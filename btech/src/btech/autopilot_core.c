@@ -229,7 +229,12 @@ void auto_load_commands(FILE * file, AUTO * autopilot)
 		return;
 
 	/* Loop for the beginning tag */
-	fread(&tmpb, 1, 1, file);
+	if(fread(&tmpb, 1, 1, file) != 1) {
+		fprintf(stderr, "Unable to read START for reading data"
+				" for AI #%ld\n", autopilot->mynum);
+		fflush(stderr);
+		exit(1);
+	}
 	if(tmpb != AI_COMMAND_DLLIST_START) {
 		fprintf(stderr, "Unable to locate START for reading data"
 				" for AI #%ld\n", autopilot->mynum);
@@ -256,7 +261,12 @@ void auto_load_commands(FILE * file, AUTO * autopilot)
 	}
 
 	/* Look for the end tag */
-	fread(&tmpb, 1, 1, file);
+	if(fread(&tmpb, 1, 1, file) != 1) {
+		fprintf(stderr, "Unable to read END for reading data"
+				" for AI #%ld\n", autopilot->mynum);
+		fflush(stderr);
+		exit(1);
+	}
 	if(tmpb != AI_COMMAND_DLLIST_END) {
 		fprintf(stderr, "Unable to locate END for reading data"
 				" for AI #%ld\n", autopilot->mynum);
@@ -308,14 +318,19 @@ static char *auto_show_command(command_node * node)
 
 	static char buf[MBUF_SIZE];
 	int i;
+	size_t len;
 
 	snprintf(buf, MBUF_SIZE, "%-10s", node->args[0]);
 
 	/* Loop through the args and print the commands */
 	for(i = 1; i < AUTOPILOT_MAX_ARGS; i++)
 		if(node->args[i]) {
-			strncat(buf, " ", MBUF_SIZE);
-			strncat(buf, node->args[i], MBUF_SIZE);
+			len = strlen(buf);
+			if(len < sizeof(buf) - 1)
+				strncat(buf, " ", sizeof(buf) - len - 1);
+			len = strlen(buf);
+			if(len < sizeof(buf) - 1)
+				strncat(buf, node->args[i], sizeof(buf) - len - 1);
 		}
 
 	return buf;

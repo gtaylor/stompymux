@@ -65,7 +65,7 @@ void loadrepairs(FILE * f)
 
 	if(feof(f))
 		return;
-	fread(&d, sizeof(d), 1, f);
+	CHELO(d);
 	while (d > 0 && !feof(f)) {
 		loaded++;
 		CHELO(type);

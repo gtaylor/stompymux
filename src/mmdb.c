@@ -78,7 +78,7 @@ struct mmdb_t *mmdb_open_write(char *filename)
 	mmdb->base = NULL;
 	mmdb->ppos = NULL;
 	dprintk("mmdb->length %d", mmdb->length);
-	ftruncate(mmdb->fd, mmdb->length);
+	dperror(ftruncate(mmdb->fd, mmdb->length) < 0);
 	fsync(mmdb->fd);
 	mmdb->base =
 		mmap(NULL, mmdb->length, PROT_READ | PROT_WRITE, MAP_SHARED, mmdb->fd,
@@ -100,7 +100,7 @@ void mmdb_resize(struct mmdb_t *mmdb, int length)
 		mmdb->ppos = NULL;
 	}
 	mmdb->length = (length + 0x3FF) & ~(0x3FF);
-	ftruncate(mmdb->fd, mmdb->length);
+	dperror(ftruncate(mmdb->fd, mmdb->length) < 0);
 	mmdb->base =
 		mmap(NULL, mmdb->length, PROT_READ | PROT_WRITE, MAP_SHARED, mmdb->fd,
 			 0);
@@ -113,7 +113,7 @@ void mmdb_close(struct mmdb_t *mmdb)
 {
 	msync(mmdb->base, mmdb->length, MS_SYNC);
 	munmap(mmdb->base, mmdb->length);
-	ftruncate(mmdb->fd, mmdb->ppos - mmdb->base);
+	dperror(ftruncate(mmdb->fd, mmdb->ppos - mmdb->base) < 0);
 	dprintk("truncating to %ld bytes.", mmdb->ppos - mmdb->base);
 	close(mmdb->fd);
 	mmdb->fd = 0;

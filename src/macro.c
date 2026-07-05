@@ -802,12 +802,13 @@ void load_macros(FILE * fp)
 
 		m = macros[i];
 
-		fgets(buffer, LBUF_SIZE, fp);
+		TST(!fgets(buffer, LBUF_SIZE, fp), tprintf("Reading macro set #%d\n", i));
 		TST(sscanf(buffer, "%d %d %d\n", &(m->player), &(m->nummacros), &j)
 			!= 3, tprintf("Reading macro set #%d\n", i));
 		m->status = j;
 
-		fgets(buffer, LBUF_SIZE, fp);
+		TST(!fgets(buffer, LBUF_SIZE, fp),
+			tprintf("Reading macro description #%d\n", i));
 		if(*buffer)
 			if(buffer[strlen(buffer) - 1] == '\n')
 				buffer[strlen(buffer) - 1] = 0;
@@ -820,10 +821,11 @@ void load_macros(FILE * fp)
 			m->alias = (char *) malloc(5 * m->maxmacros);
 			m->string = (char **) malloc(sizeof(char *) * m->nummacros);
 
-			for(j = 0; j < m->nummacros; j++) {
-				t = m->alias + j * 5;
-				fgets(buffer, LBUF_SIZE, fp);
-				if(buffer[strlen(buffer) - 1] == '\n')
+				for(j = 0; j < m->nummacros; j++) {
+					t = m->alias + j * 5;
+					TST(!fgets(buffer, LBUF_SIZE, fp),
+						tprintf("Reading macro #%d/%d\n", i, j));
+					if(buffer[strlen(buffer) - 1] == '\n')
 					buffer[strlen(buffer) - 1] = 0;
 				for(c = buffer; *c && *c != ' '; c++);
 				*c = 0;

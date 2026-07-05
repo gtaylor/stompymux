@@ -4,6 +4,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include \
 
 # TODO: Fiddle with the default compiler options.
 AM_CFLAGS = -Werror -Wfatal-errors -fsanitize=address
+AM_LDFLAGS = -fsanitize=address
 #ifdef DEBUG
 #CFLAGS += -g3
 #CPPFLAGS += -DDEBUG

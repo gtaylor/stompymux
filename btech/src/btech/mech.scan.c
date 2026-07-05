@@ -560,7 +560,7 @@ void mech_range(dbref player, void *data, char *buffer)
 	int ix1, iy1;
 	float x1, y1, z1, hr;
 	float temp;
-	char trash[40];
+	char trash[80];
 	char buff[100];
 	char buf1[20];
 	char buf2[20];
@@ -666,7 +666,7 @@ void mech_vector(dbref player, void *data, char *buffer)
 	int ix1, iy1, iz1;
 	float x1, y1, z1, hr;
 	float temp;
-	char trash[40];
+	char trash[80];
 	char buff[100];
 	char buf1[20];
 	char buf2[20];

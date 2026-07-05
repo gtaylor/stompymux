@@ -1949,7 +1949,8 @@ dbref getref(FILE * f)
 {
 	static char buf[SBUF_SIZE];
 
-	fgets(buf, sizeof(buf), f);
+	if(!fgets(buf, sizeof(buf), f))
+		return 0;
 	return (atoi(buf));
 }
 
@@ -2197,7 +2198,11 @@ void load_restart_db()
 	}
 	mudstate.restarting = 1;
 
-	fgets(buf, 3, f);
+	if(!fgets(buf, 3, f)) {
+		fclose(f);
+		mudstate.restarting = 0;
+		return;
+	}
 	if(strncmp(buf, "+V", 2)) {
 		abort();
 	}

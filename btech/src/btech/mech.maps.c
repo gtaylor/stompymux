@@ -515,7 +515,7 @@ static void show_lrs_map(dbref player, MECH * mech, MAP * map, int x,
 	char topbuff[4 * LRS_DISPLAY_WIDTH + 30] = "    ";
 	char botbuff[4 * LRS_DISPLAY_WIDTH + 30] = "    ";
 	char midbuff[8 + LRS_DISPLAY_WIDTH] = "    ";
-	char trash1[5];				/* temp var to hold the max-three-digit number of map Y */
+	char trash1[16];			/* temp var to hold the map coordinate label */
 	short oddcol = 0;
 	MECH *mechs[MAX_MECHS_PER_MAP];
 	int last_mech = 0;

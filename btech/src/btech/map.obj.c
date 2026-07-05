@@ -570,7 +570,10 @@ void load_mapobjs(FILE * f, MAP * map)
 	int i;
 	mapobj tmp;
 
-	fread(&tmpb, 1, 1, f);
+	if(fread(&tmpb, 1, 1, f) != 1) {
+		fprintf(stderr, "Error: Could not read mapobjstart!");
+		return;
+	}
 	if(tmpb != MAPOBJSTART_MAGICNUM) {
 		fprintf(stderr, "Error: No mapobjstart found!");
 		return;
@@ -578,19 +581,31 @@ void load_mapobjs(FILE * f, MAP * map)
 	/* Clean out */
 	for(i = 0; i < NUM_MAPOBJTYPES; i++)
 		map->mapobj[i] = NULL;
-	fread(&tmpb, 1, 1, f);
-	while (tmpb && !feof(f)) {
+	if(fread(&tmpb, 1, 1, f) != 1) {
+		fprintf(stderr, "Error: Could not read mapobj type!");
+		return;
+	}
+	while (tmpb) {
 		if((tmpb - 1) == TYPE_BITS)
 			map_load_bits(f, map);
 		else {
-			fread(&tmp, sizeof(mapobj), 1, f);
+			if(fread(&tmp, sizeof(mapobj), 1, f) != 1) {
+				fprintf(stderr, "Error: Could not read mapobj!");
+				return;
+			}
 			add_mapobj(map, &map->mapobj[tmpb - 1], &tmp, 0);
 			if((tmpb - 1) == TYPE_BUILD)
 				possibly_start_building_regen(tmp.obj);
 		}
-		fread(&tmpb, 1, 1, f);
+		if(fread(&tmpb, 1, 1, f) != 1) {
+			fprintf(stderr, "Error: Could not read mapobj type!");
+			return;
+		}
 	}
-	fread(&tmpb, 1, 1, f);
+	if(fread(&tmpb, 1, 1, f) != 1) {
+		fprintf(stderr, "Error: Could not read mapobjend!");
+		return;
+	}
 	if(tmpb != MAPOBJEND_MAGICNUM)
 		fprintf(stderr, "Error: No mapobjend found!");
 }

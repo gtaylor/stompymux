@@ -442,11 +442,11 @@ static char *MakeHeatScaleInfo(MECH * mech, char *fillchar, char *heatstr,
 void PrintHeatBar(dbref player, MECH * mech)
 {
 	char subbuff[256];
-	char buff[256];
+	char buff[sizeof(subbuff) + sizeof("Temp:")];
 	char heatstr[9] = ".:::::::";
 
 	MakeHeatScaleInfo(mech, heatstr, subbuff, 256);
-	snprintf(buff, 256, "Temp:%s", subbuff);
+	snprintf(buff, sizeof(buff), "Temp:%s", subbuff);
 	notify(player, buff);
 }
 

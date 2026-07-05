@@ -1871,6 +1871,16 @@ int save_template(dbref player, MECH * mech, char *reference, char *filename)
 	return -1;
 }
 
+static void
+skip_template_whitespace(FILE *fp)
+{
+	int c;
+
+	while ((c = fgetc(fp)) != EOF && isspace((unsigned char)c));
+	if(c != EOF)
+		ungetc(c, fp);
+}
+
 char *read_desc(FILE * fp, char *data)
 {
 	char keep[MAX_STRING_LENGTH + 500];
@@ -1881,7 +1891,7 @@ char *read_desc(FILE * fp, char *data)
 
 	keep[0] = '\0';
 	if((tmp = strchr(data, '{'))) {
-		fscanf(fp, "\n");
+		skip_template_whitespace(fp);
 		while (isspace(*(++tmp)));
 		if((t = strchr(tmp, '}'))) {
 			while (isspace(*(t--)));
@@ -1889,14 +1899,14 @@ char *read_desc(FILE * fp, char *data)
 			length = strlen(tmp);
 			strcpy(buf, tmp);
 			return buf;
-		} else {
-			strcpy(keep, tmp);
-			strcat(keep, "\r\n");
-			t = tmp + strlen(tmp) - 1;
-			length = strlen(t);
-			while (fgets(data, 512, fp)) {
-				fscanf(fp, "\n");
-				if((tmp = strchr(data, '}')) != NULL) {
+			} else {
+				strcpy(keep, tmp);
+				strcat(keep, "\r\n");
+				t = tmp + strlen(tmp) - 1;
+				length = strlen(t);
+				while (fgets(data, 512, fp)) {
+					skip_template_whitespace(fp);
+					if((tmp = strchr(data, '}')) != NULL) {
 					*tmp = 0;
 					length += strlen(data);
 					strcat(keep, data);

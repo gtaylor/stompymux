@@ -99,12 +99,17 @@ void load_commac(FILE * fp)
 	char *t;
 	char in;
 
-	fscanf(fp, "%d\n", &np);
+	if(fscanf(fp, "%d\n", &np) != 1)
+		return;
 	for(i = 0; i < np; i++) {
 		c = create_new_commac();
-		fscanf(fp, "%ld %d %d %d %d %d %d %d\n", &(c->who),
-			   &(c->numchannels), &(c->macros[0]), &(c->macros[1]),
-			   &c->macros[2], &(c->macros[3]), &(c->macros[4]), &(c->curmac));
+		if(fscanf(fp, "%ld %d %d %d %d %d %d %d\n", &(c->who),
+				  &(c->numchannels), &(c->macros[0]), &(c->macros[1]),
+				  &c->macros[2], &(c->macros[3]), &(c->macros[4]),
+				  &(c->curmac)) != 8) {
+			destroy_commac(c);
+			return;
+		}
 		c->maxchannels = c->numchannels;
 		if(c->maxchannels > 0) {
 			c->alias = (char *) malloc(c->maxchannels * 6);
@@ -116,7 +121,11 @@ void load_commac(FILE * fp)
 					*t++ = in;
 				*t = 0;
 
-				fscanf(fp, "%[^\n]\n", buffer);
+				if(fscanf(fp, "%[^\n]\n", buffer) != 1) {
+					c->numchannels = j;
+					destroy_commac(c);
+					return;
+				}
 
 				c->channels[j] = (char *) malloc(strlen(buffer) + 1);
 				StringCopy(c->channels[j], buffer);

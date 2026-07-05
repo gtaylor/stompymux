@@ -185,7 +185,7 @@ static void hud_generalstatus(DESC * d, MECH * mech, char *msgclass,
 {
 	static char response[LBUF_SIZE];
 	char fuel[15] = { 0 };
-	char tstat[5] = { 0 };
+	char tstat[15] = { 0 };
 	char jumpx[8] = { 0 };
        	char jumpy[8]=  { 0 };
 	int btc;

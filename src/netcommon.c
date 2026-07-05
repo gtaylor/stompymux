@@ -927,7 +927,7 @@ static void dump_users(DESC * e, char *match, int key)
 
 
 
-	buf = alloc_mbuf("dump_users");
+	buf = alloc_lbuf("dump_users");
 	if(key == CMD_SESSION) {
 		queue_string(e, "                               ");
 		queue_string(e,
@@ -1008,7 +1008,7 @@ static void dump_users(DESC * e, char *match, int key)
 
 			if((e->flags & DS_CONNECTED) && Wizard_Who(e->player) &&
 			   (key == CMD_WHO)) {
-				snprintf(buf, MBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
+				snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
 						trimmed_name(d->player),
 						time_format_1(mudstate.now - d->connected_at),
 						time_format_2(mudstate.now - d->last_time), flist,
@@ -1017,7 +1017,7 @@ static void dump_users(DESC * e, char *match, int key)
 									   '\0') ? tprintf("%s@%s", d->username,
 													   d->addr) : d->addr)));
 			} else if(key == CMD_SESSION) {
-				snprintf(buf, MBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
+				snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
 						trimmed_name(d->player),
 						time_format_1(mudstate.now - d->connected_at),
 						time_format_2((mudstate.now - d->last_time) >
@@ -1027,7 +1027,7 @@ static void dump_users(DESC * e, char *match, int key)
 						d->input_tot, d->output_size, d->output_lost,
 						d->output_tot);
 			} else if(Wizard_Who(e->player)) {
-				snprintf(buf, MBUF_SIZE, "%-16s%10s %5s%-3s%s%s\r\n",
+				snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s%s%s\r\n",
 						trimmed_name(d->player),
 						time_format_1(mudstate.now - d->connected_at),
 						time_format_2((mudstate.now - d->last_time) >
@@ -1035,7 +1035,7 @@ static void dump_users(DESC * e, char *match, int key)
 														 d->last_time) : 0),
 						flist, d->doing, ANSI_NORMAL);
 			} else {
-				snprintf(buf, MBUF_SIZE, "%-16s%10s %5s  %s%s\r\n",
+				snprintf(buf, LBUF_SIZE, "%-16s%10s %5s  %s%s\r\n",
 						trimmed_name(d->player),
 						time_format_1(mudstate.now - d->connected_at),
 						time_format_2((mudstate.now - d->last_time) >
@@ -1053,20 +1053,20 @@ static void dump_users(DESC * e, char *match, int key)
 	 * sometimes I like the ternary operator....
 	 */
 	if (ucount)
-		snprintf(buf, MBUF_SIZE, "%d Visible Player%slogged in, (%d %s hidden), %d record, %s maximum.\r\n", count,
+			snprintf(buf, LBUF_SIZE, "%d Visible Player%slogged in, (%d %s hidden), %d record, %s maximum.\r\n", count,
 			(count == 1) ? " " : "s ", ucount, (ucount == 1) ? "is" : "are", mudstate.record_players,
 			(mudconf.max_players == -1) ? "no" : tprintf("%d",
 														 mudconf.
 														 max_players));
 	else
-		snprintf(buf, MBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
+			snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
 			(count == 1) ? " " : "s ", mudstate.record_players,
 			(mudconf.max_players == -1) ? "no" : tprintf("%d", mudconf.max_players));
 
 	queue_string(e, buf);
 
 
-	free_mbuf(buf);
+	free_lbuf(buf);
 }
 
 /*

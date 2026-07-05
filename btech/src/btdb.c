@@ -24,6 +24,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <assert.h>
 
@@ -358,8 +359,8 @@ check_btechdb_element(const FI_Attributes *attrs)
 	version = *(const FI_Int32 *)fi_get_value(value);
 
 	if (version != 0) {
-		fprintf(stderr, "FIXME: BTDB: Version mismatch: %d != %d\n",
-		        version, 0);
+		fprintf(stderr, "FIXME: BTDB: Version mismatch: %jd != %jd\n",
+		        (intmax_t) version, (intmax_t) 0);
 		return 0;
 	}
 

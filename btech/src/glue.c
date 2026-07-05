@@ -573,11 +573,19 @@ load_xcode(void)
 		return;
 	}
 
-	fread(&xcode_version, sizeof(xcode_version), 1, fp);
+	if (fread(&xcode_version, sizeof(xcode_version), 1, fp) != 1) {
+		fprintf(stderr,
+		        "LOADING: %s (skipped xcodetree - could not read version)\n",
+		         mudconf.hcode_db);
+		my_close_file(fp, &filemode);
+		return;
+	}
+
 	if (xcode_version != XCODE_MAGIC) {
 		fprintf(stderr,
 		        "LOADING: %s (skipped xcodetree - version difference: 0x%08X vs 0x%08X)\n",
 		         mudconf.hcode_db, xcode_version, XCODE_MAGIC);
+		my_close_file(fp, &filemode);
 		return;
 	}
 
@@ -1173,6 +1181,7 @@ help_color_initialize(const char *from, char *to)
 {
 	int i;
 	char buf[LBUF_SIZE];
+	char *tp = to;
 
 	for(i = 0; from[i] && from[i] != ' '; i++);
 	if(from[i]) {
@@ -1180,11 +1189,18 @@ help_color_initialize(const char *from, char *to)
 		/*      from[i]=0; */
 		strncpy(buf, from, i);
 		buf[i] = 0;
-		snprintf(to, LBUF_SIZE, "%s%s%s %s", "%ch%cb", buf, "%cn", &from[i + 1]);
+		safe_str("%ch%cb", to, &tp);
+		safe_str(buf, to, &tp);
+		safe_str("%cn ", to, &tp);
+		safe_str((char *) &from[i + 1], to, &tp);
 
 		/*      from[i]=' '; */
-	} else
-		snprintf(to, LBUF_SIZE, "%s%s%s", "%cc", from, "%cn");
+	} else {
+		safe_str("%cc", to, &tp);
+		safe_str((char *) from, to, &tp);
+		safe_str("%cn", to, &tp);
+	}
+	*tp = '\0';
 
 }
 

@@ -727,7 +727,8 @@ void close_sockets(int emergency, char *message)
 
 	DESC_SAFEITER_ALL(d, dnext) {
 		if(emergency) {
-			write(d->descriptor, message, strlen(message));
+			if(write(d->descriptor, message, strlen(message)) < 0)
+				log_perror("NET", "FAIL", NULL, "write");
 			if(shutdown(d->descriptor, 2) < 0)
 				log_perror("NET", "FAIL", NULL, "shutdown");
 			dprintk("shutting down fd %d", d->descriptor);

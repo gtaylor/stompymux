@@ -49,6 +49,7 @@ void send_channel(char *chan, const char *format, ...)
 	struct channel *ch;
 	char buf[LBUF_SIZE];
 	char data[LBUF_SIZE];
+	char *bp = buf;
 	char *newline;
 	va_list ap;
 
@@ -58,7 +59,11 @@ void send_channel(char *chan, const char *format, ...)
 	vsnprintf(data, LBUF_SIZE, format, ap);
 	va_end(ap);
 
-	snprintf(buf, LBUF_SIZE-1, "[%s] %s", chan, data);
+	safe_chr('[', buf, &bp);
+	safe_str(chan, buf, &bp);
+	safe_str("] ", buf, &bp);
+	safe_str(data, buf, &bp);
+	*bp = '\0';
 	while ((newline = strchr(buf, '\n')))
 		*newline = ' ';
 	do_comsend(ch, buf);
@@ -102,13 +107,16 @@ void load_comsystem(FILE * fp)
 
 	num_channels = 0;
 
-	fgets(buf, sizeof(buf), fp);
+	if(!fgets(buf, sizeof(buf), fp))
+		return;
 	if(!strncmp(buf, "+V2", 3)) {
 		new = 2;
-		fscanf(fp, "%d\n", &nc);
+		if(fscanf(fp, "%d\n", &nc) != 1)
+			return;
 	} else if(!strncmp(buf, "+V1", 3)) {
 		new = 1;
-		fscanf(fp, "%d\n", &nc);
+		if(fscanf(fp, "%d\n", &nc) != 1)
+			return;
 	} else
 		nc = atoi(buf);
 
@@ -117,7 +125,8 @@ void load_comsystem(FILE * fp)
 	for(i = 0; i < nc; i++) {
 		ch = (struct channel *) malloc(sizeof(struct channel));
 
-		fscanf(fp, "%[^\n]\n", temp);
+		if(fscanf(fp, "%[^\n]\n", temp) != 1)
+			return;
 
 		strncpy(ch->name, temp, CHAN_NAME_LEN);
 		ch->name[CHAN_NAME_LEN - 1] = '\0';
@@ -129,20 +138,24 @@ void load_comsystem(FILE * fp)
 
 		if(new) {				/* V1 or higher */
 
-			if(fscanf(fp,
-					  new ==
-					  1 ? "%d %d %d %d %d %d %d %d\n" :
-					  "%d %d %d %d %d %d %d %d %d\n", &(ch->type),
-					  &(ch->temp1), &(ch->temp2), &(ch->charge),
-					  &(ch->charge_who), &(ch->amount_col),
-					  &(ch->num_messages), &(ch->chan_obj), &dummy) >= 9 &&
-			   new > 1) {
+			dummy = 0;
+			k = fscanf(fp,
+					   new ==
+					   1 ? "%d %d %d %d %d %d %d %d\n" :
+					   "%d %d %d %d %d %d %d %d %d\n", &(ch->type),
+					   &(ch->temp1), &(ch->temp2), &(ch->charge),
+					   &(ch->charge_who), &(ch->amount_col),
+					   &(ch->num_messages), &(ch->chan_obj), &dummy);
+			if((new == 1 && k != 8) || (new > 1 && k != 9))
+				return;
+			if(new > 1) {
 				/* Do things with 'dummy' */
 				if(dummy > 0) {
 					for(j = 0; j < dummy; j++) {
 						chmsg *c;
 
-						fscanf(fp, "%d %[^\n]\n", &k, temp);
+						if(fscanf(fp, "%d %[^\n]\n", &k, temp) != 2)
+							return;
 						Create(c, chmsg, 1);
 						c->msg = strdup(temp);
 						c->time = k;
@@ -151,13 +164,15 @@ void load_comsystem(FILE * fp)
 				}
 			}
 		} else {
-			fscanf(fp, "%d %d %d %d %d %d %d %d %d %d\n", &(ch->type),
-				   &(dummy), &(ch->temp1), &(ch->temp2), &(dummy),
-				   &(ch->charge), &(ch->charge_who), &(ch->amount_col),
-				   &(ch->num_messages), &(ch->chan_obj));
+			if(fscanf(fp, "%d %d %d %d %d %d %d %d %d %d\n", &(ch->type),
+					  &(dummy), &(ch->temp1), &(ch->temp2), &(dummy),
+					  &(ch->charge), &(ch->charge_who), &(ch->amount_col),
+					  &(ch->num_messages), &(ch->chan_obj)) != 10)
+				return;
 		}
 
-		fscanf(fp, "%d\n", &(ch->num_users));
+		if(fscanf(fp, "%d\n", &(ch->num_users)) != 1)
+			return;
 		ch->max_users = ch->num_users;
 		if(ch->num_users > 0) {
 			ch->users = (struct comuser **)
@@ -169,13 +184,17 @@ void load_comsystem(FILE * fp)
 				ch->users[j] = user;
 
 				if(new) {
-					fscanf(fp, "%ld %d\n", &(user->who), &(user->on));
+					if(fscanf(fp, "%ld %d\n", &(user->who), &(user->on)) != 2)
+						return;
 				} else {
-					fscanf(fp, "%ld %d %d", &(user->who), &(dummy), &(dummy));
-					fscanf(fp, "%d\n", &(user->on));
+					if(fscanf(fp, "%ld %d %d", &(user->who), &(dummy), &(dummy)) != 3)
+						return;
+					if(fscanf(fp, "%d\n", &(user->on)) != 1)
+						return;
 				}
 
-				fscanf(fp, "%[^\n]\n", temp);
+				if(fscanf(fp, "%[^\n]\n", temp) != 1)
+					return;
 
 				user->title = strdup(temp + 2);
 

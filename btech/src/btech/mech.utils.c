@@ -4522,24 +4522,25 @@ char *UnitPartsList(MECH * mech, int mode)
 
 	static char sbuff[LBUF_SIZE];
 	char *weapstring;
+	char *bp = sbuff;
 
 	memset(sbuff, '\0', sizeof(sbuff));
 
-	strncat(sbuff, tprintf("%s:%d|",MechSpecials2(mech) & STEALTH_ARMOR_TECH ? "ST_ARMOR"
+	safe_str(tprintf("%s:%d|",MechSpecials2(mech) & STEALTH_ARMOR_TECH ? "ST_ARMOR"
 					: MechSpecials2(mech) & HVY_FF_ARMOR_TECH ? "HVY_FF_ARMOR"
 					: MechSpecials2(mech) & LT_FF_ARMOR_TECH ? "LT_FF_ARMOR"
 					: MechSpecials2(mech) & HARDA_TECH ? "HD_ARMOR"
-					: MechSpecials(mech) & FF_TECH ? "FF_ARMOR" : "ARMOR", mech_armorpoints(mech)), LBUF_SIZE);
+					: MechSpecials(mech) & FF_TECH ? "FF_ARMOR" : "ARMOR", mech_armorpoints(mech)), sbuff, &bp);
 
-	strncat(sbuff, tprintf("%s:%d|",MechSpecials(mech) & REINFI_TECH ? "RE_INTERNALS"
+	safe_str(tprintf("%s:%d|",MechSpecials(mech) & REINFI_TECH ? "RE_INTERNALS"
 					: MechSpecials(mech) & COMPI_TECH ? "CO_INTERNALS"
-					: MechSpecials(mech) & ES_TECH ? "ES_INTERNAL" : "INTERNAL", mech_intpoints(mech)), LBUF_SIZE);
+					: MechSpecials(mech) & ES_TECH ? "ES_INTERNAL" : "INTERNAL", mech_intpoints(mech)), sbuff, &bp);
 
-	strncat(sbuff,tprintf("%s|", payloadlist_func(mech)), LBUF_SIZE);
+	safe_str(tprintf("%s|", payloadlist_func(mech)), sbuff, &bp);
 
-	strncat(sbuff,tprintf("%s", partlist_func(mech)), LBUF_SIZE);
+	safe_str(tprintf("%s", partlist_func(mech)), sbuff, &bp);
+	*bp = '\0';
 
 
 	return sbuff;
 }
-

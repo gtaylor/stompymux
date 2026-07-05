@@ -3613,7 +3613,7 @@ static void fun_capstr(char *buff, char **bufc, dbref player, dbref cause,
 static void fun_lnum(char *buff, char **bufc, dbref player, dbref cause,
 					 char *fargs[], int nfargs, char *cargs[], int ncargs)
 {
-	char tbuff[10];
+	char tbuff[16];
 	int ctr, limit, llimit = 0, over;
 
 	if(nfargs > 2 || nfargs < 1) {
@@ -5613,8 +5613,8 @@ static void fun_colorpairs(char *buff, char **bufc, dbref player, dbref cause,
 	struct boolexp *bool;
 
 	char *tmp_char;
+	char *tmp_bp;
 	char tmp_string[LBUF_SIZE];
-	char tmp_piece[2];
 
 	if(!parse_attrib(player, fargs[0], &thing, &attrib)) {
 		safe_str("#-1 NO MATCH", buff, bufc);
@@ -5654,53 +5654,54 @@ static void fun_colorpairs(char *buff, char **bufc, dbref player, dbref cause,
 
 	if(check_read_perms(player, thing, attr, aowner, aflags, buff, bufc)) {
 
-		/* zero temporary string */
-		memset(tmp_string, 0, sizeof(tmp_string));
+			/* zero temporary string */
+			memset(tmp_string, 0, sizeof(tmp_string));
+			tmp_bp = tmp_string;
 
-		/* Scan through the attribute, colorize what we want */
-		for(tmp_char = atr_gotten; *tmp_char; tmp_char++) {
+			/* Scan through the attribute, colorize what we want */
+			for(tmp_char = atr_gotten; *tmp_char; tmp_char++) {
 
-			switch (*tmp_char) {
-			case '{':
-				strncat(tmp_string, ANSI_RED, LBUF_SIZE);
-				strncat(tmp_string, "{", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			case '[':
-				strncat(tmp_string, ANSI_YELLOW, LBUF_SIZE);
-				strncat(tmp_string, "[", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			case '(':
-				strncat(tmp_string, ANSI_GREEN, LBUF_SIZE);
-				strncat(tmp_string, "(", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			case '}':
-				strncat(tmp_string, ANSI_RED, LBUF_SIZE);
-				strncat(tmp_string, "}", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			case ']':
-				strncat(tmp_string, ANSI_YELLOW, LBUF_SIZE);
-				strncat(tmp_string, "]", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			case ')':
-				strncat(tmp_string, ANSI_GREEN, LBUF_SIZE);
-				strncat(tmp_string, ")", LBUF_SIZE);
-				strncat(tmp_string, ANSI_NORMAL, LBUF_SIZE);
-				break;
-			default:
-				snprintf(tmp_piece, sizeof(tmp_piece), "%c", *tmp_char);
-				strncat(tmp_string, tmp_piece, LBUF_SIZE);
-				break;
+				switch (*tmp_char) {
+				case '{':
+					safe_str(ANSI_RED, tmp_string, &tmp_bp);
+					safe_chr('{', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				case '[':
+					safe_str(ANSI_YELLOW, tmp_string, &tmp_bp);
+					safe_chr('[', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				case '(':
+					safe_str(ANSI_GREEN, tmp_string, &tmp_bp);
+					safe_chr('(', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				case '}':
+					safe_str(ANSI_RED, tmp_string, &tmp_bp);
+					safe_chr('}', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				case ']':
+					safe_str(ANSI_YELLOW, tmp_string, &tmp_bp);
+					safe_chr(']', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				case ')':
+					safe_str(ANSI_GREEN, tmp_string, &tmp_bp);
+					safe_chr(')', tmp_string, &tmp_bp);
+					safe_str(ANSI_NORMAL, tmp_string, &tmp_bp);
+					break;
+				default:
+					safe_chr(*tmp_char, tmp_string, &tmp_bp);
+					break;
+				}
+
 			}
+			*tmp_bp = '\0';
 
+			safe_str(tmp_string, buff, bufc);
 		}
-
-		safe_str(tmp_string, buff, bufc);
-	}
 
 	if(free_buffer)
 		free_lbuf(atr_gotten);

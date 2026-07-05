@@ -1486,7 +1486,8 @@ int load_mail(FILE * fp)
 	/*
 	 * Read the version number
 	 */
-	fgets(nbuf1, sizeof(nbuf1), fp);
+	if(!fgets(nbuf1, sizeof(nbuf1), fp))
+		return 0;
 
 	if(!strncmp(nbuf1, "+V2", 3)) {
 		new = 1;
@@ -1505,12 +1506,12 @@ int load_mail(FILE * fp)
 	} else if(!strncmp(nbuf1, "+1", 2)) {
 		pennsub = 1;
 	}
-	if(pennsub)
-		fgets(nbuf1, sizeof(nbuf1), fp);	/*
-											 * Toss away the * *
-											 * * number of
-											 * messages  *  * *
-											 */
+	if(pennsub && !fgets(nbuf1, sizeof(nbuf1), fp))
+		return 0;							/*
+												 * Toss away the * *
+												 * * number of
+												 * messages  *  * *
+												 */
 	if(read_newdb) {
 		mail_top = getref(fp);
 		mail_db_grow(mail_top + 1);
@@ -1518,7 +1519,8 @@ int load_mail(FILE * fp)
 		mail_db_grow(1);
 	}
 
-	fgets(nbuf1, sizeof(nbuf1), fp);
+	if(!fgets(nbuf1, sizeof(nbuf1), fp))
+		return 0;
 
 	while (strncmp(nbuf1, "***", 3)) {
 		mp = (struct mail *) malloc(sizeof(struct mail));
@@ -1571,16 +1573,19 @@ int load_mail(FILE * fp)
 		else if(!pennsub)
 			mp->subject = (char *) strdup("No subject");
 		mp->read = getref(fp);
-		fgets(nbuf1, sizeof(nbuf1), fp);
+		if(!fgets(nbuf1, sizeof(nbuf1), fp))
+			return 0;
 	}
 
 	if(read_newdb) {
-		fgets(nbuf1, sizeof(nbuf1), fp);
+		if(!fgets(nbuf1, sizeof(nbuf1), fp))
+			return 0;
 
 		while (strncmp(nbuf1, "+++", 3)) {
 			number = atoi(nbuf1);
 			new_mail_message(getstring_noalloc(fp, read_new_strings), number);
-			fgets(nbuf1, sizeof(nbuf1), fp);
+			if(!fgets(nbuf1, sizeof(nbuf1), fp))
+				return 0;
 		}
 	}
 	load_malias(fp);
@@ -2570,7 +2575,12 @@ void malias_read(FILE * fp)
 	char buffer[1000];
 	struct malias *m;
 
-	fscanf(fp, "%d\n", &ma_top);
+	if(fscanf(fp, "%d\n", &ma_top) != 1) {
+		ma_top = 0;
+		ma_size = 0;
+		malias = NULL;
+		return;
+	}
 
 	ma_size = ma_top;
 
@@ -2585,12 +2595,15 @@ void malias_read(FILE * fp)
 
 		m = (struct malias *) malias[i];
 
-		fscanf(fp, "%d %d\n", &(m->owner), &(m->numrecep));
+		if(fscanf(fp, "%d %d\n", &(m->owner), &(m->numrecep)) != 2)
+			return;
 
-		fscanf(fp, "%[^\n]\n", buffer);
+		if(fscanf(fp, "%[^\n]\n", buffer) != 1)
+			return;
 		m->name = (char *) malloc(strlen(buffer) - 1);
 		StringCopy(m->name, buffer + 2);
-		fscanf(fp, "%[^\n]\n", buffer);
+		if(fscanf(fp, "%[^\n]\n", buffer) != 1)
+			return;
 		m->desc = (char *) malloc(strlen(buffer) - 1);
 		StringCopy(m->desc, buffer + 2);
 

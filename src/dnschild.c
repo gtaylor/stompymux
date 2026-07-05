@@ -38,6 +38,18 @@ static struct timeval query_timeout = { 60, 0 };
 
 static void dnschild_finish(int fd, short event, void *arg);
 
+static void
+dnschild_write_result(int fd, char *buffer, size_t buffer_size, int length)
+{
+	if(length < 0)
+		length = 0;
+	if((size_t) length >= buffer_size)
+		length = buffer_size - 1;
+	buffer[length++] = '\0';
+	if(write(fd, buffer, length) < 0)
+		_exit(1);
+}
+
 int dnschild_init()
 {
 	dprintk("dnschild initialized.");
@@ -78,15 +90,13 @@ void *dnschild_request(DESC * d)
 		unbind_signals();
         memset(address, 0, 1023);
 		if((result=getnameinfo((struct sockaddr *) &d->saddr, d->saddr_len,
-					   address, 1023, NULL, 0, NI_NAMEREQD))) {
-			length = snprintf(outbuffer, 255, "0%s/%s", gai_strerror(result), strerror(errno));
-			outbuffer[length++] = '\0';
-			write(fds[1], outbuffer, length);
-		} else {
-			length = snprintf(outbuffer, 255, "1%s", address);
-			outbuffer[length++] = '\0';
-			write(fds[1], outbuffer, length);
-		}
+						   address, 1023, NULL, 0, NI_NAMEREQD))) {
+				length = snprintf(outbuffer, 255, "0%s/%s", gai_strerror(result), strerror(errno));
+				dnschild_write_result(fds[1], outbuffer, sizeof(outbuffer), length);
+			} else {
+				length = snprintf(outbuffer, 255, "1%s", address);
+				dnschild_write_result(fds[1], outbuffer, sizeof(outbuffer), length);
+			}
 		close(fds[1]);
 		exit(0);
 		/* end child section */
@@ -145,6 +155,7 @@ void dnschild_kill(void *arg)
 static void dnschild_finish(int fd, short event, void *arg)
 {
 	char buffer[2048];
+	ssize_t bytes_read;
 	struct dns_query_state_t *dqst = (struct dns_query_state_t *) arg, *iter;
 
 	iter = running;
@@ -170,7 +181,14 @@ static void dnschild_finish(int fd, short event, void *arg)
 		return;
 	}
 
-	read(fd, buffer, 2048);
+	bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+	if(bytes_read <= 0) {
+		log_perror("DNS", "ERR", NULL, "dnschild read failed.");
+		close(fd);
+		free(dqst);
+		return;
+	}
+	buffer[bytes_read] = '\0';
 
 	if(buffer[0] == '0') {
 		dprintk("dnschild failed with error: %s", buffer + 1);

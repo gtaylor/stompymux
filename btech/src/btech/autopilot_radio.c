@@ -34,6 +34,18 @@
 
 void sendchannelstuff(MECH * mech, int freq, char *msg);
 
+static void
+build_auto_reply(char *reply, const char *prefix, const char *message,
+				 const char *suffix)
+{
+	char *rp = reply;
+
+	safe_str((char *) prefix, reply, &rp);
+	safe_str((char *) message, reply, &rp);
+	safe_str((char *) suffix, reply, &rp);
+	*rp = '\0';
+}
+
 /*! \todo {Should really do away with this some how but i'm being lazy right now} */
 #define Clear(a) \
     auto_disengage(a->mynum, a, ""); \
@@ -1341,7 +1353,7 @@ void auto_parse_command(AUTO * autopilot, MECH * mech, int chn, char *buffer)
 		/* Check if there was an error message
 		 * otherwise add a front and back to the message */
 		if(message[0] == '!') {
-			snprintf(reply, LBUF_SIZE, "ERROR: %s!", message + 1);
+			build_auto_reply(reply, "ERROR: ", message + 1, "!");
 		} else {
 
 			switch (Number(0, 20)) {
@@ -1349,45 +1361,39 @@ void auto_parse_command(AUTO * autopilot, MECH * mech, int chn, char *buffer)
 			case 1:
 			case 2:
 			case 4:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Affirmative, ",
-						 message, ".");
+				build_auto_reply(reply, "Affirmative, ", message, ".");
 				break;
 			case 5:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Nod, ", message, ".");
+				build_auto_reply(reply, "Nod, ", message, ".");
 				break;
 			case 6:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Fine, ", message, ".");
+				build_auto_reply(reply, "Fine, ", message, ".");
 				break;
 			case 7:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Aye aye, Captain, ",
-						 message, "!");
+				build_auto_reply(reply, "Aye aye, Captain, ", message, "!");
 				break;
 			case 8:
 			case 9:
 			case 10:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Da, boss, ",
-						 message, "!");
+				build_auto_reply(reply, "Da, boss, ", message, "!");
 				break;
 			case 11:
 			case 12:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Ok, ", message, ".");
+				build_auto_reply(reply, "Ok, ", message, ".");
 				break;
 			case 13:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Okay, okay, ",
-						 message, ", happy now?");
+				build_auto_reply(reply, "Okay, okay, ", message, ", happy now?");
 				break;
 			case 14:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Okidoki, ",
-						 message, "!");
+				build_auto_reply(reply, "Okidoki, ", message, "!");
 				break;
 			case 15:
 			case 16:
 			case 17:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Aye, ", message, ".");
+				build_auto_reply(reply, "Aye, ", message, ".");
 				break;
 			default:
-				snprintf(reply, LBUF_SIZE, "%s%s%s", "Roger, Roger, ",
-						 message, ".");
+				build_auto_reply(reply, "Roger, Roger, ", message, ".");
 				break;
 			}					/* End of switch */
 

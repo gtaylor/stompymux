@@ -641,7 +641,7 @@ const char radio_colorstr[] = "xrgybmcwXRGYBMCW";
 static char *ccode(MECH * m, int i, int obs, int team)
 {
 	int t = m->freqmodes[i] / FREQ_REST;
-	static char buf[6];
+	static char buf[8];
 	int ii;
 
 	if(!obs) {
@@ -1115,6 +1115,58 @@ int findCommLink(MAP * map, MECH * from, MECH * to, int freq)
 
 /* The code that does the actual sending of radio messages whenever
  * someone speaks on a given frequency */
+static void
+build_observer_channel_message(char *buf, const char *color, char open_bracket,
+							   char close_bracket, char channel, int bearing,
+							   const char *faction, const char *id, int frequency,
+							   const char *title, const char *message)
+{
+	char *bp = buf;
+	char numbuf[32];
+
+	safe_str((char *) color, buf, &bp);
+	safe_chr(open_bracket, buf, &bp);
+	safe_chr(channel, buf, &bp);
+	safe_chr(':', buf, &bp);
+	snprintf(numbuf, sizeof(numbuf), "%d", bearing);
+	safe_str(numbuf, buf, &bp);
+	safe_chr(close_bracket, buf, &bp);
+	safe_str(" <", buf, &bp);
+	safe_str((char *) faction, buf, &bp);
+	safe_chr(':', buf, &bp);
+	safe_str((char *) id, buf, &bp);
+	safe_chr(':', buf, &bp);
+	snprintf(numbuf, sizeof(numbuf), "%d", frequency);
+	safe_str(numbuf, buf, &bp);
+	safe_str("> <", buf, &bp);
+	safe_str((char *) title, buf, &bp);
+	safe_str("> ", buf, &bp);
+	safe_str((char *) message, buf, &bp);
+	safe_str("%c", buf, &bp);
+	*bp = '\0';
+}
+
+static void
+build_channel_message(char *buf, const char *color, char open_bracket,
+					  char close_bracket, char channel, int bearing,
+					  const char *message)
+{
+	char *bp = buf;
+	char numbuf[32];
+
+	safe_str((char *) color, buf, &bp);
+	safe_chr(open_bracket, buf, &bp);
+	safe_chr(channel, buf, &bp);
+	safe_chr(':', buf, &bp);
+	snprintf(numbuf, sizeof(numbuf), "%.3d", bearing);
+	safe_str(numbuf, buf, &bp);
+	safe_chr(close_bracket, buf, &bp);
+	safe_chr(' ', buf, &bp);
+	safe_str((char *) message, buf, &bp);
+	safe_str("%c", buf, &bp);
+	*bp = '\0';
+}
+
 void sendchannelstuff(MECH * mech, int freq, char *msg)
 {
 	/* The _smart_ code :-) */
@@ -1217,22 +1269,24 @@ void sendchannelstuff(MECH * mech, int freq, char *msg)
 			 * elsewhere. We'll compose the message and send it now since
 			 * it should technically hear everything */
 
-			if(obs) {
-				if(mech->freqmodes[freq] & FREQ_DIGITAL) {
-					snprintf(buf, LBUF_SIZE, "%s[%c:%d] <%s:%s:%d> <%s> %s%%c",
-							 ccode(tempMech, i, obs, MechTeam(mech)),
-							 (char) ('A' + i), bearing,
-							 silly_atr_get(mech->mynum, A_FACTION),
-							 MechIDS(mech, 0), mech->freq[freq], mech->chantitle[freq],buf2);
-				} else {
-					snprintf(buf, LBUF_SIZE, "%s(%c:%d) <%s:%s:%d> <%s> %s%%c",
-							 ccode(tempMech, i, obs, MechTeam(mech)),
-							 (char) ('A' + i), bearing,
-							 silly_atr_get(mech->mynum, A_FACTION),
-							 MechIDS(mech, 0), mech->freq[freq], mech->chantitle[freq],buf2);
+				if(obs) {
+					if(mech->freqmodes[freq] & FREQ_DIGITAL) {
+						build_observer_channel_message(buf,
+								 ccode(tempMech, i, obs, MechTeam(mech)),
+								 '[', ']', (char) ('A' + i), bearing,
+								 silly_atr_get(mech->mynum, A_FACTION),
+								 MechIDS(mech, 0), mech->freq[freq],
+								 mech->chantitle[freq], buf2);
+					} else {
+						build_observer_channel_message(buf,
+								 ccode(tempMech, i, obs, MechTeam(mech)),
+								 '(', ')', (char) ('A' + i), bearing,
+								 silly_atr_get(mech->mynum, A_FACTION),
+								 MechIDS(mech, 0), mech->freq[freq],
+								 mech->chantitle[freq], buf2);
+					}
+					mech_notify(tempMech, MECHALL, buf);
 				}
-				mech_notify(tempMech, MECHALL, buf);
-			}
 
 			/* This is where we check to see if the mech has an AI and
 			 * then we give the radio commands to the AI */
@@ -1289,10 +1343,10 @@ void sendchannelstuff(MECH * mech, int freq, char *msg)
 										  MechFY(comm_mech
 												 [comm_best_path
 												  [comm_best - 1]]));
-				if(!obs)
-					snprintf(buf, LBUF_SIZE, "%s[%c:%.3d] %s%%c",
-							 ccode(tempMech, i, obs, MechTeam(mech)),
-							 (char) ('A' + i), bearing, buf3);
+					if(!obs)
+						build_channel_message(buf,
+								 ccode(tempMech, i, obs, MechTeam(mech)),
+								 '[', ']', (char) ('A' + i), bearing, buf3);
 
 			} else {
 
@@ -1307,10 +1361,10 @@ void sendchannelstuff(MECH * mech, int freq, char *msg)
 								    rfail_type == FAIL_STATIC
 								  */
 								) && mech != tempMech, 0);
-				if(!obs)
-					snprintf(buf, LBUF_SIZE, "%s(%c:%.3d) %s%%c",
-							 ccode(tempMech, i, obs, MechTeam(mech)),
-							 (char) ('A' + i), bearing, buf3);
+					if(!obs)
+						build_channel_message(buf,
+								 ccode(tempMech, i, obs, MechTeam(mech)),
+								 '(', ')', (char) ('A' + i), bearing, buf3);
 
 			}
 
@@ -1564,12 +1618,17 @@ void MechLOSBroadcasti(MECH * mech, MECH * target, char *message)
 															 tempMech,
 															 target));
 				if(a || b) {
+					char *obp = oddbuff2;
+
 					snprintf(oddbuff, sizeof(oddbuff), message, b ? GetMechToMechID(tempMech,
 																  target) :
 							"someone");
-					snprintf(oddbuff2, sizeof(oddbuff2), "%s%s%s",
-							a ? GetMechToMechID(tempMech, mech) : "Someone",
-							*oddbuff != '\'' ? " " : "", oddbuff);
+					safe_str((char *) (a ? GetMechToMechID(tempMech, mech) : "Someone"),
+							 oddbuff2, &obp);
+					if(*oddbuff != '\'')
+						safe_chr(' ', oddbuff2, &obp);
+					safe_str(oddbuff, oddbuff2, &obp);
+					*obp = '\0';
 					mech_notify(tempMech, MECHSTARTED, oddbuff2);
 				}
 			}

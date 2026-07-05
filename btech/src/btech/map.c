@@ -33,6 +33,20 @@
 #include "p.spath.h"
 #include "p.debug.h"
 
+static char *
+map_filename(const char *mapname)
+{
+	char *path;
+	size_t pathlen;
+
+	pathlen = strlen(MAP_PATH) + strlen("/") + strlen(mapname) + 1;
+	path = malloc(pathlen);
+	if(!path)
+		return NULL;
+	snprintf(path, pathlen, "%s/%s", MAP_PATH, mapname);
+	return path;
+}
+
 void debug_fixmap(dbref player, void *data, char *buffer)
 {
 	MAP *m = (MAP *) data;
@@ -243,19 +257,21 @@ static void make_bridges(MAP * map)
 
 int map_checkmapfile(MAP * map, char *mapname)
 {
-	char openfile[50] = { 0 };
+	char *openfile;
 	FILE *fp;
-        char row[MAPX * 2 + 3];
-        int i  = 0, height, width, filemode;
+	char row[MAPX * 2 + 3];
+	int i  = 0, height, width, filemode;
 
 
 	if(strlen(mapname) >= MAP_NAME_SIZE)
 		mapname[MAP_NAME_SIZE] = 0;
-	snprintf(openfile, sizeof(openfile), "%s/%s", MAP_PATH, mapname);
+	openfile = map_filename(mapname);
+	if(!openfile)
+		return -1;
 	fp = my_open_file(openfile, "r", &filemode);
+	free(openfile);
 
 	if(!fp) {
-	        my_close_file(fp, &filemode);
 		return -1; // Bad map file
 	}
 
@@ -289,7 +305,7 @@ int map_checkmapfile(MAP * map, char *mapname)
 
 int map_load(MAP * map, char *mapname)
 {
-	char openfile[50] = { 0 };
+	char *openfile;
 	char terr, elev;
 	int i1, i2, i3;
 	FILE *fp;
@@ -298,8 +314,11 @@ int map_load(MAP * map, char *mapname)
 
 	if(strlen(mapname) >= MAP_NAME_SIZE)
 		mapname[MAP_NAME_SIZE] = 0;
-	snprintf(openfile, sizeof(openfile), "%s/%s", MAP_PATH, mapname);
+	openfile = map_filename(mapname);
+	if(!openfile)
+		return -1;
 	fp = my_open_file(openfile, "r", &filemode);
+	free(openfile);
 	if(!fp) {
 		return -1; // Bad map file
 	}
@@ -421,7 +440,7 @@ void map_savemap(dbref player, void *data, char *buffer)
 	MAP *map;
 	char *args[1];
 	FILE *fp;
-	char openfile[50] = { 0 };
+	char *openfile;
 	int i, j;
 	char row[MAPX * 2 + 1];
 	char terrain;
@@ -437,11 +456,11 @@ void map_savemap(dbref player, void *data, char *buffer)
 	if(strlen(args[0]) >= MAP_NAME_SIZE)
 		args[0][MAP_NAME_SIZE] = 0;
 	notify_printf(player, "Saving %s", args[0]);
-	snprintf(openfile, sizeof(openfile), "%s/", MAP_PATH);
-	strcat(openfile, args[0]);
-	DOCHECK(!(fp =
-			  my_open_file(openfile, "w", &filemode)),
-			"Unable to open the map file!");
+	openfile = map_filename(args[0]);
+	DOCHECK(!openfile, "Unable to open the map file!");
+	fp = my_open_file(openfile, "w", &filemode);
+	free(openfile);
+	DOCHECK(!fp, "Unable to open the map file!");
 	fprintf(fp, "%d %d\n", map->map_width, map->map_height);
 	for(i = 0; i < map->map_height; i++) {
 		mapobj *mo;

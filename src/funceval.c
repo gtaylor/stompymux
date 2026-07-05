@@ -2254,7 +2254,7 @@ void fun_matchall(char *buff, char **bufc, dbref player, dbref cause,
 				  char *fargs[], int nfargs, char *cargs[], int ncargs)
 {
 	int wcount;
-	char *r, *s, *old, sep, tbuf[8];
+	char *r, *s, *old, sep, tbuf[16];
 
 	varargs_preamble("MATCHALL", 3);
 	old = *bufc;

@@ -473,9 +473,14 @@ void do_page(dbref player, dbref cause, int key, char *tname, char *message)
 	}
 
 	atr_get_str(alias, player, A_ALIAS, &aowner, &aflags);
-	if(*alias)
-		snprintf(aladd, sizeof(aladd), " (%s)", alias);
-	else
+	if(*alias) {
+		char *ap = aladd;
+
+		safe_str(" (", aladd, &ap);
+		safe_str(alias, aladd, &ap);
+		safe_chr(')', aladd, &ap);
+		*ap = '\0';
+	} else
 		aladd[0] = 0;
 
 	/*
