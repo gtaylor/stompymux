@@ -4,10 +4,11 @@
 
 * Add auto clang-format?
 * Add clang-tidy?
+* Dedupe /include
+* Move /misc/ and /event/ under /src/?
+* Start breaking up src/ into system subdirs. Maybe db to start.
 * Maybe: remove alias/macro system
-* Remove src/patchlevel.h in lieu of build system metadata
 * Is src/myfifo.h still used?
-* Move p.*.h files
 * Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
 * Maybe: remove all powers. wiz bit is enough
@@ -17,3 +18,4 @@
 ## BTech Todos in the /btech/ dir
 
 * Maybe: do we need btech/src/mt19937ar.c or is there something else that may suffice for RNG?
+* Remove prototype header files.
