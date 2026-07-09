@@ -706,13 +706,10 @@ void do_motd(dbref player, dbref cause, int key, char *message)
 										 mudconf.downmotd_msg));
 			notify_quiet(player, tprintf("Full MOTD: %s",
 										 mudconf.fullmotd_msg));
-		} else {
-			if(Guest(player))
-				fcache_send(player, FC_CONN_GUEST);
-			else
+			} else {
 				fcache_send(player, FC_MOTD);
-			notify_quiet(player, mudconf.motd_msg);
-		}
+				notify_quiet(player, mudconf.motd_msg);
+			}
 		break;
 	default:
 		notify_quiet(player, "Illegal combination of switches.");

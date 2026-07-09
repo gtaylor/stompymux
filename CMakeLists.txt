@@ -346,7 +346,6 @@ set(NETMUX_SOURCES
   src/macro.c
   src/mail.c
   src/match.c
-  src/mguests.c
   src/move.c
   src/mmdb.c
   src/nametab.c

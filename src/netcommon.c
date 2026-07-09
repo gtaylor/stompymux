@@ -20,7 +20,6 @@
 #include "externs.h"
 #include "alloc.h"
 #include "attrs.h"
-#include "mguests.h"
 #include "ansi.h"
 #include "mail.h"
 #include "powers.h"
@@ -691,11 +690,8 @@ void announce_disconnect(dbref player, DESC * d, const char *reason)
 		raw_broadcast(MONITOR, (char *) "GAME: %s has disconnected.",
 					  Name(player), 0, 0, 0, 0, 0);
 
-		if(Guest(player) && mudconf.have_comsys)
-			toast_player(player);
-
-		argv[0] = (char *) reason;
-		c_Connected(player);
+			argv[0] = (char *) reason;
+			c_Connected(player);
 
 		atr_temp = atr_pget(player, A_ADISCONNECT, &aowner, &aflags);
 		if(atr_temp && *atr_temp)
@@ -757,9 +753,7 @@ void announce_disconnect(dbref player, DESC * d, const char *reason)
 			d->flags &= ~DS_AUTODARK;
 		}
 
-		if(Guest(player))
-			s_Flags(player, Flags(player) | DARK);
-	} else {
+		} else {
 		buf = alloc_mbuf("announce_disconnect.partial");
 		snprintf(buf, MBUF_SIZE, "%s has partially disconnected.", Name(player));
 		key = MSG_INV;
@@ -1192,7 +1186,6 @@ static int check_connect(DESC * d, char *msg)
 	dbref player, aowner;
 	long aflags; int nplayers;
 	DESC *d2;
-	char *p;
 
 	cmdsave = mudstate.debug_cmd;
 	mudstate.debug_cmd = (char *) "< check_connect >";
@@ -1213,20 +1206,6 @@ static int check_connect(DESC * d, char *msg)
 	parse_connect(msg, command, user, password);
 
 	if(!strncmp(command, "co", 2) || !strncmp(command, "cd", 2)) {
-		if((string_prefix(user, mudconf.guest_prefix)) &&
-		   (mudconf.guest_char != NOTHING) &&
-		   (mudconf.control_flags & CF_LOGIN)) {
-			if((p = make_guest(d)) == NULL) {
-				queue_string(d,
-							 "All guests are tied up, please try again later.\n");
-				free_lbuf(command);
-				free_lbuf(user);
-				free_lbuf(password);
-				return 0;
-			}
-			StringCopy(user, p);
-			StringCopy(password, mudconf.guest_prefix);
-		}
 		/*
 		 * See if this connection would exceed the max #players
 		 */
@@ -1310,10 +1289,7 @@ static int check_connect(DESC * d, char *msg)
 			 * player * * * doesn't * try to match on the text.
 			 */
 
-			if(Guest(player)) {
-				fcache_dump(d, FC_CONN_GUEST);
-			} else {
-				buff = atr_get(player, A_LAST, &aowner, &aflags);
+			buff = atr_get(player, A_LAST, &aowner, &aflags);
 				if((buff == NULL) || (*buff == '\0'))
 					fcache_dump(d, FC_CREA_NEW);
 				else
@@ -1321,8 +1297,7 @@ static int check_connect(DESC * d, char *msg)
 				if(Wizard(player))
 					fcache_dump(d, FC_WIZMOTD);
 				free_lbuf(buff);
-			}
-			announce_connect(player, d);
+				announce_connect(player, d);
 
 			/* If stuck in an @prog, show the prompt */
 
@@ -1391,7 +1366,7 @@ static int check_connect(DESC * d, char *msg)
 		if(d->host_info & H_REGISTRATION) {
 			fcache_dump(d, FC_CREA_REG);
 		} else {
-			player = create_player(user, password, NOTHING, 0, 0);
+			player = create_player(user, password, NOTHING, 0);
 			if(player == NOTHING) {
 				queue_string(d, create_fail);
 				STARTLOG(LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {

@@ -41,7 +41,6 @@
 #define	POW_MONITOR	0x00400000	/* Player can set or clear MONITOR */
 #define	POW_POLL	0x00800000	/* Player can set the doing poll */
 #define	POW_NO_DESTROY	0x01000000	/* Cannot be destroyed */
-#define POW_GUEST	0x02000000	/* Player is a guest */
 #define	POW_PASS_LOCKS	0x04000000	/* Player can pass any lock */
 #define	POW_STAT_ANY	0x08000000	/* Can @stat anyone */
 #define	POW_STEAL	0x10000000	/* Can give negative money */
@@ -112,7 +111,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define s_Can_Monitor(c)	s_Powers((c), Powers(c) | POW_MONITOR)
 #define s_Can_Poll(c)		s_Powers((c), Powers(c) | POW_POLL)
 #define s_No_Destroy(c)		s_Powers((c), Powers(c) | POW_NO_DESTROY)
-#define s_Guest(c)		s_Powers((c), Powers(c) | POW_GUEST)
 #define s_Set_Maint_Flags(c)	s_Powers((c), Powers(c) | POW_SET_MFLAGS)
 #define s_Stat_Any(c)		s_Powers((c), Powers(c) | POW_STAT_ANY)
 #define s_Steal(c)		s_Powers((c), Powers(c) | POW_STEAL)
@@ -153,7 +151,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define Can_Monitor(c)		(((Powers(c) & POW_MONITOR) != 0) || Wizard(c))
 #define Can_Poll(c)		(((Powers(c) & POW_POLL) != 0) || Wizard(c))
 #define No_Destroy(c)		(((Powers(c) & POW_NO_DESTROY) != 0) || Wizard(c))
-#define Guest(c)		((Powers(c) & POW_GUEST) != 0)
 #define Set_Maint_Flags(c)	((Powers(c) & POW_SET_MFLAGS) != 0)
 #define Stat_Any(c)		((Powers(c) & POW_STAT_ANY) != 0)
 #define Steal(c)		(((Powers(c) & POW_STEAL) != 0) || Wizard(c))

@@ -169,11 +169,6 @@ void cf_init(void)
 	mudconf.port = 6250;
 	mudconf.conc_port = 6251;
 	mudconf.init_size = 1000;
-	mudconf.guest_char = -1;
-	mudconf.guest_nuker = 1;
-	mudconf.number_guests = 30;
-	StringCopy(mudconf.guest_prefix, "Guest");
-	StringCopy(mudconf.guest_file, "text/guest.txt");
 	StringCopy(mudconf.conn_file, "text/connect.txt");
 	StringCopy(mudconf.conn_dir, "");
 	StringCopy(mudconf.creg_file, "text/register.txt");
@@ -204,7 +199,6 @@ void cf_init(void)
 	StringCopy(mudconf.fixed_home_msg, "");
 	StringCopy(mudconf.fixed_tel_msg, "");
 	StringCopy(mudconf.public_channel, "Public");
-	StringCopy(mudconf.guests_channel, "Guests");
 	mudconf.indent_desc = 0;
 	mudconf.name_spaces = 1;
 	mudconf.fork_dump = 1;
@@ -1283,18 +1277,6 @@ CONF conftable[] = {
 	 cf_string, CA_DISABLED, (void *) mudconf.gdbm, 128},
 	{(char *) "good_name",
 	 cf_badname, CA_GOD, NULL, 1},
-	{(char *) "guest_char_num",
-	 cf_int, CA_DISABLED, &mudconf.guest_char, 0},
-	{(char *) "guest_nuker",
-	 cf_int, CA_GOD, &mudconf.guest_nuker, 0},
-	{(char *) "guest_prefix",
-	 cf_string, CA_DISABLED, (void *) mudconf.guest_prefix, 32},
-	{(char *) "number_guests",
-	 cf_int, CA_DISABLED, &mudconf.number_guests, 0},
-	{(char *) "guest_file",
-	 cf_string, CA_DISABLED, (void *) mudconf.guest_file, 32},
-	{(char *) "guests_channel",
-	 cf_string, CA_DISABLED, (void *) mudconf.guests_channel, 32},
 	{(char *) "have_specials",
 	 cf_bool, CA_DISABLED, &mudconf.have_specials, 0},
 	{(char *) "have_comsys",

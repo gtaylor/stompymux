@@ -52,12 +52,6 @@ struct confdata {
     int port;			/* user port */
     int conc_port;		/* concentrator port */
     int init_size;		/* initial db size */
-    int have_guest;		/* Do we wish to allow a GUEST character? */
-    int guest_char;		/* player num of prototype GUEST character */
-    int guest_nuker;		/* Wiz who nukes the GUEST characters. */
-    int number_guests;		/* number of guest characters allowed */
-    char guest_prefix[32];	/* Prefix for the guest char's name */
-    char guest_file[32];	/* display if guest connects */
     char conn_file[32];		/* display on connect if no registration */
     char conn_dir[32];		/* display on connect if no registration */
     char creg_file[32];		/* display on connect if registration */
@@ -88,7 +82,6 @@ struct confdata {
     char fixed_home_msg[128];	/* Message displayed when going home and FIXED */
     char fixed_tel_msg[128];	/* Message displayed when teleporting and FIXED */
     char public_channel[32];	/* Name of public channel */
-    char guests_channel[32];	/* Name of guests channel */
     int allow_unloggedwho;	/* Wether or not to allow unlogged-in clients to use WHO, DOING and SESSION */
     int btech_explode_reactor;	/* Allow or disallow explode reactor */
     int btech_explode_ammo;	/* Allow or disallow explode ammo */
@@ -423,7 +416,6 @@ struct statedata {
     int mail_db_top;		/* Like db_top */
     int mail_db_size;		/* Like db_size */
     MENT *mail_list;		/* The mail database */
-    int *guest_free;		/* Table to keep track of free guests */
     MARKBUF *markbits;		/* temp storage for marking/unmarking */
     int func_nest_lev;		/* Current nesting of functions */
     int func_invk_ctr;		/* Functions invoked so far by this command */

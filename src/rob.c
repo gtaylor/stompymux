@@ -226,10 +226,6 @@ void do_give(dbref player, dbref cause, int key, char *who, char *amnt)
 		return;
 	}
 
-	if(Guest(recipient)) {
-		notify(player, "Guest really doesn't need money or anything.");
-		return;
-	}
 	if(is_number(amnt)) {
 		give_money(player, recipient, key, atoi(amnt));
 	} else {

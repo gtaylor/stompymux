@@ -1833,7 +1833,7 @@ void db_make_minimal(void)
 	 */
 	load_player_names();
 	obj =
-		create_player((char *) "Wizard", (char *) "potrzebie", NOTHING, 0, 0);
+		create_player((char *) "Wizard", (char *) "potrzebie", NOTHING, 0);
 	s_Flags(obj, Flags(obj) | WIZARD);
 	s_Powers(obj, 0);
 	s_Powers2(obj, 0);

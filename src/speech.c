@@ -358,7 +358,7 @@ static void page_return(dbref player, dbref target, const char *tag, int anum,
 
 static int page_check(dbref player, dbref target)
 {
-	if(!payfor(player, Guest(player) ? 0 : mudconf.pagecost)) {
+	if(!payfor(player, mudconf.pagecost)) {
 		notify_printf(player, "You don't have enough %s.",
 					  mudconf.many_coins);
 		return 0;

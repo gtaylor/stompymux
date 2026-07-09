@@ -172,7 +172,7 @@ void empty_obj(dbref);
 void record_login(dbref, int, char *, char *, char *);
 int check_pass(dbref, const char *);
 dbref connect_player(char *, char *, char *, char *);
-dbref create_player(char *, char *, dbref, int, int);
+dbref create_player(char *, char *, dbref, int);
 int add_player_name(dbref, char *);
 int delete_player_name(dbref, char *);
 dbref lookup_player(dbref, char *, int);

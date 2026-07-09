@@ -193,7 +193,6 @@ struct addedentry {
 #define CA_NO_ROBOT	0x00002000	/* Not by ROBOT players */
 #define CA_NO_SLAVE	0x00004000	/* Not by SLAVE players */
 #define CA_NO_SUSPECT	0x00008000	/* Not by SUSPECT players */
-#define CA_NO_GUEST	0x00010000	/* Not by GUEST players */
 #define CA_NO_IC        0x00020000	/* Not by IC players */
 
 

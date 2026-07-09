@@ -639,7 +639,7 @@ void do_pcreate(dbref player, dbref cause, int key, char *name, char *pass)
 	dbref newplayer;
 
 	isrobot = (key == PCRE_ROBOT) ? 1 : 0;
-	newplayer = create_player(name, pass, player, isrobot, 0);
+	newplayer = create_player(name, pass, player, isrobot);
 	if(newplayer == NOTHING) {
 		notify_quiet(player, tprintf("Failure creating '%s'", name));
 		return;

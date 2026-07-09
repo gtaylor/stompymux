@@ -33,8 +33,8 @@ We would like to thank the following people:
 - Kalkin(DarkZone) and Harlock(StarWarsII) who extended the comsystem and
   added tons of new commands, which is basically unchanged here.
  
-- Kalkin, again, for the basis of the mail alias and guest code, and the
-  idea of restarting on a fatal signal.
+- Kalkin, again, for the basis of the mail alias code, and the idea of
+  restarting on a fatal signal.
   
 - Airam(Generations) for ideas on the stack and @program code.
 

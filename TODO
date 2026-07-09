@@ -2,15 +2,10 @@
 
 ## MUX Todos in the /src/ dir
 
-* Remove src/dummy.c - automake no longer necessary
-* Remove src/mguests.c and any other remnants of the guest system
-* Maybe: remove src/htab.h if we don't need it any longer
-* Move src/copyright.h to some kind of docs file
 * Maybe: remove alias/macro system
 * Maybe: remove @mail
 * Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
-* Replace src/compat.c with zig equivalents
 * Maybe: remove all powers. wiz bit is enough
 * Write tests
 * Switch DB to sqlite

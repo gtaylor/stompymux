@@ -335,7 +335,7 @@ void do_processcom(dbref player, char *arg1, char *arg2)
 		raw_notify(player, "That channel type cannot be transmitted on.");
 		return;
 	} else {
-		if(!payfor(player, Guest(player) ? 0 : ch->charge)) {
+			if(!payfor(player, ch->charge)) {
 			notify_printf(player, "You don't have enough %s.",
 						  mudconf.many_coins);
 			return;

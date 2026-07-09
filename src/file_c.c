@@ -42,8 +42,6 @@ FCACHE fcache[] = {
 	,
 	{mudconf.full_file, NULL, "Conn/Full"}
 	,
-	{mudconf.guest_file, NULL, "Conn/Guest"}
-	,
 	{mudconf.creg_file, NULL, "Conn/Reg"}
 	,
 	{mudconf.crea_file, NULL, "Crea/Newuser"}
@@ -65,7 +63,6 @@ NAMETAB list_files[] = {
 	{(char *) "create_register", 2, CA_WIZARD, FC_CREA_REG},
 	{(char *) "down", 1, CA_WIZARD, FC_CONN_DOWN},
 	{(char *) "full", 1, CA_WIZARD, FC_CONN_FULL},
-	{(char *) "guest_motd", 1, CA_WIZARD, FC_CONN_GUEST},
 	{(char *) "motd", 1, CA_WIZARD, FC_MOTD},
 	{(char *) "newuser", 1, CA_WIZARD, FC_CREA_NEW},
 	{(char *) "quit", 1, CA_WIZARD, FC_QUIT},

@@ -268,8 +268,7 @@ dbref connect_player(char *name, char *password, char *host, char *username)
 /**
  * Create a new player.
  */
-dbref create_player(char *name, char *password, dbref creator, int isrobot,
-					int isguest)
+dbref create_player(char *name, char *password, dbref creator, int isrobot)
 {
 	dbref player;
 	char *pbuf;
@@ -295,13 +294,8 @@ dbref create_player(char *name, char *password, dbref creator, int isrobot,
 	/*
 	 * initialize everything
 	 */
-	if(isguest) {
-		if(*mudconf.guests_channel)
-			do_addcom(player, player, 0, "g", mudconf.guests_channel);
-	} else {
-		if(*mudconf.public_channel)
-			do_addcom(player, player, 0, "pub", mudconf.public_channel);
-	}
+	if(*mudconf.public_channel)
+		do_addcom(player, player, 0, "pub", mudconf.public_channel);
 
 	s_Pass(player, crypt(pbuf, "XX"));
 	s_Home(player, start_home());

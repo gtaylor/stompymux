@@ -94,7 +94,6 @@ POWERENT gen_powers[] = {
 	{(char *) "monitor", POW_MONITOR, 0, 0, ph_wiz},
 	{(char *) "poll", POW_POLL, 0, 0, ph_wiz},
 	{(char *) "no_destroy", POW_NO_DESTROY, 0, 0, ph_wiz},
-	{(char *) "guest", POW_GUEST, 0, 0, ph_god},
 	{(char *) "stat_any", POW_STAT_ANY, 0, 0, ph_wiz},
 	{(char *) "steal_money", POW_STEAL, 0, 0, ph_wiz},
 	{(char *) "tel_anywhere", POW_TEL_ANYWHR, 0, 0, ph_wiz},
