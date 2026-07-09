@@ -1091,7 +1091,7 @@ int Hearer(dbref thing) {
         free_lbuf(buff);
       return 1;
     }
-    if (Monitor(thing)) {
+    if (buff && Monitor(thing)) {
       ap = atr_num(attr);
       if (!ap || (ap->flags & AF_NOPROG))
         continue;

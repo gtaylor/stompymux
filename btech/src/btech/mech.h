@@ -634,8 +634,9 @@ struct critical_slot {
 /* Fire modes */
 #define DESTROYED_MODE 0x00000001 /* the part is destroyed */
 #define DISABLED_MODE 0x00000002  /* the part is disabled */
-#define BROKEN_MODE 0x00000004 /* the part is part of a destroyed weapon/item  \
-                                */
+#define BROKEN_MODE                                                            \
+  0x00000004 /* the part is part of a destroyed weapon/item                    \
+              */
 #define DAMAGED_MODE                                                           \
   0x00000008             /* the part is damaged from an enhanced critical */
 #define ON_TC 0x00000010 /* (T) Set if the wepons mounted with TC */
@@ -683,18 +684,20 @@ struct critical_slot {
   0x00000400                      /* (Y) inarc launcher firing haywire pods */
 #define INARC_ECM_MODE 0x00000800 /* (E) inarc launcher firing ecm pods */
 #define INARC_NEMESIS_MODE                                                     \
-  0x00001000                  /* (Z) inarc launcher firing nemesis pods */
-#define AC_AP_MODE 0x00002000 /* (R) autocannon firing armor piercing rounds   \
-                               */
+  0x00001000 /* (Z) inarc launcher firing nemesis pods */
+#define AC_AP_MODE                                                             \
+  0x00002000 /* (R) autocannon firing armor piercing rounds                    \
+              */
 #define AC_FLECHETTE_MODE                                                      \
   0x00004000 /* (F) autocannon firing flechette rounds */
 #define AC_INCENDIARY_MODE                                                     \
   0x00008000 /* (D) autocannon firing incendiary rounds */
 #define AC_PRECISION_MODE                                                      \
-  0x00010000                        /* (P) autocannon firing precision rounds */
-#define STINGER_MODE 0x00020000     /* (T) AntiAir LRM */
-#define AC_CASELESS_MODE 0x00040000 /* (U) autocannon firing caseless rounds   \
-                                     */
+  0x00010000                    /* (P) autocannon firing precision rounds */
+#define STINGER_MODE 0x00020000 /* (T) AntiAir LRM */
+#define AC_CASELESS_MODE                                                       \
+  0x00040000 /* (U) autocannon firing caseless rounds                          \
+              */
 #define SGUIDED_MODE                                                           \
   0x00080000 /* (G) LRM's loaded with Semi-Guided rounds (benefits only if     \
                 unit is lit by 'TAG' */
@@ -812,14 +815,16 @@ struct section_struct {
 #define MOVENEMENT_LAST 10
 
 /* Mech Preferences list */
-#define MECHPREF_PKILL 0x00000001    /* Kill MWs anyway */
-#define MECHPREF_SLWARN 0x00000002   /* Warn when lit by slite */
-#define MECHPREF_AUTOFALL 0x00000004 /* Jump off cliffs (don't try to avoid)   \
-                                      */
+#define MECHPREF_PKILL 0x00000001  /* Kill MWs anyway */
+#define MECHPREF_SLWARN 0x00000002 /* Warn when lit by slite */
+#define MECHPREF_AUTOFALL                                                      \
+  0x00000004 /* Jump off cliffs (don't try to avoid)                           \
+              */
 #define MECHPREF_NOARMORWARN                                                   \
   0x00000008 /* Don't warn when armor is getting low */
-#define MECHPREF_NOAMMOWARN 0x00000010 /* Don't warn when ammo is getting low  \
-                                        */
+#define MECHPREF_NOAMMOWARN                                                    \
+  0x00000010 /* Don't warn when ammo is getting low                            \
+              */
 #define MECHPREF_STANDANYWAY                                                   \
   0x00000020                           /* Try to stand even when BTH too high */
 #define MECHPREF_AUTOCON_SD 0x00000040 /* Autocon on non-started units */
@@ -892,8 +897,8 @@ typedef struct {
   byte fire_adjustment; /* For artillery mostly */
   char vis_mod;         /* Should be in range of 0 to 100 ; basically, this
                            is used as _base_ of random element in each sensor type,
-                           altered         once every heat update (and when mech's sensor mode
-                           changes) */
+                           altered         once every heat update (and when mech's
+                           sensor mode         changes) */
   char chargetimer;     /* # of movement ticks since 'charge' command */
   float chargedist;     /* # of hexes moved since 'charge' command */
   char staggerstamp;    /* When in last turn this 'mech staggered */
@@ -1082,8 +1087,9 @@ struct repair_data {
 #define TOWED 0x00004000         /* (o) Someone's towing us */
 #define LOCK_TARGET 0x00008000   /* (p) We mean business */
 #define LOCK_BUILDING 0x00010000 /* (q) Hit building */
-#define LOCK_HEX 0x00020000 /* (r) Hit hex (clear / ignite, d'pend on weapon)  \
-                             */
+#define LOCK_HEX                                                               \
+  0x00020000 /* (r) Hit hex (clear / ignite, d'pend on weapon)                 \
+              */
 #define LOCK_HEX_IGN 0x00040000 /* (s) */
 #define LOCK_HEX_CLR 0x00080000 /* (t) */
 #define MASC_ENABLED 0x00100000 /* (u) Using MASC */
@@ -1205,8 +1211,9 @@ struct repair_data {
 #define CHEAD 0x08000000        /* (B) Altered heading */
 #define OBSERVATORIC 0x10000000 /* (C) */
 #define BLOODHOUND_DESTROYED 0x20000000 /* (D) */
-#define MECH_STUNNED 0x40000000 /* (E) Is the mech stunned (Exile stun code)   \
-                                 */
+#define MECH_STUNNED                                                           \
+  0x40000000 /* (E) Is the mech stunned (Exile stun code)                      \
+              */
 
 /* tankcritstatus element */
 #define TURRET_LOCKED 0x01

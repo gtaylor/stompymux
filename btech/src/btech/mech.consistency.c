@@ -438,7 +438,7 @@ int mech_weight_sub_mech(dbref player, MECH *mech, int interactive) {
   // ceil(armor /
 
   //					(8. * (MechSpecials(mech) & HARDA_TECH ?
-  //2 : 1))) * 512);
+  // 2 : 1))) * 512);
 
   if (MyMechNumOsinks(mech)) {
     pile[Special(HEAT_SINK)] =

@@ -934,6 +934,8 @@ void do_mvattr(dbref player, dbref cause, int key, char *what, char *args[],
   long aflags, axflags;
   char *astr;
 
+  aflags = 0;
+
   /*
    * Make sure we have something to do.
    */

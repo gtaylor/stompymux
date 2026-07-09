@@ -93,7 +93,6 @@ static void desc_delhash(DESC *d) {
              "hashtable.\n",
              d->player);
     log_text(buffer);
-    release_descriptor(d);
     return;
   }
 
@@ -116,12 +115,12 @@ static void desc_delhash(DESC *d) {
   while (hdesc->hashnext != NULL) {
     if (hdesc->hashnext == d) {
       hdesc->hashnext = d->hashnext;
+      d->hashnext = NULL;
+      release_descriptor(d);
       break;
     }
     hdesc = hdesc->hashnext;
   }
-  d->hashnext = NULL;
-  release_descriptor(d);
   return;
 }
 
@@ -264,7 +263,6 @@ int eradicate_broken_fd(int fd) {
       event_del(&d->sock_ev);
       close(d->descriptor);
       shutdownsock(d, R_SOCKDIED);
-      release_descriptor(d);
     }
   }
   if (mux_bound_socket != -1 && fstat(mux_bound_socket, &statbuf) < 0) {
@@ -300,7 +298,7 @@ void accept_client_input(int fd, short event, void *arg) {
     eradicate_broken_fd(fd);
   }
   /*dprintk("finish on fd %d DESC %p", fd, arg); */
-  release_descriptor(connection);
+  release_descriptor(connection); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
 void bsd_write_callback(struct bufferevent *bufev, void *arg) {}
@@ -341,7 +339,6 @@ static void runqueues(int fd, short event, void *arg) {
 }
 
 void shovechars(int port) {
-  unsigned int flags;
   queue_slice.tv_sec = 0;
   queue_slice.tv_usec = mudconf.timeslice * 1000;
 
@@ -357,8 +354,6 @@ void shovechars(int port) {
             accept_new_connection, NULL);
   event_add(&listen_sock_ev, NULL);
 
-  flags = fcntl(2, F_GETFD, 0);
-  dprintk("stderr is %x", flags);
 #ifdef IPV6_SUPPORT
   if (mux_bound_socket6 < 0) {
     mux_bound_socket6 = bind_mux6_socket(port);
@@ -378,9 +373,7 @@ void shovechars(int port) {
 }
 
 static void accept_new_connection(int sock, short event, void *arg) {
-  int newsock, addr_len, len;
-  char *buff, *buff1;
-  DESC *d;
+  int newsock, addr_len;
   struct sockaddr_storage addr;
   char addrname[1024];
   char addrport[32];
@@ -402,12 +395,11 @@ static void accept_new_connection(int sock, short event, void *arg) {
     shutdown(newsock, 2);
     close(newsock);
     errno = 0;
-    d = NULL;
   } else {
     log_error(LOG_NET, "NET", "CONN", "Connection opened from %s %s.", addrname,
               addrport);
 
-    d = initializesock(newsock, &addr, addr_len);
+    initializesock(newsock, &addr, addr_len);
   }
   return;
 }
@@ -444,6 +436,7 @@ void shutdownsock(DESC *d, int reason) {
   /*    dprintk("shutdownsock called on %p %s(#%d) refcount %d",
           d, (d->player?Name(d->player):""), d->player, d->refcount); */
 
+  d->flags |= DS_DEAD;
   if (d->flags & DS_CONNECTED) {
     if (d->outstanding_dnschild_query)
       dnschild_kill(d->outstanding_dnschild_query);
@@ -479,8 +472,7 @@ void shutdownsock(DESC *d, int reason) {
     announce_disconnect(d->player, d, disc_messages[reason]);
     desc_delhash(d);
   }
-  d->flags |= DS_DEAD;
-  release_descriptor(d);
+  release_descriptor(d); // NOLINT(clang-analyzer-unix.Malloc)
   /* dprintk("shutdown."); */
 }
 
@@ -581,7 +573,7 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
 
 static int process_input(DESC *d) {
   char buf[LBUF_SIZE];
-  int got, in, iter;
+  int got, iter;
   char current;
 
   if (d->flags & DS_DEAD) {
@@ -592,7 +584,7 @@ static int process_input(DESC *d) {
 
   memset(buf, 0, sizeof(buf));
 
-  got = in = read(d->descriptor, buf, (sizeof buf - 1));
+  got = read(d->descriptor, buf, (sizeof buf - 1));
 
   if (got <= 0) {
     if (errno == EINTR)
@@ -657,7 +649,7 @@ static int process_input(DESC *d) {
   }
   // dprintk("finished %p fd %d", d, d->descriptor);
 
-  release_descriptor(d);
+  release_descriptor(d); // NOLINT(clang-analyzer-unix.Malloc)
   return 1;
 }
 

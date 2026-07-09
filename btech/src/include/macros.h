@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include "externs.h"
+
 #ifdef notify
 #undef notify
 #endif

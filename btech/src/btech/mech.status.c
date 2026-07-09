@@ -1408,7 +1408,7 @@ void PrintWeaponStatus(MECH *mech, dbref player) {
 
     //		if(MechSpecials(mech) & LIGHT_BAP_TECH)
     //			snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) -
-    //strleng(tempbuff), " LightBAP");
+    // strleng(tempbuff), " LightBAP");
 
     notify(player, tempbuff);
     tempbuff[0] = 0;

@@ -269,7 +269,6 @@ static BOOLEXP *test_atr(char *s) {
       free_lbuf(buff);
       return ((BOOLEXP *)NULL);
     }
-    s1 = buff;
     for (s1 = buff; isdigit(*s1); s1++)
       ;
     if (*s1) {
@@ -331,9 +330,9 @@ static BOOLEXP *parse_boolexp_L(void) {
      * strip trailing whitespace
      */
 
-    *p-- = '\0';
-    while (isspace(*p))
-      *p-- = '\0';
+    *p = '\0';
+    while (p > buf && isspace((unsigned char)p[-1]))
+      *--p = '\0';
 
     /*
      * check for an attribute

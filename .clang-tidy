@@ -1,0 +1,2 @@
+Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores'
+HeaderFilterRegex: '^.*/src/.*'

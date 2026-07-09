@@ -27,8 +27,9 @@
        Includes the command as the first argument */
 
 /* The various flags for the AI */
-#define AUTOPILOT_AUTOGUN 1 /* Is autogun enabled, ie: shoot what AI wants to  \
-                             */
+#define AUTOPILOT_AUTOGUN                                                      \
+  1 /* Is autogun enabled, ie: shoot what AI wants to                          \
+     */
 #define AUTOPILOT_GUNZOMBIE 2
 #define AUTOPILOT_PILZOMBIE 4
 #define AUTOPILOT_ROAM 8       /* Are we roaming around */
@@ -53,8 +54,9 @@
 #define AUTOPILOT_FOLLOW_UPDATE_TICK                                           \
   10 /* When should we update the target hex */
 
-#define AUTOPILOT_CHASETARG_UPDATE_TICK 30 /* When should we update chasetarg  \
-                                            */
+#define AUTOPILOT_CHASETARG_UPDATE_TICK                                        \
+  30 /* When should we update chasetarg                                        \
+      */
 
 #define AUTOPILOT_STARTUP_TICK                                                 \
   STARTUP_TIME + AUTOPILOT_NC_DELAY /* Delay for startup */
@@ -65,8 +67,9 @@
 #define AUTO_GUN_MAX_TARGETS 100 /* Don't really use this one */
 #define AUTO_GUN_MAX_RANGE 30    /* Max range to look for targets */
 #define AUTO_GUN_UPDATE_TICK 30  /* When to look for a new target */
-#define AUTO_GUN_IDLE_TICK 10 /* How often to call autogun when in idle mode   \
-                               */
+#define AUTO_GUN_IDLE_TICK                                                     \
+  10 /* How often to call autogun when in idle mode                            \
+      */
 #define AUTO_GUN_PHYSICAL_RANGE_MIN                                            \
   3.0 /* Min range at which to physically attack                               \
          other targets if our main target is beyond                            \

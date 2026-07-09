@@ -15,11 +15,11 @@
 #include "vattr.h"
 
 /* adds for commac */
+#include "../misc/myfifo.h"
 #include "commac.h"
 #include "comsys.h"
 #include "create.h"
 #include "macro.h"
-#include "../misc/myfifo.h"
 
 extern OBJ *db;
 

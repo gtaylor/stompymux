@@ -70,12 +70,13 @@
 #define MAPFLAG_VACUUM 4 /* (c) We're in vacuum */
 #define MAPFLAG_FIRES 8  /* (d) We have eternal fires */
 #define MAPFLAG_UNDERGROUND                                                    \
-  16                           /* (e) We're underground. No ejecting, jumping, \
-                                  VTOL taking off */
-#define MAPFLAG_DARK 32        /* (f) We can't see map beyond sensor range */
-#define MAPFLAG_BRIDGESCS 64   /* (g) We can't destroy bridges on this map */
-#define MAPFLAG_NOBRIDGIFY 128 /* (h) We shouldn't convert roads into bridges  \
-                                */
+  16                         /* (e) We're underground. No ejecting, jumping,   \
+                                VTOL taking off */
+#define MAPFLAG_DARK 32      /* (f) We can't see map beyond sensor range */
+#define MAPFLAG_BRIDGESCS 64 /* (g) We can't destroy bridges on this map */
+#define MAPFLAG_NOBRIDGIFY                                                     \
+  128 /* (h) We shouldn't convert roads into bridges                           \
+       */
 #define MAPFLAG_NOFRIENDLYFIRE                                                 \
   256 /* (i) We can't shoot friendlies AT ALL on this map */
 #define MAPFLAG_NOPHYSICALS                                                    \
@@ -88,7 +89,8 @@
   2 /* Decoration, like those 2 previous ones. obj = obj# of DS it is related  \
        to, datac = char it replaced */
 #define TYPE_LAST_DEC 2
-#define TYPE_MINE 3  /* datac = type, datas = damage it causes, datai = extra  \
+#define TYPE_MINE                                                              \
+  3                  /* datac = type, datas = damage it causes, datai = extra  \
                       */
 #define TYPE_BUILD 4 /* Building obj=# of the internal map */
 #define TYPE_LEAVE                                                             \

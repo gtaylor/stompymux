@@ -325,7 +325,7 @@ void rb_insert(rbtree bt, void *key, void *data) {
   node->color = NODE_RED;
   if (node->parent && node->parent->color == NODE_RED) {
     iter = node;
-    while (iter != bt->head && iter->parent->parent &&
+    while (iter != bt->head && iter->parent && iter->parent->parent &&
            iter->parent->color == NODE_RED) {
       bt->head->color = NODE_BLACK;
       if (iter->parent == iter->parent->parent->left) {
@@ -583,8 +583,9 @@ static void rb_unlink_leaf(rbtree bt, rbtree_node *leaf) {
     }
   }
 
-  if (!sibling && node->parent->color == NODE_RED) {
-    node->parent->color = NODE_BLACK;
+  if (!sibling) {
+    if (node->parent->color == NODE_RED)
+      node->parent->color = NODE_BLACK;
     goto done;
   }
 
@@ -717,6 +718,9 @@ void *rb_delete(rbtree bt, void *key) {
   // without empty children.
 
   child = rb_find_successor_node(node);
+  if (!child)
+    return data;
+
   tail = child;
   while (tail) {
     tail->count--;

@@ -291,7 +291,7 @@ void fwdlist_set(dbref thing, FWDLIST *ifp) {
    * Copy input forwardlist to a correctly-sized buffer
    */
 
-  fp = (FWDLIST *)XMALLOC(sizeof(int) * ((ifp->count) + 1), "fwdlist_set");
+  fp = (FWDLIST *)XMALLOC(sizeof(FWDLIST), "fwdlist_set");
 
   for (i = 0; i < ifp->count; i++) {
     fp->data[i] = ifp->data[i];
@@ -333,6 +333,9 @@ int fwdlist_load(FWDLIST *fp, dbref player, char *atext) {
   dbref target;
   char *tp, *bp, *dp;
   int count, errors, fail;
+
+  if (!atext)
+    atext = "";
 
   count = 0;
   errors = 0;
@@ -396,7 +399,8 @@ int fwdlist_rewrite(FWDLIST *fp, char *atext) {
     free_sbuf(tp);
   } else {
     count = 0;
-    *atext = '\0';
+    if (atext)
+      *atext = '\0';
   }
   return count;
 }
@@ -424,7 +428,7 @@ int fwdlist_ck(int key, dbref player, dbref thing, int anum, char *atext) {
    */
 
   fwdlist_set(thing, fp);
-  count = fwdlist_rewrite(fp, atext);
+  count = atext ? fwdlist_rewrite(fp, atext) : (fp ? fp->count : 0);
   if (fp)
     free_lbuf(fp);
   return ((count > 0) || !atext || !*atext);
@@ -934,9 +938,12 @@ int Commer(dbref thing) {
     c = *s;
     free_lbuf(s);
     if ((c == '$') && !(aflags & AF_NOPROG)) {
+      free(as);
       return 1;
     }
   }
+  if (as)
+    free(as);
   return 0;
 }
 
@@ -1466,6 +1473,8 @@ void atr_cpy(dbref player, dbref dest, dbref source) {
     }
     free_lbuf(buf);
   }
+  if (as)
+    free(as);
 }
 
 /*
@@ -1487,6 +1496,8 @@ void atr_chown(dbref obj) {
       atr_add(obj, attr, buf, owner, aflags);
     free_lbuf(buf);
   }
+  if (as)
+    free(as);
 }
 
 /*
@@ -1503,6 +1514,7 @@ int atr_next(char **attrp) {
     atr = (ATRCOUNT *)*attrp;
     if (atr->count > db[atr->thing].at_count) {
       free(atr);
+      *attrp = NULL;
       return 0;
     }
     atr->count++;
@@ -1523,8 +1535,14 @@ int atr_head(dbref thing, char **attrp) {
     atr->thing = thing;
     atr->count = 2;
     *attrp = (char *)atr;
+    if (!db[thing].ahead[0].number) {
+      free(atr);
+      *attrp = NULL;
+      return 0;
+    }
     return db[thing].ahead[0].number;
   }
+  *attrp = NULL;
   return 0;
 }
 
@@ -1944,6 +1962,7 @@ BOOLEXP *dup_bool(BOOLEXP *b) {
     break;
   default:
     fprintf(stderr, "bad bool type!!\n");
+    free_bool(r);
     return (TRUE_BOOLEXP);
   }
   return (r);

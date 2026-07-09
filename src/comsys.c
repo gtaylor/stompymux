@@ -130,8 +130,10 @@ void load_comsystem(FILE *fp) {
   for (i = 0; i < nc; i++) {
     ch = (struct channel *)malloc(sizeof(struct channel));
 
-    if (fscanf(fp, "%[^\n]\n", temp) != 1)
+    if (fscanf(fp, "%[^\n]\n", temp) != 1) {
+      free(ch);
       return;
+    }
 
     strncpy(ch->name, temp, CHAN_NAME_LEN);
     ch->name[CHAN_NAME_LEN - 1] = '\0';

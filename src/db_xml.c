@@ -134,7 +134,7 @@ static int xml_db_write_mux(FILE *f, dbref i, int db_format, int flags) {
 
 dbref xml_db_write(FILE *f, int format, int version) {
   dbref i;
-  int flags;
+  int flags = 0;
 
   fprintf(f, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
   fprintf(f, "<TinyMUXDataBase dumptime=\"%lu\">\n", mudstate.now);

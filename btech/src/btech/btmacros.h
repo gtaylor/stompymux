@@ -22,8 +22,8 @@
 #pragma once
 
 #include "floatsim.h"
-#include "mech.h"
 #include "macros.h"
+#include "mech.h"
 #include "muxevent.h"
 #include "p.event.h"
 #include <math.h>

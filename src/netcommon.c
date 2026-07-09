@@ -264,10 +264,10 @@ void raw_broadcast(int inflags, char *template, ...) {
   DESC *d;
   va_list ap;
 
-  va_start(ap, template);
   if (!template || !*template)
     return;
 
+  va_start(ap, template);
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
 

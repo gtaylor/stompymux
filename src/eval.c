@@ -767,7 +767,7 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
                 */
         safe_chr(**dstr, buff, bufc);
       }
-      if (isupper(savec))
+      if ((*bufc > savepos) && isupper((unsigned char)savec))
         *savepos = ToUpper(*savepos);
       break;
     case '(':
@@ -1033,10 +1033,12 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
    */
 
   if (realbuff) {
+    char *oldbuff = buff;
     **bufc = '\0';
     *bufc = realbp;
     safe_str(buff, realbuff, bufc);
-    free(buff);
+    start = realbuff + (start - oldbuff);
+    free(oldbuff);
     buff = realbuff;
   }
 

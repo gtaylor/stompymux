@@ -384,6 +384,7 @@ static char *find_attribute_flag(int flag, NAMETAB *ntab) {
   for (nt = ntab; nt->name; nt++) {
     if (flag == nt->flag) {
       flag_name = strdup(nt->name);
+      break;
     }
   }
 

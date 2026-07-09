@@ -93,8 +93,8 @@ void pickup_mw(MECH *mech, MECH *target) {
                 !(MechSpecials(mech) & SALVAGE_TECH),
             "You can't pick up, period.")
   if (mw > 0)
-      notify_printf(mw, "%s scoops you up and brings you into the cockpit.",
-                    GetMechToMechID(target, mech));
+    notify_printf(mw, "%s scoops you up and brings you into the cockpit.",
+                  GetMechToMechID(target, mech));
   /* Put the player in the picker uppper and clear him from the map */
   MechLOSBroadcast(mech, tprintf("picks up %s.", GetMechID(target)));
   mech_printf(mech, MECHALL,

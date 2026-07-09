@@ -61,10 +61,12 @@ int main(int argc, char *argv[]) {
     }
     pos += n;
   }
-  entry.len = (int)(pos - entry.pos);
-  if (fwrite(&entry, sizeof(help_indx), 1, wfp) < 1) {
-    fprintf(stderr, "error writing %s\n", argv[2]);
-    exit(-1);
+  if (ntopics > 0) {
+    entry.len = (int)(pos - entry.pos);
+    if (fwrite(&entry, sizeof(help_indx), 1, wfp) < 1) {
+      fprintf(stderr, "error writing %s\n", argv[2]);
+      exit(-1);
+    }
   }
   fclose(rfp);
   fclose(wfp);

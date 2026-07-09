@@ -585,7 +585,7 @@ static char *crypt_code(char *code, char *text, int type) {
   int mod = end - start + 1;
   char *p, *q, *r;
 
-  if (!text && !*text)
+  if (!text || !*text)
     return (char *)"";
   if (!code || !*code)
     return text;

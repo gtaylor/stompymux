@@ -1055,7 +1055,7 @@ static void sweep_check(dbref player, dbref what, int key, int is_loc) {
         canhear = 1;
         break;
       }
-      if (Monitor(what)) {
+      if (buff && Monitor(what)) {
         ap = atr_num(attr);
         if (!ap || (ap->flags & AF_NOPROG))
           continue;

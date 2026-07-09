@@ -1099,6 +1099,7 @@ void do_ps(dbref player, dbref cause, int key, char *target) {
   /*
    * Go do it
    */
+  pqent = 0;
   pqtot = 0;
   if (player_targ == NOTHING) {
     objq = mudstate.qhead;

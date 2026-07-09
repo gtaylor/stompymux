@@ -61,11 +61,12 @@ void *hashfind(char *str, RBTAB *htab) {
  */
 
 int hashadd(char *str, void *hashdata, RBTAB *htab) {
-  struct string_dict_entry *ent = malloc(sizeof(struct string_dict_entry));
+  struct string_dict_entry *ent;
 
   if (rb_exists(htab->tree, str))
     return (-1);
 
+  ent = malloc(sizeof(struct string_dict_entry));
   ent->key = strdup(str);
   ent->data = hashdata;
 
