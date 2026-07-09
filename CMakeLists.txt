@@ -29,9 +29,6 @@ option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
-set(BTECH_BTPR "mux1" CACHE STRING "BTPR layer: mux1, penn, or mux2")
-set_property(CACHE BTECH_BTPR PROPERTY STRINGS mux1 penn mux2)
-
 option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTMUX_ENABLE_WERROR "Treat compiler warnings as errors" OFF)
 
@@ -151,19 +148,6 @@ set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 set(BT_SCALED_INFRARED ${BTECH_SCALED_INFRARED})
 set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
-set(BTPR_MUX1 OFF)
-set(BTPR_PENN OFF)
-set(BTPR_MUX2 OFF)
-if(BTECH_BTPR STREQUAL "mux1")
-  set(BTPR_MUX1 ON)
-elseif(BTECH_BTPR STREQUAL "penn")
-  set(BTPR_PENN ON)
-elseif(BTECH_BTPR STREQUAL "mux2")
-  set(BTPR_MUX2 ON)
-else()
-  message(FATAL_ERROR "BTECH_BTPR must be one of: mux1, penn, mux2")
-endif()
-
 configure_file(cmake/autoconf.h.in btech/autoconf.h)
 
 set(build_num_file "${CMAKE_BINARY_DIR}/buildnum.data")
@@ -228,42 +212,6 @@ target_include_directories(btfi PRIVATE
   "${CMAKE_BINARY_DIR}/btech"
   "${CMAKE_SOURCE_DIR}/btech/btfi"
   "${CMAKE_SOURCE_DIR}/btech/btfi/include")
-
-set(BTPR_SOURCES
-  btech/btpr/event.c
-  btech/btpr/comsys.c
-  btech/btpr/conf.c
-  btech/btpr/db.c
-  btech/btpr/dllist.c
-  btech/btpr/eval.c
-  btech/btpr/game.c
-  btech/btpr/flags.c
-  btech/btpr/functions.c
-  btech/btpr/log.c
-  btech/btpr/move.c
-  btech/btpr/netcommon.c
-  btech/btpr/player.c
-  btech/btpr/powers.c
-  btech/btpr/pqueue.c
-  btech/btpr/predicates.c
-  btech/btpr/rbtab.c
-  btech/btpr/rbtree.c
-  btech/btpr/stringutil.c
-  btech/btpr/wild.c)
-
-if(BTPR_PENN OR BTPR_MUX2)
-  add_library(btpr STATIC ${BTPR_SOURCES})
-  target_link_libraries(btpr PRIVATE btmux_options)
-  target_include_directories(btpr PRIVATE
-    "${CMAKE_BINARY_DIR}/btech"
-    "${CMAKE_SOURCE_DIR}/btech/btpr/include")
-  if(BTPR_PENN)
-    target_include_directories(btpr PRIVATE "${CMAKE_SOURCE_DIR}/btech/btpr/penn/include")
-  endif()
-  if(BTPR_MUX2)
-    target_include_directories(btpr PRIVATE "${CMAKE_SOURCE_DIR}/btech/btpr/mux2/include")
-  endif()
-endif()
 
 set(BTECH_SOURCES
   btech/src/coolmenu.c
@@ -368,20 +316,6 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/btech/btfi/include"
   "${CMAKE_SOURCE_DIR}/include"
   "${CMAKE_SOURCE_DIR}/src")
-if(BTPR_PENN)
-  target_include_directories(btech PRIVATE
-    "${CMAKE_SOURCE_DIR}/btech/btpr/penn/include"
-    "${CMAKE_SOURCE_DIR}/btech/btpr/include")
-  target_link_libraries(btech PRIVATE btpr)
-  target_link_options(btech PRIVATE -Wl,-Bsymbolic)
-elseif(BTPR_MUX2)
-  target_include_directories(btech PRIVATE
-    "${CMAKE_SOURCE_DIR}/btech/btpr/mux2/include"
-    "${CMAKE_SOURCE_DIR}/btech/btpr/include")
-  target_link_libraries(btech PRIVATE btpr)
-  target_link_options(btech PRIVATE -Wl,-Bsymbolic)
-endif()
-
 set(NETMUX_SOURCES
   misc/myfifo.c
   event/event.c
@@ -477,13 +411,6 @@ target_include_directories(vocabtest PRIVATE
   "${CMAKE_SOURCE_DIR}/btech/btfi"
   "${CMAKE_SOURCE_DIR}/btech/btfi/include")
 
-add_executable(pqtest btech/btpr/tests/pqtest.c btech/btpr/pqueue.c)
-target_link_libraries(pqtest PRIVATE btmux_options)
-target_include_directories(pqtest PRIVATE
-  "${CMAKE_BINARY_DIR}/btech"
-  "${CMAKE_SOURCE_DIR}/btech/btpr"
-  "${CMAKE_SOURCE_DIR}/btech/btpr/include")
-
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/btech/btfi/tests")
 configure_file(
   "${CMAKE_SOURCE_DIR}/btech/btfi/tests/thirdparty.finf"
@@ -493,7 +420,6 @@ configure_file(
 add_test(NAME saxtest COMMAND saxtest)
 set_tests_properties(saxtest PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/btech/btfi")
 add_test(NAME vocabtest COMMAND vocabtest)
-add_test(NAME pqtest COMMAND pqtest)
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS btech ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
