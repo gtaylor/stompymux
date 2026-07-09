@@ -23,10 +23,6 @@
 #include "alloc.h"
 #include "vattr.h"
 #include "commac.h"
-#ifdef SQL_SUPPORT
-#include "sqlchild.h"
-#endif
-
 #ifndef NEXT
 #endif
 
@@ -1389,10 +1385,6 @@ int real_main(int argc, char *argv[])
         load_restart_db();
     }
 
-#ifdef SQL_SUPPORT
-	sqlchild_init();
-#endif
-
 #ifdef ARBITRARY_LOGFILES
 	logcache_init();
 #endif
@@ -1419,10 +1411,6 @@ int real_main(int argc, char *argv[])
 #ifdef ARBITRARY_LOGFILES
 	logcache_destruct();
 #endif
-#ifdef SQL_SUPPORT
-	sqlchild_destruct();
-#endif
-
 	exit(0);
 }
 

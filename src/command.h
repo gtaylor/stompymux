@@ -134,9 +134,6 @@ void do_dbclean(dbref, dbref, int);		/* Remove stale vattr entries */
 void do_addcommand(dbref, dbref, int, char *, char *);	/* Add or replace a global command */
 void do_delcommand(dbref, dbref, int, char *, char *);	/* Delete an added global command */
 void do_listcommands(dbref, dbref, int, char *);	/* List added global commands */
-#ifdef SQL_SUPPORT
-void do_query(dbref, dbref, int, char *, char *);		/* Trigger an externalized query */
-#endif
 /* from log.c */
 #ifdef ARBITRARY_LOGFILES
 void do_log(dbref, dbref, int, char *, char *);		/* Log to arbitrary logfile in 'logs' */

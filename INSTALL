@@ -20,7 +20,6 @@ ________________________________________
  * A C and C++ compiler supported by CMake
  * crypt (libcrypt/lcrypt)
  * libevent (http://www.monkey.org/~provos/libevent/)
- * libdbi (If SQL support is enabled)
  * wget and tar (If you need getdata.sh to fetch the game data)
 
  S2: COMPILING AND RUNNING THE SOURCE
@@ -70,7 +69,7 @@ ________________________________________
  You may set these by passing CMake cache options when configuring the build.
  For example:
 
- cmake -S . -B build -DBTMUX_SQL_SUPPORT=ON -DBTMUX_FREE_TECHTIME=ON
+ cmake -S . -B build -DBTMUX_FREE_TECHTIME=ON
 
  To see the available options in your configured build:
 
@@ -83,7 +82,6 @@ ________________________________________
  * BTMUX_ENHANCED_LOGGING=ON|OFF
  * BTMUX_COMPLEX_REPAIRS=ON|OFF
  * BTMUX_FREE_TECHTIME=ON|OFF
- * BTMUX_SQL_SUPPORT=ON|OFF
  * BTMUX_RENAME_HELP=ON|OFF
  * BTECH_CARGO_COMMANDS=ON|OFF
  * BTECH_MW3STATS=ON|OFF

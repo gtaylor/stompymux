@@ -22,7 +22,6 @@ option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
 option(BTMUX_COMPLEX_REPAIRS "Enable complex repairs" OFF)
 option(BTMUX_FREE_TECHTIME "Enable near-instant techtime" OFF)
-option(BTMUX_SQL_SUPPORT "Enable SQL support through libdbi" OFF)
 option(BTMUX_RENAME_HELP "Rename the help command to muxhelp" OFF)
 
 option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
@@ -39,11 +38,6 @@ option(BTMUX_ENABLE_WERROR "Treat compiler warnings as errors" OFF)
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
-
-if(BTMUX_SQL_SUPPORT)
-  find_path(DBI_INCLUDE_DIR dbi/dbi.h REQUIRED)
-  find_library(DBI_LIBRARY dbi REQUIRED)
-endif()
 
 set(BTMUX_PLATFORM_LIBS)
 check_library_exists(m tan "" HAVE_LIBM)
@@ -89,11 +83,6 @@ check_include_file(dirent.h HAVE_DIRENT_H)
 set(STDC_HEADERS 1)
 set(HAVE_LIBEVENT 1)
 set(HAVE_EVENT_H 1)
-if(BTMUX_SQL_SUPPORT)
-  set(HAVE_LIBDBI 1)
-  set(HAVE_DBI_DBI_H 1)
-endif()
-
 foreach(function IN ITEMS
     bzero dup2 floor fork getdtablesize gethostbyaddr gethostbyname
     getrusage gettimeofday inet_ntoa isascii localtime lstat malloc memmove
@@ -147,7 +136,6 @@ set(BT_ADVANCED_ECON ${BTMUX_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTMUX_ENHANCED_LOGGING})
 set(BT_COMPLEXREPAIRS ${BTMUX_COMPLEX_REPAIRS})
 set(BT_FREETECHTIME ${BTMUX_FREE_TECHTIME})
-set(SQL_SUPPORT ${BTMUX_SQL_SUPPORT})
 set(MOVE_HELP ${BTMUX_RENAME_HELP})
 
 configure_file(cmake/autoconf.h.in autoconf.h)
@@ -455,9 +443,6 @@ set(NETMUX_SOURCES
 if(BTMUX_ENHANCED_LOGGING)
   list(APPEND NETMUX_SOURCES src/logcache.c)
 endif()
-if(BTMUX_SQL_SUPPORT)
-  list(APPEND NETMUX_SOURCES src/sqlchild.c)
-endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
 target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" ${BTMUX_PLATFORM_LIBS})
@@ -469,10 +454,6 @@ target_include_directories(netmux PRIVATE
   "${CMAKE_SOURCE_DIR}/btech/src/include"
   "${CMAKE_SOURCE_DIR}/btech/src/btech"
   "${EVENT_INCLUDE_DIR}")
-if(BTMUX_SQL_SUPPORT)
-  target_link_libraries(netmux PRIVATE "${DBI_LIBRARY}")
-  target_include_directories(netmux PRIVATE "${DBI_INCLUDE_DIR}")
-endif()
 
 add_executable(mkindx src/mkindx.c)
 target_link_libraries(mkindx PRIVATE btmux_options ${BTMUX_PLATFORM_LIBS})

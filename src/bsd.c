@@ -30,10 +30,6 @@
 
 #include "debug.h"
 
-#if SQL_SUPPORT
-#include "sqlchild.h"
-#endif
-
 struct event listen_sock_ev;
 #ifdef IPV6_SUPPORT
 struct event listen6_sock_ev;
@@ -204,9 +200,6 @@ void shutdown_services()
 {
 	dnschild_destruct();
 	flush_sockets();
-#ifdef SQL_SUPPORT
-	sqlchild_destruct();
-#endif
 #ifdef ARBITRARY_LOGFILES
 	logcache_destruct();
 #endif

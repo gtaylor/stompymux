@@ -48,15 +48,6 @@ void logcache_list(dbref player);
  * (typically via a switch alias) 
  */
 
-#ifdef SQL_SUPPORT
-NAMETAB query_sw[] = {
-	{(char *) "sql", 1, CA_WIZARD, QUERY_SQL},
-	{(char *) "list", 1, CA_WIZARD, LIST_SQL},
-	{(char *) "kill", 1, CA_WIZARD, KILL_SQL},
-	{NULL, 0, 0, 0}
-};
-#endif
-
 NAMETAB attrib_sw[] = {
 	{(char *) "access", 1, CA_GOD, ATTRIB_ACCESS},
 	{(char *) "delete", 1, CA_GOD, ATTRIB_DELETE},
@@ -679,9 +670,6 @@ CMDENT command_table[] = {
 	 CS_ONE_ARG | CS_LEADIN, do_postpend},
 	{(char *) "~", NULL, CA_NO_GUEST | CA_NO_SLAVE | CF_DARK, 0,
 	 CS_ONE_ARG | CS_LEADIN, do_prepend},
-#ifdef SQL_SUPPORT
-	{(char *) "@query", query_sw, CA_WIZARD, 0, CS_TWO_ARG, do_query},
-#endif 
 	{(char *) NULL, NULL, 0, 0, 0, NULL}
 };
 

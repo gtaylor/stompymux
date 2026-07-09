@@ -15,10 +15,6 @@
 #include "attrs.h"
 #include "flags.h"
 #include "powers.h"
-#ifdef SQL_SUPPORT
-#include "sqlchild.h"
-#endif
-
 /* default (runtime-resettable) cache parameters */
 
 #define	CACHE_DEPTH	10
@@ -406,40 +402,6 @@ void cf_init(void)
 	mudstate.poutobj = -1;
 	for(i = 0; i < MAX_GLOBAL_REGS; i++)
 		mudstate.global_regs[i] = NULL;
-#ifdef SQL_SUPPORT
-	memset(mudconf.sqlDB_type_A, '\0', 128);
-	memset(mudconf.sqlDB_hostname_A, '\0', 128);
-	memset(mudconf.sqlDB_username_A, '\0', 128);
-	memset(mudconf.sqlDB_password_A, '\0', 128);
-	memset(mudconf.sqlDB_dbname_A, '\0', 128);
-	memset(mudconf.sqlDB_type_B, '\0', 128);
-	memset(mudconf.sqlDB_hostname_B, '\0', 128);
-	memset(mudconf.sqlDB_username_B, '\0', 128);
-	memset(mudconf.sqlDB_password_B, '\0', 128);
-	memset(mudconf.sqlDB_dbname_B, '\0', 128);
-	memset(mudconf.sqlDB_type_C, '\0', 128);
-	memset(mudconf.sqlDB_hostname_C, '\0', 128);
-	memset(mudconf.sqlDB_username_C, '\0', 128);
-	memset(mudconf.sqlDB_password_C, '\0', 128);
-	memset(mudconf.sqlDB_dbname_C, '\0', 128);
-	memset(mudconf.sqlDB_type_D, '\0', 128);
-	memset(mudconf.sqlDB_hostname_D, '\0', 128);
-	memset(mudconf.sqlDB_username_D, '\0', 128);
-	memset(mudconf.sqlDB_password_D, '\0', 128);
-	memset(mudconf.sqlDB_dbname_D, '\0', 128);
-	memset(mudconf.sqlDB_type_E, '\0', 128);
-	memset(mudconf.sqlDB_hostname_E, '\0', 128);
-	memset(mudconf.sqlDB_username_E, '\0', 128);
-	memset(mudconf.sqlDB_password_E, '\0', 128);
-	memset(mudconf.sqlDB_dbname_E, '\0', 128);
-	mudconf.sqlDB_init_A = 0;
-	mudconf.sqlDB_init_B = 0;
-	mudconf.sqlDB_init_C = 0;
-	mudconf.sqlDB_init_D = 0;
-	mudconf.sqlDB_init_E = 0;
-	mudconf.sqlDB_max_queries = 4;
-	memset(mudconf.sqlDB_mysql_socket, '\0', 128);
-#endif
 	mudconf.exit_parent = 0;
 	mudconf.room_parent = 0;
 	mudconf.player_parent = 0;
@@ -1596,64 +1558,6 @@ CONF conftable[] = {
 	 cf_string, CA_GOD, (void *) mudconf.wizmotd_msg, 4096},
 	{(char *) "zone_recursion_limit",
 	 cf_int, CA_GOD, &mudconf.zone_nest_lim, 0},
-#ifdef SQL_SUPPORT
-	{(char *) "sqlDB_type_A",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_type_A, 128},
-	{(char *) "sqlDB_hostname_A",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_hostname_A, 128},
-	{(char *) "sqlDB_username_A",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_username_A, 128},
-	{(char *) "sqlDB_password_A",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_password_A, 128},
-	{(char *) "sqlDB_dbname_A",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_dbname_A, 128},
-	{(char *) "sqlDB_type_B",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_type_B, 128},
-	{(char *) "sqlDB_hostname_B",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_hostname_B, 128},
-	{(char *) "sqlDB_username_B",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_username_B, 128},
-	{(char *) "sqlDB_password_B",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_password_B, 128},
-	{(char *) "sqlDB_dbname_B",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_dbname_B, 128},
-	{(char *) "sqlDB_type_C",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_type_C, 128},
-	{(char *) "sqlDB_hostname_C",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_hostname_C, 128},
-	{(char *) "sqlDB_username_C",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_username_C, 128},
-	{(char *) "sqlDB_password_C",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_password_C, 128},
-	{(char *) "sqlDB_dbname_C",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_dbname_C, 128},
-	{(char *) "sqlDB_type_D",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_type_D, 128},
-	{(char *) "sqlDB_hostname_D",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_hostname_D, 128},
-	{(char *) "sqlDB_username_D",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_username_D, 128},
-	{(char *) "sqlDB_password_D",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_password_D, 128},
-	{(char *) "sqlDB_dbname_D",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_dbname_D, 128},
-	{(char *) "sqlDB_type_E",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_type_E, 128},
-	{(char *) "sqlDB_hostname_E",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_hostname_E, 128},
-	{(char *) "sqlDB_username_E",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_username_E, 128},
-	{(char *) "sqlDB_password_E",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_password_E, 128},
-	{(char *) "sqlDB_dbname_E",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_dbname_E, 128},
-	{(char *) "sqlDB_mysql_socket",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_mysql_socket, 128},
-	{(char *) "sqlDB_sqlite_dbdir",
-	 cf_string, CA_GOD, (void *) mudconf.sqlDB_sqlite_dbdir, 128},
-	{(char *) "sqlDB_max_queries",
-	 cf_int, CA_GOD, &mudconf.sqlDB_max_queries, 0},
-#endif
 	{(char *) "exit_parent",
 	 cf_int, CA_GOD, &mudconf.exit_parent, 0},
 	{(char *) "room_parent",

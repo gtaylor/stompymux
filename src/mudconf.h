@@ -289,41 +289,6 @@ struct confdata {
     int lock_nest_lim;		/* Max nesting of lock evals */
     int parent_nest_lim;	/* Max levels of parents */
     int zone_nest_lim;		/* Max nesting of zones */
-#ifdef SQL_SUPPORT
-    int sqlDB_init_A;
-    char sqlDB_type_A[128];     /* Currently only 'MySQL' */
-    char sqlDB_hostname_A[128]; /* Usually localhost */
-    char sqlDB_username_A[128]; /* SQL user */
-    char sqlDB_password_A[128]; /* SQL user's password */
-    char sqlDB_dbname_A[128];   /* Name of the DB to use */
-    int sqlDB_init_B;
-    char sqlDB_type_B[128];
-    char sqlDB_hostname_B[128];
-    char sqlDB_username_B[128];
-    char sqlDB_password_B[128];
-    char sqlDB_dbname_B[128];
-    int sqlDB_init_C;
-    char sqlDB_type_C[128];
-    char sqlDB_hostname_C[128];
-    char sqlDB_username_C[128];
-    char sqlDB_password_C[128];
-    char sqlDB_dbname_C[128];
-    int sqlDB_init_D;
-    char sqlDB_type_D[128];
-    char sqlDB_hostname_D[128];
-    char sqlDB_username_D[128];
-    char sqlDB_password_D[128];
-    char sqlDB_dbname_D[128];
-    int sqlDB_init_E;
-    char sqlDB_type_E[128];
-    char sqlDB_hostname_E[128];
-    char sqlDB_username_E[128];
-    char sqlDB_password_E[128];
-    char sqlDB_dbname_E[128];
-    char sqlDB_sqlite_dbdir[128];
-    char sqlDB_mysql_socket[128];
-    int sqlDB_max_queries;
-#endif
     int room_parent;
     int exit_parent;
     int player_parent;
