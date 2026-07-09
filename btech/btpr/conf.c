@@ -103,8 +103,5 @@ btpr_cf_init(void)
 	mudconf.btech_variable_techtime = 0;
 	mudconf.btech_techtime_mod = 0;
 	mudconf.btech_statengine_obj = -1;
-#ifdef HUDINFO_SUPPORT
-	mudconf.hudinfo_show_mapinfo = 0;
-#endif /* HUDINFO_SUPPORT */
 	mudconf.afterlife_dbref = 220;
 }

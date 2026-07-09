@@ -163,10 +163,6 @@ void cf_init(void)
 #ifdef BT_COMPLEXREPAIRS
 	mudconf.btech_complexrepair = 1;
 #endif
-#ifdef HUDINFO_SUPPORT
-	mudconf.hudinfo_show_mapinfo = 0;
-	mudconf.hudinfo_enabled = 0;
-#endif
 	mudconf.registeredonly = 0;
 	mudconf.namechange_days = 60;
 	mudconf.allow_chanlurking = 0;
@@ -1164,12 +1160,6 @@ CONF conftable[] = {
 #ifdef BT_COMPLEXREPAIRS
 	{(char *) "btech_complexrepair",
 	 cf_int, CA_GOD, &mudconf.btech_complexrepair, 0},
-#endif
-#ifdef HUDINFO_SUPPORT
-	{(char *) "hudinfo_show_mapinfo",
-	 cf_int, CA_GOD, &mudconf.hudinfo_show_mapinfo, 0},
-	{(char *) "hudinfo_enabled",
-	 cf_int, CA_GOD, &mudconf.hudinfo_enabled, 0},
 #endif
 	{(char *) "btech_seismic_see_stopped",
 	 cf_int, CA_GOD, &mudconf.btech_seismic_see_stopped, 0},

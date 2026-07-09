@@ -33,7 +33,6 @@
 #define RS_CONCENTRATE		0x00000002
 #define RS_RECORD_PLAYERS	0x00000004
 #define RS_NEW_STRINGS		0x00000008
-#define RS_HUDKEY		0x00000010
 
 OBJ *db = NULL;
 NAME *names = NULL;
@@ -2099,7 +2098,6 @@ void dump_restart_db(void)
 
 	version |= RS_RECORD_PLAYERS;
 	version |= RS_NEW_STRINGS;
-	version |= RS_HUDKEY;
 
 	f = fopen("restart.db", "w");
 	fprintf(f, "+V%d\n", version);
@@ -2122,7 +2120,6 @@ void dump_restart_db(void)
 		putstring(f, d->addr);
 		putstring(f, d->doing);
 		putstring(f, d->username);
-		putstring(f, d->hudkey);
 	}
 	putref(f, 0);
 	fclose(f);
@@ -2141,7 +2138,6 @@ void dump_restart_db_xdr(void)
 
 	version |= RS_RECORD_PLAYERS;
 	version |= RS_NEW_STRINGS;
-	version |= RS_HUDKEY;
 
    
     mmdb = mmdb_open_write("restart.xdr");
@@ -2168,7 +2164,6 @@ void dump_restart_db_xdr(void)
 		mmdb_write_string(mmdb, d->addr);
 		mmdb_write_string(mmdb, d->doing);
 		mmdb_write_string(mmdb, d->username);
-		mmdb_write_string(mmdb, d->hudkey);
 	}
     mmdb_write_uint32(mmdb, 0);
     cque_dump_restart(mmdb); 
@@ -2248,11 +2243,6 @@ void load_restart_db()
 		strcpy(d->addr, getstring_noalloc(f, new_strings));
 		strcpy(d->doing, getstring_noalloc(f, new_strings));
 		strcpy(d->username, getstring_noalloc(f, new_strings));
-
-		if(version & RS_HUDKEY)
-			strncpy(d->hudkey, getstring_noalloc(f, new_strings), HUDKEYLEN);
-		else
-			d->hudkey[0] = '\0';
 
 		d->output_size = 0;
 		d->output_tot = 0;
@@ -2354,7 +2344,6 @@ int load_restart_db_xdr()
         mmdb_read_opaque(mmdb, d->addr, sizeof(d->addr));
         mmdb_read_opaque(mmdb, d->doing, sizeof(d->doing));
         mmdb_read_opaque(mmdb, d->username, sizeof(d->username));
-        mmdb_read_opaque(mmdb, d->hudkey, sizeof(d->hudkey));
 
 		d->output_size = 0;
 		d->output_tot = 0;

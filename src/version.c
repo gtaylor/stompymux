@@ -57,9 +57,6 @@ void do_version(dbref player, dbref cause, int extra)
 }
 
 char *mux_version = PACKAGE_STRING "." MINOR_REVNUM
-#ifdef HUDINFO_SUPPORT
-    "+HUD"
-#endif
 #ifdef HAG_WAS_HERE
     "+HAG"
 #endif

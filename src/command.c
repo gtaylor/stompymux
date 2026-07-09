@@ -645,9 +645,6 @@ CMDENT command_table[] = {
 	{(char *) "+show", NULL, CA_NO_SLAVE | CA_NO_IC, 0, CS_TWO_ARG, do_show},
 	{(char *) "+rolls", NULL, CA_NO_SLAVE, 0, CS_NO_ARGS, do_show_stat},
 	{(char *) "+charclear", NULL, CA_WIZARD, 0, CS_ONE_ARG, do_charclear},
-#ifdef HUDINFO_SUPPORT
-	{(char *) "hudinfo", NULL, CA_PUBLIC, 0, CS_ONE_ARG, fake_hudinfo},
-#endif
 	{(char *) PLUSHELP_COMMAND, NULL, 0, HELP_PLUSHELP, CS_ONE_ARG, do_help},
 	{(char *) "wiznews", NULL, CA_WIZARD, HELP_WIZNEWS, CS_ONE_ARG, do_help},
     {(char *) "\\", NULL, CA_NO_GUEST | CA_LOCATION | CF_DARK | CA_NO_SLAVE,

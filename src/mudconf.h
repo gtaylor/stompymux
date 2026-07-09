@@ -179,10 +179,6 @@ struct confdata {
 #ifdef BT_COMPLEXREPAIRS
     int btech_complexrepair;
 #endif
-#ifdef HUDINFO_SUPPORT
-    int hudinfo_show_mapinfo;	/* What kind of info we are willing to give */
-    int hudinfo_enabled;	/* At runtime turn HUD on and off */
-#endif
     int afterlife_dbref;
     int indent_desc;		/* Newlines before and after descs? */
     int name_spaces;		/* allow player names to have spaces */

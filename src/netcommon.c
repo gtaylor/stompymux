@@ -281,27 +281,6 @@ void raw_notify_newline(dbref player)
 	}
 }
 
-#ifdef HUDINFO_SUPPORT
-void hudinfo_notify(DESC * d, const char *msgclass, const char *msgtype,
-					const char *msg)
-{
-	char buf[LBUF_SIZE];
-
-    memset(buf, 0, LBUF_SIZE);
-
-	if(!msgclass || !msgtype) {
-		queue_write(d, msg, strnlen(msg, LBUF_SIZE-1));
-		queue_write(d, "\r\n", 2);
-		return;
-	}
-
-	snprintf(buf, LBUF_SIZE-1, "#HUD:%s:%s:%s# %s\r\n",
-			 d->hudkey[0] ? d->hudkey : "???", msgclass, msgtype, msg);
-	buf[LBUF_SIZE - 1] = '\0';
-	queue_write(d, buf, strnlen(buf, LBUF_SIZE-1));
-}
-#endif
-
 /*
  * ---------------------------------------------------------------------------
  * * raw_broadcast: Send message to players who have indicated flags
@@ -1549,9 +1528,7 @@ int do_command(DESC * d, char *command)
 
     /* The IDLE command is used to keep players behind badly configured NATs
        alive. This does not increment command count or idle time and is a
-       good alternative to a lot of the current anti-disconnectors out there
-       client-side. As mentioned in the HUDINFO comment below, this should
-       have no noticable affect on even semi-modern hardware.
+       good alternative to a lot of the current anti-disconnectors out there.
     */
     if(!strcasecmp(command, "IDLE") && d->flags & DS_CONNECTED) {
         mudstate.curr_player = d->player;
@@ -1572,29 +1549,6 @@ int do_command(DESC * d, char *command)
 	if(*arg)
 		*arg++ = '\0';
 
-#ifdef HUDINFO_SUPPORT
-	/* We check for hudinfo before anything else.  This is a fairly dirty
-	 * hack, and slows down the common case by a strcmp (which is fast on
-	 * modern processors and libraries) but has many advantages: hudinfo
-	 * only outputs to the *connection* (rather than the player) that issued
-	 * the command, and always knows which hud session key to use. I think
-	 * the payoff is justified, in this case.
-	 */
-
-	if(mudconf.hudinfo_enabled > 0 && d->flags & DS_CONNECTED
-	   && !strcmp(command, "hudinfo")) {
-	   // hudinfo shouldn't increment the command count...
-		//d->command_count++;
-		mudstate.curr_player = d->player;
-		mudstate.curr_enactor = d->player;
-		mudstate.debug_cmd = "hudinfo";
-		do_hudinfo(d, arg);
-		mudstate.debug_cmd = cmdsave;
-		return 1;
-	}
-#endif
-
-   // moved this here so hudinfo doesn't spank a user's idle time or commands - jf
    d->last_time = mudstate.now;
 
     cp = (NAMETAB *) hashfind(command, &mudstate.logout_cmd_htab);

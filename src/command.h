@@ -144,10 +144,6 @@ void do_show(dbref, dbref, int, char *, char *);
 void do_charclear(dbref, dbref, int, char *);
 void do_show_stat(dbref, dbref, int);
 
-#ifdef HUDINFO_SUPPORT
-void fake_hudinfo(dbref, dbref, int, char *);
-#endif
-
 #ifdef USE_PYTHON
 
 /* From python.c */

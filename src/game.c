@@ -56,10 +56,6 @@ void logcache_init();
 void logcache_destruct();
 #endif
 
-#ifdef HUDINFO_SUPPORT
-extern void init_hudinfo(void);
-#endif
-
 void fork_and_dump(int);
 void dump_database(void);
 void do_dump_optimize(dbref, dbref, int);
@@ -1296,10 +1292,6 @@ int real_main(int argc, char *argv[])
 	init_functab();
 	init_attrtab();
 	init_version();
-
-#ifdef HUDINFO_SUPPORT
-	init_hudinfo();
-#endif
 
 	hashinit(&mudstate.player_htab, 250 * HASH_FACTOR);
 	nhashinit(&mudstate.mail_htab, 50 * HASH_FACTOR);

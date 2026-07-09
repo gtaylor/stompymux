@@ -68,7 +68,6 @@ struct prog_data {
 };
 
 #define DOINGLEN 45
-#define HUDKEYLEN 21
 
 typedef struct descriptor_data DESC;
 struct descriptor_data {
@@ -81,7 +80,6 @@ struct descriptor_data {
     char addr[256];
     char username[11];
     char doing[DOINGLEN];
-    char hudkey[HUDKEYLEN];
     dbref player;
     char *output_prefix;
     char *output_suffix;
@@ -136,7 +134,6 @@ extern void handle_http(DESC *, char *);
 extern void raw_notify(dbref, const char *);
 extern void raw_notify_raw(dbref, const char *, char *);
 extern void raw_notify_newline(dbref);
-extern void hudinfo_notify(DESC *, const char *, const char *, const char *);
 extern void clearstrings(DESC *);
 extern void queue_write(DESC *, const char *, int);
 extern void queue_string(DESC *, const char *);
@@ -153,11 +150,6 @@ extern void process_commands(void);
 extern int site_check(struct sockaddr_storage *, int, SITE *);
 extern void make_ulist(dbref, char *, char **);
 extern dbref find_connected_name(dbref, char *);
-
-/* from hcode/btech/hudinfo.c */
-#ifdef HUDINFO_SUPPORT
-extern void do_hudinfo(DESC *, char *);
-#endif
 
 /* From predicates.c */
 

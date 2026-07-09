@@ -17,7 +17,6 @@ include(GNUInstallDirs)
 
 enable_testing()
 
-option(BTMUX_HUDINFO_SUPPORT "Enable graphical HUD support" ON)
 option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
 option(BTMUX_COMPLEX_REPAIRS "Enable complex repairs" OFF)
@@ -131,7 +130,6 @@ set(PACKAGE_URL "")
 set(PACKAGE "${PACKAGE_TARNAME}")
 set(VERSION "${PACKAGE_VERSION}")
 
-set(HUDINFO_SUPPORT ${BTMUX_HUDINFO_SUPPORT})
 set(BT_ADVANCED_ECON ${BTMUX_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTMUX_ENHANCED_LOGGING})
 set(BT_COMPLEXREPAIRS ${BTMUX_COMPLEX_REPAIRS})
@@ -297,7 +295,6 @@ set(BTECH_SOURCES
   btech/src/btech/econ_cmds.c
   btech/src/btech/eject.c
   btech/src/btech/failures.c
-  btech/src/btech/hudinfo.c
   btech/src/btech/map.bits.c
   btech/src/btech/map.coding.c
   btech/src/btech/map.conditions.c

@@ -77,7 +77,6 @@ ________________________________________
 
  Common options include:
 
- * BTMUX_HUDINFO_SUPPORT=ON|OFF
  * BTMUX_ADVANCED_ECON=ON|OFF
  * BTMUX_ENHANCED_LOGGING=ON|OFF
  * BTMUX_COMPLEX_REPAIRS=ON|OFF

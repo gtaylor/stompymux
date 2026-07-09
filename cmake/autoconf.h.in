@@ -109,7 +109,6 @@
 #cmakedefine HAVE_WORKING_FORK 1
 #cmakedefine HAVE_WORKING_VFORK 1
 #cmakedefine HAVE__BOOL 1
-#cmakedefine HUDINFO_SUPPORT 1
 #cmakedefine LSTAT_FOLLOWS_SLASHED_SYMLINK 1
 #cmakedefine MOVE_HELP 1
 #cmakedefine STDC_HEADERS 1

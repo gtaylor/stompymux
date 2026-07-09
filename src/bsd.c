@@ -565,7 +565,6 @@ DESC *initializesock(int s, struct sockaddr_storage *saddr, int saddr_len)
 	d->chokes = 0;
 	d->addr[0] = '\0';
 	d->doing[0] = '\0';
-	d->hudkey[0] = '\0';
 	d->username[0] = '\0';
 	make_nonblocking(s);
 	d->output_prefix = NULL;

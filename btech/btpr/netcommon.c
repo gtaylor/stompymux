@@ -29,24 +29,3 @@ raw_notify(dbref player, const char *msg)
 {
 	btshim_raw_notify(player, msg);
 }
-
-#ifdef HUDINFO_SUPPORT
-extern void btshim_queue_string_eol(DESC *, const char *);
-
-void
-hudinfo_notify(DESC *d, const char *msgclass, const char *msgtype,
-               const char *msg)
-{
-	char buf[LBUF_SIZE];
-
-	if (!msgclass || !msgtype) {
-		btshim_queue_string_eol(d, msg);
-		return;
-	}
-
-	snprintf(buf, LBUF_SIZE, "#HUD:%s:%s:%s# %s",
-	         d->hudkey[0] ? d->hudkey : "???", msgclass, msgtype, msg);
-
-	btshim_queue_string_eol(d, buf);
-}
-#endif /* HUDINFO_SUPPORT */

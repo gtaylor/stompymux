@@ -14,6 +14,4 @@
 
 typedef BT_DESC DESC;
 
-extern void hudinfo_notify(DESC *, const char *, const char *, const char *);
-
 #endif

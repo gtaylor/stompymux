@@ -271,7 +271,6 @@ void mech_contacts(dbref player, void *data, char *buffer)
 	int losflag;
 	int isvb;
 	int inlos;
-	int IsUsingHUD = 0;
 	char new[LBUF_SIZE];
 
 	cch(MECH_USUAL);
@@ -280,70 +279,64 @@ void mech_contacts(dbref player, void *data, char *buffer)
 
 	isvb = (mech->brief % 4);
 	if(argc > 0) {
-		if(args[0][0] == 'h') {
-			IsUsingHUD = 1;
-			see_what =
-				(SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA | SEE_ALLY | SEE_TARGET);
-		} else {
-			if(args[0][0] == '+') {
-				str = silly_atr_get(player, A_CONTACTOPT);
-				if(!*str)
-					strcpy(buff, default_contactoptions);
-				else {
-					strncpy(buff, str, 50);
-					buff[49] = 0;
-
-					if(strlen(buff) == 0)
-						strcpy(buff, default_contactoptions);
-				}
-			} else {
-				strncpy(buff, args[0], 50);
+		if(args[0][0] == '+') {
+			str = silly_atr_get(player, A_CONTACTOPT);
+			if(!*str)
+				strcpy(buff, default_contactoptions);
+			else {
+				strncpy(buff, str, 50);
 				buff[49] = 0;
+
+				if(strlen(buff) == 0)
+					strcpy(buff, default_contactoptions);
 			}
+		} else {
+			strncpy(buff, args[0], 50);
+			buff[49] = 0;
+		}
 
-			if(isvb == 1)
-				see_what = SEE_BUILDINGS;
-			else
-				see_what = 0x0;
+		if(isvb == 1)
+			see_what = SEE_BUILDINGS;
+		else
+			see_what = 0x0;
 
-			for(loop = 0; loop < 50 && buff[loop]; loop++) {
-				char c;
+		for(loop = 0; loop < 50 && buff[loop]; loop++) {
+			char c;
 
-				c = buff[loop];
+			c = buff[loop];
 
-				if(c == 'd')
+			if(c == 'd')
 
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_DEAD) : (see_what |=
-															  SEE_DEAD);
-				else if(c == 's')
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_SHUTDOWN) : (see_what |=
-																  SEE_SHUTDOWN);
-				else if(c == 'b')
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_BUILDINGS) : (see_what |=
-																   SEE_BUILDINGS);
-				else if(c == 'e')
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_ENEMA) : (see_what |=
-															   SEE_ENEMA);
-				else if(c == 'a')
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_ALLY) : (see_what |=
-															  SEE_ALLY);
-				else if(c == 't')
-					(see_what & SEE_NEGNEXT) ? (see_what &=
-												~SEE_TARGET) : (see_what |=
-																SEE_TARGET);
-				else if(c == '!') {
-					see_what =
-						(SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA
-						 | SEE_ALLY | SEE_TARGET);
-				} else
-					notify_printf(player,
-								  "Ignoring %c as contact option.", c);
-			}
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_DEAD) : (see_what |=
+														  SEE_DEAD);
+			else if(c == 's')
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_SHUTDOWN) : (see_what |=
+															  SEE_SHUTDOWN);
+			else if(c == 'b')
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_BUILDINGS) : (see_what |=
+															   SEE_BUILDINGS);
+			else if(c == 'e')
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_ENEMA) : (see_what |=
+														   SEE_ENEMA);
+			else if(c == 'a')
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_ALLY) : (see_what |=
+														  SEE_ALLY);
+			else if(c == 't')
+				(see_what & SEE_NEGNEXT) ? (see_what &=
+											~SEE_TARGET) : (see_what |=
+															SEE_TARGET);
+			else if(c == '!') {
+				see_what =
+					(SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA
+					 | SEE_ALLY | SEE_TARGET);
+			} else
+				notify_printf(player,
+							  "Ignoring %c as contact option.", c);
 		}
 	} else {
 		see_what =
@@ -352,9 +345,7 @@ void mech_contacts(dbref player, void *data, char *buffer)
 			see_what |= SEE_BUILDINGS;
 	}
 
-	if(IsUsingHUD)
-		notify(player, "#HUDINFO:CON#Line of Sight Contacts:");
-	else if(isvb <= 2)
+	if(isvb <= 2)
 		notify(player, "Line of Sight Contacts:");
 
 	for(loop = 0; loop < mech_map->first_free; loop++) {
@@ -421,39 +412,24 @@ void mech_contacts(dbref player, void *data, char *buffer)
 				cStatus5 = getStatusChar(mech, tempMech, 5);
 			}
 
-			if(!IsUsingHUD) {
-				snprintf(buff, sizeof(buff),
-				    "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d s:%5.1f h:%3d S:%c%c%c%c%c%s",
-				    tempMech->mynum == MechTarget(mech) ? "%ch%cr" :
-				    !MechSeemsFriend(mech, tempMech) ? "%ch%cy" : "",
-						(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
-						(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
-						weaponarc, MechIDS(tempMech,
-										   MechSeemsFriend(mech, tempMech)),
-						move_type[0], mech_name, MechX(tempMech),
-						MechY(tempMech), MechZ(tempMech), range, bearing,
-						MechSpeed(tempMech), MechVFacing(tempMech),
-						cStatus1,
-						cStatus2,
-						cStatus3,
-						cStatus4,
-						cStatus5,
-						(tempMech->mynum == MechTarget(mech) ||
-						 !MechSeemsFriend(mech, tempMech)) ? "%c" : "");
-			} else {
-				snprintf(buff, sizeof(buff),
-						"#HUDINFO:CON#%c,%c,%c,%c,%s,%c,%-12.12s,%3d,%3d,%3d,%4.1f,%3d,%4.1f,%3d,%c%c%c%c%c",
-						(tempMech->mynum == MechTarget(mech)) ? 'T' :
-						!MechSeemsFriend(mech, tempMech) ? 'E' : 'F',
-						(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
-						(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
-						weaponarc, MechIDS(tempMech,
-										   MechSeemsFriend(mech, tempMech)),
-						move_type[0], mech_name, MechX(tempMech),
-						MechY(tempMech), MechZ(tempMech), range, bearing,
-						MechSpeed(tempMech), MechVFacing(tempMech),
-						cStatus1, cStatus2, cStatus3, cStatus4, cStatus5);
-			}
+			snprintf(buff, sizeof(buff),
+			    "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d s:%5.1f h:%3d S:%c%c%c%c%c%s",
+			    tempMech->mynum == MechTarget(mech) ? "%ch%cr" :
+			    !MechSeemsFriend(mech, tempMech) ? "%ch%cy" : "",
+					(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
+					(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
+					weaponarc, MechIDS(tempMech,
+									   MechSeemsFriend(mech, tempMech)),
+					move_type[0], mech_name, MechX(tempMech),
+					MechY(tempMech), MechZ(tempMech), range, bearing,
+					MechSpeed(tempMech), MechVFacing(tempMech),
+					cStatus1,
+					cStatus2,
+					cStatus3,
+					cStatus4,
+					cStatus5,
+					(tempMech->mynum == MechTarget(mech) ||
+					 !MechSeemsFriend(mech, tempMech)) ? "%c" : "");
 
 			rangelist[buffindex] = range;
 			rangelist[buffindex] +=
@@ -526,31 +502,17 @@ void mech_contacts(dbref player, void *data, char *buffer)
 				mech_name = strip_ansi_r(new,Name(building->obj),strlen(Name(building->obj)));
 			}
 
-			if(!IsUsingHUD) {
-				snprintf(buff, sizeof(buff),
-						"%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d S:%c%c%s",
-						j ? "%ch%cy" : "",
-						(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
-						(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
-						weaponarc, mech_name, building->x, building->y, i,
-						range, bearing, tmp_map->cf, tmp_map->cfmax,
-						(BuildIsSafe(tmp_map) || (j &&
-												  BuildIsCS(tmp_map))) ? 'X' :
-						j ? 'x' : BuildIsCS(tmp_map) ? 'C' : ' ',
-						BuildIsHidden(tmp_map) ? 'H' : ' ', j ? "%c" : "");
-			} else {
-				snprintf(buff, sizeof(buff),
-						"#HUDINFO:CON#%c,%c,%c,%c,%-21.21s,%3d,%3d,%3d,%4.1f,%3d,%4d,%4d,%c%c",
-						j ? 'E' : 'F',
-						(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
-						(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
-						weaponarc, mech_name, building->x, building->y, i,
-						range, bearing, tmp_map->cf, tmp_map->cfmax,
-						(BuildIsSafe(tmp_map) || (j &&
-												  BuildIsCS(tmp_map))) ? 'X' :
-						j ? 'x' : BuildIsCS(tmp_map) ? 'C' : ' ',
-						BuildIsHidden(tmp_map) ? 'H' : ' ');
-			}
+			snprintf(buff, sizeof(buff),
+					"%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d S:%c%c%s",
+					j ? "%ch%cy" : "",
+					(losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
+					(losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ',
+					weaponarc, mech_name, building->x, building->y, i,
+					range, bearing, tmp_map->cf, tmp_map->cfmax,
+					(BuildIsSafe(tmp_map) || (j &&
+											  BuildIsCS(tmp_map))) ? 'X' :
+					j ? 'x' : BuildIsCS(tmp_map) ? 'C' : ' ',
+					BuildIsHidden(tmp_map) ? 'H' : ' ', j ? "%c" : "");
 			rangelist[buffindex] = range + 20000;
 			strcpy(bufflist[buffindex++], buff);
 		}
@@ -572,9 +534,7 @@ void mech_contacts(dbref player, void *data, char *buffer)
 			notify(player, bufflist[sbuff[loop]]);
 	}
 
-	if(IsUsingHUD)
-		notify(player, "#HUDINFO:CON#End Contact List");
-	else if(isvb <= 2)
+	if(isvb <= 2)
 		notify(player, "End Contact List");
 }
 
