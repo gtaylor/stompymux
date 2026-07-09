@@ -41,6 +41,7 @@ extern int nummacros;
 extern int maxmacros;
 extern struct macros **macros;
 
+void init_mactab(void);
 struct macros *get_macro_set(dbref player, int which);
 int can_write_macros(dbref player, struct macros *m);
 int can_read_macros(dbref player, struct macros *m);

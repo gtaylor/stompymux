@@ -44,12 +44,11 @@
 #include "p.event.h"
 #include "p.mech.restrict.h"
 #include "mech.partnames.h"
-#include "p.functions.h"
+#include "functions.h"
 #include "p.mech.tech.commands.h"
 #include "p.mech.consistency.h"
 
 extern SpecialObjectStruct SpecialObjects[];
-dbref match_thing(dbref player, char *name);
 char *mechref_path(char *id);
 char *setarmorstatus_func(MECH * mech, char *sectstr, char *typestr,
 						  char *valuestr);
@@ -1519,8 +1518,6 @@ void fun_btaddstores(char *buff, char **bufc, dbref player, dbref cause,
 					 get_parts_vlong_name(id, brand), loc));
 	safe_tprintf_str(buff, bufc, "1");
 }								/* end btaddstores() */
-
-extern int xlate(char *);
 
 void fun_btticweaps(char *buff, char **bufc, dbref player, dbref cause, char *fargs[], int nfargs, char *cargs[], int ncargs)
 {

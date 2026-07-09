@@ -290,7 +290,7 @@ void tcache_init(void)
 	tcache_count = 0;
 }
 
-int tcache_empty(void)
+static int tcache_empty(void)
 {
 	if(tcache_top) {
 		tcache_top = 0;

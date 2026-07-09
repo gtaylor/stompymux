@@ -16,6 +16,7 @@
 #include "mudconf.h"
 #include "file_c.h"
 #include "interface.h"
+#include "netcommon.h"
 #include "command.h"
 #include "externs.h"
 #include "alloc.h"
@@ -24,7 +25,7 @@
 #include "powers.h"
 #include "alloc.h"
 #include "config.h"
-#include "p.comsys.h"
+#include "comsys.h"
 
 #ifdef DEBUG_NETCOMMON
 #ifndef DEBUG
@@ -34,10 +35,6 @@
 #include "debug.h"
 
 extern int process_output(DESC * d);
-extern void handle_prog(DESC *, char *);
-extern void fcache_dump_conn(DESC *, int);
-extern void do_comconnect(dbref, DESC *);
-extern void do_comdisconnect(dbref);
 void set_lastsite(DESC *, char *);
 
 /*

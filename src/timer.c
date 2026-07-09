@@ -12,23 +12,24 @@
 #include "interface.h"
 #include "match.h"
 #include "externs.h"
+#include "cque.h"
 #include "command.h"
 #include "attrs.h"
 #include "powers.h"
+#include "timer.h"
 
 extern void pool_reset(void);
-extern void do_second(void);
 extern void fork_and_dump(int key);
 extern unsigned int alarm(unsigned int seconds);
 extern void pcache_trim(void);
-void check_events(void);
+static void check_events(void);
 
-void timer_callback(int fd, short event, void *arg);
+static void timer_callback(int fd, short event, void *arg);
 
 static struct timeval tv = { 0, 100000 };
 static struct event timer_event;
 
-void init_timer()
+void init_timer(void)
 {
 	mudstate.now = time(NULL);
 	mudstate.dump_counter =
@@ -79,7 +80,7 @@ void check_idle(void)
     }   
 }   
 
-void check_events(void)
+static void check_events(void)
 {
     struct tm *ltime;
     dbref thing, parent;
@@ -131,7 +132,7 @@ void check_events(void)
 }
 
 
-void dispatch()
+static void dispatch(void)
 {
 	char *cmdsave;
 
@@ -228,7 +229,7 @@ void dispatch()
 	mudstate.debug_cmd = cmdsave;
 }
 
-void timer_callback(int fd, short event, void *arg)
+static void timer_callback(int fd, short event, void *arg)
 {
 	mudstate.alarm_triggered = 1;
 	evtimer_add(&timer_event, &tv);

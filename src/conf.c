@@ -6,9 +6,11 @@
 
 #include "mudconf.h"
 #include "db.h"
+#include "conf.h"
 #include "externs.h"
 #include "interface.h"
 #include "command.h"
+#include "functions.h"
 #include "rbtab.h"
 #include "alloc.h"
 #include "attrs.h"
@@ -430,7 +432,7 @@ void cf_log_syntax(dbref player, char *cmd, const char *template, char *arg)
  * * cf_status_from_succfail: Return command status from succ and fail info
  */
 
-int cf_status_from_succfail(dbref player, char *cmd, int success, int failure)
+static int cf_status_from_succfail(dbref player, char *cmd, int success, int failure)
 {
 	char *buff;
 
@@ -463,7 +465,7 @@ int cf_status_from_succfail(dbref player, char *cmd, int success, int failure)
  * * cf_int: Set integer parameter.
  */
 
-int cf_int(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_int(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	/*
 	 * Copy the numeric value to the parameter
@@ -489,7 +491,7 @@ NAMETAB bool_names[] = {
 
 /* *INDENT-ON* */
 
-int cf_bool(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_bool(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	*vp = (int) search_nametab(GOD, bool_names, str);
 	if(*vp < 0)
@@ -502,7 +504,7 @@ int cf_bool(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_option: Select one option from many choices.
  */
 
-int cf_option(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_option(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	int i;
 
@@ -520,7 +522,7 @@ int cf_option(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_string: Set string parameter.
  */
 
-int cf_string(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_string(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	int retval;
 	char *buff;
@@ -548,7 +550,7 @@ int cf_string(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_alias: define a generic hash table alias.
  */
 
-int cf_alias(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_alias(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	char *alias, *orig, *p;
 	int *cp = NULL;
@@ -583,7 +585,7 @@ int cf_alias(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_flagalias: define a flag alias.
  */
 
-int cf_flagalias(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_flagalias(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	char *alias, *orig;
 	int *cp, success;
@@ -607,7 +609,7 @@ int cf_flagalias(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_or_in_bits: OR in bits from namelist to a word.
  */
 
-int cf_or_in_bits(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_or_in_bits(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	char *sp;
 	int f, success, failure;
@@ -698,7 +700,7 @@ int cf_modify_bits(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_set_bits: Clear flag word and then set specified bits from namelist.
  */
 
-int cf_set_bits(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_set_bits(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	char *sp;
 	int f, success, failure;
@@ -739,7 +741,7 @@ int cf_set_bits(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_set_flags: Clear flag word and then set from a flags htab.
  */
 
-int cf_set_flags(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_set_flags(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	char *sp;
 	FLAGENT *fp;
@@ -800,7 +802,7 @@ int cf_set_flags(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_badname: Disallow use of player name/alias.
  */
 
-int cf_badname(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_badname(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	if(extra)
 		badname_remove(str);
@@ -814,7 +816,7 @@ int cf_badname(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_site: Update site information
  */
 
-int cf_site(long **vp, char *str, long extra, dbref player, char *cmd)
+static int cf_site(long **vp, char *str, long extra, dbref player, char *cmd)
 {
 	SITE *site, *last, *head;
 	char *addr_txt, *mask_txt;
@@ -880,7 +882,7 @@ int cf_site(long **vp, char *str, long extra, dbref player, char *cmd)
  * * cf_cf_access: Set access on config directives
  */
 
-int cf_cf_access(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_cf_access(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	CONF *tp;
 	char *ap;
@@ -903,7 +905,7 @@ int cf_cf_access(int *vp, char *str, long extra, dbref player, char *cmd)
  * * cf_include: Read another config file.  Only valid during startup.
  */
 
-int cf_include(int *vp, char *str, long extra, dbref player, char *cmd)
+static int cf_include(int *vp, char *str, long extra, dbref player, char *cmd)
 {
 	FILE *fp;
 	char *cp, *ap, *zp, *buf;
@@ -962,12 +964,6 @@ int cf_include(int *vp, char *str, long extra, dbref player, char *cmd)
 	fclose(fp);
 	return 0;
 }
-
-extern int cf_access(long *, char *, long, dbref, char *);
-extern int cf_cmd_alias(long *, char *, long, dbref, char *);
-extern int cf_acmd_access(long *, char *, long, dbref, char *);
-extern int cf_attr_access(long *, char *, long, dbref, char *);
-extern int cf_func_access(long *, char *, long, dbref, char *);
 
 /* ---------------------------------------------------------------------------
  * conftable: Table for parsing the configuration file.

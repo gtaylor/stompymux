@@ -16,8 +16,7 @@
 #include "powers.h"
 
 #include "comsys.h"
-#include "p.comsys.h"
-#include "p.functions.h"
+#include "functions.h"
 #include "create.h"
 
 int num_channels;
@@ -33,6 +32,20 @@ static void do_leavechannel(dbref, struct channel *);
 static void do_comwho(dbref, struct channel *);
 static void do_setnewtitle(dbref, struct channel *, char *);
 static int do_test_access(dbref, long, struct channel *);
+static char *get_channel_from_alias(dbref, char *);
+static void do_processcom(dbref, char *, char *);
+static void do_delcomchannel(dbref, char *);
+static void do_listchannels(dbref);
+static void do_comdisconnectraw_notify(dbref, char *);
+static void do_comconnectraw_notify(dbref, char *);
+static void do_comconnectchannel(dbref, char *, char *, int);
+static void do_comdisconnectchannel(dbref, char *);
+static void do_chclose(dbref, char *);
+static void do_chloud(dbref, char *);
+static void do_chsquelch(dbref, char *);
+static void do_chtransparent(dbref, char *);
+static void do_chopaque(dbref, char *);
+static void do_chanobj(dbref, char *, char *);
 
 /*
  * This is the hash table for channel names
@@ -68,7 +81,7 @@ void send_channel(char *chan, const char *format, ...)
 	do_comsend(ch, buf);
 }
 
-char *get_channel_from_alias(dbref player, char *alias)
+static char *get_channel_from_alias(dbref player, char *alias)
 {
 	struct commac *c;
 	int first, last, current = 0;
@@ -293,7 +306,7 @@ static void do_comlast(dbref player, struct channel *ch)
 	myfifo_trav_r(&ch->last_messages, do_show_com);
 }
 
-void do_processcom(dbref player, char *arg1, char *arg2)
+static void do_processcom(dbref player, char *arg1, char *arg2)
 {
 	struct channel *ch;
 	struct comuser *user;
@@ -729,7 +742,7 @@ void do_delcom(dbref player, dbref cause, int key, char *arg1)
 	raw_notify(player, "Unable to find that alias.");
 }
 
-void do_delcomchannel(dbref player, char *channel)
+static void do_delcomchannel(dbref player, char *channel)
 {
 	struct channel *ch;
 	struct comuser *user;
@@ -844,7 +857,7 @@ void do_destroychannel(dbref player, dbref cause, int key, char *channel)
 	notify_printf(player, "Channel %s destroyed.", channel);
 }
 
-void do_listchannels(dbref player)
+static void do_listchannels(dbref player)
 {
 	struct channel *ch;
 	int perm;
@@ -1083,7 +1096,7 @@ void do_channelwho(dbref player, dbref cause, int key, char *arg1)
 	notify_printf(player, "-- %s --", ch->name);
 }
 
-void do_comdisconnectraw_notify(dbref player, char *chan)
+static void do_comdisconnectraw_notify(dbref player, char *chan)
 {
 	struct channel *ch;
 	struct comuser *cu;
@@ -1098,7 +1111,7 @@ void do_comdisconnectraw_notify(dbref player, char *chan)
 	}
 }
 
-void do_comconnectraw_notify(dbref player, char *chan)
+static void do_comconnectraw_notify(dbref player, char *chan)
 {
 	struct channel *ch;
 	struct comuser *cu;
@@ -1113,7 +1126,8 @@ void do_comconnectraw_notify(dbref player, char *chan)
 	}
 }
 
-void do_comconnectchannel(dbref player, char *channel, char *alias, int i)
+static void do_comconnectchannel(dbref player, char *channel, char *alias,
+								 int i)
 {
 	struct channel *ch;
 	struct comuser *user;
@@ -1168,7 +1182,7 @@ void do_comconnect(dbref player, DESC * d)
 		send_channel("MUXConnections","* %s has connected from somewhere *", Name(player));
 }
 
-void do_comdisconnectchannel(dbref player, char *channel)
+static void do_comdisconnectchannel(dbref player, char *channel)
 {
 	struct comuser *user, *prevuser = NULL;
 	struct channel *ch;
@@ -1381,7 +1395,7 @@ int do_comsystem(dbref who, char *cmd)
 
 }
 
-void do_chclose(dbref player, char *chan)
+static void do_chclose(dbref player, char *chan)
 {
 	struct channel *ch;
 
@@ -1470,7 +1484,7 @@ void do_chopen(dbref player, dbref cause, int key, char *chan, char *object)
 	return;
 }
 
-void do_chloud(dbref player, char *chan)
+static void do_chloud(dbref player, char *chan)
 {
 	struct channel *ch;
 
@@ -1489,7 +1503,7 @@ void do_chloud(dbref player, char *chan)
 	return;
 }
 
-void do_chsquelch(dbref player, char *chan)
+static void do_chsquelch(dbref player, char *chan)
 {
 	struct channel *ch;
 
@@ -1507,7 +1521,7 @@ void do_chsquelch(dbref player, char *chan)
 	return;
 }
 
-void do_chtransparent(dbref player, char *chan)
+static void do_chtransparent(dbref player, char *chan)
 {
 	struct channel *ch;
 
@@ -1526,7 +1540,7 @@ void do_chtransparent(dbref player, char *chan)
 	return;
 }
 
-void do_chopaque(dbref player, char *chan)
+static void do_chopaque(dbref player, char *chan)
 {
 	struct channel *ch;
 
@@ -1593,7 +1607,7 @@ void do_chboot(dbref player, dbref cause, int key, char *channel,
 
 }
 
-void do_chanobj(dbref player, char *channel, char *object)
+static void do_chanobj(dbref player, char *channel, char *object)
 {
 	struct channel *ch;
 	dbref thing;
@@ -1765,7 +1779,7 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan)
 }
 
 void fun_cemit(char *buff, char **bufc, dbref player, dbref cause,
-			   char *fargs[], char *nfargs[], int cargs, int ncargs)
+			   char *fargs[], int nfargs, char *cargs[], int ncargs)
 {
 	struct channel *ch;
 	static char smbuf[LBUF_SIZE];

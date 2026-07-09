@@ -8,7 +8,7 @@
 #include "mudconf.h"
 #include "alloc.h"
 #include "externs.h"
-#include "patchlevel.h"
+#include "command.h"
 
 #include "version.h"
 
@@ -55,19 +55,13 @@ void do_version(dbref player, dbref cause, int extra)
 	notify(player, mudstate.version);
 }
 
-char *mux_version = PACKAGE_STRING "." MINOR_REVNUM
-#ifdef HAG_WAS_HERE
-    "+HAG"
-#endif
-#ifdef ARBITRARY_LOGFILES
-    "+ALG"
-#endif
+char *mux_version = PACKAGE_STRING
 #ifdef DEBUG
     " DEBUG source revision " SOURCE_REVISION
 #else
     " RELEASE source revision " SOURCE_REVISION
 #endif
-    " '" RELEASE_NAME "' build #" MUX_BUILD_NUM " on " MUX_BUILD_DATE
+    " '" MUX_RELEASE_NAME "' build #" MUX_BUILD_NUM " on " MUX_BUILD_DATE
 #ifdef DEBUG
     " by " MUX_BUILD_USER "@" MUX_BUILD_HOST
 #endif

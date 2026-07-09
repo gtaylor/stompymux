@@ -309,7 +309,7 @@ void do_chownall(dbref player, dbref cause, int key, char *from, char *to)
 
 #define ANY_OWNER -2
 
-void er_mark_disabled(dbref player)
+static void er_mark_disabled(dbref player)
 {
 	notify(player,
 		   "The mark commands are not allowed while DB cleaning is enabled.");

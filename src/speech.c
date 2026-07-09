@@ -14,11 +14,13 @@
 #include "powers.h"
 #include "attrs.h"
 #include "alloc.h"
+#include "functions.h"
+#include "command.h"
+#include "speech.h"
 
-extern char *next_token(char *, char);
 extern int In_IC_Loc(dbref);
 
-int sp_ok(dbref player)
+static int sp_ok(dbref player)
 {
 	if(Gagged(player) && (!(Wizard(player)))) {
 		notify(player, "Sorry. Gagged players cannot speak.");
@@ -624,7 +626,7 @@ void do_page(dbref player, dbref cause, int key, char *tname, char *message)
 /**
  * Messages to specific players, or to all but specific players.
  */
-void whisper_pose(dbref player, dbref target, char *message)
+static void whisper_pose(dbref player, dbref target, char *message)
 {
 	char *buff;
 

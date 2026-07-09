@@ -16,6 +16,8 @@
 #include "mudconf.h"
 #include "db.h"
 #include "file_c.h"
+#include "bsd.h"
+#include "dnschild.h"
 #include "externs.h"
 #include "interface.h"
 #include "flags.h"
@@ -42,12 +44,12 @@ int ndescriptors = 0;
 
 DESC *descriptor_list = NULL;
 
-void mux_release_socket();
-void make_nonblocking(int s);
-void accept_new_connection(int, short, void *);
-DESC *initializesock(int, struct sockaddr_storage *, int);
-DESC *new_connection(int);
-int process_input(DESC *);
+static void make_nonblocking(int s);
+static void make_blocking(int s);
+static void accept_new_connection(int sock, short event, void *arg);
+static DESC *initializesock(int s, struct sockaddr_storage *saddr, int saddr_len);
+static DESC *new_connection(int sock);
+static int process_input(DESC *d);
 
 int desc_cmp(void *vleft, void *vright, void *token)
 {
@@ -76,7 +78,7 @@ void desc_addhash(DESC * d)
     rb_insert(mudstate.desctree, (void *) d->player, d);
 }
 
-void desc_delhash(DESC * d)
+static void desc_delhash(DESC * d)
 {
     char buffer2[4096];
     DESC *hdesc = NULL;
@@ -205,7 +207,7 @@ void shutdown_services()
 	event_loopexit(NULL);
 }
 
-int bind_mux_socket(int port)
+static int bind_mux_socket(int port)
 {
 	int s, opt;
 	struct sockaddr_in server;
@@ -330,7 +332,7 @@ struct timeval queue_slice = { 0, 0 };
 struct event queue_ev;
 struct timeval last_slice, current_time;
 
-void runqueues(int fd, short event, void *arg)
+static void runqueues(int fd, short event, void *arg)
 {
 	pid_t pchild;
 	int status = 0;
@@ -384,7 +386,7 @@ void shovechars(int port)
 	event_dispatch();
 }
 
-void accept_new_connection(int sock, short event, void *arg)
+static void accept_new_connection(int sock, short event, void *arg)
 {
 	int newsock, addr_len, len;
 	char *buff, *buff1;
@@ -508,7 +510,7 @@ void shutdownsock(DESC * d, int reason)
    /* dprintk("shutdown."); */
 }
 
-void make_nonblocking(int s)
+static void make_nonblocking(int s)
 {
 	long flags = 0;
 
@@ -525,7 +527,7 @@ void make_nonblocking(int s)
 	}
 }
 
-void make_blocking(int s)
+static void make_blocking(int s)
 {
 	long flags = 0;
 
@@ -543,7 +545,7 @@ void make_blocking(int s)
 }
 extern int fcache_conn_c;
 
-DESC *initializesock(int s, struct sockaddr_storage *saddr, int saddr_len)
+static DESC *initializesock(int s, struct sockaddr_storage *saddr, int saddr_len)
 {
 	DESC *d;
 
@@ -607,7 +609,7 @@ DESC *initializesock(int s, struct sockaddr_storage *saddr, int saddr_len)
 	return d;
 }
 
-int process_input(DESC * d)
+static int process_input(DESC * d)
 {
 	char buf[LBUF_SIZE];
 	int got, in, iter;

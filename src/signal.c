@@ -16,14 +16,15 @@
 
 #include "debug.h"
 #include "mudconf.h"
+#include "signals.h"
 #include "externs.h"
 #include "flags.h"
 
-void signal_TERM(int, siginfo_t *, void *);
-void signal_PIPE(int, siginfo_t *, void *);
-void signal_USR1(int, siginfo_t *, void *);
-void signal_SEGV(int, siginfo_t *, void *);
-void signal_BUS(int, siginfo_t *, void *);
+static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_PIPE(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_USR1(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext);
 
 struct sigaction saTERM = { .sa_sigaction = signal_TERM, .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART };
 struct sigaction saPIPE = { .sa_sigaction = signal_PIPE, .sa_flags = SA_SIGINFO };
@@ -37,7 +38,7 @@ stack_t regular_stack;
 #define ALT_STACK_SIZE (0x40000)
 #define ALT_STACK_ALIGN (0x1000)
 
-void bind_signals()
+void bind_signals(void)
 {
     int error_code;
     dprintk("creating alternate signal stack.");
@@ -79,7 +80,7 @@ void bind_signals()
     dprintk("done.");
 }
 
-void unbind_signals()
+void unbind_signals(void)
 {
 	signal(SIGTERM, SIG_DFL);
 	signal(SIGPIPE, SIG_DFL);
@@ -97,13 +98,13 @@ void unbind_signals()
     }
 }
 
-void signal_TERM(int signo, siginfo_t * siginfo, void *ucontext)
+static void signal_TERM(int signo, siginfo_t * siginfo, void *ucontext)
 {
 	dprintk("caught SIGTERM");
 	do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGTERM from kernel.");
 }
 
-void signal_PIPE(int signo, siginfo_t * siginfo, void *ucontext)
+static void signal_PIPE(int signo, siginfo_t * siginfo, void *ucontext)
 {
     dprintk("caught SIGPIPE");
 #ifdef HAVE_SIGINFO_T_SI_FD
@@ -113,14 +114,14 @@ void signal_PIPE(int signo, siginfo_t * siginfo, void *ucontext)
 #endif
 }
 
-void signal_USR1(int signo, siginfo_t * siginfo, void *ucontext)
+static void signal_USR1(int signo, siginfo_t * siginfo, void *ucontext)
 {
     mux_release_socket();
     dprintk("caught SIGUSR1");
 	do_restart(1, 1, 0);
 }
 
-void signal_SEGV(int signo, siginfo_t * siginfo, void *ucontext)
+static void signal_SEGV(int signo, siginfo_t * siginfo, void *ucontext)
 {
     dprintk("caught SIGSEGV");
 	int child;
@@ -157,7 +158,7 @@ void signal_SEGV(int signo, siginfo_t * siginfo, void *ucontext)
 	}
 }
 
-void signal_BUS(int signo, siginfo_t * siginfo, void *ucontext)
+static void signal_BUS(int signo, siginfo_t * siginfo, void *ucontext)
 {
     dprintk("caught SIGBUS");
 	int child;

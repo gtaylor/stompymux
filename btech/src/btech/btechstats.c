@@ -34,14 +34,13 @@
 #include "p.mech.combat.misc.h"
 #include "p.mech.pickup.h"
 #include "p.mech.tag.h"
-#include "p.functions.h"
+#include "functions.h"
 
 extern dbref pilot_override;
 
 dbref cached_target_char = -1;
 int cached_skill;
 int cached_result;
-extern char *get_uptime_to_string(int);
 
 static int char_xp_bonus(PSTATS * s, int code);
 static int char_getstatvalue(PSTATS * s, char *name);

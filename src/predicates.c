@@ -12,11 +12,9 @@
 #include "attrs.h"
 #include "powers.h"
 #include "ansi.h"
-#include "patchlevel.h"
 #include "rbtab.h"
+#include "functions.h"
 
-extern dbref match_thing(dbref, char *);
-extern int do_command(DESC *, char *);
 extern void dump_database(void);
 extern void dump_restart_db(void);
 
@@ -1429,7 +1427,7 @@ int exit_displayable(dbref exit, dbref player, int key)
 /**
  * Return next exit that is ok to see.
  */
-dbref next_exit(dbref player, dbref this, int exam_here)
+static dbref next_exit(dbref player, dbref this, int exam_here)
 {
 	if(isRoom(this))
 		return NOTHING;

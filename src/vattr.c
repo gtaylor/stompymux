@@ -9,6 +9,7 @@
 #include "alloc.h"
 #include "rbtab.h"
 #include "externs.h"
+#include "command.h"
 
 static void fixcase(char *);
 static char *store_string(char *);

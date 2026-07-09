@@ -28,6 +28,7 @@
 #include "p.mech.consistency.h"
 #include "p.mech.utils.h"
 #include "mech.events.h"
+#include "functions.h"
 
 /* Selectors */
 #define SPECIAL_FREE 0
@@ -37,7 +38,6 @@ extern char *strtok(char *s, const char *ct);
 
 /* EXTERNS THAT SHOULDN'T BE IN HERE! */
 extern void *FindObjectsData(dbref key);
-dbref match_thing(dbref player, char *name);
 void muxevent_remove_data(void *data);
 
 #define MECHREP_COMMON(a) \

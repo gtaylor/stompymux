@@ -12,13 +12,11 @@
 #include "config.h"
 #include "externs.h"
 
-#include "commac.h"
+#include "comsys.h"
 
 struct commac *commac_table[NUM_COMMAC];
 
-extern void load_comsystem(FILE *);
 extern void load_macros(FILE *);
-extern void save_comsystem(FILE *);
 extern void save_macros(FILE *);
 
 void load_comsys_and_macros(char *filename)

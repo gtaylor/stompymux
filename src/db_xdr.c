@@ -33,7 +33,7 @@ static void do_save_com_xdr(void *data, struct mmdb_t *mmdb)
 
 }
 
-void myfifo_trav_r_xdr(myfifo ** foo, struct mmdb_t *mmdb,
+static void myfifo_trav_r_xdr(myfifo ** foo, struct mmdb_t *mmdb,
 					   void (*func) (void *, struct mmdb_t *))
 {
         myfifo_e *tmp;
@@ -43,7 +43,7 @@ void myfifo_trav_r_xdr(myfifo ** foo, struct mmdb_t *mmdb,
                 func(tmp->data, mmdb);
 }
 
-void mmdb_write_object(struct mmdb_t *mmdb, dbref object)
+static void mmdb_write_object(struct mmdb_t *mmdb, dbref object)
 {
 	ATRLIST *atrlist;
 	int ii;
@@ -94,7 +94,7 @@ static int mmdb_write_vattr(void *key, void *data, int depth, void *arg)
 	return 1;
 }
 
-void mmdb_db_write(char *filename)
+static void mmdb_db_write(char *filename)
 {
 	struct mmdb_t *mmdb;
 	uint32_t xid[5], i;
@@ -222,7 +222,7 @@ void mmdb_db_write(char *filename)
 	mmdb_close(mmdb);
 }
 
-int mmdb_db_read(char *filename)
+static int mmdb_db_read(char *filename)
 {
 	struct mmdb_t *mmdb;
 	uint32_t xid[5], i;

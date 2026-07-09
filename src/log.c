@@ -10,6 +10,7 @@
 
 #include "db.h"
 #include "mudconf.h"
+#include "command.h"
 #include "externs.h"
 #include "flags.h"
 #include "powers.h"

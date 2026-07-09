@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
+#include "dnschild.h"
 #include "externs.h"
 #include "debug.h"
 
@@ -49,7 +50,7 @@ dnschild_write_result(int fd, char *buffer, size_t buffer_size, int length)
 		_exit(1);
 }
 
-int dnschild_init()
+int dnschild_init(void)
 {
 	dprintk("dnschild initialized.");
 	dnschild_state = 1;
@@ -108,7 +109,7 @@ void *dnschild_request(DESC * d)
 	return (void *) dqst;
 }
 
-void dnschild_destruct()
+void dnschild_destruct(void)
 {
 	struct dns_query_state_t *dqst;
 	dprintk("dnschild expiring queries and shutting down.");

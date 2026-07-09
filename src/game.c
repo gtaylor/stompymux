@@ -15,12 +15,19 @@
 #include "db.h"
 #include "interface.h"
 #include "match.h"
+#include "command.h"
+#include "cque.h"
+#include "logcache.h"
+#include "macro.h"
+#include "timer.h"
 #include "externs.h"
+#include "version.h"
 #include "flags.h"
 #include "powers.h"
 #include "attrs.h"
 #include "alloc.h"
 #include "vattr.h"
+#include "comsys.h"
 #include "commac.h"
 #ifndef NEXT
 #endif
@@ -34,26 +41,13 @@
 
 #define NSUBEXP 10
 
-extern void init_attrtab(void);
 extern void init_cmdtab(void);
-extern void init_mactab(void);
-extern void init_chantab(void);
 extern void cf_init(void);
 extern void pcache_init(void);
 extern int cf_read(char *fn);
 extern void init_functab(void);
-extern void close_sockets(int emergency, char *message);
-extern void init_version(void);
-extern void init_logout_cmdtab(void);
-extern void init_timer(void);
 extern void raw_notify(dbref, const char *);
-extern void do_second(void);
 extern void do_dbck(dbref, dbref, int);
-
-#ifdef ARBITRARY_LOGFILES
-void logcache_init();
-void logcache_destruct();
-#endif
 
 void fork_and_dump(int);
 void dump_database(void);
@@ -119,7 +113,7 @@ void report(void)
  * Load a regular expression match and insert it into
  * registers.
  */
-int regexp_match(char *pattern, char *str, char *args[], int nargs)
+static int regexp_match(char *pattern, char *str, char *args[], int nargs)
 {
 	regex_t re;
 	int got_match;

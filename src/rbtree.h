@@ -62,7 +62,7 @@ void rb_insert(rbtree, void *, void *);
 void *rb_find(rbtree, void *);
 int rb_exists(rbtree, void *);
 void *rb_delete(rbtree, void *);
-void *rb_release(rbtree, void (*)(void *, void *, void *), void *);
+void rb_release(rbtree, void (*)(void *, void *, void *), void *);
 
 int rb_walk(rbtree, int, int (*)(void *, void *, int, void *), void *);
 unsigned int rb_size(rbtree);

@@ -5,6 +5,7 @@
 #include "config.h"
 
 #include "db.h"
+#include "conf.h"
 #include "externs.h"
 #include "rbtab.h"
 #include "alloc.h"
@@ -152,7 +153,6 @@ void listset_nametab(dbref player, NAMETAB * ntab, int flagword, char *prefix,
 	free_lbuf(buf);
 }
 
-extern void cf_log_notfound(dbref, char *, const char *, char *);
 
 int cf_ntab_access(int *vp, char *str, long extra, dbref player, char *cmd)
 {

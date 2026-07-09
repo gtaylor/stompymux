@@ -201,6 +201,8 @@ extern void s_Pennies(dbref, int);
 
 extern dbref getref(FILE *);
 extern void putref(FILE *, dbref);
+extern void putstring(FILE *, const char *);
+extern const char *getstring_noalloc(FILE *, int);
 extern BOOLEXP *dup_bool(BOOLEXP *);
 extern void free_boolexp(BOOLEXP *);
 extern dbref parse_dbref(const char *);
@@ -209,11 +211,13 @@ extern void al_add(dbref, int);
 extern void al_delete(dbref, int);
 extern void al_destroy(dbref);
 extern void al_store(void);
+extern void init_attrtab(void);
 extern void db_grow(dbref);
 extern void db_free(void);
 extern void db_make_minimal(void);
 extern dbref db_read(FILE *, int *, int *, int *);
 extern dbref db_write(FILE *, int, int);
+extern dbref xml_db_write(FILE *, int, int);
 extern void destroy_thing(dbref);
 extern void destroy_exit(dbref);
 extern int load_restart_db_xdr(void);
@@ -235,7 +239,6 @@ extern void dump_database_internal(int);
 #define DO_WHOLE_DB_REV(thing) \
 	for ((thing)=mudstate.db_top-1; (thing)>0; (thing)--)
 
-#define HAG_WAS_HERE
 #define	Dropper(thing)	(Connected(Owner(thing)) && Hearer(thing))
 
 #define DUMP_NORMAL  0

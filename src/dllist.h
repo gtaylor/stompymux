@@ -17,7 +17,7 @@ typedef struct dllist_t {
 } dllist;
 
 /* The various create functions */
-dllist *dllist_create_list();
+dllist *dllist_create_list(void);
 dllist_node *dllist_create_node(void *data);
 
 /* The different destroy functions

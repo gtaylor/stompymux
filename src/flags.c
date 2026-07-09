@@ -19,7 +19,7 @@
  * @param fflags ??
  * @param reset If 1, we're resetting the flag 
  */
-int fh_any(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_any(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(fflags & FLAG_WORD3) {
 		if(reset)
@@ -48,7 +48,7 @@ int fh_any(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag 
  */
-int fh_god(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_god(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!God(player))
 		return 0;
@@ -64,7 +64,7 @@ int fh_god(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_wiz(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_wiz(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!Wizard(player) && !God(player))
 		return 0;
@@ -80,7 +80,7 @@ int fh_wiz(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_fixed(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_fixed(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(isPlayer(target))
 		if(!Wizard(player) && !God(player))
@@ -98,7 +98,7 @@ int fh_fixed(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param reset If 1, we're resetting the flag
  */
 
-int fh_wizroy(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_wizroy(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!WizRoy(player) && !God(player))
 		return 0;
@@ -114,7 +114,7 @@ int fh_wizroy(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_inherit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_inherit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!Inherits(player))
 		return 0;
@@ -130,7 +130,7 @@ int fh_inherit(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_wiz_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_wiz_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!God(player))
 		return 0;
@@ -150,7 +150,7 @@ int fh_wiz_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_dark_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_dark_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(!reset && isPlayer(target) && !((target == player) &&
 									   Can_Hide(player)) && (!Wizard(player)
@@ -168,7 +168,7 @@ int fh_dark_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_going_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_going_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	if(Going(target) && reset && (Typeof(target) != TYPE_GARBAGE)) {
 		notify(player, "Your object has been spared from destruction.");
@@ -189,7 +189,7 @@ int fh_going_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_hear_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_hear_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	int could_hear;
 
@@ -215,7 +215,7 @@ int fh_hear_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-int fh_xcode_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
+static int fh_xcode_bit(dbref target, dbref player, FLAG flag, int fflags, int reset)
 {
 	int got_xcode;
 	int new_xcode;
@@ -505,7 +505,7 @@ FLAGENT *find_flag(dbref thing, char *flagname)
 }								/* end find_flag() */
 
 
-char *find_attribute_flag(int flag, NAMETAB *ntab) {
+static char *find_attribute_flag(int flag, NAMETAB *ntab) {
 
     NAMETAB *nt;
     char *flag_name;

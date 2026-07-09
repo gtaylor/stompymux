@@ -12,6 +12,7 @@
 #include "attrs.h"
 #include "externs.h"
 #include "powers.h"
+#include "command.h"
 
 /*
  * ---------------------------------------------------------------------------

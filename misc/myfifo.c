@@ -20,7 +20,7 @@
 /* A little shortcut to save me some typing */
 #define PFOO   (*foo)
 
-void check_fifo(myfifo ** foo)
+static void check_fifo(myfifo ** foo)
 {
     if (PFOO == NULL) {
 	PFOO = (myfifo *) malloc(sizeof(myfifo));

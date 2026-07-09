@@ -10,6 +10,7 @@
 #include "config.h"
 #include "db.h"
 #include "interface.h"
+#include "command.h"
 #include "externs.h"
 #include "help.h"
 #include "rbtab.h"

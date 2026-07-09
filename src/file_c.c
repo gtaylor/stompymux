@@ -190,7 +190,7 @@ static int fcache_read(FBLOCK ** cp, char *filename)
 	return tchars;
 }
 
-void fcache_read_dir(char *dir, FCACHE foo[], int *cnt, int max)
+static void fcache_read_dir(char *dir, FCACHE foo[], int *cnt, int max)
 {
 	DIR *d;
 	struct dirent *de;
@@ -239,7 +239,7 @@ void fcache_rawdump(int fd, int num)
 	return;
 }
 
-void fcache_dumpbase(DESC * d, FCACHE fc[], int num)
+static void fcache_dumpbase(DESC * d, FCACHE fc[], int num)
 {
 	FBLOCK *fp;
 

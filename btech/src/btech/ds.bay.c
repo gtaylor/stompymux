@@ -19,8 +19,7 @@
 #include "p.eject.h"
 #include "p.mech.restrict.h"
 #include "p.mech.startup.h"
-
-dbref match_thing(dbref player, char *name);
+#include "functions.h"
 
 void mech_createbays(dbref player, void *data, char *buffer)
 {

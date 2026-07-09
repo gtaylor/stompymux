@@ -17,7 +17,7 @@
 #include "attrs.h"
 #include "powers.h"
 
-int recursive_check_contents(dbref victim, dbref destination)
+static int recursive_check_contents(dbref victim, dbref destination)
 {
 	dbref i;
 

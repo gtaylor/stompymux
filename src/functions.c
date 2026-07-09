@@ -12,6 +12,7 @@
 #include "flags.h"
 #include "powers.h"
 #include "attrs.h"
+#include "conf.h"
 #include "externs.h"
 #include "match.h"
 #include "command.h"
@@ -27,9 +28,6 @@ UFUN *ufun_head;
 extern NAMETAB indiv_attraccess_nametab[];
 
 extern int game_lag(void);
-
-extern void cf_log_notfound(dbref player, char *cmd,
-							const char *thingname, char *thing);
 
 /*
  * Function definitions from funceval.c 

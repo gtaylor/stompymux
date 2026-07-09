@@ -15,7 +15,7 @@
 #include "attrs.h"
 #include "alloc.h"
 #include "ansi.h"
-#include "p.comsys.h"
+#include "comsys.h"
 #include "command.h"
 
 extern NAMETAB indiv_attraccess_nametab[];
@@ -687,8 +687,8 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown)
  * * do_set: Set flags or attributes on objects, or flags on attributes.
  */
 
-void set_attr_internal(dbref player, dbref thing, int attrnum, char *attrtext,
-					   int key)
+static void set_attr_internal(dbref player, dbref thing, int attrnum,
+							  char *attrtext, int key)
 {
 	dbref aowner;
 	long aflags; int could_hear, have_xcode;
@@ -1253,8 +1253,8 @@ void edit_string(char *src, char **dst, char *from, char *to)
 	}
 }
 
-void edit_string_ansi(char *src, char **dst, char **returnstr, char *from,
-					  char *to)
+static void edit_string_ansi(char *src, char **dst, char **returnstr,
+							 char *from, char *to)
 {
 	char *cp, *rp;
 

@@ -15,8 +15,6 @@
 #include "alloc.h"
 #include "powers.h"
 
-extern const char *getstring_noalloc(FILE *, int);
-extern void putstring(FILE *, const char *);
 extern void db_grow(dbref);
 
 extern struct object *db;

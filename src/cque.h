@@ -38,4 +38,7 @@ struct objqe {
     int queued;
 };  
 
+int cque_init(void);
+void do_second(void);
+
 #endif

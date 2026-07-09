@@ -18,6 +18,7 @@
 #include <errno.h>
 
 #include "mudconf.h"
+#include "logcache.h"
 #include "externs.h"
 #include "interface.h"
 #include "flags.h"
@@ -126,7 +127,7 @@ static int logcache_open(char *filename)
 	return 1;
 }
 
-void logcache_init()
+void logcache_init(void)
 {
 	if(!logfiles) {
 		dprintk("logcache initialized.");
@@ -143,7 +144,7 @@ static int _logcache_destruct(void *key, void *data, int depth, void *arg)
 	return 1;
 }
 
-void logcache_destruct()
+void logcache_destruct(void)
 {
 	dprintk("logcache destructing.");
 	if(!logfiles) {

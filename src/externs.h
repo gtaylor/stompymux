@@ -12,6 +12,13 @@
 #include "mudconf.h"
 #include "interface.h"
 #include "mmdb.h"
+#include "bsd.h"
+#include "conf.h"
+#include "dnschild.h"
+#include "logcache.h"
+#include "netcommon.h"
+#include "signals.h"
+#include "stringutil.h"
 
 #ifndef _DB_C
 #define INLINE
@@ -27,24 +34,10 @@
 #define ToLower(C)	(((C) >= 'A' && (C) <= 'Z')? (C) - 'A' + 'a': (C))
 #define safe_atoi(s)	((s == NULL) ? 0 : atoi(s))
 
-/* From conf.c */
-int cf_modify_bits(int *, char *, long, dbref, char *);
-
 /* From udb_achunk.c */
 int dddb_close(void);
 int dddb_setfile(char *);
 int dddb_init(void);
-
-/* From netcommon.c */
-void choke_player(dbref);
-void release_player(dbref);
-void make_ulist(dbref, char *, char **);
-int fetch_idle(dbref);
-int fetch_connect(dbref);
-void raw_broadcast(int, char *, ...);
-int desc_cmp(void *, void *, void *);
-void run_command(DESC *d, char *);
-int do_unauth_command(DESC *d, char *);
 
 /* From cque.c */
 int nfy_que(dbref, int, int, int);
@@ -92,25 +85,6 @@ int Hearer(dbref);
 void report(void);
 int atr_match(dbref, dbref, char, char *, int);
 int list_check(dbref, dbref, char, char *, int);
-
-/* From dnschild.c */
-int dnschild_init();
-void *dnschild_request(DESC *d);
-void dnschild_destruct();
-void dnschild_kill(void *);
-
-/* From bsd.c */
-void shutdown_services();
-void flush_sockets();
-int eradicate_broken_fd(int);
-void mux_release_socket();
-void bind_descriptor(DESC *);
-void release_descriptor(DESC *);
-
-/* From signal.c */
-void bind_signals();
-void unbind_signals();
-
 
 /* From help.c */
 int helpindex_read(HASHTAB *, char *);
@@ -221,26 +195,6 @@ void edit_string(char *, char **, char *, char *);
 dbref match_controlled(dbref, char *);
 dbref match_affected(dbref, char *);
 dbref match_examinable(dbref, char *);
-
-/* From stringutil.c */
-char *munge_space(char *);
-char *trim_spaces(char *);
-char *grabto(char **, char);
-int string_compare(const char *, const char *);
-int string_prefix(const char *, const char *);
-const char *string_match(const char *, const char *);
-char *dollar_to_space(const char *);
-char *replace_string(const char *, const char *, const char *);
-char *replace_string_inplace(const char *, const char *, char *);
-char *skip_space(const char *);
-char *seek_char(const char *, char);
-int prefix_match(const char *, const char *);
-int minmatch(char *, char *, int);
-char *strsave(const char *);
-int safe_copy_str(char *, char *, char **, int);
-int safe_copy_chr(char, char *, char **, int);
-int matches_exit_from_list(char *, char *);
-char *translate_string(const char *, int);
 
 /* From boolexp.c */
 int eval_boolexp(dbref, dbref, dbref, BOOLEXP *);

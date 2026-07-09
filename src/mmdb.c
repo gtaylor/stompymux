@@ -19,14 +19,7 @@
 #include <stdint.h>
 
 #include "debug.h"
-
-struct mmdb_t {
-	void *base;
-	void *ppos;
-	void *end;
-	int length;
-	int fd;
-};
+#include "mmdb.h"
 
 struct mmdb_t *mmdb_open_read(char *filename)
 {
@@ -215,7 +208,7 @@ void mmdb_write_opaque(struct mmdb_t *mmdb, void *data, int length)
 		mmdb_write(mmdb, pad, 4 - (length & 3));
 }
 
-void mmdb_write_string(struct mmdb_t *mmdb, void *data) {
+void mmdb_write_string(struct mmdb_t *mmdb, char *data) {
     if(data == NULL) {
         mmdb_write_uint32(mmdb, 0);
     } else {

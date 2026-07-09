@@ -146,6 +146,12 @@ struct cmdentry {
     void *handler;
 };
 
+void init_cmdtab(void);
+int cf_access(int *vp, char *str, long extra, dbref player, char *cmd);
+int cf_acmd_access(int *vp, char *str, long extra, dbref player, char *cmd);
+int cf_attr_access(int *vp, char *str, long extra, dbref player, char *cmd);
+int cf_cmd_alias(int *vp, char *str, long extra, dbref player, char *cmd);
+
 typedef struct addedentry ADDENT;
 struct addedentry {
     dbref thing;

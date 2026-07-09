@@ -64,6 +64,7 @@
 #include <event.h>
 
 #include "muxevent.h"
+#include "../include/p.event.h"
 #include "create.h"
 #include "debug.h"
 
@@ -387,4 +388,3 @@ long muxevent_count_type_data_firstev(int type, void *data) {
         }
     return -1;
 }
-

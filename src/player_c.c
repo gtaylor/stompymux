@@ -16,7 +16,7 @@
 rbtree pcache_tree;
 PCACHE *pcache_head;
 
-int compare_pcache(dbref left, dbref right)
+static int compare_pcache(dbref left, dbref right)
 {
 	return (left - right);
 }

@@ -21,10 +21,7 @@
 #include "functions.h"
 #include "cque.h"
 #include "mmdb.h"
-
-extern int a_Queue(dbref, int);
-extern void s_Queue(dbref, int);
-extern int QueueMax(dbref);
+#include "pcache.h"
 
 static rbtree obq = NULL;
 
@@ -33,7 +30,7 @@ static int objqe_compare(dbref left, dbref right, void *arg)
 	return (right - left);
 }
 
-int cque_init()
+int cque_init(void)
 {
 	obq = rb_init((void *) objqe_compare, NULL);
 	return 1;

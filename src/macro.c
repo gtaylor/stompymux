@@ -11,12 +11,11 @@
 #include "powers.h"
 #include "db.h"
 #include "alloc.h"
+#include "functions.h"
 
 int nummacros;
 int maxmacros;
 struct macros **macros;
-
-extern dbref match_thing(dbref player, char *name);
 
 MACENT macro_table[] = {
 	{(char *) "add", do_add_macro},

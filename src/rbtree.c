@@ -63,10 +63,12 @@ void rb_insert(rbtree, void *key, void *data);
 void *rb_find(rbtree, void *key);
 int rb_exists(rbtree, void *key);
 void *rb_delete(rbtree, void *key);
+void rb_release(rbtree, void (*)(void *, void *, void *), void *);
 
 int rb_walk(rbtree, int, int (*)(void *, void *, int, void *), void *);
 unsigned int rb_size(rbtree);
 void *rb_search(rbtree, int, void *);
+void *rb_index(rbtree, int);
 
 rbtree rb_init(int (*compare_function) (void *, void *, void *), void *token)
 {

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "externs.h"
 #include "db.h"
+#include "command.h"
 #include "attrs.h"
 #include "vattr.h"
 #include "match.h"
@@ -19,8 +20,9 @@
 #include "powers.h"
 #include "interface.h"
 #include "flags.h"
-#include "p.comsys.h"
+#include "comsys.h"
 #include "mmdb.h"
+#include "pcache.h"
 
 #ifndef O_ACCMODE
 #define O_ACCMODE	(O_RDONLY|O_WRONLY|O_RDWR)
@@ -70,9 +72,6 @@ extern unsigned int malloc_sbrk_used;	/* Amount of data space used now */
  * Check routine forward declaration. 
  */
 extern int fwdlist_ck(int, dbref, dbref, int, char *);
-
-extern void pcache_reload(dbref);
-extern void desc_reload(dbref);
 
 // Macro for the flags for character stats/skills attributes.
 #define PLSTAT_MODE (AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL)
@@ -1468,7 +1467,7 @@ void atr_free(dbref thing)
 /*
  * garbage collect an attribute list 
  */
-void atr_collect(dbref thing)
+static void atr_collect(dbref thing)
 {
 	/*
 	 * Nada.  gdbm takes care of us.  I hope ;-) 
@@ -1579,7 +1578,7 @@ int atr_head(dbref thing, char **attrp)
 								 * * So mistaken refs to #-1 won't die.  
 								 */
 
-void initialize_objects(dbref first, dbref last)
+static void initialize_objects(dbref first, dbref last)
 {
 	dbref thing;
 
@@ -2162,9 +2161,6 @@ void dump_restart_db_xdr(void)
 
 void accept_client_input(int fd, short event, void *arg);
 
-void bsd_write_callback(struct bufferevent *bufev, void *arg);
-void bsd_read_callback(struct bufferevent *bufev, void *arg);
-void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg);
 
 void load_restart_db()
 {

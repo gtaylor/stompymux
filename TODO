@@ -3,6 +3,9 @@
 ## MUX Todos in the /src/ dir
 
 * Maybe: remove alias/macro system
+* Remove src/patchlevel.h in lieu of build system metadata
+* Is src/myfifo.h still used?
+* Move p.*.h files
 * Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
 * Maybe: remove all powers. wiz bit is enough

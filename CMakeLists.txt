@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.3)
 
-project(BattleTechMUX VERSION 0.7.6 LANGUAGES C CXX)
+project(BattleTechMUX VERSION 0.7.6.2 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -163,6 +163,7 @@ else()
 endif()
 file(WRITE "${build_num_file}" "${mux_build_num}\n")
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
+set(MUX_RELEASE_NAME "Fly")
 cmake_host_system_information(RESULT MUX_BUILD_HOST QUERY FQDN)
 if(DEFINED ENV{USER})
   set(MUX_BUILD_USER "$ENV{USER}")
@@ -376,6 +377,8 @@ endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
 set_target_properties(netmux PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_options(netmux PRIVATE
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" ${BTMUX_PLATFORM_LIBS})
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
@@ -387,6 +390,8 @@ target_include_directories(netmux PRIVATE
   "${EVENT_INCLUDE_DIR}")
 
 add_executable(mkindx src/mkindx.c)
+target_compile_options(mkindx PRIVATE
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(mkindx PRIVATE btmux_options ${BTMUX_PLATFORM_LIBS})
 target_include_directories(mkindx PRIVATE
   "${CMAKE_BINARY_DIR}"

@@ -13,7 +13,7 @@
 #include "alloc.h"
 #include "attrs.h"
 #include "powers.h"
-#include "p.comsys.h"
+#include "command.h"
 
 /*
  * ---------------------------------------------------------------------------

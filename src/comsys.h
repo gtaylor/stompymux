@@ -1,14 +1,20 @@
 
+#ifndef __COMSYS_H__
+#define __COMSYS_H__
+
 /* comsys.h */
 
 /* $Id: comsys.h,v 1.1 2005/06/13 20:50:46 murrayma Exp $ */
 
+#include <stdio.h>
+#include <time.h>
+
+#include "db.h"
+#include "interface.h"
 #include "commac.h"
 #ifdef CHANNEL_HISTORY
 #include "myfifo.h"
 #endif
-#ifndef __COMSYS_H__
-#define __COMSYS_H__
 
 typedef struct chanentry CHANENT;
 struct chanentry {
@@ -51,10 +57,38 @@ typedef struct {
 extern int num_channels;
 extern int max_channels;
 
-/* some extern functions. */
-extern int In_IC_Loc(dbref player);
-extern void do_joinchannel(dbref, struct channel *);
-extern void sort_users(struct channel *);
+int In_IC_Loc(dbref player);
+void init_chantab(void);
+void send_channel(char *chan, const char *format, ...);
+void load_comsystem(FILE *fp);
+void save_comsystem(FILE *fp);
+struct channel *select_channel(char *channel);
+struct comuser *select_user(struct channel *ch, dbref player);
+void do_addcom(dbref player, dbref cause, int key, char *arg1, char *arg2);
+void do_delcom(dbref player, dbref cause, int key, char *arg1);
+void do_createchannel(dbref player, dbref cause, int key, char *channel);
+void do_destroychannel(dbref player, dbref cause, int key, char *channel);
+void do_comtitle(dbref player, dbref cause, int key, char *arg1, char *arg2);
+void do_comlist(dbref player, dbref cause, int key);
+void do_channelnuke(dbref player);
+void do_clearcom(dbref player, dbref cause, int key);
+void do_allcom(dbref player, dbref cause, int key, char *arg1);
+void do_channelwho(dbref player, dbref cause, int key, char *arg1);
+void do_comdisconnect(dbref player);
+void do_comconnect(dbref player, DESC *d);
+void do_editchannel(dbref player, dbref cause, int flag, char *arg1,
+	char *arg2);
+int do_comsystem(dbref who, char *cmd);
+void do_cemit(dbref player, dbref cause, int key, char *chan, char *text);
+void do_chopen(dbref player, dbref cause, int key, char *chan, char *object);
+void do_chboot(dbref player, dbref cause, int key, char *channel,
+	char *victim);
+void do_chanstatus(dbref player, dbref cause, int key, char *chan);
+void do_chanlist(dbref player, dbref cause, int key);
+void do_joinchannel(dbref player, struct channel *ch);
+void sort_users(struct channel *ch);
+void fun_cemit(char *buff, char **bufc, dbref player, dbref cause,
+	char *fargs[], int nfargs, char *cargs[], int ncargs);
 
 #define CHANNEL_JOIN		0x001
 #define CHANNEL_TRANSMIT	0x002

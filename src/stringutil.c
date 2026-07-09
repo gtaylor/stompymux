@@ -6,6 +6,7 @@
 
 #include "mudconf.h"
 #include "config.h"
+#include "stringutil.h"
 #include "externs.h"
 #include "alloc.h"
 #include "ansi.h"

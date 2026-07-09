@@ -14,7 +14,7 @@
 /**
  * set or clear indicated bit, no security checking
  */
-int ph_any(dbref target, dbref player, POWER power, int fpowers, int reset)
+static int ph_any(dbref target, dbref player, POWER power, int fpowers, int reset)
 {
 	if(fpowers & POWER_EXT) {
 		if(reset)
@@ -33,7 +33,7 @@ int ph_any(dbref target, dbref player, POWER power, int fpowers, int reset)
 /**
  * Only GOD may set or clear the bit
  */
-int ph_god(dbref target, dbref player, POWER power, int fpowers, int reset)
+static int ph_god(dbref target, dbref player, POWER power, int fpowers, int reset)
 {
 	if(!God(player))
 		return 0;
@@ -43,7 +43,7 @@ int ph_god(dbref target, dbref player, POWER power, int fpowers, int reset)
 /**
  * Only WIZARDS (or GOD) may set or clear the bit
  */
-int ph_wiz(dbref target, dbref player, POWER power, int fpowers, int reset)
+static int ph_wiz(dbref target, dbref player, POWER power, int fpowers, int reset)
 {
 	if(!Wizard(player) & !God(player))
 		return 0;
@@ -53,7 +53,7 @@ int ph_wiz(dbref target, dbref player, POWER power, int fpowers, int reset)
 /**
  * Only WIZARDS, ROYALTY, (or GOD) may set or clear the bit
  */
-int ph_wizroy(dbref target, dbref player, POWER power, int fpowers, int reset)
+static int ph_wizroy(dbref target, dbref player, POWER power, int fpowers, int reset)
 {
 	if(!WizRoy(player) & !God(player))
 		return 0;
@@ -63,8 +63,8 @@ int ph_wizroy(dbref target, dbref player, POWER power, int fpowers, int reset)
 /**
  * Only players may set or clear this bit.
  */
-int ph_inherit(dbref target, dbref player, POWER power, int fpowers,
-			   int reset)
+static int ph_inherit(dbref target, dbref player, POWER power, int fpowers,
+					  int reset)
 {
 	if(!Inherits(player))
 		return 0;

@@ -9,6 +9,7 @@
 #include "interface.h"
 #include "mudconf.h"
 #include "command.h"
+#include "conf.h"
 #include "functions.h"
 #include "externs.h"
 #include "match.h"
@@ -20,10 +21,7 @@
 #include "comsys.h"
 #include "create.h"
 #include "macro.h"
-#include "p.comsys.h"
 
-extern void list_cf_access(dbref);
-extern void list_siteinfo(dbref);
 #ifdef ARBITRARY_LOGFILES
 extern void logcache_init(void);
 void logcache_list(dbref player);
@@ -795,9 +793,9 @@ int check_access(dbref player, int mask)
  * ---------------------------------------------------------------------------
  * * process_cmdent: Perform indicated command with passed args.
  */
-void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
-					int interactive, char *arg, char *unp_command,
-					char *cargs[], int ncargs)
+static void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
+						   int interactive, char *arg, char *unp_command,
+						   char *cargs[], int ncargs)
 {
 	char *buf1 = NULL, *buf2 = NULL, tchar = '\x00', *bp = NULL, *str = NULL, 
         *buff = NULL, *s = NULL, *j = NULL, *new = NULL;
@@ -1755,7 +1753,6 @@ static void list_attraccess(dbref player)
  * * cf_access: Change command or switch permissions.
  */
 
-extern void cf_log_notfound(dbref, char *, const char *, char *);
 
 int cf_access(int *vp, char *str, long extra, dbref player, char *cmd)
 {

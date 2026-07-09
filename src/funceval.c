@@ -22,6 +22,8 @@
 #include "alloc.h"
 #include "ansi.h"
 #include "comsys.h"
+#include "netcommon.h"
+#include "speech.h"
 
 #define NSUBEXP 10
 
@@ -34,22 +36,6 @@
  */
 
 extern NAMETAB indiv_attraccess_nametab[];
-extern char *trim_space_sep(char *, char);
-extern char *next_token(char *, char);
-extern char *split_token(char **, char);
-extern dbref match_thing(dbref, char *);
-extern int countwords(char *, char);
-extern int check_read_perms(dbref, dbref, ATTR *, int, int, char *, char **);
-extern void arr2list(char **, int, char *, char **, char);
-extern void make_portlist(dbref, dbref, char *, char **);
-extern struct channel *select_channel(char *channel);
-extern void do_pemit_list(dbref, char *, const char *);
-extern int fn_range_check(const char *, int, int, int, char *, char **);
-extern int delim_check(char *[], int, int, char *, char *, char **, int,
-					   dbref, dbref, char *[], int);
-extern char *upcasestr(char *s);
-extern int list2arr(char *[], int, char *, int);
-extern struct comuser *select_user(struct channel *, dbref);
 
 /*
  * This is for functions that take an optional delimiter character
@@ -2440,7 +2426,7 @@ void fun_munge(char *buff, char **bufc, dbref player, dbref cause,
 /*
  * die() code borrowed from PennMUSH 1.50
  */
-int getrandom(int x)
+static int getrandom(int x)
 {
 	/*
 	 * In order to be perfectly anal about not introducing any further *
@@ -2782,8 +2768,8 @@ void fun_strcat(char *buff, char **bufc, dbref player, dbref cause,
 /*
  * grep() and grepi() code borrowed from PennMUSH 1.50
  */
-char *grep_util(dbref player, dbref thing, char *pattern, char *lookfor,
-				int len, int insensitive)
+static char *grep_util(dbref player, dbref thing, char *pattern, char *lookfor,
+					   int len, int insensitive)
 {
 	/*
 	 * returns a list of attributes which match <pattern> on <thing> * *
@@ -3044,7 +3030,7 @@ void fun_lparent(char *buff, char **bufc, dbref player, dbref cause,
 
 /* stacksize - returns how many items are stuffed onto an object stack */
 
-int stacksize(dbref doer)
+static int stacksize(dbref doer)
 {
 	int i;
 	STACK *sp;

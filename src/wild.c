@@ -128,7 +128,7 @@ int quick_wild(char *tstr, char *dstr)
  * Side Effect: this routine modifies the 'arglist' static global
  * variable.
  */
-int wild1(char *tstr, char *dstr, int arg)
+static int wild1(char *tstr, char *dstr, int arg)
 {
 	char *datapos;
 	int argpos, numextra;
