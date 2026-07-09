@@ -64,13 +64,6 @@ static OBJQE *cque_find(dbref player)
 	return tmp;
 }
 
-static BQUE *cque_peek(dbref player)
-{
-	OBJQE *tmp;
-	tmp = cque_find(player);
-	return tmp->cque;
-}
-
 static BQUE *cque_deque(dbref player)
 {
 	OBJQE *tmp;
@@ -97,7 +90,6 @@ static BQUE *cque_deque(dbref player)
 static void cque_enqueue(dbref player, BQUE * cmd)
 {
     BQUE *point, *trail;
-	OBJQE *current, *blocker;
 	struct timeval tv;
     OBJQE *tmp;
 
@@ -164,7 +156,7 @@ static void cque_enqueue(dbref player, BQUE * cmd)
 static void wakeup_wait_que(int fd, short event, void *arg)
 {
 	BQUE *pending = (BQUE *) arg;
-	BQUE *point, trail;
+	BQUE *point;
 
 	if(mudstate.qwait == pending) {
 		mudstate.qwait = pending->next;
@@ -232,7 +224,6 @@ void cque_dump_restart(struct mmdb_t *mmdb) {
 
 static void load_bqe(struct mmdb_t *mmdb) {
     int exists, count, ii;
-    struct timeval tv;
     BQUE *tmp;
     exists = mmdb_read_uint32(mmdb);
     if(!exists)
@@ -274,9 +265,8 @@ static void load_bqe(struct mmdb_t *mmdb) {
 
 static void load_objqe(struct mmdb_t *mmdb) {
     int object;
-    OBJQE *coq;
     object = mmdb_read_uint32(mmdb);
-    coq = cque_find(object);
+    cque_find(object);
     load_bqe(mmdb);
 }
     
@@ -922,9 +912,8 @@ void do_second(void)
 
 int do_top(int ncmds)
 {
-	BQUE *tmp, *walk;
-	OBJQE *current_object;
-	dbref object, player, last_player;
+	BQUE *tmp;
+	dbref object;
 	int count, i;
 	char *command, *cp, *cmdsave;
 
@@ -937,7 +926,6 @@ int do_top(int ncmds)
 	if(!mudstate.qhead)
 		return 0;
 
-	current_object = mudstate.qhead;
 	count = 0;
 
 	while (count < ncmds && mudstate.qhead) {
@@ -1084,10 +1072,8 @@ static void show_que(dbref player, int key, BQUE * queue, int *qent,
 
 void do_ps(dbref player, dbref cause, int key, char *target)
 {
-	char *bufp;
 	dbref player_targ, obj_targ;
-	int pqent, pqtot, pqdel, oqent, oqtot, oqdel, wqent, wqtot, sqent,
-		sqtot, i;
+	int pqent, pqtot, wqent, wqtot, sqent, sqtot;
 	OBJQE *objq;
 	int tempkey;
 
