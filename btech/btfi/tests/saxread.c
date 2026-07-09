@@ -1,5 +1,6 @@
 #include "autoconf.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -75,7 +76,7 @@ print_value_content(const FI_Value *value)
 		break;
 
 	case FI_VALUE_AS_UTF8:
-		printf("%.*s", count, data_ptr);
+		printf("%.*s", (int)count, data_ptr);
 		break;
 
 	case FI_VALUE_AS_OCTETS:
@@ -102,7 +103,7 @@ print_value_content(const FI_Value *value)
 
 			switch (type) {
 			case FI_VALUE_AS_INT:
-				printf("%d", ((FI_Int32 *)data_ptr)[ii]);
+				printf("%" PRIdFAST32, ((FI_Int32 *)data_ptr)[ii]);
 				break;
 
 			case FI_VALUE_AS_FLOAT:

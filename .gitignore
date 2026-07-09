@@ -1,7 +1,16 @@
 *.o
 *.lo
 *.la
+/.cache
+/CMakeFiles
+/CMakeCache.txt
+/cmake_install.cmake
+/CTestTestfile.cmake
+/Testing
+/build
+/build-*
 *.in
+!/cmake/*.in
 *.m4
 /btech/configure
 /btech/confutil

@@ -1,0 +1,11 @@
+#ifndef BT_VERSION_H
+#define BT_VERSION_H
+
+#define SVN_REVISION "@SVN_REVISION@"
+#define MUX_BUILD_DATE "@MUX_BUILD_DATE@"
+#define MUX_BUILD_NUM "@mux_build_num@"
+
+#define MUX_BUILD_USER "@MUX_BUILD_USER@"
+#define MUX_BUILD_HOST "@MUX_BUILD_HOST@"
+
+#endif /* !BT_VERSION_H */

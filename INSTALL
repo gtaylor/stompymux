@@ -16,44 +16,49 @@ ________________________________________
  Before you even attempt to compile the source, you'll need to make sure that
  your machine has the following packages installed:
 
+ * CMake 4.3 or higher
+ * A C and C++ compiler supported by CMake
  * crypt (libcrypt/lcrypt)
  * libevent (http://www.monkey.org/~provos/libevent/)
  * libdbi (If SQL support is enabled)
- * autoconf 2.71 or higher
+ * wget and tar (If you need getdata.sh to fetch the game data)
 
  S2: COMPILING AND RUNNING THE SOURCE
  ------------------------------------
- To compile the Battletech MUX source, 'cd' into your root BTMux dir and type:
+ To compile the Battletech MUX source, 'cd' into your root BTMux dir and use
+ an out-of-tree CMake build:
 
- 'autoreconf --install --force'
+ cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBTMUX_ENABLE_ASAN=OFF
+ cmake --build build -j
 
- Once this has setup the build environment, you can issue:
+ To run the self-tests:
 
- './configure'.
+ ctest --test-dir build --output-on-failure
 
- NOTE: If you'd like to change the default configuration values, issue a
- './configure --help' to see the various features that may be enabled or
- disabled. More about this in Section 5. When you've got your configuration
- how you like it, proceed with compiling the source by typing './configure'
- followed by any flags you need, then 'make install'.
+ If you do not already have a /game directory and a /game.run working
+ directory, populate them first:
 
- Make sure that you already have a /game directory present or the binaries
- won't be moved and you will not have a working game. See Sections 1 and 2
- for details on setting your game directory up. In general, 'make install'
- will pull the latest version of everything you need as long as you
- have Subversion installed.
+ ./getdata.sh
 
- To run the example database, cd into the /game.run directory after running
- 'make install', and run './Startmux'. Also see the README in the 'game'
+ The CMake install step installs the built binaries and library into the
+ selected prefix. To install into the working game directory:
+
+ cmake --install build --prefix "$PWD/game.run"
+
+ This installs 'netmux' and 'mkindx' under 'game.run/bin'. It does not fetch
+ game data or create 'game.run'; use './getdata.sh' for that.
+
+ To run the example database, cd into the /game.run directory after installing
+ the binaries, and run './Startmux'. Also see the README in the 'game'
  directory.
 
  A quick note on the 'game' directory: For those of you who have used
  older versions of BTMux source, the /game directory is not where the
- actual game directory you want to run is. When you 'make install',
- the script checks to see if there is a /game.run present. If there
- isn't, it copies /game to /game.run. This is done so you have a template
- (/game) and a working copy (/game.run). Once you have a /game.run, you
- may safely delete /game if you so wish.
+ actual game directory you want to run is. Run './getdata.sh' to create or
+ refresh the template data under /game and to create /game.run if it is
+ missing. This is done so you have a template (/game) and a working copy
+ (/game.run). Once you have a /game.run, you may safely delete /game if you
+ so wish.
 
  S3: COMPILE-TIME DIRECTIVES
  ---------------------------
@@ -62,12 +67,41 @@ ________________________________________
 
  http://docs.btmux.com/index.php/Compile_Time_Options
 
- You may set these by issuing a './configure' with the needed flags. See
- './configure --help' for an up-to-date list.
+ You may set these by passing CMake cache options when configuring the build.
+ For example:
 
- Most of these require a 'make clean' before re-compiling. Some may also
- require a hcode.db rebuild which means you'll need to remove your
- /game/hcode.db file and setup all of your xcode objects again.
+ cmake -S . -B build -DBTMUX_SQL_SUPPORT=ON -DBTMUX_FREE_TECHTIME=ON
+
+ To see the available options in your configured build:
+
+ cmake -LAH build
+
+ Common options include:
+
+ * BTMUX_HUDINFO_SUPPORT=ON|OFF
+ * BTMUX_ADVANCED_ECON=ON|OFF
+ * BTMUX_ENHANCED_LOGGING=ON|OFF
+ * BTMUX_COMPLEX_REPAIRS=ON|OFF
+ * BTMUX_FREE_TECHTIME=ON|OFF
+ * BTMUX_SQL_SUPPORT=ON|OFF
+ * BTMUX_RENAME_HELP=ON|OFF
+ * BTECH_CARGO_COMMANDS=ON|OFF
+ * BTECH_MW3STATS=ON|OFF
+ * BTECH_MOVEMENT_MODES=ON|OFF
+ * BTECH_SCALED_INFRARED=ON|OFF
+ * BTECH_OVERSPEEDING=ON|OFF
+ * BTECH_BTPR=mux1|penn|mux2
+ * BTMUX_ENABLE_ASAN=ON|OFF
+ * BTMUX_ENABLE_WERROR=ON|OFF
+
+ Most of these require rebuilding after reconfiguring:
+
+ cmake -S . -B build -D<option>=<value>
+ cmake --build build -j
+ cmake --install build --prefix "$PWD/game.run"
+
+ Some may also require a hcode.db rebuild which means you'll need to remove
+ your /game/hcode.db file and setup all of your xcode objects again.
 
  S4: GAME CONFIGURATION FILE
  ---------------------------

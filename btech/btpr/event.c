@@ -50,6 +50,7 @@
 */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
@@ -405,7 +406,7 @@ muxevent_get_type_data(int type, void *data, int *data2)
 
 	LoopType(type, e) {
 		if (e->data == data)
-			*data2 = (int) e->data2;
+			*data2 = (int)(intptr_t) e->data2;
 	}
 }
 
@@ -572,7 +573,7 @@ muxevent_count_type_data_firstev(int type, void *data)
 
 	LoopType(type, e) {
 		if (e->data == data)
-			return (int) (e->data2);
+			return (int)(intptr_t) e->data2;
 	}
 
 	return -1;
