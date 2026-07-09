@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include "copyright.h"
 #include "mudconf.h"
 #include "externs.h"
 #include "mguests.h"

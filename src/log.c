@@ -2,7 +2,6 @@
  * log.c - logging routines
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <sys/types.h>
@@ -15,7 +14,7 @@
 #include "flags.h"
 #include "powers.h"
 #include "alloc.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "ansi.h"
 #ifdef ARBITRARY_LOGFILES
 #include "logcache.h"

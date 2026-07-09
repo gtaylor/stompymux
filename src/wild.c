@@ -9,11 +9,10 @@
  * *
  * * Copyright (c) 1993 by T. Alexander Popiel
  * * This code is hereby placed under GNU copyleft,
- * * see copyright.h for details.
+ * * see docs/COPYRIGHT.md for details.
  * *
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "config.h"

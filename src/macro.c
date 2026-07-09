@@ -2,7 +2,6 @@
  * macro.c - ported from BattleTech 3056 MUSE
  */
 
-#include "copyright.h"
 #include "config.h"
 #include "macro.h"
 #include "commac.h"

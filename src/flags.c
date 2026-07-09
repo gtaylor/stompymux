@@ -2,7 +2,6 @@
  * flags.c - flag manipulation routines 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "db.h"

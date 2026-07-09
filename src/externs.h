@@ -4,7 +4,6 @@
 /* $Id: externs.h,v 1.6 2005/08/08 10:30:11 murrayma Exp $ */
 
 #include "config.h"
-#include "copyright.h"
 
 #ifndef __EXTERNS__H
 #define	__EXTERNS__H

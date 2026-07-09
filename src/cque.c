@@ -2,7 +2,6 @@
  * cque.c -- commands and functions for manipulating the command queue 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <signal.h>
@@ -10,7 +9,7 @@
 #include "mudconf.h"
 #include "config.h"
 #include "db.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "interface.h"
 #include "match.h"
 #include "externs.h"

@@ -2,7 +2,6 @@
  * funceval.c - MUX function handlers
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <limits.h>

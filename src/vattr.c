@@ -2,14 +2,12 @@
  * vattr.c -- Manages the user-defined attributes. 
  */
 
-#include "copyright.h"
 #include "config.h"
 
-#include "copyright.h"
 #include "mudconf.h"
 #include "vattr.h"
 #include "alloc.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "externs.h"
 
 static void fixcase(char *);

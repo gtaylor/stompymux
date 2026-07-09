@@ -3,7 +3,6 @@
 
 /* $Id: file_c.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-#include "copyright.h"
 #ifndef __FILE_C
 #define	__FILE_C
 

@@ -2,7 +2,6 @@
  * eval.c - command evaluation and cracking 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "db.h"

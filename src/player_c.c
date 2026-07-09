@@ -2,11 +2,10 @@
  * player_c.c -- Player cache routines 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "externs.h"
 #include "alloc.h"
 #include "attrs.h"

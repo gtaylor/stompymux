@@ -2,7 +2,6 @@
  * game.c 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <sys/stat.h>
@@ -852,10 +851,6 @@ void dump_database_internal(int dump_type)
 	char tmpfile[256], outfn[256], prevfile[256];
 	FILE *f;
 
-#ifdef USE_PYTHON
-	runPythonHook("save");
-#endif
-
 	if(dump_type == DUMP_CRASHED) {
 		unlink(mudconf.crashdb);
 		f = fopen(mudconf.crashdb, "w");
@@ -1253,7 +1248,7 @@ static void process_preload(void)
 	free_lbuf(tstr);
 }
 
-int real_main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int mindb;
 
@@ -1327,11 +1322,6 @@ int real_main(int argc, char *argv[])
 			ENDLOG;
 		} exit(2);
 	}
-#ifdef USE_PYTHON
-	MUXPy_Init();
-	runPythonHook("load");
-#endif
-
 	/* initialize random.. */
 	srandom(getpid());
 	/* set singnals.. */

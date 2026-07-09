@@ -1,7 +1,6 @@
 /*
  * db_xdr.c
  */
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

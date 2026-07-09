@@ -8,7 +8,6 @@
  * portions of the descriptor data structure are not used.
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <time.h>

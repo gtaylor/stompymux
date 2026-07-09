@@ -7,7 +7,6 @@
  *
  */
 
-#include "copyright.h"
 #include "config.h"
 #include <sys/time.h>
 #include <sys/types.h>
@@ -18,7 +17,7 @@
 #include "externs.h"
 #include "mail.h"
 #include "alloc.h"
-#include "htab.h"
+#include "rbtab.h"
 
 char msgbuff[LBUF_SIZE + (LBUF_SIZE >> 1) + 1];
 

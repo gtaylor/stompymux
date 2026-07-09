@@ -2,7 +2,6 @@
  * wiz.c -- Wizard-only commands 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"
@@ -13,7 +12,7 @@
 #include "match.h"
 #include "externs.h"
 #include "command.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 #include "attrs.h"
 #include "powers.h"

@@ -2,7 +2,6 @@
  * timer.c -- Subroutines for (system-) timed events 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <signal.h>
@@ -135,11 +134,6 @@ void check_events(void)
 void dispatch()
 {
 	char *cmdsave;
-
-#ifdef USE_PYTHON
-	mudstate.debug_cmd = "< Python >";
-	updatePython();
-#endif
 
 	cmdsave = mudstate.debug_cmd;
 	DPSET("< dispatch >");

@@ -6,7 +6,6 @@
 #ifndef _MAIL_H
 #define _MAIL_H
 
-#include "copyright.h"
 #include "config.h"
 #include "db.h"
 

@@ -5,7 +5,6 @@
 #ifndef _ATTRS_H
 #define _ATTRS_H
 
-#include "copyright.h"
 
 /* Attribute flags */
 #define AF_ODARK    0x0001  /* players other than owner can't see it */

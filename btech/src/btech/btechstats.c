@@ -20,7 +20,7 @@
 #define BTECHSTATS_C
 #include "btmacros.h"
 #include "btechstats.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "create.h"
 #include "muxevent.h"
 #include "glue.h"

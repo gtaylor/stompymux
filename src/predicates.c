@@ -1,4 +1,3 @@
-#include "copyright.h"
 #include "config.h"
 
 #include <signal.h>
@@ -14,7 +13,7 @@
 #include "powers.h"
 #include "ansi.h"
 #include "patchlevel.h"
-#include "htab.h"
+#include "rbtab.h"
 
 extern dbref match_thing(dbref, char *);
 extern int do_command(DESC *, char *);

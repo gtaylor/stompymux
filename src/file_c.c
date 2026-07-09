@@ -3,7 +3,6 @@
  */
 
 #include <dirent.h>
-#include "copyright.h"
 #include "config.h"
 
 #include "config.h"

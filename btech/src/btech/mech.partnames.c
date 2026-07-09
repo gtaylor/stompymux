@@ -12,7 +12,7 @@
 
 #include "glue.h"
 #include "mech.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "create.h"
 #include "mech.partnames.h"
 

@@ -20,7 +20,6 @@
    tons<target              = no explosion
  */
 
-#include "copyright.h"
 #include "config.h"
 #include <math.h>
 #include "glue.h"

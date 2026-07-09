@@ -2,7 +2,6 @@
  * walkdb.c -- Support for commands that walk the entire db 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

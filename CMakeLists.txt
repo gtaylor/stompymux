@@ -383,7 +383,6 @@ elseif(BTPR_MUX2)
 endif()
 
 set(NETMUX_SOURCES
-  src/dummy.cc
   misc/myfifo.c
   event/event.c
   src/boolexp.c
@@ -424,7 +423,6 @@ set(NETMUX_SOURCES
   src/player_c.c
   src/powers.c
   src/predicates.c
-  src/python.c
   src/rbtree.c
   src/rbtab.c
   src/rob.c
@@ -445,6 +443,7 @@ if(BTMUX_ENHANCED_LOGGING)
 endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
+set_target_properties(netmux PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" ${BTMUX_PLATFORM_LIBS})
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"

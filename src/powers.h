@@ -3,12 +3,11 @@
 
 /* $Id: powers.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-#include "copyright.h"
 
 #ifndef __POWERS_H
 #define	__POWERS_H
 
-#include "htab.h"
+#include "rbtab.h"
 #include "db.h"
 
 

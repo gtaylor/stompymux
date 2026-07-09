@@ -3,7 +3,6 @@
 
 /* $Id: functions.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-#include "copyright.h"
 
 #ifndef __FUNCTIONS_H
 #define __FUNCTIONS_H

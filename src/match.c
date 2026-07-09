@@ -2,7 +2,6 @@
  * match.c -- Routines for parsing arguments
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "config.h"

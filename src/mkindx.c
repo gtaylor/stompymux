@@ -2,7 +2,6 @@
  * mkindx.c -- make help/news file indexes 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #define MKINDX

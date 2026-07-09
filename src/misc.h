@@ -3,7 +3,6 @@
 
 /* $Id: misc.h,v 1.2 2005/06/23 02:59:58 murrayma Exp $ */
 
-#include "copyright.h"
 
 #ifndef _MISC_H
 #define _MISC_H

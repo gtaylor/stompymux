@@ -2,7 +2,6 @@
  * unparse.c 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "config.h"

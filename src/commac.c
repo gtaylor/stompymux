@@ -2,7 +2,6 @@
  * commac.c 
  */
 
-#include "copyright.h"
 #include "config.h"
 #include <ctype.h>
 #include <sys/types.h>

@@ -2,7 +2,6 @@
  * functions.c - MUX function handlers 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <limits.h>
@@ -168,10 +167,6 @@ extern void fun_stripansi();
 extern void fun_zfun();
 extern void fun_columns();
 extern void fun_playmem();
-#ifdef USE_PYTHON
-extern void fun_python();
-extern void fun_pythoncall();
-#endif
 extern void fun_objmem();
 extern void fun_orflags();
 extern void fun_andflags();
@@ -5965,10 +5960,6 @@ FUN flist[] = {
 	{"POSS", fun_poss, 1, 0, CA_PUBLIC},
 	{"POWER", fun_power, 2, 0, CA_PUBLIC},
 	{"PUSH", fun_push, 0, FN_VARARGS, CA_PUBLIC},
-#ifdef USE_PYTHON
-	{"PYTHON", fun_python, 1, FN_NO_EVAL, CA_WIZARD},
-	{"PYTHONCALL", fun_pythoncall, 0, FN_VARARGS, CA_WIZARD},
-#endif
 	{"R", fun_r, 1, 0, CA_PUBLIC},
 	{"RAND", fun_rand, 1, 0, CA_PUBLIC},
 	{"REGMATCH", fun_regmatch, 0, FN_VARARGS, CA_PUBLIC},

@@ -6,7 +6,6 @@
 #ifndef  __MGUESTS_H
 #define __MGUESTS_H
 
-#include "copyright.h"
 #include "config.h"
 #include "interface.h"
 

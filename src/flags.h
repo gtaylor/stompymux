@@ -1,11 +1,10 @@
 /* flags.h - object flags */
 
-#include "copyright.h"
 
 #ifndef __FLAGS_H
 #define __FLAGS_H
 
-#include "htab.h"
+#include "rbtab.h"
 #include "db.h"
 
 #define FLAG_WORD2   0x1  /* 2nd word of flags. */

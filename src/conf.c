@@ -2,7 +2,6 @@
  * conf.c:      set up configuration information and static data
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"
@@ -10,7 +9,7 @@
 #include "externs.h"
 #include "interface.h"
 #include "command.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 #include "attrs.h"
 #include "flags.h"

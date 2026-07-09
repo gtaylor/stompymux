@@ -1,9 +1,6 @@
 
-/* htab.h - Structures and declarations needed for table hashing */
+/* rbtab.h - Structures and declarations needed for table hashing */
 
-/* $Id: htab.h,v 1.3 2005/08/08 09:43:07 murrayma Exp $ */
-
-#include "copyright.h"
 
 #ifndef __HTAB_H
 #define __HTAB_H

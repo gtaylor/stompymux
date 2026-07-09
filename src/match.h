@@ -3,7 +3,6 @@
 
 /* $Id: match.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-#include "copyright.h"
 
 #ifndef M_MATCH_H
 #define M_MATCH_H

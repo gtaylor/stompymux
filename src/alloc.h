@@ -1,6 +1,5 @@
 /* alloc.h - External definitions for memory allocation subsystem */
 
-#include "copyright.h"
 
 #ifndef M_ALLOC_H
 #define M_ALLOC_H

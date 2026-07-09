@@ -2,7 +2,6 @@
  * help.c -- commands for giving help 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <fcntl.h>
@@ -13,7 +12,7 @@
 #include "interface.h"
 #include "externs.h"
 #include "help.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 
 /*

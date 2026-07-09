@@ -3,7 +3,6 @@
 
 /* $Id: command.h,v 1.4 2005/08/08 09:43:05 murrayma Exp $ */
 
-#include "copyright.h"
 #include "config.h"
 
 #ifndef __COMMAND_H
@@ -143,12 +142,6 @@ void do_log(dbref, dbref, int, char *, char *);		/* Log to arbitrary logfile in 
 void do_show(dbref, dbref, int, char *, char *);
 void do_charclear(dbref, dbref, int, char *);
 void do_show_stat(dbref, dbref, int);
-
-#ifdef USE_PYTHON
-
-/* From python.c */
-void do_python(dbref, dbref, int, char *);
-#endif
 
 typedef struct cmdentry CMDENT;
 struct cmdentry {

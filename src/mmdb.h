@@ -3,7 +3,6 @@
  */
 #ifndef __MMDB_H__
 #define __MMDB_H__
-#include "copyright.h"
 
 struct mmdb_t {
 	void *base;

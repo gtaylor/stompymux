@@ -2,7 +2,6 @@
  * move.c -- Routines for moving about 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

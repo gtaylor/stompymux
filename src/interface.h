@@ -3,13 +3,12 @@
 
 /* $Id: interface.h,v 1.7 2005/08/08 10:30:11 murrayma Exp $ */
 
-#include "copyright.h"
 
 #ifndef __INTERFACE__H
 #define __INTERFACE__H
 
 #include "db.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 #include "config.h"
 

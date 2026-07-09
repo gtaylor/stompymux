@@ -2,7 +2,6 @@
  * rob.c -- Commands dealing with giving/taking/killing things or money 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

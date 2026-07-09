@@ -2,12 +2,11 @@
  * htab.c - table hashing routines 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "db.h"
 #include "externs.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 
 #include "mudconf.h"

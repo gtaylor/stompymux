@@ -2,7 +2,6 @@
  * db.c 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include <sys/file.h>

@@ -2,7 +2,6 @@
  * look.c -- commands which look at things 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

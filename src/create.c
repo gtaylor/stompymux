@@ -2,7 +2,6 @@
  * create.c -- Commands that create new objects 
  */
 
-#include "copyright.h"
 #include "config.h"
 
 #include "mudconf.h"

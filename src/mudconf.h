@@ -7,7 +7,7 @@
 
 #include <netinet/in.h>
 #include "config.h"
-#include "htab.h"
+#include "rbtab.h"
 #include "alloc.h"
 #include "flags.h"
 #include "mail.h"
