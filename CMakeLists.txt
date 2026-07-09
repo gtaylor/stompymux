@@ -182,15 +182,18 @@ if(DEFINED ENV{USER})
 else()
   set(MUX_BUILD_USER "unknown")
 endif()
-find_program(SVNVERSION_EXECUTABLE svnversion)
-if(SVNVERSION_EXECUTABLE)
+find_package(Git QUIET)
+set(SOURCE_REVISION "unknown")
+if(Git_FOUND)
   execute_process(
-    COMMAND "${SVNVERSION_EXECUTABLE}" "${CMAKE_SOURCE_DIR}"
-    OUTPUT_VARIABLE SVN_REVISION
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short HEAD
+    OUTPUT_VARIABLE SOURCE_REVISION
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET)
-else()
-  set(SVN_REVISION "exported")
+    ERROR_QUIET
+    RESULT_VARIABLE git_revision_result)
+  if(NOT git_revision_result EQUAL 0 OR SOURCE_REVISION STREQUAL "")
+    set(SOURCE_REVISION "unknown")
+  endif()
 endif()
 configure_file(cmake/version.h.in src/version.h @ONLY)
 

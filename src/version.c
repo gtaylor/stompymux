@@ -64,9 +64,9 @@ char *mux_version = PACKAGE_STRING "." MINOR_REVNUM
     "+ALG"
 #endif
 #ifdef DEBUG
-    " DEBUG svn revision " SVN_REVISION
+    " DEBUG source revision " SOURCE_REVISION
 #else
-    " RELEASE svn revision " SVN_REVISION
+    " RELEASE source revision " SOURCE_REVISION
 #endif
     " '" RELEASE_NAME "' build #" MUX_BUILD_NUM " on " MUX_BUILD_DATE
 #ifdef DEBUG
