@@ -131,8 +131,8 @@ and not a port bug so prolly needs fixed in the main tree for the peeps also.
 Fixed cemit to not have a buffer overflow in it's *BUF_SIZE settings.
 ---
 EXILE_FUNCS_SUPPORT switches in the btech_ooc_comsys to bypass checks to
-CA_NO_IC commands for blocking in an IC location. (Comsys and @mail as of
-now). Patch compliments of cmarney, modified by Null.
+CA_NO_IC commands for blocking in an IC location. Patch compliments of
+cmarney, modified by Null.
 
 ------------------------------------------------------------------------------
 - MUX : Extra Functions                                                      -

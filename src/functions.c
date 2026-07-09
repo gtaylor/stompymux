@@ -174,8 +174,6 @@ extern void fun_strtrunc();
 extern void fun_ifelse();
 extern void fun_inc();
 extern void fun_dec();
-extern void fun_mail();
-extern void fun_mailfrom();
 extern void fun_die();
 extern void fun_lit();
 extern void fun_shl();
@@ -5917,8 +5915,6 @@ FUN flist[] = {
 	{"LTE", fun_lte, 2, 0, CA_PUBLIC},
 	{"LVPLAYERS", fun_lvplayers, 1, 0 , CA_PUBLIC},
 	{"LWHO", fun_lwho, 0, 0, CA_BUILDER},
-	{"MAIL", fun_mail, 0, FN_VARARGS, CA_PUBLIC},
-	{"MAILFROM", fun_mailfrom, 0, FN_VARARGS, CA_PUBLIC},
 	{"MAP", fun_map, 0, FN_VARARGS, CA_PUBLIC},
 	{"MATCH", fun_match, 0, FN_VARARGS, CA_PUBLIC},
 	{"MATCHALL", fun_matchall, 0, FN_VARARGS, CA_PUBLIC},

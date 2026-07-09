@@ -79,7 +79,6 @@
 #define MULTIOK      0x00800000
 
 #define VACATION     0x01000000
-#define PLAYER_MAILS 0x02000000
 #define BLIND        0x04000000  /* Something to support blind players! */
 #define ZOMBIE       0x08000000  /* Hardcode object is a zombie */
 

@@ -21,7 +21,6 @@
 #include "alloc.h"
 #include "attrs.h"
 #include "ansi.h"
-#include "mail.h"
 #include "powers.h"
 #include "alloc.h"
 #include "config.h"
@@ -684,10 +683,7 @@ void announce_disconnect(dbref player, DESC * d, const char *reason)
 		if(mudconf.have_comsys)
 			do_comdisconnect(player);
 
-		if(mudconf.have_mailer)
-			do_mail_purge(player);
-
-		raw_broadcast(MONITOR, (char *) "GAME: %s has disconnected.",
+			raw_broadcast(MONITOR, (char *) "GAME: %s has disconnected.",
 					  Name(player), 0, 0, 0, 0, 0);
 
 			argv[0] = (char *) reason;

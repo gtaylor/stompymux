@@ -162,9 +162,7 @@ void record_login(dbref player, int isgood, char *ldate, char *lhost,
 			notify_printf(player, "Last connect was from %s on %s.",
 						  login_info.good[0].host, login_info.good[0].dtm);
 		}
-		if(mudconf.have_mailer)
-			check_mail(player, 0, 0);
-		for(i = NUM_GOOD - 1; i > 0; i--) {
+			for(i = NUM_GOOD - 1; i > 0; i--) {
 			login_info.good[i].dtm = login_info.good[i - 1].dtm;
 			login_info.good[i].host = login_info.good[i - 1].host;
 		}

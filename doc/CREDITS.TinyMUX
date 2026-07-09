@@ -20,10 +20,6 @@ We would like to thank the following people:
 - Chris (Children of the Atom) who had many, many, many ideas and found
   many, many, many bugs, in his own gleeful manner of crashing our site.
  
-- Alan Schwartz (Javelin/Paul) and Lydia Leong (Amberyl), whose extended
-  mailer from PennMUSH is the basis for MUX's @mail system. Also,
-  Brandy (CrystalMUSH) whose +mail system inspired many of the features.
- 
 - Ethaniel and Kayan Telva (BTech3056) for the basic comsystem and macro code.
  
 - Dreamline(Horizons) who helped update the help text.
@@ -33,13 +29,11 @@ We would like to thank the following people:
 - Kalkin(DarkZone) and Harlock(StarWarsII) who extended the comsystem and
   added tons of new commands, which is basically unchanged here.
  
-- Kalkin, again, for the basis of the mail alias code, and the idea of
-  restarting on a fatal signal.
+- Kalkin, again, for the idea of restarting on a fatal signal.
   
 - Airam(Generations) for ideas on the stack and @program code.
 
-- Mike(StarWars), idea for not saving GOING objects, and mail expiration
-  code.
+- Mike(StarWars), idea for not saving GOING objects.
 
 - Dean Gaudet, for his user and hostname slave process code.
 

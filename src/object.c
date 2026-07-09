@@ -22,7 +22,6 @@
 
 static int check_type;
 extern int boot_off(dbref player, char *message);
-extern void do_mail_clear(dbref player, char *msglist);
 
 /**
  * Log_pointer_err, Log_header_err, Log_simple_damage: Write errors to the
@@ -594,8 +593,6 @@ void destroy_player(dbref victim)
 	free_lbuf(buf);
 
 	move_via_generic(victim, NOTHING, player, 0);
-	do_mail_clear(victim, NULL);
-	do_mail_purge(victim);
 	destroy_obj(NOTHING, victim);
 	notify_quiet(player, tprintf("(%d objects @chowned to you)", count));
 }

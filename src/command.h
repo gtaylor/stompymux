@@ -31,13 +31,6 @@ void do_clearcom(dbref, dbref, int);	/* clears all comaliases */
 void do_delcom(dbref, dbref, int, char *);		/* deletes a comalias */
 void do_tapcom(dbref, dbref, int, char *, char *);		/* taps a channel */
 
-/* from mail.c */
-
-void do_mail(dbref, dbref, int, char *, char *);		/* mail command */
-void do_malias(dbref, dbref, int, char *, char *);		/* mail alias command */
-void do_prepend(dbref, dbref, int, char *);
-void do_postpend(dbref, dbref, int, char *);
-
 void do_admin(dbref, dbref, int, char *, char *);		/* Change config parameters */
 void do_alias(dbref, dbref, int, char *, char *);		/* Change the alias of something */
 void do_attribute(dbref, dbref, int, char *, char *);	/* Manage user-named attributes */

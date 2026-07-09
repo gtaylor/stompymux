@@ -65,7 +65,6 @@ void cf_init(void)
 	StringCopy(mudconf.outdb, "");
 	StringCopy(mudconf.crashdb, "");
 	StringCopy(mudconf.gdbm, "");
-	StringCopy(mudconf.mail_db, "mail.db");
 	StringCopy(mudconf.commac_db, "commac.db");
 	StringCopy(mudconf.hcode_db, "hcode.db");
 #ifdef BT_ADVANCED_ECON
@@ -206,7 +205,6 @@ void cf_init(void)
 	mudconf.have_specials = 1;
 	mudconf.have_comsys = 1;
 	mudconf.have_macros = 1;
-	mudconf.have_mailer = 1;
 	mudconf.have_zones = 1;
 	mudconf.paranoid_alloc = 0;
 	mudconf.sig_action = SA_DFLT;
@@ -244,7 +242,6 @@ void cf_init(void)
 	mudconf.player_quota = 1;
 	mudconf.room_quota = 1;
 	mudconf.thing_quota = 1;
-	mudconf.mail_expiration = 14;
 	mudconf.use_http = 0;
 	mudconf.queuemax = 100;
 	mudconf.queue_chunk = 10;
@@ -374,9 +371,6 @@ void cf_init(void)
 	mudstate.min_size = 0;
 	mudstate.db_top = 0;
 	mudstate.db_size = 0;
-	mudstate.mail_db_top = 0;
-	mudstate.mail_db_size = 0;
-	mudstate.mail_freelist = 0;
 	mudstate.freelist = NOTHING;
 	mudstate.markbits = NULL;
 	mudstate.func_nest_lev = 0;
@@ -1283,8 +1277,6 @@ CONF conftable[] = {
 	 cf_bool, CA_DISABLED, &mudconf.have_comsys, 0},
 	{(char *) "have_macros",
 	 cf_bool, CA_DISABLED, &mudconf.have_macros, 0},
-	{(char *) "have_mailer",
-	 cf_bool, CA_DISABLED, &mudconf.have_mailer, 0},
 	{(char *) "have_zones",
 	 cf_bool, CA_DISABLED, &mudconf.have_zones, 0},
 	{(char *) "hcode_database",
@@ -1343,10 +1335,6 @@ CONF conftable[] = {
 	 cf_bool, CA_GOD, &mudconf.terse_look, 0},
 	{(char *) "machine_command_cost",
 	 cf_int, CA_GOD, &mudconf.machinecost, 0},
-	{(char *) "mail_database",
-	 cf_string, CA_GOD, (void *) mudconf.mail_db, 128},
-	{(char *) "mail_expiration",
-	 cf_int, CA_GOD, &mudconf.mail_expiration, 0},
 	{(char *) "map_database",
 	 cf_string, CA_GOD, (void *) mudconf.map_db, 128},
 	{(char *) "master_room",

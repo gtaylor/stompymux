@@ -343,7 +343,6 @@ set(NETMUX_SOURCES
   src/log.c
   src/look.c
   src/macro.c
-  src/mail.c
   src/match.c
   src/move.c
   src/mmdb.c

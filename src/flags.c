@@ -355,9 +355,6 @@ FLAGENT gen_flags[] = {
 	{"PARENT_OK", PARENT_OK, 'Y',
 	 FLAG_WORD2, 0, fh_any}
 	,
-	{"PLAYER_MAILS", PLAYER_MAILS, 'B',
-	 FLAG_WORD2, CA_GOD | CA_NO_DECOMP, fh_god}
-	,
 	{"PUPPET", PUPPET, 'p',
 	 0, 0, fh_hear_bit}
 	,

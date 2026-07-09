@@ -17,7 +17,6 @@
 #include "powers.h"
 #include "alloc.h"
 #include "vattr.h"
-#include "mail.h"
 #include "comsys.h"
 #include "create.h"
 #include "macro.h"
@@ -240,48 +239,6 @@ NAMETAB lock_sw[] = {
 NAMETAB look_sw[] = {
 	{(char *) "outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
 	{NULL, 0, 0, 0}
-};
-
-NAMETAB mail_sw[] = {
-	{(char *) "stats", 1, CA_PUBLIC, MAIL_STATS},
-	{(char *) "dstats", 1, CA_PUBLIC, MAIL_DSTATS},
-	{(char *) "fstats", 1, CA_PUBLIC, MAIL_FSTATS},
-	{(char *) "debug", 1, CA_PUBLIC, MAIL_DEBUG},
-	{(char *) "nuke", 1, CA_PUBLIC, MAIL_NUKE},
-	{(char *) "folder", 1, CA_PUBLIC, MAIL_FOLDER},
-	{(char *) "list", 1, CA_PUBLIC, MAIL_LIST},
-	{(char *) "read", 1, CA_PUBLIC, MAIL_READ},
-	{(char *) "clear", 1, CA_PUBLIC, MAIL_CLEAR},
-	{(char *) "unclear", 1, CA_PUBLIC, MAIL_UNCLEAR},
-	{(char *) "purge", 1, CA_PUBLIC, MAIL_PURGE},
-	{(char *) "file", 1, CA_PUBLIC, MAIL_FILE},
-	{(char *) "tag", 1, CA_PUBLIC, MAIL_TAG},
-	{(char *) "untag", 1, CA_PUBLIC, MAIL_UNTAG},
-	{(char *) "fwd", 2, CA_PUBLIC, MAIL_FORWARD},
-	{(char *) "forward", 2, CA_PUBLIC, MAIL_FORWARD},
-	{(char *) "send", 0, CA_PUBLIC, MAIL_SEND},
-	{(char *) "edit", 2, CA_PUBLIC, MAIL_EDIT},
-	{(char *) "urgent", 1, CA_PUBLIC, MAIL_URGENT},
-	{(char *) "alias", 1, CA_PUBLIC, MAIL_ALIAS},
-	{(char *) "alist", 1, CA_PUBLIC, MAIL_ALIST},
-	{(char *) "proof", 1, CA_PUBLIC, MAIL_PROOF},
-	{(char *) "abort", 0, CA_PUBLIC, MAIL_ABORT},
-	{(char *) "quick", 0, CA_PUBLIC, MAIL_QUICK},
-	{(char *) "review", 2, CA_PUBLIC, MAIL_REVIEW},
-	{(char *) "retract", 2, CA_PUBLIC, MAIL_RETRACT},
-	{(char *) "cc", 2, CA_PUBLIC, MAIL_CC},
-	{(char *) "safe", 2, CA_PUBLIC, MAIL_SAFE}
-};
-
-NAMETAB malias_sw[] = {
-	{(char *) "desc", 1, CA_PUBLIC, MALIAS_DESC},
-	{(char *) "chown", 1, CA_PUBLIC, MALIAS_CHOWN},
-	{(char *) "add", 1, CA_PUBLIC, MALIAS_ADD},
-	{(char *) "remove", 1, CA_PUBLIC, MALIAS_REMOVE},
-	{(char *) "delete", 1, CA_PUBLIC, MALIAS_DELETE},
-	{(char *) "rename", 1, CA_PUBLIC, MALIAS_RENAME},
-	{(char *) "list", 1, CA_PUBLIC, MALIAS_LIST},
-	{(char *) "status", 1, CA_PUBLIC, MALIAS_STATUS}
 };
 
 NAMETAB motd_sw[] = {
@@ -514,10 +471,6 @@ CMDENT command_table[] = {
 #ifdef ARBITRARY_LOGFILES
 	{(char *) "@log", NULL, CA_WIZARD, 0, CS_TWO_ARG, do_log},
 #endif
-	{(char *) "@mail", mail_sw, CA_NO_SLAVE | CA_NO_IC, 0,
-	 CS_TWO_ARG | CS_INTERP, do_mail},
-	{(char *) "@malias", malias_sw, CA_NO_SLAVE, 0,
-	 CS_TWO_ARG | CS_INTERP, do_malias},
 	{(char *) "@motd", motd_sw, CA_WIZARD, 0, CS_ONE_ARG, do_motd},
 	{(char *) "@mvattr", NULL, CA_NO_SLAVE | CA_GBL_BUILD,
 	 0, CS_TWO_ARG | CS_ARGV, do_mvattr},
@@ -654,10 +607,6 @@ CMDENT command_table[] = {
 	 CS_ONE_ARG | CS_INTERP | CS_LEADIN, do_say},
 	{(char *) "&", NULL, CA_NO_SLAVE | CF_DARK, 0,
 	 CS_TWO_ARG | CS_LEADIN, do_setvattr},
-	{(char *) "-", NULL, CA_NO_SLAVE | CF_DARK, 0,
-	 CS_ONE_ARG | CS_LEADIN, do_postpend},
-	{(char *) "~", NULL, CA_NO_SLAVE | CF_DARK, 0,
-	 CS_ONE_ARG | CS_LEADIN, do_prepend},
 	{(char *) NULL, NULL, 0, 0, 0, NULL}
 };
 

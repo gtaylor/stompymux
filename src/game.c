@@ -860,13 +860,8 @@ void dump_database_internal(int dump_type)
 		} else {
 			log_perror("DMP", "FAIL", "Opening crash file", mudconf.crashdb);
 		}
-		if(mudconf.have_mailer)
-			if((f = fopen(mudconf.mail_db, "w"))) {
-				dump_mail(f);
-				fclose(f);
-			}
-		if(mudconf.have_comsys || mudconf.have_macros)
-			save_comsys_and_macros(mudconf.commac_db);
+			if(mudconf.have_comsys || mudconf.have_macros)
+				save_comsys_and_macros(mudconf.commac_db);
 		SaveSpecialObjects(DUMP_CRASHED);
 		return;
 	}
@@ -880,13 +875,8 @@ void dump_database_internal(int dump_type)
 		} else {
 			log_perror("DMP", "FAIL", "Opening restart file", mudconf.indb);
 		}
-		if(mudconf.have_mailer)
-			if((f = fopen(mudconf.mail_db, "w"))) {
-				dump_mail(f);
-				fclose(f);
-			}
-		if(mudconf.have_comsys || mudconf.have_macros)
-			save_comsys_and_macros(mudconf.commac_db);
+			if(mudconf.have_comsys || mudconf.have_macros)
+				save_comsys_and_macros(mudconf.commac_db);
 		if(mudconf.have_specials)
 			SaveSpecialObjects(DUMP_RESTART);
 		return;
@@ -901,13 +891,8 @@ void dump_database_internal(int dump_type)
 		} else {
 			log_perror("DMP", "FAIL", "Opening killed file", mudconf.indb);
 		}
-		if(mudconf.have_mailer)
-			if((f = fopen(mudconf.mail_db, "w"))) {
-				dump_mail(f);
-				fclose(f);
-			}
-		if(mudconf.have_comsys || mudconf.have_macros)
-			save_comsys_and_macros(mudconf.commac_db);
+			if(mudconf.have_comsys || mudconf.have_macros)
+				save_comsys_and_macros(mudconf.commac_db);
 		if(mudconf.have_specials)
 			SaveSpecialObjects(DUMP_KILLED);
 		return;
@@ -952,11 +937,6 @@ void dump_database_internal(int dump_type)
 		rename(prevfile, mudconf.indb);
 	}
 
-	if(mudconf.have_mailer)
-		if((f = fopen(mudconf.mail_db, "w"))) {
-			dump_mail(f);
-			fclose(f);
-		}
 	if(mudconf.have_comsys || mudconf.have_macros)
 		save_comsys_and_macros(mudconf.commac_db);
 	if(mudconf.have_specials)
@@ -994,7 +974,6 @@ void fork_and_dump(int key)
 	if(*mudconf.dump_msg)
 		raw_broadcast(0, "%s", mudconf.dump_msg);
 
-	check_mail_expiration();
 	mudstate.epoch++;
 	mudstate.dumping = 1;
 	buff = alloc_mbuf("fork_and_dump");
@@ -1096,11 +1075,6 @@ static int load_game(void)
 	if(mudconf.have_specials)
 		LoadSpecialObjects();
 
-	if(mudconf.have_mailer)
-		if((f = fopen(mudconf.mail_db, "r"))) {
-			load_mail(f);
-			fclose(f);
-		}
 	STARTLOG(LOG_STARTUP, "INI", "LOAD") {
 		log_text((char *) "Load complete.");
 		ENDLOG;
@@ -1289,7 +1263,6 @@ int main(int argc, char *argv[])
 	init_version();
 
 	hashinit(&mudstate.player_htab, 250 * HASH_FACTOR);
-	nhashinit(&mudstate.mail_htab, 50 * HASH_FACTOR);
 	nhashinit(&mudstate.fwdlist_htab, 25 * HASH_FACTOR);
 	nhashinit(&mudstate.parent_htab, 5 * HASH_FACTOR);
 	mudstate.desctree = rb_init(desc_cmp, NULL);
@@ -1340,7 +1313,6 @@ int main(int argc, char *argv[])
 	hashreset(&mudstate.command_htab);
 	hashreset(&mudstate.macro_htab);
 	hashreset(&mudstate.channel_htab);
-	nhashreset(&mudstate.mail_htab);
 	hashreset(&mudstate.logout_cmd_htab);
 	hashreset(&mudstate.func_htab);
 	hashreset(&mudstate.flags_htab);

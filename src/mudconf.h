@@ -10,7 +10,6 @@
 #include "rbtab.h"
 #include "alloc.h"
 #include "flags.h"
-#include "mail.h"
 #include "db.h"
 #include "pcache.h"
 #include "cque.h"
@@ -31,7 +30,6 @@ struct confdata {
     char outdb[128];		/* checkpoint the database to here */
     char crashdb[128];		/* write database here on crash */
     char gdbm[128];		/* use this gdbm file if we need one */
-    char mail_db[128];		/* name of the @mail database */
     char commac_db[128];	/* name of the comsys and macros db */
     char hcode_db[128];		/* Hardcode stuff */
 #ifdef BT_ADVANCED_ECON
@@ -47,7 +45,6 @@ struct confdata {
     int have_specials;		/* Should the special hcode be active? */
     int have_comsys;		/* Should the comsystem be active? */
     int have_macros;		/* Should the macro system be active? */
-    int have_mailer;		/* Should @mail be active? */
     int have_zones;		/* Should zones be active? */
     int port;			/* user port */
     int conc_port;		/* concentrator port */
@@ -209,7 +206,6 @@ struct confdata {
     int pagecost;		/* cost of @page command */
     int searchcost;		/* cost of commands that search the whole DB */
     int waitcost;		/* cost of @wait (refunded when finishes) */
-    int mail_expiration;	/* Number of days to wait to delete mail */
     int use_http;		/* Should we allow http access? */
     int queuemax;		/* max commands a player may have in queue */
     int queue_chunk;		/* # cmds to run from queue when idle */
@@ -370,7 +366,6 @@ struct statedata {
     HASHTAB command_htab;	/* Commands hashtable */
     HASHTAB macro_htab;		/* Macro command hashtable */
     HASHTAB channel_htab;	/* Channels hashtable */
-    NHSHTAB mail_htab;		/* Mail players hashtable */
     HASHTAB logout_cmd_htab;	/* Logged-out commands hashtable (WHO, etc) */
     HASHTAB func_htab;		/* Functions hashtable */
     HASHTAB ufunc_htab;		/* Local functions hashtable */
@@ -412,10 +407,6 @@ struct statedata {
     int db_top;			/* Number of items in the db */
     int db_size;		/* Allocated size of db structure */
     int db_revision;     /* database revision */
-    int mail_freelist;		/* The next free mail number */
-    int mail_db_top;		/* Like db_top */
-    int mail_db_size;		/* Like db_size */
-    MENT *mail_list;		/* The mail database */
     MARKBUF *markbits;		/* temp storage for marking/unmarking */
     int func_nest_lev;		/* Current nesting of functions */
     int func_invk_ctr;		/* Functions invoked so far by this command */

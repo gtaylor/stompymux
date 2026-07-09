@@ -42,14 +42,12 @@ extern int countwords(char *, char);
 extern int check_read_perms(dbref, dbref, ATTR *, int, int, char *, char **);
 extern void arr2list(char **, int, char *, char **, char);
 extern void make_portlist(dbref, dbref, char *, char **);
-extern INLINE char *get_mail_message(int);
 extern struct channel *select_channel(char *channel);
 extern void do_pemit_list(dbref, char *, const char *);
 extern int fn_range_check(const char *, int, int, int, char *, char **);
 extern int delim_check(char *[], int, int, char *, char *, char **, int,
 					   dbref, dbref, char *[], int);
 extern char *upcasestr(char *s);
-extern void count_mail(dbref, int, int *, int *, int *);
 extern int list2arr(char *[], int, char *, int);
 extern struct comuser *select_user(struct channel *, dbref);
 
@@ -1381,137 +1379,6 @@ void fun_dec(char *buff, char **bufc, dbref player, dbref cause,
 	}
 	number = atoi(fargs[0]);
 	safe_tprintf_str(buff, bufc, "%d", (--number));
-}
-
-/*
- * Mail functions borrowed from DarkZone
- */
-void fun_mail(char *buff, char **bufc, dbref player, dbref cause,
-			  char *fargs[], int nfargs, char *cargs[], int ncargs)
-{
-	/*
-	 * This function can take one of three formats: 1.  mail(num)  --> *
-	 * * * returns * message <num> for privs. 2.  mail(player)  -->
-	 * returns  * *  * number of * messages for <player>. 3.
-	 * mail(player, num)  -->  * * * returns message <num> * for
-	 * <player>.
-	 */
-	/*
-	 * It can now take one more format: 4.  mail() --> returns number of
-	 * * * * * messages for executor
-	 */
-
-	struct mail *mp;
-	dbref playerask;
-	int num, rc, uc, cc;
-
-	/*
-	 * make sure we have the right number of arguments
-	 */
-	if((nfargs != 0) && (nfargs != 1) && (nfargs != 2)) {
-		safe_str("#-1 FUNCTION (MAIL) EXPECTS 0 OR 1 OR 2 ARGUMENTS", buff,
-				 bufc);
-		return;
-	}
-	if((nfargs == 0) || !fargs[0] || !fargs[0][0]) {
-		count_mail(player, 0, &rc, &uc, &cc);
-		safe_tprintf_str(buff, bufc, "%d", rc + uc);
-		return;
-	}
-	if(nfargs == 1) {
-		if(!is_number(fargs[0])) {
-			/*
-			 * handle the case of wanting to count the number of
-			 * * * * messages
-			 */
-			if((playerask = lookup_player(player, fargs[0], 1)) == NOTHING) {
-				safe_str("#-1 NO SUCH PLAYER", buff, bufc);
-				return;
-			} else if((player != playerask) && !Wizard(player)) {
-				safe_str("#-1 PERMISSION DENIED", buff, bufc);
-				return;
-			} else {
-				count_mail(playerask, 0, &rc, &uc, &cc);
-				safe_tprintf_str(buff, bufc, "%d %d %d", rc, uc, cc);
-				return;
-			}
-		} else {
-			playerask = player;
-			num = atoi(fargs[0]);
-		}
-	} else {
-		if((playerask = lookup_player(player, fargs[0], 1)) == NOTHING) {
-			safe_str("#-1 NO SUCH PLAYER", buff, bufc);
-			return;
-		} else if((player != playerask) && !God(player)) {
-			safe_str("#-1 PERMISSION DENIED", buff, bufc);
-			return;
-		}
-		num = atoi(fargs[1]);
-	}
-
-	if((num < 1) || (Typeof(playerask) != TYPE_PLAYER)) {
-		safe_str("#-1 NO SUCH MESSAGE", buff, bufc);
-		return;
-	}
-	mp = mail_fetch(playerask, num);
-	if(mp != NULL) {
-		safe_str(get_mail_message(mp->number), buff, bufc);
-		return;
-	}
-	/*
-	 * ran off the end of the list without finding anything
-	 */
-	safe_str("#-1 NO SUCH MESSAGE", buff, bufc);
-}
-
-void fun_mailfrom(char *buff, char **bufc, dbref player, dbref cause,
-				  char *fargs[], int nfargs, char *cargs[], int ncargs)
-{
-	/*
-	 * This function can take these formats: 1) mailfrom(<num>) 2) * * *
-	 * * mailfrom(<player>,<num>) It returns the dbref of the player the
-	 * * * * mail is * from
-	 */
-	struct mail *mp;
-	dbref playerask;
-	int num;
-
-	/*
-	 * make sure we have the right number of arguments
-	 */
-	if((nfargs != 1) && (nfargs != 2)) {
-		safe_str("#-1 FUNCTION (MAILFROM) EXPECTS 1 OR 2 ARGUMENTS", buff,
-				 bufc);
-		return;
-	}
-	if(nfargs == 1) {
-		playerask = player;
-		num = atoi(fargs[0]);
-	} else {
-		if((playerask = lookup_player(player, fargs[0], 1)) == NOTHING) {
-			safe_str("#-1 NO SUCH PLAYER", buff, bufc);
-			return;
-		} else if((player != playerask) && !Wizard(player)) {
-			safe_str("#-1 PERMISSION DENIED", buff, bufc);
-			return;
-		}
-		num = atoi(fargs[1]);
-	}
-
-	if((num < 1) || (Typeof(playerask) != TYPE_PLAYER)) {
-		safe_str("#-1 NO SUCH MESSAGE", buff, bufc);
-		return;
-	}
-	mp = mail_fetch(playerask, num);
-	if(mp != NULL) {
-		safe_tprintf_str(buff, bufc, "#%d", mp->from);
-		return;
-	}
-	/*
-	 * ran off the end of the list without finding anything
-	 */
-	safe_str("#-1 NO SUCH MESSAGE", buff, bufc);
 }
 
 /*

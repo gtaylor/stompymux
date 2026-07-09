@@ -3,7 +3,6 @@
 ## MUX Todos in the /src/ dir
 
 * Maybe: remove alias/macro system
-* Maybe: remove @mail
 * Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
 * Maybe: remove all powers. wiz bit is enough

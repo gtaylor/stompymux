@@ -36,7 +36,7 @@ results of its tests to speed up reconfiguring.  Caching is disabled by
 default to prevent problems with accidental use of stale cache files.
 
    If you need to do unusual things to compile the package, please try
-to figure out how 'configure' could check whether to do them, and mail
+to figure out how 'configure' could check whether to do them, and send
 diffs or instructions to the address given in the 'README' so they can
 be considered for the next release.  If you are using the cache, and at
 some point 'config.cache' contains results you don't want to keep, you

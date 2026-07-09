@@ -118,7 +118,6 @@
 #define A_LLINK         93  /* Who may link to here */
 #define A_LTELOUT       94  /* Who may teleport out from here */
 #define A_FORWARDLIST   95  /* Recipients of AUDIBLE output */
-#define A_MAILFOLDERS   96  /* @mail folders */
 #define A_LUSER         97  /* Spare lock not referenced by server */
 #define A_LPARENT       98  /* Who may @parent to me if PARENT_OK set */
 #define A_VA            100 /* VA attribute (VB-VZ follow) */
@@ -144,17 +143,9 @@
 #define A_MAPCOLOR      147 /* ANSIMAP color scheme */
 
 #define A_LASTPAGE      200 /* Player last paged */
-#define A_MAIL          201 /* Message echoed to sender */
-#define A_AMAIL         202 /* Action taken when mail received */
-#define A_SIGNATURE     203 /* Mail signature */
 #define A_DAILY         204 /* Daily attribute to be executed */
-#define A_MAILTO        205 /* Who is the mail to? */
-#define A_MAILMSG       206 /* The mail message itself */
-#define A_MAILSUB       207 /* The mail subject */
-#define A_MAILCURF      208 /* The current @mail folder */
 #define A_LSPEECH       209 /* Speechlocks */
 #define A_PROGCMD       210 /* Command for exectution by @prog */
-#define A_MAILFLAGS     211 /* Flags for extended mail */
 #define A_DESTROYER     212 /* Who is destroying this object? */
 #define A_UNUSED1       213 /* Old luck.c, now unused. */
 

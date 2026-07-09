@@ -30,12 +30,6 @@
 /* From conf.c */
 int cf_modify_bits(int *, char *, long, dbref, char *);
 
-/* From mail.c*/
-int load_mail(FILE *);
-int dump_mail(FILE *);
-void mail_init(void);
-struct mail *mail_fetch(dbref, int);
-
 /* From udb_achunk.c */
 int dddb_close(void);
 int dddb_setfile(char *);
@@ -431,42 +425,6 @@ void list_chashstats(dbref);
 #define	LOOK_INVENTORY	4	/* list inventory of object */
 #define	LOOK_SCORE	5	/* list score (# coins) */
 #define	LOOK_OUTSIDE    8	/* look for object in container of player */
-#define MAIL_STATS	1	/* Mail stats */
-#define MAIL_DSTATS	2	/* More mail stats */
-#define MAIL_FSTATS	3	/* Even more mail stats */
-#define MAIL_DEBUG	4	/* Various debugging options */
-#define MAIL_NUKE	5	/* Nuke the post office */
-#define MAIL_FOLDER	6	/* Do folder stuff */
-#define MAIL_LIST	7	/* List @mail by time */
-#define MAIL_READ	8	/* Read @mail message */
-#define MAIL_CLEAR	9	/* Clear @mail message */
-#define MAIL_UNCLEAR	10	/* Unclear @mail message */
-#define MAIL_PURGE	11	/* Purge cleared @mail messages */
-#define MAIL_FILE	12	/* File @mail in folders */
-#define MAIL_TAG	13	/* Tag @mail messages */
-#define MAIL_UNTAG	14	/* Untag @mail messages */
-#define MAIL_FORWARD	15	/* Forward @mail messages */
-#define MAIL_SEND	16	/* Send @mail messages in progress */
-#define MAIL_EDIT	17	/* Edit @mail messages in progress */
-#define MAIL_URGENT	18	/* Sends a @mail message as URGENT */
-#define MAIL_ALIAS	19	/* Creates an @mail alias */
-#define MAIL_ALIST	20	/* Lists @mail aliases */
-#define MAIL_PROOF	21	/* Proofs @mail messages in progress */
-#define MAIL_ABORT	22	/* Aborts @mail messages in progress */
-#define MAIL_QUICK	23	/* Sends a quick @mail message */
-#define MAIL_REVIEW	24	/* Reviews @mail sent to a player */
-#define MAIL_RETRACT	25	/* Retracts @mail sent to a player */
-#define MAIL_CC		26	/* Carbon copy */
-#define MAIL_SAFE	27	/* Defines a piece of mail as safe. */
-
-#define MALIAS_DESC	1	/* Describes a mail alias */
-#define MALIAS_CHOWN	2	/* Changes a mail alias's owner */
-#define MALIAS_ADD	3	/* Adds a player to an alias */
-#define MALIAS_REMOVE	4	/* Removes a player from an alias */
-#define MALIAS_DELETE	5	/* Deletes a mail alias */
-#define MALIAS_RENAME	6	/* Renames a mail alias */
-#define MALIAS_LIST	8	/* Lists mail aliases */
-#define MALIAS_STATUS	9	/* Status of mail aliases */
 #define	MOTD_ALL	0	/* login message for all */
 #define	MOTD_WIZ	1	/* login message for wizards */
 #define	MOTD_DOWN	2	/* login message when logins disabled */
