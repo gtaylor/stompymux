@@ -19,7 +19,7 @@
 #include "comsys.h"
 #include "create.h"
 #include "macro.h"
-#include "myfifo.h"
+#include "../misc/myfifo.h"
 
 extern OBJ *db;
 
