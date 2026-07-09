@@ -81,7 +81,7 @@ void myfifo_push(myfifo ** foo, void *data)
     PFOO->first = tmp;
 }
 
-void myfifo_trav(myfifo ** foo, void (*func) ())
+void myfifo_trav(myfifo ** foo, void (*func) (void *))
 {
     myfifo_e *tmp;
 
@@ -90,7 +90,7 @@ void myfifo_trav(myfifo ** foo, void (*func) ())
 	func(tmp->data);
 }
 
-void myfifo_trav_r(myfifo ** foo, void (*func) ())
+void myfifo_trav_r(myfifo ** foo, void (*func) (void *))
 {
     myfifo_e *tmp;
 

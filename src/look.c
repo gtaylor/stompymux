@@ -164,12 +164,12 @@ static void view_atr(dbref player, dbref thing, ATTR * ap, char *text,
 	char *buf;
 	char xbuf[6];
 	char *xbufp;
-	BOOLEXP *bool;
+	BOOLEXP *boolexp;
 
 	if(ap->flags & AF_IS_LOCK) {
-		bool = parse_boolexp(player, text, 1);
-		text = unparse_boolexp(player, bool);
-		free_boolexp(bool);
+		boolexp = parse_boolexp(player, text, 1);
+		text = unparse_boolexp(player, boolexp);
+		free_boolexp(boolexp);
 	}
 	/*
 	 * If we don't control the object or own the attribute, hide the * *
@@ -506,7 +506,7 @@ static void debug_examine(dbref player, dbref thing)
 	dbref aowner;
 	char *buf;
 	long aflags; int ca;
-	BOOLEXP *bool;
+	BOOLEXP *boolexp;
 	ATTR *attr;
 	char *as, *cp;
 
@@ -530,10 +530,10 @@ static void debug_examine(dbref player, dbref thing)
 	notify_printf(player, "Powers  = %s", buf);
 	free_mbuf(buf);
 	buf = atr_get(thing, A_LOCK, &aowner, &aflags);
-	bool = parse_boolexp(player, buf, 1);
+	boolexp = parse_boolexp(player, buf, 1);
 	free_lbuf(buf);
-	notify_printf(player, "Lock    = %s", unparse_boolexp(player, bool));
-	free_boolexp(bool);
+	notify_printf(player, "Lock    = %s", unparse_boolexp(player, boolexp));
+	free_boolexp(boolexp);
 
 	buf = alloc_lbuf("debug_dexamine");
 	cp = buf;
@@ -642,7 +642,7 @@ void do_examine(dbref player, dbref cause, int key, char *name)
 	dbref thing, content, exit, aowner, loc;
 	char savec;
 	char *temp, *buf, *buf2;
-	BOOLEXP *bool;
+	BOOLEXP *boolexp;
 	int control, do_parent; long aflags;
 
 	/*
@@ -741,9 +741,9 @@ void do_examine(dbref player, dbref cause, int key, char *name)
 		savec = mudconf.many_coins[0];
 		mudconf.many_coins[0] = (islower(savec) ? toupper(savec) : savec);
 		buf2 = atr_get(thing, A_LOCK, &aowner, &aflags);
-		bool = parse_boolexp(player, buf2, 1);
-		buf = unparse_boolexp(player, bool);
-		free_boolexp(bool);
+		boolexp = parse_boolexp(player, buf2, 1);
+		buf = unparse_boolexp(player, boolexp);
+		free_boolexp(boolexp);
 		StringCopy(buf2, Name(Owner(thing)));
 		notify_printf(player, "Owner: %s  Key: %s %s: %d", buf2, buf,
 					  mudconf.many_coins, Pennies(thing));
@@ -1259,7 +1259,7 @@ extern NAMETAB indiv_attraccess_nametab[];
 
 void do_decomp(dbref player, dbref cause, int key, char *name, char *qual)
 {
-	BOOLEXP *bool;
+	BOOLEXP *boolexp;
 	char *got, *thingname, *as, *ltext, *buff, *s;
 	dbref aowner, thing;
 	int val, ca, atr; long aflags;
@@ -1289,9 +1289,9 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual)
 			got = atr_get(thing, atr, &aowner, &aflags);
 			if(Read_attr(player, thing, attr, aowner, aflags)) {
 				if(attr->flags & AF_IS_LOCK) {
-					bool = parse_boolexp(player, got, 1);
-					ltext = unparse_boolexp_decompile(player, bool);
-					free_boolexp(bool);
+					boolexp = parse_boolexp(player, got, 1);
+					ltext = unparse_boolexp_decompile(player, boolexp);
+					free_boolexp(boolexp);
 					notify_printf(player, "@lock/%s %s=%s", attr->name,
 								  strip_ansi_r(new,thingname,strlen(thingname)), ltext);
 				} else {
@@ -1349,7 +1349,7 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual)
 		return;
 	}
 	thingname = atr_get(thing, A_LOCK, &aowner, &aflags);
-	bool = parse_boolexp(player, thingname, 1);
+	boolexp = parse_boolexp(player, thingname, 1);
 
 	/*
 	 * Determine the name of the thing to use in reporting and then
@@ -1393,11 +1393,11 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual)
 	 */
 
 	strncpy(new, thingname, LBUF_SIZE-1);
-	if(bool != TRUE_BOOLEXP) {
+	if(boolexp != TRUE_BOOLEXP) {
 		notify_printf(player, "@lock %s=%s", strip_ansi_r(new,thingname,strlen(thingname)),
-					  unparse_boolexp_decompile(player, bool));
+					  unparse_boolexp_decompile(player, boolexp));
 	}
-	free_boolexp(bool);
+	free_boolexp(boolexp);
 
 	/*
 	 * Report attributes 
@@ -1416,9 +1416,9 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual)
 		got = atr_get(thing, ca, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
 			if(attr->flags & AF_IS_LOCK) {
-				bool = parse_boolexp(player, got, 1);
-				ltext = unparse_boolexp_decompile(player, bool);
-				free_boolexp(bool);
+				boolexp = parse_boolexp(player, got, 1);
+				ltext = unparse_boolexp_decompile(player, boolexp);
+				free_boolexp(boolexp);
 				notify_printf(player, "@lock/%s %s=%s", attr->name,
 							  thingname, ltext);
 			} else {

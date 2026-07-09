@@ -24,7 +24,7 @@
 typedef struct macroentry MACENT;
 struct macroentry {
     char *cmdname;
-    void (*handler) ();
+    void (*handler) (dbref, char *);
 };
 
 struct macros {
@@ -41,31 +41,31 @@ extern int nummacros;
 extern int maxmacros;
 extern struct macros **macros;
 
-struct macros *get_macro_set();
-int can_write_macros();
-int can_read_macros();
+struct macros *get_macro_set(dbref player, int which);
+int can_write_macros(dbref player, struct macros *m);
+int can_read_macros(dbref player, struct macros *m);
 
-void do_sort_macro_set();
-void save_macros();
-void load_macros();
-void clear_macro_set();
+void do_sort_macro_set(struct macros *m);
+void save_macros(FILE *fp);
+void load_macros(FILE *fp);
+void clear_macro_set(int set);
 
-int do_macro();
-void do_add_macro();
+int do_macro(dbref player, char *in, char **out);
+void do_add_macro(dbref player, char *s);
 
-void do_chown_macro();
-void do_clear_macro();
-void do_chmod_macro();
-void do_create_macro();
-void do_def_macro();
-void do_del_macro();
-void do_desc_macro();
-void do_edit_macro();
-void do_ex_macro();
-void do_list_macro();
-void do_status_macro();
-void do_undef_macro();
-void do_gex_macro();
-char *do_process_macro();
+void do_chown_macro(dbref player, char *cmd);
+void do_clear_macro(dbref player, char *s);
+void do_chmod_macro(dbref player, char *s);
+void do_create_macro(dbref player, char *s);
+void do_def_macro(dbref player, char *cmd);
+void do_del_macro(dbref player, char *s);
+void do_desc_macro(dbref player, char *s);
+void do_edit_macro(dbref player, char *s);
+void do_ex_macro(dbref player, char *s);
+void do_list_macro(dbref player, char *s);
+void do_status_macro(dbref player, char *s);
+void do_undef_macro(dbref player, char *cmd);
+void do_gex_macro(dbref player, char *s);
+char *do_process_macro(dbref player, char *in, char *s);
 
 #endif				/* __MACRO_H */

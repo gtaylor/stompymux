@@ -23,15 +23,18 @@
 
 extern OBJ *db;
 
-static void do_save_com_xdr(chmsg * d,struct mmdb_t *mmdb)
+static void do_save_com_xdr(void *data, struct mmdb_t *mmdb)
 {
+        chmsg *d = data;
+
         mmdb_write_uint32(mmdb, (int) d->time);
 
         mmdb_write_opaque(mmdb, d->msg, strlen(d->msg)+1);
 
 }
 
-void myfifo_trav_r_xdr(myfifo ** foo, struct mmdb_t *mmdb, void (*func) ())
+void myfifo_trav_r_xdr(myfifo ** foo, struct mmdb_t *mmdb,
+					   void (*func) (void *, struct mmdb_t *))
 {
         myfifo_e *tmp;
 

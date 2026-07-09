@@ -9,7 +9,7 @@
 
 typedef struct fun {
     const char *name;		/* function name */
-    void (*fun) ();		/* handler */
+    void (*fun) (char *, char **, dbref, dbref, char **, int, char **, int);		/* handler */
     int nargs;			/* Number of args needed or expected */
     int flags;			/* Function flags */
     int perms;			/* Access to function */

@@ -921,7 +921,7 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 	case CS_NO_ARGS:			/*
 								 * <cmd>   (no args) 
 								 */
-		(*(cmdp->handler)) (player, cause, key);
+		((void (*)(dbref, dbref, int)) cmdp->handler) (player, cause, key);
 		break;
 	case CS_ONE_ARG:			/*
 								 * <cmd> <arg> 
@@ -932,7 +932,7 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 		 */
 
 		if(cmdp->callseq & CS_UNPARSE) {
-			(*(cmdp->handler)) (player, unp_command);
+			((void (*)(dbref, char *)) cmdp->handler) (player, unp_command);
 			break;
 		}
 		/* Interpret if necessary, but not twice for CS_ADDED */
@@ -952,7 +952,7 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 		 */
 
 		if(cmdp->callseq & CS_CMDARG) {
-			(*(cmdp->handler)) (player, cause, key, buf1, cargs, ncargs);
+			((void (*)(dbref, dbref, int, char *, char **, int)) cmdp->handler) (player, cause, key, buf1, cargs, ncargs);
 		} else {
 			if(cmdp->callseq & CS_ADDED) {
 				for(add = (ADDENT *) cmdp->handler; add != NULL;
@@ -1006,7 +1006,7 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 					free_lbuf(buff);
 				}
 			} else
-				(*(cmdp->handler)) (player, cause, key, buf1);
+				((void (*)(dbref, dbref, int, char *)) cmdp->handler) (player, cause, key, buf1);
 		}
 
 		/*
@@ -1058,10 +1058,10 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 			 */
 
 			if(cmdp->callseq & CS_CMDARG) {
-				(*(cmdp->handler)) (player, cause, key, buf1, args, nargs,
-									cargs, ncargs);
+				((void (*)(dbref, dbref, int, char *, char **, int, char **, int)) cmdp->handler) (player, cause, key, buf1, args, nargs,
+																									cargs, ncargs);
 			} else {
-				(*(cmdp->handler)) (player, cause, key, buf1, args, nargs);
+				((void (*)(dbref, dbref, int, char *, char **, int)) cmdp->handler) (player, cause, key, buf1, args, nargs);
 			}
 
 			/*
@@ -1098,10 +1098,10 @@ void process_cmdent(CMDENT * cmdp, char *switchp, dbref player, dbref cause,
 			 */
 
 			if(cmdp->callseq & CS_CMDARG) {
-				(*(cmdp->handler)) (player, cause, key, buf1, buf2, cargs,
-									ncargs);
+				((void (*)(dbref, dbref, int, char *, char *, char **, int)) cmdp->handler) (player, cause, key, buf1, buf2, cargs,
+																							 ncargs);
 			} else {
-				(*(cmdp->handler)) (player, cause, key, buf1, buf2);
+				((void (*)(dbref, dbref, int, char *, char *)) cmdp->handler) (player, cause, key, buf1, buf2);
 			}
 
 			/*

@@ -24,8 +24,8 @@ int num_channels;
 int max_channels;
 
 /* Static functions */
-static void do_save_com(chmsg *);
-static void do_show_com(chmsg *);
+static void do_save_com(void *);
+static void do_show_com(void *);
 static void do_comlast(dbref, struct channel *);
 static void do_comsend(struct channel *, char *);
 static void do_comprintf(struct channel *, char *, ...);
@@ -215,8 +215,10 @@ void load_comsystem(FILE * fp)
 
 static FILE *temp_file;
 
-static void do_save_com(chmsg * d)
+static void do_save_com(void *data)
 {
+	chmsg *d = data;
+
 	fprintf(temp_file, "%d %s\n", (int) d->time, d->msg);
 }
 
@@ -262,8 +264,9 @@ void save_comsystem(FILE * fp)
 
 static dbref cheat_player;
 
-static void do_show_com(chmsg * d)
+static void do_show_com(void *data)
 {
+	chmsg *d = data;
 	struct tm *t;
 	int day;
 	char buf[LBUF_SIZE];

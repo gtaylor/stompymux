@@ -70,7 +70,7 @@ typedef struct power_entry {
     int powervalue;		/* Which bit in the object is the flag */
     int powerpower;		/* Ctrl flags for this power (recursive? :-) */
     int listperm;		/* Who sees this flag when set */
-    int (*handler) ();		/* Handler for setting/clearing this flag */
+    int (*handler) (dbref, dbref, POWER, int, int);		/* Handler for setting/clearing this flag */
 } POWERENT;
 
 typedef struct powerset {

@@ -96,7 +96,7 @@ typedef struct flag_entry {
    char flaglett;		/* Flag letter for listing */
    int flagflag;		/* Ctrl flags for this flag (recursive? :-) */
    int listperm;		/* Who sees this flag when set */
-   int (*handler) ();		/* Handler for setting/clearing this flag */
+   int (*handler) (dbref, dbref, FLAG, int, int);		/* Handler for setting/clearing this flag */
 } FLAGENT;
 
 /* ---------------------------------------------------------------------------

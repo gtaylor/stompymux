@@ -31,7 +31,7 @@ typedef struct myfifo_struct {
 int myfifo_length(myfifo ** foo);
 void *myfifo_pop(myfifo ** foo);
 void myfifo_push(myfifo ** foo, void *data);
-void myfifo_trav(myfifo ** foo, void (*func) ());
-void myfifo_trav_r(myfifo ** foo, void (*func) ());
+void myfifo_trav(myfifo ** foo, void (*func) (void *));
+void myfifo_trav_r(myfifo ** foo, void (*func) (void *));
 
 #endif				/* MYFIFO_H */

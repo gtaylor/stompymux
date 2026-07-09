@@ -126,7 +126,6 @@ init_xcode_tree(void)
 /*********************************************/
 
 HASHTAB SpecialCommandHash[NUM_SPECIAL_OBJECTS];
-extern int map_sizefun();
 
 static int Can_Use_Command(MECH * mech, int cmdflag)
 {
@@ -195,7 +194,7 @@ int HandledCommand_sub(dbref player, dbref location, char *command)
 		if(cmd->helpmsg[0] != '@' ||
 		   Have_MechPower(Owner(player), typeOfObject->power_needed)) {
 			SKIPSTUFF(command);
-			cmd->func(player, xcode_obj, command);
+			((void (*)(dbref, void *, char *)) cmd->func) (player, xcode_obj, command);
 		} else
 			notify(player, "Sorry, that command is restricted!");
 		return 1;
@@ -912,7 +911,7 @@ UpdateSpecialObject_func(void *key, void *data, int depth, void *arg)
 		return 1;
 	if((mudstate.now % SpecialObjects[xcode_obj->type].updateTime))
 		return 1;
-	SpecialObjects[xcode_obj->type].updatefunc((dbref)key, xcode_obj);
+	((void (*)(dbref, void *)) SpecialObjects[xcode_obj->type].updatefunc) ((dbref)key, xcode_obj);
 	return 1;
 }
 
@@ -959,7 +958,7 @@ NewSpecialObject(long id, int type)
 		xcode_obj->size = SpecialObjects[type].datasize;
 
 		if(SpecialObjects[type].allocfreefunc)
-			SpecialObjects[type].allocfreefunc(id, &xcode_obj, SPECIAL_ALLOC);
+			((void (*)(dbref, void **, int)) SpecialObjects[type].allocfreefunc) (id, (void **) &xcode_obj, SPECIAL_ALLOC);
 
 		rb_insert(xcode_tree, (void *)id, xcode_obj);
 	}
@@ -1031,7 +1030,7 @@ DisposeSpecialObject(dbref player, dbref key)
 	}
 	if(xcode_obj) {
 		if(typeOfObject->allocfreefunc)
-			typeOfObject->allocfreefunc(key, &xcode_obj, SPECIAL_FREE);
+			((void (*)(dbref, void **, int)) typeOfObject->allocfreefunc) (key, (void **) &xcode_obj, SPECIAL_FREE);
 		rb_delete(xcode_tree, (void *)key);
 		muxevent_remove_data(xcode_obj);
 		free(xcode_obj);

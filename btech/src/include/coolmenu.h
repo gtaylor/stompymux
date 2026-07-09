@@ -80,11 +80,11 @@ coolmenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
 
 /* last = how many entries we have */
 coolmenu *SelCol_FunStringMenuK(int columns, char *heading,
-    char *(*fun) (), int last);
+    char *(*fun) (int), int last);
 
 /* Same, except we dunno how many entries we got */
 coolmenu *SelCol_FunStringMenu(int columns, char *heading,
-    char *(*fun) ());
+    char *(*fun) (int));
 
 #define AutoCol_Menu(hea,stri,typ) SelCol_Menu(-1,hea,stri,typ,0)
 #define AutoCol_StringMenu(head,str)    AutoCol_Menu(head,str,0)

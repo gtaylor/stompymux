@@ -35,172 +35,174 @@ extern void cf_log_notfound(dbref player, char *cmd,
  * Function definitions from funceval.c 
  */
 
-extern void fun_btlag();
-extern void fun_btdesignex();
-extern void fun_btgetcharvalue();
-extern void fun_btmapelev();
-extern void fun_btmapterr();
-extern void fun_btsetcharvalue();
-extern void fun_btgetxcodevalue();
-extern void fun_btmakepilotroll();
-extern void fun_btsetxcodevalue();
-extern void fun_btstores();
-extern void fun_btstores_short();
-extern void fun_btunderrepair();
-extern void fun_btdamages();
-extern void fun_btsectstatus();
-extern void fun_btcritstatus();
-extern void fun_btarmorstatus();
-extern void fun_btsetarmorstatus();
-extern void fun_btweapons(); /* AAA */
-extern void fun_btweaponstatus();
-extern void fun_btthreshold();
-extern void fun_btdamagemech();
-extern void fun_bttechstatus();
-extern void fun_btpartmatch();
-extern void fun_btpartname();
-extern void fun_btloadmap();
-extern void fun_btloadmech();
-extern void fun_btmechfreqs();
-extern void fun_btmapunits();
-extern void fun_btgetxcodevalue_ref();
-extern void fun_btarmorstatus_ref();
-extern void fun_btcritstatus_ref();
-extern void fun_btweaponstatus_ref();
-extern void fun_btid2db();
-extern void fun_bthexlos();
-extern void fun_btlosm2m();
-extern void fun_bthexemit();
-extern void fun_zmechs();
-extern void fun_btgetweight();
-extern void fun_btpartweight();
-extern void fun_btaddstores();
-extern void fun_btupdatelinks();
-extern void fun_btremovestores();
-extern void fun_bttechtime();
-extern void fun_btcritslot();
-extern void fun_btcritslot_ref();
-extern void fun_btgetrange();
-extern void fun_btsetmaxspeed();
-extern void fun_btgetrealmaxspeed();
-extern void fun_btgetbv();
-extern void fun_btgetbv_ref();
-extern void fun_btgetdbv_ref();
-extern void fun_btgetobv_ref();
-extern void fun_btgetbv2_ref();
-extern void fun_btgetbv2();
-extern void fun_bttechlist();
-extern void fun_bttechlist_ref();
-extern void fun_btpayload_ref();
-extern void fun_btshowstatus_ref();
-extern void fun_btshowwspecs_ref();
-extern void fun_btshowcritstatus_ref();
-extern void fun_btengrate();
-extern void fun_btengrate_ref();
-extern void fun_btweapstat();
-extern void fun_btnumrepjobs();
-extern void fun_btsetxy();
-extern void fun_btsettons();
-extern void fun_btmapemit();
-extern void fun_btparttype();
-extern void fun_btticweaps();
-#ifdef BT_ADVANCED_ECON
-extern void fun_btgetpartcost();
-extern void fun_btsetpartcost();
-extern void fun_btfasabasecost_ref();
-#endif
-extern void fun_btunitfixable();
-extern void fun_btunitpartslist();
-extern void fun_btunitpartslist_ref();
-extern void fun_btlistblz();
-extern void fun_bthexinblz();
-extern void fun_btcharlist();
-extern void fun_cobj();
-extern void fun_config();
+#define FUN_EXTERN(name) extern void name(char *, char **, dbref, dbref, char **, int, char **, int)
 
-extern void fun_cwho();
-extern void fun_clist();
-extern void fun_cemit();
-extern void fun_beep();
-extern void fun_ansi();
-extern void fun_zone();
-#ifdef SIDE_EFFECT_FUNCTIONS
-extern void fun_link();
-extern void fun_tel();
-extern void fun_pemit();
-extern void fun_create();
-extern void fun_set();
-extern void fun_setlock();
+FUN_EXTERN(fun_btlag);
+FUN_EXTERN(fun_btdesignex);
+FUN_EXTERN(fun_btgetcharvalue);
+FUN_EXTERN(fun_btmapelev);
+FUN_EXTERN(fun_btmapterr);
+FUN_EXTERN(fun_btsetcharvalue);
+FUN_EXTERN(fun_btgetxcodevalue);
+FUN_EXTERN(fun_btmakepilotroll);
+FUN_EXTERN(fun_btsetxcodevalue);
+FUN_EXTERN(fun_btstores);
+FUN_EXTERN(fun_btstores_short);
+FUN_EXTERN(fun_btunderrepair);
+FUN_EXTERN(fun_btdamages);
+FUN_EXTERN(fun_btsectstatus);
+FUN_EXTERN(fun_btcritstatus);
+FUN_EXTERN(fun_btarmorstatus);
+FUN_EXTERN(fun_btsetarmorstatus);
+FUN_EXTERN(fun_btweapons); /* AAA */
+FUN_EXTERN(fun_btweaponstatus);
+FUN_EXTERN(fun_btthreshold);
+FUN_EXTERN(fun_btdamagemech);
+FUN_EXTERN(fun_bttechstatus);
+FUN_EXTERN(fun_btpartmatch);
+FUN_EXTERN(fun_btpartname);
+FUN_EXTERN(fun_btloadmap);
+FUN_EXTERN(fun_btloadmech);
+FUN_EXTERN(fun_btmechfreqs);
+FUN_EXTERN(fun_btmapunits);
+FUN_EXTERN(fun_btgetxcodevalue_ref);
+FUN_EXTERN(fun_btarmorstatus_ref);
+FUN_EXTERN(fun_btcritstatus_ref);
+FUN_EXTERN(fun_btweaponstatus_ref);
+FUN_EXTERN(fun_btid2db);
+FUN_EXTERN(fun_bthexlos);
+FUN_EXTERN(fun_btlosm2m);
+FUN_EXTERN(fun_bthexemit);
+FUN_EXTERN(fun_zmechs);
+FUN_EXTERN(fun_btgetweight);
+FUN_EXTERN(fun_btpartweight);
+FUN_EXTERN(fun_btaddstores);
+FUN_EXTERN(fun_btupdatelinks);
+FUN_EXTERN(fun_btremovestores);
+FUN_EXTERN(fun_bttechtime);
+FUN_EXTERN(fun_btcritslot);
+FUN_EXTERN(fun_btcritslot_ref);
+FUN_EXTERN(fun_btgetrange);
+FUN_EXTERN(fun_btsetmaxspeed);
+FUN_EXTERN(fun_btgetrealmaxspeed);
+FUN_EXTERN(fun_btgetbv);
+FUN_EXTERN(fun_btgetbv_ref);
+FUN_EXTERN(fun_btgetdbv_ref);
+FUN_EXTERN(fun_btgetobv_ref);
+FUN_EXTERN(fun_btgetbv2_ref);
+FUN_EXTERN(fun_btgetbv2);
+FUN_EXTERN(fun_bttechlist);
+FUN_EXTERN(fun_bttechlist_ref);
+FUN_EXTERN(fun_btpayload_ref);
+FUN_EXTERN(fun_btshowstatus_ref);
+FUN_EXTERN(fun_btshowwspecs_ref);
+FUN_EXTERN(fun_btshowcritstatus_ref);
+FUN_EXTERN(fun_btengrate);
+FUN_EXTERN(fun_btengrate_ref);
+FUN_EXTERN(fun_btweapstat);
+FUN_EXTERN(fun_btnumrepjobs);
+FUN_EXTERN(fun_btsetxy);
+FUN_EXTERN(fun_btsettons);
+FUN_EXTERN(fun_btmapemit);
+FUN_EXTERN(fun_btparttype);
+FUN_EXTERN(fun_btticweaps);
+#ifdef BT_ADVANCED_ECON
+FUN_EXTERN(fun_btgetpartcost);
+FUN_EXTERN(fun_btsetpartcost);
+FUN_EXTERN(fun_btfasabasecost_ref);
 #endif
-extern void fun_last();
-extern void fun_matchall();
-extern void fun_ports();
-extern void fun_mix();
-extern void fun_foreach();
-extern void fun_munge();
-extern void fun_visible();
-extern void fun_elements();
-extern void fun_grab();
-extern void fun_graball();
-extern void fun_scramble();
-extern void fun_shuffle();
-extern void fun_sortby();
-extern void fun_default();
-extern void fun_edefault();
-extern void fun_udefault();
-extern void fun_findable();
-extern void fun_isword();
-extern void fun_hasattr();
-extern void fun_hasattrp();
-extern void fun_zwho();
-extern void fun_zrooms();
-extern void fun_zexits();
-extern void fun_zobjects();
-extern void fun_zplayers();
-extern void fun_inzone();
-extern void fun_children();
-extern void fun_encrypt();
-extern void fun_decrypt();
-extern void fun_objeval();
-extern void fun_squish();
-extern void fun_stripansi();
-extern void fun_zfun();
-extern void fun_columns();
-extern void fun_playmem();
-extern void fun_objmem();
-extern void fun_orflags();
-extern void fun_andflags();
-extern void fun_strtrunc();
-extern void fun_ifelse();
-extern void fun_inc();
-extern void fun_dec();
-extern void fun_die();
-extern void fun_lit();
-extern void fun_shl();
-extern void fun_shr();
-extern void fun_vadd();
-extern void fun_vsub();
-extern void fun_vmul();
-extern void fun_vmag();
-extern void fun_vunit();
-extern void fun_vdim();
-extern void fun_strcat();
-extern void fun_grep();
-extern void fun_grepi();
-extern void fun_art();
-extern void fun_alphamax();
-extern void fun_alphamin();
-extern void fun_valid();
-extern void fun_hastype();
-extern void fun_lparent();
-extern void fun_empty();
-extern void fun_push();
-extern void fun_peek();
-extern void fun_pop();
-extern void fun_items();
-extern void fun_lstack();
-extern void fun_regmatch();
-extern void fun_translate();
+FUN_EXTERN(fun_btunitfixable);
+FUN_EXTERN(fun_btunitpartslist);
+FUN_EXTERN(fun_btunitpartslist_ref);
+FUN_EXTERN(fun_btlistblz);
+FUN_EXTERN(fun_bthexinblz);
+FUN_EXTERN(fun_btcharlist);
+FUN_EXTERN(fun_cobj);
+FUN_EXTERN(fun_config);
+
+FUN_EXTERN(fun_cwho);
+FUN_EXTERN(fun_clist);
+FUN_EXTERN(fun_cemit);
+FUN_EXTERN(fun_beep);
+FUN_EXTERN(fun_ansi);
+FUN_EXTERN(fun_zone);
+#ifdef SIDE_EFFECT_FUNCTIONS
+FUN_EXTERN(fun_link);
+FUN_EXTERN(fun_tel);
+FUN_EXTERN(fun_pemit);
+FUN_EXTERN(fun_create);
+FUN_EXTERN(fun_set);
+FUN_EXTERN(fun_setlock);
+#endif
+FUN_EXTERN(fun_last);
+FUN_EXTERN(fun_matchall);
+FUN_EXTERN(fun_ports);
+FUN_EXTERN(fun_mix);
+FUN_EXTERN(fun_foreach);
+FUN_EXTERN(fun_munge);
+FUN_EXTERN(fun_visible);
+FUN_EXTERN(fun_elements);
+FUN_EXTERN(fun_grab);
+FUN_EXTERN(fun_graball);
+FUN_EXTERN(fun_scramble);
+FUN_EXTERN(fun_shuffle);
+FUN_EXTERN(fun_sortby);
+FUN_EXTERN(fun_default);
+FUN_EXTERN(fun_edefault);
+FUN_EXTERN(fun_udefault);
+FUN_EXTERN(fun_findable);
+FUN_EXTERN(fun_isword);
+FUN_EXTERN(fun_hasattr);
+FUN_EXTERN(fun_hasattrp);
+FUN_EXTERN(fun_zwho);
+FUN_EXTERN(fun_zrooms);
+FUN_EXTERN(fun_zexits);
+FUN_EXTERN(fun_zobjects);
+FUN_EXTERN(fun_zplayers);
+FUN_EXTERN(fun_inzone);
+FUN_EXTERN(fun_children);
+FUN_EXTERN(fun_encrypt);
+FUN_EXTERN(fun_decrypt);
+FUN_EXTERN(fun_objeval);
+FUN_EXTERN(fun_squish);
+FUN_EXTERN(fun_stripansi);
+FUN_EXTERN(fun_zfun);
+FUN_EXTERN(fun_columns);
+FUN_EXTERN(fun_playmem);
+FUN_EXTERN(fun_objmem);
+FUN_EXTERN(fun_orflags);
+FUN_EXTERN(fun_andflags);
+FUN_EXTERN(fun_strtrunc);
+FUN_EXTERN(fun_ifelse);
+FUN_EXTERN(fun_inc);
+FUN_EXTERN(fun_dec);
+FUN_EXTERN(fun_die);
+FUN_EXTERN(fun_lit);
+FUN_EXTERN(fun_shl);
+FUN_EXTERN(fun_shr);
+FUN_EXTERN(fun_vadd);
+FUN_EXTERN(fun_vsub);
+FUN_EXTERN(fun_vmul);
+FUN_EXTERN(fun_vmag);
+FUN_EXTERN(fun_vunit);
+FUN_EXTERN(fun_vdim);
+FUN_EXTERN(fun_strcat);
+FUN_EXTERN(fun_grep);
+FUN_EXTERN(fun_grepi);
+FUN_EXTERN(fun_art);
+FUN_EXTERN(fun_alphamax);
+FUN_EXTERN(fun_alphamin);
+FUN_EXTERN(fun_valid);
+FUN_EXTERN(fun_hastype);
+FUN_EXTERN(fun_lparent);
+FUN_EXTERN(fun_empty);
+FUN_EXTERN(fun_push);
+FUN_EXTERN(fun_peek);
+FUN_EXTERN(fun_pop);
+FUN_EXTERN(fun_items);
+FUN_EXTERN(fun_lstack);
+FUN_EXTERN(fun_regmatch);
+FUN_EXTERN(fun_translate);
 
 /*
  * This is for functions that take an optional delimiter character 
@@ -1073,7 +1075,7 @@ static void fun_get(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer; long aflags;
 	ATTR *attr;
 	char *atr_gotten;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	if(!parse_attrib(player, fargs[0], &thing, &attrib)) {
 		safe_str("#-1 NO MATCH", buff, bufc);
@@ -1092,10 +1094,10 @@ static void fun_get(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";
@@ -1125,7 +1127,7 @@ static void fun_xget(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer; long aflags;
 	ATTR *attr;
 	char *atr_gotten;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
     char buffer[MBUF_SIZE];
 
 
@@ -1150,10 +1152,10 @@ static void fun_xget(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";
@@ -1183,7 +1185,7 @@ static void fun_get_eval(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer, eval_it; long aflags;
 	ATTR *attr;
 	char *atr_gotten, *str;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	if(!parse_attrib(player, fargs[0], &thing, &attrib)) {
 		safe_str("#-1 NO MATCH", buff, bufc);
@@ -1203,10 +1205,10 @@ static void fun_get_eval(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";
@@ -1257,7 +1259,7 @@ static void fun_eval(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer, eval_it; long aflags;
 	ATTR *attr;
 	char *atr_gotten, *str;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
     char buffer[MBUF_SIZE];
 
 	if((nfargs != 1) && (nfargs != 2)) {
@@ -1289,10 +1291,10 @@ static void fun_eval(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";
@@ -3405,7 +3407,7 @@ static void fun_lock(char *buff, char **bufc, dbref player, dbref cause,
 	long aflags;
 	char *tbuf;
 	ATTR *attr;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	/*
 	 * Parse the argument into obj + lock 
@@ -3420,10 +3422,10 @@ static void fun_lock(char *buff, char **bufc, dbref player, dbref cause,
 
 	tbuf = atr_get(it, attr->number, &aowner, &aflags);
 	if(Read_attr(player, it, attr, aowner, aflags)) {
-		bool = parse_boolexp(player, tbuf, 1);
+		boolexp = parse_boolexp(player, tbuf, 1);
 		free_lbuf(tbuf);
-		tbuf = (char *) unparse_boolexp_function(player, bool);
-		free_boolexp(bool);
+		tbuf = (char *) unparse_boolexp_function(player, boolexp);
+		free_boolexp(boolexp);
 		safe_str(tbuf, buff, bufc);
 	} else
 		free_lbuf(tbuf);
@@ -3436,7 +3438,7 @@ static void fun_elock(char *buff, char **bufc, dbref player, dbref cause,
 	long aflags;
 	char *tbuf;
 	ATTR *attr;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	/*
 	 * Parse lock supplier into obj + lock 
@@ -3459,10 +3461,10 @@ static void fun_elock(char *buff, char **bufc, dbref player, dbref cause,
 		tbuf = atr_get(it, attr->number, &aowner, &aflags);
 		if((attr->number == A_LOCK) ||
 		   Read_attr(player, it, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, tbuf, 1);
+			boolexp = parse_boolexp(player, tbuf, 1);
 			safe_tprintf_str(buff, bufc, "%d", eval_boolexp(victim, it, it,
-															bool));
-			free_boolexp(bool);
+															boolexp));
+			free_boolexp(boolexp);
 		} else {
 			safe_str("0", buff, bufc);
 		}
@@ -5504,7 +5506,7 @@ static void fun_pairs(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer; long aflags;
 	ATTR *attr;
 	char *atr_gotten;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	char *tmp_char;
 	int right_brace = 0, left_brace = 0, right_square_bracket = 0,
@@ -5527,10 +5529,10 @@ static void fun_pairs(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";
@@ -5603,7 +5605,7 @@ static void fun_colorpairs(char *buff, char **bufc, dbref player, dbref cause,
 	int attrib, free_buffer; long aflags;
 	ATTR *attr;
 	char *atr_gotten;
-	struct boolexp *bool;
+	struct boolexp *boolexp;
 
 	char *tmp_char;
 	char *tmp_bp;
@@ -5626,10 +5628,10 @@ static void fun_colorpairs(char *buff, char **bufc, dbref player, dbref cause,
 	if(attr->flags & AF_IS_LOCK) {
 		atr_gotten = atr_get(thing, attrib, &aowner, &aflags);
 		if(Read_attr(player, thing, attr, aowner, aflags)) {
-			bool = parse_boolexp(player, atr_gotten, 1);
+			boolexp = parse_boolexp(player, atr_gotten, 1);
 			free_lbuf(atr_gotten);
-			atr_gotten = unparse_boolexp(player, bool);
-			free_boolexp(bool);
+			atr_gotten = unparse_boolexp(player, boolexp);
+			free_boolexp(boolexp);
 		} else {
 			free_lbuf(atr_gotten);
 			atr_gotten = (char *) "#-1 PERMISSION DENIED";

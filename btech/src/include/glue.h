@@ -51,16 +51,16 @@ typedef struct CommandsStruct {
     int flag;
     char *name;
     char *helpmsg;
-    void (*func) ();
+    void *func;
 } CommandsStruct;
 
 typedef struct SpecialObjectStruct {
     char *type;			        // Type of the object
     CommandsStruct *commands;	// Commands array
     long datasize;		        // Size of private buffer
-    void (*allocfreefunc) ();
+    void *allocfreefunc;
     int updateTime;		        // Amount of time between updates (secs)
-    void (*updatefunc) ();	    // called for every object at every update
+    void *updatefunc;	    // called for every object at every update
     int power_needed;		    // What power is needed to restricted commands
 } SpecialObjectStruct;
 

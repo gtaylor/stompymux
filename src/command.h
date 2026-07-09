@@ -143,7 +143,7 @@ struct cmdentry {
     int perms;
     int extra;
     int callseq;
-    void (*handler) ();
+    void *handler;
 };
 
 typedef struct addedentry ADDENT;

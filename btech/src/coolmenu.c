@@ -345,7 +345,7 @@ coolmenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
 }
 
 coolmenu *SelCol_FunStringMenuK(int columns, char *heading,
-								char *(*fun) (), int last)
+								char *(*fun) (int), int last)
 {
 	coolmenu *c = NULL;
 	int i;
@@ -369,7 +369,7 @@ coolmenu *SelCol_FunStringMenuK(int columns, char *heading,
 	return c;
 }
 
-coolmenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun) ())
+coolmenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun) (int))
 {
 	int co;
 

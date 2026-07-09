@@ -27,7 +27,7 @@
 typedef struct confparm CONF;
 struct confparm {
 	char *pname;				/* parm name */
-	int (*interpreter) ();		/* routine to interp parameter */
+	void *interpreter;			/* routine to interp parameter */
 	int flags;					/* control flags */
 	int *loc;					/* where to store value */
 	long extra;					/* extra data for interpreter */
@@ -1551,7 +1551,7 @@ int cf_set(char *cp, char *ap, dbref player)
 			}
             buff = alloc_lbuf("cf_set");
             StringCopy(buff, ap);
-			i = tp->interpreter(tp->loc, ap, tp->extra, player, cp);
+			i = ((int (*)(void *, char *, long, dbref, char *)) tp->interpreter) (tp->loc, ap, tp->extra, player, cp);
 			if(!mudstate.initializing) {
                 log_error(LOG_CONFIGMODS, "CFG", "UPDAT",
                 "%s entered config directive: %s with args '%s'. Status: %s%s%s%s",
@@ -1653,14 +1653,14 @@ void fun_config(char *buff, char **bufc, dbref player, dbref cause,
 				safe_str("#-1 PERMISSION DENIED", buff, bufc);
 				return;
 			}
-			if(cp->interpreter == cf_string) {
+			if(cp->interpreter == (void *) cf_string) {
 				safe_str((char *) cp->loc, buff, bufc);
 				return;
 			}
 
 			/* [cad] bool can be returned as 0|1 or true|false softcoders should
 			   decide how they want it */
-			if(cp->interpreter == cf_int || cp->interpreter == cf_bool) {
+			if(cp->interpreter == (void *) cf_int || cp->interpreter == (void *) cf_bool) {
 				safe_tprintf_str(buff, bufc, "%d", *(int *) cp->loc);
 				return;
 			}

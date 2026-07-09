@@ -589,7 +589,7 @@ void fun_btsetxcodevalue(char *buff, char **bufc, dbref player, dbref cause,
 	int i, spec;
 	void *foo;
 	void *bar;
-	void *(*tempfun) ();
+	void *(*tempfun) (int, MECH *, char *);
 
 	it = match_thing(player, fargs[0]);
 	FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
@@ -644,7 +644,7 @@ static char *RetrieveValue(void *data, int i)
 {
 	void *bar = (void *) ((long) data + xcode_data[i].rel_addr);
 	static char buf[LBUF_SIZE];
-	char *(*tempfun) ();
+	char *(*tempfun) (int, MECH *);
 
 	switch (xcode_data[i].type) {
 	case TYPE_STRFUNC_BD:
@@ -742,7 +742,7 @@ void set_xcodestuff(dbref player, void *data, char *buffer)
 	char *args[2];
 	int t, i;
 	void *bar;
-	void *(*tempfun) ();
+	void *(*tempfun) (int, MECH *, char *);
 
 	memset(args, 0, sizeof(char *) * 2);
 
