@@ -232,10 +232,7 @@ static void fire_dissipation_event(MUXEVENT * e)
 	}
 }
 
-int FindXEven(wind, x)
-	 int wind;
-	 int x;
-
+int FindXEven(int wind, int x)
 {
 	switch (wind) {
 	case 0:
@@ -274,10 +271,7 @@ int FindXEven(wind, x)
 	return 0;
 }
 
-int FindYEven(wind, y)
-	 int wind;
-	 int y;
-
+int FindYEven(int wind, int y)
 {
 	switch (wind) {
 	case 0:
@@ -316,10 +310,7 @@ int FindYEven(wind, y)
 	return 0;
 }
 
-int FindXOdd(wind, x)
-	 int wind;
-	 int x;
-
+int FindXOdd(int wind, int x)
 {
 	switch (wind) {
 	case 0:
@@ -358,10 +349,7 @@ int FindXOdd(wind, x)
 	return 0;
 }
 
-int FindYOdd(wind, y)
-	 int wind;
-	 int y;
-
+int FindYOdd(int wind, int y)
 {
 	switch (wind) {
 	case 0:

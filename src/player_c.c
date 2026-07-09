@@ -135,23 +135,6 @@ void pcache_sync(void)
 	}
 }
 
-#if 0
-
-// Not used?
-
-void pcache_purge(dbref player)
-{
-	PCACHE *pp;
-
-	pp = rb_find(pcache_tree, player);
-	if(!pp)
-		return;
-	pp->cflags = PF_DEAD;
-	rb_delete(pcache_tree, pp->player);
-	free(pp);
-}
-#endif
-
 int a_Queue(dbref player, int adj)
 {
 	PCACHE *pp;

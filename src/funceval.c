@@ -355,9 +355,7 @@ void fun_pemit(char *buff, char **bufc, dbref player, dbref cause,
  * fun_create: Creates a room, thing or exit
  */
 
-static int check_command(player, name, buff, bufc)
-	 dbref player;
-	 char *name, *buff, **bufc;
+static int check_command(dbref player, char *name, char *buff, char **bufc)
 {
 	CMDENT *cmd;
 

@@ -11,6 +11,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <math.h>
 #include <sys/file.h>
@@ -43,6 +44,19 @@
 static int doweird = 0;
 static char *weirdbuf;
 
+static void append_status(char *buffer, size_t size, const char *fmt, ...)
+{
+	size_t len = strlen(buffer);
+	va_list ap;
+
+	if(len >= size)
+		return;
+
+	va_start(ap, fmt);
+	vsnprintf(buffer + len, size - len, fmt, ap);
+	va_end(ap);
+}
+
 #define PHY_AXE		1
 #define PHY_SWORD	2
 #define PHY_MACE	3
@@ -54,7 +68,7 @@ void DisplayTarget(dbref player, MECH * mech)
 	int arc;
 	MECH *tempMech = NULL;
 	char location[50] = { 0 };
-	char buff[100] = { 0 };
+	char buff[MBUF_SIZE] = { 0 };
 	char buff1[100] = { 0 };
 
 	if(MechTarget(mech) != -1) {
@@ -293,7 +307,7 @@ void PrintGenericStatus(dbref player, MECH * mech, int own, int usex)
 
 void PrintShortInfo(dbref player, MECH * mech)
 {
-	char buff[100] = { 0 };
+	char buff[MBUF_SIZE] = { 0 };
 	char typespecific[50] = { 0 };
 
 	switch (MechType(mech)) {
@@ -331,12 +345,11 @@ void PrintShortInfo(dbref player, MECH * mech)
 		break;
 	}
 
-	snprintf(buff, 100,
+	snprintf(buff, sizeof(buff),
 			 "LOC: %3d,%3d,%3d  HD: %3d/%3d  SP: %3.1f/%3.1f %s ST:%s",
 			 MechX(mech), MechY(mech), MechZ(mech), MechFacing(mech),
 			 MechDesiredFacing(mech), MechSpeed(mech), MechDesiredSpeed(mech),
 			 typespecific, getStatusString(mech, 2));
-	buff[99] = '\0';
 	notify(player, buff);
 	DisplayTarget(player, mech);
 }
@@ -932,14 +945,14 @@ char *critstatus_func(MECH * mech, char *arg)
 	max_crits = CritsInLoc(mech, index);
 	for(i = 0; i < max_crits; i++) {
 		if(buffer[0])
-			snprintf(buffer, sizeof(buffer), "%s,", buffer);
-		snprintf(buffer, sizeof(buffer), "%s%d|", buffer, i + 1);
+			append_status(buffer, sizeof(buffer), ",");
+		append_status(buffer, sizeof(buffer), "%d|", i + 1);
 		type = GetPartType(mech, index, i);
 		if(IsAmmo(type))
 			type = FindAmmoType(mech, index, i);
 		tmp = get_parts_long_name(type, GetPartBrand(mech, index, i));
-		snprintf(buffer, sizeof(buffer), "%s|%s", buffer, tmp ? tmp : "Empty");
-		snprintf(buffer, sizeof(buffer), "%s|%d", buffer, (PartIsNonfunctional(mech, index,
+		append_status(buffer, sizeof(buffer), "|%s", tmp ? tmp : "Empty");
+		append_status(buffer, sizeof(buffer), "|%d", (PartIsNonfunctional(mech, index,
 															  i)
 										  && type != EMPTY && (!IsCrap(type)
 															   ||
@@ -947,7 +960,7 @@ char *critstatus_func(MECH * mech, char *arg)
 															   (mech,
 																index))) ? -1
 				: PartTempNuke(mech, index, i));
-		snprintf(buffer, sizeof(buffer), "%s|%d", buffer,
+		append_status(buffer, sizeof(buffer), "|%d",
 				IsWeapon(type) ? 1 : IsAmmo(type) ? 2 : IsActuator(type) ? 3 :
 				IsCargo(type) ? 4 : (IsCrap(type) || type == EMPTY) ? 5 : 0);
 	}
@@ -1035,9 +1048,9 @@ char *weaponstatus_func(MECH * mech, char *arg)
       count = FindWeapons(mech, loopsect, weaparray, weapdata, criticals);
       for(i = 0; i < count; i++, totalcount++) {
             if(buffer[0])
-               snprintf(buffer, sizeof(buffer), "%s,", buffer);
+               append_status(buffer, sizeof(buffer), ",");
                type = Weapon2I(GetPartType(mech, loopsect, criticals[i]));
-               snprintf(buffer, sizeof(buffer), "%s%d|%s|%d|%d|%d|%d|%d|%d", buffer,
+               append_status(buffer, sizeof(buffer), "%d|%s|%d|%d|%d|%d|%d|%d",
                   totalcount, get_parts_long_name(I2Weapon(type),
                   GetPartBrand(mech, loopsect, criticals[i])),
                   GetWeaponCrits(mech, type), GetPartBrand(mech, loopsect,

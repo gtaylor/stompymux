@@ -16,7 +16,7 @@ using namespace BTech::FI;
 namespace {
 
 void
-die(const char *cause, const char *reason) throw (int)
+die(const char *cause, const char *reason)
 {
 	cerr << cause << ": " << reason << endl;
 	throw 1;

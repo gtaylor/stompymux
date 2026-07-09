@@ -722,9 +722,7 @@ int In_IC_Loc(dbref player)
  * * check_access: Check if player has access to function.  
  */
 
-int check_access(player, mask)
-	 dbref player;
-	 int mask;
+int check_access(dbref player, int mask)
 {
 	int succ, fail;
 
@@ -1737,8 +1735,7 @@ NAMETAB indiv_attraccess_nametab[] = {
 
 /* *INDENT-ON* */
 
-static void list_attraccess(player)
-	 dbref player;
+static void list_attraccess(dbref player)
 {
 	char *buff;
 	ATTR *ap;

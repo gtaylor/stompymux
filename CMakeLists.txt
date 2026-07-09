@@ -34,7 +34,7 @@ option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
 option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
-option(BTMUX_ENABLE_WERROR "Treat compiler warnings as errors" OFF)
+option(BTMUX_ENABLE_WERROR "Treat compiler warnings as errors" ON)
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)

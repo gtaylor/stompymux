@@ -427,8 +427,7 @@ dbref last_match_result(void)
 	return md.match;
 }
 
-dbref match_status(player, match)
-	 dbref player, match;
+dbref match_status(dbref player, dbref match)
 {
 	switch (match) {
 	case NOTHING:
@@ -452,8 +451,7 @@ dbref noisy_match_result(void)
 	return match_status(md.player, match_result());
 }
 
-dbref dispatched_match_result(player)
-	 dbref player;
+dbref dispatched_match_result(dbref player)
 {
 	return match_status(player, match_result());
 }
@@ -463,8 +461,7 @@ int matched_locally(void)
 	return (md.confidence & CON_LOCAL);
 }
 
-void save_match_state(mstate)
-	 MSTATE *mstate;
+void save_match_state(MSTATE *mstate)
 {
 	mstate->confidence = md.confidence;
 	mstate->count = md.count;
@@ -477,8 +474,7 @@ void save_match_state(mstate)
 	StringCopy(mstate->string, md.string);
 }
 
-void restore_match_state(mstate)
-	 MSTATE *mstate;
+void restore_match_state(MSTATE *mstate)
 {
 	md.confidence = mstate->confidence;
 	md.count = mstate->count;

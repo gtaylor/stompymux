@@ -9,6 +9,7 @@
  */
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <math.h>
 #include <sys/file.h>
@@ -30,6 +31,19 @@
 #include "p.bsuit.h"
 
 void sendchannelstuff(MECH * mech, int freq, char *msg);
+
+static void append_lbuf(char *buffer, size_t size, const char *fmt, ...)
+{
+	size_t len = strlen(buffer);
+	va_list ap;
+
+	if(len >= size)
+		return;
+
+	va_start(ap, fmt);
+	vsnprintf(buffer + len, size - len, fmt, ap);
+	va_end(ap);
+}
 
 const char *GetAmmoDesc_Model_Mode(int model, int mode)
 {
@@ -887,7 +901,7 @@ void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
 							MechFY(comm_mech[comm_best_path[i]]),
 							MechFX(comm_mech[comm_best_path[i - 1]]),
 							MechFY(comm_mech[comm_best_path[i - 1]]));
-			snprintf(buf + strlen(buf), LBUF_SIZE, "[%c%c]-h:%.3d",
+			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "[%c%c]-h:%.3d",
 					 MechID(comm_mech[comm_best_path[i]])[0],
 					 MechID(comm_mech[comm_best_path[i]])[1], bearing);
 		}
@@ -895,11 +909,11 @@ void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
 		header = buf;
 	}
 
+	buffo[0] = '\0';
+	append_lbuf(buffo, LBUF_SIZE, "%s", header ? header : "");
 	if(handle && *handle)
-		snprintf(buffo, LBUF_SIZE, "%s<%s> %s", header ? header : "", handle,
-				 msg);
-	else
-		snprintf(buffo, LBUF_SIZE, "%s%s", header ? header : "", msg);
+		append_lbuf(buffo, LBUF_SIZE, "<%s> ", handle);
+	append_lbuf(buffo, LBUF_SIZE, "%s", msg);
 
 	if((!digmode && (range >= sendrange || range >= recvrrange)) || under_ecm) {
 		if(!digmode) {

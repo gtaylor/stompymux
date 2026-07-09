@@ -14,6 +14,10 @@
  *
  */
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "mech.h"
 #include "mech.events.h"
 #include "mech.tech.h"
@@ -30,6 +34,19 @@
 /* 0 = type, 1 = loc, 2 = (pos/amnt), 3 = (val) */
 short damage_table[MAX_DAMAGES][3];
 int damage_last;
+
+static void append_damage(char *buffer, size_t size, const char *fmt, ...)
+{
+	size_t len = strlen(buffer);
+	va_list ap;
+
+	if(len >= size)
+		return;
+
+	va_start(ap, fmt);
+	vsnprintf(buffer + len, size - len, fmt, ap);
+	va_end(ap);
+}
 
 const char *repair_need_msgs[] = {
 	"Reattachment",
@@ -279,8 +296,8 @@ char *damages_func(MECH * mech)
 		/* Ok... i think we want: */
 		/* repairnum|location|typenum|data|fixing? */
 		if(i)
-			snprintf(buffer, sizeof(buffer), "%s,", buffer);
-		snprintf(buffer, sizeof(buffer), "%s%d|%s|%d|", buffer, i + 1,
+			append_damage(buffer, sizeof(buffer), ",");
+		append_damage(buffer, sizeof(buffer), "%d|%s|%d|", i + 1,
 				ShortArmorSectionString(MechType(mech), MechMove(mech),
 										damage_table[i][1]),
 				(int) damage_table[i][0]);
@@ -297,13 +314,13 @@ char *damages_func(MECH * mech)
 		case ENHCRIT_AMMOM:
 		case SCRAPP:
 		case SCRAPG:
-			snprintf(buffer, sizeof(buffer), "%s%s", buffer, pos_part_name(mech,
+			append_damage(buffer, sizeof(buffer), "%s", pos_part_name(mech,
 														  damage_table[i][1],
 														  damage_table[i]
 														  [2]));
 			break;
 		case RELOAD:
-			snprintf(buffer, sizeof(buffer), "%s%s:%d", buffer, pos_part_name(mech,
+			append_damage(buffer, sizeof(buffer), "%s:%d", pos_part_name(mech,
 															 damage_table[i]
 															 [1],
 															 damage_table[i]
@@ -316,7 +333,7 @@ char *damages_func(MECH * mech)
 															   [2]));
 			break;
 		case UNLOAD:
-			snprintf(buffer, sizeof(buffer), "%s%s:%d", buffer, pos_part_name(mech,
+			append_damage(buffer, sizeof(buffer), "%s:%d", pos_part_name(mech,
 															 damage_table[i]
 															 [1],
 															 damage_table[i]
@@ -327,12 +344,12 @@ char *damages_func(MECH * mech)
 		case FIXARMOR:
 		case FIXARMOR_R:
 		case FIXINTERNAL:
-			snprintf(buffer, sizeof(buffer), "%s%d", buffer, damage_table[i][2]);
+			append_damage(buffer, sizeof(buffer), "%d", damage_table[i][2]);
 			break;
 		default:
-			snprintf(buffer, sizeof(buffer), "%s-", buffer);
+			append_damage(buffer, sizeof(buffer), "-");
 		}
-		snprintf(buffer, sizeof(buffer), "%s|%d", buffer, is_under_repair(mech, i));
+		append_damage(buffer, sizeof(buffer), "|%d", is_under_repair(mech, i));
 	}
 	return buffer;
 }
@@ -343,7 +360,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer)
 	coolmenu *c = NULL;
 	int i, j, v1, v2;
 	char buf[MBUF_SIZE] = { 0 };
-	char buf2[MBUF_SIZE] = { 0 };
+	char buf2[LBUF_SIZE] = { 0 };
 	char buf3[MBUF_SIZE] = { 0 };
 	int isds;
 	int fix_time = 0;

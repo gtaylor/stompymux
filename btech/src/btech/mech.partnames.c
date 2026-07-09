@@ -59,7 +59,7 @@ int temp_brand_flag;
 
 static int create_brandname(int id, int b)
 {
-	char buf[MBUF_SIZE];
+	char buf[LBUF_SIZE];
 	char buf2[MBUF_SIZE];
 	char buf3[MBUF_SIZE];
 	char *c, *brn = NULL;
