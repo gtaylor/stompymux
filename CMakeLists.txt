@@ -34,7 +34,6 @@ option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
 option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
-option(BTMUX_ENABLE_WERROR "Treat compiler warnings as errors" ON)
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
@@ -186,11 +185,9 @@ endif()
 configure_file(cmake/version.h.in src/version.h @ONLY)
 
 add_library(btmux_options INTERFACE)
-if(BTMUX_ENABLE_WERROR)
-  target_compile_options(btmux_options INTERFACE
-    $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors>
-    $<$<COMPILE_LANGUAGE:CXX>:-Werror -Wfatal-errors>)
-endif()
+target_compile_options(btmux_options INTERFACE
+  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors>
+  $<$<COMPILE_LANGUAGE:CXX>:-Werror -Wfatal-errors>)
 if(BTMUX_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
