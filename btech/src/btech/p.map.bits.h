@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:41 CET 1999 from map.bits.c */
 
-#ifndef _P_MAP_BITS_H
-#define _P_MAP_BITS_H
+#pragma once
 
 /* map.bits.c */
 void map_load_bits(FILE * f, MAP * map);
@@ -23,5 +22,3 @@ int is_mine_hex(MAP * map, int x, int y);
 int is_hangar_hex(MAP * map, int x, int y);
 void clear_hex_bits(MAP * map, int bits);
 int bit_size(MAP * map);
-
-#endif				/* _P_MAP_BITS_H */

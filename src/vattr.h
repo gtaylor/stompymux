@@ -5,6 +5,7 @@
  *  $Id: vattr.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $
  */
 
+#pragma once
 #define VNAME_SIZE	32
 
 typedef struct user_attribute VATTR;

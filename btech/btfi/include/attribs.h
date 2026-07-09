@@ -2,8 +2,7 @@
  * Attribute name-value list type.
  */
 
-#ifndef BTECH_FI_ATTRIBS_H
-#define BTECH_FI_ATTRIBS_H
+#pragma once
 
 #include "names.h"
 #include "values.h"
@@ -35,5 +34,3 @@ const FI_Value *fi_get_attribute_value(const FI_Attributes *attrs, int idx);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_ATTRIBS_H */

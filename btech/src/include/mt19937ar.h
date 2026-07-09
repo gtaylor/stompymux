@@ -44,6 +44,7 @@
 */
 
 /* initializes mt[N] with a seed */
+#pragma once
 void init_genrand(unsigned long s);
 
 /* initialize by an array with array-length */

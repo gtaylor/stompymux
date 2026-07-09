@@ -2,8 +2,7 @@
 
 #include "config.h"
 
-#ifndef __MUDCONF_H
-#define __MUDCONF_H
+#pragma once
 
 #include <netinet/in.h>
 #include "config.h"
@@ -478,5 +477,3 @@ extern STATEDATA mudstate;
 #define LOGOPT_TIMESTAMP	0x08	/* Timestamp log entries */
 
 #define HIDDEN_IDLESECS		600	/* Show people idle for less as 0s idle */
-
-#endif

@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_SENSOR_H
-#define MECH_SENSOR_H
+#pragma once
 
 /* 
    For all scanners chance of seeing a foe is modified by:
@@ -172,4 +171,3 @@ SensorStruct sensors[] = {
 #else
 extern SensorStruct sensors[];
 #endif
-#endif				/* MECH_SENSOR_H */

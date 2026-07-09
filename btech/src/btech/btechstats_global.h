@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef BTECHSTATS_GLOBAL_H
-#define BTECHSTATS_GLOBAL_H
+#pragma once
 
 #define VALUES_HEALTH 1		/* In PLBRUISE / PLLETHAL */
 #define VALUES_SKILLS 2		/* In PLSKILLS */
@@ -129,4 +128,3 @@ if (code >= 0) \
     char_setstatvaluebycode(hm, code, value); \
     store_stats(player, hm, VALUES_ALL); \
   }
-#endif				/* BTECHSTATS_GLOBAL_H */

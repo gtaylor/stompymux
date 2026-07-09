@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef EXTERN_H
-#define EXTERN_H
+#pragma once
 
 #define	FUNCTION(x)	\
 	void x(buff, bufc, player, cause, fargs, nfargs, cargs, ncargs) \
@@ -23,5 +22,3 @@
 	dbref player, cause; \
 	char *fargs[], *cargs[]; \
 	int nfargs, ncargs;
-
-#endif				/* EXTERN_H */

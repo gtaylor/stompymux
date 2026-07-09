@@ -3,8 +3,7 @@
 
 /* $Id: commac.h,v 1.1 2005/06/13 20:50:46 murrayma Exp $ */
 
-#ifndef __COMMAC_H__
-#define __COMMAC_H__
+#pragma once
 
 struct commac {
     dbref who;
@@ -36,5 +35,3 @@ void add_commac(struct commac *c);
 void del_commac(dbref who);
 void save_comsys_and_macros(char *);
 void load_comsys_and_macros(char *);
-
-#endif				/* __COMMAC_H__ */

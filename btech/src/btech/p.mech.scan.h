@@ -9,8 +9,7 @@
 
 /* Generated at Tue Feb  9 14:31:35 CET 1999 from mech.scan.c */
 
-#ifndef _P_MECH_SCAN_H
-#define _P_MECH_SCAN_H
+#pragma once
 
 /* mech.scan.c */
 void mech_scan(dbref player, void *data, char *buffer);
@@ -24,5 +23,3 @@ void mech_range(dbref player, void *data, char *buffer);
 void PrintEnemyWeaponStatus(MECH * mech, dbref player);
 void mech_sight(dbref player, void *data, char *buffer);
 void mech_view(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_SCAN_H */

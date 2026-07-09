@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:41 CET 1999 from failures.c */
 
-#ifndef _P_FAILURES_H
-#define _P_FAILURES_H
+#pragma once
 
 /* failures.c */
 int GetBrandIndex(int type);
@@ -44,5 +43,3 @@ void FailureWeaponSpike(MECH * mech, int weapnum, int weaptype,
 void CheckGenericFail(MECH * mech, int type, int *result, int *mod);
 void CheckWeaponFailed(MECH * mech, int weapnum, int weaptype, int section,
     int critical, int *modifier, int *type);
-
-#endif				/* _P_FAILURES_H */

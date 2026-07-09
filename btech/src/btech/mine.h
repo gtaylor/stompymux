@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MINE_H
-#define MINE_H
+#pragma once
 
 #define MINE_LOW  1
 #define MINE_HIGH 5
@@ -26,5 +25,3 @@
 #define MINE_TRIGGER  5		/* Same as vibra, except shows _no_ message,
 				   and doesn't get destroyed */
 #define VIBRO(a)      (a == MINE_VIBRA || a == MINE_TRIGGER)
-
-#endif				/* MINE_H */

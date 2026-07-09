@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:49 CET 1999 from mech.ice.c */
 
-#ifndef _P_MECH_ICE_H
-#define _P_MECH_ICE_H
+#pragma once
 
 /* mech.ice.c */
 void drop_thru_ice(MECH * mech);
@@ -24,5 +23,3 @@ void map_addice(dbref player, MAP * map, char *buffer);
 void map_delice(dbref player, MAP * map, char *buffer);
 void possibly_blow_ice(MECH * mech, int weapindx, int x, int y);
 void possibly_blow_bridge(MECH * mech, int weapindx, int x, int y);
-
-#endif				/* _P_MECH_ICE_H */

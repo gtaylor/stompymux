@@ -4,8 +4,7 @@
 /* $Id: interface.h,v 1.7 2005/08/08 10:30:11 murrayma Exp $ */
 
 
-#ifndef __INTERFACE__H
-#define __INTERFACE__H
+#pragma once
 
 #include "db.h"
 #include "rbtab.h"
@@ -178,5 +177,3 @@ extern dbref find_connected_name(dbref, char *);
 	for (d=descriptor_list,n=((d!=NULL) ? d->next : NULL); \
 	     d; \
 	     d=n,n=((n!=NULL) ? n->next : NULL))
-
-#endif

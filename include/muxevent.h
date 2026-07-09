@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MUXEVENT_H
-#define MUXEVENT_H
+#pragma once
 
 /* EVENT_DEBUG adds some useful debugging information to the structure
    / allows more diverse set of error messages to be shown. However,
@@ -97,5 +96,3 @@ void event_gothru_type(int type, void (*func) (MUXEVENT *));
 
 
 /* Did I mention cproto is braindead? */
-
-#endif				/* MUXEVENT_H */

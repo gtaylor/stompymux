@@ -2,8 +2,7 @@
  * Some common type definitions.
  */
 
-#ifndef BTECH_FI_COMMON_H
-#define BTECH_FI_COMMON_H
+#pragma once
 
 /*
  * Common types.
@@ -61,5 +60,3 @@ typedef std::string CharString;
 } // namespace FI
 } // namespace BTech
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_COMMON_H */

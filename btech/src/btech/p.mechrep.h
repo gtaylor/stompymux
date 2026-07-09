@@ -11,8 +11,7 @@
 
 #include "config.h"
 
-#ifndef _P_MECHREP_H
-#define _P_MECHREP_H
+#pragma once
 
 /* mechrep.c */
 void newfreemechrep(dbref key, void **data, int selector);
@@ -55,5 +54,3 @@ void mechrep_Rdelinftech(dbref player, void *data, char *buffer);
 void mechrep_Raddinftech(dbref player, void *data, char *buffer);
 void mechrep_setcargospace(dbref player, void *data, char *buffer);
 void invalid_section(dbref player, MECH * mech);
-
-#endif				/* _P_MECHREP_H */

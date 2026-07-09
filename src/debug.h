@@ -1,5 +1,4 @@
-#ifndef _FUMIGATE_
-#define _FUMIGATE_
+#pragma once
 
 #include <time.h>
 #include <stdio.h>
@@ -92,5 +91,3 @@
     }} while (0)
 
 #define handle_errno(x) if((x)<0) do { fprintf(stderr, "%s (%s:%d)] %s\n", __FUNCTION__, __FILE__,  __LINE__, strerror(errno)); abort(); } while(0)
-
-#endif /* !_FUMIGATE_ */

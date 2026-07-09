@@ -1,6 +1,5 @@
 
-#ifndef __COMSYS_H__
-#define __COMSYS_H__
+#pragma once
 
 /* comsys.h */
 
@@ -106,4 +105,3 @@ void fun_cemit(char *buff, char **bufc, dbref player, dbref cause,
 /* explanation of logic... If it's not owned by god, and it's either not a
 player, or a connected player, it's good... If it is owned by god, then if
 it's going, assume it's already gone, no matter what it is. :) */
-#endif				/* __COMSYS_H__ */

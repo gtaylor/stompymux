@@ -2,8 +2,7 @@
 
 #include "config.h"
 
-#ifndef _ATTRS_H
-#define _ATTRS_H
+#pragma once
 
 
 /* Attribute flags */
@@ -201,5 +200,3 @@
 #define A_USER_START    256 /* Start of user-named attributes */
 #define ATR_BUF_CHUNK   100 /* Min size to allocate for attribute buffer */
 #define ATR_BUF_INCR    6   /* Max size of one attribute */
-
-#endif

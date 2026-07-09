@@ -4,6 +4,7 @@
 */
 
 /* static void tag_recycle_event(MUXEVENT * e); */
+#pragma once
 void mech_tag(dbref player, void *data, char *buffer);
 int isTAGDestroyed(MECH * mech);
 void stopTAG(MECH * mech);

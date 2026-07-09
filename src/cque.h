@@ -1,8 +1,7 @@
 /* cque.h */
 /* $Id: */
 
-#ifndef __CQUE_H__
-#define __CQUE_H__
+#pragma once
 #include "config.h"
 
 /* BQUE - Command queue */
@@ -40,5 +39,3 @@ struct objqe {
 
 int cque_init(void);
 void do_second(void);
-
-#endif

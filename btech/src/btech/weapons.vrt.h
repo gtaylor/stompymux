@@ -1,6 +1,7 @@
 /*
  * Recycle times for 'standard' VRT
  */
+#pragma once
 #define VRT_CL_AC10		25	/* CL.AC/10 */
 #define VRT_CL_AC2		12	/* CL.AC/2 */
 #define VRT_CL_AC20		30	/* CL.AC/20 */

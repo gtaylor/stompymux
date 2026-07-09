@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:53 CET 1999 from mech.partnames.c */
 
-#ifndef _P_MECH_PARTNAMES_H
-#define _P_MECH_PARTNAMES_H
+#pragma once
 
 /* mech.partnames.c */
 void list_phashstats(dbref player);
@@ -23,4 +22,3 @@ int find_matching_long_part(char *wc, int *i, int *id, int *brand);
 int find_matching_short_part(char *wc, int *ind, int *id, int *brand);
 void ListForms(dbref player, void *data, char *buffer);
 char *partname_func(int index, int size);
-#endif				/* _P_MECH_PARTNAMES_H */

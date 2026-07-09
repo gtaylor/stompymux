@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef FLOATSIM_H
-#define FLOATSIM_H
+#pragma once
 
 /* Simulate floats by using ints in interesting way */
 
@@ -28,5 +27,3 @@
 #define FSIM2SHO(a) ((a) >> SHO_DECIMAL_BITS)
 #define INT2FSIM(a) ((a) << INT_DECIMAL_BITS)
 #define SHO2FSIM(a) ((a) << SHO_DECIMAL_BITS)
-
-#endif				/* FLOATSIM_H */

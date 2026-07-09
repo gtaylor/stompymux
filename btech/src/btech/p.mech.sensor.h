@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 10:40:21 CET 1999 from mech.sensor.c */
 
-#ifndef _P_MECH_SENSOR_H
-#define _P_MECH_SENSOR_H
+#pragma once
 
 /* mech.sensor.c */
 int Sensor_ToHitBonus(MECH * mech, MECH * target, int flag, int maplight,
@@ -36,5 +35,3 @@ void mech_sensor(dbref player, void *data, char *buffer);
 void possibly_see_mech(MECH * mech);
 void ScrambleInfraAndLiteAmp(MECH * mech, int time, int chance,
     char *inframsg, char *liteampmsg);
-
-#endif				/* _P_MECH_SENSOR_H */

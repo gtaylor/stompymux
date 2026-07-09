@@ -9,9 +9,6 @@
 
 /* Generated at Mon Feb 22 14:59:39 CET 1999 from spath.c */
 
-#ifndef _P_SPATH_H
-#define _P_SPATH_H
+#pragma once
 
 /* spath.c */
-
-#endif				/* _P_SPATH_H */

@@ -1,7 +1,6 @@
 /* p.map.build.functions.h */
 
-#ifndef _P_MAP_BUILD_FUNCTIONS_H
-#define _P_MAP_BUILD_FUNCTIONS_H
+#pragma once
 
 /* map.build.functions.c */
 
@@ -24,5 +23,3 @@ void SetHexTerrain(MAP * map, int x, int y, char terrain);
 void SetHexElevation(MAP * map, int x, int y, char elevation);
 void SetHexLayers(MAP * map, int x, int y, int layers);
 void SetHexLayerData(MAP * map, int x, int y, int layerData);
-
-#endif				/* _P_MAP_BUILD_FUNCTIONS_H */

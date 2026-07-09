@@ -19,8 +19,7 @@
 
 #include "config.h"
 
-#ifndef BTMACROS_H
-#define BTMACROS_H
+#pragma once
 
 #include <math.h>
 #include "macros.h"
@@ -886,5 +885,3 @@ if (FlyingT(mech)) { \
 #define Dodging(a)		(MechStatus2(a) & DODGING)
 #define SideSlipping(a)		muxevent_count_type_data(EVENT_SIDESLIP, (void *) a)
 #define StopSideslip(a)		muxevent_remove_type_data(EVENT_SIDESLIP, (void *) a)
-
-#endif				/* BTMACROS_H */

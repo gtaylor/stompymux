@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_STAT_H
-#define MECH_STAT_H
+#pragma once
 
 typedef struct {
     int rolls[11];
@@ -30,4 +29,3 @@ typedef struct {
 #ifndef MECH_STAT_C
 extern stat_type rollstat;
 #endif
-#endif				/* MECH.STAT_H */

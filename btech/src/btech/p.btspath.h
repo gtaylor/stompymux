@@ -9,12 +9,9 @@
 
 /* Generated at Fri Jan 15 15:32:38 CET 1999 from btspath.c */
 
-#ifndef _P_BTSPATH_H
-#define _P_BTSPATH_H
+#pragma once
 
 /* btspath.c */
 int MechTileCost(int fx, int fy, int tx, int ty);
 int HoverTankTileCost(int fx, int fy, int tx, int ty);
 int TrackedTankTileCost(int fx, int fy, int tx, int ty);
-
-#endif				/* _P_BTSPATH_H */

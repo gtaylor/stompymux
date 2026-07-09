@@ -13,6 +13,7 @@
  *
  */
 
+#pragma once
 #define BEEP_CHAR             '\07'
 #define ESC_CHAR              '\033'
 

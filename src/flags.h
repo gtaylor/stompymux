@@ -1,8 +1,7 @@
 /* flags.h - object flags */
 
 
-#ifndef __FLAGS_H
-#define __FLAGS_H
+#pragma once
 
 #include "rbtab.h"
 #include "db.h"
@@ -407,5 +406,3 @@ extern void decompile_flags(dbref, dbref, char *);
 
 #define Has_power(p,x)  (check_access((p),powers_nametab[x].flag))
 #define s_Dark(x)       s_Flags((x),Flags(x) | DARK)
-
-#endif

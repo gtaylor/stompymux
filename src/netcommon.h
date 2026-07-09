@@ -1,5 +1,4 @@
-#ifndef BTMUX_NETCOMMON_H
-#define BTMUX_NETCOMMON_H
+#pragma once
 
 #include "db.h"
 #include "interface.h"
@@ -20,5 +19,3 @@ void list_siteinfo(dbref player);
 int fetch_idle(dbref target);
 int fetch_connect(dbref target);
 void make_ulist(dbref player, char *buff, char **bufc);
-
-#endif

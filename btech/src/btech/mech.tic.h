@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_TIC_H
-#define MECH_TIC_H
+#pragma once
 
 /* mech.tic.c */
 void cleartic_sub(dbref player, MECH * mech, char *buffer);
@@ -29,5 +28,3 @@ void mech_deltic(dbref player, void *data, char *buffer);
 void mech_firetic(dbref player, void *data, char *buffer);
 void mech_listtic(dbref player, void *data, char *buffer);
 void heat_cutoff(dbref player, void *data, char *buffer);
-
-#endif				/* MECH_TIC_H */

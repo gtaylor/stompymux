@@ -2,8 +2,7 @@
 /* rbtab.h - Structures and declarations needed for table hashing */
 
 
-#ifndef __HTAB_H
-#define __HTAB_H
+#pragma once
 
 #include "config.h"
 #include "db.h"
@@ -53,4 +52,3 @@ void nhashdelete(long, RBTAB *);
 void nhashflush(RBTAB *, int);
 int nhashrepl(long, void *, RBTAB *);
 extern NAMETAB powers_nametab[];
-#endif

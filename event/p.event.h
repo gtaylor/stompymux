@@ -9,8 +9,7 @@
 
 /* Generated at Sat Jul 18 04:14:31 EEST 1998 from event.c */
 
-#ifndef _P_EVENT_H
-#define _P_EVENT_H
+#pragma once
 
 /* event.c */
 void muxevent_add(int time, int flags, int type, void (*func) (MUXEVENT *),
@@ -36,5 +35,3 @@ void muxevent_gothru_type(int type, void (*func) (MUXEVENT *));
 int muxevent_last_type_data(int type, void *data);
 int muxevent_first_type_data(int type, void *data);
 long muxevent_count_type_data_firstev(int type, void *data);
-
-#endif				/* _P_EVENT_H */

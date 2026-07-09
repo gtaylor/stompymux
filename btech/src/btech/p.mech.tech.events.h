@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:33:00 CET 1999 from mech.tech.events.c */
 
-#ifndef _P_MECH_TECH_EVENTS_H
-#define _P_MECH_TECH_EVENTS_H
+#pragma once
 
 /* mech.tech.events.c */
 void muxevent_tickmech_removesection(MUXEVENT * e);
@@ -28,5 +27,3 @@ void muxevent_tickmech_reload(MUXEVENT * e);
 void muxevent_tickmech_mountbomb(MUXEVENT * e);
 void muxevent_tickmech_umountbomb(MUXEVENT * e);
 void muxevent_tickmech_replacesuit(MUXEVENT * e);
-
-#endif				/* _P_MECH_TECH_EVENTS_H */

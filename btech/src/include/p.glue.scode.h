@@ -9,8 +9,7 @@
 
 /* Generated at Mon Feb 22 14:59:38 CET 1999 from glue.scode.c */
 
-#ifndef _P_GLUE_SCODE_H
-#define _P_GLUE_SCODE_H
+#pragma once
 
 /* glue.scode.c */
 char *mechIDfunc(int mode, MECH * mech);
@@ -48,5 +47,3 @@ void fun_btsectstatus(char *buff, char **bufc, dbref player, dbref cause,
     char *fargs[], int nfargs, char *cargs[], int ncargs);
 void fun_btarmorstatus(char *buff, char **bufc, dbref player, dbref cause,
     char *fargs[], int nfargs, char *cargs[], int ncargs);
-
-#endif				/* _P_GLUE_SCODE_H */

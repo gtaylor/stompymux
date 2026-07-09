@@ -10,8 +10,7 @@
    Last modified: Sat Jun  6 20:27:26 1998 fingon
  */
 
-#ifndef _FAILURES_H
-#define _FAILURES_H
+#pragma once
 
 #include "p.failures.h"
 
@@ -210,5 +209,4 @@ struct failure_data failures[] = {
 	FailureRadioShort, FAIL_NONE, REQ_RADIO}
 };
 
-#endif
 #endif

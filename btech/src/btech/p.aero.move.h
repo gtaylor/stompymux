@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 08:51:10 CET 1999 from aero.move.c */
 
-#ifndef _P_AERO_MOVE_H
-#define _P_AERO_MOVE_H
+#pragma once
 
 /* aero.move.c */
 void aero_takeoff(dbref player, void *data, char *buffer);
@@ -32,5 +31,3 @@ void aero_dive(dbref player, MECH * mech, char *arg);
 int ImproperLZ(MECH * mech, int x, int y);
 void DS_LandWarning(MECH * mech, int serious);
 void aero_checklz(dbref player, MECH * mech, char *buffer);
-
-#endif				/* _P_AERO_MOVE_H */

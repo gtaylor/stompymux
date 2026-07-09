@@ -3,8 +3,7 @@
 
 /* $Id: file_c.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-#ifndef __FILE_C
-#define	__FILE_C
+#pragma once
 
 #include "db.h"
 #include "interface.h"
@@ -31,5 +30,3 @@ extern void fcache_dump_conn(DESC *d, int num);
 extern void fcache_send(dbref, int);
 extern void fcache_load(dbref);
 extern void fcache_init(void);
-
-#endif

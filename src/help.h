@@ -3,8 +3,7 @@
 
 /* $Id: help.h,v 1.1 2005/06/13 20:50:47 murrayma Exp $ */
 
-#ifndef _HELP_H
-#define _HELP_H
+#pragma once
 #ifndef MKINDX
 void help_write(dbref, char *, HASHTAB *, char *, int);
 int helpindex_read(HASHTAB *, char *);
@@ -18,4 +17,3 @@ typedef struct {
     int len;			/* length of help entry */
     char topic[TOPIC_NAME_LEN + 1];	/* topic of help entry */
 } help_indx;
-#endif

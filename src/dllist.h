@@ -3,6 +3,7 @@
  */
 
 /* Doubly Linked List Node */
+#pragma once
 typedef struct dllist_node_t {
     struct dllist_node_t *next, *prev;
     void *data;

@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MYMATH_H
-#define MYMATH_H
+#pragma once
 
 #include <math.h>
 
@@ -37,5 +36,3 @@
 #endif
 #define TWOPIOVER360 0.0174533
 #define PI 3.141592654
-
-#endif				/* MYMATH_H */

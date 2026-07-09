@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef _MAP_LOS_H
-#define _MAP_LOS_H
+#pragma once
 
 #define MAX_SENSORS		2
 #define NUMSENSORS(mech)	2
@@ -42,5 +41,3 @@ typedef struct hexlosmap_info {
 
 hexlosmap_info *CalculateLOSMap(MAP *, MECH *, int, int, int, int);
 int LOSMap_Hex2Index(hexlosmap_info *, int, int);
-
-#endif

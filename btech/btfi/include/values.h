@@ -2,8 +2,7 @@
  * Generic value type.
  */
 
-#ifndef BTECH_FI_VALUES_H
-#define BTECH_FI_VALUES_H
+#pragma once
 
 #include <stddef.h>
 
@@ -53,5 +52,3 @@ void *fi_get_value_buffer(FI_Value *obj);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_VALUES_H */

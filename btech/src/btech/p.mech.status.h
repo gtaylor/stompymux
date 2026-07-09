@@ -11,8 +11,7 @@
 
 #include "config.h"
 
-#ifndef _P_MECH_STATUS_H
-#define _P_MECH_STATUS_H
+#pragma once
 
 /*
  * Armor status flags for ArmorEvaluateSerious().
@@ -63,5 +62,3 @@ int ArmorEvaluateSerious(MECH * mech, int loc, int flag, int *opt);
 void PrintArmorStatus(dbref player, MECH * mech, int owner);
 int hasPhysical(MECH * objMech, int wLoc, int wPhysType);
 int canUsePhysical(MECH * objMech, int wLoc, int wPhysType);
-
-#endif				/* _P_MECH_STATUS_H */

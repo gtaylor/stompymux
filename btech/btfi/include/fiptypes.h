@@ -2,8 +2,7 @@
  * Various primitive types.
  */
 
-#ifndef BTECH_FI_FIPTYPES_H
-#define BTECH_FI_FIPTYPES_H
+#pragma once
 
 #include <stdint.h>
 
@@ -76,5 +75,3 @@ typedef FI_UInt8 FI_Octet;		/* octet */
 /* Sections 6.5 and 6.10: Vocabulary table indexes range from 1 to 2^20.  */
 typedef FI_UInt21 FI_VocabIndex;	/* vocab index */
 #define FI_VOCAB_INDEX_NULL 0		/* null vocab index */
-
-#endif /* !BTECH_FI_FIPTYPES_H */

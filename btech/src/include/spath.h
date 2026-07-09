@@ -6,8 +6,7 @@
  *
  */
 
-#ifndef SPATH_H
-#define SPATH_H
+#pragma once
 
 #define HEX_BASED
 #undef APPROXIMATE_ASTAR
@@ -61,5 +60,3 @@ typedef struct STACKTYPE {
 
 #endif
 #include "p.spath.h"
-
-#endif				/* SPATH_H */

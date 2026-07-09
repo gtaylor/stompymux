@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:33 CET 1999 from ai.c */
 
-#ifndef _P_AI_H
-#define _P_AI_H
+#pragma once
 
 /* ai.c */
 void sendAIM(AUTO * a, MECH * m, char *msg);
@@ -35,5 +34,3 @@ int ai_check_path(MECH * m, AUTO * a, float dx, float dy, float delx,
     float dely);
 void ai_init(AUTO * a, MECH * m);
 void mech_snipe(dbref player, MECH * mech, char *buffer);
-
-#endif				/* _P_AI_H */

@@ -2,8 +2,7 @@
 /* db.h */
 
 
-#ifndef	__DB_H
-#define	__DB_H
+#pragma once
 
 #include "config.h"
 #include "mudconf.h"
@@ -245,5 +244,3 @@ extern void dump_database_internal(int);
 #define DUMP_CRASHED 1
 #define DUMP_RESTART 2
 #define DUMP_KILLED  4
-
-#endif				/* __DB_H */

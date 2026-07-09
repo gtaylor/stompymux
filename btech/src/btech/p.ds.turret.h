@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:39 CET 1999 from ds.turret.c */
 
-#ifndef _P_DS_TURRET_H
-#define _P_DS_TURRET_H
+#pragma once
 
 /* ds.turret.c */
 void turret_addtic(dbref player, void *data, char *buffer);
@@ -37,5 +36,3 @@ void turret_weaponspecs(dbref player, void *data, char *buffer);
 void newturret(dbref key, void **data, int selector);
 void turret_initialize(dbref player, void *data, char *buffer);
 void turret_deinitialize(dbref player, void *data, char *buffer);
-
-#endif				/* _P_DS_TURRET_H */

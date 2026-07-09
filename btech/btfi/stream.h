@@ -6,8 +6,7 @@
  * interface like this one, or at least with the capabilities of this one.
  */
 
-#ifndef BTECH_FI_STREAM_H
-#define BTECH_FI_STREAM_H
+#pragma once
 
 #include <stddef.h>
 
@@ -50,5 +49,3 @@ FI_Octet *fi_get_stream_write_window(FI_OctetStream *stream,
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_STREAM_H */

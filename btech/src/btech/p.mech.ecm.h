@@ -9,12 +9,8 @@
 
 /* Generated at Fri Jan 15 15:32:48 CET 1999 from mech.ecm.c */
 
-#ifndef _P_MECH_ECM_H
-#define _P_MECH_ECM_H
+#pragma once
 
 /* mech.ecm.c */
 void sendECMNotification(MECH * objMech, int wMsgType);
 void checkECM(MECH * objMech);
-
-
-#endif				/* _P_MECH_ECM_H */

@@ -13,8 +13,7 @@
  * to settle on consistent boilerplate, and slap it on everything.
  */
 
-#ifndef GLUE_TYPES_H
-#define GLUE_TYPES_H
+#pragma once
 
 #include <stddef.h>
 
@@ -36,5 +35,3 @@ typedef struct {
 	GlueType type;		/* XCODE object type */
 	size_t size;		/* object size */
 } XCODE;
-
-#endif /* !GLUE_TYPES_H */

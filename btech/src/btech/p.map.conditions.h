@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:42 CET 1999 from map.conditions.c */
 
-#ifndef _P_MAP_CONDITIONS_H
-#define _P_MAP_CONDITIONS_H
+#pragma once
 
 /* map.conditions.c */
 void alter_conditions(MAP * map);
@@ -22,5 +21,3 @@ void reactor_explosion(MECH *wounded, MECH *attacker);
 
 int BreachLoc(MECH * attacker, MECH * mech, int hitloc);
 int PossiblyBreach(MECH * attacker, MECH * mech, int hitloc);
-
-#endif				/* _P_MAP_CONDITIONS_H */

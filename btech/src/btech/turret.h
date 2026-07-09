@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef TURRET_H
-#define TURRET_H
+#pragma once
 
 #include "glue_types.h"
 
@@ -33,5 +32,3 @@ typedef struct {
     short targx, targy, targz;	/* in map coords, target squares */
     int lockmode;		/* lock modes (hex, etc) */
 } TURRET_T;
-
-#endif				/* TURRET_H */

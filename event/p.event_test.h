@@ -9,9 +9,6 @@
 
 /* Generated at Sat Jun  6 17:24:32 EEST 1998 from event_test.c */
 
-#ifndef _P_EVENT_TEST_H
-#define _P_EVENT_TEST_H
+#pragma once
 
 void main(void);
-
-#endif				/* _P_EVENT_TEST_H */

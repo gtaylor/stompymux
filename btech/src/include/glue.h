@@ -21,8 +21,7 @@
 #include "config.h"
 
 /* Parameter to the save/load function */
-#ifndef _GLUE_H
-#define _GLUE_H
+#pragma once
 
 #define VERIFY 0
 #define SAVE 1
@@ -944,5 +943,3 @@ CommandsStruct sscommands[] = {
 #endif
 
 void send_channel(char *, const char *, ...);
-
-#endif

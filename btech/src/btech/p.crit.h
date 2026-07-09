@@ -9,8 +9,7 @@
 
 /* Generated at Wed Feb 17 23:36:30 CET 1999 from crit.c */
 
-#ifndef _P_CRIT_H
-#define _P_CRIT_H
+#pragma once
 
 /* crit.c */
 void correct_speed(MECH * mech);
@@ -61,5 +60,3 @@ void NormalizeArmActuatorCrits(MECH * objMech, int wLoc, int wCritType);
 void NormalizeLegActuatorCrits(MECH * objMech, int wLoc, int wCritType);
 void NormalizeLocActuatorCrits(MECH * objMech, int wLoc);
 void NormalizeAllActuatorCrits(MECH * objMech);
-
-#endif				/* _P_CRIT_H */

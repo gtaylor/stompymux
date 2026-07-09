@@ -9,8 +9,7 @@
  *
  */
 
-#ifndef COOLMENU_INTERFACE_H
-#define COOLMENU_INTERFACE_H
+#pragma once
 
 /* To be included _after_ mech.h */
 #include "mech.h"
@@ -100,6 +99,3 @@ GCOMMANDS(name ## _w,w) \
 GCOMMANDS(name ## _x,x) \
 GCOMMANDS(name ## _y,y) \
 				/* GCOMMANDS(name ## _z,z)  */
-
-
-#endif				/* COOLMENU_INTERFACE_H */

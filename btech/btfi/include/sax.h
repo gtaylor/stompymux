@@ -6,8 +6,7 @@
  * API on the same sorts of ideas, run in reverse.
  */
 
-#ifndef BTECH_FI_SAX_H
-#define BTECH_FI_SAX_H
+#pragma once
 
 #include <stdio.h>
 
@@ -80,5 +79,3 @@ int fi_parse_file(FI_Parser *parser, FILE *fpin);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_SAX_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Mon Feb 22 14:59:37 CET 1999 from glue.hcode.c */
 
-#ifndef _P_GLUE_HCODE_H
-#define _P_GLUE_HCODE_H
+#pragma once
 
 /* glue.hcode.c */
 char *silly_atr_get(int id, int flag);
@@ -26,5 +25,3 @@ int mech_parseattributes(char *buffer, char **args, int maxargs);
 int proper_parseattributes(char *buffer, char **args, int max);
 int proper_explodearguments(char *buffer, char **args, int max);
 char *first_parseattribute(char *buffer);
-
-#endif				/* _P_GLUE_HCODE_H */

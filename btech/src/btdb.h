@@ -2,8 +2,7 @@
  * btechdb routines.
  */
 
-#ifndef BTECH_BTDB_H
-#define BTECH_BTDB_H
+#pragma once
 
 #include <stddef.h>
 #include <stdio.h>
@@ -17,5 +16,3 @@ int fini_btdb_state(void);
 /* Save/load btechdb.finf.  */
 int save_btdb(void);
 int load_btdb(void);
-
-#endif /* !BTECH_BTDB_H */

@@ -11,8 +11,7 @@
 
 #include "config.h"
 
-#ifndef _P_BTECHSTATS_H
-#define _P_BTECHSTATS_H
+#pragma once
 
 /* btechstats.c */
 char *silly_get_uptime_to_string(int i);
@@ -189,5 +188,3 @@ void chargen_next(dbref player, void *data, char *buffer);
 void chargen_prev(dbref player, void *data, char *buffer);
 void chargen_reset(dbref player, void *data, char *buffer);
 void chargen_help(dbref player, void *data, char *buffer);
-
-#endif				/* _P_BTECHSTATS_H */

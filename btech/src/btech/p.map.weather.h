@@ -1,7 +1,6 @@
 /* p.map.weather.h */
 
-#ifndef _P_MAP_WEATHER_H
-#define _P_MAP_WEATHER_H
+#pragma once
 
 /* map.weather.c */
 
@@ -13,5 +12,3 @@ void setWeatherHeatEffects(MAP * map, MECH * mech);
 void meltSnowAndIce(MAP * map, int x, int y, int depth, int emit,
     int makeSteam);
 void growSnow(MAP * map, int lowDepth, int highDepth);
-
-#endif				/* _P_MAP_WEATHER_H */

@@ -2,8 +2,7 @@
  * Vocabulary table.
  */
 
-#ifndef BTECH_FI_VOCAB_H
-#define BTECH_FI_VOCAB_H
+#pragma once
 
 #include "names.h"
 
@@ -22,5 +21,3 @@ FI_Name *fi_create_attribute_name(FI_Vocabulary *vocab, const char *name);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_VOCAB_H */

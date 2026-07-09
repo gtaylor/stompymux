@@ -1,8 +1,7 @@
 /* alloc.h - External definitions for memory allocation subsystem */
 
 
-#ifndef M_ALLOC_H
-#define M_ALLOC_H
+#pragma once
 
 #define POOL_SBUF   0
 #define POOL_MBUF   1
@@ -37,5 +36,3 @@
 #define safe_sb_chr(c,b,p)  safe_copy_chr(c,b,p,(SBUF_SIZE-1))
 #define safe_mb_str(s,b,p)  safe_copy_str(s,b,p,(MBUF_SIZE-1))
 #define safe_mb_chr(c,b,p)  safe_copy_chr(c,b,p,(MBUF_SIZE-1))
-
-#endif              /* M_ALLOC_H */

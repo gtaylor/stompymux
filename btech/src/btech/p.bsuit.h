@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 08:51:11 CET 1999 from bsuit.c */
 
-#ifndef _P_BSUIT_H
-#define _P_BSUIT_H
+#pragma once
 
 /* bsuit.c */
 char *GetBSuitName(MECH * mech);
@@ -32,5 +31,3 @@ void bsuit_swarm(dbref player, void *data, char *buffer);
 void bsuit_attackleg(dbref player, void *data, char *buffer);
 void bsuit_hide(dbref player, void *data, char *buffer);
 void JettisonPacks(dbref player, void *data, char *buffer);
-
-#endif				/* _P_BSUIT_H */

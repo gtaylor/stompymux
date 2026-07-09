@@ -1,8 +1,7 @@
 
 /* p.mech.bth.h */
 
-#ifndef _P_MECH_BTH_H
-#define _P_MECH_BTH_H
+#pragma once
 
 int FindNormalBTH(MECH * mech, MAP * mech_map, int section, int critical,
     int weapindx, float range, MECH * target, int indirectFire,
@@ -22,5 +21,3 @@ int TargetMovementMods(MECH * mech, MECH * target, float range);
 #define RANGE_EXTREME			3
 #define RANGE_TOFAR				4
 #define RANGE_NOWATER			5
-
-#endif				/* _P_MECH_BTH_H */

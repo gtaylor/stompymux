@@ -1,8 +1,7 @@
 /*
  * db_rw.h
  */
-#ifndef __MMDB_H__
-#define __MMDB_H__
+#pragma once
 
 struct mmdb_t {
 	void *base;
@@ -41,6 +40,3 @@ void mmdb_write_single(struct mmdb_t *, float);
 float mmdb_read_single(struct mmdb_t *);
 void mmdb_write_double(struct mmdb_t *, double);
 double mmdb_read_double(struct mmdb_t *);
-
-
-#endif

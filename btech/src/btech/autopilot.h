@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef AUTOPILOT_H
-#define AUTOPILOT_H
+#pragma once
 
 #include "mech.events.h"
 #include "dllist.h"
@@ -482,5 +481,3 @@ void auto_radio_command_target(AUTO *autopilot, MECH *mech,
 #include "p.autopilot_command.h"
 #include "p.autopilot_commands.h"
 #include "p.autogun.h"
-
-#endif                  /* AUTOPILOT_H */

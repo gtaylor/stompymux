@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef AERO_BOMB_H
-#define AERO_BOMB_H
+#pragma once
 
 typedef struct {
     char *name;
@@ -28,5 +27,3 @@ typedef struct {
     int x, y, type;
     MAP *map;
 } bomb_shot;
-
-#endif				/* AERO_BOMB_H */

@@ -19,8 +19,7 @@
  * $Id$
  */
 
-#ifndef __RB_TREE__
-#define __RB_TREE__
+#pragma once
 
 #define SEARCH_EQUAL    0x1
 #define SEARCH_GTEQ     0x2
@@ -68,4 +67,3 @@ int rb_walk(rbtree, int, int (*)(void *, void *, int, void *), void *);
 unsigned int rb_size(rbtree);
 void *rb_search(rbtree, int, void *);
 void *rb_index(rbtree, int);
-#endif

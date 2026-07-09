@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MUXEVENT_H
-#define MUXEVENT_H
+#pragma once
 
 #include <event.h>
 
@@ -94,5 +93,3 @@ void event_gothru_type(int type, void (*func) (MUXEVENT *));
 
 
 /* Did I mention cproto is braindead? */
-
-#endif				/* MUXEVENT_H */

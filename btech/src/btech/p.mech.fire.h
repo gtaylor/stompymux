@@ -3,6 +3,7 @@
    p.mech.fire.h
 */
 
+#pragma once
 void inferno_burn(MECH * mech, int time);
 void vehicle_start_burn(MECH * objMech, MECH * objAttacker);
 void checkVehicleInFire(MECH * objMech, int fromHexFire);

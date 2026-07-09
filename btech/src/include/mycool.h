@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MYCOOL_H
-#define MYCOOL_H
+#pragma once
 
 #define addmenu(str) \
   CreateMenuEntry_Simple(&c, str, CM_TWO)
@@ -29,5 +28,3 @@
 #define vsi(str)      CreateMenuEntry_VSimple(&c, str)
 #define sim(str,flag) CreateMenuEntry_Simple(&c, str, flag)
 #define cent(str)     sim(str,CM_ONE|CM_CENTER)
-
-#endif				/* MYCOOL_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:45 CET 1999 from mech.build.c */
 
-#ifndef _P_MECH_BUILD_H
-#define _P_MECH_BUILD_H
+#pragma once
 
 /* mech.build.c */
 int CheckData(dbref player, void *data);
@@ -19,5 +18,3 @@ char *ShortArmorSectionString(char type, char mtype, int loc);
 int ArmorSectionFromString(char type, char mtype, char *string);
 int WeaponIndexFromString(char *string);
 int FindSpecialItemCodeFromString(char *buffer);
-
-#endif				/* _P_MECH_BUILD_H */

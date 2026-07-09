@@ -3,8 +3,7 @@
    p.mech.c3.misc.h
 */
 
-#ifndef _P_MECH_C3_MISC_H
-#define _P_MECH_C3_MISC_H
+#pragma once
 
 MECH *getMechInTempNetwork(int wIdx, dbref * myNetwork, int networkSize);
 MECH *getOtherMechInNetwork(MECH * mech, int wIdx, int tCheckECM,
@@ -20,5 +19,3 @@ float findC3Range(MECH * mech, MECH * mechTarget, float realRange,
 float findC3RangeWithNetwork(MECH * mech, MECH * mechTarget,
     float realRange, dbref * myNetwork, int networkSize, dbref * c3Ref);
 void debugC3(char *msg);
-
-#endif

@@ -1,8 +1,7 @@
 
 /* p.mech.combat.h */
 
-#ifndef _P_MECH_COMBAT_MISSILE_H
-#define _P_MECH_COMBAT_MISSILE_H
+#pragma once
 
 void Missile_Hit(MECH * mech, MECH * target, int hitX, int hitY,
     int isrear, int iscritical, int weapindx, int fireMode, int ammoMode,
@@ -20,5 +19,3 @@ int MissileHitTarget(MECH * mech, int weapindx, int wSection,
 void SwarmHitTarget(MECH * mech, int weapindx, int wSection, int wCritSlot,
     MECH * hitMech, int LOS, int baseToHit, int roll, int incoming,
     int fof, int tIsSwarmAttack, int player_roll);
-
-#endif              /* _P_MECH_COMBAT_MISSILE_H */

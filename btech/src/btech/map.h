@@ -12,8 +12,7 @@
  *   '98 - '02: Thomas Woutes <thomas@xs4all.net>
  */
 
-#ifndef _MAP_H
-#define _MAP_H
+#pragma once
 
 #include "glue_types.h"
 
@@ -211,4 +210,3 @@ extern void map_update(dbref obj, void *data);
 #define set_buildflag(a,b) silly_atr_set((a), A_BUILDFLAG, tprintf("%d", (b)))
 #define get_buildflag(a) atoi(silly_atr_get((a), A_BUILDFLAG))
 #define set_buildcf(a,b) silly_atr_set((a), A_BUILDCF, tprintf("%d %d", (b), (b)))
-#endif

@@ -9,8 +9,7 @@
 
 /* Generated at Tue Feb  9 14:31:36 CET 1999 from mech.tech.commands.c */
 
-#ifndef _P_MECH_TECH_COMMANDS_H
-#define _P_MECH_TECH_COMMANDS_H
+#pragma once
 
 /* mech.tech.commands.c */
 int SomeoneRepairing_s(MECH * mech, int loc, int part, int t);
@@ -48,5 +47,3 @@ void tech_reseal(dbref player, void *data, char *buffer);
 void tech_magic(dbref player, void *data, char *buffer);
 void tech_fixextra(dbref player, void *data, char *buffer);
 void tech_replacesuit(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_TECH_COMMANDS_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:48 CET 1999 from mech.events.c */
 
-#ifndef _P_MECH_EVENTS_H
-#define _P_MECH_EVENTS_H
+#pragma once
 
 /* mech.events.c */
 void mech_standfail_event(MUXEVENT * e);
@@ -38,5 +37,3 @@ void mech_movemode_event(MUXEVENT * e);
 int calcStaggerBTHMod(MECH * mech);
 int calcNewStaggerBTHMod(MECH * mech, int staggerLevel);
 void mech_staggercheck_heartbeat(MECH * mech);
-
-#endif				/* _P_MECH_EVENTS_H */

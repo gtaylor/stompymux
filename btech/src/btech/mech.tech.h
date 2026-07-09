@@ -16,8 +16,7 @@
 
 #include "config.h"
 
-#ifndef MECH_TECH_H
-#define MECH_TECH_H
+#pragma once
 
 #include "mech.events.h"
 
@@ -269,5 +268,3 @@ ETECHEVENT(very_fake_func);
 void loadrepairs(FILE * f);
 void saverepairs(FILE * f);
 int valid_ammo_mode(MECH * mech, int loc, int part, int let);
-
-#endif				/* MECH_TECH_H */

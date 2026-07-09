@@ -2,8 +2,7 @@
  * pcache.h
  */
 
-#ifndef __PCACHE_H__
-#define __PCACHE_H__
+#pragma once
 #include "db.h"
 #include "cque.h"
 #include "rbtree.h"
@@ -30,5 +29,3 @@ void pcache_trim(void);
 int a_Queue(dbref player, int adj);
 void s_Queue(dbref player, int val);
 int QueueMax(dbref player);
-
-#endif

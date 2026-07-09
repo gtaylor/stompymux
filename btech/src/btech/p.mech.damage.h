@@ -1,8 +1,7 @@
 
 /* p.mech.damage.h */
 
-#ifndef _P_MECH_DAMAGE_H
-#define _P_MECH_DAMAGE_H
+#pragma once
 
 int cause_armordamage(MECH * wounded, MECH * attacker, int LOS,
     int attackPilot, int isrear, int iscritical, int hitloc, int damage,
@@ -26,5 +25,3 @@ int dodamage_func(dbref player, MECH * mech, int totaldam, int clustersize,
     int direction, int critical, char *mechmsg, char *mechbroadcast);
 void mech_damage(dbref player, MECH * mech, char *buffer);
 void mech_damage_section(dbref player, MECH * mech, char *buffer);
-
-#endif				/* _P_MECH_DAMAGE_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:40 CET 1999 from econ_cmds.c */
 
-#ifndef _P_ECON_CMDS_H
-#define _P_ECON_CMDS_H
+#pragma once
 
 /* econ_cmds.c */
 void SetCargoWeight(MECH * mech);
@@ -24,5 +23,3 @@ void mech_Rremovestuff(dbref player, void *data, char *buffer);
 void mech_loadcargo(dbref player, void *data, char *buffer);
 void mech_unloadcargo(dbref player, void *data, char *buffer);
 void mech_Rresetstuff(dbref player, void *data, char *buffer);
-
-#endif				/* _P_ECON_CMDS_H */

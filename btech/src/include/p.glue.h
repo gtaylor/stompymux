@@ -9,8 +9,7 @@
 
 /* Generated at Mon Feb 22 14:59:36 CET 1999 from glue.c */
 
-#ifndef _P_GLUE_H
-#define _P_GLUE_H
+#pragma once
 
 /* glue.c */
 int HandledCommand_sub(dbref player, dbref location, char *command);
@@ -45,5 +44,3 @@ void list_chashstats(dbref player);
 void ResetSpecialObjects(void);
 MAP *getMap(dbref d);
 MECH *getMech(dbref d);
-
-#endif				/* _P_GLUE_H */

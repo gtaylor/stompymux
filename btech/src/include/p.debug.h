@@ -9,8 +9,7 @@
 
 /* Generated at Mon Feb 22 14:59:36 CET 1999 from debug.c */
 
-#ifndef _P_DEBUG_H
-#define _P_DEBUG_H
+#pragma once
 
 /* debug.c */
 void debug_list(dbref player, void *data, char *buffer);
@@ -20,5 +19,3 @@ void debug_memory(dbref player, void *data, char *buffer);
 void ShutDownMap(dbref player, dbref mapnumber);
 void debug_shutdown(dbref player, void *data, char *buffer);
 void debug_setvrt(dbref player, void *data, char *buffer);
-
-#endif				/* _P_DEBUG_H */

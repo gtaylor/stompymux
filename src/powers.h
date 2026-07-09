@@ -4,8 +4,7 @@
 /* $Id: powers.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
 
-#ifndef __POWERS_H
-#define	__POWERS_H
+#pragma once
 
 #include "rbtab.h"
 #include "db.h"
@@ -170,4 +169,3 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define Template(c)             (((Powers2(c) & POW_TEMPLATE) != 0) || WizRoy(c))
 
 /* End Mecha */
-#endif				/* POWERS_H */

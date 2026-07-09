@@ -5,8 +5,7 @@
 
 #include "config.h"
 
-#ifndef __COMMAND_H
-#define __COMMAND_H
+#pragma once
 
 #include "db.h"
 
@@ -206,5 +205,3 @@ struct addedentry {
 
 int check_access(dbref, int);
 void process_command(dbref, dbref, int, char *, char *[], int);
-
-#endif

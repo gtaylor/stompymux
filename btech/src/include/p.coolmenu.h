@@ -9,8 +9,7 @@
 
 /* Generated at Mon Feb 22 14:59:35 CET 1999 from coolmenu.c */
 
-#ifndef _P_COOLMENU_H
-#define _P_COOLMENU_H
+#pragma once
 
 /* coolmenu.c */
 int number_of_entries(coolmenu * c);
@@ -34,5 +33,3 @@ coolmenu *SelCol_FunStringMenuK(int columns, char *heading,
     char *(*fun) (), int last);
 coolmenu *SelCol_FunStringMenu(int columns, char *heading,
     char *(*fun) ());
-
-#endif				/* _P_COOLMENU_H */

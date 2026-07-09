@@ -5,8 +5,7 @@
 
 #include "config.h"
 
-#ifndef __EXTERNS__H
-#define	__EXTERNS__H
+#pragma once
 
 #include "db.h"
 #include "mudconf.h"
@@ -561,5 +560,3 @@ void list_chashstats(dbref);
 
 #define	test_top()		((mudstate.qfirst != NULL) ? 1 : 0)
 #define	controls(p,x)		Controls(p,x)
-
-#endif				/* __EXTERNS_H */

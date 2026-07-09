@@ -3,8 +3,7 @@
  * algorithms of section 10.
  */
 
-#ifndef BTECH_FI_ENCALG_H
-#define BTECH_FI_ENCALG_H
+#pragma once
 
 #include <stddef.h>
 
@@ -93,5 +92,3 @@ extern const FI_EncodingAlgorithm fi_ea_uuid;
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_ENCALG_H */

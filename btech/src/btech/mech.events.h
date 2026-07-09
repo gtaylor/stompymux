@@ -15,8 +15,7 @@
  *
  */
 
-#ifndef MECH_EVENTS_H
-#define MECH_EVENTS_H
+#pragma once
 
 #include "mech.h"
 #include "muxevent.h"
@@ -228,5 +227,3 @@ static char *muxevent_names[] = {
 #include "p.aero.move.h"
 #include "p.mech.move.h"
 #include "p.mech.events.h"
-
-#endif				/* MECH_EVENTS_H */

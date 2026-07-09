@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:33:01 CET 1999 from mech.tic.c */
 
-#ifndef _P_MECH_TIC_H
-#define _P_MECH_TIC_H
+#pragma once
 
 /* mech.tic.c */
 int cleartic_sub_func(MECH * mech, dbref player, int low, int high);
@@ -28,4 +27,3 @@ void mech_deltic(dbref player, void *data, char *buffer);
 void mech_firetic(dbref player, void *data, char *buffer);
 void mech_listtic(dbref player, void *data, char *buffer);
 void heat_cutoff(dbref player, void *data, char *buffer);
-#endif				/* _P_MECH_TIC_H */

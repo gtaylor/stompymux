@@ -4,8 +4,7 @@
 /* $Id: misc.h,v 1.2 2005/06/23 02:59:58 murrayma Exp $ */
 
 
-#ifndef _MISC_H
-#define _MISC_H
+#pragma once
 
 #include "db.h"
 #include "flags.h"
@@ -44,5 +43,3 @@ struct stats_type {
 extern int search_setup(dbref, char *, SEARCH *);
 extern void search_perform(dbref, dbref, SEARCH *);
 extern int get_stats(dbref, dbref, STATS *);
-
-#endif

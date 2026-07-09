@@ -11,8 +11,7 @@
 
 #include "config.h"
 
-#ifndef _P_TEMPLATE_H
-#define _P_TEMPLATE_H
+#pragma once
 
 /* template.c */
 int count_special_items(void);
@@ -56,4 +55,3 @@ void DumpWeapons(dbref player);
 char *techlist_func(MECH * mech);
 char *payloadlist_func(MECH * mech);
 char *partlist_func(MECH * mech);
-#endif				/* _P_TEMPLATE_H */

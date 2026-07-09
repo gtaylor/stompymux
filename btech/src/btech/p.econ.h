@@ -9,12 +9,9 @@
 
 /* Generated at Fri Jan 15 15:32:39 CET 1999 from econ.c */
 
-#ifndef _P_ECON_H
-#define _P_ECON_H
+#pragma once
 
 /* econ.c */
 void econ_change_items(dbref d, int id, int brand, int num);
 int econ_find_items(dbref d, int id, int brand);
 void econ_set_items(dbref d, int id, int brand, int num);
-
-#endif				/* _P_ECON_H */

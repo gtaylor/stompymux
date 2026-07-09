@@ -4,8 +4,7 @@
 /* $Id: match.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
 
-#ifndef M_MATCH_H
-#define M_MATCH_H
+#pragma once
 
 #include "db.h"
 
@@ -65,5 +64,3 @@ extern void match_zone_exit(void);
 #define	MAT_EXIT_PARENTS	2	/* Check for exits in parents */
 #define	MAT_NUMERIC		4	/* Check for un-#ified dbrefs */
 #define	MAT_HOME		8	/* Check for 'home' */
-
-#endif

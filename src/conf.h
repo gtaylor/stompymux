@@ -1,5 +1,4 @@
-#ifndef BTMUX_CONF_H
-#define BTMUX_CONF_H
+#pragma once
 
 #include "db.h"
 
@@ -10,5 +9,3 @@ void list_cf_access(dbref player);
 int cf_read(char *fn);
 int cf_set(char *cp, char *ap, dbref player);
 int cf_modify_bits(int *vp, char *str, long extra, dbref player, char *cmd);
-
-#endif

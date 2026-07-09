@@ -9,8 +9,7 @@
 
 /* Generated at Wed Feb 17 23:36:34 CET 1999 from mech.physical.c */
 
-#ifndef _P_MECH_PHYSICAL_H
-#define _P_MECH_PHYSICAL_H
+#pragma once
 
 /* mech.physical.c */
 void mech_punch(dbref player, void *data, char *buffer);
@@ -41,5 +40,3 @@ int DeathFromAbove(MECH * mech, MECH * target);
 void ChargeMech(MECH * mech, MECH * target);
 int checkGrabClubLocation(MECH * mech, int section, int emit);
 void mech_grabclub(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_PHYSICAL_H */

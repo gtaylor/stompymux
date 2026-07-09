@@ -6,6 +6,7 @@
  * Header file for weapons, includes specific featured lists.
  */
 
+#pragma once
 #ifdef BT_USE_VRT
 #include "weapons.vrt.h"
 #else

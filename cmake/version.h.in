@@ -1,5 +1,4 @@
-#ifndef BT_VERSION_H
-#define BT_VERSION_H
+#pragma once
 
 #define SOURCE_REVISION "@SOURCE_REVISION@"
 #define MUX_RELEASE_NAME "@MUX_RELEASE_NAME@"
@@ -10,5 +9,3 @@
 #define MUX_BUILD_HOST "@MUX_BUILD_HOST@"
 
 void init_version(void);
-
-#endif /* !BT_VERSION_H */

@@ -9,10 +9,7 @@
 
 /* Generated at Fri Jan 15 15:33:00 CET 1999 from mech.tech.repairs.c */
 
-#ifndef _P_MECH_TECH_REPAIRS_H
-#define _P_MECH_TECH_REPAIRS_H
+#pragma once
 
 /* mech.tech.repairs.c */
 void tech_repairs(dbref player, MECH * mech, char *buffer);
-
-#endif				/* _P_MECH_TECH_REPAIRS_H */

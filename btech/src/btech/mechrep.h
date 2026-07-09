@@ -17,8 +17,7 @@
 
 #include "mech.h"
 
-#ifndef _MECHREP_H
-#define _MECHREP_H
+#pragma once
 
 /* This is the silly structure that I use for the repair stuff */
 typedef struct mechrep_data {
@@ -64,5 +63,3 @@ ECMD(mechrep_Rshowtech);
 
 /* Mem alloc/free routines */
 void newfreemechrep(dbref key, void **data, int selector);
-
-#endif

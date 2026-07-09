@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:52 CET 1999 from mech.notify.c */
 
-#ifndef _P_MECH_NOTIFY_H
-#define _P_MECH_NOTIFY_H
+#pragma once
 
 /* mech.notify.c */
 const char *GetAmmoDesc_Model_Mode(int model, int mode);
@@ -50,5 +49,3 @@ void MechFireBroadcast(MECH * mech, MECH * target, int x, int y,
     MAP * mech_map, char *weapname, int IsHit);
 void mech_notify(MECH * mech, int type, char *buffer);
 void mech_printf(MECH * mech, int type, char *format, ...);
-
-#endif				/* _P_MECH_NOTIFY_H */

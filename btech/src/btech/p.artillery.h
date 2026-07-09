@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 08:51:11 CET 1999 from artillery.c */
 
-#ifndef _P_ARTILLERY_H
-#define _P_ARTILLERY_H
+#pragma once
 
 /* artillery.c */
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
@@ -31,5 +30,3 @@ void blast_hit_hexes(MAP * map, int dam, int singlehitsize, int heatdam,
     int table, int safeup, int safedown, int isunderwater,
     int doneighbors);
 void artillery_FriendlyAdjustment(dbref mechnum, MAP * map, int x, int y);
-
-#endif				/* _P_ARTILLERY_H */

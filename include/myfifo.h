@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MYFIFO_H
-#define MYFIFO_H
+#pragma once
 
 typedef struct myfifo_entry_struct {
     void *data;
@@ -33,5 +32,3 @@ void *myfifo_pop(myfifo ** foo);
 void myfifo_push(myfifo ** foo, void *data);
 void myfifo_trav(myfifo ** foo, void (*func) ());
 void myfifo_trav_r(myfifo ** foo, void (*func) ());
-
-#endif				/* MYFIFO_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Wed Feb 17 23:36:31 CET 1999 from mech.advanced.c */
 
-#ifndef _P_MECH_ADVANCED_H
-#define _P_MECH_ADVANCED_H
+#pragma once
 
 /* mech.advanced.c */
 void mech_ecm(dbref player, MECH * mech, char *buffer);
@@ -63,5 +62,3 @@ void mech_auto_turret(dbref player, MECH * mech, char *buffer);
 void mech_usebin(dbref player, MECH * mech, char *buffer);
 void mech_safety(dbref player, void *data, char *buffer);
 void mech_mechprefs(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_ADVANCED_H */

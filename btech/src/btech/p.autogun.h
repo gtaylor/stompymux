@@ -9,9 +9,6 @@
 
 /* Generated at Fri Jan 15 15:32:34 CET 1999 from autogun.c */
 
-#ifndef _P_AUTOGUN_H
-#define _P_AUTOGUN_H
+#pragma once
 
 /* autogun.c */
-
-#endif				/* _P_AUTOGUN_H */

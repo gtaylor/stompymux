@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:58 CET 1999 from mech.tech.c */
 
-#ifndef _P_MECH_TECH_H
-#define _P_MECH_TECH_H
+#pragma once
 
 /* mech.tech.c */
 int game_lag(void);
@@ -27,5 +26,3 @@ int tech_parsepart(MECH * mech, char *buffer, int *loc, int *pos,
 int tech_parsegun(MECH * mech, char *buffer, int *loc, int *pos,
     int *brand);
 int figure_latest_tech_event(MECH * mech);
-
-#endif				/* _P_MECH_TECH_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:56 CET 1999 from mech.sensor.functions.c */
 
-#ifndef _P_MECH_SENSOR_FUNCTIONS_H
-#define _P_MECH_SENSOR_FUNCTIONS_H
+#pragma once
 
 /* mech.sensor.functions.c */
 int vislight_see(MECH * t, int num, float r, int c, int l);
@@ -37,5 +36,3 @@ int seismic_tohit(MECH * m, MECH * t, int f, int l);
 int bap_tohit(MECH * m, MECH * t, int f, int l);
 int blood_tohit(MECH * m, MECH * t, int f, int l);
 int radar_tohit(MECH * m, MECH * t, int f, int l);
-
-#endif				/* _P_MECH_SENSOR_FUNCTIONS_H */

@@ -1,7 +1,6 @@
 #include "config.h"
 
-#ifndef _P_MECH_UTILS_H
-#define _P_MECH_UTILS_H
+#pragma once
 
 /* mech.utils.c */
 /* Misc Functions */
@@ -174,4 +173,3 @@ int ProperInternal(MECH * mech);
 int alias_part(MECH * mech, int t, int loc);
 int ProperMyomer(MECH * mech);
 #endif
-#endif				/* _P_MECH_UTILS_H */

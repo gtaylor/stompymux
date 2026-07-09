@@ -9,11 +9,8 @@
 
 /* Generated at Fri Jan 15 15:32:56 CET 1999 from mech.startup.c */
 
-#ifndef _P_MECH_STARTUP_H
-#define _P_MECH_STARTUP_H
+#pragma once
 
 /* mech.startup.c */
 void mech_startup(dbref player, void *data, char *buffer);
 void mech_shutdown(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_STARTUP_H */

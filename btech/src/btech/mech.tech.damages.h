@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_TECH_DAMAGES_H
-#define MECH_TECH_DAMAGES_H
+#pragma once
 
 /* Added RESEAL to repair flooded sections
  * -Kipsta
@@ -32,5 +31,3 @@ enum damage_type {
 
 /* Reattachs / fixints / fixarmors, repair / reload */
 #define MAX_DAMAGES (3 * NUM_SECTIONS + 2 * NUM_SECTIONS * NUM_CRITICALS)
-
-#endif				/* MECH_TECH_DAMAGES_H */

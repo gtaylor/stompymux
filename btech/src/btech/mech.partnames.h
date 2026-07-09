@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_PARTNAMES_H
-#define MECH_PARTNAMES_H
+#pragma once
 
 typedef struct {
     char *shorty;
@@ -38,5 +37,3 @@ char *get_parts_long_name(int, int);
 char *get_parts_vlong_name(int, int);
 
 #include "p.mech.partnames.h"
-
-#endif				/* MECH_PARTNAMES_H */

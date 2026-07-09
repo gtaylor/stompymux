@@ -4,8 +4,7 @@
 /* $Id: functions.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
 
-#ifndef __FUNCTIONS_H
-#define __FUNCTIONS_H
+#pragma once
 
 #include <time.h>
 
@@ -144,5 +143,3 @@ extern dbref match_thing(dbref, char *);
 void do_function(dbref player, dbref cause, int key, char *fname,
 				 char *target);
 int cf_func_access(int *vp, char *str, long extra, dbref player, char *cmd);
-
-#endif

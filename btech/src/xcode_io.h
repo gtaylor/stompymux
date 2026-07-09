@@ -2,8 +2,7 @@
  * XCODE I/O routines.
  */
 
-#ifndef BTECH_XCODE_IO_H
-#define BTECH_XCODE_IO_H
+#pragma once
 
 #include "sax.h"
 
@@ -21,5 +20,3 @@ int btdb_end_xcode(void);
 int btdb_start_in_xcode(const FI_Name *name, const FI_Attributes *attrs);
 int btdb_end_in_xcode(const FI_Name *name);
 int btdb_chars_in_xcode(const FI_Value *value);
-
-#endif /* !BTECH_XCODE_IO_H */

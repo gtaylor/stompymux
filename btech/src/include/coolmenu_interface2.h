@@ -12,6 +12,7 @@
 /* Functions for toggling / changing values / changing strings */
 
 /* These are the generic form ones */
+#pragma once
 static coolmenu *retrieve_matching_letter(coolmenu * c, char l)
 {
     l = tolower(l);

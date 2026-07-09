@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 08:51:14 CET 1999 from mech.maps.c */
 
-#ifndef _P_MECH_MAPS_H
-#define _P_MECH_MAPS_H
+#pragma once
 
 /* mech.maps.c */
 void mech_findcenter(dbref player, void *data, char *buffer);
@@ -26,5 +25,3 @@ char **MakeMapText(dbref player, MECH * mech, MAP * mech_map, int x, int y,
     int xw, int yw, int labels, int dohexlos);
 void mech_tacmap(dbref player, void *data, char *buffer);
 void mech_enterbase(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_MAPS_H */

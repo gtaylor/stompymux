@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:59 CET 1999 from mech.tech.do.c */
 
-#ifndef _P_MECH_TECH_DO_H
-#define _P_MECH_TECH_DO_H
+#pragma once
 
 /* mech.tech.do.c */
 int valid_ammo_mode(MECH * mech, int loc, int part, int let);
@@ -46,5 +45,3 @@ int fixinternal_fail(dbref player, MECH * mech, int loc, int *val);
 int reattach_fail(dbref player, MECH * mech, int loc);
 int replacesuit_fail(dbref player, MECH * mech, int loc);
 int reseal_fail(dbref player, MECH * mech, int loc);
-
-#endif				/* _P_MECH_TECH_DO_H */

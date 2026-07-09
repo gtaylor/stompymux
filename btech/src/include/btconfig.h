@@ -1,7 +1,6 @@
 #include "config.h"
 
-#ifndef BTCONFIG_H
-#define BTCONFIG_H
+#pragma once
 
 /* 
  * Define if you want BV calculation functions. This include btgetbv()
@@ -228,5 +227,3 @@ typedef unsigned char byte;
 
 /* Exile Stun Code Timer */
 #define MECHSTUN_TICK 10
-
-#endif                /* BTCONFIG_H */

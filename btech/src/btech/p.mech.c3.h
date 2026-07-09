@@ -1,8 +1,7 @@
 
 /* p.mech.c3.h */
 
-#ifndef _P_MECH_C3_H
-#define _P_MECH_C3_H
+#pragma once
 
 int getC3MasterSize(MECH * mech);
 int isPartOfWorkingC3Master(MECH * mech, int section, int slot);
@@ -21,5 +20,3 @@ void mech_c3_join_leave(dbref player, void *data, char *buffer);
 void mech_c3_message(dbref player, MECH * mech, char *buffer);
 void mech_c3_targets(dbref player, MECH * mech, char *buffer);
 void mech_c3_network(dbref player, MECH * mech, char *buffer);
-
-#endif				/* _P_MECH_C3_H */

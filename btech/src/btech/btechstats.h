@@ -16,8 +16,7 @@
 
 /* Function declarations / skill list for btechstats.c */
 
-#ifndef BTECHSTATS_H
-#define BTECHSTATS_H
+#pragma once
 
 #include "db.h"
 #include "externs.h"
@@ -252,5 +251,3 @@ typedef struct {
 #endif
 
 #include "p.btechstats.h"
-
-#endif				/* BTECHSTATS_H */

@@ -9,8 +9,7 @@
 
 /* Generated at Tue Feb  9 14:31:33 CET 1999 from mech.hitloc.c */
 
-#ifndef _P_MECH_HITLOC_H
-#define _P_MECH_HITLOC_H
+#pragma once
 
 /* mech.hitloc.c */
 int FindPunchLocation(MECH *target, int hitGroup);
@@ -33,5 +32,3 @@ int FindTCHitLoc(MECH * mech, MECH * target, int *isrear, int *iscritical);
 int FindAimHitLoc(MECH * mech, MECH * target, int *isrear,
     int *iscritical);
 int FindAreaHitGroup(MECH * mech, MECH * target);
-
-#endif				/* _P_MECH_HITLOC_H */

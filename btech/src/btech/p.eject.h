@@ -11,8 +11,7 @@
 
 #include "config.h"
 
-#ifndef _P_EJECT_H
-#define _P_EJECT_H
+#pragma once
 
 /* eject.c */
 int tele_contents(dbref from, dbref to, int flag);
@@ -24,4 +23,3 @@ void mech_disembark(dbref player, void *data, char *buffer);
 void mech_udisembark(dbref player, void *data, char *buffer);
 void mech_embark(dbref player, void *data, char *buffer);
 void autoeject(dbref player, MECH * mech, int tIsBSuit);
-#endif				/* _P_EJECT_H */

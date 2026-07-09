@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 22 09:50:26 CET 1999 from map.c */
 
-#ifndef _P_MAP_H
-#define _P_MAP_H
+#pragma once
 
 /* map.c */
 void debug_fixmap(dbref player, void *data, char *buffer);
@@ -31,5 +30,3 @@ int map_sizefun(void *data, int flag);
 void map_listmechs(dbref player, void *data, char *buffer);
 void clear_hex(MECH * mech, int x, int y, int meant);
 void UpdateMechsTerrain(MAP * map, int x, int y, int t);
-
-#endif				/* _P_MAP_H */

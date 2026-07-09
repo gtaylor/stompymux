@@ -2,8 +2,7 @@
  * Error handling.
  */
 
-#ifndef BTECH_FI_ERRORS_H
-#define BTECH_FI_ERRORS_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,5 +49,3 @@ extern const char *const fi_error_strings[];
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
-
-#endif /* !BTECH_FI_ERRORS_H */

@@ -3,8 +3,7 @@
    p.mech.enhanced.criticals.h
 */
 
-#ifndef _P_MECH_ENHANCED_CRITICALS_H
-#define _P_MECH_ENHANCED_CRITICALS_H
+#pragma once
 
 void getWeapData(MECH * mech, int section, int critical, int *wWeapIndex,
     int *wWeapSize, int *wFirstCrit);
@@ -26,5 +25,3 @@ void scoreEnhancedWeaponCriticalHit(MECH * mech, MECH * attacker, int LOS,
 void mech_weaponstatus(dbref player, MECH * mech, char *buffer);
 void showWeaponDamageAndInfo(dbref player, MECH * mech, int section,
     int critical);
-
-#endif

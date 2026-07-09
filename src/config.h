@@ -1,7 +1,6 @@
 /* config.h */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include "autoconf.h"
 
@@ -180,5 +179,3 @@ size_t strlcat(char *, const char *, size_t);
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *, const char *, size_t);
 #endif
-
-#endif				/* CONFIG_H */

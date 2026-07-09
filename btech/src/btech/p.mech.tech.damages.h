@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:59 CET 1999 from mech.tech.damages.c */
 
-#ifndef _P_MECH_TECH_DAMAGES_H
-#define _P_MECH_TECH_DAMAGES_H
+#pragma once
 
 /* mech.tech.damages.c */
 void make_scrap_table(MECH * mech);
@@ -19,5 +18,3 @@ int is_under_repair(MECH * mech, int i);
 char *damages_func(MECH * mech);
 void show_mechs_damage(dbref player, void *data, char *buffer);
 void tech_fix(dbref player, void *data, char *buffer);
-
-#endif				/* _P_MECH_TECH_DAMAGES_H */

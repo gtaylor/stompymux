@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:43 CET 1999 from map.obj.c */
 
-#ifndef _P_MAP_OBJ_H
-#define _P_MAP_OBJ_H
+#pragma once
 
 /* map.obj.c */
 mapobj *next_mapobj(mapobj * m);
@@ -58,5 +57,3 @@ void show_building_in_hex(MECH * mech, int x, int y);
 int obj_size(MAP * map);
 int map_underlying_terrain(MAP * map, int x, int y);
 int mech_underlying_terrain(MECH * mech);
-
-#endif				/* _P_MAP_OBJ_H */

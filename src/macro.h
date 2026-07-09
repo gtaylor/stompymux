@@ -3,8 +3,7 @@
 
 /* $Id: macro.h,v 1.1 2005/06/13 20:50:47 murrayma Exp $ */
 
-#ifndef __MACRO_H
-#define __MACRO_H
+#pragma once
 
 #include <stdio.h>
 
@@ -68,5 +67,3 @@ void do_status_macro(dbref player, char *s);
 void do_undef_macro(dbref player, char *cmd);
 void do_gex_macro(dbref player, char *s);
 char *do_process_macro(dbref player, char *in, char *s);
-
-#endif				/* __MACRO_H */

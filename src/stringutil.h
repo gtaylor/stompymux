@@ -1,5 +1,4 @@
-#ifndef BTMUX_STRINGUTIL_H
-#define BTMUX_STRINGUTIL_H
+#pragma once
 
 char *munge_space(char *string);
 char *trim_spaces(char *string);
@@ -21,5 +20,3 @@ int matches_exit_from_list(char *str, char *pattern);
 char *translate_string(const char *str, int type);
 char *upcasestr(char *s);
 int count_chars(const char *str, char c);
-
-#endif

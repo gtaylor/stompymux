@@ -14,8 +14,7 @@
  *
  */
 
-#ifndef MECH_NOTIFY_H
-#define MECH_NOTIFY_H
+#pragma once
 
 #include "mech.h"
 #include "db.h"
@@ -28,5 +27,3 @@
 #define ccheck(a,b,c) if (!common_checks((a), (b), (c))) return
 
 #include "p.mech.notify.h"
-
-#endif				/* MECH_NOTIFY_H */

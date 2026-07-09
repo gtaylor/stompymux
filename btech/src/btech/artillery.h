@@ -15,8 +15,7 @@
  *
  */
 
-#ifndef ARTILLERY_H
-#define ARTILLERY_H
+#pragma once
 
 typedef struct artillery_shot_type {
     int from_x, from_y;		/* hex this is shot from */
@@ -37,5 +36,3 @@ typedef struct artillery_shot_type {
 #define IS_ARROW      27
 
 #define CL_ARROW      71
-
-#endif				/* ARTILLERY_H */

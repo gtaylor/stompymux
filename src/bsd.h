@@ -1,5 +1,4 @@
-#ifndef BTMUX_BSD_H
-#define BTMUX_BSD_H
+#pragma once
 
 #include "interface.h"
 
@@ -16,5 +15,3 @@ void release_descriptor(DESC *d);
 void bsd_write_callback(struct bufferevent *bufev, void *arg);
 void bsd_read_callback(struct bufferevent *bufev, void *arg);
 void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg);
-
-#endif

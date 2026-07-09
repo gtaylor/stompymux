@@ -11,11 +11,8 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#ifndef MECH_COMBAT_H
-#define MECH_COMBAT_H
+#pragma once
 
 #define Clustersize(weapindx) (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) && (MechWeapons[weapindx].damage == 1))? 5 : 1)
 
 #define Swap(val1,val2) { rtmp = val1 ; val1 = val2 ; val2 = rtmp; }
-
-#endif				/* MECH_COMBAT_H.ECM_H */

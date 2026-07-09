@@ -1,6 +1,3 @@
-#ifndef BTMUX_TIMER_H
-#define BTMUX_TIMER_H
+#pragma once
 
 void init_timer(void);
-
-#endif

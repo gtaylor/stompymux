@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef COOLMENU_H
-#define COOLMENU_H
+#pragma once
 
 /* #define MAX_MENU_LENGTH 24 */
 #define MAX_MENU_LENGTH 400
@@ -93,5 +92,3 @@ coolmenu *SelCol_FunStringMenu(int columns, char *heading,
 #define AutoCol_FunStringMenu(hea,fun) \
    SelCol_FunStringMenuK(-1,hea,fun)
 #define SelCol_StringMenu(col,head,str) SelCol_Menu(col,head,str,0,0)
-
-#endif				/* COOLMENU_H */

@@ -12,8 +12,7 @@
  *
  */
 
-#ifndef MACROS_H
-#define MACROS_H
+#pragma once
 
 #ifdef notify
 #undef notify
@@ -94,6 +93,3 @@ do { if (!(val & bit)) SetBit(val,bit);else UnSetBit(val,bit); } while (0)
 #endif
 
 #define can_pass_lock(guy,lockobj,lockname) could_doit(guy,lockobj,lockname)
-
-
-#endif				/* MACROS_H */

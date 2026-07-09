@@ -10,8 +10,7 @@
 
 #include "config.h"
 
-#ifndef MECH_H
-#define MECH_H
+#pragma once
 
 #include "externs.h"
 #include "db.h"
@@ -1363,5 +1362,3 @@ typedef struct {
     int x;
     int y;
 } lostrace_info;
-
-#endif				/* MECH_H */

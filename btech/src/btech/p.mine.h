@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:33:04 CET 1999 from mine.c */
 
-#ifndef _P_MINE_H
-#define _P_MINE_H
+#pragma once
 
 /* mine.c */
 void add_mine(MAP * map, int x, int y, int dam);
@@ -23,5 +22,3 @@ void map_add_mine(dbref player, void *data, char *buffer);
 void explode_mines(MECH * mech, int chn);
 void show_mines_in_hex(dbref player, MECH * mech, float range, int x,
     int y);
-
-#endif				/* _P_MINE_H */

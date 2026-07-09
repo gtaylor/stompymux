@@ -10,8 +10,7 @@
  * Created: Mon Apr 2 8:00:00 2001 spectre
  */
 
-#ifndef MECH_PHYSICAL_H
-#define MECH_PHYSICAL_H
+#pragma once
 
 /* mech.physical.h */
 #define PA_PUNCH 1
@@ -26,5 +25,3 @@
 
 #define P_LEFT  1
 #define P_RIGHT 2
-
-#endif				/* MECH_PHYSICAL_H */

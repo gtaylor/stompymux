@@ -9,8 +9,7 @@
 
 /* Generated at Fri Jan 15 15:32:47 CET 1999 from mech.contacts.c */
 
-#ifndef _P_MECH_CONTACTS_H
-#define _P_MECH_CONTACTS_H
+#pragma once
 
 /* mech.contacts.c */
 void show_brief_flags(dbref player, MECH * mech);
@@ -19,4 +18,3 @@ void mech_contacts(dbref player, void *data, char *buffer);
 char getWeaponArc(MECH * mech, int arc);
 char *getStatusString(MECH * target, int enemy);
 char getStatusChar(MECH * mech, MECH * mechTarget, int wCharNum);
-#endif				/* _P_MECH_CONTACTS_H */

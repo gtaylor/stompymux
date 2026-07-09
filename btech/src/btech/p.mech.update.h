@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 08:51:16 CET 1999 from mech.update.c */
 
-#ifndef _P_MECH_UPDATE_H
-#define _P_MECH_UPDATE_H
+#pragma once
 
 /* mech.update.c */
 int fiery_death(MECH * mech);
@@ -44,5 +43,3 @@ void CheckDamage(MECH * wounded);
 void UpdatePilotSkillRolls(MECH * mech);
 void updateAutoturnTurret(MECH * mech);
 void mech_update(dbref key, void *data);
-
-#endif				/* _P_MECH_UPDATE_H */

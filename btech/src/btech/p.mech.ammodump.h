@@ -1,8 +1,7 @@
 
 /* p.mech.ammodump.h */
 
-#ifndef _P_MECH_AMMODUMP_H
-#define _P_MECH_AMMODUMP_H
+#pragma once
 
 int Dump_Decrease(MECH * mech, int loc, int pos, int *hm);
 void mech_dump(dbref player, void *data, char *buffer);
@@ -16,6 +15,3 @@ struct objDumpingAmmo {
     int wWeapIdx;
     int wPartType;
 };
-
-
-#endif				/* _P_MECH_AMMODUMP_H */

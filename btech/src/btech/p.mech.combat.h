@@ -9,8 +9,7 @@
 
 /* Generated at Mon Mar 22 10:40:19 CET 1999 from mech.combat.c */
 
-#ifndef _P_MECH_COMBAT_H
-#define _P_MECH_COMBAT_H
+#pragma once
 
 /* mech.combat.c */
 void mech_target(dbref player, void *data, char *buffer);
@@ -44,5 +43,3 @@ int determineDamageFromHit(MECH * mech, int wSection, int wCritSlot,
 void HitTarget(MECH * mech, int weapindx, int wSection, int wCritSlot,
     MECH * hitMech, int hitX, int hitY, int LOS, int type, int modifier,
     int reallyhit, int bth, int wGattlingShots, int tIsSwarmAttack, int player_roll);
-
-#endif				/* _P_MECH_COMBAT_H */
