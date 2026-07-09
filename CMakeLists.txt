@@ -323,7 +323,6 @@ set(NETMUX_SOURCES
   src/bsd.c
   src/commac.c
   src/command.c
-  src/compat.c
   src/comsys.c
   src/conf.c
   src/cque.c
