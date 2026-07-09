@@ -12,5 +12,5 @@
 #pragma once
 
 /* autopilot_commands.c */
-int auto_valid_progline(AUTO * a, int p);
+int auto_valid_progline(AUTO *a, int p);
 void auto_jump(dbref player, void *data, char *buffer);

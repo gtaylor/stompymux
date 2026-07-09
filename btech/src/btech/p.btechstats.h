@@ -30,8 +30,7 @@ int char_gainxpbycode(dbref player, int code, int amount, int override);
 int char_gainxp(dbref player, char *skill, int amount);
 int char_getskillsuccess(dbref player, char *name, int modifier, int loud);
 int char_getskillmargsucc(dbref player, char *name, int modifier);
-int char_getopposedskill(dbref first, char *skill1, dbref second,
-    char *skill2);
+int char_getopposedskill(dbref first, char *skill1, dbref second, char *skill2);
 int char_getattrsave(dbref player, char *name);
 int char_getattrsavesucc(dbref player, char *name);
 void zap_unneccessary_stats(void);
@@ -39,32 +38,34 @@ void init_btechstats(void);
 void do_charstatus(dbref player, dbref cause, int key, char *arg1);
 void do_charclear(dbref player, dbref cause, int key, char *arg1);
 dbref char_lookupplayer(dbref player, dbref cause, int key, char *arg1);
-void initialize_pc(dbref player, MECH * mech);
-void fix_pilotdamage(MECH * mech, dbref player);
-int mw_ic_bth(MECH * mech);
-int handlemwconc(MECH * mech, int initial);
-void headhitmwdamage(MECH * mech, MECH * attacker, int dam);
-void mwlethaldam(MECH * mech, MECH * attacker, int dam);
+void initialize_pc(dbref player, MECH *mech);
+void fix_pilotdamage(MECH *mech, dbref player);
+int mw_ic_bth(MECH *mech);
+int handlemwconc(MECH *mech, int initial);
+void headhitmwdamage(MECH *mech, MECH *attacker, int dam);
+void mwlethaldam(MECH *mech, MECH *attacker, int dam);
 void lower_xp(dbref player, int promillage);
-void AccumulateTechXP(dbref pilot, MECH * mech, int reason);
-void AccumulateTechWeaponsXP(dbref pilot, MECH * mech, int reason);
-void AccumulateCommXP(dbref pilot, MECH * mech);
-void AccumulatePilXP(dbref pilot, MECH * mech, int reason, int addanyway);
-void AccumulateSpotXP(dbref pilot, MECH * attacker, MECH * wounded);
-int MadePerceptionRoll(MECH * mech, int modifier);
-void AccumulateArtyXP(dbref pilot, MECH * attacker, MECH * wounded);
-void AccumulateComputerXP(dbref pilot, MECH * mech, int reason);
+void AccumulateTechXP(dbref pilot, MECH *mech, int reason);
+void AccumulateTechWeaponsXP(dbref pilot, MECH *mech, int reason);
+void AccumulateCommXP(dbref pilot, MECH *mech);
+void AccumulatePilXP(dbref pilot, MECH *mech, int reason, int addanyway);
+void AccumulateSpotXP(dbref pilot, MECH *attacker, MECH *wounded);
+int MadePerceptionRoll(MECH *mech, int modifier);
+void AccumulateArtyXP(dbref pilot, MECH *attacker, MECH *wounded);
+void AccumulateComputerXP(dbref pilot, MECH *mech, int reason);
 int HasBoolAdvantage(dbref player, const char *name);
-void AccumulateGunXP(dbref pilot, MECH * attacker, MECH * wounded,
-    int numOccurences, float multiplier, int weapindx, int bth);
-void AccumulateGunXPold(dbref pilot, MECH * attacker, MECH * wounded,
-    int numOccurences, float multiplier, int weapindx, int bth);
+void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded,
+                     int numOccurences, float multiplier, int weapindx,
+                     int bth);
+void AccumulateGunXPold(dbref pilot, MECH *attacker, MECH *wounded,
+                        int numOccurences, float multiplier, int weapindx,
+                        int bth);
 void fun_btgetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
-    char *fargs[], int nfargs, char *cargs[], int ncargs);
+                        char *fargs[], int nfargs, char *cargs[], int ncargs);
 void fun_btsetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
-    char *fargs[], int nfargs, char *cargs[], int ncargs);
+                        char *fargs[], int nfargs, char *cargs[], int ncargs);
 void fun_btcharlist(char *buff, char **bufc, dbref player, dbref cause,
-    char *fargs[], int nfargs, char *cargs[], int ncargs);
+                    char *fargs[], int nfargs, char *cargs[], int ncargs);
 void debug_xptop(dbref player, void *data, char *buffer);
 void debug_setxplevel(dbref player, void *data, char *buffer);
 int btthreshold_func(char *skillname);

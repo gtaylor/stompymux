@@ -15,11 +15,11 @@
 
 /* eject.c */
 int tele_contents(dbref from, dbref to, int flag);
-void discard_mw(MECH * mech);
-void enter_mw_bay(MECH * mech, dbref bay);
-void pickup_mw(MECH * mech, MECH * target);
+void discard_mw(MECH *mech);
+void enter_mw_bay(MECH *mech, dbref bay);
+void pickup_mw(MECH *mech, MECH *target);
 void mech_eject(dbref player, void *data, char *buffer);
 void mech_disembark(dbref player, void *data, char *buffer);
 void mech_udisembark(dbref player, void *data, char *buffer);
 void mech_embark(dbref player, void *data, char *buffer);
-void autoeject(dbref player, MECH * mech, int tIsBSuit);
+void autoeject(dbref player, MECH *mech, int tIsBSuit);

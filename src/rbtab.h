@@ -1,18 +1,17 @@
 
 /* rbtab.h - Structures and declarations needed for table hashing */
 
-
 #pragma once
 
 #include "config.h"
 #include "db.h"
-#include "rbtree.h"
 #include "nametab.h"
+#include "rbtree.h"
 
 struct rbtable {
-    long long checks, scans, max_scan, hits, entries, deletes, nulls;
-    rbtree tree;
-    void *last;
+  long long checks, scans, max_scan, hits, entries, deletes, nulls;
+  rbtree tree;
+  void *last;
 };
 typedef struct rbtable HASHTAB;
 typedef struct rbtable RBTAB;
@@ -36,15 +35,15 @@ NAMETAB *find_nametab_ent(dbref, NAMETAB *, char *);
 void display_nametab(dbref, NAMETAB *, char *, int);
 void interp_nametab(dbref, NAMETAB *, int, char *, char *, char *);
 void listset_nametab(dbref, NAMETAB *, int, char *, int);
-void *hash_nextentry(RBTAB * htab);
-void *hash_firstentry(RBTAB * htab);
-char *hash_firstkey(RBTAB * htab);
-char *hash_nextkey(RBTAB * htab);
+void *hash_nextentry(RBTAB *htab);
+void *hash_firstentry(RBTAB *htab);
+char *hash_firstkey(RBTAB *htab);
+char *hash_nextkey(RBTAB *htab);
 
 void nhashinit(RBTAB *, int);
 void nhashreset(RBTAB *);
-void *nhash_nextentry(RBTAB * htab);
-void *nhash_firstentry(RBTAB * htab);
+void *nhash_nextentry(RBTAB *htab);
+void *nhash_firstentry(RBTAB *htab);
 char *nhashinfo(const char *, RBTAB *);
 void *nhashfind(long, RBTAB *);
 int nhashadd(long, void *, RBTAB *);

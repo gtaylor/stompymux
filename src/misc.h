@@ -3,7 +3,6 @@
 
 /* $Id: misc.h,v 1.2 2005/06/23 02:59:58 murrayma Exp $ */
 
-
 #pragma once
 
 #include "db.h"
@@ -14,30 +13,30 @@
 
 typedef struct search_type SEARCH;
 struct search_type {
-    int s_wizard;
-    dbref s_owner;
-    dbref s_rst_owner;
-    long s_rst_type;
-    FLAGSET s_fset;
-    POWERSET s_pset;
-    dbref s_parent;
-    dbref s_zone;
-    char *s_rst_name;
-    char *s_rst_eval;
-    long low_bound;
-    long high_bound;
+  int s_wizard;
+  dbref s_owner;
+  dbref s_rst_owner;
+  long s_rst_type;
+  FLAGSET s_fset;
+  POWERSET s_pset;
+  dbref s_parent;
+  dbref s_zone;
+  char *s_rst_name;
+  char *s_rst_eval;
+  long low_bound;
+  long high_bound;
 };
 
 /* Stats structure, used by @stats and stats(). */
 
 typedef struct stats_type STATS;
 struct stats_type {
-    int s_total;
-    int s_rooms;
-    int s_exits;
-    int s_things;
-    int s_players;
-    int s_garbage;
+  int s_total;
+  int s_rooms;
+  int s_exits;
+  int s_things;
+  int s_players;
+  int s_garbage;
 };
 
 extern int search_setup(dbref, char *, SEARCH *);

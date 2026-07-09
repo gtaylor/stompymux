@@ -10,22 +10,22 @@
 
 /* File caches.  These _must_ track the fcache array in file_c.c */
 
-#define	FC_CONN		0
-#define	FC_CONN_SITE	1
-#define	FC_CONN_DOWN	2
-#define	FC_CONN_FULL	3
-#define	FC_CONN_REG	4
-#define	FC_CREA_NEW	5
-#define	FC_CREA_REG	6
-#define	FC_MOTD		7
-#define	FC_WIZMOTD	8
-#define	FC_QUIT		9
-#define	FC_LAST		9
+#define FC_CONN 0
+#define FC_CONN_SITE 1
+#define FC_CONN_DOWN 2
+#define FC_CONN_FULL 3
+#define FC_CONN_REG 4
+#define FC_CREA_NEW 5
+#define FC_CREA_REG 6
+#define FC_MOTD 7
+#define FC_WIZMOTD 8
+#define FC_QUIT 9
+#define FC_LAST 9
 
 /* File cache routines */
 
 extern void fcache_rawdump(int fd, int num);
-extern void fcache_dump(DESC * d, int num);
+extern void fcache_dump(DESC *d, int num);
 extern void fcache_dump_conn(DESC *d, int num);
 extern void fcache_send(dbref, int);
 extern void fcache_load(dbref);

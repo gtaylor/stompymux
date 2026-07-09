@@ -19,69 +19,66 @@
    Work's based on MUSE's btechstats.c
  */
 
-#include "interface.h"
-#include "mech.h"
-#include "create.h"
 #include "btechstats_global.h"
 #include "coolmenu.h"
+#include "create.h"
+#include "interface.h"
+#include "mech.h"
 #include "mycool.h"
-#include "p.mech.utils.h"
 #include "p.glue.scode.h"
+#include "p.mech.utils.h"
 
 extern HASHTAB playervaluehash;
 extern HASHTAB playervaluehash2;
 
 #define IsHCO(ref) WizP(ref)
 
-void do_show(dbref player, dbref cause, int key, char *arg1, char *arg2)
-{
-	int i;
-	enum {
-		CHAVA, CHVAL, CHSKI, CHADV, CHATT,
-		MECHVALUES
-	};
-	char *cmds[] = { "allvalues",
-		"values", "skills", "advantages",
-		"attributes", "xcodevalues", NULL
-	};
-	char *cmds_help[] = { "[char_]allvalues", "[char_]values",
-		"[char_]skills", "[char_]advantages", "[char_]attributes",
-		"xcodevalues [scode]", NULL
-	};
-	char buf[MBUF_SIZE] = { 0 };
+void do_show(dbref player, dbref cause, int key, char *arg1, char *arg2) {
+  int i;
+  enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
+  char *cmds[] = {"allvalues",  "values",      "skills", "advantages",
+                  "attributes", "xcodevalues", NULL};
+  char *cmds_help[] = {"[char_]allvalues",
+                       "[char_]values",
+                       "[char_]skills",
+                       "[char_]advantages",
+                       "[char_]attributes",
+                       "xcodevalues [scode]",
+                       NULL};
+  char buf[MBUF_SIZE] = {0};
 
-	DOCHECK(!IsHCO(player), "You aren't cleared to know this stuff yet!");
+  DOCHECK(!IsHCO(player), "You aren't cleared to know this stuff yet!");
 
-	if(!arg1 || !*arg1) {
-		strcpy(buf, "Valid arguments:");
-		for(i = 0; cmds_help[i]; i++)
-			snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s", i > 0 ? ',' : ' ',
-					cmds_help[i]);
-		notify(player, buf);
-		return;
-	}
-	i = listmatch(cmds, arg1);
-	/* Do da cmd */
-	switch (i) {
-	case MECHVALUES:
-		list_xcodevalues(player);
-		return;
-	case CHAVA:
-		list_charvaluestuff(player, -1);
-		return;
-	case CHVAL:
-		list_charvaluestuff(player, CHAR_VALUE);
-		return;
-	case CHSKI:
-		list_charvaluestuff(player, CHAR_SKILL);
-		return;
-	case CHADV:
-		list_charvaluestuff(player, CHAR_ADVANTAGE);
-		return;
-	case CHATT:
-		list_charvaluestuff(player, CHAR_ATTRIBUTE);
-		return;
-	}
-	notify(player, "Invalid arguments to +show command!");
-	return;
+  if (!arg1 || !*arg1) {
+    strcpy(buf, "Valid arguments:");
+    for (i = 0; cmds_help[i]; i++)
+      snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s",
+               i > 0 ? ',' : ' ', cmds_help[i]);
+    notify(player, buf);
+    return;
+  }
+  i = listmatch(cmds, arg1);
+  /* Do da cmd */
+  switch (i) {
+  case MECHVALUES:
+    list_xcodevalues(player);
+    return;
+  case CHAVA:
+    list_charvaluestuff(player, -1);
+    return;
+  case CHVAL:
+    list_charvaluestuff(player, CHAR_VALUE);
+    return;
+  case CHSKI:
+    list_charvaluestuff(player, CHAR_SKILL);
+    return;
+  case CHADV:
+    list_charvaluestuff(player, CHAR_ADVANTAGE);
+    return;
+  case CHATT:
+    list_charvaluestuff(player, CHAR_ATTRIBUTE);
+    return;
+  }
+  notify(player, "Invalid arguments to +show command!");
+  return;
 }

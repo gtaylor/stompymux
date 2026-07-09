@@ -11,63 +11,39 @@
 
 #include "MutableAttributes.hh"
 
-
 /*
  * C interface.
  */
 
 using namespace BTech::FI;
 
-
 /*
  * Attributes API.
  */
 
-FI_Attributes *
-fi_create_attributes(void)
-{
-	return new FI_Attributes ();
+FI_Attributes *fi_create_attributes(void) { return new FI_Attributes(); }
+
+void fi_destroy_attributes(FI_Attributes *attrs) { delete attrs; }
+
+void fi_clear_attributes(FI_Attributes *attrs) { attrs->clear(); }
+
+int fi_add_attribute(FI_Attributes *attrs, const FI_Name *name,
+                     const FI_Value *value) {
+  return attrs->add(*name, *value);
 }
 
-void
-fi_destroy_attributes(FI_Attributes *attrs)
-{
-	delete attrs;
+int fi_get_attributes_length(const FI_Attributes *attrs) {
+  return attrs->getLength();
 }
 
-void
-fi_clear_attributes(FI_Attributes *attrs)
-{
-	attrs->clear();
+int fi_get_attribute_index(const FI_Attributes *attrs, const FI_Name *name) {
+  return attrs->getIndex(*name);
 }
 
-int
-fi_add_attribute(FI_Attributes *attrs,
-                 const FI_Name *name, const FI_Value *value)
-{
-	return attrs->add(*name, *value);
+const FI_Name *fi_get_attribute_name(const FI_Attributes *attrs, int idx) {
+  return attrs->getCName(idx);
 }
 
-int
-fi_get_attributes_length(const FI_Attributes *attrs)
-{
-	return attrs->getLength();
-}
-
-int
-fi_get_attribute_index(const FI_Attributes *attrs, const FI_Name *name)
-{
-	return attrs->getIndex(*name);
-}
-
-const FI_Name *
-fi_get_attribute_name(const FI_Attributes *attrs, int idx)
-{
-	return attrs->getCName(idx);
-}
-
-const FI_Value *
-fi_get_attribute_value(const FI_Attributes *attrs, int idx)
-{
-	return attrs->getCValue(idx);
+const FI_Value *fi_get_attribute_value(const FI_Attributes *attrs, int idx) {
+  return attrs->getCValue(idx);
 }

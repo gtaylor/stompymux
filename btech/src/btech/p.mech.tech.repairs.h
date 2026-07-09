@@ -12,4 +12,4 @@
 #pragma once
 
 /* mech.tech.repairs.c */
-void tech_repairs(dbref player, MECH * mech, char *buffer);
+void tech_repairs(dbref player, MECH *mech, char *buffer);

@@ -7,8 +7,15 @@
  */
 
 #pragma once
+
+#include "config.h"
+
 #ifndef DOCHECK
-#define DOCHECK(a,b) if (a) { notify(player, b); return; }
+#define DOCHECK(a, b)                                                          \
+  if (a) {                                                                     \
+    notify(player, b);                                                         \
+    return;                                                                    \
+  }
 #endif
 void debug_allocfree(dbref key, void **data, int selector);
 void debug_list(dbref player, void *data, char *buffer);

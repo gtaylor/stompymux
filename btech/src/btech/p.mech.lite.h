@@ -12,5 +12,5 @@
 #pragma once
 
 /* mech.lite.c */
-void cause_lite(MECH * mech, MECH * tempMech);
-void end_lite_check(MECH * mech);
+void cause_lite(MECH *mech, MECH *tempMech);
+void end_lite_check(MECH *mech);

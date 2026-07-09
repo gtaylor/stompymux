@@ -7,16 +7,16 @@
 #include "sax.h"
 
 typedef struct {
-	const int idx;
-	const char *const literal;
-	FI_Name *cached;
+  const int idx;
+  const char *const literal;
+  FI_Name *cached;
 } CachedName;
 
 typedef struct {
-	const int idx;
-	const FI_ValueType type;
-	const size_t count;
-	FI_Value *cached;
+  const int idx;
+  const FI_ValueType type;
+  const size_t count;
+  FI_Value *cached;
 } CachedVariable;
 
 extern FI_ContentHandler *btdb_gen_handler;

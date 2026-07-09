@@ -11,7 +11,6 @@
 #include "common.h" // FIXME: only needed for CharString
 #include "encalg.h"
 
-
 namespace BTech {
 namespace FI {
 
@@ -20,14 +19,14 @@ namespace FI {
 //
 class RA_VocabTable : public DynamicTypedVocabTable<CharString> {
 public:
-	RA_VocabTable ();
+  RA_VocabTable();
 
-	const TypedEntryRef getEntry(const_reference value);
+  const TypedEntryRef getEntry(const_reference value);
 
 private:
-	RA_VocabTable (bool read_only, FI_VocabIndex max_idx);
+  RA_VocabTable(bool read_only, FI_VocabIndex max_idx);
 
-	static TypedVocabTable *builtin_table ();
+  static TypedVocabTable *builtin_table();
 }; // class RA_VocabTable
 
 //
@@ -44,12 +43,12 @@ private:
 // are mainly function pointers with no ordering of their own...
 class EA_VocabTable : public TypedVocabTable<const FI_EncodingAlgorithm *> {
 public:
-	EA_VocabTable ();
+  EA_VocabTable();
 
 private:
-	EA_VocabTable (bool read_only, FI_VocabIndex max_idx);
+  EA_VocabTable(bool read_only, FI_VocabIndex max_idx);
 
-	static EA_VocabTable *builtin_table ();
+  static EA_VocabTable *builtin_table();
 }; // class EA_VocabTable
 
 //
@@ -57,15 +56,15 @@ private:
 //
 class DS_VocabTable : public DynamicTypedVocabTable<CharString> {
 public:
-	DS_VocabTable ();
+  DS_VocabTable();
 
 protected:
-	DS_VocabTable (TypedVocabTable *parent);
+  DS_VocabTable(TypedVocabTable *parent);
 
 private:
-	DS_VocabTable (bool read_only, FI_VocabIndex max_idx);
+  DS_VocabTable(bool read_only, FI_VocabIndex max_idx);
 
-	static TypedVocabTable *builtin_table ();
+  static TypedVocabTable *builtin_table();
 }; // class DS_VocabTable
 
 //
@@ -73,12 +72,12 @@ private:
 //
 class PFX_DS_VocabTable : public DS_VocabTable {
 public:
-	PFX_DS_VocabTable ();
+  PFX_DS_VocabTable();
 
 private:
-	PFX_DS_VocabTable (bool read_only, FI_VocabIndex max_idx);
+  PFX_DS_VocabTable(bool read_only, FI_VocabIndex max_idx);
 
-	static DS_VocabTable *builtin_table ();
+  static DS_VocabTable *builtin_table();
 }; // class PFX_DS_VocabTable
 
 //
@@ -86,12 +85,12 @@ private:
 //
 class NSN_DS_VocabTable : public DS_VocabTable {
 public:
-	NSN_DS_VocabTable ();
+  NSN_DS_VocabTable();
 
 private:
-	NSN_DS_VocabTable (bool read_only, FI_VocabIndex max_idx);
+  NSN_DS_VocabTable(bool read_only, FI_VocabIndex max_idx);
 
-	static DS_VocabTable *builtin_table ();
+  static DS_VocabTable *builtin_table();
 }; // class NSN_DS_VocabTable
 
 } // namespace FI

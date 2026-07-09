@@ -12,13 +12,13 @@
 #pragma once
 
 /* map.bits.c */
-void map_load_bits(FILE * f, MAP * map);
-void map_save_bits(FILE * f, MAP * map, mapobj * obj);
-void set_hex_enterable(MAP * map, int x, int y);
-void set_hex_mine(MAP * map, int x, int y);
-void unset_hex_enterable(MAP * map, int x, int y);
-void unset_hex_mine(MAP * map, int x, int y);
-int is_mine_hex(MAP * map, int x, int y);
-int is_hangar_hex(MAP * map, int x, int y);
-void clear_hex_bits(MAP * map, int bits);
-int bit_size(MAP * map);
+void map_load_bits(FILE *f, MAP *map);
+void map_save_bits(FILE *f, MAP *map, mapobj *obj);
+void set_hex_enterable(MAP *map, int x, int y);
+void set_hex_mine(MAP *map, int x, int y);
+void unset_hex_enterable(MAP *map, int x, int y);
+void unset_hex_mine(MAP *map, int x, int y);
+int is_mine_hex(MAP *map, int x, int y);
+int is_hangar_hex(MAP *map, int x, int y);
+void clear_hex_bits(MAP *map, int bits);
+int bit_size(MAP *map);

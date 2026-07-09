@@ -12,8 +12,8 @@
 #pragma once
 
 /* econ_cmds.c */
-void SetCargoWeight(MECH * mech);
-int loading_bay_whine(dbref player, dbref cargobay, MECH * mech);
+void SetCargoWeight(MECH *mech);
+int loading_bay_whine(dbref player, dbref cargobay, MECH *mech);
 void mech_Rfixstuff(dbref player, void *data, char *buffer);
 void list_matching(dbref player, char *header, dbref loc, char *buf);
 void mech_manifest(dbref player, void *data, char *buffer);

@@ -13,6 +13,15 @@
 
 #pragma once
 
-#define Clustersize(weapindx) (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) && (MechWeapons[weapindx].damage == 1))? 5 : 1)
+#define Clustersize(weapindx)                                                  \
+  (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) &&                  \
+    (MechWeapons[weapindx].damage == 1))                                       \
+       ? 5                                                                     \
+       : 1)
 
-#define Swap(val1,val2) { rtmp = val1 ; val1 = val2 ; val2 = rtmp; }
+#define Swap(val1, val2)                                                       \
+  {                                                                            \
+    rtmp = val1;                                                               \
+    val1 = val2;                                                               \
+    val2 = rtmp;                                                               \
+  }

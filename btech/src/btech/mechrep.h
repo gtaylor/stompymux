@@ -21,10 +21,10 @@
 
 /* This is the silly structure that I use for the repair stuff */
 typedef struct mechrep_data {
-    XCODE xcode;			/* XCODE base class field */
- 
-    dbref mynum;
-    dbref current_target;
+  XCODE xcode; /* XCODE base class field */
+
+  dbref mynum;
+  dbref current_target;
 } MECHREP;
 
 /* Mech repair/type commands */

@@ -18,13 +18,13 @@
 #include <stddef.h>
 
 typedef enum {
-	GTYPE_MECH,
-	GTYPE_DEBUG,
-	GTYPE_MECHREP,
-	GTYPE_MAP,
-	GTYPE_AUTO,
-	GTYPE_TURRET,
-	GTYPE_UNUSED1 /* placeholder for old chargen object */
+  GTYPE_MECH,
+  GTYPE_DEBUG,
+  GTYPE_MECHREP,
+  GTYPE_MAP,
+  GTYPE_AUTO,
+  GTYPE_TURRET,
+  GTYPE_UNUSED1 /* placeholder for old chargen object */
 } GlueType;
 
 /*
@@ -32,6 +32,6 @@ typedef enum {
  * field of this type, called 'xcode' by convention.
  */
 typedef struct {
-	GlueType type;		/* XCODE object type */
-	size_t size;		/* object size */
+  GlueType type; /* XCODE object type */
+  size_t size;   /* object size */
 } XCODE;

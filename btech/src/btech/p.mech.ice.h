@@ -12,14 +12,14 @@
 #pragma once
 
 /* mech.ice.c */
-void drop_thru_ice(MECH * mech);
-void break_thru_ice(MECH * mech);
-int possibly_drop_thru_ice(MECH * mech);
-int growable(MAP * map, int x, int y);
-int meltable(MAP * map, int x, int y);
-void ice_growth(dbref player, MAP * map, int num);
-void ice_melt(dbref player, MAP * map, int num);
-void map_addice(dbref player, MAP * map, char *buffer);
-void map_delice(dbref player, MAP * map, char *buffer);
-void possibly_blow_ice(MECH * mech, int weapindx, int x, int y);
-void possibly_blow_bridge(MECH * mech, int weapindx, int x, int y);
+void drop_thru_ice(MECH *mech);
+void break_thru_ice(MECH *mech);
+int possibly_drop_thru_ice(MECH *mech);
+int growable(MAP *map, int x, int y);
+int meltable(MAP *map, int x, int y);
+void ice_growth(dbref player, MAP *map, int num);
+void ice_melt(dbref player, MAP *map, int num);
+void map_addice(dbref player, MAP *map, char *buffer);
+void map_delice(dbref player, MAP *map, char *buffer);
+void possibly_blow_ice(MECH *mech, int weapindx, int x, int y);
+void possibly_blow_bridge(MECH *mech, int weapindx, int x, int y);

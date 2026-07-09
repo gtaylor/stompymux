@@ -7,33 +7,33 @@
 
 #include <stdio.h>
 
+#include "config.h"
 #include "db.h"
+#include "externs.h"
 #include "interface.h"
 #include "match.h"
-#include "config.h"
-#include "externs.h"
 
 #define GMac(n) (n >= 0 && n < nummacros)
 
 #define MACRO_L 1
 #define MACRO_R 2
 #define MACRO_W 4
-#define MAX_SLOTS 5		/* Number of macro slots a person can have. */
+#define MAX_SLOTS 5 /* Number of macro slots a person can have. */
 
 typedef struct macroentry MACENT;
 struct macroentry {
-    char *cmdname;
-    void (*handler) (dbref, char *);
+  char *cmdname;
+  void (*handler)(dbref, char *);
 };
 
 struct macros {
-    int player;
-    char status;
-    char *desc;
-    int nummacros;
-    int maxmacros;
-    char *alias;		/* Chopped into 5 byte sections.  Macro can have  */
-    char **string;		/* at most a 4 letter alias                       */
+  int player;
+  char status;
+  char *desc;
+  int nummacros;
+  int maxmacros;
+  char *alias;   /* Chopped into 5 byte sections.  Macro can have  */
+  char **string; /* at most a 4 letter alias                       */
 };
 
 extern int nummacros;

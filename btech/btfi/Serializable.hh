@@ -18,11 +18,10 @@ namespace FI {
 #define FI_BIT_7 0x02
 #define FI_BIT_8 0x01
 
-#define FI_BITS(a,b,c,d,e,f,g,h) \
-	(  ((0||(a+0)) << 7) | ((0||(b+0)) << 6) \
-	 | ((0||(c+0)) << 5) | ((0||(d+0)) << 4) \
-	 | ((0||(e+0)) << 3) | ((0||(f+0)) << 2) \
-	 | ((0||(g+0)) << 1) | ((0||(h+0))     ))
+#define FI_BITS(a, b, c, d, e, f, g, h)                                        \
+  (((0 || (a + 0)) << 7) | ((0 || (b + 0)) << 6) | ((0 || (c + 0)) << 5) |     \
+   ((0 || (d + 0)) << 4) | ((0 || (e + 0)) << 3) | ((0 || (f + 0)) << 2) |     \
+   ((0 || (g + 0)) << 1) | ((0 || (h + 0))))
 
 // Forward declarations for Encoder/Decoder.
 class Encoder;
@@ -32,11 +31,11 @@ class Decoder;
 // Encoder/Decoder.
 class Serializable {
 protected:
-	virtual ~Serializable () {}
+  virtual ~Serializable() {}
 
 public:
-	virtual void write (Encoder& encoder) const = 0;
-	virtual bool read (Decoder& decoder) = 0;
+  virtual void write(Encoder &encoder) const = 0;
+  virtual bool read(Decoder &decoder) = 0;
 }; // class Serializable
 
 } // namespace FI

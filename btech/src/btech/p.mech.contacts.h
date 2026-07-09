@@ -12,9 +12,9 @@
 #pragma once
 
 /* mech.contacts.c */
-void show_brief_flags(dbref player, MECH * mech);
+void show_brief_flags(dbref player, MECH *mech);
 void mech_brief(dbref player, void *data, char *buffer);
 void mech_contacts(dbref player, void *data, char *buffer);
-char getWeaponArc(MECH * mech, int arc);
-char *getStatusString(MECH * target, int enemy);
-char getStatusChar(MECH * mech, MECH * mechTarget, int wCharNum);
+char getWeaponArc(MECH *mech, int arc);
+char *getStatusString(MECH *target, int enemy);
+char getStatusChar(MECH *mech, MECH *mechTarget, int wCharNum);

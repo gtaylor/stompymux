@@ -12,9 +12,9 @@
 #pragma once
 
 /* autopilot.c */
-void gradually_load(MECH * mech, int loc, int percent);
-void autopilot_load_cargo(dbref player, MECH * mech, int percent);
-void figure_out_range_and_bearing(MECH * mech, int tx, int ty,
-    float *range, int *bearing);
-void auto_goto_event(MUXEVENT * e);
-void auto_follow_event(MUXEVENT * e);
+void gradually_load(MECH *mech, int loc, int percent);
+void autopilot_load_cargo(dbref player, MECH *mech, int percent);
+void figure_out_range_and_bearing(MECH *mech, int tx, int ty, float *range,
+                                  int *bearing);
+void auto_goto_event(MUXEVENT *e);
+void auto_follow_event(MUXEVENT *e);

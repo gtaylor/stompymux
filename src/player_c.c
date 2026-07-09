@@ -1,213 +1,198 @@
 /*
- * player_c.c -- Player cache routines 
+ * player_c.c -- Player cache routines
  */
 
 #include "config.h"
 
-#include "mudconf.h"
-#include "rbtab.h"
-#include "externs.h"
 #include "alloc.h"
 #include "attrs.h"
 #include "db.h"
+#include "externs.h"
+#include "mudconf.h"
 #include "pcache.h"
+#include "rbtab.h"
 #include "rbtree.h"
 
 rbtree pcache_tree;
 PCACHE *pcache_head;
 
-static int compare_pcache(dbref left, dbref right)
-{
-	return (left - right);
+static int compare_pcache(dbref left, dbref right) { return (left - right); }
+
+void pcache_init(void) {
+  pcache_tree = rb_init((void *)compare_pcache, NULL);
+  pcache_head = NULL;
 }
 
-void pcache_init(void)
-{
-	pcache_tree = rb_init((void *)compare_pcache, NULL);
-	pcache_head = NULL;
+static void pcache_reload1(dbref player, PCACHE *pp) {
+  char *cp;
+
+  cp = atr_get_raw(player, A_MONEY);
+  if (cp && *cp)
+    pp->money = atoi(cp);
+  else
+    pp->money = 0;
+
+  cp = atr_get_raw(player, A_QUEUEMAX);
+  if (cp && *cp)
+    pp->qmax = atoi(cp);
+  else if (!Wizard(player))
+    pp->qmax = mudconf.queuemax;
+  else
+    pp->qmax = -1;
 }
 
-static void pcache_reload1(dbref player, PCACHE * pp)
-{
-	char *cp;
+PCACHE *pcache_find(dbref player) {
+  PCACHE *pp;
 
-	cp = atr_get_raw(player, A_MONEY);
-	if(cp && *cp)
-		pp->money = atoi(cp);
-	else
-		pp->money = 0;
+  if (!Good_obj(player) || !OwnsOthers(player))
+    return NULL;
 
-	cp = atr_get_raw(player, A_QUEUEMAX);
-	if(cp && *cp)
-		pp->qmax = atoi(cp);
-	else if(!Wizard(player))
-		pp->qmax = mudconf.queuemax;
-	else
-		pp->qmax = -1;
+  pp = (PCACHE *)rb_find(pcache_tree, (void *)player);
+  if (pp) {
+    pp->cflags |= PF_REF;
+    return pp;
+  }
+  pp = malloc(sizeof(PCACHE));
+  pp->queue = 0;
+  pp->cflags = PF_REF;
+  pp->player = player;
+  pcache_reload1(player, pp);
+  pp->next = pcache_head;
+  pcache_head = pp;
+  rb_insert(pcache_tree, (void *)player, (void *)pp);
+  return pp;
 }
 
-PCACHE *pcache_find(dbref player)
-{
-	PCACHE *pp;
+void pcache_reload(dbref player) {
+  PCACHE *pp;
 
-	if(!Good_obj(player) || !OwnsOthers(player))
-		return NULL;
-
-	pp = (PCACHE *) rb_find(pcache_tree, (void *)player);
-	if(pp) {
-		pp->cflags |= PF_REF;
-		return pp;
-	}
-	pp = malloc(sizeof(PCACHE));
-	pp->queue = 0;
-	pp->cflags = PF_REF;
-	pp->player = player;
-	pcache_reload1(player, pp);
-	pp->next = pcache_head;
-	pcache_head = pp;
-	rb_insert(pcache_tree, (void *)player, (void *)pp);
-	return pp;
+  pp = pcache_find(player);
+  if (!pp)
+    return;
+  pcache_reload1(player, pp);
 }
 
-void pcache_reload(dbref player)
-{
-	PCACHE *pp;
+static void pcache_save(PCACHE *pp) {
+  IBUF tbuf;
 
-	pp = pcache_find(player);
-	if(!pp)
-		return;
-	pcache_reload1(player, pp);
+  if (pp->cflags & PF_DEAD)
+    return;
+  if (pp->cflags & PF_MONEY_CH) {
+    snprintf(tbuf, sizeof(tbuf), "%d", pp->money);
+    atr_add_raw(pp->player, A_MONEY, tbuf);
+  }
+  if (pp->cflags & PF_QMAX_CH) {
+    snprintf(tbuf, sizeof(tbuf), "%d", pp->qmax);
+    atr_add_raw(pp->player, A_QUEUEMAX, tbuf);
+  }
+  pp->cflags &= ~(PF_MONEY_CH | PF_QMAX_CH);
 }
 
-static void pcache_save(PCACHE * pp)
-{
-	IBUF tbuf;
+void pcache_trim(void) {
+  PCACHE *pp, *pplast, *ppnext;
+  return;
 
-	if(pp->cflags & PF_DEAD)
-		return;
-	if(pp->cflags & PF_MONEY_CH) {
-		snprintf(tbuf, sizeof(tbuf), "%d", pp->money);
-		atr_add_raw(pp->player, A_MONEY, tbuf);
-	}
-	if(pp->cflags & PF_QMAX_CH) {
-		snprintf(tbuf, sizeof(tbuf), "%d", pp->qmax);
-		atr_add_raw(pp->player, A_QUEUEMAX, tbuf);
-	}
-	pp->cflags &= ~(PF_MONEY_CH | PF_QMAX_CH);
+  pp = pcache_head;
+  pplast = NULL;
+  while (pp) {
+    if (!(pp->cflags & PF_DEAD) && (pp->queue || (pp->cflags & PF_REF))) {
+      pp->cflags &= ~PF_REF;
+      pplast = pp;
+      pp = pp->next;
+    } else {
+      ppnext = pp->next;
+      if (pplast)
+        pplast->next = ppnext;
+      else
+        pcache_head = ppnext;
+      if (!(pp->cflags & PF_DEAD)) {
+        pcache_save(pp);
+        rb_delete(pcache_tree, (void *)pp->player);
+      }
+      free(pp);
+      pp = ppnext;
+    }
+  }
 }
 
-void pcache_trim(void)
-{
-	PCACHE *pp, *pplast, *ppnext;
-	return;
+void pcache_sync(void) {
+  PCACHE *pp;
 
-	pp = pcache_head;
-	pplast = NULL;
-	while (pp) {
-		if(!(pp->cflags & PF_DEAD) && (pp->queue || (pp->cflags & PF_REF))) {
-			pp->cflags &= ~PF_REF;
-			pplast = pp;
-			pp = pp->next;
-		} else {
-			ppnext = pp->next;
-			if(pplast)
-				pplast->next = ppnext;
-			else
-				pcache_head = ppnext;
-			if(!(pp->cflags & PF_DEAD)) {
-				pcache_save(pp);
-				rb_delete(pcache_tree, (void *)pp->player);
-			}
-			free(pp);
-			pp = ppnext;
-		}
-	}
+  pp = pcache_head;
+  while (pp) {
+    pcache_save(pp);
+    pp = pp->next;
+  }
 }
 
-void pcache_sync(void)
-{
-	PCACHE *pp;
+int a_Queue(dbref player, int adj) {
+  PCACHE *pp;
 
-	pp = pcache_head;
-	while (pp) {
-		pcache_save(pp);
-		pp = pp->next;
-	}
+  if (OwnsOthers(player)) {
+    pp = pcache_find(player);
+    if (pp)
+      pp->queue += adj;
+    return pp->queue;
+  }
+  return 0;
 }
 
-int a_Queue(dbref player, int adj)
-{
-	PCACHE *pp;
+void s_Queue(dbref player, int val) {
+  PCACHE *pp;
 
-	if(OwnsOthers(player)) {
-		pp = pcache_find(player);
-		if(pp)
-			pp->queue += adj;
-		return pp->queue;
-	}
-	return 0;
+  if (OwnsOthers(player)) {
+    pp = pcache_find(player);
+    if (pp)
+      pp->queue = val;
+  }
 }
 
-void s_Queue(dbref player, int val)
-{
-	PCACHE *pp;
+int QueueMax(dbref player) {
+  PCACHE *pp;
+  int m;
 
-	if(OwnsOthers(player)) {
-		pp = pcache_find(player);
-		if(pp)
-			pp->queue = val;
-	}
+  m = 0;
+  if (OwnsOthers(player)) {
+    pp = pcache_find(player);
+    if (pp) {
+      if (pp->qmax >= 0) {
+        m = pp->qmax;
+      } else {
+        m = mudstate.db_top + 1;
+        if (m < mudconf.queuemax)
+          m = mudconf.queuemax;
+      }
+    }
+  }
+  return m;
 }
 
-int QueueMax(dbref player)
-{
-	PCACHE *pp;
-	int m;
+int Pennies(dbref obj) {
+  char *cp;
 
-	m = 0;
-	if(OwnsOthers(player)) {
-		pp = pcache_find(player);
-		if(pp) {
-			if(pp->qmax >= 0) {
-				m = pp->qmax;
-			} else {
-				m = mudstate.db_top + 1;
-				if(m < mudconf.queuemax)
-					m = mudconf.queuemax;
-			}
-		}
-	}
-	return m;
+  PCACHE *pp;
+
+  if (OwnsOthers(obj)) {
+    pp = pcache_find(obj);
+    if (pp)
+      return pp->money;
+  }
+  cp = atr_get_raw(obj, A_MONEY);
+  return (safe_atoi(cp));
 }
 
-int Pennies(dbref obj)
-{
-	char *cp;
+void s_Pennies(dbref obj, int howfew) {
+  IBUF tbuf;
 
-	PCACHE *pp;
+  PCACHE *pp;
 
-	if(OwnsOthers(obj)) {
-		pp = pcache_find(obj);
-		if(pp)
-			return pp->money;
-	}
-	cp = atr_get_raw(obj, A_MONEY);
-	return (safe_atoi(cp));
-}
-
-void s_Pennies(dbref obj, int howfew)
-{
-	IBUF tbuf;
-
-	PCACHE *pp;
-
-	if(OwnsOthers(obj)) {
-		pp = pcache_find(obj);
-		if(pp) {
-			pp->money = howfew;
-			pp->cflags |= PF_MONEY_CH;
-		}
-	}
-	snprintf(tbuf, sizeof(tbuf), "%d", howfew);
-	atr_add_raw(obj, A_MONEY, tbuf);
+  if (OwnsOthers(obj)) {
+    pp = pcache_find(obj);
+    if (pp) {
+      pp->money = howfew;
+      pp->cflags |= PF_MONEY_CH;
+    }
+  }
+  snprintf(tbuf, sizeof(tbuf), "%d", howfew);
+  atr_add_raw(obj, A_MONEY, tbuf);
 }

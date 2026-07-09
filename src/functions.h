@@ -3,7 +3,6 @@
 
 /* $Id: functions.h,v 1.3 2005/06/23 02:59:58 murrayma Exp $ */
 
-
 #pragma once
 
 #include <time.h>
@@ -12,28 +11,30 @@
 #include "db.h"
 
 typedef struct fun {
-    const char *name;		/* function name */
-    void (*fun) (char *, char **, dbref, dbref, char **, int, char **, int);		/* handler */
-    int nargs;			/* Number of args needed or expected */
-    int flags;			/* Function flags */
-    int perms;			/* Access to function */
+  const char *name; /* function name */
+  void (*fun)(char *, char **, dbref, dbref, char **, int, char **,
+              int); /* handler */
+  int nargs;        /* Number of args needed or expected */
+  int flags;        /* Function flags */
+  int perms;        /* Access to function */
 } FUN;
 
 typedef struct ufun {
-    const char *name;		/* function name */
-    dbref obj;			/* Object ID */
-    int atr;			/* Attribute ID */
-    int flags;			/* Function flags */
-    int perms;			/* Access to function */
-    struct ufun *next;		/* Next ufun in chain */
+  const char *name;  /* function name */
+  dbref obj;         /* Object ID */
+  int atr;           /* Attribute ID */
+  int flags;         /* Function flags */
+  int perms;         /* Access to function */
+  struct ufun *next; /* Next ufun in chain */
 } UFUN;
 
-#define	FN_VARARGS	1	/* Function allows a variable # of args */
-#define	FN_NO_EVAL	2	/* Don't evaluate args to function */
-#define	FN_PRIV		4	/* Perform user-def function as holding obj */
-#define FN_PRES		8	/* Preseve r-regs before user-def functions */
+#define FN_VARARGS 1 /* Function allows a variable # of args */
+#define FN_NO_EVAL 2 /* Don't evaluate args to function */
+#define FN_PRIV 4    /* Perform user-def function as holding obj */
+#define FN_PRES 8    /* Preseve r-regs before user-def functions */
 
-#define FUN_PROTO(name) void name(char *, char **, dbref, dbref, char **, int, char **, int)
+#define FUN_PROTO(name)                                                        \
+  void name(char *, char **, dbref, dbref, char **, int, char **, int)
 FUN_PROTO(fun_alphamax);
 FUN_PROTO(fun_alphamin);
 FUN_PROTO(fun_andflags);
@@ -126,20 +127,19 @@ int list2arr(char *arr[], int maxlen, char *list, char sep);
 void arr2list(char *arr[], int alen, char *list, char **bufc, char sep);
 int nearby_or_control(dbref player, dbref thing);
 int fn_range_check(const char *fname, int nfargs, int minargs, int maxargs,
-				   char *result, char **bufc);
-int delim_check(char *fargs[], int nfargs, int sep_arg, char *sep,
-				char *buff, char **bufc, int eval, dbref player,
-				dbref cause, char *cargs[], int ncargs);
+                   char *result, char **bufc);
+int delim_check(char *fargs[], int nfargs, int sep_arg, char *sep, char *buff,
+                char **bufc, int eval, dbref player, dbref cause, char *cargs[],
+                int ncargs);
 int countwords(char *str, char sep);
 time_t mytime(dbref player);
 int do_convtime(char *str, struct tm *ttm);
 char *get_uptime_to_string(int uptime);
 char *get_uptime_to_short_string(int uptime);
 int check_read_perms(dbref player, dbref thing, ATTR *attr, int aowner,
-					 int aflags, char *buff, char **bufc);
+                     int aflags, char *buff, char **bufc);
 int xlate(char *arg);
 extern void list_functable(dbref);
 extern dbref match_thing(dbref, char *);
-void do_function(dbref player, dbref cause, int key, char *fname,
-				 char *target);
+void do_function(dbref player, dbref cause, int key, char *fname, char *target);
 int cf_func_access(int *vp, char *str, long extra, dbref player, char *cmd);

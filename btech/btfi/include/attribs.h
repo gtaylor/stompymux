@@ -21,8 +21,8 @@ FI_Attributes *fi_create_attributes(void);
 void fi_destroy_attributes(FI_Attributes *attrs);
 
 void fi_clear_attributes(FI_Attributes *attrs);
-int fi_add_attribute(FI_Attributes *attrs,
-                     const FI_Name *name, const FI_Value *value);
+int fi_add_attribute(FI_Attributes *attrs, const FI_Name *name,
+                     const FI_Value *value);
 
 int fi_get_attributes_length(const FI_Attributes *attrs);
 

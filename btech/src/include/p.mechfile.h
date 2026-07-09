@@ -13,4 +13,4 @@
 
 /* mechfile.c */
 FILE *my_open_file(char *name, char *mode, int *openway);
-void my_close_file(FILE * f, int *openway);
+void my_close_file(FILE *f, int *openway);

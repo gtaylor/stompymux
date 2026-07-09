@@ -19,16 +19,16 @@ namespace FI {
 
 class Attributes {
 protected:
-	virtual ~Attributes () {}
+  virtual ~Attributes() {}
 
 public:
-	virtual int getIndex (const DN_VocabTable::TypedEntryRef& qName) const = 0;
+  virtual int getIndex(const DN_VocabTable::TypedEntryRef &qName) const = 0;
 
-	virtual int getLength () const = 0;
+  virtual int getLength() const = 0;
 
-	virtual const DN_VocabTable::TypedEntryRef getName (int idx) const = 0;
+  virtual const DN_VocabTable::TypedEntryRef getName(int idx) const = 0;
 
-	virtual const Value& getValue (int idx) const = 0;
+  virtual const Value &getValue(int idx) const = 0;
 }; // class Attributes
 
 } // namespace FI

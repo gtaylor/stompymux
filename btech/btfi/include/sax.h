@@ -10,12 +10,12 @@
 
 #include <stdio.h>
 
-#include "fiptypes.h"
 #include "errors.h"
+#include "fiptypes.h"
 
+#include "attribs.h"
 #include "names.h"
 #include "values.h"
-#include "attribs.h"
 
 #include "vocab.h"
 
@@ -30,20 +30,20 @@ extern "C" {
 typedef struct FI_tag_ContentHandler FI_ContentHandler;
 
 struct FI_tag_ContentHandler {
-	/* Document start/stop events.  */
-	int (*startDocument)(FI_ContentHandler *handler);
-	int (*endDocument)(FI_ContentHandler *handler);
+  /* Document start/stop events.  */
+  int (*startDocument)(FI_ContentHandler *handler);
+  int (*endDocument)(FI_ContentHandler *handler);
 
-	/* Element start/stop events.  */
-	int (*startElement)(FI_ContentHandler *handler,
-	                    const FI_Name *name, const FI_Attributes *attrs);
-	int (*endElement)(FI_ContentHandler *handler, const FI_Name *name);
+  /* Element start/stop events.  */
+  int (*startElement)(FI_ContentHandler *handler, const FI_Name *name,
+                      const FI_Attributes *attrs);
+  int (*endElement)(FI_ContentHandler *handler, const FI_Name *name);
 
-	/* "Character" chunks. */
-	int (*characters)(FI_ContentHandler *handler, const FI_Value *value);
+  /* "Character" chunks. */
+  int (*characters)(FI_ContentHandler *handler, const FI_Value *value);
 
-	/* For application use.  */
-	void *app_data_ptr;
+  /* For application use.  */
+  void *app_data_ptr;
 }; /* FI_ContentHandler */
 
 /*

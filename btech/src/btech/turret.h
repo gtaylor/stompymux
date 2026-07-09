@@ -21,14 +21,14 @@
 #include "mech.h"
 
 typedef struct {
-    XCODE xcode;		/* XCODE base class field */
-    dbref mynum;
+  XCODE xcode; /* XCODE base class field */
+  dbref mynum;
 
-    int arcs;			/* arc_override */
-    unsigned long tic[NUM_TICS];	/* tics.. */
-    dbref parent;		/* ship whose stats we use for this */
-    dbref gunner;		/* who's da gunner? */
-    dbref target;		/* what do we have locked? */
-    short targx, targy, targz;	/* in map coords, target squares */
-    int lockmode;		/* lock modes (hex, etc) */
+  int arcs;                    /* arc_override */
+  unsigned long tic[NUM_TICS]; /* tics.. */
+  dbref parent;                /* ship whose stats we use for this */
+  dbref gunner;                /* who's da gunner? */
+  dbref target;                /* what do we have locked? */
+  short targx, targy, targz;   /* in map coords, target squares */
+  int lockmode;                /* lock modes (hex, etc) */
 } TURRET_T;

@@ -120,11 +120,11 @@
 #define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
 #define PACKAGE_URL "@PACKAGE_URL@"
 #define PACKAGE_VERSION "@PACKAGE_VERSION@"
-#define SELECT_TYPE_ARG1 @SELECT_TYPE_ARG1@
-#define SELECT_TYPE_ARG234 @SELECT_TYPE_ARG234@
-#define SELECT_TYPE_ARG5 @SELECT_TYPE_ARG5@
+#define SELECT_TYPE_ARG1 @SELECT_TYPE_ARG1 @
+#define SELECT_TYPE_ARG234 @SELECT_TYPE_ARG234 @
+#define SELECT_TYPE_ARG5 @SELECT_TYPE_ARG5 @
 #define VERSION "@VERSION@"
 
 #ifndef __cplusplus
-#cmakedefine inline @inline@
+#cmakedefine inline @ inline @
 #endif

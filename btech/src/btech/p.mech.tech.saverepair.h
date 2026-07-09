@@ -12,5 +12,5 @@
 #pragma once
 
 /* mech.tech.saverepair.c */
-void saverepairs(FILE * f);
-void loadrepairs(FILE * f);
+void saverepairs(FILE *f);
+void loadrepairs(FILE *f);

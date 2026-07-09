@@ -18,27 +18,19 @@
 
 #pragma once
 
+#include "btechstats_global.h"
+#include "config.h"
 #include "db.h"
 #include "externs.h"
 #include "interface.h"
-#include "config.h"
 #include "powers.h"
-#include "btechstats_global.h"
 
 #ifdef BTECHSTATS_C
-char *btech_charvaluetype_names[] = {
-    "Char_value",
-    "Char_skill",
-    "Char_advantage",
-    "Char_attribute"
-};
+char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",
+                                     "Char_advantage", "Char_attribute"};
 
-char *btech_charskillflag_names[] = {
-    "Athletic",
-    "Mental",
-    "Physical",
-    "Social"
-};
+char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
+                                     "Social"};
 
 #endif
 
@@ -49,10 +41,10 @@ char *btech_charskillflag_names[] = {
 /* *INDENT-OFF* */
 
 struct char_value {
-    char *name;
-    char type;
-    int flag;
-    int xpthreshold;
+  char *name;
+  char type;
+  int flag;
+  int xpthreshold;
 } char_values[] = {
 
     {"XP", CHAR_VALUE, 0, 0},
@@ -70,7 +62,7 @@ struct char_value {
     {"DamageTaken", CHAR_VALUE, 0, 0},
     {"DamageGiven", CHAR_VALUE, 0, 0},
 
-/* Advantages */
+    /* Advantages */
     {"Ambidextrous", CHAR_ADVANTAGE, CHAR_ADV_BOOL, 0},
     {"Bloodname", CHAR_ADVANTAGE, CHAR_ADV_BOOL, 0},
     {"Combat_Sense", CHAR_ADVANTAGE, CHAR_ADV_BOOL, 0},
@@ -94,14 +86,14 @@ struct char_value {
     {"Speed_Demon", CHAR_ADVANTAGE, CHAR_ADV_BOOL, 0},
     {"Tech_Aptitude", CHAR_ADVANTAGE, CHAR_ADV_BOOL, 0},
 
-/* Attributes */
+    /* Attributes */
     {"Build", CHAR_ATTRIBUTE, 0, 0},
     {"Reflexes", CHAR_ATTRIBUTE, 0, 0},
     {"Intuition", CHAR_ATTRIBUTE, 0, 0},
     {"Learn", CHAR_ATTRIBUTE, 0, 0},
     {"Charisma", CHAR_ATTRIBUTE, 0, 0},
 
-/* Skills themselves */
+    /* Skills themselves */
     {"Acrobatics", CHAR_SKILL, CHAR_ATHLETIC, 50},
     {"Administration", CHAR_SKILL, CHAR_MENTAL, 50},
     {"Alternate_Identity", CHAR_SKILL, CHAR_MENTAL, 50},
@@ -116,24 +108,29 @@ struct char_value {
     {"Cryptography", CHAR_SKILL, CHAR_MENTAL | CAREER_TECH, 50},
     {"Demolitions", CHAR_SKILL, CHAR_MENTAL, 50},
     {"Disguise", CHAR_SKILL, CHAR_MENTAL | CAREER_RECON, 50},
-/*Expanded Piloting Skills */
+    /*Expanded Piloting Skills */
     {"Drive", CHAR_SKILL, CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
     {"Drive-Naval", CHAR_SKILL, CHAR_PHYSICAL, 3000},
-/*End Expand */
+    /*End Expand */
     {"Engineering", CHAR_SKILL, CHAR_MENTAL | CAREER_TECH, 50},
     {"Escape_Artist", CHAR_SKILL, CHAR_PHYSICAL | CAREER_RECON, 50},
     {"Forgery", CHAR_SKILL, CHAR_MENTAL, 50},
     {"Gambling", CHAR_SKILL, CHAR_MENTAL, 50},
 
-/*Standard Gunnery Skills */
-    {"Gunnery-Aerospace", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_AERO, 1000},
-    {"Gunnery-Artillery", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_ARTILLERY, 500},
-    {"Gunnery-Battlemech", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH, 3000},
+    /*Standard Gunnery Skills */
+    {"Gunnery-Aerospace", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_AERO,
+     1000},
+    {"Gunnery-Artillery", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_ARTILLERY,
+     500},
+    {"Gunnery-Battlemech", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH,
+     3000},
     {"Gunnery-BSuit", CHAR_SKILL, SK_XP | CHAR_PHYSICAL, 500},
-    {"Gunnery-Conventional", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
-    {"Gunnery-Spacecraft", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_DROPSHIP, 50},
+    {"Gunnery-Conventional", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY,
+     3000},
+    {"Gunnery-Spacecraft", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_DROPSHIP,
+     50},
     {"Gunnery-Spotting", CHAR_SKILL, CHAR_PHYSICAL | CAREER_ARTILLERY, 50},
-/* Expanded Gunnery Skills*/
+    /* Expanded Gunnery Skills*/
     {"Gunnery-Ballistic", CHAR_SKILL, SK_XP | CHAR_PHYSICAL, 2500},
     {"Gunnery-Flamer", CHAR_SKILL, SK_XP | CHAR_PHYSICAL, 500},
     {"Gunnery-Laser", CHAR_SKILL, SK_XP | CHAR_PHYSICAL, 2500},
@@ -148,19 +145,26 @@ struct char_value {
     {"Negotiation", CHAR_SKILL, CHAR_SOCIAL, 25},
     {"Perception", CHAR_SKILL, CHAR_MENTAL | CAREER_RECON, 150},
 
-    {"Piloting-Aerospace", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_AERO, 2500},
-    {"Piloting-Battlemech", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH, 3000},
+    {"Piloting-Aerospace", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_AERO,
+     2500},
+    {"Piloting-Battlemech", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH,
+     3000},
     {"Piloting-BSuit", CHAR_SKILL, SK_XP | CHAR_ATHLETIC, 3000},
-    {"Piloting-Spacecraft", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_DROPSHIP, 50},
+    {"Piloting-Spacecraft", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_DROPSHIP,
+     50},
 
-/* Added skills for 'expanded' skill sets */
+    /* Added skills for 'expanded' skill sets */
     {"Piloting-Biped", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH, 3000},
-    {"Piloting-Hover", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
-    {"Piloting-Naval", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
+    {"Piloting-Hover", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY,
+     3000},
+    {"Piloting-Naval", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY,
+     3000},
     {"Piloting-Quad", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_BMECH, 3000},
-    {"Piloting-Tracked", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
-    {"Piloting-Wheeled", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY, 3000},
-/* End add */
+    {"Piloting-Tracked", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY,
+     3000},
+    {"Piloting-Wheeled", CHAR_SKILL, SK_XP | CHAR_PHYSICAL | CAREER_CAVALRY,
+     3000},
+    /* End add */
     {"Protocol", CHAR_SKILL, CHAR_SOCIAL, 50},
     {"Quickdraw", CHAR_SKILL, CHAR_PHYSICAL, 50},
     {"Research", CHAR_SKILL, CHAR_MENTAL | CAREER_TECH, 100},
@@ -177,11 +181,15 @@ struct char_value {
     {"Survival", CHAR_SKILL, CHAR_MENTAL, 50},
     {"Swimming", CHAR_SKILL, CHAR_ATHLETIC, 50},
     {"Tactics", CHAR_SKILL, CHAR_MENTAL | CAREER_ACADMISC, 50},
-    {"Technician-Aerospace", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHVEH, 50},
-    {"Technician-Battlemech", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHMECH, 600},
+    {"Technician-Aerospace", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHVEH,
+     50},
+    {"Technician-Battlemech", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHMECH,
+     600},
     {"Technician-Battlesuit", CHAR_SKILL, SK_XP | CHAR_MENTAL, 300},
-    {"Technician-Electronics", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECH, 50},
-    {"Technician-Mechanic", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHVEH, 400},
+    {"Technician-Electronics", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECH,
+     50},
+    {"Technician-Mechanic", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECHVEH,
+     400},
     {"Technician-Weapons", CHAR_SKILL, SK_XP | CHAR_MENTAL | CAREER_TECH, 300},
     {"Technician-Spacecraft", CHAR_SKILL, SK_XP | CHAR_MENTAL, 300},
     {"Throwing_Weapons", CHAR_SKILL, CHAR_PHYSICAL, 50},
@@ -194,58 +202,43 @@ struct char_value {
 
 /* *INDENT-ON* */
 
-#define NUM_CHARVALUES sizeof(char_values)/sizeof(struct char_value)
+#define NUM_CHARVALUES sizeof(char_values) / sizeof(struct char_value)
 
 char *char_values_short[NUM_CHARVALUES];
 
 /*************************************************************************/
 
-char *char_levels[] = {
-    "Green",
-    "Regular",
-    "Veteran",
-    "Elite",
-    "Historical"
-};
+char *char_levels[] = {"Green", "Regular", "Veteran", "Elite", "Historical"};
 
 #define NUM_CHARLEVELS 5
 
-char *char_types[] = {
-    "Inner_Sphere",
-    "Clan_MechWarrior",
-    "Clan_Aerospace",
-    "Clan_Elemental",
-    "Clan_Freebirth",
-    "Clan_Other"
-};
+char *char_types[] = {"Inner_Sphere",   "Clan_MechWarrior", "Clan_Aerospace",
+                      "Clan_Elemental", "Clan_Freebirth",   "Clan_Other"};
 
 #define NUM_CHARTYPES 6
 
-char *char_packages[] = {
-    "None",
-    "Primary_Clan_Warrior",
-    "Secondary_Clan_Warrior",
-    "Secondar_Clan_Pilot",
-    "Clan_Elemental",
-    "Basic_Academy",
-    "Advanced_Academy",
-    "Basic_University",
-    "Advanced_University"
-};
-
+char *char_packages[] = {"None",
+                         "Primary_Clan_Warrior",
+                         "Secondary_Clan_Warrior",
+                         "Secondar_Clan_Pilot",
+                         "Clan_Elemental",
+                         "Basic_Academy",
+                         "Advanced_Academy",
+                         "Basic_University",
+                         "Advanced_University"};
 
 #define NUM_CHARPACKAGES 9
 
-/* 
+/*
     XP is added only if the player is online AND
     the skill is marked SK_XP OR the last xp-gain is 30 seconds or more ago.
  */
 
 typedef struct {
-    dbref dbref;
-    unsigned char values[NUM_CHARVALUES];
-    time_t last_use[NUM_CHARVALUES];
-    int xp[NUM_CHARVALUES];
+  dbref dbref;
+  unsigned char values[NUM_CHARVALUES];
+  time_t last_use[NUM_CHARVALUES];
+  int xp[NUM_CHARVALUES];
 } PSTATS;
 
 #endif

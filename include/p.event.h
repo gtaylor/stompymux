@@ -11,9 +11,11 @@
 
 #pragma once
 
+typedef struct my_event_type MUXEVENT;
+
 /* event.c */
-void muxevent_add(int time, int flags, int type, void (*func) (MUXEVENT *),
-    void *data, void *data2);
+void muxevent_add(int time, int flags, int type, void (*func)(MUXEVENT *),
+                  void *data, void *data2);
 void muxevent_run(void);
 int muxevent_run_by_type(int type);
 int muxevent_last_type(void);
@@ -30,8 +32,8 @@ int muxevent_count_type_data2(int type, void *data);
 int muxevent_count_type_data_data(int type, void *data, void *data2);
 int muxevent_count_data(int type, void *data);
 int muxevent_count_data_data(int type, void *data, void *data2);
-void muxevent_gothru_type_data(int type, void *data, void (*func) (MUXEVENT *));
-void muxevent_gothru_type(int type, void (*func) (MUXEVENT *));
+void muxevent_gothru_type_data(int type, void *data, void (*func)(MUXEVENT *));
+void muxevent_gothru_type(int type, void (*func)(MUXEVENT *));
 int muxevent_last_type_data(int type, void *data);
 int muxevent_first_type_data(int type, void *data);
 long muxevent_count_type_data_firstev(int type, void *data);

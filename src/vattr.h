@@ -6,13 +6,13 @@
  */
 
 #pragma once
-#define VNAME_SIZE	32
+#define VNAME_SIZE 32
 
 typedef struct user_attribute VATTR;
 struct user_attribute {
-    char *name;			/* Name of user attribute */
-    int number;			/* Assigned attribute number */
-    int flags;			/* Attribute flags */
+  char *name; /* Name of user attribute */
+  int number; /* Assigned attribute number */
+  int flags;  /* Attribute flags */
 };
 
 extern void vattr_init(void);

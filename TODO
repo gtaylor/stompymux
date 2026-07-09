@@ -2,6 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Add auto clang-format?
+* Add clang-tidy?
 * Maybe: remove alias/macro system
 * Remove src/patchlevel.h in lieu of build system metadata
 * Is src/myfifo.h still used?

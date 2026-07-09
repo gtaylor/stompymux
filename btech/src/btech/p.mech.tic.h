@@ -12,15 +12,15 @@
 #pragma once
 
 /* mech.tic.c */
-int cleartic_sub_func(MECH * mech, dbref player, int low, int high);
-void cleartic_sub(dbref player, MECH * mech, char *buffer);
-int addtic_sub_func(MECH * mech, dbref player, int low, int high);
-void addtic_sub(dbref player, MECH * mech, char *buffer);
-int deltic_sub_func(MECH * mech, dbref player, int low, int high);
-void deltic_sub(dbref player, MECH * mech, char *buffer);
-int firetic_sub_func(MECH * mech, dbref player, int low, int high);
-void firetic_sub(dbref player, MECH * mech, char *buffer);
-void listtic_sub(dbref player, MECH * mech, char *buffer);
+int cleartic_sub_func(MECH *mech, dbref player, int low, int high);
+void cleartic_sub(dbref player, MECH *mech, char *buffer);
+int addtic_sub_func(MECH *mech, dbref player, int low, int high);
+void addtic_sub(dbref player, MECH *mech, char *buffer);
+int deltic_sub_func(MECH *mech, dbref player, int low, int high);
+void deltic_sub(dbref player, MECH *mech, char *buffer);
+int firetic_sub_func(MECH *mech, dbref player, int low, int high);
+void firetic_sub(dbref player, MECH *mech, char *buffer);
+void listtic_sub(dbref player, MECH *mech, char *buffer);
 void mech_cleartic(dbref player, void *data, char *buffer);
 void mech_addtic(dbref player, void *data, char *buffer);
 void mech_deltic(dbref player, void *data, char *buffer);

@@ -12,21 +12,20 @@
 #pragma once
 
 /* bsuit.c */
-char *GetBSuitName(MECH * mech);
-char *GetLCaseBSuitName(MECH * mech);
-void StartBSuitRecycle(MECH * mech, int time);
-void StopSwarming(MECH * mech, int intentional);
-int CountSwarmers(MECH * mech);
-MECH *findSwarmers(MECH * mech);
-void StopBSuitSwarmers(MAP * map, MECH * mech, int intentional);
-int IsMechSwarmed(MECH * mech);
-int IsMechMounted(MECH * mech);
-void BSuitMirrorSwarmedTarget(MAP * map, MECH * mech);
-int doBSuitCommonChecks(MECH * mech, dbref player);
-int CountBSuitMembers(MECH * mech);
-int FindBSuitTarget(dbref player, MECH * mech, MECH ** target,
-    char *buffer);
-int doJettisonChecks(MECH * mech);
+char *GetBSuitName(MECH *mech);
+char *GetLCaseBSuitName(MECH *mech);
+void StartBSuitRecycle(MECH *mech, int time);
+void StopSwarming(MECH *mech, int intentional);
+int CountSwarmers(MECH *mech);
+MECH *findSwarmers(MECH *mech);
+void StopBSuitSwarmers(MAP *map, MECH *mech, int intentional);
+int IsMechSwarmed(MECH *mech);
+int IsMechMounted(MECH *mech);
+void BSuitMirrorSwarmedTarget(MAP *map, MECH *mech);
+int doBSuitCommonChecks(MECH *mech, dbref player);
+int CountBSuitMembers(MECH *mech);
+int FindBSuitTarget(dbref player, MECH *mech, MECH **target, char *buffer);
+int doJettisonChecks(MECH *mech);
 void bsuit_swarm(dbref player, void *data, char *buffer);
 void bsuit_attackleg(dbref player, void *data, char *buffer);
 void bsuit_hide(dbref player, void *data, char *buffer);

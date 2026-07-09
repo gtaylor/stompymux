@@ -12,14 +12,14 @@
 #pragma once
 
 /* mech.advanced.c */
-void mech_ecm(dbref player, MECH * mech, char *buffer);
-void mech_eccm(dbref player, MECH * mech, char *buffer);
-void mech_perecm(dbref player, MECH * mech, char *buffer);
-void mech_pereccm(dbref player, MECH * mech, char *buffer);
-void mech_angelecm(dbref player, MECH * mech, char *buffer);
-void mech_angeleccm(dbref player, MECH * mech, char *buffer);
-void mech_stinger(dbref player, MECH * mech, char *buffer);
-void mech_slite(dbref player, MECH * mech, char *buffer);
+void mech_ecm(dbref player, MECH *mech, char *buffer);
+void mech_eccm(dbref player, MECH *mech, char *buffer);
+void mech_perecm(dbref player, MECH *mech, char *buffer);
+void mech_pereccm(dbref player, MECH *mech, char *buffer);
+void mech_angelecm(dbref player, MECH *mech, char *buffer);
+void mech_angeleccm(dbref player, MECH *mech, char *buffer);
+void mech_stinger(dbref player, MECH *mech, char *buffer);
+void mech_slite(dbref player, MECH *mech, char *buffer);
 void mech_ams(dbref player, void *data, char *buffer);
 void mech_fliparms(dbref player, void *data, char *buffer);
 void mech_flamerheat(dbref player, void *data, char *buffer);
@@ -51,14 +51,13 @@ void mech_explode(dbref player, void *data, char *buffer);
 void mech_dig(dbref player, void *data, char *buffer);
 void mech_fixturret(dbref player, void *data, char *buffer);
 void mech_disableweap(dbref player, void *data, char *buffer);
-int FindMainWeapon(MECH * mech, int (*callback) (MECH *, int, int, int,
-	int));
-void mech_stealtharmor(dbref player, MECH * mech, char *buffer);
-void mech_nullsig(dbref player, MECH * mech, char *buffer);
-void show_narc_pods(dbref player, MECH * mech, char *buffer);
-void remove_inarc_pods_mech(dbref player, MECH * mech, char *buffer);
-void remove_inarc_pods_tank(dbref player, MECH * mech, char *buffer);
-void mech_auto_turret(dbref player, MECH * mech, char *buffer);
-void mech_usebin(dbref player, MECH * mech, char *buffer);
+int FindMainWeapon(MECH *mech, int (*callback)(MECH *, int, int, int, int));
+void mech_stealtharmor(dbref player, MECH *mech, char *buffer);
+void mech_nullsig(dbref player, MECH *mech, char *buffer);
+void show_narc_pods(dbref player, MECH *mech, char *buffer);
+void remove_inarc_pods_mech(dbref player, MECH *mech, char *buffer);
+void remove_inarc_pods_tank(dbref player, MECH *mech, char *buffer);
+void mech_auto_turret(dbref player, MECH *mech, char *buffer);
+void mech_usebin(dbref player, MECH *mech, char *buffer);
 void mech_safety(dbref player, void *data, char *buffer);
 void mech_mechprefs(dbref player, void *data, char *buffer);

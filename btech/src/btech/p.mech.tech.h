@@ -15,14 +15,12 @@
 int game_lag(void);
 int game_lag_time(int i);
 int player_techtime(dbref player);
-int tech_roll(dbref player, MECH * mech, int diff);
-int tech_weapon_roll(dbref player, MECH * mech, int diff);
+int tech_roll(dbref player, MECH *mech, int diff);
+int tech_weapon_roll(dbref player, MECH *mech, int diff);
 void tech_status(dbref player, time_t dat);
 int tech_addtechtime(dbref player, int time);
-int tech_parsepart_advanced(MECH * mech, char *buffer, int *loc, int *pos,
-    int *extra, int allowrear);
-int tech_parsepart(MECH * mech, char *buffer, int *loc, int *pos,
-    int *extra);
-int tech_parsegun(MECH * mech, char *buffer, int *loc, int *pos,
-    int *brand);
-int figure_latest_tech_event(MECH * mech);
+int tech_parsepart_advanced(MECH *mech, char *buffer, int *loc, int *pos,
+                            int *extra, int allowrear);
+int tech_parsepart(MECH *mech, char *buffer, int *loc, int *pos, int *extra);
+int tech_parsegun(MECH *mech, char *buffer, int *loc, int *pos, int *brand);
+int figure_latest_tech_event(MECH *mech);

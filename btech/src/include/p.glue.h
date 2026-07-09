@@ -14,8 +14,8 @@
 /* glue.c */
 int HandledCommand_sub(dbref player, dbref location, char *command);
 int HandledCommand(dbref player, dbref loc, char *command);
-void mech_remove_from_all_maps(MECH * mech);
-void mech_remove_from_all_maps_except(MECH * mech, int num);
+void mech_remove_from_all_maps(MECH *mech);
+void mech_remove_from_all_maps_except(MECH *mech, int num);
 void zap_unneccessary_hcode(void);
 void LoadSpecialObjects(void);
 void ChangeSpecialObjects(int i);
@@ -38,8 +38,7 @@ void handle_xcode(dbref player, dbref obj, int from, int to);
 void initialize_colorize(void);
 char *colorize(dbref player, char *from);
 void mecha_notify(dbref player, char *msg);
-void mecha_notify_except(dbref loc, dbref player, dbref exception,
-    char *msg);
+void mecha_notify_except(dbref loc, dbref player, dbref exception, char *msg);
 void list_chashstats(dbref player);
 void ResetSpecialObjects(void);
 MAP *getMap(dbref d);

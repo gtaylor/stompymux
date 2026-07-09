@@ -10,14 +10,14 @@
 
 #include <stddef.h>
 
-#include "fiptypes.h"
 #include "errors.h"
+#include "fiptypes.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#define FI_LENGTH_MAX ((size_t)-1)
+#define FI_LENGTH_MAX ((size_t) - 1)
 
 typedef size_t FI_Length; /* FI_LENGTH_MAX must be <= SIZE_MAX, for sanity */
 
@@ -43,8 +43,7 @@ void fi_advance_stream_read_cursor(FI_OctetStream *stream, FI_Length length);
 
 const FI_Octet *fi_get_stream_read_window(FI_OctetStream *stream,
                                           FI_Length length);
-FI_Octet *fi_get_stream_write_window(FI_OctetStream *stream,
-                                     FI_Length length);
+FI_Octet *fi_get_stream_write_window(FI_OctetStream *stream, FI_Length length);
 
 #ifdef __cplusplus
 } /* extern "C" */

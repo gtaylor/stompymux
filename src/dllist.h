@@ -5,16 +5,16 @@
 /* Doubly Linked List Node */
 #pragma once
 typedef struct dllist_node_t {
-    struct dllist_node_t *next, *prev;
-    void *data;
+  struct dllist_node_t *next, *prev;
+  void *data;
 } dllist_node;
 
 /* DLLIST - Doesn't store data just
  * size of list and has pointer to
  * head node and tail node */
 typedef struct dllist_t {
-    struct dllist_node_t *head, *tail;
-    unsigned int size;
+  struct dllist_node_t *head, *tail;
+  unsigned int size;
 } dllist;
 
 /* The various create functions */
@@ -24,11 +24,14 @@ dllist_node *dllist_create_node(void *data);
 /* The different destroy functions
  * destroy_node returns the data */
 int dllist_destroy_list(dllist *ddlist);
-void *dllist_destroy_node(dllist_node *node);   /* Shouldn't include this one but whatever */
+void *dllist_destroy_node(
+    dllist_node *node); /* Shouldn't include this one but whatever */
 
 /* The various insert functions */
-void dllist_insert_after(dllist *dllist, dllist_node *node, dllist_node *newnode);
-void dllist_insert_before(dllist *dllist, dllist_node *node, dllist_node *newnode);
+void dllist_insert_after(dllist *dllist, dllist_node *node,
+                         dllist_node *newnode);
+void dllist_insert_before(dllist *dllist, dllist_node *node,
+                          dllist_node *newnode);
 void dllist_insert_beginning(dllist *dllist, dllist_node *newnode);
 void dllist_insert_end(dllist *dllist, dllist_node *newnode);
 

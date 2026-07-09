@@ -1,14 +1,14 @@
 /*
- * version.c - version information 
+ * version.c - version information
  */
 
 #include "config.h"
 
-#include "db.h"
-#include "mudconf.h"
 #include "alloc.h"
-#include "externs.h"
 #include "command.h"
+#include "db.h"
+#include "externs.h"
+#include "mudconf.h"
 
 #include "version.h"
 
@@ -17,7 +17,7 @@
  */
 
 /*
- * 1.0.0 TinyMUX 
+ * 1.0.0 TinyMUX
  */
 
 /*
@@ -50,9 +50,8 @@
  * * big enough revision to increment the TinyCWRU version #.
  */
 
-void do_version(dbref player, dbref cause, int extra)
-{
-	notify(player, mudstate.version);
+void do_version(dbref player, dbref cause, int extra) {
+  notify(player, mudstate.version);
 }
 
 char *mux_version = PACKAGE_STRING
@@ -67,19 +66,18 @@ char *mux_version = PACKAGE_STRING
 #endif
     ;
 
+void init_version(void) {
+  strlcpy(mudstate.version, mux_version, sizeof(mudstate.version));
 
-void init_version(void)
-{
-    strlcpy(mudstate.version, mux_version, sizeof(mudstate.version));
+  STARTLOG(LOG_ALWAYS, "INI", "START") {
+    log_text((char *)"Starting: ");
+    log_text(mudstate.version);
+    ENDLOG;
+  }
+  STARTLOG(LOG_ALWAYS, "INI", "START") {
+    log_text((char *)"Build date: ");
 
-	STARTLOG(LOG_ALWAYS, "INI", "START") {
-		log_text((char *) "Starting: ");
-		log_text(mudstate.version);
-		ENDLOG;
-	} STARTLOG(LOG_ALWAYS, "INI", "START") {
-		log_text((char *) "Build date: ");
-
-		log_text((char *) MUX_BUILD_DATE);
-		ENDLOG;
-	}
+    log_text((char *)MUX_BUILD_DATE);
+    ENDLOG;
+  }
 }

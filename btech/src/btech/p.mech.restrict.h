@@ -12,7 +12,7 @@
 #pragma once
 
 /* mech.restrict.c */
-void clear_mech_from_LOS(MECH * mech);
+void clear_mech_from_LOS(MECH *mech);
 void mech_Rsetxy(dbref player, void *data, char *buffer);
 void mech_Rsetmapindex(dbref player, void *data, char *buffer);
 void mech_Rsetteam(dbref player, void *data, char *buffer);

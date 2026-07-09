@@ -13,5 +13,4 @@
 
 /* mech.stat.c */
 void init_stat(void);
-void do_show_stat(dbref player, dbref cause, int key, char *arg1,
-    char *arg2);
+void do_show_stat(dbref player, dbref cause, int key, char *arg1, char *arg2);

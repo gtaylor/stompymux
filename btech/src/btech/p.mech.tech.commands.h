@@ -12,23 +12,23 @@
 #pragma once
 
 /* mech.tech.commands.c */
-int SomeoneRepairing_s(MECH * mech, int loc, int part, int t);
-int SomeoneRepairing(MECH * mech, int loc, int part);
-int SomeoneReplacingSuit(MECH * mech, int loc);
-int SomeoneFixingA(MECH * mech, int loc);
-int SomeoneFixingI(MECH * mech, int loc);
-int SomeoneFixing(MECH * mech, int loc);
-int SomeoneAttaching(MECH * mech, int loc);
-int SomeoneResealing(MECH * mech, int loc);
-int SomeoneScrappingLoc(MECH * mech, int loc);
-int SomeoneScrappingPart(MECH * mech, int loc, int part);
-int CanScrapLoc(MECH * mech, int loc);
-int CanScrapPart(MECH * mech, int loc, int part);
-int ValidGunPos(MECH * mech, int loc, int pos);
+int SomeoneRepairing_s(MECH *mech, int loc, int part, int t);
+int SomeoneRepairing(MECH *mech, int loc, int part);
+int SomeoneReplacingSuit(MECH *mech, int loc);
+int SomeoneFixingA(MECH *mech, int loc);
+int SomeoneFixingI(MECH *mech, int loc);
+int SomeoneFixing(MECH *mech, int loc);
+int SomeoneAttaching(MECH *mech, int loc);
+int SomeoneResealing(MECH *mech, int loc);
+int SomeoneScrappingLoc(MECH *mech, int loc);
+int SomeoneScrappingPart(MECH *mech, int loc, int part);
+int CanScrapLoc(MECH *mech, int loc);
+int CanScrapPart(MECH *mech, int loc, int part);
+int ValidGunPos(MECH *mech, int loc, int pos);
 void tech_checkstatus(dbref player, void *data, char *buffer);
 void tech_removegun(dbref player, void *data, char *buffer);
 void tech_removepart(dbref player, void *data, char *buffer);
-int Invalid_Scrap_Path(MECH * mech, int loc);
+int Invalid_Scrap_Path(MECH *mech, int loc);
 void tech_removesection(dbref player, void *data, char *buffer);
 void tech_replacegun(dbref player, void *data, char *buffer);
 void tech_repairgun(dbref player, void *data, char *buffer);
@@ -40,8 +40,8 @@ void tech_reload(dbref player, void *data, char *buffer);
 void tech_unload(dbref player, void *data, char *buffer);
 void tech_fixarmor(dbref player, void *data, char *buffer);
 void tech_fixinternal(dbref player, void *data, char *buffer);
-int Invalid_Repair_Path(MECH * mech, int loc);
-int unit_is_fixable(MECH * mech);
+int Invalid_Repair_Path(MECH *mech, int loc);
+int unit_is_fixable(MECH *mech);
 void tech_reattach(dbref player, void *data, char *buffer);
 void tech_reseal(dbref player, void *data, char *buffer);
 void tech_magic(dbref player, void *data, char *buffer);

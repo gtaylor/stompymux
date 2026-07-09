@@ -6,17 +6,17 @@
 #pragma once
 
 struct commac {
-    dbref who;
+  dbref who;
 
-    int numchannels;
-    int maxchannels;
-    char *alias;
-    char **channels;
+  int numchannels;
+  int maxchannels;
+  char *alias;
+  char **channels;
 
-    int curmac;
-    int macros[5];
+  int curmac;
+  int macros[5];
 
-    struct commac *next;
+  struct commac *next;
 };
 
 #define NUM_COMMAC 500

@@ -12,9 +12,9 @@
 #pragma once
 
 /* mech.tech.damages.c */
-void make_scrap_table(MECH * mech);
-void make_damage_table(MECH * mech);
-int is_under_repair(MECH * mech, int i);
-char *damages_func(MECH * mech);
+void make_scrap_table(MECH *mech);
+void make_damage_table(MECH *mech);
+int is_under_repair(MECH *mech, int i);
+char *damages_func(MECH *mech);
 void show_mechs_damage(dbref player, void *data, char *buffer);
 void tech_fix(dbref player, void *data, char *buffer);

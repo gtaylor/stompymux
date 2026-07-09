@@ -6,7 +6,7 @@
  *
  *  Copyright (c) 1997 Markus Stenberg
  *  Copyright (c) 1998-2002 Thomas Wouters
- *  Copyright (c) 2000-2002 Cord Awtry 
+ *  Copyright (c) 2000-2002 Cord Awtry
  *       All rights reserved
  *
  * Created: Mon Jan  6 15:59:37 1997 fingon
@@ -16,14 +16,16 @@
 
 #pragma once
 
+#include "config.h"
+
 typedef struct {
-    char *name;
-    int aff;
-    int type;			/* 0 = standard, 1 = inferno, 2 = cluster */
-    int weight;
+  char *name;
+  int aff;
+  int type; /* 0 = standard, 1 = inferno, 2 = cluster */
+  int weight;
 } BOMBINFO;
 
 typedef struct {
-    int x, y, type;
-    MAP *map;
+  int x, y, type;
+  MAP *map;
 } bomb_shot;

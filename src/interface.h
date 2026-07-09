@@ -3,19 +3,18 @@
 
 /* $Id: interface.h,v 1.7 2005/08/08 10:30:11 murrayma Exp $ */
 
-
 #pragma once
 
-#include "db.h"
-#include "rbtab.h"
 #include "alloc.h"
 #include "config.h"
+#include "db.h"
+#include "rbtab.h"
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
@@ -23,95 +22,95 @@
 
 /* these symbols must be defined by the interface */
 
-extern int shutdown_flag;	/* if non-zero, interface should shut down */
+extern int shutdown_flag; /* if non-zero, interface should shut down */
 
 /* Disconnection reason codes */
 
-#define	R_QUIT		1	/* User quit */
-#define	R_TIMEOUT	2	/* Inactivity timeout */
-#define	R_BOOT		3	/* Victim of @boot, @toad, or @destroy */
-#define	R_SOCKDIED	4	/* Other end of socked closed it */
-#define	R_GOING_DOWN	5	/* Game is going down */
-#define	R_BADLOGIN	6	/* Too many failed login attempts */
-#define	R_GAMEDOWN	7	/* Not admitting users now */
-#define	R_LOGOUT	8	/* Logged out w/o disconnecting */
-#define R_GAMEFULL	9	/* Too many players logged in */
+#define R_QUIT 1       /* User quit */
+#define R_TIMEOUT 2    /* Inactivity timeout */
+#define R_BOOT 3       /* Victim of @boot, @toad, or @destroy */
+#define R_SOCKDIED 4   /* Other end of socked closed it */
+#define R_GOING_DOWN 5 /* Game is going down */
+#define R_BADLOGIN 6   /* Too many failed login attempts */
+#define R_GAMEDOWN 7   /* Not admitting users now */
+#define R_LOGOUT 8     /* Logged out w/o disconnecting */
+#define R_GAMEFULL 9   /* Too many players logged in */
 
 /* Logged out command tabel definitions */
 
-#define CMD_QUIT	1
-#define CMD_WHO		2
-#define CMD_DOING	3
-#define CMD_PREFIX	5
-#define CMD_SUFFIX	6
-#define CMD_LOGOUT	7
-#define CMD_SESSION	8
+#define CMD_QUIT 1
+#define CMD_WHO 2
+#define CMD_DOING 3
+#define CMD_PREFIX 5
+#define CMD_SUFFIX 6
+#define CMD_LOGOUT 7
+#define CMD_SESSION 8
 
-#define CMD_MASK	0xff
-#define CMD_NOxFIX	0x100
+#define CMD_MASK 0xff
+#define CMD_NOxFIX 0x100
 
 extern NAMETAB logout_cmdtable[];
 
 typedef struct cmd_block CBLK;
 
 struct cmd_block {
-	struct cmd_block *nxt;
-    char cmd[LBUF_SIZE - sizeof(struct cmd_block *)];
+  struct cmd_block *nxt;
+  char cmd[LBUF_SIZE - sizeof(struct cmd_block *)];
 };
 
 typedef struct prog_data PROG;
 struct prog_data {
-    dbref wait_cause;
-    char *wait_regs[MAX_GLOBAL_REGS];
+  dbref wait_cause;
+  char *wait_regs[MAX_GLOBAL_REGS];
 };
 
 #define DOINGLEN 45
 
 typedef struct descriptor_data DESC;
 struct descriptor_data {
-    int descriptor;
-    int flags;
-    int retries_left;
-    int command_count;
-    int timeout;
-    int host_info;
-    char addr[256];
-    char username[11];
-    char doing[DOINGLEN];
-    dbref player;
-    char *output_prefix;
-    char *output_suffix;
-    int output_size;
-    int output_tot;
-    int output_lost;
-    int input_size;
-    int input_tot;
-    int input_lost;
-    int chokes;
-    char input[LBUF_SIZE];
-    int input_tail;
-    time_t connected_at;
-    time_t last_time;
-    int quota;
-    int refcount;
-    int wait_for_input;		/* Used by @prog */
-    dbref wait_cause;		/* Used by @prog */
-    PROG *program_data;
-    struct sockaddr_storage saddr;	/* added 3/6/90 SCG */
-    int saddr_len;
-    void *outstanding_dnschild_query;
-    struct descriptor_data *hashnext;
-    struct descriptor_data *next;
-    struct descriptor_data *prev;
-    struct event sock_ev;
-    struct bufferevent *sock_buff;
+  int descriptor;
+  int flags;
+  int retries_left;
+  int command_count;
+  int timeout;
+  int host_info;
+  char addr[256];
+  char username[11];
+  char doing[DOINGLEN];
+  dbref player;
+  char *output_prefix;
+  char *output_suffix;
+  int output_size;
+  int output_tot;
+  int output_lost;
+  int input_size;
+  int input_tot;
+  int input_lost;
+  int chokes;
+  char input[LBUF_SIZE];
+  int input_tail;
+  time_t connected_at;
+  time_t last_time;
+  int quota;
+  int refcount;
+  int wait_for_input; /* Used by @prog */
+  dbref wait_cause;   /* Used by @prog */
+  PROG *program_data;
+  struct sockaddr_storage saddr; /* added 3/6/90 SCG */
+  int saddr_len;
+  void *outstanding_dnschild_query;
+  struct descriptor_data *hashnext;
+  struct descriptor_data *next;
+  struct descriptor_data *prev;
+  struct event sock_ev;
+  struct bufferevent *sock_buff;
 };
 
 /* flags in the flag field */
-#define	DS_CONNECTED	0x0001	/* player is connected */
-#define	DS_AUTODARK	0x0002	/* Wizard was auto set dark. */
-#define DS_IDENTIFIED   0x0008
-#define DS_DEAD     0x10000000 /* Socket has disconnected, ignore. */
+#define DS_CONNECTED 0x0001 /* player is connected */
+#define DS_AUTODARK 0x0002  /* Wizard was auto set dark. */
+#define DS_IDENTIFIED 0x0008
+#define DS_DEAD 0x10000000 /* Socket has disconnected, ignore. */
 
 extern DESC *descriptor_list;
 
@@ -151,29 +150,25 @@ extern dbref find_connected_name(dbref, char *);
 
 /* From predicates.c */
 
-#define DESC_ITER_PLAYER(p,d) \
-	for (d=(DESC *)rb_find(mudstate.desctree, (void *)p);d;d=d->hashnext)
+#define DESC_ITER_PLAYER(p, d)                                                 \
+  for (d = (DESC *)rb_find(mudstate.desctree, (void *)p); d; d = d->hashnext)
 
-#define DESC_ITER_CONN(d) \
-	for (d=descriptor_list;(d);d=(d)->next) \
-		if ((d)->flags & DS_CONNECTED)
+#define DESC_ITER_CONN(d)                                                      \
+  for (d = descriptor_list; (d); d = (d)->next)                                \
+    if ((d)->flags & DS_CONNECTED)
 
-#define DESC_ITER_ALL(d) \
-	for (d=descriptor_list;(d);d=(d)->next)
+#define DESC_ITER_ALL(d) for (d = descriptor_list; (d); d = (d)->next)
 
-#define DESC_SAFEITER_PLAYER(p,d,n) \
-	for (d=(DESC *)rb_find(mudstate.desctree, (void *)p), \
-        	n=((d!=NULL) ? d->hashnext : NULL); \
-	     d; \
-	     d=n,n=((n!=NULL) ? n->hashnext : NULL))
+#define DESC_SAFEITER_PLAYER(p, d, n)                                          \
+  for (d = (DESC *)rb_find(mudstate.desctree, (void *)p),                      \
+      n = ((d != NULL) ? d->hashnext : NULL);                                  \
+       d; d = n, n = ((n != NULL) ? n->hashnext : NULL))
 
-#define DESC_SAFEITER_CONN(d,n) \
-	for (d=descriptor_list,n=((d!=NULL) ? d->next : NULL); \
-	     d; \
-	     d=n,n=((n!=NULL) ? n->next : NULL)) \
-		if ((d)->flags & DS_CONNECTED)
+#define DESC_SAFEITER_CONN(d, n)                                               \
+  for (d = descriptor_list, n = ((d != NULL) ? d->next : NULL); d;             \
+       d = n, n = ((n != NULL) ? n->next : NULL))                              \
+    if ((d)->flags & DS_CONNECTED)
 
-#define DESC_SAFEITER_ALL(d,n) \
-	for (d=descriptor_list,n=((d!=NULL) ? d->next : NULL); \
-	     d; \
-	     d=n,n=((n!=NULL) ? n->next : NULL))
+#define DESC_SAFEITER_ALL(d, n)                                                \
+  for (d = descriptor_list, n = ((d != NULL) ? d->next : NULL); d;             \
+       d = n, n = ((n != NULL) ? n->next : NULL))

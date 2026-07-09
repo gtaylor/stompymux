@@ -10,14 +10,12 @@
 namespace BTech {
 namespace FI {
 
-class Exception : public std::exception {
-}; // Exception
+class Exception : public std::exception {}; // Exception
 
 class AssertionFailureException : public Exception {
 }; // AssertionFailureException
 
-class OutOfMemoryException : public Exception {
-}; // OutOfMemoryException
+class OutOfMemoryException : public Exception {}; // OutOfMemoryException
 
 class IndexOutOfBoundsException : public Exception {
 }; // IndexOutOfBoundsException
@@ -25,14 +23,12 @@ class IndexOutOfBoundsException : public Exception {
 class InvalidArgumentException : public Exception {
 }; // InvalidArgumentException
 
-class IllegalStateException : public Exception {
-}; // IllegalStateException
+class IllegalStateException : public Exception {}; // IllegalStateException
 
 class UnsupportedOperationException : public Exception {
 }; // UnsupportedOperationException
 
-class IOException : public Exception {
-}; // IOException
+class IOException : public Exception {}; // IOException
 
 } // namespace FI
 } // namespace BTech

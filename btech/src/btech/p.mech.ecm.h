@@ -12,5 +12,5 @@
 #pragma once
 
 /* mech.ecm.c */
-void sendECMNotification(MECH * objMech, int wMsgType);
-void checkECM(MECH * objMech);
+void sendECMNotification(MECH *objMech, int wMsgType);
+void checkECM(MECH *objMech);

@@ -17,18 +17,16 @@
  * for rows) */
 
 typedef struct {
-    int *coords;
-    int coordcount;
-    int iterations;
-    int score;
+  int *coords;
+  int coordcount;
+  int iterations;
+  int score;
 } SPATHRESULT;
 
-void FreePath(SPATHRESULT * res);
+void FreePath(SPATHRESULT *res);
 SPATHRESULT *CalculatePath(int x1, int y1, int x2, int y2, int errper);
 
-
 #ifdef _SPATH_C
-
 
 #ifdef HEX_BASED
 #define NBCOUNT 6
@@ -37,16 +35,15 @@ SPATHRESULT *CalculatePath(int x1, int y1, int x2, int y2, int errper);
 #endif
 
 typedef struct NODETYPE {
-    int x, y;
-    int f, h, g;
-    int NodeNum;
-    struct NODETYPE *Parent;
-    struct NODETYPE *Child[NBCOUNT];	/* a node may have upto NBC children. */
-    struct NODETYPE *next;	/* for filing purposes */
+  int x, y;
+  int f, h, g;
+  int NodeNum;
+  struct NODETYPE *Parent;
+  struct NODETYPE *Child[NBCOUNT]; /* a node may have upto NBC children. */
+  struct NODETYPE *next;           /* for filing purposes */
 } NODE;
 
-
-#define TileNum(x,y) ((x) + ((y) << 16))
+#define TileNum(x, y) ((x) + ((y) << 16))
 
 /**************************************************************************/
 
@@ -54,8 +51,8 @@ typedef struct NODETYPE {
 
 /**************************************************************************/
 typedef struct STACKTYPE {
-    NODE *Node;
-    struct STACKTYPE *Next;
+  NODE *Node;
+  struct STACKTYPE *Next;
 } MYSTACK;
 
 #endif

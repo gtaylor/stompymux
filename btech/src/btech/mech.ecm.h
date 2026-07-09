@@ -17,10 +17,10 @@
 #pragma once
 
 /* mech.ecm.c */
-void cause_ecm(MECH * from, MECH * to);
-void end_ecm_check(MECH * mech);
+void cause_ecm(MECH *from, MECH *to);
+void end_ecm_check(MECH *mech);
 
-#define ECM_NOTIFY_DISTURBED		0
-#define ECM_NOTIFY_UNDISTURBED	1
-#define ECM_NOTIFY_COUNTERED		2
-#define ECM_NOTIFY_UNCOUNTERED	3
+#define ECM_NOTIFY_DISTURBED 0
+#define ECM_NOTIFY_UNDISTURBED 1
+#define ECM_NOTIFY_COUNTERED 2
+#define ECM_NOTIFY_UNCOUNTERED 3

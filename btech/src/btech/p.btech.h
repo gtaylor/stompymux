@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "config.h"
+
 /* btech.c */
 void list_fhashstats(dbref player);
 void do_show(dbref player, dbref cause, int key, char *arg1, char *arg2);
