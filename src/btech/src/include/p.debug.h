@@ -14,7 +14,6 @@
 /* debug.c */
 void debug_list(dbref player, void *data, char *buffer);
 void debug_savedb(dbref player, void *data, char *buffer);
-void debug_loaddb(dbref player, void *data, char *buffer);
 void debug_memory(dbref player, void *data, char *buffer);
 void ShutDownMap(dbref player, dbref mapnumber);
 void debug_shutdown(dbref player, void *data, char *buffer);

@@ -44,14 +44,6 @@
 /btech/stamp-h1
 /btech/Makefile
 
-# /btech/btfi/
-/btech/btfi/Makefile
-/btech/btfi/.deps
-/btech/btfi/.libs
-/btech/btfi/saxtest
-/btech/btfi/vocabtest
-/btech/btfi/*.test
-
 # /btech/btpr/
 /btech/btpr/Makefile
 /btech/btpr/.deps

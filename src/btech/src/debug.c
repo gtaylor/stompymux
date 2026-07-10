@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "autopilot.h"
 #include "config.h"
+#include "db.h"
 #include "muxevent/muxevent_alloc.h"
 #include "externs.h"
 #include "glue.h"
@@ -17,6 +18,7 @@
 #include "p.map.obj.h"
 #include "p.mech.partnames.h"
 #include "p.mech.startup.h"
+#include "persistence/gamedb.h"
 #include "rbtree.h"
 
 void debug_list(dbref player, void *data, char *buffer) {
@@ -34,15 +36,10 @@ void debug_list(dbref player, void *data, char *buffer) {
 }
 
 void debug_savedb(dbref player, void *data, char *buffer) {
-  notify(player, "--- Saving ---");
-  SaveSpecialObjects(DUMP_NORMAL);
-  notify(player, "---  Done  ---");
-}
-
-void debug_loaddb(dbref player, void *data, char *buffer) {
-  notify(player, "--- Loading ---");
-  LoadSpecialObjects();
-  notify(player, "---  Done   ---");
+  if (gamedb_dump(DUMP_NORMAL) < 0)
+    notify(player, "SQLite checkpoint failed; the previous snapshot remains available.");
+  else
+    notify(player, "SQLite checkpoint complete.");
 }
 
 static int *number;

@@ -2,9 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Remove junk from version info.
 * Start breaking up src/ into system subdirs. Maybe db to start.
-* Maybe: remove alias/macro system
-* Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
 * Maybe: remove all powers. wiz bit is enough
 * Write tests

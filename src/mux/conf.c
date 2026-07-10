@@ -63,7 +63,6 @@ void cf_init(void) {
   int i;
 
   StringCopy(mudconf.gamedb, "");
-  StringCopy(mudconf.hcode_db, "hcode.db");
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
   StringCopy(mudconf.status_file, "shutdown.status");
@@ -1168,8 +1167,6 @@ CONF conftable[] = {
     {(char *)"have_comsys", cf_bool, CA_DISABLED, &mudconf.have_comsys, 0},
     {(char *)"have_macros", cf_bool, CA_DISABLED, &mudconf.have_macros, 0},
     {(char *)"have_zones", cf_bool, CA_DISABLED, &mudconf.have_zones, 0},
-    {(char *)"hcode_database", cf_string, CA_GOD, (void *)mudconf.hcode_db,
-     128},
     {(char *)"help_file", cf_string, CA_DISABLED, (void *)mudconf.help_file,
      32},
     {(char *)"help_index", cf_string, CA_DISABLED, (void *)mudconf.help_indx,

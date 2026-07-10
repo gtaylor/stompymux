@@ -19,7 +19,7 @@ include(CheckSymbolExists)
 include(CheckTypeSize)
 include(GNUInstallDirs)
 
-enable_testing()
+include(CTest)
 
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
@@ -201,27 +201,6 @@ if(BTMUX_ENABLE_ASAN)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
 endif()
 
-set(BTFI_SOURCES
-  ${BTECH_SOURCE_DIR}/btfi/sax.cc
-  ${BTECH_SOURCE_DIR}/btfi/Codec.cc
-  ${BTECH_SOURCE_DIR}/btfi/Document.cc
-  ${BTECH_SOURCE_DIR}/btfi/Element.cc
-  ${BTECH_SOURCE_DIR}/btfi/Name.cc
-  ${BTECH_SOURCE_DIR}/btfi/Value.cc
-  ${BTECH_SOURCE_DIR}/btfi/MutableAttributes.cc
-  ${BTECH_SOURCE_DIR}/btfi/Vocabulary.cc
-  ${BTECH_SOURCE_DIR}/btfi/VocabSimple.cc
-  ${BTECH_SOURCE_DIR}/btfi/encalg.c
-  ${BTECH_SOURCE_DIR}/btfi/stream.c
-  ${BTECH_SOURCE_DIR}/btfi/errors.c)
-
-add_library(btfi STATIC ${BTFI_SOURCES})
-target_link_libraries(btfi PRIVATE btmux_options)
-target_include_directories(btfi PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
-
 set(BTECH_SOURCES
   ${BTECH_SOURCE_DIR}/persistence/btech_persistence_sqlite.c
   ${BTECH_SOURCE_DIR}/src/coolmenu.c
@@ -230,8 +209,6 @@ set(BTECH_SOURCES
   ${BTECH_SOURCE_DIR}/src/glue.hcode.c
   ${BTECH_SOURCE_DIR}/src/glue.c
   ${BTECH_SOURCE_DIR}/src/glue.scode.c
-  ${BTECH_SOURCE_DIR}/src/btdb.c
-  ${BTECH_SOURCE_DIR}/src/xcode_io.c
   ${BTECH_SOURCE_DIR}/src/mech.lostracer.c
   ${BTECH_SOURCE_DIR}/src/mechfile.c
   ${BTECH_SOURCE_DIR}/src/spath.c
@@ -307,7 +284,6 @@ set(BTECH_SOURCES
   ${BTECH_SOURCE_DIR}/src/btech/mech.tech.events.c
   ${BTECH_SOURCE_DIR}/src/btech/mech.tech.c
   ${BTECH_SOURCE_DIR}/src/btech/mech.tech.repairs.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.saverepair.c
   ${BTECH_SOURCE_DIR}/src/btech/mech.tic.c
   ${BTECH_SOURCE_DIR}/src/btech/mech.update.c
   ${BTECH_SOURCE_DIR}/src/btech/mech.utils.c
@@ -317,7 +293,10 @@ set(BTECH_SOURCES
   ${BTECH_SOURCE_DIR}/src/btech/template.c)
 
 add_library(btech STATIC ${BTECH_SOURCES})
-target_link_libraries(btech PRIVATE btmux_options btfi)
+target_link_libraries(btech PRIVATE btmux_options)
+if(BUILD_TESTING)
+  target_compile_definitions(btech PRIVATE BTMUX_PERSISTENCE_TESTING=1)
+endif()
 target_include_directories(btech PRIVATE
   "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
@@ -325,7 +304,6 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
   ${MYFIFO_SOURCE_DIR}/myfifo.c
@@ -387,7 +365,7 @@ add_executable(netmux ${NETMUX_SOURCES})
 set_target_properties(netmux PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" SQLite3::SQLite3 ${BTMUX_PLATFORM_LIBS})
+target_link_libraries(netmux PRIVATE btmux_options btech "${EVENT_LIBRARY}" SQLite3::SQLite3 ${BTMUX_PLATFORM_LIBS})
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
@@ -405,41 +383,16 @@ target_include_directories(mkindx PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 
-add_executable(saxtest
-  ${BTECH_SOURCE_DIR}/btfi/tests/saxtest.cc
-  ${BTECH_SOURCE_DIR}/btfi/tests/saxwrite.c
-  ${BTECH_SOURCE_DIR}/btfi/tests/saxread.c)
-target_link_libraries(saxtest PRIVATE btmux_options btfi)
-target_include_directories(saxtest PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
-
-add_executable(vocabtest ${BTECH_SOURCE_DIR}/btfi/tests/vocabtest.cc)
-target_link_libraries(vocabtest PRIVATE btmux_options btfi)
-target_include_directories(vocabtest PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi/tests")
-configure_file(
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/tests/thirdparty.finf"
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi/tests/thirdparty.finf"
-  COPYONLY)
-
-add_test(NAME saxtest COMMAND saxtest)
-set_tests_properties(saxtest PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi")
-add_test(NAME vocabtest COMMAND vocabtest)
-
-add_executable(gamedb_integration_test tests/gamedb_integration.c)
-target_link_libraries(gamedb_integration_test PRIVATE SQLite3::SQLite3)
-if(BTMUX_ADVANCED_ECON)
-  target_compile_definitions(gamedb_integration_test
-    PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
+if(BUILD_TESTING)
+  add_executable(gamedb_integration_test tests/gamedb_integration.c)
+  target_link_libraries(gamedb_integration_test PRIVATE SQLite3::SQLite3)
+  if(BTMUX_ADVANCED_ECON)
+    target_compile_definitions(gamedb_integration_test
+      PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
+  endif()
+  add_test(NAME gamedb_integration
+    COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
 endif()
-add_test(NAME gamedb_integration
-  COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS btech ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

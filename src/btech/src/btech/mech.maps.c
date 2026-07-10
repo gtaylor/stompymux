@@ -1488,17 +1488,20 @@ char **MakeMapText(dbref player, MECH *mech, MAP *map, int cx, int cy, int wx,
 
     for (y = 0; y < wy; y++) {
       int label = sy + y;
+      size_t row_offset;
+      size_t right_label_offset;
 
-      base = sketch_buf + (top_offset + 1 + y * 2) * dispcols;
+      row_offset = (size_t)(top_offset + 1 + y * 2) * (size_t)dispcols;
+      right_label_offset = row_offset + (size_t)(dispcols - RIGHT_LABEL - 1);
+      base = sketch_buf + row_offset;
       if (label < 0 || label > 999) {
         continue;
       }
 
-      snprintf(base, sizeof(sketch_buf) - (top_offset + 1 + y * 2) * dispcols,
-               "%3d", label);
+      snprintf(base, sizeof(sketch_buf) - row_offset, "%3d", label);
       base[3] = ' ';
-      snprintf(base + (dispcols - RIGHT_LABEL - 1),
-               sizeof(sketch_buf) - (dispcols - RIGHT_LABEL - 1), "%3d", label);
+      snprintf(sketch_buf + right_label_offset,
+               sizeof(sketch_buf) - right_label_offset, "%3d", label);
     }
   }
 

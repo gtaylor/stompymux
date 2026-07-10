@@ -9,9 +9,7 @@
  */
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
 
 #include "muxevent/muxevent_alloc.h"
 #include "mech.events.h"
@@ -28,36 +26,9 @@ static char *map_types[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
 
 mapobj *free_mapobjs = NULL;
 
-#define MAPOBJSTART_MAGICNUM 27
-#define MAPOBJEND_MAGICNUM 39
-
 mapobj *next_mapobj(mapobj *m) { return m->next; }
 
 mapobj *first_mapobj(MAP *map, int type) { return map->mapobj[type]; }
-
-void save_mapobjs(FILE *f, MAP *map) {
-#define outbyte(a)                                                             \
-  tmpb = (a);                                                                  \
-  fwrite(&tmpb, 1, 1, f);
-  int i;
-  unsigned char tmpb;
-  mapobj *tmp;
-
-  outbyte(MAPOBJSTART_MAGICNUM);
-  for (i = 0; i < NUM_MAPOBJTYPES; i++)
-    if (map->mapobj[i]) {
-      if (i == TYPE_BITS) {
-        tmp = map->mapobj[i];
-        map_save_bits(f, map, tmp);
-      } else
-        for (tmp = map->mapobj[i]; tmp; tmp = tmp->next) {
-          outbyte(i + 1);
-          fwrite(tmp, sizeof(mapobj), 1, f);
-        }
-    }
-  outbyte(0);
-  outbyte(MAPOBJEND_MAGICNUM);
-}
 
 int find_entrance(MAP *map, char dir, int *x, int *y) {
   mapobj *tmp;
@@ -522,51 +493,6 @@ void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo) {
                tmpo);
     }
   }
-}
-
-void load_mapobjs(FILE *f, MAP *map) {
-  unsigned char tmpb;
-  int i;
-  mapobj tmp;
-
-  if (fread(&tmpb, 1, 1, f) != 1) {
-    fprintf(stderr, "Error: Could not read mapobjstart!");
-    return;
-  }
-  if (tmpb != MAPOBJSTART_MAGICNUM) {
-    fprintf(stderr, "Error: No mapobjstart found!");
-    return;
-  }
-  /* Clean out */
-  for (i = 0; i < NUM_MAPOBJTYPES; i++)
-    map->mapobj[i] = NULL;
-  if (fread(&tmpb, 1, 1, f) != 1) {
-    fprintf(stderr, "Error: Could not read mapobj type!");
-    return;
-  }
-  while (tmpb) {
-    if ((tmpb - 1) == TYPE_BITS)
-      map_load_bits(f, map);
-    else {
-      if (fread(&tmp, sizeof(mapobj), 1, f) != 1) {
-        fprintf(stderr, "Error: Could not read mapobj!");
-        return;
-      }
-      add_mapobj(map, &map->mapobj[tmpb - 1], &tmp, 0);
-      if ((tmpb - 1) == TYPE_BUILD)
-        possibly_start_building_regen(tmp.obj);
-    }
-    if (fread(&tmpb, 1, 1, f) != 1) {
-      fprintf(stderr, "Error: Could not read mapobj type!");
-      return;
-    }
-  }
-  if (fread(&tmpb, 1, 1, f) != 1) {
-    fprintf(stderr, "Error: Could not read mapobjend!");
-    return;
-  }
-  if (tmpb != MAPOBJEND_MAGICNUM)
-    fprintf(stderr, "Error: No mapobjend found!");
 }
 
 void list_mapobjs(dbref player, MAP *map) {

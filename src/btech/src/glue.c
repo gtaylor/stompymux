@@ -19,8 +19,8 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/file.h>
 
 #define FAST_WHICHSPECIAL
 
@@ -36,6 +36,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "persistence/btech_persistence.h"
 #include "mech.tech.h"
 #include "mechrep.h"
 #include "mycool.h"
@@ -47,8 +48,6 @@
 #include "powers.h"
 #include "rbtree.h"
 #include "turret.h"
-
-#include "btdb.h"
 
 /* Special object parameters.  */
 SpecialObjectStruct SpecialObjects[] = {
@@ -331,95 +330,6 @@ static int load_update3(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-static int load_update1(void *key, void *data, int depth, void *arg) {
-  const dbref key_val = (dbref)key;
-  XCODE *const xcode_obj = data;
-  FILE *const fp = arg;
-
-  MAP *map;
-  int doh;
-  char mapbuffer[MBUF_SIZE];
-  MECH *mech;
-  int i;
-  int ctemp;
-
-  switch (xcode_obj->type) {
-  case GTYPE_MAP:
-    map = (MAP *)xcode_obj;
-    memset(map->mapobj, 0, sizeof(map->mapobj));
-    map->map = NULL;
-    strcpy(mapbuffer, map->mapname);
-    doh = (map->flags & MAPFLAG_MAPO);
-    if (strcmp(map->mapname, "Default Map"))
-      map_loadmap(1, map, mapbuffer);
-    if (!strcmp(map->mapname, "Default Map") || !map->map)
-      initialize_map_empty(map, key_val);
-    if (!feof(fp)) {
-      load_mapdynamic(fp, map);
-      if (!feof(fp))
-        if (doh)
-          load_mapobjs(fp, map);
-    }
-    if (feof(fp)) {
-      map->first_free = 0;
-      map->mechflags = NULL;
-      map->mechsOnMap = NULL;
-      map->LOSinfo = NULL;
-    }
-    debug_fixmap(GOD, map, NULL);
-    break;
-
-  case GTYPE_MECH:
-    mech = (MECH *)xcode_obj;
-    if (!(FlyingT(mech) && !Landed(mech))) {
-      MechDesiredSpeed(mech) = 0;
-      MechSpeed(mech) = 0;
-      MechVerticalSpeed(mech) = 0;
-    }
-    ctemp = MechCocoon(mech);
-    if (MechCocoon(mech)) {
-      MechCocoon(mech) = 0;
-      initiate_ood((dbref)GOD, mech,
-                   tprintf("%d %d %d", MechX(mech), MechY(mech), MechZ(mech)));
-      MechCocoon(mech) = ctemp;
-    }
-
-    if (!FlyingT(mech) && Started(mech) && Jumping(mech))
-      mech_Rsetxy(GOD, (void *)mech,
-                  tprintf("%d %d", MechX(mech), MechY(mech)));
-
-    MechStatus(mech) &= ~(BLINDED | UNCONSCIOUS | JUMPING | TOWED);
-    MechSpecials2(mech) &=
-        ~(ECM_ENABLED | ECM_DISTURBANCE | ECM_PROTECTED | ECCM_ENABLED |
-          ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED | ANGEL_ECM_PROTECTED |
-          ANGEL_ECM_DISTURBED);
-    MechCritStatus(mech) &= ~(JELLIED | LOAD_OK | OWEIGHT_OK | SPEED_OK);
-    MechWalkXPFactor(mech) = 999;
-    MechCarrying(mech) = -1;
-    MechBoomStart(mech) = 0;
-    MechC3iNetworkSize(mech) = -1;
-    MechHeatLast(mech) = 0;
-    MechCommLast(mech) = 0;
-    // ClearStaggerDamage
-    mech->rd.staggerDamageList = NULL;
-    if (!(MechXPMod(mech)))
-      MechXPMod(mech) = 1;
-    for (i = 0; i < FREQS; i++)
-      if (mech->freq[i] < 0)
-        mech->freq[i] = 0;
-    break;
-  case GTYPE_DEBUG:
-  case GTYPE_MECHREP:
-  case GTYPE_AUTO:
-  case GTYPE_TURRET:
-  case GTYPE_UNUSED1:
-  default:
-    /* do nothing with these types */
-    break;
-  }
-  return 1;
-}
-
 /*
  * Read in autopilot data
  */
@@ -431,28 +341,33 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
 
     int i;
 
-    /* Save the AI Command List */
-    /* auto_load_commands(f, autopilot); */
-    autopilot->commands = dllist_create_list();
-
-    /* Reset the Astar Path */
-    autopilot->astar_path = NULL;
-
-    /* Reset the weaplist */
+    /* Commands and A* paths are restored before these derived caches. */
     autopilot->weaplist = NULL;
-
-    /* Reset the profile */
     for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
       autopilot->profile[i] = NULL;
     }
-
-    /* Check to see if the AI is in a mech */
-    /* Need to make this better, check if its got a target whatnot */
 
     if (!autopilot->mymechnum ||
         !(autopilot->mymech = getMech(autopilot->mymechnum))) {
       DoStopGun(autopilot);
     } else {
+      /*
+       * Weapon lists and range profiles are caches derived from the restored
+       * MECH definition. Rebuild them instead of persisting cache trees.
+       */
+      auto_update_profile_event(autopilot);
+
+      /*
+       * MUX event nodes are runtime-only. An autopilot that was engaged at
+       * checkpoint time is identified by the durable MECH->AUTO link and by
+       * the AUTO object being inside that MECH. Requeue its dispatcher from
+       * the durable command list; it recreates goal-specific events itself.
+       */
+      if (MechAuto(autopilot->mymech) == autopilot->mynum &&
+          Location(autopilot->mynum) == autopilot->mymechnum &&
+          autopilot->commands && dllist_size(autopilot->commands) > 0 &&
+          !muxevent_count_type_data(EVENT_AUTOCOM, autopilot))
+        AUTO_COM(autopilot, AUTOPILOT_NC_DELAY);
       if (Gunning(autopilot))
         DoStartGun(autopilot);
     }
@@ -461,91 +376,7 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-static size_t get_specialobjectsize(GlueType type) {
-  if (type < 0 || type >= NUM_SPECIAL_OBJECTS)
-    return -1;
-  return SpecialObjects[type].datasize;
-}
-
 void heartbeat_init();
-
-static void load_xcode(void) {
-  FILE *fp;
-  int xcode_version;
-  int filemode;
-
-  initialize_colorize();
-
-  fprintf(stderr, "LOADING: %s\n", mudconf.hcode_db);
-
-  fp = my_open_file(mudconf.hcode_db, "rb", &filemode);
-  if (!fp) {
-    fprintf(stderr, "ERROR: %s not found.\n", mudconf.hcode_db);
-    return;
-  }
-
-  if (fread(&xcode_version, sizeof(xcode_version), 1, fp) != 1) {
-    fprintf(stderr,
-            "LOADING: %s (skipped xcodetree - could not read version)\n",
-            mudconf.hcode_db);
-    my_close_file(fp, &filemode);
-    return;
-  }
-
-  if (xcode_version != XCODE_MAGIC) {
-    fprintf(stderr,
-            "LOADING: %s (skipped xcodetree - version difference: 0x%08X vs "
-            "0x%08X)\n",
-            mudconf.hcode_db, xcode_version, XCODE_MAGIC);
-    my_close_file(fp, &filemode);
-    return;
-  }
-
-  if (!load_btdb()) {
-    /* TODO: We could be more graceful about this... */
-    exit(EXIT_FAILURE);
-  }
-
-  rb_walk(xcode_tree, WALK_INORDER, load_update1, fp);
-  rb_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
-  rb_walk(xcode_tree, WALK_INORDER, load_update3, NULL);
-  rb_walk(xcode_tree, WALK_INORDER, load_update4, NULL);
-
-  /* Read in autopilot data */
-  rb_walk(xcode_tree, WALK_INORDER, load_autopilot_data, NULL);
-
-  if (!feof(fp))
-    loadrepairs(fp);
-
-  my_close_file(fp, &filemode);
-
-  fprintf(stderr, "LOADING: %s (done)\n", mudconf.hcode_db);
-
-  heartbeat_init();
-}
-
-static long int zappable_node;
-
-static int zap_check(void *key, void *data, int depth, void *arg) {
-  if (zappable_node >= 0)
-    return 0;
-  if (!Hardcode((dbref)key)) {
-    zappable_node = (dbref)key;
-    return 0;
-  }
-  return 1;
-}
-
-void zap_unneccessary_hcode(void) {
-  for (;;) {
-    zappable_node = -1;
-    rb_walk(xcode_tree, WALK_INORDER, zap_check, NULL);
-    if (zappable_node >= 0)
-      rb_delete(xcode_tree, (void *)zappable_node);
-    else
-      break;
-  }
-}
 
 void LoadSpecialObjects(void) {
   dbref i;
@@ -553,13 +384,14 @@ void LoadSpecialObjects(void) {
   int type;
   void *tmpdat;
 
-  init_btdb_state(get_specialobjectsize);
   init_xcode_tree();
 
   muxevent_initialize();
   muxevent_count_initialize();
   init_stat();
   initialize_partname_tables();
+  /* The SQLite startup path still needs ANSI parser state for BTech output. */
+  initialize_colorize();
   for (i = 0; MissileHitTable[i].key != -1; i++) {
     if (find_matching_vlong_part(MissileHitTable[i].name, NULL, &id, &brand))
       MissileHitTable[i].key = Weapon2I(id);
@@ -585,124 +417,21 @@ void LoadSpecialObjects(void) {
       SpecialObjects[i].updateTime = 0;
   }
   init_btechstats();
-  load_xcode();
-  zap_unneccessary_hcode();
-}
-
-static int save_maps_func(void *key, void *data, int depth, void *arg) {
-  XCODE *const xcode_obj = data;
-  FILE *const f = arg;
-
-  if (xcode_obj->type == GTYPE_MAP) {
-    MAP *const map = (MAP *)xcode_obj;
-
-    /* Write mapobjs, if neccessary */
-    save_mapdynamic(f, map);
-    if (map->flags & MAPFLAG_MAPO)
-      save_mapobjs(f, map);
-  }
-
-  return 1;
-}
-
-/*
- * Save any extra info for the autopilots
- *
- * Like their command lists
- * or the Astar path if there is one
- *
- */
-#if 0
-static int
-save_autopilot_data(void *key, void *data, int depth, void *arg)
-{
-	XCODE *const xcode_obj = tmp;
-	FILE *const f = arg;
-
-	if(xcode_obj->type == GTYPE_AUTO) {
-		AUTO *const a = (AUTO *)xcode_obj;
-
-		/* Save the AI Command List */
-		auto_save_commands(f, a);
-
-		/* Save the AI Astar Path */
-	}
-
-	return 1;
-}
-#endif /* not used yet? */
-
-void ChangeSpecialObjects(int i) {
-  /* XXX Unneccessary for now ; 'latest' db
-     (db.new) is equivalent to 'db' because we don't
-     _have_ new-db concept ; this is to-be-done project, however */
-}
-
-void SaveSpecialObjects(int i) {
-  FILE *fp;
-  int filemode;
-  int xcode_version = XCODE_MAGIC;
-  char target[LBUF_SIZE];
-
-  if (!xcode_tree) {
-    /* no xcode_tree means we did not actually load any "special objects"
-     * so lets us just early exit here. This is expected when working with
-     * a new or empty database
-     */
+#ifdef BTMUX_PERSISTENCE_TESTING
+  /* The integration fixture creates its initial SQLite special-state rows. */
+  if (getenv("BTMUX_TEST_BTECH_BOOTSTRAP")) {
+    heartbeat_init();
     return;
   }
-
-  switch (i) {
-  case DUMP_KILLED:
-    snprintf(target, LBUF_SIZE, "%s.KILLED", mudconf.hcode_db);
-    break;
-  case DUMP_CRASHED:
-    snprintf(target, LBUF_SIZE, "%s.CRASHED", mudconf.hcode_db);
-    break;
-  default: /* RESTART / normal */
-    snprintf(target, LBUF_SIZE, "%s.tmp", mudconf.hcode_db);
-    break;
-  }
-
-  if (!save_btdb()) {
-    /* TODO: We could be more graceful about this... */
+#endif
+  if (btech_persistence_load_special_state_path(mudconf.gamedb) < 0) {
     exit(EXIT_FAILURE);
   }
-
-  fp = my_open_file(target, "wb", &filemode);
-  if (!fp) {
-    log_perror("SAV", "FAIL", "Opening new hcode-save file", target);
-    SendDB("ERROR occured during opening of new hcode-savefile.");
-    return;
-  }
-
-  fwrite(&xcode_version, sizeof(xcode_version), 1, fp);
-
-  /* Then, check each xcode thing for stuff */
-  rb_walk(xcode_tree, WALK_INORDER, save_maps_func, fp);
-
-  /* Save autopilot data */
-  /* GoThruTree(xcode_tree, save_autopilot_data); */
-
-  saverepairs(fp);
-
-  my_close_file(fp, &filemode);
-
-  if (i == DUMP_RESTART || i == DUMP_NORMAL) {
-    if (rename(mudconf.hcode_db, tprintf("%s.prev", mudconf.hcode_db)) < 0) {
-      log_perror("SAV", "FAIL", "Renaming old hcode-save file ", target);
-      SendDB("ERROR occured during renaming of old hcode save-file.");
-    }
-
-    if (rename(target, mudconf.hcode_db) < 0) {
-      log_perror("SAV", "FAIL", "Renaming new hcode-save file ", target);
-      SendDB("ERROR occured during renaming of new hcode save-file.");
-    }
-  }
-
-  /* TODO: This used to report the number of entries saved.  */
-  SendDB("Hcode saved.");
-
+  rb_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
+  rb_walk(xcode_tree, WALK_INORDER, load_update3, NULL);
+  rb_walk(xcode_tree, WALK_INORDER, load_update4, NULL);
+  rb_walk(xcode_tree, WALK_INORDER, load_autopilot_data, NULL);
+  heartbeat_init();
 }
 
 static int UpdateSpecialObject_func(void *key, void *data, int depth,
@@ -1364,17 +1093,7 @@ void mecha_notify_except(dbref loc, dbref player, dbref exception, char *msg) {
   }
 }
 
-/*
-   Basically, finish all the repairs etc in one fell swoop. That's the
-   best we can do for now, I'm afraid.
-   */
 void ResetSpecialObjects() {
-#if 0 /* Nowadays no longer neccessary, see mech.tech.saverepair.c */
-	int i;
-
-	for(i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-		while (muxevent_run_by_type(i));
-#endif
   muxevent_run_by_type(EVENT_HIDE);
   muxevent_run_by_type(EVENT_BLINDREC);
 }

@@ -801,6 +801,19 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
       log_text(mudconf.gamedb);
       ENDLOG;
     }
+  } else if (key & SHUTDN_KILLED) {
+    pcache_sync();
+    STARTLOG(LOG_ALWAYS, "DMP", "KILLED") {
+      log_text((char *)"Killed dump: ");
+      log_text(mudconf.gamedb);
+      ENDLOG;
+    }
+    dump_database_internal(DUMP_KILLED);
+    STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
+      log_text((char *)"Killed dump complete: ");
+      log_text(mudconf.gamedb);
+      ENDLOG;
+    }
   }
   /*
    * Set up for normal shutdown
@@ -813,11 +826,6 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
 
 void dump_database_internal(int dump_type) {
   gamedb_dump(dump_type);
-
-  if (dump_type == DUMP_CRASHED)
-    SaveSpecialObjects(DUMP_CRASHED);
-  else if (mudconf.have_specials)
-    SaveSpecialObjects(dump_type);
 }
 
 void dump_database(void) {

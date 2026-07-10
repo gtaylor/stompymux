@@ -15,25 +15,6 @@
 #include "muxevent/muxevent_alloc.h"
 #include "mech.h"
 
-#define CHELO(a, b, c, d)                                                      \
-  if ((tmp = fread(a, b, c, d)) != c) {                                        \
-    fprintf(stderr,                                                            \
-            "Error loading mapdynamic for #%ld - couldn't find enough "        \
-            "entries! (found: %d, should: %d)\n",                              \
-            map->mynum, tmp, c);                                               \
-    fflush(stderr);                                                            \
-    exit(1);                                                                   \
-  }
-#define CHESA(a, b, c, d)                                                      \
-  if ((tmp = fwrite(a, b, c, d)) != c) {                                       \
-    fprintf(stderr,                                                            \
-            "Error writing mapdynamic for #%ld - couldn't find enough "        \
-            "entries! (found: %d, should: %d)\n",                              \
-            map->mynum, tmp, c);                                               \
-    fflush(stderr);                                                            \
-    exit(1);                                                                   \
-  }
-
 #define realnum(x) ((x) / 4 + ((x) % 4 ? 1 : 0))
 #define boffs(x) (2 * ((x) % 4))
 #define boffsbit(x, n) ((1 << boffs(x)) * n)
@@ -57,64 +38,6 @@ static void create_if_neccessary(unsigned char **foo, MAP *map, int y) {
 
   if (!foo[y])
     Create(foo[y], unsigned char, realnum(xs));
-}
-
-/* All the nasty bits on the map ;) */
-void map_load_bits(FILE *f, MAP *map) {
-  int xs = map->map_width;
-  int ys = map->map_height;
-  unsigned char **foo;
-  int tmp, i;
-
-  Create(foo, unsigned char *, ys);
-  CHELO(foo, sizeof(unsigned char *), ys, f);
-
-  for (i = 0; i < ys; i++)
-    if (foo[i]) {
-      Create(foo[i], unsigned char, realnum(xs));
-      CHELO(foo[i], sizeof(unsigned char), realnum(xs), f);
-    }
-}
-
-void map_save_bits(FILE *f, MAP *map, mapobj *obj) {
-  int tmp;
-  int i, j, c, tc = 0;
-  unsigned char **foo;
-  int xs = map->map_width;
-  int ys = map->map_height;
-  unsigned char tmpb;
-
-#define outbyte(a)                                                             \
-  tmpb = (a);                                                                  \
-  fwrite(&tmpb, 1, 1, f);
-  foo = (unsigned char **)((void *)obj->datai);
-  /* First, we clean up our act */
-  for (i = 0; i < ys; i++) {
-    c = 0;
-    if (foo[i]) {
-      for (j = 0; j < realnum(xs); j++)
-        if (foo[i][j])
-          c++;
-      if (!c) {
-        free((void *)foo[i]);
-        foo[i] = NULL;
-      } else
-        tc += c;
-    }
-  }
-  if (!tc) {
-    /* We don't want to save worthless shit */
-    /* On other hand, cleaning us out of memory would take too
-       much trouble compared to the worth. Therefore, during next
-       cleanup (reboot), this structure does a disappearance act. */
-    return;
-  }
-  outbyte(TYPE_BITS + 1);
-  CHESA(foo, sizeof(unsigned char *), ys, f);
-
-  for (i = 0; i < ys; i++)
-    if (foo[i])
-      CHESA(foo[i], sizeof(unsigned char), realnum(xs), f);
 }
 
 /* Okay, now we got code to load / save the bits.. but what will we do with

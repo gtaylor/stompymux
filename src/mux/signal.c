@@ -23,6 +23,7 @@
 static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext);
 static void signal_PIPE(int signo, siginfo_t *siginfo, void *ucontext);
 static void signal_USR1(int signo, siginfo_t *siginfo, void *ucontext);
+static void signal_USR2(int signo, siginfo_t *siginfo, void *ucontext);
 static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext);
 static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext);
 
@@ -30,6 +31,8 @@ struct sigaction saTERM = {.sa_sigaction = signal_TERM,
                            .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
 struct sigaction saPIPE = {.sa_sigaction = signal_PIPE, .sa_flags = SA_SIGINFO};
 struct sigaction saUSR1 = {.sa_sigaction = signal_USR1,
+                           .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
+struct sigaction saUSR2 = {.sa_sigaction = signal_USR2,
                            .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
 struct sigaction saSEGV = {.sa_sigaction = signal_SEGV,
                            .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
@@ -81,6 +84,7 @@ void bind_signals(void) {
   dperror(sigaction(SIGTERM, &saTERM, NULL) < 0);
   //	sigaction(SIGPIPE, &saPIPE, NULL);
   sigaction(SIGUSR1, &saUSR1, NULL);
+  sigaction(SIGUSR2, &saUSR2, NULL);
   sigaction(SIGSEGV, &saSEGV, NULL);
   sigaction(SIGBUS, &saBUS, NULL);
   signal(SIGCHLD, SIG_IGN);
@@ -92,6 +96,7 @@ void unbind_signals(void) {
   signal(SIGTERM, SIG_DFL);
   signal(SIGPIPE, SIG_DFL);
   signal(SIGUSR1, SIG_DFL);
+  signal(SIGUSR2, SIG_DFL);
   signal(SIGSEGV, SIG_DFL);
   signal(SIGBUS, SIG_DFL);
   signal(SIGCHLD, SIG_DFL);
@@ -123,6 +128,13 @@ static void signal_USR1(int signo, siginfo_t *siginfo, void *ucontext) {
   mux_release_socket();
   dprintk("caught SIGUSR1");
   do_restart(1, 1, 0);
+}
+
+/* SIGUSR2 is an operator-requested shutdown that preserves a .KILLED dump. */
+static void signal_USR2(int signo, siginfo_t *siginfo, void *ucontext) {
+  dprintk("caught SIGUSR2");
+  do_shutdown(NOTHING, 0, SHUTDN_EXIT | SHUTDN_KILLED,
+              "received SIGUSR2 from kernel.");
 }
 
 static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {

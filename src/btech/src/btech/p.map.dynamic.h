@@ -12,8 +12,6 @@
 #pragma once
 
 /* map.dynamic.c */
-void load_mapdynamic(FILE *f, MAP *map);
-void save_mapdynamic(FILE *f, MAP *map);
 void mech_map_consistency_check(MECH *mech);
 void eliminate_empties(MAP *map);
 void remove_mech_from_map(MAP *map, MECH *mech);

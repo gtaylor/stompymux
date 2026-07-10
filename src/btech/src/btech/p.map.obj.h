@@ -14,7 +14,6 @@
 /* map.obj.c */
 mapobj *next_mapobj(mapobj *m);
 mapobj *first_mapobj(MAP *map, int type);
-void save_mapobjs(FILE *f, MAP *map);
 int find_entrance(MAP *map, char dir, int *x, int *y);
 char *structure_name(mapobj *mapo);
 mapobj *find_entrance_by_target(MAP *map, dbref target);
@@ -32,7 +31,6 @@ int FindYOdd(int wind, int y);
 void CheckForFire(MAP *map, int x[], int y[]);
 void CheckForSmoke(MAP *map, int x[], int y[]);
 void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo);
-void load_mapobjs(FILE *f, MAP *map);
 void list_mapobjs(dbref player, MAP *map);
 void map_addfire(dbref player, void *data, char *buffer);
 void map_addsmoke(dbref player, void *data, char *buffer);

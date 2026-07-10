@@ -277,7 +277,6 @@ void DisposeSpecialObject(dbref, dbref);
 void UpdateSpecialObjects(void);
 void LoadSpecialObjects(void);
 void ResetSpecialObjects(void);
-void SaveSpecialObjects(int);
 void helpindex_faction_load(dbref);
 void list_fhashstats(dbref);
 void list_chashstats(dbref);
@@ -439,6 +438,7 @@ void list_chashstats(dbref);
 #define SHUTDN_PANIC 1     /* Write a panic dump file */
 #define SHUTDN_EXIT 2      /* Exit from shutdown code */
 #define SHUTDN_COREDUMP 4  /* Produce a coredump */
+#define SHUTDN_KILLED 8    /* Preserve an operator-requested killed snapshot */
 #define SRCH_SEARCH 1      /* Do a normal search */
 #define SRCH_MARK 2        /* Set mark bit for matches */
 #define SRCH_UNMARK 3      /* Clear mark bit for matches */

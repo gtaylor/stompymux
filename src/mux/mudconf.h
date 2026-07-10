@@ -26,7 +26,6 @@ struct confdata {
   int cache_width;       /* Number of cache cells */
   int cache_names;       /* Should object names be cached separately */
   char gamedb[128];      /* SQLite game database */
-  char hcode_db[128];    /* Hardcode stuff */
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */
   char config_file[128];    /* name of config file, used by @restart */

@@ -883,7 +883,7 @@ CommandsStruct debugcommands[] = {
     {0, "EVENTSTATS", "@Shows event statistics", debug_EventTypes},
     {0, "MEMSTATS [LONG]", "@Shows memory statistics (optionally in long form)",
      debug_memory},
-    {0, "SAVEDB", "@Saves the SpecialObject DB", debug_savedb},
+    {0, "SAVEDB", "@Writes a SQLite game checkpoint", debug_savedb},
     {0, "LISTFORMS", "@Shows forms", ListForms},
 
     {0, "SETVRT <WEAPON> <NUM>",

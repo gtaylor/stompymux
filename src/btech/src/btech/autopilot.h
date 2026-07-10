@@ -419,8 +419,6 @@ enum {
 
 /* From autopilot_core.c */
 void auto_destroy_command_node(command_node *node);
-void auto_save_commands(FILE *file, AUTO *autopilot);
-void auto_load_commands(FILE *file, AUTO *autopilot);
 void auto_delcommand(dbref player, void *data, char *buffer);
 void auto_addcommand(dbref player, void *data, char *buffer);
 void auto_listcommands(dbref player, void *data, char *buffer);

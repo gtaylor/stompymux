@@ -329,6 +329,4 @@ ETECHEVENT(muxevent_tickmech_umountbomb);
 ETECHEVENT(muxevent_tickmech_replacesuit);
 ETECHEVENT(very_fake_func);
 
-void loadrepairs(FILE *f);
-void saverepairs(FILE *f);
 int valid_ammo_mode(MECH *mech, int loc, int part, int let);
