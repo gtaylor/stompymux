@@ -49,49 +49,16 @@ static int query_int(sqlite3 *sqlite, const char *sql, sqlite3_int64 expected) {
 }
 
 #ifdef BTMUX_TEST_ADVANCED_ECON
-/* Recreate the prior empty index schema to verify the no-data transition. */
-static int create_empty_obsolete_economy(const char *path) {
+/* Remove the required extension table to verify strict schema validation. */
+static int drop_sqlite_economy(const char *path) {
   sqlite3 *sqlite;
   int result;
 
   sqlite = NULL;
   result = sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
                    SQLITE_OK &&
-               sqlite3_exec(sqlite,
-                            "DROP TABLE btech_economy_costs;"
-                            "CREATE TABLE btech_economy_costs ("
-                            " category TEXT NOT NULL,"
-                            " item_index INTEGER NOT NULL,"
-                            " cost TEXT NOT NULL,"
-                            " PRIMARY KEY (category, item_index)"
-                            ") WITHOUT ROWID;",
-                            NULL, NULL, NULL) == SQLITE_OK
-               ? 0
-               : -1;
-  sqlite3_close(sqlite);
-  return result;
-}
-
-/* Populate the obsolete schema to verify that no price migration is retained. */
-static int create_nonempty_obsolete_economy(const char *path) {
-  sqlite3 *sqlite;
-  int result;
-
-  sqlite = NULL;
-  result = sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
-                   SQLITE_OK &&
-               sqlite3_exec(sqlite,
-                            "DROP TABLE btech_economy_costs;"
-                            "CREATE TABLE btech_economy_costs ("
-                            " category TEXT NOT NULL,"
-                            " item_index INTEGER NOT NULL,"
-                            " cost TEXT NOT NULL,"
-                            " PRIMARY KEY (category, item_index)"
-                            ") WITHOUT ROWID;"
-                            "INSERT INTO btech_economy_costs "
-                            "(category, item_index, cost) "
-                            "VALUES ('weapon', 0, '987');",
-                            NULL, NULL, NULL) == SQLITE_OK
+               sqlite3_exec(sqlite, "DROP TABLE btech_economy_costs;", NULL,
+                            NULL, NULL) == SQLITE_OK
                ? 0
                : -1;
   sqlite3_close(sqlite);
@@ -257,14 +224,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 &&
-      (create_empty_obsolete_economy(database) < 0 ||
-       run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
-       WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
-       check_zero_economy(database) < 0))
-    result = 1;
-
-  if (result == 0 &&
-      (create_nonempty_obsolete_economy(database) < 0 ||
+      (drop_sqlite_economy(database) < 0 ||
        run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) != 2))
     result = 1;

@@ -109,24 +109,6 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
   return result;
 }
 
-/* Return whether an obsolete table can be discarded without losing a price. */
-static int btech_economy_table_is_empty(sqlite3 *sqlite, int *is_empty) {
-  sqlite3_stmt *statement;
-  int result;
-
-  statement = NULL;
-  *is_empty = 0;
-  result = -1;
-  if (sqlite3_prepare_v2(sqlite, "SELECT count(*) FROM btech_economy_costs;",
-                         -1, &statement, NULL) == SQLITE_OK &&
-      sqlite3_step(statement) == SQLITE_ROW) {
-    *is_empty = sqlite3_column_int64(statement, 0) == 0;
-    result = 0;
-  }
-  sqlite3_finalize(statement);
-  return result;
-}
-
 /* Read a decimal SQLite value without narrowing the unsigned 64-bit price. */
 static int btech_parse_cost(const unsigned char *text,
                             unsigned long long *cost) {
@@ -224,7 +206,6 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   size_t index;
   int exists;
   int has_item_name;
-  int is_empty;
 
   for (index = 0; index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
        index++)
@@ -235,21 +216,18 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   exists = 0;
   if (btech_economy_table_exists(sqlite, &exists) < 0)
     return -1;
-  if (!exists)
-    return 0;
+  if (!exists) {
+    log_error(LOG_ALWAYS, "ECO", "FAIL",
+              "SQLite game database lacks required btech_economy_costs data.");
+    return -1;
+  }
 
   has_item_name = 0;
   if (btech_economy_table_has_item_name(sqlite, &has_item_name) < 0)
     return -1;
   if (!has_item_name) {
-    is_empty = 0;
-    if (btech_economy_table_is_empty(sqlite, &is_empty) < 0)
-      return -1;
-    if (is_empty)
-      return 0;
     log_error(LOG_ALWAYS, "ECO", "FAIL",
-              "SQLite economy data uses an obsolete nonempty item-index "
-              "schema.");
+              "SQLite economy data lacks required item_name schema.");
     return -1;
   }
 
