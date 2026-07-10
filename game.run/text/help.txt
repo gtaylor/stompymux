@@ -4485,7 +4485,7 @@ while line:
  
   drop         enter        examine      get          give    
   goto         help         inventory    kill         leave    
-  LOGOUT       look         move         news         OUTPUTPREFIX
+  LOGOUT       look         move         OUTPUTPREFIX
   OUTPUTSUFFIX page         pose         QUIT         read     
   say          score        SESSION      take         think    
   throw        use          version      whisper      WHO
@@ -8645,15 +8645,6 @@ Continued in locate()2
   You say "0"
  
   See Also: lt(), lte(), gte(), gt(), eq(), not()
-  
-& news
- 
-  Syntax: news [<topic>]
- 
-  Shows you the current news for the MUX. It is highly recommended
-  that you check the news daily for new information.  Otherwise, the
-  wizards will have no pity on you for messing up with the new
-  commands.
   
 & next()
  

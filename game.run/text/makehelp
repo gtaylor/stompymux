@@ -68,7 +68,7 @@ def mkindx(targ):
 #----------------------------------------------------------------------------
 
 # List of targets. Safe to add on to without further modification.
-valid_targets = ['help', 'wizhelp', 'news', 'wiznews', 'plushelp']
+valid_targets = ['help', 'wizhelp']
 other_files = ['connect', 'down', 'newuser']
 mkindx_note = "Don't forget to @readcache if your game is still running!"
 
@@ -103,4 +103,3 @@ else:
 # ----> Invalid argument.
 	print 'Invalid build target! Issue the command with no arguments for syntax.'
 	sys.exit(2)
-

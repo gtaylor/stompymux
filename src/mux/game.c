@@ -1159,11 +1159,8 @@ int main(int argc, char *argv[]) {
   hashreset(&mudstate.attr_name_htab);
   hashreset(&mudstate.player_htab);
   nhashreset(&mudstate.fwdlist_htab);
-  hashreset(&mudstate.news_htab);
   hashreset(&mudstate.help_htab);
   hashreset(&mudstate.wizhelp_htab);
-  hashreset(&mudstate.plushelp_htab);
-  hashreset(&mudstate.wiznews_htab);
 
   for (mindb = 0; mindb < MAX_GLOBAL_REGS; mindb++) {
     mudstate.global_regs[mindb] = alloc_lbuf("main.global_reg");

@@ -52,14 +52,8 @@ struct confdata {
   char crea_file[32];       /* display this on login for new users */
   char help_file[32];       /* HELP text file */
   char help_indx[32];       /* HELP index file */
-  char news_file[32];       /* NEWS text file */
-  char news_indx[32];       /* NEWS index file */
   char whelp_file[32];      /* Wizard help text file */
   char whelp_indx[32];      /* Wizard help index file */
-  char plushelp_file[32];   /* +help text file */
-  char plushelp_indx[32];   /* +help index file */
-  char wiznews_file[32];    /*  wiznews text file */
-  char wiznews_indx[32];    /*  wiznews index file */
   char motd_msg[4096];      /* Wizard-settable login message */
   char wizmotd_msg[4096];   /* Login message for wizards only */
   char downmotd_msg[4096];  /* Settable 'logins disabled' message */
@@ -421,11 +415,8 @@ struct statedata {
 #ifdef PARSE_TREES
   NHSHTAB tree_htab; /* Parse trees for evaluation */
 #endif
-  HASHTAB news_htab;     /* News topics hashtable */
-  HASHTAB help_htab;     /* Help topics hashtable */
-  HASHTAB wizhelp_htab;  /* Wizard help topics hashtable */
-  HASHTAB plushelp_htab; /* +help topics hashtable */
-  HASHTAB wiznews_htab;  /* wiznews topics hashtable */
+  HASHTAB help_htab;    /* Help topics hashtable */
+  HASHTAB wizhelp_htab; /* Wizard help topics hashtable */
   int attr_next;         /* Next attr to alloc when freelist is empty */
   OBJQE *qhead;          /* Per Object Queue Entries */
   OBJQE *qtail;

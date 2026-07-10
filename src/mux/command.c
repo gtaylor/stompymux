@@ -485,7 +485,6 @@ CMDENT command_table[] = {
     {(char *)"+show", NULL, CA_NO_SLAVE | CA_NO_IC, 0, CS_TWO_ARG, do_show},
     {(char *)"+rolls", NULL, CA_NO_SLAVE, 0, CS_NO_ARGS, do_show_stat},
     {(char *)"+charclear", NULL, CA_WIZARD, 0, CS_ONE_ARG, do_charclear},
-    {(char *)PLUSHELP_COMMAND, NULL, 0, HELP_PLUSHELP, CS_ONE_ARG, do_help},
     {(char *)"\\", NULL, CA_LOCATION | CF_DARK | CA_NO_SLAVE, SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP, do_say},
     {(char *)"#", NULL, CA_NO_SLAVE | CA_GBL_INTERP | CF_DARK, 0,

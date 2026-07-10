@@ -1,4 +1,4 @@
- 
+
 & commands
  
   Help available for MUX Commands:
@@ -6,7 +6,7 @@
  
   drop         enter        examine      get          give    
   goto         help         inventory    kill         leave    
-  LOGOUT       look         move         news         OUTPUTPREFIX
+  LOGOUT       look         move         OUTPUTPREFIX
   OUTPUTSUFFIX page         pose         QUIT         read     
   say          score        SESSION      take         think    
   throw        use          version      whisper      WHO
@@ -25,4 +25,3 @@
   @wait        @wipe  
  
   { 'help commands2' for more}
- 

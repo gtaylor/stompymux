@@ -65,13 +65,9 @@ typedef struct mech_data MECH;
 
 #define HASH_FACTOR 16 /* How much hashing you want. */
 
-#define PLUSHELP_COMMAND "+help" /* What you type to see the +help file */
 #define OUTPUT_BLOCK_SIZE 16384
 #define StringCopy strcpy
 #define StringCopyTrunc strncpy
-
-/* define DO_PARSE_WIZNEWS if wiznews.txt should be parsed like news.txt */
-/* #define DO_PARSE_WIZNEWS */
 
 #define CHANNEL_HISTORY
 #define CHANNEL_HISTORY_LEN 20 /* at max 20 last msgs */
@@ -142,7 +138,6 @@ extern int malloc_count;
                                     origin */
 #endif
 
-#define EVAL_ALL_NEWS 1
 #include <sys/socket.h>
 #ifndef HAVE_SRANDOM
 #define random rand

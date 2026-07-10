@@ -173,14 +173,8 @@ void cf_init(void) {
   StringCopy(mudconf.crea_file, "text/newuser.txt");
   StringCopy(mudconf.help_file, "text/help.txt");
   StringCopy(mudconf.help_indx, "text/help.indx");
-  StringCopy(mudconf.news_file, "text/news.txt");
-  StringCopy(mudconf.news_indx, "text/news.indx");
   StringCopy(mudconf.whelp_file, "text/wizhelp.txt");
   StringCopy(mudconf.whelp_indx, "text/wizhelp.indx");
-  StringCopy(mudconf.plushelp_file, "text/plushelp.txt");
-  StringCopy(mudconf.plushelp_indx, "text/plushelp.indx");
-  StringCopy(mudconf.wiznews_file, "text/wiznews.txt");
-  StringCopy(mudconf.wiznews_indx, "text/wiznews.indx");
   StringCopy(mudconf.motd_msg, "");
   StringCopy(mudconf.wizmotd_msg, "");
   StringCopy(mudconf.downmotd_msg, "");
@@ -1222,10 +1216,6 @@ CONF conftable[] = {
      32},
     {(char *)"motd_message", cf_string, CA_GOD, (void *)mudconf.motd_msg, 4096},
     {(char *)"mud_name", cf_string, CA_GOD, (void *)mudconf.mud_name, 32},
-    {(char *)"news_file", cf_string, CA_DISABLED, (void *)mudconf.news_file,
-     32},
-    {(char *)"news_index", cf_string, CA_DISABLED, (void *)mudconf.news_indx,
-     32},
     {(char *)"newuser_file", cf_string, CA_DISABLED, (void *)mudconf.crea_file,
      32},
     {(char *)"notify_recursion_limit", cf_int, CA_GOD, &mudconf.ntfy_nest_lim,
@@ -1250,16 +1240,8 @@ CONF conftable[] = {
     {(char *)"player_quota", cf_int, CA_GOD, &mudconf.player_quota, 0},
     {(char *)"player_starting_home", cf_int, CA_GOD, &mudconf.start_home, 0},
     {(char *)"player_starting_room", cf_int, CA_GOD, &mudconf.start_room, 0},
-    {(char *)"plushelp_file", cf_string, CA_DISABLED,
-     (void *)mudconf.plushelp_file, 32},
-    {(char *)"plushelp_index", cf_string, CA_DISABLED,
-     (void *)mudconf.plushelp_indx, 32},
     {(char *)"public_channel", cf_string, CA_DISABLED,
      (void *)mudconf.public_channel, 32},
-    {(char *)"wiznews_file", cf_string, CA_DISABLED,
-     (void *)mudconf.wiznews_file, 32},
-    {(char *)"wiznews_index", cf_string, CA_DISABLED,
-     (void *)mudconf.wiznews_indx, 32},
     {(char *)"port", cf_int, CA_DISABLED, &mudconf.port, 0},
     {(char *)"public_flags", cf_bool, CA_GOD, &mudconf.pub_flags, 0},
     {(char *)"queue_active_chunk", cf_int, CA_GOD, &mudconf.active_q_chunk, 0},

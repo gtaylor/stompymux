@@ -1,5 +1,5 @@
 /*
- * mkindx.c -- make help/news file indexes
+ * mkindx.c -- make help-file indexes
  */
 
 #include "config.h"

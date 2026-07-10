@@ -108,27 +108,18 @@ int helpindex_read(HASHTAB *htab, char *filename) {
 }
 
 void helpindex_load(dbref player) {
-  int news, help, whelp;
-  int phelp, wnhelp;
+  int help, whelp;
 
-  phelp = helpindex_read(&mudstate.plushelp_htab, mudconf.plushelp_indx);
-  wnhelp = helpindex_read(&mudstate.wiznews_htab, mudconf.wiznews_indx);
-  news = helpindex_read(&mudstate.news_htab, mudconf.news_indx);
   help = helpindex_read(&mudstate.help_htab, mudconf.help_indx);
   whelp = helpindex_read(&mudstate.wizhelp_htab, mudconf.whelp_indx);
   if ((player != NOTHING) && !Quiet(player))
     notify_printf(player,
-                  "Index entries: News...%d  Help...%d  Wizhelp...%d  "
-                  "+Help...%d  Wiznews...%d",
-                  news, help, whelp, phelp, wnhelp);
+                  "Index entries: Help...%d  Wizhelp...%d", help, whelp);
 }
 
 void helpindex_init(void) {
-  hashinit(&mudstate.news_htab, 30 * HASH_FACTOR);
   hashinit(&mudstate.help_htab, 400 * HASH_FACTOR);
   hashinit(&mudstate.wizhelp_htab, 400 * HASH_FACTOR);
-  hashinit(&mudstate.plushelp_htab, 400 * HASH_FACTOR);
-  hashinit(&mudstate.wiznews_htab, 400 * HASH_FACTOR);
 
   helpindex_load(NOTHING);
 }
@@ -226,7 +217,7 @@ void help_write(dbref player, char *topic, HASHTAB *htab, char *filename,
 
 /*
  * ---------------------------------------------------------------------------
- * * do_help: display information from new-format news and help files
+ * * do_help: display information from help files
  */
 
 void do_help(dbref player, dbref cause, int key, char *message) {
@@ -236,25 +227,8 @@ void do_help(dbref player, dbref cause, int key, char *message) {
   case HELP_HELP:
     help_write(player, message, &mudstate.help_htab, mudconf.help_file, 0);
     break;
-  case HELP_NEWS:
-    help_write(player, message, &mudstate.news_htab, mudconf.news_file,
-               EVAL_ALL_NEWS);
-    break;
   case HELP_WIZHELP:
     help_write(player, message, &mudstate.wizhelp_htab, mudconf.whelp_file, 0);
-    break;
-  case HELP_PLUSHELP:
-    help_write(player, message, &mudstate.plushelp_htab, mudconf.plushelp_file,
-               1);
-    break;
-  case HELP_WIZNEWS:
-#ifdef DO_PARSE_WIZNEWS
-    help_write(player, message, &mudstate.wiznews_htab, mudconf.wiznews_file,
-               1);
-#else
-    help_write(player, message, &mudstate.wiznews_htab, mudconf.wiznews_file,
-               0);
-#endif
     break;
   default:
     STARTLOG(LOG_BUGS, "BUG", "HELP") {

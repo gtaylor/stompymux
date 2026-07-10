@@ -53,15 +53,15 @@
  machine_command_cost    mail_database             mail_expiration 
  master_room             match_own_commands        max_players 
  money_name_plural       money_name_singular       motd_file 
- motd_message            mud_name                  news_file 
- news_index              newuser_file              notify_recursion_limit 
+ motd_message            mud_name                  newuser_file
+ notify_recursion_limit
  number_guests           open_cost                 output_database 
  output_limit            page_cost                 paranoid_allocate 
  parent_recursion_limit  paycheck                  pemit_any_object 
  pemit_far_players       pemit_site                player_flags 
  player_listen           player_match_own_commands player_queue_limit 
  player_quota            player_starting_home      player_starting_room 
- plushelp_file           plushelp_index            port 
+ port
  postdump_message        public_channel            public_flags 
  queue_active_chunk      queue_idle_chunk          quiet_look 
  quiet_whisper           quit_file                 quotas 
@@ -78,6 +78,5 @@
  trace_output_limit      trace_topdown             trust_site 
  uncompress_program      unowned_safe              user_attr_access 
  use_http                wait_cost                 wizard_help_file 
- wizard_help_index       wizard_motd_file          wizard_motd_message 
- wiznews_file            wiznews_index             zone_recursion_limit
- 
+ wizard_help_index       wizard_motd_file          wizard_motd_message
+ zone_recursion_limit
