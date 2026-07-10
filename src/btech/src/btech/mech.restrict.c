@@ -13,7 +13,7 @@
 #include <sys/file.h>
 
 #include "autopilot.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "p.mech.build.h"

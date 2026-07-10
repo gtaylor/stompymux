@@ -16,7 +16,7 @@
  */
 
 #include "config.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 
 #include <stdio.h>
 #include <string.h>

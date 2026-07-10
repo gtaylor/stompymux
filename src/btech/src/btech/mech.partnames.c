@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.h"
 #include "mech.partnames.h"

@@ -19,7 +19,7 @@
 #include <time.h>
 
 #include "autopilot.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"

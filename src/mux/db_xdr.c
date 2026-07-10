@@ -18,7 +18,7 @@
 #include "myfifo/myfifo.h"
 #include "commac.h"
 #include "comsys.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "macro.h"
 
 extern OBJ *db;

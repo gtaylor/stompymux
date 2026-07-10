@@ -26,7 +26,7 @@
 
 #include <assert.h>
 
-/*#include "muxevent_alloc.h" -- temporarily not used */
+/*#include "muxevent/muxevent_alloc.h" -- temporarily not used */
 
 #include "glue_types.h"
 #include "rbtree.h"

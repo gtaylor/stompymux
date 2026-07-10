@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 
 #define number(a, b) (a + rand() % (b - a + 1))
 

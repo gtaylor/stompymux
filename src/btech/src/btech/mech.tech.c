@@ -10,7 +10,7 @@
 #include "mech.h"
 #include "mech.events.h"
 #include "mech.tech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.btechstats.h"
 #include "p.mech.build.h"
 #include "p.mech.partnames.h"

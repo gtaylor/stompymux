@@ -10,7 +10,7 @@
 #include "comsys.h"
 #include "conf.h"
 #include "config.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "db.h"
 #include "externs.h"
 #include "flags.h"

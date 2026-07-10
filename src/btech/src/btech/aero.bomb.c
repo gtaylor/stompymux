@@ -15,7 +15,7 @@
 
 #include "aero.bomb.h"
 #include "coolmenu.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "math.h"
 #include "mech.events.h"
 #include "mech.h"

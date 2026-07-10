@@ -15,7 +15,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.bsuit.h"
 #include "p.crit.h"
 #include "p.eject.h"

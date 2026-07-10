@@ -11,7 +11,7 @@
 #include "failures.h"
 #include "mech.events.h"
 #include "mech.tech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.econ.h"

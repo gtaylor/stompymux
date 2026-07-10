@@ -15,7 +15,7 @@
 #include "powers.h"
 
 #include "comsys.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "functions.h"
 
 int num_channels;

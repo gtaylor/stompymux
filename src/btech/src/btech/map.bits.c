@@ -12,7 +12,7 @@
  *
  */
 
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "mech.h"
 
 #define CHELO(a, b, c, d)                                                      \

@@ -24,7 +24,7 @@
 #include "floatsim.h"
 #include "macros.h"
 #include "mech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include <math.h>
 
 #define LOS_NB InLineOfSight_NB

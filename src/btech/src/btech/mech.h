@@ -16,7 +16,7 @@
 #include "db.h"
 #include "externs.h"
 #include "mech.stat.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "powers.h"
 
 #include "btconfig.h"

@@ -20,10 +20,10 @@
 #define BTECHSTATS_C
 #include "btechstats.h"
 #include "btmacros.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "functions.h"
 #include "glue.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.bsuit.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"

@@ -24,7 +24,7 @@
 
 #define FAST_WHICHSPECIAL
 
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 
 #define _GLUE_C
 

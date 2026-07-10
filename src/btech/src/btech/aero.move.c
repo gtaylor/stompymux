@@ -13,7 +13,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"
 #include "p.mech.combat.h"

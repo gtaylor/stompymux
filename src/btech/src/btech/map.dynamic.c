@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "autopilot.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.h"
 #include "p.econ_cmds.h"

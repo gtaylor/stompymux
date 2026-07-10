@@ -322,7 +322,6 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include"
-  "${CMAKE_SOURCE_DIR}/${MUXEVENT_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
   ${MYFIFO_SOURCE_DIR}/myfifo.c
@@ -389,7 +388,6 @@ target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}"
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${MUXEVENT_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"

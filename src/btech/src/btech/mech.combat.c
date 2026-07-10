@@ -14,8 +14,8 @@
 #include <sys/file.h>
 
 #include "btmacros.h"
-#include "muxevent.h"
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent.h"
+#include "muxevent/muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "map.h"

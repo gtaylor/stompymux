@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Dedupe /include
 * Start breaking up src/ into system subdirs. Maybe db to start.
 * Maybe: remove alias/macro system
 * Maybe: simplify comm sys 

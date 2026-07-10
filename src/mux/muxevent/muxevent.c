@@ -62,9 +62,9 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "debug.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 
 int muxevent_tick = 0;
 

@@ -18,7 +18,7 @@
 #pragma once
 
 #include "mech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 
 /* Semi-combat-related events */
 #define EVENT_MOVE 1 /* mech */

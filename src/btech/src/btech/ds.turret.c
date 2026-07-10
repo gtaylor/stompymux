@@ -8,7 +8,7 @@
  *
  */
 
-#include "muxevent_alloc.h"
+#include "muxevent/muxevent_alloc.h"
 #include "mech.tic.h"
 #include "p.mech.combat.h"
 #include "p.mech.contacts.h"

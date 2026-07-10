@@ -10,7 +10,7 @@
 
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 
 #define MAX_EVENTS 100
 

@@ -14,7 +14,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.tech.h"
-#include "muxevent.h"
+#include "muxevent/muxevent.h"
 #include "p.econ.h"
 #include "p.mech.status.h"
 #include "p.mech.tech.h"

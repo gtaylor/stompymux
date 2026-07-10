@@ -12,7 +12,7 @@
  *
  */
 
-#include "myfifo.h"
+#include "myfifo/myfifo.h"
 #include <stdio.h>
 #include <stdlib.h>
 
