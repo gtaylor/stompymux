@@ -77,23 +77,6 @@ typedef struct mech_data MECH;
 #define CHANNEL_HISTORY_LEN 20 /* at max 20 last msgs */
 #define COMMAND_HISTORY_LEN 10 /* at max 10 last msgs */
 
-/* ---------------------------------------------------------------------------
- * Database R/W flags.
- */
-
-#define MANDFLAGS                                                              \
-  (V_LINK | V_PARENT | V_XFLAGS | V_ZONE | V_POWERS | V_3FLAGS | V_QUOTED)
-
-#define OFLAGS1 (V_GDBM | V_ATRKEY) /* GDBM has these */
-
-#define OFLAGS2 (V_ATRNAME | V_ATRMONEY)
-
-#define OUTPUT_VERSION 1 /* Version 1 */
-#define OUTPUT_FLAGS (MANDFLAGS)
-
-#define UNLOAD_VERSION 1            /* verison for export */
-#define UNLOAD_OUTFLAGS (MANDFLAGS) /* format for export */
-
 /* magic lock cookies */
 #define NOT_TOKEN '!'
 #define AND_TOKEN '&'

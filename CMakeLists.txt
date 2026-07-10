@@ -43,6 +43,7 @@ option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 set(BTMUX_PLATFORM_LIBS)
 check_library_exists(m tan "" HAVE_LIBM)
@@ -335,9 +336,6 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/cque.c
   ${MUX_SOURCE_DIR}/create.c
   ${MUX_SOURCE_DIR}/db.c
-  ${MUX_SOURCE_DIR}/db_xml.c
-  ${MUX_SOURCE_DIR}/db_xdr.c
-  ${MUX_SOURCE_DIR}/db_rw.c
   ${MUX_SOURCE_DIR}/dllist.c
   ${MUX_SOURCE_DIR}/dnschild.c
   ${MUX_SOURCE_DIR}/eval.c
@@ -346,6 +344,7 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/funceval.c
   ${MUX_SOURCE_DIR}/functions.c
   ${MUX_SOURCE_DIR}/game.c
+  ${MUX_SOURCE_DIR}/gamedb/gamedb_sqlite.c
   ${MUX_SOURCE_DIR}/help.c
   ${MUX_SOURCE_DIR}/log.c
   ${MUX_SOURCE_DIR}/look.c
@@ -384,7 +383,7 @@ add_executable(netmux ${NETMUX_SOURCES})
 set_target_properties(netmux PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" ${BTMUX_PLATFORM_LIBS})
+target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" SQLite3::SQLite3 ${BTMUX_PLATFORM_LIBS})
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
@@ -427,6 +426,11 @@ configure_file(
 add_test(NAME saxtest COMMAND saxtest)
 set_tests_properties(saxtest PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi")
 add_test(NAME vocabtest COMMAND vocabtest)
+
+add_executable(gamedb_integration_test tests/gamedb_integration.c)
+target_link_libraries(gamedb_integration_test PRIVATE SQLite3::SQLite3)
+add_test(NAME gamedb_integration
+  COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS btech ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

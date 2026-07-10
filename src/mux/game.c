@@ -7,7 +7,6 @@
 #include <event.h>
 #include <regex.h>
 #include <signal.h>
-#include <sys/stat.h>
 
 #include "alloc.h"
 #include "attrs.h"
@@ -20,6 +19,7 @@
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
+#include "gamedb/gamedb.h"
 #include "interface.h"
 #include "logcache.h"
 #include "macro.h"
@@ -789,14 +789,14 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
     pcache_sync();
     STARTLOG(LOG_ALWAYS, "DMP", "PANIC") {
       log_text((char *)"Panic dump: ");
-      log_text(mudconf.crashdb);
+      log_text(mudconf.gamedb);
       ENDLOG;
     }
     dump_database_internal(DUMP_CRASHED);
 
     STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
       log_text((char *)"Panic dump complete: ");
-      log_text(mudconf.crashdb);
+      log_text(mudconf.gamedb);
       ENDLOG;
     }
   }
@@ -810,112 +810,21 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
 }
 
 void dump_database_internal(int dump_type) {
-  char tmpfile[256], outfn[256], prevfile[256];
-  FILE *f;
-
-  if (dump_type == DUMP_CRASHED) {
-    unlink(mudconf.crashdb);
-    f = fopen(mudconf.crashdb, "w");
-    if (f != NULL) {
-      db_write(f, F_MUX, UNLOAD_VERSION | UNLOAD_OUTFLAGS);
-      fclose(f);
-    } else {
-      log_perror("DMP", "FAIL", "Opening crash file", mudconf.crashdb);
-    }
-    if (mudconf.have_comsys || mudconf.have_macros)
-      save_comsys_and_macros(mudconf.commac_db);
-    SaveSpecialObjects(DUMP_CRASHED);
-    return;
-  }
-
-  if (dump_type == DUMP_RESTART) {
-    f = fopen(mudconf.indb, "w");
-    if (f != NULL) {
-      /* Write a flatfile */
-      db_write(f, F_MUX, UNLOAD_VERSION | UNLOAD_OUTFLAGS);
-      fclose(f);
-    } else {
-      log_perror("DMP", "FAIL", "Opening restart file", mudconf.indb);
-    }
-    if (mudconf.have_comsys || mudconf.have_macros)
-      save_comsys_and_macros(mudconf.commac_db);
-    if (mudconf.have_specials)
-      SaveSpecialObjects(DUMP_RESTART);
-    return;
-  }
-  if (dump_type == DUMP_KILLED) {
-    snprintf(tmpfile, sizeof(tmpfile), "%s.KILLED", mudconf.indb);
-    f = fopen(tmpfile, "w");
-    if (f != NULL) {
-      /* Write a flatfile */
-      db_write(f, F_MUX, UNLOAD_VERSION | UNLOAD_OUTFLAGS);
-      fclose(f);
-    } else {
-      log_perror("DMP", "FAIL", "Opening killed file", mudconf.indb);
-    }
-    if (mudconf.have_comsys || mudconf.have_macros)
-      save_comsys_and_macros(mudconf.commac_db);
-    if (mudconf.have_specials)
-      SaveSpecialObjects(DUMP_KILLED);
-    return;
-  }
-
-  snprintf(prevfile, sizeof(prevfile), "%s.prev", mudconf.outdb);
-  snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", mudconf.outdb,
-           mudstate.epoch - 1);
-  unlink(tmpfile); /*
-                    * nuke our predecessor
-                    */
-  snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#", mudconf.outdb, mudstate.epoch);
-
-  if (mudconf.compress_db) {
-    snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#.gz", mudconf.outdb,
-             mudstate.epoch - 1);
-    unlink(tmpfile);
-    snprintf(tmpfile, sizeof(tmpfile), "%s.#%d#.gz", mudconf.outdb,
-             mudstate.epoch);
-    StringCopy(outfn, mudconf.outdb);
-    strcat(outfn, ".gz");
-    f = popen(tprintf("%s > %s", mudconf.compress, tmpfile), "w");
-    if (f) {
-      db_write(f, F_MUX, OUTPUT_VERSION | OUTPUT_FLAGS);
-      pclose(f);
-      rename(mudconf.outdb, prevfile);
-      if (rename(tmpfile, outfn) < 0)
-        log_perror("SAV", "FAIL", "Renaming output file to DB file", tmpfile);
-    } else {
-      log_perror("SAV", "FAIL", "Opening", tmpfile);
-    }
-  } else {
-    f = fopen(tmpfile, "w");
-    if (f) {
-      db_write(f, F_MUX, OUTPUT_VERSION | OUTPUT_FLAGS);
-      fclose(f);
-      rename(mudconf.outdb, prevfile);
-      if (rename(tmpfile, mudconf.outdb) < 0)
-        log_perror("SAV", "FAIL", "Renaming output file to DB file", tmpfile);
-    } else {
-      log_perror("SAV", "FAIL", "Opening", tmpfile);
-    }
-    rename(prevfile, mudconf.indb);
-  }
+  gamedb_dump(dump_type);
 
   if (mudconf.have_comsys || mudconf.have_macros)
     save_comsys_and_macros(mudconf.commac_db);
-  if (mudconf.have_specials)
-    SaveSpecialObjects(DUMP_NORMAL);
+  if (dump_type == DUMP_CRASHED)
+    SaveSpecialObjects(DUMP_CRASHED);
+  else if (mudconf.have_specials)
+    SaveSpecialObjects(dump_type);
 }
 
 void dump_database(void) {
-  char *buff;
-
-  mudstate.epoch++;
   mudstate.dumping = 1;
-  buff = alloc_mbuf("dump_database");
-  snprintf(buff, MBUF_SIZE, "%s.#%d#", mudconf.outdb, mudstate.epoch);
   STARTLOG(LOG_DBSAVES, "DMP", "DUMP") {
     log_text((char *)"Dumping: ");
-    log_text(buff);
+    log_text(mudconf.gamedb);
     ENDLOG;
   }
   pcache_sync();
@@ -923,26 +832,19 @@ void dump_database(void) {
   dump_database_internal(DUMP_NORMAL);
   STARTLOG(LOG_DBSAVES, "DMP", "DONE") {
     log_text((char *)"Dump complete: ");
-    log_text(buff);
+    log_text(mudconf.gamedb);
     ENDLOG;
   }
-  free_mbuf(buff);
-
   mudstate.dumping = 0;
 }
 
 void fork_and_dump(int key) {
-  char *buff;
-
   if (*mudconf.dump_msg)
     raw_broadcast(0, "%s", mudconf.dump_msg);
 
-  mudstate.epoch++;
   mudstate.dumping = 1;
-  buff = alloc_mbuf("fork_and_dump");
-  snprintf(buff, MBUF_SIZE, "%s.#%d#", mudconf.outdb, mudstate.epoch);
-
-  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s", buff);
+  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
+            mudconf.gamedb);
 
   pcache_sync();
 
@@ -982,53 +884,19 @@ void fork_and_dump(int key) {
 }
 
 static int load_game(void) {
-  FILE *f;
-  int compressed;
-  char infile[256];
-  struct stat statbuf;
-  int db_format, db_version, db_flags;
-
-  f = NULL;
-  compressed = 0;
-  if (mudconf.compress_db) {
-    StringCopy(infile, mudconf.indb);
-    strcat(infile, ".gz");
-    if (stat(infile, &statbuf) == 0) {
-      if ((f = popen(tprintf(" %s < %s", mudconf.uncompress, infile), "r")) !=
-          NULL)
-        compressed = 1;
-    }
-  }
-  if (compressed == 0) {
-    StringCopy(infile, mudconf.indb);
-    if ((f = fopen(mudconf.indb, "r")) == NULL)
-      return -1;
-  }
-  /*
-   * ok, read it in
-   */
-
   STARTLOG(LOG_STARTUP, "INI", "LOAD") {
     log_text((char *)"Loading: ");
-    log_text(infile);
+    log_text(mudconf.gamedb);
     ENDLOG;
   };
-  if (db_read(f, &db_format, &db_version, &db_flags) < 0) {
+  if (gamedb_load(mudconf.gamedb) < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "FATAL") {
       log_text((char *)"Error loading ");
-      log_text(infile);
+      log_text(mudconf.gamedb);
       ENDLOG;
     }
-    if (compressed)
-      pclose(f);
-    else
-      fclose(f);
     return -1;
   }
-  if (compressed)
-    pclose(f);
-  else
-    fclose(f);
 
   if (mudconf.have_comsys || mudconf.have_macros)
     load_comsys_and_macros(mudconf.commac_db);
@@ -1240,6 +1108,11 @@ int main(int argc, char *argv[]) {
     cf_read((char *)CONF_FILE);
   }
 
+  if (!*mudconf.gamedb) {
+    fprintf(stderr, "Required configuration directive game_database is missing.\n");
+    exit(2);
+  }
+
   fcache_init();
   helpindex_init();
   db_free();
@@ -1251,7 +1124,7 @@ int main(int argc, char *argv[]) {
   else if (load_game() < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "LOAD") {
       log_text((char *)"Couldn't load: ");
-      log_text(mudconf.indb);
+      log_text(mudconf.gamedb);
       ENDLOG;
     }
     exit(2);

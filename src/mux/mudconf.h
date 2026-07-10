@@ -25,10 +25,7 @@ struct confdata {
   int cache_depth;       /* Number of entries in each cache cell */
   int cache_width;       /* Number of cache cells */
   int cache_names;       /* Should object names be cached separately */
-  char indb[128];        /* database file name */
-  char outdb[128];       /* checkpoint the database to here */
-  char crashdb[128];     /* write database here on crash */
-  char gdbm[128];        /* use this gdbm file if we need one */
+  char gamedb[128];      /* SQLite game database */
   char commac_db[128];   /* name of the comsys and macros db */
   char hcode_db[128];    /* Hardcode stuff */
 #ifdef BT_ADVANCED_ECON
@@ -37,9 +34,6 @@ struct confdata {
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */
   char config_file[128];    /* name of config file, used by @restart */
-  int compress_db;          /* should we use compress */
-  char compress[128];       /* program to run to compress */
-  char uncompress[128];     /* program to run to uncompress */
   char status_file[128];    /* Where to write arg to @shutdown */
   int have_specials;        /* Should the special hcode be active? */
   int have_comsys;          /* Should the comsystem be active? */
@@ -391,7 +385,6 @@ struct statedata {
   int restarting;        /* Are we restarting? */
   int dumping;           /* Are we dumping? */
   int logging;           /* Are we in the middle of logging? */
-  int epoch;             /* Generation number for dumps */
   int generation;        /* DB global generation number */
   dbref curr_enactor;    /* Who initiated the current command */
   dbref curr_player;     /* Who is running the current command */

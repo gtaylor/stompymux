@@ -92,7 +92,7 @@ static void print_value_content(const FI_Value *value) {
 
       switch (type) {
       case FI_VALUE_AS_INT:
-        printf("%" PRIdFAST32, ((FI_Int32 *)data_ptr)[ii]);
+        printf("%" PRId32, ((FI_Int32 *)data_ptr)[ii]);
         break;
 
       case FI_VALUE_AS_FLOAT:

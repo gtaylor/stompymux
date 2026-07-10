@@ -71,42 +71,6 @@ struct boolexp {
 
 #define TRUE_BOOLEXP ((BOOLEXP *)0)
 
-/* Database format information */
-
-#define F_UNKNOWN 0 /* Unknown database format */
-#define F_MUSH 1    /* MUSH format (many variants) */
-#define F_MUSE 2    /* MUSE format */
-#define F_MUD 3     /* Old TinyMUD format */
-#define F_MUCK 4    /* TinyMUCK format */
-#define F_MUX 5     /* TinyMUX format */
-
-#define V_MASK 0x000000ff     /* Database version */
-#define V_ZONE 0x00000100     /* ZONE/DOMAIN field */
-#define V_LINK 0x00000200     /* LINK field (exits from objs) */
-#define V_GDBM 0x00000400     /* attrs are in a gdbm db, not here */
-#define V_ATRNAME 0x00000800  /* NAME is an attr, not in the hdr */
-#define V_ATRKEY 0x00001000   /* KEY is an attr, not in the hdr */
-#define V_PERNKEY 0x00001000  /* PERN: Extra locks in object hdr */
-#define V_PARENT 0x00002000   /* db has the PARENT field */
-#define V_COMM 0x00004000     /* PERN: Comm status in header */
-#define V_ATRMONEY 0x00008000 /* Money is kept in an attribute */
-#define V_XFLAGS 0x00010000   /* An extra word of flags */
-#define V_POWERS 0x00020000   /* Powers? */
-#define V_3FLAGS 0x00040000   /* Adding a 3rd flag word */
-#define V_QUOTED 0x00080000   /* Quoted strings, ala PennMUSH */
-
-/* Some defines for DarkZone's flavor of PennMUSH */
-#define DB_CHANNELS 0x2   /*  Channel system */
-#define DB_SLOCK 0x4      /*  Slock */
-#define DB_MC 0x8         /*  Master Create Time + modifed */
-#define DB_MPAR 0x10      /*  Multiple Parent Code */
-#define DB_CLASS 0x20     /*  Class System */
-#define DB_RANK 0x40      /*  Rank */
-#define DB_DROPLOCK 0x80  /*  Drop/TelOut Lock */
-#define DB_GIVELOCK 0x100 /*  Give/TelIn Lock */
-#define DB_GETLOCK 0x200  /*  Get Lock */
-#define DB_THREEPOW 0x400 /*  Powers have Three Long Words */
-
 /* special dbref's */
 #define NOTHING (-1)   /* null dbref */
 #define AMBIGUOUS (-2) /* multiple possibilities, for matchers */
@@ -213,9 +177,6 @@ extern void init_attrtab(void);
 extern void db_grow(dbref);
 extern void db_free(void);
 extern void db_make_minimal(void);
-extern dbref db_read(FILE *, int *, int *, int *);
-extern dbref db_write(FILE *, int, int);
-extern dbref xml_db_write(FILE *, int, int);
 extern void destroy_thing(dbref);
 extern void destroy_exit(dbref);
 extern int load_restart_db_xdr(void);

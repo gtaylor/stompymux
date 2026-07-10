@@ -12,17 +12,17 @@
 
 #define FI_UINT32_MAX 4294967295U /* 2^32 - 1 */
 
-typedef uint_fast8_t FI_UInt8;   /* unsigned 8-bit integer */
-typedef uint_fast16_t FI_UInt16; /* unsigned 16-bit integer */
-typedef uint_fast32_t FI_UInt32; /* unsigned 32-bit integer */
-typedef uint_fast64_t FI_UInt64; /* unsigned 64-bit integer */
+typedef uint8_t FI_UInt8;   /* unsigned 8-bit integer */
+typedef uint16_t FI_UInt16; /* unsigned 16-bit integer */
+typedef uint32_t FI_UInt32; /* unsigned 32-bit integer */
+typedef uint64_t FI_UInt64; /* unsigned 64-bit integer */
 
-typedef int_fast8_t FI_Int8;   /* signed 8-bit integer */
-typedef int_fast16_t FI_Int16; /* signed 16-bit integer */
-typedef int_fast32_t FI_Int32; /* signed 32-bit integer */
-typedef int_fast64_t FI_Int64; /* signed 64-bit integer */
+typedef int8_t FI_Int8;   /* signed 8-bit integer */
+typedef int16_t FI_Int16; /* signed 16-bit integer */
+typedef int32_t FI_Int32; /* signed 32-bit integer */
+typedef int64_t FI_Int64; /* signed 64-bit integer */
 
-typedef uint_fast8_t FI_Boolean; /* boolean */
+typedef uint8_t FI_Boolean; /* boolean */
 
 /*
  * Basic floating point types.
@@ -50,14 +50,14 @@ typedef double FI_Float64; /* double-precision IEEE 754 */
  * holding at least 2^20. (The name "FI_UInt21" is a bit of a misnomer.)
  */
 
-typedef uint_fast32_t FI_UInt21; /* 0 to at least 2^20 */
+typedef uint32_t FI_UInt21; /* 0 to at least 2^20 */
 
 #define FI_PINT8_MAX 255U           /* 2^8 in p-int encoding */
 #define FI_PINT20_MAX 1048575U      /* 2^20 in p-int encoding */
 #define FI_PINT32_MAX FI_UINT32_MAX /* 2^32 in p-int encoding */
 
 typedef FI_UInt8 FI_PInt8;       /* 1 to at least 2^8 */
-typedef uint_fast32_t FI_PInt20; /* 1 to at least 2^20 */
+typedef uint32_t FI_PInt20; /* 1 to at least 2^20 */
 typedef FI_UInt32 FI_PInt32;     /* 1 to at least 2^32 */
 
 #define FI_UINT_TO_PINT(ui) ((ui) - 1U) /* convert from UInt to PInt range */

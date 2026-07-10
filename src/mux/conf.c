@@ -62,10 +62,7 @@ extern CONF conftable[];
 void cf_init(void) {
   int i;
 
-  StringCopy(mudconf.indb, "tinymush.db");
-  StringCopy(mudconf.outdb, "");
-  StringCopy(mudconf.crashdb, "");
-  StringCopy(mudconf.gdbm, "");
+  StringCopy(mudconf.gamedb, "");
   StringCopy(mudconf.commac_db, "commac.db");
   StringCopy(mudconf.hcode_db, "hcode.db");
 #ifdef BT_ADVANCED_ECON
@@ -73,9 +70,6 @@ void cf_init(void) {
 #endif
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
-  mudconf.compress_db = 0;
-  StringCopy(mudconf.compress, "gzip");
-  StringCopy(mudconf.uncompress, "gzip -d");
   StringCopy(mudconf.status_file, "shutdown.status");
   mudconf.allow_unloggedwho = 0;
   mudconf.btech_explode_reactor = 1;
@@ -336,7 +330,6 @@ void cf_init(void) {
   mudstate.panicking = 0;
   mudstate.dumping = 0;
   mudstate.logging = 0;
-  mudstate.epoch = 0;
   mudstate.generation = 0;
   mudstate.curr_player = NOTHING;
   mudstate.curr_enactor = NOTHING;
@@ -1128,9 +1121,6 @@ CONF conftable[] = {
     {(char *)"command_quota_increment", cf_int, CA_GOD, &mudconf.cmd_quota_incr,
      0},
     {(char *)"command_quota_max", cf_int, CA_GOD, &mudconf.cmd_quota_max, 0},
-    {(char *)"compress_program", cf_string, CA_DISABLED,
-     (void *)mudconf.compress, 128},
-    {(char *)"compression", cf_bool, CA_GOD, &mudconf.compress_db, 0},
     {(char *)"concentrator_port", cf_int, CA_DISABLED, &mudconf.conc_port, 0},
     {(char *)"config_access", cf_cf_access, CA_GOD, NULL, (long)access_nametab},
     {(char *)"conn_timeout", cf_int, CA_GOD, &mudconf.conn_timeout, 0},
@@ -1140,8 +1130,6 @@ CONF conftable[] = {
      32},
     {(char *)"connect_reg_file", cf_string, CA_DISABLED,
      (void *)mudconf.creg_file, 32},
-    {(char *)"crash_database", cf_string, CA_DISABLED, (void *)mudconf.crashdb,
-     128},
     {(char *)"create_max_cost", cf_int, CA_GOD, &mudconf.createmax, 0},
     {(char *)"create_min_cost", cf_int, CA_GOD, &mudconf.createmin, 0},
     {(char *)"dark_sleepers", cf_bool, CA_GOD, &mudconf.dark_sleepers, 0},
@@ -1185,7 +1173,7 @@ CONF conftable[] = {
      &mudconf.func_invk_lim, 0},
     {(char *)"function_recursion_limit", cf_int, CA_GOD, &mudconf.func_nest_lim,
      0},
-    {(char *)"gdbm_database", cf_string, CA_DISABLED, (void *)mudconf.gdbm,
+    {(char *)"game_database", cf_string, CA_DISABLED, (void *)mudconf.gamedb,
      128},
     {(char *)"good_name", cf_badname, CA_GOD, NULL, 1},
     {(char *)"have_specials", cf_bool, CA_DISABLED, &mudconf.have_specials, 0},
@@ -1209,8 +1197,6 @@ CONF conftable[] = {
     {(char *)"include", cf_include, CA_DISABLED, NULL, 0},
     {(char *)"indent_desc", cf_bool, CA_GOD, &mudconf.indent_desc, 0},
     {(char *)"initial_size", cf_int, CA_DISABLED, &mudconf.init_size, 0},
-    {(char *)"input_database", cf_string, CA_DISABLED, (void *)mudconf.indb,
-     128},
     {(char *)"kill_guarantee_cost", cf_int, CA_GOD, &mudconf.killguarantee, 0},
     {(char *)"kill_max_cost", cf_int, CA_GOD, &mudconf.killmax, 0},
     {(char *)"kill_min_cost", cf_int, CA_GOD, &mudconf.killmin, 0},
@@ -1251,8 +1237,6 @@ CONF conftable[] = {
     {(char *)"notify_recursion_limit", cf_int, CA_GOD, &mudconf.ntfy_nest_lim,
      0},
     {(char *)"open_cost", cf_int, CA_GOD, &mudconf.opencost, 0},
-    {(char *)"output_database", cf_string, CA_DISABLED, (void *)mudconf.outdb,
-     128},
     {(char *)"output_limit", cf_int, CA_GOD, &mudconf.output_limit, 0},
     {(char *)"page_cost", cf_int, CA_GOD, &mudconf.pagecost, 0},
     {(char *)"paranoid_allocate", cf_bool, CA_GOD, &mudconf.paranoid_alloc, 0},
@@ -1338,8 +1322,6 @@ CONF conftable[] = {
     {(char *)"trace_output_limit", cf_int, CA_GOD, &mudconf.trace_limit, 0},
     {(char *)"trace_topdown", cf_bool, CA_GOD, &mudconf.trace_topdown, 0},
     {(char *)"trust_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list, 0},
-    {(char *)"uncompress_program", cf_string, CA_DISABLED,
-     (void *)mudconf.uncompress, 128},
     {(char *)"unowned_safe", cf_bool, CA_GOD, &mudconf.safe_unowned, 0},
     {(char *)"user_attr_access", cf_modify_bits, CA_GOD, &mudconf.vattr_flags,
      (long)attraccess_nametab},
@@ -1430,22 +1412,6 @@ int cf_read(char *fn) {
   retval = cf_include(NULL, fn, 0, 0, (char *)"init");
   mudstate.initializing = 0;
 
-  /*
-   * Fill in missing DB file names
-   */
-
-  if (!*mudconf.outdb) {
-    StringCopy(mudconf.outdb, mudconf.indb);
-    strcat(mudconf.outdb, ".out");
-  }
-  if (!*mudconf.crashdb) {
-    StringCopy(mudconf.crashdb, mudconf.indb);
-    strcat(mudconf.crashdb, ".CRASH");
-  }
-  if (!*mudconf.gdbm) {
-    StringCopy(mudconf.gdbm, mudconf.indb);
-    strcat(mudconf.gdbm, ".gdbm");
-  }
   return retval;
 }
 

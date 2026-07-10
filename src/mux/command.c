@@ -2105,8 +2105,7 @@ static void list_options(dbref player) {
            mudconf.timeslice, mudconf.cmd_quota_max, mudconf.cmd_quota_incr);
   raw_notify(player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Spaces...%s  Savefiles...%s",
-           ed[mudconf.space_compress], ed[mudconf.compress_db]);
+  snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[mudconf.space_compress]);
   raw_notify(player, buff);
 
   snprintf(

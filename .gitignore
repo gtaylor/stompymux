@@ -26,8 +26,12 @@
 /stamp-h1
 /Makefile
 /config.cache
-/game
-/game.*
+/game*/data/
+/game*/lib/
+/game*/bin/
+/game*/text/*.indx
+/game*/netmux.log*
+/game*/shutdown.status
 /buildnum.data
 
 # /btech/
