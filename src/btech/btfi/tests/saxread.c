@@ -206,6 +206,7 @@ void read_test(FI_Vocabulary *const vocabulary, const char *const TEST_FILE) {
   FILE *fpin = fopen(TEST_FILE, "rb");
   if (!fpin) {
     die("fopen");
+    return;
   }
 
   parser = fi_create_parser(vocabulary);

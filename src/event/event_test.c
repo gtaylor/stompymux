@@ -12,7 +12,10 @@
  *
  */
 
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "muxevent.h"
 
@@ -39,9 +42,9 @@
 #define SHORT_TIME 1
 #define LONG_TIME 2
 
-void hellow(MUXEVENT *e) {
+static void hellow(MUXEVENT *e) {
   int n;
-  int d = (int)e->data;
+  int d = (int)(intptr_t)e->data;
 
 #if 1
   int d1, d2;
@@ -52,19 +55,21 @@ void hellow(MUXEVENT *e) {
   n = number(0, 10);
 #endif
   muxevent_add_simple_arg(!n ? number(1, LONG_TIME) : number(1, SHORT_TIME),
-                          hellow, (int *)(d + 1));
+                          hellow, (void *)(intptr_t)(d + 1));
 }
 
-void main() {
+int main(void) {
   int i;
 
   muxevent_initialize();
   for (i = 0; i < SIMULTANEOUS_EVENTS; i++)
-    muxevent_add_simple_arg(i + 1, hellow, (int *)(LARGE_NUMBER * i));
+    muxevent_add_simple_arg(i + 1, hellow,
+                            (void *)(intptr_t)(LARGE_NUMBER * i));
   for (i = 0; i < TEST_ITERATIONS; i++) {
 #ifdef TEST_TIME
     usleep(TEST_MSECS);
 #endif
     muxevent_run();
   }
+  return 0;
 }

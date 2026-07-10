@@ -444,7 +444,7 @@ void PrintEnemyStatus(dbref player, MECH *mymech, MECH *mech, float range,
 }
 
 void mech_bearing(dbref player, void *data, char *buffer) {
-  MECH *mech = (MECH *)data, *tempMech;
+  MECH *mech = (MECH *)data, *tempMech = NULL;
   MAP *mech_map;
   char *args[4];
   int argc;
@@ -500,7 +500,7 @@ void mech_bearing(dbref player, void *data, char *buffer) {
       iy1 = atoi(args[3]);
 
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            y1 < mech_map->map_height && ix0 >= 0 &&
+            iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
         notify(player, "Invalid map coordinates!");
@@ -533,7 +533,7 @@ void mech_range(dbref player, void *data, char *buffer) {
   int ix0, iy0;
   float x0, y0, z0;
   int ix1, iy1;
-  float x1, y1, z1, hr;
+  float x1, y1, z1 = 0, hr;
   float temp;
   char trash[80];
   char buff[100];
@@ -630,14 +630,14 @@ void mech_range(dbref player, void *data, char *buffer) {
 }
 
 void mech_vector(dbref player, void *data, char *buffer) {
-  MECH *mech = (MECH *)data, *tempMech;
+  MECH *mech = (MECH *)data, *tempMech = NULL;
   MAP *mech_map;
   char *args[6];
   int argc;
   int ix0, iy0, iz0;
   float x0, y0, z0;
   int ix1, iy1, iz1;
-  float x1, y1, z1, hr;
+  float x1, y1, z1 = 0, hr;
   float temp;
   char trash[80];
   char buff[100];
@@ -703,7 +703,7 @@ void mech_vector(dbref player, void *data, char *buffer) {
       iy1 = atoi(args[3]);
 
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            y1 < mech_map->map_height && ix0 >= 0 &&
+            iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
         notify(player, "Invalid map coordinates!");
@@ -725,7 +725,7 @@ void mech_vector(dbref player, void *data, char *buffer) {
       iz1 = atoi(args[5]);
 
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            y1 < mech_map->map_height && ix0 >= 0 &&
+            iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
         notify(player, "Invalid map coordinates!");

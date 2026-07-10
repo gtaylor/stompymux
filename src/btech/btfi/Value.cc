@@ -130,7 +130,9 @@ Value::~Value() { delete[] static_cast<char *>(value_buf); }
 
 Value::Value(const Value &src)
     : value_type(src.value_type), value_count(src.value_count),
-      value_size(src.value_size), value_buf_size(src.value_buf_size) {
+      value_size(src.value_size), value_buf_size(src.value_buf_size),
+      vocab_table(src.vocab_table), add_value_to_table(src.add_value_to_table),
+      saved_format(src.saved_format) {
   if (value_type == FI_VALUE_AS_NULL) {
     // Empty buffer.
     value_buf = 0;
@@ -146,7 +148,12 @@ Value::Value(const Value &src)
     throw OutOfMemoryException();
   }
 
-  memcpy(value_buf, src.value_buf, value_size);
+  if (value_size > 0) {
+    if (!value_buf || !src.value_buf) {
+      throw Exception();
+    }
+    memcpy(value_buf, src.value_buf, value_size);
+  }
 }
 
 Value &Value::operator=(const Value &src) {
@@ -173,7 +180,16 @@ Value &Value::operator=(const Value &src) {
   value_count = src.value_count;
   value_size = src.value_size;
 
-  memcpy(value_buf, src.value_buf, value_size);
+  vocab_table = src.vocab_table;
+  add_value_to_table = src.add_value_to_table;
+  saved_format = src.saved_format;
+
+  if (value_size > 0) {
+    if (!value_buf || !src.value_buf) {
+      throw Exception();
+    }
+    memcpy(value_buf, src.value_buf, value_size);
+  }
   return *this;
 }
 

@@ -2,13 +2,9 @@
 
 ## MUX Todos in the /src/ dir
 
-* Add auto clang-format?
-* Add clang-tidy?
 * Dedupe /include
-* Move /misc/ and /event/ under /src/?
 * Start breaking up src/ into system subdirs. Maybe db to start.
 * Maybe: remove alias/macro system
-* Is src/myfifo.h still used?
 * Maybe: simplify comm sys 
 * Remove ROYALTY bit - meh
 * Maybe: remove all powers. wiz bit is enough

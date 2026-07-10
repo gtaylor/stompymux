@@ -363,7 +363,7 @@ int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
   MECH *tempMech = NULL;
   int section, critical;
   float range = 0;
-  float enemyX, enemyY, enemyZ;
+  float enemyX = 0, enemyY = 0, enemyZ = 0;
   int ishex = 0;
   int wcDeadLegs = 0;
   char location[20];
@@ -517,6 +517,9 @@ int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
        * as well */
       tempMech = mech;
       DOCHECK0(!tempMech, "Error in FireWeaponNumber routine");
+      enemyX = MechFX(tempMech);
+      enemyY = MechFY(tempMech);
+      enemyZ = MechFZ(tempMech);
       mapx = MechX(tempMech);
       mapy = MechY(tempMech);
       range = 0.2;
@@ -637,8 +640,7 @@ int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
     if (!sight && !IsArtillery(weaptype))
 
       /* look for enemies in that hex... */
-      if ((tempMech = find_mech_in_hex(mech, mech_map, MechTargX(mech),
-                                       MechTargY(mech), 0))) {
+      if ((tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0))) {
         enemyX = MechFX(tempMech);
         enemyY = MechFY(tempMech);
         enemyZ = MechFZ(tempMech);
@@ -662,6 +664,10 @@ int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
 
     if (!IsArtillery(weaptype))
       DOCHECK0(!LOS, "That hex target is not in your line of sight!");
+    break;
+
+  default:
+    return 0;
   }
 
   if (tempMech) {

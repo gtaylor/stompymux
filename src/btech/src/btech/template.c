@@ -1812,7 +1812,7 @@ char *read_desc(FILE *fp, char *data) {
   static char buf[MAX_STRING_LENGTH];
 
   keep[0] = '\0';
-  if ((tmp = strchr(data, '{'))) {
+  if (data && (tmp = strchr(data, '{'))) {
     skip_template_whitespace(fp);
     while (isspace(*(++tmp)))
       ;

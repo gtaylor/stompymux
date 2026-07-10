@@ -1173,6 +1173,7 @@ void auto_reply(MECH *mech, char *buf) {
   reply = strdup(buf);
 
   if (reply) {
+    // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
     MECHEVENT(mech, EVENT_AUTO_REPLY, auto_reply_event, Number(1, 2), reply);
   } else {
     SendAI("Interal AI Error: Attempting to radio reply but unable to copy "

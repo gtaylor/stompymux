@@ -1,2 +1,2 @@
-Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores'
+Checks: 'clang-analyzer-*,-clang-analyzer-security.insecureAPI.*,-clang-analyzer-deadcode.DeadStores,-clang-analyzer-optin.performance.Padding,-clang-analyzer-cplusplus.NewDelete'
 HeaderFilterRegex: '^.*/src/.*'

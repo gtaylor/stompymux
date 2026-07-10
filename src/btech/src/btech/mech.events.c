@@ -544,7 +544,10 @@ void mech_movemode_event(MUXEVENT *e) {
   long i = (long)e->data2;
   int dir = (i & MODE_ON ? 1 : i & MODE_OFF ? 0 : 0);
 
-  if (!mech || !Started(mech) || Destroyed(mech)) {
+  if (!mech)
+    return;
+
+  if (!Started(mech) || Destroyed(mech)) {
     MechStatus2(mech) &= ~(MOVE_MODES);
     return;
   }

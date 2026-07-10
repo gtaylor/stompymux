@@ -460,7 +460,8 @@ protected:
   public:
     DynamicTypedEntry(DynamicTypedVocabTable &owner,
                       const EntryPoolPtr &pool_ptr)
-        : TypedEntry(owner, pool_ptr), has_cached_idx(false), ref_count(0) {}
+        : TypedEntry(owner, pool_ptr), has_cached_idx(false), cached_idx(0),
+          ref_count(0) {}
 
     bool hasIndex() const { return has_cached_idx; }
 

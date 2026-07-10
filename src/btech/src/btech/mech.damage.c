@@ -987,7 +987,7 @@ skip_nuke:
     else if (hitloc == CTORSO || hitloc == HEAD) {
       if (!Destroyed(wounded)) {
         if (hitloc == HEAD) {
-          if (MechAim(attacker) == HEAD) {
+          if (attacker && MechAim(attacker) == HEAD) {
             DestroyMech(wounded, attacker, 1, KILL_TYPE_HEAD_TARGET);
           } else {
             DestroyMech(wounded, attacker, 1, KILL_TYPE_BEHEADED);

@@ -96,6 +96,7 @@ void write_test(FI_Vocabulary *const vocabulary, const char *const TEST_FILE) {
   FILE *fpout = fopen(TEST_FILE, "wb");
   if (!fpout) {
     die("fopen");
+    return;
   }
 
   gen = fi_create_generator(vocabulary);

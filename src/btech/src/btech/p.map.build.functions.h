@@ -8,11 +8,8 @@ int water_distance(MAP *map, int x, int y, int dir, int max);
 void loadMap(dbref player, void *data, char *buffer);
 void saveMap(dbref player, void *data, char *buffer);
 void freeOldMap(MAP *map);
-HEXDATA *GetMapHexData(MAP *map, int x, int y);
 void validateExistingLayers(MAP *map, int x, int y);
 void validateSnowDepth(MAP *map, int x, int y);
-void SetMapHexData(MAP *map, int x, int y, char terrain, char elevation,
-                   int layers, int layerData);
 void ClearTerrainLayers(MAP *map, int x, int y);
 void AddTerrainLayer(MAP *map, int x, int y, int layer, int layerData);
 char GetHexTerrain(MAP *map, int x, int y);

@@ -1117,6 +1117,7 @@ void mech_jump(dbref player, void *data, char *buffer) {
     return;
 
   DOCHECK(argc > 2, "Too many arguments to JUMP function!");
+  DOCHECK(argc < 0, "Invalid number of arguments to JUMP function!");
   MechStatus(mech) &= ~DFA_ATTACK; /* By default no DFA */
   switch (argc) {
   case 0:

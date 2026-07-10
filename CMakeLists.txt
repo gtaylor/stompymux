@@ -21,6 +21,12 @@ include(GNUInstallDirs)
 
 enable_testing()
 
+set(MUX_SOURCE_DIR "src/mux")
+set(BTECH_SOURCE_DIR "src/btech")
+set(EVENT_SOURCE_DIR "src/event")
+set(PROJECT_INCLUDE_DIR "src/include")
+set(MISC_SOURCE_DIR "src/misc")
+
 option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
 option(BTMUX_COMPLEX_REPAIRS "Enable complex repairs" OFF)
@@ -151,7 +157,7 @@ set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 set(BT_SCALED_INFRARED ${BTECH_SCALED_INFRARED})
 set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
-configure_file(cmake/autoconf.h.in btech/autoconf.h)
+configure_file(cmake/autoconf.h.in "${BTECH_SOURCE_DIR}/autoconf.h")
 
 set(build_num_file "${CMAKE_BINARY_DIR}/buildnum.data")
 if(EXISTS "${build_num_file}")
@@ -183,7 +189,7 @@ if(Git_FOUND)
     set(SOURCE_REVISION "unknown")
   endif()
 endif()
-configure_file(cmake/version.h.in src/version.h @ONLY)
+configure_file(cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
@@ -195,184 +201,184 @@ if(BTMUX_ENABLE_ASAN)
 endif()
 
 set(BTFI_SOURCES
-  btech/btfi/sax.cc
-  btech/btfi/Codec.cc
-  btech/btfi/Document.cc
-  btech/btfi/Element.cc
-  btech/btfi/Name.cc
-  btech/btfi/Value.cc
-  btech/btfi/MutableAttributes.cc
-  btech/btfi/Vocabulary.cc
-  btech/btfi/VocabSimple.cc
-  btech/btfi/encalg.c
-  btech/btfi/stream.c
-  btech/btfi/errors.c)
+  ${BTECH_SOURCE_DIR}/btfi/sax.cc
+  ${BTECH_SOURCE_DIR}/btfi/Codec.cc
+  ${BTECH_SOURCE_DIR}/btfi/Document.cc
+  ${BTECH_SOURCE_DIR}/btfi/Element.cc
+  ${BTECH_SOURCE_DIR}/btfi/Name.cc
+  ${BTECH_SOURCE_DIR}/btfi/Value.cc
+  ${BTECH_SOURCE_DIR}/btfi/MutableAttributes.cc
+  ${BTECH_SOURCE_DIR}/btfi/Vocabulary.cc
+  ${BTECH_SOURCE_DIR}/btfi/VocabSimple.cc
+  ${BTECH_SOURCE_DIR}/btfi/encalg.c
+  ${BTECH_SOURCE_DIR}/btfi/stream.c
+  ${BTECH_SOURCE_DIR}/btfi/errors.c)
 
 add_library(btfi STATIC ${BTFI_SOURCES})
 target_link_libraries(btfi PRIVATE btmux_options)
 target_include_directories(btfi PRIVATE
-  "${CMAKE_BINARY_DIR}/btech"
-  "${CMAKE_SOURCE_DIR}/btech/btfi"
-  "${CMAKE_SOURCE_DIR}/btech/btfi/include")
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
 
 set(BTECH_SOURCES
-  btech/src/coolmenu.c
-  btech/src/debug.c
-  btech/src/events.c
-  btech/src/glue.hcode.c
-  btech/src/glue.c
-  btech/src/glue.scode.c
-  btech/src/btdb.c
-  btech/src/xcode_io.c
-  btech/src/mech.lostracer.c
-  btech/src/mechfile.c
-  btech/src/spath.c
-  btech/src/tick.c
-  btech/src/mt19937ar.c
-  btech/src/btech/aero.bomb.c
-  btech/src/btech/aero.move.c
-  btech/src/btech/artillery.c
-  btech/src/btech/autopilot_ai.c
-  btech/src/btech/autopilot_autogun.c
-  btech/src/btech/autopilot_commands.c
-  btech/src/btech/autopilot_core.c
-  btech/src/btech/autopilot_radio.c
-  btech/src/btech/bsuit.c
-  btech/src/btech/btech.c
-  btech/src/btech/btechstats.c
-  btech/src/btech/btspath.c
-  btech/src/btech/crit.c
-  btech/src/btech/ds.bay.c
-  btech/src/btech/ds.turret.c
-  btech/src/btech/econ.c
-  btech/src/btech/econ_cmds.c
-  btech/src/btech/eject.c
-  btech/src/btech/failures.c
-  btech/src/btech/map.bits.c
-  btech/src/btech/map.coding.c
-  btech/src/btech/map.conditions.c
-  btech/src/btech/map.dynamic.c
-  btech/src/btech/map.los.c
-  btech/src/btech/map.c
-  btech/src/btech/map.obj.c
-  btech/src/btech/mech.advanced.c
-  btech/src/btech/mech.ammodump.c
-  btech/src/btech/mech.bth.c
-  btech/src/btech/mech.build.c
-  btech/src/btech/mech.c3.misc.c
-  btech/src/btech/mech.c3.c
-  btech/src/btech/mech.c3i.c
-  btech/src/btech/mech.combat.misc.c
-  btech/src/btech/mech.combat.missile.c
-  btech/src/btech/mech.combat.c
-  btech/src/btech/mech.consistency.c
-  btech/src/btech/mech.contacts.c
-  btech/src/btech/mech.damage.c
-  btech/src/btech/mech.ecm.c
-  btech/src/btech/mech.enhanced.criticals.c
-  btech/src/btech/mech.events.c
-  btech/src/btech/mech.fire.c
-  btech/src/btech/mech.hitloc.c
-  btech/src/btech/mech.ice.c
-  btech/src/btech/mech.lite.c
-  btech/src/btech/mech.los.c
-  btech/src/btech/mech.maps.c
-  btech/src/btech/mech.mechref_ident.c
-  btech/src/btech/mech.move.c
-  btech/src/btech/mech.notify.c
-  btech/src/btech/mech.ood.c
-  btech/src/btech/mech.partnames.c
-  btech/src/btech/mech.physical.c
-  btech/src/btech/mech.pickup.c
-  btech/src/btech/mech.restrict.c
-  btech/src/btech/mech.scan.c
-  btech/src/btech/mech.sensor.functions.c
-  btech/src/btech/mech.sensor.c
-  btech/src/btech/mech.spot.c
-  btech/src/btech/mech.startup.c
-  btech/src/btech/mech.stat.c
-  btech/src/btech/mech.status.c
-  btech/src/btech/mech.tag.c
-  btech/src/btech/mech.tech.commands.c
-  btech/src/btech/mech.tech.damages.c
-  btech/src/btech/mech.tech.do.c
-  btech/src/btech/mech.tech.events.c
-  btech/src/btech/mech.tech.c
-  btech/src/btech/mech.tech.repairs.c
-  btech/src/btech/mech.tech.saverepair.c
-  btech/src/btech/mech.tic.c
-  btech/src/btech/mech.update.c
-  btech/src/btech/mech.utils.c
-  btech/src/btech/mechrep.c
-  btech/src/btech/mine.c
-  btech/src/btech/pcombat.c
-  btech/src/btech/template.c)
+  ${BTECH_SOURCE_DIR}/src/coolmenu.c
+  ${BTECH_SOURCE_DIR}/src/debug.c
+  ${BTECH_SOURCE_DIR}/src/events.c
+  ${BTECH_SOURCE_DIR}/src/glue.hcode.c
+  ${BTECH_SOURCE_DIR}/src/glue.c
+  ${BTECH_SOURCE_DIR}/src/glue.scode.c
+  ${BTECH_SOURCE_DIR}/src/btdb.c
+  ${BTECH_SOURCE_DIR}/src/xcode_io.c
+  ${BTECH_SOURCE_DIR}/src/mech.lostracer.c
+  ${BTECH_SOURCE_DIR}/src/mechfile.c
+  ${BTECH_SOURCE_DIR}/src/spath.c
+  ${BTECH_SOURCE_DIR}/src/tick.c
+  ${BTECH_SOURCE_DIR}/src/mt19937ar.c
+  ${BTECH_SOURCE_DIR}/src/btech/aero.bomb.c
+  ${BTECH_SOURCE_DIR}/src/btech/aero.move.c
+  ${BTECH_SOURCE_DIR}/src/btech/artillery.c
+  ${BTECH_SOURCE_DIR}/src/btech/autopilot_ai.c
+  ${BTECH_SOURCE_DIR}/src/btech/autopilot_autogun.c
+  ${BTECH_SOURCE_DIR}/src/btech/autopilot_commands.c
+  ${BTECH_SOURCE_DIR}/src/btech/autopilot_core.c
+  ${BTECH_SOURCE_DIR}/src/btech/autopilot_radio.c
+  ${BTECH_SOURCE_DIR}/src/btech/bsuit.c
+  ${BTECH_SOURCE_DIR}/src/btech/btech.c
+  ${BTECH_SOURCE_DIR}/src/btech/btechstats.c
+  ${BTECH_SOURCE_DIR}/src/btech/btspath.c
+  ${BTECH_SOURCE_DIR}/src/btech/crit.c
+  ${BTECH_SOURCE_DIR}/src/btech/ds.bay.c
+  ${BTECH_SOURCE_DIR}/src/btech/ds.turret.c
+  ${BTECH_SOURCE_DIR}/src/btech/econ.c
+  ${BTECH_SOURCE_DIR}/src/btech/econ_cmds.c
+  ${BTECH_SOURCE_DIR}/src/btech/eject.c
+  ${BTECH_SOURCE_DIR}/src/btech/failures.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.bits.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.coding.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.conditions.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.dynamic.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.los.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.c
+  ${BTECH_SOURCE_DIR}/src/btech/map.obj.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.advanced.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.ammodump.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.bth.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.build.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.c3.misc.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.c3.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.c3i.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.misc.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.missile.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.consistency.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.contacts.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.damage.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.ecm.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.enhanced.criticals.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.events.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.fire.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.hitloc.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.ice.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.lite.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.los.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.maps.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.mechref_ident.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.move.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.notify.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.ood.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.partnames.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.physical.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.pickup.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.restrict.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.scan.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.sensor.functions.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.sensor.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.spot.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.startup.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.stat.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.status.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tag.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.commands.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.damages.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.do.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.events.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.repairs.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.saverepair.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.tic.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.update.c
+  ${BTECH_SOURCE_DIR}/src/btech/mech.utils.c
+  ${BTECH_SOURCE_DIR}/src/btech/mechrep.c
+  ${BTECH_SOURCE_DIR}/src/btech/mine.c
+  ${BTECH_SOURCE_DIR}/src/btech/pcombat.c
+  ${BTECH_SOURCE_DIR}/src/btech/template.c)
 
 add_library(btech STATIC ${BTECH_SOURCES})
 target_link_libraries(btech PRIVATE btmux_options btfi)
 target_include_directories(btech PRIVATE
-  "${CMAKE_BINARY_DIR}/btech"
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_SOURCE_DIR}/btech/src/include"
-  "${CMAKE_SOURCE_DIR}/btech/src/btech"
-  "${CMAKE_SOURCE_DIR}/btech/btfi/include"
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/src")
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include"
+  "${CMAKE_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
-  misc/myfifo.c
-  event/event.c
-  src/boolexp.c
-  src/bsd.c
-  src/commac.c
-  src/command.c
-  src/comsys.c
-  src/conf.c
-  src/cque.c
-  src/create.c
-  src/db.c
-  src/db_xml.c
-  src/db_xdr.c
-  src/db_rw.c
-  src/dllist.c
-  src/dnschild.c
-  src/eval.c
-  src/file_c.c
-  src/flags.c
-  src/funceval.c
-  src/functions.c
-  src/game.c
-  src/help.c
-  src/log.c
-  src/look.c
-  src/macro.c
-  src/match.c
-  src/move.c
-  src/mmdb.c
-  src/nametab.c
-  src/netcommon.c
-  src/nrbtab.c
-  src/object.c
-  src/player.c
-  src/player_c.c
-  src/powers.c
-  src/predicates.c
-  src/rbtree.c
-  src/rbtab.c
-  src/rob.c
-  src/set.c
-  src/signal.c
-  src/speech.c
-  src/stringutil.c
-  src/timer.c
-  src/unparse.c
-  src/vattr.c
-  src/walkdb.c
-  src/wild.c
-  src/wiz.c
-  src/version.c)
+  ${MISC_SOURCE_DIR}/myfifo.c
+  ${EVENT_SOURCE_DIR}/event.c
+  ${MUX_SOURCE_DIR}/boolexp.c
+  ${MUX_SOURCE_DIR}/bsd.c
+  ${MUX_SOURCE_DIR}/commac.c
+  ${MUX_SOURCE_DIR}/command.c
+  ${MUX_SOURCE_DIR}/comsys.c
+  ${MUX_SOURCE_DIR}/conf.c
+  ${MUX_SOURCE_DIR}/cque.c
+  ${MUX_SOURCE_DIR}/create.c
+  ${MUX_SOURCE_DIR}/db.c
+  ${MUX_SOURCE_DIR}/db_xml.c
+  ${MUX_SOURCE_DIR}/db_xdr.c
+  ${MUX_SOURCE_DIR}/db_rw.c
+  ${MUX_SOURCE_DIR}/dllist.c
+  ${MUX_SOURCE_DIR}/dnschild.c
+  ${MUX_SOURCE_DIR}/eval.c
+  ${MUX_SOURCE_DIR}/file_c.c
+  ${MUX_SOURCE_DIR}/flags.c
+  ${MUX_SOURCE_DIR}/funceval.c
+  ${MUX_SOURCE_DIR}/functions.c
+  ${MUX_SOURCE_DIR}/game.c
+  ${MUX_SOURCE_DIR}/help.c
+  ${MUX_SOURCE_DIR}/log.c
+  ${MUX_SOURCE_DIR}/look.c
+  ${MUX_SOURCE_DIR}/macro.c
+  ${MUX_SOURCE_DIR}/match.c
+  ${MUX_SOURCE_DIR}/move.c
+  ${MUX_SOURCE_DIR}/mmdb.c
+  ${MUX_SOURCE_DIR}/nametab.c
+  ${MUX_SOURCE_DIR}/netcommon.c
+  ${MUX_SOURCE_DIR}/nrbtab.c
+  ${MUX_SOURCE_DIR}/object.c
+  ${MUX_SOURCE_DIR}/player.c
+  ${MUX_SOURCE_DIR}/player_c.c
+  ${MUX_SOURCE_DIR}/powers.c
+  ${MUX_SOURCE_DIR}/predicates.c
+  ${MUX_SOURCE_DIR}/rbtree.c
+  ${MUX_SOURCE_DIR}/rbtab.c
+  ${MUX_SOURCE_DIR}/rob.c
+  ${MUX_SOURCE_DIR}/set.c
+  ${MUX_SOURCE_DIR}/signal.c
+  ${MUX_SOURCE_DIR}/speech.c
+  ${MUX_SOURCE_DIR}/stringutil.c
+  ${MUX_SOURCE_DIR}/timer.c
+  ${MUX_SOURCE_DIR}/unparse.c
+  ${MUX_SOURCE_DIR}/vattr.c
+  ${MUX_SOURCE_DIR}/walkdb.c
+  ${MUX_SOURCE_DIR}/wild.c
+  ${MUX_SOURCE_DIR}/wiz.c
+  ${MUX_SOURCE_DIR}/version.c)
 
 if(BTMUX_ENHANCED_LOGGING)
-  list(APPEND NETMUX_SOURCES src/logcache.c)
+  list(APPEND NETMUX_SOURCES ${MUX_SOURCE_DIR}/logcache.c)
 endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
@@ -382,46 +388,46 @@ target_compile_options(netmux PRIVATE
 target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}" ${BTMUX_PLATFORM_LIBS})
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_BINARY_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/include"
-  "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/btech/src/include"
-  "${CMAKE_SOURCE_DIR}/btech/src/btech"
+  "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${EVENT_INCLUDE_DIR}")
 
-add_executable(mkindx src/mkindx.c)
+add_executable(mkindx ${MUX_SOURCE_DIR}/mkindx.c)
 target_compile_options(mkindx PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(mkindx PRIVATE btmux_options ${BTMUX_PLATFORM_LIBS})
 target_include_directories(mkindx PRIVATE
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_SOURCE_DIR}/src")
+  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 
 add_executable(saxtest
-  btech/btfi/tests/saxtest.cc
-  btech/btfi/tests/saxwrite.c
-  btech/btfi/tests/saxread.c)
+  ${BTECH_SOURCE_DIR}/btfi/tests/saxtest.cc
+  ${BTECH_SOURCE_DIR}/btfi/tests/saxwrite.c
+  ${BTECH_SOURCE_DIR}/btfi/tests/saxread.c)
 target_link_libraries(saxtest PRIVATE btmux_options btfi)
 target_include_directories(saxtest PRIVATE
-  "${CMAKE_BINARY_DIR}/btech"
-  "${CMAKE_SOURCE_DIR}/btech/btfi"
-  "${CMAKE_SOURCE_DIR}/btech/btfi/include")
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
 
-add_executable(vocabtest btech/btfi/tests/vocabtest.cc)
+add_executable(vocabtest ${BTECH_SOURCE_DIR}/btfi/tests/vocabtest.cc)
 target_link_libraries(vocabtest PRIVATE btmux_options btfi)
 target_include_directories(vocabtest PRIVATE
-  "${CMAKE_BINARY_DIR}/btech"
-  "${CMAKE_SOURCE_DIR}/btech/btfi"
-  "${CMAKE_SOURCE_DIR}/btech/btfi/include")
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
 
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/btech/btfi/tests")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi/tests")
 configure_file(
-  "${CMAKE_SOURCE_DIR}/btech/btfi/tests/thirdparty.finf"
-  "${CMAKE_BINARY_DIR}/btech/btfi/tests/thirdparty.finf"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/tests/thirdparty.finf"
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi/tests/thirdparty.finf"
   COPYONLY)
 
 add_test(NAME saxtest COMMAND saxtest)
-set_tests_properties(saxtest PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/btech/btfi")
+set_tests_properties(saxtest PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}/btfi")
 add_test(NAME vocabtest COMMAND vocabtest)
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

@@ -1509,7 +1509,7 @@ void HexLOSBroadcast(MAP *mech_map, int x, int y, char *message) {
               *(d++) = *c;
           }
           /* Apparently, it's necessary to remove trailing $'s ?? */
-          if (*(d - 1) == '$')
+          if (d > tbuf && *(d - 1) == '$')
             d--;
           *d = '\0';
           mech_notify(tempMech, MECHSTARTED, tbuf);

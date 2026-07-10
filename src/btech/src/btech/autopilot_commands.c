@@ -996,7 +996,7 @@ void figure_out_range_and_bearing(MECH *mech, int tx, int ty, float *range,
 void auto_goto_event(MUXEVENT *e) {
 
   AUTO *autopilot = (AUTO *)e->data;
-  int tx, ty;
+  int tx = 0, ty = 0;
   float dx, dy;
   MECH *mech = autopilot->mymech;
   float range;
@@ -1015,17 +1015,21 @@ void auto_goto_event(MUXEVENT *e) {
 
   /* Get the first argument - x coord */
   argument = auto_get_command_arg(autopilot, 1, 1);
-  if (Readnum(tx, argument)) {
+  if (!argument || Readnum(tx, argument)) {
     /*! \todo {add a thing here incase the argument isn't a number} */
     free(argument);
+    auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
+    return;
   }
   free(argument);
 
   /* Get the second argument - y coord */
   argument = auto_get_command_arg(autopilot, 1, 2);
-  if (Readnum(ty, argument)) {
+  if (!argument || Readnum(ty, argument)) {
     /*! \todo {add a thing here incase the argument isn't a number} */
     free(argument);
+    auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
+    return;
   }
   free(argument);
 
@@ -1124,7 +1128,7 @@ void auto_roam_event(MUXEVENT * e)
 void auto_dumbgoto_event(MUXEVENT *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
-  int tx, ty;
+  int tx = 0, ty = 0;
   MECH *mech = autopilot->mymech;
   MAP *map;
   float range;
@@ -1279,7 +1283,7 @@ void auto_dumbgoto_event(MUXEVENT *muxevent) {
 void auto_astar_goto_event(MUXEVENT *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
-  int tx, ty;
+  int tx = 0, ty = 0;
   MECH *mech = autopilot->mymech;
   MAP *map;
   float range;
@@ -1361,9 +1365,9 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
        * so should go to next one */
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to hex %d,%d but was"
-               " unable to - bad first argument - going to next command",
-               autopilot->mynum, tx, ty);
+               " generate an astar path for AI #%ld but was unable to - bad"
+               " first argument - going to next command",
+               autopilot->mynum);
       SendAI(error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
@@ -1374,9 +1378,9 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
 
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to hex %d,%d but was"
-               " unable to - bad first argument '%s' - going to next command",
-               autopilot->mynum, tx, ty, argument);
+               " generate an astar path for AI #%ld but was unable to - bad"
+               " first argument '%s' - going to next command",
+               autopilot->mynum, argument);
       SendAI(error_buf);
 
       free(argument);
@@ -1392,9 +1396,9 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
        * so should go to next one */
       snprintf(error_buf, MBUF_SIZE,
                "Internal AI Error - Attempting to"
-               " generate an astar path for AI #%ld to hex %d,%d but was"
-               " unable to - bad second argument - going to next command",
-               autopilot->mynum, tx, ty);
+               " generate an astar path for AI #%ld but was unable to - bad"
+               " second argument - going to next command",
+               autopilot->mynum);
       SendAI(error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
@@ -2559,6 +2563,7 @@ void auto_roam_generate_target_hex(AUTO *autopilot, MECH *mech, MAP *map,
   float range;
   int bearing;
   int max_range = 0;
+  int range_divisor = 1;
   int counter;
 
   /* First tho we pick a hex differently based on which roam mode */
@@ -2577,11 +2582,14 @@ void auto_roam_generate_target_hex(AUTO *autopilot, MECH *mech, MAP *map,
   } else {
 
     /*! \todo {Add some more types of roams perhaps} */
+    return;
   }
 
   /* Adjust roam distance based on number of times we've called this
    * function */
-  max_range = max_range / (2 ^ attempt);
+  for (counter = 0; counter < attempt; counter++)
+    range_divisor *= 2;
+  max_range = max_range / range_divisor;
 
   counter = 0;
 

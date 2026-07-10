@@ -2577,7 +2577,7 @@ void fun_btlistblz(char *buff, char **bufc, dbref player, dbref cause,
   dbref mapdb;
   MAP *map;
   mapobj *tmp;
-  int i, count = 0, strcount = 0;
+  int i = 0, count = 0, strcount = 0;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
 

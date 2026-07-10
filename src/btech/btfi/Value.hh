@@ -31,14 +31,17 @@ public:
   // Construction.
   Value()
       : value_type(FI_VALUE_AS_NULL), value_count(0), value_size(0),
-        value_buf(0), value_buf_size(0) {}
+        value_buf(0), value_buf_size(0), vocab_table(0),
+        add_value_to_table(false), saved_format(ENCODE_AS_UTF8) {}
 
   virtual ~Value();
 
   Value(const Value &src);
 
   Value(FI_ValueType type, size_t count, const void *buf)
-      : value_buf(0), value_buf_size(0) {
+      : value_type(FI_VALUE_AS_NULL), value_count(0), value_size(0),
+        value_buf(0), value_buf_size(0), vocab_table(0),
+        add_value_to_table(false), saved_format(ENCODE_AS_UTF8) {
     if (!setBufferType(type, count)) {
       // TODO: This Exception isn't specific enough.
       throw Exception();

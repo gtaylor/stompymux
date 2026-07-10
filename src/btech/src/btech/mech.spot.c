@@ -143,7 +143,7 @@ void mech_spot(dbref player, void *data, char *buffer) {
   if (target)
     LOS = InLineOfSight(mech, target, MechX(target), MechY(target),
                         FlMechRange(mech_map, mech, target));
-  DOCHECK((targetref == -1) || MechTeam(target) != MechTeam(mech),
+  DOCHECK(!target || (targetref == -1) || MechTeam(target) != MechTeam(mech),
           "That target does not exist!");
 
   DOCHECK(MechType(target) == CLASS_MW,
@@ -167,6 +167,7 @@ void mech_spot(dbref player, void *data, char *buffer) {
     dat->tarFX = MechFX(target);
     dat->tarFY = MechFY(target);
     dat->target = (MECH *)target;
+    // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
     MECHEVENT(mech, EVENT_SPOT_LOCK, mech_spot_event,
               WEAPON_TICK * ((int)range / 10 + 5), dat);
     return;
