@@ -30,10 +30,8 @@ else
 	exit 1
 fi
 
-$MKINDX $TEXT/news.txt $TEXT/news.indx
 $MKINDX $TEXT/help.txt $TEXT/help.indx
 $MKINDX $TEXT/wizhelp.txt $TEXT/wizhelp.indx
-$MKINDX $TEXT/wiznews.txt $TEXT/wiznews.indx
 
 #
 #	Save a copy of the previous input database and log.
@@ -82,4 +80,3 @@ else
 	exit 1
 fi
 	
-
