@@ -74,10 +74,10 @@ fi
 ulimit -c unlimited
 if [ -x $BIN/netmux.debug ]; then
 	echo Starting debug binary.
-	(nohup $BIN/netmux.debug $GAMENAME.conf >$LOGNAME 2>&1 &)
+	($BIN/netmux.debug $GAMENAME.conf >$LOGNAME 2>&1 &)
 elif [ -x $BIN/netmux ]; then
 	echo Starting release binary.
-	(nohup $BIN/netmux $GAMENAME.conf >$LOGNAME 2>&1 &)
+	($BIN/netmux $GAMENAME.conf >$LOGNAME 2>&1 &)
 else
 	echo No binary found!
 	exit 1
