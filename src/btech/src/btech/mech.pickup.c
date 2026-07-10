@@ -19,7 +19,6 @@
 #include "p.bsuit.h"
 #include "p.crit.h"
 #include "p.eject.h"
-#include "p.event.h"
 #include "p.mech.ice.h"
 #include "p.mech.los.h"
 #include "p.mech.pickup.h"

@@ -15,7 +15,7 @@
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "externs.h"
 #include "functions.h"
 #include "glue.h"

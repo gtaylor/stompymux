@@ -17,7 +17,7 @@
 #include <sys/file.h>
 
 #include "coolmenu.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "mech.events.h"

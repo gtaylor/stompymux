@@ -18,7 +18,7 @@
 #include <math.h>
 
 #include "artillery.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "p.artillery.h"

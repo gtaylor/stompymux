@@ -16,7 +16,7 @@
 #include <sys/file.h>
 
 #include "autopilot.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "glue.h"
 #include "map.los.h"
 #include "mech.events.h"

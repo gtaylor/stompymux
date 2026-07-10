@@ -12,7 +12,7 @@
 #include "db.h"
 #include "interface.h"
 #ifdef CHANNEL_HISTORY
-#include "../misc/myfifo.h"
+#include "myfifo/myfifo.h"
 #endif
 
 typedef struct chanentry CHANENT;

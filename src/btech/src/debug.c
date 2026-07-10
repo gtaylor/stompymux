@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "autopilot.h"
 #include "config.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "externs.h"
 #include "glue.h"
 #include "mech.h"

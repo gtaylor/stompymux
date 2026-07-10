@@ -15,7 +15,7 @@
  */
 
 #include "autopilot.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"

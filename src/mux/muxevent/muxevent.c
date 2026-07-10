@@ -62,8 +62,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "../include/p.event.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "debug.h"
 #include "muxevent.h"
 

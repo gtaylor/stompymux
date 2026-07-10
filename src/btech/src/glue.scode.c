@@ -16,6 +16,7 @@
  */
 
 #include "config.h"
+#include "muxevent.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -29,7 +30,6 @@
 #include "mycool.h"
 #include "p.btechstats.h"
 #include "p.econ.h"
-#include "p.event.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
 #include "p.mech.consistency.h"

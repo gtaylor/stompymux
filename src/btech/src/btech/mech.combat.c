@@ -14,7 +14,8 @@
 #include <sys/file.h>
 
 #include "btmacros.h"
-#include "create.h"
+#include "muxevent.h"
+#include "muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "map.h"
@@ -28,7 +29,6 @@
 #include "p.btechstats.h"
 #include "p.crit.h"
 #include "p.eject.h"
-#include "p.event.h"
 #include "p.map.conditions.h"
 #include "p.map.obj.h"
 #include "p.mech.bth.h"

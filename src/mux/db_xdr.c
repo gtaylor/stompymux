@@ -15,10 +15,10 @@
 #include "vattr.h"
 
 /* adds for commac */
-#include "../misc/myfifo.h"
+#include "myfifo/myfifo.h"
 #include "commac.h"
 #include "comsys.h"
-#include "create.h"
+#include "muxevent_alloc.h"
 #include "macro.h"
 
 extern OBJ *db;

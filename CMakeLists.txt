@@ -23,9 +23,9 @@ enable_testing()
 
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
-set(EVENT_SOURCE_DIR "src/event")
-set(PROJECT_INCLUDE_DIR "src/include")
-set(MISC_SOURCE_DIR "src/misc")
+set(MKINDX_SOURCE_DIR "src/mkinx")
+set(MUXEVENT_SOURCE_DIR "${MUX_SOURCE_DIR}/muxevent")
+set(MYFIFO_SOURCE_DIR "${MUX_SOURCE_DIR}/myfifo")
 
 option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
@@ -142,7 +142,7 @@ set(BT_COMPLEXREPAIRS ${BTMUX_COMPLEX_REPAIRS})
 set(BT_FREETECHTIME ${BTMUX_FREE_TECHTIME})
 set(MOVE_HELP ${BTMUX_RENAME_HELP})
 
-configure_file(cmake/autoconf.h.in autoconf.h)
+configure_file(src/cmake/autoconf.h.in autoconf.h)
 
 set(PACKAGE_NAME "BattleTech Extensions")
 set(PACKAGE_TARNAME "battletech-extensions")
@@ -157,7 +157,7 @@ set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 set(BT_SCALED_INFRARED ${BTECH_SCALED_INFRARED})
 set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
-configure_file(cmake/autoconf.h.in "${BTECH_SOURCE_DIR}/autoconf.h")
+configure_file(src/cmake/autoconf.h.in "${BTECH_SOURCE_DIR}/autoconf.h")
 
 set(build_num_file "${CMAKE_BINARY_DIR}/buildnum.data")
 if(EXISTS "${build_num_file}")
@@ -189,7 +189,7 @@ if(Git_FOUND)
     set(SOURCE_REVISION "unknown")
   endif()
 endif()
-configure_file(cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
+configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
@@ -322,11 +322,11 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include"
-  "${CMAKE_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${MUXEVENT_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
-  ${MISC_SOURCE_DIR}/myfifo.c
-  ${EVENT_SOURCE_DIR}/event.c
+  ${MYFIFO_SOURCE_DIR}/myfifo.c
+  ${MUXEVENT_SOURCE_DIR}/muxevent.c
   ${MUX_SOURCE_DIR}/boolexp.c
   ${MUX_SOURCE_DIR}/bsd.c
   ${MUX_SOURCE_DIR}/commac.c
@@ -389,13 +389,13 @@ target_link_libraries(netmux PRIVATE btmux_options btech btfi "${EVENT_LIBRARY}"
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${PROJECT_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/${MUXEVENT_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${EVENT_INCLUDE_DIR}")
 
-add_executable(mkindx ${MUX_SOURCE_DIR}/mkindx.c)
+add_executable(mkindx ${MKINDX_SOURCE_DIR}/mkindx.c)
 target_compile_options(mkindx PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(mkindx PRIVATE btmux_options ${BTMUX_PLATFORM_LIBS})

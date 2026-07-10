@@ -25,7 +25,6 @@
 #include "macros.h"
 #include "mech.h"
 #include "muxevent.h"
-#include "p.event.h"
 #include <math.h>
 
 #define LOS_NB InLineOfSight_NB
