@@ -19,7 +19,7 @@
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
-#include "gamedb/gamedb.h"
+#include "persistence/gamedb.h"
 #include "interface.h"
 #include "logcache.h"
 #include "macro.h"
