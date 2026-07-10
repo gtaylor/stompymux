@@ -3,134 +3,11 @@
  */
 
 #include "config.h"
-#include <ctype.h>
-#include <sys/types.h>
-
-#include "config.h"
 #include "db.h"
 #include "externs.h"
-#include "interface.h"
-#include "match.h"
-
-#include "comsys.h"
+#include "commac.h"
 
 struct commac *commac_table[NUM_COMMAC];
-
-extern void load_macros(FILE *);
-extern void save_macros(FILE *);
-
-void load_comsys_and_macros(char *filename) {
-  FILE *fp;
-  int i;
-  char buffer[200];
-
-  for (i = 0; i < NUM_COMMAC; i++)
-    commac_table[i] = NULL;
-
-  if (!(fp = fopen(filename, "r"))) {
-    fprintf(stderr, "Error: Couldn't find %s.\n", filename);
-  } else {
-    fprintf(stderr, "LOADING: %s\n", filename);
-    if (fscanf(fp, "*** Begin %s ***\n", buffer) == 1 &&
-        !strcmp(buffer, "COMMAC")) {
-      load_commac(fp);
-    } else {
-      fprintf(stderr, "Error: Couldn't find Begin COMMAC in %s.", filename);
-      return;
-    }
-
-    if (fscanf(fp, "*** Begin %s ***\n", buffer) == 1 &&
-        !strcmp(buffer, "COMSYS")) {
-      load_comsystem(fp);
-    } else {
-      fprintf(stderr, "Error: Couldn't find Begin COMSYS in %s.", filename);
-      return;
-    }
-
-    if (fscanf(fp, "*** Begin %s ***\n", buffer) == 1 &&
-        !strcmp(buffer, "MACRO")) {
-      load_macros(fp);
-    } else {
-      fprintf(stderr, "Error: Couldn't find Begin MACRO in %s.", filename);
-      return;
-    }
-
-    fclose(fp);
-    fprintf(stderr, "LOADING: %s (done)\n", filename);
-  }
-}
-
-void save_comsys_and_macros(char *filename) {
-  FILE *fp;
-  char buffer[500] = {0};
-
-  snprintf(buffer, sizeof(buffer), "%s.#", filename);
-  if (!(fp = fopen(buffer, "w"))) {
-    fprintf(stderr, "Unable to open %s for writing.\n", buffer);
-    return;
-  }
-  fprintf(fp, "*** Begin COMMAC ***\n");
-  save_commac(fp);
-
-  fprintf(fp, "*** Begin COMSYS ***\n");
-  save_comsystem(fp);
-
-  fprintf(fp, "*** Begin MACRO ***\n");
-  save_macros(fp);
-
-  fclose(fp);
-  rename(buffer, filename);
-}
-
-void load_commac(FILE *fp) {
-  int i, j;
-  char buffer[100];
-  int np;
-  struct commac *c;
-  char *t;
-  char in;
-
-  if (fscanf(fp, "%d\n", &np) != 1)
-    return;
-  for (i = 0; i < np; i++) {
-    c = create_new_commac();
-    if (fscanf(fp, "%ld %d %d %d %d %d %d %d\n", &(c->who), &(c->numchannels),
-               &(c->macros[0]), &(c->macros[1]), &c->macros[2], &(c->macros[3]),
-               &(c->macros[4]), &(c->curmac)) != 8) {
-      destroy_commac(c);
-      return;
-    }
-    c->maxchannels = c->numchannels;
-    if (c->maxchannels > 0) {
-      c->alias = (char *)malloc(c->maxchannels * 6);
-      c->channels = (char **)malloc(sizeof(char *) * c->maxchannels);
-
-      for (j = 0; j < c->numchannels; j++) {
-        t = c->alias + j * 6;
-        while ((in = fgetc(fp)) != ' ')
-          *t++ = in;
-        *t = 0;
-
-        if (fscanf(fp, "%[^\n]\n", buffer) != 1) {
-          c->numchannels = j;
-          destroy_commac(c);
-          return;
-        }
-
-        c->channels[j] = (char *)malloc(strlen(buffer) + 1);
-        StringCopy(c->channels[j], buffer);
-      }
-      sort_com_aliases(c);
-    } else {
-      c->alias = NULL;
-      c->channels = NULL;
-    }
-    if ((Typeof(c->who) == TYPE_PLAYER) || (!God(Owner(c->who))) ||
-        ((!Going(c->who))))
-      add_commac(c);
-    purge_commac();
-  }
-}
 
 void purge_commac(void) {
   struct commac *c;
@@ -169,35 +46,6 @@ void purge_commac(void) {
   }
 }
 
-void save_commac(FILE *fp) {
-  int np;
-  struct commac *c;
-  int i, j;
-
-  purge_commac();
-  np = 0;
-  for (i = 0; i < NUM_COMMAC; i++) {
-    c = commac_table[i];
-    while (c) {
-      np++;
-      c = c->next;
-    }
-  }
-
-  fprintf(fp, "%d\n", np);
-  for (i = 0; i < NUM_COMMAC; i++) {
-    c = commac_table[i];
-    while (c) {
-      fprintf(fp, "%ld %d %d %d %d %d %d %d\n", c->who, c->numchannels,
-              c->macros[0], c->macros[1], c->macros[2], c->macros[3],
-              c->macros[4], c->curmac);
-      for (j = 0; j < c->numchannels; j++) {
-        fprintf(fp, "%s %s\n", c->alias + j * 6, c->channels[j]);
-      }
-      c = c->next;
-    }
-  }
-}
 
 struct commac *create_new_commac(void) {
   struct commac *c;

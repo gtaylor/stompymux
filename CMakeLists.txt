@@ -347,6 +347,7 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/funceval.c
   ${MUX_SOURCE_DIR}/functions.c
   ${MUX_SOURCE_DIR}/game.c
+  ${MUX_SOURCE_DIR}/persistence/commac_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/persistence/gamedb_sqlite.c
   ${MUX_SOURCE_DIR}/help.c
   ${MUX_SOURCE_DIR}/log.c

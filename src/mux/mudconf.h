@@ -26,7 +26,6 @@ struct confdata {
   int cache_width;       /* Number of cache cells */
   int cache_names;       /* Should object names be cached separately */
   char gamedb[128];      /* SQLite game database */
-  char commac_db[128];   /* name of the comsys and macros db */
   char hcode_db[128];    /* Hardcode stuff */
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */

@@ -63,7 +63,6 @@ void cf_init(void) {
   int i;
 
   StringCopy(mudconf.gamedb, "");
-  StringCopy(mudconf.commac_db, "commac.db");
   StringCopy(mudconf.hcode_db, "hcode.db");
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
@@ -1107,8 +1106,6 @@ CONF conftable[] = {
     {(char *)"check_interval", cf_int, CA_GOD, &mudconf.check_interval, 0},
     {(char *)"check_offset", cf_int, CA_GOD, &mudconf.check_offset, 0},
     {(char *)"clone_copies_cost", cf_bool, CA_GOD, &mudconf.clone_copy_cost, 0},
-    {(char *)"commac_database", cf_string, CA_GOD, (void *)mudconf.commac_db,
-     128},
     {(char *)"command_quota_increment", cf_int, CA_GOD, &mudconf.cmd_quota_incr,
      0},
     {(char *)"command_quota_max", cf_int, CA_GOD, &mudconf.cmd_quota_max, 0},

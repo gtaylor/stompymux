@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <stdio.h>
-
 #include "config.h"
 #include "db.h"
 #include "externs.h"
@@ -46,8 +44,6 @@ int can_write_macros(dbref player, struct macros *m);
 int can_read_macros(dbref player, struct macros *m);
 
 void do_sort_macro_set(struct macros *m);
-void save_macros(FILE *fp);
-void load_macros(FILE *fp);
 void clear_macro_set(int set);
 
 int do_macro(dbref player, char *in, char **out);

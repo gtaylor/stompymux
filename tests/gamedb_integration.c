@@ -149,9 +149,15 @@ static int check_snapshot(const char *path) {
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
            0 &&
        query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 &&
-       query_int(sqlite,
+      query_int(sqlite,
                  "SELECT count(*) FROM attributes WHERE number IN (25, 42, 43);",
-                 0) == 0;
+                 0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
+                "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
+                "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
+                "'macro_entries');",
+                7) == 0;
 #ifdef BTMUX_TEST_ADVANCED_ECON
   ok = ok &&
        query_int(sqlite,
@@ -159,6 +165,50 @@ static int check_snapshot(const char *path) {
                  "AND name = 'btech_economy_costs';",
                  1) == 0;
 #endif
+  sqlite3_close(sqlite);
+  return ok ? 0 : -1;
+}
+
+/* Seed SQLite directly, then verify a normal server restart reads these rows. */
+static int seed_commac_snapshot(const char *path) {
+  sqlite3 *sqlite;
+  int result;
+
+  sqlite = NULL;
+  result = sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                   SQLITE_OK &&
+               sqlite3_exec(
+                   sqlite,
+                   "INSERT INTO commac_entries VALUES (1, 0, 0, -1, -1, -1, -1);"
+                   "INSERT INTO commac_aliases VALUES (1, 0, 'test', 'Public');"
+                   "INSERT INTO comsys_channels VALUES ('Public', 0, 0, 0, 0, 0, 0, 0, 0);"
+                   "INSERT INTO comsys_channel_users VALUES ('Public', 0, 1, 1, 'pilot');"
+                   "INSERT INTO comsys_channel_messages VALUES ('Public', 0, 123, 'test message');"
+                   "INSERT INTO macro_sets VALUES (0, 1, 0, 'Test macros');"
+                   "INSERT INTO macro_entries VALUES (0, 0, 'go', 'look');",
+                   NULL, NULL, NULL) == SQLITE_OK
+               ? 0
+               : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_commac_snapshot(const char *path) {
+  sqlite3 *sqlite;
+  int ok;
+
+  sqlite = NULL;
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  ok = query_int(sqlite, "SELECT count(*) FROM commac_entries;", 1) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM commac_aliases;", 1) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM comsys_channels;", 1) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM comsys_channel_users;", 1) ==
+           0 &&
+       query_int(sqlite, "SELECT count(*) FROM comsys_channel_messages;", 1) ==
+           0 &&
+       query_int(sqlite, "SELECT count(*) FROM macro_sets;", 1) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM macro_entries;", 1) == 0;
   sqlite3_close(sqlite);
   return ok ? 0 : -1;
 }
@@ -202,23 +252,28 @@ int main(int argc, char *argv[]) {
                ? 0
                : 1;
 
+  if (result == 0 && seed_commac_snapshot(database) < 0)
+    result = 1;
+
 #ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 &&
       (run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
-       check_zero_economy(database) < 0))
+       check_zero_economy(database) < 0 || check_commac_snapshot(database) < 0))
     result = 1;
 
   if (result == 0 &&
       (insert_sparse_economy_cost(database) < 0 ||
        run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
-       check_sparse_economy_cost(database) < 0))
+       check_sparse_economy_cost(database) < 0 ||
+       check_commac_snapshot(database) < 0))
     result = 1;
 #else
   if (result == 0 &&
       (run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
-       WEXITSTATUS(status) == 2 || check_snapshot(database) < 0))
+       WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
+       check_commac_snapshot(database) < 0))
     result = 1;
 #endif
 

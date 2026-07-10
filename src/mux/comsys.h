@@ -5,7 +5,6 @@
 
 /* $Id: comsys.h,v 1.1 2005/06/13 20:50:46 murrayma Exp $ */
 
-#include <stdio.h>
 #include <time.h>
 
 #include "commac.h"
@@ -59,8 +58,6 @@ extern int max_channels;
 int In_IC_Loc(dbref player);
 void init_chantab(void);
 void send_channel(char *chan, const char *format, ...);
-void load_comsystem(FILE *fp);
-void save_comsystem(FILE *fp);
 struct channel *select_channel(char *channel);
 struct comuser *select_user(struct channel *ch, dbref player);
 void do_addcom(dbref player, dbref cause, int key, char *arg1, char *arg2);

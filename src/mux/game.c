@@ -27,6 +27,7 @@
 #include "mudconf.h"
 #include "powers.h"
 #include "persistence/btech_persistence.h"
+#include "persistence/commac_persistence.h"
 #include "timer.h"
 #include "vattr.h"
 #include "version.h"
@@ -813,8 +814,6 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
 void dump_database_internal(int dump_type) {
   gamedb_dump(dump_type);
 
-  if (mudconf.have_comsys || mudconf.have_macros)
-    save_comsys_and_macros(mudconf.commac_db);
   if (dump_type == DUMP_CRASHED)
     SaveSpecialObjects(DUMP_CRASHED);
   else if (mudconf.have_specials)
@@ -898,9 +897,6 @@ static int load_game(void) {
     }
     return -1;
   }
-
-  if (mudconf.have_comsys || mudconf.have_macros)
-    load_comsys_and_macros(mudconf.commac_db);
 
   /* Load the mecha stuff.. */
   if (mudconf.have_specials)
@@ -1116,6 +1112,11 @@ int main(int argc, char *argv[]) {
 
   if (btech_persistence_register() < 0) {
     fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
+    exit(2);
+  }
+
+  if (commac_persistence_register() < 0) {
+    fprintf(stderr, "Unable to register commac SQLite persistence.\n");
     exit(2);
   }
 
