@@ -25,6 +25,20 @@
 /* Identifies SQLite as the storage implementation in snapshot metadata. */
 #define GAMEDB_SOURCE_FORMAT_SQLITE 1
 
+/* Keep extension storage in the game snapshot without coupling MUX to BTech. */
+#define GAMEDB_MAX_SQLITE_EXTENSIONS 8
+
+typedef struct persistence_sqlite_extension PERSISTENCE_SQLITE_EXTENSION;
+struct persistence_sqlite_extension {
+  const char *name;
+  PERSISTENCE_SQLITE_LOAD load;
+  PERSISTENCE_SQLITE_STORE store;
+};
+
+static PERSISTENCE_SQLITE_EXTENSION
+    sqlite_extensions[GAMEDB_MAX_SQLITE_EXTENSIONS];
+static size_t sqlite_extension_count;
+
 #ifndef O_DIRECTORY
 #define O_DIRECTORY 0
 #endif
@@ -86,6 +100,70 @@ static void gamedb_log_failure(const char *stage, const char *path,
   detail = sqlite ? sqlite3_errmsg(sqlite) : strerror(errno);
   log_error(LOG_ALWAYS, "GDB", "FAIL", "SQLite %s for %s: %s", (char *)stage,
             (char *)path, (char *)detail);
+}
+
+/* Report a subsystem persistence failure with its registered extension name. */
+static void gamedb_log_extension_failure(const char *operation,
+                                         const char *name, const char *path,
+                                         sqlite3 *sqlite) {
+  const char *detail;
+
+  detail = sqlite ? sqlite3_errmsg(sqlite) : "extension callback failed";
+  log_error(LOG_ALWAYS, "GDB", "FAIL",
+            "SQLite persistence extension %s failed while %s %s: %s",
+            (char *)name, (char *)operation, (char *)path, (char *)detail);
+}
+
+/* Register one optional subsystem that shares the game SQLite database. */
+int persistence_register_sqlite_extension(const char *name,
+                                          PERSISTENCE_SQLITE_LOAD load,
+                                          PERSISTENCE_SQLITE_STORE store) {
+  size_t index;
+
+  if (!name || !*name || !load || !store)
+    return -1;
+  for (index = 0; index < sqlite_extension_count; index++) {
+    if (!strcmp(sqlite_extensions[index].name, name))
+      return sqlite_extensions[index].load == load &&
+                     sqlite_extensions[index].store == store
+                 ? 0
+                 : -1;
+  }
+  if (sqlite_extension_count == GAMEDB_MAX_SQLITE_EXTENSIONS)
+    return -1;
+  sqlite_extensions[sqlite_extension_count].name = name;
+  sqlite_extensions[sqlite_extension_count].load = load;
+  sqlite_extensions[sqlite_extension_count].store = store;
+  sqlite_extension_count++;
+  return 0;
+}
+
+/* Restore every registered subsystem while its snapshot connection is open. */
+static int gamedb_load_extensions(sqlite3 *sqlite, const char *path) {
+  size_t index;
+
+  for (index = 0; index < sqlite_extension_count; index++) {
+    if (sqlite_extensions[index].load(sqlite) < 0) {
+      gamedb_log_extension_failure("loading", sqlite_extensions[index].name,
+                                   path, sqlite);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+/* Store every registered subsystem before committing the full snapshot. */
+static int gamedb_store_extensions(sqlite3 *sqlite) {
+  size_t index;
+
+  for (index = 0; index < sqlite_extension_count; index++) {
+    if (sqlite_extensions[index].store(sqlite) < 0) {
+      gamedb_log_extension_failure("writing", sqlite_extensions[index].name,
+                                   mudconf.gamedb, sqlite);
+      return -1;
+    }
+  }
+  return 0;
 }
 
 /* Execute a statement that does not return rows. */
@@ -432,6 +510,8 @@ int gamedb_load(const char *path) {
         gamedb_load_objects(sqlite, db_top) < 0 ||
         gamedb_load_attributes(sqlite, db_top) < 0) {
       gamedb_log_failure("loading snapshot data", path, sqlite);
+    } else if (gamedb_load_extensions(sqlite, path) < 0) {
+      /* The extension has already emitted a subsystem-specific error. */
     } else {
       load_player_names();
       result = 0;
@@ -607,6 +687,10 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
     if (attr_cursor)
       free(attr_cursor);
   }
+
+  if (gamedb_store_extensions(sqlite) < 0)
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
+                                  attributes, 0);
 
   if (gamedb_exec(sqlite, "COMMIT;") < 0)
     return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,

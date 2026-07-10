@@ -10,14 +10,9 @@
 #define BT_CALCULATE_BV
 
 /*
- * Define if you want extra commands in debug objects for re-loading and
- * saving file at econ.db location, loading into econ memory default data,
- * etc... This is configured out since after initialization of the cost data
- * there isn't much use to have the commands around. Normal hcode save includes
- * econ.db write. Having the command to load default econ.db contents forever
- * just wastes static memory space and such. This default build has it one but I
- * suggest turning it off after either you have yer own acquired econ.db or
- * create and save an initial one after setting up.
+ * Define if you want extra commands in debug objects for loading default
+ * advanced-economy data. Persistent economy prices live in the SQLite game
+ * database.
  */
 #define BT_ADVANCED_ECON_INIT
 

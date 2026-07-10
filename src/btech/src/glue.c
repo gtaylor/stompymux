@@ -467,64 +467,6 @@ static size_t get_specialobjectsize(GlueType type) {
   return SpecialObjects[type].datasize;
 }
 
-#ifdef BT_ADVANCED_ECON
-static void load_econdb() {
-  FILE *f;
-  /* Econ DB */
-  extern unsigned long long int specialcost[SPECIALCOST_SIZE];
-  extern unsigned long long int ammocost[AMMOCOST_SIZE];
-  extern unsigned long long int weapcost[WEAPCOST_SIZE];
-  extern unsigned long long int cargocost[CARGOCOST_SIZE];
-  extern unsigned long long int bombcost[BOMBCOST_SIZE];
-  int count;
-
-  fprintf(stderr, "LOADING: %s\n", mudconf.econ_db);
-  f = fopen(mudconf.econ_db, "r");
-  if (!f) {
-    fprintf(stderr, "ERROR: %s not found.\n", mudconf.econ_db);
-    return;
-  }
-  count =
-      fread(&specialcost, sizeof(unsigned long long int), SPECIALCOST_SIZE, f);
-  if (count < SPECIALCOST_SIZE) {
-    fprintf(stderr, "ERROR: %s specialcost read : %d expected %d\n",
-            mudconf.econ_db, count, SPECIALCOST_SIZE);
-    fclose(f);
-    return;
-  }
-  count = fread(&ammocost, sizeof(unsigned long long int), AMMOCOST_SIZE, f);
-  if (count < AMMOCOST_SIZE) {
-    fprintf(stderr, "ERROR: %s ammocost read : %d expected %d\n",
-            mudconf.econ_db, count, AMMOCOST_SIZE);
-    fclose(f);
-    return;
-  }
-  count = fread(&weapcost, sizeof(unsigned long long int), WEAPCOST_SIZE, f);
-  if (count < WEAPCOST_SIZE) {
-    fprintf(stderr, "ERROR: %s weapcost read : %d expected %d\n",
-            mudconf.econ_db, count, WEAPCOST_SIZE);
-    fclose(f);
-    return;
-  }
-  count = fread(&cargocost, sizeof(unsigned long long int), CARGOCOST_SIZE, f);
-  if (count < CARGOCOST_SIZE) {
-    fprintf(stderr, "ERROR: %s cargocost read : %d expected %d\n",
-            mudconf.econ_db, count, CARGOCOST_SIZE);
-    fclose(f);
-    return;
-  }
-  count = fread(&bombcost, sizeof(unsigned long long int), BOMBCOST_SIZE, f);
-  if (count < BOMBCOST_SIZE) {
-    fprintf(stderr, "ERROR: %s bombcost read : %d expected %d\n",
-            mudconf.econ_db, count, BOMBCOST_SIZE);
-    fclose(f);
-    return;
-  }
-  fclose(f);
-  fprintf(stderr, "LOADING: %s (done)\n", mudconf.econ_db);
-}
-#endif
-
 void heartbeat_init();
 
 static void load_xcode(void) {
@@ -578,10 +520,6 @@ static void load_xcode(void) {
   my_close_file(fp, &filemode);
 
   fprintf(stderr, "LOADING: %s (done)\n", mudconf.hcode_db);
-
-#ifdef BT_ADVANCED_ECON
-  load_econdb();
-#endif
 
   heartbeat_init();
 }
@@ -700,94 +638,6 @@ void ChangeSpecialObjects(int i) {
      _have_ new-db concept ; this is to-be-done project, however */
 }
 
-#ifdef BT_ADVANCED_ECON
-static void save_econdb(char *target, int maxlen, int i) {
-  FILE *f;
-  extern unsigned long long int specialcost[SPECIALCOST_SIZE];
-  extern unsigned long long int ammocost[AMMOCOST_SIZE];
-  extern unsigned long long int weapcost[WEAPCOST_SIZE];
-  extern unsigned long long int cargocost[CARGOCOST_SIZE];
-  extern unsigned long long int bombcost[BOMBCOST_SIZE];
-  int count;
-
-  switch (i) {
-  case DUMP_KILLED:
-    snprintf(target, maxlen, "%s.KILLED", mudconf.econ_db);
-    break;
-  case DUMP_CRASHED:
-    snprintf(target, maxlen, "%s.CRASHED", mudconf.econ_db);
-    break;
-  default: /* RESTART / normal */
-    snprintf(target, maxlen, "%s.tmp", mudconf.econ_db);
-    break;
-  }
-  f = fopen(target, "w");
-  if (!f) {
-    log_perror("SAVE", "FAIL", "Opening econ-save file", target);
-    SendDB("ERROR occured during opening of new econ-savefile.");
-    return;
-  }
-  count =
-      fwrite(&specialcost, sizeof(unsigned long long int), SPECIALCOST_SIZE, f);
-  if (count < SPECIALCOST_SIZE) {
-    log_perror("SAVE", "FAIL",
-               tprintf("ERROR: %s specialcost wrote : %d expected %d", target,
-                       count, SPECIALCOST_SIZE),
-               target);
-    SendDB("ERROR occured during saving of econ-save file");
-    fclose(f);
-    return;
-  }
-  count = fwrite(&ammocost, sizeof(unsigned long long int), AMMOCOST_SIZE, f);
-  if (count < AMMOCOST_SIZE) {
-    log_perror("SAVE", "FAIL",
-               tprintf("ERROR: %s ammocost wrote : %d expected %d", target,
-                       count, AMMOCOST_SIZE),
-               target);
-    SendDB("ERROR occured during saving of econ-save file");
-    fclose(f);
-    return;
-  }
-  count = fwrite(&weapcost, sizeof(unsigned long long int), WEAPCOST_SIZE, f);
-  if (count < WEAPCOST_SIZE) {
-    log_perror("SAVE", "FAIL",
-               tprintf("ERROR: %s weapcost wrote : %d expected %d", target,
-                       count, WEAPCOST_SIZE),
-               target);
-    SendDB("ERROR occured during saving of econ-save file");
-    fclose(f);
-    return;
-  }
-  count = fwrite(&cargocost, sizeof(unsigned long long int), CARGOCOST_SIZE, f);
-  if (count < CARGOCOST_SIZE) {
-    log_perror("SAVE", "FAIL",
-               tprintf("ERROR: %s cargocost wrote : %d expected %d", target,
-                       count, CARGOCOST_SIZE),
-               target);
-    SendDB("ERROR occured during saving of econ-save file");
-    fclose(f);
-    return;
-  }
-  count = fwrite(&bombcost, sizeof(unsigned long long int), BOMBCOST_SIZE, f);
-  if (count < BOMBCOST_SIZE) {
-    log_perror("SAVE", "FAIL",
-               tprintf("ERROR: %s bombcost wrote : %d expected %d", target,
-                       count, BOMBCOST_SIZE),
-               target);
-    SendDB("ERROR occured during saving of econ-save file");
-    fclose(f);
-    return;
-  }
-  fclose(f);
-  if (i == DUMP_RESTART || i == DUMP_NORMAL) {
-    if (rename(target, mudconf.econ_db) < 0) {
-      log_perror("SAV", "FAIL", "Renaming econ-save file ", target);
-      SendDB("ERROR occured during renaming of econ save-file.");
-    }
-  }
-}
-#endif
-
 void SaveSpecialObjects(int i) {
   FILE *fp;
   int filemode;
@@ -853,9 +703,6 @@ void SaveSpecialObjects(int i) {
   /* TODO: This used to report the number of entries saved.  */
   SendDB("Hcode saved.");
 
-#ifdef BT_ADVANCED_ECON
-  save_econdb(target, LBUF_SIZE, i);
-#endif
 }
 
 static int UpdateSpecialObject_func(void *key, void *data, int depth,

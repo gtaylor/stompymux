@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 
 #include "muxevent/muxevent_alloc.h"
 #include "glue.h"
@@ -256,6 +257,107 @@ void fun_btpartmatch(char *buff, char **bufc, dbref player, dbref cause,
 
   if (part_count == 0)
     safe_tprintf_str(buff, bufc, "#-1 INVALID PARTNAME");
+}
+
+/* Categories accepted by btpartslist(), based on the canonical part ID. */
+typedef enum bt_part_category BT_PART_CATEGORY;
+enum bt_part_category {
+  BT_PART_CATEGORY_AMMO,
+  BT_PART_CATEGORY_WEAPON,
+  BT_PART_CATEGORY_BOMB,
+  BT_PART_CATEGORY_SPECIAL,
+  BT_PART_CATEGORY_CARGO,
+  BT_PART_CATEGORY_INVALID
+};
+
+/* Convert a user-facing category name into the corresponding part category. */
+static BT_PART_CATEGORY btpartslist_category(const char *category) {
+  if (!strcasecmp(category, "ammo"))
+    return BT_PART_CATEGORY_AMMO;
+  if (!strcasecmp(category, "weapon") || !strcasecmp(category, "weapons") ||
+      !strcasecmp(category, "weap"))
+    return BT_PART_CATEGORY_WEAPON;
+  if (!strcasecmp(category, "bomb") || !strcasecmp(category, "bombs"))
+    return BT_PART_CATEGORY_BOMB;
+  if (!strcasecmp(category, "special") || !strcasecmp(category, "specials") ||
+      !strcasecmp(category, "part") || !strcasecmp(category, "parts"))
+    return BT_PART_CATEGORY_SPECIAL;
+  if (!strcasecmp(category, "cargo") || !strcasecmp(category, "carg"))
+    return BT_PART_CATEGORY_CARGO;
+  return BT_PART_CATEGORY_INVALID;
+}
+
+/* Return whether a canonical part ID belongs in the requested category. */
+static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
+  switch (category) {
+  case BT_PART_CATEGORY_AMMO:
+    return IsAmmo(part);
+  case BT_PART_CATEGORY_WEAPON:
+    return IsWeapon(part);
+  case BT_PART_CATEGORY_BOMB:
+    return IsBomb(part);
+  case BT_PART_CATEGORY_SPECIAL:
+    return IsSpecial(part);
+  case BT_PART_CATEGORY_CARGO:
+    return IsCargo(part);
+  default:
+    return 0;
+  }
+}
+
+/* List the canonical category names accepted by btpartslist(). */
+void fun_btpartscategorylist(char *buff, char **bufc, dbref player,
+                             dbref cause, char *fargs[], int nfargs,
+                             char *cargs[], int ncargs) {
+  FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
+  safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
+}
+
+/*
+ * Return canonical long part names from one category, separated by pipes.
+ * Requiring the category keeps this softcode result within one LBUF.
+ */
+void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
+                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
+  BT_PART_CATEGORY category;
+  PN *part_name;
+  size_t used;
+  size_t needed;
+  int index;
+  int part;
+  int brand;
+  int listed;
+
+  FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
+  FUNCHECK(nfargs != 1, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
+
+  category = btpartslist_category(fargs[0]);
+  FUNCHECK(category == BT_PART_CATEGORY_INVALID,
+           "#-1 CATEGORY MUST BE AMMO, WEAPON, BOMB, SPECIAL, OR CARGO");
+
+  listed = 0;
+  for (index = 0; index < object_count; index++) {
+    part_name = long_sorted[index];
+    UNPACK_PART(part_name->index, part, brand);
+    if (!btpartslist_matches(category, part))
+      continue;
+
+    used = (size_t)(*bufc - buff);
+    needed = strlen(part_name->longy) + (listed ? 1 : 0);
+    if (used + needed >= LBUF_SIZE) {
+      *bufc = buff;
+      safe_str("#-1 LIST TOO LONG FOR THIS CATEGORY",
+               buff, bufc);
+      return;
+    }
+    if (listed)
+      safe_str("|", buff, bufc);
+    safe_str(part_name->longy, buff, bufc);
+    listed++;
+  }
+
+  if (!listed)
+    safe_str("#-1 NO PARTS IN CATEGORY", buff, bufc);
 }
 
 void fun_btpartname(char *buff, char **bufc, dbref player, dbref cause,

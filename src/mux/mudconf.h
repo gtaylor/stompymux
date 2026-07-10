@@ -28,9 +28,6 @@ struct confdata {
   char gamedb[128];      /* SQLite game database */
   char commac_db[128];   /* name of the comsys and macros db */
   char hcode_db[128];    /* Hardcode stuff */
-#ifdef BT_ADVANCED_ECON
-  char econ_db[128]; /* Hardcode Econ stuff */
-#endif
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */
   char config_file[128];    /* name of config file, used by @restart */

@@ -223,6 +223,7 @@ target_include_directories(btfi PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include")
 
 set(BTECH_SOURCES
+  ${BTECH_SOURCE_DIR}/persistence/btech_persistence_sqlite.c
   ${BTECH_SOURCE_DIR}/src/coolmenu.c
   ${BTECH_SOURCE_DIR}/src/debug.c
   ${BTECH_SOURCE_DIR}/src/events.c
@@ -320,8 +321,10 @@ target_link_libraries(btech PRIVATE btmux_options btfi)
 target_include_directories(btech PRIVATE
   "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
+  "${SQLite3_INCLUDE_DIRS}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/btfi/include"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
@@ -390,6 +393,7 @@ target_include_directories(netmux PRIVATE
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
   "${EVENT_INCLUDE_DIR}")
 
 add_executable(mkindx ${MKINDX_SOURCE_DIR}/mkindx.c)
@@ -429,6 +433,10 @@ add_test(NAME vocabtest COMMAND vocabtest)
 
 add_executable(gamedb_integration_test tests/gamedb_integration.c)
 target_link_libraries(gamedb_integration_test PRIVATE SQLite3::SQLite3)
+if(BTMUX_ADVANCED_ECON)
+  target_compile_definitions(gamedb_integration_test
+    PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
+endif()
 add_test(NAME gamedb_integration
   COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
 

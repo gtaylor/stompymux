@@ -60,6 +60,8 @@ FUN_EXTERN(fun_btdamagemech);
 FUN_EXTERN(fun_bttechstatus);
 FUN_EXTERN(fun_btpartmatch);
 FUN_EXTERN(fun_btpartname);
+FUN_EXTERN(fun_btpartscategorylist);
+FUN_EXTERN(fun_btpartslist);
 FUN_EXTERN(fun_btloadmap);
 FUN_EXTERN(fun_btloadmech);
 FUN_EXTERN(fun_btmechfreqs);
@@ -5595,6 +5597,8 @@ FUN flist[] = {
     {"BTPARTTYPE", fun_btparttype, 1, 0, CA_WIZARD},
     {"BTPARTMATCH", fun_btpartmatch, 1, 0, CA_WIZARD},
     {"BTPARTNAME", fun_btpartname, 2, 0, CA_WIZARD},
+    {"BTPARTSCATEGORYLIST", fun_btpartscategorylist, 0, 0, CA_WIZARD},
+    {"BTPARTSLIST", fun_btpartslist, 1, 0, CA_WIZARD},
     {"BTPARTWEIGHT", fun_btgetweight, 1, 0, CA_WIZARD},
     {"BTPAYLOAD_REF", fun_btpayload_ref, 1, 0, CA_WIZARD},
     {"BTREMOVESTORES", fun_btremovestores, 3, 0, CA_WIZARD},

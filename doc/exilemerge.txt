@@ -232,7 +232,7 @@ for cash costs for parts in the game. Hope to expand it more later.
 
 Currently btfasabasecost_ref(), btgetpartcost(), and btsetpartcost() utilize
 this functionality and do not exist if BT_ADVANCED_ECON is off. They read up
-from data/econ.db.
+from the btech_economy_costs table in the SQLite game database.
 
 TODO : Expand more integer fields for data like btgetpartrarity(),
 btgetparttech(), etc... to eliminate scode DB on it completely. Why? Various

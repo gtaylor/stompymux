@@ -65,9 +65,6 @@ void cf_init(void) {
   StringCopy(mudconf.gamedb, "");
   StringCopy(mudconf.commac_db, "commac.db");
   StringCopy(mudconf.hcode_db, "hcode.db");
-#ifdef BT_ADVANCED_ECON
-  StringCopy(mudconf.econ_db, "econ.db");
-#endif
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
   StringCopy(mudconf.status_file, "shutdown.status");
@@ -1182,9 +1179,6 @@ CONF conftable[] = {
     {(char *)"have_zones", cf_bool, CA_DISABLED, &mudconf.have_zones, 0},
     {(char *)"hcode_database", cf_string, CA_GOD, (void *)mudconf.hcode_db,
      128},
-#ifdef BT_ADVANCED_ECON
-    {(char *)"econ_database", cf_string, CA_GOD, (void *)mudconf.econ_db, 128},
-#endif
     {(char *)"help_file", cf_string, CA_DISABLED, (void *)mudconf.help_file,
      32},
     {(char *)"help_index", cf_string, CA_DISABLED, (void *)mudconf.help_indx,

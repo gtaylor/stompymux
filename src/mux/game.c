@@ -26,6 +26,7 @@
 #include "match.h"
 #include "mudconf.h"
 #include "powers.h"
+#include "persistence/btech_persistence.h"
 #include "timer.h"
 #include "vattr.h"
 #include "version.h"
@@ -1110,6 +1111,11 @@ int main(int argc, char *argv[]) {
 
   if (!*mudconf.gamedb) {
     fprintf(stderr, "Required configuration directive game_database is missing.\n");
+    exit(2);
+  }
+
+  if (btech_persistence_register() < 0) {
+    fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
     exit(2);
   }
 
