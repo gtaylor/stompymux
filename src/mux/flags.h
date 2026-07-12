@@ -37,7 +37,7 @@
 #define PUPPET 0x00020000      /* Relays ALL messages to owner */
 /* 0x00040000 is reserved for the removed CHOWN_OK flag. */
 #define ENTER_OK 0x00080000    /* Object may be ENTERed */
-#define VISUAL 0x00100000      /* Everyone can see properties */
+/* 0x00100000 is reserved for the removed VISUAL flag. */
 #define IMMORTAL 0x00200000    /* Object can't be killed */
 #define HAS_STARTUP 0x00400000 /* Load some attrs at startup */
 #define OPAQUE 0x00800000      /* Can't see inside */
@@ -241,7 +241,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Puppet(x) ((Flags(x) & PUPPET) != 0)
 #define Enter_ok(x)                                                            \
   (((Flags(x) & ENTER_OK) != 0) && Has_location(x) && Has_contents(x))
-#define Visual(x) ((Flags(x) & VISUAL) != 0)
 #define Immortal(x)                                                            \
   ((Flags(x) & IMMORTAL) || ((Flags(Owner(x)) & IMMORTAL) && Inherits(x)))
 #define Opaque(x) ((Flags(x) & OPAQUE) != 0)
@@ -295,13 +294,11 @@ extern void decompile_flags(dbref, dbref, char *);
 #define OnEnterLock(p, x) (check_zone(p, x))
 
 #define Examinable(p, x)                                                       \
-  (((Flags(x) & VISUAL) != 0) || (See_All(p)) || (Owner(p) == Owner(x)) ||     \
-   OnEnterLock(p, x))
+  ((See_All(p)) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))
 
 #define MyopicExam(p, x)                                                       \
-  (((Flags(x) & VISUAL) != 0) ||                                               \
-   (!Myopic(p) &&                                                              \
-    (See_All(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))))
+  (!Myopic(p) &&                                                               \
+   (See_All(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
 
 #define Controls(p, x)                                                         \
   (Good_obj(x) && (!(God(x) && !God(p))) &&                                    \

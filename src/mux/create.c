@@ -466,10 +466,7 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
   if ((thing == NOTHING) || (thing == AMBIGUOUS))
     return;
 
-  /*
-   * Let players clone things set VISUAL.  It's easier than retyping in
-   * all that data
-   */
+  /* Cloning requires examination permission. */
 
   if (!Examinable(player, thing)) {
     notify_quiet(player, "Permission denied.");

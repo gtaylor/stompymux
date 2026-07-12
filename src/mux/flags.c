@@ -268,7 +268,6 @@ FLAGENT gen_flags[] = {
     {"UNFINDABLE", UNFINDABLE, 'U', FLAG_WORD2, 0, fh_any},
     {"UNINSPECTED", UNINSPECTED, 'g', FLAG_WORD2, 0, fh_wiz},
     {"VERBOSE", VERBOSE, 'v', 0, 0, fh_any},
-    {"VISUAL", VISUAL, 'V', 0, 0, fh_any},
     {"WIZARD", WIZARD, 'W', 0, 0, fh_wiz_bit},
     {"XCODE", HARDCODE, 'X', FLAG_WORD2, 0, fh_xcode_bit},
     {"ZOMBIE", ZOMBIE, 'z', FLAG_WORD2, CA_WIZARD, fh_wiz},

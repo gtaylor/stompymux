@@ -623,7 +623,7 @@
   the object put in your inventory (or your exitlist in the case of
   cloning exits) by using the /inventory switch.
  
-  You may clone your own objects, plus VISUAL objects owned by others.
+  You may clone your own objects.
   The INHERIT and WIZARD bits of the (new) object are cleared when the
   object is cloned.  If <newname> is specified, it is used as the
   name instead of the original name.
@@ -655,7 +655,7 @@
   /parent     - Set the new object's parent to be the template
                 object and don't copy the attributes.
  
-  See also: @create, @decompile, @destroy, VISUAL.
+  See also: @create, @decompile, @destroy.
   
 & @coflags
  
@@ -2815,8 +2815,6 @@
      no_inherit - Prevents children of the object from obtaining the
                   attribute.  From their perspective the attribute
                   does not exist.
-     visual     - Anyone may see the attribute when they examine you,
-                  and may get the attribute with get().
      hidden     - The attribute is only visable to wizards.
      regexp     - When $-commands are matched, treat the pattern as a
                   regular expression rather than a wildcard glob
@@ -3149,9 +3147,8 @@
  
   You must control the actor, but need not control the victim.  Note
   that if you don't have the ability to read the appropriate
-  attributes (whether because you control the victim, he is VISUAL,
-  or the attributes are set VISUAL), the default messages will be
-  used.
+  attributes (whether because you control the victim), the 
+  default messages will be used.
  
 { 'help @verb2' for more }
   
@@ -5654,10 +5651,10 @@ carried
   Syntax: examine[/<switches>] <object>[/<wild-attrib>]
  
   Displays all available information about <object>.  <object> may be
-  an object, 'me' or 'here'. You must control the object to examine
-  it, or it  must be set VISUAL.  If you do not own the object, you
-  will just see the name of the object's owner, and optionally any
-  public attributes and attributes owned by you set on the object.
+  an object, 'me' or 'here'. You must control the object to examine it.  
+  If you do not own the object, you will just see the name of the object's 
+  owner, and optionally any public attributes and attributes owned by you 
+  set on the object.
  
   If an attribute is owned by a player other than the owner of the
   object, the number of the attribute owner is shown in parentheses
@@ -5670,9 +5667,6 @@ carried
         FAIL, OFAIL,  SUCC, OSUCC, DROP, ODROP, SEX, and CHARGES are
         never checked.
     I - This attribute is not inherited by children of the object.
-    V - The attribute is visible to anyone who examines you.  Note
-        that the predefined attributes DESC, SEX, and LAST are
-        always VISUAL.
  
   { 'help examine2' for more}
   
@@ -5691,7 +5685,7 @@ carried
                itself but which are inherited from the object's
                parent.
  
-  See also: look, @decompile, VISUAL, ATTRIBUTE OWNERSHIP.
+  See also: look, @decompile, ATTRIBUTE OWNERSHIP.
   
 & exit()
  
@@ -8394,7 +8388,7 @@ Continued in locate()2
   You say "1052"
   > exam sac test
   Sac Test(#287V)
-  Type: THING Flags: VISUAL
+  Type: THING Flags: INHERIT
   Owner: Beaker  Key: *UNLOCKED* Clams: 20
   Home: Limbo(#0RLDAJ)
   Location: The Town Square
@@ -8944,7 +8938,7 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
   Syntax: parent(<obj>)
  
   Returns the parent of <obj>. Returns #-1 if <obj> cannot be found or
-  if you do not own <obj> and it is not set VISUAL.
+  if you do not own <obj>.
  
   Example:
  
@@ -10531,7 +10525,7 @@ AdvSensors: BeagleProbe
   > think [set(me,foo:Twenty Pink Pigs)]
   < think [set(me,foo:)]
   > think [set(me,VERBOSE)]
-  > think [set(me/foo,!VISUAL)]
+  > think [set(me/foo,!INHERIT)]
   
   See Also: @set
   
