@@ -63,7 +63,7 @@
 #define ANSI 0x00000200
 /* 0x00000400 is reserved for the removed REGISTERED flag. */
 #define FIXED 0x00000800
-#define UNINSPECTED 0x00001000
+/* 0x00001000 is reserved for the removed UNINSPECTED flag. */
 #define NO_COMMAND 0x00002000
 
 #define NOBLEED 0x00008000
@@ -213,7 +213,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Good_owner(x) (Good_obj(x) && OwnsOthers(x))
 
 #define Fixed(x) ((Flags2(x) & FIXED) != 0)
-#define Uninspected(x) ((Flags2(x) & UNINSPECTED) != 0)
 #define Ansi(x) ((Flags2(x) & ANSI) != 0)
 #define Ansimap(x) ((Flags2(x) & ANSIMAP) != 0)
 #define No_Command(x) ((Flags2(x) & NO_COMMAND) != 0)

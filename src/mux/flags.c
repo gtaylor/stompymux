@@ -263,7 +263,6 @@ FLAGENT gen_flags[] = {
     {"TRACE", TRACE, 'T', 0, 0, fh_any},
     {"TRANSPARENT", SEETHRU, 't', 0, 0, fh_any},
     {"UNFINDABLE", UNFINDABLE, 'U', FLAG_WORD2, 0, fh_any},
-    {"UNINSPECTED", UNINSPECTED, 'g', FLAG_WORD2, 0, fh_wiz},
     {"VERBOSE", VERBOSE, 'v', 0, 0, fh_any},
     {"WIZARD", WIZARD, 'W', 0, 0, fh_wiz_bit},
     {"XCODE", HARDCODE, 'X', FLAG_WORD2, 0, fh_xcode_bit},
