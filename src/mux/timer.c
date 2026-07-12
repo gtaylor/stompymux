@@ -193,7 +193,6 @@ static void dispatch(void) {
     DPSET("< eventcheck >");
     check_events();
   }
-#ifdef HAVE_GETRUSAGE
   /*
    * Memory use stats
    */
@@ -217,8 +216,6 @@ static void dispatch(void) {
       mudstate.mstat_curr = curr;
     }
   }
-#endif
-
   mudstate.debug_cmd = cmdsave;
 }
 

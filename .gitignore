@@ -11,6 +11,7 @@
 /build-*
 *.in
 !/cmake/*.in
+!/src/cmake/*.in
 *.m4
 /btech/configure
 /btech/confutil
@@ -70,4 +71,3 @@
 /src/.libs
 /src/version.h
 /src/netmux
-/src/mkindx

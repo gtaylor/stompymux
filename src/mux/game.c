@@ -35,13 +35,6 @@
 #ifndef NEXT
 #endif
 
-#ifdef HAVE_IEEEFP_H
-#include <ieeefp.h>
-#endif
-#ifdef HAVE_SYS_UCONTEXT_H
-#include <sys/ucontext.h>
-#endif
-
 #define NSUBEXP 10
 
 extern void init_cmdtab(void);
@@ -1067,14 +1060,6 @@ int main(int argc, char *argv[]) {
 
   event_init();
 
-#if defined(HAVE_IEEEFP_H) && defined(HAVE_SYS_UCONTEXT_H)
-  /*
-   * Inhibit IEEE fp exception on overflow
-   */
-
-  fpsetmask(fpgetmask() & ~FP_X_OFL);
-#endif
-
   mindb = 0;   /* Are we creating a new db? */
   restarting = 0;
   config_file = (char *)CONF_FILE;
@@ -1229,7 +1214,6 @@ int main(int argc, char *argv[]) {
 }
 
 static void init_rlimit(void) {
-#if defined(HAVE_SETRLIMIT) && defined(RLIMIT_NOFILE)
   struct rlimit *rlp;
 
   rlp = (struct rlimit *)alloc_lbuf("rlimit");
@@ -1243,8 +1227,4 @@ static void init_rlimit(void) {
   if (setrlimit(RLIMIT_NOFILE, rlp))
     log_perror("RLM", "FAIL", NULL, "setrlimit()");
   free_lbuf(rlp);
-
-#endif /*                                                                      \
-        * HAVE_SETRLIMIT                                                       \
-        */
 }

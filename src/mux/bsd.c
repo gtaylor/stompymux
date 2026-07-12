@@ -309,16 +309,6 @@ void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg) {
   dprintk("error %d", whut);
 }
 
-#ifndef HAVE_GETTIMEOFDAY
-#define get_tod(x)                                                             \
-  {                                                                            \
-    (x)->tv_sec = time(NULL);                                                  \
-    (x)->tv_usec = 0;                                                          \
-  }
-#else
-#define get_tod(x) gettimeofday(x, (struct timezone *)0)
-#endif
-
 struct timeval queue_slice = {0, 0};
 struct event queue_ev;
 struct timeval last_slice, current_time;
@@ -327,7 +317,7 @@ static void runqueues(int fd, short event, void *arg) {
   pid_t pchild;
   int status = 0;
   event_add(&queue_ev, &queue_slice);
-  get_tod(&current_time);
+  gettimeofday(&current_time, NULL);
   last_slice = update_quotas(last_slice, current_time);
   pchild = waitpid(-1, &status, WNOHANG);
   if (pchild > 0) {
@@ -366,8 +356,8 @@ void shovechars(int port) {
   evtimer_set(&queue_ev, runqueues, NULL);
   evtimer_add(&queue_ev, &queue_slice);
 
-  get_tod(&last_slice);
-  get_tod(&current_time);
+  gettimeofday(&last_slice, NULL);
+  gettimeofday(&current_time, NULL);
 
   event_dispatch();
 }

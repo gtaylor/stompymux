@@ -2161,7 +2161,6 @@ static void list_db_stats(dbref player) {
 static void list_process(dbref player) {
   int pid, psize, maxfds;
 
-#ifdef HAVE_GETRUSAGE
   struct rusage usage;
   int ixrss, idrss, isrss, curr, last, dur;
 
@@ -2182,13 +2181,7 @@ static void list_process(dbref player) {
     idrss = 0;
     isrss = 0;
   }
-#endif
-
-#ifdef HAVE_GETDTABLESIZE
   maxfds = getdtablesize();
-#else
-  maxfds = sysconf(_SC_OPEN_MAX);
-#endif
 
   pid = getpid();
   psize = getpagesize();
@@ -2199,7 +2192,6 @@ static void list_process(dbref player) {
 
   raw_notify(player, tprintf("Process ID:  %10d        %10d bytes per page",
                              pid, psize));
-#ifdef HAVE_GETRUSAGE
   raw_notify(player, tprintf("Time used:   %10d user   %10d sys",
                              usage.ru_utime.tv_sec, usage.ru_stime.tv_sec));
 
@@ -2223,7 +2215,6 @@ static void list_process(dbref player) {
              tprintf("Context swi: %10d vol    %10d forced %10d sigs",
                      usage.ru_nvcsw, usage.ru_nivcsw, usage.ru_nsignals));
   raw_notify(player, tprintf("Descs avail: %10d", maxfds));
-#endif
 }
 
 /*

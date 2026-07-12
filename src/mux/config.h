@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "autoconf.h"
+#include "btmux_build_config.h"
 
 #define _GNU_SOURCE
 
@@ -32,12 +32,7 @@ typedef struct mech_data MECH;
 
 #include "debug.h"
 
-#ifdef HAVE_SYS_RUSAGE_H
-#include <sys/rusage.h>
-#endif
-#if defined(HAVE_SETRLIMIT) || defined(HAVE_GETRUSAGE)
 #include <sys/resource.h>
-#endif
 
 #include <event.h>
 
@@ -139,23 +134,3 @@ extern int malloc_count;
 #endif
 
 #include <sys/socket.h>
-#ifndef HAVE_SRANDOM
-#define random rand
-#define srandom srand
-#endif /* HAVE_SRANDOM */
-
-#ifndef HAVE_STRNLEN
-size_t strnlen(const char *s, size_t maxlen);
-#endif
-#ifndef HAVE_STRNDUP
-char *strndup(const char *s, size_t n);
-#endif
-#ifndef HAVE_POSIX_MEMALIGN
-int posix_memalign(void **memptr, size_t alignment, size_t size);
-#endif
-#ifndef HAVE_STRLCAT
-size_t strlcat(char *, const char *, size_t);
-#endif
-#ifndef HAVE_STRLCPY
-size_t strlcpy(char *, const char *, size_t);
-#endif

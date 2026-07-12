@@ -20,22 +20,13 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
-include(CheckCSourceCompiles)
-include(CheckFunctionExists)
-include(CheckIncludeFile)
-include(CheckLibraryExists)
-include(CheckStructHasMember)
-include(CheckSymbolExists)
-include(CheckTypeSize)
 include(GNUInstallDirs)
 
 include(CTest)
 
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
-set(MKINDX_SOURCE_DIR "src/mkinx")
-set(MUXEVENT_SOURCE_DIR "${MUX_SOURCE_DIR}/muxevent")
-set(MYFIFO_SOURCE_DIR "${MUX_SOURCE_DIR}/myfifo")
+set(MKINDX_SOURCE_DIR "src/mkindx")
 
 option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
@@ -49,102 +40,14 @@ option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
-option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
+option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
+find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(BTMUX_PLATFORM_LIBS)
-check_library_exists(m tan "" HAVE_LIBM)
-if(HAVE_LIBM)
-  list(APPEND BTMUX_PLATFORM_LIBS m)
-endif()
-check_library_exists(bsd main "" HAVE_LIBBSD)
-if(HAVE_LIBBSD)
-  list(APPEND BTMUX_PLATFORM_LIBS bsd)
-endif()
-check_library_exists(crypt crypt "" HAVE_LIBCRYPT)
-if(HAVE_LIBCRYPT)
-  list(APPEND BTMUX_PLATFORM_LIBS crypt)
-endif()
-check_library_exists(nsl main "" HAVE_LIBNSL)
-if(HAVE_LIBNSL)
-  list(APPEND BTMUX_PLATFORM_LIBS nsl)
-endif()
-check_library_exists(socket main "" HAVE_LIBSOCKET)
-if(HAVE_LIBSOCKET)
-  list(APPEND BTMUX_PLATFORM_LIBS socket)
-endif()
-check_library_exists(inet main "" HAVE_LIBINET)
-if(HAVE_LIBINET)
-  list(APPEND BTMUX_PLATFORM_LIBS inet)
-endif()
-
-set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
-set(CMAKE_REQUIRED_INCLUDES "${EVENT_INCLUDE_DIR}")
-set(CMAKE_REQUIRED_LIBRARIES ${BTMUX_PLATFORM_LIBS} "${EVENT_LIBRARY}")
-
-foreach(header IN ITEMS
-    arpa/inet.h errno.h fcntl.h limits.h memory.h netdb.h netinet/in.h
-    stdint.h stdio.h stdlib.h string.h strings.h sys/dir.h sys/file.h
-    sys/ioctl.h sys/ndir.h sys/param.h sys/select.h sys/socket.h
-    sys/stat.h sys/time.h sys/types.h sys/wait.h time.h unistd.h vfork.h)
-  string(MAKE_C_IDENTIFIER "HAVE_${header}" var)
-  string(TOUPPER "${var}" var)
-  check_include_file("${header}" "${var}")
-endforeach()
-
-check_include_file(dirent.h HAVE_DIRENT_H)
-set(STDC_HEADERS 1)
-set(HAVE_LIBEVENT 1)
-set(HAVE_EVENT_H 1)
-foreach(function IN ITEMS
-    bzero dup2 floor fork getdtablesize gethostbyaddr gethostbyname
-    getrusage gettimeofday inet_ntoa isascii localtime lstat malloc memmove
-    memset mktime posix_memalign pow realloc regcomp rint select socket sqrt
-    srandom stpcpy strcasecmp strchr strcspn strdup strerror strlcat strlcpy
-    strncasecmp strndup strnlen strrchr strstr strtol timelocal tzset
-    sigaction vfork vprintf)
-  string(TOUPPER "HAVE_${function}" var)
-  check_function_exists("${function}" "${var}")
-endforeach()
-
-set(HAVE_WORKING_FORK ${HAVE_FORK})
-set(HAVE_WORKING_VFORK ${HAVE_VFORK})
-set(LSTAT_FOLLOWS_SLASHED_SYMLINK ${HAVE_LSTAT})
-set(CLOSEDIR_VOID 1)
-set(HAVE_MALLOC 1)
-set(HAVE_REALLOC 1)
-
-check_symbol_exists(_Bool stdbool.h HAVE__BOOL)
-check_include_file(stdbool.h HAVE_STDBOOL_H)
-check_type_size(pid_t PID_T LANGUAGE C)
-check_type_size(size_t SIZE_T LANGUAGE C)
-check_type_size(ptrdiff_t PTRDIFF_T LANGUAGE C)
-set(HAVE_PTRDIFF_T ${HAVE_PTRDIFF_T})
-
-check_struct_has_member("struct tm" tm_zone time.h HAVE_STRUCT_TM_TM_ZONE LANGUAGE C)
-set(HAVE_TM_ZONE ${HAVE_STRUCT_TM_TM_ZONE})
-check_symbol_exists(tzname time.h HAVE_TZNAME)
-set(HAVE_DECL_TZNAME ${HAVE_TZNAME})
-check_struct_has_member(siginfo_t si_fd signal.h HAVE_SIGINFO_T_SI_FD LANGUAGE C)
-check_c_source_compiles("
-#include <sys/socket.h>
-int main(void) { struct linger ling; ling.l_onoff = 1; return 0; }
-" HAVE_LINGER)
-
-set(SELECT_TYPE_ARG1 "int")
-set(SELECT_TYPE_ARG234 "(fd_set *)")
-set(SELECT_TYPE_ARG5 "(struct timeval *)")
-
-set(PACKAGE_NAME "BattleTech MUX")
-set(PACKAGE_TARNAME "battletech-mux")
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PROJECT_VERSION}")
-set(PACKAGE_BUGREPORT "")
-set(PACKAGE_URL "")
-set(PACKAGE "${PACKAGE_TARNAME}")
-set(VERSION "${PROJECT_VERSION}")
+set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
 set(BT_ADVANCED_ECON ${BTMUX_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTMUX_ENHANCED_LOGGING})
@@ -152,13 +55,7 @@ set(BT_COMPLEXREPAIRS ${BTMUX_COMPLEX_REPAIRS})
 set(BT_FREETECHTIME ${BTMUX_FREE_TECHTIME})
 set(MOVE_HELP ${BTMUX_RENAME_HELP})
 
-configure_file(src/cmake/autoconf.h.in autoconf.h)
-
-set(PACKAGE_NAME "BattleTech Extensions")
-set(PACKAGE_TARNAME "battletech-extensions")
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PROJECT_VERSION}")
-set(PACKAGE "${PACKAGE_TARNAME}")
-set(VERSION "${PROJECT_VERSION}")
+configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 
 set(BT_CARGO_COMMANDS ${BTECH_CARGO_COMMANDS})
 set(BT_EXILE_MW3STATS ${BTECH_MW3STATS})
@@ -166,7 +63,8 @@ set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 set(BT_SCALED_INFRARED ${BTECH_SCALED_INFRARED})
 set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
-configure_file(src/cmake/autoconf.h.in "${BTECH_SOURCE_DIR}/autoconf.h")
+configure_file(src/cmake/btmux_build_config.h.in
+               "${BTECH_SOURCE_DIR}/btmux_build_config.h")
 
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
 configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
@@ -284,8 +182,8 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
 set(NETMUX_SOURCES
-  ${MYFIFO_SOURCE_DIR}/myfifo.c
-  ${MUXEVENT_SOURCE_DIR}/muxevent.c
+  ${MUX_SOURCE_DIR}/myfifo/myfifo.c
+  ${MUX_SOURCE_DIR}/muxevent/muxevent.c
   ${MUX_SOURCE_DIR}/boolexp.c
   ${MUX_SOURCE_DIR}/bsd.c
   ${MUX_SOURCE_DIR}/commac.c
@@ -342,7 +240,7 @@ endif()
 add_executable(netmux ${NETMUX_SOURCES})
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech "${EVENT_LIBRARY}" SQLite3::SQLite3 ${BTMUX_PLATFORM_LIBS})
+target_link_libraries(netmux PRIVATE btmux_options btech "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
@@ -355,7 +253,7 @@ target_include_directories(netmux PRIVATE
 add_executable(mkindx ${MKINDX_SOURCE_DIR}/mkindx.c)
 target_compile_options(mkindx PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(mkindx PRIVATE btmux_options ${BTMUX_PLATFORM_LIBS})
+target_link_libraries(mkindx PRIVATE btmux_options)
 target_include_directories(mkindx PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
@@ -373,4 +271,4 @@ endif()
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(TARGETS btech ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-install(FILES README DESTINATION "${CMAKE_INSTALL_DOCDIR}" OPTIONAL)
+install(FILES README.md DESTINATION "${CMAKE_INSTALL_DOCDIR}")

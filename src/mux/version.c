@@ -16,7 +16,7 @@ void do_version(dbref player, dbref cause, int extra) {
   notify(player, mudstate.version);
 }
 
-char *mux_version = PACKAGE_STRING
+char *mux_version = BTMUX_VERSION_STRING
 #ifdef DEBUG
     " DEBUG"
 #else

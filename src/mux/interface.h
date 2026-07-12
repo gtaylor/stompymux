@@ -15,9 +15,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
-#endif
 #include <event.h>
 
 /* these symbols must be defined by the interface */

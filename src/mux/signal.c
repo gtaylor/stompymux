@@ -49,14 +49,8 @@ stack_t regular_stack;
 void bind_signals(void) {
   int error_code;
   dprintk("creating alternate signal stack.");
-#ifdef HAVE_POSIX_MEMALIGN
   error_code =
       posix_memalign(&sighandler_stack.ss_sp, ALT_STACK_ALIGN, ALT_STACK_SIZE);
-#else
-  sighandler_stack.ss_sp = malloc(ALT_STACK_SIZE);
-  if (sighandler_stack.ss_sp != 0)
-    error_code = 0;
-#endif
   if (error_code == 0) {
     sighandler_stack.ss_size = ALT_STACK_SIZE;
     sighandler_stack.ss_flags = 0;
@@ -125,11 +119,7 @@ static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext) {
 
 static void signal_PIPE(int signo, siginfo_t *siginfo, void *ucontext) {
   dprintk("caught SIGPIPE");
-#ifdef HAVE_SIGINFO_T_SI_FD
   eradicate_broken_fd(siginfo->si_fd);
-#else
-  eradicate_broken_fd(-1);
-#endif
 }
 
 static void signal_USR1(int signo, siginfo_t *siginfo, void *ucontext) {
