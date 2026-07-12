@@ -226,7 +226,6 @@ FLAGENT gen_flags[] = {
     {"AUDITORIUM", AUDITORIUM, 'b', FLAG_WORD2, 0, fh_any},
     {"COMPRESS", COMPRESS, '.', FLAG_WORD2, 0, fh_any},
     {"CONNECTED", CONNECTED, 'c', FLAG_WORD2, CA_NO_DECOMP, fh_god},
-    {"CHOWN_OK", CHOWN_OK, 'C', 0, 0, fh_any},
     {"DARK", DARK, 'D', 0, 0, fh_dark_bit},
     {"DESTROY_OK", DESTROY_OK, 'd', 0, 0, fh_any},
     {"ENTER_OK", ENTER_OK, 'e', 0, 0, fh_any},
@@ -258,7 +257,6 @@ FLAGENT gen_flags[] = {
     {"NO_COMMAND", NO_COMMAND, 'n', FLAG_WORD2, 0, fh_any},
     {"NOSPOOF", NOSPOOF, 'N', 0, 0, fh_any},
     {"OPAQUE", OPAQUE, 'O', 0, 0, fh_any},
-    {"PARENT_OK", PARENT_OK, 'Y', FLAG_WORD2, 0, fh_any},
     {"PUPPET", PUPPET, 'p', 0, 0, fh_hear_bit},
     {"QUIET", QUIET, 'Q', 0, 0, fh_any},
     {"ROBOT", ROBOT, 'r', 0, 0, fh_any},
@@ -601,7 +599,7 @@ char *unparse_object(dbref player, dbref target, int obey_myopic) {
       exam = MyopicExam(player, target);
     else
       exam = Examinable(player, target);
-    if (exam || (Flags(target) & (CHOWN_OK | JUMP_OK | LINK_OK | DESTROY_OK))) {
+    if (exam || (Flags(target) & (JUMP_OK | LINK_OK | DESTROY_OK))) {
 
       /*
        * show everything

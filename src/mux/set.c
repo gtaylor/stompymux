@@ -646,8 +646,7 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
     notify_quiet(player, "I couldn't find that player.");
   } else if (isPlayer(thing) && !God(player)) {
     notify_quiet(player, "Players always own themselves.");
-  } else if (((!controls(player, thing) && !Chown_Any(player) &&
-               !Chown_ok(thing)) ||
+  } else if (((!controls(player, thing) && !Chown_Any(player)) ||
               (isThing(thing) && (Location(thing) != player) &&
                !Chown_Any(player))) ||
              (!controls(player, owner))) {
@@ -662,7 +661,7 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
       s_Owner(thing, Owner(owner));
     }
     atr_chown(thing);
-    s_Flags(thing, (Flags(thing) & ~(CHOWN_OK | INHERIT)) | HALT);
+    s_Flags(thing, (Flags(thing) & ~INHERIT) | HALT);
     s_Powers(thing, 0);
     s_Powers2(thing, 0);
     halt_que(NOTHING, thing);

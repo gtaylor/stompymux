@@ -483,7 +483,7 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
    * You can only make a parent link to what you control
    */
 
-  if (!Controls(player, thing) && !Parent_ok(thing) && (key & CLONE_PARENT)) {
+  if (!Controls(player, thing) && (key & CLONE_PARENT)) {
     notify_quiet(player, tprintf("You don't control %s, ignoring /parent.",
                                  Name(thing)));
     key &= ~CLONE_PARENT;
@@ -604,7 +604,7 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
       s_Parent(clone, Parent(thing));
     did_it(player, clone, 0, NULL, 0, NULL, A_ACLONE, (char **)NULL, 0);
   } else {
-    if (!(key & CLONE_PARENT) && (Controls(player, thing) || Parent_ok(thing)))
+    if (!(key & CLONE_PARENT) && Controls(player, thing))
       s_Parent(clone, Parent(thing));
     s_Halted(clone);
   }

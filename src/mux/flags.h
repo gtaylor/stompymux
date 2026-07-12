@@ -35,7 +35,7 @@
 #define MONITOR 0x00008000     /* Process ^x:action listens on obj? */
 #define MYOPIC 0x00010000      /* See things as nonowner/nonwizard */
 #define PUPPET 0x00020000      /* Relays ALL messages to owner */
-#define CHOWN_OK 0x00040000    /* Object may be @chowned freely */
+/* 0x00040000 is reserved for the removed CHOWN_OK flag. */
 #define ENTER_OK 0x00080000    /* Object may be ENTERed */
 #define VISUAL 0x00100000      /* Everyone can see properties */
 #define IMMORTAL 0x00200000    /* Object can't be killed */
@@ -55,7 +55,7 @@
 /* 0x00000002 is reserved for the removed ABODE flag. */
 #define FLOATING 0x00000004    /* Inhibit Floating room.. msgs */
 #define UNFINDABLE 0x00000008  /* Cant loc() from afar */
-#define PARENT_OK 0x00000010   /* Others may @parent to me */
+/* 0x00000010 is reserved for the removed PARENT_OK flag. */
 #define LIGHT 0x00000020       /* Visible in dark places */
 #define HAS_LISTEN 0x00000040  /* Internal: LISTEN attr set */
 #define HAS_FWDLIST 0x00000080 /* Internal: FORWARDLIST attr set */
@@ -242,7 +242,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Monitor(x) ((Flags(x) & MONITOR) != 0)
 #define Myopic(x) ((Flags(x) & MYOPIC) != 0)
 #define Puppet(x) ((Flags(x) & PUPPET) != 0)
-#define Chown_ok(x) ((Flags(x) & CHOWN_OK) != 0)
 #define Enter_ok(x)                                                            \
   (((Flags(x) & ENTER_OK) != 0) && Has_location(x) && Has_contents(x))
 #define Visual(x) ((Flags(x) & VISUAL) != 0)
@@ -266,7 +265,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Floating(x) ((Flags2(x) & FLOATING) != 0)
 #define Findable(x) ((Flags2(x) & UNFINDABLE) == 0)
 #define Hideout(x) ((Flags2(x) & UNFINDABLE) != 0)
-#define Parent_ok(x) ((Flags2(x) & PARENT_OK) != 0)
 #define Light(x) ((Flags2(x) & LIGHT) != 0)
 #define Hardcode(x) ((Flags2(x) & HARDCODE) != 0)
 #define Zombie(x) ((Flags2(x) & ZOMBIE) != 0)
@@ -296,8 +294,7 @@ extern void decompile_flags(dbref, dbref, char *);
 #define s_In_Character(x) s_Flags2((x), Flags2(x) | IN_CHARACTER)
 #define c_In_Character(x) s_Flags2((x), Flags2(x) & ~IN_CHARACTER)
 
-#define Parentable(p, x)                                                       \
-  (Controls(p, x) || (Parent_ok(x) && could_doit(p, x, A_LPARENT)))
+#define Parentable(p, x) Controls(p, x)
 
 #define OnEnterLock(p, x) (check_zone(p, x))
 

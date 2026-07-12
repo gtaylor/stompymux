@@ -117,7 +117,7 @@
 #define A_LTELOUT 94     /* Who may teleport out from here */
 #define A_FORWARDLIST 95 /* Recipients of AUDIBLE output */
 #define A_LUSER 97       /* Spare lock not referenced by server */
-#define A_LPARENT 98     /* Who may @parent to me if PARENT_OK set */
+#define A_LPARENT 98     /* Legacy ParentLock attribute */
 #define A_VA 100         /* VA attribute (VB-VZ follow) */
 
 #define A_GFAIL 129    /* Give fail message */

@@ -255,7 +255,7 @@ int chown_all(dbref from_player, dbref to_player) {
       default:
         s_Owner(i, to_player);
       }
-      s_Flags(i, (Flags(i) & ~(CHOWN_OK | INHERIT)) | HALT);
+      s_Flags(i, (Flags(i) & ~INHERIT) | HALT);
       count++;
     }
   }
