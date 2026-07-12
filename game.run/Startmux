@@ -34,13 +34,6 @@ $MKINDX $TEXT/help.txt $TEXT/help.indx
 $MKINDX $TEXT/wizhelp.txt $TEXT/wizhelp.indx
 
 #
-#	Remove the restart db if there is one.
-#
-if [ -r restart.db ]; then
-	rm restart.db
-fi
-
-#
 #	Kick off MUX
 #
 ulimit -c unlimited

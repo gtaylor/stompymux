@@ -13,7 +13,6 @@
 #include "dnschild.h"
 #include "interface.h"
 #include "logcache.h"
-#include "mmdb.h"
 #include "mudconf.h"
 #include "netcommon.h"
 #include "signals.h"
@@ -45,8 +44,6 @@ void wait_que(dbref, dbref, int, dbref, int, char *, char *[], int, char *[]);
 int que_next(void);
 int do_top(int ncmds);
 void recover_queue_deposits(void);
-void cque_dump_restart(struct mmdb_t *);
-void cque_load_restart(struct mmdb_t *);
 
 /* From eval.c */
 void tcache_init(void);
@@ -270,7 +267,6 @@ void atr_free(dbref);
 int check_zone(dbref, dbref);
 int check_zone_for_player(dbref, dbref);
 void toast_player(dbref);
-void dump_restart_db(void);
 
 /* Mecha code: */
 void DisposeSpecialObject(dbref, dbref);

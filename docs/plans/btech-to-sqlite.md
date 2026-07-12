@@ -4,7 +4,7 @@
 
 - [x] Retire `btechdb.finf` and `hcode.db` only after the SQLite-only restart
   gate passes.
-- [x] Keep `restart.xdr`: it stores MUX descriptor/session restart state and
+- [x] Restart continuation state now resides in the SQLite game database and
   is not BTech persistence.
 - [x] Do not store raw structs, pointers, function pointers, cache trees, or
   linked-list nodes. Persist stable scalar values and explicit child rows only.
@@ -140,5 +140,5 @@
   source file depends on Fast Infoset.
 - [x] Remove obsolete `hcode_database` configuration after all its data has a
   SQLite replacement.
-- [x] Leave `restart.xdr` intact: it remains MUX session persistence outside
-  this migration.
+- [x] Keep MUX restart continuation state separate from BTech persistence,
+  while storing it in the SQLite game database.

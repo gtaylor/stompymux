@@ -316,10 +316,12 @@ static int check_snapshot(const char *path) {
   ok = query_int(
            sqlite,
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-           "IN ('snapshot', 'vattrs', 'objects', 'attributes');",
-           4) == 0 &&
+           "IN ('snapshot', 'vattrs', 'objects', 'attributes', "
+           "'restart_metadata', 'restart_descriptors', 'restart_queue_objects', "
+           "'restart_queue_entries', 'restart_queue_env', 'restart_queue_scr');",
+           10) == 0 &&
       query_int(sqlite,
-                 "SELECT schema_version FROM snapshot WHERE id = 1;", 2) ==
+                 "SELECT schema_version FROM snapshot WHERE id = 1;", 3) ==
            0 &&
       query_int(sqlite,
                  "SELECT storage_format FROM snapshot WHERE id = 1;", 1) ==
@@ -337,6 +339,13 @@ static int check_snapshot(const char *path) {
                 "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
                 "'macro_entries');",
                 7) == 0;
+  ok = ok &&
+       query_int(sqlite, "SELECT count(*) FROM restart_metadata;", 0) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM restart_descriptors;", 0) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM restart_queue_objects;", 0) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM restart_queue_entries;", 0) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM restart_queue_env;", 0) == 0 &&
+       query_int(sqlite, "SELECT count(*) FROM restart_queue_scr;", 0) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
                        "AND name IN ('btech_persistence_metadata', 'btech_maps', 'btech_map_hexes', 'btech_map_slots', "

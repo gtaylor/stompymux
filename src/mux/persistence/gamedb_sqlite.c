@@ -15,12 +15,13 @@
 #include "externs.h"
 #include "flags.h"
 #include "persistence/gamedb.h"
+#include "persistence/restart_persistence.h"
 #include "mudconf.h"
 #include "powers.h"
 #include "vattr.h"
 
 /* Increment whenever the schema written by this module changes. */
-#define GAMEDB_SCHEMA_VERSION 2
+#define GAMEDB_SCHEMA_VERSION 3
 
 /* Identifies SQLite as the storage implementation in snapshot metadata. */
 #define GAMEDB_SOURCE_FORMAT_SQLITE 1
@@ -327,7 +328,8 @@ static int gamedb_load_metadata(sqlite3 *sqlite, int *db_top) {
       gamedb_column_int(statement, 3, &attr_next) == 0 &&
       gamedb_column_int(statement, 4, &record_players) == 0 &&
       sqlite3_step(statement) == SQLITE_DONE &&
-      (schema_version == 1 || schema_version == GAMEDB_SCHEMA_VERSION) &&
+      (schema_version == 1 || schema_version == 2 ||
+       schema_version == GAMEDB_SCHEMA_VERSION) &&
       *db_top > 0 && min_size >= 0 && attr_next >= 0 && record_players >= 0) {
     mudstate.min_size = min_size;
     mudstate.attr_next = attr_next;
@@ -571,6 +573,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
                   "PRAGMA foreign_keys = ON;") < 0 ||
       gamedb_exec(sqlite, "BEGIN IMMEDIATE;") < 0 ||
       gamedb_exec(sqlite, schema_sql) < 0 ||
+      restart_persistence_create_schema(sqlite) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
     return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,

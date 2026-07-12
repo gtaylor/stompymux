@@ -20,6 +20,7 @@
 #include "file_c.h"
 #include "flags.h"
 #include "persistence/gamedb.h"
+#include "persistence/restart_persistence.h"
 #include "interface.h"
 #include "logcache.h"
 #include "macro.h"
@@ -55,7 +56,7 @@ void fork_and_dump(int);
 void dump_database(void);
 void do_dump_optimize(dbref, dbref, int);
 void pcache_sync(void);
-void dump_database_internal(int);
+int dump_database_internal(int);
 static void init_rlimit(void);
 
 int reserved;
@@ -824,8 +825,8 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
   return;
 }
 
-void dump_database_internal(int dump_type) {
-  gamedb_dump(dump_type);
+int dump_database_internal(int dump_type) {
+  return gamedb_dump(dump_type);
 }
 
 void dump_database(void) {
@@ -1057,10 +1058,14 @@ static void process_preload(void) {
 }
 
 int main(int argc, char *argv[]) {
+  char *config_file;
+  int index;
   int mindb;
+  int restarting;
 
-  if ((argc > 2) && (!strcmp(argv[1], "-s") && (argc > 3))) {
-    fprintf(stderr, "Usage: %s [-s] [config-file]\n", argv[0]);
+  if (argc > 3 || (argc > 2 && strcmp(argv[1], "-s") &&
+                   strcmp(argv[1], "--restart"))) {
+    fprintf(stderr, "Usage: %s [-s|--restart] [config-file]\n", argv[0]);
     exit(1);
   }
 
@@ -1075,6 +1080,21 @@ int main(int argc, char *argv[]) {
 #endif
 
   mindb = 0;   /* Are we creating a new db? */
+  restarting = 0;
+  config_file = (char *)CONF_FILE;
+  if (argc > 1) {
+    if (!strcmp(argv[1], "-s")) {
+      mindb = 1;
+      if (argc == 3)
+        config_file = argv[2];
+    } else if (!strcmp(argv[1], "--restart")) {
+      restarting = 1;
+      if (argc == 3)
+        config_file = argv[2];
+    } else {
+      config_file = argv[1];
+    }
+  }
   corrupt = 0; /* Database isn't corrupted. */
   memset(&mudstate, 0, sizeof(mudstate));
   time(&mudstate.start_time);
@@ -1101,17 +1121,7 @@ int main(int argc, char *argv[]) {
   mudstate.desctree = rb_init(desc_cmp, NULL);
   vattr_init();
 
-  if (argc > 1 && !strcmp(argv[1], "-s")) {
-    mindb = 1;
-    if (argc == 3)
-      cf_read(argv[2]);
-    else
-      cf_read((char *)CONF_FILE);
-  } else if (argc == 2) {
-    cf_read(argv[1]);
-  } else {
-    cf_read((char *)CONF_FILE);
-  }
+  cf_read(config_file);
 
   if (!*mudconf.gamedb) {
     fprintf(stderr, "Required configuration directive game_database is missing.\n");
@@ -1171,9 +1181,9 @@ int main(int argc, char *argv[]) {
   hashreset(&mudstate.help_htab);
   hashreset(&mudstate.wizhelp_htab);
 
-  for (mindb = 0; mindb < MAX_GLOBAL_REGS; mindb++) {
-    mudstate.global_regs[mindb] = alloc_lbuf("main.global_reg");
-    memset(mudstate.global_regs[mindb], 0, LBUF_SIZE);
+  for (index = 0; index < MAX_GLOBAL_REGS; index++) {
+    mudstate.global_regs[index] = alloc_lbuf("main.global_reg");
+    memset(mudstate.global_regs[index], 0, LBUF_SIZE);
   }
 
   mudstate.now = time(NULL);
@@ -1181,8 +1191,16 @@ int main(int argc, char *argv[]) {
 
   dnschild_init();
 
-  if (!load_restart_db_xdr()) {
-    load_restart_db();
+  if (restarting) {
+    if (mindb || restart_persistence_load() < 0) {
+      log_error(LOG_ALWAYS, "INI", "RSTRT",
+                "Unable to restore SQLite restart continuation state.");
+      exit(2);
+    }
+  } else if (!mindb && restart_persistence_discard() < 0) {
+    log_error(LOG_ALWAYS, "INI", "RSTRT",
+              "Unable to discard stale SQLite restart continuation state.");
+    exit(2);
   }
 
 #ifdef ARBITRARY_LOGFILES

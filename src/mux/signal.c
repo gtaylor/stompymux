@@ -18,6 +18,7 @@
 #include "externs.h"
 #include "flags.h"
 #include "mudconf.h"
+#include "persistence/restart_persistence.h"
 #include "signals.h"
 
 static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext);
@@ -146,9 +147,10 @@ static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
               // not sure if its necessary but I'm worried about
               // a race.
     dprintk("(forked child) dumping restart database");
-    dump_restart_db();
+    if (restart_persistence_store() < 0)
+      _exit(1);
     dprintk("(forked child) execing new copy of game.");
-    execl(mudstate.executable_path, mudstate.executable_path,
+    execl(mudstate.executable_path, mudstate.executable_path, "--restart",
           mudconf.config_file, NULL);
   } else {
     switch (siginfo->si_code) {
@@ -180,8 +182,9 @@ static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext) {
   int child;
   mux_release_socket();
   if (mudconf.sig_action != SA_EXIT && !(child = fork())) {
-    dump_restart_db();
-    execl(mudstate.executable_path, mudstate.executable_path,
+    if (restart_persistence_store() < 0)
+      _exit(1);
+    execl(mudstate.executable_path, mudstate.executable_path, "--restart",
           mudconf.config_file, NULL);
   } else {
     switch (siginfo->si_code) {

@@ -12,11 +12,11 @@
 #include "match.h"
 #include "mudconf.h"
 #include "powers.h"
+#include "persistence/restart_persistence.h"
 #include "rbtab.h"
 #include <signal.h>
 
 extern void dump_database(void);
-extern void dump_restart_db(void);
 
 #ifdef NEED_VSPRINTF_DCL
 extern char *vsprintf(char *, char *, va_list);
@@ -951,19 +951,23 @@ void do_restart(dbref player, dbref cause, int key) {
 
   ResetSpecialObjects();
   raw_broadcast(0, "Game: Restart by %s, please wait.", Name(Owner(player)));
-  shutdown_services();
-
   STARTLOG(LOG_ALWAYS, "WIZ", "RSTRT") {
     log_text((char *)"Restart by ");
     log_name(player);
     ENDLOG;
   }
-  dump_database_internal(DUMP_RESTART);
+  if (dump_database_internal(DUMP_RESTART) < 0) {
+    raw_broadcast(0, "Game: Restart failed while writing the SQLite snapshot.");
+    return;
+  }
 
-  dump_restart_db();
-  dump_restart_db_xdr();
-  execl(mudstate.executable_path, mudstate.executable_path, mudconf.config_file,
-        NULL);
+  if (restart_persistence_store() < 0) {
+    raw_broadcast(0, "Game: Restart failed while saving SQLite continuation state.");
+    return;
+  }
+  shutdown_services();
+  execl(mudstate.executable_path, mudstate.executable_path, "--restart",
+        mudconf.config_file, NULL);
 }
 
 /**

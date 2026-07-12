@@ -55,5 +55,5 @@ The normal command dispatcher then rebuilds any goal-specific events it needs.
 5. The test suite also injects prepare, write, and replacement failures to
    prove a failed dump preserves the last complete SQLite snapshot.
 
-`restart.xdr` is excluded: it preserves live MUX session descriptors rather
-than BTech game state.
+Restart continuation tables are separate from BTech game state, but live in
+the same SQLite database so a controlled re-exec can restore MUX sessions.

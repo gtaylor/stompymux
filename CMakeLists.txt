@@ -327,13 +327,13 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/game.c
   ${MUX_SOURCE_DIR}/persistence/commac_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/persistence/gamedb_sqlite.c
+  ${MUX_SOURCE_DIR}/persistence/restart_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/help.c
   ${MUX_SOURCE_DIR}/log.c
   ${MUX_SOURCE_DIR}/look.c
   ${MUX_SOURCE_DIR}/macro.c
   ${MUX_SOURCE_DIR}/match.c
   ${MUX_SOURCE_DIR}/move.c
-  ${MUX_SOURCE_DIR}/mmdb.c
   ${MUX_SOURCE_DIR}/nametab.c
   ${MUX_SOURCE_DIR}/netcommon.c
   ${MUX_SOURCE_DIR}/nrbtab.c
