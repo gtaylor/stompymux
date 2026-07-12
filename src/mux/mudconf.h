@@ -29,7 +29,6 @@ struct confdata {
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */
   char config_file[128];    /* name of config file, used by @restart */
-  char status_file[128];    /* Where to write arg to @shutdown */
   int have_specials;        /* Should the special hcode be active? */
   int have_comsys;          /* Should the comsystem be active? */
   int have_macros;          /* Should the macro system be active? */

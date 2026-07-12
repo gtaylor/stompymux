@@ -31,7 +31,6 @@
 /game*/bin/
 /game*/text/*.indx
 /game*/netmux.log*
-/game*/shutdown.status
 /buildnum.data
 
 # /btech/

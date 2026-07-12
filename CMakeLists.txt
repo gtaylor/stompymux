@@ -1,6 +1,20 @@
 cmake_minimum_required(VERSION 4.3)
 
-project(BattleTechMUX VERSION 0.7.6.2 LANGUAGES C CXX)
+project(BattleTechMUX LANGUAGES C CXX)
+
+find_package(Git QUIET)
+set(PROJECT_VERSION "unknown")
+if(Git_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short HEAD
+    OUTPUT_VARIABLE PROJECT_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE git_revision_result)
+  if(NOT git_revision_result EQUAL 0 OR PROJECT_VERSION STREQUAL "")
+    set(PROJECT_VERSION "unknown")
+  endif()
+endif()
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -130,12 +144,11 @@ set(SELECT_TYPE_ARG5 "(struct timeval *)")
 
 set(PACKAGE_NAME "BattleTech MUX")
 set(PACKAGE_TARNAME "battletech-mux")
-set(PACKAGE_VERSION "${PROJECT_VERSION}")
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+set(PACKAGE_STRING "${PACKAGE_NAME} ${PROJECT_VERSION}")
 set(PACKAGE_BUGREPORT "")
 set(PACKAGE_URL "")
 set(PACKAGE "${PACKAGE_TARNAME}")
-set(VERSION "${PACKAGE_VERSION}")
+set(VERSION "${PROJECT_VERSION}")
 
 set(BT_ADVANCED_ECON ${BTMUX_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTMUX_ENHANCED_LOGGING})
@@ -147,10 +160,9 @@ configure_file(src/cmake/autoconf.h.in autoconf.h)
 
 set(PACKAGE_NAME "BattleTech Extensions")
 set(PACKAGE_TARNAME "battletech-extensions")
-set(PACKAGE_VERSION "0.7")
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+set(PACKAGE_STRING "${PACKAGE_NAME} ${PROJECT_VERSION}")
 set(PACKAGE "${PACKAGE_TARNAME}")
-set(VERSION "${PACKAGE_VERSION}")
+set(VERSION "${PROJECT_VERSION}")
 
 set(BT_CARGO_COMMANDS ${BTECH_CARGO_COMMANDS})
 set(BT_EXILE_MW3STATS ${BTECH_MW3STATS})
@@ -160,36 +172,7 @@ set(WEIGHT_OVERSPEEDING ${BTECH_OVERSPEEDING})
 
 configure_file(src/cmake/autoconf.h.in "${BTECH_SOURCE_DIR}/autoconf.h")
 
-set(build_num_file "${CMAKE_BINARY_DIR}/buildnum.data")
-if(EXISTS "${build_num_file}")
-  file(READ "${build_num_file}" previous_build_num)
-  string(STRIP "${previous_build_num}" previous_build_num)
-  math(EXPR mux_build_num "${previous_build_num} + 1")
-else()
-  set(mux_build_num 1)
-endif()
-file(WRITE "${build_num_file}" "${mux_build_num}\n")
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
-set(MUX_RELEASE_NAME "Fly")
-cmake_host_system_information(RESULT MUX_BUILD_HOST QUERY FQDN)
-if(DEFINED ENV{USER})
-  set(MUX_BUILD_USER "$ENV{USER}")
-else()
-  set(MUX_BUILD_USER "unknown")
-endif()
-find_package(Git QUIET)
-set(SOURCE_REVISION "unknown")
-if(Git_FOUND)
-  execute_process(
-    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short HEAD
-    OUTPUT_VARIABLE SOURCE_REVISION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-    RESULT_VARIABLE git_revision_result)
-  if(NOT git_revision_result EQUAL 0 OR SOURCE_REVISION STREQUAL "")
-    set(SOURCE_REVISION "unknown")
-  endif()
-endif()
 configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)

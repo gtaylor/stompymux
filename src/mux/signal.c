@@ -82,6 +82,7 @@ void bind_signals(void) {
     sighandler_stack.ss_sp = NULL;
   }
   dprintk("binding signals.");
+  dperror(sigaction(SIGINT, &saTERM, NULL) < 0);
   dperror(sigaction(SIGTERM, &saTERM, NULL) < 0);
   //	sigaction(SIGPIPE, &saPIPE, NULL);
   sigaction(SIGUSR1, &saUSR1, NULL);
@@ -94,6 +95,7 @@ void bind_signals(void) {
 }
 
 void unbind_signals(void) {
+  signal(SIGINT, SIG_DFL);
   signal(SIGTERM, SIG_DFL);
   signal(SIGPIPE, SIG_DFL);
   signal(SIGUSR1, SIG_DFL);
@@ -112,8 +114,13 @@ void unbind_signals(void) {
 }
 
 static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext) {
-  dprintk("caught SIGTERM");
-  do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGTERM from kernel.");
+  if (signo == SIGINT) {
+    dprintk("caught SIGINT");
+    do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGINT from kernel.");
+  } else {
+    dprintk("caught SIGTERM");
+    do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGTERM from kernel.");
+  }
 }
 
 static void signal_PIPE(int signo, siginfo_t *siginfo, void *ucontext) {

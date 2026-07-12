@@ -71,8 +71,8 @@
  room_quota              sacrifice_adjust          sacrifice_factor 
  search_cost             see_owned_dark            signal_action 
  site_chars              space_compress            stack_limit 
- starting_money          starting_quota            status_file 
- suspect_site            sweep_dark                switch_default_all 
+ starting_money          starting_quota            suspect_site 
+ sweep_dark              switch_default_all 
  terse_shows_contents    terse_shows_exits         terse_shows_move_messages 
  thing_flags             thing_quota               timeslice 
  trace_output_limit      trace_topdown             trust_site 

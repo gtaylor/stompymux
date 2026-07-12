@@ -7,8 +7,5 @@
   to disk, and shuts down the game.  The game is unavailable until 
   it is restarted.  
   
-  If an argument is specified, it is written to the file named by 
-  the status_file config directive.
-  
-  See also: @restart, status_file
+  See also: @restart
  

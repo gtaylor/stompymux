@@ -735,7 +735,6 @@ int main(int argc, char *argv[]) {
   char database[PATH_MAX];
   char crash_database[PATH_MAX];
   char killed_database[PATH_MAX];
-  char status_path[PATH_MAX];
   FILE *file;
   int dump_failure;
   int status;
@@ -760,8 +759,6 @@ int main(int argc, char *argv[]) {
           0 ||
       snprintf(killed_database, sizeof(killed_database), "%s.KILLED", database) <
           0 ||
-      snprintf(status_path, sizeof(status_path), "%s/shutdown.status", directory) <
-          0 ||
       mkdir(sqlite_directory, 0700) < 0)
     return 2;
 
@@ -770,7 +767,6 @@ int main(int argc, char *argv[]) {
     return 2;
   fprintf(file, "game_database %s\n", database);
   fprintf(file, "have_specials 0\n");
-  fprintf(file, "status_file %s\n", status_path);
   fprintf(file, "port 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -793,7 +789,6 @@ int main(int argc, char *argv[]) {
     return 2;
   fprintf(file, "game_database %s\n", database);
   fprintf(file, "have_specials 1\n");
-  fprintf(file, "status_file %s\n", status_path);
   fprintf(file, "port 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -820,7 +815,6 @@ int main(int argc, char *argv[]) {
     return 2;
   fprintf(file, "game_database %s\n", database);
   fprintf(file, "have_specials 1\n");
-  fprintf(file, "status_file %s\n", status_path);
   fprintf(file, "port 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -977,7 +971,6 @@ int main(int argc, char *argv[]) {
   unlink(database);
   unlink(crash_database);
   unlink(killed_database);
-  unlink(status_path);
   rmdir(sqlite_directory);
   rmdir(directory);
   return result;

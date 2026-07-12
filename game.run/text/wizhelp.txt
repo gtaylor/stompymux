@@ -522,10 +522,7 @@
   to disk, and shuts down the game.  The game is unavailable until 
   it is restarted.  
   
-  If an argument is specified, it is written to the file named by 
-  the status_file config directive.
-  
-  See also: @restart, status_file
+  See also: @restart
   
 & @timewarp
  
@@ -4216,8 +4213,8 @@ Continued in btdamgaes()3
  room_quota              sacrifice_adjust          sacrifice_factor 
  search_cost             see_owned_dark            signal_action 
  site_chars              space_compress            stack_limit 
- starting_money          starting_quota            status_file 
- suspect_site            sweep_dark                switch_default_all 
+ starting_money          starting_quota            suspect_site 
+ sweep_dark              switch_default_all 
  terse_shows_contents    terse_shows_exits         terse_shows_move_messages 
  thing_flags             thing_quota               timeslice 
  trace_output_limit      trace_topdown             trust_site 
@@ -7409,16 +7406,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: status, @viewxcode
  
-& status_file
-
-  Config parameter: status_file <filename>
-  Default: shutdown.status
-
-  If you give an argument to the @shutdown command, that argument is
-  written out to the file named by this directive.  The file can be
-  used by an auto-restart script to decide whether or not to bring
-  the MUX back up, for instance.
-  
 & steal_money
  
   Power: steal_money

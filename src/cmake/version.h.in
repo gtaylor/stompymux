@@ -1,11 +1,5 @@
 #pragma once
 
-#define SOURCE_REVISION "@SOURCE_REVISION@"
-#define MUX_RELEASE_NAME "@MUX_RELEASE_NAME@"
 #define MUX_BUILD_DATE "@MUX_BUILD_DATE@"
-#define MUX_BUILD_NUM "@mux_build_num@"
-
-#define MUX_BUILD_USER "@MUX_BUILD_USER@"
-#define MUX_BUILD_HOST "@MUX_BUILD_HOST@"
 
 void init_version(void);

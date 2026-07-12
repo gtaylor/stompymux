@@ -743,8 +743,6 @@ void notify_except2(dbref loc, dbref player, dbref exc1, dbref exc2,
 }
 
 void do_shutdown(dbref player, dbref cause, int key, char *message) {
-  FILE *fs;
-
   ResetSpecialObjects();
   if (player != NOTHING) {
     raw_broadcast(0, "Game: Shutdown by %s", Name(Owner(player)));
@@ -761,15 +759,13 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
       ENDLOG;
     }
   }
-  STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
-    log_text((char *)"Shutdown status: ");
-    log_text(message);
-    ENDLOG;
+  if (player != NOTHING) {
+    STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
+      log_text((char *)"Shutdown status: ");
+      log_text(message);
+      ENDLOG;
+    }
   }
-
-  fs = fopen(mudconf.status_file, "w");
-  fprintf(fs, "%s\n", message);
-  fclose(fs);
 
   /*
    * Do we perform a normal or an emergency shutdown?  Normal shutdown

@@ -65,7 +65,6 @@ void cf_init(void) {
   StringCopy(mudconf.gamedb, "");
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
-  StringCopy(mudconf.status_file, "shutdown.status");
   mudconf.allow_unloggedwho = 0;
   mudconf.btech_explode_reactor = 1;
   mudconf.btech_explode_time = 120;
@@ -1274,8 +1273,6 @@ CONF conftable[] = {
     {(char *)"stack_limit", cf_int, CA_GOD, &mudconf.stack_limit, 0},
     {(char *)"starting_money", cf_int, CA_GOD, &mudconf.paystart, 0},
     {(char *)"starting_quota", cf_int, CA_GOD, &mudconf.start_quota, 0},
-    {(char *)"status_file", cf_string, CA_DISABLED, (void *)mudconf.status_file,
-     128},
     {(char *)"suspect_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list,
      H_SUSPECT},
     {(char *)"sweep_dark", cf_bool, CA_GOD, &mudconf.sweep_dark, 0},
