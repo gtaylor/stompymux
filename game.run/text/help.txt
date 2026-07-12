@@ -6620,15 +6620,6 @@ carried
 .
   See also: kill
 . 
-& HEAD
- 
-  Flag: HEAD(?)
- 
-  This is another marker flag, for faction heads and the like. No powers
-  come with it; it is purely a marker.
-
-  See also: WIZARD
-  
 & heading
  
   RS Command: heading [<degrees>]
