@@ -10,6 +10,5 @@
   kill_guarantee_cost parameter prevents 'automatic kills', as the
   kill will always have a chance of failing.
 
-  See also: kill, kill_guarantee_cost, kill_min_cost, HAVEN, IMMORTAL,
+  See also: kill, kill_guarantee_cost, kill_min_cost, IMMORTAL,
             KILLING.
- 

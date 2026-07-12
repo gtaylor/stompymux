@@ -5194,11 +5194,11 @@ Continued in btdamgaes()3
 
   Specifies the amount of money you have to spend (ie. kill target =
   <amount>) to have a 100% chance of killing them (assuming there
-  are no other factors, such as the victim being immortal or in a
-  HAVEN room, etc).  The chance of a successful kill is <amount
+  are no other factors, such as the victim being immortal). The chance
+  of a successful kill is <amount
   spent> / <kill_guarantee_cost>.
 
-  See also: kill, kill_max_cost, kill_min_cost, HAVEN, IMMORTAL,
+  See also: kill, kill_max_cost, kill_min_cost, IMMORTAL,
             KILLING.
  
 & kill_max_cost
@@ -5212,7 +5212,7 @@ Continued in btdamgaes()3
   kill_guarantee_cost parameter prevents 'automatic kills', as the
   kill will always have a chance of failing.
 
-  See also: kill, kill_guarantee_cost, kill_min_cost, HAVEN, IMMORTAL,
+  See also: kill, kill_guarantee_cost, kill_min_cost, IMMORTAL,
             KILLING.
  
 & kill_min_cost
@@ -5223,7 +5223,7 @@ Continued in btdamgaes()3
   Specifies the minimum (and default) cost for attempting to kill
   someone or something.
 
-  See also: kill, kill_guarantee_cost, kill_max_cost, HAVEN, IMMORTAL,
+  See also: kill, kill_guarantee_cost, kill_max_cost, IMMORTAL,
             KILLING.
   
 & last_startup

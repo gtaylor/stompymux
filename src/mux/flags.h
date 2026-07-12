@@ -27,7 +27,7 @@
 #define JUMP_OK 0x00000080     /* Others may @tel here */
 #define STICKY 0x00000100      /* Object goes home when dropped */
 #define DESTROY_OK 0x00000200  /* Others may @destroy */
-#define HAVEN 0x00000400       /* No killing here, or no pages */
+/* 0x00000400 is reserved for the removed HAVEN flag. */
 #define QUIET 0x00000800       /* Prevent 'feelgood' messages */
 #define HALT 0x00001000        /* object cannot perform actions */
 #define TRACE 0x00002000       /* Generate evaluation trace output */
@@ -153,8 +153,6 @@ extern void decompile_flags(dbref, dbref, char *);
 /* Quiet(X)          - Should 'Set.' messages et al from X be disabled */
 /* Verbose(X)        - Should owner receive all commands executed? */
 /* Trace(X)          - Should owner receive eval trace output? */
-/* Player_haven(X)   - Is the owner of X no-page */
-/* Haven(X)          - Is X no-kill(rooms) or no-page(players) */
 /* Halted(X)         - Is X halted (not allowed to run commands)? */
 /* Suspect(X)        - Is X someone the wizzes should keep an eye on */
 /* Slave(X)          - Should X be prevented from db-changing commands */
@@ -230,8 +228,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Jump_ok(x) (((Flags(x) & JUMP_OK) != 0) && Has_contents(x))
 #define Sticky(x) ((Flags(x) & STICKY) != 0)
 #define Destroy_ok(x) ((Flags(x) & DESTROY_OK) != 0)
-#define Haven(x) ((Flags(x) & HAVEN) != 0)
-#define Player_haven(x) ((Flags(Owner(x)) & HAVEN) != 0)
 #define Quiet(x) ((Flags(x) & QUIET) != 0)
 #define Halted(x) ((Flags(x) & HALT) != 0)
 #define Trace(x) ((Flags(x) & TRACE) != 0)

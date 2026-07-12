@@ -7,6 +7,5 @@
   Specifies the minimum (and default) cost for attempting to kill
   someone or something.
 
-  See also: kill, kill_guarantee_cost, kill_max_cost, HAVEN, IMMORTAL,
+  See also: kill, kill_guarantee_cost, kill_max_cost, IMMORTAL,
             KILLING.
- 

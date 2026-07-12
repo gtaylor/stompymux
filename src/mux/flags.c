@@ -239,7 +239,6 @@ FLAGENT gen_flags[] = {
     {"HAS_HOURLY", HAS_HOURLY, '*', FLAG_WORD2, CA_GOD | CA_NO_DECOMP, fh_god},
     {"HAS_LISTEN", HAS_LISTEN, '@', FLAG_WORD2, CA_GOD | CA_NO_DECOMP, fh_god},
     {"HAS_STARTUP", HAS_STARTUP, '+', 0, CA_GOD | CA_NO_DECOMP, fh_god},
-    {"HAVEN", HAVEN, 'H', 0, 0, fh_any},
     {"BLIND", BLIND, '(', FLAG_WORD2, 0, fh_any},
     {"IMMORTAL", IMMORTAL, 'i', 0, 0, fh_wiz},
     {"IN_CHARACTER", IN_CHARACTER, '#', FLAG_WORD2, 0, fh_wiz},

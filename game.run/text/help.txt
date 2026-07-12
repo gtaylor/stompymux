@@ -6576,14 +6576,6 @@ carried
   types are: ROOM, EXIT, PLAYER, THING. If an invalid type is given,
   #-1 is returned.
  .
-& HAVEN
-.
-  Flag: HAVEN (H)
-.
-  If a location is set HAVEN, you cannot kill in that location. 
-.
-  See also: kill
-. 
 & heading
  
   RS Command: heading [<degrees>]
@@ -7086,7 +7078,7 @@ carried
   which gives you a <cost>% chance of killing the player. Thus,
   spending 100 coins always works (except against wizards and
   immortals, who can never be killed). Players cannot be killed in
-  rooms which have been set HAVEN or which they control.  If you
+  rooms which they control. If you
   don't specify a cost, the default is 10 (for a 10% chance of
   success).  The player, if killed, receives <cost>/2 coins in
   insurance.
@@ -12618,4 +12610,3 @@ great
   #20 #32 #18
  
   See Also: zone(), zfun(), zplayers()
-

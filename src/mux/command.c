@@ -657,8 +657,7 @@ int check_access(dbref player, int mask) {
    */
 
   if (!Wizard(player) &&
-      (((mask & CA_NO_HAVEN) && Player_haven(player)) ||
-       ((mask & CA_NO_ROBOT) && Robot(player)) ||
+      (((mask & CA_NO_ROBOT) && Robot(player)) ||
        ((mask & CA_NO_SLAVE) && Slave(player)) ||
        ((mask & CA_NO_SUSPECT) && Suspect(player)) ||
        (!mudconf.btech_ooc_comsys && (mask & CA_NO_IC) && In_IC_Loc(player)) ||
@@ -1500,7 +1499,6 @@ NAMETAB access_nametab[] = {
     {(char *)"builder", 6, CA_WIZARD, CA_BUILDER},
     {(char *)"immortal", 3, CA_WIZARD, CA_IMMORTAL},
     {(char *)"robot", 2, CA_WIZARD, CA_ROBOT},
-    {(char *)"no_haven", 4, CA_PUBLIC, CA_NO_HAVEN},
     {(char *)"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
     {(char *)"no_slave", 5, CA_PUBLIC, CA_NO_SLAVE},
     {(char *)"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
