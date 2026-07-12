@@ -365,8 +365,6 @@ void list_chashstats(dbref);
 #define HALT_ALL 1         /* halt everything */
 #define HELP_HELP 1        /* get data from help file */
 #define HELP_WIZHELP 2     /* get data from wizard help file */
-#define KILL_KILL 1        /* gives victim insurance */
-#define KILL_SLAY 2        /* no insurance */
 #define LOOK_LOOK 1        /* list desc (and succ/fail if room) */
 #define LOOK_EXAM 2        /* full listing of object */
 #define LOOK_DEXAM 3       /* debug listing of object */

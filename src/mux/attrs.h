@@ -30,12 +30,11 @@
 #define A_SEX 7          /* Sex */
 #define A_ODROP 8        /* Others drop message */
 #define A_DROP 9         /* Invoker drop message */
-#define A_OKILL 10       /* Others kill message */
-#define A_KILL 11        /* Invoker kill message */
+/* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
 #define A_ASUCC 12       /* Success action list */
 #define A_AFAIL 13       /* Failure action list */
 #define A_ADROP 14       /* Drop action list */
-#define A_AKILL 15       /* Kill action list */
+/* 15 is reserved for the removed AKILL attribute. */
 #define A_AUSE 16        /* Use action list */
 #define A_CHARGES 17     /* Number of charges remaining */
 #define A_RUNOUT 18      /* Actions done when no more charges */

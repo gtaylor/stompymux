@@ -552,7 +552,7 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
 
   rmv_flags = WIZARD;
   if (!(key & CLONE_INHERIT) || (!Inherits(player)))
-    rmv_flags |= INHERIT | IMMORTAL;
+    rmv_flags |= INHERIT;
   s_Flags(clone, Flags(thing) & ~rmv_flags);
 
   /*

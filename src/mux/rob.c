@@ -1,5 +1,5 @@
 /*
- * rob.c -- Commands dealing with giving/taking/killing things or money
+ * rob.c -- Commands dealing with giving/taking things or money
  */
 
 #include "config.h"

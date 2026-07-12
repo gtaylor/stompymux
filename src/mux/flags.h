@@ -38,7 +38,7 @@
 /* 0x00040000 is reserved for the removed CHOWN_OK flag. */
 #define ENTER_OK 0x00080000    /* Object may be ENTERed */
 /* 0x00100000 is reserved for the removed VISUAL flag. */
-#define IMMORTAL 0x00200000    /* Object can't be killed */
+/* 0x00200000 is reserved for the removed IMMORTAL flag. */
 #define HAS_STARTUP 0x00400000 /* Load some attrs at startup */
 #define OPAQUE 0x00800000      /* Can't see inside */
 #define VERBOSE 0x01000000     /* Tells owner everything it does. */
@@ -145,7 +145,6 @@ extern void decompile_flags(dbref, dbref, char *);
 /* God(X)            - Is X player #1 */
 /* Robot(X)          - Is X a robot player */
 /* Wizard(X)         - Does X have wizard privs */
-/* Immortal(X)       - Is X unkillable */
 /* Alive(X)          - Is X a player or a puppet */
 /* Dark(X)           - Is X dark */
 /* WHODark(X)        - Should X be hidden from the WHO report */
@@ -237,8 +236,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Puppet(x) ((Flags(x) & PUPPET) != 0)
 #define Enter_ok(x)                                                            \
   (((Flags(x) & ENTER_OK) != 0) && Has_location(x) && Has_contents(x))
-#define Immortal(x)                                                            \
-  ((Flags(x) & IMMORTAL) || ((Flags(Owner(x)) & IMMORTAL) && Inherits(x)))
 #define Opaque(x) ((Flags(x) & OPAQUE) != 0)
 #define Verbose(x) ((Flags(x) & VERBOSE) != 0)
 #define Inherits(x)                                                            \

@@ -230,9 +230,6 @@ struct confdata {
   int opencost;            /* cost of @open command */
   int createmin;           /* default (and minimum) cost of @create cmd */
   int createmax;           /* max cost of @create command */
-  int killmin;             /* default (and minimum) cost of kill cmd */
-  int killmax;             /* max cost of kill command */
-  int killguarantee;       /* cost of kill cmd that guarantees success */
   int robotcost;           /* cost of @robot command */
   int pagecost;            /* cost of @page command */
   int searchcost;          /* cost of commands that search the whole DB */
@@ -487,7 +484,7 @@ extern STATEDATA mudstate;
 #define LOG_DBSAVES 0x00000010     /* Log database dumps */
 #define LOG_CONFIGMODS 0x00000020  /* Log changes to configuration */
 #define LOG_PCREATES 0x00000040    /* Log character creations */
-#define LOG_KILLS 0x00000080       /* Log KILLs */
+/* 0x00000080 is reserved for the removed killing log category. */
 #define LOG_LOGIN 0x00000100       /* Log logins and logouts */
 #define LOG_NET 0x00000200         /* Log net connects and disconnects */
 #define LOG_SECURITY 0x00000400    /* Log security-related events */

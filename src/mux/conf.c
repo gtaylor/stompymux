@@ -212,9 +212,6 @@ void cf_init(void) {
   mudconf.opencost = 1;
   mudconf.createmin = 10;
   mudconf.createmax = 505;
-  mudconf.killmin = 10;
-  mudconf.killmax = 100;
-  mudconf.killguarantee = 100;
   mudconf.robotcost = 1000;
   mudconf.pagecost = 10;
   mudconf.searchcost = 100;
@@ -1076,9 +1073,6 @@ CONF conftable[] = {
     {(char *)"include", cf_include, CA_DISABLED, NULL, 0},
     {(char *)"indent_desc", cf_bool, CA_GOD, &mudconf.indent_desc, 0},
     {(char *)"initial_size", cf_int, CA_DISABLED, &mudconf.init_size, 0},
-    {(char *)"kill_guarantee_cost", cf_int, CA_GOD, &mudconf.killguarantee, 0},
-    {(char *)"kill_max_cost", cf_int, CA_GOD, &mudconf.killmax, 0},
-    {(char *)"kill_min_cost", cf_int, CA_GOD, &mudconf.killmin, 0},
     {(char *)"link_cost", cf_int, CA_GOD, &mudconf.linkcost, 0},
     {(char *)"list_access", cf_ntab_access, CA_GOD, (int *)list_names,
      (long)access_nametab},

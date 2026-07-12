@@ -77,7 +77,6 @@ POWERENT gen_powers[] = {
     {(char *)"steal_money", POW_STEAL, 0, 0, ph_wiz},
     {(char *)"tel_anywhere", POW_TEL_ANYWHR, 0, 0, ph_wiz},
     {(char *)"tel_anything", POW_TEL_UNRST, 0, 0, ph_wiz},
-    {(char *)"unkillable", POW_UNKILLABLE, 0, 0, ph_wiz},
     {(char *)"pass_locks", POW_PASS_LOCKS, 0, 0, ph_wiz},
     {(char *)"builder", POW_BUILDER, POWER_EXT, 0, ph_wiz},
     /* BattletechMUX Powers */

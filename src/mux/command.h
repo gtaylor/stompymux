@@ -83,7 +83,6 @@ void do_multis(dbref, dbref, int);
 void do_inventory(dbref, dbref, int);            /* Print what I am carrying */
 void do_prog(dbref, dbref, int, char *, char *); /* Interactive input */
 void do_quitprog(dbref, dbref, int, char *);     /* Quits @prog */
-void do_kill(dbref, dbref, int, char *, char *); /* Kill something */
 void do_last(dbref, dbref, int, char *);         /* Get recent login info */
 void do_leave(dbref, dbref, int);                /* Leave the current object */
 void do_link(dbref, dbref, int, char *, char *); /* Set home, dropto, or dest */
@@ -215,7 +214,7 @@ struct addedentry {
 #define CA_GOD 0x00000001        /* GOD only... */
 #define CA_WIZARD 0x00000002     /* Wizards only */
 #define CA_BUILDER 0x00000004    /* Builders only */
-#define CA_IMMORTAL 0x00000008   /* Immortals only */
+/* 0x00000008 is reserved for the removed immortal restriction. */
 #define CA_ROBOT 0x00000010      /* Robots only */
 #define CA_ANNOUNCE 0x00000020   /* Announce Power */
 #define CA_ADMIN 0x00000800      /* Wizard */

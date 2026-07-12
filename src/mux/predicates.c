@@ -308,7 +308,7 @@ int payfor(dbref who, int cost) {
   dbref tmp;
 
   if (Wizard(who) || Wizard(Owner(who)) || Free_Money(who) ||
-      Free_Money(Owner(who)) || Immortal(who) || Immortal(Owner(who))) {
+      Free_Money(Owner(who))) {
     return 1;
   }
   who = Owner(who);
@@ -335,7 +335,7 @@ void add_quota(dbref who, int payment) {
  */
 void giveto(dbref who, int pennies) {
   if (Wizard(who) || Wizard(Owner(who)) || Free_Money(who) ||
-      Free_Money(Owner(who)) || Immortal(who) || Immortal(Owner(who))) {
+      Free_Money(Owner(who))) {
     return;
   }
   who = Owner(who);

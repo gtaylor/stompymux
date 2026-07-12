@@ -629,12 +629,6 @@ int check_access(dbref player, int mask) {
     else
       fail++;
   }
-  if ((succ == 0) && (mask & CA_IMMORTAL)) {
-    if (Immortal(player))
-      succ++;
-    else
-      fail++;
-  }
   if ((succ == 0) && (mask & CA_BUILDER)) {
     if (Builder(player))
       succ++;
@@ -1497,7 +1491,6 @@ NAMETAB access_nametab[] = {
     {(char *)"god", 2, CA_GOD, CA_GOD},
     {(char *)"wizard", 3, CA_WIZARD, CA_WIZARD},
     {(char *)"builder", 6, CA_WIZARD, CA_BUILDER},
-    {(char *)"immortal", 3, CA_WIZARD, CA_IMMORTAL},
     {(char *)"robot", 2, CA_WIZARD, CA_ROBOT},
     {(char *)"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
     {(char *)"no_slave", 5, CA_PUBLIC, CA_NO_SLAVE},
@@ -1861,19 +1854,6 @@ static void list_costs(dbref player) {
     snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.player_quota);
   notify_printf(player, "Creating a robot costs %d %s%s.", mudconf.robotcost,
                 coin_name(mudconf.robotcost), buff);
-  if (mudconf.killmin == mudconf.killmax) {
-    raw_notify(player,
-               tprintf("Killing costs %d %s, with a %d%% chance of success.",
-                       mudconf.killmin, coin_name(mudconf.digcost),
-                       (mudconf.killmin * 100) / mudconf.killguarantee));
-  } else {
-    raw_notify(player,
-               tprintf("Killing costs between %d and %d %s.", mudconf.killmin,
-                       mudconf.killmax, mudconf.many_coins));
-    raw_notify(player, tprintf("You must spend %d %s to guarantee success.",
-                               mudconf.killguarantee,
-                               coin_name(mudconf.killguarantee)));
-  }
   raw_notify(player,
              tprintf("Computationally expensive commands and functions (ie: "
                      "@entrances, @find, @search, @stats (with an argument or "

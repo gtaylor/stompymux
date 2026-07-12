@@ -42,7 +42,7 @@
 #define POW_STEAL 0x10000000      /* Can give negative money */
 #define POW_TEL_ANYWHR 0x20000000 /* Teleport anywhere */
 #define POW_TEL_UNRST 0x40000000  /* Teleport anything */
-#define POW_UNKILLABLE 0x80000000 /* Can't be killed */
+/* 0x80000000 is reserved for the removed unkillable power. */
 
 /* Second word of powers */
 #define POW_BUILDER 0x00000001 /* Can build */
@@ -111,7 +111,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define s_Steal(c) s_Powers((c), Powers(c) | POW_STEAL)
 #define s_Tel_Anywhere(c) s_Powers((c), Powers(c) | POW_TEL_ANYWHR)
 #define s_Tel_Anything(c) s_Powers((c), Powers(c) | POW_TEL_UNRST)
-#define s_Unkillable(c) s_Powers((c), Powers(c) | POW_UNKILLABLE)
 #define s_Builder(c) s_Powers2((c), Powers2(c) | POW_BUILDER)
 
 /* 'mech set-on macros */
@@ -134,7 +133,7 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define Wizard_Who(c) (((Powers(c) & POW_WIZARD_WHO) != 0) || Wizard(c))
 #define See_All(c) (((Powers(c) & POW_EXAM_ALL) != 0) || Wizard(c))
 #define Find_Unfindable(c) ((Powers(c) & POW_FIND_UNFIND) != 0)
-#define Free_Money(c) (((Powers(c) & POW_FREE_MONEY) != 0) || Immortal(c))
+#define Free_Money(c) ((Powers(c) & POW_FREE_MONEY) != 0)
 #define Free_Quota(c) (((Powers(c) & POW_FREE_QUOTA) != 0) || Wizard(c))
 #define Can_Hide(c) ((Powers(c) & POW_HIDE) != 0)
 #define Can_Idle(c) (((Powers(c) & POW_IDLE) != 0) || Wizard(c))
@@ -151,7 +150,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define Steal(c) (((Powers(c) & POW_STEAL) != 0) || Wizard(c))
 #define Tel_Anywhere(c) (((Powers(c) & POW_TEL_ANYWHR) != 0) || Tel_Anything(c))
 #define Tel_Anything(c) (((Powers(c) & POW_TEL_UNRST) != 0) || Wizard(c))
-#define Unkillable(c) (((Powers(c) & POW_UNKILLABLE) != 0) || Immortal(c))
 #define Prog(c) (((Powers(c) & POW_PROG) != 0) || Wizard(c))
 #define Pass_Locks(c) ((Powers(c) & POW_PASS_LOCKS) != 0)
 #define Builder(c) (((Powers2(c) & POW_BUILDER) != 0) || Wizard(c))
