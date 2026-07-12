@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.3)
 
-project(BattleTechMUX LANGUAGES C CXX)
+project(BattleTechMUX LANGUAGES C)
 
 find_package(Git QUIET)
 set(PROJECT_VERSION "unknown")
@@ -19,10 +19,6 @@ endif()
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -177,8 +173,7 @@ configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors>
-  $<$<COMPILE_LANGUAGE:CXX>:-Werror -Wfatal-errors>)
+  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors>)
 if(BTMUX_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
@@ -345,7 +340,6 @@ if(BTMUX_ENHANCED_LOGGING)
 endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
-set_target_properties(netmux PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(netmux PRIVATE btmux_options btech "${EVENT_LIBRARY}" SQLite3::SQLite3 ${BTMUX_PLATFORM_LIBS})
