@@ -142,7 +142,6 @@ int PrefVisSens(MECH *mech, MAP *map, int slite, MECH *target) {
 void auto_sensor_event(AUTO *autopilot) {
   MECH *target = NULL;
   MAP *map;
-  char buf[16];
   int wanted_s[2];
   int rvis;
   int slite, prefvis;

@@ -555,7 +555,7 @@ void add_sensor_info(char *buf, int size, MECH *mech, int sn, int verbose) {
 static char *sensor_mode_name(MECH *mech, int sn, int full, int verbose) {
   static char buf[MBUF_SIZE];
 
-  if (sn < 0 || sn >= NUM_SENSORS)
+  if (sn < 0 || (size_t)sn >= NUM_SENSORS)
     return "None";
 
   if (sensors[sn].fullvision) {
@@ -577,7 +577,7 @@ static char *sensor_mode_name(MECH *mech, int sn, int full, int verbose) {
 static void sensor_mode(MECH *mech, char *msg, dbref player, int p, int s,
                         int verbose) {
   char buf[MBUF_SIZE];
-  int i;
+  size_t i;
 
   if (p != s) {
     for (i = 0; i < strlen(msg); i++)
@@ -727,7 +727,7 @@ static int set_sensor(MECH *mech, char ps, char ss) {
 
   if (!Started(mech))
     return 0;
-  for (i = 0; i < NUM_SENSORS; i++) {
+  for (i = 0; i < (int)NUM_SENSORS; i++) {
     if (sensors[i].matchletter[0] == ps)
       prim = i;
     if (sensors[i].matchletter[0] == ss)

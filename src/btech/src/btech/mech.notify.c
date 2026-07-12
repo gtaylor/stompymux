@@ -231,7 +231,7 @@ struct {
     {NULL, "SHUTDOWN", STARTED, 1},
     {"Torso is 60 degrees right", NULL, TORSO_RIGHT, 0},
     {"Torso is 60 degrees left", NULL, TORSO_LEFT, 0},
-    {NULL, NULL, 0}};
+    {NULL, NULL, 0, 0}};
 
 struct {
   int team;
@@ -1135,8 +1135,6 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
   char buf[LBUF_SIZE];
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
-  int sfail_type, sfail_mod;
-  int rfail_type, rfail_mod;
   int obs = 0;
 
   char ai_buf[LBUF_SIZE];
@@ -1217,7 +1215,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
         continue;
       }
 
-      strncpy(buf2, msg, LBUF_SIZE);
+      snprintf(buf2, LBUF_SIZE, "%s", msg);
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking
        * elsewhere. We'll compose the message and send it now since
@@ -1256,7 +1254,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
           SendAI(ai_buf);
         } else if (a && !ECMDisturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
-          strncpy(buf3, msg, LBUF_SIZE);
+          snprintf(buf3, LBUF_SIZE, "%s", msg);
           auto_parse_command(a, tempMech, i, buf3);
         }
       }
@@ -1553,9 +1551,9 @@ void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message) {
         if (a || b) {
           char *obp = oddbuff2;
 
-          format_mech_los_message(
-              oddbuff, sizeof(oddbuff), message,
-              b ? GetMechToMechID(tempMech, target) : "someone");
+          format_mech_los_message(oddbuff, sizeof(oddbuff), message,
+                                  b ? GetMechToMechID(tempMech, target)
+                                    : "someone");
           safe_str((char *)(a ? GetMechToMechID(tempMech, mech) : "Someone"),
                    oddbuff2, &obp);
           if (*oddbuff != '\'')

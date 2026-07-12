@@ -15,13 +15,13 @@
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "muxevent/muxevent_alloc.h"
 #include "externs.h"
 #include "functions.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mechrep.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.mech.build.h"
 #include "p.mech.consistency.h"
 #include "p.mech.restrict.h"
@@ -290,6 +290,7 @@ void mechrep_Rsetmove(dbref player, void *data, char *buffer) {
       notify(player, "Movement set to FLY");
       break;
     }
+    break;
   case 'N':
     MechMove(mech) = MOVE_NONE;
     notify(player, "Movement set to NONE");
@@ -403,8 +404,8 @@ static int scan_template_dir(char const *dirname, char const *parent) {
       }
     }
 
-    strncpy(tmpl_list[tmpl_pos].name, ent->d_name, CACHE_MAXNAME);
-    tmpl_list[tmpl_pos].name[CACHE_MAXNAME] = '\0';
+    snprintf(tmpl_list[tmpl_pos].name, sizeof(tmpl_list[tmpl_pos].name), "%s",
+             ent->d_name);
     tmpl_list[tmpl_pos].dir = parent;
     tmpl_pos++;
   }
@@ -940,12 +941,10 @@ void mechrep_Raddweap(dbref player, void *data, char *buffer) {
   int index;         /* Used to determine section validity */
   int weapindex;     /* Weapon index number */
   int weapnumcrits;  /* Number of crits the desired weapon occupies. */
-  int weaptype;      /* The weapon type */
   int loop, temp;    /* Loop Counters */
   int isrear = 0;    /* Rear mounted? */
   int istc = 0;      /* Is the weap TC'd? */
   int isoneshot = 0; /* If 1, weapon is a One-Shot (OS) Weap */
-  int isrocket = 0;  /* Is this a rocket launcher? */
   int argstoiter;    /* Holder for figuring out how many args to scan */
   char flagholder;   /* Holder for flag comparisons */
 

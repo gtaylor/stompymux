@@ -13,9 +13,9 @@
 #include <stdlib.h>
 
 #include "btmacros.h"
-#include "muxevent/muxevent_alloc.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.btechstats.h"
 #include "p.mech.bth.h"
 #include "p.mech.combat.h"

@@ -39,7 +39,7 @@ struct stack {
 extern ATTR *atr_num(int anum);
 extern ATTR *atr_str(char *s);
 
-extern ATTR attr[];
+extern ATTR attr_table[];
 
 extern ATTR **anum_table;
 

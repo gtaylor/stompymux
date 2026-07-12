@@ -148,6 +148,7 @@ static void unparse_boolexp1(dbref player, BOOLEXP *b, char outer_type,
       switch (Typeof(b->thing)) {
       case TYPE_PLAYER:
         safe_chr('*', boolexp_buf, &buftop);
+        [[fallthrough]];
       case TYPE_THING:
         safe_str(Name(b->thing), boolexp_buf, &buftop);
         break;

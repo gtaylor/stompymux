@@ -131,8 +131,8 @@ char *first_parseattribute(char *buffer) {
  */
 
 int proper_parseattributes(char *buffer, char **args, int max) {
-  int count = 0, iterator = 0, length;
-  char *start, *finish;
+  int count = 0, length;
+  char *start;
 
   memset(args, 0, sizeof(char *) * max);
 
@@ -229,8 +229,8 @@ int silly_parseattributes(char *buffer, char **args, int max) {
  */
 
 int proper_explodearguments(char *buffer, char **args, int max) {
-  int count = 0, iterator = 0, length;
-  char *start, *finish;
+  int count = 0, length;
+  char *start;
 
   memset(args, 0, sizeof(char *) * max);
 

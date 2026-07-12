@@ -119,7 +119,6 @@ static void look_contents(dbref player, dbref loc, const char *contents_name,
   dbref thing;
   dbref can_see_loc;
   char *buff;
-  char remote_num[32];
 
   /*
    * check to see if he can see the location
@@ -156,7 +155,6 @@ static void look_contents(dbref player, dbref loc, const char *contents_name,
 
 static void view_atr(dbref player, dbref thing, ATTR *ap, char *text,
                      dbref aowner, int aflags, int skip_tag) {
-  char *buf;
   char xbuf[6];
   char *xbufp;
   BOOLEXP *boolexp;
@@ -305,9 +303,7 @@ static void look_simple(dbref player, dbref thing, int obey_terse) {
 }
 
 static void show_a_desc(dbref player, dbref loc) {
-  char *got2;
-  dbref aowner;
-  int aflags, indent = 0;
+  int indent = 0;
 
   indent = (isRoom(loc) && mudconf.indent_desc && atr_get_raw(loc, A_DESC));
 

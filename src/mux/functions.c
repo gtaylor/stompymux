@@ -1473,7 +1473,7 @@ static void fun_mid(char *buff, char **bufc, dbref player, dbref cause,
     return;
   }
   strncpy(new, fargs[0], LBUF_SIZE - 1);
-  if (l < strlen(strip_ansi_r(new, fargs[0], strlen(fargs[0]))))
+  if ((size_t)l < strlen(strip_ansi_r(new, fargs[0], strlen(fargs[0]))))
     safe_str(strip_ansi_r(new, fargs[0], strlen(fargs[0])) + l, buff, bufc);
   oldp[len] = 0;
   if ((oldp + len) < *bufc) {
@@ -1510,7 +1510,7 @@ static void fun_first(char *buff, char **bufc, dbref player, dbref cause,
  */
 static void fun_rest(char *buff, char **bufc, dbref player, dbref cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  char *s, *first, sep;
+  char *s, sep;
 
   /*
    * If we are passed an empty arglist return a null string
@@ -1523,7 +1523,7 @@ static void fun_rest(char *buff, char **bufc, dbref player, dbref cause,
   s = trim_space_sep(fargs[0], sep); /*
                                       * leading spaces ...
                                       */
-  first = split_token(&s, sep);
+  split_token(&s, sep);
   if (s) {
     safe_str(s, buff, bufc);
   }
@@ -1922,7 +1922,7 @@ static void fun_strmatch(char *buff, char **bufc, dbref player, dbref cause,
 static void fun_extract(char *buff, char **bufc, dbref player, dbref cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs) {
   int start, len;
-  char *r, *s, *t, sep;
+  char *r, *s, sep;
 
   varargs_preamble("EXTRACT", 4);
 
@@ -1967,7 +1967,7 @@ static void fun_extract(char *buff, char **bufc, dbref player, dbref cause,
    */
 
   if (s && *s)
-    t = split_token(&s, sep);
+    split_token(&s, sep);
   safe_str(r, buff, bufc);
 }
 
@@ -2853,7 +2853,6 @@ static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
                         char sep, int flag) {
   int ct, overrun;
   char *sptr, *iptr, *eptr;
-  char nullb;
 
   /*
    * If passed a null string return an empty string, except that we * *
@@ -2877,7 +2876,6 @@ static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
    * * * pointed to by sptr, iptr, and eptr respectively.
    */
 
-  nullb = '\0';
   if (el == 1) {
     /*
      * No 'before' portion, just split off element 1
@@ -3150,6 +3148,7 @@ static void fun_escape(char *buff, char **bufc, dbref player, dbref cause,
     case '}':
     case ';':
       safe_chr('\\', buff, bufc);
+      [[fallthrough]];
     default:
       if (*bufc == d)
         safe_chr('\\', buff, bufc);
@@ -3172,7 +3171,7 @@ static void fun_wordpos(char *buff, char **bufc, dbref player, dbref cause,
 
   charpos = atoi(fargs[1]);
   cp = fargs[0];
-  if ((charpos > 0) && (charpos <= strlen(cp))) {
+  if ((charpos > 0) && ((size_t)charpos <= strlen(cp))) {
     tp = &(cp[charpos - 1]);
     cp = trim_space_sep(cp, sep);
     xp = split_token(&cp, sep);

@@ -78,7 +78,6 @@ void auto_destroy_command_node(command_node *node) {
 
 /*! \todo {See if we need this function and remove it if not} */
 int auto_valid_progline(AUTO *a, int p) {
-  int i;
 #if 0
 	for(i = 0; i < a->first_free; i += (acom[a->commands[i]].argcount + 1))
 		if(i == p)
@@ -119,7 +118,7 @@ static char *auto_show_command(command_node *node) {
  */
 void auto_delcommand(dbref player, void *data, char *buffer) {
 
-  int p, i;
+  int p;
   AUTO *autopilot = (AUTO *)data;
   int remove_all_commands = 0;
   command_node *temp_command_node;
@@ -215,9 +214,6 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
  * command list
  */
 void auto_jump(dbref player, void *data, char *buffer) {
-  int p;
-  AUTO *a = (AUTO *)data;
-
   notify(player, "jump has been temporarly disabled till I can figure out"
                  " how I want to change it - Dany");
 #if 0
@@ -320,7 +316,7 @@ void auto_listcommands(dbref player, void *data, char *buffer) {
   AUTO *autopilot = (AUTO *)data;
   coolmenu *c = NULL;
   char buf[MBUF_SIZE];
-  int i, count = 0;
+  int i;
 
   addline();
 

@@ -553,7 +553,6 @@ void do_undef_macro(dbref player, char *cmd) {
 }
 
 char *do_process_macro(dbref player, char *in, char *s) {
-  char *cmd;
   char *tar;
   char *next;
   struct macros *m;
@@ -565,7 +564,6 @@ char *do_process_macro(dbref player, char *in, char *s) {
 
   c = get_commac(player);
   buff = alloc_lbuf("do_process_macro");
-  cmd = in + 1;
   buff[0] = '\0'; /*
                    * End the string
                    */

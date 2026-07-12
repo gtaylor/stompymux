@@ -14,8 +14,6 @@
 #include <sys/file.h>
 
 #include "btmacros.h"
-#include "muxevent/muxevent.h"
-#include "muxevent/muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "map.h"
@@ -24,6 +22,8 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
+#include "muxevent/muxevent.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.artillery.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
@@ -1843,10 +1843,8 @@ void possibly_clear(MECH *mech, MAP *map, int weapindx, int ammoMode,
 
 void possibly_ignite_or_clear(MECH *mech, int weapindx, int ammoMode,
                               int damage, int x, int y, int intentional) {
-  int r;
   MAP *map;
 
-  r = Roll();
   map = FindObjectsData(mech->mapindex);
 
   if (!map)

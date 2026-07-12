@@ -210,7 +210,6 @@ static void link_exit(dbref player, dbref exit, dbref dest) {
 
 void do_link(dbref player, dbref cause, int key, char *what, char *where) {
   dbref thing, room;
-  char *buff;
 
   /*
    * Find the thing to link

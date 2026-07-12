@@ -66,7 +66,6 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   int wFireMode = GetPartFireMode(mech, section, critical);
   int wAmmoMode = GetPartAmmoMode(mech, section, critical);
   int tInWater = 0;
-  int tTargetInWater = 0;
   int wTargMoveMod = 0;
   int rangecheck = 0;
 #ifdef BTH_DEBUG
@@ -82,7 +81,6 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
 
   if (target) {
     tInWater = ((MechRTerrain(mech) == WATER) && (MechZ(mech) < 0));
-    tTargetInWater = ((MechRTerrain(target) == WATER) && (MechZ(target) < 0));
   }
 
   BTHBASE(mech, target, FindPilotGunnery(mech, weapindx));

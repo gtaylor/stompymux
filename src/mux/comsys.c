@@ -15,14 +15,13 @@
 #include "powers.h"
 
 #include "comsys.h"
-#include "muxevent/muxevent_alloc.h"
 #include "functions.h"
+#include "muxevent/muxevent_alloc.h"
 
 int num_channels;
 int max_channels;
 
 /* Static functions */
-static void do_save_com(void *);
 static void do_show_com(void *);
 static void do_comlast(dbref, struct channel *);
 static void do_comsend(struct channel *, char *);
@@ -835,7 +834,6 @@ void do_channelwho(dbref player, dbref cause, int key, char *arg1) {
   char *cp;
   int i;
   char ansibuffer[LBUF_SIZE];
-  char outputbuffer[LBUF_SIZE];
 
   if (!mudconf.have_comsys) {
     raw_notify(player, "Comsys disabled.");
@@ -1438,7 +1436,7 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan) {
   }
 
   if (key & CSTATUS_FULL) {
-    struct channel *ch;
+    struct channel *selected_channel;
     int perm;
 
     if (!(perm = Comm_All(player))) {
@@ -1449,24 +1447,36 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan) {
     raw_notify(player, "** Channel             --Flags--  Obj   Own   Charge  "
                        "Balance  Users   Messages");
 
-    if (!(ch = select_channel(chan))) {
+    if (!(selected_channel = select_channel(chan))) {
       notify_printf(player, "@cstatus: Channel %s does not exist.", chan);
       return;
     }
-    if (perm || (ch->type & CHANNEL_PUBLIC) || ch->charge_who == player) {
+    if (perm || (selected_channel->type & CHANNEL_PUBLIC) ||
+        selected_channel->charge_who == player) {
 
       notify_printf(
           player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %8d %8d %6d %10d",
-          (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
-          (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name,
-          (ch->type & (CHANNEL_PL_MULT * CHANNEL_JOIN)) ? 'J' : '-',
-          (ch->type & (CHANNEL_PL_MULT * CHANNEL_TRANSMIT)) ? 'X' : '-',
-          (ch->type & (CHANNEL_PL_MULT * CHANNEL_RECIEVE)) ? 'R' : '-',
-          (ch->type & (CHANNEL_OBJ_MULT * CHANNEL_JOIN)) ? 'j' : '-',
-          (ch->type & (CHANNEL_OBJ_MULT * CHANNEL_TRANSMIT)) ? 'x' : '-',
-          (ch->type & (CHANNEL_OBJ_MULT * CHANNEL_RECIEVE)) ? 'r' : '-',
-          (ch->chan_obj != NOTHING) ? ch->chan_obj : -1, ch->charge_who,
-          ch->charge, ch->amount_col, ch->num_users, ch->num_messages);
+          (selected_channel->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
+          (selected_channel->type & (CHANNEL_LOUD)) ? 'L' : '-',
+          selected_channel->name,
+          (selected_channel->type & (CHANNEL_PL_MULT * CHANNEL_JOIN)) ? 'J'
+                                                                      : '-',
+          (selected_channel->type & (CHANNEL_PL_MULT * CHANNEL_TRANSMIT)) ? 'X'
+                                                                          : '-',
+          (selected_channel->type & (CHANNEL_PL_MULT * CHANNEL_RECIEVE)) ? 'R'
+                                                                         : '-',
+          (selected_channel->type & (CHANNEL_OBJ_MULT * CHANNEL_JOIN)) ? 'j'
+                                                                       : '-',
+          (selected_channel->type & (CHANNEL_OBJ_MULT * CHANNEL_TRANSMIT))
+              ? 'x'
+              : '-',
+          (selected_channel->type & (CHANNEL_OBJ_MULT * CHANNEL_RECIEVE)) ? 'r'
+                                                                          : '-',
+          (selected_channel->chan_obj != NOTHING) ? selected_channel->chan_obj
+                                                  : -1,
+          selected_channel->charge_who, selected_channel->charge,
+          selected_channel->amount_col, selected_channel->num_users,
+          selected_channel->num_messages);
     }
     raw_notify(player, "-- End of list of Channels --");
     return;
@@ -1504,7 +1514,6 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan) {
 void fun_cemit(char *buff, char **bufc, dbref player, dbref cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs) {
   struct channel *ch;
-  static char smbuf[LBUF_SIZE];
 
   if (!(ch = select_channel(fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);

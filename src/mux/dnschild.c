@@ -192,7 +192,8 @@ static void dnschild_finish(int fd, short event, void *arg) {
     return;
   }
 
-  strncpy(dqst->desc->addr, buffer + 1, sizeof(dqst->desc->addr) - 1);
+  snprintf(dqst->desc->addr, sizeof(dqst->desc->addr), "%.*s",
+           (int)(sizeof(dqst->desc->addr) - 1), buffer + 1);
   dprintk("dnschild resolved %s correctly.", buffer + 1);
   close(fd);
   free(dqst);

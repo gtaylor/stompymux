@@ -17,18 +17,6 @@
 #include "powers.h"
 #include "rbtab.h"
 
-static int recursive_check_contents(dbref victim, dbref destination) {
-  dbref i;
-
-  DOLIST(i, Contents(victim)) {
-    if (destination == i)
-      return 1;
-    else if (recursive_check_contents(i, destination))
-      return 1;
-  }
-  return 0;
-}
-
 extern char *crypt(const char *, const char *);
 
 void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {

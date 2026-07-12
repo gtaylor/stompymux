@@ -34,10 +34,11 @@ void muxevent_tickmech_removesection(MUXEVENT *e) {
   MECH *mech = (MECH *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
-  int loc, pos, extra;
+  int loc, extra;
 
   /* changed Special2I to Special on AddPartsM statements */
-  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  loc = earg % LOCMAX;
+  extra = earg / (LOCMAX * POSMAX);
 #ifndef BT_COMPLEXREPAIRS
   AddPartsM(mech, ProperInternal(mech), 0, (2 * GetSectInt(mech, loc)) / extra);
   AddPartsM(mech, ProperArmor(mech), 0, (2 * GetSectArmor(mech, loc)) / extra);
@@ -96,26 +97,26 @@ void muxevent_tickmech_removegun(MUXEVENT *e) {
               GetPartBrand(mech, loc, pos), 1);
 #endif
     do {
-      int i = 0;
+      int was_destroyed = 0;
 
       if (Destroyed(mech))
-        i = 1;
+        was_destroyed = 1;
       MechStatus(mech) &= ~DESTROYED;
       mech_printf(mech, MECHALL, "%s from %s has been removed.",
                   pos_part_name(mech, loc, pos), buf);
-      if (i)
+      if (was_destroyed)
         MechStatus(mech) |= DESTROYED;
     } while (0);
   } else {
     do {
-      int i = 0;
+      int was_destroyed = 0;
 
       if (Destroyed(mech))
-        i = 1;
+        was_destroyed = 1;
       MechStatus(mech) &= ~DESTROYED;
       mech_printf(mech, MECHALL, "%s from %s has been removed and scrapped.",
                   pos_part_name(mech, loc, pos), buf);
-      if (i)
+      if (was_destroyed)
         MechStatus(mech) |= DESTROYED;
     } while (0);
   }
@@ -268,13 +269,13 @@ void muxevent_tickmech_reattach(MUXEVENT *e) {
   if (completely_intact_int(mech))
     do_magic(mech);
   do {
-    int i = 0;
+    int was_destroyed = 0;
 
     if (Destroyed(mech))
-      i = 1;
+      was_destroyed = 1;
     MechStatus(mech) &= ~DESTROYED;
     mech_printf(mech, MECHALL, "%s has been reattached.", buf);
-    if (i)
+    if (was_destroyed)
       MechStatus(mech) |= DESTROYED;
   } while (0);
 }
@@ -339,14 +340,14 @@ void muxevent_tickmech_replacegun(MUXEVENT *e) {
 
   ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
   do {
-    int i = 0;
+    int was_destroyed = 0;
 
     if (Destroyed(mech))
-      i = 1;
+      was_destroyed = 1;
     MechStatus(mech) &= ~(DESTROYED);
     mech_printf(mech, MECHALL, "%s on %s has been replaced.",
                 pos_part_name(mech, loc, pos), buf);
-    if (i)
+    if (was_destroyed)
       MechStatus(mech) |= DESTROYED;
   } while (0);
 }
@@ -378,14 +379,14 @@ void muxevent_tickmech_repairgun(MUXEVENT *e) {
 
   ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
   do {
-    int i = 0;
+    int was_destroyed = 0;
 
     if (Destroyed(mech))
-      i = 1;
+      was_destroyed = 1;
     MechStatus(mech) &= ~DESTROYED;
     mech_printf(mech, MECHALL, "%s on %s has been repaired.",
                 pos_part_name(mech, loc, pos), buf);
-    if (i)
+    if (was_destroyed)
       MechStatus(mech) |= DESTROYED;
   } while (0);
 }

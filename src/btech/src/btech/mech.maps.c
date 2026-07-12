@@ -16,12 +16,12 @@
 #include <sys/file.h>
 
 #include "autopilot.h"
-#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "map.los.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mine.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.bsuit.h"
 #include "p.ds.bay.h"
 #include "p.eject.h"
@@ -166,8 +166,8 @@ static void set_colorscheme(dbref player) {
   int i;
 
   if (*str && strlen(str) <= NUM_COLOR_IDX) {
-    strncpy(custom_color_str, DEFAULT_COLOR_STRING, NUM_COLOR_IDX);
-    strncpy(custom_color_str, str, strlen(str));
+    memcpy(custom_color_str, DEFAULT_COLOR_STRING, NUM_COLOR_IDX);
+    memcpy(custom_color_str, str, strlen(str));
     for (i = 0; i < NUM_COLOR_IDX; i++) {
       switch (custom_color_str[i]) {
       case 'f':
@@ -311,6 +311,7 @@ char GetLRSMechChar(MECH *mech, MECH *other) {
   switch (MechMove(other)) {
   case MOVE_FLY:
     c = 'a';
+    break;
   case MOVE_BIPED:
     c = 'b';
     break;
@@ -1147,8 +1148,6 @@ static void sketch_tac_mines(char *buf, MAP *map, MECH *mech, int sx, int sy,
     int ty = sy + y;
     for (x = MAX(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      int oddcolx = is_oddcol(tx);
-      int elev = Elevation(map, tx, ty);
       char *base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
       char c;
 
@@ -1219,7 +1218,7 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
 
   line_start = (char *)src;
   lines[0] = buf;
-  while (lines > 0) {
+  while (line < disprows) {
     unsigned char new_colour;
     unsigned char c = *src++;
 
@@ -1604,7 +1603,6 @@ void mech_tacmap(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int argc, i;
   short x, y;
-  int mapx, mapy;
   char *args_vec[4];
   char **args = args_vec;
   MAP *mech_map;
@@ -1618,8 +1616,6 @@ void mech_tacmap(dbref player, void *data, char *buffer) {
 
   /* Get the map info */
   mech_map = getMap(mech->mapindex);
-  mapx = MechX(mech);
-  mapy = MechY(mech);
 
   /* Various checks for conditions and system of mech */
   argc = mech_parseattributes(buffer, args, 4);

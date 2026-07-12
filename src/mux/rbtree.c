@@ -463,15 +463,15 @@ int rb_exists(rbtree bt, void *key) {
 
 #define rbann(...)                                                             \
   do {                                                                         \
-    printf("%d: ", __LINE__);                                                \
-    printf(__VA_ARGS__);                                                      \
-    printf("\n");                                                           \
+    printf("%d: ", __LINE__);                                                  \
+    printf(__VA_ARGS__);                                                       \
+    printf("\n");                                                              \
   } while (0)
 #define rbfail(...)                                                            \
   do {                                                                         \
-    printf("%d: ", __LINE__);                                                \
-    printf(__VA_ARGS__);                                                      \
-    printf("\n");                                                           \
+    printf("%d: ", __LINE__);                                                  \
+    printf(__VA_ARGS__);                                                       \
+    printf("\n");                                                              \
     abort();                                                                   \
   } while (0)
 

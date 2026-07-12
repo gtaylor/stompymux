@@ -85,6 +85,7 @@ void mech_scan(dbref player, void *data, char *buffer) {
         return;
       }
     }
+    [[fallthrough]];
   case 0:
     /* scan current target... */
     target = MechTarget(mech);
@@ -134,6 +135,7 @@ void mech_scan(dbref player, void *data, char *buffer) {
     switch (toupper(args[2][0])) {
     case 'H':
       doh = 1;
+      [[fallthrough]];
     case 'B':
       dob = 1;
       break;
@@ -843,7 +845,6 @@ void mech_sight(dbref player, void *data, char *buffer) {
 
 void mech_view(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
-  MAP *mech_map;
   int targetnum;
   char targetID[5];
   char *args[5];
@@ -864,7 +865,7 @@ void mech_view(dbref player, void *data, char *buffer) {
       return;
     }
     DOCHECK(!InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                              FlMechRange(mech_map, mech, target)),
+                              FaMechRange(mech, target)),
             "That target isn't seen well enough by the scannfers for viewing!");
     if (*(target_desc = silly_atr_get(target->mynum, A_MECHDESC)))
       notify(player, target_desc);
@@ -879,16 +880,15 @@ void mech_view(dbref player, void *data, char *buffer) {
       return;
     }
     target = getMech(targetnum);
-    mech_map = getMap(mech->mapindex);
 
     if (!target || !InLineOfSight(mech, target, MechX(target), MechY(target),
-                                  FlMechRange(mech_map, mech, target))) {
+                                  FaMechRange(mech, target))) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");
       return;
     }
 
     DOCHECK(!InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                              FlMechRange(mech_map, mech, target)),
+                              FaMechRange(mech, target)),
             "That target isn't seen well enough by the scanners for viewing!");
 
     if (*(target_desc = silly_atr_get(target->mynum, A_MECHDESC)))

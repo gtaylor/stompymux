@@ -45,11 +45,9 @@ int ndescriptors = 0;
 DESC *descriptor_list = NULL;
 
 static void make_nonblocking(int s);
-static void make_blocking(int s);
 static void accept_new_connection(int sock, short event, void *arg);
 static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                             int saddr_len);
-static DESC *new_connection(int sock);
 static int process_input(DESC *d);
 
 int desc_cmp(void *vleft, void *vright, void *token) {
@@ -78,7 +76,6 @@ void desc_addhash(DESC *d) {
 }
 
 static void desc_delhash(DESC *d) {
-  char buffer2[4096];
   DESC *hdesc = NULL;
   char buffer[4096];
   /*    dprintk("removing descriptor %p from list root %p for '%s'(#%d).", d,
@@ -418,11 +415,6 @@ static const char *disc_messages[] = {"unknown",  "quit",     "timeout",
                                       "badlogin", "nologins", "logout"};
 
 void shutdownsock(DESC *d, int reason) {
-  char *buff, *buff2;
-  time_t now;
-  int i, num;
-  DESC *dtemp;
-
   /*    dprintk("shutdownsock called on %p %s(#%d) refcount %d",
           d, (d->player?Name(d->player):""), d->player, d->refcount); */
 
@@ -482,21 +474,6 @@ static void make_nonblocking(int s) {
   }
 }
 
-static void make_blocking(int s) {
-  long flags = 0;
-
-  if (fcntl(s, F_GETFL, &flags) < 0) {
-    log_perror("NET", "FAIL", "make_blocking", "fcntl F_GETFL");
-  }
-  flags &= ~O_NONBLOCK;
-  if (fcntl(s, F_SETFL, flags) < 0) {
-    log_perror("NET", "FAIL", "make_blocking", "fcntl F_SETFL");
-  }
-  flags = 0;
-  if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(flags)) < 0) {
-    log_perror("NET", "FAIL", "make_blocking", "setsockopt NDELAY");
-  }
-}
 extern int fcache_conn_c;
 
 static DESC *initializesock(int s, struct sockaddr_storage *saddr,
@@ -630,7 +607,7 @@ static int process_input(DESC *d) {
       }
       d->input_size--;
     } else if (isascii(current) && isprint(current)) {
-      if (d->input_tail >= sizeof(d->input)) {
+      if ((size_t)d->input_tail >= sizeof(d->input)) {
         continue;
       }
       d->input[d->input_tail++] = current;

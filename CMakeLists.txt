@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 4.3)
 
 project(BattleTechMUX LANGUAGES C)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 find_package(Git QUIET)
 set(PROJECT_VERSION "unknown")
 if(Git_FOUND)
@@ -18,12 +16,12 @@ if(Git_FOUND)
   endif()
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
 include(GNUInstallDirs)
-
 include(CTest)
 
 set(MUX_SOURCE_DIR "src/mux")
@@ -79,7 +77,7 @@ configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors -Wformat -Wformat-security>)
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow>)
 if(BTMUX_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)

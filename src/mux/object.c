@@ -167,7 +167,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
   FLAG f1, f2, f3;
   time_t tt;
   char *buff;
-  const char *tname;
 
   value = 0;
   quota = 0;
@@ -182,7 +181,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     f2 = mudconf.room_flags.word2;
     f3 = mudconf.room_flags.word3;
     okname = ok_name(name);
-    tname = "a room";
     break;
   case TYPE_THING:
     if (cost < mudconf.createmin)
@@ -195,7 +193,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     f3 = mudconf.thing_flags.word3;
     value = OBJECT_ENDOWMENT(cost);
     okname = ok_name(name);
-    tname = "a thing";
     break;
   case TYPE_EXIT:
     cost = mudconf.opencost;
@@ -204,7 +201,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     f2 = mudconf.exit_flags.word2;
     f3 = mudconf.exit_flags.word3;
     okname = ok_name(name);
-    tname = "an exit";
     break;
   case TYPE_PLAYER:
     if (cost) {
@@ -214,7 +210,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
       f2 = mudconf.robot_flags.word2;
       f3 = mudconf.robot_flags.word3;
       value = 0;
-      tname = "a robot";
       require_inherit = 1;
     } else {
       cost = 0;
@@ -225,7 +220,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
       value = mudconf.paystart;
       quota = mudconf.start_quota;
       self_owned = 1;
-      tname = "a player";
     }
     buff = munge_space(name);
     if (!badname_check(buff)) {

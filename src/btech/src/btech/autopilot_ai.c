@@ -455,7 +455,7 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
           friend_o[j] = 1;
       }
       for (k = 0; k < num_o; k++) {
-        int sc = 0;
+        int stack_count = 0;
 
         if (out[k] || stack[k])
           continue;
@@ -463,9 +463,9 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
         for (j = 0; j < friend_c; j++)
           if (!friend_o[j])
             if (lo[k].x == friend_l[j].x && lo[k].y == friend_l[j].y)
-              sc++;
-        if (sc > 1) { /* Possible stackage */
-          int osc = sc;
+              stack_count++;
+        if (stack_count > 1) { /* Possible stackage */
+          int osc = stack_count;
 
           for (j = 0; j < friend_c; j++)
             if (!friend_o[j])
@@ -474,7 +474,7 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
                     (friend_l[j].lx != friend_l[j].x ||
                      friend_l[j].ly != friend_l[j].y))
                   osc--;
-          if (osc != sc)
+          if (osc != stack_count)
             stack[k] = i + 1;
         }
         if (gotenemy)
@@ -716,8 +716,6 @@ void ai_set_heading(MECH *mech, AUTO *a, int dir) {
 
 void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
                     int b_score) {
-  float ms;
-
   ai_set_heading(m, a, MechDesiredFacing(m) + hmod);
   switch (smod) {
   default:
@@ -726,7 +724,6 @@ void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
   case SP_OPT_FASTER:
     SendAI("%s state: %s+accelerating (hmod:%d) sc:%d", AI_Info(m, a), text,
            hmod, b_score);
-    ms = MMaxSpeed(m);
     ai_set_speed(
         m, a,
         (float)((MechDesiredSpeed(m) < MP1 ? MP1 : MechDesiredSpeed(m)) * 4.0 /
@@ -735,7 +732,6 @@ void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
   case SP_OPT_SLOWER:
     SendAI("%s state: %s+decelerating (hmod:%d) sc:%d", AI_Info(m, a), text,
            hmod, b_score);
-    ms = MMaxSpeed(m);
     ai_set_speed(m, a, (int)(MechDesiredSpeed(m) * 2.0 / 3.0));
     break;
   }
@@ -1416,11 +1412,6 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
  * nodes we don't need */
 /* Not even close to being finished yet */
 void astar_smooth_path(AUTO *autopilot) {
-
-  dllist_node *current, *next, *prev;
-
-  float x1, y1, x2, y2;
-  int degrees;
 
   /* Get the n node off the list */
 

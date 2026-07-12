@@ -24,13 +24,13 @@ extern int TraceLOS(MAP *map, int ax, int ay, int bx, int by,
 
 static hexlosmap_info losmap;
 
-int LOSMap_Hex2Index(hexlosmap_info *losmap, int x, int y) {
-  if (x < losmap->startx || x > losmap->startx + losmap->xsize ||
-      y < losmap->starty || y > losmap->starty + losmap->ysize) {
+int LOSMap_Hex2Index(hexlosmap_info *map_info, int x, int y) {
+  if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
+      y < map_info->starty || y > map_info->starty + map_info->ysize) {
     SendError(tprintf("LOSMap request from out of bounds hex: %d,%d", x, y));
     return 0;
   }
-  return ((y - losmap->starty) * losmap->xsize) + (x - losmap->startx);
+  return ((y - map_info->starty) * map_info->xsize) + (x - map_info->startx);
 }
 
 static float MechHeight(MECH *mech) {

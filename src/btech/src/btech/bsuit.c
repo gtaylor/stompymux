@@ -589,6 +589,7 @@ void bsuit_attackleg(dbref player, void *data, char *buffer) {
               tprintf("'s %s is blown off in a shower of sparks and smoke!",
                       strAttackLoc));
           DestroySection(target, mech, 1, wLegID);
+          [[fallthrough]];
         default:
           HandleCritical(target, mech, 1, wLegID, 3);
         }
@@ -666,9 +667,7 @@ static void mech_hide_event(MUXEVENT *e) {
 }
 
 void bsuit_hide(dbref player, void *data, char *buffer) {
-  int i;
   MECH *mech = data;
-  MECH *t;
   MAP *map = FindObjectsData(mech->mapindex);
   int terrain;
 

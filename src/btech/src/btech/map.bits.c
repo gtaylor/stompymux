@@ -12,8 +12,8 @@
  *
  */
 
-#include "muxevent/muxevent_alloc.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 
 #define realnum(x) ((x) / 4 + ((x) % 4 ? 1 : 0))
 #define boffs(x) (2 * ((x) % 4))

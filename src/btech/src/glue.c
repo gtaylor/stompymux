@@ -36,7 +36,6 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "persistence/btech_persistence.h"
 #include "mech.tech.h"
 #include "mechrep.h"
 #include "mycool.h"
@@ -45,6 +44,7 @@
 #include "p.mech.partnames.h"
 #include "p.mech.stat.h"
 #include "p.mechfile.h"
+#include "persistence/btech_persistence.h"
 #include "powers.h"
 #include "rbtree.h"
 #include "turret.h"
@@ -150,7 +150,6 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
   struct SpecialObjectStruct *typeOfObject;
   int type;
   CommandsStruct *cmd;
-  HASHTAB *damnedhash;
   char *tmpc, *tmpchar;
   int ishelp;
 
@@ -166,11 +165,10 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
       return 0;
   }
 #ifdef FAST_WHICHSPECIAL
-  if (type > NUM_SPECIAL_OBJECTS)
+  if (type > (int)(NUM_SPECIAL_OBJECTS))
     return 0;
 #endif
   typeOfObject = &SpecialObjects[type];
-  damnedhash = &SpecialCommandHash[type];
   tmpc = strstr(command, " ");
   if (tmpc)
     *tmpc = 0;
@@ -382,7 +380,6 @@ void LoadSpecialObjects(void) {
   dbref i;
   int id, brand;
   int type;
-  void *tmpdat;
 
   init_xcode_tree();
 
@@ -405,13 +402,11 @@ void LoadSpecialObjects(void) {
     type = WhichSpecialS(i);
     if (type >= 0) {
       if (SpecialObjects[type].datasize > 0)
-        tmpdat = NewSpecialObject(i, type);
-      else
-        tmpdat = NULL;
+        NewSpecialObject(i, type);
     } else
       c_Hardcode(i); /* Reset the flag */
   }
-  for (i = 0; i < NUM_SPECIAL_OBJECTS; i++) {
+  for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
     InitSpecialHash(i);
     if (!SpecialObjects[i].updatefunc)
       SpecialObjects[i].updateTime = 0;
@@ -647,7 +642,7 @@ int WhichSpecial(dbref key)
     return -1;
   str = silly_atr_get(key, A_XTYPE);
   if (str && *str) {
-    for (i = 0; i < NUM_SPECIAL_OBJECTS; i++) {
+    for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
       if (!strcmp(SpecialObjects[i].type, str)) {
         returnValue = i;
         break;
@@ -739,7 +734,7 @@ static char *do_ugly_things(coolmenu **d, char *msg, int len, int initial) {
    */
   msg_len = strlen(msg);
 
-  if (msg_len <= len) {
+  if (msg_len <= (size_t)len) {
     /* Line fits, don't split anything.  */
     e = msg + msg_len;
   } else {

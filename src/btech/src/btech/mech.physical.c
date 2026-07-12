@@ -1454,7 +1454,7 @@ void PhysicalTrip(MECH *mech, MECH *target) {
 void PhysicalDamage(MECH *mech, MECH *target, int weightdmg, int AttackType,
                     int sect, int glance) {
 
-  int hitloc = 0, damage, hitgroup = 0, isrear, iscritical, i;
+  int hitloc = 0, damage, hitgroup = 0, isrear, iscritical;
 
   isrear = 0;
   iscritical = 0;

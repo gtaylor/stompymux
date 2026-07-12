@@ -8,8 +8,8 @@
  *
  */
 
-#include "muxevent/muxevent_alloc.h"
 #include "mech.tic.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.mech.combat.h"
 #include "p.mech.contacts.h"
 #include "p.mech.maps.h"
@@ -58,7 +58,7 @@ dbref pilot_override = 0;
 
 #define TUR_BASE                                                               \
   TURRET_T *tur = (TURRET_T *)data;                                            \
-  MECH *mech = FindObjectsData(tur->parent);                                   \
+  [[maybe_unused]] MECH *mech = FindObjectsData(tur->parent);                  \
   DOCHECK(!IsMech(tur->parent), "Error: Turret's parentage is unknown.");
 
 #define TUR_COMMON                                                             \

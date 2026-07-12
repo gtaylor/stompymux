@@ -29,12 +29,12 @@
 
 #include "aero.bomb.h"
 #include "coolmenu.h"
-#include "muxevent/muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.aero.bomb.h"
 #include "p.bsuit.h"
 #include "p.crit.h"
@@ -1919,7 +1919,7 @@ long BuildBitVectorNoErr(char **list, char *line) {
   return bv;
 }
 
-int CheckSpecialsList(char **specials, char **specials2, char *line) {
+int CheckSpecialsList(char **special_list, char **special_list2, char *line) {
   int wSpecCheck = -1, wSpec2Check = -1;
   char buf[30];
 
@@ -1929,11 +1929,11 @@ int CheckSpecialsList(char **specials, char **specials2, char *line) {
   while (*line) {
     line = one_arg(line, buf);
 
-    if (specials)
-      wSpecCheck = compare_array(specials, buf);
+    if (special_list)
+      wSpecCheck = compare_array(special_list, buf);
 
-    if (specials2)
-      wSpec2Check = compare_array(specials2, buf);
+    if (special_list2)
+      wSpec2Check = compare_array(special_list2, buf);
 
     if ((wSpecCheck == -1) && (wSpec2Check == -1))
       return 0;
@@ -2686,9 +2686,11 @@ int load_template(dbref player, MECH *mech, char *filename) {
   if ((map = FindObjectsData(mech->mapindex)))
     UpdateConditions(mech, map);
   /* To prevent certain funny occurences.. */
-  for (i = 0; i < NUM_SECTIONS; i++)
-    if (!(GetSectOInt(mech, i)))
+  for (i = 0; i < NUM_SECTIONS; i++) {
+    if (!(GetSectOInt(mech, i))) {
       SetSectDestroyed(mech, i);
+    }
+  }
   return 0;
 }
 
@@ -2810,7 +2812,6 @@ char *payloadlist_func(MECH *mech) {
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
-  short ammomode;
   int temp_crit;
 
   int count, weap_count, ammo_count, section_loop, weap_loop, put_loop;
@@ -2933,7 +2934,6 @@ char *payloadlist_func(MECH *mech) {
 // Borrowed from payload_func
 char *partlist_func(MECH *mech) {
   static char buffer[LBUF_SIZE];
-  int critical[MAX_WEAPS_SECTION];
 
   int temp_crit;
 

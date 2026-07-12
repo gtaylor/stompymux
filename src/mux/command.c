@@ -10,7 +10,6 @@
 #include "comsys.h"
 #include "conf.h"
 #include "config.h"
-#include "muxevent/muxevent_alloc.h"
 #include "db.h"
 #include "externs.h"
 #include "flags.h"
@@ -19,6 +18,7 @@
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"
+#include "muxevent/muxevent_alloc.h"
 #include "powers.h"
 #include "vattr.h"
 
@@ -516,7 +516,7 @@ void init_cmdtab(void) {
    */
 
   cbuff = alloc_sbuf("init_cmdtab");
-  for (ap = attr; ap->name; ap++) {
+  for (ap = attr_table; ap->name; ap++) {
     if ((ap->flags & AF_NOCMD) == 0) {
       p = cbuff;
       *p++ = '@';
@@ -680,7 +680,6 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, dbref player,
   int nargs = 0, i = 0, fail = 0, interp = 0, key = 0, xkey = 0;
   long aflags = 0;
   int length = 0;
-  int hasswitch = 0;
   dbref aowner = 0;
   char *aargs[10];
   ADDENT *add = NULL;
@@ -768,7 +767,6 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, dbref player,
       }
       key |= xkey;
       switchp = buf1;
-      hasswitch = 1;
     } while (buf1);
   } else if (switchp && !(cmdp->callseq & CS_ADDED)) {
     notify_printf(player, "Command %s does not take switches.", cmdp->cmdname);
@@ -1017,7 +1015,6 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
   CMDENT *cmdp = NULL;
   char *macroout = NULL;
   int macerr = 0;
-  int eins = 1, null = 0;
   int length = 0;
 
   /*
@@ -1454,7 +1451,7 @@ static void list_attrtable(dbref player) {
   bp = buf;
   for (cp = (char *)"Attributes:"; *cp; cp++)
     *bp++ = *cp;
-  for (ap = attr; ap->name; ap++) {
+  for (ap = attr_table; ap->name; ap++) {
     if (See_attr(player, player, ap, player, 0)) {
       *bp++ = ' ';
       for (cp = (char *)(ap->name); *cp; cp++)
@@ -1530,7 +1527,7 @@ static void list_cmdaccess(dbref player) {
       }
     }
   }
-  for (ap = attr; ap->name; ap++) {
+  for (ap = attr_table; ap->name; ap++) {
     p = buff;
     *p++ = '@';
     for (q = (char *)ap->name; *q; p++, q++)
@@ -1612,7 +1609,7 @@ static void list_attraccess(dbref player) {
   ATTR *ap;
 
   buff = alloc_sbuf("list_attraccess");
-  for (ap = attr; ap->name; ap++) {
+  for (ap = attr_table; ap->name; ap++) {
     if (Read_attr(player, player, ap, player, 0)) {
       snprintf(buff, SBUF_SIZE, "%s:", ap->name);
       listset_nametab(player, attraccess_nametab, ap->flags, buff, 1);
@@ -1668,7 +1665,7 @@ int cf_acmd_access(int *vp, char *str, long extra, dbref player, char *cmd) {
   int failure, save;
 
   buff = alloc_sbuf("cf_acmd_access");
-  for (ap = attr; ap->name; ap++) {
+  for (ap = attr_table; ap->name; ap++) {
     p = buff;
     *p++ = '@';
     for (q = (char *)ap->name; *q; p++, q++)
@@ -2162,7 +2159,7 @@ static void list_process(dbref player) {
   int pid, psize, maxfds;
 
   struct rusage usage;
-  int ixrss, idrss, isrss, curr, last, dur;
+  int curr, last, dur;
 
   getrusage(RUSAGE_SELF, &usage);
   /*
@@ -2173,13 +2170,6 @@ static void list_process(dbref player) {
   last = 1 - curr;
   dur = mudstate.mstat_secs[curr] - mudstate.mstat_secs[last];
   if (dur > 0) {
-    ixrss = (mudstate.mstat_ixrss[curr] - mudstate.mstat_ixrss[last]) / dur;
-    idrss = (mudstate.mstat_idrss[curr] - mudstate.mstat_idrss[last]) / dur;
-    isrss = (mudstate.mstat_isrss[curr] - mudstate.mstat_isrss[last]) / dur;
-  } else {
-    ixrss = 0;
-    idrss = 0;
-    isrss = 0;
   }
   maxfds = getdtablesize();
 

@@ -11,12 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "externs.h"
 #include "autopilot.h"
+#include "externs.h"
 #include "glue.h"
 #include "map.h"
-#include "mech.h"
 #include "mech.events.h"
+#include "mech.h"
 #include "mech.tech.h"
 #include "mechrep.h"
 #include "p.mech.events.h"
@@ -40,172 +40,262 @@ static const char btech_special_schema_sql[] =
     " id INTEGER PRIMARY KEY CHECK (id = 1), schema_version INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_maps ("
-    " dbref INTEGER PRIMARY KEY, map_name TEXT NOT NULL, width INTEGER NOT NULL,"
-    " height INTEGER NOT NULL, temperature INTEGER NOT NULL, gravity INTEGER NOT NULL,"
-    " cloudbase INTEGER NOT NULL, visibility INTEGER NOT NULL, max_visibility INTEGER NOT NULL,"
-    " light INTEGER NOT NULL, wind_direction INTEGER NOT NULL, wind_speed INTEGER NOT NULL,"
-    " reserved INTEGER NOT NULL, flags INTEGER NOT NULL, cf INTEGER NOT NULL, cf_max INTEGER NOT NULL,"
-    " on_map INTEGER NOT NULL, build_flag INTEGER NOT NULL, first_free INTEGER NOT NULL,"
-    " moves INTEGER NOT NULL, move_mod INTEGER NOT NULL, sensor_flags INTEGER NOT NULL,"
+    " dbref INTEGER PRIMARY KEY, map_name TEXT NOT NULL, width INTEGER NOT "
+    "NULL,"
+    " height INTEGER NOT NULL, temperature INTEGER NOT NULL, gravity INTEGER "
+    "NOT NULL,"
+    " cloudbase INTEGER NOT NULL, visibility INTEGER NOT NULL, max_visibility "
+    "INTEGER NOT NULL,"
+    " light INTEGER NOT NULL, wind_direction INTEGER NOT NULL, wind_speed "
+    "INTEGER NOT NULL,"
+    " reserved INTEGER NOT NULL, flags INTEGER NOT NULL, cf INTEGER NOT NULL, "
+    "cf_max INTEGER NOT NULL,"
+    " on_map INTEGER NOT NULL, build_flag INTEGER NOT NULL, first_free INTEGER "
+    "NOT NULL,"
+    " moves INTEGER NOT NULL, move_mod INTEGER NOT NULL, sensor_flags INTEGER "
+    "NOT NULL,"
     " regen_factor INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_map_hexes ("
-    " map_dbref INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, value INTEGER NOT NULL,"
+    " map_dbref INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, "
+    "value INTEGER NOT NULL,"
     " PRIMARY KEY (map_dbref, x, y)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_map_slots ("
-    " map_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, mech_dbref INTEGER NOT NULL,"
+    " map_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, mech_dbref INTEGER "
+    "NOT NULL,"
     " mech_flags INTEGER NOT NULL, PRIMARY KEY (map_dbref, slot)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_map_los ("
-    " map_dbref INTEGER NOT NULL, source_slot INTEGER NOT NULL, target_slot INTEGER NOT NULL,"
+    " map_dbref INTEGER NOT NULL, source_slot INTEGER NOT NULL, target_slot "
+    "INTEGER NOT NULL,"
     " flags INTEGER NOT NULL, PRIMARY KEY (map_dbref, source_slot, target_slot)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_map_objects ("
-    " map_dbref INTEGER NOT NULL, object_type INTEGER NOT NULL, ordinal INTEGER NOT NULL,"
+    " map_dbref INTEGER NOT NULL, object_type INTEGER NOT NULL, ordinal "
+    "INTEGER NOT NULL,"
     " x INTEGER NOT NULL, y INTEGER NOT NULL, object_dbref INTEGER NOT NULL,"
-    " data_char INTEGER NOT NULL, data_short INTEGER NOT NULL, data_int INTEGER NOT NULL,"
+    " data_char INTEGER NOT NULL, data_short INTEGER NOT NULL, data_int "
+    "INTEGER NOT NULL,"
     " PRIMARY KEY (map_dbref, object_type, ordinal)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_map_bits ("
-    " map_dbref INTEGER NOT NULL, y INTEGER NOT NULL, byte_index INTEGER NOT NULL,"
+    " map_dbref INTEGER NOT NULL, y INTEGER NOT NULL, byte_index INTEGER NOT "
+    "NULL,"
     " value INTEGER NOT NULL, PRIMARY KEY (map_dbref, y, byte_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_repair_events ("
-    " event_id INTEGER PRIMARY KEY, mech_dbref INTEGER NOT NULL, event_type INTEGER NOT NULL,"
-    " remaining_ticks INTEGER NOT NULL, event_data INTEGER NOT NULL, is_fake INTEGER NOT NULL"
+    " event_id INTEGER PRIMARY KEY, mech_dbref INTEGER NOT NULL, event_type "
+    "INTEGER NOT NULL,"
+    " remaining_ticks INTEGER NOT NULL, event_data INTEGER NOT NULL, is_fake "
+    "INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_mechrep ("
     " dbref INTEGER PRIMARY KEY, current_target INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_turrets ("
-    " dbref INTEGER PRIMARY KEY, arcs INTEGER NOT NULL, parent INTEGER NOT NULL,"
-    " gunner INTEGER NOT NULL, target INTEGER NOT NULL, target_x INTEGER NOT NULL,"
-    " target_y INTEGER NOT NULL, target_z INTEGER NOT NULL, lock_mode INTEGER NOT NULL"
+    " dbref INTEGER PRIMARY KEY, arcs INTEGER NOT NULL, parent INTEGER NOT "
+    "NULL,"
+    " gunner INTEGER NOT NULL, target INTEGER NOT NULL, target_x INTEGER NOT "
+    "NULL,"
+    " target_y INTEGER NOT NULL, target_z INTEGER NOT NULL, lock_mode INTEGER "
+    "NOT NULL"
     ");"
     "CREATE TABLE btech_turret_tics ("
-    " turret_dbref INTEGER NOT NULL, tic_index INTEGER NOT NULL, value INTEGER NOT NULL,"
+    " turret_dbref INTEGER NOT NULL, tic_index INTEGER NOT NULL, value INTEGER "
+    "NOT NULL,"
     " PRIMARY KEY (turret_dbref, tic_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_autopilots ("
-    " dbref INTEGER PRIMARY KEY, mech_dbref INTEGER NOT NULL, map_dbref INTEGER NOT NULL,"
-    " speed_percent INTEGER NOT NULL, offset_x INTEGER NOT NULL, offset_y INTEGER NOT NULL,"
-    " verbose_level INTEGER NOT NULL, target INTEGER NOT NULL, target_score INTEGER NOT NULL,"
+    " dbref INTEGER PRIMARY KEY, mech_dbref INTEGER NOT NULL, map_dbref "
+    "INTEGER NOT NULL,"
+    " speed_percent INTEGER NOT NULL, offset_x INTEGER NOT NULL, offset_y "
+    "INTEGER NOT NULL,"
+    " verbose_level INTEGER NOT NULL, target INTEGER NOT NULL, target_score "
+    "INTEGER NOT NULL,"
     " target_threshold INTEGER NOT NULL, target_update_tick INTEGER NOT NULL,"
     " chase_target INTEGER NOT NULL, chase_update_tick INTEGER NOT NULL,"
-    " follow_update_tick INTEGER NOT NULL, flags INTEGER NOT NULL, mech_max_range INTEGER NOT NULL,"
-    " roam_type INTEGER NOT NULL, roam_update_tick INTEGER NOT NULL, roam_target_x INTEGER NOT NULL,"
-    " roam_target_y INTEGER NOT NULL, roam_anchor_x INTEGER NOT NULL, roam_anchor_y INTEGER NOT NULL,"
-    " roam_anchor_distance INTEGER NOT NULL, ahead_ok INTEGER NOT NULL, auto_cmode INTEGER NOT NULL,"
-    " auto_cdist INTEGER NOT NULL, auto_goweight INTEGER NOT NULL, auto_fweight INTEGER NOT NULL,"
-    " auto_nervous INTEGER NOT NULL, b_msc INTEGER NOT NULL, w_msc INTEGER NOT NULL, b_bsc INTEGER NOT NULL,"
-    " w_bsc INTEGER NOT NULL, b_dan INTEGER NOT NULL, w_dan INTEGER NOT NULL, last_upd INTEGER NOT NULL"
+    " follow_update_tick INTEGER NOT NULL, flags INTEGER NOT NULL, "
+    "mech_max_range INTEGER NOT NULL,"
+    " roam_type INTEGER NOT NULL, roam_update_tick INTEGER NOT NULL, "
+    "roam_target_x INTEGER NOT NULL,"
+    " roam_target_y INTEGER NOT NULL, roam_anchor_x INTEGER NOT NULL, "
+    "roam_anchor_y INTEGER NOT NULL,"
+    " roam_anchor_distance INTEGER NOT NULL, ahead_ok INTEGER NOT NULL, "
+    "auto_cmode INTEGER NOT NULL,"
+    " auto_cdist INTEGER NOT NULL, auto_goweight INTEGER NOT NULL, "
+    "auto_fweight INTEGER NOT NULL,"
+    " auto_nervous INTEGER NOT NULL, b_msc INTEGER NOT NULL, w_msc INTEGER NOT "
+    "NULL, b_bsc INTEGER NOT NULL,"
+    " w_bsc INTEGER NOT NULL, b_dan INTEGER NOT NULL, w_dan INTEGER NOT NULL, "
+    "last_upd INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_autopilot_commands ("
-    " autopilot_dbref INTEGER NOT NULL, position INTEGER NOT NULL, command_enum INTEGER NOT NULL, arg_count INTEGER NOT NULL,"
+    " autopilot_dbref INTEGER NOT NULL, position INTEGER NOT NULL, "
+    "command_enum INTEGER NOT NULL, arg_count INTEGER NOT NULL,"
     " PRIMARY KEY (autopilot_dbref, position)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_autopilot_command_args ("
-    " autopilot_dbref INTEGER NOT NULL, command_position INTEGER NOT NULL, argument_index INTEGER NOT NULL, value TEXT NOT NULL,"
+    " autopilot_dbref INTEGER NOT NULL, command_position INTEGER NOT NULL, "
+    "argument_index INTEGER NOT NULL, value TEXT NOT NULL,"
     " PRIMARY KEY (autopilot_dbref, command_position, argument_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_autopilot_path ("
-    " autopilot_dbref INTEGER NOT NULL, position INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL,"
-    " parent_x INTEGER NOT NULL, parent_y INTEGER NOT NULL, g_score INTEGER NOT NULL, h_score INTEGER NOT NULL,"
-    " f_score INTEGER NOT NULL, hex_offset INTEGER NOT NULL, PRIMARY KEY (autopilot_dbref, position)"
+    " autopilot_dbref INTEGER NOT NULL, position INTEGER NOT NULL, x INTEGER "
+    "NOT NULL, y INTEGER NOT NULL,"
+    " parent_x INTEGER NOT NULL, parent_y INTEGER NOT NULL, g_score INTEGER "
+    "NOT NULL, h_score INTEGER NOT NULL,"
+    " f_score INTEGER NOT NULL, hex_offset INTEGER NOT NULL, PRIMARY KEY "
+    "(autopilot_dbref, position)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mechs ("
-    " dbref INTEGER PRIMARY KEY, id_0 INTEGER NOT NULL, id_1 INTEGER NOT NULL, brief INTEGER NOT NULL,"
-    " map_number INTEGER NOT NULL, map_dbref INTEGER NOT NULL, mech_name TEXT NOT NULL, mech_type TEXT NOT NULL,"
-    " unit_era TEXT NOT NULL, unit_tro TEXT NOT NULL, unit_class INTEGER NOT NULL, movement_type INTEGER NOT NULL,"
-    " tactical_range INTEGER NOT NULL, lrs_range INTEGER NOT NULL, scan_range INTEGER NOT NULL, heat_sinks INTEGER NOT NULL,"
-    " heat_sink_override INTEGER NOT NULL, computer INTEGER NOT NULL, radio INTEGER NOT NULL, radio_info INTEGER NOT NULL,"
-    " structural_integrity INTEGER NOT NULL, structural_integrity_original INTEGER NOT NULL, radio_range INTEGER NOT NULL,"
-    " fuel INTEGER NOT NULL, fuel_original INTEGER NOT NULL, tons INTEGER NOT NULL, walk_speed INTEGER NOT NULL,"
-    " run_speed INTEGER NOT NULL, max_speed REAL NOT NULL, template_max_speed REAL NOT NULL, battle_value INTEGER NOT NULL,"
-    " cargo_space INTEGER NOT NULL, targeting_computer INTEGER NOT NULL, carrier_max_tons INTEGER NOT NULL"
+    " dbref INTEGER PRIMARY KEY, id_0 INTEGER NOT NULL, id_1 INTEGER NOT NULL, "
+    "brief INTEGER NOT NULL,"
+    " map_number INTEGER NOT NULL, map_dbref INTEGER NOT NULL, mech_name TEXT "
+    "NOT NULL, mech_type TEXT NOT NULL,"
+    " unit_era TEXT NOT NULL, unit_tro TEXT NOT NULL, unit_class INTEGER NOT "
+    "NULL, movement_type INTEGER NOT NULL,"
+    " tactical_range INTEGER NOT NULL, lrs_range INTEGER NOT NULL, scan_range "
+    "INTEGER NOT NULL, heat_sinks INTEGER NOT NULL,"
+    " heat_sink_override INTEGER NOT NULL, computer INTEGER NOT NULL, radio "
+    "INTEGER NOT NULL, radio_info INTEGER NOT NULL,"
+    " structural_integrity INTEGER NOT NULL, structural_integrity_original "
+    "INTEGER NOT NULL, radio_range INTEGER NOT NULL,"
+    " fuel INTEGER NOT NULL, fuel_original INTEGER NOT NULL, tons INTEGER NOT "
+    "NULL, walk_speed INTEGER NOT NULL,"
+    " run_speed INTEGER NOT NULL, max_speed REAL NOT NULL, template_max_speed "
+    "REAL NOT NULL, battle_value INTEGER NOT NULL,"
+    " cargo_space INTEGER NOT NULL, targeting_computer INTEGER NOT NULL, "
+    "carrier_max_tons INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_mech_sections ("
-    " mech_dbref INTEGER NOT NULL, section INTEGER NOT NULL, armor INTEGER NOT NULL, internal INTEGER NOT NULL, rear INTEGER NOT NULL,"
-    " armor_original INTEGER NOT NULL, internal_original INTEGER NOT NULL, rear_original INTEGER NOT NULL, base_to_hit INTEGER NOT NULL,"
-    " config INTEGER NOT NULL, recycle INTEGER NOT NULL, specials INTEGER NOT NULL, PRIMARY KEY (mech_dbref, section)"
+    " mech_dbref INTEGER NOT NULL, section INTEGER NOT NULL, armor INTEGER NOT "
+    "NULL, internal INTEGER NOT NULL, rear INTEGER NOT NULL,"
+    " armor_original INTEGER NOT NULL, internal_original INTEGER NOT NULL, "
+    "rear_original INTEGER NOT NULL, base_to_hit INTEGER NOT NULL,"
+    " config INTEGER NOT NULL, recycle INTEGER NOT NULL, specials INTEGER NOT "
+    "NULL, PRIMARY KEY (mech_dbref, section)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_criticals ("
-    " mech_dbref INTEGER NOT NULL, section INTEGER NOT NULL, slot INTEGER NOT NULL, brand INTEGER NOT NULL, data INTEGER NOT NULL,"
-    " item_type INTEGER NOT NULL, fire_mode INTEGER NOT NULL, ammo_mode INTEGER NOT NULL, damage_flags INTEGER NOT NULL,"
-    " desired_ammo_location INTEGER NOT NULL, PRIMARY KEY (mech_dbref, section, slot)"
+    " mech_dbref INTEGER NOT NULL, section INTEGER NOT NULL, slot INTEGER NOT "
+    "NULL, brand INTEGER NOT NULL, data INTEGER NOT NULL,"
+    " item_type INTEGER NOT NULL, fire_mode INTEGER NOT NULL, ammo_mode "
+    "INTEGER NOT NULL, damage_flags INTEGER NOT NULL,"
+    " desired_ammo_location INTEGER NOT NULL, PRIMARY KEY (mech_dbref, "
+    "section, slot)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_positions ("
-    " mech_dbref INTEGER PRIMARY KEY, pilot_status INTEGER NOT NULL, terrain INTEGER NOT NULL, elevation INTEGER NOT NULL,"
-    " hexes_walked REAL NOT NULL, facing INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, z INTEGER NOT NULL,"
-    " last_x INTEGER NOT NULL, last_y INTEGER NOT NULL, fx REAL NOT NULL, fy REAL NOT NULL, fz REAL NOT NULL,"
-    " team INTEGER NOT NULL, unusable_arcs INTEGER NOT NULL, stall INTEGER NOT NULL, pilot INTEGER NOT NULL"
+    " mech_dbref INTEGER PRIMARY KEY, pilot_status INTEGER NOT NULL, terrain "
+    "INTEGER NOT NULL, elevation INTEGER NOT NULL,"
+    " hexes_walked REAL NOT NULL, facing INTEGER NOT NULL, x INTEGER NOT NULL, "
+    "y INTEGER NOT NULL, z INTEGER NOT NULL,"
+    " last_x INTEGER NOT NULL, last_y INTEGER NOT NULL, fx REAL NOT NULL, fy "
+    "REAL NOT NULL, fz REAL NOT NULL,"
+    " team INTEGER NOT NULL, unusable_arcs INTEGER NOT NULL, stall INTEGER NOT "
+    "NULL, pilot INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_mech_bays ("
-    " mech_dbref INTEGER NOT NULL, bay_index INTEGER NOT NULL, bay_dbref INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, bay_index INTEGER NOT NULL, bay_dbref "
+    "INTEGER NOT NULL,"
     " PRIMARY KEY (mech_dbref, bay_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_turrets ("
-    " mech_dbref INTEGER NOT NULL, turret_index INTEGER NOT NULL, turret_dbref INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, turret_index INTEGER NOT NULL, turret_dbref "
+    "INTEGER NOT NULL,"
     " PRIMARY KEY (mech_dbref, turret_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_c3 ("
-    " mech_dbref INTEGER PRIMARY KEY, channel_title TEXT NOT NULL, c3i_size INTEGER NOT NULL, c3_size INTEGER NOT NULL,"
-    " total_masters INTEGER NOT NULL, working_masters INTEGER NOT NULL, frequency_mode INTEGER NOT NULL,"
+    " mech_dbref INTEGER PRIMARY KEY, channel_title TEXT NOT NULL, c3i_size "
+    "INTEGER NOT NULL, c3_size INTEGER NOT NULL,"
+    " total_masters INTEGER NOT NULL, working_masters INTEGER NOT NULL, "
+    "frequency_mode INTEGER NOT NULL,"
     " tag_target INTEGER NOT NULL, tagged_by INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_mech_c3_nodes ("
-    " mech_dbref INTEGER NOT NULL, network_type INTEGER NOT NULL, node_index INTEGER NOT NULL, node_dbref INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, network_type INTEGER NOT NULL, node_index "
+    "INTEGER NOT NULL, node_dbref INTEGER NOT NULL,"
     " PRIMARY KEY (mech_dbref, network_type, node_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_tics ("
-    " mech_dbref INTEGER NOT NULL, tic_index INTEGER NOT NULL, word_index INTEGER NOT NULL, value INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, tic_index INTEGER NOT NULL, word_index "
+    "INTEGER NOT NULL, value INTEGER NOT NULL,"
     " PRIMARY KEY (mech_dbref, tic_index, word_index)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_frequencies ("
-    " mech_dbref INTEGER NOT NULL, frequency_index INTEGER NOT NULL, frequency INTEGER NOT NULL, mode INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, frequency_index INTEGER NOT NULL, frequency "
+    "INTEGER NOT NULL, mode INTEGER NOT NULL,"
     " title TEXT NOT NULL, PRIMARY KEY (mech_dbref, frequency_index)"
     ") WITHOUT ROWID;"
-    /* time_t fields are Unix wall-clock timestamps stored as signed INTEGERs. */
+    /* time_t fields are Unix wall-clock timestamps stored as signed INTEGERs.
+     */
     "CREATE TABLE btech_mech_runtime ("
-    " mech_dbref INTEGER PRIMARY KEY, jumptop INTEGER NOT NULL, aim INTEGER NOT NULL, basetohit INTEGER NOT NULL,"
-    " pilotskillbase INTEGER NOT NULL, engineheat INTEGER NOT NULL, masc_value INTEGER NOT NULL, aim_type INTEGER NOT NULL,"
-    " sensor_primary INTEGER NOT NULL, sensor_secondary INTEGER NOT NULL, fire_adjustment INTEGER NOT NULL, vis_mod INTEGER NOT NULL,"
-    " charge_timer INTEGER NOT NULL, charge_distance REAL NOT NULL, stagger_stamp INTEGER NOT NULL, mech_prefs INTEGER NOT NULL,"
-    " jump_length INTEGER NOT NULL, going_x INTEGER NOT NULL, going_y INTEGER NOT NULL, desired_facing INTEGER NOT NULL,"
-    " angle INTEGER NOT NULL, jump_heading INTEGER NOT NULL, target_x INTEGER NOT NULL, target_y INTEGER NOT NULL,"
-    " target_z INTEGER NOT NULL, turret_facing INTEGER NOT NULL, turn_damage INTEGER NOT NULL, lateral INTEGER NOT NULL,"
-    " num_seen INTEGER NOT NULL, lx INTEGER NOT NULL, ly INTEGER NOT NULL, charge_target INTEGER NOT NULL,"
-    " dfa_target INTEGER NOT NULL, target INTEGER NOT NULL, swarming INTEGER NOT NULL, swarmed_by INTEGER NOT NULL,"
-    " carrying INTEGER NOT NULL, spotter INTEGER NOT NULL, heat REAL NOT NULL, weapon_heat REAL NOT NULL,"
-    " plus_heat REAL NOT NULL, minus_heat REAL NOT NULL, start_fx REAL NOT NULL, start_fy REAL NOT NULL,"
-    " start_fz REAL NOT NULL, end_fz REAL NOT NULL, vertical_speed REAL NOT NULL, speed REAL NOT NULL,"
-    " desired_speed REAL NOT NULL, jump_speed REAL NOT NULL, crit_status INTEGER NOT NULL, status INTEGER NOT NULL,"
-    " status2 INTEGER NOT NULL, specials INTEGER NOT NULL, specials2 INTEGER NOT NULL, specials_status INTEGER NOT NULL,"
-    " tank_crit_status INTEGER NOT NULL, last_weapon_recycle INTEGER NOT NULL, cargo_weight INTEGER NOT NULL,"
-    " last_random_update INTEGER NOT NULL, random_seed INTEGER NOT NULL, last_ds_message INTEGER NOT NULL,"
-    " boom_start INTEGER NOT NULL, max_fuel INTEGER NOT NULL, last_used INTEGER NOT NULL, cocoon INTEGER NOT NULL,"
-    " commconv INTEGER NOT NULL, commconv_last INTEGER NOT NULL, original_heat_sinks INTEGER NOT NULL,"
-    " disabled_heat_sinks INTEGER NOT NULL, autopilot_num INTEGER NOT NULL, heatboom_last INTEGER NOT NULL,"
-    " spin_start INTEGER NOT NULL, can_see INTEGER NOT NULL, row_weight INTEGER NOT NULL, carried_weight INTEGER NOT NULL,"
-    " relative_speed REAL NOT NULL, era_tick INTEGER NOT NULL, per INTEGER NOT NULL, wxf INTEGER NOT NULL,"
-    " last_startup INTEGER NOT NULL, max_suits INTEGER NOT NULL, infantry_specials INTEGER NOT NULL,"
-    " supercharger_value INTEGER NOT NULL, stagger_damage INTEGER NOT NULL, last_stagger_notify INTEGER NOT NULL,"
-    " crit_status2 INTEGER NOT NULL, xp_modifier REAL NOT NULL, shots_fired INTEGER NOT NULL, shots_hit INTEGER NOT NULL,"
-    " shots_missed INTEGER NOT NULL, damage_taken INTEGER NOT NULL, damage_inflicted INTEGER NOT NULL,"
+    " mech_dbref INTEGER PRIMARY KEY, jumptop INTEGER NOT NULL, aim INTEGER "
+    "NOT NULL, basetohit INTEGER NOT NULL,"
+    " pilotskillbase INTEGER NOT NULL, engineheat INTEGER NOT NULL, masc_value "
+    "INTEGER NOT NULL, aim_type INTEGER NOT NULL,"
+    " sensor_primary INTEGER NOT NULL, sensor_secondary INTEGER NOT NULL, "
+    "fire_adjustment INTEGER NOT NULL, vis_mod INTEGER NOT NULL,"
+    " charge_timer INTEGER NOT NULL, charge_distance REAL NOT NULL, "
+    "stagger_stamp INTEGER NOT NULL, mech_prefs INTEGER NOT NULL,"
+    " jump_length INTEGER NOT NULL, going_x INTEGER NOT NULL, going_y INTEGER "
+    "NOT NULL, desired_facing INTEGER NOT NULL,"
+    " angle INTEGER NOT NULL, jump_heading INTEGER NOT NULL, target_x INTEGER "
+    "NOT NULL, target_y INTEGER NOT NULL,"
+    " target_z INTEGER NOT NULL, turret_facing INTEGER NOT NULL, turn_damage "
+    "INTEGER NOT NULL, lateral INTEGER NOT NULL,"
+    " num_seen INTEGER NOT NULL, lx INTEGER NOT NULL, ly INTEGER NOT NULL, "
+    "charge_target INTEGER NOT NULL,"
+    " dfa_target INTEGER NOT NULL, target INTEGER NOT NULL, swarming INTEGER "
+    "NOT NULL, swarmed_by INTEGER NOT NULL,"
+    " carrying INTEGER NOT NULL, spotter INTEGER NOT NULL, heat REAL NOT NULL, "
+    "weapon_heat REAL NOT NULL,"
+    " plus_heat REAL NOT NULL, minus_heat REAL NOT NULL, start_fx REAL NOT "
+    "NULL, start_fy REAL NOT NULL,"
+    " start_fz REAL NOT NULL, end_fz REAL NOT NULL, vertical_speed REAL NOT "
+    "NULL, speed REAL NOT NULL,"
+    " desired_speed REAL NOT NULL, jump_speed REAL NOT NULL, crit_status "
+    "INTEGER NOT NULL, status INTEGER NOT NULL,"
+    " status2 INTEGER NOT NULL, specials INTEGER NOT NULL, specials2 INTEGER "
+    "NOT NULL, specials_status INTEGER NOT NULL,"
+    " tank_crit_status INTEGER NOT NULL, last_weapon_recycle INTEGER NOT NULL, "
+    "cargo_weight INTEGER NOT NULL,"
+    " last_random_update INTEGER NOT NULL, random_seed INTEGER NOT NULL, "
+    "last_ds_message INTEGER NOT NULL,"
+    " boom_start INTEGER NOT NULL, max_fuel INTEGER NOT NULL, last_used "
+    "INTEGER NOT NULL, cocoon INTEGER NOT NULL,"
+    " commconv INTEGER NOT NULL, commconv_last INTEGER NOT NULL, "
+    "original_heat_sinks INTEGER NOT NULL,"
+    " disabled_heat_sinks INTEGER NOT NULL, autopilot_num INTEGER NOT NULL, "
+    "heatboom_last INTEGER NOT NULL,"
+    " spin_start INTEGER NOT NULL, can_see INTEGER NOT NULL, row_weight "
+    "INTEGER NOT NULL, carried_weight INTEGER NOT NULL,"
+    " relative_speed REAL NOT NULL, era_tick INTEGER NOT NULL, per INTEGER NOT "
+    "NULL, wxf INTEGER NOT NULL,"
+    " last_startup INTEGER NOT NULL, max_suits INTEGER NOT NULL, "
+    "infantry_specials INTEGER NOT NULL,"
+    " supercharger_value INTEGER NOT NULL, stagger_damage INTEGER NOT NULL, "
+    "last_stagger_notify INTEGER NOT NULL,"
+    " crit_status2 INTEGER NOT NULL, xp_modifier REAL NOT NULL, shots_fired "
+    "INTEGER NOT NULL, shots_hit INTEGER NOT NULL,"
+    " shots_missed INTEGER NOT NULL, damage_taken INTEGER NOT NULL, "
+    "damage_inflicted INTEGER NOT NULL,"
     " units_killed INTEGER NOT NULL, last_stagger_check INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_mech_runtime_unused ("
-    " mech_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, value INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, value INTEGER NOT "
+    "NULL,"
     " PRIMARY KEY (mech_dbref, slot)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_unit_aux ("
-    " mech_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, value INTEGER NOT NULL,"
+    " mech_dbref INTEGER NOT NULL, slot INTEGER NOT NULL, value INTEGER NOT "
+    "NULL,"
     " PRIMARY KEY (mech_dbref, slot)"
     ") WITHOUT ROWID;"
     "CREATE TABLE btech_mech_stagger_damage ("
-    " mech_dbref INTEGER NOT NULL, position INTEGER NOT NULL, amount INTEGER NOT NULL, occurred_at INTEGER NOT NULL,"
-    " attacker_dbref INTEGER NOT NULL, counted INTEGER NOT NULL, PRIMARY KEY (mech_dbref, position)"
+    " mech_dbref INTEGER NOT NULL, position INTEGER NOT NULL, amount INTEGER "
+    "NOT NULL, occurred_at INTEGER NOT NULL,"
+    " attacker_dbref INTEGER NOT NULL, counted INTEGER NOT NULL, PRIMARY KEY "
+    "(mech_dbref, position)"
     ") WITHOUT ROWID;";
 #pragma GCC diagnostic pop
 
@@ -223,10 +313,9 @@ static int btech_special_test_fault_triggered;
 static void btech_special_test_reset_fault(void) {
   btech_special_test_fault_table = getenv("BTMUX_TEST_BTECH_FAIL_TABLE");
   btech_special_test_fault_phase = getenv("BTMUX_TEST_BTECH_FAIL_PHASE");
-  btech_special_test_fault_active = btech_special_test_fault_table &&
-                                    btech_special_test_fault_table[0] &&
-                                    btech_special_test_fault_phase &&
-                                    btech_special_test_fault_phase[0];
+  btech_special_test_fault_active =
+      btech_special_test_fault_table && btech_special_test_fault_table[0] &&
+      btech_special_test_fault_phase && btech_special_test_fault_phase[0];
   btech_special_test_fault_triggered = 0;
 }
 
@@ -280,9 +369,7 @@ static int btech_special_step(sqlite3_stmt *statement) {
 
 static int btech_special_bind_int(sqlite3_stmt *statement, int index,
                                   sqlite3_int64 value) {
-  return sqlite3_bind_int64(statement, index, value) == SQLITE_OK
-             ? 0
-             : -1;
+  return sqlite3_bind_int64(statement, index, value) == SQLITE_OK ? 0 : -1;
 }
 
 static int btech_special_bind_real(sqlite3_stmt *statement, int index,
@@ -290,7 +377,8 @@ static int btech_special_bind_real(sqlite3_stmt *statement, int index,
   return sqlite3_bind_double(statement, index, value) == SQLITE_OK ? 0 : -1;
 }
 
-/* Mark the schema version in every snapshot, including snapshots with no BTech objects. */
+/* Mark the schema version in every snapshot, including snapshots with no BTech
+ * objects. */
 static int btech_special_store_metadata(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   int result;
@@ -301,8 +389,8 @@ static int btech_special_store_metadata(sqlite3 *sqlite) {
                "INSERT INTO btech_persistence_metadata (id, schema_version) "
                "VALUES (1, ?);",
                -1, &statement, NULL) == SQLITE_OK &&
-                   btech_special_bind_int(statement, 1,
-                                          BTECH_PERSISTENCE_SCHEMA_VERSION) == 0 &&
+                   btech_special_bind_int(
+                       statement, 1, BTECH_PERSISTENCE_SCHEMA_VERSION) == 0 &&
                    btech_special_step(statement) == 0
                ? 0
                : -1;
@@ -451,11 +539,13 @@ static int btech_special_column_real(sqlite3_stmt *statement, int column,
 
 /* Copy NUL-free SQLite text only when it fits the fixed BTech destination. */
 static int btech_special_column_text(sqlite3_stmt *statement, int column,
-                                     char *destination, size_t destination_size) {
+                                     char *destination,
+                                     size_t destination_size) {
   const unsigned char *text;
   int length;
 
-  if (!destination_size || sqlite3_column_type(statement, column) != SQLITE_TEXT)
+  if (!destination_size ||
+      sqlite3_column_type(statement, column) != SQLITE_TEXT)
     return -1;
   text = sqlite3_column_text(statement, column);
   length = sqlite3_column_bytes(statement, column);
@@ -473,17 +563,18 @@ static int btech_special_validate_metadata(sqlite3 *sqlite) {
   int result;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT schema_version FROM btech_persistence_metadata "
-               "WHERE id = 1;",
-               -1, &statement, NULL) == SQLITE_OK &&
-                   sqlite3_step(statement) == SQLITE_ROW &&
-                   btech_special_column_int(statement, 0, &schema_version) == 0 &&
-                   schema_version == BTECH_PERSISTENCE_SCHEMA_VERSION &&
-                   sqlite3_step(statement) == SQLITE_DONE
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT schema_version FROM btech_persistence_metadata "
+          "WHERE id = 1;",
+          -1, &statement, NULL) == SQLITE_OK &&
+              sqlite3_step(statement) == SQLITE_ROW &&
+              btech_special_column_int(statement, 0, &schema_version) == 0 &&
+              schema_version == BTECH_PERSISTENCE_SCHEMA_VERSION &&
+              sqlite3_step(statement) == SQLITE_DONE
+          ? 0
+          : -1;
   sqlite3_finalize(statement);
   return result;
 }
@@ -525,8 +616,10 @@ struct btech_object_store_context {
   int result;
 };
 
-/* Finalize every object statement; SQLite permits finalizing NULL statements. */
-static void btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
+/* Finalize every object statement; SQLite permits finalizing NULL statements.
+ */
+static void
+btech_finalize_object_statements(BTECH_OBJECT_STORE_CONTEXT *context) {
   sqlite3_finalize(context->mechrep);
   sqlite3_finalize(context->turret);
   sqlite3_finalize(context->turret_tic);
@@ -653,7 +746,8 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
         !(map = getMap(map_dbref)) ||
-        btech_special_column_text(statement, 1, map_name, sizeof(map_name)) < 0 ||
+        btech_special_column_text(statement, 1, map_name, sizeof(map_name)) <
+            0 ||
         btech_special_column_int(statement, 2, &width) < 0 ||
         btech_special_column_int(statement, 3, &height) < 0 ||
         btech_special_column_int(statement, 4, &temperature) < 0 ||
@@ -684,9 +778,9 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
         wind_speed > SHRT_MAX || reserved < CHAR_MIN || reserved > CHAR_MAX ||
         cf < SHRT_MIN || cf > SHRT_MAX || cf_max < SHRT_MIN ||
         cf_max > SHRT_MAX || build_flag < CHAR_MIN || build_flag > CHAR_MAX ||
-        first_free < 0 || first_free > MAX_MECHS_PER_MAP ||
-        moves < SHRT_MIN || moves > SHRT_MAX || move_mod < SHRT_MIN ||
-        move_mod > SHRT_MAX || btech_special_resize_map(map, width, height) < 0) {
+        first_free < 0 || first_free > MAX_MECHS_PER_MAP || moves < SHRT_MIN ||
+        moves > SHRT_MAX || move_mod < SHRT_MIN || move_mod > SHRT_MAX ||
+        btech_special_resize_map(map, width, height) < 0) {
       result = -1;
       break;
     }
@@ -721,7 +815,8 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
   return result;
 }
 
-/* Restore every base-grid byte in order, rejecting incomplete or sparse maps. */
+/* Restore every base-grid byte in order, rejecting incomplete or sparse maps.
+ */
 static int btech_special_load_map_hexes(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
@@ -740,13 +835,13 @@ static int btech_special_load_map_hexes(sqlite3 *sqlite) {
   expected_x = 0;
   expected_y = 0;
   map = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT map_dbref, x, y, value FROM btech_map_hexes "
-               "ORDER BY map_dbref, y, x;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(sqlite,
+                         "SELECT map_dbref, x, y, value FROM btech_map_hexes "
+                         "ORDER BY map_dbref, y, x;",
+                         -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
         btech_special_column_int(statement, 1, &x) < 0 ||
@@ -805,11 +900,10 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
   current_map = NOTHING;
   expected_slot = 0;
   map = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT map_dbref, slot, mech_dbref, mech_flags "
-               "FROM btech_map_slots ORDER BY map_dbref, slot;",
-               -1, &statement, NULL) == SQLITE_OK
+  result = sqlite3_prepare_v2(sqlite,
+                              "SELECT map_dbref, slot, mech_dbref, mech_flags "
+                              "FROM btech_map_slots ORDER BY map_dbref, slot;",
+                              -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -870,13 +964,14 @@ static int btech_special_load_map_los(sqlite3 *sqlite) {
   expected_source = 0;
   expected_target = 0;
   map = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT map_dbref, source_slot, target_slot, flags "
-               "FROM btech_map_los ORDER BY map_dbref, source_slot, target_slot;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT map_dbref, source_slot, target_slot, flags "
+          "FROM btech_map_los ORDER BY map_dbref, source_slot, target_slot;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
         btech_special_column_int(statement, 1, &source) < 0 ||
@@ -919,28 +1014,31 @@ static int btech_special_load_map_los(sqlite3 *sqlite) {
   return result;
 }
 
-/* Ensure maps with zero children, and maps omitted from a child query, are checked too. */
+/* Ensure maps with zero children, and maps omitted from a child query, are
+ * checked too. */
 static int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   int invalid_rows;
   int result;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT count(*) FROM btech_maps AS maps WHERE "
-               "(SELECT count(*) FROM btech_map_hexes AS hexes "
-               " WHERE hexes.map_dbref = maps.dbref) != maps.width * maps.height "
-               "OR (SELECT count(*) FROM btech_map_slots AS slots "
-               " WHERE slots.map_dbref = maps.dbref) != maps.first_free "
-               "OR (SELECT count(*) FROM btech_map_los AS los "
-               " WHERE los.map_dbref = maps.dbref) != maps.first_free * maps.first_free;",
-               -1, &statement, NULL) == SQLITE_OK &&
-                   sqlite3_step(statement) == SQLITE_ROW &&
-                   btech_special_column_int(statement, 0, &invalid_rows) == 0 &&
-                   invalid_rows == 0 && sqlite3_step(statement) == SQLITE_DONE
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT count(*) FROM btech_maps AS maps WHERE "
+          "(SELECT count(*) FROM btech_map_hexes AS hexes "
+          " WHERE hexes.map_dbref = maps.dbref) != maps.width * maps.height "
+          "OR (SELECT count(*) FROM btech_map_slots AS slots "
+          " WHERE slots.map_dbref = maps.dbref) != maps.first_free "
+          "OR (SELECT count(*) FROM btech_map_los AS los "
+          " WHERE los.map_dbref = maps.dbref) != maps.first_free * "
+          "maps.first_free;",
+          -1, &statement, NULL) == SQLITE_OK &&
+              sqlite3_step(statement) == SQLITE_ROW &&
+              btech_special_column_int(statement, 0, &invalid_rows) == 0 &&
+              invalid_rows == 0 && sqlite3_step(statement) == SQLITE_DONE
+          ? 0
+          : -1;
   sqlite3_finalize(statement);
   return result;
 }
@@ -994,8 +1092,8 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
         btech_special_column_long(statement, 8, &data_int) < 0 ||
         object_type < 0 || object_type >= NUM_MAPOBJTYPES ||
         object_type == TYPE_BITS || ordinal < 0 || x < SHRT_MIN ||
-        x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
-        data_short < SHRT_MIN || data_short > SHRT_MAX) {
+        x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX || data_short < SHRT_MIN ||
+        data_short > SHRT_MAX) {
       result = -1;
       break;
     }
@@ -1049,7 +1147,7 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
   dbref map_dbref;
   mapobj source;
   unsigned char **bits;
-  int bytes_per_row;
+  int bytes_per_row = 0;
   int current_y;
   int expected_byte;
   int result;
@@ -1109,8 +1207,7 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
     }
     bytes_per_row = map->map_width / 4 + (map->map_width % 4 ? 1 : 0);
     if (y < 0 || y >= map->map_height || byte_index < 0 ||
-        byte_index >= bytes_per_row ||
-        (current_y >= 0 && y < current_y) ||
+        byte_index >= bytes_per_row || (current_y >= 0 && y < current_y) ||
         (y == current_y && byte_index != expected_byte)) {
       result = -1;
       break;
@@ -1139,7 +1236,8 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
   return result;
 }
 
-/* Map each persisted repair type to the canonical repair completion callback. */
+/* Map each persisted repair type to the canonical repair completion callback.
+ */
 static void (*btech_special_repair_function(int type))(MUXEVENT *) {
   switch (type) {
   case EVENT_REPAIR_MOB:
@@ -1178,7 +1276,8 @@ static void (*btech_special_repair_function(int type))(MUXEVENT *) {
   }
 }
 
-/* Requeue repair work with its original remaining ticks and fake-event state. */
+/* Requeue repair work with its original remaining ticks and fake-event state.
+ */
 static int btech_special_load_repair_events(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
@@ -1192,13 +1291,14 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
   int step;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, event_type, remaining_ticks, event_data, is_fake "
-               "FROM btech_repair_events ORDER BY event_id;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT mech_dbref, event_type, remaining_ticks, event_data, is_fake "
+          "FROM btech_repair_events ORDER BY event_id;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         !(mech = getMech(mech_dbref)) ||
@@ -1211,7 +1311,8 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
       result = -1;
       break;
     }
-    function = fake ? very_fake_func : btech_special_repair_function(event_type);
+    function =
+        fake ? very_fake_func : btech_special_repair_function(event_type);
     if (!function) {
       result = -1;
       break;
@@ -1267,19 +1368,20 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
   int brief;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT dbref, id_0, id_1, brief, map_number, map_dbref, "
-               "mech_name, mech_type, unit_era, unit_tro, unit_class, "
-               "movement_type, tactical_range, lrs_range, scan_range, heat_sinks, "
-               "heat_sink_override, computer, radio, radio_info, "
-               "structural_integrity, structural_integrity_original, radio_range, "
-               "fuel, fuel_original, tons, walk_speed, run_speed, max_speed, "
-               "template_max_speed, battle_value, cargo_space, targeting_computer, "
-               "carrier_max_tons FROM btech_mechs ORDER BY dbref;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT dbref, id_0, id_1, brief, map_number, map_dbref, "
+          "mech_name, mech_type, unit_era, unit_tro, unit_class, "
+          "movement_type, tactical_range, lrs_range, scan_range, heat_sinks, "
+          "heat_sink_override, computer, radio, radio_info, "
+          "structural_integrity, structural_integrity_original, radio_range, "
+          "fuel, fuel_original, tons, walk_speed, run_speed, max_speed, "
+          "template_max_speed, battle_value, cargo_space, targeting_computer, "
+          "carrier_max_tons FROM btech_mechs ORDER BY dbref;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         !(mech = getMech(mech_dbref)) ||
@@ -1288,10 +1390,14 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
         btech_special_column_int(statement, 3, &brief) < 0 ||
         btech_special_column_int(statement, 4, &map_number) < 0 ||
         btech_special_column_long(statement, 5, &map_dbref) < 0 ||
-        btech_special_column_text(statement, 6, mech_name, sizeof(mech_name)) < 0 ||
-        btech_special_column_text(statement, 7, mech_type, sizeof(mech_type)) < 0 ||
-        btech_special_column_text(statement, 8, unit_era, sizeof(unit_era)) < 0 ||
-        btech_special_column_text(statement, 9, unit_tro, sizeof(unit_tro)) < 0 ||
+        btech_special_column_text(statement, 6, mech_name, sizeof(mech_name)) <
+            0 ||
+        btech_special_column_text(statement, 7, mech_type, sizeof(mech_type)) <
+            0 ||
+        btech_special_column_text(statement, 8, unit_era, sizeof(unit_era)) <
+            0 ||
+        btech_special_column_text(statement, 9, unit_tro, sizeof(unit_tro)) <
+            0 ||
         btech_special_column_int(statement, 10, &unit_class) < 0 ||
         btech_special_column_int(statement, 11, &movement_type) < 0 ||
         btech_special_column_int(statement, 12, &tactical_range) < 0 ||
@@ -1303,7 +1409,8 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
         btech_special_column_int(statement, 18, &radio) < 0 ||
         btech_special_column_int(statement, 19, &radio_info) < 0 ||
         btech_special_column_int(statement, 20, &structural_integrity) < 0 ||
-        btech_special_column_int(statement, 21, &structural_integrity_original) < 0 ||
+        btech_special_column_int(statement, 21,
+                                 &structural_integrity_original) < 0 ||
         btech_special_column_int(statement, 22, &radio_range) < 0 ||
         btech_special_column_int(statement, 23, &fuel) < 0 ||
         btech_special_column_int(statement, 24, &fuel_original) < 0 ||
@@ -1322,10 +1429,11 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
         movement_type < CHAR_MIN || movement_type > CHAR_MAX ||
         tactical_range < CHAR_MIN || tactical_range > CHAR_MAX ||
         lrs_range < CHAR_MIN || lrs_range > CHAR_MAX || scan_range < CHAR_MIN ||
-        scan_range > CHAR_MAX || heat_sinks < CHAR_MIN || heat_sinks > CHAR_MAX ||
-        computer < CHAR_MIN || computer > CHAR_MAX || radio < CHAR_MIN ||
-        radio > CHAR_MAX || radio_info < 0 || radio_info > UCHAR_MAX ||
-        structural_integrity < CHAR_MIN || structural_integrity > CHAR_MAX ||
+        scan_range > CHAR_MAX || heat_sinks < CHAR_MIN ||
+        heat_sinks > CHAR_MAX || computer < CHAR_MIN || computer > CHAR_MAX ||
+        radio < CHAR_MIN || radio > CHAR_MAX || radio_info < 0 ||
+        radio_info > UCHAR_MAX || structural_integrity < CHAR_MIN ||
+        structural_integrity > CHAR_MAX ||
         structural_integrity_original < CHAR_MIN ||
         structural_integrity_original > CHAR_MAX || radio_range < SHRT_MIN ||
         radio_range > SHRT_MAX || targeting_computer < CHAR_MIN ||
@@ -1401,14 +1509,16 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
   current_mech = NOTHING;
   expected_section = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, section, armor, internal, rear, armor_original, "
-               "internal_original, rear_original, base_to_hit, config, recycle, specials "
-               "FROM btech_mech_sections ORDER BY mech_dbref, section;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT mech_dbref, section, armor, internal, rear, armor_original, "
+          "internal_original, rear_original, base_to_hit, config, recycle, "
+          "specials "
+          "FROM btech_mech_sections ORDER BY mech_dbref, section;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         btech_special_column_int(statement, 1, &section_index) < 0 ||
@@ -1421,15 +1531,14 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
         btech_special_column_int(statement, 8, &base_to_hit) < 0 ||
         btech_special_column_int(statement, 9, &config) < 0 ||
         btech_special_column_int(statement, 10, &recycle) < 0 ||
-        btech_special_column_int(statement, 11, &specials) < 0 ||
-        armor < 0 || armor > UCHAR_MAX || internal < 0 || internal > UCHAR_MAX ||
-        rear < 0 || rear > UCHAR_MAX || armor_original < 0 ||
-        armor_original > UCHAR_MAX || internal_original < 0 ||
-        internal_original > UCHAR_MAX || rear_original < 0 ||
-        rear_original > UCHAR_MAX || base_to_hit < CHAR_MIN ||
-        base_to_hit > CHAR_MAX || config < CHAR_MIN || config > CHAR_MAX ||
-        recycle < CHAR_MIN || recycle > CHAR_MAX || specials < 0 ||
-        specials > USHRT_MAX) {
+        btech_special_column_int(statement, 11, &specials) < 0 || armor < 0 ||
+        armor > UCHAR_MAX || internal < 0 || internal > UCHAR_MAX || rear < 0 ||
+        rear > UCHAR_MAX || armor_original < 0 || armor_original > UCHAR_MAX ||
+        internal_original < 0 || internal_original > UCHAR_MAX ||
+        rear_original < 0 || rear_original > UCHAR_MAX ||
+        base_to_hit < CHAR_MIN || base_to_hit > CHAR_MAX || config < CHAR_MIN ||
+        config > CHAR_MAX || recycle < CHAR_MIN || recycle > CHAR_MAX ||
+        specials < 0 || specials > USHRT_MAX) {
       result = -1;
       break;
     }
@@ -1497,12 +1606,13 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
   current_section = -1;
   expected_slot = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, section, slot, brand, data, item_type, fire_mode, "
-               "ammo_mode, damage_flags, desired_ammo_location FROM btech_mech_criticals "
-               "ORDER BY mech_dbref, section, slot;",
-               -1, &statement, NULL) == SQLITE_OK
+  result = sqlite3_prepare_v2(sqlite,
+                              "SELECT mech_dbref, section, slot, brand, data, "
+                              "item_type, fire_mode, "
+                              "ammo_mode, damage_flags, desired_ammo_location "
+                              "FROM btech_mech_criticals "
+                              "ORDER BY mech_dbref, section, slot;",
+                              -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -1517,8 +1627,8 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
         btech_special_column_uint(statement, 8, &damage_flags) < 0 ||
         btech_special_column_int(statement, 9, &desired_ammo_location) < 0 ||
         brand < 0 || brand > UCHAR_MAX || data < 0 || data > UCHAR_MAX ||
-        item_type < 0 || item_type > USHRT_MAX || desired_ammo_location < SHRT_MIN ||
-        desired_ammo_location > SHRT_MAX) {
+        item_type < 0 || item_type > USHRT_MAX ||
+        desired_ammo_location < SHRT_MIN || desired_ammo_location > SHRT_MAX) {
       result = -1;
       break;
     }
@@ -1538,7 +1648,8 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
       expected_slot = 0;
     }
     if (section_index != current_section) {
-      if (expected_slot != NUM_CRITICALS || section_index != current_section + 1) {
+      if (expected_slot != NUM_CRITICALS ||
+          section_index != current_section + 1) {
         result = -1;
         break;
       }
@@ -1595,14 +1706,15 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
   int z;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, pilot_status, terrain, elevation, hexes_walked, "
-               "facing, x, y, z, last_x, last_y, fx, fy, fz, team, unusable_arcs, "
-               "stall, pilot FROM btech_mech_positions ORDER BY mech_dbref;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT mech_dbref, pilot_status, terrain, elevation, hexes_walked, "
+          "facing, x, y, z, last_x, last_y, fx, fy, fz, team, unusable_arcs, "
+          "stall, pilot FROM btech_mech_positions ORDER BY mech_dbref;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         !(mech = getMech(mech_dbref)) ||
@@ -1623,12 +1735,13 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
         btech_special_column_int(statement, 15, &unusable_arcs) < 0 ||
         btech_special_column_int(statement, 16, &stall) < 0 ||
         btech_special_column_long(statement, 17, &pilot) < 0 ||
-        pilot_status < CHAR_MIN || pilot_status > CHAR_MAX || terrain < CHAR_MIN ||
-        terrain > CHAR_MAX || elevation < CHAR_MIN || elevation > CHAR_MAX ||
-        facing < SHRT_MIN || facing > SHRT_MAX || x < SHRT_MIN || x > SHRT_MAX ||
-        y < SHRT_MIN || y > SHRT_MAX || z < SHRT_MIN || z > SHRT_MAX ||
-        last_x < SHRT_MIN || last_x > SHRT_MAX || last_y < SHRT_MIN ||
-        last_y > SHRT_MAX || (pilot != NOTHING && !Good_obj(pilot))) {
+        pilot_status < CHAR_MIN || pilot_status > CHAR_MAX ||
+        terrain < CHAR_MIN || terrain > CHAR_MAX || elevation < CHAR_MIN ||
+        elevation > CHAR_MAX || facing < SHRT_MIN || facing > SHRT_MAX ||
+        x < SHRT_MIN || x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
+        z < SHRT_MIN || z > SHRT_MAX || last_x < SHRT_MIN ||
+        last_x > SHRT_MAX || last_y < SHRT_MIN || last_y > SHRT_MAX ||
+        (pilot != NOTHING && !Good_obj(pilot))) {
       result = -1;
       break;
     }
@@ -1715,7 +1828,8 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
   return result;
 }
 
-/* Restore all independent turret dbref links in their fixed three-slot order. */
+/* Restore all independent turret dbref links in their fixed three-slot order.
+ */
 static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
@@ -1731,11 +1845,11 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
   current_mech = NOTHING;
   expected_turret = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, turret_index, turret_dbref FROM btech_mech_turrets "
-               "ORDER BY mech_dbref, turret_index;",
-               -1, &statement, NULL) == SQLITE_OK
+  result = sqlite3_prepare_v2(sqlite,
+                              "SELECT mech_dbref, turret_index, turret_dbref "
+                              "FROM btech_mech_turrets "
+                              "ORDER BY mech_dbref, turret_index;",
+                              -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -1791,14 +1905,15 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
   int working_masters;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, channel_title, c3i_size, c3_size, total_masters, "
-               "working_masters, frequency_mode, tag_target, tagged_by "
-               "FROM btech_mech_c3 ORDER BY mech_dbref;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT mech_dbref, channel_title, c3i_size, c3_size, total_masters, "
+          "working_masters, frequency_mode, tag_target, tagged_by "
+          "FROM btech_mech_c3 ORDER BY mech_dbref;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         !(mech = getMech(mech_dbref)) ||
@@ -1857,7 +1972,8 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
   result = sqlite3_prepare_v2(
                sqlite,
                "SELECT mech_dbref, network_type, node_index, node_dbref "
-               "FROM btech_mech_c3_nodes ORDER BY mech_dbref, network_type, node_index;",
+               "FROM btech_mech_c3_nodes ORDER BY mech_dbref, network_type, "
+               "node_index;",
                -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
@@ -1903,8 +2019,7 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
-  if (result == 0 && mech &&
-      (expected_network != 2 || expected_node != 0))
+  if (result == 0 && mech && (expected_network != 2 || expected_node != 0))
     result = -1;
   sqlite3_finalize(statement);
   return result;
@@ -1929,11 +2044,11 @@ static int btech_special_load_mech_tics(sqlite3 *sqlite) {
   expected_tic = 0;
   expected_word = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, tic_index, word_index, value FROM btech_mech_tics "
-               "ORDER BY mech_dbref, tic_index, word_index;",
-               -1, &statement, NULL) == SQLITE_OK
+  result = sqlite3_prepare_v2(sqlite,
+                              "SELECT mech_dbref, tic_index, word_index, value "
+                              "FROM btech_mech_tics "
+                              "ORDER BY mech_dbref, tic_index, word_index;",
+                              -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -1971,8 +2086,7 @@ static int btech_special_load_mech_tics(sqlite3 *sqlite) {
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
-  if (result == 0 && mech &&
-      (expected_tic != NUM_TICS || expected_word != 0))
+  if (result == 0 && mech && (expected_tic != NUM_TICS || expected_word != 0))
     result = -1;
   sqlite3_finalize(statement);
   return result;
@@ -1996,13 +2110,14 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
   current_mech = NOTHING;
   expected_frequency = 0;
   mech = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, frequency_index, frequency, mode, title "
-               "FROM btech_mech_frequencies ORDER BY mech_dbref, frequency_index;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT mech_dbref, frequency_index, frequency, mode, title "
+          "FROM btech_mech_frequencies ORDER BY mech_dbref, frequency_index;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         btech_special_column_int(statement, 1, &frequency_index) < 0 ||
@@ -2052,8 +2167,7 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
 
   statement = NULL;
   result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT * FROM btech_mech_runtime ORDER BY mech_dbref;",
+               sqlite, "SELECT * FROM btech_mech_runtime ORDER BY mech_dbref;",
                -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
@@ -2063,15 +2177,15 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
       result = -1;
       break;
     }
-#define RUNTIME_CHAR(column, field)                                           \
+#define RUNTIME_CHAR(column, field)                                            \
   btech_special_column_char(statement, column, &mech->rd.field)
-#define RUNTIME_SHORT(column, field)                                          \
+#define RUNTIME_SHORT(column, field)                                           \
   btech_special_column_short(statement, column, &mech->rd.field)
-#define RUNTIME_INT(column, field)                                            \
+#define RUNTIME_INT(column, field)                                             \
   btech_special_column_int(statement, column, &mech->rd.field)
-#define RUNTIME_REAL(column, field)                                           \
+#define RUNTIME_REAL(column, field)                                            \
   btech_special_column_real(statement, column, &mech->rd.field)
-#define RUNTIME_DBREF(column, field)                                          \
+#define RUNTIME_DBREF(column, field)                                           \
   btech_special_column_dbref(statement, column, &mech->rd.field)
     if (RUNTIME_CHAR(1, jumptop) < 0 || RUNTIME_CHAR(2, aim) < 0 ||
         RUNTIME_CHAR(3, basetohit) < 0 || RUNTIME_CHAR(4, pilotskillbase) < 0 ||
@@ -2079,51 +2193,60 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
         RUNTIME_CHAR(7, aim_type) < 0 ||
         btech_special_column_char(statement, 8, &mech->rd.sensor[0]) < 0 ||
         btech_special_column_char(statement, 9, &mech->rd.sensor[1]) < 0 ||
-        btech_special_column_uchar(statement, 10, &mech->rd.fire_adjustment) < 0 ||
+        btech_special_column_uchar(statement, 10, &mech->rd.fire_adjustment) <
+            0 ||
         RUNTIME_CHAR(11, vis_mod) < 0 || RUNTIME_CHAR(12, chargetimer) < 0 ||
-        RUNTIME_REAL(13, chargedist) < 0 || RUNTIME_CHAR(14, staggerstamp) < 0 ||
-        RUNTIME_INT(15, mech_prefs) < 0 || RUNTIME_SHORT(16, jumplength) < 0 ||
-        RUNTIME_SHORT(17, goingx) < 0 || RUNTIME_SHORT(18, goingy) < 0 ||
-        RUNTIME_SHORT(19, desiredfacing) < 0 || RUNTIME_SHORT(20, angle) < 0 ||
-        RUNTIME_SHORT(21, jumpheading) < 0 || RUNTIME_SHORT(22, targx) < 0 ||
-        RUNTIME_SHORT(23, targy) < 0 || RUNTIME_SHORT(24, targz) < 0 ||
-        RUNTIME_SHORT(25, turretfacing) < 0 || RUNTIME_SHORT(26, turndamage) < 0 ||
-        RUNTIME_SHORT(27, lateral) < 0 || RUNTIME_SHORT(28, num_seen) < 0 ||
-        RUNTIME_SHORT(29, lx) < 0 || RUNTIME_SHORT(30, ly) < 0 ||
-        RUNTIME_DBREF(31, chgtarget) < 0 || RUNTIME_DBREF(32, dfatarget) < 0 ||
-        RUNTIME_DBREF(33, target) < 0 || RUNTIME_DBREF(34, swarming) < 0 ||
-        RUNTIME_DBREF(35, swarmedby) < 0 || RUNTIME_DBREF(36, carrying) < 0 ||
-        RUNTIME_DBREF(37, spotter) < 0 || RUNTIME_REAL(38, heat) < 0 ||
-        RUNTIME_REAL(39, weapheat) < 0 || RUNTIME_REAL(40, plus_heat) < 0 ||
-        RUNTIME_REAL(41, minus_heat) < 0 || RUNTIME_REAL(42, startfx) < 0 ||
-        RUNTIME_REAL(43, startfy) < 0 || RUNTIME_REAL(44, startfz) < 0 ||
-        RUNTIME_REAL(45, endfz) < 0 || RUNTIME_REAL(46, verticalspeed) < 0 ||
-        RUNTIME_REAL(47, speed) < 0 || RUNTIME_REAL(48, desired_speed) < 0 ||
+        RUNTIME_REAL(13, chargedist) < 0 ||
+        RUNTIME_CHAR(14, staggerstamp) < 0 || RUNTIME_INT(15, mech_prefs) < 0 ||
+        RUNTIME_SHORT(16, jumplength) < 0 || RUNTIME_SHORT(17, goingx) < 0 ||
+        RUNTIME_SHORT(18, goingy) < 0 || RUNTIME_SHORT(19, desiredfacing) < 0 ||
+        RUNTIME_SHORT(20, angle) < 0 || RUNTIME_SHORT(21, jumpheading) < 0 ||
+        RUNTIME_SHORT(22, targx) < 0 || RUNTIME_SHORT(23, targy) < 0 ||
+        RUNTIME_SHORT(24, targz) < 0 || RUNTIME_SHORT(25, turretfacing) < 0 ||
+        RUNTIME_SHORT(26, turndamage) < 0 || RUNTIME_SHORT(27, lateral) < 0 ||
+        RUNTIME_SHORT(28, num_seen) < 0 || RUNTIME_SHORT(29, lx) < 0 ||
+        RUNTIME_SHORT(30, ly) < 0 || RUNTIME_DBREF(31, chgtarget) < 0 ||
+        RUNTIME_DBREF(32, dfatarget) < 0 || RUNTIME_DBREF(33, target) < 0 ||
+        RUNTIME_DBREF(34, swarming) < 0 || RUNTIME_DBREF(35, swarmedby) < 0 ||
+        RUNTIME_DBREF(36, carrying) < 0 || RUNTIME_DBREF(37, spotter) < 0 ||
+        RUNTIME_REAL(38, heat) < 0 || RUNTIME_REAL(39, weapheat) < 0 ||
+        RUNTIME_REAL(40, plus_heat) < 0 || RUNTIME_REAL(41, minus_heat) < 0 ||
+        RUNTIME_REAL(42, startfx) < 0 || RUNTIME_REAL(43, startfy) < 0 ||
+        RUNTIME_REAL(44, startfz) < 0 || RUNTIME_REAL(45, endfz) < 0 ||
+        RUNTIME_REAL(46, verticalspeed) < 0 || RUNTIME_REAL(47, speed) < 0 ||
+        RUNTIME_REAL(48, desired_speed) < 0 ||
         RUNTIME_REAL(49, jumpspeed) < 0 || RUNTIME_INT(50, critstatus) < 0 ||
         RUNTIME_INT(51, status) < 0 || RUNTIME_INT(52, status2) < 0 ||
         RUNTIME_INT(53, specials) < 0 || RUNTIME_INT(54, specials2) < 0 ||
-        RUNTIME_INT(55, specialsstatus) < 0 || RUNTIME_INT(56, tankcritstatus) < 0 ||
-        btech_special_column_time(statement, 57, &mech->rd.last_weapon_recycle) < 0 ||
+        RUNTIME_INT(55, specialsstatus) < 0 ||
+        RUNTIME_INT(56, tankcritstatus) < 0 ||
+        btech_special_column_time(statement, 57,
+                                  &mech->rd.last_weapon_recycle) < 0 ||
         RUNTIME_INT(58, cargo_weight) < 0 || RUNTIME_INT(59, lastrndu) < 0 ||
         RUNTIME_INT(60, rnd) < 0 || RUNTIME_INT(61, last_ds_msg) < 0 ||
         RUNTIME_INT(62, boom_start) < 0 || RUNTIME_INT(63, maxfuel) < 0 ||
         RUNTIME_INT(64, lastused) < 0 || RUNTIME_INT(65, cocoon) < 0 ||
         RUNTIME_INT(66, commconv) < 0 || RUNTIME_INT(67, commconv_last) < 0 ||
         RUNTIME_INT(68, onumsinks) < 0 || RUNTIME_INT(69, disabled_hs) < 0 ||
-        RUNTIME_INT(70, autopilot_num) < 0 || RUNTIME_INT(71, heatboom_last) < 0 ||
-        RUNTIME_INT(72, sspin) < 0 || RUNTIME_INT(73, can_see) < 0 ||
-        RUNTIME_INT(74, row) < 0 || RUNTIME_INT(75, rcw) < 0 ||
-        RUNTIME_REAL(76, rspd) < 0 || RUNTIME_INT(77, erat) < 0 ||
-        RUNTIME_INT(78, per) < 0 || RUNTIME_INT(79, wxf) < 0 ||
-        RUNTIME_INT(80, last_startup) < 0 || RUNTIME_INT(81, maxsuits) < 0 ||
+        RUNTIME_INT(70, autopilot_num) < 0 ||
+        RUNTIME_INT(71, heatboom_last) < 0 || RUNTIME_INT(72, sspin) < 0 ||
+        RUNTIME_INT(73, can_see) < 0 || RUNTIME_INT(74, row) < 0 ||
+        RUNTIME_INT(75, rcw) < 0 || RUNTIME_REAL(76, rspd) < 0 ||
+        RUNTIME_INT(77, erat) < 0 || RUNTIME_INT(78, per) < 0 ||
+        RUNTIME_INT(79, wxf) < 0 || RUNTIME_INT(80, last_startup) < 0 ||
+        RUNTIME_INT(81, maxsuits) < 0 ||
         RUNTIME_INT(82, infantry_specials) < 0 ||
-        RUNTIME_CHAR(83, scharge_value) < 0 || RUNTIME_INT(84, staggerDamage) < 0 ||
-        RUNTIME_INT(85, lastStaggerNotify) < 0 || RUNTIME_INT(86, critstatus2) < 0 ||
-        RUNTIME_REAL(87, xpmod) < 0 || RUNTIME_INT(88, shots_fired) < 0 ||
-        RUNTIME_INT(89, shots_hit) < 0 || RUNTIME_INT(90, shots_missed) < 0 ||
-        RUNTIME_INT(91, damage_taken) < 0 || RUNTIME_INT(92, damage_inflicted) < 0 ||
+        RUNTIME_CHAR(83, scharge_value) < 0 ||
+        RUNTIME_INT(84, staggerDamage) < 0 ||
+        RUNTIME_INT(85, lastStaggerNotify) < 0 ||
+        RUNTIME_INT(86, critstatus2) < 0 || RUNTIME_REAL(87, xpmod) < 0 ||
+        RUNTIME_INT(88, shots_fired) < 0 || RUNTIME_INT(89, shots_hit) < 0 ||
+        RUNTIME_INT(90, shots_missed) < 0 ||
+        RUNTIME_INT(91, damage_taken) < 0 ||
+        RUNTIME_INT(92, damage_inflicted) < 0 ||
         RUNTIME_INT(93, units_killed) < 0 ||
-        btech_special_column_time(statement, 94, &mech->rd.lastStaggerCheck) < 0)
+        btech_special_column_time(statement, 94, &mech->rd.lastStaggerCheck) <
+            0)
       result = -1;
 #undef RUNTIME_CHAR
 #undef RUNTIME_SHORT
@@ -2315,7 +2438,8 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
   tail = NULL;
   result = sqlite3_prepare_v2(
                sqlite,
-               "SELECT mech_dbref, position, amount, occurred_at, attacker_dbref, counted "
+               "SELECT mech_dbref, position, amount, occurred_at, "
+               "attacker_dbref, counted "
                "FROM btech_mech_stagger_damage ORDER BY mech_dbref, position;",
                -1, &statement, NULL) == SQLITE_OK
                ? 0
@@ -2326,8 +2450,8 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
         btech_special_column_int(statement, 2, &amount) < 0 ||
         btech_special_column_time(statement, 3, &occurred_at) < 0 ||
         btech_special_column_dbref(statement, 4, &attacker) < 0 ||
-        btech_special_column_int(statement, 5, &counted) < 0 ||
-        counted < 0 || counted > 1) {
+        btech_special_column_int(statement, 5, &counted) < 0 || counted < 0 ||
+        counted > 1) {
       result = -1;
       break;
     }
@@ -2421,13 +2545,14 @@ static int btech_special_load_turrets(sqlite3 *sqlite) {
   int target_z;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT dbref, arcs, parent, gunner, target, target_x, target_y, "
-               "target_z, lock_mode FROM btech_turrets ORDER BY dbref;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT dbref, arcs, parent, gunner, target, target_x, target_y, "
+          "target_z, lock_mode FROM btech_turrets ORDER BY dbref;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &object) < 0 ||
         !(turret = btech_special_object(object, GTYPE_TURRET)) ||
@@ -2515,7 +2640,8 @@ static int btech_special_load_turret_tics(sqlite3 *sqlite) {
   return result;
 }
 
-/* Restore AUTOPILOT scalar state; command and path lists are loaded separately. */
+/* Restore AUTOPILOT scalar state; command and path lists are loaded separately.
+ */
 static int btech_special_load_autopilots(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
@@ -2540,27 +2666,41 @@ static int btech_special_load_autopilots(sqlite3 *sqlite) {
         btech_special_column_ushort(statement, 3, &autopilot->speed) < 0 ||
         btech_special_column_int(statement, 4, &autopilot->ofsx) < 0 ||
         btech_special_column_int(statement, 5, &autopilot->ofsy) < 0 ||
-        btech_special_column_uchar(statement, 6, &autopilot->verbose_level) < 0 ||
+        btech_special_column_uchar(statement, 6, &autopilot->verbose_level) <
+            0 ||
         btech_special_column_dbref(statement, 7, &target) < 0 ||
         btech_special_column_int(statement, 8, &autopilot->target_score) < 0 ||
-        btech_special_column_int(statement, 9, &autopilot->target_threshold) < 0 ||
-        btech_special_column_int(statement, 10, &autopilot->target_update_tick) < 0 ||
-        btech_special_column_dbref(statement, 11, &autopilot->chase_target) < 0 ||
-        btech_special_column_int(statement, 12, &autopilot->chasetarg_update_tick) < 0 ||
-        btech_special_column_int(statement, 13, &autopilot->follow_update_tick) < 0 ||
+        btech_special_column_int(statement, 9, &autopilot->target_threshold) <
+            0 ||
+        btech_special_column_int(statement, 10,
+                                 &autopilot->target_update_tick) < 0 ||
+        btech_special_column_dbref(statement, 11, &autopilot->chase_target) <
+            0 ||
+        btech_special_column_int(statement, 12,
+                                 &autopilot->chasetarg_update_tick) < 0 ||
+        btech_special_column_int(statement, 13,
+                                 &autopilot->follow_update_tick) < 0 ||
         btech_special_column_ushort(statement, 14, &autopilot->flags) < 0 ||
-        btech_special_column_int(statement, 15, &autopilot->mech_max_range) < 0 ||
+        btech_special_column_int(statement, 15, &autopilot->mech_max_range) <
+            0 ||
         btech_special_column_uchar(statement, 16, &autopilot->roam_type) < 0 ||
-        btech_special_column_int(statement, 17, &autopilot->roam_update_tick) < 0 ||
-        btech_special_column_short(statement, 18, &autopilot->roam_target_hex_x) < 0 ||
-        btech_special_column_short(statement, 19, &autopilot->roam_target_hex_y) < 0 ||
-        btech_special_column_short(statement, 20, &autopilot->roam_anchor_hex_x) < 0 ||
-        btech_special_column_short(statement, 21, &autopilot->roam_anchor_hex_y) < 0 ||
-        btech_special_column_short(statement, 22, &autopilot->roam_anchor_distance) < 0 ||
+        btech_special_column_int(statement, 17, &autopilot->roam_update_tick) <
+            0 ||
+        btech_special_column_short(statement, 18,
+                                   &autopilot->roam_target_hex_x) < 0 ||
+        btech_special_column_short(statement, 19,
+                                   &autopilot->roam_target_hex_y) < 0 ||
+        btech_special_column_short(statement, 20,
+                                   &autopilot->roam_anchor_hex_x) < 0 ||
+        btech_special_column_short(statement, 21,
+                                   &autopilot->roam_anchor_hex_y) < 0 ||
+        btech_special_column_short(statement, 22,
+                                   &autopilot->roam_anchor_distance) < 0 ||
         btech_special_column_int(statement, 23, &autopilot->ahead_ok) < 0 ||
         btech_special_column_int(statement, 24, &autopilot->auto_cmode) < 0 ||
         btech_special_column_int(statement, 25, &autopilot->auto_cdist) < 0 ||
-        btech_special_column_int(statement, 26, &autopilot->auto_goweight) < 0 ||
+        btech_special_column_int(statement, 26, &autopilot->auto_goweight) <
+            0 ||
         btech_special_column_int(statement, 27, &autopilot->auto_fweight) < 0 ||
         btech_special_column_int(statement, 28, &autopilot->auto_nervous) < 0 ||
         btech_special_column_int(statement, 29, &autopilot->b_msc) < 0 ||
@@ -2596,12 +2736,9 @@ static ACOM *btech_special_autopilot_command(int command_enum) {
 }
 
 /* Load one command's ordered text arguments and derive its callback locally. */
-static int btech_special_load_autopilot_command_args(sqlite3 *sqlite,
-                                                      AUTO *autopilot,
-                                                      dbref autopilot_dbref,
-                                                      int position,
-                                                      int command_enum,
-                                                      int argument_count) {
+static int btech_special_load_autopilot_command_args(
+    sqlite3 *sqlite, AUTO *autopilot, dbref autopilot_dbref, int position,
+    int command_enum, int argument_count) {
   sqlite3_stmt *statement;
   ACOM *definition;
   command_node *command;
@@ -2642,7 +2779,8 @@ static int btech_special_load_autopilot_command_args(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    command->args[argument_index] = strndup((const char *)value, (size_t)length);
+    command->args[argument_index] =
+        strndup((const char *)value, (size_t)length);
     if (!command->args[argument_index]) {
       result = -1;
       break;
@@ -2685,13 +2823,14 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
   current_autopilot = NOTHING;
   expected_position = 0;
   autopilot = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT autopilot_dbref, position, command_enum, arg_count "
-               "FROM btech_autopilot_commands ORDER BY autopilot_dbref, position;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT autopilot_dbref, position, command_enum, arg_count "
+          "FROM btech_autopilot_commands ORDER BY autopilot_dbref, position;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &autopilot_dbref) < 0 ||
         btech_special_column_int(statement, 1, &position) < 0 ||
@@ -2702,7 +2841,8 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
     }
     if (autopilot_dbref != current_autopilot) {
       autopilot = btech_special_object(autopilot_dbref, GTYPE_AUTO);
-      if (!autopilot || !autopilot->commands || dllist_size(autopilot->commands)) {
+      if (!autopilot || !autopilot->commands ||
+          dllist_size(autopilot->commands)) {
         result = -1;
         break;
       }
@@ -2749,14 +2889,15 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
   current_autopilot = NOTHING;
   expected_position = 0;
   autopilot = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT autopilot_dbref, position, x, y, parent_x, parent_y, "
-               "g_score, h_score, f_score, hex_offset FROM btech_autopilot_path "
-               "ORDER BY autopilot_dbref, position;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT autopilot_dbref, position, x, y, parent_x, parent_y, "
+          "g_score, h_score, f_score, hex_offset FROM btech_autopilot_path "
+          "ORDER BY autopilot_dbref, position;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &autopilot_dbref) < 0 ||
         btech_special_column_int(statement, 1, &position) < 0 ||
@@ -2843,26 +2984,47 @@ static int btech_store_simple_object(void *key, void *data, int depth,
   if (xcode->type == GTYPE_MECH) {
     mech = (MECH *)xcode;
     if (btech_special_bind_int(context->mech, 1, (dbref)key) < 0 ||
-        btech_special_bind_int(context->mech, 2, mech->ID[0]) < 0 || btech_special_bind_int(context->mech, 3, mech->ID[1]) < 0 ||
-        btech_special_bind_int(context->mech, 4, mech->brief) < 0 || btech_special_bind_int(context->mech, 5, mech->mapnumber) < 0 ||
+        btech_special_bind_int(context->mech, 2, mech->ID[0]) < 0 ||
+        btech_special_bind_int(context->mech, 3, mech->ID[1]) < 0 ||
+        btech_special_bind_int(context->mech, 4, mech->brief) < 0 ||
+        btech_special_bind_int(context->mech, 5, mech->mapnumber) < 0 ||
         btech_special_bind_int(context->mech, 6, mech->mapindex) < 0 ||
-        sqlite3_bind_text(context->mech, 7, mech->ud.mech_name, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 8, mech->ud.mech_type, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 9, mech->ud.unit_era, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(context->mech, 10, mech->ud.unit_tro, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-        btech_special_bind_int(context->mech, 11, mech->ud.type) < 0 || btech_special_bind_int(context->mech, 12, mech->ud.move) < 0 ||
-        btech_special_bind_int(context->mech, 13, mech->ud.tac_range) < 0 || btech_special_bind_int(context->mech, 14, mech->ud.lrs_range) < 0 ||
-        btech_special_bind_int(context->mech, 15, mech->ud.scan_range) < 0 || btech_special_bind_int(context->mech, 16, mech->ud.numsinks) < 0 ||
-        btech_special_bind_int(context->mech, 17, mech->ud.hsengoverride) < 0 || btech_special_bind_int(context->mech, 18, mech->ud.computer) < 0 ||
-        btech_special_bind_int(context->mech, 19, mech->ud.radio) < 0 || btech_special_bind_int(context->mech, 20, mech->ud.radioinfo) < 0 ||
-        btech_special_bind_int(context->mech, 21, mech->ud.si) < 0 || btech_special_bind_int(context->mech, 22, mech->ud.si_orig) < 0 ||
-        btech_special_bind_int(context->mech, 23, mech->ud.radio_range) < 0 || btech_special_bind_int(context->mech, 24, mech->ud.fuel) < 0 ||
-        btech_special_bind_int(context->mech, 25, mech->ud.fuel_orig) < 0 || btech_special_bind_int(context->mech, 26, mech->ud.tons) < 0 ||
-        btech_special_bind_int(context->mech, 27, mech->ud.walkspeed) < 0 || btech_special_bind_int(context->mech, 28, mech->ud.runspeed) < 0 ||
-        sqlite3_bind_double(context->mech, 29, mech->ud.maxspeed) != SQLITE_OK || sqlite3_bind_double(context->mech, 30, mech->ud.template_maxspeed) != SQLITE_OK ||
-        btech_special_bind_int(context->mech, 31, mech->ud.mechbv) < 0 || btech_special_bind_int(context->mech, 32, mech->ud.cargospace) < 0 ||
-        btech_special_bind_int(context->mech, 33, mech->ud.targcomp) < 0 || btech_special_bind_int(context->mech, 34, mech->ud.carmaxton) < 0 ||
-        btech_special_step(context->mech) < 0) context->result = -1;
+        sqlite3_bind_text(context->mech, 7, mech->ud.mech_name, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_text(context->mech, 8, mech->ud.mech_type, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_text(context->mech, 9, mech->ud.unit_era, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_text(context->mech, 10, mech->ud.unit_tro, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
+        btech_special_bind_int(context->mech, 11, mech->ud.type) < 0 ||
+        btech_special_bind_int(context->mech, 12, mech->ud.move) < 0 ||
+        btech_special_bind_int(context->mech, 13, mech->ud.tac_range) < 0 ||
+        btech_special_bind_int(context->mech, 14, mech->ud.lrs_range) < 0 ||
+        btech_special_bind_int(context->mech, 15, mech->ud.scan_range) < 0 ||
+        btech_special_bind_int(context->mech, 16, mech->ud.numsinks) < 0 ||
+        btech_special_bind_int(context->mech, 17, mech->ud.hsengoverride) < 0 ||
+        btech_special_bind_int(context->mech, 18, mech->ud.computer) < 0 ||
+        btech_special_bind_int(context->mech, 19, mech->ud.radio) < 0 ||
+        btech_special_bind_int(context->mech, 20, mech->ud.radioinfo) < 0 ||
+        btech_special_bind_int(context->mech, 21, mech->ud.si) < 0 ||
+        btech_special_bind_int(context->mech, 22, mech->ud.si_orig) < 0 ||
+        btech_special_bind_int(context->mech, 23, mech->ud.radio_range) < 0 ||
+        btech_special_bind_int(context->mech, 24, mech->ud.fuel) < 0 ||
+        btech_special_bind_int(context->mech, 25, mech->ud.fuel_orig) < 0 ||
+        btech_special_bind_int(context->mech, 26, mech->ud.tons) < 0 ||
+        btech_special_bind_int(context->mech, 27, mech->ud.walkspeed) < 0 ||
+        btech_special_bind_int(context->mech, 28, mech->ud.runspeed) < 0 ||
+        sqlite3_bind_double(context->mech, 29, mech->ud.maxspeed) !=
+            SQLITE_OK ||
+        sqlite3_bind_double(context->mech, 30, mech->ud.template_maxspeed) !=
+            SQLITE_OK ||
+        btech_special_bind_int(context->mech, 31, mech->ud.mechbv) < 0 ||
+        btech_special_bind_int(context->mech, 32, mech->ud.cargospace) < 0 ||
+        btech_special_bind_int(context->mech, 33, mech->ud.targcomp) < 0 ||
+        btech_special_bind_int(context->mech, 34, mech->ud.carmaxton) < 0 ||
+        btech_special_step(context->mech) < 0)
+      context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
       struct section_struct *section = &mech->ud.sections[index];
       if (btech_special_bind_int(context->section, 1, (dbref)key) < 0 ||
@@ -2870,14 +3032,19 @@ static int btech_store_simple_object(void *key, void *data, int depth,
           btech_special_bind_int(context->section, 3, section->armor) < 0 ||
           btech_special_bind_int(context->section, 4, section->internal) < 0 ||
           btech_special_bind_int(context->section, 5, section->rear) < 0 ||
-          btech_special_bind_int(context->section, 6, section->armor_orig) < 0 ||
-          btech_special_bind_int(context->section, 7, section->internal_orig) < 0 ||
+          btech_special_bind_int(context->section, 6, section->armor_orig) <
+              0 ||
+          btech_special_bind_int(context->section, 7, section->internal_orig) <
+              0 ||
           btech_special_bind_int(context->section, 8, section->rear_orig) < 0 ||
           btech_special_bind_int(context->section, 9, section->basetohit) < 0 ||
           btech_special_bind_int(context->section, 10, section->config) < 0 ||
           btech_special_bind_int(context->section, 11, section->recycle) < 0 ||
           btech_special_bind_int(context->section, 12, section->specials) < 0 ||
-          btech_special_step(context->section) < 0) { context->result = -1; break; }
+          btech_special_step(context->section) < 0) {
+        context->result = -1;
+        break;
+      }
       for (slot = 0; context->result == 0 && slot < NUM_CRITICALS; slot++) {
         struct critical_slot *critical = &section->criticals[slot];
         if (btech_special_bind_int(context->critical, 1, (dbref)key) < 0 ||
@@ -2886,19 +3053,26 @@ static int btech_store_simple_object(void *key, void *data, int depth,
             btech_special_bind_int(context->critical, 4, critical->brand) < 0 ||
             btech_special_bind_int(context->critical, 5, critical->data) < 0 ||
             btech_special_bind_int(context->critical, 6, critical->type) < 0 ||
-            btech_special_bind_int(context->critical, 7, critical->firemode) < 0 ||
-            btech_special_bind_int(context->critical, 8, critical->ammomode) < 0 ||
-            btech_special_bind_int(context->critical, 9, critical->weapDamageFlags) < 0 ||
-            btech_special_bind_int(context->critical, 10, critical->desiredAmmoLoc) < 0 ||
-            btech_special_step(context->critical) < 0) context->result = -1;
+            btech_special_bind_int(context->critical, 7, critical->firemode) <
+                0 ||
+            btech_special_bind_int(context->critical, 8, critical->ammomode) <
+                0 ||
+            btech_special_bind_int(context->critical, 9,
+                                   critical->weapDamageFlags) < 0 ||
+            btech_special_bind_int(context->critical, 10,
+                                   critical->desiredAmmoLoc) < 0 ||
+            btech_special_step(context->critical) < 0)
+          context->result = -1;
       }
     }
     if (context->result == 0 &&
         (btech_special_bind_int(context->position, 1, (dbref)key) < 0 ||
-         btech_special_bind_int(context->position, 2, mech->pd.pilotstatus) < 0 ||
+         btech_special_bind_int(context->position, 2, mech->pd.pilotstatus) <
+             0 ||
          btech_special_bind_int(context->position, 3, mech->pd.terrain) < 0 ||
          btech_special_bind_int(context->position, 4, mech->pd.elev) < 0 ||
-         sqlite3_bind_double(context->position, 5, mech->pd.hexes_walked) != SQLITE_OK ||
+         sqlite3_bind_double(context->position, 5, mech->pd.hexes_walked) !=
+             SQLITE_OK ||
          btech_special_bind_int(context->position, 6, mech->pd.facing) < 0 ||
          btech_special_bind_int(context->position, 7, mech->pd.x) < 0 ||
          btech_special_bind_int(context->position, 8, mech->pd.y) < 0 ||
@@ -2909,15 +3083,18 @@ static int btech_store_simple_object(void *key, void *data, int depth,
          sqlite3_bind_double(context->position, 13, mech->pd.fy) != SQLITE_OK ||
          sqlite3_bind_double(context->position, 14, mech->pd.fz) != SQLITE_OK ||
          btech_special_bind_int(context->position, 15, mech->pd.team) < 0 ||
-         btech_special_bind_int(context->position, 16, mech->pd.unusable_arcs) < 0 ||
+         btech_special_bind_int(context->position, 16, mech->pd.unusable_arcs) <
+             0 ||
          btech_special_bind_int(context->position, 17, mech->pd.stall) < 0 ||
          btech_special_bind_int(context->position, 18, mech->pd.pilot) < 0 ||
-         btech_special_step(context->position) < 0)) context->result = -1;
+         btech_special_step(context->position) < 0))
+      context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
       if (btech_special_bind_int(context->bay, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->bay, 2, index) < 0 ||
           btech_special_bind_int(context->bay, 3, mech->pd.bay[index]) < 0 ||
-          btech_special_step(context->bay) < 0) context->result = -1;
+          btech_special_step(context->bay) < 0)
+        context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TURRETS; index++) {
       if (btech_special_bind_int(context->mech_turret, 1, (dbref)key) < 0 ||
@@ -2929,39 +3106,56 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
     if (context->result == 0 &&
         (btech_special_bind_int(context->c3, 1, (dbref)key) < 0 ||
-         sqlite3_bind_text(context->c3, 2, mech->sd.C3ChanTitle, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+         sqlite3_bind_text(context->c3, 2, mech->sd.C3ChanTitle, -1,
+                           SQLITE_TRANSIENT) != SQLITE_OK ||
          btech_special_bind_int(context->c3, 3, mech->sd.wC3iNetworkSize) < 0 ||
          btech_special_bind_int(context->c3, 4, mech->sd.wC3NetworkSize) < 0 ||
          btech_special_bind_int(context->c3, 5, mech->sd.wTotalC3Masters) < 0 ||
-         btech_special_bind_int(context->c3, 6, mech->sd.wWorkingC3Masters) < 0 ||
+         btech_special_bind_int(context->c3, 6, mech->sd.wWorkingC3Masters) <
+             0 ||
          btech_special_bind_int(context->c3, 7, mech->sd.C3FreqMode) < 0 ||
          btech_special_bind_int(context->c3, 8, mech->sd.tagTarget) < 0 ||
          btech_special_bind_int(context->c3, 9, mech->sd.taggedBy) < 0 ||
-         btech_special_step(context->c3) < 0)) context->result = -1;
-    for (index = 0; context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE; index++) {
-      dbref node = index < C3I_NETWORK_SIZE ? mech->sd.C3iNetwork[index] : mech->sd.C3Network[index - C3I_NETWORK_SIZE];
+         btech_special_step(context->c3) < 0))
+      context->result = -1;
+    for (index = 0;
+         context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE;
+         index++) {
+      dbref node = index < C3I_NETWORK_SIZE
+                       ? mech->sd.C3iNetwork[index]
+                       : mech->sd.C3Network[index - C3I_NETWORK_SIZE];
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
-      int node_index = index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
-      if (btech_special_bind_int(context->c3node, 1, (dbref)key) < 0 || btech_special_bind_int(context->c3node, 2, network) < 0 ||
-          btech_special_bind_int(context->c3node, 3, node_index) < 0 || btech_special_bind_int(context->c3node, 4, node) < 0 ||
-          btech_special_step(context->c3node) < 0) context->result = -1;
+      int node_index =
+          index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
+      if (btech_special_bind_int(context->c3node, 1, (dbref)key) < 0 ||
+          btech_special_bind_int(context->c3node, 2, network) < 0 ||
+          btech_special_bind_int(context->c3node, 3, node_index) < 0 ||
+          btech_special_bind_int(context->c3node, 4, node) < 0 ||
+          btech_special_step(context->c3node) < 0)
+        context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       for (slot = 0; context->result == 0 && slot < TICLONGS; slot++) {
         if (btech_special_bind_int(context->tic, 1, (dbref)key) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
-            btech_special_bind_int(context->tic, 4, mech->tic[index][slot]) < 0 ||
-            btech_special_step(context->tic) < 0) context->result = -1;
+            btech_special_bind_int(context->tic, 4, mech->tic[index][slot]) <
+                0 ||
+            btech_special_step(context->tic) < 0)
+          context->result = -1;
       }
     }
     for (index = 0; context->result == 0 && index < FREQS; index++) {
       if (btech_special_bind_int(context->frequency, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->frequency, 2, index) < 0 ||
-          btech_special_bind_int(context->frequency, 3, mech->freq[index]) < 0 ||
-          btech_special_bind_int(context->frequency, 4, mech->freqmodes[index]) < 0 ||
-          sqlite3_bind_text(context->frequency, 5, mech->chantitle[index], -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-          btech_special_step(context->frequency) < 0) context->result = -1;
+          btech_special_bind_int(context->frequency, 3, mech->freq[index]) <
+              0 ||
+          btech_special_bind_int(context->frequency, 4,
+                                 mech->freqmodes[index]) < 0 ||
+          sqlite3_bind_text(context->frequency, 5, mech->chantitle[index], -1,
+                            SQLITE_TRANSIENT) != SQLITE_OK ||
+          btech_special_step(context->frequency) < 0)
+        context->result = -1;
     }
     if (context->result == 0) {
       runtime_index = 1;
@@ -3082,7 +3276,8 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < 8; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, index) < 0 ||
-          btech_special_bind_int(context->unit_aux, 3, mech->ud.unused[index]) < 0 ||
+          btech_special_bind_int(context->unit_aux, 3, mech->ud.unused[index]) <
+              0 ||
           btech_special_step(context->unit_aux) < 0)
         context->result = -1;
     }
@@ -3090,7 +3285,8 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     if (context->result == 0 &&
         (btech_special_bind_int(context->unit_aux, 1, (dbref)key) < 0 ||
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
-         btech_special_bind_int(context->unit_aux, 3, mech->ud.mechbv_last) < 0 ||
+         btech_special_bind_int(context->unit_aux, 3, mech->ud.mechbv_last) <
+             0 ||
          btech_special_step(context->unit_aux) < 0))
       context->result = -1;
 #endif
@@ -3106,19 +3302,22 @@ static int btech_store_simple_object(void *key, void *data, int depth,
          context->result == 0 && damage; damage = damage->next, index++) {
       if (btech_special_bind_int(context->stagger_damage, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->stagger_damage, 2, index) < 0 ||
-          btech_special_bind_int(context->stagger_damage, 3, damage->amount) < 0 ||
+          btech_special_bind_int(context->stagger_damage, 3, damage->amount) <
+              0 ||
           btech_special_bind_int(context->stagger_damage, 4,
                                  (sqlite3_int64)damage->occuredAt) < 0 ||
           btech_special_bind_int(context->stagger_damage, 5,
                                  damage->attackerNum) < 0 ||
-          btech_special_bind_int(context->stagger_damage, 6, damage->counted) < 0 ||
+          btech_special_bind_int(context->stagger_damage, 6, damage->counted) <
+              0 ||
           btech_special_step(context->stagger_damage) < 0)
         context->result = -1;
     }
   } else if (xcode->type == GTYPE_MECHREP) {
     mechrep = (MECHREP *)xcode;
     if (btech_special_bind_int(context->mechrep, 1, (dbref)key) < 0 ||
-        btech_special_bind_int(context->mechrep, 2, mechrep->current_target) < 0 ||
+        btech_special_bind_int(context->mechrep, 2, mechrep->current_target) <
+            0 ||
         btech_special_step(context->mechrep) < 0)
       context->result = -1;
   } else if (xcode->type == GTYPE_TURRET) {
@@ -3137,59 +3336,86 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       if (btech_special_bind_int(context->turret_tic, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->turret_tic, 2, index) < 0 ||
-          btech_special_bind_int(context->turret_tic, 3, turret->tic[index]) < 0 ||
+          btech_special_bind_int(context->turret_tic, 3, turret->tic[index]) <
+              0 ||
           btech_special_step(context->turret_tic) < 0)
         context->result = -1;
     }
   } else if (xcode->type == GTYPE_AUTO) {
     autopilot = (AUTO *)xcode;
     if (btech_special_bind_int(context->autopilot, 1, (dbref)key) < 0 ||
-        btech_special_bind_int(context->autopilot, 2, autopilot->mymechnum) < 0 ||
-        btech_special_bind_int(context->autopilot, 3, autopilot->mapindex) < 0 ||
+        btech_special_bind_int(context->autopilot, 2, autopilot->mymechnum) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 3, autopilot->mapindex) <
+            0 ||
         btech_special_bind_int(context->autopilot, 4, autopilot->speed) < 0 ||
         btech_special_bind_int(context->autopilot, 5, autopilot->ofsx) < 0 ||
         btech_special_bind_int(context->autopilot, 6, autopilot->ofsy) < 0 ||
-        btech_special_bind_int(context->autopilot, 7, autopilot->verbose_level) < 0 ||
+        btech_special_bind_int(context->autopilot, 7,
+                               autopilot->verbose_level) < 0 ||
         btech_special_bind_int(context->autopilot, 8, autopilot->target) < 0 ||
-        btech_special_bind_int(context->autopilot, 9, autopilot->target_score) < 0 ||
-        btech_special_bind_int(context->autopilot, 10, autopilot->target_threshold) < 0 ||
-        btech_special_bind_int(context->autopilot, 11, autopilot->target_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 12, autopilot->chase_target) < 0 ||
-        btech_special_bind_int(context->autopilot, 13, autopilot->chasetarg_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 14, autopilot->follow_update_tick) < 0 ||
+        btech_special_bind_int(context->autopilot, 9, autopilot->target_score) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 10,
+                               autopilot->target_threshold) < 0 ||
+        btech_special_bind_int(context->autopilot, 11,
+                               autopilot->target_update_tick) < 0 ||
+        btech_special_bind_int(context->autopilot, 12,
+                               autopilot->chase_target) < 0 ||
+        btech_special_bind_int(context->autopilot, 13,
+                               autopilot->chasetarg_update_tick) < 0 ||
+        btech_special_bind_int(context->autopilot, 14,
+                               autopilot->follow_update_tick) < 0 ||
         btech_special_bind_int(context->autopilot, 15, autopilot->flags) < 0 ||
-        btech_special_bind_int(context->autopilot, 16, autopilot->mech_max_range) < 0 ||
-        btech_special_bind_int(context->autopilot, 17, autopilot->roam_type) < 0 ||
-        btech_special_bind_int(context->autopilot, 18, autopilot->roam_update_tick) < 0 ||
-        btech_special_bind_int(context->autopilot, 19, autopilot->roam_target_hex_x) < 0 ||
-        btech_special_bind_int(context->autopilot, 20, autopilot->roam_target_hex_y) < 0 ||
-        btech_special_bind_int(context->autopilot, 21, autopilot->roam_anchor_hex_x) < 0 ||
-        btech_special_bind_int(context->autopilot, 22, autopilot->roam_anchor_hex_y) < 0 ||
-        btech_special_bind_int(context->autopilot, 23, autopilot->roam_anchor_distance) < 0 ||
-        btech_special_bind_int(context->autopilot, 24, autopilot->ahead_ok) < 0 ||
-        btech_special_bind_int(context->autopilot, 25, autopilot->auto_cmode) < 0 ||
-        btech_special_bind_int(context->autopilot, 26, autopilot->auto_cdist) < 0 ||
-        btech_special_bind_int(context->autopilot, 27, autopilot->auto_goweight) < 0 ||
-        btech_special_bind_int(context->autopilot, 28, autopilot->auto_fweight) < 0 ||
-        btech_special_bind_int(context->autopilot, 29, autopilot->auto_nervous) < 0 ||
+        btech_special_bind_int(context->autopilot, 16,
+                               autopilot->mech_max_range) < 0 ||
+        btech_special_bind_int(context->autopilot, 17, autopilot->roam_type) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 18,
+                               autopilot->roam_update_tick) < 0 ||
+        btech_special_bind_int(context->autopilot, 19,
+                               autopilot->roam_target_hex_x) < 0 ||
+        btech_special_bind_int(context->autopilot, 20,
+                               autopilot->roam_target_hex_y) < 0 ||
+        btech_special_bind_int(context->autopilot, 21,
+                               autopilot->roam_anchor_hex_x) < 0 ||
+        btech_special_bind_int(context->autopilot, 22,
+                               autopilot->roam_anchor_hex_y) < 0 ||
+        btech_special_bind_int(context->autopilot, 23,
+                               autopilot->roam_anchor_distance) < 0 ||
+        btech_special_bind_int(context->autopilot, 24, autopilot->ahead_ok) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 25, autopilot->auto_cmode) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 26, autopilot->auto_cdist) <
+            0 ||
+        btech_special_bind_int(context->autopilot, 27,
+                               autopilot->auto_goweight) < 0 ||
+        btech_special_bind_int(context->autopilot, 28,
+                               autopilot->auto_fweight) < 0 ||
+        btech_special_bind_int(context->autopilot, 29,
+                               autopilot->auto_nervous) < 0 ||
         btech_special_bind_int(context->autopilot, 30, autopilot->b_msc) < 0 ||
         btech_special_bind_int(context->autopilot, 31, autopilot->w_msc) < 0 ||
         btech_special_bind_int(context->autopilot, 32, autopilot->b_bsc) < 0 ||
         btech_special_bind_int(context->autopilot, 33, autopilot->w_bsc) < 0 ||
         btech_special_bind_int(context->autopilot, 34, autopilot->b_dan) < 0 ||
         btech_special_bind_int(context->autopilot, 35, autopilot->w_dan) < 0 ||
-        btech_special_bind_int(context->autopilot, 36, autopilot->last_upd) < 0 ||
+        btech_special_bind_int(context->autopilot, 36, autopilot->last_upd) <
+            0 ||
         btech_special_step(context->autopilot) < 0)
       context->result = -1;
-    for (index = 1;
-         context->result == 0 && autopilot->commands &&
-         index <= dllist_size(autopilot->commands);
+    for (index = 1; context->result == 0 && autopilot->commands &&
+                    index <= dllist_size(autopilot->commands);
          index++) {
       command = (command_node *)dllist_get_node(autopilot->commands, index);
       if (!command || command->argcount >= AUTOPILOT_MAX_ARGS ||
-          btech_special_bind_int(context->autopilot_command, 1, (dbref)key) < 0 ||
-          btech_special_bind_int(context->autopilot_command, 2, index - 1) < 0 ||
-          btech_special_bind_int(context->autopilot_command, 3, command->command_enum) < 0 ||
+          btech_special_bind_int(context->autopilot_command, 1, (dbref)key) <
+              0 ||
+          btech_special_bind_int(context->autopilot_command, 2, index - 1) <
+              0 ||
+          btech_special_bind_int(context->autopilot_command, 3,
+                                 command->command_enum) < 0 ||
           btech_special_bind_int(context->autopilot_command, 4,
                                  command->argcount + 1) < 0 ||
           btech_special_step(context->autopilot_command) < 0) {
@@ -3200,9 +3426,12 @@ static int btech_store_simple_object(void *key, void *data, int depth,
            context->result == 0 && argument_index <= command->argcount;
            argument_index++) {
         if (!command->args[argument_index] ||
-            btech_special_bind_int(context->autopilot_command_arg, 1, (dbref)key) < 0 ||
-            btech_special_bind_int(context->autopilot_command_arg, 2, index - 1) < 0 ||
-            btech_special_bind_int(context->autopilot_command_arg, 3, argument_index) < 0 ||
+            btech_special_bind_int(context->autopilot_command_arg, 1,
+                                   (dbref)key) < 0 ||
+            btech_special_bind_int(context->autopilot_command_arg, 2,
+                                   index - 1) < 0 ||
+            btech_special_bind_int(context->autopilot_command_arg, 3,
+                                   argument_index) < 0 ||
             sqlite3_bind_text(context->autopilot_command_arg, 4,
                               command->args[argument_index], -1,
                               SQLITE_TRANSIENT) != SQLITE_OK ||
@@ -3210,22 +3439,29 @@ static int btech_store_simple_object(void *key, void *data, int depth,
           context->result = -1;
       }
     }
-    for (index = 1;
-         context->result == 0 && autopilot->astar_path &&
-         index <= dllist_size(autopilot->astar_path);
+    for (index = 1; context->result == 0 && autopilot->astar_path &&
+                    index <= dllist_size(autopilot->astar_path);
          index++) {
       path_node = (astar_node *)dllist_get_node(autopilot->astar_path, index);
       if (!path_node ||
           btech_special_bind_int(context->autopilot_path, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->autopilot_path, 2, index - 1) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 3, path_node->x) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 4, path_node->y) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 5, path_node->x_parent) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 6, path_node->y_parent) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 7, path_node->g_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 8, path_node->h_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 9, path_node->f_score) < 0 ||
-          btech_special_bind_int(context->autopilot_path, 10, path_node->hexoffset) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 3, path_node->x) <
+              0 ||
+          btech_special_bind_int(context->autopilot_path, 4, path_node->y) <
+              0 ||
+          btech_special_bind_int(context->autopilot_path, 5,
+                                 path_node->x_parent) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 6,
+                                 path_node->y_parent) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 7,
+                                 path_node->g_score) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 8,
+                                 path_node->h_score) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 9,
+                                 path_node->f_score) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 10,
+                                 path_node->hexoffset) < 0 ||
           btech_special_step(context->autopilot_path) < 0) {
         context->result = -1;
         break;
@@ -3256,7 +3492,8 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
     return context->result == 0;
   map = (MAP *)xcode;
   if (btech_special_bind_int(context->map, 1, (dbref)key) < 0 ||
-      sqlite3_bind_text(context->map, 2, map->mapname, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+      sqlite3_bind_text(context->map, 2, map->mapname, -1, SQLITE_TRANSIENT) !=
+          SQLITE_OK ||
       btech_special_bind_int(context->map, 3, map->map_width) < 0 ||
       btech_special_bind_int(context->map, 4, map->map_height) < 0 ||
       btech_special_bind_int(context->map, 5, map->temp) < 0 ||
@@ -3305,11 +3542,13 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
       context->result = -1;
       break;
     }
-    for (target = 0; context->result == 0 && target < map->first_free; target++) {
+    for (target = 0; context->result == 0 && target < map->first_free;
+         target++) {
       if (btech_special_bind_int(context->los, 1, (dbref)key) < 0 ||
           btech_special_bind_int(context->los, 2, index) < 0 ||
           btech_special_bind_int(context->los, 3, target) < 0 ||
-          btech_special_bind_int(context->los, 4, map->LOSinfo[index][target]) < 0 ||
+          btech_special_bind_int(context->los, 4, map->LOSinfo[index][target]) <
+              0 ||
           btech_special_step(context->los) < 0)
         context->result = -1;
     }
@@ -3344,7 +3583,8 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
         if (btech_special_bind_int(context->bits, 1, (dbref)key) < 0 ||
             btech_special_bind_int(context->bits, 2, index) < 0 ||
             btech_special_bind_int(context->bits, 3, byte_index) < 0 ||
-            btech_special_bind_int(context->bits, 4, bits[index][byte_index]) < 0 ||
+            btech_special_bind_int(context->bits, 4, bits[index][byte_index]) <
+                0 ||
             btech_special_step(context->bits) < 0)
           context->result = -1;
       }
@@ -3369,9 +3609,12 @@ static void btech_store_repair_event(MUXEVENT *event) {
   if (event->function == very_fake_func)
     remaining = -remaining;
   if (btech_special_bind_int(btech_repair_statement, 1, mech->mynum) < 0 ||
-      btech_special_bind_int(btech_repair_statement, 2, btech_repair_type) < 0 ||
-      btech_special_bind_int(btech_repair_statement, 3, remaining < 0 ? -remaining : remaining) < 0 ||
-      btech_special_bind_int(btech_repair_statement, 4, (long)event->data2) < 0 ||
+      btech_special_bind_int(btech_repair_statement, 2, btech_repair_type) <
+          0 ||
+      btech_special_bind_int(btech_repair_statement, 3,
+                             remaining < 0 ? -remaining : remaining) < 0 ||
+      btech_special_bind_int(btech_repair_statement, 4, (long)event->data2) <
+          0 ||
       btech_special_bind_int(btech_repair_statement, 5, remaining < 0) < 0 ||
       btech_special_step(btech_repair_statement) < 0)
     btech_repair_result = -1;
@@ -3394,105 +3637,128 @@ static int btech_persistence_store_special_state(sqlite3 *sqlite) {
     return -1;
   if (!xcode_tree)
     return 0;
-  if (
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+  if (sqlite3_prepare_v2(sqlite,
+                         "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                          -1, &maps.map, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_map_hexes VALUES (?, ?, ?, ?);",
-                         -1, &maps.hex, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_map_hexes VALUES (?, ?, ?, ?);", -1,
+                         &maps.hex, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_map_slots VALUES (?, ?, ?, ?);",
-                         -1, &maps.slot, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_map_slots VALUES (?, ?, ?, ?);", -1,
+                         &maps.slot, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_map_los VALUES (?, ?, ?, ?);",
-                         -1, &maps.los, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_map_los VALUES (?, ?, ?, ?);", -1,
+                         &maps.los, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_map_objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+          -1, &maps.object, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_map_objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                         -1, &maps.object, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_map_bits VALUES (?, ?, ?, ?);",
-                         -1, &maps.bits, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_repair_events "
-                         "(mech_dbref, event_type, remaining_ticks, event_data, is_fake) "
-                         "VALUES (?, ?, ?, ?, ?);",
-                         -1, &repairs, NULL) != SQLITE_OK) {
-    sqlite3_finalize(maps.map); sqlite3_finalize(maps.hex); sqlite3_finalize(maps.slot); sqlite3_finalize(maps.los);
-    sqlite3_finalize(maps.object); sqlite3_finalize(maps.bits);
+                         "INSERT INTO btech_map_bits VALUES (?, ?, ?, ?);", -1,
+                         &maps.bits, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_repair_events "
+          "(mech_dbref, event_type, remaining_ticks, event_data, is_fake) "
+          "VALUES (?, ?, ?, ?, ?);",
+          -1, &repairs, NULL) != SQLITE_OK) {
+    sqlite3_finalize(maps.map);
+    sqlite3_finalize(maps.hex);
+    sqlite3_finalize(maps.slot);
+    sqlite3_finalize(maps.los);
+    sqlite3_finalize(maps.object);
+    sqlite3_finalize(maps.bits);
     sqlite3_finalize(repairs);
     return -1;
   }
-  if (sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mechrep VALUES (?, ?);", -1,
+  if (sqlite3_prepare_v2(sqlite, "INSERT INTO btech_mechrep VALUES (?, ?);", -1,
                          &objects.mechrep, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_turrets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
+          &objects.turret, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_turrets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                         -1, &objects.turret, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_turret_tics VALUES (?, ?, ?);", -1,
+                         &objects.turret_tic, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_turret_tics VALUES (?, ?, ?);",
-                         -1, &objects.turret_tic, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_autopilots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "INSERT INTO btech_autopilots VALUES (?, ?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                          -1, &objects.autopilot, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_mechs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+          -1, &objects.mech, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mechs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                         -1, &objects.mech, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_sections VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "INSERT INTO btech_mech_sections VALUES (?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?, ?, ?);",
                          -1, &objects.section, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_criticals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "INSERT INTO btech_mech_criticals VALUES (?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?);",
                          -1, &objects.critical, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_positions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "INSERT INTO btech_mech_positions VALUES (?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                          -1, &objects.position, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_bays VALUES (?, ?, ?);",
-                         -1, &objects.bay, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_mech_bays VALUES (?, ?, ?);", -1,
+                         &objects.bay, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_turrets VALUES (?, ?, ?);",
-                         -1, &objects.mech_turret, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_c3 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                         -1, &objects.c3, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_mech_turrets VALUES (?, ?, ?);", -1,
+                         &objects.mech_turret, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_mech_c3 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
+          &objects.c3, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO btech_mech_c3_nodes VALUES (?, ?, ?, ?);",
                          -1, &objects.c3node, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_tics VALUES (?, ?, ?, ?);",
-                         -1, &objects.tic, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_frequencies VALUES (?, ?, ?, ?, ?);",
-                         -1, &objects.frequency, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_runtime VALUES ("
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                         -1, &objects.runtime, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_runtime_unused VALUES (?, ?, ?);",
-                         -1, &objects.runtime_unused, NULL) != SQLITE_OK ||
+                         "INSERT INTO btech_mech_tics VALUES (?, ?, ?, ?);", -1,
+                         &objects.tic, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite, "INSERT INTO btech_mech_frequencies VALUES (?, ?, ?, ?, ?);",
+          -1, &objects.frequency, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_mech_runtime VALUES ("
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+          -1, &objects.runtime, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite, "INSERT INTO btech_mech_runtime_unused VALUES (?, ?, ?);", -1,
+          &objects.runtime_unused, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO btech_mech_unit_aux VALUES (?, ?, ?);",
                          -1, &objects.unit_aux, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_mech_stagger_damage VALUES (?, ?, ?, ?, ?, ?);",
+          -1, &objects.stagger_damage, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite, "INSERT INTO btech_autopilot_commands VALUES (?, ?, ?, ?);",
+          -1, &objects.autopilot_command, NULL) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_autopilot_command_args VALUES (?, ?, ?, ?);", -1,
+          &objects.autopilot_command_arg, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_mech_stagger_damage VALUES (?, ?, ?, ?, ?, ?);",
-                         -1, &objects.stagger_damage, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_autopilot_commands VALUES (?, ?, ?, ?);",
-                         -1, &objects.autopilot_command, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_autopilot_command_args VALUES (?, ?, ?, ?);",
-                         -1, &objects.autopilot_command_arg, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO btech_autopilot_path VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                         "INSERT INTO btech_autopilot_path VALUES (?, ?, ?, ?, "
+                         "?, ?, ?, ?, ?, ?);",
                          -1, &objects.autopilot_path, NULL) != SQLITE_OK) {
-    sqlite3_finalize(maps.map); sqlite3_finalize(maps.hex); sqlite3_finalize(maps.slot); sqlite3_finalize(maps.los);
-    sqlite3_finalize(maps.object); sqlite3_finalize(maps.bits); sqlite3_finalize(repairs);
+    sqlite3_finalize(maps.map);
+    sqlite3_finalize(maps.hex);
+    sqlite3_finalize(maps.slot);
+    sqlite3_finalize(maps.los);
+    sqlite3_finalize(maps.object);
+    sqlite3_finalize(maps.bits);
+    sqlite3_finalize(repairs);
     btech_finalize_object_statements(&objects);
     return -1;
   }
@@ -3502,13 +3768,19 @@ static int btech_persistence_store_special_state(sqlite3 *sqlite) {
   rb_walk(xcode_tree, WALK_INORDER, btech_store_simple_object, &objects);
   btech_repair_statement = repairs;
   btech_repair_result = 0;
-  for (type = FIRST_TECH_EVENT; type <= LAST_TECH_EVENT && btech_repair_result == 0; type++) {
+  for (type = FIRST_TECH_EVENT;
+       type <= LAST_TECH_EVENT && btech_repair_result == 0; type++) {
     btech_repair_type = type;
     muxevent_gothru_type(type, btech_store_repair_event);
   }
-  result = maps.result < 0 || objects.result < 0 || btech_repair_result < 0 ? -1 : 0;
-  sqlite3_finalize(maps.map); sqlite3_finalize(maps.hex); sqlite3_finalize(maps.slot); sqlite3_finalize(maps.los);
-  sqlite3_finalize(maps.object); sqlite3_finalize(maps.bits);
+  result =
+      maps.result < 0 || objects.result < 0 || btech_repair_result < 0 ? -1 : 0;
+  sqlite3_finalize(maps.map);
+  sqlite3_finalize(maps.hex);
+  sqlite3_finalize(maps.slot);
+  sqlite3_finalize(maps.los);
+  sqlite3_finalize(maps.object);
+  sqlite3_finalize(maps.bits);
   sqlite3_finalize(repairs);
   btech_finalize_object_statements(&objects);
   return result;
@@ -3529,7 +3801,8 @@ struct btech_special_object_counts {
   int autopilots;
 };
 
-/* Count normal BTech instances, excluding DEBUG and other non-persisted types. */
+/* Count normal BTech instances, excluding DEBUG and other non-persisted types.
+ */
 static int btech_special_count_objects(void *key, void *data, int depth,
                                        void *argument) {
   BTECH_SPECIAL_OBJECT_COUNTS *counts = argument;
@@ -3589,7 +3862,8 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite) {
 #define REQUIRE_ROWS(table, rows)                                              \
   do {                                                                         \
     expected = (rows);                                                         \
-    if (expected < 0 || btech_special_table_count(sqlite, table, &actual) < 0 || \
+    if (expected < 0 ||                                                        \
+        btech_special_table_count(sqlite, table, &actual) < 0 ||               \
         actual != expected)                                                    \
       return -1;                                                               \
   } while (0)
@@ -3621,13 +3895,14 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite) {
   return 0;
 }
 
-/* Load every BTech table only after the normal special-object allocators run. */
+/* Load every BTech table only after the normal special-object allocators run.
+ */
 static int btech_special_load_all(sqlite3 *sqlite) {
-#define BTECH_LOAD(stage, function)                                           \
+#define BTECH_LOAD(stage, function)                                            \
   do {                                                                         \
     if ((function)(sqlite) < 0) {                                              \
-      log_error(LOG_ALWAYS, "BTP", "FAIL", "SQLite BTech validation failed at %s.", \
-                (char *)stage);                                               \
+      log_error(LOG_ALWAYS, "BTP", "FAIL",                                     \
+                "SQLite BTech validation failed at %s.", (char *)stage);       \
       return -1;                                                               \
     }                                                                          \
   } while (0)
@@ -3820,7 +4095,8 @@ static int btech_part_from_name(const char *item_name, int *part) {
   size_t item_index;
   int candidate_part;
 
-  for (index = 0; index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
+  for (index = 0;
+       index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
        index++) {
     cost_set = &economy_cost_sets[index];
     for (item_index = 0; item_index < cost_set->count; item_index++) {
@@ -3849,13 +4125,12 @@ static int btech_load_costs(sqlite3 *sqlite) {
   result = -1;
   skipped = 0;
   if (sqlite3_prepare_v2(sqlite,
-                         "SELECT item_name, cost FROM btech_economy_costs;",
-                         -1, &statement, NULL) == SQLITE_OK) {
+                         "SELECT item_name, cost FROM btech_economy_costs;", -1,
+                         &statement, NULL) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       part_name = sqlite3_column_text(statement, 0);
-      if (!part_name ||
-          !btech_part_from_name((const char *)part_name, &part)) {
+      if (!part_name || !btech_part_from_name((const char *)part_name, &part)) {
         skipped++;
       } else if (btech_parse_cost(sqlite3_column_text(statement, 1), &cost) <
                  0) {
@@ -3882,7 +4157,8 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   int exists;
   int has_item_name;
 
-  for (index = 0; index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
+  for (index = 0;
+       index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
        index++)
     memset(economy_cost_sets[index].costs, 0,
            economy_cost_sets[index].count *
@@ -3909,7 +4185,8 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   return btech_load_costs(sqlite);
 }
 
-/* Write non-default advanced-economy prices in the core snapshot transaction. */
+/* Write non-default advanced-economy prices in the core snapshot transaction.
+ */
 static int btech_persistence_store_economy(sqlite3 *sqlite) {
   BTECH_ECONOMY_COST_SET *cost_set;
   sqlite3_stmt *statement;
@@ -3922,20 +4199,19 @@ static int btech_persistence_store_economy(sqlite3 *sqlite) {
   int result;
 
   statement = NULL;
-  if (btech_sqlite_exec(
-          sqlite, "CREATE TABLE btech_economy_costs ("
-                  " item_name TEXT PRIMARY KEY,"
-                  " cost TEXT NOT NULL"
-                  ") WITHOUT ROWID;") < 0 ||
-      sqlite3_prepare_v2(
-          sqlite, "INSERT INTO btech_economy_costs (item_name, cost) "
-                  "VALUES (?, ?);",
-          -1, &statement, NULL) != SQLITE_OK)
+  if (btech_sqlite_exec(sqlite, "CREATE TABLE btech_economy_costs ("
+                                " item_name TEXT PRIMARY KEY,"
+                                " cost TEXT NOT NULL"
+                                ") WITHOUT ROWID;") < 0 ||
+      sqlite3_prepare_v2(sqlite,
+                         "INSERT INTO btech_economy_costs (item_name, cost) "
+                         "VALUES (?, ?);",
+                         -1, &statement, NULL) != SQLITE_OK)
     return -1;
 
   result = 0;
-  for (index = 0;
-       result == 0 && index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
+  for (index = 0; result == 0 && index < sizeof(economy_cost_sets) /
+                                             sizeof(economy_cost_sets[0]);
        index++) {
     cost_set = &economy_cost_sets[index];
     for (item_index = 0; item_index < cost_set->count; item_index++) {
@@ -3943,10 +4219,11 @@ static int btech_persistence_store_economy(sqlite3 *sqlite) {
         continue;
       part = cost_set->first_part + item_index;
       part_name = btech_part_name(part);
-      length = snprintf(cost, sizeof(cost), "%llu", cost_set->costs[item_index]);
+      length =
+          snprintf(cost, sizeof(cost), "%llu", cost_set->costs[item_index]);
       if (!part_name || length < 0 || (size_t)length >= sizeof(cost) ||
-          sqlite3_bind_text(statement, 1, part_name, -1,
-                            SQLITE_TRANSIENT) != SQLITE_OK ||
+          sqlite3_bind_text(statement, 1, part_name, -1, SQLITE_TRANSIENT) !=
+              SQLITE_OK ||
           sqlite3_bind_text(statement, 2, cost, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||
           btech_sqlite_step(statement) < 0) {
@@ -3967,9 +4244,9 @@ int btech_persistence_register(void) {
           btech_persistence_store_special_state) < 0)
     return -1;
 #ifdef BT_ADVANCED_ECON
-  return persistence_register_sqlite_extension(
-      "btech_economy", btech_persistence_load_economy,
-      btech_persistence_store_economy);
+  return persistence_register_sqlite_extension("btech_economy",
+                                               btech_persistence_load_economy,
+                                               btech_persistence_store_economy);
 #else
   return 0;
 #endif

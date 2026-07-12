@@ -113,8 +113,8 @@ void helpindex_load(dbref player) {
   help = helpindex_read(&mudstate.help_htab, mudconf.help_indx);
   whelp = helpindex_read(&mudstate.wizhelp_htab, mudconf.whelp_indx);
   if ((player != NOTHING) && !Quiet(player))
-    notify_printf(player,
-                  "Index entries: Help...%d  Wizhelp...%d", help, whelp);
+    notify_printf(player, "Index entries: Help...%d  Wizhelp...%d", help,
+                  whelp);
 }
 
 void helpindex_init(void) {

@@ -17,13 +17,13 @@
 #include <sys/file.h>
 
 #include "coolmenu.h"
-#include "muxevent/muxevent_alloc.h"
 #include "failures.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
 #include "mech.tech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "mycool.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
@@ -42,7 +42,7 @@
 #include "p.mech.utils.h"
 
 static int doweird = 0;
-static char *weirdbuf;
+static char weirdbuf[LBUF_SIZE];
 
 static void append_status(char *buffer, size_t size, const char *fmt, ...) {
   size_t len = strlen(buffer);
@@ -584,7 +584,6 @@ void mech_status(dbref player, void *data, char *buffer) {
   int i;
   int usex = 0;
   char buf[LBUF_SIZE] = {0};
-  char subbuff[256] = {0};
 
   doweird = 0;
   cch(MECH_USUALSM);
@@ -648,7 +647,7 @@ void mech_status(dbref player, void *data, char *buffer) {
              (int)(MechMaxSpeed(mech) / MP1) * 2 / 3,
              (int)(MechMaxSpeed(mech) / MP1), (int)(MechJumpSpeed(mech) / MP1),
              MechActiveNumsinks(mech));
-    weirdbuf = buf;
+    memcpy(weirdbuf, buf, sizeof(weirdbuf));
 
   } else if (!doheat || (doarmor | doinfo | doweap))
     PrintGenericStatus(player, mech, 1, usex);
@@ -689,7 +688,7 @@ void mech_status(dbref player, void *data, char *buffer) {
 
   // Really strange, short status info.
   if (doweird)
-    notify(player, buf);
+    notify(player, weirdbuf);
 }
 
 void mech_critstatus(dbref player, void *data, char *buffer) {
@@ -1346,7 +1345,7 @@ void PrintWeaponStatus(MECH *mech, dbref player) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "TAG(%s)  ",
                isTAGDestroyed(mech) ? "%cr%chXX%cn"
-               : ((getMech(TAGTarget(mech)) <= 0) ||
+               : ((getMech(TAGTarget(mech)) == NULL) ||
                   (TaggedBy(getMech(TAGTarget(mech))) != mech->mynum))
                    ? (TagRecycling(mech) ? "%cy%chNot Rdy%cn" : "%cgRdy%cn")
                    : tprintf("%s%s%%cn",
@@ -2382,16 +2381,14 @@ static char *show_armor(MECH *mech, const int loc, const int flag, int width) {
   /* XXX: color_string must be 6 chars or less.  */
   static char fieldbuf[6 + 23 + 2 + 1];
 
-  char *fbp = fieldbuf;
-
   const char *color_string;
   const char *armor_string;
 
   int armor_level, armor_value;
 
   /* Sanity check arguments.  */
-  if (width > sizeof(fieldbuf) - 6 - 2 - 1) {
-    width = sizeof(fieldbuf) - 6 - 2 - 1;
+  if (width > (int)(sizeof(fieldbuf) - 6 - 2 - 1)) {
+    width = (int)(sizeof(fieldbuf) - 6 - 2 - 1);
   }
 
   /* Get armor status.  */
@@ -2452,7 +2449,7 @@ void PrintArmorStatus(dbref player, MECH *mech, int owner) {
   char destbuf[LBUF_SIZE], *dbp;
 
   BTS_State current_state = BTS_START_OF_LINE;
-  int tmp_value1, tmp_value2;
+  int tmp_value1 = 0, tmp_value2 = 0;
   int flag;
 
   char tmpbuf[8192];
@@ -2573,7 +2570,7 @@ void PrintArmorStatus(dbref player, MECH *mech, int owner) {
   for (sbp = srcbuf; *sbp; sbp++) {
 #define SAFE_CHR_DBP(c)                                                        \
   do {                                                                         \
-    if ((dbp - destbuf) < (sizeof(destbuf) - 1))                               \
+    if ((size_t)(dbp - destbuf) < (sizeof(destbuf) - 1))                       \
       *dbp++ = (c);                                                            \
   } while (0)
 
@@ -2669,6 +2666,7 @@ void PrintArmorStatus(dbref player, MECH *mech, int owner) {
           /* Expect section number.  */
           tmp_value2 = tmp_value1;
           tmp_value1 = 2;
+          [[fallthrough]];
         }
       case 3: /* location */
         /* Expect section number.  */

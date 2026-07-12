@@ -2,10 +2,10 @@
  * commac.c
  */
 
+#include "commac.h"
 #include "config.h"
 #include "db.h"
 #include "externs.h"
-#include "commac.h"
 
 struct commac *commac_table[NUM_COMMAC];
 
@@ -45,7 +45,6 @@ void purge_commac(void) {
     }
   }
 }
-
 
 struct commac *create_new_commac(void) {
   struct commac *c;

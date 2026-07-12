@@ -76,7 +76,7 @@ void do_list_file(dbref player, dbref cause, int extra, char *arg) {
 static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
   FBLOCK *tfp;
 
-  if (fp->hdr.nchars >= (MBUF_SIZE - sizeof(FBLKHDR))) {
+  if ((size_t)fp->hdr.nchars >= (MBUF_SIZE - sizeof(FBLKHDR))) {
 
     /*
      * We filled the current buffer.  Go get a new one.

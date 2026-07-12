@@ -13,9 +13,9 @@
 #include <sys/file.h>
 
 #include "autopilot.h"
-#include "muxevent/muxevent_alloc.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.mech.build.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3i.h"
@@ -228,7 +228,6 @@ extern void auto_stop_pilot(AUTO *autopilot);
 void newfreemech(dbref key, void **data, int selector) {
   MECH *new = *data;
   MAP *map;
-  AUTO *a;
   int i;
   command_node *temp;
 
@@ -247,40 +246,40 @@ void newfreemech(dbref key, void **data, int selector) {
     if (new->mapindex != -1 && (map = getMap(new->mapindex)))
       remove_mech_from_map(map, new);
     if (MechAuto(new) > 0) {
-      AUTO *a = (AUTO *)FindObjectsData(MechAuto(new));
-      if (a) {
-        auto_stop_pilot(a);
+      AUTO *autopilot = (AUTO *)FindObjectsData(MechAuto(new));
+      if (autopilot) {
+        auto_stop_pilot(autopilot);
         /* Go through the list and remove any leftover nodes */
-        while (dllist_size(a->commands)) {
+        while (dllist_size(autopilot->commands)) {
 
           /* Remove the first node on the list and get the data
            * from it */
-          temp = (command_node *)dllist_remove(a->commands,
-                                               dllist_head(a->commands));
+          temp = (command_node *)dllist_remove(
+              autopilot->commands, dllist_head(autopilot->commands));
 
           /* Destroy the command node */
           auto_destroy_command_node(temp);
         }
 
         /* Destroy the list */
-        dllist_destroy_list(a->commands);
-        a->commands = NULL;
+        dllist_destroy_list(autopilot->commands);
+        autopilot->commands = NULL;
 
         /* Destroy any astar path list thats on the AI */
-        auto_destroy_astar_path(a);
+        auto_destroy_astar_path(autopilot);
 
         /* Destroy profile array */
         for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
-          if (a->profile[i]) {
-            rb_destroy(a->profile[i]);
+          if (autopilot->profile[i]) {
+            rb_destroy(autopilot->profile[i]);
           }
-          a->profile[i] = NULL;
+          autopilot->profile[i] = NULL;
         }
 
         /* Destroy weaponlist */
-        auto_destroy_weaplist(a);
+        auto_destroy_weaplist(autopilot);
 
-        a->mymechnum = -1;
+        autopilot->mymechnum = -1;
       }
       MechAuto(new) = -1;
     }

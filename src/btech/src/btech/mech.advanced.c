@@ -416,11 +416,8 @@ void mech_ultra(dbref player, void *data, char *buffer) {
 
 void mech_inarc_ammo_toggle(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  int wSection, wCritSlot, wWeapType;
-  int wWeapNum = 0;
   int wcArgs = 0;
   char *args[2];
-  char strMode[30];
 
   cch(MECH_USUALO);
 
@@ -562,11 +559,8 @@ void mech_stinger(dbref player, void *data, char *buffer) {
 
 void mech_rac(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  int wSection, wCritSlot, wWeapType;
-  int wWeapNum = 0;
   int wcArgs = 0;
   char *args[2];
-  char strMode[30];
 
   wcArgs = mech_parseattributes(buffer, args, 2);
 
@@ -983,11 +977,8 @@ void mech_scharge(dbref player, void *data, char *buffer) {
 
 static void mech_explode_event(MUXEVENT *e) {
   MECH *mech = (MECH *)e->data;
-  MAP *map;
   long extra = (long)e->data2;
   int i, j, k, damage;
-  int z;
-  int dam;
 
   if (Destroyed(mech) || !Started(mech))
     return;
@@ -1818,7 +1809,7 @@ void mech_mechprefs(dbref player, void *data, char *buffer) {
 
   } else {
 
-    int i;
+    size_t i;
     struct mechpref_info info;
     char *newstate;
 

@@ -211,7 +211,6 @@ void validateC3iNetwork(MECH *mech) {
 
 void mech_c3i_join_leave(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
-  MAP *objMap;
   char *args[2];
   dbref refTarget;
   int LOS = 1;
@@ -248,8 +247,6 @@ void mech_c3i_join_leave(dbref player, void *data, char *buffer) {
   /* Let's check to see if we're already in one... can't be in two at the same
    * time */
   DOCHECK(MechC3iNetworkSize(mech) > 0, "You are already in a C3i network!");
-
-  objMap = getMap(mech->mapindex);
 
   /* Find who we're trying to connect to */
   refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);

@@ -62,9 +62,9 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "muxevent/muxevent_alloc.h"
 #include "debug.h"
 #include "muxevent/muxevent.h"
+#include "muxevent/muxevent_alloc.h"
 
 int muxevent_tick = 0;
 
@@ -112,7 +112,7 @@ void muxevent_add(int time, int flags, int type, void (*func)(MUXEVENT *),
   MUXEVENT *e = (MUXEVENT *)0xDEADBEEF;
   struct timeval tv = {0, 0};
 
-  int i, spot;
+  int i;
 
   if (time < 1)
     time = 1;

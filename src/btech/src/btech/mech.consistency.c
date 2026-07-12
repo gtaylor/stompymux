@@ -357,7 +357,7 @@ int mech_weight_sub_mech(dbref player, MECH *mech, int interactive) {
   hs_eff = HS_Efficiency(mech);
   cl = MechSpecials(mech) & CLAN_TECH;
 #define ADDENTRY(text, weight)                                                 \
-  if (weight) {                                                                \
+  if ((weight) != 0) {                                                         \
     if (interactive > 0) {                                                     \
       addmenu(text);                                                           \
       addmenu(tprintf("      %6.2f", (float)(weight) / 1024.0));               \
@@ -365,7 +365,7 @@ int mech_weight_sub_mech(dbref player, MECH *mech, int interactive) {
     total += weight;                                                           \
   }
 #define ADDENTRY_C(text, count, weight)                                        \
-  if (weight) {                                                                \
+  if ((weight) != 0) {                                                         \
     if (interactive > 0) {                                                     \
       addmenu(text);                                                           \
       addmenu(tprintf("%5d %6.2f", count, (float)(weight) / 1024.0));          \

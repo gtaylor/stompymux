@@ -411,7 +411,6 @@ void cf_log_syntax(dbref player, char *cmd, const char *template, char *arg) {
 
 static int cf_status_from_succfail(dbref player, char *cmd, int success,
                                    int failure) {
-  char *buff;
 
   /*
    * If any successes, return SUCCESS(0) if no failures or * * * * *
@@ -475,36 +474,18 @@ static int cf_bool(int *vp, char *str, long extra, dbref player, char *cmd) {
 
 /*
  * ---------------------------------------------------------------------------
- * * cf_option: Select one option from many choices.
- */
-
-static int cf_option(int *vp, char *str, long extra, dbref player, char *cmd) {
-  int i;
-
-  i = search_nametab(GOD, (NAMETAB *)extra, str);
-  if (i < 0) {
-    cf_log_notfound(player, cmd, "Value", str);
-    return -1;
-  }
-  *vp = i;
-  return 0;
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * cf_string: Set string parameter.
  */
 
 static int cf_string(int *vp, char *str, long extra, dbref player, char *cmd) {
   int retval;
-  char *buff;
 
   /*
    * Copy the string to the buffer if it is not too big
    */
 
   retval = 0;
-  if (strlen(str) >= extra) {
+  if (strlen(str) >= (size_t)extra) {
     str[extra - 1] = '\0';
     if (mudstate.initializing) {
       log_error(LOG_STARTUP, "CNF", "NFND", "%s: String truncated", cmd);
@@ -577,46 +558,6 @@ static int cf_flagalias(int *vp, char *str, long extra, dbref player,
 
 /*
  * ---------------------------------------------------------------------------
- * * cf_or_in_bits: OR in bits from namelist to a word.
- */
-
-static int cf_or_in_bits(int *vp, char *str, long extra, dbref player,
-                         char *cmd) {
-  char *sp;
-  int f, success, failure;
-
-  /*
-   * Walk through the tokens
-   */
-
-  success = failure = 0;
-  sp = strtok(str, " \t");
-  while (sp != NULL) {
-
-    /*
-     * Set the appropriate bit
-     */
-
-    f = search_nametab(GOD, (NAMETAB *)extra, sp);
-    if (f > 0) {
-      *vp |= f;
-      success++;
-    } else {
-      cf_log_notfound(player, cmd, "Entry", sp);
-      failure++;
-    }
-
-    /*
-     * Get the next token
-     */
-
-    sp = strtok(NULL, " \t");
-  }
-  return cf_status_from_succfail(player, cmd, success, failure);
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * cf_modify_bits: set or clear bits in a flag word from a namelist.
  */
 int cf_modify_bits(int *vp, char *str, long extra, dbref player, char *cmd) {
@@ -650,47 +591,6 @@ int cf_modify_bits(int *vp, char *str, long extra, dbref player, char *cmd) {
         *vp &= ~f;
       else
         *vp |= f;
-      success++;
-    } else {
-      cf_log_notfound(player, cmd, "Entry", sp);
-      failure++;
-    }
-
-    /*
-     * Get the next token
-     */
-
-    sp = strtok(NULL, " \t");
-  }
-  return cf_status_from_succfail(player, cmd, success, failure);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * cf_set_bits: Clear flag word and then set specified bits from namelist.
- */
-
-static int cf_set_bits(int *vp, char *str, long extra, dbref player,
-                       char *cmd) {
-  char *sp;
-  int f, success, failure;
-
-  /*
-   * Walk through the tokens
-   */
-
-  success = failure = 0;
-  *vp = 0;
-  sp = strtok(str, " \t");
-  while (sp != NULL) {
-
-    /*
-     * Set the appropriate bit
-     */
-
-    f = search_nametab(GOD, (NAMETAB *)extra, sp);
-    if (f > 0) {
-      *vp |= f;
       success++;
     } else {
       cf_log_notfound(player, cmd, "Entry", sp);
@@ -802,7 +702,7 @@ static int cf_site(long **vp, char *str, long extra, dbref player, char *cmd) {
   addr_num.s_addr = inet_addr(addr_txt);
   mask_num.s_addr = inet_addr(mask_txt);
 
-  if (addr_num.s_addr == -1) {
+  if (addr_num.s_addr == INADDR_NONE) {
     cf_log_syntax(player, cmd, "Bad host address: ", addr_txt);
     return -1;
   }

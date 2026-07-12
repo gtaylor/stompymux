@@ -20,12 +20,12 @@ typedef unsigned char Uchar;
 
 typedef struct confdata CONFDATA;
 struct confdata {
-  int cache_trim;        /* Should cache be shrunk to original size */
-  int cache_steal_dirty; /* Should cache code write dirty attrs */
-  int cache_depth;       /* Number of entries in each cache cell */
-  int cache_width;       /* Number of cache cells */
-  int cache_names;       /* Should object names be cached separately */
-  char gamedb[128];      /* SQLite game database */
+  int cache_trim;           /* Should cache be shrunk to original size */
+  int cache_steal_dirty;    /* Should cache code write dirty attrs */
+  int cache_depth;          /* Number of entries in each cache cell */
+  int cache_width;          /* Number of cache cells */
+  int cache_names;          /* Should object names be cached separately */
+  char gamedb[128];         /* SQLite game database */
   char mech_db[128];        /* Mecha templates */
   char map_db[128];         /* Map templates */
   char config_file[128];    /* name of config file, used by @restart */
@@ -414,8 +414,8 @@ struct statedata {
 #endif
   HASHTAB help_htab;    /* Help topics hashtable */
   HASHTAB wizhelp_htab; /* Wizard help topics hashtable */
-  int attr_next;         /* Next attr to alloc when freelist is empty */
-  OBJQE *qhead;          /* Per Object Queue Entries */
+  int attr_next;        /* Next attr to alloc when freelist is empty */
+  OBJQE *qhead;         /* Per Object Queue Entries */
   OBJQE *qtail;
   BQUE *qwait;           /* Head of wait queue */
   BQUE *qsemfirst;       /* Head of semaphore queue */

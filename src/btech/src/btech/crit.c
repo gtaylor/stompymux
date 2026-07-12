@@ -200,7 +200,6 @@ void NormalizeLocActuatorCrits(MECH *objMech, int wLoc) {
 
 void NormalizeAllActuatorCrits(MECH *objMech) {
   int wLegsDestroyed = CountDestroyedLegs(objMech);
-  int wMaxTemplateSpeed = 0;
 
   /* reset us back to zero */
   MechPilotSkillBase(objMech) = 0;
@@ -2235,6 +2234,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     case DS_MECHDOOR:
       mech_notify(wounded, MECHALL,
                   "One of the 'mech doors has been rendered useless!");
+      [[fallthrough]];
     case NULL_SIGNATURE_SYSTEM:
       mech_notify(wounded, MECHALL,
                   "Your Null Signature System has been destroyed!");

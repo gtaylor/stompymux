@@ -146,8 +146,6 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
   int critType;
   int nhs = 0;
   int tDoAutoFall = 0;
-  int tNormalizeAllCrits = 0;
-  int tNormalizeLocCrits = 0;
   int tIsLeg = ((hitloc == RLEG || hitloc == LLEG) ||
                 ((hitloc == RARM || hitloc == LARM) && (MechIsQuad(wounded))));
 
@@ -183,7 +181,6 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
         case UPPER_ACTUATOR:
         case LOWER_ACTUATOR:
         case HAND_OR_FOOT_ACTUATOR:
-          tNormalizeLocCrits = 1;
           break;
         case SHOULDER_OR_HIP:
           if (tIsLeg) {
@@ -193,9 +190,7 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
               if (!MechIsQuad(wounded))
                 MechCritStatus(wounded) |= HIP_DESTROYED;
             }
-            tNormalizeAllCrits = 1;
-          } else
-            tNormalizeLocCrits = 1;
+          }
           break;
         case HEAT_SINK:
           if (MechSpecials(wounded) & DOUBLE_HEAT_TECH) {
@@ -295,10 +290,7 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
       tDoAutoFall = 1;
       StopStand(wounded);
     }
-    /*		if(tNormalizeAllCrits) */
     NormalizeAllActuatorCrits(wounded);
-    /*		else if(tNormalizeLocCrits)
-                            NormalizeLocActuatorCrits(wounded, hitloc); */
     if (tIsLeg && !Fallen(wounded) && !Jumping(wounded) && !OODing(wounded) &&
         attacker) {
       if (tDoAutoFall) {

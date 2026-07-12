@@ -794,7 +794,7 @@
 
 #define TEMPLATE_ERR(a, ...)                                                   \
   if (a) {                                                                     \
-    notify(player, tprintf(__VA_ARGS__));                                     \
+    notify(player, tprintf(__VA_ARGS__));                                      \
     if (fp)                                                                    \
       fclose(fp);                                                              \
     return -1;                                                                 \
@@ -803,7 +803,7 @@
 #define TEMPLATE_GERR(a, ...)                                                  \
   if (a) {                                                                     \
     char foobarbuf[LBUF_SIZE] = {0};                                           \
-    snprintf(foobarbuf, sizeof(foobarbuf), __VA_ARGS__);                      \
+    snprintf(foobarbuf, sizeof(foobarbuf), __VA_ARGS__);                       \
     SendError(foobarbuf);                                                      \
     if (fp)                                                                    \
       fclose(fp);                                                              \

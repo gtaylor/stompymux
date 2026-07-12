@@ -11,8 +11,8 @@
 #include "interface.h"
 #include "match.h"
 #include "mudconf.h"
-#include "powers.h"
 #include "persistence/restart_persistence.h"
+#include "powers.h"
 #include "rbtab.h"
 #include <signal.h>
 
@@ -962,7 +962,8 @@ void do_restart(dbref player, dbref cause, int key) {
   }
 
   if (restart_persistence_store() < 0) {
-    raw_broadcast(0, "Game: Restart failed while saving SQLite continuation state.");
+    raw_broadcast(
+        0, "Game: Restart failed while saving SQLite continuation state.");
     return;
   }
   shutdown_services();
@@ -1372,22 +1373,6 @@ int exit_displayable(dbref exit, dbref player, int key) {
   if (key & (VE_LOC_DARK | VE_BASE_DARK))
     return 0; // Dark loc or base
   return 1;   // Default
-}
-
-/**
- * Return next exit that is ok to see.
- */
-static dbref next_exit(dbref player, dbref this, int exam_here) {
-  if (isRoom(this))
-    return NOTHING;
-  if (isExit(this) && exam_here)
-    return this;
-
-  while ((this != NOTHING) && Dark(this) && !Light(this) &&
-         !Examinable(player, this))
-    this = Next(this);
-
-  return this;
 }
 
 /**

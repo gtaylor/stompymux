@@ -74,7 +74,7 @@ extern int fwdlist_ck(int, dbref, dbref, int, char *);
 /*
  * list of attributes
  */
-ATTR attr[] = {
+ATTR attr_table[] = {
     {"Aahear", A_AAHEAR, AF_ODARK, NULL},
     {"Aclone", A_ACLONE, AF_ODARK, NULL},
     {"Aconnect", A_ACONNECT, AF_ODARK, NULL},
@@ -500,7 +500,6 @@ INLINE char *PureName(dbref thing) {
     }
     if (!purenames[thing]) {
       buff = atr_get(thing, A_NAME, &aowner, &aflags);
-      strncpy(new, buff, LBUF_SIZE - 1);
       set_string(&purenames[thing], strip_ansi_r(new, buff, strlen(buff)));
       free_lbuf(buff);
     }
@@ -508,7 +507,6 @@ INLINE char *PureName(dbref thing) {
   }
 
   atr_get_str((char *)tbuff, thing, A_NAME, &aowner, &aflags);
-  strncpy(new, (char *)tbuff, LBUF_SIZE - 1);
   return (strip_ansi_r(new, (char *)tbuff, strlen((char *)tbuff)));
 }
 
@@ -746,7 +744,7 @@ void init_attrtab(void) {
 
   hashinit(&mudstate.attr_name_htab, 512);
   buff = alloc_sbuf("init_attrtab");
-  for (a = attr; a->number; a++) {
+  for (a = attr_table; a->number; a++) {
     anum_extend(a->number);
     anum_set(a->number, a);
     for (p = buff, q = (char *)a->name; *q; p++, q++)
@@ -985,7 +983,7 @@ static void atr_decode(char *iattr, char *oattr, dbref thing, dbref *owner,
                        long *flags, int atr) {
   char *cp;
   int neg;
-  int attrOwner, attrFlags;
+  int attrOwner;
 
   /*
    * See if the first char of the attribute is the special character
@@ -1429,15 +1427,6 @@ void atr_free(dbref thing) {
 }
 
 /*
- * garbage collect an attribute list
- */
-static void atr_collect(dbref thing) {
-  /*
-   * Nada.  gdbm takes care of us.  I hope ;-)
-   */
-}
-
-/*
  * ---------------------------------------------------------------------------
  * * atr_cpy: Copy all attributes from one object to another.  Takes the
  * * player argument to ensure that only attributes that COULD be set by
@@ -1830,6 +1819,7 @@ void putstring(FILE *f, const char *s) {
     case '\\':
     case '"':
       putc('\\', f);
+      [[fallthrough]];
     default:
       putc(*s, f);
     }
@@ -1941,12 +1931,14 @@ BOOLEXP *dup_bool(BOOLEXP *b) {
   case BOOLEXP_AND:
   case BOOLEXP_OR:
     r->sub2 = dup_bool(b->sub2);
+    [[fallthrough]];
   case BOOLEXP_NOT:
   case BOOLEXP_CARRY:
   case BOOLEXP_IS:
   case BOOLEXP_OWNER:
   case BOOLEXP_INDIR:
     r->sub1 = dup_bool(b->sub1);
+    [[fallthrough]];
   case BOOLEXP_CONST:
     r->thing = b->thing;
     break;

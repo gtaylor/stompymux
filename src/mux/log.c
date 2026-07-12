@@ -51,7 +51,7 @@ char *strip_ansi_r(char *dest, const char *raw, size_t n) {
   char *p = (char *)raw;
   char *q = dest;
 
-  while (p && *p && ((q - dest) < n)) {
+  while (p && *p && ((size_t)(q - dest) < n)) {
     if (*p == ESC_CHAR) {
       /*
        * Start of ANSI code. Skip to end.
@@ -71,7 +71,7 @@ char *normal_to_white_r(char *dest, const char *raw, size_t n) {
   char *p = (char *)raw;
   char *q = dest;
 
-  while (p && *p && ((q - dest) < n)) {
+  while (p && *p && ((size_t)(q - dest) < n)) {
     if (*p == ESC_CHAR) {
       /*
        * Start of ANSI code.
@@ -83,7 +83,7 @@ char *normal_to_white_r(char *dest, const char *raw, size_t n) {
                     * [ character.
                     */
       if (*p == '0') {
-        if ((q - dest + 7) < n) {
+        if ((size_t)(q - dest + 7) < n) {
           memcpy(q, "0m\x1b[37m", 7);
           q += 7;
         }
@@ -140,6 +140,7 @@ int start_log(const char *primary, const char *secondary) {
     if (mudstate.logging == 1)
       return 1;
     fprintf(stderr, "Recursive logging request.\r\n");
+    [[fallthrough]];
   default:
     mudstate.logging--;
   }
@@ -325,9 +326,9 @@ int log_to_file(dbref thing, const char *logfile, const char *message) {
   if (!logfile || !*logfile || strlen(logfile) > 200)
     return 0; /* invalid logfile name */
 
-  if (strstr(pathname, "..") != NULL)
+  if (strstr(logfile, "..") != NULL)
     return 0;
-  if (strstr(pathname, "/") != NULL)
+  if (strstr(logfile, "/") != NULL)
     return 0;
   snprintf(pathname, 210, "logs/%s", logfile);
 

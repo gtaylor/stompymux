@@ -49,7 +49,6 @@ void mech_staggercheck_heartbeat(MECH *mech) {
   int curStaggerDamage = 0;
   int prevStaggerDamage = 0;
   int staggerLevel = 0;
-  int headingChange = 0;
 
   // if we've not checked stagger since last time... ruhroh!
   if (now - (mech)->rd.lastStaggerCheck >= mudconf.btech_newstaggertime) {
@@ -181,16 +180,14 @@ void mech_fall_event(MUXEVENT *e) {
 /* This is just a 'toy' event */
 void mech_lock_event(MUXEVENT *e) {
   MECH *mech = (MECH *)e->data;
-  MAP *map;
   MECH *target;
 
   if (MechTarget(mech) >= 0) {
-    map = getMap(mech->mapindex);
     target = FindObjectsData(MechTarget(mech));
     if (!target)
       return;
     if (!InLineOfSight(mech, target, MechX(target), MechY(target),
-                       FlMechRange(map, mech, target)))
+                       FaMechRange(mech, target)))
       return;
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on %s.",
                 GetMechToMechID(mech, target));

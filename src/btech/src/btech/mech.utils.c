@@ -1024,7 +1024,8 @@ int FindAmmunition(MECH *mech, unsigned char *weaparray,
                    unsigned int *modearray, int returnall) {
   int loop;
   int weapcount = 0;
-  int temp, data, mode;
+  int temp, data;
+  unsigned int mode;
   int index, i, j, duplicate;
 
   for (index = 0; index < NUM_SECTIONS; index++)
@@ -1472,7 +1473,7 @@ int FindDestructiveAmmo(MECH *mech, int *section, int *critical) {
   int critloop;
   int maxdamage = 0;
   int damage;
-  int weapindx;
+  [[maybe_unused]] int weapindx;
   int i;
   int type, data;
 
@@ -1632,7 +1633,6 @@ void ArmorStringFromIndex(int index, char *buffer, char type, char mtype) {
     high = NUM_AERO_SECTIONS;
     break;
   case CLASS_SPHEROID_DS:
-    high = NUM_DS_SECTIONS;
   case CLASS_DS:
     high = NUM_DS_SECTIONS;
     break;
@@ -2764,7 +2764,6 @@ unsigned long long int CalcFasaCost(MECH *mech) {
   unsigned short ammo[8 * MAX_WEAPS_SECTION];
   unsigned short ammomax[8 * MAX_WEAPS_SECTION];
   unsigned int modearray[8 * MAX_WEAPS_SECTION];
-  int temp;
   int engine_size = 0;
   int has_sword = 0;
   int clan_case_sections[NUM_SECTIONS];
@@ -2991,14 +2990,18 @@ unsigned long long int CalcFasaCost(MECH *mech) {
 
     /* Armor */
     int total_armor = 0;
+#if COST_DEBUG
     int orig_armor = 0;
+#endif
     int armor_section = 0;
     for (armor_section = 0; armor_section < NUM_SECTIONS; ++armor_section) {
       total_armor += GetSectOArmor(mech, armor_section);
       total_armor += GetSectORArmor(mech, armor_section);
     }
 
+#if COST_DEBUG
     orig_armor = total_armor;
+#endif
 
     if (MechSpecials(mech) & FF_TECH)
       total_armor =
@@ -3319,7 +3322,6 @@ float Calculate_Defensive_BV(MECH *mech) {
   int jump_mp = 0;
   int move_mod = 0;
   int run_mp = 0;
-  int run_mp_unmod = 0;
   float def_factor = 0.0;
   char buff[50];
 
@@ -3514,7 +3516,7 @@ float Calculate_Defensive_BV(MECH *mech) {
 
   /* Determine base mp */
   jump_mp = (int)(MechJumpSpeed(mech) / MP1);
-  run_mp_unmod = run_mp = (int)(MMaxSpeed(mech) / MP1);
+  run_mp = (int)(MMaxSpeed(mech) / MP1);
 
   if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
     run_mp = ceil((rint((MMaxSpeed(mech) / 1.5) / MP1) + 1) * 1.5);
@@ -3576,7 +3578,7 @@ float Calculate_Offensive_BV(MECH *mech) {
   int heat_sinks;
   int jump_mp;
   int i, ii, j;
-  int weapindx;
+  [[maybe_unused]] int weapindx;
   int count;
   int tablecount = 0;
   unsigned char weaparray[MAX_WEAPS_SECTION];
@@ -3587,7 +3589,6 @@ float Calculate_Offensive_BV(MECH *mech) {
   int bvtable[64];
   int wt, bt, ht;
   int heatcount = 0;
-  int weapbv = 0;
 
   /* First Find Heat Efficiency */
 
@@ -4248,7 +4249,7 @@ int HeatFactor(MECH *mech) {
    Returns -(# of crits) if partially damaged.
    remember that values 3 means the weapon IS NOT destroyed.  */
 int WeaponIsNonfunctional(MECH *mech, int section, int crit, int numcrits) {
-  int sum = 0, disabled = 0, dested = 0;
+  int disabled = 0, dested = 0;
   int count = 0, nloc, ncrit, stype;
   int i;
 
@@ -4300,7 +4301,6 @@ int WeaponIsNonfunctional(MECH *mech, int section, int crit, int numcrits) {
 char *UnitPartsList(MECH *mech, int mode) {
 
   static char sbuff[LBUF_SIZE];
-  char *weapstring;
   char *bp = sbuff;
 
   memset(sbuff, '\0', sizeof(sbuff));

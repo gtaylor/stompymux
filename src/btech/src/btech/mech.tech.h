@@ -67,8 +67,9 @@
 #define TECHCOMMANDH(a) void a(dbref player, void *data, char *buffer)
 #define TECHCOMMANDB                                                           \
   MECH *mech = (MECH *)data;                                                   \
-  int loc, part, t, full, now, from, to, change, mod = 2, isds = 0;            \
-  char *c;
+  [[maybe_unused]] int loc, part, t, full, now, from, to, change, mod = 2,     \
+                                                                  isds = 0;    \
+  [[maybe_unused]] char *c;
 
 #define TECHCOMMANDC                                                           \
   DOCHECK(!(Tech(player)), "Insufficient clearance to access the command.");   \

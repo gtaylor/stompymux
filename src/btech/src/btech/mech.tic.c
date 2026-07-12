@@ -141,20 +141,16 @@ int firetic_sub_func(MECH *mech, dbref player, int low, int high) {
 }
 
 void firetic_sub(dbref player, MECH *mech, char *buffer) {
-  MAP *mech_map;
   int ticnum, argc;
   char *args[5];
-  unsigned long weaps;
 
   DOCHECK((argc = mech_parseattributes(buffer, args, 5)) < 1,
           "Not enough arguments to function");
-  mech_map = getMap(mech->mapindex);
   ticnum = atoi(args[0]);
   DOCHECK(!(ticnum >= 0 && ticnum < NUM_TICS), "TIC out of range!");
 
   /*   notify (player, tprintf ("Firing all weapons in TIC #%d at default
    * target!", ticnum)); */
-  weaps = 1;
   ftflag = 1;
   temp_args = args;
   temp_argc = argc;

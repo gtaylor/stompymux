@@ -38,7 +38,6 @@ void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
   int total_damage = 0;
   int clear_damage = 0;
   int hitloc;
-  int tCheckWoodsDamageDecrement = 0;
   MAP *mech_map = getMap(mech->mapindex);
   char buf[SBUF_SIZE];
 
@@ -49,7 +48,6 @@ void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
       (ammoMode > -1) &&
       ((MechZ(target) - 2) <=
        Elevation(mech_map, MechX(target), MechY(target)))) {
-    tCheckWoodsDamageDecrement = 1;
     clear_damage = total_damage;
 
     if (GetRTerrain(mech_map, MechX(target), MechY(target)) == LIGHT_FOREST)
@@ -190,7 +188,7 @@ int MissileHitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
   int AMStype, ammoLoc, ammoCrit;
   int AMSShotdown = 0;
   int hit;
-  int i, j = -1, k, l = 0;
+  int j = -1;
   int wNARCType = 0;
   int ammoMode = GetPartAmmoMode(mech, wSection, wCritSlot);
   int tIsInferno = (ammoMode & INFERNO_MODE);

@@ -11,12 +11,12 @@
 #include "rbtab.h"
 
 #include <arpa/inet.h>
+#include <event.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/select.h>
-#include <event.h>
 
 /* these symbols must be defined by the interface */
 

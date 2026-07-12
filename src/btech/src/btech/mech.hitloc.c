@@ -235,6 +235,7 @@ int FindKickLocation(MECH *target, int hitGroup) {
       case 6:
         return LLEG;
       }
+      break;
     case RIGHTSIDE:
       return RLEG;
     }
@@ -431,6 +432,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
       return Number(0, NUM_BSUIT_MEMBERS - 1);
+    [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
     switch (hitGroup) {
@@ -464,6 +466,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
@@ -494,6 +497,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case FRONT:
     case BACK:
       switch (roll) {
@@ -976,6 +980,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         // Aft/Weapon
         return AERO_AFT;
       }
+      break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
@@ -1078,6 +1083,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 10:
         return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
       }
+      break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
@@ -1107,6 +1113,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           *iscritical = 1;
         return side;
       }
+      break;
     case BACK:
       switch (roll) {
       case 2:
@@ -1672,6 +1679,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
       return Number(0, NUM_BSUIT_MEMBERS - 1);
+    [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
     switch (hitGroup) {
@@ -1701,6 +1709,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
@@ -1727,6 +1736,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case FRONT:
     case BACK:
       switch (roll) {
@@ -1915,6 +1925,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 10:
         return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
       }
+      break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
@@ -1938,6 +1949,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 12:
         return side;
       }
+      break;
     case BACK:
       switch (roll) {
       case 2:
@@ -2197,6 +2209,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
       return Number(0, NUM_BSUIT_MEMBERS - 1);
+    [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
     switch (hitGroup) {
@@ -2232,6 +2245,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
@@ -2264,6 +2278,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
+      break;
     case FRONT:
     case BACK:
       switch (roll) {
@@ -2484,6 +2499,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 10:
         return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
       }
+      break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
@@ -2513,6 +2529,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
           *iscritical = 1;
         return side;
       }
+      break;
     case BACK:
       switch (roll) {
       case 2:
@@ -3040,6 +3057,7 @@ int FindTCHitLoc(MECH *mech, MECH *target, int *isrear, int *iscritical) {
           return AERO_AFT;
         break;
       }
+      [[fallthrough]];
     case CLASS_VEH_GROUND:
     case CLASS_VEH_NAVAL:
     case CLASS_VTOL:

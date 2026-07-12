@@ -19,16 +19,16 @@
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
-#include "persistence/gamedb.h"
-#include "persistence/restart_persistence.h"
 #include "interface.h"
 #include "logcache.h"
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"
-#include "powers.h"
 #include "persistence/btech_persistence.h"
 #include "persistence/commac_persistence.h"
+#include "persistence/gamedb.h"
+#include "persistence/restart_persistence.h"
+#include "powers.h"
 #include "timer.h"
 #include "vattr.h"
 #include "version.h"
@@ -460,6 +460,7 @@ void notify_checked(dbref target, dbref sender, const char *msg, int key) {
       free_lbuf(colbuf);
     if (!mudconf.player_listen)
       check_listens = 0;
+    [[fallthrough]];
   case TYPE_THING:
   case TYPE_ROOM:
 
@@ -814,9 +815,7 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
   return;
 }
 
-int dump_database_internal(int dump_type) {
-  return gamedb_dump(dump_type);
-}
+int dump_database_internal(int dump_type) { return gamedb_dump(dump_type); }
 
 void dump_database(void) {
   mudstate.dumping = 1;
@@ -841,8 +840,7 @@ void fork_and_dump(int key) {
     raw_broadcast(0, "%s", mudconf.dump_msg);
 
   mudstate.dumping = 1;
-  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
-            mudconf.gamedb);
+  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s", mudconf.gamedb);
 
   pcache_sync();
 
@@ -993,13 +991,12 @@ void do_readcache(dbref player, dbref cause, int key) {
 static void process_preload(void) {
   dbref thing, parent, aowner;
   long aflags;
-  int lev, i;
+  int lev;
   char *tstr;
   FWDLIST *fp;
 
   fp = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
   tstr = alloc_lbuf("process_preload.string");
-  i = 0;
   DO_WHOLE_DB(thing) {
 
     /*
@@ -1052,15 +1049,15 @@ int main(int argc, char *argv[]) {
   int mindb;
   int restarting;
 
-  if (argc > 3 || (argc > 2 && strcmp(argv[1], "-s") &&
-                   strcmp(argv[1], "--restart"))) {
+  if (argc > 3 ||
+      (argc > 2 && strcmp(argv[1], "-s") && strcmp(argv[1], "--restart"))) {
     fprintf(stderr, "Usage: %s [-s|--restart] [config-file]\n", argv[0]);
     exit(1);
   }
 
   event_init();
 
-  mindb = 0;   /* Are we creating a new db? */
+  mindb = 0; /* Are we creating a new db? */
   restarting = 0;
   config_file = (char *)CONF_FILE;
   if (argc > 1) {
@@ -1105,7 +1102,8 @@ int main(int argc, char *argv[]) {
   cf_read(config_file);
 
   if (!*mudconf.gamedb) {
-    fprintf(stderr, "Required configuration directive game_database is missing.\n");
+    fprintf(stderr,
+            "Required configuration directive game_database is missing.\n");
     exit(2);
   }
 

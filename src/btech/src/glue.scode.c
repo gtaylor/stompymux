@@ -63,9 +63,8 @@ typedef struct {
   int size;
 } GMV;
 
-static MECH tmpm;
-static MAP tmpmap;
-static TURRET_T tmpturret;
+[[maybe_unused]] static MECH tmpm;
+[[maybe_unused]] static MAP tmpmap;
 
 enum {
   TYPE_STRING,
@@ -414,8 +413,8 @@ static char *bv2text(int i) {
 #endif
 
 static GMV xcode_data[] = {
-    {GTYPE_MECH, "mapindex", offsetof(MECH, mapindex), TYPE_DBREF_RO},
-    {GTYPE_MECH, "id", mechIDfunc, TYPE_STRFUNC},
+    {GTYPE_MECH, "mapindex", offsetof(MECH, mapindex), TYPE_DBREF_RO, 0},
+    {GTYPE_MECH, "id", mechIDfunc, TYPE_STRFUNC, 0},
     MeEntryS("mechname", MechType_Name, TYPE_STRING, 31),
     MeEntry("maxspeed", MechMaxSpeed, TYPE_FLOAT),
     MeEntryS("unit_era", MechUnitEra, TYPE_STRING, 25),
@@ -455,14 +454,14 @@ static GMV xcode_data[] = {
     MeEntry("SwarmTarget", MechSwarmTarget, TYPE_DBREF),
     MeEntry("SwarmedBy", MechSwarmer, TYPE_DBREF),
 
-    {GTYPE_MECH, "mechtype", mechTypefunc, TYPE_STRFUNC_BD},
-    {GTYPE_MECH, "mechmovetype", mechMovefunc, TYPE_STRFUNC_BD},
-    {GTYPE_MECH, "mechdamage", mechDamagefunc, TYPE_STRFUNC_BD},
-    {GTYPE_MECH, "techtime", mechTechTimefunc, TYPE_STRFUNC},
-    {GTYPE_MECH, "centdist", mechCentDistfunc, TYPE_STRFUNC},
-    {GTYPE_MECH, "centbearing", mechCentBearingfunc, TYPE_STRFUNC},
-    {GTYPE_MECH, "sensors", mechSensorInfo, TYPE_STRFUNC},
-    {GTYPE_MECH, "mechref", mech_getset_ref, TYPE_STRFUNC_BD},
+    {GTYPE_MECH, "mechtype", mechTypefunc, TYPE_STRFUNC_BD, 0},
+    {GTYPE_MECH, "mechmovetype", mechMovefunc, TYPE_STRFUNC_BD, 0},
+    {GTYPE_MECH, "mechdamage", mechDamagefunc, TYPE_STRFUNC_BD, 0},
+    {GTYPE_MECH, "techtime", mechTechTimefunc, TYPE_STRFUNC, 0},
+    {GTYPE_MECH, "centdist", mechCentDistfunc, TYPE_STRFUNC, 0},
+    {GTYPE_MECH, "centbearing", mechCentBearingfunc, TYPE_STRFUNC, 0},
+    {GTYPE_MECH, "sensors", mechSensorInfo, TYPE_STRFUNC, 0},
+    {GTYPE_MECH, "mechref", mech_getset_ref, TYPE_STRFUNC_BD, 0},
 
     MeEntry("fuel", AeroFuel, TYPE_INT),
     MeEntry("fuel_orig", AeroFuelOrig, TYPE_INT),
@@ -542,7 +541,7 @@ static GMV xcode_data[] = {
     MeEntry("units_killed", MechUnitsKilled, TYPE_INT),
     MeEntry("hexes_walked", MechHexes, TYPE_FLOAT),
 
-    {-1, NULL, 0, TYPE_STRING}};
+    {-1, NULL, 0, TYPE_STRING, 0}};
 
 void fun_zmechs(char *buff, char **bufc, dbref player, dbref cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
@@ -672,10 +671,10 @@ static char *RetrieveValue(void *data, int i) {
     snprintf(buf, LBUF_SIZE, "%.2f", (float)*((float *)bar));
     break;
   case TYPE_BV:
-    strncpy(buf, bv2text((int)*((int *)bar)), LBUF_SIZE);
+    snprintf(buf, LBUF_SIZE, "%s", bv2text((int)*((int *)bar)));
     break;
   case TYPE_CBV:
-    strncpy(buf, bv2text((int)*((char *)bar)), LBUF_SIZE);
+    snprintf(buf, LBUF_SIZE, "%s", bv2text((int)*((char *)bar)));
     break;
   }
   return buf;
@@ -1482,7 +1481,7 @@ void fun_btticweaps(char *buff, char **bufc, dbref player, dbref cause,
 
   MECH *mech;
   dbref it;
-  int i, j, k, l, section, critical;
+  int j, k, l, section, critical;
   int ticnum;
 
   it = match_thing(player, fargs[0]);
@@ -1630,14 +1629,13 @@ void fun_btremovestores(char *buff, char **bufc, dbref player, dbref cause,
   /* fargs[1] = name of the part */
   /* fargs[2] = amount */
   dbref it;
-  int i = -1, spec;
+  int i = -1;
   int num = 0;
   void *foo;
   int p, b;
 
   it = match_thing(player, fargs[0]);
   FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
-  spec = WhichSpecial(it);
   FUNCHECK(!(foo = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK(Readnum(num, fargs[2]), "#-2 Illegal Value");
@@ -1725,7 +1723,7 @@ void fun_btgetrange(char *buff, char **bufc, dbref player, dbref cause,
   dbref mechAdb, mechBdb, mapdb;
   MECH *mechA, *mechB;
   MAP *map;
-  float fxA, fyA, fzA, fxB, fyB, fzB;
+  float fxA, fyA, fxB, fyB;
   int xA, yA, zA, xB, yB, zB;
 
   FUNCHECK(!WizR(player), "#=1 PERMISSION DENIED");
@@ -1962,7 +1960,6 @@ void fun_bttechlist(char *buff, char **bufc, dbref player, dbref cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
   dbref it;
   MECH *mech;
-  int i, ii, part = 0, axe = 0, sword = 0, mace = 0, hascase = 0;
   char *infostr;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -1976,9 +1973,7 @@ void fun_bttechlist(char *buff, char **bufc, dbref player, dbref cause,
 
 void fun_bttechlist_ref(char *buff, char **bufc, dbref player, dbref cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  dbref it;
   MECH *mech;
-  int i, ii, part = 0, axe = 0, sword = 0, mace = 0, hascase = 0;
   char *infostr;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -2009,7 +2004,6 @@ void fun_btshowstatus_ref(char *buff, char **bufc, dbref player, dbref cause,
                           int ncargs) {
   dbref outplayer;
   MECH *mech;
-  char *infostr;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
@@ -2027,7 +2021,6 @@ void fun_btshowwspecs_ref(char *buff, char **bufc, dbref player, dbref cause,
                           int ncargs) {
   dbref outplayer;
   MECH *mech;
-  char *infostr;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
@@ -2045,7 +2038,6 @@ void fun_btshowcritstatus_ref(char *buff, char **bufc, dbref player,
                               char *cargs[], int ncargs) {
   dbref outplayer;
   MECH *mech;
-  char *infostr;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
@@ -2237,7 +2229,7 @@ void fun_btsetxy(char *buff, char **bufc, dbref player, dbref cause,
 
    */
   dbref mechdb, mapdb;
-  int x, y, z;
+  int x, y, z = 0;
   MECH *mech;
   MECH *towee = NULL;
   MAP *map;
@@ -2512,7 +2504,7 @@ void fun_btparttype(char *buff, char **bufc, dbref player, dbref cause,
 void fun_btgetpartcost(char *buff, char **bufc, dbref player, dbref cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs) {
 #ifdef BT_ADVANCED_ECON
-  int i = -1, p, index, b;
+  int i = -1, p, b;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   if (!find_matching_long_part(fargs[0], &i, &p, &b)) {
@@ -2532,7 +2524,7 @@ void fun_btgetpartcost(char *buff, char **bufc, dbref player, dbref cause,
 void fun_btsetpartcost(char *buff, char **bufc, dbref player, dbref cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs) {
 #ifdef BT_ADVANCED_ECON
-  int i = -1, p, index, b;
+  int i = -1, p, b;
   unsigned long long int cost;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");

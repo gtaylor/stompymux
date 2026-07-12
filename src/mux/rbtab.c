@@ -44,7 +44,6 @@ void hashreset(RBTAB *htab) {
  */
 
 void *hashfind(char *str, RBTAB *htab) {
-  int hval, numchecks;
   struct string_dict_entry *ent;
 
   htab->checks++;

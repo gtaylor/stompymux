@@ -23,8 +23,8 @@ void ShowText(char **mapt, dbref player);
    Simple menu system for cool menus ;-)
    */
 #include "coolmenu.h"
-#include "muxevent/muxevent_alloc.h"
 #include "db.h"
+#include "muxevent/muxevent_alloc.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

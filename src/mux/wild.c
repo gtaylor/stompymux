@@ -52,6 +52,7 @@ int quick_wild(char *tstr, char *dstr) {
       /*
        * FALL THROUGH
        */
+      [[fallthrough]];
     default:
       /*
        * Literal character.  Check for a match. * If * * *
@@ -160,6 +161,7 @@ static int wild1(char *tstr, char *dstr, int arg) {
       /*
        * FALL THROUGH
        */
+      [[fallthrough]];
     default:
       /*
        * Literal character.  Check for a match. * If * * *

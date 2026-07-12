@@ -124,7 +124,7 @@ struct timeval update_quotas(struct timeval last, struct timeval current) {
  */
 void choke_player(dbref player) {
   DESC *d;
-  int eins = 1, null = 0;
+  int eins = 1;
 
   DESC_ITER_PLAYER(player, d) {
     if (d->chokes == 0) {
@@ -141,7 +141,7 @@ void choke_player(dbref player) {
 
 void release_player(dbref player) {
   DESC *d;
-  int eins = 1, null = 0;
+  int null = 0;
 
   DESC_ITER_PLAYER(player, d) {
     d->chokes--;
@@ -303,7 +303,6 @@ void clearstrings(DESC *d) {
  */
 
 void queue_write(DESC *d, const char *b, int n) {
-  int retval;
   if (n <= 0)
     return;
 
@@ -324,7 +323,6 @@ void queue_string(DESC *d, const char *s) {
 }
 
 void freeqs(DESC *d) {
-  CBLK *cb, *cnext;
 
   d->input_tail = 0;
   memset(d->input, 0, sizeof(d->input));
@@ -827,7 +825,7 @@ static char *trimmed_name(dbref player) {
 static char *trimmed_site(char *name) {
   static char buff[MBUF_SIZE];
 
-  if ((strlen(name) <= mudconf.site_chars) || (mudconf.site_chars == 0))
+  if (mudconf.site_chars <= 0 || strlen(name) <= (size_t)mudconf.site_chars)
     return name;
   StringCopyTrunc(buff, name, mudconf.site_chars);
   buff[mudconf.site_chars + 1] = '\0';

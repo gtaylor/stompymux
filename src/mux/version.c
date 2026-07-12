@@ -22,8 +22,7 @@ char *mux_version = BTMUX_VERSION_STRING
 #else
     " RELEASE"
 #endif
-    " built on " MUX_BUILD_DATE
-    ;
+    " built on " MUX_BUILD_DATE;
 
 void init_version(void) {
   strlcpy(mudstate.version, mux_version, sizeof(mudstate.version));

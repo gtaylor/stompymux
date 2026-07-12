@@ -446,7 +446,6 @@ void mech_embark(dbref player, void *data, char *buffer) {
   MECH *target, *towee = NULL;
   int tmp;
   dbref target_num;
-  MAP *newmap;
   int argc;
   char *args[4];
   char fail_mesg[SBUF_SIZE];
@@ -599,7 +598,6 @@ void mech_embark(dbref player, void *data, char *buffer) {
     DOCHECK(((MechTons(mech) + MechTons(towee)) * 100) > CargoSpace(target),
             "Not enough cargospace for you and your towed unit!");
   }
-  newmap = getMap(mech->mapindex);
   if (MechType(mech) == CLASS_BSUIT) {
     mech_notify(mech, MECHALL,
                 tprintf("You climb into %s.", GetMechID(target)));

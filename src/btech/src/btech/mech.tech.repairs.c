@@ -142,6 +142,7 @@ static void describe_repairs(MUXEVENT *e) {
              "%5s Replacing suit", buf);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
   // Added Reseal description
   case EVENT_REPAIR_RESE:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%5s Reseal",

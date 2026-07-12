@@ -68,7 +68,7 @@ static void aero_takeoff_event(MUXEVENT *e) {
   long count = (long)e->data2;
 
   if (IsDS(mech))
-    for (i = 0; i < NUM_LAND_TYPES; i++)
+    for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
       if (MechType(mech) == land_data[i].type)
         break;
   if (count > 0) {
@@ -117,7 +117,7 @@ static void aero_takeoff_event(MUXEVENT *e) {
       mech_notify(mech, MECHALL, "You're moving too slowly to lift off!");
       return;
     }
-    for (i = 0; i < NUM_LAND_TYPES; i++)
+    for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
       if (MechType(mech) == land_data[i].type)
         break;
   }
@@ -154,7 +154,7 @@ void aero_takeoff(dbref player, void *data, char *buffer) {
   int i;
   long j;
 
-  for (i = 0; i < NUM_LAND_TYPES; i++)
+  for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
     if (MechType(mech) == land_data[i].type)
       break;
 
@@ -162,7 +162,7 @@ void aero_takeoff(dbref player, void *data, char *buffer) {
     DOCHECK(!WizP(player), "Insufficient access!");
 
   DOCHECK(TakingOff(mech), "The launch sequence has already been initiated!");
-  DOCHECK(i == NUM_LAND_TYPES, "This vehicle type cannot takeoff!");
+  DOCHECK(i == (int)(NUM_LAND_TYPES), "This vehicle type cannot takeoff!");
   cch(MECH_USUAL);
   DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
   DOCHECK(!FlyingT(mech),
@@ -293,10 +293,10 @@ void aero_land(dbref player, void *data, char *buffer) {
               !AeroFreeFuel(mech),
           "You lack fuel to maneuver for landing!");
 
-  for (i = 0; i < NUM_LAND_TYPES; i++)
+  for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
     if (MechType(mech) == land_data[i].type)
       break;
-  if (i == NUM_LAND_TYPES)
+  if (i == (int)(NUM_LAND_TYPES))
     return;
   DOCHECK((Fallen(mech)) && (MechType(mech) == CLASS_VTOL),
           "The rotor's dead!");
@@ -427,7 +427,6 @@ void aero_UpdateSpeed(MECH *mech) {
   float nh;
   float dx, dy, dz;
   float vlen, mod;
-  float sp;
   float ab = 0.7;
   float m = 1.0;
 
@@ -485,7 +484,6 @@ void aero_UpdateSpeed(MECH *mech) {
     SetFacing(mech, AcceptableDegree((int)nh + 90));
   xypart = length_hypotenuse(nx, ny);
   MechSpeed(mech) = xypart;
-  sp = length_hypotenuse(length_hypotenuse(nx, ny), nz); /* Whole speed */
   MechVerticalSpeed(mech) = nz;
   if (!SpheroidDS(mech) && fabs(MechSpeed(mech)) < MP1)
     SetFacing(mech, MechDesiredFacing(mech));

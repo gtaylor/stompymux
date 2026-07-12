@@ -17,9 +17,9 @@
 #include <stdlib.h>
 
 #include "autopilot.h"
-#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.econ_cmds.h"
 #include "p.map.conditions.h"
 #include "p.mech.restrict.h"
@@ -182,15 +182,15 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   }
 
   if (Towed(mech)) {
-    int i;
+    int tow_index;
     MECH *t;
 
-    for (i = 0; i < newmap->first_free; i++)
+    for (tow_index = 0; tow_index < newmap->first_free; tow_index++)
       /* Release from towing if tow-guy ain't on same map already */
-      if ((t = FindObjectsData(newmap->mechsOnMap[i])))
+      if ((t = FindObjectsData(newmap->mechsOnMap[tow_index])))
         if (MechCarrying(t) == mech->mynum)
           break;
-    if (i == newmap->first_free)
+    if (tow_index == newmap->first_free)
       MechStatus(mech) &= ~TOWED; /* Reset the Towed flag */
   }
   MarkForLOSUpdate(mech);

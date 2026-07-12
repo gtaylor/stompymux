@@ -165,6 +165,7 @@ void do_say(dbref player, dbref cause, int key, char *message) {
       break;
     case '"':
       message++;
+      [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.shout");
       bp = buf2;
@@ -197,6 +198,7 @@ void do_say(dbref player, dbref cause, int key, char *message) {
       break;
     case '"':
       message++;
+      [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.wizshout");
       bp = buf2;
@@ -231,6 +233,7 @@ void do_say(dbref player, dbref cause, int key, char *message) {
       break;
     case '"':
       message++;
+      [[fallthrough]];
     default:
       buf2 = alloc_lbuf("do_say.adminshout");
       bp = buf2;
@@ -512,6 +515,7 @@ void do_page(dbref player, dbref cause, int key, char *tname, char *message) {
           break;
         case '"':
           message++;
+          [[fallthrough]];
         default:
           notify_with_cause(target, player,
                             tprintf("To (%s), %s%s pages you: %s", buf1,
@@ -546,6 +550,7 @@ void do_page(dbref player, dbref cause, int key, char *tname, char *message) {
         break;
       case '"':
         message++;
+        [[fallthrough]];
       default:
         notify_with_cause(
             target, player,
@@ -775,6 +780,7 @@ void do_pemit(dbref player, dbref cause, int key, char *recipient,
         break;
       case '"':
         message++;
+        [[fallthrough]];
       default:
         notify_printf(player, "You whisper \"%s\" to %s.", message,
                       Name(target));

@@ -11,9 +11,9 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "muxevent/muxevent_alloc.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.btechstats.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
@@ -840,8 +840,8 @@ void map_updatelinks(dbref player, void *data, char *buffer) {
                 update_stats[0], update_stats[1], update_stats[2]);
 }
 
-int map_linked(dbref mapobj) {
-  MAP *map = getMap(mapobj);
+int map_linked(dbref map_object) {
+  MAP *map = getMap(map_object);
 
   if (!map)
     return 0;

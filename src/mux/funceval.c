@@ -66,8 +66,6 @@ extern NAMETAB indiv_attraccess_nametab[];
 void fun_cobj(char *buff, char **bufc, dbref player, dbref cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
   struct channel *ch;
-  struct comuser *user;
-  static char smbuf[SBUF_SIZE];
 
   if (!(ch = select_channel(fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
@@ -126,11 +124,6 @@ void fun_cwho(char *buff, char **bufc, dbref player, dbref cause, char *fargs[],
 void fun_clist(char *buff, char **bufc, dbref player, dbref cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs) {
   struct channel *ch;
-  struct comuser *user;
-  int thing;
-  int len = 0;
-
-  static char smbuf[SBUF_SIZE];
 
   if (!(ch = select_channel(fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
@@ -416,7 +409,7 @@ void fun_set(char *buff, char **bufc, dbref player, dbref cause, char *fargs[],
              int nfargs, char *cargs[], int ncargs) {
   dbref thing, thing2, aowner;
   char *p, *buff2;
-  int atr, atr2, clear, flagvalue, could_hear;
+  int atr, atr2, clear, flagvalue;
   long aflags;
   ATTR *attr, *attr2;
 
@@ -478,7 +471,6 @@ void fun_set(char *buff, char **bufc, dbref player, dbref cause, char *fargs[],
         aflags &= ~flagvalue;
       else
         aflags |= flagvalue;
-      could_hear = Hearer(thing);
       atr_set_flags(thing, atr, aflags);
 
       return;
@@ -994,7 +986,7 @@ void fun_columns(char *buff, char **bufc, dbref player, dbref cause,
     objstring = split_token(&cp, sep);
     strncpy(new, objstring, MBUF_SIZE - 1);
     ansinumber = number;
-    if (ansinumber >
+    if ((size_t)ansinumber >
         strlen((char *)strip_ansi_r(new, objstring, strlen(objstring))))
       ansinumber =
           strlen((char *)strip_ansi_r(new, objstring, strlen(objstring)));
@@ -1226,7 +1218,8 @@ void fun_strtrunc(char *buff, char **bufc, dbref player, dbref cause,
 
   number = atoi(fargs[1]);
   strncpy(new, fargs[0], LBUF_SIZE - 1);
-  if (number > strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0]))))
+  if ((size_t)number >
+      strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0]))))
     number = strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
 
   if (number < 0) {

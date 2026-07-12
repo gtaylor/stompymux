@@ -263,7 +263,6 @@ void mech_contacts(dbref player, void *data, char *buffer) {
   char *args[1], bufflist[MAX_MECHS_PER_MAP][120], buff[100];
   int sbuff[MAX_MECHS_PER_MAP];
   float range, rangelist[MAX_MECHS_PER_MAP], fx, fy;
-  int mechfound;
   char weaponarc;
   char *mech_name;
   unsigned char see_what;
@@ -276,7 +275,6 @@ void mech_contacts(dbref player, void *data, char *buffer) {
   char new[LBUF_SIZE];
 
   cch(MECH_USUAL);
-  mechfound = 0;
   argc = mech_parseattributes(buffer, args, 1);
 
   isvb = (mech->brief % 4);

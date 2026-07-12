@@ -43,7 +43,6 @@ static void tag_recycle_event(MUXEVENT *e) {
 
 void mech_tag(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
-  MAP *objMap;
   char *args[2];
   dbref refTarget;
   int LOS = 1;
@@ -56,8 +55,6 @@ void mech_tag(dbref player, void *data, char *buffer) {
   DOCHECK(TagRecycling(mech), "Your TAG system is recycling!");
   DOCHECK(mech_parseattributes(buffer, args, 2) != 1,
           "Invalid number of arguments to function!");
-
-  objMap = getMap(mech->mapindex);
 
   /* Clear our TAG */
   if (!strcmp(args[0], "-")) {
@@ -75,7 +72,7 @@ void mech_tag(dbref player, void *data, char *buffer) {
   target = getMech(refTarget);
 
   if (target) {
-    range = FlMechRange(objMap, mech, target);
+    range = FaMechRange(mech, target);
 
     LOS = InLineOfSight_NB(mech, target, MechX(target), MechY(target), range);
   } else

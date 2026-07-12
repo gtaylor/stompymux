@@ -217,7 +217,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
   int currx, curry;         /* current hex being worked from */
   int nextx, nexty;         /* x & y coords of next hex */
   int bestx = 0, besty = 0; /* best found so far */
-  int lastx, lasty;         /* Holding place for final intervening hex */
   int xmul, ymul;           /* Used in 30/150/210/330 special case */
   hexdir nexthex;           /* potential next hex being examined */
   float nextcx, nextcy;     /* Next hex's CARTESIAN coords */
@@ -400,8 +399,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
     }
 
     if (bestx == bx && besty == by) { /* If we've found the last hex, record */
-      lastx = currx;                  /* the current hex as the last */
-      lasty = curry;                  /* intervening hex, save currx/y, */
       currx = bestx;                  /* and jump to the end of the loop */
       curry = besty;
       continue;

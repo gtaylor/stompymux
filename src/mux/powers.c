@@ -50,26 +50,6 @@ static int ph_wiz(dbref target, dbref player, POWER power, int fpowers,
   return (ph_any(target, player, power, fpowers, reset));
 }
 
-/**
- * Only WIZARDS, ROYALTY, (or GOD) may set or clear the bit
- */
-static int ph_wizroy(dbref target, dbref player, POWER power, int fpowers,
-                     int reset) {
-  if (!WizRoy(player) & !God(player))
-    return 0;
-  return (ph_any(target, player, power, fpowers, reset));
-}
-
-/**
- * Only players may set or clear this bit.
- */
-static int ph_inherit(dbref target, dbref player, POWER power, int fpowers,
-                      int reset) {
-  if (!Inherits(player))
-    return 0;
-  return (ph_any(target, player, power, fpowers, reset));
-}
-
 POWERENT gen_powers[] = {
     {(char *)"quota", POW_CHG_QUOTAS, 0, 0, ph_wiz},
     {(char *)"chown_anything", POW_CHOWN_ANY, 0, 0, ph_wiz},
@@ -262,14 +242,12 @@ int has_power(dbref player, dbref it, char *powername) {
 char *power_description(dbref player, dbref target) {
   char *buff, *bp;
   POWERENT *fp;
-  int otype;
   POWER fv;
 
   /*
    * Allocate the return buffer
    */
 
-  otype = Typeof(target);
   bp = buff = alloc_mbuf("power_description");
 
   /*

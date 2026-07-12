@@ -348,8 +348,7 @@ TECHCOMMANDH(tech_removesection) {
 TECHCOMMANDH(tech_replacegun) {
   int brand = 0, ob = 0;
 
-  int base, roll, rollmod, fixtime, base_fixtime, parttype, oparttype,
-      fail_fixtime;
+  int roll, rollmod, fixtime, base_fixtime, parttype, oparttype, fail_fixtime;
 
   TECHCOMMANDB;
   TECHCOMMANDC;
@@ -395,7 +394,6 @@ TECHCOMMANDH(tech_replacegun) {
                   part_name(parttype, GetPartBrand(mech, loc, part))));
 
   notify_printf(player, "You start replacing the gun...");
-  base = char_getskilltarget(player, "technician-weapons", 0);
   rollmod =
       REPLACE_DIFFICULTY + WEAPTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_weapon_roll(player, mech, rollmod);
@@ -532,8 +530,6 @@ TECHCOMMANDH(tech_repairgun) {
 }
 
 TECHCOMMANDH(tech_fixenhcrit) {
-  int extra_hard = 0;
-
   TECHCOMMANDB;
   TECHCOMMANDC;
   /* Find the gun for us */
@@ -571,8 +567,7 @@ TECHCOMMANDH(tech_replacepart) {
 
   TECHCOMMANDC;
 
-  int base, roll, rollmod, fixtime, base_fixtime, parttype, oparttype,
-      fail_fixtime;
+  int roll, rollmod, fixtime, base_fixtime, parttype, oparttype, fail_fixtime;
 
   my_parsepart(&loc, &part);
   DOCHECK((t = GetPartType(mech, loc, part)) == EMPTY,
@@ -617,7 +612,6 @@ TECHCOMMANDH(tech_replacepart) {
                   part_name(parttype, GetPartBrand(mech, loc, part))));
 
   notify_printf(player, "You start replacing the part...");
-  base = FindTechSkill(player, mech);
   rollmod =
       REPLACE_DIFFICULTY + PARTTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_roll(player, mech, rollmod);
@@ -938,7 +932,7 @@ TECHCOMMANDH(tech_reattach) {
 
   int internal_stock = 0;
   int electric_stock = 0;
-  int base, roll, rollmod, fixtime, base_fixtime, fail_fixtime;
+  int roll, rollmod, fixtime, base_fixtime, fail_fixtime;
 
   my_parsepart(&loc, NULL);
   DOCHECK(MechType(mech) == CLASS_BSUIT,
@@ -969,7 +963,6 @@ TECHCOMMANDH(tech_reattach) {
                   GetSectOInt(mech, loc) - electric_stock));
 
   notify_printf(player, "You start replacing the section...");
-  base = FindTechSkill(player, mech);
   rollmod = REATTACH_DIFFICULTY;
   roll = tech_roll(player, mech, rollmod);
   base_fixtime = REATTACH_TIME;

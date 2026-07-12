@@ -298,15 +298,6 @@ void do_chownall(dbref player, dbref cause, int key, char *from, char *to) {
 
 #define ANY_OWNER -2
 
-static void er_mark_disabled(dbref player) {
-  notify(player,
-         "The mark commands are not allowed while DB cleaning is enabled.");
-  notify(player,
-         "Use the '@disable cleaning' command to disable automatic cleaning.");
-  notify(player,
-         "Remember to '@unmark_all' before re-enabling automatic cleaning.");
-}
-
 /**
  * Walk the db reporting various things (or setting/clearing
  * mark bits)
@@ -887,7 +878,7 @@ void olist_add(dbref item) {
     mudstate.olist->head = mudstate.olist->tail = op;
     mudstate.olist->count = 0;
     op->next = NULL;
-  } else if (mudstate.olist->count >= OBLOCK_SIZE) {
+  } else if ((size_t)mudstate.olist->count >= OBLOCK_SIZE) {
     op = (OBLOCK *)alloc_lbuf("olist_add.next");
     mudstate.olist->tail->next = op;
     mudstate.olist->tail = op;
@@ -922,7 +913,7 @@ dbref olist_next(void) {
       (mudstate.olist->citm >= mudstate.olist->count))
     return NOTHING;
   thing = mudstate.olist->cblock->data[mudstate.olist->citm++];
-  if (mudstate.olist->citm >= OBLOCK_SIZE) {
+  if ((size_t)mudstate.olist->citm >= OBLOCK_SIZE) {
     mudstate.olist->cblock = mudstate.olist->cblock->next;
     mudstate.olist->citm = 0;
   }

@@ -20,10 +20,10 @@
 #define BTECHSTATS_C
 #include "btechstats.h"
 #include "btmacros.h"
-#include "muxevent/muxevent_alloc.h"
 #include "functions.h"
 #include "glue.h"
 #include "muxevent/muxevent.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.bsuit.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
@@ -157,7 +157,7 @@ void list_charvaluestuff(dbref player, int flag) {
                   "List of %s available:", btech_charvaluetype_names[flag]);
   }
   buf[0] = 0;
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     ok = 0;
     type = char_values[i].type;
     if (flag < 0)
@@ -477,7 +477,7 @@ void init_btechstats(void) {
   hashinit(&playervaluehash, 20 * HASH_FACTOR);
   hashinit(&playervaluehash2, 20 * HASH_FACTOR);
   tmpbuf = alloc_sbuf("getvaluecode");
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     for (tmpc1 = char_values[i].name, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++)
       *tmpc2 = ToLower(*tmpc1);
     *tmpc2 = '\0';
@@ -515,7 +515,7 @@ static PSTATS *create_new_stats(void) {
 static void clear_player(PSTATS *s) {
   int i;
 
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     s->values[i] = (char_values[i].type == CHAR_ATTRIBUTE ? 1 : 0);
     s->xp[i] = 0;
   }
@@ -580,7 +580,7 @@ static void show_charstatus(dbref player, PSTATS *s, dbref thing) {
                   18 - (char_gvalue(s, "charisma") * 2)));
   addempty();
   notified = 0;
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     if (char_values[i].type != CHAR_ADVANTAGE)
       continue;
     if (!(j = s->values[i]))
@@ -590,7 +590,7 @@ static void show_charstatus(dbref player, PSTATS *s, dbref thing) {
   if (notified) {
     addmenu("%cgAdvantages");
     addline();
-    for (i = 0; i < NUM_CHARVALUES; i++) {
+    for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
       if (char_values[i].type != CHAR_ADVANTAGE)
         continue;
       if (!(j = s->values[i]))
@@ -621,7 +621,7 @@ static void show_charstatus(dbref player, PSTATS *s, dbref thing) {
   addline();
 
   notified = 0;
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     if (!s->values[i])
       continue;
     if (char_values[i].type != CHAR_SKILL)
@@ -790,6 +790,7 @@ void initialize_pc(dbref player, MECH *mech) {
         }
       }
     }
+    [[fallthrough]];
   case 2:
     if (strcmp(buf2, "-")) {
       if (!find_matching_vlong_part(buf2, NULL, &id, &brand)) {
@@ -810,6 +811,7 @@ void initialize_pc(dbref player, MECH *mech) {
         }
       }
     }
+    [[fallthrough]];
   case 1:
     if (strlen(buf1) != PC_LOCS) {
       SendError(tprintf("Invalid armor string for %s(#%d): %s", Name(player),
@@ -992,7 +994,7 @@ void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
 void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
   PSTATS *s;
   dbref player;
-  int bruise, lethaldam, playerBLD;
+  int lethaldam, playerBLD;
 
   if (mech->mynum < 0)
     return;
@@ -1006,7 +1008,6 @@ void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
 
   s = retrieve_stats(player, VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH);
   /* get the player_stats structure */
-  bruise = char_gbruise(s);
   playerBLD = char_gvalue(s, "build");
   if (!playerBLD)
     playerBLD++;
@@ -1035,7 +1036,7 @@ void lower_xp(dbref player, int promillage) {
   int i;
 
   s = retrieve_stats(player, VALUES_ALL);
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     if (!s->xp[i])
       continue;
     if (s->xp[i] < 0) {
@@ -1049,8 +1050,8 @@ void lower_xp(dbref player, int promillage) {
 }
 
 void AccumulateTechXP(dbref pilot, MECH *mech, int reason) {
-  char *skname;
   int xp;
+  char *skname;
   static char *techw = "technician-weapons";
 
   if (mech) {
@@ -1206,8 +1207,6 @@ void AccumulateArtyXP(dbref pilot, MECH *attacker, MECH *wounded) {
 }
 
 void AccumulateComputerXP(dbref pilot, MECH *mech, int reason) {
-  int xp;
-
   if (!mech)
     return;
 
@@ -1290,7 +1289,7 @@ float getPilotBVMod(MECH *mech, int weapindx) {
  */
 void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded, int damage,
                      float multiplier, int weapindx, int bth) {
-  int omul, xp, my_BV, th_BV, my_speed, th_speed;
+  int xp, my_BV, th_BV, my_speed, th_speed;
   float myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
   float weapTypeMod;
   char *skname;
@@ -1368,8 +1367,6 @@ void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded, int damage,
     multiplier = 2 * multiplier * bth_modifier[bth - 3] / 36;
   }
 
-  omul = multiplier;
-
   /* Need to do a BV mod between the mechs */
   my_BV = MechBV(attacker);
   th_BV = MechBV(wounded);
@@ -1442,7 +1439,7 @@ void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded, int damage,
 void AccumulateGunXPold(dbref pilot, MECH *attacker, MECH *wounded,
                         int numOccurences, float multiplier, int weapindx,
                         int bth) {
-  int omul, xp;
+  int xp;
   char *skname;
   char buf[MBUF_SIZE];
 
@@ -1482,7 +1479,6 @@ void AccumulateGunXPold(dbref pilot, MECH *attacker, MECH *wounded,
   if (!(bth >= 3 && bth <= 12))
     return; /* sure hits aren't interesting */
 
-  omul = multiplier;
   if (MechTons(attacker) > 0)
     multiplier = multiplier *
                  BOUNDED(50, 100 * TonValue(wounded) / TonValue(attacker), 150);
@@ -1536,7 +1532,8 @@ void fun_btgetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
   FUNCHECK(!Wiz(player), "#-1 PERMISSION DENIED!");
   if (Readnum(targetcode, fargs[1]))
     targetcode = char_getvaluecode(fargs[1]);
-  FUNCHECK(targetcode < 0 || targetcode >= NUM_CHARVALUES, "#-1 INVALID VALUE");
+  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
+           "#-1 INVALID VALUE");
   flaggo = atoi(fargs[2]);
   if (char_values[targetcode].type == CHAR_SKILL && flaggo == 4) {
     safe_tprintf_str(buff, bufc, "%d",
@@ -1575,7 +1572,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
   FUNCHECK(!Wiz(player), "#-1 PERMISSION DENIED!");
   if (Readnum(targetcode, fargs[1]))
     targetcode = char_getvaluecode(fargs[1]);
-  FUNCHECK(targetcode < 0 || targetcode >= NUM_CHARVALUES, "#-1 INVALID VALUE");
+  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
+           "#-1 INVALID VALUE");
   targetvalue = atoi(fargs[2]);
   flaggo = atoi(fargs[3]);
 
@@ -1693,7 +1691,7 @@ void fun_btcharlist(char *buff, char **bufc, dbref player, dbref cause,
     return;
   }
 
-  for (i = 0; i < NUM_CHARVALUES; ++i)
+  for (i = 0; i < (int)(NUM_CHARVALUES); ++i)
     if (type == char_values[i].type) {
       if (nfargs == 2 && type != CHAR_ATTRIBUTE) {
         int targetcode = char_getvaluecode(char_values[i].name);
@@ -1820,8 +1818,8 @@ static void retrieve_attrs(dbref player, PSTATS *s) {
   char_svalue(s, "Charisma", i5);
 }
 
-static void generic_retrieve_stuff(dbref player, PSTATS *s, int attr) {
-  char *c = silly_atr_get(player, attr), *e;
+static void generic_retrieve_stuff(dbref player, PSTATS *s, int attrnum) {
+  char *c = silly_atr_get(player, attrnum), *e;
   char buf[512];
   int i1, i2, i3, sn;
 
@@ -1849,13 +1847,14 @@ static void generic_retrieve_stuff(dbref player, PSTATS *s, int attr) {
   }
 }
 
-static void generic_store_stuff(dbref player, PSTATS *s, int attr, int flag) {
+static void generic_store_stuff(dbref player, PSTATS *s, int attrnum,
+                                int flag) {
   char buf[LBUF_SIZE] = {0};
   int i;
   char *c;
 
   c = buf;
-  for (i = 0; i < NUM_CHARVALUES; i++) {
+  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     if (!s->values[i] && !s->xp[i])
       continue;
     if (flag) {
@@ -1872,9 +1871,9 @@ static void generic_store_stuff(dbref player, PSTATS *s, int attr, int flag) {
       ;
   }
   if (*buf)
-    silly_atr_set(player, attr, buf);
+    silly_atr_set(player, attrnum, buf);
   else
-    silly_atr_set(player, attr, "");
+    silly_atr_set(player, attrnum, "");
 }
 
 static void retrieve_skills(dbref player, PSTATS *s) {

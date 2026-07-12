@@ -43,7 +43,7 @@ struct {
                      {"ne", "Front/Right", 60}, {"fr", "Front/Right", 60},
                      {"sw", "Rear/Left", 240},  {"rl", "Rear/Left", 240},
                      {"se", "Rear/Right", 120}, {"rr", "Rear/Right", 120},
-                     {"-", "None", 0},          {NULL, 0}};
+                     {"-", "None", 0},          {NULL, NULL, 0}};
 
 const char *LateralDesc(MECH *mech) {
   int i;
@@ -246,14 +246,12 @@ void mech_bootlegger(dbref player, void *data, char *buffer) {
 
 void mech_eta(dbref player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map;
   int argc, eta_x, eta_y;
   float fx, fy, range;
   int etahr, etamin;
   char *args[3];
 
   cch(MECH_USUAL);
-  mech_map = getMap(mech->mapindex);
   argc = mech_parseattributes(buffer, args, 2);
   DOCHECK(argc == 1, "Invalid number of arguments!");
   switch (argc) {

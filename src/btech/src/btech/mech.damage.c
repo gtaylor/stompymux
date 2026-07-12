@@ -462,6 +462,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     switch (damage) {
     case -2:
       was_transfer = 1;
+      [[fallthrough]];
     case -1:
       transfer = 1;
       break;
@@ -471,6 +472,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     switch (intDamage) {
     case -2:
       was_transfer = 1;
+      [[fallthrough]];
     case -1:
       transfer = 1;
       break;

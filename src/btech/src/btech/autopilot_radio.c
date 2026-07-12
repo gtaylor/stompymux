@@ -708,8 +708,6 @@ void auto_radio_command_report(AUTO *autopilot, MECH *mech, char **args,
 void auto_radio_command_reset(AUTO *autopilot, MECH *mech, char **args,
                               int argc, char *mesg) {
 
-  char buffer[SBUF_SIZE];
-
   auto_disengage(autopilot->mynum, autopilot, "");
   auto_delcommand(autopilot->mynum, autopilot, "-1");
   auto_init(autopilot, mech);

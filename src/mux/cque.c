@@ -175,15 +175,18 @@ struct cque_restart_store_context {
 };
 
 static int cque_sqlite_step(sqlite3_stmt *statement) {
-  if (sqlite3_step(statement) != SQLITE_DONE || sqlite3_reset(statement) != SQLITE_OK)
+  if (sqlite3_step(statement) != SQLITE_DONE ||
+      sqlite3_reset(statement) != SQLITE_OK)
     return -1;
   sqlite3_clear_bindings(statement);
   return 0;
 }
 
-static int cque_sqlite_bind_int(sqlite3_stmt *statement, int index, long value) {
-  return sqlite3_bind_int64(statement, index, (sqlite3_int64)value) == SQLITE_OK ? 0
-                                                                                : -1;
+static int cque_sqlite_bind_int(sqlite3_stmt *statement, int index,
+                                long value) {
+  return sqlite3_bind_int64(statement, index, (sqlite3_int64)value) == SQLITE_OK
+             ? 0
+             : -1;
 }
 
 static int cque_restart_store_entry(CQUE_RESTART_STORE_CONTEXT *context,
@@ -248,7 +251,8 @@ static int cque_restart_store_object(void *key, void *data, int depth,
   }
   position = 0;
   for (entry = object->cque; entry; entry = entry->next) {
-    if (cque_restart_store_entry(context, 0, object->obj, position++, entry) < 0) {
+    if (cque_restart_store_entry(context, 0, object->obj, position++, entry) <
+        0) {
       context->result = -1;
       return 0;
     }
@@ -265,14 +269,15 @@ int cque_restart_store(sqlite3 *sqlite) {
   memset(&context, 0, sizeof(context));
   context.sqlite = sqlite;
   context.result = -1;
-  if (sqlite3_prepare_v2(sqlite,
-                         "INSERT INTO restart_queue_objects (owner_dbref) VALUES (?);",
-                         -1, &context.object, NULL) != SQLITE_OK ||
+  if (sqlite3_prepare_v2(
+          sqlite, "INSERT INTO restart_queue_objects (owner_dbref) VALUES (?);",
+          -1, &context.object, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(
           sqlite,
           "INSERT INTO restart_queue_entries "
           "(queue_type, owner_dbref, position, player_dbref, cause_dbref, "
-          "semaphore_dbref, wait_delay, attribute_number, text, command, nargs) "
+          "semaphore_dbref, wait_delay, attribute_number, text, command, "
+          "nargs) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &context.entry, NULL) != SQLITE_OK ||
       sqlite3_prepare_v2(sqlite,
@@ -293,13 +298,13 @@ int cque_restart_store(sqlite3 *sqlite) {
     position = 0;
     for (entry = mudstate.qwait; context.result == 0 && entry;
          entry = entry->next)
-      context.result = cque_restart_store_entry(&context, 1, NOTHING,
-                                                position++, entry);
+      context.result =
+          cque_restart_store_entry(&context, 1, NOTHING, position++, entry);
     position = 0;
     for (entry = mudstate.qsemfirst; context.result == 0 && entry;
          entry = entry->next)
-      context.result = cque_restart_store_entry(&context, 2, NOTHING,
-                                                position++, entry);
+      context.result =
+          cque_restart_store_entry(&context, 2, NOTHING, position++, entry);
     result = context.result;
   }
   sqlite3_finalize(context.object);
@@ -331,13 +336,13 @@ static int cque_restart_load_values(sqlite3 *sqlite, int environment,
   int result;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(sqlite,
-                              environment
-                                  ? "SELECT position, value FROM restart_queue_env "
-                                    "WHERE entry_id = ? ORDER BY position;"
-                                  : "SELECT position, value FROM restart_queue_scr "
-                                    "WHERE entry_id = ? ORDER BY position;",
-                              -1, &statement, NULL) == SQLITE_OK &&
+  result = sqlite3_prepare_v2(
+               sqlite,
+               environment ? "SELECT position, value FROM restart_queue_env "
+                             "WHERE entry_id = ? ORDER BY position;"
+                           : "SELECT position, value FROM restart_queue_scr "
+                             "WHERE entry_id = ? ORDER BY position;",
+               -1, &statement, NULL) == SQLITE_OK &&
                    sqlite3_bind_int64(statement, 1, entry_id) == SQLITE_OK
                ? 0
                : -1;
@@ -431,10 +436,8 @@ static int cque_restart_load_entry(sqlite3 *sqlite, sqlite3_stmt *statement,
         value > INT_MAX)
       goto done;
     entry->nargs = value;
-    if (cque_restart_load_values(sqlite, 1, entry_id,
-                                 entry->env) < 0 ||
-        cque_restart_load_values(sqlite, 0, entry_id,
-                                 entry->scr) < 0)
+    if (cque_restart_load_values(sqlite, 1, entry_id, entry->env) < 0 ||
+        cque_restart_load_values(sqlite, 0, entry_id, entry->scr) < 0)
       goto done;
     evtimer_set(&entry->ev, wakeup_wait_que, entry);
     cque_enqueue(owner, entry);
@@ -463,20 +466,21 @@ int cque_restart_load(sqlite3 *sqlite) {
 
   objects = NULL;
   entries = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite, "SELECT owner_dbref FROM restart_queue_objects "
-                       "ORDER BY owner_dbref;",
-               -1, &objects, NULL) == SQLITE_OK &&
-                   sqlite3_prepare_v2(
-                       sqlite,
-                       "SELECT entry_id, queue_type, owner_dbref, player_dbref, "
-                       "cause_dbref, semaphore_dbref, wait_delay, "
-                       "attribute_number, text, command, nargs, position "
-                       "FROM restart_queue_entries "
-                       "ORDER BY queue_type, owner_dbref, position;",
-                       -1, &entries, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(sqlite,
+                         "SELECT owner_dbref FROM restart_queue_objects "
+                         "ORDER BY owner_dbref;",
+                         -1, &objects, NULL) == SQLITE_OK &&
+              sqlite3_prepare_v2(
+                  sqlite,
+                  "SELECT entry_id, queue_type, owner_dbref, player_dbref, "
+                  "cause_dbref, semaphore_dbref, wait_delay, "
+                  "attribute_number, text, command, nargs, position "
+                  "FROM restart_queue_entries "
+                  "ORDER BY queue_type, owner_dbref, position;",
+                  -1, &entries, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(objects)) == SQLITE_ROW) {
     if (cque_sqlite_column_long(objects, 0, &owner) < 0 || !Good_obj(owner) ||
         !cque_find(owner))
@@ -508,8 +512,8 @@ int cque_restart_load(sqlite3 *sqlite) {
         result = -1;
       else if (cque_restart_load_entry(
                    sqlite, entries,
-                   queue_type == 0 ? (dbref)owner : sqlite3_column_int64(entries, 3)) <
-               0)
+                   queue_type == 0 ? (dbref)owner
+                                   : sqlite3_column_int64(entries, 3)) < 0)
         result = -1;
     }
   }

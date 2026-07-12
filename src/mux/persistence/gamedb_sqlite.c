@@ -14,9 +14,9 @@
 #include "db.h"
 #include "externs.h"
 #include "flags.h"
+#include "mudconf.h"
 #include "persistence/gamedb.h"
 #include "persistence/restart_persistence.h"
-#include "mudconf.h"
 #include "powers.h"
 #include "vattr.h"
 
@@ -191,8 +191,7 @@ static int gamedb_step(sqlite3_stmt *statement) {
 
 /* Bind a MUX integer to SQLite's signed 64-bit integer representation. */
 static int gamedb_bind_int(sqlite3_stmt *statement, int index, long value) {
-  return sqlite3_bind_int64(statement, index, (sqlite3_int64)value) ==
-                 SQLITE_OK
+  return sqlite3_bind_int64(statement, index, (sqlite3_int64)value) == SQLITE_OK
              ? 0
              : -1;
 }
@@ -257,14 +256,12 @@ static int gamedb_fsync_directory(const char *path) {
 /* Compile one SQL statement for repeated binding and execution. */
 static int gamedb_prepare(sqlite3 *sqlite, sqlite3_stmt **statement,
                           const char *sql) {
-  return sqlite3_prepare_v2(sqlite, sql, -1, statement, NULL) == SQLITE_OK
-             ? 0
-             : -1;
+  return sqlite3_prepare_v2(sqlite, sql, -1, statement, NULL) == SQLITE_OK ? 0
+                                                                           : -1;
 }
 
 /* Read an SQLite integer only when it fits the destination int exactly. */
-static int gamedb_column_int(sqlite3_stmt *statement, int column,
-                             int *value) {
+static int gamedb_column_int(sqlite3_stmt *statement, int column, int *value) {
   sqlite3_int64 number;
 
   if (sqlite3_column_type(statement, column) != SQLITE_INTEGER)
@@ -352,9 +349,9 @@ static int gamedb_load_vattrs(sqlite3 *sqlite) {
 
   statement = NULL;
   result = -1;
-  if (gamedb_prepare(sqlite, &statement,
-                     "SELECT number, name, flags FROM vattrs ORDER BY number;") ==
-      0) {
+  if (gamedb_prepare(
+          sqlite, &statement,
+          "SELECT number, name, flags FROM vattrs ORDER BY number;") == 0) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       if (gamedb_column_int(statement, 0, &number) < 0 ||
@@ -530,8 +527,7 @@ int gamedb_load(const char *path) {
  * failed write rolls the transaction back before returning an error.
  */
 static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
-                                  sqlite3_stmt *vattrs,
-                                  sqlite3_stmt *objects,
+                                  sqlite3_stmt *vattrs, sqlite3_stmt *objects,
                                   sqlite3_stmt *attributes, int success) {
   if (!success)
     gamedb_exec(sqlite, "ROLLBACK;");
@@ -576,8 +572,8 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
       restart_persistence_create_schema(sqlite) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                  attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
+                                  0);
 
   if (gamedb_prepare(
           sqlite, &snapshot,
@@ -597,8 +593,8 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, number, value) "
                      "VALUES (?, ?, ?);") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                  attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
+                                  0);
 
   if (gamedb_bind_int(snapshot, 1, GAMEDB_SCHEMA_VERSION) < 0 ||
       gamedb_bind_int(snapshot, 2, GAMEDB_SOURCE_FORMAT_SQLITE) < 0 ||
@@ -610,8 +606,8 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
       gamedb_bind_int(snapshot, 8, mudstate.attr_next) < 0 ||
       gamedb_bind_int(snapshot, 9, mudstate.record_players) < 0 ||
       gamedb_step(snapshot) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                  attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
+                                  0);
 
   for (vattr = vattr_first(); vattr; vattr = vattr_next(vattr)) {
     if (vattr->flags & AF_DELETED)
@@ -619,8 +615,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
     if (gamedb_bind_int(vattrs, 1, vattr->number) < 0 ||
         sqlite3_bind_text(vattrs, 2, vattr->name, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
-        gamedb_bind_int(vattrs, 3, vattr->flags) < 0 ||
-        gamedb_step(vattrs) < 0)
+        gamedb_bind_int(vattrs, 3, vattr->flags) < 0 || gamedb_step(vattrs) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
                                     attributes, 0);
   }
@@ -675,8 +670,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
         break;
       }
       attr_text = atr_get_raw(object, attribute->number);
-      if (!attr_text ||
-          gamedb_bind_int(attributes, 1, object) < 0 ||
+      if (!attr_text || gamedb_bind_int(attributes, 1, object) < 0 ||
           gamedb_bind_int(attributes, 2, attribute->number) < 0 ||
           sqlite3_bind_text(attributes, 3, attr_text, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||
@@ -692,12 +686,12 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
   }
 
   if (gamedb_store_extensions(sqlite) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                  attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
+                                  0);
 
   if (gamedb_exec(sqlite, "COMMIT;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                  attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
+                                  0);
   return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
                                 1);
 }

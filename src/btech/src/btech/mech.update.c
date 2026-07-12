@@ -127,6 +127,7 @@ int collision_check(MECH *mech, int mode, int le, int lt) {
   case WALK_BACK:
     if (MechMove(mech) != MOVE_TRACK && MechType(mech) != CLASS_VTOL)
       return (MechSpeed(mech) < 0 ? abs((le - e)) : 0);
+    [[fallthrough]];
   case HIT_UNDER_BRIDGE: /* Hovers only... tho it should be fixed for foils and
                             hulls too */
     if ((lt == BRIDGE) && (MechRTerrain(mech) == BRIDGE) && (le == 0) &&
@@ -431,6 +432,7 @@ void move_mech(MECH *mech) {
     /* Use the same code as subs below */
     /*! \todo {VTOLS not able to lateral, nor can subs right now} */
 
+    [[fallthrough]];
   case MOVE_SUB:
 
     MarkForLOSUpdate(mech);
@@ -928,6 +930,7 @@ float terrain_speed(MECH *mech, float tempspeed, float maxspeed, int terrain,
         (MechMove(mech) == MOVE_TRACK || MechMove(mech) == MOVE_WHEEL))
 #endif
       INCREASE_OLD(MP1);
+    [[fallthrough]];
   case ICE:
     if (MechZ(mech) >= 0)
       break;
@@ -2642,8 +2645,6 @@ void CheckDamage(MECH *wounded) {
   /* should be called from UpdatePilotSkillRolls */
   /* this is so that a roll will be made only when the mech takes damage */
   int now = muxevent_tick % TURN;
-  int staggerLevel = 0;
-  int headingChange = 0;
 
   if (!mudconf.btech_newstagger) {
     if (!IsDS(wounded) && MechTurnDamage(wounded) >= 20 &&

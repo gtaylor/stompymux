@@ -15,10 +15,10 @@
  */
 
 #include "autopilot.h"
-#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.ds.bay.h"
@@ -657,12 +657,6 @@ void auto_com_event(MUXEVENT *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
-  MECH *tempmech;
-  char buf[SBUF_SIZE];
-  int i, j, t;
-
-  command_node *command;
-
   /* No mech and/or no AI */
   if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
     return;
@@ -2203,7 +2197,6 @@ void auto_enter_event(MUXEVENT *muxevent) {
   MECH *mech = autopilot->mymech;
   MAP *map;
   mapobj *map_object;
-  int num;
   long reset_mapindex = (long)muxevent->data2;
 
   char *argument;

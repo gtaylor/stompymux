@@ -249,7 +249,7 @@
 #define print_autogun_log(autopilot, ...)                                      \
   do {                                                                         \
     fprintf(stderr, "AI: %d AUTOGUN ", autopilot->mynum);                      \
-    fprintf(stderr, __VA_ARGS__);                                             \
+    fprintf(stderr, __VA_ARGS__);                                              \
     fprintf(stderr, "\n");                                                     \
   } while (0)
 #else

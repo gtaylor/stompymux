@@ -11,10 +11,10 @@
 #include <string.h>
 #include <strings.h>
 
-#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.h"
 #include "mech.partnames.h"
+#include "muxevent/muxevent_alloc.h"
 #include "rbtab.h"
 
 void list_hashstat(dbref player, const char *tab_name, HASHTAB *htab);
@@ -306,9 +306,9 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
 }
 
 /* List the canonical category names accepted by btpartslist(). */
-void fun_btpartscategorylist(char *buff, char **bufc, dbref player,
-                             dbref cause, char *fargs[], int nfargs,
-                             char *cargs[], int ncargs) {
+void fun_btpartscategorylist(char *buff, char **bufc, dbref player, dbref cause,
+                             char *fargs[], int nfargs, char *cargs[],
+                             int ncargs) {
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
 }
@@ -325,7 +325,6 @@ void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
   size_t needed;
   int index;
   int part;
-  int brand;
   int listed;
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -338,7 +337,7 @@ void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
   listed = 0;
   for (index = 0; index < object_count; index++) {
     part_name = long_sorted[index];
-    UNPACK_PART(part_name->index, part, brand);
+    part = part_name->index % NUM_ITEMS;
     if (!btpartslist_matches(category, part))
       continue;
 
@@ -346,8 +345,7 @@ void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
     needed = strlen(part_name->longy) + (listed ? 1 : 0);
     if (used + needed >= LBUF_SIZE) {
       *bufc = buff;
-      safe_str("#-1 LIST TOO LONG FOR THIS CATEGORY",
-               buff, bufc);
+      safe_str("#-1 LIST TOO LONG FOR THIS CATEGORY", buff, bufc);
       return;
     }
     if (listed)

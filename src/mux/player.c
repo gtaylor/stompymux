@@ -484,18 +484,16 @@ dbref lookup_player(dbref doer, char *name, int check_who) {
 }
 
 void load_player_names(void) {
-  dbref i, j, aowner;
+  dbref i, aowner;
   long aflags;
   char *alias;
 
-  j = 0;
   DO_WHOLE_DB(i) {
     if (Typeof(i) == TYPE_PLAYER) {
       add_player_name(i, Name(i));
     }
   }
   alias = alloc_lbuf("load_player_names");
-  j = 0;
   DO_WHOLE_DB(i) {
     if (Typeof(i) == TYPE_PLAYER) {
       alias = atr_pget_str(alias, i, A_ALIAS, &aowner, &aflags);

@@ -1,4 +1,5 @@
-/* restart_persistence_sqlite.c -- transient SQLite state for controlled restarts */
+/* restart_persistence_sqlite.c -- transient SQLite state for controlled
+ * restarts */
 
 #include "config.h"
 
@@ -99,7 +100,8 @@ static int restart_open(sqlite3 **sqlite) {
 }
 
 static int restart_step(sqlite3_stmt *statement) {
-  if (sqlite3_step(statement) != SQLITE_DONE || sqlite3_reset(statement) != SQLITE_OK)
+  if (sqlite3_step(statement) != SQLITE_DONE ||
+      sqlite3_reset(statement) != SQLITE_OK)
     return -1;
   sqlite3_clear_bindings(statement);
   return 0;
@@ -117,15 +119,17 @@ static int restart_store_descriptors(sqlite3 *sqlite) {
   int result;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "INSERT INTO restart_descriptors "
-               "(descriptor, flags, connected_at, command_count, timeout, "
-               "host_info, player_dbref, last_time, output_prefix, output_suffix, "
-               "addr, doing, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO restart_descriptors "
+          "(descriptor, flags, connected_at, command_count, timeout, "
+          "host_info, player_dbref, last_time, output_prefix, output_suffix, "
+          "addr, doing, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?);",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   DESC_ITER_CONN(descriptor) {
     if (result < 0)
       break;
@@ -141,10 +145,10 @@ static int restart_store_descriptors(sqlite3 *sqlite) {
                           SQLITE_TRANSIENT) != SQLITE_OK ||
         sqlite3_bind_text(statement, 10, descriptor->output_suffix, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
-        sqlite3_bind_text(statement, 11, descriptor->addr, -1, SQLITE_TRANSIENT) !=
-            SQLITE_OK ||
-        sqlite3_bind_text(statement, 12, descriptor->doing, -1, SQLITE_TRANSIENT) !=
-            SQLITE_OK ||
+        sqlite3_bind_text(statement, 11, descriptor->addr, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
+        sqlite3_bind_text(statement, 12, descriptor->doing, -1,
+                          SQLITE_TRANSIENT) != SQLITE_OK ||
         sqlite3_bind_text(statement, 13, descriptor->username, -1,
                           SQLITE_TRANSIENT) != SQLITE_OK ||
         restart_step(statement) < 0)
@@ -161,33 +165,36 @@ int restart_persistence_store(void) {
 
   sqlite = NULL;
   metadata = NULL;
-  result = restart_open(&sqlite) == 0 && restart_exec(sqlite, "PRAGMA foreign_keys = ON;") == 0 &&
-                   restart_exec(sqlite, "PRAGMA synchronous = FULL;") == 0 &&
-                   restart_exec(sqlite, "BEGIN IMMEDIATE;") == 0 &&
-                   restart_persistence_create_schema(sqlite) == 0 &&
-                   restart_exec(sqlite,
-                                "DELETE FROM restart_queue_env;"
-                                "DELETE FROM restart_queue_scr;"
-                                "DELETE FROM restart_queue_entries;"
-                                "DELETE FROM restart_queue_objects;"
-                                "DELETE FROM restart_descriptors;"
-                                "DELETE FROM restart_metadata;") == 0 &&
-                   sqlite3_prepare_v2(
-                       sqlite,
-                       "INSERT INTO restart_metadata "
-                       "(id, format_version, created_at, start_time, doing_hdr, "
-                       "record_players) VALUES (1, ?, ?, ?, ?, ?);",
-                       -1, &metadata, NULL) == SQLITE_OK &&
-                   restart_bind_long(metadata, 1, RESTART_SCHEMA_VERSION) == 0 &&
-                   restart_bind_long(metadata, 2, time(NULL)) == 0 &&
-                   restart_bind_long(metadata, 3, mudstate.start_time) == 0 &&
-                   sqlite3_bind_text(metadata, 4, mudstate.doing_hdr, -1,
-                                     SQLITE_TRANSIENT) == SQLITE_OK &&
-                   restart_bind_long(metadata, 5, mudstate.record_players) == 0 &&
-                   restart_step(metadata) == 0 && restart_store_descriptors(sqlite) == 0 &&
-                   cque_restart_store(sqlite) == 0 && restart_exec(sqlite, "COMMIT;") == 0
-               ? 0
-               : -1;
+  result =
+      restart_open(&sqlite) == 0 &&
+              restart_exec(sqlite, "PRAGMA foreign_keys = ON;") == 0 &&
+              restart_exec(sqlite, "PRAGMA synchronous = FULL;") == 0 &&
+              restart_exec(sqlite, "BEGIN IMMEDIATE;") == 0 &&
+              restart_persistence_create_schema(sqlite) == 0 &&
+              restart_exec(sqlite, "DELETE FROM restart_queue_env;"
+                                   "DELETE FROM restart_queue_scr;"
+                                   "DELETE FROM restart_queue_entries;"
+                                   "DELETE FROM restart_queue_objects;"
+                                   "DELETE FROM restart_descriptors;"
+                                   "DELETE FROM restart_metadata;") == 0 &&
+              sqlite3_prepare_v2(
+                  sqlite,
+                  "INSERT INTO restart_metadata "
+                  "(id, format_version, created_at, start_time, doing_hdr, "
+                  "record_players) VALUES (1, ?, ?, ?, ?, ?);",
+                  -1, &metadata, NULL) == SQLITE_OK &&
+              restart_bind_long(metadata, 1, RESTART_SCHEMA_VERSION) == 0 &&
+              restart_bind_long(metadata, 2, time(NULL)) == 0 &&
+              restart_bind_long(metadata, 3, mudstate.start_time) == 0 &&
+              sqlite3_bind_text(metadata, 4, mudstate.doing_hdr, -1,
+                                SQLITE_TRANSIENT) == SQLITE_OK &&
+              restart_bind_long(metadata, 5, mudstate.record_players) == 0 &&
+              restart_step(metadata) == 0 &&
+              restart_store_descriptors(sqlite) == 0 &&
+              cque_restart_store(sqlite) == 0 &&
+              restart_exec(sqlite, "COMMIT;") == 0
+          ? 0
+          : -1;
   if (result < 0 && sqlite)
     restart_exec(sqlite, "ROLLBACK;");
   sqlite3_finalize(metadata);
@@ -196,7 +203,8 @@ int restart_persistence_store(void) {
   return result;
 }
 
-static int restart_column_long(sqlite3_stmt *statement, int column, long *value) {
+static int restart_column_long(sqlite3_stmt *statement, int column,
+                               long *value) {
   sqlite3_int64 number;
 
   if (sqlite3_column_type(statement, column) != SQLITE_INTEGER)
@@ -208,8 +216,8 @@ static int restart_column_long(sqlite3_stmt *statement, int column, long *value)
   return 0;
 }
 
-static int restart_column_text(sqlite3_stmt *statement, int column, char *target,
-                               size_t target_size, int nullable) {
+static int restart_column_text(sqlite3_stmt *statement, int column,
+                               char *target, size_t target_size, int nullable) {
   const unsigned char *text;
   int length;
 
@@ -232,9 +240,9 @@ static void restart_add_descriptor(DESC *descriptor) {
   descriptor->next = descriptor_list;
   descriptor->prev = NULL;
   descriptor_list = descriptor;
-  descriptor->sock_buff = bufferevent_new(
-      descriptor->descriptor, bsd_write_callback, bsd_read_callback,
-      bsd_error_callback, NULL);
+  descriptor->sock_buff =
+      bufferevent_new(descriptor->descriptor, bsd_write_callback,
+                      bsd_read_callback, bsd_error_callback, NULL);
   bufferevent_disable(descriptor->sock_buff, EV_READ);
   bufferevent_enable(descriptor->sock_buff, EV_WRITE);
   event_set(&descriptor->sock_ev, descriptor->descriptor, EV_READ | EV_PERSIST,
@@ -258,18 +266,19 @@ static int restart_load_descriptors(sqlite3 *sqlite) {
   int has_suffix;
 
   statement = NULL;
-  result = sqlite3_prepare_v2(
-               sqlite,
-               "SELECT descriptor, flags, connected_at, command_count, timeout, "
-               "host_info, player_dbref, last_time, output_prefix, output_suffix, "
-               "addr, doing, username FROM restart_descriptors ORDER BY descriptor;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      sqlite3_prepare_v2(
+          sqlite,
+          "SELECT descriptor, flags, connected_at, command_count, timeout, "
+          "host_info, player_dbref, last_time, output_prefix, output_suffix, "
+          "addr, doing, username FROM restart_descriptors ORDER BY descriptor;",
+          -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     descriptor = calloc(1, sizeof(DESC));
-    if (!descriptor || restart_column_long(statement, 0, &value) < 0 || value <= 0 ||
-        value > INT_MAX) {
+    if (!descriptor || restart_column_long(statement, 0, &value) < 0 ||
+        value <= 0 || value > INT_MAX) {
       free(descriptor);
       result = -1;
       break;
@@ -325,10 +334,10 @@ static int restart_load_descriptors(sqlite3 *sqlite) {
     has_prefix = restart_column_text(statement, 8, prefix, sizeof(prefix), 1);
     has_suffix = restart_column_text(statement, 9, suffix, sizeof(suffix), 1);
     if (has_prefix < 0 || has_suffix < 0 ||
-        restart_column_text(statement, 10, descriptor->addr, sizeof(descriptor->addr),
-                            0) < 0 ||
-        restart_column_text(statement, 11, descriptor->doing, sizeof(descriptor->doing),
-                            0) < 0 ||
+        restart_column_text(statement, 10, descriptor->addr,
+                            sizeof(descriptor->addr), 0) < 0 ||
+        restart_column_text(statement, 11, descriptor->doing,
+                            sizeof(descriptor->doing), 0) < 0 ||
         restart_column_text(statement, 12, descriptor->username,
                             sizeof(descriptor->username), 0) < 0) {
       free(descriptor);
@@ -384,18 +393,19 @@ int restart_persistence_load(void) {
 
   sqlite = NULL;
   metadata = NULL;
-  result = restart_open(&sqlite) == 0 && restart_exec(sqlite, "PRAGMA foreign_keys = ON;") == 0 &&
+  result = restart_open(&sqlite) == 0 &&
+                   restart_exec(sqlite, "PRAGMA foreign_keys = ON;") == 0 &&
                    restart_exec(sqlite, "BEGIN IMMEDIATE;") == 0 &&
-                   sqlite3_prepare_v2(
-                       sqlite,
-                       "SELECT format_version, start_time, doing_hdr, record_players "
-                       "FROM restart_metadata WHERE id = 1;",
-                       -1, &metadata, NULL) == SQLITE_OK &&
+                   sqlite3_prepare_v2(sqlite,
+                                      "SELECT format_version, start_time, "
+                                      "doing_hdr, record_players "
+                                      "FROM restart_metadata WHERE id = 1;",
+                                      -1, &metadata, NULL) == SQLITE_OK &&
                    sqlite3_step(metadata) == SQLITE_ROW &&
                    restart_column_long(metadata, 0, &version) == 0 &&
                    restart_column_long(metadata, 1, &start_time) == 0 &&
-                   restart_column_text(metadata, 2, doing_hdr, sizeof(doing_hdr), 0) ==
-                       0 &&
+                   restart_column_text(metadata, 2, doing_hdr,
+                                       sizeof(doing_hdr), 0) == 0 &&
                    restart_column_long(metadata, 3, &record_players) == 0 &&
                    sqlite3_step(metadata) == SQLITE_DONE &&
                    version == RESTART_SCHEMA_VERSION && start_time >= 0 &&
@@ -407,17 +417,18 @@ int restart_persistence_load(void) {
     mudstate.start_time = start_time;
     mudstate.record_players = record_players;
     strcpy(mudstate.doing_hdr, doing_hdr);
-    result = restart_load_descriptors(sqlite) == 0 && cque_restart_load(sqlite) == 0 &&
-                     restart_exec(sqlite,
-                                  "DELETE FROM restart_queue_env;"
-                                  "DELETE FROM restart_queue_scr;"
-                                  "DELETE FROM restart_queue_entries;"
-                                  "DELETE FROM restart_queue_objects;"
-                                  "DELETE FROM restart_descriptors;"
-                                  "DELETE FROM restart_metadata;") == 0 &&
-                     restart_exec(sqlite, "COMMIT;") == 0
-                 ? 0
-                 : -1;
+    result =
+        restart_load_descriptors(sqlite) == 0 &&
+                cque_restart_load(sqlite) == 0 &&
+                restart_exec(sqlite, "DELETE FROM restart_queue_env;"
+                                     "DELETE FROM restart_queue_scr;"
+                                     "DELETE FROM restart_queue_entries;"
+                                     "DELETE FROM restart_queue_objects;"
+                                     "DELETE FROM restart_descriptors;"
+                                     "DELETE FROM restart_metadata;") == 0 &&
+                restart_exec(sqlite, "COMMIT;") == 0
+            ? 0
+            : -1;
   }
   if (result < 0 && sqlite)
     restart_exec(sqlite, "ROLLBACK;");
@@ -445,9 +456,8 @@ int restart_persistence_discard(void) {
       sqlite3_close(sqlite);
     return -1;
   }
-  result = sqlite3_prepare_v2(sqlite,
-                              "SELECT count(*) FROM restart_metadata;", -1,
-                              &statement, NULL) == SQLITE_OK &&
+  result = sqlite3_prepare_v2(sqlite, "SELECT count(*) FROM restart_metadata;",
+                              -1, &statement, NULL) == SQLITE_OK &&
                    sqlite3_step(statement) == SQLITE_ROW
                ? 0
                : -1;
@@ -464,13 +474,12 @@ int restart_persistence_discard(void) {
     return -1;
   result = restart_exec(sqlite, "BEGIN IMMEDIATE;") == 0 &&
                    restart_persistence_create_schema(sqlite) == 0 &&
-                   restart_exec(sqlite,
-                                "DELETE FROM restart_queue_env;"
-                                "DELETE FROM restart_queue_scr;"
-                                "DELETE FROM restart_queue_entries;"
-                                "DELETE FROM restart_queue_objects;"
-                                "DELETE FROM restart_descriptors;"
-                                "DELETE FROM restart_metadata;") == 0 &&
+                   restart_exec(sqlite, "DELETE FROM restart_queue_env;"
+                                        "DELETE FROM restart_queue_scr;"
+                                        "DELETE FROM restart_queue_entries;"
+                                        "DELETE FROM restart_queue_objects;"
+                                        "DELETE FROM restart_descriptors;"
+                                        "DELETE FROM restart_metadata;") == 0 &&
                    restart_exec(sqlite, "COMMIT;") == 0
                ? 0
                : -1;

@@ -19,10 +19,10 @@
 #include <time.h>
 
 #include "autopilot.h"
-#include "muxevent/muxevent_alloc.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.debug.h"
 #include "p.map.obj.h"
 #include "p.mech.build.h"
@@ -56,7 +56,7 @@ void debug_fixmap(dbref player, void *data, char *buffer) {
   DOLIST(k, Contents(m->mynum)) {
     if (Hardcode(k)) {
       if (WhichSpecial(k) == GTYPE_MECH) {
-        MECH *mek;
+        MECH *map_mech;
 
         /* Check if it's on the map */
         for (i = 0; i < m->first_free; i++)
@@ -64,9 +64,9 @@ void debug_fixmap(dbref player, void *data, char *buffer) {
             break;
         if (i != m->first_free)
           continue;
-        mek = getMech(k);
-        mek->mapindex = -1; /* Eep. */
-        mek->mapnumber = 0;
+        map_mech = getMech(k);
+        map_mech->mapindex = -1; /* Eep. */
+        map_mech->mapnumber = 0;
       }
     }
   }
@@ -272,7 +272,7 @@ int map_checkmapfile(MAP *map, char *mapname) {
   // Scan through the mapfile
   for (i = 0; i < height; i++) {
     if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
-        strlen(row) < (2 * width))
+        strlen(row) < 2U * (size_t)width)
       break;
   }
 
@@ -327,7 +327,7 @@ int map_load(MAP *map, char *mapname) {
 
   for (i = 0; i < height; i++) {
     if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
-        strlen(row) < (2 * width)) {
+        strlen(row) < 2U * (size_t)width) {
       break;
     }
     for (j = 0; j < width; j++) {
@@ -554,7 +554,6 @@ void map_update(dbref obj, void *data) {
   char *tmps, changemsg[LBUF_SIZE] = "";
   int ma, ml, wind, wspeed, cloudbase = 200;
   int oldl, oldv, i, j;
-  AUTO *au;
 
   /* Changed from % 25 to % 60. %60 never hit when muxevent_tick came here and
      was odd. % 25 should hit when its odd or even (25 75 125... when odd 50 100

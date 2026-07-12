@@ -40,9 +40,6 @@ static int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
 void do_show_stat(dbref player, dbref cause, int key, char *arg1, char *arg2) {
   int i, j, chancetotal;
   float f1, f2, chanceperc, optimalrolls;
-  int hitstatstotal;
-  float hitavg, missavg, glanceavg;
-  int totalhitrolls[3] = {0, 0, 0};
 
   if (!rollstat.totrolls) {
     notify(player, "No rolls to show statistics for!");
@@ -159,7 +156,7 @@ long int Number(long int low, long int high) {
     return 0;
   }
 
-  assert(nn >= 0 && nn < 32);
+  assert(nn < 32);
 
   /* Repeatedly select random numbers until we get an acceptable one.  */
   do {

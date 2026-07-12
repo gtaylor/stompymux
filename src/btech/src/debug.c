@@ -10,11 +10,11 @@
 #include "autopilot.h"
 #include "config.h"
 #include "db.h"
-#include "muxevent/muxevent_alloc.h"
 #include "externs.h"
 #include "glue.h"
 #include "mech.h"
 #include "muxevent/muxevent.h"
+#include "muxevent/muxevent_alloc.h"
 #include "p.map.obj.h"
 #include "p.mech.partnames.h"
 #include "p.mech.startup.h"
@@ -37,7 +37,9 @@ void debug_list(dbref player, void *data, char *buffer) {
 
 void debug_savedb(dbref player, void *data, char *buffer) {
   if (gamedb_dump(DUMP_NORMAL) < 0)
-    notify(player, "SQLite checkpoint failed; the previous snapshot remains available.");
+    notify(
+        player,
+        "SQLite checkpoint failed; the previous snapshot remains available.");
   else
     notify(player, "SQLite checkpoint complete.");
 }
@@ -55,10 +57,10 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   const dbref key_val = (dbref)key;
   XCODE *const xcode_obj = data;
 
-  int osize, size;
+  int size;
   MAP *map;
 
-  osize = size = SpecialObjects[xcode_obj->type].datasize;
+  size = SpecialObjects[xcode_obj->type].datasize;
 
   switch (xcode_obj->type) {
   case GTYPE_MAP:

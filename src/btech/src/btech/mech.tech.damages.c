@@ -391,8 +391,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
       fix_bth = FindTechSkill(player, mech) + REPLACE_DIFFICULTY +
                 PARTTYPE_DIFFICULTY(GetPartType(mech, v1, v2));
       fix_time = REPLACEPART_TIME;
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
       break;
     case REPAIRP_T:
       if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))) < 5)
@@ -401,8 +400,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
                 REPLACE_DIFFICULTY +
                 WEAPTYPE_DIFFICULTY(GetPartType(mech, v1, v2)) + extra_hard;
       fix_time = REPAIRGUN_TIME;
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
       break;
     case REPAIRG:
       fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
@@ -411,8 +409,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
       fix_time =
           REPLACEGUN_TIME *
           ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
       break;
     case ENHCRIT_MISC:
     case ENHCRIT_FOCUS:
@@ -424,14 +421,40 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
       fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
                 ENHCRIT_DIFFICULTY;
       fix_time = REPAIRENHCRIT_TIME;
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      switch (damage_table[i][0]) {
+      case ENHCRIT_MISC:
+        snprintf(buf, sizeof(buf), "Repairs on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      case ENHCRIT_FOCUS:
+        snprintf(buf, sizeof(buf), "Realign focus on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      case ENHCRIT_CRYSTAL:
+        snprintf(buf, sizeof(buf), "Charging crystal repairs on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      case ENHCRIT_BARREL:
+        snprintf(buf, sizeof(buf), "Barrel repairs on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      case ENHCRIT_AMMOB:
+      case ENHCRIT_AMMOM:
+        snprintf(buf, sizeof(buf), "Ammo feed repairs on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      case ENHCRIT_RANGING:
+        snprintf(buf, sizeof(buf), "Ranging system repairs on %s",
+                 pos_part_name(mech, v1, v2));
+        break;
+      default:
+        break;
+      }
       break;
     case SCRAPP:
       fix_bth = FindTechSkill(player, mech) + REMOVEP_DIFFICULTY;
       fix_time = REMOVEP_TIME;
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Removal of %s", pos_part_name(mech, v1, v2));
       break;
     case SCRAPG:
       fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
@@ -439,12 +462,11 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
       fix_time =
           REMOVEG_TIME *
           ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Removal of %s", pos_part_name(mech, v1, v2));
       break;
     case RELOAD:
       snprintf(
-          buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
+          buf, sizeof(buf), "Reload of %s%s (%d rounds)",
           pos_part_name(mech, v1, v2),
           GetPartAmmoMode(mech, v1, v2)
               ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
@@ -456,7 +478,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
       break;
     case UNLOAD:
       snprintf(
-          buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
+          buf, sizeof(buf), "Unload of %s%s(%d rounds)",
           pos_part_name(mech, v1, v2),
           GetPartAmmoMode(mech, v1, v2)
               ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
@@ -469,23 +491,32 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
     case FIXARMOR:
     case FIXARMOR_R:
     case FIXINTERNAL:
-      snprintf(buf, sizeof(buf), repair_need_msgs[(int)damage_table[i][0]],
-               damage_table[i][0] == FIXINTERNAL
-                   ? ((MechSpecials(mech) & ES_TECH)       ? " Endosteel"
-                      : (MechSpecials(mech) & REINFI_TECH) ? " Reinforced"
-                      : (MechSpecials(mech) & COMPI_TECH)  ? " Composite"
-                                                           : "")
-                   : ((MechSpecials(mech) & FF_TECH)      ? " Ferrofibrous"
-                      : (MechSpecials(mech) & HARDA_TECH) ? " Hardened"
-                      : (MechSpecials2(mech) & STEALTH_ARMOR_TECH) ? " Stealth"
-                      : (MechSpecials2(mech) & HVY_FF_ARMOR_TECH)
-                          ? " Heavy Ferrofibrous"
-                      : (MechSpecials2(mech) & LT_FF_ARMOR_TECH)
-                          ? " Light Ferrofibrous"
-                      : (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
-                          ? " Purifier Stealth"
-                          : ""),
-               damage_table[i][2]);
+      const char *armor_material =
+          damage_table[i][0] == FIXINTERNAL
+              ? ((MechSpecials(mech) & ES_TECH)       ? " Endosteel"
+                 : (MechSpecials(mech) & REINFI_TECH) ? " Reinforced"
+                 : (MechSpecials(mech) & COMPI_TECH)  ? " Composite"
+                                                      : "")
+              : ((MechSpecials(mech) & FF_TECH)               ? " Ferrofibrous"
+                 : (MechSpecials(mech) & HARDA_TECH)          ? " Hardened"
+                 : (MechSpecials2(mech) & STEALTH_ARMOR_TECH) ? " Stealth"
+                 : (MechSpecials2(mech) & HVY_FF_ARMOR_TECH)
+                     ? " Heavy Ferrofibrous"
+                 : (MechSpecials2(mech) & LT_FF_ARMOR_TECH)
+                     ? " Light Ferrofibrous"
+                 : (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
+                     ? " Purifier Stealth"
+                     : "");
+      if (damage_table[i][0] == FIXINTERNAL) {
+        snprintf(buf, sizeof(buf), "Repairs on%s internals (%d points)",
+                 armor_material, damage_table[i][2]);
+      } else if (damage_table[i][0] == FIXARMOR_R) {
+        snprintf(buf, sizeof(buf), "Repairs on rear%s armor (%d points)",
+                 armor_material, damage_table[i][2]);
+      } else {
+        snprintf(buf, sizeof(buf), "Repairs on%s armor (%d points)",
+                 armor_material, damage_table[i][2]);
+      }
       fix_bth = FindTechSkill(player, mech) + (damage_table[i][0] == FIXINTERNAL
                                                    ? FIXINTERNAL_DIFFICULTY
                                                    : FIXARMOR_DIFFICULTY);
