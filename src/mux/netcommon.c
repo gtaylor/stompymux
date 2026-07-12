@@ -1662,7 +1662,7 @@ dbref find_connected_name(dbref player, char *name) {
 }
 
 void run_command(DESC *d, char *command) {
-  if (!Staff(d->player)) {
+  if (!Wizard(d->player)) {
     if (d->quota <= 0) {
       queue_string(d, "quota exceed, dropping command.\n");
       dprintk("aborting execution of %s for #%ld.", command, d->player);

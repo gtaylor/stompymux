@@ -6624,10 +6624,10 @@ carried
  
   Flag: HEAD(?)
  
-  This is another marker flag, for faction heads and the like. As
-  with STAFF, no powers come with it; it is purely a marker.
- 
-  See also: STAFF, WIZARD
+  This is another marker flag, for faction heads and the like. No powers
+  come with it; it is purely a marker.
+
+  See also: WIZARD
   
 & heading
  
@@ -6921,7 +6921,7 @@ carried
  >> Help: Inform (Informational Commands)
  -----------------------------------------------------------------------------
  Factions		Time			Uptime
- Stats			Ranklist		Staff
+ Stats			Ranklist
  Finger			Weather			Weaplist		
  Weapstats
  -----------------------------------------------------------------------------
@@ -11138,27 +11138,6 @@ AdvSensors: BeagleProbe
  
   See Also: trim()
  
-& staff
- 
- >> Help: Staff (Informational Command)
- -----------------------------------------------------------------------------
- Syntax: Staff
- 
- The 'Staff' command displays a listing of the current staff presiding over
- the game along with basic information about each staff member. Their job
- within the staff along with when they were last connected (or connected now)
- are also shown.
- 
- 
-& STAFF
- 
-  Flag: STAFF
- 
-  This flag can be used to mark players who serve as staff on the MUX.
-  It is wizard-settable only.
- 
-  See also: WIZARD, HEAD
-  
 & stand
  
   RS Command: stand

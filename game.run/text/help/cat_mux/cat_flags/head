@@ -3,8 +3,8 @@
  
   Flag: HEAD(?)
  
-  This is another marker flag, for faction heads and the like. As
-  with STAFF, no powers come with it; it is purely a marker.
- 
-  See also: STAFF, WIZARD
+ This is another marker flag, for faction heads and the like. No powers
+ come with it; it is purely a marker.
+
+ See also: WIZARD
  

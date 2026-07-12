@@ -550,7 +550,7 @@ void notify_checked(dbref target, dbref sender, const char *msg, int key) {
      * \todo Eventually come up with a cleaner method for making sure
      * the sender isn't the same as the target.
      */
-    if ((key & MSG_ME) && (sender != target || Staff(target)) && pass_uselock &&
+    if ((key & MSG_ME) && (sender != target || Wizard(target)) && pass_uselock &&
         Monitor(target)) {
       (void)atr_match(target, sender, AMATCH_LISTEN, (char *)msg, 0);
     }

@@ -69,7 +69,7 @@
 #define NO_COMMAND 0x00002000
 
 #define NOBLEED 0x00008000
-#define STAFF 0x00010000
+/* 0x00010000 is reserved for the removed STAFF flag. */
 #define HAS_DAILY 0x00020000
 #define GAGGED 0x00040000
 #define HARDCODE 0x00080000
@@ -279,7 +279,6 @@ extern void decompile_flags(dbref, dbref, char *);
   (((Flags2(x) & CONNECTED) != 0) && (Typeof(x) == TYPE_PLAYER))
 #define Slave(x) ((Flags2(Owner(x)) & SLAVE) != 0)
 #define Hidden(x) ((Flags(x) & DARK) || (Flags2(x) & UNFINDABLE))
-#define Staff(x) ((Flags2(x) & STAFF))
 #define H_Startup(x) ((Flags(x) & HAS_STARTUP) != 0)
 #define H_Fwdlist(x) ((Flags2(x) & HAS_FWDLIST) != 0)
 #define H_Listen(x) ((Flags2(x) & HAS_LISTEN) != 0)
