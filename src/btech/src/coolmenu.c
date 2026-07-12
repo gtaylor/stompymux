@@ -60,6 +60,8 @@ void display_line(char **c, int *len, coolmenu *m) {
   char *ch = *c;
   int i;
 
+  (void)m;
+
   snprintf(ch, *len, "%%cb");
   ch += strlen(ch);
   for (i = 0; i < *len; i++)

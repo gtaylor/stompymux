@@ -756,35 +756,35 @@
   SetMap(mapn, x, y, GetTerrain(mapn, x, y), e)
 
 /* For now I don't care about allocations */
-#define ScenError(msg...) send_channel("ScenErrors", msg)
-#define ScenStatus(msg...) send_channel("ScenStatus", msg)
-#define SendAI(msg...) send_channel("MechAI", msg)
+#define ScenError(...) send_channel("ScenErrors", __VA_ARGS__)
+#define ScenStatus(...) send_channel("ScenStatus", __VA_ARGS__)
+#define SendAI(...) send_channel("MechAI", __VA_ARGS__)
 #define SendAlloc(msg)
 #define SendLoc(msg)
-#define SendCustom(msg...) send_channel("MechCustom", msg)
-#define SendDB(msg...) send_channel("DBInfo", msg)
-#define SendDebug(msg...) send_channel("MechDebugInfo", msg)
-#define SendDeath(msg...) send_channel("MechDeaths", msg)
-#define SendEcon(msg...) send_channel("MechEconInfo", msg)
-#define SendError(msg...) send_channel("MechErrors", msg)
-#define SendMapError(msg...) send_channel("MapErrors", msg)
-#define SendEvent(msg...) send_channel("EventInfo", msg)
-#define SendSensor(msg...) send_channel("MechSensor", msg)
-#define SendTrigger(msg...) send_channel("MineTriggers", msg)
-#define SendXP(msg...) send_channel("MechXP", msg)
-#define SendDSInfo(msg...) send_channel("DSInfo", msg)
+#define SendCustom(...) send_channel("MechCustom", __VA_ARGS__)
+#define SendDB(...) send_channel("DBInfo", __VA_ARGS__)
+#define SendDebug(...) send_channel("MechDebugInfo", __VA_ARGS__)
+#define SendDeath(...) send_channel("MechDeaths", __VA_ARGS__)
+#define SendEcon(...) send_channel("MechEconInfo", __VA_ARGS__)
+#define SendError(...) send_channel("MechErrors", __VA_ARGS__)
+#define SendMapError(...) send_channel("MapErrors", __VA_ARGS__)
+#define SendEvent(...) send_channel("EventInfo", __VA_ARGS__)
+#define SendSensor(...) send_channel("MechSensor", __VA_ARGS__)
+#define SendTrigger(...) send_channel("MineTriggers", __VA_ARGS__)
+#define SendXP(...) send_channel("MechXP", __VA_ARGS__)
+#define SendDSInfo(...) send_channel("DSInfo", __VA_ARGS__)
 
 /*
  * Exile Added Channel Message Emits
  */
-#define SendAttackEmits(msg...) send_channel("MechAttackEmits", msg)
-#define SendAttacks(msg...) send_channel("MechAttacks", msg)
-#define SendAttackXP(msg...) send_channel("MechAttackXP", msg)
-#define SendBTHDebug(msg...) send_channel("MechBTHDebug", msg)
-#define SendFreqs(msg...) send_channel("MechFreqs", msg)
-#define SendPilotXP(msg...) send_channel("MechPilotXP", msg)
-#define SendTechXP(msg...) send_channel("MechTechXP", msg)
-#define SendTAC(msg...) send_channel("TACInfo", msg)
+#define SendAttackEmits(...) send_channel("MechAttackEmits", __VA_ARGS__)
+#define SendAttacks(...) send_channel("MechAttacks", __VA_ARGS__)
+#define SendAttackXP(...) send_channel("MechAttackXP", __VA_ARGS__)
+#define SendBTHDebug(...) send_channel("MechBTHDebug", __VA_ARGS__)
+#define SendFreqs(...) send_channel("MechFreqs", __VA_ARGS__)
+#define SendPilotXP(...) send_channel("MechPilotXP", __VA_ARGS__)
+#define SendTechXP(...) send_channel("MechTechXP", __VA_ARGS__)
+#define SendTAC(...) send_channel("TACInfo", __VA_ARGS__)
 
 /*
  * This is the prototype for functions
@@ -792,18 +792,18 @@
 
 #ifdef TEMPLATE_VERBOSE_ERRORS
 
-#define TEMPLATE_ERR(a, b...)                                                  \
+#define TEMPLATE_ERR(a, ...)                                                   \
   if (a) {                                                                     \
-    notify(player, tprintf(b));                                                \
+    notify(player, tprintf(__VA_ARGS__));                                     \
     if (fp)                                                                    \
       fclose(fp);                                                              \
     return -1;                                                                 \
   }
 
-#define TEMPLATE_GERR(a, b...)                                                 \
+#define TEMPLATE_GERR(a, ...)                                                  \
   if (a) {                                                                     \
     char foobarbuf[LBUF_SIZE] = {0};                                           \
-    snprintf(foobarbuf, sizeof(foobarbuf), b);                                 \
+    snprintf(foobarbuf, sizeof(foobarbuf), __VA_ARGS__);                      \
     SendError(foobarbuf);                                                      \
     if (fp)                                                                    \
       fclose(fp);                                                              \
@@ -811,7 +811,7 @@
   }
 #else
 
-#define TEMPLATE_ERR(a, b...)                                                  \
+#define TEMPLATE_ERR(a, ...)                                                   \
   if (a) {                                                                     \
     if (fp)                                                                    \
       fclose(fp);                                                              \

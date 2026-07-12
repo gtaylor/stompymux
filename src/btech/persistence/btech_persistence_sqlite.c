@@ -33,6 +33,8 @@ extern ACOM acom[AUTO_NUM_COMMANDS + 1];
 #define BTECH_PERSISTENCE_SCHEMA_VERSION 1
 
 /* Explicit map and repair-event tables are the first BTech SQLite mirror. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
 static const char btech_special_schema_sql[] =
     "CREATE TABLE btech_persistence_metadata ("
     " id INTEGER PRIMARY KEY CHECK (id = 1), schema_version INTEGER NOT NULL"
@@ -205,6 +207,7 @@ static const char btech_special_schema_sql[] =
     " mech_dbref INTEGER NOT NULL, position INTEGER NOT NULL, amount INTEGER NOT NULL, occurred_at INTEGER NOT NULL,"
     " attacker_dbref INTEGER NOT NULL, counted INTEGER NOT NULL, PRIMARY KEY (mech_dbref, position)"
     ") WITHOUT ROWID;";
+#pragma GCC diagnostic pop
 
 /*
  * CTest can force one named BTech writer statement to fail. This code is
@@ -2145,7 +2148,9 @@ static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
   int slot;
   int step;
   int value;
+#ifndef BT_CALCULATE_BV
   int index;
+#endif
 
   statement = NULL;
   current_mech = NOTHING;
@@ -2364,7 +2369,7 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
 
 /* Resolve a preallocated special object and reject a row of the wrong type. */
 static void *btech_special_object(dbref object, GlueType type) {
-  if (!Good_obj(object) || WhichSpecial(object) != type)
+  if (!Good_obj(object) || WhichSpecial(object) != (int)type)
     return NULL;
   return FindObjectsData(object);
 }

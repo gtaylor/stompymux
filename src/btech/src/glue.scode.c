@@ -259,7 +259,7 @@ void apply_mechDamage(MECH *omech, char *buf) {
     do_magic(omech);
 }
 
-#define ADD(foo...)                                                            \
+#define ADD(...)                                                               \
   {                                                                            \
     if (count++) {                                                             \
       size_t len = strlen(buf);                                                \
@@ -268,7 +268,7 @@ void apply_mechDamage(MECH *omech, char *buf) {
         buf[len + 1] = '\0';                                                   \
       }                                                                        \
     }                                                                          \
-    snprintf(buf + strlen(buf), LBUF_SIZE - strlen(buf), foo);                 \
+    snprintf(buf + strlen(buf), LBUF_SIZE - strlen(buf), __VA_ARGS__);         \
   }
 
 char *mechDamagefunc(int mode, MECH *mech, char *arg) {

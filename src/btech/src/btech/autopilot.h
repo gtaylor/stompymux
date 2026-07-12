@@ -246,14 +246,14 @@
   } while (0)
 
 #ifdef DEBUG_AUTOGUN
-#define print_autogun_log(autopilot, args...)                                  \
+#define print_autogun_log(autopilot, ...)                                      \
   do {                                                                         \
     fprintf(stderr, "AI: %d AUTOGUN ", autopilot->mynum);                      \
-    fprintf(stderr, args);                                                     \
+    fprintf(stderr, __VA_ARGS__);                                             \
     fprintf(stderr, "\n");                                                     \
   } while (0)
 #else
-#define print_autogun_log(autopilot, args...)
+#define print_autogun_log(autopilot, ...)
 #endif
 
 /*

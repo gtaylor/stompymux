@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 4.3)
 
 project(BattleTechMUX LANGUAGES C)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Git QUIET)
 set(PROJECT_VERSION "unknown")
 if(Git_FOUND)
@@ -41,6 +43,12 @@ option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
 option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
+option(BTMUX_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+
+if(BTMUX_ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_EXECUTABLE clang-tidy REQUIRED)
+  set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
+endif()
 
 find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
@@ -71,7 +79,7 @@ configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors>)
+  $<$<COMPILE_LANGUAGE:C>:-Werror -Wfatal-errors -Wformat -Wformat-security>)
 if(BTMUX_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
@@ -260,7 +268,7 @@ target_include_directories(mkindx PRIVATE
 
 if(BUILD_TESTING)
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
-  target_link_libraries(gamedb_integration_test PRIVATE SQLite3::SQLite3)
+  target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTMUX_ADVANCED_ECON)
     target_compile_definitions(gamedb_integration_test
       PRIVATE BTMUX_TEST_ADVANCED_ECON=1)

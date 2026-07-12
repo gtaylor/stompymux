@@ -42,7 +42,7 @@ void MechLOSBroadcast(MECH *mech, char *message);
 int MechSeesHexF(MECH *mech, MAP *map, float x, float y, int ix, int iy);
 int MechSeesHex(MECH *mech, MAP *map, int x, int y);
 void HexLOSBroadcast(MAP *mech_map, int x, int y, char *message);
-void MechLOSBroadcasti(MECH *mech, MECH *target, char *message);
+void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message);
 void MapBroadcast(MAP *map, char *message);
 void MechFireBroadcast(MECH *mech, MECH *target, int x, int y, MAP *mech_map,
                        char *weapname, int IsHit);

@@ -461,10 +461,17 @@ int rb_exists(rbtree bt, void *key) {
   exit(1);
 }
 
-#define rbann(format, args...) printf("%d: " format "\n", __LINE__, ##args)
-#define rbfail(format, args...)                                                \
+#define rbann(...)                                                             \
   do {                                                                         \
-    printf("%d: " format "\n", __LINE__, ##args);                              \
+    printf("%d: ", __LINE__);                                                \
+    printf(__VA_ARGS__);                                                      \
+    printf("\n");                                                           \
+  } while (0)
+#define rbfail(...)                                                            \
+  do {                                                                         \
+    printf("%d: ", __LINE__);                                                \
+    printf(__VA_ARGS__);                                                      \
+    printf("\n");                                                           \
     abort();                                                                   \
   } while (0)
 

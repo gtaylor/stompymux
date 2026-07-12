@@ -1516,7 +1516,20 @@ void HexLOSBroadcast(MAP *mech_map, int x, int y, char *message) {
         }
 }
 
-void MechLOSBroadcasti(MECH *mech, MECH *target, char *message) {
+static void format_mech_los_message(char *buffer, size_t buffer_size,
+                                    const char *message,
+                                    const char *target_name) {
+  const char *placeholder = strstr(message, "%s");
+
+  if (!placeholder) {
+    snprintf(buffer, buffer_size, "%s", message);
+    return;
+  }
+  snprintf(buffer, buffer_size, "%.*s%s%s", (int)(placeholder - message),
+           message, target_name, placeholder + 2);
+}
+
+void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message) {
   /* Sends msg to everyone except the mech */
   int i, a, b;
   char oddbuff[LBUF_SIZE];
@@ -1540,8 +1553,9 @@ void MechLOSBroadcasti(MECH *mech, MECH *target, char *message) {
         if (a || b) {
           char *obp = oddbuff2;
 
-          snprintf(oddbuff, sizeof(oddbuff), message,
-                   b ? GetMechToMechID(tempMech, target) : "someone");
+          format_mech_los_message(
+              oddbuff, sizeof(oddbuff), message,
+              b ? GetMechToMechID(tempMech, target) : "someone");
           safe_str((char *)(a ? GetMechToMechID(tempMech, mech) : "Someone"),
                    oddbuff2, &obp);
           if (*oddbuff != '\'')
