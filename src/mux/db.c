@@ -349,9 +349,7 @@ int fwdlist_load(FWDLIST *fp, dbref player, char *atext) {
                      */
     if ((*dp++ == '#') && isdigit(*dp)) {
       target = atoi(dp);
-      fail = (!Good_obj(target) ||
-              (!God(player) && !controls(player, target) &&
-               (!Link_ok(target) || !could_doit(player, target, A_LLINK))));
+      fail = (!Good_obj(target) || (!God(player) && !controls(player, target)));
       if (fail) {
         notify_printf(player, "Cannot forward to #%d: Permission denied.",
                       target);

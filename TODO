@@ -6,7 +6,6 @@
 * Maybe: remove all powers. wiz bit is enough
 * Remove flags that aren't useful
     * HAVEN
-* Remove kill / @akill
 * Remove @sex
 * Write tests
 

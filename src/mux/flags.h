@@ -22,7 +22,7 @@
 /* First word of flags */
 #define SEETHRU 0x00000008     /* Can see through to the other side */
 #define WIZARD 0x00000010      /* gets automatic control */
-#define LINK_OK 0x00000020     /* anybody can link to this room */
+/* 0x00000020 is reserved for the removed LINK_OK flag. */
 #define DARK 0x00000040        /* Don't show contents or presence */
 #define JUMP_OK 0x00000080     /* Others may @tel here */
 #define STICKY 0x00000100      /* Object goes home when dropped */
@@ -220,7 +220,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define NoBleed(x) ((Flags2(x) & NOBLEED) != 0)
 
 #define Transparent(x) ((Flags(x) & SEETHRU) != 0)
-#define Link_ok(x) (((Flags(x) & LINK_OK) != 0) && Has_contents(x))
 #define Wizard(x)                                                              \
   ((Flags(x) & WIZARD) || ((Flags(Owner(x)) & WIZARD) && Inherits(x)))
 #define Dark(x) (((Flags(x) & DARK) != 0) && (Wizard(x) || !Alive(x)))
@@ -317,8 +316,7 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Link_exit(p, x)                                                        \
   ((Typeof(x) == TYPE_EXIT) && ((Location(x) == NOTHING) || Controls(p, x)))
 #define Linkable(p, x)                                                         \
-  (Good_obj(x) && (Has_contents(x)) &&                                         \
-   (((Flags(x) & LINK_OK) != 0) || Controls(p, x)))
+  (Good_obj(x) && Has_contents(x) && Controls(p, x))
 #define See_attr(p, x, a, o, f)                                                \
   (!((a)->flags & (AF_INTERNAL | AF_IS_LOCK)) &&                               \
    (God(p) || ((f) & AF_VISUAL) ||                                             \

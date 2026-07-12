@@ -163,8 +163,8 @@ static void link_exit(dbref player, dbref exit, dbref dest) {
    * Make sure we can link there
    */
 
-  if ((dest != HOME) && ((!controls(player, dest) && !Link_ok(dest)) ||
-                         !could_doit(player, dest, A_LLINK))) {
+  if ((dest != HOME) &&
+      (!controls(player, dest) || !could_doit(player, dest, A_LLINK))) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -287,8 +287,8 @@ void do_link(dbref player, dbref cause, int key, char *what, char *where) {
 
     if ((room != HOME) && !isRoom(room)) {
       notify_quiet(player, "That is not a room!");
-    } else if ((room != HOME) && ((!controls(player, room) && !Link_ok(room)) ||
-                                  !could_doit(player, room, A_LLINK))) {
+    } else if ((room != HOME) &&
+               (!controls(player, room) || !could_doit(player, room, A_LLINK))) {
       notify_quiet(player, "Permission denied.");
     } else {
       s_Dropto(thing, room);

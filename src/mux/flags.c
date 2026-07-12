@@ -245,7 +245,6 @@ FLAGENT gen_flags[] = {
     {"JUMP_OK", JUMP_OK, 'J', 0, 0, fh_any},
     {"KEY", KEY, 'K', FLAG_WORD2, 0, fh_any},
     {"LIGHT", LIGHT, 'l', FLAG_WORD2, 0, fh_any},
-    {"LINK_OK", LINK_OK, 'L', 0, 0, fh_any},
     {"MONITOR", MONITOR, 'M', 0, 0, fh_hear_bit},
     {"MULTIOK", MULTIOK, 'y', FLAG_WORD2, CA_WIZARD, fh_wiz},
     {"MYOPIC", MYOPIC, 'm', 0, 0, fh_any},
@@ -594,7 +593,7 @@ char *unparse_object(dbref player, dbref target, int obey_myopic) {
       exam = MyopicExam(player, target);
     else
       exam = Examinable(player, target);
-    if (exam || (Flags(target) & (JUMP_OK | LINK_OK | DESTROY_OK))) {
+    if (exam || (Flags(target) & (JUMP_OK | DESTROY_OK))) {
 
       /*
        * show everything

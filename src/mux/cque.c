@@ -790,7 +790,7 @@ void do_notify(dbref player, dbref cause, int key, char *what, char *count) {
 
   if ((thing = noisy_match_result()) < 0) {
     notify(player, "No match.");
-  } else if (!controls(player, thing) && !Link_ok(thing)) {
+  } else if (!controls(player, thing)) {
     notify(player, "Permission denied.");
   } else {
     if (!what || !*what) {
@@ -1012,7 +1012,7 @@ void do_wait(dbref player, dbref cause, int key, char *event, char *cmd,
   thing = noisy_match_result();
   if (!Good_obj(thing)) {
     notify(player, "No match.");
-  } else if (!controls(player, thing) && !Link_ok(thing)) {
+  } else if (!controls(player, thing)) {
     notify(player, "Permission denied.");
   } else {
 

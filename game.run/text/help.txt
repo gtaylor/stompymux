@@ -1521,13 +1521,12 @@
   you, and you must pass the destination's LinkLock.
  
   When used on a room, this command sets the room's drop-to, where
-  objects dropped in the room go.  The destination must be a room
-  that is either owned by you or is LINK_OK, and you must pass the
-  destination's LinkLock.
+  objects dropped in the room go. The destination must be a room you
+  control, and you must pass the destination's LinkLock.
  
   For exits, this command sets the destination if the exit is
-  currently unlinked, you control the destination or it is set
-  LINK_OK, and you pass the destination's LinkLock.  You can @link
+  currently unlinked, you control the destination, and you pass the
+  destination's LinkLock. You can @link
   an unlinked exit regardless of who owns it or the lock set on it,
   you are made the owner if you successfully link to the destination.
  
@@ -1541,10 +1540,7 @@
  
   Note that in all the above cases that it is the player performing
   the @link command that must pass the LinkLock, not the object
-  being linked. Therefore, you should use the '$' lock qualifier if
-  you want to prevent specific players from linking to your LINK_OK
-  locations, as simply locking against '*<playername>' does not lock
-  out their puppets.
+  being linked.
  
   See also: @dig, @open, @unlink, DROP-TOS, HOMES, LINKING.
  
@@ -1826,9 +1822,8 @@
      LeaveLock:    Players/Things: controls who may LEAVE the object.
  
      LinkLock:     All but Exits:  controls who may link to the
-                                   location if the location is LINK_OK
-                                   (for linking exits, setting drop-tos,
-                                   or setting homes)
+                                   location (for linking exits, setting
+                                   drop-tos, or setting homes)
      PageLock:     Players:        controls who may page the player.
      ParentLock:   All:            controls who may make @parent links
                                    to the object.
@@ -7290,16 +7285,6 @@ carried
   the same as using @link.
  
   See Also: @link, home()
- & LINK_OK
- 
-  Flag: LINK_OK (L)
- 
-  If a room is LINK_OK, anyone can link exits TO it, though not FROM
-  it.
-  It has no meaning for people, things, or exits.
- 
-  See also: @link
-  
 & list()
  
   Syntax: list(<list>, <eval>[, <delim>])
