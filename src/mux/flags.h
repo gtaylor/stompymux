@@ -61,9 +61,7 @@
 #define HAS_FWDLIST 0x00000080 /* Internal: FORWARDLIST attr set */
 #define AUDITORIUM 0x00000100  /* Should we check the SpeechLock? */
 #define ANSI 0x00000200
-#define REGISTERED_FLAG                                                        \
-  0x00000400 /* Is player Registered? Useful to lockout non-registered players \
-              */
+/* 0x00000400 is reserved for the removed REGISTERED flag. */
 #define FIXED 0x00000800
 #define UNINSPECTED 0x00001000
 #define NO_COMMAND 0x00002000
@@ -278,7 +276,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define H_Startup(x) ((Flags(x) & HAS_STARTUP) != 0)
 #define H_Fwdlist(x) ((Flags2(x) & HAS_FWDLIST) != 0)
 #define H_Listen(x) ((Flags2(x) & HAS_LISTEN) != 0)
-#define Registered(x) ((Flags2(x) & REGISTERED_FLAG) != 0)
 
 #define s_Opaque(x) s_Flags((x), Flags(x) | OPAQUE)
 #define s_Slave(x) s_Flags2((x), Flags2(x) | SLAVE)

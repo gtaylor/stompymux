@@ -501,11 +501,6 @@ static void announce_connect(dbref player, DESC *d) {
     if (!(mudconf.control_flags & CF_LOGIN)) {
       raw_notify(player, "*** Logins are disabled.");
     }
-    if (mudconf.registeredonly) {
-      raw_notify(
-          player,
-          "*** Only players with the Registered FLAG are allowed to login.");
-    }
   }
   buf = atr_get(player, A_LPAGE, &aowner, &aflags);
   if (buf && *buf) {
@@ -1180,16 +1175,13 @@ static int check_connect(DESC *d, char *msg) {
         return 0;
       }
     } else if (((mudconf.control_flags & CF_LOGIN) &&
-                (nplayers < mudconf.max_players) &&
-                (mudconf.registeredonly == Registered(player))) ||
-               !mudconf.registeredonly || Wizard(player) || God(player)) {
+                (nplayers < mudconf.max_players)) ||
+               Wizard(player) || God(player)) {
 
       if (!strncmp(command, "cd", 2) && (Wizard(player) || God(player)))
         s_Flags(player, Flags(player) | DARK);
 
-      /*
-       * Logins are enabled, or wiz or god and registered player if needed
-       */
+      /* Logins are enabled, or the player is a wizard or God. */
 
       STARTLOG(LOG_LOGIN, "CON", "LOGIN") {
         buff = alloc_mbuf("check_conn.LOG.login");
@@ -1245,12 +1237,6 @@ static int check_connect(DESC *d, char *msg) {
                FC_CONN_DOWN, mudconf.downmotd_msg, command, user, password,
                cmdsave);
       return 0;
-    } else if (mudconf.registeredonly &&
-               mudconf.registeredonly != Registered(player)) {
-      failconn("CON", "Connect", "Registered Only", d, R_GAMEDOWN, player,
-               FC_CONN_DOWN, mudconf.downmotd_msg, command, user, password,
-               cmdsave);
-      return 0;
     } else {
       failconn("CON", "Connect", "Game Full", d, R_GAMEFULL, player,
                FC_CONN_FULL, mudconf.fullmotd_msg, command, user, password,
@@ -1269,16 +1255,6 @@ static int check_connect(DESC *d, char *msg) {
                cmdsave);
       return 0;
     }
-    /* Enforce registered only -- Wiz would @pcreate and set registered instead
-     * of a login screen create*/
-
-    if (mudconf.registeredonly) {
-      failconn("CRE", "Create", "Registered Only", d, R_GAMEDOWN, NOTHING,
-               FC_CONN_DOWN, mudconf.downmotd_msg, command, user, password,
-               cmdsave);
-      return 0;
-    }
-
     /*
      * Enforce max #players
      */
