@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "config.h"
+
 struct commac {
   dbref who;
 
