@@ -224,7 +224,6 @@ FLAGENT gen_flags[] = {
     {"ANSIMAP", ANSIMAP, 'P', FLAG_WORD2, 0, fh_any},
     {"AUDIBLE", HEARTHRU, 'a', 0, 0, fh_hear_bit},
     {"AUDITORIUM", AUDITORIUM, 'b', FLAG_WORD2, 0, fh_any},
-    {"COMPRESS", COMPRESS, '.', FLAG_WORD2, 0, fh_any},
     {"CONNECTED", CONNECTED, 'c', FLAG_WORD2, CA_NO_DECOMP, fh_god},
     {"DARK", DARK, 'D', 0, 0, fh_dark_bit},
     {"DESTROY_OK", DESTROY_OK, 'd', 0, 0, fh_any},

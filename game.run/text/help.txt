@@ -4514,12 +4514,6 @@ while line:
  
   See Also: sortby()
   
-& COMPRESS
- 
-  Flag: COMPRESS (.)
- 
-  This flag is currently unused.
-  
 & computer
  
  >> Help: Computer (Skills-Combat, Misc.)

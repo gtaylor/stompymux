@@ -81,7 +81,7 @@
 #define ZOMBIE 0x08000000 /* Hardcode object is a zombie */
 
 #define SUSPECT 0x10000000   /* Report some activities to wizards */
-#define COMPRESS 0x20000000  /* Output is compressed */
+/* 0x20000000 is reserved for the removed COMPRESS flag. */
 #define CONNECTED 0x40000000 /* Player is connected */
 #define SLAVE 0x80000000     /* Disallow most commands */
 
@@ -221,7 +221,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Ansimap(x) ((Flags2(x) & ANSIMAP) != 0)
 #define No_Command(x) ((Flags2(x) & NO_COMMAND) != 0)
 #define NoBleed(x) ((Flags2(x) & NOBLEED) != 0)
-#define Compress(x) ((Flags2(x) & COMPRESS) != 0)
 
 #define Transparent(x) ((Flags(x) & SEETHRU) != 0)
 #define Link_ok(x) (((Flags(x) & LINK_OK) != 0) && Has_contents(x))
