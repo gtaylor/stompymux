@@ -115,7 +115,7 @@ int can_set_home(dbref player, dbref thing, dbref home) {
   case TYPE_THING:
     if (Going(home))
       return 0;
-    if (Controls(player, home) || Abode(home))
+    if (Controls(player, home))
       return 1;
   }
   return 0;

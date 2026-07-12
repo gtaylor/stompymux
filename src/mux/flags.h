@@ -52,7 +52,7 @@
 
 /* Second word of flags */
 #define KEY 0x00000001         /* No puppets */
-#define ABODE 0x00000002       /* May @set home here */
+/* 0x00000002 is reserved for the removed ABODE flag. */
 #define FLOATING 0x00000004    /* Inhibit Floating room.. msgs */
 #define UNFINDABLE 0x00000008  /* Cant loc() from afar */
 #define PARENT_OK 0x00000010   /* Others may @parent to me */
@@ -181,7 +181,6 @@ extern void decompile_flags(dbref, dbref, char *);
 /* MyopicExam(P,X)   - Can P look at attribs of X (obeys MYOPIC) */
 /* Controls(P,X)     - Can P force X to do something */
 /* Affects(P,X)      - (Controls in MUSH V1) Is P wiz or same owner as X */
-/* Abode(X)          - Is X an ABODE room */
 /* Link_exit(P,X)    - Can P link from exit X */
 /* Linkable(P,X)     - Can P link to X */
 /* Mark(x)           - Set marked flag on X */
@@ -263,7 +262,6 @@ extern void decompile_flags(dbref, dbref, char *);
 
 #define Gagged(x) ((Flags2(x) & GAGGED) != 0)
 #define Key(x) ((Flags2(x) & KEY) != 0)
-#define Abode(x) (((Flags2(x) & ABODE) != 0) && Home_ok(x))
 #define Auditorium(x) ((Flags2(x) & AUDITORIUM) != 0)
 #define Floating(x) ((Flags2(x) & FLOATING) != 0)
 #define Findable(x) ((Flags2(x) & UNFINDABLE) == 0)

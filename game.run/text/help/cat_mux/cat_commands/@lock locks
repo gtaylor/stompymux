@@ -21,12 +21,11 @@
  
      LinkLock:     All but Exits:  controls who may link to the
                                    location if the location is LINK_OK
-                                   (for linking exits or setting drop-
-                                   tos) or ABODE (for setting homes)
+                                   (for linking exits, setting drop-tos,
+                                   or setting homes)
      PageLock:     Players:        controls who may page the player.
      ParentLock:   All:            controls who may make @parent links
                                    to the object.
      ReceiveLock:  Players/Things: controls who may give things to the
                                    object.
 { 'help @lock locks2' for more}
- 

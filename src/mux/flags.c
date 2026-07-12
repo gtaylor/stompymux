@@ -220,7 +220,6 @@ static int fh_xcode_bit(dbref target, dbref player, FLAG flag, int fflags,
  * 5 = Permissions
  */
 FLAGENT gen_flags[] = {
-    {"ABODE", ABODE, 'A', FLAG_WORD2, 0, fh_any},
     {"ANSI", ANSI, 'X', FLAG_WORD2, 0, fh_any},
     {"ANSIMAP", ANSIMAP, 'P', FLAG_WORD2, 0, fh_any},
     {"AUDIBLE", HEARTHRU, 'a', 0, 0, fh_hear_bit},
@@ -602,8 +601,7 @@ char *unparse_object(dbref player, dbref target, int obey_myopic) {
       exam = MyopicExam(player, target);
     else
       exam = Examinable(player, target);
-    if (exam || (Flags(target) & (CHOWN_OK | JUMP_OK | LINK_OK | DESTROY_OK)) ||
-        (Flags2(target) & ABODE)) {
+    if (exam || (Flags(target) & (CHOWN_OK | JUMP_OK | LINK_OK | DESTROY_OK))) {
 
       /*
        * show everything

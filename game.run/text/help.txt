@@ -1518,9 +1518,8 @@
   Syntax: @link <object>=#<number>/here/home
  
   When used on a player or a thing, this command sets the object's
-  home to the indicated location.  The destination must be owned by
-  you or be an ABODE room, and you must pass the destination's
-  LinkLock.
+  home to the indicated location. The destination must be controlled by
+  you, and you must pass the destination's LinkLock.
  
   When used on a room, this command sets the room's drop-to, where
   objects dropped in the room go.  The destination must be a room
@@ -1829,8 +1828,8 @@
  
      LinkLock:     All but Exits:  controls who may link to the
                                    location if the location is LINK_OK
-                                   (for linking exits or setting drop-
-                                   tos) or ABODE (for setting homes)
+                                   (for linking exits, setting drop-tos,
+                                   or setting homes)
      PageLock:     Players:        controls who may page the player.
      ParentLock:   All:            controls who may make @parent links
                                    to the object.
@@ -3245,16 +3244,6 @@
   specified) are removed from <object>.  Attributes that you do not
   have permission to modify (such as read-only or locked attributes)
   are not removed.
-  
-& ABODE
-
-Flag: ABODE (A)
-
-  If a room is set ABODE, players can set their homes there,
-  and can set the homes of objects there.  It does not mean that a
-  player can open an exit to that room, however.
-
-  See also: HOMES
   
 & abs()
  

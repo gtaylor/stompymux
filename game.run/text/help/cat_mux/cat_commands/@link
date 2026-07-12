@@ -4,9 +4,8 @@
   Syntax: @link <object>=#<number>/here/home
  
   When used on a player or a thing, this command sets the object's
-  home to the indicated location.  The destination must be owned by
-  you or be an ABODE room, and you must pass the destination's
-  LinkLock.
+  home to the indicated location. The destination must be controlled by
+  you, and you must pass the destination's LinkLock.
  
   When used on a room, this command sets the room's drop-to, where
   objects dropped in the room go.  The destination must be a room
