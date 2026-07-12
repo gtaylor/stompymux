@@ -12264,14 +12264,6 @@ inside
  
   See Also: DARK, LIGHT
   
-& VISUAL
- 
-  Flag: VISUAL (V)
- 
-  When set on your object, it allows other players to examine it and
-  see all the object's attributes as if they owned the object. They
-  cannot make any changes to the object.
-  
 & vmag()
  
   Syntax: vmag(<vector>[,<delimiter>]
