@@ -423,7 +423,7 @@ dbref match_status(dbref player, dbref match) {
     return NOTHING;
   }
   if (Good_obj(match) && Dark(match) && Good_obj(player) &&
-      !WizRoy(Owner(player)) && !Builder(Owner(player)))
+      !Wizard(Owner(player)) && !Builder(Owner(player)))
     return match_status(player, NOTHING);
   return match;
 }

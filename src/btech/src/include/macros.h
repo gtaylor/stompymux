@@ -122,7 +122,7 @@ extern long int Number(long int, long int);
 #define WizPo(p, fun) (fun(Owner(p)) && Inherits(p))
 
 #define Wiz(p) WizPo(p, Wizard)
-#define WizR(p) WizPo(p, WizRoy)
+#define WizR(p) Wiz(p)
 #define WizP(p) WizPo(p, Security)
 
 #define hush_teleport(p, t) move_via_teleport(p, t, 1, 7)

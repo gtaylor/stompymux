@@ -857,7 +857,7 @@ void mech_snipe(dbref player, MECH *mech, char *buffer) {
   char *args[3];
   dbref d;
 
-  DOCHECK(!WizRoy(player), "Permission denied.");
+  DOCHECK(!Wizard(player), "Permission denied.");
   DOCHECK(mech_parseattributes(buffer, args, 3) != 2,
           "Please supply target ID _and_ weapon(s) to use");
   DOCHECK((d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,

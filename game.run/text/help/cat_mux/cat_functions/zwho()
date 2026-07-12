@@ -4,7 +4,7 @@
   Syntax: zwho(<object>)
  
   Returns a list of players who are in the zone defined by <object>.
-  Currently a WIZARD/ROYALTY only function.
+  Currently a WIZARD-only function.
  
   Example:
  

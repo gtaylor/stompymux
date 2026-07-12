@@ -419,7 +419,7 @@ void do_move(dbref player, dbref cause, int key, char *direction) {
   if (!string_compare(direction, "home")) { /*
                                              * go home w/o stuff
                                              */
-    if ((Fixed(player) || Fixed(Owner(player))) && !(WizRoy(player))) {
+    if ((Fixed(player) || Fixed(Owner(player))) && !(Wizard(player))) {
       notify(player, mudconf.fixed_home_msg);
       return;
     }

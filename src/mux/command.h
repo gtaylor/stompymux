@@ -218,7 +218,7 @@ struct addedentry {
 #define CA_IMMORTAL 0x00000008   /* Immortals only */
 #define CA_ROBOT 0x00000010      /* Robots only */
 #define CA_ANNOUNCE 0x00000020   /* Announce Power */
-#define CA_ADMIN 0x00000800      /* Wizard or royal */
+#define CA_ADMIN 0x00000800      /* Wizard */
 #define CA_NO_HAVEN 0x00001000   /* Not by HAVEN players */
 #define CA_NO_ROBOT 0x00002000   /* Not by ROBOT players */
 #define CA_NO_SLAVE 0x00004000   /* Not by SLAVE players */

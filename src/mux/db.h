@@ -12,7 +12,7 @@
   for ((l) = 0, (p) = (t); (Good_obj(p) && ((l) < mudconf.parent_nest_lim));   \
        (p) = Parent(p), (l)++)
 
-#define Hasprivs(x) (Royalty(x) || Wizard(x))
+#define Hasprivs(x) Wizard(x)
 int get_atr(char *name);
 
 typedef struct attr ATTR;

@@ -1187,7 +1187,7 @@ static int check_connect(DESC *d, char *msg) {
     } else if (((mudconf.control_flags & CF_LOGIN) &&
                 (nplayers < mudconf.max_players) &&
                 (mudconf.registeredonly == Registered(player))) ||
-               !mudconf.registeredonly || WizRoy(player) || God(player)) {
+               !mudconf.registeredonly || Wizard(player) || God(player)) {
 
       if (!strncmp(command, "cd", 2) && (Wizard(player) || God(player)))
         s_Flags(player, Flags(player) | DARK);
@@ -1633,7 +1633,7 @@ void make_ulist(dbref player, char *buff, char **bufc) {
 
   cp = *bufc;
   DESC_ITER_CONN(d) {
-    if (!WizRoy(player) && Hidden(d->player))
+    if (!Wizard(player) && Hidden(d->player))
       continue;
     if (cp != *bufc)
       safe_chr(' ', buff, bufc);

@@ -90,23 +90,6 @@ static int fh_fixed(dbref target, dbref player, FLAG flag, int fflags,
 } /* end fh_fixed() */
 
 /**
- * Only allows WIZARDS, ROYALTY, (or GOD) to set or clear the bit.
- * @param target Target object for setting/unsetting
- * @param player The object that is setting/unsetting
- * @param flag The flag to be manipulated
- * @param fflags ??
- * @param reset If 1, we're resetting the flag
- */
-
-static int fh_wizroy(dbref target, dbref player, FLAG flag, int fflags,
-                     int reset) {
-  if (!WizRoy(player) && !God(player))
-    return 0;
-
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_wizroy() */
-
-/**
  * Only allows players to set or clear this bit.
  * @param target Target object for setting/unsetting
  * @param player The object that is setting/unsetting
@@ -280,7 +263,6 @@ FLAGENT gen_flags[] = {
     {"PUPPET", PUPPET, 'p', 0, 0, fh_hear_bit},
     {"QUIET", QUIET, 'Q', 0, 0, fh_any},
     {"ROBOT", ROBOT, 'r', 0, 0, fh_any},
-    {"ROYALTY", ROYALTY, 'Z', 0, 0, fh_wiz},
     {"SAFE", SAFE, 's', 0, 0, fh_any},
     {"SLAVE", SLAVE, 'x', FLAG_WORD2, CA_WIZARD, fh_wiz},
     {"STAFF", STAFF, 'w', FLAG_WORD2, 0, fh_wiz},
@@ -290,7 +272,7 @@ FLAGENT gen_flags[] = {
     {"TRACE", TRACE, 'T', 0, 0, fh_any},
     {"TRANSPARENT", SEETHRU, 't', 0, 0, fh_any},
     {"UNFINDABLE", UNFINDABLE, 'U', FLAG_WORD2, 0, fh_any},
-    {"UNINSPECTED", UNINSPECTED, 'g', FLAG_WORD2, 0, fh_wizroy},
+    {"UNINSPECTED", UNINSPECTED, 'g', FLAG_WORD2, 0, fh_wiz},
     {"VERBOSE", VERBOSE, 'v', 0, 0, fh_any},
     {"VISUAL", VISUAL, 'V', 0, 0, fh_any},
     {"VACATION", VACATION, '|', FLAG_WORD2, 0, fh_fixed},

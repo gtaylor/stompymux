@@ -619,7 +619,7 @@ void fun_zwho(char *buff, char **bufc, dbref player, dbref cause, char *fargs[],
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -650,7 +650,7 @@ void fun_zrooms(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -681,7 +681,7 @@ void fun_zexits(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -712,7 +712,7 @@ void fun_zobjects(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -743,7 +743,7 @@ void fun_zplayers(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -778,7 +778,7 @@ void fun_inzone(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || !(Controls(player, it) || !WizRoy(player))) {
+  if (!mudconf.have_zones || !(Controls(player, it) || !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -811,7 +811,7 @@ void fun_children(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!(Controls(player, it)) || !(WizRoy(player))) {
+  if (!(Controls(player, it)) || !(Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }

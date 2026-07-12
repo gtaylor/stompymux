@@ -597,7 +597,7 @@
   may @chzone themselves to an object they own; otherwise, only
   wizards may @chzone players.
  
-  @chzone'ing resets the WIZARD, ROYALTY, and INHERIT flags on
+  @chzone'ing resets the WIZARD and INHERIT flags on
   non-player objects.
  
   See also: ZONE OBJECTS
@@ -4285,7 +4285,7 @@ while line:
   Syntax: children(<object>)
  
   Returns a list of objects that are parented to <object>. Currently
-  a WIZARD/ROYALTY only function.
+  a WIZARD-only function.
  
   See Also: parent().
   
@@ -6627,7 +6627,7 @@ carried
   This is another marker flag, for faction heads and the like. As
   with STAFF, no powers come with it; it is purely a marker.
  
-  See also: STAFF, ROYALTY, WIZARD
+  See also: STAFF, WIZARD
   
 & heading
  
@@ -6976,7 +6976,7 @@ carried
   Syntax: inzone(<object>)
  
   Returns a list of rooms in the zone defined by <object>. Currently a
-  WIZARD/ ROYALTY only function.
+  WIZARD/ only function.
  
   See Also: zone(), zplayers(), zwho(), zfun()
   
@@ -8817,7 +8817,7 @@ Continued in locate()2
   single letter standing for each flag, like the output of the
   flags() function. A '!' preceding a flag letter means "not flag".
  
-  Thus, orflags(me,Wr) would return 1 if I am set WIZARD or ROYALTY.
+  Thus, orflags(me,Wr) would return 1 if I am set WIZARD.
   orflags(me,D!c) would return 1 if I am DARK or not CONNECTED.
  
   If a letter does not correspond to any flag, <object> doesn't have
@@ -10219,19 +10219,6 @@ AdvSensors: BeagleProbe
  
   See Also: div(), floor(), mod(), trunc()
   
-& ROYALTY
- 
-  Flag: ROYALTY
- 
-  If a person is ROYALTY, they can see and examine things, and
-  teleport anywhere or anything, like a wizard can. They cannot modify
-  objects or players they do not control, and cannot use wizard
-  commands.
- 
-  This flag may only be set by a wizard.
- 
-  See also: WIZARD, STAFF, HEAD
-  
 & running
  
  >> Help: Running (Skills-Combat, Misc.)
@@ -11170,7 +11157,7 @@ AdvSensors: BeagleProbe
   This flag can be used to mark players who serve as staff on the MUX.
   It is wizard-settable only.
  
-  See also: WIZARD, ROYALTY, HEAD
+  See also: WIZARD, HEAD
   
 & stand
  
@@ -12094,7 +12081,7 @@ inside
  
   This flag is typically set on rooms that need to be
   inspected for good building practices. This flag may only be set by
-  wizards and royalty.
+  wizards.
   
 & unjam
  
@@ -12717,7 +12704,7 @@ great
   Syntax: zwho(<object>)
  
   Returns a list of players who are in the zone defined by <object>.
-  Currently a WIZARD/ROYALTY only function.
+  Currently a WIZARD-only function.
  
   Example:
  

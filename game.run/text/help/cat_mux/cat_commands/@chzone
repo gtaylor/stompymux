@@ -13,7 +13,7 @@
   may @chzone themselves to an object they own; otherwise, only
   wizards may @chzone players.
  
-  @chzone'ing resets the WIZARD, ROYALTY, and INHERIT flags on
+  @chzone'ing resets the WIZARD and INHERIT flags on
   non-player objects.
  
   See also: ZONE OBJECTS

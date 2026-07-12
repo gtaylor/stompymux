@@ -549,7 +549,7 @@ void fun_zmechs(char *buff, char **bufc, dbref player, dbref cause,
   dbref i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !WizRoy(player))) {
+  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }

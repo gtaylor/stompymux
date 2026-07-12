@@ -8,7 +8,7 @@
   single letter standing for each flag, like the output of the
   flags() function. A '!' preceding a flag letter means "not flag".
  
-  Thus, orflags(me,Wr) would return 1 if I am set WIZARD or ROYALTY.
+  Thus, orflags(me,WD) would return 1 if I am set DARK.
   orflags(me,D!c) would return 1 if I am DARK or not CONNECTED.
  
   If a letter does not correspond to any flag, <object> doesn't have

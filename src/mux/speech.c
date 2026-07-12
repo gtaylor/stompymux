@@ -224,12 +224,10 @@ void do_say(dbref player, dbref cause, int key, char *message) {
     case ':':
       message[0] = ' ';
       say_shout(WIZARD, admin_msg, say_flags, player, message);
-      say_shout(ROYALTY, admin_msg, say_flags, player, message);
       break;
     case ';':
       message++;
       say_shout(WIZARD, admin_msg, say_flags, player, message);
-      say_shout(ROYALTY, admin_msg, say_flags, player, message);
       break;
     case '"':
       message++;
@@ -242,7 +240,6 @@ void do_say(dbref player, dbref cause, int key, char *message) {
       safe_chr('"', buf2, &bp);
       *bp = '\0';
       say_shout(WIZARD, admin_msg, say_flags, player, buf2);
-      say_shout(ROYALTY, admin_msg, say_flags, player, buf2);
       free_lbuf(buf2);
     }
     STARTLOG(LOG_SHOUTS, "WIZ", "ASHOUT") {

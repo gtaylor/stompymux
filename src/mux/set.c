@@ -137,11 +137,9 @@ void do_chzone(dbref player, dbref cause, int key, char *name, char *newobj) {
     /*
      * if the object is a player, resetting these flags is rather
      * * * * * inconvenient -- although this may pose a bit of a *
-     * *  * security * risk. Be careful when @chzone'ing wizard or
-     * * * * royal players.
+     * *  * security * risk. Be careful when @chzone'ing wizard players.
      */
     Flags(thing) &= ~WIZARD;
-    Flags(thing) &= ~ROYALTY;
     Flags(thing) &= ~INHERIT;
 #ifdef USE_POWERS
     Powers(thing) = 0; /*

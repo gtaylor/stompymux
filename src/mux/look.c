@@ -1028,7 +1028,7 @@ static void sweep_check(dbref player, dbref what, int key, int is_loc) {
   char *buf, *buf2, *bp, *as, *buff, *s;
   ATTR *ap;
 
-  if (Dark(what) && !WizRoy(player) && !mudconf.sweep_dark)
+  if (Dark(what) && !Wizard(player) && !mudconf.sweep_dark)
     return;
   canhear = 0;
   cancom = 0;

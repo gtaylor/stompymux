@@ -423,7 +423,7 @@ void list_chashstats(dbref);
 #define SAY_WIZSHOUT 12    /* shout to all logged-in wizards */
 #define SAY_WIZPOSE 13     /* Pose to all logged-in wizards */
 #define SAY_WIZEMIT 14     /* Emit to all logged-in wizards */
-#define SAY_ADMINSHOUT 15  /* Emit to all wizards or royalty */
+#define SAY_ADMINSHOUT 15  /* Emit to all wizards */
 #define SAY_GRIPE 16       /* Complain to management */
 #define SAY_NOTE 17        /* Comment to log for wizards */
 #define SAY_NOTAG 32       /* Don't put Broadcast: in front (additive) */

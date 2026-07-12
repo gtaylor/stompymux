@@ -618,7 +618,7 @@ int check_access(dbref player, int mask) {
       fail++;
   }
   if ((succ == 0) && (mask & CA_ADMIN)) {
-    if (WizRoy(player))
+    if (Wizard(player))
       succ++;
     else
       fail++;
@@ -1143,7 +1143,7 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
    */
 
   if (string_compare(command, "home") == 0) {
-    if (((Fixed(player)) || (Fixed(Owner(player)))) && !(WizRoy(player))) {
+    if (((Fixed(player)) || (Fixed(Owner(player)))) && !(Wizard(player))) {
       notify(player, mudconf.fixed_home_msg);
       goto exit;
     }

@@ -46,7 +46,7 @@
 #define NOSPOOF 0x04000000     /* Report originator of all actions. */
 #define ROBOT 0x08000000       /* Player is a ROBOT */
 #define SAFE 0x10000000        /* Need /override to @destroy */
-#define ROYALTY 0x20000000     /* Sees like a wiz, but ca't modify */
+/* 0x20000000 is reserved for the removed ROYALTY flag. */
 #define HEARTHRU 0x40000000    /* Can hear out of this obj or exit */
 #define TERSE 0x80000000       /* Only show room name on look */
 
@@ -218,8 +218,6 @@ extern void decompile_flags(dbref, dbref, char *);
   (((x) >= 0) && ((x) < mudstate.db_top) && (Typeof(x) < NOTYPE))
 #define Good_owner(x) (Good_obj(x) && OwnsOthers(x))
 
-#define Royalty(x) ((Flags(x) & ROYALTY) != 0)
-#define WizRoy(x) (Royalty(x) || Wizard(x))
 #define Fixed(x) ((Flags2(x) & FIXED) != 0)
 #define Uninspected(x) ((Flags2(x) & UNINSPECTED) != 0)
 #define Ansi(x) ((Flags2(x) & ANSI) != 0)
@@ -349,7 +347,7 @@ extern void decompile_flags(dbref, dbref, char *);
      !((a)->flags & (AF_DARK | AF_MDARK)) && !((f) & (AF_DARK | AF_MDARK)) &&  \
      !((a)->name && strlen((a)->name) > 4 &&                                   \
        !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||          \
-    ((Wizard(p) || Royalty(p)) && !((a)->flags & AF_DARK)) ||                  \
+    (Wizard(p) && !((a)->flags & AF_DARK)) ||                                  \
     (!((a)->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&                        \
      !((a)->name && strlen((a)->name) > 4 &&                                   \
        !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV")))))
@@ -376,7 +374,7 @@ extern void decompile_flags(dbref, dbref, char *);
      !((a)->flags & (AF_DARK | AF_MDARK)) && !((f) & (AF_DARK | AF_MDARK)) &&  \
      !((a)->name && strlen((a)->name) > 4 &&                                   \
        !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||          \
-    ((Wizard(p) || Royalty(p)) && !((a)->flags & AF_DARK)) ||                  \
+    (Wizard(p) && !((a)->flags & AF_DARK)) ||                                  \
     (!((a)->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&                        \
      !((a)->name && strlen((a)->name) > 4 &&                                   \
        !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV")))))

@@ -4,7 +4,7 @@
   Syntax: inzone(<object>)
  
   Returns a list of rooms in the zone defined by <object>. Currently a
-  WIZARD/ ROYALTY only function.
+  WIZARD-only function.
  
   See Also: zone(), zplayers(), zwho(), zfun()
  

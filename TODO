@@ -2,13 +2,12 @@
 
 ## MUX Todos in the /src/ dir
 
-* Start breaking up src/ into system subdirs. Maybe db to start.
-* Remove ROYALTY bit - meh
+* Start breaking up src/ into system subdirs
 * Maybe: remove all powers. wiz bit is enough
+* Remove flags that aren't useful
 * Write tests
-* Switch DB to sqlite
 
 ## BTech Todos in the /btech/ dir
 
 * Maybe: do we need btech/src/mt19937ar.c or is there something else that may suffice for RNG?
-* Remove prototype header files.
+* Remove prototype header files
