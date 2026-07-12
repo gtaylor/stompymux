@@ -516,11 +516,6 @@ static void announce_connect(dbref player, DESC *d) {
   num = 0;
   DESC_ITER_PLAYER(player, dtemp) num++;
 
-  /*
-   * Reset vacation flag
-   */
-  s_Flags2(player, Flags2(player) & ~VACATION);
-
   if (num < 2) {
     snprintf(buf, LBUF_SIZE, "%s has connected.", Name(player));
 

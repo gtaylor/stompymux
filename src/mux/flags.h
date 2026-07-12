@@ -78,7 +78,7 @@
 #define HAS_HOURLY 0x00400000
 #define MULTIOK 0x00800000
 
-#define VACATION 0x01000000
+/* 0x01000000 is reserved for the removed VACATION flag. */
 #define BLIND 0x04000000  /* Something to support blind players! */
 #define ZOMBIE 0x08000000 /* Hardcode object is a zombie */
 
@@ -262,7 +262,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Terse(x) ((Flags(x) & TERSE) != 0)
 
 #define Gagged(x) ((Flags2(x) & GAGGED) != 0)
-#define Vacation(x) ((Flags2(x) & VACATION) != 0)
 #define Key(x) ((Flags2(x) & KEY) != 0)
 #define Abode(x) (((Flags2(x) & ABODE) != 0) && Home_ok(x))
 #define Auditorium(x) ((Flags2(x) & AUDITORIUM) != 0)
