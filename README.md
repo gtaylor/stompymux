@@ -1,7 +1,7 @@
-Battletech MUX
+BattletechMUX
 ==============
 
-Battletech MUX is a [TinyMUX 1.6 based MUX server](https://en.wikipedia.org/wiki/MUSH) with special [Battletech](https://en.wikipedia.org/wiki/BattleTech)
+BattletechMUX is a [TinyMUX 1.6 based MUX server](https://en.wikipedia.org/wiki/MUSH) with special [Battletech](https://en.wikipedia.org/wiki/BattleTech)
 extensions. These extensions allow site admins to configure and run a
 persistent pseudo real-time warfare simulation. The rules that govern the simulation are an adaptation of the original turn based FASA board game.
 
@@ -39,7 +39,7 @@ brand new ideas. The main MUX site has always been 3030 MUX.
 Fingon continued development until about 1998, after which he released the
 source to the public under a restricted license and retired. Development for 3030 was continued by several of the 3030 MUX Wizards, most notably Thomas Wouters (Focus) and Cord Awtry (Spectre).
 
-In 1999, a new Battletech MUX using the restricted license source opened up
+In 1999, a new BattletechMUX using the restricted license source opened up
 under the banner of 'Exile: Exodus', with development efforts lead by Null
 (Kevin Stevens). Exile took an aggressive approach to development and many
 modifications, rewrites, and additions were made to the now ancient
