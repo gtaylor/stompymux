@@ -3364,11 +3364,11 @@ static void fun_nearby(char *buff, char **bufc, dbref player, dbref cause,
 
 /*
  * ---------------------------------------------------------------------------
- * * fun_obj, fun_poss, and fun_subj: perform pronoun sub for object.
+ * * fun_obj, fun_poss, and fun_subj: perform pronoun substitution for object.
  */
 
-static void process_sex(dbref player, char *what, const char *token, char *buff,
-                        char **bufc) {
+static void process_pronoun(dbref player, char *what, const char *token,
+                            char *buff, char **bufc) {
   dbref it;
   char *str;
 
@@ -3383,22 +3383,22 @@ static void process_sex(dbref player, char *what, const char *token, char *buff,
 
 static void fun_obj(char *buff, char **bufc, dbref player, dbref cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  process_sex(player, fargs[0], "%o", buff, bufc);
+  process_pronoun(player, fargs[0], "%o", buff, bufc);
 }
 
 static void fun_poss(char *buff, char **bufc, dbref player, dbref cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  process_sex(player, fargs[0], "%p", buff, bufc);
+  process_pronoun(player, fargs[0], "%p", buff, bufc);
 }
 
 static void fun_subj(char *buff, char **bufc, dbref player, dbref cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  process_sex(player, fargs[0], "%s", buff, bufc);
+  process_pronoun(player, fargs[0], "%s", buff, bufc);
 }
 
 static void fun_aposs(char *buff, char **bufc, dbref player, dbref cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  process_sex(player, fargs[0], "%a", buff, bufc);
+  process_pronoun(player, fargs[0], "%a", buff, bufc);
 }
 
 /*

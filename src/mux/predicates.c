@@ -357,8 +357,6 @@ int ok_password(const char *password) {
  */
 void handle_ears(dbref thing, int could_hear, int can_hear) {
   char *buff, *bp;
-  int gender;
-  static const char *poss[5] = {"", "its", "her", "his", "their"};
 
   if (!could_hear && can_hear) {
     buff = alloc_lbuf("handle_ears.grow");
@@ -368,10 +366,8 @@ void handle_ears(dbref thing, int could_hear, int can_hear) {
         ;
       *bp = '\0';
     }
-    gender = get_gender(thing);
     notify_checked(thing, thing,
-                   tprintf("%s grow%s ears and can now hear.", buff,
-                           (gender == 4) ? "" : "s"),
+                   tprintf("%s grows ears and can now hear.", buff),
                    (MSG_ME | MSG_NBR | MSG_LOC | MSG_INV));
     free_lbuf(buff);
   } else if (could_hear && !can_hear) {
@@ -382,11 +378,8 @@ void handle_ears(dbref thing, int could_hear, int can_hear) {
         ;
       *bp = '\0';
     }
-    gender = get_gender(thing);
     notify_checked(thing, thing,
-                   tprintf("%s lose%s %s ears and become%s deaf.", buff,
-                           (gender == 4) ? "" : "s", poss[gender],
-                           (gender == 4) ? "" : "s"),
+                   tprintf("%s loses its ears and becomes deaf.", buff),
                    (MSG_ME | MSG_NBR | MSG_LOC | MSG_INV));
     free_lbuf(buff);
   }

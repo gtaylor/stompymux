@@ -245,31 +245,6 @@ char *parse_arglist(dbref player, dbref cause, char *dstr, char delim,
  * %-substitutions.
  */
 
-int get_gender(dbref player) {
-  char first, *atr_gotten;
-  dbref aowner;
-  long aflags;
-
-  atr_gotten = atr_pget(player, A_SEX, &aowner, &aflags);
-  first = *atr_gotten;
-  free_lbuf(atr_gotten);
-  switch (first) {
-  case 'P':
-  case 'p':
-    return 4;
-  case 'M':
-  case 'm':
-    return 3;
-  case 'F':
-  case 'f':
-  case 'W':
-  case 'w':
-    return 2;
-  default:
-    return 1;
-  }
-}
-
 /*
  * ---------------------------------------------------------------------------
  * * Trace cache routines.
@@ -345,17 +320,12 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
   char savec, ch, *str;
   char *realbuff = NULL, *realbp = NULL;
   dbref aowner;
-  int at_space, nfargs, gender, i, j, alldone, feval;
+  int at_space, nfargs, i, j, alldone, feval;
   long aflags;
   int is_trace, is_top, save_count;
   int ansi;
   FUN *fp;
   UFUN *ufp;
-
-  static const char *subj[5] = {"", "it", "she", "he", "they"};
-  static const char *poss[5] = {"", "its", "her", "his", "their"};
-  static const char *obj[5] = {"", "it", "her", "him", "them"};
-  static const char *absp[5] = {"", "its", "hers", "his", "theirs"};
 
   if (*dstr == NULL)
     return;
@@ -363,7 +333,6 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
   // dprintk("%d/%s", player, *dstr);
 
   at_space = 1;
-  gender = -1;
   alldone = 0;
   ansi = 0;
 
@@ -680,38 +649,19 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
                  * Objective pronoun
                  */
       case 'o':
-        if (gender < 0)
-          gender = get_gender(cause);
-        if (!gender)
-          tbuf = Name(cause);
-        else
-          tbuf = (char *)obj[gender];
-        safe_str(tbuf, buff, bufc);
+        safe_str("it", buff, bufc);
         break;
       case 'P': /*
                  * Personal pronoun
                  */
       case 'p':
-        if (gender < 0)
-          gender = get_gender(cause);
-        if (!gender) {
-          safe_str(Name(cause), buff, bufc);
-          safe_chr('s', buff, bufc);
-        } else {
-          safe_str((char *)poss[gender], buff, bufc);
-        }
+        safe_str("its", buff, bufc);
         break;
       case 'S': /*
                  * Subjective pronoun
                  */
       case 's':
-        if (gender < 0)
-          gender = get_gender(cause);
-        if (!gender)
-          tbuf = Name(cause);
-        else
-          tbuf = (char *)subj[gender];
-        safe_str(tbuf, buff, bufc);
+        safe_str("it", buff, bufc);
         break;
       case 'A': /*
                  * Absolute posessive
@@ -719,14 +669,7 @@ void exec(char *buff, char **bufc, int tflags, dbref player, dbref cause,
       case 'a': /*
                  * idea from Empedocles
                  */
-        if (gender < 0)
-          gender = get_gender(cause);
-        if (!gender) {
-          safe_str(Name(cause), buff, bufc);
-          safe_chr('s', buff, bufc);
-        } else {
-          safe_str((char *)absp[gender], buff, bufc);
-        }
+        safe_str("its", buff, bufc);
         break;
       case '#': /*
                  * Invoker DB number

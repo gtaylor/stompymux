@@ -27,7 +27,7 @@
 #define A_SUCC 4  /* Invoker success message */
 #define A_PASS 5  /* Password (only meaningful for players) */
 #define A_DESC 6  /* Description */
-#define A_SEX 7   /* Sex */
+/* 7 is reserved for the removed Sex attribute. */
 #define A_ODROP 8 /* Others drop message */
 #define A_DROP 9  /* Invoker drop message */
 /* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
@@ -57,13 +57,13 @@
 #define A_ACONNECT 39    /* Actions run when player connects */
 #define A_ADISCONNECT 40 /* Actions run when player disconnectes */
 /* 41 is reserved for the removed money allowance attribute. */
-#define A_LOCK 42        /* Object lock */
-#define A_NAME 43        /* Object name */
-#define A_COMMENT 44     /* Wizard-accessable comments */
-#define A_USE 45         /* Invoker use message */
-#define A_OUSE 46        /* Others use message */
-#define A_SEMAPHORE 47   /* Semaphore control info */
-#define A_TIMEOUT 48     /* Per-user disconnect timeout */
+#define A_LOCK 42      /* Object lock */
+#define A_NAME 43      /* Object name */
+#define A_COMMENT 44   /* Wizard-accessable comments */
+#define A_USE 45       /* Invoker use message */
+#define A_OUSE 46      /* Others use message */
+#define A_SEMAPHORE 47 /* Semaphore control info */
+#define A_TIMEOUT 48   /* Per-user disconnect timeout */
 /* 49 is reserved for the removed building quota attribute. */
 #define A_LEAVE 50       /* Invoker leave message */
 #define A_OLEAVE 51      /* Others leave message in src */

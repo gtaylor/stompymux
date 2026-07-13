@@ -197,7 +197,6 @@ ATTR attr_table[] = {
 
     {"Semaphore", A_SEMAPHORE, AF_ODARK | AF_NOPROG | AF_WIZARD | AF_NOCMD,
      NULL},
-    {"Sex", A_SEX, AF_NOPROG, NULL},
     {"SpeechLock", A_LSPEECH, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
      NULL},
     {"Startup", A_STARTUP, AF_ODARK, NULL},

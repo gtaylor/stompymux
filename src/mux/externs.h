@@ -50,7 +50,6 @@ void tcache_init(void);
 char *parse_to(char **, char, int);
 char *parse_arglist(dbref, dbref, char *, char, long, char *[], long, char *[],
                     long);
-int get_gender(dbref);
 void exec(char *, char **, int, dbref, dbref, int, char **, char *[], int);
 
 /* From game.c */
