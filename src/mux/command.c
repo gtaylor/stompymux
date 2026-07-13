@@ -256,10 +256,10 @@ NAMETAB trig_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, TRIG_QUIET},
                      {NULL, 0, 0, 0}};
 
 NAMETAB wall_sw[] = {
-    {(char *)"emit", 1, CA_ANNOUNCE, SAY_WALLEMIT},
-    {(char *)"no_prefix", 1, CA_ANNOUNCE, SAY_NOTAG | SW_MULTIPLE},
-    {(char *)"pose", 1, CA_ANNOUNCE, SAY_WALLPOSE},
-    {(char *)"wizard", 1, CA_ANNOUNCE, SAY_WIZSHOUT | SW_MULTIPLE},
+    {(char *)"emit", 1, CA_WIZARD, SAY_WALLEMIT},
+    {(char *)"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
+    {(char *)"pose", 1, CA_WIZARD, SAY_WALLPOSE},
+    {(char *)"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
     {(char *)"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
     {NULL, 0, 0, 0}};
 
@@ -414,7 +414,7 @@ CMDENT command_table[] = {
     {(char *)"@wait", NULL, CA_GBL_INTERP, 0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
      do_wait},
-    {(char *)"@wall", wall_sw, CA_ANNOUNCE, SAY_SHOUT, CS_ONE_ARG | CS_INTERP,
+    {(char *)"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG | CS_INTERP,
      do_say},
     {(char *)"@wipe", wall_sw, CA_GBL_BUILD, 0, CS_ONE_ARG | CS_INTERP,
      do_wipe},
@@ -592,18 +592,6 @@ int check_access(dbref player, int mask) {
     else
       fail++;
   }
-  if ((succ == 0) && (mask & CA_ANNOUNCE)) {
-    if (Announce(player))
-      succ++;
-    else
-      fail++;
-  }
-  if ((succ == 0) && (mask & CA_BUILDER)) {
-    if (Builder(player))
-      succ++;
-    else
-      fail++;
-  }
   if ((succ == 0) && (mask & CA_ROBOT)) {
     if (Robot(player))
       succ++;
@@ -669,7 +657,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, dbref player,
    * Check global flags
    */
 
-  if ((!Builder(player)) && Protect(CA_GBL_BUILD) &&
+  if ((!Wizard(player)) && Protect(CA_GBL_BUILD) &&
       !(mudconf.control_flags & CF_BUILD)) {
     notify(player, "Sorry, building is not allowed now.");
     return;
@@ -1458,7 +1446,6 @@ static void list_ntab_flags(player, ntab, flaglist)
 NAMETAB access_nametab[] = {
     {(char *)"god", 2, CA_GOD, CA_GOD},
     {(char *)"wizard", 3, CA_WIZARD, CA_WIZARD},
-    {(char *)"builder", 6, CA_WIZARD, CA_BUILDER},
     {(char *)"robot", 2, CA_WIZARD, CA_ROBOT},
     {(char *)"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
     {(char *)"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},

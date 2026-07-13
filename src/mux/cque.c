@@ -652,7 +652,7 @@ void do_halt(dbref player, dbref cause, int key, char *target) {
   dbref player_targ, obj_targ;
   int numhalted;
 
-  if ((key & HALT_ALL) && !(Can_Halt(player))) {
+  if ((key & HALT_ALL) && !Wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -670,7 +670,7 @@ void do_halt(dbref player, dbref cause, int key, char *target) {
         obj_targ = player;
     }
   } else {
-    if (Can_Halt(player))
+    if (Wizard(player))
       obj_targ = match_thing(player, target);
     else
       obj_targ = match_controlled(player, target);
@@ -1279,7 +1279,7 @@ void do_ps(dbref player, dbref cause, int key, char *target) {
    * Figure out what to list the queue for
    */
 
-  if ((key & PS_ALL) && !(See_Queue(player))) {
+  if ((key & PS_ALL) && !Wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -1349,7 +1349,7 @@ void do_ps(dbref player, dbref cause, int key, char *target) {
    * Display stats
    */
 
-  if (See_Queue(player))
+  if (Wizard(player))
     notify_printf(player,
                   "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
                   pqent, pqtot, wqent, wqtot, sqent, sqtot);

@@ -277,15 +277,14 @@ extern void decompile_flags(dbref, dbref, char *);
 #define OnEnterLock(p, x) (check_zone(p, x))
 
 #define Examinable(p, x)                                                       \
-  ((See_All(p)) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))
+  (Wizard(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))
 
 #define MyopicExam(p, x)                                                       \
-  (!Myopic(p) && (See_All(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
+  (!Myopic(p) && (Wizard(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
 
 #define Controls(p, x)                                                         \
   (Good_obj(x) && (!(God(x) && !God(p))) &&                                    \
-   (Control_All(p) ||                                                          \
-    ((Owner(p) == Owner(x)) && (Inherits(p) || !Inherits(x))) ||               \
+   (Wizard(p) || ((Owner(p) == Owner(x)) && (Inherits(p) || !Inherits(x))) ||  \
     OnEnterLock(p, x)))
 
 #define Affects(p, x)                                                          \

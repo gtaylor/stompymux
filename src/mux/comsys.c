@@ -329,7 +329,7 @@ static void do_comwho(dbref player, struct channel *ch) {
     if (Typeof(user->who) == TYPE_PLAYER && user->on && Connected(user->who) &&
         (!Hidden(user->who) ||
          ((ch->type & CHANNEL_TRANSPARENT) && !Dark(user->who)) ||
-         Wizard_Who(player)) &&
+         Wizard(player)) &&
         (!In_IC_Loc(user->who) || Wizard(user->who))) {
 
       int i = fetch_idle(user->who);
@@ -862,7 +862,7 @@ void do_channelwho(dbref player, dbref cause, int key, char *arg1) {
     if ((flag || UNDEAD(user->who)) &&
         (!Hidden(user->who) ||
          ((ch->type & CHANNEL_TRANSPARENT) && !Dark(user->who)) ||
-         Wizard_Who(player))) {
+         Wizard(player))) {
       cp = unparse_object(player, user->who, 0);
       strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
       notify_printf(player, "%-29.29s %-6.6s %-6.6s", ansibuffer,

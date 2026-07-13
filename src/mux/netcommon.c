@@ -841,11 +841,11 @@ static void dump_users(DESC *e, char *match, int key) {
   queue_string(e, "Player Name         On For  Idle ");
   if (key == CMD_SESSION) {
     queue_string(e, "Port Pend  Lost     Total  Pend  Lost     Total\r\n");
-  } else if ((e->flags & DS_CONNECTED) && (Wizard_Who(e->player)) &&
+  } else if ((e->flags & DS_CONNECTED) && Wizard(e->player) &&
              (key == CMD_WHO)) {
     queue_string(e, "     Room    Cmds Host\r\n");
   } else {
-    if (Wizard_Who(e->player))
+    if (Wizard(e->player))
       queue_string(e, "  ");
     else
       queue_string(e, " ");
@@ -858,12 +858,12 @@ static void dump_users(DESC *e, char *match, int key) {
   ucount = 0;
   DESC_ITER_CONN(d) {
     if ((!mudconf.show_unfindable_who || !Hidden(d->player)) ||
-        (e->flags & DS_CONNECTED) & Wizard_Who(e->player)) {
+        (e->flags & DS_CONNECTED) & Wizard(e->player)) {
       count++;
       if (match && !(string_prefix(Name(d->player), match)))
         continue;
 #if 0
-			if((!((Wizard_Who(e->player)) && (e->flags & DS_CONNECTED)) &&
+			if((!((Wizard(e->player)) && (e->flags & DS_CONNECTED)) &&
 				(d->player != e->player)))
 				if(In_Character(Location(d->player)) &&
 				   In_Character(Location(Location(d->player))))
@@ -871,7 +871,7 @@ static void dump_users(DESC *e, char *match, int key) {
 #endif
       rcount++;
       if ((key == CMD_SESSION) &&
-          !(Wizard_Who(e->player) && (e->flags & DS_CONNECTED)) &&
+          !(Wizard(e->player) && (e->flags & DS_CONNECTED)) &&
           (d->player != e->player))
         continue;
 
@@ -881,7 +881,7 @@ static void dump_users(DESC *e, char *match, int key) {
 
       fp = flist;
       sp = slist;
-      if ((e->flags & DS_CONNECTED) && Wizard_Who(e->player)) {
+      if ((e->flags & DS_CONNECTED) && Wizard(e->player)) {
         if (Hidden(d->player)) {
           if (d->flags & DS_AUTODARK)
             *fp++ = 'd';
@@ -912,8 +912,7 @@ static void dump_users(DESC *e, char *match, int key) {
       *fp = '\0';
       *sp = '\0';
 
-      if ((e->flags & DS_CONNECTED) && Wizard_Who(e->player) &&
-          (key == CMD_WHO)) {
+      if ((e->flags & DS_CONNECTED) && Wizard(e->player) && (key == CMD_WHO)) {
         snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
                  trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
@@ -931,7 +930,7 @@ static void dump_users(DESC *e, char *match, int key) {
                                    : 0),
                  d->descriptor, d->input_size, d->input_lost, d->input_tot,
                  d->output_size, d->output_lost, d->output_tot);
-      } else if (Wizard_Who(e->player)) {
+      } else if (Wizard(e->player)) {
         snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s%s%s\r\n",
                  trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
@@ -1025,7 +1024,7 @@ void do_doing(dbref player, dbref cause, int key, char *arg) {
       notify(player, "Not connected.");
     }
   } else if (key == DOING_HEADER) {
-    if (!(Can_Poll(player))) {
+    if (!Wizard(player)) {
       notify(player, "Permission denied.");
       return;
     }

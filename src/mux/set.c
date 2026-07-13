@@ -603,7 +603,7 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
   match_here();
   match_exit();
   match_me();
-  if (Chown_Any(player)) {
+  if (Wizard(player)) {
     match_player();
     match_absolute();
   }
@@ -626,9 +626,9 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
     notify_quiet(player, "I couldn't find that player.");
   } else if (isPlayer(thing) && !God(player)) {
     notify_quiet(player, "Players always own themselves.");
-  } else if (((!controls(player, thing) && !Chown_Any(player)) ||
+  } else if (((!controls(player, thing) && !Wizard(player)) ||
               (isThing(thing) && (Location(thing) != player) &&
-               !Chown_Any(player))) ||
+               !Wizard(player))) ||
              (!controls(player, owner))) {
     notify_quiet(player, "Permission denied.");
   } else {

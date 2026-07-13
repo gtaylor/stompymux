@@ -926,14 +926,6 @@ InfiltratorIIStealthUnit  SuperCharger              Dual_Saw
   
   This attribute is triggered on the destruction of an RS Unit.
    
-& announce
- 
-  Power: announce
-  
-  This power permits the player to use the @wall command.
- 
-  See Also: @power, @list powers, @wall
- 
 & attr_access
 
   Config parameter: attr_access
@@ -1070,14 +1062,6 @@ InfiltratorIIStealthUnit  SuperCharger              Dual_Saw
   1
   > think btdesignex(AS20-C)
   0
-  
-& boot
- 
-  Power: boot
-  
-  This power permits the player to use the @boot command.
-  
-  See Also: @power, @list powers, @boot
   
 & bt-advanced-econ
 
@@ -3755,15 +3739,6 @@ Continued in btdamgaes()3
 
   See Also: buildcoord, buildlinks, updatelinks.
   
-& builder
- 
-  Power: builder
-  
-  This power permits the player to use the building-related commands 
-  such as @dig and @open.
-  
-  See Also: @power, @list powers
-  
 & buildflag
  
   xcodevalue: buildflag <char>
@@ -3968,14 +3943,6 @@ Continued in btdamgaes()3
   check_interval seconds.
 
   See also: check_interval, @dbck.
-  
-& chown_anything
- 
-  Power: chown_anything
-  
-  This power permits the player to @chown anything to anyone.
-  
-  See Also: @power, @list powers, @chown
   
 & clearmechs
  
@@ -4220,14 +4187,6 @@ Continued in btdamgaes()3
 
   See also: connect_file
   
-& control_all
- 
-  Power: control_all
-  
-  This power permits the player to modify any object in the database.
-  
-  See Also: @power, @list powers
- 
 & crash_database
 
   Config parameter: crash_database <path>
@@ -4520,13 +4479,6 @@ Continued in btdamgaes()3
 
   See also: @list, player_flags, robot_flags, room_flags, thing_flags.
  
-& expanded_who
- 
-  This power permits the player to see the additional information that 
-  a wizard can see using the WHO command.
- 
-  See Also: @power, @list powers, who
-  
 & faction
  
   Attribute: faction
@@ -4841,14 +4793,6 @@ Continued in btdamgaes()3
 
   See also: public_channel.
   
-& halt
- 
-  Power: halt
-  
-  This power permits a player to @halt objects he does not own.
-  
-  See Also: @power, @list powers, @halt
- 
 & have_comsys
 
   Config parameter: have_comsys <yes/no>
@@ -4954,14 +4898,6 @@ Continued in btdamgaes()3
   >ex Main RS Map/hhourly
   HHourly: @fo me={FIXMAP};@tri me/SAVEMAP.T
   
-& hide
- 
-  Power: hide
-  
-  This power permits the player to set the DARK flag upon himself.
-  
-  See Also: @power, @list powers, dark
- 
 & hostnames
 
   Config parameter: hostnames <yes/no>
@@ -5829,14 +5765,6 @@ Avg weight: 45.00 Total tons: 990
      1 AUTOPILOT           : 272 bytes total, 272 each
   Grand total: 326208 bytes.
  
-& monitor
- 
-  Power: monitor
-  
-  This power permits the player to set or clear the MONITOR flag
-  
-  See Also: @power, @list powers, monitor
- 
 & motd_file
 
   Config parameter: motd_file <pathname>
@@ -6105,14 +6033,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: player_starting_home, @pcreate, player_flags.
  
-& poll
- 
-  Power: poll
-  
-  This power permits the player to set the Doing poll.
-  
-  See Also: @power, @list powers, poll()
- 
 & port
 
   Config parameter: port <port>
@@ -6130,15 +6050,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: @dump, dump_message.
  .
-& prog
- 
-  Power: prog
-  
-  This power permits the player to use the @prog command on any 
-  player.
-  
-  See Also: @power, @list powers, @prog
- 
 & public_channel
 
   Config parameter: public_channel <name>
@@ -6492,24 +6403,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: scan, @viewxcode
   
-& search
- 
-  Power: search
-  
-  This power permits the player to use the @search command on any 
-  player.
-  
-  See Also: @power, @list powers, @search
- 
-& see_all
- 
-  Power: see_all
-  
-  This power permits the player to examine and see attributes the same 
-  way someone with the wizard flag can.
-  
-  See Also: @power, @list powers
-  
 & see_hidden
  
   Power: see_hidden
@@ -6527,15 +6420,6 @@ Avg weight: 45.00 Total tons: 990
   Specifies whether or not players see their own DARK objects when
   they look at a room.  It does not affect the inventory or examine
   commands, both of which show all objects.
-  
-& see_queue
- 
-  Power: see_queue
-  
-  This power permits the player to use @ps/all or to use the @ps 
-  command on any player.
-  
-  See Also: @power, @list powers, @ps
   
 & sensors
  
@@ -6986,15 +6870,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @viewxcode
  
-& stat_any
- 
-  Power: stat_any
-  
-  This power permits the player to use the @stat command on any 
-  player.
-  
-  See Also: @power, @list powers, @stat
-  
 & status
  
   xcodevalue: status <bv>
@@ -7220,24 +7095,6 @@ Avg weight: 45.00 Total tons: 990
   The value expresses the time in seconds.
   
   See Also: @viewxcode
-  
-& tel_anything
- 
-  Power: tel_anything
-  
-  This power permits the player to @teleport anything. This includes 
-  the ability to @teleport himself to any location (as per 
-  tel_anywhere).
-  
-  See Also: @power, @list powers, @teleport
-  
-& tel_anywhere
- 
-  Power: tel_anywhere
-  
-  This power permits the player to @teleport to any location
-  
-  See Also: @power, @list powers, @teleport
   
 & temperature
  

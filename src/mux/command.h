@@ -111,7 +111,7 @@ void do_parent(dbref, dbref, int, char *, char *);   /* Set parent field */
 void do_password(dbref, dbref, int, char *, char *); /* Change my password */
 void do_pcreate(dbref, dbref, int, char *, char *);  /* Create new characters */
 void do_pemit(dbref, dbref, int, char *,
-              char *);                   /* Messages to specific player */
+              char *); /* Messages to specific player */
 void do_power(dbref, dbref, int, char *, char *); /* Sets powers */
 void do_ps(dbref, dbref, int, char *);            /* List contents of queue */
 void do_queue(dbref, dbref, int, char *);         /* Force queue processing */
@@ -207,14 +207,14 @@ struct addedentry {
 
 /* Command permission flags */
 
-#define CA_PUBLIC 0x00000000  /* No access restrictions */
-#define CA_GOD 0x00000001     /* GOD only... */
-#define CA_WIZARD 0x00000002  /* Wizards only */
-#define CA_BUILDER 0x00000004 /* Builders only */
+#define CA_PUBLIC 0x00000000 /* No access restrictions */
+#define CA_GOD 0x00000001    /* GOD only... */
+#define CA_WIZARD 0x00000002 /* Wizards only */
+/* 0x00000004 is reserved for the removed builder power restriction. */
 /* 0x00000008 is reserved for the removed immortal restriction. */
-#define CA_ROBOT 0x00000010    /* Robots only */
-#define CA_ANNOUNCE 0x00000020 /* Announce Power */
-#define CA_ADMIN 0x00000800    /* Wizard */
+#define CA_ROBOT 0x00000010 /* Robots only */
+/* 0x00000020 is reserved for the removed announce power restriction. */
+#define CA_ADMIN 0x00000800 /* Wizard */
 /* 0x00001000 is reserved for the removed no_haven restriction. */
 #define CA_NO_ROBOT 0x00002000 /* Not by ROBOT players */
 /* 0x00004000 is reserved for the removed no_slave restriction. */

@@ -24,7 +24,7 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
   char *to;
   int hush = 0;
 
-  if (((Fixed(player)) || (Fixed(Owner(player)))) && !(Tel_Anywhere(player))) {
+  if (((Fixed(player)) || (Fixed(Owner(player)))) && !Wizard(player)) {
     notify(player, mudconf.fixed_tel_msg);
     return;
   }
@@ -58,7 +58,7 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
    */
 
   if (!Controls(player, victim) && !Controls(player, Location(victim)) &&
-      !Tel_Anything(player)) {
+      !Wizard(player)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -101,7 +101,7 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
   if (mudconf.fascist_tport) {
     loc = where_room(victim);
     if (!Good_obj(loc) || !isRoom(loc) ||
-        (!Controls(player, loc) && !Tel_Anywhere(player))) {
+        (!Controls(player, loc) && !Wizard(player))) {
       notify_quiet(player, "Permission denied.");
       return;
     }
@@ -112,7 +112,7 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
      * You must control the destination and pass its TELEPORT lock.
      */
 
-    if ((!Controls(player, destination) && !Tel_Anywhere(player)) ||
+    if ((!Controls(player, destination) && !Wizard(player)) ||
         !could_doit(player, destination, A_LTPORT)) {
 
       /*
@@ -322,7 +322,7 @@ void do_boot(dbref player, dbref cause, int key, char *name) {
   char *buf, *bp;
   int count;
 
-  if (!(Can_Boot(player))) {
+  if (!Wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }

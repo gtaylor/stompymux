@@ -2266,6 +2266,7 @@
   This command allows the granting of special powers to objects of any type.
 
   Related Topics: powers list 
+
 & @prefix
  
   Syntax: @prefix <object> = <prefix text>
@@ -4182,12 +4183,10 @@ while line:
  
   This is the help for the MUX comsystem. Note that the channel
   names and aliases are case-sensitive. Upon creation, new players
-  automatically join the "Public" channel, while guest characters join
-  channel "Guests" when they connect.
+  automatically join the "Public" channel.
  
   Note: <alias> is the alias you choose for the channel.
   The "Public" channel for new players is aliased to "pub".
-  The "Guests" channel for guests is aliases to "g".
  
   Aliases are the most common way to manipulate channels, and may be
   used in 2 different ways:
@@ -6202,7 +6201,7 @@ carried
  
   Example:
  
-  > say haspower(me, announce)
+  > say haspower(me, find_unfindable)
   You say "0"
   > say hasflag(me, extended_who)
   You say "1"
@@ -8543,8 +8542,7 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
   number of bytes that player uses, including all objects that they
   own.
  
-  You must be a WIZARD, or have the search power to use this function
-  on another player.
+  You must be a WIZARD to use this function on another player.
   
 & pmatch()
  
@@ -8712,35 +8710,11 @@ and a
  
   TOPIC: Powers List
  
-  announce		Can use the @wall command.
-  boot			Can use the @boot command.
-  builder		Can build, if the builder power is enabled.
-  chown_anything	Can @chown anything to anyone.
-  comm_all		Like a wizard with respect to channels.
-  control_all		Can modify any object in the database.
-  expanded_who		Sees the wizard WHO, and SESSION commands.
+  comm_all		    Like a wizard with respect to channels.
   find_unfindable	Can locate unfindable people.
-  guest			Is this a guest character?
-  halt			Can @halt anything, and @halt/all.
-  hide			Can set themselves DARK.
-  idle			No idle timeout.
+  idle			      No idle timeout.
   long_fingers		Can get, look, whisper, etc from a distance.
- 
-{ 'help powers list2' for more }
- 
 
-& powers list2
- 
-  monitor		Can set or reset monitor flag.
-  poll			Can set the @poll.
-  prog			Can use @program on players other than themself.
-  search		Can @search anyone.
-  see_all		Can examine and see attributes like a wizard.
-  see_queue		Can @ps/all or @ps any player.
-  stat_any		Can @stat any player.
-  tel_anywhere		Can teleport anywhere.
-  tel_anything		Can teleport anything (includes tel_anywhere)
- 
   See also: @power
   
 & precision
@@ -8759,17 +8733,6 @@ and a
   This command causes your mech to drop to the ground.
   
   Note - if the unit is moving there is a risk of damage to the Mech.
-  
-& PUEBLO
- 
-  Details on Pueblo support in TinyMUX:
- 
-  @VRML_URL is the URL of a VRML scene for a particular room.
-  @HTDesc is an alternate description for players who are logged in
-  using Pueblo.
-  @pemit/html and @emit/html allow outputting unescaped HTML strings.
-  Please see http://www.chaco.com/pueblo/doc/enhancing.html for more
-  details.
   
 & punch
  

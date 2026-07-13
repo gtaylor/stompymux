@@ -126,7 +126,7 @@ static int fh_wiz_bit(dbref target, dbref player, FLAG flag, int fflags,
 } /* end fh_wiz_bit() */
 
 /**
- * Manipulates the dark bit. Non-Wizards may not set on players.
+ * Manipulates the dark bit. Only Wizards may set it on players.
  * @param target Target object for setting/unsetting
  * @param player The object that is setting/unsetting
  * @param flag The flag to be manipulated
@@ -135,8 +135,7 @@ static int fh_wiz_bit(dbref target, dbref player, FLAG flag, int fflags,
  */
 static int fh_dark_bit(dbref target, dbref player, FLAG flag, int fflags,
                        int reset) {
-  if (!reset && isPlayer(target) && !((target == player) && Can_Hide(player)) &&
-      (!Wizard(player) && !God(player)))
+  if (!reset && isPlayer(target) && !Wizard(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -176,7 +175,7 @@ static int fh_hear_bit(dbref target, dbref player, FLAG flag, int fflags,
   int could_hear;
 
   if (isPlayer(target) && (flag & MONITOR)) {
-    if (Can_Monitor(player))
+    if (Wizard(player))
       fh_any(target, player, flag, fflags, reset);
     else
       return 0;

@@ -709,7 +709,7 @@ void do_quitprog(dbref player, dbref cause, int key, char *name) {
     doer = player;
   }
 
-  if (!(Prog(player) || Prog(Owner(player))) && (player != doer)) {
+  if (!(Wizard(player) || Wizard(Owner(player))) && (player != doer)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -764,7 +764,7 @@ void do_prog(dbref player, dbref cause, int key, char *name, char *command) {
   }
   doer = match_thing(player, name);
 
-  if (!(Prog(player) || Prog(Owner(player))) && (player != doer)) {
+  if (!(Wizard(player) || Wizard(Owner(player))) && (player != doer)) {
     notify(player, "Permission denied.");
     return;
   }

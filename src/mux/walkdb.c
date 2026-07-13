@@ -110,7 +110,7 @@ int get_stats(dbref player, dbref who, STATS *info) {
    * Do we have permission?
    */
 
-  if (Good_obj(who) && !Controls(player, who) && !Stat_Any(player)) {
+  if (Good_obj(who) && !Controls(player, who) && !Wizard(player)) {
     notify(player, "Permission denied.");
     return 0;
   }
@@ -329,7 +329,7 @@ int search_setup(dbref player, char *searchfor, SEARCH *parm) {
    */
 
   parm->s_owner = Owner(player);
-  parm->s_wizard = Search(player);
+  parm->s_wizard = Wizard(player);
   parm->s_rst_owner = NOTHING;
   if (!*pname) {
     parm->s_rst_owner = parm->s_wizard ? ANY_OWNER : player;

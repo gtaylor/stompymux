@@ -1016,7 +1016,7 @@ int check_read_perms(dbref player, dbref thing, ATTR *attr, int aowner,
    */
 
   see_it = See_attr(player, thing, attr, aowner, aflags);
-  if ((Examinable(player, thing) || nearby(player, thing) || See_All(player)) &&
+  if ((Examinable(player, thing) || nearby(player, thing) || Wizard(player)) &&
       see_it)
     return 1;
 
@@ -4374,7 +4374,7 @@ static void fun_locate(char *buff, char **bufc, dbref player, dbref cause,
    * Find the thing to do the looking, make sure we control it.
    */
 
-  if (See_All(player))
+  if (Wizard(player))
     thing = match_thing(player, fargs[0]);
   else
     thing = match_controlled(player, fargs[0]);
@@ -5249,7 +5249,7 @@ static void fun_doing(char *buff, char **bufc, dbref player, dbref cause,
         break;
       }
     }
-    if (bFound && (d->player == player || Wizard_Who(player))) {
+    if (bFound && (d->player == player || Wizard(player))) {
       safe_str(d->doing, buff, bufc);
     } else {
       /* [cad] Mux2.3 returns empty string here, not sure what
@@ -5263,7 +5263,7 @@ static void fun_doing(char *buff, char **bufc, dbref player, dbref cause,
       return;
     }
 
-    if (Wizard_Who(player) || !Hidden(victim)) {
+    if (Wizard(player) || !Hidden(victim)) {
       DESC *d;
       DESC_ITER_CONN(d) {
         if (d->player == victim) {
@@ -5512,7 +5512,7 @@ FUN flist[] = {
     {"ART", fun_art, 1, 0, CA_PUBLIC},
     {"ASIN", fun_asin, 1, 0, CA_PUBLIC},
     {"ATAN", fun_atan, 1, 0, CA_PUBLIC},
-    {"BEEP", fun_beep, 0, 0, CA_BUILDER},
+    {"BEEP", fun_beep, 0, 0, CA_WIZARD},
     {"BEFORE", fun_before, 0, FN_VARARGS, CA_PUBLIC},
     {"BTADDSTORES", fun_btaddstores, 3, 0, CA_WIZARD},
     {"BTARMORSTATUS", fun_btarmorstatus, 2, 0, CA_WIZARD},
@@ -5589,7 +5589,7 @@ FUN flist[] = {
     {"BTTECHTIME", fun_bttechtime, 0, 0, CA_WIZARD},
     {"BTTHRESHOLD", fun_btthreshold, 1, 0, CA_WIZARD},
     {"BTTICWEAPS", fun_btticweaps, 2, 0, CA_WIZARD},
-    {"BTUNDERREPAIR", fun_btunderrepair, 1, 0, CA_BUILDER},
+    {"BTUNDERREPAIR", fun_btunderrepair, 1, 0, CA_WIZARD},
     {"BTUNITFIXABLE", fun_btunitfixable, 1, 0, CA_WIZARD},
     {"BTUNITPARTSLIST", fun_btunitpartslist, 1, 0, CA_WIZARD},
     {"BTUNITPARTSLIST_REF", fun_btunitpartslist_ref, 1, 0, CA_WIZARD},
@@ -5694,8 +5694,8 @@ FUN flist[] = {
     {"LINK", fun_link, 2, 0, CA_PUBLIC},
     {"LN", fun_ln, 1, 0, CA_PUBLIC},
     {"LNUM", fun_lnum, 0, FN_VARARGS, CA_PUBLIC},
-    {"LOC", fun_loc, 1, 0, CA_BUILDER},
-    {"LOCATE", fun_locate, 3, 0, CA_BUILDER},
+    {"LOC", fun_loc, 1, 0, CA_WIZARD},
+    {"LOCATE", fun_locate, 3, 0, CA_WIZARD},
     {"LOCK", fun_lock, 1, 0, CA_PUBLIC},
     {"LOG", fun_log, 1, 0, CA_PUBLIC},
 #ifdef ARBITRARY_LOGFILES
@@ -5706,7 +5706,7 @@ FUN flist[] = {
     {"LT", fun_lt, 2, 0, CA_PUBLIC},
     {"LTE", fun_lte, 2, 0, CA_PUBLIC},
     {"LVPLAYERS", fun_lvplayers, 1, 0, CA_PUBLIC},
-    {"LWHO", fun_lwho, 0, 0, CA_BUILDER},
+    {"LWHO", fun_lwho, 0, 0, CA_WIZARD},
     {"MAP", fun_map, 0, FN_VARARGS, CA_PUBLIC},
     {"MATCH", fun_match, 0, FN_VARARGS, CA_PUBLIC},
     {"MATCHALL", fun_matchall, 0, FN_VARARGS, CA_PUBLIC},

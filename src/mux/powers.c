@@ -31,16 +31,6 @@ static int ph_any(dbref target, dbref player, POWER power, int fpowers,
 }
 
 /**
- * Only GOD may set or clear the bit
- */
-static int ph_god(dbref target, dbref player, POWER power, int fpowers,
-                  int reset) {
-  if (!God(player))
-    return 0;
-  return (ph_any(target, player, power, fpowers, reset));
-}
-
-/**
  * Only WIZARDS (or GOD) may set or clear the bit
  */
 static int ph_wiz(dbref target, dbref player, POWER power, int fpowers,
@@ -51,30 +41,13 @@ static int ph_wiz(dbref target, dbref player, POWER power, int fpowers,
 }
 
 POWERENT gen_powers[] = {
-    {(char *)"chown_anything", POW_CHOWN_ANY, 0, 0, ph_wiz},
-    {(char *)"announce", POW_ANNOUNCE, 0, 0, ph_wiz},
-    {(char *)"boot", POW_BOOT, 0, 0, ph_wiz},
-    {(char *)"halt", POW_HALT, 0, 0, ph_wiz},
-    {(char *)"control_all", POW_CONTROL_ALL, 0, 0, ph_god},
-    {(char *)"expanded_who", POW_WIZARD_WHO, 0, 0, ph_wiz},
-    {(char *)"see_all", POW_EXAM_ALL, 0, 0, ph_wiz},
-    {(char *)"prog", POW_PROG, 0, 0, ph_wiz},
     {(char *)"find_unfindable", POW_FIND_UNFIND, 0, 0, ph_wiz},
-    {(char *)"hide", POW_HIDE, 0, 0, ph_wiz},
     {(char *)"idle", POW_IDLE, 0, 0, ph_wiz},
-    {(char *)"search", POW_SEARCH, 0, 0, ph_wiz},
     {(char *)"long_fingers", POW_LONGFINGERS, 0, 0, ph_wiz},
     {(char *)"comm_all", POW_COMM_ALL, 0, 0, ph_wiz},
-    {(char *)"see_queue", POW_SEE_QUEUE, 0, 0, ph_wiz},
     {(char *)"see_hidden", POW_SEE_HIDDEN, 0, 0, ph_wiz},
-    {(char *)"monitor", POW_MONITOR, 0, 0, ph_wiz},
-    {(char *)"poll", POW_POLL, 0, 0, ph_wiz},
     {(char *)"no_destroy", POW_NO_DESTROY, 0, 0, ph_wiz},
-    {(char *)"stat_any", POW_STAT_ANY, 0, 0, ph_wiz},
-    {(char *)"tel_anywhere", POW_TEL_ANYWHR, 0, 0, ph_wiz},
-    {(char *)"tel_anything", POW_TEL_UNRST, 0, 0, ph_wiz},
     {(char *)"pass_locks", POW_PASS_LOCKS, 0, 0, ph_wiz},
-    {(char *)"builder", POW_BUILDER, POWER_EXT, 0, ph_wiz},
     /* BattletechMUX Powers */
     {(char *)"mech", POW_MECH, POWER_EXT, 0, ph_wiz},
     {(char *)"security", POW_SECURITY, POWER_EXT, 0, ph_wiz},
