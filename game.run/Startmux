@@ -21,12 +21,10 @@ fi
 #
 #	Make sure the indexes are up-to-date.
 #
-if [ -x $BIN/mkindx.debug ]; then
-	MKINDX=$BIN/mkindx.debug
-elif [ -x $BIN/mkindx ]; then
+if [ -x $BIN/mkindx ]; then
 	MKINDX=$BIN/mkindx
 else
-	echo "No mkindx or mkindx.debug. Did you forget to make install?"
+	echo "No mkindx. Did you forget to make install?"
 	exit 1
 fi
 
@@ -37,11 +35,8 @@ $MKINDX $TEXT/wizhelp.txt $TEXT/wizhelp.indx
 #	Kick off MUX
 #
 ulimit -c unlimited
-if [ -x $BIN/netmux.debug ]; then
-	echo Starting debug binary.
-	$BIN/netmux.debug $GAMENAME.conf
-elif [ -x $BIN/netmux ]; then
-	echo Starting release binary.
+if [ -x $BIN/netmux ]; then
+	echo Starting netmux binary.
 	$BIN/netmux $GAMENAME.conf
 else
 	echo No binary found!
