@@ -120,7 +120,6 @@ void do_quota(dbref, dbref, int, char *, char *); /* Set or display quotas */
 void do_readcache(dbref, dbref, int);             /* Reread text file cache */
 void do_restart(dbref, dbref, int);               /* Restart the game. */
 void do_say(dbref, dbref, int, char *);           /* Messages to all */
-void do_score(dbref, dbref, int);                 /* Display my wealth */
 void do_search(dbref, dbref, int,
                char *); /* Search for objs matching criteria */
 void do_set(dbref, dbref, int, char *, char *); /* Set flags or attributes */

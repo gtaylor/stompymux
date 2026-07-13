@@ -883,11 +883,6 @@ void do_examine(dbref player, dbref cause, int key, char *name) {
   }
 }
 
-void do_score(dbref player, dbref cause, int key) {
-  notify_printf(player, "You have %d %s.", Pennies(player),
-                (Pennies(player) == 1) ? mudconf.one_coin : mudconf.many_coins);
-}
-
 void do_inventory(dbref player, dbref cause, int key) {
   dbref thing;
   char *buff, *s, *e;
@@ -920,7 +915,6 @@ void do_inventory(dbref player, dbref cause, int key) {
     notify(player, buff);
     free_lbuf(buff);
   }
-  do_score(player, player, 0);
 }
 
 void do_entrances(dbref player, dbref cause, int key, char *name) {

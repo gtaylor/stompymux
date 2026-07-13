@@ -78,7 +78,6 @@ static const char schema_sql[] =
     " next INTEGER NOT NULL,"
     " owner INTEGER NOT NULL,"
     " parent INTEGER NOT NULL,"
-    " pennies INTEGER NOT NULL,"
     " flags INTEGER NOT NULL,"
     " flags2 INTEGER NOT NULL,"
     " flags3 INTEGER NOT NULL,"
@@ -388,7 +387,6 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
   dbref next;
   dbref owner;
   dbref parent;
-  int pennies;
   int powers;
   int powers2;
   int result;
@@ -400,7 +398,7 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
   if (gamedb_prepare(
           sqlite, &statement,
           "SELECT dbref, name, location, zone, contents, exits, link, next, "
-          "owner, parent, pennies, flags, flags2, flags3, powers, powers2, "
+          "owner, parent, flags, flags2, flags3, powers, powers2, "
           "lock_expr FROM objects ORDER BY dbref;") < 0) {
     sqlite3_finalize(statement);
     return -1;
@@ -419,13 +417,12 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
         gamedb_column_long(statement, 7, &next) < 0 ||
         gamedb_column_long(statement, 8, &owner) < 0 ||
         gamedb_column_long(statement, 9, &parent) < 0 ||
-        gamedb_column_int(statement, 10, &pennies) < 0 ||
-        gamedb_column_long(statement, 11, &flags) < 0 ||
-        gamedb_column_long(statement, 12, &flags2) < 0 ||
-        gamedb_column_long(statement, 13, &flags3) < 0 ||
-        gamedb_column_int(statement, 14, &powers) < 0 ||
-        gamedb_column_int(statement, 15, &powers2) < 0 ||
-        gamedb_column_text(statement, 16, &lock_text, LBUF_SIZE) < 0) {
+        gamedb_column_long(statement, 10, &flags) < 0 ||
+        gamedb_column_long(statement, 11, &flags2) < 0 ||
+        gamedb_column_long(statement, 12, &flags3) < 0 ||
+        gamedb_column_int(statement, 13, &powers) < 0 ||
+        gamedb_column_int(statement, 14, &powers2) < 0 ||
+        gamedb_column_text(statement, 15, &lock_text, LBUF_SIZE) < 0) {
       result = -1;
     } else {
       s_Name(object, (char *)name);
@@ -437,7 +434,6 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
       s_Next(object, next);
       s_Owner(object, owner);
       s_Parent(object, parent);
-      s_Pennies(object, pennies);
       s_Flags(object, flags);
       s_Flags2(object, flags2);
       s_Flags3(object, flags3);
@@ -588,8 +584,8 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
           sqlite, &objects,
           "INSERT INTO objects "
           "(dbref, name, location, zone, contents, exits, link, next, owner, "
-          "parent, pennies, flags, flags2, flags3, powers, powers2, lock_expr) "
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "parent, flags, flags2, flags3, powers, powers2, lock_expr) "
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, number, value) "
                      "VALUES (?, ?, ?);") < 0)
@@ -638,13 +634,12 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
         gamedb_bind_int(objects, 8, Next(object)) < 0 ||
         gamedb_bind_int(objects, 9, Owner(object)) < 0 ||
         gamedb_bind_int(objects, 10, Parent(object)) < 0 ||
-        gamedb_bind_int(objects, 11, Pennies(object)) < 0 ||
-        gamedb_bind_int(objects, 12, Flags(object)) < 0 ||
-        gamedb_bind_int(objects, 13, Flags2(object)) < 0 ||
-        gamedb_bind_int(objects, 14, Flags3(object)) < 0 ||
-        gamedb_bind_int(objects, 15, Powers(object)) < 0 ||
-        gamedb_bind_int(objects, 16, Powers2(object)) < 0 ||
-        sqlite3_bind_text(objects, 17, lock_text, -1, SQLITE_TRANSIENT) !=
+        gamedb_bind_int(objects, 11, Flags(object)) < 0 ||
+        gamedb_bind_int(objects, 12, Flags2(object)) < 0 ||
+        gamedb_bind_int(objects, 13, Flags3(object)) < 0 ||
+        gamedb_bind_int(objects, 14, Powers(object)) < 0 ||
+        gamedb_bind_int(objects, 15, Powers2(object)) < 0 ||
+        sqlite3_bind_text(objects, 16, lock_text, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
         gamedb_step(objects) < 0) {
       free_boolexp(lock);
@@ -664,7 +659,6 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
       case A_NAME:
       case A_LOCK:
       case A_LIST:
-      case A_MONEY:
         continue;
       default:
         break;

@@ -305,18 +305,9 @@ int canpayfees(dbref player, dbref who, int pennies, int quota) {
 }
 
 int payfor(dbref who, int cost) {
-  dbref tmp;
-
-  if (Wizard(who) || Wizard(Owner(who)) || Free_Money(who) ||
-      Free_Money(Owner(who))) {
-    return 1;
-  }
-  who = Owner(who);
-  if ((tmp = Pennies(who)) >= cost) {
-    s_Pennies(who, tmp - cost);
-    return 1;
-  }
-  return 0;
+  (void)who;
+  (void)cost;
+  return 1;
 }
 
 void add_quota(dbref who, int payment) {
@@ -334,12 +325,8 @@ void add_quota(dbref who, int payment) {
  * Give moner to a player.
  */
 void giveto(dbref who, int pennies) {
-  if (Wizard(who) || Wizard(Owner(who)) || Free_Money(who) ||
-      Free_Money(Owner(who))) {
-    return;
-  }
-  who = Owner(who);
-  s_Pennies(who, Pennies(who) + pennies);
+  (void)who;
+  (void)pennies;
 }
 
 int ok_name(const char *name) {

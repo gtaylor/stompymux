@@ -40,11 +40,7 @@
 #define A_RUNOUT 18      /* Actions done when no more charges */
 #define A_STARTUP 19     /* Actions run when game started up */
 #define A_ACLONE 20      /* Actions run when obj is cloned */
-#define A_APAY 21        /* Actions run when given COST pennies */
-#define A_OPAY 22        /* Others pay message */
-#define A_PAY 23         /* Invoker pay message */
-#define A_COST 24        /* Number of pennies needed to invoke xPAY */
-#define A_MONEY 25       /* Value or Wealth (internal) */
+/* 21 through 25 are reserved for removed payment and money attributes. */
 #define A_LISTEN 26      /* (Wildcarded) string to listen for */
 #define A_AAHEAR 27      /* Actions to do when anyone says LISTEN str */
 #define A_AMHEAR 28      /* Actions to do when I say LISTEN str */

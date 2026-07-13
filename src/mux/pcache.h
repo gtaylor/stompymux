@@ -9,7 +9,6 @@
 
 typedef struct player_cache {
   dbref player;
-  int money;
   int queue;
   int qmax;
   int cflags;
@@ -18,8 +17,7 @@ typedef struct player_cache {
 
 #define PF_DEAD 0x0001
 #define PF_REF 0x0002
-#define PF_MONEY_CH 0x0004
-#define PF_QMAX_CH 0x0008
+#define PF_QMAX_CH 0x0004
 
 void pcache_init(void);
 PCACHE *pcache_find(dbref player);

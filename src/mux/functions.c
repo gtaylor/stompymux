@@ -2792,22 +2792,6 @@ static void fun_home(char *buff, char **bufc, dbref player, dbref cause,
 
 /*
  * ---------------------------------------------------------------------------
- * * fun_money: Return an object's value
- */
-
-static void fun_money(char *buff, char **bufc, dbref player, dbref cause,
-                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  dbref it;
-
-  it = match_thing(player, fargs[0]);
-  if ((it == NOTHING) || !Examinable(player, it))
-    safe_str("#-1", buff, bufc);
-  else
-    safe_tprintf_str(buff, bufc, "%d", Pennies(it));
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * fun_pos: Find a word in a string
  */
 
@@ -5749,7 +5733,6 @@ FUN flist[] = {
     {"MIN", fun_min, 0, FN_VARARGS, CA_PUBLIC},
     {"MIX", fun_mix, 0, FN_VARARGS, CA_PUBLIC},
     {"MOD", fun_mod, 2, 0, CA_PUBLIC},
-    {"MONEY", fun_money, 1, 0, CA_PUBLIC},
     {"MUDNAME", fun_mudname, 0, 0, CA_PUBLIC},
     {"MUL", fun_mul, 0, FN_VARARGS, CA_PUBLIC},
     {"MUNGE", fun_munge, 0, FN_VARARGS, CA_PUBLIC},

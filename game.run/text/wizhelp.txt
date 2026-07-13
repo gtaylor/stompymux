@@ -4277,26 +4277,6 @@ Continued in btdamgaes()3
 
   Dumping a crash database is currently not implemented.
  
-& create_max_cost
-
-  Config directive: create_max_cost <amount>
-  Default: 505
-
-  Specifies the maximum amount of money that is used in calculating
-  the value of a created object.  Specifying more than this amount
-  of money in a @create command will cause the excess to be wasted.
-
-  See also: create_min_cost, sacrifice_adjust, sacrifice_factor.
- 
-& create_min_cost
-
-  Config parameter: create_min_cost <amount>
-  Default: 10
-
-  Specifies the minimum (and default) cost for creating an object.
-
-  See also: create_max_cost, sacrifice_adjust, sacrifice_factor.
-  
 & critstatus
  
   xcodevalue: critstatus <bv>
@@ -4442,13 +4422,6 @@ Continued in btdamgaes()3
   The attribute stores the #dbref of the player who @destroy'ed the 
   player.
  
-& dig_cost
-
-  Config parameter: dig_cost <amount>
-  Default: 10
-
-  Specifies how much the @dig command costs.
-  
 & disabled_hs
  
   xcodevalue: disabled_hs <int_ro>
@@ -4533,19 +4506,6 @@ Continued in btdamgaes()3
 
   See also: dump_interval.
  
-& earn_limit
-
-  Config parameter: earn_limit <amount>
-  Default: 10000
-
-  Specifies the threshold at which earning additional money becomes
-  difficult. Specifically, players with more than this much money no
-  longer receive a  paycheck for each day they connect, don't receive
-  insurance payments for being killed, and don't find money lying in
-  the streets.
-
-  See also: find_money_chance, paycheck.
-  
 & enhanced-logging
 
   Compile option: --disable-enhanced-logging
@@ -4631,17 +4591,6 @@ Continued in btdamgaes()3
   room that ultimately contains the object is checked.  Going home
   is unaffected.
  
-& find_money_chance
-
-  Config parameter: find_money_chance <amount>
-  Default: 0
-
-  Indicates the chance that players have of finding money when
-  entering a new room.  The chance is 1 / find_money_chance, except
-  that finding money is disabled if this parameter is set to zero.
-
-  See also: earn_limit, paycheck.
-  
 & find_unfindable
  
   Power: find_unfindable
@@ -4742,14 +4691,6 @@ Continued in btdamgaes()3
   yes.
 
   See also: fork_dump.
-  
-& free_money
- 
-  Power: free_money
-  
-  This power provides the player with infinite money.
-  
-  See Also: @power, @list powers
   
 & free_quota
  
@@ -5239,17 +5180,6 @@ Continued in btdamgaes()3
   
   See Also: secs(), convsecs(), @viewxcode
  
-& link_cost
-
-  Config parameter: link_cost <amount>
-  Default: 1
-
-  Specifies the cost of using the @link command to establish or change
-  the link of an exit to its destination, the home of a player or an
-  object, or the drop-to of a room.
-
-  See also: @link.
-  
 & list
  
   Map Command: list <mechs|objs>
@@ -5978,28 +5908,6 @@ Avg weight: 45.00 Total tons: 990
      1 AUTOPILOT           : 272 bytes total, 272 each
   Grand total: 326208 bytes.
  
-& money_name_plural
-
-  Config parameter: money_name_plural <string>
-  Default: pennies
-
-  Specifies the string to use to describe the coin of the realm when
-  they are being referred to plurally (such as: 'You have <number>
-  pennies.', where <number> is not 1).
-
-  See also: money_name_singular.
- 
-& money_name_singular
-
-  Config parameter: money_name_singular <string>
-  Default: penny
-
-  Specifies the string to use to describe the coin of the realm when
-  they are being referred to singularly (such as: 'You found a
-  penny!').
-
-  See also: money_name_plural.
-  
 & monitor
  
   Power: monitor
@@ -6085,17 +5993,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @viewxcode
  
-& open_cost
-
-  Config parameter: open_cost <amount>
-  Default: 1
-
-  Indicates the cost of using the @open command to open a new exit.
-  If a destination for the new exit is specified and the link is
-  successful, then the link_cost is also charged.
-
-  See also: @open, link_cost.
- 
 & output_database
 
   Config parameter: output_database <pathname>
@@ -6125,15 +6022,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @viewxcode
  
-& page_cost
-
-  Config parameter: page_cost <amount>
-  Default: 0
-
-  Specifies the cost of using the page command.
-
-  See also: page.
- 
 & paranoid_allocate
 
   Config parameter: paranoid_allocate <yes/no>
@@ -6160,17 +6048,6 @@ Avg weight: 45.00 Total tons: 990
   This power permits the player to pass any lock.
   
   See Also: @power, @list powers, @lock
-& paycheck
-
-  Config parameter: paycheck <amount>
-  Default: 0
-
-  Specifies the default amount of money that players receive each day
-  they connect.  This parameter may be overridden by setting the
-  ALLOWANCE attribute on the player to a different value.
-
-  See also: @allowance, earn_limit, starting_money.
- 
 & pemit_any_object
 
   Config parameter: pemit_any_object <yes/no>
@@ -6666,15 +6543,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: conn_timeout.
  
-& robot_cost
-
-  Config paramater: robot_cost <amount>
-  Default: 1000
-
-  Specifies the cost of using the @robot command to create a robot.
-
-  See also: @robot, ROBOT.
- 
 & robot_flags
 
   Config parameter: robot_flags <flags>
@@ -6789,16 +6657,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @power, @list powers, @search
  
-& search_cost
-
-  Config parameter: search_cost <amount>
-  Default: 100
-
-  Specifies how much commands that scan the entire database (such as
-  @find, @search, and stats with a playername) cost.
-
-  See also: stats, @find, @search.
-  
 & see_all
  
   Power: see_all
@@ -7284,15 +7142,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @viewxcode
  
-& starting_money
-
-  Config parameter: starting_money <amount>
-  Default: 0
-
-  Sets the amount of money that new players start out with.
-
-  See also: paycheck.
- 
 & starting_quota
 
   Config parameter: starting_quota <amount>
@@ -7405,14 +7254,6 @@ Avg weight: 45.00 Total tons: 990
   * F - UNUSED currently. 
   
   See Also: status, @viewxcode
- 
-& steal_money
- 
-  Power: steal_money
-  
-  This permits the player to give negative amounts of money.
-  
-  See Also: @power, @list powers
  
 & suspect_site
 
@@ -7819,18 +7660,6 @@ Avg weight: 45.00 Total tons: 990
   they are created.  By default, user attributes are invisible to
   others.
  
-& wait_cost
-
-  Config parameter: wait_cost <amount>
-  Default: 10
-
-  Sets the amount of money that it costs to run the @wait command and
-  other actions that add commands to the queue.  The money is
-  refunded when the command is removed from the queue (either when
-  it is executed or by @halt).
-
-  See also: @wait.
-  
 & winddir
  
   xcodevalue: winddir <short>

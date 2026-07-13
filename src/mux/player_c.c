@@ -26,12 +26,6 @@ void pcache_init(void) {
 static void pcache_reload1(dbref player, PCACHE *pp) {
   char *cp;
 
-  cp = atr_get_raw(player, A_MONEY);
-  if (cp && *cp)
-    pp->money = atoi(cp);
-  else
-    pp->money = 0;
-
   cp = atr_get_raw(player, A_QUEUEMAX);
   if (cp && *cp)
     pp->qmax = atoi(cp);
@@ -77,15 +71,11 @@ static void pcache_save(PCACHE *pp) {
 
   if (pp->cflags & PF_DEAD)
     return;
-  if (pp->cflags & PF_MONEY_CH) {
-    snprintf(tbuf, sizeof(tbuf), "%d", pp->money);
-    atr_add_raw(pp->player, A_MONEY, tbuf);
-  }
   if (pp->cflags & PF_QMAX_CH) {
     snprintf(tbuf, sizeof(tbuf), "%d", pp->qmax);
     atr_add_raw(pp->player, A_QUEUEMAX, tbuf);
   }
-  pp->cflags &= ~(PF_MONEY_CH | PF_QMAX_CH);
+  pp->cflags &= ~PF_QMAX_CH;
 }
 
 void pcache_trim(void) {
@@ -168,31 +158,11 @@ int QueueMax(dbref player) {
 }
 
 int Pennies(dbref obj) {
-  char *cp;
-
-  PCACHE *pp;
-
-  if (OwnsOthers(obj)) {
-    pp = pcache_find(obj);
-    if (pp)
-      return pp->money;
-  }
-  cp = atr_get_raw(obj, A_MONEY);
-  return (safe_atoi(cp));
+  (void)obj;
+  return 0;
 }
 
-void s_Pennies(dbref obj, int howfew) {
-  IBUF tbuf;
-
-  PCACHE *pp;
-
-  if (OwnsOthers(obj)) {
-    pp = pcache_find(obj);
-    if (pp) {
-      pp->money = howfew;
-      pp->cflags |= PF_MONEY_CH;
-    }
-  }
-  snprintf(tbuf, sizeof(tbuf), "%d", howfew);
-  atr_add_raw(obj, A_MONEY, tbuf);
+void s_Pennies(dbref obj, int amount) {
+  (void)obj;
+  (void)amount;
 }

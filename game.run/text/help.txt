@@ -128,7 +128,7 @@
   an exit when it is successfully used.
  
   Example:
-  @adrop plastique = kill %n=100; @destroy me
+  @adrop plastique = :EXPLODES; @destroy me
  
   See also: drop, @drop, @odrop, DROP-TO, EXITS
   
@@ -219,22 +219,6 @@
   @ahear clock = "The time is now [time()].  >> BONNNNGGGGG <<
  
   See also: @aahear, @amhear, @listen
-  
-& @akill
- 
-  Syntax: @akill <object> = <command-list>
-  Attribute: Akill
- 
-  Sets the actions to be taken by an object after it is killed and has
-  returned to its home.
- 
-  This attribute is only meaningful for players and things, and will
-  never be automatically triggered on other object types.
- 
-  Example:
-  @akill lion = south; :leaps onto %n, roaring loudly.;kill %n=100
- 
-  See also: kill, @kill and @okill, BEING KILLED, IMMORTAL, WIZARD
   
 & @aleave
  
@@ -338,26 +322,6 @@
  
   See also: @move, @omove
   
-& @apay
- 
-  Syntax: @apay <object> = <command-list>
-  Attribute: Apay
- 
-  Sets the actions to be taken after the object is given the number of
-  coins specified in its Cost attribute.  If the giver tries to give
-  more than that number of coins, the excess is refunded, and if
-  less than the necessary  amount is given then it is all given back
-  and a snide message is sent to the giver.
- 
-  This attribute is only meaningful for players and things, and will
-  never be automatically triggered on other object types.
- 
-  Example:
-  @apay Coke machine = @clone Can of Coke; :drops a can on the
-  floor.
- 
-  See also: give, @cost, @opay, @pay
-  
 & @arfail
  
   Syntax: @arfail <object> = <command-list>
@@ -440,7 +404,7 @@
   not trigger Aufail.
  
   Example:
-  @aufail robot = "I _told_ you to leave me alone; kill %n=100
+  @aufail robot = "I _told_ you to leave me alone
  
   See also: @oufail, @ufail, @use
   
@@ -456,7 +420,7 @@
   never be automatically triggered on other object types.
  
   Example:
-  @ause grenade = :EXPLODES; kill %n=100; @destroy me
+  @ause grenade = :EXPLODES; @destroy me
  
   See also: use, @ouse, @use
   
@@ -672,26 +636,6 @@
   ALWAYS override locks on channel objects.
  
   See also: @coflags, @clist, CHANNEL OBJECT
-  
-& @cost
- 
-  Syntax: @cost <object> = <amount>
-  Attribute: Cost
- 
-  Sets the number of coins that need to be given to an object to
-  trigger the Pay, Opay, and Apay attributes.  If the object is
-  given more than this amount, the excess is returned to the giver,
-  while if less than this amount is given the entire amount is
-  returned, a snide message is sent to the giver, and the Apay,
-  Opay, and Pay attributes are not used.
- 
-  This attribute is only meaningful for things, and will never be
-  automatically triggered on other object types.
- 
-  Example:
-  @cost Coke machine = 25
- 
-  See also: give, @apay, @opay, @pay
   
 & @cpattr
  
@@ -1320,7 +1264,7 @@
   Halting an object does not affect commands waiting on it as a
   semaphore.
  
-  See also: @drain, @notify, kill, HALTED, SEMAPHORES
+  See also: @drain, @notify, HALTED, SEMAPHORES
   
 & @idesc
  
@@ -1416,29 +1360,6 @@
     Wizard waves some more.
  
   See also: @filter, @infilter, @listen, @prefix
-  
-& @kill
- 
-  Syntax: @kill <object> = <message>
-  Attribute: Kill
- 
-  This command sets the message that is shown to anyone who kills
-  <object>.
- 
-  This attribute is only meaningful for players and things, and will
-  never be automatically triggered on other object types.
- 
-  Function references and %-substitutions are allowed in kill
-  messages, and are evaluated when someone kills the object.  In
-  function references, 'me' refers to the object that was killed,
-  while %-substitutions that refer to the enactor (such as %n, %#,
-  %p, etc) refer to the player doing the killing.
- 
-  Example:
-  @kill guard = The guard says "I'll get.. you... for...this... %n"
-  as he falls down and dies.
- 
-  See also: kill, @akill, @okill, BEING KILLED, IMMORTAL, WIZARD
   
 & @Lalias
  
@@ -1841,9 +1762,7 @@
                                    the location.
      TportLock:    Rooms/Things:   controls who may teleport there if
                                    the location is JUMP_OK.
-     UseLock:      All but Exits:  controls who may USE the object,
-                                   GIVE the object money and have the
-                                   PAY attributes run, have their
+     UseLock:      All but Exits:  controls who may USE the object, have their
                                    messages heard and possibly acted
                                    on by LISTEN and AxHEAR, and invoke
                                    $-commands stored on the object.
@@ -2199,22 +2118,6 @@
  
   See also: get, look, @afail, @fail, FAILURE
   
-& @okill
- 
-  Syntax: @okill <object> = <message>
-  Attribute: Okill
- 
-  Sets the message (prefixed by the player's name) that is shown to
-  others in the room when someone kills <object>.
- 
-  This attribute is meaningful for players, things, and rooms, and
-  will never be automatically triggered on exits.
- 
-  Example:
-  @okill guard = bashes in the guard's skull, killing him.
- 
-  See also: kill, @akill, @kill, BEING KILLED, IMMORTAL, WIZARD
-  
 & @oleave
  
   Syntax: @oleave <object> = <message>
@@ -2272,25 +2175,6 @@
   @omove car = coasts to a stop.
  
   See also: @amove, @move
-  
-& @opay
- 
-  @opay <object> = <message>
-  Attribute: Opay
- 
-  Sets the message (prefixed by the player's name) that is shown to
-  others in the room when someone pays <object> enough to satisfy
-  its Cost attribute.
- 
-  This attribute is only meaningful for players and things, and will
-  never be automatically triggered on other object types.
- 
-  Example:
-  @opay Coke machine = slips some change into the coin slot on the
-  Coke machine.  You hear some rumbling from inside the machine and a
-  can of Coke appears in the tray at the bottom of the machine.
- 
-  See also: give, @cost, @apay, @pay
   
 & @open
  
@@ -2524,22 +2408,6 @@
  
   This command changes your password.
   
-& @pay
- 
-  Syntax: @pay <object> = <message>
-  Attribute: Pay
- 
-  Sets the message that is shown to the player who gives <object>
-  enough money to satisfy its Cost attribute.
- 
-  This attribute is only meaningful for things, and will never be
-  automatically triggered on other object types.
- 
-  Example:
-  @pay Coke machine = You slip some change into the slot.
- 
-  See also: give, @apay, @cost, @opay
- 
 & @power
 
   COMMAND: @power <object>=[!]<power> [[!]<power> [...]]
@@ -2766,9 +2634,7 @@
  
   Examples:
     @search flags=PWc              <-- search for connected wizards.
-    @search type=room              <-- list all rooms owned by me.
-    @search eval=gt(money(##),10)  <-- search for things worth more
-                                       than 10.
+    @search type=room              <-- list all rooms owned by me.                                       than 10.
     @search type=room,100,300      <-- Rooms between #100 and #300,
                                        inclusive
     @search object=Test,5000       <-- Things starting with Test from
@@ -4043,7 +3909,6 @@ faster.
 @afail
 @agfail
 @ahear
-@akill
 @aleave
 @alfail
 @alias
@@ -4077,7 +3942,6 @@ faster.
 @idle
 @infilter
 @inprefix
-@kill
 @lalias
 @last
 @lastsite
@@ -4095,7 +3959,6 @@ faster.
 @oenter
 @ofail
 @ogfail
-@okill
 @oleave
 @olfail
 @omove
@@ -4452,10 +4315,10 @@ while line:
   Note: Some commands are @-related.
  
   drop         enter        examine      get          give    
-  goto         help         inventory    kill         leave    
+  goto         help         inventory    leave    
   LOGOUT       look         move         OUTPUTPREFIX
   OUTPUTSUFFIX page         pose         QUIT         read     
-  say          score        SESSION      take         think    
+  say          SESSION      take         think    
   throw        use          version      whisper      WHO
   "            :            ;            &            #        
   \\           @@           @cemit       @chown       @chzone  
@@ -4479,16 +4342,16 @@ while line:
  
   @aahear      @aclone      @aconnect    @adescribe   @adfail 
   @adisconnect @adrop       @aefail      @aenter      @afail   
-  @agfail      @ahear       @akill       @aleave      @alfail  
+  @agfail      @ahear       @aleave      @alfail  
   @alias       @amail       @amhear      @amove       @apay    
   @arfail      @asuccess    @atfail      @atofail     @atport  
   @aufail      @ause        @away        @charges     @cost
   @daily       @describe    @dfail       @drop        @ealias 
   @efail       @enter       @fail        @filter      @forwardlist
   @gfail       @idesc       @idle        @infilter    @inprefix
-  @kill        @lalias      @leave       @lfail       @listen  
+  @lalias      @leave       @lfail       @listen  
   @mailsucc    @move        @odescribe   @odfail      @odrop   
-  @oefail      @oenter      @ofail       @ogfail      @okill
+  @oefail      @oenter      @ofail       @ogfail
   @oleave      @olfail      @omove       @opay        @orfail 
   @osuccess    @otfail      @otofail     @otport      @oufail  
   @ouse        @oxenter     @oxleave     @oxtport     @pay     
@@ -6759,15 +6622,6 @@ carried
  
   See Also: switch()
   
-& IMMORTAL
- 
-  Flag: IMMORTAL (i)
- 
-  Objects set immortal cannot be killed and don't use up money.
-  Only settable by wizards.  This is useful when an object's location
-  shouldn't be changed by Joe Player, but you don't want to have to
-  relink it to its current location whenever it moves.
-  
 & IN_CHARACTER
  
   Flag: IN_CHARACTER (#)
@@ -6911,7 +6765,7 @@ carried
  
   Syntax: inventory
  
-  Lists what you are carrying and how much money you have.
+  Lists what you are carrying.
   
 & inzone()
  
@@ -7064,21 +6918,6 @@ carried
   * ID - specify a unit to kick
   
   See Also: axe, charge, chop, club, grabclub, mace, punch, saw, trip
-  
-& kill
- 
-  Syntax: kill <player> [=<cost>]
- 
-  Attempts to kill the specified player. Killing costs <cost> coins,
-  which gives you a <cost>% chance of killing the player. Thus,
-  spending 100 coins always works (except against wizards and
-  immortals, who can never be killed). Players cannot be killed in
-  rooms which they control. If you
-  don't specify a cost, the default is 10 (for a 10% chance of
-  success).  The player, if killed, receives <cost>/2 coins in
-  insurance.
- 
-  See also: @akill, @kill, @okill, BEING KILLED, IMMORTAL, WIZARD
   
 & land
  
@@ -8349,29 +8188,6 @@ Continued in locate()2
  
   See Also: add(), fdiv(), div(), mul(), round(), sub(), trunc()
   
-& money()
- 
-  Syntax: money(<object>)
- 
-  Returns an integer equal to the amount of money <object> has (if it
-  is a player). If the specified object isn't a player, the value of
-  the target is returned.
- 
-  Example:
- 
-  > score
-  You have 1052 clams.
-  > say money(me)
-  You say "1052"
-  > exam sac test
-  Sac Test(#287V)
-  Type: THING Flags: INHERIT
-  Owner: Beaker  Key: *UNLOCKED* Clams: 20
-  Home: Limbo(#0RLDAJ)
-  Location: The Town Square
-  > say money(sac test)
-  You say "20"
-  
 & MONITOR
  
   Flag: MONITOR(M)
@@ -9352,7 +9168,6 @@ and a
   control_all		Can modify any object in the database.
   expanded_who		Sees the wizard WHO, and SESSION commands.
   find_unfindable	Can locate unfindable people.
-  free_money		Unlimited money.
   free_quota		Unlimited quota.
   guest			Is this a guest character?
   halt			Can @halt anything, and @halt/all.
@@ -9372,10 +9187,8 @@ and a
   see_all		Can examine and see attributes like a wizard.
   see_queue		Can @ps/all or @ps any player.
   stat_any		Can @stat any player.
-  steal_money		Can give negative money.
   tel_anywhere		Can teleport anywhere.
   tel_anything		Can teleport anything (includes tel_anywhere)
-  unkillable		Cannot be killed with the 'kill' command.
  
   See also: @power
   
@@ -10259,15 +10072,6 @@ AdvSensors: BeagleProbe
   This command toggles the status (ie on or off) of your units 
   supercharger, if it is so equipped.
   
-& score
- 
-  Syntax: score
- 
-  Displays how much money you have.  Helpful to see if any machines
-  are looping.
- 
-  See also: @ps, LOOPING
-  
 & scramble()
  
   Syntax: scramble(<string>)
@@ -10299,10 +10103,7 @@ AdvSensors: BeagleProbe
   > say search()
   You say "#226 #289 #325 #364 #368 #369"
   > @stats me
-  6 objects = 0 rooms, 0 exits, 5 things, 1 players. (0 garbage)
-  > say search(eval=\[eq(money(##),1)\])
-  You say "#289 #325 #364 #368 #369"
-  > say search(player=wizard)
+  6 objects = 0 rooms, 0 exits, 5 things, 1 players. (0 garbage)  > say search(player=wizard)
   You say "#1"
  
   See Also: @search, SEARCH CLASSES
@@ -11648,13 +11449,13 @@ AdvSensors: BeagleProbe
  
   Help available on the following Topics:
  
-  ARBITRARY COMMANDS  ATTRIBUTE OWNERSHIP BEING KILLED        BOGUS COMMANDS
+  ARBITRARY COMMANDS  ATTRIBUTE OWNERSHIP                     BOGUS COMMANDS
   BOOLEAN VALUES      COMMAND EVALUATION  COMSYS              CONTROL 
   COSTS               CREDITS             DROP-TO             ENACTOR
   EXITS               FAILURE             FLAG LIST           FLAGS 
   FUNCTION LIST       FUNCTIONS           GENDER              GOALS 
   HERE                HOMES               LINKING             LISTENING
-  LISTS               LOOPING             ME                  MONEY
+  LISTS               LOOPING             ME
   MOVING              OBJECT STACK        OBJECT TYPES        PARENT OBJECTS
   PARENT ROOMS        PIPING		  POWERS LIST         PUEBLO
   PUPPETS             REGEXPS             ROBBERY             SEARCH CLASSES
@@ -12405,8 +12206,8 @@ IS.SmallLaser             1      3            0     1      2    3   15
 
   Flag: WIZARD (W)
 
-  If a person is WIZARD, they are a wizard, unkillable,
-  subject to fewer restrictions, and able to use wizard commands.
+  If a person is WIZARD, they are a wizard, subject to fewer
+  restrictions, and able to use wizard commands.
   In general, WIZARDs can do anything using #<number> or *<player>.
   Only player #1 can set and unset the WIZARD flag of other players.
 
