@@ -7162,6 +7162,19 @@ carried
   This command lists the weapons in the specified TIC.
  
     See Also: addtic, cleartic, deltic
+
+& LIGHT
+
+  Flag: LIGHT (l)
+
+  LIGHT makes an object visible in a DARK location, unless the object
+  is also DARK. A LIGHT exit is shown in the Obvious Exits list even
+  when its location is dark, unless the exit is also DARK.
+
+  LIGHT does not illuminate a location or make its other contents
+  visible.
+
+  See Also: DARK
   
 & lit()
  
@@ -12229,6 +12242,19 @@ great
  
   See Also: BOOLEAN VALUES, and(), not(), or()
   
+& ZOMBIE
+
+  Flag: ZOMBIE (z)
+
+  ZOMBIE marks a hardcoded BattleTech object as retired or inactive.
+  A ZOMBIE object does not handle BattleTech special commands. A
+  ZOMBIE DropShip also cannot be left through its bay.
+
+  This flag is normally set by the game when a mechwarrior is
+  discarded. It is wizard-settable.
+
+  See Also: XCODE
+
 & zfun()
  
   Syntax: zfun(<attrib>, <arg0>[, <arg1>[, ...]])
