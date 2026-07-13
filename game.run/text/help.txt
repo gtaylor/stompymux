@@ -8258,14 +8258,6 @@ Continued in locate()2
  
   See Also: add(), div(), fdiv(), mod(), round(), sub(), trunc()
   
-& MULTIOK
- 
-  Flag: MULTIOK (y)
- 
-  This flag is merely used as a marker for any softcoded multi
-  checking code you may have. It serves absolutely no purpose under 
-  the MUX itself.
-  
 & munge()
  
   Syntax: munge([<object>/]<attribute>,<list 1>,<list

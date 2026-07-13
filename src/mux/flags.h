@@ -74,7 +74,7 @@
 #define IN_CHARACTER 0x00100000
 #define ANSIMAP 0x00200000 /* Player uses ANSI maps */
 #define HAS_HOURLY 0x00400000
-#define MULTIOK 0x00800000
+/* 0x00800000 is reserved for the removed MULTIOK flag. */
 
 /* 0x01000000 is reserved for the removed VACATION flag. */
 #define BLIND 0x04000000  /* Something to support blind players! */
@@ -255,7 +255,6 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Light(x) ((Flags2(x) & LIGHT) != 0)
 #define Hardcode(x) ((Flags2(x) & HARDCODE) != 0)
 #define Zombie(x) ((Flags2(x) & ZOMBIE) != 0)
-#define MultiOK(x) ((Flags2(x) & MULTIOK) != 0)
 #define In_Character(x) ((Flags2(x) & IN_CHARACTER) != 0)
 #define Suspect(x) ((Flags2(Owner(x)) & SUSPECT) != 0)
 #define Connected(x)                                                           \

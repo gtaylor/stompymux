@@ -246,7 +246,6 @@ FLAGENT gen_flags[] = {
     {"KEY", KEY, 'K', FLAG_WORD2, 0, fh_any},
     {"LIGHT", LIGHT, 'l', FLAG_WORD2, 0, fh_any},
     {"MONITOR", MONITOR, 'M', 0, 0, fh_hear_bit},
-    {"MULTIOK", MULTIOK, 'y', FLAG_WORD2, CA_WIZARD, fh_wiz},
     {"MYOPIC", MYOPIC, 'm', 0, 0, fh_any},
     {"NOBLEED", NOBLEED, '-', FLAG_WORD2, 0, fh_any},
     {"NO_COMMAND", NO_COMMAND, 'n', FLAG_WORD2, 0, fh_any},
