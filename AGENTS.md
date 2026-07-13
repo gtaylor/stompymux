@@ -13,6 +13,7 @@
 
 ## Development rules
 
+* Function, variable, and type names should be snake_case.
 * Name functions in the format of `[module]_[verb]`.
 * Name structs and types in the form of `[module]_[name]_[c-type-letter].
 * Two space indents for C sources.
@@ -21,4 +22,7 @@
 ## Development workflows
 
 * We use the `just` command runner
-* When making changes, run `just list-changes`, `just build`, `just test`, and then `just install` to validate end to end.
+* When making changes, run `just lint-changes`, `just build`, `just test`, and then `just install` to validate end to end.
+* Make sure that updates to behaviors are reflected in `game.run/text/help.txt`, `game.run/text/wizhelp.txt`, and `docs/`.
+* Check the various `game.run/*.conf` and `game.run/*.config` files when making changes to mudconfs, configs, and settings.
+* If making DB schema changes, offer to update the game's database at `game.run/data/netmux.db.sqlite`. If a `netmux` process is running, direct me to shutdown the game before making changes or instability could occur.

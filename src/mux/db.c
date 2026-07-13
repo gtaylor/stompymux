@@ -189,13 +189,11 @@ ATTR attr_table[] = {
     {"Prefix", A_PREFIX, AF_ODARK | AF_NOPROG, NULL},
     {"ProgCmd", A_PROGCMD, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, NULL},
     {"QueueMax", A_QUEUEMAX, AF_MDARK | AF_WIZARD | AF_NOPROG, NULL},
-    {"Quota", A_QUOTA, AF_MDARK | AF_NOPROG | AF_GOD | AF_NOCMD, NULL},
     {"Ranknum", A_RANKNUM, AF_MDARK | AF_WIZARD, NULL},
     {"ReceiveLock", A_LRECEIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
      NULL},
     {"Reject", A_REJECT, AF_ODARK | AF_NOPROG, NULL},
     {"Rfail", A_RFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Rquota", A_RQUOTA, AF_MDARK | AF_NOPROG | AF_GOD | AF_NOCMD, NULL},
     {"Runout", A_RUNOUT, AF_ODARK, NULL},
 
     {"Semaphore", A_SEMAPHORE, AF_ODARK | AF_NOPROG | AF_WIZARD | AF_NOCMD,

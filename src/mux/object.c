@@ -163,20 +163,18 @@ static void make_freelist(void) {
  */
 dbref create_obj(dbref player, int objtype, char *name, int cost) {
   dbref obj, owner;
-  int quota, okname = 0, value, self_owned, require_inherit;
+  int okname = 0, value, self_owned, require_inherit;
   FLAG f1, f2, f3;
   time_t tt;
   char *buff;
 
   value = 0;
-  quota = 0;
   self_owned = 0;
   require_inherit = 0;
 
   switch (objtype) {
   case TYPE_ROOM:
     cost = mudconf.digcost;
-    quota = mudconf.room_quota;
     f1 = mudconf.room_flags.word1;
     f2 = mudconf.room_flags.word2;
     f3 = mudconf.room_flags.word3;
@@ -187,7 +185,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
       cost = mudconf.createmin;
     if (cost > mudconf.createmax)
       cost = mudconf.createmax;
-    quota = mudconf.thing_quota;
     f1 = mudconf.thing_flags.word1;
     f2 = mudconf.thing_flags.word2;
     f3 = mudconf.thing_flags.word3;
@@ -196,7 +193,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     break;
   case TYPE_EXIT:
     cost = mudconf.opencost;
-    quota = mudconf.exit_quota;
     f1 = mudconf.exit_flags.word1;
     f2 = mudconf.exit_flags.word2;
     f3 = mudconf.exit_flags.word3;
@@ -205,7 +201,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
   case TYPE_PLAYER:
     if (cost) {
       cost = mudconf.robotcost;
-      quota = mudconf.player_quota;
       f1 = mudconf.robot_flags.word1;
       f2 = mudconf.robot_flags.word2;
       f3 = mudconf.robot_flags.word3;
@@ -213,12 +208,10 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
       require_inherit = 1;
     } else {
       cost = 0;
-      quota = 0;
       f1 = mudconf.player_flags.word1;
       f2 = mudconf.player_flags.word2;
       f3 = mudconf.player_flags.word3;
       value = mudconf.paystart;
-      quota = mudconf.start_quota;
       self_owned = 1;
     }
     buff = munge_space(name);
@@ -271,7 +264,7 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
    * Make sure the creator can pay for the object.
    */
 
-  if ((player != NOTHING) && !canpayfees(player, player, cost, quota))
+  if ((player != NOTHING) && !canpayfees(player, player, cost))
     return NOTHING;
 
   /*
@@ -338,12 +331,7 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     buff[strlen(buff) - 1] = '\0';
     atr_add_raw(obj, A_LAST, buff);
 
-    buff = alloc_sbuf("create_obj.quota");
-    snprintf(buff, SBUF_SIZE, "%d", quota);
-    atr_add_raw(obj, A_QUOTA, buff);
-    atr_add_raw(obj, A_RQUOTA, buff);
     add_player_name(obj, Name(obj));
-    free_sbuf(buff);
     s_Pennies(obj, 1000); /* Give the player some starting cash */
   }
   make_freelist();
@@ -356,7 +344,7 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
  */
 void destroy_obj(dbref player, dbref obj) {
   dbref owner;
-  int good_owner, val, quota;
+  int good_owner, val;
   STACK *sp, *next;
   char *tname;
 
@@ -385,32 +373,24 @@ void destroy_obj(dbref player, dbref obj) {
    */
 
   val = 1;
-  quota = 1;
   if (good_owner && (owner != obj)) {
     switch (Typeof(obj)) {
     case TYPE_ROOM:
       val = mudconf.digcost;
-      quota = mudconf.room_quota;
       break;
     case TYPE_THING:
       val = OBJECT_DEPOSIT(Pennies(obj));
-      quota = mudconf.thing_quota;
       break;
     case TYPE_EXIT:
       val = mudconf.opencost;
-      quota = mudconf.exit_quota;
       break;
     case TYPE_PLAYER:
       if (Robot(obj))
         val = mudconf.robotcost;
       else
         val = 0;
-      quota = mudconf.player_quota;
     }
     giveto(owner, val);
-    if (mudconf.quotas)
-      add_quota(owner, quota);
-
     if (!Quiet(owner) && !Quiet(obj))
       notify_printf(owner, "You get back your %d %s deposit for %s(#%d).", val,
                     mudconf.one_coin, Name(obj), obj);

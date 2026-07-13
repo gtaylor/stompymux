@@ -223,14 +223,6 @@ NAMETAB ps_sw[] = {{(char *)"all", 1, CA_PUBLIC, PS_ALL | SW_MULTIPLE},
                    {(char *)"summary", 1, CA_PUBLIC, PS_SUMM},
                    {NULL, 0, 0, 0}};
 
-NAMETAB quota_sw[] = {
-    {(char *)"all", 1, CA_GOD, QUOTA_ALL | SW_MULTIPLE},
-    {(char *)"fix", 1, CA_WIZARD, QUOTA_FIX},
-    {(char *)"remaining", 1, CA_WIZARD, QUOTA_REM | SW_MULTIPLE},
-    {(char *)"set", 1, CA_WIZARD, QUOTA_SET},
-    {(char *)"total", 1, CA_WIZARD, QUOTA_TOT | SW_MULTIPLE},
-    {NULL, 0, 0, 0}};
-
 NAMETAB set_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, SET_QUIET},
                     {NULL, 0, 0, 0}};
 
@@ -396,7 +388,6 @@ CMDENT command_table[] = {
     {(char *)"@power", NULL, 0, 0, CS_TWO_ARG, do_power},
     {(char *)"@program", NULL, CA_PUBLIC, 0, CS_TWO_ARG | CS_INTERP, do_prog},
     {(char *)"@ps", ps_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_ps},
-    {(char *)"@quota", quota_sw, 0, 0, CS_TWO_ARG | CS_INTERP, do_quota},
     {(char *)"@quitprogram", NULL, CA_PUBLIC, 0, CS_ONE_ARG | CS_INTERP,
      do_quitprog},
     {(char *)"@readcache", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_readcache},
@@ -1809,18 +1800,12 @@ static void list_costs(dbref player) {
 
   buff = alloc_mbuf("list_costs");
   *buff = '\0';
-  if (mudconf.quotas)
-    snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.room_quota);
   notify_printf(player, "Digging a room costs %d %s%s.", mudconf.digcost,
                 coin_name(mudconf.digcost), buff);
-  if (mudconf.quotas)
-    snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.exit_quota);
   notify_printf(player, "Opening a new exit costs %d %s%s.", mudconf.opencost,
                 coin_name(mudconf.opencost), buff);
   notify_printf(player, "Linking an exit, home, or dropto costs %d %s.",
                 mudconf.linkcost, coin_name(mudconf.linkcost));
-  if (mudconf.quotas)
-    snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.thing_quota);
   if (mudconf.createmin == mudconf.createmax)
     raw_notify(player,
                tprintf("Creating a new thing costs %d %s%s.", mudconf.createmin,
@@ -1830,8 +1815,6 @@ static void list_costs(dbref player) {
                tprintf("Creating a new thing costs between %d and %d %s%s.",
                        mudconf.createmin, mudconf.createmax, mudconf.many_coins,
                        buff));
-  if (mudconf.quotas)
-    snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.player_quota);
   notify_printf(player, "Creating a robot costs %d %s%s.", mudconf.robotcost,
                 coin_name(mudconf.robotcost), buff);
   raw_notify(player,
@@ -1896,8 +1879,6 @@ static void list_options(dbref player) {
   time_t now;
 
   now = time(NULL);
-  if (mudconf.quotas)
-    raw_notify(player, "Building quotas are enforced.");
   if (mudconf.name_spaces)
     raw_notify(player, "Player names may contain spaces.");
   else
@@ -2006,10 +1987,6 @@ static void list_options(dbref player) {
     raw_notify(player,
                tprintf("There may be at most %d players logged in at once.",
                        mudconf.max_players));
-  if (mudconf.quotas)
-    snprintf(buff, MBUF_SIZE, " and %d quota", mudconf.start_quota);
-  else
-    *buff = '\0';
   raw_notify(player, tprintf("New players are given %d %s to start with.",
                              mudconf.paystart, mudconf.many_coins));
   raw_notify(player, tprintf("Players are given %d %s each day they connect.",
@@ -2047,11 +2024,9 @@ static void list_options(dbref player) {
   snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[mudconf.space_compress]);
   raw_notify(player, buff);
 
-  snprintf(
-      buff, MBUF_SIZE,
-      "New characters: Room...#%d  Home...#%d  DefaultHome...#%d  Quota...%d",
-      mudconf.start_room, mudconf.start_home, mudconf.default_home,
-      mudconf.start_quota);
+  snprintf(buff, MBUF_SIZE,
+           "New characters: Room...#%d  Home...#%d  DefaultHome...#%d",
+           mudconf.start_room, mudconf.start_home, mudconf.default_home);
   raw_notify(player, buff);
 
   snprintf(

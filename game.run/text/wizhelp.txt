@@ -4176,7 +4176,7 @@ Continued in btdamgaes()3
  down_file               down_motd_message         dump_interval 
  dump_message            dump_offset               earn_limit events_
  daily_hour              examine_flags             examine_public_
- attrs exit_flags        exit_quota                fascist_teleport 
+ attrs exit_flags                                   fascist_teleport
  find_money_chance       fixed_home_message        fixed_tel_message 
  flag_alias              forbid_site               fork_dump 
  fork_vfork              full_file full_motd_message 
@@ -4202,20 +4202,20 @@ Continued in btdamgaes()3
  parent_recursion_limit  paycheck                  pemit_any_object 
  pemit_far_players       pemit_site                player_flags 
  player_listen           player_match_own_commands player_queue_limit 
- player_quota            player_starting_home      player_starting_room 
+ player_starting_home    player_starting_room
  port
  postdump_message        public_channel            public_flags 
  queue_active_chunk      queue_idle_chunk          quiet_look 
- quiet_whisper           quit_file                 quotas 
+ quiet_whisper           quit_file
  read_remote_desc        read_remote_name          register_create_file 
  register_site           retry_limit               robot_cost 
  robot_flags             robot_speech              room_flags 
- room_quota              sacrifice_adjust          sacrifice_factor 
+ sacrifice_adjust        sacrifice_factor
  search_cost             see_owned_dark            signal_action 
  site_chars              space_compress            stack_limit 
- starting_money          starting_quota            suspect_site 
+ starting_money          suspect_site
  sweep_dark              switch_default_all 
- thing_flags             thing_quota               timeslice 
+ thing_flags                                       timeslice
  trace_output_limit      trace_topdown             trust_site 
  uncompress_program      unowned_safe              user_attr_access 
  use_http                wait_cost                 wizard_help_file 
@@ -4556,16 +4556,6 @@ Continued in btdamgaes()3
 
   See also: @list, player_flags, robot_flags, room_flags, thing_flags.
  
-& exit_quota
-
-  Config parameter: exit_quota <amount>
-  Default: 1
-
-  Sets how much quota it costs to create an exit (and also how much
-  the remaining quota is increased when an exit is @destroyed.
-
-  See also: @quota, player_quota, room_quota, thing_quota, QUOTAS.
-  
 & expanded_who
  
   This power permits the player to see the additional information that 
@@ -4689,14 +4679,6 @@ Continued in btdamgaes()3
   yes.
 
   See also: fork_dump.
-  
-& free_quota
- 
-  Power: free_quota
-  
-  This power gives the player infinite quota
-  
-  See Also: @power, @list powers
   
 & fuel
  
@@ -6145,16 +6127,6 @@ Avg weight: 45.00 Total tons: 990
   on the queue at one time.  An attempt to queue more commands than
   allowed will halt the object performing the command.
  
-& player_quota
-
-  Config parameter: player_quota <amount>
-  Default: 1
-
-  Sets how much quota it costs to create a robot player (and also how
-  much the remaining quota is increased when a robot is @destroyed.
-
-  See also: @quota, exit_quota, room_quota, thing_quota, QUOTAS.
- 
 & player_starting_home
 
   Config parameter: player_starting_home
@@ -6286,31 +6258,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: QUIT, @readcache.
   
-& quota
- 
-  Power: quota
-  
-  This power permits a player to see and change the quota for anyone.
-  
-  See Also: @power, @list powers
- 
-& quotas
-
-  Config parameter: quotas <yes/no>
-  Default: no
-
-  Indicates whether or not building quotas are enforced and
-  maintained.
-
-  Quotas are stored as a relative number, ie. number of objects that
-  the player may create, not the total number that the player may
-  create.
-
-  If quotas are turned off and turned back on later, any building or
-  @destroying that occurs in the interim does not affect the quotas.
-
-  See also: @allquota, @create, @destroy, @dig, @open, @quota, QUOTAS.
- 
 & read_remote_desc
 
   Config parameter: read_remote_desc <yes/no>
@@ -6558,16 +6505,6 @@ Avg weight: 45.00 Total tons: 990
   Flags prefixed by a ! remove the indicated flag from the set.
 
   See also: @list, exit_flags, player_flags, robot_flags, thing_flags.
- 
-& room_quota
-
-  Config parameter: room_quota <amount>
-  Default: 1
-
-  Sets how much quota it costs to dig a room (and also how much the
-  remaining quota is increased when a room is @destroyed.
-
-  See also: @quota, exit_quota, player_quota, thing_quota, QUOTAS.
  
 & sacrifice_adjust
 
@@ -7126,16 +7063,6 @@ Avg weight: 45.00 Total tons: 990
   
   See Also: @viewxcode
  
-& starting_quota
-
-  Config parameter: starting_quota <amount>
-  Default: 20
-
-  Sets the building quota that players receive when they are created,
-  whether by @pcreate or the connection screen.
-
-  See also: @quota, quotas.
-  
 & stat_any
  
   Power: stat_any
@@ -7417,16 +7344,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: @list, exit_flags, player_flags, robot_flags, room_flags.
  
-& thing_quota
-
-  Config parameter: thing_quota <amount>
-  Default: 1
-
-  Sets how much quota it costs to create a thing (and also how much
-  the remaining quota is increased when a thing is @destroyed.
-
-  See also: @quota, exit_quota, player_quota, room_quota, QUOTAS.
-  
 & timeout
  
   Attribute: timeout <secs>

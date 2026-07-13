@@ -11,7 +11,7 @@
 #define POWER_EXT 0x1 /* Lives in extended powers word */
 
 /* First word of powers */
-#define POW_CHG_QUOTAS 0x00000001  /* May change and see quotas */
+/* 0x00000001 is reserved for the removed quota power. */
 #define POW_CHOWN_ANY 0x00000002   /* Can @chown anything or to anyone */
 #define POW_ANNOUNCE 0x00000004    /* May use @wall */
 #define POW_BOOT 0x00000008        /* May use @boot */
@@ -21,7 +21,7 @@
 #define POW_EXAM_ALL 0x00000080    /* I can examine everything */
 #define POW_FIND_UNFIND 0x00000100 /* Can find unfindable players */
 #define POW_FREE_MONEY 0x00000200  /* I have infinite money */
-#define POW_FREE_QUOTA 0x00000400  /* I have infinite quota */
+/* 0x00000400 is reserved for the removed free_quota power. */
 #define POW_HIDE 0x00000800        /* Can set themselves DARK */
 #define POW_IDLE 0x00001000        /* No idle limit */
 #define POW_SEARCH 0x00002000      /* Can @search anyone */
@@ -94,7 +94,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define s_See_All(c) s_Powers((c), Powers(c) | POW_EXAM_ALL)
 #define s_Find_Unfindable(c) s_Powers((c), Powers(c) | POW_FIND_UNFIND)
 #define s_Free_Money(c) s_Powers((c), Powers(c) | POW_FREE_MONEY)
-#define s_Free_Quota(c) s_Powers((c), Powers(c) | POW_FREE_QUOTA)
 #define s_Can_Hide(c) s_Powers((c), Powers(c) | POW_HIDE)
 #define s_Can_Idle(c) s_Powers((c), Powers(c) | POW_IDLE)
 #define s_Search(c) s_Powers((c), Powers(c) | POW_SEARCH)
@@ -124,7 +123,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 
 /* end of 'mech stuff */
 
-#define Quota(c) (((Powers(c) & POW_CHG_QUOTAS) != 0) || Wizard(c))
 #define Chown_Any(c) (((Powers(c) & POW_CHOWN_ANY) != 0) || Wizard(c))
 #define Announce(c) (((Powers(c) & POW_ANNOUNCE) != 0) || Wizard(c))
 #define Can_Boot(c) (((Powers(c) & POW_BOOT) != 0) || Wizard(c))
@@ -134,7 +132,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define See_All(c) (((Powers(c) & POW_EXAM_ALL) != 0) || Wizard(c))
 #define Find_Unfindable(c) ((Powers(c) & POW_FIND_UNFIND) != 0)
 #define Free_Money(c) ((Powers(c) & POW_FREE_MONEY) != 0)
-#define Free_Quota(c) (((Powers(c) & POW_FREE_QUOTA) != 0) || Wizard(c))
 #define Can_Hide(c) ((Powers(c) & POW_HIDE) != 0)
 #define Can_Idle(c) (((Powers(c) & POW_IDLE) != 0) || Wizard(c))
 #define Search(c) (((Powers(c) & POW_SEARCH) != 0) || Wizard(c))

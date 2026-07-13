@@ -519,7 +519,7 @@ void do_unlink(dbref player, dbref cause, int key, char *name) {
 
 void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
   dbref thing, owner, aowner;
-  int atr, do_it, cost, quota;
+  int atr, do_it, cost;
   long aflags;
   ATTR *ap;
 
@@ -623,23 +623,18 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
   }
 
   cost = 1;
-  quota = 1;
   switch (Typeof(thing)) {
   case TYPE_ROOM:
     cost = mudconf.digcost;
-    quota = mudconf.room_quota;
     break;
   case TYPE_THING:
     cost = OBJECT_DEPOSIT(Pennies(thing));
-    quota = mudconf.thing_quota;
     break;
   case TYPE_EXIT:
     cost = mudconf.opencost;
-    quota = mudconf.exit_quota;
     break;
   case TYPE_PLAYER:
     cost = mudconf.robotcost;
-    quota = mudconf.player_quota;
   }
 
   if (owner == NOTHING) {
@@ -651,10 +646,8 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
                !Chown_Any(player))) ||
              (!controls(player, owner))) {
     notify_quiet(player, "Permission denied.");
-  } else if (canpayfees(player, owner, cost, quota)) {
+  } else if (canpayfees(player, owner, cost)) {
     giveto(Owner(thing), cost);
-    if (mudconf.quotas)
-      add_quota(Owner(thing), quota);
     if (God(player)) {
       s_Owner(thing, owner);
     } else {

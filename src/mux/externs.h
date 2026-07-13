@@ -160,8 +160,7 @@ int is_integer(char *);
 int is_number(char *);
 int could_doit(dbref, dbref, int);
 int can_see(dbref, dbref, int);
-void add_quota(dbref, int);
-int canpayfees(dbref, dbref, int, int);
+int canpayfees(dbref, dbref, int);
 void giveto(dbref, int);
 int payfor(dbref, int);
 int ok_name(const char *);
@@ -357,7 +356,6 @@ void list_chashstats(dbref);
 #define FRC_COMMAND 1      /* what=command */
 #define GET_QUIET 1        /* Don't do osucc/asucc if control */
 #define GIVE_MONEY 1       /* Give money */
-#define GIVE_QUOTA 2       /* Give quota */
 #define GIVE_QUIET 64      /* Inhibit give messages */
 #define GLOB_ENABLE 1      /* key to enable */
 #define GLOB_DISABLE 2     /* key to disable */
@@ -404,11 +402,6 @@ void list_chashstats(dbref);
 #define PS_ALL 4           /* List entire queue */
 #define QUEUE_KICK 1       /* Process commands from queue */
 #define QUEUE_WARP 2       /* Advance or set back wait queue clock */
-#define QUOTA_SET 1        /* Set a quota */
-#define QUOTA_FIX 2        /* Repair a quota */
-#define QUOTA_TOT 4        /* Operate on total quota */
-#define QUOTA_REM 8        /* Operate on remaining quota */
-#define QUOTA_ALL 16       /* Operate on all players */
 #define SAY_SAY 1          /* say in current room */
 #define SAY_NOSPACE 1      /* OR with xx_EMIT to get nospace form */
 #define SAY_POSE 2         /* pose in current room */

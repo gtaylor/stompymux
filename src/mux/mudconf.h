@@ -222,7 +222,6 @@ struct confdata {
   int paycheck;            /* players earn this much each day connected */
   int paystart;            /* new players start with this much money */
   int paylimit;            /* getting money gets hard over this much */
-  int start_quota;         /* Quota for new players */
   int payfind;             /* chance to find a penny with wandering */
   int digcost;             /* cost of @dig command */
   int linkcost;            /* cost of @link command */
@@ -238,15 +237,10 @@ struct confdata {
   int queue_chunk;         /* # cmds to run from queue when idle */
   int active_q_chunk;      /* # cmds to run from queue when active */
   int machinecost;         /* One in mc+1 cmds costs 1 penny (POW2-1) */
-  int room_quota;          /* quota needed to make a room */
-  int exit_quota;          /* quota needed to make an exit */
-  int thing_quota;         /* quota needed to make a thing */
-  int player_quota;        /* quota needed to make a robot player */
   int sacfactor;           /* sacrifice earns (obj_cost/sfactor) + sadj */
   int sacadjust;           /* ... */
   int clone_copy_cost;     /* Does @clone copy value? */
   int use_hostname;        /* TRUE = use machine NAME rather than quad */
-  int quotas;              /* TRUE = have building quotas */
   int ex_flags;            /* TRUE = show flags on examine */
   int robot_speak;         /* TRUE = allow robots to speak */
   int pub_flags;           /* TRUE = flags() works on anything */

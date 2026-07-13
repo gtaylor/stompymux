@@ -221,36 +221,27 @@ void do_stats(dbref player, dbref cause, int key, char *name) {
  * Transfers ownership of all a player's objects to another player.
  */
 int chown_all(dbref from_player, dbref to_player) {
-  int i, count, quota_out, quota_in;
+  int i, count;
 
   if (Typeof(from_player) != TYPE_PLAYER)
     from_player = Owner(from_player);
   if (Typeof(to_player) != TYPE_PLAYER)
     to_player = Owner(to_player);
   count = 0;
-  quota_out = 0;
-  quota_in = 0;
   DO_WHOLE_DB(i) {
     if ((Owner(i) == from_player) && (Owner(i) != i)) {
       switch (Typeof(i)) {
       case TYPE_PLAYER:
         s_Owner(i, i);
-        quota_out += mudconf.player_quota;
         break;
       case TYPE_THING:
         s_Owner(i, to_player);
-        quota_out += mudconf.thing_quota;
-        quota_in -= mudconf.thing_quota;
         break;
       case TYPE_ROOM:
         s_Owner(i, to_player);
-        quota_out += mudconf.room_quota;
-        quota_in -= mudconf.room_quota;
         break;
       case TYPE_EXIT:
         s_Owner(i, to_player);
-        quota_out += mudconf.exit_quota;
-        quota_in -= mudconf.exit_quota;
         break;
       default:
         s_Owner(i, to_player);
@@ -259,8 +250,6 @@ int chown_all(dbref from_player, dbref to_player) {
       count++;
     }
   }
-  add_quota(from_player, quota_out);
-  add_quota(to_player, quota_in);
   return count;
 }
 

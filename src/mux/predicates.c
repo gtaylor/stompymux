@@ -241,44 +241,7 @@ int can_see(dbref player, dbref thing, int can_see_loc) {
   }
 }
 
-static int pay_quota(dbref who, int cost) {
-  dbref aowner;
-  int quota;
-  long aflags;
-  char buf[20], *quota_str;
-
-  /*
-   * If no cost, succeed
-   */
-
-  if (cost <= 0)
-    return 1;
-
-  /*
-   * determine quota
-   */
-
-  quota = atoi(quota_str = atr_get(Owner(who), A_RQUOTA, &aowner, &aflags));
-  free_lbuf(quota_str);
-
-  /*
-   * enough to build?  Wizards always have enough.
-   */
-
-  quota -= cost;
-  if ((quota < 0) && !Free_Quota(who) && !Free_Quota(Owner(who)))
-    return 0;
-
-  /*
-   * dock the quota
-   */
-  snprintf(buf, sizeof(buf), "%d", quota);
-  atr_add_raw(Owner(who), A_RQUOTA, buf);
-
-  return 1;
-}
-
-int canpayfees(dbref player, dbref who, int pennies, int quota) {
+int canpayfees(dbref player, dbref who, int pennies) {
   if (!Wizard(who) && !Wizard(Owner(who)) && !Free_Money(who) &&
       !Free_Money(Owner(who)) && (Pennies(Owner(who)) < pennies)) {
     if (player == who) {
@@ -290,16 +253,6 @@ int canpayfees(dbref player, dbref who, int pennies, int quota) {
     }
     return 0;
   }
-  if (mudconf.quotas) {
-    if (!pay_quota(who, quota)) {
-      if (player == who) {
-        notify(player, "Sorry, your building contract has run out.");
-      } else {
-        notify(player, "Sorry, that player's building contract has run out.");
-      }
-      return 0;
-    }
-  }
   payfor(who, pennies);
   return 1;
 }
@@ -308,17 +261,6 @@ int payfor(dbref who, int cost) {
   (void)who;
   (void)cost;
   return 1;
-}
-
-void add_quota(dbref who, int payment) {
-  dbref aowner;
-  long aflags;
-  char buf[20], *quota;
-
-  quota = atr_get(who, A_RQUOTA, &aowner, &aflags);
-  snprintf(buf, sizeof(buf), "%d", atoi(quota) + payment);
-  free_lbuf(quota);
-  atr_add_raw(who, A_RQUOTA, buf);
 }
 
 /**

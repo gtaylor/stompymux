@@ -157,7 +157,7 @@ void do_open(dbref player, dbref cause, int key, char *direction, char *links[],
  */
 
 static void link_exit(dbref player, dbref exit, dbref dest) {
-  int cost, quot;
+  int cost;
 
   /*
    * Make sure we can link there
@@ -181,12 +181,10 @@ static void link_exit(dbref player, dbref exit, dbref dest) {
    */
 
   cost = mudconf.linkcost;
-  quot = 0;
   if (Owner(exit) != Owner(player)) {
     cost += mudconf.opencost;
-    quot += mudconf.exit_quota;
   }
-  if (!canpayfees(player, player, cost, quot))
+  if (!canpayfees(player, player, cost))
     return;
 
   /*
@@ -195,7 +193,6 @@ static void link_exit(dbref player, dbref exit, dbref dest) {
 
   if (Owner(exit) != Owner(player)) {
     giveto(Owner(exit), mudconf.opencost);
-    add_quota(Owner(exit), quot);
     s_Owner(exit, Owner(player));
     s_Flags(exit, (Flags(exit) & ~(INHERIT | WIZARD)) | HALT);
   }

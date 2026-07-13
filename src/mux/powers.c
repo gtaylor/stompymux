@@ -51,7 +51,6 @@ static int ph_wiz(dbref target, dbref player, POWER power, int fpowers,
 }
 
 POWERENT gen_powers[] = {
-    {(char *)"quota", POW_CHG_QUOTAS, 0, 0, ph_wiz},
     {(char *)"chown_anything", POW_CHOWN_ANY, 0, 0, ph_wiz},
     {(char *)"announce", POW_ANNOUNCE, 0, 0, ph_wiz},
     {(char *)"boot", POW_BOOT, 0, 0, ph_wiz},
@@ -62,7 +61,6 @@ POWERENT gen_powers[] = {
     {(char *)"prog", POW_PROG, 0, 0, ph_wiz},
     {(char *)"find_unfindable", POW_FIND_UNFIND, 0, 0, ph_wiz},
     {(char *)"free_money", POW_FREE_MONEY, 0, 0, ph_wiz},
-    {(char *)"free_quota", POW_FREE_QUOTA, 0, 0, ph_wiz},
     {(char *)"hide", POW_HIDE, 0, 0, ph_wiz},
     {(char *)"idle", POW_IDLE, 0, 0, ph_wiz},
     {(char *)"search", POW_SEARCH, 0, 0, ph_wiz},

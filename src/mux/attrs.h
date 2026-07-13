@@ -41,19 +41,19 @@
 #define A_STARTUP 19 /* Actions run when game started up */
 #define A_ACLONE 20  /* Actions run when obj is cloned */
 /* 21 through 25 are reserved for removed payment and money attributes. */
-#define A_LISTEN 26      /* (Wildcarded) string to listen for */
-#define A_AAHEAR 27      /* Actions to do when anyone says LISTEN str */
-#define A_AMHEAR 28      /* Actions to do when I say LISTEN str */
-#define A_AHEAR 29       /* Actions to do when others say LISTEN str */
-#define A_LAST 30        /* Date/time of last login (players only) */
-#define A_QUEUEMAX 31    /* Max. # of entries obj has in the queue */
-#define A_IDESC 32       /* Inside description (ENTER to get inside) */
-#define A_ENTER 33       /* Invoker enter message */
-#define A_OXENTER 34     /* Others enter message in dest */
-#define A_AENTER 35      /* Enter action list */
-#define A_ADESC 36       /* Describe action list */
-#define A_ODESC 37       /* Others describe message */
-#define A_RQUOTA 38      /* Relative object quota */
+#define A_LISTEN 26   /* (Wildcarded) string to listen for */
+#define A_AAHEAR 27   /* Actions to do when anyone says LISTEN str */
+#define A_AMHEAR 28   /* Actions to do when I say LISTEN str */
+#define A_AHEAR 29    /* Actions to do when others say LISTEN str */
+#define A_LAST 30     /* Date/time of last login (players only) */
+#define A_QUEUEMAX 31 /* Max. # of entries obj has in the queue */
+#define A_IDESC 32    /* Inside description (ENTER to get inside) */
+#define A_ENTER 33    /* Invoker enter message */
+#define A_OXENTER 34  /* Others enter message in dest */
+#define A_AENTER 35   /* Enter action list */
+#define A_ADESC 36    /* Describe action list */
+#define A_ODESC 37    /* Others describe message */
+/* 38 is reserved for the removed building quota attribute. */
 #define A_ACONNECT 39    /* Actions run when player connects */
 #define A_ADISCONNECT 40 /* Actions run when player disconnectes */
 #define A_ALLOWANCE 41   /* Daily allowance, if diff from default */
@@ -64,7 +64,7 @@
 #define A_OUSE 46        /* Others use message */
 #define A_SEMAPHORE 47   /* Semaphore control info */
 #define A_TIMEOUT 48     /* Per-user disconnect timeout */
-#define A_QUOTA 49       /* Absolute quota (to speed up @quota) */
+/* 49 is reserved for the removed building quota attribute. */
 #define A_LEAVE 50       /* Invoker leave message */
 #define A_OLEAVE 51      /* Others leave message in src */
 #define A_ALEAVE 52      /* Leave action list */

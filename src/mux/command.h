@@ -116,7 +116,6 @@ void do_poor(dbref, dbref, int, char *); /* Reduce wealth of all players */
 void do_power(dbref, dbref, int, char *, char *); /* Sets powers */
 void do_ps(dbref, dbref, int, char *);            /* List contents of queue */
 void do_queue(dbref, dbref, int, char *);         /* Force queue processing */
-void do_quota(dbref, dbref, int, char *, char *); /* Set or display quotas */
 void do_readcache(dbref, dbref, int);             /* Reread text file cache */
 void do_restart(dbref, dbref, int);               /* Restart the game. */
 void do_say(dbref, dbref, int, char *);           /* Messages to all */

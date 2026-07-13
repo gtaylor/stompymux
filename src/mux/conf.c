@@ -204,7 +204,6 @@ void cf_init(void) {
   mudconf.paycheck = 0;
   mudconf.paystart = 0;
   mudconf.paylimit = 10000;
-  mudconf.start_quota = 20;
   mudconf.site_chars = 25;
   mudconf.payfind = 0;
   mudconf.digcost = 10;
@@ -217,10 +216,6 @@ void cf_init(void) {
   mudconf.searchcost = 100;
   mudconf.waitcost = 10;
   mudconf.machinecost = 64;
-  mudconf.exit_quota = 1;
-  mudconf.player_quota = 1;
-  mudconf.room_quota = 1;
-  mudconf.thing_quota = 1;
   mudconf.use_http = 0;
   mudconf.queuemax = 100;
   mudconf.queue_chunk = 10;
@@ -228,7 +223,6 @@ void cf_init(void) {
   mudconf.sacfactor = 5;
   mudconf.sacadjust = -1;
   mudconf.use_hostname = 1;
-  mudconf.quotas = 0;
   mudconf.ex_flags = 1;
   mudconf.robot_speak = 1;
   mudconf.clone_copy_cost = 0;
@@ -1025,7 +1019,6 @@ CONF conftable[] = {
     {(char *)"examine_flags", cf_bool, CA_GOD, &mudconf.ex_flags, 0},
     {(char *)"examine_public_attrs", cf_bool, CA_GOD, &mudconf.exam_public, 0},
     {(char *)"exit_flags", cf_set_flags, CA_GOD, (int *)&mudconf.exit_flags, 0},
-    {(char *)"exit_quota", cf_int, CA_GOD, &mudconf.exit_quota, 0},
     {(char *)"events_daily_hour", cf_int, CA_GOD, &mudconf.events_daily_hour,
      0},
     {(char *)"fascist_teleport", cf_bool, CA_GOD, &mudconf.fascist_tport, 0},
@@ -1117,7 +1110,6 @@ CONF conftable[] = {
      &mudconf.match_mine_pl, 0},
     {(char *)"player_name_spaces", cf_bool, CA_GOD, &mudconf.name_spaces, 0},
     {(char *)"player_queue_limit", cf_int, CA_GOD, &mudconf.queuemax, 0},
-    {(char *)"player_quota", cf_int, CA_GOD, &mudconf.player_quota, 0},
     {(char *)"player_starting_home", cf_int, CA_GOD, &mudconf.start_home, 0},
     {(char *)"player_starting_room", cf_int, CA_GOD, &mudconf.start_room, 0},
     {(char *)"public_channel", cf_string, CA_DISABLED,
@@ -1130,7 +1122,6 @@ CONF conftable[] = {
     {(char *)"quiet_whisper", cf_bool, CA_GOD, &mudconf.quiet_whisper, 0},
     {(char *)"quit_file", cf_string, CA_DISABLED, (void *)mudconf.quit_file,
      32},
-    {(char *)"quotas", cf_bool, CA_GOD, &mudconf.quotas, 0},
     {(char *)"read_remote_desc", cf_bool, CA_GOD, &mudconf.read_rem_desc, 0},
     {(char *)"read_remote_name", cf_bool, CA_GOD, &mudconf.read_rem_name, 0},
     {(char *)"register_create_file", cf_string, CA_DISABLED,
@@ -1143,7 +1134,6 @@ CONF conftable[] = {
      0},
     {(char *)"robot_speech", cf_bool, CA_GOD, &mudconf.robot_speak, 0},
     {(char *)"room_flags", cf_set_flags, CA_GOD, (int *)&mudconf.room_flags, 0},
-    {(char *)"room_quota", cf_int, CA_GOD, &mudconf.room_quota, 0},
     {(char *)"sacrifice_adjust", cf_int, CA_GOD, &mudconf.sacadjust, 0},
     {(char *)"sacrifice_factor", cf_int, CA_GOD, &mudconf.sacfactor, 0},
     {(char *)"search_cost", cf_int, CA_GOD, &mudconf.searchcost, 0},
@@ -1159,14 +1149,12 @@ CONF conftable[] = {
     {(char *)"space_compress", cf_bool, CA_GOD, &mudconf.space_compress, 0},
     {(char *)"stack_limit", cf_int, CA_GOD, &mudconf.stack_limit, 0},
     {(char *)"starting_money", cf_int, CA_GOD, &mudconf.paystart, 0},
-    {(char *)"starting_quota", cf_int, CA_GOD, &mudconf.start_quota, 0},
     {(char *)"suspect_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list,
      H_SUSPECT},
     {(char *)"sweep_dark", cf_bool, CA_GOD, &mudconf.sweep_dark, 0},
     {(char *)"switch_default_all", cf_bool, CA_GOD, &mudconf.switch_df_all, 0},
     {(char *)"thing_flags", cf_set_flags, CA_GOD, (int *)&mudconf.thing_flags,
      0},
-    {(char *)"thing_quota", cf_int, CA_GOD, &mudconf.thing_quota, 0},
     {(char *)"timeslice", cf_int, CA_GOD, &mudconf.timeslice, 0},
     {(char *)"trace_output_limit", cf_int, CA_GOD, &mudconf.trace_limit, 0},
     {(char *)"trace_topdown", cf_bool, CA_GOD, &mudconf.trace_topdown, 0},

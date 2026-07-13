@@ -4,8 +4,6 @@
 
 * Start breaking up src/ into system subdirs
 * Maybe: remove all powers. wiz bit is enough
-* Remove flags that aren't useful
-    * MULTIOK
 * Remove @sex
 * Write tests
 
