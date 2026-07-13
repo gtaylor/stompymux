@@ -1948,28 +1948,6 @@ static void list_options(dbref player) {
 
 /*
  * ---------------------------------------------------------------------------
- * * list_vattrs: List user-defined attributes
- */
-static void list_vattrs(dbref player) {
-  VATTR *va;
-  int na;
-  char *buff;
-
-  buff = alloc_lbuf("list_vattrs");
-  raw_notify(player, "--- User-Defined Attributes ---");
-  for (va = vattr_first(), na = 0; va; va = vattr_next(va), na++) {
-    if (!(va->flags & AF_DELETED)) {
-      snprintf(buff, LBUF_SIZE, "%s(%d):", va->name, va->number);
-      listset_nametab(player, attraccess_nametab, va->flags, buff, 1);
-    }
-  }
-
-  raw_notify(player, tprintf("%d attributes, next=%d", na, mudstate.attr_next));
-  free_lbuf(buff);
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * list_db_stats: Get useful info from the DB layer about hash stats, etc.
  */
 static void list_db_stats(dbref player) {
@@ -2057,7 +2035,6 @@ static void list_process(dbref player) {
 #define LIST_SITEINFO 16
 #define LIST_POWERS 17
 #define LIST_SWITCHES 18
-#define LIST_VATTRS 19
 #define LIST_DB_STATS 20
 #define LIST_PROCESS 21
 #define LIST_BADNAMES 22
@@ -2081,7 +2058,6 @@ NAMETAB list_names[] = {
     {(char *)"process", 2, CA_WIZARD, LIST_PROCESS},
     {(char *)"site_information", 2, CA_WIZARD, LIST_SITEINFO},
     {(char *)"switches", 2, CA_PUBLIC, LIST_SWITCHES},
-    {(char *)"user_attributes", 1, CA_WIZARD, LIST_VATTRS},
 #ifdef ARBITRARY_LOGFILES
     {(char *)"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
 #endif
@@ -2136,9 +2112,6 @@ void do_list(dbref player, dbref cause, int extra, char *arg) {
     break;
   case LIST_ATTRPERMS:
     list_attraccess(player);
-    break;
-  case LIST_VATTRS:
-    list_vattrs(player);
     break;
   case LIST_LOGGING:
     interp_nametab(player, logoptions_nametab, mudconf.log_options,
