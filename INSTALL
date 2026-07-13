@@ -69,7 +69,7 @@ ________________________________________
  You may set these by passing CMake cache options when configuring the build.
  For example:
 
- cmake -S . -B build -DBTMUX_FREE_TECHTIME=ON
+ cmake -S . -B build -DBTECH_FREE_TECHTIME=ON
 
  To see the available options in your configured build:
 
@@ -77,18 +77,18 @@ ________________________________________
 
  Common options include:
 
- * BTMUX_ADVANCED_ECON=ON|OFF
- * BTMUX_ENHANCED_LOGGING=ON|OFF
- * BTMUX_COMPLEX_REPAIRS=ON|OFF
- * BTMUX_FREE_TECHTIME=ON|OFF
- * BTMUX_RENAME_HELP=ON|OFF
+ * BTECH_ADVANCED_ECON=ON|OFF
+ * BTECH_ENHANCED_LOGGING=ON|OFF
+ * BTECH_COMPLEX_REPAIRS=ON|OFF
+ * BTECH_FREE_TECHTIME=ON|OFF
+ * BTECH_RENAME_HELP=ON|OFF
  * BTECH_CARGO_COMMANDS=ON|OFF
  * BTECH_MW3STATS=ON|OFF
  * BTECH_MOVEMENT_MODES=ON|OFF
  * BTECH_SCALED_INFRARED=ON|OFF
  * BTECH_OVERSPEEDING=ON|OFF
- * BTMUX_ENABLE_ASAN=ON|OFF
- * BTMUX_ENABLE_WERROR=ON|OFF
+ * BTECH_ENABLE_ASAN=ON|OFF
+ * BTECH_ENABLE_CLANG_TIDY=ON|OFF
 
  Most of these require rebuilding after reconfiguring:
 

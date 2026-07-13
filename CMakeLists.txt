@@ -28,11 +28,11 @@ set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
 set(MKINDX_SOURCE_DIR "src/mkindx")
 
-option(BTMUX_ADVANCED_ECON "Enable the advanced econ system" ON)
-option(BTMUX_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
-option(BTMUX_COMPLEX_REPAIRS "Enable complex repairs" OFF)
-option(BTMUX_FREE_TECHTIME "Enable near-instant techtime" OFF)
-option(BTMUX_RENAME_HELP "Rename the help command to muxhelp" OFF)
+option(BTECH_ADVANCED_ECON "Enable the advanced econ system" ON)
+option(BTECH_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
+option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
+option(BTECH_FREE_TECHTIME "Enable near-instant techtime" OFF)
+option(BTECH_RENAME_HELP "Rename the help command to muxhelp" OFF)
 
 option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
 option(BTECH_MW3STATS "Enable MW3-like stats and skills" ON)
@@ -40,10 +40,10 @@ option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
-option(BTMUX_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
-option(BTMUX_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
+option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
-if(BTMUX_ENABLE_CLANG_TIDY)
+if(BTECH_ENABLE_CLANG_TIDY)
   find_program(CLANG_TIDY_EXECUTABLE clang-tidy REQUIRED)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
 endif()
@@ -55,11 +55,11 @@ find_package(SQLite3 REQUIRED)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
-set(BT_ADVANCED_ECON ${BTMUX_ADVANCED_ECON})
-set(ARBITRARY_LOGFILES ${BTMUX_ENHANCED_LOGGING})
-set(BT_COMPLEXREPAIRS ${BTMUX_COMPLEX_REPAIRS})
-set(BT_FREETECHTIME ${BTMUX_FREE_TECHTIME})
-set(MOVE_HELP ${BTMUX_RENAME_HELP})
+set(BT_ADVANCED_ECON ${BTECH_ADVANCED_ECON})
+set(ARBITRARY_LOGFILES ${BTECH_ENHANCED_LOGGING})
+set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
+set(BT_FREETECHTIME ${BTECH_FREE_TECHTIME})
+set(MOVE_HELP ${BTECH_RENAME_HELP})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 
@@ -78,7 +78,7 @@ configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
   $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow>)
-if(BTMUX_ENABLE_ASAN)
+if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
 endif()
@@ -239,7 +239,7 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/wiz.c
   ${MUX_SOURCE_DIR}/version.c)
 
-if(BTMUX_ENHANCED_LOGGING)
+if(BTECH_ENHANCED_LOGGING)
   list(APPEND NETMUX_SOURCES ${MUX_SOURCE_DIR}/logcache.c)
 endif()
 
@@ -267,7 +267,7 @@ target_include_directories(mkindx PRIVATE
 if(BUILD_TESTING)
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
-  if(BTMUX_ADVANCED_ECON)
+  if(BTECH_ADVANCED_ECON)
     target_compile_definitions(gamedb_integration_test
       PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
   endif()
