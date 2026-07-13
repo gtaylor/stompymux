@@ -95,14 +95,13 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
 
   /*
    * If fascist teleport is on, you must control the victim's ultimate
-   * location (after LEAVEing any objects) or it must be JUMP_OK.
+   * location (after LEAVEing any objects).
    */
 
   if (mudconf.fascist_tport) {
     loc = where_room(victim);
     if (!Good_obj(loc) || !isRoom(loc) ||
-        (((!Controls(player, loc) && !Jump_ok(loc))) &&
-         !Tel_Anywhere(player))) {
+        (!Controls(player, loc) && !Tel_Anywhere(player))) {
       notify_quiet(player, "Permission denied.");
       return;
     }
@@ -110,12 +109,10 @@ void do_teleport(dbref player, dbref cause, int key, char *arg1, char *arg2) {
   if (Has_contents(destination)) {
 
     /*
-     * You must control the destination, or it must be a JUMP_OK
-     * room where you pass its TELEPORT lock.
+     * You must control the destination and pass its TELEPORT lock.
      */
 
-    if (((!Controls(player, destination) && !Jump_ok(destination)) &&
-         !Tel_Anywhere(player)) ||
+    if ((!Controls(player, destination) && !Tel_Anywhere(player)) ||
         !could_doit(player, destination, A_LTPORT)) {
 
       /*

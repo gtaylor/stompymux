@@ -24,9 +24,9 @@
 #define WIZARD 0x00000010      /* gets automatic control */
 /* 0x00000020 is reserved for the removed LINK_OK flag. */
 #define DARK 0x00000040        /* Don't show contents or presence */
-#define JUMP_OK 0x00000080     /* Others may @tel here */
+/* 0x00000080 is reserved for the removed JUMP_OK flag. */
 #define STICKY 0x00000100      /* Object goes home when dropped */
-#define DESTROY_OK 0x00000200  /* Others may @destroy */
+/* 0x00000200 is reserved for the removed DESTROY_OK flag. */
 /* 0x00000400 is reserved for the removed HAVEN flag. */
 #define QUIET 0x00000800       /* Prevent 'feelgood' messages */
 #define HALT 0x00001000        /* object cannot perform actions */
@@ -221,9 +221,7 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Wizard(x)                                                              \
   ((Flags(x) & WIZARD) || ((Flags(Owner(x)) & WIZARD) && Inherits(x)))
 #define Dark(x) (((Flags(x) & DARK) != 0) && (Wizard(x) || !Alive(x)))
-#define Jump_ok(x) (((Flags(x) & JUMP_OK) != 0) && Has_contents(x))
 #define Sticky(x) ((Flags(x) & STICKY) != 0)
-#define Destroy_ok(x) ((Flags(x) & DESTROY_OK) != 0)
 #define Quiet(x) ((Flags(x) & QUIET) != 0)
 #define Halted(x) ((Flags(x) & HALT) != 0)
 #define Trace(x) ((Flags(x) & TRACE) != 0)

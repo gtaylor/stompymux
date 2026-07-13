@@ -712,30 +712,13 @@ void do_destroy(dbref player, dbref cause, int key, char *what) {
     thing = last_match_result();
   }
   /*
-   * You may destroy DESTROY_OK things in your inventory
-   */
-
-  if (thing == NOTHING) {
-    init_match(player, what, TYPE_THING);
-    match_possession();
-    thing = last_match_result();
-    if ((thing != NOTHING) && !(isThing(thing) && Destroy_ok(thing))) {
-      thing = NOPERM;
-    }
-  }
-  /*
    * Return an error if we didn't find anything to destroy
    */
 
   if (match_status(player, thing) == NOTHING) {
     return;
   }
-  /*
-   * Check SAFE and DESTROY_OK flags
-   */
-
-  if (Safe(thing, player) && !(key & DEST_OVERRIDE) &&
-      !(isThing(thing) && Destroy_ok(thing))) {
+  if (Safe(thing, player) && !(key & DEST_OVERRIDE)) {
     notify_quiet(player, "Sorry, that object is protected. Use "
                          "@destroy/override to destroy it.");
     return;
@@ -762,7 +745,7 @@ void do_destroy(dbref player, dbref cause, int key, char *what) {
           DisposeSpecialObject(player, thing);
           c_Hardcode(thing);
         }
-        if (Destroy_ok(thing) || Destroy_ok(Owner(thing))) {
+        if (0) {
           destroy_exit(thing);
         } else {
           notify(player, "The exit shakes and begins to crumble.");
@@ -786,7 +769,7 @@ void do_destroy(dbref player, dbref cause, int key, char *what) {
         DisposeSpecialObject(player, thing);
         c_Hardcode(thing);
       }
-      if (Destroy_ok(thing) || Destroy_ok(Owner(thing))) {
+      if (0) {
         destroy_thing(thing);
       } else {
         notify(player, "The object shakes and begins to crumble.");
@@ -810,7 +793,7 @@ void do_destroy(dbref player, dbref cause, int key, char *what) {
           DisposeSpecialObject(player, thing);
           c_Hardcode(thing);
         }
-        if (Destroy_ok(thing)) {
+        if (0) {
           atr_add_raw(thing, A_DESTROYER, tprintf("%d", player));
           destroy_player(thing);
         } else {
@@ -825,7 +808,7 @@ void do_destroy(dbref player, dbref cause, int key, char *what) {
     if (Going(thing)) {
       notify_quiet(player, "No sense beating a dead room.");
     } else {
-      if (Destroy_ok(thing) || Destroy_ok(Owner(thing))) {
+      if (0) {
         empty_obj(thing);
         destroy_obj(NOTHING, thing);
       } else {

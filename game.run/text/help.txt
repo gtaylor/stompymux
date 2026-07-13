@@ -783,9 +783,7 @@
  
   Syntax: @destroy[/<switches>] <object>
  
-  This command destroys <object> and refunds its cost of creation to
-  its owner.  You must own <object> in order to @destroy it, unless
-  its DESTROY_OK flag is set, in which case anyone holding it may
+  This command destroys <object>. You must control <object> to
   @destroy it.
  
   Rooms, exits, and objects may be destroyed, although the the actual
@@ -793,17 +791,13 @@
   flag is set on the victim room.  Clearing the GOING flag on the
   room spares it from destruction.
  
-  If a thing OR it's owner is set DESTROY_OK, the thing will be
-  destroyed with no delay.
- 
   The @destroy command will not destroy objects with the SAFE flag set
-  unless the /override switch is specified.  The DESTROY_OK flag
-  overrides the protection given by the SAFE flag.
+  unless the /override switch is specified.
  
   The following switches are available:
     /override  - Negate protection offered by the SAFE flag.
  
-  See also: DESTROY_OK, SAFE
+  See also: SAFE
   
 & @dfail
  
@@ -1760,8 +1754,7 @@
                                    location)
      TeloutLock:   All but Exits:  controls who may teleport out of
                                    the location.
-     TportLock:    Rooms/Things:   controls who may teleport there if
-                                   the location is JUMP_OK.
+     TportLock:    Rooms/Things:   controls who may teleport there.
      UseLock:      All but Exits:  controls who may USE the object, have their
                                    messages heard and possibly acted
                                    on by LISTEN and AxHEAR, and invoke
@@ -2834,8 +2827,7 @@
  
   For the first form of the @teleport command, the object being
   teleported must pass its location's TeloutLock; and you must
-  control the destination, or it must be JUMP_OK and you must pass
-  the destination's TportLock.
+  control the destination and pass the destination's TportLock.
  
   The second and third forms let you remove any object from locations
   you control by sending them through an exit or to their home.
@@ -2844,7 +2836,7 @@
      /quiet - Teleports without setting off success or failure
               messages.
  
-  See also: JUMP_OK, @lock (tport and telout), @tfail, @otfail,
+  See also: @lock (tport and telout), @tfail, @otfail,
   @atfail, @tofail, @otofail, @atofail
   
 & @tfail
@@ -4985,21 +4977,6 @@ carried
  
   See also: look, @adescribe, @odescribe
   
-& DESTROY_OK
- 
-  Flag: DESTROY_OK (d)
- 
-  When set on an object, it allows any player to destroy
-  it as long as the object is not locked against them. This is good
-  for things like notes, whereby the recipient can destroy the note
-  after reading it, instead of having to look for you to destroy it.
-  The DESTROY_OK flag overrides the SAFE flag, so that you do not need
-  to give the /override switch to @destroy to destroy a thing that 
-  is both DESTROY_OK and SAFE. When it is set on any object or the 
-  owner of that object, that object can be destroyed immediately.
- 
-  See also: @destroy, SAFE
-  
 & detachcables
  
   RS Command: detachables <UnitID>
@@ -6885,15 +6862,6 @@ carried
   * <bearing> <range> - Jump <range> hexes in the direction of 
                         <bearing>
   
-& JUMP_OK
- 
-  Flag: JUMP_OK(J)
- 
-  When a room or thing is set JUMP_OK, that location can be teleported
-  into by anyone.
- 
-  See also: @teleport
-  
 & KEY
  
   Flag: KEY (K)
@@ -8275,7 +8243,7 @@ Continued in locate()2
  
   For example: Consider attribute PLACES, which contains "Fort Benden
   Ista", and another attribute DBREFS contains the dbrefs of the main
-  JUMP_OK location of these areas, "#20 #9000 #5000". We want to
+  teleport destination of these areas, "#20 #9000 #5000". We want to
   return a list of dbrefs, corresponding to the names of the places
   sorted alphabetically. The places sorted this way would be "Benden
   Fort Ista", so we want the final list to be "#9000 #20 #5000". The
@@ -9975,10 +9943,7 @@ AdvSensors: BeagleProbe
   When set, requires the use of the /override switch to @destroy in
   order to destroy the object.  It does not prevent the destruction 
   of the object, but merely requires some additional effort.  If a 
-  thing is set DESTROY_OK, its SAFE flag is ignored and it may be 
-  destroyed without using the /override switch.
- 
-  See also: @destroy, DESTROY_OK
+  See also: @destroy
   
 & safety
  

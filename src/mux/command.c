@@ -1983,8 +1983,7 @@ static void list_options(dbref player) {
   if (mudconf.sweep_dark)
     raw_notify(player, "Players may @sweep dark locations.");
   if (mudconf.fascist_tport)
-    raw_notify(player, "You may only @teleport out of locations that are "
-                       "JUMP_OK or that you control.");
+    raw_notify(player, "You may only @teleport out of locations you control.");
   raw_notify(
       player,
       tprintf("Players may have at most %d commands in the queue at one time.",

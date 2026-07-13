@@ -226,7 +226,6 @@ FLAGENT gen_flags[] = {
     {"AUDITORIUM", AUDITORIUM, 'b', FLAG_WORD2, 0, fh_any},
     {"CONNECTED", CONNECTED, 'c', FLAG_WORD2, CA_NO_DECOMP, fh_god},
     {"DARK", DARK, 'D', 0, 0, fh_dark_bit},
-    {"DESTROY_OK", DESTROY_OK, 'd', 0, 0, fh_any},
     {"ENTER_OK", ENTER_OK, 'e', 0, 0, fh_any},
     {"FIXED", FIXED, 'f', FLAG_WORD2, 0, fh_fixed},
     {"FLOATING", FLOATING, 'F', FLAG_WORD2, 0, fh_any},
@@ -242,7 +241,6 @@ FLAGENT gen_flags[] = {
     {"BLIND", BLIND, '(', FLAG_WORD2, 0, fh_any},
     {"IN_CHARACTER", IN_CHARACTER, '#', FLAG_WORD2, 0, fh_wiz},
     {"INHERIT", INHERIT, 'I', 0, 0, fh_inherit},
-    {"JUMP_OK", JUMP_OK, 'J', 0, 0, fh_any},
     {"KEY", KEY, 'K', FLAG_WORD2, 0, fh_any},
     {"LIGHT", LIGHT, 'l', FLAG_WORD2, 0, fh_any},
     {"MONITOR", MONITOR, 'M', 0, 0, fh_hear_bit},
@@ -590,7 +588,7 @@ char *unparse_object(dbref player, dbref target, int obey_myopic) {
       exam = MyopicExam(player, target);
     else
       exam = Examinable(player, target);
-    if (exam || (Flags(target) & (JUMP_OK | DESTROY_OK))) {
+    if (exam) {
 
       /*
        * show everything

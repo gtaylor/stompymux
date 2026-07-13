@@ -4586,8 +4586,7 @@ Continued in btdamgaes()3
   Default: no
 
   If this parameter is set to yes, then players (and objects) may not
-  teleport out of locations that they do not control or which are not
-  set JUMP_OK.  If the teleporting player is inside an object, the
+  teleport out of locations that they do not control. If the teleporting player is inside an object, the
   room that ultimately contains the object is checked.  Going home
   is unaffected.
  
@@ -7625,11 +7624,10 @@ Avg weight: 45.00 Total tons: 990
   Default: no
 
   Indicates whether or not objects not owned by you are automatically
-  considered SAFE.  (This parameter only affects wizards)  Note that
-  players are always considered SAFE, and DESTROY_OK things are
-  never considered SAFE.
+  considered SAFE. (This parameter only affects wizards.) Players are
+  always considered SAFE.
 
-  See also: @destroy, DESTROY_OK, SAFE.
+  See also: @destroy, SAFE.
   
 & unusablearcs
  
