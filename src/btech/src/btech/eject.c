@@ -40,10 +40,6 @@ int tele_contents(dbref from, dbref to, int flag) {
 
   SAFE_DOLIST(i, tmpnext, Contents(from))
   if ((flag & TELE_ALL) || !Wiz(i)) {
-    if ((flag & TELE_SLAVE) && !Wiz(i)) {
-      s_Slave(i);
-      silly_atr_set(i, A_LOCK, "");
-    }
     if (flag & TELE_XP && !Wiz(i))
       if (!(Quiet(from)))
         lower_xp(i, mudconf.btech_xploss);
@@ -103,7 +99,7 @@ void pickup_mw(MECH *mech, MECH *target) {
     if (mudconf.btech_mwpickup_action)
       tele_contents(target->mynum, mech->mynum, TELE_ALL | TELE_LOUD);
     else
-      tele_contents(target->mynum, mech->mynum, TELE_ALL | TELE_SLAVE);
+      tele_contents(target->mynum, mech->mynum, TELE_ALL);
   else if (mudconf.btech_mwpickup_action)
     tele_contents(target->mynum, mech->mynum, TELE_ALL | TELE_LOUD);
   else

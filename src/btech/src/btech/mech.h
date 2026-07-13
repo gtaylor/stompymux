@@ -1449,7 +1449,6 @@ extern struct weapon_struct MechWeapons[];
 extern struct missile_hit_table_struct MissileHitTable[];
 
 #define TELE_ALL 1   /* Tele all, not just mortals */
-#define TELE_SLAVE 2 /* Make slaves in progress (not of wizzes, though) */
 #define TELE_LOUD 4  /* Loudly teleport */
 #define TELE_XP 8    /* Lose 1/3 XP */
 

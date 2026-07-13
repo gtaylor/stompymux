@@ -83,7 +83,7 @@
 #define SUSPECT 0x10000000   /* Report some activities to wizards */
 /* 0x20000000 is reserved for the removed COMPRESS flag. */
 #define CONNECTED 0x40000000 /* Player is connected */
-#define SLAVE 0x80000000     /* Disallow most commands */
+/* 0x80000000 is reserved for the removed SLAVE flag. */
 
 /* ---------------------------------------------------------------------------
  * FLAGENT: Information about object flags.
@@ -154,7 +154,6 @@ extern void decompile_flags(dbref, dbref, char *);
 /* Trace(X)          - Should owner receive eval trace output? */
 /* Halted(X)         - Is X halted (not allowed to run commands)? */
 /* Suspect(X)        - Is X someone the wizzes should keep an eye on */
-/* Slave(X)          - Should X be prevented from db-changing commands */
 /* Safe(X,P)         - Does P need the /OVERRIDE switch to @destroy X? */
 /* Monitor(X)        - Should we check for ^xxx:xxx listens on player? */
 /* Terse(X)          - Should we only show the room name on a look? */
@@ -259,14 +258,12 @@ extern void decompile_flags(dbref, dbref, char *);
 #define Suspect(x) ((Flags2(Owner(x)) & SUSPECT) != 0)
 #define Connected(x)                                                           \
   (((Flags2(x) & CONNECTED) != 0) && (Typeof(x) == TYPE_PLAYER))
-#define Slave(x) ((Flags2(Owner(x)) & SLAVE) != 0)
 #define Hidden(x) ((Flags(x) & DARK) || (Flags2(x) & UNFINDABLE))
 #define H_Startup(x) ((Flags(x) & HAS_STARTUP) != 0)
 #define H_Fwdlist(x) ((Flags2(x) & HAS_FWDLIST) != 0)
 #define H_Listen(x) ((Flags2(x) & HAS_LISTEN) != 0)
 
 #define s_Opaque(x) s_Flags((x), Flags(x) | OPAQUE)
-#define s_Slave(x) s_Flags2((x), Flags2(x) | SLAVE)
 #define s_Fixed(x) s_Flags2((x), Flags2(x) | FIXED)
 #define s_Halted(x) s_Flags((x), Flags(x) | HALT)
 #define s_Going(x) s_Flags((x), Flags(x) | GOING)

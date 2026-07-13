@@ -76,7 +76,6 @@ struct boolexp {
 #define AMBIGUOUS (-2) /* multiple possibilities, for matchers */
 #define HOME (-3)      /* virtual room, represents mover's home */
 #define NOPERM (-4)    /* Error status, no permission */
-#define NOSLAVE (-5)   /* Don't send to slaves */
 
 typedef struct object OBJ;
 struct object {

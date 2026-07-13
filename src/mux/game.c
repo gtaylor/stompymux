@@ -645,8 +645,6 @@ void notify_checked(dbref target, dbref sender, const char *msg, int key) {
         buff = (char *)msg;
       }
       DOLIST(obj, Contents(target)) {
-        if (Slave(obj) && (key & MSG_NO_SLAVE))
-          continue;
         if (obj != target) {
           notify_checked(obj, sender, buff,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
@@ -712,13 +710,9 @@ void notify_except(dbref loc, dbref player, dbref exception, const char *msg) {
     notify_checked(loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
   DOLIST(first, Contents(loc)) {
-    if (exception == NOSLAVE)
-      if (Slave(first))
-        continue;
     if (first != exception)
       notify_checked(first, player, msg,
-                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE |
-                      (exception == NOSLAVE ? MSG_NO_SLAVE : 0)));
+                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
   }
 }
 

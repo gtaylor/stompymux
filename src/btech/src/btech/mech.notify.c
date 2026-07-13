@@ -1698,11 +1698,11 @@ void mech_notify(MECH *mech, int type, char *buffer) {
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(mech->mynum, NOSLAVE, mech->mynum, buffer);
+    notify_except(mech->mynum, NOTHING, mech->mynum, buffer);
     if (arc_override)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(AeroTurret(mech, i), NOSLAVE, AeroTurret(mech, i),
+          notify_except(AeroTurret(mech, i), NOTHING, AeroTurret(mech, i),
                         buffer);
   }
 }
@@ -1731,11 +1731,11 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(mech->mynum, NOSLAVE, mech->mynum, buffer);
+    notify_except(mech->mynum, NOTHING, mech->mynum, buffer);
     if (arc_override)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(AeroTurret(mech, i), NOSLAVE, AeroTurret(mech, i),
+          notify_except(AeroTurret(mech, i), NOTHING, AeroTurret(mech, i),
                         buffer);
   }
 }

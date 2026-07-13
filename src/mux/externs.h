@@ -516,7 +516,6 @@ void list_chashstats(dbref);
 #define MSG_S_OUTSIDE 8192  /* Originator is outside target */
 #define MSG_COLORIZE 16384  /* Message needs to be given color */
 /* #define FREE		32768	*/
-#define MSG_NO_SLAVE 65536 /* Don't send to slaves */
 #define MSG_ME_ALL (MSG_ME | MSG_INV_EXITS | MSG_FWDLIST)
 #define MSG_F_CONTENTS (MSG_INV)
 #define MSG_F_UP (MSG_NBR_A | MSG_LOC_A)

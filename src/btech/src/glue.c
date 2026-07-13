@@ -208,8 +208,6 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
 int HandledCommand(dbref player, dbref loc, char *command) {
   dbref curr, temp;
 
-  if (Slave(player))
-    return 0;
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
     return 0;
   if (OkayHcode(player) && HandledCommand_sub(player, player, command))

@@ -219,7 +219,7 @@ struct addedentry {
 #define CA_ADMIN 0x00000800      /* Wizard */
 /* 0x00001000 is reserved for the removed no_haven restriction. */
 #define CA_NO_ROBOT 0x00002000   /* Not by ROBOT players */
-#define CA_NO_SLAVE 0x00004000   /* Not by SLAVE players */
+/* 0x00004000 is reserved for the removed no_slave restriction. */
 #define CA_NO_SUSPECT 0x00008000 /* Not by SUSPECT players */
 #define CA_NO_IC 0x00020000      /* Not by IC players */
 
