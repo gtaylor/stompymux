@@ -90,7 +90,6 @@ ATTR attr_table[] = {
     {"Aleave", A_ALEAVE, AF_ODARK, NULL},
     {"Alfail", A_ALFAIL, AF_ODARK | AF_NOPROG, NULL},
     {"Alias", A_ALIAS, AF_NOPROG | AF_NOCMD | AF_GOD, NULL},
-    {"Allowance", A_ALLOWANCE, AF_MDARK | AF_NOPROG | AF_WIZARD, NULL},
     {"Amhear", A_AMHEAR, AF_ODARK, NULL},
     {"Amove", A_AMOVE, AF_ODARK, NULL},
     {"Arfail", A_ARFAIL, AF_ODARK | AF_NOPROG, NULL},
@@ -651,9 +650,6 @@ void do_fixdb(dbref player, dbref cause, int key, char *arg1, char *arg2) {
     match_everything(0);
     res = noisy_match_result();
     break;
-  case FIXDB_PENNIES:
-    res = atoi(arg2);
-    break;
   }
 
   switch (key) {
@@ -681,11 +677,6 @@ void do_fixdb(dbref player, dbref cause, int key, char *arg1, char *arg2) {
     s_Next(thing, res);
     if (!Quiet(player))
       notify_printf(player, "Next set to #%d", res);
-    break;
-  case FIXDB_PENNIES:
-    s_Pennies(thing, res);
-    if (!Quiet(player))
-      notify_printf(player, "Pennies set to %d", res);
     break;
   case FIXDB_NAME:
     if (Typeof(thing) == TYPE_PLAYER) {
@@ -1757,7 +1748,6 @@ void db_make_minimal(void) {
   s_Link(0, NOTHING);
   s_Parent(0, NOTHING);
   s_Zone(0, NOTHING);
-  s_Pennies(0, 1);
   s_Owner(0, 1);
   db[0].ahead = NULL;
   db[0].at_count = 0;
@@ -1769,7 +1759,6 @@ void db_make_minimal(void) {
   s_Flags(obj, Flags(obj) | WIZARD);
   s_Powers(obj, 0);
   s_Powers2(obj, 0);
-  s_Pennies(obj, 1000);
 
   /*
    * Manually link to Limbo, just in case

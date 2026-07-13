@@ -158,60 +158,47 @@ static void make_freelist(void) {
 }
 
 /**
- * Create an object of the indicated type IF the player can
- * afford it.
+ * Create an object of the indicated type.
  */
-dbref create_obj(dbref player, int objtype, char *name, int cost) {
+dbref create_obj(dbref player, int objtype, char *name) {
   dbref obj, owner;
-  int okname = 0, value, self_owned, require_inherit;
+  int okname = 0, self_owned, require_inherit;
   FLAG f1, f2, f3;
   time_t tt;
   char *buff;
 
-  value = 0;
   self_owned = 0;
   require_inherit = 0;
 
   switch (objtype) {
   case TYPE_ROOM:
-    cost = mudconf.digcost;
     f1 = mudconf.room_flags.word1;
     f2 = mudconf.room_flags.word2;
     f3 = mudconf.room_flags.word3;
     okname = ok_name(name);
     break;
   case TYPE_THING:
-    if (cost < mudconf.createmin)
-      cost = mudconf.createmin;
-    if (cost > mudconf.createmax)
-      cost = mudconf.createmax;
     f1 = mudconf.thing_flags.word1;
     f2 = mudconf.thing_flags.word2;
     f3 = mudconf.thing_flags.word3;
-    value = OBJECT_ENDOWMENT(cost);
     okname = ok_name(name);
     break;
   case TYPE_EXIT:
-    cost = mudconf.opencost;
     f1 = mudconf.exit_flags.word1;
     f2 = mudconf.exit_flags.word2;
     f3 = mudconf.exit_flags.word3;
     okname = ok_name(name);
     break;
   case TYPE_PLAYER:
-    if (cost) {
-      cost = mudconf.robotcost;
+    if (player != NOTHING) {
       f1 = mudconf.robot_flags.word1;
       f2 = mudconf.robot_flags.word2;
       f3 = mudconf.robot_flags.word3;
-      value = 0;
       require_inherit = 1;
     } else {
-      cost = 0;
       f1 = mudconf.player_flags.word1;
       f2 = mudconf.player_flags.word2;
       f3 = mudconf.player_flags.word3;
-      value = mudconf.paystart;
       self_owned = 1;
     }
     buff = munge_space(name);
@@ -260,13 +247,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
       return NOTHING;
     }
   }
-  /*
-   * Make sure the creator can pay for the object.
-   */
-
-  if ((player != NOTHING) && !canpayfees(player, player, cost))
-    return NOTHING;
-
   /*
    * Get the first object from the freelist. If the object is not
    * clean, discard the remainder of the freelist and go get a
@@ -319,7 +299,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
   s_Flags2(obj, f2);
   s_Flags3(obj, f3);
   s_Owner(obj, (self_owned ? obj : owner));
-  s_Pennies(obj, value);
   Unmark(obj);
   buff = munge_space((char *)name);
   s_Name(obj, buff);
@@ -332,7 +311,6 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
     atr_add_raw(obj, A_LAST, buff);
 
     add_player_name(obj, Name(obj));
-    s_Pennies(obj, 1000); /* Give the player some starting cash */
   }
   make_freelist();
   return obj;
@@ -344,7 +322,7 @@ dbref create_obj(dbref player, int objtype, char *name, int cost) {
  */
 void destroy_obj(dbref player, dbref obj) {
   dbref owner;
-  int good_owner, val;
+  int good_owner;
   STACK *sp, *next;
   char *tname;
 
@@ -367,34 +345,6 @@ void destroy_obj(dbref player, dbref obj) {
     }
   }
   nfy_que(obj, 0, NFY_DRAIN, 0);
-
-  /*
-   * Compensate the owner for the object
-   */
-
-  val = 1;
-  if (good_owner && (owner != obj)) {
-    switch (Typeof(obj)) {
-    case TYPE_ROOM:
-      val = mudconf.digcost;
-      break;
-    case TYPE_THING:
-      val = OBJECT_DEPOSIT(Pennies(obj));
-      break;
-    case TYPE_EXIT:
-      val = mudconf.opencost;
-      break;
-    case TYPE_PLAYER:
-      if (Robot(obj))
-        val = mudconf.robotcost;
-      else
-        val = 0;
-    }
-    giveto(owner, val);
-    if (!Quiet(owner) && !Quiet(obj))
-      notify_printf(owner, "You get back your %d %s deposit for %s(#%d).", val,
-                    mudconf.one_coin, Name(obj), obj);
-  }
 
   if ((player != NOTHING) && !Quiet(player)) {
     if (good_owner && Owner(player) != owner) {
@@ -424,7 +374,6 @@ void destroy_obj(dbref player, dbref obj) {
   s_Next(obj, NOTHING);
   s_Link(obj, NOTHING);
   s_Owner(obj, GOD);
-  s_Pennies(obj, 0);
   s_Parent(obj, NOTHING);
   s_Zone(obj, NOTHING);
 
@@ -610,26 +559,6 @@ static void purge_going(void) {
 /**
  * Look for references to GOING or illegal objects.
  */
-static void check_pennies(dbref thing, int limit, const char *qual) {
-  int j;
-
-  if (Going(thing))
-    return;
-  j = Pennies(thing);
-  if (isRoom(thing) || isExit(thing)) {
-    if (j) {
-      Log_header_err(thing, NOTHING, j, 0, qual, "is strange.  Reset.");
-      s_Pennies(j, 0);
-    }
-  } else if (j == 0) {
-    Log_header_err(thing, NOTHING, j, 0, qual, "is zero.");
-  } else if (j < 0) {
-    Log_header_err(thing, NOTHING, j, 0, qual, "is negative.");
-  } else if (j > limit) {
-    Log_header_err(thing, NOTHING, j, 0, qual, "is excessive.");
-  }
-}
-
 static void check_dead_refs(void) {
   dbref targ, owner, i, j;
   long aflags;
@@ -719,20 +648,6 @@ static void check_dead_refs(void) {
         Log_simple_err(i, NOTHING, "Next points to self.  Next cleared.");
         s_Next(i, NOTHING);
       }
-      if (check_type & DBCK_FULL) {
-
-        /*
-         * Check wealth or value
-         */
-
-        targ = OBJECT_ENDOWMENT(mudconf.createmax);
-        if (OwnsOthers(i)) {
-          targ += mudconf.paylimit;
-          check_pennies(i, targ, "Wealth");
-        } else {
-          check_pennies(i, targ, "Value");
-        }
-      }
       break;
     case TYPE_ROOM:
 
@@ -773,11 +688,6 @@ static void check_dead_refs(void) {
                          "should be NOTHING.  Reset.");
           s_Link(i, NOTHING);
         }
-        /*
-         * Check value
-         */
-
-        check_pennies(i, 1, "Value");
       }
       break;
     case TYPE_EXIT:
@@ -835,11 +745,6 @@ static void check_dead_refs(void) {
                          "should be NOTHING.  Reset.");
           s_Link(i, NOTHING);
         }
-        /*
-         * Check value
-         */
-
-        check_pennies(i, 1, "Value");
       }
       break;
     case TYPE_GARBAGE:

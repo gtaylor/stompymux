@@ -519,7 +519,7 @@ void do_unlink(dbref player, dbref cause, int key, char *name) {
 
 void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
   dbref thing, owner, aowner;
-  int atr, do_it, cost;
+  int atr, do_it;
   long aflags;
   ATTR *ap;
 
@@ -622,21 +622,6 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
     owner = lookup_player(player, newown, 1);
   }
 
-  cost = 1;
-  switch (Typeof(thing)) {
-  case TYPE_ROOM:
-    cost = mudconf.digcost;
-    break;
-  case TYPE_THING:
-    cost = OBJECT_DEPOSIT(Pennies(thing));
-    break;
-  case TYPE_EXIT:
-    cost = mudconf.opencost;
-    break;
-  case TYPE_PLAYER:
-    cost = mudconf.robotcost;
-  }
-
   if (owner == NOTHING) {
     notify_quiet(player, "I couldn't find that player.");
   } else if (isPlayer(thing) && !God(player)) {
@@ -646,8 +631,7 @@ void do_chown(dbref player, dbref cause, int key, char *name, char *newown) {
                !Chown_Any(player))) ||
              (!controls(player, owner))) {
     notify_quiet(player, "Permission denied.");
-  } else if (canpayfees(player, owner, cost)) {
-    giveto(Owner(thing), cost);
+  } else {
     if (God(player)) {
       s_Owner(thing, owner);
     } else {

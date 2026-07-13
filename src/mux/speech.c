@@ -354,10 +354,6 @@ static void page_return(dbref player, dbref target, const char *tag, int anum,
 }
 
 static int page_check(dbref player, dbref target) {
-  if (!payfor(player, mudconf.pagecost)) {
-    notify_printf(player, "You don't have enough %s.", mudconf.many_coins);
-    return 0;
-  }
   if (In_IC_Loc(player) && !Wizard(target) && !Wizard(player)) {
     notify(player, "Permission denied.");
     return 0;

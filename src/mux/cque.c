@@ -636,7 +636,6 @@ int halt_que(dbref player, dbref object) {
 
   if (player == NOTHING)
     player = Owner(object);
-  giveto(player, (mudconf.waitcost * numhalted));
   if (object == NOTHING)
     s_Queue(player, 0);
   else
@@ -740,7 +739,6 @@ int nfy_que(dbref sem, int attr, int key, int count) {
           point->waittime = 0;
           cque_enqueue(point->player, point);
         } else {
-          giveto(point->player, mudconf.waitcost);
           a_Queue(Owner(point->player), -1);
           free(point->text);
           free_qentry(point);
@@ -846,17 +844,6 @@ static BQUE *setup_que(dbref player, dbref cause, char *command, char *args[],
   if (Halted(player))
     return NULL;
 
-  /*
-   * make sure player can afford to do it
-   */
-
-  a = mudconf.waitcost;
-  if (mudconf.machinecost && ((random() % mudconf.machinecost) == 0))
-    a++;
-  if (!payfor(player, a)) {
-    notify(Owner(player), "Not enough money to queue command.");
-    return NULL;
-  }
   /*
    * Wizards and their objs may queue up to db_top+1 cmds. Players are
    * * * * * * * limited to QUEUE_QUOTA. -mnp
@@ -1168,7 +1155,6 @@ int do_top(int ncmds) {
     dassert(tmp);
     count++;
     if ((object >= 0) && !Going(object)) {
-      giveto(object, mudconf.waitcost);
       mudstate.curr_enactor = tmp->cause;
       mudstate.curr_player = object;
       a_Queue(Owner(object), -1);

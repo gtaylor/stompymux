@@ -156,13 +156,3 @@ int QueueMax(dbref player) {
   }
   return m;
 }
-
-int Pennies(dbref obj) {
-  (void)obj;
-  return 0;
-}
-
-void s_Pennies(dbref obj, int amount) {
-  (void)obj;
-  (void)amount;
-}

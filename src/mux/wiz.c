@@ -242,7 +242,6 @@ void do_toad(dbref player, dbref cause, int key, char *toad, char *newowner) {
   s_Flags(victim, TYPE_THING | HALT);
   s_Flags2(victim, 0);
   s_Flags3(victim, 0);
-  s_Pennies(victim, 1);
 
   /*
    * notify people
@@ -389,22 +388,6 @@ void do_boot(dbref player, dbref cause, int key, char *name) {
 /**
  * Reduce the wealth of anyone over a specified amount.
  */
-void do_poor(dbref player, dbref cause, int key, char *arg1) {
-  dbref a;
-  int amt, curamt;
-
-  if (!is_number(arg1))
-    return;
-  amt = atoi(arg1);
-  DO_WHOLE_DB(a) {
-    if (isPlayer(a)) {
-      curamt = Pennies(a);
-      if (amt < curamt)
-        s_Pennies(a, amt);
-    }
-  }
-}
-
 /**
  * Chop off a contents or exits chain after the named item.
  */

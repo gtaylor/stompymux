@@ -96,14 +96,6 @@ typedef struct mech_data MECH;
 #define BOUND_VAR "##"
 #define LISTPLACE_VAR "#@"
 
-/* amount of object endowment, based on cost */
-#define OBJECT_ENDOWMENT(cost)                                                 \
-  (((cost) / mudconf.sacfactor) + mudconf.sacadjust)
-
-/* !!! added for recycling, return value of object */
-#define OBJECT_DEPOSIT(pennies)                                                \
-  (((pennies) - mudconf.sacadjust) * mudconf.sacfactor)
-
 #define DEV_NULL "/dev/null"
 #define READ read
 #define WRITE write

@@ -1463,7 +1463,7 @@ extern void *FindObjectsData(dbref key);
 #endif
 
 #define destroy_object(obj) destroy_thing(obj)
-#define create_object(name) create_obj(GOD, TYPE_THING, name, 1)
+#define create_object(name) create_obj(GOD, TYPE_THING, name)
 
 #define A_MECHREF A_MECHTYPE
 #define MECH_PATH mudconf.mech_db

@@ -201,31 +201,14 @@ void cf_init(void) {
   mudconf.idle_interval = 60;
   mudconf.retry_limit = 3;
   mudconf.output_limit = 16384;
-  mudconf.paycheck = 0;
-  mudconf.paystart = 0;
-  mudconf.paylimit = 10000;
   mudconf.site_chars = 25;
-  mudconf.payfind = 0;
-  mudconf.digcost = 10;
-  mudconf.linkcost = 1;
-  mudconf.opencost = 1;
-  mudconf.createmin = 10;
-  mudconf.createmax = 505;
-  mudconf.robotcost = 1000;
-  mudconf.pagecost = 10;
-  mudconf.searchcost = 100;
-  mudconf.waitcost = 10;
-  mudconf.machinecost = 64;
   mudconf.use_http = 0;
   mudconf.queuemax = 100;
   mudconf.queue_chunk = 10;
   mudconf.active_q_chunk = 10;
-  mudconf.sacfactor = 5;
-  mudconf.sacadjust = -1;
   mudconf.use_hostname = 1;
   mudconf.ex_flags = 1;
   mudconf.robot_speak = 1;
-  mudconf.clone_copy_cost = 0;
   mudconf.pub_flags = 1;
   mudconf.quiet_look = 1;
   mudconf.exam_public = 1;
@@ -266,8 +249,6 @@ void cf_init(void) {
   mudconf.robot_flags.word2 = 0;
   mudconf.vattr_flags = AF_ODARK;
   StringCopy(mudconf.mud_name, "TinyMUX");
-  StringCopy(mudconf.one_coin, "penny");
-  StringCopy(mudconf.many_coins, "pennies");
   mudconf.timeslice = 100;
   mudconf.cmd_quota_max = 100;
   mudconf.cmd_quota_incr = 5;
@@ -988,7 +969,6 @@ CONF conftable[] = {
     {(char *)"cache_width", cf_int, CA_DISABLED, &mudconf.cache_width, 0},
     {(char *)"check_interval", cf_int, CA_GOD, &mudconf.check_interval, 0},
     {(char *)"check_offset", cf_int, CA_GOD, &mudconf.check_offset, 0},
-    {(char *)"clone_copies_cost", cf_bool, CA_GOD, &mudconf.clone_copy_cost, 0},
     {(char *)"command_quota_increment", cf_int, CA_GOD, &mudconf.cmd_quota_incr,
      0},
     {(char *)"command_quota_max", cf_int, CA_GOD, &mudconf.cmd_quota_max, 0},
@@ -1001,11 +981,8 @@ CONF conftable[] = {
      32},
     {(char *)"connect_reg_file", cf_string, CA_DISABLED,
      (void *)mudconf.creg_file, 32},
-    {(char *)"create_max_cost", cf_int, CA_GOD, &mudconf.createmax, 0},
-    {(char *)"create_min_cost", cf_int, CA_GOD, &mudconf.createmin, 0},
     {(char *)"dark_sleepers", cf_bool, CA_GOD, &mudconf.dark_sleepers, 0},
     {(char *)"default_home", cf_int, CA_GOD, &mudconf.default_home, 0},
-    {(char *)"dig_cost", cf_int, CA_GOD, &mudconf.digcost, 0},
     {(char *)"down_file", cf_string, CA_DISABLED, (void *)mudconf.down_file,
      32},
     {(char *)"down_motd_message", cf_string, CA_GOD,
@@ -1015,7 +992,6 @@ CONF conftable[] = {
     {(char *)"postdump_message", cf_string, CA_GOD,
      (void *)mudconf.postdump_msg, 128},
     {(char *)"dump_offset", cf_int, CA_GOD, &mudconf.dump_offset, 0},
-    {(char *)"earn_limit", cf_int, CA_GOD, &mudconf.paylimit, 0},
     {(char *)"examine_flags", cf_bool, CA_GOD, &mudconf.ex_flags, 0},
     {(char *)"examine_public_attrs", cf_bool, CA_GOD, &mudconf.exam_public, 0},
     {(char *)"exit_flags", cf_set_flags, CA_GOD, (int *)&mudconf.exit_flags, 0},
@@ -1026,7 +1002,6 @@ CONF conftable[] = {
      (void *)mudconf.fixed_home_msg, 128},
     {(char *)"fixed_tel_message", cf_string, CA_DISABLED,
      (void *)mudconf.fixed_tel_msg, 128},
-    {(char *)"find_money_chance", cf_int, CA_GOD, &mudconf.payfind, 0},
     {(char *)"flag_alias", cf_flagalias, CA_GOD, NULL, 0},
     {(char *)"forbid_site", cf_site, CA_GOD, (int *)&mudstate.access_list,
      H_FORBIDDEN},
@@ -1062,7 +1037,6 @@ CONF conftable[] = {
     {(char *)"include", cf_include, CA_DISABLED, NULL, 0},
     {(char *)"indent_desc", cf_bool, CA_GOD, &mudconf.indent_desc, 0},
     {(char *)"initial_size", cf_int, CA_DISABLED, &mudconf.init_size, 0},
-    {(char *)"link_cost", cf_int, CA_GOD, &mudconf.linkcost, 0},
     {(char *)"list_access", cf_ntab_access, CA_GOD, (int *)list_names,
      (long)access_nametab},
     {(char *)"lock_recursion_limit", cf_int, CA_WIZARD, &mudconf.lock_nest_lim,
@@ -1075,16 +1049,11 @@ CONF conftable[] = {
      (int *)logout_cmdtable, (long)access_nametab},
     {(char *)"logout_cmd_alias", cf_alias, CA_GOD,
      (int *)&mudstate.logout_cmd_htab, 0},
-    {(char *)"machine_command_cost", cf_int, CA_GOD, &mudconf.machinecost, 0},
     {(char *)"map_database", cf_string, CA_GOD, (void *)mudconf.map_db, 128},
     {(char *)"master_room", cf_int, CA_GOD, &mudconf.master_room, 0},
     {(char *)"match_own_commands", cf_bool, CA_GOD, &mudconf.match_mine, 0},
     {(char *)"max_players", cf_int, CA_GOD, &mudconf.max_players, 0},
     {(char *)"mech_database", cf_string, CA_GOD, (void *)mudconf.mech_db, 128},
-    {(char *)"money_name_plural", cf_string, CA_GOD, (void *)mudconf.many_coins,
-     32},
-    {(char *)"money_name_singular", cf_string, CA_GOD, (void *)mudconf.one_coin,
-     32},
     {(char *)"motd_file", cf_string, CA_DISABLED, (void *)mudconf.motd_file,
      32},
     {(char *)"motd_message", cf_string, CA_GOD, (void *)mudconf.motd_msg, 4096},
@@ -1093,13 +1062,10 @@ CONF conftable[] = {
      32},
     {(char *)"notify_recursion_limit", cf_int, CA_GOD, &mudconf.ntfy_nest_lim,
      0},
-    {(char *)"open_cost", cf_int, CA_GOD, &mudconf.opencost, 0},
     {(char *)"output_limit", cf_int, CA_GOD, &mudconf.output_limit, 0},
-    {(char *)"page_cost", cf_int, CA_GOD, &mudconf.pagecost, 0},
     {(char *)"paranoid_allocate", cf_bool, CA_GOD, &mudconf.paranoid_alloc, 0},
     {(char *)"parent_recursion_limit", cf_int, CA_GOD, &mudconf.parent_nest_lim,
      0},
-    {(char *)"paycheck", cf_int, CA_GOD, &mudconf.paycheck, 0},
     {(char *)"pemit_far_players", cf_bool, CA_GOD, &mudconf.pemit_players, 0},
     {(char *)"pemit_any_object", cf_bool, CA_GOD, &mudconf.pemit_any, 0},
     {(char *)"permit_site", cf_site, CA_GOD, (int *)&mudstate.access_list, 0},
@@ -1129,14 +1095,10 @@ CONF conftable[] = {
     {(char *)"register_site", cf_site, CA_GOD, (int *)&mudstate.access_list,
      H_REGISTRATION},
     {(char *)"retry_limit", cf_int, CA_GOD, &mudconf.retry_limit, 0},
-    {(char *)"robot_cost", cf_int, CA_GOD, &mudconf.robotcost, 0},
     {(char *)"robot_flags", cf_set_flags, CA_GOD, (int *)&mudconf.robot_flags,
      0},
     {(char *)"robot_speech", cf_bool, CA_GOD, &mudconf.robot_speak, 0},
     {(char *)"room_flags", cf_set_flags, CA_GOD, (int *)&mudconf.room_flags, 0},
-    {(char *)"sacrifice_adjust", cf_int, CA_GOD, &mudconf.sacadjust, 0},
-    {(char *)"sacrifice_factor", cf_int, CA_GOD, &mudconf.sacfactor, 0},
-    {(char *)"search_cost", cf_int, CA_GOD, &mudconf.searchcost, 0},
     {(char *)"see_owned_dark", cf_bool, CA_GOD, &mudconf.see_own_dark, 0},
     {(char *)"show_unfindable_who", cf_bool, CA_GOD,
      &mudconf.show_unfindable_who, 1},
@@ -1148,7 +1110,6 @@ CONF conftable[] = {
     {(char *)"site_chars", cf_int, CA_GOD, &mudconf.site_chars, 0},
     {(char *)"space_compress", cf_bool, CA_GOD, &mudconf.space_compress, 0},
     {(char *)"stack_limit", cf_int, CA_GOD, &mudconf.stack_limit, 0},
-    {(char *)"starting_money", cf_int, CA_GOD, &mudconf.paystart, 0},
     {(char *)"suspect_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list,
      H_SUSPECT},
     {(char *)"sweep_dark", cf_bool, CA_GOD, &mudconf.sweep_dark, 0},
@@ -1162,7 +1123,6 @@ CONF conftable[] = {
     {(char *)"unowned_safe", cf_bool, CA_GOD, &mudconf.safe_unowned, 0},
     {(char *)"user_attr_access", cf_modify_bits, CA_GOD, &mudconf.vattr_flags,
      (long)attraccess_nametab},
-    {(char *)"wait_cost", cf_int, CA_GOD, &mudconf.waitcost, 0},
     {(char *)"wizard_help_file", cf_string, CA_DISABLED,
      (void *)mudconf.whelp_file, 32},
     {(char *)"wizard_help_index", cf_string, CA_DISABLED,

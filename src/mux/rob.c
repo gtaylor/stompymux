@@ -1,5 +1,5 @@
 /*
- * rob.c -- Commands dealing with giving/taking things or money
+ * rob.c -- Commands dealing with giving and taking things
  */
 
 #include "config.h"
@@ -17,7 +17,7 @@
 
 /*
  * ---------------------------------------------------------------------------
- * * give_thing, give_money, do_give: Give away money or things.
+ * * give_thing, do_give: Give away things.
  */
 
 static void give_thing(dbref giver, dbref recipient, int key, char *what) {
@@ -89,13 +89,6 @@ static void give_thing(dbref giver, dbref recipient, int key, char *what) {
          0);
 }
 
-static void give_money(dbref giver, dbref recipient, int key, int amount) {
-  (void)recipient;
-  (void)key;
-  (void)amount;
-  notify(giver, "Money transfers are no longer supported.");
-}
-
 void do_give(dbref player, dbref cause, int key, char *who, char *amnt) {
   dbref recipient;
 
@@ -121,9 +114,5 @@ void do_give(dbref player, dbref cause, int key, char *who, char *amnt) {
     return;
   }
 
-  if (is_number(amnt)) {
-    give_money(player, recipient, key, atoi(amnt));
-  } else {
-    give_thing(player, recipient, key, amnt);
-  }
+  give_thing(player, recipient, key, amnt);
 }

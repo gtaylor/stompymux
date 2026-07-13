@@ -20,7 +20,7 @@
 #define POW_WIZARD_WHO 0x00000040  /* See extra WHO information */
 #define POW_EXAM_ALL 0x00000080    /* I can examine everything */
 #define POW_FIND_UNFIND 0x00000100 /* Can find unfindable players */
-#define POW_FREE_MONEY 0x00000200  /* I have infinite money */
+/* 0x00000200 is reserved for the removed free_money power. */
 /* 0x00000400 is reserved for the removed free_quota power. */
 #define POW_HIDE 0x00000800        /* Can set themselves DARK */
 #define POW_IDLE 0x00001000        /* No idle limit */
@@ -39,7 +39,7 @@
 #define POW_NO_DESTROY 0x01000000 /* Cannot be destroyed */
 #define POW_PASS_LOCKS 0x04000000 /* Player can pass any lock */
 #define POW_STAT_ANY 0x08000000   /* Can @stat anyone */
-#define POW_STEAL 0x10000000      /* Can give negative money */
+/* 0x10000000 is reserved for the removed steal_money power. */
 #define POW_TEL_ANYWHR 0x20000000 /* Teleport anywhere */
 #define POW_TEL_UNRST 0x40000000  /* Teleport anything */
 /* 0x80000000 is reserved for the removed unkillable power. */
@@ -93,7 +93,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define s_Wizard_Who(c) s_Powers((c), Powers(c) | POW_WIZARD_WHO)
 #define s_See_All(c) s_Powers((c), Powers(c) | POW_EXAM_ALL)
 #define s_Find_Unfindable(c) s_Powers((c), Powers(c) | POW_FIND_UNFIND)
-#define s_Free_Money(c) s_Powers((c), Powers(c) | POW_FREE_MONEY)
 #define s_Can_Hide(c) s_Powers((c), Powers(c) | POW_HIDE)
 #define s_Can_Idle(c) s_Powers((c), Powers(c) | POW_IDLE)
 #define s_Search(c) s_Powers((c), Powers(c) | POW_SEARCH)
@@ -107,7 +106,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define s_No_Destroy(c) s_Powers((c), Powers(c) | POW_NO_DESTROY)
 #define s_Set_Maint_Flags(c) s_Powers((c), Powers(c) | POW_SET_MFLAGS)
 #define s_Stat_Any(c) s_Powers((c), Powers(c) | POW_STAT_ANY)
-#define s_Steal(c) s_Powers((c), Powers(c) | POW_STEAL)
 #define s_Tel_Anywhere(c) s_Powers((c), Powers(c) | POW_TEL_ANYWHR)
 #define s_Tel_Anything(c) s_Powers((c), Powers(c) | POW_TEL_UNRST)
 #define s_Builder(c) s_Powers2((c), Powers2(c) | POW_BUILDER)
@@ -131,7 +129,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define Wizard_Who(c) (((Powers(c) & POW_WIZARD_WHO) != 0) || Wizard(c))
 #define See_All(c) (((Powers(c) & POW_EXAM_ALL) != 0) || Wizard(c))
 #define Find_Unfindable(c) ((Powers(c) & POW_FIND_UNFIND) != 0)
-#define Free_Money(c) ((Powers(c) & POW_FREE_MONEY) != 0)
 #define Can_Hide(c) ((Powers(c) & POW_HIDE) != 0)
 #define Can_Idle(c) (((Powers(c) & POW_IDLE) != 0) || Wizard(c))
 #define Search(c) (((Powers(c) & POW_SEARCH) != 0) || Wizard(c))
@@ -144,7 +141,6 @@ extern int decode_power(dbref, char *, POWERSET *);
 #define No_Destroy(c) (((Powers(c) & POW_NO_DESTROY) != 0) || Wizard(c))
 #define Set_Maint_Flags(c) ((Powers(c) & POW_SET_MFLAGS) != 0)
 #define Stat_Any(c) ((Powers(c) & POW_STAT_ANY) != 0)
-#define Steal(c) (((Powers(c) & POW_STEAL) != 0) || Wizard(c))
 #define Tel_Anywhere(c) (((Powers(c) & POW_TEL_ANYWHR) != 0) || Tel_Anything(c))
 #define Tel_Anything(c) (((Powers(c) & POW_TEL_UNRST) != 0) || Wizard(c))
 #define Prog(c) (((Powers(c) & POW_PROG) != 0) || Wizard(c))

@@ -59,7 +59,6 @@ NAMETAB cemit_sw[] = {{(char *)"noheader", 1, CA_PUBLIC, CEMIT_NOHEADER},
                       {NULL, 0, 0, 0}};
 
 NAMETAB clone_sw[] = {
-    {(char *)"cost", 1, CA_PUBLIC, CLONE_SET_COST},
     {(char *)"inherit", 3, CA_PUBLIC, CLONE_INHERIT | SW_MULTIPLE},
     {(char *)"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
     {(char *)"location", 1, CA_PUBLIC, CLONE_LOCATION},
@@ -141,7 +140,6 @@ NAMETAB fixdb_sw[] = {
     {(char *)"location", 1, CA_GOD, FIXDB_LOC},
     {(char *)"next", 1, CA_GOD, FIXDB_NEXT},
     {(char *)"owner", 1, CA_GOD, FIXDB_OWNER},
-    {(char *)"pennies", 1, CA_GOD, FIXDB_PENNIES},
     {(char *)"rename", 1, CA_GOD, FIXDB_NAME},
     /* {(char *)"rm_pname", 1,  CA_GOD,     FIXDB_DEL_PN}, */
     {NULL, 0, 0, 0}};
@@ -290,7 +288,6 @@ CMDENT command_table[] = {
      do_attribute},
     {(char *)"@boot", boot_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_boot},
     {(char *)"@cboot", NULL, 0, 0, CS_TWO_ARG, do_chboot},
-    {(char *)"@ccharge", NULL, 0, 1, CS_TWO_ARG, do_editchannel},
     {(char *)"@cchown", NULL, 0, 0, CS_TWO_ARG, do_editchannel},
     {(char *)"@ccreate", NULL, 0, 0, CS_ONE_ARG, do_createchannel},
     {(char *)"@cdestroy", NULL, 0, 0, CS_ONE_ARG, do_destroychannel},
@@ -309,7 +306,7 @@ CMDENT command_table[] = {
     {(char *)"@cpattr", NULL, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV, do_cpattr},
     {(char *)"@cpflags", NULL, 0, 3, CS_TWO_ARG, do_editchannel},
     {(char *)"@create", NULL, CA_GBL_BUILD | CA_CONTENTS, 0,
-     CS_TWO_ARG | CS_INTERP, do_create},
+     CS_ONE_ARG | CS_INTERP, do_create},
     {(char *)"@cset", cset_sw, 0, 0, CS_TWO_ARG | CS_INTERP, do_chopen},
     {(char *)"@cut", NULL, CA_WIZARD | CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP,
      do_cut},
@@ -384,7 +381,6 @@ CMDENT command_table[] = {
      do_pemit},
     {(char *)"@npemit", pemit_sw, 0, PEMIT_PEMIT, CS_TWO_ARG | CS_UNPARSE,
      do_pemit},
-    {(char *)"@poor", NULL, CA_GOD, 0, CS_ONE_ARG | CS_INTERP, do_poor},
     {(char *)"@power", NULL, 0, 0, CS_TWO_ARG, do_power},
     {(char *)"@program", NULL, CA_PUBLIC, 0, CS_TWO_ARG | CS_INTERP, do_prog},
     {(char *)"@ps", ps_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_ps},
@@ -1790,83 +1786,6 @@ static void list_df_flags(dbref player) {
 
 /*
  * ---------------------------------------------------------------------------
- * * list_costs: List the costs of things.
- */
-
-#define coin_name(s) (((s) == 1) ? mudconf.one_coin : mudconf.many_coins)
-
-static void list_costs(dbref player) {
-  char *buff;
-
-  buff = alloc_mbuf("list_costs");
-  *buff = '\0';
-  notify_printf(player, "Digging a room costs %d %s%s.", mudconf.digcost,
-                coin_name(mudconf.digcost), buff);
-  notify_printf(player, "Opening a new exit costs %d %s%s.", mudconf.opencost,
-                coin_name(mudconf.opencost), buff);
-  notify_printf(player, "Linking an exit, home, or dropto costs %d %s.",
-                mudconf.linkcost, coin_name(mudconf.linkcost));
-  if (mudconf.createmin == mudconf.createmax)
-    raw_notify(player,
-               tprintf("Creating a new thing costs %d %s%s.", mudconf.createmin,
-                       coin_name(mudconf.createmin), buff));
-  else
-    raw_notify(player,
-               tprintf("Creating a new thing costs between %d and %d %s%s.",
-                       mudconf.createmin, mudconf.createmax, mudconf.many_coins,
-                       buff));
-  notify_printf(player, "Creating a robot costs %d %s%s.", mudconf.robotcost,
-                coin_name(mudconf.robotcost), buff);
-  raw_notify(player,
-             tprintf("Computationally expensive commands and functions (ie: "
-                     "@entrances, @find, @search, @stats (with an argument or "
-                     "switch), search(), and stats()) cost %d %s.",
-                     mudconf.searchcost, coin_name(mudconf.searchcost)));
-  if (mudconf.machinecost > 0)
-    raw_notify(player, tprintf("Each command run from the queue costs 1/%d %s.",
-                               mudconf.machinecost, mudconf.one_coin));
-  if (mudconf.waitcost > 0) {
-    raw_notify(
-        player,
-        tprintf(
-            "A %d %s deposit is charged for putting a command on the queue.",
-            mudconf.waitcost, mudconf.one_coin));
-    raw_notify(player,
-               "The deposit is refunded when the command is run or canceled.");
-  }
-  if (mudconf.sacfactor == 0)
-    snprintf(buff, MBUF_SIZE, "%d", mudconf.sacadjust);
-  else if (mudconf.sacfactor == 1) {
-    if (mudconf.sacadjust < 0)
-      snprintf(buff, MBUF_SIZE, "<create cost> - %d", -mudconf.sacadjust);
-    else if (mudconf.sacadjust > 0)
-      snprintf(buff, MBUF_SIZE, "<create cost> + %d", mudconf.sacadjust);
-    else
-      snprintf(buff, MBUF_SIZE, "<create cost>");
-  } else {
-    if (mudconf.sacadjust < 0)
-      snprintf(buff, MBUF_SIZE, "(<create cost> / %d) - %d", mudconf.sacfactor,
-               -mudconf.sacadjust);
-    else if (mudconf.sacadjust > 0)
-      snprintf(buff, MBUF_SIZE, "(<create cost> / %d) + %d", mudconf.sacfactor,
-               mudconf.sacadjust);
-    else
-      snprintf(buff, MBUF_SIZE, "<create cost> / %d", mudconf.sacfactor);
-  }
-  raw_notify(player, tprintf("The value of an object is %s.", buff));
-  if (mudconf.clone_copy_cost)
-    raw_notify(player, "The default value of cloned objects is the value of "
-                       "the original object.");
-  else
-    raw_notify(player,
-               tprintf("The default value of cloned objects is %d %s.",
-                       mudconf.createmin, coin_name(mudconf.createmin)));
-
-  free_mbuf(buff);
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * list_options: List more game options from mudconf.
  */
 
@@ -1987,17 +1906,6 @@ static void list_options(dbref player) {
     raw_notify(player,
                tprintf("There may be at most %d players logged in at once.",
                        mudconf.max_players));
-  raw_notify(player, tprintf("New players are given %d %s to start with.",
-                             mudconf.paystart, mudconf.many_coins));
-  raw_notify(player, tprintf("Players are given %d %s each day they connect.",
-                             mudconf.paycheck, mudconf.many_coins));
-  raw_notify(player,
-             tprintf("Earning money is difficult if you have more than %d %s.",
-                     mudconf.paylimit, mudconf.many_coins));
-  if (mudconf.payfind > 0)
-    raw_notify(player, tprintf("Players have a 1 in %d chance of finding a %s "
-                               "each time they move.",
-                               mudconf.payfind, mudconf.one_coin));
   raw_notify(player, tprintf("The head of the object freelist is #%d.",
                              mudstate.freelist));
 
@@ -2134,7 +2042,6 @@ static void list_process(dbref player) {
 
 #define LIST_ATTRIBUTES 1
 #define LIST_COMMANDS 2
-#define LIST_COSTS 3
 #define LIST_FLAGS 4
 #define LIST_FUNCTIONS 5
 #define LIST_GLOBALS 6
@@ -2162,7 +2069,6 @@ NAMETAB list_names[] = {
     {(char *)"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
     {(char *)"commands", 3, CA_PUBLIC, LIST_COMMANDS},
     {(char *)"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
-    {(char *)"costs", 3, CA_PUBLIC, LIST_COSTS},
     {(char *)"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
     {(char *)"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
     {(char *)"flags", 2, CA_PUBLIC, LIST_FLAGS},
@@ -2198,9 +2104,6 @@ void do_list(dbref player, dbref cause, int extra, char *arg) {
     break;
   case LIST_SWITCHES:
     list_cmdswitches(player);
-    break;
-  case LIST_COSTS:
-    list_costs(player);
     break;
   case LIST_OPTIONS:
     list_options(player);

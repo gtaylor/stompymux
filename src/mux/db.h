@@ -157,8 +157,6 @@ extern NAME *names;
 #define s_Home(t, n) s_Link(t, n)
 #define s_Dropto(t, n) s_Location(t, n)
 
-extern int Pennies(dbref);
-extern void s_Pennies(dbref, int);
 
 extern dbref getref(FILE *);
 extern void putref(FILE *, dbref);

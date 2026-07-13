@@ -81,11 +81,6 @@ void do_find(dbref player, dbref cause, int key, char *name) {
   dbref i, low_bound, high_bound;
   char *buff;
 
-  if (!payfor(player, mudconf.searchcost)) {
-    notify_quiet(player,
-                 tprintf("You don't have enough %s.", mudconf.many_coins));
-    return;
-  }
   parse_range(&name, &low_bound, &high_bound);
   for (i = low_bound; i <= high_bound; i++) {
     if ((Typeof(i) != TYPE_EXIT) && controls(player, i) &&
@@ -117,14 +112,6 @@ int get_stats(dbref player, dbref who, STATS *info) {
 
   if (Good_obj(who) && !Controls(player, who) && !Stat_Any(player)) {
     notify(player, "Permission denied.");
-    return 0;
-  }
-  /*
-   * Can we afford it?
-   */
-
-  if (!payfor(player, mudconf.searchcost)) {
-    notify_printf(player, "You don't have enough %s.", mudconf.many_coins);
     return 0;
   }
   DO_WHOLE_DB(i) {
@@ -520,15 +507,6 @@ int search_setup(dbref player, char *searchfor, SEARCH *parm) {
   if (!parm->s_wizard && (parm->s_rst_type != TYPE_PLAYER) &&
       (parm->s_rst_owner != player) && (parm->s_rst_owner != ANY_OWNER)) {
     notify(player, "You need a search warrant to do that!");
-    return 0;
-  }
-  /*
-   * make sure player has money to do the search
-   */
-
-  if (!payfor(player, mudconf.searchcost)) {
-    notify_printf(player, "You don't have enough %s to search. (You need %d)",
-                  mudconf.many_coins, mudconf.searchcost);
     return 0;
   }
   return 1;

@@ -316,10 +316,9 @@ static int check_command(dbref player, char *name, char *buff, char **bufc) {
 void fun_create(char *buff, char **bufc, dbref player, dbref cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
   dbref thing;
-  int cost;
   char sep, *name;
 
-  varargs_preamble("CREATE", 3);
+  varargs_preamble("CREATE", 2);
   name = fargs[0];
 
   if (!name || !*name) {
@@ -337,14 +336,14 @@ void fun_create(char *buff, char **bufc, dbref player, dbref cause,
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    thing = create_obj(player, TYPE_ROOM, name, 0);
+    thing = create_obj(player, TYPE_ROOM, name);
     break;
   case 'e':
     if (check_command(player, "@open", buff, bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    thing = create_obj(player, TYPE_EXIT, name, 0);
+    thing = create_obj(player, TYPE_EXIT, name);
     if (thing != NOTHING) {
       s_Exits(thing, player);
       s_Next(thing, Exits(player));
@@ -356,16 +355,7 @@ void fun_create(char *buff, char **bufc, dbref player, dbref cause,
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    if (fargs[1] && *fargs[1]) {
-      cost = atoi(fargs[1]);
-      if (!Wizard(player) &&
-          (cost < mudconf.createmin || cost > mudconf.createmax)) {
-        safe_str("#-1 COST OUT OF RANGE", buff, bufc);
-        return;
-      }
-    } else
-      cost = mudconf.createmin;
-    thing = create_obj(player, TYPE_THING, name, cost);
+    thing = create_obj(player, TYPE_THING, name);
     if (thing != NOTHING) {
       move_via_generic(thing, player, NOTHING, 0);
       s_Home(thing, new_home(player));

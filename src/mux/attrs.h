@@ -56,7 +56,7 @@
 /* 38 is reserved for the removed building quota attribute. */
 #define A_ACONNECT 39    /* Actions run when player connects */
 #define A_ADISCONNECT 40 /* Actions run when player disconnectes */
-#define A_ALLOWANCE 41   /* Daily allowance, if diff from default */
+/* 41 is reserved for the removed money allowance attribute. */
 #define A_LOCK 42        /* Object lock */
 #define A_NAME 43        /* Object name */
 #define A_COMMENT 44     /* Wizard-accessable comments */

@@ -112,7 +112,6 @@ void do_password(dbref, dbref, int, char *, char *); /* Change my password */
 void do_pcreate(dbref, dbref, int, char *, char *);  /* Create new characters */
 void do_pemit(dbref, dbref, int, char *,
               char *);                   /* Messages to specific player */
-void do_poor(dbref, dbref, int, char *); /* Reduce wealth of all players */
 void do_power(dbref, dbref, int, char *, char *); /* Sets powers */
 void do_ps(dbref, dbref, int, char *);            /* List contents of queue */
 void do_queue(dbref, dbref, int, char *);         /* Force queue processing */

@@ -439,16 +439,16 @@ void shutdownsock(DESC *d, int reason) {
 
     /*
      * If requested, write an accounting record of the form: * *
-     * * * * * Plyr# Flags Cmds ConnTime Loc Money [Site]
+     * * * * * Plyr# Flags Cmds ConnTime Loc [Site]
      * <DiscRsn>  * *  * Name
      */
 
-    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d %d [%s] <%s> %s",
+    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s",
               d->player,
               decode_flags(GOD, Flags(d->player), Flags2(d->player),
                            Flags3(d->player)),
               d->command_count, mudstate.now - d->connected_at,
-              Location(d->player), Pennies(d->player), d->addr,
+              Location(d->player), d->addr,
               disc_reasons[reason], Name(d->player));
 
     announce_disconnect(d->player, d, disc_messages[reason]);

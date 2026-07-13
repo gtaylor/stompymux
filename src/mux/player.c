@@ -222,10 +222,9 @@ int check_pass(dbref player, const char *password) {
  * Try to connect to an existing player.
  */
 dbref connect_player(char *name, char *password, char *host, char *username) {
-  dbref player, aowner;
-  long aflags;
+  dbref player;
   time_t tt;
-  char *time_str, *player_last, *allowance;
+  char *time_str;
 
   time(&tt);
   time_str = ctime(&tt);
@@ -241,20 +240,7 @@ dbref connect_player(char *name, char *password, char *host, char *username) {
   time_str = ctime(&tt);
   time_str[strlen(time_str) - 1] = '\0';
 
-  /*
-   * compare to last connect see if player gets salary
-   */
-  player_last = atr_get(player, A_LAST, &aowner, &aflags);
-  if (strncmp(player_last, time_str, 10) != 0) {
-    allowance = atr_pget(player, A_ALLOWANCE, &aowner, &aflags);
-    if (*allowance == '\0')
-      giveto(player, mudconf.paycheck);
-    else
-      giveto(player, atoi(allowance));
-    free_lbuf(allowance);
-  }
   atr_add_raw(player, A_LAST, time_str);
-  free_lbuf(player_last);
   return player;
 }
 
@@ -278,7 +264,7 @@ dbref create_player(char *name, char *password, dbref creator, int isrobot) {
    * If so, go create him
    */
 
-  player = create_obj(creator, TYPE_PLAYER, name, isrobot);
+  player = create_obj(creator, TYPE_PLAYER, name);
   if (player == NOTHING) {
     free_lbuf(pbuf);
     return NOTHING;

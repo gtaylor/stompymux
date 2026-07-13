@@ -241,36 +241,6 @@ int can_see(dbref player, dbref thing, int can_see_loc) {
   }
 }
 
-int canpayfees(dbref player, dbref who, int pennies) {
-  if (!Wizard(who) && !Wizard(Owner(who)) && !Free_Money(who) &&
-      !Free_Money(Owner(who)) && (Pennies(Owner(who)) < pennies)) {
-    if (player == who) {
-      notify_printf(player, "Sorry, you don't have enough %s.",
-                    mudconf.many_coins);
-    } else {
-      notify_printf(player, "Sorry, that player doesn't have enough %s.",
-                    mudconf.many_coins);
-    }
-    return 0;
-  }
-  payfor(who, pennies);
-  return 1;
-}
-
-int payfor(dbref who, int cost) {
-  (void)who;
-  (void)cost;
-  return 1;
-}
-
-/**
- * Give moner to a player.
- */
-void giveto(dbref who, int pennies) {
-  (void)who;
-  (void)pennies;
-}
-
 int ok_name(const char *name) {
   const char *cp;
   char new[LBUF_SIZE];

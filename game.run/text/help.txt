@@ -453,14 +453,6 @@
  
   See also: comsys
   
-& @ccharge
- 
-  Syntax: @ccharge <channel>=<amount>
- 
-  This command imposes a charge of <amount> coins on transmitting over
-  a channel. The default fee when a channel is created is 0. All
-  proceeds benefit the channel owner.
-  
 & @cchown
  
   Syntax: @cchown <channel>=<player>
@@ -580,7 +572,7 @@
   
 & @clone
  
-  Syntax: @clone[/<switches>] <object>[=<newname/cost>]
+  Syntax: @clone[/<switches>] <object>[=<newname>]
  
   Creates an exact duplicate of <object> that is owned by you and (for
   things and exits) puts it in your current location.  You may have
@@ -610,8 +602,6 @@
  
   The following switches are available:
  
-  /cost       - Treat the argument after the = as the cost of the new
-                object, not the name.
   /inherit    - Don't reset the INHERIT bit on the new object.
   /inventory  - Create the new object in your inventory (or your
                 exitlist, in the case of cloning exits).
@@ -678,13 +668,9 @@
   
 & @create
  
-  Syntax: @create <name> [=<cost>]
+  Syntax: @create <name>
  
-  Creates a thing with the specified name.  Creation costs either
-  <cost> or 10 coins, whichever is greater. The value of a thing is
-  proportional to its cost, specifically, value=(cost/5)-1.  The
-  value may not be greater than 100, values that would be greater
-  than 100 are rounded down to 100.
+  Creates a thing with the specified name.
  
   See also: @destroy, TYPES OF OBJECTS
   
@@ -1445,10 +1431,6 @@
   an unlinked exit regardless of who owns it or the lock set on it,
   you are made the owner if you successfully link to the destination.
  
-  Linking an exit costs 1 coin, and if the exit was owned by someone
-  else, you also reimburse the the former owner 1 coin (making the
-  total cost to you 2 coins).
- 
 { 'help @link2' for more }
  
 & @link2
@@ -1644,11 +1626,6 @@
  
   Examples:
     > @lock bank=checkmoney/1
-    > &checkmoney bank=[gt(money(%#),5000)]
-    Only people and objects with more than 5000 pennies may pass.
-    Note: this lock requires wizard privileges to read the worth of
-    other players.
- 
     > @lock divisible_by_five_club = checkdiv/0
     > &checkdiv divisible_by_five_club = [mod(mid(%#,2,20),5)]
     Only objects whose db-number is divisible by 5 may pass.
@@ -2179,8 +2156,7 @@
   unlinked. You or anyone else may use the '@link' command to
   specify where the unlinked exit leads.
  
-  Opening an exit costs 1 coin. If you specify <number>, linking costs
-  1 more coin.  You can specify a second direction list (after the
+  You can specify a second direction list (after the
   comma), which is automatically opened in the room that the new
   exit goes TO and which is linked back to where you are.  I.e.
   @open north;n=#1234,south;s would open exit 'north;n' from here to
@@ -4405,7 +4381,7 @@ while line:
   addcom       allcom       alias        comlist      comtitle     clearcom
   delcom
  
-  @ccreate     @cboot       @ccharge     @cchown      @cdestroy    @clist
+  @ccreate     @cboot       @cchown      @cdestroy    @clist
   @coflags     @cpflags     @cset        @cwho 
 & comtitle
  
@@ -4678,10 +4654,9 @@ carried
   
 & create()
 
-  Syntax: create(<object>, <cost>[, <type>])
+  Syntax: create(<object>[, <type>])
 
   Works the same as @create <object>, but returns the database number
-  of the object created. <cost> is the cost of making the object.
   <type> is an optional parameter:
 
   'r' for rooms,
@@ -6106,12 +6081,10 @@ carried
   
 & give
  
-  Syntax: give <player>=<amount/object>
+  Syntax: give <player>=<object>
  
-  Gives player the specified amount of money or <object>. You can't
-  give someone money if their new total would be greater than 10000
-  (No reason to get greedy).  You may also give players objects, but
-  the other player must be set ENTER_OK to receive something you give.
+  Gives a player an object. The other player must be set ENTER_OK to
+  receive it.
  
   See also: @apay, @cost, @opay, @pay, ENTER_OK
   
@@ -6827,7 +6800,6 @@ carried
   You say "4 2 1 4"
   > say iter(lnum(10),mul(mul(##,##),10))
   You say "0 10 40 90 160 250 360 490 640 810"
-  > say iter(lcon(me),[name(##)]..[money(##)])
   You say "test..1 t1..1 radio..1 The Wizard's Pointy Hat..1"
   > say iter(Was it a cat I saw,[words(##)] #@,s)
   You say "1 1 4 2 1 3"

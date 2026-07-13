@@ -370,7 +370,7 @@ static int gamedb_load_vattrs(sqlite3 *sqlite) {
   return result;
 }
 
-/* Restore object headers and their dedicated name, lock, and money fields. */
+/* Restore object headers and their dedicated name and lock fields. */
 static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
   sqlite3_stmt *statement;
   BOOLEXP *lock;

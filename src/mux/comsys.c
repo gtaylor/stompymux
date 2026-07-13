@@ -173,14 +173,6 @@ static void do_processcom(dbref player, char *arg1, char *arg2) {
     raw_notify(player, "That channel type cannot be transmitted on.");
     return;
   } else {
-    if (!payfor(player, ch->charge)) {
-      notify_printf(player, "You don't have enough %s.", mudconf.many_coins);
-      return;
-    } else {
-      ch->amount_col += ch->charge;
-      giveto(ch->charge_who, ch->charge);
-    }
-
     if ((*arg2) == ':')
       do_comprintf(ch, "[%s] %s %s", arg1, Name(player), arg2 + 1);
     else if ((*arg2) == ';')
@@ -672,15 +664,15 @@ static void do_listchannels(dbref player) {
         player,
         "Warning: Only public channels and your channels will be shown.");
   }
-  raw_notify(player, "** Channel             --Flags--  Obj   Own   Charge  "
-                     "Balance  Users   Messages");
+  raw_notify(player,
+             "** Channel             --Flags--  Obj   Owner Users   Messages");
 
   for (ch = (struct channel *)hash_firstentry(&mudstate.channel_htab); ch;
        ch = (struct channel *)hash_nextentry(&mudstate.channel_htab))
     if (perm || (ch->type & CHANNEL_PUBLIC) || ch->charge_who == player) {
 
       notify_printf(
-          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %8d %8d %6d %10d",
+          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
           (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
           (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name,
           (ch->type & (CHANNEL_PL_MULT * CHANNEL_JOIN)) ? 'J' : '-',
@@ -690,7 +682,7 @@ static void do_listchannels(dbref player) {
           (ch->type & (CHANNEL_OBJ_MULT * CHANNEL_TRANSMIT)) ? 'x' : '-',
           (ch->type & (CHANNEL_OBJ_MULT * CHANNEL_RECIEVE)) ? 'r' : '-',
           (ch->chan_obj != NOTHING) ? ch->chan_obj : -1, ch->charge_who,
-          ch->charge, ch->amount_col, ch->num_users, ch->num_messages);
+          ch->num_users, ch->num_messages);
     }
   raw_notify(player, "-- End of list of Channels --");
 }
@@ -1018,10 +1010,6 @@ void do_editchannel(dbref player, dbref cause, int flag, char *arg1,
       raw_notify(player, "Invalid player.");
       return;
     }
-  case 1:
-    ch->charge = atoi(arg2);
-    raw_notify(player, "Set.");
-    return;
   case 3:
     if (strcasecmp(s, "join") == 0) {
       add_remove ? (ch->type |= (CHANNEL_PL_MULT * CHANNEL_JOIN))
@@ -1455,7 +1443,7 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan) {
         selected_channel->charge_who == player) {
 
       notify_printf(
-          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %8d %8d %6d %10d",
+          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
           (selected_channel->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
           (selected_channel->type & (CHANNEL_LOUD)) ? 'L' : '-',
           selected_channel->name,
@@ -1474,8 +1462,7 @@ void do_chanstatus(dbref player, dbref cause, int key, char *chan) {
                                                                           : '-',
           (selected_channel->chan_obj != NOTHING) ? selected_channel->chan_obj
                                                   : -1,
-          selected_channel->charge_who, selected_channel->charge,
-          selected_channel->amount_col, selected_channel->num_users,
+          selected_channel->charge_who, selected_channel->num_users,
           selected_channel->num_messages);
     }
     raw_notify(player, "-- End of list of Channels --");

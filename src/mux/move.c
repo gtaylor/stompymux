@@ -156,17 +156,7 @@ void move_object(dbref thing, dbref dest) {
     s_Next(thing, NOTHING);
   s_Location(thing, dest);
 
-  /*
-   * Look around and do the penny check
-   */
-
   look_in(thing, dest, LK_SHOWEXIT);
-  if (isPlayer(thing) && (mudconf.payfind > 0) &&
-      (Pennies(thing) < mudconf.paylimit) && (!Controls(thing, dest)) &&
-      ((random() % mudconf.payfind) == 0)) {
-    giveto(thing, 1);
-    notify_printf(thing, "You found a %s!", mudconf.one_coin);
-  }
 }
 
 /*

@@ -486,7 +486,6 @@ static void debug_examine(dbref player, dbref thing) {
   notify_printf(player, "Link    = %d", Link(thing));
   notify_printf(player, "Next    = %d", Next(thing));
   notify_printf(player, "Owner   = %d", Owner(thing));
-  notify_printf(player, "Pennies = %d", Pennies(thing));
   notify_printf(player, "Zone    = %d", Zone(thing));
   buf = flag_description(player, thing);
   notify_printf(player, "Flags   = %s", buf);
@@ -603,7 +602,6 @@ static void exam_wildattrs(dbref player, dbref thing, int do_parent) {
 
 void do_examine(dbref player, dbref cause, int key, char *name) {
   dbref thing, content, exit, aowner, loc;
-  char savec;
   char *temp, *buf, *buf2;
   BOOLEXP *boolexp;
   int control, do_parent;
@@ -700,17 +698,13 @@ void do_examine(dbref player, dbref cause, int key, char *name) {
      * print owner, key, and value
      */
 
-    savec = mudconf.many_coins[0];
-    mudconf.many_coins[0] = (islower(savec) ? toupper(savec) : savec);
     buf2 = atr_get(thing, A_LOCK, &aowner, &aflags);
     boolexp = parse_boolexp(player, buf2, 1);
     buf = unparse_boolexp(player, boolexp);
     free_boolexp(boolexp);
     StringCopy(buf2, Name(Owner(thing)));
-    notify_printf(player, "Owner: %s  Key: %s %s: %d", buf2, buf,
-                  mudconf.many_coins, Pennies(thing));
+    notify_printf(player, "Owner: %s  Key: %s", buf2, buf);
     free_lbuf(buf2);
-    mudconf.many_coins[0] = savec;
 
     if (mudconf.have_zones) {
       buf2 = unparse_object(player, Zone(thing), 0);
@@ -926,10 +920,6 @@ void do_entrances(dbref player, dbref cause, int key, char *name) {
       return;
   }
 
-  if (!payfor(player, mudconf.searchcost)) {
-    notify_printf(player, "You don't have enough %s.", mudconf.many_coins);
-    return;
-  }
   message = alloc_lbuf("do_entrances");
   control_thing = Examinable(player, thing);
   count = 0;
@@ -1210,7 +1200,7 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual) {
   BOOLEXP *boolexp;
   char *got, *thingname, *as, *ltext, *buff, *s;
   dbref aowner, thing;
-  int val, ca, atr;
+  int ca, atr;
   long aflags;
   ATTR *attr;
   NAMETAB *np;
@@ -1310,9 +1300,7 @@ void do_decomp(dbref player, dbref cause, int key, char *name, char *qual) {
     switch (Typeof(thing)) {
     case TYPE_THING:
       StringCopy(thingname, Name(thing));
-      val = OBJECT_DEPOSIT(Pennies(thing));
-      notify_printf(player, "@create %s=%d", translate_string(thingname, 1),
-                    val);
+      notify_printf(player, "@create %s", translate_string(thingname, 1));
       break;
     case TYPE_ROOM:
       StringCopy(thingname, "here");

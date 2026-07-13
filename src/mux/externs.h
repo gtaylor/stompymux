@@ -131,7 +131,7 @@ int can_set_home(dbref, dbref, dbref);
 dbref new_home(dbref);
 dbref clone_home(dbref, dbref);
 void divest_object(dbref);
-dbref create_obj(dbref, int, char *, int);
+dbref create_obj(dbref, int, char *);
 void destroy_obj(dbref, dbref);
 void empty_obj(dbref);
 
@@ -160,9 +160,6 @@ int is_integer(char *);
 int is_number(char *);
 int could_doit(dbref, dbref, int);
 int can_see(dbref, dbref, int);
-int canpayfees(dbref, dbref, int);
-void giveto(dbref, int);
-int payfor(dbref, int);
 int ok_name(const char *);
 int ok_player_name(const char *);
 int ok_attr_name(const char *);
@@ -291,7 +288,6 @@ void list_chashstats(dbref);
 #define CLONE_INHERIT 1    /* Keep INHERIT bit if set */
 #define CLONE_PRESERVE 2   /* Preserve the owner of the object */
 #define CLONE_INVENTORY 4  /* Create cloned object in my inventory */
-#define CLONE_SET_COST 8   /* ARG2 is cost of cloned object */
 #define CLONE_SET_LOC 16   /* ARG2 is location of cloned object */
 #define CLONE_SET_NAME 32  /* ARG2 is alternate name of cloned object */
 #define CLONE_PARENT 64    /* Set parent on obj instd of cloning attrs */
@@ -345,7 +341,6 @@ void list_chashstats(dbref);
 #define FIXDB_CON 4        /* Fix CONTENTS field */
 #define FIXDB_EXITS 8      /* Fix EXITS field */
 #define FIXDB_NEXT 16      /* Fix NEXT field */
-#define FIXDB_PENNIES 32   /* Fix PENNIES field */
 #define FIXDB_ZONE 64      /* Fix ZONE field */
 #define FIXDB_LINK 128     /* Fix LINK field */
 #define FIXDB_PARENT 256   /* Fix PARENT field */
@@ -355,7 +350,6 @@ void list_chashstats(dbref);
 #define FRC_PREFIX 0       /* #num command */
 #define FRC_COMMAND 1      /* what=command */
 #define GET_QUIET 1        /* Don't do osucc/asucc if control */
-#define GIVE_MONEY 1       /* Give money */
 #define GIVE_QUIET 64      /* Inhibit give messages */
 #define GLOB_ENABLE 1      /* key to enable */
 #define GLOB_DISABLE 2     /* key to disable */

@@ -219,27 +219,10 @@ struct confdata {
   int idle_interval;       /* when to check for idle users */
   int retry_limit;         /* close conn after this many bad logins */
   int output_limit;        /* Max # chars queued for output */
-  int paycheck;            /* players earn this much each day connected */
-  int paystart;            /* new players start with this much money */
-  int paylimit;            /* getting money gets hard over this much */
-  int payfind;             /* chance to find a penny with wandering */
-  int digcost;             /* cost of @dig command */
-  int linkcost;            /* cost of @link command */
-  int opencost;            /* cost of @open command */
-  int createmin;           /* default (and minimum) cost of @create cmd */
-  int createmax;           /* max cost of @create command */
-  int robotcost;           /* cost of @robot command */
-  int pagecost;            /* cost of @page command */
-  int searchcost;          /* cost of commands that search the whole DB */
-  int waitcost;            /* cost of @wait (refunded when finishes) */
   int use_http;            /* Should we allow http access? */
   int queuemax;            /* max commands a player may have in queue */
   int queue_chunk;         /* # cmds to run from queue when idle */
   int active_q_chunk;      /* # cmds to run from queue when active */
-  int machinecost;         /* One in mc+1 cmds costs 1 penny (POW2-1) */
-  int sacfactor;           /* sacrifice earns (obj_cost/sfactor) + sadj */
-  int sacadjust;           /* ... */
-  int clone_copy_cost;     /* Does @clone copy value? */
   int use_hostname;        /* TRUE = use machine NAME rather than quad */
   int ex_flags;            /* TRUE = show flags on examine */
   int robot_speak;         /* TRUE = allow robots to speak */
@@ -276,8 +259,6 @@ struct confdata {
   FLAGSET robot_flags;     /* Flags robots start with */
   int vattr_flags;         /* Attr flags for all user-defined attrs */
   char mud_name[32];       /* Name of the mud */
-  char one_coin[32];       /* name of one coin (ie. "penny") */
-  char many_coins[32];     /* name of many coins (ie. "pennies") */
   int timeslice;           /* How often do we bump people's cmd quotas? */
   int cmd_quota_max;       /* Max commands at one time */
   int cmd_quota_incr;      /* Bump #cmds allowed by this each timeslice */

@@ -67,7 +67,7 @@ static void open_exit(dbref player, dbref loc, char *direction, char *linkto) {
     notify_quiet(player, "Permission denied.");
     return;
   }
-  exit = create_obj(player, TYPE_EXIT, direction, 0);
+  exit = create_obj(player, TYPE_EXIT, direction);
   if (exit == NOTHING)
     return;
 
@@ -103,17 +103,8 @@ static void open_exit(dbref player, dbref loc, char *direction, char *linkto) {
       notify_quiet(player, "You can't link to there.");
       return;
     }
-    /*
-     * Link it if the player can pay for it
-     */
-
-    if (!payfor(player, mudconf.linkcost)) {
-      notify_quiet(player, tprintf("You don't have enough %s to link.",
-                                   mudconf.many_coins));
-    } else {
-      s_Location(exit, loc);
-      notify_quiet(player, "Linked.");
-    }
+    s_Location(exit, loc);
+    notify_quiet(player, "Linked.");
   }
 }
 
@@ -157,7 +148,6 @@ void do_open(dbref player, dbref cause, int key, char *direction, char *links[],
  */
 
 static void link_exit(dbref player, dbref exit, dbref dest) {
-  int cost;
 
   /*
    * Make sure we can link there
@@ -176,23 +166,7 @@ static void link_exit(dbref player, dbref exit, dbref dest) {
     notify_quiet(player, "Permission denied.");
     return;
   }
-  /*
-   * handle costs
-   */
-
-  cost = mudconf.linkcost;
   if (Owner(exit) != Owner(player)) {
-    cost += mudconf.opencost;
-  }
-  if (!canpayfees(player, player, cost))
-    return;
-
-  /*
-   * Pay the owner for his loss
-   */
-
-  if (Owner(exit) != Owner(player)) {
-    giveto(Owner(exit), mudconf.opencost);
     s_Owner(exit, Owner(player));
     s_Flags(exit, (Flags(exit) & ~(INHERIT | WIZARD)) | HALT);
   }
@@ -389,7 +363,7 @@ void do_dig(dbref player, dbref cause, int key, char *name, char *args[],
     notify_quiet(player, "Dig what?");
     return;
   }
-  room = create_obj(player, TYPE_ROOM, name, 0);
+  room = create_obj(player, TYPE_ROOM, name);
   if (room == NOTHING)
     return;
 
@@ -416,19 +390,15 @@ void do_dig(dbref player, dbref cause, int key, char *name, char *args[],
 
 void do_create(dbref player, dbref cause, int key, char *name, char *coststr) {
   dbref thing;
-  int cost;
   char clearbuffer[MBUF_SIZE];
 
-  cost = atoi(coststr);
+  (void)coststr;
   strip_ansi_r(clearbuffer, name, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
     notify_quiet(player, "Create what?");
     return;
-  } else if (cost < 0) {
-    notify_quiet(player, "You can't create an object for less than nothing!");
-    return;
   }
-  thing = create_obj(player, TYPE_THING, name, cost);
+  thing = create_obj(player, TYPE_THING, name);
   if (thing == NOTHING)
     return;
 
@@ -447,7 +417,6 @@ void do_create(dbref player, dbref cause, int key, char *name, char *coststr) {
 void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
   dbref clone, thing, new_owner, loc;
   FLAG rmv_flags;
-  int cost;
 
   if ((key & CLONE_INVENTORY) || !Has_location(player))
     loc = player;
@@ -482,35 +451,10 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
                                  Name(thing)));
     key &= ~CLONE_PARENT;
   }
-  /*
-   * Determine the cost of cloning
-   */
-
   new_owner = (key & CLONE_PRESERVE) ? Owner(thing) : Owner(player);
-  if (key & CLONE_SET_COST) {
-    cost = atoi(arg2);
-    if (cost < mudconf.createmin)
-      cost = mudconf.createmin;
-    if (cost > mudconf.createmax)
-      cost = mudconf.createmax;
-    arg2 = NULL;
-  } else {
-    cost = 1;
-    switch (Typeof(thing)) {
-    case TYPE_THING:
-      cost = OBJECT_DEPOSIT((mudconf.clone_copy_cost) ? Pennies(thing) : 1);
-      break;
-    case TYPE_ROOM:
-      cost = mudconf.digcost;
-      break;
-    case TYPE_EXIT:
-      if (!Controls(player, loc)) {
-        notify_quiet(player, "Permission denied.");
-        return;
-      }
-      cost = mudconf.digcost;
-      break;
-    }
+  if ((Typeof(thing) == TYPE_EXIT) && !Controls(player, loc)) {
+    notify_quiet(player, "Permission denied.");
+    return;
   }
 
   /*
@@ -518,9 +462,9 @@ void do_clone(dbref player, dbref cause, int key, char *name, char *arg2) {
    */
 
   if ((arg2 && *arg2) && ok_name(arg2))
-    clone = create_obj(new_owner, Typeof(thing), arg2, cost);
+    clone = create_obj(new_owner, Typeof(thing), arg2);
   else
-    clone = create_obj(new_owner, Typeof(thing), Name(thing), cost);
+    clone = create_obj(new_owner, Typeof(thing), Name(thing));
   if (clone == NOTHING)
     return;
 
