@@ -28,3 +28,9 @@ test:
 
 install: build
     cmake --install {{build_dir}} --prefix "$PWD/game.run"
+
+docsite:
+    npm --prefix docs run build
+
+docsite-serve:
+    npm --prefix docs run serve

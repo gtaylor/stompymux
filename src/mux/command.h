@@ -86,6 +86,8 @@ void do_quitprog(dbref, dbref, int, char *);     /* Quits @prog */
 void do_last(dbref, dbref, int, char *);         /* Get recent login info */
 void do_leave(dbref, dbref, int);                /* Leave the current object */
 void do_link(dbref, dbref, int, char *, char *); /* Set home, dropto, or dest */
+void do_luaparent(dbref, dbref, int, char *, char *);
+void do_luareload(dbref, dbref, int);
 void do_list(dbref, dbref, int, char *); /* List contents of internal tables */
 void do_list_file(dbref, dbref, int,
                   char *); /* List contents of message files */

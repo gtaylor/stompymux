@@ -52,6 +52,25 @@ find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
 find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
+
+set(LUAJIT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/luajit")
+set(LUAJIT_LIBRARY "${LUAJIT_SOURCE_DIR}/src/libluajit.a")
+if(NOT EXISTS "${LUAJIT_SOURCE_DIR}/src/Makefile")
+  message(FATAL_ERROR "LuaJIT submodule is missing; run git submodule update --init --recursive")
+endif()
+add_custom_command(
+  OUTPUT "${LUAJIT_LIBRARY}"
+  COMMAND "${GNU_MAKE_EXECUTABLE}" -C "${LUAJIT_SOURCE_DIR}" BUILDMODE=static
+  DEPENDS "${LUAJIT_SOURCE_DIR}/src/Makefile"
+  WORKING_DIRECTORY "${LUAJIT_SOURCE_DIR}"
+  VERBATIM)
+add_custom_target(luajit_build DEPENDS "${LUAJIT_LIBRARY}")
+add_library(luajit STATIC IMPORTED GLOBAL)
+set_target_properties(luajit PROPERTIES
+  IMPORTED_LOCATION "${LUAJIT_LIBRARY}"
+  INTERFACE_INCLUDE_DIRECTORIES "${LUAJIT_SOURCE_DIR}/src")
+add_dependencies(luajit luajit_build)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
@@ -212,6 +231,7 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/persistence/restart_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/help.c
   ${MUX_SOURCE_DIR}/log.c
+  ${MUX_SOURCE_DIR}/lua.c
   ${MUX_SOURCE_DIR}/look.c
   ${MUX_SOURCE_DIR}/macro.c
   ${MUX_SOURCE_DIR}/match.c
@@ -246,7 +266,7 @@ endif()
 add_executable(netmux ${NETMUX_SOURCES})
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
+target_link_libraries(netmux PRIVATE btmux_options btech luajit "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
@@ -273,6 +293,19 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME gamedb_integration
     COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
+
+  add_executable(lua_module_smoke_test tests/lua_module_smoke.c)
+  target_link_libraries(lua_module_smoke_test PRIVATE btmux_options luajit m)
+  target_include_directories(lua_module_smoke_test PRIVATE
+    "${LUAJIT_SOURCE_DIR}/src")
+  add_test(NAME lua_module_smoke
+    COMMAND lua_module_smoke_test
+      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/example.lua"
+      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/hello.lua"
+      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/counter.lua"
+      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/events/enter_notice.lua"
+      "${CMAKE_SOURCE_DIR}/game.run/lua/global_commands/example.lua")
 endif()
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(DIRECTORY game.run/lua DESTINATION ".")

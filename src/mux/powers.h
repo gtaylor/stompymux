@@ -21,9 +21,6 @@
 /* 0x00002000 is reserved for the removed search power. */
 #define POW_LONGFINGERS 0x00004000 /* Can get/whisper/etc from a distance */
 /* 0x00008000 is reserved for the removed prog power. */
-
-/* FREE FREE FREE FREE */
-
 #define POW_COMM_ALL 0x00080000 /* Channel wiz */
 /* 0x00100000 is reserved for the removed see_queue power. */
 #define POW_SEE_HIDDEN                                                         \
@@ -40,7 +37,6 @@
 
 /* Second word of powers */
 /* 0x00000001 is reserved for the removed builder power. */
-
 /* Mech stuff: */
 #define POW_MECH 0x00000002     /* access to mech cmd set */
 #define POW_SECURITY 0x00000004 /* 'admin' - debug/comp */

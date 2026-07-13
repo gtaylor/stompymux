@@ -20,48 +20,51 @@ typedef unsigned char Uchar;
 
 typedef struct confdata CONFDATA;
 struct confdata {
-  int cache_trim;           /* Should cache be shrunk to original size */
-  int cache_steal_dirty;    /* Should cache code write dirty attrs */
-  int cache_depth;          /* Number of entries in each cache cell */
-  int cache_width;          /* Number of cache cells */
-  int cache_names;          /* Should object names be cached separately */
-  char gamedb[128];         /* SQLite game database */
-  char mech_db[128];        /* Mecha templates */
-  char map_db[128];         /* Map templates */
-  char config_file[128];    /* name of config file, used by @restart */
-  int have_specials;        /* Should the special hcode be active? */
-  int have_comsys;          /* Should the comsystem be active? */
-  int have_macros;          /* Should the macro system be active? */
-  int have_zones;           /* Should zones be active? */
-  int port;                 /* user port */
-  int conc_port;            /* concentrator port */
-  int init_size;            /* initial db size */
-  char conn_file[32];       /* display on connect if no registration */
-  char conn_dir[32];        /* display on connect if no registration */
-  char creg_file[32];       /* display on connect if registration */
-  char regf_file[32];       /* display on (failed) create if reg is on */
-  char motd_file[32];       /* display this file on login */
-  char wizmotd_file[32];    /* display this file on login to wizards */
-  char quit_file[32];       /* display on quit */
-  char down_file[32];       /* display this file if no logins */
-  char full_file[32];       /* display when max users exceeded */
-  char site_file[32];       /* display if conn from bad site */
-  char crea_file[32];       /* display this on login for new users */
-  char help_file[32];       /* HELP text file */
-  char help_indx[32];       /* HELP index file */
-  char whelp_file[32];      /* Wizard help text file */
-  char whelp_indx[32];      /* Wizard help index file */
-  char motd_msg[4096];      /* Wizard-settable login message */
-  char wizmotd_msg[4096];   /* Login message for wizards only */
-  char downmotd_msg[4096];  /* Settable 'logins disabled' message */
-  char fullmotd_msg[4096];  /* Settable 'Too many players' message */
-  char dump_msg[128];       /* Message displayed when @dump-ing */
-  char postdump_msg[128];   /* Message displayed after @dump-ing */
-  char fixed_home_msg[128]; /* Message displayed when going home and FIXED */
-  char fixed_tel_msg[128];  /* Message displayed when teleporting and FIXED */
-  char public_channel[32];  /* Name of public channel */
-  int allow_unloggedwho;    /* Wether or not to allow unlogged-in clients to use
-                               WHO, DOING and SESSION */
+  int cache_trim;            /* Should cache be shrunk to original size */
+  int cache_steal_dirty;     /* Should cache code write dirty attrs */
+  int cache_depth;           /* Number of entries in each cache cell */
+  int cache_width;           /* Number of cache cells */
+  int cache_names;           /* Should object names be cached separately */
+  char gamedb[128];          /* SQLite game database */
+  char lua_directory[128];   /* Lua module root, relative to game directory */
+  int lua_instruction_limit; /* Lua VM instructions per callback */
+  int lua_memory_limit;      /* Lua VM memory cap in bytes */
+  char mech_db[128];         /* Mecha templates */
+  char map_db[128];          /* Map templates */
+  char config_file[128];     /* name of config file, used by @restart */
+  int have_specials;         /* Should the special hcode be active? */
+  int have_comsys;           /* Should the comsystem be active? */
+  int have_macros;           /* Should the macro system be active? */
+  int have_zones;            /* Should zones be active? */
+  int port;                  /* user port */
+  int conc_port;             /* concentrator port */
+  int init_size;             /* initial db size */
+  char conn_file[32];        /* display on connect if no registration */
+  char conn_dir[32];         /* display on connect if no registration */
+  char creg_file[32];        /* display on connect if registration */
+  char regf_file[32];        /* display on (failed) create if reg is on */
+  char motd_file[32];        /* display this file on login */
+  char wizmotd_file[32];     /* display this file on login to wizards */
+  char quit_file[32];        /* display on quit */
+  char down_file[32];        /* display this file if no logins */
+  char full_file[32];        /* display when max users exceeded */
+  char site_file[32];        /* display if conn from bad site */
+  char crea_file[32];        /* display this on login for new users */
+  char help_file[32];        /* HELP text file */
+  char help_indx[32];        /* HELP index file */
+  char whelp_file[32];       /* Wizard help text file */
+  char whelp_indx[32];       /* Wizard help index file */
+  char motd_msg[4096];       /* Wizard-settable login message */
+  char wizmotd_msg[4096];    /* Login message for wizards only */
+  char downmotd_msg[4096];   /* Settable 'logins disabled' message */
+  char fullmotd_msg[4096];   /* Settable 'Too many players' message */
+  char dump_msg[128];        /* Message displayed when @dump-ing */
+  char postdump_msg[128];    /* Message displayed after @dump-ing */
+  char fixed_home_msg[128];  /* Message displayed when going home and FIXED */
+  char fixed_tel_msg[128];   /* Message displayed when teleporting and FIXED */
+  char public_channel[32];   /* Name of public channel */
+  int allow_unloggedwho; /* Wether or not to allow unlogged-in clients to use
+                            WHO, DOING and SESSION */
   int btech_explode_reactor; /* Allow or disallow explode reactor */
   int btech_explode_ammo;    /* Allow or disallow explode ammo */
   int btech_explode_stop;    /* Allow or disallow explode stop */

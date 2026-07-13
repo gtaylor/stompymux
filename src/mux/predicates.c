@@ -9,6 +9,7 @@
 #include "externs.h"
 #include "functions.h"
 #include "interface.h"
+#include "lua_runtime.h"
 #include "match.h"
 #include "mudconf.h"
 #include "persistence/restart_persistence.h"
@@ -1329,6 +1330,8 @@ void did_it(dbref player, dbref thing, int what, const char *def, int owhat,
    */
 
   if (awhat > 0) {
+    if (lua_event_dispatch(player, thing, awhat, args, nargs))
+      return;
     if (*(act = atr_pget(thing, awhat, &aowner, &aflags))) {
       charges = atr_pget(thing, A_CHARGES, &aowner, &aflags);
       if (*charges) {

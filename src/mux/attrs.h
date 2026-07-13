@@ -115,23 +115,23 @@
 #define A_LPARENT 98     /* Legacy ParentLock attribute */
 #define A_VA 100         /* VA attribute (VB-VZ follow) */
 
-#define A_GFAIL 129    /* Give fail message */
-#define A_OGFAIL 130   /* Others give fail message */
-#define A_AGFAIL 131   /* Give fail action */
-#define A_RFAIL 132    /* Receive fail message */
-#define A_ORFAIL 133   /* Others receive fail message */
-#define A_ARFAIL 134   /* Receive fail action */
-#define A_DFAIL 135    /* Drop fail message */
-#define A_ODFAIL 136   /* Others drop fail message */
-#define A_ADFAIL 137   /* Drop fail action */
-#define A_TFAIL 138    /* Teleport (to) fail message */
-#define A_OTFAIL 139   /* Others teleport (to) fail message */
-#define A_ATFAIL 140   /* Teleport fail action */
-#define A_TOFAIL 141   /* Teleport (from) fail message */
-#define A_OTOFAIL 142  /* Others teleport (from) fail message */
-#define A_ATOFAIL 143  /* Teleport (from) fail action */
-#define A_LASTNAME 144 /* Last time you changed your name */
-/* #define A_UNUSED     145 */
+#define A_GFAIL 129      /* Give fail message */
+#define A_OGFAIL 130     /* Others give fail message */
+#define A_AGFAIL 131     /* Give fail action */
+#define A_RFAIL 132      /* Receive fail message */
+#define A_ORFAIL 133     /* Others receive fail message */
+#define A_ARFAIL 134     /* Receive fail action */
+#define A_DFAIL 135      /* Drop fail message */
+#define A_ODFAIL 136     /* Others drop fail message */
+#define A_ADFAIL 137     /* Drop fail action */
+#define A_TFAIL 138      /* Teleport (to) fail message */
+#define A_OTFAIL 139     /* Others teleport (to) fail message */
+#define A_ATFAIL 140     /* Teleport fail action */
+#define A_TOFAIL 141     /* Teleport (from) fail message */
+#define A_OTOFAIL 142    /* Others teleport (from) fail message */
+#define A_ATOFAIL 143    /* Teleport (from) fail action */
+#define A_LASTNAME 144   /* Last time you changed your name */
+#define A_LUAPARENT 145  /* Lua module attached to this object */
 #define A_MECHPREFID 146 /* Preferred Mech ID on map */
 #define A_MAPCOLOR 147   /* ANSIMAP color scheme */
 

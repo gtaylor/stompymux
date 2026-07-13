@@ -24,6 +24,7 @@
 #include "flags.h"
 #include "interface.h"
 #include "logcache.h"
+#include "lua_runtime.h"
 #include "mudconf.h"
 #include "powers.h"
 #include "rbtree.h"
@@ -194,6 +195,7 @@ void release_descriptor(DESC *d) {
 }
 
 void shutdown_services() {
+  lua_shutdown();
   dnschild_destruct();
   flush_sockets();
 #ifdef ARBITRARY_LOGFILES
@@ -443,13 +445,12 @@ void shutdownsock(DESC *d, int reason) {
      * <DiscRsn>  * *  * Name
      */
 
-    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s",
-              d->player,
-              decode_flags(GOD, Flags(d->player), Flags2(d->player),
-                           Flags3(d->player)),
-              d->command_count, mudstate.now - d->connected_at,
-              Location(d->player), d->addr,
-              disc_reasons[reason], Name(d->player));
+    log_error(
+        LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s", d->player,
+        decode_flags(GOD, Flags(d->player), Flags2(d->player),
+                     Flags3(d->player)),
+        d->command_count, mudstate.now - d->connected_at, Location(d->player),
+        d->addr, disc_reasons[reason], Name(d->player));
 
     announce_disconnect(d->player, d, disc_messages[reason]);
     desc_delhash(d);

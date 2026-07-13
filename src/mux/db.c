@@ -132,6 +132,8 @@ ATTR attr_table[] = {
     {"Lalias", A_LALIAS, AF_ODARK | AF_NOPROG, NULL},
     {"Last", A_LAST, AF_WIZARD | AF_NOCMD | AF_NOPROG, NULL},
     {"Lastname", A_LASTNAME, AF_WIZARD | AF_NOPROG | AF_MDARK, NULL},
+    {"Luaparent", A_LUAPARENT,
+     AF_WIZARD | AF_MDARK | AF_NOCMD | AF_NOPROG | AF_LOCK, NULL},
     {"Lastpage", A_LASTPAGE,
      AF_INTERNAL | AF_NOCMD | AF_NOPROG | AF_GOD | AF_PRIVATE, NULL},
     {"Lastsite", A_LASTSITE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_GOD, NULL},

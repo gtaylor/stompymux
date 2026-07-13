@@ -278,6 +278,9 @@ void cf_init(void) {
   mudconf.cache_depth = CACHE_DEPTH;
   mudconf.cache_width = CACHE_WIDTH;
   mudconf.cache_names = 1;
+  StringCopy(mudconf.lua_directory, "lua");
+  mudconf.lua_instruction_limit = 100000;
+  mudconf.lua_memory_limit = 64 * 1024 * 1024;
 
   mudstate.events_flag = 0;
   mudstate.events_lasthour = -1;
@@ -1041,6 +1044,11 @@ CONF conftable[] = {
      (long)access_nametab},
     {(char *)"lock_recursion_limit", cf_int, CA_WIZARD, &mudconf.lock_nest_lim,
      0},
+    {(char *)"lua_directory", cf_string, CA_GOD, (void *)mudconf.lua_directory,
+     sizeof(mudconf.lua_directory)},
+    {(char *)"lua_instruction_limit", cf_int, CA_GOD,
+     &mudconf.lua_instruction_limit, 0},
+    {(char *)"lua_memory_limit", cf_int, CA_GOD, &mudconf.lua_memory_limit, 0},
     {(char *)"log", cf_modify_bits, CA_GOD, &mudconf.log_options,
      (long)logoptions_nametab},
     {(char *)"log_options", cf_modify_bits, CA_GOD, &mudconf.log_info,

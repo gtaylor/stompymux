@@ -5436,9 +5436,8 @@ Avg weight: 45.00 Total tons: 990
   Default: none
 
   Specifies the room that is searched for exits if a command does not
-  match an exit in the current room, and for $-command if a command
-  does not match any $-commands that are available to the player in
-  his current location.
+  match an exit in the current room. It is no longer searched for
+  programmable $-commands; use lua/global_commands for global commands.
  
 & match_own_commands
 
@@ -7429,3 +7428,30 @@ Avg weight: 45.00 Total tons: 990
 
   This directive specifies how far back to check a zone tree for
   control and commands.
+
+& @luacheck
+
+  Syntax: @luacheck
+
+  Validates every Lua module without replacing the running Lua state. Checks
+  every .lua file below object_logic, global_commands, and packages. Modules
+  are loaded in a fresh Lua state, and mux calls from top-level module code are
+  rejected to prevent check-time side effects.
+
+& @luareload
+
+  Syntax: @luareload
+
+  Reloads attached object modules, global command modules, and their
+  dependencies while the game is live. Reload is atomic: a syntax or dependency
+  error leaves the previously loaded Lua state active. Lua files live below the
+  lua_directory setting; see docs/lua.md.
+
+& lua_directory
+
+  Config parameter: lua_directory <directory>
+  Default: lua
+
+  The directory, relative to game.run, containing the object_logic,
+  global_commands, and packages Lua roots. Lua callbacks use the configured
+  lua_instruction_limit and lua_memory_limit safeguards.

@@ -21,6 +21,7 @@
 #include "flags.h"
 #include "interface.h"
 #include "logcache.h"
+#include "lua_runtime.h"
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"
@@ -1038,6 +1039,7 @@ static void process_preload(void) {
 
 int main(int argc, char *argv[]) {
   char *config_file;
+  char lua_error[LBUF_SIZE];
   int index;
   int mindb;
   int restarting;
@@ -1159,6 +1161,11 @@ int main(int argc, char *argv[]) {
   }
 
   mudstate.now = time(NULL);
+  if (!lua_initialize(lua_error, sizeof(lua_error))) {
+    log_error(LOG_ALWAYS, "INI", "LUA", "Unable to initialize Lua: %s",
+              lua_error);
+    exit(2);
+  }
   process_preload();
 
   dnschild_init();

@@ -11876,3 +11876,13 @@ great
   #20 #32 #18
  
   See Also: zone(), zfun(), zplayers()
+
+& @luaparent
+
+  Syntax: @luaparent <object>[=<path>.lua]
+
+  Wizards attach an object to a Lua module below object_logic in the configured
+  Lua directory. The path is relative to object_logic; for example,
+  @luaparent #123=hello.lua selects lua/object_logic/hello.lua. The closest
+  attached module in the object's parent chain is used. Omit the path to clear
+  the attachment. See also: @luareload.

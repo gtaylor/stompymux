@@ -5,6 +5,23 @@
 * Start breaking up src/ into system subdirs
 * Maybe: remove all powers. wiz bit is enough
 * Write tests
+* Make integration tests not conflict with running games
+* CLI'ify netmux
+* Crunch mkindx into netmux
+* Figure out a doc tool for the codebase
+
+## Lua Todos
+
+* Add `@luastatus` for effective-module inspection,
+  inherited attachment visibility, and pre-attachment validation.
+* Expand the explicit Lua host API for object lookup, movement, emits, locks,
+  timers, and structured command output; avoid growing dependence on
+  `mux.command()` running as #1.
+* Improve Lua error and reload observability with handler, event/command,
+  object, enactor, source location, traceback, and audit-log context.
+* Add socket-level Lua integration tests for command precedence, `NO_COMMAND`,
+  action suppression, reload rollback, parent inheritance, and sandboxing.
+* Add deferred/timer callbacks with explicit cancellation and reload behavior.
 
 ## BTech Todos in the /btech/ dir
 

@@ -71,3 +71,7 @@
 /src/.libs
 /src/version.h
 /src/netmux
+/docs/.hugo_build.lock
+/docs/node_modules/
+/docs/public/
+/docs/resources/

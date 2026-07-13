@@ -15,6 +15,7 @@
 #include "flags.h"
 #include "functions.h"
 #include "interface.h"
+#include "lua_runtime.h"
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"
@@ -352,6 +353,9 @@ CMDENT command_table[] = {
      do_queue},
     {(char *)"@last", NULL, 0, 0, CS_ONE_ARG | CS_INTERP, do_last},
     {(char *)"@link", NULL, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_INTERP, do_link},
+    {(char *)"@luaparent", NULL, CA_WIZARD, 0, CS_TWO_ARG, do_luaparent},
+    {(char *)"@luacheck", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_luacheck},
+    {(char *)"@luareload", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_luareload},
     {(char *)"@list", NULL, 0, 0, CS_ONE_ARG | CS_INTERP, do_list},
     {(char *)"@listcommands", NULL, CA_GOD, 0, CS_ONE_ARG, do_listcommands},
     {(char *)"@list_file", NULL, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,
@@ -959,7 +963,7 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
   char *p = NULL, *q = NULL, *arg = NULL, *lcbuf = NULL, *slashp = NULL,
        *cmdsave = NULL, *bp = NULL, *str = NULL;
   long aflags = 0;
-  int succ = 0, i = 0;
+  int succ = 0, lua_succ = 0, i = 0;
   dbref exit = 0, aowner = 0;
   CMDENT *cmdp = NULL;
   char *macroout = NULL;
@@ -1233,10 +1237,42 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
     }
   }
   /*
+   * Lua is the first programmable-command stage.  It observes the original
+   * unmatched command; local and zone legacy matching remains available when
+   * no Lua handler accepts it.
+   */
+  if (mudconf.match_mine && !No_Command(player) &&
+      ((Typeof(player) != TYPE_PLAYER) || mudconf.match_mine_pl))
+    lua_succ += lua_command_match(player, player, cause, command);
+  if (Has_location(player)) {
+    lua_succ += lua_list_command_match(Contents(Location(player)), player,
+                                       cause, command);
+    if (!No_Command(Location(player)))
+      lua_succ += lua_command_match(Location(player), player, cause, command);
+  }
+  if (Has_contents(player))
+    lua_succ +=
+        lua_list_command_match(Contents(player), player, cause, command);
+  if (!lua_succ && mudconf.have_zones && (Zone(Location(player)) != NOTHING)) {
+    if (Typeof(Zone(Location(player))) == TYPE_ROOM) {
+      if (Location(player) != Zone(player))
+        lua_succ += lua_list_command_match(Contents(Zone(Location(player))),
+                                           player, cause, command);
+    } else if (!No_Command(Zone(Location(player)))) {
+      lua_succ +=
+          lua_command_match(Zone(Location(player)), player, cause, command);
+    }
+  }
+  if (!lua_succ && mudconf.have_zones && (Zone(player) != NOTHING) &&
+      !No_Command(Zone(player)) && (Zone(Location(player)) != Zone(player)))
+    lua_succ += lua_command_match(Zone(player), player, cause, command);
+  if (lua_succ)
+    succ = lua_succ;
+  /*
    * Check for $-command matches on me
    */
 
-  if (mudconf.match_mine && (!(No_Command(player)))) {
+  if (!lua_succ && mudconf.match_mine && (!(No_Command(player)))) {
     if (((Typeof(player) != TYPE_PLAYER) || mudconf.match_mine_pl) &&
         (atr_match(player, player, AMATCH_CMD, lcbuf, 1) > 0)) {
       succ++;
@@ -1246,7 +1282,7 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
    * Check for $-command matches on nearby things and on my room
    */
 
-  if (Has_location(player)) {
+  if (!lua_succ && Has_location(player)) {
     succ +=
         list_check(Contents(Location(player)), player, AMATCH_CMD, lcbuf, 1);
 
@@ -1260,14 +1296,15 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
    * Check for $-command matches in my inventory
    */
 
-  if (Has_contents(player))
+  if (!lua_succ && Has_contents(player))
     succ += list_check(Contents(player), player, AMATCH_CMD, lcbuf, 1);
 
   /*
    * now do check on zones
    */
 
-  if ((!succ) && mudconf.have_zones && (Zone(Location(player)) != NOTHING)) {
+  if (!lua_succ && (!succ) && mudconf.have_zones &&
+      (Zone(Location(player)) != NOTHING)) {
     if (Typeof(Zone(Location(player))) == TYPE_ROOM) {
 
       /*
@@ -1309,25 +1346,18 @@ void process_command(dbref player, dbref cause, int interactive, char *command,
    * if nothing matched with parent room/zone object, try matching
    * zone commands on the player's personal zone
    */
-  if ((!succ) && mudconf.have_zones && (Zone(player) != NOTHING) &&
+  if (!lua_succ && (!succ) && mudconf.have_zones && (Zone(player) != NOTHING) &&
       (!(No_Command(Zone(player)))) &&
       (Zone(Location(player)) != Zone(player))) {
     succ += atr_match(Zone(player), player, AMATCH_CMD, lcbuf, 1);
   }
   /*
-   * If we didn't find anything, try in the master room
+   * Global Lua commands replace the master-room programmable-command stage.
+   * They run only after every local and zone Lua or softcode command declined
+   * the command. Master-room exits remain part of normal exit matching.
    */
-
-  if (!succ) {
-    if (Good_obj(mudconf.master_room) && Has_contents(mudconf.master_room)) {
-      succ += list_check(Contents(mudconf.master_room), player, AMATCH_CMD,
-                         lcbuf, 0);
-      if (!(No_Command(mudconf.master_room)))
-        if (atr_match(mudconf.master_room, player, AMATCH_CMD, lcbuf, 0) > 0) {
-          succ++;
-        }
-    }
-  }
+  if (!lua_succ && !succ)
+    succ += lua_global_command_match(player, cause, command);
   free_lbuf(lcbuf);
 
   /*
