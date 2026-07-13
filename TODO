@@ -4,7 +4,6 @@
 
 * Start breaking up src/ into system subdirs
 * Maybe: remove all powers. wiz bit is enough
-* Remove @sex
 * Write tests
 
 ## BTech Todos in the /btech/ dir

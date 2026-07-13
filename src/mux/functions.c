@@ -1580,17 +1580,6 @@ static void fun_v(char *buff, char **bufc, dbref player, dbref cause,
 }
 
 /**
- * Force substitution to occur.
- */
-static void fun_s(char *buff, char **bufc, dbref player, dbref cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  char *str;
-
-  str = fargs[0];
-  exec(buff, bufc, 0, player, cause, EV_FIGNORE | EV_EVAL, &str, cargs, ncargs);
-}
-
-/**
  * Returns first item in contents list of object/room
  */
 static void fun_con(char *buff, char **bufc, dbref player, dbref cause,
@@ -3364,7 +3353,7 @@ static void fun_nearby(char *buff, char **bufc, dbref player, dbref cause,
 
 /*
  * ---------------------------------------------------------------------------
- * * fun_obj, fun_poss, and fun_subj: perform pronoun substitution for object.
+ * * fun_obj and fun_poss: perform pronoun substitution for object.
  */
 
 static void process_pronoun(dbref player, char *what, const char *token,
@@ -3389,11 +3378,6 @@ static void fun_obj(char *buff, char **bufc, dbref player, dbref cause,
 static void fun_poss(char *buff, char **bufc, dbref player, dbref cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
   process_pronoun(player, fargs[0], "%p", buff, bufc);
-}
-
-static void fun_subj(char *buff, char **bufc, dbref player, dbref cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  process_pronoun(player, fargs[0], "%s", buff, bufc);
 }
 
 static void fun_aposs(char *buff, char **bufc, dbref player, dbref cause,
@@ -5776,7 +5760,6 @@ FUN flist[] = {
     {"RLOC", fun_rloc, 2, 0, CA_PUBLIC},
     {"ROOM", fun_room, 1, 0, CA_PUBLIC},
     {"ROUND", fun_round, 2, 0, CA_PUBLIC},
-    {"S", fun_s, -1, 0, CA_PUBLIC},
     {"SCRAMBLE", fun_scramble, 1, 0, CA_PUBLIC},
     {"SEARCH", fun_search, -1, 0, CA_PUBLIC},
     {"SECS", fun_secs, 0, 0, CA_PUBLIC},
@@ -5809,7 +5792,6 @@ FUN flist[] = {
     {"STRTRUNC", fun_strtrunc, 2, 0, CA_PUBLIC},
     {"SUB", fun_sub, 2, 0, CA_PUBLIC},
     {"SUBEVAL", fun_subeval, 1, 0, CA_PUBLIC},
-    {"SUBJ", fun_subj, 1, 0, CA_PUBLIC},
     {"SUM", fun_sum, 0, FN_VARARGS | FN_NO_EVAL, CA_PUBLIC},
     {"SWITCH", fun_switch, 0, FN_VARARGS | FN_NO_EVAL, CA_PUBLIC},
     {"TAN", fun_tan, 1, 0, CA_PUBLIC},

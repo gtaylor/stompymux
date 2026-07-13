@@ -74,7 +74,7 @@
   parent room for an @aconnect. If one is found, it will be executed
   when a player connects in that zone.
  
-  Example: @aconnect me = check.my.mailbox
+  Example: @aconnect me = check.notifications
  
   See also: @adisconnect.
   
@@ -271,22 +271,6 @@
   When setting an alias, the alias is checked to see that it is both a
   legal player name and not already in use.  Only if both checks
   succeed is the alias set.
-  
-& @amail
- 
-  Syntax: @amail <player> = <command-list>
-  Attribute: Amail
- 
-  Sets the actions to be taken after a player receives @mail. This
- should *never* @mail another player, as this could cause an
- infinite loop.
- 
-  Example:
-  @amail me=@mail/file [mail()]=2
- 
-  This would place all incoming messages in folder #2.
- 
-  See also: @mailsucc, @signature, @mail
   
 & @amhear
  
@@ -1538,7 +1522,7 @@
 
   You may lock on whether a specific attribute on the player
   attempting to pass the lock matches a pattern.  Example: '@lock
-  thing=sex:m*' will lock thing to anyone whose sex starts with an M.
+  thing=rank:captain' will lock thing to anyone whose rank is captain.
   Wild cards, greater than and less than may be used, for example:
   '@lock a-f=name:<g' will lock the exit a-f against any one whose
   name is higher than f.
@@ -1559,9 +1543,9 @@
   pass the lock or the lock will fail.
  
   Examples:
-    > @lock men's room=sex:m*
+    > @lock men's room=rank:captain
     > @lock a-f=name:<g
-    > @lock post office=email:*@*
+    > @lock post office=contact:*@*
   See also: ATTRIBUTE OWNERSHIP, @lock evaluation.
 . 
 & @lock carry
@@ -1777,108 +1761,6 @@
     Neither TinyJerk nor any of his objects may page you.
 
   See also: @lock normal.
-  
-& @mail
- 
-  @mail[/<switches>] <player-list> = <subject>
-  @mail[/<switches>] [<msg-list> [= <target>]]
- 
-  @mail invokes the built-in MUX mailer, which allows players to send
-  and receive mail. Pronoun/function substitution is performed on
-  any messages you may try to send.
- 
-  A <player-list> is a space-separated list of recipients, which may
-  be:
-        Player names (names with spaces in them should be put in
-        double quotes, ex: "Foo Bar")
-        Player dbref #'s
-	
-	Message numbers to be replied to.
-	A mix of the above, and mail aliases (see @malias)
- 
-  A <msg-list> is one of the following:
-        A single msg # (ex: 3)
-        A message range (ex: 2-5, -7, 3-)
-        A sender (ex: *lauren)
-        An age of mail in days (ex: ~3 (exactly 3), <2, >1)
-        "days" here means 24-hour periods from the current time.
-        One of the following: "read", "unread", "cleared", "tagged",
-        "urgent"
-        For certain commands, "all".
- 
-  See the following topics:
-    mail-sending    mail-reading     mail-folders      mail-other
-    mail-admin      @malias          mail-reviewing    mail-examples
-  
-& @mailsucc
- 
-  Syntax: @mailsucc <player> = <message>
-  Attribute: Mailsucc
- 
-  Sets a message to be displayed to the sender whenever <player>
-  receives mail.
- 
-  Example:
-  @mailsucc me=Thanks for the mail.
- 
-  See also: @amail, @signature, @mail
-  
-& @malias
- 
-  Syntax: @malias
- 
-  This allows you to generate and maintain mailing lists with the mail
-  system. All mail aliases start with '*', and are case-sensitive.
-  (*dir is different than *Dir).  There are two kinds of mail
-  aliases, Personnal and Global. Global mailing lists are owned and
-  maintained by the god (#1) char and are available for anyone to
-  use.  Generally there will be *Wizards, *Admin, *Roleplay, and
-  things of that nature.  Personal mailing aliases are mailing lists
-  that you have defined with the @malias commad.
- 
-  Currently there is no limit to the number of people you can have on
-  a mailing alias.
- 
-  To begin sending mail to a mailing list, use @mail *<alias>=subject.
- 
-  Usage:
- 
-  @malias                   Displays a list of all mail aliases.
-  @malias *<alias>          Displays a list of people on that alias.
-  @malias *<alias>=<list>   Creates that mailing list, using <list>.
- 
-  { 'help @malias2' for more}
-  
-& @malias2
- 
-  You can add, remove, rename, chown, redescribe, and delete mailing
-  lists with a switch.
- 
-  @malias/remove *<alias>=<player>     Removes <player> from *<alias>.
-  @malias/desc *<alias>=<description>  Changes the description for
-                                       *<alias>.
-  @malias/add *<alias>=<player>        Adds <player> to *<alias>.
-  @malias/rename *<alias>=<name>       Renames that alias. Names must
-                                       always begin with '*'.
-  @malias/delete <alias>               Deletes <alias>. This is the
-                                       only alias command that does
-                                       not require the '*' in front of
-                                       the alias' name.
-  @malias/chown *<alias>=<player>      Changes the owner of <alias> to
-                                       <player>.
- 
-  Wizards can use all of the malias commands on any mail alias.
-  Instead of trying to figure out different mailing lists with the
-  same name, wizards may use #<MALIAS NUMBER> instead of *alias in
-  regards to the command.
- 
-  Remember that the alias commands will only recognize aliases owned
-  by #1, owned by you, or by number.
- 
-  @malias/list                         When invoked by a wizard, it
-                                       will list all mailing aliases
-                                       currently defined by their
-                                       number.
   
 & @move
  
@@ -2645,39 +2527,6 @@
      quiet      - Inhibit 'Set.' acknowledgement messages.
  
   See also: @lock, @lock, examine, FLAGS,&
-  
-& @sex
- 
-  Syntax: @sex <object> = <gender>
-  Attribute: Sex
- 
-  Sets the gender for <object>, which is used to determine which
-  pronouns to use when replacing %p, %o, %s, and %a parameters in
-  messages that apply to <object>.  Genders that start with M or m
-  are considered male, those starting with F, f, W, or w are
-  considered female, those starting with P or p are considered
-  plural, and anything else is considered neuter.
- 
-  Example:
-  @sex me = female
-  @sex me = No thank you (Silly, but possible.  Treated as neuter)
- 
-  See also: GENDER
-  
-& @signature
- 
-  Syntax: @signature <player> = <message>
-  Attribute: Signature
- 
-  Sets a message to be appended to ever @mail message you send. It is
-  appended directly at the end of the message, so if you wish to start
-  the signature on a new line you should begin it with a %r.
- 
-  Example: @signature me=%rThis is a mail signature. (Note: You might
-  want to include the %r at the front of the signature, other wise
-  it will be combined with the @mail message.)
- 
-  See also: @mailsucc, @amail, @mail
   
 & @startup
  
@@ -3449,9 +3298,7 @@
  
   Syntax: aposs(<object>)
  
-  Returns the proper absolute possessive pronoun (his, hers, its,
-  theirs) for referring to <object>, based on the object's Sex
-  attribute.
+  Returns "its" for referring to <object>.
  
   You must either control or be near <object>.
  
@@ -3870,7 +3717,6 @@ faster.
 @aleave
 @alfail
 @alias
-@amail
 @amhear
 @amove
 @apay
@@ -3907,7 +3753,6 @@ faster.
 @lfail
 @listen
 @lrsheight
-@mailsucc
 @mechdesc
 @move
 @odesc
@@ -3936,8 +3781,6 @@ faster.
 @reject
 @rfail
 @runout
-@sex
-@signature
 @startup
 @succ
 @tacsize
@@ -4284,7 +4127,7 @@ while line:
   @dig         @doing       @dolist      @drain       @edit    
   @emit        @entrances   @femit       @find        @force   
   @fpose       @fsay        @halt        @last        @link
-  @list        @listmotd    @lock        @mail        @mvattr 
+  @list        @listmotd    @lock        @mvattr
   @name        @notify      @npemit      @oemit       @open    
   @parent      @password    @pemit       @power       @program 
   @ps          @quitprogram @remit       @robot
@@ -4301,20 +4144,20 @@ while line:
   @aahear      @aclone      @aconnect    @adescribe   @adfail 
   @adisconnect @adrop       @aefail      @aenter      @afail   
   @agfail      @ahear       @aleave      @alfail  
-  @alias       @amail       @amhear      @amove       @apay    
+  @alias       @amhear      @amove       @apay
   @arfail      @asuccess    @atfail      @atofail     @atport  
   @aufail      @ause        @away        @charges     @cost
   @daily       @describe    @dfail       @drop        @ealias 
   @efail       @enter       @fail        @filter      @forwardlist
   @gfail       @idesc       @idle        @infilter    @inprefix
   @lalias      @leave       @lfail       @listen  
-  @mailsucc    @move        @odescribe   @odfail      @odrop   
-  @oefail      @oenter      @ofail       @ogfail
+  @move        @odescribe   @odfail      @odrop   @oefail
+  @oenter      @ofail       @ogfail
   @oleave      @olfail      @omove       @opay        @orfail 
   @osuccess    @otfail      @otofail     @otport      @oufail  
   @ouse        @oxenter     @oxleave     @oxtport     @pay     
-  @prefix      @reject      @rfail       @runout      @sex     
-  @signature   @startup     @success     @tfail       @tofail  
+  @prefix      @reject      @rfail       @runout      @startup
+  @success     @tfail       @tofail
   @tport       @ufail       @use
   
 & comp()
@@ -4416,8 +4259,8 @@ carried
   for the directive specified.
  
   Example:
-  >Say config(mail_database)
-  You say "data/mail.db"
+  >Say config(game_database)
+  You say "data/netmux.db.sqlite"
  
 & conn()
  
@@ -5396,7 +5239,7 @@ carried
  
   Note that this function is only needed when the resulting string is
   to be passed through the @force command or be used as an attribute
-  for an object (like the success message for a mail message object).
+  for an object (like a success message attribute).
   This function has the advantage over the secure() function in that
   the string the user sees after evaluating it is the same as the
   original string.
@@ -5464,7 +5307,7 @@ carried
         object is @chowned and may not be modified.
     $ - The attribute is not checked when looking for $-commands.
         Note that the predefined attributes DESC, IDESC, ODESC,
-        FAIL, OFAIL,  SUCC, OSUCC, DROP, ODROP, SEX, and CHARGES are
+        FAIL, OFAIL,  SUCC, OSUCC, DROP, ODROP, and CHARGES are
         never checked.
     I - This attribute is not inherited by children of the object.
  
@@ -5675,7 +5518,7 @@ carried
  player's faction you won't be able to see some of the fields (Unknown).
  
  You may set the following fields using these commands:
- EMail       - &FINGER_EMAIL me=<email address>
+ Contact     - &FINGER_CONTACT me=<contact address>
  
  
 & fire
@@ -7594,228 +7437,6 @@ Continued in locate()2
   
   See Also: axe, charge, chop, club, grabclub, kick, punch, saw, trip
   
-& mail()
- 
-  Syntax: mail(<mail message #>)
-  Syntax: mail(<player name>)
-  Syntax: mail(<player>, <mail message #>)
-  Syntax: mail()
- 
-  The first form returns a message corresponding to that mail message
-  number in your MUX mailbox. This function can be used to forward
-  mail, or as a way to simply transfer mail messages to attributes on
-  an object.
- 
-  The second form returns three numbers, corresponding to the number
-  of read, unread, and cleared messages <player> has. The third form
-  returns <player>'s <mail message #>. It works like the first form
-  except it applies to another player. The last form returns the
-  number of messages the evaluating player has. Only wizards can use
-  the second and third forms of the function on other players.
- 
-  See Also: mailfrom(), @mail
-  
-& mail-admin
- 
-  The @mail command can also take the following switches:
- 
-    @mail/stats [<player>]    --  Basic mail statistics.
-    @mail/dstats [<player>]   --  Also provides read/unread count.
-    @mail/fstats [<player>]   --  Does all that, plus gives space
-                                  usage.
- 
-    @mail/debug <action>[=<player>]
-    @mail/nuke
- 
-  Only wizards may stats players other than themselves. The mail
-  statistics  commands are computationally expensive, and thus are
-  subject to "daytime"  restrictions. They also cost the same as a
-  @find (100 credits).
- 
-  The /debug switch does sanity checking on the mail database, and may
-  only be used by a wizard. "@mail/debug sanity" just does the
-  check; the command "@mail/debug clear=<player name or dbref
-  number>" wipes mail for an object.
-  "@mail/debug fix" attempts to repair problems noted in the sanity
-  check.
- 
-  The /nuke switch destroys the post office, erasing all @mail
-  everywhere. It may only be used by a wizard.
- 
-  Also, admin may set the @amail attrib on their char.  When somebody
-  sends you mail, it will trigger that attrib if it exists.
-  
-& mail-examples
- 
-  Here is an example of mailing a player, where is the player will be
-  "bob", and sending the mail.
- 
-  > @mail bob = The MUX              - This is the Subject line.
- 
-  Sending mail to player 'Bob'
-  > -Hi bob.                         - This is where you will enter
-                                       the body of the message.
-  Text Added.
-  > @send                            - Basically, sends the @mail.
- 
-  MAIL: You sent your message to 'Bob'.
-  
-& mail-folders
- 
-  The MUX mail system allows each player 16 folders, numbered from
-  0 to 15. Mail can only be in 1 folder at a time. Folder 0 is
-  the "inbox" where new mail is received. Most @mail commands
-  operate on only the current folder.
- 
-  @mail/folder
-        This commands lists all folders which contain mail, telling
-        how many messages are in each, and what the current folder is.
- 
-  @mail/folder <folder#|foldername>
-        This command sets your current folder to <folder#>.
- 
-  @mail/folder <folder#> = <foldername>
-        This command gives <folder#> a name.
- 
-  @mail/file <msg-list>=<folder#>
-        This command moves all messages in msg-list from the current
-        folder to a new folder, <folder#>.
-  
-& mail-other
- 
-  @mail/clear [<msg-list | all>]
-  @mail/unclear [<msg-list> | all>]
-        These commands mark mail in the current folder as cleared or
-        uncleared.
-        Mail marked for clearing is deleted when you disconnect, or
-        if you use @mail/purge. If no msg-list is specified, all
-        mail in your current folder is cleared. If "all" is given
-        instead of a msg-list, all mail in *all* folders is
-        cleared/uncleared.
- 
-  @mail/purge
-        Actually deletes all messages marked for clearing with
-  @mail/clear.
-        This is done automatically when you log out.
- 
-  @mail/tag [<msg-list | all>]
-  @mail/untag [<msg-list> | all>]
-        These commands tag or untag mail in the current folder.
-        Tagged mail can be later acted on en masse by using "tagged"
-        as the msg-list for other commands (which does *not*
-        untag them afterward). If no msg-list is specified,
-        all messages in the current folder are tagged/untagged. If
-        "all" is given as the msg-list, all mail in *all*
-        folders is tagged/untagged.
-   
-  Example:
-  To clear all mail from Lauren and Crusade:
-  @mail/tag *lauren,
-  @mail/tag *crusade
-  @mail/clear tagged
-  @mail/untag all
- 
-{ 'help mail-other2' for more }
-  
-& mail-other2
- 
-  @mail/safe [<msg-list> | all>]
-        This command marks a message as being safe from mail
-        expiration. It should be used sparingly and only for
-        very imporatant messages.
-  
-& mail-reading
- 
-  @mail <msg #>
-  @mail/read <msg-list>
-        This displays messages which match the msg# or msg-list from
-        your current folder.
- 
-  @mail
-  @mail <msg-list, but not a single msg #>
-        This gives a brief list of all mail in the current folder,
-        with sender name, a list of receiving players, subject, and
-        message status.
-  @mail/list [<msg-list>]
-        This gives the same list, but with time sent instead of
-        subject.
-        The status field is a set of characters (ex: NC-UF+) which
-        mean:
-                N = New (unread) message
-                C = Cleared message
-                U = Urgent message
-                F = Forwarded message
-                + = Tagged message
-        The opposites of these (read messages, etc.) are indicated
-        with a '-' in the status field in that position.
-  
-& mail-reviewing
- 
-  @mail/review <player>
-  Reviews the messages you have sent to <player>.
- 
-  @mail/review <player>=<msglist>
-  Reads the messages you have sent to <player>.
- 
-  @mail/retract <player>=<msglist>
-  Retracts (deletes) unread messages you have sent to <player>.
-  
-& mail-sending
- 
-  @mail[/switch] <player-list> = <subject>
-  This begins a message to all players in <player-list>.
-  -<text> adds text to the message in progress, for example
-  -This is a test
-  would add the text 'This is a test' to the end of your @mail
-  message, likewise, ~<text> prepends the text.
-
-  @mail/send
-  This sends the message that is currently in progress.
-  -- is the equivalent of @mail/send. @mail/urgent sends
-  the message as urgent, and should not be used often.
- 
-  @mail/cc <player-list>
-        This replaces the currect player list with a new one for
-        carbon copying. It does _not_ add onto the existing
-        list.
- 
-  { 'help mail-sending2' for more }
-  
-& mail-sending2
- 
-  @mail/proof
-	This shows you the message that is currently in progress, as
-	it would be read by whomever received it.
- 
-  @mail/edit <old text> = <new text>
-  Like @edit, but edits the message in process.
- 
-  @mail/abort
-  This aborts the message currently in progress, allowing you
-  to start a new one.
- 
-  @mail/fwd <msg> = <player-list>
-        This sends a copy of <msg> to all the players in
-        <player-list>.
-        The copy will appear to have been sent by you (not the
-        original sender), and its status will be "Forwarded".
-        Note that this places the message to be forwarded into
-        your mail buffer, where you can edit it with @mail/edit, add
-        text with '-', or prepend text with '~'. You have to
-        use '--' or @mail/send to send the message.
- 
-  @mail/quick <player-list>/<subject> = <message>
-  Sends <message> to the list of players.
-  
-& mailfrom()
- 
-  Syntax: mailfrom(<msg #>)
- 
-  Returns the dbref # of the player who sent you <msg #>. Wizards may
-  specify mailfrom(<player>,<msg #>).
- 
-  See Also: mail(), @mail
-  
 & maneuvering_ace
  
  >> Help: Maneuvering Ace (Advantages)
@@ -7874,7 +7495,7 @@ Continued in locate()2
  
   The pattern may contain the wildcards '*' and '?'. '?' matches any
   one character, while '*' matches any number of characters, including
-  none. So 's?x' would match 'sex' or 'six', but not to 'socx', but
+  none. So 's?x' would match 'six' or 'sax', but not 'socx', but
   's*x' would match any of them. <delim> may be used specified to
   specify a delimiter other than a space.
  
@@ -8388,7 +8009,7 @@ Continued in locate()2
  
   RS Command: nss
   
-  This command toggles the status of the Null Signature System for 
+  This command toggles the status of the Null Signature System for
   those units so equipped.
   
 & num()
@@ -8906,9 +8527,6 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
   you may only pipe 20 commands in a row.
  
   Examples:
-  > &MAILDESC me=$+maildesc *=*:look %0 ;| @mail/quick
-                  %1/Description=[translate(%|,1)]
-
   > &SAYDESC me=$+saydesc *:look %0 ;| say %r%|
   > +saydesc me
   You say "
@@ -9040,9 +8658,8 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
  
   Syntax: poss(<object>)
  
-  Returns the proper possessive pronoun (his, her, its, their) for
-  referring to <object>, based on the object's Sex attribute. You must
-  either control or be near <object>.
+  Returns "its" for referring to <object>. You must either control or
+  be near <object>.
  
   See Also: obj()
   
@@ -9893,23 +9510,6 @@ AdvSensors: BeagleProbe
  
  
  
-& s()
- 
-  Syntax: s(string)
- 
-  This function performs pronoun substitution in a string, and then
-  returns that string. As usually, %n is the name, %s the subjective
-  pronoun, %o the objective, %p the possessive, and %a the absolute
-  possessive. It is important to note that the pronoun is that of the
-  triggering object.
- 
-  So, if the attribute ve of an object were: s(This is %n), and I were
-  to type @trigger <object>/ve, it would return "This is <myname>",
-  but if attribute vf were @trigger me/ve, then triggering the
-  attribute vf makes the Attribute ve return "This is <object>".
- 
-  See Also: subj(), obj()
-  
 & SAFE
  
   Flag: SAFE (s)
@@ -10067,7 +9667,7 @@ AdvSensors: BeagleProbe
  
   Note: This function is only needed when the resulting string is to
   be passed through the @force command or be used as an attribute for
-  an object (like the success message for a mail message object).
+  an object (like a success message attribute).
  
   Example:
   > @va me=Sneak a peek at Wiz's desc... [get(#1/desc)]
@@ -10949,7 +10549,7 @@ AdvSensors: BeagleProbe
  
   The pattern may contain the wildcards '*' and '?'.  '?' matches any
   one character, while '*' matches any number of characters, 
-  including none. So 's?x' would match 'sex' or 'six', but not to 
+  including none. So 's?x' would match 'six' or 'sax', but not to
   'socx', but 's*x' would match any of them.
  
   Examples:
@@ -11000,16 +10600,6 @@ AdvSensors: BeagleProbe
   When used from the command line, it's use is limited to nil because
   evaluation of subeval's parameters occurs before the subeval()
   function is called.
-  
-& subj()
- 
-  Syntax: subj(<object>)
- 
-  Returns the proper subjective pronoun (he, she, it, they) for
-  referring to <object>, based on the object's Sex attribute. You
-  must either control or be near <object>.
- 
-  See Also: obj(), s(), @sex
   
 & success
  
@@ -11375,7 +10965,7 @@ AdvSensors: BeagleProbe
   BOOLEAN VALUES      COMMAND EVALUATION  COMSYS              CONTROL 
   COSTS               CREDITS             DROP-TO             ENACTOR
   EXITS               FAILURE             FLAG LIST           FLAGS 
-  FUNCTION LIST       FUNCTIONS           GENDER              GOALS 
+  FUNCTION LIST       FUNCTIONS                               GOALS
   HERE                HOMES               LINKING             LISTENING
   LISTS               LOOPING             ME
   MOVING              OBJECT STACK        OBJECT TYPES        PARENT OBJECTS
@@ -11563,7 +11153,7 @@ AdvSensors: BeagleProbe
   > say u(me/va,6,Foobar)
   You say "Word is u, arg2 is Foobar."
  
-  See Also: s(), v(), get(), get_eval(), map()
+  See Also: v(), get(), get_eval(), map()
   
 & ucstr()
  
@@ -11790,7 +11380,7 @@ inside
   Note: Attributes with single-character names cannot be retrieved
   with v().
  
-  See Also: GENDER, SUBSTITUTION, PARENT OBJECTS
+  See Also: SUBSTITUTION, PARENT OBJECTS
   
 & vadd()
  
