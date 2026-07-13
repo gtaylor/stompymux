@@ -5,7 +5,11 @@
 export LD_LIBRARY_PATH=/usr/local/lib
 PATH=/usr/ucb:/bin:/usr/bin:.; export PATH
 #
-. mux.config
+
+BIN=./bin
+TEXT=./text
+DATA=./data
+
 #
 #	Make sure there isn't aready a MUX running.
 #
@@ -37,7 +41,7 @@ $MKINDX $TEXT/wizhelp.txt $TEXT/wizhelp.indx
 ulimit -c unlimited
 if [ -x $BIN/netmux ]; then
 	echo Starting netmux binary.
-	$BIN/netmux $GAMENAME.conf
+	$BIN/netmux netmux.conf
 else
 	echo No binary found!
 	exit 1
