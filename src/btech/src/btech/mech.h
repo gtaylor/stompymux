@@ -1448,9 +1448,9 @@ struct repair_data {
 extern struct weapon_struct MechWeapons[];
 extern struct missile_hit_table_struct MissileHitTable[];
 
-#define TELE_ALL 1   /* Tele all, not just mortals */
-#define TELE_LOUD 4  /* Loudly teleport */
-#define TELE_XP 8    /* Lose 1/3 XP */
+#define TELE_ALL 1  /* Tele all, not just mortals */
+#define TELE_LOUD 4 /* Loudly teleport */
+#define TELE_XP 8   /* Lose 1/3 XP */
 
 #define MINE_STEP 1 /* Someone steps to a hex */
 #define MINE_LAND 2 /* Someone lands in a hex */

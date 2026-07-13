@@ -550,8 +550,8 @@ void notify_checked(dbref target, dbref sender, const char *msg, int key) {
      * \todo Eventually come up with a cleaner method for making sure
      * the sender isn't the same as the target.
      */
-    if ((key & MSG_ME) && (sender != target || Wizard(target)) && pass_uselock &&
-        Monitor(target)) {
+    if ((key & MSG_ME) && (sender != target || Wizard(target)) &&
+        pass_uselock && Monitor(target)) {
       (void)atr_match(target, sender, AMATCH_LISTEN, (char *)msg, 0);
     }
     /*
@@ -711,8 +711,7 @@ void notify_except(dbref loc, dbref player, dbref exception, const char *msg) {
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
   DOLIST(first, Contents(loc)) {
     if (first != exception)
-      notify_checked(first, player, msg,
-                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
+      notify_checked(first, player, msg, (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
   }
 }
 

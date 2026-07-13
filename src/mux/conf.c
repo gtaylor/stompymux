@@ -249,10 +249,6 @@ void cf_init(void) {
   mudconf.match_mine_pl = 0;
   mudconf.switch_df_all = 1;
   mudconf.fascist_tport = 0;
-  mudconf.terse_look = 1;
-  mudconf.terse_contents = 1;
-  mudconf.terse_exits = 1;
-  mudconf.terse_movemsg = 1;
   mudconf.trace_topdown = 1;
   mudconf.trace_limit = 200;
   mudconf.safe_unowned = 0;
@@ -1086,7 +1082,6 @@ CONF conftable[] = {
      (int *)logout_cmdtable, (long)access_nametab},
     {(char *)"logout_cmd_alias", cf_alias, CA_GOD,
      (int *)&mudstate.logout_cmd_htab, 0},
-    {(char *)"look_obey_terse", cf_bool, CA_GOD, &mudconf.terse_look, 0},
     {(char *)"machine_command_cost", cf_int, CA_GOD, &mudconf.machinecost, 0},
     {(char *)"map_database", cf_string, CA_GOD, (void *)mudconf.map_db, 128},
     {(char *)"master_room", cf_int, CA_GOD, &mudconf.master_room, 0},
@@ -1169,11 +1164,6 @@ CONF conftable[] = {
      H_SUSPECT},
     {(char *)"sweep_dark", cf_bool, CA_GOD, &mudconf.sweep_dark, 0},
     {(char *)"switch_default_all", cf_bool, CA_GOD, &mudconf.switch_df_all, 0},
-    {(char *)"terse_shows_contents", cf_bool, CA_GOD, &mudconf.terse_contents,
-     0},
-    {(char *)"terse_shows_exits", cf_bool, CA_GOD, &mudconf.terse_exits, 0},
-    {(char *)"terse_shows_move_messages", cf_bool, CA_GOD,
-     &mudconf.terse_movemsg, 0},
     {(char *)"thing_flags", cf_set_flags, CA_GOD, (int *)&mudconf.thing_flags,
      0},
     {(char *)"thing_quota", cf_int, CA_GOD, &mudconf.thing_quota, 0},

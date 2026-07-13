@@ -20,23 +20,23 @@
 #define TYPE_MASK 0x7
 
 /* First word of flags */
-#define SEETHRU 0x00000008     /* Can see through to the other side */
-#define WIZARD 0x00000010      /* gets automatic control */
+#define SEETHRU 0x00000008 /* Can see through to the other side */
+#define WIZARD 0x00000010  /* gets automatic control */
 /* 0x00000020 is reserved for the removed LINK_OK flag. */
-#define DARK 0x00000040        /* Don't show contents or presence */
+#define DARK 0x00000040 /* Don't show contents or presence */
 /* 0x00000080 is reserved for the removed JUMP_OK flag. */
-#define STICKY 0x00000100      /* Object goes home when dropped */
+#define STICKY 0x00000100 /* Object goes home when dropped */
 /* 0x00000200 is reserved for the removed DESTROY_OK flag. */
 /* 0x00000400 is reserved for the removed HAVEN flag. */
-#define QUIET 0x00000800       /* Prevent 'feelgood' messages */
-#define HALT 0x00001000        /* object cannot perform actions */
-#define TRACE 0x00002000       /* Generate evaluation trace output */
-#define GOING 0x00004000       /* object is available for recycling */
-#define MONITOR 0x00008000     /* Process ^x:action listens on obj? */
-#define MYOPIC 0x00010000      /* See things as nonowner/nonwizard */
-#define PUPPET 0x00020000      /* Relays ALL messages to owner */
+#define QUIET 0x00000800   /* Prevent 'feelgood' messages */
+#define HALT 0x00001000    /* object cannot perform actions */
+#define TRACE 0x00002000   /* Generate evaluation trace output */
+#define GOING 0x00004000   /* object is available for recycling */
+#define MONITOR 0x00008000 /* Process ^x:action listens on obj? */
+#define MYOPIC 0x00010000  /* See things as nonowner/nonwizard */
+#define PUPPET 0x00020000  /* Relays ALL messages to owner */
 /* 0x00040000 is reserved for the removed CHOWN_OK flag. */
-#define ENTER_OK 0x00080000    /* Object may be ENTERed */
+#define ENTER_OK 0x00080000 /* Object may be ENTERed */
 /* 0x00100000 is reserved for the removed VISUAL flag. */
 /* 0x00200000 is reserved for the removed IMMORTAL flag. */
 #define HAS_STARTUP 0x00400000 /* Load some attrs at startup */
@@ -47,14 +47,14 @@
 #define ROBOT 0x08000000       /* Player is a ROBOT */
 #define SAFE 0x10000000        /* Need /override to @destroy */
 /* 0x20000000 is reserved for the removed ROYALTY flag. */
-#define HEARTHRU 0x40000000    /* Can hear out of this obj or exit */
-#define TERSE 0x80000000       /* Only show room name on look */
+#define HEARTHRU 0x40000000 /* Can hear out of this obj or exit */
+/* 0x80000000 is reserved for the removed TERSE flag. */
 
 /* Second word of flags */
-#define KEY 0x00000001         /* No puppets */
+#define KEY 0x00000001 /* No puppets */
 /* 0x00000002 is reserved for the removed ABODE flag. */
-#define FLOATING 0x00000004    /* Inhibit Floating room.. msgs */
-#define UNFINDABLE 0x00000008  /* Cant loc() from afar */
+#define FLOATING 0x00000004   /* Inhibit Floating room.. msgs */
+#define UNFINDABLE 0x00000008 /* Cant loc() from afar */
 /* 0x00000010 is reserved for the removed PARENT_OK flag. */
 #define LIGHT 0x00000020       /* Visible in dark places */
 #define HAS_LISTEN 0x00000040  /* Internal: LISTEN attr set */
@@ -80,7 +80,7 @@
 #define BLIND 0x04000000  /* Something to support blind players! */
 #define ZOMBIE 0x08000000 /* Hardcode object is a zombie */
 
-#define SUSPECT 0x10000000   /* Report some activities to wizards */
+#define SUSPECT 0x10000000 /* Report some activities to wizards */
 /* 0x20000000 is reserved for the removed COMPRESS flag. */
 #define CONNECTED 0x40000000 /* Player is connected */
 /* 0x80000000 is reserved for the removed SLAVE flag. */
@@ -156,7 +156,6 @@ extern void decompile_flags(dbref, dbref, char *);
 /* Suspect(X)        - Is X someone the wizzes should keep an eye on */
 /* Safe(X,P)         - Does P need the /OVERRIDE switch to @destroy X? */
 /* Monitor(X)        - Should we check for ^xxx:xxx listens on player? */
-/* Terse(X)          - Should we only show the room name on a look? */
 /* Myopic(X)         - Should things as if we were nonowner/nonwiz */
 /* Audible(X)        - Should X forward messages? */
 /* Findroom(X)       - Can players in room X be found via @whereis? */
@@ -241,7 +240,6 @@ extern void decompile_flags(dbref, dbref, char *);
   (OwnsOthers(x) || (Flags(x) & SAFE) ||                                       \
    (mudconf.safe_unowned && (Owner(x) != Owner(p))))
 #define Audible(x) ((Flags(x) & HEARTHRU) != 0)
-#define Terse(x) ((Flags(x) & TERSE) != 0)
 
 #define Gagged(x) ((Flags2(x) & GAGGED) != 0)
 #define Key(x) ((Flags2(x) & KEY) != 0)
@@ -282,8 +280,7 @@ extern void decompile_flags(dbref, dbref, char *);
   ((See_All(p)) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))
 
 #define MyopicExam(p, x)                                                       \
-  (!Myopic(p) &&                                                               \
-   (See_All(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
+  (!Myopic(p) && (See_All(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
 
 #define Controls(p, x)                                                         \
   (Good_obj(x) && (!(God(x) && !God(p))) &&                                    \
@@ -308,8 +305,7 @@ extern void decompile_flags(dbref, dbref, char *);
   mudstate.markbits->chunk[i] = 0x0
 #define Link_exit(p, x)                                                        \
   ((Typeof(x) == TYPE_EXIT) && ((Location(x) == NOTHING) || Controls(p, x)))
-#define Linkable(p, x)                                                         \
-  (Good_obj(x) && Has_contents(x) && Controls(p, x))
+#define Linkable(p, x) (Good_obj(x) && Has_contents(x) && Controls(p, x))
 #define See_attr(p, x, a, o, f)                                                \
   (!((a)->flags & (AF_INTERNAL | AF_IS_LOCK)) &&                               \
    (God(p) || ((f) & AF_VISUAL) ||                                             \

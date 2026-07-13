@@ -273,7 +273,7 @@ static void look_atrs(dbref player, dbref thing, int check_parents) {
   }
 }
 
-static void look_simple(dbref player, dbref thing, int obey_terse) {
+static void look_simple(dbref player, dbref thing) {
   int pattr;
   char *buff;
 
@@ -293,11 +293,11 @@ static void look_simple(dbref player, dbref thing, int obey_terse) {
     notify(player, buff);
     free_lbuf(buff);
   }
-  pattr = (obey_terse && Terse(player)) ? 0 : A_DESC;
+  pattr = A_DESC;
   did_it(player, thing, pattr, "You see nothing special.", A_ODESC, NULL,
          A_ADESC, (char **)NULL, 0);
 
-  if (!mudconf.quiet_look && (!Terse(player) || mudconf.terse_look)) {
+  if (!mudconf.quiet_look) {
     look_atrs(player, thing, 0);
   }
 }
@@ -314,14 +314,12 @@ static void show_a_desc(dbref player, dbref loc) {
     raw_notify_newline(player);
 }
 
-static void show_desc(dbref player, dbref loc, int key) {
+static void show_desc(dbref player, dbref loc, int use_idesc) {
   char *got;
   dbref aowner;
   long aflags;
 
-  if ((key & LK_OBEYTERSE) && Terse(player))
-    did_it(player, loc, 0, NULL, A_ODESC, NULL, A_ADESC, (char **)NULL, 0);
-  else if ((Typeof(loc) != TYPE_ROOM) && (key & LK_IDESC)) {
+  if ((Typeof(loc) != TYPE_ROOM) && use_idesc) {
     if (*(got = atr_pget(loc, A_IDESC, &aowner, &aflags)))
       did_it(player, loc, A_IDESC, NULL, A_ODESC, NULL, A_ADESC, (char **)NULL,
              0);
@@ -334,10 +332,8 @@ static void show_desc(dbref player, dbref loc, int key) {
 }
 
 void look_in(dbref player, dbref loc, int key) {
-  int pattr, oattr, aattr, is_terse, showkey;
+  int pattr, oattr, aattr;
   char *buff;
-
-  is_terse = (key & LK_OBEYTERSE) ? Terse(player) : 0;
 
   /*
    * Only makes sense for things that can hear
@@ -365,12 +361,7 @@ void look_in(dbref player, dbref loc, int key) {
    * tell him the description
    */
 
-  showkey = 0;
-  if (loc == Location(player))
-    showkey |= LK_IDESC;
-  if (key & LK_OBEYTERSE)
-    showkey |= LK_OBEYTERSE;
-  show_desc(player, loc, showkey);
+  show_desc(player, loc, loc == Location(player));
 
   /*
    * tell him the appropriate messages if he has the key
@@ -386,19 +377,16 @@ void look_in(dbref player, dbref loc, int key) {
       oattr = A_OFAIL;
       aattr = A_AFAIL;
     }
-    if (is_terse)
-      pattr = 0;
     did_it(player, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
   }
   /*
    * tell him the attributes, contents and exits
    */
 
-  if ((key & LK_SHOWATTR) && !mudconf.quiet_look && !is_terse)
+  if ((key & LK_SHOWATTR) && !mudconf.quiet_look)
     look_atrs(player, loc, 0);
-  if (!is_terse || mudconf.terse_contents)
-    look_contents(player, loc, "Contents:", CONTENTS_LOCAL);
-  if ((key & LK_SHOWEXIT) && (!is_terse || mudconf.terse_exits))
+  look_contents(player, loc, "Contents:", CONTENTS_LOCAL);
+  if (key & LK_SHOWEXIT)
     look_exits(player, loc, "Obvious exits:");
 }
 
@@ -406,8 +394,6 @@ void do_look(dbref player, dbref cause, int key, char *name) {
   dbref thing, loc, look_key;
 
   look_key = LK_SHOWATTR | LK_SHOWEXIT;
-  if (!mudconf.terse_look)
-    look_key |= LK_OBEYTERSE;
 
   loc = Location(player);
   if (!name || !*name) {
@@ -462,20 +448,20 @@ void do_look(dbref player, dbref cause, int key, char *name) {
       break;
     case TYPE_THING:
     case TYPE_PLAYER:
-      look_simple(player, thing, !mudconf.terse_look);
-      if (!Opaque(thing) && (!Terse(player) || mudconf.terse_contents)) {
+      look_simple(player, thing);
+      if (!Opaque(thing)) {
         look_contents(player, thing, "Carrying:", CONTENTS_NESTED);
       }
       break;
     case TYPE_EXIT:
-      look_simple(player, thing, !mudconf.terse_look);
+      look_simple(player, thing);
       if (Transparent(thing) && (Location(thing) != NOTHING)) {
         look_key &= ~LK_SHOWATTR;
         look_in(player, Location(thing), look_key);
       }
       break;
     default:
-      look_simple(player, thing, !mudconf.terse_look);
+      look_simple(player, thing);
     }
   }
 }

@@ -595,7 +595,7 @@ static void announce_connect(dbref player, DESC *d) {
   time_str = ctime(&mudstate.now);
   time_str[strlen(time_str) - 1] = '\0';
   record_login(player, 1, time_str, d->addr, d->username);
-  look_in(player, Location(player), (LK_SHOWEXIT | LK_OBEYTERSE));
+  look_in(player, Location(player), LK_SHOWEXIT);
   mudstate.curr_enactor = temp;
   release_player(player);
 }

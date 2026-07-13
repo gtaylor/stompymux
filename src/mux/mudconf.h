@@ -171,14 +171,14 @@ struct confdata {
   int btech_transported_unit_death; /* 1=Destroy units in a transport
                                        automatically. (Via AMECHDEST) 0=Don't.
                                      */
-  int btech_mwpickup_action; /* 0 = quiet teleport,
-                                1 = TELE_LOUD (triggers AENTER) */
-  int btech_standcareful;    /* 0 = Don't allow (FASA rules), 1 Allow (-2 BTH to
-                                stand, double time if successful */
-  int btech_maxtechtime;     /* Max Tech Time allowed, in minutes */
-  int btech_blzmapmode; /* 0 = Regular tacmap for non-aeros <blzs with terrain
-                           blockouts> (Default and usual), 1 = Just BLZs <no
-                           terrain blockers> */
+  int btech_mwpickup_action;        /* 0 = quiet teleport,
+                                       1 = TELE_LOUD (triggers AENTER) */
+  int btech_standcareful; /* 0 = Don't allow (FASA rules), 1 Allow (-2 BTH to
+                             stand, double time if successful */
+  int btech_maxtechtime;  /* Max Tech Time allowed, in minutes */
+  int btech_blzmapmode;   /* 0 = Regular tacmap for non-aeros <blzs with terrain
+                             blockouts> (Default and usual), 1 = Just BLZs <no
+                             terrain blockers> */
   int btech_extended_piloting; /* 0 = No (Drive, Piloting-Bmech, etc) 1 = Yes
                                   (Piloting-Tracked, Piloting-Biped, etc.) */
   int btech_extended_gunnery;  /* 0 = No (Gunnery-Bmech, Gunnery-Aero, etc) 1 =
@@ -266,10 +266,6 @@ struct confdata {
   int match_mine_pl;       /* Should players check selves for $-cmds? */
   int switch_df_all;       /* Should @switch match all by default? */
   int fascist_tport;       /* Source of teleport must be controlled */
-  int terse_look;          /* Does manual look obey TERSE */
-  int terse_contents;      /* Does TERSE look show exits */
-  int terse_exits;         /* Does TERSE look show obvious exits */
-  int terse_movemsg;       /* Show move msgs (SUCC/LEAVE/etc) if TERSE? */
   int trace_topdown;       /* Is TRACE output top-down or bottom-up? */
   int trace_limit;         /* Max lines of trace output if top-down */
   int stack_limit;         /* How big can stacks get? */

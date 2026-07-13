@@ -287,8 +287,8 @@ void do_link(dbref player, dbref cause, int key, char *what, char *where) {
 
     if ((room != HOME) && !isRoom(room)) {
       notify_quiet(player, "That is not a room!");
-    } else if ((room != HOME) &&
-               (!controls(player, room) || !could_doit(player, room, A_LLINK))) {
+    } else if ((room != HOME) && (!controls(player, room) ||
+                                  !could_doit(player, room, A_LLINK))) {
       notify_quiet(player, "Permission denied.");
     } else {
       s_Dropto(thing, room);

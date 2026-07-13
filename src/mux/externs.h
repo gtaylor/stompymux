@@ -524,7 +524,7 @@ void list_chashstats(dbref);
 /* Look primitive directives */
 
 #define LK_IDESC 0x0001
-#define LK_OBEYTERSE 0x0002
+/* 0x0002 is reserved for the removed TERSE look mode. */
 #define LK_SHOWATTR 0x0004
 #define LK_SHOWEXIT 0x0008
 

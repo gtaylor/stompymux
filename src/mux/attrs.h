@@ -21,25 +21,25 @@
 #define AF_DIRTY 0x2000    /* This attribute has been compiled. */
 #define AF_REGEXP 0x8000   /* Do a regexp rather than wildcard match */
 
-#define A_OSUCC 1        /* Others success message */
-#define A_OFAIL 2        /* Others fail message */
-#define A_FAIL 3         /* Invoker fail message */
-#define A_SUCC 4         /* Invoker success message */
-#define A_PASS 5         /* Password (only meaningful for players) */
-#define A_DESC 6         /* Description */
-#define A_SEX 7          /* Sex */
-#define A_ODROP 8        /* Others drop message */
-#define A_DROP 9         /* Invoker drop message */
+#define A_OSUCC 1 /* Others success message */
+#define A_OFAIL 2 /* Others fail message */
+#define A_FAIL 3  /* Invoker fail message */
+#define A_SUCC 4  /* Invoker success message */
+#define A_PASS 5  /* Password (only meaningful for players) */
+#define A_DESC 6  /* Description */
+#define A_SEX 7   /* Sex */
+#define A_ODROP 8 /* Others drop message */
+#define A_DROP 9  /* Invoker drop message */
 /* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
-#define A_ASUCC 12       /* Success action list */
-#define A_AFAIL 13       /* Failure action list */
-#define A_ADROP 14       /* Drop action list */
+#define A_ASUCC 12 /* Success action list */
+#define A_AFAIL 13 /* Failure action list */
+#define A_ADROP 14 /* Drop action list */
 /* 15 is reserved for the removed AKILL attribute. */
-#define A_AUSE 16        /* Use action list */
-#define A_CHARGES 17     /* Number of charges remaining */
-#define A_RUNOUT 18      /* Actions done when no more charges */
-#define A_STARTUP 19     /* Actions run when game started up */
-#define A_ACLONE 20      /* Actions run when obj is cloned */
+#define A_AUSE 16    /* Use action list */
+#define A_CHARGES 17 /* Number of charges remaining */
+#define A_RUNOUT 18  /* Actions done when no more charges */
+#define A_STARTUP 19 /* Actions run when game started up */
+#define A_ACLONE 20  /* Actions run when obj is cloned */
 /* 21 through 25 are reserved for removed payment and money attributes. */
 #define A_LISTEN 26      /* (Wildcarded) string to listen for */
 #define A_AAHEAR 27      /* Actions to do when anyone says LISTEN str */

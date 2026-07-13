@@ -4215,7 +4215,6 @@ Continued in btdamgaes()3
  site_chars              space_compress            stack_limit 
  starting_money          starting_quota            suspect_site 
  sweep_dark              switch_default_all 
- terse_shows_contents    terse_shows_exits         terse_shows_move_messages 
  thing_flags             thing_quota               timeslice 
  trace_output_limit      trace_topdown             trust_site 
  uncompress_program      unowned_safe              user_attr_access 
@@ -5348,20 +5347,6 @@ Listing of forms:
  
   See Also: @power, @list powers
  
-& look_obey_terse
-
-  Config parameter: look_obey_terse <yes/no>
-  Default: Yes
-
-  Indicates whether or not the 'look' command obeys the TERSE flag
-  when deciding how much information to display.  If set to yes, the
-  terse_shows_contents, terse_shows_exits, and
-  terse_shows_move_messages config options control the amount of
-  information displayed for TERSE players.
-
-  See also: terse_shows_contents, terse_shows_exits,
-            terse_shows_move_messages.
-  
 & lrsrange
  
   xcodevalue: lrsrange <char>
@@ -7421,45 +7406,6 @@ Avg weight: 45.00 Total tons: 990
   This gives the player the ability to template units
   
   See Also: @power, @list powers
- 
-& terse_shows_contents
-
-  Config parameter: terse_shows_contents <yes/no>
-  Default yes
-
-  Indicates whether or not to suppress the listing of a location's
-  contents when producing TERSE output (whether from an automatic
-  look or a 'real' look if look_obey_terse is turned on.
-
-  See also: look_obey_terse, terse_shows_exits,
-            terse_shows_move_messages.
- 
-& terse_shows_exits
-
-  Config parameter: terse_shows_exits <yes/no>
-  Default yes
-
-  Indicates whether or not to suppress the listing of a location's
-  obvious exits when producing TERSE output (whether from an
-  automatic look or a 'real' look if look_obey_terse is turned on.
-
-  See also: look_obey_terse, terse_shows_contents,
-            terse_shows_move_messages.
-
-& terse_shows_move_messages
-
-  Config parameter: terse_shows_move_messages <yes/no>
-  Default yes
-
-  Indicates whether or not to suppress messages related to moving
-  about produced by locations and exits.  These messages are the
-  ENTER and LEAVE messages on locations, and the SUCC and DROP
-  messages on exits.
-
-  The messages seen by others (Oxxx attributes) and the actions to be
-  performed (Axxx attributes) are unaffected.
-
-  See also: look_obey_terse, terse_shows_contents, terse_shows_exits.
  
 & thing_flags
 

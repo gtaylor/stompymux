@@ -46,7 +46,7 @@ static void process_leave_loc(dbref thing, dbref dest, dbref cause, int canhear,
           (hush & HUSH_LEAVE);
   oattr = quiet ? 0 : A_OLEAVE;
   aattr = quiet ? 0 : A_ALEAVE;
-  pattr = (!mudconf.terse_movemsg && Terse(thing)) ? 0 : A_LEAVE;
+  pattr = A_LEAVE;
   did_it(thing, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
 
   /*
@@ -100,7 +100,7 @@ static void process_enter_loc(dbref thing, dbref src, dbref cause, int canhear,
           (hush & HUSH_ENTER);
   oattr = quiet ? 0 : A_OENTER;
   aattr = quiet ? 0 : A_AENTER;
-  pattr = (!mudconf.terse_movemsg && Terse(thing)) ? 0 : A_ENTER;
+  pattr = A_ENTER;
   did_it(thing, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
 
   /*
@@ -160,7 +160,7 @@ void move_object(dbref thing, dbref dest) {
    * Look around and do the penny check
    */
 
-  look_in(thing, dest, (LK_SHOWEXIT | LK_OBEYTERSE));
+  look_in(thing, dest, LK_SHOWEXIT);
   if (isPlayer(thing) && (mudconf.payfind > 0) &&
       (Pennies(thing) < mudconf.paylimit) && (!Controls(thing, dest)) &&
       ((random() % mudconf.payfind) == 0)) {
@@ -295,7 +295,7 @@ void move_via_exit(dbref thing, dbref dest, dbref cause, dbref exit, int hush) {
 
   oattr = quiet ? 0 : A_OSUCC;
   aattr = quiet ? 0 : A_ASUCC;
-  pattr = (!mudconf.terse_movemsg && Terse(thing)) ? 0 : A_SUCC;
+  pattr = A_SUCC;
   did_it(thing, exit, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
   process_leave_loc(thing, dest, cause, canhear, hush);
   move_object(thing, dest);
@@ -306,7 +306,7 @@ void move_via_exit(dbref thing, dbref dest, dbref cause, dbref exit, int hush) {
 
   oattr = quiet ? 0 : A_ODROP;
   aattr = quiet ? 0 : A_ADROP;
-  pattr = (!mudconf.terse_movemsg && Terse(thing)) ? 0 : A_DROP;
+  pattr = A_DROP;
   did_it(thing, exit, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
 
   did_it(thing, thing, A_MOVE, NULL, A_OMOVE, NULL, A_AMOVE, (char **)NULL, 0);
