@@ -392,7 +392,6 @@ CMDENT command_table[] = {
     {(char *)"@quitprogram", NULL, CA_PUBLIC, 0, CS_ONE_ARG | CS_INTERP,
      do_quitprog},
     {(char *)"@readcache", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_readcache},
-    {(char *)"@restart", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_restart},
     {(char *)"@robot", NULL, CA_GBL_BUILD | CA_PLAYER, PCRE_ROBOT, CS_TWO_ARG,
      do_pcreate},
     {(char *)"@search", NULL, 0, SRCH_SEARCH, CS_ONE_ARG | CS_NOINTERP,

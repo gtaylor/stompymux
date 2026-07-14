@@ -179,7 +179,6 @@ void did_it(dbref, dbref, int, const char *, int, const char *, int, char *[],
             int);
 void list_bufstats(dbref);
 void list_buftrace(dbref);
-void do_restart(dbref player, dbref cause, int key);
 
 /* From set.c */
 int parse_attrib(dbref, char *, dbref *, int *);
@@ -523,9 +522,6 @@ void list_chashstats(dbref);
 #define VE_BASE_LIGHT 0x20 /* Base location (pre-parent) is light */
 
 /* Signal handling directives */
-
-#define SA_EXIT 1 /* Exit, and dump core */
-#define SA_DFLT 2 /* Try to restart on a fatal error */
 
 #define STARTLOG(key, p, s)                                                    \
   if ((((key) & mudconf.log_options) != 0) && start_log(p, s))

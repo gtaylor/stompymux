@@ -981,26 +981,20 @@ int main(int argc, char *argv[]) {
   char *config_file;
   int index;
   int mindb;
-  int restarting;
 
-  if (argc > 3 ||
-      (argc > 2 && strcmp(argv[1], "-s") && strcmp(argv[1], "--restart"))) {
-    fprintf(stderr, "Usage: %s [-s|--restart] [config-file]\n", argv[0]);
+  if (argc > 3 || (argc > 2 && strcmp(argv[1], "-s")) ||
+      (argc > 1 && !strcmp(argv[1], "--restart"))) {
+    fprintf(stderr, "Usage: %s [-s] [config-file]\n", argv[0]);
     exit(1);
   }
 
   event_init();
 
   mindb = 0; /* Are we creating a new db? */
-  restarting = 0;
   config_file = (char *)CONF_FILE;
   if (argc > 1) {
     if (!strcmp(argv[1], "-s")) {
       mindb = 1;
-      if (argc == 3)
-        config_file = argv[2];
-    } else if (!strcmp(argv[1], "--restart")) {
-      restarting = 1;
       if (argc == 3)
         config_file = argv[2];
     } else {
@@ -1010,8 +1004,7 @@ int main(int argc, char *argv[]) {
   corrupt = 0; /* Database isn't corrupted. */
   memset(&mudstate, 0, sizeof(mudstate));
   time(&mudstate.start_time);
-  time(&mudstate.restart_time);
-  mudstate.executable_path = strdup(argv[0]);
+  time(&mudstate.process_start_time);
   mudstate.db_top = -1;
   tcache_init();
   pcache_init();
@@ -1096,7 +1089,7 @@ int main(int argc, char *argv[]) {
     memset(mudstate.global_regs[index], 0, LBUF_SIZE);
   }
 
-  if (!server_lifecycle_boot(restarting, mindb)) {
+  if (!server_lifecycle_boot(mindb)) {
     exit(2);
   }
 

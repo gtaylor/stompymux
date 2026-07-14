@@ -16,7 +16,6 @@
 #include "flags.h"
 #include "mudconf.h"
 #include "persistence/gamedb.h"
-#include "persistence/restart_persistence.h"
 #include "powers.h"
 #include "vattr.h"
 
@@ -565,7 +564,6 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
                   "PRAGMA foreign_keys = ON;") < 0 ||
       gamedb_exec(sqlite, "BEGIN IMMEDIATE;") < 0 ||
       gamedb_exec(sqlite, schema_sql) < 0 ||
-      restart_persistence_create_schema(sqlite) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
     return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,

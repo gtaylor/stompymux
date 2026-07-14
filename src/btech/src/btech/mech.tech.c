@@ -19,7 +19,8 @@
 int game_lag(void) {
   if (!muxevent_tick)
     return 0;
-  return 100 * (mudstate.now - mudstate.restart_time) / muxevent_tick - 100;
+  return 100 * (mudstate.now - mudstate.process_start_time) / muxevent_tick -
+         100;
 }
 
 int game_lag_time(int i) { return (100 + game_lag()) * i / 100; }

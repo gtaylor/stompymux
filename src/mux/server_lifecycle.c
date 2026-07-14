@@ -24,7 +24,6 @@
 #include "lua_runtime.h"
 #include "mudconf.h"
 #include "netcommon.h"
-#include "persistence/restart_persistence.h"
 #include "server_lifecycle.h"
 #include "signals.h"
 #include "telnet_socket.h"
@@ -118,7 +117,7 @@ void server_lifecycle_prepare(void) {
 }
 
 /* Start services required after the database and descriptor state are ready. */
-int server_lifecycle_boot(int restarting, int mindb) {
+int server_lifecycle_boot(int mindb) {
   char lua_error[LBUF_SIZE];
 
   mudstate.now = time(NULL);
@@ -128,18 +127,6 @@ int server_lifecycle_boot(int restarting, int mindb) {
     return 0;
   }
   server_lifecycle_process_preload();
-  if (restarting) {
-    if (mindb || restart_persistence_load() < 0) {
-      log_error(LOG_ALWAYS, "INI", "RSTRT",
-                "Unable to restore SQLite restart continuation state.");
-      return 0;
-    }
-  } else if (!mindb && restart_persistence_discard() < 0) {
-    log_error(LOG_ALWAYS, "INI", "RSTRT",
-              "Unable to discard stale SQLite restart continuation state.");
-    return 0;
-  }
-
 #ifdef ARBITRARY_LOGFILES
   logcache_init();
 #endif
@@ -166,7 +153,7 @@ void server_lifecycle_run(int port) {
 /* Request that the active event loop return at its next safe opportunity. */
 void server_lifecycle_stop(void) { event_loopexit(NULL); }
 
-/* Stop services and flush pending output before process exit or restart. */
+/* Stop services and flush pending output before process exit. */
 void server_lifecycle_shutdown(void) {
   lua_shutdown();
   flush_sockets();

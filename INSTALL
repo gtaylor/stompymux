@@ -110,8 +110,8 @@ ________________________________________
 
  http://docs.btmux.com/index.php/Config_Directives
 
- Note that you'll need to do a @restart for most of these config
- directives to take effect. You may use the @admin command with your
+ Note that you'll need to shut down and start the server for most of these
+ config directives to take effect. You may use the @admin command with your
  #1 character to do most of these but anything set by @admin won't
  be saved across restarts unless it's also in your <gamename>.conf
  file.

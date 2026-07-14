@@ -433,21 +433,6 @@
   NOTE - Be sure and run mkindx to produce new index files before 
   running @readcache.
   
-& @restart
- 
-  Syntax: @restart
-  
-  This command literally restarts the game. To the players, it appears 
-  as merely a short pause in the action. There are many reasons to 
-  @restart, including updating the source code, freeing built-up 
-  memory, etc.
-  
-  @restart dumps and reloads the database, so you cannot use it to 
-  change the database. You may recompile and use @restart to 
-  implement the changes without having to @shutdown.
-  
-  See Also: @shutdown
-  
 & @setmap
  
   Syntax: @setmap <name> <value>
@@ -509,8 +494,6 @@
   This command disconnects all connected players, saves the database 
   to disk, and shuts down the game.  The game is unavailable until 
   it is restarted.  
-  
-  See also: @restart
   
 & @timewarp
  
@@ -1053,8 +1036,8 @@ InfiltratorIIStealthUnit  SuperCharger              Dual_Saw
  
   This function returns '1' if the specified unit reference exists in
   the /mechs directory and '0' if it does not. Note that if you copy a
-  template into the mechs directory, you may need to perform a
-  @restart before it becomes visible.
+  template into the mechs directory, you must stop and start the server before
+  it becomes visible.
  
   Example:
  
@@ -4142,7 +4125,7 @@ Continued in btdamgaes()3
  read_remote_desc        read_remote_name          register_create_file 
  register_site           retry_limit
  robot_flags             robot_speech              room_flags 
- see_owned_dark            signal_action
+ see_owned_dark
  space_compress          stack_limit
  suspect_site
  sweep_dark              switch_default_all 
@@ -6777,20 +6760,6 @@ Avg weight: 45.00 Total tons: 990
   is not in use in this codebase
   
   See Also: si, @viewxcode
-& signal_action
-
-  Config parameter: signal_action <default|exit>
-  Default: default
-
-  Specifies what action to take when a fatal signal is received.  The
-  possibilities are:
-
-     default  - Log the error, produce a panic dump, dump a core file,
-                and restart the game using the last reliably saved
-                database. For a description of the restart process,
-                see @restart.
-     exit     - Log the error, and exit, hopefully with a core file.
- 
 & snipe
  
   RS Command: snipe <UnitID> <weapon>

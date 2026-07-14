@@ -4,8 +4,6 @@
 #pragma once
 #include "config.h"
 
-#include <sqlite3.h>
-
 /* BQUE - Command queue */
 
 typedef struct bque BQUE;
@@ -41,7 +39,3 @@ struct objqe {
 
 int cque_init(void);
 void do_second(void);
-
-/* Store and restore queued commands in the restart SQLite transaction. */
-int cque_restart_store(sqlite3 *sqlite);
-int cque_restart_load(sqlite3 *sqlite);

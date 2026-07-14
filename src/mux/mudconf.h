@@ -31,7 +31,7 @@ struct confdata {
   int lua_memory_limit;      /* Lua VM memory cap in bytes */
   char mech_db[128];         /* Mecha templates */
   char map_db[128];          /* Map templates */
-  char config_file[128];     /* name of config file, used by @restart */
+  char config_file[128];     /* name of configuration file */
   int have_specials;         /* Should the special hcode be active? */
   int have_comsys;           /* Should the comsystem be active? */
   int have_macros;           /* Should the macro system be active? */
@@ -208,7 +208,6 @@ struct confdata {
   int show_unfindable_who; /* should players set UNFINDABLE appear on who? */
   int fork_dump;           /* perform dump in a forked process */
   int fork_vfork;          /* use vfork to fork */
-  int sig_action;          /* What to do with fatal signals */
   int paranoid_alloc;      /* Rigorous buffer integrity checks */
   int max_players;         /* Max # of connected players */
   int dump_interval;       /* interval between ckp dumps in seconds */
@@ -336,7 +335,6 @@ struct statedata {
   int record_players;    /* The maximum # of player logged on */
   int initializing;      /* are we reading config file at startup? */
   int panicking;         /* are we in the middle of dying horribly? */
-  int restarting;        /* Are we restarting? */
   int dumping;           /* Are we dumping? */
   int logging;           /* Are we in the middle of logging? */
   int generation;        /* DB global generation number */
@@ -352,26 +350,26 @@ struct statedata {
   int events_flag;       /* Flags for check_events */
   int events_lasthour;   /* Last hour we ran hourly maintenance */
 
-  int shutdown_flag;       /* Should interface be shut down? */
-  char version[256];       /* MUX version string */
-  time_t start_time;       /* When was MUX started */
-  time_t restart_time;     /* When was MUX (re-)started */
-  char buffer[256];        /* A buffer for holding temp stuff */
-  char *debug_cmd;         /* The command we are executing (if any) */
-  char doing_hdr[41];      /* Doing column header in the WHO display */
-  SITE *access_list;       /* Access states for sites */
-  SITE *suspect_list;      /* Sites that are suspect */
-  HASHTAB command_htab;    /* Commands hashtable */
-  HASHTAB macro_htab;      /* Macro command hashtable */
-  HASHTAB channel_htab;    /* Channels hashtable */
-  HASHTAB logout_cmd_htab; /* Logged-out commands hashtable (WHO, etc) */
-  HASHTAB func_htab;       /* Functions hashtable */
-  HASHTAB ufunc_htab;      /* Local functions hashtable */
-  HASHTAB powers_htab;     /* Powers hashtable */
-  HASHTAB flags_htab;      /* Flags hashtable */
-  HASHTAB attr_name_htab;  /* Attribute names hashtable */
-  HASHTAB vattr_name_htab; /* User attribute names hashtable */
-  HASHTAB player_htab;     /* Player name->number hashtable */
+  int shutdown_flag;         /* Should interface be shut down? */
+  char version[256];         /* MUX version string */
+  time_t start_time;         /* When was MUX started */
+  time_t process_start_time; /* When this server process started */
+  char buffer[256];          /* A buffer for holding temp stuff */
+  char *debug_cmd;           /* The command we are executing (if any) */
+  char doing_hdr[41];        /* Doing column header in the WHO display */
+  SITE *access_list;         /* Access states for sites */
+  SITE *suspect_list;        /* Sites that are suspect */
+  HASHTAB command_htab;      /* Commands hashtable */
+  HASHTAB macro_htab;        /* Macro command hashtable */
+  HASHTAB channel_htab;      /* Channels hashtable */
+  HASHTAB logout_cmd_htab;   /* Logged-out commands hashtable (WHO, etc) */
+  HASHTAB func_htab;         /* Functions hashtable */
+  HASHTAB ufunc_htab;        /* Local functions hashtable */
+  HASHTAB powers_htab;       /* Powers hashtable */
+  HASHTAB flags_htab;        /* Flags hashtable */
+  HASHTAB attr_name_htab;    /* Attribute names hashtable */
+  HASHTAB vattr_name_htab;   /* User attribute names hashtable */
+  HASHTAB player_htab;       /* Player name->number hashtable */
   rbtree desctree;
   NHSHTAB fwdlist_htab; /* Room forwardlists */
   NHSHTAB parent_htab;  /* Parent $-command exclusion */
@@ -414,7 +412,6 @@ struct statedata {
   char *poutnew;  /* The output being build by the current command */
   char *poutbufc; /* Buffer position for poutnew */
   dbref poutobj;  /* Object doing the piping */
-  char *executable_path;
 };
 
 extern STATEDATA mudstate;

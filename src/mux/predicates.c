@@ -12,10 +12,8 @@
 #include "lua_runtime.h"
 #include "match.h"
 #include "mudconf.h"
-#include "persistence/restart_persistence.h"
 #include "powers.h"
 #include "rbtab.h"
-#include "server_lifecycle.h"
 #include <signal.h>
 
 extern void dump_database(void);
@@ -832,37 +830,6 @@ void do_prog(dbref player, dbref cause, int key, char *name, char *command) {
      */
     queue_string(d, tprintf("%s>%s \377\371", ANSI_HILITE, ANSI_NORMAL));
   }
-}
-
-/**
- * Restarts the game.
- */
-void do_restart(dbref player, dbref cause, int key) {
-  if (key && mudstate.dumping) {
-    notify(player, "Dumping. Please try again later.");
-    return;
-  }
-
-  ResetSpecialObjects();
-  raw_broadcast(0, "Game: Restart by %s, please wait.", Name(Owner(player)));
-  STARTLOG(LOG_ALWAYS, "WIZ", "RSTRT") {
-    log_text((char *)"Restart by ");
-    log_name(player);
-    ENDLOG;
-  }
-  if (dump_database_internal(DUMP_RESTART) < 0) {
-    raw_broadcast(0, "Game: Restart failed while writing the SQLite snapshot.");
-    return;
-  }
-
-  if (restart_persistence_store() < 0) {
-    raw_broadcast(
-        0, "Game: Restart failed while saving SQLite continuation state.");
-    return;
-  }
-  server_lifecycle_shutdown();
-  execl(mudstate.executable_path, mudstate.executable_path, "--restart",
-        mudconf.config_file, NULL);
 }
 
 /**

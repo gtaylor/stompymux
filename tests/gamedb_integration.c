@@ -120,9 +120,9 @@ static int run_server_in_directory(const char *netmux, const char *config,
                                      1, status);
 }
 
-/* Exercise @restart's DUMP_RESTART snapshot, then stop the re-execed server. */
-static int run_server_restart_in_directory(const char *netmux, const char *config,
-                                           const char *directory, int *status) {
+/* Trigger the fatal-signal crash dump without attempting process recovery. */
+static int run_server_crash_in_directory(const char *netmux, const char *config,
+                                         const char *directory, int *status) {
   struct timespec delay;
   pid_t child;
 
@@ -138,36 +138,10 @@ static int run_server_restart_in_directory(const char *netmux, const char *confi
   delay.tv_sec = 1;
   delay.tv_nsec = 0;
   nanosleep(&delay, NULL);
-  if (kill(child, SIGUSR1) < 0)
-    return -1;
-  nanosleep(&delay, NULL);
-  if (kill(child, SIGKILL) < 0 && errno != ESRCH)
-    return -1;
-  return waitpid(child, status, 0) == child ? 0 : -1;
-}
-
-/* Trigger the existing fatal-signal crash dump and terminate its restart group. */
-static int run_server_crash_in_directory(const char *netmux, const char *config,
-                                         const char *directory, int *status) {
-  struct timespec delay;
-  pid_t child;
-
-  child = fork();
-  if (child < 0)
-    return -1;
-  if (child == 0) {
-    if (setpgid(0, 0) < 0 || chdir(directory) < 0)
-      _exit(127);
-    execl(netmux, netmux, config, NULL);
-    _exit(127);
-  }
-  delay.tv_sec = 1;
-  delay.tv_nsec = 0;
-  nanosleep(&delay, NULL);
   if (kill(child, SIGBUS) < 0)
     return -1;
   nanosleep(&delay, NULL);
-  if (kill(-child, SIGKILL) < 0 && errno != ESRCH)
+  if (kill(child, SIGKILL) < 0 && errno != ESRCH)
     return -1;
   return waitpid(child, status, 0) == child ? 0 : -1;
 }
@@ -338,10 +312,8 @@ static int check_snapshot(const char *path) {
   ok = query_int(
            sqlite,
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-           "IN ('snapshot', 'vattrs', 'objects', 'attributes', "
-           "'restart_metadata', 'restart_descriptors', 'restart_queue_objects', "
-           "'restart_queue_entries', 'restart_queue_env', 'restart_queue_scr');",
-           10) == 0 &&
+           "IN ('snapshot', 'vattrs', 'objects', 'attributes');",
+           4) == 0 &&
       query_int(sqlite,
                  "SELECT schema_version FROM snapshot WHERE id = 1;", 3) ==
            0 &&
@@ -361,13 +333,6 @@ static int check_snapshot(const char *path) {
                 "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
                 "'macro_entries');",
                 7) == 0;
-  ok = ok &&
-       query_int(sqlite, "SELECT count(*) FROM restart_metadata;", 0) == 0 &&
-       query_int(sqlite, "SELECT count(*) FROM restart_descriptors;", 0) == 0 &&
-       query_int(sqlite, "SELECT count(*) FROM restart_queue_objects;", 0) == 0 &&
-       query_int(sqlite, "SELECT count(*) FROM restart_queue_entries;", 0) == 0 &&
-       query_int(sqlite, "SELECT count(*) FROM restart_queue_env;", 0) == 0 &&
-       query_int(sqlite, "SELECT count(*) FROM restart_queue_scr;", 0) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
                        "AND name IN ('btech_persistence_metadata', 'btech_maps', 'btech_map_hexes', 'btech_map_slots', "
@@ -450,7 +415,7 @@ static const char *const btech_special_writer_tables[] = {
     "btech_mech_stagger_damage", "btech_autopilot_commands",
     "btech_autopilot_command_args", "btech_autopilot_path"};
 
-/* Seed SQLite directly, then verify a normal server restart reads these rows. */
+/* Seed SQLite directly, then verify a fresh server process reads these rows. */
 static int seed_commac_snapshot(const char *path) {
   sqlite3 *sqlite;
   int result;
@@ -578,7 +543,7 @@ static int remove_btech_runtime_row(const char *path) {
   return result;
 }
 
-/* Make selected persisted fields non-default before the SQLite-only restart. */
+/* Make selected persisted fields non-default before the SQLite reload. */
 static int seed_btech_nondefault_state(const char *path) {
   sqlite3 *sqlite;
   int result;
@@ -733,13 +698,13 @@ static int check_btech_queued_command_state(const char *path) {
   sqlite = NULL;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
-  result = check_btech_value(sqlite, "restart autopilot speed",
+  result = check_btech_value(sqlite, "reload autopilot speed",
                              "SELECT speed_percent FROM btech_autopilots WHERE dbref = 5;", 75) == 0 &&
-           check_btech_value(sqlite, "restart autopilot command count",
+           check_btech_value(sqlite, "reload autopilot command count",
                              "SELECT count(*) FROM btech_autopilot_commands WHERE autopilot_dbref = 5;", 2) == 0 &&
-           check_btech_value(sqlite, "restart autopilot command enum",
+           check_btech_value(sqlite, "reload autopilot command enum",
                              "SELECT command_enum FROM btech_autopilot_commands WHERE autopilot_dbref = 5 AND position = 0;", 23) == 0 &&
-           check_btech_value(sqlite, "restart autopilot command argument",
+           check_btech_value(sqlite, "reload autopilot command argument",
                              "SELECT count(*) FROM btech_autopilot_command_args WHERE autopilot_dbref = 5 AND command_position = 0 AND argument_index = 1 AND value = '50';", 1) == 0
                ? 0
                : -1;
@@ -841,13 +806,13 @@ int main(int argc, char *argv[]) {
   if (fclose(file) != 0)
     return 2;
   if (result == 0 &&
-      (run_server_restart_in_directory(argv[1], sqlite_read_config, directory,
-                                       &status) < 0 ||
-       !WIFSIGNALED(status) || WTERMSIG(status) != SIGKILL ||
-       check_snapshot_dump_type(database, 2) < 0 ||
+      (run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
+                               &status) < 0 ||
+       !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
+       check_snapshot_dump_type(database, 0) < 0 ||
        check_btech_special_snapshot(database) < 0 ||
        check_btech_queued_command_state(database) < 0)) {
-    fprintf(stderr, "SQLite restart-dump fixture failed: %s (status=%d)\n",
+    fprintf(stderr, "SQLite reload fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
   }

@@ -48,10 +48,6 @@ extern NAMETAB logoptions_nametab[];
 extern NAMETAB access_nametab[];
 extern NAMETAB attraccess_nametab[];
 extern NAMETAB list_names[];
-#if 0
-extern NAMETAB sigactions_nametab[];
-#endif
-
 extern CONF conftable[];
 
 /*
@@ -189,7 +185,6 @@ void cf_init(void) {
   mudconf.have_macros = 1;
   mudconf.have_zones = 1;
   mudconf.paranoid_alloc = 0;
-  mudconf.sig_action = SA_DFLT;
   mudconf.max_players = -1;
   mudconf.dump_interval = 3600;
   mudconf.check_interval = 600;
@@ -1107,11 +1102,6 @@ CONF conftable[] = {
     {(char *)"see_owned_dark", cf_bool, CA_GOD, &mudconf.see_own_dark, 0},
     {(char *)"show_unfindable_who", cf_bool, CA_GOD,
      &mudconf.show_unfindable_who, 1},
-#if 0
-	{(char *) "signal_action",
-	 cf_option, CA_DISABLED, &mudconf.sig_action,
-	 (long) sigactions_nametab},
-#endif
     {(char *)"space_compress", cf_bool, CA_GOD, &mudconf.space_compress, 0},
     {(char *)"stack_limit", cf_int, CA_GOD, &mudconf.stack_limit, 0},
     {(char *)"suspect_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list,

@@ -157,7 +157,6 @@ extern NAME *names;
 #define s_Home(t, n) s_Link(t, n)
 #define s_Dropto(t, n) s_Location(t, n)
 
-
 extern dbref getref(FILE *);
 extern void putref(FILE *, dbref);
 extern void putstring(FILE *, const char *);
@@ -196,5 +195,4 @@ extern int dump_database_internal(int);
 
 #define DUMP_NORMAL 0
 #define DUMP_CRASHED 1
-#define DUMP_RESTART 2
 #define DUMP_KILLED 4

@@ -236,7 +236,6 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/game.c
   ${MUX_SOURCE_DIR}/persistence/commac_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/persistence/gamedb_sqlite.c
-  ${MUX_SOURCE_DIR}/persistence/restart_persistence_sqlite.c
   ${MUX_SOURCE_DIR}/help.c
   ${MUX_SOURCE_DIR}/log.c
   ${MUX_SOURCE_DIR}/lua.c
