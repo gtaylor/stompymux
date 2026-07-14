@@ -19,7 +19,7 @@
 /* 0x00000800 is reserved for the removed hide power. */
 #define POW_IDLE 0x00001000 /* No idle limit */
 /* 0x00002000 is reserved for the removed search power. */
-#define POW_LONGFINGERS 0x00004000 /* Can get/whisper/etc from a distance */
+#define POW_LONGFINGERS 0x00004000 /* Can get/look/etc from a distance */
 /* 0x00008000 is reserved for the removed prog power. */
 #define POW_COMM_ALL 0x00080000 /* Channel wiz */
 /* 0x00100000 is reserved for the removed see_queue power. */

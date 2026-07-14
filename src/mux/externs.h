@@ -371,11 +371,10 @@ void list_chashstats(dbref);
 #define PCRE_ROBOT 2       /* create robot player */
 #define PEMIT_PEMIT 1      /* emit to named player */
 #define PEMIT_OEMIT 2      /* emit to all in current room except named */
-#define PEMIT_WHISPER 3    /* whisper to player in current room */
-#define PEMIT_FSAY 4       /* force controlled obj to say */
-#define PEMIT_FEMIT 5      /* force controlled obj to emit */
-#define PEMIT_FPOSE 6      /* force controlled obj to pose */
-#define PEMIT_FPOSE_NS 7   /* force controlled obj to pose w/o space */
+#define PEMIT_FSAY 3       /* force controlled obj to say */
+#define PEMIT_FEMIT 4      /* force controlled obj to emit */
+#define PEMIT_FPOSE 5      /* force controlled obj to pose */
+#define PEMIT_FPOSE_NS 6   /* force controlled obj to pose w/o space */
 #define PEMIT_CONTENTS 8   /* Send to contents (additive) */
 #define PEMIT_HERE 16      /* Send to location (@femit, additive) */
 #define PEMIT_ROOM 32      /* Send to containing rm (@femit, additive) */

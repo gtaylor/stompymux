@@ -147,7 +147,6 @@ ECMD(f_put);
 ECMD(f_shout);
 ECMD(f_emote);
 ECMD(f_say);
-ECMD(f_whisper);
 
 /* Flag:
  * 0 = ALL

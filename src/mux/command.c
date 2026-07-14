@@ -434,8 +434,6 @@ CMDENT command_table[] = {
     {(char *)"think", NULL, 0, 0, CS_ONE_ARG, do_think},
     {(char *)"use", NULL, CA_GBL_INTERP, 0, CS_ONE_ARG | CS_INTERP, do_use},
     {(char *)"version", NULL, 0, 0, CS_NO_ARGS, do_version},
-    {(char *)"whisper", NULL, CA_LOCATION, PEMIT_WHISPER,
-     CS_TWO_ARG | CS_INTERP, do_pemit},
     {(char *)"wizhelp", NULL, CA_WIZARD, HELP_WIZHELP, CS_ONE_ARG, do_help},
     {(char *)"+show", NULL, CA_NO_IC, 0, CS_TWO_ARG, do_show},
     {(char *)"+rolls", NULL, 0, 0, CS_NO_ARGS, do_show_stat},
@@ -1822,9 +1820,6 @@ static void list_options(dbref player) {
     raw_notify(player,
                "Trace output is presented bottom-up (subexpressions first).");
   }
-  if (!mudconf.quiet_whisper)
-    raw_notify(player, "The 'whisper' command lets others in the room with you "
-                       "know you whispered.");
   if (mudconf.pemit_players)
     raw_notify(player,
                "The '@pemit' command may be used to emit to faraway players.");

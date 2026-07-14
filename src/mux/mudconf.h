@@ -229,7 +229,6 @@ struct confdata {
   int read_rem_name;       /* Can the NAMEs of nonlocal objs be read? */
   int sweep_dark;          /* Can you sweep dark places? */
   int player_listen;       /* Are AxHEAR triggered on players? */
-  int quiet_whisper;       /* Can others tell when you whisper? */
   int dark_sleepers;       /* Are sleeping players 'dark'? */
   int see_own_dark;        /* Do you see your own dark stuff? */
   int idle_wiz_dark;       /* Do idling wizards get set dark? */

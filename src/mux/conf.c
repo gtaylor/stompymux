@@ -206,7 +206,6 @@ void cf_init(void) {
   mudconf.read_rem_name = 0;
   mudconf.sweep_dark = 0;
   mudconf.player_listen = 0;
-  mudconf.quiet_whisper = 1;
   mudconf.dark_sleepers = 1;
   mudconf.see_own_dark = 1;
   mudconf.idle_wiz_dark = 0;
@@ -1077,7 +1076,6 @@ CONF conftable[] = {
     {(char *)"queue_active_chunk", cf_int, CA_GOD, &mudconf.active_q_chunk, 0},
     {(char *)"queue_idle_chunk", cf_int, CA_GOD, &mudconf.queue_chunk, 0},
     {(char *)"quiet_look", cf_bool, CA_GOD, &mudconf.quiet_look, 0},
-    {(char *)"quiet_whisper", cf_bool, CA_GOD, &mudconf.quiet_whisper, 0},
     {(char *)"quit_file", cf_string, CA_DISABLED, (void *)mudconf.quit_file,
      32},
     {(char *)"read_remote_desc", cf_bool, CA_GOD, &mudconf.read_rem_desc, 0},

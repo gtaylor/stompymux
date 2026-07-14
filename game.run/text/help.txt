@@ -1456,7 +1456,7 @@
   Attribute: Listen
  
   This attribute contains a wildcard pattern that the object listens
-  for. Anything spoken, posed, emitted, or whispered in the room
+  for. Anything spoken, posed, or emitted in the room
   that <object> is in, as well as messages resulting from using
   objects (such as Opay and Succ messages) are checked against the
   Listen attribute.  When the object hears something that matches
@@ -4026,7 +4026,7 @@ while line:
   your name and a space.  Example: the command ':jumps for joy'
   produces '<yourname> jumps for joy'.
  
-  See also: page, pose, say, whisper, ;,"
+  See also: page, pose, say, ;,"
   
 & colorpairs()
  
@@ -4113,7 +4113,7 @@ while line:
   look         move         OUTPUTPREFIX
   OUTPUTSUFFIX page         pose         QUIT         read     
   say          SESSION      take         think    
-  throw        use          version      whisper      WHO
+  throw        use          version      WHO
   "            :            ;            &            #        
   \\           @@           @cemit       @chown       @chzone  
   @clone       @cpattr      @create      @decompile   @destroy 
@@ -8221,7 +8221,7 @@ you page
  
   This will work until you page another player or list of players.
  
-  See also: pose, say, whisper, :, ;, ", @pemit, @away, @idle,
+  See also: pose, say, :, ;, ", @pemit, @away, @idle,
   @reject.
   
 & pain_resistance
@@ -8632,7 +8632,7 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
      /nospace - Don't put a space between your name and the message
                 (ie, display '<name><message>').
  
-  See also: page, say, whisper, :, ;,"
+  See also: page, say, :, ;,"
   
 & poss()
  
@@ -8695,7 +8695,7 @@ and a
   comm_all		    Like a wizard with respect to channels.
   find_unfindable	Can locate unfindable people.
   idle			      No idle timeout.
-  long_fingers		Can get, look, whisper, etc from a distance.
+  long_fingers		Can get, look, etc from a distance.
 
   See also: @power
   
@@ -9498,7 +9498,7 @@ AdvSensors: BeagleProbe
   Says <message> out loud to everyone in your current room. You can
   also use '"<message>'.
  
-  See also: page, pose, whisper, :, ;,"
+  See also: page, pose, :, ;,"
   
 & scan
  
@@ -9654,7 +9654,7 @@ AdvSensors: BeagleProbe
   attribute because the ';' is treated as the command separator.
   Use pose/nospace  instead.
  
-  See also: page, pose, say, whisper, :,"
+  See also: page, pose, say, :,"
   
 & sendchannel
  
@@ -11629,21 +11629,6 @@ IS.SmallLaser             1      3            0     1      2    3   15
  
   See Also: loc(), rloc()
  
-& whisper
-
-  Syntax: whisper <player>=<message>
-
-  Whispers the message to the named person, if they are in the same
-  room as you. No one else can see the message that you whisper.
-
-  You can format the message one of several ways by specifying ':',
-  ';', or '"' as the first character of the message.  ':' and ';'
-  format the message as 'You sense <player> <message>', with ';'
-  omitting the space between <player> and <message>.  '"' formats
-  the message in normal whisper format (this is the default).
-
-  See also: page, pose, say, :, ;,"
-  
 & WHO
  
   Syntax: WHO <prefix>

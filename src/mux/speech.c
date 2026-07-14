@@ -604,19 +604,6 @@ void do_page(dbref player, dbref cause, int key, char *tname, char *message) {
   free_lbuf(buf2);
 }
 
-/**
- * Messages to specific players, or to all but specific players.
- */
-static void whisper_pose(dbref player, dbref target, char *message) {
-  char *buff;
-
-  buff = alloc_lbuf("do_pemit.whisper.pose");
-  StringCopy(buff, Name(player));
-  notify_printf(player, "%s senses \"%s%s\"", Name(target), buff, message);
-  notify_with_cause(target, player, tprintf("You sense %s%s", buff, message));
-  free_lbuf(buff);
-}
-
 void do_pemit_list(dbref player, char *list, const char *message) {
   /*
    * Send a message to a list of dbrefs. To avoid repeated generation *
@@ -670,7 +657,6 @@ void do_pemit_list(dbref player, char *list, const char *message) {
 void do_pemit(dbref player, dbref cause, int key, char *recipient,
               char *message) {
   dbref target, loc;
-  char *buf2, *bp;
   int do_contents, ok_to_do, depth, pemit_flags;
 
   if (key & PEMIT_LIST) {
@@ -706,9 +692,6 @@ void do_pemit(dbref player, dbref cause, int key, char *recipient,
   switch (target) {
   case NOTHING:
     switch (key) {
-    case PEMIT_WHISPER:
-      notify(player, "Whisper to whom?");
-      break;
     case PEMIT_PEMIT:
       notify(player, "Emit to whom?");
       break;
@@ -759,39 +742,6 @@ void do_pemit(dbref player, dbref cause, int key, char *recipient,
       break;
     case PEMIT_OEMIT:
       notify_except(Location(target), player, target, message);
-      break;
-    case PEMIT_WHISPER:
-      switch (*message) {
-      case ':':
-        message[0] = ' ';
-        whisper_pose(player, target, message);
-        break;
-      case ';':
-        message++;
-        whisper_pose(player, target, message);
-        break;
-      case '"':
-        message++;
-        [[fallthrough]];
-      default:
-        notify_printf(player, "You whisper \"%s\" to %s.", message,
-                      Name(target));
-        notify_with_cause(target, player,
-                          tprintf("%s whispers \"%s\"", Name(player), message));
-      }
-      if ((!mudconf.quiet_whisper) && !Wizard(player)) {
-        loc = where_is(player);
-        if (loc != NOTHING) {
-          buf2 = alloc_lbuf("do_pemit.whisper.buzz");
-          bp = buf2;
-          safe_str(Name(player), buf2, &bp);
-          safe_str((char *)" whispers something to ", buf2, &bp);
-          safe_str(Name(target), buf2, &bp);
-          *bp = '\0';
-          notify_except2(loc, player, player, target, buf2);
-          free_lbuf(buf2);
-        }
-      }
       break;
     case PEMIT_FSAY:
       notify_printf(target, "You say \"%s\"", message);
