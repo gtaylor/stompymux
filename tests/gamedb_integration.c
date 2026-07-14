@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <poll.h>
 #include <signal.h>
 #include <sqlite3.h>
 #include <stdio.h>
@@ -63,18 +64,29 @@ static int run_server_in_directory_for(const char *netmux, const char *config,
   return waitpid(child, status, 0) == child ? 0 : -1;
 }
 
-/* Use a shorter, deterministic startup window for fault-injection cases. */
+/* Wait for the child to enter its event loop before sending its test signal. */
 static int run_server_in_directory_after(const char *netmux, const char *config,
                                          const char *directory, int make_minimal,
-                                         long milliseconds, int *status) {
-  struct timespec delay;
+                                         int *status) {
+  char ready_fd[32];
+  char ready_signal;
+  int ready_pipe[2];
+  struct pollfd ready;
   pid_t child;
 
-  child = fork();
-  if (child < 0)
+  if (pipe(ready_pipe) < 0)
     return -1;
+  child = fork();
+  if (child < 0) {
+    close(ready_pipe[0]);
+    close(ready_pipe[1]);
+    return -1;
+  }
   if (child == 0) {
-    if (chdir(directory) < 0)
+    close(ready_pipe[0]);
+    snprintf(ready_fd, sizeof(ready_fd), "%d", ready_pipe[1]);
+    if (chdir(directory) < 0 ||
+        setenv("BTMUX_TEST_READY_FD", ready_fd, 1) < 0)
       _exit(127);
     if (make_minimal)
       execl(netmux, netmux, "-s", config, NULL);
@@ -82,9 +94,19 @@ static int run_server_in_directory_after(const char *netmux, const char *config,
       execl(netmux, netmux, config, NULL);
     _exit(127);
   }
-  delay.tv_sec = milliseconds / 1000;
-  delay.tv_nsec = (milliseconds % 1000) * 1000000L;
-  nanosleep(&delay, NULL);
+  close(ready_pipe[1]);
+  ready.fd = ready_pipe[0];
+  ready.events = POLLIN;
+  ready.revents = 0;
+  if (poll(&ready, 1, 5000) != 1 || !(ready.revents & POLLIN) ||
+      read(ready_pipe[0], &ready_signal, sizeof(ready_signal)) !=
+          sizeof(ready_signal)) {
+    close(ready_pipe[0]);
+    kill(child, SIGKILL);
+    waitpid(child, status, 0);
+    return -1;
+  }
+  close(ready_pipe[0]);
   if (kill(child, SIGTERM) < 0 && errno != ESRCH)
     return -1;
   return waitpid(child, status, 0) == child ? 0 : -1;
@@ -403,8 +425,8 @@ static int check_btech_writer_fault(const char *netmux, const char *config,
       setenv("BTMUX_TEST_BTECH_FAIL_TABLE", table, 1) < 0 ||
       setenv("BTMUX_TEST_BTECH_FAIL_PHASE", phase, 1) < 0)
     return -1;
-  result = run_server_in_directory_after(netmux, config, directory, 0, 250,
-                                         &status);
+  result =
+      run_server_in_directory_after(netmux, config, directory, 0, &status);
   unsetenv("BTMUX_TEST_BTECH_FAIL_TABLE");
   unsetenv("BTMUX_TEST_BTECH_FAIL_PHASE");
   if (result < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||

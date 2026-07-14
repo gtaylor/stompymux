@@ -273,6 +273,9 @@ if(BTECH_ENHANCED_LOGGING)
 endif()
 
 add_executable(netmux ${NETMUX_SOURCES})
+if(BUILD_TESTING)
+  target_compile_definitions(netmux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
+endif()
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
 target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")

@@ -4,7 +4,9 @@
 
 #include "config.h"
 
+#include <errno.h>
 #include <event.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -33,6 +35,26 @@ static struct timeval queue_slice = {0, 0};
 static struct event queue_event;
 static struct timeval last_slice;
 static struct timeval current_time;
+
+#ifdef BTMUX_PERSISTENCE_TESTING
+/* Notify the integration test only after the server can handle shutdown. */
+static void server_lifecycle_signal_test_ready(void) {
+  const char *value;
+  char *end;
+  long descriptor;
+
+  value = getenv("BTMUX_TEST_READY_FD");
+  if (value == NULL)
+    return;
+  errno = 0;
+  descriptor = strtol(value, &end, 10);
+  if (errno != 0 || end == value || *end != '\0' || descriptor < 0 ||
+      descriptor > INT_MAX)
+    return;
+  if (write((int)descriptor, "", 1) != 1)
+    return;
+}
+#endif
 
 /* Run startup attributes and restore each object's forward list after load. */
 static void server_lifecycle_process_preload(void) {
@@ -138,6 +160,9 @@ void server_lifecycle_run(int port) {
   evtimer_add(&queue_event, &queue_slice);
   gettimeofday(&last_slice, NULL);
   gettimeofday(&current_time, NULL);
+#ifdef BTMUX_PERSISTENCE_TESTING
+  server_lifecycle_signal_test_ready();
+#endif
   event_dispatch();
 }
 
