@@ -15,13 +15,21 @@ object with the wizard-only command:
 The path is relative to `object_logic`; for example,
 `@luaparent #123=hello.lua` selects
 `game.run/lua/object_logic/hello.lua`. Paths must be relative `.lua` files and
-cannot escape into `global_commands` or `packages`. Omit the path to clear an
+cannot escape into `global_logic` or `packages`. Omit the path to clear an
 attachment.
 
 The closest `Luaparent` in an object's normal MUX parent chain supplies the
 active module. Reload all attached modules and their dependencies atomically
 with `@luareload`; a failed reload leaves the current Lua state running.
-Use [`@luacheck`](lua-check/) to validate every Lua module before reloading.
+Use [`@luacheck`](validating-and-reloading/) to validate every Lua module
+before reloading.
+
+If an attached file is deleted or otherwise cannot load, startup logs the
+object, configured path, and load error but continues. The attachment remains
+in place; command matching and action events for that object log the load error
+and are treated as handled, so legacy softcode does not run unexpectedly.
+Restore the file or update `Luaparent`, then use `@luareload` to activate the
+repair. `@luareload` itself remains atomic and rejects a missing attachment.
 
 ## Module contract
 
@@ -111,3 +119,26 @@ the shared `packages` root. See `game.run/lua/object_logic/` for the `hello`,
 
 The [`mux` package](packages/mux/) documents the server API available to
 object modules.
+
+## Scheduled events
+
+Object modules may define a `schedules` array. Each entry has a unique `name`,
+a numeric five-field UTC cron expression, and a handler. Cron fields accept
+`*`, values, lists, ranges, and steps. Matching jobs are spread deterministically
+across the first 55 seconds of the minute and are not replayed after downtime.
+
+```lua
+schedules = {
+  {
+    name = "hourly_notice",
+    cron = "0 * * * *",
+    handler = function(ctx)
+      -- ctx.scope == "object" and ctx.object is the effective object.
+    end,
+  },
+}
+```
+
+A shared `Luaparent` runs each matching schedule once for every object that
+inherits it. Use the wizard-only `@luaschedule` command to inspect active
+schedules and their effective objects.

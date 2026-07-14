@@ -16,9 +16,13 @@ To check your Lua scripts for validity, run the following from in-game with a Wi
 ```
 
 `@luacheck` recursively verifies every `.lua` file below
-`game.run/lua/object_logic`, `game.run/lua/global_commands`, and
+`game.run/lua/object_logic`, `game.run/lua/global_logic`, and
 `game.run/lua/packages`. It checks module syntax, top-level imports, and the
-module return contract. Global command modules must export a `commands` table.
+module return contract, including cron schedules. Global logic modules must
+export a nonempty `commands` or `schedules` table. It also checks every
+configured `Luaparent` path. Missing or unreadable paths
+are reported once per path with the number of objects that use that value, so a
+single deleted file does not produce one error for every affected object.
 
 Checks run in a fresh Lua state and never replace the running state. Command
 handlers and event handlers are not called. To prevent check-time side effects,
@@ -28,4 +32,12 @@ move any `mux` calls into a handler or event function before checking it.
 ## Reloading Lua at runtime
 
 Use `@luareload` after a successful check to atomically put changed attached
-and global command modules into service.
+and global logic modules into service.
+
+## Inspecting schedules
+
+Wizards can use `@luaschedule` to list scheduled object modules with their
+effective-object counts and scheduled global logic modules. Pass an object to
+show its effective Lua parent, a relative `object_logic` path to show its
+schedules and inheriting objects, or `global_logic/<path>.lua` to inspect one
+global module.

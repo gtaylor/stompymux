@@ -5437,7 +5437,7 @@ Avg weight: 45.00 Total tons: 990
 
   Specifies the room that is searched for exits if a command does not
   match an exit in the current room. It is no longer searched for
-  programmable $-commands; use lua/global_commands for global commands.
+  programmable $-commands; use lua/global_logic for global commands.
  
 & match_own_commands
 
@@ -7434,18 +7434,29 @@ Avg weight: 45.00 Total tons: 990
   Syntax: @luacheck
 
   Validates every Lua module without replacing the running Lua state. Checks
-  every .lua file below object_logic, global_commands, and packages. Modules
-  are loaded in a fresh Lua state, and mux calls from top-level module code are
-  rejected to prevent check-time side effects.
+  every .lua file below object_logic, global_logic, and packages, plus each
+  configured Luaparent path. Missing Luaparents are reported once per path with
+  their affected-object count. Modules are loaded in a fresh Lua state, and mux
+  calls from top-level module code are rejected to prevent check-time side
+  effects.
 
 & @luareload
 
   Syntax: @luareload
 
-  Reloads attached object modules, global command modules, and their
+  Reloads attached object modules, global logic modules, and their
   dependencies while the game is live. Reload is atomic: a syntax or dependency
   error leaves the previously loaded Lua state active. Lua files live below the
   lua_directory setting; see docs/lua.md.
+
+& @luaschedule
+
+  Syntax: @luaschedule [<object>|<path>.lua|global_logic/<path>.lua]
+
+  Lists active Lua cron schedules. With no argument, lists scheduled object
+  modules with their effective-object counts and scheduled global logic
+  modules. An object shows its effective Lua parent; an object_logic path also
+  lists every object that inherits it.
 
 & lua_directory
 
@@ -7453,5 +7464,5 @@ Avg weight: 45.00 Total tons: 990
   Default: lua
 
   The directory, relative to game.run, containing the object_logic,
-  global_commands, and packages Lua roots. Lua callbacks use the configured
+  global_logic, and packages Lua roots. Lua callbacks use the configured
   lua_instruction_limit and lua_memory_limit safeguards.

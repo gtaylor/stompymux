@@ -301,10 +301,9 @@ if(BUILD_TESTING)
   add_test(NAME lua_module_smoke
     COMMAND lua_module_smoke_test
       "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/example.lua"
-      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/hello.lua"
       "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/counter.lua"
       "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/events/enter_notice.lua"
-      "${CMAKE_SOURCE_DIR}/game.run/lua/global_commands/example.lua")
+      "${CMAKE_SOURCE_DIR}/game.run/lua/global_logic/example.lua")
 endif()
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

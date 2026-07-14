@@ -11,4 +11,13 @@ return {
       end,
     },
   },
+  schedules = {
+    {
+      name = "hourly_maintenance",
+      cron = "0 * * * *",
+      handler = function(ctx)
+        -- Global scheduled events have ctx.scope == "global" and no enactor.
+      end,
+    },
+  },
 }

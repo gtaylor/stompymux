@@ -1,11 +1,11 @@
 ---
-title: Global commands
-linkTitle: Global commands
+title: Global logic
+linkTitle: Global logic
 type: docs
 weight: 20
 ---
 
-Global Lua command modules live under `game.run/lua/global_commands`. Every
+Global Lua logic modules live under `game.run/lua/global_logic`. Every
 `.lua` file in that tree is discovered recursively during startup and
 `@luareload`. Files are loaded in lexical relative-path order, so use
 domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
@@ -42,7 +42,12 @@ dispatch only, not object event hooks.
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.
 
-Global modules resolve `require("name")` in `global_commands` before the
+Global modules resolve `require("name")` in `global_logic` before the
 shared `packages` root. Put shared parsing, formatting, and policy helpers in
-`packages`. The working `game.run/lua/global_commands/example.lua` module
+`packages`. The working `game.run/lua/global_logic/example.lua` module
 defines the `global-hello` command.
+
+Global logic modules may also define `schedules`, an ordered array of named
+UTC five-field cron handlers. A global schedule runs once per matching module
+entry and receives `ctx.scope == "global"`; `ctx.object`, `ctx.enactor`, and
+`ctx.cause` are `nil`.

@@ -356,6 +356,7 @@ CMDENT command_table[] = {
     {(char *)"@luaparent", NULL, CA_WIZARD, 0, CS_TWO_ARG, do_luaparent},
     {(char *)"@luacheck", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_luacheck},
     {(char *)"@luareload", NULL, CA_WIZARD, 0, CS_NO_ARGS, do_luareload},
+    {(char *)"@luaschedule", NULL, CA_WIZARD, 0, CS_ONE_ARG, do_luaschedule},
     {(char *)"@list", NULL, 0, 0, CS_ONE_ARG | CS_INTERP, do_list},
     {(char *)"@listcommands", NULL, CA_GOD, 0, CS_ONE_ARG, do_listcommands},
     {(char *)"@list_file", NULL, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,

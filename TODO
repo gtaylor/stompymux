@@ -19,9 +19,7 @@
   `mux.command()` running as #1.
 * Improve Lua error and reload observability with handler, event/command,
   object, enactor, source location, traceback, and audit-log context.
-* Add socket-level Lua integration tests for command precedence, `NO_COMMAND`,
-  action suppression, reload rollback, parent inheritance, and sandboxing.
-* Add deferred/timer callbacks with explicit cancellation and reload behavior.
+* Add a way to mark a lua file as non-importable?
 
 ## BTech Todos in the /btech/ dir
 
