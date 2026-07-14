@@ -12,7 +12,7 @@
 /* Reasons passed to shutdownsock(). */
 #define R_QUIT 1       /* User quit */
 #define R_TIMEOUT 2    /* Inactivity timeout */
-#define R_BOOT 3       /* Victim of @boot, @toad, or @destroy */
+#define R_BOOT 3       /* Victim of @boot or @destroy */
 #define R_SOCKDIED 4   /* Other end of socket closed it */
 #define R_GOING_DOWN 5 /* Game is going down */
 #define R_BADLOGIN 6   /* Too many failed login attempts */

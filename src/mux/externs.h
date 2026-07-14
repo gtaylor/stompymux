@@ -430,7 +430,6 @@ void list_chashstats(dbref);
 #define SWEEP_VERBOSE 256  /* Display what pattern matches */
 #define TELEPORT_DEFAULT 1 /* Emit all messages */
 #define TELEPORT_QUIET 2   /* Teleport in quietly */
-#define TOAD_NO_CHOWN 1    /* Don't change ownership */
 #define TRIG_QUIET 1       /* Don't display 'Triggered.' message. */
 #define TWARP_QUEUE 1      /* Warp the wait and sem queues */
 #define TWARP_DUMP 2       /* Warp the dump interval */

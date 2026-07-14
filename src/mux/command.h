@@ -132,8 +132,6 @@ void do_switch(dbref, dbref, int, char *, char *[], int, char *[],
 void do_teleport(dbref, dbref, int, char *, char *); /* Teleport elsewhere */
 void do_think(dbref, dbref, int, char *);            /* Think command */
 void do_timewarp(dbref, dbref, int, char *);         /* Warp various timers */
-void do_toad(dbref, dbref, int, char *,
-             char *); /* Turn a tinyjerk into a tinytoad */
 void do_trigger(dbref, dbref, int, char *, char *[],
                 int);                      /* Trigger an attribute */
 void do_unlock(dbref, dbref, int, char *); /* Remove a lock from an object */

@@ -490,20 +490,6 @@
   
   See also: @list options.
   
-& @toad
- 
-  Syntax: @toad[/<switches>] <victim>[=<recipient>]
-  Turns the victim into an object (a slimy toad) and disconnects them 
-  from the game.  The named recipient (or the @toading wizard) get 
-  ownership of all the victim's things, rooms, and exits, as well as 
-  of the toad object itself.
- 
-  The following switches are available:
-    /no_chown - Don't change the ownership of the victim or his 
-    objects.
-    
-  See also: @boot, @chownall, @destroy.
-  
 & @viewxcode
  
   Syntax: @viewxcode
@@ -5132,7 +5118,7 @@ Listing of forms:
     security       - Record security-related events.
     shouts         - Record uses of the @wall command.
     startup        - Record information about game startup.
-    wizard         - Record uses of dangerous commands like @toad.
+    wizard         - Record uses of dangerous wizard commands.
 
   See also: log_options.
  
@@ -5732,9 +5718,9 @@ Avg weight: 45.00 Total tons: 990
  
   Power: no_destroy
   
-  This power prevents the player being destroyed or toaded.
+  This power prevents the player being destroyed.
   
-  See Also: @power, @list powers, @toad
+  See Also: @power, @list powers
  
 & notify_recursion_limit
 

@@ -237,10 +237,6 @@ NAMETAB teleport_sw[] = {{(char *)"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
                          {(char *)"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
                          {NULL, 0, 0, 0}};
 
-NAMETAB toad_sw[] = {
-    {(char *)"no_chown", 1, CA_WIZARD, TOAD_NO_CHOWN | SW_MULTIPLE},
-    {NULL, 0, 0, 0}};
-
 NAMETAB trig_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, TRIG_QUIET},
                      {NULL, 0, 0, 0}};
 
@@ -393,7 +389,6 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_INTERP, do_teleport},
     {(char *)"@timewarp", warp_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,
      do_timewarp},
-    {(char *)"@toad", toad_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_INTERP, do_toad},
     {(char *)"@trigger", trig_sw, CA_GBL_INTERP, 0, CS_TWO_ARG | CS_ARGV,
      do_trigger},
     {(char *)"@unlink", NULL, CA_GBL_BUILD, 0, CS_ONE_ARG | CS_INTERP,
