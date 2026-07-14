@@ -409,65 +409,6 @@ void do_cut(dbref player, dbref cause, int key, char *thing) {
 }
 
 /**
- * Wizard-settable message of the day (displayed on connect)
- */
-void do_motd(dbref player, dbref cause, int key, char *message) {
-  int is_brief;
-
-  is_brief = 0;
-  if (key & MOTD_BRIEF) {
-    is_brief = 1;
-    key = key & ~MOTD_BRIEF;
-    if (key == MOTD_ALL)
-      key = MOTD_LIST;
-    else if (key != MOTD_LIST)
-      key |= MOTD_BRIEF;
-  }
-  switch (key) {
-  case MOTD_ALL:
-    StringCopy(mudconf.motd_msg, message);
-    if (!Quiet(player))
-      notify_quiet(player, "Set: MOTD.");
-    break;
-  case MOTD_WIZ:
-    StringCopy(mudconf.wizmotd_msg, message);
-    if (!Quiet(player))
-      notify_quiet(player, "Set: Wizard MOTD.");
-    break;
-  case MOTD_DOWN:
-    StringCopy(mudconf.downmotd_msg, message);
-    if (!Quiet(player))
-      notify_quiet(player, "Set: Down MOTD.");
-    break;
-  case MOTD_FULL:
-    StringCopy(mudconf.fullmotd_msg, message);
-    if (!Quiet(player))
-      notify_quiet(player, "Set: Full MOTD.");
-    break;
-  case MOTD_LIST:
-    if (Wizard(player)) {
-      if (!is_brief) {
-        notify_quiet(player, "----- motd file -----");
-        fcache_send(player, FC_MOTD);
-        notify_quiet(player, "----- wizmotd file -----");
-        fcache_send(player, FC_WIZMOTD);
-        notify_quiet(player, "----- motd messages -----");
-      }
-      notify_quiet(player, tprintf("MOTD: %s", mudconf.motd_msg));
-      notify_quiet(player, tprintf("Wizard MOTD: %s", mudconf.wizmotd_msg));
-      notify_quiet(player, tprintf("Down MOTD: %s", mudconf.downmotd_msg));
-      notify_quiet(player, tprintf("Full MOTD: %s", mudconf.fullmotd_msg));
-    } else {
-      fcache_send(player, FC_MOTD);
-      notify_quiet(player, mudconf.motd_msg);
-    }
-    break;
-  default:
-    notify_quiet(player, "Illegal combination of switches.");
-  }
-}
-
-/**
  * Enable or disable global control flags
  */
 NAMETAB enable_names[] = {

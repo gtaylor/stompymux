@@ -279,21 +279,15 @@
 
      guest_motd       - shown to guest characters immediately after 
                         they connect.
-     motd             - shown to all players immediately after they 
-                        connect. (except guests and players connecting 
-                        for the first time)
      newuser          - shown to players the first time they connect 
-                        in place of the motd file.
+                        after they create their characters.
      quit             - shown to players when they disconnect from the 
                         game. 
      register_connect - shown when a connection is opened from a site 
                         for which registration is enforced.
-     wizard_motd      - shown to wizards when they connect in addition 
-                        to the motd file.
- 
   See also: @readcache, badsite_file, connect_file, connect_reg_file,
-            down_file, guest_file, motd_file, newuser_file, quit_file,
-            register_create_file, wizard_motd_file.
+            down_file, guest_file, newuser_file, quit_file,
+            register_create_file.
  
 & @listcommands
  
@@ -337,27 +331,6 @@
   Other units on the map within LOS will see:
   
   T1 Naga [pw] shakes it's booty
-  
-& @motd
- 
-  Syntax: @motd[/<switches>] <message>
- 
-  This command sets or lists short messages that are displayed to 
-  players after they successfully log in to the game (or after they 
-  fail because logins are not allowed).  These messages are displayed 
-  in addition to the contents of the motd.txt and wizmotd.txt files.
- 
-  The following switches are available:
-     (No switches)   - Sets the message that all players see when they connect.
-     /wizard         - Sets the message that wizards see when they connect.
-     /down           - Sets the message the players see when they try to
-                       connect, but fail because logins are disabled.
-     /full           - Sets the message that players see when they try to
-                       connect, but fail because there are too many players
-                       already connected.
-     /list           - Lists the current messages.
-
-  See also: @listmotd
   
 & @newpassword
  
@@ -4088,13 +4061,13 @@ Continued in btdamgaes()3
  connect_file            connect_reg_file          conn_timeout 
  crash_database
  dark_sleepers           default_home
- down_file               down_motd_message         dump_interval 
+ down_file               down_message              dump_interval
  dump_message            dump_offset               events_
  daily_hour              examine_flags             examine_public_
  attrs exit_flags                                   fascist_teleport
  fixed_home_message      fixed_tel_message
  flag_alias              forbid_site               fork_dump 
- fork_vfork              full_file full_motd_message 
+ fork_vfork              full_file full_message
  function_access         function_invocation_limit 
  function_recursion_limit                          gdbm_database 
  good_name               guests_channel            guest_char_num 
@@ -4109,8 +4082,7 @@ Continued in btdamgaes()3
  logout_cmd_alias        log_options               look_obey_terse 
  mail_database             mail_expiration
  master_room             match_own_commands        max_players 
- motd_file
- motd_message            mud_name                  newuser_file
+ mud_name                  newuser_file
  notify_recursion_limit
  number_guests                                     output_database
  output_limit                                      paranoid_allocate
@@ -4133,7 +4105,7 @@ Continued in btdamgaes()3
  trace_output_limit      trace_topdown             trust_site 
  uncompress_program      unowned_safe              user_attr_access 
  use_http                                          wizard_help_file
- wizard_help_index       wizard_motd_file          wizard_motd_message
+ wizard_help_index
  zone_recursion_limit
  
 & conn_timeout
@@ -4366,18 +4338,18 @@ Continued in btdamgaes()3
   attempt to connect to a non-wizard character when logins are
   disabled.
 
-  See also: @disable, down_motd_message.
+  See also: @disable, down_message.
  
-& down_motd_message
+& down_message
 
-  Config parameter: down_motd_message <message>
+  Config parameter: down_message <message>
   Default: none
 
   Sets the message that is displayed when a player attempts to connect
   to a non-wizard character when logins are disabled.  This message
   is displayed in addition to the contents of the down.txt file.
 
-  See also: @disable, down_motd_file.
+  See also: @disable, down_file.
  
 & dump_interval
 
@@ -4614,11 +4586,11 @@ Continued in btdamgaes()3
   connected players is not less than the number of players allowed
   by the max_players directive.
 
-  See also: full_motd_message, max_players.
+  See also: full_message, max_players.
  
-& full_motd_message
+& full_message
 
-  Config parameter: full_motd_message <message>
+  Config parameter: full_message <message>
   Default: blank
 
   Sets the message that is displayed when a player attempts to connect
@@ -4627,7 +4599,7 @@ Continued in btdamgaes()3
   directive.  This message is displayed in addition to the contents
   of the full.txt file.
 
-  See also: down_motd_file, max_players.
+  See also: full_file, max_players.
  
 & function_access
 
@@ -4751,7 +4723,7 @@ Continued in btdamgaes()3
   Default: text/guest.txt
 
   Specifies the file that is to be shown to people connecting to the
-  guest character in place of the motd file.
+  guest character after they connect.
 
   See also: guest_char_num.
  
@@ -5442,10 +5414,10 @@ Avg weight: 45.00 Total tons: 990
 
   Players connecting when there are max_players players connected
   receive the contents of the file named by the full_file directive,
-  and the full_motd_message (also settable via @motd/full), and are
+  and the full_message, and are
   disconnected.
 
-  See also: @motd, full_file, full_motd_message.
+  See also: full_file, full_message.
   
 & maxjumpspeed
  
@@ -5739,30 +5711,6 @@ Avg weight: 45.00 Total tons: 990
      1 AUTOPILOT           : 272 bytes total, 272 each
   Grand total: 326208 bytes.
  
-& motd_file
-
-  Config parameter: motd_file <pathname>
-  Default: text/motd.txt
-
-  Specifies the name of the file to be shown to players immediately
-  after they connect to their characters.
-
-  See also: @readcache, newuser_file, motd_message.
- 
-& motd_message
-
-  Config parameter: motd_message <message>
-  Default: none
-
-  Sets the MOTD message that is displayed to all characters when they
-  log in.
-
-  This message is displayed in addition to the contents of the
-  motd.txt file.  It can be changed with the @motd command and
-  examined by the @listmotd command.
-
-  See also: @listmotd, @motd, motd_file.
- 
 & mud_name
 
   Config parameter: mud_name <string>
@@ -5774,11 +5722,11 @@ Avg weight: 45.00 Total tons: 990
   Default: text/newuser.txt
 
   Specifies the file to be shown to new players immediately after they
-  create their characters, in place of the MOTD file.  This file
+  create their characters. This file
   should contain information about the basic commands and how to get
   help.
 
-  See also: @readcache, motd_file.
+  See also: @readcache.
   
 & no_destroy
  
@@ -7295,34 +7243,6 @@ Avg weight: 45.00 Total tons: 990
 
   See also: wizhelp, @readcache, wizard_help_file
  
-& wizard_motd_file
-
-  Config parameter: wizard_motd_file <path>
-  Default: text/wizmotd.txt
-
-  Specifies the name of the file that contains the wizard MOTD message
-  that is displayed to wizards when they log in.  This message is
-  displayed in addition to the wizard MOTD message that is set by
-  the @motd/wiz command or the wizard_motd_message config parameter.
-
-  The contents of the file are read in to a cache when the game is
-  started and whenever a @readcache command is executed.
-
-  See also: @readcache, wizard_motd_message.
- 
-& wizard_motd_message
-
-  Config parameter: wizard_motd_message <message>
-  Default: none
-
-  Sets the wizard MOTD message that is displayed to wizards when they
-  log in.
-
-  This message is displayed in addition to the contents of the
-  wizmotd.txt file.  It can be changed with the @motd/wiz command
-  and examined by the @listmotd command.
-
-  See also: @listmotd, @motd, motd_message, wizard_motd_file.
  & help
  
   This is the MUX online help facility for wizard commands and topics.

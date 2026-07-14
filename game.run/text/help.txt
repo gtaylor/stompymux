@@ -1480,14 +1480,6 @@
  
   See also: @aahear, @ahear, @amhear, @sweep, @inprefix, @infilter
   
-& @listmotd
- 
-  Syntax: @listmotd
- 
-  Displays the current message-of-the-day.  Note that it is displayed
-  when you connect to your character. This will also display the
-  "motd.txt" file.
-  
 & @lock
  
   Syntax: @lock[/<whichlock>] <object>=<key>
@@ -4128,7 +4120,7 @@ while line:
   @dig         @doing       @dolist      @drain       @edit    
   @emit        @entrances   @femit       @find        @force   
   @fpose       @fsay        @halt        @last        @link
-  @list        @listmotd    @lock        @mvattr
+  @list                      @lock        @mvattr
   @name        @notify      @npemit      @oemit       @open    
   @parent      @password    @pemit       @power       @program 
   @ps          @quitprogram @remit       @robot

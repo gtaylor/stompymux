@@ -360,12 +360,6 @@ void list_chashstats(dbref);
 #define LOOK_INVENTORY 4   /* list inventory of object */
 #define LOOK_SCORE 5       /* list score (# coins) */
 #define LOOK_OUTSIDE 8     /* look for object in container of player */
-#define MOTD_ALL 0         /* login message for all */
-#define MOTD_WIZ 1         /* login message for wizards */
-#define MOTD_DOWN 2        /* login message when logins disabled */
-#define MOTD_FULL 4        /* login message when too many players on */
-#define MOTD_LIST 8        /* Display current login messages */
-#define MOTD_BRIEF 16      /* Suppress motd file display for wizards */
 #define MOVE_QUIET 1       /* Dont do osucc/ofail/asucc/afail if ctrl */
 #define NFY_NFY 0          /* Notify first waiting command */
 #define NFY_NFYALL 1       /* Notify all waiting commands */

@@ -156,8 +156,6 @@ void cf_init(void) {
   StringCopy(mudconf.conn_dir, "");
   StringCopy(mudconf.creg_file, "text/register.txt");
   StringCopy(mudconf.regf_file, "text/create_reg.txt");
-  StringCopy(mudconf.motd_file, "text/motd.txt");
-  StringCopy(mudconf.wizmotd_file, "text/wizmotd.txt");
   StringCopy(mudconf.quit_file, "text/quit.txt");
   StringCopy(mudconf.down_file, "text/down.txt");
   StringCopy(mudconf.full_file, "text/full.txt");
@@ -167,10 +165,8 @@ void cf_init(void) {
   StringCopy(mudconf.help_indx, "text/help.indx");
   StringCopy(mudconf.whelp_file, "text/wizhelp.txt");
   StringCopy(mudconf.whelp_indx, "text/wizhelp.indx");
-  StringCopy(mudconf.motd_msg, "");
-  StringCopy(mudconf.wizmotd_msg, "");
-  StringCopy(mudconf.downmotd_msg, "");
-  StringCopy(mudconf.fullmotd_msg, "");
+  StringCopy(mudconf.down_msg, "");
+  StringCopy(mudconf.full_msg, "");
   StringCopy(mudconf.dump_msg, "");
   StringCopy(mudconf.postdump_msg, "");
   StringCopy(mudconf.fixed_home_msg, "");
@@ -981,8 +977,7 @@ CONF conftable[] = {
     {(char *)"default_home", cf_int, CA_GOD, &mudconf.default_home, 0},
     {(char *)"down_file", cf_string, CA_DISABLED, (void *)mudconf.down_file,
      32},
-    {(char *)"down_motd_message", cf_string, CA_GOD,
-     (void *)mudconf.downmotd_msg, 4096},
+    {(char *)"down_message", cf_string, CA_GOD, (void *)mudconf.down_msg, 4096},
     {(char *)"dump_interval", cf_int, CA_GOD, &mudconf.dump_interval, 0},
     {(char *)"dump_message", cf_string, CA_GOD, (void *)mudconf.dump_msg, 128},
     {(char *)"postdump_message", cf_string, CA_GOD,
@@ -1005,8 +1000,7 @@ CONF conftable[] = {
     {(char *)"fork_vfork", cf_bool, CA_GOD, &mudconf.fork_vfork, 0},
     {(char *)"full_file", cf_string, CA_DISABLED, (void *)mudconf.full_file,
      32},
-    {(char *)"full_motd_message", cf_string, CA_GOD,
-     (void *)mudconf.fullmotd_msg, 4096},
+    {(char *)"full_message", cf_string, CA_GOD, (void *)mudconf.full_msg, 4096},
     {(char *)"function_access", cf_func_access, CA_GOD, NULL,
      (long)access_nametab},
     {(char *)"function_alias", cf_alias, CA_GOD, (int *)&mudstate.func_htab, 0},
@@ -1054,9 +1048,6 @@ CONF conftable[] = {
     {(char *)"match_own_commands", cf_bool, CA_GOD, &mudconf.match_mine, 0},
     {(char *)"max_players", cf_int, CA_GOD, &mudconf.max_players, 0},
     {(char *)"mech_database", cf_string, CA_GOD, (void *)mudconf.mech_db, 128},
-    {(char *)"motd_file", cf_string, CA_DISABLED, (void *)mudconf.motd_file,
-     32},
-    {(char *)"motd_message", cf_string, CA_GOD, (void *)mudconf.motd_msg, 4096},
     {(char *)"mud_name", cf_string, CA_GOD, (void *)mudconf.mud_name, 32},
     {(char *)"newuser_file", cf_string, CA_DISABLED, (void *)mudconf.crea_file,
      32},
@@ -1121,10 +1112,6 @@ CONF conftable[] = {
      (void *)mudconf.whelp_file, 32},
     {(char *)"wizard_help_index", cf_string, CA_DISABLED,
      (void *)mudconf.whelp_indx, 32},
-    {(char *)"wizard_motd_file", cf_string, CA_DISABLED,
-     (void *)mudconf.wizmotd_file, 32},
-    {(char *)"wizard_motd_message", cf_string, CA_GOD,
-     (void *)mudconf.wizmotd_msg, 4096},
     {(char *)"zone_recursion_limit", cf_int, CA_GOD, &mudconf.zone_nest_lim, 0},
     {(char *)"exit_parent", cf_int, CA_GOD, &mudconf.exit_parent, 0},
     {(char *)"room_parent", cf_int, CA_GOD, &mudconf.room_parent, 0},

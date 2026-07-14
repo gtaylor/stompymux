@@ -386,11 +386,7 @@ static void announce_connect(dbref player, DESC *d) {
   loc = Location(player);
   s_Connected(player);
 
-  queue_string(d, tprintf("\n%sMOTD:%s %s\n", ANSI_HILITE, ANSI_NORMAL,
-                          mudconf.motd_msg));
   if (Wizard(player)) {
-    raw_notify(player, tprintf("%sWIZMOTD:%s %s\n", ANSI_HILITE, ANSI_NORMAL,
-                               mudconf.wizmotd_msg));
     if (!(mudconf.control_flags & CF_LOGIN)) {
       raw_notify(player, "*** Logins are disabled.");
     }
@@ -953,7 +949,7 @@ void init_logout_cmdtab(void) {
 
 static void failconn(const char *logcode, const char *logtype,
                      const char *logreason, DESC *d, int disconnect_reason,
-                     dbref player, int filecache, char *motd_msg, char *command,
+                     dbref player, int filecache, char *message, char *command,
                      char *user, char *password, char *cmdsave) {
   char *buff;
 
@@ -974,8 +970,8 @@ static void failconn(const char *logcode, const char *logtype,
   }
   fcache_dump(d, filecache);
 
-  if (*motd_msg) {
-    queue_string(d, motd_msg);
+  if (*message) {
+    queue_string(d, message);
     queue_write(d, "\r\n", 2);
   }
   free_lbuf(command);
@@ -1090,20 +1086,9 @@ static int check_connect(DESC *d, char *msg) {
         }
       }
 
-      /*
-       * Give the player the MOTD file and the settable * *
-       *
-       * * MOTD * message(s). Use raw notifies so the
-       * player * * * doesn't * try to match on the text.
-       */
-
       buff = atr_get(player, A_LAST, &aowner, &aflags);
       if ((buff == NULL) || (*buff == '\0'))
         fcache_dump(d, FC_CREA_NEW);
-      else
-        fcache_dump(d, FC_MOTD);
-      if (Wizard(player))
-        fcache_dump(d, FC_WIZMOTD);
       free_lbuf(buff);
       announce_connect(player, d);
 
@@ -1114,12 +1099,12 @@ static int check_connect(DESC *d, char *msg) {
 
     } else if (!(mudconf.control_flags & CF_LOGIN)) {
       failconn("CON", "Connect", "Logins Disabled", d, R_GAMEDOWN, player,
-               FC_CONN_DOWN, mudconf.downmotd_msg, command, user, password,
+               FC_CONN_DOWN, mudconf.down_msg, command, user, password,
                cmdsave);
       return 0;
     } else {
       failconn("CON", "Connect", "Game Full", d, R_GAMEFULL, player,
-               FC_CONN_FULL, mudconf.fullmotd_msg, command, user, password,
+               FC_CONN_FULL, mudconf.full_msg, command, user, password,
                cmdsave);
       return 0;
     }
@@ -1131,7 +1116,7 @@ static int check_connect(DESC *d, char *msg) {
 
     if (!(mudconf.control_flags & CF_LOGIN)) {
       failconn("CRE", "Create", "Logins Disabled", d, R_GAMEDOWN, NOTHING,
-               FC_CONN_DOWN, mudconf.downmotd_msg, command, user, password,
+               FC_CONN_DOWN, mudconf.down_msg, command, user, password,
                cmdsave);
       return 0;
     }
@@ -1153,7 +1138,7 @@ static int check_connect(DESC *d, char *msg) {
        */
 
       failconn("CRE", "Create", "Game Full", d, R_GAMEFULL, NOTHING,
-               FC_CONN_FULL, mudconf.fullmotd_msg, command, user, password,
+               FC_CONN_FULL, mudconf.full_msg, command, user, password,
                cmdsave);
       return 0;
     }

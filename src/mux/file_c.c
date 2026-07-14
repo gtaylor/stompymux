@@ -40,8 +40,6 @@ FCACHE fcache[] = {{mudconf.conn_file, NULL, "Conn"},
                    {mudconf.creg_file, NULL, "Conn/Reg"},
                    {mudconf.crea_file, NULL, "Crea/Newuser"},
                    {mudconf.regf_file, NULL, "Crea/RegFaill"},
-                   {mudconf.motd_file, NULL, "Motd"},
-                   {mudconf.wizmotd_file, NULL, "Wizmotd"},
                    {mudconf.quit_file, NULL, "Quit"},
                    {NULL, NULL, NULL}};
 
@@ -50,11 +48,9 @@ NAMETAB list_files[] = {{(char *)"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
                         {(char *)"create_register", 2, CA_WIZARD, FC_CREA_REG},
                         {(char *)"down", 1, CA_WIZARD, FC_CONN_DOWN},
                         {(char *)"full", 1, CA_WIZARD, FC_CONN_FULL},
-                        {(char *)"motd", 1, CA_WIZARD, FC_MOTD},
                         {(char *)"newuser", 1, CA_WIZARD, FC_CREA_NEW},
                         {(char *)"quit", 1, CA_WIZARD, FC_QUIT},
                         {(char *)"register_connect", 1, CA_WIZARD, FC_CONN_REG},
-                        {(char *)"wizard_motd", 1, CA_WIZARD, FC_WIZMOTD},
                         {NULL, 0, 0, 0}};
 
 #define MAX_CONN 100

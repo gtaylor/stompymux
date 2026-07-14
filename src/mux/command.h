@@ -95,7 +95,6 @@ void do_lock(dbref, dbref, int, char *, char *); /* Set a lock on an object */
 void do_pagelock(dbref, dbref, int, char *, char *); /* Sets a Pagelock */
 void do_pageunlock(dbref, dbref, int, char *);       /* Removes a Pagelock */
 void do_look(dbref, dbref, int, char *); /* Look here or at something */
-void do_motd(dbref, dbref, int, char *); /* Set/list MOTD messages */
 void do_move(dbref, dbref, int, char *); /* Move about using exits */
 void do_mvattr(dbref, dbref, int, char *, char *[],
                int); /* Move attributes on object */

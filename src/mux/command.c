@@ -167,9 +167,6 @@ NAMETAB halt_sw[] = {{(char *)"all", 1, CA_PUBLIC, HALT_ALL}, {NULL, 0, 0, 0}};
 NAMETAB leave_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, MOVE_QUIET},
                       {NULL, 0, 0, 0}};
 
-NAMETAB listmotd_sw[] = {{(char *)"brief", 1, CA_WIZARD, MOTD_BRIEF},
-                         {NULL, 0, 0, 0}};
-
 NAMETAB lock_sw[] = {{(char *)"defaultlock", 1, CA_PUBLIC, A_LOCK},
                      {(char *)"droplock", 1, CA_PUBLIC, A_LDROP},
                      {(char *)"enterlock", 1, CA_PUBLIC, A_LENTER},
@@ -187,14 +184,6 @@ NAMETAB lock_sw[] = {{(char *)"defaultlock", 1, CA_PUBLIC, A_LOCK},
                      {NULL, 0, 0, 0}};
 
 NAMETAB look_sw[] = {{(char *)"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
-                     {NULL, 0, 0, 0}};
-
-NAMETAB motd_sw[] = {{(char *)"brief", 1, CA_WIZARD, MOTD_BRIEF | SW_MULTIPLE},
-                     {(char *)"connect", 1, CA_WIZARD, MOTD_ALL},
-                     {(char *)"down", 1, CA_WIZARD, MOTD_DOWN},
-                     {(char *)"full", 1, CA_WIZARD, MOTD_FULL},
-                     {(char *)"list", 1, CA_PUBLIC, MOTD_LIST},
-                     {(char *)"wizard", 1, CA_WIZARD, MOTD_WIZ},
                      {NULL, 0, 0, 0}};
 
 NAMETAB notify_sw[] = {{(char *)"all", 1, CA_PUBLIC, NFY_NFYALL},
@@ -361,12 +350,10 @@ CMDENT command_table[] = {
     {(char *)"@listcommands", NULL, CA_GOD, 0, CS_ONE_ARG, do_listcommands},
     {(char *)"@list_file", NULL, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,
      do_list_file},
-    {(char *)"@listmotd", listmotd_sw, 0, MOTD_LIST, CS_ONE_ARG, do_motd},
     {(char *)"@lock", lock_sw, 0, 0, CS_TWO_ARG | CS_INTERP, do_lock},
 #ifdef ARBITRARY_LOGFILES
     {(char *)"@log", NULL, CA_WIZARD, 0, CS_TWO_ARG, do_log},
 #endif
-    {(char *)"@motd", motd_sw, CA_WIZARD, 0, CS_ONE_ARG, do_motd},
     {(char *)"@mvattr", NULL, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV, do_mvattr},
     {(char *)"@name", NULL, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_INTERP, do_name},
     {(char *)"@newpassword", NULL, CA_WIZARD, PASS_ANY, CS_TWO_ARG,

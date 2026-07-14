@@ -17,10 +17,8 @@
 #define FC_CONN_REG 4
 #define FC_CREA_NEW 5
 #define FC_CREA_REG 6
-#define FC_MOTD 7
-#define FC_WIZMOTD 8
-#define FC_QUIT 9
-#define FC_LAST 9
+#define FC_QUIT 7
+#define FC_LAST 7
 
 /* File cache routines */
 

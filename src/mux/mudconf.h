@@ -43,8 +43,6 @@ struct confdata {
   char conn_dir[32];         /* display on connect if no registration */
   char creg_file[32];        /* display on connect if registration */
   char regf_file[32];        /* display on (failed) create if reg is on */
-  char motd_file[32];        /* display this file on login */
-  char wizmotd_file[32];     /* display this file on login to wizards */
   char quit_file[32];        /* display on quit */
   char down_file[32];        /* display this file if no logins */
   char full_file[32];        /* display when max users exceeded */
@@ -54,10 +52,8 @@ struct confdata {
   char help_indx[32];        /* HELP index file */
   char whelp_file[32];       /* Wizard help text file */
   char whelp_indx[32];       /* Wizard help index file */
-  char motd_msg[4096];       /* Wizard-settable login message */
-  char wizmotd_msg[4096];    /* Login message for wizards only */
-  char downmotd_msg[4096];   /* Settable 'logins disabled' message */
-  char fullmotd_msg[4096];   /* Settable 'Too many players' message */
+  char down_msg[4096];       /* Message displayed when logins are disabled */
+  char full_msg[4096];       /* Message displayed when the game is full */
   char dump_msg[128];        /* Message displayed when @dump-ing */
   char postdump_msg[128];    /* Message displayed after @dump-ing */
   char fixed_home_msg[128];  /* Message displayed when going home and FIXED */
