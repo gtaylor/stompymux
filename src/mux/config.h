@@ -34,7 +34,7 @@ typedef struct mech_data MECH;
 
 #include <sys/resource.h>
 
-#include <event.h>
+#include <event2/event.h>
 
 /* TEST_MALLOC:	Defining this makes a malloc that keeps track of the number
  *		of blocks allocated.  Good for testing for Memory leaks.

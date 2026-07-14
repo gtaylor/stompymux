@@ -54,7 +54,7 @@
    further than LOOKAHEAD_STACK_SIZE in the future
    */
 
-#include <event.h>
+#include <event2/event.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +65,7 @@
 #include "debug.h"
 #include "muxevent/muxevent.h"
 #include "muxevent/muxevent_alloc.h"
+#include "server_lifecycle.h"
 
 int muxevent_tick = 0;
 
@@ -94,7 +95,7 @@ static void muxevent_delete(MUXEVENT *);
   for (var = muxevent_list; var; var = var->next_in_main)                      \
     if (!Zombie(var))
 
-static void muxevent_wakeup(int fd, short event, void *arg) {
+static void muxevent_wakeup(evutil_socket_t fd, short event, void *arg) {
   MUXEVENT *e = (MUXEVENT *)arg;
 
   if (Zombie(e)) {
@@ -144,8 +145,12 @@ void muxevent_add(int time, int flags, int type, void (*func)(MUXEVENT *),
   tv.tv_sec = time;
   tv.tv_usec = 0;
 
-  evtimer_set(&e->ev, muxevent_wakeup, e);
-  evtimer_add(&e->ev, &tv);
+  e->ev = evtimer_new(server_lifecycle_event_base(), muxevent_wakeup, e);
+  if (e->ev == NULL) {
+    free(e);
+    return;
+  }
+  evtimer_add(e->ev, &tv);
 
   ADD_TO_BIDIR_LIST_HEAD(muxevent_list, prev_in_main, next_in_main, e);
   ADD_TO_BIDIR_LIST_HEAD(muxevent_first_in_type[type], prev_in_type,
@@ -155,9 +160,10 @@ void muxevent_add(int time, int flags, int type, void (*func)(MUXEVENT *),
 /* Remove event */
 
 static void muxevent_delete(MUXEVENT *e) {
-  if (evtimer_pending(&e->ev, NULL)) {
-    evtimer_del(&e->ev);
-  }
+  if (event_pending(e->ev, EV_TIMEOUT, NULL))
+    event_del(e->ev);
+  event_free(e->ev);
+  e->ev = NULL;
 
   if (e->flags & FLAG_FREE_DATA)
     free((void *)e->data);

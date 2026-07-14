@@ -5,6 +5,7 @@
 #include "config.h"
 
 #include <errno.h>
+#include <event2/buffer.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -17,14 +18,15 @@
 #include "libtelnet.h"
 #include "mudconf.h"
 #include "rbtree.h"
+#include "server_lifecycle.h"
 #include "telnet.h"
 #include "telnet_socket.h"
 
 #include "debug.h"
 
-struct event listen_sock_ev;
+static struct event *listen_sock_ev;
 #ifdef IPV6_SUPPORT
-struct event listen6_sock_ev;
+static struct event *listen6_sock_ev;
 #endif
 
 int mux_bound_socket = -1;
@@ -35,7 +37,7 @@ int ndescriptors = 0;
 
 DESC *descriptor_list = NULL;
 
-static void accept_new_connection(int sock, short event, void *arg);
+static void accept_new_connection(evutil_socket_t sock, short event, void *arg);
 static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                             int saddr_len);
 static int process_input(DESC *d);
@@ -142,7 +144,8 @@ void release_descriptor(DESC *d) {
     telnet_socket_clear_strings(d);
     if (d->descriptor) {
       fsync(d->descriptor);
-      event_del(&d->sock_ev);
+      event_free(d->sock_ev);
+      d->sock_ev = NULL;
       shutdown(d->descriptor, 2);
       close(d->descriptor);
     }
@@ -200,12 +203,20 @@ static int bind_mux_socket(int port) {
 
 void mux_release_socket() {
   dprintk("releasing mux main socket.");
-  event_del(&listen_sock_ev);
-  close(mux_bound_socket);
+  if (listen_sock_ev != NULL) {
+    event_free(listen_sock_ev);
+    listen_sock_ev = NULL;
+  }
+  if (mux_bound_socket != -1)
+    close(mux_bound_socket);
   mux_bound_socket = -1;
 #ifdef IPV6_SUPPORT
-  event_del(&listen6_sock_ev);
-  close(mux_bound_socket6);
+  if (listen6_sock_ev != NULL) {
+    event_free(listen6_sock_ev);
+    listen6_sock_ev = NULL;
+  }
+  if (mux_bound_socket6 != -1)
+    close(mux_bound_socket6);
   mux_bound_socket6 = -1;
 #endif
 }
@@ -221,7 +232,7 @@ int eradicate_broken_fd(int fd) {
       log_error(LOG_PROBLEMS, "ERR", "EBADF",
                 "Broken descriptor %d for player #%d", d->descriptor,
                 d->player);
-      event_del(&d->sock_ev);
+      event_del(d->sock_ev);
       close(d->descriptor);
       shutdownsock(d, R_SOCKDIED);
     }
@@ -243,7 +254,7 @@ int eradicate_broken_fd(int fd) {
   return 0;
 }
 
-void accept_client_input(int fd, short event, void *arg) {
+void accept_client_input(evutil_socket_t fd, short event, void *arg) {
   DESC *connection = (DESC *)arg;
   if (connection->descriptor != fd)
     return;
@@ -259,11 +270,12 @@ void accept_client_input(int fd, short event, void *arg) {
   release_descriptor(connection); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
-void bsd_write_callback(struct bufferevent *bufev, void *arg) {}
+static void bsd_write_callback(struct bufferevent *bufev, void *arg) {}
 
-void bsd_read_callback(struct bufferevent *bufev, void *arg) {}
+static void bsd_read_callback(struct bufferevent *bufev, void *arg) {}
 
-void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg) {
+static void bsd_error_callback(struct bufferevent *bufev, short whut,
+                               void *arg) {
   dprintk("error %d", whut);
 }
 
@@ -276,21 +288,27 @@ void telnet_socket_listen(int port) {
   if (mux_bound_socket < 0) {
     mux_bound_socket = bind_mux_socket(port);
   }
-  event_set(&listen_sock_ev, mux_bound_socket, EV_READ | EV_PERSIST,
-            accept_new_connection, NULL);
-  event_add(&listen_sock_ev, NULL);
+  listen_sock_ev = event_new(server_lifecycle_event_base(), mux_bound_socket,
+                             EV_READ | EV_PERSIST, accept_new_connection, NULL);
+  if (listen_sock_ev == NULL)
+    return;
+  event_add(listen_sock_ev, NULL);
 
 #ifdef IPV6_SUPPORT
   if (mux_bound_socket6 < 0) {
     mux_bound_socket6 = bind_mux6_socket(port);
   }
-  event_set(&listen6_sock_ev, mux_bound_socket6, EV_READ | EV_PERSIST,
-            accept_new6_connection, NULL);
-  event_add(&listen6_sock_ev, NULL);
+  listen6_sock_ev =
+      event_new(server_lifecycle_event_base(), mux_bound_socket6,
+                EV_READ | EV_PERSIST, accept_new6_connection, NULL);
+  if (listen6_sock_ev == NULL)
+    return;
+  event_add(listen6_sock_ev, NULL);
 #endif
 }
 
-static void accept_new_connection(int sock, short event, void *arg) {
+static void accept_new_connection(evutil_socket_t sock, short event,
+                                  void *arg) {
   int newsock, addr_len;
   struct sockaddr_storage addr;
   char addrname[1024];
@@ -433,8 +451,19 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
   d->prev = NULL;
   descriptor_list = d;
 
-  d->sock_buff = bufferevent_new(d->descriptor, bsd_write_callback,
-                                 bsd_read_callback, bsd_error_callback, NULL);
+  d->sock_buff =
+      bufferevent_socket_new(server_lifecycle_event_base(), d->descriptor, 0);
+  if (d->sock_buff == NULL) {
+    descriptor_list = d->next;
+    if (descriptor_list != NULL)
+      descriptor_list->prev = NULL;
+    ndescriptors--;
+    close(d->descriptor);
+    free(d);
+    return NULL;
+  }
+  bufferevent_setcb(d->sock_buff, bsd_read_callback, bsd_write_callback,
+                    bsd_error_callback, NULL);
   bufferevent_disable(d->sock_buff, EV_READ);
   bufferevent_enable(d->sock_buff, EV_WRITE);
   if (!telnet_initialize(d)) {
@@ -448,9 +477,21 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
     free(d);
     return NULL;
   }
-  event_set(&d->sock_ev, d->descriptor, EV_READ | EV_PERSIST,
-            accept_client_input, d);
-  event_add(&d->sock_ev, NULL);
+  d->sock_ev = event_new(server_lifecycle_event_base(), d->descriptor,
+                         EV_READ | EV_PERSIST, accept_client_input, d);
+  if (d->sock_ev == NULL) {
+    telnet_destroy(d);
+    bufferevent_free(d->sock_buff);
+    d->sock_buff = NULL;
+    descriptor_list = d->next;
+    if (descriptor_list != NULL)
+      descriptor_list->prev = NULL;
+    ndescriptors--;
+    close(d->descriptor);
+    free(d);
+    return NULL;
+  }
+  event_add(d->sock_ev, NULL);
   bind_descriptor(d);
   welcome_user(d);
   return d;
@@ -501,8 +542,11 @@ static int process_input(DESC *d) {
 void flush_sockets() {
   DESC *d, *dnext;
   DESC_SAFEITER_ALL(d, dnext) {
-    if (d->sock_buff && EVBUFFER_LENGTH(d->sock_buff->output)) {
-      evbuffer_write(d->sock_buff->output, d->descriptor);
+    if (d->sock_buff != NULL) {
+      struct evbuffer *output = bufferevent_get_output(d->sock_buff);
+
+      if (evbuffer_get_length(output) > 0)
+        evbuffer_write(output, d->descriptor);
     }
     fsync(d->descriptor);
   }
@@ -518,13 +562,16 @@ void close_sockets(int emergency, char *message) {
       if (shutdown(d->descriptor, 2) < 0)
         log_perror("NET", "FAIL", NULL, "shutdown");
       dprintk("shutting down fd %d", d->descriptor);
-      dprintk("output evbuffer contiguous space: %ld, totallen: %ld",
-              evbuffer_get_contiguous_space(d->sock_buff->output),
-              evbuffer_get_length(d->sock_buff->output));
+      dprintk(
+          "output evbuffer contiguous space: %ld, totallen: %ld",
+          evbuffer_get_contiguous_space(bufferevent_get_output(d->sock_buff)),
+          evbuffer_get_length(bufferevent_get_output(d->sock_buff)));
       fsync(d->descriptor);
-      event_loop(EVLOOP_ONCE);
-      event_del(&d->sock_ev);
+      event_base_loop(server_lifecycle_event_base(), EVLOOP_ONCE);
+      event_free(d->sock_ev);
+      d->sock_ev = NULL;
       bufferevent_free(d->sock_buff);
+      d->sock_buff = NULL;
       close(d->descriptor);
     } else {
       queue_string(d, message);
@@ -532,8 +579,7 @@ void close_sockets(int emergency, char *message) {
       shutdownsock(d, R_GOING_DOWN);
     }
   }
-  close(mux_bound_socket);
-  event_del(&listen_sock_ev);
+  mux_release_socket();
 }
 
 void emergency_shutdown(void) {

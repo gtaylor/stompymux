@@ -16,6 +16,7 @@
 #include "match.h"
 #include "mudconf.h"
 #include "powers.h"
+#include "server_lifecycle.h"
 #include "timer.h"
 
 extern void pool_reset(void);
@@ -24,10 +25,10 @@ extern unsigned int alarm(unsigned int seconds);
 extern void pcache_trim(void);
 static void check_events(void);
 
-static void timer_callback(int fd, short event, void *arg);
+static void timer_callback(evutil_socket_t fd, short event, void *arg);
 
 static struct timeval tv = {0, 100000};
-static struct event timer_event;
+static struct event *timer_event;
 
 void init_timer(void) {
   mudstate.now = time(NULL);
@@ -41,8 +42,10 @@ void init_timer(void) {
   mudstate.idle_counter = mudconf.idle_interval + mudstate.now;
   mudstate.mstats_counter = 15 + mudstate.now;
   mudstate.events_counter = 900 + mudstate.now;
-  evtimer_set(&timer_event, timer_callback, NULL);
-  evtimer_add(&timer_event, &tv);
+  timer_event =
+      evtimer_new(server_lifecycle_event_base(), timer_callback, NULL);
+  if (timer_event != NULL)
+    evtimer_add(timer_event, &tv);
 }
 
 #undef DISPATCH_DEBUG
@@ -220,10 +223,17 @@ static void dispatch(void) {
   mudstate.debug_cmd = cmdsave;
 }
 
-static void timer_callback(int fd, short event, void *arg) {
+static void timer_callback(evutil_socket_t fd, short event, void *arg) {
   mudstate.alarm_triggered = 1;
-  evtimer_add(&timer_event, &tv);
+  evtimer_add(timer_event, &tv);
   dispatch();
+}
+
+void timer_shutdown(void) {
+  if (timer_event != NULL) {
+    event_free(timer_event);
+    timer_event = NULL;
+  }
 }
 
 /**

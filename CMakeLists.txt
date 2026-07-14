@@ -48,8 +48,6 @@ if(BTECH_ENABLE_CLANG_TIDY)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
 endif()
 
-find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
-find_library(EVENT_LIBRARY event REQUIRED)
 find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -81,6 +79,22 @@ add_library(libtelnet STATIC "${LIBTELNET_SOURCE_DIR}/libtelnet.c")
 target_include_directories(libtelnet PUBLIC "${LIBTELNET_SOURCE_DIR}")
 target_compile_definitions(libtelnet PRIVATE HAVE_ZLIB)
 target_link_libraries(libtelnet PUBLIC ZLIB::ZLIB)
+
+set(LIBEVENT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libevent")
+if(NOT EXISTS "${LIBEVENT_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR "libevent submodule is missing; run git submodule update --init --recursive")
+endif()
+set(EVENT__LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
+set(EVENT__DISABLE_OPENSSL ON CACHE STRING "" FORCE)
+set(EVENT__DISABLE_MBEDTLS ON CACHE STRING "" FORCE)
+set(EVENT__DISABLE_BENCHMARK ON CACHE BOOL "" FORCE)
+set(EVENT__DISABLE_TESTS ON CACHE BOOL "" FORCE)
+set(EVENT__DISABLE_REGRESS ON CACHE BOOL "" FORCE)
+set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "" FORCE)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+set(CMAKE_SKIP_INSTALL_RULES ON)
+add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
+unset(CMAKE_SKIP_INSTALL_RULES)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
@@ -279,15 +293,14 @@ if(BUILD_TESTING)
 endif()
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
+target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
-  "${EVENT_INCLUDE_DIR}")
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
 
 add_executable(mkindx ${MKINDX_SOURCE_DIR}/mkindx.c)
 target_compile_options(mkindx PRIVATE

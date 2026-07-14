@@ -44,6 +44,8 @@
 
 #include "glue_types.h"
 
+void heartbeat_stop(void);
+
 #define Have_MechPower(a, b)                                                   \
   (((Powers2((Owner(a))) & (b)) || Wizard(Owner(a))) && Inherits((a)))
 

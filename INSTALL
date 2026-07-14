@@ -19,7 +19,7 @@ ________________________________________
  * CMake 4.3 or higher
  * A C and C++ compiler supported by CMake
  * crypt (libcrypt/lcrypt)
- * libevent (http://www.monkey.org/~provos/libevent/)
+ * libevent is provided by the third_party/libevent submodule
  * wget and tar (If you need getdata.sh to fetch the game data)
 
  S2: COMPILING AND RUNNING THE SOURCE

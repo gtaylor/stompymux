@@ -987,7 +987,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  event_init();
+  if (!server_lifecycle_initialize()) {
+    fprintf(stderr, "Unable to create libevent event base.\n");
+    exit(2);
+  }
 
   mindb = 0; /* Are we creating a new db? */
   config_file = (char *)CONF_FILE;

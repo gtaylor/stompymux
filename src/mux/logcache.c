@@ -24,6 +24,7 @@
 #include "logcache.h"
 #include "mudconf.h"
 #include "rbtree.h"
+#include "server_lifecycle.h"
 #include <errno.h>
 
 #ifdef DEBUG_LOGCACHE
@@ -39,7 +40,7 @@
 struct logfile_t {
   char *filename;
   int fd;
-  struct event ev;
+  struct event *ev;
 };
 
 rbtree logfiles = NULL;
@@ -50,9 +51,9 @@ static int logcache_compare(void *vleft, void *vright, void *arg) {
 
 static int logcache_close(struct logfile_t *log) {
   dprintk("closing logfile '%s'.", log->filename);
-  if (evtimer_pending(&log->ev, NULL)) {
-    evtimer_del(&log->ev);
-  }
+  if (event_pending(log->ev, EV_TIMEOUT, NULL))
+    event_del(log->ev);
+  event_free(log->ev);
   close(log->fd);
   rb_delete(logfiles, log->filename);
   if (log->filename)
@@ -63,7 +64,7 @@ static int logcache_close(struct logfile_t *log) {
   return 1;
 }
 
-static void logcache_expire(int fd, short event, void *arg) {
+static void logcache_expire(evutil_socket_t fd, short event, void *arg) {
   dprintk("Expiring '%s'.", ((struct logfile_t *)arg)->filename);
   logcache_close((struct logfile_t *)arg);
 }
@@ -72,7 +73,7 @@ static int _logcache_list(void *key, void *data, int depth, void *arg) {
   struct timeval tv;
   struct logfile_t *log = (struct logfile_t *)data;
   dbref player = *(dbref *)arg;
-  evtimer_pending(&log->ev, &tv);
+  event_pending(log->ev, EV_TIMEOUT, &tv);
   notify_printf(player, "%-40s%d", log->filename, tv.tv_sec - mudstate.now);
   return 1;
 }
@@ -113,8 +114,15 @@ static int logcache_open(char *filename) {
   newlog = malloc(sizeof(struct logfile_t));
   newlog->fd = fd;
   newlog->filename = strdup(filename);
-  evtimer_set(&newlog->ev, logcache_expire, newlog);
-  evtimer_add(&newlog->ev, &tv);
+  newlog->ev =
+      evtimer_new(server_lifecycle_event_base(), logcache_expire, newlog);
+  if (newlog->ev == NULL) {
+    close(newlog->fd);
+    free(newlog->filename);
+    free(newlog);
+    return 0;
+  }
+  evtimer_add(newlog->ev, &tv);
   rb_insert(logfiles, newlog->filename, newlog);
   dprintk("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
@@ -168,9 +176,9 @@ int logcache_writelog(char *fname, char *fdata) {
     }
   }
 
-  if (evtimer_pending(&log->ev, NULL)) {
-    event_del(&log->ev);
-    event_add(&log->ev, &tv);
+  if (event_pending(log->ev, EV_TIMEOUT, NULL)) {
+    event_del(log->ev);
+    event_add(log->ev, &tv);
   }
 
   if (write(log->fd, fdata, len) < 0) {

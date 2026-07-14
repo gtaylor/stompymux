@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include <event.h>
+#include <event2/bufferevent.h>
+#include <event2/event.h>
 #include <time.h>
 
 #include "alloc.h"
@@ -69,7 +70,7 @@ struct descriptor_data {
   struct descriptor_data *hashnext;
   struct descriptor_data *next;
   struct descriptor_data *prev;
-  struct event sock_ev;
+  struct event *sock_ev;
   struct bufferevent *sock_buff;
 };
 

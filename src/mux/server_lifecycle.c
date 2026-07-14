@@ -5,7 +5,7 @@
 #include "config.h"
 
 #include <errno.h>
-#include <event.h>
+#include <event2/event.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -20,6 +20,7 @@
 #include "debug.h"
 #include "externs.h"
 #include "flags.h"
+#include "glue.h"
 #include "logcache.h"
 #include "lua_runtime.h"
 #include "mudconf.h"
@@ -29,8 +30,9 @@
 #include "telnet_socket.h"
 #include "timer.h"
 
+static struct event_base *server_event_base;
 static struct timeval queue_slice = {0, 0};
-static struct event queue_event;
+static struct event *queue_event;
 static struct timeval last_slice;
 static struct timeval current_time;
 
@@ -94,11 +96,12 @@ static void server_lifecycle_process_preload(void) {
 }
 
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */
-static void server_lifecycle_run_queues(int fd, short event, void *arg) {
+static void server_lifecycle_run_queues(evutil_socket_t fd, short event,
+                                        void *arg) {
   pid_t child;
   int status = 0;
 
-  event_add(&queue_event, &queue_slice);
+  event_add(queue_event, &queue_slice);
   gettimeofday(&current_time, NULL);
   last_slice = update_quotas(last_slice, current_time);
   child = waitpid(-1, &status, WNOHANG);
@@ -108,6 +111,15 @@ static void server_lifecycle_run_queues(int fd, short event, void *arg) {
   }
   if (mudconf.queue_chunk)
     do_top(mudconf.queue_chunk);
+}
+
+int server_lifecycle_initialize(void) {
+  server_event_base = event_base_new();
+  return server_event_base != NULL;
+}
+
+struct event_base *server_lifecycle_event_base(void) {
+  return server_event_base;
 }
 
 /* Initialize process-wide state that must exist before database validation. */
@@ -140,25 +152,43 @@ void server_lifecycle_run(int port) {
   queue_slice.tv_sec = 0;
   queue_slice.tv_usec = mudconf.timeslice * 1000;
   telnet_socket_listen(port);
-  evtimer_set(&queue_event, server_lifecycle_run_queues, NULL);
-  evtimer_add(&queue_event, &queue_slice);
+  queue_event =
+      evtimer_new(server_event_base, server_lifecycle_run_queues, NULL);
+  if (queue_event == NULL) {
+    log_error(LOG_ALWAYS, "INI", "EVENT", "Unable to create queue timer.");
+    return;
+  }
+  evtimer_add(queue_event, &queue_slice);
   gettimeofday(&last_slice, NULL);
   gettimeofday(&current_time, NULL);
 #ifdef BTMUX_PERSISTENCE_TESTING
   server_lifecycle_signal_test_ready();
 #endif
-  event_dispatch();
+  event_base_dispatch(server_event_base);
 }
 
 /* Request that the active event loop return at its next safe opportunity. */
-void server_lifecycle_stop(void) { event_loopexit(NULL); }
+void server_lifecycle_stop(void) {
+  if (server_event_base != NULL)
+    event_base_loopexit(server_event_base, NULL);
+}
 
 /* Stop services and flush pending output before process exit. */
 void server_lifecycle_shutdown(void) {
+  server_lifecycle_stop();
+  if (queue_event != NULL) {
+    event_free(queue_event);
+    queue_event = NULL;
+  }
+  timer_shutdown();
+  heartbeat_stop();
   lua_shutdown();
   flush_sockets();
 #ifdef ARBITRARY_LOGFILES
   logcache_destruct();
 #endif
-  server_lifecycle_stop();
+  if (server_event_base != NULL) {
+    event_base_free(server_event_base);
+    server_event_base = NULL;
+  }
 }

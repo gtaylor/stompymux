@@ -5,3 +5,6 @@
 	path = third_party/libtelnet
 	url = https://github.com/seanmiddleditch/libtelnet.git
 	branch = develop
+[submodule "third_party/libevent"]
+	path = third_party/libevent
+	url = https://github.com/libevent/libevent.git

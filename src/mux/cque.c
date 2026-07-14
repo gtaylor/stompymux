@@ -20,8 +20,15 @@
 #include "pcache.h"
 #include "powers.h"
 #include "rbtab.h"
+#include "server_lifecycle.h"
 
 static rbtree obq = NULL;
+
+static void cque_free_entry(BQUE *entry) {
+  if (entry->ev != NULL)
+    event_free(entry->ev);
+  free_qentry(entry);
+}
 
 static int objqe_compare(dbref left, dbref right, void *arg) {
   return (right - left);
@@ -121,7 +128,7 @@ static void cque_enqueue(dbref player, BQUE *cmd) {
         tmp->queued = 1;
       }
     } else {
-      evtimer_add(&cmd->ev, &tv);
+      evtimer_add(cmd->ev, &tv);
       for (point = mudstate.qwait, trail = NULL;
            point && point->waittime <= cmd->waittime; point = point->next) {
         trail = point;
@@ -142,7 +149,7 @@ static void cque_enqueue(dbref player, BQUE *cmd) {
   }
 }
 
-static void wakeup_wait_que(int fd, short event, void *arg) {
+static void wakeup_wait_que(evutil_socket_t fd, short event, void *arg) {
   BQUE *pending = (BQUE *)arg;
   BQUE *point;
 
@@ -218,7 +225,7 @@ int halt_que(dbref player, dbref object) {
     while ((point = cque_deque(player)) != NULL) {
       free(point->text);
       point->text = NULL;
-      free_qentry(point);
+      cque_free_entry(point);
       point = NULL;
       numhalted++;
     }
@@ -228,7 +235,7 @@ int halt_que(dbref player, dbref object) {
     while ((point = cque_deque(object)) != NULL) {
       free(point->text);
       point->text = NULL;
-      free_qentry(point);
+      cque_free_entry(point);
       point = NULL;
       numhalted++;
     }
@@ -245,10 +252,10 @@ int halt_que(dbref player, dbref object) {
         trail->next = next = point->next;
       else
         mudstate.qwait = next = point->next;
-      if (evtimer_pending(&point->ev, NULL))
-        evtimer_del(&point->ev);
+      if (event_pending(point->ev, EV_TIMEOUT, NULL))
+        event_del(point->ev);
       free(point->text);
-      free_qentry(point);
+      cque_free_entry(point);
     } else
       next = (trail = point)->next;
 
@@ -267,7 +274,7 @@ int halt_que(dbref player, dbref object) {
         mudstate.qsemlast = trail;
       add_to(point->sem, -1, point->attr);
       free(point->text);
-      free_qentry(point);
+      cque_free_entry(point);
     } else
       next = (trail = point)->next;
 
@@ -378,7 +385,7 @@ int nfy_que(dbref sem, int attr, int key, int count) {
         } else {
           a_Queue(Owner(point->player), -1);
           free(point->text);
-          free_qentry(point);
+          cque_free_entry(point);
         }
       } else {
         next = (trail = point)->next;
@@ -561,7 +568,12 @@ static BQUE *setup_que(dbref player, dbref cause, char *command, char *args[],
    * Load the rest of the queue block
    */
 
-  evtimer_set(&tmp->ev, wakeup_wait_que, tmp);
+  tmp->ev = evtimer_new(server_lifecycle_event_base(), wakeup_wait_que, tmp);
+  if (tmp->ev == NULL) {
+    free(tmp->text);
+    free_qentry(tmp);
+    return NULL;
+  }
 
   tmp->player = player;
   tmp->waittime = 0;
@@ -839,7 +851,7 @@ int do_top(int ncmds) {
       }
     }
     free(tmp->text);
-    free_qentry(tmp);
+    cque_free_entry(tmp);
   }
 
   for (i = 0; i < MAX_GLOBAL_REGS; i++)
