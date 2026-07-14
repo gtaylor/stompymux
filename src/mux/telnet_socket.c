@@ -11,7 +11,6 @@
 
 #include "alloc.h"
 #include "db.h"
-#include "dnschild.h"
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
@@ -349,9 +348,6 @@ static const char *disc_messages[] = {"unknown",  "quit",     "timeout",
 void shutdownsock(DESC *d, int reason) {
   d->flags |= DS_DEAD;
   if (d->flags & DS_CONNECTED) {
-    if (d->outstanding_dnschild_query)
-      dnschild_kill(d->outstanding_dnschild_query);
-
     /*
      * Do the disconnect stuff if we aren't doing a LOGOUT * * *
      * * * * (which keeps the connection open so the player can *
@@ -436,9 +432,6 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
   d->quota = mudconf.cmd_quota_max;
   d->program_data = NULL;
   d->last_time = 0;
-  memcpy(&d->saddr, saddr, saddr_len);
-  d->saddr_len = saddr_len;
-
   d->hashnext = NULL;
   getnameinfo((struct sockaddr *)saddr, saddr_len, d->addr, sizeof(d->addr),
               NULL, 0, NI_NUMERICHOST);
@@ -448,8 +441,6 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
   d->next = descriptor_list;
   d->prev = NULL;
   descriptor_list = d;
-
-  d->outstanding_dnschild_query = dnschild_request(d);
 
   d->sock_buff = bufferevent_new(d->descriptor, bsd_write_callback,
                                  bsd_read_callback, bsd_error_callback, NULL);
@@ -539,9 +530,6 @@ void close_sockets(int emergency, char *message) {
               evbuffer_get_contiguous_space(d->sock_buff->output),
               evbuffer_get_length(d->sock_buff->output));
       fsync(d->descriptor);
-      if (d->outstanding_dnschild_query)
-        dnschild_kill(d->outstanding_dnschild_query);
-      d->outstanding_dnschild_query = NULL;
       event_loop(EVLOOP_ONCE);
       event_del(&d->sock_ev);
       bufferevent_free(d->sock_buff);

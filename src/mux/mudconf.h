@@ -206,7 +206,6 @@ struct confdata {
   int indent_desc;         /* Newlines before and after descs? */
   int name_spaces;         /* allow player names to have spaces */
   int show_unfindable_who; /* should players set UNFINDABLE appear on who? */
-  int site_chars;          /* where to truncate site name */
   int fork_dump;           /* perform dump in a forked process */
   int fork_vfork;          /* use vfork to fork */
   int sig_action;          /* What to do with fatal signals */
@@ -226,7 +225,6 @@ struct confdata {
   int queuemax;            /* max commands a player may have in queue */
   int queue_chunk;         /* # cmds to run from queue when idle */
   int active_q_chunk;      /* # cmds to run from queue when active */
-  int use_hostname;        /* TRUE = use machine NAME rather than quad */
   int ex_flags;            /* TRUE = show flags on examine */
   int robot_speak;         /* TRUE = allow robots to speak */
   int pub_flags;           /* TRUE = flags() works on anything */

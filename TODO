@@ -2,6 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Upgrade to latest libevent styles or replace with libuv or something else
+* Break up interface.h
 * Remove @doing and WHO
 * Start breaking up src/ into system subdirs
 * Do an analysis of what we could simplify by removing @restart

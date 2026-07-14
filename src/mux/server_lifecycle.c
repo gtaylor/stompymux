@@ -18,7 +18,6 @@
 #include "cque.h"
 #include "db.h"
 #include "debug.h"
-#include "dnschild.h"
 #include "externs.h"
 #include "flags.h"
 #include "logcache.h"
@@ -129,8 +128,6 @@ int server_lifecycle_boot(int restarting, int mindb) {
     return 0;
   }
   server_lifecycle_process_preload();
-  dnschild_init();
-
   if (restarting) {
     if (mindb || restart_persistence_load() < 0) {
       log_error(LOG_ALWAYS, "INI", "RSTRT",
@@ -172,7 +169,6 @@ void server_lifecycle_stop(void) { event_loopexit(NULL); }
 /* Stop services and flush pending output before process exit or restart. */
 void server_lifecycle_shutdown(void) {
   lua_shutdown();
-  dnschild_destruct();
   flush_sockets();
 #ifdef ARBITRARY_LOGFILES
   logcache_destruct();

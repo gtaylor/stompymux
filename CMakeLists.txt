@@ -228,7 +228,6 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/create.c
   ${MUX_SOURCE_DIR}/db.c
   ${MUX_SOURCE_DIR}/dllist.c
-  ${MUX_SOURCE_DIR}/dnschild.c
   ${MUX_SOURCE_DIR}/eval.c
   ${MUX_SOURCE_DIR}/file_c.c
   ${MUX_SOURCE_DIR}/flags.c

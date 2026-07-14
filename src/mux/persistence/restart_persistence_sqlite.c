@@ -11,7 +11,6 @@
 #include "alloc.h"
 #include "cque.h"
 #include "db.h"
-#include "dnschild.h"
 #include "flags.h"
 #include "interface.h"
 #include "mudconf.h"
@@ -374,10 +373,6 @@ static int restart_load_descriptors(sqlite3 *sqlite) {
       strcpy(descriptor->output_suffix, suffix);
     descriptor->quota = mudconf.cmd_quota_max;
     descriptor->refcount = 1;
-    descriptor->saddr_len = sizeof(descriptor->saddr);
-    getpeername(descriptor->descriptor, (struct sockaddr *)&descriptor->saddr,
-                (socklen_t *)&descriptor->saddr_len);
-    descriptor->outstanding_dnschild_query = dnschild_request(descriptor);
     if (restart_add_descriptor(descriptor) < 0) {
       free_lbuf(descriptor->output_prefix);
       free_lbuf(descriptor->output_suffix);

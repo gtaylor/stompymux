@@ -201,12 +201,10 @@ void cf_init(void) {
   mudconf.idle_interval = 60;
   mudconf.retry_limit = 3;
   mudconf.output_limit = 16384;
-  mudconf.site_chars = 25;
   mudconf.use_http = 0;
   mudconf.queuemax = 100;
   mudconf.queue_chunk = 10;
   mudconf.active_q_chunk = 10;
-  mudconf.use_hostname = 1;
   mudconf.ex_flags = 1;
   mudconf.robot_speak = 1;
   mudconf.pub_flags = 1;
@@ -1032,7 +1030,6 @@ CONF conftable[] = {
      32},
     {(char *)"help_index", cf_string, CA_DISABLED, (void *)mudconf.help_indx,
      32},
-    {(char *)"hostnames", cf_bool, CA_GOD, &mudconf.use_hostname, 0},
     {(char *)"use_http", cf_bool, CA_DISABLED, &mudconf.use_http, 0},
     {(char *)"idle_wiz_dark", cf_bool, CA_GOD, &mudconf.idle_wiz_dark, 0},
     {(char *)"idle_interval", cf_int, CA_GOD, &mudconf.idle_interval, 0},
@@ -1115,7 +1112,6 @@ CONF conftable[] = {
 	 cf_option, CA_DISABLED, &mudconf.sig_action,
 	 (long) sigactions_nametab},
 #endif
-    {(char *)"site_chars", cf_int, CA_GOD, &mudconf.site_chars, 0},
     {(char *)"space_compress", cf_bool, CA_GOD, &mudconf.space_compress, 0},
     {(char *)"stack_limit", cf_int, CA_GOD, &mudconf.stack_limit, 0},
     {(char *)"suspect_site", cf_site, CA_GOD, (int *)&mudstate.suspect_list,

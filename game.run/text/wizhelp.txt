@@ -4117,7 +4117,7 @@ Continued in btdamgaes()3
  good_name               guests_channel            guest_char_num 
  guest_file              guest_nuker               have_comsys 
  have_macros             have_mailer               have_zones 
- help_file               help_index                hostnames 
+ help_file               help_index
  idle_interval           idle_timeout              idle_wiz_dark 
  include                 indent_desc               initial_size 
  input_database          kill_guarantee_cost       kill_max_cost 
@@ -4143,7 +4143,7 @@ Continued in btdamgaes()3
  register_site           retry_limit
  robot_flags             robot_speech              room_flags 
  see_owned_dark            signal_action
- site_chars              space_compress            stack_limit 
+ space_compress          stack_limit
  suspect_site
  sweep_dark              switch_default_all 
  thing_flags                                       timeslice
@@ -4897,14 +4897,6 @@ Continued in btdamgaes()3
   Example:
   >ex Main RS Map/hhourly
   HHourly: @fo me={FIXMAP};@tri me/SAVEMAP.T
-  
-& hostnames
-
-  Config parameter: hostnames <yes/no>
-  Default: yes
-
-  Indicates whether or not IP addresses should be replaced with host
-  names where possible in the log file and wizard WHO report.
   
 & hudinfo-support
 
@@ -6799,14 +6791,6 @@ Avg weight: 45.00 Total tons: 990
                 see @restart.
      exit     - Log the error, and exit, hopefully with a core file.
  
-& site_chars
-
-  Config parameter: site_chars <number>
-  Default: 25.
-
-  Specifies the length of the hostname that is shown in a wizard WHO
-  listing. If <number> is 0, then the hostname will be shown in full.
-  
 & snipe
  
   RS Command: snipe <UnitID> <weapon>

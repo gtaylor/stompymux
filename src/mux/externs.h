@@ -9,7 +9,6 @@
 
 #include "conf.h"
 #include "db.h"
-#include "dnschild.h"
 #include "interface.h"
 #include "logcache.h"
 #include "mudconf.h"

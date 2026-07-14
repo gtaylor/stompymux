@@ -703,16 +703,6 @@ static char *trimmed_name(dbref player) {
   return cbuff;
 }
 
-static char *trimmed_site(char *name) {
-  static char buff[MBUF_SIZE];
-
-  if (mudconf.site_chars <= 0 || strlen(name) <= (size_t)mudconf.site_chars)
-    return name;
-  StringCopyTrunc(buff, name, mudconf.site_chars);
-  buff[mudconf.site_chars + 1] = '\0';
-  return buff;
-}
-
 static void dump_users(DESC *e, char *match, int key) {
   DESC *d;
   int count, rcount, ucount;
@@ -809,9 +799,9 @@ static void dump_users(DESC *e, char *match, int key) {
                  time_format_1(mudstate.now - d->connected_at),
                  time_format_2(mudstate.now - d->last_time), flist,
                  Location(d->player), d->command_count,
-                 trimmed_site(((d->username[0] != '\0')
-                                   ? tprintf("%s@%s", d->username, d->addr)
-                                   : d->addr)));
+                 (d->username[0] != '\0')
+                     ? tprintf("%s@%s", d->username, d->addr)
+                     : d->addr);
       } else if (key == CMD_SESSION) {
         snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
                  trimmed_name(d->player),
