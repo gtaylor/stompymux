@@ -93,11 +93,6 @@ NAMETAB destroy_sw[] = {{(char *)"override", 8, CA_PUBLIC, DEST_OVERRIDE},
 NAMETAB dig_sw[] = {{(char *)"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
                     {NULL, 0, 0, 0}};
 
-NAMETAB doing_sw[] = {{(char *)"header", 1, CA_PUBLIC, DOING_HEADER},
-                      {(char *)"message", 1, CA_PUBLIC, DOING_MESSAGE},
-                      {(char *)"poll", 1, CA_PUBLIC, DOING_POLL},
-                      {NULL, 0, 0, 0}};
-
 NAMETAB dolist_sw[] = {{(char *)"delimit", 1, CA_PUBLIC, DOLIST_DELIMIT},
                        {(char *)"space", 1, CA_PUBLIC, DOLIST_SPACE},
                        {
@@ -307,7 +302,6 @@ CMDENT command_table[] = {
     {(char *)"@dig", dig_sw, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV | CS_INTERP,
      do_dig},
     {(char *)"@disable", NULL, CA_WIZARD, GLOB_DISABLE, CS_ONE_ARG, do_global},
-    {(char *)"@doing", doing_sw, CA_PUBLIC, 0, CS_ONE_ARG, do_doing},
     {(char *)"@dolist", dolist_sw, CA_GBL_INTERP, 0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
      do_dolist},

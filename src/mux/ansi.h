@@ -4,7 +4,7 @@
  *
  * Some older versions of Ultrix don't appear to be able to
  * handle these escape sequences. If lowercase 'a's are being
- * stripped from @doings, and/or the output of the ANSI flag
+ * stripped from output using the ANSI flag
  * is screwed up, you have the Ultrix problem.
  *
  * To fix the ANSI problem, try replacing the '\x1B' with '\033'.

@@ -425,7 +425,6 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                  site_check(saddr, saddr_len, mudstate.suspect_list);
   d->player = 0;
   d->addr[0] = '\0';
-  d->doing[0] = '\0';
   d->username[0] = '\0';
   make_nonblocking(s);
   d->output_prefix = NULL;

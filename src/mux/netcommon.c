@@ -729,14 +729,8 @@ static void dump_users(DESC *e, char *match, int key) {
   } else if ((e->flags & DS_CONNECTED) && Wizard(e->player) &&
              (key == CMD_WHO)) {
     queue_string(e, "     Room    Cmds Host\r\n");
-  } else {
-    if (Wizard(e->player))
-      queue_string(e, "  ");
-    else
-      queue_string(e, " ");
-    queue_string(e, mudstate.doing_hdr);
+  } else
     queue_string(e, "\r\n");
-  }
   //	queue_string(e,"------------------------------------------------------------------------------\r\n");
   count = 0;
   rcount = 0;
@@ -816,21 +810,19 @@ static void dump_users(DESC *e, char *match, int key) {
                  d->descriptor, d->input_size, d->input_lost, d->input_tot,
                  d->output_size, d->output_lost, d->output_tot);
       } else if (Wizard(e->player)) {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s%s%s\r\n",
+        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s\r\n",
                  trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
                  time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
                                    ? (mudstate.now - d->last_time)
                                    : 0),
-                 flist, d->doing, ANSI_NORMAL);
+                 flist);
       } else {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s  %s%s\r\n",
-                 trimmed_name(d->player),
+        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s\r\n", trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
                  time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
                                    ? (mudstate.now - d->last_time)
-                                   : 0),
-                 d->doing, ANSI_NORMAL);
+                                   : 0));
       }
       queue_string(e, buf);
     } else {
@@ -858,77 +850,6 @@ static void dump_users(DESC *e, char *match, int key) {
   queue_string(e, buf);
 
   free_lbuf(buf);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * do_doing: Set the doing string that appears in the WHO report.
- * * Idea from R'nice@TinyTIM.
- */
-
-void do_doing(dbref player, dbref cause, int key, char *arg) {
-  DESC *d;
-  char *c, *e;
-  int foundany, over;
-
-  if (key == DOING_MESSAGE) {
-    foundany = 0;
-    over = 0;
-    DESC_ITER_PLAYER(player, d) {
-      c = d->doing;
-
-      over =
-          safe_copy_str(arg, d->doing, &c, DOINGLEN - 2 - strlen(ANSI_NORMAL));
-      /* See if there's <esc>[<numbers> as the last remaining stuff */
-      if (over) {
-        e = c;
-        c--;
-        if (isdigit(*c)) {
-          while (isdigit(*c) && c > e)
-            c--;
-          if (*c == '[') {
-            c--;
-            if (c > e && *c == '\033') {
-              *c = 0;
-              e = c;
-            }
-          }
-        }
-        StringCopy(e, ANSI_NORMAL);
-      } else
-        StringCopy(c, ANSI_NORMAL);
-      foundany = 1;
-    }
-    if (foundany) {
-      if (over) {
-        notify_printf(player, "Warning: %d characters lost.", over);
-      }
-      if (!Quiet(player))
-        notify(player, "Set.");
-    } else {
-      notify(player, "Not connected.");
-    }
-  } else if (key == DOING_HEADER) {
-    if (!Wizard(player)) {
-      notify(player, "Permission denied.");
-      return;
-    }
-    if (!arg || !*arg) {
-      StringCopy(mudstate.doing_hdr, "Doing");
-      over = 0;
-    } else {
-      c = mudstate.doing_hdr;
-      over = safe_copy_str(arg, mudstate.doing_hdr, &c, DOINGLEN - 1);
-      *c = '\0';
-    }
-    if (over) {
-      notify_printf(player, "Warning: %d characters lost.", over);
-    }
-    if (!Quiet(player))
-      notify(player, "Set.");
-  } else {
-    notify_printf(player, "Poll: %s", mudstate.doing_hdr);
-  }
 }
 
 NAMETAB logout_cmdtable[] = {

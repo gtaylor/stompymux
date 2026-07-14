@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Remove @doing
 * Rewrite WHO in Lua
 * Start breaking up src/ into system subdirs
 * Write tests

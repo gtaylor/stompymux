@@ -819,19 +819,6 @@
  
   See also: @destroy, @link, @open, LINKING, TYPES OF OBJECTS
   
-& @doing
- 
-  Syntax: @doing[/<switches>] [<message>]
- 
-  Sets your doing message, which appears after your name in the WHO
-  report.
- 
-  The following switches are available:
-     /message - Sets your Doing string in the WHO report. (default)
-     /poll    - Displays the current Doing poll from the WHO report.
- 
-  See also: WHO, @poll
-  
 & @dolist
  
   Syntax: @dolist[/<switch>] [<delimiter>] <list>=<action>
@@ -4117,7 +4104,7 @@ while line:
   "            :            ;            &            #        
   \\           @@           @cemit       @chown       @chzone  
   @clone       @cpattr      @create      @decompile   @destroy 
-  @dig         @doing       @dolist      @drain       @edit    
+  @dig         @dolist      @drain       @edit
   @emit        @entrances   @femit       @find        @force   
   @fpose       @fsay        @halt        @last        @link
   @list                      @lock        @mvattr
@@ -4264,10 +4251,10 @@ carried
   Example:
  
   > WHO
-  Player Name          On For Idle  Doing
+  Player Name          On For Idle
   Wizard                00:04   1m
   Mortal                00:11   0s
-  Evinar                00:12   6m  Idle. :)
+  Evinar                00:12   6m
   frobozz               00:32   6s
   4 Players logged in.
   > say conn(wiz)
@@ -4936,25 +4923,6 @@ carried
  Result: It is harder for an enemy to hit you with physical attacks.
  
  
-& doing()
- 
-  Syntax: doing(<player>)
- 
-  This function returns the value of the specified players doing, as
-  set by the @doing command.
- 
-  Example:
-  >WHO
-  Player Name        On For Idle
-  Fred                23:16   0s  Stuff
-  Nurks            1d 00:05   0s  Other Stuff
-  2 Players logged in, 85 record, no maximum.
- 
-  >say doing(Nurks)
-  You say "Other Stuff"
- 
-  See Also: @doing
-  
 & drop
  
   Syntax: drop[/<switch>] <object>
@@ -6356,7 +6324,7 @@ carried
   Example:
  
   > WHO
-  Player Name          On For Idle  Doing
+  Player Name          On For Idle
   Wizard                00:04   1m
   Mortal                00:11   0s 
   Evinar                00:12   6m 
@@ -7391,7 +7359,7 @@ Continued in locate()2
   Example:
  
   > WHO
-  Player Name          On For Idle  Doing
+  Player Name          On For Idle
   Mortal                00:11   0s 
   Evinar                00:12   6m 
   Wizard                00:32   6s 
@@ -8562,21 +8530,6 @@ round(%0,0)),3))],[strtrunc(round(%0,0),[sub(strlen(round(%0,0)),6)])]
  Left Leg      ||........||.....X.....||............||........||.............
  Right Leg     ||........||...........||............||........||.............
  Head          ||........||...........||............||........||.............
-  
-& poll()
- 
-  Syntax: poll()
- 
-  This function returns the string which is set as the @doing header.
- 
-  Example:
-  >WHO
-  Player Name        On For Idle  Under Construction
-  Fred             1d 22:55   0s  Stuff
-  Nurks            1d 23:44   0s  Other Stuff
-  2 Players logged in, 85 record, no maximum.
-  >say poll()
-  You say "Under Construction"
   
 & pop()
  
@@ -11634,13 +11587,12 @@ IS.SmallLaser             1      3            0     1      2    3   15
   Syntax: WHO <prefix>
  
   Displays a list of players currently connected to the MUX.
-  The WHO report tells you how long a player has been on, how long
-  they have been inactive, and what they are doing (if they have
-  used the @doing  command).  If <prefix> is specified, only players
-  whose names start with  <prefix> are listed.  The WHO command must
-  be entered in all capitals.
+  The WHO report tells you how long a player has been on and how long
+  they have been inactive. If <prefix> is specified, only players whose names
+  start with <prefix> are listed. The WHO command must be entered in all
+  capitals.
  
-  See also: @doing, lwho()
+  See also: lwho()
   
 & WIZARD
 

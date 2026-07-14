@@ -59,8 +59,8 @@ struct confdata {
   char fixed_home_msg[128];  /* Message displayed when going home and FIXED */
   char fixed_tel_msg[128];   /* Message displayed when teleporting and FIXED */
   char public_channel[32];   /* Name of public channel */
-  int allow_unloggedwho; /* Wether or not to allow unlogged-in clients to use
-                            WHO, DOING and SESSION */
+  int allow_unloggedwho; /* Whether unlogged-in clients can use WHO, DOING, and
+                            SESSION */
   int btech_explode_reactor; /* Allow or disallow explode reactor */
   int btech_explode_ammo;    /* Allow or disallow explode ammo */
   int btech_explode_stop;    /* Allow or disallow explode stop */
@@ -351,7 +351,6 @@ struct statedata {
   time_t process_start_time; /* When this server process started */
   char buffer[256];          /* A buffer for holding temp stuff */
   char *debug_cmd;           /* The command we are executing (if any) */
-  char doing_hdr[41];        /* Doing column header in the WHO display */
   SITE *access_list;         /* Access states for sites */
   SITE *suspect_list;        /* Sites that are suspect */
   HASHTAB command_htab;      /* Commands hashtable */

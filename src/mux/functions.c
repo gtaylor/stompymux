@@ -5233,58 +5233,6 @@ static void fun_logf(char *buff, char **bufc, dbref player, dbref cause,
 #endif
 
 /* ----------------------------------------------------------------------
-** fun_doing: return @doing string for arg.
-** arg is either socket or player (Code adopted from Mux2.3)
-*/
-static void fun_doing(char *buff, char **bufc, dbref player, dbref cause,
-                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  if (is_number(fargs[0])) {
-    int s = atoi(fargs[0]);
-    unsigned short bFound = 0;
-    DESC *d;
-    DESC_ITER_CONN(d) {
-      if (d->descriptor == s) {
-        bFound = 1;
-        break;
-      }
-    }
-    if (bFound && (d->player == player || Wizard(player))) {
-      safe_str(d->doing, buff, bufc);
-    } else {
-      /* [cad] Mux2.3 returns empty string here, not sure what
-         convention is used here. Just return #-1 for now */
-      safe_str("#-1", buff, bufc);
-    }
-  } else {
-    dbref victim = lookup_player(player, fargs[0], 1);
-    if (victim == NOTHING) {
-      safe_str("#-1 PLAYER DOES NOT EXIST", buff, bufc);
-      return;
-    }
-
-    if (Wizard(player) || !Hidden(victim)) {
-      DESC *d;
-      DESC_ITER_CONN(d) {
-        if (d->player == victim) {
-          safe_str(d->doing, buff, bufc);
-          return;
-        }
-      }
-    }
-    safe_str("#-1 NOT A CONNECTED PLAYER", buff, bufc);
-  }
-}
-
-/* ----------------------------------------------------------------------
-** fun_poll: return @doing header
-** (Code adopted from Mux2.3)
-*/
-static void fun_poll(char *buff, char **bufc, dbref player, dbref cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  safe_str(mudstate.doing_hdr, buff, bufc);
-}
-
-/* ----------------------------------------------------------------------
  ** fun_pairs: take an attr off an object and count the # of
  ** {[()]} in that attribute and return it as a list
  ** Modified from fun_get
@@ -5631,7 +5579,6 @@ FUN flist[] = {
     {"DIST2D", fun_dist2d, 4, 0, CA_PUBLIC},
     {"DIST3D", fun_dist3d, 6, 0, CA_PUBLIC},
     {"DIV", fun_div, 2, 0, CA_PUBLIC},
-    {"DOING", fun_doing, 1, 0, CA_WIZARD},
     {"E", fun_e, 0, 0, CA_PUBLIC},
     {"EDEFAULT", fun_edefault, 2, FN_NO_EVAL, CA_PUBLIC},
     {"EDIT", fun_edit, 3, 0, CA_PUBLIC},
@@ -5739,7 +5686,6 @@ FUN flist[] = {
     {"PI", fun_pi, 0, 0, CA_PUBLIC},
     {"PLAYMEM", fun_playmem, 1, 0, CA_PUBLIC},
     {"PMATCH", fun_pmatch, 1, 0, CA_PUBLIC},
-    {"POLL", fun_poll, 0, 0, CA_WIZARD},
     {"POP", fun_pop, 0, FN_VARARGS, CA_PUBLIC},
     {"PORTS", fun_ports, 1, 0, CA_PUBLIC},
     {"POS", fun_pos, 2, 0, CA_PUBLIC},

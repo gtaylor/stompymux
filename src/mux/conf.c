@@ -283,7 +283,6 @@ void cf_init(void) {
   mudstate.shutdown_flag = 0;
   mudstate.attr_next = A_USER_START;
   mudstate.debug_cmd = (char *)"< init >";
-  StringCopy(mudstate.doing_hdr, "Doing");
   mudstate.access_list = NULL;
   mudstate.suspect_list = NULL;
   mudstate.qhead = NULL;

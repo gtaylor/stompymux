@@ -54,7 +54,6 @@ void do_decomp(dbref, dbref, int, char *,
                char *); /* Reproduce commands to recrete obj */
 void do_destroy(dbref, dbref, int, char *);            /* Destroy an object */
 void do_dig(dbref, dbref, int, char *, char *[], int); /* Dig a new room */
-void do_doing(dbref, dbref, int, char *); /* Set doing string in WHO report */
 void do_dolist(dbref, dbref, int, char *, char *, char *[],
                int);                     /* Iterate command on list members */
 void do_drop(dbref, dbref, int, char *); /* Drop an object */

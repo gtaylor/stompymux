@@ -28,8 +28,6 @@ struct prog_data {
   char *wait_regs[MAX_GLOBAL_REGS];
 };
 
-#define DOINGLEN 45
-
 typedef struct descriptor_data DESC;
 struct descriptor_data {
   int descriptor;
@@ -40,7 +38,6 @@ struct descriptor_data {
   int host_info;
   char addr[256];
   char username[11];
-  char doing[DOINGLEN];
   dbref player;
   char *output_prefix;
   char *output_suffix;

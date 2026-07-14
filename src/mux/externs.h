@@ -320,9 +320,6 @@ void list_chashstats(dbref);
 #define DIG_TELEPORT 1     /* teleport to room after @digging */
 #define DOLIST_SPACE 0     /* expect spaces as delimiter */
 #define DOLIST_DELIMIT 1   /* expect custom delimiter */
-#define DOING_MESSAGE 0    /* Set my DOING message */
-#define DOING_HEADER 1     /* Set the DOING header */
-#define DOING_POLL 2       /* List DOING header */
 #define DROP_QUIET 1       /* Don't do odrop/adrop if control */
 #define DUMP_STRUCT 1      /* Dump flat structure file */
 #define DUMP_TEXT 2        /* Dump text (gdbm) file */
