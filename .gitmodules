@@ -1,3 +1,7 @@
 [submodule "third_party/luajit"]
 	path = third_party/luajit
 	url = https://github.com/LuaJIT/LuaJIT.git
+[submodule "third_party/libtelnet"]
+	path = third_party/libtelnet
+	url = https://github.com/seanmiddleditch/libtelnet.git
+	branch = develop

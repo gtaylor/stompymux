@@ -11,13 +11,19 @@
 * `src/mkindx`: Sources for the `mkindx` bin for indexing help files.
 * `tests`: Integration tests.
 
-## Development rules
+## C coding rules
 
-* Function, variable, and type names should be snake_case.
-* Name functions in the format of `[module]_[verb]`.
-* Name structs and types in the form of `[module]_[name]_[c-type-letter].
 * Two space indents for C sources.
 * Avoid the use of preprocessor macros when possible.
+* Obey the C code naming conventions below
+
+## C code naming conventions
+
+When writing C code, use the following naming conventions:
+
+* All macros and constants should be in caps: `THIS_IS_A_MACRO`, `ANOTHER_EXAMPLE_MACRO`
+* Struct names and typedefs should be in PascalCase: `FileDescription`, `MechObject`
+* Functions that operate on structs should use classic C style naming in snake_case: `file_descriptor_write`, `mech_object_destroy`
 
 ## Development workflows
 

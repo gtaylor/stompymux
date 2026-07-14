@@ -52,6 +52,7 @@ find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
 find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(ZLIB REQUIRED)
 find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
 
 set(LUAJIT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/luajit")
@@ -71,6 +72,15 @@ set_target_properties(luajit PROPERTIES
   IMPORTED_LOCATION "${LUAJIT_LIBRARY}"
   INTERFACE_INCLUDE_DIRECTORIES "${LUAJIT_SOURCE_DIR}/src")
 add_dependencies(luajit luajit_build)
+
+set(LIBTELNET_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libtelnet")
+if(NOT EXISTS "${LIBTELNET_SOURCE_DIR}/libtelnet.h")
+  message(FATAL_ERROR "libtelnet submodule is missing; run git submodule update --init --recursive")
+endif()
+add_library(libtelnet STATIC "${LIBTELNET_SOURCE_DIR}/libtelnet.c")
+target_include_directories(libtelnet PUBLIC "${LIBTELNET_SOURCE_DIR}")
+target_compile_definitions(libtelnet PRIVATE HAVE_ZLIB=1)
+target_link_libraries(libtelnet PRIVATE ZLIB::ZLIB)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
@@ -210,7 +220,8 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/myfifo/myfifo.c
   ${MUX_SOURCE_DIR}/muxevent/muxevent.c
   ${MUX_SOURCE_DIR}/boolexp.c
-  ${MUX_SOURCE_DIR}/bsd.c
+  ${MUX_SOURCE_DIR}/telnet_socket.c
+  ${MUX_SOURCE_DIR}/telnet.c
   ${MUX_SOURCE_DIR}/commac.c
   ${MUX_SOURCE_DIR}/command.c
   ${MUX_SOURCE_DIR}/comsys.c
@@ -266,7 +277,7 @@ endif()
 add_executable(netmux ${NETMUX_SOURCES})
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech luajit "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
+target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet "${EVENT_LIBRARY}" SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
@@ -304,6 +315,11 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/counter.lua"
       "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/events/enter_notice.lua"
       "${CMAKE_SOURCE_DIR}/game.run/lua/global_logic/example.lua")
+
+  add_executable(libtelnet_integration_test tests/libtelnet_integration.c)
+  target_link_libraries(libtelnet_integration_test
+    PRIVATE btmux_options libtelnet ZLIB::ZLIB)
+  add_test(NAME libtelnet_integration COMMAND libtelnet_integration_test)
 endif()
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

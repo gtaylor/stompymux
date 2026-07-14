@@ -17,24 +17,15 @@
 #include "attrs.h"
 #include "command.h"
 #include "comsys.h"
-#include "config.h"
 #include "db.h"
 #include "externs.h"
 #include "file_c.h"
 #include "interface.h"
 #include "mudconf.h"
 #include "netcommon.h"
-#include "powers.h"
+#include "telnet_socket.h"
 
-#ifdef DEBUG_NETCOMMON
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
 #include "debug.h"
-
-extern int process_output(DESC *d);
-void set_lastsite(DESC *, char *);
 
 /*
  * ---------------------------------------------------------------------------
@@ -118,81 +109,6 @@ struct timeval update_quotas(struct timeval last, struct timeval current) {
   }
   return msec_add(last, nslices * mudconf.timeslice);
 }
-
-#ifdef TCP_CORK // Linux 2.4, 2.6
-/* choke_player: cork the player's sockets, must have a matching release_socket
- */
-void choke_player(dbref player) {
-  DESC *d;
-  int eins = 1;
-
-  DESC_ITER_PLAYER(player, d) {
-    if (d->chokes == 0) {
-      if (setsockopt(d->descriptor, IPPROTO_TCP, TCP_CORK, &eins,
-                     sizeof(eins)) < 0) {
-        // XXX: currently we ignore the error, because if its not supported,
-        // then we'd spam the logs; other errors will be caught in the event
-        // loop.
-      }
-    }
-    d->chokes++;
-  }
-}
-
-void release_player(dbref player) {
-  DESC *d;
-  int null = 0;
-
-  DESC_ITER_PLAYER(player, d) {
-    d->chokes--;
-    if (d->chokes == 0) {
-      if (setsockopt(d->descriptor, IPPROTO_TCP, TCP_CORK, &null,
-                     sizeof(null)) < 0) {
-        // XXX: current we ignore any error, ebcause if its not supported,
-        // then we'd spam the logs; other errors will be caught in the event
-        // loop.
-      }
-    }
-    if (d->chokes < 0)
-      d->chokes = 0;
-  }
-}
-#else
-#ifdef TCP_NOPUSH // *BSD, Mac OSX
-/* choke_player: cork the player's sockets, must have a matching release_socket
- */
-void choke_player(dbref player) {
-  DESC *d;
-  int eins = 1, null = 0;
-
-  DESC_ITER_PLAYER(player, d) {
-    if (setsockopt(d->descriptor, IPPROTO_TCP, TCP_NOPUSH, &eins,
-                   sizeof(eins)) < 0) {
-      log_perror("NET", "FAIL", "choke_player", "setsockopt");
-    }
-  }
-}
-
-void release_player(dbref player) {
-  DESC *d;
-  int eins = 1, null = 0;
-
-  DESC_ITER_PLAYER(player, d) {
-    if (setsockopt(d->descriptor, IPPROTO_TCP, TCP_NOPUSH, &null,
-                   sizeof(null)) < 0) {
-      log_perror("NET", "FAIL", "release_player", "setsockopt");
-    }
-  }
-}
-#else             /* no OS support for network block coalescing. */
-void choke_player(dbref player) {
-  // Do nothing!
-}
-void release_player(dbref player) {
-  // Do nothing!
-}
-#endif
-#endif
 
 /* raw_notify_raw: write a message to a player without the newline */
 
@@ -283,22 +199,6 @@ void raw_broadcast(int inflags, char *template, ...) {
 
 /*
  * ---------------------------------------------------------------------------
- * * clearstrings: clear out prefix and suffix strings
- */
-
-void clearstrings(DESC *d) {
-  if (d->output_prefix) {
-    free_lbuf(d->output_prefix);
-    d->output_prefix = NULL;
-  }
-  if (d->output_suffix) {
-    free_lbuf(d->output_suffix);
-    d->output_suffix = NULL;
-  }
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * queue_write: Add text to the output queue for the indicated descriptor.
  */
 
@@ -306,7 +206,7 @@ void queue_write(DESC *d, const char *b, int n) {
   if (n <= 0)
     return;
 
-  bufferevent_write(d->sock_buff, b, n);
+  telnet_socket_write(d, b, (size_t)n);
   d->output_tot += n;
   return;
 }
@@ -322,11 +222,6 @@ void queue_string(DESC *d, const char *s) {
   queue_write(d, new, strlen(new));
 }
 
-void freeqs(DESC *d) {
-
-  d->input_tail = 0;
-  memset(d->input, 0, sizeof(d->input));
-}
 extern int fcache_conn_c;
 
 void welcome_user(DESC *d) {
@@ -341,7 +236,7 @@ void welcome_user(DESC *d) {
   }
 }
 
-void set_lastsite(DESC *d, char *lastsite) {
+static void set_lastsite(DESC *d, char *lastsite) {
   long i, j;
   char buf[LBUF_SIZE];
 
@@ -473,8 +368,6 @@ static void announce_connect(dbref player, DESC *d) {
 
   desc_addhash(d);
 
-  choke_player(player);
-
   count = 0;
   DESC_ITER_CONN(dtemp)
   count++;
@@ -597,7 +490,6 @@ static void announce_connect(dbref player, DESC *d) {
   record_login(player, 1, time_str, d->addr, d->username);
   look_in(player, Location(player), LK_SHOWEXIT);
   mudstate.curr_enactor = temp;
-  release_player(player);
 }
 
 void announce_disconnect(dbref player, DESC *d, const char *reason) {
@@ -711,7 +603,6 @@ void announce_disconnect(dbref player, DESC *d, const char *reason) {
   }
 
   mudstate.curr_enactor = temp;
-  release_player(player);
 }
 
 int boot_off(dbref player, char *message) {

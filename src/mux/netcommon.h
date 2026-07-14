@@ -6,8 +6,6 @@
 void make_portlist(dbref player, dbref target, char *buff, char **bufc);
 struct timeval timeval_sub(struct timeval now, struct timeval then);
 int msec_diff(struct timeval now, struct timeval then);
-void choke_player(dbref player);
-void release_player(dbref player);
 void raw_broadcast(int inflags, char *template, ...);
 void run_command(DESC *d, char *command);
 int do_command(DESC *d, char *command);

@@ -50,6 +50,7 @@ extern int shutdown_flag; /* if non-zero, interface should shut down */
 extern NAMETAB logout_cmdtable[];
 
 typedef struct cmd_block CBLK;
+typedef struct telnet_t telnet_t;
 
 struct cmd_block {
   struct cmd_block *nxt;
@@ -84,9 +85,15 @@ struct descriptor_data {
   int input_size;
   int input_tot;
   int input_lost;
-  int chokes;
   char input[LBUF_SIZE];
   int input_tail;
+  telnet_t *telnet;
+  char terminal_type[16];
+  int terminal_width;
+  int terminal_height;
+  int gmcp_enabled;
+  int charset_ascii;
+  int charset_request_pending;
   time_t connected_at;
   time_t last_time;
   int quota;
@@ -129,10 +136,8 @@ extern void handle_http(DESC *, char *);
 extern void raw_notify(dbref, const char *);
 extern void raw_notify_raw(dbref, const char *, char *);
 extern void raw_notify_newline(dbref);
-extern void clearstrings(DESC *);
 extern void queue_write(DESC *, const char *, int);
 extern void queue_string(DESC *, const char *);
-extern void freeqs(DESC *);
 extern void welcome_user(DESC *);
 extern void save_command(DESC *, CBLK *);
 extern void announce_disconnect(dbref, DESC *, const char *);

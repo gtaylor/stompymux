@@ -1170,8 +1170,6 @@ int do_top(int ncmds) {
         command = tmp->comm;
 
         if (command) {
-          if (isPlayer(object) && Connected(object))
-            choke_player(object);
           while (command) {
             cp = parse_to(&command, ';', 0);
             if (cp && *cp) {
@@ -1200,8 +1198,6 @@ int do_top(int ncmds) {
               }
             }
           }
-          if (isPlayer(object) && Connected(object))
-            release_player(object);
         }
       }
     }

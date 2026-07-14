@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "bsd.h"
 #include "conf.h"
 #include "db.h"
 #include "dnschild.h"
@@ -17,6 +16,7 @@
 #include "netcommon.h"
 #include "signals.h"
 #include "stringutil.h"
+#include "telnet_socket.h"
 
 #ifndef _DB_C
 #define INLINE

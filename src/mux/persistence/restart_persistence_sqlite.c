@@ -9,7 +9,6 @@
 #include <time.h>
 
 #include "alloc.h"
-#include "bsd.h"
 #include "cque.h"
 #include "db.h"
 #include "dnschild.h"
@@ -18,6 +17,7 @@
 #include "mudconf.h"
 #include "netcommon.h"
 #include "persistence/restart_persistence.h"
+#include "telnet_socket.h"
 
 #define RESTART_SCHEMA_VERSION 1
 

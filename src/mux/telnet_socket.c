@@ -1,34 +1,30 @@
 /*
- * bsd.c
+ * telnet_socket.c
  */
 
 #include "config.h"
 
 #include <errno.h>
 #include <signal.h>
-#include <sys/file.h>
-#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "alloc.h"
-#include "attrs.h"
-#include "bsd.h"
-#include "command.h"
 #include "db.h"
 #include "dnschild.h"
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
 #include "interface.h"
+#include "libtelnet.h"
 #include "logcache.h"
 #include "lua_runtime.h"
 #include "mudconf.h"
-#include "powers.h"
 #include "rbtree.h"
-#include <errno.h>
+#include "telnet.h"
+#include "telnet_socket.h"
 
 #include "debug.h"
 
@@ -45,11 +41,33 @@ int ndescriptors = 0;
 
 DESC *descriptor_list = NULL;
 
-static void make_nonblocking(int s);
 static void accept_new_connection(int sock, short event, void *arg);
 static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                             int saddr_len);
 static int process_input(DESC *d);
+
+void telnet_socket_write(DESC *d, const char *buffer, size_t size) {
+  if (d->telnet != NULL)
+    telnet_send(d->telnet, buffer, size);
+  else
+    bufferevent_write(d->sock_buff, buffer, size);
+}
+
+static void telnet_socket_clear_strings(DESC *d) {
+  if (d->output_prefix != NULL) {
+    free_lbuf(d->output_prefix);
+    d->output_prefix = NULL;
+  }
+  if (d->output_suffix != NULL) {
+    free_lbuf(d->output_suffix);
+    d->output_suffix = NULL;
+  }
+}
+
+static void telnet_socket_free_queues(DESC *d) {
+  d->input_tail = 0;
+  memset(d->input, 0, sizeof(d->input));
+}
 
 int desc_cmp(void *vleft, void *vright, void *token) {
   dbref left = (dbref)vleft;
@@ -64,14 +82,6 @@ void desc_addhash(DESC *d) {
   bind_descriptor(d);
 
   hdesc = (DESC *)rb_find(mudstate.desctree, (void *)d->player);
-  /*    if(!hdesc) {
-          dprintk("Creating new list root for '%s'(#%d) at %p.",
-              Name(d->player), d->player, d);
-      } else {
-          dprintk("Adding descriptor %p to list root at %p for '%s'(#%d).",
-          d, hdesc, Name(d->player), d->player);
-      }
-  */
   d->hashnext = hdesc;
   rb_insert(mudstate.desctree, (void *)d->player, d);
 }
@@ -79,12 +89,8 @@ void desc_addhash(DESC *d) {
 static void desc_delhash(DESC *d) {
   DESC *hdesc = NULL;
   char buffer[4096];
-  /*    dprintk("removing descriptor %p from list root %p for '%s'(#%d).", d,
-   * hdesc, Name(d->player), d->player); */
-  hdesc = (DESC *)rb_find(mudstate.desctree, (void *)d->player);
-  /*    dprintk("removing descriptor %p from list root %p for '%s'(#%d).", d,
-   * hdesc, Name(d->player), d->player); */
 
+  hdesc = (DESC *)rb_find(mudstate.desctree, (void *)d->player);
   if (!hdesc) {
     snprintf(buffer, 4096,
              "desc_delhash: unable to find player(%ld)'s descriptors from "
@@ -94,17 +100,12 @@ static void desc_delhash(DESC *d) {
     return;
   }
 
-  /*  dprintk("hdesc: %p, d: %p, hdesc->hashnext: %p, d->hashnext: %p", hdesc,
-            d, hdesc->hashnext, d->hashnext);
-*/
   if (hdesc == d && hdesc->hashnext) {
-    /*      dprintk("updating %d to use hashroot %p", d->player, d->hashnext);*/
     rb_insert(mudstate.desctree, (void *)d->player, d->hashnext);
     d->hashnext = NULL;
     release_descriptor(d);
     return;
   } else if (hdesc == d) {
-    /*        dprintk("removing %d table", d->player); */
     rb_delete(mudstate.desctree, (void *)d->player);
     release_descriptor(d);
     return;
@@ -122,17 +123,13 @@ static void desc_delhash(DESC *d) {
   return;
 }
 
-void bind_descriptor(DESC *d) {
-  d->refcount++;
-  // dprintk("bound desciptor %p, refcount now %d", d, d->refcount);
-}
+void bind_descriptor(DESC *d) { d->refcount++; }
 
 void release_descriptor(DESC *d) {
   d->refcount--;
-  // dprintk("descriptor %p released, refcount now %d", d, d->refcount);
   if (d->refcount == 0) {
     dprintk("%p destructing", d);
-    freeqs(d);
+    telnet_socket_free_queues(d);
 
     if (d->program_data != NULL) {
       int num = 0;
@@ -147,7 +144,7 @@ void release_descriptor(DESC *d) {
         free(d->program_data);
       }
     }
-    clearstrings(d);
+    telnet_socket_clear_strings(d);
     if (d->descriptor) {
       fsync(d->descriptor);
       event_del(&d->sock_ev);
@@ -155,31 +152,11 @@ void release_descriptor(DESC *d) {
       close(d->descriptor);
     }
     d->descriptor = 0;
+    telnet_destroy(d);
     if (d->sock_buff)
       bufferevent_free(d->sock_buff);
     d->sock_buff = NULL;
 
-    /*        if(descriptor_list == d) {
-                descriptor_list = d->next;
-            } else {
-                if(!descriptor_list) {
-                    dprintk("Oh sweet jesus, we have major braindamage.");
-                    descriptor_list = d->next;
-                } else {
-                    DESC *dtemp = descriptor_list;
-                    while(dtemp->next != NULL) {
-                        if(dtemp->next == d) {
-                            dtemp->next = d->next;
-                            break;
-                        } else {
-                            dtemp = dtemp->next;
-                        }
-                    }
-                }
-            }
-
-            d->next = NULL;
-            */
     if (d->prev) {
       d->prev->next = d->next;
     } else { /* d was the first one! */
@@ -286,8 +263,6 @@ void accept_client_input(int fd, short event, void *arg) {
   if (connection->descriptor != fd)
     return;
 
-  /* dprintk("callback on fd %d DESC %p", fd, arg); */
-
   if (connection->flags & DS_AUTODARK) {
     connection->flags &= ~DS_AUTODARK;
     s_Flags(connection->player, Flags(connection->player) & ~DARK);
@@ -296,7 +271,6 @@ void accept_client_input(int fd, short event, void *arg) {
   if (!process_input(connection)) {
     eradicate_broken_fd(fd);
   }
-  /*dprintk("finish on fd %d DESC %p", fd, arg); */
   release_descriptor(connection); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
@@ -417,9 +391,6 @@ static const char *disc_messages[] = {"unknown",  "quit",     "timeout",
                                       "badlogin", "nologins", "logout"};
 
 void shutdownsock(DESC *d, int reason) {
-  /*    dprintk("shutdownsock called on %p %s(#%d) refcount %d",
-          d, (d->player?Name(d->player):""), d->player, d->refcount); */
-
   d->flags |= DS_DEAD;
   if (d->flags & DS_CONNECTED) {
     if (d->outstanding_dnschild_query)
@@ -475,8 +446,6 @@ static void make_nonblocking(int s) {
   }
 }
 
-extern int fcache_conn_c;
-
 static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                             int saddr_len) {
   DESC *d;
@@ -494,7 +463,6 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
   d->host_info = site_check(saddr, saddr_len, mudstate.access_list) |
                  site_check(saddr, saddr_len, mudstate.suspect_list);
   d->player = 0;
-  d->chokes = 0;
   d->addr[0] = '\0';
   d->doing[0] = '\0';
   d->username[0] = '\0';
@@ -531,6 +499,17 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
                                  bsd_read_callback, bsd_error_callback, NULL);
   bufferevent_disable(d->sock_buff, EV_READ);
   bufferevent_enable(d->sock_buff, EV_WRITE);
+  if (!telnet_initialize(d)) {
+    bufferevent_free(d->sock_buff);
+    d->sock_buff = NULL;
+    descriptor_list = d->next;
+    if (descriptor_list != NULL)
+      descriptor_list->prev = NULL;
+    ndescriptors--;
+    close(d->descriptor);
+    free(d);
+    return NULL;
+  }
   event_set(&d->sock_ev, d->descriptor, EV_READ | EV_PERSIST,
             accept_client_input, d);
   event_add(&d->sock_ev, NULL);
@@ -541,8 +520,7 @@ static DESC *initializesock(int s, struct sockaddr_storage *saddr,
 
 static int process_input(DESC *d) {
   char buf[LBUF_SIZE];
-  int got, iter;
-  char current;
+  int got;
 
   if (d->flags & DS_DEAD) {
     dprintk("Bailing on process_input %p %d %s %ld", d, d->descriptor,
@@ -575,66 +553,15 @@ static int process_input(DESC *d) {
     *(char *)0xDEADBEEF = '9';
   }
 
-  for (iter = 0; iter < got; iter++) {
-    current = buf[iter];
-    if (current == '\n') {
-      if (d->flags & DS_CONNECTED) {
-        // dprintk("authed as %s running command '%s' refcount %d descriptor %p
-        // fd %d", Name(d->player), d->input, d->refcount, d, d->descriptor);
-        run_command(d, (char *)d->input);
-      } else {
-        // dprintk("unauth running command '%s' refcount %d descriptor %p fd
-        // %d", d->input, d->refcount, d, d->descriptor);
-        if (!do_unauth_command(d, d->input)) {
-          dprintk("logout on %p fd %d, bailing.", d, d->descriptor);
-          if (!(d->flags & DS_DEAD)) {
-            shutdownsock(d, R_QUIT);
-          }
-          break;
-        }
-      }
-      memset(d->input, 0, sizeof(d->input));
-      d->input_tail = 0;
-      if (d->flags & DS_DEAD)
-        break;
-    } else if (current == '\b' || current == 0x7f) {
-      if (current == 127) {
-        queue_string(d, "\b \b");
-      } else {
-        queue_string(d, " \b");
-      }
-      if (d->input_tail > 0) {
-        d->input[--d->input_tail] = '\0';
-      }
-      d->input_size--;
-    } else if (isascii(current) && isprint(current)) {
-      if ((size_t)d->input_tail >= sizeof(d->input)) {
-        continue;
-      }
-      d->input[d->input_tail++] = current;
-      d->input_size++;
-    }
-  }
-  // dprintk("finished %p fd %d", d, d->descriptor);
+  telnet_receive(d, buf, (size_t)got);
 
   release_descriptor(d); // NOLINT(clang-analyzer-unix.Malloc)
   return 1;
 }
 
 void flush_sockets() {
-  int null = 0;
   DESC *d, *dnext;
   DESC_SAFEITER_ALL(d, dnext) {
-    if (d->chokes) {
-#if TCP_CORK
-      setsockopt(d->descriptor, IPPROTO_TCP, TCP_CORK, &null, sizeof(null));
-#else
-#ifdef TCP_NOPUSH
-      setsockopt(d->descriptor, IPPROTO_TCP, TCP_NOPUSH, &null, sizeof(null));
-#endif
-#endif
-      d->chokes = 0;
-    }
     if (d->sock_buff && EVBUFFER_LENGTH(d->sock_buff->output)) {
       evbuffer_write(d->sock_buff->output, d->descriptor);
     }

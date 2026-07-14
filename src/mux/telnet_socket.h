@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 #include "interface.h"
 
 int desc_cmp(void *vleft, void *vright, void *token);
@@ -15,3 +17,4 @@ void release_descriptor(DESC *d);
 void bsd_write_callback(struct bufferevent *bufev, void *arg);
 void bsd_read_callback(struct bufferevent *bufev, void *arg);
 void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg);
+void telnet_socket_write(DESC *d, const char *buffer, size_t size);
