@@ -10,6 +10,7 @@
 * Make integration tests not conflict with running games
 * CLI'ify netmux
 * Crunch mkindx into netmux
+* utf8 support
 
 ## Lua Todos
 

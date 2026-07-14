@@ -52,6 +52,7 @@ find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
 find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(ZLIB REQUIRED)
 find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
 
 set(LUAJIT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/luajit")
@@ -78,6 +79,8 @@ if(NOT EXISTS "${LIBTELNET_SOURCE_DIR}/libtelnet.h")
 endif()
 add_library(libtelnet STATIC "${LIBTELNET_SOURCE_DIR}/libtelnet.c")
 target_include_directories(libtelnet PUBLIC "${LIBTELNET_SOURCE_DIR}")
+target_compile_definitions(libtelnet PRIVATE HAVE_ZLIB)
+target_link_libraries(libtelnet PUBLIC ZLIB::ZLIB)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 

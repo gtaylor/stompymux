@@ -56,6 +56,7 @@ struct descriptor_data {
   int terminal_width;
   int terminal_height;
   int gmcp_enabled;
+  int mccp_enabled;
   int charset_ascii;
   int charset_request_pending;
   time_t connected_at;

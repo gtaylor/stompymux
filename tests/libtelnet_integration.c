@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <zlib.h>
 
 #include "libtelnet.h"
 
@@ -21,6 +22,7 @@ struct test_context {
   int terminal_width;
   int terminal_height;
   int gmcp_enabled;
+  int mccp_enabled;
   int charset_ascii;
   int charset_request_pending;
 };
@@ -29,6 +31,7 @@ static const telnet_telopt_t test_options[] = {
     {TELNET_TELOPT_TTYPE, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_NAWS, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_MSSP, TELNET_WILL, TELNET_DONT},
+    {TELNET_TELOPT_COMPRESS2, TELNET_WILL, TELNET_DONT},
     {telnet_charset_option, TELNET_WILL, TELNET_DONT},
     {telnet_gmcp_option, TELNET_WILL, TELNET_DONT},
     {-1, 0, 0},
@@ -166,6 +169,9 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
       test_send_mssp(telnet);
+    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
+             !context->mccp_enabled)
+      telnet_begin_compress2(telnet);
     else if (event->neg.telopt == telnet_charset_option)
       test_send_charset_request(telnet, context);
     else if (event->neg.telopt == telnet_gmcp_option)
@@ -176,6 +182,9 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
       context->charset_request_pending = 0;
     else if (event->neg.telopt == telnet_gmcp_option)
       context->gmcp_enabled = 0;
+    break;
+  case TELNET_EV_COMPRESS:
+    context->mccp_enabled = event->compress.state;
     break;
   case TELNET_EV_TTYPE:
     if (event->ttype.cmd == TELNET_TTYPE_IS && event->ttype.name != NULL)
@@ -209,11 +218,45 @@ static int expect_bytes(const char *actual, size_t actual_size,
   return 0;
 }
 
+static int expect_mccp_data(const char *actual, size_t actual_size,
+                            const char *expected, size_t expected_size) {
+  static const char marker[] = {TELNET_IAC, TELNET_SB,
+                                TELNET_TELOPT_COMPRESS2, TELNET_IAC,
+                                TELNET_SE};
+  char output[128];
+  z_stream stream = {0};
+  int result;
+
+  if (actual_size <= sizeof(marker) ||
+      memcmp(actual, marker, sizeof(marker)) != 0) {
+    fprintf(stderr, "MCCP2 marker was not sent\n");
+    return 0;
+  }
+  stream.next_in = (Bytef *)(actual + sizeof(marker));
+  stream.avail_in = actual_size - sizeof(marker);
+  stream.next_out = (Bytef *)output;
+  stream.avail_out = sizeof(output);
+  result = inflateInit(&stream);
+  if (result != Z_OK) {
+    fprintf(stderr, "Unable to initialize MCCP2 decompression\n");
+    return 0;
+  }
+  result = inflate(&stream, Z_SYNC_FLUSH);
+  inflateEnd(&stream);
+  if (result != Z_OK || stream.total_out != expected_size ||
+      memcmp(output, expected, expected_size) != 0) {
+    fprintf(stderr, "MCCP2 output did not decompress correctly\n");
+    return 0;
+  }
+  return 1;
+}
+
 int main(void) {
   static const char do_options[] = {
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_TTYPE,
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_NAWS,
       TELNET_IAC, TELNET_WILL, TELNET_TELOPT_MSSP,
+      TELNET_IAC, TELNET_WILL, TELNET_TELOPT_COMPRESS2,
       TELNET_IAC, TELNET_WILL, telnet_charset_option,
       TELNET_IAC, TELNET_WILL, telnet_gmcp_option};
   static const char ttype_will[] = {TELNET_IAC, TELNET_WILL,
@@ -300,6 +343,8 @@ int main(void) {
       TELNET_IAC, TELNET_SB, telnet_charset_option, telnet_charset_rejected,
       TELNET_IAC, TELNET_SE};
   static const char gmcp_do[] = {TELNET_IAC, TELNET_DO, telnet_gmcp_option};
+  static const char mccp_do[] = {TELNET_IAC, TELNET_DO,
+                                 TELNET_TELOPT_COMPRESS2};
   static const char gmcp_ping[] = {TELNET_IAC, TELNET_SB, telnet_gmcp_option,
                                    'C',        'o',       'r',
                                    'e',        '.',       'P',
@@ -345,6 +390,7 @@ int main(void) {
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_NAWS);
   telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
+  telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(telnet, TELNET_WILL, telnet_charset_option);
   telnet_negotiate(telnet, TELNET_WILL, telnet_gmcp_option);
   result &= expect_bytes(context.sent, context.sent_size, do_options,
@@ -398,6 +444,13 @@ int main(void) {
   telnet_recv(telnet, "look\r\n", 6);
   result &= expect_bytes(context.data, context.data_size, "look\n", 5,
                          "ordinary input");
+
+  context.sent_size = 0;
+  telnet_recv(telnet, mccp_do, sizeof(mccp_do));
+  telnet_send(telnet, "compressed output", sizeof("compressed output") - 1);
+  result &= context.mccp_enabled;
+  result &= expect_mccp_data(context.sent, context.sent_size, "compressed output",
+                             sizeof("compressed output") - 1);
   telnet_free(telnet);
 
   if (!result)

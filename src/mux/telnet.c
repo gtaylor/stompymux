@@ -41,6 +41,7 @@ static const telnet_telopt_t telnet_options[] = {
     {TELNET_TELOPT_TTYPE, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_NAWS, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_MSSP, TELNET_WILL, TELNET_DONT},
+    {TELNET_TELOPT_COMPRESS2, TELNET_WILL, TELNET_DONT},
     {telnet_charset_option, TELNET_WILL, TELNET_DONT},
     {telnet_gmcp_option, TELNET_WILL, TELNET_DONT},
     {-1, 0, 0},
@@ -63,6 +64,7 @@ int telnet_initialize(DESC *d) {
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_NAWS);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
+  telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(d->telnet, TELNET_WILL, telnet_charset_option);
   telnet_negotiate(d->telnet, TELNET_WILL, telnet_gmcp_option);
   return 1;
@@ -267,6 +269,8 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
       telnet_send_mssp(telnet);
+    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 && !d->mccp_enabled)
+      telnet_begin_compress2(telnet);
     else if (event->neg.telopt == telnet_charset_option)
       telnet_send_charset_request(d);
     else if (event->neg.telopt == telnet_gmcp_option)
@@ -277,6 +281,9 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
       d->charset_request_pending = 0;
     else if (event->neg.telopt == telnet_gmcp_option)
       d->gmcp_enabled = 0;
+    break;
+  case TELNET_EV_COMPRESS:
+    d->mccp_enabled = event->compress.state;
     break;
   case TELNET_EV_WONT:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE) {
