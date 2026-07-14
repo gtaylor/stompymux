@@ -1526,7 +1526,6 @@ void run_command(DESC *d, char *command) {
     }
     d->quota--;
   }
-  d->input_size -= (strlen(command) + 1);
   if (d->program_data != NULL)
     handle_prog(d, command);
   else

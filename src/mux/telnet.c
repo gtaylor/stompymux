@@ -101,6 +101,7 @@ static void telnet_process_data(DESC *d, const char *buffer, size_t size) {
   for (iter = 0; iter < size; iter++) {
     current = (unsigned char)buffer[iter];
     if (current == '\n') {
+      d->input_size = 0;
       if (d->flags & DS_CONNECTED) {
         run_command(d, d->input);
       } else {
@@ -120,9 +121,10 @@ static void telnet_process_data(DESC *d, const char *buffer, size_t size) {
         queue_string(d, "\b \b");
       else
         queue_string(d, " \b");
-      if (d->input_tail > 0)
+      if (d->input_tail > 0) {
         d->input[--d->input_tail] = '\0';
-      d->input_size--;
+        d->input_size--;
+      }
     } else if (isascii(current) && isprint(current)) {
       if ((size_t)d->input_tail >= sizeof(d->input))
         continue;

@@ -493,6 +493,7 @@ static int process_input(DESC *d) {
     }
   }
 
+  d->input_tot += got;
   bind_descriptor(d);
 
   if (Wizard(d->player) && strncmp("@segfault", buf, 9) == 0) {
