@@ -52,7 +52,6 @@ find_path(EVENT_INCLUDE_DIR event.h REQUIRED)
 find_library(EVENT_LIBRARY event REQUIRED)
 find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(ZLIB REQUIRED)
 find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
 
 set(LUAJIT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/luajit")
@@ -79,8 +78,6 @@ if(NOT EXISTS "${LIBTELNET_SOURCE_DIR}/libtelnet.h")
 endif()
 add_library(libtelnet STATIC "${LIBTELNET_SOURCE_DIR}/libtelnet.c")
 target_include_directories(libtelnet PUBLIC "${LIBTELNET_SOURCE_DIR}")
-target_compile_definitions(libtelnet PRIVATE HAVE_ZLIB=1)
-target_link_libraries(libtelnet PRIVATE ZLIB::ZLIB)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
 
@@ -220,6 +217,7 @@ set(NETMUX_SOURCES
   ${MUX_SOURCE_DIR}/myfifo/myfifo.c
   ${MUX_SOURCE_DIR}/muxevent/muxevent.c
   ${MUX_SOURCE_DIR}/boolexp.c
+  ${MUX_SOURCE_DIR}/server_lifecycle.c
   ${MUX_SOURCE_DIR}/telnet_socket.c
   ${MUX_SOURCE_DIR}/telnet.c
   ${MUX_SOURCE_DIR}/commac.c
@@ -318,7 +316,7 @@ if(BUILD_TESTING)
 
   add_executable(libtelnet_integration_test tests/libtelnet_integration.c)
   target_link_libraries(libtelnet_integration_test
-    PRIVATE btmux_options libtelnet ZLIB::ZLIB)
+    PRIVATE btmux_options libtelnet)
   add_test(NAME libtelnet_integration COMMAND libtelnet_integration_test)
 endif()
 

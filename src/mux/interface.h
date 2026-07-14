@@ -123,7 +123,6 @@ extern DESC *descriptor_list;
 
 extern void emergency_shutdown(void);
 extern void shutdownsock(DESC *, int);
-extern void shovechars(int);
 extern void set_signals(void);
 
 /* from netcommon.c */

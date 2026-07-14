@@ -17,6 +17,7 @@
 #include "mudconf.h"
 #include "netcommon.h"
 #include "persistence/restart_persistence.h"
+#include "telnet.h"
 #include "telnet_socket.h"
 
 #define RESTART_SCHEMA_VERSION 1
@@ -234,23 +235,33 @@ static int restart_column_text(sqlite3_stmt *statement, int column,
   return 0;
 }
 
-static void restart_add_descriptor(DESC *descriptor) {
+static int restart_add_descriptor(DESC *descriptor) {
+  descriptor->sock_buff =
+      bufferevent_new(descriptor->descriptor, bsd_write_callback,
+                      bsd_read_callback, bsd_error_callback, NULL);
+  if (descriptor->sock_buff == NULL)
+    return -1;
+  bufferevent_disable(descriptor->sock_buff, EV_READ);
+  bufferevent_enable(descriptor->sock_buff, EV_WRITE);
+  if (!telnet_initialize(descriptor)) {
+    bufferevent_free(descriptor->sock_buff);
+    descriptor->sock_buff = NULL;
+    return -1;
+  }
+
   if (descriptor_list)
     descriptor_list->prev = descriptor;
   descriptor->next = descriptor_list;
   descriptor->prev = NULL;
   descriptor_list = descriptor;
-  descriptor->sock_buff =
-      bufferevent_new(descriptor->descriptor, bsd_write_callback,
-                      bsd_read_callback, bsd_error_callback, NULL);
-  bufferevent_disable(descriptor->sock_buff, EV_READ);
-  bufferevent_enable(descriptor->sock_buff, EV_WRITE);
+  ndescriptors++;
   event_set(&descriptor->sock_ev, descriptor->descriptor, EV_READ | EV_PERSIST,
             accept_client_input, descriptor);
   event_add(&descriptor->sock_ev, NULL);
   desc_addhash(descriptor);
   if (isPlayer(descriptor->player))
     s_Flags2(descriptor->player, Flags2(descriptor->player) | CONNECTED);
+  return 0;
 }
 
 static int restart_load_descriptors(sqlite3 *sqlite) {
@@ -367,7 +378,13 @@ static int restart_load_descriptors(sqlite3 *sqlite) {
     getpeername(descriptor->descriptor, (struct sockaddr *)&descriptor->saddr,
                 (socklen_t *)&descriptor->saddr_len);
     descriptor->outstanding_dnschild_query = dnschild_request(descriptor);
-    restart_add_descriptor(descriptor);
+    if (restart_add_descriptor(descriptor) < 0) {
+      free_lbuf(descriptor->output_prefix);
+      free_lbuf(descriptor->output_suffix);
+      free(descriptor);
+      result = -1;
+      break;
+    }
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;

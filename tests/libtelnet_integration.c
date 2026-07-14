@@ -3,7 +3,6 @@
 #include <strings.h>
 
 #include "libtelnet.h"
-#include <zlib.h>
 
 enum {
   telnet_charset_option = 42,
@@ -30,7 +29,6 @@ static const telnet_telopt_t test_options[] = {
     {TELNET_TELOPT_TTYPE, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_NAWS, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_MSSP, TELNET_WILL, TELNET_DONT},
-    {TELNET_TELOPT_COMPRESS2, TELNET_WILL, TELNET_DONT},
     {telnet_charset_option, TELNET_WILL, TELNET_DONT},
     {telnet_gmcp_option, TELNET_WILL, TELNET_DONT},
     {-1, 0, 0},
@@ -168,8 +166,6 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
       test_send_mssp(telnet);
-    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2)
-      telnet_begin_compress2(telnet);
     else if (event->neg.telopt == telnet_charset_option)
       test_send_charset_request(telnet, context);
     else if (event->neg.telopt == telnet_gmcp_option)
@@ -213,43 +209,11 @@ static int expect_bytes(const char *actual, size_t actual_size,
   return 0;
 }
 
-static int expect_compressed_data(const char *actual, size_t actual_size,
-                                  const char *expected, size_t expected_size) {
-  static const char marker[] = {TELNET_IAC, TELNET_SB, TELNET_TELOPT_COMPRESS2,
-                                TELNET_IAC, TELNET_SE};
-  char output[64];
-  z_stream stream;
-  int result;
-
-  if (actual_size < sizeof(marker) ||
-      memcmp(actual, marker, sizeof(marker)) != 0) {
-    fprintf(stderr, "MCCP marker did not match expected bytes\n");
-    return 0;
-  }
-
-  memset(&stream, 0, sizeof(stream));
-  stream.next_in = (Bytef *)(actual + sizeof(marker));
-  stream.avail_in = actual_size - sizeof(marker);
-  stream.next_out = (Bytef *)output;
-  stream.avail_out = sizeof(output);
-  result = inflateInit(&stream) == Z_OK &&
-                   inflate(&stream, Z_SYNC_FLUSH) == Z_OK &&
-                   sizeof(output) - stream.avail_out == expected_size &&
-                   memcmp(output, expected, expected_size) == 0
-               ? 1
-               : 0;
-  inflateEnd(&stream);
-  if (!result)
-    fprintf(stderr, "MCCP data did not decompress to the expected payload\n");
-  return result;
-}
-
 int main(void) {
   static const char do_options[] = {
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_TTYPE,
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_NAWS,
       TELNET_IAC, TELNET_WILL, TELNET_TELOPT_MSSP,
-      TELNET_IAC, TELNET_WILL, TELNET_TELOPT_COMPRESS2,
       TELNET_IAC, TELNET_WILL, telnet_charset_option,
       TELNET_IAC, TELNET_WILL, telnet_gmcp_option};
   static const char ttype_will[] = {TELNET_IAC, TELNET_WILL,
@@ -274,8 +238,6 @@ int main(void) {
   static const char escaped_data[] = {'a', TELNET_IAC, 'b'};
   static const char escaped_wire[] = {'a', TELNET_IAC, TELNET_IAC, 'b'};
   static const char mssp_do[] = {TELNET_IAC, TELNET_DO, TELNET_TELOPT_MSSP};
-  static const char compress2_do[] = {TELNET_IAC, TELNET_DO,
-                                      TELNET_TELOPT_COMPRESS2};
   static const char charset_do[] = {TELNET_IAC, TELNET_DO,
                                     telnet_charset_option};
   static const char charset_request_wire[] = {TELNET_IAC,
@@ -383,7 +345,6 @@ int main(void) {
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_NAWS);
   telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
-  telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(telnet, TELNET_WILL, telnet_charset_option);
   telnet_negotiate(telnet, TELNET_WILL, telnet_gmcp_option);
   result &= expect_bytes(context.sent, context.sent_size, do_options,
@@ -428,12 +389,6 @@ int main(void) {
   telnet_send(telnet, escaped_data, sizeof(escaped_data));
   result &= expect_bytes(context.sent, context.sent_size, escaped_wire,
                          sizeof(escaped_wire), "escaped output");
-
-  context.sent_size = 0;
-  telnet_recv(telnet, compress2_do, sizeof(compress2_do));
-  telnet_send(telnet, "compressed", 10);
-  result &=
-      expect_compressed_data(context.sent, context.sent_size, "compressed", 10);
 
   telnet_recv(telnet, ttype_is, sizeof(ttype_is));
   telnet_recv(telnet, naws, sizeof(naws));

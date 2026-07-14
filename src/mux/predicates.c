@@ -15,6 +15,7 @@
 #include "persistence/restart_persistence.h"
 #include "powers.h"
 #include "rbtab.h"
+#include "server_lifecycle.h"
 #include <signal.h>
 
 extern void dump_database(void);
@@ -859,7 +860,7 @@ void do_restart(dbref player, dbref cause, int key) {
         0, "Game: Restart failed while saving SQLite continuation state.");
     return;
   }
-  shutdown_services();
+  server_lifecycle_shutdown();
   execl(mudstate.executable_path, mudstate.executable_path, "--restart",
         mudconf.config_file, NULL);
 }

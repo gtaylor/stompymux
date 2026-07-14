@@ -5,10 +5,8 @@
 #include "config.h"
 
 #include <errno.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include "alloc.h"
@@ -19,8 +17,6 @@
 #include "flags.h"
 #include "interface.h"
 #include "libtelnet.h"
-#include "logcache.h"
-#include "lua_runtime.h"
 #include "mudconf.h"
 #include "rbtree.h"
 #include "telnet.h"
@@ -171,16 +167,6 @@ void release_descriptor(DESC *d) {
   }
 }
 
-void shutdown_services() {
-  lua_shutdown();
-  dnschild_destruct();
-  flush_sockets();
-#ifdef ARBITRARY_LOGFILES
-  logcache_destruct();
-#endif
-  event_loopexit(NULL);
-}
-
 static int bind_mux_socket(int port) {
   int s, opt;
   struct sockaddr_in server;
@@ -282,32 +268,10 @@ void bsd_error_callback(struct bufferevent *bufev, short whut, void *arg) {
   dprintk("error %d", whut);
 }
 
-struct timeval queue_slice = {0, 0};
-struct event queue_ev;
-struct timeval last_slice, current_time;
-
-static void runqueues(int fd, short event, void *arg) {
-  pid_t pchild;
-  int status = 0;
-  event_add(&queue_ev, &queue_slice);
-  gettimeofday(&current_time, NULL);
-  last_slice = update_quotas(last_slice, current_time);
-  pchild = waitpid(-1, &status, WNOHANG);
-  if (pchild > 0) {
-    dprintk("unexpected child %d exited with exit status %d.", pchild,
-            WEXITSTATUS(status));
-  }
-  if (mudconf.queue_chunk)
-    do_top(mudconf.queue_chunk);
-}
-
-void shovechars(int port) {
-  queue_slice.tv_sec = 0;
-  queue_slice.tv_usec = mudconf.timeslice * 1000;
-
-  dprintk("shovechars starting, sock is %d.", mux_bound_socket);
+void telnet_socket_listen(int port) {
+  dprintk("starting socket listener on %d.", mux_bound_socket);
 #ifdef IPV6_SUPPORT
-  dprintk("shovechars starting, ipv6 sock is %d.", mux_bound_socket);
+  dprintk("starting IPv6 socket listener on %d.", mux_bound_socket6);
 #endif
 
   if (mux_bound_socket < 0) {
@@ -325,14 +289,6 @@ void shovechars(int port) {
             accept_new6_connection, NULL);
   event_add(&listen6_sock_ev, NULL);
 #endif
-
-  evtimer_set(&queue_ev, runqueues, NULL);
-  evtimer_add(&queue_ev, &queue_slice);
-
-  gettimeofday(&last_slice, NULL);
-  gettimeofday(&current_time, NULL);
-
-  event_dispatch();
 }
 
 static void accept_new_connection(int sock, short event, void *arg) {

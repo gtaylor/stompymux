@@ -4,9 +4,7 @@
 
 #include "config.h"
 
-#include <event.h>
 #include <regex.h>
-#include <signal.h>
 
 #include "alloc.h"
 #include "attrs.h"
@@ -20,17 +18,14 @@
 #include "file_c.h"
 #include "flags.h"
 #include "interface.h"
-#include "logcache.h"
-#include "lua_runtime.h"
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"
 #include "persistence/btech_persistence.h"
 #include "persistence/commac_persistence.h"
 #include "persistence/gamedb.h"
-#include "persistence/restart_persistence.h"
 #include "powers.h"
-#include "timer.h"
+#include "server_lifecycle.h"
 #include "vattr.h"
 #include "version.h"
 #ifndef NEXT
@@ -757,7 +752,7 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
 
   /*
    * Do we perform a normal or an emergency shutdown?  Normal shutdown
-   * * * * * is handled by exiting the main loop in shovechars,
+   * * * * * is handled by exiting the server lifecycle event loop,
    * emergency  * * * * shutdown is done here.
    */
 
@@ -805,7 +800,7 @@ void do_shutdown(dbref player, dbref cause, int key, char *message) {
    */
 
   mudstate.shutdown_flag = 1;
-  event_loopexit(NULL);
+  server_lifecycle_stop();
   return;
 }
 
@@ -982,64 +977,8 @@ void do_readcache(dbref player, dbref cause, int key) {
   fcache_load(player);
 }
 
-static void process_preload(void) {
-  dbref thing, parent, aowner;
-  long aflags;
-  int lev;
-  char *tstr;
-  FWDLIST *fp;
-
-  fp = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
-  tstr = alloc_lbuf("process_preload.string");
-  DO_WHOLE_DB(thing) {
-
-    /*
-     * Ignore GOING objects
-     */
-
-    if (Going(thing))
-      continue;
-
-    do_top(10);
-
-    /*
-     * Look for a STARTUP attribute in parents
-     */
-
-    ITER_PARENTS(thing, parent, lev) {
-      if (Flags(thing) & HAS_STARTUP) {
-        did_it(Owner(thing), thing, 0, NULL, 0, NULL, A_STARTUP, (char **)NULL,
-               0);
-        /*
-         * Process queue entries as we add them
-         */
-
-        do_second();
-        do_top(10);
-        break;
-      }
-    }
-
-    /*
-     * Look for a FORWARDLIST attribute
-     */
-
-    if (H_Fwdlist(thing)) {
-      (void)atr_get_str(tstr, thing, A_FORWARDLIST, &aowner, &aflags);
-      if (*tstr) {
-        fwdlist_load(fp, GOD, tstr);
-        if (fp->count > 0)
-          fwdlist_set(thing, fp);
-      }
-    }
-  }
-  free_lbuf(fp);
-  free_lbuf(tstr);
-}
-
 int main(int argc, char *argv[]) {
   char *config_file;
-  char lua_error[LBUF_SIZE];
   int index;
   int mindb;
   int restarting;
@@ -1128,10 +1067,7 @@ int main(int argc, char *argv[]) {
     }
     exit(2);
   }
-  /* initialize random.. */
-  srandom(getpid());
-  /* set singnals.. */
-  bind_signals();
+  server_lifecycle_prepare();
 
   /*
    * Do a consistency check and set up the freelist
@@ -1160,31 +1096,9 @@ int main(int argc, char *argv[]) {
     memset(mudstate.global_regs[index], 0, LBUF_SIZE);
   }
 
-  mudstate.now = time(NULL);
-  if (!lua_initialize(lua_error, sizeof(lua_error))) {
-    log_error(LOG_ALWAYS, "INI", "LUA", "Unable to initialize Lua: %s",
-              lua_error);
+  if (!server_lifecycle_boot(restarting, mindb)) {
     exit(2);
   }
-  process_preload();
-
-  dnschild_init();
-
-  if (restarting) {
-    if (mindb || restart_persistence_load() < 0) {
-      log_error(LOG_ALWAYS, "INI", "RSTRT",
-                "Unable to restore SQLite restart continuation state.");
-      exit(2);
-    }
-  } else if (!mindb && restart_persistence_discard() < 0) {
-    log_error(LOG_ALWAYS, "INI", "RSTRT",
-              "Unable to discard stale SQLite restart continuation state.");
-    exit(2);
-  }
-
-#ifdef ARBITRARY_LOGFILES
-  logcache_init();
-#endif
 
 #ifdef MCHECK
   mtrace();
@@ -1194,9 +1108,7 @@ int main(int argc, char *argv[]) {
    * go do it
    */
 
-  mudstate.now = time(NULL);
-  init_timer();
-  shovechars(mudconf.port);
+  server_lifecycle_run(mudconf.port);
 
 #ifdef MCHECK
   muntrace();
@@ -1205,9 +1117,7 @@ int main(int argc, char *argv[]) {
   close_sockets(0, (char *)"Going down - Bye");
   dump_database();
 
-#ifdef ARBITRARY_LOGFILES
-  logcache_destruct();
-#endif
+  server_lifecycle_shutdown();
   exit(0);
 }
 
