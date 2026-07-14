@@ -350,7 +350,6 @@ static const char *time_format_2(time_t dt) {
   return buf;
 }
 
-extern char *mux_version;
 void desc_addhash(DESC *);
 
 static void announce_connect(dbref player, DESC *d) {
@@ -362,9 +361,7 @@ static void announce_connect(dbref player, DESC *d) {
   char *buf, *time_str;
   DESC *dtemp;
 
-  queue_string(d, "Connected.\n");
-  queue_string(d, mux_version);
-  queue_string(d, "\n\n");
+  queue_string(d, "Connected.\n\n");
 
   desc_addhash(d);
 

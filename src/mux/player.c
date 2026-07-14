@@ -131,8 +131,8 @@ static void encrypt_logindata(char *atrbuf, LDATA *info) {
 
 /**
  * Record successful or failed login attempt.
- * If successful, report last successful login and number of failures since
- * last successful login.
+ * If successful, report the number of failures since the last successful
+ * login.
  */
 void record_login(dbref player, int isgood, char *ldate, char *lhost,
                   char *lusername) {
@@ -155,11 +155,6 @@ void record_login(dbref player, int isgood, char *ldate, char *lhost,
                     login_info.bad[0].host, login_info.bad[0].dtm);
       notify(player, "");
       login_info.new_bad = 0;
-    }
-    if (login_info.good[0].host && *login_info.good[0].host &&
-        login_info.good[0].dtm && *login_info.good[0].dtm) {
-      notify_printf(player, "Last connect was from %s on %s.",
-                    login_info.good[0].host, login_info.good[0].dtm);
     }
     for (i = NUM_GOOD - 1; i > 0; i--) {
       login_info.good[i].dtm = login_info.good[i - 1].dtm;
