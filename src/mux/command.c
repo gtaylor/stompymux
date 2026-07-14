@@ -14,7 +14,6 @@
 #include "externs.h"
 #include "flags.h"
 #include "functions.h"
-#include "interface.h"
 #include "lua_runtime.h"
 #include "macro.h"
 #include "match.h"

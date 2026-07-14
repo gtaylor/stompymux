@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "interface.h"
+#include "descriptor.h"
 
 int telnet_initialize(DESC *d);
 void telnet_destroy(DESC *d);

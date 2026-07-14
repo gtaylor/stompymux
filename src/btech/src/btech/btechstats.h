@@ -22,7 +22,6 @@
 #include "config.h"
 #include "db.h"
 #include "externs.h"
-#include "interface.h"
 #include "powers.h"
 
 #ifdef BTECHSTATS_C

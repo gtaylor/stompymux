@@ -14,7 +14,6 @@
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
-#include "interface.h"
 #include "libtelnet.h"
 #include "mudconf.h"
 #include "rbtree.h"
@@ -132,9 +131,10 @@ void release_descriptor(DESC *d) {
       DESC_ITER_PLAYER(d->player, dtemp) num++;
 
       if (num == 0) {
-        int ii;
-        for (ii = 0; ii < MAX_GLOBAL_REGS; ii++) {
-          free_lbuf(d->program_data->wait_regs[ii]);
+        int index;
+
+        for (index = 0; index < MAX_GLOBAL_REGS; index++) {
+          free_lbuf(d->program_data->wait_regs[index]);
         }
         free(d->program_data);
       }
@@ -334,7 +334,6 @@ static const char *disc_reasons[] = {"Unspecified",
                                      "Game Shutdown",
                                      "Login Retry Limit",
                                      "Logins Disabled",
-                                     "Logout (Connection Not Dropped)",
                                      "Too Many Connected Players"};
 
 /*
@@ -343,20 +342,12 @@ static const char *disc_reasons[] = {"Unspecified",
 
 static const char *disc_messages[] = {"unknown",  "quit",     "timeout",
                                       "boot",     "netdeath", "shutdown",
-                                      "badlogin", "nologins", "logout"};
+                                      "badlogin", "nologins", "gamefull"};
 
 void shutdownsock(DESC *d, int reason) {
   d->flags |= DS_DEAD;
   if (d->flags & DS_CONNECTED) {
-    /*
-     * Do the disconnect stuff if we aren't doing a LOGOUT * * *
-     * * * * (which keeps the connection open so the player can *
-     * * connect * * * * to a different character).
-     */
-
-    if (reason != R_LOGOUT) {
-      fcache_dump(d, FC_QUIT);
-    }
+    fcache_dump(d, FC_QUIT);
 
     log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%d), <Reason: %s>", d->descriptor, d->addr,

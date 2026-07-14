@@ -16,7 +16,6 @@
 #include "db.h"
 #include "externs.h"
 #include "flags.h"
-#include "interface.h"
 #include "match.h"
 #include "mudconf.h"
 #include "pcache.h"

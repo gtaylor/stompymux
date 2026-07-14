@@ -11,7 +11,6 @@
 #include "db.h"
 #include "externs.h"
 #include "file_c.h"
-#include "interface.h"
 #include "match.h"
 #include "mudconf.h"
 #include "powers.h"

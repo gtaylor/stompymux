@@ -12,7 +12,6 @@
 #include "db.h"
 #include "externs.h"
 #include "help.h"
-#include "interface.h"
 #include "mudconf.h"
 #include "rbtab.h"
 

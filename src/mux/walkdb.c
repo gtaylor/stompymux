@@ -10,7 +10,6 @@
 #include "db.h"
 #include "externs.h"
 #include "flags.h"
-#include "interface.h"
 #include "match.h"
 #include "misc.h"
 #include "mudconf.h"

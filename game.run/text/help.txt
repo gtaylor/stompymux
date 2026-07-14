@@ -4110,7 +4110,7 @@ while line:
  
   drop         enter        examine      get          give    
   goto         help         inventory    leave    
-  LOGOUT       look         move         OUTPUTPREFIX
+  look         move         OUTPUTPREFIX
   OUTPUTSUFFIX page         pose         QUIT         read     
   say          SESSION      take         think    
   throw        use          version      whisper      WHO
@@ -7231,16 +7231,6 @@ Continued in locate()2
  
   See Also: @log
   
-& LOGOUT
- 
-  Syntax: LOGOUT
- 
-  Disconnects you from your character without breaking the network
-  connection to the game.  You may then log in to another character.
-  The LOGOUT command must be entered in all capitals.
- 
-  See also: QUIT
-  
 & look
  
   Syntax: look[/<switches>] [<object>]
@@ -8780,8 +8770,6 @@ second
   Logs you out and disconnects you from the game. Must be in all
   capitals.
  
-  See also: LOGOUT
-  
 & "
  
   Syntax: "<message>

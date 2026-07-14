@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "interface.h"
+#include "descriptor.h"
 
 extern int ndescriptors;
 
@@ -11,6 +11,8 @@ void desc_addhash(DESC *d);
 void accept_client_input(int fd, short event, void *arg);
 void flush_sockets(void);
 void close_sockets(int emergency, char *message);
+void emergency_shutdown(void);
+void shutdownsock(DESC *descriptor, int reason);
 int eradicate_broken_fd(int fd);
 void mux_release_socket(void);
 void bind_descriptor(DESC *d);

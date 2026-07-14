@@ -12,7 +12,6 @@
 #include "cque.h"
 #include "db.h"
 #include "externs.h"
-#include "interface.h"
 #include "lua_runtime.h"
 #include "match.h"
 #include "mudconf.h"

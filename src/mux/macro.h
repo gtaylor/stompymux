@@ -8,7 +8,6 @@
 #include "config.h"
 #include "db.h"
 #include "externs.h"
-#include "interface.h"
 #include "match.h"
 
 #define GMac(n) (n >= 0 && n < nummacros)

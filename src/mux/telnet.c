@@ -8,7 +8,6 @@
 #include "command.h"
 #include "debug.h"
 #include "externs.h"
-#include "interface.h"
 #include "libtelnet.h"
 #include "logcache.h"
 #include "mudconf.h"
@@ -106,7 +105,7 @@ static void telnet_process_data(DESC *d, const char *buffer, size_t size) {
         run_command(d, d->input);
       } else {
         if (!do_unauth_command(d, d->input)) {
-          dprintk("logout on %p fd %d, bailing.", d, d->descriptor);
+          dprintk("disconnect on %p fd %d, bailing.", d, d->descriptor);
           if (!(d->flags & DS_DEAD))
             shutdownsock(d, R_QUIT);
           break;

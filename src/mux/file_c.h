@@ -6,7 +6,7 @@
 #pragma once
 
 #include "db.h"
-#include "interface.h"
+#include "descriptor.h"
 
 /* File caches.  These _must_ track the fcache array in file_c.c */
 

@@ -17,7 +17,6 @@
 #include "externs.h"
 #include "file_c.h"
 #include "flags.h"
-#include "interface.h"
 #include "macro.h"
 #include "match.h"
 #include "mudconf.h"

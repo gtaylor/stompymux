@@ -4,6 +4,8 @@
 
 #include "config.h"
 
+#include <arpa/inet.h>
+
 #include "alloc.h"
 #include "attrs.h"
 #include "command.h"
@@ -12,7 +14,6 @@
 #include "externs.h"
 #include "flags.h"
 #include "functions.h"
-#include "interface.h"
 #include "mudconf.h"
 #include "powers.h"
 #include "rbtab.h"

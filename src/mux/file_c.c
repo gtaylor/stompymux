@@ -10,7 +10,6 @@
 #include "config.h"
 #include "externs.h"
 #include "file_c.h"
-#include "interface.h"
 #include "mudconf.h"
 
 typedef struct filecache_hdr FCACHE;

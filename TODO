@@ -3,10 +3,9 @@
 ## MUX Todos in the /src/ dir
 
 * Upgrade to latest libevent styles or replace with libuv or something else
-* Break up interface.h
-* Remove @doing and WHO
+* Remove @doing
+* Rewrite WHO in Lua
 * Start breaking up src/ into system subdirs
-* Maybe: remove all powers. wiz bit is enough
 * Write tests
 * Make integration tests not conflict with running games
 * CLI'ify netmux

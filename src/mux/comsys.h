@@ -9,7 +9,7 @@
 
 #include "commac.h"
 #include "db.h"
-#include "interface.h"
+#include "descriptor.h"
 #ifdef CHANNEL_HISTORY
 #include "myfifo/myfifo.h"
 #endif

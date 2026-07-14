@@ -21,7 +21,6 @@
 
 #include "btechstats_global.h"
 #include "coolmenu.h"
-#include "interface.h"
 #include "mech.h"
 #include "muxevent/muxevent_alloc.h"
 #include "mycool.h"

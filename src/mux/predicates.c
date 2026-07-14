@@ -8,7 +8,6 @@
 #include "db.h"
 #include "externs.h"
 #include "functions.h"
-#include "interface.h"
 #include "lua_runtime.h"
 #include "match.h"
 #include "mudconf.h"

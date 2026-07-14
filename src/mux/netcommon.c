@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include <arpa/inet.h>
 #include <time.h>
 
 #include "alloc.h"
@@ -20,12 +21,22 @@
 #include "db.h"
 #include "externs.h"
 #include "file_c.h"
-#include "interface.h"
 #include "mudconf.h"
 #include "netcommon.h"
 #include "telnet_socket.h"
 
 #include "debug.h"
+
+enum {
+  CMD_QUIT = 1,
+  CMD_WHO = 2,
+  CMD_DOING = 3,
+  CMD_PREFIX = 5,
+  CMD_SUFFIX = 6,
+  CMD_SESSION = 8,
+  CMD_MASK = 0xff,
+  CMD_NOxFIX = 0x100,
+};
 
 /*
  * ---------------------------------------------------------------------------
@@ -922,7 +933,6 @@ void do_doing(dbref player, dbref cause, int key, char *arg) {
 
 NAMETAB logout_cmdtable[] = {
     {(char *)"DOING", 5, CA_PUBLIC, CMD_DOING},
-    {(char *)"LOGOUT", 6, CA_PUBLIC, CMD_LOGOUT},
     {(char *)"OUTPUTPREFIX", 12, CA_PUBLIC, CMD_PREFIX | CMD_NOxFIX},
     {(char *)"OUTPUTSUFFIX", 12, CA_PUBLIC, CMD_SUFFIX | CMD_NOxFIX},
     {(char *)"QUIT", 4, CA_PUBLIC, CMD_QUIT},
