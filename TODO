@@ -9,6 +9,18 @@
 * CLI'ify netmux
 * Crunch mkindx into netmux
 * utf8 support
+* Replace the `#pragma clang diagnostic ignored "-Wformat-nonliteral"`
+  suppressions with `__attribute__((format(printf, N, M)))` on the printf-style
+  wrapper functions that are declared in headers and called pervasively:
+  `mech_printf`, `send_channel`, `tprintf`, `safe_tprintf_str`, `log_error`,
+  `notify_printf`, `raw_broadcast` (mech.notify.c/comsys.c/formatting.c/log.c/
+  netcommon.c), and `lua_set_error` (lua.c). Four file-local helpers with no
+  external callers (`append_status`, `append_damage`, `append_lbuf`,
+  `do_comprintf`) were already converted this way. Doing the rest properly
+  means auditing/fixing every call site the compiler flags once the attribute
+  goes on the header declarations — likely hundreds combined. Wiring up just
+  `notify_printf` already turned up 3 pre-existing bugs in debug.c passing a
+  `DbRef` (64-bit `long`) to `%d` instead of `%ld`.
 
 ## Lua Todos
 
