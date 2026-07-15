@@ -39,7 +39,7 @@ void do_quitprog(DbRef player, DbRef cause, int key, char *name) {
     return;
   }
   DESC_ITER_PLAYER(doer, d) {
-    if (d->program_data != NULL) {
+    if (d->program_data != nullptr) {
       isprog = 1;
     }
   }
@@ -111,13 +111,13 @@ void do_prog(DbRef player, DbRef cause, int key, char *name, char *command) {
    * Check to see if the cause already has an @prog input pending
    */
   DESC_ITER_PLAYER(doer, d) {
-    if (d->program_data != NULL) {
+    if (d->program_data != nullptr) {
       notify(player, "Input already pending.");
       return;
     }
   }
 
-  program = (ProgramData *)malloc(sizeof(ProgramData));
+  program = malloc(sizeof(ProgramData));
   program->wait_cause = player;
   for (i = 0; i < MAX_GLOBAL_REGS; i++) {
     program->wait_regs[i] = alloc_lbuf("prog_regs");

@@ -13,8 +13,8 @@ static int nhrbtab_compare(int left, int right, void *arg) {
 
 void numeric_hash_table_initialize(HashTable *htab, int size) {
   memset(htab, 0, sizeof(HashTable));
-  htab->tree = red_black_tree_init((void *)nhrbtab_compare, NULL);
-  htab->last = NULL;
+  htab->tree = red_black_tree_init((void *)nhrbtab_compare, nullptr);
+  htab->last = nullptr;
 }
 
 void numeric_hash_table_reset(HashTable *htab) {
@@ -64,8 +64,8 @@ void numeric_hash_table_delete(long val, HashTable *htab) {
 
 void numeric_hash_table_flush(HashTable *htab, int size) {
   red_black_tree_destroy(htab->tree);
-  htab->tree = red_black_tree_init((void *)nhrbtab_compare, NULL);
-  htab->last = NULL;
+  htab->tree = red_black_tree_init((void *)nhrbtab_compare, nullptr);
+  htab->last = nullptr;
 }
 
 /*

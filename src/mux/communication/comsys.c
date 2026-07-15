@@ -279,8 +279,8 @@ void do_joinchannel(DbRef player, struct channel *ch) {
 	for(i = ch->num_users - 1; i > 0; i--) {
 		if(!ch->users[i]) break;
 		if(typeof_obj(ch->users[i]->who) == TYPE_THING)
-			did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_AENTER,
-				   (char **) NULL, 0);
+			did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_AENTER,
+				   (char **) nullptr, 0);
 	}
 #endif
   notify_printf(player, "You have joined channel %s.", ch->name);
@@ -303,8 +303,8 @@ static void do_leavechannel(DbRef player, struct channel *ch) {
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
     if (typeof_obj(ch->users[i]->who) == TYPE_THING)
-      did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_ALEAVE,
-             (char **)NULL, 0);
+      did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_ALEAVE,
+             (char **)nullptr, 0);
   }
 
   notify_printf(player, "You have left channel %s.", ch->name);
@@ -367,14 +367,14 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
   int dir = 1, first = 0;
 
   if (!ch)
-    return NULL;
+    return nullptr;
 
   last = ch->num_users - 1;
   current = (first + last) / 2;
 
   while (dir && (first <= last)) {
     current = (first + last) / 2;
-    if (ch->users[current] == NULL) {
+    if (ch->users[current] == nullptr) {
       last--;
       continue;
     }
@@ -392,7 +392,7 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
   if (!dir)
     return ch->users[current];
   else
-    return NULL;
+    return nullptr;
 }
 
 void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
@@ -434,7 +434,7 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
       raw_notify(player, "Channel name too long.");
       return;
     }
-    strcpy(channel, arg2);
+    strlcpy(channel, arg2, sizeof(channel));
     title[0] = '\0';
   }
 
@@ -555,8 +555,8 @@ static void do_delcomchannel(DbRef player, char *channel) {
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
       if (typeof_obj(ch->users[i]->who) == TYPE_THING)
-        did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_ALEAVE,
-               (char **)NULL, 0);
+        did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_ALEAVE,
+               (char **)nullptr, 0);
     }
 
     for (i = 0; i < ch->num_users; i++) {
@@ -606,7 +606,7 @@ void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
 
   strncpy(newchannel->name, channel, CHAN_NAME_LEN - 1);
   newchannel->name[CHAN_NAME_LEN - 1] = '\0';
-  newchannel->last_messages = NULL;
+  newchannel->last_messages = nullptr;
   newchannel->type = 127;
   newchannel->temp1 = 0;
   newchannel->temp2 = 0;
@@ -615,8 +615,8 @@ void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
   newchannel->amount_col = 0;
   newchannel->num_users = 0;
   newchannel->max_users = 0;
-  newchannel->users = NULL;
-  newchannel->on_users = NULL;
+  newchannel->users = nullptr;
+  newchannel->on_users = nullptr;
   newchannel->chan_obj = NOTHING;
   newchannel->num_messages = 0;
 
@@ -938,7 +938,7 @@ void do_comconnect(DbRef player, Descriptor *d) {
 }
 
 static void do_comdisconnectchannel(DbRef player, char *channel) {
-  struct comuser *user, *prevuser = NULL;
+  struct comuser *user, *prevuser = nullptr;
   struct channel *ch;
 
   if (!(ch = select_channel(channel)))
@@ -1353,7 +1353,7 @@ void do_chanlist(DbRef player, DbRef cause, int key) {
     raw_notify(player, "Comsys disabled.");
     return;
   }
-  flags = (long)NULL;
+  flags = 0;
 
   if (key & CLIST_FULL) {
     do_listchannels(player);

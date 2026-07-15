@@ -261,7 +261,7 @@ char *grabto(char **str, char targ) {
   char *savec, *cp;
 
   if (!str || !*str || !**str)
-    return NULL;
+    return nullptr;
 
   savec = cp = *str;
   while (*cp && *cp != targ)
@@ -358,8 +358,8 @@ char *replace_string(const char *old, const char *new, const char *string) {
   char *result, *r, *s;
   int olen;
 
-  if (string == NULL)
-    return NULL;
+  if (string == nullptr)
+    return nullptr;
   s = (char *)string;
   olen = strlen(old);
   r = result = alloc_lbuf("replace_string");
@@ -424,7 +424,7 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
   char *tp;
 
   tp = *bufp;
-  if (src == NULL)
+  if (src == nullptr)
     return 0;
   while (*src && ((tp - buff) < max))
     *tp++ = *src++;

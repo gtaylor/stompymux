@@ -7,15 +7,17 @@
 
 /* File caches. These _must_ track the fcache array in file_cache.c. */
 
-#define FC_CONN 0
-#define FC_CONN_SITE 1
-#define FC_CONN_DOWN 2
-#define FC_CONN_FULL 3
-#define FC_CONN_REG 4
-#define FC_CREA_NEW 5
-#define FC_CREA_REG 6
-#define FC_QUIT 7
-#define FC_LAST 7
+enum : int {
+  FC_CONN = 0,
+  FC_CONN_SITE = 1,
+  FC_CONN_DOWN = 2,
+  FC_CONN_FULL = 3,
+  FC_CONN_REG = 4,
+  FC_CREA_NEW = 5,
+  FC_CREA_REG = 6,
+  FC_QUIT = 7,
+  FC_LAST = FC_QUIT,
+};
 
 /* File cache routines */
 

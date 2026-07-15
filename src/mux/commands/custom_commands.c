@@ -84,7 +84,8 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     /* If it's already found in the hash table, and it's being
        added using the same object and attribute... */
 
-    for (nextp = (ADDENT *)old->handler; nextp != NULL; nextp = nextp->next) {
+    for (nextp = (ADDENT *)old->handler; nextp != nullptr;
+         nextp = nextp->next) {
       if ((nextp->thing == thing) && (nextp->atr == atr)) {
         notify_printf(player, "%s already added.", name);
         return;
@@ -93,7 +94,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
 
     /* else tack it on to the existing entry... */
 
-    add = (ADDENT *)malloc(sizeof(ADDENT));
+    add = malloc(sizeof(ADDENT));
     add->thing = thing;
     add->atr = atr;
     add->name = (char *)strdup(name);
@@ -105,10 +106,10 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
       hash_table_delete(name, &mudstate.command_htab);
     }
 
-    cmd = (CMDENT *)malloc(sizeof(CMDENT));
+    cmd = malloc(sizeof(CMDENT));
 
     cmd->cmdname = (char *)strdup(name);
-    cmd->switches = NULL;
+    cmd->switches = nullptr;
     cmd->perms = 0;
     cmd->extra = 0;
     if (old && (old->callseq & CS_LEADIN)) {
@@ -116,11 +117,11 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     } else {
       cmd->callseq = CS_ADDED | CS_ONE_ARG;
     }
-    add = (ADDENT *)malloc(sizeof(ADDENT));
+    add = malloc(sizeof(ADDENT));
     add->thing = thing;
     add->atr = atr;
     add->name = (char *)strdup(name);
-    add->next = NULL;
+    add->next = nullptr;
     cmd->handler = (void *)add;
 
     hash_table_add(name, (int *)cmd, &mudstate.command_htab);
@@ -159,7 +160,8 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
       /* If it's already found in the hash table, and it's being
          added using the same object and attribute... */
 
-      for (nextp = (ADDENT *)old->handler; nextp != NULL; nextp = nextp->next) {
+      for (nextp = (ADDENT *)old->handler; nextp != nullptr;
+           nextp = nextp->next) {
         notify_printf(player, "%s: #%d/%s", nextp->name, nextp->thing,
                       ((Attribute *)attribute_by_number(nextp->atr))->name);
       }
@@ -169,14 +171,14 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
     return;
   } else {
     for (keyname = hash_table_first_key(&mudstate.command_htab);
-         keyname != NULL;
+         keyname != nullptr;
          keyname = hash_table_next_key(&mudstate.command_htab)) {
 
       old = (CMDENT *)hash_table_find(keyname, &mudstate.command_htab);
 
       if (old && (old->callseq & CS_ADDED)) {
 
-        for (nextp = (ADDENT *)old->handler; nextp != NULL;
+        for (nextp = (ADDENT *)old->handler; nextp != nullptr;
              nextp = nextp->next) {
           if (strcmp(keyname, nextp->name))
             continue;
@@ -194,7 +196,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
 void do_delcommand(DbRef player, DbRef cause, int key, char *name,
                    char *command) {
   CMDENT *old, *cmd;
-  ADDENT *prev = NULL, *nextp;
+  ADDENT *prev = nullptr, *nextp;
 
   DbRef thing;
   int atr;
@@ -222,15 +224,15 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
 
   if (old && (old->callseq & CS_ADDED)) {
     if (!*command) {
-      for (prev = (ADDENT *)old->handler; prev != NULL; prev = nextp) {
+      for (prev = (ADDENT *)old->handler; prev != nullptr; prev = nextp) {
         nextp = prev->next;
         /* Delete it! */
         free(prev->name);
         free(prev);
       }
       hash_table_delete(name, &mudstate.command_htab);
-      if ((cmd = (CMDENT *)hash_table_find(tprintf("__%s", name),
-                                           &mudstate.command_htab)) != NULL) {
+      if ((cmd = (CMDENT *)hash_table_find(
+               tprintf("__%s", name), &mudstate.command_htab)) != nullptr) {
         hash_table_delete(tprintf("__%s", name), &mudstate.command_htab);
         hash_table_add(name, (int *)cmd, &mudstate.command_htab);
         hash_table_replace_all((int *)old, (int *)cmd, &mudstate.command_htab);
@@ -240,7 +242,8 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
       notify(player, "Done.");
       return;
     } else {
-      for (nextp = (ADDENT *)old->handler; nextp != NULL; nextp = nextp->next) {
+      for (nextp = (ADDENT *)old->handler; nextp != nullptr;
+           nextp = nextp->next) {
         if ((nextp->thing == thing) && (nextp->atr == atr)) {
           /* Delete it! */
           free(nextp->name);
@@ -249,7 +252,7 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
               hash_table_delete(name, &mudstate.command_htab);
               if ((cmd = (CMDENT *)hash_table_find(tprintf("__%s", name),
                                                    &mudstate.command_htab)) !=
-                  NULL) {
+                  nullptr) {
                 hash_table_delete(tprintf("__%s", name),
                                   &mudstate.command_htab);
                 hash_table_add(name, (int *)cmd, &mudstate.command_htab);

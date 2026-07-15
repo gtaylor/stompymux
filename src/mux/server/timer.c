@@ -33,7 +33,7 @@ static struct timeval tv = {0, 100000};
 static struct event *timer_event;
 
 void init_timer(void) {
-  mudstate.now = time(NULL);
+  mudstate.now = time(nullptr);
   mudstate.dump_counter = ((mudconf.dump_offset == 0) ? mudconf.dump_interval
                                                       : mudconf.dump_offset) +
                           mudstate.now;
@@ -45,8 +45,8 @@ void init_timer(void) {
   mudstate.mstats_counter = 15 + mudstate.now;
   mudstate.events_counter = 900 + mudstate.now;
   timer_event =
-      evtimer_new(server_lifecycle_event_base(), timer_callback, NULL);
-  if (timer_event != NULL)
+      evtimer_new(server_lifecycle_event_base(), timer_callback, nullptr);
+  if (timer_event != nullptr)
     evtimer_add(timer_event, &tv);
 }
 
@@ -98,8 +98,8 @@ static void check_events(void) {
 
       ITER_PARENTS(thing, parent, lev) {
         if (obj_flags2(thing) & HAS_DAILY) {
-          did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_DAILY,
-                 (char **)NULL, 0);
+          did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_DAILY,
+                 (char **)nullptr, 0);
 
           break;
         }
@@ -115,8 +115,8 @@ static void check_events(void) {
 
         ITER_PARENTS(thing, parent, lev) {
           if (obj_flags2(thing) & HAS_HOURLY) {
-            did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_HOURLY,
-                   (char **)NULL, 0);
+            did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_HOURLY,
+                   (char **)nullptr, 0);
 
             break;
           }
@@ -144,7 +144,7 @@ static void dispatch(void) {
   if (!mudstate.alarm_triggered)
     return;
   mudstate.alarm_triggered = 0;
-  mudstate.now = time(NULL);
+  mudstate.now = time(nullptr);
 
   do_second();
   lua_schedule_tick(mudstate.now);
@@ -232,9 +232,9 @@ static void timer_callback(evutil_socket_t fd, short event, void *arg) {
 }
 
 void timer_shutdown(void) {
-  if (timer_event != NULL) {
+  if (timer_event != nullptr) {
     event_free(timer_event);
-    timer_event = NULL;
+    timer_event = nullptr;
   }
 }
 

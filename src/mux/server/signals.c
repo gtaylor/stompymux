@@ -57,15 +57,15 @@ void bind_signals(void) {
     log_error(LOG_PROBLEMS, "SIG", "ERR",
               "running signal_handlers without sigaltstack() will corrupt your "
               "coredumps!");
-    sighandler_stack.ss_sp = NULL;
+    sighandler_stack.ss_sp = nullptr;
   }
   dprintk("binding signals.");
-  dperror(sigaction(SIGINT, &saTERM, NULL) < 0);
-  dperror(sigaction(SIGTERM, &saTERM, NULL) < 0);
+  dperror(sigaction(SIGINT, &saTERM, nullptr) < 0);
+  dperror(sigaction(SIGTERM, &saTERM, nullptr) < 0);
   //	sigaction(SIGPIPE, &saPIPE, NULL);
-  sigaction(SIGUSR2, &saUSR2, NULL);
-  sigaction(SIGSEGV, &saSEGV, NULL);
-  sigaction(SIGBUS, &saBUS, NULL);
+  sigaction(SIGUSR2, &saUSR2, nullptr);
+  sigaction(SIGSEGV, &saSEGV, nullptr);
+  sigaction(SIGBUS, &saBUS, nullptr);
   signal(SIGCHLD, SIG_IGN);
   signal(SIGPIPE, SIG_IGN);
   dprintk("done.");
@@ -79,13 +79,13 @@ void unbind_signals(void) {
   signal(SIGSEGV, SIG_DFL);
   signal(SIGBUS, SIG_DFL);
   signal(SIGCHLD, SIG_DFL);
-  if (sighandler_stack.ss_sp != NULL) {
+  if (sighandler_stack.ss_sp != nullptr) {
     void *temp_ptr;
     sighandler_stack.ss_flags = SS_DISABLE;
     temp_ptr = sighandler_stack.ss_sp;
-    sigaltstack(&sighandler_stack, NULL);
+    sigaltstack(&sighandler_stack, nullptr);
     free(temp_ptr);
-    sighandler_stack.ss_sp = NULL;
+    sighandler_stack.ss_sp = nullptr;
   }
 }
 

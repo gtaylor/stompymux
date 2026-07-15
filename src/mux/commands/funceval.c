@@ -382,7 +382,7 @@ static void set_attr_internal(DbRef player, DbRef thing, int attrnum,
   attr = attribute_by_number(attrnum);
   attribute_parent_get_info(thing, attrnum, &aowner, &aflags);
   if (attr && set_attr(player, thing, attr, aflags)) {
-    if ((attr->check != NULL) &&
+    if ((attr->check != nullptr) &&
         (!(*attr->check)(0, player, thing, attrnum, attrtext))) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
@@ -1402,7 +1402,7 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * If so, we grab it and use it.
    */
 
-  if (objname != NULL) {
+  if (objname != nullptr) {
     if (parse_attrib(player, objname, &thing, &attrib) && (attrib != NOTHING)) {
       attr = attribute_by_number(attrib);
       if (attr && !(attr->flags & AF_IS_LOCK)) {
@@ -1450,7 +1450,7 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * If so, we grab it and use it.
    */
 
-  if (objname != NULL) {
+  if (objname != nullptr) {
     if (parse_attrib(player, objname, &thing, &attrib) && (attrib != NOTHING)) {
       attr = attribute_by_number(attrib);
       if (attr && !(attr->flags & AF_IS_LOCK)) {
@@ -1459,7 +1459,7 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
             check_read_perms(player, thing, attr, aowner, aflags, buff, bufc)) {
           str = atr_gotten;
           exec(buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL, &str,
-               (char **)NULL, 0);
+               (char **)nullptr, 0);
           free_lbuf(atr_gotten);
           free_lbuf(objname);
           return;
@@ -1505,10 +1505,10 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * If so, we grab it and use it.
    */
 
-  if (objname != NULL) {
+  if (objname != nullptr) {
     if (parse_attrib(player, objname, &thing, &anum)) {
       if ((anum == NOTHING) || (!is_good_obj(thing)))
-        ap = NULL;
+        ap = nullptr;
       else
         ap = attribute_by_number(anum);
     } else {
@@ -1929,7 +1929,7 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || !is_good_obj(thing))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -2090,7 +2090,7 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || !is_good_obj(thing))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -2163,7 +2163,7 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || !is_good_obj(thing))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -2258,7 +2258,7 @@ void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || !is_good_obj(thing))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -2920,7 +2920,7 @@ static int stacksize(DbRef doer) {
   int i;
   AttributeStack *sp;
 
-  for (i = 0, sp = obj_stack(doer); sp != NULL; sp = sp->next, i++)
+  for (i = 0, sp = obj_stack(doer); sp != nullptr; sp = sp->next, i++)
     ;
 
   return i;
@@ -2945,7 +2945,7 @@ void fun_lstack(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = obj_stack(doer); sp != NULL; sp = sp->next) {
+  for (sp = obj_stack(doer); sp != nullptr; sp = sp->next) {
     safe_str(sp->data, buff, bufc);
     safe_chr(' ', buff, bufc);
   }
@@ -2973,13 +2973,13 @@ void fun_empty(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = obj_stack(doer); sp != NULL; sp = next) {
+  for (sp = obj_stack(doer); sp != nullptr; sp = next) {
     next = sp->next;
     free_lbuf(sp->data);
     free(sp);
   }
 
-  s_stack(doer, NULL);
+  s_stack(doer, nullptr);
 }
 
 void fun_items(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -3039,7 +3039,7 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   count = 0;
   sp = obj_stack(doer);
   while (count != pos) {
-    if (sp == NULL) {
+    if (sp == nullptr) {
       return;
     }
     count++;
@@ -3051,7 +3051,7 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
 void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
              int nfargs, char *cargs[], int ncargs) {
-  AttributeStack *sp, *prev = NULL;
+  AttributeStack *sp, *prev = nullptr;
   DbRef doer;
   int count, pos;
 
@@ -3090,7 +3090,7 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   }
 
   while (count != pos) {
-    if (sp == NULL) {
+    if (sp == nullptr) {
       return;
     }
     prev = sp;
@@ -3136,7 +3136,7 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     safe_str("#-1 STACK SIZE EXCEEDED", buff, bufc);
     return;
   }
-  sp = (AttributeStack *)malloc(sizeof(AttributeStack));
+  sp = malloc(sizeof(AttributeStack));
   sp->next = obj_stack(doer);
   sp->data = alloc_lbuf("push");
   StringCopy(sp->data, data);

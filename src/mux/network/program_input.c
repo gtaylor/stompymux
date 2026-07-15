@@ -1,4 +1,5 @@
-/* program_input.c - Descriptor input routing for interactive program editing. */
+/* program_input.c - Descriptor input routing for interactive program editing.
+ */
 
 #include "mux/network/program_input.h"
 
@@ -21,7 +22,7 @@ void descriptor_program_clear(DbRef player) {
 
   descriptor =
       (Descriptor *)red_black_tree_find(mudstate.desctree, (void *)player);
-  if (descriptor == NULL || descriptor->program_data == NULL)
+  if (descriptor == nullptr || descriptor->program_data == nullptr)
     return;
 
   program = descriptor->program_data;
@@ -31,7 +32,7 @@ void descriptor_program_clear(DbRef player) {
   free(program);
 
   DESC_ITER_PLAYER(player, descriptor)
-  descriptor->program_data = NULL;
+  descriptor->program_data = nullptr;
 
   attribute_clear(player, A_PROGCMD);
 }
@@ -48,7 +49,7 @@ void descriptor_program_handle(Descriptor *d, char *message) {
   if (*message == '|') {
     descriptor_command(d, message + 1);
     /* Use telnet protocol's GOAHEAD command to show prompt */
-    if (d->program_data != NULL)
+    if (d->program_data != nullptr)
       descriptor_queue_string(
           d, tprintf("%s>%s \377\371", ANSI_HILITE, ANSI_NORMAL));
     return;

@@ -60,7 +60,7 @@ struct lua_runtime_t {
   size_t schedule_job_count;
 };
 
-static LUA_RUNTIME *lua_runtime = NULL;
+static LUA_RUNTIME *lua_runtime = nullptr;
 static time_t lua_schedule_high_water = -1;
 
 #ifdef __clang__
@@ -92,7 +92,7 @@ static int lua_pcall_limited(LUA_RUNTIME *runtime, int arguments, int results) {
   lua_sethook(runtime->state, lua_instruction_hook, LUA_MASKCOUNT,
               mudconf.lua_instruction_limit);
   status = lua_pcall(runtime->state, arguments, results, 0);
-  lua_sethook(runtime->state, NULL, 0, 0);
+  lua_sethook(runtime->state, nullptr, 0, 0);
   if (!status && (size_t)lua_gc(runtime->state, LUA_GCCOUNT, 0) * 1024U >
                      (size_t)mudconf.lua_memory_limit) {
     lua_pushstring(runtime->state, "Lua memory limit exceeded");
@@ -265,7 +265,7 @@ static int lua_host_command(lua_State *state) {
 
   if (runtime->checking)
     return luaL_error(state, "mux.command is unavailable during @luacheck");
-  wait_que(1, 1, 0, NOTHING, 0, (char *)command, (char **)NULL, 0, NULL);
+  wait_que(1, 1, 0, NOTHING, 0, (char *)command, (char **)nullptr, 0, nullptr);
   return 0;
 }
 
@@ -277,7 +277,7 @@ static void lua_install_sandbox(LUA_RUNTIME *runtime) {
                                   "ffi",        "dofile",    "loadfile",
                                   "loadstring", "load",      "collectgarbage",
                                   "module",     "require",   "getfenv",
-                                  "setfenv",    NULL};
+                                  "setfenv",    nullptr};
   int index;
 
   luaL_openlibs(runtime->state);
@@ -425,12 +425,12 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
     lua_set_error(
         error, error_size,
         "lua_instruction_limit and lua_memory_limit must be positive");
-    return NULL;
+    return nullptr;
   }
   runtime = calloc(1, sizeof(*runtime));
   if (!runtime) {
     lua_set_error(error, error_size, "out of memory");
-    return NULL;
+    return nullptr;
   }
   if (!realpath(mudconf.lua_directory, runtime->root)) {
     if (errno != ENOENT || mkdir(mudconf.lua_directory, 0755) < 0 ||
@@ -438,7 +438,7 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
       lua_set_error(error, error_size, "unable to open lua_directory %s",
                     mudconf.lua_directory);
       free(runtime);
-      return NULL;
+      return nullptr;
     }
   }
   for (root = LUA_ROOT_OBJECT_LOGIC; root < LUA_ROOT_COUNT; root++) {
@@ -448,7 +448,7 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
                        lua_root_name(root))) {
       lua_set_error(error, error_size, "Lua directory path is too long");
       free(runtime);
-      return NULL;
+      return nullptr;
     }
     if (!realpath(directory, runtime->roots[root]) &&
         (errno != ENOENT || mkdir(directory, 0755) < 0 ||
@@ -456,14 +456,14 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
       lua_set_error(error, error_size, "unable to open Lua %s directory",
                     lua_root_name(root));
       free(runtime);
-      return NULL;
+      return nullptr;
     }
   }
   runtime->state = luaL_newstate();
   if (!runtime->state) {
     lua_set_error(error, error_size, "unable to create Lua state");
     free(runtime);
-    return NULL;
+    return nullptr;
   }
   lua_install_sandbox(runtime);
   return runtime;
@@ -695,7 +695,7 @@ static int lua_cron_matches(const char *cron, time_t when, char *error,
     if (!field)
       goto invalid;
     fields[index] = field;
-    field = strtok(NULL, " \t");
+    field = strtok(nullptr, " \t");
   }
   if (field || !gmtime_r(&when, &utc))
     goto invalid;
@@ -748,7 +748,7 @@ static int lua_verify_schedules(lua_State *state, int schedules,
       goto invalid;
     }
     lua_pop(state, 1);
-    if (lua_cron_matches(cron, time(NULL), error, error_size) < 0) {
+    if (lua_cron_matches(cron, time(nullptr), error, error_size) < 0) {
       lua_pop(state, 1);
       return 0;
     }
@@ -879,7 +879,7 @@ int lua_initialize(char *error, size_t error_size) {
 
 void lua_shutdown(void) {
   lua_runtime_destroy(lua_runtime);
-  lua_runtime = NULL;
+  lua_runtime = nullptr;
 }
 
 int lua_reload(char *error, size_t error_size) {
@@ -962,7 +962,7 @@ static int lua_add_parent_check(LUA_PARENT_CHECK **checks, size_t *check_count,
 static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
                                 int *has_errors, char *error,
                                 size_t error_size) {
-  LUA_PARENT_CHECK *checks = NULL;
+  LUA_PARENT_CHECK *checks = nullptr;
   size_t check_count = 0;
   DbRef object;
   size_t index;
@@ -1029,7 +1029,7 @@ int lua_check(DbRef player, char *error, size_t error_size) {
     result = 0;
   }
   for (root = LUA_ROOT_OBJECT_LOGIC; root < LUA_ROOT_COUNT; root++) {
-    char **modules = NULL;
+    char **modules = nullptr;
     size_t module_count = 0;
     size_t index;
 
@@ -1262,8 +1262,8 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
           state, job->object,
           job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
           job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
-          NULL, "schedule",
-          job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global", NULL, 0);
+          nullptr, "schedule",
+          job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global", nullptr, 0);
       lua_pushstring(state, job->name);
       lua_setfield(state, -2, "schedule");
       lua_pushstring(state, job->cron);
@@ -1318,7 +1318,7 @@ void lua_schedule_tick(time_t now) {
       char path[PATH_MAX];
 
       if (!is_good_obj(object) || is_going(object) ||
-          !lua_effective_path(object, path, sizeof(path), NULL))
+          !lua_effective_path(object, path, sizeof(path), nullptr))
         continue;
       lua_schedule_collect_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
                                   minute);
@@ -1413,8 +1413,9 @@ static int lua_module_command_match(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
       continue;
     lua_getfield(state, entry, "handler");
     lua_insert(state, entry + 1);
-    lua_push_context(state, thing, player, cause, command, NULL,
-                     root == LUA_ROOT_GLOBAL_LOGIC ? "global" : NULL, NULL, 0);
+    lua_push_context(state, thing, player, cause, command, nullptr,
+                     root == LUA_ROOT_GLOBAL_LOGIC ? "global" : nullptr,
+                     nullptr, 0);
     lua_insert(state, entry + 2);
     previous_root = runtime->current_root;
     runtime->current_root = root;
@@ -1440,7 +1441,7 @@ int lua_command_match(DbRef thing, DbRef player, DbRef cause,
   char path[PATH_MAX];
 
   if (!lua_runtime || is_halted(thing) ||
-      !lua_effective_path(thing, path, sizeof(path), NULL))
+      !lua_effective_path(thing, path, sizeof(path), nullptr))
     return 0;
   return lua_module_command_match(lua_runtime, LUA_ROOT_OBJECT_LOGIC, path,
                                   thing, player, cause, command, 0);
@@ -1484,7 +1485,7 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
   int index;
   int status;
 
-  if (!runtime || !lua_effective_path(thing, path, sizeof(path), NULL))
+  if (!runtime || !lua_effective_path(thing, path, sizeof(path), nullptr))
     return 0;
   definition = attribute_by_number(attribute);
   if (!definition)
@@ -1510,7 +1511,7 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
     lua_settop(state, top);
     return 1;
   }
-  lua_push_context(state, thing, player, player, NULL, event, NULL, args,
+  lua_push_context(state, thing, player, player, nullptr, event, nullptr, args,
                    nargs);
   {
     LUA_MODULE_ROOT previous_root = runtime->current_root;
@@ -1669,7 +1670,7 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
 
       if (object == NOTHING)
         goto done;
-      if (!lua_effective_path(object, path, sizeof(path), NULL)) {
+      if (!lua_effective_path(object, path, sizeof(path), nullptr)) {
         notify_quiet(player, "That object has no effective Luaparent.");
         goto done;
       }
@@ -1681,8 +1682,8 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
   {
     size_t index;
     DbRef object;
-    char **paths = NULL;
-    size_t *counts = NULL;
+    char **paths = nullptr;
+    size_t *counts = nullptr;
     size_t path_count = 0;
 
     for (index = 0; index < runtime->global_module_count; index++) {
@@ -1699,7 +1700,7 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
       char path[PATH_MAX];
 
       if (!is_good_obj(object) ||
-          !lua_effective_path(object, path, sizeof(path), NULL))
+          !lua_effective_path(object, path, sizeof(path), nullptr))
         continue;
       for (index = 0; index < path_count; index++) {
         if (!strcmp(paths[index], path)) {

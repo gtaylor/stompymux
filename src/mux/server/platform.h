@@ -59,7 +59,7 @@ constexpr int MAX_GLOBAL_REGS = 10;   /* r() registers */
 
 constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
-#define OUTPUT_BLOCK_SIZE 16384
+constexpr int OUTPUT_BLOCK_SIZE = 16384;
 static inline char *StringCopy(char *dst, const char *src) {
   return strcpy(dst, src);
 }
@@ -111,10 +111,10 @@ extern int malloc_count;
   (fprintf(stderr, "Malloc: %s\n", (y)), malloc_count++, (char *)malloc((x)))
 #define XFREE(x, y)                                                            \
   (fprintf(stderr, "Free: %s\n", (y)),                                         \
-   ((x) ? malloc_count--, free((x)), (x) = NULL : (x)))
+   ((x) ? malloc_count--, free((x)), (x) = nullptr : (x)))
 #else
 #define XMALLOC(x, y) (char *)malloc((x))
-#define XFREE(x, y) (free((x)), (x) = NULL)
+#define XFREE(x, y) (free((x)), (x) = nullptr)
 #endif /* TEST_MALLOC */
 
 #ifdef ENTERLEAVE_PARANOID

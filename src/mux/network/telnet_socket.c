@@ -35,7 +35,7 @@ int mux_bound_socket6 = -1;
 #endif
 int ndescriptors = 0;
 
-Descriptor *descriptor_list = NULL;
+Descriptor *descriptor_list = nullptr;
 
 static void accept_new_connection(evutil_socket_t sock, short event, void *arg);
 static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
@@ -43,20 +43,20 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
 static int process_input(Descriptor *d);
 
 void descriptor_write(Descriptor *d, const char *buffer, size_t size) {
-  if (d->telnet != NULL)
+  if (d->telnet != nullptr)
     telnet_send(d->telnet, buffer, size);
   else
     bufferevent_write(d->sock_buff, buffer, size);
 }
 
 static void telnet_socket_clear_strings(Descriptor *d) {
-  if (d->output_prefix != NULL) {
+  if (d->output_prefix != nullptr) {
     free_lbuf(d->output_prefix);
-    d->output_prefix = NULL;
+    d->output_prefix = nullptr;
   }
-  if (d->output_suffix != NULL) {
+  if (d->output_suffix != nullptr) {
     free_lbuf(d->output_suffix);
-    d->output_suffix = NULL;
+    d->output_suffix = nullptr;
   }
 }
 
@@ -84,7 +84,7 @@ void descriptor_hash_add(Descriptor *d) {
 }
 
 static void desc_delhash(Descriptor *d) {
-  Descriptor *hdesc = NULL;
+  Descriptor *hdesc = nullptr;
   char buffer[4096];
 
   hdesc =
@@ -100,7 +100,7 @@ static void desc_delhash(Descriptor *d) {
 
   if (hdesc == d && hdesc->hashnext) {
     red_black_tree_insert(mudstate.desctree, (void *)d->player, d->hashnext);
-    d->hashnext = NULL;
+    d->hashnext = nullptr;
     descriptor_release(d);
     return;
   } else if (hdesc == d) {
@@ -109,10 +109,10 @@ static void desc_delhash(Descriptor *d) {
     return;
   }
 
-  while (hdesc->hashnext != NULL) {
+  while (hdesc->hashnext != nullptr) {
     if (hdesc->hashnext == d) {
       hdesc->hashnext = d->hashnext;
-      d->hashnext = NULL;
+      d->hashnext = nullptr;
       descriptor_release(d);
       break;
     }
@@ -129,7 +129,7 @@ void descriptor_release(Descriptor *d) {
     dprintk("%p destructing", d);
     telnet_socket_free_queues(d);
 
-    if (d->program_data != NULL) {
+    if (d->program_data != nullptr) {
       int num = 0;
       Descriptor *dtemp;
       DESC_ITER_PLAYER(d->player, dtemp) num++;
@@ -147,7 +147,7 @@ void descriptor_release(Descriptor *d) {
     if (d->descriptor) {
       fsync(d->descriptor);
       event_free(d->sock_ev);
-      d->sock_ev = NULL;
+      d->sock_ev = nullptr;
       shutdown(d->descriptor, 2);
       close(d->descriptor);
     }
@@ -155,7 +155,7 @@ void descriptor_release(Descriptor *d) {
     descriptor_telnet_destroy(d);
     if (d->sock_buff)
       bufferevent_free(d->sock_buff);
-    d->sock_buff = NULL;
+    d->sock_buff = nullptr;
 
     if (d->prev) {
       d->prev->next = d->next;
@@ -177,16 +177,16 @@ static int bind_mux_socket(int port) {
 
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0) {
-    log_perror("NET", "FAIL", NULL, "creating master socket");
+    log_perror("NET", "FAIL", nullptr, "creating master socket");
     exit(3);
   }
   opt = 1;
   if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {
-    log_perror("NET", "FAIL", NULL, "setsockopt");
+    log_perror("NET", "FAIL", nullptr, "setsockopt");
   }
 
   if (fcntl(s, F_SETFD, FD_CLOEXEC) < 0) {
-    log_perror("LOGCACHE", "FAIL", NULL, "fcntl(fd, F_SETFD, FD_CLOEXEC)");
+    log_perror("LOGCACHE", "FAIL", nullptr, "fcntl(fd, F_SETFD, FD_CLOEXEC)");
     close(s);
     abort();
   }
@@ -194,7 +194,7 @@ static int bind_mux_socket(int port) {
   server.sin_addr.s_addr = INADDR_ANY;
   server.sin_port = htons(port);
   if (bind(s, (struct sockaddr *)&server, sizeof(server))) {
-    log_perror("NET", "FAIL", NULL, "bind");
+    log_perror("NET", "FAIL", nullptr, "bind");
     close(s);
     exit(4);
   }
@@ -205,17 +205,17 @@ static int bind_mux_socket(int port) {
 
 void mux_release_socket() {
   dprintk("releasing mux main socket.");
-  if (listen_sock_ev != NULL) {
+  if (listen_sock_ev != nullptr) {
     event_free(listen_sock_ev);
-    listen_sock_ev = NULL;
+    listen_sock_ev = nullptr;
   }
   if (mux_bound_socket != -1)
     close(mux_bound_socket);
   mux_bound_socket = -1;
 #ifdef IPV6_SUPPORT
-  if (listen6_sock_ev != NULL) {
+  if (listen6_sock_ev != nullptr) {
     event_free(listen6_sock_ev);
-    listen6_sock_ev = NULL;
+    listen6_sock_ev = nullptr;
   }
   if (mux_bound_socket6 != -1)
     close(mux_bound_socket6);
@@ -290,11 +290,12 @@ void telnet_socket_listen(int port) {
   if (mux_bound_socket < 0) {
     mux_bound_socket = bind_mux_socket(port);
   }
-  listen_sock_ev = event_new(server_lifecycle_event_base(), mux_bound_socket,
-                             EV_READ | EV_PERSIST, accept_new_connection, NULL);
-  if (listen_sock_ev == NULL)
+  listen_sock_ev =
+      event_new(server_lifecycle_event_base(), mux_bound_socket,
+                EV_READ | EV_PERSIST, accept_new_connection, nullptr);
+  if (listen_sock_ev == nullptr)
     return;
-  event_add(listen_sock_ev, NULL);
+  event_add(listen_sock_ev, nullptr);
 
 #ifdef IPV6_SUPPORT
   if (mux_bound_socket6 < 0) {
@@ -302,10 +303,10 @@ void telnet_socket_listen(int port) {
   }
   listen6_sock_ev =
       event_new(server_lifecycle_event_base(), mux_bound_socket6,
-                EV_READ | EV_PERSIST, accept_new6_connection, NULL);
-  if (listen6_sock_ev == NULL)
+                EV_READ | EV_PERSIST, accept_new6_connection, nullptr);
+  if (listen6_sock_ev == nullptr)
     return;
-  event_add(listen6_sock_ev, NULL);
+  event_add(listen6_sock_ev, nullptr);
 #endif
 }
 
@@ -431,8 +432,8 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   d->addr[0] = '\0';
   d->username[0] = '\0';
   make_nonblocking(s);
-  d->output_prefix = NULL;
-  d->output_suffix = NULL;
+  d->output_prefix = nullptr;
+  d->output_suffix = nullptr;
   d->output_size = 0;
   d->output_tot = 0;
   d->output_lost = 0;
@@ -442,59 +443,59 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   memset(d->input, 0, sizeof(d->input));
   d->input_tail = 0;
   d->quota = mudconf.cmd_quota_max;
-  d->program_data = NULL;
+  d->program_data = nullptr;
   d->last_time = 0;
-  d->hashnext = NULL;
+  d->hashnext = nullptr;
   getnameinfo((struct sockaddr *)saddr, saddr_len, d->addr, sizeof(d->addr),
-              NULL, 0, NI_NUMERICHOST);
+              nullptr, 0, NI_NUMERICHOST);
 
   if (descriptor_list)
     descriptor_list->prev = d;
   d->next = descriptor_list;
-  d->prev = NULL;
+  d->prev = nullptr;
   descriptor_list = d;
 
   d->sock_buff =
       bufferevent_socket_new(server_lifecycle_event_base(), d->descriptor, 0);
-  if (d->sock_buff == NULL) {
+  if (d->sock_buff == nullptr) {
     descriptor_list = d->next;
-    if (descriptor_list != NULL)
-      descriptor_list->prev = NULL;
+    if (descriptor_list != nullptr)
+      descriptor_list->prev = nullptr;
     ndescriptors--;
     close(d->descriptor);
     free(d);
-    return NULL;
+    return nullptr;
   }
   bufferevent_setcb(d->sock_buff, bsd_read_callback, bsd_write_callback,
-                    bsd_error_callback, NULL);
+                    bsd_error_callback, nullptr);
   bufferevent_disable(d->sock_buff, EV_READ);
   bufferevent_enable(d->sock_buff, EV_WRITE);
   if (!descriptor_telnet_initialize(d)) {
     bufferevent_free(d->sock_buff);
-    d->sock_buff = NULL;
+    d->sock_buff = nullptr;
     descriptor_list = d->next;
-    if (descriptor_list != NULL)
-      descriptor_list->prev = NULL;
+    if (descriptor_list != nullptr)
+      descriptor_list->prev = nullptr;
     ndescriptors--;
     close(d->descriptor);
     free(d);
-    return NULL;
+    return nullptr;
   }
   d->sock_ev = event_new(server_lifecycle_event_base(), d->descriptor,
                          EV_READ | EV_PERSIST, accept_client_input, d);
-  if (d->sock_ev == NULL) {
+  if (d->sock_ev == nullptr) {
     descriptor_telnet_destroy(d);
     bufferevent_free(d->sock_buff);
-    d->sock_buff = NULL;
+    d->sock_buff = nullptr;
     descriptor_list = d->next;
-    if (descriptor_list != NULL)
-      descriptor_list->prev = NULL;
+    if (descriptor_list != nullptr)
+      descriptor_list->prev = nullptr;
     ndescriptors--;
     close(d->descriptor);
     free(d);
-    return NULL;
+    return nullptr;
   }
-  event_add(d->sock_ev, NULL);
+  event_add(d->sock_ev, nullptr);
   descriptor_retain(d);
   descriptor_welcome(d);
   return d;
@@ -546,7 +547,7 @@ static int process_input(Descriptor *d) {
 void flush_sockets() {
   Descriptor *d, *dnext;
   DESC_SAFEITER_ALL(d, dnext) {
-    if (d->sock_buff != NULL) {
+    if (d->sock_buff != nullptr) {
       struct evbuffer *output = bufferevent_get_output(d->sock_buff);
 
       if (evbuffer_get_length(output) > 0)
@@ -562,9 +563,9 @@ void close_sockets(int emergency, char *message) {
   DESC_SAFEITER_ALL(d, dnext) {
     if (emergency) {
       if (write(d->descriptor, message, strlen(message)) < 0)
-        log_perror("NET", "FAIL", NULL, "write");
+        log_perror("NET", "FAIL", nullptr, "write");
       if (shutdown(d->descriptor, 2) < 0)
-        log_perror("NET", "FAIL", NULL, "shutdown");
+        log_perror("NET", "FAIL", nullptr, "shutdown");
       dprintk("shutting down fd %d", d->descriptor);
       dprintk(
           "output evbuffer contiguous space: %ld, totallen: %ld",
@@ -573,9 +574,9 @@ void close_sockets(int emergency, char *message) {
       fsync(d->descriptor);
       event_base_loop(server_lifecycle_event_base(), EVLOOP_ONCE);
       event_free(d->sock_ev);
-      d->sock_ev = NULL;
+      d->sock_ev = nullptr;
       bufferevent_free(d->sock_buff);
-      d->sock_buff = NULL;
+      d->sock_buff = nullptr;
       close(d->descriptor);
     } else {
       descriptor_queue_string(d, message);

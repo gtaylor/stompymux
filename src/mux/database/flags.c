@@ -330,7 +330,7 @@ FLAGENT gen_flags[] = {
     {"WIZARD", WIZARD, 'W', 0, 0, fh_wiz_bit},
     {"XCODE", HARDCODE, 'X', FLAG_WORD2, 0, fh_xcode_bit},
     {"ZOMBIE", ZOMBIE, 'z', FLAG_WORD2, CA_WIZARD, fh_wiz},
-    {NULL, 0, ' ', 0, 0, NULL}};
+    {nullptr, 0, ' ', 0, 0, nullptr}};
 
 /**
  * Listing of valid object types
@@ -444,7 +444,7 @@ void flag_set(DbRef target, DbRef player, char *flag, int key) {
     return;
   }
   fp = find_flag(target, flag);
-  if (fp == NULL) {
+  if (fp == nullptr) {
     notify(player, "I don't understand that flag.");
     return;
   }
@@ -525,7 +525,7 @@ int has_flag(DbRef player, DbRef target, char *flagname) {
   Flag fv;
 
   fp = find_flag(target, flagname);
-  if (fp == NULL)
+  if (fp == nullptr)
     return 0;
 
   if (fp->flagflag & FLAG_WORD3)

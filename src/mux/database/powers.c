@@ -55,7 +55,7 @@ POWERENT gen_powers[] = {
     {(char *)"map", POW_MAP, POWER_EXT, 0, ph_wiz},
     {(char *)"tech", POW_TECH, POWER_EXT, 0, ph_wiz},
     {(char *)"template", POW_TEMPLATE, POWER_EXT, 0, ph_wiz},
-    {NULL, 0, 0, 0, 0}};
+    {nullptr, 0, 0, 0, 0}};
 
 /**
  * Initialize power hash tables.
@@ -161,7 +161,7 @@ void power_set(DbRef target, DbRef player, char *power, int key) {
     return;
   }
   fp = find_power(target, power);
-  if (fp == NULL) {
+  if (fp == nullptr) {
     notify(player, "I don't understand that power.");
     return;
   }
@@ -186,7 +186,7 @@ int has_power(DbRef player, DbRef it, char *powername) {
   Power fv;
 
   fp = find_power(it, powername);
-  if (fp == NULL)
+  if (fp == nullptr)
     return 0;
 
   if (fp->powerpower & POWER_EXT)

@@ -20,10 +20,10 @@
 #define PFOO (*foo)
 
 static void check_fifo(Fifo **foo) {
-  if (PFOO == NULL) {
-    PFOO = (Fifo *)malloc(sizeof(Fifo));
-    PFOO->first = NULL;
-    PFOO->last = NULL;
+  if (PFOO == nullptr) {
+    PFOO = malloc(sizeof(Fifo));
+    PFOO->first = nullptr;
+    PFOO->last = nullptr;
     PFOO->count = 0;
   }
 }
@@ -40,35 +40,35 @@ void *fifo_pop(Fifo **foo) {
   check_fifo(foo);
   tmp = PFOO->last;
   /* Is the list empty? */
-  if (tmp != NULL) {
+  if (tmp != nullptr) {
     /* Are we removeing the only element? */
     if (PFOO->first == PFOO->last) {
-      PFOO->first = NULL;
-      PFOO->last = NULL;
+      PFOO->first = nullptr;
+      PFOO->last = nullptr;
     } else
-      tmp->prev->next = NULL;
+      tmp->prev->next = nullptr;
     PFOO->last = tmp->prev;
     /* Are we going down to only one element? */
-    if (PFOO->last->prev == NULL)
+    if (PFOO->last->prev == nullptr)
       PFOO->first = PFOO->last;
     PFOO->count--;
     tmpd = tmp->data;
     free(tmp);
     return tmpd;
   } else
-    return NULL;
+    return nullptr;
 }
 
 void fifo_push(Fifo **foo, void *data) {
   FifoEntry *tmp;
 
   check_fifo(foo);
-  tmp = (FifoEntry *)malloc(sizeof(FifoEntry));
+  tmp = malloc(sizeof(FifoEntry));
   tmp->data = data;
   tmp->next = PFOO->first;
-  tmp->prev = NULL;
+  tmp->prev = nullptr;
   PFOO->count++;
-  if (PFOO->first == NULL) {
+  if (PFOO->first == nullptr) {
     PFOO->first = tmp;
     PFOO->last = tmp;
   } else
@@ -80,6 +80,6 @@ void fifo_traverse_reverse(Fifo **foo, void (*func)(void *)) {
   FifoEntry *tmp;
 
   check_fifo(foo);
-  for (tmp = PFOO->last; tmp != NULL; tmp = tmp->prev)
+  for (tmp = PFOO->last; tmp != nullptr; tmp = tmp->prev)
     func(tmp->data);
 }

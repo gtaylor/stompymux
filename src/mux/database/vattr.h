@@ -3,7 +3,7 @@
  * attributes. */
 
 #pragma once
-#define VNAME_SIZE 32
+constexpr int VNAME_SIZE = 32;
 
 typedef struct user_attribute VATTR;
 struct user_attribute {

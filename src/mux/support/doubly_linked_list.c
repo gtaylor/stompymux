@@ -14,13 +14,13 @@ DoublyLinkedList *doubly_linked_list_create_list() {
   DoublyLinkedList *temp;
 
   temp = malloc(sizeof(DoublyLinkedList));
-  if (temp == NULL) {
-    return NULL;
+  if (temp == nullptr) {
+    return nullptr;
   }
 
   memset(temp, 0, sizeof(DoublyLinkedList));
-  temp->head = NULL;
-  temp->tail = NULL;
+  temp->head = nullptr;
+  temp->tail = nullptr;
   temp->size = 0;
 
   return temp;
@@ -32,13 +32,13 @@ DoublyLinkedListNode *doubly_linked_list_create_node(void *data) {
   DoublyLinkedListNode *temp;
 
   temp = malloc(sizeof(DoublyLinkedListNode));
-  if (temp == NULL) {
-    return NULL;
+  if (temp == nullptr) {
+    return nullptr;
   }
 
   memset(temp, 0, sizeof(DoublyLinkedListNode));
-  temp->prev = NULL;
-  temp->next = NULL;
+  temp->prev = nullptr;
+  temp->next = nullptr;
   temp->data = data;
 
   return temp;
@@ -54,8 +54,8 @@ int doubly_linked_list_destroy_list(DoublyLinkedList *list) {
   if (list->size != 0) {
     return 0;
   } else {
-    list->head = NULL;
-    list->tail = NULL;
+    list->head = nullptr;
+    list->tail = nullptr;
     free(list);
     return 1;
   }
@@ -67,12 +67,12 @@ void *doubly_linked_list_destroy_node(DoublyLinkedListNode *node) {
   void *data;
 
   if (!node)
-    return NULL;
+    return nullptr;
 
   data = node->data;
-  node->prev = NULL;
-  node->next = NULL;
-  node->data = NULL;
+  node->prev = nullptr;
+  node->next = nullptr;
+  node->data = nullptr;
   free(node);
 
   return data;
@@ -92,7 +92,7 @@ void doubly_linked_list_insert_after(DoublyLinkedList *list,
 
   newnode->prev = node;
   newnode->next = node->next;
-  if (node->next == NULL) {
+  if (node->next == nullptr) {
     list->tail = newnode;
   } else {
     (node->next)->prev = newnode;
@@ -119,7 +119,7 @@ void doubly_linked_list_insert_before(DoublyLinkedList *list,
 
   newnode->prev = node->prev;
   newnode->next = node;
-  if (node->prev == NULL) {
+  if (node->prev == nullptr) {
     list->head = newnode;
   } else {
     (node->prev)->next = newnode;
@@ -144,11 +144,11 @@ void doubly_linked_list_insert_beginning(DoublyLinkedList *list,
   /*! \todo {Add check here incase DoublyLinkedList is bad */
 
   /* If there is no head it means empty list */
-  if (list->head == NULL) {
+  if (list->head == nullptr) {
     list->head = newnode;
     list->tail = newnode;
-    newnode->prev = NULL;
-    newnode->next = NULL;
+    newnode->prev = nullptr;
+    newnode->next = nullptr;
 
     /* Increment */
     list->size++;
@@ -172,7 +172,7 @@ void doubly_linked_list_insert_end(DoublyLinkedList *list,
   /*! \todo {Add a check here incase the list is bad?} */
 
   /* If there is no tail means empty list */
-  if (list->tail == NULL) {
+  if (list->tail == nullptr) {
     doubly_linked_list_insert_beginning(list, newnode);
   } else {
     doubly_linked_list_insert_after(list, list->tail, newnode);
@@ -189,7 +189,7 @@ void *doubly_linked_list_remove(DoublyLinkedList *list,
 
   /* Invalid node? */
   if (!node) {
-    return NULL;
+    return nullptr;
   }
 
   /* Invalid list? */
@@ -204,7 +204,7 @@ void *doubly_linked_list_remove(DoublyLinkedList *list,
    * problems if the list is still linked to something} */
 
   /* Somehow the list has nothing in it yet it thinks it does */
-  if (list->head == NULL && list->tail == NULL) {
+  if (list->head == nullptr && list->tail == nullptr) {
 
     /* Try and return the data */
     data = doubly_linked_list_destroy_node(node);
@@ -212,14 +212,14 @@ void *doubly_linked_list_remove(DoublyLinkedList *list,
   }
 
   /* We're checking if this first node */
-  if (node->prev == NULL) {
+  if (node->prev == nullptr) {
     list->head = node->next;
   } else {
     (node->prev)->next = node->next;
   }
 
   /* Check if end of list */
-  if (node->next == NULL) {
+  if (node->next == nullptr) {
     list->tail = node->prev;
   } else {
     (node->next)->prev = node->prev;
@@ -242,11 +242,11 @@ void *doubly_linked_list_remove_node_at_pos(DoublyLinkedList *list, int pos) {
   void *data;
 
   if (!list) {
-    return NULL;
+    return nullptr;
   }
 
   if (doubly_linked_list_size(list) < pos) {
-    return NULL;
+    return nullptr;
   }
 
   /* Start at the head */
@@ -270,7 +270,7 @@ void *doubly_linked_list_remove_node_at_pos(DoublyLinkedList *list, int pos) {
 DoublyLinkedListNode *doubly_linked_list_head(DoublyLinkedList *list) {
 
   if (!list)
-    return NULL;
+    return nullptr;
 
   return list->head;
 }
@@ -279,7 +279,7 @@ DoublyLinkedListNode *doubly_linked_list_head(DoublyLinkedList *list) {
 DoublyLinkedListNode *doubly_linked_list_next(DoublyLinkedListNode *node) {
 
   if (!node)
-    return NULL;
+    return nullptr;
 
   return node->next;
 }
@@ -288,7 +288,7 @@ DoublyLinkedListNode *doubly_linked_list_next(DoublyLinkedListNode *node) {
 void *doubly_linked_list_data(DoublyLinkedListNode *node) {
 
   if (!node)
-    return NULL;
+    return nullptr;
 
   return node->data;
 }
@@ -310,15 +310,15 @@ void *doubly_linked_list_get_node(DoublyLinkedList *list, int pos) {
   DoublyLinkedListNode *temp;
 
   if (!list) {
-    return NULL;
+    return nullptr;
   }
 
   if (doubly_linked_list_size(list) < pos) {
-    return NULL;
+    return nullptr;
   }
 
   if (pos < counter) {
-    return NULL;
+    return nullptr;
   }
 
   /* Start at the head */

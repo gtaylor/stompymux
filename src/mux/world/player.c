@@ -49,12 +49,12 @@ static void decrypt_logindata(char *atrbuf, LDATA *info) {
   info->tot_bad = 0;
   info->new_bad = 0;
   for (i = 0; i < NUM_GOOD; i++) {
-    info->good[i].host = NULL;
-    info->good[i].dtm = NULL;
+    info->good[i].host = nullptr;
+    info->good[i].dtm = nullptr;
   }
   for (i = 0; i < NUM_BAD; i++) {
-    info->bad[i].host = NULL;
-    info->bad[i].dtm = NULL;
+    info->bad[i].host = nullptr;
+    info->bad[i].dtm = nullptr;
   }
 
   if (*atrbuf == '#') {
@@ -380,13 +380,13 @@ int add_player_name(DbRef player, char *name) {
      * It's an alias (or an incorrect entry).  Clobber it
      */
     free(p);
-    p = (DbRef *)malloc(sizeof(DbRef));
+    p = malloc(sizeof(DbRef));
 
     *p = player;
     stat = hash_table_replace(temp, p, &mudstate.player_htab);
     free_lbuf(temp);
   } else {
-    p = (DbRef *)malloc(sizeof(DbRef));
+    p = malloc(sizeof(DbRef));
 
     *p = player;
     stat = hash_table_add(temp, p, &mudstate.player_htab);
@@ -502,7 +502,7 @@ void badname_remove(char *bad_name) {
    * Look for an exact match on the bad name and remove if found
    */
 
-  backp = NULL;
+  backp = nullptr;
   for (bp = mudstate.badname_head; bp; backp = bp, bp = bp->next) {
     if (!string_compare(bad_name, bp->name)) {
       if (backp)

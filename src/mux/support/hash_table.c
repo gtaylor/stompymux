@@ -22,8 +22,8 @@ static int hrbtab_compare(char *left, char *right, void *arg) {
 
 void hash_table_initialize(HashTable *htab, int size) {
   memset(htab, 0, sizeof(HashTable));
-  htab->tree = red_black_tree_init((void *)hrbtab_compare, NULL);
-  htab->last = NULL;
+  htab->tree = red_black_tree_init((void *)hrbtab_compare, nullptr);
+  htab->last = nullptr;
 }
 
 /*
@@ -80,7 +80,7 @@ int hash_table_add(char *str, void *hashdata, HashTable *htab) {
  */
 
 void hash_table_delete(char *str, HashTable *htab) {
-  struct string_dict_entry *ent = NULL;
+  struct string_dict_entry *ent = nullptr;
 
   if (!red_black_tree_exists(htab->tree, str)) {
     return;
@@ -109,12 +109,12 @@ static int nuke_hash_ent(void *key, void *data, int depth, void *arg) {
 }
 
 void hash_table_flush(HashTable *htab, int size) {
-  red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, NULL);
+  red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, nullptr);
   red_black_tree_destroy(htab->tree);
-  htab->tree = red_black_tree_init((void *)hrbtab_compare, NULL);
+  htab->tree = red_black_tree_init((void *)hrbtab_compare, nullptr);
   if (htab->last)
     free(htab->last);
-  htab->last = NULL;
+  htab->last = nullptr;
 }
 
 /*
@@ -178,14 +178,14 @@ void *hash_table_first_entry(HashTable *htab) {
   if (htab->last)
     free(htab->last);
 
-  ent = red_black_tree_search(htab->tree, SEARCH_FIRST, NULL);
+  ent = red_black_tree_search(htab->tree, SEARCH_FIRST, nullptr);
   if (ent) {
     htab->last = strdup(ent->key);
     return ent->data;
   }
-  htab->last = NULL;
+  htab->last = nullptr;
 
-  return NULL;
+  return nullptr;
 }
 
 void *hash_table_next_entry(HashTable *htab) {
@@ -202,8 +202,8 @@ void *hash_table_next_entry(HashTable *htab) {
     htab->last = strdup(ent->key);
     return ent->data;
   } else {
-    htab->last = NULL;
-    return NULL;
+    htab->last = nullptr;
+    return nullptr;
   }
 }
 
@@ -212,14 +212,14 @@ char *hash_table_first_key(HashTable *htab) {
   if (htab->last)
     free(htab->last);
 
-  ent = red_black_tree_search(htab->tree, SEARCH_FIRST, NULL);
+  ent = red_black_tree_search(htab->tree, SEARCH_FIRST, nullptr);
   if (ent) {
     htab->last = strdup(ent->key);
     return ent->key;
   }
-  htab->last = NULL;
+  htab->last = nullptr;
 
-  return NULL;
+  return nullptr;
 }
 
 char *hash_table_next_key(HashTable *htab) {
@@ -236,7 +236,7 @@ char *hash_table_next_key(HashTable *htab) {
     htab->last = strdup(ent->key);
     return ent->key;
   } else {
-    htab->last = NULL;
-    return NULL;
+    htab->last = nullptr;
+    return nullptr;
   }
 }

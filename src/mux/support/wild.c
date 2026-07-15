@@ -349,7 +349,7 @@ int wild(char *tstr, char *dstr, char *args[], int nargs) {
    */
 
   for (i = 0; i < nargs; i++)
-    args[i] = NULL;
+    args[i] = nullptr;
 
   /*
    * Do fast match.
@@ -405,9 +405,9 @@ int wild(char *tstr, char *dstr, char *args[], int nargs) {
    */
 
   for (i = 0; i < nargs; i++)
-    if ((args[i] != NULL) && (!*args[i] || !value)) {
+    if ((args[i] != nullptr) && (!*args[i] || !value)) {
       free_lbuf(args[i]);
-      args[i] = NULL;
+      args[i] = nullptr;
     }
   return value;
 }

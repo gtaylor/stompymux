@@ -165,8 +165,8 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
   what = -1;
   owhat = -1;
   awhat = -1;
-  whatd = NULL;
-  owhatd = NULL;
+  whatd = nullptr;
+  owhatd = nullptr;
   nxargs = 0;
 
   /*
@@ -216,7 +216,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
 
   if (nargs >= 7) {
     parse_arglist(victim, actor, args[6], '\0', EV_STRIP_LS | EV_STRIP_TS,
-                  xargs, 10, (char **)NULL, 0);
+                  xargs, 10, (char **)nullptr, 0);
     for (nxargs = 0; (nxargs < 10) && xargs[nxargs]; nxargs++)
       ;
   }
@@ -225,7 +225,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (restriction) {
-    ap = NULL;
+    ap = nullptr;
     if (what != -1) {
       attribute_get_info(victim, what, &aowner, &aflags);
       ap = attribute_by_number(what);
@@ -235,7 +235,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
          !is_examinable(player, victim) && !nearby(player, victim)))
       what = -1;
 
-    ap = NULL;
+    ap = nullptr;
     if (owhat != -1) {
       attribute_get_info(victim, owhat, &aowner, &aflags);
       ap = attribute_by_number(owhat);

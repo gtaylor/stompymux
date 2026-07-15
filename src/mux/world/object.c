@@ -382,13 +382,13 @@ void destroy_obj(DbRef player, DbRef obj) {
   /*
    * Clear the stack
    */
-  for (sp = obj_stack(obj); sp != NULL; sp = next) {
+  for (sp = obj_stack(obj); sp != nullptr; sp = next) {
     next = sp->next;
     free_lbuf(sp->data);
     free(sp);
   }
 
-  s_stack(obj, NULL);
+  s_stack(obj, nullptr);
 
   if (mudconf.have_comsys)
     toast_player(obj);

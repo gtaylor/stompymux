@@ -256,7 +256,7 @@ void do_chownall(DbRef player, DbRef cause, int key, char *from, char *to) {
   if ((victim = noisy_match_result()) == NOTHING)
     return;
 
-  if ((to != NULL) && *to) {
+  if ((to != nullptr) && *to) {
     init_match(player, to, TYPE_PLAYER);
     match_neighbor();
     match_absolute();
@@ -356,8 +356,8 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
    */
 
   err = 0;
-  parm->s_rst_name = NULL;
-  parm->s_rst_eval = NULL;
+  parm->s_rst_name = nullptr;
+  parm->s_rst_eval = nullptr;
   parm->s_rst_type = NOTYPE;
   parm->s_parent = NOTHING;
   parm->s_zone = NOTHING;
@@ -584,7 +584,7 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
      * Check for matching name
      */
 
-    if (parm->s_rst_name != NULL) {
+    if (parm->s_rst_name != nullptr) {
       if (!string_prefix((char *)PureName(thing), parm->s_rst_name))
         continue;
     }
@@ -592,7 +592,7 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
      * Check for successful evaluation
      */
 
-    if (parm->s_rst_eval != NULL) {
+    if (parm->s_rst_eval != nullptr) {
       if (typeof_obj(thing) == TYPE_GARBAGE)
         continue;
       snprintf(buff, SBUF_SIZE, "#%ld", thing);
@@ -600,7 +600,7 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
       result = bp = alloc_lbuf("search_criteria_perform");
       str = buff2;
       exec(result, &bp, 0, player, cause, EV_FCHECK | EV_EVAL | EV_NOTRACE,
-           &str, (char **)NULL, 0);
+           &str, (char **)nullptr, 0);
       *bp = '\0';
       free_lbuf(buff2);
       if (!*result || !xlate(result)) {
@@ -812,9 +812,9 @@ void olist_push(void) {
   ol->next = mudstate.olist;
   mudstate.olist = ol;
 
-  ol->head = NULL;
-  ol->tail = NULL;
-  ol->cblock = NULL;
+  ol->head = nullptr;
+  ol->tail = nullptr;
+  ol->cblock = nullptr;
   ol->count = 0;
   ol->citm = 0;
 }
@@ -828,7 +828,7 @@ void olist_pop(void) {
 
   ol = mudstate.olist->next;
 
-  for (op = mudstate.olist->head; op != NULL; op = onext) {
+  for (op = mudstate.olist->head; op != nullptr; op = onext) {
     onext = op->next;
     free_lbuf(op);
   }
@@ -846,13 +846,13 @@ void olist_add(DbRef item) {
     op = (OBLOCK *)alloc_lbuf("olist_add.first");
     mudstate.olist->head = mudstate.olist->tail = op;
     mudstate.olist->count = 0;
-    op->next = NULL;
+    op->next = nullptr;
   } else if ((size_t)mudstate.olist->count >= OBLOCK_SIZE) {
     op = (OBLOCK *)alloc_lbuf("olist_add.next");
     mudstate.olist->tail->next = op;
     mudstate.olist->tail = op;
     mudstate.olist->count = 0;
-    op->next = NULL;
+    op->next = nullptr;
   } else {
     op = mudstate.olist->tail;
   }

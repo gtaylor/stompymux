@@ -79,8 +79,8 @@ RedBlackTree red_black_tree_init(int (*compare_function)(void *, void *,
   RedBlackTree temp;
 
   temp = malloc(sizeof(struct RedBlackTreeHead));
-  if (temp == NULL)
-    return NULL;
+  if (temp == nullptr)
+    return nullptr;
   memset(temp, 0, sizeof(struct RedBlackTreeHead));
   temp->compare_function = compare_function;
   temp->token = token;
@@ -92,8 +92,8 @@ static rbtree_node *red_black_tree_find_minimum(rbtree_node *node) {
   rbtree_node *child;
   child = node;
   if (!node)
-    return NULL;
-  while (child->left != NULL)
+    return nullptr;
+  while (child->left != nullptr)
     child = child->left;
   return child;
 }
@@ -102,8 +102,8 @@ static rbtree_node *red_black_tree_find_maximum(rbtree_node *node) {
   rbtree_node *child;
   child = node;
   if (!node)
-    return NULL;
-  while (child->right != NULL)
+    return nullptr;
+  while (child->right != nullptr)
     child = child->right;
   return child;
 }
@@ -111,44 +111,44 @@ static rbtree_node *red_black_tree_find_maximum(rbtree_node *node) {
 static rbtree_node *red_black_tree_find_successor_node(rbtree_node *node) {
   rbtree_node *child, *parent;
   if (!node)
-    return NULL;
-  if (node->right != NULL) {
+    return nullptr;
+  if (node->right != nullptr) {
     child = node->right;
-    while (child->left != NULL) {
+    while (child->left != nullptr) {
       child = child->left;
     }
     return child;
   } else {
     child = node;
     parent = node->parent;
-    while (parent != NULL && child == parent->right) {
+    while (parent != nullptr && child == parent->right) {
       child = parent;
       parent = child->parent;
     }
     return parent;
   }
-  return NULL;
+  return nullptr;
 }
 
 static rbtree_node *red_black_tree_find_predecessor_node(rbtree_node *node) {
   rbtree_node *child, *parent;
   if (!node)
-    return NULL;
-  if (node->left != NULL) {
+    return nullptr;
+  if (node->left != nullptr) {
     child = node->left;
-    while (child->right != NULL)
+    while (child->right != nullptr)
       child = child->right;
     return child;
   } else {
     child = node;
     parent = node->parent;
-    while (parent != NULL && child == parent->left) {
+    while (parent != nullptr && child == parent->left) {
       child = parent;
       parent = parent->parent;
     }
     return parent;
   }
-  return NULL;
+  return nullptr;
 }
 
 void red_black_tree_release(RedBlackTree bt,
@@ -158,19 +158,19 @@ void red_black_tree_release(RedBlackTree bt,
   node = bt->head;
 
   if (bt->head) {
-    while (node != NULL) {
-      if (node->left != NULL) {
+    while (node != nullptr) {
+      if (node->left != nullptr) {
         node = node->left;
         continue;
-      } else if (node->right != NULL) {
+      } else if (node->right != nullptr) {
         node = node->right;
         continue;
       } else {
         parent = node->parent;
         if (parent && parent->left == node)
-          parent->left = NULL;
+          parent->left = nullptr;
         else if (parent && parent->right == node)
-          parent->right = NULL;
+          parent->right = nullptr;
         else if (parent) {
           fprintf(stderr, "serious braindamage.\n");
           exit(1);
@@ -190,19 +190,19 @@ void red_black_tree_destroy(RedBlackTree bt) {
   node = bt->head;
 
   if (bt->head) {
-    while (node != NULL) {
-      if (node->left != NULL) {
+    while (node != nullptr) {
+      if (node->left != nullptr) {
         node = node->left;
         continue;
-      } else if (node->right != NULL) {
+      } else if (node->right != nullptr) {
         node = node->right;
         continue;
       } else {
         parent = node->parent;
         if (parent && parent->left == node)
-          parent->left = NULL;
+          parent->left = nullptr;
         else if (parent && parent->right == node)
-          parent->right = NULL;
+          parent->right = nullptr;
         else if (parent) {
           fprintf(stderr, "serious braindamage.\n");
           exit(1);
@@ -236,7 +236,7 @@ static void red_black_tree_rotate_right(RedBlackTree bt, rbtree_node *pivot) {
   child = pivot->left;
 
   pivot->left = child->right;
-  if (child->right != NULL)
+  if (child->right != nullptr)
     child->right->parent = pivot;
 
   child->parent = pivot->parent;
@@ -263,7 +263,7 @@ static void red_black_tree_rotate_left(RedBlackTree bt, rbtree_node *pivot) {
   child = pivot->right;
 
   pivot->right = child->left;
-  if (child->left != NULL)
+  if (child->left != nullptr)
     child->left->parent = pivot;
 
   child->parent = pivot->parent;
@@ -288,14 +288,14 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
   int compare_result;
 
   if (!bt->head) {
-    bt->head = red_black_tree_allocate(NULL, key, data);
+    bt->head = red_black_tree_allocate(nullptr, key, data);
     bt->size++;
     bt->head->color = NODE_BLACK;
     return;
   }
 
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     compare_result = (*bt->compare_function)(key, node->key, bt->token);
     if (compare_result == 0) {
       // Key already exists, replace data.
@@ -304,7 +304,7 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       return;
     } else if (compare_result < 0) {
       // Go Left
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
         node->left = red_black_tree_allocate(node, key, data);
@@ -313,7 +313,7 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
         break;
       }
     } else {
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         node = node->right;
       } else {
         node->right = red_black_tree_allocate(node, key, data);
@@ -338,7 +338,7 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       bt->head->color = NODE_BLACK;
       if (iter->parent == iter->parent->parent->left) {
         // parent is left child of grandparent
-        if (iter->parent->parent->right != NULL &&
+        if (iter->parent->parent->right != nullptr &&
             iter->parent->parent->right->color == NODE_RED) {
           // Case 1:
           // The current node has a red uncle and it's parent is parent node is
@@ -370,7 +370,7 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
         }
       } else {
         // parent is right child of grandparent
-        if (iter->parent->parent->left != NULL &&
+        if (iter->parent->parent->left != nullptr &&
             iter->parent->parent->left->color == NODE_RED) {
           // Case 1:
           // The current node has a red uncle and it's parent is parent node is
@@ -411,25 +411,25 @@ void *red_black_tree_find(RedBlackTree bt, void *key) {
   int compare_result;
 
   if (!bt->head) {
-    return NULL;
+    return nullptr;
   }
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     compare_result = (*bt->compare_function)(key, node->key, bt->token);
     if (compare_result == 0) {
       return node->data;
     } else if (compare_result < 0) {
       // Go Left
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
-        return NULL;
+        return nullptr;
       }
     } else {
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         node = node->right;
       } else {
-        return NULL;
+        return nullptr;
       }
     }
   }
@@ -445,19 +445,19 @@ int red_black_tree_exists(RedBlackTree bt, void *key) {
     return 0;
   }
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     compare_result = (*bt->compare_function)(key, node->key, bt->token);
     if (compare_result == 0) {
       return 1;
     } else if (compare_result < 0) {
       // Go Left
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
         return 0;
       }
     } else {
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         node = node->right;
       } else {
         return 0;
@@ -484,18 +484,18 @@ int red_black_tree_exists(RedBlackTree bt, void *key) {
   } while (0)
 
 static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
-  rbtree_node *sibling = NULL, *node;
+  rbtree_node *sibling = nullptr, *node;
 
   node = leaf;
 
   if (node->color == NODE_RED) {
     // if node is red and has at most one child, then it has no child.
     if (node->parent->left == node) {
-      node->parent->left = NULL;
+      node->parent->left = nullptr;
     } else {
-      node->parent->right = NULL;
+      node->parent->right = nullptr;
     }
-    node->parent = NULL;
+    node->parent = nullptr;
     return;
   }
   // node is black so it has only one red child, two black children, or no
@@ -504,7 +504,7 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
   if (node->left) {
     if (node == bt->head) {
       bt->head = node->left;
-      node->left->parent = NULL;
+      node->left->parent = nullptr;
     } else if (node->parent->left == node) {
       node->parent->left = node->left;
       node->left->parent = node->parent;
@@ -519,15 +519,15 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
         rbfail("shit.");
       }
     }
-    node->parent = NULL;
-    node->left = NULL;
+    node->parent = nullptr;
+    node->left = nullptr;
     return;
   }
 
   if (node->right) {
     if (node == bt->head) {
       bt->head = node->right;
-      node->right->parent = NULL;
+      node->right->parent = nullptr;
     } else if (node->parent->right == node) {
       node->parent->right = node->right;
       node->right->parent = node->parent;
@@ -542,8 +542,8 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
         rbfail("shit.");
       }
     }
-    node->right = NULL;
-    node->left = NULL;
+    node->right = nullptr;
+    node->left = nullptr;
     return;
   }
   // node is black and has no children, if it had two children, then
@@ -654,9 +654,9 @@ static void red_black_tree_unlink_leaf(RedBlackTree bt, rbtree_node *leaf) {
 
 done:
   if (leaf->parent->left == leaf) {
-    leaf->parent->left = NULL;
+    leaf->parent->left = nullptr;
   } else if (leaf->parent->right == leaf) {
-    leaf->parent->right = NULL;
+    leaf->parent->right = nullptr;
   } else {
     rbfail("major braindamage.");
   }
@@ -664,35 +664,35 @@ done:
 }
 
 void *red_black_tree_delete(RedBlackTree bt, void *key) {
-  rbtree_node *node = NULL, *child = NULL, *tail;
+  rbtree_node *node = nullptr, *child = nullptr, *tail;
   void *data;
   int compare_result;
 
   if (!bt->head) {
-    return NULL;
+    return nullptr;
   }
 
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     compare_result = (*bt->compare_function)(key, node->key, bt->token);
     if (compare_result == 0) {
       break;
     } else if (compare_result < 0) {
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
-        return NULL;
+        return nullptr;
       }
     } else {
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         node = node->right;
       } else {
-        return NULL;
+        return nullptr;
       }
     }
   }
 
-  if (node == NULL) {
+  if (node == nullptr) {
     return node;
   }
 
@@ -701,8 +701,8 @@ void *red_black_tree_delete(RedBlackTree bt, void *key) {
 
   // XXX: handle deleting the head.
 
-  if (node == bt->head && node->left == NULL && node->right == NULL) {
-    bt->head = NULL;
+  if (node == bt->head && node->left == nullptr && node->right == nullptr) {
+    bt->head = nullptr;
     free(node);
     return data;
   }
@@ -720,7 +720,7 @@ void *red_black_tree_delete(RedBlackTree bt, void *key) {
    */
 
   // our child has at most one child (or none.)
-  if (node->left == NULL || node->right == NULL) {
+  if (node->left == nullptr || node->right == nullptr) {
     tail = node;
     while (tail) {
       tail->count--;
@@ -760,25 +760,25 @@ int red_black_tree_walk(RedBlackTree bt, int how,
   int depth = 0;
   if (!bt || !bt->head)
     return 1;
-  last = NULL;
+  last = nullptr;
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     if (last == node->parent) {
       if (how == WALK_PREORDER)
         if (!(*callback)(node->key, node->data, depth, arg))
           return 0;
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         depth++;
         last = node;
         node = node->left;
         continue;
       }
     }
-    if (last == node->left || (last == node->parent && node->left == NULL)) {
+    if (last == node->left || (last == node->parent && node->left == nullptr)) {
       if (how == WALK_INORDER)
         if (!(*callback)(node->key, node->data, depth, arg))
           return 0;
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         depth++;
         last = node;
         node = node->right;
@@ -804,7 +804,7 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
   int found = 0;
 
   if (!bt->head) {
-    return NULL;
+    return nullptr;
   }
 
   if (method == SEARCH_FIRST) {
@@ -816,7 +816,7 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
   }
 
   node = bt->head;
-  while (node != NULL) {
+  while (node != nullptr) {
     last = node;
     compare_result = (*bt->compare_function)(key, node->key, bt->token);
     if (compare_result == 0) {
@@ -824,17 +824,17 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
       break;
     } else if (compare_result < 0) {
       // Go Left
-      if (node->left != NULL) {
+      if (node->left != nullptr) {
         node = node->left;
       } else {
-        node = NULL;
+        node = nullptr;
         break;
       }
     } else {
-      if (node->right != NULL) {
+      if (node->right != nullptr) {
         node = node->right;
       } else {
-        node = NULL;
+        node = nullptr;
         break;
       }
     }
@@ -845,12 +845,12 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
     if (node)
       return node->data;
     else
-      return NULL;
+      return nullptr;
   }
 
   if (!found && (method == SEARCH_EQUAL || method == SEARCH_NEXT ||
                  method == SEARCH_PREV)) {
-    return NULL;
+    return nullptr;
   }
 
   if (method == SEARCH_GTEQ || (!found && method == SEARCH_GT)) {
@@ -893,7 +893,7 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
       return node;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 void *red_black_tree_index(RedBlackTree bt, int index) {

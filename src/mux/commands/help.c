@@ -49,7 +49,7 @@ int helpindex_read(HashTable *htab, char *filename) {
   }
 
   hash_table_flush(htab, 0);
-  if ((fp = fopen(filename, "r")) == NULL) {
+  if ((fp = fopen(filename, "r")) == nullptr) {
     STARTLOG(LOG_PROBLEMS, "HLP", "RINDX") {
       p = alloc_lbuf("helpindex_read.LOG");
       snprintf(p, LBUF_SIZE, "Can't open %s for reading.", filename);
@@ -76,7 +76,7 @@ int helpindex_read(HashTable *htab, char *filename) {
     htab_entry->original = 1; /*
                                * First is the longest
                                */
-    htab_entry->key = (char *)malloc(strlen(entry.topic) + 1);
+    htab_entry->key = malloc(strlen(entry.topic) + 1);
     StringCopy(htab_entry->key, entry.topic);
     while (p > entry.topic) {
       p--;
@@ -96,7 +96,7 @@ int helpindex_read(HashTable *htab, char *filename) {
 
       htab_entry->pos = entry.pos;
       htab_entry->original = 0;
-      htab_entry->key = (char *)malloc(strlen(entry.topic) + 1);
+      htab_entry->key = malloc(strlen(entry.topic) + 1);
       StringCopy(htab_entry->key, entry.topic);
     }
     free(htab_entry->key);
@@ -131,7 +131,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
   int offset;
   struct help_entry *htab_entry;
   char matched;
-  char *topic_list = NULL, *buffp;
+  char *topic_list = nullptr, *buffp;
 
   if (*topic == '\0')
     topic = (char *)"help";
@@ -144,7 +144,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
   else {
     matched = 0;
     for (htab_entry = (struct help_entry *)hash_table_first_entry(htab);
-         htab_entry != NULL;
+         htab_entry != nullptr;
          htab_entry = (struct help_entry *)hash_table_next_entry(htab)) {
       if (htab_entry->original && quick_wild(topic, htab_entry->key)) {
         if (matched == 0) {
@@ -166,7 +166,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
     }
     return;
   }
-  if ((fp = fopen(filename, "r")) == NULL) {
+  if ((fp = fopen(filename, "r")) == nullptr) {
     notify(player, "Sorry, that function is temporarily unavailable.");
     STARTLOG(LOG_PROBLEMS, "HLP", "OPEN") {
       line = alloc_lbuf("help_write.LOG.open");
@@ -193,7 +193,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
   line = alloc_lbuf("help_write");
   result = alloc_lbuf("help_write.2");
   for (;;) {
-    if (fgets(line, LBUF_SIZE - 1, fp) == NULL)
+    if (fgets(line, LBUF_SIZE - 1, fp) == nullptr)
       break;
     if (line[0] == '&')
       break;
@@ -204,7 +204,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
       str = line;
       bp = result;
       exec(result, &bp, 0, player, player,
-           EV_NO_COMPRESS | EV_FIGNORE | EV_EVAL, &str, (char **)NULL, 0);
+           EV_NO_COMPRESS | EV_FIGNORE | EV_EVAL, &str, (char **)nullptr, 0);
       *bp = '\0';
       notify(player, result);
     } else

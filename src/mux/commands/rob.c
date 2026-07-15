@@ -54,8 +54,8 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
     safe_str((char *)" away.", str, &sp);
     *sp = '\0';
 
-    did_it(giver, thing, A_GFAIL, str, A_OGFAIL, NULL, A_AGFAIL, (char **)NULL,
-           0);
+    did_it(giver, thing, A_GFAIL, str, A_OGFAIL, nullptr, A_AGFAIL,
+           (char **)nullptr, 0);
     free_lbuf(str);
     return;
   }
@@ -67,8 +67,8 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
     safe_chr('.', str, &sp);
     *sp = '\0';
 
-    did_it(giver, recipient, A_RFAIL, str, A_ORFAIL, NULL, A_ARFAIL,
-           (char **)NULL, 0);
+    did_it(giver, recipient, A_RFAIL, str, A_ORFAIL, nullptr, A_ARFAIL,
+           (char **)nullptr, 0);
     free_lbuf(str);
     return;
   }
@@ -84,9 +84,10 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
                       tprintf("%s gave you to %s.", str, Name(recipient)));
     free_lbuf(str);
   }
-  did_it(giver, thing, A_DROP, NULL, A_ODROP, NULL, A_ADROP, (char **)NULL, 0);
-  did_it(recipient, thing, A_SUCC, NULL, A_OSUCC, NULL, A_ASUCC, (char **)NULL,
-         0);
+  did_it(giver, thing, A_DROP, nullptr, A_ODROP, nullptr, A_ADROP,
+         (char **)nullptr, 0);
+  did_it(recipient, thing, A_SUCC, nullptr, A_OSUCC, nullptr, A_ASUCC,
+         (char **)nullptr, 0);
 }
 
 void do_give(DbRef player, DbRef cause, int key, char *who, char *amnt) {

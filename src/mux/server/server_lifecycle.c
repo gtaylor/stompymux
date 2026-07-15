@@ -44,7 +44,7 @@ static void server_lifecycle_signal_test_ready(void) {
   long descriptor;
 
   value = getenv("BTMUX_TEST_READY_FD");
-  if (value == NULL)
+  if (value == nullptr)
     return;
   errno = 0;
   descriptor = strtol(value, &end, 10);
@@ -75,7 +75,8 @@ static void server_lifecycle_process_preload(void) {
     do_top(10);
     ITER_PARENTS(thing, parent, level) {
       if (obj_flags(thing) & HAS_STARTUP) {
-        did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_STARTUP, NULL, 0);
+        did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_STARTUP,
+               nullptr, 0);
         do_second();
         do_top(10);
         break;
@@ -102,7 +103,7 @@ static void server_lifecycle_run_queues(evutil_socket_t fd, short event,
   int status = 0;
 
   event_add(queue_event, &queue_slice);
-  gettimeofday(&current_time, NULL);
+  gettimeofday(&current_time, nullptr);
   last_slice = update_quotas(last_slice, current_time);
   child = waitpid(-1, &status, WNOHANG);
   if (child > 0) {
@@ -115,7 +116,7 @@ static void server_lifecycle_run_queues(evutil_socket_t fd, short event,
 
 int server_lifecycle_initialize(void) {
   server_event_base = event_base_new();
-  return server_event_base != NULL;
+  return server_event_base != nullptr;
 }
 
 struct event_base *server_lifecycle_event_base(void) {
@@ -132,7 +133,7 @@ void server_lifecycle_prepare(void) {
 int server_lifecycle_boot(int mindb) {
   char lua_error[LBUF_SIZE];
 
-  mudstate.now = time(NULL);
+  mudstate.now = time(nullptr);
   if (!lua_initialize(lua_error, sizeof(lua_error))) {
     log_error(LOG_ALWAYS, "INI", "LUA", "Unable to initialize Lua: %s",
               lua_error);
@@ -153,14 +154,14 @@ void server_lifecycle_run(int port) {
   queue_slice.tv_usec = mudconf.timeslice * 1000;
   telnet_socket_listen(port);
   queue_event =
-      evtimer_new(server_event_base, server_lifecycle_run_queues, NULL);
-  if (queue_event == NULL) {
+      evtimer_new(server_event_base, server_lifecycle_run_queues, nullptr);
+  if (queue_event == nullptr) {
     log_error(LOG_ALWAYS, "INI", "EVENT", "Unable to create queue timer.");
     return;
   }
   evtimer_add(queue_event, &queue_slice);
-  gettimeofday(&last_slice, NULL);
-  gettimeofday(&current_time, NULL);
+  gettimeofday(&last_slice, nullptr);
+  gettimeofday(&current_time, nullptr);
 #ifdef BTMUX_PERSISTENCE_TESTING
   server_lifecycle_signal_test_ready();
 #endif
@@ -169,16 +170,16 @@ void server_lifecycle_run(int port) {
 
 /* Request that the active event loop return at its next safe opportunity. */
 void server_lifecycle_stop(void) {
-  if (server_event_base != NULL)
-    event_base_loopexit(server_event_base, NULL);
+  if (server_event_base != nullptr)
+    event_base_loopexit(server_event_base, nullptr);
 }
 
 /* Stop services and flush pending output before process exit. */
 void server_lifecycle_shutdown(void) {
   server_lifecycle_stop();
-  if (queue_event != NULL) {
+  if (queue_event != nullptr) {
     event_free(queue_event);
-    queue_event = NULL;
+    queue_event = nullptr;
   }
   timer_shutdown();
   heartbeat_stop();
@@ -187,8 +188,8 @@ void server_lifecycle_shutdown(void) {
 #ifdef ARBITRARY_LOGFILES
   logcache_destruct();
 #endif
-  if (server_event_base != NULL) {
+  if (server_event_base != nullptr) {
     event_base_free(server_event_base);
-    server_event_base = NULL;
+    server_event_base = nullptr;
   }
 }

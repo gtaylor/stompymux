@@ -47,14 +47,15 @@ static void process_leave_loc(DbRef thing, DbRef dest, DbRef cause, int canhear,
   oattr = quiet ? 0 : A_OLEAVE;
   aattr = quiet ? 0 : A_ALEAVE;
   pattr = A_LEAVE;
-  did_it(thing, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
+  did_it(thing, loc, pattr, nullptr, oattr, nullptr, aattr, (char **)nullptr,
+         0);
 
   /*
    * Do OXENTER for receiving room
    */
 
   if ((dest != NOTHING) && !quiet)
-    did_it(thing, dest, 0, NULL, A_OXENTER, NULL, 0, (char **)NULL, 0);
+    did_it(thing, dest, 0, nullptr, A_OXENTER, nullptr, 0, (char **)nullptr, 0);
 
   /*
    * Display the 'has left' message if we meet any of the following * *
@@ -101,14 +102,15 @@ static void process_enter_loc(DbRef thing, DbRef src, DbRef cause, int canhear,
   oattr = quiet ? 0 : A_OENTER;
   aattr = quiet ? 0 : A_AENTER;
   pattr = A_ENTER;
-  did_it(thing, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
+  did_it(thing, loc, pattr, nullptr, oattr, nullptr, aattr, (char **)nullptr,
+         0);
 
   /*
    * Do OXLEAVE for sending room
    */
 
   if ((src != NOTHING) && !quiet)
-    did_it(thing, src, 0, NULL, A_OXLEAVE, NULL, 0, (char **)NULL, 0);
+    did_it(thing, src, 0, nullptr, A_OXLEAVE, nullptr, 0, (char **)nullptr, 0);
 
   /*
    * Display the 'has arrived' message if we meet all of the following
@@ -258,7 +260,8 @@ void move_via_generic(DbRef thing, DbRef dest, DbRef cause, int hush) {
   canhear = is_hearer(thing);
   process_leave_loc(thing, dest, cause, canhear, hush);
   move_object(thing, dest);
-  did_it(thing, thing, A_MOVE, NULL, A_OMOVE, NULL, A_AMOVE, (char **)NULL, 0);
+  did_it(thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
+         (char **)nullptr, 0);
   process_enter_loc(thing, src, cause, canhear, hush);
 }
 
@@ -286,7 +289,8 @@ void move_via_exit(DbRef thing, DbRef dest, DbRef cause, DbRef exit, int hush) {
   oattr = quiet ? 0 : A_OSUCC;
   aattr = quiet ? 0 : A_ASUCC;
   pattr = A_SUCC;
-  did_it(thing, exit, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
+  did_it(thing, exit, pattr, nullptr, oattr, nullptr, aattr, (char **)nullptr,
+         0);
   process_leave_loc(thing, dest, cause, canhear, hush);
   move_object(thing, dest);
 
@@ -297,9 +301,11 @@ void move_via_exit(DbRef thing, DbRef dest, DbRef cause, DbRef exit, int hush) {
   oattr = quiet ? 0 : A_ODROP;
   aattr = quiet ? 0 : A_ADROP;
   pattr = A_DROP;
-  did_it(thing, exit, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
+  did_it(thing, exit, pattr, nullptr, oattr, nullptr, aattr, (char **)nullptr,
+         0);
 
-  did_it(thing, thing, A_MOVE, NULL, A_OMOVE, NULL, A_AMOVE, (char **)NULL, 0);
+  did_it(thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
+         (char **)nullptr, 0);
   process_enter_loc(thing, src, cause, canhear, hush);
   process_sticky_dropto(src, thing);
 }
@@ -326,8 +332,8 @@ int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
           failmsg = (char *)"You can't be teleported out!";
           notify_quiet(cause, "You can't teleport that out!");
         }
-        did_it(thing, src, A_TOFAIL, failmsg, A_OTOFAIL, NULL, A_ATOFAIL,
-               (char **)NULL, 0);
+        did_it(thing, src, A_TOFAIL, failmsg, A_OTOFAIL, nullptr, A_ATOFAIL,
+               (char **)nullptr, 0);
         return 0;
       }
       if (is_room(curr))
@@ -339,13 +345,15 @@ int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
     dest = obj_home(thing);
   canhear = is_hearer(thing);
   if (!(hush & HUSH_LEAVE))
-    did_it(thing, thing, 0, NULL, A_OXTPORT, NULL, 0, (char **)NULL, 0);
+    did_it(thing, thing, 0, nullptr, A_OXTPORT, nullptr, 0, (char **)nullptr,
+           0);
   process_leave_loc(thing, dest, NOTHING, canhear, hush);
   move_object(thing, dest);
   if (!(hush & HUSH_ENTER))
-    did_it(thing, thing, A_TPORT, NULL, A_OTPORT, NULL, A_ATPORT, (char **)NULL,
-           0);
-  did_it(thing, thing, A_MOVE, NULL, A_OMOVE, NULL, A_AMOVE, (char **)NULL, 0);
+    did_it(thing, thing, A_TPORT, nullptr, A_OTPORT, nullptr, A_ATPORT,
+           (char **)nullptr, 0);
+  did_it(thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
+         (char **)nullptr, 0);
   process_enter_loc(thing, src, NOTHING, canhear, hush);
   divest_object(thing);
   process_sticky_dropto(src, thing);
@@ -393,7 +401,8 @@ void move_exit(DbRef player, DbRef exit, int divest, const char *failmsg,
       oattr = A_OFAIL;
       aattr = A_AFAIL;
     }
-    did_it(player, exit, A_FAIL, failmsg, oattr, NULL, aattr, (char **)NULL, 0);
+    did_it(player, exit, A_FAIL, failmsg, oattr, nullptr, aattr,
+           (char **)nullptr, 0);
   }
 }
 
@@ -537,8 +546,8 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
       notify(thing, "Taken.");
       oattr = quiet ? 0 : A_OSUCC;
       aattr = quiet ? 0 : A_ASUCC;
-      did_it(player, thing, A_SUCC, "Taken.", oattr, NULL, aattr, (char **)NULL,
-             0);
+      did_it(player, thing, A_SUCC, "Taken.", oattr, nullptr, aattr,
+             (char **)nullptr, 0);
     } else {
       oattr = quiet ? 0 : A_OFAIL;
       aattr = quiet ? 0 : A_AFAIL;
@@ -546,8 +555,8 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
         failmsg = (char *)"You can't take that from there.";
       else
         failmsg = (char *)"You can't pick that up.";
-      did_it(player, thing, A_FAIL, failmsg, oattr, NULL, aattr, (char **)NULL,
-             0);
+      did_it(player, thing, A_FAIL, failmsg, oattr, nullptr, aattr,
+             (char **)nullptr, 0);
     }
     break;
   case TYPE_EXIT:
@@ -622,8 +631,8 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
 
     if (((obj_location(thing) != player) && !is_wizard(player)) ||
         (!could_doit(player, thing, A_LDROP))) {
-      did_it(player, thing, A_DFAIL, "You can't drop that.", A_ODFAIL, NULL,
-             A_ADFAIL, (char **)NULL, 0);
+      did_it(player, thing, A_DFAIL, "You can't drop that.", A_ODFAIL, nullptr,
+             A_ADFAIL, (char **)nullptr, 0);
       return;
     }
     /*
@@ -639,8 +648,8 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
     safe_tprintf_str(buf, &bp, "dropped %s.", Name(thing));
     oattr = quiet ? 0 : A_ODROP;
     aattr = quiet ? 0 : A_ADROP;
-    did_it(player, thing, A_DROP, "Dropped.", oattr, buf, aattr, (char **)NULL,
-           0);
+    did_it(player, thing, A_DROP, "Dropped.", oattr, buf, aattr,
+           (char **)nullptr, 0);
     free_lbuf(buf);
 
     /*
@@ -693,8 +702,8 @@ void do_enter_internal(DbRef player, DbRef thing, int quiet) {
   if (!is_enter_ok(thing) && !is_controls(player, thing)) {
     oattr = quiet ? 0 : A_OEFAIL;
     aattr = quiet ? 0 : A_AEFAIL;
-    did_it(player, thing, A_EFAIL, "Permission denied.", oattr, NULL, aattr,
-           (char **)NULL, 0);
+    did_it(player, thing, A_EFAIL, "Permission denied.", oattr, nullptr, aattr,
+           (char **)nullptr, 0);
   } else if (player == thing) {
     notify(player, "You can't enter yourself!");
 #ifdef ENTER_REQUIRES_LEAVESUCC
@@ -711,8 +720,8 @@ void do_enter_internal(DbRef player, DbRef thing, int quiet) {
   } else {
     oattr = quiet ? 0 : A_OEFAIL;
     aattr = quiet ? 0 : A_AEFAIL;
-    did_it(player, thing, A_EFAIL, "You can't enter that.", oattr, NULL, aattr,
-           (char **)NULL, 0);
+    did_it(player, thing, A_EFAIL, "You can't enter that.", oattr, nullptr,
+           aattr, (char **)nullptr, 0);
   }
 }
 
@@ -767,7 +776,7 @@ void do_leave(DbRef player, DbRef cause, int key) {
   } else {
     oattr = quiet ? 0 : A_OLFAIL;
     aattr = quiet ? 0 : A_ALFAIL;
-    did_it(player, loc, A_LFAIL, "You can't leave.", oattr, NULL, aattr,
-           (char **)NULL, 0);
+    did_it(player, loc, A_LFAIL, "You can't leave.", oattr, nullptr, aattr,
+           (char **)nullptr, 0);
   }
 }

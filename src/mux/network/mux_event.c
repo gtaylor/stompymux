@@ -70,13 +70,13 @@
 int mux_event_tick = 0;
 
 /* Stack of the events according to date */
-static MuxEvent **mux_event_first_in_type = NULL;
+static MuxEvent **mux_event_first_in_type = nullptr;
 
 /* Whole list (dual linked) */
-static MuxEvent *mux_event_list = NULL;
+static MuxEvent *mux_event_list = nullptr;
 
 /* List of 'free' events */
-static MuxEvent *mux_event_free_list = NULL;
+static MuxEvent *mux_event_free_list = nullptr;
 
 static int last_muxevent_type = -1;
 /* The main add-to-lists event handling function */
@@ -123,7 +123,7 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
     mux_event_first_in_type =
         realloc(mux_event_first_in_type, sizeof(MuxEvent *) * (type + 1));
     for (i = last_muxevent_type + 1; i <= type; i++)
-      mux_event_first_in_type[i] = NULL;
+      mux_event_first_in_type[i] = nullptr;
     last_muxevent_type = type;
   }
   if (mux_event_free_list) {
@@ -140,13 +140,13 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
   e->data2 = data2;
   e->type = type;
   e->tick = mux_event_tick + time;
-  e->next = NULL;
+  e->next = nullptr;
 
   tv.tv_sec = time;
   tv.tv_usec = 0;
 
   e->ev = evtimer_new(server_lifecycle_event_base(), mux_event_wakeup, e);
-  if (e->ev == NULL) {
+  if (e->ev == nullptr) {
     free(e);
     return;
   }
@@ -160,10 +160,10 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
 /* Remove event */
 
 static void mux_event_delete(MuxEvent *e) {
-  if (event_pending(e->ev, EV_TIMEOUT, NULL))
+  if (event_pending(e->ev, EV_TIMEOUT, nullptr))
     event_del(e->ev);
   event_free(e->ev);
-  e->ev = NULL;
+  e->ev = nullptr;
 
   if (e->flags & FLAG_FREE_DATA)
     free((void *)e->data);

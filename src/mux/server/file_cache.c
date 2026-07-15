@@ -30,15 +30,15 @@ struct filecache_block {
   char data[MBUF_SIZE - sizeof(FBLKHDR)];
 };
 
-FCACHE fcache[] = {{mudconf.conn_file, NULL, "Conn"},
-                   {mudconf.site_file, NULL, "Conn/Badsite"},
-                   {mudconf.down_file, NULL, "Conn/Down"},
-                   {mudconf.full_file, NULL, "Conn/Full"},
-                   {mudconf.creg_file, NULL, "Conn/Reg"},
-                   {mudconf.crea_file, NULL, "Crea/Newuser"},
-                   {mudconf.regf_file, NULL, "Crea/RegFaill"},
-                   {mudconf.quit_file, NULL, "Quit"},
-                   {NULL, NULL, NULL}};
+FCACHE fcache[] = {{mudconf.conn_file, nullptr, "Conn"},
+                   {mudconf.site_file, nullptr, "Conn/Badsite"},
+                   {mudconf.down_file, nullptr, "Conn/Down"},
+                   {mudconf.full_file, nullptr, "Conn/Full"},
+                   {mudconf.creg_file, nullptr, "Conn/Reg"},
+                   {mudconf.crea_file, nullptr, "Crea/Newuser"},
+                   {mudconf.regf_file, nullptr, "Crea/RegFaill"},
+                   {mudconf.quit_file, nullptr, "Quit"},
+                   {nullptr, nullptr, nullptr}};
 
 NameTable list_files[] = {
     {(char *)"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
@@ -49,7 +49,7 @@ NameTable list_files[] = {
     {(char *)"newuser", 1, CA_WIZARD, FC_CREA_NEW},
     {(char *)"quit", 1, CA_WIZARD, FC_QUIT},
     {(char *)"register_connect", 1, CA_WIZARD, FC_CONN_REG},
-    {NULL, 0, 0, 0}};
+    {nullptr, 0, 0, 0}};
 
 constexpr int MAX_CONN = 100;
 int fcache_conn_c = 0;
@@ -78,7 +78,7 @@ static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
 
     tfp = fp;
     fp = (FBLOCK *)alloc_mbuf("fcache_fill");
-    fp->hdr.nxt = NULL;
+    fp->hdr.nxt = nullptr;
     fp->hdr.nchars = 0;
     tfp->hdr.nxt = fp;
   }
@@ -96,12 +96,12 @@ static int fcache_read(FBLOCK **cp, char *filename) {
    */
 
   fp = *cp;
-  while (fp != NULL) {
+  while (fp != nullptr) {
     tfp = fp->hdr.nxt;
     free_mbuf(fp);
     fp = tfp;
   }
-  *cp = NULL;
+  *cp = nullptr;
 
   /*
    * Read the text file into a new chain
@@ -125,7 +125,7 @@ static int fcache_read(FBLOCK **cp, char *filename) {
    */
 
   fp = (FBLOCK *)alloc_mbuf("fcache_read.first");
-  fp->hdr.nxt = NULL;
+  fp->hdr.nxt = nullptr;
   fp->hdr.nchars = 0;
   *cp = fp;
   tchars = 0;
@@ -161,7 +161,7 @@ static int fcache_read(FBLOCK **cp, char *filename) {
    */
 
   if (fp->hdr.nchars == 0) {
-    *cp = NULL;
+    *cp = nullptr;
     free_mbuf(fp);
   }
   return tchars;
@@ -198,7 +198,7 @@ void fcache_rawdump(int fd, int num) {
     return;
   fp = fcache[num].fileblock;
 
-  while (fp != NULL) {
+  while (fp != nullptr) {
     start = fp->data;
     remaining = fp->hdr.nchars;
     while (remaining > 0) {
@@ -219,7 +219,7 @@ static void fcache_dumpbase(Descriptor *d, FCACHE fc[], int num) {
 
   fp = fc[num].fileblock;
 
-  while (fp != NULL) {
+  while (fp != nullptr) {
     descriptor_queue_write(d, fp->data, fp->hdr.nchars);
     fp = fp->hdr.nxt;
   }
@@ -275,7 +275,7 @@ void fcache_init(void) {
   FCACHE *fp;
 
   for (fp = fcache; fp->filename; fp++) {
-    fp->fileblock = NULL;
+    fp->fileblock = nullptr;
   }
   fcache_load(NOTHING);
 }

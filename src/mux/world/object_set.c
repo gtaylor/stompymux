@@ -299,7 +299,7 @@ void object_attribute_set(DbRef player, DbRef thing, int attrnum,
   attr = attribute_by_number(attrnum);
   attribute_parent_get_info(thing, attrnum, &aowner, &aflags);
   if (attr && set_attr(player, thing, attr, aflags)) {
-    if ((attr->check != NULL) &&
+    if ((attr->check != nullptr) &&
         (!(*attr->check)(0, player, thing, attrnum, attrtext)))
       return;
     have_xcode = is_hardcode(thing);
@@ -676,7 +676,7 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
 
         got_one = 1;
         edit_string_ansi(atext, &result, &returnstr, from, to);
-        if (ap->check != NULL) {
+        if (ap->check != nullptr) {
           doit = (*ap->check)(0, player, thing, ap->number, result);
         } else {
           doit = 1;
@@ -743,7 +743,7 @@ void do_trigger(DbRef player, DbRef cause, int key, char *object, char *argv[],
     strncpy(attributeName, attribute->name, MBUF_SIZE - 1);
   }
 
-  did_it(player, thing, 0, NULL, 0, NULL, attrib, argv, nargs);
+  did_it(player, thing, 0, nullptr, 0, nullptr, attrib, argv, nargs);
 
   /*
    * XXX be more descriptive as to what was triggered?
@@ -777,7 +777,7 @@ void do_use(DbRef player, DbRef cause, int key, char *object) {
 
   if (!could_doit(player, thing, A_LUSE)) {
     did_it(player, thing, A_UFAIL, "You can't figure out how to use that.",
-           A_OUFAIL, NULL, A_AUFAIL, (char **)NULL, 0);
+           A_OUFAIL, nullptr, A_AUFAIL, (char **)nullptr, 0);
     return;
   }
   temp = alloc_lbuf("do_use");
@@ -795,8 +795,8 @@ void do_use(DbRef player, DbRef cause, int key, char *object) {
     df_ouse = alloc_lbuf("do_use.ouse");
     snprintf(df_use, LBUF_SIZE, "You use %s", Name(thing));
     snprintf(df_ouse, LBUF_SIZE, "uses %s", Name(thing));
-    did_it(player, thing, A_USE, df_use, A_OUSE, df_ouse, A_AUSE, (char **)NULL,
-           0);
+    did_it(player, thing, A_USE, df_use, A_OUSE, df_ouse, A_AUSE,
+           (char **)nullptr, 0);
     free_lbuf(df_use);
     free_lbuf(df_ouse);
   } else {

@@ -53,7 +53,7 @@ static const telnet_telopt_t telnet_options[] = {
 int descriptor_telnet_initialize(Descriptor *d) {
   d->telnet =
       telnet_init(telnet_options, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
-  if (d->telnet == NULL) {
+  if (d->telnet == nullptr) {
     log_error(LOG_PROBLEMS, "TELNET", "ERROR",
               "Unable to allocate Telnet state for descriptor %d.",
               d->descriptor);
@@ -74,9 +74,9 @@ int descriptor_telnet_initialize(Descriptor *d) {
 }
 
 void descriptor_telnet_destroy(Descriptor *d) {
-  if (d->telnet != NULL)
+  if (d->telnet != nullptr)
     telnet_free(d->telnet);
-  d->telnet = NULL;
+  d->telnet = nullptr;
 }
 
 void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size) {
@@ -299,7 +299,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     }
     break;
   case TELNET_EV_TTYPE:
-    if (event->ttype.cmd == TELNET_TTYPE_IS && event->ttype.name != NULL) {
+    if (event->ttype.cmd == TELNET_TTYPE_IS && event->ttype.name != nullptr) {
       snprintf(d->terminal_type, sizeof(d->terminal_type), "%s",
                event->ttype.name);
     }

@@ -48,7 +48,9 @@ static inline char ToUpper(char C) {
 static inline char ToLower(char C) {
   return (C >= 'A' && C <= 'Z') ? C - 'A' + 'a' : C;
 }
-static inline int safe_atoi(const char *s) { return s == NULL ? 0 : atoi(s); }
+static inline int safe_atoi(const char *s) {
+  return s == nullptr ? 0 : atoi(s);
+}
 
 /* Message forwarding directives */
 

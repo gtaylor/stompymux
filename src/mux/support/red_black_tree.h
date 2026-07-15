@@ -22,19 +22,23 @@
 
 #pragma once
 
-#define SEARCH_EQUAL 0x1
-#define SEARCH_GTEQ 0x2
-#define SEARCH_LTEQ 0x3
-#define SEARCH_GT 0x4
-#define SEARCH_LT 0x5
-#define SEARCH_NEXT 0x6
-#define SEARCH_PREV 0x7
-#define SEARCH_FIRST 0x8
-#define SEARCH_LAST 0x9
+enum : int {
+  SEARCH_EQUAL = 0x1,
+  SEARCH_GTEQ = 0x2,
+  SEARCH_LTEQ = 0x3,
+  SEARCH_GT = 0x4,
+  SEARCH_LT = 0x5,
+  SEARCH_NEXT = 0x6,
+  SEARCH_PREV = 0x7,
+  SEARCH_FIRST = 0x8,
+  SEARCH_LAST = 0x9,
+};
 
-#define WALK_PREORDER 0x100
-#define WALK_INORDER 0x101
-#define WALK_POSTORDER 0x102
+enum : int {
+  WALK_PREORDER = 0x100,
+  WALK_INORDER = 0x101,
+  WALK_POSTORDER = 0x102,
+};
 
 #ifndef DEBUG
 typedef void *RedBlackTree;

@@ -17,21 +17,15 @@ int nummacros;
 int maxmacros;
 struct macros **macros;
 
-MACENT macro_table[] = {{(char *)"add", do_add_macro},
-                        {(char *)"clear", do_clear_macro},
-                        {(char *)"chmod", do_chmod_macro},
-                        {(char *)"chown", do_chown_macro},
-                        {(char *)"create", do_create_macro},
-                        {(char *)"def", do_def_macro},
-                        {(char *)"del", do_del_macro},
-                        {(char *)"name", do_desc_macro},
-                        {(char *)"chslot", do_edit_macro},
-                        {(char *)"ex", do_ex_macro},
-                        {(char *)"gex", do_gex_macro},
-                        {(char *)"glist", do_list_macro},
-                        {(char *)"list", do_status_macro},
-                        {(char *)"undef", do_undef_macro},
-                        {(char *)NULL, NULL}};
+MACENT macro_table[] = {
+    {(char *)"add", do_add_macro},       {(char *)"clear", do_clear_macro},
+    {(char *)"chmod", do_chmod_macro},   {(char *)"chown", do_chown_macro},
+    {(char *)"create", do_create_macro}, {(char *)"def", do_def_macro},
+    {(char *)"del", do_del_macro},       {(char *)"name", do_desc_macro},
+    {(char *)"chslot", do_edit_macro},   {(char *)"ex", do_ex_macro},
+    {(char *)"gex", do_gex_macro},       {(char *)"glist", do_list_macro},
+    {(char *)"list", do_status_macro},   {(char *)"undef", do_undef_macro},
+    {(char *)nullptr, nullptr}};
 
 void init_mactab(void) {
   MACENT *mp;
@@ -64,12 +58,12 @@ int do_macro(DbRef player, char *in, char **out) {
     *s++ = 0;
 
   mp = (MACENT *)hash_table_find(cmd, &mudstate.macro_htab);
-  if (mp != NULL) {
+  if (mp != nullptr) {
     (*(mp->handler))(player, s);
     free_lbuf(old);
     return 0;
   }
-  if ((*out = do_process_macro(player, in, s)) != NULL) {
+  if ((*out = do_process_macro(player, in, s)) != nullptr) {
     free_lbuf(old);
     return 1;
   } else {
@@ -176,7 +170,7 @@ void do_desc_macro(DbRef player, char *s) {
   m = get_macro_set(player, -1);
   if (m) {
     free(m->desc);
-    m->desc = (char *)malloc(strlen(s) + 1);
+    m->desc = malloc(strlen(s) + 1);
     StringCopy(m->desc, s);
     notify_printf(player, "MACRO: Current slot description to %s.", s);
   } else
@@ -395,7 +389,7 @@ void clear_macro_set(int set) {
     nummacros--;
     for (i = set; i < nummacros; i++)
       macros[i] = macros[i + 1];
-    macros[i] = NULL;
+    macros[i] = nullptr;
   }
   for (i = 0; i < NUM_COMMAC; i++) {
     c = commac_table[i];
@@ -501,8 +495,8 @@ void do_def_macro(DbRef player, char *cmd) {
   }
   if (m->nummacros >= m->maxmacros) {
     m->maxmacros += 10;
-    na = (char *)malloc(5 * m->maxmacros);
-    ns = (char **)malloc(sizeof(char *) * m->maxmacros);
+    na = malloc(5 * m->maxmacros);
+    ns = malloc(sizeof(char *) * m->maxmacros);
 
     for (i = 0; i < m->nummacros; i++) {
       StringCopy(na + i * 5, m->alias + i * 5);
@@ -521,7 +515,7 @@ void do_def_macro(DbRef player, char *cmd) {
 
   where = j;
   StringCopy(m->alias + where * 5, alias);
-  m->string[where] = (char *)malloc(strlen(s) + 1);
+  m->string[where] = malloc(strlen(s) + 1);
   StringCopy(m->string[where], s);
   snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias, s);
   notify(player, buffer);
@@ -594,7 +588,7 @@ char *do_process_macro(DbRef player, char *in, char *s) {
               tar += 2;
             } else if (*tar == '*') {
               *next = 0;
-              strcat(next, s);
+              strlcat(next, s, LBUF_SIZE - (next - buff));
               tar++;
               next += strlen(next);
             } else
@@ -633,7 +627,7 @@ char *do_process_macro(DbRef player, char *in, char *s) {
     }
   }
   free_lbuf(buff);
-  return NULL;
+  return nullptr;
 }
 
 struct macros *get_macro_set(DbRef player, int which) {
@@ -650,11 +644,11 @@ struct macros *get_macro_set(DbRef player, int which) {
       set = c->macros[c->curmac];
 
     if (set == -1)
-      return NULL;
+      return nullptr;
     else
       return macros[set];
   } else
-    return NULL;
+    return nullptr;
 }
 
 void do_create_macro(DbRef player, char *s) {
@@ -689,9 +683,9 @@ void do_create_macro(DbRef player, char *s) {
   macros[set]->status = 0;
   macros[set]->nummacros = 0;
   macros[set]->maxmacros = 0;
-  macros[set]->alias = NULL;
-  macros[set]->string = NULL;
-  macros[set]->desc = (char *)malloc(strlen(s) + 1);
+  macros[set]->alias = nullptr;
+  macros[set]->string = nullptr;
+  macros[set]->desc = malloc(strlen(s) + 1);
   StringCopy(macros[set]->desc, s);
   c->curmac = first;
   c->macros[first] = set;

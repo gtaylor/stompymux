@@ -37,7 +37,7 @@ struct logfile_t {
   struct event *ev;
 };
 
-RedBlackTree logfiles = NULL;
+RedBlackTree logfiles = nullptr;
 
 static int logcache_compare(void *vleft, void *vright, void *arg) {
   return strcmp((char *)vleft, (char *)vright);
@@ -45,14 +45,14 @@ static int logcache_compare(void *vleft, void *vright, void *arg) {
 
 static int logcache_close(struct logfile_t *log) {
   dprintk("closing logfile '%s'.", log->filename);
-  if (event_pending(log->ev, EV_TIMEOUT, NULL))
+  if (event_pending(log->ev, EV_TIMEOUT, nullptr))
     event_del(log->ev);
   event_free(log->ev);
   close(log->fd);
   red_black_tree_delete(logfiles, log->filename);
   if (log->filename)
     free(log->filename);
-  log->filename = NULL;
+  log->filename = nullptr;
   log->fd = -1;
   free(log);
   return 1;
@@ -102,7 +102,7 @@ static int logcache_open(char *filename) {
     return 0;
   }
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
-    log_perror("LOGCACHE", "FAIL", NULL, "fcntl(fd, F_SETFD, FD_CLOEXEC)");
+    log_perror("LOGCACHE", "FAIL", nullptr, "fcntl(fd, F_SETFD, FD_CLOEXEC)");
   }
 
   newlog = malloc(sizeof(struct logfile_t));
@@ -110,7 +110,7 @@ static int logcache_open(char *filename) {
   newlog->filename = strdup(filename);
   newlog->ev =
       evtimer_new(server_lifecycle_event_base(), logcache_expire, newlog);
-  if (newlog->ev == NULL) {
+  if (newlog->ev == nullptr) {
     close(newlog->fd);
     free(newlog->filename);
     free(newlog);
@@ -125,7 +125,7 @@ static int logcache_open(char *filename) {
 void logcache_init(void) {
   if (!logfiles) {
     dprintk("logcache initialized.");
-    logfiles = red_black_tree_init(logcache_compare, NULL);
+    logfiles = red_black_tree_init(logcache_compare, nullptr);
   } else {
     dprintk("REDUNDANT CALL TO logcache_init()!");
   }
@@ -143,9 +143,9 @@ void logcache_destruct(void) {
     dprintk("logcache_destruct() CALLED WHILE UNITIALIZED!");
     return;
   }
-  red_black_tree_walk(logfiles, WALK_INORDER, _logcache_destruct, NULL);
+  red_black_tree_walk(logfiles, WALK_INORDER, _logcache_destruct, nullptr);
   red_black_tree_destroy(logfiles);
-  logfiles = NULL;
+  logfiles = nullptr;
 }
 
 int logcache_writelog(char *fname, char *fdata) {
@@ -170,7 +170,7 @@ int logcache_writelog(char *fname, char *fdata) {
     }
   }
 
-  if (event_pending(log->ev, EV_TIMEOUT, NULL)) {
+  if (event_pending(log->ev, EV_TIMEOUT, nullptr)) {
     event_del(log->ev);
     event_add(log->ev, &tv);
   }

@@ -59,7 +59,7 @@ void do_think(DbRef player, DbRef cause, int key, char *message) {
   bp = buf;
   str = message;
   exec(buf, &bp, 0, player, cause, EV_FCHECK | EV_EVAL | EV_TOP, &str,
-       (char **)NULL, 0);
+       (char **)nullptr, 0);
   output_length = strnlen(buf, LBUF_SIZE - 1);
   buf[output_length] = '\0';
   notify(player, buf);
@@ -332,10 +332,11 @@ static void page_return(DbRef player, DbRef target, const char *tag, int anum,
     str2 = bp = alloc_lbuf("page_return");
     buf = str;
     exec(str2, &bp, 0, target, player,
-         EV_FCHECK | EV_EVAL | EV_TOP | EV_NO_LOCATION, &buf, (char **)NULL, 0);
+         EV_FCHECK | EV_EVAL | EV_TOP | EV_NO_LOCATION, &buf, (char **)nullptr,
+         0);
     *bp = '\0';
     if (*str2) {
-      t = time(NULL);
+      t = time(nullptr);
       tp = localtime(&t);
       if (is_wizard(target) || !is_in_character_location(target))
         notify_with_cause(
@@ -397,8 +398,8 @@ static char *dbrefs_to_names(DbRef player, char *list, char *namelist,
 
   StringCopy(oldlist, list);
   bp = namelist;
-  for (p = (char *)strtok(oldlist, " "); p != NULL;
-       p = (char *)strtok(NULL, " ")) {
+  for (p = (char *)strtok(oldlist, " "); p != nullptr;
+       p = (char *)strtok(nullptr, " ")) {
     if (ismessage)
       safe_str(tprintf("%s, ", Name(atoi(p))), namelist, &bp);
     else {
@@ -442,8 +443,8 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
       if (!*targetname)
         notify(player, "You have not paged anyone.");
       else
-        for (p = (char *)strtok(targetname, " "); p != NULL;
-             p = (char *)strtok(NULL, " ")) {
+        for (p = (char *)strtok(targetname, " "); p != nullptr;
+             p = (char *)strtok(nullptr, " ")) {
           target = atoi(p);
           notify_printf(player, "You last paged %s.", Name(target));
         }
@@ -476,8 +477,8 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
 
   if (((target = lookup_player(player, tname, 1)) == NOTHING) && n > 1) {
     bp = dbrefs_to_names(player, tname, buf1, ismessage);
-    for (p = (char *)strtok(tname, " "); p != NULL;
-         p = (char *)strtok(NULL, " ")) {
+    for (p = (char *)strtok(tname, " "); p != nullptr;
+         p = (char *)strtok(nullptr, " ")) {
 
       /*
        * If it's a memory page, grab the number from the *
@@ -515,7 +516,7 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
                             tprintf("To (%s), %s%s pages you: %s", buf1,
                                     Name(player), aladd, message));
         }
-        page_return(player, target, "Idle", A_IDLE, NULL);
+        page_return(player, target, "Idle", A_IDLE, nullptr);
 
         safe_str(tprintf("%d ", target), buf2, &bp2);
         count++;
@@ -550,7 +551,7 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
             target, player,
             tprintf("%s%s pages: %s", Name(player), aladd, message));
       }
-      page_return(player, target, "Idle", A_IDLE, NULL);
+      page_return(player, target, "Idle", A_IDLE, nullptr);
 
       safe_str(tprintf("%d ", target), buf2, &bp2);
       safe_str(tprintf("%s, ", Name(target)), buf1, &bp);
@@ -621,8 +622,8 @@ void do_pemit_list(DbRef player, char *list, const char *message) {
   if (!message || !*message || !list || !*list)
     return;
 
-  for (p = (char *)strtok(list, " "); p != NULL;
-       p = (char *)strtok(NULL, " ")) {
+  for (p = (char *)strtok(list, " "); p != nullptr;
+       p = (char *)strtok(nullptr, " ")) {
 
     ok_to_do = 0;
     init_match(player, p, TYPE_PLAYER);

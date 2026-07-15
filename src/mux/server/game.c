@@ -144,7 +144,7 @@ static int regexp_match(char *pattern, char *str, char *args[], int nargs) {
    */
 
   for (i = 0; i < nargs; i++) {
-    args[i] = NULL;
+    args[i] = nullptr;
   }
 
   /* Convenient: nargs and NSUBEXP are the same.
@@ -319,7 +319,7 @@ int check_filter(DbRef object, DbRef player, int filter, const char *msg) {
   nbuf = dp = alloc_lbuf("check_filter");
   str = buf;
   exec(nbuf, &dp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP, &str,
-       (char **)NULL, 0);
+       (char **)nullptr, 0);
   *dp = '\0';
   dp = nbuf;
   free_lbuf(buf);
@@ -329,7 +329,7 @@ int check_filter(DbRef object, DbRef player, int filter, const char *msg) {
       free_lbuf(nbuf);
       return (0);
     }
-  } while (dp != NULL);
+  } while (dp != nullptr);
   free_lbuf(nbuf);
   return (1);
 }
@@ -348,7 +348,7 @@ static char *add_prefix(DbRef object, DbRef player, int prefix, const char *msg,
     nbuf = bp = alloc_lbuf("add_prefix");
     str = buf;
     exec(nbuf, &bp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP, &str,
-         (char **)NULL, 0);
+         (char **)nullptr, 0);
     *bp = '\0';
     free_lbuf(buf);
     buf = nbuf;
@@ -378,7 +378,7 @@ static char *dflt_from_msg(DbRef sender, DbRef sendloc) {
 char *colorize(DbRef player, char *from);
 
 void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
-  char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = NULL;
+  char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = nullptr;
   char *args[10];
   DbRef aowner, targetloc, recip, obj;
   int i, nargs, has_neighbors, pass_listen;
@@ -441,7 +441,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
     safe_str((char *)msg, msg_ns, &mp);
     *mp = '\0';
   } else {
-    msg_ns = NULL;
+    msg_ns = nullptr;
   }
 
   /*
@@ -531,10 +531,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
     if ((key & MSG_ME) && pass_listen && pass_uselock) {
       if (sender != target)
-        did_it(sender, target, 0, NULL, 0, NULL, A_AHEAR, args, nargs);
+        did_it(sender, target, 0, nullptr, 0, nullptr, A_AHEAR, args, nargs);
       else
-        did_it(sender, target, 0, NULL, 0, NULL, A_AMHEAR, args, nargs);
-      did_it(sender, target, 0, NULL, 0, NULL, A_AAHEAR, args, nargs);
+        did_it(sender, target, 0, nullptr, 0, nullptr, A_AMHEAR, args, nargs);
+      did_it(sender, target, 0, nullptr, 0, nullptr, A_AAHEAR, args, nargs);
     }
     /*
      * Get rid of match arguments. We don't need them anymore
@@ -542,7 +542,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
     if (pass_listen) {
       for (i = 0; i < 10; i++)
-        if (args[i] != NULL)
+        if (args[i] != nullptr)
           free_lbuf(args[i]);
     }
     /*
@@ -845,7 +845,7 @@ void fork_and_dump(int key) {
       switch (fork()) {
       case -1: /* fork() failed */
         /* FIXME: Make this error message conform.  */
-        log_perror("DMP", "FAIL", NULL, "fork()");
+        log_perror("DMP", "FAIL", nullptr, "fork()");
         mudstate.dumping = 0;
         return;
 
@@ -940,7 +940,7 @@ int is_hearer(DbRef thing) {
   if (is_monitor(thing))
     buff = alloc_lbuf("Hearer");
   else
-    buff = NULL;
+    buff = nullptr;
   for (attr = attribute_list_first(thing, &as); attr;
        attr = attribute_list_next(&as)) {
     if (attr == A_LISTEN) {
@@ -1033,7 +1033,7 @@ int main(int argc, char *argv[]) {
   hash_table_initialize(&mudstate.player_htab, 250 * HASH_FACTOR);
   numeric_hash_table_initialize(&mudstate.fwdlist_htab, 25 * HASH_FACTOR);
   numeric_hash_table_initialize(&mudstate.parent_htab, 5 * HASH_FACTOR);
-  mudstate.desctree = red_black_tree_init(descriptor_compare, NULL);
+  mudstate.desctree = red_black_tree_init(descriptor_compare, nullptr);
   vattr_init();
 
   configuration_read(config_file);
@@ -1135,12 +1135,12 @@ static void init_rlimit(void) {
   rlp = (struct rlimit *)alloc_lbuf("rlimit");
 
   if (getrlimit(RLIMIT_NOFILE, rlp)) {
-    log_perror("RLM", "FAIL", NULL, "getrlimit()");
+    log_perror("RLM", "FAIL", nullptr, "getrlimit()");
     free_lbuf(rlp);
     return;
   }
   rlp->rlim_cur = rlp->rlim_max;
   if (setrlimit(RLIMIT_NOFILE, rlp))
-    log_perror("RLM", "FAIL", NULL, "setrlimit()");
+    log_perror("RLM", "FAIL", nullptr, "setrlimit()");
   free_lbuf(rlp);
 }

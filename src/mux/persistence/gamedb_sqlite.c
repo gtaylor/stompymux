@@ -171,8 +171,8 @@ static int gamedb_exec(sqlite3 *sqlite, const char *sql) {
   char *errmsg;
   int rc;
 
-  errmsg = NULL;
-  rc = sqlite3_exec(sqlite, sql, NULL, NULL, &errmsg);
+  errmsg = nullptr;
+  rc = sqlite3_exec(sqlite, sql, nullptr, nullptr, &errmsg);
   if (errmsg)
     sqlite3_free(errmsg);
   return rc == SQLITE_OK ? 0 : -1;
@@ -255,8 +255,9 @@ static int gamedb_fsync_directory(const char *path) {
 /* Compile one SQL statement for repeated binding and execution. */
 static int gamedb_prepare(sqlite3 *sqlite, sqlite3_stmt **statement,
                           const char *sql) {
-  return sqlite3_prepare_v2(sqlite, sql, -1, statement, NULL) == SQLITE_OK ? 0
-                                                                           : -1;
+  return sqlite3_prepare_v2(sqlite, sql, -1, statement, nullptr) == SQLITE_OK
+             ? 0
+             : -1;
 }
 
 /* Read an SQLite integer only when it fits the destination int exactly. */
@@ -312,7 +313,7 @@ static int gamedb_load_metadata(sqlite3 *sqlite, int *db_top) {
   int schema_version;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   if (gamedb_prepare(sqlite, &statement,
                      "SELECT schema_version, db_top, min_size, attr_next, "
@@ -346,7 +347,7 @@ static int gamedb_load_vattrs(sqlite3 *sqlite) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   if (gamedb_prepare(
           sqlite, &statement,
@@ -393,7 +394,7 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
   int step;
   DbRef zone;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   if (gamedb_prepare(
           sqlite, &statement,
@@ -462,7 +463,7 @@ static int gamedb_load_attributes(sqlite3 *sqlite, int db_top) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   if (gamedb_prepare(sqlite, &statement,
                      "SELECT object_dbref, number, value FROM attributes "
@@ -493,9 +494,10 @@ int gamedb_load(const char *path) {
   int db_top;
   int result;
 
-  sqlite = NULL;
+  sqlite = nullptr;
   result = -1;
-  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, nullptr) !=
+      SQLITE_OK) {
     gamedb_log_failure("opening game database", path, sqlite);
   } else if (gamedb_load_metadata(sqlite, &db_top) < 0) {
     gamedb_log_failure("validating snapshot metadata", path, sqlite);
@@ -556,10 +558,10 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
   DbRef attr_owner;
   long attr_flags;
 
-  snapshot = NULL;
-  vattrs = NULL;
-  objects = NULL;
-  attributes = NULL;
+  snapshot = nullptr;
+  vattrs = nullptr;
+  objects = nullptr;
+  attributes = nullptr;
 
   if (gamedb_exec(sqlite,
                   "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; "
@@ -704,28 +706,28 @@ int gamedb_dump(int dump_type) {
   int rc;
 
   if (gamedb_target_path(target, sizeof(target), dump_type) < 0) {
-    gamedb_log_failure("building path", mudconf.gamedb, NULL);
+    gamedb_log_failure("building path", mudconf.gamedb, nullptr);
     return -1;
   }
   length = snprintf(temporary, sizeof(temporary), "%s.tmp.XXXXXX", target);
   if (length < 0 || (size_t)length >= sizeof(temporary)) {
-    gamedb_log_failure("building temporary path", target, NULL);
+    gamedb_log_failure("building temporary path", target, nullptr);
     return -1;
   }
 
   fd = mkstemp(temporary);
   if (fd < 0) {
-    gamedb_log_failure("creating temporary file", target, NULL);
+    gamedb_log_failure("creating temporary file", target, nullptr);
     return -1;
   }
   if (close(fd) < 0) {
-    gamedb_log_failure("closing temporary file", temporary, NULL);
+    gamedb_log_failure("closing temporary file", temporary, nullptr);
     unlink(temporary);
     return -1;
   }
 
-  sqlite = NULL;
-  rc = sqlite3_open_v2(temporary, &sqlite, SQLITE_OPEN_READWRITE, NULL);
+  sqlite = nullptr;
+  rc = sqlite3_open_v2(temporary, &sqlite, SQLITE_OPEN_READWRITE, nullptr);
   if (rc != SQLITE_OK) {
     gamedb_log_failure("opening temporary database", temporary, sqlite);
     if (sqlite)
@@ -746,17 +748,17 @@ int gamedb_dump(int dump_type) {
     return -1;
   }
   if (gamedb_fsync_file(temporary) < 0) {
-    gamedb_log_failure("syncing snapshot", temporary, NULL);
+    gamedb_log_failure("syncing snapshot", temporary, nullptr);
     unlink(temporary);
     return -1;
   }
   if (rename(temporary, target) < 0) {
-    gamedb_log_failure("replacing snapshot", target, NULL);
+    gamedb_log_failure("replacing snapshot", target, nullptr);
     unlink(temporary);
     return -1;
   }
   if (gamedb_fsync_directory(target) < 0) {
-    gamedb_log_failure("syncing snapshot directory", target, NULL);
+    gamedb_log_failure("syncing snapshot directory", target, nullptr);
     return -1;
   }
   return 0;

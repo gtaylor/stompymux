@@ -19,8 +19,8 @@ PCACHE *pcache_head;
 static int compare_pcache(DbRef left, DbRef right) { return (left - right); }
 
 void pcache_init(void) {
-  pcache_tree = red_black_tree_init((void *)compare_pcache, NULL);
-  pcache_head = NULL;
+  pcache_tree = red_black_tree_init((void *)compare_pcache, nullptr);
+  pcache_head = nullptr;
 }
 
 static void pcache_reload1(DbRef player, PCACHE *pp) {
@@ -39,7 +39,7 @@ PCACHE *pcache_find(DbRef player) {
   PCACHE *pp;
 
   if (!is_good_obj(player) || !is_owns_others(player))
-    return NULL;
+    return nullptr;
 
   pp = (PCACHE *)red_black_tree_find(pcache_tree, (void *)player);
   if (pp) {
@@ -83,7 +83,7 @@ void pcache_trim(void) {
   return;
 
   pp = pcache_head;
-  pplast = NULL;
+  pplast = nullptr;
   while (pp) {
     if (!(pp->cflags & PF_DEAD) && (pp->queue || (pp->cflags & PF_REF))) {
       pp->cflags &= ~PF_REF;

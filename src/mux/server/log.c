@@ -26,7 +26,7 @@ NameTable logdata_nametab[] = {{(char *)"flags", 1, 0, LOGOPT_FLAGS},
                                {(char *)"location", 1, 0, LOGOPT_LOC},
                                {(char *)"owner", 1, 0, LOGOPT_OWNER},
                                {(char *)"timestamp", 1, 0, LOGOPT_TIMESTAMP},
-                               {NULL, 0, 0, 0}};
+                               {nullptr, 0, 0, 0}};
 
 NameTable logoptions_nametab[] = {
     {(char *)"accounting", 2, 0, LOG_ACCOUNTING},
@@ -45,7 +45,7 @@ NameTable logoptions_nametab[] = {
     {(char *)"shouts", 2, 0, LOG_SHOUTS},
     {(char *)"startup", 2, 0, LOG_STARTUP},
     {(char *)"wizard", 1, 0, LOG_WIZARD},
-    {NULL, 0, 0, 0}};
+    {nullptr, 0, 0, 0}};
 
 char *strip_ansi_r(char *dest, const char *raw, size_t n) {
   char *p = (char *)raw;
@@ -276,9 +276,9 @@ int log_to_file(DbRef thing, const char *logfile, const char *message) {
   if (!logfile || !*logfile || strlen(logfile) > 200)
     return 0; /* invalid logfile name */
 
-  if (strstr(logfile, "..") != NULL)
+  if (strstr(logfile, "..") != nullptr)
     return 0;
-  if (strstr(logfile, "/") != NULL)
+  if (strstr(logfile, "/") != nullptr)
     return 0;
   snprintf(pathname, 210, "logs/%s", logfile);
 

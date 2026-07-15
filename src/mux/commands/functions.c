@@ -256,7 +256,7 @@ char *next_token(char *str, char sep) {
   while (*str && (*str != sep))
     str++;
   if (!*str)
-    return NULL;
+    return nullptr;
   str++;
   if (sep == ' ') {
     while (*str == sep)
@@ -275,8 +275,8 @@ char *split_token(char **sp, char sep) {
 
   save = str = *sp;
   if (!str) {
-    *sp = NULL;
-    return NULL;
+    *sp = nullptr;
+    return nullptr;
   }
   while (*str && (*str != sep))
     str++;
@@ -287,7 +287,7 @@ char *split_token(char **sp, char sep) {
         str++;
     }
   } else {
-    str = NULL;
+    str = nullptr;
   }
   *sp = str;
   return save;
@@ -442,9 +442,9 @@ static void fval(char *buff, char **bufc, double result) {
                                                  */
   **bufc = '\0';
   p = (char *)rindex(buf1, '0');
-  if (p == NULL) { /*
-                    * remove useless trailing 0's
-                    */
+  if (p == nullptr) { /*
+                       * remove useless trailing 0's
+                       */
     return;
   } else if (*(p + 1) == '\0') {
     while (*p == '0') {
@@ -455,7 +455,7 @@ static void fval(char *buff, char **bufc, double result) {
   p = (char *)rindex(buf1, '.'); /*
                                   * take care of dangling '.'
                                   */
-  if ((p != NULL) && (*(p + 1) == '\0')) {
+  if ((p != nullptr) && (*(p + 1) == '\0')) {
     *p = '\0';
     *bufc = p;
   }
@@ -858,7 +858,7 @@ char *get_uptime_to_string(int uptime) {
   int ut = 0, uc = 0, foofaa;
 
   if (uptime <= 0) {
-    strcpy(buf, "#-1 INVALID VALUE");
+    strlcpy(buf, "#-1 INVALID VALUE", SBUF_SIZE);
     return buf;
   }
   for (ut = 0; ut < UPTIME_UNITS; ut++)
@@ -886,9 +886,9 @@ char *get_uptime_to_string(int uptime) {
         snprintf(buf + strlen(buf), SBUF_SIZE - strlen(buf), "%d %s", units[ut],
                  uptime_unit_table[ut].name);
       if (uc > 1)
-        strcat(buf, ", ");
+        strlcat(buf, ", ", SBUF_SIZE);
       else if (uc > 0)
-        strcat(buf, " and ");
+        strlcat(buf, " and ", SBUF_SIZE);
     }
   }
   return buf;
@@ -1135,7 +1135,7 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   if (eval_it) {
     str = atr_gotten;
     exec(buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL, &str,
-         (char **)NULL, 0);
+         (char **)nullptr, 0);
   } else {
     safe_str(atr_gotten, buff, bufc);
   }
@@ -1156,7 +1156,7 @@ static void fun_subeval(char *buff, char **bufc, DbRef player, DbRef cause,
   str = fargs[0];
   exec(buff, bufc, 0, player, cause,
        EV_NO_LOCATION | EV_NOFCHECK | EV_FIGNORE | EV_NO_COMPRESS, &str,
-       (char **)NULL, 0);
+       (char **)nullptr, 0);
 }
 
 static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1175,7 +1175,7 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (nfargs == 1) {
     str = fargs[0];
-    exec(buff, bufc, 0, player, cause, EV_EVAL, &str, (char **)NULL, 0);
+    exec(buff, bufc, 0, player, cause, EV_EVAL, &str, (char **)nullptr, 0);
     return;
   }
   if (!*fargs[0] || !*fargs[1])
@@ -1219,7 +1219,7 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   if (eval_it) {
     str = atr_gotten;
     exec(buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL, &str,
-         (char **)NULL, 0);
+         (char **)nullptr, 0);
   } else {
     safe_str(atr_gotten, buff, bufc);
   }
@@ -1254,7 +1254,7 @@ static void do_ufun(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || (!is_good_obj(thing)))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -1293,7 +1293,7 @@ static void do_ufun(char *buff, char **bufc, DbRef player, DbRef cause,
   if (is_local) {
     for (i = 0; i < MAX_GLOBAL_REGS; i++) {
       if (!mudstate.global_regs[i])
-        preserve[i] = NULL;
+        preserve[i] = nullptr;
       else {
         preserve[i] = alloc_lbuf("u_regs");
         StringCopy(preserve[i], mudstate.global_regs[i]);
@@ -1955,7 +1955,7 @@ static void fun_index(char *buff, char **bufc, DbRef player, DbRef cause,
 
   start--;
   while (start && s && *s) {
-    if ((s = (char *)index(s, c)) != NULL)
+    if ((s = (char *)index(s, c)) != nullptr)
       s++;
     start--;
   }
@@ -1975,7 +1975,7 @@ static void fun_index(char *buff, char **bufc, DbRef player, DbRef cause,
 
   p = s;
   while (end && p && *p) {
-    if ((p = (char *)index(p, c)) != NULL) {
+    if ((p = (char *)index(p, c)) != nullptr) {
       if (--end == 0) {
         do {
           p--;
@@ -2799,10 +2799,10 @@ static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
      * No 'before' portion, just split off element 1
      */
 
-    sptr = NULL;
+    sptr = nullptr;
     if (!str || !*str) {
-      eptr = NULL;
-      iptr = NULL;
+      eptr = nullptr;
+      iptr = nullptr;
     } else {
       eptr = trim_space_sep(str, sep);
       iptr = split_token(&eptr, sep);
@@ -2838,7 +2838,7 @@ static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
     if (eptr)
       iptr = split_token(&eptr, sep);
     else
-      iptr = NULL;
+      iptr = nullptr;
   }
 
   switch (flag) {
@@ -2895,7 +2895,7 @@ static void fun_ldelete(char *buff, char **bufc, DbRef player, DbRef cause,
   char sep;
 
   varargs_preamble("LDELETE", 3);
-  do_itemfuns(buff, bufc, fargs[0], atoi(fargs[1]), NULL, sep, IF_DELETE);
+  do_itemfuns(buff, bufc, fargs[0], atoi(fargs[1]), nullptr, sep, IF_DELETE);
 }
 
 static void fun_replace(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -3312,7 +3312,7 @@ static void process_pronoun(DbRef player, char *what, const char *token,
     safe_str("#-1 NO MATCH", buff, bufc);
   } else {
     str = (char *)token;
-    exec(buff, bufc, 0, it, it, 0, &str, (char **)NULL, 0);
+    exec(buff, bufc, 0, it, it, 0, &str, (char **)nullptr, 0);
   }
 }
 
@@ -3530,9 +3530,9 @@ static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
    * Sanity-check arg1 and arg2
    */
 
-  if (bp == NULL)
+  if (bp == nullptr)
     bp = "";
-  if (mp == NULL)
+  if (mp == nullptr)
     mp = " ";
   if (!mp || !*mp)
     mp = (char *)" ";
@@ -3551,7 +3551,7 @@ static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
      */
 
     cp = (char *)index(bp, *mp);
-    if (cp == NULL) {
+    if (cp == nullptr) {
 
       /*
        * Not found, return empty string
@@ -3605,9 +3605,9 @@ static void fun_before(char *buff, char **bufc, DbRef player, DbRef cause,
    * Sanity-check arg1 and arg2
    */
 
-  if (bp == NULL)
+  if (bp == nullptr)
     bp = "";
-  if (mp == NULL)
+  if (mp == nullptr)
     mp = " ";
   if (!mp || !*mp)
     mp = (char *)" ";
@@ -3627,7 +3627,7 @@ static void fun_before(char *buff, char **bufc, DbRef player, DbRef cause,
      */
 
     cp = (char *)index(bp, *mp);
-    if (cp == NULL) {
+    if (cp == nullptr) {
 
       /*
        * Not found, return entire string
@@ -3899,7 +3899,7 @@ static void fun_repeat(char *buff, char **bufc, DbRef player, DbRef cause,
   int times, i;
 
   times = atoi(fargs[1]);
-  if ((times < 1) || (fargs[0] == NULL) || (!*fargs[0])) {
+  if ((times < 1) || (fargs[0] == nullptr) || (!*fargs[0])) {
     return;
   } else if (times == 1) {
     safe_str(fargs[0], buff, bufc);
@@ -4048,7 +4048,7 @@ static void fun_fold(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || (!is_good_obj(thing)))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -4105,7 +4105,7 @@ static void fun_fold(char *buff, char **bufc, DbRef player, DbRef cause,
   }
 
   rstore = result;
-  result = NULL;
+  result = nullptr;
 
   while (cp) {
     clist[0] = rstore;
@@ -4157,7 +4157,7 @@ static void fun_filter(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || (!is_good_obj(thing)))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -4238,7 +4238,7 @@ static void fun_map(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
     if ((anum == NOTHING) || (!is_good_obj(thing)))
-      ap = NULL;
+      ap = nullptr;
     else
       ap = attribute_by_number(anum);
   } else {
@@ -4651,7 +4651,7 @@ static void do_asort(char *s[], int n, int sort_type) {
 
     break;
   case NUMERIC_LIST:
-    ip = (i_rec *)malloc(n * sizeof(i_rec));
+    ip = malloc(n * sizeof(i_rec));
     for (i = 0; i < n; i++) {
       ip[i].str = s[i];
       ip[i].data = atoi(s[i]);
@@ -4663,7 +4663,7 @@ static void do_asort(char *s[], int n, int sort_type) {
     free(ip);
     break;
   case DBREF_LIST:
-    ip = (i_rec *)malloc(n * sizeof(i_rec));
+    ip = malloc(n * sizeof(i_rec));
     for (i = 0; i < n; i++) {
       ip[i].str = s[i];
       ip[i].data = dbnum(s[i]);
@@ -4675,7 +4675,7 @@ static void do_asort(char *s[], int n, int sort_type) {
     free(ip);
     break;
   case FLOAT_LIST:
-    fp = (f_rec *)malloc(n * sizeof(f_rec));
+    fp = malloc(n * sizeof(f_rec));
     for (i = 0; i < n; i++) {
       fp[i].str = s[i];
       fp[i].data = atof(s[i]);
@@ -5722,7 +5722,7 @@ FUN flist[] = {
     {"ZPLAYERS", fun_zplayers, 1, 0, CA_PUBLIC},
     {"ZROOMS", fun_zrooms, 1, 0, CA_PUBLIC},
     {"ZWHO", fun_zwho, 1, 0, CA_PUBLIC},
-    {NULL, NULL, 0, 0, 0}};
+    {nullptr, nullptr, 0, 0, 0}};
 
 /* *INDENT-ON* */
 
@@ -5744,7 +5744,7 @@ void init_functab() {
     hash_table_add(buff, (int *)fp, &mudstate.func_htab);
   }
   free_sbuf(buff);
-  ufun_head = NULL;
+  ufun_head = nullptr;
   hash_table_initialize(&mudstate.ufunc_htab, 11);
 }
 
@@ -5771,7 +5771,7 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
    * Verify that the function doesn't exist in the builtin table
    */
 
-  if (hash_table_find(np, &mudstate.func_htab) != NULL) {
+  if (hash_table_find(np, &mudstate.func_htab) != nullptr) {
     notify_quiet(player, "Function already defined in builtin function table.");
     free_sbuf(np);
     return;
@@ -5826,14 +5826,14 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
   ufp = (UFUN *)hash_table_find(np, &mudstate.ufunc_htab);
 
   if (!ufp) {
-    ufp = (UFUN *)malloc(sizeof(UFUN));
+    ufp = malloc(sizeof(UFUN));
     ufp->name = strsave(np);
     for (bp = (char *)ufp->name; *bp; bp++)
       *bp = ToUpper(*bp);
     ufp->obj = obj;
     ufp->atr = atr;
     ufp->perms = CA_PUBLIC;
-    ufp->next = NULL;
+    ufp->next = nullptr;
     if (!ufun_head) {
       ufun_head = ufp;
     } else {

@@ -13,9 +13,9 @@ void helpindex_init(void);
 void help_write(DbRef, char *, HashTable *, char *, int);
 int helpindex_read(HashTable *, char *);
 #endif
-#define LINE_SIZE 400
+constexpr int LINE_SIZE = 400;
 
-#define TOPIC_NAME_LEN 30
+constexpr int TOPIC_NAME_LEN = 30;
 
 typedef struct {
   long pos;                       /* index into help file */

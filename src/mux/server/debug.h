@@ -17,7 +17,7 @@
       time_t now;                                                              \
       time(&now);                                                              \
       localtime_r(&now, &tm);                                                  \
-      gettimeofday(&assertion_time, NULL);                                     \
+      gettimeofday(&assertion_time, nullptr);                                  \
       fprintf(stderr,                                                          \
               "%02d%02d%02d.%08d:%5d %s (%s:%d] failed assertion '%s'\n",      \
               tm.tm_hour, tm.tm_min, tm.tm_sec, (int)assertion_time.tv_usec,   \
@@ -34,7 +34,7 @@
       time_t now;                                                              \
       time(&now);                                                              \
       localtime_r(&now, &tm);                                                  \
-      gettimeofday(&assertion_time, NULL);                                     \
+      gettimeofday(&assertion_time, nullptr);                                  \
       fprintf(                                                                 \
           stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d] '%s' failed with '%s'\n",  \
           tm.tm_hour, tm.tm_min, tm.tm_sec, (int)assertion_time.tv_usec,       \
@@ -66,7 +66,7 @@
     time_t __now;                                                              \
     time(&__now);                                                              \
     localtime_r(&__now, &__tm);                                                \
-    gettimeofday(&__tv, NULL);                                                 \
+    gettimeofday(&__tv, nullptr);                                              \
     fprintf(stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d)] ", __tm.tm_hour,        \
             __tm.tm_min, __tm.tm_sec, (int)__tv.tv_usec, getpid(),             \
             __FUNCTION__, __FILE__, __LINE__);                                 \
@@ -83,7 +83,7 @@
     unsigned char *my__buffer = (unsigned char *)buffer;                       \
     time(&now);                                                                \
     localtime_r(&now, &tm);                                                    \
-    gettimeofday(&tv, NULL);                                                   \
+    gettimeofday(&tv, nullptr);                                                \
     fprintf(stderr,                                                            \
             "%02d%02d%02d.%08d:%5d %s (%s:%d)] buffer %s at %p len %d ",       \
             tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(),       \
@@ -109,7 +109,7 @@
     time_t now;                                                                \
     time(&now);                                                                \
     localtime_r(&now, &tm);                                                    \
-    gettimeofday(&tv, NULL);                                                   \
+    gettimeofday(&tv, nullptr);                                                \
     fprintf(stderr, "%02d%02d%02d.%08d:%5d %s (%s:%d)] ", tm.tm_hour,          \
             tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(), __FUNCTION__,     \
             __FILE__, __LINE__);                                               \
@@ -123,7 +123,7 @@
       fprintf(stderr, "%s (%s:%d)] ", __FUNCTION__, __FILE__, __LINE__);       \
       fprintf(stderr, __VA_ARGS__);                                            \
       fprintf(stderr, ": ");                                                   \
-      perror(NULL);                                                            \
+      perror(nullptr);                                                         \
       abort();                                                                 \
     }                                                                          \
   } while (0)

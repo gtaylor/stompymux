@@ -54,7 +54,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
 
     place = target;
     target = (char *)index(place, '\'');
-    if ((target == NULL) || !*target)
+    if ((target == nullptr) || !*target)
       return dflt;
 
     /*
@@ -199,7 +199,7 @@ int parse_thing_slash(DbRef player, char *thing, char **after, DbRef *it) {
    */
 
   if (!*str) {
-    *after = NULL;
+    *after = nullptr;
     *it = NOTHING;
     return 0;
   }

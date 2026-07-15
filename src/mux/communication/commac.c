@@ -54,14 +54,14 @@ struct commac *create_new_commac(void) {
   c->who = -1;
   c->numchannels = 0;
   c->maxchannels = 0;
-  c->alias = NULL;
-  c->channels = NULL;
+  c->alias = nullptr;
+  c->channels = nullptr;
 
   c->curmac = -1;
   for (i = 0; i < 5; i++)
     c->macros[i] = -1;
 
-  c->next = NULL;
+  c->next = nullptr;
   return c;
 }
 
@@ -69,7 +69,7 @@ struct commac *get_commac(DbRef which) {
   struct commac *c;
 
   if (which < 0)
-    return NULL;
+    return nullptr;
 
   c = commac_table[which % NUM_COMMAC];
 
@@ -101,7 +101,7 @@ void del_commac(DbRef who) {
 
   c = commac_table[who % NUM_COMMAC];
 
-  if (c == NULL)
+  if (c == nullptr)
     return;
 
   if (c->who == who) {

@@ -220,7 +220,7 @@ static void look_atrs1(DbRef player, DbRef thing, DbRef othing,
   Attribute *attr, *cattr;
   char *as, *buf;
 
-  cattr = (Attribute *)malloc(sizeof(Attribute));
+  cattr = malloc(sizeof(Attribute));
   for (ca = attribute_list_first(thing, &as); ca;
        ca = attribute_list_next(&as)) {
     if ((ca == A_DESC) || (ca == A_LOCK))
@@ -297,8 +297,8 @@ static void look_simple(DbRef player, DbRef thing) {
     free_lbuf(buff);
   }
   pattr = A_DESC;
-  did_it(player, thing, pattr, "You see nothing special.", A_ODESC, NULL,
-         A_ADESC, (char **)NULL, 0);
+  did_it(player, thing, pattr, "You see nothing special.", A_ODESC, nullptr,
+         A_ADESC, (char **)nullptr, 0);
 
   if (!mudconf.quiet_look) {
     look_atrs(player, thing, 0);
@@ -313,7 +313,8 @@ static void show_a_desc(DbRef player, DbRef loc) {
 
   if (indent)
     raw_notify_newline(player);
-  did_it(player, loc, A_DESC, NULL, A_ODESC, NULL, A_ADESC, (char **)NULL, 0);
+  did_it(player, loc, A_DESC, nullptr, A_ODESC, nullptr, A_ADESC,
+         (char **)nullptr, 0);
   if (indent)
     raw_notify_newline(player);
 }
@@ -325,8 +326,8 @@ static void show_desc(DbRef player, DbRef loc, int use_idesc) {
 
   if ((typeof_obj(loc) != TYPE_ROOM) && use_idesc) {
     if (*(got = attribute_parent_get(loc, A_IDESC, &aowner, &aflags)))
-      did_it(player, loc, A_IDESC, NULL, A_ODESC, NULL, A_ADESC, (char **)NULL,
-             0);
+      did_it(player, loc, A_IDESC, nullptr, A_ODESC, nullptr, A_ADESC,
+             (char **)nullptr, 0);
     else
       show_a_desc(player, loc);
     free_lbuf(got);
@@ -381,7 +382,8 @@ void look_in(DbRef player, DbRef loc, int key) {
       oattr = A_OFAIL;
       aattr = A_AFAIL;
     }
-    did_it(player, loc, pattr, NULL, oattr, NULL, aattr, (char **)NULL, 0);
+    did_it(player, loc, pattr, nullptr, oattr, nullptr, aattr, (char **)nullptr,
+           0);
   }
   /*
    * tell him the attributes, contents and exits
@@ -1023,7 +1025,7 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     if (is_monitor(what))
       buff = alloc_lbuf("Hearer");
     else
-      buff = NULL;
+      buff = nullptr;
 
     for (attr = attribute_list_first(what, &as); attr;
          attr = attribute_list_next(&as)) {

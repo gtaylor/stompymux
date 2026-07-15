@@ -22,11 +22,13 @@
 
 /* #undef EVENT_DEBUG */
 
-#define FLAG_FREE_DATA 1  /* Free the 1st data segment after execution */
-#define FLAG_FREE_DATA2 2 /* Free the 2nd data segment after execution */
-#define FLAG_ZOMBIE                                                            \
-  4 /* Exists there just because we're too                                     \
-       lazy to search for it everywhere - dud */
+enum : int {
+  FLAG_FREE_DATA = 1,  /* Free the 1st data segment after execution */
+  FLAG_FREE_DATA2 = 2, /* Free the 2nd data segment after execution */
+  /* Exists there just because we're too lazy to search for it everywhere -
+   * dud */
+  FLAG_ZOMBIE = 4,
+};
 
 /* ZOMBIE events aren't moved during reschedule, they instead die then.
    Killing them outside event_run is kinda unhealthy, therefore we set things
@@ -67,9 +69,9 @@ extern int events_zombies;
    tend to make their own macros for it. This is an example,
    though. */
 #define mux_event_add_simple_arg(time, func, data)                             \
-  mux_event_add(time, 0, 0, func, data, NULL)
+  mux_event_add(time, 0, 0, func, data, nullptr)
 #define mux_event_add_simple_noarg(time, func)                                 \
-  mux_event_add(time, 0, 0, func, NULL, NULL)
+  mux_event_add(time, 0, 0, func, nullptr, nullptr)
 
 /* Macros for handling simple lists
    Where it applies: a = main list, b = thing to be added, c = prev
@@ -93,7 +95,7 @@ extern int events_zombies;
   if (a == b) {                                                                \
     a = b->d;                                                                  \
     if (a)                                                                     \
-      a->c = NULL;                                                             \
+      a->c = nullptr;                                                          \
   }
 
 #define ADD_TO_LIST_HEAD(a, c, b)                                              \
@@ -104,7 +106,7 @@ extern int events_zombies;
   if (a)                                                                       \
     a->c = b;                                                                  \
   a = b;                                                                       \
-  b->c = NULL
+  b->c = nullptr
 
 void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
                    void *data, void *data2);

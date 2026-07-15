@@ -131,7 +131,7 @@ void raw_notify_raw(DbRef player, const char *msg, char *append) {
 
   if (mudstate.inpipe && (player == mudstate.poutobj)) {
     safe_str((char *)msg, mudstate.poutnew, &mudstate.poutbufc);
-    if (append != NULL)
+    if (append != nullptr)
       safe_str(append, mudstate.poutnew, &mudstate.poutbufc);
     return;
   }
@@ -141,7 +141,7 @@ void raw_notify_raw(DbRef player, const char *msg, char *append) {
 
   DESC_ITER_PLAYER(player, d) {
     descriptor_queue_string(d, msg);
-    if (append != NULL)
+    if (append != nullptr)
       descriptor_queue_write(d, append, strlen(append));
   }
 }
@@ -267,12 +267,12 @@ static void set_userstring(char **userstring, const char *command) {
   while (*command && isascii(*command) && isspace(*command))
     command++;
   if (!*command) {
-    if (*userstring != NULL) {
+    if (*userstring != nullptr) {
       free_lbuf(*userstring);
-      *userstring = NULL;
+      *userstring = nullptr;
     }
   } else {
-    if (*userstring == NULL) {
+    if (*userstring == nullptr) {
       *userstring = alloc_lbuf("set_userstring");
     }
     snprintf(*userstring, LBUF_SIZE - 1, "%s\r\n", command);
@@ -444,19 +444,19 @@ static void announce_connect(DbRef player, Descriptor *d) {
                  Name(player));
   buf = attribute_parent_get(player, A_ACONNECT, &aowner, &aflags);
   if (buf)
-    wait_que(player, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
+    wait_que(player, player, 0, NOTHING, 0, buf, (char **)nullptr, 0, nullptr);
   free_lbuf(buf);
   if (mudconf.master_room != NOTHING) {
     buf =
         attribute_parent_get(mudconf.master_room, A_ACONNECT, &aowner, &aflags);
     if (buf)
-      wait_que(mudconf.master_room, player, 0, NOTHING, 0, buf, (char **)NULL,
-               0, NULL);
+      wait_que(mudconf.master_room, player, 0, NOTHING, 0, buf,
+               (char **)nullptr, 0, nullptr);
     free_lbuf(buf);
     DOLIST(obj, obj_contents(mudconf.master_room)) {
       buf = attribute_parent_get(obj, A_ACONNECT, &aowner, &aflags);
       if (buf) {
-        wait_que(obj, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
+        wait_que(obj, player, 0, NOTHING, 0, buf, (char **)nullptr, 0, nullptr);
       }
       free_lbuf(buf);
     }
@@ -469,7 +469,8 @@ static void announce_connect(DbRef player, Descriptor *d) {
     case TYPE_THING:
       buf = attribute_parent_get(zone, A_ACONNECT, &aowner, &aflags);
       if (buf) {
-        wait_que(zone, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
+        wait_que(zone, player, 0, NOTHING, 0, buf, (char **)nullptr, 0,
+                 nullptr);
       }
       free_lbuf(buf);
       break;
@@ -481,7 +482,8 @@ static void announce_connect(DbRef player, Descriptor *d) {
       DOLIST(obj, obj_contents(zone)) {
         buf = attribute_parent_get(obj, A_ACONNECT, &aowner, &aflags);
         if (buf) {
-          wait_que(obj, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
+          wait_que(obj, player, 0, NOTHING, 0, buf, (char **)nullptr, 0,
+                   nullptr);
         }
         free_lbuf(buf);
       }
@@ -542,20 +544,20 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 
     atr_temp = attribute_parent_get(player, A_ADISCONNECT, &aowner, &aflags);
     if (atr_temp && *atr_temp)
-      wait_que(player, player, 0, NOTHING, 0, atr_temp, argv, 1, NULL);
+      wait_que(player, player, 0, NOTHING, 0, atr_temp, argv, 1, nullptr);
     free_lbuf(atr_temp);
     if (mudconf.master_room != NOTHING) {
       atr_temp = attribute_parent_get(mudconf.master_room, A_ADISCONNECT,
                                       &aowner, &aflags);
       if (atr_temp)
         wait_que(mudconf.master_room, player, 0, NOTHING, 0, atr_temp,
-                 (char **)NULL, 0, NULL);
+                 (char **)nullptr, 0, nullptr);
       free_lbuf(atr_temp);
       DOLIST(obj, obj_contents(mudconf.master_room)) {
         atr_temp = attribute_parent_get(obj, A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
-          wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)NULL, 0,
-                   NULL);
+          wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)nullptr, 0,
+                   nullptr);
         }
         free_lbuf(atr_temp);
       }
@@ -569,8 +571,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
       case TYPE_THING:
         atr_temp = attribute_parent_get(zone, A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
-          wait_que(zone, player, 0, NOTHING, 0, atr_temp, (char **)NULL, 0,
-                   NULL);
+          wait_que(zone, player, 0, NOTHING, 0, atr_temp, (char **)nullptr, 0,
+                   nullptr);
         }
         free_lbuf(atr_temp);
         break;
@@ -582,8 +584,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
         DOLIST(obj, obj_contents(zone)) {
           atr_temp = attribute_parent_get(obj, A_ADISCONNECT, &aowner, &aflags);
           if (atr_temp) {
-            wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)NULL, 0,
-                     NULL);
+            wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)nullptr, 0,
+                     nullptr);
           }
           free_lbuf(atr_temp);
         }
@@ -721,7 +723,7 @@ static void dump_users(Descriptor *e, char *match, int key) {
   while (match && *match && isspace(*match))
     match++;
   if (!match || !*match)
-    match = NULL;
+    match = nullptr;
 
   buf = alloc_lbuf("dump_users");
   if (key == CMD_SESSION) {
@@ -867,7 +869,7 @@ NameTable logout_cmdtable[] = {
     {(char *)"QUIT", 4, CA_PUBLIC, CMD_QUIT},
     {(char *)"SESSION", 7, CA_PUBLIC, CMD_SESSION},
     {(char *)"WHO", 3, CA_PUBLIC, CMD_WHO},
-    {NULL, 0, 0, 0}};
+    {nullptr, 0, 0, 0}};
 
 void init_logout_cmdtab(void) {
   NameTable *cp;
@@ -966,7 +968,7 @@ static int login_throttle_allow(const char *address) {
     return 0;
   }
 
-  now = time(NULL);
+  now = time(nullptr);
   if (login_hash_window != now) {
     login_hash_window = now;
     login_hash_count = 0;
@@ -1086,7 +1088,7 @@ static int check_connect(Descriptor *d, char *msg) {
 
       d->connected_at = time(0);
       d->player = player;
-      set_lastsite(d, NULL);
+      set_lastsite(d, nullptr);
 
       /* Check to see if the player is currently running
        * an @program. If so, drop the new descriptor into
@@ -1094,21 +1096,21 @@ static int check_connect(Descriptor *d, char *msg) {
        */
 
       DESC_ITER_PLAYER(player, d2) {
-        if (d2->program_data != NULL) {
+        if (d2->program_data != nullptr) {
           d->program_data = d2->program_data;
           break;
         }
       }
 
       buff = attribute_get(player, A_LAST, &aowner, &aflags);
-      if ((buff == NULL) || (*buff == '\0'))
+      if ((buff == nullptr) || (*buff == '\0'))
         fcache_dump(d, FC_CREA_NEW);
       free_lbuf(buff);
       announce_connect(player, d);
 
       /* If stuck in an @prog, show the prompt */
 
-      if (d->program_data != NULL)
+      if (d->program_data != nullptr)
         descriptor_queue_string(d, ">\377\371");
 
     } else if (!(mudconf.control_flags & CF_LOGIN)) {
@@ -1189,7 +1191,7 @@ static int check_connect(Descriptor *d, char *msg) {
         d->flags |= DS_CONNECTED;
         d->connected_at = time(0);
         d->player = player;
-        set_lastsite(d, NULL);
+        set_lastsite(d, nullptr);
         fcache_dump(d, FC_CREA_NEW);
         announce_connect(player, d);
       }
@@ -1333,14 +1335,14 @@ int descriptor_command(Descriptor *d, char *command) {
 
   if (*arg)
     *--arg = ' ';
-  if (cp == NULL) {
+  if (cp == nullptr) {
     d->command_count++;
     if (d->output_prefix) {
       descriptor_queue_string(d, d->output_prefix);
     }
     mudstate.curr_player = d->player;
     mudstate.curr_enactor = d->player;
-    process_command(d->player, d->player, 1, command, (char **)NULL, 0);
+    process_command(d->player, d->player, 1, command, (char **)nullptr, 0);
     if (d->output_suffix) {
       descriptor_queue_string(d, d->output_suffix);
     }
@@ -1540,7 +1542,7 @@ void descriptor_run_command(Descriptor *d, char *command) {
     }
     d->quota--;
   }
-  if (d->program_data != NULL)
+  if (d->program_data != nullptr)
     descriptor_program_handle(d, command);
   else
     descriptor_command(d, command);

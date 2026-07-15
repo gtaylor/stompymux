@@ -31,10 +31,10 @@ void free_qentry(struct bque *b) {
     free(b);
 }
 
-static RedBlackTree obq = NULL;
+static RedBlackTree obq = nullptr;
 
 static void cque_free_entry(BQUE *entry) {
-  if (entry->ev != NULL)
+  if (entry->ev != nullptr)
     event_free(entry->ev);
   free_qentry(entry);
 }
@@ -44,14 +44,14 @@ static int objqe_compare(DbRef left, DbRef right, void *arg) {
 }
 
 int cque_init(void) {
-  obq = red_black_tree_init((void *)objqe_compare, NULL);
+  obq = red_black_tree_init((void *)objqe_compare, nullptr);
   return 1;
 };
 
 static OBJQE *cque_find(DbRef player) {
-  OBJQE *tmp = NULL;
+  OBJQE *tmp = nullptr;
 
-  if (obq == NULL) {
+  if (obq == nullptr) {
     cque_init();
   }
 
@@ -60,12 +60,12 @@ static OBJQE *cque_find(DbRef player) {
   if (!tmp && is_good_obj(player)) {
     tmp = malloc(sizeof(OBJQE));
     tmp->obj = player;
-    tmp->cque = NULL;
-    tmp->ctail = NULL;
-    tmp->next = NULL;
+    tmp->cque = nullptr;
+    tmp->ctail = nullptr;
+    tmp->next = nullptr;
     tmp->queued = 0;
-    tmp->wait_que = NULL;
-    tmp->pending_que = NULL;
+    tmp->wait_que = nullptr;
+    tmp->pending_que = nullptr;
     red_black_tree_insert(obq, (void *)player, tmp);
   }
 
@@ -78,16 +78,16 @@ static BQUE *cque_deque(DbRef player) {
 
   tmp = cque_find(player);
   if (!tmp)
-    return NULL;
+    return nullptr;
 
   dassert(tmp);
 
   if (!tmp->cque)
-    return NULL;
+    return nullptr;
 
   cmd = tmp->cque;
   if (!cmd->next) {
-    tmp->cque = tmp->ctail = NULL;
+    tmp->cque = tmp->ctail = nullptr;
   } else {
     tmp->cque = cmd->next;
   }
@@ -99,7 +99,7 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
   struct timeval tv;
   OBJQE *tmp;
 
-  cmd->next = NULL;
+  cmd->next = nullptr;
 
   tv.tv_sec = cmd->waittime - mudstate.now;
   tv.tv_usec = 0;
@@ -118,39 +118,39 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
 
       if (!tmp->ctail) {
         tmp->cque = tmp->ctail = cmd;
-        cmd->next = NULL;
+        cmd->next = nullptr;
       } else {
         tmp->ctail->next = cmd;
         tmp->ctail = cmd;
-        tmp->ctail->next = NULL;
+        tmp->ctail->next = nullptr;
       }
 
       if (!tmp->queued) {
         if (!mudstate.qhead) {
           mudstate.qhead = mudstate.qtail = tmp;
-          tmp->next = NULL;
+          tmp->next = nullptr;
         } else {
           mudstate.qtail->next = tmp;
           mudstate.qtail = tmp;
-          mudstate.qtail->next = NULL;
+          mudstate.qtail->next = nullptr;
         }
         tmp->queued = 1;
       }
     } else {
       evtimer_add(cmd->ev, &tv);
-      for (point = mudstate.qwait, trail = NULL;
+      for (point = mudstate.qwait, trail = nullptr;
            point && point->waittime <= cmd->waittime; point = point->next) {
         trail = point;
       }
       cmd->next = point;
-      if (trail != NULL)
+      if (trail != nullptr)
         trail->next = cmd;
       else
         mudstate.qwait = cmd;
     }
   } else {
-    cmd->next = NULL;
-    if (mudstate.qsemlast != NULL)
+    cmd->next = nullptr;
+    if (mudstate.qsemlast != nullptr)
       mudstate.qsemlast->next = cmd;
     else
       mudstate.qsemfirst = cmd;
@@ -231,21 +231,21 @@ int halt_que(DbRef player, DbRef object) {
 
   pque = cque_find(player);
   if (pque && pque->cque) {
-    while ((point = cque_deque(player)) != NULL) {
+    while ((point = cque_deque(player)) != nullptr) {
       free(point->text);
-      point->text = NULL;
+      point->text = nullptr;
       cque_free_entry(point);
-      point = NULL;
+      point = nullptr;
       numhalted++;
     }
   }
   pque = cque_find(object);
   if (pque && pque->cque) {
-    while ((point = cque_deque(object)) != NULL) {
+    while ((point = cque_deque(object)) != nullptr) {
       free(point->text);
-      point->text = NULL;
+      point->text = nullptr;
       cque_free_entry(point);
-      point = NULL;
+      point = nullptr;
       numhalted++;
     }
   }
@@ -254,14 +254,14 @@ int halt_que(DbRef player, DbRef object) {
    * Wait queue
    */
 
-  for (point = mudstate.qwait, trail = NULL; point; point = next)
+  for (point = mudstate.qwait, trail = nullptr; point; point = next)
     if (que_want(point, player, object)) {
       numhalted++;
       if (trail)
         trail->next = next = point->next;
       else
         mudstate.qwait = next = point->next;
-      if (event_pending(point->ev, EV_TIMEOUT, NULL))
+      if (event_pending(point->ev, EV_TIMEOUT, nullptr))
         event_del(point->ev);
       free(point->text);
       cque_free_entry(point);
@@ -272,7 +272,7 @@ int halt_que(DbRef player, DbRef object) {
    * Semaphore queue
    */
 
-  for (point = mudstate.qsemfirst, trail = NULL; point; point = next)
+  for (point = mudstate.qsemfirst, trail = nullptr; point; point = next)
     if (que_want(point, player, object)) {
       numhalted++;
       if (trail)
@@ -373,7 +373,7 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
 
   if (num > 0) {
     num = 0;
-    for (point = mudstate.qsemfirst, trail = NULL; point; point = next) {
+    for (point = mudstate.qsemfirst, trail = nullptr; point; point = next) {
       if ((point->sem == sem) && ((point->attr == attr) || !attr)) {
         num++;
         if (trail)
@@ -405,7 +405,7 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
        */
 
       if ((key == NFY_NFY) && (num >= count))
-        next = NULL;
+        next = nullptr;
     }
   } else {
     num = 0;
@@ -445,7 +445,7 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
     notify(player, "Permission denied.");
   } else {
     if (!what || !*what) {
-      ap = NULL;
+      ap = nullptr;
     } else {
       ap = attribute_by_name(what);
     }
@@ -495,7 +495,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    */
 
   if (is_halted(player))
-    return NULL;
+    return nullptr;
 
   /*
    * Wizards and their objs may queue up to db_top+1 cmds. Players are
@@ -512,7 +512,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
      * halt also means no command execution allowed
      */
     s_halted(player);
-    return NULL;
+    return nullptr;
   }
   /*
    * We passed all the tests
@@ -543,15 +543,15 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
 
   tmp = malloc(sizeof(BQUE));
   memset(tmp, 0, sizeof(BQUE));
-  tmp->comm = NULL;
+  tmp->comm = nullptr;
   for (a = 0; a < NUM_ENV_VARS; a++) {
-    tmp->env[a] = NULL;
+    tmp->env[a] = nullptr;
   }
   for (a = 0; a < MAX_GLOBAL_REGS; a++) {
-    tmp->scr[a] = NULL;
+    tmp->scr[a] = nullptr;
   }
 
-  tptr = tmp->text = (char *)malloc(tlen);
+  tptr = tmp->text = malloc(tlen);
   if (command) {
     StringCopy(tptr, command);
     tmp->comm = tptr;
@@ -578,15 +578,15 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    */
 
   tmp->ev = evtimer_new(server_lifecycle_event_base(), wakeup_wait_que, tmp);
-  if (tmp->ev == NULL) {
+  if (tmp->ev == nullptr) {
     free(tmp->text);
     free_qentry(tmp);
-    return NULL;
+    return nullptr;
   }
 
   tmp->player = player;
   tmp->waittime = 0;
-  tmp->next = NULL;
+  tmp->next = nullptr;
   tmp->sem = NOTHING;
   tmp->attr = 0;
   tmp->cause = cause;
@@ -605,9 +605,9 @@ void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
   if (mudconf.control_flags & CF_INTERP)
     cmd = setup_que(player, cause, command, args, nargs, sargs);
   else
-    cmd = NULL;
+    cmd = nullptr;
 
-  if (cmd == NULL) {
+  if (cmd == nullptr) {
     return;
   }
 
@@ -741,7 +741,7 @@ void do_second(void) {
    * Check the semaphore queue for expired timed-waits
    */
 
-  for (point = mudstate.qsemfirst, trail = NULL; point; point = next) {
+  for (point = mudstate.qsemfirst, trail = nullptr; point; point = next) {
     if (point->waittime == 0) {
       next = (trail = point)->next;
       continue; /*
@@ -749,7 +749,7 @@ void do_second(void) {
                  */
     }
     if (point->waittime <= mudstate.now) {
-      if (trail != NULL)
+      if (trail != nullptr)
         trail->next = next = point->next;
       else
         mudstate.qsemfirst = next = point->next;
@@ -799,13 +799,13 @@ int do_top(int ncmds) {
     if (!mudstate.qhead->cque) {
       mudstate.qhead->queued = 0;
       mudstate.qhead = mudstate.qhead->next;
-      if (mudstate.qhead == NULL)
-        mudstate.qtail = NULL;
+      if (mudstate.qhead == nullptr)
+        mudstate.qtail = nullptr;
     } else {
       mudstate.qtail->next = mudstate.qhead;
       mudstate.qtail = mudstate.qtail->next;
       mudstate.qhead = mudstate.qhead->next;
-      mudstate.qtail->next = NULL;
+      mudstate.qtail->next = nullptr;
     }
     if (!tmp)
       continue;
@@ -841,7 +841,7 @@ int do_top(int ncmds) {
                                 tmp->nargs);
                 if (mudstate.pout) {
                   free_lbuf(mudstate.pout);
-                  mudstate.pout = NULL;
+                  mudstate.pout = nullptr;
                 }
 
                 *mudstate.poutbufc = '\0';
@@ -852,7 +852,7 @@ int do_top(int ncmds) {
               process_command(object, tmp->cause, 0, cp, tmp->env, tmp->nargs);
               if (mudstate.pout) {
                 free_lbuf(mudstate.pout);
-                mudstate.pout = NULL;
+                mudstate.pout = nullptr;
               }
             }
           }
@@ -905,7 +905,7 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
     bp = bufp;
     if (key == PS_LONG) {
       for (i = 0; i < (tmp->nargs); i++) {
-        if (tmp->env[i] != NULL) {
+        if (tmp->env[i] != nullptr) {
           safe_str((char *)"; Arg", bufp, &bp);
           safe_chr(i + '0', bufp, &bp);
           safe_str((char *)"='", bufp, &bp);
@@ -979,7 +979,7 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
   pqtot = 0;
   if (player_targ == NOTHING) {
     objq = mudstate.qhead;
-    while (objq && (objq = objq->next) != NULL) {
+    while (objq && (objq = objq->next) != nullptr) {
       pqent = 0;
       show_que(player, tempkey, objq->cque, &pqent, "PLAYAH");
       pqtot += pqent;

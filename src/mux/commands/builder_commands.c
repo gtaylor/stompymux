@@ -132,7 +132,7 @@ void do_open(DbRef player, DbRef cause, int key, char *direction, char *links[],
   if (nlinks >= 1)
     dest = links[0];
   else
-    dest = NULL;
+    dest = nullptr;
 
   if (key == OPEN_INVENTORY)
     loc = player;
@@ -552,7 +552,8 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
   if (new_owner == obj_owner(thing)) {
     if (!(key & CLONE_PARENT))
       s_parent(clone, obj_parent(thing));
-    did_it(player, clone, 0, NULL, 0, NULL, A_ACLONE, (char **)NULL, 0);
+    did_it(player, clone, 0, nullptr, 0, nullptr, A_ACLONE, (char **)nullptr,
+           0);
   } else {
     if (!(key & CLONE_PARENT) && is_controls(player, thing))
       s_parent(clone, obj_parent(thing));
@@ -1335,7 +1336,7 @@ void do_mvattr(DbRef player, DbRef cause, int key, char *what, char *args[],
   in_anum = -1;
   astr = alloc_lbuf("do_mvattr");
   in_attr = attribute_by_name(args[0]);
-  if (in_attr == NULL) {
+  if (in_attr == nullptr) {
     *astr = '\0';
   } else {
     attribute_get_string(astr, thing, in_attr->number, &aowner, &aflags);

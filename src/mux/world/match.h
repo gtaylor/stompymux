@@ -61,7 +61,9 @@ extern int get_obj_and_lock(DbRef player, char *what, DbRef *object,
 #define AMBIGUOUS_MESSAGE "I don't know which one you mean!"
 #define NOPERM_MESSAGE "Permission denied."
 
-#define MAT_NO_EXITS 1     /* Don't check for exits */
-#define MAT_EXIT_PARENTS 2 /* Check for exits in parents */
-#define MAT_NUMERIC 4      /* Check for un-#ified dbrefs */
-#define MAT_HOME 8         /* Check for 'home' */
+enum : int {
+  MAT_NO_EXITS = 1,     /* Don't check for exits */
+  MAT_EXIT_PARENTS = 2, /* Check for exits in parents */
+  MAT_NUMERIC = 4,      /* Check for un-#ified dbrefs */
+  MAT_HOME = 8,         /* Check for 'home' */
+};

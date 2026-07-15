@@ -91,14 +91,14 @@ extern Descriptor *descriptor_list;
 
 #define DESC_SAFEITER_PLAYER(p, d, n)                                          \
   for (d = (Descriptor *)red_black_tree_find(mudstate.desctree, (void *)p),    \
-      n = ((d != NULL) ? d->hashnext : NULL);                                  \
-       d; d = n, n = ((n != NULL) ? n->hashnext : NULL))
+      n = ((d != nullptr) ? d->hashnext : nullptr);                            \
+       d; d = n, n = ((n != nullptr) ? n->hashnext : nullptr))
 
 #define DESC_SAFEITER_CONN(d, n)                                               \
-  for (d = descriptor_list, n = ((d != NULL) ? d->next : NULL); d;             \
-       d = n, n = ((n != NULL) ? n->next : NULL))                              \
+  for (d = descriptor_list, n = ((d != nullptr) ? d->next : nullptr); d;       \
+       d = n, n = ((n != nullptr) ? n->next : nullptr))                        \
     if ((d)->flags & DS_CONNECTED)
 
 #define DESC_SAFEITER_ALL(d, n)                                                \
-  for (d = descriptor_list, n = ((d != NULL) ? d->next : NULL); d;             \
-       d = n, n = ((n != NULL) ? n->next : NULL))
+  for (d = descriptor_list, n = ((d != nullptr) ? d->next : nullptr); d;       \
+       d = n, n = ((n != nullptr) ? n->next : nullptr))

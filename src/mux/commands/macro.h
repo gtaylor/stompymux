@@ -9,10 +9,8 @@
 
 #define GMac(n) (n >= 0 && n < nummacros)
 
-#define MACRO_L 1
-#define MACRO_R 2
-#define MACRO_W 4
-#define MAX_SLOTS 5 /* Number of macro slots a person can have. */
+enum : int { MACRO_L = 1, MACRO_R = 2, MACRO_W = 4 };
+constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */
 
 typedef struct macroentry MACENT;
 struct macroentry {

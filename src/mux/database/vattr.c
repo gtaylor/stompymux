@@ -40,7 +40,7 @@ VATTR *vattr_find(char *name) {
   register VATTR *vp;
 
   if (!ok_attr_name(name))
-    return (NULL);
+    return (nullptr);
 
   vp = (VATTR *)hash_table_find(name, &mudstate.vattr_name_htab);
 
@@ -71,12 +71,12 @@ VATTR *vattr_define(char *name, int number, int flags) {
 
   fixcase(name);
   if (!ok_attr_name(name))
-    return (NULL);
+    return (nullptr);
 
-  if ((vp = vattr_find(name)) != NULL)
+  if ((vp = vattr_find(name)) != nullptr)
     return (vp);
 
-  vp = (VATTR *)malloc(sizeof(VATTR));
+  vp = malloc(sizeof(VATTR));
 
   vp->name = store_string(name);
   vp->flags = flags;
@@ -96,19 +96,19 @@ void do_dbclean(DbRef player, DbRef cause, int key) {
   int count = 0;
 
   for (vp = (VATTR *)hash_table_first_entry(&mudstate.vattr_name_htab);
-       vp != NULL;
+       vp != nullptr;
        vp = (VATTR *)hash_table_next_entry(&mudstate.vattr_name_htab)) {
     notfree = 0;
 
     DO_WHOLE_DB(i) {
-      if (attribute_get_raw(i, vp->number) != NULL) {
+      if (attribute_get_raw(i, vp->number) != nullptr) {
         notfree = 1;
         break;
       }
     }
 
     if (!notfree) {
-      anum_set(vp->number, NULL);
+      anum_set(vp->number, nullptr);
       hash_table_delete(vp->name, &mudstate.vattr_name_htab);
       free((char *)vp);
       count++;
@@ -132,7 +132,7 @@ void vattr_delete(char *name) {
 
   if (vp) {
     number = vp->number;
-    anum_set(number, NULL);
+    anum_set(number, nullptr);
     hash_table_delete(name, &mudstate.vattr_name_htab);
     free((char *)vp);
   }
@@ -145,7 +145,7 @@ VATTR *vattr_rename(char *name, char *newname) {
 
   fixcase(name);
   if (!ok_attr_name(name))
-    return (NULL);
+    return (nullptr);
 
   /*
    * Be ruthless.
@@ -156,7 +156,7 @@ VATTR *vattr_rename(char *name, char *newname) {
 
   fixcase(newname);
   if (!ok_attr_name(newname))
-    return (NULL);
+    return (nullptr);
 
   vp = (VATTR *)hash_table_find(name, &mudstate.vattr_name_htab);
 
@@ -171,7 +171,7 @@ VATTR *vattr_first(void) {
 }
 
 VATTR *vattr_next(VATTR *vp) {
-  if (vp == NULL)
+  if (vp == nullptr)
     return (vattr_first());
 
   return ((VATTR *)hash_table_next_entry(&mudstate.vattr_name_htab));
@@ -204,7 +204,7 @@ static char *store_string(char *str) {
    */
 
   if (!stringblock || (STRINGBLOCK - stringblock_hwm) < (len + 1)) {
-    stringblock = (char *)malloc(STRINGBLOCK);
+    stringblock = malloc(STRINGBLOCK);
     if (!stringblock)
       return ((char *)0);
     stringblock_hwm = 0;

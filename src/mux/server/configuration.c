@@ -364,13 +364,10 @@ static int cf_int(int *vp, char *str, long extra, DbRef player, char *cmd) {
  * cf_bool: Set boolean parameter.
  */
 
-NameTable bool_names[] = {{(char *)"true", 1, 0, 1},
-                          {(char *)"false", 1, 0, 0},
-                          {(char *)"yes", 1, 0, 1},
-                          {(char *)"no", 1, 0, 0},
-                          {(char *)"1", 1, 0, 1},
-                          {(char *)"0", 1, 0, 0},
-                          {NULL, 0, 0, 0}};
+NameTable bool_names[] = {{(char *)"true", 1, 0, 1}, {(char *)"false", 1, 0, 0},
+                          {(char *)"yes", 1, 0, 1},  {(char *)"no", 1, 0, 0},
+                          {(char *)"1", 1, 0, 1},    {(char *)"0", 1, 0, 0},
+                          {nullptr, 0, 0, 0}};
 
 /* *INDENT-ON* */
 
@@ -414,26 +411,26 @@ static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd) {
 
 static int cf_alias(int *vp, char *str, long extra, DbRef player, char *cmd) {
   char *alias, *orig, *p;
-  int *cp = NULL;
+  int *cp = nullptr;
 
   alias = strtok(str, " \t=,");
-  orig = strtok(NULL, " \t=,");
+  orig = strtok(nullptr, " \t=,");
   if (orig) {
     for (p = orig; *p; p++)
       *p = ToLower(*p);
     cp = hash_table_find(orig, (HashTable *)vp);
-    if (cp == NULL) {
+    if (cp == nullptr) {
       for (p = orig; *p; p++)
         *p = ToUpper(*p);
       cp = hash_table_find(orig, (HashTable *)vp);
-      if (cp == NULL) {
+      if (cp == nullptr) {
         configuration_log_not_found(player, cmd, "Entry", orig);
         return -1;
       }
     }
   }
 
-  if (cp == NULL) {
+  if (cp == nullptr) {
     return -1;
   }
 
@@ -453,10 +450,10 @@ static int cf_flagalias(int *vp, char *str, long extra, DbRef player,
 
   success = 0;
   alias = strtok(str, " \t=,");
-  orig = strtok(NULL, " \t=,");
+  orig = strtok(nullptr, " \t=,");
 
   cp = hash_table_find(orig, &mudstate.flags_htab);
-  if (cp != NULL) {
+  if (cp != nullptr) {
     hash_table_add(alias, cp, &mudstate.flags_htab);
     success++;
   }
@@ -481,7 +478,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
 
   success = failure = 0;
   sp = strtok(str, " \t");
-  while (sp != NULL) {
+  while (sp != nullptr) {
 
     /*
      * Check for negation
@@ -512,7 +509,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
      * Get the next token
      */
 
-    sp = strtok(NULL, " \t");
+    sp = strtok(nullptr, " \t");
   }
   return cf_status_from_succfail(player, cmd, success, failure);
 }
@@ -538,14 +535,14 @@ static int cf_set_flags(int *vp, char *str, long extra, DbRef player,
   sp = strtok(str, " \t");
   fset = (FLAGSET *)vp;
 
-  while (sp != NULL) {
+  while (sp != nullptr) {
 
     /*
      * Set the appropriate bit
      */
 
     fp = (FLAGENT *)hash_table_find(sp, &mudstate.flags_htab);
-    if (fp != NULL) {
+    if (fp != nullptr) {
       if (success == 0) {
         (*fset).word1 = 0;
         (*fset).word2 = 0;
@@ -566,7 +563,7 @@ static int cf_set_flags(int *vp, char *str, long extra, DbRef player,
      * Get the next token
      */
 
-    sp = strtok(NULL, " \t");
+    sp = strtok(nullptr, " \t");
   }
   if ((success == 0) && (failure == 0)) {
     (*fset).word1 = 0;
@@ -602,9 +599,9 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd) {
   struct in_addr addr_num, mask_num;
 
   addr_txt = strtok(str, " \t=,");
-  mask_txt = NULL;
+  mask_txt = nullptr;
   if (addr_txt)
-    mask_txt = strtok(NULL, " \t=,");
+    mask_txt = strtok(nullptr, " \t=,");
   if (!addr_txt || !*addr_txt || !mask_txt || !*mask_txt) {
     configuration_log_syntax(player, cmd, "Missing host address or mask.",
                              (char *)"");
@@ -623,7 +620,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd) {
    * Parse the access entry and allocate space for it
    */
 
-  site = (SiteData *)malloc(sizeof(SiteData));
+  site = malloc(sizeof(SiteData));
 
   /*
    * Initialize the site entry
@@ -632,7 +629,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd) {
   site->address.s_addr = addr_num.s_addr;
   site->mask.s_addr = mask_num.s_addr;
   site->flag = extra;
-  site->next = NULL;
+  site->next = nullptr;
 
   /*
    * Link in the entry.  Link it at the start if not initializing, at *
@@ -644,7 +641,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd) {
    */
 
   if (mudstate.initializing) {
-    if (head == NULL) {
+    if (head == nullptr) {
       *vp = (long *)site;
     } else {
       for (last = head; last->next; last = last->next)
@@ -697,7 +694,7 @@ static int cf_include(int *vp, char *str, long extra, DbRef player, char *cmd) {
     return -1;
 
   fp = fopen(str, "r");
-  if (fp == NULL) {
+  if (fp == nullptr) {
     configuration_log_not_found(player, cmd, "Config file", str);
     return -1;
   }
@@ -756,17 +753,17 @@ static int cf_include(int *vp, char *str, long extra, DbRef player, char *cmd) {
  */
 
 CONF conftable[] = {
-    {(char *)"access", cf_access, CA_GOD, NULL, (long)access_nametab},
+    {(char *)"access", cf_access, CA_GOD, nullptr, (long)access_nametab},
     {(char *)"alias", cf_cmd_alias, CA_GOD, (int *)&mudstate.command_htab, 0},
     {(char *)"allow_unloggedwho", cf_int, CA_GOD, &mudconf.allow_unloggedwho,
      0},
-    {(char *)"attr_access", cf_attr_access, CA_GOD, NULL,
+    {(char *)"attr_access", cf_attr_access, CA_GOD, nullptr,
      (long)attraccess_nametab},
     {(char *)"attr_alias", cf_alias, CA_GOD, (int *)&mudstate.attr_name_htab,
      0},
-    {(char *)"attr_cmd_access", cf_acmd_access, CA_GOD, NULL,
+    {(char *)"attr_cmd_access", cf_acmd_access, CA_GOD, nullptr,
      (long)access_nametab},
-    {(char *)"bad_name", cf_badname, CA_GOD, NULL, 0},
+    {(char *)"bad_name", cf_badname, CA_GOD, nullptr, 0},
     {(char *)"badsite_file", cf_string, CA_DISABLED, (void *)mudconf.site_file,
      32},
     {(char *)"btech_explode_reactor", cf_int, CA_GOD,
@@ -918,7 +915,8 @@ CONF conftable[] = {
      0},
     {(char *)"command_quota_max", cf_int, CA_GOD, &mudconf.cmd_quota_max, 0},
     {(char *)"concentrator_port", cf_int, CA_DISABLED, &mudconf.conc_port, 0},
-    {(char *)"config_access", cf_cf_access, CA_GOD, NULL, (long)access_nametab},
+    {(char *)"config_access", cf_cf_access, CA_GOD, nullptr,
+     (long)access_nametab},
     {(char *)"conn_timeout", cf_int, CA_GOD, &mudconf.conn_timeout, 0},
     {(char *)"connect_dir", cf_string, CA_DISABLED, (void *)mudconf.conn_dir,
      32},
@@ -946,7 +944,7 @@ CONF conftable[] = {
      (void *)mudconf.fixed_home_msg, 128},
     {(char *)"fixed_tel_message", cf_string, CA_DISABLED,
      (void *)mudconf.fixed_tel_msg, 128},
-    {(char *)"flag_alias", cf_flagalias, CA_GOD, NULL, 0},
+    {(char *)"flag_alias", cf_flagalias, CA_GOD, nullptr, 0},
     {(char *)"forbid_site", cf_site, CA_GOD, (int *)&mudstate.access_list,
      H_FORBIDDEN},
     {(char *)"fork_dump", cf_bool, CA_GOD, &mudconf.fork_dump, 0},
@@ -954,7 +952,7 @@ CONF conftable[] = {
     {(char *)"full_file", cf_string, CA_DISABLED, (void *)mudconf.full_file,
      32},
     {(char *)"full_message", cf_string, CA_GOD, (void *)mudconf.full_msg, 4096},
-    {(char *)"function_access", cf_func_access, CA_GOD, NULL,
+    {(char *)"function_access", cf_func_access, CA_GOD, nullptr,
      (long)access_nametab},
     {(char *)"function_alias", cf_alias, CA_GOD, (int *)&mudstate.func_htab, 0},
     {(char *)"function_invocation_limit", cf_int, CA_GOD,
@@ -963,7 +961,7 @@ CONF conftable[] = {
      0},
     {(char *)"game_database", cf_string, CA_DISABLED, (void *)mudconf.gamedb,
      128},
-    {(char *)"good_name", cf_badname, CA_GOD, NULL, 1},
+    {(char *)"good_name", cf_badname, CA_GOD, nullptr, 1},
     {(char *)"have_specials", cf_bool, CA_DISABLED, &mudconf.have_specials, 0},
     {(char *)"have_comsys", cf_bool, CA_DISABLED, &mudconf.have_comsys, 0},
     {(char *)"have_macros", cf_bool, CA_DISABLED, &mudconf.have_macros, 0},
@@ -976,7 +974,7 @@ CONF conftable[] = {
     {(char *)"idle_wiz_dark", cf_bool, CA_GOD, &mudconf.idle_wiz_dark, 0},
     {(char *)"idle_interval", cf_int, CA_GOD, &mudconf.idle_interval, 0},
     {(char *)"idle_timeout", cf_int, CA_GOD, &mudconf.idle_timeout, 0},
-    {(char *)"include", cf_include, CA_DISABLED, NULL, 0},
+    {(char *)"include", cf_include, CA_DISABLED, nullptr, 0},
     {(char *)"indent_desc", cf_bool, CA_GOD, &mudconf.indent_desc, 0},
     {(char *)"initial_size", cf_int, CA_DISABLED, &mudconf.init_size, 0},
     {(char *)"list_access", cf_ntab_access, CA_GOD, (int *)list_names,
@@ -1080,7 +1078,7 @@ CONF conftable[] = {
     {(char *)"room_parent", cf_int, CA_GOD, &mudconf.room_parent, 0},
     {(char *)"player_parent", cf_int, CA_GOD, &mudconf.player_parent, 0},
     {(char *)"player_zone", cf_int, CA_GOD, &mudconf.player_zone, 0},
-    {NULL, NULL, 0, NULL, 0}};
+    {nullptr, nullptr, 0, nullptr, 0}};
 
 /*
  * ---------------------------------------------------------------------------
@@ -1089,7 +1087,7 @@ CONF conftable[] = {
 int configuration_set(char *cp, char *ap, DbRef player) {
   CONF *tp;
   int i;
-  char *buff = NULL;
+  char *buff = nullptr;
 
   /*
    * Search the config parameter table for the command. If we find it,
@@ -1150,7 +1148,7 @@ int configuration_read(char *fn) {
 
   StringCopy(mudconf.config_file, fn);
   mudstate.initializing = 1;
-  retval = cf_include(NULL, fn, 0, 0, (char *)"init");
+  retval = cf_include(nullptr, fn, 0, 0, (char *)"init");
   mudstate.initializing = 0;
 
   return retval;

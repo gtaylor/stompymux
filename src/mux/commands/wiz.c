@@ -121,7 +121,7 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
       if (player != victim)
         notify_quiet(player, "Permission denied.");
       did_it(victim, destination, A_TFAIL, "You can't teleport there!",
-             A_OTFAIL, 0, A_ATFAIL, (char **)NULL, 0);
+             A_OTFAIL, 0, A_ATFAIL, (char **)nullptr, 0);
       return;
     }
     /*
@@ -278,7 +278,7 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
     notify_quiet(player, tprintf("You booted %s off!", Name(victim)));
   }
   if (key & BOOT_QUIET) {
-    buf = NULL;
+    buf = nullptr;
   } else {
     bp = buf = alloc_lbuf("do_boot.msg");
     safe_str(Name(player), buf, &bp);
@@ -331,7 +331,7 @@ NameTable enable_names[] = {
     {(char *)"interpret", 2, CA_PUBLIC, CF_INTERP},
     {(char *)"logins", 3, CA_PUBLIC, CF_LOGIN},
     {(char *)"eventchecking", 2, CA_PUBLIC, CF_EVENTCHECK},
-    {NULL, 0, 0, 0}};
+    {nullptr, 0, 0, 0}};
 
 void do_global(DbRef player, DbRef cause, int key, char *flag) {
   int flagvalue;

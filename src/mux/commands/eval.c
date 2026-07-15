@@ -63,11 +63,11 @@ char *parse_to(char **dstr, char delim, int eval) {
   char *rstr, *cstr, *zstr;
   int sp, tp, first, bracketlev;
 
-  if ((dstr == NULL) || (*dstr == NULL))
-    return NULL;
+  if ((dstr == nullptr) || (*dstr == nullptr))
+    return nullptr;
   if (**dstr == '\0') {
     rstr = *dstr;
-    *dstr = NULL;
+    *dstr = nullptr;
     return rstr;
   }
   sp = 0;
@@ -194,7 +194,7 @@ char *parse_to(char **dstr, char delim, int eval) {
     }
   }
   rstr = parse_to_cleanup(eval, first, cstr, rstr, zstr);
-  *dstr = NULL;
+  *dstr = nullptr;
   return rstr;
 }
 
@@ -213,9 +213,9 @@ char *parse_arglist(DbRef player, DbRef cause, char *dstr, char delim,
   int arg, peval;
 
   for (arg = 0; arg < nfargs; arg++)
-    fargs[arg] = NULL;
-  if (dstr == NULL)
-    return NULL;
+    fargs[arg] = nullptr;
+  if (dstr == nullptr)
+    return nullptr;
   rstr = parse_to(&dstr, delim, 0);
   arg = 0;
 
@@ -261,7 +261,7 @@ struct tcache_ent {
 int tcache_top, tcache_count;
 
 void tcache_init(void) {
-  tcache_head = NULL;
+  tcache_head = nullptr;
   tcache_top = 1;
   tcache_count = 0;
 }
@@ -300,7 +300,7 @@ static void tcache_add(char *orig, char *result) {
 static void tcache_finish(DbRef player) {
   TCENT *xp;
 
-  while (tcache_head != NULL) {
+  while (tcache_head != nullptr) {
     xp = tcache_head;
     tcache_head = xp->next;
     notify_printf(obj_owner(player), "%s(#%d)} '%s' -> '%s'", Name(player),
@@ -320,7 +320,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   char *preserve[MAX_GLOBAL_REGS];
   char *tstr, *tbuf, *tbufc, *savepos, *atr_gotten, *start, *oldp, *savestr;
   char savec, ch, *str;
-  char *realbuff = NULL, *realbp = NULL;
+  char *realbuff = nullptr, *realbp = nullptr;
   DbRef aowner;
   int at_space, nfargs, i, j, alldone, feval;
   long aflags;
@@ -329,7 +329,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   FUN *fp;
   UFUN *ufp;
 
-  if (*dstr == NULL)
+  if (*dstr == nullptr)
     return;
 
   // dprintk("%d/%s", player, *dstr);
@@ -346,7 +346,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   if (((*bufc) - buff) > (LBUF_SIZE - SBUF_SIZE)) {
     realbuff = buff;
     realbp = *bufc;
-    buff = (char *)malloc(LBUF_SIZE);
+    buff = malloc(LBUF_SIZE);
     *bufc = buff;
   }
 
@@ -356,7 +356,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
    * If we are tracing, save a copy of the starting buffer
    */
 
-  savestr = NULL;
+  savestr = nullptr;
   if (do_trace) {
     is_top = tcache_empty();
     savestr = alloc_lbuf("exec.save");
@@ -404,7 +404,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         break;
       }
       tbuf = parse_to(dstr, ']', 0);
-      if (*dstr == NULL) {
+      if (*dstr == nullptr) {
         safe_chr('[', buff, bufc);
         *dstr = tstr;
       } else {
@@ -424,7 +424,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       at_space = 0;
       tstr = (*dstr)++;
       tbuf = parse_to(dstr, '}', 0);
-      if (*dstr == NULL) {
+      if (*dstr == nullptr) {
         safe_chr('{', buff, bufc);
         *dstr = tstr;
       } else {
@@ -619,7 +619,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       case '8':
       case '9':
         i = (**dstr - '0');
-        if ((i < ncargs) && (cargs[i] != NULL))
+        if ((i < ncargs) && (cargs[i] != nullptr))
           safe_str(cargs[i], buff, bufc);
         break;
       case 'V': /*
@@ -750,8 +750,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
        * If not a builtin func, check for global func
        */
 
-      ufp = NULL;
-      if (fp == NULL) {
+      ufp = nullptr;
+      if (fp == nullptr) {
         ufp = (UFUN *)hash_table_find(tbuf, &mudstate.ufunc_htab);
       }
       /*
@@ -805,7 +805,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         *dstr = tstr;
         safe_chr(**dstr, buff, bufc);
         for (i = 0; i < nfargs; i++)
-          if (fargs[i] != NULL)
+          if (fargs[i] != nullptr)
             free_lbuf(fargs[i]);
         eval &= ~EV_FCHECK;
         break;
@@ -817,7 +817,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       (*dstr)--;
       j = 0;
       for (i = 0; i < nfargs; i++)
-        if (fargs[i] != NULL)
+        if (fargs[i] != nullptr)
           j = i + 1;
       nfargs = j;
 
@@ -841,7 +841,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
           if (ufp->flags & FN_PRES) {
             for (j = 0; j < MAX_GLOBAL_REGS; j++) {
               if (!mudstate.global_regs[j])
-                preserve[j] = NULL;
+                preserve[j] = nullptr;
               else {
                 preserve[j] = alloc_lbuf("eval_regs");
                 StringCopy(preserve[j], mudstate.global_regs[j]);
@@ -875,7 +875,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
 
         mudstate.func_nest_lev--;
         for (i = 0; i < nfargs; i++)
-          if (fargs[i] != NULL)
+          if (fargs[i] != nullptr)
             free_lbuf(fargs[i]);
         eval &= ~EV_FCHECK;
         break;
@@ -891,7 +891,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       if ((fp->nargs == 0) && (nfargs == 1)) {
         if (!*fargs[0]) {
           free_lbuf(fargs[0]);
-          fargs[0] = NULL;
+          fargs[0] = nullptr;
           nfargs = 0;
         }
       }
@@ -935,7 +935,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
        */
 
       for (i = 0; i < nfargs; i++)
-        if (fargs[i] != NULL)
+        if (fargs[i] != nullptr)
           free_lbuf(fargs[i]);
       eval &= ~EV_FCHECK;
       break;

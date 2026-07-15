@@ -153,7 +153,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
       buff2 = bp = alloc_lbuf("boolean_expression_evaluate");
       str = buff;
       exec(buff2, &bp, 0, source, player, EV_FIGNORE | EV_EVAL | EV_TOP, &str,
-           (char **)NULL, 0);
+           (char **)nullptr, 0);
       *bp = '\0';
       checkit = !string_compare(buff2, (char *)b->sub1);
       free_lbuf(buff2);
@@ -213,7 +213,7 @@ int eval_boolexp_atr(DbRef player, DbRef thing, DbRef from, char *key) {
   int ret_value;
 
   b = boolean_expression_parse(player, key, 1);
-  if (b == NULL) {
+  if (b == nullptr) {
     ret_value = 1;
   } else {
     ret_value = boolean_expression_evaluate(player, thing, from, b);
@@ -253,7 +253,7 @@ static BooleanExpression *test_atr(char *s) {
     ;
   if (!*s) {
     free_lbuf(buff);
-    return ((BooleanExpression *)NULL);
+    return ((BooleanExpression *)nullptr);
   }
   if (*s == '/')
     locktype = BOOLEXP_EVAL;
@@ -275,13 +275,13 @@ static BooleanExpression *test_atr(char *s) {
      */
     if (!is_god(parse_player)) {
       free_lbuf(buff);
-      return ((BooleanExpression *)NULL);
+      return ((BooleanExpression *)nullptr);
     }
     for (s1 = buff; isdigit(*s1); s1++)
       ;
     if (*s1) {
       free_lbuf(buff);
-      return ((BooleanExpression *)NULL);
+      return ((BooleanExpression *)nullptr);
     }
     anum = atoi(buff);
   } else {
@@ -307,7 +307,7 @@ static BooleanExpression *parse_boolexp_L(void) {
   char *p, *buf;
   MSTATE mstate;
 
-  buf = NULL;
+  buf = nullptr;
   skip_whitespace();
 
   switch (*parsebuf) {
@@ -346,7 +346,7 @@ static BooleanExpression *parse_boolexp_L(void) {
      * check for an attribute
      */
 
-    if ((b = test_atr(buf)) != NULL) {
+    if ((b = test_atr(buf)) != nullptr) {
       free_lbuf(buf);
       return (b);
     }
@@ -555,7 +555,7 @@ BooleanExpression *boolean_expression_parse(DbRef player, const char *buf,
   StringCopy(parsestore, buf);
   parsebuf = parsestore;
   parse_player = player;
-  if ((buf == NULL) || (*buf == '\0'))
+  if ((buf == nullptr) || (*buf == '\0'))
     return (TRUE_BOOLEXP);
   parsing_internal = internal;
   return parse_boolexp_E();

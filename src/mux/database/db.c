@@ -28,9 +28,9 @@
  * Restart definitions
  */
 
-GameObject *db = NULL;
-NAME *names = NULL;
-NAME *purenames = NULL;
+GameObject *db = nullptr;
+NAME *names = nullptr;
+NAME *purenames = nullptr;
 
 int corrupt;
 
@@ -72,186 +72,197 @@ constexpr int PLSTAT_MODE = AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL;
  * list of attributes
  */
 Attribute attr_table[] = {
-    {"Aahear", A_AAHEAR, AF_ODARK, NULL},
-    {"Aclone", A_ACLONE, AF_ODARK, NULL},
-    {"Aconnect", A_ACONNECT, AF_ODARK, NULL},
-    {"Adesc", A_ADESC, AF_ODARK, NULL},
-    {"Adfail", A_ADFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Adisconnect", A_ADISCONNECT, AF_ODARK, NULL},
-    {"Adrop", A_ADROP, AF_ODARK, NULL},
-    {"Aefail", A_AEFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Aenter", A_AENTER, AF_ODARK, NULL},
-    {"Afail", A_AFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Agfail", A_AGFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Ahear", A_AHEAR, AF_ODARK, NULL},
-    {"Aleave", A_ALEAVE, AF_ODARK, NULL},
-    {"Alfail", A_ALFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Alias", A_ALIAS, AF_NOPROG | AF_NOCMD | AF_GOD, NULL},
-    {"Amhear", A_AMHEAR, AF_ODARK, NULL},
-    {"Amove", A_AMOVE, AF_ODARK, NULL},
-    {"Arfail", A_ARFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Asucc", A_ASUCC, AF_ODARK, NULL},
-    {"Atfail", A_ATFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Atport", A_ATPORT, AF_ODARK | AF_NOPROG, NULL},
-    {"Atofail", A_ATOFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Aufail", A_AUFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Ause", A_AUSE, AF_ODARK, NULL},
-    {"Away", A_AWAY, AF_ODARK | AF_NOPROG, NULL},
-    {"Buildcoord", A_BUILDCOORD, AF_MDARK | AF_WIZARD, NULL},
-    {"Buildentrance", A_BUILDENTRANCE, AF_MDARK | AF_WIZARD, NULL},
-    {"Buildlinks", A_BUILDLINKS, AF_MDARK | AF_WIZARD, NULL},
-    {"Charges", A_CHARGES, AF_ODARK | AF_NOPROG, NULL},
-    {"Comment", A_COMMENT, AF_MDARK | AF_WIZARD, NULL},
-    {"Contactoptions", A_CONTACTOPT, AF_ODARK, NULL},
-    {"Daily", A_DAILY, AF_ODARK, NULL},
-    {"HHourly", A_HOURLY, AF_MDARK, NULL},
-    {"Desc", A_DESC, AF_NOPROG, NULL},
-    {"DefaultLock", A_LOCK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Destroyer", A_DESTROYER, AF_MDARK | AF_WIZARD | AF_NOPROG, NULL},
-    {"Dfail", A_DFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Drop", A_DROP, AF_ODARK | AF_NOPROG, NULL},
-    {"DropLock", A_LDROP, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Ealias", A_EALIAS, AF_ODARK | AF_NOPROG, NULL},
-    {"Efail", A_EFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Enter", A_ENTER, AF_ODARK, NULL},
-    {"EnterLock", A_LENTER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Faction", A_FACTION, AF_MDARK | AF_WIZARD, NULL},
-    {"Fail", A_FAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Filter", A_FILTER, AF_ODARK | AF_NOPROG, NULL},
+    {"Aahear", A_AAHEAR, AF_ODARK, nullptr},
+    {"Aclone", A_ACLONE, AF_ODARK, nullptr},
+    {"Aconnect", A_ACONNECT, AF_ODARK, nullptr},
+    {"Adesc", A_ADESC, AF_ODARK, nullptr},
+    {"Adfail", A_ADFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Adisconnect", A_ADISCONNECT, AF_ODARK, nullptr},
+    {"Adrop", A_ADROP, AF_ODARK, nullptr},
+    {"Aefail", A_AEFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Aenter", A_AENTER, AF_ODARK, nullptr},
+    {"Afail", A_AFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Agfail", A_AGFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Ahear", A_AHEAR, AF_ODARK, nullptr},
+    {"Aleave", A_ALEAVE, AF_ODARK, nullptr},
+    {"Alfail", A_ALFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Alias", A_ALIAS, AF_NOPROG | AF_NOCMD | AF_GOD, nullptr},
+    {"Amhear", A_AMHEAR, AF_ODARK, nullptr},
+    {"Amove", A_AMOVE, AF_ODARK, nullptr},
+    {"Arfail", A_ARFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Asucc", A_ASUCC, AF_ODARK, nullptr},
+    {"Atfail", A_ATFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Atport", A_ATPORT, AF_ODARK | AF_NOPROG, nullptr},
+    {"Atofail", A_ATOFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Aufail", A_AUFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Ause", A_AUSE, AF_ODARK, nullptr},
+    {"Away", A_AWAY, AF_ODARK | AF_NOPROG, nullptr},
+    {"Buildcoord", A_BUILDCOORD, AF_MDARK | AF_WIZARD, nullptr},
+    {"Buildentrance", A_BUILDENTRANCE, AF_MDARK | AF_WIZARD, nullptr},
+    {"Buildlinks", A_BUILDLINKS, AF_MDARK | AF_WIZARD, nullptr},
+    {"Charges", A_CHARGES, AF_ODARK | AF_NOPROG, nullptr},
+    {"Comment", A_COMMENT, AF_MDARK | AF_WIZARD, nullptr},
+    {"Contactoptions", A_CONTACTOPT, AF_ODARK, nullptr},
+    {"Daily", A_DAILY, AF_ODARK, nullptr},
+    {"HHourly", A_HOURLY, AF_MDARK, nullptr},
+    {"Desc", A_DESC, AF_NOPROG, nullptr},
+    {"DefaultLock", A_LOCK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Destroyer", A_DESTROYER, AF_MDARK | AF_WIZARD | AF_NOPROG, nullptr},
+    {"Dfail", A_DFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Drop", A_DROP, AF_ODARK | AF_NOPROG, nullptr},
+    {"DropLock", A_LDROP, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Ealias", A_EALIAS, AF_ODARK | AF_NOPROG, nullptr},
+    {"Efail", A_EFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Enter", A_ENTER, AF_ODARK, nullptr},
+    {"EnterLock", A_LENTER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Faction", A_FACTION, AF_MDARK | AF_WIZARD, nullptr},
+    {"Fail", A_FAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Filter", A_FILTER, AF_ODARK | AF_NOPROG, nullptr},
     {"Forwardlist", A_FORWARDLIST, AF_ODARK | AF_NOPROG, fwdlist_ck},
-    {"Gfail", A_GFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"GiveLock", A_LGIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Idesc", A_IDESC, AF_ODARK | AF_NOPROG, NULL},
-    {"Idle", A_IDLE, AF_ODARK | AF_NOPROG, NULL},
-    {"Infilter", A_INFILTER, AF_ODARK | AF_NOPROG, NULL},
-    {"Inprefix", A_INPREFIX, AF_ODARK | AF_NOPROG, NULL},
-    {"Job", A_JOB, AF_MDARK | AF_WIZARD, NULL},
-    {"Lalias", A_LALIAS, AF_ODARK | AF_NOPROG, NULL},
-    {"Last", A_LAST, AF_WIZARD | AF_NOCMD | AF_NOPROG, NULL},
-    {"Lastname", A_LASTNAME, AF_WIZARD | AF_NOPROG | AF_MDARK, NULL},
+    {"Gfail", A_GFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"GiveLock", A_LGIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Idesc", A_IDESC, AF_ODARK | AF_NOPROG, nullptr},
+    {"Idle", A_IDLE, AF_ODARK | AF_NOPROG, nullptr},
+    {"Infilter", A_INFILTER, AF_ODARK | AF_NOPROG, nullptr},
+    {"Inprefix", A_INPREFIX, AF_ODARK | AF_NOPROG, nullptr},
+    {"Job", A_JOB, AF_MDARK | AF_WIZARD, nullptr},
+    {"Lalias", A_LALIAS, AF_ODARK | AF_NOPROG, nullptr},
+    {"Last", A_LAST, AF_WIZARD | AF_NOCMD | AF_NOPROG, nullptr},
+    {"Lastname", A_LASTNAME, AF_WIZARD | AF_NOPROG | AF_MDARK, nullptr},
     {"Luaparent", A_LUAPARENT,
-     AF_WIZARD | AF_MDARK | AF_NOCMD | AF_NOPROG | AF_LOCK, NULL},
+     AF_WIZARD | AF_MDARK | AF_NOCMD | AF_NOPROG | AF_LOCK, nullptr},
     {"Lastpage", A_LASTPAGE,
-     AF_INTERNAL | AF_NOCMD | AF_NOPROG | AF_GOD | AF_PRIVATE, NULL},
-    {"Lastsite", A_LASTSITE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_GOD, NULL},
-    {"Leave", A_LEAVE, AF_ODARK, NULL},
-    {"LeaveLock", A_LLEAVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Lfail", A_LFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"LinkLock", A_LLINK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Listen", A_LISTEN, AF_ODARK, NULL},
+     AF_INTERNAL | AF_NOCMD | AF_NOPROG | AF_GOD | AF_PRIVATE, nullptr},
+    {"Lastsite", A_LASTSITE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_GOD, nullptr},
+    {"Leave", A_LEAVE, AF_ODARK, nullptr},
+    {"LeaveLock", A_LLEAVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Lfail", A_LFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"LinkLock", A_LLINK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Listen", A_LISTEN, AF_ODARK, nullptr},
 
     {"Logindata", A_LOGINDATA, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
-     NULL},
-    {"LRSheight", A_LRSHEIGHT, AF_ODARK, NULL},
-    {"Unused1", A_UNUSED1, AF_WIZARD | AF_MDARK, NULL},
-    {"Mapcolor", A_MAPCOLOR, AF_ODARK, NULL},
-    {"Mapvis", A_MAPVIS, AF_MDARK | AF_WIZARD, NULL},
-    {"Mechdesc", A_MECHDESC, AF_MDARK, NULL},
-    {"Mechname", A_MECHNAME, AF_MDARK, NULL},
-    {"Mechstatus", A_MECHSTATUS, AF_MDARK | AF_WIZARD, NULL},
-    {"Mechtype", A_MECHTYPE, AF_MDARK, NULL},
-    {"MechPrefID", A_MECHPREFID, AF_MDARK | AF_WIZARD, NULL},
-    {"Mechskills", A_MECHSKILLS, AF_MDARK, NULL},
-    {"Mwtemplate", A_MWTEMPLATE, AF_MDARK, NULL},
-    {"Move", A_MOVE, AF_ODARK, NULL},
-    {"Name", A_NAME, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, NULL},
-    {"Odesc", A_ODESC, AF_ODARK | AF_NOPROG, NULL},
-    {"Odfail", A_ODFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Odrop", A_ODROP, AF_ODARK | AF_NOPROG, NULL},
-    {"Oefail", A_OEFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Oenter", A_OENTER, AF_ODARK, NULL},
-    {"Ofail", A_OFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Ogfail", A_OGFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Amechdest", A_AMECHDEST, AF_MDARK, NULL},
-    {"Aaeroland", A_AAEROLAND, AF_MDARK, NULL},
-    {"Aoodland", A_AOODLAND, AF_MDARK, NULL},
-    {"Aminetrigger", A_AMINETRIGGER, AF_MDARK, NULL},
-    {"Oleave", A_OLEAVE, AF_ODARK, NULL},
-    {"Olfail", A_OLFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Omove", A_OMOVE, AF_ODARK, NULL},
-    {"Orfail", A_ORFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Osucc", A_OSUCC, AF_ODARK | AF_NOPROG, NULL},
-    {"Otfail", A_OTFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Otport", A_OTPORT, AF_ODARK | AF_NOPROG, NULL},
-    {"Otofail", A_OTOFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Oufail", A_OUFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Ouse", A_OUSE, AF_ODARK, NULL},
-    {"Oxenter", A_OXENTER, AF_ODARK, NULL},
-    {"Oxleave", A_OXLEAVE, AF_ODARK, NULL},
-    {"Oxtport", A_OXTPORT, AF_ODARK | AF_NOPROG, NULL},
-    {"PageLock", A_LPAGE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
+     nullptr},
+    {"LRSheight", A_LRSHEIGHT, AF_ODARK, nullptr},
+    {"Unused1", A_UNUSED1, AF_WIZARD | AF_MDARK, nullptr},
+    {"Mapcolor", A_MAPCOLOR, AF_ODARK, nullptr},
+    {"Mapvis", A_MAPVIS, AF_MDARK | AF_WIZARD, nullptr},
+    {"Mechdesc", A_MECHDESC, AF_MDARK, nullptr},
+    {"Mechname", A_MECHNAME, AF_MDARK, nullptr},
+    {"Mechstatus", A_MECHSTATUS, AF_MDARK | AF_WIZARD, nullptr},
+    {"Mechtype", A_MECHTYPE, AF_MDARK, nullptr},
+    {"MechPrefID", A_MECHPREFID, AF_MDARK | AF_WIZARD, nullptr},
+    {"Mechskills", A_MECHSKILLS, AF_MDARK, nullptr},
+    {"Mwtemplate", A_MWTEMPLATE, AF_MDARK, nullptr},
+    {"Move", A_MOVE, AF_ODARK, nullptr},
+    {"Name", A_NAME, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, nullptr},
+    {"Odesc", A_ODESC, AF_ODARK | AF_NOPROG, nullptr},
+    {"Odfail", A_ODFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Odrop", A_ODROP, AF_ODARK | AF_NOPROG, nullptr},
+    {"Oefail", A_OEFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Oenter", A_OENTER, AF_ODARK, nullptr},
+    {"Ofail", A_OFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Ogfail", A_OGFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Amechdest", A_AMECHDEST, AF_MDARK, nullptr},
+    {"Aaeroland", A_AAEROLAND, AF_MDARK, nullptr},
+    {"Aoodland", A_AOODLAND, AF_MDARK, nullptr},
+    {"Aminetrigger", A_AMINETRIGGER, AF_MDARK, nullptr},
+    {"Oleave", A_OLEAVE, AF_ODARK, nullptr},
+    {"Olfail", A_OLFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Omove", A_OMOVE, AF_ODARK, nullptr},
+    {"Orfail", A_ORFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Osucc", A_OSUCC, AF_ODARK | AF_NOPROG, nullptr},
+    {"Otfail", A_OTFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Otport", A_OTPORT, AF_ODARK | AF_NOPROG, nullptr},
+    {"Otofail", A_OTOFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Oufail", A_OUFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Ouse", A_OUSE, AF_ODARK, nullptr},
+    {"Oxenter", A_OXENTER, AF_ODARK, nullptr},
+    {"Oxleave", A_OXLEAVE, AF_ODARK, nullptr},
+    {"Oxtport", A_OXTPORT, AF_ODARK | AF_NOPROG, nullptr},
+    {"PageLock", A_LPAGE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
     {"ParentLock", A_LPARENT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     NULL},
-    {"PCequip", A_PCEQUIP, AF_MDARK, NULL},
-    {"Pilot", A_PILOTNUM, AF_MDARK, NULL},
-    {"Prefix", A_PREFIX, AF_ODARK | AF_NOPROG, NULL},
-    {"ProgCmd", A_PROGCMD, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, NULL},
-    {"QueueMax", A_QUEUEMAX, AF_MDARK | AF_WIZARD | AF_NOPROG, NULL},
-    {"Ranknum", A_RANKNUM, AF_MDARK | AF_WIZARD, NULL},
+     nullptr},
+    {"PCequip", A_PCEQUIP, AF_MDARK, nullptr},
+    {"Pilot", A_PILOTNUM, AF_MDARK, nullptr},
+    {"Prefix", A_PREFIX, AF_ODARK | AF_NOPROG, nullptr},
+    {"ProgCmd", A_PROGCMD, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
+     nullptr},
+    {"QueueMax", A_QUEUEMAX, AF_MDARK | AF_WIZARD | AF_NOPROG, nullptr},
+    {"Ranknum", A_RANKNUM, AF_MDARK | AF_WIZARD, nullptr},
     {"ReceiveLock", A_LRECEIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     NULL},
-    {"Reject", A_REJECT, AF_ODARK | AF_NOPROG, NULL},
-    {"Rfail", A_RFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Runout", A_RUNOUT, AF_ODARK, NULL},
+     nullptr},
+    {"Reject", A_REJECT, AF_ODARK | AF_NOPROG, nullptr},
+    {"Rfail", A_RFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Runout", A_RUNOUT, AF_ODARK, nullptr},
 
     {"Semaphore", A_SEMAPHORE, AF_ODARK | AF_NOPROG | AF_WIZARD | AF_NOCMD,
-     NULL},
+     nullptr},
     {"SpeechLock", A_LSPEECH, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     NULL},
-    {"Startup", A_STARTUP, AF_ODARK, NULL},
-    {"Succ", A_SUCC, AF_ODARK | AF_NOPROG, NULL},
-    {"Tacsize", A_TACSIZE, AF_ODARK, NULL},
+     nullptr},
+    {"Startup", A_STARTUP, AF_ODARK, nullptr},
+    {"Succ", A_SUCC, AF_ODARK | AF_NOPROG, nullptr},
+    {"Tacsize", A_TACSIZE, AF_ODARK, nullptr},
     {"TeloutLock", A_LTELOUT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     NULL},
-    {"Tfail", A_TFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Timeout", A_TIMEOUT, AF_MDARK | AF_NOPROG | AF_WIZARD, NULL},
-    {"Tport", A_TPORT, AF_ODARK | AF_NOPROG, NULL},
-    {"TportLock", A_LTPORT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"Tofail", A_TOFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Tz", A_TZ, AF_NOPROG, NULL},
-    {"Ufail", A_UFAIL, AF_ODARK | AF_NOPROG, NULL},
-    {"Use", A_USE, AF_ODARK, NULL},
-    {"UseLock", A_LUSE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"UserLock", A_LUSER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, NULL},
-    {"VA", A_VA, AF_ODARK, NULL},
-    {"VB", A_VA + 1, AF_ODARK, NULL},
-    {"VC", A_VA + 2, AF_ODARK, NULL},
-    {"VD", A_VA + 3, AF_ODARK, NULL},
-    {"VE", A_VA + 4, AF_ODARK, NULL},
-    {"VF", A_VA + 5, AF_ODARK, NULL},
-    {"VG", A_VA + 6, AF_ODARK, NULL},
-    {"VH", A_VA + 7, AF_ODARK, NULL},
-    {"VI", A_VA + 8, AF_ODARK, NULL},
-    {"VJ", A_VA + 9, AF_ODARK, NULL},
-    {"VK", A_VA + 10, AF_ODARK, NULL},
-    {"VL", A_VA + 11, AF_ODARK, NULL},
-    {"VM", A_VA + 12, AF_ODARK, NULL},
-    {"VN", A_VA + 13, AF_ODARK, NULL},
-    {"VO", A_VA + 14, AF_ODARK, NULL},
-    {"VP", A_VA + 15, AF_ODARK, NULL},
-    {"VQ", A_VA + 16, AF_ODARK, NULL},
-    {"VR", A_VA + 17, AF_ODARK, NULL},
-    {"VS", A_VA + 18, AF_ODARK, NULL},
-    {"VT", A_VA + 19, AF_ODARK, NULL},
-    {"VU", A_VA + 20, AF_ODARK, NULL},
-    {"VV", A_VA + 21, AF_ODARK, NULL},
-    {"VW", A_VA + 22, AF_ODARK, NULL},
-    {"VX", A_VA + 23, AF_ODARK, NULL},
-    {"VY", A_VA + 24, AF_ODARK, NULL},
-    {"VZ", A_VA + 25, AF_ODARK, NULL},
-    {"Xtype", A_XTYPE, AF_MDARK | AF_WIZARD, NULL},
-    {"*Password", A_PASS, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, NULL},
+     nullptr},
+    {"Tfail", A_TFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Timeout", A_TIMEOUT, AF_MDARK | AF_NOPROG | AF_WIZARD, nullptr},
+    {"Tport", A_TPORT, AF_ODARK | AF_NOPROG, nullptr},
+    {"TportLock", A_LTPORT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"Tofail", A_TOFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Tz", A_TZ, AF_NOPROG, nullptr},
+    {"Ufail", A_UFAIL, AF_ODARK | AF_NOPROG, nullptr},
+    {"Use", A_USE, AF_ODARK, nullptr},
+    {"UseLock", A_LUSE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, nullptr},
+    {"UserLock", A_LUSER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
+     nullptr},
+    {"VA", A_VA, AF_ODARK, nullptr},
+    {"VB", A_VA + 1, AF_ODARK, nullptr},
+    {"VC", A_VA + 2, AF_ODARK, nullptr},
+    {"VD", A_VA + 3, AF_ODARK, nullptr},
+    {"VE", A_VA + 4, AF_ODARK, nullptr},
+    {"VF", A_VA + 5, AF_ODARK, nullptr},
+    {"VG", A_VA + 6, AF_ODARK, nullptr},
+    {"VH", A_VA + 7, AF_ODARK, nullptr},
+    {"VI", A_VA + 8, AF_ODARK, nullptr},
+    {"VJ", A_VA + 9, AF_ODARK, nullptr},
+    {"VK", A_VA + 10, AF_ODARK, nullptr},
+    {"VL", A_VA + 11, AF_ODARK, nullptr},
+    {"VM", A_VA + 12, AF_ODARK, nullptr},
+    {"VN", A_VA + 13, AF_ODARK, nullptr},
+    {"VO", A_VA + 14, AF_ODARK, nullptr},
+    {"VP", A_VA + 15, AF_ODARK, nullptr},
+    {"VQ", A_VA + 16, AF_ODARK, nullptr},
+    {"VR", A_VA + 17, AF_ODARK, nullptr},
+    {"VS", A_VA + 18, AF_ODARK, nullptr},
+    {"VT", A_VA + 19, AF_ODARK, nullptr},
+    {"VU", A_VA + 20, AF_ODARK, nullptr},
+    {"VV", A_VA + 21, AF_ODARK, nullptr},
+    {"VW", A_VA + 22, AF_ODARK, nullptr},
+    {"VX", A_VA + 23, AF_ODARK, nullptr},
+    {"VY", A_VA + 24, AF_ODARK, nullptr},
+    {"VZ", A_VA + 25, AF_ODARK, nullptr},
+    {"Xtype", A_XTYPE, AF_MDARK | AF_WIZARD, nullptr},
+    {"*Password", A_PASS, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
+     nullptr},
     {"*Privileges", A_PRIVS, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
-     NULL},
-    {"Techtime", A_TECHTIME, AF_MDARK | AF_WIZARD, NULL},
+     nullptr},
+    {"Techtime", A_TECHTIME, AF_MDARK | AF_WIZARD, nullptr},
     {"*EconParts", A_ECONPARTS, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
-     NULL},
-    {"PLHEALTH", A_HEALTH, PLSTAT_MODE, NULL},
-    {"PLATTRS", A_ATTRS, PLSTAT_MODE, NULL},
-    {"PLADVS", A_ADVS, PLSTAT_MODE, NULL},
-    {"PLSKILLS", A_SKILLS, PLSTAT_MODE, NULL},
+     nullptr},
+    {"PLHEALTH", A_HEALTH, PLSTAT_MODE, nullptr},
+    {"PLATTRS", A_ATTRS, PLSTAT_MODE, nullptr},
+    {"PLADVS", A_ADVS, PLSTAT_MODE, nullptr},
+    {"PLSKILLS", A_SKILLS, PLSTAT_MODE, nullptr},
 
-    {NULL, 0, 0, NULL}};
+    {nullptr, 0, 0, nullptr}};
 
 /*
  * ---------------------------------------------------------------------------
@@ -401,7 +412,7 @@ int fwdlist_ck(int key, DbRef player, DbRef thing, int anum, char *atext) {
     fp = (FWDLIST *)alloc_lbuf("fwdlist_ck.fp");
     fwdlist_load(fp, player, atext);
   } else {
-    fp = NULL;
+    fp = nullptr;
   }
 
   /*
@@ -435,12 +446,12 @@ static char *set_string(char **ptr, char *new) {
    * if new string is not null allocate space for it and copy it
    */
 
-  if (!new)               /*
-                           * * || !*new
-                           */
-    return (*ptr = NULL); /*
-                           * Check with GAC about this
-                           */
+  if (!new)                  /*
+                              * * || !*new
+                              */
+    return (*ptr = nullptr); /*
+                              * Check with GAC about this
+                              */
   *ptr = (char *)XMALLOC(strlen(new) + 1, "set_string");
   StringCopy(*ptr, new);
   return (*ptr);
@@ -555,7 +566,7 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
       *sp = ToUpper(*sp);
     sp = strtok(value, " ");
     success = 0;
-    while (sp != NULL) {
+    while (sp != nullptr) {
 
       /*
        * Check for negation
@@ -585,7 +596,7 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
        * Get the next token
        */
 
-      sp = strtok(NULL, " ");
+      sp = strtok(nullptr, " ");
     }
     if (success && !is_quiet(player))
       notify_printf(player, "Attribute access for %s changed to %s.", va->name,
@@ -604,7 +615,7 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
       free_sbuf(buff);
       return;
     }
-    if (vattr_rename(va->name, value) == NULL)
+    if (vattr_rename(va->name, value) == nullptr)
       notify(player, "Attribute rename failed.");
     else
       notify(player, "Attribute renamed.");
@@ -745,7 +756,7 @@ Attribute *attribute_by_name(char *s) {
   static Attribute tattr;
 
   if (!s || !*s) {
-    return (NULL);
+    return (nullptr);
   }
 
   /*
@@ -762,7 +773,7 @@ Attribute *attribute_by_name(char *s) {
    */
 
   a = (Attribute *)hash_table_find(buff, &mudstate.attr_name_htab);
-  if (a != NULL) {
+  if (a != nullptr) {
     free_sbuf(buff);
     return a;
   }
@@ -777,18 +788,18 @@ Attribute *attribute_by_name(char *s) {
    * If we got one, load tattr and return a pointer to it.
    */
 
-  if (va != NULL) {
+  if (va != nullptr) {
     tattr.name = va->name;
     tattr.number = va->number;
     tattr.flags = va->flags;
-    tattr.check = NULL;
+    tattr.check = nullptr;
     return &tattr;
   }
   /*
    * All failed, return NULL
    */
 
-  return NULL;
+  return nullptr;
 }
 
 /*
@@ -796,7 +807,7 @@ Attribute *attribute_by_name(char *s) {
  * * anum_extend: Grow the attr num lookup table.
  */
 
-Attribute **anum_table = NULL;
+Attribute **anum_table = nullptr;
 int anum_alc_top = 0;
 
 void anum_extend(int newtop) {
@@ -809,16 +820,16 @@ void anum_extend(int newtop) {
     return;
   if (newtop < anum_alc_top + delta)
     newtop = anum_alc_top + delta;
-  if (anum_table == NULL) {
-    anum_table = (Attribute **)malloc((newtop + 1) * sizeof(Attribute *));
+  if (anum_table == nullptr) {
+    anum_table = malloc((newtop + 1) * sizeof(Attribute *));
     for (i = 0; i <= newtop; i++)
-      anum_table[i] = NULL;
+      anum_table[i] = nullptr;
   } else {
-    anum_table2 = (Attribute **)malloc((newtop + 1) * sizeof(Attribute *));
+    anum_table2 = malloc((newtop + 1) * sizeof(Attribute *));
     for (i = 0; i <= anum_alc_top; i++)
       anum_table2[i] = anum_table[i];
     for (i = anum_alc_top + 1; i <= newtop; i++)
-      anum_table2[i] = NULL;
+      anum_table2[i] = nullptr;
     free((char *)anum_table);
     anum_table = anum_table2;
   }
@@ -842,25 +853,25 @@ Attribute *attribute_by_number(int anum) {
     return anum_get(anum);
 
   if (anum >= anum_alc_top)
-    return NULL;
+    return nullptr;
 
   /*
    * It's a user-defined attribute, we need to copy data
    */
 
   va = (VATTR *)anum_get(anum);
-  if (va != NULL) {
+  if (va != nullptr) {
     tattr.name = va->name;
     tattr.number = va->number;
     tattr.flags = va->flags;
-    tattr.check = NULL;
+    tattr.check = nullptr;
     return &tattr;
   }
   /*
    * All failed, return NULL
    */
 
-  return NULL;
+  return nullptr;
 }
 
 /*
@@ -1132,13 +1143,13 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
   if (strlen(buff) >= LBUF_SIZE) {
     buff[LBUF_SIZE - 1] = '\0';
   }
-  if ((text = (char *)malloc(strlen(buff) + 1)) == NULL) {
+  if ((text = malloc(strlen(buff) + 1)) == nullptr) {
     return;
   }
   StringCopy(text, buff);
 
   if (!db[thing].ahead) {
-    if ((list = (AttributeList *)malloc(sizeof(AttributeList))) == NULL) {
+    if ((list = malloc(sizeof(AttributeList))) == nullptr) {
       free(text);
       return;
     }
@@ -1178,8 +1189,8 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
        * and the attribute should be inserted between them.
        */
 
-      list = (AttributeList *)realloc(
-          db[thing].ahead, (db[thing].at_count + 1) * sizeof(AttributeList));
+      list = realloc(db[thing].ahead,
+                     (db[thing].at_count + 1) * sizeof(AttributeList));
 
       if (!list)
         return;
@@ -1277,7 +1288,7 @@ char *attribute_get_raw(DbRef thing, int atr) {
   AttributeList *list;
 
   if (thing < 0)
-    return NULL;
+    return nullptr;
 
   /*
    * Binary search for the attribute
@@ -1286,7 +1297,7 @@ char *attribute_get_raw(DbRef thing, int atr) {
   hi = db[thing].at_count - 1;
   list = db[thing].ahead;
   if (!list)
-    return NULL;
+    return nullptr;
 
   while (lo <= hi) {
     mid = ((hi - lo) >> 1) + lo;
@@ -1299,7 +1310,7 @@ char *attribute_get_raw(DbRef thing, int atr) {
       lo = mid + 1;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 char *attribute_get_string(char *s, DbRef thing, int atr, DbRef *owner,
@@ -1335,7 +1346,7 @@ int attribute_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
     *flags = 0;
     return 0;
   }
-  attribute_decode(buff, NULL, thing, owner, flags, atr);
+  attribute_decode(buff, nullptr, thing, owner, flags, atr);
   return 1;
 }
 
@@ -1382,7 +1393,7 @@ int attribute_parent_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
   ITER_PARENTS(thing, parent, lev) {
     buff = attribute_get_raw(parent, atr);
     if (buff && *buff) {
-      attribute_decode(buff, NULL, thing, owner, flags, atr);
+      attribute_decode(buff, nullptr, thing, owner, flags, atr);
       if ((lev == 0) || !(*flags & AF_PRIVATE))
         return 1;
     }
@@ -1404,7 +1415,7 @@ int attribute_parent_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
 
 void attribute_free(DbRef thing) {
   free(db[thing].ahead);
-  db[thing].ahead = NULL;
+  db[thing].ahead = nullptr;
 }
 
 /*
@@ -1482,7 +1493,7 @@ int attribute_list_next(char **attrp) {
     atr = (ATRCOUNT *)*attrp;
     if (atr->count > db[atr->thing].at_count) {
       free(atr);
-      *attrp = NULL;
+      *attrp = nullptr;
       return 0;
     }
     atr->count++;
@@ -1499,18 +1510,18 @@ int attribute_list_first(DbRef thing, char **attrp) {
   ATRCOUNT *atr;
 
   if (db[thing].at_count) {
-    atr = (ATRCOUNT *)malloc(sizeof(ATRCOUNT));
+    atr = malloc(sizeof(ATRCOUNT));
     atr->thing = thing;
     atr->count = 2;
     *attrp = (char *)atr;
     if (!db[thing].ahead[0].number) {
       free(atr);
-      *attrp = NULL;
+      *attrp = nullptr;
       return 0;
     }
     return db[thing].ahead[0].number;
   }
-  *attrp = NULL;
+  *attrp = nullptr;
   return 0;
 }
 
@@ -1540,8 +1551,8 @@ static void initialize_objects(DbRef first, DbRef last) {
     s_next(thing, NOTHING);
     s_zone(thing, NOTHING);
     s_parent(thing, NOTHING);
-    s_stack(thing, NULL);
-    db[thing].ahead = NULL;
+    s_stack(thing, nullptr);
+    db[thing].ahead = nullptr;
     db[thing].at_count = 0;
   }
 }
@@ -1580,7 +1591,7 @@ void db_grow(DbRef newtop) {
   if (newtop <= mudstate.db_size) {
     for (i = mudstate.db_top; i < newtop; i++) {
       if (mudconf.cache_names)
-        purenames[i] = NULL;
+        purenames[i] = nullptr;
     }
     initialize_objects(mudstate.db_top, newtop);
     mudstate.db_top = newtop;
@@ -1640,11 +1651,11 @@ void db_grow(DbRef newtop) {
 
       purenames = newpurenames;
       for (i = 0; i < SIZE_HACK; i++) {
-        purenames[i] = NULL;
+        purenames[i] = nullptr;
       }
     }
     purenames = newpurenames + SIZE_HACK;
-    newpurenames = NULL;
+    newpurenames = nullptr;
   }
   /*
    * Grow the db array
@@ -1691,17 +1702,17 @@ void db_grow(DbRef newtop) {
       s_next(i, NOTHING);
       s_zone(i, NOTHING);
       s_parent(i, NOTHING);
-      s_stack(i, NULL);
-      db[i].ahead = NULL;
+      s_stack(i, nullptr);
+      db[i].ahead = nullptr;
       db[i].at_count = 0;
     }
   }
   db = newdb + SIZE_HACK;
-  newdb = NULL;
+  newdb = nullptr;
 
   for (i = mudstate.db_top; i < newtop; i++) {
     if (mudconf.cache_names) {
-      purenames[i] = NULL;
+      purenames[i] = nullptr;
     }
   }
   initialize_objects(mudstate.db_top, newtop);
@@ -1727,11 +1738,11 @@ void db_grow(DbRef newtop) {
 void db_free(void) {
   char *cp;
 
-  if (db != NULL) {
+  if (db != nullptr) {
     db -= SIZE_HACK;
     cp = (char *)db;
     XFREE(cp, "db_grow");
-    db = NULL;
+    db = nullptr;
   }
   mudstate.db_top = 0;
   mudstate.db_size = 0;
@@ -1753,7 +1764,7 @@ void db_make_minimal(void) {
   s_parent(0, NOTHING);
   s_zone(0, NOTHING);
   s_owner(0, 1);
-  db[0].ahead = NULL;
+  db[0].ahead = nullptr;
   db[0].at_count = 0;
   /*
    * should be #1
@@ -1903,5 +1914,5 @@ void toast_player(DbRef player) {
   do_clearcom(player, player, 0);
   do_channelnuke(player);
   del_commac(player);
-  do_clear_macro(player, NULL);
+  do_clear_macro(player, nullptr);
 }

@@ -49,7 +49,7 @@ NameTable *name_table_find_entry(DbRef player, NameTable *ntab,
       }
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 /*
