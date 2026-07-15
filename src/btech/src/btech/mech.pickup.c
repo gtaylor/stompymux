@@ -150,7 +150,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   correct_speed(mech);
 
   /* Send emit for triggers/debugging */
-  SendDebug(tprintf("#%d has picked up #%d", mech->mynum, target->mynum));
+  SendDebug(tprintf("#%ld has picked up #%ld", mech->mynum, target->mynum));
 }
 
 void mech_attachcables(DbRef player, void *data, char *buffer) {
@@ -378,5 +378,5 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
     }
   }
   correct_speed(mech);
-  SendDebug(tprintf("#%d has dropped off #%d", mech->mynum, target->mynum));
+  SendDebug(tprintf("#%ld has dropped off #%ld", mech->mynum, target->mynum));
 }

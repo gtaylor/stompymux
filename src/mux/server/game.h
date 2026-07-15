@@ -9,7 +9,8 @@ void notify_except(DbRef location, DbRef player, DbRef exception,
                    const char *message);
 void notify_except2(DbRef location, DbRef player, DbRef exception1,
                     DbRef exception2, const char *message);
-void notify_printf(DbRef player, const char *format, ...);
+void notify_printf(DbRef player, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 int check_filter(DbRef object, DbRef player, int filter, const char *message);
 void notify_checked(DbRef target, DbRef sender, const char *message, int key);
 int is_hearer(DbRef object);

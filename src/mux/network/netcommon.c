@@ -151,10 +151,6 @@ void raw_notify(DbRef player, const char *msg) {
   raw_notify_raw(player, msg, "\r\n");
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 void notify_printf(DbRef player, const char *format, ...) {
   Descriptor *d;
   char buffer[LBUF_SIZE];
@@ -165,9 +161,6 @@ void notify_printf(DbRef player, const char *format, ...) {
 
   vsnprintf(buffer, LBUF_SIZE - 1, format, ap);
   va_end(ap);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
   strncat(buffer, "\r\n", LBUF_SIZE - 1);
   buffer[LBUF_SIZE - 1] = '\0';
@@ -193,10 +186,6 @@ void raw_notify_newline(DbRef player) {
  * * raw_broadcast: Send message to players who have indicated flags
  */
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 void raw_broadcast(int inflags, char *template, ...) {
   char buff[LBUF_SIZE];
   Descriptor *d;
@@ -208,9 +197,6 @@ void raw_broadcast(int inflags, char *template, ...) {
   va_start(ap, template);
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
   DESC_ITER_CONN(d) {
     if ((obj_flags(d->player) & inflags) == inflags) {
@@ -431,15 +417,13 @@ static void announce_connect(DbRef player, Descriptor *d) {
 
     if (is_dark(player)) {
       raw_broadcast(MONITOR, (char *)"GAME: %s has DARK-connected.",
-                    Name(player), 0, 0, 0, 0, 0);
+                    Name(player));
     } else {
-      raw_broadcast(MONITOR, (char *)"GAME: %s has connected.", Name(player), 0,
-                    0, 0, 0, 0);
+      raw_broadcast(MONITOR, (char *)"GAME: %s has connected.", Name(player));
     }
   } else {
     snprintf(buf, LBUF_SIZE, "%s has reconnected.", Name(player));
-    raw_broadcast(MONITOR, (char *)"GAME: %s has reconnected.", Name(player), 0,
-                  0, 0, 0, 0);
+    raw_broadcast(MONITOR, (char *)"GAME: %s has reconnected.", Name(player));
   }
 
   key = MSG_INV;
@@ -503,7 +487,7 @@ static void announce_connect(DbRef player, Descriptor *d) {
       }
       break;
     default:
-      log_text(tprintf("Invalid zone #%d for %s(#%d) has bad type %d", zone,
+      log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
                        Name(player), player, typeof_obj(zone)));
     }
   }
@@ -550,8 +534,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     if (mudconf.have_comsys)
       do_comdisconnect(player);
 
-    raw_broadcast(MONITOR, (char *)"GAME: %s has disconnected.", Name(player),
-                  0, 0, 0, 0, 0);
+    raw_broadcast(MONITOR, (char *)"GAME: %s has disconnected.", Name(player));
 
     argv[0] = (char *)reason;
     c_connected(player);
@@ -605,7 +588,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
         }
         break;
       default:
-        log_text(tprintf("Invalid zone #%d for %s(#%d) has bad type %d", zone,
+        log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
                          Name(player), player, typeof_obj(zone)));
       }
     }
@@ -622,7 +605,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(player, player, buf, key);
     raw_broadcast(MONITOR, (char *)"GAME: %s has partially disconnected.",
-                  Name(player), 0, 0, 0, 0, 0);
+                  Name(player));
     free_mbuf(buf);
   }
 
@@ -1519,7 +1502,7 @@ void make_ulist(DbRef player, char *buff, char **bufc) {
     if (cp != *bufc)
       safe_chr(' ', buff, bufc);
     safe_chr('#', buff, bufc);
-    safe_str(tprintf("%d", d->player), buff, bufc);
+    safe_str(tprintf("%ld", d->player), buff, bufc);
   }
 }
 

@@ -148,7 +148,7 @@ void do_open(DbRef player, DbRef cause, int key, char *direction, char *links[],
   if (nlinks >= 2) {
     destnum = parse_linkable_room(player, dest);
     if (destnum != NOTHING) {
-      open_exit(player, destnum, links[1], tprintf("%d", loc));
+      open_exit(player, destnum, links[1], tprintf("%ld", loc));
     }
   }
 }
@@ -283,7 +283,7 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
     notify_quiet(player, "Permission denied.");
     break;
   default:
-    log_error(LOG_BUGS, "BUG", "OTYPE", "Strange object type: object #%d = %d",
+    log_error(LOG_BUGS, "BUG", "OTYPE", "Strange object type: object #%ld = %d",
               thing, typeof_obj(thing));
   }
 }
@@ -379,7 +379,7 @@ void do_dig(DbRef player, DbRef cause, int key, char *name, char *args[],
   if (room == NOTHING)
     return;
 
-  notify_printf(player, "%s created with room number %d.", name, room);
+  notify_printf(player, "%s created with room number %ld.", name, room);
 
   buff = alloc_sbuf("do_dig");
   if ((nargs >= 1) && args[0] && *args[0]) {
@@ -417,7 +417,7 @@ void do_create(DbRef player, DbRef cause, int key, char *name, char *coststr) {
   move_via_generic(thing, player, NOTHING, 0);
   s_home(thing, new_home(player));
   if (!is_quiet(player)) {
-    notify_printf(player, "%s created as object #%d", Name(thing), thing);
+    notify_printf(player, "%s created as object #%ld", Name(thing), thing);
   }
 }
 
@@ -514,10 +514,10 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
 
   if (!is_quiet(player)) {
     if (arg2 && *arg2)
-      notify_printf(player, "%s cloned as %s, new copy is object #%d.",
+      notify_printf(player, "%s cloned as %s, new copy is object #%ld.",
                     Name(thing), arg2, clone);
     else
-      notify_printf(player, "%s cloned, new copy is object #%d.", Name(thing),
+      notify_printf(player, "%s cloned, new copy is object #%ld.", Name(thing),
                     clone);
   }
   /*
@@ -579,7 +579,7 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
   if (isrobot) {
     move_object(newplayer, obj_location(player));
     notify_quiet(player,
-                 tprintf("New robot '%s' (#%d) created with password '%s'",
+                 tprintf("New robot '%s' (#%ld) created with password '%s'",
                          name, newplayer, pass));
 
     notify_quiet(player, "Your robot has arrived.");
@@ -592,7 +592,7 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
   } else {
     move_object(newplayer, mudconf.start_room);
     notify_quiet(player,
-                 tprintf("New player '%s' (#%d) created with password '%s'",
+                 tprintf("New player '%s' (#%ld) created with password '%s'",
                          name, newplayer, pass));
 
     STARTLOG(LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
@@ -705,10 +705,10 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
           notify(player, "The exit shakes and begins to crumble.");
           if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
             notify_quiet(obj_owner(thing),
-                         tprintf("You will be rewarded shortly for %s(#%d).",
+                         tprintf("You will be rewarded shortly for %s(#%ld).",
                                  Name(thing), thing));
           if ((obj_owner(thing) != player) && !is_quiet(player))
-            notify_quiet(player, tprintf("Destroyed. #%d's %s(#%d)",
+            notify_quiet(player, tprintf("Destroyed. #%ld's %s(#%ld)",
                                          obj_owner(thing), Name(thing), thing));
           s_going(thing);
         }
@@ -729,11 +729,11 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
         notify(player, "The object shakes and begins to crumble.");
         if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
           notify_quiet(obj_owner(thing),
-                       tprintf("You will be rewarded shortly for %s(#%d).",
+                       tprintf("You will be rewarded shortly for %s(#%ld).",
                                Name(thing), thing));
         if ((obj_owner(thing) != player) && !is_quiet(player))
           notify_quiet(player,
-                       tprintf("Destroyed. %s's %s(#%d)",
+                       tprintf("Destroyed. %s's %s(#%ld)",
                                Name(obj_owner(thing)), Name(thing), thing));
         s_going(thing);
       }
@@ -749,12 +749,12 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
           c_hardcode(thing);
         }
         if (0) {
-          attribute_add_raw(thing, A_DESTROYER, tprintf("%d", player));
+          attribute_add_raw(thing, A_DESTROYER, tprintf("%ld", player));
           destroy_player(thing);
         } else {
           notify(player, "The player shakes and begins to crumble.");
           s_going(thing);
-          attribute_add_raw(thing, A_DESTROYER, tprintf("%d", player));
+          attribute_add_raw(thing, A_DESTROYER, tprintf("%ld", player));
         }
       }
     }
@@ -770,11 +770,11 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
         notify_all(thing, player, "The room shakes and begins to crumble.");
         if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
           notify_quiet(obj_owner(thing),
-                       tprintf("You will be rewarded shortly for %s(#%d).",
+                       tprintf("You will be rewarded shortly for %s(#%ld).",
                                Name(thing), thing));
         if ((obj_owner(thing) != player) && !is_quiet(player))
           notify_quiet(player,
-                       tprintf("Destroyed. %s's %s(#%d)",
+                       tprintf("Destroyed. %s's %s(#%ld)",
                                Name(obj_owner(thing)), Name(thing), thing));
         s_going(thing);
       }
@@ -898,7 +898,7 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
             ((atoi(buff2) + (mudconf.namechange_days * 86400)) < mudstate.now)))
         lower_xp(player, 900);
 
-      silly_atr_set(player, A_LASTNAME, tprintf("%u", mudstate.now));
+      silly_atr_set(player, A_LASTNAME, tprintf("%ld", mudstate.now));
     }
     /*
      * everything ok, notify
@@ -909,7 +909,8 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
       ENDLOG;
     }
     if (is_suspect(thing)) {
-      send_channel("Suspect", tprintf("%s renamed to %s", Name(thing), buff));
+      send_channel("Suspect", "%s",
+                   tprintf("%s renamed to %s", Name(thing), buff));
     }
     delete_player_name(thing, Name(thing));
 

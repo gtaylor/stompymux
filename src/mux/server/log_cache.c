@@ -68,7 +68,7 @@ static int _logcache_list(void *key, void *data, int depth, void *arg) {
   struct logfile_t *log = (struct logfile_t *)data;
   DbRef player = *(DbRef *)arg;
   event_pending(log->ev, EV_TIMEOUT, &tv);
-  notify_printf(player, "%-40s%d", log->filename, tv.tv_sec - mudstate.now);
+  notify_printf(player, "%-40s%ld", log->filename, tv.tv_sec - mudstate.now);
   return 1;
 }
 

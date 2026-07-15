@@ -2208,7 +2208,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     case ARTEMIS_IV:
       weapon_slot = GetPartData(wounded, hitloc, critHit);
       if (weapon_slot > NUM_CRITICALS) {
-        SendError(tprintf("Artemis IV error on mech %d", wounded->mynum));
+        SendError(tprintf("Artemis IV error on mech %ld", wounded->mynum));
         break;
       }
       GetPartAmmoMode(wounded, hitloc, weapon_slot) &= ~ARTEMIS_MODE;

@@ -634,7 +634,7 @@ static void fun_digittime(char *buff, char **bufc, DbRef player, DbRef cause,
     snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour, delta->tm_min);
   }
 
-  safe_tprintf_str(buff, bufc, buf);
+  safe_tprintf_str(buff, bufc, "%s", buf);
 }
 
 /**
@@ -654,7 +654,7 @@ static void fun_time(char *buff, char **bufc, DbRef player, DbRef cause,
  */
 static void fun_secs(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  safe_tprintf_str(buff, bufc, "%d", mudstate.now);
+  safe_tprintf_str(buff, bufc, "%ld", mudstate.now);
 }
 
 /**
@@ -829,7 +829,7 @@ static void fun_convtime(char *buff, char **bufc, DbRef player, DbRef cause,
 
   ttm = localtime(&mudstate.now);
   if (do_convtime(fargs[0], ttm))
-    safe_tprintf_str(buff, bufc, "%d", mktime(ttm));
+    safe_tprintf_str(buff, bufc, "%ld", mktime(ttm));
   else
     safe_str("-1", buff, bufc);
 }
@@ -922,7 +922,7 @@ static void fun_starttime(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_startsecs(char *buff, char **bufc, DbRef player, DbRef cause,
                           char *fargs[], int nfargs, char *cargs[],
                           int ncargs) {
-  safe_tprintf_str(buff, bufc, "%d", mudstate.start_time);
+  safe_tprintf_str(buff, bufc, "%ld", mudstate.start_time);
 }
 
 /**
@@ -1347,7 +1347,7 @@ static void fun_parent(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   if (is_good_obj(it) && (is_examinable(player, it) || (it == cause))) {
-    safe_tprintf_str(buff, bufc, "#%d", obj_parent(it));
+    safe_tprintf_str(buff, bufc, "#%ld", obj_parent(it));
   } else {
     safe_str("#-1", buff, bufc);
   }
@@ -1531,7 +1531,7 @@ static void fun_con(char *buff, char **bufc, DbRef player, DbRef cause,
   if ((it != NOTHING) && (has_contents(it)) &&
       (is_examinable(player, it) || (where_is(player) == it) ||
        (it == cause))) {
-    safe_tprintf_str(buff, bufc, "#%d", obj_contents(it));
+    safe_tprintf_str(buff, bufc, "#%ld", obj_contents(it));
     return;
   }
   safe_str("#-1", buff, bufc);
@@ -1556,7 +1556,7 @@ static void fun_exit(char *buff, char **bufc, DbRef player, DbRef cause,
       key |= VE_LOC_DARK;
     DOLIST(exit, obj_exits(it)) {
       if (exit_visible(exit, player, key)) {
-        safe_tprintf_str(buff, bufc, "#%d", exit);
+        safe_tprintf_str(buff, bufc, "#%ld", exit);
         return;
       }
     }
@@ -1581,7 +1581,7 @@ static void fun_next(char *buff, char **bufc, DbRef player, DbRef cause,
     ex_here = is_good_obj(loc) ? is_examinable(player, loc) : 0;
     if (ex_here || (loc == player) || (loc == where_is(player))) {
       if (!is_exit(it)) {
-        safe_tprintf_str(buff, bufc, "#%d", obj_next(it));
+        safe_tprintf_str(buff, bufc, "#%ld", obj_next(it));
         return;
       } else {
         key = 0;
@@ -1591,7 +1591,7 @@ static void fun_next(char *buff, char **bufc, DbRef player, DbRef cause,
           key |= VE_LOC_DARK;
         DOLIST(exit, it) {
           if ((exit != it) && exit_visible(exit, player, key)) {
-            safe_tprintf_str(buff, bufc, "#%d", exit);
+            safe_tprintf_str(buff, bufc, "#%ld", exit);
             return;
           }
         }
@@ -1613,7 +1613,7 @@ static void fun_loc(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   if (locatable(player, it, cause))
-    safe_tprintf_str(buff, bufc, "#%d", obj_location(it));
+    safe_tprintf_str(buff, bufc, "#%ld", obj_location(it));
   else
     safe_str("#-1", buff, bufc);
   return;
@@ -1630,7 +1630,7 @@ static void fun_where(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   if (locatable(player, it, cause))
-    safe_tprintf_str(buff, bufc, "#%d", where_is(it));
+    safe_tprintf_str(buff, bufc, "#%ld", where_is(it));
   else
     safe_str("#-1", buff, bufc);
   return;
@@ -1657,7 +1657,7 @@ static void fun_rloc(char *buff, char **bufc, DbRef player, DbRef cause,
         break;
       it = obj_location(it);
     }
-    safe_tprintf_str(buff, bufc, "#%d", it);
+    safe_tprintf_str(buff, bufc, "#%ld", it);
     return;
   }
   safe_str("#-1", buff, bufc);
@@ -1680,13 +1680,13 @@ static void fun_room(char *buff, char **bufc, DbRef player, DbRef cause,
       if (!is_good_obj(it))
         break;
       if (is_room(it)) {
-        safe_tprintf_str(buff, bufc, "#%d", it);
+        safe_tprintf_str(buff, bufc, "#%ld", it);
         return;
       }
     }
     safe_str("#-1", buff, bufc);
   } else if (is_room(it)) {
-    safe_tprintf_str(buff, bufc, "#%d", it);
+    safe_tprintf_str(buff, bufc, "#%ld", it);
   } else {
     safe_str("#-1", buff, bufc);
   }
@@ -1716,7 +1716,7 @@ static void fun_owner(char *buff, char **bufc, DbRef player, DbRef cause,
     if (it != NOTHING)
       it = obj_owner(it);
   }
-  safe_tprintf_str(buff, bufc, "#%d", it);
+  safe_tprintf_str(buff, bufc, "#%ld", it);
 }
 
 /*
@@ -2033,7 +2033,7 @@ static void fun_strlen(char *buff, char **bufc, DbRef player, DbRef cause,
 
 static void fun_num(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  safe_tprintf_str(buff, bufc, "#%d", match_thing(player, fargs[0]));
+  safe_tprintf_str(buff, bufc, "#%ld", match_thing(player, fargs[0]));
 }
 
 static void fun_pmatch(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -2041,11 +2041,11 @@ static void fun_pmatch(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef thing;
 
   if (*fargs[0] == '#') {
-    safe_tprintf_str(buff, bufc, "#%d", match_thing(player, fargs[0]));
+    safe_tprintf_str(buff, bufc, "#%ld", match_thing(player, fargs[0]));
     return;
   }
   if (!((thing = lookup_player(player, fargs[0], 1)) == NOTHING)) {
-    safe_tprintf_str(buff, bufc, "#%d", thing);
+    safe_tprintf_str(buff, bufc, "#%ld", thing);
     return;
   } else
     safe_str("#-1 NO MATCH", buff, bufc);
@@ -2231,7 +2231,15 @@ static void fun_round(char *buff, char **bufc, DbRef player, DbRef cause,
     fstr = "%.0f";
     break;
   }
+  /* fstr is always one of the "%.Nf" literals assigned above. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
   safe_tprintf_str(buff, bufc, (char *)fstr, atof(fargs[0]));
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   /* Handle bogus result of "-0" from snprintf.  Yay, cclib. */
 
@@ -2714,11 +2722,11 @@ static void fun_home(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!is_good_obj(it) || !is_examinable(player, it))
     safe_str("#-1", buff, bufc);
   else if (has_home(it))
-    safe_tprintf_str(buff, bufc, "#%d", obj_home(it));
+    safe_tprintf_str(buff, bufc, "#%ld", obj_home(it));
   else if (has_dropto(it))
-    safe_tprintf_str(buff, bufc, "#%d", obj_dropto(it));
+    safe_tprintf_str(buff, bufc, "#%ld", obj_dropto(it));
   else if (is_exit(it))
-    safe_tprintf_str(buff, bufc, "#%d", where_is(it));
+    safe_tprintf_str(buff, bufc, "#%ld", where_is(it));
   else
     safe_str("#-1", buff, bufc);
   return;
@@ -4415,7 +4423,7 @@ static void fun_locate(char *buff, char **bufc, DbRef player, DbRef cause,
   if (verbose)
     (void)match_status(player, what);
 
-  safe_tprintf_str(buff, bufc, "#%d", what);
+  safe_tprintf_str(buff, bufc, "#%ld", what);
 }
 
 /*

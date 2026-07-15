@@ -206,7 +206,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   skipws(buffer);
 
-  SendDebug(tprintf("#%d attempts to do a bootlegger (mech). Tonnage: %d, "
+  SendDebug(tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
                     "Speed: %4.1f, BTHMod: %d",
                     mech->mynum, wMechTons, fMechSpeed, wBTHMod));
 

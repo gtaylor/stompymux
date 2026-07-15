@@ -92,8 +92,8 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   mech->mapindex = -1;
   if (map->first_free <= mech->mapnumber ||
       map->mechsOnMap[mech->mapnumber] != mech->mynum) {
-    SendError(tprintf("Map indexing error for mech #%d: Map index %d contains "
-                      "data for #%d instead.",
+    SendError(tprintf("Map indexing error for mech #%ld: Map index %d contains "
+                      "data for #%ld instead.",
                       mech->mynum, mech->mapnumber,
                       map->mechsOnMap ? map->mechsOnMap[mech->mapnumber] : -1));
     if (map->mechsOnMap)
@@ -136,7 +136,7 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   }
   MechNumSeen(mech) = 0;
   if (IsDS(mech))
-    SendDSInfo(tprintf("DS #%d has left map #%d", mech->mynum, map->mynum));
+    SendDSInfo(tprintf("DS #%ld has left map #%ld", mech->mynum, map->mynum));
 }
 
 void add_mech_to_map(MAP *newmap, MECH *mech) {
@@ -198,7 +198,7 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   UpdateConditions(mech, newmap);
   if (IsDS(mech))
     SendDSInfo(
-        tprintf("DS #%d has entered map #%d", mech->mynum, newmap->mynum));
+        tprintf("DS #%ld has entered map #%ld", mech->mynum, newmap->mynum));
 }
 
 int mech_size(MAP *map) {

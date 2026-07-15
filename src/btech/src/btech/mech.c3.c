@@ -72,7 +72,7 @@ int countWorkingC3MastersOnMech(MECH *mech) {
   int wcWorkingSlots;
   int wcMasters = 0;
 
-  debugC3(tprintf("Counting working C3 masters for %d", mech->mynum));
+  debugC3(tprintf("Counting working C3 masters for %ld", mech->mynum));
 
   for (x = 0; x < NUM_SECTIONS; x++) {
     wcSlots = 0;
@@ -82,7 +82,7 @@ int countWorkingC3MastersOnMech(MECH *mech) {
       if ((t = GetPartType(mech, x, y))) {
         if (Special2I(t) == C3_MASTER) {
           debugC3(
-              tprintf("...found a C3Master slot at section %d, slot %d on %d.",
+              tprintf("...found a C3Master slot at section %d, slot %d on %ld.",
                       x, y, mech->mynum));
 
           wcSlots++;
@@ -95,13 +95,13 @@ int countWorkingC3MastersOnMech(MECH *mech) {
       }
 
       if (wcSlots == getC3MasterSize(mech)) {
-        debugC3(tprintf("...found enough slots for a C3Master for %d.",
+        debugC3(tprintf("...found enough slots for a C3Master for %ld.",
                         mech->mynum));
         wcSlots = 0;
 
         if (wcWorkingSlots == getC3MasterSize(mech)) {
           debugC3(tprintf("...there is even enough working slots to make the "
-                          "computer work on %d.",
+                          "computer work on %ld.",
                           mech->mynum));
           wcMasters++;
         }
@@ -109,7 +109,8 @@ int countWorkingC3MastersOnMech(MECH *mech) {
     }
   }
 
-  debugC3(tprintf("Found %d working C3 masters on %d", wcMasters, mech->mynum));
+  debugC3(
+      tprintf("Found %d working C3 masters on %ld", wcMasters, mech->mynum));
 
   return wcMasters;
 }
@@ -119,7 +120,7 @@ int countTotalC3MastersOnMech(MECH *mech) {
   int wcSlots;
   int wcMasters = 0;
 
-  debugC3(tprintf("Counting total C3 masters for %d", mech->mynum));
+  debugC3(tprintf("Counting total C3 masters for %ld", mech->mynum));
 
   for (x = 0; x < NUM_SECTIONS; x++) {
     wcSlots = 0;
@@ -128,7 +129,7 @@ int countTotalC3MastersOnMech(MECH *mech) {
       if ((t = GetPartType(mech, x, y))) {
         if (Special2I(t) == C3_MASTER) {
           debugC3(
-              tprintf("...found a C3Master slot at section %d, slot %d on %d.",
+              tprintf("...found a C3Master slot at section %d, slot %d on %ld.",
                       x, y, mech->mynum));
 
           wcSlots++;
@@ -136,7 +137,7 @@ int countTotalC3MastersOnMech(MECH *mech) {
       }
 
       if (wcSlots == getC3MasterSize(mech)) {
-        debugC3(tprintf("...found enough slots for a C3Master for %d.",
+        debugC3(tprintf("...found enough slots for a C3Master for %ld.",
                         mech->mynum));
 
         wcSlots = 0;
@@ -145,7 +146,7 @@ int countTotalC3MastersOnMech(MECH *mech) {
     }
   }
 
-  debugC3(tprintf("Found %d total C3 masters on %d", wcMasters, mech->mynum));
+  debugC3(tprintf("Found %d total C3 masters on %ld", wcMasters, mech->mynum));
 
   return wcMasters;
 }
@@ -159,10 +160,10 @@ int countMaxC3Units(MECH *mech, DbRef *myTempNetwork, int tempNetworkSize,
   int myMasters = 0;
   int maxC3Size;
 
-  debugC3(tprintf("Counting max C3 units in %d's network", mech->mynum));
+  debugC3(tprintf("Counting max C3 units in %ld's network", mech->mynum));
 
   if (targMech)
-    debugC3(tprintf("...using %d as an additional mech", targMech->mynum));
+    debugC3(tprintf("...using %ld as an additional mech", targMech->mynum));
 
   /* First we iterate over the list and find all the masters */
   for (i = 0; i < tempNetworkSize; i++) {
@@ -174,7 +175,7 @@ int countMaxC3Units(MECH *mech, DbRef *myTempNetwork, int tempNetworkSize,
 
     wcC3Masters += MechWorkingC3Masters(otherMech);
 
-    debugC3(tprintf("...for %d, we add %d masters", otherMech->mynum,
+    debugC3(tprintf("...for %ld, we add %d masters", otherMech->mynum,
                     MechWorkingC3Masters(otherMech)));
   }
 
@@ -216,7 +217,7 @@ int trimC3Network(MECH *mech, DbRef *myTempNetwork, int tempNetworkSize) {
   int maxC3Size = 0; /* This is calc'd based on the number of masters */
   DbRef newNetwork[C3_NETWORK_SIZE];
 
-  debugC3(tprintf("C3 TRIM: Trimming %d's C3 network", mech->mynum));
+  debugC3(tprintf("C3 TRIM: Trimming %ld's C3 network", mech->mynum));
 
   /* Initialize our data */
   newNetworkSize = tempNetworkSize;
@@ -294,7 +295,7 @@ void replicateC3Network(MECH *mechSrc, MECH *mechDest) {
   int i;
   DbRef otherRef;
 
-  debugC3(tprintf("C3 REPLICATE: %d's C3 network to %d", mechSrc->mynum,
+  debugC3(tprintf("C3 REPLICATE: %ld's C3 network to %ld", mechSrc->mynum,
                   mechDest->mynum));
 
   clearC3Network(mechDest, 0);
@@ -321,7 +322,7 @@ void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
   int i;
   int wPos = -1;
 
-  debugC3(tprintf("C3 ADD: %d to the C3 network of %d", mechToAdd->mynum,
+  debugC3(tprintf("C3 ADD: %ld to the C3 network of %ld", mechToAdd->mynum,
                   mech->mynum));
 
   /* Find a position to add the new mech into my network */
@@ -333,7 +334,7 @@ void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
     return;
 
   /* Well, we have a valid position, so let's put this mech in the network */
-  debugC3(tprintf("C3 ADD: Position to add to %d's network is %d", mech->mynum,
+  debugC3(tprintf("C3 ADD: Position to add to %ld's network is %d", mech->mynum,
                   wPos));
 
   MechC3NetworkElem(mech, wPos) = mechToAdd->mynum;
@@ -375,7 +376,7 @@ void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
 void clearMechFromC3Network(DbRef refToClear, MECH *mech) {
   int i;
 
-  debugC3(tprintf("C3 CLEAR: %d from the C3 network of %d", refToClear,
+  debugC3(tprintf("C3 CLEAR: %ld from the C3 network of %ld", refToClear,
                   mech->mynum));
 
   if (!MechC3NetworkSize(mech))
@@ -393,7 +394,7 @@ void clearC3Network(MECH *mech, int tClearFromOthers) {
   MECH *otherMech;
   int i;
 
-  debugC3(tprintf("C3 CLEAR: %d's C3 network", mech->mynum));
+  debugC3(tprintf("C3 CLEAR: %ld's C3 network", mech->mynum));
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
     otherMech = getOtherMechInNetwork(mech, i, 0, 0, 0, 1);
@@ -420,7 +421,7 @@ void validateC3Network(MECH *mech) {
   int i;
   int networkSize = 0;
 
-  debugC3(tprintf("C3 VALIDATE: %d's C3 network", mech->mynum));
+  debugC3(tprintf("C3 VALIDATE: %ld's C3 network", mech->mynum));
 
   if (!HasC3(mech) || Destroyed(mech) || C3Destroyed(mech)) {
     clearC3Network(mech, 1);
@@ -443,7 +444,7 @@ void validateC3Network(MECH *mech) {
     if (!is_good_obj(otherMech->mynum))
       continue;
 
-    debugC3(tprintf("C3 VALIDATE INFO: %d is now in %d's C3 network",
+    debugC3(tprintf("C3 VALIDATE INFO: %ld is now in %ld's C3 network",
                     otherMech->mynum, mech->mynum));
 
     myTempNetwork[networkSize] = otherMech->mynum;
@@ -457,12 +458,12 @@ void validateC3Network(MECH *mech) {
 
   MechC3NetworkSize(mech) = networkSize;
 
-  debugC3(tprintf("C3 VALIDATE INFO: (PreTrim) %d's C3 network is %d elements",
+  debugC3(tprintf("C3 VALIDATE INFO: (PreTrim) %ld's C3 network is %d elements",
                   mech->mynum, MechC3NetworkSize(mech)));
 
   networkSize = trimC3Network(mech, myTempNetwork, networkSize);
 
-  debugC3(tprintf("C3 VALIDATE INFO: (PostTrim) %d's C3 network has been "
+  debugC3(tprintf("C3 VALIDATE INFO: (PostTrim) %ld's C3 network has been "
                   "trimmed to %d elements",
                   mech->mynum, networkSize));
 

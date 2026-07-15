@@ -972,7 +972,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
   }
 
   if (!is_good_obj(player)) {
-    log_error(LOG_BUGS, "CMD", "PLYR", "Bad player in process_command: %d",
+    log_error(LOG_BUGS, "CMD", "PLYR", "Bad player in process_command: %ld",
               player);
     mudstate.debug_cmd = cmdsave;
     goto exit;
@@ -986,7 +986,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
       (is_halted(player) &&
        !((typeof_obj(player) == TYPE_PLAYER) && interactive))) {
     notify_printf(obj_owner(player),
-                  "Attempt to execute command by halted object #%d", player);
+                  "Attempt to execute command by halted object #%ld", player);
     mudstate.debug_cmd = cmdsave;
     goto exit;
   }
@@ -1000,7 +1000,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
       free_lbuf(lcbuf);
       ENDLOG;
     }
-    send_channel("SuspectsLog", "%s (#%d) (in #%d) entered: %s", Name(player),
+    send_channel("SuspectsLog", "%s (#%ld) (in #%ld) entered: %s", Name(player),
                  player, obj_location(player), command);
   } else {
     STARTLOG(LOG_ALLCOMMANDS, "CMD", "ALL") {
@@ -1916,7 +1916,7 @@ static void list_options(DbRef player) {
     raw_notify(player,
                tprintf("There may be at most %d players logged in at once.",
                        mudconf.max_players));
-  raw_notify(player, tprintf("The head of the object freelist is #%d.",
+  raw_notify(player, tprintf("The head of the object freelist is #%ld.",
                              mudstate.freelist));
 
   snprintf(buff, MBUF_SIZE, "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
@@ -1998,7 +1998,7 @@ static void list_process(DbRef player) {
 
   raw_notify(player, tprintf("Process ID:  %10d        %10d bytes per page",
                              pid, psize));
-  raw_notify(player, tprintf("Time used:   %10d user   %10d sys",
+  raw_notify(player, tprintf("Time used:   %10ld user   %10ld sys",
                              usage.ru_utime.tv_sec, usage.ru_stime.tv_sec));
 
   /*
@@ -2006,19 +2006,20 @@ static void list_process(DbRef player) {
    * * tprintf("Resident mem:%10d shared %10d private%10d stack",
    * * ixrss, idrss, isrss));
    */
-  raw_notify(player, tprintf("Integral mem:%10d shared %10d private%10d stack",
-                             usage.ru_ixrss, usage.ru_idrss, usage.ru_isrss));
-  raw_notify(player, tprintf("Max res mem: %10d pages  %10d bytes",
+  raw_notify(player,
+             tprintf("Integral mem:%10ld shared %10ld private%10ld stack",
+                     usage.ru_ixrss, usage.ru_idrss, usage.ru_isrss));
+  raw_notify(player, tprintf("Max res mem: %10ld pages  %10ld bytes",
                              usage.ru_maxrss, (usage.ru_maxrss * psize)));
   raw_notify(player,
-             tprintf("Page faults: %10d hard   %10d soft   %10d swapouts",
+             tprintf("Page faults: %10ld hard   %10ld soft   %10ld swapouts",
                      usage.ru_majflt, usage.ru_minflt, usage.ru_nswap));
-  raw_notify(player, tprintf("Disk I/O:    %10d reads  %10d writes",
+  raw_notify(player, tprintf("Disk I/O:    %10ld reads  %10ld writes",
                              usage.ru_inblock, usage.ru_oublock));
-  raw_notify(player, tprintf("Network I/O: %10d in     %10d out",
+  raw_notify(player, tprintf("Network I/O: %10ld in     %10ld out",
                              usage.ru_msgrcv, usage.ru_msgsnd));
   raw_notify(player,
-             tprintf("Context swi: %10d vol    %10d forced %10d sigs",
+             tprintf("Context swi: %10ld vol    %10ld forced %10ld sigs",
                      usage.ru_nvcsw, usage.ru_nivcsw, usage.ru_nsignals));
   raw_notify(player, tprintf("Descs avail: %10d", maxfds));
 }

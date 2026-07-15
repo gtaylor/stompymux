@@ -162,7 +162,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
 
       for (nextp = (ADDENT *)old->handler; nextp != nullptr;
            nextp = nextp->next) {
-        notify_printf(player, "%s: #%d/%s", nextp->name, nextp->thing,
+        notify_printf(player, "%s: #%ld/%s", nextp->name, nextp->thing,
                       ((Attribute *)attribute_by_number(nextp->atr))->name);
       }
     } else {
@@ -182,7 +182,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
              nextp = nextp->next) {
           if (strcmp(keyname, nextp->name))
             continue;
-          notify_printf(player, "%s: #%d/%s", nextp->name, nextp->thing,
+          notify_printf(player, "%s: #%ld/%s", nextp->name, nextp->thing,
                         ((Attribute *)attribute_by_number(nextp->atr))->name);
           didit = 1;
         }

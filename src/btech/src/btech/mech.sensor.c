@@ -794,8 +794,8 @@ void possibly_see_mech(MECH *mech) {
       if (!(seer = getMech(j)))
         continue;
       if (seer->mapindex != map->mynum) {
-        SendError(tprintf("Mech #%d was on map #%d but with "
-                          "incorrect mapindex (%d)",
+        SendError(tprintf("Mech #%ld was on map #%ld but with "
+                          "incorrect mapindex (%ld)",
                           seer->mynum, map->mynum, seer->mapindex));
         map->mechsOnMap[i] = -1;
         continue;

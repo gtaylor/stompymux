@@ -303,7 +303,7 @@ static void tcache_finish(DbRef player) {
   while (tcache_head != nullptr) {
     xp = tcache_head;
     tcache_head = xp->next;
-    notify_printf(obj_owner(player), "%s(#%d)} '%s' -> '%s'", Name(player),
+    notify_printf(obj_owner(player), "%s(#%ld)} '%s' -> '%s'", Name(player),
                   player, xp->orig, xp->result);
     free_lbuf(xp->orig);
     free_lbuf(xp->result);

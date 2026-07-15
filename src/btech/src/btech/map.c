@@ -263,7 +263,7 @@ int map_checkmapfile(MAP *map, char *mapname) {
 
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(tprintf("Map #%d: Invalid height and or/width on %s",
+    SendMapError(tprintf("Map #%ld: Invalid height and or/width on %s",
                          map->mynum, mapname));
     my_close_file(fp, &filemode);
     return -2; // Bad Height/Width
@@ -277,7 +277,7 @@ int map_checkmapfile(MAP *map, char *mapname) {
   }
 
   if (i != height) {
-    SendMapError(tprintf("Map #%d: Mapfile possibly corrupt and/or "
+    SendMapError(tprintf("Map #%ld: Mapfile possibly corrupt and/or "
                          "height/width flipped. Height != what was read in %s",
                          map->mynum, mapname));
     my_close_file(fp, &filemode);
@@ -316,7 +316,7 @@ int map_load(MAP *map, char *mapname) {
   }
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(tprintf("Map #%d: Invalid height and/or width", map->mynum));
+    SendMapError(tprintf("Map #%ld: Invalid height and/or width", map->mynum));
     width = DEFAULT_MAP_WIDTH;
     height = DEFAULT_MAP_HEIGHT;
   }
@@ -347,7 +347,7 @@ int map_load(MAP *map, char *mapname) {
         break;
       }
       if (!strcmp(GetTerrainName_base(terr), "Unknown")) {
-        SendMapError(tprintf("Map #%d: Invalid terrain at %d,%d: '%c'",
+        SendMapError(tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
                              map->mynum, j, i, terr));
         terr = GRASSLAND;
       }
@@ -461,7 +461,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         else if (!(map->flags & MAPFLAG_FIRES)) {
           SetTerrain(map, j, i, ' ');
           SendEvent(
-              tprintf("[lost?] fire event noticed on map #%d (%s) at %d,%d",
+              tprintf("[lost?] fire event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
         }
@@ -473,7 +473,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         if (terrain == SMOKE) {
           SetTerrain(map, j, i, ' ');
           SendEvent(
-              tprintf("[lost?] smoke event noticed on map #%d (%s) at %d,%d",
+              tprintf("[lost?] smoke event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
         }
@@ -678,7 +678,7 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
           strcpy(valid, "Valid Data");
         else
           strcpy(valid, "Invalid Object Data!  Remove this Mech!");
-        notify_printf(player, "Mech DB Number: %d : [%s]\t%s",
+        notify_printf(player, "Mech DB Number: %ld : [%s]\t%s",
                       map->mechsOnMap[i], ID, valid);
         count++;
       }

@@ -46,7 +46,7 @@ void replicateC3iNetwork(MECH *mechSrc, MECH *mechDest) {
   int i;
   DbRef otherRef;
 
-  debugC3(tprintf("REPLICATE: %d's C3i network to %d", mechSrc->mynum,
+  debugC3(tprintf("REPLICATE: %ld's C3i network to %ld", mechSrc->mynum,
                   mechDest->mynum));
 
   clearC3iNetwork(mechDest, 0);
@@ -73,7 +73,7 @@ void addMechToC3iNetwork(MECH *mech, MECH *mechToAdd) {
   int i;
   int wPos = -1;
 
-  debugC3(tprintf("ADD: %d to the C3i network of %d", mechToAdd->mynum,
+  debugC3(tprintf("ADD: %ld to the C3i network of %ld", mechToAdd->mynum,
                   mech->mynum));
 
   /* Find a position to add the new mech into my network */
@@ -124,8 +124,8 @@ void addMechToC3iNetwork(MECH *mech, MECH *mechToAdd) {
 void clearMechFromC3iNetwork(DbRef refToClear, MECH *mech) {
   int i;
 
-  debugC3(
-      tprintf("CLEAR: %d from the C3i network of %d", refToClear, mech->mynum));
+  debugC3(tprintf("CLEAR: %ld from the C3i network of %ld", refToClear,
+                  mech->mynum));
 
   if (!MechC3iNetworkSize(mech))
     return;
@@ -142,7 +142,7 @@ void clearC3iNetwork(MECH *mech, int tClearFromOthers) {
   MECH *otherMech;
   int i;
 
-  debugC3(tprintf("CLEAR: %d's C3i network", mech->mynum));
+  debugC3(tprintf("CLEAR: %ld's C3i network", mech->mynum));
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
     otherMech = getOtherMechInNetwork(mech, i, 0, 0, 0, 0);
@@ -169,7 +169,7 @@ void validateC3iNetwork(MECH *mech) {
   int i;
   int networkSize = 0;
 
-  debugC3(tprintf("VALIDATE: %d's C3i network", mech->mynum));
+  debugC3(tprintf("VALIDATE: %ld's C3i network", mech->mynum));
 
   if (!HasC3i(mech) || Destroyed(mech) || C3iDestroyed(mech)) {
     clearC3iNetwork(mech, 1);
@@ -192,7 +192,7 @@ void validateC3iNetwork(MECH *mech) {
     if (!is_good_obj(otherMech->mynum))
       continue;
 
-    debugC3(tprintf("VALIDATE INFO: %d is now in %d's C3i network",
+    debugC3(tprintf("VALIDATE INFO: %ld is now in %ld's C3i network",
                     otherMech->mynum, mech->mynum));
 
     myTempNetwork[networkSize++] = otherMech->mynum;
@@ -205,8 +205,8 @@ void validateC3iNetwork(MECH *mech) {
 
   MechC3iNetworkSize(mech) = networkSize;
 
-  debugC3(tprintf("VALIDATE INFO: %d's C3i network is %d elements", mech->mynum,
-                  MechC3iNetworkSize(mech)));
+  debugC3(tprintf("VALIDATE INFO: %ld's C3i network is %d elements",
+                  mech->mynum, MechC3iNetworkSize(mech)));
 }
 
 void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {

@@ -156,12 +156,12 @@ static void mech_enterbay_event(MuxEvent *e) {
   }
   if (MechCarrying(mech) > 0)
     tmpm = getMech(MechCarrying(mech));
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", ref));
+  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   MechLOSBroadcast(mech, "has entered the bay.");
   loud_teleport(mech->mynum, ref);
   if (tmpm) {
-    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%d", ref));
+    mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", ref));
     mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
     loud_teleport(tmpm->mynum, ref);
   }
@@ -304,11 +304,11 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 1);
   MechLOSBroadcast(mech, "has left the bay.");
   /* We escape confines of the bay to open air/land! */
-  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", ds->mapindex));
+  mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ds->mapindex));
   if (MechCarrying(mech) > 0)
     car = getMech(MechCarrying(mech));
   if (car)
-    mech_Rsetmapindex(GOD, (void *)car, tprintf("%d", ds->mapindex));
+    mech_Rsetmapindex(GOD, (void *)car, tprintf("%ld", ds->mapindex));
   DOCHECKMA0(mech->mapindex == map->mynum,
              "Fatal error: Unable to find the map 'ship is on.");
   loud_teleport(mech->mynum, mech->mapindex);

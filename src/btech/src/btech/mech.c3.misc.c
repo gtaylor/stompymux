@@ -489,7 +489,7 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
       if (otherMech == mechTarget)
         continue;
 
-      debugC3(tprintf("C3RANGE-NETWORK (mech): Finding range from %d to %d.",
+      debugC3(tprintf("C3RANGE-NETWORK (mech): Finding range from %ld to %ld.",
                       mech->mynum, mechTarget->mynum));
 
       c3Range = FaMechRange(otherMech, mechTarget);
@@ -500,7 +500,7 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
       mapY = MechTargY(mech);
       map = getMap(mech->mapindex);
 
-      debugC3(tprintf("C3RANGE-NETWORK (hex): Finding range from %d to %d %d.",
+      debugC3(tprintf("C3RANGE-NETWORK (hex): Finding range from %ld to %d %d.",
                       mech->mynum, mapX, mapY));
 
       MechTargZ(mech) = Elevation(map, mapX, mapY);

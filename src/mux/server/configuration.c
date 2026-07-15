@@ -309,7 +309,7 @@ void configuration_log_syntax(DbRef player, char *cmd, const char *template,
   if (mudstate.initializing) {
     log_error(LOG_STARTUP, "CNF", "SYNTX", "%s: %s %s", cmd, template, arg);
   } else {
-    notify_printf(player, template, arg);
+    notify_printf(player, "%s%s", template, arg);
   }
 }
 
@@ -1105,13 +1105,12 @@ int configuration_set(char *cp, char *ap, DbRef player) {
       i = ((int (*)(void *, char *, long, DbRef, char *))tp->interpreter)(
           tp->loc, ap, tp->extra, player, cp);
       if (!mudstate.initializing) {
-        log_error(
-            LOG_CONFIGMODS, "CFG", "UPDAT",
-            "%s entered config directive: %s with args '%s'. Status: %s%s%s%s",
-            Name(player), cp, buff,
-            (i == 0 ? "Success"
-                    : (i == 1 ? "Partial success"
-                              : (i == -1 ? "Failure" : "Strange"))));
+        log_error(LOG_CONFIGMODS, "CFG", "UPDAT",
+                  "%s entered config directive: %s with args '%s'. Status: %s",
+                  Name(player), cp, buff,
+                  (i == 0 ? "Success"
+                          : (i == 1 ? "Partial success"
+                                    : (i == -1 ? "Failure" : "Strange"))));
       }
       free_lbuf(buff);
       return i;

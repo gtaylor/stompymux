@@ -273,7 +273,7 @@ static int engine_weight(MECH *mech) {
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
   if (MechMove(mech) != MOVE_HOVER) {
-    SendError(tprintf("Error in #%d (%s) : No engine found!", mech->mynum,
+    SendError(tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
                       Name(mech->mynum)));
   }
 
@@ -670,10 +670,10 @@ void vehicle_int_check(MECH *mech, int noisy) {
   for (i = 0; i < NUM_SECTIONS; i++)
     if (GetSectOInt(mech, i) && GetSectOInt(mech, i) != j) {
       if (noisy)
-        SendError(tprintf("Template %s / mech #%d: Invalid internals in loc %d "
-                          "(should be %d, are %d)",
-                          MechType_Ref(mech), mech->mynum, i, j,
-                          GetSectOInt(mech, i)));
+        SendError(tprintf(
+            "Template %s / mech #%ld: Invalid internals in loc %d "
+            "(should be %d, are %d)",
+            MechType_Ref(mech), mech->mynum, i, j, GetSectOInt(mech, i)));
       SetSectOInt(mech, i, j);
       SetSectInt(mech, i, j);
     }
@@ -693,7 +693,7 @@ void mech_int_check(MECH *mech, int noisy) {
       break;
   if (int_data[i][0] < 0) {
     if (noisy)
-      SendError(tprintf("VERY odd tonnage for #%d: %d.", mech->mynum,
+      SendError(tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
                         MechTons(mech)));
     return;
   }
@@ -701,10 +701,10 @@ void mech_int_check(MECH *mech, int noisy) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (GetSectOInt(mech, i) != (j = real_int(mech, i, k))) {
       if (noisy)
-        SendError(tprintf("Template %s / mech #%d: Invalid internals in loc %d "
-                          "(should be %d, are %d)",
-                          MechType_Ref(mech), mech->mynum, i, j,
-                          GetSectOInt(mech, i)));
+        SendError(tprintf(
+            "Template %s / mech #%ld: Invalid internals in loc %d "
+            "(should be %d, are %d)",
+            MechType_Ref(mech), mech->mynum, i, j, GetSectOInt(mech, i)));
       SetSectOInt(mech, i, j);
       SetSectInt(mech, i, j);
     }

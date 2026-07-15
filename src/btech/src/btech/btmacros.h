@@ -1099,14 +1099,14 @@
 #define StartStaggerCheck(mech)                                                \
   do {                                                                         \
     MECHEVENT(mech, EVENT_CHECK_STAGGER, check_stagger_event, 5, 0);           \
-    SendDebug(tprintf("Starting stagger check for %d.", mech->mynum));         \
+    SendDebug(tprintf("Starting stagger check for %ld.", mech->mynum));        \
   } while (0)
 #define StopStaggerCheck(mech)                                                 \
   do {                                                                         \
     mux_event_remove_type_data(EVENT_CHECK_STAGGER, (void *)mech);             \
     (mech)->rd.staggerDamage = 0;                                              \
     (mech)->rd.lastStaggerNotify = 0;                                          \
-    SendDebug(tprintf("Stopping stagger check for %d.", mech->mynum));         \
+    SendDebug(tprintf("Stopping stagger check for %ld.", mech->mynum));        \
   } while (0)
 #define StaggerDamage(mech) ((mech)->rd.staggerDamage)
 #define LastStaggerNotify(mech) ((mech)->rd.lastStaggerNotify)

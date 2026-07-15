@@ -772,7 +772,7 @@ char *pos_part_name(MECH *mech, int index, int loop) {
   int newloop, newindex;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
-    SendError(tprintf("INVALID: For mech #%d, %d/%d was requested.",
+    SendError(tprintf("INVALID: For mech #%ld, %d/%d was requested.",
                       mech->mynum, index, loop));
     return "--?LocationBug?--";
   }

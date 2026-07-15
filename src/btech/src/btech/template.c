@@ -2105,7 +2105,7 @@ void update_specials(MECH *mech) {
   if ((MechSpecials(mech) & (XXL_TECH | XL_TECH | LE_TECH)) &&
       (MechSpecials(mech) & CE_TECH))
     SendError(
-        tprintf("#%d apparently is very weird: Compact engine AND XL/XXL?",
+        tprintf("#%ld apparently is very weird: Compact engine AND XL/XXL?",
                 mech->mynum));
   if (tc_count) {
     MechSpecials2(mech) |= TCOMP_TECH;
@@ -2137,25 +2137,25 @@ void update_specials(MECH *mech) {
   if (MechType(mech) == CLASS_MECH) {
     /* Be 'noisy' about some crits/techs */
     if ((ff_count > 0) && (ff_count < (cl ? 7 : 14)))
-      SendError(tprintf("%s (#%d) is missing FF Crits %d/%d!",
+      SendError(tprintf("%s (#%ld) is missing FF Crits %d/%d!",
                         MechType_Ref(mech), mech->mynum, ff_count,
                         (cl ? 7 : 14)));
 
     if ((es_count > 0) && (es_count < (cl ? 7 : 14)))
-      SendError(tprintf("%s (#%d) is missing ES Crits %d/%d!",
+      SendError(tprintf("%s (#%ld) is missing ES Crits %d/%d!",
                         MechType_Ref(mech), mech->mynum, es_count,
                         (cl ? 7 : 14)));
 
     if ((tsm_count > 0) && (tsm_count < 6))
-      SendError(tprintf("%s (#%d) is missing TSM Crits %d/6!",
+      SendError(tprintf("%s (#%ld) is missing TSM Crits %d/6!",
                         MechType_Ref(mech), mech->mynum, tsm_count));
 
     if ((wcHvyFF > 0) && (wcHvyFF < 21))
-      SendError(tprintf("%s (#%d) is missing HvyFF Crits %d/21!",
+      SendError(tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
                         MechType_Ref(mech), mech->mynum, wcHvyFF));
 
     if ((wcLtFF > 0) && (wcLtFF < 7))
-      SendError(tprintf("%s (#%d) is missing LtFF Crits %d/7!",
+      SendError(tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
                         MechType_Ref(mech), mech->mynum, wcLtFF));
   }
 
@@ -2506,7 +2506,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         if (GetPartData(mech, section, critical) !=
                 FullAmmo(mech, section, critical) &&
             MechType(mech) != CLASS_MW && MechType(mech) != CLASS_BSUIT) {
-          SendError(tprintf("Invalid ammo crit for %s in #%d %s (%d/%d)",
+          SendError(tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
                             MechWeapons[Ammo2I(type)].name, mech->mynum,
                             filename, GetPartData(mech, section, critical),
                             FullAmmo(mech, section, critical)));

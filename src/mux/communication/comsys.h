@@ -56,7 +56,8 @@ extern int max_channels;
 
 int is_in_character_location(DbRef player);
 void init_chantab(void);
-void send_channel(char *chan, const char *format, ...);
+void send_channel(char *chan, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 struct channel *select_channel(char *channel);
 struct comuser *select_user(struct channel *ch, DbRef player);
 void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2);

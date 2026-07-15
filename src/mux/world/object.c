@@ -262,7 +262,7 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
       mudstate.freelist = obj_link(obj);
     } else {
       LOG_SIMPLE(LOG_PROBLEMS, "FRL", "DAMAG",
-                 tprintf("Freelist damaged, bad object #%d.", obj));
+                 tprintf("Freelist damaged, bad object #%ld.", obj));
       obj = NOTHING;
       mudstate.freelist = NOTHING;
     }
@@ -351,11 +351,12 @@ void destroy_obj(DbRef player, DbRef obj) {
   if ((player != NOTHING) && !is_quiet(player)) {
     if (good_owner && obj_owner(player) != owner) {
       if (owner == obj) {
-        notify_printf(player, "Destroyed. %s(#%d)", Name(obj), obj);
+        notify_printf(player, "Destroyed. %s(#%ld)", Name(obj), obj);
       } else {
         tname = alloc_sbuf("destroy_obj");
         StringCopy(tname, Name(owner));
-        notify_printf(player, "Destroyed. %s's %s(#%d)", tname, Name(obj), obj);
+        notify_printf(player, "Destroyed. %s's %s(#%ld)", tname, Name(obj),
+                      obj);
         free_sbuf(tname);
       }
     } else if (!is_quiet(obj)) {
@@ -582,7 +583,7 @@ static void check_dead_refs(void) {
         owner = obj_owner(i);
 
         if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-          notify_printf(owner, "Parent cleared on %s(#%d)", Name(i), i);
+          notify_printf(owner, "Parent cleared on %s(#%ld)", Name(i), i);
         }
       }
     } else if (targ != NOTHING) {
@@ -600,7 +601,7 @@ static void check_dead_refs(void) {
         s_zone(i, NOTHING);
         owner = obj_owner(i);
         if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-          notify_printf(owner, "Zone cleared on %s(#%d)", Name(i), i);
+          notify_printf(owner, "Zone cleared on %s(#%ld)", Name(i), i);
         }
       }
     } else if (targ != NOTHING) {
@@ -625,7 +626,7 @@ static void check_dead_refs(void) {
           s_home(i, new_home(i));
           owner = obj_owner(i);
           if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-            notify_printf(owner, "Home reset on %s(#%d)", Name(i), i);
+            notify_printf(owner, "Home reset on %s(#%ld)", Name(i), i);
           }
         }
       } else if (targ != NOTHING) {
@@ -665,7 +666,7 @@ static void check_dead_refs(void) {
           s_dropto(i, NOTHING);
           owner = obj_owner(i);
           if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-            notify_printf(owner, "Dropto removed from %s(#%d)", Name(i), i);
+            notify_printf(owner, "Dropto removed from %s(#%ld)", Name(i), i);
           }
         }
       } else if ((targ != NOTHING) && (targ != HOME)) {
@@ -1276,7 +1277,7 @@ static void check_floating(void) {
     if (is_room(i) && !is_floating(i) && !is_going(i) && !is_marked(i)) {
       owner = obj_owner(i);
       if (is_good_owner(owner)) {
-        notify_printf(owner, "You own a floating room: %s(#%d)", Name(i), i);
+        notify_printf(owner, "You own a floating room: %s(#%ld)", Name(i), i);
       }
     }
   }

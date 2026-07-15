@@ -21,7 +21,8 @@ struct timeval update_quotas(struct timeval last, struct timeval current);
 void raw_notify_raw(DbRef player, const char *message, char *append);
 void raw_notify(DbRef player, const char *message);
 void raw_notify_newline(DbRef player);
-void raw_broadcast(int inflags, char *template, ...);
+void raw_broadcast(int inflags, char *template, ...)
+    __attribute__((format(printf, 2, 3)));
 void descriptor_queue_write(Descriptor *descriptor, const char *buffer,
                             int size);
 void descriptor_queue_string(Descriptor *descriptor, const char *string);

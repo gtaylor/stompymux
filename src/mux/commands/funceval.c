@@ -280,7 +280,7 @@ void fun_zone(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     safe_str("#-1", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "#%d", obj_zone(it));
+  safe_tprintf_str(buff, bufc, "#%ld", obj_zone(it));
 }
 
 #ifdef SIDE_EFFECT_FUNCTIONS
@@ -364,7 +364,7 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
     }
     break;
   }
-  safe_tprintf_str(buff, bufc, "#%d", thing);
+  safe_tprintf_str(buff, bufc, "#%ld", thing);
 }
 
 /*---------------------------------------------------------------------------
@@ -2678,7 +2678,7 @@ static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
   tbuf1 = alloc_lbuf("grep_util");
   bufc = buf = alloc_lbuf("grep_util.parse_attrib");
   bp = tbuf1;
-  safe_tprintf_str(buf, &bufc, "#%d/%s", thing, pattern);
+  safe_tprintf_str(buf, &bufc, "#%ld/%s", thing, pattern);
   olist_push();
   if (parse_attrib_wild(player, buf, &thing, 0, 0, 1)) {
     for (ca = olist_first(); ca != NOTHING; ca = olist_next()) {
@@ -3181,7 +3181,7 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
   got_match = (regexec(&re, fargs[0], NSUBEXP, pmatch, 0) == 0);
   if (got_match) {
     if (re.re_nsub > 0)
-      safe_tprintf_str(buff, bufc, "%d", re.re_nsub);
+      safe_tprintf_str(buff, bufc, "%zu", re.re_nsub);
     else
       safe_tprintf_str(buff, bufc, "1");
   } else

@@ -506,7 +506,7 @@ void list_mapobjs(DbRef player, MAP *map) {
       if (i == TYPE_BITS)
         notify(player, "--- MAP/HANGAR INFORMATION OBJECT ---");
       else
-        notify_printf(player, "%-3d %-3d %-5s %-5d %-4d %-6d %d", tmp->x,
+        notify_printf(player, "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x,
                       tmp->y, map_types[i], (int)tmp->obj, tmp->datac,
                       tmp->datas, tmp->datai);
     }
@@ -945,8 +945,8 @@ static void damage_cf(MECH *mech, mapobj *o, int from, int to, int damage) {
         o->obj, NOTHING, o->obj,
         tprintf("%s is hit for %d more points of damage, destroying it!",
                 MyToUpper(structure_name(o)), damage));
-    MechLOSBroadcast(
-        mech, tprintf("hits %s, destroying it!", structure_name(o), damage));
+    MechLOSBroadcast(mech,
+                     tprintf("hits %s, destroying it!", structure_name(o)));
     start_regen = 2;
   } else {
     mech_printf(mech, MECHALL, "You hit %s for %d points of damage.",

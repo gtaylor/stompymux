@@ -568,7 +568,7 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
             safe_str(smbuf, buff, bufc);
             len += strlen(smbuf);
           } else {
-            safe_tprintf_str(buff, bufc, "#%d", i);
+            safe_tprintf_str(buff, bufc, "#%ld", i);
             len = strlen(buff);
           }
         }
@@ -820,7 +820,15 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
       strcpy(lab, xcode_data[i].name);
       lab[se_len / 3] = 0;
       snprintf(mask, SBUF_SIZE, "%%-%ds%%%ds", se_len / 3, se_len * 2 / 3);
+      /* mask is built above from a fixed pattern, not external input. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
       sim(tprintf(mask, lab, RetrieveValue(data, i)), flag);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
   }
   addline();
@@ -1022,7 +1030,7 @@ void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   sectstr = sectstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, sectstr);
+  safe_tprintf_str(buff, bufc, "%s", sectstr);
 }
 
 void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1039,7 +1047,7 @@ void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   damstr = damages_func(mech);
-  safe_tprintf_str(buff, bufc, damstr ? damstr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", damstr ? damstr : "#-1 ERROR");
 }
 
 void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1057,7 +1065,7 @@ void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   critstr = critstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, critstr ? critstr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", critstr ? critstr : "#-1 ERROR");
 }
 
 void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1075,7 +1083,7 @@ void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = armorstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1116,7 +1124,7 @@ void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = weaponstatus_func(mech, nfargs == 2 ? fargs[1] : NULL);
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btcritstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1131,7 +1139,7 @@ void fun_btcritstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   critstr = critstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, critstr ? critstr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", critstr ? critstr : "#-1 ERROR");
 }
 
 void fun_btarmorstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1146,7 +1154,7 @@ void fun_btarmorstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   infostr = armorstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btweaponstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1164,7 +1172,7 @@ void fun_btweaponstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   infostr = weaponstatus_func(mech, nfargs == 2 ? fargs[1] : NULL);
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1186,7 +1194,7 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = setarmorstatus_func(mech, fargs[1], fargs[2],
                                 fargs[3]); /* fargs[1] unguaranteed ! */
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1 ERROR");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1 ERROR");
 }
 
 void fun_btthreshold(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1468,7 +1476,7 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
                !find_matching_long_part(fargs[1], &index, &id, &brand),
            "0");
   econ_change_items(loc, id, brand, count);
-  SendEcon(tprintf("#%d added %d %s to #%d", player, count,
+  SendEcon(tprintf("#%ld added %d %s to #%d", player, count,
                    get_parts_vlong_name(id, brand), loc));
   safe_tprintf_str(buff, bufc, "1");
 } /* end btaddstores() */
@@ -1503,7 +1511,7 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
         continue;
       }
       safe_tprintf_str(
-          buff, bufc,
+          buff, bufc, "%s",
           tprintf("%d:%s ", j,
                   &MechWeapons[Weapon2I(GetPartType(mech, section, critical))]
                        .name[3]));
@@ -1620,7 +1628,7 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
   sw = GetPartWeight(p);
   if (sw <= 0)
     sw = (1024 * 100);
-  safe_tprintf_str(buff, bufc, tprintf("%.3f", (float)sw / 1024));
+  safe_tprintf_str(buff, bufc, "%s", tprintf("%.3f", (float)sw / 1024));
 }
 
 void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1894,7 +1902,7 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
 
   speed = MechCargoMaxSpeed(mech, MechMaxSpeed(mech));
 
-  safe_tprintf_str(buff, bufc, tprintf("%f", speed));
+  safe_tprintf_str(buff, bufc, "%s", tprintf("%f", speed));
 }
 
 void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1912,7 +1920,7 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
 
   bv = CalculateBV(mech, 100, 100);
   MechBV(mech) = bv;
-  safe_tprintf_str(buff, bufc, tprintf("%d", bv));
+  safe_tprintf_str(buff, bufc, "%s", tprintf("%d", bv));
 #else
   safe_tprintf_str(buff, bufc, "#-1 BATTLE VALUE SUPPORT DISABLED");
 #endif
@@ -1989,7 +1997,7 @@ void fun_bttechlist(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = techlist_func(mech);
-  safe_tprintf_str(buff, bufc, infostr ? infostr : " ");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : " ");
 }
 
 void fun_bttechlist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -2001,7 +2009,7 @@ void fun_bttechlist_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
 
   infostr = techlist_func(mech);
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
 }
 
 /* Function to return the 'payload' of a unit
@@ -2017,7 +2025,7 @@ void fun_btpayload_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
 
   infostr = payloadlist_func(mech);
-  safe_tprintf_str(buff, bufc, infostr ? infostr : "#-1");
+  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
 }
 
 void fun_btshowstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -2344,7 +2352,7 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
       mech = getMech(map->mechsOnMap[loop]);
 
       if (mech)
-        safe_tprintf_str(buff, bufc, "#%d ", map->mechsOnMap[loop]);
+        safe_tprintf_str(buff, bufc, "#%ld ", map->mechsOnMap[loop]);
     }
     break;
   case 4:
@@ -2365,7 +2373,7 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
       mech = getMech(map->mechsOnMap[loop]);
       if (mech &&
           FindXYRange(realX, realY, MechFX(mech), MechFY(mech)) <= range)
-        safe_tprintf_str(buff, bufc, "#%d ", map->mechsOnMap[loop]);
+        safe_tprintf_str(buff, bufc, "#%ld ", map->mechsOnMap[loop]);
     }
     break;
   case 5:
@@ -2388,7 +2396,7 @@ void fun_btmapunits(char *buff, char **bufc, DbRef player, DbRef cause,
 
       if (mech && FindRange(realX, realY, z * ZSCALE, MechFX(mech),
                             MechFY(mech), MechFZ(mech)) <= range)
-        safe_tprintf_str(buff, bufc, "#%d ", map->mechsOnMap[loop]);
+        safe_tprintf_str(buff, bufc, "#%ld ", map->mechsOnMap[loop]);
     }
     break;
   default:
@@ -2610,7 +2618,7 @@ void fun_btlistblz(char *buff, char **bufc, DbRef player, DbRef cause,
         strcount += snprintf(buf + strcount, MBUF_SIZE - strcount, "|%d %d %ld",
                              tmp->x, tmp->y, tmp->datai);
     }
-  safe_tprintf_str(buff, bufc, buf);
+  safe_tprintf_str(buff, bufc, "%s", buf);
 }
 
 void fun_bthexinblz(char *buff, char **bufc, DbRef player, DbRef cause,

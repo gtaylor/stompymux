@@ -93,12 +93,12 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
                     x, y);
         break;
       case MINE_LAND:
-        MechLOSBroadcast(mech, tprintf("triggers a mine!", x, y));
+        MechLOSBroadcast(mech, tprintf("triggers a mine!"));
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       case MINE_DROP:
       case MINE_FALL:
-        MechLOSBroadcast(mech, tprintf("triggers a mine!", x, y));
+        MechLOSBroadcast(mech, tprintf("triggers a mine!"));
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       }
@@ -131,7 +131,7 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
     mapobj_del(map, o->x, o->y, TYPE_MINE);
     break;
   case MINE_TRIGGER:
-    SendTrigger(tprintf("#%d %s activated trigger at %d,%d.", mech->mynum,
+    SendTrigger(tprintf("#%ld %s activated trigger at %d,%d.", mech->mynum,
                         GetMechID(mech), o->x, o->y));
 
     // Trigger the unit's AMECHDEST attribute.

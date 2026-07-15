@@ -152,10 +152,6 @@ void log_text(char *text) {
   fprintf(stderr, "%s", strip_ansi_r(new, text, strlen(text)));
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 void log_error(int key, char *primary, char *secondary, char *format, ...) {
   char buffer[LBUF_SIZE];
   char stripped_buffer[LBUF_SIZE];
@@ -183,9 +179,6 @@ void log_error(int key, char *primary, char *secondary, char *format, ...) {
   va_start(ap, format);
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
   strip_ansi_r(stripped_buffer, buffer, LBUF_SIZE);
   fprintf(stderr, "%s\n", stripped_buffer);

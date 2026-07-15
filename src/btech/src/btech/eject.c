@@ -119,7 +119,7 @@ static void char_eject(DbRef player, MECH *mech) {
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
     SendError(
-        tprintf("Unable to create special obj for #%d's ejection.", player));
+        tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
                    "(can't create RS object)");
@@ -128,7 +128,7 @@ static void char_eject(DbRef player, MECH *mech) {
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     SendError(
-        tprintf("Unable to load mechwarrior template for #%d's ejection. (%s)",
+        tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
@@ -137,7 +137,7 @@ static void char_eject(DbRef player, MECH *mech) {
   }
   silly_atr_set(suit, A_MECHNAME, "MechWarrior");
   MechTeam(m) = MechTeam(mech);
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%d", mech->mapindex));
+  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech->mapindex));
   mech_Rsetxy(GOD, (void *)m, tprintf("%d %d", MechX(mech), MechY(mech)));
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", MechTeam(mech)));
   hush_teleport(suit, mech->mapindex);
@@ -145,7 +145,7 @@ static void char_eject(DbRef player, MECH *mech) {
   MechLOSBroadcast(m, tprintf("ejected from %s!", GetMechID(mech)));
   s_in_character(suit);
   initialize_pc(player, m);
-  silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%d", player));
+  silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%ld", player));
   MechPilot(m) = player;
   MechTeam(m) = MechTeam(mech);
   /* MUDCONF THIS LATER (and to not copy digital)
@@ -213,7 +213,7 @@ static void char_disembark(DbRef player, MECH *mech) {
   handle_xcode(GOD, suit, 0, 1);
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
-    SendError(tprintf("Unable to create special obj for #%d's disembarkation.",
+    SendError(tprintf("Unable to create special obj for #%ld's disembarkation.",
                       player));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
@@ -223,7 +223,7 @@ static void char_disembark(DbRef player, MECH *mech) {
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     SendError(tprintf(
-        "Unable to load mechwarrior template for #%d's disembarkation. (%s)",
+        "Unable to load mechwarrior template for #%ld's disembarkation. (%s)",
         player, (!d || !*d) ? "Default template" : d));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
@@ -232,7 +232,7 @@ static void char_disembark(DbRef player, MECH *mech) {
   }
   silly_atr_set(suit, A_MECHNAME, "MechWarrior");
   MechTeam(m) = MechTeam(mech);
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%d", mech->mapindex));
+  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech->mapindex));
   mech_Rsetxy(GOD, (void *)m, tprintf("%d %d", MechX(mech), MechY(mech)));
   MechZ(m) = MechZ(mech);
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", MechTeam(mech)));
@@ -241,7 +241,7 @@ static void char_disembark(DbRef player, MECH *mech) {
   s_in_character(suit);
   initialize_pc(player, m);
   MechPilot(m) = player;
-  silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%d", player));
+  silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%ld", player));
   MechTeam(m) = MechTeam(mech);
   /* MUDCONF THIS LATER AND FIX (to not copy digital)
   #ifdef COPY_CHANS_ON_EJECT
@@ -663,7 +663,7 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
     SendError(
-        tprintf("Unable to create special obj for #%d's ejection.", player));
+        tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
                    "(can't create RS object)");
@@ -672,7 +672,7 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     SendError(
-        tprintf("Unable to load mechwarrior template for #%d's ejection. (%s)",
+        tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_object(suit);
     notify(player, "Sorry, something serious went wrong, contact a Wizard "
@@ -681,7 +681,7 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   }
   silly_atr_set(suit, A_MECHNAME, "MechWarrior");
   MechTeam(m) = MechTeam(mech);
-  mech_Rsetmapindex(GOD, (void *)m, tprintf("%d", mech->mapindex));
+  mech_Rsetmapindex(GOD, (void *)m, tprintf("%ld", mech->mapindex));
   mech_Rsetxy(GOD, (void *)m, tprintf("%d %d", MechX(mech), MechY(mech)));
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", MechTeam(mech)));
 

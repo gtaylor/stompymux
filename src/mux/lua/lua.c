@@ -63,10 +63,9 @@ struct lua_runtime_t {
 static LUA_RUNTIME *lua_runtime = nullptr;
 static time_t lua_schedule_high_water = -1;
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
+static void lua_set_error(char *error, size_t error_size, const char *format,
+                          ...) __attribute__((format(printf, 3, 4)));
+
 static void lua_set_error(char *error, size_t error_size, const char *format,
                           ...) {
   va_list arguments;
@@ -77,9 +76,6 @@ static void lua_set_error(char *error, size_t error_size, const char *format,
   vsnprintf(error, error_size, format, arguments);
   va_end(arguments);
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 static void lua_instruction_hook(lua_State *state, lua_Debug *debug) {
   (void)debug;
@@ -103,14 +99,14 @@ static int lua_pcall_limited(LUA_RUNTIME *runtime, int arguments, int results) {
 
 static void lua_log_error(LUA_RUNTIME *runtime, DbRef object, const char *kind,
                           const char *error) {
-  log_error(LOG_PROBLEMS, "LUA", (char *)kind, "object #%d module %s: %s",
+  log_error(LOG_PROBLEMS, "LUA", (char *)kind, "object #%ld module %s: %s",
             object, runtime->module[0] ? runtime->module : "<unknown>",
             error ? error : "unknown Lua error");
 }
 
 static void lua_log_load_error(DbRef object, const char *path,
                                const char *error) {
-  log_error(LOG_PROBLEMS, "LUA", "LOAD", "object #%d module %s: %s", object,
+  log_error(LOG_PROBLEMS, "LUA", "LOAD", "object #%ld module %s: %s", object,
             path ? path : "<unknown>", error ? error : "unknown Lua error");
 }
 
@@ -1281,7 +1277,7 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
       if (status) {
         if (job->root == LUA_ROOT_OBJECT_LOGIC)
           log_error(LOG_PROBLEMS, "LUA", "SCHEDULE",
-                    "object #%d module %s schedule %s: %s", job->object,
+                    "object #%ld module %s schedule %s: %s", job->object,
                     job->path, job->name, lua_tostring(state, -1));
         else
           log_error(LOG_PROBLEMS, "LUA", "SCHEDULE",
@@ -1628,7 +1624,7 @@ static void lua_schedule_show_module(DbRef player, LUA_RUNTIME *runtime,
       if (is_good_obj(object) &&
           lua_effective_path(object, effective, sizeof(effective), &source) &&
           !strcmp(effective, path))
-        notify_printf(player, "  %s (#%d, attached on #%d)", Name(object),
+        notify_printf(player, "  %s (#%ld, attached on #%ld)", Name(object),
                       object, source);
     }
   }

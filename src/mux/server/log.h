@@ -11,7 +11,8 @@ int start_log(const char *primary, const char *secondary);
 void end_log(void);
 void log_perror(const char *primary, const char *secondary, const char *name,
                 const char *error);
-void log_error(int key, char *primary, char *secondary, char *format, ...);
+void log_error(int key, char *primary, char *secondary, char *format, ...)
+    __attribute__((format(printf, 4, 5)));
 void log_text(char *text);
 void log_number(int number);
 void log_name(DbRef thing);

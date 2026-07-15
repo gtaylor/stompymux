@@ -108,6 +108,16 @@ static void mech_startup_event(MuxEvent *e) {
   MAP *mech_map;
   int i;
 
+  /*
+   * Each *_bootmsgs[] array is a fixed set of string-literal boot messages
+   * indexed by timer; none of them contain real printf conversions (the
+   * %%c sequences are escaped MUX color markup), just non-literal to clang.
+   */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#pragma clang diagnostic ignored "-Wformat-security"
+#endif
   if (is_aero(mech)) {
     mech_printf(mech, MECHALL, aero_bootmsgs[timer]);
   } else if (MechType(mech) == CLASS_BSUIT) {
@@ -138,6 +148,9 @@ static void mech_startup_event(MuxEvent *e) {
       mech_printf(mech, MECHALL, bootmsgs[timer]);
       break;
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   timer++;
 
   /* Check if the unit is in water and if it should die */

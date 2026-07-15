@@ -50,10 +50,6 @@ void init_chantab(void) {
   hash_table_initialize(&mudstate.channel_htab, 30 * HASH_FACTOR);
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 void send_channel(char *chan, const char *format, ...) {
   struct channel *ch;
   char buf[LBUF_SIZE];
@@ -67,9 +63,6 @@ void send_channel(char *chan, const char *format, ...) {
   va_start(ap, format);
   vsnprintf(data, LBUF_SIZE, format, ap);
   va_end(ap);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
   safe_chr('[', buf, &bp);
   safe_str(chan, buf, &bp);
@@ -496,10 +489,10 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   do_setnewtitle(player, ch, title);
 
   if (title[0])
-    notify_printf(player, "Channel %s added with alias %s and title %s.", ch,
-                  arg1, title);
+    notify_printf(player, "Channel %s added with alias %s and title %s.",
+                  ch->name, arg1, title);
   else
-    notify_printf(player, "Channel %s added with alias %s.", ch, arg1);
+    notify_printf(player, "Channel %s added with alias %s.", ch->name, arg1);
 }
 
 static void do_setnewtitle(DbRef player, struct channel *ch, char *title) {

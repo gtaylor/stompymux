@@ -232,7 +232,7 @@ int eradicate_broken_fd(int fd) {
         (!fd && fstat(d->descriptor, &statbuf) < 0)) {
       /* An invalid player connection... eject, eject, eject. */
       log_error(LOG_PROBLEMS, "ERR", "EBADF",
-                "Broken descriptor %d for player #%d", d->descriptor,
+                "Broken descriptor %d for player #%ld", d->descriptor,
                 d->player);
       event_del(d->sock_ev);
       close(d->descriptor);
@@ -372,8 +372,8 @@ void descriptor_shutdown(Descriptor *d, int reason) {
     fcache_dump(d, FC_QUIT);
 
     log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
-              "[%d/%s] Logout by %s(#%d), <Reason: %s>", d->descriptor, d->addr,
-              Name(d->player), d->player, disc_reasons[reason]);
+              "[%d/%s] Logout by %s(#%ld), <Reason: %s>", d->descriptor,
+              d->addr, Name(d->player), d->player, disc_reasons[reason]);
 
     /*
      * If requested, write an accounting record of the form: * *
@@ -381,7 +381,7 @@ void descriptor_shutdown(Descriptor *d, int reason) {
      * <DiscRsn>  * *  * Name
      */
 
-    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s",
+    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%ld %s %d %ld %ld [%s] <%s> %s",
               d->player,
               decode_flags(GOD, obj_flags(d->player), obj_flags2(d->player),
                            obj_flags3(d->player)),

@@ -267,6 +267,15 @@ void mech_fliparms(DbRef player, void *data, char *buffer) {
 static int temp_nspecisspec, temp_nspec, temp_mode, temp_firemode;
 static char *temp_onmsg, *temp_offmsg, *temp_cant;
 
+/*
+ * temp_onmsg/temp_offmsg are always one of the string-literal arguments
+ * passed in by mech_toggle_mode_sub()'s callers below; the literal-ness is
+ * just lost through the static globals by the time they reach tprintf().
+ */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
 static int mech_toggle_mode_sub_func(MECH *mech, DbRef player, int index,
                                      int high) {
   int section, critical, weaptype;
@@ -375,6 +384,9 @@ static int mech_toggle_mode_sub_func(MECH *mech, DbRef player, int index,
     notify(player, temp_cant);
   return 0;
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
@@ -987,11 +999,11 @@ static void mech_explode_event(MuxEvent *e) {
     return;
 
   if ((--extra) % 256) {
-    mech_printf(mech, MECHALL, "Self-destruction in %d second%s..", extra % 256,
-                extra > 1 ? "s" : "");
+    mech_printf(mech, MECHALL, "Self-destruction in %ld second%s..",
+                extra % 256, extra > 1 ? "s" : "");
     MECHEVENT(mech, EVENT_EXPLODE, mech_explode_event, 1, extra);
   } else {
-    SendDebug(tprintf("#%d explodes.", mech->mynum));
+    SendDebug(tprintf("#%ld explodes.", mech->mynum));
     if (MechType(mech) == CLASS_BSUIT) {
       mech_notify(mech, MECHALL,
                   "Your batttle suit triggers it's self-destruction sequence.. "
@@ -1012,12 +1024,12 @@ static void mech_explode_event(MuxEvent *e) {
       MechZ(mech) += 6;
 
     } else if (extra >= 256) {
-      SendDebug(tprintf("#%d explodes [ammo]", mech->mynum));
+      SendDebug(tprintf("#%ld explodes [ammo]", mech->mynum));
       mech_notify(mech, MECHALL, "All your ammo explodes!");
       while ((damage = FindDestructiveAmmo(mech, &i, &j)))
         ammo_explosion(mech, mech, i, j, damage);
     } else {
-      SendDebug(tprintf("#%d explodes [reactor]", mech->mynum));
+      SendDebug(tprintf("#%ld explodes [reactor]", mech->mynum));
       MechLOSBroadcast(mech, "suddenly explodes!");
       mech_notify(mech, MECHALL,
                   "Suddenly you feel great heat overcoming your senses.. you "
@@ -1061,7 +1073,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
 
     StopExploding(mech);
     mech_notify(mech, MECHALL, "Self-destruction sequence aborted.");
-    SendDebug(tprintf("#%d in #%d stopped the self-destruction sequence.",
+    SendDebug(tprintf("#%ld in #%ld stopped the self-destruction sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "regains control over itself.");
     return;
@@ -1081,7 +1093,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
     i = FindDestructiveAmmo(mech, &ammoloc, &ammocritnum);
     DOCHECK(!i, "There is no 'damaging' ammo on your 'mech!");
     /* Engage the boom-event */
-    SendDebug(tprintf("#%d in #%d initiates the ammo explosion sequence.",
+    SendDebug(tprintf("#%ld in #%ld initiates the ammo explosion sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "starts billowing smoke!");
     time = time / 2;
@@ -1093,7 +1105,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
               "Only mechs can do the 'big boom' effect.");
       DOCHECK(MechSpecials(mech) & ICE_TECH, "You need a fusion reactor.");
     }
-    SendDebug(tprintf("#%d in #%d initiates the reactor explosion sequence.",
+    SendDebug(tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "loses reactions containment!");
     ammo = 0;
@@ -1103,7 +1115,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_EXPLODE, mech_explode_event, 1, time);
   mech_notify(mech, MECHALL,
               "Self-destruction sequence engaged ; please stand by.");
-  mech_printf(mech, MECHALL, "%s in %d seconds.",
+  mech_printf(mech, MECHALL, "%s in %ld seconds.",
               ammo ? "The ammunition will explode" : "The reactor will blow up",
               time);
   MechPilot(mech) = -1; /* Pilot gives up control */

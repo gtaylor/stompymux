@@ -506,7 +506,7 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
 void check_stagger_event(MuxEvent *event) {
   MECH *mech = (MECH *)event->data; /* get the mech */
 
-  SendDebug(tprintf("Triggered stagger check for %d.", mech->mynum));
+  SendDebug(tprintf("Triggered stagger check for %ld.", mech->mynum));
 
   if ((StaggerLevel(mech) < 1) || Fallen(mech) ||
       (MechType(mech) != CLASS_MECH)) {

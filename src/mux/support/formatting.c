@@ -6,10 +6,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 char *tprintf(const char *format, ...) {
   static char buff[LBUF_SIZE];
   va_list ap;
@@ -37,6 +33,3 @@ void safe_tprintf_str(char *str, char **bp, const char *format, ...) {
   safe_str(buff, str, bp);
   **bp = '\0';
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif

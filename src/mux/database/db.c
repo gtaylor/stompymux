@@ -353,7 +353,7 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
       fail = (!is_good_obj(target) ||
               (!is_god(player) && !is_controls(player, target)));
       if (fail) {
-        notify_printf(player, "Cannot forward to #%d: Permission denied.",
+        notify_printf(player, "Cannot forward to #%ld: Permission denied.",
                       target);
         errors++;
       } else {
@@ -666,27 +666,27 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   case FIXDB_OWNER:
     s_owner(thing, res);
     if (!is_quiet(player))
-      notify_printf(player, "Owner set to #%d", res);
+      notify_printf(player, "Owner set to #%ld", res);
     break;
   case FIXDB_LOC:
     s_location(thing, res);
     if (!is_quiet(player))
-      notify_printf(player, "Location set to #%d", res);
+      notify_printf(player, "Location set to #%ld", res);
     break;
   case FIXDB_CON:
     s_contents(thing, res);
     if (!is_quiet(player))
-      notify_printf(player, "Contents set to #%d", res);
+      notify_printf(player, "Contents set to #%ld", res);
     break;
   case FIXDB_EXITS:
     s_exits(thing, res);
     if (!is_quiet(player))
-      notify_printf(player, "Exits set to #%d", res);
+      notify_printf(player, "Exits set to #%ld", res);
     break;
   case FIXDB_NEXT:
     s_next(thing, res);
     if (!is_quiet(player))
-      notify_printf(player, "Next set to #%d", res);
+      notify_printf(player, "Next set to #%ld", res);
     break;
   case FIXDB_NAME:
     if (typeof_obj(thing) == TYPE_PLAYER) {

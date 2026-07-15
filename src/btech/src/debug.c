@@ -85,7 +85,7 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   number[xcode_obj->type]++;
 
   if (cheat_player > 0)
-    notify_printf(cheat_player, "#%5d: %10s %5d", key_val,
+    notify_printf(cheat_player, "#%5ld: %10s %5ld", key_val,
                   SpecialObjects[xcode_obj->type].type,
                   xcode_obj->type == GTYPE_AUTO ? ((AUTO *)xcode_obj)->mymechnum
                                                 : 0);
@@ -150,7 +150,7 @@ void ShutDownMap(DbRef player, DbRef mapnumber) {
         if (mech) {
           notify_printf(
               player,
-              "Shutting down Mech #%d and resetting map index to -1....",
+              "Shutting down Mech #%ld and resetting map index to -1....",
               map->mechsOnMap[j]);
           mech_shutdown(GOD, (void *)mech, "");
           MechLastX(mech) = 0;
@@ -190,7 +190,7 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
   MechWeapons[Weapon2I(id)].vrt = vrt;
   notify_printf(player, "VRT for %s set to %d.", MechWeapons[Weapon2I(id)].name,
                 vrt);
-  log_error(LOG_WIZARD, "WIZ", "CHANGE", "VRT for %s set to %d by #%d",
+  log_error(LOG_WIZARD, "WIZ", "CHANGE", "VRT for %s set to %d by #%ld",
             MechWeapons[Weapon2I(id)].name, vrt, player);
 }
 

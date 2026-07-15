@@ -892,13 +892,13 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
       if ((player != obj_owner(tmp->player)))
         continue;
     if ((tmp->waittime > 0) && (is_good_obj(tmp->sem)))
-      notify_printf(player, "[#%d/%d]%s:%s", tmp->sem,
+      notify_printf(player, "[#%ld/%ld]%s:%s", tmp->sem,
                     tmp->waittime - mudstate.now, bufp, tmp->comm);
     else if (tmp->waittime > 0)
-      notify_printf(player, "[%d]%s:%s", tmp->waittime - mudstate.now, bufp,
+      notify_printf(player, "[%ld]%s:%s", tmp->waittime - mudstate.now, bufp,
                     tmp->comm);
     else if (is_good_obj(tmp->sem))
-      notify_printf(player, "[#%d]%s:%s", tmp->sem, bufp, tmp->comm);
+      notify_printf(player, "[#%ld]%s:%s", tmp->sem, bufp, tmp->comm);
     else
       notify_printf(player, "%s:%s", bufp, tmp->comm);
 

@@ -580,8 +580,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
         continue;
       for (j = 0; j < MFreqs(t); j++) {
         if (t->freq[j] == freq && !(t->freqmodes[j] & FREQ_SCAN))
-          SendFreqs(tprintf("ALERT: Possible abuse by #%d (Team %d)"
-                            " setting freq %d matching #%d (Team %d)!",
+          SendFreqs(tprintf("ALERT: Possible abuse by #%ld (Team %d)"
+                            " setting freq %d matching #%ld (Team %d)!",
                             mech->mynum, MechTeam(mech), freq, t->mynum,
                             MechTeam(t)));
       }
@@ -1710,10 +1710,6 @@ void mech_notify(MECH *mech, int type, char *buffer) {
   }
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
 void mech_printf(MECH *mech, int type, char *format, ...) {
   char buffer[LBUF_SIZE];
   int i;
@@ -1730,9 +1726,6 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
   va_start(ap, format);
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))

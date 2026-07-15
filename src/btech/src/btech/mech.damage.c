@@ -674,7 +674,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     if (mudconf.btech_statengine_obj > 0 && wWeapIndx != -1)
       notify_with_cause(
           mudconf.btech_statengine_obj, GOD,
-          tprintf("STATHIT|#%d|#%d|#%d|%s|%s|#%d|#%d|%d|%s%s|%s|%d|%d",
+          tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
                   attacker->mapindex, MechPilot(attacker), MechPilot(wounded),
                   MechType_Ref(attacker), MechType_Ref(wounded),
                   attacker->mynum, wounded->mynum, bth, isrear ? "Rear " : "",

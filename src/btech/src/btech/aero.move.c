@@ -74,9 +74,9 @@ static void aero_takeoff_event(MuxEvent *e) {
   if (count > 0) {
     if (count > 5) {
       if (!(count % 10))
-        mech_printf(mech, MECHALL, "Launch countdown: %d.", count);
+        mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
     } else
-      mech_printf(mech, MECHALL, "Launch countdown: %d.", count);
+      mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
     if (i >= 0) {
       if (count == (land_data[i].launchtime / 4))
         DSSpam_O(mech, "'s engines start to glow with unbearable intensity..");
@@ -128,8 +128,8 @@ static void aero_takeoff_event(MuxEvent *e) {
   MechStartFY(mech) = 0;
   MechStartFZ(mech) = 0;
   if (IsDS(mech))
-    SendDSInfo(tprintf("DS #%d has lifted off at %d %d "
-                       "on map #%d",
+    SendDSInfo(tprintf("DS #%ld has lifted off at %d %d "
+                       "on map #%ld",
                        mech->mynum, MechX(mech), MechY(mech), map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
@@ -190,7 +190,7 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
                 "Launch sequence initiated.. type 'land' to abort it.");
   DSSpam(mech, "starts warming engines for liftoff!");
   if (IsDS(mech))
-    SendDSInfo(tprintf("DS #%d has started takeoff at %d %d on map #%d",
+    SendDSInfo(tprintf("DS #%ld has started takeoff at %d %d on map #%ld",
                        mech->mynum, MechX(mech), MechY(mech), map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You break your cover to takeoff!");
@@ -306,8 +306,8 @@ void aero_land(DbRef player, void *data, char *buffer) {
     if (TakingOff(mech)) {
       mech_printf(mech, MECHALL, "Launch aborted by %s.", Name(player));
       if (IsDS(mech))
-        SendDSInfo(tprintf("DS #%d aborted takeoff at %d %d "
-                           "on map #%d",
+        SendDSInfo(tprintf("DS #%ld aborted takeoff at %d %d "
+                           "on map #%ld",
                            mech->mynum, MechX(mech), MechY(mech), map->mynum));
       StopTakeOff(mech);
       return;
@@ -344,7 +344,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
     return;
   }
   if (IsDS(mech))
-    SendDSInfo(tprintf("DS #%d has landed at %d %d on map #%d", mech->mynum,
+    SendDSInfo(tprintf("DS #%ld has landed at %d %d on map #%ld", mech->mynum,
                        MechX(mech), MechY(mech), map->mynum));
 
   mech_notify(mech, MECHALL, land_data[i].landmsg);

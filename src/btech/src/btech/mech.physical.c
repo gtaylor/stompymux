@@ -441,7 +441,7 @@ int axe_checkArm(MECH *mech, int arm) {
     return 0;
   } else if (!OkayCritSectS(arm, 3, HAND_OR_FOOT_ACTUATOR)) {
     mech_printf(mech, MECHALL,
-                "Your left hand is destroyed, you can't axe with that arm.",
+                "Your %s hand is destroyed, you can't axe with that arm.",
                 arm_used);
     return 0;
   }
@@ -1331,7 +1331,7 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
               GetMechToMechID(target, mech), phys_form(AttackType, 0));
 
   // We send to MechAttacks channel
-  SendAttacks(tprintf("#%i attacks #%i (%s) (%i/%i)", mech->mynum,
+  SendAttacks(tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
                       target->mynum, phys_form(AttackType, 0), baseToHit,
                       roll));
 

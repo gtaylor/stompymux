@@ -59,7 +59,7 @@ void bomb_list(MECH *mech, int player) {
           vsi(tprintf("#  %-20s %-5s %-5s %s", "Location", "Weight", "Power",
                       "Type"));
         }
-        vsi(tprintf("%-2d %-20s %5d %5d", bc + 1, location,
+        vsi(tprintf("%-2d %-20s %5d %5d %s", bc + 1, location,
                     bombs[k].weight / 10, bombs[k].aff, types[bombs[k].type]));
         bc++;
       }

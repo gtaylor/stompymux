@@ -921,7 +921,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(tprintf("#%i attacks #%i (weapon) (%i/%i)", mech->mynum,
+    SendAttacks(tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
                         target->mynum, baseToHit, roll));
     /*
             SendXP(tprintf("#%i attacks #%i (weapon) (%i/%i)", mech->mynum,
@@ -931,7 +931,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * output this info as well
      */
     if (MechStatus2(target) & ATTACKEMIT_MECH)
-      SendAttackEmits(tprintf("#%i attacks #%i (weapon) (%i/%i)", mech->mynum,
+      SendAttackEmits(tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
                               target->mynum, baseToHit, roll));
 
   } else {
@@ -945,7 +945,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(tprintf("#%i attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum,
+    SendAttacks(tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum,
                         mapx, mapy, short_hextarget(mech), baseToHit, roll));
     /*
             SendXP(tprintf("#%i attacks %d,%d (%s) (weapon) (%i/%i)",
@@ -972,7 +972,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
           if (MechX(tmpmech) != mapx && MechY(tmpmech) != mapy)
             continue;
           if (MechStatus2(tmpmech) & ATTACKEMIT_MECH)
-            SendAttackEmits(tprintf("#%i attacks %d,%d (%s) (weapon)"
+            SendAttackEmits(tprintf("#%li attacks %d,%d (%s) (weapon)"
                                     " (%i/%i)",
                                     mech->mynum, mapx, mapy,
                                     short_hextarget(mech), baseToHit, roll));

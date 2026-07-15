@@ -305,7 +305,7 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
     if (!(map = getMap(mech->mapindex))) {
       /* Ugly kludge */
       if ((map = getMap(obj_location(mech->mynum))))
-        mech_Rsetmapindex(GOD, mech, tprintf("%d", obj_location(mech->mynum)));
+        mech_Rsetmapindex(GOD, mech, tprintf("%ld", obj_location(mech->mynum)));
       if (!(map = getMap(mech->mapindex)))
         return 1;
     }

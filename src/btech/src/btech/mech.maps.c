@@ -498,7 +498,7 @@ static char *get_lrshexstr(MECH *mech, MAP *map, int x, int y, char *prevc,
     return LRSTerrain(map, x, y, mode & LRS_COLORMODE, prevc);
 
   SendError(
-      tprintf("Unknown LRS mode, mech #%d mode 0x%x.", mech->mynum, mode));
+      tprintf("Unknown LRS mode, mech #%ld mode 0x%x.", mech->mynum, mode));
   return add_color('R', prevc, 'Y');
 }
 
@@ -1814,15 +1814,15 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   if (!(newmap = FindObjectsData(mapo->obj))) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     SendError(
-        tprintf("Error: No map existing for mapindex #%d (@ %d,%d of #%d)",
+        tprintf("Error: No map existing for mapindex #%d (@ %d,%d of #%ld)",
                 (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
     return;
   }
   if (!find_entrance(newmap, target, &x, &y)) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
-    SendError(
-        tprintf("Error: No entrance existing for mapindex #%d (@ %d,%d of #%d)",
-                (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
+    SendError(tprintf(
+        "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
+        (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
     return;
   }
 

@@ -173,7 +173,7 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
       ch = tmpstr;
 #endif /* BT_PART_WEIGHTS */
       if (!ch) {
-        SendError(tprintf("#%d in %d encountered odd thing: %d %d/%d's.",
+        SendError(tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.",
                           player, loc, pile[brand][id], id, brand));
         continue;
       }
@@ -280,9 +280,10 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
   i = -1;
 #define MY_ECON_MODIFY(loc, num)                                               \
   econ_change_items(loc, id, brand, num);                                      \
-  SendEcon(tprintf(                                                            \
-      "#%d %s %d %s %s #%d.", player, num > 0 ? "added" : "removed", abs(num), \
-      (c = get_parts_long_name(id, brand)), num > 0 ? "to" : "from", loc))
+  SendEcon(tprintf("#%ld %s %d %s %s #%ld.", player,                           \
+                   num > 0 ? "added" : "removed", abs(num),                    \
+                   (c = get_parts_long_name(id, brand)),                       \
+                   num > 0 ? "to" : "from", loc))
   while (sfun(args[0], &i, &id, &brand)) {
     if (mort) {
       if (mod < 0)
@@ -346,5 +347,5 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
 void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   notify(player, "Inventory cleaned!");
   silly_atr_set(obj_location(player), A_ECONPARTS, "");
-  SendEcon(tprintf("#%d reset #%d's stuff.", player, obj_location(player)));
+  SendEcon(tprintf("#%ld reset #%ld's stuff.", player, obj_location(player)));
 }

@@ -518,7 +518,7 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
         }
         page_return(player, target, "Idle", A_IDLE, nullptr);
 
-        safe_str(tprintf("%d ", target), buf2, &bp2);
+        safe_str(tprintf("%ld ", target), buf2, &bp2);
         count++;
       }
     }
@@ -553,7 +553,7 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
       }
       page_return(player, target, "Idle", A_IDLE, nullptr);
 
-      safe_str(tprintf("%d ", target), buf2, &bp2);
+      safe_str(tprintf("%ld ", target), buf2, &bp2);
       safe_str(tprintf("%s, ", Name(target)), buf1, &bp);
 
       /* this is terminating the string above when there is no more to add to

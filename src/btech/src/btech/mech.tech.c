@@ -134,7 +134,7 @@ int tech_addtechtime(DbRef player, int time) {
   } else
     old = mudstate.now;
   old += time * TECH_TICK;
-  silly_atr_set(player, A_TECHTIME, tprintf("%u", old));
+  silly_atr_set(player, A_TECHTIME, tprintf("%ld", old));
   tech_status(player, old);
   return (old - mudstate.now);
 }

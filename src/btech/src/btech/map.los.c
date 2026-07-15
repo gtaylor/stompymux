@@ -413,7 +413,7 @@ hexlosmap_info *CalculateLOSMap(MAP *map, MECH *mech, int sx, int sy, int xsz,
 
   if (xsz > MAPLOS_MAXX || ysz > MAPLOS_MAXY) {
     SendError(tprintf("xsize (%d vs %d) or ysize (%d vs %d) "
-                      "to CalculateLOSMap too large, for mech #%d",
+                      "to CalculateLOSMap too large, for mech #%ld",
                       xsz, MAPLOS_MAXX, ysz, MAPLOS_MAXY, mech->mynum));
     return NULL;
   }

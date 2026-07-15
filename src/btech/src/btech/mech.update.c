@@ -737,7 +737,7 @@ void CheckNavalHeight(MECH *mech, int oz) {
   if (MechZ(mech) <= (MechLowerElevation(mech))) {
     MechZ(mech) = MIN(0, MechLowerElevation(mech) + 1);
     if (MechElevation(mech) > 0)
-      SendError(tprintf("Oddity: #%d managed to wind up on '%c' (%d elev.)",
+      SendError(tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
                         mech->mynum, MechTerrain(mech), MechElev(mech)));
     MechFZ(mech) = ((5.0 * MechZ(mech) - 4) * ZSCALE) / 5.0;
     if (MechMove(mech) == MOVE_SUB) {
@@ -1519,6 +1519,14 @@ int recycle_weaponry(MECH *mech) {
           GetPartData(mech, loop, crit[i]) = 0;
         if (diff >= GetPartData(mech, loop, crit[i])) {
           GetPartData(mech, loop, crit[i]) = 0;
+          /*
+           * The ROCKET_FIRED branch intentionally selects an empty format
+           * to suppress any recycle notification for that case.
+           */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-zero-length"
+#endif
           mech_printf(mech, MECHSTARTED,
                       MechType(mech) == CLASS_MW
                           ? "%%cgYou are ready to attack again with %s.%%c"
@@ -1528,6 +1536,9 @@ int recycle_weaponry(MECH *mech) {
                           ? ""
                           : "%%cg%s finished recycling.%%c",
                       &MechWeapons[weaptype[i]].name[3]);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
           SetPartTempNuke(mech, loop, crit[i], 0);
         } else {
           if (PartTempNuke(mech, loop, crit[i]) != FAIL_DESTROYED) {

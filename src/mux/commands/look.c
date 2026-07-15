@@ -201,7 +201,7 @@ static void view_atr(DbRef player, DbRef thing, Attribute *ap, char *text,
   *xbufp = '\0';
 
   if ((aowner != obj_owner(thing)) && (aowner != NOTHING)) {
-    notify_printf(player, "\033[1m%s [#%d%s]:\033[0m %s", ap->name, aowner,
+    notify_printf(player, "\033[1m%s [#%ld%s]:\033[0m %s", ap->name, aowner,
                   xbuf, text);
   } else if (*xbuf) {
     notify_printf(player, "\033[1m%s [%s]:\033[0m %s", ap->name, xbuf, text);
@@ -481,18 +481,18 @@ static void debug_examine(DbRef player, DbRef thing) {
   Attribute *attr;
   char *as, *cp;
 
-  notify_printf(player, "Number  = %d", thing);
+  notify_printf(player, "Number  = %ld", thing);
   if (!is_good_obj(thing))
     return;
 
   notify_printf(player, "Name    = %s", Name(thing));
-  notify_printf(player, "Location= %d", obj_location(thing));
-  notify_printf(player, "Contents= %d", obj_contents(thing));
-  notify_printf(player, "Exits   = %d", obj_exits(thing));
-  notify_printf(player, "Link    = %d", obj_link(thing));
-  notify_printf(player, "Next    = %d", obj_next(thing));
-  notify_printf(player, "Owner   = %d", obj_owner(thing));
-  notify_printf(player, "Zone    = %d", obj_zone(thing));
+  notify_printf(player, "Location= %ld", obj_location(thing));
+  notify_printf(player, "Contents= %ld", obj_contents(thing));
+  notify_printf(player, "Exits   = %ld", obj_exits(thing));
+  notify_printf(player, "Link    = %ld", obj_link(thing));
+  notify_printf(player, "Next    = %ld", obj_next(thing));
+  notify_printf(player, "Owner   = %ld", obj_owner(thing));
+  notify_printf(player, "Zone    = %ld", obj_zone(thing));
   buf = flag_description(player, thing);
   notify_printf(player, "Flags   = %s", buf);
   free_mbuf(buf);

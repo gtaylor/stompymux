@@ -200,8 +200,8 @@ DbRef FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum) {
     return -1;
   map = getMap(mech->mapindex);
   if (!map) {
-    SendError(tprintf("FTDBREFFMN:invalid map:Mech: %d  Index: %d", mech->mynum,
-                      mech->mapindex));
+    SendError(tprintf("FTDBREFFMN:invalid map:Mech: %ld  Index: %ld",
+                      mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return -1;
   }
@@ -234,15 +234,15 @@ static int Leave_Hangar(MAP *map, MECH *mech) {
                       tprintf("%d", (int)map->mapobj[TYPE_LEAVE]->obj));
   map = getMap(mech->mapindex);
   if (mech->mapindex == mapob) {
-    SendError(tprintf("#%d %s attempted to leave, but no target map?",
+    SendError(tprintf("#%ld %s attempted to leave, but no target map?",
                       mech->mynum, GetMechID(mech)));
     mech_notify(mech, MECHALL,
                 "Exit of this map is.. fubared. Please contact a wizard");
     return 0;
   }
   if (!(mapo = find_entrance_by_target(map, mapob))) {
-    SendError(tprintf("#%d %s attempted to leave, but no target place was "
-                      "found? setting the mech at 0,0 at %d.",
+    SendError(tprintf("#%ld %s attempted to leave, but no target place was "
+                      "found? setting the mech at 0,0 at %ld.",
                       mech->mynum, GetMechID(mech), mech->mapindex));
     mech_notify(mech, MECHALL,
                 "Weird bug happened during leave. Please contact a wizard. ");
@@ -283,7 +283,7 @@ void CheckEdgeOfMap(MECH *mech) {
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
     mech_shutdown(MechPilot(mech), (void *)mech, "");
-    SendError(tprintf("CheckEdgeofMap:invalid map:Mech: %d  Index: %d",
+    SendError(tprintf("CheckEdgeofMap:invalid map:Mech: %ld  Index: %ld",
                       mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return;
@@ -424,7 +424,7 @@ int InWeaponArc(MECH *mech, float x, float y) {
       res |= TURRETARC;
   }
   if (res == NOARC)
-    SendError(tprintf("NoArc: #%d: BearingToTarget:%d Facing:%d", mech->mynum,
+    SendError(tprintf("NoArc: #%ld: BearingToTarget:%d Facing:%d", mech->mynum,
                       bearingToTarget, MechFacing(mech)));
   return res;
 }
@@ -969,7 +969,7 @@ int global_silence = 0;
   if (num_crits) {                                                             \
     if (num_crits != (i = GetWeaponCrits(mech, lastweap)) && i < 9) {          \
       if (whine && !global_silence)                                            \
-        SendError(tprintf("Error in the numcriticals for weapon on #%d! "      \
+        SendError(tprintf("Error in the numcriticals for weapon on #%ld! "     \
                           "(Should be: %d, is: %d)",                           \
                           mech->mynum, i, num_crits));                         \
       return -1;                                                               \
@@ -1823,7 +1823,7 @@ void do_sub_magic(MECH *mech, int loud) {
 
   if (jjs > maxjjs) {
     if (loud)
-      SendError(tprintf("Error in #%d (%s): %d JJs, yet %d maximum available "
+      SendError(tprintf("Error in #%ld (%s): %d JJs, yet %d maximum available "
                         "(due to walk MPs)?",
                         mech->mynum, MechType_Ref(mech), jjs, maxjjs));
 
@@ -1836,7 +1836,7 @@ void do_sub_magic(MECH *mech, int loud) {
     MechNumOsinks(mech) =
         wanths - MIN(MechRealNumsinks(mech), inthses * hs_eff);
   if (wanths != MechRealNumsinks(mech) && loud) {
-    SendError(tprintf("Error in #%d (%s): Set HS: %d. Existing HS: %d. "
+    SendError(tprintf("Error in #%ld (%s): Set HS: %d. Existing HS: %d. "
                       "Difference: %d. Please %s.",
                       mech->mynum, MechType_Ref(mech), MechRealNumsinks(mech),
                       wanths, MechRealNumsinks(mech) - wanths,
@@ -1849,8 +1849,9 @@ void do_sub_magic(MECH *mech, int loud) {
 
   if ((MechNumOsinks(mech) * shs_size / hs_eff -
        (MechSpecials(mech) & ICE_TECH ? 0 : 10) * shs_size) < 0)
-    SendError(tprintf("Error in #%d (%s): HS less then max possible in engine!",
-                      mech->mynum, MechType_Ref(mech)));
+    SendError(
+        tprintf("Error in #%ld (%s): HS less then max possible in engine!",
+                mech->mynum, MechType_Ref(mech)));
 }
 
 #define CV(fun) fun(mech) = fun(&opp)
@@ -2566,28 +2567,28 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
     MechUnitsKilled(attacker) = MechUnitsKilled(attacker) + 1;
 
   if (reason) {
-    SendDebug(tprintf("#%d [%s] has been killed by #%d [%s] (%s)", mech->mynum,
-                      MechType_Ref(mech), attacker->mynum,
+    SendDebug(tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
+                      mech->mynum, MechType_Ref(mech), attacker->mynum,
                       MechType_Ref(attacker), reason));
-    SendDeath(tprintf("#%d [%s] has been killed by #%d [%s] (%s)", mech->mynum,
-                      MechType_Ref(mech), attacker->mynum,
+    SendDeath(tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
+                      mech->mynum, MechType_Ref(mech), attacker->mynum,
                       MechType_Ref(attacker), reason));
   } else {
-    SendDebug(tprintf("#%d [%s] has been killed by #%d [%s]", mech->mynum,
+    SendDebug(tprintf("#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
                       MechType_Ref(mech), attacker->mynum,
                       MechType_Ref(attacker)));
-    SendDeath(tprintf("#%d [%s] has been killed by #%d [%s]", mech->mynum,
+    SendDeath(tprintf("#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
                       MechType_Ref(mech), attacker->mynum,
                       MechType_Ref(attacker)));
   }
 
   if (IsDS(mech)) {
     if (reason) {
-      SendDSInfo(tprintf("#%d has been killed by #%d (%s)", mech->mynum,
+      SendDSInfo(tprintf("#%ld has been killed by #%ld (%s)", mech->mynum,
                          attacker->mynum, reason));
     } else {
-      SendDSInfo(
-          tprintf("#%d has been killed by #%d", mech->mynum, attacker->mynum));
+      SendDSInfo(tprintf("#%ld has been killed by #%ld", mech->mynum,
+                         attacker->mynum));
     }
   }
 

@@ -317,13 +317,13 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
   map = getMap(mech->mapindex);
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
-    SendError(tprintf("InLineOfSight:invalid map:Mech %d  Index %d",
+    SendError(tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
                       mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return 0;
   }
   if (x < 0 || y < 0 || y >= map->map_height || x >= map->map_width) {
-    SendError(tprintf("x:%d y:%d out of bounds for #%d (LOS check)", x, y,
+    SendError(tprintf("x:%d y:%d out of bounds for #%ld (LOS check)", x, y,
                       mech ? mech->mynum : -1));
   }
 
