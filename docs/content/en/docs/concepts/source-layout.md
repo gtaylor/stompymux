@@ -1,4 +1,9 @@
-# Source architecture
+---
+title: Source layout
+linkTitle: Source layout
+type: docs
+weight: 10
+---
 
 The MUX server is organized by responsibility beneath `src/mux`.
 
