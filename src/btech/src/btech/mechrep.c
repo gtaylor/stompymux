@@ -43,7 +43,7 @@ void mux_event_remove_data(void *data);
 #define MECHREP_COMMON(a)                                                      \
   struct mechrep_data *rep = (struct mechrep_data *)data;                      \
   MECH *mech;                                                                  \
-  DOCHECK(!Template(player), "I'm sorry Dave, can't do that.");                \
+  DOCHECK(!is_template_power(player), "I'm sorry Dave, can't do that.");       \
   if (!CheckData(player, rep))                                                 \
     return;                                                                    \
   if (a) {                                                                     \
@@ -131,7 +131,7 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   switch (mech_parseattributes(buffer, args, 2)) {
   case 1:
     newmech = match_thing(player, args[0]);
-    DOCHECK(!(Good_obj(newmech) && Hardcode(newmech)),
+    DOCHECK(!(is_good_obj(newmech) && is_hardcode(newmech)),
             "That is not a BattleMech or Vehicle!");
     rep->current_target = newmech;
     notify_printf(player, "Mech to repair changed to #%d", newmech);

@@ -28,7 +28,7 @@ DbRef match_controlled(DbRef player, char *name) {
   init_match(player, name, NOTYPE);
   match_everything(MAT_EXIT_PARENTS);
   mat = noisy_match_result();
-  if (Good_obj(mat) && !Controls(player, mat)) {
+  if (is_good_obj(mat) && !is_controls(player, mat)) {
     notify_quiet(player, "Permission denied.");
     return NOTHING;
   } else {
@@ -42,7 +42,7 @@ DbRef match_controlled_quiet(DbRef player, char *name) {
   init_match(player, name, NOTYPE);
   match_everything(MAT_EXIT_PARENTS);
   mat = match_result();
-  if (Good_obj(mat) && !Controls(player, mat)) {
+  if (is_good_obj(mat) && !is_controls(player, mat)) {
     return NOTHING;
   } else {
     return (mat);
@@ -68,7 +68,7 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
    */
 
   ap = attribute_by_number(A_ALIAS);
-  if (isPlayer(thing)) {
+  if (is_player(thing)) {
 
     /*
      * Fetch the old alias
@@ -77,7 +77,7 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
     oldalias = attribute_parent_get(thing, A_ALIAS, &aowner, &aflags);
     trimalias = trim_spaces(alias);
 
-    if (!Controls(player, thing)) {
+    if (!is_controls(player, thing)) {
 
       /*
        * Make sure we have rights to do it.  We can't do *
@@ -96,7 +96,7 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
 
       delete_player_name(thing, oldalias);
       attribute_clear(thing, A_ALIAS);
-      if (!Quiet(player))
+      if (!is_quiet(player))
         notify_quiet(player, "Alias removed.");
     } else if (lookup_player(NOTHING, trimalias, 0) != NOTHING) {
 
@@ -114,9 +114,9 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
        */
 
       delete_player_name(thing, oldalias);
-      attribute_add(thing, A_ALIAS, trimalias, Owner(player), aflags);
+      attribute_add(thing, A_ALIAS, trimalias, obj_owner(player), aflags);
       if (add_player_name(thing, trimalias)) {
-        if (!Quiet(player))
+        if (!is_quiet(player))
           notify_quiet(player, "Alias set.");
       } else {
         notify_quiet(
@@ -134,11 +134,11 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
      * Make sure we have rights to do it
      */
 
-    if (!Set_attr(player, thing, ap, aflags)) {
+    if (!set_attr(player, thing, ap, aflags)) {
       notify_quiet(player, "Permission denied.");
     } else {
-      attribute_add(thing, A_ALIAS, alias, Owner(player), aflags);
-      if (!Quiet(player))
+      attribute_add(thing, A_ALIAS, alias, obj_owner(player), aflags);
+      if (!is_quiet(player))
         notify_quiet(player, "Set.");
     }
   }
@@ -181,13 +181,13 @@ void do_lock(DbRef player, DbRef cause, int key, char *name, char *keytext) {
        * * trying to do * * something to #1.
        */
 
-      if (ap &&
-          (God(player) ||
-           (!God(thing) && (Set_attr(player, player, ap, 0) &&
-                            (Wizard(player) || aowner == Owner(player)))))) {
+      if (ap && (is_god(player) ||
+                 (!is_god(thing) &&
+                  (set_attr(player, player, ap, 0) &&
+                   (is_wizard(player) || aowner == obj_owner(player)))))) {
         aflags |= AF_LOCK;
         attribute_set_flags(thing, atr, aflags);
-        if (!Quiet(player) && !Quiet(thing))
+        if (!is_quiet(player) && !is_quiet(thing))
           notify_quiet(player, "Attribute locked.");
       } else {
         notify_quiet(player, "Permission denied.");
@@ -207,7 +207,7 @@ void do_lock(DbRef player, DbRef cause, int key, char *name, char *keytext) {
     notify_quiet(player, "I don't know which one you want to lock!");
     return;
   default:
-    if (!controls(player, thing)) {
+    if (!is_controls(player, thing)) {
       notify_quiet(player, "You can't lock that!");
       return;
     }
@@ -226,7 +226,7 @@ void do_lock(DbRef player, DbRef cause, int key, char *name, char *keytext) {
       key = A_LOCK;
     attribute_add_raw(thing, key,
                       boolean_expression_unparse_quiet(player, okey));
-    if (!Quiet(player) && !Quiet(thing))
+    if (!is_quiet(player) && !is_quiet(thing))
       notify_quiet(player, "Locked.");
   }
   boolean_expression_free(okey);
@@ -265,14 +265,14 @@ void do_unlock(DbRef player, DbRef cause, int key, char *name) {
        * and are * trying to * do * something to #1.
        */
 
-      if (ap &&
-          (God(player) ||
-           ((!God(thing)) && (Set_attr(player, player, ap, 0) &&
-                              (Wizard(player) || aowner == Owner(player)))))) {
+      if (ap && (is_god(player) ||
+                 ((!is_god(thing)) &&
+                  (set_attr(player, player, ap, 0) &&
+                   (is_wizard(player) || aowner == obj_owner(player)))))) {
         aflags &= ~AF_LOCK;
         attribute_set_flags(thing, atr, aflags);
-        if (Owner(player != Owner(thing)))
-          if (!Quiet(player) && !Quiet(thing))
+        if (obj_owner(player != obj_owner(thing)))
+          if (!is_quiet(player) && !is_quiet(thing))
             notify_quiet(player, "Attribute unlocked.");
       } else {
         notify_quiet(player, "Permission denied.");
@@ -284,12 +284,10 @@ void do_unlock(DbRef player, DbRef cause, int key, char *name) {
     key = A_LOCK;
   if ((thing = match_controlled(player, name)) != NOTHING) {
     attribute_clear(thing, key);
-    if (!Quiet(player) && !Quiet(thing))
+    if (!is_quiet(player) && !is_quiet(thing))
       notify_quiet(player, "Unlocked.");
   }
 }
-
-
 
 void object_attribute_set(DbRef player, DbRef thing, int attrnum,
                           char *attrtext, int key) {
@@ -300,15 +298,15 @@ void object_attribute_set(DbRef player, DbRef thing, int attrnum,
 
   attr = attribute_by_number(attrnum);
   attribute_parent_get_info(thing, attrnum, &aowner, &aflags);
-  if (attr && Set_attr(player, thing, attr, aflags)) {
+  if (attr && set_attr(player, thing, attr, aflags)) {
     if ((attr->check != NULL) &&
         (!(*attr->check)(0, player, thing, attrnum, attrtext)))
       return;
-    have_xcode = Hardcode(thing);
-    attribute_add(thing, attrnum, attrtext, Owner(player), aflags);
+    have_xcode = is_hardcode(thing);
+    attribute_add(thing, attrnum, attrtext, obj_owner(player), aflags);
     if (mudconf.have_specials)
-      handle_xcode(player, thing, have_xcode, Hardcode(thing));
-    if (!(key & SET_QUIET) && !Quiet(player) && !Quiet(thing))
+      handle_xcode(player, thing, have_xcode, is_hardcode(thing));
+    if (!(key & SET_QUIET) && !is_quiet(player) && !is_quiet(thing))
       notify_printf(player, "%s/%s - %s", Name(thing), attr->name,
                     strlen(attrtext) ? "Set." : "Cleared.");
     could_hear = is_hearer(thing);
@@ -317,7 +315,6 @@ void object_attribute_set(DbRef player, DbRef thing, int attrnum,
     notify_quiet(player, "Permission denied.");
   }
 }
-
 
 void do_power(DbRef player, DbRef cause, int key, char *name, char *flag) {
   DbRef thing;
@@ -348,7 +345,6 @@ void do_setattr(DbRef player, DbRef cause, int attrnum, char *name,
     return;
   object_attribute_set(player, thing, attrnum, attrtext, 0);
 }
-
 
 /*
  * ---------------------------------------------------------------------------
@@ -384,7 +380,7 @@ int parse_attrib(DbRef player, char *str, DbRef *thing, int *atr) {
     *atr = NOTHING;
   } else {
     attribute_parent_get_info(*thing, attr->number, &aowner, &aflags);
-    if (!See_attr(player, *thing, attr, aowner, aflags)) {
+    if (!see_attr(player, *thing, attr, aowner, aflags)) {
       *atr = NOTHING;
     } else {
       *atr = attr->number;
@@ -430,16 +426,16 @@ static void find_wild_attrs(DbRef player, DbRef thing, char *str,
       continue;
 
     if (get_locks)
-      ok = Read_attr(player, thing, attr, aowner, aflags);
+      ok = read_attr(player, thing, attr, aowner, aflags);
     else
-      ok = See_attr(player, thing, attr, aowner, aflags);
+      ok = see_attr(player, thing, attr, aowner, aflags);
 
     /*
      * Enforce locality restriction on descriptions
      */
 
     if (ok && (attr->number == A_DESC) && !mudconf.read_rem_desc &&
-        !Examinable(player, thing) && !nearby(player, thing))
+        !is_examinable(player, thing) && !nearby(player, thing))
       ok = 0;
 
     if (ok && quick_wild(str, (char *)attr->name)) {
@@ -485,7 +481,7 @@ int parse_attrib_wild(DbRef player, char *str, DbRef *thing, int check_parents,
     match_everything(MAT_EXIT_PARENTS);
     *thing = match_result();
 
-    if (!Good_obj(*thing)) {
+    if (!is_good_obj(*thing)) {
       free_lbuf(buff);
       return 0;
     }
@@ -500,7 +496,7 @@ int parse_attrib_wild(DbRef player, char *str, DbRef *thing, int check_parents,
     hash_insert = check_parents;
     numeric_hash_table_flush(&mudstate.parent_htab, 0);
     ITER_PARENTS(*thing, parent, lev) {
-      if (!Good_obj(Parent(parent)))
+      if (!is_good_obj(obj_parent(parent)))
         hash_insert = 0;
       find_wild_attrs(player, parent, str, check_exclude, hash_insert,
                       get_locks);
@@ -672,7 +668,7 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
        */
 
       attribute_get_string(atext, thing, ap->number, &aowner, &aflags);
-      if (Set_attr(player, thing, ap, aflags)) {
+      if (set_attr(player, thing, ap, aflags)) {
 
         /*
          * Do the edit and save the result
@@ -686,8 +682,8 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
           doit = 1;
         }
         if (doit) {
-          attribute_add(thing, ap->number, result, Owner(player), aflags);
-          if (!Quiet(player))
+          attribute_add(thing, ap->number, result, obj_owner(player), aflags);
+          if (!is_quiet(player))
             notify_quiet(player, tprintf("Set - %s: %s", ap->name, returnstr));
         }
         free_lbuf(result);
@@ -715,7 +711,6 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
   }
 }
 
-
 void do_trigger(DbRef player, DbRef cause, int key, char *object, char *argv[],
                 int nargs) {
   DbRef thing, attrOwner;
@@ -732,7 +727,7 @@ void do_trigger(DbRef player, DbRef cause, int key, char *object, char *argv[],
     notify_quiet(player, "No match.");
     return;
   }
-  if (!controls(player, thing)) {
+  if (!is_controls(player, thing)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -753,7 +748,7 @@ void do_trigger(DbRef player, DbRef cause, int key, char *object, char *argv[],
   /*
    * XXX be more descriptive as to what was triggered?
    */
-  if (!(key & TRIG_QUIET) && !Quiet(player))
+  if (!(key & TRIG_QUIET) && !is_quiet(player))
     notify_printf(player, "%s/%s - Triggered.", objectName, attributeName);
 }
 
@@ -766,7 +761,7 @@ void do_use(DbRef player, DbRef cause, int key, char *object) {
   init_match(player, object, NOTYPE);
   match_neighbor();
   match_possession();
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     match_absolute();
     match_player();
   }

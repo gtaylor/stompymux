@@ -46,60 +46,58 @@ typedef struct mech_data MECH;
 
 /* Compile time options */
 
-#define FILEDIR "files/" /* Source for @cat */
+/* #define TEST_MALLOC */             /* Keep track of block allocs */
+#define SIDE_EFFECT_FUNCTIONS         /* Those neat funcs that should be       \
+                                       * commands */
+#define ENTERLEAVE_PARANOID           /* Enter/leave commands                  \
+                                         require opposite locks succeeding     \
+                                         as well */
+constexpr int PLAYER_NAME_LIMIT = 22; /* Max length for player names */
+constexpr int NUM_ENV_VARS = 10;      /* Number of env vars (%0 et al) */
+constexpr int MAX_ARG = 100;          /* max # args from command processor */
+constexpr int MAX_GLOBAL_REGS = 10;   /* r() registers */
 
-/* #define TEST_MALLOC */     /* Keep track of block allocs */
-#define SIDE_EFFECT_FUNCTIONS /* Those neat funcs that should be               \
-                               * commands */
-#define ENTERLEAVE_PARANOID   /* Enter/leave commands                          \
-                                 require opposite locks succeeding             \
-                                 as well */
-#define PLAYER_NAME_LIMIT 22  /* Max length for player names */
-#define NUM_ENV_VARS 10       /* Number of env vars (%0 et al) */
-#define MAX_ARG 100           /* max # args from command processor */
-#define MAX_GLOBAL_REGS 10    /* r() registers */
-
-#define HASH_FACTOR 16 /* How much hashing you want. */
+constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
 #define OUTPUT_BLOCK_SIZE 16384
-#define StringCopy strcpy
-#define StringCopyTrunc strncpy
+static inline char *StringCopy(char *dst, const char *src) {
+  return strcpy(dst, src);
+}
+static inline char *StringCopyTrunc(char *dst, const char *src, size_t n) {
+  return strncpy(dst, src, n);
+}
 
 #define CHANNEL_HISTORY
-#define CHANNEL_HISTORY_LEN 20 /* at max 20 last msgs */
-#define COMMAND_HISTORY_LEN 10 /* at max 10 last msgs */
+constexpr int CHANNEL_HISTORY_LEN = 20; /* at max 20 last msgs */
+constexpr int COMMAND_HISTORY_LEN = 10; /* at max 10 last msgs */
 
 /* magic lock cookies */
-#define NOT_TOKEN '!'
-#define AND_TOKEN '&'
-#define OR_TOKEN '|'
-#define LOOKUP_TOKEN '*'
-#define NUMBER_TOKEN '#'
-#define INDIR_TOKEN '@' /* One of these two should go. */
-#define CARRY_TOKEN '+' /* One of these two should go. */
-#define IS_TOKEN '='
-#define OWNER_TOKEN '$'
+constexpr char NOT_TOKEN = '!';
+constexpr char AND_TOKEN = '&';
+constexpr char OR_TOKEN = '|';
+constexpr char LOOKUP_TOKEN = '*';
+constexpr char NUMBER_TOKEN = '#';
+constexpr char INDIR_TOKEN = '@'; /* One of these two should go. */
+constexpr char CARRY_TOKEN = '+'; /* One of these two should go. */
+constexpr char IS_TOKEN = '=';
+constexpr char OWNER_TOKEN = '$';
 
 /* matching attribute tokens */
-#define AMATCH_CMD '$'
-#define AMATCH_LISTEN '^'
+constexpr char AMATCH_CMD = '$';
+constexpr char AMATCH_LISTEN = '^';
 
 /* delimiters for various things */
-#define EXIT_DELIMITER ';'
-#define ARG_DELIMITER '='
-#define ARG_LIST_DELIM ','
+constexpr char EXIT_DELIMITER = ';';
+constexpr char ARG_DELIMITER = '=';
+constexpr char ARG_LIST_DELIM = ',';
 
 /* These chars get replaced by the current item from a list in commands and
  * functions that do iterative replacement, such as @apply_marked, dolist,
  * the eval= operator for @search, and iter().
  */
 
-#define BOUND_VAR "##"
-#define LISTPLACE_VAR "#@"
-
-#define DEV_NULL "/dev/null"
-#define READ read
-#define WRITE write
+constexpr char BOUND_VAR[] = "##";
+constexpr char LISTPLACE_VAR[] = "#@";
 
 #ifdef BRAIN_DAMAGE /* a kludge to get it to work on a mutant                  \
                      * DENIX system */

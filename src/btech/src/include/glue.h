@@ -47,7 +47,8 @@
 void heartbeat_stop(void);
 
 #define Have_MechPower(a, b)                                                   \
-  (((Powers2((Owner(a))) & (b)) || Wizard(Owner(a))) && Inherits((a)))
+  (((obj_powers2((obj_owner(a))) & (b)) || is_wizard(obj_owner(a))) &&         \
+   is_inherits((a)))
 
 typedef struct CommandsStruct {
   int flag;

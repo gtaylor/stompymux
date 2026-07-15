@@ -365,7 +365,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     if (!(losflag = InLineOfSight(mech, tempMech, MechX(tempMech),
                                   MechY(tempMech), range)))
       continue;
-    if (Good_obj(tempMech->mynum)) {
+    if (is_good_obj(tempMech->mynum)) {
       if (!InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             0.0)) {
         mech_name = "something";

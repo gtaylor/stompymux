@@ -33,177 +33,174 @@ extern int game_lag(void);
  * Function definitions from funceval.c
  */
 
-#define FUN_EXTERN(name)                                                       \
-  extern void name(char *, char **, DbRef, DbRef, char **, int, char **, int)
-
-FUN_EXTERN(fun_btlag);
-FUN_EXTERN(fun_btdesignex);
-FUN_EXTERN(fun_btgetcharvalue);
-FUN_EXTERN(fun_btmapelev);
-FUN_EXTERN(fun_btmapterr);
-FUN_EXTERN(fun_btsetcharvalue);
-FUN_EXTERN(fun_btgetxcodevalue);
-FUN_EXTERN(fun_btmakepilotroll);
-FUN_EXTERN(fun_btsetxcodevalue);
-FUN_EXTERN(fun_btstores);
-FUN_EXTERN(fun_btstores_short);
-FUN_EXTERN(fun_btunderrepair);
-FUN_EXTERN(fun_btdamages);
-FUN_EXTERN(fun_btsectstatus);
-FUN_EXTERN(fun_btcritstatus);
-FUN_EXTERN(fun_btarmorstatus);
-FUN_EXTERN(fun_btsetarmorstatus);
-FUN_EXTERN(fun_btweapons); /* AAA */
-FUN_EXTERN(fun_btweaponstatus);
-FUN_EXTERN(fun_btthreshold);
-FUN_EXTERN(fun_btdamagemech);
-FUN_EXTERN(fun_bttechstatus);
-FUN_EXTERN(fun_btpartmatch);
-FUN_EXTERN(fun_btpartname);
-FUN_EXTERN(fun_btpartscategorylist);
-FUN_EXTERN(fun_btpartslist);
-FUN_EXTERN(fun_btloadmap);
-FUN_EXTERN(fun_btloadmech);
-FUN_EXTERN(fun_btmechfreqs);
-FUN_EXTERN(fun_btmapunits);
-FUN_EXTERN(fun_btgetxcodevalue_ref);
-FUN_EXTERN(fun_btarmorstatus_ref);
-FUN_EXTERN(fun_btcritstatus_ref);
-FUN_EXTERN(fun_btweaponstatus_ref);
-FUN_EXTERN(fun_btid2db);
-FUN_EXTERN(fun_bthexlos);
-FUN_EXTERN(fun_btlosm2m);
-FUN_EXTERN(fun_bthexemit);
-FUN_EXTERN(fun_zmechs);
-FUN_EXTERN(fun_btgetweight);
-FUN_EXTERN(fun_btpartweight);
-FUN_EXTERN(fun_btaddstores);
-FUN_EXTERN(fun_btupdatelinks);
-FUN_EXTERN(fun_btremovestores);
-FUN_EXTERN(fun_bttechtime);
-FUN_EXTERN(fun_btcritslot);
-FUN_EXTERN(fun_btcritslot_ref);
-FUN_EXTERN(fun_btgetrange);
-FUN_EXTERN(fun_btsetmaxspeed);
-FUN_EXTERN(fun_btgetrealmaxspeed);
-FUN_EXTERN(fun_btgetbv);
-FUN_EXTERN(fun_btgetbv_ref);
-FUN_EXTERN(fun_btgetdbv_ref);
-FUN_EXTERN(fun_btgetobv_ref);
-FUN_EXTERN(fun_btgetbv2_ref);
-FUN_EXTERN(fun_btgetbv2);
-FUN_EXTERN(fun_bttechlist);
-FUN_EXTERN(fun_bttechlist_ref);
-FUN_EXTERN(fun_btpayload_ref);
-FUN_EXTERN(fun_btshowstatus_ref);
-FUN_EXTERN(fun_btshowwspecs_ref);
-FUN_EXTERN(fun_btshowcritstatus_ref);
-FUN_EXTERN(fun_btengrate);
-FUN_EXTERN(fun_btengrate_ref);
-FUN_EXTERN(fun_btweapstat);
-FUN_EXTERN(fun_btnumrepjobs);
-FUN_EXTERN(fun_btsetxy);
-FUN_EXTERN(fun_btsettons);
-FUN_EXTERN(fun_btmapemit);
-FUN_EXTERN(fun_btparttype);
-FUN_EXTERN(fun_btticweaps);
+extern FunProto fun_btlag;
+extern FunProto fun_btdesignex;
+extern FunProto fun_btgetcharvalue;
+extern FunProto fun_btmapelev;
+extern FunProto fun_btmapterr;
+extern FunProto fun_btsetcharvalue;
+extern FunProto fun_btgetxcodevalue;
+extern FunProto fun_btmakepilotroll;
+extern FunProto fun_btsetxcodevalue;
+extern FunProto fun_btstores;
+extern FunProto fun_btstores_short;
+extern FunProto fun_btunderrepair;
+extern FunProto fun_btdamages;
+extern FunProto fun_btsectstatus;
+extern FunProto fun_btcritstatus;
+extern FunProto fun_btarmorstatus;
+extern FunProto fun_btsetarmorstatus;
+extern FunProto fun_btweapons; /* AAA */
+extern FunProto fun_btweaponstatus;
+extern FunProto fun_btthreshold;
+extern FunProto fun_btdamagemech;
+extern FunProto fun_bttechstatus;
+extern FunProto fun_btpartmatch;
+extern FunProto fun_btpartname;
+extern FunProto fun_btpartscategorylist;
+extern FunProto fun_btpartslist;
+extern FunProto fun_btloadmap;
+extern FunProto fun_btloadmech;
+extern FunProto fun_btmechfreqs;
+extern FunProto fun_btmapunits;
+extern FunProto fun_btgetxcodevalue_ref;
+extern FunProto fun_btarmorstatus_ref;
+extern FunProto fun_btcritstatus_ref;
+extern FunProto fun_btweaponstatus_ref;
+extern FunProto fun_btid2db;
+extern FunProto fun_bthexlos;
+extern FunProto fun_btlosm2m;
+extern FunProto fun_bthexemit;
+extern FunProto fun_zmechs;
+extern FunProto fun_btgetweight;
+extern FunProto fun_btpartweight;
+extern FunProto fun_btaddstores;
+extern FunProto fun_btupdatelinks;
+extern FunProto fun_btremovestores;
+extern FunProto fun_bttechtime;
+extern FunProto fun_btcritslot;
+extern FunProto fun_btcritslot_ref;
+extern FunProto fun_btgetrange;
+extern FunProto fun_btsetmaxspeed;
+extern FunProto fun_btgetrealmaxspeed;
+extern FunProto fun_btgetbv;
+extern FunProto fun_btgetbv_ref;
+extern FunProto fun_btgetdbv_ref;
+extern FunProto fun_btgetobv_ref;
+extern FunProto fun_btgetbv2_ref;
+extern FunProto fun_btgetbv2;
+extern FunProto fun_bttechlist;
+extern FunProto fun_bttechlist_ref;
+extern FunProto fun_btpayload_ref;
+extern FunProto fun_btshowstatus_ref;
+extern FunProto fun_btshowwspecs_ref;
+extern FunProto fun_btshowcritstatus_ref;
+extern FunProto fun_btengrate;
+extern FunProto fun_btengrate_ref;
+extern FunProto fun_btweapstat;
+extern FunProto fun_btnumrepjobs;
+extern FunProto fun_btsetxy;
+extern FunProto fun_btsettons;
+extern FunProto fun_btmapemit;
+extern FunProto fun_btparttype;
+extern FunProto fun_btticweaps;
 #ifdef BT_ADVANCED_ECON
-FUN_EXTERN(fun_btgetpartcost);
-FUN_EXTERN(fun_btsetpartcost);
-FUN_EXTERN(fun_btfasabasecost_ref);
+extern FunProto fun_btgetpartcost;
+extern FunProto fun_btsetpartcost;
+extern FunProto fun_btfasabasecost_ref;
 #endif
-FUN_EXTERN(fun_btunitfixable);
-FUN_EXTERN(fun_btunitpartslist);
-FUN_EXTERN(fun_btunitpartslist_ref);
-FUN_EXTERN(fun_btlistblz);
-FUN_EXTERN(fun_bthexinblz);
-FUN_EXTERN(fun_btcharlist);
-FUN_EXTERN(fun_cobj);
-FUN_EXTERN(fun_config);
+extern FunProto fun_btunitfixable;
+extern FunProto fun_btunitpartslist;
+extern FunProto fun_btunitpartslist_ref;
+extern FunProto fun_btlistblz;
+extern FunProto fun_bthexinblz;
+extern FunProto fun_btcharlist;
+extern FunProto fun_cobj;
+extern FunProto fun_config;
 
-FUN_EXTERN(fun_cwho);
-FUN_EXTERN(fun_clist);
-FUN_EXTERN(fun_cemit);
-FUN_EXTERN(fun_beep);
-FUN_EXTERN(fun_ansi);
-FUN_EXTERN(fun_zone);
+extern FunProto fun_cwho;
+extern FunProto fun_clist;
+extern FunProto fun_cemit;
+extern FunProto fun_beep;
+extern FunProto fun_ansi;
+extern FunProto fun_zone;
 #ifdef SIDE_EFFECT_FUNCTIONS
-FUN_EXTERN(fun_link);
-FUN_EXTERN(fun_tel);
-FUN_EXTERN(fun_pemit);
-FUN_EXTERN(fun_create);
-FUN_EXTERN(fun_set);
-FUN_EXTERN(fun_setlock);
+extern FunProto fun_link;
+extern FunProto fun_tel;
+extern FunProto fun_pemit;
+extern FunProto fun_create;
+extern FunProto fun_set;
+extern FunProto fun_setlock;
 #endif
-FUN_EXTERN(fun_last);
-FUN_EXTERN(fun_matchall);
-FUN_EXTERN(fun_ports);
-FUN_EXTERN(fun_mix);
-FUN_EXTERN(fun_foreach);
-FUN_EXTERN(fun_munge);
-FUN_EXTERN(fun_visible);
-FUN_EXTERN(fun_elements);
-FUN_EXTERN(fun_grab);
-FUN_EXTERN(fun_graball);
-FUN_EXTERN(fun_scramble);
-FUN_EXTERN(fun_shuffle);
-FUN_EXTERN(fun_sortby);
-FUN_EXTERN(fun_default);
-FUN_EXTERN(fun_edefault);
-FUN_EXTERN(fun_udefault);
-FUN_EXTERN(fun_findable);
-FUN_EXTERN(fun_isword);
-FUN_EXTERN(fun_hasattr);
-FUN_EXTERN(fun_hasattrp);
-FUN_EXTERN(fun_zwho);
-FUN_EXTERN(fun_zrooms);
-FUN_EXTERN(fun_zexits);
-FUN_EXTERN(fun_zobjects);
-FUN_EXTERN(fun_zplayers);
-FUN_EXTERN(fun_inzone);
-FUN_EXTERN(fun_children);
-FUN_EXTERN(fun_encrypt);
-FUN_EXTERN(fun_decrypt);
-FUN_EXTERN(fun_objeval);
-FUN_EXTERN(fun_squish);
-FUN_EXTERN(fun_stripansi);
-FUN_EXTERN(fun_zfun);
-FUN_EXTERN(fun_columns);
-FUN_EXTERN(fun_playmem);
-FUN_EXTERN(fun_objmem);
-FUN_EXTERN(fun_orflags);
-FUN_EXTERN(fun_andflags);
-FUN_EXTERN(fun_strtrunc);
-FUN_EXTERN(fun_ifelse);
-FUN_EXTERN(fun_inc);
-FUN_EXTERN(fun_dec);
-FUN_EXTERN(fun_die);
-FUN_EXTERN(fun_lit);
-FUN_EXTERN(fun_shl);
-FUN_EXTERN(fun_shr);
-FUN_EXTERN(fun_vadd);
-FUN_EXTERN(fun_vsub);
-FUN_EXTERN(fun_vmul);
-FUN_EXTERN(fun_vmag);
-FUN_EXTERN(fun_vunit);
-FUN_EXTERN(fun_vdim);
-FUN_EXTERN(fun_strcat);
-FUN_EXTERN(fun_grep);
-FUN_EXTERN(fun_grepi);
-FUN_EXTERN(fun_art);
-FUN_EXTERN(fun_alphamax);
-FUN_EXTERN(fun_alphamin);
-FUN_EXTERN(fun_valid);
-FUN_EXTERN(fun_hastype);
-FUN_EXTERN(fun_lparent);
-FUN_EXTERN(fun_empty);
-FUN_EXTERN(fun_push);
-FUN_EXTERN(fun_peek);
-FUN_EXTERN(fun_pop);
-FUN_EXTERN(fun_items);
-FUN_EXTERN(fun_lstack);
-FUN_EXTERN(fun_regmatch);
-FUN_EXTERN(fun_translate);
+extern FunProto fun_last;
+extern FunProto fun_matchall;
+extern FunProto fun_ports;
+extern FunProto fun_mix;
+extern FunProto fun_foreach;
+extern FunProto fun_munge;
+extern FunProto fun_visible;
+extern FunProto fun_elements;
+extern FunProto fun_grab;
+extern FunProto fun_graball;
+extern FunProto fun_scramble;
+extern FunProto fun_shuffle;
+extern FunProto fun_sortby;
+extern FunProto fun_default;
+extern FunProto fun_edefault;
+extern FunProto fun_udefault;
+extern FunProto fun_findable;
+extern FunProto fun_isword;
+extern FunProto fun_hasattr;
+extern FunProto fun_hasattrp;
+extern FunProto fun_zwho;
+extern FunProto fun_zrooms;
+extern FunProto fun_zexits;
+extern FunProto fun_zobjects;
+extern FunProto fun_zplayers;
+extern FunProto fun_inzone;
+extern FunProto fun_children;
+extern FunProto fun_encrypt;
+extern FunProto fun_decrypt;
+extern FunProto fun_objeval;
+extern FunProto fun_squish;
+extern FunProto fun_stripansi;
+extern FunProto fun_zfun;
+extern FunProto fun_columns;
+extern FunProto fun_playmem;
+extern FunProto fun_objmem;
+extern FunProto fun_orflags;
+extern FunProto fun_andflags;
+extern FunProto fun_strtrunc;
+extern FunProto fun_ifelse;
+extern FunProto fun_inc;
+extern FunProto fun_dec;
+extern FunProto fun_die;
+extern FunProto fun_lit;
+extern FunProto fun_shl;
+extern FunProto fun_shr;
+extern FunProto fun_vadd;
+extern FunProto fun_vsub;
+extern FunProto fun_vmul;
+extern FunProto fun_vmag;
+extern FunProto fun_vunit;
+extern FunProto fun_vdim;
+extern FunProto fun_strcat;
+extern FunProto fun_grep;
+extern FunProto fun_grepi;
+extern FunProto fun_art;
+extern FunProto fun_alphamax;
+extern FunProto fun_alphamin;
+extern FunProto fun_valid;
+extern FunProto fun_hastype;
+extern FunProto fun_lparent;
+extern FunProto fun_empty;
+extern FunProto fun_push;
+extern FunProto fun_peek;
+extern FunProto fun_pop;
+extern FunProto fun_items;
+extern FunProto fun_lstack;
+extern FunProto fun_regmatch;
+extern FunProto fun_translate;
 
 /*
  * This is for functions that take an optional delimiter character
@@ -307,10 +304,10 @@ DbRef match_thing(DbRef player, char *name) {
  * * List management utilities.
  */
 
-#define ALPHANUM_LIST 1
-#define NUMERIC_LIST 2
-#define DBREF_LIST 3
-#define FLOAT_LIST 4
+constexpr int ALPHANUM_LIST = 1;
+constexpr int NUMERIC_LIST = 2;
+constexpr int DBREF_LIST = 3;
+constexpr int FLOAT_LIST = 4;
 
 static int autodetect_list(char *ptrs[], int nitems) {
   int sort_type, i;
@@ -423,9 +420,9 @@ static int dbnum(char *dbr) {
  * Check if player is near or controls thing
  */
 int nearby_or_control(DbRef player, DbRef thing) {
-  if (!Good_obj(player) || !Good_obj(thing))
+  if (!is_good_obj(player) || !is_good_obj(thing))
     return 0;
-  if (Controls(player, thing))
+  if (is_controls(player, thing))
     return 1;
   if (!nearby(player, thing))
     return 0;
@@ -559,7 +556,7 @@ static void fun_flags(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   if ((it != NOTHING) &&
-      (mudconf.pub_flags || Examinable(player, it) || (it == cause))) {
+      (mudconf.pub_flags || is_examinable(player, it) || (it == cause))) {
     buff2 = unparse_flags(player, it);
     safe_str(buff2, buff, bufc);
     free_sbuf(buff2);
@@ -690,15 +687,18 @@ static const char daystab[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
  * Ddd Mmm DD HH:MM:SS YYYY
  */
 
-#define get_substr(buf, p)                                                     \
-  {                                                                            \
-    p = (char *)index(buf, ' ');                                               \
-    if (p) {                                                                   \
-      *p++ = '\0';                                                             \
-      while (*p == ' ')                                                        \
-        p++;                                                                   \
-    }                                                                          \
+static void get_substr(char *buf, char **p) {
+  *p = (char *)index(buf, ' ');
+  if (*p) {
+    *(*p)++ = '\0';
+    while (**p == ' ')
+      (*p)++;
   }
+}
+
+static inline bool is_leapyear_1900(int yr) {
+  return yr % 400 == 100 || (yr % 100 != 0 && yr % 4 == 0);
+}
 
 int do_convtime(char *str, struct tm *ttm) {
   char *buf, *p, *q;
@@ -714,9 +714,9 @@ int do_convtime(char *str, struct tm *ttm) {
   safe_sb_str(str, buf, &p);
   *p = '\0';
 
-  get_substr(buf, p); /*
-                       * day-of-week or month
-                       */
+  get_substr(buf, &p); /*
+                        * day-of-week or month
+                        */
   if (!p || strlen(buf) != 3) {
     free_sbuf(buf);
     return 0;
@@ -724,9 +724,9 @@ int do_convtime(char *str, struct tm *ttm) {
   for (i = 0; (i < 12) && string_compare(monthtab[i], p); i++)
     ;
   if (i == 12) {
-    get_substr(p, q); /*
-                       * month
-                       */
+    get_substr(p, &q); /*
+                        * month
+                        */
     if (!q || strlen(p) != 3) {
       free_sbuf(buf);
       return 0;
@@ -741,9 +741,9 @@ int do_convtime(char *str, struct tm *ttm) {
   }
   ttm->tm_mon = i;
 
-  get_substr(p, q); /*
-                     * day of month
-                     */
+  get_substr(p, &q); /*
+                      * day of month
+                      */
   if (!q || (ttm->tm_mday = atoi(p)) < 1 || ttm->tm_mday > daystab[i]) {
     free_sbuf(buf);
     return 0;
@@ -788,9 +788,9 @@ int do_convtime(char *str, struct tm *ttm) {
       return 0;
     }
   }
-  get_substr(q, p); /*
-                     * seconds
-                     */
+  get_substr(q, &p); /*
+                      * seconds
+                      */
   if (!p || (ttm->tm_sec = atoi(q)) > 59 || ttm->tm_sec < 0) {
     free_sbuf(buf);
     return 0;
@@ -803,9 +803,9 @@ int do_convtime(char *str, struct tm *ttm) {
       return 0;
     }
   }
-  get_substr(p, q); /*
-                     * year
-                     */
+  get_substr(p, &q); /*
+                      * year
+                      */
   if ((ttm->tm_year = atoi(p)) == 0) {
     while (isspace(*p))
       p++;
@@ -820,10 +820,7 @@ int do_convtime(char *str, struct tm *ttm) {
   if (ttm->tm_year < 0) {
     return 0;
   }
-#define LEAPYEAR_1900(yr)                                                      \
-  ((yr) % 400 == 100 || ((yr) % 100 != 0 && (yr) % 4 == 0))
-  return (ttm->tm_mday != 29 || i != 1 || LEAPYEAR_1900(ttm->tm_year));
-#undef LEAPYEAR_1900
+  return (ttm->tm_mday != 29 || i != 1 || is_leapyear_1900(ttm->tm_year));
 }
 
 static void fun_convtime(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -841,7 +838,7 @@ static void fun_convtime(char *buff, char **bufc, DbRef player, DbRef cause,
  * Converts number to minutes/secs/days
  */
 
-#define UPTIME_UNITS 6
+constexpr int UPTIME_UNITS = 6;
 
 struct {
   int multip;
@@ -948,7 +945,7 @@ int check_read_perms(DbRef player, DbRef thing, Attribute *attr, int aowner,
    * If we have explicit read permission to the attr, return it
    */
 
-  if (See_attr_explicit(player, thing, attr, aowner, aflags))
+  if (see_attr_explicit(player, thing, attr, aowner, aflags))
     return 1;
 
   /*
@@ -957,8 +954,9 @@ int check_read_perms(DbRef player, DbRef thing, Attribute *attr, int aowner,
    * * visible to us, return it.
    */
 
-  see_it = See_attr(player, thing, attr, aowner, aflags);
-  if ((Examinable(player, thing) || nearby(player, thing) || Wizard(player)) &&
+  see_it = see_attr(player, thing, attr, aowner, aflags);
+  if ((is_examinable(player, thing) || nearby(player, thing) ||
+       is_wizard(player)) &&
       see_it)
     return 1;
 
@@ -1005,7 +1003,7 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -1062,7 +1060,7 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -1115,7 +1113,7 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -1199,7 +1197,7 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -1255,7 +1253,7 @@ static void do_ufun(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || (!Good_obj(thing)))
+    if ((anum == NOTHING) || (!is_good_obj(thing)))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -1348,8 +1346,8 @@ static void fun_parent(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  if (Good_obj(it) && (Examinable(player, it) || (it == cause))) {
-    safe_tprintf_str(buff, bufc, "#%d", Parent(it));
+  if (is_good_obj(it) && (is_examinable(player, it) || (it == cause))) {
+    safe_tprintf_str(buff, bufc, "#%d", obj_parent(it));
   } else {
     safe_str("#-1", buff, bufc);
   }
@@ -1500,7 +1498,7 @@ static void fun_v(char *buff, char **bufc, DbRef player, DbRef cause,
      */
 
     attribute_parent_get_info(player, ap->number, &aowner, &aflags);
-    if (See_attr(player, player, ap, aowner, aflags)) {
+    if (see_attr(player, player, ap, aowner, aflags)) {
       tbuf = attribute_parent_get(player, ap->number, &aowner, &aflags);
       safe_str(tbuf, buff, bufc);
       free_lbuf(tbuf);
@@ -1530,9 +1528,10 @@ static void fun_con(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
 
-  if ((it != NOTHING) && (Has_contents(it)) &&
-      (Examinable(player, it) || (where_is(player) == it) || (it == cause))) {
-    safe_tprintf_str(buff, bufc, "#%d", Contents(it));
+  if ((it != NOTHING) && (has_contents(it)) &&
+      (is_examinable(player, it) || (where_is(player) == it) ||
+       (it == cause))) {
+    safe_tprintf_str(buff, bufc, "#%d", obj_contents(it));
     return;
   }
   safe_str("#-1", buff, bufc);
@@ -1549,13 +1548,13 @@ static void fun_exit(char *buff, char **bufc, DbRef player, DbRef cause,
   int key;
 
   it = match_thing(player, fargs[0]);
-  if (Good_obj(it) && Has_exits(it) && Good_obj(Exits(it))) {
+  if (is_good_obj(it) && has_exits(it) && is_good_obj(obj_exits(it))) {
     key = 0;
-    if (Examinable(player, it))
+    if (is_examinable(player, it))
       key |= VE_LOC_XAM;
-    if (Dark(it))
+    if (is_dark(it))
       key |= VE_LOC_DARK;
-    DOLIST(exit, Exits(it)) {
+    DOLIST(exit, obj_exits(it)) {
       if (exit_visible(exit, player, key)) {
         safe_tprintf_str(buff, bufc, "#%d", exit);
         return;
@@ -1577,18 +1576,18 @@ static void fun_next(char *buff, char **bufc, DbRef player, DbRef cause,
   int key;
 
   it = match_thing(player, fargs[0]);
-  if (Good_obj(it) && Has_siblings(it)) {
+  if (is_good_obj(it) && has_siblings(it)) {
     loc = where_is(it);
-    ex_here = Good_obj(loc) ? Examinable(player, loc) : 0;
+    ex_here = is_good_obj(loc) ? is_examinable(player, loc) : 0;
     if (ex_here || (loc == player) || (loc == where_is(player))) {
-      if (!isExit(it)) {
-        safe_tprintf_str(buff, bufc, "#%d", Next(it));
+      if (!is_exit(it)) {
+        safe_tprintf_str(buff, bufc, "#%d", obj_next(it));
         return;
       } else {
         key = 0;
         if (ex_here)
           key |= VE_LOC_XAM;
-        if (Dark(loc))
+        if (is_dark(loc))
           key |= VE_LOC_DARK;
         DOLIST(exit, it) {
           if ((exit != it) && exit_visible(exit, player, key)) {
@@ -1614,7 +1613,7 @@ static void fun_loc(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   if (locatable(player, it, cause))
-    safe_tprintf_str(buff, bufc, "#%d", Location(it));
+    safe_tprintf_str(buff, bufc, "#%d", obj_location(it));
   else
     safe_str("#-1", buff, bufc);
   return;
@@ -1654,9 +1653,9 @@ static void fun_rloc(char *buff, char **bufc, DbRef player, DbRef cause,
   it = match_thing(player, fargs[0]);
   if (locatable(player, it, cause)) {
     for (i = 0; i < levels; i++) {
-      if (!Good_obj(it) || !Has_location(it))
+      if (!is_good_obj(it) || !has_location(it))
         break;
-      it = Location(it);
+      it = obj_location(it);
     }
     safe_tprintf_str(buff, bufc, "#%d", it);
     return;
@@ -1677,16 +1676,16 @@ static void fun_room(char *buff, char **bufc, DbRef player, DbRef cause,
   it = match_thing(player, fargs[0]);
   if (locatable(player, it, cause)) {
     for (count = mudconf.ntfy_nest_lim; count > 0; count--) {
-      it = Location(it);
-      if (!Good_obj(it))
+      it = obj_location(it);
+      if (!is_good_obj(it))
         break;
-      if (isRoom(it)) {
+      if (is_room(it)) {
         safe_tprintf_str(buff, bufc, "#%d", it);
         return;
       }
     }
     safe_str("#-1", buff, bufc);
-  } else if (isRoom(it)) {
+  } else if (is_room(it)) {
     safe_tprintf_str(buff, bufc, "#%d", it);
   } else {
     safe_str("#-1", buff, bufc);
@@ -1715,7 +1714,7 @@ static void fun_owner(char *buff, char **bufc, DbRef player, DbRef cause,
   } else {
     it = match_thing(player, fargs[0]);
     if (it != NOTHING)
-      it = Owner(it);
+      it = obj_owner(it);
   }
   safe_tprintf_str(buff, bufc, "#%d", it);
 }
@@ -1739,7 +1738,7 @@ static void fun_controls(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_tprintf_str(buff, bufc, "%s", "#-1 ARG2 NOT FOUND");
     return;
   }
-  safe_tprintf_str(buff, bufc, "%d", Controls(x, y));
+  safe_tprintf_str(buff, bufc, "%d", is_controls(x, y));
 }
 
 /*
@@ -1756,7 +1755,7 @@ static void fun_fullname(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   if (!mudconf.read_rem_name) {
-    if (!nearby_or_control(player, it) && (!isPlayer(it))) {
+    if (!nearby_or_control(player, it) && (!is_player(it))) {
       safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
       return;
     }
@@ -1779,15 +1778,15 @@ static void fun_name(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   if (!mudconf.read_rem_name) {
-    if (!nearby_or_control(player, it) && !isPlayer(it) &&
-        !Long_Fingers(player)) {
+    if (!nearby_or_control(player, it) && !is_player(it) &&
+        !is_long_fingers(player)) {
       safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
       return;
     }
   }
   temp = *bufc;
   safe_str(Name(it), buff, bufc);
-  if (isExit(it)) {
+  if (is_exit(it)) {
     for (s = temp; (s != *bufc) && (*s != ';'); s++)
       ;
     if (*s == ';')
@@ -2562,10 +2561,11 @@ static void fun_lcon(char *buff, char **bufc, DbRef player, DbRef cause,
   int first = 1;
 
   it = match_thing(player, fargs[0]);
-  if ((it != NOTHING) && (Has_contents(it)) &&
-      (Examinable(player, it) || (Location(player) == it) || (it == cause))) {
+  if ((it != NOTHING) && (has_contents(it)) &&
+      (is_examinable(player, it) || (obj_location(player) == it) ||
+       (it == cause))) {
     tbuf = alloc_sbuf("fun_lcon");
-    DOLIST(thing, Contents(it)) {
+    DOLIST(thing, obj_contents(it)) {
       if (!first)
         snprintf(tbuf, SBUF_SIZE, " #%ld", thing);
       else {
@@ -2588,12 +2588,13 @@ static void fun_lplayers(char *buff, char **bufc, DbRef player, DbRef cause,
   int first = 1;
 
   it = match_thing(player, fargs[0]);
-  if ((it != NOTHING) && (Has_contents(it)) &&
-      (Examinable(player, it) || (Location(player) == it) || (it == cause))) {
+  if ((it != NOTHING) && (has_contents(it)) &&
+      (is_examinable(player, it) || (obj_location(player) == it) ||
+       (it == cause))) {
 
     tbuf = alloc_sbuf("fun_lplayers");
-    DOLIST(thing, Contents(it)) {
-      if (Typeof(thing) == TYPE_PLAYER && !Dark(thing)) {
+    DOLIST(thing, obj_contents(it)) {
+      if (typeof_obj(thing) == TYPE_PLAYER && !is_dark(thing)) {
         if (!first)
           snprintf(tbuf, SBUF_SIZE, " #%ld", thing);
         else {
@@ -2618,12 +2619,14 @@ static void fun_lvplayers(char *buff, char **bufc, DbRef player, DbRef cause,
   int first = 1;
 
   it = match_thing(player, fargs[0]);
-  if ((it != NOTHING) && (Has_contents(it)) &&
-      (Examinable(player, it) || (Location(player) == it) || (it == cause))) {
+  if ((it != NOTHING) && (has_contents(it)) &&
+      (is_examinable(player, it) || (obj_location(player) == it) ||
+       (it == cause))) {
 
     tbuf = alloc_sbuf("fun_lvplayers");
-    DOLIST(thing, Contents(it)) {
-      if (Typeof(thing) == TYPE_PLAYER && !Dark(thing) && Connected(thing)) {
+    DOLIST(thing, obj_contents(it)) {
+      if (typeof_obj(thing) == TYPE_PLAYER && !is_dark(thing) &&
+          is_connected(thing)) {
         if (!first)
           snprintf(tbuf, SBUF_SIZE, " #%ld", thing);
         else {
@@ -2652,11 +2655,11 @@ static void fun_lexits(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
 
-  if (!Good_obj(it) || !Has_exits(it)) {
+  if (!is_good_obj(it) || !has_exits(it)) {
     safe_str("#-1", buff, bufc);
     return;
   }
-  exam = Examinable(player, it);
+  exam = is_examinable(player, it);
   if (!exam && (where_is(player) != it) && (it != cause)) {
     safe_str("#-1", buff, bufc);
     return;
@@ -2673,16 +2676,16 @@ static void fun_lexits(char *buff, char **bufc, DbRef player, DbRef cause,
      * Look for exits at each level
      */
 
-    if (!Has_exits(parent))
+    if (!has_exits(parent))
       continue;
     key = 0;
-    if (Examinable(player, parent))
+    if (is_examinable(player, parent))
       key |= VE_LOC_XAM;
-    if (Dark(parent))
+    if (is_dark(parent))
       key |= VE_LOC_DARK;
-    if (Dark(it))
+    if (is_dark(it))
       key |= VE_BASE_DARK;
-    DOLIST(thing, Exits(parent)) {
+    DOLIST(thing, obj_exits(parent)) {
       if (exit_visible(thing, player, key)) {
         if (!first)
           snprintf(tbuf, SBUF_SIZE, " #%ld", thing);
@@ -2708,13 +2711,13 @@ static void fun_home(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  if (!Good_obj(it) || !Examinable(player, it))
+  if (!is_good_obj(it) || !is_examinable(player, it))
     safe_str("#-1", buff, bufc);
-  else if (Has_home(it))
-    safe_tprintf_str(buff, bufc, "#%d", Home(it));
-  else if (Has_dropto(it))
-    safe_tprintf_str(buff, bufc, "#%d", Dropto(it));
-  else if (isExit(it))
+  else if (has_home(it))
+    safe_tprintf_str(buff, bufc, "#%d", obj_home(it));
+  else if (has_dropto(it))
+    safe_tprintf_str(buff, bufc, "#%d", obj_dropto(it));
+  else if (is_exit(it))
     safe_tprintf_str(buff, bufc, "#%d", where_is(it));
   else
     safe_str("#-1", buff, bufc);
@@ -2760,9 +2763,9 @@ static void fun_pos(char *buff, char **bufc, DbRef player, DbRef cause,
  * *  replace(<list>,<position>,<new item>[,<separator>])
  */
 
-#define IF_DELETE 0
-#define IF_REPLACE 1
-#define IF_INSERT 2
+constexpr int IF_DELETE = 0;
+constexpr int IF_REPLACE = 1;
+constexpr int IF_INSERT = 2;
 
 static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
                         char sep, int flag) {
@@ -3107,11 +3110,11 @@ static void fun_type(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  if (!Good_obj(it)) {
+  if (!is_good_obj(it)) {
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  switch (Typeof(it)) {
+  switch (typeof_obj(it)) {
   case TYPE_ROOM:
     safe_str("ROOM", buff, bufc);
     break;
@@ -3135,11 +3138,11 @@ static void fun_hasflag(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  if (!Good_obj(it)) {
+  if (!is_good_obj(it)) {
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (mudconf.pub_flags || Examinable(player, it) || (it == cause)) {
+  if (mudconf.pub_flags || is_examinable(player, it) || (it == cause)) {
     if (has_flag(player, it, fargs[1]))
       safe_str("1", buff, bufc);
     else
@@ -3154,11 +3157,11 @@ static void fun_haspower(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  if (!Good_obj(it)) {
+  if (!is_good_obj(it)) {
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (mudconf.pub_flags || Examinable(player, it) || (it == cause)) {
+  if (mudconf.pub_flags || is_examinable(player, it) || (it == cause)) {
     if (has_power(player, it, fargs[1]))
       safe_str("1", buff, bufc);
     else
@@ -3215,7 +3218,7 @@ static void fun_lock(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   tbuf = attribute_get(it, attr->number, &aowner, &aflags);
-  if (Read_attr(player, it, attr, aowner, aflags)) {
+  if (read_attr(player, it, attr, aowner, aflags)) {
     boolexp = boolean_expression_parse(player, tbuf, 1);
     free_lbuf(tbuf);
     tbuf = (char *)boolean_expression_unparse_function(player, boolexp);
@@ -3245,7 +3248,7 @@ static void fun_elock(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   victim = match_thing(player, fargs[1]);
-  if (!Good_obj(victim)) {
+  if (!is_good_obj(victim)) {
     safe_str("#-1 NOT FOUND", buff, bufc);
   } else if (!nearby_or_control(player, victim) &&
              !nearby_or_control(player, it)) {
@@ -3253,7 +3256,7 @@ static void fun_elock(char *buff, char **bufc, DbRef player, DbRef cause,
   } else {
     tbuf = attribute_get(it, attr->number, &aowner, &aflags);
     if ((attr->number == A_LOCK) ||
-        Read_attr(player, it, attr, aowner, aflags)) {
+        read_attr(player, it, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, tbuf, 1);
       safe_tprintf_str(buff, bufc, "%d",
                        boolean_expression_evaluate(victim, it, it, boolexp));
@@ -3305,7 +3308,7 @@ static void process_pronoun(DbRef player, char *what, const char *token,
   char *str;
 
   it = match_thing(player, what);
-  if (!Good_obj(it) || (!isPlayer(it) && !nearby_or_control(player, it))) {
+  if (!is_good_obj(it) || (!is_player(it) && !nearby_or_control(player, it))) {
     safe_str("#-1 NO MATCH", buff, bufc);
   } else {
     str = (char *)token;
@@ -4044,7 +4047,7 @@ static void fun_fold(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || (!Good_obj(thing)))
+    if ((anum == NOTHING) || (!is_good_obj(thing)))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -4067,7 +4070,7 @@ static void fun_fold(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -4153,7 +4156,7 @@ static void fun_filter(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || (!Good_obj(thing)))
+    if ((anum == NOTHING) || (!is_good_obj(thing)))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -4176,7 +4179,7 @@ static void fun_filter(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -4234,7 +4237,7 @@ static void fun_map(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || (!Good_obj(thing)))
+    if ((anum == NOTHING) || (!is_good_obj(thing)))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -4257,7 +4260,7 @@ static void fun_map(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -4317,11 +4320,11 @@ static void fun_locate(char *buff, char **bufc, DbRef player, DbRef cause,
    * Find the thing to do the looking, make sure we control it.
    */
 
-  if (Wizard(player))
+  if (is_wizard(player))
     thing = match_thing(player, fargs[0]);
   else
     thing = match_controlled(player, fargs[0]);
-  if (!Good_obj(thing)) {
+  if (!is_good_obj(thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -4584,7 +4587,7 @@ static void fun_idle(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
 
   target = lookup_player(player, fargs[0], 1);
-  if (Good_obj(target) && Dark(target) && !Wizard(player))
+  if (is_good_obj(target) && is_dark(target) && !is_wizard(player))
     target = NOTHING;
   safe_tprintf_str(buff, bufc, "%d", fetch_idle(target));
 }
@@ -4594,7 +4597,7 @@ static void fun_conn(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef target;
 
   target = lookup_player(player, fargs[0], 1);
-  if (Good_obj(target) && Dark(target) && !Wizard(player))
+  if (is_good_obj(target) && is_dark(target) && !is_wizard(player))
     target = NOTHING;
   safe_tprintf_str(buff, bufc, "%d", fetch_connect(target));
 }
@@ -4719,9 +4722,9 @@ static void fun_sort(char *buff, char **bufc, DbRef player, DbRef cause,
  * * fun_setunion, fun_setdiff, fun_setinter: Set management.
  */
 
-#define SET_UNION 1
-#define SET_INTERSECT 2
-#define SET_DIFF 3
+constexpr int SET_UNION = 1;
+constexpr int SET_INTERSECT = 2;
+constexpr int SET_DIFF = 3;
 
 static void handle_sets(char *fargs[], char *buff, char **bufc, int oper,
                         char sep) {
@@ -5103,7 +5106,7 @@ static void fun_isdbref(char *buff, char **bufc, DbRef player, DbRef cause,
   p = fargs[0];
   if (*p++ == NUMBER_TOKEN) {
     dbitem = parse_dbref(p);
-    if (Good_obj(dbitem)) {
+    if (is_good_obj(dbitem)) {
       safe_str("1", buff, bufc);
       return;
     }
@@ -5211,7 +5214,7 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -5307,7 +5310,7 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (attr->flags & AF_IS_LOCK) {
     atr_gotten = attribute_get(thing, attrib, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       boolexp = boolean_expression_parse(player, atr_gotten, 1);
       free_lbuf(atr_gotten);
       atr_gotten = boolean_expression_unparse(player, boolexp);
@@ -5802,7 +5805,7 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
     return;
   }
   attribute_get_info(obj, atr, &aowner, &aflags);
-  if (!See_attr(player, obj, ap, aowner, aflags)) {
+  if (!see_attr(player, obj, ap, aowner, aflags)) {
     notify_quiet(player, "Permission denied.");
     free_sbuf(np);
     return;
@@ -5811,7 +5814,7 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
    * Privileged functions require you control the obj.
    */
 
-  if ((key & FN_PRIV) && !Controls(player, obj)) {
+  if ((key & FN_PRIV) && !is_controls(player, obj)) {
     notify_quiet(player, "Permission denied.");
     free_sbuf(np);
     return;
@@ -5844,7 +5847,7 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
   ufp->atr = atr;
   ufp->flags = key;
   free_sbuf(np);
-  if (!Quiet(player)) {
+  if (!is_quiet(player)) {
     char buffer[MBUF_SIZE];
     snprintf(buffer, MBUF_SIZE - 1, "Function %s defined.", fname);
     notify_quiet(player, buffer);

@@ -25,12 +25,12 @@ static void process_leave_loc(DbRef thing, DbRef dest, DbRef cause, int canhear,
   DbRef loc;
   int quiet, pattr, oattr, aattr;
 
-  loc = Location(thing);
+  loc = obj_location(thing);
   if ((loc == NOTHING) || (loc == dest))
     return;
 
   if (dest == HOME)
-    dest = Home(thing);
+    dest = obj_home(thing);
 
   /*
    * Run the LEAVE attributes in the current room if we meet any of * *
@@ -41,8 +41,8 @@ static void process_leave_loc(DbRef thing, DbRef dest, DbRef cause, int canhear,
    * privs. * EXCEPT  * if * * we were called with the HUSH_LEAVE key.
    */
 
-  quiet = (!(Wizard(loc) || (!Dark(thing) && !Dark(loc)) ||
-             (canhear && !(Wizard(thing) && Dark(thing))))) ||
+  quiet = (!(is_wizard(loc) || (!is_dark(thing) && !is_dark(loc)) ||
+             (canhear && !(is_wizard(thing) && is_dark(thing))))) ||
           (hush & HUSH_LEAVE);
   oattr = quiet ? 0 : A_OLEAVE;
   aattr = quiet ? 0 : A_ALEAVE;
@@ -65,8 +65,8 @@ static void process_leave_loc(DbRef thing, DbRef dest, DbRef cause, int canhear,
    */
 
   if (!quiet)
-    if ((!Dark(thing) && !Dark(loc)) ||
-        (canhear && !(Wizard(thing) && Dark(thing)))) {
+    if ((!is_dark(thing) && !is_dark(loc)) ||
+        (canhear && !(is_wizard(thing) && is_dark(thing)))) {
       notify_except2(loc, thing, thing, cause,
                      tprintf("%s has left.", Name(thing)));
     }
@@ -82,7 +82,7 @@ static void process_enter_loc(DbRef thing, DbRef src, DbRef cause, int canhear,
   DbRef loc;
   int quiet, pattr, oattr, aattr;
 
-  loc = Location(thing);
+  loc = obj_location(thing);
   if ((loc == NOTHING) || (loc == src))
     return;
 
@@ -95,8 +95,8 @@ static void process_enter_loc(DbRef thing, DbRef src, DbRef cause, int canhear,
    * privs. * EXCEPT  * if * * we were called with the HUSH_ENTER key.
    */
 
-  quiet = (!(Wizard(loc) || (!Dark(thing) && !Dark(loc)) ||
-             (canhear && !(Wizard(thing) && Dark(thing))))) ||
+  quiet = (!(is_wizard(loc) || (!is_dark(thing) && !is_dark(loc)) ||
+             (canhear && !(is_wizard(thing) && is_dark(thing))))) ||
           (hush & HUSH_ENTER);
   oattr = quiet ? 0 : A_OENTER;
   aattr = quiet ? 0 : A_AENTER;
@@ -116,7 +116,7 @@ static void process_enter_loc(DbRef thing, DbRef src, DbRef cause, int canhear,
    * is * * not * a dark wizard.
    */
 
-  if (!quiet && canhear && !(Dark(thing) && Wizard(thing))) {
+  if (!quiet && canhear && !(is_dark(thing) && is_wizard(thing))) {
     notify_except2(loc, thing, thing, cause,
                    tprintf("%s has arrived.", Name(thing)));
   }
@@ -135,26 +135,26 @@ void move_object(DbRef thing, DbRef dest) {
    * Remove from the source location
    */
 
-  src = Location(thing);
+  src = obj_location(thing);
   if (src != NOTHING)
-    s_Contents(src, remove_first(Contents(src), thing));
+    s_contents(src, remove_first(obj_contents(src), thing));
 
   /*
    * Special check for HOME
    */
 
   if (dest == HOME)
-    dest = Home(thing);
+    dest = obj_home(thing);
 
   /*
    * Add to destination location
    */
 
   if (dest != NOTHING)
-    s_Contents(dest, insert_first(Contents(dest), thing));
+    s_contents(dest, insert_first(obj_contents(dest), thing));
   else
-    s_Next(thing, NOTHING);
-  s_Location(thing, dest);
+    s_next(thing, NOTHING);
+  s_location(thing, dest);
 
   look_in(thing, dest, LK_SHOWEXIT);
 }
@@ -170,8 +170,8 @@ void move_object(DbRef thing, DbRef dest) {
  */
 
 static void send_dropto(DbRef thing, DbRef player) {
-  if (!Sticky(thing))
-    move_via_generic(thing, Dropto(Location(thing)), player, 0);
+  if (!is_sticky(thing))
+    move_via_generic(thing, obj_dropto(obj_location(thing)), player, 0);
   else
     move_via_generic(thing, HOME, player, 0);
   divest_object(thing);
@@ -189,14 +189,14 @@ static void process_sticky_dropto(DbRef loc, DbRef player) {
    * Do nothing if checking anything but a sticky room
    */
 
-  if (!Good_obj(loc) || !Has_dropto(loc) || !Sticky(loc))
+  if (!is_good_obj(loc) || !has_dropto(loc) || !is_sticky(loc))
     return;
 
   /*
    * Make sure dropto loc is valid
    */
 
-  dropto = Dropto(loc);
+  dropto = obj_dropto(loc);
   if ((dropto == NOTHING) || (dropto == loc))
     return;
 
@@ -204,8 +204,8 @@ static void process_sticky_dropto(DbRef loc, DbRef player) {
    * Make sure no players hanging out
    */
 
-  DOLIST(thing, Contents(loc)) {
-    if (Dropper(thing))
+  DOLIST(thing, obj_contents(loc)) {
+    if (is_connected(obj_owner(thing)) && is_hearer(thing))
       return;
   }
 
@@ -213,8 +213,8 @@ static void process_sticky_dropto(DbRef loc, DbRef player) {
    * Send everything through the dropto
    */
 
-  s_Contents(loc, reverse_list(Contents(loc)));
-  SAFE_DOLIST(thing, next, Contents(loc)) { send_dropto(thing, player); }
+  s_contents(loc, reverse_list(obj_contents(loc)));
+  SAFE_DOLIST(thing, next, obj_contents(loc)) { send_dropto(thing, player); }
 }
 
 /*
@@ -228,7 +228,7 @@ static void process_dropped_dropto(DbRef thing, DbRef player) {
    * If STICKY, send home
    */
 
-  if (Sticky(thing)) {
+  if (is_sticky(thing)) {
     move_via_generic(thing, HOME, player, 0);
     divest_object(thing);
     return;
@@ -237,8 +237,8 @@ static void process_dropped_dropto(DbRef thing, DbRef player) {
    * Process the dropto if location is a room and is not STICKY
    */
 
-  loc = Location(thing);
-  if (Has_dropto(loc) && (Dropto(loc) != NOTHING) && !Sticky(loc))
+  loc = obj_location(thing);
+  if (has_dropto(loc) && (obj_dropto(loc) != NOTHING) && !is_sticky(loc))
     send_dropto(thing, player);
 }
 
@@ -253,8 +253,8 @@ void move_via_generic(DbRef thing, DbRef dest, DbRef cause, int hush) {
   int canhear;
 
   if (dest == HOME)
-    dest = Home(thing);
-  src = Location(thing);
+    dest = obj_home(thing);
+  src = obj_location(thing);
   canhear = is_hearer(thing);
   process_leave_loc(thing, dest, cause, canhear, hush);
   move_object(thing, dest);
@@ -272,15 +272,15 @@ void move_via_exit(DbRef thing, DbRef dest, DbRef cause, DbRef exit, int hush) {
   int canhear, darkwiz, quiet, pattr, oattr, aattr;
 
   if (dest == HOME)
-    dest = Home(thing);
-  src = Location(thing);
+    dest = obj_home(thing);
+  src = obj_location(thing);
   canhear = is_hearer(thing);
 
   /*
    * Dark wizards don't trigger OSUCC/ASUCC
    */
 
-  darkwiz = (Wizard(thing) && Dark(thing));
+  darkwiz = (is_wizard(thing) && is_dark(thing));
   quiet = darkwiz || (hush & HUSH_EXIT);
 
   oattr = quiet ? 0 : A_OSUCC;
@@ -315,8 +315,8 @@ int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
   int canhear, count;
   char *failmsg;
 
-  src = Location(thing);
-  if ((dest != HOME) && Good_obj(src)) {
+  src = obj_location(thing);
+  if ((dest != HOME) && is_good_obj(src)) {
     curr = src;
     for (count = mudconf.ntfy_nest_lim; count > 0; count--) {
       if (!could_doit(thing, curr, A_LTELOUT)) {
@@ -330,13 +330,13 @@ int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
                (char **)NULL, 0);
         return 0;
       }
-      if (isRoom(curr))
+      if (is_room(curr))
         break;
-      curr = Location(curr);
+      curr = obj_location(curr);
     }
   }
   if (dest == HOME)
-    dest = Home(thing);
+    dest = obj_home(thing);
   canhear = is_hearer(thing);
   if (!(hush & HUSH_LEAVE))
     did_it(thing, thing, 0, NULL, A_OXTPORT, NULL, 0, (char **)NULL, 0);
@@ -362,11 +362,11 @@ void move_exit(DbRef player, DbRef exit, int divest, const char *failmsg,
   DbRef loc;
   int oattr, aattr;
 
-  loc = Location(exit);
+  loc = obj_location(exit);
   if (loc == HOME)
-    loc = Home(player);
-  if (Good_obj(loc) && could_doit(player, exit, A_LOCK)) {
-    switch (Typeof(loc)) {
+    loc = obj_home(player);
+  if (is_good_obj(loc) && could_doit(player, exit, A_LOCK)) {
+    switch (typeof_obj(loc)) {
     case TYPE_ROOM:
       move_via_exit(player, loc, NOTHING, exit, hush);
       if (divest)
@@ -374,7 +374,7 @@ void move_exit(DbRef player, DbRef exit, int divest, const char *failmsg,
       break;
     case TYPE_PLAYER:
     case TYPE_THING:
-      if (Going(loc)) {
+      if (is_going(loc)) {
         notify(player, "You can't go that way.");
         return;
       }
@@ -386,7 +386,7 @@ void move_exit(DbRef player, DbRef exit, int divest, const char *failmsg,
       return;
     }
   } else {
-    if ((Wizard(player) && Dark(player)) || (hush & HUSH_EXIT)) {
+    if ((is_wizard(player) && is_dark(player)) || (hush & HUSH_EXIT)) {
       oattr = 0;
       aattr = 0;
     } else {
@@ -409,12 +409,14 @@ void do_move(DbRef player, DbRef cause, int key, char *direction) {
   if (!string_compare(direction, "home")) { /*
                                              * go home w/o stuff
                                              */
-    if ((Fixed(player) || Fixed(Owner(player))) && !(Wizard(player))) {
+    if ((is_fixed(player) || is_fixed(obj_owner(player))) &&
+        !(is_wizard(player))) {
       notify(player, mudconf.fixed_home_msg);
       return;
     }
 
-    if ((loc = Location(player)) != NOTHING && !Dark(player) && !Dark(loc)) {
+    if ((loc = obj_location(player)) != NOTHING && !is_dark(player) &&
+        !is_dark(loc)) {
 
       /*
        * tell all
@@ -453,7 +455,7 @@ void do_move(DbRef player, DbRef cause, int key, char *direction) {
     break;
   default:
     quiet = 0;
-    if ((key & MOVE_QUIET) && Controls(player, exit))
+    if ((key & MOVE_QUIET) && is_controls(player, exit))
       quiet = HUSH_EXIT;
     move_exit(player, exit, 0, "You can't go that way.", quiet);
   }
@@ -469,16 +471,16 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
   char *failmsg;
   int oattr, aattr, quiet;
 
-  playerloc = Location(player);
-  if (!Good_obj(playerloc))
+  playerloc = obj_location(player);
+  if (!is_good_obj(playerloc))
     return;
 
   /*
    * You can only pick up things in rooms and ENTER_OK objects/players
    */
 
-  if (!isRoom(playerloc) && !Enter_ok(playerloc) &&
-      !controls(player, playerloc)) {
+  if (!is_room(playerloc) && !is_enter_ok(playerloc) &&
+      !is_controls(player, playerloc)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -489,7 +491,7 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
   init_match_check_keys(player, what, TYPE_THING);
   match_neighbor();
   match_exit();
-  if (Long_Fingers(player))
+  if (is_long_fingers(player))
     match_absolute(); /*
                        * long fingers
                        */
@@ -499,10 +501,10 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
    * Look for the thing in other people's inventories
    */
 
-  if (!Good_obj(thing))
+  if (!is_good_obj(thing))
     thing =
         match_status(player, match_possessed(player, player, what, thing, 1));
-  if (!Good_obj(thing))
+  if (!is_good_obj(thing))
     return;
 
   /*
@@ -510,25 +512,25 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
    */
 
   quiet = 0;
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_PLAYER:
   case TYPE_THING:
     /*
      * You can't take what you already have
      */
 
-    thingloc = Location(thing);
+    thingloc = obj_location(thing);
     if (thingloc == player) {
       notify(player, "You already have that!");
       break;
     }
-    if ((key & GET_QUIET) && Controls(player, thing))
+    if ((key & GET_QUIET) && is_controls(player, thing))
       quiet = 1;
 
     if (thing == player) {
       notify(player, "You cannot get yourself!");
     } else if (could_doit(player, thing, A_LOCK)) {
-      if (thingloc != Location(player)) {
+      if (thingloc != obj_location(player)) {
         notify_printf(thingloc, "%s was taken from you.", Name(thing));
       }
       move_via_generic(thing, player, player, 0);
@@ -540,7 +542,7 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
     } else {
       oattr = quiet ? 0 : A_OFAIL;
       aattr = quiet ? 0 : A_AFAIL;
-      if (thingloc != Location(player))
+      if (thingloc != obj_location(player))
         failmsg = (char *)"You can't take that from there.";
       else
         failmsg = (char *)"You can't pick that up.";
@@ -553,7 +555,7 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
      * You can't take what you already have
      */
 
-    thingloc = Exits(thing);
+    thingloc = obj_exits(thing);
     if (thingloc == player) {
       notify(player, "You already have that!");
       break;
@@ -562,8 +564,8 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
      * You must control either the exit or the location
      */
 
-    playerloc = Location(player);
-    if (!Controls(player, thing) && !Controls(player, playerloc)) {
+    playerloc = obj_location(player);
+    if (!is_controls(player, thing) && !is_controls(player, playerloc)) {
       notify(player, "Permission denied.");
       break;
     }
@@ -571,10 +573,10 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
      * Do it
      */
 
-    s_Exits(thingloc, remove_first(Exits(thingloc), thing));
-    s_Exits(player, insert_first(Exits(player), thing));
-    s_Exits(thing, player);
-    if (!Quiet(player))
+    s_exits(thingloc, remove_first(obj_exits(thingloc), thing));
+    s_exits(player, insert_first(obj_exits(player), thing));
+    s_exits(thing, player);
+    if (!is_quiet(player))
       notify(player, "Exit taken.");
     break;
   default:
@@ -593,8 +595,8 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
   char *buf, *bp;
   int quiet, oattr, aattr;
 
-  loc = Location(player);
-  if (!Good_obj(loc))
+  loc = obj_location(player);
+  if (!is_good_obj(loc))
     return;
 
   init_match(player, name, TYPE_THING);
@@ -610,7 +612,7 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
     return;
   }
 
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_THING:
   case TYPE_PLAYER:
 
@@ -618,7 +620,7 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
      * You have to be carrying it
      */
 
-    if (((Location(thing) != player) && !Wizard(player)) ||
+    if (((obj_location(thing) != player) && !is_wizard(player)) ||
         (!could_doit(player, thing, A_LDROP))) {
       did_it(player, thing, A_DFAIL, "You can't drop that.", A_ODFAIL, NULL,
              A_ADFAIL, (char **)NULL, 0);
@@ -628,10 +630,10 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
      * Move it
      */
 
-    move_via_generic(thing, Location(player), player, 0);
+    move_via_generic(thing, obj_location(player), player, 0);
     notify(thing, "Dropped.");
     quiet = 0;
-    if ((key & DROP_QUIET) && Controls(player, thing))
+    if ((key & DROP_QUIET) && is_controls(player, thing))
       quiet = 1;
     bp = buf = alloc_lbuf("do_drop.did_it");
     safe_tprintf_str(buf, &bp, "dropped %s.", Name(thing));
@@ -654,11 +656,11 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
      * You have to be carrying it
      */
 
-    if ((Exits(thing) != player) && !Wizard(player)) {
+    if ((obj_exits(thing) != player) && !is_wizard(player)) {
       notify(player, "You can't drop that.");
       return;
     }
-    if (!Controls(player, loc)) {
+    if (!is_controls(player, loc)) {
       notify(player, "Permission denied.");
       return;
     }
@@ -666,12 +668,12 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
      * Do it
      */
 
-    exitloc = Exits(thing);
-    s_Exits(exitloc, remove_first(Exits(exitloc), thing));
-    s_Exits(loc, insert_first(Exits(loc), thing));
-    s_Exits(thing, loc);
+    exitloc = obj_exits(thing);
+    s_exits(exitloc, remove_first(obj_exits(exitloc), thing));
+    s_exits(loc, insert_first(obj_exits(loc), thing));
+    s_exits(thing, loc);
 
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify(player, "Exit dropped.");
     break;
   default:
@@ -685,10 +687,10 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
  */
 
 void do_enter_internal(DbRef player, DbRef thing, int quiet) {
-  DbRef loc = Location(player);
+  DbRef loc = obj_location(player);
   int oattr, aattr;
 
-  if (!Enter_ok(thing) && !controls(player, thing)) {
+  if (!is_enter_ok(thing) && !is_controls(player, thing)) {
     oattr = quiet ? 0 : A_OEFAIL;
     aattr = quiet ? 0 : A_AEFAIL;
     did_it(player, thing, A_EFAIL, "Permission denied.", oattr, NULL, aattr,
@@ -720,7 +722,7 @@ void do_enter(DbRef player, DbRef cause, int key, char *what) {
 
   init_match(player, what, TYPE_THING);
   match_neighbor();
-  if (Long_Fingers(player))
+  if (is_long_fingers(player))
     match_absolute(); /*
                        * the wizard has long fingers
                        */
@@ -728,11 +730,11 @@ void do_enter(DbRef player, DbRef cause, int key, char *what) {
   if ((thing = noisy_match_result()) == NOTHING)
     return;
 
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_PLAYER:
   case TYPE_THING:
     quiet = 0;
-    if ((key & MOVE_QUIET) && Controls(player, thing))
+    if ((key & MOVE_QUIET) && is_controls(player, thing))
       quiet = 1;
     do_enter_internal(player, thing, quiet);
     break;
@@ -746,22 +748,22 @@ void do_leave(DbRef player, DbRef cause, int key) {
   DbRef loc;
   int quiet, oattr, aattr;
 
-  loc = Location(player);
+  loc = obj_location(player);
 
-  if (!Good_obj(loc) || isRoom(loc) || Going(loc)) {
+  if (!is_good_obj(loc) || is_room(loc) || is_going(loc)) {
     notify(player, "You can't leave.");
     return;
   }
   quiet = 0;
-  if ((key & MOVE_QUIET) && Controls(player, loc))
+  if ((key & MOVE_QUIET) && is_controls(player, loc))
     quiet = HUSH_LEAVE;
 #ifdef LEAVE_REQUIRES_ENTERSUCC
   if (could_doit(player, loc, A_LLEAVE) &&
-      could_doit(player, Location(loc), A_LENTER)) {
+      could_doit(player, obj_location(loc), A_LENTER)) {
 #else
   if (could_doit(player, loc, A_LLEAVE)) {
 #endif
-    move_via_generic(player, Location(loc), NOTHING, quiet);
+    move_via_generic(player, obj_location(loc), NOTHING, quiet);
   } else {
     oattr = quiet ? 0 : A_OLFAIL;
     aattr = quiet ? 0 : A_ALFAIL;

@@ -478,7 +478,7 @@ const char *GetMechToMechID_base(MECH *see, MECH *mech, int inlos) {
   char *mname;
   static char ids[SBUF_SIZE];
 
-  if (!Good_obj(mech->mynum))
+  if (!is_good_obj(mech->mynum))
     return "";
 
   if (!inlos)
@@ -505,7 +505,7 @@ const char *GetMechToMechID(MECH *see, MECH *mech) {
     dprintk("bad see");
     return "";
   }
-  if (!Good_obj(mech->mynum))
+  if (!is_good_obj(mech->mynum))
     return "";
 
   if (!InLineOfSight_NB(see, mech, 0, 0, 0)) {
@@ -525,7 +525,7 @@ const char *GetMechID(MECH *mech) {
   char *mname;
   static char ids[SBUF_SIZE];
 
-  if (!Good_obj(mech->mynum))
+  if (!is_good_obj(mech->mynum))
     return "";
 
   mname = silly_atr_get(mech->mynum, A_MECHNAME);
@@ -794,7 +794,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (mech->freq[chn] == 0 && In_Character(mech->mapindex)) {
+  if (mech->freq[chn] == 0 && is_in_character(mech->mapindex)) {
     send_channel("ZeroFrequencies",
                  "Player #%d (%s) in mech #%d (channel %c) "
                  "on map #%d 0-freqs \"%s\"",
@@ -900,7 +900,7 @@ int common_checks(DbRef player, MECH *mech, int flag) {
   if ((flag & MECH_CONSISTENT) && !CheckData(player, mech))
     return 0;
 
-  if (!Wizard(player)) {
+  if (!is_wizard(player)) {
     /* ----------------------------- */
     /* INSERT UNSUPPORTED TYPES HERE */
     /* ----------------------------- */
@@ -914,7 +914,7 @@ int common_checks(DbRef player, MECH *mech, int flag) {
 
   /*
       if (MechAuto(mech) > 0)
-          if (isPlayer(MechPilot(mech)))
+          if (is_player(MechPilot(mech)))
               MechAuto(mech) = -1;
   */
   MechLastUse(mech) = 0;
@@ -933,7 +933,7 @@ int common_checks(DbRef player, MECH *mech, int flag) {
              "You are unconscious....zzzzzzz");
 
   if (flag & MECH_PILOTONLY)
-    DOCHECK0(!Wizard(player) && In_Character(mech->mynum) &&
+    DOCHECK0(!is_wizard(player) && is_in_character(mech->mynum) &&
                  MechPilot(mech) != player,
              "Now now, only the pilot can push that button.");
 
@@ -1245,12 +1245,12 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
         if (!a) {
           /* No AI there so reset the AI value on the mech */
           MechAuto(tempMech) = -1;
-        } else if (a && Location(a->mynum) != tempMech->mynum) {
+        } else if (a && obj_location(a->mynum) != tempMech->mynum) {
           /* Check to see if the AI is still in the same mech */
           snprintf(ai_buf, LBUF_SIZE,
                    "Autopilot #%ld (Location: #%ld) "
                    "reported on Mech #%ld but not in the proper location",
-                   a->mynum, Location(a->mynum), tempMech->mynum);
+                   a->mynum, obj_location(a->mynum), tempMech->mynum);
           SendAI(ai_buf);
         } else if (a && !ECMDisturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
@@ -1310,7 +1310,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
 
       if (!obs)
         mech_notify(tempMech, MECHALL, buf);
-      if (isxp && In_Character(tempMech->mynum))
+      if (isxp && is_in_character(tempMech->mynum))
         if ((MechCommLast(tempMech) + 60) < mux_event_tick) {
           AccumulateCommXP(MechPilot(tempMech), tempMech);
           MechCommLast(tempMech) = mux_event_tick;

@@ -303,8 +303,8 @@ static void tcache_finish(DbRef player) {
   while (tcache_head != NULL) {
     xp = tcache_head;
     tcache_head = xp->next;
-    notify_printf(Owner(player), "%s(#%d)} '%s' -> '%s'", Name(player), player,
-                  xp->orig, xp->result);
+    notify_printf(obj_owner(player), "%s(#%d)} '%s' -> '%s'", Name(player),
+                  player, xp->orig, xp->result);
     free_lbuf(xp->orig);
     free_lbuf(xp->result);
     free_sbuf(xp);
@@ -324,7 +324,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   DbRef aowner;
   int at_space, nfargs, i, j, alldone, feval;
   long aflags;
-  int is_trace, is_top, save_count;
+  int do_trace, is_top, save_count;
   int ansi;
   FUN *fp;
   UFUN *ufp;
@@ -338,7 +338,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   alldone = 0;
   ansi = 0;
 
-  is_trace = Trace(player) && !(eval & EV_NOTRACE);
+  do_trace = is_trace(player) && !(eval & EV_NOTRACE);
   is_top = 0;
 
   /* Extend the buffer if we need to. */
@@ -357,7 +357,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
    */
 
   savestr = NULL;
-  if (is_trace) {
+  if (do_trace) {
     is_top = tcache_empty();
     savestr = alloc_lbuf("exec.save");
     StringCopy(savestr, *dstr);
@@ -962,7 +962,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
     (*bufc)--;
 
   /*
-   * The ansi() function knows how to take care of itself. However,
+   * The is_ansi() function knows how to take care of itself. However,
    * if the player used a %c sub in the string, and hasn't yet
    * terminated the color with a %cn yet, we'll have to do it for
    * them.
@@ -987,7 +987,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
     buff = realbuff;
   }
 
-  if (is_trace) {
+  if (do_trace) {
     tcache_add(savestr, start);
     save_count = tcache_count - mudconf.trace_limit;
     ;

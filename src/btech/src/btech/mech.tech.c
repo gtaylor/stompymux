@@ -56,13 +56,13 @@ int tech_roll(DbRef player, MECH *mech, int diff) {
   s = FindTechSkill(player, mech);
   s += diff;
   succ = r >= s;
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     notify_printf(player, "Tech - BTH: %d(Base:%d, Mod:%d) Roll: %d", s,
                   s - diff, diff, r);
   } else {
     notify_printf(player, "BTH: %d Roll: %d", s, r);
   }
-  if (succ && In_Character(mech->mynum))
+  if (succ && is_in_character(mech->mynum))
     AccumulateTechXP(player, mech, BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
 }
@@ -76,13 +76,13 @@ int tech_weapon_roll(DbRef player, MECH *mech, int diff) {
   s = char_getskilltarget(player, "technician-weapons", 0);
   s += diff;
   succ = r >= s;
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     notify_printf(player, "Tech-W - BTH: %d(Base:%d, Mod:%d) Roll: %d", s,
                   s - diff, diff, r);
   } else {
     notify_printf(player, "BTH: %d Roll: %d", s, r);
   }
-  if (succ && In_Character(mech->mynum))
+  if (succ && is_in_character(mech->mynum))
     AccumulateTechWeaponsXP(player, mech, BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
 }

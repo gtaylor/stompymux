@@ -854,7 +854,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
                  MechRTerrain(mech) == HIGHWATER),
             "You can't run through water!");
   }
-  if (!Wizard(player) && In_Character(mech->mynum) &&
+  if (!is_wizard(player) && is_in_character(mech->mynum) &&
       MechPilot(mech) != player) {
     if (newspeed < 0.0) {
       notify(

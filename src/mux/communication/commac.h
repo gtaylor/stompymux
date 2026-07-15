@@ -18,7 +18,7 @@ struct commac {
   struct commac *next;
 };
 
-#define NUM_COMMAC 500
+constexpr int NUM_COMMAC = 500;
 
 extern struct commac *commac_table[NUM_COMMAC];
 

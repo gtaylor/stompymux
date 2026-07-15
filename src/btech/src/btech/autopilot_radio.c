@@ -1161,8 +1161,8 @@ void auto_reply(MECH *mech, char *buf) {
     return;
 
   /* Make sure valid objects */
-  if (!(FindObjectsData(MechAuto(mech))) || !Good_obj(MechAuto(mech)) ||
-      Location(MechAuto(mech)) != mech->mynum) {
+  if (!(FindObjectsData(MechAuto(mech))) || !is_good_obj(MechAuto(mech)) ||
+      obj_location(MechAuto(mech)) != mech->mynum) {
     MechAuto(mech) = -1;
     return;
   }

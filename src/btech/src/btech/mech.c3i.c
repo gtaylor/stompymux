@@ -102,7 +102,7 @@ void addMechToC3iNetwork(MECH *mech, MECH *mechToAdd) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     if (otherRef != mechToAdd->mynum) {
@@ -153,7 +153,7 @@ void clearC3iNetwork(MECH *mech, int tClearFromOthers) {
       if (!otherMech)
         continue;
 
-      if (!Good_obj(otherMech->mynum))
+      if (!is_good_obj(otherMech->mynum))
         continue;
 
       clearMechFromC3iNetwork(mech->mynum, otherMech);
@@ -189,7 +189,7 @@ void validateC3iNetwork(MECH *mech) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     debugC3(tprintf("VALIDATE INFO: %d is now in %d's C3i network",

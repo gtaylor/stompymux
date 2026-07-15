@@ -44,7 +44,8 @@ option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
-  find_program(CLANG_TIDY_EXECUTABLE clang-tidy REQUIRED)
+  # Needs to understand C23 `constexpr`, which landed in Clang 19.
+  find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy-20 clang-tidy-19 clang-tidy REQUIRED)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
 endif()
 

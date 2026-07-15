@@ -50,7 +50,7 @@ int do_macro(DbRef player, char *in, char **out) {
 
   cmd = in + 1;
 
-  if (!isPlayer(player)) {
+  if (!is_player(player)) {
     notify(player, "MACRO: Only players may use macros.");
     return 0;
   }
@@ -190,7 +190,7 @@ void do_chmod_macro(DbRef player, char *s) {
   m = get_macro_set(player, -1);
 
   if (m) {
-    if ((m->player != player) && !Wizard(player)) {
+    if ((m->player != player) && !is_wizard(player)) {
       notify(player, "MACRO: Permission denied.");
       return;
     }
@@ -368,7 +368,7 @@ void do_chown_macro(DbRef player, char *cmd) {
     notify(player, "MACRO: No current active macro.");
     return;
   }
-  if (!Wizard(player)) {
+  if (!is_wizard(player)) {
     notify(player, "MACRO: Sorry, command limited to Wizards.");
     return;
   }
@@ -432,7 +432,7 @@ void do_clear_macro(DbRef player, char *s) {
   m = macros[set];
 
   if (GMac(set)) {
-    if ((player != m->player) && !Wizard(player)) {
+    if ((player != m->player) && !is_wizard(player)) {
       notify(player, "MACRO: You may only CLEAR your own macro sets.");
       return;
     } else if ((player == m->player) && (m->status & MACRO_L)) {
@@ -711,7 +711,7 @@ int can_write_macros(DbRef player, struct macros *m) {
 }
 
 int can_read_macros(DbRef player, struct macros *m) {
-  if (Wizard(player))
+  if (is_wizard(player))
     return 1;
 
   if (!m)

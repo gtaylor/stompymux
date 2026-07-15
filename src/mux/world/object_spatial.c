@@ -1,4 +1,5 @@
-/* object_spatial.c - Object containment, location, and exit visibility checks. */
+/* object_spatial.c - Object containment, location, and exit visibility checks.
+ */
 
 #include "mux/world/object_spatial.h"
 
@@ -11,16 +12,16 @@
 DbRef where_is(DbRef what) {
   DbRef loc;
 
-  if (!Good_obj(what))
+  if (!is_good_obj(what))
     return NOTHING;
 
-  switch (Typeof(what)) {
+  switch (typeof_obj(what)) {
   case TYPE_PLAYER:
   case TYPE_THING:
-    loc = Location(what);
+    loc = obj_location(what);
     break;
   case TYPE_EXIT:
-    loc = Exits(what);
+    loc = obj_exits(what);
     break;
   default:
     loc = NOTHING;
@@ -37,13 +38,13 @@ DbRef where_room(DbRef what) {
   int count;
 
   for (count = mudconf.ntfy_nest_lim; count > 0; count--) {
-    if (!Good_obj(what))
+    if (!is_good_obj(what))
       break;
-    if (isRoom(what))
+    if (is_room(what))
       return what;
-    if (!Has_location(what))
+    if (!has_location(what))
       break;
-    what = Location(what);
+    what = obj_location(what);
   }
   return NOTHING;
 }
@@ -56,7 +57,7 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * No sense if trying to locate a bad object
    */
 
-  if (!Good_obj(it))
+  if (!is_good_obj(it))
     return 0;
 
   loc_it = where_is(it);
@@ -68,15 +69,16 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * * or  * *  * if the target caused the lookup.
    */
 
-  if (Examinable(player, it) || Find_Unfindable(player) || (loc_it == player) ||
+  if (is_examinable(player, it) || is_find_unfindable(player) ||
+      (loc_it == player) ||
       ((loc_it != NOTHING) &&
-       (Examinable(player, loc_it) || loc_it == where_is(player))) ||
-      Wizard(cause) || (it == cause))
+       (is_examinable(player, loc_it) || loc_it == where_is(player))) ||
+      is_wizard(cause) || (it == cause))
     return 1;
 
   room_it = where_room(it);
-  if (Good_obj(room_it))
-    findable_room = !Hideout(room_it);
+  if (is_good_obj(room_it))
+    findable_room = !is_hideout(room_it);
   else
     findable_room = 1;
 
@@ -85,8 +87,8 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * * * findable and the containing room is not unfindable.
    */
 
-  if (((room_it != NOTHING) && Examinable(player, room_it)) ||
-      Find_Unfindable(player) || (Findable(it) && findable_room))
+  if (((room_it != NOTHING) && is_examinable(player, room_it)) ||
+      is_find_unfindable(player) || (is_findable(it) && findable_room))
     return 1;
 
   /*
@@ -103,7 +105,7 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
 int nearby(DbRef player, DbRef thing) {
   int thing_loc, player_loc;
 
-  if (!Good_obj(player) || !Good_obj(thing))
+  if (!is_good_obj(player) || !is_good_obj(thing))
     return 0;
   thing_loc = where_is(thing);
   if (thing_loc == player)
@@ -120,13 +122,13 @@ int nearby(DbRef player, DbRef thing) {
 int exit_visible(DbRef exit, DbRef player, int key) {
   if (key & VE_LOC_XAM) // Exam exit's loc
     return 1;
-  if (Examinable(player, exit)) // Exam exit
+  if (is_examinable(player, exit)) // Exam exit
     return 1;
-  if (Light(exit)) // Exit is light
+  if (is_light(exit)) // Exit is light
     return 1;
   if (key & (VE_LOC_DARK | VE_BASE_DARK))
-    return 0;     // Dark loc or base
-  if (Dark(exit)) // Dark exit
+    return 0;        // Dark loc or base
+  if (is_dark(exit)) // Dark exit
     return 0;
   return 1; // Default
 }
@@ -135,9 +137,9 @@ int exit_visible(DbRef exit, DbRef player, int key) {
  * Checks to see if the exit is visible to look.
  */
 int exit_displayable(DbRef exit, DbRef player, int key) {
-  if (Dark(exit)) // Dark exit
+  if (is_dark(exit)) // Dark exit
     return 0;
-  if (Light(exit)) // Light exit
+  if (is_light(exit)) // Light exit
     return 1;
   if (key & (VE_LOC_DARK | VE_BASE_DARK))
     return 0; // Dark loc or base

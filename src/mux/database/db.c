@@ -65,8 +65,8 @@ extern unsigned int malloc_sbrk_used; /* Amount of data space used now */
  */
 extern int fwdlist_ck(int, DbRef, DbRef, int, char *);
 
-// Macro for the flags for character stats/skills attributes.
-#define PLSTAT_MODE (AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL)
+// Flags for character stats/skills attributes.
+constexpr int PLSTAT_MODE = AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL;
 
 /*
  * list of attributes
@@ -339,7 +339,8 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
                      */
     if ((*dp++ == '#') && isdigit(*dp)) {
       target = atoi(dp);
-      fail = (!Good_obj(target) || (!God(player) && !controls(player, target)));
+      fail = (!is_good_obj(target) ||
+              (!is_god(player) && !is_controls(player, target)));
       if (fail) {
         notify_printf(player, "Cannot forward to #%d: Permission denied.",
                       target);
@@ -368,7 +369,7 @@ int fwdlist_rewrite(FWDLIST *fp, char *atext) {
     tp = alloc_sbuf("fwdlist_rewrite.errors");
     bp = atext;
     for (i = 0; i < fp->count; i++) {
-      if (Good_obj(fp->data[i])) {
+      if (is_good_obj(fp->data[i])) {
         snprintf(tp, SBUF_SIZE, "#%d ", fp->data[i]);
         safe_str(tp, atext, &bp);
       } else {
@@ -586,7 +587,7 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
 
       sp = strtok(NULL, " ");
     }
-    if (success && !Quiet(player))
+    if (success && !is_quiet(player))
       notify_printf(player, "Attribute access for %s changed to %s.", va->name,
                     value);
     break;
@@ -652,32 +653,32 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
 
   switch (key) {
   case FIXDB_OWNER:
-    s_Owner(thing, res);
-    if (!Quiet(player))
+    s_owner(thing, res);
+    if (!is_quiet(player))
       notify_printf(player, "Owner set to #%d", res);
     break;
   case FIXDB_LOC:
-    s_Location(thing, res);
-    if (!Quiet(player))
+    s_location(thing, res);
+    if (!is_quiet(player))
       notify_printf(player, "Location set to #%d", res);
     break;
   case FIXDB_CON:
-    s_Contents(thing, res);
-    if (!Quiet(player))
+    s_contents(thing, res);
+    if (!is_quiet(player))
       notify_printf(player, "Contents set to #%d", res);
     break;
   case FIXDB_EXITS:
-    s_Exits(thing, res);
-    if (!Quiet(player))
+    s_exits(thing, res);
+    if (!is_quiet(player))
       notify_printf(player, "Exits set to #%d", res);
     break;
   case FIXDB_NEXT:
-    s_Next(thing, res);
-    if (!Quiet(player))
+    s_next(thing, res);
+    if (!is_quiet(player))
       notify_printf(player, "Next set to #%d", res);
     break;
   case FIXDB_NAME:
-    if (Typeof(thing) == TYPE_PLAYER) {
+    if (typeof_obj(thing) == TYPE_PLAYER) {
       if (!ok_player_name(arg2)) {
         notify(player, "That's not a good name for a player.");
         return;
@@ -691,7 +692,7 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
         log_text(arg2);
         ENDLOG;
       }
-      if (Suspect(player)) {
+      if (is_suspect(player)) {
         send_channel("Suspect", "%s renamed to %s", Name(thing), arg2);
       }
       delete_player_name(thing, Name(thing));
@@ -704,7 +705,7 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
       }
       object_name_set(thing, arg2);
     }
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_printf(player, "Name set to %s", arg2);
     break;
   }
@@ -934,7 +935,7 @@ static char *attribute_encode(char *iattr, DbRef thing, DbRef owner, long flags,
    * * * * * * * just store the string.
    */
 
-  if (((owner == Owner(thing)) || (owner == NOTHING)) && !flags) {
+  if (((owner == obj_owner(thing)) || (owner == NOTHING)) && !flags) {
     memset(dest_buffer, 0, LBUF_SIZE);
     strncpy(dest_buffer, iattr, LBUF_SIZE - 1);
     return dest_buffer;
@@ -945,7 +946,7 @@ static char *attribute_encode(char *iattr, DbRef thing, DbRef owner, long flags,
    */
 
   if (owner == NOTHING)
-    owner = Owner(thing);
+    owner = obj_owner(thing);
   memset(dest_buffer, 0, LBUF_SIZE);
   snprintf(dest_buffer, LBUF_SIZE - 1, "%c%ld:%ld:%s", ATR_INFO_CHAR, owner,
            flags, iattr);
@@ -998,7 +999,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
 
     if (*cp++ != ':') {
       if (owner)
-        *owner = Owner(thing);
+        *owner = obj_owner(thing);
       if (flags)
         *flags = 0;
       if (oattr) {
@@ -1021,7 +1022,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
 
     if (*cp++ != ':') {
       if (owner)
-        *owner = Owner(thing);
+        *owner = obj_owner(thing);
       if (flags)
         *flags = 0;
       if (oattr) {
@@ -1035,7 +1036,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
     if (oattr)
       StringCopy(oattr, cp);
     if (attrOwner == NOTHING && owner)
-      *owner = Owner(thing);
+      *owner = obj_owner(thing);
   } else {
 
     /*
@@ -1043,7 +1044,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
      */
 
     if (owner)
-      *owner = Owner(thing);
+      *owner = obj_owner(thing);
     if (flags)
       *flags = 0;
     if (oattr)
@@ -1090,19 +1091,19 @@ void attribute_clear(DbRef thing, int atr) {
 
   switch (atr) {
   case A_STARTUP:
-    s_Flags(thing, Flags(thing) & ~HAS_STARTUP);
+    s_flags(thing, obj_flags(thing) & ~HAS_STARTUP);
     break;
   case A_DAILY:
-    s_Flags2(thing, Flags2(thing) & ~HAS_DAILY);
+    s_flags2(thing, obj_flags2(thing) & ~HAS_DAILY);
     break;
   case A_HOURLY:
-    s_Flags2(thing, Flags2(thing) & ~HAS_HOURLY);
+    s_flags2(thing, obj_flags2(thing) & ~HAS_HOURLY);
     break;
   case A_FORWARDLIST:
-    s_Flags2(thing, Flags2(thing) & ~HAS_FWDLIST);
+    s_flags2(thing, obj_flags2(thing) & ~HAS_FWDLIST);
     break;
   case A_LISTEN:
-    s_Flags2(thing, Flags2(thing) & ~HAS_LISTEN);
+    s_flags2(thing, obj_flags2(thing) & ~HAS_LISTEN);
     break;
   case A_TIMEOUT:
     descriptor_reload(thing);
@@ -1200,19 +1201,19 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
 
   switch (atr) {
   case A_STARTUP:
-    s_Flags(thing, Flags(thing) | HAS_STARTUP);
+    s_flags(thing, obj_flags(thing) | HAS_STARTUP);
     break;
   case A_DAILY:
-    s_Flags2(thing, Flags2(thing) | HAS_DAILY);
+    s_flags2(thing, obj_flags2(thing) | HAS_DAILY);
     break;
   case A_HOURLY:
-    s_Flags2(thing, Flags2(thing) | HAS_HOURLY);
+    s_flags2(thing, obj_flags2(thing) | HAS_HOURLY);
     break;
   case A_FORWARDLIST:
-    s_Flags2(thing, Flags2(thing) | HAS_FWDLIST);
+    s_flags2(thing, obj_flags2(thing) | HAS_FWDLIST);
     break;
   case A_LISTEN:
-    s_Flags2(thing, Flags2(thing) | HAS_LISTEN);
+    s_flags2(thing, obj_flags2(thing) | HAS_LISTEN);
     break;
   case A_TIMEOUT:
     descriptor_reload(thing);
@@ -1308,7 +1309,7 @@ char *attribute_get_string(char *s, DbRef thing, int atr, DbRef *owner,
   buff = attribute_get_raw(thing, atr);
   if (!buff) {
     if (owner)
-      *owner = Owner(thing);
+      *owner = obj_owner(thing);
     if (flags)
       *flags = 0;
     *s = '\0';
@@ -1330,7 +1331,7 @@ int attribute_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
 
   buff = attribute_get_raw(thing, atr);
   if (!buff) {
-    *owner = Owner(thing);
+    *owner = obj_owner(thing);
     *flags = 0;
     return 0;
   }
@@ -1353,13 +1354,13 @@ char *attribute_parent_get_string(char *s, DbRef thing, int atr, DbRef *owner,
       if ((lev == 0) || !(*flags & AF_PRIVATE))
         return s;
     }
-    if ((lev == 0) && Good_obj(Parent(parent))) {
+    if ((lev == 0) && is_good_obj(obj_parent(parent))) {
       ap = attribute_by_number(atr);
       if (!ap || ap->flags & AF_PRIVATE)
         break;
     }
   }
-  *owner = Owner(thing);
+  *owner = obj_owner(thing);
   *flags = 0;
   *s = '\0';
   return s;
@@ -1385,13 +1386,13 @@ int attribute_parent_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
       if ((lev == 0) || !(*flags & AF_PRIVATE))
         return 1;
     }
-    if ((lev == 0) && Good_obj(Parent(parent))) {
+    if ((lev == 0) && is_good_obj(obj_parent(parent))) {
       ap = attribute_by_number(atr);
       if (!ap || ap->flags & AF_PRIVATE)
         break;
     }
   }
-  *owner = Owner(thing);
+  *owner = obj_owner(thing);
   *flags = 0;
   return 0;
 }
@@ -1420,7 +1421,7 @@ void attribute_copy(DbRef player, DbRef dest, DbRef source) {
   char *as, *buf;
   Attribute *at;
 
-  owner = Owner(dest);
+  owner = obj_owner(dest);
   for (attr = attribute_list_first(source, &as); attr;
        attr = attribute_list_next(&as)) {
     buf = attribute_get(source, attr, &aowner, &aflags);
@@ -1430,7 +1431,7 @@ void attribute_copy(DbRef player, DbRef dest, DbRef source) {
                        */
     at = attribute_by_number(attr);
     if (attr && at) {
-      if (Write_attr(owner, dest, at, aflags))
+      if (write_attr(owner, dest, at, aflags))
         /*
          * Only set attrs that owner has perm to set
          */
@@ -1455,7 +1456,7 @@ void attribute_change_owner(DbRef obj) {
   DbRef owner, aowner;
   char *as, *buf;
 
-  owner = Owner(obj);
+  owner = obj_owner(obj);
   for (attr = attribute_list_first(obj, &as); attr;
        attr = attribute_list_next(&as)) {
     buf = attribute_get(obj, attr, &aowner, &aflags);
@@ -1518,30 +1519,28 @@ int attribute_list_first(DbRef thing, char **attrp) {
  * * db_grow: Extend the struct database.
  */
 
-#define SIZE_HACK                                                              \
-  1 /*                                                                         \
-     * * So mistaken refs to #-1 won't die.                                    \
-     */
+// So mistaken refs to #-1 won't die.
+constexpr int SIZE_HACK = 1;
 
 static void initialize_objects(DbRef first, DbRef last) {
   DbRef thing;
 
   for (thing = first; thing < last; thing++) {
     memset(&db[thing], 0, sizeof(db[0]));
-    s_Owner(thing, GOD);
-    s_Flags(thing, (TYPE_GARBAGE | GOING));
-    s_Flags2(thing, 0);
-    s_Flags3(thing, 0);
-    s_Powers(thing, 0);
-    s_Powers2(thing, 0);
-    s_Location(thing, NOTHING);
-    s_Contents(thing, NOTHING);
-    s_Exits(thing, NOTHING);
-    s_Link(thing, NOTHING);
-    s_Next(thing, NOTHING);
-    s_Zone(thing, NOTHING);
-    s_Parent(thing, NOTHING);
-    s_Stack(thing, NULL);
+    s_owner(thing, GOD);
+    s_flags(thing, (TYPE_GARBAGE | GOING));
+    s_flags2(thing, 0);
+    s_flags3(thing, 0);
+    s_powers(thing, 0);
+    s_powers2(thing, 0);
+    s_location(thing, NOTHING);
+    s_contents(thing, NOTHING);
+    s_exits(thing, NOTHING);
+    s_link(thing, NOTHING);
+    s_next(thing, NOTHING);
+    s_zone(thing, NOTHING);
+    s_parent(thing, NOTHING);
+    s_stack(thing, NULL);
     db[thing].ahead = NULL;
     db[thing].at_count = 0;
   }
@@ -1681,18 +1680,18 @@ void db_grow(DbRef newtop) {
 
     db = newdb;
     for (i = 0; i < SIZE_HACK; i++) {
-      s_Owner(i, GOD);
-      s_Flags(i, (TYPE_GARBAGE | GOING));
-      s_Powers(i, 0);
-      s_Powers2(i, 0);
-      s_Location(i, NOTHING);
-      s_Contents(i, NOTHING);
-      s_Exits(i, NOTHING);
-      s_Link(i, NOTHING);
-      s_Next(i, NOTHING);
-      s_Zone(i, NOTHING);
-      s_Parent(i, NOTHING);
-      s_Stack(i, NULL);
+      s_owner(i, GOD);
+      s_flags(i, (TYPE_GARBAGE | GOING));
+      s_powers(i, 0);
+      s_powers2(i, 0);
+      s_location(i, NOTHING);
+      s_contents(i, NOTHING);
+      s_exits(i, NOTHING);
+      s_link(i, NOTHING);
+      s_next(i, NOTHING);
+      s_zone(i, NOTHING);
+      s_parent(i, NOTHING);
+      s_stack(i, NULL);
       db[i].ahead = NULL;
       db[i].at_count = 0;
     }
@@ -1745,15 +1744,15 @@ void db_make_minimal(void) {
   db_free();
   db_grow(1);
   object_name_set(0, "Limbo");
-  s_Flags(0, TYPE_ROOM);
-  s_Powers(0, 0);
-  s_Powers2(0, 0);
-  s_Location(0, NOTHING);
-  s_Exits(0, NOTHING);
-  s_Link(0, NOTHING);
-  s_Parent(0, NOTHING);
-  s_Zone(0, NOTHING);
-  s_Owner(0, 1);
+  s_flags(0, TYPE_ROOM);
+  s_powers(0, 0);
+  s_powers2(0, 0);
+  s_location(0, NOTHING);
+  s_exits(0, NOTHING);
+  s_link(0, NOTHING);
+  s_parent(0, NOTHING);
+  s_zone(0, NOTHING);
+  s_owner(0, 1);
   db[0].ahead = NULL;
   db[0].at_count = 0;
   /*
@@ -1761,17 +1760,17 @@ void db_make_minimal(void) {
    */
   load_player_names();
   obj = create_player((char *)"Wizard", (char *)"potrzebie", NOTHING, 0);
-  s_Flags(obj, Flags(obj) | WIZARD);
-  s_Powers(obj, 0);
-  s_Powers2(obj, 0);
+  s_flags(obj, obj_flags(obj) | WIZARD);
+  s_powers(obj, 0);
+  s_powers2(obj, 0);
 
   /*
    * Manually link to Limbo, just in case
    */
-  s_Location(obj, 0);
-  s_Next(obj, NOTHING);
-  s_Contents(0, obj);
-  s_Link(obj, 0);
+  s_location(obj, 0);
+  s_next(obj, NOTHING);
+  s_contents(0, obj);
+  s_link(obj, 0);
 }
 
 DbRef parse_dbref(const char *s) {
@@ -1862,8 +1861,8 @@ BooleanExpression *boolean_expression_duplicate(BooleanExpression *b) {
 int check_zone(DbRef player, DbRef thing) {
   mudstate.zone_nest_num++;
 
-  if (!mudconf.have_zones || (Zone(thing) == NOTHING) ||
-      (mudstate.zone_nest_num == mudconf.zone_nest_lim) || (isPlayer(thing))) {
+  if (!mudconf.have_zones || (obj_zone(thing) == NOTHING) ||
+      (mudstate.zone_nest_num == mudconf.zone_nest_lim) || (is_player(thing))) {
     mudstate.zone_nest_num = 0;
     return 0;
   }
@@ -1872,30 +1871,31 @@ int check_zone(DbRef player, DbRef thing) {
    * If the zone doesn't have an enterlock, DON'T allow control.
    */
 
-  if (attribute_get_raw(Zone(thing), A_LENTER) &&
-      could_doit(player, Zone(thing), A_LENTER)) {
+  if (attribute_get_raw(obj_zone(thing), A_LENTER) &&
+      could_doit(player, obj_zone(thing), A_LENTER)) {
     mudstate.zone_nest_num = 0;
     return 1;
   } else {
-    return check_zone(player, Zone(thing));
+    return check_zone(player, obj_zone(thing));
   }
 }
 
 int check_zone_for_player(DbRef player, DbRef thing) {
   mudstate.zone_nest_num++;
 
-  if (!mudconf.have_zones || (Zone(thing) == NOTHING) ||
-      (mudstate.zone_nest_num == mudconf.zone_nest_lim) || !(isPlayer(thing))) {
+  if (!mudconf.have_zones || (obj_zone(thing) == NOTHING) ||
+      (mudstate.zone_nest_num == mudconf.zone_nest_lim) ||
+      !(is_player(thing))) {
     mudstate.zone_nest_num = 0;
     return 0;
   }
 
-  if (attribute_get_raw(Zone(thing), A_LENTER) &&
-      could_doit(player, Zone(thing), A_LENTER)) {
+  if (attribute_get_raw(obj_zone(thing), A_LENTER) &&
+      could_doit(player, obj_zone(thing), A_LENTER)) {
     mudstate.zone_nest_num = 0;
     return 1;
   } else {
-    return check_zone(player, Zone(thing));
+    return check_zone(player, obj_zone(thing));
   }
 }
 

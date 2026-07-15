@@ -1173,7 +1173,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
     RbaseToHit = baseToHit - 1; /* only time we modify it */
 
   if (!isarty) {
-    /*		if(In_Character(mech->mynum)) {
+    /*		if(is_in_character(mech->mynum)) {
                             if((roll < RbaseToHit) && (RbaseToHit < 13) &&
        (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][0]++; if((roll ==
        RbaseToHit) && (mudconf.btech_glancing_blows) && (RbaseToHit < 13) &&

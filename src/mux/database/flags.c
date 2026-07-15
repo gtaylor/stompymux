@@ -7,12 +7,80 @@
 #include "p.glue.h"
 
 #include "mux/commands/command.h"
+#include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
+
+bool is_good_obj(DbRef x) {
+  return x >= 0 && x < mudstate.db_top && typeof_obj(x) < NOTYPE;
+}
+
+bool is_safe(DbRef x, DbRef p) {
+  return is_owns_others(x) || (obj_flags(x) & SAFE) ||
+         (mudconf.safe_unowned && (obj_owner(x) != obj_owner(p)));
+}
+
+void mark(DbRef x) {
+  mudstate.markbits->chunk[x >> 3] |= mudconf.markdata[x & 7];
+}
+void unmark(DbRef x) {
+  mudstate.markbits->chunk[x >> 3] &= ~mudconf.markdata[x & 7];
+}
+bool is_marked(DbRef x) {
+  return mudstate.markbits->chunk[x >> 3] & mudconf.markdata[x & 7];
+}
+
+static bool has_priv_suffix(const char *name) {
+  return name && strlen(name) > 4 &&
+         !strcasecmp(name + (strlen(name) - 5), ".PRIV");
+}
+
+bool see_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+         ((is_god(p) || (f & AF_VISUAL) ||
+           (((obj_owner(p) == o) || is_examinable(p, x)) &&
+            !(a->flags & (AF_DARK | AF_MDARK)) && !(f & (AF_DARK | AF_MDARK)) &&
+            !has_priv_suffix(a->name)) ||
+           (is_wizard(p) && !(a->flags & AF_DARK)) ||
+           (!(a->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&
+            !has_priv_suffix(a->name))));
+}
+bool see_attr_explicit(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+         ((f & AF_VISUAL) ||
+          ((obj_owner(p) == o) && !(a->flags & (AF_DARK | AF_MDARK)) &&
+           !has_priv_suffix(a->name)));
+}
+bool set_attr(DbRef p, DbRef x, Attribute *a, long f) {
+  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+         (is_god(p) ||
+          (!is_god(x) && !(f & AF_LOCK) &&
+           ((is_controls(p, x) && !(a->flags & (AF_WIZARD | AF_GOD)) &&
+             !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
+            (is_wizard(p) && !(a->flags & AF_GOD)))));
+}
+bool read_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+  return !(a->flags & AF_INTERNAL) &&
+         ((is_god(p) || (f & AF_VISUAL) ||
+           (((obj_owner(p) == o) || is_examinable(p, x)) &&
+            !(a->flags & (AF_DARK | AF_MDARK)) && !(f & (AF_DARK | AF_MDARK)) &&
+            !has_priv_suffix(a->name)) ||
+           (is_wizard(p) && !(a->flags & AF_DARK)) ||
+           (!(a->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&
+            !has_priv_suffix(a->name))));
+}
+bool write_attr(DbRef p, DbRef x, Attribute *a, long f) {
+  return !(a->flags & AF_INTERNAL) &&
+         (is_god(p) ||
+          (!is_god(x) && !(f & AF_LOCK) &&
+           ((is_controls(p, x) && !(a->flags & (AF_WIZARD | AF_GOD)) &&
+             !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
+            (is_wizard(p) && !(a->flags & AF_GOD)))));
+}
 
 /**
  * Sets or clears the indicated bit, no security checking.
@@ -25,19 +93,19 @@ static int fh_any(DbRef target, DbRef player, Flag flag, int fflags,
                   int reset) {
   if (fflags & FLAG_WORD3) {
     if (reset)
-      s_Flags3(target, Flags3(target) & ~flag);
+      s_flags3(target, obj_flags3(target) & ~flag);
     else
-      s_Flags3(target, Flags3(target) | flag);
+      s_flags3(target, obj_flags3(target) | flag);
   } else if (fflags & FLAG_WORD2) {
     if (reset)
-      s_Flags2(target, Flags2(target) & ~flag);
+      s_flags2(target, obj_flags2(target) & ~flag);
     else
-      s_Flags2(target, Flags2(target) | flag);
+      s_flags2(target, obj_flags2(target) | flag);
   } else {
     if (reset)
-      s_Flags(target, Flags(target) & ~flag);
+      s_flags(target, obj_flags(target) & ~flag);
     else
-      s_Flags(target, Flags(target) | flag);
+      s_flags(target, obj_flags(target) | flag);
   }
   return 1;
 } /* end fh_and() */
@@ -52,7 +120,7 @@ static int fh_any(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_god(DbRef target, DbRef player, Flag flag, int fflags,
                   int reset) {
-  if (!God(player))
+  if (!is_god(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -68,7 +136,7 @@ static int fh_god(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_wiz(DbRef target, DbRef player, Flag flag, int fflags,
                   int reset) {
-  if (!Wizard(player) && !God(player))
+  if (!is_wizard(player) && !is_god(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -84,8 +152,8 @@ static int fh_wiz(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_fixed(DbRef target, DbRef player, Flag flag, int fflags,
                     int reset) {
-  if (isPlayer(target))
-    if (!Wizard(player) && !God(player))
+  if (is_player(target))
+    if (!is_wizard(player) && !is_god(player))
       return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -101,7 +169,7 @@ static int fh_fixed(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_inherit(DbRef target, DbRef player, Flag flag, int fflags,
                       int reset) {
-  if (!Inherits(player))
+  if (!is_inherits(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -117,9 +185,9 @@ static int fh_inherit(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_wiz_bit(DbRef target, DbRef player, Flag flag, int fflags,
                       int reset) {
-  if (!God(player))
+  if (!is_god(player))
     return 0;
-  if (God(target) && reset) {
+  if (is_god(target) && reset) {
     notify(player, "You cannot make yourself mortal.");
     return 0;
   }
@@ -137,7 +205,7 @@ static int fh_wiz_bit(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_dark_bit(DbRef target, DbRef player, Flag flag, int fflags,
                        int reset) {
-  if (!reset && isPlayer(target) && !Wizard(player))
+  if (!reset && is_player(target) && !is_wizard(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -153,12 +221,12 @@ static int fh_dark_bit(DbRef target, DbRef player, Flag flag, int fflags,
  */
 static int fh_going_bit(DbRef target, DbRef player, Flag flag, int fflags,
                         int reset) {
-  if (Going(target) && reset && (Typeof(target) != TYPE_GARBAGE)) {
+  if (is_going(target) && reset && (typeof_obj(target) != TYPE_GARBAGE)) {
     notify(player, "Your object has been spared from destruction.");
     return (fh_any(target, player, flag, fflags, reset));
   }
 
-  if (!God(player))
+  if (!is_god(player))
     return 0;
 
   return (fh_any(target, player, flag, fflags, reset));
@@ -176,8 +244,8 @@ static int fh_hear_bit(DbRef target, DbRef player, Flag flag, int fflags,
                        int reset) {
   int could_hear;
 
-  if (isPlayer(target) && (flag & MONITOR)) {
-    if (Wizard(player))
+  if (is_player(target) && (flag & MONITOR)) {
+    if (is_wizard(player))
       fh_any(target, player, flag, fflags, reset);
     else
       return 0;
@@ -203,9 +271,9 @@ static int fh_xcode_bit(DbRef target, DbRef player, Flag flag, int fflags,
   int got_xcode;
   int new_xcode;
 
-  got_xcode = Hardcode(target);
+  got_xcode = is_hardcode(target);
   fh_wiz(target, player, flag, fflags, reset);
-  new_xcode = Hardcode(target);
+  new_xcode = is_hardcode(target);
   handle_xcode(player, target, got_xcode, new_xcode);
 
   return 1;
@@ -310,9 +378,9 @@ void display_flagtab(DbRef player) {
   safe_str((char *)"Flags:", buf, &bp);
 
   for (fp = gen_flags; fp->flagname; fp++) {
-    if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
       continue;
-    if ((fp->listperm & CA_GOD) && !God(player))
+    if ((fp->listperm & CA_GOD) && !is_god(player))
       continue;
     safe_chr(' ', buf, &bp);
     safe_str((char *)fp->flagname, buf, &bp);
@@ -387,7 +455,7 @@ void flag_set(DbRef target, DbRef player, char *flag, int key) {
   result = fp->handler(target, player, fp->flagvalue, fp->flagflag, negate);
   if (!result)
     notify(player, "Permission denied.");
-  else if (!(key & SET_QUIET) && !Quiet(player))
+  else if (!(key & SET_QUIET) && !is_quiet(player))
     notify_printf(player, "%s - %s %s", Name(target), fp->flagname,
                   negate ? "cleared." : "set.");
   return;
@@ -410,7 +478,7 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
   buf = bp = alloc_sbuf("decode_flags");
   *bp = '\0';
 
-  if (!Good_obj(player)) {
+  if (!is_good_obj(player)) {
     StringCopy(buf, "#-2 ERROR");
     return buf;
   }
@@ -427,15 +495,16 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
     else
       fv = flagword;
     if (fv & fp->flagvalue) {
-      if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+      if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
         continue;
-      if ((fp->listperm & CA_GOD) && !God(player))
+      if ((fp->listperm & CA_GOD) && !is_god(player))
         continue;
       /*
        * don't show CONNECT on dark wizards to mortals
        */
       if ((flagtype == TYPE_PLAYER) && (fp->flagvalue == CONNECTED) &&
-          ((flagword & (WIZARD | DARK)) == (WIZARD | DARK)) && !Wizard(player))
+          ((flagword & (WIZARD | DARK)) == (WIZARD | DARK)) &&
+          !is_wizard(player))
         continue;
       safe_sb_chr(fp->flaglett, buf, &bp);
     }
@@ -460,23 +529,23 @@ int has_flag(DbRef player, DbRef target, char *flagname) {
     return 0;
 
   if (fp->flagflag & FLAG_WORD3)
-    fv = Flags3(target);
+    fv = obj_flags3(target);
   else if (fp->flagflag & FLAG_WORD2)
-    fv = Flags2(target);
+    fv = obj_flags2(target);
   else
-    fv = Flags(target);
+    fv = obj_flags(target);
 
   if (fv & fp->flagvalue) {
-    if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
       return 0;
-    if ((fp->listperm & CA_GOD) && !God(player))
+    if ((fp->listperm & CA_GOD) && !is_god(player))
       return 0;
     /*
      * don't show CONNECT on dark wizards to mortals
      */
-    if (isPlayer(target) && (fp->flagvalue == CONNECTED) &&
-        ((Flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-        !Wizard(player))
+    if (is_player(target) && (fp->flagvalue == CONNECTED) &&
+        ((obj_flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
+        !is_wizard(player))
       return 0;
     return 1;
   }
@@ -498,7 +567,7 @@ char *flag_description(DbRef player, DbRef target) {
    * Allocate the return buffer
    */
 
-  otype = Typeof(target);
+  otype = typeof_obj(target);
   bp = buff = alloc_mbuf("flag_description");
 
   /*
@@ -518,22 +587,22 @@ char *flag_description(DbRef player, DbRef target) {
 
   for (fp = gen_flags; fp->flagname; fp++) {
     if (fp->flagflag & FLAG_WORD3)
-      fv = Flags3(target);
+      fv = obj_flags3(target);
     else if (fp->flagflag & FLAG_WORD2)
-      fv = Flags2(target);
+      fv = obj_flags2(target);
     else
-      fv = Flags(target);
+      fv = obj_flags(target);
     if (fv & fp->flagvalue) {
-      if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+      if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
         continue;
-      if ((fp->listperm & CA_GOD) && !God(player))
+      if ((fp->listperm & CA_GOD) && !is_god(player))
         continue;
       /*
        * don't show CONNECT on dark wizards to mortals
        */
-      if (isPlayer(target) && (fp->flagvalue == CONNECTED) &&
-          ((Flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-          !Wizard(player))
+      if (is_player(target) && (fp->flagvalue == CONNECTED) &&
+          ((obj_flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
+          !is_wizard(player))
         continue;
       safe_mb_chr(' ', buff, &bp);
       safe_mb_str((char *)fp->flagname, buff, &bp);
@@ -560,7 +629,7 @@ char *unparse_object_numonly(DbRef target) {
     StringCopy(buf, "*NOTHING*");
   } else if (target == HOME) {
     StringCopy(buf, "*HOME*");
-  } else if (!Good_obj(target)) {
+  } else if (!is_good_obj(target)) {
     snprintf(buf, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else {
     snprintf(buf, LBUF_SIZE, "%s(#%ld)", Name(target), target);
@@ -580,13 +649,13 @@ char *unparse_object(DbRef player, DbRef target, int obey_myopic) {
     StringCopy(buf, "*NOTHING*");
   } else if (target == HOME) {
     StringCopy(buf, "*HOME*");
-  } else if (!Good_obj(target)) {
+  } else if (!is_good_obj(target)) {
     snprintf(buf, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else {
     if (obey_myopic)
-      exam = MyopicExam(player, target);
+      exam = is_myopic_exam(player, target);
     else
-      exam = Examinable(player, target);
+      exam = is_examinable(player, target);
     if (exam) {
 
       /*
@@ -632,8 +701,8 @@ int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
 
     for (i = 0; (i <= 7) && !handled; i++) {
       if ((object_types[i].lett == *s) &&
-          !(((object_types[i].perm & CA_WIZARD) && !Wizard(player)) ||
-            ((object_types[i].perm & CA_GOD) && !God(player)))) {
+          !(((object_types[i].perm & CA_WIZARD) && !is_wizard(player)) ||
+            ((object_types[i].perm & CA_GOD) && !is_god(player)))) {
         if ((type != NOTYPE) && (type != i)) {
           notify_printf(player, "%c: Conflicting type specifications.", *s);
           return 0;
@@ -651,8 +720,8 @@ int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
       continue;
     for (fp = gen_flags; (fp->flagname) && !handled; fp++) {
       if ((fp->flaglett == *s) &&
-          !(((fp->listperm & CA_WIZARD) && !Wizard(player)) ||
-            ((fp->listperm & CA_GOD) && !God(player)))) {
+          !(((fp->listperm & CA_WIZARD) && !is_wizard(player)) ||
+            ((fp->listperm & CA_GOD) && !is_god(player)))) {
         if (fp->flagflag & FLAG_WORD3)
           flag3mask |= fp->flagvalue;
         else if (fp->flagflag & FLAG_WORD2)

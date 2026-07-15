@@ -217,8 +217,8 @@ int Sensor_Sees(MECH *mech, MECH *target, int f, int arc, float range, int snum,
     }
   }
   if (range < 3 || Number(1, 10000) < ((chance * ch2) / chance_divisor)) {
-    if (target && In_Character(mech->mynum) && In_Character(target->mynum) &&
-        MechTeam(mech) != MechTeam(target))
+    if (target && is_in_character(mech->mynum) &&
+        is_in_character(target->mynum) && MechTeam(mech) != MechTeam(target))
       if (!Number(0, 5))
         MadePerceptionRoll(mech, -2);
     return 1;

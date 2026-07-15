@@ -205,11 +205,12 @@ void log_name(DbRef target) {
   strncpy(new, tp, LBUF_SIZE - 1);
   fprintf(stderr, "%s", strip_ansi_r(new, tp, strlen(tp)));
   free_lbuf(tp);
-  if (((mudconf.log_info & LOGOPT_OWNER) != 0) && (target != Owner(target))) {
+  if (((mudconf.log_info & LOGOPT_OWNER) != 0) &&
+      (target != obj_owner(target))) {
     if ((mudconf.log_info & LOGOPT_FLAGS) != 0)
-      tp = unparse_object((DbRef)GOD, Owner(target), 0);
+      tp = unparse_object((DbRef)GOD, obj_owner(target), 0);
     else
-      tp = unparse_object_numonly(Owner(target));
+      tp = unparse_object_numonly(obj_owner(target));
     strncpy(new, tp, LBUF_SIZE - 1);
     fprintf(stderr, "[%s]", strip_ansi_r(new, tp, strlen(tp)));
     free_lbuf(tp);
@@ -222,9 +223,9 @@ void log_name(DbRef target) {
  */
 void log_name_and_loc(DbRef player) {
   log_name(player);
-  if ((mudconf.log_info & LOGOPT_LOC) && Has_location(player)) {
+  if ((mudconf.log_info & LOGOPT_LOC) && has_location(player)) {
     log_text((char *)" in ");
-    log_name(Location(player));
+    log_name(obj_location(player));
   }
   return;
 }
@@ -233,10 +234,10 @@ void log_name_and_loc(DbRef player) {
  * Returns the object type of specified object.
  */
 char *OBJTYP(DbRef thing) {
-  if (!Good_obj(thing)) {
+  if (!is_good_obj(thing)) {
     return (char *)"??OUT-OF-RANGE??";
   }
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_PLAYER:
     return (char *)"PLAYER";
   case TYPE_THING:
@@ -258,7 +259,7 @@ void log_type_and_name(DbRef thing) {
   log_text(OBJTYP(thing));
   snprintf(nbuf, sizeof(nbuf), " #%ld(", thing);
   log_text(nbuf);
-  if (Good_obj(thing))
+  if (is_good_obj(thing))
     log_text(Name(thing));
   log_text((char *)")");
   return;

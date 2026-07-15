@@ -22,9 +22,15 @@
 #include "mux/support/alloc.h"
 #include "mux/support/wild.h"
 
-#define FIXCASE(a) (ToLower(a))
-#define EQUAL(a, b) ((a == b) || (FIXCASE(a) == FIXCASE(b)))
-#define NOTEQUAL(a, b) ((a != b) && (FIXCASE(a) != FIXCASE(b)))
+static inline char fixcase(char a) { return ToLower(a); }
+
+static inline bool is_equal(char a, char b) {
+  return (a == b) || (fixcase(a) == fixcase(b));
+}
+
+static inline bool is_notequal(char a, char b) {
+  return (a != b) && (fixcase(a) != fixcase(b));
+}
 
 static char **arglist; /* Argument return space */
 static int numargs;    /* Argument return size  */
@@ -59,7 +65,7 @@ int quick_wild(char *tstr, char *dstr) {
        * Literal character.  Check for a match. * If * * *
        * matching end of data, return true.
        */
-      if (NOTEQUAL(*dstr, *tstr))
+      if (is_notequal(*dstr, *tstr))
         return 0;
       if (!*dstr)
         return 1;
@@ -113,7 +119,7 @@ int quick_wild(char *tstr, char *dstr) {
    */
 
   while (*dstr) {
-    if (EQUAL(*dstr, *tstr) && quick_wild(tstr + 1, dstr + 1))
+    if (is_equal(*dstr, *tstr) && quick_wild(tstr + 1, dstr + 1))
       return 1;
     dstr++;
   }
@@ -168,7 +174,7 @@ static int wild1(char *tstr, char *dstr, int arg) {
        * Literal character.  Check for a match. * If * * *
        * matching end of data, return true.
        */
-      if (NOTEQUAL(*dstr, *tstr))
+      if (is_notequal(*dstr, *tstr))
         return 0;
       if (!*dstr)
         return 1;
@@ -272,7 +278,7 @@ static int wild1(char *tstr, char *dstr, int arg) {
      */
 
     if (*tstr)
-      while (NOTEQUAL(*dstr, *tstr)) {
+      while (is_notequal(*dstr, *tstr)) {
         if (!*dstr)
           return 0;
         dstr++;
@@ -352,7 +358,7 @@ int wild(char *tstr, char *dstr, char *args[], int nargs) {
   while ((*tstr != '*') && (*tstr != '?')) {
     if (*tstr == '\\')
       tstr++;
-    if (NOTEQUAL(*dstr, *tstr))
+    if (is_notequal(*dstr, *tstr))
       return 0;
     if (!*dstr)
       return 1;

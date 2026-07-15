@@ -41,8 +41,9 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
     notify(giver, "You can't give yourself away!");
     return;
   }
-  if (((Typeof(thing) != TYPE_THING) && (Typeof(thing) != TYPE_PLAYER)) ||
-      !(Enter_ok(recipient) || controls(giver, recipient))) {
+  if (((typeof_obj(thing) != TYPE_THING) &&
+       (typeof_obj(thing) != TYPE_PLAYER)) ||
+      !(is_enter_ok(recipient) || is_controls(giver, recipient))) {
     notify(giver, "Permission denied.");
     return;
   }
@@ -99,7 +100,7 @@ void do_give(DbRef player, DbRef cause, int key, char *who, char *amnt) {
   match_neighbor();
   match_possession();
   match_me();
-  if (Long_Fingers(player)) {
+  if (is_long_fingers(player)) {
     match_player();
     match_absolute();
   }

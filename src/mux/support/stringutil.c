@@ -420,7 +420,7 @@ char *strsave(const char *s) {
 /**
  * Copy buffers, watching for overflows.
  */
-int safe_copy_str(char *src, char *buff, char **bufp, int max) {
+int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
   char *tp;
 
   tp = *bufp;

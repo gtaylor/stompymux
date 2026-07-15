@@ -379,7 +379,7 @@ void ds_BridgeHit(MECH *mech) {
   /* Implementation: Kill all players on bridge :-) */
   if (Destroyed(mech))
     return;
-  if (In_Character(mech->mynum))
+  if (is_in_character(mech->mynum))
     mech_notify(mech, MECHALL,
                 "DUCK! The shot seems to be coming straight for the bridge!");
   KillMechContentsIfIC(mech->mynum);

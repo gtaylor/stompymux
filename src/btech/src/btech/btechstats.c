@@ -694,11 +694,11 @@ DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1)
 	if(!arg1 || !*arg1)
 		return NOTHING;
 
-	if(!string_compare(arg1, "me") && (Typeof(player) == TYPE_PLAYER))
+	if(!string_compare(arg1, "me") && (typeof_obj(player) == TYPE_PLAYER))
 		return player;
 	if(arg1[0] == '#') {
 		if(sscanf(arg1, "#%d", &which) == 1)
-			if(which >= 0 && isPlayer(which))
+			if(which >= 0 && is_player(which))
 				return which;
 		return NOTHING;
 	}
@@ -890,7 +890,7 @@ int handlemwconc(MECH *mech, int initial) {
 
   int m, roll;
 
-  if (In_Character(mech->mynum) && MechPilot(mech) > 0)
+  if (is_in_character(mech->mynum) && MechPilot(mech) > 0)
     m = mw_ic_bth(mech);
   else {
     if (initial)
@@ -945,7 +945,7 @@ void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
   if (mech->mynum < 0)
     return;
   /* check to see if mech is IC */
-  if (!In_Character(mech->mynum) || !GotPilot(mech)) {
+  if (!is_in_character(mech->mynum) || !GotPilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -999,7 +999,7 @@ void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
   if (mech->mynum < 0)
     return;
   /* check to see if mech is IC */
-  if (!In_Character(mech->mynum) || !GotPilot(mech)) {
+  if (!is_in_character(mech->mynum) || !GotPilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -1088,9 +1088,9 @@ void AccumulateCommXP(DbRef pilot, MECH *mech) {
   xp = 1;
   if (!RGotPilot(mech))
     return;
-  if (!In_Character(mech->mynum))
+  if (!is_in_character(mech->mynum))
     return;
-  if (!Connected(pilot))
+  if (!is_connected(pilot))
     return;
   if (char_gainxp(pilot, "Comm-Conventional", xp))
     SendXP(tprintf("%s gained %d %s XP (in #%d)", Name(pilot), xp,
@@ -1101,7 +1101,7 @@ void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
   char *skname;
   int xp;
 
-  if (!In_Character(mech->mynum))
+  if (!is_in_character(mech->mynum))
     return;
 
   if (!RGotPilot(mech))
@@ -1133,7 +1133,7 @@ void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
 void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
-  if (!In_Character(attacker->mynum))
+  if (!is_in_character(attacker->mynum))
     return;
   if (!RGotPilot(attacker))
     return;
@@ -1145,7 +1145,7 @@ void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
     return;
   if (MechTeam(wounded) == MechTeam(attacker))
     return;
-  if (!In_Character(wounded->mynum))
+  if (!is_in_character(wounded->mynum))
     return;
   if (char_gainxp(pilot, "Gunnery-Spotting", xp))
     SendXP(tprintf("%s gained spotting XP", Name(pilot)));
@@ -1154,7 +1154,7 @@ void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
 int MadePerceptionRoll(MECH *mech, int modifier) {
   int pilot;
 
-  if (!In_Character(mech->mynum))
+  if (!is_in_character(mech->mynum))
     return 0;
   if (!RGotGPilot(mech))
     return 0;
@@ -1174,7 +1174,7 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
   /* If not in character ie: like in simulator - no xp */
-  if (!In_Character(attacker->mynum))
+  if (!is_in_character(attacker->mynum))
     return;
 
   if (!RGotGPilot(attacker))
@@ -1196,7 +1196,7 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
     return;
 
   /* If target not in character ie: in simulator - no xp */
-  if (!In_Character(wounded->mynum))
+  if (!is_in_character(wounded->mynum))
     return;
 
   /* Switching to Exile method of tracking xp, where we split
@@ -1210,7 +1210,7 @@ void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason) {
   if (!mech)
     return;
 
-  if (mech && In_Character(mech->mynum) && isPlayer(pilot))
+  if (mech && is_in_character(mech->mynum) && is_player(pilot))
     if (char_gainxp(pilot, "computer", MAX(1, reason)))
       SendXP(tprintf("%s gained %d computer XP (mech #%d)", Name(pilot), reason,
                      mech ? mech->mynum : -1));
@@ -1315,7 +1315,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
     return;
 
   /* Is attacker in character ie: not in simulator */
-  if (!In_Character(attacker->mynum))
+  if (!is_in_character(attacker->mynum))
     return;
 
   if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
@@ -1340,7 +1340,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
     return;
 
   /* Is the target in character ie: in simulators */
-  if (!In_Character(wounded->mynum))
+  if (!is_in_character(wounded->mynum))
     return;
 
   /* No skill to match the weapon we're shooting with? */
@@ -1444,7 +1444,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
   char buf[MBUF_SIZE];
 
   /* Is the attacker in character ie: in simulators */
-  if (!In_Character(attacker->mynum))
+  if (!is_in_character(attacker->mynum))
     return;
 
   if (!RGotGPilot(attacker))
@@ -1466,7 +1466,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
     return;
 
   /* if target is in character ie: in simulators or something */
-  if (!In_Character(wounded->mynum))
+  if (!is_in_character(wounded->mynum))
     return;
 
   if (!(skname = FindGunnerySkillName(attacker, weapindx)))
@@ -1731,7 +1731,7 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
   DOCHECK(char_values[hm].type != CHAR_SKILL,
           "Only skills have XP (for now at least)");
   DO_WHOLE_DB(i) {
-    if (!isPlayer(i))
+    if (!is_player(i))
       continue;
     if (Wiz(i))
       continue;
@@ -1893,7 +1893,7 @@ static void store_advs(DbRef player, PSTATS *s) {
 }
 
 static void store_stats(DbRef player, PSTATS *s, int modes) {
-  if (!isPlayer(player))
+  if (!is_player(player))
     return;
   if (modes & VALUES_HEALTH)
     store_health(player, s);

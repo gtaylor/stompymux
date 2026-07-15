@@ -804,7 +804,7 @@ static void mech_masc_event(MuxEvent *e) {
     return;
   if (MechStatus(mech) & SCHARGE_ENABLED)
     roll--;
-  if (needed < 10 && Good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
+  if (needed < 10 && is_good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
     roll = Number(needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
@@ -895,7 +895,7 @@ static void mech_scharge_event(MuxEvent *e) {
     return;
   if (MechStatus(mech) & MASC_ENABLED)
     roll = roll - 1;
-  if (needed < 10 && Good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
+  if (needed < 10 && is_good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
     roll = Number(needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);
@@ -1038,7 +1038,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   int override = 0;
 
   cch(MECH_USUALO);
-  override = (strstr(buffer, "override") != NULL) && Wizard(player);
+  override = (strstr(buffer, "override") != NULL) && is_wizard(player);
   argc = mech_parseattributes(buffer, args, 2);
   DOCHECK(argc < 1, "Invalid number of arguments!");
 

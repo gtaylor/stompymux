@@ -324,7 +324,7 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   vsi(buf);
 
   snprintf(buf, MBUF_SIZE, "Controling unit %s",
-           Name(Location(autopilot->mynum)));
+           Name(obj_location(autopilot->mynum)));
   vsi(buf);
 
   addline();
@@ -462,7 +462,7 @@ void auto_engage(DbRef player, void *data, char *buffer) {
   MECH *mech;
 
   autopilot->mymech = mech =
-      getMech((autopilot->mymechnum = Location(autopilot->mynum)));
+      getMech((autopilot->mymechnum = obj_location(autopilot->mynum)));
   DOCHECK(!autopilot, "Internal error! - Bad AI object!");
   DOCHECK(!mech, "Error: The autopilot isn't inside a 'mech!");
   DOCHECK(auto_pilot_on(autopilot),

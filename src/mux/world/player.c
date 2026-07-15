@@ -16,14 +16,10 @@
 #include "mux/support/password.h"
 #include "mux/world/player.h"
 
-#define NUM_GOOD                                                               \
-  4 /*                                                                         \
-     * # of successful logins to save data for                                 \
-     */
-#define NUM_BAD                                                                \
-  3 /*                                                                         \
-     * # of failed logins to save data for                                     \
-     */
+// # of successful logins to save data for
+constexpr int NUM_GOOD = 4;
+// # of failed logins to save data for
+constexpr int NUM_BAD = 3;
 
 typedef struct hostdtm HOSTDTM;
 struct hostdtm {
@@ -263,8 +259,8 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
     do_addcom(player, player, 0, "pub", mudconf.public_channel);
 
   object_password_set(player, hashed_password);
-  s_Home(player, start_home());
-  s_Fixed(player);
+  s_home(player, start_home());
+  s_fixed(player);
   sodium_memzero(hashed_password, sizeof(hashed_password));
   free_lbuf(pbuf);
   return player;
@@ -312,16 +308,16 @@ void do_last(DbRef player, DbRef cause, int key, char *who) {
   long aflags;
 
   if (!who || !*who) {
-    target = Owner(player);
+    target = obj_owner(player);
   } else if (!(string_compare(who, "me"))) {
-    target = Owner(player);
+    target = obj_owner(player);
   } else {
     target = lookup_player(player, who, 1);
   }
 
   if (target == NOTHING) {
     notify(player, "I couldn't find that player.");
-  } else if (!Controls(player, target)) {
+  } else if (!is_controls(player, target)) {
     notify(player, "Permission denied.");
   } else {
     atrbuf = attribute_get(target, A_LOGINDATA, &aowner, &aflags);
@@ -372,7 +368,7 @@ int add_player_name(DbRef player, char *name) {
       free_lbuf(temp);
       return 0;
     }
-    if (Good_obj(*p) && (Typeof(*p) == TYPE_PLAYER)) {
+    if (is_good_obj(*p) && (typeof_obj(*p) == TYPE_PLAYER)) {
       free_lbuf(temp);
       if (*p == player) {
         return 1;
@@ -433,9 +429,9 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
     if (!is_number(name))
       return NOTHING;
     thing = atoi(name);
-    if (!Good_obj(thing))
+    if (!is_good_obj(thing))
       return NOTHING;
-    if (!((Typeof(thing) == TYPE_PLAYER) || God(doer)))
+    if (!((typeof_obj(thing) == TYPE_PLAYER) || is_god(doer)))
       thing = NOTHING;
     return thing;
   }
@@ -449,11 +445,11 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
   if (!p) {
     if (check_who) {
       thing = find_connected_name(doer, name);
-      if (Dark(thing))
+      if (is_dark(thing))
         thing = NOTHING;
     } else
       thing = NOTHING;
-  } else if (!Good_obj(*p)) {
+  } else if (!is_good_obj(*p)) {
     thing = NOTHING;
   } else
     thing = *p;
@@ -467,13 +463,13 @@ void load_player_names(void) {
   char *alias;
 
   DO_WHOLE_DB(i) {
-    if (Typeof(i) == TYPE_PLAYER) {
+    if (typeof_obj(i) == TYPE_PLAYER) {
       add_player_name(i, Name(i));
     }
   }
   alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(i) {
-    if (Typeof(i) == TYPE_PLAYER) {
+    if (typeof_obj(i) == TYPE_PLAYER) {
       alias = attribute_parent_get_string(alias, i, A_ALIAS, &aowner, &aflags);
       if (*alias)
         add_player_name(i, alias);

@@ -654,7 +654,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
 
-  if (Ansimap(player))
+  if (is_ansimap(player))
     mode |= LRS_COLORMODE;
 
   map = getMap(mech->mapindex);
@@ -1379,7 +1379,7 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
 
 char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
                    int wy, int labels, int dohexlos) {
-  int docolour = Ansimap(player);
+  int docolour = is_ansimap(player);
   int dounderlying = labels & 64;
   int dispcols;
   int disprows;
@@ -1750,7 +1750,7 @@ static void mech_enter_event(MuxEvent *e) {
                    tprintf("has entered %s at %d,%d.", structure_name(mapo),
                            MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
-  if (MechType(mech) == CLASS_MW && !In_Character(mapo->obj)) {
+  if (MechType(mech) == CLASS_MW && !is_in_character(mapo->obj)) {
     enter_mw_bay(mech, mapo->obj);
     return;
   }

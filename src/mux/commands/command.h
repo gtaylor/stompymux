@@ -185,45 +185,47 @@ struct addedentry {
 
 /* Command handler call conventions */
 
-#define CS_NO_ARGS 0x0000      /* No arguments */
-#define CS_ONE_ARG 0x0001      /* One argument */
-#define CS_TWO_ARG 0x0002      /* Two arguments */
-#define CS_NARG_MASK 0x0003    /* Argument count mask */
-#define CS_ARGV 0x0004         /* ARG2 is in ARGV form */
-#define CS_INTERP 0x0010       /* Interpret ARG2 if 2 args, ARG1 if 1 */
-#define CS_NOINTERP 0x0020     /* Never interp ARG2 if 2 or ARG1 if 1 */
-#define CS_CAUSE 0x0040        /* Pass cause to old command handler */
-#define CS_UNPARSE 0x0080      /* Pass unparsed cmd to old-style handler */
-#define CS_CMDARG 0x0100       /* Pass in given command args */
-#define CS_STRIP 0x0200        /* Strip braces even when not interpreting */
-#define CS_STRIP_AROUND 0x0400 /* Strip braces around entire string only */
-#define CS_ADDED 0X0800        /* Command has been added by @addcommand */
-#define CS_NO_MACRO 0x1000     /* Command can't be used inside macro */
-#define CS_LEADIN 0x2000       /* Command is a single-letter lead-in */
+constexpr int CS_NO_ARGS = 0x0000;   /* No arguments */
+constexpr int CS_ONE_ARG = 0x0001;   /* One argument */
+constexpr int CS_TWO_ARG = 0x0002;   /* Two arguments */
+constexpr int CS_NARG_MASK = 0x0003; /* Argument count mask */
+constexpr int CS_ARGV = 0x0004;      /* ARG2 is in ARGV form */
+constexpr int CS_INTERP = 0x0010;    /* Interpret ARG2 if 2 args, ARG1 if 1 */
+constexpr int CS_NOINTERP = 0x0020;  /* Never interp ARG2 if 2 or ARG1 if 1 */
+constexpr int CS_CAUSE = 0x0040;     /* Pass cause to old command handler */
+constexpr int CS_UNPARSE = 0x0080; /* Pass unparsed cmd to old-style handler */
+constexpr int CS_CMDARG = 0x0100;  /* Pass in given command args */
+constexpr int CS_STRIP = 0x0200;   /* Strip braces even when not interpreting */
+constexpr int CS_STRIP_AROUND =
+    0x0400;                         /* Strip braces around entire string only */
+constexpr int CS_ADDED = 0X0800;    /* Command has been added by @addcommand */
+constexpr int CS_NO_MACRO = 0x1000; /* Command can't be used inside macro */
+constexpr int CS_LEADIN = 0x2000;   /* Command is a single-letter lead-in */
 
 /* Command permission flags */
 
-#define CA_PUBLIC 0x00000000 /* No access restrictions */
-#define CA_GOD 0x00000001    /* GOD only... */
-#define CA_WIZARD 0x00000002 /* Wizards only */
+constexpr int CA_PUBLIC = 0x00000000; /* No access restrictions */
+constexpr int CA_GOD = 0x00000001;    /* GOD only... */
+constexpr int CA_WIZARD = 0x00000002; /* Wizards only */
 /* 0x00000004 is reserved for the removed builder power restriction. */
 /* 0x00000008 is reserved for the removed immortal restriction. */
-#define CA_ROBOT 0x00000010 /* Robots only */
+constexpr int CA_ROBOT = 0x00000010; /* Robots only */
 /* 0x00000020 is reserved for the removed announce power restriction. */
-#define CA_ADMIN 0x00000800 /* Wizard */
+constexpr int CA_ADMIN = 0x00000800; /* Wizard */
 /* 0x00001000 is reserved for the removed no_haven restriction. */
-#define CA_NO_ROBOT 0x00002000 /* Not by ROBOT players */
+constexpr int CA_NO_ROBOT = 0x00002000; /* Not by ROBOT players */
 /* 0x00004000 is reserved for the removed no_slave restriction. */
-#define CA_NO_SUSPECT 0x00008000 /* Not by SUSPECT players */
-#define CA_NO_IC 0x00020000      /* Not by IC players */
+constexpr int CA_NO_SUSPECT = 0x00008000; /* Not by SUSPECT players */
+constexpr int CA_NO_IC = 0x00020000;      /* Not by IC players */
 
-#define CA_GBL_BUILD 0x01000000  /* Requires the global BUILDING flag */
-#define CA_GBL_INTERP 0x02000000 /* Requires the global INTERP flag */
-#define CA_DISABLED 0x04000000   /* Command completely disabled */
-#define CA_LOCATION 0x10000000   /* Invoker must have location */
-#define CA_CONTENTS 0x20000000   /* Invoker must have contents */
-#define CA_PLAYER 0x40000000     /* Invoker must be a player */
-#define CF_DARK 0x80000000       /* Command doesn't show up in list */
+constexpr int CA_GBL_BUILD = 0x01000000; /* Requires the global BUILDING flag */
+constexpr int CA_GBL_INTERP = 0x02000000; /* Requires the global INTERP flag */
+constexpr int CA_DISABLED = 0x04000000;   /* Command completely disabled */
+constexpr int CA_LOCATION = 0x10000000;   /* Invoker must have location */
+constexpr int CA_CONTENTS = 0x20000000;   /* Invoker must have contents */
+constexpr int CA_PLAYER = 0x40000000;     /* Invoker must be a player */
+constexpr unsigned int CF_DARK =
+    0x80000000; /* Command doesn't show up in list */
 
 int check_access(DbRef, int);
 void process_command(DbRef, DbRef, int, char *, char *[], int);

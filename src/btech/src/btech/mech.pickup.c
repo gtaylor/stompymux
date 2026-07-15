@@ -68,7 +68,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   DOCHECK(Towed(target), "That target's already being towed by someone!");
   DOCHECK(MechSwarmTarget(target) == mech->mynum, "You can't grab hold!");
   DOCHECK(MechTons(mech) < 5 ||
-              (!In_Character(target->mynum) && !Towable(target)),
+              (!is_in_character(target->mynum) && !Towable(target)),
           "You can't tow that!");
   DOCHECK(MechCritStatus(target) & HIDDEN,
           "You cannot pickup hiding targets....");
@@ -195,7 +195,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   DOCHECK(MechMove(towMech) == MOVE_NONE, "That unit can not tow!");
   DOCHECK(MechTons(towMech) < 5, "That unit can not tow!");
   DOCHECK(Destroyed(towMech), "Destroyed units can not tow!");
-  DOCHECK((MechTons(towMech) < 5) || (!In_Character(towMech->mynum)),
+  DOCHECK((MechTons(towMech) < 5) || (!is_in_character(towMech->mynum)),
           "That unit can not tow!");
   DOCHECK(Burning(towMech), "You can not attach tow cables to a burning unit!");
   DOCHECK((MechSpecials(towMech) & SALVAGE_TECH),
@@ -223,7 +223,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
           "You must be on the same elevation as the target!");
   DOCHECK(MechCarrying(target) > 0, "That target is towing someone else!");
   DOCHECK(Towed(target), "That target is already being towed by someone!");
-  DOCHECK((!In_Character(target->mynum) && !Towable(target)),
+  DOCHECK((!is_in_character(target->mynum) && !Towable(target)),
           "That unit can not be towed!");
   DOCHECK(MechType(target) == CLASS_MW, "That unit can not be towed!");
   DOCHECK(MechMove(target) == MOVE_NONE, "That unit can not be towed!");

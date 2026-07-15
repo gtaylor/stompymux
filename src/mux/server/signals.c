@@ -27,8 +27,8 @@ struct sigaction saBUS = {.sa_sigaction = signal_BUS,
 stack_t sighandler_stack;
 stack_t regular_stack;
 
-#define ALT_STACK_SIZE (0x40000)
-#define ALT_STACK_ALIGN (0x1000)
+constexpr size_t ALT_STACK_SIZE = 0x40000;
+constexpr size_t ALT_STACK_ALIGN = 0x1000;
 
 void bind_signals(void) {
   int error_code;

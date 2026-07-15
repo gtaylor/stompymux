@@ -29,7 +29,7 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
    * make sure location has exits
    */
 
-  if (!Good_obj(loc) || !Has_exits(loc))
+  if (!is_good_obj(loc) || !has_exits(loc))
     return;
 
   /*
@@ -38,13 +38,13 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
 
   foundany = 0;
   key = 0;
-  if (Dark(loc))
+  if (is_dark(loc))
     key |= VE_BASE_DARK;
   ITER_PARENTS(loc, parent, lev) {
     key &= ~VE_LOC_DARK;
-    if (Dark(parent))
+    if (is_dark(parent))
       key |= VE_LOC_DARK;
-    DOLIST(thing, Exits(parent)) {
+    DOLIST(thing, obj_exits(parent)) {
       if (exit_displayable(thing, player, key)) {
         foundany = 1;
         break;
@@ -65,20 +65,21 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
   e1 = buff1 = alloc_lbuf("look_exits2");
   ITER_PARENTS(loc, parent, lev) {
     key &= ~VE_LOC_DARK;
-    if (Dark(parent))
+    if (is_dark(parent))
       key |= VE_LOC_DARK;
-    if (Transparent(loc)) {
-      DOLIST(thing, Exits(parent)) {
+    if (is_transparent(loc)) {
+      DOLIST(thing, obj_exits(parent)) {
         if (exit_displayable(thing, player, key)) {
           StringCopy(buff, Name(thing));
           for (e = buff; *e && (*e != ';'); e++)
             ;
           *e = '\0';
-          notify_printf(player, "%s leads to %s.", buff, Name(Location(thing)));
+          notify_printf(player, "%s leads to %s.", buff,
+                        Name(obj_location(thing)));
         }
       }
     } else {
-      DOLIST(thing, Exits(parent)) {
+      DOLIST(thing, obj_exits(parent)) {
         if (exit_displayable(thing, player, key)) {
           e1 = buff1;
           /* Put the exit name in buff1 */
@@ -102,7 +103,7 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
     }
   }
 
-  if (!(Transparent(loc))) {
+  if (!(is_transparent(loc))) {
     safe_str((char *)"\r\n", buff, &e);
     *e = 0;
     notify(player, buff);
@@ -126,13 +127,13 @@ static void look_contents(DbRef player, DbRef loc, const char *contents_name,
    */
 
   can_see_loc =
-      (!Dark(loc) || (mudconf.see_own_dark && Examinable(player, loc)));
+      (!is_dark(loc) || (mudconf.see_own_dark && is_examinable(player, loc)));
 
   /*
    * check to see if there is anything there
    */
 
-  DOLIST(thing, Contents(loc)) {
+  DOLIST(thing, obj_contents(loc)) {
     if (can_see(player, thing, can_see_loc)) {
 
       /*
@@ -140,7 +141,7 @@ static void look_contents(DbRef player, DbRef loc, const char *contents_name,
        */
 
       notify(player, contents_name);
-      DOLIST(thing, Contents(loc)) {
+      DOLIST(thing, obj_contents(loc)) {
         if (can_see(player, thing, can_see_loc)) {
           buff = unparse_object(player, thing, 1);
           notify(player, buff);
@@ -170,7 +171,7 @@ static void view_atr(DbRef player, DbRef thing, Attribute *ap, char *text,
    * * * attr owner and flag info.
    */
 
-  if (!Controls(player, thing) && (Owner(player) != aowner)) {
+  if (!is_controls(player, thing) && (obj_owner(player) != aowner)) {
     if (skip_tag && (ap->number == A_DESC))
       notify_printf(player, "%s", text);
     else
@@ -199,7 +200,7 @@ static void view_atr(DbRef player, DbRef thing, Attribute *ap, char *text,
 
   *xbufp = '\0';
 
-  if ((aowner != Owner(thing)) && (aowner != NOTHING)) {
+  if ((aowner != obj_owner(thing)) && (aowner != NOTHING)) {
     notify_printf(player, "\033[1m%s [#%d%s]:\033[0m %s", ap->name, aowner,
                   xbuf, text);
   } else if (*xbuf) {
@@ -239,7 +240,7 @@ static void look_atrs1(DbRef player, DbRef thing, DbRef othing,
       continue;
 
     buf = attribute_get(thing, ca, &aowner, &aflags);
-    if (Read_attr(player, othing, attr, aowner, aflags)) {
+    if (read_attr(player, othing, attr, aowner, aflags)) {
       /* check_zone/attribute_by_number overwrites attr!! */
 
       if (attr->number != cattr->number)
@@ -267,7 +268,7 @@ static void look_atrs(DbRef player, DbRef thing, int check_parents) {
     check_exclude = 0;
     numeric_hash_table_flush(&mudstate.parent_htab, 0);
     ITER_PARENTS(thing, parent, lev) {
-      if (!Good_obj(Parent(parent)))
+      if (!is_good_obj(obj_parent(parent)))
         hash_insert = 0;
       look_atrs1(player, parent, thing, check_exclude, hash_insert);
       check_exclude = 1;
@@ -290,7 +291,7 @@ static void look_simple(DbRef player, DbRef thing) {
    * Get the name and db-number if we can examine it.
    */
 
-  if (Examinable(player, thing)) {
+  if (is_examinable(player, thing)) {
     buff = unparse_object(player, thing, 1);
     notify(player, buff);
     free_lbuf(buff);
@@ -308,7 +309,7 @@ static void show_a_desc(DbRef player, DbRef loc) {
   int indent = 0;
 
   indent =
-      (isRoom(loc) && mudconf.indent_desc && attribute_get_raw(loc, A_DESC));
+      (is_room(loc) && mudconf.indent_desc && attribute_get_raw(loc, A_DESC));
 
   if (indent)
     raw_notify_newline(player);
@@ -322,7 +323,7 @@ static void show_desc(DbRef player, DbRef loc, int use_idesc) {
   DbRef aowner;
   long aflags;
 
-  if ((Typeof(loc) != TYPE_ROOM) && use_idesc) {
+  if ((typeof_obj(loc) != TYPE_ROOM) && use_idesc) {
     if (*(got = attribute_parent_get(loc, A_IDESC, &aowner, &aflags)))
       did_it(player, loc, A_IDESC, NULL, A_ODESC, NULL, A_ADESC, (char **)NULL,
              0);
@@ -353,7 +354,7 @@ void look_in(DbRef player, DbRef loc, int key) {
   notify(player, buff);
   free_lbuf(buff);
 
-  if (!Good_obj(loc))
+  if (!is_good_obj(loc))
     return; /*
              * If we went to NOTHING et al,  skip the * *
              *
@@ -364,13 +365,13 @@ void look_in(DbRef player, DbRef loc, int key) {
    * tell him the description
    */
 
-  show_desc(player, loc, loc == Location(player));
+  show_desc(player, loc, loc == obj_location(player));
 
   /*
    * tell him the appropriate messages if he has the key
    */
 
-  if (Typeof(loc) == TYPE_ROOM) {
+  if (typeof_obj(loc) == TYPE_ROOM) {
     if (could_doit(player, loc, A_LOCK)) {
       pattr = A_SUCC;
       oattr = A_OSUCC;
@@ -398,16 +399,16 @@ void do_look(DbRef player, DbRef cause, int key, char *name) {
 
   look_key = LK_SHOWATTR | LK_SHOWEXIT;
 
-  loc = Location(player);
+  loc = obj_location(player);
   if (!name || !*name) {
     thing = loc;
-    if (Good_obj(thing)) {
+    if (is_good_obj(thing)) {
       if (key & LOOK_OUTSIDE) {
-        if ((Typeof(thing) == TYPE_ROOM) || Opaque(thing)) {
+        if ((typeof_obj(thing) == TYPE_ROOM) || is_opaque(thing)) {
           notify_quiet(player, "You can't look outside.");
           return;
         }
-        thing = Location(thing);
+        thing = obj_location(thing);
       }
       look_in(player, thing, look_key);
     }
@@ -422,7 +423,7 @@ void do_look(DbRef player, DbRef cause, int key, char *name) {
   match_exit_with_parents();
   match_neighbor();
   match_possession();
-  if (Long_Fingers(player)) {
+  if (is_long_fingers(player)) {
     match_absolute();
     match_player();
   }
@@ -435,7 +436,7 @@ void do_look(DbRef player, DbRef cause, int key, char *name) {
    * Not found locally, check possessive
    */
 
-  if (!Good_obj(thing)) {
+  if (!is_good_obj(thing)) {
     thing = match_status(
         player, match_possessed(player, ((key & LOOK_OUTSIDE) ? loc : player),
                                 (char *)name, thing, 0));
@@ -444,23 +445,23 @@ void do_look(DbRef player, DbRef cause, int key, char *name) {
    * If we found something, go handle it
    */
 
-  if (Good_obj(thing)) {
-    switch (Typeof(thing)) {
+  if (is_good_obj(thing)) {
+    switch (typeof_obj(thing)) {
     case TYPE_ROOM:
       look_in(player, thing, look_key);
       break;
     case TYPE_THING:
     case TYPE_PLAYER:
       look_simple(player, thing);
-      if (!Opaque(thing)) {
+      if (!is_opaque(thing)) {
         look_contents(player, thing, "Carrying:", CONTENTS_NESTED);
       }
       break;
     case TYPE_EXIT:
       look_simple(player, thing);
-      if (Transparent(thing) && (Location(thing) != NOTHING)) {
+      if (is_transparent(thing) && (obj_location(thing) != NOTHING)) {
         look_key &= ~LK_SHOWATTR;
-        look_in(player, Location(thing), look_key);
+        look_in(player, obj_location(thing), look_key);
       }
       break;
     default:
@@ -479,17 +480,17 @@ static void debug_examine(DbRef player, DbRef thing) {
   char *as, *cp;
 
   notify_printf(player, "Number  = %d", thing);
-  if (!Good_obj(thing))
+  if (!is_good_obj(thing))
     return;
 
   notify_printf(player, "Name    = %s", Name(thing));
-  notify_printf(player, "Location= %d", Location(thing));
-  notify_printf(player, "Contents= %d", Contents(thing));
-  notify_printf(player, "Exits   = %d", Exits(thing));
-  notify_printf(player, "Link    = %d", Link(thing));
-  notify_printf(player, "Next    = %d", Next(thing));
-  notify_printf(player, "Owner   = %d", Owner(thing));
-  notify_printf(player, "Zone    = %d", Zone(thing));
+  notify_printf(player, "Location= %d", obj_location(thing));
+  notify_printf(player, "Contents= %d", obj_contents(thing));
+  notify_printf(player, "Exits   = %d", obj_exits(thing));
+  notify_printf(player, "Link    = %d", obj_link(thing));
+  notify_printf(player, "Next    = %d", obj_next(thing));
+  notify_printf(player, "Owner   = %d", obj_owner(thing));
+  notify_printf(player, "Zone    = %d", obj_zone(thing));
   buf = flag_description(player, thing);
   notify_printf(player, "Flags   = %s", buf);
   free_mbuf(buf);
@@ -514,7 +515,7 @@ static void debug_examine(DbRef player, DbRef thing) {
       continue;
 
     attribute_get_info(thing, ca, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags)) {
+    if (read_attr(player, thing, attr, aowner, aflags)) {
       if (attr) { /*
                    * Valid attr.
                    */
@@ -536,7 +537,7 @@ static void debug_examine(DbRef player, DbRef thing) {
       continue;
 
     buf = attribute_get(thing, ca, &aowner, &aflags);
-    if (Read_attr(player, thing, attr, aowner, aflags))
+    if (read_attr(player, thing, attr, aowner, aflags))
       view_atr(player, thing, attr, buf, aowner, aflags, 0);
     free_lbuf(buf);
   }
@@ -570,14 +571,14 @@ static void exam_wildattrs(DbRef player, DbRef thing, int do_parent) {
      * remote * DESC-reading * * is not turned on.
      */
 
-    if (Examinable(player, thing) &&
-        Read_attr(player, thing, ap, aowner, aflags)) {
+    if (is_examinable(player, thing) &&
+        read_attr(player, thing, ap, aowner, aflags)) {
       got_any = 1;
       view_atr(player, thing, ap, buf, aowner, aflags, 0);
-    } else if ((Typeof(thing) == TYPE_PLAYER) &&
-               Read_attr(player, thing, ap, aowner, aflags)) {
+    } else if ((typeof_obj(thing) == TYPE_PLAYER) &&
+               read_attr(player, thing, ap, aowner, aflags)) {
       got_any = 1;
-      if (aowner == Owner(player)) {
+      if (aowner == obj_owner(player)) {
         view_atr(player, thing, ap, buf, aowner, aflags, 0);
       } else if ((atr == A_DESC) &&
                  (mudconf.read_rem_desc || nearby(player, thing))) {
@@ -587,9 +588,9 @@ static void exam_wildattrs(DbRef player, DbRef thing, int do_parent) {
       } else {
         notify(player, "<Too far away to get a good look>");
       }
-    } else if (Read_attr(player, thing, ap, aowner, aflags)) {
+    } else if (read_attr(player, thing, ap, aowner, aflags)) {
       got_any = 1;
-      if (aowner == Owner(player)) {
+      if (aowner == obj_owner(player)) {
         view_atr(player, thing, ap, buf, aowner, aflags, 0);
       } else if ((atr == A_DESC) &&
                  (mudconf.read_rem_desc || nearby(player, thing))) {
@@ -623,7 +624,7 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
   do_parent = key & EXAM_PARENT;
   thing = NOTHING;
   if (!name || !*name) {
-    if ((thing = Location(player)) == NOTHING)
+    if ((thing = obj_location(player)) == NOTHING)
       return;
   } else {
 
@@ -642,7 +643,7 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
     init_match(player, name, NOTYPE);
     match_everything(MAT_EXIT_PARENTS);
     thing = noisy_match_result();
-    if (!Good_obj(thing))
+    if (!is_good_obj(thing))
       return;
   }
 
@@ -651,14 +652,14 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
    */
 
   if (key == EXAM_DEBUG) {
-    if (!Examinable(player, thing)) {
+    if (!is_examinable(player, thing)) {
       notify_quiet(player, "Permission denied.");
     } else {
       debug_examine(player, thing);
     }
     return;
   }
-  control = (Examinable(player, thing) || Link_exit(player, thing));
+  control = (is_examinable(player, thing) || can_link_exit(player, thing));
 
   if (control) {
     buf2 = unparse_object(player, thing, 0);
@@ -674,10 +675,11 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
       if (mudconf.read_rem_name) {
         buf2 = alloc_lbuf("do_examine.pub_name");
         StringCopy(buf2, Name(thing));
-        notify_printf(player, "%s is owned by %s", buf2, Name(Owner(thing)));
+        notify_printf(player, "%s is owned by %s", buf2,
+                      Name(obj_owner(thing)));
         free_lbuf(buf2);
       } else {
-        notify_printf(player, "Owned by %s", Name(Owner(thing)));
+        notify_printf(player, "Owned by %s", Name(obj_owner(thing)));
       }
       return;
     }
@@ -688,7 +690,7 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
   if (control || mudconf.read_rem_desc || nearby(player, thing)) {
     temp = attribute_get_string(temp, thing, A_DESC, &aowner, &aflags);
     if (*temp) {
-      if (Examinable(player, thing) || (aowner == Owner(player))) {
+      if (is_examinable(player, thing) || (aowner == obj_owner(player))) {
         view_atr(player, thing, attribute_by_number(A_DESC), temp, aowner,
                  aflags, 1);
       } else {
@@ -709,12 +711,12 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
     boolexp = boolean_expression_parse(player, buf2, 1);
     buf = boolean_expression_unparse(player, boolexp);
     boolean_expression_free(boolexp);
-    StringCopy(buf2, Name(Owner(thing)));
+    StringCopy(buf2, Name(obj_owner(thing)));
     notify_printf(player, "Owner: %s  Key: %s", buf2, buf);
     free_lbuf(buf2);
 
     if (mudconf.have_zones) {
-      buf2 = unparse_object(player, Zone(thing), 0);
+      buf2 = unparse_object(player, obj_zone(thing), 0);
       notify_printf(player, "Zone: %s", buf2);
       free_lbuf(buf2);
     }
@@ -722,7 +724,7 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
      * print parent
      */
 
-    loc = Parent(thing);
+    loc = obj_parent(thing);
     if (loc != NOTHING) {
       buf2 = unparse_object(player, loc, 0);
       notify_printf(player, "Parent: %s", buf2);
@@ -745,9 +747,9 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
      * Contents
      */
 
-    if (Contents(thing) != NOTHING) {
+    if (obj_contents(thing) != NOTHING) {
       notify(player, "Contents:");
-      DOLIST(content, Contents(thing)) {
+      DOLIST(content, obj_contents(thing)) {
         buf2 = unparse_object(player, content, 0);
         notify(player, buf2);
         free_lbuf(buf2);
@@ -757,16 +759,16 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
      * Show stuff that depends on the object type
      */
 
-    switch (Typeof(thing)) {
+    switch (typeof_obj(thing)) {
     case TYPE_ROOM:
 
       /*
        * tell him about exits
        */
 
-      if (Exits(thing) != NOTHING) {
+      if (obj_exits(thing) != NOTHING) {
         notify(player, "Exits:");
-        DOLIST(exit, Exits(thing)) {
+        DOLIST(exit, obj_exits(thing)) {
           buf2 = unparse_object(player, exit, 0);
           notify(player, buf2);
           free_lbuf(buf2);
@@ -779,8 +781,8 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
        * print dropto if present
        */
 
-      if (Dropto(thing) != NOTHING) {
-        buf2 = unparse_object(player, Dropto(thing), 0);
+      if (obj_dropto(thing) != NOTHING) {
+        buf2 = unparse_object(player, obj_dropto(thing), 0);
         notify_printf(player, "Dropped objects go to: %s", buf2);
         free_lbuf(buf2);
       }
@@ -792,9 +794,9 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
        * tell him about exits
        */
 
-      if (Exits(thing) != NOTHING) {
+      if (obj_exits(thing) != NOTHING) {
         notify(player, "Exits:");
-        DOLIST(exit, Exits(thing)) {
+        DOLIST(exit, obj_exits(thing)) {
           buf2 = unparse_object(player, exit, 0);
           notify(player, buf2);
           free_lbuf(buf2);
@@ -807,7 +809,7 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
        * print home
        */
 
-      loc = Home(thing);
+      loc = obj_home(thing);
       buf2 = unparse_object(player, loc, 0);
       notify_printf(player, "Home: %s", buf2);
       free_lbuf(buf2);
@@ -816,17 +818,17 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
        * print location if player can link to it
        */
 
-      loc = Location(thing);
-      if ((Location(thing) != NOTHING) &&
-          (Examinable(player, loc) || Examinable(player, thing) ||
-           Linkable(player, loc))) {
+      loc = obj_location(thing);
+      if ((obj_location(thing) != NOTHING) &&
+          (is_examinable(player, loc) || is_examinable(player, thing) ||
+           is_linkable(player, loc))) {
         buf2 = unparse_object(player, loc, 0);
         notify_printf(player, "Location: %s", buf2);
         free_lbuf(buf2);
       }
       break;
     case TYPE_EXIT:
-      buf2 = unparse_object(player, Exits(thing), 0);
+      buf2 = unparse_object(player, obj_exits(thing), 0);
       notify_printf(player, "Source: %s", buf2);
       free_lbuf(buf2);
 
@@ -834,14 +836,14 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
        * print destination
        */
 
-      switch (Location(thing)) {
+      switch (obj_location(thing)) {
       case NOTHING:
         break;
       case HOME:
         notify(player, "Destination: *HOME*");
         break;
       default:
-        buf2 = unparse_object(player, Location(thing), 0);
+        buf2 = unparse_object(player, obj_location(thing), 0);
         notify_printf(player, "Destination: %s", buf2);
         free_lbuf(buf2);
         break;
@@ -850,10 +852,10 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
     default:
       break;
     }
-  } else if (!Opaque(thing) && nearby(player, thing)) {
-    if (Has_contents(thing))
+  } else if (!is_opaque(thing) && nearby(player, thing)) {
+    if (has_contents(thing))
       look_contents(player, thing, "Contents:", CONTENTS_REMOTE);
-    if (Typeof(thing) != TYPE_EXIT)
+    if (typeof_obj(thing) != TYPE_EXIT)
       look_exits(player, thing, "Obvious exits:");
   }
   free_lbuf(temp);
@@ -862,10 +864,10 @@ void do_examine(DbRef player, DbRef cause, int key, char *name) {
     if (mudconf.read_rem_name) {
       buf2 = alloc_lbuf("do_examine.pub_name");
       StringCopy(buf2, Name(thing));
-      notify_printf(player, "%s is owned by %s", buf2, Name(Owner(thing)));
+      notify_printf(player, "%s is owned by %s", buf2, Name(obj_owner(thing)));
       free_lbuf(buf2);
     } else {
-      notify_printf(player, "Owned by %s", Name(Owner(thing)));
+      notify_printf(player, "Owned by %s", Name(obj_owner(thing)));
     }
   }
 }
@@ -874,7 +876,7 @@ void do_inventory(DbRef player, DbRef cause, int key) {
   DbRef thing;
   char *buff, *s, *e;
 
-  thing = Contents(player);
+  thing = obj_contents(player);
   if (thing == NOTHING) {
     notify(player, "You aren't carrying anything.");
   } else {
@@ -886,7 +888,7 @@ void do_inventory(DbRef player, DbRef cause, int key) {
     }
   }
 
-  thing = Exits(player);
+  thing = obj_exits(player);
   if (thing != NOTHING) {
     notify(player, "Exits:");
     e = buff = alloc_lbuf("look_exits");
@@ -913,36 +915,36 @@ void do_entrances(DbRef player, DbRef cause, int key, char *name) {
 
   parse_range(&name, &low_bound, &high_bound);
   if (!name || !*name) {
-    if (Has_location(player))
-      thing = Location(player);
+    if (has_location(player))
+      thing = obj_location(player);
     else
       thing = player;
-    if (!Good_obj(thing))
+    if (!is_good_obj(thing))
       return;
   } else {
     init_match(player, name, NOTYPE);
     match_everything(MAT_EXIT_PARENTS);
     thing = noisy_match_result();
-    if (!Good_obj(thing))
+    if (!is_good_obj(thing))
       return;
   }
 
   message = alloc_lbuf("do_entrances");
-  control_thing = Examinable(player, thing);
+  control_thing = is_examinable(player, thing);
   count = 0;
   for (i = low_bound; i <= high_bound; i++) {
-    if (control_thing || Examinable(player, i)) {
-      switch (Typeof(i)) {
+    if (control_thing || is_examinable(player, i)) {
+      switch (typeof_obj(i)) {
       case TYPE_EXIT:
-        if (Location(i) == thing) {
-          exit = unparse_object(player, Exits(i), 0);
+        if (obj_location(i) == thing) {
+          exit = unparse_object(player, obj_exits(i), 0);
           notify_printf(player, "%s (%s)", exit, Name(i));
           free_lbuf(exit);
           count++;
         }
         break;
       case TYPE_ROOM:
-        if (Dropto(i) == thing) {
+        if (obj_dropto(i) == thing) {
           exit = unparse_object(player, i, 0);
           notify_printf(player, "%s [dropto]", exit);
           free_lbuf(exit);
@@ -951,7 +953,7 @@ void do_entrances(DbRef player, DbRef cause, int key, char *name) {
         break;
       case TYPE_THING:
       case TYPE_PLAYER:
-        if (Home(i) == thing) {
+        if (obj_home(i) == thing) {
           exit = unparse_object(player, i, 0);
           notify_printf(player, "%s [home]", exit);
           free_lbuf(exit);
@@ -964,7 +966,7 @@ void do_entrances(DbRef player, DbRef cause, int key, char *name) {
        * Check for parents
        */
 
-      if (Parent(i) == thing) {
+      if (obj_parent(i) == thing) {
         exit = unparse_object(player, i, 0);
         notify_printf(player, "%s [parent]", exit);
         free_lbuf(exit);
@@ -974,7 +976,7 @@ void do_entrances(DbRef player, DbRef cause, int key, char *name) {
        * Check for forwarding
        */
 
-      if (H_Fwdlist(i)) {
+      if (has_fwdlist(i)) {
         fp = fwdlist_get(i);
         if (!fp)
           continue;
@@ -1005,7 +1007,7 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
   char *buf, *buf2, *bp, *as, *buff, *s;
   Attribute *ap;
 
-  if (Dark(what) && !Wizard(player) && !mudconf.sweep_dark)
+  if (is_dark(what) && !is_wizard(player) && !mudconf.sweep_dark)
     return;
   canhear = 0;
   cancom = 0;
@@ -1015,10 +1017,10 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
   is_parent = 0;
 
   if ((key & SWEEP_LISTEN) &&
-      (((Typeof(what) == TYPE_EXIT) || is_loc) && Audible(what))) {
+      (((typeof_obj(what) == TYPE_EXIT) || is_loc) && is_audible(what))) {
     canhear = 1;
   } else if (key & SWEEP_LISTEN) {
-    if (Monitor(what))
+    if (is_monitor(what))
       buff = alloc_lbuf("Hearer");
     else
       buff = NULL;
@@ -1029,7 +1031,7 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
         canhear = 1;
         break;
       }
-      if (buff && Monitor(what)) {
+      if (buff && is_monitor(what)) {
         ap = attribute_by_number(attr);
         if (!ap || (ap->flags & AF_NOPROG))
           continue;
@@ -1058,7 +1060,7 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     if (buff)
       free_lbuf(buff);
   }
-  if ((key & SWEEP_COMMANDS) && (Typeof(what) != TYPE_EXIT)) {
+  if ((key & SWEEP_COMMANDS) && (typeof_obj(what) != TYPE_EXIT)) {
 
     /*
      * Look for commands on the object and parents too
@@ -1075,15 +1077,16 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     }
   }
   if (key & SWEEP_CONNECT) {
-    if (Connected(what) || (Puppet(what) && Connected(Owner(what))) ||
-        (mudconf.player_listen && (Typeof(what) == TYPE_PLAYER) && canhear &&
-         Connected(Owner(what))))
+    if (is_connected(what) ||
+        (is_puppet(what) && is_connected(obj_owner(what))) ||
+        (mudconf.player_listen && (typeof_obj(what) == TYPE_PLAYER) &&
+         canhear && is_connected(obj_owner(what))))
       isconnected = 1;
   }
   if (key & SWEEP_PLAYER || isconnected) {
-    if (Typeof(what) == TYPE_PLAYER)
+    if (typeof_obj(what) == TYPE_PLAYER)
       isplayer = 1;
-    if (Puppet(what))
+    if (is_puppet(what))
       ispuppet = 1;
   }
   if (canhear || cancom || isplayer || ispuppet || isconnected) {
@@ -1097,8 +1100,8 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     if (isplayer)
       safe_str((char *)"player ", buf, &bp);
     if (ispuppet) {
-      safe_str((char *)"puppet(", buf, &bp);
-      safe_str(Name(Owner(what)), buf, &bp);
+      safe_str((char *)"is_puppet(", buf, &bp);
+      safe_str(Name(obj_owner(what)), buf, &bp);
       safe_str((char *)") ", buf, &bp);
     }
     if (isconnected)
@@ -1106,7 +1109,7 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     if (is_parent)
       safe_str((char *)"parent ", buf, &bp);
     bp[-1] = '\0';
-    if (Typeof(what) != TYPE_EXIT) {
+    if (typeof_obj(what) != TYPE_EXIT) {
       notify_printf(player, "  %s is listening. [%s]", Name(what), buf);
     } else {
       buf2 = alloc_lbuf("sweep_check.name");
@@ -1131,7 +1134,7 @@ void do_sweep(DbRef player, DbRef cause, int key, char *where) {
 
   if (where && *where) {
     sweeploc = match_controlled(player, where);
-    if (!Good_obj(sweeploc))
+    if (!is_good_obj(sweeploc))
       return;
   } else {
     sweeploc = player;
@@ -1150,16 +1153,16 @@ void do_sweep(DbRef player, DbRef cause, int key, char *where) {
 
   if (where_key & SWEEP_HERE) {
     notify(player, "Sweeping location...");
-    if (Has_location(sweeploc)) {
-      here = Location(sweeploc);
-      if ((here == NOTHING) ||
-          (Dark(here) && !mudconf.sweep_dark && !Examinable(player, here))) {
+    if (has_location(sweeploc)) {
+      here = obj_location(sweeploc);
+      if ((here == NOTHING) || (is_dark(here) && !mudconf.sweep_dark &&
+                                !is_examinable(player, here))) {
         notify_quiet(player,
                      "Sorry, it is dark here and you can't search for bugs");
         sweep_check(player, sweeploc, what_key, 0);
       } else {
         sweep_check(player, here, what_key, 1);
-        for (here = Contents(here); here != NOTHING; here = Next(here))
+        for (here = obj_contents(here); here != NOTHING; here = obj_next(here))
           sweep_check(player, here, what_key, 0);
       }
     } else {
@@ -1170,27 +1173,28 @@ void do_sweep(DbRef player, DbRef cause, int key, char *where) {
    * Check exits in my location
    */
 
-  if ((where_key & SWEEP_EXITS) && Has_location(sweeploc)) {
+  if ((where_key & SWEEP_EXITS) && has_location(sweeploc)) {
     notify(player, "Sweeping exits...");
-    for (here = Exits(Location(sweeploc)); here != NOTHING; here = Next(here))
+    for (here = obj_exits(obj_location(sweeploc)); here != NOTHING;
+         here = obj_next(here))
       sweep_check(player, here, what_key, 0);
   }
   /*
    * Check my inventory
    */
 
-  if ((where_key & SWEEP_ME) && Has_contents(sweeploc)) {
+  if ((where_key & SWEEP_ME) && has_contents(sweeploc)) {
     notify(player, "Sweeping inventory...");
-    for (here = Contents(sweeploc); here != NOTHING; here = Next(here))
+    for (here = obj_contents(sweeploc); here != NOTHING; here = obj_next(here))
       sweep_check(player, here, what_key, 0);
   }
   /*
    * Check carried exits
    */
 
-  if ((where_key & SWEEP_EXITS) && Has_exits(sweeploc)) {
+  if ((where_key & SWEEP_EXITS) && has_exits(sweeploc)) {
     notify(player, "Sweeping carried exits...");
-    for (here = Exits(sweeploc); here != NOTHING; here = Next(here))
+    for (here = obj_exits(sweeploc); here != NOTHING; here = obj_next(here))
       sweep_check(player, here, what_key, 0);
   }
   notify(player, "Sweep complete.");

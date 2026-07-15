@@ -139,7 +139,7 @@ void buildTempNetwork(MECH *mech, DbRef *myNetwork, int *networkSize,
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     myTempNetwork[tempNetworkSize] = otherMech->mynum;
@@ -182,7 +182,7 @@ void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     snprintf(buf, LBUF_SIZE, "%%ch%s/%s: %s%%cn", (tIsC3 ? "C3" : "C3i"), c,
@@ -234,7 +234,7 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     tShowStatusInfo = 0;
@@ -364,7 +364,7 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     range = FlMechRange(objMap, mech, otherMech);
@@ -409,7 +409,7 @@ int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     if (otherMech == mechTarget)
@@ -482,7 +482,7 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
     if (!otherMech)
       continue;
 
-    if (!Good_obj(otherMech->mynum))
+    if (!is_good_obj(otherMech->mynum))
       continue;
 
     if (mechTarget) {

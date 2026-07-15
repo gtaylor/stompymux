@@ -8,10 +8,10 @@
 #include <sys/file.h>
 
 #define ITER_PARENTS(t, p, l)                                                  \
-  for ((l) = 0, (p) = (t); (Good_obj(p) && ((l) < mudconf.parent_nest_lim));   \
-       (p) = Parent(p), (l)++)
+  for ((l) = 0, (p) = (t);                                                     \
+       (is_good_obj(p) && ((l) < mudconf.parent_nest_lim));                    \
+       (p) = obj_parent(p), (l)++)
 
-#define Hasprivs(x) Wizard(x)
 int get_atr(char *name);
 
 typedef struct Attribute Attribute;
@@ -44,23 +44,23 @@ extern Attribute attr_table[];
 
 extern Attribute **anum_table;
 
-#define anum_get(x) (anum_table[(x)])
-#define anum_set(x, v) anum_table[(x)] = v
+static inline Attribute *anum_get(int x) { return anum_table[x]; }
+static inline void anum_set(int x, Attribute *v) { anum_table[x] = v; }
 extern void anum_extend(int);
 
-#define ATR_INFO_CHAR '\1' /* Leadin char for attr control data */
+constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 
 /* Boolean expressions, for locks */
-#define BOOLEXP_AND 0
-#define BOOLEXP_OR 1
-#define BOOLEXP_NOT 2
-#define BOOLEXP_CONST 3
-#define BOOLEXP_ATR 4
-#define BOOLEXP_INDIR 5
-#define BOOLEXP_CARRY 6
-#define BOOLEXP_IS 7
-#define BOOLEXP_OWNER 8
-#define BOOLEXP_EVAL 9
+constexpr int BOOLEXP_AND = 0;
+constexpr int BOOLEXP_OR = 1;
+constexpr int BOOLEXP_NOT = 2;
+constexpr int BOOLEXP_CONST = 3;
+constexpr int BOOLEXP_ATR = 4;
+constexpr int BOOLEXP_INDIR = 5;
+constexpr int BOOLEXP_CARRY = 6;
+constexpr int BOOLEXP_IS = 7;
+constexpr int BOOLEXP_OWNER = 8;
+constexpr int BOOLEXP_EVAL = 9;
 
 typedef struct BooleanExpression BooleanExpression;
 struct BooleanExpression {
@@ -70,13 +70,13 @@ struct BooleanExpression {
   DbRef thing; /* thing refers to an object */
 };
 
-#define TRUE_BOOLEXP ((BooleanExpression *)0)
+constexpr BooleanExpression *TRUE_BOOLEXP = (BooleanExpression *)0;
 
 /* special dbref's */
-#define NOTHING (-1)   /* null dbref */
-#define AMBIGUOUS (-2) /* multiple possibilities, for matchers */
-#define HOME (-3)      /* virtual room, represents mover's home */
-#define NOPERM (-4)    /* Error status, no permission */
+constexpr DbRef NOTHING = -1;   /* null dbref */
+constexpr DbRef AMBIGUOUS = -2; /* multiple possibilities, for matchers */
+constexpr DbRef HOME = -3;      /* virtual room, represents mover's home */
+constexpr DbRef NOPERM = -4;    /* Error status, no permission */
 
 typedef struct GameObject GameObject;
 struct GameObject {
@@ -116,47 +116,39 @@ typedef char *NAME;
 extern GameObject *db;
 extern NAME *names;
 
-#define Location(t) db[t].location
+static inline DbRef obj_location(DbRef t) { return db[t].location; }
+static inline DbRef obj_zone(DbRef t) { return db[t].zone; }
+static inline DbRef obj_contents(DbRef t) { return db[t].contents; }
+static inline DbRef obj_exits(DbRef t) { return db[t].exits; }
+static inline DbRef obj_next(DbRef t) { return db[t].next; }
+static inline DbRef obj_link(DbRef t) { return db[t].link; }
+static inline DbRef obj_owner(DbRef t) { return db[t].owner; }
+static inline DbRef obj_parent(DbRef t) { return db[t].parent; }
+static inline Flag obj_flags(DbRef t) { return db[t].flags; }
+static inline Flag obj_flags2(DbRef t) { return db[t].flags2; }
+static inline Flag obj_flags3(DbRef t) { return db[t].flags3; }
+static inline Power obj_powers(DbRef t) { return db[t].powers; }
+static inline Power obj_powers2(DbRef t) { return db[t].powers2; }
+static inline AttributeStack *obj_stack(DbRef t) { return db[t].stackhead; }
+static inline DbRef obj_home(DbRef t) { return obj_link(t); }
+static inline DbRef obj_dropto(DbRef t) { return obj_location(t); }
 
-#define Zone(t) db[t].zone
-
-#define Contents(t) db[t].contents
-#define Exits(t) db[t].exits
-#define Next(t) db[t].next
-#define Link(t) db[t].link
-#define Owner(t) db[t].owner
-#define Parent(t) db[t].parent
-#define Flags(t) db[t].flags
-#define Flags2(t) db[t].flags2
-#define Flags3(t) db[t].flags3
-#define Powers(t) db[t].powers
-#define Powers2(t) db[t].powers2
-#define Stack(t) db[t].stackhead
-#define Home(t) Link(t)
-#define Dropto(t) Location(t)
-
-#define i_Name(t)                                                              \
-  if (mudconf.cache_names)                                                     \
-    purenames[t] = NULL;
-
-#define s_Location(t, n) db[t].location = (n)
-
-#define s_Zone(t, n) db[t].zone = (n)
-
-#define s_Contents(t, n) db[t].contents = (n)
-#define s_Exits(t, n) db[t].exits = (n)
-#define s_Next(t, n) db[t].next = (n)
-#define s_Link(t, n) db[t].link = (n)
-#define s_Owner(t, n) db[t].owner = (n)
-#define s_Parent(t, n) db[t].parent = (n)
-#define s_Flags(t, n) db[t].flags = (n)
-#define s_Flags2(t, n) db[t].flags2 = (n)
-#define s_Flags3(t, n) db[t].flags3 = (n)
-#define s_Powers(t, n) db[t].powers = (n)
-#define s_Powers2(t, n) db[t].powers2 = (n)
-#define s_Stack(t, n) db[t].stackhead = (n)
-#define s_Home(t, n) s_Link(t, n)
-#define s_Dropto(t, n) s_Location(t, n)
+static inline void s_location(DbRef t, DbRef n) { db[t].location = n; }
+static inline void s_zone(DbRef t, DbRef n) { db[t].zone = n; }
+static inline void s_contents(DbRef t, DbRef n) { db[t].contents = n; }
+static inline void s_exits(DbRef t, DbRef n) { db[t].exits = n; }
+static inline void s_next(DbRef t, DbRef n) { db[t].next = n; }
+static inline void s_link(DbRef t, DbRef n) { db[t].link = n; }
+static inline void s_owner(DbRef t, DbRef n) { db[t].owner = n; }
+static inline void s_parent(DbRef t, DbRef n) { db[t].parent = n; }
+static inline void s_flags(DbRef t, Flag n) { db[t].flags = n; }
+static inline void s_flags2(DbRef t, Flag n) { db[t].flags2 = n; }
+static inline void s_flags3(DbRef t, Flag n) { db[t].flags3 = n; }
+static inline void s_powers(DbRef t, Power n) { db[t].powers = n; }
+static inline void s_powers2(DbRef t, Power n) { db[t].powers2 = n; }
+static inline void s_stack(DbRef t, AttributeStack *n) { db[t].stackhead = n; }
+static inline void s_home(DbRef t, DbRef n) { s_link(t, n); }
+static inline void s_dropto(DbRef t, DbRef n) { s_location(t, n); }
 
 extern BooleanExpression *boolean_expression_duplicate(BooleanExpression *);
 extern void boolean_expression_free(BooleanExpression *);
@@ -217,21 +209,19 @@ int check_zone_for_player(DbRef player, DbRef thing);
 void toast_player(DbRef player);
 
 #define DOLIST(thing, list)                                                    \
-  for ((thing) = (list); ((thing) != NOTHING) && (Next(thing) != (thing));     \
-       (thing) = Next(thing))
+  for ((thing) = (list); ((thing) != NOTHING) && (obj_next(thing) != (thing)); \
+       (thing) = obj_next(thing))
 #define SAFE_DOLIST(thing, next, list)                                         \
   for ((thing) = (list),                                                       \
-      (next) = ((thing) == NOTHING ? NOTHING : Next(thing));                   \
-       (thing) != NOTHING && (Next(thing) != (thing));                         \
-       (thing) = (next), (next) = Next(next))
+      (next) = ((thing) == NOTHING ? NOTHING : obj_next(thing));               \
+       (thing) != NOTHING && (obj_next(thing) != (thing));                     \
+       (thing) = (next), (next) = obj_next(next))
 #define DO_WHOLE_DB(thing)                                                     \
   for ((thing) = 0; (thing) < mudstate.db_top; (thing)++)
 
 #define DO_WHOLE_DB_REV(thing)                                                 \
   for ((thing) = mudstate.db_top - 1; (thing) > 0; (thing)--)
 
-#define Dropper(thing) (Connected(Owner(thing)) && is_hearer(thing))
-
-#define DUMP_NORMAL 0
-#define DUMP_CRASHED 1
-#define DUMP_KILLED 4
+constexpr int DUMP_NORMAL = 0;
+constexpr int DUMP_CRASHED = 1;
+constexpr int DUMP_KILLED = 4;

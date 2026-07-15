@@ -86,19 +86,19 @@ extern void postrun_event(MuxEvent *e);
 
 static void mux_event_delete(MuxEvent *);
 
-#define Zombie(e) (e->flags & FLAG_ZOMBIE)
+#define is_zombie(e) (e->flags & FLAG_ZOMBIE)
 #define LoopType(type, var)                                                    \
   for (var = mux_event_first_in_type[type]; var; var = var->next_in_type)      \
-    if (!Zombie(var))
+    if (!is_zombie(var))
 
 #define LoopEvent(var)                                                         \
   for (var = mux_event_list; var; var = var->next_in_main)                     \
-    if (!Zombie(var))
+    if (!is_zombie(var))
 
 static void mux_event_wakeup(evutil_socket_t fd, short event, void *arg) {
   MuxEvent *e = (MuxEvent *)arg;
 
-  if (Zombie(e)) {
+  if (is_zombie(e)) {
     mux_event_delete(e);
     return;
   }
@@ -186,7 +186,7 @@ int mux_event_run_by_type(int type) {
 
   if (type <= last_muxevent_type) {
     for (e = mux_event_first_in_type[type]; e; e = e->next_in_type) {
-      if (!Zombie(e)) {
+      if (!is_zombie(e)) {
         prerun_event(e);
         e->function(e);
         postrun_event(e);

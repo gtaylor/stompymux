@@ -29,7 +29,7 @@ static void pcache_reload1(DbRef player, PCACHE *pp) {
   cp = attribute_get_raw(player, A_QUEUEMAX);
   if (cp && *cp)
     pp->qmax = atoi(cp);
-  else if (!Wizard(player))
+  else if (!is_wizard(player))
     pp->qmax = mudconf.queuemax;
   else
     pp->qmax = -1;
@@ -38,7 +38,7 @@ static void pcache_reload1(DbRef player, PCACHE *pp) {
 PCACHE *pcache_find(DbRef player) {
   PCACHE *pp;
 
-  if (!Good_obj(player) || !OwnsOthers(player))
+  if (!is_good_obj(player) || !is_owns_others(player))
     return NULL;
 
   pp = (PCACHE *)red_black_tree_find(pcache_tree, (void *)player);
@@ -118,7 +118,7 @@ void pcache_sync(void) {
 int queue_adjust(DbRef player, int adj) {
   PCACHE *pp;
 
-  if (OwnsOthers(player)) {
+  if (is_owns_others(player)) {
     pp = pcache_find(player);
     if (pp)
       pp->queue += adj;
@@ -130,7 +130,7 @@ int queue_adjust(DbRef player, int adj) {
 void queue_set(DbRef player, int val) {
   PCACHE *pp;
 
-  if (OwnsOthers(player)) {
+  if (is_owns_others(player)) {
     pp = pcache_find(player);
     if (pp)
       pp->queue = val;
@@ -142,7 +142,7 @@ int queue_maximum(DbRef player) {
   int m;
 
   m = 0;
-  if (OwnsOthers(player)) {
+  if (is_owns_others(player)) {
     pp = pcache_find(player);
     if (pp) {
       if (pp->qmax >= 0) {

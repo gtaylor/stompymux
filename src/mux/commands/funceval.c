@@ -73,7 +73,7 @@ void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   if (!mudconf.have_comsys ||
-      (!Comm_All(player) && (player != ch->charge_who))) {
+      (!is_comm_all(player) && (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -97,13 +97,13 @@ void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   if (!mudconf.have_comsys ||
-      (!Comm_All(player) && (player != ch->charge_who))) {
+      (!is_comm_all(player) && (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (user = ch->on_users; user; user = user->on_next) {
 
-    /*      if (Connected(user->who)) */
+    /*      if (is_connected(user->who)) */
     {
       if (len) {
         snprintf(smbuf, sizeof(smbuf), " #%ld", user->who);
@@ -131,7 +131,7 @@ void fun_clist(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   if (!mudconf.have_comsys ||
-      (!Comm_All(player) && (player != ch->charge_who))) {
+      (!is_comm_all(player) && (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -276,11 +276,11 @@ void fun_zone(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   it = match_thing(player, fargs[0]);
-  if (it == NOTHING || !Examinable(player, it)) {
+  if (it == NOTHING || !is_examinable(player, it)) {
     safe_str("#-1", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "#%d", Zone(it));
+  safe_tprintf_str(buff, bufc, "#%d", obj_zone(it));
 }
 
 #ifdef SIDE_EFFECT_FUNCTIONS
@@ -347,9 +347,9 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
     }
     thing = create_obj(player, TYPE_EXIT, name);
     if (thing != NOTHING) {
-      s_Exits(thing, player);
-      s_Next(thing, Exits(player));
-      s_Exits(player, thing);
+      s_exits(thing, player);
+      s_next(thing, obj_exits(player));
+      s_exits(player, thing);
     }
     break;
   default:
@@ -360,7 +360,7 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
     thing = create_obj(player, TYPE_THING, name);
     if (thing != NOTHING) {
       move_via_generic(thing, player, NOTHING, 0);
-      s_Home(thing, new_home(player));
+      s_home(thing, new_home(player));
     }
     break;
   }
@@ -381,16 +381,16 @@ static void set_attr_internal(DbRef player, DbRef thing, int attrnum,
 
   attr = attribute_by_number(attrnum);
   attribute_parent_get_info(thing, attrnum, &aowner, &aflags);
-  if (attr && Set_attr(player, thing, attr, aflags)) {
+  if (attr && set_attr(player, thing, attr, aflags)) {
     if ((attr->check != NULL) &&
         (!(*attr->check)(0, player, thing, attrnum, attrtext))) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
     could_hear = is_hearer(thing);
-    attribute_add(thing, attrnum, attrtext, Owner(player), aflags);
+    attribute_add(thing, attrnum, attrtext, obj_owner(player), aflags);
     handle_ears(thing, could_hear, is_hearer(thing));
-    if (!(key & SET_QUIET) && !Quiet(player) && !Quiet(thing))
+    if (!(key & SET_QUIET) && !is_quiet(player) && !is_quiet(thing))
       notify_quiet(player, "Set.");
   } else {
     safe_str("#-1 PERMISSION DENIED.", buff, bufc);
@@ -451,7 +451,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
        */
 
       attr = attribute_by_number(atr);
-      if (!attr || !Set_attr(player, thing, attr, aflags)) {
+      if (!attr || !set_attr(player, thing, attr, aflags)) {
         safe_str("#-1 PERMISSION DENIED", buff, bufc);
         return;
       }
@@ -495,7 +495,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
       return;
     }
     attribute_get_info(thing, atr, &aowner, &aflags);
-    if (!Set_attr(player, thing, attr, aflags)) {
+    if (!set_attr(player, thing, attr, aflags)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
@@ -515,7 +515,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
       p = buff2;
       attribute_parent_get_string(buff2, thing2, atr2, &aowner, &aflags);
 
-      if (!attr2 || !See_attr(player, thing2, attr2, aowner, aflags)) {
+      if (!attr2 || !see_attr(player, thing2, attr2, aowner, aflags)) {
         free_lbuf(buff2);
         safe_str("#-1 PERMISSION DENIED", buff, bufc);
         return;
@@ -611,13 +611,13 @@ void fun_zwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_PLAYER) {
-      if (Zone(i) == it) {
+    if (typeof_obj(i) == TYPE_PLAYER) {
+      if (obj_zone(i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -642,13 +642,13 @@ void fun_zrooms(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_ROOM) {
-      if (Zone(i) == it) {
+    if (typeof_obj(i) == TYPE_ROOM) {
+      if (obj_zone(i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -673,13 +673,13 @@ void fun_zexits(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_EXIT) {
-      if (Zone(i) == it) {
+    if (typeof_obj(i) == TYPE_EXIT) {
+      if (obj_zone(i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -704,13 +704,13 @@ void fun_zobjects(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_THING) {
-      if (Zone(i) == it) {
+    if (typeof_obj(i) == TYPE_THING) {
+      if (obj_zone(i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -735,14 +735,14 @@ void fun_zplayers(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_PLAYER)
-      if (Zone(i) == it) {
-        if (!(Connected(i)))
+    if (typeof_obj(i) == TYPE_PLAYER)
+      if (obj_zone(i) == it) {
+        if (!(is_connected(i)))
           continue;
         if (len) {
           static char smbuf[SBUF_SIZE];
@@ -770,12 +770,12 @@ void fun_inzone(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || !(Controls(player, it) || !Wizard(player))) {
+  if (!mudconf.have_zones || !(is_controls(player, it) || !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_ROOM)
+    if (typeof_obj(i) == TYPE_ROOM)
       if (db[i].zone == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
@@ -803,12 +803,12 @@ void fun_children(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!(Controls(player, it)) || !(Wizard(player))) {
+  if (!(is_controls(player, it)) || !(is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Parent(i) == it) {
+    if (obj_parent(i) == it) {
       if (len) {
         static char smbuf[SBUF_SIZE];
 
@@ -865,8 +865,8 @@ void fun_objeval(char *buff, char **bufc, DbRef player, DbRef cause,
   *bp = '\0';
   obj = match_thing(player, name);
 
-  if ((obj == NOTHING) || ((Owner(obj) != player) && (!(Wizard(player)))) ||
-      (obj == GOD))
+  if ((obj == NOTHING) ||
+      ((obj_owner(obj) != player) && (!(is_wizard(player)))) || (obj == GOD))
     obj = player;
 
   str = fargs[1];
@@ -913,7 +913,7 @@ void fun_zfun(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   int attrib;
   char *tbuf1, *str;
 
-  DbRef zone = Zone(player);
+  DbRef zone = obj_zone(player);
 
   if (!mudconf.have_zones) {
     safe_str("#-1 ZONES DISABLED", buff, bufc);
@@ -935,7 +935,7 @@ void fun_zfun(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   tbuf1 = attribute_parent_get(zone, attrib, &aowner, &aflags);
-  if (!See_attr(player, zone, (Attribute *)attribute_by_number(attrib), aowner,
+  if (!see_attr(player, zone, (Attribute *)attribute_by_number(attrib), aowner,
                 aflags)) {
     safe_str("#-1 NO PERMISSION TO GET ATTRIBUTE", buff, bufc);
     free_lbuf(tbuf1);
@@ -1064,7 +1064,7 @@ void fun_objmem(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef thing;
 
   thing = match_thing(player, fargs[0]);
-  if (thing == NOTHING || !Examinable(player, thing)) {
+  if (thing == NOTHING || !is_examinable(player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -1078,12 +1078,12 @@ void fun_playmem(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef j;
 
   thing = match_thing(player, fargs[0]);
-  if (thing == NOTHING || !Examinable(player, thing)) {
+  if (thing == NOTHING || !is_examinable(player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
   DO_WHOLE_DB(j)
-  if (Owner(j) == thing)
+  if (obj_owner(j) == thing)
     tot += mem_usage(j);
   safe_tprintf_str(buff, bufc, "%d", tot);
 }
@@ -1146,11 +1146,11 @@ static int handle_flaglists(DbRef player, char *name, char *fstr, int type) {
        * does the object have this flag?
        */
 
-      if ((Flags(it) & fset.word1) || (Flags2(it) & fset.word2) ||
-          (Typeof(it) == p_type)) {
-        if (isPlayer(it) && (fset.word2 == CONNECTED) &&
-            ((Flags(it) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-            !Wizard(player))
+      if ((obj_flags(it) & fset.word1) || (obj_flags2(it) & fset.word2) ||
+          (typeof_obj(it) == p_type)) {
+        if (is_player(it) && (fset.word2 == CONNECTED) &&
+            ((obj_flags(it) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
+            !is_wizard(player))
           temp = 0;
         else
           temp = 1;
@@ -1314,7 +1314,7 @@ void fun_hasattr(char *buff, char **bufc, DbRef player, DbRef cause,
   if (thing == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!Examinable(player, thing)) {
+  } else if (!is_examinable(player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -1324,7 +1324,7 @@ void fun_hasattr(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   attribute_get_info(thing, attr->number, &aowner, &aflags);
-  if (!See_attr(player, thing, attr, aowner, aflags))
+  if (!see_attr(player, thing, attr, aowner, aflags))
     safe_str("0", buff, bufc);
   else {
     tbuf = attribute_get(thing, attr->number, &aowner, &aflags);
@@ -1347,7 +1347,7 @@ void fun_hasattrp(char *buff, char **bufc, DbRef player, DbRef cause,
   if (thing == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!Examinable(player, thing)) {
+  } else if (!is_examinable(player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -1357,7 +1357,7 @@ void fun_hasattrp(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   attribute_parent_get_info(thing, attr->number, &aowner, &aflags);
-  if (!See_attr(player, thing, attr, aowner, aflags))
+  if (!see_attr(player, thing, attr, aowner, aflags))
     safe_str("0", buff, bufc);
   else {
     tbuf = attribute_parent_get(thing, attr->number, &aowner, &aflags);
@@ -1507,7 +1507,7 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (objname != NULL) {
     if (parse_attrib(player, objname, &thing, &anum)) {
-      if ((anum == NOTHING) || (!Good_obj(thing)))
+      if ((anum == NOTHING) || (!is_good_obj(thing)))
         ap = NULL;
       else
         ap = attribute_by_number(anum);
@@ -1609,20 +1609,20 @@ void fun_visible(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   if (parse_attrib(player, fargs[1], &thing, &atr)) {
     if (atr == NOTHING) {
-      safe_tprintf_str(buff, bufc, "%d", Examinable(it, thing));
+      safe_tprintf_str(buff, bufc, "%d", is_examinable(it, thing));
       return;
     }
     ap = attribute_by_number(atr);
     attribute_parent_get_info(thing, atr, &aowner, &aflags);
-    safe_tprintf_str(buff, bufc, "%d", See_attr(it, thing, ap, aowner, aflags));
+    safe_tprintf_str(buff, bufc, "%d", see_attr(it, thing, ap, aowner, aflags));
     return;
   }
   thing = match_thing(player, fargs[1]);
-  if (!Good_obj(thing)) {
+  if (!is_good_obj(thing)) {
     safe_str("0", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "%d", Examinable(it, thing));
+  safe_tprintf_str(buff, bufc, "%d", is_examinable(it, thing));
 }
 
 /*
@@ -1928,7 +1928,7 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
   varargs_preamble("SORTBY", 3);
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !Good_obj(thing))
+    if ((anum == NOTHING) || !is_good_obj(thing))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -1943,7 +1943,7 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2054,11 +2054,11 @@ void fun_ports(char *buff, char **bufc, DbRef player, DbRef cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef target;
 
-  if (!Wizard(player)) {
+  if (!is_wizard(player)) {
     return;
   }
   target = lookup_player(player, fargs[0], 1);
-  if (!Good_obj(target) || !Connected(target)) {
+  if (!is_good_obj(target) || !is_connected(target)) {
     return;
   }
   make_portlist(player, target, buff, bufc);
@@ -2089,7 +2089,7 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !Good_obj(thing))
+    if ((anum == NOTHING) || !is_good_obj(thing))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -2104,7 +2104,7 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2162,7 +2162,7 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
   }
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !Good_obj(thing))
+    if ((anum == NOTHING) || !is_good_obj(thing))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -2177,7 +2177,7 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2257,7 +2257,7 @@ void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !Good_obj(thing))
+    if ((anum == NOTHING) || !is_good_obj(thing))
       ap = NULL;
     else
       ap = attribute_by_number(anum);
@@ -2272,7 +2272,7 @@ void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
   atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !See_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2717,7 +2717,7 @@ void fun_grep(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   if (it == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(Examinable(player, it))) {
+  } else if (!(is_examinable(player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -2746,7 +2746,7 @@ void fun_grepi(char *buff, char **bufc, DbRef player, DbRef cause,
   if (it == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(Examinable(player, it))) {
+  } else if (!(is_examinable(player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -2865,19 +2865,19 @@ void fun_hastype(char *buff, char **bufc, DbRef player, DbRef cause,
   switch (*fargs[1]) {
   case 'r':
   case 'R':
-    safe_str((Typeof(it) == TYPE_ROOM) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(it) == TYPE_ROOM) ? "1" : "0", buff, bufc);
     break;
   case 'e':
   case 'E':
-    safe_str((Typeof(it) == TYPE_EXIT) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(it) == TYPE_EXIT) ? "1" : "0", buff, bufc);
     break;
   case 'p':
   case 'P':
-    safe_str((Typeof(it) == TYPE_PLAYER) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(it) == TYPE_PLAYER) ? "1" : "0", buff, bufc);
     break;
   case 't':
   case 'T':
-    safe_str((Typeof(it) == TYPE_THING) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(it) == TYPE_THING) ? "1" : "0", buff, bufc);
     break;
   default:
     safe_str("#-1 NO SUCH TYPE", buff, bufc);
@@ -2895,22 +2895,22 @@ void fun_lparent(char *buff, char **bufc, DbRef player, DbRef cause,
   char tbuf1[20] = {0};
 
   it = match_thing(player, fargs[0]);
-  if (!Good_obj(it)) {
+  if (!is_good_obj(it)) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(Examinable(player, it))) {
+  } else if (!(is_examinable(player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
   snprintf(tbuf1, sizeof(tbuf1), "#%ld", it);
   safe_str(tbuf1, buff, bufc);
-  par = Parent(it);
+  par = obj_parent(it);
 
-  while (Good_obj(par) && Examinable(player, it)) {
+  while (is_good_obj(par) && is_examinable(player, it)) {
     snprintf(tbuf1, sizeof(tbuf1), " #%ld", par);
     safe_str(tbuf1, buff, bufc);
     it = par;
-    par = Parent(par);
+    par = obj_parent(par);
   }
 }
 
@@ -2920,7 +2920,7 @@ static int stacksize(DbRef doer) {
   int i;
   AttributeStack *sp;
 
-  for (i = 0, sp = Stack(doer); sp != NULL; sp = sp->next, i++)
+  for (i = 0, sp = obj_stack(doer); sp != NULL; sp = sp->next, i++)
     ;
 
   return i;
@@ -2941,11 +2941,11 @@ void fun_lstack(char *buff, char **bufc, DbRef player, DbRef cause,
     doer = match_thing(player, fargs[0]);
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = Stack(doer); sp != NULL; sp = sp->next) {
+  for (sp = obj_stack(doer); sp != NULL; sp = sp->next) {
     safe_str(sp->data, buff, bufc);
     safe_chr(' ', buff, bufc);
   }
@@ -2969,17 +2969,17 @@ void fun_empty(char *buff, char **bufc, DbRef player, DbRef cause,
     doer = match_thing(player, fargs[0]);
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = Stack(doer); sp != NULL; sp = next) {
+  for (sp = obj_stack(doer); sp != NULL; sp = next) {
     next = sp->next;
     free_lbuf(sp->data);
     free(sp);
   }
 
-  s_Stack(doer, NULL);
+  s_stack(doer, NULL);
 }
 
 void fun_items(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -2996,7 +2996,7 @@ void fun_items(char *buff, char **bufc, DbRef player, DbRef cause,
     doer = match_thing(player, fargs[0]);
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3019,7 +3019,7 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     doer = match_thing(player, fargs[0]);
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3037,7 +3037,7 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   count = 0;
-  sp = Stack(doer);
+  sp = obj_stack(doer);
   while (count != pos) {
     if (sp == NULL) {
       return;
@@ -3066,7 +3066,7 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     doer = match_thing(player, fargs[0]);
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3077,7 +3077,7 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     pos = atoi(fargs[1]);
   }
 
-  sp = Stack(doer);
+  sp = obj_stack(doer);
   count = 0;
 
   if (stacksize(doer) == 0) {
@@ -3100,7 +3100,7 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
   safe_str(sp->data, buff, bufc);
   if (count == 0) {
-    s_Stack(doer, sp->next);
+    s_stack(doer, sp->next);
     free_lbuf(sp->data);
     free(sp);
   } else {
@@ -3128,7 +3128,7 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     data = fargs[1];
   }
 
-  if (!Controls(player, doer)) {
+  if (!is_controls(player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3137,10 +3137,10 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   sp = (AttributeStack *)malloc(sizeof(AttributeStack));
-  sp->next = Stack(doer);
+  sp->next = obj_stack(doer);
   sp->data = alloc_lbuf("push");
   StringCopy(sp->data, data);
-  s_Stack(doer, sp);
+  s_stack(doer, sp);
 }
 
 /* ---------------------------------------------------------------------------
@@ -3282,10 +3282,10 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
        * and are trying to do something to #1.
        */
 
-      if (ap &&
-          (God(player) ||
-           (!God(thing) && (Set_attr(player, player, ap, 0) &&
-                            (Wizard(player) || aowner == Owner(player)))))) {
+      if (ap && (is_god(player) ||
+                 (!is_god(thing) &&
+                  (set_attr(player, player, ap, 0) &&
+                   (is_wizard(player) || aowner == obj_owner(player)))))) {
         if (*fargs[2])
           aflags |= AF_LOCK;
         else
@@ -3310,7 +3310,7 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 AMBIGUOUS MATCH", buff, bufc);
     return;
   default:
-    if (!controls(player, thing)) {
+    if (!is_controls(player, thing)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }

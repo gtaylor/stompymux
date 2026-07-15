@@ -293,7 +293,7 @@ struct objlist_block {
   DbRef data[(LBUF_SIZE - sizeof(OBLOCK *)) / sizeof(DbRef)];
 };
 
-#define OBLOCK_SIZE ((LBUF_SIZE - sizeof(OBLOCK *)) / sizeof(DbRef))
+constexpr int OBLOCK_SIZE = (LBUF_SIZE - sizeof(OBLOCK *)) / sizeof(DbRef);
 
 typedef struct objlist_stack OLSTK;
 struct objlist_stack {
@@ -420,53 +420,54 @@ void server_state_initialize(void);
 
 /* Game control flags in mudconf.control_flags */
 
-#define CF_LOGIN 0x0001      /* Allow nonwiz logins to the mux */
-#define CF_BUILD 0x0002      /* Allow building commands */
-#define CF_INTERP 0x0004     /* Allow object triggering */
-#define CF_CHECKPOINT 0x0008 /* Perform auto-checkpointing */
-#define CF_DBCHECK 0x0010    /* Periodically check/clean the DB */
-#define CF_IDLECHECK 0x0020  /* Periodically check for idle users */
+constexpr int CF_LOGIN = 0x0001;      /* Allow nonwiz logins to the mux */
+constexpr int CF_BUILD = 0x0002;      /* Allow building commands */
+constexpr int CF_INTERP = 0x0004;     /* Allow object triggering */
+constexpr int CF_CHECKPOINT = 0x0008; /* Perform auto-checkpointing */
+constexpr int CF_DBCHECK = 0x0010;    /* Periodically check/clean the DB */
+constexpr int CF_IDLECHECK = 0x0020;  /* Periodically check for idle users */
 
 /* empty		0x0040 */
 
 /* empty		0x0080 */
-#define CF_DEQUEUE 0x0100    /* Remove entries from the queue */
-#define CF_EVENTCHECK 0x0200 /* Allow events checking */
+constexpr int CF_DEQUEUE = 0x0100;    /* Remove entries from the queue */
+constexpr int CF_EVENTCHECK = 0x0200; /* Allow events checking */
 
 /* Host information codes */
 
-#define H_REGISTRATION 0x0001 /* Registration ALWAYS on */
-#define H_FORBIDDEN 0x0002    /* Reject all connects */
-#define H_SUSPECT 0x0004      /* Notify wizards of connects/disconnects */
+constexpr int H_REGISTRATION = 0x0001; /* Registration ALWAYS on */
+constexpr int H_FORBIDDEN = 0x0002;    /* Reject all connects */
+constexpr int H_SUSPECT = 0x0004; /* Notify wizards of connects/disconnects */
 
 /* Event flags, for noting when an event has taken place */
 
-#define ET_DAILY 0x00000001 /* Daily taken place? */
+constexpr int ET_DAILY = 0x00000001; /* Daily taken place? */
 
 /* Logging options */
 
-#define LOG_ALLCOMMANDS 0x00000001 /* Log all commands */
-#define LOG_ACCOUNTING 0x00000002  /* Write accounting info on logout */
-#define LOG_BADCOMMANDS 0x00000004 /* Log bad commands */
-#define LOG_BUGS 0x00000008        /* Log program bugs found */
-#define LOG_DBSAVES 0x00000010     /* Log database dumps */
-#define LOG_CONFIGMODS 0x00000020  /* Log changes to configuration */
-#define LOG_PCREATES 0x00000040    /* Log character creations */
+constexpr int LOG_ALLCOMMANDS = 0x00000001; /* Log all commands */
+constexpr int LOG_ACCOUNTING = 0x00000002; /* Write accounting info on logout */
+constexpr int LOG_BADCOMMANDS = 0x00000004; /* Log bad commands */
+constexpr int LOG_BUGS = 0x00000008;        /* Log program bugs found */
+constexpr int LOG_DBSAVES = 0x00000010;     /* Log database dumps */
+constexpr int LOG_CONFIGMODS = 0x00000020;  /* Log changes to configuration */
+constexpr int LOG_PCREATES = 0x00000040;    /* Log character creations */
 /* 0x00000080 is reserved for the removed killing log category. */
-#define LOG_LOGIN 0x00000100       /* Log logins and logouts */
-#define LOG_NET 0x00000200         /* Log net connects and disconnects */
-#define LOG_SECURITY 0x00000400    /* Log security-related events */
-#define LOG_SHOUTS 0x00000800      /* Log shouts */
-#define LOG_STARTUP 0x00001000     /* Log nonfatal errors in startup */
-#define LOG_WIZARD 0x00002000      /* Log dangerous things */
-#define LOG_ALLOCATE 0x00004000    /* Log alloc/free from buffer pools */
-#define LOG_PROBLEMS 0x00008000    /* Log runtime problems */
-#define LOG_SUSPECTCMDS 0x00010000 /* Log commands by people set SUSPECT */
-#define LOG_ALWAYS 0x80000000      /* Always log it */
+constexpr int LOG_LOGIN = 0x00000100;    /* Log logins and logouts */
+constexpr int LOG_NET = 0x00000200;      /* Log net connects and disconnects */
+constexpr int LOG_SECURITY = 0x00000400; /* Log security-related events */
+constexpr int LOG_SHOUTS = 0x00000800;   /* Log shouts */
+constexpr int LOG_STARTUP = 0x00001000;  /* Log nonfatal errors in startup */
+constexpr int LOG_WIZARD = 0x00002000;   /* Log dangerous things */
+constexpr int LOG_ALLOCATE = 0x00004000; /* Log alloc/free from buffer pools */
+constexpr int LOG_PROBLEMS = 0x00008000; /* Log runtime problems */
+constexpr int LOG_SUSPECTCMDS =
+    0x00010000; /* Log commands by people set SUSPECT */
+constexpr unsigned int LOG_ALWAYS = 0x80000000; /* Always log it */
 
-#define LOGOPT_FLAGS 0x01     /* Report flags on object */
-#define LOGOPT_LOC 0x02       /* Report loc of obj when requested */
-#define LOGOPT_OWNER 0x04     /* Report owner of obj if not obj */
-#define LOGOPT_TIMESTAMP 0x08 /* Timestamp log entries */
+constexpr int LOGOPT_FLAGS = 0x01;     /* Report flags on object */
+constexpr int LOGOPT_LOC = 0x02;       /* Report loc of obj when requested */
+constexpr int LOGOPT_OWNER = 0x04;     /* Report owner of obj if not obj */
+constexpr int LOGOPT_TIMESTAMP = 0x08; /* Timestamp log entries */
 
-#define HIDDEN_IDLESECS 600 /* Show people idle for less as 0s idle */
+constexpr int HIDDEN_IDLESECS = 600; /* Show people idle for less as 0s idle */

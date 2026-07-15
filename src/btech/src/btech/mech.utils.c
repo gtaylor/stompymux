@@ -172,7 +172,7 @@ MAP *ValidMap(DbRef player, DbRef map) {
   char *str;
   MAP *maps;
 
-  DOCHECKN(!Good_obj(map), "Index out of range!");
+  DOCHECKN(!is_good_obj(map), "Index out of range!");
   str = silly_atr_get(map, A_XTYPE);
   DOCHECKN(!str || !*str, "That is not a valid map! (no XTYPE!)");
   DOCHECKN(strcmp("MAP", str), "That is not a valid map!");
@@ -260,7 +260,8 @@ static int Leave_Hangar(MAP *map, MECH *mech) {
   loud_teleport(mech->mynum, mech->mapindex);
   if (car)
     loud_teleport(car->mynum, mech->mapindex);
-  if (In_Character(mech->mynum) && Location(MechPilot(mech)) != mech->mynum) {
+  if (is_in_character(mech->mynum) &&
+      obj_location(MechPilot(mech)) != mech->mynum) {
     mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
     mech_notify(mech, MECHALL,
                 "%ch%cr%cfAutomatic self-destruct sequence initiated...%c");
@@ -544,7 +545,7 @@ char *FindPilotingSkillName(MECH *mech) {
 
 // TODO: Replace this with a function.
 #define GENERIC_FIND_MECHSKILL(num, n)                                         \
-  if (Quiet(mech->mynum)) {                                                    \
+  if (is_quiet(mech->mynum)) {                                                 \
     str = silly_atr_get(mech->mynum, A_MECHSKILLS);                            \
     if (*str)                                                                  \
       if (sscanf(str, "%d %d %d %d", &i[0], &i[1], &i[2], &i[3]) > num)        \
@@ -634,7 +635,8 @@ int MechPilotSkillRoll_BTH(MECH *mech, int mods) {
   if (MechSpecials2(mech) & SMALLCOCKPIT_TECH)
     mods++;
 
-  if (In_Character(mech->mynum) && Location(MechPilot(mech)) != mech->mynum)
+  if (is_in_character(mech->mynum) &&
+      obj_location(MechPilot(mech)) != mech->mynum)
     mods += 5;
   return mods;
 }
@@ -2557,7 +2559,7 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
 
   /* Very Rare Occassion where using btsetxcodevalue(mech,mechdamage,) triggers
    * this, we'll just ignore */
-  if ((mech->mynum == attacker->mynum) && !Good_obj(mech->mynum))
+  if ((mech->mynum == attacker->mynum) && !is_good_obj(mech->mynum))
     return;
 
   if (mech != attacker)
@@ -2590,7 +2592,7 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
   }
 
   /* Trigger AMECHDEST.  */
-  if (Good_obj(mech->mynum) && Good_obj(attacker->mynum)) {
+  if (is_good_obj(mech->mynum) && is_good_obj(attacker->mynum)) {
     char *reason_copy = NULL;
 
     char *args[1] = {NULL};

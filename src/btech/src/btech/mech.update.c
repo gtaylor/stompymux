@@ -644,7 +644,7 @@ void move_mech(MECH *mech) {
       steppable_base_check(mech, x, y);
 
       /* Pilot XP */
-      if (In_Character(mech->mynum)) {
+      if (is_in_character(mech->mynum)) {
         MechHexes(mech)++;
         if (!((int)MechHexes(mech) % PIL_XP_EVERY_N_STEPS))
           if (RGotPilot(mech))
@@ -1216,7 +1216,7 @@ void HandleOverheat(MECH *mech) {
 
   avoided = 0;
 #ifdef BT_EXILE_MW3STATS
-  if (!isPlayer(MechPilot(mech))) {
+  if (!is_player(MechPilot(mech))) {
 #endif
     if (MechHeat(mech) >= 30.) {
       /* Shutdown */

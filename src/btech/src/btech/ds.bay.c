@@ -150,7 +150,7 @@ static void mech_enterbay_event(MuxEvent *e) {
   MechLOSBroadcast(mech, tprintf("has entered %s at %d,%d.", GetMechID(ds),
                                  MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
-  if (MechType(mech) == CLASS_MW && !In_Character(ref)) {
+  if (MechType(mech) == CLASS_MW && !is_in_character(ref)) {
     enter_mw_bay(mech, ref);
     return;
   }
@@ -321,7 +321,8 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   MechLOSBroadcasti(mech, ds, "has left %s's bay.");
   mech_notify(ds, MECHALL, tprintf("%s has left the bay.", GetMechID(mech)));
   ContinueFlying(mech);
-  if (In_Character(mech->mynum) && Location(MechPilot(mech)) != mech->mynum) {
+  if (is_in_character(mech->mynum) &&
+      obj_location(MechPilot(mech)) != mech->mynum) {
     mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
     mech_notify(mech, MECHALL,
                 "%ch%cr%cfAutomatic self-destruct sequence initiated.%c");
@@ -337,7 +338,7 @@ int Leave_DS(MAP *map, MECH *mech) {
   DOCHECKMA0(!DS_Bay_Is_Open(mech, car, map->mynum),
              "The door has been jammed!");
   DOCHECKMA0(!Landed(car) && !FlyingT(mech), "The 'ship is still airborne!");
-  DOCHECKMA0(Zombie(car->mynum),
+  DOCHECKMA0(is_zombie(car->mynum),
              "You don't feel leaving right now would be prudent..");
   return Leave_DS_Bay(map, car, mech, map->mynum);
 }

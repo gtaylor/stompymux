@@ -30,8 +30,6 @@ struct filecache_block {
   char data[MBUF_SIZE - sizeof(FBLKHDR)];
 };
 
-#define FBLOCK_SIZE (MBUF_SIZE - sizeof(FBLKHDR))
-
 FCACHE fcache[] = {{mudconf.conn_file, NULL, "Conn"},
                    {mudconf.site_file, NULL, "Conn/Badsite"},
                    {mudconf.down_file, NULL, "Conn/Down"},
@@ -53,7 +51,7 @@ NameTable list_files[] = {
     {(char *)"register_connect", 1, CA_WIZARD, FC_CONN_REG},
     {NULL, 0, 0, 0}};
 
-#define MAX_CONN 100
+constexpr int MAX_CONN = 100;
 int fcache_conn_c = 0;
 FCACHE fcache_conn[MAX_CONN];
 
@@ -205,7 +203,7 @@ void fcache_rawdump(int fd, int num) {
     remaining = fp->hdr.nchars;
     while (remaining > 0) {
 
-      cnt = WRITE(fd, start, remaining);
+      cnt = write(fd, start, remaining);
       if (cnt < 0)
         return;
       remaining -= cnt;
@@ -252,7 +250,7 @@ void fcache_load(DbRef player) {
   sbuf = alloc_sbuf("fcache_load.sbuf");
   for (fp = fcache; fp->filename; fp++) {
     i = fcache_read(&fp->fileblock, fp->filename);
-    if ((player != NOTHING) && !Quiet(player)) {
+    if ((player != NOTHING) && !is_quiet(player)) {
       snprintf(sbuf, SBUF_SIZE, "%d", i);
       if (fp == fcache)
         safe_str((char *)"File sizes: ", buff, &bufc);
@@ -266,7 +264,7 @@ void fcache_load(DbRef player) {
   *bufc = '\0';
   if (*mudconf.conn_dir)
     fcache_read_dir(mudconf.conn_dir, fcache_conn, &fcache_conn_c, MAX_CONN);
-  if ((player != NOTHING) && !Quiet(player)) {
+  if ((player != NOTHING) && !is_quiet(player)) {
     notify(player, buff);
   }
   free_lbuf(buff);

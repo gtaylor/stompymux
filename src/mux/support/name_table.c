@@ -69,7 +69,7 @@ void name_table_display(DbRef player, NameTable *ntab, char *prefix,
   for (cp = prefix; *cp; cp++)
     *bp++ = *cp;
   for (nt = ntab; nt->name; nt++) {
-    if (God(player) || check_access(player, nt->perm)) {
+    if (is_god(player) || check_access(player, nt->perm)) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;
@@ -98,7 +98,7 @@ void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
     *bp++ = *cp;
   nt = ntab;
   while (nt->name) {
-    if (God(player) || check_access(player, nt->perm)) {
+    if (is_god(player) || check_access(player, nt->perm)) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;
@@ -138,7 +138,7 @@ void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
   got_one = 0;
   while (nt->name) {
     if (((flagword & nt->flag) != 0) &&
-        (God(player) || check_access(player, nt->perm))) {
+        (is_god(player) || check_access(player, nt->perm))) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;

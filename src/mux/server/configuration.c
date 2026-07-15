@@ -18,8 +18,8 @@
 #include "mux/support/hash_table.h"
 /* default (runtime-resettable) cache parameters */
 
-#define CACHE_DEPTH 10
-#define CACHE_WIDTH 20
+constexpr int CACHE_DEPTH = 10;
+constexpr int CACHE_WIDTH = 20;
 
 /*
  * ---------------------------------------------------------------------------
@@ -1136,7 +1136,7 @@ void do_admin(DbRef player, DbRef cause, int extra, char *kw, char *value) {
   int i;
 
   i = configuration_set(kw, value, player);
-  if ((i >= 0) && !Quiet(player))
+  if ((i >= 0) && !is_quiet(player))
     notify(player, "Set.");
   return;
 }
@@ -1166,7 +1166,7 @@ void configuration_list_access(DbRef player) {
 
   buff = alloc_mbuf("configuration_list_access");
   for (tp = conftable; tp->pname; tp++) {
-    if (God(player) || check_access(player, tp->flags)) {
+    if (is_god(player) || check_access(player, tp->flags)) {
       snprintf(buff, MBUF_SIZE, "%s:", tp->pname);
       name_table_list_set(player, access_nametab, tp->flags, buff, 1);
     }

@@ -672,7 +672,7 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
   int terrain;
 
   cch(MECH_USUALO);
-  DOCHECK(((HasCamo(mech)) || (Wizard(player)))
+  DOCHECK(((HasCamo(mech)) || (is_wizard(player)))
               ? 0
               : MechType(mech) != CLASS_BSUIT && MechType(mech) != CLASS_MW,
           "You aren't capable of such curious things.");

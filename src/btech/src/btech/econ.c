@@ -66,7 +66,7 @@ void econ_change_items(DbRef d, int id, int brand, int num) {
   char *t, *u;
   int base = 0, i1, i2, i3;
 
-  if (!Good_obj(d))
+  if (!is_good_obj(d))
     return;
   if (brand)
     if (get_parts_short_name(id, brand) == get_parts_short_name(id, 0))
@@ -96,7 +96,7 @@ int econ_find_items(DbRef d, int id, int brand) {
   char *t, *u;
   int i1, i2, i3;
 
-  if (!Good_obj(d))
+  if (!is_good_obj(d))
     return 0;
   if (brand)
     if (get_parts_short_name(id, brand) == get_parts_short_name(id, 0))
@@ -111,7 +111,7 @@ int econ_find_items(DbRef d, int id, int brand) {
 void econ_set_items(DbRef d, int id, int brand, int num) {
   int i;
 
-  if (!Good_obj(d))
+  if (!is_good_obj(d))
     return;
   i = econ_find_items(d, id, brand);
   if (i != num)

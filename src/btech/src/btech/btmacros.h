@@ -59,11 +59,11 @@
 
 /* GotPilot checks if mech's pilot is valid and inside his machine */
 #define GotPilot(mech)                                                         \
-  (MechPilot(mech) > 0 && Location(MechPilot(mech)) == mech->mynum)
+  (MechPilot(mech) > 0 && obj_location(MechPilot(mech)) == mech->mynum)
 
 #define RGotPilot(mech)                                                        \
   ((GotPilot(mech)) &&                                                         \
-   (Connected(MechPilot(mech)) || !isPlayer(MechPilot(mech))))
+   (is_connected(MechPilot(mech)) || !is_player(MechPilot(mech))))
 
 #define GotGPilot(mech)                                                        \
   ((pilot_override && GunPilot(mech) > 0) ||                                   \
@@ -71,7 +71,7 @@
 
 #define RGotGPilot(mech)                                                       \
   ((pilot_override && GunPilot(mech) > 0 &&                                    \
-    (Connected(GunPilot(mech)) || !isPlayer(GunPilot(mech)))) ||               \
+    (is_connected(GunPilot(mech)) || !is_player(GunPilot(mech)))) ||           \
    (!pilot_override && RGotPilot(mech)))
 
 #define AeroBay(a, b) (a)->pd.bay[b]

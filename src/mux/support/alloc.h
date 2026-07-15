@@ -2,48 +2,57 @@
 
 #pragma once
 
-#define POOL_SBUF 0
-#define POOL_MBUF 1
-#define POOL_LBUF 2
-#define POOL_BOOL 3
-#define POOL_DESC 4
-#define POOL_QENTRY 5
-#define POOL_PCACHE 6
-#define NUM_POOLS 7
+#include "mux/support/stringutil.h"
 
-#define LBUF_SIZE 16384
-#define MBUF_SIZE 2048
-#define SBUF_SIZE 256
+constexpr int LBUF_SIZE = 16384;
+constexpr int MBUF_SIZE = 2048;
+constexpr int SBUF_SIZE = 256;
 
-#define alloc_lbuf(s) (char *)malloc(LBUF_SIZE)
-#define free_lbuf(b)                                                           \
-  if (b)                                                                       \
-  free(b)
-#define alloc_mbuf(s) (char *)malloc(MBUF_SIZE)
-#define free_mbuf(b)                                                           \
-  if (b)                                                                       \
-  free(b)
-#define alloc_sbuf(s) (char *)malloc(SBUF_SIZE)
-#define free_sbuf(b)                                                           \
-  if (b)                                                                       \
-  free(b)
-#define alloc_bool(s)                                                          \
-  (struct BooleanExpression *)malloc(sizeof(struct BooleanExpression))
-#define free_bool(b)                                                           \
-  if (b)                                                                       \
-  free(b)
-#define alloc_qentry(s) (BQUE *)malloc(sizeof(BQUE))
-#define free_qentry(b)                                                         \
-  if (b)                                                                       \
-  free(b)
-#define alloc_pcache(s)     (PCACHE *)malloc(sizeof(PCACHE)
-#define free_pcache(b)                                                         \
-  if (b)                                                                       \
-  free(b)
+static inline char *alloc_lbuf(const char *s) {
+  return (char *)malloc(LBUF_SIZE);
+}
+static inline void free_lbuf(void *b) {
+  if (b)
+    free(b);
+}
+static inline char *alloc_mbuf(const char *s) {
+  return (char *)malloc(MBUF_SIZE);
+}
+static inline void free_mbuf(void *b) {
+  if (b)
+    free(b);
+}
+static inline char *alloc_sbuf(const char *s) {
+  return (char *)malloc(SBUF_SIZE);
+}
+static inline void free_sbuf(void *b) {
+  if (b)
+    free(b);
+}
 
-#define safe_str(s, b, p) safe_copy_str(s, b, p, (LBUF_SIZE - 1))
-#define safe_chr(c, b, p) safe_copy_chr(c, b, p, (LBUF_SIZE - 1))
-#define safe_sb_str(s, b, p) safe_copy_str(s, b, p, (SBUF_SIZE - 1))
-#define safe_sb_chr(c, b, p) safe_copy_chr(c, b, p, (SBUF_SIZE - 1))
-#define safe_mb_str(s, b, p) safe_copy_str(s, b, p, (MBUF_SIZE - 1))
-#define safe_mb_chr(c, b, p) safe_copy_chr(c, b, p, (MBUF_SIZE - 1))
+// Defined in boolexp.c, where struct BooleanExpression is fully declared.
+struct BooleanExpression *alloc_bool(const char *s);
+void free_bool(struct BooleanExpression *b);
+
+// Defined in command_queue.c, where BQUE is fully declared.
+struct bque *alloc_qentry(const char *s);
+void free_qentry(struct bque *b);
+
+static inline int safe_str(const char *s, char *b, char **p) {
+  return safe_copy_str(s, b, p, LBUF_SIZE - 1);
+}
+static inline int safe_chr(char c, char *b, char **p) {
+  return safe_copy_chr(c, b, p, LBUF_SIZE - 1);
+}
+static inline int safe_sb_str(const char *s, char *b, char **p) {
+  return safe_copy_str(s, b, p, SBUF_SIZE - 1);
+}
+static inline int safe_sb_chr(char c, char *b, char **p) {
+  return safe_copy_chr(c, b, p, SBUF_SIZE - 1);
+}
+static inline int safe_mb_str(const char *s, char *b, char **p) {
+  return safe_copy_str(s, b, p, MBUF_SIZE - 1);
+}
+static inline int safe_mb_chr(char c, char *b, char **p) {
+  return safe_copy_chr(c, b, p, MBUF_SIZE - 1);
+}

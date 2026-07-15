@@ -6,8 +6,8 @@
 
 #include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
-#include "mux/network/program_input.h"
 #include "mux/network/netcommon.h"
+#include "mux/network/program_input.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
@@ -25,15 +25,16 @@ void do_quitprog(DbRef player, DbRef cause, int key, char *name) {
     doer = player;
   }
 
-  if (!(Wizard(player) || Wizard(Owner(player))) && (player != doer)) {
+  if (!(is_wizard(player) || is_wizard(obj_owner(player))) &&
+      (player != doer)) {
     notify(player, "Permission denied.");
     return;
   }
-  if (!isPlayer(doer) || !Good_obj(doer)) {
+  if (!is_player(doer) || !is_good_obj(doer)) {
     notify(player, "That is not a player.");
     return;
   }
-  if (!Connected(doer)) {
+  if (!is_connected(doer)) {
     notify(player, "That player is not connected.");
     return;
   }
@@ -67,15 +68,16 @@ void do_prog(DbRef player, DbRef cause, int key, char *name, char *command) {
   }
   doer = match_thing(player, name);
 
-  if (!(Wizard(player) || Wizard(Owner(player))) && (player != doer)) {
+  if (!(is_wizard(player) || is_wizard(obj_owner(player))) &&
+      (player != doer)) {
     notify(player, "Permission denied.");
     return;
   }
-  if (!isPlayer(doer) || !Good_obj(doer)) {
+  if (!is_player(doer) || !is_good_obj(doer)) {
     notify(player, "That is not a player.");
     return;
   }
-  if (!Connected(doer)) {
+  if (!is_connected(doer)) {
     notify(player, "That player is not connected.");
     return;
   }
@@ -92,9 +94,9 @@ void do_prog(DbRef player, DbRef cause, int key, char *name, char *command) {
       return;
     }
     ap = attribute_by_number(atr);
-    if (God(player) ||
-        (!God(thing) && See_attr(player, thing, ap, aowner, aflags) &&
-         (Wizard(player) || (aowner == Owner(player))))) {
+    if (is_god(player) ||
+        (!is_god(thing) && see_attr(player, thing, ap, aowner, aflags) &&
+         (is_wizard(player) || (aowner == obj_owner(player))))) {
       attribute_add_raw(doer, A_PROGCMD, attribute_get_raw(thing, atr));
     } else {
       notify(player, "Permission denied.");

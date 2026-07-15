@@ -22,7 +22,8 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   char *to;
   int hush = 0;
 
-  if (((Fixed(player)) || (Fixed(Owner(player)))) && !Wizard(player)) {
+  if (((is_fixed(player)) || (is_fixed(obj_owner(player)))) &&
+      !is_wizard(player)) {
     notify(player, mudconf.fixed_tel_msg);
     return;
   }
@@ -47,7 +48,7 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
    * Validate type of victim
    */
 
-  if (!Has_location(victim) && Typeof(victim) != TYPE_EXIT) {
+  if (!has_location(victim) && typeof_obj(victim) != TYPE_EXIT) {
     notify_quiet(player, "You can't teleport that.");
     return;
   }
@@ -55,8 +56,8 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
    * Fail if we don't control the victim or the victim's location
    */
 
-  if (!Controls(player, victim) && !Controls(player, Location(victim)) &&
-      !Wizard(player)) {
+  if (!is_controls(player, victim) &&
+      !is_controls(player, obj_location(victim)) && !is_wizard(player)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -65,7 +66,7 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
    * Also, can't teleport exits 'home'
    */
 
-  if (!string_compare(to, "home") && Typeof(victim) != TYPE_EXIT) {
+  if (!string_compare(to, "home") && typeof_obj(victim) != TYPE_EXIT) {
     (void)move_via_teleport(victim, HOME, cause, 0);
     return;
   }
@@ -98,19 +99,19 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
 
   if (mudconf.fascist_tport) {
     loc = where_room(victim);
-    if (!Good_obj(loc) || !isRoom(loc) ||
-        (!Controls(player, loc) && !Wizard(player))) {
+    if (!is_good_obj(loc) || !is_room(loc) ||
+        (!is_controls(player, loc) && !is_wizard(player))) {
       notify_quiet(player, "Permission denied.");
       return;
     }
   }
-  if (Has_contents(destination)) {
+  if (has_contents(destination)) {
 
     /*
      * You must control the destination and pass its TELEPORT lock.
      */
 
-    if ((!Controls(player, destination) && !Wizard(player)) ||
+    if ((!is_controls(player, destination) && !is_wizard(player)) ||
         !could_doit(player, destination, A_LTPORT)) {
 
       /*
@@ -127,23 +128,23 @@ void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
      * We're OK, do the teleport
      */
 
-    if ((key & TELEPORT_QUIET) || Dark(victim))
+    if ((key & TELEPORT_QUIET) || is_dark(victim))
       hush = HUSH_ENTER | HUSH_LEAVE;
 
-    if (Typeof(victim) == TYPE_EXIT) {
-      exitloc = Exits(victim);
-      s_Exits(exitloc, remove_first(Exits(exitloc), victim));
-      s_Exits(destination, insert_first(Exits(destination), victim));
-      s_Exits(victim, destination);
+    if (typeof_obj(victim) == TYPE_EXIT) {
+      exitloc = obj_exits(victim);
+      s_exits(exitloc, remove_first(obj_exits(exitloc), victim));
+      s_exits(destination, insert_first(obj_exits(destination), victim));
+      s_exits(victim, destination);
 
-      if (!Quiet(player))
+      if (!is_quiet(player))
         notify_quiet(player, "Exit teleported.");
     } else if (move_via_teleport(victim, destination, cause, hush)) {
-      if (player != victim && !Quiet(player))
+      if (player != victim && !is_quiet(player))
         notify_quiet(player, "Teleported.");
     }
-  } else if (isExit(destination)) {
-    if (Exits(destination) == Location(victim)) {
+  } else if (is_exit(destination)) {
+    if (obj_exits(destination) == obj_location(victim)) {
       move_exit(victim, destination, 0, "You can't go that way.", 0);
     } else {
       notify_quiet(player, "I can't find that exit.");
@@ -203,7 +204,7 @@ void do_newpassword(DbRef player, DbRef cause, int key, char *name,
     notify_quiet(player, "Bad password");
     return;
   }
-  if (God(victim)) {
+  if (is_god(victim)) {
     notify_quiet(player, "You cannot change that player's password.");
     return;
   }
@@ -232,7 +233,7 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
   char *buf, *bp;
   int count;
 
-  if (!Wizard(player)) {
+  if (!is_wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -260,11 +261,11 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
     if ((victim = noisy_match_result()) == NOTHING)
       return;
 
-    if (God(victim)) {
+    if (is_god(victim)) {
       notify_quiet(player, "You cannot boot that player!");
       return;
     }
-    if ((!isPlayer(victim) && !God(player)) || (player == victim)) {
+    if ((!is_player(victim) && !is_god(player)) || (player == victim)) {
       notify_quiet(player, "You can only boot off other players!");
       return;
     }
@@ -286,7 +287,7 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
   }
 
   if (key & BOOT_PORT)
-    count = boot_by_port(victim, !God(player), buf);
+    count = boot_by_port(victim, !is_god(player), buf);
   else
     count = boot_off(victim, buf);
   notify_quiet(player, tprintf("%d connection%s closed.", count,
@@ -313,7 +314,7 @@ void do_cut(DbRef player, DbRef cause, int key, char *thing) {
     notify_quiet(player, "I don't know which one");
     break;
   default:
-    s_Next(object, NOTHING);
+    s_next(object, NOTHING);
     notify_quiet(player, "Cut.");
   }
 }
@@ -344,11 +345,11 @@ void do_global(DbRef player, DbRef cause, int key, char *flag) {
     notify_quiet(player, "I don't know about that flag.");
   } else if (key == GLOB_ENABLE) {
     mudconf.control_flags |= flagvalue;
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_quiet(player, "Enabled.");
   } else if (key == GLOB_DISABLE) {
     mudconf.control_flags &= ~flagvalue;
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_quiet(player, "Disabled.");
   } else {
     notify_quiet(player, "Illegal combination of switches.");

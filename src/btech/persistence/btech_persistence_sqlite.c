@@ -501,7 +501,7 @@ static int btech_special_column_ushort(sqlite3_stmt *statement, int column,
 static int btech_special_column_dbref(sqlite3_stmt *statement, int column,
                                       DbRef *value) {
   if (btech_special_column_long(statement, column, value) < 0 ||
-      (*value != NOTHING && !Good_obj(*value)))
+      (*value != NOTHING && !is_good_obj(*value)))
     return -1;
   return 0;
 }
@@ -1111,7 +1111,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
     }
     if (ordinal != expected_ordinal || x < 0 || x >= map->map_width || y < 0 ||
         y >= map->map_height ||
-        (object_dbref != NOTHING && !Good_obj(object_dbref))) {
+        (object_dbref != NOTHING && !is_good_obj(object_dbref))) {
       result = -1;
       break;
     }
@@ -1741,7 +1741,7 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
         x < SHRT_MIN || x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
         z < SHRT_MIN || z > SHRT_MAX || last_x < SHRT_MIN ||
         last_x > SHRT_MAX || last_y < SHRT_MIN || last_y > SHRT_MAX ||
-        (pilot != NOTHING && !Good_obj(pilot))) {
+        (pilot != NOTHING && !is_good_obj(pilot))) {
       result = -1;
       break;
     }
@@ -1796,7 +1796,7 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         btech_special_column_int(statement, 1, &bay_index) < 0 ||
         btech_special_column_long(statement, 2, &bay_dbref) < 0 ||
-        (bay_dbref != NOTHING && !Good_obj(bay_dbref))) {
+        (bay_dbref != NOTHING && !is_good_obj(bay_dbref))) {
       result = -1;
       break;
     }
@@ -1856,7 +1856,7 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         btech_special_column_int(statement, 1, &turret_index) < 0 ||
         btech_special_column_long(statement, 2, &turret_dbref) < 0 ||
-        (turret_dbref != NOTHING && !Good_obj(turret_dbref))) {
+        (turret_dbref != NOTHING && !is_good_obj(turret_dbref))) {
       result = -1;
       break;
     }
@@ -1930,8 +1930,8 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
         c3_size > C3_NETWORK_SIZE || total_masters < -1 ||
         total_masters > C3_NETWORK_SIZE || working_masters < -1 ||
         working_masters > C3_NETWORK_SIZE ||
-        (tag_target != NOTHING && !Good_obj(tag_target)) ||
-        (tagged_by != NOTHING && !Good_obj(tagged_by))) {
+        (tag_target != NOTHING && !is_good_obj(tag_target)) ||
+        (tagged_by != NOTHING && !is_good_obj(tagged_by))) {
       result = -1;
       break;
     }
@@ -2493,7 +2493,7 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
 
 /* Resolve a preallocated special object and reject a row of the wrong type. */
 static void *btech_special_object(DbRef object, GlueType type) {
-  if (!Good_obj(object) || WhichSpecial(object) != (int)type)
+  if (!is_good_obj(object) || WhichSpecial(object) != (int)type)
     return NULL;
   return FindObjectsData(object);
 }

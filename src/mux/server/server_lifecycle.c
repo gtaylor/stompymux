@@ -69,20 +69,20 @@ static void server_lifecycle_process_preload(void) {
   forward_list = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
   text = alloc_lbuf("process_preload.string");
   DO_WHOLE_DB(thing) {
-    if (Going(thing))
+    if (is_going(thing))
       continue;
 
     do_top(10);
     ITER_PARENTS(thing, parent, level) {
-      if (Flags(thing) & HAS_STARTUP) {
-        did_it(Owner(thing), thing, 0, NULL, 0, NULL, A_STARTUP, NULL, 0);
+      if (obj_flags(thing) & HAS_STARTUP) {
+        did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_STARTUP, NULL, 0);
         do_second();
         do_top(10);
         break;
       }
     }
 
-    if (H_Fwdlist(thing)) {
+    if (has_fwdlist(thing)) {
       (void)attribute_get_string(text, thing, A_FORWARDLIST, &aowner, &aflags);
       if (*text) {
         fwdlist_load(forward_list, GOD, text);

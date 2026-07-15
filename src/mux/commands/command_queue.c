@@ -22,6 +22,15 @@
 #include "mux/world/match.h"
 #include "mux/world/player_cache.h"
 
+struct bque *alloc_qentry(const char *s) {
+  return (struct bque *)malloc(sizeof(struct bque));
+}
+
+void free_qentry(struct bque *b) {
+  if (b)
+    free(b);
+}
+
 static RedBlackTree obq = NULL;
 
 static void cque_free_entry(BQUE *entry) {
@@ -48,7 +57,7 @@ static OBJQE *cque_find(DbRef player) {
 
   tmp = red_black_tree_find(obq, (void *)player);
 
-  if (!tmp && Good_obj(player)) {
+  if (!tmp && is_good_obj(player)) {
     tmp = malloc(sizeof(OBJQE));
     tmp->obj = player;
     tmp->cque = NULL;
@@ -197,7 +206,7 @@ static int add_to(DbRef player, int am, int attrnum) {
  */
 
 static int que_want(BQUE *entry, DbRef ptarg, DbRef otarg) {
-  if ((ptarg != NOTHING) && (ptarg != Owner(entry->player)))
+  if ((ptarg != NOTHING) && (ptarg != obj_owner(entry->player)))
     return 0;
   if ((otarg != NOTHING) && (otarg != entry->player))
     return 0;
@@ -279,7 +288,7 @@ int halt_que(DbRef player, DbRef object) {
       next = (trail = point)->next;
 
   if (player == NOTHING)
-    player = Owner(object);
+    player = obj_owner(object);
   if (object == NOTHING)
     queue_set(player, 0);
   else
@@ -296,7 +305,7 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
   DbRef player_targ, obj_targ;
   int numhalted;
 
-  if ((key & HALT_ALL) && !Wizard(player)) {
+  if ((key & HALT_ALL) && !is_wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -309,12 +318,12 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
     if (key & HALT_ALL) {
       player_targ = NOTHING;
     } else {
-      player_targ = Owner(player);
-      if (Typeof(player) != TYPE_PLAYER)
+      player_targ = obj_owner(player);
+      if (typeof_obj(player) != TYPE_PLAYER)
         obj_targ = player;
     }
   } else {
-    if (Wizard(player))
+    if (is_wizard(player))
       obj_targ = match_thing(player, target);
     else
       obj_targ = match_controlled(player, target);
@@ -325,7 +334,7 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
       notify(player, "Can't specify a target and /all");
       return;
     }
-    if (Typeof(obj_targ) == TYPE_PLAYER) {
+    if (typeof_obj(obj_targ) == TYPE_PLAYER) {
       player_targ = obj_targ;
       obj_targ = NOTHING;
     } else {
@@ -334,12 +343,12 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
   }
 
   numhalted = halt_que(player_targ, obj_targ);
-  if (Quiet(player))
+  if (is_quiet(player))
     return;
   if (numhalted == 1)
-    notify(Owner(player), "1 queue entries removed.");
+    notify(obj_owner(player), "1 queue entries removed.");
   else
-    notify_printf(Owner(player), "%d queue entries removed.", numhalted);
+    notify_printf(obj_owner(player), "%d queue entries removed.", numhalted);
 }
 
 /*
@@ -383,7 +392,7 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
           point->waittime = 0;
           cque_enqueue(point->player, point);
         } else {
-          queue_adjust(Owner(point->player), -1);
+          queue_adjust(obj_owner(point->player), -1);
           free(point->text);
           cque_free_entry(point);
         }
@@ -432,7 +441,7 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
 
   if ((thing = noisy_match_result()) < 0) {
     notify(player, "No match.");
-  } else if (!controls(player, thing)) {
+  } else if (!is_controls(player, thing)) {
     notify(player, "Permission denied.");
   } else {
     if (!what || !*what) {
@@ -446,7 +455,7 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
     } else {
       /* Do they have permission to set this attribute? */
       attribute_parent_get_info(thing, ap->number, &aowner, &aflags);
-      if (Set_attr(player, thing, ap, aflags)) {
+      if (set_attr(player, thing, ap, aflags)) {
         attr = ap->number;
       } else {
         notify_quiet(player, "Permission denied.");
@@ -460,7 +469,7 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
       loccount = 1;
     if (loccount > 0) {
       nfy_que(thing, attr, key, loccount);
-      if (!(Quiet(player) || Quiet(thing))) {
+      if (!(is_quiet(player) || is_quiet(thing))) {
         if (key == NFY_DRAIN)
           notify_quiet(player, "Drained.");
         else
@@ -485,7 +494,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * Can we run commands at all?
    */
 
-  if (Halted(player))
+  if (is_halted(player))
     return NULL;
 
   /*
@@ -493,16 +502,16 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * * * * * * * limited to QUEUE_QUOTA. -mnp
    */
 
-  a = queue_maximum(Owner(player));
-  if (queue_adjust(Owner(player), 1) > a) {
-    notify(Owner(player),
+  a = queue_maximum(obj_owner(player));
+  if (queue_adjust(obj_owner(player), 1) > a) {
+    notify(obj_owner(player),
            "Run away objects: too many commands queued.  Halted.");
-    halt_que(Owner(player), NOTHING);
+    halt_que(obj_owner(player), NOTHING);
 
     /*
      * halt also means no command execution allowed
      */
-    s_Halted(player);
+    s_halted(player);
     return NULL;
   }
   /*
@@ -646,9 +655,9 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
   match_everything(0);
 
   thing = noisy_match_result();
-  if (!Good_obj(thing)) {
+  if (!is_good_obj(thing)) {
     notify(player, "No match.");
-  } else if (!controls(player, thing)) {
+  } else if (!is_controls(player, thing)) {
     notify(player, "Permission denied.");
   } else {
 
@@ -675,7 +684,7 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
         ap = attribute_by_number(attr);
       }
       attribute_parent_get_info(thing, ap->number, &aowner, &aflags);
-      if (attr && Set_attr(player, thing, ap, aflags)) {
+      if (attr && set_attr(player, thing, ap, aflags)) {
         attr = ap->number;
         howlong = 0;
       } else {
@@ -803,11 +812,11 @@ int do_top(int ncmds) {
 
     dassert(tmp);
     count++;
-    if ((object >= 0) && !Going(object)) {
+    if ((object >= 0) && !is_going(object)) {
       mudstate.curr_enactor = tmp->cause;
       mudstate.curr_player = object;
-      queue_adjust(Owner(object), -1);
-      if (!Halted(object)) {
+      queue_adjust(obj_owner(object), -1);
+      if (!is_halted(object)) {
         for (i = 0; i < MAX_GLOBAL_REGS; i++) {
           if (tmp->scr[i]) {
             StringCopy(mudstate.global_regs[i], tmp->scr[i]);
@@ -880,15 +889,15 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
 
     bufp = unparse_object(player, tmp->player, 0);
     if (!(key & PS_ALL))
-      if ((player != Owner(tmp->player)))
+      if ((player != obj_owner(tmp->player)))
         continue;
-    if ((tmp->waittime > 0) && (Good_obj(tmp->sem)))
+    if ((tmp->waittime > 0) && (is_good_obj(tmp->sem)))
       notify_printf(player, "[#%d/%d]%s:%s", tmp->sem,
                     tmp->waittime - mudstate.now, bufp, tmp->comm);
     else if (tmp->waittime > 0)
       notify_printf(player, "[%d]%s:%s", tmp->waittime - mudstate.now, bufp,
                     tmp->comm);
-    else if (Good_obj(tmp->sem))
+    else if (is_good_obj(tmp->sem))
       notify_printf(player, "[#%d]%s:%s", tmp->sem, bufp, tmp->comm);
     else
       notify_printf(player, "%s:%s", bufp, tmp->comm);
@@ -924,7 +933,7 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
    * Figure out what to list the queue for
    */
 
-  if ((key & PS_ALL) && !Wizard(player)) {
+  if ((key & PS_ALL) && !is_wizard(player)) {
     notify(player, "Permission denied.");
     return;
   }
@@ -933,12 +942,12 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
     if (key & PS_ALL) {
       player_targ = NOTHING;
     } else {
-      player_targ = Owner(player);
-      if (Typeof(player) != TYPE_PLAYER)
+      player_targ = obj_owner(player);
+      if (typeof_obj(player) != TYPE_PLAYER)
         obj_targ = player;
     }
   } else {
-    player_targ = Owner(player);
+    player_targ = obj_owner(player);
     obj_targ = match_controlled(player, target);
     if (obj_targ == NOTHING)
       return;
@@ -946,7 +955,7 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
       notify(player, "Can't specify a target and /all");
       return;
     }
-    if (Typeof(obj_targ) == TYPE_PLAYER) {
+    if (typeof_obj(obj_targ) == TYPE_PLAYER) {
       player_targ = obj_targ;
       obj_targ = NOTHING;
     }
@@ -994,7 +1003,7 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
    * Display stats
    */
 
-  if (Wizard(player))
+  if (is_wizard(player))
     notify_printf(player,
                   "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
                   pqent, pqtot, wqent, wqtot, sqent, sqtot);
@@ -1025,7 +1034,7 @@ void do_queue(DbRef player, DbRef cause, int key, char *arg) {
     ncmds = do_top(i);
     if (was_disabled)
       mudconf.control_flags &= ~CF_DEQUEUE;
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_printf(player, "%d commands processed.", ncmds);
   } else if (key == QUEUE_WARP) {
     i = atoi(arg);
@@ -1050,7 +1059,7 @@ void do_queue(DbRef player, DbRef cause, int key, char *arg) {
     do_second();
     if (was_disabled)
       mudconf.control_flags &= ~CF_DEQUEUE;
-    if (Quiet(player))
+    if (is_quiet(player))
       return;
     if (i > 0)
       notify_printf(player, "WaitQ timer advanced %d seconds.", i);

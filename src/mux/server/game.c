@@ -87,12 +87,12 @@ void report(void) {
     log_text((char *)"'");
     ENDLOG;
   }
-  if (Good_obj(mudstate.curr_player)) {
+  if (is_good_obj(mudstate.curr_player)) {
     STARTLOG(LOG_BUGS, "BUG", "INFO") {
       log_text((char *)"Player: ");
       log_name_and_loc(mudstate.curr_player);
       if ((mudstate.curr_enactor != mudstate.curr_player) &&
-          Good_obj(mudstate.curr_enactor)) {
+          is_good_obj(mudstate.curr_enactor)) {
         log_text((char *)" Enactor: ");
         log_name_and_loc(mudstate.curr_enactor);
       }
@@ -268,7 +268,7 @@ int attribute_match(DbRef thing, DbRef player, char type, char *str,
    * If thing is halted, don't check anything
    */
 
-  if (Halted(thing))
+  if (is_halted(thing))
     return 0;
 
   /*
@@ -287,7 +287,7 @@ int attribute_match(DbRef thing, DbRef player, char type, char *str,
   insert = 1;
   numeric_hash_table_flush(&mudstate.parent_htab, 0);
   ITER_PARENTS(thing, parent, lev) {
-    if (!Good_obj(Parent(parent)))
+    if (!is_good_obj(obj_parent(parent)))
       insert = 0;
     result =
         attribute_match_one(thing, parent, player, type, str, exclude, insert);
@@ -366,7 +366,7 @@ static char *dflt_from_msg(DbRef sender, DbRef sendloc) {
 
   tp = tbuff = alloc_lbuf("notify_checked.fwdlist");
   safe_str((char *)"From ", tbuff, &tp);
-  if (Good_obj(sendloc))
+  if (is_good_obj(sendloc))
     safe_str(Name(sendloc), tbuff, &tp);
   else
     safe_str(Name(sender), tbuff, &tp);
@@ -383,14 +383,14 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
   DbRef aowner, targetloc, recip, obj;
   int i, nargs, has_neighbors, pass_listen;
   long aflags;
-  int check_listens, pass_uselock, is_audible;
+  int check_listens, pass_uselock, target_audible;
   FWDLIST *fp;
 
   /*
    * If speaker is invalid or message is empty, just exit
    */
 
-  if (!Good_obj(target) || !msg || !*msg)
+  if (!is_good_obj(target) || !msg || !*msg)
     return;
 
   /*
@@ -409,9 +409,9 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
   if (key & MSG_ME) {
     mp = msg_ns = alloc_lbuf("notify_checked");
-    if (Nospoof(target) && (target != sender) &&
+    if (is_nospoof(target) && (target != sender) &&
         (target != mudstate.curr_enactor) &&
-        (target != mudstate.curr_player && Good_obj(sender))) {
+        (target != mudstate.curr_player && is_good_obj(sender))) {
 
       /*
        * I'd really like to use tprintf here but I can't
@@ -426,9 +426,9 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       snprintf(tbuff, SBUF_SIZE, "(#%ld)", sender);
       safe_str(tbuff, msg_ns, &mp);
 
-      if (sender != Owner(sender)) {
+      if (sender != obj_owner(sender)) {
         safe_chr('{', msg_ns, &mp);
-        safe_str(Name(Owner(sender)), msg_ns, &mp);
+        safe_str(Name(obj_owner(sender)), msg_ns, &mp);
         safe_chr('}', msg_ns, &mp);
       }
       if (sender != mudstate.curr_enactor) {
@@ -448,8 +448,8 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
    * msg contains the raw message, msg_ns contains the NOSPOOFed msg
    */
 
-  check_listens = Halted(target) ? 0 : 1;
-  switch (Typeof(target)) {
+  check_listens = is_halted(target) ? 0 : 1;
+  switch (typeof_obj(target)) {
   case TYPE_PLAYER:
     if (key & MSG_ME) {
       if (key & MSG_COLORIZE)
@@ -470,7 +470,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * do this, they'd be notified twice! */
 
     if (mudstate.inpipe &&
-        (!isPlayer(target) || (isPlayer(target) && !Connected(target)))) {
+        (!is_player(target) || (is_player(target) && !is_connected(target)))) {
       raw_notify(target, msg_ns);
     }
 
@@ -478,21 +478,22 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * Forward puppet message if it is for me
      */
 
-    has_neighbors = Has_location(target);
+    has_neighbors = has_location(target);
     targetloc = where_is(target);
-    is_audible = Audible(target);
+    target_audible = is_audible(target);
 
-    if ((key & MSG_ME) && Puppet(target) && (target != Owner(target)) &&
-        ((key & MSG_PUP_ALWAYS) || ((targetloc != Location(Owner(target))) &&
-                                    (targetloc != Owner(target))))) {
+    if ((key & MSG_ME) && is_puppet(target) && (target != obj_owner(target)) &&
+        ((key & MSG_PUP_ALWAYS) ||
+         ((targetloc != obj_location(obj_owner(target))) &&
+          (targetloc != obj_owner(target))))) {
       tp = tbuff = alloc_lbuf("notify_checked.puppet");
       safe_str(Name(target), tbuff, &tp);
       safe_str((char *)"> ", tbuff, &tp);
       if (key & MSG_COLORIZE)
-        colbuf = colorize(Owner(target), msg_ns);
+        colbuf = colorize(obj_owner(target), msg_ns);
       safe_str(colbuf ? colbuf : msg_ns, tbuff, &tp);
       *tp = '\0';
-      raw_notify(Owner(target), tbuff);
+      raw_notify(obj_owner(target), tbuff);
       if (colbuf)
         free_lbuf(colbuf);
       free_lbuf(tbuff);
@@ -503,7 +504,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
     pass_listen = 0;
     nargs = 0;
-    if (check_listens && (key & (MSG_ME | MSG_INV_L)) && H_Listen(target)) {
+    if (check_listens && (key & (MSG_ME | MSG_INV_L)) && has_listen(target)) {
       tp = attribute_get(target, A_LISTEN, &aowner, &aflags);
       if (*tp && wild(tp, (char *)msg, args, 10)) {
         for (nargs = 10; nargs && (!args[nargs - 1] || !(*args[nargs - 1]));
@@ -521,7 +522,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
     if (sender < 0)
       sender = GOD;
     pass_uselock = 0;
-    if ((key & MSG_ME) && check_listens && (pass_listen || Monitor(target)))
+    if ((key & MSG_ME) && check_listens && (pass_listen || is_monitor(target)))
       pass_uselock = could_doit(sender, target, A_LUSE);
 
     /*
@@ -551,15 +552,15 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * \todo Eventually come up with a cleaner method for making sure
      * the sender isn't the same as the target.
      */
-    if ((key & MSG_ME) && (sender != target || Wizard(target)) &&
-        pass_uselock && Monitor(target)) {
+    if ((key & MSG_ME) && (sender != target || is_wizard(target)) &&
+        pass_uselock && is_monitor(target)) {
       (void)attribute_match(target, sender, AMATCH_LISTEN, (char *)msg, 0);
     }
     /*
      * Deliver message to forwardlist members
      */
 
-    if ((key & MSG_FWDLIST) && Audible(target) &&
+    if ((key & MSG_FWDLIST) && is_audible(target) &&
         check_filter(target, sender, A_FILTER, msg)) {
       tbuff = dflt_from_msg(sender, target);
       buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
@@ -569,7 +570,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       if (fp) {
         for (i = 0; i < fp->count; i++) {
           recip = fp->data[i];
-          if (!Good_obj(recip) || (recip == target))
+          if (!is_good_obj(recip) || (recip == target))
             continue;
           notify_checked(recip, sender, buff,
                          (MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE));
@@ -582,9 +583,9 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (key & MSG_INV_EXITS) {
-      DOLIST(obj, Exits(target)) {
-        recip = Location(obj);
-        if (Audible(obj) &&
+      DOLIST(obj, obj_exits(target)) {
+        recip = obj_location(obj);
+        if (is_audible(obj) &&
             ((recip != target) && check_filter(obj, sender, A_FILTER, msg))) {
           buff = add_prefix(obj, target, A_PREFIX, msg, "From a distance,");
           notify_checked(recip, sender, buff,
@@ -597,8 +598,8 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * Deliver message through neighboring audible exits
      */
 
-    if (has_neighbors &&
-        ((key & MSG_NBR_EXITS) || ((key & MSG_NBR_EXITS_A) && is_audible))) {
+    if (has_neighbors && ((key & MSG_NBR_EXITS) ||
+                          ((key & MSG_NBR_EXITS_A) && target_audible))) {
 
       /*
        * If from inside, we have to add the prefix string *
@@ -614,9 +615,9 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
         buff = (char *)msg;
       }
 
-      DOLIST(obj, Exits(Location(target))) {
-        recip = Location(obj);
-        if (Good_obj(recip) && Audible(obj) && (recip != targetloc) &&
+      DOLIST(obj, obj_exits(obj_location(target))) {
+        recip = obj_location(obj);
+        if (is_good_obj(recip) && is_audible(obj) && (recip != targetloc) &&
             (recip != target) && check_filter(obj, sender, A_FILTER, msg)) {
           tbuff = add_prefix(obj, target, A_PREFIX, buff, "From a distance,");
           notify_checked(recip, sender, tbuff,
@@ -645,7 +646,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         buff = (char *)msg;
       }
-      DOLIST(obj, Contents(target)) {
+      DOLIST(obj, obj_contents(target)) {
         if (obj != target) {
           notify_checked(obj, sender, buff,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
@@ -659,7 +660,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (has_neighbors &&
-        ((key & MSG_NBR) || ((key & MSG_NBR_A) && is_audible &&
+        ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible &&
                              check_filter(target, sender, A_FILTER, msg)))) {
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(sender, target);
@@ -668,7 +669,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         buff = (char *)msg;
       }
-      DOLIST(obj, Contents(targetloc)) {
+      DOLIST(obj, obj_contents(targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
           notify_checked(obj, sender, buff,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE |
@@ -684,7 +685,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (has_neighbors &&
-        ((key & MSG_LOC) || ((key & MSG_LOC_A) && is_audible &&
+        ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible &&
                              check_filter(target, sender, A_FILTER, msg)))) {
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(sender, target);
@@ -710,7 +711,7 @@ void notify_except(DbRef loc, DbRef player, DbRef exception, const char *msg) {
   if (loc != exception)
     notify_checked(loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
-  DOLIST(first, Contents(loc)) {
+  DOLIST(first, obj_contents(loc)) {
     if (first != exception)
       notify_checked(first, player, msg, (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
   }
@@ -723,7 +724,7 @@ void notify_except2(DbRef loc, DbRef player, DbRef exc1, DbRef exc2,
   if ((loc != exc1) && (loc != exc2))
     notify_checked(loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
-  DOLIST(first, Contents(loc)) {
+  DOLIST(first, obj_contents(loc)) {
     if (first != exc1 && first != exc2) {
       notify_checked(first, player, msg, (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
     }
@@ -733,7 +734,7 @@ void notify_except2(DbRef loc, DbRef player, DbRef exc1, DbRef exc2,
 void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
   ResetSpecialObjects();
   if (player != NOTHING) {
-    raw_broadcast(0, "Game: Shutdown by %s", Name(Owner(player)));
+    raw_broadcast(0, "Game: Shutdown by %s", Name(obj_owner(player)));
     STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text((char *)"Shutdown by ");
       log_name(player);
@@ -912,11 +913,11 @@ int list_check(DbRef thing, DbRef player, char type, char *str,
   match = 0;
   limit = mudstate.db_top;
   while (thing != NOTHING) {
-    if ((thing != player) && (!(No_Command(thing)))) {
+    if ((thing != player) && (!(is_no_command(thing)))) {
       if (attribute_match(thing, player, type, str, check_parent) > 0)
         match = 1;
     }
-    thing = Next(thing);
+    thing = obj_next(thing);
     if (--limit < 0)
       return match;
   }
@@ -933,10 +934,10 @@ int is_hearer(DbRef thing) {
   if (mudstate.inpipe && (thing == mudstate.poutobj))
     return 1;
 
-  if (Connected(thing) || Puppet(thing))
+  if (is_connected(thing) || is_puppet(thing))
     return 1;
 
-  if (Monitor(thing))
+  if (is_monitor(thing))
     buff = alloc_lbuf("Hearer");
   else
     buff = NULL;
@@ -947,7 +948,7 @@ int is_hearer(DbRef thing) {
         free_lbuf(buff);
       return 1;
     }
-    if (buff && Monitor(thing)) {
+    if (buff && is_monitor(thing)) {
       ap = attribute_by_number(attr);
       if (!ap || (ap->flags & AF_NOPROG))
         continue;

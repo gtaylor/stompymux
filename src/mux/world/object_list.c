@@ -5,7 +5,7 @@
 #include "mux/server/platform.h"
 
 DbRef insert_first(DbRef head, DbRef thing) {
-  s_Next(thing, head);
+  s_next(thing, head);
   return thing;
 }
 
@@ -16,11 +16,11 @@ DbRef remove_first(DbRef head, DbRef thing) {
   DbRef prev;
 
   if (head == thing)
-    return (Next(thing));
+    return (obj_next(thing));
 
   DOLIST(prev, head) {
-    if (Next(prev) == thing) {
-      s_Next(prev, Next(thing));
+    if (obj_next(prev) == thing) {
+      s_next(prev, obj_next(thing));
       return head;
     }
   }
@@ -35,8 +35,8 @@ DbRef reverse_list(DbRef list) {
 
   newlist = NOTHING;
   while (list != NOTHING) {
-    rest = Next(list);
-    s_Next(list, newlist);
+    rest = obj_next(list);
+    s_next(list, newlist);
     newlist = list;
     list = rest;
   }

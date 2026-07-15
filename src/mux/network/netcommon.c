@@ -136,7 +136,7 @@ void raw_notify_raw(DbRef player, const char *msg, char *append) {
     return;
   }
 
-  if (!Connected(player))
+  if (!is_connected(player))
     return;
 
   DESC_ITER_PLAYER(player, d) {
@@ -175,7 +175,7 @@ void raw_notify_newline(DbRef player) {
     safe_str("\r\n", mudstate.poutnew, &mudstate.poutbufc);
     return;
   }
-  if (!Connected(player))
+  if (!is_connected(player))
     return;
 
   DESC_ITER_PLAYER(player, d) { descriptor_queue_write(d, "\r\n", 2); }
@@ -199,7 +199,7 @@ void raw_broadcast(int inflags, char *template, ...) {
   buff[LBUF_SIZE - 1] = '\0';
 
   DESC_ITER_CONN(d) {
-    if ((Flags(d->player) & inflags) == inflags) {
+    if ((obj_flags(d->player) & inflags) == inflags) {
       descriptor_queue_write(d, buff, strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
     }
@@ -229,7 +229,7 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
   strncpy(new, s, LBUF_SIZE - 1);
   new[LBUF_SIZE - 1] = '\0';
 
-  if (!Ansi(d->player) && index(s, ESC_CHAR))
+  if (!is_ansi(d->player) && index(s, ESC_CHAR))
     strip_ansi_r(new, s, strlen(s));
   descriptor_queue_write(d, new, strlen(new));
 }
@@ -392,10 +392,10 @@ static void announce_connect(DbRef player, Descriptor *d) {
   }
   free_lbuf(buf);
 
-  loc = Location(player);
-  s_Connected(player);
+  loc = obj_location(player);
+  s_connected(player);
 
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     if (!(mudconf.control_flags & CF_LOGIN)) {
       raw_notify(player, "*** Logins are disabled.");
     }
@@ -415,7 +415,7 @@ static void announce_connect(DbRef player, Descriptor *d) {
     if (mudconf.have_comsys)
       do_comconnect(player, d);
 
-    if (Dark(player)) {
+    if (is_dark(player)) {
       raw_broadcast(MONITOR, (char *)"GAME: %s has DARK-connected.",
                     Name(player), 0, 0, 0, 0, 0);
     } else {
@@ -429,14 +429,14 @@ static void announce_connect(DbRef player, Descriptor *d) {
   }
 
   key = MSG_INV;
-  if ((loc != NOTHING) && !(Dark(player) && Wizard(player)))
+  if ((loc != NOTHING) && !(is_dark(player) && is_wizard(player)))
     key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
 
   temp = mudstate.curr_enactor;
   mudstate.curr_enactor = player;
   notify_checked(player, player, buf, key);
   free_lbuf(buf);
-  if (Suspect(player)) {
+  if (is_suspect(player)) {
     send_channel("Suspect", "%s has connected.", Name(player));
   }
   if (d->host_info & H_SUSPECT)
@@ -453,7 +453,7 @@ static void announce_connect(DbRef player, Descriptor *d) {
       wait_que(mudconf.master_room, player, 0, NOTHING, 0, buf, (char **)NULL,
                0, NULL);
     free_lbuf(buf);
-    DOLIST(obj, Contents(mudconf.master_room)) {
+    DOLIST(obj, obj_contents(mudconf.master_room)) {
       buf = attribute_parent_get(obj, A_ACONNECT, &aowner, &aflags);
       if (buf) {
         wait_que(obj, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
@@ -464,8 +464,8 @@ static void announce_connect(DbRef player, Descriptor *d) {
   /*
    * do the zone of the player's location's possible aconnect
    */
-  if (mudconf.have_zones && ((zone = Zone(loc)) != NOTHING)) {
-    switch (Typeof(zone)) {
+  if (mudconf.have_zones && ((zone = obj_zone(loc)) != NOTHING)) {
+    switch (typeof_obj(zone)) {
     case TYPE_THING:
       buf = attribute_parent_get(zone, A_ACONNECT, &aowner, &aflags);
       if (buf) {
@@ -478,7 +478,7 @@ static void announce_connect(DbRef player, Descriptor *d) {
        * check every object in the room for a connect * * *
        * action
        */
-      DOLIST(obj, Contents(zone)) {
+      DOLIST(obj, obj_contents(zone)) {
         buf = attribute_parent_get(obj, A_ACONNECT, &aowner, &aflags);
         if (buf) {
           wait_que(obj, player, 0, NOTHING, 0, buf, (char **)NULL, 0, NULL);
@@ -488,13 +488,13 @@ static void announce_connect(DbRef player, Descriptor *d) {
       break;
     default:
       log_text(tprintf("Invalid zone #%d for %s(#%d) has bad type %d", zone,
-                       Name(player), player, Typeof(zone)));
+                       Name(player), player, typeof_obj(zone)));
     }
   }
   time_str = ctime(&mudstate.now);
   time_str[strlen(time_str) - 1] = '\0';
   record_login(player, 1, time_str, d->addr, d->username);
-  look_in(player, Location(player), LK_SHOWEXIT);
+  look_in(player, obj_location(player), LK_SHOWEXIT);
   mudstate.curr_enactor = temp;
 }
 
@@ -507,14 +507,14 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   Descriptor *dtemp;
   char *argv[1];
 
-  if (Suspect(player)) {
+  if (is_suspect(player)) {
     send_channel("Suspect", "%s has disconnected.", Name(player));
   }
   if (d->host_info & H_SUSPECT) {
     send_channel("Suspect", "[Suspect site: %s] %s has disconnected.", d->addr,
                  Name(d->player));
   }
-  loc = Location(player);
+  loc = obj_location(player);
   num = 0;
   DESC_ITER_PLAYER(player, dtemp) num++;
 
@@ -526,7 +526,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 
     snprintf(buf, MBUF_SIZE, "%s has disconnected.", Name(player));
     key = MSG_INV;
-    if ((loc != NOTHING) && !(Dark(player) && Wizard(player)))
+    if ((loc != NOTHING) && !(is_dark(player) && is_wizard(player)))
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(player, player, buf, key);
     free_mbuf(buf);
@@ -538,7 +538,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                   0, 0, 0, 0, 0);
 
     argv[0] = (char *)reason;
-    c_Connected(player);
+    c_connected(player);
 
     atr_temp = attribute_parent_get(player, A_ADISCONNECT, &aowner, &aflags);
     if (atr_temp && *atr_temp)
@@ -551,7 +551,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
         wait_que(mudconf.master_room, player, 0, NOTHING, 0, atr_temp,
                  (char **)NULL, 0, NULL);
       free_lbuf(atr_temp);
-      DOLIST(obj, Contents(mudconf.master_room)) {
+      DOLIST(obj, obj_contents(mudconf.master_room)) {
         atr_temp = attribute_parent_get(obj, A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
           wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)NULL, 0,
@@ -564,8 +564,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
      * do the zone of the player's location's possible * * *
      * adisconnect
      */
-    if (mudconf.have_zones && ((zone = Zone(loc)) != NOTHING)) {
-      switch (Typeof(zone)) {
+    if (mudconf.have_zones && ((zone = obj_zone(loc)) != NOTHING)) {
+      switch (typeof_obj(zone)) {
       case TYPE_THING:
         atr_temp = attribute_parent_get(zone, A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
@@ -579,7 +579,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
          * check every object in the room for a * * *
          * connect action
          */
-        DOLIST(obj, Contents(zone)) {
+        DOLIST(obj, obj_contents(zone)) {
           atr_temp = attribute_parent_get(obj, A_ADISCONNECT, &aowner, &aflags);
           if (atr_temp) {
             wait_que(obj, player, 0, NOTHING, 0, atr_temp, (char **)NULL, 0,
@@ -590,11 +590,11 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
         break;
       default:
         log_text(tprintf("Invalid zone #%d for %s(#%d) has bad type %d", zone,
-                         Name(player), player, Typeof(zone)));
+                         Name(player), player, typeof_obj(zone)));
       }
     }
     if (d->flags & DS_AUTODARK) {
-      s_Flags(d->player, Flags(d->player) & ~DARK);
+      s_flags(d->player, obj_flags(d->player) & ~DARK);
       d->flags &= ~DS_AUTODARK;
     }
 
@@ -602,7 +602,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     buf = alloc_mbuf("descriptor_announce_disconnect.partial");
     snprintf(buf, MBUF_SIZE, "%s has partially disconnected.", Name(player));
     key = MSG_INV;
-    if ((loc != NOTHING) && !(Dark(player) && Wizard(player)))
+    if ((loc != NOTHING) && !(is_dark(player) && is_wizard(player)))
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(player, player, buf, key);
     raw_broadcast(MONITOR, (char *)"GAME: %s has partially disconnected.",
@@ -635,7 +635,7 @@ int boot_by_port(int port, int no_god, char *message) {
 
   count = 0;
   DESC_SAFEITER_ALL(d, dnext) {
-    if ((d->descriptor == port) && (!no_god || !God(d->player))) {
+    if ((d->descriptor == port) && (!no_god || !is_god(d->player))) {
       if (message && *message) {
         descriptor_queue_string(d, message);
         descriptor_queue_string(d, "\r\n");
@@ -733,7 +733,7 @@ static void dump_users(Descriptor *e, char *match, int key) {
   if (key == CMD_SESSION) {
     descriptor_queue_string(
         e, "Port Pend  Lost     Total  Pend  Lost     Total\r\n");
-  } else if ((e->flags & DS_CONNECTED) && Wizard(e->player) &&
+  } else if ((e->flags & DS_CONNECTED) && is_wizard(e->player) &&
              (key == CMD_WHO)) {
     descriptor_queue_string(e, "     Room    Cmds Host\r\n");
   } else
@@ -743,21 +743,21 @@ static void dump_users(Descriptor *e, char *match, int key) {
   rcount = 0;
   ucount = 0;
   DESC_ITER_CONN(d) {
-    if ((!mudconf.show_unfindable_who || !Hidden(d->player)) ||
-        (e->flags & DS_CONNECTED) & Wizard(e->player)) {
+    if ((!mudconf.show_unfindable_who || !is_hidden(d->player)) ||
+        (e->flags & DS_CONNECTED) & is_wizard(e->player)) {
       count++;
       if (match && !(string_prefix(Name(d->player), match)))
         continue;
 #if 0
-			if((!((Wizard(e->player)) && (e->flags & DS_CONNECTED)) &&
+			if((!((is_wizard(e->player)) && (e->flags & DS_CONNECTED)) &&
 				(d->player != e->player)))
-				if(In_Character(Location(d->player)) &&
-				   In_Character(Location(Location(d->player))))
+				if(is_in_character(obj_location(d->player)) &&
+				   is_in_character(obj_location(obj_location(d->player))))
 					continue;
 #endif
       rcount++;
       if ((key == CMD_SESSION) &&
-          !(Wizard(e->player) && (e->flags & DS_CONNECTED)) &&
+          !(is_wizard(e->player) && (e->flags & DS_CONNECTED)) &&
           (d->player != e->player))
         continue;
 
@@ -767,26 +767,26 @@ static void dump_users(Descriptor *e, char *match, int key) {
 
       fp = flist;
       sp = slist;
-      if ((e->flags & DS_CONNECTED) && Wizard(e->player)) {
-        if (Hidden(d->player)) {
+      if ((e->flags & DS_CONNECTED) && is_wizard(e->player)) {
+        if (is_hidden(d->player)) {
           if (d->flags & DS_AUTODARK)
             *fp++ = 'd';
-          else if (Dark(d->player))
+          else if (is_dark(d->player))
             *fp++ = 'D';
         }
-        if (!Findable(d->player)) {
+        if (!is_findable(d->player)) {
           *fp++ = 'U';
         } else {
           room_it = where_room(d->player);
-          if (Good_obj(room_it)) {
-            if (Hideout(room_it))
+          if (is_good_obj(room_it)) {
+            if (is_hideout(room_it))
               *fp++ = 'u';
           } else {
             *fp++ = 'u';
           }
         }
 
-        if (Suspect(d->player))
+        if (is_suspect(d->player))
           *fp++ = '+';
         if (d->host_info & H_FORBIDDEN)
           *sp++ = 'F';
@@ -798,12 +798,13 @@ static void dump_users(Descriptor *e, char *match, int key) {
       *fp = '\0';
       *sp = '\0';
 
-      if ((e->flags & DS_CONNECTED) && Wizard(e->player) && (key == CMD_WHO)) {
+      if ((e->flags & DS_CONNECTED) && is_wizard(e->player) &&
+          (key == CMD_WHO)) {
         snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
                  trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
                  time_format_2(mudstate.now - d->last_time), flist,
-                 Location(d->player), d->command_count,
+                 obj_location(d->player), d->command_count,
                  (d->username[0] != '\0')
                      ? tprintf("%s@%s", d->username, d->addr)
                      : d->addr);
@@ -816,7 +817,7 @@ static void dump_users(Descriptor *e, char *match, int key) {
                                    : 0),
                  d->descriptor, d->input_size, d->input_lost, d->input_tot,
                  d->output_size, d->output_lost, d->output_tot);
-      } else if (Wizard(e->player)) {
+      } else if (is_wizard(e->player)) {
         snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s\r\n",
                  trimmed_name(d->player),
                  time_format_1(mudstate.now - d->connected_at),
@@ -923,7 +924,7 @@ static const char *connect_fail =
 static const char *create_fail = "Either there is already a player with that "
                                  "name, or that name is illegal.\r\n";
 
-#define LOGIN_THROTTLE_ENTRIES 1024
+constexpr int LOGIN_THROTTLE_ENTRIES = 1024;
 
 typedef struct LoginThrottleEntry LoginThrottleEntry;
 struct LoginThrottleEntry {
@@ -1065,10 +1066,10 @@ static int check_connect(Descriptor *d, char *msg) {
       }
     } else if (((mudconf.control_flags & CF_LOGIN) &&
                 (nplayers < mudconf.max_players)) ||
-               Wizard(player) || God(player)) {
+               is_wizard(player) || is_god(player)) {
 
-      if (!strncmp(command, "cd", 2) && (Wizard(player) || God(player)))
-        s_Flags(player, Flags(player) | DARK);
+      if (!strncmp(command, "cd", 2) && (is_wizard(player) || is_god(player)))
+        s_flags(player, obj_flags(player) | DARK);
 
       /* Logins are enabled, or the player is a wizard or God. */
 
@@ -1497,7 +1498,7 @@ void make_ulist(DbRef player, char *buff, char **bufc) {
 
   cp = *bufc;
   DESC_ITER_CONN(d) {
-    if (!Wizard(player) && Hidden(d->player))
+    if (!is_wizard(player) && is_hidden(d->player))
       continue;
     if (cp != *bufc)
       safe_chr(' ', buff, bufc);
@@ -1519,7 +1520,7 @@ DbRef find_connected_name(DbRef player, char *name) {
 
   found = NOTHING;
   DESC_ITER_CONN(d) {
-    if (Good_obj(player) && !Wizard(player) && Hidden(d->player))
+    if (is_good_obj(player) && !is_wizard(player) && is_hidden(d->player))
       continue;
     if (!string_prefix(Name(d->player), name))
       continue;
@@ -1531,7 +1532,7 @@ DbRef find_connected_name(DbRef player, char *name) {
 }
 
 void descriptor_run_command(Descriptor *d, char *command) {
-  if (!Wizard(d->player)) {
+  if (!is_wizard(d->player)) {
     if (d->quota <= 0) {
       descriptor_queue_string(d, "quota exceed, dropping command.\n");
       dprintk("aborting execution of %s for #%ld.", command, d->player);

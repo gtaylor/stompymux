@@ -24,10 +24,10 @@ int could_doit(DbRef player, DbRef thing, int locknum) {
    * no if nonplayer trys to get key
    */
 
-  if (!isPlayer(player) && Key(thing)) {
+  if (!is_player(player) && has_key_flag(thing)) {
     return 0;
   }
-  if (Pass_Locks(player))
+  if (is_pass_locks(player))
     return 1;
 
   key = attribute_get(thing, locknum, &aowner, &aflags);
@@ -44,15 +44,15 @@ int can_see(DbRef player, DbRef thing, int can_see_loc) {
    * player * is  *  * * not a puppet.
    */
 
-  if (mudconf.dark_sleepers && isPlayer(thing) && !Connected(thing) &&
-      !Puppet(thing)) {
+  if (mudconf.dark_sleepers && is_player(thing) && !is_connected(thing) &&
+      !is_puppet(thing)) {
     return 0;
   }
   /*
    * You don't see yourself or exits
    */
 
-  if ((player == thing) || isExit(thing)) {
+  if ((player == thing) || is_exit(thing)) {
     return 0;
   }
   /*
@@ -64,11 +64,11 @@ int can_see(DbRef player, DbRef thing, int can_see_loc) {
    */
 
   if (can_see_loc) {
-    return (!Dark(thing) ||
-            (mudconf.see_own_dark && MyopicExam(player, thing)));
+    return (!is_dark(thing) ||
+            (mudconf.see_own_dark && is_myopic_exam(player, thing)));
   } else {
-    return ((Light(thing) && !Dark(thing)) ||
-            (mudconf.see_own_dark && MyopicExam(player, thing)));
+    return ((is_light(thing) && !is_dark(thing)) ||
+            (mudconf.see_own_dark && is_myopic_exam(player, thing)));
   }
 }
 void handle_ears(DbRef thing, int could_hear, int can_hear) {
@@ -77,7 +77,7 @@ void handle_ears(DbRef thing, int could_hear, int can_hear) {
   if (!could_hear && can_hear) {
     buff = alloc_lbuf("handle_ears.grow");
     StringCopy(buff, Name(thing));
-    if (isExit(thing)) {
+    if (is_exit(thing)) {
       for (bp = buff; *bp && (*bp != ';'); bp++)
         ;
       *bp = '\0';
@@ -89,7 +89,7 @@ void handle_ears(DbRef thing, int could_hear, int can_hear) {
   } else if (could_hear && !can_hear) {
     buff = alloc_lbuf("handle_ears.lose");
     StringCopy(buff, Name(thing));
-    if (isExit(thing)) {
+    if (is_exit(thing)) {
       for (bp = buff; *bp && (*bp != ';'); bp++)
         ;
       *bp = '\0';

@@ -25,96 +25,96 @@ typedef struct ufun {
   struct ufun *next; /* Next ufun in chain */
 } UFUN;
 
-#define FN_VARARGS 1 /* Function allows a variable # of args */
-#define FN_NO_EVAL 2 /* Don't evaluate args to function */
-#define FN_PRIV 4    /* Perform user-def function as holding obj */
-#define FN_PRES 8    /* Preseve r-regs before user-def functions */
+constexpr int FN_VARARGS = 1; /* Function allows a variable # of args */
+constexpr int FN_NO_EVAL = 2; /* Don't evaluate args to function */
+constexpr int FN_PRIV = 4;    /* Perform user-def function as holding obj */
+constexpr int FN_PRES = 8;    /* Preseve r-regs before user-def functions */
 
-#define FUN_PROTO(name)                                                        \
-  void name(char *, char **, DbRef, DbRef, char **, int, char **, int)
-FUN_PROTO(fun_alphamax);
-FUN_PROTO(fun_alphamin);
-FUN_PROTO(fun_andflags);
-FUN_PROTO(fun_ansi);
-FUN_PROTO(fun_art);
-FUN_PROTO(fun_beep);
-FUN_PROTO(fun_children);
-FUN_PROTO(fun_clist);
-FUN_PROTO(fun_cobj);
-FUN_PROTO(fun_columns);
-FUN_PROTO(fun_config);
-FUN_PROTO(fun_create);
-FUN_PROTO(fun_cwho);
-FUN_PROTO(fun_dec);
-FUN_PROTO(fun_decrypt);
-FUN_PROTO(fun_default);
-FUN_PROTO(fun_die);
-FUN_PROTO(fun_edefault);
-FUN_PROTO(fun_elements);
-FUN_PROTO(fun_empty);
-FUN_PROTO(fun_encrypt);
-FUN_PROTO(fun_findable);
-FUN_PROTO(fun_foreach);
-FUN_PROTO(fun_grab);
-FUN_PROTO(fun_graball);
-FUN_PROTO(fun_grep);
-FUN_PROTO(fun_grepi);
-FUN_PROTO(fun_hasattr);
-FUN_PROTO(fun_hasattrp);
-FUN_PROTO(fun_hastype);
-FUN_PROTO(fun_ifelse);
-FUN_PROTO(fun_inc);
-FUN_PROTO(fun_inzone);
-FUN_PROTO(fun_isword);
-FUN_PROTO(fun_items);
-FUN_PROTO(fun_last);
-FUN_PROTO(fun_link);
-FUN_PROTO(fun_lit);
-FUN_PROTO(fun_lparent);
-FUN_PROTO(fun_lstack);
-FUN_PROTO(fun_matchall);
-FUN_PROTO(fun_mix);
-FUN_PROTO(fun_munge);
-FUN_PROTO(fun_objeval);
-FUN_PROTO(fun_objmem);
-FUN_PROTO(fun_orflags);
-FUN_PROTO(fun_peek);
-FUN_PROTO(fun_pemit);
-FUN_PROTO(fun_playmem);
-FUN_PROTO(fun_pop);
-FUN_PROTO(fun_ports);
-FUN_PROTO(fun_push);
-FUN_PROTO(fun_regmatch);
-FUN_PROTO(fun_scramble);
-FUN_PROTO(fun_set);
-FUN_PROTO(fun_setlock);
-FUN_PROTO(fun_shl);
-FUN_PROTO(fun_shr);
-FUN_PROTO(fun_shuffle);
-FUN_PROTO(fun_sortby);
-FUN_PROTO(fun_squish);
-FUN_PROTO(fun_strcat);
-FUN_PROTO(fun_stripansi);
-FUN_PROTO(fun_strtrunc);
-FUN_PROTO(fun_tel);
-FUN_PROTO(fun_translate);
-FUN_PROTO(fun_udefault);
-FUN_PROTO(fun_vadd);
-FUN_PROTO(fun_valid);
-FUN_PROTO(fun_vdim);
-FUN_PROTO(fun_visible);
-FUN_PROTO(fun_vmag);
-FUN_PROTO(fun_vmul);
-FUN_PROTO(fun_vsub);
-FUN_PROTO(fun_vunit);
-FUN_PROTO(fun_zexits);
-FUN_PROTO(fun_zfun);
-FUN_PROTO(fun_zobjects);
-FUN_PROTO(fun_zone);
-FUN_PROTO(fun_zplayers);
-FUN_PROTO(fun_zrooms);
-FUN_PROTO(fun_zwho);
-#undef FUN_PROTO
+typedef void FunProto(char *, char **, DbRef, DbRef, char **, int, char **,
+                      int);
+
+FunProto fun_alphamax;
+FunProto fun_alphamin;
+FunProto fun_andflags;
+FunProto fun_ansi;
+FunProto fun_art;
+FunProto fun_beep;
+FunProto fun_children;
+FunProto fun_clist;
+FunProto fun_cobj;
+FunProto fun_columns;
+FunProto fun_config;
+FunProto fun_create;
+FunProto fun_cwho;
+FunProto fun_dec;
+FunProto fun_decrypt;
+FunProto fun_default;
+FunProto fun_die;
+FunProto fun_edefault;
+FunProto fun_elements;
+FunProto fun_empty;
+FunProto fun_encrypt;
+FunProto fun_findable;
+FunProto fun_foreach;
+FunProto fun_grab;
+FunProto fun_graball;
+FunProto fun_grep;
+FunProto fun_grepi;
+FunProto fun_hasattr;
+FunProto fun_hasattrp;
+FunProto fun_hastype;
+FunProto fun_ifelse;
+FunProto fun_inc;
+FunProto fun_inzone;
+FunProto fun_isword;
+FunProto fun_items;
+FunProto fun_last;
+FunProto fun_link;
+FunProto fun_lit;
+FunProto fun_lparent;
+FunProto fun_lstack;
+FunProto fun_matchall;
+FunProto fun_mix;
+FunProto fun_munge;
+FunProto fun_objeval;
+FunProto fun_objmem;
+FunProto fun_orflags;
+FunProto fun_peek;
+FunProto fun_pemit;
+FunProto fun_playmem;
+FunProto fun_pop;
+FunProto fun_ports;
+FunProto fun_push;
+FunProto fun_regmatch;
+FunProto fun_scramble;
+FunProto fun_set;
+FunProto fun_setlock;
+FunProto fun_shl;
+FunProto fun_shr;
+FunProto fun_shuffle;
+FunProto fun_sortby;
+FunProto fun_squish;
+FunProto fun_strcat;
+FunProto fun_stripansi;
+FunProto fun_strtrunc;
+FunProto fun_tel;
+FunProto fun_translate;
+FunProto fun_udefault;
+FunProto fun_vadd;
+FunProto fun_valid;
+FunProto fun_vdim;
+FunProto fun_visible;
+FunProto fun_vmag;
+FunProto fun_vmul;
+FunProto fun_vsub;
+FunProto fun_vunit;
+FunProto fun_zexits;
+FunProto fun_zfun;
+FunProto fun_zobjects;
+FunProto fun_zone;
+FunProto fun_zplayers;
+FunProto fun_zrooms;
+FunProto fun_zwho;
 
 extern void init_functab(void);
 char *trim_space_sep(char *str, char sep);

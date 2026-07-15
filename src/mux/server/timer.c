@@ -65,12 +65,12 @@ void check_idle(void) {
   DESC_SAFEITER_ALL(d, dnext) {
     if (d->flags & DS_CONNECTED) {
       idletime = mudstate.now - d->last_time;
-      if ((idletime > d->timeout) && !Can_Idle(d->player)) {
+      if ((idletime > d->timeout) && !can_idle(d->player)) {
         descriptor_queue_string(d, "*** Inactivity Timeout ***\r\n");
         descriptor_shutdown(d, R_TIMEOUT);
       } else if (mudconf.idle_wiz_dark && (idletime > mudconf.idle_timeout) &&
-                 Can_Idle(d->player) && !Dark(d->player)) {
-        s_Flags(d->player, Flags(d->player) | DARK);
+                 can_idle(d->player) && !is_dark(d->player)) {
+        s_flags(d->player, obj_flags(d->player) | DARK);
         d->flags |= DS_AUTODARK;
       }
     } else {
@@ -93,13 +93,13 @@ static void check_events(void) {
       !(mudstate.events_flag & ET_DAILY)) {
     mudstate.events_flag = mudstate.events_flag | ET_DAILY;
     DO_WHOLE_DB(thing) {
-      if (Going(thing))
+      if (is_going(thing))
         continue;
 
       ITER_PARENTS(thing, parent, lev) {
-        if (Flags2(thing) & HAS_DAILY) {
-          did_it(Owner(thing), thing, 0, NULL, 0, NULL, A_DAILY, (char **)NULL,
-                 0);
+        if (obj_flags2(thing) & HAS_DAILY) {
+          did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_DAILY,
+                 (char **)NULL, 0);
 
           break;
         }
@@ -110,12 +110,12 @@ static void check_events(void) {
     if (mudstate.events_lasthour >= 0) {
       /* Run hourly maintenance */
       DO_WHOLE_DB(thing) {
-        if (Going(thing))
+        if (is_going(thing))
           continue;
 
         ITER_PARENTS(thing, parent, lev) {
-          if (Flags2(thing) & HAS_HOURLY) {
-            did_it(Owner(thing), thing, 0, NULL, 0, NULL, A_HOURLY,
+          if (obj_flags2(thing) & HAS_HOURLY) {
+            did_it(obj_owner(thing), thing, 0, NULL, 0, NULL, A_HOURLY,
                    (char **)NULL, 0);
 
             break;

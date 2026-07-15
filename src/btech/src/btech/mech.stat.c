@@ -66,7 +66,7 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
 
   /*	i = 0;
 
-          if(Wizard(player)) {
+          if(is_wizard(player)) {
           for(i = 0; i < 11; i++) {
                   if(i == 0) {
                           notify(player, "\nWeapon Fire Stats\nBTH   #Misses

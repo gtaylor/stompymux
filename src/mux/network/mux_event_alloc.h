@@ -32,9 +32,3 @@
   } else {                                                                     \
     Create(a, b, c);                                                           \
   }
-
-#define Free(a)                                                                \
-  if (a) {                                                                     \
-    free(a);                                                                   \
-    a = 0;                                                                     \
-  }

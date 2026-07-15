@@ -29,21 +29,17 @@ extern void logcache_init(void);
 void logcache_list(DbRef player);
 #endif
 
-#define CACHING "object"
+constexpr char CACHING[] = "object";
 
 /*
  * ---------------------------------------------------------------------------
  * * Switch tables for the various commands.
  */
 
-#define SW_MULTIPLE                                                            \
-  0x80000000 /*                                                                \
-              * This sw may be spec'd w/others                                 \
-              */
-#define SW_GOT_UNIQUE                                                          \
-  0x40000000 /*                                                                \
-              * Already have a unique option                                   \
-              */
+// This sw may be spec'd w/others
+constexpr unsigned int SW_MULTIPLE = 0x80000000;
+// Already have a unique option
+constexpr unsigned int SW_GOT_UNIQUE = 0x40000000;
 /*
  * (typically via a switch alias)
  */
@@ -532,20 +528,20 @@ void set_prefix_cmds() {
  * the ooc_comsys directive.
  */
 int is_in_character_location(DbRef player) {
-  DbRef d = Location(player);
+  DbRef d = obj_location(player);
   int z = 0;
 
-  while (isPlayer(d)) {
+  while (is_player(d)) {
     int od = d;
 
-    if ((d = Location(d)) == od)
+    if ((d = obj_location(d)) == od)
       break;
     if (z++ >= 100)
       break;
   }
-  if (mudconf.btech_ooc_comsys && !Gagged(player))
+  if (mudconf.btech_ooc_comsys && !is_gagged(player))
     return 0;
-  else if (In_Character(d) || Gagged(player))
+  else if (is_in_character(d) || is_gagged(player))
     return 1;
   return 0;
 } /* end In_IC_Loc() */
@@ -560,26 +556,26 @@ int check_access(DbRef player, int mask) {
 
   if (mask & CA_DISABLED)
     return 0;
-  if (God(player) || mudstate.initializing)
+  if (is_god(player) || mudstate.initializing)
     return 1;
 
   succ = fail = 0;
   if (mask & CA_GOD)
     fail++;
   if (mask & CA_WIZARD) {
-    if (Wizard(player))
+    if (is_wizard(player))
       succ++;
     else
       fail++;
   }
   if ((succ == 0) && (mask & CA_ADMIN)) {
-    if (Wizard(player))
+    if (is_wizard(player))
       succ++;
     else
       fail++;
   }
   if ((succ == 0) && (mask & CA_ROBOT)) {
-    if (Robot(player))
+    if (is_robot_player(player))
       succ++;
     else
       fail++;
@@ -593,14 +589,17 @@ int check_access(DbRef player, int mask) {
    * Check for forbidden flags.
    */
 
-  if (!Wizard(player) && (((mask & CA_NO_ROBOT) && Robot(player)) ||
-                          ((mask & CA_NO_SUSPECT) && Suspect(player)) ||
-                          (!mudconf.btech_ooc_comsys && (mask & CA_NO_IC) &&
-                           is_in_character_location(player)) ||
-                          ((mask & CA_NO_IC) && Gagged(player))))
+  if (!is_wizard(player) &&
+      (((mask & CA_NO_ROBOT) && is_robot_player(player)) ||
+       ((mask & CA_NO_SUSPECT) && is_suspect(player)) ||
+       (!mudconf.btech_ooc_comsys && (mask & CA_NO_IC) &&
+        is_in_character_location(player)) ||
+       ((mask & CA_NO_IC) && is_gagged(player))))
     return 0;
   return 1;
 }
+
+static inline bool is_protected(CMDENT *cmdp, int x) { return cmdp->perms & x; }
 
 /*
  * ---------------------------------------------------------------------------
@@ -622,18 +621,16 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
   memset(args, 0, sizeof(char *) * MAX_ARG);
   memset(aargs, 0, sizeof(char *) * 10);
 
-#define Protect(x) (cmdp->perms & x)
-
   /*
    * Perform object type checks.
    */
 
   fail = 0;
-  if (Protect(CA_LOCATION) && !Has_location(player))
+  if (is_protected(cmdp, CA_LOCATION) && !has_location(player))
     fail++;
-  if (Protect(CA_CONTENTS) && !Has_contents(player))
+  if (is_protected(cmdp, CA_CONTENTS) && !has_contents(player))
     fail++;
-  if (Protect(CA_PLAYER) && (Typeof(player) != TYPE_PLAYER))
+  if (is_protected(cmdp, CA_PLAYER) && (typeof_obj(player) != TYPE_PLAYER))
     fail++;
   if (fail > 0) {
     notify(player, "Command incompatible with invoker type.");
@@ -643,12 +640,13 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
    * Check global flags
    */
 
-  if ((!Wizard(player)) && Protect(CA_GBL_BUILD) &&
+  if ((!is_wizard(player)) && is_protected(cmdp, CA_GBL_BUILD) &&
       !(mudconf.control_flags & CF_BUILD)) {
     notify(player, "Sorry, building is not allowed now.");
     return;
   }
-  if (Protect(CA_GBL_INTERP) && !(mudconf.control_flags & CF_INTERP)) {
+  if (is_protected(cmdp, CA_GBL_INTERP) &&
+      !(mudconf.control_flags & CF_INTERP)) {
     notify(player, "Sorry, queueing and triggering are not allowed now.");
     return;
   }
@@ -963,7 +961,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
     abort();
   }
 
-  if (!Good_obj(player)) {
+  if (!is_good_obj(player)) {
     log_error(LOG_BUGS, "CMD", "PLYR", "Bad player in process_command: %d",
               player);
     mudstate.debug_cmd = cmdsave;
@@ -974,15 +972,16 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Make sure player isn't going or halted
    */
 
-  if (Going(player) ||
-      (Halted(player) && !((Typeof(player) == TYPE_PLAYER) && interactive))) {
-    notify_printf(Owner(player),
+  if (is_going(player) ||
+      (is_halted(player) &&
+       !((typeof_obj(player) == TYPE_PLAYER) && interactive))) {
+    notify_printf(obj_owner(player),
                   "Attempt to execute command by halted object #%d", player);
     mudstate.debug_cmd = cmdsave;
     goto exit;
   }
 
-  if (Suspect(player)) {
+  if (is_suspect(player)) {
     STARTLOG(LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD", "SUS") {
       log_name_and_loc(player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
@@ -992,7 +991,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
       ENDLOG;
     }
     send_channel("SuspectsLog", "%s (#%d) (in #%d) entered: %s", Name(player),
-                 player, Location(player), command);
+                 player, obj_location(player), command);
   } else {
     STARTLOG(LOG_ALLCOMMANDS, "CMD", "ALL") {
       log_name_and_loc(player);
@@ -1012,8 +1011,8 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
   mudstate.ntfy_nest_lev = 0;
   mudstate.lock_nest_lev = 0;
 
-  if (Verbose(player))
-    notify_printf(Owner(player), "%s] %s", Name(player), command);
+  if (is_verbose(player))
+    notify_printf(obj_owner(player), "%s] %s", Name(player), command);
 
   /*
    * Eat leading whitespace, and space-compress if configured
@@ -1069,14 +1068,15 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
 
   /* Handle mecha stuff.. */
   if (mudconf.have_specials)
-    if (HandledCommand(player, Location(player), command))
+    if (HandledCommand(player, obj_location(player), command))
       goto exit;
   /*
    * Check for the HOME command
    */
 
   if (string_compare(command, "home") == 0) {
-    if (((Fixed(player)) || (Fixed(Owner(player)))) && !(Wizard(player))) {
+    if (((is_fixed(player)) || (is_fixed(obj_owner(player)))) &&
+        !(is_wizard(player))) {
       notify(player, mudconf.fixed_home_msg);
       goto exit;
     }
@@ -1185,10 +1185,10 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Idea for enter/leave aliases from R'nice@TinyTIM
    */
 
-  if (Has_location(player) && Good_obj(Location(player))) {
+  if (has_location(player) && is_good_obj(obj_location(player))) {
 
     /* Check for a leave alias */
-    p = attribute_parent_get(Location(player), A_LALIAS, &aowner, &aflags);
+    p = attribute_parent_get(obj_location(player), A_LALIAS, &aowner, &aflags);
     if (p && *p) {
       if (matches_exit_from_list(lcbuf, p)) {
         free_lbuf(lcbuf);
@@ -1203,7 +1203,7 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
      * Check for enter aliases
      */
 
-    DOLIST(exit, Contents(Location(player))) {
+    DOLIST(exit, obj_contents(obj_location(player))) {
       p = attribute_parent_get(exit, A_EALIAS, &aowner, &aflags);
       if (p && *p) {
         if (matches_exit_from_list(lcbuf, p)) {
@@ -1221,39 +1221,43 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * unmatched command; local and zone legacy matching remains available when
    * no Lua handler accepts it.
    */
-  if (mudconf.match_mine && !No_Command(player) &&
-      ((Typeof(player) != TYPE_PLAYER) || mudconf.match_mine_pl))
+  if (mudconf.match_mine && !is_no_command(player) &&
+      ((typeof_obj(player) != TYPE_PLAYER) || mudconf.match_mine_pl))
     lua_succ += lua_command_match(player, player, cause, command);
-  if (Has_location(player)) {
-    lua_succ += lua_list_command_match(Contents(Location(player)), player,
-                                       cause, command);
-    if (!No_Command(Location(player)))
-      lua_succ += lua_command_match(Location(player), player, cause, command);
-  }
-  if (Has_contents(player))
-    lua_succ +=
-        lua_list_command_match(Contents(player), player, cause, command);
-  if (!lua_succ && mudconf.have_zones && (Zone(Location(player)) != NOTHING)) {
-    if (Typeof(Zone(Location(player))) == TYPE_ROOM) {
-      if (Location(player) != Zone(player))
-        lua_succ += lua_list_command_match(Contents(Zone(Location(player))),
-                                           player, cause, command);
-    } else if (!No_Command(Zone(Location(player)))) {
+  if (has_location(player)) {
+    lua_succ += lua_list_command_match(obj_contents(obj_location(player)),
+                                       player, cause, command);
+    if (!is_no_command(obj_location(player)))
       lua_succ +=
-          lua_command_match(Zone(Location(player)), player, cause, command);
+          lua_command_match(obj_location(player), player, cause, command);
+  }
+  if (has_contents(player))
+    lua_succ +=
+        lua_list_command_match(obj_contents(player), player, cause, command);
+  if (!lua_succ && mudconf.have_zones &&
+      (obj_zone(obj_location(player)) != NOTHING)) {
+    if (typeof_obj(obj_zone(obj_location(player))) == TYPE_ROOM) {
+      if (obj_location(player) != obj_zone(player))
+        lua_succ +=
+            lua_list_command_match(obj_contents(obj_zone(obj_location(player))),
+                                   player, cause, command);
+    } else if (!is_no_command(obj_zone(obj_location(player)))) {
+      lua_succ += lua_command_match(obj_zone(obj_location(player)), player,
+                                    cause, command);
     }
   }
-  if (!lua_succ && mudconf.have_zones && (Zone(player) != NOTHING) &&
-      !No_Command(Zone(player)) && (Zone(Location(player)) != Zone(player)))
-    lua_succ += lua_command_match(Zone(player), player, cause, command);
+  if (!lua_succ && mudconf.have_zones && (obj_zone(player) != NOTHING) &&
+      !is_no_command(obj_zone(player)) &&
+      (obj_zone(obj_location(player)) != obj_zone(player)))
+    lua_succ += lua_command_match(obj_zone(player), player, cause, command);
   if (lua_succ)
     succ = lua_succ;
   /*
    * Check for $-command matches on me
    */
 
-  if (!lua_succ && mudconf.match_mine && (!(No_Command(player)))) {
-    if (((Typeof(player) != TYPE_PLAYER) || mudconf.match_mine_pl) &&
+  if (!lua_succ && mudconf.match_mine && (!(is_no_command(player)))) {
+    if (((typeof_obj(player) != TYPE_PLAYER) || mudconf.match_mine_pl) &&
         (attribute_match(player, player, AMATCH_CMD, lcbuf, 1) > 0)) {
       succ++;
     }
@@ -1262,12 +1266,13 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Check for $-command matches on nearby things and on my room
    */
 
-  if (!lua_succ && Has_location(player)) {
-    succ +=
-        list_check(Contents(Location(player)), player, AMATCH_CMD, lcbuf, 1);
+  if (!lua_succ && has_location(player)) {
+    succ += list_check(obj_contents(obj_location(player)), player, AMATCH_CMD,
+                       lcbuf, 1);
 
-    if (!(No_Command(Location(player))))
-      if (attribute_match(Location(player), player, AMATCH_CMD, lcbuf, 1) > 0) {
+    if (!(is_no_command(obj_location(player))))
+      if (attribute_match(obj_location(player), player, AMATCH_CMD, lcbuf, 1) >
+          0) {
         succ++;
       }
   }
@@ -1276,21 +1281,21 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Check for $-command matches in my inventory
    */
 
-  if (!lua_succ && Has_contents(player))
-    succ += list_check(Contents(player), player, AMATCH_CMD, lcbuf, 1);
+  if (!lua_succ && has_contents(player))
+    succ += list_check(obj_contents(player), player, AMATCH_CMD, lcbuf, 1);
 
   /*
    * now do check on zones
    */
 
   if (!lua_succ && (!succ) && mudconf.have_zones &&
-      (Zone(Location(player)) != NOTHING)) {
-    if (Typeof(Zone(Location(player))) == TYPE_ROOM) {
+      (obj_zone(obj_location(player)) != NOTHING)) {
+    if (typeof_obj(obj_zone(obj_location(player))) == TYPE_ROOM) {
 
       /*
        * zone of player's location is a parent room
        */
-      if (Location(player) != Zone(player)) {
+      if (obj_location(player) != obj_zone(player)) {
 
         /*
          * check parent room exits
@@ -1303,8 +1308,8 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
           mudstate.debug_cmd = cmdsave;
           goto exit;
         }
-        succ += list_check(Contents(Zone(Location(player))), player, AMATCH_CMD,
-                           lcbuf, 1);
+        succ += list_check(obj_contents(obj_zone(obj_location(player))), player,
+                           AMATCH_CMD, lcbuf, 1);
       } /*
          * * end of parent room checks
          */
@@ -1314,10 +1319,10 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
        */
 
       if ((!succ) && mudconf.have_zones &&
-          (Zone(Location(player)) != NOTHING) &&
-          (!(No_Command(Zone(Location(player))))))
-        succ += attribute_match(Zone(Location(player)), player, AMATCH_CMD,
-                                lcbuf, 1);
+          (obj_zone(obj_location(player)) != NOTHING) &&
+          (!(is_no_command(obj_zone(obj_location(player))))))
+        succ += attribute_match(obj_zone(obj_location(player)), player,
+                                AMATCH_CMD, lcbuf, 1);
   }
   /*
    * * end of matching on zone of player's * *
@@ -1327,10 +1332,10 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * if nothing matched with parent room/zone object, try matching
    * zone commands on the player's personal zone
    */
-  if (!lua_succ && (!succ) && mudconf.have_zones && (Zone(player) != NOTHING) &&
-      (!(No_Command(Zone(player)))) &&
-      (Zone(Location(player)) != Zone(player))) {
-    succ += attribute_match(Zone(player), player, AMATCH_CMD, lcbuf, 1);
+  if (!lua_succ && (!succ) && mudconf.have_zones &&
+      (obj_zone(player) != NOTHING) && (!(is_no_command(obj_zone(player)))) &&
+      (obj_zone(obj_location(player)) != obj_zone(player))) {
+    succ += attribute_match(obj_zone(player), player, AMATCH_CMD, lcbuf, 1);
   }
   /*
    * Global Lua commands replace the master-room programmable-command stage.
@@ -1390,7 +1395,7 @@ static void list_cmdtable(DbRef player) {
    * Players get the list of logged-out cmds too
    */
 
-  if (Typeof(player) == TYPE_PLAYER)
+  if (typeof_obj(player) == TYPE_PLAYER)
     name_table_display(player, logout_cmdtable, buf, 1);
   else
     notify(player, buf);
@@ -1411,7 +1416,7 @@ static void list_attrtable(DbRef player) {
   for (cp = (char *)"Attributes:"; *cp; cp++)
     *bp++ = *cp;
   for (ap = attr_table; ap->name; ap++) {
-    if (See_attr(player, player, ap, player, 0)) {
+    if (see_attr(player, player, ap, player, 0)) {
       *bp++ = ' ';
       for (cp = (char *)(ap->name); *cp; cp++)
         *bp++ = *cp;
@@ -1565,7 +1570,7 @@ static void list_attraccess(DbRef player) {
 
   buff = alloc_sbuf("list_attraccess");
   for (ap = attr_table; ap->name; ap++) {
-    if (Read_attr(player, player, ap, player, 0)) {
+    if (read_attr(player, player, ap, player, 0)) {
       snprintf(buff, SBUF_SIZE, "%s:", ap->name);
       name_table_list_set(player, attraccess_nametab, ap->flags, buff, 1);
     }
@@ -1861,7 +1866,7 @@ static void list_options(DbRef player) {
           player,
           "Objects other than players search themselves for $-commands.");
   }
-  if (!Wizard(player))
+  if (!is_wizard(player))
     return;
   buff = alloc_mbuf("list_options");
 
@@ -2013,27 +2018,24 @@ static void list_process(DbRef player) {
  * * do_list: List information stored in internal structures.
  */
 
-#define LIST_ATTRIBUTES 1
-#define LIST_COMMANDS 2
-#define LIST_FLAGS 4
-#define LIST_FUNCTIONS 5
-#define LIST_GLOBALS 6
-#define LIST_ALLOCATOR 7
-#define LIST_LOGGING 8
-#define LIST_DF_FLAGS 9
-#define LIST_PERMS 10
-#define LIST_ATTRPERMS 11
-#define LIST_OPTIONS 12
-#define LIST_HASHSTATS 13
-#define LIST_BUFTRACE 14
-#define LIST_CONF_PERMS 15
-#define LIST_SITEINFO 16
-#define LIST_POWERS 17
-#define LIST_SWITCHES 18
-#define LIST_DB_STATS 20
-#define LIST_PROCESS 21
-#define LIST_BADNAMES 22
-#define LIST_LOGFILES 23
+constexpr int LIST_ATTRIBUTES = 1;
+constexpr int LIST_COMMANDS = 2;
+constexpr int LIST_FLAGS = 4;
+constexpr int LIST_FUNCTIONS = 5;
+constexpr int LIST_GLOBALS = 6;
+constexpr int LIST_LOGGING = 8;
+constexpr int LIST_DF_FLAGS = 9;
+constexpr int LIST_PERMS = 10;
+constexpr int LIST_ATTRPERMS = 11;
+constexpr int LIST_OPTIONS = 12;
+constexpr int LIST_CONF_PERMS = 15;
+constexpr int LIST_SITEINFO = 16;
+constexpr int LIST_POWERS = 17;
+constexpr int LIST_SWITCHES = 18;
+constexpr int LIST_DB_STATS = 20;
+constexpr int LIST_PROCESS = 21;
+constexpr int LIST_BADNAMES = 22;
+constexpr int LIST_LOGFILES = 23;
 
 NameTable list_names[] = {
     {(char *)"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},

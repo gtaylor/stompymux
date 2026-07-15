@@ -84,7 +84,7 @@ void do_find(DbRef player, DbRef cause, int key, char *name) {
 
   parse_range(&name, &low_bound, &high_bound);
   for (i = low_bound; i <= high_bound; i++) {
-    if ((Typeof(i) != TYPE_EXIT) && controls(player, i) &&
+    if ((typeof_obj(i) != TYPE_EXIT) && is_controls(player, i) &&
         (!*name || string_match(PureName(i), name))) {
       buff = unparse_object(player, i, 0);
       notify(player, buff);
@@ -111,18 +111,18 @@ int database_statistics_get(DbRef player, DbRef who, DatabaseStatistics *info) {
    * Do we have permission?
    */
 
-  if (Good_obj(who) && !Controls(player, who) && !Wizard(player)) {
+  if (is_good_obj(who) && !is_controls(player, who) && !is_wizard(player)) {
     notify(player, "Permission denied.");
     return 0;
   }
   DO_WHOLE_DB(i) {
-    if ((who == NOTHING) || (who == Owner(i))) {
+    if ((who == NOTHING) || (who == obj_owner(i))) {
       info->s_total++;
-      if (Going(i) && (Typeof(i) != TYPE_ROOM)) {
+      if (is_going(i) && (typeof_obj(i) != TYPE_ROOM)) {
         info->s_garbage++;
         continue;
       }
-      switch (Typeof(i)) {
+      switch (typeof_obj(i)) {
       case TYPE_ROOM:
         info->s_rooms++;
         break;
@@ -155,7 +155,7 @@ void do_stats(DbRef player, DbRef cause, int key, char *name) {
     owner = NOTHING;
     break;
   case STAT_ME:
-    owner = Owner(player);
+    owner = obj_owner(player);
     break;
   case STAT_PLAYER:
     if (!(name && *name)) {
@@ -183,13 +183,13 @@ void do_stats(DbRef player, DbRef cause, int key, char *name) {
       statinfo.s_players, statinfo.s_garbage);
 
 #ifdef TEST_MALLOC
-  if (Wizard(player))
+  if (is_wizard(player))
     notify_printf(player, "Malloc count = %d.", malloc_count);
 #endif /*                                                                      \
         * TEST_MALLOC                                                          \
         */
 #ifdef MCHECK
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     struct mstats mval;
 
     mval = mstats();
@@ -211,30 +211,30 @@ void do_stats(DbRef player, DbRef cause, int key, char *name) {
 int chown_all(DbRef from_player, DbRef to_player) {
   int i, count;
 
-  if (Typeof(from_player) != TYPE_PLAYER)
-    from_player = Owner(from_player);
-  if (Typeof(to_player) != TYPE_PLAYER)
-    to_player = Owner(to_player);
+  if (typeof_obj(from_player) != TYPE_PLAYER)
+    from_player = obj_owner(from_player);
+  if (typeof_obj(to_player) != TYPE_PLAYER)
+    to_player = obj_owner(to_player);
   count = 0;
   DO_WHOLE_DB(i) {
-    if ((Owner(i) == from_player) && (Owner(i) != i)) {
-      switch (Typeof(i)) {
+    if ((obj_owner(i) == from_player) && (obj_owner(i) != i)) {
+      switch (typeof_obj(i)) {
       case TYPE_PLAYER:
-        s_Owner(i, i);
+        s_owner(i, i);
         break;
       case TYPE_THING:
-        s_Owner(i, to_player);
+        s_owner(i, to_player);
         break;
       case TYPE_ROOM:
-        s_Owner(i, to_player);
+        s_owner(i, to_player);
         break;
       case TYPE_EXIT:
-        s_Owner(i, to_player);
+        s_owner(i, to_player);
         break;
       default:
-        s_Owner(i, to_player);
+        s_owner(i, to_player);
       }
-      s_Flags(i, (Flags(i) & ~INHERIT) | HALT);
+      s_flags(i, (obj_flags(i) & ~INHERIT) | HALT);
       count++;
     }
   }
@@ -268,7 +268,7 @@ void do_chownall(DbRef player, DbRef cause, int key, char *from, char *to) {
   }
 
   count = chown_all(victim, recipient);
-  if (!Quiet(player)) {
+  if (!is_quiet(player)) {
     notify_printf(player, "%d objects @chowned.", count);
   }
 }
@@ -329,16 +329,16 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
    * set limits on who we search
    */
 
-  parm->s_owner = Owner(player);
-  parm->s_wizard = Wizard(player);
+  parm->s_owner = obj_owner(player);
+  parm->s_wizard = is_wizard(player);
   parm->s_rst_owner = NOTHING;
   if (!*pname) {
     parm->s_rst_owner = parm->s_wizard ? ANY_OWNER : player;
   } else if (pname[0] == '#') {
     parm->s_rst_owner = atoi(&pname[1]);
-    if (!Good_obj(parm->s_rst_owner))
+    if (!is_good_obj(parm->s_rst_owner))
       parm->s_rst_owner = NOTHING;
-    else if (Typeof(parm->s_rst_owner) != TYPE_PLAYER)
+    else if (typeof_obj(parm->s_rst_owner) != TYPE_PLAYER)
       parm->s_rst_owner = NOTHING;
 
   } else if (strcmp(pname, "me") == 0) {
@@ -434,7 +434,7 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
         parm->s_rst_owner = ANY_OWNER;
     } else if (string_prefix("parent", searchtype)) {
       parm->s_parent = match_controlled(player, searchfor);
-      if (!Good_obj(parm->s_parent))
+      if (!is_good_obj(parm->s_parent))
         return 0;
       if (!*pname)
         parm->s_rst_owner = ANY_OWNER;
@@ -485,7 +485,7 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
   case 'z':
     if (string_prefix("zone", searchtype)) {
       parm->s_zone = match_controlled(player, searchfor);
-      if (!Good_obj(parm->s_zone))
+      if (!is_good_obj(parm->s_zone))
         return 0;
       if (!*pname)
         parm->s_rst_owner = ANY_OWNER;
@@ -530,37 +530,38 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
      * Check for matching type
      */
 
-    if ((parm->s_rst_type != NOTYPE) && (parm->s_rst_type != Typeof(thing)))
+    if ((parm->s_rst_type != NOTYPE) && (parm->s_rst_type != typeof_obj(thing)))
       continue;
 
     /*
      * Check for matching owner
      */
 
-    if ((parm->s_rst_owner != ANY_OWNER) && (parm->s_rst_owner != Owner(thing)))
+    if ((parm->s_rst_owner != ANY_OWNER) &&
+        (parm->s_rst_owner != obj_owner(thing)))
       continue;
 
     /*
      * Check for matching parent
      */
 
-    if ((parm->s_parent != NOTHING) && (parm->s_parent != Parent(thing)))
+    if ((parm->s_parent != NOTHING) && (parm->s_parent != obj_parent(thing)))
       continue;
 
     /*
      * Check for matching zone
      */
 
-    if ((parm->s_zone != NOTHING) && (parm->s_zone != Zone(thing)))
+    if ((parm->s_zone != NOTHING) && (parm->s_zone != obj_zone(thing)))
       continue;
 
     /*
      * Check for matching flags
      */
 
-    thing3flags = Flags3(thing);
-    thing2flags = Flags2(thing);
-    thing1flags = Flags(thing);
+    thing3flags = obj_flags3(thing);
+    thing2flags = obj_flags2(thing);
+    thing1flags = obj_flags(thing);
     if ((thing1flags & parm->s_fset.word1) != parm->s_fset.word1)
       continue;
     if ((thing2flags & parm->s_fset.word2) != parm->s_fset.word2)
@@ -572,8 +573,8 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
      * Check for matching power
      */
 
-    thing1powers = Powers(thing);
-    thing2powers = Powers2(thing);
+    thing1powers = obj_powers(thing);
+    thing2powers = obj_powers2(thing);
     if ((thing1powers & parm->s_pset.word1) != parm->s_pset.word1)
       continue;
     if ((thing2powers & parm->s_pset.word2) != parm->s_pset.word2)
@@ -592,7 +593,7 @@ void search_criteria_perform(DbRef player, DbRef cause, SearchCriteria *parm) {
      */
 
     if (parm->s_rst_eval != NULL) {
-      if (Typeof(thing) == TYPE_GARBAGE)
+      if (typeof_obj(thing) == TYPE_GARBAGE)
         continue;
       snprintf(buff, SBUF_SIZE, "#%ld", thing);
       buff2 = replace_string(BOUND_VAR, buff, parm->s_rst_eval);
@@ -641,7 +642,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
   if (searchparm.s_rst_type == TYPE_ROOM || searchparm.s_rst_type == NOTYPE) {
     flag = 1;
     for (thing = olist_first(); thing != NOTHING; thing = olist_next()) {
-      if (Typeof(thing) != TYPE_ROOM)
+      if (typeof_obj(thing) != TYPE_ROOM)
         continue;
       if (flag) {
         flag = 0;
@@ -660,15 +661,15 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
   if (searchparm.s_rst_type == TYPE_EXIT || searchparm.s_rst_type == NOTYPE) {
     flag = 1;
     for (thing = olist_first(); thing != NOTHING; thing = olist_next()) {
-      if (Typeof(thing) != TYPE_EXIT)
+      if (typeof_obj(thing) != TYPE_EXIT)
         continue;
       if (flag) {
         flag = 0;
         destitute = 0;
         notify(player, "\nEXITS:");
       }
-      from = Exits(thing);
-      to = Location(thing);
+      from = obj_exits(thing);
+      to = obj_location(thing);
 
       bp = outbuf;
       buff = unparse_object(player, thing, 0);
@@ -697,7 +698,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
   if (searchparm.s_rst_type == TYPE_THING || searchparm.s_rst_type == NOTYPE) {
     flag = 1;
     for (thing = olist_first(); thing != NOTHING; thing = olist_next()) {
-      if (Typeof(thing) != TYPE_THING)
+      if (typeof_obj(thing) != TYPE_THING)
         continue;
       if (flag) {
         flag = 0;
@@ -710,7 +711,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       free_lbuf(buff);
 
       safe_str((char *)" [owner: ", outbuf, &bp);
-      buff = unparse_object(player, Owner(thing), 0);
+      buff = unparse_object(player, obj_owner(thing), 0);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
@@ -727,7 +728,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       searchparm.s_rst_type == NOTYPE) {
     flag = 1;
     for (thing = olist_first(); thing != NOTHING; thing = olist_next()) {
-      if (Typeof(thing) != TYPE_GARBAGE)
+      if (typeof_obj(thing) != TYPE_GARBAGE)
         continue;
       if (flag) {
         flag = 0;
@@ -740,7 +741,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       free_lbuf(buff);
 
       safe_str((char *)" [owner: ", outbuf, &bp);
-      buff = unparse_object(player, Owner(thing), 0);
+      buff = unparse_object(player, obj_owner(thing), 0);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
@@ -756,7 +757,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
   if (searchparm.s_rst_type == TYPE_PLAYER || searchparm.s_rst_type == NOTYPE) {
     flag = 1;
     for (thing = olist_first(); thing != NOTHING; thing = olist_next()) {
-      if (Typeof(thing) != TYPE_PLAYER)
+      if (typeof_obj(thing) != TYPE_PLAYER)
         continue;
       if (flag) {
         flag = 0;
@@ -769,7 +770,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       free_lbuf(buff);
       if (searchparm.s_wizard) {
         safe_str((char *)" [location: ", outbuf, &bp);
-        buff = unparse_object(player, Location(thing), 0);
+        buff = unparse_object(player, obj_location(thing), 0);
         safe_str(buff, outbuf, &bp);
         free_lbuf(buff);
         safe_chr(']', outbuf, &bp);

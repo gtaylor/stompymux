@@ -163,9 +163,9 @@ void gradually_load(MECH * mech, int loc, int percent)
 void autopilot_load_cargo(DbRef player, MECH * mech, int percent)
 {
 	DOCHECK(fabs(MechSpeed(mech)) > MP1, "You're moving too fast!");
-	DOCHECK(Location(mech->mynum) != mech->mapindex ||
-			In_Character(Location(mech->mynum)), "You aren't inside hangar!");
-	if(loading_bay_whine(player, Location(mech->mynum), mech))
+	DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
+			is_in_character(obj_location(mech->mynum)), "You aren't inside hangar!");
+	if(loading_bay_whine(player, obj_location(mech->mynum), mech))
 		return;
 	gradually_load(mech, mech->mapindex, percent);
 	SetCargoWeight(mech);
@@ -186,7 +186,8 @@ void auto_cal_mapindex(MECH *mech) {
 
   if (MechAuto(mech) > 0) {
     if (!(autopilot = FindObjectsData(MechAuto(mech))) ||
-        !Good_obj(MechAuto(mech)) || Location(MechAuto(mech)) != mech->mynum) {
+        !is_good_obj(MechAuto(mech)) ||
+        obj_location(MechAuto(mech)) != mech->mynum) {
       snprintf(error_buf, MBUF_SIZE,
                "Mech #%ld thinks it has the Autopilot #%d on it"
                " but FindObj breaks",
@@ -1135,7 +1136,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1295,7 +1296,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1550,7 +1551,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1927,7 +1928,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2089,7 +2090,7 @@ void auto_leave_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2211,7 +2212,7 @@ void auto_enter_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2673,7 +2674,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (Location(autopilot->mynum) != autopilot->mymechnum)
+  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */

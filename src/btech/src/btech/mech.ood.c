@@ -103,7 +103,8 @@ void mech_ood_event(MuxEvent *e) {
 
   MechCocoon(mech) = 0;
 
-  if (In_Character(mech->mynum) && Location(MechPilot(mech)) != mech->mynum)
+  if (is_in_character(mech->mynum) &&
+      obj_location(MechPilot(mech)) != mech->mynum)
     roll_needed += 99;
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");

@@ -263,7 +263,7 @@ void accept_client_input(evutil_socket_t fd, short event, void *arg) {
 
   if (connection->flags & DS_AUTODARK) {
     connection->flags &= ~DS_AUTODARK;
-    s_Flags(connection->player, Flags(connection->player) & ~DARK);
+    s_flags(connection->player, obj_flags(connection->player) & ~DARK);
   }
   descriptor_retain(connection);
   if (!process_input(connection)) {
@@ -380,12 +380,13 @@ void descriptor_shutdown(Descriptor *d, int reason) {
      * <DiscRsn>  * *  * Name
      */
 
-    log_error(
-        LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s", d->player,
-        decode_flags(GOD, Flags(d->player), Flags2(d->player),
-                     Flags3(d->player)),
-        d->command_count, mudstate.now - d->connected_at, Location(d->player),
-        d->addr, disc_reasons[reason], Name(d->player));
+    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%d %s %d %d %d [%s] <%s> %s",
+              d->player,
+              decode_flags(GOD, obj_flags(d->player), obj_flags2(d->player),
+                           obj_flags3(d->player)),
+              d->command_count, mudstate.now - d->connected_at,
+              obj_location(d->player), d->addr, disc_reasons[reason],
+              Name(d->player));
 
     descriptor_announce_disconnect(d->player, d, disc_messages[reason]);
     desc_delhash(d);
@@ -530,7 +531,7 @@ static int process_input(Descriptor *d) {
   d->input_tot += got;
   descriptor_retain(d);
 
-  if (Wizard(d->player) && strncmp("@segfault", buf, 9) == 0) {
+  if (is_wizard(d->player) && strncmp("@segfault", buf, 9) == 0) {
     descriptor_queue_string(d,
                             "@segfault failed. (check logfile for reason.)\n");
     *(char *)0xDEADBEEF = '9';

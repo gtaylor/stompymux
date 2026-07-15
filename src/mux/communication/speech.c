@@ -20,19 +20,19 @@
 extern int is_in_character_location(DbRef);
 
 static int sp_ok(DbRef player) {
-  if (Gagged(player) && (!(Wizard(player)))) {
+  if (is_gagged(player) && (!(is_wizard(player)))) {
     notify(player, "Sorry. Gagged players cannot speak.");
     return 0;
   }
 
   if (!mudconf.robot_speak) {
-    if (Robot(player) && !controls(player, Location(player))) {
+    if (is_robot_player(player) && !is_controls(player, obj_location(player))) {
       notify(player, "Sorry robots may not speak in public.");
       return 0;
     }
   }
-  if (Auditorium(Location(player))) {
-    if (!could_doit(player, Location(player), A_LSPEECH)) {
+  if (is_auditorium(obj_location(player))) {
+    if (!could_doit(player, obj_location(player), A_LSPEECH)) {
       notify(player, "Sorry, you may not speak in this place.");
       return 0;
     }
@@ -138,16 +138,16 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
       notify_all_from_inside(loc, player, message);
     }
     if (say_flags & SAY_ROOM) {
-      if ((Typeof(loc) == TYPE_ROOM) && (say_flags & SAY_HERE)) {
+      if ((typeof_obj(loc) == TYPE_ROOM) && (say_flags & SAY_HERE)) {
         return;
       }
       depth = 0;
-      while ((Typeof(loc) != TYPE_ROOM) && (depth++ < 20)) {
-        loc = Location(loc);
-        if ((loc == NOTHING) || (loc == Location(loc)))
+      while ((typeof_obj(loc) != TYPE_ROOM) && (depth++ < 20)) {
+        loc = obj_location(loc);
+        if ((loc == NOTHING) || (loc == obj_location(loc)))
           return;
       }
-      if (Typeof(loc) == TYPE_ROOM) {
+      if (typeof_obj(loc) == TYPE_ROOM) {
         notify_all_from_inside(loc, player, message);
       }
     }
@@ -337,7 +337,7 @@ static void page_return(DbRef player, DbRef target, const char *tag, int anum,
     if (*str2) {
       t = time(NULL);
       tp = localtime(&t);
-      if (Wizard(target) || !is_in_character_location(target))
+      if (is_wizard(target) || !is_in_character_location(target))
         notify_with_cause(
             player, target,
             tprintf("%s message from %s: %s", tag, Name(target), str2));
@@ -353,19 +353,20 @@ static void page_return(DbRef player, DbRef target, const char *tag, int anum,
 }
 
 static int page_check(DbRef player, DbRef target) {
-  if (is_in_character_location(player) && !Wizard(target) && !Wizard(player)) {
+  if (is_in_character_location(player) && !is_wizard(target) &&
+      !is_wizard(player)) {
     notify(player, "Permission denied.");
     return 0;
   }
-  if (!Connected(target)) {
+  if (!is_connected(target)) {
     page_return(player, target, "Away", A_AWAY,
                 tprintf("Sorry, %s is not connected.", Name(target)));
     return 0;
   }
   if (!could_doit(player, target, A_LPAGE) ||
-      (!Wizard(player) && is_in_character_location(target) &&
-       !Wizard(target))) {
-    if (Wizard(target) && Dark(target))
+      (!is_wizard(player) && is_in_character_location(target) &&
+       !is_wizard(target))) {
+    if (is_wizard(target) && is_dark(target))
       page_return(player, target, "Away", A_AWAY,
                   tprintf("Sorry, %s is not connected.", Name(target)));
     else
@@ -374,7 +375,7 @@ static int page_check(DbRef player, DbRef target) {
     return 0;
   }
   if (!could_doit(target, player, A_LPAGE)) {
-    if (Wizard(player)) {
+    if (is_wizard(player)) {
       notify_printf(player, "Warning: %s can't return your page.",
                     Name(target));
       return 1;
@@ -568,7 +569,7 @@ void do_page(DbRef player, DbRef cause, int key, char *tname, char *message) {
     return;
   }
   *(bp2 - 1) = '\0';
-  attribute_add(player, A_LASTPAGE, buf2, Owner(player), aflags);
+  attribute_add(player, A_LASTPAGE, buf2, obj_owner(player), aflags);
 
   if (count == 1) {
     if (*buf1) {
@@ -628,11 +629,11 @@ void do_pemit_list(DbRef player, char *list, const char *message) {
     match_everything(0);
     who = match_result();
 
-    if (!ok_to_do && (Long_Fingers(player) || nearby(player, who) ||
-                      Controls(player, who))) {
+    if (!ok_to_do && (is_long_fingers(player) || nearby(player, who) ||
+                      is_controls(player, who))) {
       ok_to_do = 1;
     }
-    if (!ok_to_do && (isPlayer(who)) && mudconf.pemit_players) {
+    if (!ok_to_do && (is_player(who)) && mudconf.pemit_players) {
       if (!page_check(player, who))
         return;
       ok_to_do = 1;
@@ -649,7 +650,7 @@ void do_pemit_list(DbRef player, char *list, const char *message) {
         notify(player, "You cannot do that.");
         break;
       }
-      if (Good_obj(who))
+      if (is_good_obj(who))
         notify_with_cause(who, player, message);
     }
   }
@@ -711,12 +712,12 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
      * Enforce locality constraints
      */
 
-    if (!ok_to_do && (nearby(player, target) || Long_Fingers(player) ||
-                      Controls(player, target))) {
+    if (!ok_to_do && (nearby(player, target) || is_long_fingers(player) ||
+                      is_controls(player, target))) {
       ok_to_do = 1;
     }
-    if (!ok_to_do && (key == PEMIT_PEMIT) && (Typeof(target) == TYPE_PLAYER) &&
-        mudconf.pemit_players) {
+    if (!ok_to_do && (key == PEMIT_PEMIT) &&
+        (typeof_obj(target) == TYPE_PLAYER) && mudconf.pemit_players) {
       if (!page_check(player, target))
         return;
       ok_to_do = 1;
@@ -725,7 +726,7 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
       notify(player, "You are too far away to do that.");
       return;
     }
-    if (do_contents && !Controls(player, target) && !mudconf.pemit_any) {
+    if (do_contents && !is_controls(player, target) && !mudconf.pemit_any) {
       notify(player, "Permission denied.");
       return;
     }
@@ -734,7 +735,7 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
     switch (key) {
     case PEMIT_PEMIT:
       if (do_contents) {
-        if (Has_contents(target)) {
+        if (has_contents(target)) {
           notify_all_from_inside(target, player, message);
         }
       } else {
@@ -742,7 +743,7 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
       }
       break;
     case PEMIT_OEMIT:
-      notify_except(Location(target), player, target, message);
+      notify_except(obj_location(target), player, target, message);
       break;
     case PEMIT_FSAY:
       notify_printf(target, "You say \"%s\"", message);
@@ -763,16 +764,16 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
       if ((pemit_flags & PEMIT_HERE) || !pemit_flags)
         notify_all_from_inside(loc, player, message);
       if (pemit_flags & PEMIT_ROOM) {
-        if ((Typeof(loc) == TYPE_ROOM) && (pemit_flags & PEMIT_HERE)) {
+        if ((typeof_obj(loc) == TYPE_ROOM) && (pemit_flags & PEMIT_HERE)) {
           return;
         }
         depth = 0;
-        while ((Typeof(loc) != TYPE_ROOM) && (depth++ < 20)) {
-          loc = Location(loc);
-          if ((loc == NOTHING) || (loc == Location(loc)))
+        while ((typeof_obj(loc) != TYPE_ROOM) && (depth++ < 20)) {
+          loc = obj_location(loc);
+          if ((loc == NOTHING) || (loc == obj_location(loc)))
             return;
         }
-        if (Typeof(loc) == TYPE_ROOM) {
+        if (typeof_obj(loc) == TYPE_ROOM) {
           notify_all_from_inside(loc, player, message);
         }
       }

@@ -119,11 +119,11 @@ extern long int Number(long int, long int);
       UnSetBit(val, bit);                                                      \
   } while (0)
 
-#define WizPo(p, fun) (fun(Owner(p)) && Inherits(p))
+#define WizPo(p, fun) (fun(obj_owner(p)) && is_inherits(p))
 
-#define Wiz(p) WizPo(p, Wizard)
+#define Wiz(p) WizPo(p, is_wizard)
 #define WizR(p) Wiz(p)
-#define WizP(p) WizPo(p, Security)
+#define WizP(p) WizPo(p, is_security)
 
 #define hush_teleport(p, t) move_via_teleport(p, t, 1, 7)
 #define loud_teleport(p, t) move_via_teleport(p, t, 1, 0)
@@ -131,7 +131,8 @@ extern long int Number(long int, long int);
 #if 0
 /* Old cheater @luck code. Removed. If you got an issue with it's removal, you prolly had an issue to start with. */
 #define ValidLuckPlayer(mech)                                                  \
-  ((In_Character(mech->mynum) && In_Character(Location(mech->mynum)))          \
+  ((is_in_character(mech->mynum) &&                                            \
+    is_in_character(obj_location(mech->mynum)))                                \
        ? MechPilot(mech)                                                       \
        : -1)
 #define NRoll(mech) luck_die_mod(ValidLuckPlayer(mech), -1)

@@ -50,10 +50,10 @@ static DbRef parse_linkable_room(DbRef player, char *room_name) {
    * Make sure we can link to it
    */
 
-  if (!Good_obj(room)) {
+  if (!is_good_obj(room)) {
     notify_quiet(player, "That's not a valid object.");
     return NOTHING;
-  } else if (!Has_contents(room) || !Linkable(player, room)) {
+  } else if (!has_contents(room) || !is_linkable(player, room)) {
     notify_quiet(player, "You can't link to that.");
     return NOTHING;
   } else {
@@ -69,13 +69,13 @@ static DbRef parse_linkable_room(DbRef player, char *room_name) {
 static void open_exit(DbRef player, DbRef loc, char *direction, char *linkto) {
   DbRef exit;
 
-  if (!Good_obj(loc))
+  if (!is_good_obj(loc))
     return;
 
   if (!direction || !*direction) {
     notify_quiet(player, "Open where?");
     return;
-  } else if (!controls(player, loc)) {
+  } else if (!is_controls(player, loc)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -87,9 +87,9 @@ static void open_exit(DbRef player, DbRef loc, char *direction, char *linkto) {
    * Initialize everything and link it in.
    */
 
-  s_Exits(exit, loc);
-  s_Next(exit, Exits(loc));
-  s_Exits(loc, exit);
+  s_exits(exit, loc);
+  s_next(exit, obj_exits(loc));
+  s_exits(loc, exit);
 
   /*
    * and we're done
@@ -115,7 +115,7 @@ static void open_exit(DbRef player, DbRef loc, char *direction, char *linkto) {
       notify_quiet(player, "You can't link to there.");
       return;
     }
-    s_Location(exit, loc);
+    s_location(exit, loc);
     notify_quiet(player, "Linked.");
   }
 }
@@ -137,7 +137,7 @@ void do_open(DbRef player, DbRef cause, int key, char *direction, char *links[],
   if (key == OPEN_INVENTORY)
     loc = player;
   else
-    loc = Location(player);
+    loc = obj_location(player);
 
   open_exit(player, loc, direction, dest);
 
@@ -166,7 +166,7 @@ static void link_exit(DbRef player, DbRef exit, DbRef dest) {
    */
 
   if ((dest != HOME) &&
-      (!controls(player, dest) || !could_doit(player, dest, A_LLINK))) {
+      (!is_controls(player, dest) || !could_doit(player, dest, A_LLINK))) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -174,20 +174,20 @@ static void link_exit(DbRef player, DbRef exit, DbRef dest) {
    * Exit must be unlinked or controlled by you
    */
 
-  if ((Location(exit) != NOTHING) && !controls(player, exit)) {
+  if ((obj_location(exit) != NOTHING) && !is_controls(player, exit)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
-  if (Owner(exit) != Owner(player)) {
-    s_Owner(exit, Owner(player));
-    s_Flags(exit, (Flags(exit) & ~(INHERIT | WIZARD)) | HALT);
+  if (obj_owner(exit) != obj_owner(player)) {
+    s_owner(exit, obj_owner(player));
+    s_flags(exit, (obj_flags(exit) & ~(INHERIT | WIZARD)) | HALT);
   }
   /*
    * link has been validated and paid for, do it and tell the player
    */
 
-  s_Location(exit, dest);
-  if (!Quiet(player))
+  s_location(exit, dest);
+  if (!is_quiet(player))
     notify_quiet(player, "Linked.");
 }
 
@@ -212,7 +212,7 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
     do_unlink(player, cause, key, what);
     return;
   }
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_EXIT:
 
     /*
@@ -230,16 +230,16 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
      * Set home
      */
 
-    if (!Controls(player, thing)) {
+    if (!is_controls(player, thing)) {
       notify_quiet(player, "Permission denied.");
       break;
     }
     init_match(player, where, NOTYPE);
     match_everything(MAT_NO_EXITS);
     room = noisy_match_result();
-    if (!Good_obj(room))
+    if (!is_good_obj(room))
       break;
-    if (!Has_contents(room)) {
+    if (!has_contents(room)) {
       notify_quiet(player, "Can't link to an exit.");
       break;
     }
@@ -249,8 +249,8 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
     } else if (room == HOME) {
       notify_quiet(player, "Can't set home to home.");
     } else {
-      s_Home(thing, room);
-      if (!Quiet(player))
+      s_home(thing, room);
+      if (!is_quiet(player))
         notify_quiet(player, "Home set.");
     }
     break;
@@ -260,22 +260,22 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
      * Set dropto
      */
 
-    if (!Controls(player, thing)) {
+    if (!is_controls(player, thing)) {
       notify_quiet(player, "Permission denied.");
       break;
     }
     room = parse_linkable_room(player, where);
-    if (!(Good_obj(room) || (room == HOME)))
+    if (!(is_good_obj(room) || (room == HOME)))
       break;
 
-    if ((room != HOME) && !isRoom(room)) {
+    if ((room != HOME) && !is_room(room)) {
       notify_quiet(player, "That is not a room!");
-    } else if ((room != HOME) && (!controls(player, room) ||
+    } else if ((room != HOME) && (!is_controls(player, room) ||
                                   !could_doit(player, room, A_LLINK))) {
       notify_quiet(player, "Permission denied.");
     } else {
-      s_Dropto(thing, room);
-      if (!Quiet(player))
+      s_dropto(thing, room);
+      if (!is_quiet(player))
         notify_quiet(player, "Dropto set.");
     }
     break;
@@ -284,7 +284,7 @@ void do_link(DbRef player, DbRef cause, int key, char *what, char *where) {
     break;
   default:
     log_error(LOG_BUGS, "BUG", "OTYPE", "Strange object type: object #%d = %d",
-              thing, Typeof(thing));
+              thing, typeof_obj(thing));
   }
 }
 
@@ -311,7 +311,7 @@ void do_parent(DbRef player, DbRef cause, int key, char *tname, char *pname) {
    * Make sure we can do it
    */
 
-  if (!Controls(player, thing)) {
+  if (!is_controls(player, thing)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -320,7 +320,7 @@ void do_parent(DbRef player, DbRef cause, int key, char *tname, char *pname) {
    */
 
   if (*pname) {
-    init_match(player, pname, Typeof(thing));
+    init_match(player, pname, typeof_obj(thing));
     match_everything(0);
     parent = noisy_match_result();
     if (parent == NOTHING)
@@ -330,7 +330,7 @@ void do_parent(DbRef player, DbRef cause, int key, char *tname, char *pname) {
      * Make sure we have rights to set parent
      */
 
-    if (!Parentable(player, parent)) {
+    if (!is_parentable(player, parent)) {
       notify_quiet(player, "Permission denied.");
       return;
     }
@@ -348,8 +348,8 @@ void do_parent(DbRef player, DbRef cause, int key, char *tname, char *pname) {
     parent = NOTHING;
   }
 
-  s_Parent(thing, parent);
-  if (!Quiet(thing) && !Quiet(player)) {
+  s_parent(thing, parent);
+  if (!is_quiet(thing) && !is_quiet(player)) {
     if (parent == NOTHING)
       notify_quiet(player, "Parent cleared.");
     else
@@ -384,10 +384,10 @@ void do_dig(DbRef player, DbRef cause, int key, char *name, char *args[],
   buff = alloc_sbuf("do_dig");
   if ((nargs >= 1) && args[0] && *args[0]) {
     snprintf(buff, SBUF_SIZE, "%ld", room);
-    open_exit(player, Location(player), args[0], buff);
+    open_exit(player, obj_location(player), args[0], buff);
   }
   if ((nargs >= 2) && args[1] && *args[1]) {
-    snprintf(buff, SBUF_SIZE, "%ld", Location(player));
+    snprintf(buff, SBUF_SIZE, "%ld", obj_location(player));
     open_exit(player, room, args[1], buff);
   }
   free_sbuf(buff);
@@ -415,8 +415,8 @@ void do_create(DbRef player, DbRef cause, int key, char *name, char *coststr) {
     return;
 
   move_via_generic(thing, player, NOTHING, 0);
-  s_Home(thing, new_home(player));
-  if (!Quiet(player)) {
+  s_home(thing, new_home(player));
+  if (!is_quiet(player)) {
     notify_printf(player, "%s created as object #%d", Name(thing), thing);
   }
 }
@@ -430,12 +430,12 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
   DbRef clone, thing, new_owner, loc;
   Flag rmv_flags;
 
-  if ((key & CLONE_INVENTORY) || !Has_location(player))
+  if ((key & CLONE_INVENTORY) || !has_location(player))
     loc = player;
   else
-    loc = Location(player);
+    loc = obj_location(player);
 
-  if (!Good_obj(loc))
+  if (!is_good_obj(loc))
     return;
 
   init_match(player, name, NOTYPE);
@@ -446,11 +446,11 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
 
   /* Cloning requires examination permission. */
 
-  if (!Examinable(player, thing)) {
+  if (!is_examinable(player, thing)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
-  if (isPlayer(thing)) {
+  if (is_player(thing)) {
     notify_quiet(player, "You cannot clone players!");
     return;
   }
@@ -458,13 +458,13 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
    * You can only make a parent link to what you control
    */
 
-  if (!Controls(player, thing) && (key & CLONE_PARENT)) {
+  if (!is_controls(player, thing) && (key & CLONE_PARENT)) {
     notify_quiet(player, tprintf("You don't control %s, ignoring /parent.",
                                  Name(thing)));
     key &= ~CLONE_PARENT;
   }
-  new_owner = (key & CLONE_PRESERVE) ? Owner(thing) : Owner(player);
-  if ((Typeof(thing) == TYPE_EXIT) && !Controls(player, loc)) {
+  new_owner = (key & CLONE_PRESERVE) ? obj_owner(thing) : obj_owner(player);
+  if ((typeof_obj(thing) == TYPE_EXIT) && !is_controls(player, loc)) {
     notify_quiet(player, "Permission denied.");
     return;
   }
@@ -474,9 +474,9 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
    */
 
   if ((arg2 && *arg2) && ok_name(arg2))
-    clone = create_obj(new_owner, Typeof(thing), arg2);
+    clone = create_obj(new_owner, typeof_obj(thing), arg2);
   else
-    clone = create_obj(new_owner, Typeof(thing), Name(thing));
+    clone = create_obj(new_owner, typeof_obj(thing), Name(thing));
   if (clone == NOTHING)
     return;
 
@@ -486,7 +486,7 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
 
   attribute_free(clone);
   if (key & CLONE_PARENT)
-    s_Parent(clone, thing);
+    s_parent(clone, thing);
   else
     attribute_copy(player, clone, thing);
 
@@ -504,15 +504,15 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
    */
 
   rmv_flags = WIZARD;
-  if (!(key & CLONE_INHERIT) || (!Inherits(player)))
+  if (!(key & CLONE_INHERIT) || (!is_inherits(player)))
     rmv_flags |= INHERIT;
-  s_Flags(clone, Flags(thing) & ~rmv_flags);
+  s_flags(clone, obj_flags(thing) & ~rmv_flags);
 
   /*
    * Tell creator about it
    */
 
-  if (!Quiet(player)) {
+  if (!is_quiet(player)) {
     if (arg2 && *arg2)
       notify_printf(player, "%s cloned as %s, new copy is object #%d.",
                     Name(thing), arg2, clone);
@@ -525,22 +525,22 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
    * * * * * * * try to re-establish it.
    */
 
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_THING:
-    s_Home(clone, clone_home(player, thing));
+    s_home(clone, clone_home(player, thing));
     move_via_generic(clone, loc, player, 0);
     break;
   case TYPE_ROOM:
-    s_Dropto(clone, NOTHING);
-    if (Dropto(thing) != NOTHING)
-      link_exit(player, clone, Dropto(thing));
+    s_dropto(clone, NOTHING);
+    if (obj_dropto(thing) != NOTHING)
+      link_exit(player, clone, obj_dropto(thing));
     break;
   case TYPE_EXIT:
-    s_Exits(loc, insert_first(Exits(loc), clone));
-    s_Exits(clone, loc);
-    s_Location(clone, NOTHING);
-    if (Location(thing) != NOTHING)
-      link_exit(player, clone, Location(thing));
+    s_exits(loc, insert_first(obj_exits(loc), clone));
+    s_exits(clone, loc);
+    s_location(clone, NOTHING);
+    if (obj_location(thing) != NOTHING)
+      link_exit(player, clone, obj_location(thing));
     break;
   }
 
@@ -549,14 +549,14 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
    * * * * * * can
    */
 
-  if (new_owner == Owner(thing)) {
+  if (new_owner == obj_owner(thing)) {
     if (!(key & CLONE_PARENT))
-      s_Parent(clone, Parent(thing));
+      s_parent(clone, obj_parent(thing));
     did_it(player, clone, 0, NULL, 0, NULL, A_ACLONE, (char **)NULL, 0);
   } else {
-    if (!(key & CLONE_PARENT) && Controls(player, thing))
-      s_Parent(clone, Parent(thing));
-    s_Halted(clone);
+    if (!(key & CLONE_PARENT) && is_controls(player, thing))
+      s_parent(clone, obj_parent(thing));
+    s_halted(clone);
   }
 }
 
@@ -576,7 +576,7 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
     return;
   }
   if (isrobot) {
-    move_object(newplayer, Location(player));
+    move_object(newplayer, obj_location(player));
     notify_quiet(player,
                  tprintf("New robot '%s' (#%d) created with password '%s'",
                          name, newplayer, pass));
@@ -612,8 +612,8 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
 static int can_destroy_exit(DbRef player, DbRef exit) {
   DbRef loc;
 
-  loc = Exits(exit);
-  if ((loc != Location(player)) && (loc != player) && !Wizard(player)) {
+  loc = obj_exits(exit);
+  if ((loc != obj_location(player)) && (loc != player) && !is_wizard(player)) {
     notify_quiet(player, "You can not destroy exits in another room.");
     return 0;
   }
@@ -629,17 +629,17 @@ static int can_destroy_exit(DbRef player, DbRef exit) {
 static int destroyable(DbRef victim) {
   if ((victim == mudconf.default_home) || (victim == mudconf.start_home) ||
       (victim == mudconf.start_room) || (victim == mudconf.master_room) ||
-      (victim == (DbRef)0) || (God(victim)))
+      (victim == (DbRef)0) || (is_god(victim)))
     return 0;
   return 1;
 }
 
 static int can_destroy_player(DbRef player, DbRef victim) {
-  if (!Wizard(player)) {
+  if (!is_wizard(player)) {
     notify_quiet(player, "Sorry, no suicide allowed.");
     return 0;
   }
-  if (Wizard(victim)) {
+  if (is_wizard(victim)) {
     notify_quiet(player, "You may not destroy Wizards!");
     return 0;
   }
@@ -659,7 +659,7 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
    * If you own a location, you can destroy its exits
    */
 
-  if ((thing == NOTHING) && controls(player, Location(player))) {
+  if ((thing == NOTHING) && is_controls(player, obj_location(player))) {
     init_match(player, what, TYPE_EXIT);
     match_exit();
     thing = last_match_result();
@@ -671,7 +671,7 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
   if (match_status(player, thing) == NOTHING) {
     return;
   }
-  if (Safe(thing, player) && !(key & DEST_OVERRIDE)) {
+  if (is_safe(thing, player) && !(key & DEST_OVERRIDE)) {
     notify_quiet(player, "Sorry, that object is protected. Use "
                          "@destroy/override to destroy it.");
     return;
@@ -688,77 +688,78 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
    * Go do it
    */
 
-  switch (Typeof(thing)) {
+  switch (typeof_obj(thing)) {
   case TYPE_EXIT:
     if (can_destroy_exit(player, thing)) {
-      if (Going(thing)) {
+      if (is_going(thing)) {
         notify_quiet(player, "No sense beating a dead exit.");
       } else {
-        if (Hardcode(thing)) {
+        if (is_hardcode(thing)) {
           DisposeSpecialObject(player, thing);
-          c_Hardcode(thing);
+          c_hardcode(thing);
         }
         if (0) {
           destroy_exit(thing);
         } else {
           notify(player, "The exit shakes and begins to crumble.");
-          if (!Quiet(thing) && !Quiet(Owner(thing)))
-            notify_quiet(Owner(thing),
+          if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
+            notify_quiet(obj_owner(thing),
                          tprintf("You will be rewarded shortly for %s(#%d).",
                                  Name(thing), thing));
-          if ((Owner(thing) != player) && !Quiet(player))
+          if ((obj_owner(thing) != player) && !is_quiet(player))
             notify_quiet(player, tprintf("Destroyed. #%d's %s(#%d)",
-                                         Owner(thing), Name(thing), thing));
-          s_Going(thing);
+                                         obj_owner(thing), Name(thing), thing));
+          s_going(thing);
         }
       }
     }
     break;
   case TYPE_THING:
-    if (Going(thing)) {
+    if (is_going(thing)) {
       notify_quiet(player, "No sense beating a dead object.");
     } else {
-      if (Hardcode(thing)) {
+      if (is_hardcode(thing)) {
         DisposeSpecialObject(player, thing);
-        c_Hardcode(thing);
+        c_hardcode(thing);
       }
       if (0) {
         destroy_thing(thing);
       } else {
         notify(player, "The object shakes and begins to crumble.");
-        if (!Quiet(thing) && !Quiet(Owner(thing)))
-          notify_quiet(Owner(thing),
+        if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
+          notify_quiet(obj_owner(thing),
                        tprintf("You will be rewarded shortly for %s(#%d).",
                                Name(thing), thing));
-        if ((Owner(thing) != player) && !Quiet(player))
-          notify_quiet(player, tprintf("Destroyed. %s's %s(#%d)",
-                                       Name(Owner(thing)), Name(thing), thing));
-        s_Going(thing);
+        if ((obj_owner(thing) != player) && !is_quiet(player))
+          notify_quiet(player,
+                       tprintf("Destroyed. %s's %s(#%d)",
+                               Name(obj_owner(thing)), Name(thing), thing));
+        s_going(thing);
       }
     }
     break;
   case TYPE_PLAYER:
     if (can_destroy_player(player, thing)) {
-      if (Going(thing)) {
+      if (is_going(thing)) {
         notify_quiet(player, "No sense beating a dead player.");
       } else {
-        if (Hardcode(thing)) {
+        if (is_hardcode(thing)) {
           DisposeSpecialObject(player, thing);
-          c_Hardcode(thing);
+          c_hardcode(thing);
         }
         if (0) {
           attribute_add_raw(thing, A_DESTROYER, tprintf("%d", player));
           destroy_player(thing);
         } else {
           notify(player, "The player shakes and begins to crumble.");
-          s_Going(thing);
+          s_going(thing);
           attribute_add_raw(thing, A_DESTROYER, tprintf("%d", player));
         }
       }
     }
     break;
   case TYPE_ROOM:
-    if (Going(thing)) {
+    if (is_going(thing)) {
       notify_quiet(player, "No sense beating a dead room.");
     } else {
       if (0) {
@@ -766,14 +767,15 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
         destroy_obj(NOTHING, thing);
       } else {
         notify_all(thing, player, "The room shakes and begins to crumble.");
-        if (!Quiet(thing) && !Quiet(Owner(thing)))
-          notify_quiet(Owner(thing),
+        if (!is_quiet(thing) && !is_quiet(obj_owner(thing)))
+          notify_quiet(obj_owner(thing),
                        tprintf("You will be rewarded shortly for %s(#%d).",
                                Name(thing), thing));
-        if ((Owner(thing) != player) && !Quiet(player))
-          notify_quiet(player, tprintf("Destroyed. %s's %s(#%d)",
-                                       Name(Owner(thing)), Name(thing), thing));
-        s_Going(thing);
+        if ((obj_owner(thing) != player) && !is_quiet(player))
+          notify_quiet(player,
+                       tprintf("Destroyed. %s's %s(#%d)",
+                               Name(obj_owner(thing)), Name(thing), thing));
+        s_going(thing);
       }
     }
   }
@@ -799,13 +801,13 @@ void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
     if ((zone = noisy_match_result()) == NOTHING)
       return;
 
-    if ((Typeof(zone) != TYPE_THING) && (Typeof(zone) != TYPE_ROOM)) {
+    if ((typeof_obj(zone) != TYPE_THING) && (typeof_obj(zone) != TYPE_ROOM)) {
       notify(player, "Invalid zone object type.");
       return;
     }
   }
 
-  if (!Wizard(player) && !(Controls(player, thing)) &&
+  if (!is_wizard(player) && !(is_controls(player, thing)) &&
       !(check_zone_for_player(player, thing)) &&
       !(db[player].owner == db[thing].owner)) {
     notify(player, "You don't have the power to shift reality.");
@@ -816,7 +818,7 @@ void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
    *
    * *  * *  * * owns
    */
-  if ((zone != NOTHING) && !Wizard(player) && !(Controls(player, zone)) &&
+  if ((zone != NOTHING) && !is_wizard(player) && !(is_controls(player, zone)) &&
       !(db[player].owner == db[zone].owner)) {
     notify(player, "You cannot move that object to that zone.");
     return;
@@ -824,8 +826,8 @@ void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
   /*
    * only rooms may be zoned to other rooms
    */
-  if ((zone != NOTHING) && (Typeof(zone) == TYPE_ROOM) &&
-      Typeof(thing) != TYPE_ROOM) {
+  if ((zone != NOTHING) && (typeof_obj(zone) == TYPE_ROOM) &&
+      typeof_obj(thing) != TYPE_ROOM) {
     notify(player, "Only rooms may have parent rooms.");
     return;
   }
@@ -833,18 +835,18 @@ void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
    * everything is okay, do the change
    */
   db[thing].zone = zone;
-  if (Typeof(thing) != TYPE_PLAYER) {
+  if (typeof_obj(thing) != TYPE_PLAYER) {
     /*
      * if the object is a player, resetting these flags is rather
      * * * * * inconvenient -- although this may pose a bit of a *
      * *  * security * risk. Be careful when @chzone'ing wizard players.
      */
-    Flags(thing) &= ~WIZARD;
-    Flags(thing) &= ~INHERIT;
+    s_flags(thing, obj_flags(thing) & ~WIZARD);
+    s_flags(thing, obj_flags(thing) & ~INHERIT);
 #ifdef USE_POWERS
-    Powers(thing) = 0; /*
-                        * wipe out all powers
-                        */
+    s_powers(thing, 0); /*
+                         * wipe out all powers
+                         */
 #endif
   }
   notify(player, "Zone changed.");
@@ -870,7 +872,7 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
   /*
    * check for renaming a player
    */
-  if (isPlayer(thing)) {
+  if (is_player(thing)) {
 
     buff = trim_spaces((char *)newname);
     if (!ok_player_name(buff) || !badname_check(buff)) {
@@ -889,7 +891,7 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
       return;
     }
 
-    if (player == thing && In_Character(player) && !Wizard(player)) {
+    if (player == thing && is_in_character(player) && !is_wizard(player)) {
       buff2 = silly_atr_get(player, A_LASTNAME);
       if (!(buff2 && atoi(buff2) &&
             ((atoi(buff2) + (mudconf.namechange_days * 86400)) < mudstate.now)))
@@ -905,14 +907,14 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
       log_text(buff);
       ENDLOG;
     }
-    if (Suspect(thing)) {
+    if (is_suspect(thing)) {
       send_channel("Suspect", tprintf("%s renamed to %s", Name(thing), buff));
     }
     delete_player_name(thing, Name(thing));
 
     object_name_set(thing, buff);
     add_player_name(thing, Name(thing));
-    if (!Quiet(player) && !Quiet(thing))
+    if (!is_quiet(player) && !is_quiet(thing))
       notify_quiet(player, "Name set.");
     free_lbuf(buff);
     return;
@@ -925,7 +927,7 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
      * everything ok, change the name
      */
     object_name_set(thing, newname);
-    if (!Quiet(player) && !Quiet(thing))
+    if (!is_quiet(player) && !is_quiet(thing))
       notify_quiet(player, "Name set.");
   }
 }
@@ -949,18 +951,18 @@ void do_unlink(DbRef player, DbRef cause, int key, char *name) {
     notify_quiet(player, "I don't know which one you mean!");
     break;
   default:
-    if (!controls(player, exit)) {
+    if (!is_controls(player, exit)) {
       notify_quiet(player, "Permission denied.");
     } else {
-      switch (Typeof(exit)) {
+      switch (typeof_obj(exit)) {
       case TYPE_EXIT:
-        s_Location(exit, NOTHING);
-        if (!Quiet(player))
+        s_location(exit, NOTHING);
+        if (!is_quiet(player))
           notify_quiet(player, "Unlinked.");
         break;
       case TYPE_ROOM:
-        s_Dropto(exit, NOTHING);
-        if (!Quiet(player))
+        s_dropto(exit, NOTHING);
+        if (!is_quiet(player))
           notify_quiet(player, "Dropto removed.");
         break;
       default:
@@ -985,9 +987,9 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
   if (parse_attrib(player, name, &thing, &atr)) {
     if (atr != NOTHING) {
       if (!*newown) {
-        owner = Owner(thing);
+        owner = obj_owner(thing);
       } else if (!(string_compare(newown, "me"))) {
-        owner = Owner(player);
+        owner = obj_owner(player);
       } else {
         owner = lookup_player(player, newown, 1);
       }
@@ -1009,11 +1011,11 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
       do_it = 0;
       if (owner == NOTHING) {
         notify_quiet(player, "I couldn't find that player.");
-      } else if (God(thing) && !God(player)) {
+      } else if (is_god(thing) && !is_god(player)) {
         notify_quiet(player, "Permission denied.");
-      } else if (Wizard(player)) {
+      } else if (is_wizard(player)) {
         do_it = 1;
-      } else if (owner == Owner(player)) {
+      } else if (owner == obj_owner(player)) {
 
         /*
          * chown to me: only if I own the obj and * *
@@ -1021,12 +1023,12 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
          * *  * * !locked
          */
 
-        if (!Controls(player, thing) || (aflags & AF_LOCK)) {
+        if (!is_controls(player, thing) || (aflags & AF_LOCK)) {
           notify_quiet(player, "Permission denied.");
         } else {
           do_it = 1;
         }
-      } else if (owner == Owner(thing)) {
+      } else if (owner == obj_owner(thing)) {
 
         /*
          * chown to obj owner: only if I own attr * *
@@ -1034,7 +1036,7 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
          * *  * * and !locked
          */
 
-        if ((Owner(player) != aowner) || (aflags & AF_LOCK)) {
+        if ((obj_owner(player) != aowner) || (aflags & AF_LOCK)) {
           notify_quiet(player, "Permission denied.");
         } else {
           do_it = 1;
@@ -1047,12 +1049,12 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
         return;
 
       ap = attribute_by_number(atr);
-      if (!ap || !Set_attr(player, player, ap, aflags)) {
+      if (!ap || !set_attr(player, player, ap, aflags)) {
         notify_quiet(player, "Permission denied.");
         return;
       }
       attribute_set_owner(thing, atr, owner);
-      if (!Quiet(player))
+      if (!is_quiet(player))
         notify_quiet(player, "Attribute owner changed.");
       return;
     }
@@ -1062,7 +1064,7 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
   match_here();
   match_exit();
   match_me();
-  if (Wizard(player)) {
+  if (is_wizard(player)) {
     match_player();
     match_absolute();
   }
@@ -1076,32 +1078,32 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
   }
 
   if (!*newown || !(string_compare(newown, "me"))) {
-    owner = Owner(player);
+    owner = obj_owner(player);
   } else {
     owner = lookup_player(player, newown, 1);
   }
 
   if (owner == NOTHING) {
     notify_quiet(player, "I couldn't find that player.");
-  } else if (isPlayer(thing) && !God(player)) {
+  } else if (is_player(thing) && !is_god(player)) {
     notify_quiet(player, "Players always own themselves.");
-  } else if (((!controls(player, thing) && !Wizard(player)) ||
-              (isThing(thing) && (Location(thing) != player) &&
-               !Wizard(player))) ||
-             (!controls(player, owner))) {
+  } else if (((!is_controls(player, thing) && !is_wizard(player)) ||
+              (is_thing(thing) && (obj_location(thing) != player) &&
+               !is_wizard(player))) ||
+             (!is_controls(player, owner))) {
     notify_quiet(player, "Permission denied.");
   } else {
-    if (God(player)) {
-      s_Owner(thing, owner);
+    if (is_god(player)) {
+      s_owner(thing, owner);
     } else {
-      s_Owner(thing, Owner(owner));
+      s_owner(thing, obj_owner(owner));
     }
     attribute_change_owner(thing);
-    s_Flags(thing, (Flags(thing) & ~INHERIT) | HALT);
-    s_Powers(thing, 0);
-    s_Powers2(thing, 0);
+    s_flags(thing, (obj_flags(thing) & ~INHERIT) | HALT);
+    s_powers(thing, 0);
+    s_powers2(thing, 0);
     halt_que(NOTHING, thing);
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_quiet(player, "Owner changed.");
   }
 }
@@ -1163,7 +1165,7 @@ void do_set(DbRef player, DbRef cause, int key, char *name, char *flag) {
        */
 
       attr = attribute_by_number(atr);
-      if (!attr || !Set_attr(player, thing, attr, aflags)) {
+      if (!attr || !set_attr(player, thing, attr, aflags)) {
         notify_quiet(player, "Permission denied.");
         return;
       }
@@ -1175,7 +1177,7 @@ void do_set(DbRef player, DbRef cause, int key, char *name, char *flag) {
         aflags &= ~flagvalue;
       else
         aflags |= flagvalue;
-      have_xcode = Hardcode(thing);
+      have_xcode = is_hardcode(thing);
       attribute_set_flags(thing, atr, aflags);
 
       /*
@@ -1183,8 +1185,8 @@ void do_set(DbRef player, DbRef cause, int key, char *name, char *flag) {
        */
 
       if (mudconf.have_specials)
-        handle_xcode(player, thing, have_xcode, Hardcode(thing));
-      if (!(key & SET_QUIET) && !Quiet(player) && !Quiet(thing)) {
+        handle_xcode(player, thing, have_xcode, is_hardcode(thing));
+      if (!(key & SET_QUIET) && !is_quiet(player) && !is_quiet(thing)) {
         NameTable *nt;
         nt = name_table_find_entry(player, indiv_attraccess_nametab, flag);
         notify_printf(player, "%s/%s - %s %s", Name(thing), attr->name,
@@ -1221,7 +1223,7 @@ void do_set(DbRef player, DbRef cause, int key, char *name, char *flag) {
       return;
     }
     attribute_get_info(thing, atr, &aowner, &aflags);
-    if (!Set_attr(player, thing, attr, aflags)) {
+    if (!set_attr(player, thing, attr, aflags)) {
       notify_quiet(player, "Permission denied.");
       return;
     }
@@ -1241,7 +1243,7 @@ void do_set(DbRef player, DbRef cause, int key, char *name, char *flag) {
       p = buff;
       attribute_parent_get_string(buff, thing2, atr2, &aowner, &aflags);
 
-      if (!attr2 || !See_attr(player, thing2, attr2, aowner, aflags)) {
+      if (!attr2 || !see_attr(player, thing2, attr2, aowner, aflags)) {
         notify_quiet(player, "Permission denied.");
         free_lbuf(buff);
         return;
@@ -1337,7 +1339,7 @@ void do_mvattr(DbRef player, DbRef cause, int key, char *what, char *args[],
     *astr = '\0';
   } else {
     attribute_get_string(astr, thing, in_attr->number, &aowner, &aflags);
-    if (!See_attr(player, thing, in_attr, aowner, aflags)) {
+    if (!see_attr(player, thing, in_attr, aowner, aflags)) {
       *astr = '\0';
     } else {
       in_anum = in_attr->number;
@@ -1364,11 +1366,11 @@ void do_mvattr(DbRef player, DbRef cause, int key, char *what, char *args[],
       no_delete = 1;
     } else {
       attribute_get_info(thing, out_attr->number, &axowner, &axflags);
-      if (!Set_attr(player, thing, out_attr, axflags)) {
+      if (!set_attr(player, thing, out_attr, axflags)) {
         notify_quiet(player, tprintf("%s: Permission denied.", args[i]));
       } else {
-        attribute_add(thing, out_attr->number, astr, Owner(player), aflags);
-        if (!Quiet(player))
+        attribute_add(thing, out_attr->number, astr, obj_owner(player), aflags);
+        if (!is_quiet(player))
           notify_printf(player, "%s/%s - Set.", Name(thing), out_attr->name);
       }
     }
@@ -1380,9 +1382,9 @@ void do_mvattr(DbRef player, DbRef cause, int key, char *what, char *args[],
 
   if ((in_anum > 0) && !no_delete) {
     in_attr = attribute_by_number(in_anum);
-    if (in_attr && Set_attr(player, thing, in_attr, aflags)) {
+    if (in_attr && set_attr(player, thing, in_attr, aflags)) {
       attribute_clear(thing, in_attr->number);
-      if (!Quiet(player))
+      if (!is_quiet(player))
         notify_printf(player, "%s/%s - Cleared.", Name(thing), in_attr->name);
     } else {
       if (in_attr)
@@ -1422,7 +1424,7 @@ void do_wipe(DbRef player, DbRef cause, int key, char *it) {
        */
 
       attribute_get_string(atext, thing, ap->number, &aowner, &aflags);
-      if (Set_attr(player, thing, ap, aflags)) {
+      if (set_attr(player, thing, ap, aflags)) {
         attribute_clear(thing, ap->number);
         got_one++;
       }
@@ -1435,7 +1437,7 @@ void do_wipe(DbRef player, DbRef cause, int key, char *it) {
   if (!got_one) {
     notify_quiet(player, "No matching attributes.");
   } else {
-    if (!Quiet(player))
+    if (!is_quiet(player))
       notify_printf(player, "%s - %d attribute(s) wiped.", Name(thing),
                     got_one);
   }

@@ -210,7 +210,7 @@ void Plasma_Hit(MECH *mech, MECH *hitMech, int LOS) {
 // extern int global_kill_cheat;
 void KillMechContentsIfIC(DbRef aRef) {
   // global_kill_cheat = 1;
-  if (!In_Character(aRef))
+  if (!is_in_character(aRef))
     return;
   if (!mudconf.btech_ic || mudconf.btech_xploss >= 1000)
     tele_contents(aRef, AFTERLIFE_DBREF, TELE_LOUD);
@@ -267,8 +267,8 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
 
   // Destroy Contents Right Away
   if (mudconf.btech_transported_unit_death) {
-    SAFE_DOLIST(a, b, Contents(target->mynum))
-    if (IsMech(a) && In_Character(a)) {
+    SAFE_DOLIST(a, b, obj_contents(target->mynum))
+    if (IsMech(a) && is_in_character(a)) {
       ctarget = getMech(a);
       mech_notify(
           ctarget, MECHALL,
@@ -327,7 +327,7 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
     Destroy(target);
   }
   if (MechType(target) == CLASS_MW) {
-    if (In_Character(target->mynum)) {
+    if (is_in_character(target->mynum)) {
       if (mudconf.btech_xploss_for_mw) {
         KillMechContentsIfIC(target->mynum);
       } else {

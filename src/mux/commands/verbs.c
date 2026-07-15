@@ -45,7 +45,8 @@ void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
    * message to neighbors
    */
 
-  if ((owhat > 0) && Has_location(player) && Good_obj(loc = Location(player))) {
+  if ((owhat > 0) && has_location(player) &&
+      is_good_obj(loc = obj_location(player))) {
     d = attribute_parent_get(thing, owhat, &aowner, &aflags);
     if (*d) {
       buff = bp = alloc_lbuf("did_it.2");
@@ -62,8 +63,8 @@ void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
                      tprintf("%s %s", Name(player), odef));
     }
     free_lbuf(d);
-  } else if ((owhat < 0) && odef && Has_location(player) &&
-             Good_obj(loc = Location(player))) {
+  } else if ((owhat < 0) && odef && has_location(player) &&
+             is_good_obj(loc = obj_location(player))) {
     notify_except2(loc, player, player, thing,
                    tprintf("%s %s", Name(player), odef));
   }
@@ -129,7 +130,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
   init_match(player, victim_str, NOTYPE);
   match_everything(MAT_EXIT_PARENTS);
   victim = noisy_match_result();
-  if (!Good_obj(victim))
+  if (!is_good_obj(victim))
     return;
 
   /*
@@ -140,7 +141,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
     init_match(player, args[0], NOTYPE);
     match_everything(MAT_EXIT_PARENTS);
     actor = noisy_match_result();
-    if (!Good_obj(actor))
+    if (!is_good_obj(actor))
       return;
   } else {
     actor = cause;
@@ -155,11 +156,11 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    *      victim are defaulted.
    */
 
-  if (!controls(player, actor)) {
+  if (!is_controls(player, actor)) {
     notify_quiet(player, "Permission denied,");
     return;
   }
-  restriction = !controls(player, victim);
+  restriction = !is_controls(player, victim);
 
   what = -1;
   owhat = -1;
@@ -229,9 +230,9 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
       attribute_get_info(victim, what, &aowner, &aflags);
       ap = attribute_by_number(what);
     }
-    if (!ap || !Read_attr(player, victim, ap, aowner, aflags) ||
+    if (!ap || !read_attr(player, victim, ap, aowner, aflags) ||
         ((ap->number == A_DESC) && !mudconf.read_rem_desc &&
-         !Examinable(player, victim) && !nearby(player, victim)))
+         !is_examinable(player, victim) && !nearby(player, victim)))
       what = -1;
 
     ap = NULL;
@@ -239,9 +240,9 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
       attribute_get_info(victim, owhat, &aowner, &aflags);
       ap = attribute_by_number(owhat);
     }
-    if (!ap || !Read_attr(player, victim, ap, aowner, aflags) ||
+    if (!ap || !read_attr(player, victim, ap, aowner, aflags) ||
         ((ap->number == A_DESC) && !mudconf.read_rem_desc &&
-         !Examinable(player, victim) && !nearby(player, victim)))
+         !is_examinable(player, victim) && !nearby(player, victim)))
       owhat = -1;
 
     awhat = 0;

@@ -18,14 +18,14 @@ static int ph_any(DbRef target, DbRef player, Power power, int fpowers,
                   int reset) {
   if (fpowers & POWER_EXT) {
     if (reset)
-      s_Powers2(target, Powers2(target) & ~power);
+      s_powers2(target, obj_powers2(target) & ~power);
     else
-      s_Powers2(target, Powers2(target) | power);
+      s_powers2(target, obj_powers2(target) | power);
   } else {
     if (reset)
-      s_Powers(target, Powers(target) & ~power);
+      s_powers(target, obj_powers(target) & ~power);
     else
-      s_Powers(target, Powers(target) | power);
+      s_powers(target, obj_powers(target) | power);
   }
   return 1;
 }
@@ -35,7 +35,7 @@ static int ph_any(DbRef target, DbRef player, Power power, int fpowers,
  */
 static int ph_wiz(DbRef target, DbRef player, Power power, int fpowers,
                   int reset) {
-  if (!Wizard(player) & !God(player))
+  if (!is_wizard(player) & !is_god(player))
     return 0;
   return (ph_any(target, player, power, fpowers, reset));
 }
@@ -85,9 +85,9 @@ void display_powertab(DbRef player) {
   bp = buf = alloc_lbuf("display_powertab");
   safe_str((char *)"Powers:", buf, &bp);
   for (fp = gen_powers; fp->powername; fp++) {
-    if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
       continue;
-    if ((fp->listperm & CA_GOD) && !God(player))
+    if ((fp->listperm & CA_GOD) && !is_god(player))
       continue;
     safe_chr(' ', buf, &bp);
     safe_str((char *)fp->powername, buf, &bp);
@@ -172,7 +172,7 @@ void power_set(DbRef target, DbRef player, char *power, int key) {
   result = fp->handler(target, player, fp->powervalue, fp->powerpower, negate);
   if (!result)
     notify(player, "Permission denied.");
-  else if (!(key & SET_QUIET) && !Quiet(player))
+  else if (!(key & SET_QUIET) && !is_quiet(player))
     notify_printf(player, "%s - %s %s", Name(target), fp->powername,
                   negate ? "removed." : "granted.");
   return;
@@ -190,14 +190,14 @@ int has_power(DbRef player, DbRef it, char *powername) {
     return 0;
 
   if (fp->powerpower & POWER_EXT)
-    fv = Powers2(it);
+    fv = obj_powers2(it);
   else
-    fv = Powers(it);
+    fv = obj_powers(it);
 
   if (fv & fp->powervalue) {
-    if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
       return 0;
-    if ((fp->listperm & CA_GOD) && !God(player))
+    if ((fp->listperm & CA_GOD) && !is_god(player))
       return 0;
     return 1;
   }
@@ -226,13 +226,13 @@ char *power_description(DbRef player, DbRef target) {
 
   for (fp = gen_powers; fp->powername; fp++) {
     if (fp->powerpower & POWER_EXT)
-      fv = Powers2(target);
+      fv = obj_powers2(target);
     else
-      fv = Powers(target);
+      fv = obj_powers(target);
     if (fv & fp->powervalue) {
-      if ((fp->listperm & CA_WIZARD) && !Wizard(player))
+      if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
         continue;
-      if ((fp->listperm & CA_GOD) && !God(player))
+      if ((fp->listperm & CA_GOD) && !is_god(player))
         continue;
       safe_mb_chr(' ', buff, &bp);
       safe_mb_str((char *)fp->powername, buff, &bp);

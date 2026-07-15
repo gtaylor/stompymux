@@ -38,10 +38,10 @@ int tele_contents(DbRef from, DbRef to, int flag) {
   DbRef i, tmpnext;
   int count = 0;
 
-  SAFE_DOLIST(i, tmpnext, Contents(from))
+  SAFE_DOLIST(i, tmpnext, obj_contents(from))
   if ((flag & TELE_ALL) || !Wiz(i)) {
     if (flag & TELE_XP && !Wiz(i))
-      if (!(Quiet(from)))
+      if (!(is_quiet(from)))
         lower_xp(i, mudconf.btech_xploss);
     if (flag & TELE_LOUD)
       loud_teleport(i, to);
@@ -59,18 +59,18 @@ static void mech_discard_event(MuxEvent *e) {
 
   /* We'll silently move the mech off, but lets trigger the aleave/oleave/leave
    * of the loc as well before we do anything fancy */
-  did_it(i, Location(i), A_LEAVE, NULL, A_OLEAVE, NULL, A_ALEAVE, (char **)NULL,
-         0);
-  c_Hardcode(i);
+  did_it(i, obj_location(i), A_LEAVE, NULL, A_OLEAVE, NULL, A_ALEAVE,
+         (char **)NULL, 0);
+  c_hardcode(i);
   handle_xcode(GOD, i, 1, 0);
-  s_Going(i);
-  s_Dark(i);
-  s_Zombie(i);
+  s_going(i);
+  s_dark(i);
+  s_zombie(i);
   hush_teleport(i, USED_MW_STORE);
 }
 
 void discard_mw(MECH *mech) {
-  if (In_Character(mech->mynum))
+  if (is_in_character(mech->mynum))
     MECHEVENT(mech, EVENT_NUKEMECH, mech_discard_event, 10, 0);
 }
 
@@ -82,7 +82,7 @@ void enter_mw_bay(MECH *mech, DbRef bay) {
 void pickup_mw(MECH *mech, MECH *target) {
   DbRef mw;
 
-  mw = Contents(target->mynum);
+  mw = obj_contents(target->mynum);
   DOCHECKMA((MechType(mech) != CLASS_MECH) &&
                 (MechType(mech) != CLASS_VEH_GROUND) &&
                 (MechType(mech) != CLASS_VTOL) &&
@@ -114,7 +114,7 @@ static void char_eject(DbRef player, MECH *mech) {
 
   suit = create_object(tprintf("MechWarrior - %s", Name(player)));
   silly_atr_set(suit, A_XTYPE, "MECH");
-  s_Hardcode(suit);
+  s_hardcode(suit);
   handle_xcode(GOD, suit, 0, 1);
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
@@ -143,7 +143,7 @@ static void char_eject(DbRef player, MECH *mech) {
   hush_teleport(suit, mech->mapindex);
   hush_teleport(player, suit);
   MechLOSBroadcast(m, tprintf("ejected from %s!", GetMechID(mech)));
-  s_In_Character(suit);
+  s_in_character(suit);
   initialize_pc(player, m);
   silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%d", player));
   MechPilot(m) = player;
@@ -180,9 +180,9 @@ void mech_eject(DbRef player, void *data, char *buffer) {
   DOCHECK(FlyingT(mech) && !Landed(mech),
           "Regrettably, right now you can only eject when landed, sorry - no "
           "parachute :P");
-  DOCHECK(!In_Character(mech->mynum), "This unit isn't in character!");
+  DOCHECK(!is_in_character(mech->mynum), "This unit isn't in character!");
   DOCHECK(!mudconf.btech_ic, "This MUX isn't in character!");
-  DOCHECK(!In_Character(Location(mech->mynum)),
+  DOCHECK(!is_in_character(obj_location(mech->mynum)),
           "Your location isn't in character!");
   DOCHECK(Started(mech) && MechPilot(mech) != player,
           "You aren't in da pilot's seat - no ejection for you!");
@@ -208,8 +208,8 @@ static void char_disembark(DbRef player, MECH *mech) {
 
   suit = create_object(tprintf("MechWarrior - %s", Name(player)));
   silly_atr_set(suit, A_XTYPE, "MECH");
-  s_Hardcode(suit);
-  s_Opaque(suit);
+  s_hardcode(suit);
+  s_opaque(suit);
   handle_xcode(GOD, suit, 0, 1);
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
@@ -238,7 +238,7 @@ static void char_disembark(DbRef player, MECH *mech) {
   mech_Rsetteam(GOD, (void *)m, tprintf("%d", MechTeam(mech)));
   hush_teleport(suit, mech->mapindex);
   hush_teleport(player, suit);
-  s_In_Character(suit);
+  s_in_character(suit);
   initialize_pc(player, m);
   MechPilot(m) = player;
   silly_atr_set(m->mynum, A_PILOTNUM, tprintf("#%d", player));
@@ -284,9 +284,9 @@ void mech_disembark(DbRef player, void *data, char *buffer) {
 
   /*  DOCHECK(FlyingT(mech) && !Landed(mech), "What, in the air ? Are you
    * suicidal ?"); */
-  DOCHECK(!In_Character(mech->mynum), "This unit isn't in character!");
+  DOCHECK(!is_in_character(mech->mynum), "This unit isn't in character!");
   DOCHECK(!mudconf.btech_ic, "This MUX isn't in character!");
-  DOCHECK(!In_Character(Location(mech->mynum)),
+  DOCHECK(!is_in_character(obj_location(mech->mynum)),
           "Your location isn't in character!");
   DOCHECK((Started(mech) || Starting(mech)) && (MechPilot(mech) == player),
           "While it's running!? Don't be daft.");
@@ -312,15 +312,15 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
    * A unit that is not IC can be disembarked by anyone.
    */
   DOCHECK(
-      In_Character(mech->mynum) && !Wiz(player) &&
+      is_in_character(mech->mynum) && !Wiz(player) &&
           (char_lookupplayer(GOD, GOD, 0,
                              silly_atr_get(mech->mynum, A_PILOTNUM)) != player),
       "This isn't your mech!");
 
   /* Find the carrier that the invoker's unit is in and check it for validity.
    */
-  newmech = Location(mech->mynum);
-  DOCHECK(!(Good_obj(newmech) && Hardcode(newmech)),
+  newmech = obj_location(mech->mynum);
+  DOCHECK(!(is_good_obj(newmech) && is_hardcode(newmech)),
           "You're not being carried!");
   DOCHECK(!(target = getMech(newmech)), "Not being carried!");
   DOCHECK(target->mapindex == -1, "You are not on a map.");
@@ -347,7 +347,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   loud_teleport(mech->mynum, mech->mapindex);
 
   /* If we make it safely, start the invoker's unit up once it's on the map. */
-  if (!Destroyed(mech) && Location(player) == mech->mynum) {
+  if (!Destroyed(mech) && obj_location(player) == mech->mynum) {
     MechPilot(mech) = player;
     Startup(mech);
   }
@@ -357,12 +357,12 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   UnSetMechPKiller(mech);
   MechLOSBroadcast(mech, "powers up!");
   EvalBit(MechSpecials(mech), SS_ABILITY,
-          ((MechPilot(mech) > 0 && isPlayer(MechPilot(mech)))
+          ((MechPilot(mech) > 0 && is_player(MechPilot(mech)))
                ? char_getvalue(MechPilot(mech), "Sixth_Sense")
                : 0));
   MechComm(mech) = DEFAULT_COMM;
 
-  if (isPlayer(MechPilot(mech)) && !Quiet(mech->mynum)) {
+  if (is_player(MechPilot(mech)) && !is_quiet(mech->mynum)) {
     MechComm(mech) =
         char_getskilltarget(MechPilot(mech), "Comm-Conventional", 0);
     MechPer(mech) = char_getskilltarget(MechPilot(mech), "Perception", 0);
@@ -465,7 +465,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     DOCHECK(MechZ(mech) < (MechZ(target) - 1), "You can't reach that high !");
     DOCHECK(MechX(mech) != MechX(target) || MechY(mech) != MechY(target),
             "You need to be in the same hex!");
-    DOCHECK((!In_Character(mech->mynum)) || (!In_Character(target->mynum)),
+    DOCHECK((!is_in_character(mech->mynum)) ||
+                (!is_in_character(target->mynum)),
             "You don't really see a way to get in there.");
     DOCHECK((MechType(target) == CLASS_VEH_GROUND ||
              MechType(target) == CLASS_VTOL) &&
@@ -567,7 +568,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
   DOCHECK(fabs(MechSpeed(target)) > 0,
           "Are you suicidal ? That thing is moving too fast !");
-  DOCHECK(!In_Character(mech->mynum) || !In_Character(target->mynum),
+  DOCHECK(!is_in_character(mech->mynum) || !is_in_character(target->mynum),
           "You don't really see a way to get in there.");
 
   /* New message system for when someone tries to embark
@@ -650,14 +651,14 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   char *d;
 
   /* If we're not IC, return */
-  if (!player || !In_Character(mech->mynum) || !mudconf.btech_ic ||
-      !In_Character(Location(mech->mynum)))
+  if (!player || !is_in_character(mech->mynum) || !mudconf.btech_ic ||
+      !is_in_character(obj_location(mech->mynum)))
     return;
 
   /* Create the MW object */
   suit = create_object(tprintf("MechWarrior - %s", Name(player)));
   silly_atr_set(suit, A_XTYPE, "MECH");
-  s_Hardcode(suit);
+  s_hardcode(suit);
   handle_xcode(GOD, suit, 0, 1);
   d = silly_atr_get(player, A_MWTEMPLATE);
   if (!(m = getMech(suit))) {
@@ -689,7 +690,7 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   hush_teleport(player, suit);
 
   /* Init the sucker */
-  s_In_Character(suit);
+  s_in_character(suit);
   initialize_pc(player, m);
   MechPilot(m) = player;
   MechTeam(m) = MechTeam(mech);

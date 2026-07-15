@@ -25,7 +25,7 @@
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
 
-#define LUA_MODULES_KEY "btmux.lua.modules"
+constexpr char LUA_MODULES_KEY[] = "btmux.lua.modules";
 
 typedef enum lua_module_root_e LUA_MODULE_ROOT;
 enum lua_module_root_e {
@@ -208,7 +208,7 @@ static int lua_host_attr_get(lua_State *state) {
 
   if (runtime->checking)
     return luaL_error(state, "mux.attr_get is unavailable during @luacheck");
-  if (!Good_obj(object))
+  if (!is_good_obj(object))
     return luaL_error(state, "invalid object");
   attribute = attribute_by_name((char *)name);
   if (!attribute) {
@@ -234,7 +234,7 @@ static int lua_host_attr_set(lua_State *state) {
 
   if (runtime->checking)
     return luaL_error(state, "mux.attr_set is unavailable during @luacheck");
-  if (!Good_obj(object))
+  if (!is_good_obj(object))
     return luaL_error(state, "invalid object");
   snprintf(attribute_name, sizeof(attribute_name), "%s", name);
   attribute = mkattr(attribute_name);
@@ -253,7 +253,7 @@ static int lua_host_notify(lua_State *state) {
 
   if (runtime->checking)
     return luaL_error(state, "mux.notify is unavailable during @luacheck");
-  if (!Good_obj(object))
+  if (!is_good_obj(object))
     return luaL_error(state, "invalid object");
   notify(object, message);
   return 0;
@@ -845,7 +845,7 @@ static int lua_load_attached_modules(LUA_RUNTIME *runtime, char *error,
     DbRef owner;
     long flags;
 
-    if (!Good_obj(object))
+    if (!is_good_obj(object))
       continue;
     path = attribute_get(object, A_LUAPARENT, &owner, &flags);
     if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
@@ -974,7 +974,7 @@ static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
     long flags;
     char detail[LBUF_SIZE];
 
-    if (!Good_obj(object))
+    if (!is_good_obj(object))
       continue;
     path = attribute_get(object, A_LUAPARENT, &owner, &flags);
     if (!*path) {
@@ -1102,7 +1102,7 @@ static void lua_push_context(lua_State *state, DbRef object, DbRef player,
   int index;
 
   lua_newtable(state);
-  if (Good_obj(object)) {
+  if (is_good_obj(object)) {
     lua_pushinteger(state, object);
     lua_setfield(state, -2, "object");
   }
@@ -1231,7 +1231,7 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
   char error[LBUF_SIZE];
 
   if (job->root == LUA_ROOT_OBJECT_LOGIC &&
-      (!Good_obj(job->object) || Going(job->object)))
+      (!is_good_obj(job->object) || is_going(job->object)))
     return;
   if (!lua_load_module(runtime, job->root, job->path, error, sizeof(error))) {
     lua_log_load_error(job->object, job->path, error);
@@ -1260,8 +1260,8 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
 
       lua_push_context(
           state, job->object,
-          job->root == LUA_ROOT_OBJECT_LOGIC ? Owner(job->object) : NOTHING,
-          job->root == LUA_ROOT_OBJECT_LOGIC ? Owner(job->object) : NOTHING,
+          job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
+          job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
           NULL, "schedule",
           job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global", NULL, 0);
       lua_pushstring(state, job->name);
@@ -1317,7 +1317,7 @@ void lua_schedule_tick(time_t now) {
     for (object = 0; object < mudstate.db_top; object++) {
       char path[PATH_MAX];
 
-      if (!Good_obj(object) || Going(object) ||
+      if (!is_good_obj(object) || is_going(object) ||
           !lua_effective_path(object, path, sizeof(path), NULL))
         continue;
       lua_schedule_collect_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
@@ -1439,7 +1439,7 @@ int lua_command_match(DbRef thing, DbRef player, DbRef cause,
                       const char *command) {
   char path[PATH_MAX];
 
-  if (!lua_runtime || Halted(thing) ||
+  if (!lua_runtime || is_halted(thing) ||
       !lua_effective_path(thing, path, sizeof(path), NULL))
     return 0;
   return lua_module_command_match(lua_runtime, LUA_ROOT_OBJECT_LOGIC, path,
@@ -1624,7 +1624,7 @@ static void lua_schedule_show_module(DbRef player, LUA_RUNTIME *runtime,
 
       DbRef source;
 
-      if (Good_obj(object) &&
+      if (is_good_obj(object) &&
           lua_effective_path(object, effective, sizeof(effective), &source) &&
           !strcmp(effective, path))
         notify_printf(player, "  %s (#%d, attached on #%d)", Name(object),
@@ -1698,7 +1698,7 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
     for (object = 0; object < mudstate.db_top; object++) {
       char path[PATH_MAX];
 
-      if (!Good_obj(object) ||
+      if (!is_good_obj(object) ||
           !lua_effective_path(object, path, sizeof(path), NULL))
         continue;
       for (index = 0; index < path_count; index++) {

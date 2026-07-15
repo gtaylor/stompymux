@@ -5,84 +5,84 @@
 #include "mux/database/db.h"
 #include "mux/support/hash_table.h"
 
-#define FLAG_WORD2 0x1 /* 2nd word of flags. */
-#define FLAG_WORD3 0x2 /* 3rd word of flags. */
+constexpr int FLAG_WORD2 = 0x1; /* 2nd word of flags. */
+constexpr int FLAG_WORD3 = 0x2; /* 3rd word of flags. */
 
 /* Object types */
-#define TYPE_ROOM 0x0
-#define TYPE_THING 0x1
-#define TYPE_EXIT 0x2
-#define TYPE_PLAYER 0x3
+constexpr int TYPE_ROOM = 0x0;
+constexpr int TYPE_THING = 0x1;
+constexpr int TYPE_EXIT = 0x2;
+constexpr int TYPE_PLAYER = 0x3;
 
 /* Empty */
-#define TYPE_GARBAGE 0x5
-#define NOTYPE 0x7
-#define TYPE_MASK 0x7
+constexpr int TYPE_GARBAGE = 0x5;
+constexpr int NOTYPE = 0x7;
+constexpr int TYPE_MASK = 0x7;
 
 /* First word of flags */
-#define SEETHRU 0x00000008 /* Can see through to the other side */
-#define WIZARD 0x00000010  /* gets automatic control */
+constexpr int SEETHRU = 0x00000008; /* Can see through to the other side */
+constexpr int WIZARD = 0x00000010;  /* gets automatic control */
 /* 0x00000020 is reserved for the removed LINK_OK flag. */
-#define DARK 0x00000040 /* Don't show contents or presence */
+constexpr int DARK = 0x00000040; /* Don't show contents or presence */
 /* 0x00000080 is reserved for the removed JUMP_OK flag. */
-#define STICKY 0x00000100 /* Object goes home when dropped */
+constexpr int STICKY = 0x00000100; /* Object goes home when dropped */
 /* 0x00000200 is reserved for the removed DESTROY_OK flag. */
 /* 0x00000400 is reserved for the removed HAVEN flag. */
-#define QUIET 0x00000800   /* Prevent 'feelgood' messages */
-#define HALT 0x00001000    /* object cannot perform actions */
-#define TRACE 0x00002000   /* Generate evaluation trace output */
-#define GOING 0x00004000   /* object is available for recycling */
-#define MONITOR 0x00008000 /* Process ^x:action listens on obj? */
-#define MYOPIC 0x00010000  /* See things as nonowner/nonwizard */
-#define PUPPET 0x00020000  /* Relays ALL messages to owner */
+constexpr int QUIET = 0x00000800;   /* Prevent 'feelgood' messages */
+constexpr int HALT = 0x00001000;    /* object cannot perform actions */
+constexpr int TRACE = 0x00002000;   /* Generate evaluation trace output */
+constexpr int GOING = 0x00004000;   /* object is available for recycling */
+constexpr int MONITOR = 0x00008000; /* Process ^x:action listens on obj? */
+constexpr int MYOPIC = 0x00010000;  /* See things as nonowner/nonwizard */
+constexpr int PUPPET = 0x00020000;  /* Relays ALL messages to owner */
 /* 0x00040000 is reserved for the removed CHOWN_OK flag. */
-#define ENTER_OK 0x00080000 /* Object may be ENTERed */
+constexpr int ENTER_OK = 0x00080000; /* Object may be ENTERed */
 /* 0x00100000 is reserved for the removed VISUAL flag. */
 /* 0x00200000 is reserved for the removed IMMORTAL flag. */
-#define HAS_STARTUP 0x00400000 /* Load some attrs at startup */
-#define OPAQUE 0x00800000      /* Can't see inside */
-#define VERBOSE 0x01000000     /* Tells owner everything it does. */
-#define INHERIT 0x02000000     /* Gets owner's privs. (i.e. Wiz) */
-#define NOSPOOF 0x04000000     /* Report originator of all actions. */
-#define ROBOT 0x08000000       /* Player is a ROBOT */
-#define SAFE 0x10000000        /* Need /override to @destroy */
+constexpr int HAS_STARTUP = 0x00400000; /* Load some attrs at startup */
+constexpr int OPAQUE = 0x00800000;      /* Can't see inside */
+constexpr int VERBOSE = 0x01000000;     /* Tells owner everything it does. */
+constexpr int INHERIT = 0x02000000;     /* Gets owner's privs. (i.e. Wiz) */
+constexpr int NOSPOOF = 0x04000000;     /* Report originator of all actions. */
+constexpr int ROBOT = 0x08000000;       /* Player is a ROBOT */
+constexpr int SAFE = 0x10000000;        /* Need /override to @destroy */
 /* 0x20000000 is reserved for the removed ROYALTY flag. */
-#define HEARTHRU 0x40000000 /* Can hear out of this obj or exit */
+constexpr int HEARTHRU = 0x40000000; /* Can hear out of this obj or exit */
 /* 0x80000000 is reserved for the removed TERSE flag. */
 
 /* Second word of flags */
-#define KEY 0x00000001 /* No puppets */
+constexpr int KEY = 0x00000001; /* No puppets */
 /* 0x00000002 is reserved for the removed ABODE flag. */
-#define FLOATING 0x00000004   /* Inhibit Floating room.. msgs */
-#define UNFINDABLE 0x00000008 /* Cant loc() from afar */
+constexpr int FLOATING = 0x00000004;   /* Inhibit Floating room.. msgs */
+constexpr int UNFINDABLE = 0x00000008; /* Cant loc() from afar */
 /* 0x00000010 is reserved for the removed PARENT_OK flag. */
-#define LIGHT 0x00000020       /* Visible in dark places */
-#define HAS_LISTEN 0x00000040  /* Internal: LISTEN attr set */
-#define HAS_FWDLIST 0x00000080 /* Internal: FORWARDLIST attr set */
-#define AUDITORIUM 0x00000100  /* Should we check the SpeechLock? */
-#define ANSI 0x00000200
+constexpr int LIGHT = 0x00000020;       /* Visible in dark places */
+constexpr int HAS_LISTEN = 0x00000040;  /* Internal: LISTEN attr set */
+constexpr int HAS_FWDLIST = 0x00000080; /* Internal: FORWARDLIST attr set */
+constexpr int AUDITORIUM = 0x00000100;  /* Should we check the SpeechLock? */
+constexpr int ANSI = 0x00000200;
 /* 0x00000400 is reserved for the removed REGISTERED flag. */
-#define FIXED 0x00000800
+constexpr int FIXED = 0x00000800;
 /* 0x00001000 is reserved for the removed UNINSPECTED flag. */
-#define NO_COMMAND 0x00002000
+constexpr int NO_COMMAND = 0x00002000;
 
-#define NOBLEED 0x00008000
+constexpr int NOBLEED = 0x00008000;
 /* 0x00010000 is reserved for the removed STAFF flag. */
-#define HAS_DAILY 0x00020000
-#define GAGGED 0x00040000
-#define HARDCODE 0x00080000
-#define IN_CHARACTER 0x00100000
-#define ANSIMAP 0x00200000 /* Player uses ANSI maps */
-#define HAS_HOURLY 0x00400000
+constexpr int HAS_DAILY = 0x00020000;
+constexpr int GAGGED = 0x00040000;
+constexpr int HARDCODE = 0x00080000;
+constexpr int IN_CHARACTER = 0x00100000;
+constexpr int ANSIMAP = 0x00200000; /* Player uses ANSI maps */
+constexpr int HAS_HOURLY = 0x00400000;
 /* 0x00800000 is reserved for the removed MULTIOK flag. */
 
 /* 0x01000000 is reserved for the removed VACATION flag. */
-#define BLIND 0x04000000  /* Something to support blind players! */
-#define ZOMBIE 0x08000000 /* Hardcode object is a zombie */
+constexpr int BLIND = 0x04000000;  /* Something to support blind players! */
+constexpr int ZOMBIE = 0x08000000; /* Hardcode object is a zombie */
 
-#define SUSPECT 0x10000000 /* Report some activities to wizards */
+constexpr int SUSPECT = 0x10000000; /* Report some activities to wizards */
 /* 0x20000000 is reserved for the removed COMPRESS flag. */
-#define CONNECTED 0x40000000 /* Player is connected */
+constexpr int CONNECTED = 0x40000000; /* Player is connected */
 /* 0x80000000 is reserved for the removed SLAVE flag. */
 
 /* ---------------------------------------------------------------------------
@@ -109,13 +109,13 @@ typedef struct object_entry {
 } OBJENT;
 extern OBJENT object_types[8];
 
-#define OF_CONTENTS 0x0001 /* Object has contents: Contents() */
-#define OF_LOCATION 0x0002 /* Object has a location: Location() */
-#define OF_EXITS 0x0004    /* Object has exits: Exits() */
-#define OF_HOME 0x0008     /* Object has a home: Home() */
-#define OF_DROPTO 0x0010   /* Object has a dropto: Dropto() */
-#define OF_OWNER 0x0020    /* Object can own other objects */
-#define OF_SIBLINGS 0x0040 /* Object has siblings: Next() */
+constexpr int OF_CONTENTS = 0x0001; /* Object has contents: obj_contents() */
+constexpr int OF_LOCATION = 0x0002; /* Object has a location: obj_location() */
+constexpr int OF_EXITS = 0x0004;    /* Object has exits: obj_exits() */
+constexpr int OF_HOME = 0x0008;     /* Object has a home: obj_home() */
+constexpr int OF_DROPTO = 0x0010;   /* Object has a dropto: obj_dropto() */
+constexpr int OF_OWNER = 0x0020;    /* Object can own other objects */
+constexpr int OF_SIBLINGS = 0x0040; /* Object has siblings: obj_next() */
 
 typedef struct flagset {
   Flag word1;
@@ -134,223 +134,247 @@ extern char *unparse_object(DbRef, DbRef, int);
 extern char *unparse_object_numonly(DbRef);
 extern int convert_flags(DbRef, char *, FLAGSET *, Flag *);
 
-#define unparse_flags(p, t) decode_flags(p, Flags(t), Flags2(t), Flags3(t))
+constexpr DbRef GOD = 1;
 
-#define GOD ((DbRef)1)
+/* ---------------------- Object Permission/Attribute Functions */
+/* is_flag_set(X,T,F) - Is X of type T and have flag F set? */
+/* typeof(X)         - What object type is X */
+/* is_god(X)            - Is X player #1 */
+/* is_robot_player(X)          - Is X a robot player */
+/* is_wizard(X)         - Does X have wizard privs */
+/* is_alive(X)          - Is X a player or a puppet */
+/* is_dark(X)           - Is X dark */
+/* is_floating(X)       - Prevent 'disconnected room' msgs for room X */
+/* is_quiet(X)       - Should 'Set.' messages et al from X be disabled */
+/* is_verbose(X)        - Should owner receive all commands executed? */
+/* is_trace(X)          - Should owner receive eval trace output? */
+/* is_halted(X)         - Is X halted (not allowed to run commands)? */
+/* is_suspect(X)        - Is X someone the wizzes should keep an eye on */
+/* is_safe(X,P)         - Does P need the /OVERRIDE switch to @destroy X? */
+/* is_monitor(X)        - Should we check for ^xxx:xxx listens on player? */
+/* is_myopic(X)         - Should things as if we were nonowner/nonwiz */
+/* is_audible(X)        - Should X forward messages? */
+/* is_findable(X)       - Can @whereis find X */
+/* is_hideout(X)        - Is @whereis blocked for X */
+/* has_location(X)   - Is X something with a location (ie plyr or obj) */
+/* has_home(X)       - Is X something with a home (ie plyr or obj) */
+/* has_contents(X)   - Is X something with contents (ie plyr/obj/room) */
+/* is_good_obj(X)       - Is X inside the DB and have a valid type? */
+/* is_good_owner(X)  - Is X a good owner value? */
+/* is_going(X)          - Is X marked GOING? */
+/* is_inherits(X)       - Does X inherit the privs of its owner */
+/* is_examinable(P,X)   - Can P look at attribs of X */
+/* is_myopic_exam(P,X)  - Can P look at attribs of X (obeys MYOPIC) */
+/* is_controls(P,X)     - Can P force X to do something */
+/* can_link_exit(P,X) - Can P link from exit X */
+/* is_linkable(P,X)     - Can P link to X */
+/* mark(x)           - Set marked flag on X */
+/* unmark(x)         - Clear marked flag on X */
+/* is_marked(x)         - Check marked flag on X */
+/* is_hardcode(x)       - Check hardcode flag on X */
+/* is_in_character(x)   - Whether or not mecha's IC */
+/* see_attr(P,X.A,O,F)  - Can P see text attr A on X if attr has owner O */
+/* set_attr(P,X,A,F)    - Can P set/change text attr A (with flags F) on X */
+/* read_attr(P,X,A,O,F) - Can P see attr A on X if attr has owner O */
+/* write_attr(P,X,A,F)  - Can P set/change attr A (with flags F) on X */
 
-/* ---------------------- Object Permission/Attribute Macros */
-/* IS(X,T,F)         - Is X of type T and have flag F set? */
-/* Typeof(X)         - What object type is X */
-/* God(X)            - Is X player #1 */
-/* Robot(X)          - Is X a robot player */
-/* Wizard(X)         - Does X have wizard privs */
-/* Alive(X)          - Is X a player or a puppet */
-/* Dark(X)           - Is X dark */
-/* WHODark(X)        - Should X be hidden from the WHO report */
-/* Floating(X)       - Prevent 'disconnected room' msgs for room X */
-/* Quiet(X)          - Should 'Set.' messages et al from X be disabled */
-/* Verbose(X)        - Should owner receive all commands executed? */
-/* Trace(X)          - Should owner receive eval trace output? */
-/* Halted(X)         - Is X halted (not allowed to run commands)? */
-/* Suspect(X)        - Is X someone the wizzes should keep an eye on */
-/* Safe(X,P)         - Does P need the /OVERRIDE switch to @destroy X? */
-/* Monitor(X)        - Should we check for ^xxx:xxx listens on player? */
-/* Myopic(X)         - Should things as if we were nonowner/nonwiz */
-/* Audible(X)        - Should X forward messages? */
-/* Findroom(X)       - Can players in room X be found via @whereis? */
-/* Unfindroom(X)     - Is @whereis blocked for players in room X? */
-/* Findable(X)       - Can @whereis find X */
-/* Unfindable(X)     - Is @whereis blocked for X */
-/* No_robots(X)      - Does X disallow robot players from using */
-/* Has_location(X)   - Is X something with a location (ie plyr or obj) */
-/* Has_home(X)       - Is X something with a home (ie plyr or obj) */
-/* Has_contents(X)   - Is X something with contents (ie plyr/obj/room) */
-/* Good_obj(X)       - Is X inside the DB and have a valid type? */
-/* Good_owner(X)     - Is X a good owner value? */
-/* Going(X)          - Is X marked GOING? */
-/* Inherits(X)       - Does X inherit the privs of its owner */
-/* Examinable(P,X)   - Can P look at attribs of X */
-/* MyopicExam(P,X)   - Can P look at attribs of X (obeys MYOPIC) */
-/* Controls(P,X)     - Can P force X to do something */
-/* Affects(P,X)      - (Controls in MUSH V1) Is P wiz or same owner as X */
-/* Link_exit(P,X)    - Can P link from exit X */
-/* Linkable(P,X)     - Can P link to X */
-/* Mark(x)           - Set marked flag on X */
-/* Unmark(x)         - Clear marked flag on X */
-/* Marked(x)         - Check marked flag on X */
-/* Hardcode(x)       - Check hardcode flag on X */
-/* In_Character(x)   - Whether or not mecha's IC */
-/* See_attr(P,X.A,O,F)  - Can P see text attr A on X if attr has owner O */
-/* Set_attr(P,X,A,F)    - Can P set/change text attr A (with flags F) on X */
-/* Read_attr(P,X,A,O,F) - Can P see attr A on X if attr has owner O */
-/* Write_attr(P,X,A,F)  - Can P set/change attr A (with flags F) on X */
+static inline int typeof_obj(DbRef x) { return obj_flags(x) & TYPE_MASK; }
+static inline bool is_flag_set(DbRef thing, int type, int flag) {
+  return typeof_obj(thing) == type && (obj_flags(thing) & flag);
+}
+static inline bool is_god(DbRef x) { return x == GOD; }
+static inline bool is_robot(DbRef x) { return (obj_flags(x) & ROBOT) != 0; }
+static inline bool is_player(DbRef x) { return typeof_obj(x) == TYPE_PLAYER; }
+static inline bool is_room(DbRef x) { return typeof_obj(x) == TYPE_ROOM; }
+static inline bool is_exit(DbRef x) { return typeof_obj(x) == TYPE_EXIT; }
+static inline bool is_thing(DbRef x) { return typeof_obj(x) == TYPE_THING; }
+static inline bool is_owns_others(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_OWNER) != 0;
+}
+static inline bool has_location(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_LOCATION) != 0;
+}
+static inline bool has_contents(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_CONTENTS) != 0;
+}
+static inline bool has_exits(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_EXITS) != 0;
+}
+static inline bool has_siblings(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_SIBLINGS) != 0;
+}
+static inline bool has_home(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_HOME) != 0;
+}
+static inline bool has_dropto(DbRef x) {
+  return (object_types[typeof_obj(x)].flags & OF_DROPTO) != 0;
+}
+// Defined in flags.c, where server_state.h's full mudstate type is visible.
+bool is_good_obj(DbRef x);
+static inline bool is_fixed(DbRef x) { return (obj_flags2(x) & FIXED) != 0; }
+static inline bool is_ansi(DbRef x) { return (obj_flags2(x) & ANSI) != 0; }
+static inline bool is_ansimap(DbRef x) {
+  return (obj_flags2(x) & ANSIMAP) != 0;
+}
+static inline bool is_no_command(DbRef x) {
+  return (obj_flags2(x) & NO_COMMAND) != 0;
+}
+static inline bool is_transparent(DbRef x) {
+  return (obj_flags(x) & SEETHRU) != 0;
+}
+static inline bool is_sticky(DbRef x) { return (obj_flags(x) & STICKY) != 0; }
+static inline bool is_quiet(DbRef x) { return (obj_flags(x) & QUIET) != 0; }
+static inline bool is_halted(DbRef x) { return (obj_flags(x) & HALT) != 0; }
+static inline bool is_trace(DbRef x) { return (obj_flags(x) & TRACE) != 0; }
+static inline bool is_going(DbRef x) { return (obj_flags(x) & GOING) != 0; }
+static inline bool is_monitor(DbRef x) { return (obj_flags(x) & MONITOR) != 0; }
+static inline bool is_myopic(DbRef x) { return (obj_flags(x) & MYOPIC) != 0; }
+static inline bool is_puppet(DbRef x) { return (obj_flags(x) & PUPPET) != 0; }
+static inline bool is_opaque(DbRef x) { return (obj_flags(x) & OPAQUE) != 0; }
+static inline bool is_verbose(DbRef x) { return (obj_flags(x) & VERBOSE) != 0; }
+static inline bool is_nospoof(DbRef x) { return (obj_flags(x) & NOSPOOF) != 0; }
+static inline bool is_audible(DbRef x) {
+  return (obj_flags(x) & HEARTHRU) != 0;
+}
+static inline bool is_gagged(DbRef x) { return (obj_flags2(x) & GAGGED) != 0; }
+static inline bool has_key_flag(DbRef x) { return (obj_flags2(x) & KEY) != 0; }
+static inline bool is_auditorium(DbRef x) {
+  return (obj_flags2(x) & AUDITORIUM) != 0;
+}
+static inline bool is_floating(DbRef x) {
+  return (obj_flags2(x) & FLOATING) != 0;
+}
+static inline bool is_findable(DbRef x) {
+  return (obj_flags2(x) & UNFINDABLE) == 0;
+}
+static inline bool is_hideout(DbRef x) {
+  return (obj_flags2(x) & UNFINDABLE) != 0;
+}
+static inline bool is_light(DbRef x) { return (obj_flags2(x) & LIGHT) != 0; }
+static inline bool is_hardcode(DbRef x) {
+  return (obj_flags2(x) & HARDCODE) != 0;
+}
+static inline bool is_zombie(DbRef x) { return (obj_flags2(x) & ZOMBIE) != 0; }
+static inline bool is_in_character(DbRef x) {
+  return (obj_flags2(x) & IN_CHARACTER) != 0;
+}
+static inline bool has_fwdlist(DbRef x) {
+  return (obj_flags2(x) & HAS_FWDLIST) != 0;
+}
+static inline bool has_listen(DbRef x) {
+  return (obj_flags2(x) & HAS_LISTEN) != 0;
+}
 
-#define IS(thing, type, flag)                                                  \
-  ((Typeof(thing) == (type)) && (Flags(thing) & (flag)))
-#define Typeof(x) (Flags(x) & TYPE_MASK)
-#define God(x) ((x) == GOD)
-#define isRobot(x) ((Flags(x) & ROBOT) != 0)
-#define Robot(x) (isPlayer(x) && isRobot(x))
-#define Alive(x) (isPlayer(x) || (Puppet(x) && Has_contents(x)))
-#define OwnsOthers(x) ((object_types[Typeof(x)].flags & OF_OWNER) != 0)
-#define Has_location(x) ((object_types[Typeof(x)].flags & OF_LOCATION) != 0)
-#define Has_contents(x) ((object_types[Typeof(x)].flags & OF_CONTENTS) != 0)
-#define Has_exits(x) ((object_types[Typeof(x)].flags & OF_EXITS) != 0)
-#define Has_siblings(x) ((object_types[Typeof(x)].flags & OF_SIBLINGS) != 0)
-#define Has_home(x) ((object_types[Typeof(x)].flags & OF_HOME) != 0)
-#define Has_dropto(x) ((object_types[Typeof(x)].flags & OF_DROPTO) != 0)
-#define Home_ok(x) ((object_types[Typeof(x)].flags & OF_HOME) != 0)
-#define isPlayer(x) (Typeof(x) == TYPE_PLAYER)
-#define isRoom(x) (Typeof(x) == TYPE_ROOM)
-#define isExit(x) (Typeof(x) == TYPE_EXIT)
-#define isThing(x) (Typeof(x) == TYPE_THING)
+static inline bool is_robot_player(DbRef x) {
+  return is_player(x) && is_robot(x);
+}
+static inline bool is_good_owner(DbRef x) {
+  return is_good_obj(x) && is_owns_others(x);
+}
+static inline bool is_inherits(DbRef x) {
+  return (obj_flags(x) & INHERIT) != 0 ||
+         (obj_flags(obj_owner(x)) & INHERIT) != 0 || x == obj_owner(x);
+}
+static inline bool is_wizard(DbRef x) {
+  return (obj_flags(x) & WIZARD) ||
+         ((obj_flags(obj_owner(x)) & WIZARD) && is_inherits(x));
+}
+static inline bool is_enter_ok(DbRef x) {
+  return (obj_flags(x) & ENTER_OK) != 0 && has_location(x) && has_contents(x);
+}
+static inline bool is_suspect(DbRef x) {
+  return (obj_flags2(obj_owner(x)) & SUSPECT) != 0;
+}
+static inline bool is_hidden(DbRef x) {
+  return (obj_flags(x) & DARK) || (obj_flags2(x) & UNFINDABLE);
+}
+static inline bool is_connected(DbRef x) {
+  return (obj_flags2(x) & CONNECTED) != 0 && typeof_obj(x) == TYPE_PLAYER;
+}
 
-#define Good_obj(x)                                                            \
-  (((x) >= 0) && ((x) < mudstate.db_top) && (Typeof(x) < NOTYPE))
-#define Good_owner(x) (Good_obj(x) && OwnsOthers(x))
+static inline bool is_alive(DbRef x) {
+  return is_player(x) || (is_puppet(x) && has_contents(x));
+}
+static inline bool is_dark(DbRef x) {
+  return (obj_flags(x) & DARK) != 0 && (is_wizard(x) || !is_alive(x));
+}
+// Defined in flags.c, where server_state.h's full mudconf type is visible.
+bool is_safe(DbRef x, DbRef p);
 
-#define Fixed(x) ((Flags2(x) & FIXED) != 0)
-#define Ansi(x) ((Flags2(x) & ANSI) != 0)
-#define Ansimap(x) ((Flags2(x) & ANSIMAP) != 0)
-#define No_Command(x) ((Flags2(x) & NO_COMMAND) != 0)
-#define NoBleed(x) ((Flags2(x) & NOBLEED) != 0)
+static inline bool is_on_enter_lock(DbRef p, DbRef x) {
+  return check_zone(p, x);
+}
 
-#define Transparent(x) ((Flags(x) & SEETHRU) != 0)
-#define Wizard(x)                                                              \
-  ((Flags(x) & WIZARD) || ((Flags(Owner(x)) & WIZARD) && Inherits(x)))
-#define Dark(x) (((Flags(x) & DARK) != 0) && (Wizard(x) || !Alive(x)))
-#define Sticky(x) ((Flags(x) & STICKY) != 0)
-#define Quiet(x) ((Flags(x) & QUIET) != 0)
-#define Halted(x) ((Flags(x) & HALT) != 0)
-#define Trace(x) ((Flags(x) & TRACE) != 0)
-#define Going(x) ((Flags(x) & GOING) != 0)
-#define Monitor(x) ((Flags(x) & MONITOR) != 0)
-#define Myopic(x) ((Flags(x) & MYOPIC) != 0)
-#define Puppet(x) ((Flags(x) & PUPPET) != 0)
-#define Enter_ok(x)                                                            \
-  (((Flags(x) & ENTER_OK) != 0) && Has_location(x) && Has_contents(x))
-#define Opaque(x) ((Flags(x) & OPAQUE) != 0)
-#define Verbose(x) ((Flags(x) & VERBOSE) != 0)
-#define Inherits(x)                                                            \
-  (((Flags(x) & INHERIT) != 0) || ((Flags(Owner(x)) & INHERIT) != 0) ||        \
-   ((x) == Owner(x)))
-#define Nospoof(x) ((Flags(x) & NOSPOOF) != 0)
-#define Safe(x, p)                                                             \
-  (OwnsOthers(x) || (Flags(x) & SAFE) ||                                       \
-   (mudconf.safe_unowned && (Owner(x) != Owner(p))))
-#define Audible(x) ((Flags(x) & HEARTHRU) != 0)
+static inline bool is_examinable(DbRef p, DbRef x) {
+  return is_wizard(p) || (obj_owner(p) == obj_owner(x)) ||
+         is_on_enter_lock(p, x);
+}
 
-#define Gagged(x) ((Flags2(x) & GAGGED) != 0)
-#define Key(x) ((Flags2(x) & KEY) != 0)
-#define Auditorium(x) ((Flags2(x) & AUDITORIUM) != 0)
-#define Floating(x) ((Flags2(x) & FLOATING) != 0)
-#define Findable(x) ((Flags2(x) & UNFINDABLE) == 0)
-#define Hideout(x) ((Flags2(x) & UNFINDABLE) != 0)
-#define Light(x) ((Flags2(x) & LIGHT) != 0)
-#define Hardcode(x) ((Flags2(x) & HARDCODE) != 0)
-#define Zombie(x) ((Flags2(x) & ZOMBIE) != 0)
-#define In_Character(x) ((Flags2(x) & IN_CHARACTER) != 0)
-#define Suspect(x) ((Flags2(Owner(x)) & SUSPECT) != 0)
-#define Connected(x)                                                           \
-  (((Flags2(x) & CONNECTED) != 0) && (Typeof(x) == TYPE_PLAYER))
-#define Hidden(x) ((Flags(x) & DARK) || (Flags2(x) & UNFINDABLE))
-#define H_Startup(x) ((Flags(x) & HAS_STARTUP) != 0)
-#define H_Fwdlist(x) ((Flags2(x) & HAS_FWDLIST) != 0)
-#define H_Listen(x) ((Flags2(x) & HAS_LISTEN) != 0)
+static inline bool is_myopic_exam(DbRef p, DbRef x) {
+  return !is_myopic(p) && (is_wizard(p) || (obj_owner(p) == obj_owner(x)) ||
+                           is_on_enter_lock(p, x));
+}
 
-#define s_Opaque(x) s_Flags((x), Flags(x) | OPAQUE)
-#define s_Fixed(x) s_Flags2((x), Flags2(x) | FIXED)
-#define s_Halted(x) s_Flags((x), Flags(x) | HALT)
-#define s_Going(x) s_Flags((x), Flags(x) | GOING)
-#define s_Connected(x) s_Flags2((x), Flags2(x) | CONNECTED)
-#define s_Hardcode(x) s_Flags2((x), Flags2(x) | HARDCODE)
-#define c_Hardcode(x) s_Flags2((x), Flags2(x) & ~HARDCODE)
-#define s_Zombie(x) s_Flags2((x), Flags2(x) | ZOMBIE)
-#define c_Zombie(x) s_Flags2((x), Flags2(x) & ~ZOMBIE)
-#define c_Connected(x) s_Flags2((x), Flags2(x) & ~CONNECTED)
-#define s_In_Character(x) s_Flags2((x), Flags2(x) | IN_CHARACTER)
-#define c_In_Character(x) s_Flags2((x), Flags2(x) & ~IN_CHARACTER)
+static inline bool is_controls(DbRef p, DbRef x) {
+  return is_good_obj(x) && !(is_god(x) && !is_god(p)) &&
+         (is_wizard(p) ||
+          ((obj_owner(p) == obj_owner(x)) &&
+           (is_inherits(p) || !is_inherits(x))) ||
+          is_on_enter_lock(p, x));
+}
 
-#define Parentable(p, x) Controls(p, x)
+static inline bool is_parentable(DbRef p, DbRef x) { return is_controls(p, x); }
 
-#define OnEnterLock(p, x) (check_zone(p, x))
-
-#define Examinable(p, x)                                                       \
-  (Wizard(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x))
-
-#define MyopicExam(p, x)                                                       \
-  (!Myopic(p) && (Wizard(p) || (Owner(p) == Owner(x)) || OnEnterLock(p, x)))
-
-#define Controls(p, x)                                                         \
-  (Good_obj(x) && (!(God(x) && !God(p))) &&                                    \
-   (Wizard(p) || ((Owner(p) == Owner(x)) && (Inherits(p) || !Inherits(x))) ||  \
-    OnEnterLock(p, x)))
-
-#define Affects(p, x)                                                          \
-  (Good_obj(x) && (!(God(x) && !God(p))) &&                                    \
-   (Wizard(p) || (Owner(p) == Owner(x))))
-#define Mark(x)                                                                \
-  (mudstate.markbits->chunk[(x) >> 3] |= mudconf.markdata[(x) & 7])
-#define Unmark(x)                                                              \
-  (mudstate.markbits->chunk[(x) >> 3] &= ~mudconf.markdata[(x) & 7])
-#define Marked(x)                                                              \
-  (mudstate.markbits->chunk[(x) >> 3] & mudconf.markdata[(x) & 7])
+// Defined in flags.c, where server_state.h's full mudstate/mudconf types are
+// visible.
+void mark(DbRef x);
+void unmark(DbRef x);
+bool is_marked(DbRef x);
 #define Mark_all(i)                                                            \
   for ((i) = 0; (i) < ((mudstate.db_top + 7) >> 3); (i)++)                     \
   mudstate.markbits->chunk[i] = 0xff
 #define Unmark_all(i)                                                          \
   for ((i) = 0; (i) < ((mudstate.db_top + 7) >> 3); (i)++)                     \
   mudstate.markbits->chunk[i] = 0x0
-#define Link_exit(p, x)                                                        \
-  ((Typeof(x) == TYPE_EXIT) && ((Location(x) == NOTHING) || Controls(p, x)))
-#define Linkable(p, x) (Good_obj(x) && Has_contents(x) && Controls(p, x))
-#define See_attr(p, x, a, o, f)                                                \
-  (!((a)->flags & (AF_INTERNAL | AF_IS_LOCK)) &&                               \
-   (God(p) || ((f) & AF_VISUAL) ||                                             \
-    (((Owner(p) == (o)) || Examinable(p, x)) &&                                \
-     !((a)->flags & (AF_DARK | AF_MDARK)) && !((f) & (AF_DARK | AF_MDARK)) &&  \
-     !((a)->name && strlen((a)->name) > 4 &&                                   \
-       !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||          \
-    (Wizard(p) && !((a)->flags & AF_DARK)) ||                                  \
-    (!((a)->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&                        \
-     !((a)->name && strlen((a)->name) > 4 &&                                   \
-       !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV")))))
-#define See_attr_explicit(p, x, a, o, f)                                       \
-  (!((a)->flags & (AF_INTERNAL | AF_IS_LOCK)) &&                               \
-   (((f) & AF_VISUAL) ||                                                       \
-    ((Owner(p) == (o)) &&                                                      \
-     (!(((a)->flags & (AF_DARK | AF_MDARK))) &&                                \
-      !((a)->name && strlen((a)->name) > 4 &&                                  \
-        !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))))))
-#define Set_attr(p, x, a, f)                                                   \
-  (!((a)->flags & (AF_INTERNAL | AF_IS_LOCK)) &&                               \
-   (God(p) ||                                                                  \
-    (!God(x) && !(f & AF_LOCK) &&                                              \
-     ((Controls(p, x) && !((a)->flags & (AF_WIZARD | AF_GOD)) &&               \
-       !((f) & (AF_WIZARD | AF_GOD)) &&                                        \
-       !((a)->name && strlen((a)->name) > 4 &&                                 \
-         !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||        \
-      (Wizard(p) && !((a)->flags & AF_GOD))))))
-#define Read_attr(p, x, a, o, f)                                               \
-  (!((a)->flags & AF_INTERNAL) &&                                              \
-   (God(p) || ((f) & AF_VISUAL) ||                                             \
-    (((Owner(p) == o) || Examinable(p, x)) &&                                  \
-     !((a)->flags & (AF_DARK | AF_MDARK)) && !((f) & (AF_DARK | AF_MDARK)) &&  \
-     !((a)->name && strlen((a)->name) > 4 &&                                   \
-       !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||          \
-    (Wizard(p) && !((a)->flags & AF_DARK)) ||                                  \
-    (!((a)->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&                        \
-     !((a)->name && strlen((a)->name) > 4 &&                                   \
-       !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV")))))
-#define Write_attr(p, x, a, f)                                                 \
-  (!((a)->flags & AF_INTERNAL) &&                                              \
-   (God(p) ||                                                                  \
-    (!God(x) && !(f & AF_LOCK) &&                                              \
-     ((Controls(p, x) && !((a)->flags & (AF_WIZARD | AF_GOD)) &&               \
-       !((f) & (AF_WIZARD | AF_GOD)) &&                                        \
-       !((a)->name && strlen((a)->name) > 4 &&                                 \
-         !strcasecmp((a)->name + (strlen((a)->name) - 5), ".PRIV"))) ||        \
-      (Wizard(p) && !((a)->flags & AF_GOD))))))
 
-#define Has_power(p, x) (check_access((p), powers_nametab[x].flag))
-#define s_Dark(x) s_Flags((x), Flags(x) | DARK)
+static inline bool can_link_exit(DbRef p, DbRef x) {
+  return typeof_obj(x) == TYPE_EXIT &&
+         (obj_location(x) == NOTHING || is_controls(p, x));
+}
+static inline bool is_linkable(DbRef p, DbRef x) {
+  return is_good_obj(x) && has_contents(x) && is_controls(p, x);
+}
+
+// Defined in flags.c, where attrs.h's AF_* flags are visible.
+bool see_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f);
+bool see_attr_explicit(DbRef p, DbRef x, Attribute *a, DbRef o, long f);
+bool set_attr(DbRef p, DbRef x, Attribute *a, long f);
+bool read_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f);
+bool write_attr(DbRef p, DbRef x, Attribute *a, long f);
+
+static inline void s_opaque(DbRef x) { s_flags(x, obj_flags(x) | OPAQUE); }
+static inline void s_fixed(DbRef x) { s_flags2(x, obj_flags2(x) | FIXED); }
+static inline void s_halted(DbRef x) { s_flags(x, obj_flags(x) | HALT); }
+static inline void s_going(DbRef x) { s_flags(x, obj_flags(x) | GOING); }
+static inline void s_connected(DbRef x) {
+  s_flags2(x, obj_flags2(x) | CONNECTED);
+}
+static inline void s_hardcode(DbRef x) {
+  s_flags2(x, obj_flags2(x) | HARDCODE);
+}
+static inline void c_hardcode(DbRef x) {
+  s_flags2(x, obj_flags2(x) & ~HARDCODE);
+}
+static inline void s_zombie(DbRef x) { s_flags2(x, obj_flags2(x) | ZOMBIE); }
+static inline void c_connected(DbRef x) {
+  s_flags2(x, obj_flags2(x) & ~CONNECTED);
+}
+static inline void s_in_character(DbRef x) {
+  s_flags2(x, obj_flags2(x) | IN_CHARACTER);
+}
+
+static inline char *unparse_flags(DbRef p, DbRef t) {
+  return decode_flags(p, obj_flags(t), obj_flags2(t), obj_flags3(t));
+}
+
+static inline void s_dark(DbRef x) { s_flags(x, obj_flags(x) | DARK); }

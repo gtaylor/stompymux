@@ -373,7 +373,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
     if (indirectFire >= 1000) {
       j = AddTerrainMod(mech, target, mech_map, range, wAmmoMode);
       if (j < 1000)
-        BTHADD("Terrain/Light(Sensor)", j);
+        BTHADD("Terrain/is_light(Sensor)", j);
     }
 
     if (mudconf.btech_moddamagewithwoods &&

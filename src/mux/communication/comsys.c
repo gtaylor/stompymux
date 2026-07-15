@@ -140,7 +140,7 @@ static void do_processcom(DbRef player, char *arg1, char *arg2) {
     return;
   }
 
-  if (!Wizard(player) && is_in_character_location(player)) {
+  if (!is_wizard(player) && is_in_character_location(player)) {
     raw_notify(player, "Permission denied.");
     return;
   }
@@ -158,7 +158,7 @@ static void do_processcom(DbRef player, char *arg1, char *arg2) {
     do_joinchannel(player, ch);
   } else if (!strcasecmp(arg2, "off")) {
     do_leavechannel(player, ch);
-  } else if (!user->on && !Wizard(player) && !mudconf.allow_chanlurking) {
+  } else if (!user->on && !is_wizard(player) && !mudconf.allow_chanlurking) {
     notify_printf(player, "You must be on %s to do that.", arg1);
     return;
   } else if (!strcasecmp(arg2, "who")) {
@@ -191,8 +191,8 @@ static void do_comsend(struct channel *ch, char *mess) {
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
     if (user->on && do_test_access(user->who, CHANNEL_RECIEVE, ch) &&
-        (Wizard(user->who) || !is_in_character_location(user->who))) {
-      if (Typeof(user->who) == TYPE_PLAYER && Connected(user->who))
+        (is_wizard(user->who) || !is_in_character_location(user->who))) {
+      if (typeof_obj(user->who) == TYPE_PLAYER && is_connected(user->who))
         raw_notify(user->who, mess);
       else
         notify(user->who, mess);
@@ -222,8 +222,8 @@ static void do_comprintf(struct channel *ch, char *messfmt, ...) {
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
     if (user->on && do_test_access(user->who, CHANNEL_RECIEVE, ch) &&
-        (Wizard(user->who) || !is_in_character_location(user->who))) {
-      if (Typeof(user->who) == TYPE_PLAYER && Connected(user->who))
+        (is_wizard(user->who) || !is_in_character_location(user->who))) {
+      if (typeof_obj(user->who) == TYPE_PLAYER && is_connected(user->who))
         raw_notify(user->who, buffer);
       else
         notify(user->who, buffer);
@@ -264,7 +264,7 @@ void do_joinchannel(DbRef player, struct channel *ch) {
     user->on = 1;
     user->title = strdup("");
 
-    if (UNDEAD(player)) {
+    if (is_undead(player)) {
       user->on_next = ch->on_users;
       ch->on_users = user;
     }
@@ -278,14 +278,14 @@ void do_joinchannel(DbRef player, struct channel *ch) {
 	/* Trigger AENTER of any channel objects on the channel */
 	for(i = ch->num_users - 1; i > 0; i--) {
 		if(!ch->users[i]) break;
-		if(Typeof(ch->users[i]->who) == TYPE_THING)
+		if(typeof_obj(ch->users[i]->who) == TYPE_THING)
 			did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_AENTER,
 				   (char **) NULL, 0);
 	}
 #endif
   notify_printf(player, "You have joined channel %s.", ch->name);
 
-  if (!Dark(player)) {
+  if (!is_dark(player)) {
     do_comprintf(ch, "[%s] %s has joined this channel.", ch->name,
                  Name(player));
   }
@@ -302,14 +302,14 @@ static void do_leavechannel(DbRef player, struct channel *ch) {
 
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
-    if (Typeof(ch->users[i]->who) == TYPE_THING)
+    if (typeof_obj(ch->users[i]->who) == TYPE_THING)
       did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_ALEAVE,
              (char **)NULL, 0);
   }
 
   notify_printf(player, "You have left channel %s.", ch->name);
 
-  if ((user->on) && (!Dark(player))) {
+  if ((user->on) && (!is_dark(player))) {
     char *c = Name(player);
 
     if (c && *c) {
@@ -325,11 +325,12 @@ static void do_comwho(DbRef player, struct channel *ch) {
 
   raw_notify(player, "-- Players --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (Typeof(user->who) == TYPE_PLAYER && user->on && Connected(user->who) &&
-        (!Hidden(user->who) ||
-         ((ch->type & CHANNEL_TRANSPARENT) && !Dark(user->who)) ||
-         Wizard(player)) &&
-        (!is_in_character_location(user->who) || Wizard(user->who))) {
+    if (typeof_obj(user->who) == TYPE_PLAYER && user->on &&
+        is_connected(user->who) &&
+        (!is_hidden(user->who) ||
+         ((ch->type & CHANNEL_TRANSPARENT) && !is_dark(user->who)) ||
+         is_wizard(player)) &&
+        (!is_in_character_location(user->who) || is_wizard(user->who))) {
 
       int i = fetch_idle(user->who);
 
@@ -347,8 +348,8 @@ static void do_comwho(DbRef player, struct channel *ch) {
 
   raw_notify(player, "-- Objects --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (Typeof(user->who) != TYPE_PLAYER && user->on &&
-        !(Going(user->who) && God(Owner(user->who)))) {
+    if (typeof_obj(user->who) != TYPE_PLAYER && user->on &&
+        !(is_going(user->who) && is_god(obj_owner(user->who)))) {
       buff = unparse_object(player, user->who, 0);
       notify_printf(player, "%s", buff);
       free_lbuf(buff);
@@ -553,7 +554,7 @@ static void do_delcomchannel(DbRef player, char *channel) {
 
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
-      if (Typeof(ch->users[i]->who) == TYPE_THING)
+      if (typeof_obj(ch->users[i]->who) == TYPE_THING)
         did_it(player, ch->users[i]->who, 0, NULL, 0, NULL, A_ALEAVE,
                (char **)NULL, 0);
     }
@@ -562,7 +563,7 @@ static void do_delcomchannel(DbRef player, char *channel) {
       user = ch->users[i];
       if (user->who == player) {
         do_comdisconnectchannel(player, channel);
-        if (user->on && !Dark(player)) {
+        if (user->on && !is_dark(player)) {
           char *c = Name(player);
 
           if (c && *c)
@@ -597,7 +598,7 @@ void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
     raw_notify(player, "You must specify a channel to create.");
     return;
   }
-  if (!(Comm_All(player))) {
+  if (!(is_comm_all(player))) {
     raw_notify(player, "You do not have permission to do that.");
     return;
   }
@@ -639,7 +640,7 @@ void do_destroychannel(DbRef player, DbRef cause, int key, char *channel) {
   if (!ch) {
     notify_printf(player, "Could not find channel %s.", channel);
     return;
-  } else if (!(Comm_All(player)) && (player != ch->charge_who)) {
+  } else if (!(is_comm_all(player)) && (player != ch->charge_who)) {
     raw_notify(player, "You do not have permission to do that. ");
     return;
   }
@@ -658,7 +659,7 @@ static void do_listchannels(DbRef player) {
   struct channel *ch;
   int perm;
 
-  if (!(perm = Comm_All(player))) {
+  if (!(perm = is_comm_all(player))) {
     raw_notify(
         player,
         "Warning: Only public channels and your channels will be shown.");
@@ -830,7 +831,7 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
     notify_printf(player, "Unknown channel \"%s\".", channel);
     return;
   }
-  if (!((Comm_All(player)) || (player == ch->charge_who))) {
+  if (!((is_comm_all(player)) || (player == ch->charge_who))) {
     raw_notify(player, "You do not have permission to do that.");
     return;
   }
@@ -838,15 +839,15 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
   notify_printf(player, "%-29.29s %-6.6s %-6.6s", "Name", "Status", "Player");
   for (i = 0; i < ch->num_users; i++) {
     user = ch->users[i];
-    if ((flag || UNDEAD(user->who)) &&
-        (!Hidden(user->who) ||
-         ((ch->type & CHANNEL_TRANSPARENT) && !Dark(user->who)) ||
-         Wizard(player))) {
+    if ((flag || is_undead(user->who)) &&
+        (!is_hidden(user->who) ||
+         ((ch->type & CHANNEL_TRANSPARENT) && !is_dark(user->who)) ||
+         is_wizard(player))) {
       cp = unparse_object(player, user->who, 0);
       strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
       notify_printf(player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
                     ((user->on) ? "on " : "off"),
-                    (Typeof(user->who) == TYPE_PLAYER) ? "yes" : "no ");
+                    (typeof_obj(user->who) == TYPE_PLAYER) ? "yes" : "no ");
       free_lbuf(cp);
     }
   }
@@ -862,7 +863,7 @@ static void do_comdisconnectraw_notify(DbRef player, char *chan) {
   if (!(cu = select_user(ch, player)))
     return;
 
-  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!Dark(player))) {
+  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!is_dark(player))) {
     do_comprintf(ch, "[%s] %s has disconnected.", ch->name, Name(player));
   }
 }
@@ -876,7 +877,7 @@ static void do_comconnectraw_notify(DbRef player, char *chan) {
   if (!(cu = select_user(ch, player)))
     return;
 
-  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!Dark(player))) {
+  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!is_dark(player))) {
     do_comprintf(ch, "[%s] %s has connected.", ch->name, Name(player));
   }
 }
@@ -970,7 +971,7 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
     notify_printf(player, "Unknown channel %s.", arg1);
     return;
   }
-  if (!((Comm_All(player)) || (player == ch->charge_who))) {
+  if (!((is_comm_all(player)) || (player == ch->charge_who))) {
     raw_notify(player, "Permission denied.");
     return;
   }
@@ -1044,7 +1045,7 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
 static int do_test_access(DbRef player, long access, struct channel *chan) {
   long flag_value = access;
 
-  if (Comm_All(player))
+  if (is_comm_all(player))
     return (1);
 
   /*
@@ -1073,7 +1074,7 @@ static int do_test_access(DbRef player, long access, struct channel *chan) {
     if (could_doit(player, chan->chan_obj, A_LENTER))
       return (1);
   }
-  if (Typeof(player) == TYPE_PLAYER)
+  if (typeof_obj(player) == TYPE_PLAYER)
     flag_value *= CHANNEL_PL_MULT;
   else
     flag_value *= CHANNEL_OBJ_MULT;
@@ -1118,7 +1119,7 @@ static void do_chclose(DbRef player, char *chan) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1139,7 +1140,7 @@ void do_cemit(DbRef player, DbRef cause, int key, char *chan, char *text) {
     notify_printf(player, "Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "Permission denied.");
     return;
   }
@@ -1187,7 +1188,7 @@ void do_chopen(DbRef player, DbRef cause, int key, char *chan, char *object) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1204,7 +1205,7 @@ static void do_chloud(DbRef player, char *chan) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1221,7 +1222,7 @@ static void do_chsquelch(DbRef player, char *chan) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1238,7 +1239,7 @@ static void do_chtransparent(DbRef player, char *chan) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1255,7 +1256,7 @@ static void do_chopaque(DbRef player, char *chan) {
     notify_printf(player, "@cset: Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!Comm_All(player))) {
+  if ((player != ch->charge_who) && (!is_comm_all(player))) {
     raw_notify(player, "@cset: Permission denied.");
     return;
   }
@@ -1290,7 +1291,7 @@ void do_chboot(DbRef player, DbRef cause, int key, char *channel,
     raw_notify(player, "@cboot: You are not on that channel.");
     return;
   }
-  if (!((ch->charge_who == player) || Comm_All(player))) {
+  if (!((ch->charge_who == player) || is_comm_all(player))) {
     raw_notify(player, "Permission denied.");
     return;
   }
@@ -1329,7 +1330,7 @@ static void do_chanobj(DbRef player, char *channel, char *object) {
     raw_notify(player, "Set.");
     return;
   }
-  if (!(ch->charge_who == player) && !Comm_All(player)) {
+  if (!(ch->charge_who == player) && !is_comm_all(player)) {
     raw_notify(player, "Permission denied.");
     return;
   }
@@ -1366,7 +1367,7 @@ void do_chanlist(DbRef player, DbRef cause, int key) {
   for (ch = (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
        ch;
        ch = (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
-    if (Comm_All(player) || (ch->type & CHANNEL_PUBLIC) ||
+    if (is_comm_all(player) || (ch->type & CHANNEL_PUBLIC) ||
         ch->charge_who == player ||
         (do_test_access(player, CHANNEL_JOIN, ch))) {
 
@@ -1407,7 +1408,7 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
     struct channel *selected_channel;
     int perm;
 
-    if (!(perm = Comm_All(player))) {
+    if (!(perm = is_comm_all(player))) {
       raw_notify(
           player,
           "Warning: Only public channels and your channels will be shown.");
@@ -1456,7 +1457,7 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
     notify_printf(player, "@cstatus: Channel %s does not exist.", chan);
     return;
   }
-  if (Comm_All(player) || (ch->type & CHANNEL_PUBLIC) ||
+  if (is_comm_all(player) || (ch->type & CHANNEL_PUBLIC) ||
       ch->charge_who == player) {
 
     atrstr = attribute_parent_get(ch->chan_obj, A_DESC, &owner, &flags);
@@ -1488,7 +1489,7 @@ void fun_cemit(char *buff, char **bufc, DbRef player, DbRef cause,
   }
 
   if (!mudconf.have_comsys ||
-      (!Comm_All(player) && (player != ch->charge_who))) {
+      (!is_comm_all(player) && (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }

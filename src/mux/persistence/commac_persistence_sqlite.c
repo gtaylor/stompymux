@@ -208,7 +208,7 @@ static int commac_store_comsys(sqlite3 *sqlite) {
       position = 0;
       for (index = 0; result == 0 && index < current->num_users; index++) {
         user = current->users[index];
-        if (!isPlayer(user->who) && !isRobot(user->who))
+        if (!is_player(user->who) && !is_robot(user->who))
           continue;
         if (commac_sqlite_bind_text(user_statement, 1, current->name) < 0 ||
             commac_sqlite_bind_int(user_statement, 2, position++) < 0 ||
@@ -534,7 +534,7 @@ static int commac_load_users(sqlite3 *sqlite) {
       user->on = (int)is_on;
       user->title = strdup(title);
       channel->users[channel->num_users++] = user;
-      if (UNDEAD(who)) {
+      if (is_undead(who)) {
         user->on_next = channel->on_users;
         channel->on_users = user;
       }
@@ -686,7 +686,7 @@ static int commac_load_macros(sqlite3 *sqlite) {
   if (result == 0) {
     expected_set = 0;
     while (expected_set < nummacros) {
-      if (!isPlayer(macros[expected_set]->player))
+      if (!is_player(macros[expected_set]->player))
         clear_macro_set(expected_set);
       else
         expected_set++;

@@ -832,7 +832,7 @@ void recursively_updatelinks(DbRef from, DbRef loc) {
 void map_updatelinks(DbRef player, void *data, char *buffer) {
   DbRef ourloc;
 
-  ourloc = Location(player);
+  ourloc = obj_location(player);
   bzero(update_stats, sizeof(update_stats));
   recursively_updatelinks(NOTHING, ourloc);
   notify_printf(player,

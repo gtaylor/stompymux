@@ -432,7 +432,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     if (!global_physical_flag)
       AccumulateGunXP(attackPilot, attacker, wounded, damage, 1, cause, bth);
     else if (global_physical_flag == 1)
-      if (!Destroyed(wounded) && In_Character(wounded->mynum) &&
+      if (!Destroyed(wounded) && is_in_character(wounded->mynum) &&
           MechTeam(wounded) != MechTeam(attacker))
         if (MechType(wounded) != CLASS_MW || MechType(attacker) == CLASS_MW)
           AccumulatePilXP(attackPilot, attacker, damage / 3, 1);
@@ -951,7 +951,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
   }
 
   /* Ensure the template's timely demise */
-  if (In_Character(wounded->mynum)) {
+  if (is_in_character(wounded->mynum)) {
     /* Clear the freqs on the unit... */
     for (j = 0; j < FREQS; j++) {
       wounded->freq[j] = 0;
@@ -1001,7 +1001,7 @@ skip_nuke:
       /* If it's the head or a MW's CT, kill the contents if IC */
       if (hitloc == HEAD ||
           ((MechType(wounded) == CLASS_MW) && (hitloc == CTORSO))) {
-        if (In_Character(wounded->mynum)) {
+        if (is_in_character(wounded->mynum)) {
           for (j = 0; j < FREQS; j++) {
             wounded->freq[j] = 0;
             wounded->freqmodes[j] = 0;

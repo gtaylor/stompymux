@@ -7,6 +7,7 @@
 
 #include "mux/communication/commac.h"
 #include "mux/database/db.h"
+#include "mux/database/flags.h"
 #include "mux/network/descriptor.h"
 #ifdef CHANNEL_HISTORY
 #include "mux/support/fifo.h"
@@ -18,7 +19,7 @@ struct chanentry {
   struct channel *chan;
 };
 
-#define CHAN_NAME_LEN 50
+constexpr int CHAN_NAME_LEN = 50;
 struct comuser {
   DbRef who;
   int on;
@@ -82,19 +83,20 @@ void do_joinchannel(DbRef player, struct channel *ch);
 void fun_cemit(char *buff, char **bufc, DbRef player, DbRef cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs);
 
-#define CHANNEL_JOIN 0x001
-#define CHANNEL_TRANSMIT 0x002
-#define CHANNEL_RECIEVE 0x004
+constexpr int CHANNEL_JOIN = 0x001;
+constexpr int CHANNEL_TRANSMIT = 0x002;
+constexpr int CHANNEL_RECIEVE = 0x004;
 
-#define CHANNEL_PL_MULT 0x001
-#define CHANNEL_OBJ_MULT 0x010
-#define CHANNEL_LOUD 0x100
-#define CHANNEL_PUBLIC 0x200
-#define CHANNEL_TRANSPARENT 0x400
+constexpr int CHANNEL_PL_MULT = 0x001;
+constexpr int CHANNEL_OBJ_MULT = 0x010;
+constexpr int CHANNEL_LOUD = 0x100;
+constexpr int CHANNEL_PUBLIC = 0x200;
+constexpr int CHANNEL_TRANSPARENT = 0x400;
 
-#define UNDEAD(x)                                                              \
-  (((!God(Owner(x))) || !(Going(x))) &&                                        \
-   ((Typeof(x) != TYPE_PLAYER) || (Connected(x))))
+static inline bool is_undead(DbRef x) {
+  return (!is_god(obj_owner(x)) || !is_going(x)) &&
+         (typeof_obj(x) != TYPE_PLAYER || is_connected(x));
+}
 
 /* explanation of logic... If it's not owned by god, and it's either not a
 player, or a connected player, it's good... If it is owned by god, then if

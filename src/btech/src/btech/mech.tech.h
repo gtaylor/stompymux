@@ -72,7 +72,8 @@
   [[maybe_unused]] char *c;
 
 #define TECHCOMMANDC                                                           \
-  DOCHECK(!(Tech(player)), "Insufficient clearance to access the command.");   \
+  DOCHECK(!(is_tech_power(player)),                                            \
+          "Insufficient clearance to access the command.");                    \
   DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
   isds = DropShip(MechType(mech));                                             \
   DOCHECK(Starting(mech) && !Wiz(player),                                      \
@@ -83,7 +84,8 @@
           "The 'mech isn't in a repair stall!");
 
 #define TECHCOMMANDD                                                           \
-  DOCHECK(!(Tech(player)), "Insufficient clearance to access the command.");   \
+  DOCHECK(!(is_tech_power(player)),                                            \
+          "Insufficient clearance to access the command.");                    \
   DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
   isds = DropShip(MechType(mech));                                             \
   DOCHECK(Starting(mech) && !Wiz(player),                                      \
@@ -279,16 +281,17 @@ ECMD(tech_fix);
 #endif
 
 #define GrabPartsM(m, a, b, c)                                                 \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : Location(m->mynum), a, b, 0 - c)
+  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum), a, b,    \
+                    0 - c)
 #define PartAvailM(m, a, b, c)                                                 \
-  (econ_find_items(IsDS(m) ? AeroBay(m, 0) : Location(m->mynum), a, b) >= c)
+  (econ_find_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum), a, b) >= c)
 #ifndef BT_COMPLEXREPAIRS
 #define AddPartsM(m, a, b, c)                                                  \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : Location(m->mynum),              \
+  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum),          \
                     alias_part(m, a), b, c)
 #else
 #define AddPartsM(m, l, a, b, c)                                               \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : Location(m->mynum),              \
+  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum),          \
                     alias_part(m, a, l), b, c)
 #endif
 #define AVCHECKM(m, a, b, c)                                                   \

@@ -189,7 +189,7 @@
 
 /* Basic checks for the autopilot */
 #define AUTO_CHECKS(a)                                                         \
-  if (Location(a->mynum) != a->mymechnum)                                      \
+  if (obj_location(a->mynum) != a->mymechnum)                                  \
     return;                                                                    \
   if (Destroyed(mech))                                                         \
     return;

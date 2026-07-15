@@ -31,12 +31,13 @@ void purge_commac(void) {
       }
 
       /*
-       * if ((Typeof(d->who) != TYPE_PLAYER) && (God(Owner(d->who))) &&
-       * * (Going(d->who)))
+       * if ((typeof_obj(d->who) != TYPE_PLAYER) && (is_god(obj_owner(d->who)))
+       * &&
+       * * (is_going(d->who)))
        */
-      if (Typeof(d->who) == TYPE_PLAYER)
+      if (typeof_obj(d->who) == TYPE_PLAYER)
         continue;
-      if (God(Owner(d->who)) && Going(d->who)) {
+      if (is_god(obj_owner(d->who)) && is_going(d->who)) {
         del_commac(d->who);
         continue;
       }

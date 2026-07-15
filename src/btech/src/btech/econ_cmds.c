@@ -96,7 +96,7 @@ int loading_bay_whine(DbRef player, DbRef cargobay, MECH *mech) {
 }
 
 void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
-  int loc = Location(player);
+  int loc = obj_location(player);
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   char *t;
   int ol, nl, items = 0, kinds = 0;
@@ -200,21 +200,21 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
 void mech_manifest(DbRef player, void *data, char *buffer) {
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(Location(player));
+  MY_DO_LIST(obj_location(player));
 }
 
 void mech_stores(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUAL);
-  DOCHECK(Location(mech->mynum) != mech->mapindex ||
-              In_Character(Location(mech->mynum)),
+  DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
+              is_in_character(obj_location(mech->mynum)),
           "You aren't inside a hangar!");
-  if (loading_bay_whine(player, Location(mech->mynum), mech))
+  if (loading_bay_whine(player, obj_location(mech->mynum), mech))
     return;
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(Location(mech->mynum));
+  MY_DO_LIST(obj_location(mech->mynum));
 }
 
 #ifdef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
@@ -274,8 +274,8 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
                   "time. ('%s' matches: %d)",
                   args[0], count));
   if (mort) {
-    DOCHECK(Location(player) != loc1, "You ain't in your 'mech!");
-    DOCHECK(Location(loc1) != loc2, "You ain't in hangar!");
+    DOCHECK(obj_location(player) != loc1, "You ain't in your 'mech!");
+    DOCHECK(obj_location(loc1) != loc2, "You ain't in hangar!");
   }
   i = -1;
 #define MY_ECON_MODIFY(loc, num)                                               \
@@ -312,11 +312,11 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
 }
 
 void mech_Raddstuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(player, buffer, Location(player), -1, 1, 0);
+  stuff_change_sub(player, buffer, obj_location(player), -1, 1, 0);
 }
 
 void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(player, buffer, Location(player), -1, -1, 0);
+  stuff_change_sub(player, buffer, obj_location(player), -1, -1, 0);
 }
 
 void mech_loadcargo(DbRef player, void *data, char *buffer) {
@@ -325,10 +325,10 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(!(MechSpecials(mech) & CARGO_TECH), "This unit cannot haul cargo!");
   DOCHECK(fabs(MechSpeed(mech)) > 0.0, "You're moving too fast!");
-  DOCHECK(Location(mech->mynum) != mech->mapindex ||
-              In_Character(Location(mech->mynum)),
+  DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
+              is_in_character(obj_location(mech->mynum)),
           "You aren't inside hangar!");
-  if (loading_bay_whine(player, Location(mech->mynum), mech))
+  if (loading_bay_whine(player, obj_location(mech->mynum), mech))
     return;
   stuff_change_sub(player, buffer, mech->mynum, mech->mapindex, 1, 1);
   correct_speed(mech);
@@ -345,6 +345,6 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
 
 void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   notify(player, "Inventory cleaned!");
-  silly_atr_set(Location(player), A_ECONPARTS, "");
-  SendEcon(tprintf("#%d reset #%d's stuff.", player, Location(player)));
+  silly_atr_set(obj_location(player), A_ECONPARTS, "");
+  SendEcon(tprintf("#%d reset #%d's stuff.", player, obj_location(player)));
 }

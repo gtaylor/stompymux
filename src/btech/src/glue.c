@@ -157,7 +157,7 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   if (type < 0 ||
       (SpecialObjects[type].datasize > 0 &&
        !(xcode_obj = red_black_tree_find(xcode_tree, (void *)location)))) {
-    if (type >= 0 || !Hardcode(location) || Zombie(location))
+    if (type >= 0 || !is_hardcode(location) || is_zombie(location))
       return 0;
     if ((type = WhichSpecialS(location)) >= 0) {
       if (SpecialObjects[type].datasize > 0)
@@ -188,7 +188,7 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   while (*a == ' ')                                                            \
   a++
     if (cmd->helpmsg[0] != '@' ||
-        Have_MechPower(Owner(player), typeOfObject->power_needed)) {
+        Have_MechPower(obj_owner(player), typeOfObject->power_needed)) {
       SKIPSTUFF(command);
       ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
     } else
@@ -203,7 +203,7 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   return 0;
 }
 
-#define OkayHcode(a) (a >= 0 && Hardcode(a) && !Zombie(a))
+#define OkayHcode(a) (a >= 0 && is_hardcode(a) && !is_zombie(a))
 
 /* Main entry point */
 int HandledCommand(DbRef player, DbRef loc, char *command) {
@@ -215,12 +215,12 @@ int HandledCommand(DbRef player, DbRef loc, char *command) {
     return 1;
   if (OkayHcode(loc) && HandledCommand_sub(player, loc, command))
     return 1;
-  SAFE_DOLIST(curr, temp, Contents(player)) {
+  SAFE_DOLIST(curr, temp, obj_contents(player)) {
     if (OkayHcode(curr))
       if (HandledCommand_sub(player, curr, command))
         return 1;
 #if 0 /* Recursion is evil ; let's not do that, this time */
-		if(Has_contents(curr))
+		if(has_contents(curr))
 			if(HandledCommand_contents(player, curr, command))
 				return 1;
 #endif
@@ -304,8 +304,8 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
 
     if (!(map = getMap(mech->mapindex))) {
       /* Ugly kludge */
-      if ((map = getMap(Location(mech->mynum))))
-        mech_Rsetmapindex(GOD, mech, tprintf("%d", Location(mech->mynum)));
+      if ((map = getMap(obj_location(mech->mynum))))
+        mech_Rsetmapindex(GOD, mech, tprintf("%d", obj_location(mech->mynum)));
       if (!(map = getMap(mech->mapindex)))
         return 1;
     }
@@ -363,7 +363,7 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
        * the durable command list; it recreates goal-specific events itself.
        */
       if (MechAuto(autopilot->mymech) == autopilot->mynum &&
-          Location(autopilot->mynum) == autopilot->mymechnum &&
+          obj_location(autopilot->mynum) == autopilot->mymechnum &&
           autopilot->commands &&
           doubly_linked_list_size(autopilot->commands) > 0 &&
           !mux_event_count_type_data(EVENT_AUTOCOM, autopilot))
@@ -400,13 +400,13 @@ void LoadSpecialObjects(void) {
   /* Loop through the entire database, and if it has the special */
   /* object flag, add it to our linked list. */
   DO_WHOLE_DB(i)
-  if (Hardcode(i) && !Going(i) && !Halted(i)) {
+  if (is_hardcode(i) && !is_going(i) && !is_halted(i)) {
     type = WhichSpecialS(i);
     if (type >= 0) {
       if (SpecialObjects[type].datasize > 0)
         NewSpecialObject(i, type);
     } else
-      c_Hardcode(i); /* Reset the flag */
+      c_hardcode(i); /* Reset the flag */
   }
   for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
     InitSpecialHash(i);
@@ -504,7 +504,7 @@ void CreateNewSpecialObject(DbRef player, DbRef key) {
     notify(player, "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
                    "AUTOPILOT, TURRET.");
     notify(player, "Resetting hardcode flag.");
-    c_Hardcode(key); /* Reset the flag */
+    c_hardcode(key); /* Reset the flag */
     return;
   }
 
@@ -523,7 +523,7 @@ void CreateNewSpecialObject(DbRef player, DbRef key) {
     notify(player, "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
                    "AUTOPILOT, TURRET.");
     notify(player, "Resetting HARDCODE flag.");
-    c_Hardcode(key);
+    c_hardcode(key);
   }
 }
 
@@ -623,9 +623,9 @@ void DumpMaps(DbRef player) {
 int WhichSpecial(DbRef key) {
   XCODE *xcode_obj;
 
-  if (!Good_obj(key))
+  if (!is_good_obj(key))
     return -1;
-  if (!Hardcode(key))
+  if (!is_hardcode(key))
     return -1;
   if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)key)))
     return -1;
@@ -641,7 +641,7 @@ int WhichSpecial(DbRef key)
   int returnValue = -1;
   char *str;
 
-  if (!Hardcode(key))
+  if (!is_hardcode(key))
     return -1;
   str = silly_atr_get(key, A_XTYPE);
   if (str && *str) {
@@ -832,7 +832,7 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
   for (i = 0; SpecialObjects[id].commands[i].name; i++) {
     if (!SpecialObjects[id].commands[i].func &&
         (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
-         Have_MechPower(Owner(player), powerneeded)))
+         Have_MechPower(obj_owner(player), powerneeded)))
       if (id != GTYPE_MECH ||
           Can_Use_Command(mech, SpecialObjects[id].commands[i].flag)) {
         if (count)
@@ -862,7 +862,7 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
         sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
         if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-            Have_MechPower(Owner(player), powerneeded))
+            Have_MechPower(obj_owner(player), powerneeded))
           if (id != GTYPE_MECH ||
               Can_Use_Command(mech, SpecialObjects[id].commands[j].flag)) {
             strcpy(buf, SpecialObjects[id].commands[j].name);
@@ -916,7 +916,7 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
             if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-                Have_MechPower(Owner(player), powerneeded))
+                Have_MechPower(obj_owner(player), powerneeded))
               if (id != GTYPE_MECH ||
                   Can_Use_Command(mech, SpecialObjects[id].commands[j].flag))
                 cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,
@@ -953,9 +953,9 @@ void handle_xcode(DbRef player, DbRef obj, int from, int to) {
   if (from == to)
     return;
   if (!to) {
-    s_Hardcode(obj);
+    s_hardcode(obj);
     DisposeSpecialObject(player, obj);
-    c_Hardcode(obj);
+    c_hardcode(obj);
   } else
     CreateNewSpecialObject(player, obj);
 }
@@ -970,7 +970,7 @@ struct color_entry {
   int bit;
   int negbit;
   char ltr;
-  char *string;
+  const char *string;
   char *sstring;
 } color_table[] = {
     {0x0008, 7, 'n', ANSI_NORMAL, NULL},  {0x0001, 0, 'h', ANSI_HILITE, NULL},
@@ -1023,7 +1023,7 @@ char *colorize(DbRef player, char *from) {
       color_wanted &= ~color_table[i].negbit;
       color_wanted |= color_table[i].bit;
     } else {
-      if (color_wanted && Ansi(player)) {
+      if (color_wanted && is_ansi(player)) {
         *q = 0;
         /* Generate efficient color string */
         strcpy(q, ANSI_START);
@@ -1046,7 +1046,7 @@ char *colorize(DbRef player, char *from) {
     }
   }
   *q = 0;
-  if (color_wanted && Ansi(player)) {
+  if (color_wanted && is_ansi(player)) {
     /* Generate efficient color string */
     strcpy(q, ANSI_START);
     q += ANSI_START_LEN;
@@ -1085,7 +1085,7 @@ void mecha_notify_except(DbRef loc, DbRef player, DbRef exception, char *msg) {
     notify_checked(loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A |
                     MSG_COLORIZE));
-  DOLIST(first, Contents(loc)) {
+  DOLIST(first, obj_contents(loc)) {
     if (first != exception) {
       notify_checked(first, player, msg,
                      (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE | MSG_COLORIZE));
@@ -1111,9 +1111,9 @@ MAP *getMap(DbRef d) {
 MECH *getMech(DbRef d) {
   XCODE *xcode_obj;
 
-  if (!(Good_obj(d)))
+  if (!(is_good_obj(d)))
     return NULL;
-  if (!(Hardcode(d)))
+  if (!(is_hardcode(d)))
     return NULL;
   if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
     return NULL;

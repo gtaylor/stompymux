@@ -53,8 +53,8 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
   if (!m)
     return;
   notify_printf(player, "Checking %d entries..", m->first_free);
-  DOLIST(k, Contents(m->mynum)) {
-    if (Hardcode(k)) {
+  DOLIST(k, obj_contents(m->mynum)) {
+    if (is_hardcode(k)) {
       if (WhichSpecial(k) == GTYPE_MECH) {
         MECH *map_mech;
 

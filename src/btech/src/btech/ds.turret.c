@@ -225,8 +225,8 @@ void newturret(DbRef key, void **data, int selector) {
 void turret_initialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
   DOCHECK(
-      player != tur->gunner && Connected(tur->gunner) &&
-          Location(tur->gunner) == Location(player),
+      player != tur->gunner && is_connected(tur->gunner) &&
+          obj_location(tur->gunner) == obj_location(player),
       tprintf("You need %s to leave or disconnect first.", Name(tur->gunner)));
   DOCHECK(player == tur->gunner, "You grap firmer hold on the joystick..");
   notify_except(tur->mynum, NOTHING, tur->mynum,

@@ -12,6 +12,15 @@
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
 
+struct BooleanExpression *alloc_bool(const char *s) {
+  return (struct BooleanExpression *)malloc(sizeof(struct BooleanExpression));
+}
+
+void free_bool(struct BooleanExpression *b) {
+  if (b)
+    free(b);
+}
+
 static int parsing_internal = 0;
 
 /**
@@ -30,7 +39,7 @@ static int check_attr(DbRef player, DbRef lockobj, Attribute *attr, char *key) {
   if (attr->number == A_LENTER) {
     /* We can see enterlocks... else we'd break zones */
     checkit = 1;
-  } else if (See_attr(lockobj, player, attr, aowner, aflags)) {
+  } else if (see_attr(lockobj, player, attr, aowner, aflags)) {
     checkit = 1;
   } else if (attr->number == A_NAME) {
     checkit = 1;
@@ -101,7 +110,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
     mudstate.lock_nest_lev--;
     return (c);
   case BOOLEXP_CONST:
-    return (b->thing == player || member(b->thing, Contents(player)));
+    return (b->thing == player || member(b->thing, obj_contents(player)));
   case BOOLEXP_ATR:
     a = attribute_by_number(b->thing);
     if (!a)
@@ -115,7 +124,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
 
     if (check_attr(player, from, a, (char *)b->sub1))
       return 1;
-    DOLIST(obj, Contents(player)) {
+    DOLIST(obj, obj_contents(player)) {
       if (check_attr(obj, from, a, (char *)b->sub1))
         return 1;
     }
@@ -137,7 +146,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
 
     if ((a->number == A_NAME) || (a->number == A_LENTER)) {
       checkit = 1;
-    } else if (Read_attr(source, source, a, aowner, aflags)) {
+    } else if (read_attr(source, source, a, aowner, aflags)) {
       checkit = 1;
     }
     if (checkit) {
@@ -175,7 +184,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
      */
 
     if (b->sub1->type == BOOLEXP_CONST)
-      return (member(b->sub1->thing, Contents(player)));
+      return (member(b->sub1->thing, obj_contents(player)));
 
     /*
      * Nope, do an attribute check
@@ -184,13 +193,13 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
     a = attribute_by_number(b->sub1->thing);
     if (!a)
       return 0;
-    DOLIST(obj, Contents(player)) {
+    DOLIST(obj, obj_contents(player)) {
       if (check_attr(obj, from, a, (char *)(b->sub1)->sub1))
         return 1;
     }
     return 0;
   case BOOLEXP_OWNER:
-    return (Owner(b->sub1->thing) == Owner(player));
+    return (obj_owner(b->sub1->thing) == obj_owner(player));
   default:
     abort(); /*
               * bad type
@@ -264,7 +273,7 @@ static BooleanExpression *test_atr(char *s) {
     /*
      * Only #1 can lock on numbers
      */
-    if (!God(parse_player)) {
+    if (!is_god(parse_player)) {
       free_lbuf(buff);
       return ((BooleanExpression *)NULL);
     }
@@ -361,7 +370,7 @@ static BooleanExpression *parse_boolexp_L(void) {
         return TRUE_BOOLEXP;
       }
       b->thing = atoi(&buf[1]);
-      if (!Good_obj(b->thing)) {
+      if (!is_good_obj(b->thing)) {
         free_lbuf(buf);
         free_bool(b);
         return TRUE_BOOLEXP;
@@ -647,7 +656,7 @@ boolean_expression_unparse_internal(DbRef player, BooleanExpression *expression,
       safe_str(buffer, boolexp_unparse_buffer, &boolexp_unparse_top);
       free_lbuf(buffer);
     } else {
-      if (Typeof(expression->thing) == TYPE_PLAYER) {
+      if (typeof_obj(expression->thing) == TYPE_PLAYER) {
         safe_chr('*', boolexp_unparse_buffer, &boolexp_unparse_top);
         safe_str(Name(expression->thing), boolexp_unparse_buffer,
                  &boolexp_unparse_top);

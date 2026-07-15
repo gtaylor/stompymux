@@ -65,8 +65,8 @@ void explode_unit(MECH *wounded, MECH *attacker) {
 
   from = wounded->mynum;
 
-  SAFE_DOLIST(i, tmpnext, Contents(from)) {
-    if (Good_obj(i) && Hardcode(i)) {
+  SAFE_DOLIST(i, tmpnext, obj_contents(from)) {
+    if (is_good_obj(i) && is_hardcode(i)) {
       if ((target = getMech(i))) {
         if (MechType(target) == CLASS_BSUIT) {
           KillMechContentsIfIC(target->mynum);

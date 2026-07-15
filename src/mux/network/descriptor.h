@@ -11,14 +11,14 @@
 #include "mux/support/hash_table.h"
 
 /* Reasons passed to descriptor_shutdown(). */
-#define R_QUIT 1       /* User quit */
-#define R_TIMEOUT 2    /* Inactivity timeout */
-#define R_BOOT 3       /* Victim of @boot or @destroy */
-#define R_SOCKDIED 4   /* Other end of socket closed it */
-#define R_GOING_DOWN 5 /* Game is going down */
-#define R_BADLOGIN 6   /* Too many failed login attempts */
-#define R_GAMEDOWN 7   /* Not admitting users now */
-#define R_GAMEFULL 8   /* Too many players logged in */
+constexpr int R_QUIT = 1;       /* User quit */
+constexpr int R_TIMEOUT = 2;    /* Inactivity timeout */
+constexpr int R_BOOT = 3;       /* Victim of @boot or @destroy */
+constexpr int R_SOCKDIED = 4;   /* Other end of socket closed it */
+constexpr int R_GOING_DOWN = 5; /* Game is going down */
+constexpr int R_BADLOGIN = 6;   /* Too many failed login attempts */
+constexpr int R_GAMEDOWN = 7;   /* Not admitting users now */
+constexpr int R_GAMEFULL = 8;   /* Too many players logged in */
 
 typedef struct telnet_t telnet_t;
 
@@ -72,10 +72,10 @@ struct Descriptor {
 };
 
 /* Flags in DESC.flags. */
-#define DS_CONNECTED 0x0001 /* Player is connected. */
-#define DS_AUTODARK 0x0002  /* Wizard was automatically set dark. */
-#define DS_IDENTIFIED 0x0008
-#define DS_DEAD 0x10000000 /* Socket has disconnected; ignore it. */
+constexpr int DS_CONNECTED = 0x0001; /* Player is connected. */
+constexpr int DS_AUTODARK = 0x0002;  /* Wizard was automatically set dark. */
+constexpr int DS_IDENTIFIED = 0x0008;
+constexpr int DS_DEAD = 0x10000000; /* Socket has disconnected; ignore it. */
 
 extern Descriptor *descriptor_list;
 

@@ -1,4 +1,5 @@
-/* match_helpers.c - Supplemental object matching helpers and command parsing. */
+/* match_helpers.c - Supplemental object matching helpers and command parsing.
+ */
 
 #include "mux/world/match.h"
 
@@ -37,7 +38,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
    * First, check normally
    */
 
-  if (Good_obj(dflt))
+  if (is_good_obj(dflt))
     return dflt;
 
   /*
@@ -112,7 +113,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
     result1 = match_result();
 
     free_lbuf(buff);
-    if (!Good_obj(result1)) {
+    if (!is_good_obj(result1)) {
       dflt = promote_dflt(dflt, result1);
       continue;
     }
@@ -121,8 +122,8 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * * * * skip past.
      */
 
-    control = Controls(player, result1);
-    if ((Dark(result1) || Opaque(result1)) && !control) {
+    control = is_controls(player, result1);
+    if ((is_dark(result1) || is_opaque(result1)) && !control) {
       dflt = promote_dflt(dflt, NOTHING);
       continue;
     }
@@ -130,7 +131,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * Validate object has the ENTER bit set, if requested
      */
 
-    if ((check_enter) && !Enter_ok(result1) && !control) {
+    if ((check_enter) && !is_enter_ok(result1) && !control) {
       dflt = promote_dflt(dflt, NOPERM);
       continue;
     }
@@ -142,7 +143,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
     match_possession();
     result = match_result();
     result = match_possessed(player, result1, target, result, check_enter);
-    if (Good_obj(result))
+    if (is_good_obj(result))
       return result;
     dflt = promote_dflt(dflt, result);
   }
@@ -217,7 +218,7 @@ int parse_thing_slash(DbRef player, char *thing, char **after, DbRef *it) {
    * Return status of search
    */
 
-  return (Good_obj(*it));
+  return (is_good_obj(*it));
 }
 
 extern NameTable lock_sw[];
@@ -248,7 +249,7 @@ int get_obj_and_lock(DbRef player, char *what, DbRef *it, Attribute **attr,
      */
 
     *it = match_thing(player, what);
-    if (!Good_obj(*it)) {
+    if (!is_good_obj(*it)) {
       free_lbuf(tbuf);
       safe_str("#-1 NOT FOUND", errmsg, bufc);
       return 0;

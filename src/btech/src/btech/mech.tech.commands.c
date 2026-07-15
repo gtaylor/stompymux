@@ -388,7 +388,7 @@ TECHCOMMANDH(tech_replacegun) {
   DOCHECK(IsAmmo(GetPartType(mech, loc, part))
               ? 0
               : econ_find_items(IsDS(mech) ? AeroBay(mech, 0)
-                                           : Location(mech->mynum),
+                                           : obj_location(mech->mynum),
                                 parttype, GetPartBrand(mech, loc, part)) < 1,
           tprintf("Not enough units of %s in store.",
                   part_name(parttype, GetPartBrand(mech, loc, part))));
@@ -412,7 +412,8 @@ TECHCOMMANDH(tech_replacegun) {
       notify_printf(player, "You muck around, wasting the gun for good...");
       /* part goes , 1.5 * techtime*/
       if (!(IsAmmo(GetPartType(mech, loc, part))))
-        econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+        econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                     : obj_location(mech->mynum),
                           parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
       mux_event_add(
@@ -461,7 +462,8 @@ TECHCOMMANDH(tech_replacegun) {
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
     if (!(IsAmmo(GetPartType(mech, loc, part))))
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
     mux_event_add(
@@ -606,7 +608,7 @@ TECHCOMMANDH(tech_replacepart) {
   DOCHECK(IsAmmo(GetPartType(mech, loc, part))
               ? 0
               : econ_find_items(IsDS(mech) ? AeroBay(mech, 0)
-                                           : Location(mech->mynum),
+                                           : obj_location(mech->mynum),
                                 parttype, GetPartBrand(mech, loc, part)) < 1,
           tprintf("Not enough units of %s in store.",
                   part_name(parttype, GetPartBrand(mech, loc, part))));
@@ -628,7 +630,8 @@ TECHCOMMANDH(tech_replacepart) {
       fixtime = fail_fixtime;
       notify_printf(player, "You muck around, wasting the part for good...");
       /* part goes , 1.5 * techtime*/
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
       mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
@@ -675,7 +678,7 @@ TECHCOMMANDH(tech_replacepart) {
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
 
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
                       parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
     mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
@@ -727,7 +730,7 @@ TECHCOMMANDH(tech_toggletype) {
 
   TECHCOMMANDB;
 
-  DOCHECK((!Wizard(player)) && In_Character(mech->mynum),
+  DOCHECK((!is_wizard(player)) && is_in_character(mech->mynum),
           "This command only works in simpods!");
   my_parsepart2(&loc, &part, &atype);
   DOCHECK(!IsAmmo((t = GetPartType(mech, loc, part))), "That's no ammo!");
@@ -949,10 +952,10 @@ TECHCOMMANDH(tech_reattach) {
           "You're too tired to do that!");
 
   internal_stock =
-      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
                       ProperInternal(mech), 0);
   electric_stock =
-      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
                       Cargo(S_ELECTRONIC), 0);
 
   DOCHECK(internal_stock < GetSectOInt(mech, loc),
@@ -979,9 +982,11 @@ TECHCOMMANDH(tech_reattach) {
       fixtime = fail_fixtime;
       notify_printf(player, "You muck around, wasting the section for good...");
       /* TODO: maybe save X% of materials like before? */
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
       mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
@@ -1004,9 +1009,11 @@ TECHCOMMANDH(tech_reattach) {
         notify_printf(player, "Your skill manages to save %d minute%s",
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
+                                   : obj_location(mech->mynum),
                         Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
       mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
@@ -1027,9 +1034,9 @@ TECHCOMMANDH(tech_reattach) {
       notify_printf(player, "Your skill manages to save %d minute%s",
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
                       ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
+    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
                       Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
     tech_addtechtime(player, fixtime);
     mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,

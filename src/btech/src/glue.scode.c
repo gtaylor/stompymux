@@ -549,14 +549,14 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   int len = 0;
 
-  if (!mudconf.have_zones || (!Controls(player, it) && !Wizard(player))) {
+  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (i = 0; i < mudstate.db_top; i++)
-    if (Typeof(i) == TYPE_THING) {
-      if (Zone(i) == it) {
-        if ((WhichSpecial(i) == GTYPE_MECH) && Good_obj(i)) {
+    if (typeof_obj(i) == TYPE_THING) {
+      if (obj_zone(i) == it) {
+        if ((WhichSpecial(i) == GTYPE_MECH) && is_good_obj(i)) {
           if (len) {
             static char smbuf[SBUF_SIZE];
 
@@ -589,7 +589,7 @@ void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
   void *(*tempfun)(int, MECH *, char *);
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   spec = WhichSpecial(it);
   FUNCHECK(!(foo = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -691,7 +691,7 @@ void fun_btgetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
   int spec;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   spec = WhichSpecial(it);
   FUNCHECK(!(foo = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -737,7 +737,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
   memset(args, 0, sizeof(char *) * 2);
 
   DOCHECK(silly_parseattributes(buffer, args, 2) != 2, "Invalid arguments!");
-  t = WhichSpecial(Location(player));
+  t = WhichSpecial(obj_location(player));
   for (i = 0; xcode_data[i].name; i++)
     if (xcode_data[i].gtype == t)
       break;
@@ -749,13 +749,13 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
       break;
   DOCHECK(!xcode_data[i].name,
           "Error: No matching xcode value for this type of object found.");
-  bar = (void *)((long)FindObjectsData(Location(player)) +
+  bar = (void *)((long)FindObjectsData(obj_location(player)) +
                  xcode_data[i].rel_addr);
   switch (xcode_data[i].type) {
   case TYPE_STRFUNC_BD:
   case TYPE_STRFUNC_S:
     tempfun = (void *)xcode_data[i].rel_addr;
-    tempfun(1, getMech(Location(player)), (char *)args[1]);
+    tempfun(1, getMech(obj_location(player)), (char *)args[1]);
     break;
   case TYPE_STRING:
     strncpy((char *)bar, args[1], xcode_data[i].size - 1);
@@ -788,14 +788,14 @@ void list_xcodestuff(DbRef player, void *data, char *buffer) {
   int t, i, flag = CM_TWO, se_len = 37;
   coolmenu *c = NULL;
 
-  t = WhichSpecial(Location(player));
+  t = WhichSpecial(obj_location(player));
   for (i = 0; xcode_data[i].name; i++)
     if (xcode_data[i].gtype == t && (scode_in_out[xcode_data[i].type] & 1))
       break;
   DOCHECK(!xcode_data[i].name,
           "Error: No xcode values for this type of object found.");
   addline();
-  cent(tprintf("Data for %s (%s)", Name(Location(player)),
+  cent(tprintf("Data for %s (%s)", Name(obj_location(player)),
                SpecialObjects[t].type));
   addline();
   if (*buffer == '1') {
@@ -836,7 +836,7 @@ void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   FUNCHECK(!IsMech(it), "#-2");
   mech = FindObjectsData(it);
   n = figure_latest_tech_event(mech);
@@ -857,7 +857,7 @@ void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(nfargs < 1 || nfargs > 2,
            "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(it), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(it), "#-1 INVALID TARGET");
   if (nfargs > 1) {
     i = -1;
     if (!find_matching_long_part(fargs[1], &i, &p, &b)) {
@@ -902,7 +902,7 @@ void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(nfargs < 1 || nfargs > 2,
            "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(it), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(it), "#-1 INVALID TARGET");
   if (nfargs > 1) {
     i = -1;
     if (!find_matching_long_part(fargs[1], &i, &p, &b)) {
@@ -945,7 +945,7 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
   char terr;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   spec = WhichSpecial(it);
   FUNCHECK(spec != GTYPE_MAP, "#-1");
   FUNCHECK(!(map = FindObjectsData(it)), "#-1");
@@ -972,7 +972,7 @@ void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
   int spec;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   spec = WhichSpecial(it);
   FUNCHECK(spec != GTYPE_MAP, "#-1");
   FUNCHECK(!(map = FindObjectsData(it)), "#-1");
@@ -1018,7 +1018,7 @@ void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   sectstr = sectstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
@@ -1035,7 +1035,7 @@ void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   damstr = damages_func(mech);
@@ -1053,7 +1053,7 @@ void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   critstr = critstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
@@ -1071,7 +1071,7 @@ void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = armorstatus_func(mech, fargs[1]); /* fargs[1] unguaranteed ! */
@@ -1089,7 +1089,7 @@ void fun_btweapons(char *buff, char **bufc, DbRef player, DbRef cause,
 
   int i;
 
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
 
@@ -1112,7 +1112,7 @@ void fun_btweaponstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = weaponstatus_func(mech, nfargs == 2 ? fargs[1] : NULL);
@@ -1181,7 +1181,7 @@ void fun_btsetarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = setarmorstatus_func(mech, fargs[1], fargs[2],
@@ -1219,7 +1219,7 @@ void fun_btdamagemech(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1 UNABLE TO GET MECHDATA");
   FUNCHECK(Readnum(totaldam, fargs[1]) || totaldam < 1 || totaldam > 1000,
@@ -1245,7 +1245,7 @@ void fun_bttechstatus(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1 UNABLE TO GET MECHDATA");
   infostr = techstatus_func(mech);
@@ -1263,7 +1263,7 @@ void fun_btupdatelinks(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 CANT FIND");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 CANT FIND");
   FUNCHECK(!IsMap(it), "#-1 NOT A MAP");
   FUNCHECK(!(map = FindObjectsData(it)), "#-1 UNABLE TO GET MAPDATA");
   recursively_updatelinks(NOTHING, it);
@@ -1314,7 +1314,7 @@ void fun_btmakepilotroll(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
 
   mechnum = match_thing(player, fargs[0]);
-  FUNCHECK(mechnum == NOTHING || !Examinable(player, mechnum),
+  FUNCHECK(mechnum == NOTHING || !is_examinable(player, mechnum),
            "#-1 INVALID MECH");
   FUNCHECK(!IsMech(mechnum), "#-1 INVALID MECH");
   FUNCHECK(!(mech = FindObjectsData(mechnum)), "#-1 INVALID MECH");
@@ -1341,7 +1341,7 @@ void fun_btid2db(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechnum = match_thing(player, fargs[0]);
-  FUNCHECK(mechnum == NOTHING || !Examinable(player, mechnum),
+  FUNCHECK(mechnum == NOTHING || !is_examinable(player, mechnum),
            "#-1 INVALID MECH/MAP");
   FUNCHECK(strlen(fargs[1]) != 2, "#-1 INVALID TARGETID");
   if (IsMech(mechnum)) {
@@ -1380,7 +1380,7 @@ void fun_bthexlos(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechnum = match_thing(player, fargs[0]);
-  FUNCHECK(mechnum == NOTHING || !Examinable(player, mechnum),
+  FUNCHECK(mechnum == NOTHING || !is_examinable(player, mechnum),
            "#-1 INVALID MECH");
   FUNCHECK(!IsMech(mechnum), "#-1 INVALID MECH");
   FUNCHECK(!(mech = getMech(mechnum)), "#-1 INVALID MECH");
@@ -1409,13 +1409,13 @@ void fun_btlosm2m(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechnum = match_thing(player, fargs[0]);
-  FUNCHECK(mechnum == NOTHING || !Examinable(player, mechnum),
+  FUNCHECK(mechnum == NOTHING || !is_examinable(player, mechnum),
            "#-1 INVALID MECH");
   FUNCHECK(!IsMech(mechnum), "#-1 INVALID MECH");
   FUNCHECK(!(mech = getMech(mechnum)), "#-1 INVALID MECH");
 
   mechnum = match_thing(player, fargs[1]);
-  FUNCHECK(mechnum == NOTHING || !Examinable(player, mechnum),
+  FUNCHECK(mechnum == NOTHING || !is_examinable(player, mechnum),
            "#-1 INVALID MECH");
   FUNCHECK(!IsMech(mechnum), "#-1 INVALID MECH");
   FUNCHECK(!(target = getMech(mechnum)), "#-1 INVALID MECH");
@@ -1449,7 +1449,7 @@ void fun_btaddstores(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
 
   loc = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(loc), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(loc), "#-1 INVALID TARGET");
 
   FUNCHECK(strlen(fargs[1]) >= MBUF_SIZE, "#-1 PARTNAME TOO LONG");
 
@@ -1485,7 +1485,7 @@ void fun_btticweaps(char *buff, char **bufc, DbRef player, DbRef cause,
   int ticnum;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   FUNCHECK(!isdigit(fargs[1][0]), "#-1 TIC MUST BE NUMERIC");
@@ -1522,7 +1522,7 @@ void fun_btloadmap(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(nfargs < 2 || nfargs > 3, "#-1 BTLOADMAP TAKES 2 OR 3 ARGUMENTS");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mapdbref = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mapdbref), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(mapdbref), "#-1 INVALID TARGET");
   map = getMap(mapdbref);
   FUNCHECK(!map, "#-1 INVALID TARGET");
   switch (map_checkmapfile(map, fargs[1])) {
@@ -1560,7 +1560,7 @@ void fun_btloadmech(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdbref = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mechdbref), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(mechdbref), "#-1 INVALID TARGET");
   mech = getMech(mechdbref);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
   if (mech_loadnew(player, mech, fargs[1]) == 1) {
@@ -1584,7 +1584,7 @@ void fun_btmechfreqs(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdbref = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mechdbref), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(mechdbref), "#-1 INVALID TARGET");
   mech = getMech(mechdbref);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
 
@@ -1635,7 +1635,7 @@ void fun_btremovestores(char *buff, char **bufc, DbRef player, DbRef cause,
   int p, b;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   FUNCHECK(!(foo = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK(Readnum(num, fargs[2]), "#-2 Illegal Value");
@@ -1687,7 +1687,7 @@ void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1 INVALID MECH");
 
@@ -1732,17 +1732,18 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
 
   mapdb = match_thing(player, fargs[0]);
-  FUNCHECK(mapdb == NOTHING || !Examinable(player, mapdb), "#-1 INVALID MAPDB");
+  FUNCHECK(mapdb == NOTHING || !is_examinable(player, mapdb),
+           "#-1 INVALID MAPDB");
   FUNCHECK(!IsMap(mapdb), "#-1 OBJECT NOT MAP");
   FUNCHECK(!(map = getMap(mapdb)), "#-1 INVALID MAP");
 
   switch (nfargs) {
   case 3:
     mechAdb = match_thing(player, fargs[1]);
-    FUNCHECK(mechAdb == NOTHING || !Examinable(player, mechAdb),
+    FUNCHECK(mechAdb == NOTHING || !is_examinable(player, mechAdb),
              "#-1 INVALID MECHDBREF");
     mechBdb = match_thing(player, fargs[2]);
-    FUNCHECK(mechBdb == NOTHING || !Examinable(player, mechBdb),
+    FUNCHECK(mechBdb == NOTHING || !is_examinable(player, mechBdb),
              "#-1 INVALID MECHDBREF");
     FUNCHECK(!IsMech(mechAdb) || !IsMech(mechBdb), "#-1 INVALID MECH");
     FUNCHECK(!(mechA = getMech(mechAdb)) || !(mechB = getMech(mechBdb)),
@@ -1765,7 +1766,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
       yA = atoi(fargs[2]);
       mechAdb = match_thing(player, fargs[3]);
     }
-    FUNCHECK(mechAdb == NOTHING || !Examinable(player, mechAdb),
+    FUNCHECK(mechAdb == NOTHING || !is_examinable(player, mechAdb),
              "#-1 INVALID MECHDBREF");
     FUNCHECK(!IsMech(mechAdb), "#-1 INVALID MECH");
     FUNCHECK(!(mechA = getMech(mechAdb)), "#-1 INVALID MECH");
@@ -1798,7 +1799,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
         zA = atoi(fargs[3]);
         mechAdb = match_thing(player, fargs[4]);
       }
-      FUNCHECK(mechAdb == NOTHING || !Examinable(player, mechAdb),
+      FUNCHECK(mechAdb == NOTHING || !is_examinable(player, mechAdb),
                "#-1 INVALID MECHDBREF");
       FUNCHECK(!IsMech(mechAdb), "#-1 INVALID MECH");
       FUNCHECK(!(mechA = getMech(mechAdb)), "#-1 INVALID MECH");
@@ -1867,7 +1868,7 @@ void fun_btsetmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   float newmaxspeed = atof(fargs[1]);
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -1886,7 +1887,7 @@ void fun_btgetrealmaxspeed(char *buff, char **bufc, DbRef player, DbRef cause,
   float speed;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -1904,7 +1905,7 @@ void fun_btgetbv(char *buff, char **bufc, DbRef player, DbRef cause,
   int bv;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -1984,7 +1985,7 @@ void fun_bttechlist(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1 NOT A MECH");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1 NOT A MECH");
   FUNCHECK(!IsMech(it), "#-1 NOT A MECH");
   FUNCHECK(!(mech = FindObjectsData(it)), "#-1");
   infostr = techlist_func(mech);
@@ -2028,8 +2029,8 @@ void fun_btshowstatus_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   outplayer = match_thing(player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING || !Examinable(player, outplayer) ||
-               !isPlayer(outplayer),
+  FUNCHECK(outplayer == NOTHING || !is_examinable(player, outplayer) ||
+               !is_player(outplayer),
            "#-1");
 
   mech_status(outplayer, (void *)mech, "R");
@@ -2045,8 +2046,8 @@ void fun_btshowwspecs_ref(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   outplayer = match_thing(player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING || !Examinable(player, outplayer) ||
-               !isPlayer(outplayer),
+  FUNCHECK(outplayer == NOTHING || !is_examinable(player, outplayer) ||
+               !is_player(outplayer),
            "#-1");
 
   mech_weaponspecs(outplayer, (void *)mech, "");
@@ -2062,8 +2063,8 @@ void fun_btshowcritstatus_ref(char *buff, char **bufc, DbRef player,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   FUNCHECK((mech = load_refmech(fargs[0])) == NULL, "#-1 NO SUCH MECH");
   outplayer = match_thing(player, fargs[1]);
-  FUNCHECK(outplayer == NOTHING || !Examinable(player, outplayer) ||
-               !isPlayer(outplayer),
+  FUNCHECK(outplayer == NOTHING || !is_examinable(player, outplayer) ||
+               !is_player(outplayer),
            "#-1");
 
   mech_critstatus(outplayer, (void *)mech, fargs[2]);
@@ -2077,7 +2078,8 @@ void fun_btengrate(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdb = match_thing(player, fargs[0]);
-  FUNCHECK(mechdb == NOTHING || !Examinable(player, mechdb), "#-1 NOT A MECH");
+  FUNCHECK(mechdb == NOTHING || !is_examinable(player, mechdb),
+           "#-1 NOT A MECH");
   FUNCHECK(!IsMech(mechdb), "#-1 NOT A MECH");
   FUNCHECK(!(mech = getMech(mechdb)), "#-1");
 
@@ -2134,7 +2136,8 @@ void fun_btunitpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdb = match_thing(player, fargs[0]);
-  FUNCHECK(mechdb == NOTHING || !Examinable(player, mechdb), "#-1 NOT A MECH");
+  FUNCHECK(mechdb == NOTHING || !is_examinable(player, mechdb),
+           "#-1 NOT A MECH");
   FUNCHECK(!IsMech(mechdb), "#-1 NOT A MECH");
   FUNCHECK(!(mech = getMech(mechdb)), "#-1");
 
@@ -2207,7 +2210,7 @@ void fun_btnumrepjobs(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
-  FUNCHECK(it == NOTHING || !Examinable(player, it), "#-1");
+  FUNCHECK(it == NOTHING || !is_examinable(player, it), "#-1");
   FUNCHECK(!IsMech(it), "#-2");
   mech = FindObjectsData(it);
 
@@ -2227,7 +2230,7 @@ void fun_btsettons(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(player, fargs[0]);
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
-  FUNCHECK(!Good_obj(it), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(it), "#-1 INVALID TARGET");
 
   mech = getMech(it);
   FUNCHECK(!mech, "#-1 NOT A MECH");
@@ -2258,12 +2261,13 @@ void fun_btsetxy(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(nfargs < 4 || nfargs > 5, "#-1 INVALID ARGUMENT");
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdb = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mechdb), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(mechdb), "#-1 INVALID TARGET");
   mech = getMech(mechdb);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
 
   mapdb = match_thing(player, fargs[1]);
-  FUNCHECK(mapdb == NOTHING || !Examinable(player, mapdb), "#-1 INVALID MAP");
+  FUNCHECK(mapdb == NOTHING || !is_examinable(player, mapdb),
+           "#-1 INVALID MAP");
   FUNCHECK(!IsMap(mapdb), "#-1 INVALID MAP");
   FUNCHECK(!(map = getMap(mapdb)), "#-1 INVALID MAP");
 
@@ -2576,7 +2580,7 @@ void fun_btunitfixable(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   mechdb = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mechdb), "#-1 INVALID TARGET");
+  FUNCHECK(!is_good_obj(mechdb), "#-1 INVALID TARGET");
   mech = getMech(mechdb);
   FUNCHECK(!mech, "#-1 INVALID TARGET");
 
@@ -2594,7 +2598,7 @@ void fun_btlistblz(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
 
   mapdb = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mapdb), "#-1 INVALID MAP");
+  FUNCHECK(!is_good_obj(mapdb), "#-1 INVALID MAP");
   FUNCHECK(!(map = getMap(mapdb)), "#-1 INVALID MAP");
   for (tmp = first_mapobj(map, i); tmp; tmp = next_mapobj(tmp))
     if (i == TYPE_B_LZ) {
@@ -2620,7 +2624,7 @@ void fun_bthexinblz(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
 
   mapdb = match_thing(player, fargs[0]);
-  FUNCHECK(!Good_obj(mapdb), "#-1 INVALID MAP");
+  FUNCHECK(!is_good_obj(mapdb), "#-1 INVALID MAP");
   FUNCHECK(!(map = getMap(mapdb)), "#-1 INVALID MAP");
   x = atoi(fargs[1]);
   y = atoi(fargs[2]);

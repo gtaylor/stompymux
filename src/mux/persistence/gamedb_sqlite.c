@@ -20,14 +20,14 @@
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 
-/* Increment whenever the schema written by this module changes. */
-#define GAMEDB_SCHEMA_VERSION 3
+// Increment whenever the schema written by this module changes.
+constexpr int GAMEDB_SCHEMA_VERSION = 3;
 
-/* Identifies SQLite as the storage implementation in snapshot metadata. */
-#define GAMEDB_SOURCE_FORMAT_SQLITE 1
+// Identifies SQLite as the storage implementation in snapshot metadata.
+constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
 
-/* Keep extension storage in the game snapshot without coupling MUX to BTech. */
-#define GAMEDB_MAX_SQLITE_EXTENSIONS 8
+// Keep extension storage in the game snapshot without coupling MUX to BTech.
+constexpr int GAMEDB_MAX_SQLITE_EXTENSIONS = 8;
 
 typedef struct persistence_sqlite_extension PERSISTENCE_SQLITE_EXTENSION;
 struct persistence_sqlite_extension {
@@ -426,25 +426,25 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
       result = -1;
     } else {
       object_name_set(object, (char *)name);
-      s_Location(object, location);
-      s_Zone(object, zone);
-      s_Contents(object, contents);
-      s_Exits(object, exits);
-      s_Link(object, link);
-      s_Next(object, next);
-      s_Owner(object, owner);
-      s_Parent(object, parent);
-      s_Flags(object, flags);
-      s_Flags2(object, flags2);
-      s_Flags3(object, flags3);
-      s_Powers(object, powers);
-      s_Powers2(object, powers2);
+      s_location(object, location);
+      s_zone(object, zone);
+      s_contents(object, contents);
+      s_exits(object, exits);
+      s_link(object, link);
+      s_next(object, next);
+      s_owner(object, owner);
+      s_parent(object, parent);
+      s_flags(object, flags);
+      s_flags2(object, flags2);
+      s_flags3(object, flags3);
+      s_powers(object, powers);
+      s_powers2(object, powers2);
       lock = boolean_expression_parse(GOD, lock_text, 1);
       attribute_add_raw(object, A_LOCK,
                         boolean_expression_unparse_quiet(GOD, lock));
       boolean_expression_free(lock);
-      if (Typeof(object) == TYPE_PLAYER)
-        c_Connected(object);
+      if (typeof_obj(object) == TYPE_PLAYER)
+        c_connected(object);
     }
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -617,7 +617,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
   }
 
   DO_WHOLE_DB(object) {
-    if (Going(object))
+    if (is_going(object))
       continue;
 
     lock_source = attribute_get(object, A_LOCK, &attr_owner, &attr_flags);
@@ -626,19 +626,19 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
     if (gamedb_bind_int(objects, 1, object) < 0 ||
         sqlite3_bind_text(objects, 2, Name(object), -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
-        gamedb_bind_int(objects, 3, Location(object)) < 0 ||
-        gamedb_bind_int(objects, 4, Zone(object)) < 0 ||
-        gamedb_bind_int(objects, 5, Contents(object)) < 0 ||
-        gamedb_bind_int(objects, 6, Exits(object)) < 0 ||
-        gamedb_bind_int(objects, 7, Link(object)) < 0 ||
-        gamedb_bind_int(objects, 8, Next(object)) < 0 ||
-        gamedb_bind_int(objects, 9, Owner(object)) < 0 ||
-        gamedb_bind_int(objects, 10, Parent(object)) < 0 ||
-        gamedb_bind_int(objects, 11, Flags(object)) < 0 ||
-        gamedb_bind_int(objects, 12, Flags2(object)) < 0 ||
-        gamedb_bind_int(objects, 13, Flags3(object)) < 0 ||
-        gamedb_bind_int(objects, 14, Powers(object)) < 0 ||
-        gamedb_bind_int(objects, 15, Powers2(object)) < 0 ||
+        gamedb_bind_int(objects, 3, obj_location(object)) < 0 ||
+        gamedb_bind_int(objects, 4, obj_zone(object)) < 0 ||
+        gamedb_bind_int(objects, 5, obj_contents(object)) < 0 ||
+        gamedb_bind_int(objects, 6, obj_exits(object)) < 0 ||
+        gamedb_bind_int(objects, 7, obj_link(object)) < 0 ||
+        gamedb_bind_int(objects, 8, obj_next(object)) < 0 ||
+        gamedb_bind_int(objects, 9, obj_owner(object)) < 0 ||
+        gamedb_bind_int(objects, 10, obj_parent(object)) < 0 ||
+        gamedb_bind_int(objects, 11, obj_flags(object)) < 0 ||
+        gamedb_bind_int(objects, 12, obj_flags2(object)) < 0 ||
+        gamedb_bind_int(objects, 13, obj_flags3(object)) < 0 ||
+        gamedb_bind_int(objects, 14, obj_powers(object)) < 0 ||
+        gamedb_bind_int(objects, 15, obj_powers2(object)) < 0 ||
         sqlite3_bind_text(objects, 16, lock_text, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
         gamedb_step(objects) < 0) {
