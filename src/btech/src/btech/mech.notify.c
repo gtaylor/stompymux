@@ -32,6 +32,9 @@
 
 void sendchannelstuff(MECH *mech, int freq, char *msg);
 
+static void append_lbuf(char *buffer, size_t size, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
+
 static void append_lbuf(char *buffer, size_t size, const char *fmt, ...) {
   size_t len = strlen(buffer);
   va_list ap;
@@ -1707,6 +1710,10 @@ void mech_notify(MECH *mech, int type, char *buffer) {
   }
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
 void mech_printf(MECH *mech, int type, char *format, ...) {
   char buffer[LBUF_SIZE];
   int i;
@@ -1723,6 +1730,9 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
   va_start(ap, format);
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))

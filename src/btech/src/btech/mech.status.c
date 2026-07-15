@@ -44,6 +44,9 @@
 static int doweird = 0;
 static char weirdbuf[LBUF_SIZE];
 
+static void append_status(char *buffer, size_t size, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
+
 static void append_status(char *buffer, size_t size, const char *fmt, ...) {
   size_t len = strlen(buffer);
   va_list ap;

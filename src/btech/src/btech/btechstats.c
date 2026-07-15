@@ -646,12 +646,7 @@ static void show_charstatus(DbRef player, PSTATS *s, DbRef thing) {
 
 void do_charstatus(DbRef player, DbRef cause, int key, char *arg1) {
   DbRef thing;
-  int dir = 0;
-
   PSTATS *s;
-
-  if (WizR(player))
-    dir++;
 
   if (arg1 && *arg1) {
     thing = char_lookupplayer(player, player, 0, arg1);

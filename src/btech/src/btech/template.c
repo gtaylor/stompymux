@@ -1808,7 +1808,6 @@ char *read_desc(FILE *fp, char *data) {
   char keep[MAX_STRING_LENGTH + 500];
   char *t, *tmp;
   char *point;
-  int length = 0;
   static char buf[MAX_STRING_LENGTH];
 
   keep[0] = '\0';
@@ -1820,19 +1819,16 @@ char *read_desc(FILE *fp, char *data) {
       while (isspace(*(t--)))
         ;
       *(t++) = '\0';
-      length = strlen(tmp);
       strcpy(buf, tmp);
       return buf;
     } else {
       strcpy(keep, tmp);
       strcat(keep, "\r\n");
       t = tmp + strlen(tmp) - 1;
-      length = strlen(t);
       while (fgets(data, 512, fp)) {
         skip_template_whitespace(fp);
         if ((tmp = strchr(data, '}')) != NULL) {
           *tmp = 0;
-          length += strlen(data);
           strcat(keep, data);
           break;
         } else {
@@ -1841,7 +1837,6 @@ char *read_desc(FILE *fp, char *data) {
           *(point++) = '\n';
           *point = '\0';
           strcat(keep, data);
-          length += strlen(data);
         }
       }
     }

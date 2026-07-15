@@ -151,6 +151,10 @@ void raw_notify(DbRef player, const char *msg) {
   raw_notify_raw(player, msg, "\r\n");
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
 void notify_printf(DbRef player, const char *format, ...) {
   Descriptor *d;
   char buffer[LBUF_SIZE];
@@ -161,6 +165,9 @@ void notify_printf(DbRef player, const char *format, ...) {
 
   vsnprintf(buffer, LBUF_SIZE - 1, format, ap);
   va_end(ap);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   strncat(buffer, "\r\n", LBUF_SIZE - 1);
   buffer[LBUF_SIZE - 1] = '\0';
@@ -186,6 +193,10 @@ void raw_notify_newline(DbRef player) {
  * * raw_broadcast: Send message to players who have indicated flags
  */
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
 void raw_broadcast(int inflags, char *template, ...) {
   char buff[LBUF_SIZE];
   Descriptor *d;
@@ -197,6 +208,9 @@ void raw_broadcast(int inflags, char *template, ...) {
   va_start(ap, template);
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   DESC_ITER_CONN(d) {
     if ((obj_flags(d->player) & inflags) == inflags) {

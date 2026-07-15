@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 4.3)
 
+if(NOT DEFINED CMAKE_C_COMPILER)
+  find_program(CMAKE_C_COMPILER NAMES clang-20 REQUIRED)
+endif()
+
 project(BattleTechMUX LANGUAGES C)
 
 find_package(Git QUIET)

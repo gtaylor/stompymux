@@ -50,6 +50,10 @@ void init_chantab(void) {
   hash_table_initialize(&mudstate.channel_htab, 30 * HASH_FACTOR);
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
 void send_channel(char *chan, const char *format, ...) {
   struct channel *ch;
   char buf[LBUF_SIZE];
@@ -63,6 +67,9 @@ void send_channel(char *chan, const char *format, ...) {
   va_start(ap, format);
   vsnprintf(data, LBUF_SIZE, format, ap);
   va_end(ap);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   safe_chr('[', buf, &bp);
   safe_str(chan, buf, &bp);
@@ -208,6 +215,9 @@ static void do_comsend(struct channel *ch, char *mess) {
   c->time = mudstate.now;
   fifo_push(&ch->last_messages, c);
 }
+
+static void do_comprintf(struct channel *ch, char *messfmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
 static void do_comprintf(struct channel *ch, char *messfmt, ...) {
   struct comuser *user;

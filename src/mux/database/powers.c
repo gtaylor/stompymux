@@ -35,7 +35,7 @@ static int ph_any(DbRef target, DbRef player, Power power, int fpowers,
  */
 static int ph_wiz(DbRef target, DbRef player, Power power, int fpowers,
                   int reset) {
-  if (!is_wizard(player) & !is_god(player))
+  if (!is_wizard(player) && !is_god(player))
     return 0;
   return (ph_any(target, player, power, fpowers, reset));
 }
