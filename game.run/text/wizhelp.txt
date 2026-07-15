@@ -339,7 +339,7 @@
   This command gives <player> the new password <newpassword>.  If 
   <newpassword> is not specified, the player is given a null 
   password.  If logged in, the player is notified that his password 
-  has been changed.
+  has been changed. Passwords are limited by player_password_length_limit.
   
   See also: @password
   
@@ -4066,6 +4066,7 @@ Continued in btdamgaes()3
  kill_min_cost                                     list_access
  lock_recursion_limit    log                       logout_cmd_access 
  logout_cmd_alias        log_options               look_obey_terse 
+ login_attempt_burst     login_attempt_refill      login_hash_limit
  mail_database             mail_expiration
  master_room             match_own_commands        max_players 
  mud_name                  newuser_file
@@ -4073,8 +4074,10 @@ Continued in btdamgaes()3
  number_guests                                     output_database
  output_limit                                      paranoid_allocate
  parent_recursion_limit                            pemit_any_object
- pemit_far_players       pemit_site                player_flags 
+ password_hash_memlimit  password_hash_opslimit    pemit_far_players
+ pemit_site                player_flags
  player_listen           player_match_own_commands player_queue_limit 
+ player_password_length_limit
  player_starting_home    player_starting_room
  port
  postdump_message        public_channel            public_flags 
@@ -6235,6 +6238,53 @@ Avg weight: 45.00 Total tons: 990
   connect to an existing player before being disconnected.
 
   See also: conn_timeout.
+
+& player_password_length_limit
+
+  Config parameter: player_password_length_limit <count>
+  Default: 64
+
+  Specifies the maximum permitted player password length. Longer passwords are
+  rejected before they are hashed.
+
+& password_hash_opslimit
+
+  Config parameter: password_hash_opslimit <count>
+  Default: 3
+
+  Specifies the Argon2id CPU work factor used for new and changed passwords.
+  Increase this only after measuring login latency on the game host.
+
+& password_hash_memlimit
+
+  Config parameter: password_hash_memlimit <bytes>
+  Default: 12582912
+
+  Specifies the Argon2id memory work factor in bytes. The default is 12 MiB.
+
+& login_attempt_burst
+
+  Config parameter: login_attempt_burst <count>
+  Default: 3
+
+  Specifies the number of password operations a source address may make before
+  login throttling begins.
+
+& login_attempt_refill
+
+  Config parameter: login_attempt_refill <seconds>
+  Default: 10
+
+  Specifies the time required to restore one password operation for a source
+  address.
+
+& login_hash_limit
+
+  Config parameter: login_hash_limit <count>
+  Default: 5
+
+  Specifies the global number of password operations admitted each second.
+  This protects the game event loop from login floods.
  
 & robot_flags
 

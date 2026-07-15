@@ -2,8 +2,8 @@
 
 #include "mux/support/validation.h"
 
-#include "mux/server/platform.h"
 #include "mux/server/configuration.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
@@ -179,7 +179,8 @@ int ok_attr_name(const char *attrname) {
 int ok_password(const char *password) {
   const char *scan;
 
-  if (*password == '\0')
+  if (*password == '\0' ||
+      strlen(password) > (size_t)mudconf.player_password_length_limit)
     return 0;
 
   for (scan = password; *scan; scan++) {

@@ -44,6 +44,7 @@ target_sources(netmux PRIVATE
   ${MUX_MODULE_DIR}/support/numeric_hash_table.c
   ${MUX_MODULE_DIR}/support/hash_table.c
   ${MUX_MODULE_DIR}/support/red_black_tree.c
+  ${MUX_MODULE_DIR}/support/password.c
   ${MUX_MODULE_DIR}/support/stringutil.c
   ${MUX_MODULE_DIR}/support/validation.c
   ${MUX_MODULE_DIR}/support/wild.c

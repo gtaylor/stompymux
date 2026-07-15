@@ -188,6 +188,12 @@ void configuration_initialize(void) {
   mudconf.conn_timeout = 120;
   mudconf.idle_interval = 60;
   mudconf.retry_limit = 3;
+  mudconf.player_password_length_limit = 64;
+  mudconf.password_hash_opslimit = 3;
+  mudconf.password_hash_memlimit = 12 * 1024 * 1024;
+  mudconf.login_attempt_burst = 3;
+  mudconf.login_attempt_refill = 10;
+  mudconf.login_hash_limit = 5;
   mudconf.output_limit = 16384;
   mudconf.use_http = 0;
   mudconf.queuemax = 100;
@@ -1005,6 +1011,10 @@ CONF conftable[] = {
     {(char *)"parent_recursion_limit", cf_int, CA_GOD, &mudconf.parent_nest_lim,
      0},
     {(char *)"pemit_far_players", cf_bool, CA_GOD, &mudconf.pemit_players, 0},
+    {(char *)"password_hash_memlimit", cf_int, CA_GOD,
+     &mudconf.password_hash_memlimit, 0},
+    {(char *)"password_hash_opslimit", cf_int, CA_GOD,
+     &mudconf.password_hash_opslimit, 0},
     {(char *)"pemit_any_object", cf_bool, CA_GOD, &mudconf.pemit_any, 0},
     {(char *)"permit_site", cf_site, CA_GOD, (int *)&mudstate.access_list, 0},
     {(char *)"player_flags", cf_set_flags, CA_GOD, (int *)&mudconf.player_flags,
@@ -1012,6 +1022,8 @@ CONF conftable[] = {
     {(char *)"player_listen", cf_bool, CA_GOD, &mudconf.player_listen, 0},
     {(char *)"player_match_own_commands", cf_bool, CA_GOD,
      &mudconf.match_mine_pl, 0},
+    {(char *)"player_password_length_limit", cf_int, CA_GOD,
+     &mudconf.player_password_length_limit, 0},
     {(char *)"player_name_spaces", cf_bool, CA_GOD, &mudconf.name_spaces, 0},
     {(char *)"player_queue_limit", cf_int, CA_GOD, &mudconf.queuemax, 0},
     {(char *)"player_starting_home", cf_int, CA_GOD, &mudconf.start_home, 0},
@@ -1032,6 +1044,11 @@ CONF conftable[] = {
     {(char *)"register_site", cf_site, CA_GOD, (int *)&mudstate.access_list,
      H_REGISTRATION},
     {(char *)"retry_limit", cf_int, CA_GOD, &mudconf.retry_limit, 0},
+    {(char *)"login_attempt_burst", cf_int, CA_GOD,
+     &mudconf.login_attempt_burst, 0},
+    {(char *)"login_attempt_refill", cf_int, CA_GOD,
+     &mudconf.login_attempt_refill, 0},
+    {(char *)"login_hash_limit", cf_int, CA_GOD, &mudconf.login_hash_limit, 0},
     {(char *)"robot_flags", cf_set_flags, CA_GOD, (int *)&mudconf.robot_flags,
      0},
     {(char *)"robot_speech", cf_bool, CA_GOD, &mudconf.robot_speak, 0},

@@ -26,6 +26,7 @@
 #include "mux/server/server_state.h"
 #include "mux/server/version.h"
 #include "mux/support/alloc.h"
+#include "mux/support/password.h"
 #include "mux/world/match.h"
 #include "persistence/btech_persistence.h"
 #ifndef NEXT
@@ -1035,6 +1036,11 @@ int main(int argc, char *argv[]) {
   vattr_init();
 
   configuration_read(config_file);
+
+  if (!password_initialize()) {
+    fprintf(stderr, "Unable to initialize password hashing.\n");
+    exit(2);
+  }
 
   if (!*mudconf.gamedb) {
     fprintf(stderr,

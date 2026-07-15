@@ -5,6 +5,7 @@
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
+#include "mux/support/password.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"

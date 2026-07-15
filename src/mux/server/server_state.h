@@ -213,58 +213,64 @@ struct ServerConfiguration {
   int conn_timeout;        /* Allow this long to connect before booting */
   int idle_interval;       /* when to check for idle users */
   int retry_limit;         /* close conn after this many bad logins */
-  int output_limit;        /* Max # chars queued for output */
-  int use_http;            /* Should we allow http access? */
-  int queuemax;            /* max commands a player may have in queue */
-  int queue_chunk;         /* # cmds to run from queue when idle */
-  int active_q_chunk;      /* # cmds to run from queue when active */
-  int ex_flags;            /* TRUE = show flags on examine */
-  int robot_speak;         /* TRUE = allow robots to speak */
-  int pub_flags;           /* TRUE = flags() works on anything */
-  int quiet_look;          /* TRUE = don't see attribs when looking */
-  int exam_public;         /* Does EXAM show public attrs by default? */
-  int read_rem_desc;       /* Can the DESCs of nonlocal objs be read? */
-  int read_rem_name;       /* Can the NAMEs of nonlocal objs be read? */
-  int sweep_dark;          /* Can you sweep dark places? */
-  int player_listen;       /* Are AxHEAR triggered on players? */
-  int dark_sleepers;       /* Are sleeping players 'dark'? */
-  int see_own_dark;        /* Do you see your own dark stuff? */
-  int idle_wiz_dark;       /* Do idling wizards get set dark? */
-  int pemit_players;       /* Can you @pemit to faraway players? */
-  int pemit_any;           /* Can you @pemit to ANY remote object? */
-  int match_mine;          /* Should you check yourself for $-commands? */
-  int match_mine_pl;       /* Should players check selves for $-cmds? */
-  int switch_df_all;       /* Should @switch match all by default? */
-  int fascist_tport;       /* Source of teleport must be controlled */
-  int trace_topdown;       /* Is TRACE output top-down or bottom-up? */
-  int trace_limit;         /* Max lines of trace output if top-down */
-  int stack_limit;         /* How big can stacks get? */
-  int safe_unowned;        /* Are objects not owned by you safe? */
-  int space_compress;      /* Convert multiple spaces into one space */
-  int start_room;          /* initial location and home for players */
-  int start_home;          /* initial HOME for players */
-  int default_home;        /* HOME when home is inaccessable */
-  int master_room;         /* Room containing default cmds/exits/etc */
-  FLAGSET player_flags;    /* Flags players start with */
-  FLAGSET room_flags;      /* Flags rooms start with */
-  FLAGSET exit_flags;      /* Flags exits start with */
-  FLAGSET thing_flags;     /* Flags things start with */
-  FLAGSET robot_flags;     /* Flags robots start with */
-  int vattr_flags;         /* Attr flags for all user-defined attrs */
-  char mud_name[32];       /* Name of the mud */
-  int timeslice;           /* How often do we bump people's cmd quotas? */
-  int cmd_quota_max;       /* Max commands at one time */
-  int cmd_quota_incr;      /* Bump #cmds allowed by this each timeslice */
-  int control_flags;       /* Global runtime control flags */
-  int log_options;         /* What gets logged */
-  int log_info;            /* Info that goes into log entries */
-  Uchar markdata[8];       /* Masks for marking/unmarking */
-  int func_nest_lim;       /* Max nesting of functions */
-  int func_invk_lim;       /* Max funcs invoked by a command */
-  int ntfy_nest_lim;       /* Max nesting of notifys */
-  int lock_nest_lim;       /* Max nesting of lock evals */
-  int parent_nest_lim;     /* Max levels of parents */
-  int zone_nest_lim;       /* Max nesting of zones */
+  int player_password_length_limit; /* Maximum length of a player password */
+  int password_hash_opslimit;       /* Argon2id CPU cost */
+  int password_hash_memlimit;       /* Argon2id memory cost in bytes */
+  int login_attempt_burst;          /* Per-source login attempts before delay */
+  int login_attempt_refill;         /* Seconds to refill one login attempt */
+  int login_hash_limit;             /* Password checks permitted per second */
+  int output_limit;                 /* Max # chars queued for output */
+  int use_http;                     /* Should we allow http access? */
+  int queuemax;         /* max commands a player may have in queue */
+  int queue_chunk;      /* # cmds to run from queue when idle */
+  int active_q_chunk;   /* # cmds to run from queue when active */
+  int ex_flags;         /* TRUE = show flags on examine */
+  int robot_speak;      /* TRUE = allow robots to speak */
+  int pub_flags;        /* TRUE = flags() works on anything */
+  int quiet_look;       /* TRUE = don't see attribs when looking */
+  int exam_public;      /* Does EXAM show public attrs by default? */
+  int read_rem_desc;    /* Can the DESCs of nonlocal objs be read? */
+  int read_rem_name;    /* Can the NAMEs of nonlocal objs be read? */
+  int sweep_dark;       /* Can you sweep dark places? */
+  int player_listen;    /* Are AxHEAR triggered on players? */
+  int dark_sleepers;    /* Are sleeping players 'dark'? */
+  int see_own_dark;     /* Do you see your own dark stuff? */
+  int idle_wiz_dark;    /* Do idling wizards get set dark? */
+  int pemit_players;    /* Can you @pemit to faraway players? */
+  int pemit_any;        /* Can you @pemit to ANY remote object? */
+  int match_mine;       /* Should you check yourself for $-commands? */
+  int match_mine_pl;    /* Should players check selves for $-cmds? */
+  int switch_df_all;    /* Should @switch match all by default? */
+  int fascist_tport;    /* Source of teleport must be controlled */
+  int trace_topdown;    /* Is TRACE output top-down or bottom-up? */
+  int trace_limit;      /* Max lines of trace output if top-down */
+  int stack_limit;      /* How big can stacks get? */
+  int safe_unowned;     /* Are objects not owned by you safe? */
+  int space_compress;   /* Convert multiple spaces into one space */
+  int start_room;       /* initial location and home for players */
+  int start_home;       /* initial HOME for players */
+  int default_home;     /* HOME when home is inaccessable */
+  int master_room;      /* Room containing default cmds/exits/etc */
+  FLAGSET player_flags; /* Flags players start with */
+  FLAGSET room_flags;   /* Flags rooms start with */
+  FLAGSET exit_flags;   /* Flags exits start with */
+  FLAGSET thing_flags;  /* Flags things start with */
+  FLAGSET robot_flags;  /* Flags robots start with */
+  int vattr_flags;      /* Attr flags for all user-defined attrs */
+  char mud_name[32];    /* Name of the mud */
+  int timeslice;        /* How often do we bump people's cmd quotas? */
+  int cmd_quota_max;    /* Max commands at one time */
+  int cmd_quota_incr;   /* Bump #cmds allowed by this each timeslice */
+  int control_flags;    /* Global runtime control flags */
+  int log_options;      /* What gets logged */
+  int log_info;         /* Info that goes into log entries */
+  Uchar markdata[8];    /* Masks for marking/unmarking */
+  int func_nest_lim;    /* Max nesting of functions */
+  int func_invk_lim;    /* Max funcs invoked by a command */
+  int ntfy_nest_lim;    /* Max nesting of notifys */
+  int lock_nest_lim;    /* Max nesting of lock evals */
+  int parent_nest_lim;  /* Max levels of parents */
+  int zone_nest_lim;    /* Max nesting of zones */
   int room_parent;
   int exit_parent;
   int player_parent;

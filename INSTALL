@@ -18,7 +18,7 @@ ________________________________________
 
  * CMake 4.3 or higher
  * A C and C++ compiler supported by CMake
- * crypt (libcrypt/lcrypt)
+ * libsodium is provided by the third_party/libsodium submodule
  * libevent is provided by the third_party/libevent submodule
  * wget and tar (If you need getdata.sh to fetch the game data)
 

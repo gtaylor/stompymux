@@ -2217,7 +2217,9 @@
  
   Syntax: @password <old password> = <new password>
  
-  This command changes your password.
+  This command changes your password. Passwords may be at most the number of
+  characters set by the player_password_length_limit configuration parameter
+  (64 by default).
   
 & @power
 

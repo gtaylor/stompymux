@@ -923,6 +923,78 @@ static const char *connect_fail =
 static const char *create_fail = "Either there is already a player with that "
                                  "name, or that name is illegal.\r\n";
 
+#define LOGIN_THROTTLE_ENTRIES 1024
+
+typedef struct LoginThrottleEntry LoginThrottleEntry;
+struct LoginThrottleEntry {
+  char address[sizeof(((Descriptor *)0)->addr)];
+  time_t last_refill;
+  unsigned int tokens;
+};
+
+static LoginThrottleEntry login_throttle_entries[LOGIN_THROTTLE_ENTRIES];
+static time_t login_hash_window;
+static int login_hash_count;
+
+static LoginThrottleEntry *login_throttle_entry(const char *address,
+                                                time_t now) {
+  LoginThrottleEntry *oldest;
+  int index;
+
+  oldest = &login_throttle_entries[0];
+  for (index = 0; index < LOGIN_THROTTLE_ENTRIES; index++) {
+    if (!strcmp(login_throttle_entries[index].address, address))
+      return &login_throttle_entries[index];
+    if (login_throttle_entries[index].last_refill < oldest->last_refill)
+      oldest = &login_throttle_entries[index];
+  }
+  snprintf(oldest->address, sizeof(oldest->address), "%s", address);
+  oldest->last_refill = now;
+  oldest->tokens = (unsigned int)mudconf.login_attempt_burst;
+  return oldest;
+}
+
+static int login_throttle_allow(const char *address) {
+  LoginThrottleEntry *entry;
+  time_t now;
+  time_t elapsed;
+  unsigned int refills;
+
+  if (mudconf.login_attempt_burst < 1 || mudconf.login_attempt_refill < 1 ||
+      mudconf.login_hash_limit < 1) {
+    return 0;
+  }
+
+  now = time(NULL);
+  if (login_hash_window != now) {
+    login_hash_window = now;
+    login_hash_count = 0;
+  }
+  if (login_hash_count >= mudconf.login_hash_limit)
+    return 0;
+
+  entry = login_throttle_entry(address, now);
+  elapsed = now - entry->last_refill;
+  if (elapsed >= mudconf.login_attempt_refill) {
+    refills = (unsigned int)(elapsed / mudconf.login_attempt_refill);
+    if (refills >= (unsigned int)mudconf.login_attempt_burst) {
+      entry->tokens = (unsigned int)mudconf.login_attempt_burst;
+    } else if (entry->tokens + refills >=
+               (unsigned int)mudconf.login_attempt_burst) {
+      entry->tokens = (unsigned int)mudconf.login_attempt_burst;
+    } else {
+      entry->tokens += refills;
+    }
+    entry->last_refill += refills * mudconf.login_attempt_refill;
+  }
+  if (entry->tokens == 0)
+    return 0;
+
+  entry->tokens--;
+  login_hash_count++;
+  return 1;
+}
+
 static int check_connect(Descriptor *d, char *msg) {
   char *command, *user, *password, *buff, *cmdsave;
   DbRef player, aowner;
@@ -961,6 +1033,11 @@ static int check_connect(Descriptor *d, char *msg) {
       nplayers++;
     }
 
+    if (!login_throttle_allow(d->addr)) {
+      failconn("CON", "Connect", "Login throttled", d, R_BADLOGIN, NOTHING,
+               FC_CONN, (char *)connect_fail, command, user, password, cmdsave);
+      return 0;
+    }
     player = connect_player(user, password, d->addr, d->username);
     if (player == NOTHING) {
 
@@ -1076,6 +1153,11 @@ static int check_connect(Descriptor *d, char *msg) {
       failconn("CRE", "Create", "Game Full", d, R_GAMEFULL, NOTHING,
                FC_CONN_FULL, mudconf.full_msg, command, user, password,
                cmdsave);
+      return 0;
+    }
+    if (!login_throttle_allow(d->addr)) {
+      failconn("CRE", "Create", "Login throttled", d, R_BADLOGIN, NOTHING,
+               FC_CONN, (char *)create_fail, command, user, password, cmdsave);
       return 0;
     }
     if (d->host_info & H_REGISTRATION) {

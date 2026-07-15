@@ -48,7 +48,6 @@ if(BTECH_ENABLE_CLANG_TIDY)
   set(CMAKE_C_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
 endif()
 
-find_library(CRYPT_LIBRARY crypt REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
@@ -70,6 +69,28 @@ set_target_properties(luajit PROPERTIES
   IMPORTED_LOCATION "${LUAJIT_LIBRARY}"
   INTERFACE_INCLUDE_DIRECTORIES "${LUAJIT_SOURCE_DIR}/src")
 add_dependencies(luajit luajit_build)
+
+set(LIBSODIUM_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libsodium")
+set(LIBSODIUM_BUILD_DIR "${CMAKE_BINARY_DIR}/libsodium")
+set(LIBSODIUM_LIBRARY "${LIBSODIUM_BUILD_DIR}/src/libsodium/.libs/libsodium.a")
+file(MAKE_DIRECTORY "${LIBSODIUM_BUILD_DIR}/src/libsodium/include")
+if(NOT EXISTS "${LIBSODIUM_SOURCE_DIR}/configure")
+  message(FATAL_ERROR "libsodium submodule is missing; run git submodule update --init --recursive")
+endif()
+add_custom_command(
+  OUTPUT "${LIBSODIUM_LIBRARY}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${LIBSODIUM_BUILD_DIR}"
+  COMMAND "${LIBSODIUM_SOURCE_DIR}/configure" --disable-shared --enable-static --with-pic
+  COMMAND "${GNU_MAKE_EXECUTABLE}"
+  DEPENDS "${LIBSODIUM_SOURCE_DIR}/configure"
+  WORKING_DIRECTORY "${LIBSODIUM_BUILD_DIR}"
+  VERBATIM)
+add_custom_target(libsodium_build DEPENDS "${LIBSODIUM_LIBRARY}")
+add_library(libsodium STATIC IMPORTED GLOBAL)
+set_target_properties(libsodium PROPERTIES
+  IMPORTED_LOCATION "${LIBSODIUM_LIBRARY}"
+  INTERFACE_INCLUDE_DIRECTORIES "${LIBSODIUM_BUILD_DIR}/src/libsodium/include;${LIBSODIUM_SOURCE_DIR}/src/libsodium/include;${LIBSODIUM_SOURCE_DIR}/src/libsodium/include/sodium")
+add_dependencies(libsodium libsodium_build)
 
 set(LIBTELNET_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libtelnet")
 if(NOT EXISTS "${LIBTELNET_SOURCE_DIR}/libtelnet.h")
@@ -93,7 +114,35 @@ set(EVENT__DISABLE_REGRESS ON CACHE BOOL "" FORCE)
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "" FORCE)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_SKIP_INSTALL_RULES ON)
-add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
+block()
+  set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
+    cmake_diagnostic(PUSH)
+    cmake_diagnostic(SET CMD_DEPRECATED IGNORE)
+    add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
+    cmake_diagnostic(POP)
+  else()
+    get_property(BTMUX_WARN_DEPRECATED_CACHE_SET CACHE CMAKE_WARN_DEPRECATED
+      PROPERTY TYPE SET)
+    if(BTMUX_WARN_DEPRECATED_CACHE_SET)
+      get_property(BTMUX_WARN_DEPRECATED_CACHE_VALUE CACHE CMAKE_WARN_DEPRECATED
+        PROPERTY VALUE)
+    endif()
+    unset(CMAKE_WARN_DEPRECATED)
+    set(CMAKE_WARN_DEPRECATED FALSE CACHE BOOL
+      "Whether to issue warnings for deprecated functionality." FORCE)
+    add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
+    unset(CMAKE_WARN_DEPRECATED)
+    if(BTMUX_WARN_DEPRECATED_CACHE_SET)
+      set(CMAKE_WARN_DEPRECATED "${BTMUX_WARN_DEPRECATED_CACHE_VALUE}" CACHE BOOL
+        "Whether to issue warnings for deprecated functionality." FORCE)
+    else()
+      unset(CMAKE_WARN_DEPRECATED CACHE)
+    endif()
+    unset(BTMUX_WARN_DEPRECATED_CACHE_SET)
+    unset(BTMUX_WARN_DEPRECATED_CACHE_VALUE)
+  endif()
+endblock()
 unset(CMAKE_SKIP_INSTALL_RULES)
 
 set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
@@ -238,7 +287,7 @@ if(BUILD_TESTING)
 endif()
 target_compile_options(netmux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
+target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium m)
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src"
@@ -256,11 +305,19 @@ target_include_directories(mkindx PRIVATE
 
 if(BUILD_TESTING)
   add_executable(mux_header_interfaces_test tests/mux_header_interfaces.c)
-  target_link_libraries(mux_header_interfaces_test PRIVATE btmux_options)
+  target_link_libraries(mux_header_interfaces_test PRIVATE btmux_options libsodium)
   target_include_directories(mux_header_interfaces_test PRIVATE
     "${CMAKE_BINARY_DIR}"
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME mux_header_interfaces COMMAND mux_header_interfaces_test)
+
+  add_executable(password_hash_test tests/password_hash.c
+    ${MUX_SOURCE_DIR}/support/password.c)
+  target_link_libraries(password_hash_test PRIVATE btmux_options libsodium)
+  target_include_directories(password_hash_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME password_hash COMMAND password_hash_test)
 
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)

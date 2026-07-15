@@ -14,9 +14,8 @@
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/password.h"
 #include "mux/world/match.h"
-
-extern char *crypt(const char *, const char *);
 
 void do_teleport(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   DbRef victim, destination, loc, exitloc;
@@ -189,6 +188,7 @@ void do_force(DbRef player, DbRef cause, int key, char *what, char *command,
 void do_newpassword(DbRef player, DbRef cause, int key, char *name,
                     char *password) {
   DbRef victim;
+  char hashed_password[crypto_pwhash_STRBYTES];
   char *buf;
 
   if ((victim = lookup_player(player, name, 0)) == NOTHING) {
@@ -207,16 +207,18 @@ void do_newpassword(DbRef player, DbRef cause, int key, char *name,
     notify_quiet(player, "You cannot change that player's password.");
     return;
   }
+  if (!password_hash(password, hashed_password)) {
+    notify_quiet(player, "Unable to change password.");
+    return;
+  }
+  object_password_set(victim, hashed_password);
+  sodium_memzero(hashed_password, sizeof(hashed_password));
   STARTLOG(LOG_WIZARD, "WIZ", "PASS") {
     log_name(player);
     log_text((char *)" changed the password of ");
     log_name(victim);
     ENDLOG;
   }
-  /*
-   * it's ok, do it
-   */
-  object_password_set(victim, crypt((const char *)password, "XX"));
   buf = alloc_lbuf("do_newpassword");
   notify_quiet(player, "Password changed.");
   snprintf(buf, LBUF_SIZE, "Your password has been changed by %s.",

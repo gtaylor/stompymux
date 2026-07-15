@@ -13,6 +13,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
+#include "mux/support/password.h"
 #include "mux/world/player.h"
 
 #define NUM_GOOD                                                               \
@@ -39,7 +40,6 @@ struct logindata {
   int new_bad;
 };
 
-extern char *crypt(const char *, const char *);
 extern time_t time(time_t *);
 
 /**
@@ -189,28 +189,14 @@ int check_pass(DbRef player, const char *password) {
   DbRef aowner;
   long aflags;
   char *target;
-  char *hashed;
+  int matches;
 
+  if (strlen(password) > (size_t)mudconf.player_password_length_limit)
+    return 0;
   target = attribute_get(player, A_PASS, &aowner, &aflags);
-  hashed = crypt(password, "XX");
-  if (*target && strcmp(target, password) && strcmp(hashed, target)) {
-    free_lbuf(target);
-    return 0;
-  }
+  matches = *target && password_verify(password, target);
   free_lbuf(target);
-
-  /*
-   * This is needed to prevent entering the raw encrypted password from
-   * working. Do it better if you like, but it's needed.
-   *
-   * Not really, you should just not really allow unencrypted passwords.
-   * -Hag
-   */
-
-  if ((strlen(password) == 13) && (password[0] == 'X') && (password[1] == 'X'))
-    return 0;
-
-  return 1;
+  return matches;
 }
 
 /**
@@ -244,6 +230,7 @@ DbRef connect_player(char *name, char *password, char *host, char *username) {
  */
 DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
   DbRef player;
+  char hashed_password[crypto_pwhash_STRBYTES];
   char *pbuf;
 
   /*
@@ -255,12 +242,17 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
     free_lbuf(pbuf);
     return NOTHING;
   }
+  if (!password_hash(pbuf, hashed_password)) {
+    free_lbuf(pbuf);
+    return NOTHING;
+  }
   /*
    * If so, go create him
    */
 
   player = create_obj(creator, TYPE_PLAYER, name);
   if (player == NOTHING) {
+    sodium_memzero(hashed_password, sizeof(hashed_password));
     free_lbuf(pbuf);
     return NOTHING;
   }
@@ -270,9 +262,10 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
   if (*mudconf.public_channel)
     do_addcom(player, player, 0, "pub", mudconf.public_channel);
 
-  object_password_set(player, crypt(pbuf, "XX"));
+  object_password_set(player, hashed_password);
   s_Home(player, start_home());
   s_Fixed(player);
+  sodium_memzero(hashed_password, sizeof(hashed_password));
   free_lbuf(pbuf);
   return player;
 }
@@ -284,6 +277,7 @@ void do_password(DbRef player, DbRef cause, int key, char *oldpass,
                  char *newpass) {
   DbRef aowner;
   long aflags;
+  char hashed_password[crypto_pwhash_STRBYTES];
   char *target;
 
   target = attribute_get(player, A_PASS, &aowner, &aflags);
@@ -291,8 +285,11 @@ void do_password(DbRef player, DbRef cause, int key, char *oldpass,
     notify(player, "Sorry.");
   } else if (!ok_password(newpass)) {
     notify(player, "Bad new password.");
+  } else if (!password_hash(newpass, hashed_password)) {
+    notify(player, "Unable to change password.");
   } else {
-    attribute_add_raw(player, A_PASS, crypt(newpass, "XX"));
+    attribute_add_raw(player, A_PASS, hashed_password);
+    sodium_memzero(hashed_password, sizeof(hashed_password));
     notify(player, "Password changed.");
   }
   free_lbuf(target);
