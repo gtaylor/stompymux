@@ -12,16 +12,16 @@
 #pragma once
 
 /* mech.maps.c */
-void mech_findcenter(dbref player, void *data, char *buffer);
+void mech_findcenter(DbRef player, void *data, char *buffer);
 const char *GetTerrainName_base(int t);
 const char *GetTerrainName(MAP *map, int x, int y);
-void mech_navigate(dbref player, void *data, char *buffer);
+void mech_navigate(DbRef player, void *data, char *buffer);
 char GetLRSMechChar(MECH *mech, MECH *tempMech);
-void mech_lrsmap(dbref player, void *data, char *buffer);
+void mech_lrsmap(DbRef player, void *data, char *buffer);
 char *TerrainColor(char terrain, int elev);
 void TacMapTerr(MAP *mech_map, int x, int y, char *terr, char *elev,
                 int isdown);
-char **MakeMapText(dbref player, MECH *mech, MAP *mech_map, int x, int y,
+char **MakeMapText(DbRef player, MECH *mech, MAP *mech_map, int x, int y,
                    int xw, int yw, int labels, int dohexlos);
-void mech_tacmap(dbref player, void *data, char *buffer);
-void mech_enterbase(dbref player, void *data, char *buffer);
+void mech_tacmap(DbRef player, void *data, char *buffer);
+void mech_enterbase(DbRef player, void *data, char *buffer);

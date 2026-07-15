@@ -19,14 +19,14 @@
 #include "mech.h"
 
 /* mech.tic.c */
-void cleartic_sub(dbref player, MECH *mech, char *buffer);
-void addtic_sub(dbref player, MECH *mech, char *buffer);
-void deltic_sub(dbref player, MECH *mech, char *buffer);
-void firetic_sub(dbref player, MECH *mech, char *buffer);
-void listtic_sub(dbref player, MECH *mech, char *buffer);
-void mech_cleartic(dbref player, void *data, char *buffer);
-void mech_addtic(dbref player, void *data, char *buffer);
-void mech_deltic(dbref player, void *data, char *buffer);
-void mech_firetic(dbref player, void *data, char *buffer);
-void mech_listtic(dbref player, void *data, char *buffer);
-void heat_cutoff(dbref player, void *data, char *buffer);
+void cleartic_sub(DbRef player, MECH *mech, char *buffer);
+void addtic_sub(DbRef player, MECH *mech, char *buffer);
+void deltic_sub(DbRef player, MECH *mech, char *buffer);
+void firetic_sub(DbRef player, MECH *mech, char *buffer);
+void listtic_sub(DbRef player, MECH *mech, char *buffer);
+void mech_cleartic(DbRef player, void *data, char *buffer);
+void mech_addtic(DbRef player, void *data, char *buffer);
+void mech_deltic(DbRef player, void *data, char *buffer);
+void mech_firetic(DbRef player, void *data, char *buffer);
+void mech_listtic(DbRef player, void *data, char *buffer);
+void heat_cutoff(DbRef player, void *data, char *buffer);

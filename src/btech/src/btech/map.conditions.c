@@ -42,7 +42,7 @@ void alter_conditions(MAP *map) {
     }
 }
 
-void map_setconditions(dbref player, MAP *map, char *buffer) {
+void map_setconditions(DbRef player, MAP *map, char *buffer) {
   char *args[5];
   int vacuum = -1, underground = -1, grav, temp, argc;
   int fl;
@@ -107,7 +107,7 @@ void UpdateConditions(MECH *mech, MAP *map) {
 void reactor_explosion(MECH *wounded, MECH *attacker) {
   int z = MechZ(wounded);
   MAP *map = getMap(wounded->mapindex);
-  dbref wounded_pilot = MechPilot(wounded);
+  DbRef wounded_pilot = MechPilot(wounded);
   int dam;
 
   DestroySection(wounded, attacker, 0, CTORSO);
@@ -224,7 +224,7 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
             // check_stackpole(wounded, attacker);
 
             if (mudconf.btech_stackpole &&
-                (MechBoomStart(wounded) + MAX_BOOM_TIME) >= muxevent_tick &&
+                (MechBoomStart(wounded) + MAX_BOOM_TIME) >= mux_event_tick &&
                 Roll() >= BOOM_BTH && (Started(wounded) || Starting(wounded))) {
 
               HexLOSBroadcast(getMap(wounded->mapindex), MechX(wounded),

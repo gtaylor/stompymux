@@ -242,7 +242,7 @@ struct {
     {9, "%ch%cw"},  {10, "%ch%cc"}, {11, "%ch%cm"}, {12, "%ch%cb"},
     {13, "%ch%cy"}, {14, "%ch%cg"}, {15, "%ch%cr"}, {0, "%ch%cw"}};
 
-void Mech_ShowFlags(dbref player, MECH *mech, int spaces, int level) {
+void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
   char buf[MBUF_SIZE];
   int i;
 
@@ -534,7 +534,7 @@ const char *GetMechID(MECH *mech) {
   return ids;
 }
 
-void mech_set_channelfreq(dbref player, void *data, char *buffer) {
+void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   int chn = -1;
   int freq;
   MECH *mech = (MECH *)data;
@@ -586,7 +586,7 @@ void mech_set_channelfreq(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_set_channeltitle(dbref player, void *data, char *buffer) {
+void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
   int chn = -1;
   MECH *mech = (MECH *)data;
 
@@ -640,7 +640,7 @@ static char *ccode(MECH *m, int i, int obs, int team) {
   return buf;
 }
 
-void mech_set_channelmode(dbref player, void *data, char *buffer) {
+void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   int chn = -1, nm = 0, i;
   MECH *mech = (MECH *)data;
   char buf[SBUF_SIZE] = {0};
@@ -730,7 +730,7 @@ void mech_set_channelmode(dbref player, void *data, char *buffer) {
                 'A' + chn, nm & FREQ_DIGITAL ? "digital" : "analog", buf);
 }
 
-void mech_list_freqs(dbref player, void *data, char *buffer) {
+void mech_list_freqs(DbRef player, void *data, char *buffer) {
   int i;
   MECH *mech = (MECH *)data;
 
@@ -749,7 +749,7 @@ void mech_list_freqs(dbref player, void *data, char *buffer) {
                   mech->freq[i], mech->chantitle[i]);
 }
 
-void mech_sendchannel(dbref player, void *data, char *buffer) {
+void mech_sendchannel(DbRef player, void *data, char *buffer) {
   /* Basically, this is sorta routine 'sendchannel <letter>=message' code */
   MECH *mech = (MECH *)data;
   int fail = 0;
@@ -891,7 +891,7 @@ void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
   }
 }
 
-int common_checks(dbref player, MECH *mech, int flag) {
+int common_checks(DbRef player, MECH *mech, int flag) {
   MAP *mech_map;
 
   if (!mech)
@@ -1311,21 +1311,21 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       if (!obs)
         mech_notify(tempMech, MECHALL, buf);
       if (isxp && In_Character(tempMech->mynum))
-        if ((MechCommLast(tempMech) + 60) < muxevent_tick) {
+        if ((MechCommLast(tempMech) + 60) < mux_event_tick) {
           AccumulateCommXP(MechPilot(tempMech), tempMech);
-          MechCommLast(tempMech) = muxevent_tick;
+          MechCommLast(tempMech) = mux_event_tick;
         }
     }
   } /* End of looping through all the units on the map */
 }
 
-void mech_radio(dbref player, void *data, char *buffer) {
+void mech_radio(DbRef player, void *data, char *buffer) {
   int argc;
   int fail = 0;
   char *args[3];
   int i;
   MECH *mech = (MECH *)data;
-  dbref target;
+  DbRef target;
   MECH *tempMech;
 
   /* radio <id>=message */

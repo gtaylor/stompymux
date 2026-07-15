@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include "dllist.h"
 #include "mech.events.h"
+#include "mux/support/doubly_linked_list.h"
 
 #include "glue_types.h"
 
@@ -262,7 +262,7 @@
 typedef struct profile_node_t {
   int damage;
   int heat;
-  rbtree weaplist;
+  RedBlackTree weaplist;
 } profile_node;
 
 /*
@@ -271,22 +271,22 @@ typedef struct profile_node_t {
 typedef struct {
   XCODE xcode; /* XCODE base class field */
 
-  dbref mynum;          /* The AI's dbref number */
+  DbRef mynum;          /* The AI's dbref number */
   MECH *mymech;         /* The AI's unit */
   int mapindex;         /* The map the AI is currently on */
-  dbref mymechnum;      /* the dbref of the AI's mech */
+  DbRef mymechnum;      /* the dbref of the AI's mech */
   unsigned short speed; /* % of speed (1-100) that the AI should drive at */
   int ofsx, ofsy;       /* ? */
 
   unsigned char verbose_level; /* How talkative should the AI be */
 
-  dbref target;           /* The AI's current target */
+  DbRef target;           /* The AI's current target */
   int target_score;       /* Current score of the AI's target */
   int target_threshold;   /* Threshold at which to change to another target */
   int target_update_tick; /* What autogun tick we currently at and should we
                              update */
 
-  dbref chase_target;        /* Current target we are chasing */
+  DbRef chase_target;        /* Current target we are chasing */
   int chasetarg_update_tick; /* When should we update chasetarg */
 
   int follow_update_tick; /* When should we update follow */
@@ -295,16 +295,16 @@ typedef struct {
   unsigned short flags;
 
   /* The autopilot's command list */
-  dllist *commands;
+  DoublyLinkedList *commands;
 
   /* AI A* pathfinding stuff */
-  dllist *astar_path;
+  DoublyLinkedList *astar_path;
 
   /* The AI's Weaplist for use with autogun */
-  dllist *weaplist;
+  DoublyLinkedList *weaplist;
 
   /* Range Profile Array - for use with autogun */
-  rbtree profile[AUTO_PROFILE_MAX_SIZE];
+  RedBlackTree profile[AUTO_PROFILE_MAX_SIZE];
 
   /* Max Range of AI's mech's weapons */
   int mech_max_range;
@@ -374,7 +374,7 @@ typedef struct weapon_node_t {
 /* Target node for storing target data */
 typedef struct target_node_t {
   int target_score;
-  dbref target_dbref;
+  DbRef target_dbref;
 } target_node;
 
 /* Quick flags for use with the various autopilot
@@ -419,18 +419,18 @@ enum {
 
 /* From autopilot_core.c */
 void auto_destroy_command_node(command_node *node);
-void auto_delcommand(dbref player, void *data, char *buffer);
-void auto_addcommand(dbref player, void *data, char *buffer);
-void auto_listcommands(dbref player, void *data, char *buffer);
-void auto_eventstats(dbref player, void *data, char *buffer);
+void auto_delcommand(DbRef player, void *data, char *buffer);
+void auto_addcommand(DbRef player, void *data, char *buffer);
+void auto_listcommands(DbRef player, void *data, char *buffer);
+void auto_eventstats(DbRef player, void *data, char *buffer);
 void auto_set_comtitle(AUTO *autopilot, MECH *mech);
 void auto_init(AUTO *autopilot, MECH *mech);
-void auto_engage(dbref player, void *data, char *buffer);
-void auto_disengage(dbref player, void *data, char *buffer);
+void auto_engage(DbRef player, void *data, char *buffer);
+void auto_disengage(DbRef player, void *data, char *buffer);
 void auto_goto_next_command(AUTO *autopilot, int time);
 char *auto_get_command_arg(AUTO *autopilot, int command_number, int arg_number);
 int auto_get_command_enum(AUTO *autopilot, int command_number);
-void auto_newautopilot(dbref key, void **data, int selector);
+void auto_newautopilot(DbRef key, void **data, int selector);
 
 /* From autopilot_commands.c */
 void auto_cal_mapindex(MECH *mech);
@@ -440,15 +440,15 @@ void auto_command_shutdown(AUTO *autopilot, MECH *mech);
 void auto_command_pickup(AUTO *autopilot, MECH *mech);
 void auto_command_dropoff(MECH *mech);
 void auto_command_speed(AUTO *autopilot);
-void auto_com_event(MUXEVENT *muxevent);
-void auto_astar_goto_event(MUXEVENT *muxevent);
-void auto_astar_follow_event(MUXEVENT *muxevent);
-void auto_dumbgoto_event(MUXEVENT *muxevent);
-void auto_dumbfollow_event(MUXEVENT *muxevent);
-void auto_leave_event(MUXEVENT *muxevent);
-void auto_enter_event(MUXEVENT *muxevent);
+void auto_com_event(MuxEvent *muxevent);
+void auto_astar_goto_event(MuxEvent *muxevent);
+void auto_astar_follow_event(MuxEvent *muxevent);
+void auto_dumbgoto_event(MuxEvent *muxevent);
+void auto_dumbfollow_event(MuxEvent *muxevent);
+void auto_leave_event(MuxEvent *muxevent);
+void auto_enter_event(MuxEvent *muxevent);
 void auto_command_roam(AUTO *autopilot, MECH *mech);
-void auto_astar_roam_event(MUXEVENT *muxevent);
+void auto_astar_roam_event(MuxEvent *muxevent);
 
 /* From autopilot_ai.c */
 int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
@@ -464,7 +464,7 @@ void auto_destroy_weaplist(AUTO *autopilot);
 void auto_update_profile_event(AUTO *autopilot);
 
 /* From autopilot_radio.c */
-void auto_reply_event(MUXEVENT *muxevent);
+void auto_reply_event(MuxEvent *muxevent);
 void auto_reply(MECH *mech, char *buf);
 void auto_parse_command(AUTO *autopilot, MECH *mech, int chn, char *buffer);
 

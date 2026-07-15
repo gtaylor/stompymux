@@ -8,7 +8,7 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -53,7 +53,7 @@ const char *LateralDesc(MECH *mech) {
   return lateral_modes[i].full;
 }
 
-void mech_lateral(dbref player, void *data, char *buffer) {
+void mech_lateral(DbRef player, void *data, char *buffer) {
 
   /* Rule Reference: BMR Revised, Page 82 (Quad Lateral) */
   /* Rule Reference: MaxTech Revised, Page 46 (All Units w/ Maneuvering Ace) */
@@ -95,7 +95,7 @@ void mech_lateral(dbref player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_LATERAL, mech_lateral_event, LATERAL_TICK, i);
 }
 
-void mech_turnmode(dbref player, void *data, char *buffer) {
+void mech_turnmode(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   if (!GotPilot(mech) || MechPilot(mech) != player) {
@@ -123,7 +123,7 @@ void mech_turnmode(dbref player, void *data, char *buffer) {
   return;
 }
 
-void mech_bootlegger(dbref player, void *data, char *buffer) {
+void mech_bootlegger(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   float fMinSpeed = (4 * MP1);
   int wBTHMod = 0;
@@ -244,7 +244,7 @@ void mech_bootlegger(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_eta(dbref player, void *data, char *buffer) {
+void mech_eta(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int argc, eta_x, eta_y;
   float fx, fy, range;
@@ -409,7 +409,7 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
   return MMaxSpeed(mech);
 }
 
-void mech_drop(dbref player, void *data, char *buffer) {
+void mech_drop(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   float s1;
   int wDropLevels = 0;
@@ -488,7 +488,7 @@ void mech_drop(dbref player, void *data, char *buffer) {
   possible_mine_poof(mech, MINE_STEP);
 }
 
-void mech_stand(dbref player, void *data, char *buffer) {
+void mech_stand(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[2];
   int wcDeadLegs = 0;
@@ -600,7 +600,7 @@ void mech_stand(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_land(dbref player, void *data, char *buffer) {
+void mech_land(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUAL);
@@ -631,7 +631,7 @@ void mech_land(dbref player, void *data, char *buffer) {
 }
 
 /* Facing related */
-void mech_heading(dbref player, void *data, char *buffer) {
+void mech_heading(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   int newheading;
@@ -664,7 +664,7 @@ void mech_heading(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_turret(dbref player, void *data, char *buffer) {
+void mech_turret(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   int newheading;
@@ -691,7 +691,7 @@ void mech_turret(dbref player, void *data, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_rotatetorso(dbref player, void *data, char *buffer) {
+void mech_rotatetorso(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[2];
 
@@ -745,7 +745,7 @@ struct {
 } speed_tables[] = {{"walk", 1},   {"run", 2},   {"stop", 0}, {"back", -1},
                     {"cruise", 1}, {"flank", 2}, {NULL, 0.0}};
 
-void mech_speed(dbref player, void *data, char *buffer) {
+void mech_speed(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   float newspeed, walkspeed, maxspeed;
@@ -883,7 +883,7 @@ void mech_speed(dbref player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "Desired speed changed to %d KPH.", (int)newspeed);
 }
 
-void mech_vertical(dbref player, void *data, char *buffer) {
+void mech_vertical(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   char buff[50] = {0};
@@ -932,7 +932,7 @@ void mech_vertical(dbref player, void *data, char *buffer) {
  * - Make pskill roll or take damage as if 1 level fall
  */
 
-void mech_thrash(dbref player, void *data, char *buffer) {
+void mech_thrash(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *target;
   MAP *map = getMap(mech->mapindex);
@@ -1052,7 +1052,7 @@ void mech_thrash(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_jump(dbref player, void *data, char *buffer) {
+void mech_jump(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *tempMech = NULL;
   MAP *mech_map;
@@ -1222,7 +1222,7 @@ void mech_jump(dbref player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
 }
 
-static void mech_hulldown_event(MUXEVENT *e) {
+static void mech_hulldown_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long type = (long)e->data2;
 
@@ -1244,7 +1244,7 @@ static void mech_hulldown_event(MUXEVENT *e) {
 }
 
 #ifdef BT_MOVEMENT_MODES
-void mech_sprint(dbref player, void *data, char *buffer) {
+void mech_sprint(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   long d = 0;
   int i;
@@ -1307,7 +1307,7 @@ void mech_sprint(dbref player, void *data, char *buffer) {
   return;
 }
 
-void mech_evade(dbref player, void *data, char *buffer) {
+void mech_evade(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   long d = 0;
   int i;
@@ -1370,7 +1370,7 @@ void mech_evade(dbref player, void *data, char *buffer) {
   return;
 }
 
-void mech_dodge(dbref player, void *data, char *buffer) {
+void mech_dodge(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   long d = 0;
   int i;
@@ -1416,7 +1416,7 @@ void mech_dodge(dbref player, void *data, char *buffer) {
 }
 #endif
 
-void mech_hulldown(dbref player, void *data, char *buffer) {
+void mech_hulldown(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   int argc;

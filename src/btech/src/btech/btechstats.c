@@ -9,7 +9,7 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 #include <math.h>
 #include <stdio.h>
 #define BTECHSTATS
@@ -20,10 +20,11 @@
 #define BTECHSTATS_C
 #include "btechstats.h"
 #include "btmacros.h"
-#include "functions.h"
 #include "glue.h"
-#include "muxevent/muxevent.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/commands/functions.h"
+#include "mux/network/mux_event.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/support/hash_table.h"
 #include "p.bsuit.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
@@ -34,19 +35,18 @@
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mechfile.h"
-#include "rbtab.h"
 
-extern dbref pilot_override;
+extern DbRef pilot_override;
 
-dbref cached_target_char = -1;
+DbRef cached_target_char = -1;
 int cached_skill;
 int cached_result;
 
 static int char_xp_bonus(PSTATS *s, int code);
 static int char_getstatvalue(PSTATS *s, char *name);
-static PSTATS *retrieve_stats(dbref player, int modes);
+static PSTATS *retrieve_stats(DbRef player, int modes);
 static void clear_player(PSTATS *s);
-static void store_stats(dbref player, PSTATS *s, int modes);
+static void store_stats(DbRef player, PSTATS *s, int modes);
 
 char *silly_get_uptime_to_string(int i) {
   static char buf[MBUF_SIZE];
@@ -58,12 +58,12 @@ char *silly_get_uptime_to_string(int i) {
   return buf;
 }
 
-static int char_getskilltargetbycode_base(dbref player, PSTATS *s, int code,
+static int char_getskilltargetbycode_base(DbRef player, PSTATS *s, int code,
                                           int modifier, int use_xp);
 
-static int char_getskilltargetbycode_noxp(dbref player, int code, int modifier);
+static int char_getskilltargetbycode_noxp(DbRef player, int code, int modifier);
 
-static int figure_xp_bonus(dbref player, PSTATS *s, int code) {
+static int figure_xp_bonus(DbRef player, PSTATS *s, int code) {
   int t = char_values[code].xpthreshold;
   int tx, bon, btar;
 
@@ -93,7 +93,7 @@ static int figure_xp_bonus(dbref player, PSTATS *s, int code) {
   return bon;
 }
 
-static int figure_xp_to_next_level(dbref target, int code) {
+static int figure_xp_to_next_level(DbRef target, int code) {
   int xpthresh = char_values[code].xpthreshold;
   int start_skill, target_skill, counter, running_total = 1;
 
@@ -145,7 +145,7 @@ static int char_xp_bonus(PSTATS *s, int code) {
 
 /*****************************/
 
-void list_charvaluestuff(dbref player, int flag) {
+void list_charvaluestuff(DbRef player, int flag) {
   int found = 0, ok, type;
   int i;
   char buf[80] = {0};
@@ -186,7 +186,7 @@ void list_charvaluestuff(dbref player, int flag) {
 
 /*****************************/
 
-HASHTAB playervaluehash, playervaluehash2;
+HashTable playervaluehash, playervaluehash2;
 
 int char_getvaluecode(char *name) {
   int *ip;
@@ -197,8 +197,8 @@ int char_getvaluecode(char *name) {
        *tmpc1 && ((tmpbuf - tmpc2) < (SBUF_SIZE - 1)); tmpc1++, tmpc2++)
     *tmpc2 = ToLower(*tmpc1);
   *tmpc2 = 0;
-  if ((ip = hashfind(tmpbuf, &playervaluehash)) == NULL)
-    ip = hashfind(tmpbuf, &playervaluehash2);
+  if ((ip = hash_table_find(tmpbuf, &playervaluehash)) == NULL)
+    ip = hash_table_find(tmpbuf, &playervaluehash2);
   free_sbuf(tmpbuf);
   return ((long)ip) - 1;
 }
@@ -279,7 +279,7 @@ static int char_getstatvalue(PSTATS *s, char *name) {
   return char_getstatvaluebycode(s, char_getvaluecode(name));
 }
 
-int char_getvalue(dbref player, char *name) {
+int char_getvalue(DbRef player, char *name) {
   return char_getvaluebycode(player, char_getvaluecode(name));
 }
 
@@ -287,11 +287,11 @@ static void char_setstatvalue(PSTATS *s, char *name, int value) {
   char_setstatvaluebycode(s, char_getvaluecode(name), value);
 }
 
-void char_setvalue(dbref player, char *name, int value) {
+void char_setvalue(DbRef player, char *name, int value) {
   char_setvaluebycode(player, char_getvaluecode(name), value);
 }
 
-static int char_getskilltargetbycode_base(dbref player, PSTATS *s, int code,
+static int char_getskilltargetbycode_base(DbRef player, PSTATS *s, int code,
                                           int modifier, int use_xp) {
   int val, skill;
 
@@ -330,14 +330,14 @@ static int char_getskilltargetbycode_base(dbref player, PSTATS *s, int code,
   }
 }
 
-int char_getskilltargetbycode(dbref player, int code, int modifier) {
+int char_getskilltargetbycode(DbRef player, int code, int modifier) {
   PSTATS *s;
 
   s = retrieve_stats(player, VALUES_CO);
   return char_getskilltargetbycode_base(player, s, code, modifier, 1);
 }
 
-static int char_getskilltargetbycode_noxp(dbref player, int code,
+static int char_getskilltargetbycode_noxp(DbRef player, int code,
                                           int modifier) {
   PSTATS *s;
 
@@ -345,11 +345,11 @@ static int char_getskilltargetbycode_noxp(dbref player, int code,
   return char_getskilltargetbycode_base(player, s, code, modifier, 0);
 }
 
-int char_getskilltarget(dbref player, char *name, int modifier) {
+int char_getskilltarget(DbRef player, char *name, int modifier) {
   return char_getskilltargetbycode(player, char_getvaluecode(name), modifier);
 }
 
-int char_getxpbycode(dbref player, int code) {
+int char_getxpbycode(DbRef player, int code) {
   PSTATS *s;
 
   if (code < 0)
@@ -358,7 +358,7 @@ int char_getxpbycode(dbref player, int code) {
   return s->xp[code] % XP_MAX;
 }
 
-int char_gainxpbycode(dbref player, int code, int amount, int override) {
+int char_gainxpbycode(DbRef player, int code, int amount, int override) {
   PSTATS *s;
 
   if (code < 0)
@@ -380,11 +380,11 @@ int char_gainxpbycode(dbref player, int code, int amount, int override) {
   return 1;
 }
 
-int char_gainxp(dbref player, char *skill, int amount) {
+int char_gainxp(DbRef player, char *skill, int amount) {
   return char_gainxpbycode(player, char_getvaluecode(skill), amount, 0);
 }
 
-int char_getskillsuccess(dbref player, char *name, int modifier, int loud) {
+int char_getskillsuccess(DbRef player, char *name, int modifier, int loud) {
   int roll, val;
   int code;
 
@@ -407,7 +407,7 @@ int char_getskillsuccess(dbref player, char *name, int modifier, int loud) {
     return (0); /* Failure */
 }
 
-int char_getskillmargsucc(dbref player, char *name, int modifier) {
+int char_getskillmargsucc(DbRef player, char *name, int modifier) {
   int roll, val;
   int code;
 
@@ -423,7 +423,7 @@ int char_getskillmargsucc(dbref player, char *name, int modifier) {
   return (roll - val);
 }
 
-int char_getopposedskill(dbref first, char *skill1, dbref second,
+int char_getopposedskill(DbRef first, char *skill1, DbRef second,
                          char *skill2) {
   int per1, per2;
 
@@ -438,7 +438,7 @@ int char_getopposedskill(dbref first, char *skill1, dbref second,
     return (second);
 }
 
-int char_getattrsave(dbref player, char *name) {
+int char_getattrsave(DbRef player, char *name) {
   int val = char_getvalue(player, name);
 
   if (val == -1)
@@ -449,7 +449,7 @@ int char_getattrsave(dbref player, char *name) {
     return (18 - 2 * val);
 }
 
-int char_getattrsavesucc(dbref player, char *name) {
+int char_getattrsavesucc(DbRef player, char *name) {
   int roll, val = char_getattrsave(player, name);
 
   if (val == -1)
@@ -474,14 +474,14 @@ void init_btechstats(void) {
   long i;
   int j;
 
-  hashinit(&playervaluehash, 20 * HASH_FACTOR);
-  hashinit(&playervaluehash2, 20 * HASH_FACTOR);
+  hash_table_initialize(&playervaluehash, 20 * HASH_FACTOR);
+  hash_table_initialize(&playervaluehash2, 20 * HASH_FACTOR);
   tmpbuf = alloc_sbuf("getvaluecode");
   for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
     for (tmpc1 = char_values[i].name, tmpc2 = tmpbuf; *tmpc1; tmpc1++, tmpc2++)
       *tmpc2 = ToLower(*tmpc1);
     *tmpc2 = '\0';
-    hashadd(tmpbuf, (int *)(i + 1), &playervaluehash);
+    hash_table_add(tmpbuf, (int *)(i + 1), &playervaluehash);
     tmpbuf[0] = '\0';
     tmpc1 = tmpbuf;
     for (j = 0; char_values[i].name[j]; j++) {
@@ -498,7 +498,7 @@ void init_btechstats(void) {
     char_values_short[i] = strdup(tmpbuf);
     for (tmpc1 = tmpbuf; *tmpc1; tmpc1++)
       *tmpc1 = ToLower(*tmpc1);
-    hashadd(tmpbuf, (int *)(i + 1), &playervaluehash2);
+    hash_table_add(tmpbuf, (int *)(i + 1), &playervaluehash2);
   }
   free_sbuf(tmpbuf);
 }
@@ -507,7 +507,7 @@ static PSTATS *create_new_stats(void) {
   PSTATS *s;
 
   Create(s, PSTATS, 1);
-  s->dbref = -1;
+  s->DbRef = -1;
   clear_player(s);
   return s;
 }
@@ -522,7 +522,7 @@ static void clear_player(PSTATS *s) {
   char_slives(s, 1);
 }
 
-static void show_charstatus(dbref player, PSTATS *s, dbref thing) {
+static void show_charstatus(DbRef player, PSTATS *s, DbRef thing) {
   char *p;
   int i, j;
   int notified;
@@ -644,8 +644,8 @@ static void show_charstatus(dbref player, PSTATS *s, dbref thing) {
 
 /************************/
 
-void do_charstatus(dbref player, dbref cause, int key, char *arg1) {
-  dbref thing;
+void do_charstatus(DbRef player, DbRef cause, int key, char *arg1) {
+  DbRef thing;
   int dir = 0;
 
   PSTATS *s;
@@ -670,8 +670,8 @@ void do_charstatus(dbref player, dbref cause, int key, char *arg1) {
   show_charstatus(player, s, thing);
 }
 
-void do_charclear(dbref player, dbref cause, int key, char *arg1) {
-  dbref thing;
+void do_charclear(DbRef player, DbRef cause, int key, char *arg1) {
+  DbRef thing;
 
   DOCHECK(!WizR(player),
           "Sorry, only those with the real power may clear players stats");
@@ -687,9 +687,9 @@ void do_charclear(dbref player, dbref cause, int key, char *arg1) {
 
 #if 0
 /* Why, what the fuck? */
-dbref char_lookupplayer(dbref player, dbref cause, int key, char *arg1)
+DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1)
 {
-	dbref which;
+	DbRef which;
 
 	if(!arg1 || !*arg1)
 		return NOTHING;
@@ -706,7 +706,7 @@ dbref char_lookupplayer(dbref player, dbref cause, int key, char *arg1)
 }
 #endif
 
-dbref char_lookupplayer(dbref player, dbref cause, int key, char *arg1) {
+DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1) {
   return lookup_player(player, arg1, 0);
 }
 
@@ -729,7 +729,7 @@ static int loc_mod(int loc) {
   return 0;
 }
 
-void initialize_pc(dbref player, MECH *mech) {
+void initialize_pc(DbRef player, MECH *mech) {
   PSTATS *s;
   int bruise, lethal, playerBLD;
   int dam, tot;
@@ -831,7 +831,7 @@ void initialize_pc(dbref player, MECH *mech) {
   }
 }
 
-void fix_pilotdamage(MECH *mech, dbref player) {
+void fix_pilotdamage(MECH *mech, DbRef player) {
   PSTATS *s;
   int bruise, lethal, playerBLD;
 
@@ -939,7 +939,7 @@ int handlemwconc(MECH *mech, int initial) {
 
 void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
   PSTATS *s;
-  dbref player;
+  DbRef player;
   int damage, bruise, lethaldam, playerBLD;
 
   if (mech->mynum < 0)
@@ -993,7 +993,7 @@ void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
 
 void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
   PSTATS *s;
-  dbref player;
+  DbRef player;
   int lethaldam, playerBLD;
 
   if (mech->mynum < 0)
@@ -1031,7 +1031,7 @@ void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
   MechPilotStatus(mech) += dam;
 }
 
-void lower_xp(dbref player, int promillage) {
+void lower_xp(DbRef player, int promillage) {
   PSTATS *s;
   int i;
 
@@ -1049,7 +1049,7 @@ void lower_xp(dbref player, int promillage) {
   store_stats(player, s, VALUES_ALL);
 }
 
-void AccumulateTechXP(dbref pilot, MECH *mech, int reason) {
+void AccumulateTechXP(DbRef pilot, MECH *mech, int reason) {
   int xp;
   char *skname;
   static char *techw = "technician-weapons";
@@ -1068,7 +1068,7 @@ void AccumulateTechXP(dbref pilot, MECH *mech, int reason) {
                        xp, skname, mech ? mech->mynum : -1));
 }
 
-void AccumulateTechWeaponsXP(dbref pilot, MECH *mech, int reason) {
+void AccumulateTechWeaponsXP(DbRef pilot, MECH *mech, int reason) {
   char *skname;
   int xp;
   static char *techw = "technician-weapons";
@@ -1082,7 +1082,7 @@ void AccumulateTechWeaponsXP(dbref pilot, MECH *mech, int reason) {
                        xp, skname, mech ? mech->mynum : -1));
 }
 
-void AccumulateCommXP(dbref pilot, MECH *mech) {
+void AccumulateCommXP(DbRef pilot, MECH *mech) {
   int xp;
 
   xp = 1;
@@ -1097,7 +1097,7 @@ void AccumulateCommXP(dbref pilot, MECH *mech) {
                    "Comm-Conventional", mech->mynum));
 }
 
-void AccumulatePilXP(dbref pilot, MECH *mech, int reason, int addanyway) {
+void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
   char *skname;
   int xp;
 
@@ -1130,7 +1130,7 @@ void AccumulatePilXP(dbref pilot, MECH *mech, int reason, int addanyway) {
   */
 }
 
-void AccumulateSpotXP(dbref pilot, MECH *attacker, MECH *wounded) {
+void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
   if (!In_Character(attacker->mynum))
@@ -1170,7 +1170,7 @@ int MadePerceptionRoll(MECH *mech, int modifier) {
   return 1;
 }
 
-void AccumulateArtyXP(dbref pilot, MECH *attacker, MECH *wounded) {
+void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
   /* If not in character ie: like in simulator - no xp */
@@ -1206,7 +1206,7 @@ void AccumulateArtyXP(dbref pilot, MECH *attacker, MECH *wounded) {
     SendAttackXP(tprintf("%s gained %d artillery XP", Name(pilot), xp));
 }
 
-void AccumulateComputerXP(dbref pilot, MECH *mech, int reason) {
+void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason) {
   if (!mech)
     return;
 
@@ -1216,7 +1216,7 @@ void AccumulateComputerXP(dbref pilot, MECH *mech, int reason) {
                      mech ? mech->mynum : -1));
 }
 
-int HasBoolAdvantage(dbref player, const char *name) {
+int HasBoolAdvantage(DbRef player, const char *name) {
   PSTATS *s;
   char buf[SBUF_SIZE];
 
@@ -1287,7 +1287,7 @@ float getPilotBVMod(MECH *mech, int weapindx) {
 /*
  * Routines and formula for XP gain.
  */
-void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded, int damage,
+void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
                      float multiplier, int weapindx, int bth) {
   int xp, my_BV, th_BV, my_speed, th_speed;
   float myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
@@ -1436,7 +1436,7 @@ void AccumulateGunXP(dbref pilot, MECH *attacker, MECH *wounded, int damage,
 
 } // end AccumulateGunXP()
 
-void AccumulateGunXPold(dbref pilot, MECH *attacker, MECH *wounded,
+void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
                         int numOccurences, float multiplier, int weapindx,
                         int bth) {
   int xp;
@@ -1519,12 +1519,12 @@ void AccumulateGunXPold(dbref pilot, MECH *attacker, MECH *wounded,
                          Name(pilot), (int)xp, multiplier, numOccurences, buf));
 }
 
-void fun_btgetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs) {
   /* fargs[0] = char id (#222)
      fargs[1] = value name / value loc #
      fargs[2] = flaggo (?) */
-  dbref target;
+  DbRef target;
   int targetcode, flaggo;
 
   FUNCHECK((target = char_lookupplayer(player, cause, 0, fargs[0])) == NOTHING,
@@ -1557,14 +1557,14 @@ void fun_btgetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
   safe_tprintf_str(buff, bufc, "%d", char_getvaluebycode(target, targetcode));
 }
 
-void fun_btsetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs) {
   /* fargs[0] = char id (#222)
      fargs[1] = value name / value loc #
      fargs[2] = value to be set
      fargs[3] = flaggo (?)
    */
-  dbref target;
+  DbRef target;
   int targetcode, targetvalue, flaggo;
 
   FUNCHECK((target = char_lookupplayer(player, cause, 0, fargs[0])) == NOTHING,
@@ -1652,12 +1652,12 @@ void fun_btsetcharvalue(char *buff, char **bufc, dbref player, dbref cause,
 ** appear. For attributes the full list will be returned of since
 ** characters need all of them.
 */
-void fun_btcharlist(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
   int i;
   int type = 0;
   int first = 1;
-  dbref target = 0;
+  DbRef target = 0;
   enum {
     CHSKI,
     CHADV,
@@ -1710,9 +1710,9 @@ void fun_btcharlist(char *buff, char **bufc, dbref player, dbref cause,
 
 #define MAX_PLAYERS_ON 10000
 
-void debug_xptop(dbref player, void *data, char *buffer) {
+void debug_xptop(DbRef player, void *data, char *buffer) {
   int hm, i, j;
-  dbref top[MAX_PLAYERS_ON];
+  DbRef top[MAX_PLAYERS_ON];
   int topv[MAX_PLAYERS_ON];
   int count = 0, gt = 0;
   coolmenu *c = NULL;
@@ -1770,13 +1770,13 @@ void debug_xptop(dbref player, void *data, char *buffer) {
   KillCoolMenu(c);
 }
 
-static void store_health(dbref player, PSTATS *s) {
+static void store_health(DbRef player, PSTATS *s) {
   silly_atr_set(
       player, A_HEALTH,
       tprintf("%d,%d", char_gvalue(s, "Bruise"), char_gvalue(s, "Lethal")));
 }
 
-static void retrieve_health(dbref player, PSTATS *s) {
+static void retrieve_health(DbRef player, PSTATS *s) {
   char *c = silly_atr_get(player, A_HEALTH);
   PSTATS *s1;
   int i1, i2;
@@ -1792,14 +1792,14 @@ static void retrieve_health(dbref player, PSTATS *s) {
   char_svalue(s, "Lethal", i2);
 }
 
-static void store_attrs(dbref player, PSTATS *s) {
+static void store_attrs(DbRef player, PSTATS *s) {
   silly_atr_set(player, A_ATTRS,
                 tprintf("%d,%d,%d,%d,%d", char_gvalue(s, "Build"),
                         char_gvalue(s, "Reflexes"), char_gvalue(s, "Intuition"),
                         char_gvalue(s, "Learn"), char_gvalue(s, "Charisma")));
 }
 
-static void retrieve_attrs(dbref player, PSTATS *s) {
+static void retrieve_attrs(DbRef player, PSTATS *s) {
   char *c = silly_atr_get(player, A_ATTRS);
   PSTATS *s1;
   int i1, i2, i3, i4, i5;
@@ -1818,7 +1818,7 @@ static void retrieve_attrs(dbref player, PSTATS *s) {
   char_svalue(s, "Charisma", i5);
 }
 
-static void generic_retrieve_stuff(dbref player, PSTATS *s, int attrnum) {
+static void generic_retrieve_stuff(DbRef player, PSTATS *s, int attrnum) {
   char *c = silly_atr_get(player, attrnum), *e;
   char buf[512];
   int i1, i2, i3, sn;
@@ -1847,7 +1847,7 @@ static void generic_retrieve_stuff(dbref player, PSTATS *s, int attrnum) {
   }
 }
 
-static void generic_store_stuff(dbref player, PSTATS *s, int attrnum,
+static void generic_store_stuff(DbRef player, PSTATS *s, int attrnum,
                                 int flag) {
   char buf[LBUF_SIZE] = {0};
   int i;
@@ -1876,23 +1876,23 @@ static void generic_store_stuff(dbref player, PSTATS *s, int attrnum,
     silly_atr_set(player, attrnum, "");
 }
 
-static void retrieve_skills(dbref player, PSTATS *s) {
+static void retrieve_skills(DbRef player, PSTATS *s) {
   generic_retrieve_stuff(player, s, A_SKILLS);
 }
 
-static void retrieve_advs(dbref player, PSTATS *s) {
+static void retrieve_advs(DbRef player, PSTATS *s) {
   generic_retrieve_stuff(player, s, A_ADVS);
 }
 
-static void store_skills(dbref player, PSTATS *s) {
+static void store_skills(DbRef player, PSTATS *s) {
   generic_store_stuff(player, s, A_SKILLS, 1);
 }
 
-static void store_advs(dbref player, PSTATS *s) {
+static void store_advs(DbRef player, PSTATS *s) {
   generic_store_stuff(player, s, A_ADVS, 0);
 }
 
-static void store_stats(dbref player, PSTATS *s, int modes) {
+static void store_stats(DbRef player, PSTATS *s, int modes) {
   if (!isPlayer(player))
     return;
   if (modes & VALUES_HEALTH)
@@ -1911,7 +1911,7 @@ static void store_stats(dbref player, PSTATS *s, int modes) {
   }
 }
 
-static PSTATS *retrieve_stats(dbref player, int modes) {
+static PSTATS *retrieve_stats(DbRef player, int modes) {
   static PSTATS s;
 
   bzero(&s, sizeof(PSTATS));
@@ -1926,7 +1926,7 @@ static PSTATS *retrieve_stats(dbref player, int modes) {
   return &s;
 }
 
-void debug_setxplevel(dbref player, void *data, char *buffer) {
+void debug_setxplevel(DbRef player, void *data, char *buffer) {
   char *args[3];
   int xpt, code;
 

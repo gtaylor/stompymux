@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "externs.h"
+#include "mux/server/server_api.h"
 
 #ifdef notify
 #undef notify

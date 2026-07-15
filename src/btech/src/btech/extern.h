@@ -19,6 +19,6 @@
 #define FUNCTION(x)                                                            \
   void x(buff, bufc, player, cause, fargs, nfargs, cargs, ncargs) char *buff,  \
       **bufc;                                                                  \
-  dbref player, cause;                                                         \
+  DbRef player, cause;                                                         \
   char *fargs[], *cargs[];                                                     \
   int nfargs, ncargs;

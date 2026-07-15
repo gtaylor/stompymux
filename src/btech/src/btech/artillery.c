@@ -20,7 +20,8 @@
 #include "artillery.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
+#include "object_spatial.h"
 #include "p.artillery.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
@@ -30,7 +31,6 @@
 #include "p.mech.hitloc.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
-#include "spath.h"
 
 struct artillery_shot_type *free_shot_list = NULL;
 static void artillery_hit(artillery_shot *s);
@@ -75,7 +75,7 @@ int artillery_round_flight_time(float fx, float fy, float tx, float ty) {
   return delay;
 }
 
-static void artillery_hit_event(MUXEVENT *e) {
+static void artillery_hit_event(MuxEvent *e) {
   artillery_shot *s = (artillery_shot *)e->data;
 
   artillery_hit(s);
@@ -105,8 +105,8 @@ void artillery_shoot(MECH *mech, int targx, int targy, int windex, int wmode,
                                  artillery_direction(s)));
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
-  muxevent_add(artillery_round_flight_time(fx, fy, tx, ty), 0, EVENT_DHIT,
-               artillery_hit_event, (void *)s, NULL);
+  mux_event_add(artillery_round_flight_time(fx, fy, tx, ty), 0, EVENT_DHIT,
+                artillery_hit_event, (void *)s, NULL);
 }
 
 static int blast_arcf(float fx, float fy, MECH *mech) {
@@ -376,7 +376,7 @@ static void artillery_cluster_hit(MAP *map, artillery_shot *s, int type,
                           1);
 }
 
-void artillery_FriendlyAdjustment(dbref mechnum, MAP *map, int x, int y) {
+void artillery_FriendlyAdjustment(DbRef mechnum, MAP *map, int x, int y) {
   MECH *mech;
   MECH *spotter;
   MECH *tempMech = NULL;

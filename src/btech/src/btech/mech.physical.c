@@ -320,7 +320,7 @@ int punch_checkArm(MECH *mech, int arm) {
 /**
  * Mech punch routines.
  */
-void mech_punch(dbref player, void *data, char *buffer) {
+void mech_punch(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -368,7 +368,7 @@ void mech_punch(dbref player, void *data, char *buffer) {
 /**
  * Mech clubbing routines.
  */
-void mech_club(dbref player, void *data, char *buffer) {
+void mech_club(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *args[5];
@@ -452,7 +452,7 @@ int axe_checkArm(MECH *mech, int arm) {
 /**
  * Mech axe routines.
  */
-void mech_axe(dbref player, void *data, char *buffer) {
+void mech_axe(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -515,7 +515,7 @@ int saw_checkArm(MECH *mech, int arm) {
 /**
  * Mech dual saw routines.
  */
-void mech_saw(dbref player, void *data, char *buffer) {
+void mech_saw(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -557,7 +557,7 @@ void mech_saw(dbref player, void *data, char *buffer) {
 /**
  * Mech punch routines.
  */
-void mech_claw(dbref player, void *data, char *buffer) {
+void mech_claw(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -636,7 +636,7 @@ int mace_checkArm(MECH *mech, int arm) {
 /**
  * Mech mace routines.
  */
-void mech_mace(dbref player, void *data, char *buffer) {
+void mech_mace(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -706,7 +706,7 @@ int sword_checkArm(MECH *mech, int arm) {
 /**
  * Mech sword routines.
  */
-void mech_sword(dbref player, void *data, char *buffer) {
+void mech_sword(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -749,21 +749,21 @@ void mech_sword(dbref player, void *data, char *buffer) {
 /**
  * Mech tripping command hook.
  */
-void mech_trip(dbref player, void *data, char *buffer) {
+void mech_trip(DbRef player, void *data, char *buffer) {
   mech_kickortrip(player, data, buffer, PA_TRIP);
 } // end mech_trip()
 
 /**
  * Mech kick command hook.
  */
-void mech_kick(dbref player, void *data, char *buffer) {
+void mech_kick(DbRef player, void *data, char *buffer) {
   mech_kickortrip(player, data, buffer, PA_KICK);
 } // end mech_trip()
 
 /**
  * Mech kick/trip routines.
  */
-void mech_kickortrip(dbref player, void *data, char *buffer, int AttackType) {
+void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *argl[5];
@@ -820,7 +820,7 @@ void mech_kickortrip(dbref player, void *data, char *buffer, int AttackType) {
 /**
  * Mech/tank charge routines
  */
-void mech_charge(dbref player, void *data, char *buffer) {
+void mech_charge(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   MAP *mech_map = getMap(mech->mapindex);
   int targetnum;
@@ -2585,7 +2585,7 @@ int checkGrabClubLocation(MECH *mech, int section, int emit) {
 /*
  * Handles the grabbing of a club.
  */
-void mech_grabclub(dbref player, void *data, char *buffer) {
+void mech_grabclub(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int wcArgs = 0;
   int location = 0;

@@ -14,26 +14,28 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
-#include "db.h"
-#include "externs.h"
 #include "macros.h"
 #include "mech.h"
+#include "mux/database/db.h"
+#include "mux/server/server_api.h"
 #include "p.glue.h"
 
 char *silly_atr_get(int id, int flag) {
   long i, j;
   static char buf[LBUF_SIZE];
 
-  atr_get_str(buf, id, flag, &i, &j);
+  attribute_get_string(buf, id, flag, &i, &j);
   return buf;
 #if 0 /* This would waste memory, so.. :P */
-	return atr_pget(id, flag, &i, &j);
+	return attribute_parent_get(id, flag, &i, &j);
 #endif
 }
 
-void silly_atr_set(int id, int flag, char *dat) { atr_add_raw(id, flag, dat); }
+void silly_atr_set(int id, int flag, char *dat) {
+  attribute_add_raw(id, flag, dat);
+}
 
 void KillText(char **mapt) {
   int i;
@@ -43,7 +45,7 @@ void KillText(char **mapt) {
   free(mapt);
 }
 
-void ShowText(char **mapt, dbref player) {
+void ShowText(char **mapt, DbRef player) {
   int i;
 
   for (i = 0; mapt[i]; i++)

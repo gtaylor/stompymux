@@ -25,7 +25,7 @@
 
 int getFreeC3iNetworkPos(MECH *mech, MECH *mechToAdd) {
   int i;
-  dbref otherRef;
+  DbRef otherRef;
 
   validateC3iNetwork(mech);
 
@@ -44,7 +44,7 @@ int getFreeC3iNetworkPos(MECH *mech, MECH *mechToAdd) {
 
 void replicateC3iNetwork(MECH *mechSrc, MECH *mechDest) {
   int i;
-  dbref otherRef;
+  DbRef otherRef;
 
   debugC3(tprintf("REPLICATE: %d's C3i network to %d", mechSrc->mynum,
                   mechDest->mynum));
@@ -69,7 +69,7 @@ void replicateC3iNetwork(MECH *mechSrc, MECH *mechDest) {
 void addMechToC3iNetwork(MECH *mech, MECH *mechToAdd) {
   MECH *otherMech;
   MECH *otherNotifyMech;
-  dbref otherRef;
+  DbRef otherRef;
   int i;
   int wPos = -1;
 
@@ -121,7 +121,7 @@ void addMechToC3iNetwork(MECH *mech, MECH *mechToAdd) {
   validateC3iNetwork(mech);
 }
 
-void clearMechFromC3iNetwork(dbref refToClear, MECH *mech) {
+void clearMechFromC3iNetwork(DbRef refToClear, MECH *mech) {
   int i;
 
   debugC3(
@@ -165,7 +165,7 @@ void clearC3iNetwork(MECH *mech, int tClearFromOthers) {
 
 void validateC3iNetwork(MECH *mech) {
   MECH *otherMech;
-  dbref myTempNetwork[C3I_NETWORK_SIZE];
+  DbRef myTempNetwork[C3I_NETWORK_SIZE];
   int i;
   int networkSize = 0;
 
@@ -209,10 +209,10 @@ void validateC3iNetwork(MECH *mech) {
                   MechC3iNetworkSize(mech)));
 }
 
-void mech_c3i_join_leave(dbref player, void *data, char *buffer) {
+void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   char *args[2];
-  dbref refTarget;
+  DbRef refTarget;
   int LOS = 1;
   float range = 0.0;
 
@@ -279,7 +279,7 @@ void mech_c3i_join_leave(dbref player, void *data, char *buffer) {
   addMechToC3iNetwork(target, mech);
 }
 
-void mech_c3i_message(dbref player, MECH *mech, char *buffer) {
+void mech_c3i_message(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3i(mech), "This unit is not equipped with C3i!");
@@ -298,7 +298,7 @@ void mech_c3i_message(dbref player, MECH *mech, char *buffer) {
   sendNetworkMessage(player, mech, buffer, 0);
 }
 
-void mech_c3i_targets(dbref player, MECH *mech, char *buffer) {
+void mech_c3i_targets(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3i(mech), "This unit is not equipped with C3i!");
@@ -314,7 +314,7 @@ void mech_c3i_targets(dbref player, MECH *mech, char *buffer) {
   showNetworkTargets(player, mech, 0);
 }
 
-void mech_c3i_network(dbref player, MECH *mech, char *buffer) {
+void mech_c3i_network(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3i(mech), "This unit is not equipped with C3i!");

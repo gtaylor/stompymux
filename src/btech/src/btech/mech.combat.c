@@ -22,8 +22,8 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
-#include "muxevent/muxevent.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.artillery.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
@@ -57,7 +57,7 @@
 #include "p.template.h"
 
 extern int arc_override;
-extern dbref pilot_override;
+extern DbRef pilot_override;
 
 /*
 Optional firing modes:
@@ -87,7 +87,7 @@ inhibitor removes min range roll 2d6 for feed back check and refer to chart
 below. If failure, mech takes 10 points of internal damage to loc of PPC Target
 distance Avoid feedback on: 1 10+ 2 6+ 3 3+
 */
-void mech_target(dbref player, void *data, char *buffer) {
+void mech_target(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *target;
   char *args[5];
@@ -138,7 +138,7 @@ char *ss_messages[] = {"You feel you'll have your hands full before too long..",
 #define SSDistMod(r) ((r < 9) ? 0 : ((r < 20) ? 1 : 2))
 #define SSTonMod(d) ((d <= -20) ? 0 : (d >= 20) ? 2 : 1)
 
-static void mech_ss_event(MUXEVENT *ev) {
+static void mech_ss_event(MuxEvent *ev) {
   MECH *mech = (MECH *)ev->data;
   long i = (long)ev->data2;
 
@@ -165,7 +165,7 @@ void sixth_sense_check(MECH *mech, MECH *target) {
             (long)((3 * (SSDistMod(r))) + (SSTonMod(d))));
 }
 
-void mech_settarget(dbref player, void *data, char *buffer) {
+void mech_settarget(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   MAP *mech_map;
   char *args[5];
@@ -173,7 +173,7 @@ void mech_settarget(dbref player, void *data, char *buffer) {
   int argc;
   int LOS = 1;
   int newx, newy;
-  dbref targetref;
+  DbRef targetref;
   int mode;
 
   cch(MECH_USUALO);
@@ -324,7 +324,7 @@ void mech_settarget(dbref player, void *data, char *buffer) {
 /*
  * Fire weapon command handler
  */
-void mech_fireweapon(dbref player, void *data, char *buffer) {
+void mech_fireweapon(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map;
   char *args[5];
@@ -354,10 +354,10 @@ void mech_fireweapon(dbref player, void *data, char *buffer) {
 /*
  * Main weapon firing routine
  */
-int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
+int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
                      int argc, char **args, int sight) {
   int weaptype;
-  dbref target;
+  DbRef target;
   char targetID[2];
   int mapx = 0, mapy = 0, LOS = 0;
   MECH *tempMech = NULL;
@@ -720,7 +720,7 @@ int weapon_failure_stuff(MECH *mech, int *weapnum, int *weapindx, int *section,
   return 0;
 }
 
-void sendC3TrackEmit(MECH *mech, dbref c3Ref, MECH *c3Mech) {
+void sendC3TrackEmit(MECH *mech, DbRef c3Ref, MECH *c3Mech) {
   if (c3Mech && (c3Mech->mynum != mech->mynum)) {
     mech_printf(mech, MECHALL, "Using range data from %s [%s]",
                 silly_atr_get(c3Mech->mynum, A_MECHNAME), MechIDS(c3Mech, 1));
@@ -751,7 +751,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   int wRACHeat = 0;
   int wHGRPSkillMod = 0;
   int tIsSwarmAttack = 0;
-  dbref c3Ref = -1;
+  DbRef c3Ref = -1;
   MECH *c3Mech = NULL;
   int firstCrit = 0;
   int mode = GetPartFireMode(mech, section, critical);

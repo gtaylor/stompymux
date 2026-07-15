@@ -430,7 +430,7 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
   *fl = f;
 }
 
-void update_LOSinfo(dbref obj, MAP *map) {
+void update_LOSinfo(DbRef obj, MAP *map) {
   int i, j, fl;
   int mapvis = map->mapvis;
   int maplight = map->maplight;
@@ -574,7 +574,7 @@ static char *sensor_mode_name(MECH *mech, int sn, int full, int verbose) {
   return buf;
 }
 
-static void sensor_mode(MECH *mech, char *msg, dbref player, int p, int s,
+static void sensor_mode(MECH *mech, char *msg, DbRef player, int p, int s,
                         int verbose) {
   char buf[MBUF_SIZE];
   size_t i;
@@ -597,7 +597,7 @@ static int tmp_prim;
 static int tmp_sec;
 static int tmp_found;
 
-static void sensor_check(MUXEVENT *e) {
+static void sensor_check(MuxEvent *e) {
   long d = ((long)e->data2);
 
   tmp_prim = d / NUM_SENSORS;
@@ -614,7 +614,7 @@ char *mechSensorInfo(int mode, MECH *mech, char *arg) {
   buffer[0] = SensorInf[(short)MechSensor(mech)[0]];
   buffer[1] = SensorInf[(short)MechSensor(mech)[1]];
   if (SensorChange(mech)) {
-    muxevent_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
+    mux_event_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
     if (tmp_found) {
       buffer[2] = SensorInf[tmp_prim + NUM_SENSORS];
       buffer[3] = SensorInf[tmp_sec + NUM_SENSORS];
@@ -626,19 +626,19 @@ char *mechSensorInfo(int mode, MECH *mech, char *arg) {
   return buffer;
 }
 
-static void show_sensor(dbref player, MECH *mech, int verbose) {
+static void show_sensor(DbRef player, MECH *mech, int verbose) {
 
   tmp_found = 0;
   sensor_mode(mech, "Sensors", player, MechSensor(mech)[0], MechSensor(mech)[1],
               verbose);
   if (SensorChange(mech)) {
-    muxevent_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
+    mux_event_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
     if (tmp_found)
       sensor_mode(mech, "Wanted", player, tmp_prim, tmp_sec, 0);
   }
 }
 
-static void mech_sensorchange_event(MUXEVENT *e) {
+static void mech_sensorchange_event(MuxEvent *e) {
   long d = (long)e->data2;
   MECH *mech = (MECH *)e->data;
   int prim = d / NUM_SENSORS;
@@ -747,7 +747,7 @@ static int set_sensor(MECH *mech, char ps, char ss) {
   return 0;
 }
 
-void mech_sensor(dbref player, void *data, char *buffer) {
+void mech_sensor(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[3];
   int argc;
@@ -814,7 +814,7 @@ void possibly_see_mech(MECH *mech) {
     }
 }
 
-static void mech_unblind_event(MUXEVENT *e) {
+static void mech_unblind_event(MuxEvent *e) {
   MECH *m = (MECH *)e->data;
 
   MechStatus(m) &= ~BLINDED;

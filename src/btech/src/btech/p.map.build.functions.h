@@ -5,8 +5,8 @@
 /* map.build.functions.c */
 
 int water_distance(MAP *map, int x, int y, int dir, int max);
-void loadMap(dbref player, void *data, char *buffer);
-void saveMap(dbref player, void *data, char *buffer);
+void loadMap(DbRef player, void *data, char *buffer);
+void saveMap(DbRef player, void *data, char *buffer);
 void freeOldMap(MAP *map);
 void validateExistingLayers(MAP *map, int x, int y);
 void validateSnowDepth(MAP *map, int x, int y);

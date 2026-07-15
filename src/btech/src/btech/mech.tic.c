@@ -27,7 +27,7 @@ int ftflag = 0;
 
 /*****************************************************************************/
 
-int cleartic_sub_func(MECH *mech, dbref player, int low, int high) {
+int cleartic_sub_func(MECH *mech, DbRef player, int low, int high) {
   int i, j;
 
   for (i = low; i <= high; i++) {
@@ -38,7 +38,7 @@ int cleartic_sub_func(MECH *mech, dbref player, int low, int high) {
   return 0;
 }
 
-void cleartic_sub(dbref player, MECH *mech, char *buffer) {
+void cleartic_sub(DbRef player, MECH *mech, char *buffer) {
   int argc;
   char *args[3];
 
@@ -49,7 +49,7 @@ void cleartic_sub(dbref player, MECH *mech, char *buffer) {
 
 static int present_tic;
 
-int addtic_sub_func(MECH *mech, dbref player, int low, int high) {
+int addtic_sub_func(MECH *mech, DbRef player, int low, int high) {
   int i, j;
 
   for (i = low; i <= high; i++) {
@@ -64,7 +64,7 @@ int addtic_sub_func(MECH *mech, dbref player, int low, int high) {
   return 0;
 }
 
-void addtic_sub(dbref player, MECH *mech, char *buffer) {
+void addtic_sub(DbRef player, MECH *mech, char *buffer) {
   int ticnum, argc;
   char *args[3];
 
@@ -76,7 +76,7 @@ void addtic_sub(dbref player, MECH *mech, char *buffer) {
   multi_weap_sel(mech, player, args[1], 0, addtic_sub_func);
 }
 
-int deltic_sub_func(MECH *mech, dbref player, int low, int high) {
+int deltic_sub_func(MECH *mech, DbRef player, int low, int high) {
   int i, j;
 
   for (i = low; i <= high; i++) {
@@ -91,7 +91,7 @@ int deltic_sub_func(MECH *mech, dbref player, int low, int high) {
   return 0;
 }
 
-void deltic_sub(dbref player, MECH *mech, char *buffer) {
+void deltic_sub(DbRef player, MECH *mech, char *buffer) {
   int ticnum, argc;
   char *args[3];
 
@@ -110,7 +110,7 @@ void deltic_sub(dbref player, MECH *mech, char *buffer) {
 static char **temp_args;
 static int temp_argc;
 
-int firetic_sub_func(MECH *mech, dbref player, int low, int high) {
+int firetic_sub_func(MECH *mech, DbRef player, int low, int high) {
   int i, j, k, count, weapnum;
   MAP *mech_map = FindObjectsData(mech->mapindex);
   int f = Fallen(mech);
@@ -140,7 +140,7 @@ int firetic_sub_func(MECH *mech, dbref player, int low, int high) {
   return 0;
 }
 
-void firetic_sub(dbref player, MECH *mech, char *buffer) {
+void firetic_sub(DbRef player, MECH *mech, char *buffer) {
   int ticnum, argc;
   char *args[5];
 
@@ -198,7 +198,7 @@ static char *listtic_fun(int i) {
   return buf;
 }
 
-void listtic_sub(dbref player, MECH *mech, char *buffer) {
+void listtic_sub(DbRef player, MECH *mech, char *buffer) {
   int ticnum, argc;
   char *args[2];
   int i, j, k, count = 0;
@@ -224,28 +224,28 @@ void listtic_sub(dbref player, MECH *mech, char *buffer) {
   KillCoolMenu(c);
 }
 
-void mech_cleartic(dbref player, void *data, char *buffer) {
+void mech_cleartic(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALSM);
   cleartic_sub(player, mech, buffer);
 }
 
-void mech_addtic(dbref player, void *data, char *buffer) {
+void mech_addtic(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALSM);
   addtic_sub(player, mech, buffer);
 }
 
-void mech_deltic(dbref player, void *data, char *buffer) {
+void mech_deltic(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALSM);
   deltic_sub(player, mech, buffer);
 }
 
-void mech_firetic(dbref player, void *data, char *buffer) {
+void mech_firetic(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
@@ -254,14 +254,14 @@ void mech_firetic(dbref player, void *data, char *buffer) {
   firetic_sub(player, mech, buffer);
 }
 
-void mech_listtic(dbref player, void *data, char *buffer) {
+void mech_listtic(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALSM);
   listtic_sub(player, mech, buffer);
 }
 
-void heat_cutoff_event(MUXEVENT *e) {
+void heat_cutoff_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (e->data2) {
@@ -273,7 +273,7 @@ void heat_cutoff_event(MUXEVENT *e) {
   }
 }
 
-void heat_cutoff(dbref player, void *data, char *buffer) {
+void heat_cutoff(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   if (mudconf.btech_heatcutoff < 1) {

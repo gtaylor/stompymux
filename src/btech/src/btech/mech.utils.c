@@ -8,7 +8,7 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -55,7 +55,7 @@ extern int cargoweight[];
 #define DEG2RAD(d) ((float)(d) * (3.14159265f / 180.f))
 #define RAD2DEG(d) ((float)(d) * (180.f / 3.14159265f))
 
-extern dbref pilot_override;
+extern DbRef pilot_override;
 
 char *mechtypenames[CLASS_LAST + 1] = {"mech",   "tank",        "VTOL",
                                        "vessel", "aerofighter", "DropShip"};
@@ -107,9 +107,9 @@ int round_to_quarterton(int weight) {
 }
 
 int MNumber(MECH *mech, int low, int high) {
-  if ((muxevent_tick / RANDOM_TICK) != MechLastRndU(mech)) {
+  if ((mux_event_tick / RANDOM_TICK) != MechLastRndU(mech)) {
     MechRnd(mech) = (int)genrand_int31();
-    MechLastRndU(mech) = muxevent_tick / RANDOM_TICK;
+    MechLastRndU(mech) = mux_event_tick / RANDOM_TICK;
   }
   return (low + MechRnd(mech) % (high - low + 1));
 }
@@ -168,7 +168,7 @@ int SectHasBusyWeap(MECH *mech, int sect) {
   return 0;
 }
 
-MAP *ValidMap(dbref player, dbref map) {
+MAP *ValidMap(DbRef player, DbRef map) {
   char *str;
   MAP *maps;
 
@@ -180,7 +180,7 @@ MAP *ValidMap(dbref player, dbref map) {
   return maps;
 }
 
-dbref FindMechOnMap(MAP *map, char *mechid) {
+DbRef FindMechOnMap(MAP *map, char *mechid) {
   int loop;
   MECH *tempMech;
 
@@ -193,7 +193,7 @@ dbref FindMechOnMap(MAP *map, char *mechid) {
   return -1;
 }
 
-dbref FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum) {
+DbRef FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum) {
   MAP *map;
 
   if (mech->mapindex == -1)
@@ -617,7 +617,7 @@ char *FindTechSkillName(MECH *mech) {
   return NULL;
 }
 
-int FindTechSkill(dbref player, MECH *mech) {
+int FindTechSkill(DbRef player, MECH *mech) {
   char *skname;
 
   if ((skname = FindTechSkillName(mech)))
@@ -2131,8 +2131,8 @@ void MarkForLOSUpdate(MECH *mech) {
   mech_map->mechflags[mech->mapnumber] = 1;
 }
 
-void multi_weap_sel(MECH *mech, dbref player, char *buffer, int bitbybit,
-                    int (*foo)(MECH *, dbref, int, int)) {
+void multi_weap_sel(MECH *mech, DbRef player, char *buffer, int bitbybit,
+                    int (*foo)(MECH *, DbRef, int, int)) {
   /* Insight: buffer contains stuff in form:
      <num>
      <num>-<num>
@@ -2436,7 +2436,7 @@ int FindAndCheckAmmo(MECH *mech, int weapindx, int section, int critical,
   int wRoundsToCheck = 1;
   int wWeapMode = GetPartFireMode(mech, section, critical);
   int tResetMode = 0;
-  dbref player = GunPilot(mech);
+  DbRef player = GunPilot(mech);
 
   /* Return if it's an energy or PC weapon */
   if (MechWeapons[weapindx].type == TBEAM ||
@@ -3671,10 +3671,10 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
     return 0;
 
   if (gunstat == 100 || pilstat == 100) {
-    if (muxevent_tick - MechBVLast(mech) < 30)
+    if (mux_event_tick - MechBVLast(mech) < 30)
       return MechBV(mech);
     else
-      MechBVLast(mech) = muxevent_tick;
+      MechBVLast(mech) = mux_event_tick;
   }
 
   type = MechType(mech);

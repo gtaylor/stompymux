@@ -18,6 +18,6 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
 void possible_mine_poof(MECH *mech, int reason);
 void possibly_remove_mines(MECH *mech, int x, int y);
 void recalculate_minefields(MAP *map);
-void map_add_mine(dbref player, void *data, char *buffer);
+void map_add_mine(DbRef player, void *data, char *buffer);
 void explode_mines(MECH *mech, int chn);
-void show_mines_in_hex(dbref player, MECH *mech, float range, int x, int y);
+void show_mines_in_hex(DbRef player, MECH *mech, float range, int x, int y);

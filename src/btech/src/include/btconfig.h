@@ -1,4 +1,4 @@
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 

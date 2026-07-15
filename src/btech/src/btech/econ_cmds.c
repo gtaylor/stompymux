@@ -79,7 +79,7 @@ void SetCargoWeight(MECH *mech) {
 
 /* Returns 1 if calling function should return */
 
-int loading_bay_whine(dbref player, dbref cargobay, MECH *mech) {
+int loading_bay_whine(DbRef player, DbRef cargobay, MECH *mech) {
   char *c;
   int i1, i2, i3 = 0;
 
@@ -95,7 +95,7 @@ int loading_bay_whine(dbref player, dbref cargobay, MECH *mech) {
   return 0;
 }
 
-void mech_Rfixstuff(dbref player, void *data, char *buffer) {
+void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
   int loc = Location(player);
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   char *t;
@@ -130,7 +130,7 @@ void mech_Rfixstuff(dbref player, void *data, char *buffer) {
                 kinds);
 }
 
-void list_matching(dbref player, char *header, dbref loc, char *buf) {
+void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   int pile2[BRANDCOUNT + 1][NUM_ITEMS];
   char *t, *ch;
@@ -197,13 +197,13 @@ void list_matching(dbref player, char *header, dbref loc, char *buf) {
   else                                                                         \
     list_matching(player, tprintf("Part listing for %s", Name(t)), t, NULL)
 
-void mech_manifest(dbref player, void *data, char *buffer) {
+void mech_manifest(DbRef player, void *data, char *buffer) {
   while (isspace(*buffer))
     buffer++;
   MY_DO_LIST(Location(player));
 }
 
-void mech_stores(dbref player, void *data, char *buffer) {
+void mech_stores(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUAL);
@@ -241,7 +241,7 @@ void mech_stores(dbref player, void *data, char *buffer) {
 /* Handles adding or removing parts/commods from a map or unit's manifest.
  * btaddstores(), addstuff, and removestuff use this.
  */
-static void stuff_change_sub(dbref player, char *buffer, dbref loc1, dbref loc2,
+static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
                              int mod, int mort) {
   int i = -1, id, brand;
   int count = 0;
@@ -311,15 +311,15 @@ static void stuff_change_sub(dbref player, char *buffer, dbref loc1, dbref loc2,
   DOCHECK(!foo, "Nothing matching that criteria was found!");
 }
 
-void mech_Raddstuff(dbref player, void *data, char *buffer) {
+void mech_Raddstuff(DbRef player, void *data, char *buffer) {
   stuff_change_sub(player, buffer, Location(player), -1, 1, 0);
 }
 
-void mech_Rremovestuff(dbref player, void *data, char *buffer) {
+void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
   stuff_change_sub(player, buffer, Location(player), -1, -1, 0);
 }
 
-void mech_loadcargo(dbref player, void *data, char *buffer) {
+void mech_loadcargo(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
@@ -334,7 +334,7 @@ void mech_loadcargo(dbref player, void *data, char *buffer) {
   correct_speed(mech);
 }
 
-void mech_unloadcargo(dbref player, void *data, char *buffer) {
+void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALSO);
@@ -343,7 +343,7 @@ void mech_unloadcargo(dbref player, void *data, char *buffer) {
   correct_speed(mech);
 }
 
-void mech_Rresetstuff(dbref player, void *data, char *buffer) {
+void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   notify(player, "Inventory cleaned!");
   silly_atr_set(Location(player), A_ECONPARTS, "");
   SendEcon(tprintf("#%d reset #%d's stuff.", player, Location(player)));

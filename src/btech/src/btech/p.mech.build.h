@@ -12,7 +12,7 @@
 #pragma once
 
 /* mech.build.c */
-int CheckData(dbref player, void *data);
+int CheckData(DbRef player, void *data);
 void FillDefaultCriticals(MECH *mech, int index);
 char *ShortArmorSectionString(char type, char mtype, int loc);
 int ArmorSectionFromString(char type, char mtype, char *string);

@@ -9,12 +9,12 @@
  */
 
 /* All the *_{succ|fail|econ} functions belong here */
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.tech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
 #include "p.econ.h"
 #include "p.mech.status.h"
 #include "p.mech.tech.h"

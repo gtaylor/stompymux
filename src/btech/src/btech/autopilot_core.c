@@ -17,7 +17,7 @@
 #include "p.mech.utils.h"
 
 extern ACOM acom[AUTO_NUM_COMMANDS + 1];
-extern char *muxevent_names[];
+extern char *mux_event_names[];
 
 /*
  * Creates a new command_node for the AI's
@@ -116,7 +116,7 @@ static char *auto_show_command(command_node *node) {
 /*
  * Removes a command from the AI's command list
  */
-void auto_delcommand(dbref player, void *data, char *buffer) {
+void auto_delcommand(DbRef player, void *data, char *buffer) {
 
   int p;
   AUTO *autopilot = (AUTO *)data;
@@ -130,7 +130,7 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
     notify_printf(player,
                   "Must be within the range"
                   " 1 to %d or -1 for all\n",
-                  dllist_size(autopilot->commands));
+                  doubly_linked_list_size(autopilot->commands));
     return;
   }
 
@@ -139,7 +139,7 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
     notify_printf(player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",
-                  dllist_size(autopilot->commands));
+                  doubly_linked_list_size(autopilot->commands));
     return;
   }
 
@@ -147,11 +147,11 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
    * If its -1 means remove all */
   if (p == -1) {
     remove_all_commands = 1;
-  } else if ((p > dllist_size(autopilot->commands)) || (p < 1)) {
+  } else if ((p > doubly_linked_list_size(autopilot->commands)) || (p < 1)) {
     notify_printf(player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",
-                  dllist_size(autopilot->commands));
+                  doubly_linked_list_size(autopilot->commands));
     return;
   }
 
@@ -162,8 +162,8 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
   if (!remove_all_commands) {
 
     /* Remove the node at pos */
-    temp_command_node =
-        (command_node *)dllist_remove_node_at_pos(autopilot->commands, p);
+    temp_command_node = (command_node *)doubly_linked_list_remove_node_at_pos(
+        autopilot->commands, p);
 
     if (!temp_command_node) {
       snprintf(error_buf, MBUF_SIZE,
@@ -181,12 +181,12 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
   } else {
 
     /* Remove ALL the commands */
-    while (dllist_size(autopilot->commands)) {
+    while (doubly_linked_list_size(autopilot->commands)) {
 
       /* Remove the first node on the list and get the data
        * from it */
-      temp_command_node = (command_node *)dllist_remove(
-          autopilot->commands, dllist_head(autopilot->commands));
+      temp_command_node = (command_node *)doubly_linked_list_remove(
+          autopilot->commands, doubly_linked_list_head(autopilot->commands));
 
       /* Make sure the command node exists */
       if (!temp_command_node) {
@@ -213,7 +213,7 @@ void auto_delcommand(dbref player, void *data, char *buffer) {
  * Jump to a specific command location in the AI's
  * command list
  */
-void auto_jump(dbref player, void *data, char *buffer) {
+void auto_jump(DbRef player, void *data, char *buffer) {
   notify(player, "jump has been temporarly disabled till I can figure out"
                  " how I want to change it - Dany");
 #if 0
@@ -231,7 +231,7 @@ void auto_jump(dbref player, void *data, char *buffer) {
 /*
  * Adds a command to the AI Command List
  */
-void auto_addcommand(dbref player, void *data, char *buffer) {
+void auto_addcommand(DbRef player, void *data, char *buffer) {
 
   AUTO *autopilot = (AUTO *)data;
   char *args[AUTOPILOT_MAX_ARGS]; /* args[0] is the command the rest are
@@ -242,7 +242,7 @@ void auto_addcommand(dbref player, void *data, char *buffer) {
   int i, j;
 
   command_node *temp_command_node;
-  dllist_node *temp_dllist_node;
+  DoublyLinkedListNode *temp_dllist_node;
 
   /* Clear the Args */
   memset(args, 0, sizeof(char *) * AUTOPILOT_MAX_ARGS);
@@ -300,8 +300,8 @@ void auto_addcommand(dbref player, void *data, char *buffer) {
   temp_command_node->ai_command_function = acom[i].ai_command_function;
 
   /* Add the command to the list */
-  temp_dllist_node = dllist_create_node(temp_command_node);
-  dllist_insert_end(autopilot->commands, temp_dllist_node);
+  temp_dllist_node = doubly_linked_list_create_node(temp_command_node);
+  doubly_linked_list_insert_end(autopilot->commands, temp_dllist_node);
 
   /* Let the player know it worked */
   notify_printf(player, "Command Added: %s",
@@ -311,7 +311,7 @@ void auto_addcommand(dbref player, void *data, char *buffer) {
 /*
  * Lists the various settings and commands currently on the AI
  */
-void auto_listcommands(dbref player, void *data, char *buffer) {
+void auto_listcommands(DbRef player, void *data, char *buffer) {
 
   AUTO *autopilot = (AUTO *)data;
   coolmenu *c = NULL;
@@ -338,12 +338,12 @@ void auto_listcommands(dbref player, void *data, char *buffer) {
 
   addline();
 
-  if (dllist_size(autopilot->commands)) {
+  if (doubly_linked_list_size(autopilot->commands)) {
 
-    for (i = 1; i <= dllist_size(autopilot->commands); i++) {
+    for (i = 1; i <= doubly_linked_list_size(autopilot->commands); i++) {
       snprintf(buf, MBUF_SIZE, "#%-3d %s", i,
-               auto_show_command(
-                   (command_node *)dllist_get_node(autopilot->commands, i)));
+               auto_show_command((command_node *)doubly_linked_list_get_node(
+                   autopilot->commands, i)));
       vsi(buf);
     }
 
@@ -356,7 +356,7 @@ void auto_listcommands(dbref player, void *data, char *buffer) {
   KillCoolMenu(c);
 }
 
-void auto_eventstats(dbref player, void *data, char *buffer) {
+void auto_eventstats(DbRef player, void *data, char *buffer) {
 
   AUTO *autopilot = (AUTO *)data;
   int i, j, total;
@@ -368,8 +368,8 @@ void auto_eventstats(dbref player, void *data, char *buffer) {
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++) {
 
-    if ((j = muxevent_count_type_data(i, (void *)autopilot))) {
-      notify_printf(player, "%-20s%d", muxevent_names[i], j);
+    if ((j = mux_event_count_type_data(i, (void *)autopilot))) {
+      notify_printf(player, "%-20s%d", mux_event_names[i], j);
       total += j;
     }
   }
@@ -388,7 +388,7 @@ static int auto_pilot_on(AUTO *autopilot) {
   int i, j, count = 0;
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++)
-    if ((j = muxevent_count_type_data(i, (void *)autopilot)))
+    if ((j = mux_event_count_type_data(i, (void *)autopilot)))
       count += j;
 
   if (!count) {
@@ -410,7 +410,7 @@ extern void auto_stop_pilot(AUTO *autopilot) {
       ~(AUTOPILOT_AUTOGUN | AUTOPILOT_GUNZOMBIE | AUTOPILOT_PILZOMBIE);
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++)
-    muxevent_remove_type_data(i, (void *)autopilot);
+    mux_event_remove_type_data(i, (void *)autopilot);
 }
 
 /*
@@ -456,7 +456,7 @@ void auto_init(AUTO *autopilot, MECH *mech) {
  * Setup all the flags and variables to current, then
  * start the AI's first command.
  */
-void auto_engage(dbref player, void *data, char *buffer) {
+void auto_engage(DbRef player, void *data, char *buffer) {
 
   AUTO *autopilot = (AUTO *)data;
   MECH *mech;
@@ -486,7 +486,7 @@ void auto_engage(dbref player, void *data, char *buffer) {
 /*
  * Turn off the autopilot
  */
-void auto_disengage(dbref player, void *data, char *buffer) {
+void auto_disengage(DbRef player, void *data, char *buffer) {
 
   AUTO *autopilot = (AUTO *)data;
 
@@ -507,7 +507,7 @@ void auto_goto_next_command(AUTO *autopilot, int time) {
   command_node *temp_command_node;
   char error_buf[MBUF_SIZE];
 
-  if (dllist_size(autopilot->commands) < 0) {
+  if (doubly_linked_list_size(autopilot->commands) < 0) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error: Trying to remove"
              " the first command from AI #%ld but the command list is empty\n",
@@ -516,8 +516,8 @@ void auto_goto_next_command(AUTO *autopilot, int time) {
     return;
   }
 
-  temp_command_node = (command_node *)dllist_remove(
-      autopilot->commands, dllist_head(autopilot->commands));
+  temp_command_node = (command_node *)doubly_linked_list_remove(
+      autopilot->commands, doubly_linked_list_head(autopilot->commands));
 
   if (!temp_command_node) {
     snprintf(
@@ -546,7 +546,7 @@ char *auto_get_command_arg(AUTO *autopilot, int command_number,
   command_node *temp_command_node;
   char error_buf[MBUF_SIZE];
 
-  if (command_number > dllist_size(autopilot->commands)) {
+  if (command_number > doubly_linked_list_size(autopilot->commands)) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error: Trying to "
              "access Command #%d for AI #%ld but it doesn't exist",
@@ -565,8 +565,8 @@ char *auto_get_command_arg(AUTO *autopilot, int command_number,
     return NULL;
   }
 
-  temp_command_node =
-      (command_node *)dllist_get_node(autopilot->commands, command_number);
+  temp_command_node = (command_node *)doubly_linked_list_get_node(
+      autopilot->commands, command_number);
 
   /*! \todo {Add in check incase the command node doesn't exist} */
 
@@ -595,7 +595,7 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
   char error_buf[MBUF_SIZE];
 
   /* Make sure there are commands */
-  if (dllist_size(autopilot->commands) <= 0) {
+  if (doubly_linked_list_size(autopilot->commands) <= 0) {
     return -1;
   }
 
@@ -609,7 +609,7 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
   }
 
   /* Make sure the command is on the list */
-  if (command_number > dllist_size(autopilot->commands)) {
+  if (command_number > doubly_linked_list_size(autopilot->commands)) {
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error: Trying to "
              "access Command #%d for AI #%ld but it doesn't exist",
@@ -618,8 +618,8 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
     return -1;
   }
 
-  temp_command_node =
-      (command_node *)dllist_get_node(autopilot->commands, command_number);
+  temp_command_node = (command_node *)doubly_linked_list_get_node(
+      autopilot->commands, command_number);
 
   /*! \todo {Add in check incase the command node doesn't exist} */
 
@@ -645,7 +645,7 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
  * Called when either creating a new autopilot - SPECIAL_ALLOC
  * or when destroying an autopilot - SPECIAL_FREE
  */
-void auto_newautopilot(dbref key, void **data, int selector) {
+void auto_newautopilot(DbRef key, void **data, int selector) {
 
   AUTO *autopilot = *data;
   MECH *mech;
@@ -657,7 +657,7 @@ void auto_newautopilot(dbref key, void **data, int selector) {
     autopilot->mynum = key;
 
     /* Allocate the command list */
-    autopilot->commands = dllist_create_list();
+    autopilot->commands = doubly_linked_list_create_list();
 
     /* Make sure certain things are set NULL */
     autopilot->astar_path = NULL;
@@ -678,19 +678,19 @@ void auto_newautopilot(dbref key, void **data, int selector) {
     auto_stop_pilot(autopilot);
 
     /* Go through the list and remove any leftover nodes */
-    while (dllist_size(autopilot->commands)) {
+    while (doubly_linked_list_size(autopilot->commands)) {
 
       /* Remove the first node on the list and get the data
        * from it */
-      temp = (command_node *)dllist_remove(autopilot->commands,
-                                           dllist_head(autopilot->commands));
+      temp = (command_node *)doubly_linked_list_remove(
+          autopilot->commands, doubly_linked_list_head(autopilot->commands));
 
       /* Destroy the command node */
       auto_destroy_command_node(temp);
     }
 
     /* Destroy the list */
-    dllist_destroy_list(autopilot->commands);
+    doubly_linked_list_destroy_list(autopilot->commands);
     autopilot->commands = NULL;
 
     /* Destroy any astar path list thats on the AI */
@@ -699,7 +699,7 @@ void auto_newautopilot(dbref key, void **data, int selector) {
     /* Destroy profile array */
     for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
       if (autopilot->profile[i]) {
-        rb_destroy(autopilot->profile[i]);
+        red_black_tree_destroy(autopilot->profile[i]);
       }
       autopilot->profile[i] = NULL;
     }

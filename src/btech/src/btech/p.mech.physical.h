@@ -12,22 +12,22 @@
 #pragma once
 
 /* mech.physical.c */
-void mech_punch(dbref player, void *data, char *buffer);
-void mech_club(dbref player, void *data, char *buffer);
+void mech_punch(DbRef player, void *data, char *buffer);
+void mech_club(DbRef player, void *data, char *buffer);
 int have_axe(MECH *mech, int loc);
 int have_sword(MECH *mech, int loc);
 int have_mace(MECH *mech, int loc);
 int have_saw(MECH *mech, int loc);
 int have_claw(MECH *mech, int loc);
-void mech_saw(dbref player, void *data, char *buffer);
-void mech_axe(dbref player, void *data, char *buffer);
-void mech_sword(dbref player, void *data, char *buffer);
-void mech_mace(dbref player, void *data, char *buffer);
-void mech_claw(dbref player, void *data, char *buffer);
-void mech_kick(dbref player, void *data, char *buffer);
-void mech_trip(dbref player, void *data, char *buffer);
-void mech_kickortrip(dbref player, void *data, char *buffer, int AttackType);
-void mech_charge(dbref player, void *data, char *buffer);
+void mech_saw(DbRef player, void *data, char *buffer);
+void mech_axe(DbRef player, void *data, char *buffer);
+void mech_sword(DbRef player, void *data, char *buffer);
+void mech_mace(DbRef player, void *data, char *buffer);
+void mech_claw(DbRef player, void *data, char *buffer);
+void mech_kick(DbRef player, void *data, char *buffer);
+void mech_trip(DbRef player, void *data, char *buffer);
+void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType);
+void mech_charge(DbRef player, void *data, char *buffer);
 char *phys_form(int AttackType, int add_s);
 void phys_succeed(MECH *mech, MECH *target, int at);
 void phys_fail(MECH *mech, MECH *target, int at);
@@ -39,4 +39,4 @@ void PhysicalDamage(MECH *mech, MECH *target, int weightdmg, int AttackType,
 int DeathFromAbove(MECH *mech, MECH *target);
 void ChargeMech(MECH *mech, MECH *target);
 int checkGrabClubLocation(MECH *mech, int section, int emit);
-void mech_grabclub(dbref player, void *data, char *buffer);
+void mech_grabclub(DbRef player, void *data, char *buffer);

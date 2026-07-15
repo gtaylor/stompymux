@@ -17,10 +17,10 @@ int BombWeight(int i);
 char *bomb_name(int i);
 void bomb_list(MECH *mech, int player);
 float calc_dest(MECH *mech, short *x, short *y);
-void bomb_aim(MECH *mech, dbref player);
+void bomb_aim(MECH *mech, DbRef player);
 void bomb_hit_hexes(MAP *map, int x, int y, int hitnb, int iscluster, int aff_d,
                     int aff_h, char *tomsg, char *otmsg, char *tomsg1,
                     char *otmsg1);
 void simulate_flight(MECH *mech, MAP *map, short *x, short *y, float t);
 void bomb_drop(MECH *mech, int player, int bn);
-void mech_bomb(dbref player, void *data, char *buffer);
+void mech_bomb(DbRef player, void *data, char *buffer);

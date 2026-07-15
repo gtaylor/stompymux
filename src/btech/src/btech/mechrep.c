@@ -4,7 +4,7 @@
  *   All right reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <dirent.h>
 #include <math.h>
@@ -15,13 +15,13 @@
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "externs.h"
-#include "functions.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mechrep.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/commands/functions.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/server/server_api.h"
 #include "p.mech.build.h"
 #include "p.mech.consistency.h"
 #include "p.mech.restrict.h"
@@ -37,8 +37,8 @@
 extern char *strtok(char *s, const char *ct);
 
 /* EXTERNS THAT SHOULDN'T BE IN HERE! */
-extern void *FindObjectsData(dbref key);
-void muxevent_remove_data(void *data);
+extern void *FindObjectsData(DbRef key);
+void mux_event_remove_data(void *data);
 
 #define MECHREP_COMMON(a)                                                      \
   struct mechrep_data *rep = (struct mechrep_data *)data;                      \
@@ -63,7 +63,7 @@ void muxevent_remove_data(void *data);
 
 /* Alloc/free routine */
 
-void newfreemechrep(dbref key, void **data, int selector) {
+void newfreemechrep(DbRef key, void **data, int selector) {
   struct mechrep_data *new = *data;
 
   switch (selector) {
@@ -76,7 +76,7 @@ void newfreemechrep(dbref key, void **data, int selector) {
 
 /* With cap R means restricted command */
 
-void mechrep_Rresetcrits(dbref player, void *data, char *buffer) {
+void mechrep_Rresetcrits(DbRef player, void *data, char *buffer) {
   int i;
 
   MECHREP_COMMON(1);
@@ -85,7 +85,7 @@ void mechrep_Rresetcrits(dbref player, void *data, char *buffer) {
     FillDefaultCriticals(mech, i);
 }
 
-void mechrep_Rdisplaysection(dbref player, void *data, char *buffer) {
+void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer) {
   char *args[1];
   int index;
 
@@ -100,7 +100,7 @@ void mechrep_Rdisplaysection(dbref player, void *data, char *buffer) {
 #define MechComputersRadioRange(mech)                                          \
   (DEFAULT_RADIORANGE * generic_radio_multiplier(mech))
 
-void mechrep_Rsetradio(dbref player, void *data, char *buffer) {
+void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
   char *args[2];
   int i;
 
@@ -123,7 +123,7 @@ void mechrep_Rsetradio(dbref player, void *data, char *buffer) {
   notify_printf(player, "Radio range set to %d.", (int)MechRadioRange(mech));
 }
 
-void mechrep_Rsettarget(dbref player, void *data, char *buffer) {
+void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   char *args[2];
   int newmech;
 
@@ -141,7 +141,7 @@ void mechrep_Rsettarget(dbref player, void *data, char *buffer) {
   }
 }
 
-void mechrep_Rsettype(dbref player, void *data, char *buffer) {
+void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   MECHREP_COMMON(1);
@@ -199,7 +199,7 @@ void mechrep_Rsettype(dbref player, void *data, char *buffer) {
 }
 
 #define SETVALUE_FUNCTION_FLOAT(funcname, valname, valstring, modifier)        \
-  void funcname(dbref player, void *data, char *buffer) {                      \
+  void funcname(DbRef player, void *data, char *buffer) {                      \
     char *args[1];                                                             \
     float f;                                                                   \
     MECHREP_COMMON(1);                                                         \
@@ -211,7 +211,7 @@ void mechrep_Rsettype(dbref player, void *data, char *buffer) {
   }
 
 #define SETVALUE_FUNCTION_INT(funcname, valname, valstring, modifier)          \
-  void funcname(dbref player, void *data, char *buffer) {                      \
+  void funcname(DbRef player, void *data, char *buffer) {                      \
     char *args[1];                                                             \
     int f;                                                                     \
     MECHREP_COMMON(1);                                                         \
@@ -236,7 +236,7 @@ SETVALUE_FUNCTION_INT(mechrep_Rsetradiorange, MechRadioRange(mech),
                       "RADIOrange", 1);
 SETVALUE_FUNCTION_INT(mechrep_Rsettons, MechTons(mech), "Tons", 1);
 
-void mechrep_Rsetmove(dbref player, void *data, char *buffer) {
+void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   MECHREP_COMMON(1);
@@ -470,13 +470,13 @@ char *subdirs[] = {"3025",    "3050",     "3055",   "3058",    "3060",
                    "Clan2nd", "ClanAero", "Custom", "Solaris", "Vehicles",
                    "MFNA",    "Infantry", NULL};
 
-void mechrep_Rloadnew(dbref player, void *data, char *buffer) {
+void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   MECHREP_COMMON(1);
   if (mech_parseattributes(buffer, args, 1) == 1)
     if (mech_loadnew(player, mech, args[0]) == 1) {
-      muxevent_remove_data((void *)mech);
+      mux_event_remove_data((void *)mech);
       clear_mech_from_LOS(mech);
       notify(player, "Template loaded.");
       return;
@@ -576,7 +576,7 @@ oldstyle:
   return NULL;
 }
 
-int load_mechdata2(dbref player, MECH *mech, char *id) {
+int load_mechdata2(DbRef player, MECH *mech, char *id) {
   FILE *fp = NULL;
   char *filename;
 
@@ -704,7 +704,7 @@ int load_mechdata(MECH *mech, char *id) {
 #undef LOADNEW_LOADS_OLD_IF_FAIL
 #define LOADNEW_LOADS_MUSE_FORMAT
 
-int mech_loadnew(dbref player, MECH *mech, char *id) {
+int mech_loadnew(DbRef player, MECH *mech, char *id) {
   char mech_origid[100];
 
   strncpy(mech_origid, MechType_Ref(mech), 99);
@@ -732,7 +732,7 @@ int mech_loadnew(dbref player, MECH *mech, char *id) {
   return 1;
 }
 
-void mechrep_Rrestore(dbref player, void *data, char *buffer) {
+void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
   char *c;
 
   MECHREP_COMMON(1);
@@ -742,7 +742,7 @@ void mechrep_Rrestore(dbref player, void *data, char *buffer) {
   notify(player, "Unable to restore this mech!.");
 }
 
-void mechrep_Rsavetemp(dbref player, void *data, char *buffer) {
+void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   char *args[1];
   FILE *fp;
   char openfile[512] = {0};
@@ -782,7 +782,7 @@ void mechrep_Rsavetemp(dbref player, void *data, char *buffer) {
 /*
  * Template saving routines and logic.
  */
-void mechrep_Rsavetemp2(dbref player, void *data, char *buffer) {
+void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
   char *args[1];
   char openfile[512] = {0};
 
@@ -823,7 +823,7 @@ void mechrep_Rsavetemp2(dbref player, void *data, char *buffer) {
  * Emits the valid sections when a player tries to setarmor/addsp/reload an
  * invalid section
  */
-void invalid_section(dbref player, MECH *mech) {
+void invalid_section(DbRef player, MECH *mech) {
   int mechtype = MechType(mech);
   int movetype = MechMove(mech);
 
@@ -871,7 +871,7 @@ void invalid_section(dbref player, MECH *mech) {
 /*
  * Logic for the 'setarmor' mechrep command.
  */
-void mechrep_Rsetarmor(dbref player, void *data, char *buffer) {
+void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -935,7 +935,7 @@ void mechrep_Rsetarmor(dbref player, void *data, char *buffer) {
  * addweap <weap> <loc> <crits> [<flags>]
  * Current Flags: O = OS, T = TC, R = Rear
  */
-void mechrep_Raddweap(dbref player, void *data, char *buffer) {
+void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   char *args[20];    /* The argument array */
   int argc;          /* Count of arguments */
   int index;         /* Used to determine section validity */
@@ -1056,7 +1056,7 @@ void mechrep_Raddweap(dbref player, void *data, char *buffer) {
   }
 } /* end mechrep_Raddweap() */
 
-void mechrep_Rfiremode(dbref player, void *data, char *buffer) {
+void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int section, critical, weaptype;
@@ -1175,7 +1175,7 @@ void mechrep_Rfiremode(dbref player, void *data, char *buffer) {
 /*
  * Logic for the 'reload' mechrep command.
  */
-void mechrep_Rreload(dbref player, void *data, char *buffer) {
+void mechrep_Rreload(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -1310,7 +1310,7 @@ void mechrep_Rreload(dbref player, void *data, char *buffer) {
 /*
  * Logic for the 'restock' mechrep command.
  */
-void mechrep_Rrestock(dbref player, void *data, char *buffer) {
+void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
   char *args[2];
   int argc;
   int index;
@@ -1344,7 +1344,7 @@ void mechrep_Rrestock(dbref player, void *data, char *buffer) {
 /*
  * Logic for the 'repair' mechrep command.
  */
-void mechrep_Rrepair(dbref player, void *data, char *buffer) {
+void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int index;
@@ -1414,7 +1414,7 @@ void mechrep_Rrepair(dbref player, void *data, char *buffer) {
 /*
    ADDSP <ITEM> <LOCATION> <SUBSECT> [<DATA>]
  */
-void mechrep_Raddspecial(dbref player, void *data, char *buffer) {
+void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   char *args[4];
   char location[20];
   int argc;
@@ -1534,7 +1534,7 @@ char *techstatus_func(MECH *mech) {
              : "";
 }
 
-void mechrep_Rshowtech(dbref player, void *data, char *buffer) {
+void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
   int i;
   char *techstring;
   char location[20];
@@ -1623,7 +1623,7 @@ char *mechrep_gettechstring(MECH *mech) {
                          MechInfantrySpecials(mech));
 }
 
-void mechrep_Rdeltech(dbref player, void *data, char *buffer) {
+void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   int i, j;
   int Type;
   int nv, nv2;
@@ -1740,7 +1740,7 @@ void mechrep_Rdeltech(dbref player, void *data, char *buffer) {
   return;
 }
 
-void mechrep_Raddtech(dbref player, void *data, char *buffer) {
+void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   int nv, nv2;
 
   MECHREP_COMMON(1);
@@ -1773,14 +1773,14 @@ void mechrep_Raddtech(dbref player, void *data, char *buffer) {
   }
 }
 
-void mechrep_Rdelinftech(dbref player, void *data, char *buffer) {
+void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   MechInfantrySpecials(mech) = 0;
   notify(player, "Advanced Infantry Technology Deleted");
 }
 
-void mechrep_Raddinftech(dbref player, void *data, char *buffer) {
+void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   int nv;
 
   MECHREP_COMMON(1);
@@ -1811,7 +1811,7 @@ void mechrep_Raddinftech(dbref player, void *data, char *buffer) {
   }
 }
 
-void mechrep_setcargospace(dbref player, void *data, char *buffer) {
+void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
   char *args[2];
   int argc;
   int cargo;

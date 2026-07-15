@@ -364,7 +364,7 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
                        map->maplight, map->cloudbase);
 }
 
-void mech_losemit(dbref player, MECH *mech, char *buffer) {
+void mech_losemit(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSP);
   MechLOSBroadcast(mech, buffer);
   notify(player, "Broadcast done.");

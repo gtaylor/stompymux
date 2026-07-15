@@ -19,7 +19,7 @@
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"
 
-static void mech_dump_event(MUXEVENT *ev) {
+static void mech_dump_event(MuxEvent *ev) {
   MECH *mech = (MECH *)ev->data;
   long arg = (long)ev->data2;
   int loc;
@@ -98,7 +98,7 @@ static void mech_dump_event(MUXEVENT *ev) {
   }
 }
 
-void mech_dump(dbref player, void *data, char *buffer) {
+void mech_dump(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int argc;
   char *args[2];
@@ -228,7 +228,8 @@ int Dump_Decrease(MECH *mech, int loc, int pos, int *hm) {
       if ((c = GetPartData(mech, loc, pos))) {
         weapindx = Ammo2WeaponI(index);
         if (MechWeapons[weapindx].ammoperton < DUMP_SPEED) {
-          if ((muxevent_tick % (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
+          if ((mux_event_tick %
+               (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
             RUP(2);
           /* fine, we remove 1 */
           rem = 1;

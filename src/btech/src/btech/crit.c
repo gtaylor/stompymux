@@ -10,15 +10,15 @@
 
 #include "autopilot.h"
 #include "btmacros.h"
-#include "config.h"
-#include "db.h"
-#include "externs.h"
 #include "failures.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.sensor.h"
 #include "mt19937ar.h"
+#include "mux/database/db.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_api.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.econ_cmds.h"
@@ -60,8 +60,8 @@ void correct_speed(MECH *mech) {
 void explode_unit(MECH *wounded, MECH *attacker) {
   int j;
   MECH *target;
-  dbref i, tmpnext;
-  dbref from;
+  DbRef i, tmpnext;
+  DbRef from;
 
   from = wounded->mynum;
 

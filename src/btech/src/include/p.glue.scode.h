@@ -20,30 +20,30 @@ void apply_mechDamage(MECH *omech, char *buf);
 char *mechDamagefunc(int mode, MECH *mech, char *arg);
 char *mechCentBearingfunc(int mode, MECH *mech, char *arg);
 char *mechCentDistfunc(int mode, MECH *mech, char *arg);
-void fun_btsetxcodevalue(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
                          char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btgetxcodevalue(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btgetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
                          char *fargs[], int nfargs, char *cargs[], int ncargs);
-void set_xcodestuff(dbref player, void *data, char *buffer);
-void list_xcodestuff(dbref player, void *data, char *buffer);
-void fun_btunderrepair(char *buff, char **bufc, dbref player, dbref cause,
+void set_xcodestuff(DbRef player, void *data, char *buffer);
+void list_xcodestuff(DbRef player, void *data, char *buffer);
+void fun_btunderrepair(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btstores(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btstores(char *buff, char **bufc, DbRef player, DbRef cause,
                   char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btstores_short(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btstores_short(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btmapterr(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btmapelev(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs);
-void list_xcodevalues(dbref player);
-void fun_btdesignex(char *buff, char **bufc, dbref player, dbref cause,
+void list_xcodevalues(DbRef player);
+void fun_btdesignex(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btdamages(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btdamages(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btcritstatus(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btcritstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btsectstatus(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btsectstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs);
-void fun_btarmorstatus(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btarmorstatus(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs);

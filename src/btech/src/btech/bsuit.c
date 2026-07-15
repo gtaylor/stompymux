@@ -230,7 +230,7 @@ void BSuitMirrorSwarmedTarget(MAP *map, MECH *mech) {
     }
 }
 
-int doBSuitCommonChecks(MECH *mech, dbref player) {
+int doBSuitCommonChecks(MECH *mech, DbRef player) {
   int i;
 
   DOCHECK1(Jumping(mech), "Unavailable when jumping - sorry.");
@@ -258,7 +258,7 @@ int CountBSuitMembers(MECH *mech) {
   return j;
 }
 
-int FindBSuitTarget(dbref player, MECH *mech, MECH **target, char *buffer) {
+int FindBSuitTarget(DbRef player, MECH *mech, MECH **target, char *buffer) {
   int argc;
   char *args[3];
   float range;
@@ -324,7 +324,7 @@ int doJettisonChecks(MECH *mech) {
   return 0;
 }
 
-void bsuit_swarm(dbref player, void *data, char *buffer) {
+void bsuit_swarm(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   MECH *target;
   int baseToHit = 4;
@@ -451,7 +451,7 @@ void bsuit_swarm(dbref player, void *data, char *buffer) {
   StartBSuitRecycle(mech, RECYCLE_SWARM);
 }
 
-void bsuit_attackleg(dbref player, void *data, char *buffer) {
+void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   MECH *target;
   int baseToHit = 0;
@@ -621,7 +621,7 @@ void bsuit_attackleg(dbref player, void *data, char *buffer) {
   StartBSuitRecycle(mech, RECYCLE_ATTACKLEG);
 }
 
-static void mech_hide_event(MUXEVENT *e) {
+static void mech_hide_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   MECH *t;
   MAP *map = getMap(mech->mapindex);
@@ -666,7 +666,7 @@ static void mech_hide_event(MUXEVENT *e) {
   return;
 }
 
-void bsuit_hide(dbref player, void *data, char *buffer) {
+void bsuit_hide(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   MAP *map = FindObjectsData(mech->mapindex);
   int terrain;
@@ -712,7 +712,7 @@ void bsuit_hide(dbref player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_HIDE, mech_hide_event, 1, 0);
 }
 
-void JettisonPacks(dbref player, void *data, char *buffer) {
+void JettisonPacks(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   int wcJettisoned = 0;
   int wcSuits = 0;

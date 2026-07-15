@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "config.h"
 #include "glue_types.h"
+#include "mux/server/platform.h"
 
 /*
    map.h
@@ -130,7 +130,7 @@
 
 typedef struct mapobj_struct {
   short x, y;
-  dbref obj;
+  DbRef obj;
   char type;
   int datac;
   short datas;
@@ -171,7 +171,7 @@ typedef struct mapobj_struct {
 typedef struct map_data {
   XCODE xcode; /* XCODE base class field */
 
-  dbref mynum;         /* My dbref */
+  DbRef mynum;         /* My dbref */
   unsigned char **map; /* The map */
   char mapname[MAP_NAME_SIZE + 1];
 
@@ -193,11 +193,11 @@ typedef struct map_data {
 
   mapobj *mapobj[NUM_MAPOBJTYPES];
   short cf, cfmax;
-  dbref onmap;
+  DbRef onmap;
   char buildflag;
 
   unsigned char first_free; /* First free on da map */
-  dbref *mechsOnMap;        /* Mechs on the map */
+  DbRef *mechsOnMap;        /* Mechs on the map */
   unsigned short **LOSinfo; /* Line of sight info */
 
   /* 1 = mech has moved recently
@@ -217,8 +217,8 @@ typedef struct map_data {
 #include "p.map.h"
 #include "p.map.obj.h"
 
-extern void newfreemap(dbref key, void **data, int selector);
-extern void map_update(dbref obj, void *data);
+extern void newfreemap(DbRef key, void **data, int selector);
+extern void map_update(DbRef obj, void *data);
 
 #define set_buildflag(a, b) silly_atr_set((a), A_BUILDFLAG, tprintf("%d", (b)))
 #define get_buildflag(a) atoi(silly_atr_get((a), A_BUILDFLAG))

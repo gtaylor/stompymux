@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #ifndef DOCHECK
 #define DOCHECK(a, b)                                                          \
@@ -17,7 +17,7 @@
     return;                                                                    \
   }
 #endif
-void debug_allocfree(dbref key, void **data, int selector);
-void debug_list(dbref player, void *data, char *buffer);
-void debug_savedb(dbref player, void *data, char *buffer);
-void debug_shutdown(dbref player, void *data, char *buffer);
+void debug_allocfree(DbRef key, void **data, int selector);
+void debug_list(DbRef player, void *data, char *buffer);
+void debug_savedb(DbRef player, void *data, char *buffer);
+void debug_shutdown(DbRef player, void *data, char *buffer);

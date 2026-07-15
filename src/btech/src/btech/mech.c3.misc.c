@@ -23,9 +23,9 @@
 
 #define DEBUG_C3 0
 
-MECH *getMechInTempNetwork(int wIdx, dbref *myNetwork, int networkSize) {
+MECH *getMechInTempNetwork(int wIdx, DbRef *myNetwork, int networkSize) {
   MECH *tempMech;
-  dbref refOtherMech;
+  DbRef refOtherMech;
 
   if ((wIdx > networkSize) || (wIdx < 0))
     return NULL;
@@ -50,7 +50,7 @@ MECH *getMechInTempNetwork(int wIdx, dbref *myNetwork, int networkSize) {
 MECH *getOtherMechInNetwork(MECH *mech, int wIdx, int tCheckECM,
                             int tCheckStarted, int tCheckUncon, int tIsC3) {
   MECH *tempMech;
-  dbref refOtherMech;
+  DbRef refOtherMech;
   int networkSize;
 
   networkSize = (tIsC3 ? MechC3NetworkSize(mech) : MechC3iNetworkSize(mech));
@@ -108,13 +108,13 @@ MECH *getOtherMechInNetwork(MECH *mech, int wIdx, int tCheckECM,
   return NULL;
 }
 
-void buildTempNetwork(MECH *mech, dbref *myNetwork, int *networkSize,
+void buildTempNetwork(MECH *mech, DbRef *myNetwork, int *networkSize,
                       int tCheckECM, int tCheckStarted, int tCheckUncon,
                       int tIsC3) {
   int tempNetworkSize = 0;
   int baseNetworkSize;
   MECH *otherMech;
-  dbref myTempNetwork[C3_NETWORK_SIZE];
+  DbRef myTempNetwork[C3_NETWORK_SIZE];
   int i;
 
   /* Re-init the network */
@@ -166,13 +166,13 @@ void buildTempNetwork(MECH *mech, dbref *myNetwork, int *networkSize,
   *networkSize = tempNetworkSize;
 }
 
-void sendNetworkMessage(dbref player, MECH *mech, char *msg, int tIsC3) {
+void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
   int i;
   MECH *otherMech;
   const char *c = GetMechID(mech);
   char buf[LBUF_SIZE] = {0};
   int networkSize;
-  dbref myNetwork[C3_NETWORK_SIZE];
+  DbRef myNetwork[C3_NETWORK_SIZE];
 
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 1, tIsC3);
 
@@ -194,7 +194,7 @@ void sendNetworkMessage(dbref player, MECH *mech, char *msg, int tIsC3) {
   mech_notify(mech, MECHALL, buf);
 }
 
-void showNetworkTargets(dbref player, MECH *mech, int tIsC3) {
+void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
   MAP *objMap = getMap(mech->mapindex);
   int i, j, wTemp, bearing;
   MECH *otherMech;
@@ -214,8 +214,8 @@ void showNetworkTargets(dbref player, MECH *mech, int tIsC3) {
   int buffindex = 0;
   int sbuff[MAX_MECHS_PER_MAP];
   int networkSize;
-  dbref myNetwork[C3_NETWORK_SIZE];
-  dbref c3Ref;
+  DbRef myNetwork[C3_NETWORK_SIZE];
+  DbRef c3Ref;
 
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
 
@@ -344,7 +344,7 @@ void showNetworkTargets(dbref player, MECH *mech, int tIsC3) {
   notify_printf(player, "End %s Contact List", tIsC3 ? "C3" : "C3i");
 }
 
-void showNetworkData(dbref player, MECH *mech, int tIsC3) {
+void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
   int i, bearing;
   MECH *otherMech;
   float range;
@@ -352,7 +352,7 @@ void showNetworkData(dbref player, MECH *mech, int tIsC3) {
   char *mech_name;
   char move_type[30];
   int networkSize;
-  dbref myNetwork[C3_NETWORK_SIZE];
+  DbRef myNetwork[C3_NETWORK_SIZE];
 
   notify_printf(player, "%s Network Status:", tIsC3 ? "C3" : "C3i");
 
@@ -395,7 +395,7 @@ int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
   float range = 0.0;
   int i;
   int networkSize;
-  dbref myNetwork[C3_NETWORK_SIZE];
+  DbRef myNetwork[C3_NETWORK_SIZE];
   MECH *otherMech;
 
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
@@ -433,10 +433,10 @@ int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
   return los;
 }
 
-float findC3Range(MECH *mech, MECH *mechTarget, float realRange, dbref *c3Ref,
+float findC3Range(MECH *mech, MECH *mechTarget, float realRange, DbRef *c3Ref,
                   int tIsC3) {
   int networkSize;
-  dbref myNetwork[C3_NETWORK_SIZE];
+  DbRef myNetwork[C3_NETWORK_SIZE];
 
   if (tIsC3) {
     if (C3Destroyed(mech)) {
@@ -460,7 +460,7 @@ float findC3Range(MECH *mech, MECH *mechTarget, float realRange, dbref *c3Ref,
 }
 
 float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
-                             dbref *myNetwork, int networkSize, dbref *c3Ref) {
+                             DbRef *myNetwork, int networkSize, DbRef *c3Ref) {
   float c3Range = 0.0;
   float bestRange = 0.0;
   int i;

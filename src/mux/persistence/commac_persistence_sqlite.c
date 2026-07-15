@@ -1,19 +1,19 @@
 /* commac_persistence_sqlite.c -- commac, comsys, and macro persistence */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "commac.h"
-#include "comsys.h"
-#include "db.h"
-#include "macro.h"
-#include "mudconf.h"
-#include "persistence/commac_persistence.h"
-#include "persistence/gamedb.h"
+#include "mux/commands/macro.h"
+#include "mux/communication/commac.h"
+#include "mux/communication/comsys.h"
+#include "mux/database/db.h"
+#include "mux/persistence/commac_persistence.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/server_state.h"
 
 /* The legacy file is read during this phase; SQLite is an atomic dump mirror.
  */
@@ -139,7 +139,7 @@ static int commac_store_entries(sqlite3 *sqlite) {
   return result;
 }
 
-/* This context lets myfifo's callback insert channel history in FIFO order. */
+/* This context lets Fifo's callback insert channel history in FIFO order. */
 static sqlite3_stmt *commac_message_statement;
 static const char *commac_message_channel;
 static int commac_message_position;
@@ -187,9 +187,11 @@ static int commac_store_comsys(sqlite3 *sqlite) {
           "(channel_name, position, sent_at, message) VALUES (?, ?, ?, ?);",
           -1, &message, NULL) == SQLITE_OK) {
     result = 0;
-    for (current = (struct channel *)hash_firstentry(&mudstate.channel_htab);
+    for (current =
+             (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
          result == 0 && current;
-         current = (struct channel *)hash_nextentry(&mudstate.channel_htab)) {
+         current =
+             (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
       if (commac_sqlite_bind_text(channel, 1, current->name) < 0 ||
           commac_sqlite_bind_int(channel, 2, current->type) < 0 ||
           commac_sqlite_bind_int(channel, 3, current->temp1) < 0 ||
@@ -220,7 +222,7 @@ static int commac_store_comsys(sqlite3 *sqlite) {
       commac_message_channel = current->name;
       commac_message_position = 0;
       commac_message_result = 0;
-      myfifo_trav_r(&current->last_messages, commac_store_message);
+      fifo_traverse_reverse(&current->last_messages, commac_store_message);
       if (commac_message_result < 0)
         result = -1;
     }
@@ -331,7 +333,7 @@ static int commac_load_alias(struct commac *commac, const char *alias,
 }
 
 /* Find an existing entry without creating one for a malformed alias row. */
-static struct commac *commac_find_loaded(dbref who) {
+static struct commac *commac_find_loaded(DbRef who) {
   struct commac *commac;
 
   if (who < 0)
@@ -475,7 +477,7 @@ static int commac_load_channels(sqlite3 *sqlite) {
         free(channel);
         break;
       }
-      hashadd(channel->name, (int *)channel, &mudstate.channel_htab);
+      hash_table_add(channel->name, (int *)channel, &mudstate.channel_htab);
       num_channels++;
     }
     if (result == 0 && step != SQLITE_DONE)
@@ -576,7 +578,7 @@ static int commac_load_messages(sqlite3 *sqlite) {
       }
       message->time = (time_t)sent_at;
       message->msg = strdup(text);
-      myfifo_push(&channel->last_messages, message);
+      fifo_push(&channel->last_messages, message);
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;

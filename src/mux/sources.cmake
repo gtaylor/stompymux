@@ -1,0 +1,67 @@
+set(MUX_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+
+target_sources(netmux PRIVATE
+  ${MUX_MODULE_DIR}/commands/command.c
+  ${MUX_MODULE_DIR}/commands/command_queue.c
+  ${MUX_MODULE_DIR}/commands/builder_commands.c
+  ${MUX_MODULE_DIR}/commands/custom_commands.c
+  ${MUX_MODULE_DIR}/commands/eval.c
+  ${MUX_MODULE_DIR}/commands/funceval.c
+  ${MUX_MODULE_DIR}/commands/functions.c
+  ${MUX_MODULE_DIR}/commands/help.c
+  ${MUX_MODULE_DIR}/commands/macro.c
+  ${MUX_MODULE_DIR}/commands/program.c
+  ${MUX_MODULE_DIR}/commands/verbs.c
+  ${MUX_MODULE_DIR}/communication/commac.c
+  ${MUX_MODULE_DIR}/communication/comsys.c
+  ${MUX_MODULE_DIR}/communication/speech.c
+  ${MUX_MODULE_DIR}/database/boolexp.c
+  ${MUX_MODULE_DIR}/database/db.c
+  ${MUX_MODULE_DIR}/database/flags.c
+  ${MUX_MODULE_DIR}/database/powers.c
+  ${MUX_MODULE_DIR}/database/vattr.c
+  ${MUX_MODULE_DIR}/lua/lua.c
+  ${MUX_MODULE_DIR}/network/mux_event.c
+  ${MUX_MODULE_DIR}/network/netcommon.c
+  ${MUX_MODULE_DIR}/network/program_input.c
+  ${MUX_MODULE_DIR}/network/telnet_handler.c
+  ${MUX_MODULE_DIR}/network/telnet_socket.c
+  ${MUX_MODULE_DIR}/persistence/commac_persistence_sqlite.c
+  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite.c
+  ${MUX_MODULE_DIR}/server/configuration.c
+  ${MUX_MODULE_DIR}/server/file_cache.c
+  ${MUX_MODULE_DIR}/server/game.c
+  ${MUX_MODULE_DIR}/server/log.c
+  ${MUX_MODULE_DIR}/server/server_lifecycle.c
+  ${MUX_MODULE_DIR}/server/server_state.c
+  ${MUX_MODULE_DIR}/server/signals.c
+  ${MUX_MODULE_DIR}/server/timer.c
+  ${MUX_MODULE_DIR}/server/version.c
+  ${MUX_MODULE_DIR}/support/doubly_linked_list.c
+  ${MUX_MODULE_DIR}/support/fifo.c
+  ${MUX_MODULE_DIR}/support/formatting.c
+  ${MUX_MODULE_DIR}/support/name_table.c
+  ${MUX_MODULE_DIR}/support/numeric_hash_table.c
+  ${MUX_MODULE_DIR}/support/hash_table.c
+  ${MUX_MODULE_DIR}/support/red_black_tree.c
+  ${MUX_MODULE_DIR}/support/stringutil.c
+  ${MUX_MODULE_DIR}/support/validation.c
+  ${MUX_MODULE_DIR}/support/wild.c
+  ${MUX_MODULE_DIR}/commands/look.c
+  ${MUX_MODULE_DIR}/world/match.c
+  ${MUX_MODULE_DIR}/world/move.c
+  ${MUX_MODULE_DIR}/world/object.c
+  ${MUX_MODULE_DIR}/world/object_list.c
+  ${MUX_MODULE_DIR}/world/player.c
+  ${MUX_MODULE_DIR}/world/player_cache.c
+  ${MUX_MODULE_DIR}/world/access.c
+  ${MUX_MODULE_DIR}/world/match_helpers.c
+  ${MUX_MODULE_DIR}/world/object_spatial.c
+  ${MUX_MODULE_DIR}/commands/rob.c
+  ${MUX_MODULE_DIR}/world/object_set.c
+  ${MUX_MODULE_DIR}/world/walkdb.c
+  ${MUX_MODULE_DIR}/commands/wiz.c)
+
+if(BTECH_ENHANCED_LOGGING)
+  target_sources(netmux PRIVATE ${MUX_MODULE_DIR}/server/log_cache.c)
+endif()

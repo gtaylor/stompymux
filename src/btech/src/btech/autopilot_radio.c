@@ -20,6 +20,7 @@
 #include "glue.h"
 #include "mech.h"
 #include "mech.notify.h"
+#include "object_spatial.h"
 #include "p.bsuit.h"
 #include "p.ds.bay.h"
 #include "p.glue.h"
@@ -28,7 +29,6 @@
 #include "p.mech.sensor.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
-#include "spath.h"
 #include <math.h>
 
 void sendchannelstuff(MECH *mech, int freq, char *msg);
@@ -255,7 +255,7 @@ void auto_radio_command_chasetarg(AUTO *autopilot, MECH *mech, char **args,
 void auto_radio_command_dfollow(AUTO *autopilot, MECH *mech, char **args,
                                 int argc, char *mesg) {
 
-  dbref targetref;
+  DbRef targetref;
   char buffer[SBUF_SIZE];
 
   targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
@@ -321,7 +321,7 @@ void auto_radio_command_dropoff(AUTO *autopilot, MECH *mech, char **args,
 void auto_radio_command_embark(AUTO *autopilot, MECH *mech, char **args,
                                int argc, char *mesg) {
 
-  dbref targetref;
+  DbRef targetref;
   char buffer[SBUF_SIZE];
 
   targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
@@ -366,7 +366,7 @@ void auto_radio_command_follow(AUTO *autopilot, MECH *mech, char **args,
                                int argc, char *mesg) {
 
   char buffer[SBUF_SIZE];
-  dbref targetref;
+  DbRef targetref;
 
   targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
   if (targetref <= 0) {
@@ -499,7 +499,7 @@ void auto_radio_command_hide(AUTO *autopilot, MECH *mech, char **args, int argc,
 void auto_radio_command_jumpjet(AUTO *autopilot, MECH *mech, char **args,
                                 int argc, char *mesg) {
 
-  dbref target;
+  DbRef target;
   char buffer[SBUF_SIZE];
   int bear, rng;
 
@@ -592,7 +592,7 @@ void auto_radio_command_ogoto(AUTO *autopilot, MECH *mech, char **args,
 void auto_radio_command_pickup(AUTO *autopilot, MECH *mech, char **args,
                                int argc, char *mesg) {
 
-  dbref targetref;
+  DbRef targetref;
   char buffer[SBUF_SIZE];
 
   targetref = FindTargetDBREFFromMapNumber(mech, args[1]);
@@ -725,7 +725,7 @@ void auto_radio_command_sensor(AUTO *autopilot, MECH *mech, char **args,
   char buf[SBUF_SIZE];
 
   /* Make sure no sensor event running */
-  muxevent_remove_type_data(EVENT_AUTO_SENSOR, autopilot);
+  mux_event_remove_type_data(EVENT_AUTO_SENSOR, autopilot);
 
   if ((argc - 1) == 2) {
 
@@ -853,7 +853,7 @@ void auto_radio_command_sweight(AUTO *autopilot, MECH *mech, char **args,
 void auto_radio_command_target(AUTO *autopilot, MECH *mech, char **args,
                                int argc, char *mesg) {
 
-  dbref targetref;
+  DbRef targetref;
 
   if (!strcmp(args[1], "-")) {
 
@@ -904,7 +904,7 @@ void auto_radio_command_target(AUTO *autopilot, MECH *mech, char **args,
 #if 0
 ACMD(auto_swarm)
 {
-	dbref targetref;
+	DbRef targetref;
 
 	if(!mech || MechType(mech) != CLASS_BSUIT)
 		return "!Not a bsuit";
@@ -920,7 +920,7 @@ ACMD(auto_swarm)
 #if 0
 ACMD(auto_attackleg)
 {
-	dbref targetref;
+	DbRef targetref;
 
 	if(!mech || MechType(mech) != CLASS_BSUIT)
 		return "!Not a bsuit";
@@ -1037,7 +1037,7 @@ ACMD(auto_swarmmode)
 #if 0
 ACMD(auto_swarmcharge)
 {
-	dbref targetref;
+	DbRef targetref;
 
 	if(MechType(mech) != CLASS_BSUIT)
 		return "!I am not a battlesuit";
@@ -1125,7 +1125,7 @@ ACMD(auto_cmode)
 /*
  * Event to get AI to radio a message
  */
-void auto_reply_event(MUXEVENT *muxevent) {
+void auto_reply_event(MuxEvent *muxevent) {
 
   MECH *mech = (MECH *)muxevent->data;
   char *buf = (char *)muxevent->data2;

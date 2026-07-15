@@ -21,9 +21,9 @@
  */
 
 #include "mine.h"
-#include "config.h"
 #include "glue.h"
 #include "mech.h"
+#include "mux/server/platform.h"
 #include "p.artillery.h"
 #include "p.btechstats.h"
 #include "p.map.obj.h"
@@ -318,7 +318,7 @@ void recalculate_minefields(MAP *map) {
 }
 
 /* x y type strength <optvalue> */
-void map_add_mine(dbref player, void *data, char *buffer) {
+void map_add_mine(DbRef player, void *data, char *buffer) {
 
   char *args[6];
   int argc;
@@ -379,7 +379,7 @@ void explode_mines(MECH *mech, int chn) {
     recalculate_minefields(map);
 }
 
-void show_mines_in_hex(dbref player, MECH *mech, float range, int x, int y) {
+void show_mines_in_hex(DbRef player, MECH *mech, float range, int x, int y) {
   MAP *map = getMap(mech->mapindex);
   mapobj *o;
 

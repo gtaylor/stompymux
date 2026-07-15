@@ -15,7 +15,7 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -24,12 +24,11 @@
 
 #define FAST_WHICHSPECIAL
 
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 
 #define _GLUE_C
 
 /*** #include all the prototype here! ****/
-#include "ansi.h"
 #include "autopilot.h"
 #include "coolmenu.h"
 #include "debug.h"
@@ -38,6 +37,9 @@
 #include "mech.h"
 #include "mech.tech.h"
 #include "mechrep.h"
+#include "mux/database/powers.h"
+#include "mux/support/ansi.h"
+#include "mux/support/red_black_tree.h"
 #include "mycool.h"
 #include "p.bsuit.h"
 #include "p.ds.turret.h"
@@ -45,8 +47,6 @@
 #include "p.mech.stat.h"
 #include "p.mechfile.h"
 #include "persistence/btech_persistence.h"
-#include "powers.h"
-#include "rbtree.h"
 #include "turret.h"
 
 /* Special object parameters.  */
@@ -71,44 +71,44 @@ SpecialObjectStruct SpecialObjects[] = {
 /*************CALLABLE PROTOS*****************/
 
 /* Main entry point */
-int HandledCommand(dbref player, dbref loc, char *command);
+int HandledCommand(DbRef player, DbRef loc, char *command);
 
 /* called when user creates/removes hardcode flag */
-void CreateNewSpecialObject(dbref player, dbref key);
-void DisposeSpecialObject(dbref player, dbref key);
-void list_hashstat(dbref player, const char *tab_name, HASHTAB *htab);
-void raw_notify(dbref player, const char *msg);
+void CreateNewSpecialObject(DbRef player, DbRef key);
+void DisposeSpecialObject(DbRef player, DbRef key);
+void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
+void raw_notify(DbRef player, const char *msg);
 
 /*************PERSONAL PROTOS*****************/
 void *NewSpecialObject(long id, int type);
-void *FindObjectsData(dbref key);
-static void DoSpecialObjectHelp(dbref player, char *type, int id, int loc,
+void *FindObjectsData(DbRef key);
+static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
                                 int powerneeded, int objid, char *arg);
 void initialize_colorize();
 
 #ifndef FAST_WHICHSPECIAL
 
 #define WhichSpecialS WhichSpecial
-int WhichSpecial(dbref key);
+int WhichSpecial(DbRef key);
 
 #else
 
-int WhichSpecial(dbref key);
-static int WhichSpecialS(dbref key);
+int WhichSpecial(DbRef key);
+static int WhichSpecialS(DbRef key);
 
 #endif
 
-rbtree xcode_tree = NULL;
+RedBlackTree xcode_tree = NULL;
 
 static int compare_dbrefs(void *key1, void *key2, void *token) {
-  const dbref key1_val = (dbref)key1;
-  const dbref key2_val = (dbref)key2;
+  const DbRef key1_val = (DbRef)key1;
+  const DbRef key2_val = (DbRef)key2;
 
   return key1_val - key2_val;
 }
 
 static void init_xcode_tree(void) {
-  xcode_tree = rb_init(compare_dbrefs, NULL);
+  xcode_tree = red_black_tree_init(compare_dbrefs, NULL);
   if (!xcode_tree) {
     /* TODO: We could handle this more gracefully... */
     exit(EXIT_FAILURE);
@@ -117,7 +117,7 @@ static void init_xcode_tree(void) {
 
 /*********************************************/
 
-HASHTAB SpecialCommandHash[NUM_SPECIAL_OBJECTS];
+HashTable SpecialCommandHash[NUM_SPECIAL_OBJECTS];
 
 static int Can_Use_Command(MECH *mech, int cmdflag) {
 #define TYPE2FLAG(a)                                                           \
@@ -144,7 +144,7 @@ static int Can_Use_Command(MECH *mech, int cmdflag) {
   return 0;
 }
 
-int HandledCommand_sub(dbref player, dbref location, char *command) {
+int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   XCODE *xcode_obj = NULL;
 
   struct SpecialObjectStruct *typeOfObject;
@@ -154,8 +154,9 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
   int ishelp;
 
   type = WhichSpecial(location);
-  if (type < 0 || (SpecialObjects[type].datasize > 0 &&
-                   !(xcode_obj = rb_find(xcode_tree, (void *)location)))) {
+  if (type < 0 ||
+      (SpecialObjects[type].datasize > 0 &&
+       !(xcode_obj = red_black_tree_find(xcode_tree, (void *)location)))) {
     if (type >= 0 || !Hardcode(location) || Zombie(location))
       return 0;
     if ((type = WhichSpecialS(location)) >= 0) {
@@ -175,7 +176,7 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
   ishelp = !strcmp(command, "HELP");
   for (tmpchar = command; *tmpchar; tmpchar++)
     *tmpchar = ToLower(*tmpchar);
-  cmd = (CommandsStruct *)hashfind(command, &SpecialCommandHash[type]);
+  cmd = (CommandsStruct *)hash_table_find(command, &SpecialCommandHash[type]);
   if (tmpc)
     *tmpc = ' ';
   if (cmd && (type != GTYPE_MECH ||
@@ -189,7 +190,7 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
     if (cmd->helpmsg[0] != '@' ||
         Have_MechPower(Owner(player), typeOfObject->power_needed)) {
       SKIPSTUFF(command);
-      ((void (*)(dbref, void *, char *))cmd->func)(player, xcode_obj, command);
+      ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
     } else
       notify(player, "Sorry, that command is restricted!");
     return 1;
@@ -205,8 +206,8 @@ int HandledCommand_sub(dbref player, dbref location, char *command) {
 #define OkayHcode(a) (a >= 0 && Hardcode(a) && !Zombie(a))
 
 /* Main entry point */
-int HandledCommand(dbref player, dbref loc, char *command) {
-  dbref curr, temp;
+int HandledCommand(DbRef player, DbRef loc, char *command) {
+  DbRef curr, temp;
 
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
     return 0;
@@ -241,7 +242,7 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
     MAP *map;
     int i;
 
-    if (!(map = getMap((dbref)key)))
+    if (!(map = getMap((DbRef)key)))
       return 1;
     for (i = 0; i < map->first_free; i++)
       if (map->mechsOnMap[i] == mech->mynum)
@@ -251,14 +252,15 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
 }
 
 void mech_remove_from_all_maps(MECH *mech) {
-  rb_walk(xcode_tree, WALK_INORDER, remove_from_all_maps_func, mech);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, remove_from_all_maps_func,
+                      mech);
 }
 
-static dbref except_map = -1;
+static DbRef except_map = -1;
 
 static int remove_from_all_maps_except_func(void *key, void *data, int depth,
                                             void *arg) {
-  dbref key_val = (dbref)key;
+  DbRef key_val = (DbRef)key;
   XCODE *const xcode_obj = data;
   MECH *const mech = arg;
 
@@ -280,7 +282,8 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
 void mech_remove_from_all_maps_except(MECH *mech, int num) {
   /* TODO: Put the mech and the except_map into a structure for arg.  */
   except_map = num;
-  rb_walk(xcode_tree, WALK_INORDER, remove_from_all_maps_except_func, mech);
+  red_black_tree_walk(xcode_tree, WALK_INORDER,
+                      remove_from_all_maps_except_func, mech);
   except_map = -1;
 }
 
@@ -361,8 +364,9 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
        */
       if (MechAuto(autopilot->mymech) == autopilot->mynum &&
           Location(autopilot->mynum) == autopilot->mymechnum &&
-          autopilot->commands && dllist_size(autopilot->commands) > 0 &&
-          !muxevent_count_type_data(EVENT_AUTOCOM, autopilot))
+          autopilot->commands &&
+          doubly_linked_list_size(autopilot->commands) > 0 &&
+          !mux_event_count_type_data(EVENT_AUTOCOM, autopilot))
         AUTO_COM(autopilot, AUTOPILOT_NC_DELAY);
       if (Gunning(autopilot))
         DoStartGun(autopilot);
@@ -375,14 +379,14 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
 void heartbeat_init();
 
 void LoadSpecialObjects(void) {
-  dbref i;
+  DbRef i;
   int id, brand;
   int type;
 
   init_xcode_tree();
 
-  muxevent_initialize();
-  muxevent_count_initialize();
+  mux_event_initialize();
+  mux_event_count_initialize();
   init_stat();
   initialize_partname_tables();
   /* The SQLite startup path still needs ANSI parser state for BTech output. */
@@ -420,10 +424,10 @@ void LoadSpecialObjects(void) {
   if (btech_persistence_load_special_state_path(mudconf.gamedb) < 0) {
     exit(EXIT_FAILURE);
   }
-  rb_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
-  rb_walk(xcode_tree, WALK_INORDER, load_update3, NULL);
-  rb_walk(xcode_tree, WALK_INORDER, load_update4, NULL);
-  rb_walk(xcode_tree, WALK_INORDER, load_autopilot_data, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update3, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update4, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, load_autopilot_data, NULL);
   heartbeat_init();
 }
 
@@ -435,8 +439,8 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
     return 1;
   if ((mudstate.now % SpecialObjects[xcode_obj->type].updateTime))
     return 1;
-  ((void (*)(dbref, void *))SpecialObjects[xcode_obj->type].updatefunc)(
-      (dbref)key, xcode_obj);
+  ((void (*)(DbRef, void *))SpecialObjects[xcode_obj->type].updatefunc)(
+      (DbRef)key, xcode_obj);
   return 1;
 }
 
@@ -457,9 +461,10 @@ void UpdateSpecialObjects(void) {
                            we don't want to make it [much] worse */
   cmdsave = mudstate.debug_cmd;
   for (i = 0; i < times; i++) {
-    muxevent_run();
+    mux_event_run();
     mudstate.debug_cmd = (char *)"< Generic hcode update handler>";
-    rb_walk(xcode_tree, WALK_INORDER, UpdateSpecialObject_func, NULL);
+    red_black_tree_walk(xcode_tree, WALK_INORDER, UpdateSpecialObject_func,
+                        NULL);
   }
   lastrun = mudstate.now;
   mudstate.debug_cmd = cmdsave;
@@ -478,16 +483,16 @@ void *NewSpecialObject(long id, int type) {
     xcode_obj->size = SpecialObjects[type].datasize;
 
     if (SpecialObjects[type].allocfreefunc)
-      ((void (*)(dbref, void **, int))SpecialObjects[type].allocfreefunc)(
+      ((void (*)(DbRef, void **, int))SpecialObjects[type].allocfreefunc)(
           id, (void **)&xcode_obj, SPECIAL_ALLOC);
 
-    rb_insert(xcode_tree, (void *)id, xcode_obj);
+    red_black_tree_insert(xcode_tree, (void *)id, xcode_obj);
   }
 
   return xcode_obj;
 }
 
-void CreateNewSpecialObject(dbref player, dbref key) {
+void CreateNewSpecialObject(DbRef player, DbRef key) {
   void *new;
   struct SpecialObjectStruct *typeOfObject;
   int type;
@@ -522,13 +527,13 @@ void CreateNewSpecialObject(dbref player, dbref key) {
   }
 }
 
-void DisposeSpecialObject(dbref player, dbref key) {
+void DisposeSpecialObject(DbRef player, DbRef key) {
   XCODE *xcode_obj;
 
   int i;
   struct SpecialObjectStruct *typeOfObject;
 
-  xcode_obj = rb_find(xcode_tree, (void *)key);
+  xcode_obj = red_black_tree_find(xcode_tree, (void *)key);
 
   i = WhichSpecialS(key);
   if (i < 0) {
@@ -547,10 +552,10 @@ void DisposeSpecialObject(dbref player, dbref key) {
   }
   if (xcode_obj) {
     if (typeOfObject->allocfreefunc)
-      ((void (*)(dbref, void **, int))typeOfObject->allocfreefunc)(
+      ((void (*)(DbRef, void **, int))typeOfObject->allocfreefunc)(
           key, (void **)&xcode_obj, SPECIAL_FREE);
-    rb_delete(xcode_tree, (void *)key);
-    muxevent_remove_data(xcode_obj);
+    red_black_tree_delete(xcode_tree, (void *)key);
+    mux_event_remove_data(xcode_obj);
     free(xcode_obj);
   } else if (typeOfObject->datasize > 0) {
     notify(player, "This object is not in the special object DBASE.");
@@ -558,7 +563,7 @@ void DisposeSpecialObject(dbref player, dbref key) {
   }
 }
 
-void Dump_Mech(dbref player, int type, char *typestr) {
+void Dump_Mech(DbRef player, int type, char *typestr) {
   notify(player, "Support discontinued. Bother a wiz if this bothers you.");
 #if 0
 	MECH *mech;
@@ -586,9 +591,9 @@ void Dump_Mech(dbref player, int type, char *typestr) {
 #endif
 }
 
-void DumpMechs(dbref player) { Dump_Mech(player, GTYPE_MECH, "mech"); }
+void DumpMechs(DbRef player) { Dump_Mech(player, GTYPE_MECH, "mech"); }
 
-void DumpMaps(dbref player) {
+void DumpMaps(DbRef player) {
   notify(player, "Support discontinued. Bother a wiz if this bothers you.");
 #if 0
 	MAP *map;
@@ -615,21 +620,21 @@ void DumpMaps(dbref player) {
 
 /***************** INTERNAL ROUTINES *************/
 #ifdef FAST_WHICHSPECIAL
-int WhichSpecial(dbref key) {
+int WhichSpecial(DbRef key) {
   XCODE *xcode_obj;
 
   if (!Good_obj(key))
     return -1;
   if (!Hardcode(key))
     return -1;
-  if (!(xcode_obj = rb_find(xcode_tree, (void *)key)))
+  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)key)))
     return -1;
   return xcode_obj->type;
 }
 
-static int WhichSpecialS(dbref key)
+static int WhichSpecialS(DbRef key)
 #else
-int WhichSpecial(dbref key)
+int WhichSpecial(DbRef key)
 #endif
 {
   int i;
@@ -650,14 +655,16 @@ int WhichSpecial(dbref key)
   return (returnValue);
 }
 
-int IsMech(dbref num) { return WhichSpecial(num) == GTYPE_MECH; }
+int IsMech(DbRef num) { return WhichSpecial(num) == GTYPE_MECH; }
 
-int IsAuto(dbref num) { return WhichSpecial(num) == GTYPE_AUTO; }
+int IsAuto(DbRef num) { return WhichSpecial(num) == GTYPE_AUTO; }
 
-int IsMap(dbref num) { return WhichSpecial(num) == GTYPE_MAP; }
+int IsMap(DbRef num) { return WhichSpecial(num) == GTYPE_MAP; }
 
 /*** Support routines ***/
-void *FindObjectsData(dbref key) { return rb_find(xcode_tree, (void *)key); }
+void *FindObjectsData(DbRef key) {
+  return red_black_tree_find(xcode_tree, (void *)key);
+}
 
 char *center_string(char *c, int len) {
   static char buf[LBUF_SIZE];
@@ -808,7 +815,7 @@ static void cut_apart_helpmsgs(coolmenu **d, char *msg1, char *msg2, int len,
 #endif
 }
 
-static void DoSpecialObjectHelp(dbref player, char *type, int id, int loc,
+static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
                                 int powerneeded, int objid, char *arg) {
   int i, j;
   MECH *mech = NULL;
@@ -927,7 +934,7 @@ void InitSpecialHash(int which) {
   int i;
   char buf[MBUF_SIZE];
 
-  hashinit(&SpecialCommandHash[which], 20 * HASH_FACTOR);
+  hash_table_initialize(&SpecialCommandHash[which], 20 * HASH_FACTOR);
   for (i = 0; (tmp = SpecialObjects[which].commands[i].name); i++) {
     if (!SpecialObjects[which].commands[i].func)
       continue;
@@ -937,12 +944,12 @@ void InitSpecialHash(int which) {
     *tmpc = 0;
     if ((tmpc = strstr(buf, " ")))
       *tmpc = 0;
-    hashadd(buf, (int *)&SpecialObjects[which].commands[i],
-            &SpecialCommandHash[which]);
+    hash_table_add(buf, (int *)&SpecialObjects[which].commands[i],
+                   &SpecialCommandHash[which]);
   }
 }
 
-void handle_xcode(dbref player, dbref obj, int from, int to) {
+void handle_xcode(DbRef player, DbRef obj, int from, int to) {
   if (from == to)
     return;
   if (!to) {
@@ -995,7 +1002,7 @@ void initialize_colorize() {
 }
 
 #undef notify
-char *colorize(dbref player, char *from) {
+char *colorize(DbRef player, char *from) {
   char *to;
   char *p, *q;
   int color_wanted = 0;
@@ -1063,7 +1070,7 @@ char *colorize(dbref player, char *from) {
   return to;
 }
 
-void mecha_notify(dbref player, char *msg) {
+void mecha_notify(DbRef player, char *msg) {
   char *tmp;
 
   tmp = colorize(player, msg);
@@ -1071,8 +1078,8 @@ void mecha_notify(dbref player, char *msg) {
   free_lbuf(tmp);
 }
 
-void mecha_notify_except(dbref loc, dbref player, dbref exception, char *msg) {
-  dbref first;
+void mecha_notify_except(DbRef loc, DbRef player, DbRef exception, char *msg) {
+  DbRef first;
 
   if (loc != exception)
     notify_checked(loc, player, msg,
@@ -1087,28 +1094,28 @@ void mecha_notify_except(dbref loc, dbref player, dbref exception, char *msg) {
 }
 
 void ResetSpecialObjects() {
-  muxevent_run_by_type(EVENT_HIDE);
-  muxevent_run_by_type(EVENT_BLINDREC);
+  mux_event_run_by_type(EVENT_HIDE);
+  mux_event_run_by_type(EVENT_BLINDREC);
 }
 
-MAP *getMap(dbref d) {
+MAP *getMap(DbRef d) {
   XCODE *xcode_obj;
 
-  if (!(xcode_obj = rb_find(xcode_tree, (void *)d)))
+  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
     return NULL;
   if (xcode_obj->type != GTYPE_MAP)
     return NULL;
   return (MAP *)xcode_obj;
 }
 
-MECH *getMech(dbref d) {
+MECH *getMech(DbRef d) {
   XCODE *xcode_obj;
 
   if (!(Good_obj(d)))
     return NULL;
   if (!(Hardcode(d)))
     return NULL;
-  if (!(xcode_obj = rb_find(xcode_tree, (void *)d)))
+  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
     return NULL;
   if (xcode_obj->type != GTYPE_MECH)
     return NULL;

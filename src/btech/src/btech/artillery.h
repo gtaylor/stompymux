@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 typedef struct artillery_shot_type {
   int from_x, from_y; /* hex this is shot from */
@@ -25,8 +25,8 @@ typedef struct artillery_shot_type {
   int type;           /* weapon index in MechWeapons */
   int mode;           /* weapon mode */
   int ishit;          /* did we hit target hex? */
-  dbref shooter;      /* nice to know type of information */
-  dbref map;          /* map we're on */
+  DbRef shooter;      /* nice to know type of information */
+  DbRef map;          /* map we're on */
   struct artillery_shot_type *next;
   /* next in stack of unused things */
 } artillery_shot;

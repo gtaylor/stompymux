@@ -46,7 +46,7 @@ void mech_ood_damage(MECH *wounded, MECH *attacker, int damage) {
   }
 }
 
-void mech_ood_event(MUXEVENT *e) {
+void mech_ood_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   int mof = 0, roll, roll_needed, para = 0;
 
@@ -224,7 +224,7 @@ void mech_ood_event(MUXEVENT *e) {
   }
 }
 
-void initiate_ood(dbref player, MECH *mech, char *buffer) {
+void initiate_ood(DbRef player, MECH *mech, char *buffer) {
   char *args[4];
   int x, y, z = ORBIT_Z, argc;
 

@@ -11,8 +11,8 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 /* btech.c */
-void list_fhashstats(dbref player);
-void do_show(dbref player, dbref cause, int key, char *arg1, char *arg2);
+void list_fhashstats(DbRef player);
+void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2);

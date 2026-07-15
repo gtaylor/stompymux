@@ -404,7 +404,7 @@ void scoreEnhancedWeaponCriticalHit(MECH *mech, MECH *attacker, int LOS,
   }
 }
 
-void mech_weaponstatus(dbref player, MECH *mech, char *buffer) {
+void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
   int secIter = 0;
   int weapIter = 0;
   int wWeapsInSec = 0;
@@ -482,7 +482,7 @@ void mech_weaponstatus(dbref player, MECH *mech, char *buffer) {
   }
 }
 
-void showWeaponDamageAndInfo(dbref player, MECH *mech, int section,
+void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
                              int critical) {
   int wWeapSize = 0;
   int wFirstCrit = 0;

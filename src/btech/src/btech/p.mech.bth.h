@@ -5,7 +5,7 @@
 
 int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
                   int weapindx, float range, MECH *target, int indirectFire,
-                  dbref *c3Ref);
+                  DbRef *c3Ref);
 int FindArtilleryBTH(MECH *mech, int section, int weapindx, int indirect,
                      float range);
 int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,

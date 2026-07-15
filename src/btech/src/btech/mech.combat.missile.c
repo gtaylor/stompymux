@@ -26,7 +26,7 @@
 #include "p.mech.utils.h"
 #include "p.pcombat.h"
 
-extern dbref pilot_override;
+extern DbRef pilot_override;
 
 void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
                  int iscritical, int weapindx, int fireMode, int ammoMode,

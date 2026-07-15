@@ -18,7 +18,7 @@
 #include "math.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "mycool.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"
@@ -87,7 +87,7 @@ float calc_dest(MECH *mech, short *x, short *y) {
   return ot;
 }
 
-void bomb_aim(MECH *mech, dbref player) {
+void bomb_aim(MECH *mech, DbRef player) {
   float t; /* The time of impact */
   char toi[LBUF_SIZE];
   short x, y;
@@ -145,7 +145,7 @@ static void bomb_hit(bomb_shot *s) {
   }
 }
 
-static void bomb_hit_event(MUXEVENT *e) {
+static void bomb_hit_event(MuxEvent *e) {
   bomb_shot *s = (bomb_shot *)e->data;
 
   bomb_hit(s);
@@ -239,10 +239,10 @@ void bomb_drop(MECH *mech, int player, int bn) {
   s->type = k;
   s->map = map;
   SetCargoWeight(mech);
-  muxevent_add(MAX(1, t), 0, EVENT_DHIT, bomb_hit_event, (void *)s, NULL);
+  mux_event_add(MAX(1, t), 0, EVENT_DHIT, bomb_hit_event, (void *)s, NULL);
 }
 
-void mech_bomb(dbref player, void *data, char *buffer) {
+void mech_bomb(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[3];
   int argc;

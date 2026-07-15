@@ -13,7 +13,7 @@
 
 /* map.conditions.c */
 void alter_conditions(MAP *map);
-void map_setconditions(dbref player, MAP *map, char *buffer);
+void map_setconditions(DbRef player, MAP *map, char *buffer);
 void UpdateConditions(MECH *mech, MAP *map);
 void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
                   int IsDisable);

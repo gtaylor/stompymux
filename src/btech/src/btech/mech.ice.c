@@ -135,7 +135,7 @@ int meltable(MAP *map, int x, int y) {
   return 1;
 }
 
-void ice_growth(dbref player, MAP *map, int num) {
+void ice_growth(DbRef player, MAP *map, int num) {
   int x, y;
   int count = 0;
 
@@ -156,7 +156,7 @@ void ice_growth(dbref player, MAP *map, int num) {
     notify(player, "No hexes 'iced'.");
 }
 
-void ice_melt(dbref player, MAP *map, int num) {
+void ice_melt(DbRef player, MAP *map, int num) {
   int x, y;
   int count = 0;
 
@@ -178,7 +178,7 @@ void ice_melt(dbref player, MAP *map, int num) {
     notify(player, "No hexes melted.");
 }
 
-void map_addice(dbref player, MAP *map, char *buffer) {
+void map_addice(DbRef player, MAP *map, char *buffer) {
   char *args[2];
   int num;
 
@@ -187,7 +187,7 @@ void map_addice(dbref player, MAP *map, char *buffer) {
   ice_growth(player, map, num);
 }
 
-void map_delice(dbref player, MAP *map, char *buffer) {
+void map_delice(DbRef player, MAP *map, char *buffer) {
   char *args[2];
   int num;
 

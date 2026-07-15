@@ -12,21 +12,21 @@
 #pragma once
 
 /* map.c */
-void debug_fixmap(dbref player, void *data, char *buffer);
-void map_view(dbref player, void *data, char *buffer);
-void map_addhex(dbref player, void *data, char *buffer);
-void map_mapemit(dbref player, void *data, char *buffer);
+void debug_fixmap(DbRef player, void *data, char *buffer);
+void map_view(DbRef player, void *data, char *buffer);
+void map_addhex(DbRef player, void *data, char *buffer);
+void map_mapemit(DbRef player, void *data, char *buffer);
 int water_distance(MAP *map, int x, int y, int dir, int max);
 int map_load(MAP *map, char *mapname);
 int map_checkmapfile(MAP *map, char *mapname);
-void map_loadmap(dbref player, void *data, char *buffer);
-void map_savemap(dbref player, void *data, char *buffer);
-void map_setmapsize(dbref player, void *data, char *buffer);
-void map_clearmechs(dbref player, void *data, char *buffer);
-void map_update(dbref obj, void *data);
-void initialize_map_empty(MAP *new, dbref key);
-void newfreemap(dbref key, void **data, int selector);
+void map_loadmap(DbRef player, void *data, char *buffer);
+void map_savemap(DbRef player, void *data, char *buffer);
+void map_setmapsize(DbRef player, void *data, char *buffer);
+void map_clearmechs(DbRef player, void *data, char *buffer);
+void map_update(DbRef obj, void *data);
+void initialize_map_empty(MAP *new, DbRef key);
+void newfreemap(DbRef key, void **data, int selector);
 int map_sizefun(void *data, int flag);
-void map_listmechs(dbref player, void *data, char *buffer);
+void map_listmechs(DbRef player, void *data, char *buffer);
 void clear_hex(MECH *mech, int x, int y, int meant);
 void UpdateMechsTerrain(MAP *map, int x, int y, int t);

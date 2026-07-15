@@ -13,13 +13,13 @@
 
 /* econ_cmds.c */
 void SetCargoWeight(MECH *mech);
-int loading_bay_whine(dbref player, dbref cargobay, MECH *mech);
-void mech_Rfixstuff(dbref player, void *data, char *buffer);
-void list_matching(dbref player, char *header, dbref loc, char *buf);
-void mech_manifest(dbref player, void *data, char *buffer);
-void mech_stores(dbref player, void *data, char *buffer);
-void mech_Raddstuff(dbref player, void *data, char *buffer);
-void mech_Rremovestuff(dbref player, void *data, char *buffer);
-void mech_loadcargo(dbref player, void *data, char *buffer);
-void mech_unloadcargo(dbref player, void *data, char *buffer);
-void mech_Rresetstuff(dbref player, void *data, char *buffer);
+int loading_bay_whine(DbRef player, DbRef cargobay, MECH *mech);
+void mech_Rfixstuff(DbRef player, void *data, char *buffer);
+void list_matching(DbRef player, char *header, DbRef loc, char *buf);
+void mech_manifest(DbRef player, void *data, char *buffer);
+void mech_stores(DbRef player, void *data, char *buffer);
+void mech_Raddstuff(DbRef player, void *data, char *buffer);
+void mech_Rremovestuff(DbRef player, void *data, char *buffer);
+void mech_loadcargo(DbRef player, void *data, char *buffer);
+void mech_unloadcargo(DbRef player, void *data, char *buffer);
+void mech_Rresetstuff(DbRef player, void *data, char *buffer);

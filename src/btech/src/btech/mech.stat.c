@@ -16,10 +16,10 @@
 #include <assert.h>
 #include <time.h>
 
-#include "db.h"
-#include "externs.h"
 #include "mech.h"
 #include "mech.stat.h"
+#include "mux/database/db.h"
+#include "mux/server/server_api.h"
 #include "p.glue.h"
 
 #include "macros.h"
@@ -37,7 +37,7 @@ void init_stat() {
 
 static int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
 
-void do_show_stat(dbref player, dbref cause, int key, char *arg1, char *arg2) {
+void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   int i, j, chancetotal;
   float f1, f2, chanceperc, optimalrolls;
 

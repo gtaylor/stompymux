@@ -9,17 +9,17 @@
 
 /* Generated at Fri Jan 15 15:32:46 CET 1999 from mech.consistency.c */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
 /* mech.consistency.c */
 int susp_factor(MECH *mech);
 int engine_weight(MECH *mech);
-int mech_weight_sub_mech(dbref player, MECH *mech, int interactive);
-int mech_weight_sub_veh(dbref player, MECH *mech, int interactive);
-int mech_weight_sub(dbref player, MECH *mech, int interactive);
-void mech_weight(dbref player, void *data, char *buffer);
+int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive);
+int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive);
+int mech_weight_sub(DbRef player, MECH *mech, int interactive);
+void mech_weight(DbRef player, void *data, char *buffer);
 void vehicle_int_check(MECH *mech, int noisy);
 void mech_int_check(MECH *mech, int noisy);
 int crit_weight(MECH *mech, int t);

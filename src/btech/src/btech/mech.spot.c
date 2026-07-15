@@ -15,7 +15,7 @@
 #include "btmacros.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.btechstats.h"
 #include "p.mech.bth.h"
 #include "p.mech.combat.h"
@@ -34,7 +34,7 @@ int IsArtyMech(MECH *mech) {
   return 0;
 }
 
-static void mech_check_range(MUXEVENT *e) {
+static void mech_check_range(MuxEvent *e) {
   MECH *spotter = (MECH *)e->data2, *mech = (MECH *)e->data;
   float range;
 
@@ -59,7 +59,7 @@ static void mech_check_range(MUXEVENT *e) {
   MECHEVENT(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK, spotter);
 }
 
-static void mech_spot_event(MUXEVENT *e) {
+static void mech_spot_event(MuxEvent *e) {
   MECH *target, *mech = (MECH *)e->data;
   struct spot_data *sd = (struct spot_data *)e->data2;
 
@@ -84,7 +84,7 @@ static void mech_spot_event(MUXEVENT *e) {
   free((void *)e->data2);
 }
 
-void ClearFireAdjustments(MAP *map, dbref mech) {
+void ClearFireAdjustments(MAP *map, DbRef mech) {
   int i;
   MECH *m;
 
@@ -99,13 +99,13 @@ void ClearFireAdjustments(MAP *map, dbref mech) {
     }
 }
 
-void mech_spot(dbref player, void *data, char *buffer) {
+void mech_spot(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   char *args[5];
   char targetID[3];
   int argc;
   int LOS = 1;
-  dbref targetref;
+  DbRef targetref;
   float range;
   struct spot_data *dat;
   MAP *mech_map;
@@ -179,7 +179,7 @@ void mech_spot(dbref player, void *data, char *buffer) {
               GetMechToMechID(mech, target));
 }
 
-int FireSpot(dbref player, MECH *mech, MAP *mech_map, int weaponnum,
+int FireSpot(DbRef player, MECH *mech, MAP *mech_map, int weaponnum,
              int weapontype, int sight, int section, int critical) {
   /* Nim 9/11/96 */
 

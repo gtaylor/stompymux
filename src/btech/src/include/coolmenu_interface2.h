@@ -36,7 +36,7 @@ static coolmenu *retrieve_matching_id(coolmenu * c, int i)
 #define MAYBESHOW
 #endif
 
-static void update_entry(dbref player, coolmenu *c, char l, int val) {
+static void update_entry(DbRef player, coolmenu *c, char l, int val) {
   int o;
   coolmenu *d = retrieve_matching_letter(c, l);
 
@@ -62,7 +62,7 @@ static void update_entry(dbref player, coolmenu *c, char l, int val) {
   MAYBESHOW;
 }
 
-static void update_entry_toggle(dbref player, coolmenu *c, char l) {
+static void update_entry_toggle(DbRef player, coolmenu *c, char l) {
   coolmenu *d = retrieve_matching_letter(c, l);
 
   DOCHECK(!d, "Invalid letter!");
@@ -78,7 +78,7 @@ static void update_entry_toggle(dbref player, coolmenu *c, char l) {
   MAYBESHOW;
 }
 
-static void update_entry_set(dbref player, coolmenu *c, char l, char *buffer) {
+static void update_entry_set(DbRef player, coolmenu *c, char l, char *buffer) {
   coolmenu *d = retrieve_matching_letter(c, l);
   int i;
 
@@ -100,7 +100,7 @@ static void update_entry_set(dbref player, coolmenu *c, char l, char *buffer) {
   MAYBESHOW;
 }
 
-#define CMD(a) void a(dbref player, void *data, char *buffer)
+#define CMD(a) void a(DbRef player, void *data, char *buffer)
 
 #define COMMAND_ADD(fname, letter, mod)                                        \
   CMD(fname) {                                                                 \

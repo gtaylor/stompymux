@@ -12,5 +12,5 @@
 #pragma once
 
 /* mech.startup.c */
-void mech_startup(dbref player, void *data, char *buffer);
-void mech_shutdown(dbref player, void *data, char *buffer);
+void mech_startup(DbRef player, void *data, char *buffer);
+void mech_shutdown(DbRef player, void *data, char *buffer);

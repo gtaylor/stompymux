@@ -2,10 +2,10 @@
  * mkindx.c -- make help-file indexes
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #define MKINDX
-#include "help.h"
+#include "mux/commands/help.h"
 
 char line[LINE_SIZE];
 int main(int argc, char *argv[]) {

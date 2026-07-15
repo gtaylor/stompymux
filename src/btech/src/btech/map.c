@@ -22,7 +22,8 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
+#include "object_spatial.h"
 #include "p.debug.h"
 #include "p.map.obj.h"
 #include "p.mech.build.h"
@@ -31,7 +32,6 @@
 #include "p.mech.utils.h"
 #include "p.mechfile.h"
 #include "p.spath.h"
-#include "spath.h"
 
 static char *map_filename(const char *mapname) {
   char *path;
@@ -45,7 +45,7 @@ static char *map_filename(const char *mapname) {
   return path;
 }
 
-void debug_fixmap(dbref player, void *data, char *buffer) {
+void debug_fixmap(DbRef player, void *data, char *buffer) {
   MAP *m = (MAP *)data;
   int i, k;
   MECH *mek;
@@ -97,7 +97,7 @@ void debug_fixmap(dbref player, void *data, char *buffer) {
 
 /* Displays a map to player when they use the VIEW <X> <Y> command
  * with a Map Object */
-void map_view(dbref player, void *data, char *buffer) {
+void map_view(DbRef player, void *data, char *buffer) {
   MAP *mech_map = (MAP *)data;
   int argc, i;
   int x, y;
@@ -156,7 +156,7 @@ void map_view(dbref player, void *data, char *buffer) {
     notify(player, maptext[i]);
 }
 
-void map_addhex(dbref player, void *data, char *buffer) {
+void map_addhex(DbRef player, void *data, char *buffer) {
   MAP *map;
   int x, y, argc;
   char *args[4], elev;
@@ -180,7 +180,7 @@ void map_addhex(dbref player, void *data, char *buffer) {
   notify(player, "Hex set!");
 }
 
-void map_mapemit(dbref player, void *data, char *buffer) {
+void map_mapemit(DbRef player, void *data, char *buffer) {
   MAP *map;
 
   map = (MAP *)data;
@@ -379,7 +379,7 @@ int map_load(MAP *map, char *mapname) {
   return 0;
 }
 
-void map_loadmap(dbref player, void *data, char *buffer) {
+void map_loadmap(DbRef player, void *data, char *buffer) {
   MAP *map;
   char *args[1];
 
@@ -418,7 +418,7 @@ void map_loadmap(dbref player, void *data, char *buffer) {
 
 mapobj *find_mapobj(MAP *map, int x, int y, int type);
 
-void map_savemap(dbref player, void *data, char *buffer) {
+void map_savemap(DbRef player, void *data, char *buffer) {
   MAP *map;
   char *args[1];
   FILE *fp;
@@ -491,7 +491,7 @@ void map_savemap(dbref player, void *data, char *buffer) {
   my_close_file(fp, &filemode);
 }
 
-void map_setmapsize(dbref player, void *data, char *buffer) {
+void map_setmapsize(DbRef player, void *data, char *buffer) {
   MAP *oldmap;
   unsigned char **map;
   int x, y, i, j, failed = 0, argc, x1, y1;
@@ -538,7 +538,7 @@ void map_setmapsize(dbref player, void *data, char *buffer) {
   }
 }
 
-void map_clearmechs(dbref player, void *data, char *buffer) {
+void map_clearmechs(DbRef player, void *data, char *buffer) {
   MAP *map;
 
   map = (MAP *)data;
@@ -546,20 +546,20 @@ void map_clearmechs(dbref player, void *data, char *buffer) {
     ShutDownMap(player, map->mynum);
 }
 
-extern void update_LOSinfo(dbref, MAP *);
+extern void update_LOSinfo(DbRef, MAP *);
 
-void map_update(dbref obj, void *data) {
+void map_update(DbRef obj, void *data) {
   MAP *map = ((MAP *)data);
   MECH *mech;
   char *tmps, changemsg[LBUF_SIZE] = "";
   int ma, ml, wind, wspeed, cloudbase = 200;
   int oldl, oldv, i, j;
 
-  /* Changed from % 25 to % 60. %60 never hit when muxevent_tick came here and
+  /* Changed from % 25 to % 60. %60 never hit when mux_event_tick came here and
      was odd. % 25 should hit when its odd or even (25 75 125... when odd 50 100
      150... when even */
 
-  if (!(muxevent_tick % 25)) {
+  if (!(mux_event_tick % 25)) {
     oldl = map->maplight;
     oldv = map->mapvis;
     if (!(tmps = silly_atr_get(obj, A_MAPVIS)) ||
@@ -593,7 +593,7 @@ void map_update(dbref obj, void *data) {
   /* Fire/Smoke are event-driven -> nothing related to them done here */
 }
 
-void initialize_map_empty(MAP *new, dbref key) {
+void initialize_map_empty(MAP *new, DbRef key) {
   int i, j;
 
   new->mynum = key;
@@ -611,7 +611,7 @@ void initialize_map_empty(MAP *new, dbref key) {
 }
 
 /* Mem alloc/free routines */
-void newfreemap(dbref key, void **data, int selector) {
+void newfreemap(DbRef key, void **data, int selector) {
   MAP *new = *data;
   int i;
 
@@ -650,7 +650,7 @@ int map_sizefun(void *data, int flag) {
   return size;
 }
 
-void map_listmechs(dbref player, void *data, char *buffer) {
+void map_listmechs(DbRef player, void *data, char *buffer) {
   MAP *map;
   MECH *tempMech;
   int i;

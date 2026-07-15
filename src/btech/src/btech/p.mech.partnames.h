@@ -12,7 +12,7 @@
 #pragma once
 
 /* mech.partnames.c */
-void list_phashstats(dbref player);
+void list_phashstats(DbRef player);
 void initialize_partname_tables(void);
 char *get_parts_short_name(int i, int b);
 char *get_parts_long_name(int i, int b);
@@ -20,5 +20,5 @@ char *get_parts_vlong_name(int i, int b);
 int find_matching_vlong_part(char *wc, int *ind, int *id, int *brand);
 int find_matching_long_part(char *wc, int *i, int *id, int *brand);
 int find_matching_short_part(char *wc, int *ind, int *id, int *brand);
-void ListForms(dbref player, void *data, char *buffer);
+void ListForms(DbRef player, void *data, char *buffer);
 char *partname_func(int index, int size);

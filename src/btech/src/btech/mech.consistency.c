@@ -5,7 +5,7 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include "coolmenu.h"
 #include "glue.h"
@@ -311,7 +311,7 @@ static int ammo_weight(MECH *mech) {
 #define PLOC(a) if (interactive >= 0 || !SectIsDestroyed(mech, a))
 #define MyMechNumOsinks(m)                                                     \
   ((interactive >= 0) ? (MechNumOsinks(m)) : (MechRealNumsinks(m)))
-int mech_weight_sub_mech(dbref player, MECH *mech, int interactive) {
+int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive) {
   int pile[NUM_ITEMS_M];
   int i, j, w, cl, id;
   int armor = 0, armor_o;
@@ -489,7 +489,7 @@ static int tank_in_pieces(MECH *mech) {
   return 1;
 }
 
-int mech_weight_sub_veh(dbref player, MECH *mech, int interactive) {
+int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive) {
   int pile[NUM_ITEMS_M];
   int i, j, w, cl, id, t;
   int armor = 0, armor_o;
@@ -628,7 +628,7 @@ int mech_weight_sub_veh(dbref player, MECH *mech, int interactive) {
 }
 
 /* Returns: 1024 * MechWeight(in tons) */
-int mech_weight_sub(dbref player, MECH *mech, int interactive) {
+int mech_weight_sub(DbRef player, MECH *mech, int interactive) {
   if (MechType(mech) == CLASS_MECH)
     return mech_weight_sub_mech(player, mech, interactive);
   if (MechType(mech) == CLASS_VEH_GROUND || MechType(mech) == CLASS_VTOL ||
@@ -639,7 +639,7 @@ int mech_weight_sub(dbref player, MECH *mech, int interactive) {
   return 1;
 }
 
-void mech_weight(dbref player, void *data, char *buffer) {
+void mech_weight(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   mech_weight_sub(player, mech, 1);

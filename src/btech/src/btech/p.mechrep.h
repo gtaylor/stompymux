@@ -9,48 +9,48 @@
 
 /* Generated at Tue Feb  9 14:31:38 CET 1999 from mechrep.c */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
 /* mechrep.c */
-void newfreemechrep(dbref key, void **data, int selector);
-void mechrep_Rresetcrits(dbref player, void *data, char *buffer);
-void mechrep_Rdisplaysection(dbref player, void *data, char *buffer);
-void mechrep_Rsetradio(dbref player, void *data, char *buffer);
-void mechrep_Rsettarget(dbref player, void *data, char *buffer);
-void mechrep_Rsettype(dbref player, void *data, char *buffer);
-void mechrep_Rsetspeed(dbref player, void *data, char *buffer);
-void mechrep_Rsetjumpspeed(dbref player, void *data, char *buffer);
-void mechrep_Rsetheatsinks(dbref player, void *data, char *buffer);
-void mechrep_Rsetlrsrange(dbref player, void *data, char *buffer);
-void mechrep_Rsettacrange(dbref player, void *data, char *buffer);
-void mechrep_Rsetscanrange(dbref player, void *data, char *buffer);
-void mechrep_Rsetradiorange(dbref player, void *data, char *buffer);
-void mechrep_Rsettons(dbref player, void *data, char *buffer);
-void mechrep_Rsetmove(dbref player, void *data, char *buffer);
-void mechrep_Rloadnew(dbref player, void *data, char *buffer);
+void newfreemechrep(DbRef key, void **data, int selector);
+void mechrep_Rresetcrits(DbRef player, void *data, char *buffer);
+void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer);
+void mechrep_Rsetradio(DbRef player, void *data, char *buffer);
+void mechrep_Rsettarget(DbRef player, void *data, char *buffer);
+void mechrep_Rsettype(DbRef player, void *data, char *buffer);
+void mechrep_Rsetspeed(DbRef player, void *data, char *buffer);
+void mechrep_Rsetjumpspeed(DbRef player, void *data, char *buffer);
+void mechrep_Rsetheatsinks(DbRef player, void *data, char *buffer);
+void mechrep_Rsetlrsrange(DbRef player, void *data, char *buffer);
+void mechrep_Rsettacrange(DbRef player, void *data, char *buffer);
+void mechrep_Rsetscanrange(DbRef player, void *data, char *buffer);
+void mechrep_Rsetradiorange(DbRef player, void *data, char *buffer);
+void mechrep_Rsettons(DbRef player, void *data, char *buffer);
+void mechrep_Rsetmove(DbRef player, void *data, char *buffer);
+void mechrep_Rloadnew(DbRef player, void *data, char *buffer);
 void clear_mech(MECH *mech, int flag);
 char *mechref_path(char *id);
-int load_mechdata2(dbref player, MECH *mech, char *id);
+int load_mechdata2(DbRef player, MECH *mech, char *id);
 int unable_to_find_proper_type(int i);
 int load_mechdata(MECH *mech, char *id);
-int mech_loadnew(dbref player, MECH *mech, char *id);
+int mech_loadnew(DbRef player, MECH *mech, char *id);
 MECH *load_refmech(char *reference);
-void mechrep_Rrestore(dbref player, void *data, char *buffer);
-void mechrep_Rsavetemp(dbref player, void *data, char *buffer);
-void mechrep_Rsavetemp2(dbref player, void *data, char *buffer);
-void mechrep_Rsetarmor(dbref player, void *data, char *buffer);
-void mechrep_Raddweap(dbref player, void *data, char *buffer);
-void mechrep_Rreload(dbref player, void *data, char *buffer);
-void mechrep_Rrepair(dbref player, void *data, char *buffer);
-void mechrep_Raddspecial(dbref player, void *data, char *buffer);
+void mechrep_Rrestore(DbRef player, void *data, char *buffer);
+void mechrep_Rsavetemp(DbRef player, void *data, char *buffer);
+void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer);
+void mechrep_Rsetarmor(DbRef player, void *data, char *buffer);
+void mechrep_Raddweap(DbRef player, void *data, char *buffer);
+void mechrep_Rreload(DbRef player, void *data, char *buffer);
+void mechrep_Rrepair(DbRef player, void *data, char *buffer);
+void mechrep_Raddspecial(DbRef player, void *data, char *buffer);
 char *techstatus_func(MECH *mech);
-void mechrep_Rshowtech(dbref player, void *data, char *buffer);
+void mechrep_Rshowtech(DbRef player, void *data, char *buffer);
 char *mechrep_gettechstring(MECH *mech);
-void mechrep_Rdeltech(dbref player, void *data, char *buffer);
-void mechrep_Raddtech(dbref player, void *data, char *buffer);
-void mechrep_Rdelinftech(dbref player, void *data, char *buffer);
-void mechrep_Raddinftech(dbref player, void *data, char *buffer);
-void mechrep_setcargospace(dbref player, void *data, char *buffer);
-void invalid_section(dbref player, MECH *mech);
+void mechrep_Rdeltech(DbRef player, void *data, char *buffer);
+void mechrep_Raddtech(DbRef player, void *data, char *buffer);
+void mechrep_Rdelinftech(DbRef player, void *data, char *buffer);
+void mechrep_Raddinftech(DbRef player, void *data, char *buffer);
+void mechrep_setcargospace(DbRef player, void *data, char *buffer);
+void invalid_section(DbRef player, MECH *mech);

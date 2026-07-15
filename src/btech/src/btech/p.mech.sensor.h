@@ -26,12 +26,12 @@ char *my_dump_flag(int i);
 void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
                        int y, MECH *target, int mapvis, int maplight,
                        int cloudbase, int seeanew, int wlf);
-void update_LOSinfo(dbref obj, MAP *map);
+void update_LOSinfo(DbRef obj, MAP *map);
 void add_sensor_info(char *buf, MECH *mech, int sn, int verbose);
 char *mechSensorInfo(int mode, MECH *mech, char *arg);
 int CanChangeTo(MECH *mech, int s);
 void sensor_light_availability_check(MECH *mech);
-void mech_sensor(dbref player, void *data, char *buffer);
+void mech_sensor(DbRef player, void *data, char *buffer);
 void possibly_see_mech(MECH *mech);
 void ScrambleInfraAndLiteAmp(MECH *mech, int time, int chance, char *inframsg,
                              char *liteampmsg);

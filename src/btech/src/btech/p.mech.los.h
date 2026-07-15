@@ -19,4 +19,4 @@ int AddTerrainMod(MECH *mech, MECH *target, MAP *map, float hexRange,
                   int wAmmoMode);
 int InLineOfSight_NB(MECH *mech, MECH *target, int x, int y, float hexRange);
 int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange);
-void mech_losemit(dbref player, MECH *mech, char *buffer);
+void mech_losemit(DbRef player, MECH *mech, char *buffer);

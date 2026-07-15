@@ -22,8 +22,8 @@ void DestroyHeatSink(MECH *mech, int hitloc);
 void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc);
 char *setarmorstatus_func(MECH *mech, char *sectstr, char *typestr,
                           char *valuestr);
-int dodamage_func(dbref player, MECH *mech, int totaldam, int clustersize,
+int dodamage_func(DbRef player, MECH *mech, int totaldam, int clustersize,
                   int direction, int critical, char *mechmsg,
                   char *mechbroadcast);
-void mech_damage(dbref player, MECH *mech, char *buffer);
-void mech_damage_section(dbref player, MECH *mech, char *buffer);
+void mech_damage(DbRef player, MECH *mech, char *buffer);
+void mech_damage_section(DbRef player, MECH *mech, char *buffer);

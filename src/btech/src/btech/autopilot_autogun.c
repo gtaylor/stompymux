@@ -328,7 +328,7 @@ void auto_destroy_weapon_node(weapon_node *victim) {
 /*
  * Create a target node for the target list
  */
-target_node *auto_create_target_node(int target_score, dbref target_dbref) {
+target_node *auto_create_target_node(int target_score, DbRef target_dbref) {
 
   target_node *temp;
 
@@ -367,17 +367,17 @@ void auto_destroy_weaplist(AUTO *autopilot) {
     return;
 
   /* There is a weapon list - lets kill it */
-  if (dllist_size(autopilot->weaplist) > 0) {
+  if (doubly_linked_list_size(autopilot->weaplist) > 0) {
 
-    while (dllist_size(autopilot->weaplist)) {
-      temp_weapon_node =
-          (weapon_node *)dllist_remove_node_at_pos(autopilot->weaplist, 1);
+    while (doubly_linked_list_size(autopilot->weaplist)) {
+      temp_weapon_node = (weapon_node *)doubly_linked_list_remove_node_at_pos(
+          autopilot->weaplist, 1);
       auto_destroy_weapon_node(temp_weapon_node);
     }
   }
 
   /* Finally destroying the list */
-  dllist_destroy_list(autopilot->weaplist);
+  doubly_linked_list_destroy_list(autopilot->weaplist);
   autopilot->weaplist = NULL;
 }
 
@@ -395,7 +395,7 @@ static int auto_targets_callback(void *key, void *data, int depth, void *arg) {
 }
 
 /*
- * rbtree generic compare function
+ * RedBlackTree generic compare function
  */
 static int auto_generic_compare(void *a, void *b, void *token) {
 
@@ -512,7 +512,7 @@ void auto_update_profile_event(AUTO *autopilot) {
   MECH *mech = (MECH *)autopilot->mymech;
 
   weapon_node *temp_weapon_node;
-  dllist_node *temp_dllist_node;
+  DoublyLinkedListNode *temp_dllist_node;
 
   int section;
   int weapon_count_section;
@@ -560,13 +560,13 @@ void auto_update_profile_event(AUTO *autopilot) {
    * structures because we can clear them with the ddlist
    * weaplist */
 
-  /* Zero the array of rbtree stuff */
+  /* Zero the array of RedBlackTree stuff */
   for (range = 0; range < AUTO_PROFILE_MAX_SIZE; range++) {
 
     if (autopilot->profile[range]) {
 
-      /* Destroy rbtree */
-      rb_destroy(autopilot->profile[range]);
+      /* Destroy RedBlackTree */
+      red_black_tree_destroy(autopilot->profile[range]);
     }
     autopilot->profile[range] = NULL;
   }
@@ -579,7 +579,7 @@ void auto_update_profile_event(AUTO *autopilot) {
   }
 
   /* List doesn't exist so lets build it */
-  autopilot->weaplist = dllist_create_list();
+  autopilot->weaplist = doubly_linked_list_create_list();
 
   /* Reset the AI's max range value for its mech */
   autopilot->mech_max_range = 0;
@@ -621,8 +621,8 @@ void auto_update_profile_event(AUTO *autopilot) {
           auto_create_weapon_node(weapon_count, weaparray[weapon_number],
                                   section, critical[weapon_number]);
 
-      temp_dllist_node = dllist_create_node(temp_weapon_node);
-      dllist_insert_end(autopilot->weaplist, temp_dllist_node);
+      temp_dllist_node = doubly_linked_list_create_node(temp_weapon_node);
+      doubly_linked_list_insert_end(autopilot->weaplist, temp_dllist_node);
 
       /* Check the max range */
       if (autopilot->mech_max_range <
@@ -641,11 +641,11 @@ void auto_update_profile_event(AUTO *autopilot) {
   /* Our counter */
   weapon_number = 1;
 
-  while (weapon_number <= dllist_size(autopilot->weaplist)) {
+  while (weapon_number <= doubly_linked_list_size(autopilot->weaplist)) {
 
     /* Get the weapon */
-    temp_weapon_node =
-        (weapon_node *)dllist_get_node(autopilot->weaplist, weapon_number);
+    temp_weapon_node = (weapon_node *)doubly_linked_list_get_node(
+        autopilot->weaplist, weapon_number);
 
     for (range = 0;
          range < MechWeapons[temp_weapon_node->weapon_db_number].longrange;
@@ -660,9 +660,10 @@ void auto_update_profile_event(AUTO *autopilot) {
       temp_weapon_node->range_scores[range] =
           auto_calc_weapon_score(temp_weapon_node->weapon_db_number, range);
 
-      /* If rbtree for this range doesn't exist, create it */
+      /* If RedBlackTree for this range doesn't exist, create it */
       if (autopilot->profile[range] == NULL) {
-        autopilot->profile[range] = rb_init(&auto_generic_compare, NULL);
+        autopilot->profile[range] =
+            red_black_tree_init(&auto_generic_compare, NULL);
       }
 
       /* Check to see if the score exists in the tree
@@ -670,8 +671,8 @@ void auto_update_profile_event(AUTO *autopilot) {
        * overlaping keys */
       while (1) {
 
-        if (rb_exists(autopilot->profile[range],
-                      &temp_weapon_node->range_scores[range])) {
+        if (red_black_tree_exists(autopilot->profile[range],
+                                  &temp_weapon_node->range_scores[range])) {
           temp_weapon_node->range_scores[range]++;
         } else {
           break;
@@ -679,8 +680,9 @@ void auto_update_profile_event(AUTO *autopilot) {
       }
 
       /* Add it to tree */
-      rb_insert(autopilot->profile[range],
-                &temp_weapon_node->range_scores[range], temp_weapon_node);
+      red_black_tree_insert(autopilot->profile[range],
+                            &temp_weapon_node->range_scores[range],
+                            temp_weapon_node);
     }
 
     /* Increment */
@@ -862,7 +864,7 @@ void auto_gun_event(AUTO *autopilot) {
   MAP *map;                               /* The current Map */
   MECH *target;                           /* Our current target */
   MECH *physical_target;                  /* Our physical target */
-  rbtree targets;                         /* all the targets we're looking at */
+  RedBlackTree targets;                   /* all the targets we're looking at */
   target_node *temp_target_node;          /* temp target node struct */
   weapon_node *temp_weapon_node;          /* temp weapon node struct */
 
@@ -999,8 +1001,8 @@ void auto_gun_event(AUTO *autopilot) {
     /* Reset the update ticker */
     autopilot->target_update_tick = 0;
 
-    /* Setup the rbtree */
-    targets = rb_init(&auto_generic_compare, NULL);
+    /* Setup the RedBlackTree */
+    targets = red_black_tree_init(&auto_generic_compare, NULL);
 
     /* Cycle through possible targets and pick something to shoot */
     for (i = 0; i < map->first_free; i++) {
@@ -1020,7 +1022,7 @@ void auto_gun_event(AUTO *autopilot) {
                           "Autogun - Possible target #%d with score %d",
                           target->mynum, target_score);
 
-        /* If target has a score add it to rbtree */
+        /* If target has a score add it to RedBlackTree */
         if (target_score > 0) {
 
           /* Create target node and fill with proper values */
@@ -1033,7 +1035,8 @@ void auto_gun_event(AUTO *autopilot) {
            * with a current score */
           while (1) {
 
-            if (rb_exists(targets, &temp_target_node->target_score)) {
+            if (red_black_tree_exists(targets,
+                                      &temp_target_node->target_score)) {
               temp_target_node->target_score++;
             } else {
               break;
@@ -1041,7 +1044,8 @@ void auto_gun_event(AUTO *autopilot) {
           }
 
           /* Add it */
-          rb_insert(targets, &temp_target_node->target_score, temp_target_node);
+          red_black_tree_insert(targets, &temp_target_node->target_score,
+                                temp_target_node);
         }
 
         /* Check to see if its our current target */
@@ -1057,7 +1061,7 @@ void auto_gun_event(AUTO *autopilot) {
     /* Check to see if we couldn't find ANY targets within range,
      * if not, cycle autogun and set the update tick to 20, so we
      * check again in 10 seconds */
-    if (!(rb_size(targets) > 0)) {
+    if (!(red_black_tree_size(targets) > 0)) {
 
       /* Have the AI look for a new target 10 seconds from now */
       /*! \todo {Possibly change this since this gives an attacker who
@@ -1067,8 +1071,8 @@ void auto_gun_event(AUTO *autopilot) {
       autopilot->target_update_tick = 20;
 
       /* Don't need the target list any more so lets destroy it */
-      rb_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
-      rb_destroy(targets);
+      red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
+      red_black_tree_destroy(targets);
 
       /* Log It */
       print_autogun_log(autopilot, "Autogun in idle mode");
@@ -1081,7 +1085,8 @@ void auto_gun_event(AUTO *autopilot) {
      * stay on target */
 
     /* Best target */
-    temp_target_node = (target_node *)rb_search(targets, SEARCH_LAST, NULL);
+    temp_target_node =
+        (target_node *)red_black_tree_search(targets, SEARCH_LAST, NULL);
 
     /* Log It */
     print_autogun_log(autopilot, "Autogun - Best target #%d with score %d",
@@ -1124,8 +1129,8 @@ void auto_gun_event(AUTO *autopilot) {
     } /* End of choosing new target */
 
     /* Don't need the target list any more so lets destroy it */
-    rb_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
-    rb_destroy(targets);
+    red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
+    red_black_tree_destroy(targets);
 
   } else {
 
@@ -1609,8 +1614,8 @@ void auto_gun_event(AUTO *autopilot) {
     }
 
     /* Get first weapon */
-    temp_weapon_node = (weapon_node *)rb_search(autopilot->profile[(int)range],
-                                                SEARCH_LAST, NULL);
+    temp_weapon_node = (weapon_node *)red_black_tree_search(
+        autopilot->profile[(int)range], SEARCH_LAST, NULL);
 
     while (temp_weapon_node) {
 
@@ -1621,7 +1626,7 @@ void auto_gun_event(AUTO *autopilot) {
                   mech, Weapon2I(temp_weapon_node->weapon_db_number))) > 0) {
 
         /* Weapon Doesn't work so go to next one */
-        temp_weapon_node = (weapon_node *)rb_search(
+        temp_weapon_node = (weapon_node *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
             &temp_weapon_node->range_scores[(int)range]);
 
@@ -1633,7 +1638,7 @@ void auto_gun_event(AUTO *autopilot) {
                          temp_weapon_node->critical)) {
 
         /* Go to the next one */
-        temp_weapon_node = (weapon_node *)rb_search(
+        temp_weapon_node = (weapon_node *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
             &temp_weapon_node->range_scores[(int)range]);
 
@@ -1643,7 +1648,7 @@ void auto_gun_event(AUTO *autopilot) {
       if (IsAMS(temp_weapon_node->weapon_db_number)) {
 
         /* Ok its an AMS so go to next weapon */
-        temp_weapon_node = (weapon_node *)rb_search(
+        temp_weapon_node = (weapon_node *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
             &temp_weapon_node->range_scores[(int)range]);
         continue;
@@ -1659,7 +1664,7 @@ void auto_gun_event(AUTO *autopilot) {
           !(Jumping(target) || OODing(target) ||
             (FlyingT(target) && !Landed(target)))) {
 
-        temp_weapon_node = (weapon_node *)rb_search(
+        temp_weapon_node = (weapon_node *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
             &temp_weapon_node->range_scores[(int)range]);
         continue;
@@ -1674,7 +1679,7 @@ void auto_gun_event(AUTO *autopilot) {
             (float)MechMinusHeat(mech)) > AUTO_GUN_MAX_HEAT)) {
 
         /* Would make ourselves to hot to fire this gun */
-        temp_weapon_node = (weapon_node *)rb_search(
+        temp_weapon_node = (weapon_node *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
             &temp_weapon_node->range_scores[(int)range]);
 
@@ -1735,7 +1740,7 @@ void auto_gun_event(AUTO *autopilot) {
               } else {
 
                 /* Can't do anything so go to next weapon */
-                temp_weapon_node = (weapon_node *)rb_search(
+                temp_weapon_node = (weapon_node *)red_black_tree_search(
                     autopilot->profile[(int)range], SEARCH_PREV,
                     &temp_weapon_node->range_scores[(int)range]);
 
@@ -1749,7 +1754,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* Weapon is forward torso or leg mounted weapon
              * so no way to shoot with */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1766,7 +1771,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1783,7 +1788,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* No way can we hit him with leg mounted
              * weapons so lets go to next one */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1801,7 +1806,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* No way can we hit the guy with a rear
              * gun so lets go to next one */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1823,7 +1828,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* Weapon is not rear mounted so skip it and
              * go to the next weapon */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1838,7 +1843,7 @@ void auto_gun_event(AUTO *autopilot) {
 
             /* Weapon is rear mounted so skip it and
              * go to the next weapon */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1849,7 +1854,7 @@ void auto_gun_event(AUTO *autopilot) {
 
           /* The attacker is in a zone we can't possibly
            * shoot into, so just go to next weapon */
-          temp_weapon_node = (weapon_node *)rb_search(
+          temp_weapon_node = (weapon_node *)red_black_tree_search(
               autopilot->profile[(int)range], SEARCH_PREV,
               &temp_weapon_node->range_scores[(int)range]);
 
@@ -1886,7 +1891,7 @@ void auto_gun_event(AUTO *autopilot) {
                              temp_weapon_node->critical)) {
 
             /* Not in the arc so lets go to the next weapon */
-            temp_weapon_node = (weapon_node *)rb_search(
+            temp_weapon_node = (weapon_node *)red_black_tree_search(
                 autopilot->profile[(int)range], SEARCH_PREV,
                 &temp_weapon_node->range_scores[(int)range]);
 
@@ -1919,9 +1924,9 @@ void auto_gun_event(AUTO *autopilot) {
       }
 
       /* Ok go to the next weapon */
-      temp_weapon_node =
-          (weapon_node *)rb_search(autopilot->profile[(int)range], SEARCH_PREV,
-                                   &temp_weapon_node->range_scores[(int)range]);
+      temp_weapon_node = (weapon_node *)red_black_tree_search(
+          autopilot->profile[(int)range], SEARCH_PREV,
+          &temp_weapon_node->range_scores[(int)range]);
 
     } /* End of cycling through weapons */
   }

@@ -593,7 +593,7 @@
   /parent     - Set the new object's parent to be the template
                 object and don't copy the attributes.
  
-  See also: @create, @decompile, @destroy.
+  See also: @create, @destroy.
   
 & @coflags
  
@@ -708,25 +708,6 @@
  
   This attribute is automatically triggered once per day. No
   guarantees are made as to what time it will execute.
-  
-& @decompile
- 
-  Syntax: @decompile[/dbref] <thing>[/attr] [=<newname>]
- 
-  Dumps the sequence of commands you would have to type to clone
-  <thing>. This is handy for saving your objects in a text file in
-  case the MUX dies a horrible death, or for moving your pride-and-
-  joy creation from one MUX to another.  @decompile works on all
-  object types.
- 
-  If you specify <newname>, then the commands emitted will set
-  attributes, locks, and flags on an object named <newname> and will
-  omit the command to create the object.
-  If you specify <thing>/<attr>, <attr> accepts wildcards.
-  If you specify the /dbref switch, you will get output using the
-  dbref number instead of the object name.
- 
-  See also: examine, look.
   
 & @describe
  
@@ -4103,7 +4084,7 @@ while line:
   throw        use          version      WHO
   "            :            ;            &            #        
   \\           @@           @cemit       @chown       @chzone  
-  @clone       @cpattr      @create      @decompile   @destroy 
+  @clone       @cpattr      @create      @destroy
   @dig         @dolist      @drain       @edit
   @emit        @entrances   @femit       @find        @force   
   @fpose       @fsay        @halt        @last        @link
@@ -5287,7 +5268,7 @@ carried
                itself but which are inherited from the object's
                parent.
  
-  See also: look, @decompile, ATTRIBUTE OWNERSHIP.
+  See also: look, ATTRIBUTE OWNERSHIP.
   
 & exit()
  

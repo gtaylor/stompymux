@@ -10,22 +10,22 @@
 #include "mech.h"
 #include "mech.events.h"
 #include "mech.tech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
 #include "p.btechstats.h"
 #include "p.mech.build.h"
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"
 
 int game_lag(void) {
-  if (!muxevent_tick)
+  if (!mux_event_tick)
     return 0;
-  return 100 * (mudstate.now - mudstate.process_start_time) / muxevent_tick -
+  return 100 * (mudstate.now - mudstate.process_start_time) / mux_event_tick -
          100;
 }
 
 int game_lag_time(int i) { return (100 + game_lag()) * i / 100; }
 
-int player_techtime(dbref player) {
+int player_techtime(DbRef player) {
   /* Returns tech time, in minutes, for given player */
 
   time_t techtime;
@@ -47,7 +47,7 @@ int player_techtime(dbref player) {
   return tused;
 }
 
-int tech_roll(dbref player, MECH *mech, int diff) {
+int tech_roll(DbRef player, MECH *mech, int diff) {
   int s;
   int succ;
   int r =
@@ -67,7 +67,7 @@ int tech_roll(dbref player, MECH *mech, int diff) {
   return (r - s);
 }
 
-int tech_weapon_roll(dbref player, MECH *mech, int diff) {
+int tech_weapon_roll(DbRef player, MECH *mech, int diff) {
   int s;
   int succ;
   int r =
@@ -90,7 +90,7 @@ int tech_weapon_roll(dbref player, MECH *mech, int diff) {
 /* Basic idea: Check for attribute, if not set, set it, and do interesting
    stuff */
 
-void tech_status(dbref player, time_t dat) {
+void tech_status(DbRef player, time_t dat) {
   char buf[MBUF_SIZE] = {0};
   char *olds;
   int un;
@@ -123,7 +123,7 @@ void tech_status(dbref player, time_t dat) {
   }
 }
 
-int tech_addtechtime(dbref player, int time) {
+int tech_addtechtime(DbRef player, int time) {
   time_t old;
   char *olds = silly_atr_get(player, A_TECHTIME);
 
@@ -222,8 +222,8 @@ int tech_parsegun(MECH *mech, char *buffer, int *loc, int *pos, int *brand) {
 
 int cheated_last = 0;
 
-static void cheat_find_last(MUXEVENT *e) {
-  int ofs = e->tick - muxevent_tick;
+static void cheat_find_last(MuxEvent *e) {
+  int ofs = e->tick - mux_event_tick;
   long amount = (((long)e->data2) % PLAYERPOS) / 16 - 1;
 
   switch (e->type) {
@@ -243,6 +243,6 @@ int figure_latest_tech_event(MECH *mech) {
 
   cheated_last = 0;
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    muxevent_gothru_type_data(i, (void *)mech, cheat_find_last);
+    mux_event_gothru_type_data(i, (void *)mech, cheat_find_last);
   return cheated_last;
 }

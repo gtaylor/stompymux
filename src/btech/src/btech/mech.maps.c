@@ -8,7 +8,7 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mine.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.bsuit.h"
 #include "p.ds.bay.h"
 #include "p.eject.h"
@@ -31,7 +31,7 @@
 #include "p.mech.restrict.h"
 #include "p.mech.utils.h"
 
-void mech_findcenter(dbref player, void *data, char *buffer) {
+void mech_findcenter(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   float fx, fy;
   int x, y;
@@ -48,7 +48,7 @@ void mech_findcenter(dbref player, void *data, char *buffer) {
                 FindBearing(MechFX(mech), MechFY(mech), fx, fy));
 }
 
-static int parse_tacargs(dbref player, MECH *mech, char **args, int argc,
+static int parse_tacargs(DbRef player, MECH *mech, char **args, int argc,
                          int maxrange, short *x, short *y) {
   int bearing;
   float range, fx, fy;
@@ -161,7 +161,7 @@ enum {
 
 static char custom_color_str[NUM_COLOR_IDX + 1] = DEFAULT_COLOR_SCHEME;
 
-static void set_colorscheme(dbref player) {
+static void set_colorscheme(DbRef player) {
   char *str = silly_atr_get(player, A_MAPCOLOR);
   int i;
 
@@ -216,7 +216,7 @@ static void set_colorscheme(dbref player) {
   memcpy(custom_color_str, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
 }
 
-void mech_navigate(dbref player, void *data, char *buffer) {
+void mech_navigate(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char mybuff[NAVIGATE_LINES][MBUF_SIZE];
   MAP *mech_map;
@@ -502,7 +502,7 @@ static char *get_lrshexstr(MECH *mech, MAP *map, int x, int y, char *prevc,
   return add_color('R', prevc, 'Y');
 }
 
-static void show_lrs_map(dbref player, MECH *mech, MAP *map, int x, int y,
+static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
                          int displayHeight, int mode) {
   int loop, b_width, e_width, b_height, e_height, i;
   MECH *oMech;
@@ -644,7 +644,7 @@ static void show_lrs_map(dbref player, MECH *mech, MAP *map, int x, int y,
   }
 }
 
-void mech_lrsmap(dbref player, void *data, char *buffer) {
+void mech_lrsmap(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *map;
   int argc, mode = 0;
@@ -1377,7 +1377,7 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
  *
  */
 
-char **MakeMapText(dbref player, MECH *mech, MAP *map, int cx, int cy, int wx,
+char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
                    int wy, int labels, int dohexlos) {
   int docolour = Ansimap(player);
   int dounderlying = labels & 64;
@@ -1599,7 +1599,7 @@ char **MakeMapText(dbref player, MECH *mech, MAP *map, int cx, int cy, int wx,
 /* Draws the map for the player when they use the
  * TACTICAL [C | T | L] [<BEARING> <RANGE> | <TARGET-ID>]
  * command inside a unit */
-void mech_tacmap(dbref player, void *data, char *buffer) {
+void mech_tacmap(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int argc, i;
   short x, y;
@@ -1713,7 +1713,7 @@ void mech_tacmap(dbref player, void *data, char *buffer) {
 }
 
 /* XXX Fix 'enterbase <dir>' */
-static void mech_enter_event(MUXEVENT *e) {
+static void mech_enter_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data, *tmpm = NULL;
   mapobj *mapo;
   MAP *map = getMap(mech->mapindex), *newmap;
@@ -1774,7 +1774,7 @@ static void mech_enter_event(MUXEVENT *e) {
   auto_cal_mapindex(mech);
 }
 
-void mech_enterbase(dbref player, void *data, char *buffer) {
+void mech_enterbase(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *map, *newmap;
   int x, y;

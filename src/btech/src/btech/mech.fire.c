@@ -17,7 +17,7 @@
 #define VEHICLEBURN_TICK 60
 #define VEHICLE_EXTINGUISH_TICK 120
 
-static void inferno_end_event(MUXEVENT *e) {
+static void inferno_end_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   MechCritStatus(mech) &= ~JELLIED;
@@ -34,12 +34,12 @@ void inferno_burn(MECH *mech, int time) {
     return;
   }
 
-  l = muxevent_last_type_data(EVENT_BURN, (void *)mech) + time;
-  muxevent_remove_type_data(EVENT_BURN, (void *)mech);
+  l = mux_event_last_type_data(EVENT_BURN, (void *)mech) + time;
+  mux_event_remove_type_data(EVENT_BURN, (void *)mech);
   MECHEVENT(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
 
-static void vehicle_burn_event(MUXEVENT *objEvent) {
+static void vehicle_burn_event(MuxEvent *objEvent) {
   MECH *objMech = (MECH *)objEvent->data; /* get the mech */
   long wLoc = (long)objEvent->data2;      /* and now the loc to damage */
   int wDamRoll = Number(1, 6);            /* do 1d6 damage */
@@ -98,7 +98,7 @@ void vehicle_start_burn(MECH *objMech, MECH *objAttacker) {
   }
 }
 
-void vehicle_extinquish_fire_event(MUXEVENT *e) {
+void vehicle_extinquish_fire_event(MuxEvent *e) {
   MECH *objMech = (MECH *)e->data;
 
   if (!objMech)
@@ -113,7 +113,7 @@ void vehicle_extinquish_fire_event(MUXEVENT *e) {
   MechLOSBroadcast(objMech, "is no longer engulfed in flames.");
 }
 
-void vehicle_extinquish_fire(dbref player, MECH *mech, char *buffer) {
+void vehicle_extinquish_fire(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALS);
 
   DOCHECK(Started(mech), "Your tank is started! You can not extinguish the "
@@ -139,7 +139,7 @@ void water_extinguish_inferno(MECH *mech) {
       (elev == -1 && !Fallen(mech)))
     return;
 
-  muxevent_remove_type_data(EVENT_BURN, (void *)mech);
+  mux_event_remove_type_data(EVENT_BURN, (void *)mech);
   MechCritStatus(mech) &= ~JELLIED;
 
   mech_notify(mech, MECHALL, "The flames extinguish in a roar of steam!");

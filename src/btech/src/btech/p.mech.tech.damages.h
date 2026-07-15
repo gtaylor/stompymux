@@ -16,5 +16,5 @@ void make_scrap_table(MECH *mech);
 void make_damage_table(MECH *mech);
 int is_under_repair(MECH *mech, int i);
 char *damages_func(MECH *mech);
-void show_mechs_damage(dbref player, void *data, char *buffer);
-void tech_fix(dbref player, void *data, char *buffer);
+void show_mechs_damage(DbRef player, void *data, char *buffer);
+void tech_fix(DbRef player, void *data, char *buffer);

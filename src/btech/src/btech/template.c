@@ -19,7 +19,7 @@
 
 /* 09/17/96 Ok, ton of touches then :-P (Mark) */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #define MAX_STRING_LENGTH 8192
 #include <ctype.h>
@@ -34,7 +34,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.aero.bomb.h"
 #include "p.bsuit.h"
 #include "p.crit.h"
@@ -1696,7 +1696,7 @@ int DefaultFuelByType(MECH *mech) {
   return 0;
 }
 
-int save_template(dbref player, MECH *mech, char *reference, char *filename) {
+int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
   FILE *fp;
   int x, x2, inf_x;
   char **locs;
@@ -2271,7 +2271,7 @@ int get_weight(MECH *mech) {
   return update_oweight(mech, mech_weight_sub(GOD, mech, -1));
 }
 
-int load_template(dbref player, MECH *mech, char *filename) {
+int load_template(DbRef player, MECH *mech, char *filename) {
   char line[MAX_STRING_LENGTH], buf[MAX_STRING_LENGTH];
   int x, y, value, i;
   char cmd[MAX_STRING_LENGTH];
@@ -2694,7 +2694,7 @@ int load_template(dbref player, MECH *mech, char *filename) {
   return 0;
 }
 
-void DumpMechSpecialObjects(dbref player) {
+void DumpMechSpecialObjects(DbRef player) {
   coolmenu *c;
 
   c = AutoCol_StringMenu("MechSpecials available", internals);
@@ -2719,7 +2719,7 @@ static char *dumpweapon_fun(int i) {
   return buf;
 }
 
-void DumpWeapons(dbref player) {
+void DumpWeapons(DbRef player) {
   coolmenu *c;
 
   c = SelCol_FunStringMenuK(1, "MechWeapons available", dumpweapon_fun,

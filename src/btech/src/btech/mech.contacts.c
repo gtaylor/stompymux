@@ -34,7 +34,7 @@ static char *c_desc[] = {
     "2 - Short form, the usual one, but do not see buildings",
     "3 - Shorter form"};
 
-void show_brief_flags(dbref player, MECH *mech) {
+void show_brief_flags(DbRef player, MECH *mech) {
   notify_printf(player, "Brief status for %s:", GetMechToMechID(mech, mech));
 #ifdef ADVANCED_LOS
   notify_printf(player, "    (A)utocontacts: %s", ac_desc[mech->brief / 4]);
@@ -42,7 +42,7 @@ void show_brief_flags(dbref player, MECH *mech) {
   notify_printf(player, "    (C)ontacts:     %s", c_desc[mech->brief % 4]);
 }
 
-void mech_brief(dbref player, void *data, char *buffer) {
+void mech_brief(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char c;
   int v;
@@ -255,7 +255,7 @@ char getStatusChar(MECH *mech, MECH *mechTarget, int wCharNum) {
   return cRet;
 }
 
-void mech_contacts(dbref player, void *data, char *buffer) {
+void mech_contacts(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *tempMech;
   MAP *mech_map = getMap(mech->mapindex), *tmp_map;
   mapobj *building;

@@ -23,12 +23,12 @@
 #include "autopilot.h"
 #include "glue.h"
 #include "mech.h"
+#include "object_spatial.h"
 #include "p.autopilot_command.h"
 #include "p.glue.hcode.h"
 #include "p.map.obj.h"
 #include "p.mech.combat.h"
 #include "p.mech.utils.h"
-#include "spath.h"
 
 #define SCORE_MOD 100
 #define SAFE_SCORE SCORE_MOD * 1000
@@ -745,7 +745,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
 
   o = ai_opponents(a, m);
   if (a->last_upd > mudstate.now || (mudstate.now - a->last_upd) > AUTO_GOET) {
-    if ((muxevent_tick - a->last_upd) > AUTO_GOTT) {
+    if ((mux_event_tick - a->last_upd) > AUTO_GOTT) {
       a->b_msc = MAGIC_NUM;
       a->w_msc = MAGIC_NUM;
       a->b_bsc = MAGIC_NUM;
@@ -767,7 +767,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
     getFriends(m, map, 0);
   if (o) {
     getEnemies(m, map, 0);
-    if (!((muxevent_tick / AUTOPILOT_GOTO_TICK) %
+    if (!((mux_event_tick / AUTOPILOT_GOTO_TICK) %
           4)) { /* Just every fourth tick, i.e. 12sec */
       /* Thorough check */
       ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 1, dx, dy, delx,
@@ -786,7 +786,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
     }
     return 1; /* We want to keep fighting near foes */
   }
-  if (!((muxevent_tick / AUTOPILOT_GOTO_TICK) %
+  if (!((mux_event_tick / AUTOPILOT_GOTO_TICK) %
         4)) { /* Just every fourth tick, i.e. 12sec */
     /* Thorough check */
     ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 0, dx, dy, delx, dely,
@@ -831,7 +831,7 @@ static MECH *target_mech;
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 
-static int mech_snipe_func(MECH *mech, dbref player, int index, int high) {
+static int mech_snipe_func(MECH *mech, DbRef player, int index, int high) {
   /* Simulate mech movements until flight_time <= now */
   int now = 0, crashed = 0;
   int flt_time;
@@ -853,9 +853,9 @@ static int mech_snipe_func(MECH *mech, dbref player, int index, int high) {
   return 0;
 }
 
-void mech_snipe(dbref player, MECH *mech, char *buffer) {
+void mech_snipe(DbRef player, MECH *mech, char *buffer) {
   char *args[3];
-  dbref d;
+  DbRef d;
 
   DOCHECK(!Wizard(player), "Permission denied.");
   DOCHECK(mech_parseattributes(buffer, args, 3) != 2,
@@ -919,15 +919,15 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
   int child_g_score, child_h_score; /* the score values for the child hexes */
   long hexoffset; /* temp int to pass around as the hexoffset */
 
-  /* Our lists using Hag's rbtree */
-  /* Using two rbtree's to store the open_list so we can sort two
+  /* Our lists using Hag's RedBlackTree */
+  /* Using two RedBlackTree's to store the open_list so we can sort two
    * different ways */
-  rbtree open_list_by_score; /* open list sorted by score */
-  rbtree open_list_by_xy;    /* open list sorted by hexoffset */
-  rbtree closed_list;        /* closed list sorted by hexoffset */
+  RedBlackTree open_list_by_score; /* open list sorted by score */
+  RedBlackTree open_list_by_xy;    /* open list sorted by hexoffset */
+  RedBlackTree closed_list;        /* closed list sorted by hexoffset */
 
   /* Helper node for the final path */
-  dllist_node *astar_path_node;
+  DoublyLinkedListNode *astar_path_node;
 
   /* Our astar_node helpers */
   astar_node *temp_astar_node;
@@ -954,14 +954,14 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
   memset(open_list_bitfield, 0, sizeof(open_list_bitfield));
 
   /* Setup the trees */
-  open_list_by_score = rb_init((void *)astar_compare, NULL);
-  open_list_by_xy = rb_init((void *)astar_compare, NULL);
-  closed_list = rb_init((void *)astar_compare, NULL);
+  open_list_by_score = red_black_tree_init((void *)astar_compare, NULL);
+  open_list_by_xy = red_black_tree_init((void *)astar_compare, NULL);
+  closed_list = red_black_tree_init((void *)astar_compare, NULL);
 
   /* Setup the path */
   /* Destroy any existing path first */
   auto_destroy_astar_path(autopilot);
-  autopilot->astar_path = dllist_create_list();
+  autopilot->astar_path = doubly_linked_list_create_list();
 
   /* Setup the start hex */
   temp_astar_node =
@@ -981,10 +981,10 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
   }
 
   /* Add start hex to open list */
-  rb_insert(open_list_by_score, (void *)temp_astar_node->f_score,
-            temp_astar_node);
-  rb_insert(open_list_by_xy, (void *)temp_astar_node->hexoffset,
-            temp_astar_node);
+  red_black_tree_insert(open_list_by_score, (void *)temp_astar_node->f_score,
+                        temp_astar_node);
+  red_black_tree_insert(open_list_by_xy, (void *)temp_astar_node->hexoffset,
+                        temp_astar_node);
   SetHexBit(open_list_bitfield, temp_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
@@ -1000,16 +1000,18 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 
     /* Check to make sure there is still stuff in the open list
      * if not, means we couldn't find a path so quit */
-    if (rb_size(open_list_by_score) == 0) {
+    if (red_black_tree_size(open_list_by_score) == 0) {
       break;
     }
 
     /* Get lowest cost node, then remove it from the open list */
-    parent_astar_node =
-        (astar_node *)rb_search(open_list_by_score, SEARCH_FIRST, NULL);
+    parent_astar_node = (astar_node *)red_black_tree_search(open_list_by_score,
+                                                            SEARCH_FIRST, NULL);
 
-    rb_delete(open_list_by_score, (void *)parent_astar_node->f_score);
-    rb_delete(open_list_by_xy, (void *)parent_astar_node->hexoffset);
+    red_black_tree_delete(open_list_by_score,
+                          (void *)parent_astar_node->f_score);
+    red_black_tree_delete(open_list_by_xy,
+                          (void *)parent_astar_node->hexoffset);
     ClearHexBit(open_list_bitfield, parent_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
@@ -1023,8 +1025,8 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 #endif
 
     /* Add it to the closed list */
-    rb_insert(closed_list, (void *)parent_astar_node->hexoffset,
-              parent_astar_node);
+    red_black_tree_insert(closed_list, (void *)parent_astar_node->hexoffset,
+                          parent_astar_node);
     SetHexBit(closed_list_bitfield, parent_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
@@ -1185,8 +1187,8 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
          * and change stuff */
 
         /* Get the node off the open_list */
-        temp_astar_node =
-            (astar_node *)rb_find(open_list_by_xy, (void *)hexoffset);
+        temp_astar_node = (astar_node *)red_black_tree_find(open_list_by_xy,
+                                                            (void *)hexoffset);
 
         /* Now compare the 'g_scores' to determine shortest path */
         /* If g_score is lower, this means better path
@@ -1194,8 +1196,10 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
         if (child_g_score < temp_astar_node->g_score) {
 
           /* Remove from open list */
-          rb_delete(open_list_by_score, (void *)temp_astar_node->f_score);
-          rb_delete(open_list_by_xy, (void *)temp_astar_node->hexoffset);
+          red_black_tree_delete(open_list_by_score,
+                                (void *)temp_astar_node->f_score);
+          red_black_tree_delete(open_list_by_xy,
+                                (void *)temp_astar_node->hexoffset);
           ClearHexBit(open_list_bitfield, temp_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
@@ -1254,7 +1258,8 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
        * then those found later */
       while (1) {
 
-        if (rb_exists(open_list_by_score, (void *)temp_astar_node->f_score)) {
+        if (red_black_tree_exists(open_list_by_score,
+                                  (void *)temp_astar_node->f_score)) {
           temp_astar_node->f_score++;
 
 #ifdef DEBUG_ASTAR
@@ -1268,10 +1273,10 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
           break;
         }
       }
-      rb_insert(open_list_by_score, (void *)temp_astar_node->f_score,
-                temp_astar_node);
-      rb_insert(open_list_by_xy, (void *)temp_astar_node->hexoffset,
-                temp_astar_node);
+      red_black_tree_insert(open_list_by_score,
+                            (void *)temp_astar_node->f_score, temp_astar_node);
+      red_black_tree_insert(open_list_by_xy, (void *)temp_astar_node->hexoffset,
+                            temp_astar_node);
       SetHexBit(open_list_bitfield, temp_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
@@ -1304,11 +1309,11 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 
     /* Get end hex from closed list */
     hexoffset = HexOffSet(end_x, end_y);
-    temp_astar_node = rb_find(closed_list, (void *)hexoffset);
+    temp_astar_node = red_black_tree_find(closed_list, (void *)hexoffset);
 
     /* Add end hex to path list */
-    astar_path_node = dllist_create_node(temp_astar_node);
-    dllist_insert_beginning(autopilot->astar_path, astar_path_node);
+    astar_path_node = doubly_linked_list_create_node(temp_astar_node);
+    doubly_linked_list_insert_beginning(autopilot->astar_path, astar_path_node);
 
 #ifdef DEBUG_ASTAR
     /* Log it */
@@ -1317,7 +1322,7 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 #endif
 
     /* Remove it from closed list */
-    rb_delete(closed_list, (void *)temp_astar_node->hexoffset);
+    red_black_tree_delete(closed_list, (void *)temp_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
     /* Log it */
@@ -1343,7 +1348,7 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
          * looking for some how did not end up on the list} */
 
         /* Get Parent Node from closed list */
-        parent_astar_node = rb_find(closed_list, (void *)hexoffset);
+        parent_astar_node = red_black_tree_find(closed_list, (void *)hexoffset);
 
         /* Check if start hex */
         /* If start hex quit */
@@ -1353,8 +1358,9 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
         }
 
         /* Add to path list */
-        astar_path_node = dllist_create_node(parent_astar_node);
-        dllist_insert_beginning(autopilot->astar_path, astar_path_node);
+        astar_path_node = doubly_linked_list_create_node(parent_astar_node);
+        doubly_linked_list_insert_beginning(autopilot->astar_path,
+                                            astar_path_node);
 
 #ifdef DEBUG_ASTAR
         /* Log it */
@@ -1363,7 +1369,8 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 #endif
 
         /* Remove from closed list */
-        rb_delete(closed_list, (void *)parent_astar_node->hexoffset);
+        red_black_tree_delete(closed_list,
+                              (void *)parent_astar_node->hexoffset);
 
 #ifdef DEBUG_ASTAR
         /* Log it */
@@ -1389,11 +1396,11 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
 #endif
 
   /* Destroy the open lists */
-  rb_release(open_list_by_score, (void *)astar_release, NULL);
-  rb_destroy(open_list_by_xy);
+  red_black_tree_release(open_list_by_score, (void *)astar_release, NULL);
+  red_black_tree_destroy(open_list_by_xy);
 
   /* Destroy the closed list */
-  rb_release(closed_list, (void *)astar_release, NULL);
+  red_black_tree_release(closed_list, (void *)astar_release, NULL);
 
 #ifdef DEBUG_ASTAR
   /* Close Log file */
@@ -1442,15 +1449,16 @@ void auto_destroy_astar_path(AUTO *autopilot) {
     return;
 
   /* There is a path lets kill it */
-  if (dllist_size(autopilot->astar_path) > 0) {
+  if (doubly_linked_list_size(autopilot->astar_path) > 0) {
 
-    while (dllist_size(autopilot->astar_path)) {
-      temp_astar_node = dllist_remove_node_at_pos(autopilot->astar_path, 1);
+    while (doubly_linked_list_size(autopilot->astar_path)) {
+      temp_astar_node =
+          doubly_linked_list_remove_node_at_pos(autopilot->astar_path, 1);
       free(temp_astar_node);
     }
   }
 
   /* Finally destroying the path */
-  dllist_destroy_list(autopilot->astar_path);
+  doubly_linked_list_destroy_list(autopilot->astar_path);
   autopilot->astar_path = NULL;
 }

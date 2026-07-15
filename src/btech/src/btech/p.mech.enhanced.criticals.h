@@ -19,6 +19,6 @@ int shouldDestroyWeapon(MECH *mech, int section, int critical,
                         int incrementCount);
 void scoreEnhancedWeaponCriticalHit(MECH *mech, MECH *attacker, int LOS,
                                     int section, int critical);
-void mech_weaponstatus(dbref player, MECH *mech, char *buffer);
-void showWeaponDamageAndInfo(dbref player, MECH *mech, int section,
+void mech_weaponstatus(DbRef player, MECH *mech, char *buffer);
+void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
                              int critical);

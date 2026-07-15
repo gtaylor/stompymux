@@ -1,4 +1,4 @@
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
@@ -42,10 +42,10 @@ int round_to_quarterton(int weight);
 
 void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason);
 
-MAP *ValidMap(dbref player, dbref map);
-dbref FindMechOnMap(MAP *map, char *mechid);
+MAP *ValidMap(DbRef player, DbRef map);
+DbRef FindMechOnMap(MAP *map, char *mechid);
 MECH *find_mech_in_hex(MECH *mech, MAP *mech_map, int x, int y, int needlos);
-dbref FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum);
+DbRef FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum);
 
 /* Map Math */
 int AcceptableDegree(int d);
@@ -78,7 +78,7 @@ int FindPilotSpotting(MECH *mech);
 int FindPilotArtyGun(MECH *mech);
 int FindPilotGunnery(MECH *mech, int weapindx);
 char *FindTechSkillName(MECH *mech);
-int FindTechSkill(dbref player, MECH *mech);
+int FindTechSkill(DbRef player, MECH *mech);
 
 /* Skill rolls */
 int MadePilotSkillRoll(MECH *mech, int mods);
@@ -125,8 +125,8 @@ void ArmorStringFromIndex(int index, char *buffer, char type, char mtype);
 int GetWeaponCrits(MECH *mech, int weapindx);
 int listmatch(char **foo, char *mat);
 int GetPartWeight(int part);
-void multi_weap_sel(MECH *mech, dbref player, char *buffer, int bitbybit,
-                    int (*foo)(MECH *, dbref, int, int));
+void multi_weap_sel(MECH *mech, DbRef player, char *buffer, int bitbybit,
+                    int (*foo)(MECH *, DbRef, int, int));
 int MechNumHeatsinksInEngine(MECH *mech);
 
 /* Tech/Repair functions */
@@ -165,17 +165,17 @@ void CalcFasaCost_AddPrice(float *total, char *desc, float value);
 void Calc_AddOffBV(float *offbv, char *desc, float value);
 void Calc_AddDefBV(float *defbv, char *desc, float value);
 void Calc_SubDefBV(float *defbv, char *desc, float value);
-float Calculate_Defensive_BV(MECH *mech);
-float Calculate_Offensive_BV(MECH *mech);
 unsigned long long int CalcFasaCost(MECH *mech);
-char *UnitPartsList(MECH *mech, int mode);
 int mech_armorpoints(MECH *mech);
 int mech_intpoints(MECH *mech);
 #endif
 #ifdef BT_CALCULATE_BV
 int FindAverageGunnery(MECH *mech);
 int CalculateBV(MECH *mech, int gunstat, int pilstat);
+float Calculate_Defensive_BV(MECH *mech);
+float Calculate_Offensive_BV(MECH *mech);
 #endif
+char *UnitPartsList(MECH *mech, int mode);
 int MechFullNoRecycle(MECH *mech, int num);
 #ifdef BT_COMPLEXREPAIRS
 int GetPartMod(MECH *mech, int t);

@@ -1,6 +1,6 @@
 /* btech_persistence_sqlite.c -- BTech state in the MUX SQLite game database */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <errno.h>
 #include <float.h>
@@ -12,21 +12,21 @@
 #include <string.h>
 
 #include "autopilot.h"
-#include "externs.h"
 #include "glue.h"
 #include "map.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.tech.h"
 #include "mechrep.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/server_api.h"
+#include "mux/support/red_black_tree.h"
 #include "p.mech.events.h"
 #include "p.mech.utils.h"
 #include "persistence/btech_persistence.h"
-#include "persistence/gamedb.h"
-#include "rbtree.h"
 #include "turret.h"
 
-extern rbtree xcode_tree;
+extern RedBlackTree xcode_tree;
 extern ACOM acom[AUTO_NUM_COMMANDS + 1];
 
 /* Increment when a SQLite-only reader would need a compatibility change. */
@@ -499,7 +499,7 @@ static int btech_special_column_ushort(sqlite3_stmt *statement, int column,
 }
 
 static int btech_special_column_dbref(sqlite3_stmt *statement, int column,
-                                      dbref *value) {
+                                      DbRef *value) {
   if (btech_special_column_long(statement, column, value) < 0 ||
       (*value != NOTHING && !Good_obj(*value)))
     return -1;
@@ -707,7 +707,7 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
   char map_name[MAP_NAME_SIZE + 1];
-  dbref map_dbref;
+  DbRef map_dbref;
   long long_value;
   int build_flag;
   int cf;
@@ -820,8 +820,8 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
 static int btech_special_load_map_hexes(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
-  dbref current_map;
-  dbref map_dbref;
+  DbRef current_map;
+  DbRef map_dbref;
   int expected_x;
   int expected_y;
   int result;
@@ -887,8 +887,8 @@ static int btech_special_load_map_hexes(sqlite3 *sqlite) {
 static int btech_special_load_map_slots(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
-  dbref current_map;
-  dbref map_dbref;
+  DbRef current_map;
+  DbRef map_dbref;
   long mech_dbref;
   int expected_slot;
   int flags;
@@ -949,8 +949,8 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
 static int btech_special_load_map_los(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
-  dbref current_map;
-  dbref map_dbref;
+  DbRef current_map;
+  DbRef map_dbref;
   int expected_source;
   int expected_target;
   int flags;
@@ -1047,8 +1047,8 @@ static int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
 static int btech_special_load_map_objects(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
-  dbref current_map;
-  dbref map_dbref;
+  DbRef current_map;
+  DbRef map_dbref;
   long data_int;
   long object_dbref;
   mapobj source;
@@ -1143,8 +1143,8 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
 static int btech_special_load_map_bits(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MAP *map;
-  dbref current_map;
-  dbref map_dbref;
+  DbRef current_map;
+  DbRef map_dbref;
   mapobj source;
   unsigned char **bits;
   int bytes_per_row = 0;
@@ -1238,39 +1238,39 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
 
 /* Map each persisted repair type to the canonical repair completion callback.
  */
-static void (*btech_special_repair_function(int type))(MUXEVENT *) {
+static void (*btech_special_repair_function(int type))(MuxEvent *) {
   switch (type) {
   case EVENT_REPAIR_MOB:
-    return muxevent_tickmech_mountbomb;
+    return mux_event_tickmech_mountbomb;
   case EVENT_REPAIR_UMOB:
-    return muxevent_tickmech_umountbomb;
+    return mux_event_tickmech_umountbomb;
   case EVENT_REPAIR_REPL:
   case EVENT_REPAIR_REPAP:
-    return muxevent_tickmech_repairpart;
+    return mux_event_tickmech_repairpart;
   case EVENT_REPAIR_REPLG:
-    return muxevent_tickmech_replacegun;
+    return mux_event_tickmech_replacegun;
   case EVENT_REPAIR_REPENHCRIT:
-    return muxevent_tickmech_repairenhcrit;
+    return mux_event_tickmech_repairenhcrit;
   case EVENT_REPAIR_REPAG:
-    return muxevent_tickmech_repairgun;
+    return mux_event_tickmech_repairgun;
   case EVENT_REPAIR_REAT:
-    return muxevent_tickmech_reattach;
+    return mux_event_tickmech_reattach;
   case EVENT_REPAIR_RELO:
-    return muxevent_tickmech_reload;
+    return mux_event_tickmech_reload;
   case EVENT_REPAIR_FIX:
-    return muxevent_tickmech_repairarmor;
+    return mux_event_tickmech_repairarmor;
   case EVENT_REPAIR_FIXI:
-    return muxevent_tickmech_repairinternal;
+    return mux_event_tickmech_repairinternal;
   case EVENT_REPAIR_SCRL:
-    return muxevent_tickmech_removesection;
+    return mux_event_tickmech_removesection;
   case EVENT_REPAIR_SCRG:
-    return muxevent_tickmech_removegun;
+    return mux_event_tickmech_removegun;
   case EVENT_REPAIR_SCRP:
-    return muxevent_tickmech_removepart;
+    return mux_event_tickmech_removepart;
   case EVENT_REPAIR_RESE:
-    return muxevent_tickmech_reseal;
+    return mux_event_tickmech_reseal;
   case EVENT_REPAIR_REPSUIT:
-    return muxevent_tickmech_replacesuit;
+    return mux_event_tickmech_replacesuit;
   default:
     return NULL;
   }
@@ -1281,9 +1281,9 @@ static void (*btech_special_repair_function(int type))(MUXEVENT *) {
 static int btech_special_load_repair_events(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref mech_dbref;
+  DbRef mech_dbref;
   long event_data;
-  void (*function)(MUXEVENT *);
+  void (*function)(MuxEvent *);
   int event_type;
   int fake;
   int remaining_ticks;
@@ -1317,8 +1317,8 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
       result = -1;
       break;
     }
-    muxevent_add(remaining_ticks, 0, event_type, function, mech,
-                 (void *)event_data);
+    mux_event_add(remaining_ticks, 0, event_type, function, mech,
+                  (void *)event_data);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -1334,7 +1334,7 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
   char mech_type[sizeof(mech->ud.mech_type)];
   char unit_era[sizeof(mech->ud.unit_era)];
   char unit_tro[sizeof(mech->ud.unit_tro)];
-  dbref mech_dbref;
+  DbRef mech_dbref;
   long map_dbref;
   float max_speed;
   float template_max_speed;
@@ -1487,8 +1487,8 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
 static int btech_special_load_mech_sections(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   struct section_struct *section;
   int armor;
   int armor_original;
@@ -1584,8 +1584,8 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
 static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   struct critical_slot *critical;
   unsigned int ammo_mode;
   int brand;
@@ -1684,7 +1684,7 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
 static int btech_special_load_mech_positions(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref mech_dbref;
+  DbRef mech_dbref;
   long pilot;
   float fx;
   float fy;
@@ -1773,8 +1773,8 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
 static int btech_special_load_mech_bays(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   long bay_dbref;
   int bay_index;
   int expected_bay;
@@ -1833,8 +1833,8 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
 static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   long turret_dbref;
   int expected_turret;
   int result;
@@ -1893,7 +1893,7 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
   char channel_title[sizeof(mech->sd.C3ChanTitle)];
-  dbref mech_dbref;
+  DbRef mech_dbref;
   long tag_target;
   long tagged_by;
   int c3_size;
@@ -1954,8 +1954,8 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
 static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   long node_dbref;
   int expected_network;
   int expected_node;
@@ -2029,8 +2029,8 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
 static int btech_special_load_mech_tics(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   unsigned long value;
   int expected_tic;
   int expected_word;
@@ -2097,8 +2097,8 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
   char title[CHTITLELEN + 1];
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   int expected_frequency;
   int frequency;
   int frequency_index;
@@ -2161,7 +2161,7 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
 static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref mech_dbref;
+  DbRef mech_dbref;
   int result;
   int step;
 
@@ -2264,8 +2264,8 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
 static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   int seen[11];
   int result;
   int slot;
@@ -2360,8 +2360,8 @@ static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
 static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECH *mech;
-  dbref current_mech;
-  dbref mech_dbref;
+  DbRef current_mech;
+  DbRef mech_dbref;
   int expected_slot;
   int result;
   int slot;
@@ -2420,9 +2420,9 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
   MECH *mech;
   damageNode *node;
   damageNode *tail;
-  dbref current_mech;
-  dbref mech_dbref;
-  dbref attacker;
+  DbRef current_mech;
+  DbRef mech_dbref;
+  DbRef attacker;
   time_t occurred_at;
   int amount;
   int counted;
@@ -2492,7 +2492,7 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
 }
 
 /* Resolve a preallocated special object and reject a row of the wrong type. */
-static void *btech_special_object(dbref object, GlueType type) {
+static void *btech_special_object(DbRef object, GlueType type) {
   if (!Good_obj(object) || WhichSpecial(object) != (int)type)
     return NULL;
   return FindObjectsData(object);
@@ -2502,8 +2502,8 @@ static void *btech_special_object(dbref object, GlueType type) {
 static int btech_special_load_mechrep(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   MECHREP *mechrep;
-  dbref object;
-  dbref target;
+  DbRef object;
+  DbRef target;
   int result;
   int step;
 
@@ -2532,10 +2532,10 @@ static int btech_special_load_mechrep(sqlite3 *sqlite) {
 static int btech_special_load_turrets(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   TURRET_T *turret;
-  dbref object;
-  dbref parent;
-  dbref gunner;
-  dbref target;
+  DbRef object;
+  DbRef parent;
+  DbRef gunner;
+  DbRef target;
   int arcs;
   int lock_mode;
   int result;
@@ -2586,8 +2586,8 @@ static int btech_special_load_turrets(sqlite3 *sqlite) {
 static int btech_special_load_turret_tics(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   TURRET_T *turret;
-  dbref current_turret;
-  dbref turret_dbref;
+  DbRef current_turret;
+  DbRef turret_dbref;
   int expected_tic;
   int result;
   int step;
@@ -2645,10 +2645,10 @@ static int btech_special_load_turret_tics(sqlite3 *sqlite) {
 static int btech_special_load_autopilots(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
-  dbref object;
-  dbref map_dbref;
-  dbref mech_dbref;
-  dbref target;
+  DbRef object;
+  DbRef map_dbref;
+  DbRef mech_dbref;
+  DbRef target;
   int result;
   int step;
 
@@ -2737,12 +2737,12 @@ static ACOM *btech_special_autopilot_command(int command_enum) {
 
 /* Load one command's ordered text arguments and derive its callback locally. */
 static int btech_special_load_autopilot_command_args(
-    sqlite3 *sqlite, AUTO *autopilot, dbref autopilot_dbref, int position,
+    sqlite3 *sqlite, AUTO *autopilot, DbRef autopilot_dbref, int position,
     int command_enum, int argument_count) {
   sqlite3_stmt *statement;
   ACOM *definition;
   command_node *command;
-  dllist_node *list_node;
+  DoublyLinkedListNode *list_node;
   const unsigned char *value;
   int argument_index;
   int length;
@@ -2797,12 +2797,12 @@ static int btech_special_load_autopilot_command_args(
   command->argcount = (unsigned char)(argument_count - 1);
   command->command_enum = command_enum;
   command->ai_command_function = definition->ai_command_function;
-  list_node = dllist_create_node(command);
+  list_node = doubly_linked_list_create_node(command);
   if (!list_node) {
     auto_destroy_command_node(command);
     return -1;
   }
-  dllist_insert_end(autopilot->commands, list_node);
+  doubly_linked_list_insert_end(autopilot->commands, list_node);
   return 0;
 }
 
@@ -2810,8 +2810,8 @@ static int btech_special_load_autopilot_command_args(
 static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
-  dbref current_autopilot;
-  dbref autopilot_dbref;
+  DbRef current_autopilot;
+  DbRef autopilot_dbref;
   int argument_count;
   int command_enum;
   int expected_position;
@@ -2842,7 +2842,7 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
     if (autopilot_dbref != current_autopilot) {
       autopilot = btech_special_object(autopilot_dbref, GTYPE_AUTO);
       if (!autopilot || !autopilot->commands ||
-          dllist_size(autopilot->commands)) {
+          doubly_linked_list_size(autopilot->commands)) {
         result = -1;
         break;
       }
@@ -2869,9 +2869,9 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
   astar_node *path_node;
-  dbref current_autopilot;
-  dbref autopilot_dbref;
-  dllist_node *list_node;
+  DbRef current_autopilot;
+  DbRef autopilot_dbref;
+  DoublyLinkedListNode *list_node;
   long f_score;
   long g_score;
   long h_score;
@@ -2921,7 +2921,7 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      autopilot->astar_path = dllist_create_list();
+      autopilot->astar_path = doubly_linked_list_create_list();
       if (!autopilot->astar_path) {
         result = -1;
         break;
@@ -2946,13 +2946,13 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
     path_node->h_score = h_score;
     path_node->f_score = f_score;
     path_node->hexoffset = hex_offset;
-    list_node = dllist_create_node(path_node);
+    list_node = doubly_linked_list_create_node(path_node);
     if (!list_node) {
       free(path_node);
       result = -1;
       break;
     }
-    dllist_insert_end(autopilot->astar_path, list_node);
+    doubly_linked_list_insert_end(autopilot->astar_path, list_node);
     expected_position++;
   }
   if (result == 0 && step != SQLITE_DONE)
@@ -2983,7 +2983,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     return 0;
   if (xcode->type == GTYPE_MECH) {
     mech = (MECH *)xcode;
-    if (btech_special_bind_int(context->mech, 1, (dbref)key) < 0 ||
+    if (btech_special_bind_int(context->mech, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->mech, 2, mech->ID[0]) < 0 ||
         btech_special_bind_int(context->mech, 3, mech->ID[1]) < 0 ||
         btech_special_bind_int(context->mech, 4, mech->brief) < 0 ||
@@ -3027,7 +3027,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
       struct section_struct *section = &mech->ud.sections[index];
-      if (btech_special_bind_int(context->section, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->section, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->section, 2, index) < 0 ||
           btech_special_bind_int(context->section, 3, section->armor) < 0 ||
           btech_special_bind_int(context->section, 4, section->internal) < 0 ||
@@ -3047,7 +3047,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       }
       for (slot = 0; context->result == 0 && slot < NUM_CRITICALS; slot++) {
         struct critical_slot *critical = &section->criticals[slot];
-        if (btech_special_bind_int(context->critical, 1, (dbref)key) < 0 ||
+        if (btech_special_bind_int(context->critical, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->critical, 2, index) < 0 ||
             btech_special_bind_int(context->critical, 3, slot) < 0 ||
             btech_special_bind_int(context->critical, 4, critical->brand) < 0 ||
@@ -3066,7 +3066,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       }
     }
     if (context->result == 0 &&
-        (btech_special_bind_int(context->position, 1, (dbref)key) < 0 ||
+        (btech_special_bind_int(context->position, 1, (DbRef)key) < 0 ||
          btech_special_bind_int(context->position, 2, mech->pd.pilotstatus) <
              0 ||
          btech_special_bind_int(context->position, 3, mech->pd.terrain) < 0 ||
@@ -3090,14 +3090,14 @@ static int btech_store_simple_object(void *key, void *data, int depth,
          btech_special_step(context->position) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
-      if (btech_special_bind_int(context->bay, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->bay, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->bay, 2, index) < 0 ||
           btech_special_bind_int(context->bay, 3, mech->pd.bay[index]) < 0 ||
           btech_special_step(context->bay) < 0)
         context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TURRETS; index++) {
-      if (btech_special_bind_int(context->mech_turret, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->mech_turret, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->mech_turret, 2, index) < 0 ||
           btech_special_bind_int(context->mech_turret, 3,
                                  mech->pd.turret[index]) < 0 ||
@@ -3105,7 +3105,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
         context->result = -1;
     }
     if (context->result == 0 &&
-        (btech_special_bind_int(context->c3, 1, (dbref)key) < 0 ||
+        (btech_special_bind_int(context->c3, 1, (DbRef)key) < 0 ||
          sqlite3_bind_text(context->c3, 2, mech->sd.C3ChanTitle, -1,
                            SQLITE_TRANSIENT) != SQLITE_OK ||
          btech_special_bind_int(context->c3, 3, mech->sd.wC3iNetworkSize) < 0 ||
@@ -3121,13 +3121,13 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     for (index = 0;
          context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE;
          index++) {
-      dbref node = index < C3I_NETWORK_SIZE
+      DbRef node = index < C3I_NETWORK_SIZE
                        ? mech->sd.C3iNetwork[index]
                        : mech->sd.C3Network[index - C3I_NETWORK_SIZE];
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
       int node_index =
           index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
-      if (btech_special_bind_int(context->c3node, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->c3node, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->c3node, 2, network) < 0 ||
           btech_special_bind_int(context->c3node, 3, node_index) < 0 ||
           btech_special_bind_int(context->c3node, 4, node) < 0 ||
@@ -3136,7 +3136,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       for (slot = 0; context->result == 0 && slot < TICLONGS; slot++) {
-        if (btech_special_bind_int(context->tic, 1, (dbref)key) < 0 ||
+        if (btech_special_bind_int(context->tic, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
             btech_special_bind_int(context->tic, 4, mech->tic[index][slot]) <
@@ -3146,7 +3146,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       }
     }
     for (index = 0; context->result == 0 && index < FREQS; index++) {
-      if (btech_special_bind_int(context->frequency, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->frequency, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->frequency, 2, index) < 0 ||
           btech_special_bind_int(context->frequency, 3, mech->freq[index]) <
               0 ||
@@ -3164,7 +3164,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
                          (sqlite3_int64)(value))
 #define BTECH_RUNTIME_REAL(value)                                              \
   btech_special_bind_real(context->runtime, runtime_index++, (double)(value))
-      if (BTECH_RUNTIME_INT((dbref)key) < 0 ||
+      if (BTECH_RUNTIME_INT((DbRef)key) < 0 ||
           BTECH_RUNTIME_INT(mech->rd.jumptop) < 0 ||
           BTECH_RUNTIME_INT(mech->rd.aim) < 0 ||
           BTECH_RUNTIME_INT(mech->rd.basetohit) < 0 ||
@@ -3265,7 +3265,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
 #undef BTECH_RUNTIME_REAL
     }
     for (index = 0; context->result == 0 && index < 5; index++) {
-      if (btech_special_bind_int(context->runtime_unused, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->runtime_unused, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->runtime_unused, 2, index) < 0 ||
           btech_special_bind_int(context->runtime_unused, 3,
                                  mech->rd.unused[index]) < 0 ||
@@ -3274,7 +3274,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
 #ifndef BT_CALCULATE_BV
     for (index = 0; context->result == 0 && index < 8; index++) {
-      if (btech_special_bind_int(context->unit_aux, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, index) < 0 ||
           btech_special_bind_int(context->unit_aux, 3, mech->ud.unused[index]) <
               0 ||
@@ -3283,7 +3283,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
 #else
     if (context->result == 0 &&
-        (btech_special_bind_int(context->unit_aux, 1, (dbref)key) < 0 ||
+        (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
          btech_special_bind_int(context->unit_aux, 3, mech->ud.mechbv_last) <
              0 ||
@@ -3291,7 +3291,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       context->result = -1;
 #endif
     for (index = 0; context->result == 0 && index < 3; index++) {
-      if (btech_special_bind_int(context->unit_aux, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||
           btech_special_bind_int(context->unit_aux, 3,
                                  mech->ud.unused_char[index]) < 0 ||
@@ -3300,7 +3300,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
     for (damage = mech->rd.staggerDamageList, index = 0;
          context->result == 0 && damage; damage = damage->next, index++) {
-      if (btech_special_bind_int(context->stagger_damage, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->stagger_damage, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->stagger_damage, 2, index) < 0 ||
           btech_special_bind_int(context->stagger_damage, 3, damage->amount) <
               0 ||
@@ -3315,14 +3315,14 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
   } else if (xcode->type == GTYPE_MECHREP) {
     mechrep = (MECHREP *)xcode;
-    if (btech_special_bind_int(context->mechrep, 1, (dbref)key) < 0 ||
+    if (btech_special_bind_int(context->mechrep, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->mechrep, 2, mechrep->current_target) <
             0 ||
         btech_special_step(context->mechrep) < 0)
       context->result = -1;
   } else if (xcode->type == GTYPE_TURRET) {
     turret = (TURRET_T *)xcode;
-    if (btech_special_bind_int(context->turret, 1, (dbref)key) < 0 ||
+    if (btech_special_bind_int(context->turret, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->turret, 2, turret->arcs) < 0 ||
         btech_special_bind_int(context->turret, 3, turret->parent) < 0 ||
         btech_special_bind_int(context->turret, 4, turret->gunner) < 0 ||
@@ -3334,7 +3334,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
         btech_special_step(context->turret) < 0)
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
-      if (btech_special_bind_int(context->turret_tic, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->turret_tic, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->turret_tic, 2, index) < 0 ||
           btech_special_bind_int(context->turret_tic, 3, turret->tic[index]) <
               0 ||
@@ -3343,7 +3343,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
     }
   } else if (xcode->type == GTYPE_AUTO) {
     autopilot = (AUTO *)xcode;
-    if (btech_special_bind_int(context->autopilot, 1, (dbref)key) < 0 ||
+    if (btech_special_bind_int(context->autopilot, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->autopilot, 2, autopilot->mymechnum) <
             0 ||
         btech_special_bind_int(context->autopilot, 3, autopilot->mapindex) <
@@ -3406,11 +3406,12 @@ static int btech_store_simple_object(void *key, void *data, int depth,
         btech_special_step(context->autopilot) < 0)
       context->result = -1;
     for (index = 1; context->result == 0 && autopilot->commands &&
-                    index <= dllist_size(autopilot->commands);
+                    index <= doubly_linked_list_size(autopilot->commands);
          index++) {
-      command = (command_node *)dllist_get_node(autopilot->commands, index);
+      command = (command_node *)doubly_linked_list_get_node(autopilot->commands,
+                                                            index);
       if (!command || command->argcount >= AUTOPILOT_MAX_ARGS ||
-          btech_special_bind_int(context->autopilot_command, 1, (dbref)key) <
+          btech_special_bind_int(context->autopilot_command, 1, (DbRef)key) <
               0 ||
           btech_special_bind_int(context->autopilot_command, 2, index - 1) <
               0 ||
@@ -3427,7 +3428,7 @@ static int btech_store_simple_object(void *key, void *data, int depth,
            argument_index++) {
         if (!command->args[argument_index] ||
             btech_special_bind_int(context->autopilot_command_arg, 1,
-                                   (dbref)key) < 0 ||
+                                   (DbRef)key) < 0 ||
             btech_special_bind_int(context->autopilot_command_arg, 2,
                                    index - 1) < 0 ||
             btech_special_bind_int(context->autopilot_command_arg, 3,
@@ -3440,11 +3441,12 @@ static int btech_store_simple_object(void *key, void *data, int depth,
       }
     }
     for (index = 1; context->result == 0 && autopilot->astar_path &&
-                    index <= dllist_size(autopilot->astar_path);
+                    index <= doubly_linked_list_size(autopilot->astar_path);
          index++) {
-      path_node = (astar_node *)dllist_get_node(autopilot->astar_path, index);
+      path_node = (astar_node *)doubly_linked_list_get_node(
+          autopilot->astar_path, index);
       if (!path_node ||
-          btech_special_bind_int(context->autopilot_path, 1, (dbref)key) < 0 ||
+          btech_special_bind_int(context->autopilot_path, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->autopilot_path, 2, index - 1) < 0 ||
           btech_special_bind_int(context->autopilot_path, 3, path_node->x) <
               0 ||
@@ -3491,7 +3493,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
   if (context->result < 0 || xcode->type != GTYPE_MAP)
     return context->result == 0;
   map = (MAP *)xcode;
-  if (btech_special_bind_int(context->map, 1, (dbref)key) < 0 ||
+  if (btech_special_bind_int(context->map, 1, (DbRef)key) < 0 ||
       sqlite3_bind_text(context->map, 2, map->mapname, -1, SQLITE_TRANSIENT) !=
           SQLITE_OK ||
       btech_special_bind_int(context->map, 3, map->map_width) < 0 ||
@@ -3525,7 +3527,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
   }
   for (y = 0; context->result == 0 && y < map->map_height; y++) {
     for (x = 0; context->result == 0 && x < map->map_width; x++) {
-      if (btech_special_bind_int(context->hex, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->hex, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->hex, 2, x) < 0 ||
           btech_special_bind_int(context->hex, 3, y) < 0 ||
           btech_special_bind_int(context->hex, 4, map->map[y][x]) < 0 ||
@@ -3534,7 +3536,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
     }
   }
   for (index = 0; context->result == 0 && index < map->first_free; index++) {
-    if (btech_special_bind_int(context->slot, 1, (dbref)key) < 0 ||
+    if (btech_special_bind_int(context->slot, 1, (DbRef)key) < 0 ||
         btech_special_bind_int(context->slot, 2, index) < 0 ||
         btech_special_bind_int(context->slot, 3, map->mechsOnMap[index]) < 0 ||
         btech_special_bind_int(context->slot, 4, map->mechflags[index]) < 0 ||
@@ -3544,7 +3546,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
     }
     for (target = 0; context->result == 0 && target < map->first_free;
          target++) {
-      if (btech_special_bind_int(context->los, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->los, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->los, 2, index) < 0 ||
           btech_special_bind_int(context->los, 3, target) < 0 ||
           btech_special_bind_int(context->los, 4, map->LOSinfo[index][target]) <
@@ -3560,7 +3562,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
     ordinal = 0;
     for (object = map->mapobj[object_type]; context->result == 0 && object;
          object = object->next, ordinal++) {
-      if (btech_special_bind_int(context->object, 1, (dbref)key) < 0 ||
+      if (btech_special_bind_int(context->object, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->object, 2, object_type) < 0 ||
           btech_special_bind_int(context->object, 3, ordinal) < 0 ||
           btech_special_bind_int(context->object, 4, object->x) < 0 ||
@@ -3580,7 +3582,7 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
       if (!bits[index])
         continue;
       for (byte_index = 0; byte_index < bytes_per_row; byte_index++) {
-        if (btech_special_bind_int(context->bits, 1, (dbref)key) < 0 ||
+        if (btech_special_bind_int(context->bits, 1, (DbRef)key) < 0 ||
             btech_special_bind_int(context->bits, 2, index) < 0 ||
             btech_special_bind_int(context->bits, 3, byte_index) < 0 ||
             btech_special_bind_int(context->bits, 4, bits[index][byte_index]) <
@@ -3598,9 +3600,9 @@ static sqlite3_stmt *btech_repair_statement;
 static int btech_repair_type;
 static int btech_repair_result;
 
-static void btech_store_repair_event(MUXEVENT *event) {
+static void btech_store_repair_event(MuxEvent *event) {
   MECH *mech = event->data;
-  long remaining = event->tick - muxevent_tick;
+  long remaining = event->tick - mux_event_tick;
 
   if (btech_repair_result < 0 || !mech)
     return;
@@ -3763,15 +3765,16 @@ static int btech_persistence_store_special_state(sqlite3 *sqlite) {
     return -1;
   }
   maps.result = 0;
-  rb_walk(xcode_tree, WALK_INORDER, btech_store_map, &maps);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_store_map, &maps);
   objects.result = 0;
-  rb_walk(xcode_tree, WALK_INORDER, btech_store_simple_object, &objects);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_store_simple_object,
+                      &objects);
   btech_repair_statement = repairs;
   btech_repair_result = 0;
   for (type = FIRST_TECH_EVENT;
        type <= LAST_TECH_EVENT && btech_repair_result == 0; type++) {
     btech_repair_type = type;
-    muxevent_gothru_type(type, btech_store_repair_event);
+    mux_event_gothru_type(type, btech_store_repair_event);
   }
   result =
       maps.result < 0 || objects.result < 0 || btech_repair_result < 0 ? -1 : 0;
@@ -3858,7 +3861,8 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite) {
   int expected;
   int actual;
 
-  rb_walk(xcode_tree, WALK_INORDER, btech_special_count_objects, &counts);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_special_count_objects,
+                      &counts);
 #define REQUIRE_ROWS(table, rows)                                              \
   do {                                                                         \
     expected = (rows);                                                         \

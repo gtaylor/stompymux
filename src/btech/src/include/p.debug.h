@@ -12,9 +12,9 @@
 #pragma once
 
 /* debug.c */
-void debug_list(dbref player, void *data, char *buffer);
-void debug_savedb(dbref player, void *data, char *buffer);
-void debug_memory(dbref player, void *data, char *buffer);
-void ShutDownMap(dbref player, dbref mapnumber);
-void debug_shutdown(dbref player, void *data, char *buffer);
-void debug_setvrt(dbref player, void *data, char *buffer);
+void debug_list(DbRef player, void *data, char *buffer);
+void debug_savedb(DbRef player, void *data, char *buffer);
+void debug_memory(DbRef player, void *data, char *buffer);
+void ShutDownMap(DbRef player, DbRef mapnumber);
+void debug_shutdown(DbRef player, void *data, char *buffer);
+void debug_setvrt(DbRef player, void *data, char *buffer);

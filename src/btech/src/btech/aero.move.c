@@ -13,7 +13,8 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
+#include "object_spatial.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"
 #include "p.mech.combat.h"
@@ -25,7 +26,6 @@
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
-#include "spath.h"
 #include <math.h>
 
 struct land_data_type {
@@ -61,7 +61,7 @@ land_data[] = {
 
 #define NUM_LAND_TYPES (sizeof(land_data) / sizeof(struct land_data_type))
 
-static void aero_takeoff_event(MUXEVENT *e) {
+static void aero_takeoff_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   MAP *map = getMap(mech->mapindex);
   int i = -1;
@@ -148,7 +148,7 @@ static void aero_takeoff_event(MUXEVENT *e) {
   MaybeMove(mech);
 }
 
-void aero_takeoff(dbref player, void *data, char *buffer) {
+void aero_takeoff(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *map = getMap(mech->mapindex);
   int i;
@@ -279,7 +279,7 @@ int ImproperLZ(MECH *mech, int x, int y) {
   return NO_ERROR;
 }
 
-void aero_land(dbref player, void *data, char *buffer) {
+void aero_land(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *map = getMap(mech->mapindex);
   int i, t;
@@ -579,7 +579,7 @@ void aero_update(MECH *mech) {
   end_lite_check(mech);
 }
 
-void aero_thrust(dbref player, void *data, char *arg) {
+void aero_thrust(DbRef player, void *data, char *arg) {
   MECH *mech = (MECH *)data;
   char *args[1];
   float newspeed, maxspeed;
@@ -613,7 +613,7 @@ void aero_thrust(dbref player, void *data, char *arg) {
   MaybeMove(mech);
 }
 
-void aero_vheading(dbref player, void *data, char *arg, int flag) {
+void aero_vheading(DbRef player, void *data, char *arg, int flag) {
   char *args[1];
   int i = 0;
   MECH *mech = (MECH *)data;
@@ -634,11 +634,11 @@ void aero_vheading(dbref player, void *data, char *arg, int flag) {
   MechDesiredAngle(mech) = i;
 }
 
-void aero_climb(dbref player, MECH *mech, char *arg) {
+void aero_climb(DbRef player, MECH *mech, char *arg) {
   aero_vheading(player, mech, arg, 1);
 }
 
-void aero_dive(dbref player, MECH *mech, char *arg) {
+void aero_dive(DbRef player, MECH *mech, char *arg) {
   aero_vheading(player, mech, arg, -1);
 }
 
@@ -663,7 +663,7 @@ void DS_LandWarning(MECH *mech, int serious) {
                              : "Please do not even consider landing here.");
 }
 
-void aero_checklz(dbref player, MECH *mech, char *buffer) {
+void aero_checklz(DbRef player, MECH *mech, char *buffer) {
   int ilz, argc;
   char *args[3];
   int x, y;

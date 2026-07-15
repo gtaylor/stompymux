@@ -9,7 +9,7 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 /* Ejection code */
 #include "autopilot.h"
@@ -34,8 +34,8 @@
 #include "p.mechrep.h"
 #include <math.h>
 
-int tele_contents(dbref from, dbref to, int flag) {
-  dbref i, tmpnext;
+int tele_contents(DbRef from, DbRef to, int flag) {
+  DbRef i, tmpnext;
   int count = 0;
 
   SAFE_DOLIST(i, tmpnext, Contents(from))
@@ -53,9 +53,9 @@ int tele_contents(dbref from, dbref to, int flag) {
 }
 
 /* Delayed blast event, for various reasons */
-static void mech_discard_event(MUXEVENT *e) {
+static void mech_discard_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
-  dbref i = mech->mynum;
+  DbRef i = mech->mynum;
 
   /* We'll silently move the mech off, but lets trigger the aleave/oleave/leave
    * of the loc as well before we do anything fancy */
@@ -74,13 +74,13 @@ void discard_mw(MECH *mech) {
     MECHEVENT(mech, EVENT_NUKEMECH, mech_discard_event, 10, 0);
 }
 
-void enter_mw_bay(MECH *mech, dbref bay) {
+void enter_mw_bay(MECH *mech, DbRef bay) {
   tele_contents(mech->mynum, bay, TELE_ALL); /* Even immortals must get going */
   discard_mw(mech);
 }
 
 void pickup_mw(MECH *mech, MECH *target) {
-  dbref mw;
+  DbRef mw;
 
   mw = Contents(target->mynum);
   DOCHECKMA((MechType(mech) != CLASS_MECH) &&
@@ -107,9 +107,9 @@ void pickup_mw(MECH *mech, MECH *target) {
   discard_mw(target);
 }
 
-static void char_eject(dbref player, MECH *mech) {
+static void char_eject(DbRef player, MECH *mech) {
   MECH *m;
-  dbref suit;
+  DbRef suit;
   char *d;
 
   suit = create_object(tprintf("MechWarrior - %s", Name(player)));
@@ -169,7 +169,7 @@ static void char_eject(dbref player, MECH *mech) {
   }
 }
 
-void mech_eject(dbref player, void *data, char *buffer) {
+void mech_eject(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALS);
@@ -199,9 +199,9 @@ void mech_eject(dbref player, void *data, char *buffer) {
   char_eject(player, mech);
 }
 
-static void char_disembark(dbref player, MECH *mech) {
+static void char_disembark(DbRef player, MECH *mech) {
   MECH *m;
-  dbref suit;
+  DbRef suit;
   char *d;
   MAP *mymap;
   long initial_speed;
@@ -273,7 +273,7 @@ static void char_disembark(dbref player, MECH *mech) {
 /**
  * Handle the disembarking of pilots from units.
  */
-void mech_disembark(dbref player, void *data, char *buffer) {
+void mech_disembark(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALS);
@@ -299,7 +299,7 @@ void mech_disembark(dbref player, void *data, char *buffer) {
 /**
  * Handle the disembarking of units from within carriers.
  */
-void mech_udisembark(dbref player, void *data, char *buffer) {
+void mech_udisembark(DbRef player, void *data, char *buffer) {
 
   MECH *mech = (MECH *)data; /* The disembarking unit */
   MECH *target;
@@ -436,12 +436,12 @@ void mech_udisembark(dbref player, void *data, char *buffer) {
   correct_speed(target);
 } /* end mech_udisembark */
 
-void mech_embark(dbref player, void *data, char *buffer) {
+void mech_embark(DbRef player, void *data, char *buffer) {
 
   MECH *mech = (MECH *)data;
   MECH *target, *towee = NULL;
   int tmp;
-  dbref target_num;
+  DbRef target_num;
   int argc;
   char *args[4];
   char fail_mesg[SBUF_SIZE];
@@ -486,7 +486,7 @@ void mech_embark(dbref player, void *data, char *buffer) {
 
     /* They passed the lock but does that mean there was no lock? */
     memset(enter_lock, 0, sizeof(enter_lock));
-    atr_get_str(enter_lock, target->mynum, A_LENTER, &i, &j);
+    attribute_get_string(enter_lock, target->mynum, A_LENTER, &i, &j);
     if (*enter_lock == '\0') {
 
       /* Check their teams */
@@ -558,7 +558,7 @@ void mech_embark(dbref player, void *data, char *buffer) {
 
   /* They passed the lock but does that mean there was no lock? */
   memset(enter_lock, 0, sizeof(enter_lock));
-  atr_get_str(enter_lock, target->mynum, A_LENTER, &i, &j);
+  attribute_get_string(enter_lock, target->mynum, A_LENTER, &i, &j);
   if (*enter_lock == '\0') {
 
     /* Check their teams */
@@ -644,9 +644,9 @@ void mech_embark(dbref player, void *data, char *buffer) {
   correct_speed(target);
 }
 
-void autoeject(dbref player, MECH *mech, int tIsBSuit) {
+void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   MECH *m;
-  dbref suit;
+  DbRef suit;
   char *d;
 
   /* If we're not IC, return */

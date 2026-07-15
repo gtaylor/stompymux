@@ -14,10 +14,10 @@
 #include "glue.h"
 #include "mech.h"
 #include "mech.partnames.h"
-#include "muxevent/muxevent_alloc.h"
-#include "rbtab.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/support/hash_table.h"
 
-void list_hashstat(dbref player, const char *tab_name, HASHTAB *htab);
+void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 
 /* Main idea:
    Keep 2 sorted tables, one of shortform -> index
@@ -96,7 +96,7 @@ static int create_brandname(int id, int b) {
   return 1;
 }
 
-static HASHTAB short_hash, vlong_hash;
+static HashTable short_hash, vlong_hash;
 
 void initialize_partname_tables() {
   long i;
@@ -117,14 +117,14 @@ void initialize_partname_tables() {
     for (n = 0; n < NUM_ITEMS; n++)
       if (index_sorted[m][n])
         insert_sorted_brandname(i++, index_sorted[m][n]);
-  hashinit(&short_hash, 20 * HASH_FACTOR);
-  hashinit(&vlong_hash, 20 * HASH_FACTOR);
+  hash_table_initialize(&short_hash, 20 * HASH_FACTOR);
+  hash_table_initialize(&vlong_hash, 20 * HASH_FACTOR);
 #define DASH(fromval, tohash)                                                  \
   for (tmpc1 = short_sorted[i]->fromval, tmpc2 = tmpbuf; *tmpc1;               \
        tmpc1++, tmpc2++)                                                       \
     *tmpc2 = ToLower(*tmpc1);                                                  \
   *tmpc2 = 0;                                                                  \
-  hashadd(tmpbuf, (int *)(i + 1), &tohash);
+  hash_table_add(tmpbuf, (int *)(i + 1), &tohash);
 
   for (i = 0; i < c; i++) {
     DASH(shorty, short_hash);
@@ -167,7 +167,7 @@ int find_matching_vlong_part(char *wc, int *ind, int *id, int *brand) {
     *tmpc2 = ToLower(*tmpc1);
   }
   *tmpc2 = 0;
-  if ((i = hashfind(tmpbuf, &vlong_hash))) {
+  if ((i = hash_table_find(tmpbuf, &vlong_hash))) {
     if ((p = short_sorted[((long)i) - 1])) {
       if (ind)
         *ind = ((long)i);
@@ -201,7 +201,7 @@ int find_matching_short_part(char *wc, int *ind, int *id, int *brand) {
     *tmpc2 = ToLower(*tmpc1);
   }
   *tmpc2 = 0;
-  if ((i = hashfind(tmpbuf, &short_hash))) {
+  if ((i = hash_table_find(tmpbuf, &short_hash))) {
     if ((p = short_sorted[((long)i) - 1])) {
       *ind = ((long)i);
       UNPACK_PART(p->index, *id, *brand);
@@ -211,7 +211,7 @@ int find_matching_short_part(char *wc, int *ind, int *id, int *brand) {
   return 0;
 }
 
-void ListForms(dbref player, void *data, char *buffer) {
+void ListForms(DbRef player, void *data, char *buffer) {
   int i;
 
   notify(player, "Listing of forms:");
@@ -220,7 +220,7 @@ void ListForms(dbref player, void *data, char *buffer) {
                   short_sorted[i]->longy, short_sorted[i]->vlongy);
 }
 
-void fun_btpartmatch(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
   /* fargs[0] = name to match on
    */
@@ -306,7 +306,7 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
 }
 
 /* List the canonical category names accepted by btpartslist(). */
-void fun_btpartscategorylist(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
                              char *fargs[], int nfargs, char *cargs[],
                              int ncargs) {
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
@@ -317,7 +317,7 @@ void fun_btpartscategorylist(char *buff, char **bufc, dbref player, dbref cause,
  * Return canonical long part names from one category, separated by pipes.
  * Requiring the category keeps this softcode result within one LBUF.
  */
-void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs) {
   BT_PART_CATEGORY category;
   PN *part_name;
@@ -358,7 +358,7 @@ void fun_btpartslist(char *buff, char **bufc, dbref player, dbref cause,
     safe_str("#-1 NO PARTS IN CATEGORY", buff, bufc);
 }
 
-void fun_btpartname(char *buff, char **bufc, dbref player, dbref cause,
+void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
   /* fargs[0] = partnumer to find name for
    * fargs[1] = 'short', 'long' or 'vlong'

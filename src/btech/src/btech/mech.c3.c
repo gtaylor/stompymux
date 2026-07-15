@@ -150,9 +150,9 @@ int countTotalC3MastersOnMech(MECH *mech) {
   return wcMasters;
 }
 
-int countMaxC3Units(MECH *mech, dbref *myTempNetwork, int tempNetworkSize,
+int countMaxC3Units(MECH *mech, DbRef *myTempNetwork, int tempNetworkSize,
                     MECH *targMech) {
-  dbref otherRef;
+  DbRef otherRef;
   MECH *otherMech;
   int i;
   int wcC3Masters = 0;
@@ -208,13 +208,13 @@ int countMaxC3Units(MECH *mech, dbref *myTempNetwork, int tempNetworkSize,
   return maxC3Size;
 }
 
-int trimC3Network(MECH *mech, dbref *myTempNetwork, int tempNetworkSize) {
-  dbref otherRef;
+int trimC3Network(MECH *mech, DbRef *myTempNetwork, int tempNetworkSize) {
+  DbRef otherRef;
   MECH *otherMech;
   int i;
   int newNetworkSize;
   int maxC3Size = 0; /* This is calc'd based on the number of masters */
-  dbref newNetwork[C3_NETWORK_SIZE];
+  DbRef newNetwork[C3_NETWORK_SIZE];
 
   debugC3(tprintf("C3 TRIM: Trimming %d's C3 network", mech->mynum));
 
@@ -273,7 +273,7 @@ int trimC3Network(MECH *mech, dbref *myTempNetwork, int tempNetworkSize) {
 
 int getFreeC3NetworkPos(MECH *mech, MECH *mechToAdd) {
   int i;
-  dbref otherRef;
+  DbRef otherRef;
 
   validateC3Network(mech);
 
@@ -292,7 +292,7 @@ int getFreeC3NetworkPos(MECH *mech, MECH *mechToAdd) {
 
 void replicateC3Network(MECH *mechSrc, MECH *mechDest) {
   int i;
-  dbref otherRef;
+  DbRef otherRef;
 
   debugC3(tprintf("C3 REPLICATE: %d's C3 network to %d", mechSrc->mynum,
                   mechDest->mynum));
@@ -317,7 +317,7 @@ void replicateC3Network(MECH *mechSrc, MECH *mechDest) {
 void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
   MECH *otherMech;
   MECH *otherNotifyMech;
-  dbref otherRef;
+  DbRef otherRef;
   int i;
   int wPos = -1;
 
@@ -372,7 +372,7 @@ void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
   validateC3Network(mech);
 }
 
-void clearMechFromC3Network(dbref refToClear, MECH *mech) {
+void clearMechFromC3Network(DbRef refToClear, MECH *mech) {
   int i;
 
   debugC3(tprintf("C3 CLEAR: %d from the C3 network of %d", refToClear,
@@ -416,7 +416,7 @@ void clearC3Network(MECH *mech, int tClearFromOthers) {
 
 void validateC3Network(MECH *mech) {
   MECH *otherMech;
-  dbref myTempNetwork[C3_NETWORK_SIZE];
+  DbRef myTempNetwork[C3_NETWORK_SIZE];
   int i;
   int networkSize = 0;
 
@@ -476,10 +476,10 @@ void validateC3Network(MECH *mech) {
   }
 }
 
-void mech_c3_join_leave(dbref player, void *data, char *buffer) {
+void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   char *args[2];
-  dbref refTarget;
+  DbRef refTarget;
   int LOS = 1;
   float range = 0.0;
   int maxC3Size = 0;
@@ -552,7 +552,7 @@ void mech_c3_join_leave(dbref player, void *data, char *buffer) {
   addMechToC3Network(target, mech);
 }
 
-void mech_c3_message(dbref player, MECH *mech, char *buffer) {
+void mech_c3_message(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3(mech), "This unit is not equipped with C3!");
@@ -571,7 +571,7 @@ void mech_c3_message(dbref player, MECH *mech, char *buffer) {
   sendNetworkMessage(player, mech, buffer, 1);
 }
 
-void mech_c3_targets(dbref player, MECH *mech, char *buffer) {
+void mech_c3_targets(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3(mech), "This unit is not equipped with C3!");
@@ -587,7 +587,7 @@ void mech_c3_targets(dbref player, MECH *mech, char *buffer) {
   showNetworkTargets(player, mech, 1);
 }
 
-void mech_c3_network(dbref player, MECH *mech, char *buffer) {
+void mech_c3_network(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   DOCHECK(!HasC3(mech), "This unit is not equipped with C3!");

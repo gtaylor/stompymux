@@ -102,7 +102,7 @@ char *naval_bootmsgs[BOOTCOUNT] = {
 
 #define SSLEN MechType(mech) == CLASS_BSUIT ? 1 : (STARTUP_TIME / BOOTCOUNT)
 
-static void mech_startup_event(MUXEVENT *e) {
+static void mech_startup_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long timer = (long)e->data2;
   MAP *mech_map;
@@ -208,7 +208,7 @@ static void mech_startup_event(MUXEVENT *e) {
   UnZombifyMech(mech);
 }
 
-void mech_startup(dbref player, void *data, char *buffer) {
+void mech_startup(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int n;
 
@@ -257,7 +257,7 @@ void mech_startup(dbref player, void *data, char *buffer) {
             (long)(MechType(mech) == CLASS_MW ? BOOTCOUNT - 1 : n));
 }
 
-void mech_shutdown(dbref player, void *data, char *buffer) {
+void mech_shutdown(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   if (!CheckData(player, mech))

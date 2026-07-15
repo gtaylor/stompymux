@@ -12,6 +12,6 @@
 #pragma once
 
 /* econ.c */
-void econ_change_items(dbref d, int id, int brand, int num);
-int econ_find_items(dbref d, int id, int brand);
-void econ_set_items(dbref d, int id, int brand, int num);
+void econ_change_items(DbRef d, int id, int brand, int num);
+int econ_find_items(DbRef d, int id, int brand);
+void econ_set_items(DbRef d, int id, int brand, int num);

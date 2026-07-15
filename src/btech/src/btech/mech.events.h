@@ -18,7 +18,7 @@
 #pragma once
 
 #include "mech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
 
 /* Semi-combat-related events */
 #define EVENT_MOVE 1 /* mech */
@@ -129,98 +129,98 @@
 #define EVENT_MOVEMODE 79
 #define EVENT_SIDESLIP 80
 
-#define ETEMPL(a) void a(MUXEVENT *e)
+#define ETEMPL(a) void a(MuxEvent *e)
 
-[[maybe_unused]] static char *muxevent_names[] = {"NONAME",  /* 0 - */
-                                                  "Move",    /* 1 */
-                                                  "DHIT",    /* 2 */
-                                                  "Startup", /* 3 */
-                                                  "Lock",    /* 4 */
-                                                  "Stand",   /* 5 */
-                                                  "Jump",    /* 6 */
-                                                  "Recycle", /* 7 */
-                                                  "JumpSt",  /* 8 */
-                                                  "PRecov",  /* 9 */
-                                                  "SChange", /* 10 */
-                                                  "DecRemv", /* 11 */
-                                                  "SpotLck", /* 12 */
-                                                  "PLos",    /* 13 */
-                                                  "ChkRng",  /* 14 */
-                                                  "Takeoff", /* 15 */
+[[maybe_unused]] static char *mux_event_names[] = {"NONAME",  /* 0 - */
+                                                   "Move",    /* 1 */
+                                                   "DHIT",    /* 2 */
+                                                   "Startup", /* 3 */
+                                                   "Lock",    /* 4 */
+                                                   "Stand",   /* 5 */
+                                                   "Jump",    /* 6 */
+                                                   "Recycle", /* 7 */
+                                                   "JumpSt",  /* 8 */
+                                                   "PRecov",  /* 9 */
+                                                   "SChange", /* 10 */
+                                                   "DecRemv", /* 11 */
+                                                   "SpotLck", /* 12 */
+                                                   "PLos",    /* 13 */
+                                                   "ChkRng",  /* 14 */
+                                                   "Takeoff", /* 15 */
 
-                                                  "Fall",     /* 16 */
-                                                  "BRegen",   /* 17 */
-                                                  "BRebuild", /* 18 */
-                                                  "Dump",     /* 19 */
+                                                   "Fall",     /* 16 */
+                                                   "BRegen",   /* 17 */
+                                                   "BRebuild", /* 18 */
+                                                   "Dump",     /* 19 */
 
-                                                  "MASCF",    /* 20 */
-                                                  "MASCR",    /* 21 */
-                                                  "AmmoWarn", /* 22 */
+                                                   "MASCF",    /* 20 */
+                                                   "MASCR",    /* 21 */
+                                                   "AmmoWarn", /* 22 */
 
-                                                  "AutoGoto",    /* 23 */
-                                                  "AutoLeave",   /* 24 */
-                                                  "AutoCo",      /* 25 */
-                                                  "AutoGun",     /* 26 */
-                                                  "AutoSensor",  /* 27 */
-                                                  "AutoFollow",  /* 28 */
-                                                  "AutoEnter",   /* 29 */
-                                                  "AutoReply",   /* 30 */
-                                                  "AutoProfile", /* 31 */
-                                                  "AutoRoam",    /* 32 */
-                                                  "MRec",        /* 33 */
+                                                   "AutoGoto",    /* 23 */
+                                                   "AutoLeave",   /* 24 */
+                                                   "AutoCo",      /* 25 */
+                                                   "AutoGun",     /* 26 */
+                                                   "AutoSensor",  /* 27 */
+                                                   "AutoFollow",  /* 28 */
+                                                   "AutoEnter",   /* 29 */
+                                                   "AutoReply",   /* 30 */
+                                                   "AutoProfile", /* 31 */
+                                                   "AutoRoam",    /* 32 */
+                                                   "MRec",        /* 33 */
 
-                                                  "BlindR", /* 34 */
-                                                  "Burn",   /* 35 */
-                                                  "SixthS", /* 36 */
+                                                   "BlindR", /* 34 */
+                                                   "Burn",   /* 35 */
+                                                   "SixthS", /* 36 */
 
-                                                  "Hidin", /* 37 */
-                                                  "OOD",   /* 38 */
+                                                   "Hidin", /* 37 */
+                                                   "OOD",   /* 38 */
 
-                                                  "Misc",    /* 39 */
-                                                  "Lateral", /* 40 */
-                                                  "SelfExp", /* 41 */
+                                                   "Misc",    /* 39 */
+                                                   "Lateral", /* 40 */
+                                                   "SelfExp", /* 41 */
 
-                                                  "DigIn", /* 42 */
+                                                   "DigIn", /* 42 */
 
-                                                  "TRepl",      /* 43 */
-                                                  "TReplG",     /* 44 */
-                                                  "TReat",      /* 45 */
-                                                  "TRelo",      /* 46 */
-                                                  "TFix",       /* 47 */
-                                                  "TFixI",      /* 48 */
-                                                  "TScrL",      /* 49 */
-                                                  "TScrP",      /* 50 */
-                                                  "TScrG",      /* 51 */
-                                                  "TRepaG",     /* 52 */
-                                                  "TRepaP",     /* 53 */
-                                                  "TMoB",       /* 54 */
-                                                  "TUMoB",      /* 55 */
-                                                  "TRese",      /* 56 */
-                                                  "TRepSuit",   /* 57 */
-                                                  "TRepNHCrit", /* 58 */
-                                                  "59",
-                                                  "StandF",      /* 60 */
-                                                  "SliteC",      /* 61 */
-                                                  "HeatCutOff",  /* 62 */
-                                                  "VechBurn",    /* 63 */
-                                                  "UnStunCrew",  /* 64 */
-                                                  "StunCrew",    /* 65 */
-                                                  "UnJamTurret", /* 66 */
-                                                  "UnJamAmmo",   /* 67 */
-                                                  "StArmor",     /* 68 */
-                                                  "NSS",         /* 69 */
-                                                  "TagRecycle",  /* 70 */
-                                                  "RemPods",     /* 71 */
-                                                  "Extinguish",  /* 72 */
-                                                  "EntHangar",   /* 73 */
-                                                  "Hulldown",    /* 74 */
-                                                  "75",          /* 75 */
-                                                  "SchFail",     /* 76 */
-                                                  "SchRegen",    /* 77 */
-                                                  "CkStagger",   /* 78 */
-                                                  "MoveMode",    /* 79 */
-                                                  "Sideslip",    /* 80 */
-                                                  NULL};
+                                                   "TRepl",      /* 43 */
+                                                   "TReplG",     /* 44 */
+                                                   "TReat",      /* 45 */
+                                                   "TRelo",      /* 46 */
+                                                   "TFix",       /* 47 */
+                                                   "TFixI",      /* 48 */
+                                                   "TScrL",      /* 49 */
+                                                   "TScrP",      /* 50 */
+                                                   "TScrG",      /* 51 */
+                                                   "TRepaG",     /* 52 */
+                                                   "TRepaP",     /* 53 */
+                                                   "TMoB",       /* 54 */
+                                                   "TUMoB",      /* 55 */
+                                                   "TRese",      /* 56 */
+                                                   "TRepSuit",   /* 57 */
+                                                   "TRepNHCrit", /* 58 */
+                                                   "59",
+                                                   "StandF",      /* 60 */
+                                                   "SliteC",      /* 61 */
+                                                   "HeatCutOff",  /* 62 */
+                                                   "VechBurn",    /* 63 */
+                                                   "UnStunCrew",  /* 64 */
+                                                   "StunCrew",    /* 65 */
+                                                   "UnJamTurret", /* 66 */
+                                                   "UnJamAmmo",   /* 67 */
+                                                   "StArmor",     /* 68 */
+                                                   "NSS",         /* 69 */
+                                                   "TagRecycle",  /* 70 */
+                                                   "RemPods",     /* 71 */
+                                                   "Extinguish",  /* 72 */
+                                                   "EntHangar",   /* 73 */
+                                                   "Hulldown",    /* 74 */
+                                                   "75",          /* 75 */
+                                                   "SchFail",     /* 76 */
+                                                   "SchRegen",    /* 77 */
+                                                   "CkStagger",   /* 78 */
+                                                   "MoveMode",    /* 79 */
+                                                   "Sideslip",    /* 80 */
+                                                   NULL};
 
 #include "p.aero.move.h"
 #include "p.mech.events.h"

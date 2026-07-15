@@ -141,14 +141,14 @@ static int factoral(int n) {
   return j;
 }
 
-void mech_standfail_event(MUXEVENT *e) {
+void mech_standfail_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   mech_notify(mech, MECHALL,
               "%cgYou have finally recovered from your attempt to stand.%c");
 }
 
-void mech_fall_event(MUXEVENT *e) {
+void mech_fall_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long fallspeed = (long)e->data2;
   int fallen_elev;
@@ -178,7 +178,7 @@ void mech_fall_event(MUXEVENT *e) {
 }
 
 /* This is just a 'toy' event */
-void mech_lock_event(MUXEVENT *e) {
+void mech_lock_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   MECH *target;
 
@@ -199,14 +199,14 @@ void mech_lock_event(MUXEVENT *e) {
 /* Various events that don't fit too well to other categories */
 
 /* Basically the update events + some movenement events */
-void mech_stabilizing_event(MUXEVENT *e) {
+void mech_stabilizing_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   mech_notify(mech, MECHSTARTED,
               "%cgYou have finally stabilized after your jump.%c");
 }
 
-void mech_jump_event(MUXEVENT *e) {
+void mech_jump_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   MECHEVENT(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
@@ -217,7 +217,7 @@ void mech_jump_event(MUXEVENT *e) {
 
 extern int PilotStatusRollNeeded[];
 
-void mech_recovery_event(MUXEVENT *e) {
+void mech_recovery_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (Destroyed(mech) || !Uncon(mech))
@@ -239,8 +239,8 @@ void ProlongUncon(MECH *mech, int len) {
     MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
     return;
   }
-  l = muxevent_last_type_data(EVENT_RECOVERY, (void *)mech) + len;
-  muxevent_remove_type_data(EVENT_RECOVERY, (void *)mech);
+  l = mux_event_last_type_data(EVENT_RECOVERY, (void *)mech) + len;
+  mux_event_remove_type_data(EVENT_RECOVERY, (void *)mech);
   MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
 
@@ -252,7 +252,7 @@ struct foo {
 extern struct foo lateral_modes[];
 
 #ifdef BT_MOVEMENT_MODES
-void mech_sideslip_event(MUXEVENT *e) {
+void mech_sideslip_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   int roll;
 
@@ -277,7 +277,7 @@ void mech_sideslip_event(MUXEVENT *e) {
 }
 #endif
 
-void mech_lateral_event(MUXEVENT *e) {
+void mech_lateral_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long latmode = (long)e->data2;
 
@@ -297,7 +297,7 @@ void mech_lateral_event(MUXEVENT *e) {
 #endif
 }
 
-void mech_move_event(MUXEVENT *e) {
+void mech_move_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (MechType(mech) == CLASS_VTOL)
@@ -326,7 +326,7 @@ void mech_move_event(MUXEVENT *e) {
     MECHEVENT(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
 }
 
-void mech_stand_event(MUXEVENT *e) {
+void mech_stand_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   MechLOSBroadcast(mech, "stands up!");
@@ -334,7 +334,7 @@ void mech_stand_event(MUXEVENT *e) {
   MakeMechStand(mech);
 }
 
-void mech_plos_event(MUXEVENT *e) {
+void mech_plos_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data, *target;
   MAP *map;
   int mapvis;
@@ -365,7 +365,7 @@ void mech_plos_event(MUXEVENT *e) {
       }
 }
 
-void aero_move_event(MUXEVENT *e) {
+void aero_move_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (!Landed(mech)) {
@@ -385,7 +385,7 @@ void aero_move_event(MUXEVENT *e) {
       MechStartFZ(mech) = MechStartFZ(mech) - 1;
     move_mech(mech);
     if (IsDS(mech) && MechZ(mech) <= (MechElevation(mech) + 5) &&
-        ((muxevent_tick / WEAPON_TICK) % 10) == 0)
+        ((mux_event_tick / WEAPON_TICK) % 10) == 0)
       DS_BlastNearbyMechsAndTrees(
           mech, "You are hit by the DropShip's plasma exhaust!",
           "is hit directly by DropShip's exhaust!",
@@ -403,12 +403,12 @@ void aero_move_event(MUXEVENT *e) {
   }
 }
 
-void very_fake_func(MUXEVENT *e) {}
+void very_fake_func(MuxEvent *e) {}
 
 /*
  * Exile Stun Code Event
  */
-void mech_crewstun_event(MUXEVENT *e) {
+void mech_crewstun_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (!mech)
@@ -429,7 +429,7 @@ void mech_crewstun_event(MUXEVENT *e) {
     MechCritStatus(mech) &= ~MECH_STUNNED;
 }
 
-void unstun_crew_event(MUXEVENT *e) {
+void unstun_crew_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (CrewStunned(mech) > 1) /* If we've been stunned again! */
@@ -441,7 +441,7 @@ void unstun_crew_event(MUXEVENT *e) {
   MechTankCritStatus(mech) &= ~CREW_STUNNED;
 }
 
-void mech_unjam_ammo_event(MUXEVENT *objEvent) {
+void mech_unjam_ammo_event(MuxEvent *objEvent) {
   MECH *objMech = (MECH *)objEvent->data; /* get the mech */
   long wWeapNum = (long)objEvent->data2;  /* and now the weapon number */
   int wSect, wSlot, wWeapStatus, wWeapIdx;
@@ -503,7 +503,7 @@ void mech_unjam_ammo_event(MUXEVENT *objEvent) {
                        ammoLoc1, ammoCrit1, 0);
 }
 
-void check_stagger_event(MUXEVENT *event) {
+void check_stagger_event(MuxEvent *event) {
   MECH *mech = (MECH *)event->data; /* get the mech */
 
   SendDebug(tprintf("Triggered stagger check for %d.", mech->mynum));
@@ -536,7 +536,7 @@ void check_stagger_event(MUXEVENT *event) {
 }
 
 #ifdef BT_MOVEMENT_MODES
-void mech_movemode_event(MUXEVENT *e) {
+void mech_movemode_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long i = (long)e->data2;
   int dir = (i & MODE_ON ? 1 : i & MODE_OFF ? 0 : 0);

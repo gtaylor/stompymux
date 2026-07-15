@@ -23,7 +23,7 @@
 
 const int num_def_weapons = NUM_DEF_WEAPONS;
 
-int CheckData(dbref player, void *data) {
+int CheckData(DbRef player, void *data) {
   int returnValue = 1;
 
   if (data == NULL) {

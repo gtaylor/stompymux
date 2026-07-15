@@ -8,16 +8,16 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
-#include "attrs.h"
-#include "db.h"
-#include "externs.h"
 #include "mech.stat.h"
-#include "muxevent/muxevent.h"
-#include "powers.h"
+#include "mux/database/attrs.h"
+#include "mux/database/db.h"
+#include "mux/database/powers.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/server_api.h"
 
 #include "btconfig.h"
 #include "mymath.h"
@@ -879,7 +879,7 @@ typedef struct damageNode {
   int amount;
   time_t occuredAt;
   struct damageNode *next;
-  dbref attackerNum;
+  DbRef attackerNum;
   int counted;
 } damageNode;
 
@@ -915,13 +915,13 @@ typedef struct {
   short num_seen;            /* Number of enemies seen */
   short lx, ly;
 
-  dbref chgtarget; /* My CHARGE target */
-  dbref dfatarget; /* My DFA target */
-  dbref target;    /* My default target */
-  dbref swarming;  /* Swarm target */
-  dbref swarmedby; /* Who's swarming/mounting us */
-  dbref carrying;  /* Who are we lugging about? */
-  dbref spotter;   /* Who's spotting for us? */
+  DbRef chgtarget; /* My CHARGE target */
+  DbRef dfatarget; /* My DFA target */
+  DbRef target;    /* My default target */
+  DbRef swarming;  /* Swarm target */
+  DbRef swarmedby; /* Who's swarming/mounting us */
+  DbRef carrying;  /* Who are we lugging about? */
+  DbRef spotter;   /* Who's spotting for us? */
 
   float heat;       /* Heat index */
   float weapheat;   /* Weapon heat factor-> see manifesto */
@@ -1010,23 +1010,23 @@ typedef struct {
   int team;             /* Only for internal use */
   int unusable_arcs; /* Horrid kludge for disallowing use of some arcs' guns */
   int stall;         /* is this mech in a repair stall? */
-  dbref pilot;       /* My pilot */
-  dbref bay[NUM_BAYS];
-  dbref turret[NUM_TURRETS];
+  DbRef pilot;       /* My pilot */
+  DbRef bay[NUM_BAYS];
+  DbRef turret[NUM_TURRETS];
 } mech_pd;
 
 typedef struct {
   char C3ChanTitle[CHTITLELEN + 1];   /* applies to C3 and C3i */
-  dbref C3iNetwork[C3I_NETWORK_SIZE]; /* other mechs in the C3i network */
+  DbRef C3iNetwork[C3I_NETWORK_SIZE]; /* other mechs in the C3i network */
   int wC3iNetworkSize;                /* Current size of our network */
-  dbref C3Network[C3_NETWORK_SIZE];   /* The whole network. We're sacrificing
+  DbRef C3Network[C3_NETWORK_SIZE];   /* The whole network. We're sacrificing
                                          memory for speed. */
   int wC3NetworkSize;                 /* Current size of the C3Network */
   int wTotalC3Masters;                /* How many masters are on this mech? */
   int wWorkingC3Masters; /* How many working masters are on this mech? */
   int C3FreqMode;        /* applies to C3 and C3i */
-  dbref tagTarget;       /* dbref of the target we're tagging */
-  dbref taggedBy;        /* dbref of the person tagging us */
+  DbRef tagTarget;       /* dbref of the target we're tagging */
+  DbRef taggedBy;        /* dbref of the person tagging us */
 } mech_sd;
 
 typedef struct mech_data {
@@ -1035,9 +1035,9 @@ typedef struct mech_data {
   char ID[2];                            /* Only for internal use */
   char brief;                            /* toggle brievity */
   char chantitle[FREQS][CHTITLELEN + 1]; /* Channel titles */
-  dbref mynum;                           /* My dbref */
+  DbRef mynum;                           /* My dbref */
   int mapnumber;                         /* My number on the map */
-  dbref mapindex;                        /* 0..MAX_MAPS (dbref of map object) */
+  DbRef mapindex;                        /* 0..MAX_MAPS (dbref of map object) */
   unsigned long tic[NUM_TICS][TICLONGS]; /* tics.. */
   int freq[FREQS];                       /* channel frequencies */
   int freqmodes[FREQS];                  /* flags for the freq */
@@ -1457,9 +1457,9 @@ extern struct missile_hit_table_struct MissileHitTable[];
 #define MINE_FALL 3 /* Someone falls in the hex */
 #define MINE_DROP 4 /* Someone drops to ground in the hex */
 
-extern void *FindObjectsData(dbref key);
+extern void *FindObjectsData(DbRef key);
 #ifndef ECMD
-#define ECMD(a) extern void a(dbref player, void *data, char *buffer)
+#define ECMD(a) extern void a(DbRef player, void *data, char *buffer)
 #endif
 
 #define destroy_object(obj) destroy_thing(obj)

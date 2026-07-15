@@ -11,7 +11,7 @@
 #include "failures.h"
 #include "mech.events.h"
 #include "mech.tech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.econ.h"
@@ -66,7 +66,7 @@ static int tmp_flag = 0;
 static int tmp_loc;
 static int tmp_part;
 
-static void tech_check_locpart(MUXEVENT *e) {
+static void tech_check_locpart(MuxEvent *e) {
   int loc, pos;
   long l = (long)e->data2;
 
@@ -75,7 +75,7 @@ static void tech_check_locpart(MUXEVENT *e) {
     tmp_flag++;
 }
 
-static void tech_check_loc(MUXEVENT *e) {
+static void tech_check_loc(MuxEvent *e) {
   long loc;
 
   loc = (((long)e->data2) % 16);
@@ -87,21 +87,21 @@ static void tech_check_loc(MUXEVENT *e) {
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
   tmp_part = part;                                                             \
-  muxevent_gothru_type_data(t, (void *)mech, fun);                             \
+  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
   return tmp_flag
 
 #define CHECKL(t, fun)                                                         \
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
-  muxevent_gothru_type_data(t, (void *)mech, fun);                             \
+  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
   return tmp_flag
 
 #define CHECK2(t, t2, fun)                                                     \
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
   tmp_part = part;                                                             \
-  muxevent_gothru_type_data(t, (void *)mech, fun);                             \
-  muxevent_gothru_type_data(t2, (void *)mech, fun);                            \
+  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
+  mux_event_gothru_type_data(t2, (void *)mech, fun);                           \
   return tmp_flag
 
 /* Replace/reload */
@@ -174,8 +174,8 @@ int SomeoneScrappingPart(MECH *mech, int loc, int part) {
 int CanScrapLoc(MECH *mech, int loc) {
   tmp_flag = 0;
   tmp_loc = loc % 8;
-  muxevent_gothru_type_data(EVENT_REPAIR_REPL, (void *)mech, tech_check_loc);
-  muxevent_gothru_type_data(EVENT_REPAIR_RELO, (void *)mech, tech_check_loc);
+  mux_event_gothru_type_data(EVENT_REPAIR_REPL, (void *)mech, tech_check_loc);
+  mux_event_gothru_type_data(EVENT_REPAIR_RELO, (void *)mech, tech_check_loc);
   return !tmp_flag && !SomeoneFixing(mech, loc);
 }
 
@@ -202,7 +202,7 @@ int ValidGunPos(MECH *mech, int loc, int pos) {
   return 0;
 }
 
-void tech_checkstatus(dbref player, void *data, char *buffer) {
+void tech_checkstatus(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int i = figure_latest_tech_event(mech);
   char *ms;
@@ -248,7 +248,7 @@ TECHCOMMANDH(tech_removegun) {
   START("You start removing the gun..");
   STARTREPAIR(REMOVEG_TIME * ClanMod(GetWeaponCrits(
                                  mech, Weapon2I(GetPartType(mech, loc, part)))),
-              mech, PACK_LOCPOS_E(loc, part, mod), muxevent_tickmech_removegun,
+              mech, PACK_LOCPOS_E(loc, part, mod), mux_event_tickmech_removegun,
               EVENT_REPAIR_SCRG);
 }
 
@@ -291,7 +291,7 @@ TECHCOMMANDH(tech_removepart) {
     }
   }
   STARTREPAIR(REMOVEP_TIME, mech, PACK_LOCPOS_E(loc, part, mod),
-              muxevent_tickmech_removepart, EVENT_REPAIR_SCRP);
+              mux_event_tickmech_removepart, EVENT_REPAIR_SCRP);
 }
 
 #define CHECK_S(nloc)                                                          \
@@ -342,7 +342,7 @@ TECHCOMMANDH(tech_removesection) {
     mod = 3;
   START("You start removing the section..");
   STARTREPAIR(REMOVES_TIME, mech, PACK_LOCPOS_E(loc, 0, mod),
-              muxevent_tickmech_removesection, EVENT_REPAIR_SCRL);
+              mux_event_tickmech_removesection, EVENT_REPAIR_SCRL);
 }
 
 TECHCOMMANDH(tech_replacegun) {
@@ -415,7 +415,7 @@ TECHCOMMANDH(tech_replacegun) {
         econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                           parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
-      muxevent_add(
+      mux_event_add(
           MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
           very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
@@ -440,7 +440,7 @@ TECHCOMMANDH(tech_replacegun) {
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(player, fixtime);
-      muxevent_add(
+      mux_event_add(
           MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
           very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
@@ -464,9 +464,9 @@ TECHCOMMANDH(tech_replacegun) {
       econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                         parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
-    muxevent_add(
+    mux_event_add(
         MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
-        muxevent_tickmech_replacegun, (void *)mech,
+        mux_event_tickmech_replacegun, (void *)mech,
         (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
   }
 
@@ -477,7 +477,7 @@ TECHCOMMANDH(tech_replacegun) {
                                     ClanMod(GetWeaponCrits
                                                     (mech,
      Weapon2I(GetPartType(mech, loc, part)))), mech, PACK_LOCPOS_E(loc, part,
-     brand), muxevent_tickmech_replacegun, EVENT_REPAIR_REPLG, "You start
+     brand), mux_event_tickmech_replacegun, EVENT_REPAIR_REPLG, "You start
      replacing the gun..", 1);
 
   */
@@ -525,7 +525,7 @@ TECHCOMMANDH(tech_repairgun) {
                     WEAPTYPE_DIFFICULTY(GetPartType(mech, loc, part)) +
                     extra_hard,
                 repairg_fail, repairg_succ, repair_econ, REPAIRGUN_TIME, mech,
-                PACK_LOCPOS(loc, part), muxevent_tickmech_repairgun,
+                PACK_LOCPOS(loc, part), mux_event_tickmech_repairgun,
                 EVENT_REPAIR_REPAP, "You start repairing the weapon..", 1);
 }
 
@@ -557,7 +557,7 @@ TECHCOMMANDH(tech_fixenhcrit) {
 
   DOTECH_LOCPOS(ENHCRIT_DIFFICULTY, repairenhcrit_fail, repairenhcrit_succ,
                 repairenhcrit_econ, REPAIRENHCRIT_TIME, mech,
-                PACK_LOCPOS(loc, part), muxevent_tickmech_repairenhcrit,
+                PACK_LOCPOS(loc, part), mux_event_tickmech_repairenhcrit,
                 EVENT_REPAIR_REPENHCRIT, "You start repairing the weapon...",
                 1);
 }
@@ -631,9 +631,9 @@ TECHCOMMANDH(tech_replacepart) {
       econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                         parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
-      muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                   EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
-                   (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                    EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
+                    (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
 
     } else {
       notify_printf(player, "You manage to save the part...");
@@ -655,9 +655,9 @@ TECHCOMMANDH(tech_replacepart) {
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(player, fixtime);
-      muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                   EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
-                   (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                    EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
+                    (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
     }
 
   } else {
@@ -678,15 +678,16 @@ TECHCOMMANDH(tech_replacepart) {
     econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                       parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
-    muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                 EVENT_REPAIR_REPL, muxevent_tickmech_repairpart, (void *)mech,
-                 (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+    mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                  EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
+                  (void *)mech,
+                  (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
   }
   /*
           DOTECH_LOCPOS(REPLACE_DIFFICULTY +
                                     PARTTYPE_DIFFICULTY(GetPartType(mech, loc,
      part)), replacep_fail, replacep_succ, replace_econ, REPLACEPART_TIME, mech,
-     PACK_LOCPOS(loc, part), muxevent_tickmech_repairpart, EVENT_REPAIR_REPL,
+     PACK_LOCPOS(loc, part), mux_event_tickmech_repairpart, EVENT_REPAIR_REPL,
                                     "You start replacing the part..", 0);
   */
 }
@@ -717,7 +718,7 @@ TECHCOMMANDH(tech_repairpart) {
   DOTECH_LOCPOS(REPAIR_DIFFICULTY +
                     PARTTYPE_DIFFICULTY(GetPartType(mech, loc, part)),
                 repairp_fail, repairp_succ, repair_econ, REPAIRPART_TIME, mech,
-                PACK_LOCPOS(loc, part), muxevent_tickmech_repairpart,
+                PACK_LOCPOS(loc, part), mux_event_tickmech_repairpart,
                 EVENT_REPAIR_REPAP, "You start repairing the part..", 0);
 }
 
@@ -778,7 +779,7 @@ TECHCOMMANDH(tech_reload) {
 
   DOTECH_LOCPOS_VAL(RELOAD_DIFFICULTY, reload_fail, reload_succ, reload_econ,
                     &change, RELOAD_TIME, mech,
-                    PACK_LOCPOS_E(loc, part, change), muxevent_tickmech_reload,
+                    PACK_LOCPOS_E(loc, part, change), mux_event_tickmech_reload,
                     EVENT_REPAIR_RELO,
                     "You start reloading the ammo compartment..");
 }
@@ -814,7 +815,7 @@ TECHCOMMANDH(tech_unload) {
     mod = 3;
   START("You start unloading the ammo compartment..");
   STARTREPAIR(RELOAD_TIME, mech, PACK_LOCPOS_E(loc, part, change),
-              muxevent_tickmech_reload, EVENT_REPAIR_RELO);
+              mux_event_tickmech_reload, EVENT_REPAIR_RELO);
 }
 
 TECHCOMMANDH(tech_fixarmor) {
@@ -852,7 +853,7 @@ TECHCOMMANDH(tech_fixarmor) {
                    fixarmor_econ, &change, FIXARMOR_TIME * ochange, loc,
                    EVENT_REPAIR_FIX, mech, "You start fixing the armor..");
   STARTIREPAIR(FIXARMOR_TIME * change, mech, (change * 16 + loc),
-               muxevent_tickmech_repairarmor, EVENT_REPAIR_FIX, change);
+               mux_event_tickmech_repairarmor, EVENT_REPAIR_FIX, change);
 }
 
 TECHCOMMANDH(tech_fixinternal) {
@@ -880,7 +881,7 @@ TECHCOMMANDH(tech_fixinternal) {
                    fixinternal_econ, &change, FIXINTERNAL_TIME * ochange, loc,
                    EVENT_REPAIR_FIX, mech, "You start fixing the internals..");
   STARTIREPAIR(FIXINTERNAL_TIME * change, mech, (change * 16 + loc),
-               muxevent_tickmech_repairinternal, EVENT_REPAIR_FIXI, change);
+               mux_event_tickmech_repairinternal, EVENT_REPAIR_FIXI, change);
 }
 
 #define CHECK(tloc, nloc)                                                      \
@@ -983,9 +984,9 @@ TECHCOMMANDH(tech_reattach) {
       econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                         Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
-      muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                   EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
-                   (void *)(loc + player * PLAYERPOS));
+      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                    EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
+                    (void *)(loc + player * PLAYERPOS));
 
     } else {
       notify_printf(player, "You manage to replace the section...");
@@ -1008,9 +1009,9 @@ TECHCOMMANDH(tech_reattach) {
       econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                         Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
-      muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                   EVENT_REPAIR_REAT, muxevent_tickmech_reattach, (void *)mech,
-                   (void *)(loc + player * PLAYERPOS));
+      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                    EVENT_REPAIR_REAT, mux_event_tickmech_reattach,
+                    (void *)mech, (void *)(loc + player * PLAYERPOS));
     }
   } else {
     if (roll == 0)
@@ -1031,14 +1032,14 @@ TECHCOMMANDH(tech_reattach) {
     econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : Location(mech->mynum),
                       Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
     tech_addtechtime(player, fixtime);
-    muxevent_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
-                 EVENT_REPAIR_REAT, muxevent_tickmech_reattach, (void *)mech,
-                 (void *)(loc + player * PLAYERPOS));
+    mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+                  EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
+                  (void *)(loc + player * PLAYERPOS));
   }
 
   //	DOTECH_LOC(REATTACH_DIFFICULTY, reattach_fail, reattach_succ,
   //			   reattach_econ, REATTACH_TIME, mech, loc,
-  //			   muxevent_tickmech_reattach, EVENT_REPAIR_REAT,
+  //			   mux_event_tickmech_reattach, EVENT_REPAIR_REAT,
   //			   "You start replacing the section..");
 }
 
@@ -1073,7 +1074,7 @@ TECHCOMMANDH(tech_replacesuit) {
 
   DOTECH_LOC(REPLACESUIT_DIFFICULTY, replacesuit_fail, replacesuit_succ,
              replacesuit_econ, REPLACESUIT_TIME, mech, loc,
-             muxevent_tickmech_replacesuit, EVENT_REPAIR_REPSUIT,
+             mux_event_tickmech_replacesuit, EVENT_REPAIR_REPSUIT,
              "You start replacing the missing suit.");
 }
 
@@ -1098,7 +1099,7 @@ TECHCOMMANDH(tech_reseal) {
           "You're too tired to do that!");
 
   DOTECH_LOC(RESEAL_DIFFICULTY, reseal_fail, reseal_succ, reseal_econ,
-             RESEAL_TIME, mech, loc, muxevent_tickmech_reseal,
+             RESEAL_TIME, mech, loc, mux_event_tickmech_reseal,
              EVENT_REPAIR_RESE, "You start resealing the section.");
 }
 

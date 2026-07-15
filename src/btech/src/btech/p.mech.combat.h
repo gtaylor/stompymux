@@ -12,11 +12,11 @@
 #pragma once
 
 /* mech.combat.c */
-void mech_target(dbref player, void *data, char *buffer);
+void mech_target(DbRef player, void *data, char *buffer);
 void sixth_sense_check(MECH *mech, MECH *target);
-void mech_settarget(dbref player, void *data, char *buffer);
-void mech_fireweapon(dbref player, void *data, char *buffer);
-int FireWeaponNumber(dbref player, MECH *mech, MAP *mech_map, int weapnum,
+void mech_settarget(DbRef player, void *data, char *buffer);
+void mech_fireweapon(DbRef player, void *data, char *buffer);
+int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
                      int argc, char **args, int sight);
 char *hex_target_id(MECH *mech);
 int canClearOrIgnite(int weapindx);

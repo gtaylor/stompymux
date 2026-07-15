@@ -62,7 +62,7 @@ static char *find_entry(char *s, int i, int b) {
 
 extern char *get_parts_short_name(int, int);
 
-void econ_change_items(dbref d, int id, int brand, int num) {
+void econ_change_items(DbRef d, int id, int brand, int num) {
   char *t, *u;
   int base = 0, i1, i2, i3;
 
@@ -92,7 +92,7 @@ void econ_change_items(dbref d, int id, int brand, int num) {
   /* Successfully changed */
 }
 
-int econ_find_items(dbref d, int id, int brand) {
+int econ_find_items(DbRef d, int id, int brand) {
   char *t, *u;
   int i1, i2, i3;
 
@@ -108,7 +108,7 @@ int econ_find_items(dbref d, int id, int brand) {
   return 0;
 }
 
-void econ_set_items(dbref d, int id, int brand, int num) {
+void econ_set_items(DbRef d, int id, int brand, int num) {
   int i;
 
   if (!Good_obj(d))

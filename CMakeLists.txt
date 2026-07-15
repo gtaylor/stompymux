@@ -116,7 +116,7 @@ configure_file(src/cmake/btmux_build_config.h.in
                "${BTECH_SOURCE_DIR}/btmux_build_config.h")
 
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
-configure_file(src/cmake/version.h.in "${MUX_SOURCE_DIR}/version.h" @ONLY)
+configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h" @ONLY)
 
 add_library(btmux_options INTERFACE)
 target_compile_options(btmux_options INTERFACE
@@ -229,65 +229,10 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
-set(NETMUX_SOURCES
-  ${MUX_SOURCE_DIR}/myfifo/myfifo.c
-  ${MUX_SOURCE_DIR}/muxevent/muxevent.c
-  ${MUX_SOURCE_DIR}/boolexp.c
-  ${MUX_SOURCE_DIR}/server_lifecycle.c
-  ${MUX_SOURCE_DIR}/telnet_socket.c
-  ${MUX_SOURCE_DIR}/telnet.c
-  ${MUX_SOURCE_DIR}/commac.c
-  ${MUX_SOURCE_DIR}/command.c
-  ${MUX_SOURCE_DIR}/comsys.c
-  ${MUX_SOURCE_DIR}/conf.c
-  ${MUX_SOURCE_DIR}/cque.c
-  ${MUX_SOURCE_DIR}/create.c
-  ${MUX_SOURCE_DIR}/db.c
-  ${MUX_SOURCE_DIR}/dllist.c
-  ${MUX_SOURCE_DIR}/eval.c
-  ${MUX_SOURCE_DIR}/file_c.c
-  ${MUX_SOURCE_DIR}/flags.c
-  ${MUX_SOURCE_DIR}/funceval.c
-  ${MUX_SOURCE_DIR}/functions.c
-  ${MUX_SOURCE_DIR}/game.c
-  ${MUX_SOURCE_DIR}/persistence/commac_persistence_sqlite.c
-  ${MUX_SOURCE_DIR}/persistence/gamedb_sqlite.c
-  ${MUX_SOURCE_DIR}/help.c
-  ${MUX_SOURCE_DIR}/log.c
-  ${MUX_SOURCE_DIR}/lua.c
-  ${MUX_SOURCE_DIR}/look.c
-  ${MUX_SOURCE_DIR}/macro.c
-  ${MUX_SOURCE_DIR}/match.c
-  ${MUX_SOURCE_DIR}/move.c
-  ${MUX_SOURCE_DIR}/nametab.c
-  ${MUX_SOURCE_DIR}/netcommon.c
-  ${MUX_SOURCE_DIR}/nrbtab.c
-  ${MUX_SOURCE_DIR}/object.c
-  ${MUX_SOURCE_DIR}/player.c
-  ${MUX_SOURCE_DIR}/player_c.c
-  ${MUX_SOURCE_DIR}/powers.c
-  ${MUX_SOURCE_DIR}/predicates.c
-  ${MUX_SOURCE_DIR}/rbtree.c
-  ${MUX_SOURCE_DIR}/rbtab.c
-  ${MUX_SOURCE_DIR}/rob.c
-  ${MUX_SOURCE_DIR}/set.c
-  ${MUX_SOURCE_DIR}/signal.c
-  ${MUX_SOURCE_DIR}/speech.c
-  ${MUX_SOURCE_DIR}/stringutil.c
-  ${MUX_SOURCE_DIR}/timer.c
-  ${MUX_SOURCE_DIR}/unparse.c
-  ${MUX_SOURCE_DIR}/vattr.c
-  ${MUX_SOURCE_DIR}/walkdb.c
-  ${MUX_SOURCE_DIR}/wild.c
-  ${MUX_SOURCE_DIR}/wiz.c
-  ${MUX_SOURCE_DIR}/version.c)
+  "${CMAKE_SOURCE_DIR}/src")
 
-if(BTECH_ENHANCED_LOGGING)
-  list(APPEND NETMUX_SOURCES ${MUX_SOURCE_DIR}/logcache.c)
-endif()
-
-add_executable(netmux ${NETMUX_SOURCES})
+add_executable(netmux)
+include(src/mux/sources.cmake)
 if(BUILD_TESTING)
   target_compile_definitions(netmux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
 endif()
@@ -296,8 +241,7 @@ target_compile_options(netmux PRIVATE
 target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 m "${CRYPT_LIBRARY}")
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_BINARY_DIR}/${MUX_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
@@ -308,9 +252,16 @@ target_compile_options(mkindx PRIVATE
 target_link_libraries(mkindx PRIVATE btmux_options)
 target_include_directories(mkindx PRIVATE
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}")
+  "${CMAKE_SOURCE_DIR}/src")
 
 if(BUILD_TESTING)
+  add_executable(mux_header_interfaces_test tests/mux_header_interfaces.c)
+  target_link_libraries(mux_header_interfaces_test PRIVATE btmux_options)
+  target_include_directories(mux_header_interfaces_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME mux_header_interfaces COMMAND mux_header_interfaces_test)
+
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTECH_ADVANCED_ECON)

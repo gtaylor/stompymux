@@ -9,7 +9,7 @@
  */
 
 #include "mech.tic.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.mech.combat.h"
 #include "p.mech.contacts.h"
 #include "p.mech.maps.h"
@@ -19,7 +19,7 @@
 #include "turret.h"
 
 int arc_override = 0;
-dbref pilot_override = 0;
+DbRef pilot_override = 0;
 
 #define LOCK_FUDGE(mech, tur)                                                  \
   if (tur->gunner > 0)                                                         \
@@ -53,7 +53,7 @@ dbref pilot_override = 0;
 
 #define LOCK_FUDGE_VARS                                                        \
   short stored_targx, stored_targy, stored_targz;                              \
-  dbref stored_target;                                                         \
+  DbRef stored_target;                                                         \
   int stored_status;
 
 #define TUR_BASE                                                               \
@@ -74,35 +74,35 @@ dbref pilot_override = 0;
   TUR_COMMON                                                                   \
   LOCK_FUDGE(mech, tur)
 
-void turret_addtic(dbref player, void *data, char *buffer) {
+void turret_addtic(DbRef player, void *data, char *buffer) {
 #if 0
 	TUR_COMMON;
 	addtic_sub(player, tur->tic, mech, buffer);
 #endif
 }
 
-void turret_deltic(dbref player, void *data, char *buffer) {
+void turret_deltic(DbRef player, void *data, char *buffer) {
 #if 0
 	TUR_COMMON;
 	deltic_sub(player, tur->tic, mech, buffer);
 #endif
 }
 
-void turret_listtic(dbref player, void *data, char *buffer) {
+void turret_listtic(DbRef player, void *data, char *buffer) {
 #if 0
 	TUR_COMMON;
 	listtic_sub(player, tur->tic, mech, buffer);
 #endif
 }
 
-void turret_cleartic(dbref player, void *data, char *buffer) {
+void turret_cleartic(DbRef player, void *data, char *buffer) {
 #if 0
 	TUR_COMMON;
 	cleartic_sub(player, tur->tic, buffer);
 #endif
 }
 
-void turret_firetic(dbref player, void *data, char *buffer) {
+void turret_firetic(DbRef player, void *data, char *buffer) {
 #if 0
 	TUR_GCOMMON;
 	firetic_sub(player, tur->tic, mech, buffer);
@@ -110,96 +110,96 @@ void turret_firetic(dbref player, void *data, char *buffer) {
 #endif
 }
 
-void turret_bearing(dbref player, void *data, char *buffer) {
+void turret_bearing(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_bearing(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_eta(dbref player, void *data, char *buffer) {
+void turret_eta(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_eta(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_findcenter(dbref player, void *data, char *buffer) {
+void turret_findcenter(DbRef player, void *data, char *buffer) {
   TUR_COMMON;
   mech_findcenter(player, mech, buffer);
 }
 
-void turret_fireweapon(dbref player, void *data, char *buffer) {
+void turret_fireweapon(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_fireweapon(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_settarget(dbref player, void *data, char *buffer) {
+void turret_settarget(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_settarget(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_lrsmap(dbref player, void *data, char *buffer) {
+void turret_lrsmap(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_lrsmap(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_navigate(dbref player, void *data, char *buffer) {
+void turret_navigate(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_navigate(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_range(dbref player, void *data, char *buffer) {
+void turret_range(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_range(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_sight(dbref player, void *data, char *buffer) {
+void turret_sight(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_sight(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_tacmap(dbref player, void *data, char *buffer) {
+void turret_tacmap(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_tacmap(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_contacts(dbref player, void *data, char *buffer) {
+void turret_contacts(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_contacts(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_critstatus(dbref player, void *data, char *buffer) {
+void turret_critstatus(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_critstatus(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_report(dbref player, void *data, char *buffer) {
+void turret_report(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_report(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_scan(dbref player, void *data, char *buffer) {
+void turret_scan(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_scan(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_status(dbref player, void *data, char *buffer) {
+void turret_status(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_status(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
 }
 
-void turret_weaponspecs(dbref player, void *data, char *buffer) {
+void turret_weaponspecs(DbRef player, void *data, char *buffer) {
   TUR_GCOMMON;
   mech_weaponspecs(player, mech, buffer);
   LOCK_FUDGE_R(mech, tur);
@@ -209,7 +209,7 @@ void turret_weaponspecs(dbref player, void *data, char *buffer) {
 #define SPECIAL_ALLOC 1
 
 /* Alloc/free routine */
-void newturret(dbref key, void **data, int selector) {
+void newturret(DbRef key, void **data, int selector) {
   TURRET_T *new = *data;
 
   switch (selector) {
@@ -222,7 +222,7 @@ void newturret(dbref key, void **data, int selector) {
   }
 }
 
-void turret_initialize(dbref player, void *data, char *buffer) {
+void turret_initialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
   DOCHECK(
       player != tur->gunner && Connected(tur->gunner) &&
@@ -234,7 +234,7 @@ void turret_initialize(dbref player, void *data, char *buffer) {
   tur->gunner = player;
 }
 
-void turret_deinitialize(dbref player, void *data, char *buffer) {
+void turret_deinitialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
   DOCHECK(player != tur->gunner, "You aren't gunner!");
   notify_except(tur->mynum, NOTHING, tur->mynum,

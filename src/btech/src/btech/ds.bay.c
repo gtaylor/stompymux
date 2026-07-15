@@ -8,23 +8,23 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 
-#include "functions.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mux/commands/functions.h"
 #include "p.bsuit.h"
 #include "p.eject.h"
 #include "p.mech.restrict.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
 
-void mech_createbays(dbref player, void *data, char *buffer) {
+void mech_createbays(DbRef player, void *data, char *buffer) {
   char *args[NUM_BAYS + 1];
   int argc;
-  dbref it;
+  DbRef it;
   int i;
   MECH *ds = (MECH *)data;
   MAP *map;
@@ -124,7 +124,7 @@ static int Find_Single_DS_In_MechHex(MECH *mech, long *ref, long *bayn) {
   return count;
 }
 
-static void mech_enterbay_event(MUXEVENT *e) {
+static void mech_enterbay_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data, *ds, *tmpm = NULL;
   long ref = (long)e->data2;
   long bayn;
@@ -167,7 +167,7 @@ static void mech_enterbay_event(MUXEVENT *e) {
   }
 }
 
-static int DS_Bay_Is_Open(MECH *mech, MECH *ds, dbref bayref) {
+static int DS_Bay_Is_Open(MECH *mech, MECH *ds, DbRef bayref) {
   int i, j;
 
   for (i = 0; i < NUM_BAYS; i++)
@@ -187,13 +187,14 @@ static int DS_Bay_Is_Open(MECH *mech, MECH *ds, dbref bayref) {
   return 0;
 }
 
-static int DS_Bay_Is_EnterOK(MECH *mech, MECH *ds, dbref bayref) {
+static int DS_Bay_Is_EnterOK(MECH *mech, MECH *ds, DbRef bayref) {
   int i;
 
   for (i = 0; i < NUM_BAYS; i++)
     if (AeroBay(ds, i) > 0)
       if (AeroBay(ds, i) == bayref)
-        return muxevent_count_type_data2(EVENT_ENTER_HANGAR, (void *)bayref) > 0
+        return mux_event_count_type_data2(EVENT_ENTER_HANGAR, (void *)bayref) >
+                       0
                    ? 0
                    : 1;
   return 0;
@@ -201,10 +202,10 @@ static int DS_Bay_Is_EnterOK(MECH *mech, MECH *ds, dbref bayref) {
 
 /* ID / Number, both optional (this _will_ be painful) */
 
-void mech_enterbay(dbref player, void *data, char *buffer) {
+void mech_enterbay(DbRef player, void *data, char *buffer) {
   char *args[3];
   int argc;
-  dbref ref = -1, bayn = -1;
+  DbRef ref = -1, bayn = -1;
   MECH *mech = data, *ds;
   MAP *map;
 
@@ -297,7 +298,7 @@ static void DS_Place(MECH *ds, MECH *mech, int frombay) {
   MechTerrain(mech) = GetTerrain(mech_map, MechX(mech), MechY(mech));
 }
 
-static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, dbref frombay) {
+static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   MECH *car = NULL;
 
   StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 1);

@@ -13,7 +13,7 @@
 
 /* mech.restrict.c */
 void clear_mech_from_LOS(MECH *mech);
-void mech_Rsetxy(dbref player, void *data, char *buffer);
-void mech_Rsetmapindex(dbref player, void *data, char *buffer);
-void mech_Rsetteam(dbref player, void *data, char *buffer);
-void newfreemech(dbref key, void **data, int selector);
+void mech_Rsetxy(DbRef player, void *data, char *buffer);
+void mech_Rsetmapindex(DbRef player, void *data, char *buffer);
+void mech_Rsetteam(DbRef player, void *data, char *buffer);
+void newfreemech(DbRef key, void **data, int selector);

@@ -339,7 +339,7 @@ char *damages_func(MECH *mech) {
   return buffer;
 }
 
-void show_mechs_damage(dbref player, void *data, char *buffer) {
+void show_mechs_damage(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   coolmenu *c = NULL;
   int i, j, v1, v2;
@@ -546,7 +546,7 @@ void show_mechs_damage(dbref player, void *data, char *buffer) {
   KillCoolMenu(c);
 }
 
-static void fix_entry(dbref player, MECH *mech, int n) {
+static void fix_entry(DbRef player, MECH *mech, int n) {
   char buf[MBUF_SIZE] = {0};
   char *c;
 
@@ -624,7 +624,7 @@ static void fix_entry(dbref player, MECH *mech, int n) {
   }
 }
 
-void tech_fix(dbref player, void *data, char *buffer) {
+void tech_fix(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
   int n = atoi(buffer);
   int low, high;

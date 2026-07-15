@@ -285,7 +285,7 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
   /* Hmm.. This should be interesting */
   if (MechType(wounded) == CLASS_MECH && intDamage && (hitloc == CTORSO) &&
       GetSectInt(wounded, hitloc) == GetSectOInt(wounded, hitloc))
-    MechBoomStart(wounded) = muxevent_tick;
+    MechBoomStart(wounded) = mux_event_tick;
 
   if (GetSectInt(wounded, hitloc) <= intDamage) {
     intDamage -= GetSectInt(wounded, hitloc);
@@ -881,7 +881,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
   int tKillMech;
   int tIsLeg = ((hitloc == RLEG || hitloc == LLEG) ||
                 ((hitloc == RARM || hitloc == LARM) && (MechIsQuad(wounded))));
-  dbref wounded_pilot = MechPilot(wounded);
+  DbRef wounded_pilot = MechPilot(wounded);
   MECH *ttarget;
 
   /* Prevent the rare occurance of a section getting destroyed twice */
@@ -893,7 +893,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(wounded, i) && GetSectInt(wounded, i))
         return;
-    if (muxevent_count_type_data(EVENT_NUKEMECH, (void *)wounded)) {
+    if (mux_event_count_type_data(EVENT_NUKEMECH, (void *)wounded)) {
       fprintf(stderr, "And nuke event already existed.\n");
       return;
     }
@@ -1094,7 +1094,7 @@ char *setarmorstatus_func(MECH *mech, char *sectstr, char *typestr,
   return "1";
 }
 
-int dodamage_func(dbref player, MECH *mech, int totaldam, int clustersize,
+int dodamage_func(DbRef player, MECH *mech, int totaldam, int clustersize,
                   int direction, int iscritical, char *mechmsg,
                   char *mechbroadcast) {
 
@@ -1127,7 +1127,7 @@ int dodamage_func(dbref player, MECH *mech, int totaldam, int clustersize,
   return 1;
 }
 
-void mech_damage(dbref player, MECH *mech, char *buffer) {
+void mech_damage(DbRef player, MECH *mech, char *buffer) {
   char *args[5];
   int damage, clustersize;
   int isrear, iscritical;
@@ -1147,7 +1147,7 @@ void mech_damage(dbref player, MECH *mech, char *buffer) {
               damage / clustersize, 1, 0, 0, 0);
 }
 
-void mech_damage_section(dbref player, MECH *mech, char *buffer) {
+void mech_damage_section(DbRef player, MECH *mech, char *buffer) {
   char *args[5];
   int damage, isrear, iscritical, section;
 

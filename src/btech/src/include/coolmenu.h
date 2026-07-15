@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 /* #define MAX_MENU_LENGTH 24 */
 #define MAX_MENU_LENGTH 400
@@ -71,7 +71,7 @@ void CreateMenuEntry_Killer(coolmenu **c, char *text, int flag, int id,
                             int value, int maxvalue);
 
 void KillCoolMenu(coolmenu *c);
-void ShowCoolMenu(dbref player, coolmenu *c);
+void ShowCoolMenu(DbRef player, coolmenu *c);
 char **MakeCoolMenuText(coolmenu *c);
 int CoolMenu_FPWBit(int number, int maxlen);
 

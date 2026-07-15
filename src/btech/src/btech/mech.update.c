@@ -77,9 +77,9 @@ void bridge_set_elevation(MECH *mech) {
 }
 
 int DSOkToNotify(MECH *mech) {
-  if (DSLastMsg(mech) > muxevent_tick ||
-      (muxevent_tick - DSLastMsg(mech)) >= DS_SPAM_TIME) {
-    DSLastMsg(mech) = muxevent_tick;
+  if (DSLastMsg(mech) > mux_event_tick ||
+      (mux_event_tick - DSLastMsg(mech)) >= DS_SPAM_TIME) {
+    DSLastMsg(mech) = mux_event_tick;
     return 1;
   }
   return 0;
@@ -1154,9 +1154,9 @@ void HandleOverheat(MECH *mech) {
   if (MechHeat(mech) < 10.)
     return;
   /* Has it been a TURN already ? */
-  if ((MechHeatLast(mech) + TURN) > muxevent_tick)
+  if ((MechHeatLast(mech) + TURN) > mux_event_tick)
     return;
-  MechHeatLast(mech) = muxevent_tick;
+  MechHeatLast(mech) = mux_event_tick;
 
   /* Ammo - done first so infernobooms shut you down */
   if (MechHeat(mech) >= 10.) {
@@ -1448,7 +1448,7 @@ void UpdateHeat(MECH *mech) {
    * Bruise, w/o Lifesupport) */
   /* Custom Rule: Give bruise if heat > 30 and Random 0 or 1 */
 
-  if ((muxevent_tick % TURN) == 0)
+  if ((mux_event_tick % TURN) == 0)
     if (MechCritStatus(mech) & LIFE_SUPPORT_DESTROYED ||
         (MechHeat(mech) > 30. && Number(0, 1) == 0)) {
       if (MechHeat(mech) > 25.) {
@@ -1495,15 +1495,15 @@ int recycle_weaponry(MECH *mech) {
   unsigned char weapdata[MAX_WEAPS_SECTION];
   char location[20];
 
-  int diff = (muxevent_tick - MechLWRT(mech));
+  int diff = (mux_event_tick - MechLWRT(mech));
   int lowest = 0;
 
   if (diff < 1) {
     if (diff < 0)
-      MechLWRT(mech) = muxevent_tick;
+      MechLWRT(mech) = mux_event_tick;
     return 1;
   }
-  MechLWRT(mech) = muxevent_tick;
+  MechLWRT(mech) = mux_event_tick;
 
   if (!Started(mech) || Destroyed(mech))
     return 0;
@@ -2644,7 +2644,7 @@ int CurrentCountedStaggerDamage(MECH *mech) {
 void CheckDamage(MECH *wounded) {
   /* should be called from UpdatePilotSkillRolls */
   /* this is so that a roll will be made only when the mech takes damage */
-  int now = muxevent_tick % TURN;
+  int now = mux_event_tick % TURN;
 
   if (!mudconf.btech_newstagger) {
     if (!IsDS(wounded) && MechTurnDamage(wounded) >= 20 &&
@@ -2674,9 +2674,9 @@ void UpdatePilotSkillRolls(MECH *mech) {
   int makeroll = 0, grav = 0;
   float maxspeed;
 
-  int temp_tick = muxevent_tick;
+  int temp_tick = mux_event_tick;
 
-  /* If for some reason, we get here and muxevent_tick is odd all the time....
+  /* If for some reason, we get here and mux_event_tick is odd all the time....
    */
   if ((temp_tick & 1) != 0)
     temp_tick++;
@@ -2777,7 +2777,7 @@ void updateAutoturnTurret(MECH *mech) {
 }
 
 /* This function is called once every second for every mech in the game */
-void mech_update(dbref key, void *data) {
+void mech_update(DbRef key, void *data) {
   MECH *mech = (MECH *)data;
 
   if (!mech)

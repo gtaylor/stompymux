@@ -12,7 +12,7 @@
 #pragma once
 
 /* mech.pickup.c */
-void mech_pickup(dbref player, void *data, char *buffer);
-void mech_attachcables(dbref player, void *data, char *buffer);
-void mech_detachcables(dbref player, void *data, char *buffer);
-void mech_dropoff(dbref player, void *data, char *buffer);
+void mech_pickup(DbRef player, void *data, char *buffer);
+void mech_attachcables(DbRef player, void *data, char *buffer);
+void mech_detachcables(DbRef player, void *data, char *buffer);
+void mech_dropoff(DbRef player, void *data, char *buffer);

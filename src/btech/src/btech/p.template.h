@@ -9,7 +9,7 @@
 
 /* Generated at Fri Jan 15 15:33:05 CET 1999 from template.c */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
@@ -35,7 +35,7 @@ float generic_radio_multiplier(MECH *mech);
 void computer_conversion(MECH *mech);
 void try_to_find_name(char *mechref, MECH *mech);
 int DefaultFuelByType(MECH *mech);
-int save_template(dbref player, MECH *mech, char *reference, char *filename);
+int save_template(DbRef player, MECH *mech, char *reference, char *filename);
 char *read_desc(FILE *fp, char *data);
 int find_section(char *cmd, int type, int mtype);
 long BuildBitVector(char **list, char *line);
@@ -47,9 +47,9 @@ int AmmoIFromString(char *data);
 void update_specials(MECH *mech);
 int update_oweight(MECH *mech, int value);
 int get_weight(MECH *mech);
-int load_template(dbref player, MECH *mech, char *filename);
-void DumpMechSpecialObjects(dbref player);
-void DumpWeapons(dbref player);
+int load_template(DbRef player, MECH *mech, char *filename);
+void DumpMechSpecialObjects(DbRef player);
+void DumpWeapons(DbRef player);
 char *techlist_func(MECH *mech);
 char *payloadlist_func(MECH *mech);
 char *partlist_func(MECH *mech);

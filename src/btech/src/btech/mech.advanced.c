@@ -88,13 +88,13 @@
   } else                                                                       \
     notify(player, donthave)
 
-static void mech_toggle_mode_sub(dbref player, MECH *mech, char *buffer,
+static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
                                  int tFireMode, char *onmsg, char *offmsg,
                                  char *cant);
 
 /* Toggles ECM on / off */
-void mech_ecm(dbref player, MECH *mech, char *buffer) {
+void mech_ecm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(MechCritStatus(mech) & ECM_DESTROYED,
           "Your Guardian ECM has been destroyed already!");
@@ -105,7 +105,7 @@ void mech_ecm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_eccm(dbref player, MECH *mech, char *buffer) {
+void mech_eccm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(MechCritStatus(mech) & ECM_DESTROYED,
           "Your Guardian ECM has been destroyed already!");
@@ -116,7 +116,7 @@ void mech_eccm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_perecm(dbref player, MECH *mech, char *buffer) {
+void mech_perecm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   TOGGLE_INFANTRY_MACRO_CHECK(
       FC_INFILTRATORII_STEALTH_TECH, PER_ECM_ENABLED, PER_ECCM_ENABLED,
@@ -126,7 +126,7 @@ void mech_perecm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_pereccm(dbref player, MECH *mech, char *buffer) {
+void mech_pereccm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   TOGGLE_INFANTRY_MACRO_CHECK(
       FC_INFILTRATORII_STEALTH_TECH, PER_ECCM_ENABLED, PER_ECM_ENABLED,
@@ -136,7 +136,7 @@ void mech_pereccm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_angelecm(dbref player, MECH *mech, char *buffer) {
+void mech_angelecm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
           "Your Angel ECM has been destroyed already!");
@@ -148,7 +148,7 @@ void mech_angelecm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_angeleccm(dbref player, MECH *mech, char *buffer) {
+void mech_angeleccm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
           "Your Angel ECM has been destroyed already!");
@@ -160,7 +160,7 @@ void mech_angeleccm(dbref player, MECH *mech, char *buffer) {
   MarkForLOSUpdate(mech);
 }
 
-void MechSliteChangeEvent(MUXEVENT *e) {
+void MechSliteChangeEvent(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long wType = (long)e->data2;
 
@@ -193,7 +193,7 @@ void MechSliteChangeEvent(MUXEVENT *e) {
   MarkForLOSUpdate(mech);
 }
 
-void mech_slite(dbref player, MECH *mech, char *buffer) {
+void mech_slite(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   if (!(MechSpecials(mech) & SLITE_TECH)) {
@@ -224,7 +224,7 @@ void mech_slite(dbref player, MECH *mech, char *buffer) {
   }
 }
 
-void mech_ams(dbref player, void *data, char *buffer) {
+void mech_ams(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -235,7 +235,7 @@ void mech_ams(dbref player, void *data, char *buffer) {
                      "This mech is not equipped with AMS");
 }
 
-void mech_fliparms(dbref player, void *data, char *buffer) {
+void mech_fliparms(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -267,7 +267,7 @@ void mech_fliparms(dbref player, void *data, char *buffer) {
 static int temp_nspecisspec, temp_nspec, temp_mode, temp_firemode;
 static char *temp_onmsg, *temp_offmsg, *temp_cant;
 
-static int mech_toggle_mode_sub_func(MECH *mech, dbref player, int index,
+static int mech_toggle_mode_sub_func(MECH *mech, DbRef player, int index,
                                      int high) {
   int section, critical, weaptype;
 
@@ -376,7 +376,7 @@ static int mech_toggle_mode_sub_func(MECH *mech, dbref player, int index,
   return 0;
 }
 
-static void mech_toggle_mode_sub(dbref player, MECH *mech, char *buffer,
+static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
                                  int tFireMode, char *onmsg, char *offmsg,
                                  char *cant) {
@@ -394,7 +394,7 @@ static void mech_toggle_mode_sub(dbref player, MECH *mech, char *buffer,
   multi_weap_sel(mech, player, args[0], 1, mech_toggle_mode_sub_func);
 }
 
-void mech_flamerheat(dbref player, void *data, char *buffer) {
+void mech_flamerheat(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -404,7 +404,7 @@ void mech_flamerheat(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set HEAT!");
 }
 
-void mech_ultra(dbref player, void *data, char *buffer) {
+void mech_ultra(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -414,7 +414,7 @@ void mech_ultra(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set ULTRA!");
 }
 
-void mech_inarc_ammo_toggle(dbref player, void *data, char *buffer) {
+void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int wcArgs = 0;
   char *args[2];
@@ -467,7 +467,7 @@ void mech_inarc_ammo_toggle(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_explosive(dbref player, void *data, char *buffer) {
+void mech_explosive(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -478,7 +478,7 @@ void mech_explosive(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to fire explosive rounds!");
 }
 
-void mech_lbx(dbref player, void *data, char *buffer) {
+void mech_lbx(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -488,7 +488,7 @@ void mech_lbx(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set LBX!");
 }
 
-void mech_armorpiercing(dbref player, void *data, char *buffer) {
+void mech_armorpiercing(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -498,7 +498,7 @@ void mech_armorpiercing(dbref player, void *data, char *buffer) {
                        "That weapon cannot fire AP rounds!");
 }
 
-void mech_caseless(dbref player, void *data, char *buffer) {
+void mech_caseless(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   cch(MECH_USUALMO);
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_CASELESS_MODE, 0,
@@ -507,7 +507,7 @@ void mech_caseless(dbref player, void *data, char *buffer) {
                        "That weapon cannot fire CASELESS rounds!");
 }
 
-void mech_flechette(dbref player, void *data, char *buffer) {
+void mech_flechette(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -517,7 +517,7 @@ void mech_flechette(dbref player, void *data, char *buffer) {
                        "That weapon cannot fire Flechette rounds!");
 }
 
-void mech_incendiary(dbref player, void *data, char *buffer) {
+void mech_incendiary(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -527,7 +527,7 @@ void mech_incendiary(dbref player, void *data, char *buffer) {
                        "That weapon cannot fire Incendiary rounds!");
 }
 
-void mech_precision(dbref player, void *data, char *buffer) {
+void mech_precision(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -537,7 +537,7 @@ void mech_precision(dbref player, void *data, char *buffer) {
                        "That weapon cannot fire Precision rounds!");
 }
 
-void mech_rapidfire(dbref player, void *data, char *buffer) {
+void mech_rapidfire(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -547,7 +547,7 @@ void mech_rapidfire(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to do rapid fire!");
 }
 
-void mech_stinger(dbref player, void *data, char *buffer) {
+void mech_stinger(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -557,7 +557,7 @@ void mech_stinger(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set STINGER!");
 }
 
-void mech_rac(dbref player, void *data, char *buffer) {
+void mech_rac(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int wcArgs = 0;
   char *args[2];
@@ -603,7 +603,7 @@ void mech_rac(dbref player, void *data, char *buffer) {
   }
 }
 
-static int mech_unjamammo_func(MECH *mech, dbref player, int index, int high) {
+static int mech_unjamammo_func(MECH *mech, DbRef player, int index, int high) {
   int section, critical, weaptype;
   int i;
   char location[50];
@@ -635,7 +635,7 @@ static int mech_unjamammo_func(MECH *mech, dbref player, int index, int high) {
               "You begin to shake the jammed ammo loose on weapon #%d", index);
   return 0;
 }
-void mech_unjamammo(dbref player, void *data, char *buffer) {
+void mech_unjamammo(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
 
@@ -645,7 +645,7 @@ void mech_unjamammo(dbref player, void *data, char *buffer) {
   multi_weap_sel(mech, player, args[0], 1, mech_unjamammo_func);
 }
 
-void mech_gattling(dbref player, void *data, char *buffer) {
+void mech_gattling(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -655,7 +655,7 @@ void mech_gattling(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to do gattling fire!");
 }
 
-void mech_artemis(dbref player, void *data, char *buffer) {
+void mech_artemis(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -666,7 +666,7 @@ void mech_artemis(dbref player, void *data, char *buffer) {
       "That weapon cannot be set ARTEMIS!");
 }
 
-void mech_narc(dbref player, void *data, char *buffer) {
+void mech_narc(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -677,7 +677,7 @@ void mech_narc(dbref player, void *data, char *buffer) {
       "That weapon cannot be set NARC!");
 }
 
-void mech_swarm(dbref player, void *data, char *buffer) {
+void mech_swarm(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -687,7 +687,7 @@ void mech_swarm(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Swarm missiles!");
 }
 
-void mech_sguided(dbref player, void *data, char *buffer) {
+void mech_sguided(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -697,7 +697,7 @@ void mech_sguided(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Sguided missiles!");
 }
 
-void mech_atmrange(dbref player, void *data, char *buffer) {
+void mech_atmrange(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -708,7 +708,7 @@ void mech_atmrange(dbref player, void *data, char *buffer) {
       "That weapon cannot be set to fire Extended Range missiles!");
 }
 
-void mech_atmexplosive(dbref player, void *data, char *buffer) {
+void mech_atmexplosive(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -719,7 +719,7 @@ void mech_atmexplosive(dbref player, void *data, char *buffer) {
       "That weapon cannot be set to fire High Explosive missiles!");
 }
 
-void mech_swarm1(dbref player, void *data, char *buffer) {
+void mech_swarm1(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -729,7 +729,7 @@ void mech_swarm1(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Swarm1 missiles!");
 }
 
-void mech_inferno(dbref player, void *data, char *buffer) {
+void mech_inferno(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -739,7 +739,7 @@ void mech_inferno(dbref player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Inferno missiles!");
 }
 
-void mech_hotload(dbref player, void *data, char *buffer) {
+void mech_hotload(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   cch(MECH_USUALMO);
   mech_toggle_mode_sub(player, mech, buffer, 1, IDF, HOTLOAD_MODE, 1,
@@ -748,7 +748,7 @@ void mech_hotload(dbref player, void *data, char *buffer) {
                        "That weapon can not be hotloaded!");
 }
 
-void mech_cluster(dbref player, void *data, char *buffer) {
+void mech_cluster(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -758,7 +758,7 @@ void mech_cluster(dbref player, void *data, char *buffer) {
                        "Invalid weapon type!");
 }
 
-void mech_smoke(dbref player, void *data, char *buffer) {
+void mech_smoke(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -768,7 +768,7 @@ void mech_smoke(dbref player, void *data, char *buffer) {
                        "Invalid weapon type!");
 }
 
-void mech_mine(dbref player, void *data, char *buffer) {
+void mech_mine(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -778,7 +778,7 @@ void mech_mine(dbref player, void *data, char *buffer) {
                        "Invalid weapon type!");
 }
 
-static void mech_mascr_event(MUXEVENT *e) {
+static void mech_mascr_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (MechMASCCounter(mech) > 0) {
@@ -787,7 +787,7 @@ static void mech_mascr_event(MUXEVENT *e) {
   }
 }
 
-static void mech_masc_event(MUXEVENT *e) {
+static void mech_masc_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 #ifndef BT_MOVEMENT_MODES
   int needed = 2 * (1 + (MechMASCCounter(mech)++));
@@ -843,7 +843,7 @@ static void mech_masc_event(MUXEVENT *e) {
   SetMaxSpeed(mech, 0.0);
 }
 
-void mech_masc(dbref player, void *data, char *buffer) {
+void mech_masc(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -865,7 +865,7 @@ void mech_masc(dbref player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_MASC_FAIL, mech_masc_event, 1, 0);
 }
 
-static void mech_scharger_event(MUXEVENT *e) {
+static void mech_scharger_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (MechSChargeCounter(mech) > 0) {
@@ -874,7 +874,7 @@ static void mech_scharger_event(MUXEVENT *e) {
   }
 }
 
-static void mech_scharge_event(MUXEVENT *e) {
+static void mech_scharge_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 #ifndef BT_MOVEMENT_MODES
   int needed = 2 * (1 + (MechSChargeCounter(mech)++));
@@ -952,7 +952,7 @@ static void mech_scharge_event(MUXEVENT *e) {
   }
 }
 
-void mech_scharge(dbref player, void *data, char *buffer) {
+void mech_scharge(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
@@ -975,7 +975,7 @@ void mech_scharge(dbref player, void *data, char *buffer) {
   MECHEVENT(mech, EVENT_SCHARGE_FAIL, mech_scharge_event, 1, 0);
 }
 
-static void mech_explode_event(MUXEVENT *e) {
+static void mech_explode_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long extra = (long)e->data2;
   int i, j, k, damage;
@@ -1027,7 +1027,7 @@ static void mech_explode_event(MUXEVENT *e) {
   }
 }
 
-void mech_explode(dbref player, void *data, char *buffer) {
+void mech_explode(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[3];
   int i;
@@ -1109,7 +1109,7 @@ void mech_explode(dbref player, void *data, char *buffer) {
   MechPilot(mech) = -1; /* Pilot gives up control */
 }
 
-static void mech_dig_event(MUXEVENT *e) {
+static void mech_dig_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (!Digging(mech))
@@ -1125,7 +1125,7 @@ static void mech_dig_event(MUXEVENT *e) {
               "available now.");
 }
 
-void mech_dig(dbref player, void *data, char *buffer) {
+void mech_dig(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
@@ -1147,7 +1147,7 @@ void mech_dig(dbref player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "You start digging yourself in a nice hole..");
 }
 
-static void mech_unjam_turret_event(MUXEVENT *e) {
+static void mech_unjam_turret_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   if (Destroyed(mech))
@@ -1171,7 +1171,7 @@ static void mech_unjam_turret_event(MUXEVENT *e) {
   mech_notify(mech, MECHALL, "You manage to unjam your turret!");
 }
 
-void mech_fixturret(dbref player, void *data, char *buffer) {
+void mech_fixturret(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
@@ -1183,7 +1183,7 @@ void mech_fixturret(dbref player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "You start to repair your jammed turret.");
 }
 
-static int mech_disableweap_func(MECH *mech, dbref player, int index,
+static int mech_disableweap_func(MECH *mech, DbRef player, int index,
                                  int high) {
   int section, critical, weaptype;
 
@@ -1204,7 +1204,7 @@ static int mech_disableweap_func(MECH *mech, dbref player, int index,
   return 0;
 }
 
-void mech_disableweap(dbref player, void *data, char *buffer) {
+void mech_disableweap(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
 
@@ -1253,7 +1253,7 @@ int FindMainWeapon(MECH *mech, int (*callback)(MECH *, int, int, int, int)) {
     return 0;
 }
 
-void changeStealthArmorEvent(MUXEVENT *e) {
+void changeStealthArmorEvent(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long wType = (long)e->data2;
 
@@ -1278,7 +1278,7 @@ void changeStealthArmorEvent(MUXEVENT *e) {
   }
 }
 
-void mech_stealtharmor(dbref player, MECH *mech, char *buffer) {
+void mech_stealtharmor(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   if (!(MechSpecials2(mech) & STEALTH_ARMOR_TECH)) {
@@ -1315,7 +1315,7 @@ void mech_stealtharmor(dbref player, MECH *mech, char *buffer) {
   }
 }
 
-void changeNullSigSysEvent(MUXEVENT *e) {
+void changeNullSigSysEvent(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long wType = (long)e->data2;
 
@@ -1338,7 +1338,7 @@ void changeNullSigSysEvent(MUXEVENT *e) {
   }
 }
 
-void mech_nullsig(dbref player, MECH *mech, char *buffer) {
+void mech_nullsig(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
 
   if (!(MechSpecials2(mech) & NULLSIGSYS_TECH)) {
@@ -1375,7 +1375,7 @@ void mech_nullsig(dbref player, MECH *mech, char *buffer) {
   }
 }
 
-void show_narc_pods(dbref player, MECH *mech, char *buffer) {
+void show_narc_pods(DbRef player, MECH *mech, char *buffer) {
   char location[50];
   int i;
 
@@ -1439,7 +1439,7 @@ int findArmBTHMod(MECH *mech, int wSec) {
   return wRet;
 }
 
-void remove_inarc_pods_mech(dbref player, MECH *mech, char *buffer) {
+void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
   int wLoc;
   int wArmToUse = -1;
   char *args[2];
@@ -1586,7 +1586,7 @@ void remove_inarc_pods_mech(dbref player, MECH *mech, char *buffer) {
   SetRecycleLimb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
 }
 
-void removeiNarcPodsTank(MUXEVENT *e) {
+void removeiNarcPodsTank(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   int i;
 
@@ -1607,7 +1607,7 @@ void removeiNarcPodsTank(MUXEVENT *e) {
   }
 }
 
-void remove_inarc_pods_tank(dbref player, MECH *mech, char *buffer) {
+void remove_inarc_pods_tank(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSO);
 
   DOCHECK((MechDesiredSpeed(mech) > 0),
@@ -1643,7 +1643,7 @@ void remove_inarc_pods_tank(dbref player, MECH *mech, char *buffer) {
   MECHEVENT(mech, EVENT_REMOVE_PODS, removeiNarcPodsTank, 60, 0);
 }
 
-void mech_auto_turret(dbref player, MECH *mech, char *buffer) {
+void mech_auto_turret(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSO);
 
   DOCHECK(!GetSectInt(mech, TURRET), "You have no turret to autoturn!");
@@ -1657,7 +1657,7 @@ void mech_auto_turret(dbref player, MECH *mech, char *buffer) {
     MechStatus2(mech) |= AUTOTURN_TURRET;
 }
 
-void mech_usebin(dbref player, MECH *mech, char *buffer) {
+void mech_usebin(DbRef player, MECH *mech, char *buffer) {
   char strLocation[80];
   int wLoc, wCurLoc;
   int wSection, wCritSlot, wWeapNum, wWeapType;
@@ -1706,7 +1706,7 @@ void mech_usebin(dbref player, MECH *mech, char *buffer) {
   SetPartDesiredAmmoLoc(mech, wSection, wCritSlot, wLoc);
 }
 
-void mech_safety(dbref player, void *data, char *buffer) {
+void mech_safety(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   DOCHECK(MechType(mech) == CLASS_MW, "Your weapons dont have safeties.");
@@ -1786,7 +1786,7 @@ static char *display_mechpref(int i) {
   return buf;
 }
 
-void mech_mechprefs(dbref player, void *data, char *buffer) {
+void mech_mechprefs(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int nargs;
   char *args[3];

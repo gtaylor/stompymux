@@ -19,10 +19,10 @@
 #pragma once
 
 #include "btechstats_global.h"
-#include "config.h"
-#include "db.h"
-#include "externs.h"
-#include "powers.h"
+#include "mux/database/db.h"
+#include "mux/database/powers.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_api.h"
 
 #ifdef BTECHSTATS_C
 char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",
@@ -234,7 +234,7 @@ char *char_packages[] = {"None",
  */
 
 typedef struct {
-  dbref dbref;
+  DbRef DbRef;
   unsigned char values[NUM_CHARVALUES];
   time_t last_use[NUM_CHARVALUES];
   int xp[NUM_CHARVALUES];

@@ -60,7 +60,7 @@ extern int arc_override;
 
 int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
                   int weapindx, float range, MECH *target, int indirectFire,
-                  dbref *c3Ref) {
+                  DbRef *c3Ref) {
   MECH *spotter = NULL;
   int baseToHit;
   int wFireMode = GetPartFireMode(mech, section, critical);

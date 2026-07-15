@@ -32,4 +32,4 @@ void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
                     int b_score);
 int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx, float dely);
 void ai_init(AUTO *a, MECH *m);
-void mech_snipe(dbref player, MECH *mech, char *buffer);
+void mech_snipe(DbRef player, MECH *mech, char *buffer);

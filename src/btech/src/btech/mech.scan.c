@@ -30,13 +30,13 @@
 #define SHOW_ARMOR 2
 #define SHOW_WEAPONS 4
 
-void mech_scan(dbref player, void *data, char *buffer) {
+void mech_scan(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map;
   char *args[4];
   int mapx = 0, mapy = 0;
   char targetID[2];
-  dbref target;
+  DbRef target;
   int numargs;
   MECH *tempMech = NULL;
   float fx, fy, fz = 0.0;
@@ -223,13 +223,13 @@ void mech_scan(dbref player, void *data, char *buffer) {
     show_mines_in_hex(player, mech, range, mapx, mapy);
 }
 
-void mech_report(dbref player, void *data, char *buffer) {
+void mech_report(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map;
   char *args[3];
   int mapx = 0, mapy = 0;
   char targetID[2];
-  dbref target;
+  DbRef target;
   int numargs;
   MECH *tempMech = NULL;
   float fx, fy, fz = 0.0;
@@ -303,7 +303,7 @@ void mech_report(dbref player, void *data, char *buffer) {
     PrintReport(player, mech, tempMech, range);
 }
 
-void ShowTurretFacing(dbref player, int spaces, MECH *mech) {
+void ShowTurretFacing(DbRef player, int spaces, MECH *mech) {
   int i;
   int j;
   char buff[MBUF_SIZE] = {0};
@@ -325,7 +325,7 @@ void ShowTurretFacing(dbref player, int spaces, MECH *mech) {
   }
 }
 
-void PrintReport(dbref player, MECH *mech, MECH *tempMech, float range) {
+void PrintReport(DbRef player, MECH *mech, MECH *tempMech, float range) {
   int bearing;
   char buff[100] = {0};
   int weaponarc;
@@ -415,7 +415,7 @@ void PrintReport(dbref player, MECH *mech, MECH *tempMech, float range) {
   notify(player, " ");
 }
 
-void PrintEnemyStatus(dbref player, MECH *mymech, MECH *mech, float range,
+void PrintEnemyStatus(DbRef player, MECH *mymech, MECH *mech, float range,
                       int opt) {
   MECH *tempMech;
   int owner = 0;
@@ -445,7 +445,7 @@ void PrintEnemyStatus(dbref player, MECH *mymech, MECH *mech, float range,
   }
 }
 
-void mech_bearing(dbref player, void *data, char *buffer) {
+void mech_bearing(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *tempMech = NULL;
   MAP *mech_map;
   char *args[4];
@@ -527,7 +527,7 @@ void mech_bearing(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_range(dbref player, void *data, char *buffer) {
+void mech_range(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *tempMech = NULL;
   MAP *mech_map;
   char *args[4];
@@ -631,7 +631,7 @@ void mech_range(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_vector(dbref player, void *data, char *buffer) {
+void mech_vector(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *tempMech = NULL;
   MAP *mech_map;
   char *args[6];
@@ -778,7 +778,7 @@ void mech_vector(dbref player, void *data, char *buffer) {
   }
 }
 
-void PrintEnemyWeaponStatus(MECH *mech, dbref player) {
+void PrintEnemyWeaponStatus(MECH *mech, DbRef player) {
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
@@ -825,7 +825,7 @@ void PrintEnemyWeaponStatus(MECH *mech, dbref player) {
   }
 }
 
-void mech_sight(dbref player, void *data, char *buffer) {
+void mech_sight(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map;
   char *args[5];
@@ -843,7 +843,7 @@ void mech_sight(dbref player, void *data, char *buffer) {
   }
 }
 
-void mech_view(dbref player, void *data, char *buffer) {
+void mech_view(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   int targetnum;
   char targetID[5];

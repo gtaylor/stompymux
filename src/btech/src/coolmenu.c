@@ -12,19 +12,20 @@
  *
  */
 
-#include "db.h"
+#include "mux/database/db.h"
+#include "mux/support/alloc.h"
 #include <stdio.h>
 #include <string.h>
 
 void KillText(char **mapt);
-void ShowText(char **mapt, dbref player);
+void ShowText(char **mapt, DbRef player);
 
 /*
    Simple menu system for cool menus ;-)
    */
 #include "coolmenu.h"
-#include "db.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/database/db.h"
+#include "mux/network/mux_event_alloc.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -291,7 +292,7 @@ void KillCoolMenu(coolmenu *c) {
   }
 }
 
-void ShowCoolMenu(dbref player, coolmenu *c) {
+void ShowCoolMenu(DbRef player, coolmenu *c) {
   char **ch;
 
   ch = MakeCoolMenuText(c);

@@ -25,7 +25,7 @@ char **MakeCoolMenuText(coolmenu *c);
 void CreateMenuEntry_Killer(coolmenu **c, char *text, int flag, int id,
                             int value, int maxvalue);
 void KillCoolMenu(coolmenu *c);
-void ShowCoolMenu(dbref player, coolmenu *c);
+void ShowCoolMenu(DbRef player, coolmenu *c);
 int CoolMenu_FPWBit(int number, int maxlen);
 coolmenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
                       int max);

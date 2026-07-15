@@ -8,20 +8,20 @@
 
 #include "debug.h"
 #include "autopilot.h"
-#include "config.h"
-#include "db.h"
-#include "externs.h"
 #include "glue.h"
 #include "mech.h"
-#include "muxevent/muxevent.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/database/db.h"
+#include "mux/network/mux_event.h"
+#include "mux/network/mux_event_alloc.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_api.h"
+#include "mux/support/red_black_tree.h"
 #include "p.map.obj.h"
 #include "p.mech.partnames.h"
 #include "p.mech.startup.h"
-#include "persistence/gamedb.h"
-#include "rbtree.h"
 
-void debug_list(dbref player, void *data, char *buffer) {
+void debug_list(DbRef player, void *data, char *buffer) {
   char *args[3];
   int argc;
 
@@ -35,7 +35,7 @@ void debug_list(dbref player, void *data, char *buffer) {
     DumpMaps(player);
 }
 
-void debug_savedb(dbref player, void *data, char *buffer) {
+void debug_savedb(DbRef player, void *data, char *buffer) {
   if (gamedb_dump(DUMP_NORMAL) < 0)
     notify(
         player,
@@ -48,13 +48,13 @@ static int *number;
 static int *smallest;
 static int *largest;
 static int *total;
-static dbref cheat_player;
-extern rbtree xcode_tree;
+static DbRef cheat_player;
+extern RedBlackTree xcode_tree;
 extern int global_specials;
 extern SpecialObjectStruct SpecialObjects[];
 
 static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
-  const dbref key_val = (dbref)key;
+  const DbRef key_val = (DbRef)key;
   XCODE *const xcode_obj = data;
 
   int size;
@@ -93,7 +93,7 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-void debug_memory(dbref player, void *data, char *buffer) {
+void debug_memory(DbRef player, void *data, char *buffer) {
   int i, gtotal = 0;
 
   Create(number, int, global_specials);
@@ -113,7 +113,7 @@ void debug_memory(dbref player, void *data, char *buffer) {
     cheat_player = player;
   else
     cheat_player = -1;
-  rb_walk(xcode_tree, WALK_INORDER, debug_check_stuff, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, debug_check_stuff, NULL);
   for (i = 0; i < global_specials; i++) {
     if (number[i]) {
       if (smallest[i] == largest[i])
@@ -134,14 +134,14 @@ void debug_memory(dbref player, void *data, char *buffer) {
   free((void *)largest);
 }
 
-void ShutDownMap(dbref player, dbref mapnumber) {
+void ShutDownMap(DbRef player, DbRef mapnumber) {
   XCODE *xcode_obj;
 
   MAP *map;
   MECH *mech;
   int j;
 
-  xcode_obj = rb_find(xcode_tree, (void *)mapnumber);
+  xcode_obj = red_black_tree_find(xcode_tree, (void *)mapnumber);
   if (xcode_obj) {
     map = (MAP *)xcode_obj;
     for (j = 0; j < map->first_free; j++)
@@ -166,7 +166,7 @@ void ShutDownMap(dbref player, dbref mapnumber) {
   }
 }
 
-void debug_shutdown(dbref player, void *data, char *buffer) {
+void debug_shutdown(DbRef player, void *data, char *buffer) {
   char *args[3];
   int argc;
 
@@ -175,7 +175,7 @@ void debug_shutdown(dbref player, void *data, char *buffer) {
     ShutDownMap(player, atoi(args[0]));
 }
 
-void debug_setvrt(dbref player, void *data, char *buffer) {
+void debug_setvrt(DbRef player, void *data, char *buffer) {
   char *args[3];
   int vrt;
   int id, brand;
@@ -194,7 +194,7 @@ void debug_setvrt(dbref player, void *data, char *buffer) {
             MechWeapons[Weapon2I(id)].name, vrt, player);
 }
 
-void debug_setwbv(dbref player, void *data, char *buffer) {
+void debug_setwbv(DbRef player, void *data, char *buffer) {
   char *args[3];
   int bv;
   int id, brand;

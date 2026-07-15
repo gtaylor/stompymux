@@ -14,7 +14,7 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #pragma once
 
@@ -64,7 +64,7 @@
 #define RESEAL_TIME 60 /* Added 8/4/99. Kipsta. */
 #define REPLACESUIT_TIME 120
 
-#define TECHCOMMANDH(a) void a(dbref player, void *data, char *buffer)
+#define TECHCOMMANDH(a) void a(DbRef player, void *data, char *buffer)
 #define TECHCOMMANDB                                                           \
   MECH *mech = (MECH *)data;                                                   \
   [[maybe_unused]] int loc, part, t, full, now, from, to, change, mod = 2,     \
@@ -94,7 +94,7 @@
               !Wiz(player),                                                    \
           "The 'mech isn't in a repair stall!");
 
-#define ETECHCOMMAND(a) void a(dbref player, void *data, char *buffer)
+#define ETECHCOMMAND(a) void a(DbRef player, void *data, char *buffer)
 
 #define LOCMAX 16
 #define POSMAX 16
@@ -102,21 +102,21 @@
 #define PLAYERPOS (LOCMAX * POSMAX * EXTMAX)
 
 #define TECHEVENT(a)                                                           \
-  void a(MUXEVENT *e) {                                                        \
+  void a(MuxEvent *e) {                                                        \
     MECH *mech = (MECH *)e->data;                                              \
     int earg = (int)(e->data2) % PLAYERPOS;
 
-#define ETECHEVENT(a) extern void a(MUXEVENT *e)
+#define ETECHEVENT(a) extern void a(MuxEvent *e)
 
 #define START(a) notify(player, a)
 #ifndef BT_FREETECHTIME
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  muxevent_add(MAX(1, time), 0, type, fu, (void *)d1,                          \
-               (void *)((d2) + player * PLAYERPOS))
+  mux_event_add(MAX(1, time), 0, type, fu, (void *)d1,                         \
+                (void *)((d2) + player * PLAYERPOS))
 #else
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  muxevent_add((mudconf.btech_freetechtime ? 2 : MAX(2, time)), 0, type, fu,   \
-               (void *)d1, (void *)((d2) + player * PLAYERPOS))
+  mux_event_add((mudconf.btech_freetechtime ? 2 : MAX(2, time)), 0, type, fu,  \
+                (void *)d1, (void *)((d2) + player * PLAYERPOS))
 #endif
 #define REPAIREVENT(time, d1, d2, fu, type)                                    \
   FIXEVENT((time) * TECH_TICK, d1, d2, fu, type)
@@ -220,12 +220,12 @@
   STARTREPAIR(time, d1, d2, fu, type)
 
 #define TFUNC_LOCPOS_VAL(name)                                                 \
-  int name(dbref player, MECH *mech, int loc, int part, int *val)
+  int name(DbRef player, MECH *mech, int loc, int part, int *val)
 #define TFUNC_LOC_VAL(name)                                                    \
-  int name(dbref player, MECH *mech, int loc, int *val)
-#define TFUNC_LOCPOS(name) int name(dbref player, MECH *mech, int loc, int part)
-#define TFUNC_LOC(name) int name(dbref player, MECH *mech, int loc)
-#define TFUNC_LOC_RESEAL(name) int name(dbref player, MECH *mech, int loc)
+  int name(DbRef player, MECH *mech, int loc, int *val)
+#define TFUNC_LOCPOS(name) int name(DbRef player, MECH *mech, int loc, int part)
+#define TFUNC_LOC(name) int name(DbRef player, MECH *mech, int loc)
+#define TFUNC_LOC_RESEAL(name) int name(DbRef player, MECH *mech, int loc)
 #define NFUNC(a)                                                               \
   a { return 0; }
 
@@ -313,21 +313,21 @@ ECMD(tech_fix);
                                : t)))
 #endif
 
-ETECHEVENT(muxevent_tickmech_reattach);
-ETECHEVENT(muxevent_tickmech_reseal);
-ETECHEVENT(muxevent_tickmech_reload);
-ETECHEVENT(muxevent_tickmech_removegun);
-ETECHEVENT(muxevent_tickmech_removepart);
-ETECHEVENT(muxevent_tickmech_removesection);
-ETECHEVENT(muxevent_tickmech_repairarmor);
-ETECHEVENT(muxevent_tickmech_repairgun);
-ETECHEVENT(muxevent_tickmech_repairenhcrit);
-ETECHEVENT(muxevent_tickmech_repairinternal);
-ETECHEVENT(muxevent_tickmech_repairpart);
-ETECHEVENT(muxevent_tickmech_replacegun);
-ETECHEVENT(muxevent_tickmech_mountbomb);
-ETECHEVENT(muxevent_tickmech_umountbomb);
-ETECHEVENT(muxevent_tickmech_replacesuit);
+ETECHEVENT(mux_event_tickmech_reattach);
+ETECHEVENT(mux_event_tickmech_reseal);
+ETECHEVENT(mux_event_tickmech_reload);
+ETECHEVENT(mux_event_tickmech_removegun);
+ETECHEVENT(mux_event_tickmech_removepart);
+ETECHEVENT(mux_event_tickmech_removesection);
+ETECHEVENT(mux_event_tickmech_repairarmor);
+ETECHEVENT(mux_event_tickmech_repairgun);
+ETECHEVENT(mux_event_tickmech_repairenhcrit);
+ETECHEVENT(mux_event_tickmech_repairinternal);
+ETECHEVENT(mux_event_tickmech_repairpart);
+ETECHEVENT(mux_event_tickmech_replacegun);
+ETECHEVENT(mux_event_tickmech_mountbomb);
+ETECHEVENT(mux_event_tickmech_umountbomb);
+ETECHEVENT(mux_event_tickmech_replacesuit);
 ETECHEVENT(very_fake_func);
 
 int valid_ammo_mode(MECH *mech, int loc, int part, int let);

@@ -12,6 +12,6 @@
 #pragma once
 
 /* luck.c */
-int player_luck(dbref player);
+int player_luck(DbRef player);
 int luck_die_mod_base(int mod, int l);
-int luck_die_mod(dbref player, int mod);
+int luck_die_mod(DbRef player, int mod);

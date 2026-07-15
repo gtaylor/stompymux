@@ -15,7 +15,7 @@
 #include "autopilot.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.mech.build.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3i.h"
@@ -62,7 +62,7 @@ void clear_mech_from_LOS(MECH *mech) {
   }
 }
 
-void mech_Rsetxy(dbref player, void *data, char *buffer) {
+void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MAP *mech_map = getMap(mech->mapindex);
   char *args[3];
@@ -106,7 +106,7 @@ void mech_Rsetxy(dbref player, void *data, char *buffer) {
 }
 
 /* Team/Map commands */
-void mech_Rsetmapindex(dbref player, void *data, char *buffer) {
+void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[2], *tempstr;
   int newindex, nargs, notdone = 0;
@@ -196,7 +196,7 @@ void mech_Rsetmapindex(dbref player, void *data, char *buffer) {
   UnZombifyMech(mech);
 }
 
-void mech_Rsetteam(dbref player, void *data, char *buffer) {
+void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   int team;
@@ -225,7 +225,7 @@ void mech_Rsetteam(dbref player, void *data, char *buffer) {
 
 extern void auto_stop_pilot(AUTO *autopilot);
 /* Alloc/free routine */
-void newfreemech(dbref key, void **data, int selector) {
+void newfreemech(DbRef key, void **data, int selector) {
   MECH *new = *data;
   MAP *map;
   int i;
@@ -250,19 +250,20 @@ void newfreemech(dbref key, void **data, int selector) {
       if (autopilot) {
         auto_stop_pilot(autopilot);
         /* Go through the list and remove any leftover nodes */
-        while (dllist_size(autopilot->commands)) {
+        while (doubly_linked_list_size(autopilot->commands)) {
 
           /* Remove the first node on the list and get the data
            * from it */
-          temp = (command_node *)dllist_remove(
-              autopilot->commands, dllist_head(autopilot->commands));
+          temp = (command_node *)doubly_linked_list_remove(
+              autopilot->commands,
+              doubly_linked_list_head(autopilot->commands));
 
           /* Destroy the command node */
           auto_destroy_command_node(temp);
         }
 
         /* Destroy the list */
-        dllist_destroy_list(autopilot->commands);
+        doubly_linked_list_destroy_list(autopilot->commands);
         autopilot->commands = NULL;
 
         /* Destroy any astar path list thats on the AI */
@@ -271,7 +272,7 @@ void newfreemech(dbref key, void **data, int selector) {
         /* Destroy profile array */
         for (i = 0; i < AUTO_PROFILE_MAX_SIZE; i++) {
           if (autopilot->profile[i]) {
-            rb_destroy(autopilot->profile[i]);
+            red_black_tree_destroy(autopilot->profile[i]);
           }
           autopilot->profile[i] = NULL;
         }

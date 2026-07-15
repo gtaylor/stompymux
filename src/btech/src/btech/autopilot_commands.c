@@ -18,7 +18,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.ds.bay.h"
@@ -160,7 +160,7 @@ void gradually_load(MECH * mech, int loc, int percent)
 	SetCargoWeight(mech);
 }
 
-void autopilot_load_cargo(dbref player, MECH * mech, int percent)
+void autopilot_load_cargo(DbRef player, MECH * mech, int percent)
 {
 	DOCHECK(fabs(MechSpeed(mech)) > MP1, "You're moving too fast!");
 	DOCHECK(Location(mech->mynum) != mech->mapindex ||
@@ -321,7 +321,7 @@ void autopilot_attackleg(MECH * mech, char *id)
  */
 void auto_command_autogun(AUTO *autopilot, MECH *mech) {
 
-  dbref target_dbref;
+  DbRef target_dbref;
   MECH *target;
   char *argument;
   char error_buf[MBUF_SIZE];
@@ -615,7 +615,7 @@ void auto_command_embark(AUTO *autopilot, MECH *mech) {
  */
 void auto_command_udisembark(MECH *mech) {
 
-  dbref pil = -1;
+  DbRef pil = -1;
   char *buf;
 
   buf = silly_atr_get(mech->mynum, A_PILOTNUM);
@@ -653,7 +653,7 @@ void autopilot_enterbase(MECH * mech, int dir)
  * Main Autopilot event, checks to see what command we should
  * be running and tries to run it
  */
-void auto_com_event(MUXEVENT *muxevent) {
+void auto_com_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
@@ -987,7 +987,7 @@ void figure_out_range_and_bearing(MECH *mech, int tx, int ty, float *range,
 /*
  * Old goto system - will phase it out
  */
-void auto_goto_event(MUXEVENT *e) {
+void auto_goto_event(MuxEvent *e) {
 
   AUTO *autopilot = (AUTO *)e->data;
   int tx = 0, ty = 0;
@@ -1053,7 +1053,7 @@ void auto_goto_event(MUXEVENT *e) {
 
 #if 0
 /* ROAMMODE is a funky beast */
-void auto_roam_event(MUXEVENT * e)
+void auto_roam_event(MuxEvent * e)
 {
 	AUTO *a = (AUTO *) e->data;
 	int tx, ty;
@@ -1119,7 +1119,7 @@ void auto_roam_event(MUXEVENT * e)
 /*
  * Dumbly[goto] a given a hex
  */
-void auto_dumbgoto_event(MUXEVENT *muxevent) {
+void auto_dumbgoto_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   int tx = 0, ty = 0;
@@ -1274,7 +1274,7 @@ void auto_dumbgoto_event(MUXEVENT *muxevent) {
  * in common games to get the AI from point A
  * to point B
  */
-void auto_astar_goto_event(MUXEVENT *muxevent) {
+void auto_astar_goto_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   int tx = 0, ty = 0;
@@ -1447,7 +1447,8 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
   }
 
   /* Make sure list is ok */
-  if (!(autopilot->astar_path) || (dllist_size(autopilot->astar_path) <= 0)) {
+  if (!(autopilot->astar_path) ||
+      (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to follow"
@@ -1461,7 +1462,8 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
   }
 
   /* Get the current hex target */
-  temp_astar_node = (astar_node *)dllist_get_node(autopilot->astar_path, 1);
+  temp_astar_node =
+      (astar_node *)doubly_linked_list_get_node(autopilot->astar_path, 1);
 
   if (!(temp_astar_node)) {
 
@@ -1482,7 +1484,7 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
       (MechY(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
-    if (dllist_size(autopilot->astar_path) == 1) {
+    if (doubly_linked_list_size(autopilot->astar_path) == 1) {
 
       /* Done! */
       ai_set_speed(mech, autopilot, 0);
@@ -1495,8 +1497,8 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
     } else {
 
       /* Delete the node and goto the next one */
-      temp_astar_node =
-          (astar_node *)dllist_remove_node_at_pos(autopilot->astar_path, 1);
+      temp_astar_node = (astar_node *)doubly_linked_list_remove_node_at_pos(
+          autopilot->astar_path, 1);
       free(temp_astar_node);
 
       /* Call this event again */
@@ -1524,14 +1526,14 @@ void auto_astar_goto_event(MUXEVENT *muxevent) {
 /*
  * New follow system based on astar goto
  */
-void auto_astar_follow_event(MUXEVENT *muxevent) {
+void auto_astar_follow_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
   MECH *target;
   MAP *map;
 
-  dbref target_dbref;
+  DbRef target_dbref;
 
   float range;
   float fx, fy;
@@ -1786,7 +1788,8 @@ void auto_astar_follow_event(MUXEVENT *muxevent) {
   }
 
   /* Make sure list is ok */
-  if (!(autopilot->astar_path) || (dllist_size(autopilot->astar_path) <= 0)) {
+  if (!(autopilot->astar_path) ||
+      (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to follow"
@@ -1802,7 +1805,8 @@ void auto_astar_follow_event(MUXEVENT *muxevent) {
   }
 
   /* Get the current hex target */
-  temp_astar_node = (astar_node *)dllist_get_node(autopilot->astar_path, 1);
+  temp_astar_node =
+      (astar_node *)doubly_linked_list_get_node(autopilot->astar_path, 1);
 
   if (!(temp_astar_node)) {
 
@@ -1825,7 +1829,7 @@ void auto_astar_follow_event(MUXEVENT *muxevent) {
       (MechY(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
-    if (dllist_size(autopilot->astar_path) == 1) {
+    if (doubly_linked_list_size(autopilot->astar_path) == 1) {
 
       /* Done! */
       ai_set_speed(mech, autopilot, 0);
@@ -1839,8 +1843,8 @@ void auto_astar_follow_event(MUXEVENT *muxevent) {
     } else {
 
       /* Delete the node and goto the next one */
-      temp_astar_node =
-          (astar_node *)dllist_remove_node_at_pos(autopilot->astar_path, 1);
+      temp_astar_node = (astar_node *)doubly_linked_list_remove_node_at_pos(
+          autopilot->astar_path, 1);
       free(temp_astar_node);
 
       /* Call this event again */
@@ -1870,7 +1874,7 @@ void auto_astar_follow_event(MUXEVENT *muxevent) {
 
 #if 0
 /* Old follow system - will phase out */
-void auto_follow_event(MUXEVENT * e)
+void auto_follow_event(MuxEvent * e)
 {
 	AUTO *a = (AUTO *) e->data;
 	float fx, fy, newx, newy;
@@ -1901,7 +1905,7 @@ void auto_follow_event(MUXEVENT * e)
 /*
  * Make the AI [dumbly]follow the given target
  */
-void auto_dumbfollow_event(MUXEVENT *muxevent) {
+void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   int tx, ty, x, y;
@@ -2070,7 +2074,7 @@ void auto_dumbfollow_event(MUXEVENT *muxevent) {
 /*
  * Command the AI to leave a hangar or base
  */
-void auto_leave_event(MUXEVENT *muxevent) {
+void auto_leave_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
@@ -2191,7 +2195,7 @@ void auto_leave_event(MUXEVENT *muxevent) {
  * Function to get the AI to enter a base hex given
  * a certain direction (n w s e)
  */
-void auto_enter_event(MUXEVENT *muxevent) {
+void auto_enter_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
@@ -2649,7 +2653,7 @@ void auto_roam_generate_target_hex(AUTO *autopilot, MECH *mech, MAP *map,
 /*
  * Event for roaming
  */
-void auto_astar_roam_event(MUXEVENT *muxevent) {
+void auto_astar_roam_event(MuxEvent *muxevent) {
 
   AUTO *autopilot = (AUTO *)muxevent->data;
   int tx, ty;
@@ -2752,7 +2756,8 @@ void auto_astar_roam_event(MUXEVENT *muxevent) {
     } /* End of looking for target hex */
 
     /* Check the path */
-    if (!(autopilot->astar_path) || (dllist_size(autopilot->astar_path) <= 0)) {
+    if (!(autopilot->astar_path) ||
+        (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
       /* Put Roam to bed and try again */
       AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
@@ -2765,7 +2770,8 @@ void auto_astar_roam_event(MUXEVENT *muxevent) {
   }
 
   /* Make sure list is ok */
-  if (!(autopilot->astar_path) || (dllist_size(autopilot->astar_path) <= 0)) {
+  if (!(autopilot->astar_path) ||
+      (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to roam"
@@ -2781,7 +2787,8 @@ void auto_astar_roam_event(MUXEVENT *muxevent) {
   /* Move along the path */
 
   /* Get the current hex target */
-  temp_astar_node = (astar_node *)dllist_get_node(autopilot->astar_path, 1);
+  temp_astar_node =
+      (astar_node *)doubly_linked_list_get_node(autopilot->astar_path, 1);
 
   if (!(temp_astar_node)) {
 
@@ -2802,7 +2809,7 @@ void auto_astar_roam_event(MUXEVENT *muxevent) {
       (MechY(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
-    if (dllist_size(autopilot->astar_path) == 1) {
+    if (doubly_linked_list_size(autopilot->astar_path) == 1) {
 
       /* Done! */
       ai_set_speed(mech, autopilot, 0);
@@ -2816,8 +2823,8 @@ void auto_astar_roam_event(MUXEVENT *muxevent) {
     } else {
 
       /* Delete the node and goto the next one */
-      temp_astar_node =
-          (astar_node *)dllist_remove_node_at_pos(autopilot->astar_path, 1);
+      temp_astar_node = (astar_node *)doubly_linked_list_remove_node_at_pos(
+          autopilot->astar_path, 1);
       free(temp_astar_node);
 
       /* Update the tick counter */

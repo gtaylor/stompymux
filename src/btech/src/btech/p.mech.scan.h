@@ -12,14 +12,14 @@
 #pragma once
 
 /* mech.scan.c */
-void mech_scan(dbref player, void *data, char *buffer);
-void mech_report(dbref player, void *data, char *buffer);
-void ShowTurretFacing(dbref player, int spaces, MECH *mech);
-void PrintReport(dbref player, MECH *mech, MECH *tempMech, float range);
-void PrintEnemyStatus(dbref player, MECH *mymech, MECH *mech, float range,
+void mech_scan(DbRef player, void *data, char *buffer);
+void mech_report(DbRef player, void *data, char *buffer);
+void ShowTurretFacing(DbRef player, int spaces, MECH *mech);
+void PrintReport(DbRef player, MECH *mech, MECH *tempMech, float range);
+void PrintEnemyStatus(DbRef player, MECH *mymech, MECH *mech, float range,
                       int opt);
-void mech_bearing(dbref player, void *data, char *buffer);
-void mech_range(dbref player, void *data, char *buffer);
-void PrintEnemyWeaponStatus(MECH *mech, dbref player);
-void mech_sight(dbref player, void *data, char *buffer);
-void mech_view(dbref player, void *data, char *buffer);
+void mech_bearing(DbRef player, void *data, char *buffer);
+void mech_range(DbRef player, void *data, char *buffer);
+void PrintEnemyWeaponStatus(MECH *mech, DbRef player);
+void mech_sight(DbRef player, void *data, char *buffer);
+void mech_view(DbRef player, void *data, char *buffer);

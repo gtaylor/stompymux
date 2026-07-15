@@ -18,7 +18,7 @@
   Based on the original by MUSE folks
 */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 /* Parameter to the save/load function */
 #pragma once
@@ -111,8 +111,8 @@ typedef struct SpecialObjectStruct {
 #include "p.mine.h"
 #include "turret.h"
 
-void newturret(dbref, void **, int);
-void newfreemech(dbref, void **, int);
+void newturret(DbRef, void **, int);
+void newfreemech(DbRef, void **, int);
 
 ECMD(f_mapblock_set);
 ECMD(f_mapblock_setxy);

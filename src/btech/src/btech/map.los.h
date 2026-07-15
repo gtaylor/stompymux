@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #define MAX_SENSORS 2
 #define NUMSENSORS(mech) 2

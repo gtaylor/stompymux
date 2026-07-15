@@ -23,8 +23,8 @@
 typedef struct mechrep_data {
   XCODE xcode; /* XCODE base class field */
 
-  dbref mynum;
-  dbref current_target;
+  DbRef mynum;
+  DbRef current_target;
 } MECHREP;
 
 /* Mech repair/type commands */
@@ -62,4 +62,4 @@ ECMD(mechrep_Rsettype);
 ECMD(mechrep_Rshowtech);
 
 /* Mem alloc/free routines */
-void newfreemechrep(dbref key, void **data, int selector);
+void newfreemechrep(DbRef key, void **data, int selector);

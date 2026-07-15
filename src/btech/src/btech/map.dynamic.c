@@ -19,7 +19,7 @@
 #include "autopilot.h"
 #include "glue.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.econ_cmds.h"
 #include "p.map.conditions.h"
 #include "p.mech.restrict.h"
@@ -77,7 +77,7 @@ void eliminate_empties(MAP *map) {
     free((void *)map->LOSinfo[j]);
   ReCreate(map->LOSinfo, unsigned short *, count);
 
-  ReCreate(map->mechsOnMap, dbref, count);
+  ReCreate(map->mechsOnMap, DbRef, count);
   ReCreate(map->mechflags, char, count);
 
   map->first_free = count;
@@ -153,7 +153,7 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   if (loop == newmap->first_free) {
     newmap->first_free++;
     count = newmap->first_free;
-    ReCreate(newmap->mechsOnMap, dbref, count);
+    ReCreate(newmap->mechsOnMap, DbRef, count);
     ReCreate(newmap->mechflags, char, count);
     ReCreate(newmap->LOSinfo, unsigned short *, count);
 
@@ -203,6 +203,6 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
 
 int mech_size(MAP *map) {
   return map->first_free *
-         (sizeof(dbref) + sizeof(char) + sizeof(unsigned short *) +
+         (sizeof(DbRef) + sizeof(char) + sizeof(unsigned short *) +
           map->first_free * sizeof(unsigned short));
 }

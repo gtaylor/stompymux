@@ -13,7 +13,7 @@
 
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "p.btechstats.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
@@ -49,7 +49,7 @@ char *structure_name(mapobj *mapo) {
   return buf;
 }
 
-mapobj *find_entrance_by_target(MAP *map, dbref target) {
+mapobj *find_entrance_by_target(MAP *map, DbRef target) {
   mapobj *tmp;
 
   for (tmp = first_mapobj(map, TYPE_BUILD); tmp; tmp = next_mapobj(tmp))
@@ -163,14 +163,14 @@ mapobj *add_mapobj(MAP *map, mapobj **to, mapobj *from, int flag) {
   return realto;
 }
 
-static void smoke_dissipation_event(MUXEVENT *e) {
+static void smoke_dissipation_event(MuxEvent *e) {
   MAP *map = (MAP *)e->data;
   mapobj *o = (mapobj *)e->data2;
 
   del_mapobj(map, o, TYPE_SMOKE, 0);
 }
 
-static void fire_dissipation_event(MUXEVENT *e) {
+static void fire_dissipation_event(MuxEvent *e) {
   MAP *map = (MAP *)e->data;
   mapobj *o = (mapobj *)e->data2;
   int x, y;
@@ -397,7 +397,7 @@ static void FindMyCoord(MAP *map, int tx, int ty, int i, int wdir, int *x,
   *y = dy;
 }
 
-static void fire_spreading_event(MUXEVENT *e) {
+static void fire_spreading_event(MuxEvent *e) {
   MAP *map = (MAP *)e->data;
   mapobj *o = (mapobj *)e->data2;
   int x, y, loop;
@@ -495,7 +495,7 @@ void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo) {
   }
 }
 
-void list_mapobjs(dbref player, MAP *map) {
+void list_mapobjs(DbRef player, MAP *map) {
   mapobj *tmp;
   int i;
 
@@ -513,7 +513,7 @@ void list_mapobjs(dbref player, MAP *map) {
   notify(player, "--------------------------------------------");
 }
 
-void map_addfire(dbref player, void *data, char *buffer) {
+void map_addfire(DbRef player, void *data, char *buffer) {
   /* Entrance-checking code */
   MAP *map = (MAP *)data;
   char *args[4];
@@ -531,7 +531,7 @@ void map_addfire(dbref player, void *data, char *buffer) {
                 d);
 }
 
-void map_addsmoke(dbref player, void *data, char *buffer) {
+void map_addsmoke(DbRef player, void *data, char *buffer) {
   MAP *map = (MAP *)data;
   char *args[4];
   int x, y, d;
@@ -549,7 +549,7 @@ void map_addsmoke(dbref player, void *data, char *buffer) {
 }
 
 /* x y dist */
-void map_add_block(dbref player, void *data, char *buffer) {
+void map_add_block(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
   int x, y, str;
@@ -602,7 +602,7 @@ int is_blocked_lz(MECH *mech, MAP *map, int x, int y) {
   return 0;
 }
 
-void map_setlinked(dbref player, void *data, char *buffer) {
+void map_setlinked(DbRef player, void *data, char *buffer) {
   MAP *map = (MAP *)data;
   mapobj foo;
 
@@ -626,7 +626,7 @@ int mapobj_del(MAP *map, int x, int y, int tt) {
   return count;
 }
 
-void map_delobj(dbref player, void *data, char *buffer) {
+void map_delobj(DbRef player, void *data, char *buffer) {
   MAP *map = (MAP *)data;
   char *args[5];
   mapobj *foo, *foo2;
@@ -696,7 +696,7 @@ struct {
   char dir;
 } dirtable[4] = {{1, 0, 'n'}, {2, 1, 'e'}, {1, 2, 's'}, {0, 1, 'w'}};
 
-void recursively_updatelinks(dbref from, dbref loc);
+void recursively_updatelinks(DbRef from, DbRef loc);
 
 int parse_coord(MAP *map, int dir, char *data, int *x, int *y) {
   int tx, ty, tox, toy;
@@ -735,7 +735,7 @@ int parse_coord(MAP *map, int dir, char *data, int *x, int *y) {
   return 1;
 }
 
-void add_entrances(dbref loc, MAP *map, char *data) {
+void add_entrances(DbRef loc, MAP *map, char *data) {
   char *buf;
   char *args[4];
   int x, y, i;
@@ -759,7 +759,7 @@ void add_entrances(dbref loc, MAP *map, char *data) {
   free_mbuf(buf);
 }
 
-void add_links(dbref loc, MAP *map, char *data) {
+void add_links(DbRef loc, MAP *map, char *data) {
   char *buf;
   char *args[500];
   int i, found, targ;
@@ -795,7 +795,7 @@ void add_links(dbref loc, MAP *map, char *data) {
   free_lbuf(buf);
 }
 
-void recursively_updatelinks(dbref from, dbref loc) {
+void recursively_updatelinks(DbRef from, DbRef loc) {
   MAP *map;
   mapobj foo;
   char *tmps;
@@ -829,8 +829,8 @@ void recursively_updatelinks(dbref from, dbref loc) {
     add_links(loc, map, tmps);
 }
 
-void map_updatelinks(dbref player, void *data, char *buffer) {
-  dbref ourloc;
+void map_updatelinks(DbRef player, void *data, char *buffer) {
+  DbRef ourloc;
 
   ourloc = Location(player);
   bzero(update_stats, sizeof(update_stats));
@@ -840,7 +840,7 @@ void map_updatelinks(dbref player, void *data, char *buffer) {
                 update_stats[0], update_stats[1], update_stats[2]);
 }
 
-int map_linked(dbref map_object) {
+int map_linked(DbRef map_object) {
   MAP *map = getMap(map_object);
 
   if (!map)
@@ -848,7 +848,7 @@ int map_linked(dbref map_object) {
   return (first_mapobj(map, TYPE_LINKED)) ? 1 : 0;
 }
 
-static int get_building_cf(dbref d, int *i1, int *i2) {
+static int get_building_cf(DbRef d, int *i1, int *i2) {
   MAP *map;
 
   if (!(map = getMap(d)))
@@ -858,14 +858,14 @@ static int get_building_cf(dbref d, int *i1, int *i2) {
   return map->cf;
 }
 
-static int get_building_regen_factor(dbref d) {
+static int get_building_regen_factor(DbRef d) {
   MAP *map;
   if (!(map = getMap(d)))
     return 0;
   return map->regen_factor;
 }
 
-int get_cf(dbref d) {
+int get_cf(DbRef d) {
   int cf, max = 0;
 
   if (!(get_building_cf(d, &cf, &max)))
@@ -874,7 +874,7 @@ int get_cf(dbref d) {
   return cf;
 }
 
-static void set_building_cf(dbref obj, int i1, int i2) {
+static void set_building_cf(DbRef obj, int i1, int i2) {
   MAP *map;
 
   if (!(map = getMap(obj)))
@@ -883,9 +883,9 @@ static void set_building_cf(dbref obj, int i1, int i2) {
   map->cfmax = i2;
 }
 
-static void building_regen_event(MUXEVENT *e) {
+static void building_regen_event(MuxEvent *e) {
 #ifdef BUILDINGS_REPAIR_THEMSELVES
-  dbref d = (dbref)e->data;
+  DbRef d = (DbRef)e->data;
   int cf, max;
 
   if (!get_building_cf(d, &cf, &max))
@@ -898,9 +898,9 @@ static void building_regen_event(MUXEVENT *e) {
 #endif
 }
 
-static void building_rebuild_event(MUXEVENT *e) {
+static void building_rebuild_event(MuxEvent *e) {
 #ifdef BUILDINGS_REBUILD_FROM_DESTRUCTION
-  dbref d = (dbref)e->data;
+  DbRef d = (DbRef)e->data;
   int cf = 0, max = 0;
 
   if (get_building_cf(d, &cf, &max))
@@ -911,7 +911,7 @@ static void building_rebuild_event(MUXEVENT *e) {
 #endif
 }
 
-void possibly_start_building_regen(dbref obj) {
+void possibly_start_building_regen(DbRef obj) {
   int f, t;
 
   if (!get_building_cf(obj, &f, &t))

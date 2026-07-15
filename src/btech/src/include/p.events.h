@@ -12,7 +12,7 @@
 #pragma once
 
 /* events.c */
-void muxevent_count_initialize(void);
-void debug_EventTypes(dbref player, void *data, char *buffer);
-void prerun_event(MUXEVENT *e);
-void postrun_event(MUXEVENT *e);
+void mux_event_count_initialize(void);
+void debug_EventTypes(DbRef player, void *data, char *buffer);
+void prerun_event(MuxEvent *e);
+void postrun_event(MuxEvent *e);

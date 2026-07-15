@@ -6,14 +6,14 @@
  *
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include "autopilot.h"
 #include "debug.h"
 #include "glue_types.h"
 #include "mech.h"
-#include "rbtree.h"
-#include "server_lifecycle.h"
+#include "mux/server/server_lifecycle.h"
+#include "mux/support/red_black_tree.h"
 
 #include <event2/event.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@ static struct event *heartbeat_ev;
 static struct timeval heartbeat_tv = {1, 0};
 static int heartbeat_running = 0;
 unsigned int global_tick = 0;
-extern rbtree xcode_tree;
+extern RedBlackTree xcode_tree;
 
 void heartbeat_run(evutil_socket_t fd, short event, void *arg);
 
@@ -76,6 +76,6 @@ static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
 
 void heartbeat_run(evutil_socket_t fd, short event, void *arg) {
   evtimer_add(heartbeat_ev, &heartbeat_tv);
-  rb_walk(xcode_tree, WALK_INORDER, heartbeat_dispatch, NULL);
+  red_black_tree_walk(xcode_tree, WALK_INORDER, heartbeat_dispatch, NULL);
   global_tick++;
 }

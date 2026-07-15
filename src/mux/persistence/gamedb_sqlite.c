@@ -1,6 +1,6 @@
 /* gamedb_sqlite.c -- SQLite game-database persistence */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -9,15 +9,16 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "alloc.h"
-#include "attrs.h"
-#include "db.h"
-#include "externs.h"
-#include "flags.h"
-#include "mudconf.h"
-#include "persistence/gamedb.h"
-#include "powers.h"
-#include "vattr.h"
+#include "mux/database/attrs.h"
+#include "mux/database/boolexp.h"
+#include "mux/database/db.h"
+#include "mux/database/flags.h"
+#include "mux/database/powers.h"
+#include "mux/database/vattr.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/server_api.h"
+#include "mux/server/server_state.h"
+#include "mux/support/alloc.h"
 
 /* Increment whenever the schema written by this module changes. */
 #define GAMEDB_SCHEMA_VERSION 3
@@ -372,25 +373,25 @@ static int gamedb_load_vattrs(sqlite3 *sqlite) {
 /* Restore object headers and their dedicated name and lock fields. */
 static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
   sqlite3_stmt *statement;
-  BOOLEXP *lock;
+  BooleanExpression *lock;
   const char *lock_text;
   const char *name;
-  dbref object;
-  dbref contents;
-  dbref exits;
-  FLAG flags;
-  FLAG flags2;
-  FLAG flags3;
-  dbref link;
-  dbref location;
-  dbref next;
-  dbref owner;
-  dbref parent;
+  DbRef object;
+  DbRef contents;
+  DbRef exits;
+  Flag flags;
+  Flag flags2;
+  Flag flags3;
+  DbRef link;
+  DbRef location;
+  DbRef next;
+  DbRef owner;
+  DbRef parent;
   int powers;
   int powers2;
   int result;
   int step;
-  dbref zone;
+  DbRef zone;
 
   statement = NULL;
   result = -1;
@@ -424,7 +425,7 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
         gamedb_column_text(statement, 15, &lock_text, LBUF_SIZE) < 0) {
       result = -1;
     } else {
-      s_Name(object, (char *)name);
+      object_name_set(object, (char *)name);
       s_Location(object, location);
       s_Zone(object, zone);
       s_Contents(object, contents);
@@ -438,9 +439,10 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
       s_Flags3(object, flags3);
       s_Powers(object, powers);
       s_Powers2(object, powers2);
-      lock = parse_boolexp(GOD, lock_text, 1);
-      atr_add_raw(object, A_LOCK, unparse_boolexp_quiet(GOD, lock));
-      free_boolexp(lock);
+      lock = boolean_expression_parse(GOD, lock_text, 1);
+      attribute_add_raw(object, A_LOCK,
+                        boolean_expression_unparse_quiet(GOD, lock));
+      boolean_expression_free(lock);
       if (Typeof(object) == TYPE_PLAYER)
         c_Connected(object);
     }
@@ -455,7 +457,7 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
 static int gamedb_load_attributes(sqlite3 *sqlite, int db_top) {
   sqlite3_stmt *statement;
   const char *value;
-  dbref object;
+  DbRef object;
   int attribute;
   int result;
   int step;
@@ -477,7 +479,7 @@ static int gamedb_load_attributes(sqlite3 *sqlite, int db_top) {
         gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0)
       result = -1;
     else
-      atr_add_raw(object, attribute, (char *)value);
+      attribute_add_raw(object, attribute, (char *)value);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -543,15 +545,15 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
   sqlite3_stmt *objects;
   sqlite3_stmt *attributes;
   VATTR *vattr;
-  BOOLEXP *lock;
-  ATTR *attribute;
+  BooleanExpression *lock;
+  Attribute *attribute;
   char *attr_cursor;
   char *lock_text;
   char *lock_source;
   char *attr_text;
-  dbref object;
-  dbref attr_number;
-  dbref attr_owner;
+  DbRef object;
+  DbRef attr_number;
+  DbRef attr_owner;
   long attr_flags;
 
   snapshot = NULL;
@@ -618,9 +620,9 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
     if (Going(object))
       continue;
 
-    lock_source = atr_get(object, A_LOCK, &attr_owner, &attr_flags);
-    lock = parse_boolexp(GOD, lock_source, 1);
-    lock_text = unparse_boolexp_quiet(GOD, lock);
+    lock_source = attribute_get(object, A_LOCK, &attr_owner, &attr_flags);
+    lock = boolean_expression_parse(GOD, lock_source, 1);
+    lock_text = boolean_expression_unparse_quiet(GOD, lock);
     if (gamedb_bind_int(objects, 1, object) < 0 ||
         sqlite3_bind_text(objects, 2, Name(object), -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
@@ -640,17 +642,17 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
         sqlite3_bind_text(objects, 16, lock_text, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||
         gamedb_step(objects) < 0) {
-      free_boolexp(lock);
+      boolean_expression_free(lock);
       free_lbuf(lock_source);
       return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
                                     attributes, 0);
     }
-    free_boolexp(lock);
+    boolean_expression_free(lock);
     free_lbuf(lock_source);
 
-    for (attr_number = atr_head(object, &attr_cursor); attr_number;
-         attr_number = atr_next(&attr_cursor)) {
-      attribute = atr_num(attr_number);
+    for (attr_number = attribute_list_first(object, &attr_cursor); attr_number;
+         attr_number = attribute_list_next(&attr_cursor)) {
+      attribute = attribute_by_number(attr_number);
       if (!attribute)
         continue;
       switch (attribute->number) {
@@ -661,7 +663,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
       default:
         break;
       }
-      attr_text = atr_get_raw(object, attribute->number);
+      attr_text = attribute_get_raw(object, attribute->number);
       if (!attr_text || gamedb_bind_int(attributes, 1, object) < 0 ||
           gamedb_bind_int(attributes, 2, attribute->number) < 0 ||
           sqlite3_bind_text(attributes, 3, attr_text, -1, SQLITE_TRANSIENT) !=

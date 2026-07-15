@@ -16,7 +16,7 @@
 #define TAG_MED 10
 #define TAG_LONG 15
 
-static void tag_recycle_event(MUXEVENT *e) {
+static void tag_recycle_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long data = (long)e->data2;
   MECH *target;
@@ -41,10 +41,10 @@ static void tag_recycle_event(MUXEVENT *e) {
               "%cgYour TAG system has achieved a stable lock.%cn");
 }
 
-void mech_tag(dbref player, void *data, char *buffer) {
+void mech_tag(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
   char *args[2];
-  dbref refTarget;
+  DbRef refTarget;
   int LOS = 1;
   float range = 0.0;
 
@@ -134,7 +134,7 @@ void stopTAG(MECH *mech) {
 
 void checkTAG(MECH *mech) {
   MECH *target;
-  dbref refTarget;
+  DbRef refTarget;
   float range;
   int LOS = 1;
 

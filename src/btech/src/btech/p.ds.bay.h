@@ -12,9 +12,9 @@
 #pragma once
 
 /* ds.bay.c */
-void mech_createbays(dbref player, void *data, char *buffer);
+void mech_createbays(DbRef player, void *data, char *buffer);
 int Find_DS_Bay_Number(MECH *ds, int dir);
 int Find_DS_Bay_Dir(MECH *ds, int num);
 int Find_DS_Bay_In_MechHex(MECH *seer, MECH *ds, int *bayn);
-void mech_enterbay(dbref player, void *data, char *buffer);
+void mech_enterbay(DbRef player, void *data, char *buffer);
 int Leave_DS(MAP *map, MECH *mech);

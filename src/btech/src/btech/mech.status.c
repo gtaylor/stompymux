@@ -8,7 +8,7 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -23,7 +23,7 @@
 #include "mech.h"
 #include "mech.partnames.h"
 #include "mech.tech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "mycool.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
@@ -62,7 +62,7 @@ static void append_status(char *buffer, size_t size, const char *fmt, ...) {
 #define PHY_SAW 4
 #define PHY_CLAW 5
 
-void DisplayTarget(dbref player, MECH *mech) {
+void DisplayTarget(DbRef player, MECH *mech) {
   int arc;
   MECH *tempMech = NULL;
   char location[50] = {0};
@@ -128,7 +128,7 @@ void DisplayTarget(dbref player, MECH *mech) {
   }
 }
 
-void show_miscbrands(MECH *mech, dbref player) {
+void show_miscbrands(MECH *mech, DbRef player) {
   /*   notify(player, tprintf("Radio: %s (%3d range)     Computer: %s (%d Scan /
    * %d LRS / %d Tac)", brands[BOUNDED(1, MechRadio(mech), 5)+RADIO_INDEX].name,
    * (int) MechRadioRange(mech), brands[BOUNDED(1, MechComputer(mech),
@@ -136,7 +136,7 @@ void show_miscbrands(MECH *mech, dbref player) {
    * MechLRSRange(mech), (int) MechTacRange(mech))); */
 }
 
-void PrintGenericStatus(dbref player, MECH *mech, int own, int usex) {
+void PrintGenericStatus(DbRef player, MECH *mech, int own, int usex) {
   MECH *tempMech = NULL;
   MAP *map = FindObjectsData(mech->mapindex);
   char buff[SBUF_SIZE];
@@ -300,7 +300,7 @@ void PrintGenericStatus(dbref player, MECH *mech, int own, int usex) {
   }
 }
 
-void PrintShortInfo(dbref player, MECH *mech) {
+void PrintShortInfo(DbRef player, MECH *mech) {
   char buff[MBUF_SIZE] = {0};
   char typespecific[50] = {0};
 
@@ -447,7 +447,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   return heatstr;
 }
 
-void PrintHeatBar(dbref player, MECH *mech) {
+void PrintHeatBar(DbRef player, MECH *mech) {
   char subbuff[256];
   char buff[sizeof(subbuff) + sizeof("Temp:")];
   char heatstr[9] = ".:::::::";
@@ -457,7 +457,7 @@ void PrintHeatBar(dbref player, MECH *mech) {
   notify(player, buff);
 }
 
-void PrintInfoStatus(dbref player, MECH *mech, int own) {
+void PrintInfoStatus(DbRef player, MECH *mech, int own) {
   char buff[256];
   MECH *tempMech;
   int f;
@@ -578,7 +578,7 @@ void PrintInfoStatus(dbref player, MECH *mech, int own) {
 }
 
 /* Status commands! */
-void mech_status(dbref player, void *data, char *buffer) {
+void mech_status(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int doweap = 0, doinfo = 0, doarmor = 0, doshort = 0, doheat = 0, loop;
   int i;
@@ -691,7 +691,7 @@ void mech_status(dbref player, void *data, char *buffer) {
     notify(player, weirdbuf);
 }
 
-void mech_critstatus(dbref player, void *data, char *buffer) {
+void mech_critstatus(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char *args[1];
   int index;
@@ -854,7 +854,7 @@ static char *wspec_fun(int i) {
   return buf;
 }
 
-void mech_weaponspecs(dbref player, void *data, char *buffer) {
+void mech_weaponspecs(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   int loop;
   unsigned char weaparray[MAX_WEAPS_SECTION];
@@ -1140,7 +1140,7 @@ char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
   return buffer;
 }
 
-void CriticalStatus(dbref player, MECH *mech, int index) {
+void CriticalStatus(DbRef player, MECH *mech, int index) {
   int loop, i;
   char buffer[LBUF_SIZE] = {0};
   int type, data, wFireMode;
@@ -1224,7 +1224,7 @@ char *evaluate_ammo_amount(int now, int max) {
   return "%ch%cr";
 }
 
-void PrintWeaponStatus(MECH *mech, dbref player) {
+void PrintWeaponStatus(MECH *mech, DbRef player) {
   unsigned char weaparray[MAX_WEAPS_SECTION] = {0};
   unsigned char weapdata[MAX_WEAPS_SECTION] = {0};
   int critical[MAX_WEAPS_SECTION] = {0};
@@ -2350,7 +2350,7 @@ static char *PrintArmorDamageString(const int armor_level, int armor_value,
  * width to match the actual width on the status display, too; right now, it's
  * always two characters, regardless of width.
  */
-static char *ArmorKeyInfo(dbref player, int line_key, int owner) {
+static char *ArmorKeyInfo(DbRef player, int line_key, int owner) {
   static char str[6 + 3 + 2 + 1];
 
   if (owner) {
@@ -2415,7 +2415,7 @@ static char *show_armor(MECH *mech, const int loc, const int flag, int width) {
 /* See if the 'mech has a 'custom' template (@mechstatus attr)
  * if so, exec() it to evaluate color/newlines.
  */
-static int get_statustemplate_attr(dbref player, MECH *mech, char *result) {
+static int get_statustemplate_attr(DbRef player, MECH *mech, char *result) {
   char *resultc, *statattr = silly_atr_get(mech->mynum, A_MECHSTATUS);
 
   if (!statattr || !*statattr)
@@ -2443,7 +2443,7 @@ typedef enum {
   BTS_CONDITIONAL_2     /* binary conditional */
 } BTS_State;
 
-void PrintArmorStatus(dbref player, MECH *mech, int owner) {
+void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
   const char *srcbuf, *sbp, *saved_sbp;
 
   char destbuf[LBUF_SIZE], *dbp;

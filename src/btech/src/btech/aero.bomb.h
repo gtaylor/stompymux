@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "mux/server/platform.h"
 
 typedef struct {
   char *name;

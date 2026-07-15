@@ -9,13 +9,13 @@
  *       All rights reserved
  */
 
-#include "config.h"
+#include "mux/server/platform.h"
 #include <math.h>
 
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "muxevent/muxevent.h"
+#include "mux/network/mux_event.h"
 #include "p.bsuit.h"
 #include "p.crit.h"
 #include "p.eject.h"
@@ -26,10 +26,10 @@
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 
-void mech_pickup(dbref player, void *data, char *buffer) {
+void mech_pickup(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *target;
-  dbref target_num;
+  DbRef target_num;
   MAP *newmap;
   int argc, through_ice;
   char *args[4];
@@ -153,12 +153,12 @@ void mech_pickup(dbref player, void *data, char *buffer) {
   SendDebug(tprintf("#%d has picked up #%d", mech->mynum, target->mynum));
 }
 
-void mech_attachcables(dbref player, void *data, char *buffer) {
+void mech_attachcables(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *towMech;
   MECH *target;
-  dbref towMech_num;
-  dbref target_num;
+  DbRef towMech_num;
+  DbRef target_num;
   int argc;
   char *args[3];
   char mechName[SBUF_SIZE];
@@ -275,13 +275,13 @@ void mech_attachcables(dbref player, void *data, char *buffer) {
   correct_speed(towMech);
 }
 
-void mech_detachcables(dbref player, void *data, char *buffer) {
+void mech_detachcables(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *towMech;
   MECH *target;
-  dbref towMech_num;
+  DbRef towMech_num;
   MAP *newmap;
-  dbref aRef;
+  DbRef aRef;
   int argc;
   char *args[2];
   char mechName[SBUF_SIZE];
@@ -336,11 +336,11 @@ void mech_detachcables(dbref player, void *data, char *buffer) {
   correct_speed(towMech);
 }
 
-void mech_dropoff(dbref player, void *data, char *buffer) {
+void mech_dropoff(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *target;
   MAP *newmap;
-  dbref aRef;
+  DbRef aRef;
   int x, y;
 
   if (player != GOD)

@@ -22,17 +22,17 @@
 #include "btechstats_global.h"
 #include "coolmenu.h"
 #include "mech.h"
-#include "muxevent/muxevent_alloc.h"
+#include "mux/network/mux_event_alloc.h"
 #include "mycool.h"
 #include "p.glue.scode.h"
 #include "p.mech.utils.h"
 
-extern HASHTAB playervaluehash;
-extern HASHTAB playervaluehash2;
+extern HashTable playervaluehash;
+extern HashTable playervaluehash2;
 
 #define IsHCO(ref) WizP(ref)
 
-void do_show(dbref player, dbref cause, int key, char *arg1, char *arg2) {
+void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   int i;
   enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
   char *cmds[] = {"allvalues",  "values",      "skills", "advantages",

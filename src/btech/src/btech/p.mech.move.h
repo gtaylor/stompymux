@@ -13,26 +13,26 @@
 
 /* mech.move.c */
 const char *LateralDesc(MECH *mech);
-void mech_lateral(dbref player, void *data, char *buffer);
-void mech_turnmode(dbref player, void *data, char *buffer);
-void mech_bootlegger(dbref player, void *data, char *buffer);
-void mech_eta(dbref player, void *data, char *buffer);
+void mech_lateral(DbRef player, void *data, char *buffer);
+void mech_turnmode(DbRef player, void *data, char *buffer);
+void mech_bootlegger(DbRef player, void *data, char *buffer);
+void mech_eta(DbRef player, void *data, char *buffer);
 float MechCargoMaxSpeed(MECH *mech, float mspeed);
-void mech_drop(dbref player, void *data, char *buffer);
-void mech_stand(dbref player, void *data, char *buffer);
-void mech_land(dbref player, void *data, char *buffer);
-void mech_heading(dbref player, void *data, char *buffer);
-void mech_turret(dbref player, void *data, char *buffer);
-void mech_rotatetorso(dbref player, void *data, char *buffer);
-void mech_speed(dbref player, void *data, char *buffer);
-void mech_vertical(dbref player, void *data, char *buffer);
-void mech_thrash(dbref player, void *data, char *buffer);
-void mech_jump(dbref player, void *data, char *buffer);
-void mech_hulldown(dbref player, void *data, char *buffer);
+void mech_drop(DbRef player, void *data, char *buffer);
+void mech_stand(DbRef player, void *data, char *buffer);
+void mech_land(DbRef player, void *data, char *buffer);
+void mech_heading(DbRef player, void *data, char *buffer);
+void mech_turret(DbRef player, void *data, char *buffer);
+void mech_rotatetorso(DbRef player, void *data, char *buffer);
+void mech_speed(DbRef player, void *data, char *buffer);
+void mech_vertical(DbRef player, void *data, char *buffer);
+void mech_thrash(DbRef player, void *data, char *buffer);
+void mech_jump(DbRef player, void *data, char *buffer);
+void mech_hulldown(DbRef player, void *data, char *buffer);
 #ifdef BT_MOVEMENT_MODES
-void mech_sprint(dbref player, void *data, char *buffer);
-void mech_evade(dbref player, void *data, char *buffer);
-void mech_dodge(dbref player, void *date, char *buffer);
+void mech_sprint(DbRef player, void *data, char *buffer);
+void mech_evade(DbRef player, void *data, char *buffer);
+void mech_dodge(DbRef player, void *date, char *buffer);
 #endif
 int DropGetElevation(MECH *mech);
 void DropSetElevation(MECH *mech, int wantdrop);

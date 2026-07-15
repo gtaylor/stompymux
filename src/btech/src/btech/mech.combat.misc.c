@@ -208,7 +208,7 @@ void Plasma_Hit(MECH *mech, MECH *hitMech, int LOS) {
 }
 
 // extern int global_kill_cheat;
-void KillMechContentsIfIC(dbref aRef) {
+void KillMechContentsIfIC(DbRef aRef) {
   // global_kill_cheat = 1;
   if (!In_Character(aRef))
     return;
@@ -252,7 +252,7 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
   MECH *ttarget;
   MECH *ctarget;
 
-  dbref a, b;
+  DbRef a, b;
 
   if (Destroyed(target)) {
     if (strncmp(reason, KILL_TYPE_HEAD_TARGET, strlen(KILL_TYPE_HEAD_TARGET)) ==
