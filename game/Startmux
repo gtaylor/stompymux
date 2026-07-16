@@ -14,7 +14,7 @@ DATA=./data
 #
 
 #nmux=`ps -C netmux l | egrep "netmux netmux.conf"`
-numx=`ps ax | sed -e '/grep/d' | grep "netmux netmux.conf"`
+numx=`ps ax | sed -e '/grep/d' | grep "netmux netmux.toml"`
 if [ "$?" -ne 1 ]; then
     echo "Another copy of netmux is running"
     echo "Check ps ax"
@@ -27,7 +27,7 @@ fi
 ulimit -c unlimited
 if [ -x $BIN/netmux ]; then
 	echo Starting netmux binary.
-	$BIN/netmux netmux.conf
+	$BIN/netmux netmux.toml
 else
 	echo No binary found!
 	exit 1

@@ -1,0 +1,3 @@
+[server]
+port = 2222
+function_recursion_limit = 100

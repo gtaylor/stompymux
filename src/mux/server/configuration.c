@@ -2,6 +2,7 @@
 
 #include "mux/server/configuration.h"
 
+#include "mux/server/configuration_toml.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
@@ -674,75 +675,6 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player,
   return -1;
 }
 
-/*
- * ---------------------------------------------------------------------------
- * * cf_include: Read another config file.  Only valid during startup.
- */
-
-static int cf_include(int *vp, char *str, long extra, DbRef player, char *cmd) {
-  FILE *fp;
-  char *cp, *ap, *zp, *buf;
-
-  extern int configuration_set(char *, char *, DbRef);
-
-  if (!mudstate.initializing)
-    return -1;
-
-  fp = fopen(str, "r");
-  if (fp == nullptr) {
-    configuration_log_not_found(player, cmd, "Config file", str);
-    return -1;
-  }
-  buf = alloc_lbuf("cf_include");
-  while (1) {
-    if (!fgets(buf, LBUF_SIZE, fp))
-      break;
-    cp = buf;
-    if (!cp || !*cp || *cp == '#' || *cp == '\n')
-      continue;
-
-    /*
-     * Not a comment line or an empty one. Strip off the NL and any
-     * characters following it. Then, split the line into the command
-     * and argument portions (separated by a space). Also, trim off the
-     * trailing comment, if any (delimited by #)
-     */
-
-    for (cp = buf; *cp && *cp != '\n'; cp++)
-      ;
-    *cp = '\0'; /* strip \n */
-
-    for (cp = buf; *cp && isspace(*cp); cp++)
-      ;              /* strip spaces */
-    if (*cp == '\0') /* skip line if nothing left */
-      continue;
-
-    for (ap = cp; *ap && !isspace(*ap); ap++)
-      ; /* skip over command */
-    if (*ap)
-      *ap++ = '\0'; /* trim command */
-
-    for (; *ap && isspace(*ap); ap++)
-      ; /* skip spaces */
-
-    for (zp = ap; *zp && (*zp != '#'); zp++)
-      ; /* find comment */
-
-    if (*zp)
-      *zp = '\0'; /* zap comment */
-
-    for (zp = zp - 1; zp >= ap && isspace(*zp); zp--)
-      *zp = '\0'; /* zap trailing spaces */
-
-    configuration_set(cp, ap, player);
-  }
-  if (ferror(fp))
-    fprintf(stderr, "Error reading config file: %s\n", strerror(errno));
-  free_lbuf(buf);
-  fclose(fp);
-  return 0;
-}
-
 /* ---------------------------------------------------------------------------
  * conftable: Table for parsing the configuration file.
  */
@@ -1008,7 +940,6 @@ CONF conftable[] = {
     {"idle_wiz_dark", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.idle_wiz_dark, 0},
     {"idle_interval", (GenericFnPtr)cf_int, CA_GOD, &mudconf.idle_interval, 0},
     {"idle_timeout", (GenericFnPtr)cf_int, CA_GOD, &mudconf.idle_timeout, 0},
-    {"include", (GenericFnPtr)cf_include, CA_DISABLED, nullptr, 0},
     {"indent_desc", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.indent_desc, 0},
     {"initial_size", (GenericFnPtr)cf_int, CA_DISABLED, &mudconf.init_size, 0},
     {"list_access", (GenericFnPtr)cf_ntab_access, CA_GOD, (int *)list_names,
@@ -1190,22 +1121,38 @@ void do_admin(DbRef player, DbRef cause, int extra, char *kw, char *value) {
 
 /*
  * ---------------------------------------------------------------------------
+ * * configuration_toml_dispatch_to_set: Adapter from the TOML loader's
+ * dispatch callback into configuration_set().
+ */
+static int configuration_toml_dispatch_to_set(const char *pname,
+                                              const char *args, void *ctx) {
+  (void)ctx;
+  /* configuration_set()'s (char *, char *) signature isn't const-correct;
+     it only reads these strings. */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+  return configuration_set((char *)pname, (char *)args, 0);
+#pragma clang diagnostic pop
+}
+
+/*
+ * ---------------------------------------------------------------------------
  * * configuration_read: Read in config parameters from named file
  */
 int configuration_read(char *fn) {
-  int retval;
+  char errbuf[256];
+  bool ok;
 
   StringCopy(mudconf.config_file, fn);
   mudstate.initializing = 1;
-  /* cf_include()'s cmd parameter matches the shared cf_* interpreter
-     signature (char *), which isn't const-correct; "init" is only read. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  retval = cf_include(nullptr, fn, 0, 0, (char *)"init");
-#pragma clang diagnostic pop
+  ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, nullptr,
+                               errbuf, sizeof(errbuf));
   mudstate.initializing = 0;
-
-  return retval;
+  if (!ok) {
+    fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
+    return -1;
+  }
+  return 0;
 }
 
 /*

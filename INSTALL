@@ -84,19 +84,18 @@ ________________________________________
 
  S4: GAME CONFIGURATION FILE
  ---------------------------
- If you look under /game, you'll see some file with a .conf extension.
- This is generally netmux.conf if you are using BTMux in a Box. You'll 
- need to look through this file and change whichever options you want. 
- Most importantly, change the 'port' config directive as you will most 
- likely want to choose something unique. Documentation on config 
- directives may be found at:
+ If you look under /game, you'll see netmux.toml (and its included
+ aliases.toml). You'll need to look through netmux.toml and change whichever
+ options you want. Most importantly, change the 'port' config directive as
+ you will most likely want to choose something unique. Documentation on
+ config directives may be found at:
 
  http://docs.btmux.com/index.php/Config_Directives
 
  Note that you'll need to shut down and start the server for most of these
  config directives to take effect. You may use the @admin command with your
  #1 character to do most of these but anything set by @admin won't
- be saved across restarts unless it's also in your <gamename>.conf
+ be saved across restarts unless it's also in your netmux.toml
  file.
 
  S5: STARTING AND CONNECTING TO YOUR GAME
@@ -108,7 +107,7 @@ ________________________________________
 
  This will kick off your MUX. You should see 'netmux' and a few other
  processes related to the game under the Linux/Unix command, 'ps'.
- Try connecting to the port you specified in netmux.conf and see if
+ Try connecting to the port you specified in netmux.toml and see if
  you are greeted with a connection screen.
 
  IMPORTANT: The default wiz characters both have the same password:

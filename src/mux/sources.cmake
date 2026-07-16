@@ -32,6 +32,7 @@ target_sources(netmux PRIVATE
   ${MUX_MODULE_DIR}/persistence/commac_persistence_sqlite.c
   ${MUX_MODULE_DIR}/persistence/gamedb_sqlite.c
   ${MUX_MODULE_DIR}/server/configuration.c
+  ${MUX_MODULE_DIR}/server/configuration_toml.c
   ${MUX_MODULE_DIR}/server/diagnostics.c
   ${MUX_MODULE_DIR}/server/file_cache.c
   ${MUX_MODULE_DIR}/server/game.c

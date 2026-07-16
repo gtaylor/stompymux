@@ -390,6 +390,16 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME help_index_integration
     COMMAND help_index_integration_test "${CMAKE_SOURCE_DIR}/game/help")
+
+  add_executable(configuration_toml_parse_test tests/configuration_toml_parse.c
+    ${MUX_SOURCE_DIR}/server/configuration_toml.c)
+  target_link_libraries(configuration_toml_parse_test PRIVATE btmux_options tomlc17)
+  target_include_directories(configuration_toml_parse_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME configuration_toml_parse
+    COMMAND configuration_toml_parse_test
+      "${CMAKE_SOURCE_DIR}/tests/fixtures/configuration_toml")
 endif()
 
 install(TARGETS netmux RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

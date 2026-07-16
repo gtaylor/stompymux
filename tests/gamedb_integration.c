@@ -752,9 +752,9 @@ int main(int argc, char *argv[]) {
   file = fopen(config, "w");
   if (!file)
     return 2;
-  fprintf(file, "game_database %s\n", database);
-  fprintf(file, "have_specials 0\n");
-  fprintf(file, "port 0\n");
+  fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[mux]\nhave_specials = 0\n");
+  fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
 
@@ -774,9 +774,9 @@ int main(int argc, char *argv[]) {
   file = fopen(bootstrap_config, "w");
   if (!file)
     return 2;
-  fprintf(file, "game_database %s\n", database);
-  fprintf(file, "have_specials 1\n");
-  fprintf(file, "port 0\n");
+  fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[mux]\nhave_specials = 1\n");
+  fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
   if (result == 0) {
@@ -800,9 +800,9 @@ int main(int argc, char *argv[]) {
   file = fopen(sqlite_read_config, "w");
   if (!file)
     return 2;
-  fprintf(file, "game_database %s\n", database);
-  fprintf(file, "have_specials 1\n");
-  fprintf(file, "port 0\n");
+  fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+  fprintf(file, "[mux]\nhave_specials = 1\n");
+  fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
   if (result == 0 &&
@@ -943,7 +943,7 @@ int main(int argc, char *argv[]) {
   file = fopen(missing_config, "w");
   if (!file)
     return 2;
-  fprintf(file, "port 0\n");
+  fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
   if (result == 0 &&

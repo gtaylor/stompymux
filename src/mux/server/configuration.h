@@ -4,7 +4,7 @@
 
 #include "mux/database/db.h"
 
-#define CONF_FILE "netmux.conf"
+#define CONF_FILE "netmux.toml"
 
 void configuration_initialize(void);
 void configuration_log_not_found(DbRef player, const char *cmd,
