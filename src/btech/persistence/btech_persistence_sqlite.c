@@ -844,6 +844,7 @@ static int btech_special_load_map_hexes(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
+        map_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &x) < 0 ||
         btech_special_column_int(statement, 2, &y) < 0 ||
         btech_special_column_int(statement, 3, &value) < 0 || value < 0 ||
@@ -908,6 +909,7 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
+        map_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &slot) < 0 ||
         btech_special_column_long(statement, 2, &mech_dbref) < 0 ||
         btech_special_column_int(statement, 3, &flags) < 0 ||
@@ -974,6 +976,7 @@ static int btech_special_load_map_los(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
+        map_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &source) < 0 ||
         btech_special_column_int(statement, 2, &target) < 0 ||
         btech_special_column_int(statement, 3, &flags) < 0 || flags < 0 ||
@@ -1082,6 +1085,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
+        map_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &object_type) < 0 ||
         btech_special_column_int(statement, 2, &ordinal) < 0 ||
         btech_special_column_int(statement, 3, &x) < 0 ||
@@ -1171,6 +1175,7 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
+        map_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &y) < 0 ||
         btech_special_column_int(statement, 2, &byte_index) < 0 ||
         btech_special_column_int(statement, 3, &value) < 0 || value < 0 ||
@@ -1521,6 +1526,7 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &section_index) < 0 ||
         btech_special_column_int(statement, 2, &armor) < 0 ||
         btech_special_column_int(statement, 3, &internal) < 0 ||
@@ -1617,6 +1623,7 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &section_index) < 0 ||
         btech_special_column_int(statement, 2, &slot) < 0 ||
         btech_special_column_int(statement, 3, &brand) < 0 ||
@@ -1794,6 +1801,7 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &bay_index) < 0 ||
         btech_special_column_long(statement, 2, &bay_dbref) < 0 ||
         (bay_dbref != NOTHING && !is_good_obj(bay_dbref))) {
@@ -1854,6 +1862,7 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &turret_index) < 0 ||
         btech_special_column_long(statement, 2, &turret_dbref) < 0 ||
         (turret_dbref != NOTHING && !is_good_obj(turret_dbref))) {
@@ -1979,6 +1988,7 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &network_type) < 0 ||
         btech_special_column_int(statement, 2, &node_index) < 0 ||
         btech_special_column_long(statement, 3, &node_dbref) < 0 ||
@@ -2053,6 +2063,7 @@ static int btech_special_load_mech_tics(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &tic_index) < 0 ||
         btech_special_column_int(statement, 2, &word_index) < 0 ||
         btech_special_column_ulong(statement, 3, &value) < 0) {
@@ -2120,6 +2131,7 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &frequency_index) < 0 ||
         btech_special_column_int(statement, 2, &frequency) < 0 ||
         btech_special_column_int(statement, 3, &mode) < 0 ||
@@ -2288,6 +2300,7 @@ static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &slot) < 0 ||
         btech_special_column_int(statement, 2, &value) < 0 || slot < 0 ||
         slot >= 11) {
@@ -2381,6 +2394,7 @@ static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &slot) < 0 ||
         btech_special_column_int(statement, 2, &value) < 0) {
       result = -1;
@@ -2446,6 +2460,7 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
+        mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &position) < 0 ||
         btech_special_column_int(statement, 2, &amount) < 0 ||
         btech_special_column_time(statement, 3, &occurred_at) < 0 ||
@@ -2607,6 +2622,7 @@ static int btech_special_load_turret_tics(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &turret_dbref) < 0 ||
+        turret_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &tic_index) < 0 ||
         btech_special_column_int(statement, 2, &value) < 0) {
       result = -1;
@@ -2833,6 +2849,7 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &autopilot_dbref) < 0 ||
+        autopilot_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &position) < 0 ||
         btech_special_column_int(statement, 2, &command_enum) < 0 ||
         btech_special_column_int(statement, 3, &argument_count) < 0) {
@@ -2900,6 +2917,7 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &autopilot_dbref) < 0 ||
+        autopilot_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &position) < 0 ||
         btech_special_column_int(statement, 2, &x) < 0 ||
         btech_special_column_int(statement, 3, &y) < 0 ||

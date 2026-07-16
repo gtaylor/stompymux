@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   while (fgets(line, LINE_SIZE, rfp) != NULL) {
     ++lineno;
 
-    n = strlen(line);
+    n = (int)strlen(line);
     if (line[n - 1] != '\n') {
       fprintf(stderr, "line %d: line too long\n", lineno);
     }
