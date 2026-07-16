@@ -134,5 +134,3 @@ extern int malloc_count;
 #define LEAVE_REQUIRES_ENTERSUCC /* Leave checks enterlock of player's         \
                                     origin */
 #endif
-
-#include <sys/socket.h>
