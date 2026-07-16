@@ -7,7 +7,6 @@ PATH=/usr/ucb:/bin:/usr/bin:.; export PATH
 #
 
 BIN=./bin
-TEXT=./text
 DATA=./data
 
 #
@@ -21,19 +20,6 @@ if [ "$?" -ne 1 ]; then
     echo "Check ps ax"
 	exit 0
 fi
-
-#
-#	Make sure the indexes are up-to-date.
-#
-if [ -x $BIN/mkindx ]; then
-	MKINDX=$BIN/mkindx
-else
-	echo "No mkindx. Did you forget to make install?"
-	exit 1
-fi
-
-$MKINDX $TEXT/help.txt $TEXT/help.indx
-$MKINDX $TEXT/wizhelp.txt $TEXT/wizhelp.indx
 
 #
 #	Kick off MUX

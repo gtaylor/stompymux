@@ -16,6 +16,7 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
+#include "mux/help/help_index.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/file_cache.h"
@@ -1003,10 +1004,7 @@ int is_hearer(DbRef thing) {
   return 0;
 }
 
-void do_readcache(DbRef player, DbRef cause, int key) {
-  helpindex_load(player);
-  fcache_load(player);
-}
+void do_readcache(DbRef player, DbRef cause, int key) { fcache_load(player); }
 
 int main(int argc, char *argv[]) {
   char *config_file;
@@ -1089,7 +1087,7 @@ int main(int argc, char *argv[]) {
   }
 
   fcache_init();
-  helpindex_init();
+  help_index_init();
   db_free();
 
   mudstate.record_players = 0;
@@ -1125,8 +1123,6 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&mudstate.attr_name_htab);
   hash_table_reset(&mudstate.player_htab);
   numeric_hash_table_reset(&mudstate.fwdlist_htab);
-  hash_table_reset(&mudstate.help_htab);
-  hash_table_reset(&mudstate.wizhelp_htab);
 
   for (index = 0; index < MAX_GLOBAL_REGS; index++) {
     mudstate.global_regs[index] = alloc_lbuf("main.global_reg");

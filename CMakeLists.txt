@@ -4,7 +4,7 @@ if(NOT DEFINED CMAKE_C_COMPILER)
   find_program(CMAKE_C_COMPILER NAMES clang-20 REQUIRED)
 endif()
 
-project(BattleTechMUX LANGUAGES C)
+project(StompyMUX LANGUAGES C)
 
 find_package(Git QUIET)
 set(PROJECT_VERSION "unknown")
@@ -30,13 +30,11 @@ include(CTest)
 
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
-set(MKINDX_SOURCE_DIR "src/mkindx")
 
 option(BTECH_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTECH_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
 option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
 option(BTECH_FREE_TECHTIME "Enable near-instant techtime" OFF)
-option(BTECH_RENAME_HELP "Rename the help command to muxhelp" OFF)
 
 option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
 option(BTECH_MW3STATS "Enable MW3-like stats and skills" ON)
@@ -106,6 +104,13 @@ target_include_directories(libtelnet PUBLIC "${LIBTELNET_SOURCE_DIR}")
 target_compile_definitions(libtelnet PRIVATE HAVE_ZLIB)
 target_link_libraries(libtelnet PUBLIC ZLIB::ZLIB)
 
+set(TOMLC17_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/tomlc17")
+if(NOT EXISTS "${TOMLC17_SOURCE_DIR}/src/tomlc17.h")
+  message(FATAL_ERROR "tomlc17 submodule is missing; run git submodule update --init --recursive")
+endif()
+add_library(tomlc17 STATIC "${TOMLC17_SOURCE_DIR}/src/tomlc17.c")
+target_include_directories(tomlc17 PUBLIC "${TOMLC17_SOURCE_DIR}/src")
+
 set(LIBEVENT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libevent")
 if(NOT EXISTS "${LIBEVENT_SOURCE_DIR}/CMakeLists.txt")
   message(FATAL_ERROR "libevent submodule is missing; run git submodule update --init --recursive")
@@ -150,13 +155,28 @@ block()
 endblock()
 unset(CMAKE_SKIP_INSTALL_RULES)
 
-set(BTMUX_VERSION_STRING "BattleTechMUX ${PROJECT_VERSION}")
+set(CMARK_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/cmark")
+if(NOT EXISTS "${CMARK_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR "cmark submodule is missing; run git submodule update --init --recursive")
+endif()
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(CMARK_BUILD_TESTING_SAVED ${BUILD_TESTING})
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(CMAKE_SKIP_INSTALL_RULES ON)
+block()
+  set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+  add_subdirectory("${CMARK_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/cmark" EXCLUDE_FROM_ALL)
+endblock()
+unset(CMAKE_SKIP_INSTALL_RULES)
+set(BUILD_TESTING ${CMARK_BUILD_TESTING_SAVED} CACHE BOOL "" FORCE)
+unset(CMARK_BUILD_TESTING_SAVED)
+
+set(BTMUX_VERSION_STRING "StompyMUX ${PROJECT_VERSION}")
 
 set(BT_ADVANCED_ECON ${BTECH_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTECH_ENHANCED_LOGGING})
 set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 set(BT_FREETECHTIME ${BTECH_FREE_TECHTIME})
-set(MOVE_HELP ${BTECH_RENAME_HELP})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 
@@ -296,21 +316,13 @@ target_compile_options(netmux PRIVATE
   -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
   -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
   -Wconversion -Wsign-conversion>)
-target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium m)
+target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
-
-add_executable(mkindx ${MKINDX_SOURCE_DIR}/mkindx.c)
-target_compile_options(mkindx PRIVATE
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
-target_link_libraries(mkindx PRIVATE btmux_options)
-target_include_directories(mkindx PRIVATE
-  "${CMAKE_BINARY_DIR}"
-  "${CMAKE_SOURCE_DIR}/src")
 
 if(BUILD_TESTING)
   add_executable(mux_header_interfaces_test tests/mux_header_interfaces.c)
@@ -352,7 +364,33 @@ if(BUILD_TESTING)
   target_link_libraries(libtelnet_integration_test
     PRIVATE btmux_options libtelnet)
   add_test(NAME libtelnet_integration COMMAND libtelnet_integration_test)
+
+  add_executable(help_frontmatter_parse_test tests/help_frontmatter_parse.c
+    ${MUX_SOURCE_DIR}/help/help_frontmatter.c)
+  target_link_libraries(help_frontmatter_parse_test PRIVATE btmux_options tomlc17)
+  target_include_directories(help_frontmatter_parse_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME help_frontmatter_parse COMMAND help_frontmatter_parse_test)
+
+  add_executable(help_render_test tests/help_render.c
+    ${MUX_SOURCE_DIR}/help/help_render.c)
+  target_link_libraries(help_render_test PRIVATE btmux_options cmark)
+  target_include_directories(help_render_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME help_render COMMAND help_render_test)
+
+  add_executable(help_index_integration_test tests/help_index_integration.c
+    ${MUX_SOURCE_DIR}/help/help_frontmatter.c
+    ${MUX_SOURCE_DIR}/help/help_index.c)
+  target_link_libraries(help_index_integration_test PRIVATE btmux_options tomlc17)
+  target_include_directories(help_index_integration_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME help_index_integration
+    COMMAND help_index_integration_test "${CMAKE_SOURCE_DIR}/game/help")
 endif()
 
-install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS netmux RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(DIRECTORY game/lua DESTINATION ".")

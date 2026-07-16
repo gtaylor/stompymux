@@ -2,12 +2,16 @@
 
 ## MUX Todos in the /src/ dir
 
-* Rewrite WHO in Lua
-* Write tests
-* Make integration tests not conflict with running games
+* Rename bin from `netmux` to `stompymux`
+* Replace BattletechMUX mentions in `version`
 * CLI'ify netmux
-* Crunch mkindx into netmux
+* TOML'ify configs
+* Fix log emission to output to log dir (`logs/`)
+* Rewrite WHO in Lua
+* Make integration tests not conflict with running games
 * utf8 support
+* Maybe: Figure out external RPC
+* Maybe: Figure out external event streaming. Websockets?
 
 ## Lua Todos
 

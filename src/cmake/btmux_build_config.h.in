@@ -9,7 +9,6 @@
 #cmakedefine BT_FREETECHTIME 1
 #cmakedefine BT_MOVEMENT_MODES 1
 #cmakedefine BT_SCALED_INFRARED 1
-#cmakedefine MOVE_HELP 1
 #cmakedefine WEIGHT_OVERSPEEDING 1
 
 #define BTMUX_VERSION_STRING "@BTMUX_VERSION_STRING@"

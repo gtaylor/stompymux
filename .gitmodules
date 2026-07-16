@@ -11,3 +11,9 @@
 [submodule "third_party/libsodium"]
 	path = third_party/libsodium
 	url = https://github.com/jedisct1/libsodium.git
+[submodule "third_party/tomlc17"]
+	path = third_party/tomlc17
+	url = https://github.com/cktan/tomlc17.git
+[submodule "third_party/cmark"]
+	path = third_party/cmark
+	url = https://github.com/commonmark/cmark.git

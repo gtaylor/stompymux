@@ -76,6 +76,7 @@ void do_give(DbRef, DbRef, int, char *, char *); /* Give something away */
 void do_global(DbRef, DbRef, int, char *);  /* Enable/disable global flags */
 void do_halt(DbRef, DbRef, int, char *);    /* Remove commands from the queue */
 void do_help(DbRef, DbRef, int, char *);    /* Print info from help files */
+void do_helpreload(DbRef, DbRef, int);      /* Reindex help articles */
 void do_history(DbRef, DbRef, int, char *); /* View various history info */
 void do_multis(DbRef, DbRef, int);
 void do_inventory(DbRef, DbRef, int);            /* Print what I am carrying */

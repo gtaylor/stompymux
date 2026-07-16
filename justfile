@@ -35,6 +35,9 @@ test:
 install: build
     cmake --install {{build_dir}} --prefix "$PWD/game"
 
+run:
+    cd game && ./Startmux
+
 docsite:
     npm --prefix docs run build
 

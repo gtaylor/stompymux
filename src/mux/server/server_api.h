@@ -6,7 +6,6 @@
 
 #include "mux/commands/command_queue.h"
 #include "mux/commands/eval.h"
-#include "mux/commands/help.h"
 #include "mux/commands/look.h"
 #include "mux/commands/verbs.h"
 #include "mux/database/db.h"
@@ -188,8 +187,6 @@ constexpr int GLOB_ENABLE = 1;     /* key to enable */
 constexpr int GLOB_DISABLE = 2;    /* key to disable */
 constexpr int GLOB_LIST = 3;       /* key to list */
 constexpr int HALT_ALL = 1;        /* halt everything */
-constexpr int HELP_HELP = 1;       /* get data from help file */
-constexpr int HELP_WIZHELP = 2;    /* get data from wizard help file */
 constexpr int LOOK_LOOK = 1;       /* list desc (and succ/fail if room) */
 constexpr int LOOK_EXAM = 2;       /* full listing of object */
 constexpr int LOOK_DEXAM = 3;      /* debug listing of object */

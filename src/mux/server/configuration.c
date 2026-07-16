@@ -158,10 +158,7 @@ void configuration_initialize(void) {
   StringCopy(mudconf.full_file, "text/full.txt");
   StringCopy(mudconf.site_file, "text/badsite.txt");
   StringCopy(mudconf.crea_file, "text/newuser.txt");
-  StringCopy(mudconf.help_file, "text/help.txt");
-  StringCopy(mudconf.help_indx, "text/help.indx");
-  StringCopy(mudconf.whelp_file, "text/wizhelp.txt");
-  StringCopy(mudconf.whelp_indx, "text/wizhelp.indx");
+  StringCopy(mudconf.help_dir, "help");
   StringCopy(mudconf.down_msg, "");
   StringCopy(mudconf.full_msg, "");
   StringCopy(mudconf.dump_msg, "");
@@ -1005,10 +1002,8 @@ CONF conftable[] = {
     {"have_macros", (GenericFnPtr)cf_bool, CA_DISABLED, &mudconf.have_macros,
      0},
     {"have_zones", (GenericFnPtr)cf_bool, CA_DISABLED, &mudconf.have_zones, 0},
-    {"help_file", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.help_file, 32},
-    {"help_index", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.help_indx, 32},
+    {"help_directory", (GenericFnPtr)cf_string, CA_GOD,
+     (void *)mudconf.help_dir, sizeof(mudconf.help_dir)},
     {"use_http", (GenericFnPtr)cf_bool, CA_DISABLED, &mudconf.use_http, 0},
     {"idle_wiz_dark", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.idle_wiz_dark, 0},
     {"idle_interval", (GenericFnPtr)cf_int, CA_GOD, &mudconf.idle_interval, 0},
@@ -1127,10 +1122,6 @@ CONF conftable[] = {
     {"unowned_safe", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.safe_unowned, 0},
     {"user_attr_access", (GenericFnPtr)configuration_modify_bits, CA_GOD,
      &mudconf.vattr_flags, (long)attraccess_nametab},
-    {"wizard_help_file", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.whelp_file, 32},
-    {"wizard_help_index", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.whelp_indx, 32},
     {"zone_recursion_limit", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.zone_nest_lim, 0},
     {"exit_parent", (GenericFnPtr)cf_int, CA_GOD, &mudconf.exit_parent, 0},

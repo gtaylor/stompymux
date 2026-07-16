@@ -46,10 +46,7 @@ struct ServerConfiguration {
   char full_file[32];        /* display when max users exceeded */
   char site_file[32];        /* display if conn from bad site */
   char crea_file[32];        /* display this on login for new users */
-  char help_file[32];        /* HELP text file */
-  char help_indx[32];        /* HELP index file */
-  char whelp_file[32];       /* Wizard help text file */
-  char whelp_indx[32];       /* Wizard help index file */
+  char help_dir[128];        /* Help article root, relative to game directory */
   char down_msg[4096];       /* Message displayed when logins are disabled */
   char full_msg[4096];       /* Message displayed when the game is full */
   char dump_msg[128];        /* Message displayed when @dump-ing */
@@ -371,8 +368,6 @@ struct ServerState {
   RedBlackTree desctree;
   HashTable fwdlist_htab; /* Room forwardlists */
   HashTable parent_htab;  /* Parent $-command exclusion */
-  HashTable help_htab;    /* Help topics hashtable */
-  HashTable wizhelp_htab; /* Wizard help topics hashtable */
   int attr_next;          /* Next attr to alloc when freelist is empty */
   OBJQE *qhead;           /* Per Object Queue Entries */
   OBJQE *qtail;

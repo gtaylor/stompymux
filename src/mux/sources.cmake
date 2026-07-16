@@ -8,7 +8,6 @@ target_sources(netmux PRIVATE
   ${MUX_MODULE_DIR}/commands/eval.c
   ${MUX_MODULE_DIR}/commands/funceval.c
   ${MUX_MODULE_DIR}/commands/functions.c
-  ${MUX_MODULE_DIR}/commands/help.c
   ${MUX_MODULE_DIR}/commands/macro.c
   ${MUX_MODULE_DIR}/commands/program.c
   ${MUX_MODULE_DIR}/commands/verbs.c
@@ -20,6 +19,10 @@ target_sources(netmux PRIVATE
   ${MUX_MODULE_DIR}/database/flags.c
   ${MUX_MODULE_DIR}/database/powers.c
   ${MUX_MODULE_DIR}/database/vattr.c
+  ${MUX_MODULE_DIR}/help/help_command.c
+  ${MUX_MODULE_DIR}/help/help_frontmatter.c
+  ${MUX_MODULE_DIR}/help/help_index.c
+  ${MUX_MODULE_DIR}/help/help_render.c
   ${MUX_MODULE_DIR}/lua/lua.c
   ${MUX_MODULE_DIR}/network/mux_event.c
   ${MUX_MODULE_DIR}/network/netcommon.c
