@@ -55,8 +55,6 @@ typedef void (*GenericFnPtr)(void);
 
 /* Compile time options */
 
-#define SIDE_EFFECT_FUNCTIONS         /* Those neat funcs that should be       \
-                                       * commands */
 constexpr int PLAYER_NAME_LIMIT = 22; /* Max length for player names */
 constexpr int NUM_ENV_VARS = 10;      /* Number of env vars (%0 et al) */
 constexpr int MAX_ARG = 100;          /* max # args from command processor */
@@ -72,7 +70,6 @@ static inline char *StringCopyTrunc(char *dst, const char *src, size_t n) {
   return strncpy(dst, src, n);
 }
 
-#define CHANNEL_HISTORY
 constexpr int CHANNEL_HISTORY_LEN = 20; /* at max 20 last msgs */
 constexpr int COMMAND_HISTORY_LEN = 10; /* at max 10 last msgs */
 
@@ -103,8 +100,3 @@ constexpr char ARG_LIST_DELIM = ',';
 
 constexpr char BOUND_VAR[] = "##";
 constexpr char LISTPLACE_VAR[] = "#@";
-
-#ifdef BRAIN_DAMAGE /* a kludge to get it to work on a mutant                  \
-                     * DENIX system */
-#undef toupper
-#endif

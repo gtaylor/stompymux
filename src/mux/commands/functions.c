@@ -124,14 +124,12 @@ extern FunProto fun_cemit;
 extern FunProto fun_beep;
 extern FunProto fun_ansi;
 extern FunProto fun_zone;
-#ifdef SIDE_EFFECT_FUNCTIONS
 extern FunProto fun_link;
 extern FunProto fun_tel;
 extern FunProto fun_pemit;
 extern FunProto fun_create;
 extern FunProto fun_set;
 extern FunProto fun_setlock;
-#endif
 extern FunProto fun_last;
 extern FunProto fun_matchall;
 extern FunProto fun_ports;

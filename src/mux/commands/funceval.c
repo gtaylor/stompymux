@@ -278,8 +278,6 @@ void fun_zone(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   safe_tprintf_str(buff, bufc, "#%ld", obj_zone(it));
 }
 
-#ifdef SIDE_EFFECT_FUNCTIONS
-
 void fun_link(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
   do_link(player, cause, 0, fargs[0], fargs[1]);
@@ -530,7 +528,6 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    */
   flag_set(thing, player, fargs[1], 0);
 }
-#endif
 
 /*
  * Code for encrypt() and decrypt() was taken from the DarkZone server

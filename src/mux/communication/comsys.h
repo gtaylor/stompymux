@@ -9,9 +9,7 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/network/descriptor.h"
-#ifdef CHANNEL_HISTORY
 #include "mux/support/fifo.h"
-#endif
 
 typedef struct chanentry CHANENT;
 struct chanentry {
@@ -40,9 +38,7 @@ struct channel {
   int chan_obj;
   struct comuser **users;
   struct comuser *on_users; /* Linked list of who is on */
-#ifdef CHANNEL_HISTORY
   Fifo *last_messages;
-#endif
   int num_messages;
 };
 
