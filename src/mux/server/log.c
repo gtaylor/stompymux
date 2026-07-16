@@ -11,13 +11,11 @@
 #include "mux/commands/command.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
-#include "mux/database/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
-#include "mux/support/hash_table.h"
 #ifdef ARBITRARY_LOGFILES
 #include "mux/server/log_cache.h"
 #endif
