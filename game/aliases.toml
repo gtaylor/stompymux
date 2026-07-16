@@ -2,9 +2,9 @@
 # -----------------------------------------------------------------------------
 # If any of these are changed, players will be confused because examples in
 # the manual may not work, and existing MUX programs may stop working. Do not
-# edit this file directly - add local aliases in netmux.toml's own
+# edit this file directly - add local aliases in stompymux.toml's own
 # [aliases.*] tables instead; that file's keys always win over these (see the
-# `include` semantics documented at the top of netmux.toml).
+# `include` semantics documented at the top of stompymux.toml).
 # -----------------------------------------------------------------------------
 
 [aliases.commands]

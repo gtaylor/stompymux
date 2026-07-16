@@ -1,6 +1,6 @@
 set(MUX_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
-target_sources(netmux PRIVATE
+target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command.c
   ${MUX_MODULE_DIR}/commands/command_queue.c
   ${MUX_MODULE_DIR}/commands/builder_commands.c
@@ -69,5 +69,5 @@ target_sources(netmux PRIVATE
   ${MUX_MODULE_DIR}/commands/wiz.c)
 
 if(BTECH_ENHANCED_LOGGING)
-  target_sources(netmux PRIVATE ${MUX_MODULE_DIR}/server/log_cache.c)
+  target_sources(stompymux PRIVATE ${MUX_MODULE_DIR}/server/log_cache.c)
 endif()

@@ -1,9 +1,9 @@
-# netmux.toml - MUX configuration file
+# stompymux.toml - MUX configuration file
 # ----------------------------------------------------------------------------
 # From within this file, you can change much about the way your game behaves.
 # Some directives are clearly labeled and described, others are not. Others
 # aren't even listed in this file. For a complete list with descriptions,
-# please see docs/content/en/docs/configuration/netmux-toml.md.
+# please see docs/content/en/docs/configuration/stompymux-toml.md.
 # ----------------------------------------------------------------------------
 
 # Include the stock command/flag/function/attribute aliases. Add local
@@ -16,7 +16,7 @@ include = ["aliases.toml"]
 # -----------------------------------------------
 
 [database]
-game_database = "data/netmux.db.sqlite"
+game_database = "data/stompymux.db.sqlite"
 lua_directory = "lua"
 lua_instruction_limit = 100000
 lua_memory_limit = 67108864

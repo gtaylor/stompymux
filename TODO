@@ -3,10 +3,7 @@
 ## MUX Todos in the /src/ dir
 
 * Do we still need register.txt?
-* Rename bin from `netmux` to `stompymux`
-* Replace BattletechMUX mentions in `version`
-* CLI'ify netmux
-* TOML'ify configs
+* CLI'ify stompymux
 * Redesign login flow to be more MUDDy
 * Fix log emission to output to log dir (`logs/`)
 * Rewrite WHO in Lua

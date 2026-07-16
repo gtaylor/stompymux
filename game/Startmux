@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	Startmux - Kick off the netmux process.
+#	Startmux - Kick off the stompymux process.
 #
 export LD_LIBRARY_PATH=/usr/local/lib
 PATH=/usr/ucb:/bin:/usr/bin:.; export PATH
@@ -13,10 +13,10 @@ DATA=./data
 #	Make sure there isn't aready a MUX running.
 #
 
-#nmux=`ps -C netmux l | egrep "netmux netmux.conf"`
-numx=`ps ax | sed -e '/grep/d' | grep "netmux netmux.toml"`
+#nmux=`ps -C stompymux l | egrep "stompymux stompymux.conf"`
+numx=`ps ax | sed -e '/grep/d' | grep "stompymux stompymux.toml"`
 if [ "$?" -ne 1 ]; then
-    echo "Another copy of netmux is running"
+    echo "Another copy of stompymux is running"
     echo "Check ps ax"
 	exit 0
 fi
@@ -25,9 +25,9 @@ fi
 #	Kick off MUX
 #
 ulimit -c unlimited
-if [ -x $BIN/netmux ]; then
-	echo Starting netmux binary.
-	$BIN/netmux netmux.toml
+if [ -x $BIN/stompymux ]; then
+	echo Starting stompymux binary.
+	$BIN/stompymux stompymux.toml
 else
 	echo No binary found!
 	exit 1

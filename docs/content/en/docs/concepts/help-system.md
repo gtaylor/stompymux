@@ -6,7 +6,7 @@ weight: 20
 ---
 
 The `help` command serves markdown articles with TOML frontmatter, indexed
-and rendered entirely inside `netmux` (see `src/mux/help`). There is no
+and rendered entirely inside `stompymux` (see `src/mux/help`). There is no
 separate indexing binary and no distinction between `help` and `wizhelp` -
 per-article visibility is controlled by the `wizard_only` frontmatter key
 instead.

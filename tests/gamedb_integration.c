@@ -13,7 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
-static int run_server(const char *netmux, const char *config, int make_minimal,
+static int run_server(const char *binary_path, const char *config, int make_minimal,
                       int *status) {
   struct timespec delay;
   pid_t child;
@@ -23,9 +23,9 @@ static int run_server(const char *netmux, const char *config, int make_minimal,
     return -1;
   if (child == 0) {
     if (make_minimal)
-      execl(netmux, netmux, "-s", config, NULL);
+      execl(binary_path, binary_path, "-s", config, NULL);
     else
-      execl(netmux, netmux, config, NULL);
+      execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
 
@@ -38,7 +38,7 @@ static int run_server(const char *netmux, const char *config, int make_minimal,
 }
 
 /* Run an isolated server instance so legacy dual-write artifacts stay disposable. */
-static int run_server_in_directory_for(const char *netmux, const char *config,
+static int run_server_in_directory_for(const char *binary_path, const char *config,
                                        const char *directory, int make_minimal,
                                        time_t seconds, int *status) {
   struct timespec delay;
@@ -51,9 +51,9 @@ static int run_server_in_directory_for(const char *netmux, const char *config,
     if (chdir(directory) < 0)
       _exit(127);
     if (make_minimal)
-      execl(netmux, netmux, "-s", config, NULL);
+      execl(binary_path, binary_path, "-s", config, NULL);
     else
-      execl(netmux, netmux, config, NULL);
+      execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   delay.tv_sec = seconds;
@@ -65,7 +65,7 @@ static int run_server_in_directory_for(const char *netmux, const char *config,
 }
 
 /* Wait for the child to enter its event loop before sending its test signal. */
-static int run_server_in_directory_after(const char *netmux, const char *config,
+static int run_server_in_directory_after(const char *binary_path, const char *config,
                                          const char *directory, int make_minimal,
                                          int *status) {
   char ready_fd[32];
@@ -89,9 +89,9 @@ static int run_server_in_directory_after(const char *netmux, const char *config,
         setenv("BTMUX_TEST_READY_FD", ready_fd, 1) < 0)
       _exit(127);
     if (make_minimal)
-      execl(netmux, netmux, "-s", config, NULL);
+      execl(binary_path, binary_path, "-s", config, NULL);
     else
-      execl(netmux, netmux, config, NULL);
+      execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   close(ready_pipe[1]);
@@ -113,15 +113,15 @@ static int run_server_in_directory_after(const char *netmux, const char *config,
 }
 
 /* Start an isolated server long enough for normal startup work, then stop it. */
-static int run_server_in_directory(const char *netmux, const char *config,
+static int run_server_in_directory(const char *binary_path, const char *config,
                                    const char *directory, int make_minimal,
                                    int *status) {
-  return run_server_in_directory_for(netmux, config, directory, make_minimal,
+  return run_server_in_directory_for(binary_path, config, directory, make_minimal,
                                      1, status);
 }
 
 /* Trigger the fatal-signal crash dump without attempting process recovery. */
-static int run_server_crash_in_directory(const char *netmux, const char *config,
+static int run_server_crash_in_directory(const char *binary_path, const char *config,
                                          const char *directory, int *status) {
   struct timespec delay;
   pid_t child;
@@ -132,7 +132,7 @@ static int run_server_crash_in_directory(const char *netmux, const char *config,
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    execl(netmux, netmux, config, NULL);
+    execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   delay.tv_sec = 1;
@@ -147,7 +147,7 @@ static int run_server_crash_in_directory(const char *netmux, const char *config,
 }
 
 /* Exercise SIGUSR2's intentional DUMP_KILLED shutdown path. */
-static int run_server_killed_in_directory(const char *netmux, const char *config,
+static int run_server_killed_in_directory(const char *binary_path, const char *config,
                                           const char *directory, int *status) {
   struct timespec delay;
   pid_t child;
@@ -160,7 +160,7 @@ static int run_server_killed_in_directory(const char *netmux, const char *config
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    execl(netmux, netmux, config, NULL);
+    execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
   delay.tv_sec = 1;
@@ -378,7 +378,7 @@ static int check_snapshot_dump_type(const char *path, sqlite3_int64 dump_type) {
 }
 
 /* A failed named BTech writer must leave the completed SQLite file untouched. */
-static int check_btech_writer_fault(const char *netmux, const char *config,
+static int check_btech_writer_fault(const char *binary_path, const char *config,
                                     const char *directory, const char *database,
                                     const char *table, const char *phase) {
   struct stat before;
@@ -391,7 +391,7 @@ static int check_btech_writer_fault(const char *netmux, const char *config,
       setenv("BTMUX_TEST_BTECH_FAIL_PHASE", phase, 1) < 0)
     return -1;
   result =
-      run_server_in_directory_after(netmux, config, directory, 0, &status);
+      run_server_in_directory_after(binary_path, config, directory, 0, &status);
   unsetenv("BTMUX_TEST_BTECH_FAIL_TABLE");
   unsetenv("BTMUX_TEST_BTECH_FAIL_PHASE");
   if (result < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||

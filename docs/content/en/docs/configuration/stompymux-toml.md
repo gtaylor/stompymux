@@ -1,16 +1,16 @@
 ---
-title: netmux.toml reference
-linkTitle: netmux.toml
+title: stompymux.toml reference
+linkTitle: stompymux.toml
 weight: 20
 ---
 
-`game/netmux.toml` controls the running game server. It is TOML, organized
+`game/stompymux.toml` controls the running game server. It is TOML, organized
 into sections (`[server]`, `[battletech]`, `[security]`, and so on).
 Configuration changes can be made through the appropriate wizard
 configuration commands (`@admin`) or by editing the file before starting the
-server. `netmux.toml` includes `game/aliases.toml` (the stock command, flag,
+server. `stompymux.toml` includes `game/aliases.toml` (the stock command, flag,
 function, and attribute abbreviations) via a top-level `include` array; add
-local aliases to `netmux.toml`'s own `[aliases.*]` tables rather than editing
+local aliases to `stompymux.toml`'s own `[aliases.*]` tables rather than editing
 `aliases.toml` directly, since an including file's keys always win over
 anything pulled in through `include`.
 
@@ -62,7 +62,7 @@ are never recoverable, and legacy `crypt(3)` password hashes are not accepted.
 | `login_attempt_refill` | `10` | Seconds required to restore one attempt for a source address. |
 | `login_hash_limit` | `5` | Global maximum number of password operations admitted per second. This protects the single game event loop from a distributed login flood. |
 
-These live under `[security]` in `netmux.toml`.
+These live under `[security]` in `stompymux.toml`.
 
 The per-source tracker has room for 1,024 recent addresses and evicts the least
 recently refilled entry when full. A throttled connection receives the same

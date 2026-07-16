@@ -305,19 +305,19 @@ target_include_directories(btech PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_SOURCE_DIR}/src")
 
-add_executable(netmux)
+add_executable(stompymux)
 include(src/mux/sources.cmake)
 if(BUILD_TESTING)
-  target_compile_definitions(netmux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
+  target_compile_definitions(stompymux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
 endif()
-target_compile_options(netmux PRIVATE
+target_compile_options(stompymux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
   -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
   -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
   -Wconversion -Wsign-conversion>)
-target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium tomlc17 cmark m)
-target_include_directories(netmux PRIVATE
+target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium tomlc17 cmark m)
+target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
@@ -347,7 +347,7 @@ if(BUILD_TESTING)
       PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
   endif()
   add_test(NAME gamedb_integration
-    COMMAND gamedb_integration_test $<TARGET_FILE:netmux>)
+    COMMAND gamedb_integration_test $<TARGET_FILE:stompymux>)
 
   add_executable(lua_module_smoke_test tests/lua_module_smoke.c)
   target_link_libraries(lua_module_smoke_test PRIVATE btmux_options luajit m)
@@ -402,5 +402,5 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/tests/fixtures/configuration_toml")
 endif()
 
-install(TARGETS netmux RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS stompymux RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(DIRECTORY game/lua DESTINATION ".")
