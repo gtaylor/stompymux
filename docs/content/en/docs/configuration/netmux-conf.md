@@ -4,7 +4,7 @@ linkTitle: netmux.conf
 weight: 20
 ---
 
-`game.run/netmux.conf` controls the running game server. Configuration changes
+`game/netmux.conf` controls the running game server. Configuration changes
 can be made through the appropriate wizard configuration commands or by editing
 the file before starting the server.
 

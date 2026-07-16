@@ -7360,6 +7360,6 @@ Avg weight: 45.00 Total tons: 990
   Config parameter: lua_directory <directory>
   Default: lua
 
-  The directory, relative to game.run, containing the object_logic,
+  The directory, relative to game, containing the object_logic,
   global_logic, and packages Lua roots. Lua callbacks use the configured
   lua_instruction_limit and lua_memory_limit safeguards.

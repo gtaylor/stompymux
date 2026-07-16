@@ -1,6 +1,6 @@
 # Lua scripting
 
-LuaJIT modules live below `game.run/lua` in three separate roots:
+LuaJIT modules live below `game/lua` in three separate roots:
 
 ```
 lua/
@@ -12,7 +12,7 @@ lua/
 Attach an object module with `@luaparent <object>=<relative-path>.lua`; the
 path is relative to `object_logic`, and omitting it clears the attachment. For
 example, `@luaparent #123=hello.lua` selects
-`game.run/lua/object_logic/hello.lua`. Absolute paths, `..`, and paths into the
+`game/lua/object_logic/hello.lua`. Absolute paths, `..`, and paths into the
 other roots are rejected. The closest attachment in the ordinary MUX parent
 chain is active. Only wizards may attach or reload scripts.
 
@@ -69,7 +69,7 @@ not replay missed minutes. Inspect active schedules with the wizard-only
 
 ## Starter examples
 
-`game.run/lua/object_logic/example.lua` is a minimal hello-world command. Attach
+`game/lua/object_logic/example.lua` is a minimal hello-world command. Attach
 it to an object, then enter `hello` while that object is in the normal
 command-match scope:
 
@@ -78,11 +78,11 @@ command-match scope:
 @luareload
 ```
 
-`game.run/lua/object_logic/counter.lua` demonstrates durable state. Its `count`
+`game/lua/object_logic/counter.lua` demonstrates durable state. Its `count`
 command increments the attached object's `LuaCount` attribute, so the value
 survives Lua reloads and server restarts.
 
-`game.run/lua/object_logic/events/enter_notice.lua` demonstrates an `Aenter`
+`game/lua/object_logic/events/enter_notice.lua` demonstrates an `Aenter`
 replacement:
 
 ```

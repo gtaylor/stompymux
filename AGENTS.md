@@ -2,8 +2,8 @@
 
 ## Repository layout
 
-* `game.run`: Files needed to run the game server.
-* `game.run/text`: Sources for the `help` and `wizhelp` commands, along with other larger blocks of static text (MOTD, new user notices, etc)
+* `game`: Files needed to run the game server.
+* `game/text`: Sources for the `help` and `wizhelp` commands, along with other larger blocks of static text (MOTD, new user notices, etc)
 * `docs`: Docs for the game server and its sources.
 * `src`: Location of all C sources for the game and its supporting utilities.
 * `src/mux`: Base MUX game server sources.
@@ -29,6 +29,6 @@ When writing C code, use the following naming conventions:
 
 * We use the `just` command runner
 * When making changes, run `just lint-changes`, `just build`, `just test`, and then `just install` to validate end to end.
-* Make sure that updates to behaviors are reflected in `game.run/text/help.txt`, `game.run/text/wizhelp.txt`, and `docs/`.
-* Check the various `game.run/*.conf` and `game.run/*.config` files when making changes to mudconfs, configs, and settings.
-* If making DB schema changes, offer to update the game's database at `game.run/data/netmux.db.sqlite`. If a `netmux` process is running, direct me to shutdown the game before making changes or instability could occur.
+* Make sure that updates to behaviors are reflected in `game/text/help.txt`, `game/text/wizhelp.txt`, and `docs/`.
+* Check the various `game/*.conf` and `game/*.config` files when making changes to mudconfs, configs, and settings.
+* If making DB schema changes, offer to update the game's database at `game/data/netmux.db.sqlite`. If a `netmux` process is running, direct me to shutdown the game before making changes or instability could occur.

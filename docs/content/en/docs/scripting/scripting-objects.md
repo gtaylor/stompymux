@@ -5,7 +5,7 @@ type: docs
 weight: 10
 ---
 
-Object Lua modules live under `game.run/lua/object_logic`. Attach one to an
+Object Lua modules live under `game/lua/object_logic`. Attach one to an
 object with the wizard-only command:
 
 ```text
@@ -14,7 +14,7 @@ object with the wizard-only command:
 
 The path is relative to `object_logic`; for example,
 `@luaparent #123=hello.lua` selects
-`game.run/lua/object_logic/hello.lua`. Paths must be relative `.lua` files and
+`game/lua/object_logic/hello.lua`. Paths must be relative `.lua` files and
 cannot escape into `global_logic` or `packages`. Omit the path to clear an
 attachment.
 
@@ -114,7 +114,7 @@ handler context table.
 ## Imports and examples
 
 Object modules resolve `require("name")` in `object_logic` before looking in
-the shared `packages` root. See `game.run/lua/object_logic/` for the `hello`,
+the shared `packages` root. See `game/lua/object_logic/` for the `hello`,
 `counter`, and `events/enter_notice` examples.
 
 The [`mux` package](packages/mux/) documents the server API available to

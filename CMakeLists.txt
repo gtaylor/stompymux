@@ -343,10 +343,10 @@ if(BUILD_TESTING)
     "${LUAJIT_SOURCE_DIR}/src")
   add_test(NAME lua_module_smoke
     COMMAND lua_module_smoke_test
-      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/example.lua"
-      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/counter.lua"
-      "${CMAKE_SOURCE_DIR}/game.run/lua/object_logic/events/enter_notice.lua"
-      "${CMAKE_SOURCE_DIR}/game.run/lua/global_logic/example.lua")
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/example.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/counter.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/events/enter_notice.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/global_logic/example.lua")
 
   add_executable(libtelnet_integration_test tests/libtelnet_integration.c)
   target_link_libraries(libtelnet_integration_test
@@ -355,4 +355,4 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS netmux mkindx RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-install(DIRECTORY game.run/lua DESTINATION ".")
+install(DIRECTORY game/lua DESTINATION ".")

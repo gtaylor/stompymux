@@ -33,7 +33,7 @@ test:
     ctest --test-dir {{build_dir}} --output-on-failure
 
 install: build
-    cmake --install {{build_dir}} --prefix "$PWD/game.run"
+    cmake --install {{build_dir}} --prefix "$PWD/game"
 
 docsite:
     npm --prefix docs run build

@@ -1,0 +1,38 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/btech",
+                "${workspaceFolder}/src/btech/src/btech",
+                "${workspaceFolder}/src/btech/src/include",
+                "${workspaceFolder}/build",
+                "${workspaceFolder}/build/src/btech",
+                "${workspaceFolder}/build/libevent/include",
+                "${workspaceFolder}/build/libsodium/src/libsodium/include",
+                "${workspaceFolder}/third_party/libevent",
+                "${workspaceFolder}/third_party/libevent/compat",
+                "${workspaceFolder}/third_party/libevent/include",
+                "${workspaceFolder}/third_party/libsodium/src/libsodium/include",
+                "${workspaceFolder}/third_party/libsodium/src/libsodium/include/sodium",
+                "${workspaceFolder}/third_party/libtelnet",
+                "${workspaceFolder}/third_party/luajit/src",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_GNU_SOURCE=1",
+                "HAVE_CONFIG_H",
+                "HAVE_ZLIB",
+                "BTMUX_PERSISTENCE_TESTING=1"
+            ],
+            "compilerPath": "/usr/bin/clang-20",
+            "cStandard": "c23",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

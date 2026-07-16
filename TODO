@@ -3,7 +3,6 @@
 ## MUX Todos in the /src/ dir
 
 * Rewrite WHO in Lua
-* Start breaking up src/ into system subdirs
 * Write tests
 * Make integration tests not conflict with running games
 * CLI'ify netmux
