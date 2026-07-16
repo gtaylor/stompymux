@@ -710,13 +710,8 @@ void do_enter_internal(DbRef player, DbRef thing, int quiet) {
            (char **)nullptr, 0);
   } else if (player == thing) {
     notify(player, "You can't enter yourself!");
-#ifdef ENTER_REQUIRES_LEAVESUCC
   } else if (could_doit(player, thing, A_LENTER) &&
-             could_doit(player, loc, A_LLEAVE))
-#else
-  } else if (could_doit(player, thing, A_LENTER))
-#endif
-  {
+             could_doit(player, loc, A_LLEAVE)) {
     oattr = quiet ? HUSH_ENTER : 0;
     move_via_generic(player, thing, NOTHING, oattr);
     divest_object(player);
@@ -770,12 +765,8 @@ void do_leave(DbRef player, DbRef cause, int key) {
   quiet = 0;
   if ((key & MOVE_QUIET) && is_controls(player, loc))
     quiet = HUSH_LEAVE;
-#ifdef LEAVE_REQUIRES_ENTERSUCC
   if (could_doit(player, loc, A_LLEAVE) &&
       could_doit(player, obj_location(loc), A_LENTER)) {
-#else
-  if (could_doit(player, loc, A_LLEAVE)) {
-#endif
     move_via_generic(player, obj_location(loc), NOTHING, quiet);
   } else {
     oattr = quiet ? 0 : A_OLFAIL;

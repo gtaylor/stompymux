@@ -276,7 +276,7 @@ void fwdlist_set(DbRef thing, FWDLIST *ifp) {
    * Copy input forwardlist to a correctly-sized buffer
    */
 
-  fp = (FWDLIST *)XMALLOC(sizeof(FWDLIST), "fwdlist_set");
+  fp = (FWDLIST *)malloc(sizeof(FWDLIST));
 
   for (i = 0; i < ifp->count; i++) {
     fp->data[i] = ifp->data[i];
@@ -289,7 +289,7 @@ void fwdlist_set(DbRef thing, FWDLIST *ifp) {
 
   xfp = fwdlist_get(thing);
   if (xfp) {
-    XFREE(xfp, "fwdlist_set");
+    free(xfp);
     numeric_hash_table_replace(thing, (int *)fp, &mudstate.fwdlist_htab);
   } else {
     numeric_hash_table_add(thing, (int *)fp, &mudstate.fwdlist_htab);
@@ -305,7 +305,7 @@ void fwdlist_clr(DbRef thing) {
 
   xfp = fwdlist_get(thing);
   if (xfp) {
-    XFREE(xfp, "fwdlist_clr");
+    free(xfp);
     numeric_hash_table_delete(thing, &mudstate.fwdlist_htab);
   }
 }
@@ -439,7 +439,7 @@ static char *set_string(char **ptr, char *new) {
    */
 
   if (*ptr)
-    XFREE(*ptr, "set_string");
+    free(*ptr);
 
   /*
    * if new string is not null allocate space for it and copy it
@@ -451,7 +451,7 @@ static char *set_string(char **ptr, char *new) {
     return (*ptr = nullptr); /*
                               * Check with GAC about this
                               */
-  *ptr = (char *)XMALLOC(strlen(new) + 1, "set_string");
+  *ptr = (char *)malloc(strlen(new) + 1);
   StringCopy(*ptr, new);
   return (*ptr);
 }
@@ -1654,8 +1654,7 @@ void db_grow(DbRef newtop) {
    */
 
   if (mudconf.cache_names) {
-    newpurenames = (NAME *)XMALLOC((size_t)(newsize + SIZE_HACK) * sizeof(NAME),
-                                   "db_grow.purenames");
+    newpurenames = (NAME *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (!newpurenames) {
       LOG_SIMPLE(
@@ -1675,7 +1674,7 @@ void db_grow(DbRef newtop) {
       bcopy((char *)purenames, (char *)newpurenames,
             (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
       cp = (char *)purenames;
-      XFREE(cp, "db_grow.purename");
+      free(cp);
     } else {
 
       /*
@@ -1695,8 +1694,8 @@ void db_grow(DbRef newtop) {
    * Grow the db array
    */
 
-  newdb = (GameObject *)XMALLOC(
-      (size_t)(newsize + SIZE_HACK) * sizeof(GameObject), "db_grow.db");
+  newdb =
+      (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
     LOG_SIMPLE(LOG_ALWAYS, "ALC", "DB",
@@ -1714,7 +1713,7 @@ void db_grow(DbRef newtop) {
     bcopy((char *)db, (char *)newdb,
           (size_t)(mudstate.db_top + SIZE_HACK) * sizeof(GameObject));
     cp = (char *)db;
-    XFREE(cp, "db_grow.db");
+    free(cp);
   } else {
 
     /*
@@ -1758,13 +1757,13 @@ void db_grow(DbRef newtop) {
    */
 
   marksize = (newsize + 7) >> 3;
-  newmarkbuf = (MARKBUF *)XMALLOC((size_t)marksize, "db_grow");
+  newmarkbuf = (MARKBUF *)malloc((size_t)marksize);
   bzero((char *)newmarkbuf, (size_t)marksize);
   if (mudstate.markbits) {
     marksize = (int)((newtop + 7) >> 3);
     bcopy((char *)mudstate.markbits, (char *)newmarkbuf, (size_t)marksize);
     cp = (char *)mudstate.markbits;
-    XFREE(cp, "db_grow");
+    free(cp);
   }
   mudstate.markbits = newmarkbuf;
 }
@@ -1775,7 +1774,7 @@ void db_free(void) {
   if (db != nullptr) {
     db -= SIZE_HACK;
     cp = (char *)db;
-    XFREE(cp, "db_grow");
+    free(cp);
     db = nullptr;
   }
   mudstate.db_top = 0;

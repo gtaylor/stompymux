@@ -494,8 +494,8 @@ void badname_add(char *bad_name) {
    * Make a new node and link it in at the top
    */
 
-  bp = (BADNAME *)XMALLOC(sizeof(BADNAME), "badname.struc");
-  bp->name = XMALLOC(strlen(bad_name) + 1, "badname.name");
+  bp = (BADNAME *)malloc(sizeof(BADNAME));
+  bp->name = malloc(strlen(bad_name) + 1);
   bp->next = mudstate.badname_head;
   mudstate.badname_head = bp;
   StringCopy(bp->name, bad_name);
@@ -515,8 +515,8 @@ void badname_remove(char *bad_name) {
         backp->next = bp->next;
       else
         mudstate.badname_head = bp->next;
-      XFREE(bp->name, "badname.name");
-      XFREE(bp, "badname.struc");
+      free(bp->name);
+      free(bp);
       return;
     }
   }

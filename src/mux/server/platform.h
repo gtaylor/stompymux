@@ -57,9 +57,6 @@ typedef void (*GenericFnPtr)(void);
 
 #define SIDE_EFFECT_FUNCTIONS         /* Those neat funcs that should be       \
                                        * commands */
-#define ENTERLEAVE_PARANOID           /* Enter/leave commands                  \
-                                         require opposite locks succeeding     \
-                                         as well */
 constexpr int PLAYER_NAME_LIMIT = 22; /* Max length for player names */
 constexpr int NUM_ENV_VARS = 10;      /* Number of env vars (%0 et al) */
 constexpr int MAX_ARG = 100;          /* max # args from command processor */
@@ -110,14 +107,4 @@ constexpr char LISTPLACE_VAR[] = "#@";
 #ifdef BRAIN_DAMAGE /* a kludge to get it to work on a mutant                  \
                      * DENIX system */
 #undef toupper
-#endif
-
-#define XMALLOC(x, y) malloc((x))
-#define XFREE(x, y) (free((x)), (x) = nullptr)
-
-#ifdef ENTERLEAVE_PARANOID
-#define ENTER_REQUIRES_LEAVESUCC /* Enter checks leaveloc of player's          \
-                                    origin */
-#define LEAVE_REQUIRES_ENTERSUCC /* Leave checks enterlock of player's         \
-                                    origin */
 #endif

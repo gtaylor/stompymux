@@ -802,7 +802,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
 void olist_push(void) {
   OLSTK *ol;
 
-  ol = (OLSTK *)XMALLOC(sizeof(OLSTK), "olist_push");
+  ol = (OLSTK *)malloc(sizeof(OLSTK));
   ol->next = mudstate.olist;
   mudstate.olist = ol;
 
@@ -826,7 +826,7 @@ void olist_pop(void) {
     onext = op->next;
     free_lbuf(op);
   }
-  XFREE(mudstate.olist, "olist_pop");
+  free(mudstate.olist);
   mudstate.olist = ol;
 }
 

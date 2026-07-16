@@ -413,7 +413,7 @@ int minmatch(const char *str, const char *target, int min) {
 
 char *strsave(const char *s) {
   char *p;
-  p = (char *)XMALLOC(sizeof(char) * (strlen(s) + 1), "strsave");
+  p = (char *)malloc(sizeof(char) * (strlen(s) + 1));
 
   if (p)
     StringCopy(p, s);
