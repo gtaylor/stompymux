@@ -230,7 +230,7 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
     free_lbuf(buff);
     break;
   default:
-    LOG_SIMPLE(LOG_BUGS, "BUG", "OTYPE",
+    log_simple(LOG_BUGS, "BUG", "OTYPE",
                tprintf("Bad object type in create_obj: %d.", objtype));
     return NOTHING;
   }
@@ -263,7 +263,7 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
     if (is_good_obj(obj) && IS_CLEAN(obj)) {
       mudstate.freelist = obj_link(obj);
     } else {
-      LOG_SIMPLE(LOG_PROBLEMS, "FRL", "DAMAG",
+      log_simple(LOG_PROBLEMS, "FRL", "DAMAG",
                  tprintf("Freelist damaged, bad object #%ld.", obj));
       obj = NOTHING;
       mudstate.freelist = NOTHING;
@@ -369,14 +369,10 @@ void destroy_obj(DbRef player, DbRef obj) {
   attribute_free(obj);
   /* object_name_set()'s parameter isn't const-correct; "Garbage" is only
      read (copied) here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   object_name_set(obj, (char *)"Garbage");
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   s_flags(obj, (TYPE_GARBAGE | GOING));
   s_flags2(obj, 0);
   s_flags3(obj, 0);
@@ -1029,7 +1025,7 @@ static void check_loc_exits(DbRef loc) {
 static void check_exit_chains(void) {
   DbRef i;
 
-  Unmark_all(i);
+  unmark_all();
   DO_WHOLE_DB(i)
   check_loc_exits(i);
   DO_WHOLE_DB(i) {
@@ -1231,7 +1227,7 @@ static void check_loc_contents(DbRef loc) {
 static void check_contents_chains(void) {
   DbRef i;
 
-  Unmark_all(i);
+  unmark_all();
   DO_WHOLE_DB(i)
   check_loc_contents(i);
   DO_WHOLE_DB(i)
@@ -1275,7 +1271,7 @@ static void check_floating(void) {
    * Mark everyplace you can get to via exits from the starting room
    */
 
-  Unmark_all(i);
+  unmark_all();
   mark_place(mudconf.start_room);
 
   /*

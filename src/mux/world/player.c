@@ -14,6 +14,7 @@
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/player.h"
 
 // # of successful logins to save data for
@@ -61,7 +62,7 @@ static void decrypt_logindata(char *atrbuf, LDATA *info) {
     atrbuf++;
     if (!(tmpc = grabto(&atrbuf, ';')))
       return;
-    info->tot_good = atoi(tmpc);
+    info->tot_good = clamped_atoi(tmpc);
     for (i = 0; i < NUM_GOOD; i++) {
       if (!(tmpc = grabto(&atrbuf, ';')))
         return;
@@ -72,10 +73,10 @@ static void decrypt_logindata(char *atrbuf, LDATA *info) {
     }
     if (!(tmpc = grabto(&atrbuf, ';')))
       return;
-    info->new_bad = atoi(tmpc);
+    info->new_bad = clamped_atoi(tmpc);
     if (!(tmpc = grabto(&atrbuf, ';')))
       return;
-    info->tot_bad = atoi(tmpc);
+    info->tot_bad = clamped_atoi(tmpc);
     for (i = 0; i < NUM_BAD; i++) {
       if (!(tmpc = grabto(&atrbuf, ';')))
         return;
@@ -256,15 +257,11 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
    * initialize everything
    */
   /* do_addcom()'s parameter isn't const-correct; "pub" is only read. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (*mudconf.public_channel)
     do_addcom(player, player, 0, (char *)"pub", mudconf.public_channel);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   object_password_set(player, hashed_password);
   s_home(player, start_home());
@@ -434,7 +431,7 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
     name++;
     if (!is_number(name))
       return NOTHING;
-    thing = atoi(name);
+    thing = clamped_atol(name);
     if (!is_good_obj(thing))
       return NOTHING;
     if (!((typeof_obj(thing) == TYPE_PLAYER) || is_god(doer)))

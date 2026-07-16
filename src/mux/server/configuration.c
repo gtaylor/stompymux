@@ -1208,14 +1208,10 @@ int configuration_read(char *fn) {
   mudstate.initializing = 1;
   /* cf_include()'s cmd parameter matches the shared cf_* interpreter
      signature (char *), which isn't const-correct; "init" is only read. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   retval = cf_include(nullptr, fn, 0, 0, (char *)"init");
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   mudstate.initializing = 0;
 
   return retval;

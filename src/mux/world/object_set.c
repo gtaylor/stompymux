@@ -487,14 +487,10 @@ int parse_attrib_wild(DbRef player, char *str, DbRef *thing, int check_parents,
     }
     /* str's declared type isn't const-correct (it's a cursor reassigned
        by parse_thing_slash() above); "*" is only read from here on. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     str = (char *)"*";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   }
   /*
    * Check the object (and optionally all parents) for attributes

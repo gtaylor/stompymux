@@ -35,6 +35,12 @@ void unmark(DbRef x) {
 bool is_marked(DbRef x) {
   return mudstate.markbits->chunk[x >> 3] & mudconf.markdata[x & 7];
 }
+void unmark_all(void) {
+  DbRef i;
+
+  for (i = 0; i < ((mudstate.db_top + 7) >> 3); i++)
+    mudstate.markbits->chunk[i] = 0x0;
+}
 
 static bool has_priv_suffix(const char *name) {
   return name && strlen(name) > 4 &&

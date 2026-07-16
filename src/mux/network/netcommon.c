@@ -24,6 +24,7 @@
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
+#include "mux/support/stringutil.h"
 
 #include "mux/server/debug.h"
 
@@ -386,7 +387,7 @@ static void announce_connect(DbRef player, Descriptor *d) {
 
   buf = attribute_parent_get(player, A_TIMEOUT, &aowner, &aflags);
   if (buf) {
-    d->timeout = atoi(buf);
+    d->timeout = clamped_atoi(buf);
     if (d->timeout <= 0)
       d->timeout = mudconf.idle_timeout;
   }
@@ -537,14 +538,10 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 
     /* wait_que()'s argument array isn't const-correct; reason is only
        read as command-queue text here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     argv[0] = (char *)reason;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     c_connected(player);
 
     atr_temp = attribute_parent_get(player, A_ADISCONNECT, &aowner, &aflags);
@@ -669,7 +666,7 @@ void descriptor_reload(DbRef player) {
   DESC_ITER_PLAYER(player, d) {
     buf = attribute_parent_get(player, A_TIMEOUT, &aowner, &aflags);
     if (buf) {
-      d->timeout = atoi(buf);
+      d->timeout = clamped_atoi(buf);
       if (d->timeout <= 0)
         d->timeout = mudconf.idle_timeout;
     }
@@ -755,13 +752,6 @@ static void dump_users(Descriptor *e, char *match, int key) {
       count++;
       if (match && !(string_prefix(Name(d->player), match)))
         continue;
-#if 0
-			if((!((is_wizard(e->player)) && (e->flags & DS_CONNECTED)) &&
-				(d->player != e->player)))
-				if(is_in_character(obj_location(d->player)) &&
-				   is_in_character(obj_location(obj_location(d->player))))
-					continue;
-#endif
       rcount++;
       if ((key == CMD_SESSION) &&
           !(is_wizard(e->player) && (e->flags & DS_CONNECTED)) &&

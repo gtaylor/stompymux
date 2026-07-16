@@ -333,8 +333,3 @@ constexpr int VE_BASE_LIGHT = 0x20; /* Base location (pre-parent) is light */
 #define STARTLOG(key, p, s)                                                    \
   if ((((key) & mudconf.log_options) != 0) && start_log(p, s))
 #define ENDLOG end_log()
-#define LOG_SIMPLE(key, p, s, m)                                               \
-  STARTLOG(key, p, s) {                                                        \
-    log_text(m);                                                               \
-    ENDLOG;                                                                    \
-  }

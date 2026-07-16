@@ -4,6 +4,8 @@
 
 #include "mux/server/platform.h"
 
+#include <limits.h>
+
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
@@ -15,6 +17,35 @@
 char *___strtok;
 
 #endif
+
+/**
+ * Parses str as a base-10 long, clamping out-of-range values to
+ * LONG_MIN/LONG_MAX and treating non-numeric input as 0.
+ */
+long clamped_atol(const char *str) {
+  char *end;
+  long value;
+
+  errno = 0;
+  value = strtol(str, &end, 10);
+  if (errno == ERANGE)
+    value = (str[0] == '-') ? LONG_MIN : LONG_MAX;
+  return value;
+}
+
+/**
+ * Parses str as a base-10 int, clamping out-of-range values to
+ * INT_MIN/INT_MAX and treating non-numeric input as 0.
+ */
+int clamped_atoi(const char *str) {
+  long value = clamped_atol(str);
+
+  if (value > INT_MAX)
+    return INT_MAX;
+  if (value < INT_MIN)
+    return INT_MIN;
+  return (int)value;
+}
 
 /**
  * Convert raw character sequences into MUX substitutions (type = 1)

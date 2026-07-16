@@ -65,48 +65,13 @@ extern int events_scheduled;
 extern int events_executed;
 extern int events_zombies;
 
-/* Simplified event adding is more or less irrelevant, most programs
-   tend to make their own macros for it. This is an example,
-   though. */
-#define mux_event_add_simple_arg(time, func, data)                             \
-  mux_event_add(time, 0, 0, func, data, nullptr)
-#define mux_event_add_simple_noarg(time, func)                                 \
-  mux_event_add(time, 0, 0, func, nullptr, nullptr)
-
-/* Macros for handling simple lists
-   Where it applies: a = main list, b = thing to be added, c = prev
-   field, d = next field (c = next field in case of single-linked
-   model */
-
-#define REMOVE_FROM_LIST(a, c, b)                                              \
-  if (a == b)                                                                  \
-    a = b->c;                                                                  \
-  else {                                                                       \
-    MuxEvent *t;                                                               \
-    for (t = a; t->c != b; t = t->c)                                           \
-      ;                                                                        \
-    t->c = b->c;                                                               \
-  }
-#define REMOVE_FROM_BIDIR_LIST(a, c, d, b)                                     \
-  if (b->c)                                                                    \
-    b->c->d = b->d;                                                            \
-  if (b->d)                                                                    \
-    b->d->c = b->c;                                                            \
-  if (a == b) {                                                                \
-    a = b->d;                                                                  \
-    if (a)                                                                     \
-      a->c = nullptr;                                                          \
-  }
-
+/* Macro for handling simple lists.
+   Where it applies: a = main list, b = thing to be added, c = next
+   field. Reused across several unrelated list types, so it stays a
+   macro rather than being tied to one struct's field names. */
 #define ADD_TO_LIST_HEAD(a, c, b)                                              \
   b->c = a;                                                                    \
   a = b
-#define ADD_TO_BIDIR_LIST_HEAD(a, c, d, b)                                     \
-  b->d = a;                                                                    \
-  if (a)                                                                       \
-    a->c = b;                                                                  \
-  a = b;                                                                       \
-  b->c = nullptr
 
 void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
                    void *data, void *data2);

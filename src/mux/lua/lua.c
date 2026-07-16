@@ -240,14 +240,10 @@ static int lua_host_attr_set(lua_State *state) {
     return luaL_error(state, "use @luaparent to change Luaparent");
     /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
        only read (copied) here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   attribute_add_raw(object, attribute, (char *)value);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   return 0;
 }
 
@@ -272,14 +268,10 @@ static int lua_host_command(lua_State *state) {
     return luaL_error(state, "mux.command is unavailable during @luacheck");
     /* wait_que()'s command parameter isn't const-correct; command is only
        read here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   wait_que(1, 1, 0, NOTHING, 0, (char *)command, (char **)nullptr, 0, nullptr);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   return 0;
 }
 
@@ -1555,14 +1547,10 @@ void do_luaparent(DbRef player, DbRef cause, int key, char *target,
   if (!*path) {
     /* attribute_add_raw()'s buffer parameter isn't const-correct; "" is
        only read here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     attribute_add_raw(thing, A_LUAPARENT, (char *)"");
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     notify_quiet(player, "Lua parent cleared.");
     return;
   }

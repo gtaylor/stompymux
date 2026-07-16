@@ -371,9 +371,6 @@ struct ServerState {
   RedBlackTree desctree;
   HashTable fwdlist_htab; /* Room forwardlists */
   HashTable parent_htab;  /* Parent $-command exclusion */
-#ifdef PARSE_TREES
-  HashTable tree_htab; /* Parse trees for evaluation */
-#endif
   HashTable help_htab;    /* Help topics hashtable */
   HashTable wizhelp_htab; /* Wizard help topics hashtable */
   int attr_next;          /* Next attr to alloc when freelist is empty */

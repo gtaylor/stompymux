@@ -99,14 +99,10 @@ static char *get_channel_from_alias(DbRef player, char *alias) {
   else {
     /* This function's other branch returns a genuinely mutable char *
        from c->channels[]; the return type can't be const. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     return (char *)"";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   }
 }
 
@@ -293,15 +289,6 @@ void do_joinchannel(DbRef player, struct channel *ch) {
     notify_printf(player, "You are already on channel %s.", ch->name);
     return;
   }
-#if 0
-	/* Trigger AENTER of any channel objects on the channel */
-	for(i = ch->num_users - 1; i > 0; i--) {
-		if(!ch->users[i]) break;
-		if(typeof_obj(ch->users[i]->who) == TYPE_THING)
-			did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_AENTER,
-				   (char **) nullptr, 0);
-	}
-#endif
   notify_printf(player, "You have joined channel %s.", ch->name);
 
   if (!is_dark(player)) {

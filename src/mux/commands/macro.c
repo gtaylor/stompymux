@@ -12,6 +12,7 @@
 #include "mux/database/powers.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 
 int nummacros;
 int maxmacros;
@@ -122,7 +123,7 @@ void do_add_macro(DbRef player, char *s) {
   if (first < 0) {
     notify(player, "MACRO: Sorry, you already have 5 sets defined on you.");
   } else if (is_number(s)) {
-    set = atoi(s);
+    set = clamped_atoi(s);
     if (set >= 0 && set < nummacros) {
       m = macros[set];
       if (can_read_macros(player, m)) {
@@ -148,7 +149,7 @@ void do_del_macro(DbRef player, char *s) {
   c = get_commac(player);
 
   if (is_number(s)) {
-    set = atoi(s);
+    set = clamped_atoi(s);
     if (set >= 0 && set < 5 && c->macros[set] >= 0) {
       c->macros[set] = -1;
       notify_printf(player, "MACRO: Macro slot %d cleared.", set);
@@ -247,7 +248,7 @@ void do_gex_macro(DbRef player, char *s) {
     return;
   }
   if (is_number(s)) {
-    which = atoi(s);
+    which = clamped_atoi(s);
     if ((which >= nummacros) || (which < 0) || (nummacros == 0)) {
       notify_printf(player,
                     "MACRO: Illegal Macro Set.  Macros go from 0 to %d.",
@@ -278,8 +279,8 @@ void do_edit_macro(DbRef player, char *s) {
   c = get_commac(player);
 
   if (is_number(s)) {
-    set = atoi(s);
-    if (set >= 0 && set < 5 && GMac(c->macros[set])) {
+    set = clamped_atoi(s);
+    if (set >= 0 && set < 5 && is_valid_macro_index(c->macros[set])) {
       c->curmac = set;
       notify_printf(player, "MACRO: Current slot set to %d.", set);
     } else
@@ -300,7 +301,7 @@ void do_status_macro(DbRef player, char *s) {
                  "         LRW");
   for (i = 0; i < 5; i++) {
     if (c->macros[i] >= 0)
-      if (!(GMac(c->macros[i])))
+      if (!(is_valid_macro_index(c->macros[i])))
         notify_printf(player, "%d: INVALID MACRO SET!", i);
       else {
         m = macros[c->macros[i]];
@@ -324,7 +325,7 @@ void do_ex_macro(DbRef player, char *s) {
   char buffer[LBUF_SIZE];
 
   if (is_number(s)) {
-    which = atoi(s);
+    which = clamped_atoi(s);
     m = get_macro_set(player, which);
   } else
     m = get_macro_set(player, -1);
@@ -352,11 +353,6 @@ void do_chown_macro(DbRef player, char *cmd) {
     notify(player, "MACRO: I do not see that here.");
     return;
   }
-#if 0
-	if(!m || !can_write_macros(player, m)) {
-		notify(player, "MACRO: Permission denied.");
-	}
-#endif
   if (!m) {
     notify(player, "MACRO: No current active macro.");
     return;
@@ -376,7 +372,7 @@ void clear_macro_set(int set) {
   struct commac *c;
   int i, j;
 
-  if (GMac(set)) {
+  if (is_valid_macro_index(set)) {
     m = macros[set];
     for (i = 0; i < m->nummacros; i++) {
       free(m->string[i]);
@@ -424,7 +420,7 @@ void do_clear_macro(DbRef player, char *s) {
   set = c->macros[c->curmac];
   m = macros[set];
 
-  if (GMac(set)) {
+  if (is_valid_macro_index(set)) {
     if ((player != m->player) && !is_wizard(player)) {
       notify(player, "MACRO: You may only CLEAR your own macro sets.");
       return;
@@ -434,7 +430,7 @@ void do_clear_macro(DbRef player, char *s) {
     }
   }
   notify_printf(player, "MACRO: Clearing macro set %d: %s.", set,
-                GMac(set) ? m->desc : "Nonexistent");
+                is_valid_macro_index(set) ? m->desc : "Nonexistent");
   clear_macro_set(set);
 }
 
@@ -561,7 +557,7 @@ char *do_process_macro(DbRef player, char *in, char *s) {
                    * End the string
                    */
   for (i = 0; i < 5; i++) {
-    if (GMac(c->macros[i])) {
+    if (is_valid_macro_index(c->macros[i])) {
       m = macros[c->macros[i]];
       if (m->nummacros > 0) {
         first = 0;

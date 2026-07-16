@@ -559,10 +559,8 @@ static char *boolean_expression_unparse_object_quiet(DbRef object) {
 
   /* This function's other branches return the mutable `buffer` above; the
      return type can't be const. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   switch (object) {
   case NOTHING:
     return (char *)"-1";
@@ -572,9 +570,7 @@ static char *boolean_expression_unparse_object_quiet(DbRef object) {
     snprintf(buffer, sizeof(buffer), "(#%ld)", object);
     return buffer;
   }
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 }
 
 static void

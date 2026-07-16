@@ -63,7 +63,6 @@
 #include <time.h>
 
 #include "mux/network/mux_event.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/debug.h"
 #include "mux/server/server_lifecycle.h"
 
@@ -85,6 +84,52 @@ extern void prerun_event(MuxEvent *e);
 extern void postrun_event(MuxEvent *e);
 
 static void mux_event_delete(MuxEvent *);
+
+static void mux_event_main_list_add(MuxEvent *e) {
+  MuxEvent *old_head = mux_event_list;
+
+  e->next_in_main = old_head;
+  if (old_head)
+    old_head->prev_in_main = e;
+  mux_event_list = e;
+  e->prev_in_main = nullptr;
+}
+
+static void mux_event_main_list_remove(MuxEvent *e) {
+  if (e->prev_in_main)
+    e->prev_in_main->next_in_main = e->next_in_main;
+  if (e->next_in_main)
+    e->next_in_main->prev_in_main = e->prev_in_main;
+  if (mux_event_list == e) {
+    mux_event_list = e->next_in_main;
+    if (mux_event_list)
+      mux_event_list->prev_in_main = nullptr;
+  }
+}
+
+static void mux_event_type_list_add(int type, MuxEvent *e) {
+  MuxEvent *old_head = mux_event_first_in_type[type];
+
+  e->next_in_type = old_head;
+  if (old_head)
+    old_head->prev_in_type = e;
+  mux_event_first_in_type[type] = e;
+  e->prev_in_type = nullptr;
+}
+
+static void mux_event_type_list_remove(MuxEvent *e) {
+  int type = (int)e->type;
+
+  if (e->prev_in_type)
+    e->prev_in_type->next_in_type = e->next_in_type;
+  if (e->next_in_type)
+    e->next_in_type->prev_in_type = e->prev_in_type;
+  if (mux_event_first_in_type[type] == e) {
+    mux_event_first_in_type[type] = e->next_in_type;
+    if (mux_event_first_in_type[type])
+      mux_event_first_in_type[type]->prev_in_type = nullptr;
+  }
+}
 
 #define is_zombie(e) (e->flags & FLAG_ZOMBIE)
 #define LoopType(type, var)                                                    \
@@ -152,9 +197,8 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
   }
   evtimer_add(e->ev, &tv);
 
-  ADD_TO_BIDIR_LIST_HEAD(mux_event_list, prev_in_main, next_in_main, e);
-  ADD_TO_BIDIR_LIST_HEAD(mux_event_first_in_type[type], prev_in_type,
-                         next_in_type, e);
+  mux_event_main_list_add(e);
+  mux_event_type_list_add(type, e);
 }
 
 /* Remove event */
@@ -170,10 +214,11 @@ static void mux_event_delete(MuxEvent *e) {
   if (e->flags & FLAG_FREE_DATA2)
     free((void *)e->data2);
 
-  REMOVE_FROM_BIDIR_LIST(mux_event_list, prev_in_main, next_in_main, e);
-  REMOVE_FROM_BIDIR_LIST(mux_event_first_in_type[(int)e->type], prev_in_type,
-                         next_in_type, e);
-  ADD_TO_LIST_HEAD(mux_event_free_list, next, e);
+  mux_event_main_list_remove(e);
+  mux_event_type_list_remove(e);
+
+  e->next = mux_event_free_list;
+  mux_event_free_list = e;
 }
 
 /* Run the thingy */

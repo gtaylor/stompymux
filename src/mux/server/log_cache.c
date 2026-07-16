@@ -21,9 +21,6 @@
 #include "mux/support/red_black_tree.h"
 #include <errno.h>
 
-#ifdef DEBUG_LOGCACHE
-#define DEBUG
-#endif
 #include "mux/server/debug.h"
 
 /* The LOGFILE_TIMEOUT field describes how long a mux should keep an idle

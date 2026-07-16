@@ -13,12 +13,10 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/search.h"
 #include "mux/world/walkdb.h"
-
-#ifdef MCHECK
-#endif
 
 /**
  * Bind occurances of the universal var in ACTION to ARG, then run ACTION.
@@ -181,22 +179,6 @@ void do_stats(DbRef player, DbRef cause, int key, char *name) {
       "%d objects = %d rooms, %d exits, %d things, %d players. (%d garbage)",
       statinfo.s_total, statinfo.s_rooms, statinfo.s_exits, statinfo.s_things,
       statinfo.s_players, statinfo.s_garbage);
-
-#ifdef MCHECK
-  if (is_wizard(player)) {
-    struct mstats mval;
-
-    mval = mstats();
-    notify_printf(player, "Total size of the heap: %d", mval.bytes_total);
-    notify_printf(player,
-                  "Chunks allocated: %d -- Total size of allocated chunks: %d",
-                  mval.chunks_used, mval.bytes_used);
-    notify_printf(player, "Chunks free: %d -- Total size of free chunks: %d",
-                  mval.chunks_free, mval.bytes_free);
-  }
-#endif /*                                                                      \
-        * MCHECK                                                               \
-        */
 }
 
 /**
@@ -278,10 +260,8 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
   /* pname/searchtype are mutated in place elsewhere in this function
      (lowercased, split, null-terminated); they can't be const, so these
      literal defaults need an explicit cast. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   pname = parse_to(&searchfor, '=', EV_STRIP_TS);
   if (!pname || !*pname) {
     pname = (char *)"me";
@@ -302,9 +282,7 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
   } else {
     searchtype = (char *)"";
   }
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   /*
    * If the player name is quoted, strip the quotes
@@ -333,7 +311,7 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
   if (!*pname) {
     parm->s_rst_owner = parm->s_wizard ? ANY_OWNER : player;
   } else if (pname[0] == '#') {
-    parm->s_rst_owner = atoi(&pname[1]);
+    parm->s_rst_owner = clamped_atol(&pname[1]);
     if (!is_good_obj(parm->s_rst_owner) ||
         typeof_obj(parm->s_rst_owner) != TYPE_PLAYER)
       parm->s_rst_owner = NOTHING;

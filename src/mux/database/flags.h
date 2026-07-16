@@ -330,12 +330,7 @@ static inline bool is_parentable(DbRef p, DbRef x) { return is_controls(p, x); }
 void mark(DbRef x);
 void unmark(DbRef x);
 bool is_marked(DbRef x);
-#define Mark_all(i)                                                            \
-  for ((i) = 0; (i) < ((mudstate.db_top + 7) >> 3); (i)++)                     \
-  mudstate.markbits->chunk[i] = 0xff
-#define Unmark_all(i)                                                          \
-  for ((i) = 0; (i) < ((mudstate.db_top + 7) >> 3); (i)++)                     \
-  mudstate.markbits->chunk[i] = 0x0
+void unmark_all(void);
 
 static inline bool can_link_exit(DbRef p, DbRef x) {
   return typeof_obj(x) == TYPE_EXIT &&

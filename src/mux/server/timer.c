@@ -19,6 +19,7 @@
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_state.h"
 #include "mux/server/timer.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 
 extern void pool_reset(void);
@@ -49,14 +50,6 @@ void init_timer(void) {
   if (timer_event != nullptr)
     evtimer_add(timer_event, &tv);
 }
-
-#undef DISPATCH_DEBUG
-
-#ifdef DISPATCH_DEBUG
-#define DPSET(n) mudstate.debug_cmd = (char *)n
-#else
-#define DPSET(n)
-#endif
 
 void check_idle(void) {
   Descriptor *d, *dnext;
@@ -136,7 +129,7 @@ static void dispatch(void) {
   const char *cmdsave;
 
   cmdsave = mudstate.debug_cmd;
-  DPSET("< dispatch >");
+  mudstate.debug_cmd = "< dispatch >";
   /*
    * this routine can be used to poll from interface.c
    */
@@ -156,7 +149,7 @@ static void dispatch(void) {
   if ((mudconf.control_flags & CF_DBCHECK) &&
       (mudstate.check_counter <= mudstate.now)) {
     mudstate.check_counter = mudconf.check_interval + mudstate.now;
-    DPSET("< dbck >");
+    mudstate.debug_cmd = "< dbck >";
     do_dbck(NOTHING, NOTHING, 0);
     pcache_trim();
   }
@@ -167,7 +160,7 @@ static void dispatch(void) {
   if ((mudconf.control_flags & CF_CHECKPOINT) &&
       (mudstate.dump_counter <= mudstate.now)) {
     mudstate.dump_counter = mudconf.dump_interval + mudstate.now;
-    DPSET("< dump >");
+    mudstate.debug_cmd = "< dump >";
     fork_and_dump(0);
   }
   /*
@@ -186,7 +179,7 @@ static void dispatch(void) {
   if ((mudconf.control_flags & CF_IDLECHECK) &&
       (mudstate.idle_counter <= mudstate.now)) {
     mudstate.idle_counter = mudconf.idle_interval + mudstate.now;
-    DPSET("< idlecheck >");
+    mudstate.debug_cmd = "< idlecheck >";
     check_idle();
   }
   /*
@@ -196,7 +189,7 @@ static void dispatch(void) {
   if ((mudconf.control_flags & CF_EVENTCHECK) &&
       (mudstate.events_counter <= mudstate.now)) {
     mudstate.events_counter = 900 + mudstate.now;
-    DPSET("< eventcheck >");
+    mudstate.debug_cmd = "< eventcheck >";
     check_events();
   }
   /*
@@ -244,7 +237,7 @@ void timer_shutdown(void) {
 void do_timewarp(DbRef player, DbRef cause, int key, char *arg) {
   int secs;
 
-  secs = atoi(arg);
+  secs = clamped_atoi(arg);
 
   if ((key == 0) || (key & TWARP_QUEUE)) /*
                                           * Sem/Wait queues

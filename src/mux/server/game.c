@@ -615,14 +615,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         /* buff aliases the read-only msg here; only freed in the
          * branch above where it holds an add_prefix() allocation. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
         buff = (char *)msg;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       }
 
       DOLIST(obj, obj_exits(obj_location(target))) {
@@ -656,14 +652,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         /* buff aliases the read-only msg here; only freed in the
          * branch above where it holds an add_prefix() allocation. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
         buff = (char *)msg;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       }
       DOLIST(obj, obj_contents(target)) {
         if (obj != target) {
@@ -688,14 +680,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         /* buff aliases the read-only msg here; only freed in the
          * branch above where it holds an add_prefix() allocation. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
         buff = (char *)msg;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       }
       DOLIST(obj, obj_contents(targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
@@ -722,14 +710,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       } else {
         /* buff aliases the read-only msg here; only freed in the
          * branch above where it holds an add_prefix() allocation. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
         buff = (char *)msg;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       }
       notify_checked(targetloc, sender, buff, MSG_ME | MSG_F_UP | MSG_S_INSIDE);
       if (key & MSG_S_INSIDE) {
@@ -1043,14 +1027,10 @@ int main(int argc, char *argv[]) {
   mindb = 0; /* Are we creating a new db? */
   /* config_file also gets assigned a genuinely mutable argv[] entry below,
      so it can't be const; CONF_FILE is only read as the default here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   config_file = (char *)CONF_FILE;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   if (argc > 1) {
     if (!strcmp(argv[1], "-s")) {
       mindb = 1;

@@ -16,6 +16,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/player_cache.h"
 
@@ -320,14 +321,10 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
   int count, errors, fail;
 
   if (!atext)
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     atext = (char *)"";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   count = 0;
   errors = 0;
@@ -348,7 +345,7 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
                      * terminate string
                      */
     if ((*dp++ == '#') && isdigit(*dp)) {
-      target = atoi(dp);
+      target = clamped_atol(dp);
       fail = (!is_good_obj(target) ||
               (!is_god(player) && !is_controls(player, target)));
       if (fail) {
@@ -469,14 +466,10 @@ INLINE char *Name(DbRef thing) {
 
   if (mudconf.cache_names) {
     if (thing > mudstate.db_top || thing < 0) {
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       return (char *)"#-1 INVALID DBREF";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     if (!purenames[thing]) {
       buff = attribute_get(thing, A_NAME, &aowner, &aflags);
@@ -499,14 +492,10 @@ INLINE char *PureName(DbRef thing) {
 
   if (mudconf.cache_names) {
     if (thing > mudstate.db_top || thing < 0) {
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       return (char *)"#-1 INVALID DBREF";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     if (!purenames[thing]) {
       buff = attribute_get(thing, A_NAME, &aowner, &aflags);
@@ -538,14 +527,10 @@ INLINE void object_name_set(DbRef thing, char *s) {
 void object_password_set(DbRef thing, const char *s) {
   /* attribute_add_raw()'s buffer parameter isn't const-correct; s is only
      read (copied) here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   attribute_add_raw(thing, A_PASS, (char *)s);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 }
 
 /*
@@ -1657,7 +1642,7 @@ void db_grow(DbRef newtop) {
     newpurenames = (NAME *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (!newpurenames) {
-      LOG_SIMPLE(
+      log_simple(
           LOG_ALWAYS, "ALC", "DB",
           tprintf("Could not allocate space for %d item name cache.", newsize));
       abort();
@@ -1698,7 +1683,7 @@ void db_grow(DbRef newtop) {
       (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
-    LOG_SIMPLE(LOG_ALWAYS, "ALC", "DB",
+    log_simple(LOG_ALWAYS, "ALC", "DB",
                tprintf("Could not allocate space for %d item struct database.",
                        newsize));
     abort();
@@ -1787,14 +1772,10 @@ void db_make_minimal(void) {
 
   db_free();
   db_grow(1);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   object_name_set(0, (char *)"Limbo");
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   s_flags(0, TYPE_ROOM);
   s_powers(0, 0);
   s_powers2(0, 0);
@@ -1812,14 +1793,10 @@ void db_make_minimal(void) {
   load_player_names();
   /* create_player()'s parameters aren't const-correct; these literals are
      only read here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   obj = create_player((char *)"Wizard", (char *)"potrzebie", NOTHING, 0);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   s_flags(obj, obj_flags(obj) | WIZARD);
   s_powers(obj, 0);
   s_powers2(obj, 0);
@@ -1835,7 +1812,7 @@ void db_make_minimal(void) {
 
 DbRef parse_dbref(const char *s) {
   const char *p;
-  int x;
+  long x;
 
   /*
    * Enforce completely numeric dbrefs
@@ -1846,7 +1823,7 @@ DbRef parse_dbref(const char *s) {
       return NOTHING;
   }
 
-  x = atoi(s);
+  x = clamped_atol(s);
   return ((x >= 0) ? x : NOTHING);
 }
 

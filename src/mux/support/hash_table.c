@@ -51,14 +51,10 @@ void *hash_table_find(const char *str, HashTable *htab) {
   htab->checks++;
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   ent = red_black_tree_find(htab->tree, (void *)str);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   if (ent) {
     return ent->data;
   } else
@@ -75,15 +71,11 @@ int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
 
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (red_black_tree_exists(htab->tree, (void *)str))
     return (-1);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   ent = malloc(sizeof(struct string_dict_entry));
   ent->key = strdup(str);
@@ -103,17 +95,13 @@ void hash_table_delete(const char *str, HashTable *htab) {
 
   /* red_black_tree's key parameter isn't const-correct; str is only used
      as a lookup key here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (!red_black_tree_exists(htab->tree, (void *)str)) {
     return;
   }
   ent = red_black_tree_delete(htab->tree, (void *)str);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   if (ent) {
     if (ent->key)

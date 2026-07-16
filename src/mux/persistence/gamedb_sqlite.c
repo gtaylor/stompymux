@@ -428,14 +428,10 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
     } else {
       /* object_name_set()'s parameter isn't const-correct; name is only
          read (copied) here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       object_name_set(object, (char *)name);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       s_location(object, location);
       s_zone(object, zone);
       s_contents(object, contents);
@@ -491,14 +487,10 @@ static int gamedb_load_attributes(sqlite3 *sqlite, int db_top) {
     else {
       /* attribute_add_raw()'s buffer parameter isn't const-correct; value
          is only read (copied) here, never mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       attribute_add_raw(object, attribute, (char *)value);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
   }
   if (result == 0 && step != SQLITE_DONE)

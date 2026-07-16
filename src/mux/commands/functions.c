@@ -1004,14 +1004,10 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
   } else {
@@ -1068,14 +1064,10 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
   } else {
@@ -1128,14 +1120,10 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
     eval_it = 0;
@@ -1219,14 +1207,10 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
     eval_it = 0;
@@ -2258,14 +2242,10 @@ static void fun_round(char *buff, char **bufc, DbRef player, DbRef cause,
     break;
   }
   /* fstr is always one of the "%.Nf" literals assigned above. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
   safe_tprintf_str(buff, bufc, fstr, atof(fargs[0]));
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
   /* Handle bogus result of "-0" from snprintf.  Yay, cclib. */
 
@@ -3352,14 +3332,10 @@ static void process_pronoun(DbRef player, char *what, const char *token,
   } else {
     /* exec()'s cursor parameter is char ** for its own reasons; token is
        never written through here, only scanned. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     str = (char *)token;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     exec(buff, bufc, 0, it, it, 0, &str, (char **)nullptr, 0);
   }
 }
@@ -3580,19 +3556,15 @@ static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
 
   /* bp/mp alias fargs[]; they're mutable char * so these literal
      defaults need an explicit cast. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (bp == nullptr)
     bp = (char *)"";
   if (mp == nullptr)
     mp = (char *)" ";
   if (!mp || !*mp)
     mp = (char *)" ";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   mlen = strlen(mp);
   if ((mlen == 1) && (*mp == ' '))
     bp = trim_space_sep(bp, ' ');
@@ -3664,19 +3636,15 @@ static void fun_before(char *buff, char **bufc, DbRef player, DbRef cause,
 
   /* bp/mp alias fargs[]; they're mutable char * so these literal
      defaults need an explicit cast. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (bp == nullptr)
     bp = (char *)"";
   if (mp == nullptr)
     mp = (char *)" ";
   if (!mp || !*mp)
     mp = (char *)" ";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   mlen = strlen(mp);
   if ((mlen == 1) && (*mp == ' '))
     bp = trim_space_sep(bp, ' ');
@@ -4694,10 +4662,8 @@ struct i_record {
  * qsort() mandates the const void * comparator signature; casting it away
  * to read the real element type is the standard, unavoidable idiom.
  */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
 static int a_comp(const void *s1, const void *s2) {
   return strcmp(*(char **)s1, *(char **)s2);
 }
@@ -4717,9 +4683,7 @@ static int i_comp(const void *s1, const void *s2) {
     return -1;
   return 0;
 }
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
 static void do_asort(char *s[], int n, int sort_type) {
   int i;
@@ -5306,14 +5270,10 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
   } else {
@@ -5409,14 +5369,10 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     }
     free_buffer = 0;
   } else {
@@ -5930,15 +5886,11 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
     ufp->name = strsave(np);
     /* Upcase the name in place right after allocating it, before anyone
        else can hold a reference to it. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     for (bp = (char *)ufp->name; *bp; bp++)
       *bp = ToUpper(*bp);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     ufp->obj = obj;
     ufp->atr = atr;
     ufp->perms = CA_PUBLIC;

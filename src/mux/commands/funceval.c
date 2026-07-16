@@ -564,15 +564,11 @@ static char *crypt_code(char *code, char *text, int type) {
 
   /* This function's other paths return the mutable textbuff above; the
      return type can't be const. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   if (!text || !*text)
     return (char *)"";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   if (!code || !*code)
     return text;
   StringCopy(codebuff, crunch_code(code));
@@ -837,20 +833,6 @@ void fun_decrypt(char *buff, char **bufc, DbRef player, DbRef cause,
                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
   safe_str(crypt_code(fargs[1], fargs[0], 0), buff, bufc);
 }
-
-#if 0 /* Currently not used. */
-static void noquotes(clean, dirty)
-	 char *clean;
-	 char *dirty;
-{
-	while (*dirty != '\0') {
-		if(*dirty == '"')
-			*clean++ = '\\';
-		*clean++ = *dirty++;
-	}
-	*clean = '\0';
-}
-#endif
 
 void fun_objeval(char *buff, char **bufc, DbRef player, DbRef cause,
                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
@@ -1823,15 +1805,11 @@ static int u_comp(const void *s1, const void *s2) {
   tbuf = alloc_lbuf("u_comp");
   /* s1/s2 come in via the sane_qsort const void * comparator signature;
      exec() only reads them as argument text here. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
   elems[0] = (char *)s1;
   elems[1] = (char *)s2;
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   StringCopy(tbuf, ucomp_buff);
   result = bp = alloc_lbuf("u_comp");
   str = tbuf;

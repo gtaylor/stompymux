@@ -149,6 +149,14 @@ void log_text(const char *text) {
   fprintf(stderr, "%s", strip_ansi_r(new, text, strlen(text)));
 }
 
+void log_simple(int key, const char *primary, const char *secondary,
+                const char *message) {
+  if ((key & mudconf.log_options) != 0 && start_log(primary, secondary)) {
+    log_text(message);
+    end_log();
+  }
+}
+
 void log_error(int key, const char *primary, const char *secondary,
                const char *format, ...) {
   char buffer[LBUF_SIZE];

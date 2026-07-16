@@ -16,7 +16,6 @@
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/network/mux_event_alloc.h"
 #include "mux/server/configuration.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
@@ -1437,14 +1436,10 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
       goto exit;
     }
     /* do_move()'s parameter isn't const-correct; "home" is only read. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     do_move(player, cause, 0, (char *)"home");
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
     mudstate.debug_cmd = cmdsave;
     goto exit;
   }
@@ -1793,32 +1788,6 @@ static void list_attrtable(DbRef player) {
   free_lbuf(buf);
 }
 
-#if 0 /* Currently unused function */
-
-/*
- * ---------------------------------------------------------------------------
- * * list_ntab_flags: List flags field of an ntab.
- */
-
-static void list_ntab_flags(player, ntab, flaglist)
-	 DbRef player;
-	 NameTable *ntab, *flaglist;
-{
-	char *buff;
-	NameTable *np;
-
-	buff = alloc_sbuf("list_attraccess");
-	for(np = ntab; np->name; np++) {
-		if(check_access(player, np->perm)) {
-			snprintf(buff, sizeof(buff), "%s:", np->name);
-			name_table_list_set(player, flaglist, np->flag, buff, 1);
-		}
-	}
-	free_sbuf(buff);
-}
-
-#endif
-
 /*
  * ---------------------------------------------------------------------------
  * * list_cmdaccess: List access commands.
@@ -2103,14 +2072,10 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
     if (hash_table_add(cmd2->cmdname, (int *)cmd2, (HashTable *)vp)) {
       /* cmd2->cmdname was allocated by strsave() above; freeing it needs
          to discard the const we otherwise want on CMDENT.cmdname. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
       free((void *)cmd2->cmdname);
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
       free(cmd2);
     }
   } else {

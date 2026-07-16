@@ -14,6 +14,8 @@ void log_perror(const char *primary, const char *secondary, const char *name,
 void log_error(int key, const char *primary, const char *secondary,
                const char *format, ...) __attribute__((format(printf, 4, 5)));
 void log_text(const char *text);
+void log_simple(int key, const char *primary, const char *secondary,
+                const char *message);
 void log_number(int number);
 void log_name(DbRef thing);
 void log_name_and_loc(DbRef thing);

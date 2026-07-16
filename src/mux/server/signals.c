@@ -95,10 +95,8 @@ void unbind_signals(void) {
 
 /* do_shutdown()'s message parameter matches the CMDENT dispatch signature
    (char *), which isn't const-correct; these literals are only read. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
 static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext) {
   if (signo == SIGINT) {
     dprintk("caught SIGINT");
@@ -122,9 +120,7 @@ static void signal_USR2(int signo, siginfo_t *siginfo, void *ucontext) {
   do_shutdown(NOTHING, 0, SHUTDN_EXIT | SHUTDN_KILLED,
               (char *)"received SIGUSR2 from kernel.");
 }
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
 
 static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
   dprintk("caught SIGSEGV");

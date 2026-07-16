@@ -136,14 +136,10 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
   if (*topic == '\0') {
     /* topic is mutated in place below when non-empty; this default value
        is never itself mutated. */
-#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-#endif
     topic = (char *)"help";
-#ifdef __clang__
 #pragma clang diagnostic pop
-#endif
   } else
     for (p = topic; *p; p++)
       *p = ToLower(*p);

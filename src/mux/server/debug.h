@@ -74,32 +74,9 @@
     fprintf(stderr, "\n");                                                     \
   } while (0)
 
-#define bhexdump(buffer, size)                                                 \
-  do {                                                                         \
-    struct timeval tv;                                                         \
-    struct tm tm;                                                              \
-    time_t now;                                                                \
-    int my__count;                                                             \
-    unsigned char *my__buffer = (unsigned char *)buffer;                       \
-    time(&now);                                                                \
-    localtime_r(&now, &tm);                                                    \
-    gettimeofday(&tv, nullptr);                                                \
-    fprintf(stderr,                                                            \
-            "%02d%02d%02d.%08d:%5d %s (%s:%d)] buffer %s at %p len %d ",       \
-            tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec, getpid(),       \
-            __FUNCTION__, __FILE__, __LINE__, #buffer, buffer, size);          \
-    for (my__count = 0; my__count < size; my__count++) {                       \
-      fprintf(stderr, "%02x ", my__buffer[my__count]);                         \
-      if (my__count && my__count % 16 == 15)                                   \
-        fprintf(stderr, "\n\t");                                               \
-    }                                                                          \
-    fprintf(stderr, "\n");                                                     \
-  } while (0)
-
 #else
 #define dtest(...)
 #define dprintk(...)
-#define dhexdump(...)
 #endif /* DEBUG */
 
 #define printk(...)                                                            \

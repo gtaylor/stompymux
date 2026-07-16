@@ -7,8 +7,6 @@
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
 
-#define GMac(n) (n >= 0 && n < nummacros)
-
 enum : int { MACRO_L = 1, MACRO_R = 2, MACRO_W = 4 };
 constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */
 
@@ -31,6 +29,10 @@ struct macros {
 extern int nummacros;
 extern int maxmacros;
 extern struct macros **macros;
+
+static inline bool is_valid_macro_index(int n) {
+  return n >= 0 && n < nummacros;
+}
 
 void init_mactab(void);
 struct macros *get_macro_set(DbRef player, int which);
