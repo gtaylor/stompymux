@@ -1,0 +1,2 @@
+InheritParentConfig: true
+Checks: '-bugprone-narrowing-conversions,-bugprone-suspicious-string-compare,-bugprone-switch-missing-default-case,-bugprone-branch-clone'

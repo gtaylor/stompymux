@@ -291,7 +291,11 @@ if(BUILD_TESTING)
   target_compile_definitions(netmux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
 endif()
 target_compile_options(netmux PRIVATE
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes
+  -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
+  -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
+  -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
+  -Wconversion -Wsign-conversion>)
 target_link_libraries(netmux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium m)
 target_include_directories(netmux PRIVATE
   "${CMAKE_BINARY_DIR}"

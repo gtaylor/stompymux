@@ -11,6 +11,9 @@ default: lint build test install
 fmt:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r clang-format -i
 
+fmt-check:
+    find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r clang-format --dry-run --Werror
+
 tidy:
     cmake -S . -B {{build_dir}} -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     find src -type f -name '*.c' -print0 | xargs -0 -r -n1 {{clang_tidy}} -p {{build_dir}}
