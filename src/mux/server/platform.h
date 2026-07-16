@@ -49,15 +49,12 @@ typedef void (*GenericFnPtr)(void);
 
 #include <event2/event.h>
 
-/* TEST_MALLOC:	Defining this makes a malloc that keeps track of the number
- *		of blocks allocated.  Good for testing for Memory leaks.
- * ATR_NAME:	Define if you want name to be stored as an attribute on the
+/* ATR_NAME:	Define if you want name to be stored as an attribute on the
  *		object rather than in the object structure.
  */
 
 /* Compile time options */
 
-/* #define TEST_MALLOC */             /* Keep track of block allocs */
 #define SIDE_EFFECT_FUNCTIONS         /* Those neat funcs that should be       \
                                        * commands */
 #define ENTERLEAVE_PARANOID           /* Enter/leave commands                  \
@@ -115,18 +112,8 @@ constexpr char LISTPLACE_VAR[] = "#@";
 #undef toupper
 #endif
 
-#ifdef TEST_MALLOC
-extern int malloc_count;
-
-#define XMALLOC(x, y)                                                          \
-  (fprintf(stderr, "Malloc: %s\n", (y)), malloc_count++, malloc((x)))
-#define XFREE(x, y)                                                            \
-  (fprintf(stderr, "Free: %s\n", (y)),                                         \
-   ((x) ? malloc_count--, free((x)), (x) = nullptr : (x)))
-#else
 #define XMALLOC(x, y) malloc((x))
 #define XFREE(x, y) (free((x)), (x) = nullptr)
-#endif /* TEST_MALLOC */
 
 #ifdef ENTERLEAVE_PARANOID
 #define ENTER_REQUIRES_LEAVESUCC /* Enter checks leaveloc of player's          \

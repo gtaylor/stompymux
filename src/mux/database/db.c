@@ -36,13 +36,6 @@ int corrupt;
 extern void del_commac(DbRef);
 extern void do_clear_macro(DbRef player, char *s);
 
-#ifdef TEST_MALLOC
-int malloc_count = 0;
-
-#endif /*                                                                      \
-        * * TEST_MALLOC                                                        \
-        */
-
 extern VATTR *vattr_rename(char *, char *);
 
 typedef struct atrcount ATRCOUNT;

@@ -182,12 +182,6 @@ void do_stats(DbRef player, DbRef cause, int key, char *name) {
       statinfo.s_total, statinfo.s_rooms, statinfo.s_exits, statinfo.s_things,
       statinfo.s_players, statinfo.s_garbage);
 
-#ifdef TEST_MALLOC
-  if (is_wizard(player))
-    notify_printf(player, "Malloc count = %d.", malloc_count);
-#endif /*                                                                      \
-        * TEST_MALLOC                                                          \
-        */
 #ifdef MCHECK
   if (is_wizard(player)) {
     struct mstats mval;
