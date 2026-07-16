@@ -2,12 +2,16 @@
 
 ## MUX Todos in the /src/ dir
 
+* Do we still need register.txt?
 * Rename bin from `netmux` to `stompymux`
 * Replace BattletechMUX mentions in `version`
 * CLI'ify netmux
 * TOML'ify configs
+* Redesign login flow to be more MUDDy
 * Fix log emission to output to log dir (`logs/`)
 * Rewrite WHO in Lua
+* Figure out how to do interactive @program with Lua
+* Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
 * utf8 support
 * Maybe: Figure out external RPC
