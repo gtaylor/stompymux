@@ -21,7 +21,7 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
-#include "mux/server/debug.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"

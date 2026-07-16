@@ -14,14 +14,12 @@
 #include "mux/commands/command.h"
 #include "mux/database/attrs.h"
 #include "mux/database/flags.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_state.h"
 #include "mux/support/red_black_tree.h"
-#include <errno.h>
-
-#include "mux/server/debug.h"
 
 /* The LOGFILE_TIMEOUT field describes how long a mux should keep an idle
  * open. LOGFILE_TIMEOUT seconds after the last write, it will close. The

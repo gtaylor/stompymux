@@ -19,14 +19,13 @@
 #include "mux/database/db.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
-
-#include "mux/server/debug.h"
 
 enum {
   CMD_QUIT = 1,

@@ -43,7 +43,7 @@ typedef struct mech_data MECH;
  */
 typedef void (*GenericFnPtr)(void);
 
-#include "mux/server/debug.h"
+#include "mux/server/diagnostics.h"
 
 #include <sys/resource.h>
 

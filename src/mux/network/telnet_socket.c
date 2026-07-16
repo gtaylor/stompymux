@@ -15,14 +15,13 @@
 #include "mux/database/flags.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/red_black_tree.h"
-
-#include "mux/server/debug.h"
 
 static struct event *listen_sock_ev;
 #ifdef IPV6_SUPPORT

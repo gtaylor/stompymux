@@ -63,7 +63,7 @@
 #include <time.h>
 
 #include "mux/network/mux_event.h"
-#include "mux/server/debug.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/server_lifecycle.h"
 
 int mux_event_tick = 0;
