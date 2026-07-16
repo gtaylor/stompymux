@@ -438,7 +438,7 @@ static void find_wild_attrs(DbRef player, DbRef thing, char *str,
         !is_examinable(player, thing) && !nearby(player, thing))
       ok = 0;
 
-    if (ok && quick_wild(str, (char *)attr->name)) {
+    if (ok && quick_wild(str, attr->name)) {
       olist_add(ca);
       if (hash_insert) {
         numeric_hash_table_add(ca, (int *)attr, &mudstate.parent_htab);
@@ -485,7 +485,16 @@ int parse_attrib_wild(DbRef player, char *str, DbRef *thing, int check_parents,
       free_lbuf(buff);
       return 0;
     }
+    /* str's declared type isn't const-correct (it's a cursor reassigned
+       by parse_thing_slash() above); "*" is only read from here on. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
     str = (char *)"*";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   }
   /*
    * Check the object (and optionally all parents) for attributes
@@ -514,7 +523,7 @@ int parse_attrib_wild(DbRef player, char *str, DbRef *thing, int check_parents,
  * * edit_string, edit_string_ansi, do_edit: Modify attributes.
  */
 
-void edit_string(char *src, char **dst, char *from, char *to) {
+void edit_string(char *src, char **dst, const char *from, const char *to) {
   char *cp;
 
   /*
@@ -555,7 +564,7 @@ void edit_string(char *src, char **dst, char *from, char *to) {
 }
 
 static void edit_string_ansi(char *src, char **dst, char **returnstr,
-                             char *from, char *to) {
+                             const char *from, const char *to) {
   char *cp, *rp;
 
   /*
@@ -628,7 +637,8 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
   DbRef thing, aowner;
   int attr, got_one, doit;
   long aflags;
-  char *from, *to, *result, *returnstr, *atext;
+  char *from, *result, *returnstr, *atext;
+  const char *to;
   Attribute *ap;
 
   /*
@@ -640,7 +650,7 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
     return;
   }
   from = args[0];
-  to = (nargs >= 2) ? args[1] : (char *)"";
+  to = (nargs >= 2) ? args[1] : "";
 
   /*
    * Look for the object and get the attribute (possibly wildcarded)
@@ -659,7 +669,7 @@ void do_edit(DbRef player, DbRef cause, int key, char *it, char *args[],
   got_one = 0;
   atext = alloc_lbuf("do_edit.atext");
 
-  for (attr = olist_first(); attr != NOTHING; attr = olist_next()) {
+  for (attr = (int)olist_first(); attr != NOTHING; attr = (int)olist_next()) {
     ap = attribute_by_number(attr);
     if (ap) {
 
@@ -782,11 +792,9 @@ void do_use(DbRef player, DbRef cause, int key, char *object) {
   }
   temp = alloc_lbuf("do_use");
   doit = 0;
-  if (*attribute_parent_get_string(temp, thing, A_USE, &aowner, &aflags))
-    doit = 1;
-  else if (*attribute_parent_get_string(temp, thing, A_OUSE, &aowner, &aflags))
-    doit = 1;
-  else if (*attribute_parent_get_string(temp, thing, A_AUSE, &aowner, &aflags))
+  if (*attribute_parent_get_string(temp, thing, A_USE, &aowner, &aflags) ||
+      *attribute_parent_get_string(temp, thing, A_OUSE, &aowner, &aflags) ||
+      *attribute_parent_get_string(temp, thing, A_AUSE, &aowner, &aflags))
     doit = 1;
   free_lbuf(temp);
 

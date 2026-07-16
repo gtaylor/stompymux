@@ -22,33 +22,32 @@
 #include "mux/server/log_cache.h"
 #endif
 
-NameTable logdata_nametab[] = {{(char *)"flags", 1, 0, LOGOPT_FLAGS},
-                               {(char *)"location", 1, 0, LOGOPT_LOC},
-                               {(char *)"owner", 1, 0, LOGOPT_OWNER},
-                               {(char *)"timestamp", 1, 0, LOGOPT_TIMESTAMP},
+NameTable logdata_nametab[] = {{"flags", 1, 0, LOGOPT_FLAGS},
+                               {"location", 1, 0, LOGOPT_LOC},
+                               {"owner", 1, 0, LOGOPT_OWNER},
+                               {"timestamp", 1, 0, LOGOPT_TIMESTAMP},
                                {nullptr, 0, 0, 0}};
 
-NameTable logoptions_nametab[] = {
-    {(char *)"accounting", 2, 0, LOG_ACCOUNTING},
-    {(char *)"all_commands", 2, 0, LOG_ALLCOMMANDS},
-    {(char *)"suspect_commands", 2, 0, LOG_SUSPECTCMDS},
-    {(char *)"bad_commands", 2, 0, LOG_BADCOMMANDS},
-    {(char *)"buffer_alloc", 3, 0, LOG_ALLOCATE},
-    {(char *)"bugs", 3, 0, LOG_BUGS},
-    {(char *)"checkpoints", 2, 0, LOG_DBSAVES},
-    {(char *)"config_changes", 2, 0, LOG_CONFIGMODS},
-    {(char *)"create", 2, 0, LOG_PCREATES},
-    {(char *)"logins", 1, 0, LOG_LOGIN},
-    {(char *)"network", 1, 0, LOG_NET},
-    {(char *)"problems", 1, 0, LOG_PROBLEMS},
-    {(char *)"security", 2, 0, LOG_SECURITY},
-    {(char *)"shouts", 2, 0, LOG_SHOUTS},
-    {(char *)"startup", 2, 0, LOG_STARTUP},
-    {(char *)"wizard", 1, 0, LOG_WIZARD},
-    {nullptr, 0, 0, 0}};
+NameTable logoptions_nametab[] = {{"accounting", 2, 0, LOG_ACCOUNTING},
+                                  {"all_commands", 2, 0, LOG_ALLCOMMANDS},
+                                  {"suspect_commands", 2, 0, LOG_SUSPECTCMDS},
+                                  {"bad_commands", 2, 0, LOG_BADCOMMANDS},
+                                  {"buffer_alloc", 3, 0, LOG_ALLOCATE},
+                                  {"bugs", 3, 0, LOG_BUGS},
+                                  {"checkpoints", 2, 0, LOG_DBSAVES},
+                                  {"config_changes", 2, 0, LOG_CONFIGMODS},
+                                  {"create", 2, 0, LOG_PCREATES},
+                                  {"logins", 1, 0, LOG_LOGIN},
+                                  {"network", 1, 0, LOG_NET},
+                                  {"problems", 1, 0, LOG_PROBLEMS},
+                                  {"security", 2, 0, LOG_SECURITY},
+                                  {"shouts", 2, 0, LOG_SHOUTS},
+                                  {"startup", 2, 0, LOG_STARTUP},
+                                  {"wizard", 1, 0, LOG_WIZARD},
+                                  {nullptr, 0, 0, 0}};
 
 char *strip_ansi_r(char *dest, const char *raw, size_t n) {
-  char *p = (char *)raw;
+  const char *p = raw;
   char *q = dest;
 
   while (p && *p && ((size_t)(q - dest) < n)) {
@@ -134,11 +133,11 @@ void log_perror(const char *primary, const char *secondary, const char *extra,
                 const char *failing_object) {
   start_log(primary, secondary);
   if (extra && *extra) {
-    log_text((char *)"(");
-    log_text((char *)extra);
-    log_text((char *)") ");
+    log_text("(");
+    log_text(extra);
+    log_text(") ");
   }
-  perror((char *)failing_object);
+  perror(failing_object);
   fflush(stderr);
   mudstate.logging--;
 }
@@ -146,13 +145,14 @@ void log_perror(const char *primary, const char *secondary, const char *extra,
 /**
  * Write text to log file.
  */
-void log_text(char *text) {
+void log_text(const char *text) {
   char new[LBUF_SIZE];
   strncpy(new, text, LBUF_SIZE - 1);
   fprintf(stderr, "%s", strip_ansi_r(new, text, strlen(text)));
 }
 
-void log_error(int key, char *primary, char *secondary, char *format, ...) {
+void log_error(int key, const char *primary, const char *secondary,
+               const char *format, ...) {
   char buffer[LBUF_SIZE];
   char stripped_buffer[LBUF_SIZE];
   va_list ap;
@@ -224,7 +224,7 @@ void log_name(DbRef target) {
 void log_name_and_loc(DbRef player) {
   log_name(player);
   if ((mudconf.log_info & LOGOPT_LOC) && has_location(player)) {
-    log_text((char *)" in ");
+    log_text(" in ");
     log_name(obj_location(player));
   }
   return;
@@ -233,23 +233,23 @@ void log_name_and_loc(DbRef player) {
 /*
  * Returns the object type of specified object.
  */
-char *OBJTYP(DbRef thing) {
+const char *OBJTYP(DbRef thing) {
   if (!is_good_obj(thing)) {
-    return (char *)"??OUT-OF-RANGE??";
+    return "??OUT-OF-RANGE??";
   }
   switch (typeof_obj(thing)) {
   case TYPE_PLAYER:
-    return (char *)"PLAYER";
+    return "PLAYER";
   case TYPE_THING:
-    return (char *)"THING";
+    return "THING";
   case TYPE_ROOM:
-    return (char *)"ROOM";
+    return "ROOM";
   case TYPE_EXIT:
-    return (char *)"EXIT";
+    return "EXIT";
   case TYPE_GARBAGE:
-    return (char *)"GARBAGE";
+    return "GARBAGE";
   default:
-    return (char *)"??ILLEGAL??";
+    return "??ILLEGAL??";
   }
 }
 
@@ -261,7 +261,7 @@ void log_type_and_name(DbRef thing) {
   log_text(nbuf);
   if (is_good_obj(thing))
     log_text(Name(thing));
-  log_text((char *)")");
+  log_text(")");
   return;
 }
 

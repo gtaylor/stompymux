@@ -20,7 +20,7 @@ void server_state_initialize(void) {
   mudstate.curr_enactor = NOTHING;
   mudstate.shutdown_flag = 0;
   mudstate.attr_next = A_USER_START;
-  mudstate.debug_cmd = (char *)"< init >";
+  mudstate.debug_cmd = "< init >";
   mudstate.access_list = nullptr;
   mudstate.suspect_list = nullptr;
   mudstate.qhead = nullptr;

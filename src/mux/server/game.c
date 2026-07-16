@@ -82,18 +82,18 @@ void do_dump_optimize(DbRef player, DbRef cause, int key) {
  */
 void report(void) {
   STARTLOG(LOG_BUGS, "BUG", "INFO") {
-    log_text((char *)"Command: '");
+    log_text("Command: '");
     log_text(mudstate.debug_cmd);
-    log_text((char *)"'");
+    log_text("'");
     ENDLOG;
   }
   if (is_good_obj(mudstate.curr_player)) {
     STARTLOG(LOG_BUGS, "BUG", "INFO") {
-      log_text((char *)"Player: ");
+      log_text("Player: ");
       log_name_and_loc(mudstate.curr_player);
       if ((mudstate.curr_enactor != mudstate.curr_player) &&
           is_good_obj(mudstate.curr_enactor)) {
-        log_text((char *)" Enactor: ");
+        log_text(" Enactor: ");
         log_name_and_loc(mudstate.curr_enactor);
       }
       ENDLOG;
@@ -105,7 +105,8 @@ void report(void) {
  * Load a regular expression match and insert it into
  * registers.
  */
-static int regexp_match(char *pattern, char *str, char *args[], int nargs) {
+static int regexp_match(const char *pattern, const char *str, char *args[],
+                        int nargs) {
   regex_t re;
   int got_match;
   regmatch_t pmatch[NSUBEXP];
@@ -158,7 +159,7 @@ static int regexp_match(char *pattern, char *str, char *args[], int nargs) {
     len = pmatch[i].rm_eo - pmatch[i].rm_so;
     args[i] = alloc_lbuf("regexp_match");
     memset(args[i], 0, LBUF_SIZE);
-    strncpy(args[i], str + pmatch[i].rm_so, len);
+    strncpy(args[i], str + pmatch[i].rm_so, (size_t)len);
     args[i][len] = '\0'; /* strncpy() does not null-terminate */
   }
 
@@ -170,7 +171,7 @@ static int regexp_match(char *pattern, char *str, char *args[], int nargs) {
  * Check attribute list for wild card matches and queue them.
  */
 static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
-                               char type, char *str, int check_exclude,
+                               char type, const char *str, int check_exclude,
                                int hash_insert) {
   DbRef aowner;
   int match, attr, i;
@@ -259,7 +260,7 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
   return (match);
 }
 
-int attribute_match(DbRef thing, DbRef player, char type, char *str,
+int attribute_match(DbRef thing, DbRef player, char type, const char *str,
                     int check_parents) {
   int match, lev, result, exclude, insert;
   DbRef parent;
@@ -325,7 +326,7 @@ int check_filter(DbRef object, DbRef player, int filter, const char *msg) {
   free_lbuf(buf);
   do {
     cp = parse_to(&dp, ',', EV_STRIP);
-    if (quick_wild(cp, (char *)msg)) {
+    if (quick_wild(cp, msg)) {
       free_lbuf(nbuf);
       return (0);
     }
@@ -343,7 +344,7 @@ static char *add_prefix(DbRef object, DbRef player, int prefix, const char *msg,
   buf = attribute_parent_get(object, prefix, &aowner, &aflags);
   if (!*buf) {
     cp = buf;
-    safe_str((char *)dflt, buf, &cp);
+    safe_str(dflt, buf, &cp);
   } else {
     nbuf = bp = alloc_lbuf("add_prefix");
     str = buf;
@@ -355,8 +356,8 @@ static char *add_prefix(DbRef object, DbRef player, int prefix, const char *msg,
     cp = &buf[strlen(buf)];
   }
   if (cp != buf)
-    safe_str((char *)" ", buf, &cp);
-  safe_str((char *)msg, buf, &cp);
+    safe_str(" ", buf, &cp);
+  safe_str(msg, buf, &cp);
   *cp = '\0';
   return (buf);
 }
@@ -365,7 +366,7 @@ static char *dflt_from_msg(DbRef sender, DbRef sendloc) {
   char *tp, *tbuff;
 
   tp = tbuff = alloc_lbuf("notify_checked.fwdlist");
-  safe_str((char *)"From ", tbuff, &tp);
+  safe_str("From ", tbuff, &tp);
   if (is_good_obj(sendloc))
     safe_str(Name(sendloc), tbuff, &tp);
   else
@@ -435,10 +436,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
         snprintf(tbuff, SBUF_SIZE, "<-(#%ld)", mudstate.curr_enactor);
         safe_str(tbuff, msg_ns, &mp);
       }
-      safe_str((char *)"] ", msg_ns, &mp);
+      safe_str("] ", msg_ns, &mp);
       free_sbuf(tbuff);
     }
-    safe_str((char *)msg, msg_ns, &mp);
+    safe_str(msg, msg_ns, &mp);
     *mp = '\0';
   } else {
     msg_ns = nullptr;
@@ -488,7 +489,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
           (targetloc != obj_owner(target))))) {
       tp = tbuff = alloc_lbuf("notify_checked.puppet");
       safe_str(Name(target), tbuff, &tp);
-      safe_str((char *)"> ", tbuff, &tp);
+      safe_str("> ", tbuff, &tp);
       if (key & MSG_COLORIZE)
         colbuf = colorize(obj_owner(target), msg_ns);
       safe_str(colbuf ? colbuf : msg_ns, tbuff, &tp);
@@ -506,7 +507,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
     nargs = 0;
     if (check_listens && (key & (MSG_ME | MSG_INV_L)) && has_listen(target)) {
       tp = attribute_get(target, A_LISTEN, &aowner, &aflags);
-      if (*tp && wild(tp, (char *)msg, args, 10)) {
+      if (*tp && wild(tp, msg, args, 10)) {
         for (nargs = 10; nargs && (!args[nargs - 1] || !(*args[nargs - 1]));
              nargs--)
           ;
@@ -554,7 +555,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
     if ((key & MSG_ME) && (sender != target || is_wizard(target)) &&
         pass_uselock && is_monitor(target)) {
-      (void)attribute_match(target, sender, AMATCH_LISTEN, (char *)msg, 0);
+      (void)attribute_match(target, sender, AMATCH_LISTEN, msg, 0);
     }
     /*
      * Deliver message to forwardlist members
@@ -612,7 +613,16 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
         buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
         free_lbuf(tbuff);
       } else {
+        /* buff aliases the read-only msg here; only freed in the
+         * branch above where it holds an add_prefix() allocation. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
         buff = (char *)msg;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       }
 
       DOLIST(obj, obj_exits(obj_location(target))) {
@@ -644,7 +654,16 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
       if (key & MSG_S_OUTSIDE) {
         buff = add_prefix(target, sender, A_INPREFIX, msg, "");
       } else {
+        /* buff aliases the read-only msg here; only freed in the
+         * branch above where it holds an add_prefix() allocation. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
         buff = (char *)msg;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       }
       DOLIST(obj, obj_contents(target)) {
         if (obj != target) {
@@ -667,7 +686,16 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
         buff = add_prefix(target, sender, A_PREFIX, msg, "");
         free_lbuf(tbuff);
       } else {
+        /* buff aliases the read-only msg here; only freed in the
+         * branch above where it holds an add_prefix() allocation. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
         buff = (char *)msg;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       }
       DOLIST(obj, obj_contents(targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
@@ -692,13 +720,25 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
         buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
         free_lbuf(tbuff);
       } else {
+        /* buff aliases the read-only msg here; only freed in the
+         * branch above where it holds an add_prefix() allocation. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
         buff = (char *)msg;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       }
       notify_checked(targetloc, sender, buff, MSG_ME | MSG_F_UP | MSG_S_INSIDE);
       if (key & MSG_S_INSIDE) {
         free_lbuf(buff);
       }
     }
+    break;
+  default:
+    break;
   }
   if (msg_ns)
     free_lbuf(msg_ns);
@@ -736,21 +776,21 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
   if (player != NOTHING) {
     raw_broadcast(0, "Game: Shutdown by %s", Name(obj_owner(player)));
     STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
-      log_text((char *)"Shutdown by ");
+      log_text("Shutdown by ");
       log_name(player);
       ENDLOG;
     }
   } else {
     raw_broadcast(0, "Game: Fatal Error: %s", message);
     STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
-      log_text((char *)"Fatal error: ");
+      log_text("Fatal error: ");
       log_text(message);
       ENDLOG;
     }
   }
   if (player != NOTHING) {
     STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
-      log_text((char *)"Shutdown status: ");
+      log_text("Shutdown status: ");
       log_text(message);
       ENDLOG;
     }
@@ -776,27 +816,27 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
 
     pcache_sync();
     STARTLOG(LOG_ALWAYS, "DMP", "PANIC") {
-      log_text((char *)"Panic dump: ");
+      log_text("Panic dump: ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
     dump_database_internal(DUMP_CRASHED);
 
     STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
-      log_text((char *)"Panic dump complete: ");
+      log_text("Panic dump complete: ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
   } else if (key & SHUTDN_KILLED) {
     pcache_sync();
     STARTLOG(LOG_ALWAYS, "DMP", "KILLED") {
-      log_text((char *)"Killed dump: ");
+      log_text("Killed dump: ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
     dump_database_internal(DUMP_KILLED);
     STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
-      log_text((char *)"Killed dump complete: ");
+      log_text("Killed dump complete: ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
@@ -815,7 +855,7 @@ int dump_database_internal(int dump_type) { return gamedb_dump(dump_type); }
 void dump_database(void) {
   mudstate.dumping = 1;
   STARTLOG(LOG_DBSAVES, "DMP", "DUMP") {
-    log_text((char *)"Dumping: ");
+    log_text("Dumping: ");
     log_text(mudconf.gamedb);
     ENDLOG;
   }
@@ -823,7 +863,7 @@ void dump_database(void) {
 
   dump_database_internal(DUMP_NORMAL);
   STARTLOG(LOG_DBSAVES, "DMP", "DONE") {
-    log_text((char *)"Dump complete: ");
+    log_text("Dump complete: ");
     log_text(mudconf.gamedb);
     ENDLOG;
   }
@@ -876,13 +916,13 @@ void fork_and_dump(int key) {
 
 static int load_game(void) {
   STARTLOG(LOG_STARTUP, "INI", "LOAD") {
-    log_text((char *)"Loading: ");
+    log_text("Loading: ");
     log_text(mudconf.gamedb);
     ENDLOG;
   };
   if (gamedb_load(mudconf.gamedb) < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "FATAL") {
-      log_text((char *)"Error loading ");
+      log_text("Error loading ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
@@ -894,7 +934,7 @@ static int load_game(void) {
     LoadSpecialObjects();
 
   STARTLOG(LOG_STARTUP, "INI", "LOAD") {
-    log_text((char *)"Load complete.");
+    log_text("Load complete.");
     ENDLOG;
   }
   /*
@@ -1001,7 +1041,16 @@ int main(int argc, char *argv[]) {
   }
 
   mindb = 0; /* Are we creating a new db? */
+  /* config_file also gets assigned a genuinely mutable argv[] entry below,
+     so it can't be const; CONF_FILE is only read as the default here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   config_file = (char *)CONF_FILE;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   if (argc > 1) {
     if (!strcmp(argv[1], "-s")) {
       mindb = 1;
@@ -1069,7 +1118,7 @@ int main(int argc, char *argv[]) {
     db_make_minimal();
   else if (load_game() < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "LOAD") {
-      log_text((char *)"Couldn't load: ");
+      log_text("Couldn't load: ");
       log_text(mudconf.gamedb);
       ENDLOG;
     }
@@ -1122,7 +1171,7 @@ int main(int argc, char *argv[]) {
   muntrace();
 #endif
 
-  close_sockets(0, (char *)"Going down - Bye");
+  close_sockets(0, "Going down - Bye");
   dump_database();
 
   server_lifecycle_shutdown();

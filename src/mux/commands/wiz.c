@@ -216,7 +216,7 @@ void do_newpassword(DbRef player, DbRef cause, int key, char *name,
   sodium_memzero(hashed_password, sizeof(hashed_password));
   STARTLOG(LOG_WIZARD, "WIZ", "PASS") {
     log_name(player);
-    log_text((char *)" changed the password of ");
+    log_text(" changed the password of ");
     log_name(victim);
     ENDLOG;
   }
@@ -248,7 +248,7 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
       buf = alloc_sbuf("do_boot.port");
       snprintf(buf, SBUF_SIZE, "Port %ld", victim);
       log_text(buf);
-      log_text((char *)" was @booted by ");
+      log_text(" was @booted by ");
       log_name(player);
       free_sbuf(buf);
       ENDLOG;
@@ -271,7 +271,7 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
     }
     STARTLOG(LOG_WIZARD, "WIZ", "BOOT") {
       log_name_and_loc(victim);
-      log_text((char *)" was @booted by ");
+      log_text(" was @booted by ");
       log_name(player);
       ENDLOG;
     }
@@ -282,12 +282,12 @@ void do_boot(DbRef player, DbRef cause, int key, char *name) {
   } else {
     bp = buf = alloc_lbuf("do_boot.msg");
     safe_str(Name(player), buf, &bp);
-    safe_str((char *)" gently shows you the door.", buf, &bp);
+    safe_str(" gently shows you the door.", buf, &bp);
     *bp = '\0';
   }
 
   if (key & BOOT_PORT)
-    count = boot_by_port(victim, !is_god(player), buf);
+    count = boot_by_port((int)victim, !is_god(player), buf);
   else
     count = boot_off(victim, buf);
   notify_quiet(player, tprintf("%d connection%s closed.", count,
@@ -322,16 +322,15 @@ void do_cut(DbRef player, DbRef cause, int key, char *thing) {
 /**
  * Enable or disable global control flags
  */
-NameTable enable_names[] = {
-    {(char *)"building", 1, CA_PUBLIC, CF_BUILD},
-    {(char *)"checkpointing", 2, CA_PUBLIC, CF_CHECKPOINT},
-    {(char *)"cleaning", 2, CA_PUBLIC, CF_DBCHECK},
-    {(char *)"dequeueing", 1, CA_PUBLIC, CF_DEQUEUE},
-    {(char *)"idlechecking", 2, CA_PUBLIC, CF_IDLECHECK},
-    {(char *)"interpret", 2, CA_PUBLIC, CF_INTERP},
-    {(char *)"logins", 3, CA_PUBLIC, CF_LOGIN},
-    {(char *)"eventchecking", 2, CA_PUBLIC, CF_EVENTCHECK},
-    {nullptr, 0, 0, 0}};
+NameTable enable_names[] = {{"building", 1, CA_PUBLIC, CF_BUILD},
+                            {"checkpointing", 2, CA_PUBLIC, CF_CHECKPOINT},
+                            {"cleaning", 2, CA_PUBLIC, CF_DBCHECK},
+                            {"dequeueing", 1, CA_PUBLIC, CF_DEQUEUE},
+                            {"idlechecking", 2, CA_PUBLIC, CF_IDLECHECK},
+                            {"interpret", 2, CA_PUBLIC, CF_INTERP},
+                            {"logins", 3, CA_PUBLIC, CF_LOGIN},
+                            {"eventchecking", 2, CA_PUBLIC, CF_EVENTCHECK},
+                            {nullptr, 0, 0, 0}};
 
 void do_global(DbRef player, DbRef cause, int key, char *flag) {
   int flagvalue;

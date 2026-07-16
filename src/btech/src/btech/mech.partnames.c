@@ -153,7 +153,7 @@ SILLY_GET(get_parts_long_name, longy);
 SILLY_GET(get_parts_vlong_name, vlongy);
 
 #define wildcard_match quick_wild
-extern int wildcard_match(char *, char *);
+extern int wildcard_match(const char *, const char *);
 
 int find_matching_vlong_part(char *wc, int *ind, int *id, int *brand) {
   PN *p;

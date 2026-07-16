@@ -159,21 +159,34 @@ void do_show(DbRef, DbRef, int, char *, char *);
 void do_charclear(DbRef, DbRef, int, char *);
 void do_show_stat(DbRef, DbRef, int);
 
+/*
+ * A command's handler is either a real function pointer (dispatched via one
+ * of the ((sig *)handler.fn)(...) casts in process_cmdent, chosen by the
+ * CS_* flags in callseq) or, for softcode-added commands (CS_ADDED), a
+ * pointer to the ADDENT chain of attributes implementing it. Storing both
+ * kinds through a single `void *` isn't portable ISO C; a union keeps each
+ * access through its real type instead.
+ */
+typedef union cmdentry_handler {
+  GenericFnPtr fn;
+  struct addedentry *added;
+} CmdHandler;
+
 typedef struct cmdentry CMDENT;
 struct cmdentry {
-  char *cmdname;
+  const char *cmdname;
   NameTable *switches;
   int perms;
   int extra;
   int callseq;
-  void *handler;
+  CmdHandler handler;
 };
 
 void init_cmdtab(void);
 int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd);
 int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd);
 int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd);
-int cf_cmd_alias(int *vp, char *str, long extra, DbRef player, char *cmd);
+int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd);
 
 typedef struct addedentry ADDENT;
 struct addedentry {
@@ -224,8 +237,10 @@ constexpr int CA_DISABLED = 0x04000000;   /* Command completely disabled */
 constexpr int CA_LOCATION = 0x10000000;   /* Invoker must have location */
 constexpr int CA_CONTENTS = 0x20000000;   /* Invoker must have contents */
 constexpr int CA_PLAYER = 0x40000000;     /* Invoker must be a player */
-constexpr unsigned int CF_DARK =
-    0x80000000; /* Command doesn't show up in list */
+// Stored as int (not unsigned) so it ORs cleanly into CMDENT.perms without
+// signedness conversions; C23 guarantees the top-bit pattern converts to
+// INT_MIN deterministically.
+constexpr int CF_DARK = (int)0x80000000U; /* Command doesn't show up in list */
 
 int check_access(DbRef, int);
 void process_command(DbRef, DbRef, int, char *, char *[], int);

@@ -80,8 +80,8 @@ struct timeval timeval_sub(struct timeval now, struct timeval then) {
  */
 
 int msec_diff(struct timeval now, struct timeval then) {
-  return ((now.tv_sec - then.tv_sec) * 1000 +
-          (now.tv_usec - then.tv_usec) / 1000);
+  return (int)((now.tv_sec - then.tv_sec) * 1000 +
+               (now.tv_usec - then.tv_usec) / 1000);
 }
 
 /*
@@ -123,14 +123,14 @@ struct timeval update_quotas(struct timeval last, struct timeval current) {
 
 /* raw_notify_raw: write a message to a player without the newline */
 
-void raw_notify_raw(DbRef player, const char *msg, char *append) {
+void raw_notify_raw(DbRef player, const char *msg, const char *append) {
   Descriptor *d;
 
   if (!msg || !*msg)
     return;
 
   if (mudstate.inpipe && (player == mudstate.poutobj)) {
-    safe_str((char *)msg, mudstate.poutnew, &mudstate.poutbufc);
+    safe_str(msg, mudstate.poutnew, &mudstate.poutbufc);
     if (append != nullptr)
       safe_str(append, mudstate.poutnew, &mudstate.poutbufc);
     return;
@@ -142,7 +142,7 @@ void raw_notify_raw(DbRef player, const char *msg, char *append) {
   DESC_ITER_PLAYER(player, d) {
     descriptor_queue_string(d, msg);
     if (append != nullptr)
-      descriptor_queue_write(d, append, strlen(append));
+      descriptor_queue_write(d, append, (int)strlen(append));
   }
 }
 
@@ -186,7 +186,7 @@ void raw_notify_newline(DbRef player) {
  * * raw_broadcast: Send message to players who have indicated flags
  */
 
-void raw_broadcast(int inflags, char *template, ...) {
+void raw_broadcast(int inflags, const char *template, ...) {
   char buff[LBUF_SIZE];
   Descriptor *d;
   va_list ap;
@@ -200,7 +200,7 @@ void raw_broadcast(int inflags, char *template, ...) {
 
   DESC_ITER_CONN(d) {
     if ((obj_flags(d->player) & inflags) == inflags) {
-      descriptor_queue_write(d, buff, strnlen(buff, LBUF_SIZE - 1));
+      descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
     }
   }
@@ -231,7 +231,7 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
 
   if (!is_ansi(d->player) && index(s, ESC_CHAR))
     strip_ansi_r(new, s, strlen(s));
-  descriptor_queue_write(d, new, strlen(new));
+  descriptor_queue_write(d, new, (int)strlen(new));
 }
 
 extern int fcache_conn_c;
@@ -416,14 +416,13 @@ static void announce_connect(DbRef player, Descriptor *d) {
       do_comconnect(player, d);
 
     if (is_dark(player)) {
-      raw_broadcast(MONITOR, (char *)"GAME: %s has DARK-connected.",
-                    Name(player));
+      raw_broadcast(MONITOR, "GAME: %s has DARK-connected.", Name(player));
     } else {
-      raw_broadcast(MONITOR, (char *)"GAME: %s has connected.", Name(player));
+      raw_broadcast(MONITOR, "GAME: %s has connected.", Name(player));
     }
   } else {
     snprintf(buf, LBUF_SIZE, "%s has reconnected.", Name(player));
-    raw_broadcast(MONITOR, (char *)"GAME: %s has reconnected.", Name(player));
+    raw_broadcast(MONITOR, "GAME: %s has reconnected.", Name(player));
   }
 
   key = MSG_INV;
@@ -534,9 +533,18 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     if (mudconf.have_comsys)
       do_comdisconnect(player);
 
-    raw_broadcast(MONITOR, (char *)"GAME: %s has disconnected.", Name(player));
+    raw_broadcast(MONITOR, "GAME: %s has disconnected.", Name(player));
 
+    /* wait_que()'s argument array isn't const-correct; reason is only
+       read as command-queue text here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
     argv[0] = (char *)reason;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     c_connected(player);
 
     atr_temp = attribute_parent_get(player, A_ADISCONNECT, &aowner, &aflags);
@@ -604,7 +612,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     if ((loc != NOTHING) && !(is_dark(player) && is_wizard(player)))
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(player, player, buf, key);
-    raw_broadcast(MONITOR, (char *)"GAME: %s has partially disconnected.",
+    raw_broadcast(MONITOR, "GAME: %s has partially disconnected.",
                   Name(player));
     free_mbuf(buf);
   }
@@ -612,7 +620,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   mudstate.curr_enactor = temp;
 }
 
-int boot_off(DbRef player, char *message) {
+int boot_off(DbRef player, const char *message) {
   Descriptor *d, *dnext;
   int count;
 
@@ -681,7 +689,7 @@ int fetch_idle(DbRef target) {
 
   result = -1;
   DESC_ITER_PLAYER(target, d) {
-    idletime = (mudstate.now - d->last_time);
+    idletime = (int)(mudstate.now - d->last_time);
     if ((result == -1) || (idletime < result))
       result = idletime;
   }
@@ -694,7 +702,7 @@ int fetch_connect(DbRef target) {
 
   result = -1;
   DESC_ITER_PLAYER(target, d) {
-    conntime = (mudstate.now - d->connected_at);
+    conntime = (int)(mudstate.now - d->connected_at);
     if (conntime > result)
       result = conntime;
   }
@@ -860,12 +868,12 @@ static void dump_users(Descriptor *e, char *match, int key) {
 }
 
 NameTable logout_cmdtable[] = {
-    {(char *)"DOING", 5, CA_PUBLIC, CMD_DOING},
-    {(char *)"OUTPUTPREFIX", 12, CA_PUBLIC, CMD_PREFIX | CMD_NOxFIX},
-    {(char *)"OUTPUTSUFFIX", 12, CA_PUBLIC, CMD_SUFFIX | CMD_NOxFIX},
-    {(char *)"QUIT", 4, CA_PUBLIC, CMD_QUIT},
-    {(char *)"SESSION", 7, CA_PUBLIC, CMD_SESSION},
-    {(char *)"WHO", 3, CA_PUBLIC, CMD_WHO},
+    {"DOING", 5, CA_PUBLIC, CMD_DOING},
+    {"OUTPUTPREFIX", 12, CA_PUBLIC, CMD_PREFIX | CMD_NOxFIX},
+    {"OUTPUTSUFFIX", 12, CA_PUBLIC, CMD_SUFFIX | CMD_NOxFIX},
+    {"QUIT", 4, CA_PUBLIC, CMD_QUIT},
+    {"SESSION", 7, CA_PUBLIC, CMD_SESSION},
+    {"WHO", 3, CA_PUBLIC, CMD_WHO},
     {nullptr, 0, 0, 0}};
 
 void init_logout_cmdtab(void) {
@@ -885,8 +893,8 @@ void init_logout_cmdtab(void) {
 static void failconn(const char *logcode, const char *logtype,
                      const char *logreason, Descriptor *d,
                      int disconnect_reason, DbRef player, int filecache,
-                     char *message, char *command, char *user, char *password,
-                     char *cmdsave) {
+                     const char *message, char *command, char *user,
+                     char *password, const char *cmdsave) {
   char *buff;
 
   STARTLOG(LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
@@ -899,9 +907,9 @@ static void failconn(const char *logcode, const char *logtype,
       log_name(player);
     else
       log_text(user);
-    log_text((char *)" (");
-    log_text((char *)logreason);
-    log_text((char *)")");
+    log_text(" (");
+    log_text(logreason);
+    log_text(")");
     ENDLOG;
   }
   fcache_dump(d, filecache);
@@ -977,15 +985,13 @@ static int login_throttle_allow(const char *address) {
   elapsed = now - entry->last_refill;
   if (elapsed >= mudconf.login_attempt_refill) {
     refills = (unsigned int)(elapsed / mudconf.login_attempt_refill);
-    if (refills >= (unsigned int)mudconf.login_attempt_burst) {
-      entry->tokens = (unsigned int)mudconf.login_attempt_burst;
-    } else if (entry->tokens + refills >=
-               (unsigned int)mudconf.login_attempt_burst) {
+    if (refills >= (unsigned int)mudconf.login_attempt_burst ||
+        entry->tokens + refills >= (unsigned int)mudconf.login_attempt_burst) {
       entry->tokens = (unsigned int)mudconf.login_attempt_burst;
     } else {
       entry->tokens += refills;
     }
-    entry->last_refill += refills * mudconf.login_attempt_refill;
+    entry->last_refill += refills * (unsigned int)mudconf.login_attempt_refill;
   }
   if (entry->tokens == 0)
     return 0;
@@ -996,20 +1002,21 @@ static int login_throttle_allow(const char *address) {
 }
 
 static int check_connect(Descriptor *d, char *msg) {
-  char *command, *user, *password, *buff, *cmdsave;
+  char *command, *user, *password, *buff;
+  const char *cmdsave;
   DbRef player, aowner;
   long aflags;
   int nplayers;
   Descriptor *d2;
 
   cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = (char *)"< check_connect >";
+  mudstate.debug_cmd = "< check_connect >";
 
   /*
    * Hide the password length from SESSION
    */
 
-  d->input_tot -= (strlen(msg) + 1);
+  d->input_tot -= (int)(strlen(msg) + 1);
 
   /*
    * Crack the command apart
@@ -1035,7 +1042,7 @@ static int check_connect(Descriptor *d, char *msg) {
 
     if (!login_throttle_allow(d->addr)) {
       failconn("CON", "Connect", "Login throttled", d, R_BADLOGIN, NOTHING,
-               FC_CONN, (char *)connect_fail, command, user, password, cmdsave);
+               FC_CONN, connect_fail, command, user, password, cmdsave);
       return 0;
     }
     player = connect_player(user, password, d->addr, d->username);
@@ -1157,7 +1164,7 @@ static int check_connect(Descriptor *d, char *msg) {
     }
     if (!login_throttle_allow(d->addr)) {
       failconn("CRE", "Create", "Login throttled", d, R_BADLOGIN, NOTHING,
-               FC_CONN, (char *)create_fail, command, user, password, cmdsave);
+               FC_CONN, create_fail, command, user, password, cmdsave);
       return 0;
     }
     if (d->host_info & H_REGISTRATION) {
@@ -1298,11 +1305,12 @@ int descriptor_unauthenticated_command(Descriptor *d, char *command) {
 }
 
 int descriptor_command(Descriptor *d, char *command) {
-  char *arg, *cmdsave;
+  char *arg;
+  const char *cmdsave;
   NameTable *cp;
 
   cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = (char *)"< descriptor_command >";
+  mudstate.debug_cmd = "< descriptor_command >";
 
   /* The IDLE command is used to keep players behind badly configured NATs
      alive. This does not increment command count or idle time and is a
@@ -1457,7 +1465,8 @@ static const char *stat_string(int strtype, int flag) {
 
 static void list_sites(DbRef player, SiteData *site_list,
                        const char *header_txt, int stat_type) {
-  char *buff, *buff1, *str;
+  char *buff, *buff1;
+  const char *str;
   SiteData *this;
 
   buff = alloc_mbuf("list_sites.buff");
@@ -1466,7 +1475,7 @@ static void list_sites(DbRef player, SiteData *site_list,
   notify(player, buff);
   notify(player, "Address              Mask                 Status");
   for (this = site_list; this; this = this->next) {
-    str = (char *)stat_string(stat_type, this->flag);
+    str = stat_string(stat_type, this->flag);
     StringCopy(buff1, inet_ntoa(this->mask));
     snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address), buff1,
              str);

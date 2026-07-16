@@ -2,6 +2,7 @@
 
 #pragma once
 
-int wild(char *pattern, char *text, char *arguments[], int argument_count);
-int wild_match(char *pattern, char *text);
-int quick_wild(char *pattern, char *text);
+int wild(const char *pattern, const char *text, char *arguments[],
+         int argument_count);
+int wild_match(const char *pattern, const char *text);
+int quick_wild(const char *pattern, const char *text);

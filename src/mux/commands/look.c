@@ -91,7 +91,7 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
            */
 
           if (buff != e)
-            safe_str((char *)"  ", buff, &e);
+            safe_str("  ", buff, &e);
           for (s = Name(thing); *s && (*s != ';'); s++)
             safe_chr(*s, buff1, &e1);
           *e1 = 0;
@@ -104,7 +104,7 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
   }
 
   if (!(is_transparent(loc))) {
-    safe_str((char *)"\r\n", buff, &e);
+    safe_str("\r\n", buff, &e);
     *e = 0;
     notify(player, buff);
   }
@@ -119,7 +119,7 @@ static void look_exits(DbRef player, DbRef loc, const char *exit_name) {
 static void look_contents(DbRef player, DbRef loc, const char *contents_name,
                           int style) {
   DbRef thing;
-  DbRef can_see_loc;
+  int can_see_loc;
   char *buff;
 
   /*
@@ -156,7 +156,7 @@ static void look_contents(DbRef player, DbRef loc, const char *contents_name,
 }
 
 static void view_atr(DbRef player, DbRef thing, Attribute *ap, char *text,
-                     DbRef aowner, int aflags, int skip_tag) {
+                     DbRef aowner, long aflags, int skip_tag) {
   char xbuf[6];
   char *xbufp;
   BooleanExpression *boolexp;
@@ -397,7 +397,8 @@ void look_in(DbRef player, DbRef loc, int key) {
 }
 
 void do_look(DbRef player, DbRef cause, int key, char *name) {
-  DbRef thing, loc, look_key;
+  DbRef thing, loc;
+  int look_key;
 
   look_key = LK_SHOWATTR | LK_SHOWEXIT;
 
@@ -508,7 +509,7 @@ static void debug_examine(DbRef player, DbRef thing) {
 
   buf = alloc_lbuf("debug_dexamine");
   cp = buf;
-  safe_str((char *)"Attr list: ", buf, &cp);
+  safe_str("Attr list: ", buf, &cp);
 
   for (ca = attribute_list_first(thing, &as); ca;
        ca = attribute_list_next(&as)) {
@@ -521,7 +522,7 @@ static void debug_examine(DbRef player, DbRef thing) {
       if (attr) { /*
                    * Valid attr.
                    */
-        safe_str((char *)attr->name, buf, &cp);
+        safe_str(attr->name, buf, &cp);
         safe_chr(' ', buf, &cp);
       } else {
         safe_str(tprintf("%d ", ca), buf, &cp);
@@ -553,7 +554,7 @@ static void exam_wildattrs(DbRef player, DbRef thing, int do_parent) {
   Attribute *ap;
 
   got_any = 0;
-  for (atr = olist_first(); atr != NOTHING; atr = olist_next()) {
+  for (atr = (int)olist_first(); atr != NOTHING; atr = (int)olist_next()) {
     ap = attribute_by_number(atr);
     if (!ap)
       continue;
@@ -580,19 +581,19 @@ static void exam_wildattrs(DbRef player, DbRef thing, int do_parent) {
     } else if ((typeof_obj(thing) == TYPE_PLAYER) &&
                read_attr(player, thing, ap, aowner, aflags)) {
       got_any = 1;
-      if (aowner == obj_owner(player)) {
+      if (aowner == obj_owner(player) || atr != A_DESC) {
         view_atr(player, thing, ap, buf, aowner, aflags, 0);
-      } else if ((atr == A_DESC) &&
-                 (mudconf.read_rem_desc || nearby(player, thing))) {
+      } else if (mudconf.read_rem_desc || nearby(player, thing)) {
         show_desc(player, thing, 0);
-      } else if (atr != A_DESC) {
-        view_atr(player, thing, ap, buf, aowner, aflags, 0);
       } else {
         notify(player, "<Too far away to get a good look>");
       }
     } else if (read_attr(player, thing, ap, aowner, aflags)) {
       got_any = 1;
-      if (aowner == obj_owner(player)) {
+      // The view_atr() branches below aren't a safe merge: when atr ==
+      // A_DESC and nearby() is true, the show_desc() branch above must win,
+      // so the last branch's nearby() check has to stay order-dependent.
+      if (aowner == obj_owner(player)) { // NOLINT(bugprone-branch-clone)
         view_atr(player, thing, ap, buf, aowner, aflags, 0);
       } else if ((atr == A_DESC) &&
                  (mudconf.read_rem_desc || nearby(player, thing))) {
@@ -900,7 +901,7 @@ void do_inventory(DbRef player, DbRef cause, int key) {
        */
       for (s = Name(thing); *s && (*s != ';'); s++)
         safe_chr(*s, buff, &e);
-      safe_str((char *)"  ", buff, &e);
+      safe_str("  ", buff, &e);
     }
     *e = 0;
     notify(player, buff);
@@ -961,6 +962,8 @@ void do_entrances(DbRef player, DbRef cause, int key, char *name) {
           free_lbuf(exit);
           count++;
         }
+        break;
+      default:
         break;
       }
 
@@ -1096,20 +1099,20 @@ static void sweep_check(DbRef player, DbRef what, int key, int is_loc) {
     bp = buf;
 
     if (cancom)
-      safe_str((char *)"commands ", buf, &bp);
+      safe_str("commands ", buf, &bp);
     if (canhear)
-      safe_str((char *)"messages ", buf, &bp);
+      safe_str("messages ", buf, &bp);
     if (isplayer)
-      safe_str((char *)"player ", buf, &bp);
+      safe_str("player ", buf, &bp);
     if (ispuppet) {
-      safe_str((char *)"is_puppet(", buf, &bp);
+      safe_str("is_puppet(", buf, &bp);
       safe_str(Name(obj_owner(what)), buf, &bp);
-      safe_str((char *)") ", buf, &bp);
+      safe_str(") ", buf, &bp);
     }
     if (isconnected)
-      safe_str((char *)"connected ", buf, &bp);
+      safe_str("connected ", buf, &bp);
     if (is_parent)
-      safe_str((char *)"parent ", buf, &bp);
+      safe_str("parent ", buf, &bp);
     bp[-1] = '\0';
     if (typeof_obj(what) != TYPE_EXIT) {
       notify_printf(player, "  %s is listening. [%s]", Name(what), buf);

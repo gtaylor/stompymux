@@ -36,61 +36,61 @@ constexpr char CACHING[] = "object";
  * * Switch tables for the various commands.
  */
 
-// This sw may be spec'd w/others
-constexpr unsigned int SW_MULTIPLE = 0x80000000;
+// This sw may be spec'd w/others. Stored as int (not unsigned) so it ORs
+// cleanly into NameTable.flag/CMDENT.extra without signedness conversions;
+// C23 guarantees the top-bit pattern converts to INT_MIN deterministically.
+constexpr int SW_MULTIPLE = (int)0x80000000U;
 // Already have a unique option
-constexpr unsigned int SW_GOT_UNIQUE = 0x40000000;
+constexpr int SW_GOT_UNIQUE = 0x40000000;
 /*
  * (typically via a switch alias)
  */
 
-NameTable attrib_sw[] = {{(char *)"access", 1, CA_GOD, ATTRIB_ACCESS},
-                         {(char *)"delete", 1, CA_GOD, ATTRIB_DELETE},
-                         {(char *)"rename", 1, CA_GOD, ATTRIB_RENAME},
+NameTable attrib_sw[] = {{"access", 1, CA_GOD, ATTRIB_ACCESS},
+                         {"delete", 1, CA_GOD, ATTRIB_DELETE},
+                         {"rename", 1, CA_GOD, ATTRIB_RENAME},
                          {nullptr, 0, 0, 0}};
 
-NameTable boot_sw[] = {
-    {(char *)"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
-    {(char *)"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
+NameTable boot_sw[] = {{"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
+                       {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
+                       {nullptr, 0, 0, 0}};
 
-NameTable cemit_sw[] = {{(char *)"noheader", 1, CA_PUBLIC, CEMIT_NOHEADER},
+NameTable cemit_sw[] = {{"noheader", 1, CA_PUBLIC, CEMIT_NOHEADER},
                         {nullptr, 0, 0, 0}};
 
 NameTable clone_sw[] = {
-    {(char *)"inherit", 3, CA_PUBLIC, CLONE_INHERIT | SW_MULTIPLE},
-    {(char *)"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
-    {(char *)"location", 1, CA_PUBLIC, CLONE_LOCATION},
-    {(char *)"parent", 2, CA_PUBLIC, CLONE_PARENT | SW_MULTIPLE},
-    {(char *)"preserve", 2, CA_WIZARD, CLONE_PRESERVE | SW_MULTIPLE},
+    {"inherit", 3, CA_PUBLIC, CLONE_INHERIT | SW_MULTIPLE},
+    {"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
+    {"location", 1, CA_PUBLIC, CLONE_LOCATION},
+    {"parent", 2, CA_PUBLIC, CLONE_PARENT | SW_MULTIPLE},
+    {"preserve", 2, CA_WIZARD, CLONE_PRESERVE | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
-NameTable clist_sw[] = {{(char *)"full", 0, CA_PUBLIC, CLIST_FULL},
-                        {nullptr, 0, 0, 0}};
+NameTable clist_sw[] = {{"full", 0, CA_PUBLIC, CLIST_FULL}, {nullptr, 0, 0, 0}};
 
-NameTable cstatus_sw[] = {{(char *)"full", 0, CA_PUBLIC, CSTATUS_FULL},
+NameTable cstatus_sw[] = {{"full", 0, CA_PUBLIC, CSTATUS_FULL},
                           {nullptr, 0, 0, 0}};
 
-NameTable cset_sw[] = {{(char *)"public", 2, CA_PUBLIC, CSET_PUBLIC},
-                       {(char *)"private", 2, CA_PUBLIC, CSET_PRIVATE},
-                       {(char *)"loud", 2, CA_PUBLIC, CSET_LOUD},
-                       {(char *)"quiet", 1, CA_PUBLIC, CSET_QUIET},
-                       {(char *)"mute", 1, CA_PUBLIC, CSET_QUIET},
-                       {(char *)"list", 2, CA_PUBLIC, CSET_LIST},
-                       {(char *)"object", 2, CA_PUBLIC, CSET_OBJECT},
-                       {(char *)"transparent", 1, CA_PUBLIC, CSET_TRANSPARENT},
-                       {(char *)"opaque", 1, CA_PUBLIC, CSET_OPAQUE},
+NameTable cset_sw[] = {{"public", 2, CA_PUBLIC, CSET_PUBLIC},
+                       {"private", 2, CA_PUBLIC, CSET_PRIVATE},
+                       {"loud", 2, CA_PUBLIC, CSET_LOUD},
+                       {"quiet", 1, CA_PUBLIC, CSET_QUIET},
+                       {"mute", 1, CA_PUBLIC, CSET_QUIET},
+                       {"list", 2, CA_PUBLIC, CSET_LIST},
+                       {"object", 2, CA_PUBLIC, CSET_OBJECT},
+                       {"transparent", 1, CA_PUBLIC, CSET_TRANSPARENT},
+                       {"opaque", 1, CA_PUBLIC, CSET_OPAQUE},
                        {nullptr, 0, 0, 0}};
 
-NameTable destroy_sw[] = {{(char *)"override", 8, CA_PUBLIC, DEST_OVERRIDE},
-                          {(char *)"recursive", 9, CA_WIZARD, DEST_RECURSIVE},
+NameTable destroy_sw[] = {{"override", 8, CA_PUBLIC, DEST_OVERRIDE},
+                          {"recursive", 9, CA_WIZARD, DEST_RECURSIVE},
                           {nullptr, 0, 0, 0}};
 
-NameTable dig_sw[] = {{(char *)"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
+NameTable dig_sw[] = {{"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
                       {nullptr, 0, 0, 0}};
 
-NameTable dolist_sw[] = {{(char *)"delimit", 1, CA_PUBLIC, DOLIST_DELIMIT},
-                         {(char *)"space", 1, CA_PUBLIC, DOLIST_SPACE},
+NameTable dolist_sw[] = {{"delimit", 1, CA_PUBLIC, DOLIST_DELIMIT},
+                         {"space", 1, CA_PUBLIC, DOLIST_SPACE},
                          {
                              nullptr,
                              0,
@@ -98,156 +98,145 @@ NameTable dolist_sw[] = {{(char *)"delimit", 1, CA_PUBLIC, DOLIST_DELIMIT},
                              0,
                          }};
 
-NameTable drop_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, DROP_QUIET},
+NameTable drop_sw[] = {{"quiet", 1, CA_PUBLIC, DROP_QUIET}, {nullptr, 0, 0, 0}};
+
+NameTable dump_sw[] = {{"structure", 1, CA_WIZARD, DUMP_STRUCT | SW_MULTIPLE},
+                       {"text", 1, CA_WIZARD, DUMP_TEXT | SW_MULTIPLE},
+                       {"optimize", 1, CA_WIZARD, DUMP_OPTIMIZE | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
-NameTable dump_sw[] = {
-    {(char *)"structure", 1, CA_WIZARD, DUMP_STRUCT | SW_MULTIPLE},
-    {(char *)"text", 1, CA_WIZARD, DUMP_TEXT | SW_MULTIPLE},
-    {(char *)"optimize", 1, CA_WIZARD, DUMP_OPTIMIZE | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
-
-NameTable emit_sw[] = {{(char *)"here", 1, CA_PUBLIC, SAY_HERE | SW_MULTIPLE},
-                       {(char *)"room", 1, CA_PUBLIC, SAY_ROOM | SW_MULTIPLE},
+NameTable emit_sw[] = {{"here", 1, CA_PUBLIC, SAY_HERE | SW_MULTIPLE},
+                       {"room", 1, CA_PUBLIC, SAY_ROOM | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
-NameTable enter_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, MOVE_QUIET},
+NameTable enter_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
                         {nullptr, 0, 0, 0}};
 
-NameTable examine_sw[] = {{(char *)"brief", 1, CA_PUBLIC, EXAM_BRIEF},
-                          {(char *)"debug", 1, CA_WIZARD, EXAM_DEBUG},
-                          {(char *)"full", 1, CA_PUBLIC, EXAM_LONG},
-                          {(char *)"parent", 1, CA_PUBLIC, EXAM_PARENT},
+NameTable examine_sw[] = {{"brief", 1, CA_PUBLIC, EXAM_BRIEF},
+                          {"debug", 1, CA_WIZARD, EXAM_DEBUG},
+                          {"full", 1, CA_PUBLIC, EXAM_LONG},
+                          {"parent", 1, CA_PUBLIC, EXAM_PARENT},
                           {nullptr, 0, 0, 0}};
 
-NameTable femit_sw[] = {
-    {(char *)"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
-    {(char *)"room", 1, CA_PUBLIC, PEMIT_ROOM | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
+NameTable femit_sw[] = {{"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
+                        {"room", 1, CA_PUBLIC, PEMIT_ROOM | SW_MULTIPLE},
+                        {nullptr, 0, 0, 0}};
 
 NameTable fixdb_sw[] = {
-    /* {(char *)"add_pname",1,  CA_GOD,     FIXDB_ADD_PN}, */
-    {(char *)"contents", 1, CA_GOD, FIXDB_CON},
-    {(char *)"exits", 1, CA_GOD, FIXDB_EXITS},
-    {(char *)"location", 1, CA_GOD, FIXDB_LOC},
-    {(char *)"next", 1, CA_GOD, FIXDB_NEXT},
-    {(char *)"owner", 1, CA_GOD, FIXDB_OWNER},
-    {(char *)"rename", 1, CA_GOD, FIXDB_NAME},
-    /* {(char *)"rm_pname", 1,  CA_GOD,     FIXDB_DEL_PN}, */
+    /* {"add_pname",1,  CA_GOD,     FIXDB_ADD_PN}, */
+    {"contents", 1, CA_GOD, FIXDB_CON},
+    {"exits", 1, CA_GOD, FIXDB_EXITS},
+    {"location", 1, CA_GOD, FIXDB_LOC},
+    {"next", 1, CA_GOD, FIXDB_NEXT},
+    {"owner", 1, CA_GOD, FIXDB_OWNER},
+    {"rename", 1, CA_GOD, FIXDB_NAME},
+    /* {"rm_pname", 1,  CA_GOD,     FIXDB_DEL_PN}, */
     {nullptr, 0, 0, 0}};
 
-NameTable fpose_sw[] = {{(char *)"default", 1, CA_PUBLIC, 0},
-                        {(char *)"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
+NameTable fpose_sw[] = {{"default", 1, CA_PUBLIC, 0},
+                        {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                         {nullptr, 0, 0, 0}};
 
-NameTable function_sw[] = {{(char *)"privileged", 3, CA_WIZARD, FN_PRIV},
-                           {(char *)"preserve", 3, CA_WIZARD, FN_PRES},
+NameTable function_sw[] = {{"privileged", 3, CA_WIZARD, FN_PRIV},
+                           {"preserve", 3, CA_WIZARD, FN_PRES},
                            {nullptr, 0, 0, 0}};
 
-NameTable get_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, GET_QUIET},
-                      {nullptr, 0, 0, 0}};
+NameTable get_sw[] = {{"quiet", 1, CA_PUBLIC, GET_QUIET}, {nullptr, 0, 0, 0}};
 
-NameTable give_sw[] = {{(char *)"quiet", 1, CA_WIZARD, GIVE_QUIET},
-                       {nullptr, 0, 0, 0}};
+NameTable give_sw[] = {{"quiet", 1, CA_WIZARD, GIVE_QUIET}, {nullptr, 0, 0, 0}};
 
-NameTable goto_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, MOVE_QUIET},
-                       {nullptr, 0, 0, 0}};
+NameTable goto_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET}, {nullptr, 0, 0, 0}};
 
-NameTable halt_sw[] = {{(char *)"all", 1, CA_PUBLIC, HALT_ALL},
-                       {nullptr, 0, 0, 0}};
+NameTable halt_sw[] = {{"all", 1, CA_PUBLIC, HALT_ALL}, {nullptr, 0, 0, 0}};
 
-NameTable leave_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, MOVE_QUIET},
+NameTable leave_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
                         {nullptr, 0, 0, 0}};
 
-NameTable lock_sw[] = {{(char *)"defaultlock", 1, CA_PUBLIC, A_LOCK},
-                       {(char *)"droplock", 1, CA_PUBLIC, A_LDROP},
-                       {(char *)"enterlock", 1, CA_PUBLIC, A_LENTER},
-                       {(char *)"givelock", 1, CA_PUBLIC, A_LGIVE},
-                       {(char *)"leavelock", 2, CA_PUBLIC, A_LLEAVE},
-                       {(char *)"linklock", 2, CA_PUBLIC, A_LLINK},
-                       {(char *)"pagelock", 3, CA_PUBLIC, A_LPAGE},
-                       {(char *)"parentlock", 3, CA_PUBLIC, A_LPARENT},
-                       {(char *)"receivelock", 1, CA_PUBLIC, A_LRECEIVE},
-                       {(char *)"teloutlock", 2, CA_PUBLIC, A_LTELOUT},
-                       {(char *)"tportlock", 2, CA_PUBLIC, A_LTPORT},
-                       {(char *)"uselock", 1, CA_PUBLIC, A_LUSE},
-                       {(char *)"userlock", 4, CA_PUBLIC, A_LUSER},
-                       {(char *)"speechlock", 1, CA_PUBLIC, A_LSPEECH},
+NameTable lock_sw[] = {{"defaultlock", 1, CA_PUBLIC, A_LOCK},
+                       {"droplock", 1, CA_PUBLIC, A_LDROP},
+                       {"enterlock", 1, CA_PUBLIC, A_LENTER},
+                       {"givelock", 1, CA_PUBLIC, A_LGIVE},
+                       {"leavelock", 2, CA_PUBLIC, A_LLEAVE},
+                       {"linklock", 2, CA_PUBLIC, A_LLINK},
+                       {"pagelock", 3, CA_PUBLIC, A_LPAGE},
+                       {"parentlock", 3, CA_PUBLIC, A_LPARENT},
+                       {"receivelock", 1, CA_PUBLIC, A_LRECEIVE},
+                       {"teloutlock", 2, CA_PUBLIC, A_LTELOUT},
+                       {"tportlock", 2, CA_PUBLIC, A_LTPORT},
+                       {"uselock", 1, CA_PUBLIC, A_LUSE},
+                       {"userlock", 4, CA_PUBLIC, A_LUSER},
+                       {"speechlock", 1, CA_PUBLIC, A_LSPEECH},
                        {nullptr, 0, 0, 0}};
 
-NameTable look_sw[] = {{(char *)"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
+NameTable look_sw[] = {{"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
                        {nullptr, 0, 0, 0}};
 
-NameTable notify_sw[] = {{(char *)"all", 1, CA_PUBLIC, NFY_NFYALL},
-                         {(char *)"first", 1, CA_PUBLIC, NFY_NFY},
+NameTable notify_sw[] = {{"all", 1, CA_PUBLIC, NFY_NFYALL},
+                         {"first", 1, CA_PUBLIC, NFY_NFY},
                          {nullptr, 0, 0, 0}};
 
-NameTable open_sw[] = {{(char *)"inventory", 1, CA_PUBLIC, OPEN_INVENTORY},
-                       {(char *)"location", 1, CA_PUBLIC, OPEN_LOCATION},
+NameTable open_sw[] = {{"inventory", 1, CA_PUBLIC, OPEN_INVENTORY},
+                       {"location", 1, CA_PUBLIC, OPEN_LOCATION},
                        {nullptr, 0, 0, 0}};
 
 NameTable pemit_sw[] = {
-    {(char *)"contents", 1, CA_PUBLIC, PEMIT_CONTENTS | SW_MULTIPLE},
-    {(char *)"object", 1, CA_PUBLIC, 0},
-    {(char *)"silent", 1, CA_PUBLIC, 0},
-    {(char *)"list", 1, CA_PUBLIC, PEMIT_LIST | SW_MULTIPLE},
+    {"contents", 1, CA_PUBLIC, PEMIT_CONTENTS | SW_MULTIPLE},
+    {"object", 1, CA_PUBLIC, 0},
+    {"silent", 1, CA_PUBLIC, 0},
+    {"list", 1, CA_PUBLIC, PEMIT_LIST | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
-NameTable pose_sw[] = {{(char *)"default", 1, CA_PUBLIC, 0},
-                       {(char *)"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
+NameTable pose_sw[] = {{"default", 1, CA_PUBLIC, 0},
+                       {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                        {nullptr, 0, 0, 0}};
 
-NameTable ps_sw[] = {{(char *)"all", 1, CA_PUBLIC, PS_ALL | SW_MULTIPLE},
-                     {(char *)"brief", 1, CA_PUBLIC, PS_BRIEF},
-                     {(char *)"long", 1, CA_PUBLIC, PS_LONG},
-                     {(char *)"summary", 1, CA_PUBLIC, PS_SUMM},
+NameTable ps_sw[] = {{"all", 1, CA_PUBLIC, PS_ALL | SW_MULTIPLE},
+                     {"brief", 1, CA_PUBLIC, PS_BRIEF},
+                     {"long", 1, CA_PUBLIC, PS_LONG},
+                     {"summary", 1, CA_PUBLIC, PS_SUMM},
                      {nullptr, 0, 0, 0}};
 
-NameTable set_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, SET_QUIET},
-                      {nullptr, 0, 0, 0}};
+NameTable set_sw[] = {{"quiet", 1, CA_PUBLIC, SET_QUIET}, {nullptr, 0, 0, 0}};
 
-NameTable stats_sw[] = {{(char *)"all", 1, CA_PUBLIC, STAT_ALL},
-                        {(char *)"me", 1, CA_PUBLIC, STAT_ME},
-                        {(char *)"player", 1, CA_PUBLIC, STAT_PLAYER},
+NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
+                        {"me", 1, CA_PUBLIC, STAT_ME},
+                        {"player", 1, CA_PUBLIC, STAT_PLAYER},
                         {nullptr, 0, 0, 0}};
 
 NameTable sweep_sw[] = {
-    {(char *)"commands", 3, CA_PUBLIC, SWEEP_COMMANDS | SW_MULTIPLE},
-    {(char *)"connected", 3, CA_PUBLIC, SWEEP_CONNECT | SW_MULTIPLE},
-    {(char *)"exits", 1, CA_PUBLIC, SWEEP_EXITS | SW_MULTIPLE},
-    {(char *)"here", 1, CA_PUBLIC, SWEEP_HERE | SW_MULTIPLE},
-    {(char *)"inventory", 1, CA_PUBLIC, SWEEP_ME | SW_MULTIPLE},
-    {(char *)"listeners", 1, CA_PUBLIC, SWEEP_LISTEN | SW_MULTIPLE},
-    {(char *)"players", 1, CA_PUBLIC, SWEEP_PLAYER | SW_MULTIPLE},
+    {"commands", 3, CA_PUBLIC, SWEEP_COMMANDS | SW_MULTIPLE},
+    {"connected", 3, CA_PUBLIC, SWEEP_CONNECT | SW_MULTIPLE},
+    {"exits", 1, CA_PUBLIC, SWEEP_EXITS | SW_MULTIPLE},
+    {"here", 1, CA_PUBLIC, SWEEP_HERE | SW_MULTIPLE},
+    {"inventory", 1, CA_PUBLIC, SWEEP_ME | SW_MULTIPLE},
+    {"listeners", 1, CA_PUBLIC, SWEEP_LISTEN | SW_MULTIPLE},
+    {"players", 1, CA_PUBLIC, SWEEP_PLAYER | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
-NameTable switch_sw[] = {{(char *)"all", 1, CA_PUBLIC, SWITCH_ANY},
-                         {(char *)"default", 1, CA_PUBLIC, SWITCH_DEFAULT},
-                         {(char *)"first", 1, CA_PUBLIC, SWITCH_ONE},
+NameTable switch_sw[] = {{"all", 1, CA_PUBLIC, SWITCH_ANY},
+                         {"default", 1, CA_PUBLIC, SWITCH_DEFAULT},
+                         {"first", 1, CA_PUBLIC, SWITCH_ONE},
                          {nullptr, 0, 0, 0}};
 
-NameTable teleport_sw[] = {{(char *)"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
-                           {(char *)"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
+NameTable teleport_sw[] = {{"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
+                           {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
                            {nullptr, 0, 0, 0}};
 
-NameTable trig_sw[] = {{(char *)"quiet", 1, CA_PUBLIC, TRIG_QUIET},
+NameTable trig_sw[] = {{"quiet", 1, CA_PUBLIC, TRIG_QUIET}, {nullptr, 0, 0, 0}};
+
+NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
+                       {"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
+                       {"pose", 1, CA_WIZARD, SAY_WALLPOSE},
+                       {"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
+                       {"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
                        {nullptr, 0, 0, 0}};
 
-NameTable wall_sw[] = {
-    {(char *)"emit", 1, CA_WIZARD, SAY_WALLEMIT},
-    {(char *)"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
-    {(char *)"pose", 1, CA_WIZARD, SAY_WALLPOSE},
-    {(char *)"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
-    {(char *)"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
-    {nullptr, 0, 0, 0}};
-
-NameTable warp_sw[] = {
-    {(char *)"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
-    {(char *)"dump", 1, CA_WIZARD, TWARP_DUMP | SW_MULTIPLE},
-    {(char *)"idle", 1, CA_WIZARD, TWARP_IDLE | SW_MULTIPLE},
-    {(char *)"queue", 1, CA_WIZARD, TWARP_QUEUE | SW_MULTIPLE},
-    {(char *)"events", 1, CA_WIZARD, TWARP_EVENTS | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
+NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
+                       {"dump", 1, CA_WIZARD, TWARP_DUMP | SW_MULTIPLE},
+                       {"idle", 1, CA_WIZARD, TWARP_IDLE | SW_MULTIPLE},
+                       {"queue", 1, CA_WIZARD, TWARP_QUEUE | SW_MULTIPLE},
+                       {"events", 1, CA_WIZARD, TWARP_EVENTS | SW_MULTIPLE},
+                       {nullptr, 0, 0, 0}};
 
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
@@ -258,198 +247,559 @@ NameTable warp_sw[] = {
  */
 
 CMDENT command_table[] = {
-    {(char *)"@@", nullptr, 0, 0, CS_NO_ARGS, do_comment},
-    {(char *)"@addcommand", nullptr, CA_GOD, 0, CS_TWO_ARG, do_addcommand},
-    {(char *)"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG | CS_INTERP, do_admin},
-    {(char *)"@alias", nullptr, 0, 0, CS_TWO_ARG, do_alias},
-    {(char *)"@attribute", attrib_sw, CA_GOD, 0, CS_TWO_ARG | CS_INTERP,
-     do_attribute},
-    {(char *)"@boot", boot_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_boot},
-    {(char *)"@cboot", nullptr, 0, 0, CS_TWO_ARG, do_chboot},
-    {(char *)"@cchown", nullptr, 0, 0, CS_TWO_ARG, do_editchannel},
-    {(char *)"@ccreate", nullptr, 0, 0, CS_ONE_ARG, do_createchannel},
-    {(char *)"@cdestroy", nullptr, 0, 0, CS_ONE_ARG, do_destroychannel},
-    {(char *)"@cemit", cemit_sw, 0, 0, CS_TWO_ARG, do_cemit},
-    {(char *)"@chown", nullptr, CA_GBL_BUILD, CHOWN_ONE, CS_TWO_ARG | CS_INTERP,
-     do_chown},
-    {(char *)"@chownall", nullptr, CA_WIZARD | CA_GBL_BUILD, CHOWN_ALL,
-     CS_TWO_ARG | CS_INTERP, do_chownall},
-    {(char *)"@chzone", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_INTERP,
-     do_chzone},
-    {(char *)"@clone", clone_sw, CA_GBL_BUILD | CA_CONTENTS, 0,
-     CS_TWO_ARG | CS_INTERP, do_clone},
-    {(char *)"@clist", clist_sw, 0, 0, CS_NO_ARGS, do_chanlist},
-    {(char *)"@cstatus", cstatus_sw, 0, 0, CS_ONE_ARG, do_chanstatus},
-    {(char *)"@coflags", nullptr, 0, 4, CS_TWO_ARG, do_editchannel},
-    {(char *)"@cpattr", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV,
-     do_cpattr},
-    {(char *)"@cpflags", nullptr, 0, 3, CS_TWO_ARG, do_editchannel},
-    {(char *)"@create", nullptr, CA_GBL_BUILD | CA_CONTENTS, 0,
-     CS_ONE_ARG | CS_INTERP, do_create},
-    {(char *)"@cset", cset_sw, 0, 0, CS_TWO_ARG | CS_INTERP, do_chopen},
-    {(char *)"@cut", nullptr, CA_WIZARD | CA_LOCATION, 0,
-     CS_ONE_ARG | CS_INTERP, do_cut},
-    {(char *)"@cwho", nullptr, 0, 0, CS_ONE_ARG, do_channelwho},
-    {(char *)"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, do_dbck},
-    {(char *)"@dbclean", nullptr, CA_GOD, 0, CS_NO_ARGS, do_dbclean},
-    {(char *)"@delcommand", nullptr, CA_GOD, 0, CS_TWO_ARG, do_delcommand},
-    {(char *)"@destroy", destroy_sw, CA_GBL_BUILD, DEST_ONE,
-     CS_ONE_ARG | CS_INTERP, do_destroy},
-    /*{(char *)"@destroyall", NULL, CA_WIZARD|CA_GBL_BUILD,
-       DEST_ALL, CS_ONE_ARG, do_destroy}, */
-    {(char *)"@dig", dig_sw, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV | CS_INTERP,
-     do_dig},
-    {(char *)"@disable", nullptr, CA_WIZARD, GLOB_DISABLE, CS_ONE_ARG,
-     do_global},
-    {(char *)"@dolist", dolist_sw, CA_GBL_INTERP, 0,
+    {"@@", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_comment}},
+    {"@addcommand",
+     nullptr,
+     CA_GOD,
+     0,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_addcommand}},
+    {"@admin",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_admin}},
+    {"@alias", nullptr, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_alias}},
+    {"@attribute",
+     attrib_sw,
+     CA_GOD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_attribute}},
+    {"@boot", boot_sw, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_boot}},
+    {"@cboot", nullptr, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_chboot}},
+    {"@cchown", nullptr, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_editchannel}},
+    {"@ccreate", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_createchannel}},
+    {"@cdestroy", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_destroychannel}},
+    {"@cemit", cemit_sw, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_cemit}},
+    {"@chown",
+     nullptr,
+     CA_GBL_BUILD,
+     CHOWN_ONE,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_chown}},
+    {"@chownall",
+     nullptr,
+     CA_WIZARD | CA_GBL_BUILD,
+     CHOWN_ALL,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_chownall}},
+    {"@chzone",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_chzone}},
+    {"@clone",
+     clone_sw,
+     CA_GBL_BUILD | CA_CONTENTS,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_clone}},
+    {"@clist", clist_sw, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_chanlist}},
+    {"@cstatus", cstatus_sw, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_chanstatus}},
+    {"@coflags", nullptr, 0, 4, CS_TWO_ARG, {(GenericFnPtr)do_editchannel}},
+    {"@cpattr",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_ARGV,
+     {(GenericFnPtr)do_cpattr}},
+    {"@cpflags", nullptr, 0, 3, CS_TWO_ARG, {(GenericFnPtr)do_editchannel}},
+    {"@create",
+     nullptr,
+     CA_GBL_BUILD | CA_CONTENTS,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_create}},
+    {"@cset", cset_sw, 0, 0, CS_TWO_ARG | CS_INTERP, {(GenericFnPtr)do_chopen}},
+    {"@cut",
+     nullptr,
+     CA_WIZARD | CA_LOCATION,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_cut}},
+    {"@cwho", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_channelwho}},
+    {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dbck}},
+    {"@dbclean", nullptr, CA_GOD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dbclean}},
+    {"@delcommand",
+     nullptr,
+     CA_GOD,
+     0,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_delcommand}},
+    {"@destroy",
+     destroy_sw,
+     CA_GBL_BUILD,
+     DEST_ONE,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_destroy}},
+    /*{"@destroyall", NULL, CA_WIZARD|CA_GBL_BUILD,
+       DEST_ALL, CS_ONE_ARG, {(GenericFnPtr)do_destroy}}, */
+    {"@dig",
+     dig_sw,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_ARGV | CS_INTERP,
+     {(GenericFnPtr)do_dig}},
+    {"@disable",
+     nullptr,
+     CA_WIZARD,
+     GLOB_DISABLE,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_global}},
+    {"@dolist",
+     dolist_sw,
+     CA_GBL_INTERP,
+     0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
-     do_dolist},
-    {(char *)"@drain", nullptr, CA_GBL_INTERP, NFY_DRAIN, CS_TWO_ARG,
-     do_notify},
-    {(char *)"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, do_dump},
-    {(char *)"@edit", nullptr, 0, 0, CS_TWO_ARG | CS_ARGV | CS_STRIP_AROUND,
-     do_edit},
-    {(char *)"@emit", emit_sw, CA_LOCATION, SAY_EMIT, CS_ONE_ARG | CS_INTERP,
-     do_say},
-    {(char *)"@enable", nullptr, CA_WIZARD, GLOB_ENABLE, CS_ONE_ARG, do_global},
-    {(char *)"@entrances", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, do_entrances},
-    {(char *)"@femit", femit_sw, CA_LOCATION, PEMIT_FEMIT,
-     CS_TWO_ARG | CS_INTERP, do_pemit},
-    {(char *)"@find", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, do_find},
-    {(char *)"@fixdb", fixdb_sw, CA_GOD, 0, CS_TWO_ARG | CS_INTERP, do_fixdb},
-    /*{(char *)"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, do_fnd}, */
-    {(char *)"@force", nullptr, CA_GBL_INTERP, FRC_COMMAND,
-     CS_TWO_ARG | CS_INTERP | CS_CMDARG | CS_NO_MACRO, do_force},
-    {(char *)"@fpose", fpose_sw, CA_LOCATION, PEMIT_FPOSE,
-     CS_TWO_ARG | CS_INTERP, do_pemit},
-    {(char *)"@fsay", nullptr, CA_LOCATION, PEMIT_FSAY, CS_TWO_ARG | CS_INTERP,
-     do_pemit},
-    {(char *)"@function", function_sw, CA_GOD, 0, CS_TWO_ARG | CS_INTERP,
-     do_function},
-    {(char *)"@halt", halt_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_halt},
-    {(char *)"@kick", nullptr, CA_WIZARD, QUEUE_KICK, CS_ONE_ARG | CS_INTERP,
-     do_queue},
-    {(char *)"@last", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, do_last},
-    {(char *)"@link", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_INTERP,
-     do_link},
-    {(char *)"@luaparent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, do_luaparent},
-    {(char *)"@luacheck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, do_luacheck},
-    {(char *)"@luareload", nullptr, CA_WIZARD, 0, CS_NO_ARGS, do_luareload},
-    {(char *)"@luaschedule", nullptr, CA_WIZARD, 0, CS_ONE_ARG, do_luaschedule},
-    {(char *)"@list", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, do_list},
-    {(char *)"@listcommands", nullptr, CA_GOD, 0, CS_ONE_ARG, do_listcommands},
-    {(char *)"@list_file", nullptr, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,
-     do_list_file},
-    {(char *)"@lock", lock_sw, 0, 0, CS_TWO_ARG | CS_INTERP, do_lock},
+     {(GenericFnPtr)do_dolist}},
+    {"@drain",
+     nullptr,
+     CA_GBL_INTERP,
+     NFY_DRAIN,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_notify}},
+    {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dump}},
+    {"@edit",
+     nullptr,
+     0,
+     0,
+     CS_TWO_ARG | CS_ARGV | CS_STRIP_AROUND,
+     {(GenericFnPtr)do_edit}},
+    {"@emit",
+     emit_sw,
+     CA_LOCATION,
+     SAY_EMIT,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_say}},
+    {"@enable",
+     nullptr,
+     CA_WIZARD,
+     GLOB_ENABLE,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_global}},
+    {"@entrances",
+     nullptr,
+     0,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_entrances}},
+    {"@femit",
+     femit_sw,
+     CA_LOCATION,
+     PEMIT_FEMIT,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pemit}},
+    {"@find", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_find}},
+    {"@fixdb",
+     fixdb_sw,
+     CA_GOD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_fixdb}},
+    /*{"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, {(GenericFnPtr)do_fnd}}, */
+    {"@force",
+     nullptr,
+     CA_GBL_INTERP,
+     FRC_COMMAND,
+     CS_TWO_ARG | CS_INTERP | CS_CMDARG | CS_NO_MACRO,
+     {(GenericFnPtr)do_force}},
+    {"@fpose",
+     fpose_sw,
+     CA_LOCATION,
+     PEMIT_FPOSE,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pemit}},
+    {"@fsay",
+     nullptr,
+     CA_LOCATION,
+     PEMIT_FSAY,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pemit}},
+    {"@function",
+     function_sw,
+     CA_GOD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_function}},
+    {"@halt", halt_sw, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_halt}},
+    {"@kick",
+     nullptr,
+     CA_WIZARD,
+     QUEUE_KICK,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_queue}},
+    {"@last", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_last}},
+    {"@link",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_link}},
+    {"@luaparent",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_luaparent}},
+    {"@luacheck",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_NO_ARGS,
+     {(GenericFnPtr)do_luacheck}},
+    {"@luareload",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_NO_ARGS,
+     {(GenericFnPtr)do_luareload}},
+    {"@luaschedule",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_luaschedule}},
+    {"@list", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_list}},
+    {"@listcommands",
+     nullptr,
+     CA_GOD,
+     0,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_listcommands}},
+    {"@list_file",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_list_file}},
+    {"@lock", lock_sw, 0, 0, CS_TWO_ARG | CS_INTERP, {(GenericFnPtr)do_lock}},
 #ifdef ARBITRARY_LOGFILES
-    {(char *)"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, do_log},
+    {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_log}},
 #endif
-    {(char *)"@mvattr", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_ARGV,
-     do_mvattr},
-    {(char *)"@name", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG | CS_INTERP,
-     do_name},
-    {(char *)"@newpassword", nullptr, CA_WIZARD, PASS_ANY, CS_TWO_ARG,
-     do_newpassword},
-    {(char *)"@notify", notify_sw, CA_GBL_INTERP, 0, CS_TWO_ARG, do_notify},
-    {(char *)"@oemit", nullptr, CA_LOCATION, PEMIT_OEMIT,
-     CS_TWO_ARG | CS_INTERP, do_pemit},
-    {(char *)"@open", open_sw, CA_GBL_BUILD, 0,
-     CS_TWO_ARG | CS_ARGV | CS_INTERP, do_open},
-    {(char *)"@pagelock", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, do_pagelock},
-    {(char *)"@pageunlock", nullptr, 0, 0, CS_ONE_ARG | CS_INTERP,
-     do_pageunlock},
-    {(char *)"@parent", nullptr, CA_GBL_BUILD, 0, CS_TWO_ARG, do_parent},
-    {(char *)"@password", nullptr, 0, PASS_MINE, CS_TWO_ARG, do_password},
-    {(char *)"@pcreate", nullptr, CA_WIZARD | CA_GBL_BUILD, PCRE_PLAYER,
-     CS_TWO_ARG, do_pcreate},
-    {(char *)"@pemit", pemit_sw, 0, PEMIT_PEMIT, CS_TWO_ARG | CS_INTERP,
-     do_pemit},
-    {(char *)"@npemit", pemit_sw, 0, PEMIT_PEMIT, CS_TWO_ARG | CS_UNPARSE,
-     do_pemit},
-    {(char *)"@power", nullptr, 0, 0, CS_TWO_ARG, do_power},
-    {(char *)"@program", nullptr, CA_PUBLIC, 0, CS_TWO_ARG | CS_INTERP,
-     do_prog},
-    {(char *)"@ps", ps_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_ps},
-    {(char *)"@quitprogram", nullptr, CA_PUBLIC, 0, CS_ONE_ARG | CS_INTERP,
-     do_quitprog},
-    {(char *)"@readcache", nullptr, CA_WIZARD, 0, CS_NO_ARGS, do_readcache},
-    {(char *)"@robot", nullptr, CA_GBL_BUILD | CA_PLAYER, PCRE_ROBOT,
-     CS_TWO_ARG, do_pcreate},
-    {(char *)"@search", nullptr, 0, SRCH_SEARCH, CS_ONE_ARG | CS_NOINTERP,
-     do_search},
-    {(char *)"@set", set_sw, CA_GBL_BUILD, 0, CS_TWO_ARG, do_set},
-    {(char *)"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, do_shutdown},
-    {(char *)"@stats", stats_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_stats},
-    {(char *)"@sweep", sweep_sw, 0, 0, CS_ONE_ARG, do_sweep},
-    {(char *)"@switch", switch_sw, CA_GBL_INTERP, 0,
+    {"@mvattr",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_ARGV,
+     {(GenericFnPtr)do_mvattr}},
+    {"@name",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_name}},
+    {"@newpassword",
+     nullptr,
+     CA_WIZARD,
+     PASS_ANY,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_newpassword}},
+    {"@notify",
+     notify_sw,
+     CA_GBL_INTERP,
+     0,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_notify}},
+    {"@oemit",
+     nullptr,
+     CA_LOCATION,
+     PEMIT_OEMIT,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pemit}},
+    {"@open",
+     open_sw,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG | CS_ARGV | CS_INTERP,
+     {(GenericFnPtr)do_open}},
+    {"@pagelock",
+     nullptr,
+     0,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pagelock}},
+    {"@pageunlock",
+     nullptr,
+     0,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pageunlock}},
+    {"@parent",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_parent}},
+    {"@password",
+     nullptr,
+     0,
+     PASS_MINE,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_password}},
+    {"@pcreate",
+     nullptr,
+     CA_WIZARD | CA_GBL_BUILD,
+     PCRE_PLAYER,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_pcreate}},
+    {"@pemit",
+     pemit_sw,
+     0,
+     PEMIT_PEMIT,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_pemit}},
+    {"@npemit",
+     pemit_sw,
+     0,
+     PEMIT_PEMIT,
+     CS_TWO_ARG | CS_UNPARSE,
+     {(GenericFnPtr)do_pemit}},
+    {"@power", nullptr, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_power}},
+    {"@program",
+     nullptr,
+     CA_PUBLIC,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_prog}},
+    {"@ps", ps_sw, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_ps}},
+    {"@quitprogram",
+     nullptr,
+     CA_PUBLIC,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_quitprog}},
+    {"@readcache",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_NO_ARGS,
+     {(GenericFnPtr)do_readcache}},
+    {"@robot",
+     nullptr,
+     CA_GBL_BUILD | CA_PLAYER,
+     PCRE_ROBOT,
+     CS_TWO_ARG,
+     {(GenericFnPtr)do_pcreate}},
+    {"@search",
+     nullptr,
+     0,
+     SRCH_SEARCH,
+     CS_ONE_ARG | CS_NOINTERP,
+     {(GenericFnPtr)do_search}},
+    {"@set", set_sw, CA_GBL_BUILD, 0, CS_TWO_ARG, {(GenericFnPtr)do_set}},
+    {"@shutdown",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_shutdown}},
+    {"@stats",
+     stats_sw,
+     0,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_stats}},
+    {"@sweep", sweep_sw, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_sweep}},
+    {"@switch",
+     switch_sw,
+     CA_GBL_INTERP,
+     0,
      CS_TWO_ARG | CS_ARGV | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND,
-     do_switch},
-    {(char *)"@teleport", teleport_sw, 0, TELEPORT_DEFAULT,
-     CS_TWO_ARG | CS_INTERP, do_teleport},
-    {(char *)"@timewarp", warp_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP,
-     do_timewarp},
-    {(char *)"@trigger", trig_sw, CA_GBL_INTERP, 0, CS_TWO_ARG | CS_ARGV,
-     do_trigger},
-    {(char *)"@unlink", nullptr, CA_GBL_BUILD, 0, CS_ONE_ARG | CS_INTERP,
-     do_unlink},
-    {(char *)"@unlock", lock_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_unlock},
-    {(char *)"@verb", nullptr, CA_GBL_INTERP, 0,
-     CS_TWO_ARG | CS_ARGV | CS_INTERP | CS_STRIP_AROUND, do_verb},
-    {(char *)"@wait", nullptr, CA_GBL_INTERP, 0,
+     {(GenericFnPtr)do_switch}},
+    {"@teleport",
+     teleport_sw,
+     0,
+     TELEPORT_DEFAULT,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_teleport}},
+    {"@timewarp",
+     warp_sw,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_timewarp}},
+    {"@trigger",
+     trig_sw,
+     CA_GBL_INTERP,
+     0,
+     CS_TWO_ARG | CS_ARGV,
+     {(GenericFnPtr)do_trigger}},
+    {"@unlink",
+     nullptr,
+     CA_GBL_BUILD,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_unlink}},
+    {"@unlock",
+     lock_sw,
+     0,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_unlock}},
+    {"@verb",
+     nullptr,
+     CA_GBL_INTERP,
+     0,
+     CS_TWO_ARG | CS_ARGV | CS_INTERP | CS_STRIP_AROUND,
+     {(GenericFnPtr)do_verb}},
+    {"@wait",
+     nullptr,
+     CA_GBL_INTERP,
+     0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
-     do_wait},
-    {(char *)"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG | CS_INTERP,
-     do_say},
-    {(char *)"@wipe", wall_sw, CA_GBL_BUILD, 0, CS_ONE_ARG | CS_INTERP,
-     do_wipe},
-    {(char *)"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, do_addcom},
-    {(char *)"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, do_allcom},
-    {(char *)"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, do_comlist},
-    {(char *)"comtitle", nullptr, CA_NO_IC, 0, CS_TWO_ARG, do_comtitle},
-    {(char *)"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, do_clearcom},
-    {(char *)"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, do_delcom},
-    {(char *)"drop", drop_sw, CA_CONTENTS | CA_LOCATION, 0,
-     CS_ONE_ARG | CS_INTERP, do_drop},
-    {(char *)"enter", enter_sw, CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP,
-     do_enter},
-    {(char *)"examine", examine_sw, 0, 0, CS_ONE_ARG | CS_INTERP, do_examine},
-    {(char *)"get", get_sw, CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP, do_get},
-    {(char *)"give", give_sw, CA_LOCATION, 0, CS_TWO_ARG | CS_INTERP, do_give},
-    {(char *)"goto", goto_sw, CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP, do_move},
+     {(GenericFnPtr)do_wait}},
+    {"@wall",
+     wall_sw,
+     CA_WIZARD,
+     SAY_SHOUT,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_say}},
+    {"@wipe",
+     wall_sw,
+     CA_GBL_BUILD,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_wipe}},
+    {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_addcom}},
+    {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_allcom}},
+    {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_comlist}},
+    {"comtitle", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_comtitle}},
+    {"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_clearcom}},
+    {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_delcom}},
+    {"drop",
+     drop_sw,
+     CA_CONTENTS | CA_LOCATION,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_drop}},
+    {"enter",
+     enter_sw,
+     CA_LOCATION,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_enter}},
+    {"examine",
+     examine_sw,
+     0,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_examine}},
+    {"get",
+     get_sw,
+     CA_LOCATION,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_get}},
+    {"give",
+     give_sw,
+     CA_LOCATION,
+     0,
+     CS_TWO_ARG | CS_INTERP,
+     {(GenericFnPtr)do_give}},
+    {"goto",
+     goto_sw,
+     CA_LOCATION,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_move}},
 #ifdef MOVE_HELP
-    {(char *)"muxhelp", nullptr, 0, HELP_HELP, CS_ONE_ARG, do_help},
+    {"muxhelp", nullptr, 0, HELP_HELP, CS_ONE_ARG, {(GenericFnPtr)do_help}},
 #else
-    {(char *)"help", nullptr, 0, HELP_HELP, CS_ONE_ARG, do_help},
+    {"help", nullptr, 0, HELP_HELP, CS_ONE_ARG, {(GenericFnPtr)do_help}},
 #endif
-    {(char *)"inventory", nullptr, 0, LOOK_INVENTORY, CS_NO_ARGS, do_inventory},
-    {(char *)"leave", leave_sw, CA_LOCATION, 0, CS_NO_ARGS | CS_INTERP,
-     do_leave},
-    {(char *)"look", look_sw, CA_LOCATION, LOOK_LOOK, CS_ONE_ARG | CS_INTERP,
-     do_look},
-    {(char *)"page", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, do_page},
-    {(char *)"pose", pose_sw, CA_LOCATION, SAY_POSE, CS_ONE_ARG | CS_INTERP,
-     do_say},
-    {(char *)"say", nullptr, CA_LOCATION, SAY_SAY, CS_ONE_ARG | CS_INTERP,
-     do_say},
-    {(char *)"think", nullptr, 0, 0, CS_ONE_ARG, do_think},
-    {(char *)"use", nullptr, CA_GBL_INTERP, 0, CS_ONE_ARG | CS_INTERP, do_use},
-    {(char *)"version", nullptr, 0, 0, CS_NO_ARGS, do_version},
-    {(char *)"wizhelp", nullptr, CA_WIZARD, HELP_WIZHELP, CS_ONE_ARG, do_help},
-    {(char *)"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, do_show},
-    {(char *)"+rolls", nullptr, 0, 0, CS_NO_ARGS, do_show_stat},
-    {(char *)"+charclear", nullptr, CA_WIZARD, 0, CS_ONE_ARG, do_charclear},
-    {(char *)"\\", nullptr, CA_LOCATION | CF_DARK, SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP, do_say},
-    {(char *)"#", nullptr, CA_GBL_INTERP | CF_DARK, 0,
-     CS_ONE_ARG | CS_INTERP | CS_CMDARG, do_force_prefixed},
-    {(char *)":", nullptr, CA_LOCATION | CF_DARK, SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN, do_say},
-    {(char *)";", nullptr, CA_LOCATION | CF_DARK, SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN, do_say},
-    {(char *)"\"", nullptr, CA_LOCATION | CF_DARK, SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN, do_say},
-    {(char *)"&", nullptr, CF_DARK, 0, CS_TWO_ARG | CS_LEADIN, do_setvattr},
-    {(char *)nullptr, nullptr, 0, 0, 0, nullptr}};
+    {"inventory",
+     nullptr,
+     0,
+     LOOK_INVENTORY,
+     CS_NO_ARGS,
+     {(GenericFnPtr)do_inventory}},
+    {"leave",
+     leave_sw,
+     CA_LOCATION,
+     0,
+     CS_NO_ARGS | CS_INTERP,
+     {(GenericFnPtr)do_leave}},
+    {"look",
+     look_sw,
+     CA_LOCATION,
+     LOOK_LOOK,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_look}},
+    {"page", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, {(GenericFnPtr)do_page}},
+    {"pose",
+     pose_sw,
+     CA_LOCATION,
+     SAY_POSE,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_say}},
+    {"say",
+     nullptr,
+     CA_LOCATION,
+     SAY_SAY,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_say}},
+    {"think", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_think}},
+    {"use",
+     nullptr,
+     CA_GBL_INTERP,
+     0,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_use}},
+    {"version", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_version}},
+    {"wizhelp",
+     nullptr,
+     CA_WIZARD,
+     HELP_WIZHELP,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_help}},
+    {"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_show}},
+    {"+rolls", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_show_stat}},
+    {"+charclear",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG,
+     {(GenericFnPtr)do_charclear}},
+    {"\\",
+     nullptr,
+     CA_LOCATION | CF_DARK,
+     SAY_PREFIX,
+     CS_ONE_ARG | CS_INTERP,
+     {(GenericFnPtr)do_say}},
+    {"#",
+     nullptr,
+     CA_GBL_INTERP | CF_DARK,
+     0,
+     CS_ONE_ARG | CS_INTERP | CS_CMDARG,
+     {(GenericFnPtr)do_force_prefixed}},
+    {":",
+     nullptr,
+     CA_LOCATION | CF_DARK,
+     SAY_PREFIX,
+     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     {(GenericFnPtr)do_say}},
+    {";",
+     nullptr,
+     CA_LOCATION | CF_DARK,
+     SAY_PREFIX,
+     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     {(GenericFnPtr)do_say}},
+    {"\"",
+     nullptr,
+     CA_LOCATION | CF_DARK,
+     SAY_PREFIX,
+     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     {(GenericFnPtr)do_say}},
+    {"&",
+     nullptr,
+     CF_DARK,
+     0,
+     CS_TWO_ARG | CS_LEADIN,
+     {(GenericFnPtr)do_setvattr}},
+    {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
 CMDENT *prefix_cmds[256];
 
@@ -458,7 +808,8 @@ CMDENT *goto_cmdp;
 void init_cmdtab(void) {
   CMDENT *cp;
   Attribute *ap;
-  char *p, *q;
+  char *p;
+  const char *q;
   char *cbuff;
 
   hash_table_initialize(&mudstate.command_htab, 250 * HASH_FACTOR);
@@ -472,7 +823,7 @@ void init_cmdtab(void) {
     if ((ap->flags & AF_NOCMD) == 0) {
       p = cbuff;
       *p++ = '@';
-      for (q = (char *)ap->name; *q; p++, q++)
+      for (q = ap->name; *q; p++, q++)
         *p = ToLower(*q);
       *p = '\0';
       cp = malloc(sizeof(CMDENT));
@@ -484,7 +835,7 @@ void init_cmdtab(void) {
       }
       cp->extra = ap->number;
       cp->callseq = CS_TWO_ARG;
-      cp->handler = do_setattr;
+      cp->handler.fn = (GenericFnPtr)do_setattr;
       hash_table_add(cp->cmdname, (int *)cp, &mudstate.command_htab);
     }
   }
@@ -514,22 +865,14 @@ void set_prefix_cmds() {
 
   for (i = 0; i < A_USER_START; i++)
     prefix_cmds[i] = nullptr;
-  prefix_cmds['"'] =
-      (CMDENT *)hash_table_find((char *)"\"", &mudstate.command_htab);
-  prefix_cmds[':'] =
-      (CMDENT *)hash_table_find((char *)":", &mudstate.command_htab);
-  prefix_cmds[';'] =
-      (CMDENT *)hash_table_find((char *)";", &mudstate.command_htab);
-  prefix_cmds['\\'] =
-      (CMDENT *)hash_table_find((char *)"\\", &mudstate.command_htab);
-  prefix_cmds['#'] =
-      (CMDENT *)hash_table_find((char *)"#", &mudstate.command_htab);
-  prefix_cmds['&'] =
-      (CMDENT *)hash_table_find((char *)"&", &mudstate.command_htab);
-  prefix_cmds['-'] =
-      (CMDENT *)hash_table_find((char *)"-", &mudstate.command_htab);
-  prefix_cmds['~'] =
-      (CMDENT *)hash_table_find((char *)"~", &mudstate.command_htab);
+  prefix_cmds['"'] = (CMDENT *)hash_table_find("\"", &mudstate.command_htab);
+  prefix_cmds[':'] = (CMDENT *)hash_table_find(":", &mudstate.command_htab);
+  prefix_cmds[';'] = (CMDENT *)hash_table_find(";", &mudstate.command_htab);
+  prefix_cmds['\\'] = (CMDENT *)hash_table_find("\\", &mudstate.command_htab);
+  prefix_cmds['#'] = (CMDENT *)hash_table_find("#", &mudstate.command_htab);
+  prefix_cmds['&'] = (CMDENT *)hash_table_find("&", &mudstate.command_htab);
+  prefix_cmds['-'] = (CMDENT *)hash_table_find("-", &mudstate.command_htab);
+  prefix_cmds['~'] = (CMDENT *)hash_table_find("~", &mudstate.command_htab);
 }
 
 /*
@@ -541,7 +884,7 @@ int is_in_character_location(DbRef player) {
   int z = 0;
 
   while (is_player(d)) {
-    int od = d;
+    DbRef od = d;
 
     if ((d = obj_location(d)) == od)
       break;
@@ -623,7 +966,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
   char *args[MAX_ARG];
   int nargs = 0, i = 0, fail = 0, interp = 0, key = 0, xkey = 0;
   long aflags = 0;
-  int length = 0;
+  size_t length = 0;
   DbRef aowner = 0;
   char *aargs[10];
   ADDENT *add = nullptr;
@@ -734,7 +1077,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
   case CS_NO_ARGS: /*
                     * <cmd>   (no args)
                     */
-    ((void (*)(DbRef, DbRef, int))cmdp->handler)(player, cause, key);
+    ((void (*)(DbRef, DbRef, int))cmdp->handler.fn)(player, cause, key);
     break;
   case CS_ONE_ARG: /*
                     * <cmd> <arg>
@@ -745,7 +1088,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
      */
 
     if (cmdp->callseq & CS_UNPARSE) {
-      ((void (*)(DbRef, char *))cmdp->handler)(player, unp_command);
+      ((void (*)(DbRef, char *))cmdp->handler.fn)(player, unp_command);
       break;
     }
     /* Interpret if necessary, but not twice for CS_ADDED */
@@ -765,11 +1108,11 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
      */
 
     if (cmdp->callseq & CS_CMDARG) {
-      ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler)(
+      ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler.fn)(
           player, cause, key, buf1, cargs, ncargs);
     } else {
       if (cmdp->callseq & CS_ADDED) {
-        for (add = (ADDENT *)cmdp->handler; add != nullptr; add = add->next) {
+        for (add = cmdp->handler.added; add != nullptr; add = add->next) {
           buff = attribute_get(add->thing, add->atr, &aowner, &aflags);
           /* Skip the '$' character, and the next */
           for (s = buff + 2; *s && (*s != ':'); s++)
@@ -822,8 +1165,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
           free_lbuf(buff);
         }
       } else
-        ((void (*)(DbRef, DbRef, int, char *))cmdp->handler)(player, cause, key,
-                                                             buf1);
+        ((void (*)(DbRef, DbRef, int, char *))cmdp->handler.fn)(player, cause,
+                                                                key, buf1);
     }
 
     /*
@@ -877,10 +1220,10 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
 
       if (cmdp->callseq & CS_CMDARG) {
         ((void (*)(DbRef, DbRef, int, char *, char **, int, char **,
-                   int))cmdp->handler)(player, cause, key, buf1, args, nargs,
-                                       cargs, ncargs);
+                   int))cmdp->handler.fn)(player, cause, key, buf1, args, nargs,
+                                          cargs, ncargs);
       } else {
-        ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler)(
+        ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler.fn)(
             player, cause, key, buf1, args, nargs);
       }
 
@@ -918,10 +1261,10 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
 
       if (cmdp->callseq & CS_CMDARG) {
         ((void (*)(DbRef, DbRef, int, char *, char *, char **,
-                   int))cmdp->handler)(player, cause, key, buf1, buf2, cargs,
-                                       ncargs);
+                   int))cmdp->handler.fn)(player, cause, key, buf1, buf2, cargs,
+                                          ncargs);
       } else {
-        ((void (*)(DbRef, DbRef, int, char *, char *))cmdp->handler)(
+        ((void (*)(DbRef, DbRef, int, char *, char *))cmdp->handler.fn)(
             player, cause, key, buf1, buf2);
       }
 
@@ -939,6 +1282,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
 
     free_lbuf(buf1);
     break;
+  default:
+    break;
   }
   return;
 }
@@ -951,21 +1296,22 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
 void process_command(DbRef player, DbRef cause, int interactive, char *command,
                      char *args[], int nargs) {
   char *p = nullptr, *q = nullptr, *arg = nullptr, *lcbuf = nullptr,
-       *slashp = nullptr, *cmdsave = nullptr, *bp = nullptr, *str = nullptr;
+       *slashp = nullptr, *bp = nullptr, *str = nullptr;
+  const char *cmdsave = nullptr;
   long aflags = 0;
   int succ = 0, lua_succ = 0, i = 0;
   DbRef exit = 0, aowner = 0;
   CMDENT *cmdp = nullptr;
   char *macroout = nullptr;
   int macerr = 0;
-  int length = 0;
+  size_t length = 0;
 
   /*
    * Robustify player
    */
 
   cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = (char *)"< process_command >";
+  mudstate.debug_cmd = "< process_command >";
 
   if (!command) {
     abort();
@@ -1090,7 +1436,15 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
       notify(player, mudconf.fixed_home_msg);
       goto exit;
     }
-    do_move(player, cause, 0, "home");
+    /* do_move()'s parameter isn't const-correct; "home" is only read. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    do_move(player, cause, 0, (char *)"home");
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     mudstate.debug_cmd = cmdsave;
     goto exit;
   }
@@ -1384,11 +1738,12 @@ exit:
 
 static void list_cmdtable(DbRef player) {
   CMDENT *cmdp;
-  char *buf, *bp, *cp;
+  char *buf, *bp;
+  const char *cp;
 
   buf = alloc_lbuf("list_cmdtable");
   bp = buf;
-  for (cp = (char *)"Commands:"; *cp; cp++)
+  for (cp = "Commands:"; *cp; cp++)
     *bp++ = *cp;
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (check_access(player, cmdp->perms)) {
@@ -1419,16 +1774,17 @@ static void list_cmdtable(DbRef player) {
 
 static void list_attrtable(DbRef player) {
   Attribute *ap;
-  char *buf, *bp, *cp;
+  char *buf, *bp;
+  const char *cp;
 
   buf = alloc_lbuf("list_attrtable");
   bp = buf;
-  for (cp = (char *)"Attributes:"; *cp; cp++)
+  for (cp = "Attributes:"; *cp; cp++)
     *bp++ = *cp;
   for (ap = attr_table; ap->name; ap++) {
     if (see_attr(player, player, ap, player, 0)) {
       *bp++ = ' ';
-      for (cp = (char *)(ap->name); *cp; cp++)
+      for (cp = ap->name; *cp; cp++)
         *bp++ = *cp;
     }
   }
@@ -1468,23 +1824,23 @@ static void list_ntab_flags(player, ntab, flaglist)
  * * list_cmdaccess: List access commands.
  */
 
-NameTable access_nametab[] = {
-    {(char *)"god", 2, CA_GOD, CA_GOD},
-    {(char *)"wizard", 3, CA_WIZARD, CA_WIZARD},
-    {(char *)"robot", 2, CA_WIZARD, CA_ROBOT},
-    {(char *)"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
-    {(char *)"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
-    {(char *)"global_build", 8, CA_PUBLIC, CA_GBL_BUILD},
-    {(char *)"global_interp", 8, CA_PUBLIC, CA_GBL_INTERP},
-    {(char *)"disabled", 4, CA_GOD, CA_DISABLED},
-    {(char *)"need_location", 6, CA_PUBLIC, CA_LOCATION},
-    {(char *)"need_contents", 6, CA_PUBLIC, CA_CONTENTS},
-    {(char *)"need_player", 6, CA_PUBLIC, CA_PLAYER},
-    {(char *)"dark", 4, CA_GOD, CF_DARK},
-    {nullptr, 0, 0, 0}};
+NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
+                              {"wizard", 3, CA_WIZARD, CA_WIZARD},
+                              {"robot", 2, CA_WIZARD, CA_ROBOT},
+                              {"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
+                              {"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
+                              {"global_build", 8, CA_PUBLIC, CA_GBL_BUILD},
+                              {"global_interp", 8, CA_PUBLIC, CA_GBL_INTERP},
+                              {"disabled", 4, CA_GOD, CA_DISABLED},
+                              {"need_location", 6, CA_PUBLIC, CA_LOCATION},
+                              {"need_contents", 6, CA_PUBLIC, CA_CONTENTS},
+                              {"need_player", 6, CA_PUBLIC, CA_PLAYER},
+                              {"dark", 4, CA_GOD, CF_DARK},
+                              {nullptr, 0, 0, 0}};
 
 static void list_cmdaccess(DbRef player) {
-  char *buff, *p, *q;
+  char *buff, *p;
+  const char *q;
   CMDENT *cmdp;
   Attribute *ap;
 
@@ -1500,7 +1856,7 @@ static void list_cmdaccess(DbRef player) {
   for (ap = attr_table; ap->name; ap++) {
     p = buff;
     *p++ = '@';
-    for (q = (char *)ap->name; *q; p++, q++)
+    for (q = ap->name; *q; p++, q++)
       *p = ToLower(*q);
     if (ap->flags & AF_NOCMD)
       continue;
@@ -1546,30 +1902,29 @@ static void list_cmdswitches(DbRef player) {
  * list_attraccess: List access to attributes.
  */
 
-NameTable attraccess_nametab[] = {
-    {(char *)"dark", 2, CA_WIZARD, AF_DARK},
-    {(char *)"deleted", 2, CA_WIZARD, AF_DELETED},
-    {(char *)"god", 1, CA_PUBLIC, AF_GOD},
-    {(char *)"hidden", 1, CA_WIZARD, AF_MDARK},
-    {(char *)"ignore", 2, CA_WIZARD, AF_NOCMD},
-    {(char *)"internal", 2, CA_WIZARD, AF_INTERNAL},
-    {(char *)"is_lock", 4, CA_PUBLIC, AF_IS_LOCK},
-    {(char *)"locked", 1, CA_PUBLIC, AF_LOCK},
-    {(char *)"no_command", 4, CA_PUBLIC, AF_NOPROG},
-    {(char *)"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
-    {(char *)"private", 1, CA_PUBLIC, AF_ODARK},
-    {(char *)"regexp", 1, CA_PUBLIC, AF_REGEXP},
-    {(char *)"visual", 1, CA_PUBLIC, AF_VISUAL},
-    {(char *)"wizard", 1, CA_PUBLIC, AF_WIZARD},
-    {nullptr, 0, 0, 0}};
+NameTable attraccess_nametab[] = {{"dark", 2, CA_WIZARD, AF_DARK},
+                                  {"deleted", 2, CA_WIZARD, AF_DELETED},
+                                  {"god", 1, CA_PUBLIC, AF_GOD},
+                                  {"hidden", 1, CA_WIZARD, AF_MDARK},
+                                  {"ignore", 2, CA_WIZARD, AF_NOCMD},
+                                  {"internal", 2, CA_WIZARD, AF_INTERNAL},
+                                  {"is_lock", 4, CA_PUBLIC, AF_IS_LOCK},
+                                  {"locked", 1, CA_PUBLIC, AF_LOCK},
+                                  {"no_command", 4, CA_PUBLIC, AF_NOPROG},
+                                  {"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
+                                  {"private", 1, CA_PUBLIC, AF_ODARK},
+                                  {"regexp", 1, CA_PUBLIC, AF_REGEXP},
+                                  {"visual", 1, CA_PUBLIC, AF_VISUAL},
+                                  {"wizard", 1, CA_PUBLIC, AF_WIZARD},
+                                  {nullptr, 0, 0, 0}};
 
 NameTable indiv_attraccess_nametab[] = {
-    {(char *)"hidden", 1, CA_WIZARD, AF_MDARK},
-    {(char *)"wizard", 1, CA_WIZARD, AF_WIZARD},
-    {(char *)"no_command", 4, CA_PUBLIC, AF_NOPROG},
-    {(char *)"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
-    {(char *)"visual", 1, CA_PUBLIC, AF_VISUAL},
-    {(char *)"regexp", 1, CA_PUBLIC, AF_REGEXP},
+    {"hidden", 1, CA_WIZARD, AF_MDARK},
+    {"wizard", 1, CA_WIZARD, AF_WIZARD},
+    {"no_command", 4, CA_PUBLIC, AF_NOPROG},
+    {"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
+    {"visual", 1, CA_PUBLIC, AF_VISUAL},
+    {"regexp", 1, CA_PUBLIC, AF_REGEXP},
     {nullptr, 0, 0, 0}};
 
 /* *INDENT-ON* */
@@ -1631,14 +1986,15 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
 int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
   CMDENT *cmdp;
   Attribute *ap;
-  char *buff, *p, *q;
+  char *buff, *p;
+  const char *q;
   int failure, save;
 
   buff = alloc_sbuf("cf_acmd_access");
   for (ap = attr_table; ap->name; ap++) {
     p = buff;
     *p++ = '@';
-    for (q = (char *)ap->name; *q; p++, q++)
+    for (q = ap->name; *q; p++, q++)
       *p = ToLower(*q);
     *p = '\0';
     cmdp = (CMDENT *)hash_table_find(buff, &mudstate.command_htab);
@@ -1687,7 +2043,7 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
  * * cf_cmd_alias: Add a command alias.
  */
 
-int cf_cmd_alias(int *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
   char *alias, *orig, *ap;
   CMDENT *cmdp, *cmd2;
   NameTable *nt;
@@ -1745,7 +2101,16 @@ int cf_cmd_alias(int *vp, char *str, long extra, DbRef player, char *cmd) {
     cmd2->callseq = cmdp->callseq;
     cmd2->handler = cmdp->handler;
     if (hash_table_add(cmd2->cmdname, (int *)cmd2, (HashTable *)vp)) {
-      free(cmd2->cmdname);
+      /* cmd2->cmdname was allocated by strsave() above; freeing it needs
+         to discard the const we otherwise want on CMDENT.cmdname. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+      free((void *)cmd2->cmdname);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       free(cmd2);
     }
   } else {
@@ -2048,28 +2413,27 @@ constexpr int LIST_PROCESS = 21;
 constexpr int LIST_BADNAMES = 22;
 constexpr int LIST_LOGFILES = 23;
 
-NameTable list_names[] = {
-    {(char *)"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},
-    {(char *)"attributes", 2, CA_PUBLIC, LIST_ATTRIBUTES},
-    {(char *)"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
-    {(char *)"commands", 3, CA_PUBLIC, LIST_COMMANDS},
-    {(char *)"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
-    {(char *)"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
-    {(char *)"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
-    {(char *)"flags", 2, CA_PUBLIC, LIST_FLAGS},
-    {(char *)"functions", 2, CA_PUBLIC, LIST_FUNCTIONS},
-    {(char *)"globals", 1, CA_WIZARD, LIST_GLOBALS},
-    {(char *)"logging", 4, CA_GOD, LIST_LOGGING},
-    {(char *)"options", 1, CA_PUBLIC, LIST_OPTIONS},
-    {(char *)"permissions", 2, CA_WIZARD, LIST_PERMS},
-    {(char *)"powers", 2, CA_WIZARD, LIST_POWERS},
-    {(char *)"process", 2, CA_WIZARD, LIST_PROCESS},
-    {(char *)"site_information", 2, CA_WIZARD, LIST_SITEINFO},
-    {(char *)"switches", 2, CA_PUBLIC, LIST_SWITCHES},
+NameTable list_names[] = {{"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},
+                          {"attributes", 2, CA_PUBLIC, LIST_ATTRIBUTES},
+                          {"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
+                          {"commands", 3, CA_PUBLIC, LIST_COMMANDS},
+                          {"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
+                          {"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
+                          {"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
+                          {"flags", 2, CA_PUBLIC, LIST_FLAGS},
+                          {"functions", 2, CA_PUBLIC, LIST_FUNCTIONS},
+                          {"globals", 1, CA_WIZARD, LIST_GLOBALS},
+                          {"logging", 4, CA_GOD, LIST_LOGGING},
+                          {"options", 1, CA_PUBLIC, LIST_OPTIONS},
+                          {"permissions", 2, CA_WIZARD, LIST_PERMS},
+                          {"powers", 2, CA_WIZARD, LIST_POWERS},
+                          {"process", 2, CA_WIZARD, LIST_PROCESS},
+                          {"site_information", 2, CA_WIZARD, LIST_SITEINFO},
+                          {"switches", 2, CA_PUBLIC, LIST_SWITCHES},
 #ifdef ARBITRARY_LOGFILES
-    {(char *)"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
+                          {"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
 #endif
-    {nullptr, 0, 0, 0}};
+                          {nullptr, 0, 0, 0}};
 
 extern NameTable enable_names[];
 extern NameTable logoptions_nametab[];
@@ -2103,8 +2467,7 @@ void do_list(DbRef player, DbRef cause, int extra, char *arg) {
     break;
   case LIST_GLOBALS:
     name_table_interpret(player, enable_names, mudconf.control_flags,
-                         (char *)"Global parameters:", (char *)"enabled",
-                         (char *)"disabled");
+                         "Global parameters:", "enabled", "disabled");
     break;
   case LIST_DF_FLAGS:
     list_df_flags(player);
@@ -2123,11 +2486,9 @@ void do_list(DbRef player, DbRef cause, int extra, char *arg) {
     break;
   case LIST_LOGGING:
     name_table_interpret(player, logoptions_nametab, mudconf.log_options,
-                         (char *)"Events Logged:", (char *)"enabled",
-                         (char *)"disabled");
+                         "Events Logged:", "enabled", "disabled");
     name_table_interpret(player, logdata_nametab, mudconf.log_info,
-                         (char *)"Information Logged:", (char *)"yes",
-                         (char *)"no");
+                         "Information Logged:", "yes", "no");
     break;
   case LIST_DB_STATS:
     list_db_stats(player);
@@ -2144,7 +2505,6 @@ void do_list(DbRef player, DbRef cause, int extra, char *arg) {
     break;
 #endif
   default:
-    name_table_display(player, list_names,
-                       (char *)"Unknown option.  Use one of:", 1);
+    name_table_display(player, list_names, "Unknown option.  Use one of:", 1);
   }
 }

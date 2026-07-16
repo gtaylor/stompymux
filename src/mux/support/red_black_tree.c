@@ -469,12 +469,6 @@ int red_black_tree_exists(RedBlackTree bt, void *key) {
   exit(1);
 }
 
-#define rbann(...)                                                             \
-  do {                                                                         \
-    printf("%d: ", __LINE__);                                                  \
-    printf(__VA_ARGS__);                                                       \
-    printf("\n");                                                              \
-  } while (0)
 #define rbfail(...)                                                            \
   do {                                                                         \
     printf("%d: ", __LINE__);                                                  \

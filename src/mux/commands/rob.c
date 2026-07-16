@@ -35,6 +35,8 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
   case AMBIGUOUS:
     notify(giver, "I don't know which you mean!");
     return;
+  default:
+    break;
   }
 
   if (thing == giver) {
@@ -49,9 +51,9 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
   }
   if (!could_doit(giver, thing, A_LGIVE)) {
     sp = str = alloc_lbuf("do_give.gfail");
-    safe_str((char *)"You can't give ", str, &sp);
+    safe_str("You can't give ", str, &sp);
     safe_str(Name(thing), str, &sp);
-    safe_str((char *)" away.", str, &sp);
+    safe_str(" away.", str, &sp);
     *sp = '\0';
 
     did_it(giver, thing, A_GFAIL, str, A_OGFAIL, nullptr, A_AGFAIL,
@@ -62,7 +64,7 @@ static void give_thing(DbRef giver, DbRef recipient, int key, char *what) {
   if (!could_doit(thing, recipient, A_LRECEIVE)) {
     sp = str = alloc_lbuf("do_give.rfail");
     safe_str(Name(recipient), str, &sp);
-    safe_str((char *)" doesn't want ", str, &sp);
+    safe_str(" doesn't want ", str, &sp);
     safe_str(Name(thing), str, &sp);
     safe_chr('.', str, &sp);
     *sp = '\0';
@@ -113,6 +115,8 @@ void do_give(DbRef player, DbRef cause, int key, char *who, char *amnt) {
   case AMBIGUOUS:
     notify(player, "I don't know who you mean!");
     return;
+  default:
+    break;
   }
 
   give_thing(player, recipient, key, amnt);

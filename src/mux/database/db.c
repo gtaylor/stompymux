@@ -5,7 +5,6 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 
-#define __DB_C
 #include "mux/commands/command.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
@@ -328,7 +327,14 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
   int count, errors, fail;
 
   if (!atext)
-    atext = "";
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    atext = (char *)"";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   count = 0;
   errors = 0;
@@ -357,7 +363,7 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
                       target);
         errors++;
       } else {
-        fp->data[count++] = target;
+        fp->data[count++] = (int)target;
       }
     }
   } while (*bp);
@@ -470,7 +476,14 @@ INLINE char *Name(DbRef thing) {
 
   if (mudconf.cache_names) {
     if (thing > mudstate.db_top || thing < 0) {
-      return "#-1 INVALID DBREF";
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+      return (char *)"#-1 INVALID DBREF";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     if (!purenames[thing]) {
       buff = attribute_get(thing, A_NAME, &aowner, &aflags);
@@ -493,7 +506,14 @@ INLINE char *PureName(DbRef thing) {
 
   if (mudconf.cache_names) {
     if (thing > mudstate.db_top || thing < 0) {
-      return "#-1 INVALID DBREF";
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+      return (char *)"#-1 INVALID DBREF";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     if (!purenames[thing]) {
       buff = attribute_get(thing, A_NAME, &aowner, &aflags);
@@ -523,7 +543,16 @@ INLINE void object_name_set(DbRef thing, char *s) {
 }
 
 void object_password_set(DbRef thing, const char *s) {
+  /* attribute_add_raw()'s buffer parameter isn't const-correct; s is only
+     read (copied) here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   attribute_add_raw(thing, A_PASS, (char *)s);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 /*
@@ -630,6 +659,8 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
     vattr_delete(buff);
     notify(player, "Attribute deleted.");
     break;
+  default:
+    break;
   }
   free_sbuf(buff);
   return;
@@ -659,6 +690,8 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     init_match(player, arg2, NOTYPE);
     match_everything(0);
     res = noisy_match_result();
+    break;
+  default:
     break;
   }
 
@@ -699,7 +732,7 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
         return;
       }
       STARTLOG(LOG_SECURITY, "SEC", "CNAME") {
-        log_name(thing), log_text((char *)" renamed to ");
+        log_name(thing), log_text(" renamed to ");
         log_text(arg2);
         ENDLOG;
       }
@@ -719,6 +752,8 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     if (!is_quiet(player))
       notify_printf(player, "Name set to %s", arg2);
     break;
+  default:
+    break;
   }
 }
 
@@ -729,14 +764,15 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
 
 void init_attrtab(void) {
   Attribute *a;
-  char *buff, *p, *q;
+  char *buff, *p;
+  const char *q;
 
   hash_table_initialize(&mudstate.attr_name_htab, 512);
   buff = alloc_sbuf("init_attrtab");
   for (a = attr_table; a->number; a++) {
     anum_extend(a->number);
     anum_set(a->number, a);
-    for (p = buff, q = (char *)a->name; *q; p++, q++)
+    for (p = buff, q = a->name; *q; p++, q++)
       *p = ToUpper(*q);
     *p = '\0';
     hash_table_add(buff, (int *)a, &mudstate.attr_name_htab);
@@ -749,8 +785,9 @@ void init_attrtab(void) {
  * * attribute_by_name: Look up an attribute by name.
  */
 
-Attribute *attribute_by_name(char *s) {
-  char *buff, *p, *q;
+Attribute *attribute_by_name(const char *s) {
+  char *buff, *p;
+  const char *q;
   Attribute *a;
   VATTR *va;
   static Attribute tattr;
@@ -821,11 +858,11 @@ void anum_extend(int newtop) {
   if (newtop < anum_alc_top + delta)
     newtop = anum_alc_top + delta;
   if (anum_table == nullptr) {
-    anum_table = malloc((newtop + 1) * sizeof(Attribute *));
+    anum_table = malloc((size_t)(newtop + 1) * sizeof(Attribute *));
     for (i = 0; i <= newtop; i++)
       anum_table[i] = nullptr;
   } else {
-    anum_table2 = malloc((newtop + 1) * sizeof(Attribute *));
+    anum_table2 = malloc((size_t)(newtop + 1) * sizeof(Attribute *));
     for (i = 0; i <= anum_alc_top; i++)
       anum_table2[i] = anum_table[i];
     for (i = anum_alc_top + 1; i <= newtop; i++)
@@ -1091,7 +1128,7 @@ void attribute_clear(DbRef thing, int atr) {
       db[thing].at_count -= 1;
       if (mid != db[thing].at_count)
         bcopy((char *)(list + mid + 1), (char *)(list + mid),
-              (db[thing].at_count - mid) * sizeof(AttributeList));
+              (size_t)(db[thing].at_count - mid) * sizeof(AttributeList));
       break;
     } else if (list[mid].number > atr) {
       hi = mid - 1;
@@ -1121,6 +1158,8 @@ void attribute_clear(DbRef thing, int atr) {
     break;
   case A_QUEUEMAX:
     pcache_reload(thing);
+    break;
+  default:
     break;
   }
 }
@@ -1157,7 +1196,7 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
     db[thing].at_count = 1;
     list[0].number = atr;
     list[0].data = text;
-    list[0].size = strlen(text) + 1;
+    list[0].size = (int)strlen(text) + 1;
     found = 1;
   } else {
 
@@ -1173,7 +1212,7 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
       if (list[mid].number == atr) {
         free(list[mid].data);
         list[mid].data = text;
-        list[mid].size = strlen(text) + 1;
+        list[mid].size = (int)strlen(text) + 1;
         found = 1;
         break;
       } else if (list[mid].number > atr) {
@@ -1190,7 +1229,7 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
        */
 
       list = realloc(db[thing].ahead,
-                     (db[thing].at_count + 1) * sizeof(AttributeList));
+                     (size_t)(db[thing].at_count + 1) * sizeof(AttributeList));
 
       if (!list)
         return;
@@ -1200,11 +1239,11 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
        */
       if (lo < db[thing].at_count)
         bcopy((char *)(list + lo), (char *)(list + lo + 1),
-              (db[thing].at_count - lo) * sizeof(AttributeList));
+              (size_t)(db[thing].at_count - lo) * sizeof(AttributeList));
 
       list[lo].data = text;
       list[lo].number = atr;
-      list[lo].size = strlen(text) + 1;
+      list[lo].size = (int)strlen(text) + 1;
       db[thing].at_count++;
       db[thing].ahead = list;
     }
@@ -1231,6 +1270,8 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
     break;
   case A_QUEUEMAX:
     pcache_reload(thing);
+    break;
+  default:
     break;
   }
 }
@@ -1490,7 +1531,7 @@ int attribute_list_next(char **attrp) {
   if (!attrp || !*attrp) {
     return 0;
   } else {
-    atr = (ATRCOUNT *)*attrp;
+    atr = (ATRCOUNT *)(void *)*attrp;
     if (atr->count > db[atr->thing].at_count) {
       free(atr);
       *attrp = nullptr;
@@ -1594,7 +1635,7 @@ void db_grow(DbRef newtop) {
         purenames[i] = nullptr;
     }
     initialize_objects(mudstate.db_top, newtop);
-    mudstate.db_top = newtop;
+    mudstate.db_top = (int)newtop;
     return;
   }
   /*
@@ -1604,7 +1645,7 @@ void db_grow(DbRef newtop) {
   if (newtop <= mudstate.db_size + delta) {
     newsize = mudstate.db_size + delta;
   } else {
-    newsize = newtop;
+    newsize = (int)newtop;
   }
 
   /*
@@ -1620,7 +1661,7 @@ void db_grow(DbRef newtop) {
    */
 
   if (mudconf.cache_names) {
-    newpurenames = (NAME *)XMALLOC((newsize + SIZE_HACK) * sizeof(NAME),
+    newpurenames = (NAME *)XMALLOC((size_t)(newsize + SIZE_HACK) * sizeof(NAME),
                                    "db_grow.purenames");
 
     if (!newpurenames) {
@@ -1629,7 +1670,7 @@ void db_grow(DbRef newtop) {
           tprintf("Could not allocate space for %d item name cache.", newsize));
       abort();
     }
-    bzero((char *)newpurenames, (newsize + SIZE_HACK) * sizeof(NAME));
+    bzero((char *)newpurenames, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (purenames) {
 
@@ -1639,7 +1680,7 @@ void db_grow(DbRef newtop) {
 
       purenames -= SIZE_HACK;
       bcopy((char *)purenames, (char *)newpurenames,
-            (newtop + SIZE_HACK) * sizeof(NAME));
+            (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
       cp = (char *)purenames;
       XFREE(cp, "db_grow.purename");
     } else {
@@ -1661,8 +1702,8 @@ void db_grow(DbRef newtop) {
    * Grow the db array
    */
 
-  newdb = (GameObject *)XMALLOC((newsize + SIZE_HACK) * sizeof(GameObject),
-                                "db_grow.db");
+  newdb = (GameObject *)XMALLOC(
+      (size_t)(newsize + SIZE_HACK) * sizeof(GameObject), "db_grow.db");
   if (!newdb) {
 
     LOG_SIMPLE(LOG_ALWAYS, "ALC", "DB",
@@ -1678,7 +1719,7 @@ void db_grow(DbRef newtop) {
 
     db -= SIZE_HACK;
     bcopy((char *)db, (char *)newdb,
-          (mudstate.db_top + SIZE_HACK) * sizeof(GameObject));
+          (size_t)(mudstate.db_top + SIZE_HACK) * sizeof(GameObject));
     cp = (char *)db;
     XFREE(cp, "db_grow.db");
   } else {
@@ -1716,7 +1757,7 @@ void db_grow(DbRef newtop) {
     }
   }
   initialize_objects(mudstate.db_top, newtop);
-  mudstate.db_top = newtop;
+  mudstate.db_top = (int)newtop;
   mudstate.db_size = newsize;
 
   /*
@@ -1724,11 +1765,11 @@ void db_grow(DbRef newtop) {
    */
 
   marksize = (newsize + 7) >> 3;
-  newmarkbuf = (MARKBUF *)XMALLOC(marksize, "db_grow");
-  bzero((char *)newmarkbuf, marksize);
+  newmarkbuf = (MARKBUF *)XMALLOC((size_t)marksize, "db_grow");
+  bzero((char *)newmarkbuf, (size_t)marksize);
   if (mudstate.markbits) {
-    marksize = (newtop + 7) >> 3;
-    bcopy((char *)mudstate.markbits, (char *)newmarkbuf, marksize);
+    marksize = (int)((newtop + 7) >> 3);
+    bcopy((char *)mudstate.markbits, (char *)newmarkbuf, (size_t)marksize);
     cp = (char *)mudstate.markbits;
     XFREE(cp, "db_grow");
   }
@@ -1754,7 +1795,14 @@ void db_make_minimal(void) {
 
   db_free();
   db_grow(1);
-  object_name_set(0, "Limbo");
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+  object_name_set(0, (char *)"Limbo");
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   s_flags(0, TYPE_ROOM);
   s_powers(0, 0);
   s_powers2(0, 0);
@@ -1770,7 +1818,16 @@ void db_make_minimal(void) {
    * should be #1
    */
   load_player_names();
+  /* create_player()'s parameters aren't const-correct; these literals are
+     only read here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   obj = create_player((char *)"Wizard", (char *)"potrzebie", NOTHING, 0);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   s_flags(obj, obj_flags(obj) | WIZARD);
   s_powers(obj, 0);
   s_powers2(obj, 0);
@@ -1828,6 +1885,8 @@ void boolean_expression_free(BooleanExpression *b) {
     free((char *)b->sub1);
     free_bool(b);
     break;
+  default:
+    break;
   }
 }
 
@@ -1856,7 +1915,7 @@ BooleanExpression *boolean_expression_duplicate(BooleanExpression *b) {
   case BOOLEXP_EVAL:
   case BOOLEXP_ATR:
     r->thing = b->thing;
-    r->sub1 = (BooleanExpression *)strsave((char *)b->sub1);
+    r->sub1 = (BooleanExpression *)(void *)strsave((char *)b->sub1);
     break;
   default:
     fprintf(stderr, "bad bool type!!\n");

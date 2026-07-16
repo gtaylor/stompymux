@@ -120,8 +120,8 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
   /* Nasty thing about the new system : we _do_ have to allocate
      mux_event_first_in_type dynamically. */
   if (type > last_muxevent_type) {
-    mux_event_first_in_type =
-        realloc(mux_event_first_in_type, sizeof(MuxEvent *) * (type + 1));
+    mux_event_first_in_type = realloc(mux_event_first_in_type,
+                                      sizeof(MuxEvent *) * (size_t)(type + 1));
     for (i = last_muxevent_type + 1; i <= type; i++)
       mux_event_first_in_type[i] = nullptr;
     last_muxevent_type = type;
@@ -134,11 +134,11 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
     memset(e, 0, sizeof(MuxEvent));
   }
 
-  e->flags = flags;
+  e->flags = (char)flags;
   e->function = func;
   e->data = data;
   e->data2 = data2;
-  e->type = type;
+  e->type = (char)type;
   e->tick = mux_event_tick + time;
   e->next = nullptr;
 

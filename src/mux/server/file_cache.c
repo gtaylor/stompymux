@@ -40,16 +40,15 @@ FCACHE fcache[] = {{mudconf.conn_file, nullptr, "Conn"},
                    {mudconf.quit_file, nullptr, "Quit"},
                    {nullptr, nullptr, nullptr}};
 
-NameTable list_files[] = {
-    {(char *)"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
-    {(char *)"connect", 2, CA_WIZARD, FC_CONN},
-    {(char *)"create_register", 2, CA_WIZARD, FC_CREA_REG},
-    {(char *)"down", 1, CA_WIZARD, FC_CONN_DOWN},
-    {(char *)"full", 1, CA_WIZARD, FC_CONN_FULL},
-    {(char *)"newuser", 1, CA_WIZARD, FC_CREA_NEW},
-    {(char *)"quit", 1, CA_WIZARD, FC_QUIT},
-    {(char *)"register_connect", 1, CA_WIZARD, FC_CONN_REG},
-    {nullptr, 0, 0, 0}};
+NameTable list_files[] = {{"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
+                          {"connect", 2, CA_WIZARD, FC_CONN},
+                          {"create_register", 2, CA_WIZARD, FC_CREA_REG},
+                          {"down", 1, CA_WIZARD, FC_CONN_DOWN},
+                          {"full", 1, CA_WIZARD, FC_CONN_FULL},
+                          {"newuser", 1, CA_WIZARD, FC_CREA_NEW},
+                          {"quit", 1, CA_WIZARD, FC_QUIT},
+                          {"register_connect", 1, CA_WIZARD, FC_CONN_REG},
+                          {nullptr, 0, 0, 0}};
 
 constexpr int MAX_CONN = 100;
 int fcache_conn_c = 0;
@@ -60,8 +59,7 @@ void do_list_file(DbRef player, DbRef cause, int extra, char *arg) {
 
   flagvalue = name_table_search(player, list_files, arg);
   if (flagvalue < 0) {
-    name_table_display(player, list_files,
-                       (char *)"Unknown file.  Use one of:", 1);
+    name_table_display(player, list_files, "Unknown file.  Use one of:", 1);
     return;
   }
   fcache_send(player, flagvalue);
@@ -134,7 +132,7 @@ static int fcache_read(FBLOCK **cp, char *filename) {
    * Process the file, one lbuf at a time
    */
 
-  nmax = read(fd, buff, LBUF_SIZE);
+  nmax = (int)read(fd, buff, LBUF_SIZE);
   while (nmax > 0) {
 
     for (n = 0; n < nmax; n++) {
@@ -151,7 +149,7 @@ static int fcache_read(FBLOCK **cp, char *filename) {
         tchars++;
       }
     }
-    nmax = read(fd, buff, LBUF_SIZE);
+    nmax = (int)read(fd, buff, LBUF_SIZE);
   }
   free_lbuf(buff);
   close(fd);
@@ -172,7 +170,7 @@ static void fcache_read_dir(char *dir, FCACHE foo[], int *cnt, int max) {
   struct dirent *de;
   char buf[LBUF_SIZE] = {0};
 
-  bzero(&foo[0], sizeof(FCACHE) * max);
+  bzero(&foo[0], sizeof(FCACHE) * (size_t)max);
   if (!(d = opendir(dir)))
     return;
   for (*cnt = 0; *cnt < max;) {
@@ -203,7 +201,7 @@ void fcache_rawdump(int fd, int num) {
     remaining = fp->hdr.nchars;
     while (remaining > 0) {
 
-      cnt = write(fd, start, remaining);
+      cnt = (int)write(fd, start, (size_t)remaining);
       if (cnt < 0)
         return;
       remaining -= cnt;
@@ -253,11 +251,11 @@ void fcache_load(DbRef player) {
     if ((player != NOTHING) && !is_quiet(player)) {
       snprintf(sbuf, SBUF_SIZE, "%d", i);
       if (fp == fcache)
-        safe_str((char *)"File sizes: ", buff, &bufc);
+        safe_str("File sizes: ", buff, &bufc);
       else
-        safe_str((char *)"  ", buff, &bufc);
-      safe_str((char *)fp->desc, buff, &bufc);
-      safe_str((char *)"...", buff, &bufc);
+        safe_str("  ", buff, &bufc);
+      safe_str(fp->desc, buff, &bufc);
+      safe_str("...", buff, &bufc);
       safe_str(sbuf, buff, &bufc);
     }
   }

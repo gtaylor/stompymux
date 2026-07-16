@@ -8,23 +8,17 @@ constexpr int LBUF_SIZE = 16384;
 constexpr int MBUF_SIZE = 2048;
 constexpr int SBUF_SIZE = 256;
 
-static inline char *alloc_lbuf(const char *s) {
-  return (char *)malloc(LBUF_SIZE);
-}
+static inline void *alloc_lbuf(const char *s) { return malloc(LBUF_SIZE); }
 static inline void free_lbuf(void *b) {
   if (b)
     free(b);
 }
-static inline char *alloc_mbuf(const char *s) {
-  return (char *)malloc(MBUF_SIZE);
-}
+static inline void *alloc_mbuf(const char *s) { return malloc(MBUF_SIZE); }
 static inline void free_mbuf(void *b) {
   if (b)
     free(b);
 }
-static inline char *alloc_sbuf(const char *s) {
-  return (char *)malloc(SBUF_SIZE);
-}
+static inline void *alloc_sbuf(const char *s) { return malloc(SBUF_SIZE); }
 static inline void free_sbuf(void *b) {
   if (b)
     free(b);

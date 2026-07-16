@@ -56,13 +56,6 @@ extern NameTable indiv_attraccess_nametab[];
                    cargs, ncargs))                                             \
     return;
 
-#define mvarargs_preamble(xname, xminargs, xnargs)                             \
-  if (!fn_range_check(xname, nfargs, xminargs, xnargs, buff, bufc))            \
-    return;                                                                    \
-  if (!delim_check(fargs, nfargs, xnargs, &sep, buff, bufc, 0, player, cause,  \
-                   cargs, ncargs))                                             \
-    return;
-
 /* Returns the dbref of the specified channel's channel object. */
 void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
@@ -89,7 +82,7 @@ void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
   struct channel *ch;
   struct comuser *user;
-  int len = 0;
+  size_t len = 0;
   static char smbuf[SBUF_SIZE];
 
   if (!(ch = select_channel(fargs[0]))) {
@@ -261,6 +254,8 @@ void fun_ansi(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
                */
       safe_str(ANSI_BWHITE, buff, bufc);
       break;
+    default:
+      break;
     }
     s++;
   }
@@ -304,7 +299,8 @@ void fun_pemit(char *buff, char **bufc, DbRef player, DbRef cause,
  * fun_create: Creates a room, thing or exit
  */
 
-static int check_command(DbRef player, char *name, char *buff, char **bufc) {
+static int check_command(DbRef player, const char *name, char *buff,
+                         char **bufc) {
   CMDENT *cmd;
 
   if ((cmd = (CMDENT *)hash_table_find(name, &mudstate.command_htab)))
@@ -569,8 +565,17 @@ static char *crypt_code(char *code, char *text, int type) {
   int mod = end - start + 1;
   char *p, *q, *r;
 
+  /* This function's other paths return the mutable textbuff above; the
+     return type can't be const. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   if (!text || !*text)
     return (char *)"";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   if (!code || !*code)
     return text;
   StringCopy(codebuff, crunch_code(code));
@@ -592,9 +597,9 @@ static char *crypt_code(char *code, char *text, int type) {
       continue;
     }
     if (type)
-      *r++ = (((*p++ - start) + (*q++ - start)) % mod) + start;
+      *r++ = (char)((((*p++ - start) + (*q++ - start)) % mod) + start);
     else
-      *r++ = (((*p++ - *q++) + 2 * mod) % mod) + start;
+      *r++ = (char)((((*p++ - *q++) + 2 * mod) % mod) + start);
     if (!*q)
       q = codebuff;
   }
@@ -609,7 +614,7 @@ void fun_zwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -640,7 +645,7 @@ void fun_zrooms(char *buff, char **bufc, DbRef player, DbRef cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -671,7 +676,7 @@ void fun_zexits(char *buff, char **bufc, DbRef player, DbRef cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -702,7 +707,7 @@ void fun_zobjects(char *buff, char **bufc, DbRef player, DbRef cause,
                   char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -733,7 +738,7 @@ void fun_zplayers(char *buff, char **bufc, DbRef player, DbRef cause,
                   char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -768,7 +773,7 @@ void fun_inzone(char *buff, char **bufc, DbRef player, DbRef cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!mudconf.have_zones || !(is_controls(player, it) || !is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -801,7 +806,7 @@ void fun_children(char *buff, char **bufc, DbRef player, DbRef cause,
                   char *fargs[], int nfargs, char *cargs[], int ncargs) {
   DbRef it = match_thing(player, fargs[0]);
   DbRef i;
-  int len = 0;
+  size_t len = 0;
 
   if (!(is_controls(player, it)) || !(is_wizard(player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -982,7 +987,7 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
     if ((size_t)ansinumber >
         strlen((char *)strip_ansi_r(new, objstring, strlen(objstring))))
       ansinumber =
-          strlen((char *)strip_ansi_r(new, objstring, strlen(objstring)));
+          (int)strlen((char *)strip_ansi_r(new, objstring, strlen(objstring)));
 
     p = objstring;
     q = buf;
@@ -1010,8 +1015,8 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
     *q = '\0';
     isansi = 0;
 
-    spaces = number -
-             strlen((char *)strip_ansi_r(new, objstring, strlen(objstring)));
+    spaces = number - (int)strlen((char *)strip_ansi_r(new, objstring,
+                                                       strlen(objstring)));
 
     /*
      * Sanitize number of spaces
@@ -1025,7 +1030,7 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
       safe_chr(' ', buff, bufc);
 
     if (!(rturn % (int)(78 / number)))
-      safe_str((char *)"\r\n ", buff, bufc);
+      safe_str("\r\n ", buff, bufc);
 
     rturn++;
   }
@@ -1038,22 +1043,23 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
 static int mem_usage(DbRef thing) {
   int k;
   int ca;
-  char *as, *str;
+  char *as;
+  const char *str;
   Attribute *attr;
 
   k = sizeof(struct GameObject);
 
-  k += strlen(Name(thing)) + 1;
+  k += (int)strlen(Name(thing)) + 1;
   for (ca = attribute_list_first(thing, &as); ca;
        ca = attribute_list_next(&as)) {
     str = attribute_get_raw(thing, ca);
     if (str && *str)
-      k += strlen(str);
+      k += (int)strlen(str);
     attr = attribute_by_number(ca);
     if (attr) {
-      str = (char *)attr->name;
+      str = attr->name;
       if (str && *str)
-        k += strlen(((Attribute *)attribute_by_number(ca))->name);
+        k += (int)strlen(((Attribute *)attribute_by_number(ca))->name);
     }
   }
   return k;
@@ -1214,7 +1220,7 @@ void fun_strtrunc(char *buff, char **bufc, DbRef player, DbRef cause,
   strncpy(new, fargs[0], LBUF_SIZE - 1);
   if ((size_t)number >
       strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0]))))
-    number = strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
+    number = (int)strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
 
   if (number < 0) {
     safe_str("#-1 OUT OF RANGE", buff, bufc);
@@ -1745,10 +1751,10 @@ void fun_scramble(char *buff, char **bufc, DbRef player, DbRef cause,
   safe_str(fargs[0], buff, bufc);
   **bufc = '\0';
 
-  n = strlen(old);
+  n = (int)strlen(old);
 
   for (i = 0; i < n; i++) {
-    j = (random() % (n - i)) + i;
+    j = (int)(random() % (n - i)) + i;
     c = old[i];
     old[i] = old[j];
     old[j] = c;
@@ -1789,7 +1795,7 @@ void fun_shuffle(char *buff, char **bufc, DbRef player, DbRef cause,
   n = list2arr(words, LBUF_SIZE, fargs[0], sep);
 
   for (i = 0; i < n; i++) {
-    j = (random() % (n - i)) + i;
+    j = (int)(random() % (n - i)) + i;
     swap(&words[i], &words[j]);
   }
   arr2list(words, n, buff, bufc, sep);
@@ -1818,8 +1824,17 @@ static int u_comp(const void *s1, const void *s2) {
     return 0;
 
   tbuf = alloc_lbuf("u_comp");
+  /* s1/s2 come in via the sane_qsort const void * comparator signature;
+     exec() only reads them as argument text here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   elems[0] = (char *)s1;
   elems[1] = (char *)s2;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   StringCopy(tbuf, ucomp_buff);
   result = bp = alloc_lbuf("u_comp");
   str = tbuf;
@@ -1859,7 +1874,7 @@ loop:
    * This is the pivot, we'll put it back in the right spot later
    */
 
-  i = random() % (1 + (right - left));
+  i = (int)(random() % (1 + (right - left)));
   tmp = array[left + i];
   array[left + i] = array[left];
   array[left] = tmp;
@@ -1995,7 +2010,7 @@ void fun_last(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    */
 
   if (sep == ' ') {
-    len = strlen(s);
+    len = (int)strlen(s);
     for (i = len - 1; s[i] == ' '; i--)
       ;
     if (i + 1 <= len)
@@ -2355,7 +2370,7 @@ static int getrandom(int x) {
    * * for any x, so for any X, the average number of times we should
    * * have to call random() is less than 2.
    */
-  return (n % x);
+  return (int)(n % x);
 }
 
 void fun_die(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
@@ -2503,7 +2518,7 @@ void fun_vmul(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   char *v1[LBUF_SIZE], *v2[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, m, i;
-  float scalar;
+  double scalar;
   char sep;
 
   varargs_preamble("VMUL", 3);
@@ -2564,7 +2579,7 @@ void fun_vmag(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               int nfargs, char *cargs[], int ncargs) {
   char *v1[LBUF_SIZE];
   int n, i;
-  float tmp, res = 0;
+  double tmp, res = 0;
   char sep;
 
   varargs_preamble("VMAG", 2);
@@ -2600,7 +2615,7 @@ void fun_vunit(char *buff, char **bufc, DbRef player, DbRef cause,
   char *v1[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, i;
-  float tmp, res = 0;
+  double tmp, res = 0;
   char sep;
 
   varargs_preamble("VUNIT", 2);
@@ -2663,7 +2678,7 @@ void fun_strcat(char *buff, char **bufc, DbRef player, DbRef cause,
  * grep() and grepi() code borrowed from PennMUSH 1.50
  */
 static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
-                       int len, int insensitive) {
+                       size_t len, int insensitive) {
   /*
    * returns a list of attributes which match <pattern> on <thing> * *
    * * * whose contents have <lookfor>
@@ -2681,7 +2696,7 @@ static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
   safe_tprintf_str(buf, &bufc, "#%ld/%s", thing, pattern);
   olist_push();
   if (parse_attrib_wild(player, buf, &thing, 0, 0, 1)) {
-    for (ca = olist_first(); ca != NOTHING; ca = olist_next()) {
+    for (ca = (int)olist_first(); ca != NOTHING; ca = (int)olist_next()) {
       attrib = attribute_get(thing, ca, &aowner, &aflags);
       text = attrib;
       found = 0;
@@ -2697,7 +2712,7 @@ static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
         if (bp != tbuf1)
           safe_chr(' ', tbuf1, &bp);
 
-        safe_str((char *)(attribute_by_number(ca))->name, tbuf1, &bp);
+        safe_str((attribute_by_number(ca))->name, tbuf1, &bp);
       }
       free_lbuf(attrib);
     }
@@ -2775,7 +2790,7 @@ void fun_art(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   /*
    * checks a word and returns the appropriate article, "a" or "an"
    */
-  char c = tolower(*fargs[0]);
+  char c = (char)tolower(*fargs[0]);
 
   if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u')
     safe_str("an", buff, bufc);
@@ -3217,7 +3232,8 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
       len = 0;
     if (len >= LBUF_SIZE)
       len = LBUF_SIZE - 1;
-    strncpy(mudstate.global_regs[curq], fargs[0] + pmatch[i].rm_so, len);
+    strncpy(mudstate.global_regs[curq], fargs[0] + pmatch[i].rm_so,
+            (size_t)len);
     mudstate.global_regs[curq][len] = '\0'; /* must null-terminate */
   }
   regfree(&re);

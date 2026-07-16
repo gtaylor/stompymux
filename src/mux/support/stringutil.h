@@ -10,7 +10,7 @@ int string_prefix(const char *string, const char *prefix);
 const char *string_match(const char *src, const char *sub);
 char *dollar_to_space(const char *str);
 char *replace_string(const char *old, const char *new, const char *string);
-int minmatch(char *str, char *target, int min);
+int minmatch(const char *str, const char *target, int min);
 char *strsave(const char *s);
 int safe_copy_str(const char *src, char *buff, char **bufp, int max);
 int safe_copy_chr(char src, char *buff, char **bufp, int max);

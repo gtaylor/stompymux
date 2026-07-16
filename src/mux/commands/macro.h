@@ -14,7 +14,7 @@ constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */
 
 typedef struct macroentry MACENT;
 struct macroentry {
-  char *cmdname;
+  const char *cmdname;
   void (*handler)(DbRef, char *);
 };
 

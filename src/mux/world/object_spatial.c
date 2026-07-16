@@ -103,7 +103,7 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
  * IS the room.
  */
 int nearby(DbRef player, DbRef thing) {
-  int thing_loc, player_loc;
+  DbRef thing_loc, player_loc;
 
   if (!is_good_obj(player) || !is_good_obj(thing))
     return 0;

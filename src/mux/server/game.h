@@ -15,7 +15,7 @@ int check_filter(DbRef object, DbRef player, int filter, const char *message);
 void notify_checked(DbRef target, DbRef sender, const char *message, int key);
 int is_hearer(DbRef object);
 void report(void);
-int attribute_match(DbRef thing, DbRef player, char type, char *string,
+int attribute_match(DbRef thing, DbRef player, char type, const char *string,
                     int check_parent);
 int list_check(DbRef player, DbRef thing, char type, char *string,
                int check_parent);

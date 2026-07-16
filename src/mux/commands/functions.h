@@ -131,8 +131,8 @@ int delim_check(char *fargs[], int nfargs, int sep_arg, char *sep, char *buff,
 int countwords(char *str, char sep);
 int do_convtime(char *str, struct tm *ttm);
 char *get_uptime_to_string(int uptime);
-int check_read_perms(DbRef player, DbRef thing, Attribute *attr, int aowner,
-                     int aflags, char *buff, char **bufc);
+int check_read_perms(DbRef player, DbRef thing, Attribute *attr, DbRef aowner,
+                     long aflags, char *buff, char **bufc);
 int xlate(char *arg);
 extern void list_functable(DbRef);
 extern DbRef match_thing(DbRef, char *);

@@ -60,7 +60,7 @@ void do_think(DbRef player, DbRef cause, int key, char *message) {
   str = message;
   exec(buf, &bp, 0, player, cause, EV_FCHECK | EV_EVAL | EV_TOP, &str,
        (char **)nullptr, 0);
-  output_length = strnlen(buf, LBUF_SIZE - 1);
+  output_length = (int)strnlen(buf, LBUF_SIZE - 1);
   buf[output_length] = '\0';
   notify(player, buf);
 }
@@ -114,6 +114,8 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
       return;
     if (!sp_ok(player))
       return;
+  default:
+    break;
   }
 
   /*
@@ -168,7 +170,7 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
     default:
       buf2 = alloc_lbuf("do_say.shout");
       bp = buf2;
-      safe_str((char *)" shouts \"", buf2, &bp);
+      safe_str(" shouts \"", buf2, &bp);
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
@@ -201,7 +203,7 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
     default:
       buf2 = alloc_lbuf("do_say.wizshout");
       bp = buf2;
-      safe_str((char *)" says \"", buf2, &bp);
+      safe_str(" says \"", buf2, &bp);
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
@@ -234,7 +236,7 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
     default:
       buf2 = alloc_lbuf("do_say.adminshout");
       bp = buf2;
-      safe_str((char *)" says \"", buf2, &bp);
+      safe_str(" says \"", buf2, &bp);
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
@@ -309,6 +311,8 @@ void do_say(DbRef player, DbRef cause, int key, char *message) {
       free_lbuf(buf2);
       ENDLOG;
     }
+    break;
+  default:
     break;
   }
 }
@@ -778,6 +782,8 @@ void do_pemit(DbRef player, DbRef cause, int key, char *recipient,
           notify_all_from_inside(loc, player, message);
         }
       }
+      break;
+    default:
       break;
     }
   }

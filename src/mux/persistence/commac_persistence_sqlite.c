@@ -507,7 +507,7 @@ static int commac_load_users(sqlite3 *sqlite) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = select_channel((char *)name)) ||
+          !(channel = select_channel(name)) ||
           commac_column_int(statement, 1, &who) < 0 || who < 0 ||
           who >= mudstate.db_top ||
           commac_column_int(statement, 2, &is_on) < 0 ||
@@ -522,8 +522,9 @@ static int commac_load_users(sqlite3 *sqlite) {
       }
       if (channel->num_users == channel->max_users) {
         channel->max_users += 10;
-        channel->users = realloc(channel->users,
-                                 sizeof(*channel->users) * channel->max_users);
+        channel->users =
+            realloc(channel->users,
+                    sizeof(*channel->users) * (size_t)channel->max_users);
         if (!channel->users) {
           free(user);
           result = -1;
@@ -565,7 +566,7 @@ static int commac_load_messages(sqlite3 *sqlite) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = select_channel((char *)name)) ||
+          !(channel = select_channel(name)) ||
           commac_column_int(statement, 1, &sent_at) < 0 ||
           commac_column_text(statement, 2, &text, LBUF_SIZE - 1) < 0) {
         result = -1;
@@ -622,7 +623,7 @@ static int commac_load_macros(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      macros = realloc(macros, sizeof(*macros) * (nummacros + 1));
+      macros = realloc(macros, sizeof(*macros) * (size_t)(nummacros + 1));
       if (!macros) {
         result = -1;
         break;
@@ -668,8 +669,9 @@ static int commac_load_macros(sqlite3 *sqlite) {
         break;
       }
       macro->alias = realloc(macro->alias, (size_t)(macro->nummacros + 1) * 5);
-      macro->string = realloc(macro->string,
-                              sizeof(*macro->string) * (macro->nummacros + 1));
+      macro->string =
+          realloc(macro->string,
+                  sizeof(*macro->string) * (size_t)(macro->nummacros + 1));
       if (!macro->alias || !macro->string) {
         result = -1;
         break;

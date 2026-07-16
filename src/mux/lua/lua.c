@@ -27,13 +27,12 @@
 
 constexpr char LUA_MODULES_KEY[] = "btmux.lua.modules";
 
-typedef enum lua_module_root_e LUA_MODULE_ROOT;
-enum lua_module_root_e {
+typedef enum lua_module_root_e {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,
   LUA_ROOT_PACKAGES,
   LUA_ROOT_COUNT,
-};
+} LUA_MODULE_ROOT;
 
 typedef struct lua_runtime_t LUA_RUNTIME;
 typedef struct lua_schedule_job_t LUA_SCHEDULE_JOB;
@@ -99,8 +98,8 @@ static int lua_pcall_limited(LUA_RUNTIME *runtime, int arguments, int results) {
 
 static void lua_log_error(LUA_RUNTIME *runtime, DbRef object, const char *kind,
                           const char *error) {
-  log_error(LOG_PROBLEMS, "LUA", (char *)kind, "object #%ld module %s: %s",
-            object, runtime->module[0] ? runtime->module : "<unknown>",
+  log_error(LOG_PROBLEMS, "LUA", kind, "object #%ld module %s: %s", object,
+            runtime->module[0] ? runtime->module : "<unknown>",
             error ? error : "unknown Lua error");
 }
 
@@ -143,6 +142,7 @@ static const char *lua_root_name(LUA_MODULE_ROOT root) {
     return "global_logic";
   case LUA_ROOT_PACKAGES:
     return "packages";
+  case LUA_ROOT_COUNT:
   default:
     return "unknown";
   }
@@ -206,7 +206,7 @@ static int lua_host_attr_get(lua_State *state) {
     return luaL_error(state, "mux.attr_get is unavailable during @luacheck");
   if (!is_good_obj(object))
     return luaL_error(state, "invalid object");
-  attribute = attribute_by_name((char *)name);
+  attribute = attribute_by_name(name);
   if (!attribute) {
     lua_pushnil(state);
     return 1;
@@ -238,7 +238,16 @@ static int lua_host_attr_set(lua_State *state) {
     return luaL_error(state, "invalid attribute");
   if (attribute == A_LUAPARENT)
     return luaL_error(state, "use @luaparent to change Luaparent");
+    /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
+       only read (copied) here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   attribute_add_raw(object, attribute, (char *)value);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   return 0;
 }
 
@@ -261,7 +270,16 @@ static int lua_host_command(lua_State *state) {
 
   if (runtime->checking)
     return luaL_error(state, "mux.command is unavailable during @luacheck");
+    /* wait_que()'s command parameter isn't const-correct; command is only
+       read here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   wait_que(1, 1, 0, NOTHING, 0, (char *)command, (char **)nullptr, 0, nullptr);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   return 0;
 }
 
@@ -359,10 +377,10 @@ static int lua_load_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
 static LUA_MODULE_ROOT lua_require_root(lua_State *state,
                                         LUA_RUNTIME *runtime) {
   lua_Debug debug;
-  int root = runtime->current_root;
+  int root = (int)runtime->current_root;
 
   if (!lua_getstack(state, 1, &debug) || !lua_getinfo(state, "f", &debug))
-    return root;
+    return (LUA_MODULE_ROOT)root;
   lua_getfenv(state, -1);
   lua_getfield(state, -1, "__mux_module_root");
   if (lua_isnumber(state, -1))
@@ -1535,7 +1553,16 @@ void do_luaparent(DbRef player, DbRef cause, int key, char *target,
   if (thing == NOTHING)
     return;
   if (!*path) {
-    attribute_add_raw(thing, A_LUAPARENT, "");
+    /* attribute_add_raw()'s buffer parameter isn't const-correct; "" is
+       only read here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    attribute_add_raw(thing, A_LUAPARENT, (char *)"");
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     notify_quiet(player, "Lua parent cleared.");
     return;
   }

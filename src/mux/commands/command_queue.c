@@ -40,13 +40,14 @@ static void cque_free_entry(BQUE *entry) {
 }
 
 static int objqe_compare(DbRef left, DbRef right, void *arg) {
-  return (right - left);
+  return (right > left) - (right < left);
 }
 
 int cque_init(void) {
-  obq = red_black_tree_init((void *)objqe_compare, nullptr);
+  obq = red_black_tree_init(
+      (int (*)(void *, void *, void *))(GenericFnPtr)objqe_compare, nullptr);
   return 1;
-};
+}
 
 static OBJQE *cque_find(DbRef player) {
   OBJQE *tmp = nullptr;
@@ -486,7 +487,8 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
 
 static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
                        int nargs, char *sargs[]) {
-  int a, tlen;
+  int a;
+  size_t tlen;
   BQUE *tmp;
   char *tptr;
 
@@ -612,7 +614,7 @@ void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
   }
 
   if (wait > 0) {
-    cmd->waittime = mudstate.now + wait;
+    cmd->waittime = (int)(mudstate.now + wait);
   } else {
     cmd->waittime = 0;
   }
@@ -715,7 +717,7 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
 
 void do_second(void) {
   BQUE *trail, *point, *next;
-  char *cmdsave;
+  const char *cmdsave;
 
   /*
    * move contents of low priority queue onto end of normal one this
@@ -729,7 +731,7 @@ void do_second(void) {
     return;
 
   cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = (char *)"< do_second >";
+  mudstate.debug_cmd = "< do_second >";
 
   /*
    * Note: the point->waittime test would be 0 except the command is
@@ -776,13 +778,14 @@ int do_top(int ncmds) {
   BQUE *tmp;
   DbRef object;
   int count, i;
-  char *command, *cp, *cmdsave;
+  char *command, *cp;
+  const char *cmdsave;
 
   if ((mudconf.control_flags & CF_DEQUEUE) == 0)
     return 0;
 
   cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = (char *)"< do_top >";
+  mudstate.debug_cmd = "< do_top >";
 
   if (!mudstate.qhead)
     return 0;
@@ -906,9 +909,9 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
     if (key == PS_LONG) {
       for (i = 0; i < (tmp->nargs); i++) {
         if (tmp->env[i] != nullptr) {
-          safe_str((char *)"; Arg", bufp, &bp);
-          safe_chr(i + '0', bufp, &bp);
-          safe_str((char *)"='", bufp, &bp);
+          safe_str("; Arg", bufp, &bp);
+          safe_chr((char)(i + '0'), bufp, &bp);
+          safe_str("='", bufp, &bp);
           safe_str(tmp->env[i], bufp, &bp);
           safe_chr('\'', bufp, &bp);
         }
@@ -1003,14 +1006,9 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
    * Display stats
    */
 
-  if (is_wizard(player))
-    notify_printf(player,
-                  "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
-                  pqent, pqtot, wqent, wqtot, sqent, sqtot);
-  else
-    notify_printf(player,
-                  "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
-                  pqent, pqtot, wqent, wqtot, sqent, sqtot);
+  notify_printf(player,
+                "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
+                pqent, pqtot, wqent, wqtot, sqent, sqtot);
 }
 
 /*

@@ -27,7 +27,7 @@
   }
 
 static int check_type;
-extern int boot_off(DbRef player, char *message);
+extern int boot_off(DbRef player, const char *message);
 
 /**
  * Log_pointer_err, Log_header_err, Log_simple_damage: Write errors to the
@@ -38,19 +38,19 @@ static void Log_pointer_err(DbRef prior, DbRef obj, DbRef loc, DbRef ref,
   STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
     log_type_and_name(obj);
     if (loc != NOTHING) {
-      log_text((char *)" in ");
+      log_text(" in ");
       log_type_and_name(loc);
     }
-    log_text((char *)": ");
+    log_text(": ");
     if (prior == NOTHING) {
-      log_text((char *)reftype);
+      log_text(reftype);
     } else {
-      log_text((char *)"Next pointer");
+      log_text("Next pointer");
     }
-    log_text((char *)" ");
+    log_text(" ");
     log_type_and_name(ref);
-    log_text((char *)" ");
-    log_text((char *)errtype);
+    log_text(" ");
+    log_text(errtype);
     ENDLOG;
   }
 }
@@ -60,18 +60,18 @@ static void Log_header_err(DbRef obj, DbRef loc, DbRef val, int is_object,
   STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
     log_type_and_name(obj);
     if (loc != NOTHING) {
-      log_text((char *)" in ");
+      log_text(" in ");
       log_type_and_name(loc);
     }
-    log_text((char *)": ");
-    log_text((char *)valtype);
-    log_text((char *)" ");
+    log_text(": ");
+    log_text(valtype);
+    log_text(" ");
     if (is_object)
       log_type_and_name(val);
     else
-      log_number(val);
-    log_text((char *)" ");
-    log_text((char *)errtype);
+      log_number((int)val);
+    log_text(" ");
+    log_text(errtype);
     ENDLOG;
   }
 }
@@ -80,11 +80,11 @@ static void log_simple_error(DbRef obj, DbRef loc, const char *errtype) {
   STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
     log_type_and_name(obj);
     if (loc != NOTHING) {
-      log_text((char *)" in ");
+      log_text(" in ");
       log_type_and_name(loc);
     }
-    log_text((char *)": ");
-    log_text((char *)errtype);
+    log_text(": ");
+    log_text(errtype);
     ENDLOG;
   }
 }
@@ -119,6 +119,8 @@ int can_set_home(DbRef player, DbRef thing, DbRef home) {
       return 0;
     if (is_controls(player, home))
       return 1;
+  default:
+    break;
   }
   return 0;
 }
@@ -365,7 +367,16 @@ void destroy_obj(DbRef player, DbRef obj) {
   }
 
   attribute_free(obj);
-  object_name_set(obj, "Garbage");
+  /* object_name_set()'s parameter isn't const-correct; "Garbage" is only
+     read (copied) here. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+  object_name_set(obj, (char *)"Garbage");
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   s_flags(obj, (TYPE_GARBAGE | GOING));
   s_flags2(obj, 0);
   s_flags3(obj, 0);
@@ -498,7 +509,7 @@ void destroy_player(DbRef victim) {
    */
   player = (DbRef)atoi(attribute_get_raw(victim, A_DESTROYER));
   toast_player(victim);
-  boot_off(victim, (char *)"You have been destroyed!");
+  boot_off(victim, "You have been destroyed!");
   halt_que(victim, NOTHING);
   count = chown_all(victim, player);
 
@@ -773,10 +784,8 @@ static void check_dead_refs(void) {
     if (fp) {
       for (j = 0; j < fp->count; j++) {
         targ = fp->data[j];
-        if (is_good_obj(targ) && is_going(targ)) {
-          fp->data[j] = NOTHING;
-          dirty = 1;
-        } else if (!is_good_obj(targ) && (targ != NOTHING)) {
+        if ((is_good_obj(targ) && is_going(targ)) ||
+            (!is_good_obj(targ) && (targ != NOTHING))) {
           fp->data[j] = NOTHING;
           dirty = 1;
         }

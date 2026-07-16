@@ -16,10 +16,13 @@
 RedBlackTree pcache_tree;
 PCACHE *pcache_head;
 
-static int compare_pcache(DbRef left, DbRef right) { return (left - right); }
+static int compare_pcache(DbRef left, DbRef right) {
+  return (left > right) - (left < right);
+}
 
 void pcache_init(void) {
-  pcache_tree = red_black_tree_init((void *)compare_pcache, nullptr);
+  pcache_tree = red_black_tree_init(
+      (int (*)(void *, void *, void *))(GenericFnPtr)compare_pcache, nullptr);
   pcache_head = nullptr;
 }
 

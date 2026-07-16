@@ -125,7 +125,7 @@ struct event_base *server_lifecycle_event_base(void) {
 
 /* Initialize process-wide state that must exist before database validation. */
 void server_lifecycle_prepare(void) {
-  srandom(getpid());
+  srandom((unsigned int)getpid());
   bind_signals();
 }
 

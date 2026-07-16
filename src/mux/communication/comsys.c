@@ -22,7 +22,7 @@ int max_channels;
 static void do_show_com(void *);
 static void do_comlast(DbRef, struct channel *);
 static void do_comsend(struct channel *, char *);
-static void do_comprintf(struct channel *, char *, ...);
+static void do_comprintf(struct channel *, const char *, ...);
 static void do_leavechannel(DbRef, struct channel *);
 static void do_comwho(DbRef, struct channel *);
 static void do_setnewtitle(DbRef, struct channel *, char *);
@@ -50,7 +50,7 @@ void init_chantab(void) {
   hash_table_initialize(&mudstate.channel_htab, 30 * HASH_FACTOR);
 }
 
-void send_channel(char *chan, const char *format, ...) {
+void send_channel(const char *chan, const char *format, ...) {
   struct channel *ch;
   char buf[LBUF_SIZE];
   char data[LBUF_SIZE];
@@ -96,8 +96,18 @@ static char *get_channel_from_alias(DbRef player, char *alias) {
 
   if (!dir)
     return c->channels[current];
-  else
-    return "";
+  else {
+    /* This function's other branch returns a genuinely mutable char *
+       from c->channels[]; the return type can't be const. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    return (char *)"";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+  }
 }
 
 static DbRef cheat_player;
@@ -158,7 +168,11 @@ static void do_processcom(DbRef player, char *arg1, char *arg2) {
     do_joinchannel(player, ch);
   } else if (!strcasecmp(arg2, "off")) {
     do_leavechannel(player, ch);
-  } else if (!user->on && !is_wizard(player) && !mudconf.allow_chanlurking) {
+    // Body matches the later bare `!user->on` branch, but this one fires
+    // earlier so wizards/lurkers can still reach "who"/"last" below even
+    // while not on the channel.
+  } else if (!user->on && !is_wizard(player) &&
+             !mudconf.allow_chanlurking) { // NOLINT(bugprone-branch-clone)
     notify_printf(player, "You must be on %s to do that.", arg1);
     return;
   } else if (!strcasecmp(arg2, "who")) {
@@ -209,10 +223,10 @@ static void do_comsend(struct channel *ch, char *mess) {
   fifo_push(&ch->last_messages, c);
 }
 
-static void do_comprintf(struct channel *ch, char *messfmt, ...)
+static void do_comprintf(struct channel *ch, const char *messfmt, ...)
     __attribute__((format(printf, 2, 3)));
 
-static void do_comprintf(struct channel *ch, char *messfmt, ...) {
+static void do_comprintf(struct channel *ch, const char *messfmt, ...) {
   struct comuser *user;
   chmsg *c;
   va_list ap;
@@ -253,9 +267,11 @@ void do_joinchannel(DbRef player, struct channel *ch) {
     ch->num_users++;
     if (ch->num_users >= ch->max_users) {
       ch->max_users += 10;
-      ch->users = realloc(ch->users, sizeof(struct comuser *) * ch->max_users);
+      ch->users =
+          realloc(ch->users, sizeof(struct comuser *) * (size_t)ch->max_users);
       memset(ch->users + (ch->num_users - 1), 0,
-             sizeof(struct comuser *) * (ch->max_users - ch->num_users));
+             sizeof(struct comuser *) *
+                 (size_t)(ch->max_users - ch->num_users));
     }
     user = (struct comuser *)malloc(sizeof(struct comuser));
 
@@ -361,7 +377,7 @@ static void do_comwho(DbRef player, struct channel *ch) {
   notify_printf(player, "-- %s --", ch->name);
 }
 
-struct channel *select_channel(char *channel) {
+struct channel *select_channel(const char *channel) {
   return (struct channel *)hash_table_find(channel, &mudstate.channel_htab);
 }
 
@@ -427,7 +443,7 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
       raw_notify(player, "Channel name too long.");
       return;
     }
-    strncpy(channel, arg2, s - arg2);
+    strncpy(channel, arg2, (size_t)(s - arg2));
     channel[s - arg2] = '\0';
     strncpy(title, s + 1, 100);
     title[99] = '\0';
@@ -469,14 +485,14 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   }
   if (c->numchannels >= c->maxchannels) {
     c->maxchannels += 10;
-    c->alias = realloc(c->alias, sizeof(char) * 6 * c->maxchannels);
-    c->channels = realloc(c->channels, sizeof(char *) * c->maxchannels);
+    c->alias = realloc(c->alias, sizeof(char) * 6 * (size_t)c->maxchannels);
+    c->channels = realloc(c->channels, sizeof(char *) * (size_t)c->maxchannels);
   }
   if (where < c->numchannels) {
     memmove(c->alias + 6 * (where + 1), c->alias + 6 * where,
-            6 * (c->numchannels - where));
+            (size_t)(6 * (c->numchannels - where)));
     memmove(c->channels + where + 1, c->channels + where,
-            sizeof(c->channels) * (c->numchannels - where));
+            sizeof(c->channels) * (size_t)(c->numchannels - where));
   }
 
   c->numchannels++;
@@ -536,9 +552,9 @@ void do_delcom(DbRef player, DbRef cause, int key, char *arg1) {
       c->numchannels--;
       if (i < c->numchannels) {
         memmove(c->alias + 6 * i, c->alias + 6 * (i + 1),
-                6 * (c->numchannels - i));
+                (size_t)(6 * (c->numchannels - i)));
         memmove(c->channels + i, c->channels + i + 1,
-                sizeof(c->channels) * (c->numchannels - i));
+                sizeof(c->channels) * (size_t)(c->numchannels - i));
       }
       return;
     }
@@ -580,7 +596,7 @@ static void do_delcomchannel(DbRef player, char *channel) {
         ch->num_users--;
         if (i < ch->num_users)
           memmove(ch->users + i, ch->users + i + 1,
-                  sizeof(ch->users) * (ch->num_users - i));
+                  sizeof(ch->users) * (size_t)(ch->num_users - i));
       }
     }
   }
@@ -614,7 +630,7 @@ void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
   newchannel->temp1 = 0;
   newchannel->temp2 = 0;
   newchannel->charge = 0;
-  newchannel->charge_who = player;
+  newchannel->charge_who = (int)player;
   newchannel->amount_col = 0;
   newchannel->num_users = 0;
   newchannel->max_users = 0;
@@ -824,7 +840,7 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
       raw_notify(player, "Channel name too long.");
       return;
     }
-    strncpy(channel, arg1, cp - arg1);
+    strncpy(channel, arg1, (size_t)(cp - arg1));
     channel[cp - arg1] = '\0';
     if (*++cp == 'a')
       flag = 1;
@@ -986,7 +1002,7 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
   switch (flag) {
   case 0:
     if (lookup_player(player, arg2, 1) != NOTHING) {
-      ch->charge_who = lookup_player(player, arg2, 1);
+      ch->charge_who = (int)lookup_player(player, arg2, 1);
       raw_notify(player, "Set.");
       return;
     } else {
@@ -1041,6 +1057,8 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
     }
     raw_notify(player, "@coflags: Unknown Flag.");
     break;
+  default:
+    break;
   }
   return;
 }
@@ -1086,7 +1104,7 @@ static int do_test_access(DbRef player, long access, struct channel *chan) {
                        * just to be paranoid.
                        */
 
-  return (((long)chan->type & flag_value));
+  return (int)(((long)chan->type & flag_value));
 }
 
 int do_comsystem(DbRef who, char *cmd) {
@@ -1185,6 +1203,8 @@ void do_chopen(DbRef player, DbRef cause, int key, char *chan, char *object) {
   case CSET_OPAQUE:
     do_chopaque(player, chan);
     return;
+  default:
+    break;
   }
 
   if (!(ch = select_channel(chan))) {
@@ -1337,7 +1357,7 @@ static void do_chanobj(DbRef player, char *channel, char *object) {
     raw_notify(player, "Permission denied.");
     return;
   }
-  ch->chan_obj = thing;
+  ch->chan_obj = (int)thing;
   buff = unparse_object(player, thing, 0);
   notify_printf(player, "Channel %s is now using %s as channel object.",
                 ch->name, buff);

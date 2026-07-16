@@ -196,7 +196,7 @@ static char *store_string(char *str) {
   int len;
   char *ret;
 
-  len = strlen(str);
+  len = (int)strlen(str);
 
   /*
    * If we have no block, or there's not enough room left in the * * *

@@ -1,4 +1,5 @@
-/* object_spatial.h - Object containment, location, and exit visibility interface. */
+/* object_spatial.h - Object containment, location, and exit visibility
+ * interface. */
 
 #pragma once
 

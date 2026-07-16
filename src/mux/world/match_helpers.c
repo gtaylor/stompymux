@@ -20,6 +20,8 @@ static DbRef promote_dflt(DbRef old, DbRef new) {
       return old;
     else
       return new;
+  default:
+    break;
   }
 
   if ((old == NOPERM) || (old == AMBIGUOUS))

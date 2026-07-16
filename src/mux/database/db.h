@@ -38,7 +38,7 @@ struct AttributeStack {
 typedef struct forward_list FWDLIST;
 
 extern Attribute *attribute_by_number(int anum);
-extern Attribute *attribute_by_name(char *s);
+extern Attribute *attribute_by_name(const char *s);
 
 extern Attribute attr_table[];
 

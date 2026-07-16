@@ -542,6 +542,8 @@ void do_clone(DbRef player, DbRef cause, int key, char *name, char *arg2) {
     if (obj_location(thing) != NOTHING)
       link_exit(player, clone, obj_location(thing));
     break;
+  default:
+    break;
   }
 
   /*
@@ -585,7 +587,7 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
     notify_quiet(player, "Your robot has arrived.");
     STARTLOG(LOG_PCREATES, "CRE", "ROBOT") {
       log_name(newplayer);
-      log_text((char *)" created by ");
+      log_text(" created by ");
       log_name(player);
       ENDLOG;
     }
@@ -597,7 +599,7 @@ void do_pcreate(DbRef player, DbRef cause, int key, char *name, char *pass) {
 
     STARTLOG(LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
       log_name(newplayer);
-      log_text((char *)" created by ");
+      log_text(" created by ");
       log_name(player);
       ENDLOG;
     }
@@ -779,6 +781,8 @@ void do_destroy(DbRef player, DbRef cause, int key, char *what) {
         s_going(thing);
       }
     }
+  default:
+    break;
   }
 }
 void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
@@ -893,18 +897,18 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
     }
 
     if (player == thing && is_in_character(player) && !is_wizard(player)) {
-      buff2 = silly_atr_get(player, A_LASTNAME);
+      buff2 = silly_atr_get((int)player, A_LASTNAME);
       if (!(buff2 && atoi(buff2) &&
             ((atoi(buff2) + (mudconf.namechange_days * 86400)) < mudstate.now)))
         lower_xp(player, 900);
 
-      silly_atr_set(player, A_LASTNAME, tprintf("%ld", mudstate.now));
+      silly_atr_set((int)player, A_LASTNAME, tprintf("%ld", mudstate.now));
     }
     /*
      * everything ok, notify
      */
     STARTLOG(LOG_SECURITY, "SEC", "CNAME") {
-      log_name(thing), log_text((char *)" renamed to ");
+      log_name(thing), log_text(" renamed to ");
       log_text(buff);
       ENDLOG;
     }
@@ -1013,7 +1017,10 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
       do_it = 0;
       if (owner == NOTHING) {
         notify_quiet(player, "I couldn't find that player.");
-      } else if (is_god(thing) && !is_god(player)) {
+        // Same message as the final else below, but this is a distinct
+        // god-protection check, not the general fallback.
+      } else if (is_god(thing) &&
+                 !is_god(player)) { // NOLINT(bugprone-branch-clone)
         notify_quiet(player, "Permission denied.");
       } else if (is_wizard(player)) {
         do_it = 1;
@@ -1077,6 +1084,8 @@ void do_chown(DbRef player, DbRef cause, int key, char *name, char *newown) {
   case AMBIGUOUS:
     notify_quiet(player, "I don't know which you mean!");
     return;
+  default:
+    break;
   }
 
   if (!*newown || !(string_compare(newown, "me"))) {
@@ -1417,7 +1426,7 @@ void do_wipe(DbRef player, DbRef cause, int key, char *it) {
 
   got_one = 0;
   atext = alloc_lbuf("do_wipe.atext");
-  for (attr = olist_first(); attr != NOTHING; attr = olist_next()) {
+  for (attr = (int)olist_first(); attr != NOTHING; attr = (int)olist_next()) {
     ap = attribute_by_number(attr);
     if (ap) {
 

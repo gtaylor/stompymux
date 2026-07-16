@@ -421,6 +421,8 @@ DbRef match_status(DbRef player, DbRef match) {
   case NOPERM:
     notify(player, NOPERM_MESSAGE);
     return NOTHING;
+  default:
+    break;
   }
   if (is_good_obj(match) && is_dark(match) && is_good_obj(player) &&
       !is_wizard(obj_owner(player)))

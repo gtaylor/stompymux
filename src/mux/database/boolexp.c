@@ -36,12 +36,9 @@ static int check_attr(DbRef player, DbRef lockobj, Attribute *attr, char *key) {
   buff = attribute_parent_get(player, attr->number, &aowner, &aflags);
   checkit = 0;
 
-  if (attr->number == A_LENTER) {
-    /* We can see enterlocks... else we'd break zones */
-    checkit = 1;
-  } else if (see_attr(lockobj, player, attr, aowner, aflags)) {
-    checkit = 1;
-  } else if (attr->number == A_NAME) {
+  /* We can see enterlocks... else we'd break zones */
+  if (attr->number == A_LENTER || attr->number == A_NAME ||
+      see_attr(lockobj, player, attr, aowner, aflags)) {
     checkit = 1;
   }
   if (checkit && (!wild_match(key, buff))) {
@@ -83,7 +80,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
       //            log_error(LOG_BUGS, "BUG", "LOCK", "
       STARTLOG(LOG_BUGS, "BUG", "LOCK") {
         log_name_and_loc(player);
-        log_text((char *)": Lock exceeded recursion limit.");
+        log_text(": Lock exceeded recursion limit.");
         ENDLOG;
       }
       notify(player, "Sorry, broken lock!");
@@ -112,7 +109,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
   case BOOLEXP_CONST:
     return (b->thing == player || member(b->thing, obj_contents(player)));
   case BOOLEXP_ATR:
-    a = attribute_by_number(b->thing);
+    a = attribute_by_number((int)b->thing);
     if (!a)
       return 0; /*
                  * no such attribute
@@ -130,7 +127,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
     }
     return 0;
   case BOOLEXP_EVAL:
-    a = attribute_by_number(b->thing);
+    a = attribute_by_number((int)b->thing);
     if (!a)
       return 0; /*
                  * no such attribute
@@ -144,9 +141,8 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
     }
     checkit = 0;
 
-    if ((a->number == A_NAME) || (a->number == A_LENTER)) {
-      checkit = 1;
-    } else if (read_attr(source, source, a, aowner, aflags)) {
+    if ((a->number == A_NAME) || (a->number == A_LENTER) ||
+        read_attr(source, source, a, aowner, aflags)) {
       checkit = 1;
     }
     if (checkit) {
@@ -173,7 +169,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
      * Nope, do an attribute check
      */
 
-    a = attribute_by_number(b->sub1->thing);
+    a = attribute_by_number((int)b->sub1->thing);
     if (!a)
       return 0;
     return (check_attr(player, from, a, (char *)(b->sub1)->sub1));
@@ -190,7 +186,7 @@ int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
      * Nope, do an attribute check
      */
 
-    a = attribute_by_number(b->sub1->thing);
+    a = attribute_by_number((int)b->sub1->thing);
     if (!a)
       return 0;
     DOLIST(obj, obj_contents(player)) {
@@ -292,9 +288,9 @@ static BooleanExpression *test_atr(char *s) {
    * made it now make the parse tree node
    */
   b = alloc_bool("test_str");
-  b->type = locktype;
+  b->type = (boolexp_type)locktype;
   b->thing = (DbRef)anum;
-  b->sub1 = (BooleanExpression *)strsave(s);
+  b->sub1 = (BooleanExpression *)(void *)strsave(s);
   free_lbuf(buff);
   return (b);
 } /* end test_atr() */
@@ -431,10 +427,7 @@ static BooleanExpression *parse_boolexp_F(void) {
     b2 = alloc_bool("parse_boolexp_F.indir");
     b2->type = BOOLEXP_INDIR;
     b2->sub1 = parse_boolexp_L();
-    if ((b2->sub1) == TRUE_BOOLEXP) {
-      boolean_expression_free(b2);
-      return (TRUE_BOOLEXP);
-    } else if ((b2->sub1->type) != BOOLEXP_CONST) {
+    if ((b2->sub1) == TRUE_BOOLEXP || (b2->sub1->type) != BOOLEXP_CONST) {
       boolean_expression_free(b2);
       return (TRUE_BOOLEXP);
     } else
@@ -448,11 +441,8 @@ static BooleanExpression *parse_boolexp_F(void) {
     b2 = alloc_bool("parse_boolexp_F.is");
     b2->type = BOOLEXP_IS;
     b2->sub1 = parse_boolexp_L();
-    if ((b2->sub1) == TRUE_BOOLEXP) {
-      boolean_expression_free(b2);
-      return (TRUE_BOOLEXP);
-    } else if (((b2->sub1->type) != BOOLEXP_CONST) &&
-               ((b2->sub1->type) != BOOLEXP_ATR)) {
+    if ((b2->sub1) == TRUE_BOOLEXP || (((b2->sub1->type) != BOOLEXP_CONST) &&
+                                       ((b2->sub1->type) != BOOLEXP_ATR))) {
       boolean_expression_free(b2);
       return (TRUE_BOOLEXP);
     } else
@@ -466,11 +456,8 @@ static BooleanExpression *parse_boolexp_F(void) {
     b2 = alloc_bool("parse_boolexp_F.carry");
     b2->type = BOOLEXP_CARRY;
     b2->sub1 = parse_boolexp_L();
-    if ((b2->sub1) == TRUE_BOOLEXP) {
-      boolean_expression_free(b2);
-      return (TRUE_BOOLEXP);
-    } else if (((b2->sub1->type) != BOOLEXP_CONST) &&
-               ((b2->sub1->type) != BOOLEXP_ATR)) {
+    if ((b2->sub1) == TRUE_BOOLEXP || (((b2->sub1->type) != BOOLEXP_CONST) &&
+                                       ((b2->sub1->type) != BOOLEXP_ATR))) {
       boolean_expression_free(b2);
       return (TRUE_BOOLEXP);
     } else
@@ -484,10 +471,7 @@ static BooleanExpression *parse_boolexp_F(void) {
     b2 = alloc_bool("parse_boolexp_F.owner");
     b2->type = BOOLEXP_OWNER;
     b2->sub1 = parse_boolexp_L();
-    if ((b2->sub1) == TRUE_BOOLEXP) {
-      boolean_expression_free(b2);
-      return (TRUE_BOOLEXP);
-    } else if ((b2->sub1->type) != BOOLEXP_CONST) {
+    if ((b2->sub1) == TRUE_BOOLEXP || (b2->sub1->type) != BOOLEXP_CONST) {
       boolean_expression_free(b2);
       return (TRUE_BOOLEXP);
     } else
@@ -573,6 +557,12 @@ static char *boolexp_unparse_top;
 static char *boolean_expression_unparse_object_quiet(DbRef object) {
   static char buffer[SBUF_SIZE];
 
+  /* This function's other branches return the mutable `buffer` above; the
+     return type can't be const. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   switch (object) {
   case NOTHING:
     return (char *)"-1";
@@ -582,6 +572,9 @@ static char *boolean_expression_unparse_object_quiet(DbRef object) {
     snprintf(buffer, sizeof(buffer), "(#%ld)", object);
     return buffer;
   }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 static void
@@ -594,8 +587,7 @@ boolean_expression_unparse_internal(DbRef player, BooleanExpression *expression,
 
   if (expression == TRUE_BOOLEXP) {
     if (format == BOOLEXP_UNPARSE_EXAMINE)
-      safe_str((char *)"*UNLOCKED*", boolexp_unparse_buffer,
-               &boolexp_unparse_top);
+      safe_str("*UNLOCKED*", boolexp_unparse_buffer, &boolexp_unparse_top);
     return;
   }
 
@@ -671,10 +663,9 @@ boolean_expression_unparse_internal(DbRef player, BooleanExpression *expression,
   case BOOLEXP_ATR:
   case BOOLEXP_EVAL:
     separator = expression->type == BOOLEXP_EVAL ? '/' : ':';
-    attribute = attribute_by_number(expression->thing);
+    attribute = attribute_by_number((int)expression->thing);
     if (attribute && attribute->number) {
-      safe_str((char *)attribute->name, boolexp_unparse_buffer,
-               &boolexp_unparse_top);
+      safe_str(attribute->name, boolexp_unparse_buffer, &boolexp_unparse_top);
       safe_chr(separator, boolexp_unparse_buffer, &boolexp_unparse_top);
       safe_str((char *)expression->sub1, boolexp_unparse_buffer,
                &boolexp_unparse_top);

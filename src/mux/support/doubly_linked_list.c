@@ -300,7 +300,7 @@ int doubly_linked_list_size(DoublyLinkedList *list) {
     return 0;
   }
 
-  return list->size;
+  return (int)list->size;
 }
 
 /* Get the data from the Node in the List at Pos # */

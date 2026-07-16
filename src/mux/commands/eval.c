@@ -144,6 +144,8 @@ char *parse_to(char **dstr, char delim, int eval) {
         case '}':
           bracketlev--;
           break;
+        default:
+          break;
         }
         if (bracketlev > 0) {
           NEXTCHAR;
@@ -219,7 +221,7 @@ char *parse_arglist(DbRef player, DbRef cause, char *dstr, char delim,
   rstr = parse_to(&dstr, delim, 0);
   arg = 0;
 
-  peval = (eval & ~EV_EVAL);
+  peval = (int)(eval & ~EV_EVAL);
 
   while ((arg < nfargs) && rstr) {
     if (arg < (nfargs - 1))
@@ -229,8 +231,8 @@ char *parse_arglist(DbRef player, DbRef cause, char *dstr, char delim,
     if (eval & EV_EVAL) {
       bp = fargs[arg] = alloc_lbuf("parse_arglist");
       str = tstr;
-      exec(fargs[arg], &bp, 0, player, cause, eval | EV_FCHECK, &str, cargs,
-           ncargs);
+      exec(fargs[arg], &bp, 0, player, cause, (int)(eval | EV_FCHECK), &str,
+           cargs, (int)ncargs);
       *bp = '\0';
     } else {
       fargs[arg] = alloc_lbuf("parse_arglist");
@@ -592,7 +594,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
                  * Carriage return
                  */
       case 'R':
-        safe_str((char *)"\r\n", buff, bufc);
+        safe_str("\r\n", buff, bufc);
         break;
       case 't': /*
                  * Tab
@@ -761,9 +763,9 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       if (!fp && !ufp) {
         if (eval & EV_FMAND) {
           *bufc = oldp;
-          safe_str((char *)"#-1 FUNCTION (", buff, bufc);
+          safe_str("#-1 FUNCTION (", buff, bufc);
           safe_str(tbuf, buff, bufc);
-          safe_str((char *)") NOT FOUND", buff, bufc);
+          safe_str(") NOT FOUND", buff, bufc);
           alldone = 1;
         } else {
           safe_chr('(', buff, bufc);
@@ -781,9 +783,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
        * args
        */
 
-      if (ufp)
-        nfargs = NFARGS;
-      else if (fp->nargs < 0)
+      if (!ufp && fp->nargs < 0)
         nfargs = -fp->nargs;
       else
         nfargs = NFARGS;
@@ -833,9 +833,9 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         } else {
           tstr = attribute_get(ufp->obj, ufp->atr, &aowner, &aflags);
           if (ufp->flags & FN_PRIV)
-            i = ufp->obj;
+            i = (int)ufp->obj;
           else
-            i = player;
+            i = (int)player;
           str = tstr;
 
           if (ufp->flags & FN_PRES) {
@@ -922,11 +922,11 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         *bufc = oldp;
         tstr = alloc_sbuf("exec.funcargs");
         snprintf(tstr, SBUF_SIZE, "%d", fp->nargs);
-        safe_str((char *)"#-1 FUNCTION (", buff, bufc);
-        safe_str((char *)fp->name, buff, bufc);
-        safe_str((char *)") EXPECTS ", buff, bufc);
+        safe_str("#-1 FUNCTION (", buff, bufc);
+        safe_str(fp->name, buff, bufc);
+        safe_str(") EXPECTS ", buff, bufc);
         safe_str(tstr, buff, bufc);
-        safe_str((char *)" ARGUMENTS", buff, bufc);
+        safe_str(" ARGUMENTS", buff, bufc);
         free_sbuf(tstr);
       }
 

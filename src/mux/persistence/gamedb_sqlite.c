@@ -98,8 +98,8 @@ static void gamedb_log_failure(const char *stage, const char *path,
   const char *detail;
 
   detail = sqlite ? sqlite3_errmsg(sqlite) : strerror(errno);
-  log_error(LOG_ALWAYS, "GDB", "FAIL", "SQLite %s for %s: %s", (char *)stage,
-            (char *)path, (char *)detail);
+  log_error(LOG_ALWAYS, "GDB", "FAIL", "SQLite %s for %s: %s", stage, path,
+            detail);
 }
 
 /* Report a subsystem persistence failure with its registered extension name. */
@@ -110,8 +110,8 @@ static void gamedb_log_extension_failure(const char *operation,
 
   detail = sqlite ? sqlite3_errmsg(sqlite) : "extension callback failed";
   log_error(LOG_ALWAYS, "GDB", "FAIL",
-            "SQLite persistence extension %s failed while %s %s: %s",
-            (char *)name, (char *)operation, (char *)path, (char *)detail);
+            "SQLite persistence extension %s failed while %s %s: %s", name,
+            operation, path, detail);
 }
 
 /* Register one optional subsystem that shares the game SQLite database. */
@@ -426,7 +426,16 @@ static int gamedb_load_objects(sqlite3 *sqlite, int db_top) {
         gamedb_column_text(statement, 15, &lock_text, LBUF_SIZE) < 0) {
       result = -1;
     } else {
+      /* object_name_set()'s parameter isn't const-correct; name is only
+         read (copied) here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       object_name_set(object, (char *)name);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
       s_location(object, location);
       s_zone(object, zone);
       s_contents(object, contents);
@@ -479,8 +488,18 @@ static int gamedb_load_attributes(sqlite3 *sqlite, int db_top) {
         attribute <= 0 ||
         gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0)
       result = -1;
-    else
+    else {
+      /* attribute_add_raw()'s buffer parameter isn't const-correct; value
+         is only read (copied) here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       attribute_add_raw(object, attribute, (char *)value);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    }
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -654,7 +673,7 @@ static int gamedb_store_snapshot(sqlite3 *sqlite, int dump_type) {
 
     for (attr_number = attribute_list_first(object, &attr_cursor); attr_number;
          attr_number = attribute_list_next(&attr_cursor)) {
-      attribute = attribute_by_number(attr_number);
+      attribute = attribute_by_number((int)attr_number);
       if (!attribute)
         continue;
       switch (attribute->number) {

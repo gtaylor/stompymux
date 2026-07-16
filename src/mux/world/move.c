@@ -319,7 +319,7 @@ void move_via_exit(DbRef thing, DbRef dest, DbRef cause, DbRef exit, int hush) {
 int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
   DbRef src, curr;
   int canhear, count;
-  char *failmsg;
+  const char *failmsg;
 
   src = obj_location(thing);
   if ((dest != HOME) && is_good_obj(src)) {
@@ -327,9 +327,9 @@ int move_via_teleport(DbRef thing, DbRef dest, DbRef cause, int hush) {
     for (count = mudconf.ntfy_nest_lim; count > 0; count--) {
       if (!could_doit(thing, curr, A_LTELOUT)) {
         if ((thing == cause) || (cause == NOTHING))
-          failmsg = (char *)"You can't teleport out!";
+          failmsg = "You can't teleport out!";
         else {
-          failmsg = (char *)"You can't be teleported out!";
+          failmsg = "You can't be teleported out!";
           notify_quiet(cause, "You can't teleport that out!");
         }
         did_it(thing, src, A_TOFAIL, failmsg, A_OTOFAIL, nullptr, A_ATOFAIL,
@@ -392,6 +392,8 @@ void move_exit(DbRef player, DbRef exit, int divest, const char *failmsg,
     case TYPE_EXIT:
       notify(player, "You can't go that way.");
       return;
+    default:
+      break;
     }
   } else {
     if ((is_wizard(player) && is_dark(player)) || (hush & HUSH_EXIT)) {
@@ -477,7 +479,7 @@ void do_move(DbRef player, DbRef cause, int key, char *direction) {
 
 void do_get(DbRef player, DbRef cause, int key, char *what) {
   DbRef thing, playerloc, thingloc;
-  char *failmsg;
+  const char *failmsg;
   int oattr, aattr, quiet;
 
   playerloc = obj_location(player);
@@ -552,9 +554,9 @@ void do_get(DbRef player, DbRef cause, int key, char *what) {
       oattr = quiet ? 0 : A_OFAIL;
       aattr = quiet ? 0 : A_AFAIL;
       if (thingloc != obj_location(player))
-        failmsg = (char *)"You can't take that from there.";
+        failmsg = "You can't take that from there.";
       else
-        failmsg = (char *)"You can't pick that up.";
+        failmsg = "You can't pick that up.";
       did_it(player, thing, A_FAIL, failmsg, oattr, nullptr, aattr,
              (char **)nullptr, 0);
     }
@@ -619,6 +621,8 @@ void do_drop(DbRef player, DbRef cause, int key, char *name) {
   case AMBIGUOUS:
     notify(player, "I don't know which you mean!");
     return;
+  default:
+    break;
   }
 
   switch (typeof_obj(thing)) {

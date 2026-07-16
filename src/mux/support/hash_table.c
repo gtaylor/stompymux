@@ -22,7 +22,8 @@ static int hrbtab_compare(char *left, char *right, void *arg) {
 
 void hash_table_initialize(HashTable *htab, int size) {
   memset(htab, 0, sizeof(HashTable));
-  htab->tree = red_black_tree_init((void *)hrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(
+      (int (*)(void *, void *, void *))(GenericFnPtr)hrbtab_compare, nullptr);
   htab->last = nullptr;
 }
 
@@ -44,11 +45,20 @@ void hash_table_reset(HashTable *htab) {
  * * hash data.
  */
 
-void *hash_table_find(char *str, HashTable *htab) {
+void *hash_table_find(const char *str, HashTable *htab) {
   struct string_dict_entry *ent;
 
   htab->checks++;
-  ent = red_black_tree_find(htab->tree, str);
+  /* red_black_tree's key parameter isn't const-correct; str is only used
+     as a lookup key here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+  ent = red_black_tree_find(htab->tree, (void *)str);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   if (ent) {
     return ent->data;
   } else
@@ -60,11 +70,20 @@ void *hash_table_find(char *str, HashTable *htab) {
  * * hash_table_add: Add a new entry to a hash table.
  */
 
-int hash_table_add(char *str, void *hashdata, HashTable *htab) {
+int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
   struct string_dict_entry *ent;
 
-  if (red_black_tree_exists(htab->tree, str))
+  /* red_black_tree's key parameter isn't const-correct; str is only used
+     as a lookup key here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+  if (red_black_tree_exists(htab->tree, (void *)str))
     return (-1);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   ent = malloc(sizeof(struct string_dict_entry));
   ent->key = strdup(str);
@@ -79,13 +98,22 @@ int hash_table_add(char *str, void *hashdata, HashTable *htab) {
  * * hash_table_delete: Remove an entry from a hash table.
  */
 
-void hash_table_delete(char *str, HashTable *htab) {
+void hash_table_delete(const char *str, HashTable *htab) {
   struct string_dict_entry *ent = nullptr;
 
-  if (!red_black_tree_exists(htab->tree, str)) {
+  /* red_black_tree's key parameter isn't const-correct; str is only used
+     as a lookup key here, never mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+  if (!red_black_tree_exists(htab->tree, (void *)str)) {
     return;
   }
-  ent = red_black_tree_delete(htab->tree, str);
+  ent = red_black_tree_delete(htab->tree, (void *)str);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   if (ent) {
     if (ent->key)
@@ -111,7 +139,8 @@ static int nuke_hash_ent(void *key, void *data, int depth, void *arg) {
 void hash_table_flush(HashTable *htab, int size) {
   red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, nullptr);
   red_black_tree_destroy(htab->tree);
-  htab->tree = red_black_tree_init((void *)hrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(
+      (int (*)(void *, void *, void *))(GenericFnPtr)hrbtab_compare, nullptr);
   if (htab->last)
     free(htab->last);
   htab->last = nullptr;

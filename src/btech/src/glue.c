@@ -452,7 +452,7 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
 void UpdateSpecialObjects(void) {
   static time_t lastrun = 0;
 
-  char *cmdsave;
+  const char *cmdsave;
   int i;
   int times = lastrun ? (mudstate.now - lastrun) : 1;
 

@@ -331,18 +331,14 @@ static int autodetect_list(char *ptrs[], int nitems) {
          * accepted.
          */
 
-        if (i == 0) {
-          p = ptrs[i];
-          if (*p++ != NUMBER_TOKEN) {
-            return ALPHANUM_LIST;
-          } else if (is_integer(p)) {
-            sort_type = DBREF_LIST;
-          } else {
-            return ALPHANUM_LIST;
-          }
-        } else {
+        if (i != 0) {
           return ALPHANUM_LIST;
         }
+        p = ptrs[i];
+        if (*p++ != NUMBER_TOKEN || !is_integer(p)) {
+          return ALPHANUM_LIST;
+        }
+        sort_type = DBREF_LIST;
       } else if (index(ptrs[i], '.')) {
         sort_type = FLOAT_LIST;
       }
@@ -488,7 +484,7 @@ int delim_check(char *fargs[], int nfargs, int sep_arg, char *sep, char *buff,
                 char **bufc, int eval, DbRef player, DbRef cause, char *cargs[],
                 int ncargs) {
   char *tstr, *bp, *str;
-  int tlen;
+  size_t tlen;
 
   if (nfargs >= sep_arg) {
     tlen = strlen(fargs[sep_arg - 1]);
@@ -842,8 +838,8 @@ constexpr int UPTIME_UNITS = 6;
 
 struct {
   int multip;
-  char *name;
-  char *sname;
+  const char *name;
+  const char *sname;
 } uptime_unit_table[UPTIME_UNITS] = {{60 * 60 * 24 * 30 * 12, "year", "y"},
                                      {60 * 60 * 24 * 30, "month", "m"},
                                      {60 * 60 * 24, "day", "d"},
@@ -937,8 +933,8 @@ static void fun_connrecord(char *buff, char **bufc, DbRef player, DbRef cause,
 /**
  * Get attribute from object.
  */
-int check_read_perms(DbRef player, DbRef thing, Attribute *attr, int aowner,
-                     int aflags, char *buff, char **bufc) {
+int check_read_perms(DbRef player, DbRef thing, Attribute *attr, DbRef aowner,
+                     long aflags, char *buff, char **bufc) {
   int see_it;
 
   /*
@@ -1010,7 +1006,14 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
   } else {
@@ -1067,7 +1070,14 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
   } else {
@@ -1120,7 +1130,14 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
     eval_it = 0;
@@ -1204,7 +1221,14 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
     eval_it = 0;
@@ -2073,12 +2097,16 @@ static void fun_lte(char *buff, char **bufc, DbRef player, DbRef cause,
 
 static void fun_eq(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  safe_tprintf_str(buff, bufc, "%d", (atof(fargs[0]) == atof(fargs[1])));
+  double a = atof(fargs[0]);
+  double b = atof(fargs[1]);
+  safe_tprintf_str(buff, bufc, "%d", !(a < b) && !(a > b));
 }
 
 static void fun_neq(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  safe_tprintf_str(buff, bufc, "%d", (atof(fargs[0]) != atof(fargs[1])));
+  double a = atof(fargs[0]);
+  double b = atof(fargs[1]);
+  safe_tprintf_str(buff, bufc, "%d", (a < b) || (a > b));
 }
 
 static void fun_and(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -2147,10 +2175,10 @@ static void fun_sqrt(char *buff, char **bufc, DbRef player, DbRef cause,
   val = atof(fargs[0]);
   if (val < 0) {
     safe_str("#-1 SQUARE ROOT OF NEGATIVE", buff, bufc);
-  } else if (val == 0) {
-    safe_str("0", buff, bufc);
-  } else {
+  } else if (val > 0) {
     fval(buff, bufc, sqrt(val));
+  } else {
+    safe_str("0", buff, bufc);
   }
 }
 
@@ -2236,7 +2264,7 @@ static void fun_round(char *buff, char **bufc, DbRef player, DbRef cause,
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
-  safe_tprintf_str(buff, bufc, (char *)fstr, atof(fargs[0]));
+  safe_tprintf_str(buff, bufc, fstr, atof(fargs[0]));
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -2271,7 +2299,7 @@ static void fun_fdiv(char *buff, char **bufc, DbRef player, DbRef cause,
   double bot;
 
   bot = atof(fargs[1]);
-  if (bot == 0) {
+  if (!(bot < 0) && !(bot > 0)) {
     safe_str("#-1 DIVIDE BY ZERO", buff, bufc);
   } else {
     fval(buff, bufc, (atof(fargs[0]) / bot));
@@ -2385,21 +2413,22 @@ static void fun_atan(char *buff, char **bufc, DbRef player, DbRef cause,
 
 static void fun_cart2hex(char *buff, char **bufc, DbRef player, DbRef cause,
                          char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  float x, y;
+  double x, y;
   int x_count, y_count;
   int hex_x, hex_y;
-  float cart_x, cart_y;
-  float root3 = sqrt(3) * 322.5;
-  float alpha = root3 / 6;
-  float angle_alpha = sqrt(3) / 6;
+  double cart_x, cart_y;
+  double root3 = sqrt(3) * 322.5;
+  double alpha = root3 / 6;
+  double angle_alpha = sqrt(3) / 6;
 
   cart_x = atof(fargs[0]);
   cart_y = atof(fargs[1]);
 
   if (cart_x < alpha) {
     /* Special case: we are in section IV of x-column 0 or off the map */
+    double hex_y_d = floor(cart_y / 322.5);
     hex_x = cart_x < 0 ? -1 : 0;
-    hex_y = floor(cart_y / 322.5);
+    hex_y = (int)hex_y_d;
     safe_tprintf_str(buff, bufc, "%d %d", hex_x, hex_y);
     return;
   }
@@ -2408,7 +2437,7 @@ static void fun_cart2hex(char *buff, char **bufc, DbRef player, DbRef cause,
   cart_x -= alpha;
 
   /* Figure out the x-coordinate of the 'repeatable box' we're in. */
-  x_count = cart_x / root3;
+  x_count = (int)(cart_x / root3);
   /* And the offset inside the box, from the left edge. */
   x = cart_x - x_count * root3;
 
@@ -2416,7 +2445,8 @@ static void fun_cart2hex(char *buff, char **bufc, DbRef player, DbRef cause,
   x_count *= 2;
 
   /* Do the same for the y-coordinate; this is easy */
-  y_count = floor(cart_y / 322.5);
+  double y_count_d = floor(cart_y / 322.5);
+  y_count = (int)y_count_d;
   y = cart_y - y_count * 322.5;
 
   if (x < 2 * alpha) {
@@ -2471,9 +2501,9 @@ static void fun_cart2hex(char *buff, char **bufc, DbRef player, DbRef cause,
 
 static void fun_hex2cart(char *buff, char **bufc, DbRef player, DbRef cause,
                          char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  float cart_x, cart_y;
+  double cart_x, cart_y;
 
-  cart_x = (2.f + 3.f * atof(fargs[0])) * ((sqrt(3) * 322.5) / 6);
+  cart_x = (2.0 + 3.0 * atof(fargs[0])) * ((sqrt(3) * 322.5) / 6);
   cart_y = ((atoi(fargs[0]) % 2) ? 0 : 161.25) + (atof(fargs[1]) * 322.5);
 
   safe_tprintf_str(buff, bufc, "%f %f", cart_x, cart_y);
@@ -2719,8 +2749,10 @@ static void fun_home(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(player, fargs[0]);
+  // "#-1" is both the invalid-object guard and the final default; the
+  // middle branches are the real logic.
   if (!is_good_obj(it) || !is_examinable(player, it))
-    safe_str("#-1", buff, bufc);
+    safe_str("#-1", buff, bufc); // NOLINT(bugprone-branch-clone)
   else if (has_home(it))
     safe_tprintf_str(buff, bufc, "#%ld", obj_home(it));
   else if (has_dropto(it))
@@ -2891,6 +2923,8 @@ static void do_itemfuns(char *buff, char **bufc, char *str, int el, char *word,
       safe_chr(sep, buff, bufc);
       safe_str(eptr, buff, bufc);
     }
+    break;
+  default:
     break;
   }
 }
@@ -3187,7 +3221,7 @@ static void fun_delete(char *buff, char **bufc, DbRef player, DbRef cause,
   s = fargs[0];
   start = atoi(fargs[1]);
   nchars = atoi(fargs[2]);
-  len = strlen(s);
+  len = (int)strlen(s);
   if ((start >= len) || (nchars <= 0)) {
     safe_str(s, buff, bufc);
     return;
@@ -3297,9 +3331,8 @@ static void fun_nearby(char *buff, char **bufc, DbRef player, DbRef cause,
 
   obj1 = match_thing(player, fargs[0]);
   obj2 = match_thing(player, fargs[1]);
-  if (!(nearby_or_control(player, obj1) || nearby_or_control(player, obj2)))
-    safe_str("0", buff, bufc);
-  else if (nearby(obj1, obj2))
+  if ((nearby_or_control(player, obj1) || nearby_or_control(player, obj2)) &&
+      nearby(obj1, obj2))
     safe_str("1", buff, bufc);
   else
     safe_str("0", buff, bufc);
@@ -3319,7 +3352,16 @@ static void process_pronoun(DbRef player, char *what, const char *token,
   if (!is_good_obj(it) || (!is_player(it) && !nearby_or_control(player, it))) {
     safe_str("#-1 NO MATCH", buff, bufc);
   } else {
+    /* exec()'s cursor parameter is char ** for its own reasons; token is
+       never written through here, only scanned. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
     str = (char *)token;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     exec(buff, bufc, 0, it, it, 0, &str, (char **)nullptr, 0);
   }
 }
@@ -3439,13 +3481,13 @@ static void fun_lattr(char *buff, char **bufc, DbRef player, DbRef cause,
   first = 1;
   olist_push();
   if (parse_attrib_wild(player, fargs[0], &thing, 0, 0, 1)) {
-    for (ca = olist_first(); ca != NOTHING; ca = olist_next()) {
+    for (ca = (int)olist_first(); ca != NOTHING; ca = (int)olist_next()) {
       attr = attribute_by_number(ca);
       if (attr) {
         if (!first)
           safe_chr(' ', buff, bufc);
         first = 0;
-        safe_str((char *)attr->name, buff, bufc);
+        safe_str(attr->name, buff, bufc);
       }
     }
   } else {
@@ -3524,7 +3566,7 @@ static void fun_revwords(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
                       char *fargs[], int nfargs, char *cargs[], int ncargs) {
   char *bp, *cp, *mp;
-  int mlen;
+  size_t mlen;
 
   if (nfargs == 0) {
     return;
@@ -3538,12 +3580,21 @@ static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
    * Sanity-check arg1 and arg2
    */
 
+  /* bp/mp alias fargs[]; they're mutable char * so these literal
+     defaults need an explicit cast. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   if (bp == nullptr)
-    bp = "";
+    bp = (char *)"";
   if (mp == nullptr)
-    mp = " ";
+    mp = (char *)" ";
   if (!mp || !*mp)
     mp = (char *)" ";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   mlen = strlen(mp);
   if ((mlen == 1) && (*mp == ' '))
     bp = trim_space_sep(bp, ' ');
@@ -3598,7 +3649,7 @@ static void fun_after(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_before(char *buff, char **bufc, DbRef player, DbRef cause,
                        char *fargs[], int nfargs, char *cargs[], int ncargs) {
   char *bp, *cp, *mp, *ip;
-  int mlen;
+  size_t mlen;
 
   if (nfargs == 0) {
     return;
@@ -3613,12 +3664,21 @@ static void fun_before(char *buff, char **bufc, DbRef player, DbRef cause,
    * Sanity-check arg1 and arg2
    */
 
+  /* bp/mp alias fargs[]; they're mutable char * so these literal
+     defaults need an explicit cast. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   if (bp == nullptr)
-    bp = "";
+    bp = (char *)"";
   if (mp == nullptr)
-    mp = " ";
+    mp = (char *)" ";
   if (!mp || !*mp)
     mp = (char *)" ";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   mlen = strlen(mp);
   if ((mlen == 1) && (*mp == ' '))
     bp = trim_space_sep(bp, ' ');
@@ -3911,7 +3971,7 @@ static void fun_repeat(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   } else if (times == 1) {
     safe_str(fargs[0], buff, bufc);
-  } else if (strlen(fargs[0]) * times >= (LBUF_SIZE - 1)) {
+  } else if (strlen(fargs[0]) * (size_t)times >= (LBUF_SIZE - 1)) {
     safe_str("#-1 STRING TOO LONG", buff, bufc);
   } else {
     for (i = 0; i < times; i++)
@@ -4363,6 +4423,8 @@ static void fun_locate(char *buff, char **bufc, DbRef player, DbRef cause,
     case 'X':
       multiple = 1;
       break;
+    default:
+      break;
     }
   }
 
@@ -4407,6 +4469,8 @@ static void fun_locate(char *buff, char **bufc, DbRef player, DbRef cause,
       break;
     case '*':
       match_everything(MAT_EXIT_PARENTS);
+      break;
+    default:
       break;
     }
   }
@@ -4628,6 +4692,14 @@ struct i_record {
   char *str;
 };
 
+/*
+ * qsort() mandates the const void * comparator signature; casting it away
+ * to read the real element type is the standard, unavoidable idiom.
+ */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
 static int a_comp(const void *s1, const void *s2) {
   return strcmp(*(char **)s1, *(char **)s2);
 }
@@ -4647,6 +4719,9 @@ static int i_comp(const void *s1, const void *s2) {
     return -1;
   return 0;
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 static void do_asort(char *s[], int n, int sort_type) {
   int i;
@@ -4655,44 +4730,46 @@ static void do_asort(char *s[], int n, int sort_type) {
 
   switch (sort_type) {
   case ALPHANUM_LIST:
-    qsort((void *)s, n, sizeof(char *), a_comp);
+    qsort((void *)s, (size_t)n, sizeof(char *), a_comp);
 
     break;
   case NUMERIC_LIST:
-    ip = malloc(n * sizeof(i_rec));
+    ip = malloc((size_t)n * sizeof(i_rec));
     for (i = 0; i < n; i++) {
       ip[i].str = s[i];
       ip[i].data = atoi(s[i]);
     }
-    qsort((void *)ip, n, sizeof(i_rec), i_comp);
+    qsort((void *)ip, (size_t)n, sizeof(i_rec), i_comp);
     for (i = 0; i < n; i++) {
       s[i] = ip[i].str;
     }
     free(ip);
     break;
   case DBREF_LIST:
-    ip = malloc(n * sizeof(i_rec));
+    ip = malloc((size_t)n * sizeof(i_rec));
     for (i = 0; i < n; i++) {
       ip[i].str = s[i];
       ip[i].data = dbnum(s[i]);
     }
-    qsort((void *)ip, n, sizeof(i_rec), i_comp);
+    qsort((void *)ip, (size_t)n, sizeof(i_rec), i_comp);
     for (i = 0; i < n; i++) {
       s[i] = ip[i].str;
     }
     free(ip);
     break;
   case FLOAT_LIST:
-    fp = malloc(n * sizeof(f_rec));
+    fp = malloc((size_t)n * sizeof(f_rec));
     for (i = 0; i < n; i++) {
       fp[i].str = s[i];
       fp[i].data = atof(s[i]);
     }
-    qsort((void *)fp, n, sizeof(f_rec), f_comp);
+    qsort((void *)fp, (size_t)n, sizeof(f_rec), f_comp);
     for (i = 0; i < n; i++) {
       s[i] = fp[i].str;
     }
     free(fp);
+    break;
+  default:
     break;
   }
 }
@@ -4917,6 +4994,8 @@ static void handle_sets(char *fargs[], char *buff, char **bufc, int oper,
       while ((i1 < n1) && !strcmp(ptrs1[i1], oldp))
         i1++;
     }
+  default:
+    break;
   }
   free_lbuf(list1);
   free_lbuf(list2);
@@ -4964,7 +5043,7 @@ static void fun_ljust(char *buff, char **bufc, DbRef player, DbRef cause,
   varargs_preamble("LJUST", 3);
   strncpy(new, fargs[0], LBUF_SIZE - 1);
   spaces = atoi(fargs[1]) -
-           strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
+           (int)strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
 
   /*
    * Sanitize number of spaces
@@ -4993,7 +5072,7 @@ static void fun_rjust(char *buff, char **bufc, DbRef player, DbRef cause,
   varargs_preamble("RJUST", 3);
   strncpy(new, fargs[0], LBUF_SIZE - 1);
   spaces = atoi(fargs[1]) -
-           strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
+           (int)strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
 
   /*
    * Sanitize number of spaces
@@ -5023,7 +5102,7 @@ static void fun_center(char *buff, char **bufc, DbRef player, DbRef cause,
 
   width = atoi(fargs[1]);
   strncpy(new, fargs[0], LBUF_SIZE - 1);
-  len = strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
+  len = (int)strlen((char *)strip_ansi_r(new, fargs[0], strlen(fargs[0])));
 
   if (width > LBUF_SIZE) {
     safe_str("#-1 OUT OF RANGE", buff, bufc);
@@ -5035,7 +5114,7 @@ static void fun_center(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  lead_chrs = (width / 2) - (len / 2) + .5;
+  lead_chrs = (int)((width / 2) - (len / 2) + .5);
   for (i = 0; i < lead_chrs; i++)
     safe_chr(sep, buff, bufc);
   safe_str(fargs[0], buff, bufc);
@@ -5229,7 +5308,14 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
   } else {
@@ -5325,7 +5411,14 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
       boolean_expression_free(boolexp);
     } else {
       free_lbuf(atr_gotten);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
       atr_gotten = (char *)"#-1 PERMISSION DENIED";
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
     free_buffer = 0;
   } else {
@@ -5736,12 +5829,13 @@ FUN flist[] = {
 
 void init_functab() {
   FUN *fp;
-  char *buff, *cp, *dp;
+  char *buff, *dp;
+  const char *cp;
 
   buff = alloc_sbuf("init_functab");
   hash_table_initialize(&mudstate.func_htab, 100 * HASH_FACTOR);
   for (fp = flist; fp->name; fp++) {
-    cp = (char *)fp->name;
+    cp = fp->name;
     dp = buff;
     while (*cp) {
       *dp = ToLower(*cp);
@@ -5836,8 +5930,17 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
   if (!ufp) {
     ufp = malloc(sizeof(UFUN));
     ufp->name = strsave(np);
+    /* Upcase the name in place right after allocating it, before anyone
+       else can hold a reference to it. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
     for (bp = (char *)ufp->name; *bp; bp++)
       *bp = ToUpper(*bp);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     ufp->obj = obj;
     ufp->atr = atr;
     ufp->perms = CA_PUBLIC;
@@ -5870,18 +5973,19 @@ void do_function(DbRef player, DbRef cause, int key, char *fname,
 void list_functable(DbRef player) {
   FUN *fp;
   UFUN *ufp;
-  char *buf, *bp, *cp;
+  char *buf, *bp;
+  const char *cp;
 
   buf = alloc_lbuf("list_functable");
   bp = buf;
 
   /* Hardcoded Functions */
-  for (cp = (char *)"Functions:"; *cp; cp++)
+  for (cp = "Functions:"; *cp; cp++)
     *bp++ = *cp;
   for (fp = flist; fp->name; fp++) {
     if (check_access(player, fp->perms)) {
       *bp++ = ' ';
-      for (cp = (char *)(fp->name); *cp; cp++)
+      for (cp = fp->name; *cp; cp++)
         *bp++ = *cp;
     }
   }
@@ -5895,7 +5999,7 @@ void list_functable(DbRef player) {
   for (ufp = ufun_head; ufp; ufp = ufp->next) {
     if (check_access(player, ufp->perms)) {
       *bp++ = ' ';
-      for (cp = (char *)(ufp->name); *cp; cp++)
+      for (cp = ufp->name; *cp; cp++)
         *bp++ = *cp;
     }
   }

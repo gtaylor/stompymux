@@ -72,7 +72,7 @@ int helpindex_read(HashTable *htab, char *filename) {
 
     htab_entry = (struct help_entry *)malloc(sizeof(struct help_entry));
 
-    htab_entry->pos = entry.pos;
+    htab_entry->pos = (int)entry.pos;
     htab_entry->original = 1; /*
                                * First is the longest
                                */
@@ -94,7 +94,7 @@ int helpindex_read(HashTable *htab, char *filename) {
       *p = '\0';
       htab_entry = (struct help_entry *)malloc(sizeof(struct help_entry));
 
-      htab_entry->pos = entry.pos;
+      htab_entry->pos = (int)entry.pos;
       htab_entry->original = 0;
       htab_entry->key = malloc(strlen(entry.topic) + 1);
       StringCopy(htab_entry->key, entry.topic);
@@ -133,9 +133,18 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
   char matched;
   char *topic_list = nullptr, *buffp;
 
-  if (*topic == '\0')
+  if (*topic == '\0') {
+    /* topic is mutated in place below when non-empty; this default value
+       is never itself mutated. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
     topic = (char *)"help";
-  else
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+  } else
     for (p = topic; *p; p++)
       *p = ToLower(*p);
   htab_entry = (struct help_entry *)hash_table_find(topic, htab);
@@ -153,7 +162,7 @@ void help_write(DbRef player, char *topic, HashTable *htab, char *filename,
           buffp = topic_list;
         }
         safe_str(htab_entry->key, topic_list, &buffp);
-        safe_str((char *)"  ", topic_list, &buffp);
+        safe_str("  ", topic_list, &buffp);
       }
     }
     if (matched == 0)

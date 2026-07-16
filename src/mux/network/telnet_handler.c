@@ -133,7 +133,7 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
     } else if (isascii(current) && isprint(current)) {
       if ((size_t)d->input_tail >= sizeof(d->input))
         continue;
-      d->input[d->input_tail++] = current;
+      d->input[d->input_tail++] = (char)current;
       d->input_size++;
     }
   }
@@ -323,6 +323,10 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     log_error(LOG_PROBLEMS, "TELNET", "ERROR", "%s", event->error.msg);
     descriptor_shutdown(d, R_SOCKDIED);
     break;
+  case TELNET_EV_IAC:
+  case TELNET_EV_ZMP:
+  case TELNET_EV_ENVIRON:
+  case TELNET_EV_MSSP:
   default:
     break;
   }

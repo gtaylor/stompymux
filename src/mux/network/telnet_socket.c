@@ -69,7 +69,7 @@ int descriptor_compare(void *vleft, void *vright, void *token) {
   DbRef left = (DbRef)vleft;
   DbRef right = (DbRef)vright;
 
-  return (left - right);
+  return (left > right) - (left < right);
 }
 
 void descriptor_hash_add(Descriptor *d) {
@@ -192,7 +192,7 @@ static int bind_mux_socket(int port) {
   }
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
-  server.sin_port = htons(port);
+  server.sin_port = htons((uint16_t)port);
   if (bind(s, (struct sockaddr *)&server, sizeof(server))) {
     log_perror("NET", "FAIL", nullptr, "bind");
     close(s);
@@ -323,8 +323,8 @@ static void accept_new_connection(evutil_socket_t sock, short event,
   if (newsock < 0)
     return;
 
-  getnameinfo((struct sockaddr *)&addr, addr_len, addrname, 1024, addrport, 32,
-              NI_NUMERICHOST | NI_NUMERICSERV);
+  getnameinfo((struct sockaddr *)&addr, (socklen_t)addr_len, addrname, 1024,
+              addrport, 32, NI_NUMERICHOST | NI_NUMERICSERV);
 
   if (site_data_check(&addr, addr_len, mudstate.access_list) == H_FORBIDDEN) {
     log_error(LOG_NET | LOG_SECURITY, "NET", "SiteData",
@@ -446,8 +446,8 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   d->program_data = nullptr;
   d->last_time = 0;
   d->hashnext = nullptr;
-  getnameinfo((struct sockaddr *)saddr, saddr_len, d->addr, sizeof(d->addr),
-              nullptr, 0, NI_NUMERICHOST);
+  getnameinfo((struct sockaddr *)saddr, (socklen_t)saddr_len, d->addr,
+              sizeof(d->addr), nullptr, 0, NI_NUMERICHOST);
 
   if (descriptor_list)
     descriptor_list->prev = d;
@@ -513,12 +513,10 @@ static int process_input(Descriptor *d) {
 
   memset(buf, 0, sizeof(buf));
 
-  got = read(d->descriptor, buf, (sizeof buf - 1));
+  got = (int)read(d->descriptor, buf, (sizeof buf - 1));
 
   if (got <= 0) {
-    if (errno == EINTR)
-      return 1;
-    else if (errno == EAGAIN)
+    if (errno == EINTR || errno == EAGAIN)
       return 1;
     else {
       dprintk("error %s (errno %d) read on fd %d descriptor %p %s(%ld)\n",
@@ -557,7 +555,7 @@ void flush_sockets() {
   }
 }
 
-void close_sockets(int emergency, char *message) {
+void close_sockets(int emergency, const char *message) {
   Descriptor *d, *dnext;
 
   DESC_SAFEITER_ALL(d, dnext) {
@@ -587,6 +585,4 @@ void close_sockets(int emergency, char *message) {
   mux_release_socket();
 }
 
-void emergency_shutdown(void) {
-  close_sockets(1, (char *)"Going down - Bye.\n");
-}
+void emergency_shutdown(void) { close_sockets(1, "Going down - Bye.\n"); }

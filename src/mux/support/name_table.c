@@ -57,9 +57,10 @@ NameTable *name_table_find_entry(DbRef player, NameTable *ntab,
  * * name_table_display: Print out the names of the entries in a name table.
  */
 
-void name_table_display(DbRef player, NameTable *ntab, char *prefix,
+void name_table_display(DbRef player, NameTable *ntab, const char *prefix,
                         int list_if_none) {
-  char *buf, *bp, *cp;
+  char *buf, *bp;
+  const char *cp;
   NameTable *nt;
   int got_one;
 
@@ -88,8 +89,10 @@ void name_table_display(DbRef player, NameTable *ntab, char *prefix,
  */
 
 void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
-                          char *prefix, char *true_text, char *false_text) {
-  char *buf, *bp, *cp;
+                          const char *prefix, const char *true_text,
+                          const char *false_text) {
+  char *buf, *bp;
+  const char *cp;
   NameTable *nt;
 
   buf = alloc_lbuf("name_table_interpret");
@@ -126,8 +129,9 @@ void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
  */
 
 void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
-                         char *prefix, int list_if_none) {
-  char *buf, *bp, *cp;
+                         const char *prefix, int list_if_none) {
+  char *buf, *bp;
+  const char *cp;
   NameTable *nt;
   int got_one;
 
@@ -152,7 +156,7 @@ void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
   free_lbuf(buf);
 }
 
-int cf_ntab_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd) {
   NameTable *np;
   char *ap;
 

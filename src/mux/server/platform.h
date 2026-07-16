@@ -32,6 +32,17 @@ typedef char IBUF[16];
 typedef struct map_data MAP;
 typedef struct mech_data MECH;
 
+/*
+ * Generic function-pointer type for tables that store heterogeneous
+ * handler/interpreter functions in a single field (e.g. command dispatch
+ * tables, config directive tables). Storing a function pointer as `void *`
+ * is not portable ISO C (only POSIX guarantees it); casting through this
+ * type instead, then back to the real signature at the call site, is fully
+ * portable since function-pointer-to-function-pointer conversion is always
+ * well-defined as long as the call goes through the original type.
+ */
+typedef void (*GenericFnPtr)(void);
+
 #include "mux/server/debug.h"
 
 #include <sys/resource.h>
@@ -108,12 +119,12 @@ constexpr char LISTPLACE_VAR[] = "#@";
 extern int malloc_count;
 
 #define XMALLOC(x, y)                                                          \
-  (fprintf(stderr, "Malloc: %s\n", (y)), malloc_count++, (char *)malloc((x)))
+  (fprintf(stderr, "Malloc: %s\n", (y)), malloc_count++, malloc((x)))
 #define XFREE(x, y)                                                            \
   (fprintf(stderr, "Free: %s\n", (y)),                                         \
    ((x) ? malloc_count--, free((x)), (x) = nullptr : (x)))
 #else
-#define XMALLOC(x, y) (char *)malloc((x))
+#define XMALLOC(x, y) malloc((x))
 #define XFREE(x, y) (free((x)), (x) = nullptr)
 #endif /* TEST_MALLOC */
 

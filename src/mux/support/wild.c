@@ -39,7 +39,7 @@ static int numargs;    /* Argument return size  */
  * Do a wildcard match, without remembering the wild data.
  * This routine will cause crashes if fed NULLs instead of strings.
  */
-int quick_wild(char *tstr, char *dstr) {
+int quick_wild(const char *tstr, const char *dstr) {
   while (*tstr != '*') {
     switch (*tstr) {
     case '?':
@@ -135,8 +135,8 @@ int quick_wild(char *tstr, char *dstr) {
  * Side Effect: this routine modifies the 'arglist' static global
  * variable.
  */
-static int wild1(char *tstr, char *dstr, int arg) {
-  char *datapos;
+static int wild1(const char *tstr, const char *dstr, int arg) {
+  const char *datapos;
   int argpos, numextra;
 
   while (*tstr != '*') {
@@ -300,7 +300,8 @@ static int wild1(char *tstr, char *dstr, int arg) {
        *
        * *  * *  * * First do the '*'...
        */
-      StringCopyTrunc(arglist[argpos], datapos, (dstr - datapos) - numextra);
+      StringCopyTrunc(arglist[argpos], datapos,
+                      (size_t)((dstr - datapos) - numextra));
       arglist[argpos][(dstr - datapos) - numextra] = '\0';
       datapos = dstr - numextra;
       argpos++;
@@ -340,9 +341,9 @@ static int wild1(char *tstr, char *dstr, int arg) {
  * Side Effect: this routine modifies the 'arglist' and 'numargs'
  * static global variables.
  */
-int wild(char *tstr, char *dstr, char *args[], int nargs) {
+int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   int i, value;
-  char *scan;
+  const char *scan;
 
   /*
    * Initialize the return array.
@@ -383,6 +384,8 @@ int wild(char *tstr, char *dstr, char *args[], int nargs) {
       args[i] = alloc_lbuf("wild.*");
       memset(args[i], 0, LBUF_SIZE);
       i++;
+    default:
+      break;
     }
     scan++;
   }
@@ -418,7 +421,7 @@ int wild(char *tstr, char *dstr, char *args[], int nargs) {
  *
  * This routine will cause crashes if fed NULLs instead of strings.
  */
-int wild_match(char *tstr, char *dstr) {
+int wild_match(const char *tstr, const char *dstr) {
   switch (*tstr) {
   case '>':
     tstr++;
@@ -432,6 +435,8 @@ int wild_match(char *tstr, char *dstr) {
       return (atoi(tstr) > atoi(dstr));
     else
       return (strcmp(tstr, dstr) > 0);
+  default:
+    break;
   }
 
   return quick_wild(tstr, dstr);

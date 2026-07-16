@@ -25,10 +25,12 @@ bool is_safe(DbRef x, DbRef p) {
 }
 
 void mark(DbRef x) {
-  mudstate.markbits->chunk[x >> 3] |= mudconf.markdata[x & 7];
+  mudstate.markbits->chunk[x >> 3] =
+      (char)(mudstate.markbits->chunk[x >> 3] | mudconf.markdata[x & 7]);
 }
 void unmark(DbRef x) {
-  mudstate.markbits->chunk[x >> 3] &= ~mudconf.markdata[x & 7];
+  mudstate.markbits->chunk[x >> 3] =
+      (char)(mudstate.markbits->chunk[x >> 3] & ~mudconf.markdata[x & 7]);
 }
 bool is_marked(DbRef x) {
   return mudstate.markbits->chunk[x >> 3] & mudconf.markdata[x & 7];
@@ -352,13 +354,14 @@ OBJENT object_types[8] = {
  */
 void init_flagtab(void) {
   FLAGENT *fp;
-  char *nbuf, *np, *bp;
+  char *nbuf, *np;
+  const char *bp;
 
   hash_table_initialize(&mudstate.flags_htab, 100 * HASH_FACTOR);
   nbuf = alloc_sbuf("init_flagtab");
 
   for (fp = gen_flags; fp->flagname; fp++) {
-    for (np = nbuf, bp = (char *)fp->flagname; *bp; np++, bp++)
+    for (np = nbuf, bp = fp->flagname; *bp; np++, bp++)
       *np = ToLower(*bp);
     *np = '\0';
     hash_table_add(nbuf, (int *)fp, &mudstate.flags_htab);
@@ -375,7 +378,7 @@ void display_flagtab(DbRef player) {
   FLAGENT *fp;
 
   bp = buf = alloc_lbuf("display_flagtab");
-  safe_str((char *)"Flags:", buf, &bp);
+  safe_str("Flags:", buf, &bp);
 
   for (fp = gen_flags; fp->flagname; fp++) {
     if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
@@ -383,7 +386,7 @@ void display_flagtab(DbRef player) {
     if ((fp->listperm & CA_GOD) && !is_god(player))
       continue;
     safe_chr(' ', buf, &bp);
-    safe_str((char *)fp->flagname, buf, &bp);
+    safe_str(fp->flagname, buf, &bp);
     safe_chr('(', buf, &bp);
     safe_chr(fp->flaglett, buf, &bp);
     safe_chr(')', buf, &bp);
@@ -483,7 +486,7 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
     return buf;
   }
 
-  flagtype = (flagword & TYPE_MASK);
+  flagtype = (int)(flagword & TYPE_MASK);
   if (object_types[flagtype].lett != ' ')
     safe_sb_chr(object_types[flagtype].lett, buf, &bp);
 
@@ -574,9 +577,9 @@ char *flag_description(DbRef player, DbRef target) {
    * Store the header strings and object type
    */
 
-  safe_mb_str((char *)"Type: ", buff, &bp);
-  safe_mb_str((char *)object_types[otype].name, buff, &bp);
-  safe_mb_str((char *)" Flags:", buff, &bp);
+  safe_mb_str("Type: ", buff, &bp);
+  safe_mb_str(object_types[otype].name, buff, &bp);
+  safe_mb_str(" Flags:", buff, &bp);
   if (object_types[otype].perm != CA_PUBLIC) {
     *bp = '\0';
     return buff;
@@ -605,7 +608,7 @@ char *flag_description(DbRef player, DbRef target) {
           !is_wizard(player))
         continue;
       safe_mb_chr(' ', buff, &bp);
-      safe_mb_str((char *)fp->flagname, buff, &bp);
+      safe_mb_str(fp->flagname, buff, &bp);
     }
   }
 

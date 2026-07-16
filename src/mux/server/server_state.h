@@ -354,7 +354,7 @@ struct ServerState {
   time_t start_time;         /* When was MUX started */
   time_t process_start_time; /* When this server process started */
   char buffer[256];          /* A buffer for holding temp stuff */
-  char *debug_cmd;           /* The command we are executing (if any) */
+  const char *debug_cmd;     /* The command we are executing (if any) */
   SiteData *access_list;     /* Access states for sites */
   SiteData *suspect_list;    /* Sites that are suspect */
   HashTable command_htab;    /* Commands hashtable */
@@ -463,7 +463,10 @@ constexpr int LOG_ALLOCATE = 0x00004000; /* Log alloc/free from buffer pools */
 constexpr int LOG_PROBLEMS = 0x00008000; /* Log runtime problems */
 constexpr int LOG_SUSPECTCMDS =
     0x00010000; /* Log commands by people set SUSPECT */
-constexpr unsigned int LOG_ALWAYS = 0x80000000; /* Always log it */
+// Stored as int (not unsigned) so it combines cleanly with the other LOG_*
+// bitmask constants and mudconf.log_options without signedness conversions;
+// C23 guarantees the top-bit pattern converts to INT_MIN deterministically.
+constexpr int LOG_ALWAYS = (int)0x80000000U; /* Always log it */
 
 constexpr int LOGOPT_FLAGS = 0x01;     /* Report flags on object */
 constexpr int LOGOPT_LOC = 0x02;       /* Report loc of obj when requested */

@@ -74,7 +74,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
   /* Let's make this case insensitive... */
 
   for (s = name; *s; s++) {
-    *s = tolower(*s);
+    *s = (char)tolower(*s);
   }
 
   old = (CMDENT *)hash_table_find(name, &mudstate.command_htab);
@@ -84,8 +84,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     /* If it's already found in the hash table, and it's being
        added using the same object and attribute... */
 
-    for (nextp = (ADDENT *)old->handler; nextp != nullptr;
-         nextp = nextp->next) {
+    for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
       if ((nextp->thing == thing) && (nextp->atr == atr)) {
         notify_printf(player, "%s already added.", name);
         return;
@@ -98,8 +97,8 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     add->thing = thing;
     add->atr = atr;
     add->name = (char *)strdup(name);
-    add->next = (ADDENT *)old->handler;
-    old->handler = (void *)add;
+    add->next = old->handler.added;
+    old->handler.added = add;
   } else {
     if (old) {
       /* Delete the old built-in and rename it __name */
@@ -122,7 +121,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     add->atr = atr;
     add->name = (char *)strdup(name);
     add->next = nullptr;
-    cmd->handler = (void *)add;
+    cmd->handler.added = add;
 
     hash_table_add(name, (int *)cmd, &mudstate.command_htab);
 
@@ -149,7 +148,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
   /* Let's make this case insensitive... */
 
   for (s = name; *s; s++) {
-    *s = tolower(*s);
+    *s = (char)tolower(*s);
   }
 
   if (*name) {
@@ -160,8 +159,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
       /* If it's already found in the hash table, and it's being
          added using the same object and attribute... */
 
-      for (nextp = (ADDENT *)old->handler; nextp != nullptr;
-           nextp = nextp->next) {
+      for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
         notify_printf(player, "%s: #%ld/%s", nextp->name, nextp->thing,
                       ((Attribute *)attribute_by_number(nextp->atr))->name);
       }
@@ -178,7 +176,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
 
       if (old && (old->callseq & CS_ADDED)) {
 
-        for (nextp = (ADDENT *)old->handler; nextp != nullptr;
+        for (nextp = old->handler.added; nextp != nullptr;
              nextp = nextp->next) {
           if (strcmp(keyname, nextp->name))
             continue;
@@ -217,14 +215,14 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
   /* Let's make this case insensitive... */
 
   for (s = name; *s; s++) {
-    *s = tolower(*s);
+    *s = (char)tolower(*s);
   }
 
   old = (CMDENT *)hash_table_find(name, &mudstate.command_htab);
 
   if (old && (old->callseq & CS_ADDED)) {
     if (!*command) {
-      for (prev = (ADDENT *)old->handler; prev != nullptr; prev = nextp) {
+      for (prev = old->handler.added; prev != nullptr; prev = nextp) {
         nextp = prev->next;
         /* Delete it! */
         free(prev->name);
@@ -242,8 +240,7 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
       notify(player, "Done.");
       return;
     } else {
-      for (nextp = (ADDENT *)old->handler; nextp != nullptr;
-           nextp = nextp->next) {
+      for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
         if ((nextp->thing == thing) && (nextp->atr == atr)) {
           /* Delete it! */
           free(nextp->name);
@@ -261,7 +258,7 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
               }
               free(old);
             } else {
-              old->handler = (void *)nextp->next;
+              old->handler.added = nextp->next;
               free(nextp);
             }
           } else {

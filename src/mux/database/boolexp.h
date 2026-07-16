@@ -10,8 +10,7 @@ BooleanExpression *boolean_expression_parse(DbRef player, const char *text,
                                             int internal);
 int eval_boolexp_atr(DbRef player, DbRef thing, DbRef from, char *key);
 
-char *boolean_expression_unparse(DbRef player,
-                                 BooleanExpression *expression);
+char *boolean_expression_unparse(DbRef player, BooleanExpression *expression);
 char *boolean_expression_unparse_quiet(DbRef player,
                                        BooleanExpression *expression);
 char *boolean_expression_unparse_function(DbRef player,

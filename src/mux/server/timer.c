@@ -133,7 +133,7 @@ static void check_events(void) {
 }
 
 static void dispatch(void) {
-  char *cmdsave;
+  const char *cmdsave;
 
   cmdsave = mudstate.debug_cmd;
   DPSET("< dispatch >");
@@ -215,10 +215,10 @@ static void dispatch(void) {
 
       curr = 1 - curr;
       getrusage(RUSAGE_SELF, &usage);
-      mudstate.mstat_ixrss[curr] = usage.ru_ixrss;
-      mudstate.mstat_idrss[curr] = usage.ru_idrss;
-      mudstate.mstat_isrss[curr] = usage.ru_isrss;
-      mudstate.mstat_secs[curr] = mudstate.now;
+      mudstate.mstat_ixrss[curr] = (int)usage.ru_ixrss;
+      mudstate.mstat_idrss[curr] = (int)usage.ru_idrss;
+      mudstate.mstat_isrss[curr] = (int)usage.ru_isrss;
+      mudstate.mstat_secs[curr] = (int)mudstate.now;
       mudstate.mstat_curr = curr;
     }
   }

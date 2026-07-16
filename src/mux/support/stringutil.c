@@ -102,6 +102,8 @@ char *translate_string(const char *str, int type) {
         case 47:
           safe_str("%cW", new, &bp);
           break;
+        default:
+          break;
         }
         j = c;
       } else {
@@ -355,13 +357,14 @@ const char *string_match(const char *src, const char *sub) {
  * of OLD replaced by NEW. OLD and NEW may be different lengths.
  */
 char *replace_string(const char *old, const char *new, const char *string) {
-  char *result, *r, *s;
+  char *result, *r;
+  const char *s;
   int olen;
 
   if (string == nullptr)
     return nullptr;
-  s = (char *)string;
-  olen = strlen(old);
+  s = string;
+  olen = (int)strlen(old);
   r = result = alloc_lbuf("replace_string");
   while (*s) {
 
@@ -382,8 +385,8 @@ char *replace_string(const char *old, const char *new, const char *string) {
      */
 
     if (*s) {
-      if (!strncmp(old, s, olen)) {
-        safe_str((char *)new, result, &r);
+      if (!strncmp(old, s, (size_t)olen)) {
+        safe_str(new, result, &r);
         s += olen;
       } else {
         safe_chr(*s, result, &r);
@@ -395,7 +398,7 @@ char *replace_string(const char *old, const char *new, const char *string) {
   return result;
 }
 
-int minmatch(char *str, char *target, int min) {
+int minmatch(const char *str, const char *target, int min) {
   while (*str && *target && (ToLower(*str) == ToLower(*target))) {
     str++;
     target++;
@@ -429,7 +432,7 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
   while (*src && ((tp - buff) < max))
     *tp++ = *src++;
   *bufp = tp;
-  return strlen(src);
+  return (int)strlen(src);
 }
 
 /**

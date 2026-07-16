@@ -40,34 +40,34 @@ static int ph_wiz(DbRef target, DbRef player, Power power, int fpowers,
   return (ph_any(target, player, power, fpowers, reset));
 }
 
-POWERENT gen_powers[] = {
-    {(char *)"find_unfindable", POW_FIND_UNFIND, 0, 0, ph_wiz},
-    {(char *)"idle", POW_IDLE, 0, 0, ph_wiz},
-    {(char *)"long_fingers", POW_LONGFINGERS, 0, 0, ph_wiz},
-    {(char *)"comm_all", POW_COMM_ALL, 0, 0, ph_wiz},
-    {(char *)"see_hidden", POW_SEE_HIDDEN, 0, 0, ph_wiz},
-    {(char *)"no_destroy", POW_NO_DESTROY, 0, 0, ph_wiz},
-    {(char *)"pass_locks", POW_PASS_LOCKS, 0, 0, ph_wiz},
-    /* BattletechMUX Powers */
-    {(char *)"mech", POW_MECH, POWER_EXT, 0, ph_wiz},
-    {(char *)"security", POW_SECURITY, POWER_EXT, 0, ph_wiz},
-    {(char *)"mechrep", POW_MECHREP, POWER_EXT, 0, ph_wiz},
-    {(char *)"map", POW_MAP, POWER_EXT, 0, ph_wiz},
-    {(char *)"tech", POW_TECH, POWER_EXT, 0, ph_wiz},
-    {(char *)"template", POW_TEMPLATE, POWER_EXT, 0, ph_wiz},
-    {nullptr, 0, 0, 0, 0}};
+POWERENT gen_powers[] = {{"find_unfindable", POW_FIND_UNFIND, 0, 0, ph_wiz},
+                         {"idle", POW_IDLE, 0, 0, ph_wiz},
+                         {"long_fingers", POW_LONGFINGERS, 0, 0, ph_wiz},
+                         {"comm_all", POW_COMM_ALL, 0, 0, ph_wiz},
+                         {"see_hidden", POW_SEE_HIDDEN, 0, 0, ph_wiz},
+                         {"no_destroy", POW_NO_DESTROY, 0, 0, ph_wiz},
+                         {"pass_locks", POW_PASS_LOCKS, 0, 0, ph_wiz},
+                         /* BattletechMUX Powers */
+                         {"mech", POW_MECH, POWER_EXT, 0, ph_wiz},
+                         {"security", POW_SECURITY, POWER_EXT, 0, ph_wiz},
+                         {"mechrep", POW_MECHREP, POWER_EXT, 0, ph_wiz},
+                         {"map", POW_MAP, POWER_EXT, 0, ph_wiz},
+                         {"tech", POW_TECH, POWER_EXT, 0, ph_wiz},
+                         {"template", POW_TEMPLATE, POWER_EXT, 0, ph_wiz},
+                         {nullptr, 0, 0, 0, 0}};
 
 /**
  * Initialize power hash tables.
  */
 void init_powertab(void) {
   POWERENT *fp;
-  char *nbuf, *np, *bp;
+  char *nbuf, *np;
+  const char *bp;
 
   hash_table_initialize(&mudstate.powers_htab, 15 * HASH_FACTOR);
   nbuf = alloc_sbuf("init_powertab");
   for (fp = gen_powers; fp->powername; fp++) {
-    for (np = nbuf, bp = (char *)fp->powername; *bp; np++, bp++)
+    for (np = nbuf, bp = fp->powername; *bp; np++, bp++)
       *np = ToLower(*bp);
     *np = '\0';
     hash_table_add(nbuf, (int *)fp, &mudstate.powers_htab);
@@ -83,14 +83,14 @@ void display_powertab(DbRef player) {
   POWERENT *fp;
 
   bp = buf = alloc_lbuf("display_powertab");
-  safe_str((char *)"Powers:", buf, &bp);
+  safe_str("Powers:", buf, &bp);
   for (fp = gen_powers; fp->powername; fp++) {
     if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
       continue;
     if ((fp->listperm & CA_GOD) && !is_god(player))
       continue;
     safe_chr(' ', buf, &bp);
-    safe_str((char *)fp->powername, buf, &bp);
+    safe_str(fp->powername, buf, &bp);
   }
   *bp = '\0';
   notify(player, buf);
@@ -222,7 +222,7 @@ char *power_description(DbRef player, DbRef target) {
    * Store the header strings and object type
    */
 
-  safe_mb_str((char *)"Powers:", buff, &bp);
+  safe_mb_str("Powers:", buff, &bp);
 
   for (fp = gen_powers; fp->powername; fp++) {
     if (fp->powerpower & POWER_EXT)
@@ -235,7 +235,7 @@ char *power_description(DbRef player, DbRef target) {
       if ((fp->listperm & CA_GOD) && !is_god(player))
         continue;
       safe_mb_chr(' ', buff, &bp);
-      safe_mb_str((char *)fp->powername, buff, &bp);
+      safe_mb_str(fp->powername, buff, &bp);
     }
   }
 

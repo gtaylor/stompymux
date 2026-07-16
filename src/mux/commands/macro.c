@@ -17,15 +17,14 @@ int nummacros;
 int maxmacros;
 struct macros **macros;
 
-MACENT macro_table[] = {
-    {(char *)"add", do_add_macro},       {(char *)"clear", do_clear_macro},
-    {(char *)"chmod", do_chmod_macro},   {(char *)"chown", do_chown_macro},
-    {(char *)"create", do_create_macro}, {(char *)"def", do_def_macro},
-    {(char *)"del", do_del_macro},       {(char *)"name", do_desc_macro},
-    {(char *)"chslot", do_edit_macro},   {(char *)"ex", do_ex_macro},
-    {(char *)"gex", do_gex_macro},       {(char *)"glist", do_list_macro},
-    {(char *)"list", do_status_macro},   {(char *)"undef", do_undef_macro},
-    {(char *)nullptr, nullptr}};
+MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
+                        {"chmod", do_chmod_macro},   {"chown", do_chown_macro},
+                        {"create", do_create_macro}, {"def", do_def_macro},
+                        {"del", do_del_macro},       {"name", do_desc_macro},
+                        {"chslot", do_edit_macro},   {"ex", do_ex_macro},
+                        {"gex", do_gex_macro},       {"glist", do_list_macro},
+                        {"list", do_status_macro},   {"undef", do_undef_macro},
+                        {(char *)nullptr, nullptr}};
 
 void init_mactab(void) {
   MACENT *mp;
@@ -366,7 +365,7 @@ void do_chown_macro(DbRef player, char *cmd) {
     notify(player, "MACRO: Sorry, command limited to Wizards.");
     return;
   }
-  m->player = thing;
+  m->player = (int)thing;
   unparse = unparse_object(player, thing, 0);
   notify_printf(player, "MACRO: Macro %s chowned to %s.", m->desc, unparse);
   free_lbuf(unparse);
@@ -495,8 +494,8 @@ void do_def_macro(DbRef player, char *cmd) {
   }
   if (m->nummacros >= m->maxmacros) {
     m->maxmacros += 10;
-    na = malloc(5 * m->maxmacros);
-    ns = malloc(sizeof(char *) * m->maxmacros);
+    na = malloc(5 * (size_t)m->maxmacros);
+    ns = malloc(sizeof(char *) * (size_t)m->maxmacros);
 
     for (i = 0; i < m->nummacros; i++) {
       StringCopy(na + i * 5, m->alias + i * 5);
@@ -588,7 +587,7 @@ char *do_process_macro(DbRef player, char *in, char *s) {
               tar += 2;
             } else if (*tar == '*') {
               *next = 0;
-              strlcat(next, s, LBUF_SIZE - (next - buff));
+              strlcat(next, s, (size_t)(LBUF_SIZE - (next - buff)));
               tar++;
               next += strlen(next);
             } else
@@ -669,7 +668,7 @@ void do_create_macro(DbRef player, char *s) {
   }
   if (nummacros >= maxmacros) {
     maxmacros += 10;
-    nm = (struct macros **)malloc(sizeof(struct macros *) * maxmacros);
+    nm = (struct macros **)malloc(sizeof(struct macros *) * (size_t)maxmacros);
 
     for (i = 0; i < nummacros; i++)
       nm[i] = macros[i];
@@ -679,7 +678,7 @@ void do_create_macro(DbRef player, char *s) {
   set = nummacros++;
   macros[set] = (struct macros *)malloc(sizeof(struct macros));
 
-  macros[set]->player = player;
+  macros[set]->player = (int)player;
   macros[set]->status = 0;
   macros[set]->nummacros = 0;
   macros[set]->maxmacros = 0;

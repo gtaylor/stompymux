@@ -15,14 +15,18 @@ static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext);
 static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext);
 
 struct sigaction saTERM = {.sa_sigaction = signal_TERM,
-                           .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
+                           .sa_flags =
+                               (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
 struct sigaction saPIPE = {.sa_sigaction = signal_PIPE, .sa_flags = SA_SIGINFO};
 struct sigaction saUSR2 = {.sa_sigaction = signal_USR2,
-                           .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
+                           .sa_flags =
+                               (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
 struct sigaction saSEGV = {.sa_sigaction = signal_SEGV,
-                           .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
+                           .sa_flags =
+                               (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
 struct sigaction saBUS = {.sa_sigaction = signal_BUS,
-                          .sa_flags = SA_SIGINFO | SA_RESETHAND | SA_RESTART};
+                          .sa_flags =
+                              (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
 
 stack_t sighandler_stack;
 stack_t regular_stack;
@@ -89,13 +93,21 @@ void unbind_signals(void) {
   }
 }
 
+/* do_shutdown()'s message parameter matches the CMDENT dispatch signature
+   (char *), which isn't const-correct; these literals are only read. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
 static void signal_TERM(int signo, siginfo_t *siginfo, void *ucontext) {
   if (signo == SIGINT) {
     dprintk("caught SIGINT");
-    do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGINT from kernel.");
+    do_shutdown(NOTHING, 0, SHUTDN_EXIT,
+                (char *)"received SIGINT from kernel.");
   } else {
     dprintk("caught SIGTERM");
-    do_shutdown(NOTHING, 0, SHUTDN_EXIT, "received SIGTERM from kernel.");
+    do_shutdown(NOTHING, 0, SHUTDN_EXIT,
+                (char *)"received SIGTERM from kernel.");
   }
 }
 
@@ -108,8 +120,11 @@ static void signal_PIPE(int signo, siginfo_t *siginfo, void *ucontext) {
 static void signal_USR2(int signo, siginfo_t *siginfo, void *ucontext) {
   dprintk("caught SIGUSR2");
   do_shutdown(NOTHING, 0, SHUTDN_EXIT | SHUTDN_KILLED,
-              "received SIGUSR2 from kernel.");
+              (char *)"received SIGUSR2 from kernel.");
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
   dprintk("caught SIGSEGV");

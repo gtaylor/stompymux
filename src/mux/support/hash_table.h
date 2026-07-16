@@ -8,7 +8,7 @@
 #include "mux/support/name_table.h"
 #include "mux/support/red_black_tree.h"
 
-int cf_ntab_access(int *value, char *string, long extra, DbRef player,
+int cf_ntab_access(void *value, char *string, long extra, DbRef player,
                    char *command);
 
 struct HashTable {
@@ -24,18 +24,19 @@ void hash_table_reset(HashTable *);
 
 int hash_value(char *, int);
 int hash_mask_get(void *);
-void *hash_table_find(char *, HashTable *);
-int hash_table_add(char *, void *, HashTable *);
-void hash_table_delete(char *, HashTable *);
+void *hash_table_find(const char *, HashTable *);
+int hash_table_add(const char *, void *, HashTable *);
+void hash_table_delete(const char *, HashTable *);
 void hash_table_flush(HashTable *, int);
 int hash_table_replace(char *, void *, HashTable *);
 void hash_table_replace_all(void *, void *, HashTable *);
 char *hash_table_info(const char *, HashTable *);
 int name_table_search(DbRef, NameTable *, char *);
 NameTable *name_table_find_entry(DbRef, NameTable *, char *);
-void name_table_display(DbRef, NameTable *, char *, int);
-void name_table_interpret(DbRef, NameTable *, int, char *, char *, char *);
-void name_table_list_set(DbRef, NameTable *, int, char *, int);
+void name_table_display(DbRef, NameTable *, const char *, int);
+void name_table_interpret(DbRef, NameTable *, int, const char *, const char *,
+                          const char *);
+void name_table_list_set(DbRef, NameTable *, int, const char *, int);
 void *hash_table_next_entry(HashTable *htab);
 void *hash_table_first_entry(HashTable *htab);
 char *hash_table_first_key(HashTable *htab);

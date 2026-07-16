@@ -156,7 +156,7 @@ int logcache_writelog(char *fname, char *fdata) {
   if (!logfiles)
     logcache_init();
 
-  len = strlen(fdata);
+  len = (int)strlen(fdata);
 
   log = red_black_tree_find(logfiles, fname);
 
@@ -175,7 +175,7 @@ int logcache_writelog(char *fname, char *fdata) {
     event_add(log->ev, &tv);
   }
 
-  if (write(log->fd, fdata, len) < 0) {
+  if (write(log->fd, fdata, (size_t)len) < 0) {
     fprintf(stderr,
             "System failed to write data to file with error '%s' on logfile "
             "'%s'. Closing.\n",

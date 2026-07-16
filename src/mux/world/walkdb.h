@@ -1,4 +1,5 @@
-/* walkdb.h - Database-wide search, statistics, and ownership helper interface. */
+/* walkdb.h - Database-wide search, statistics, and ownership helper interface.
+ */
 
 #pragma once
 

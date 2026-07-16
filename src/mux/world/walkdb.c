@@ -223,14 +223,8 @@ int chown_all(DbRef from_player, DbRef to_player) {
         s_owner(i, i);
         break;
       case TYPE_THING:
-        s_owner(i, to_player);
-        break;
       case TYPE_ROOM:
-        s_owner(i, to_player);
-        break;
       case TYPE_EXIT:
-        s_owner(i, to_player);
-        break;
       default:
         s_owner(i, to_player);
       }
@@ -287,13 +281,20 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
    * Crack arg into <pname> <type>=<targ>,<low>,<high>
    */
 
+  /* pname/searchtype are mutated in place elsewhere in this function
+     (lowercased, split, null-terminated); they can't be const, so these
+     literal defaults need an explicit cast. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   pname = parse_to(&searchfor, '=', EV_STRIP_TS);
   if (!pname || !*pname) {
     pname = (char *)"me";
   } else
     for (t = pname; *t; t++) {
       if (isupper(*t))
-        *t = tolower(*t);
+        *t = (char)tolower(*t);
     }
 
   if (searchfor && *searchfor) {
@@ -307,13 +308,16 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
   } else {
     searchtype = (char *)"";
   }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   /*
    * If the player name is quoted, strip the quotes
    */
 
   if (*pname == '\"') {
-    err = strlen(pname) - 1;
+    err = (int)strlen(pname) - 1;
     if (pname[err] == '"') {
       pname[err] = '\0';
       pname++;
@@ -336,9 +340,8 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
     parm->s_rst_owner = parm->s_wizard ? ANY_OWNER : player;
   } else if (pname[0] == '#') {
     parm->s_rst_owner = atoi(&pname[1]);
-    if (!is_good_obj(parm->s_rst_owner))
-      parm->s_rst_owner = NOTHING;
-    else if (typeof_obj(parm->s_rst_owner) != TYPE_PLAYER)
+    if (!is_good_obj(parm->s_rst_owner) ||
+        typeof_obj(parm->s_rst_owner) != TYPE_PLAYER)
       parm->s_rst_owner = NOTHING;
 
   } else if (strcmp(pname, "me") == 0) {
@@ -384,10 +387,8 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
     } else if (string_prefix("eroom", searchtype)) {
       parm->s_rst_type = TYPE_ROOM;
       parm->s_rst_eval = searchfor;
-    } else if (string_prefix("eobject", searchtype)) {
-      parm->s_rst_type = TYPE_THING;
-      parm->s_rst_eval = searchfor;
-    } else if (string_prefix("ething", searchtype)) {
+    } else if (string_prefix("eobject", searchtype) ||
+               string_prefix("ething", searchtype)) {
       parm->s_rst_type = TYPE_THING;
       parm->s_rst_eval = searchfor;
     } else if (string_prefix("eexit", searchtype)) {
@@ -461,9 +462,8 @@ int search_criteria_setup(DbRef player, char *searchfor, SearchCriteria *parm) {
         parm->s_rst_type = TYPE_ROOM;
       else if (string_prefix("exits", searchfor))
         parm->s_rst_type = TYPE_EXIT;
-      else if (string_prefix("objects", searchfor))
-        parm->s_rst_type = TYPE_THING;
-      else if (string_prefix("things", searchfor))
+      else if (string_prefix("objects", searchfor) ||
+               string_prefix("things", searchfor))
         parm->s_rst_type = TYPE_THING;
       else if (string_prefix("garbage", searchfor))
         parm->s_rst_type = TYPE_GARBAGE;
@@ -676,12 +676,12 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
-      safe_str((char *)" [from ", outbuf, &bp);
+      safe_str(" [from ", outbuf, &bp);
       buff = unparse_object(player, from, 0);
       safe_str(((from == NOTHING) ? "NOWHERE" : buff), outbuf, &bp);
       free_lbuf(buff);
 
-      safe_str((char *)" to ", outbuf, &bp);
+      safe_str(" to ", outbuf, &bp);
       buff = unparse_object(player, to, 0);
       safe_str(((to == NOTHING) ? "NOWHERE" : buff), outbuf, &bp);
       free_lbuf(buff);
@@ -710,7 +710,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
-      safe_str((char *)" [owner: ", outbuf, &bp);
+      safe_str(" [owner: ", outbuf, &bp);
       buff = unparse_object(player, obj_owner(thing), 0);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
@@ -740,7 +740,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
-      safe_str((char *)" [owner: ", outbuf, &bp);
+      safe_str(" [owner: ", outbuf, &bp);
       buff = unparse_object(player, obj_owner(thing), 0);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
@@ -769,7 +769,7 @@ void do_search(DbRef player, DbRef cause, int key, char *arg) {
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
       if (searchparm.s_wizard) {
-        safe_str((char *)" [location: ", outbuf, &bp);
+        safe_str(" [location: ", outbuf, &bp);
         buff = unparse_object(player, obj_location(thing), 0);
         safe_str(buff, outbuf, &bp);
         free_lbuf(buff);

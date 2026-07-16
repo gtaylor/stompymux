@@ -18,10 +18,10 @@ struct timeval timeval_sub(struct timeval now, struct timeval then);
 int msec_diff(struct timeval now, struct timeval then);
 struct timeval msec_add(struct timeval time, int milliseconds);
 struct timeval update_quotas(struct timeval last, struct timeval current);
-void raw_notify_raw(DbRef player, const char *message, char *append);
+void raw_notify_raw(DbRef player, const char *message, const char *append);
 void raw_notify(DbRef player, const char *message);
 void raw_notify_newline(DbRef player);
-void raw_broadcast(int inflags, char *template, ...)
+void raw_broadcast(int inflags, const char *template, ...)
     __attribute__((format(printf, 2, 3)));
 void descriptor_queue_write(Descriptor *descriptor, const char *buffer,
                             int size);
@@ -29,7 +29,7 @@ void descriptor_queue_string(Descriptor *descriptor, const char *string);
 void descriptor_welcome(Descriptor *descriptor);
 void descriptor_announce_disconnect(DbRef player, Descriptor *descriptor,
                                     const char *reason);
-int boot_off(DbRef player, char *message);
+int boot_off(DbRef player, const char *message);
 int boot_by_port(int port, int no_god, char *message);
 void descriptor_run_command(Descriptor *d, char *command);
 int descriptor_command(Descriptor *d, char *command);

@@ -255,8 +255,16 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
   /*
    * initialize everything
    */
+  /* do_addcom()'s parameter isn't const-correct; "pub" is only read. */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
   if (*mudconf.public_channel)
-    do_addcom(player, player, 0, "pub", mudconf.public_channel);
+    do_addcom(player, player, 0, (char *)"pub", mudconf.public_channel);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   object_password_set(player, hashed_password);
   s_home(player, start_home());
@@ -307,9 +315,7 @@ void do_last(DbRef player, DbRef cause, int key, char *who) {
   int i;
   long aflags;
 
-  if (!who || !*who) {
-    target = obj_owner(player);
-  } else if (!(string_compare(who, "me"))) {
+  if (!who || !*who || !(string_compare(who, "me"))) {
     target = obj_owner(player);
   } else {
     target = lookup_player(player, who, 1);
@@ -542,7 +548,7 @@ void badname_list(DbRef player, const char *prefix) {
    */
 
   buff = bufp = alloc_lbuf("badname_list");
-  safe_str((char *)prefix, buff, &bufp);
+  safe_str(prefix, buff, &bufp);
   for (bp = mudstate.badname_head; bp; bp = bp->next) {
     safe_chr(' ', buff, &bufp);
     safe_str(bp->name, buff, &bufp);

@@ -1,4 +1,5 @@
-/* eval.h - Command evaluation, argument parsing, and evaluation-cache interface. */
+/* eval.h - Command evaluation, argument parsing, and evaluation-cache
+ * interface. */
 
 #pragma once
 

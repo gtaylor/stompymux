@@ -2,7 +2,7 @@
 
 #pragma once
 typedef struct NameTable {
-  char *name;
+  const char *name;
   int minlen;
   int perm;
   int flag;
