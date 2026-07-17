@@ -157,7 +157,6 @@ static const ConfigTomlMapping config_toml_map[] = {
 
     /* mux (base server behavior not covered by a more specific section) */
     {"mux.badsite_file", "badsite_file", CFG_KIND_SCALAR},
-    {"mux.namechange_days", "namechange_days", CFG_KIND_SCALAR},
     {"mux.allow_chanlurking", "allow_chanlurking", CFG_KIND_SCALAR},
     {"mux.cache_depth", "cache_depth", CFG_KIND_SCALAR},
     {"mux.cache_names", "cache_names", CFG_KIND_SCALAR},

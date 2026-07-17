@@ -143,7 +143,6 @@ void configuration_initialize(void) {
 #ifdef BT_COMPLEXREPAIRS
   mudconf.btech_complexrepair = 1;
 #endif
-  mudconf.namechange_days = 60;
   mudconf.allow_chanlurking = 0;
   mudconf.afterlife_dbref = 220;
   mudconf.port = 6250;
@@ -744,8 +743,6 @@ CONF conftable[] = {
      &mudconf.btech_newstaggertons, 0},
     {"btech_newstaggertime", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.btech_newstaggertime, 0},
-    {"namechange_days", (GenericFnPtr)cf_int, CA_GOD, &mudconf.namechange_days,
-     0},
     {"allow_chanlurking", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.allow_chanlurking, 0},
     {"btech_skidcliff", (GenericFnPtr)cf_int, CA_GOD, &mudconf.btech_skidcliff,

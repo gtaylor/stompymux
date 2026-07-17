@@ -123,8 +123,6 @@ modifier = 100
 [mux]
 # Default object new rooms are parented to at creation.
 room_parent = 10
-# Number of days between name-changes.
-namechange_days = 0
 # Command quota per player.
 command_quota_increment = 1000
 # The interval at which players' command quotas are increased.

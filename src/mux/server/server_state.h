@@ -78,8 +78,7 @@ struct ServerConfiguration {
   int btech_stackpole; /* Mechs mushroom as a result of triple engine crits */
   int btech_erange;    /* 1= Enable extended, extended weapon ranges. */
   int btech_hit_arcs;  /* hit arc rules (see FindAreaHitGroup()) */
-  int btech_phys_use_pskill; /* Use piloting skills for physical attacks */
-  int namechange_days;
+  int btech_phys_use_pskill;    /* Use piloting skills for physical attacks */
   int allow_chanlurking;        /* 'last' and 'who' on 'off' channels ? */
   int btech_newterrain;         /* fasa terrain restrictions for wheeled */
   int btech_fasacrit;           /* fasa critsystem */

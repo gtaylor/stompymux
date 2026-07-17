@@ -23,9 +23,6 @@
 #include "mux/world/object_set.h"
 
 extern NameTable indiv_attraccess_nametab[];
-extern void lower_xp(DbRef, int);
-extern char *silly_atr_get(int id, int flag);
-extern void silly_atr_set(int id, int flag, char *dat);
 
 /*
  * ---------------------------------------------------------------------------
@@ -859,7 +856,6 @@ void do_chzone(DbRef player, DbRef cause, int key, char *name, char *newobj) {
 void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
   DbRef thing;
   char *buff;
-  char *buff2;
   char new[LBUF_SIZE];
 
   if ((thing = match_controlled(player, name)) == NOTHING)
@@ -896,14 +892,6 @@ void do_name(DbRef player, DbRef cause, int key, char *name, char *newname) {
       return;
     }
 
-    if (player == thing && is_in_character(player) && !is_wizard(player)) {
-      buff2 = silly_atr_get((int)player, A_LASTNAME);
-      if (!(buff2 && atoi(buff2) &&
-            ((atoi(buff2) + (mudconf.namechange_days * 86400)) < mudstate.now)))
-        lower_xp(player, 900);
-
-      silly_atr_set((int)player, A_LASTNAME, tprintf("%ld", mudstate.now));
-    }
     /*
      * everything ok, notify
      */
