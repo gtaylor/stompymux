@@ -37,7 +37,7 @@ static const char commac_schema_sql[] =
     "CREATE TABLE comsys_channel_users ("
     " channel_name TEXT NOT NULL, position INTEGER NOT NULL, who INTEGER NOT "
     "NULL,"
-    " is_on INTEGER NOT NULL, title TEXT NOT NULL,"
+    " is_on INTEGER NOT NULL,"
     " PRIMARY KEY (channel_name, position)"
     ") WITHOUT ROWID;"
     "CREATE TABLE comsys_channel_messages ("
@@ -178,8 +178,8 @@ static int commac_store_comsys(sqlite3 *sqlite) {
           -1, &channel, nullptr) == SQLITE_OK &&
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO comsys_channel_users "
-                         "(channel_name, position, who, is_on, title) "
-                         "VALUES (?, ?, ?, ?, ?);",
+                         "(channel_name, position, who, is_on) "
+                         "VALUES (?, ?, ?, ?);",
                          -1, &user_statement, nullptr) == SQLITE_OK &&
       sqlite3_prepare_v2(
           sqlite,
@@ -214,7 +214,6 @@ static int commac_store_comsys(sqlite3 *sqlite) {
             commac_sqlite_bind_int(user_statement, 2, position++) < 0 ||
             commac_sqlite_bind_int(user_statement, 3, user->who) < 0 ||
             commac_sqlite_bind_int(user_statement, 4, user->on) < 0 ||
-            commac_sqlite_bind_text(user_statement, 5, user->title) < 0 ||
             commac_sqlite_step(user_statement) < 0)
           result = -1;
       }
@@ -493,7 +492,6 @@ static int commac_load_users(sqlite3 *sqlite) {
   struct channel *channel;
   struct comuser *user;
   const char *name;
-  const char *title;
   long who;
   long is_on;
   int result = -1;
@@ -501,7 +499,7 @@ static int commac_load_users(sqlite3 *sqlite) {
 
   if (sqlite3_prepare_v2(
           sqlite,
-          "SELECT channel_name, who, is_on, title "
+          "SELECT channel_name, who, is_on "
           "FROM comsys_channel_users ORDER BY channel_name, position;",
           -1, &statement, nullptr) == SQLITE_OK) {
     result = 0;
@@ -510,8 +508,7 @@ static int commac_load_users(sqlite3 *sqlite) {
           !(channel = select_channel(name)) ||
           commac_column_int(statement, 1, &who) < 0 || who < 0 ||
           who >= mudstate.db_top ||
-          commac_column_int(statement, 2, &is_on) < 0 ||
-          commac_column_text(statement, 3, &title, LBUF_SIZE - 1) < 0) {
+          commac_column_int(statement, 2, &is_on) < 0) {
         result = -1;
         break;
       }
@@ -533,7 +530,6 @@ static int commac_load_users(sqlite3 *sqlite) {
       }
       user->who = who;
       user->on = (int)is_on;
-      user->title = strdup(title);
       channel->users[channel->num_users++] = user;
       if (is_undead(who)) {
         user->on_next = channel->on_users;

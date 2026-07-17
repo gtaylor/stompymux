@@ -21,7 +21,6 @@ constexpr int CHAN_NAME_LEN = 50;
 struct comuser {
   DbRef who;
   int on;
-  char *title;
   struct comuser *on_next;
 };
 
@@ -60,7 +59,6 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2);
 void do_delcom(DbRef player, DbRef cause, int key, char *arg1);
 void do_createchannel(DbRef player, DbRef cause, int key, char *channel);
 void do_destroychannel(DbRef player, DbRef cause, int key, char *channel);
-void do_comtitle(DbRef player, DbRef cause, int key, char *arg1, char *arg2);
 void do_comlist(DbRef player, DbRef cause, int key);
 void do_channelnuke(DbRef player);
 void do_clearcom(DbRef player, DbRef cause, int key);

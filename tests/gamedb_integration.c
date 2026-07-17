@@ -328,11 +328,15 @@ static int check_snapshot(const char *path) {
                  "SELECT count(*) FROM attributes WHERE number IN (25, 42, 43);",
                  0) == 0 &&
       query_int(sqlite,
-                "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
-                "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
-                "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
-                "'macro_entries');",
-                7) == 0;
+                 "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
+                 "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
+                 "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
+                 "'macro_entries');",
+                7) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'comsys_channel_users') WHERE name = 'title';",
+                0) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
                        "AND name IN ('btech_persistence_metadata', 'btech_maps', 'btech_map_hexes', 'btech_map_slots', "
@@ -428,7 +432,7 @@ static int seed_commac_snapshot(const char *path) {
                    "INSERT INTO commac_entries VALUES (1, 0, 0, -1, -1, -1, -1);"
                    "INSERT INTO commac_aliases VALUES (1, 0, 'test', 'Public');"
                    "INSERT INTO comsys_channels VALUES ('Public', 0, 0, 0, 0, 0, 0, 0, 0);"
-                   "INSERT INTO comsys_channel_users VALUES ('Public', 0, 1, 1, 'pilot');"
+                   "INSERT INTO comsys_channel_users VALUES ('Public', 0, 1, 1);"
                    "INSERT INTO comsys_channel_messages VALUES ('Public', 0, 123, 'test message');"
                    "INSERT INTO macro_sets VALUES (0, 1, 0, 'Test macros');"
                    "INSERT INTO macro_entries VALUES (0, 0, 'go', 'look');",

@@ -26,8 +26,6 @@ void do_channelwho(DbRef, DbRef, int, char *);     /* who's on a channel */
 void do_addcom(DbRef, DbRef, int, char *, char *); /* adds a comalias */
 void do_allcom(DbRef, DbRef, int, char *); /* on, off, who, all aliases */
 void do_comlist(DbRef, DbRef, int);        /* channel who by alias */
-void do_comtitle(DbRef, DbRef, int, char *,
-                 char *);                  /* sets a title on a channel */
 void do_clearcom(DbRef, DbRef, int);       /* clears all comaliases */
 void do_delcom(DbRef, DbRef, int, char *); /* deletes a comalias */
 void do_tapcom(DbRef, DbRef, int, char *, char *); /* taps a channel */

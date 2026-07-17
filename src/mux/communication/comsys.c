@@ -25,7 +25,7 @@ static void do_comsend(struct channel *, char *);
 static void do_comprintf(struct channel *, const char *, ...);
 static void do_leavechannel(DbRef, struct channel *);
 static void do_comwho(DbRef, struct channel *);
-static void do_setnewtitle(DbRef, struct channel *, char *);
+static void comlist_description(struct channel *, char *, size_t);
 static int do_test_access(DbRef, long, struct channel *);
 static char *get_channel_from_alias(DbRef, char *);
 static void do_processcom(DbRef, char *, char *);
@@ -186,9 +186,6 @@ static void do_processcom(DbRef player, char *arg1, char *arg2) {
       do_comprintf(ch, "[%s] %s %s", arg1, Name(player), arg2 + 1);
     else if ((*arg2) == ';')
       do_comprintf(ch, "[%s] %s%s", arg1, Name(player), arg2 + 1);
-    else if (strlen(user->title))
-      do_comprintf(ch, "[%s] %s: <%s> %s", arg1, Name(player), user->title,
-                   arg2);
     else
       do_comprintf(ch, "[%s] %s: %s", arg1, Name(player), arg2);
   }
@@ -277,7 +274,6 @@ void do_joinchannel(DbRef player, struct channel *ch) {
 
     user->who = player;
     user->on = 1;
-    user->title = strdup("");
 
     if (is_undead(player)) {
       user->on_next = ch->on_users;
@@ -403,9 +399,7 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
 
 void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   char channel[200];
-  char title[100];
   struct channel *ch;
-  char *s;
   int where;
   struct commac *c;
 
@@ -422,27 +416,11 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     return;
   }
 
-  s = strchr(arg2, ',');
-
-  if (s) {
-    /* channelname,title */
-    if (s >= arg2 + 200) {
-      raw_notify(player, "Channel name too long.");
-      return;
-    }
-    strncpy(channel, arg2, (size_t)(s - arg2));
-    channel[s - arg2] = '\0';
-    strncpy(title, s + 1, 100);
-    title[99] = '\0';
-  } else {
-    /* just channelname */
-    if (strlen(arg2) >= 200) {
-      raw_notify(player, "Channel name too long.");
-      return;
-    }
-    strlcpy(channel, arg2, sizeof(channel));
-    title[0] = '\0';
+  if (strlen(arg2) >= sizeof(channel)) {
+    raw_notify(player, "Channel name too long.");
+    return;
   }
+  strlcpy(channel, arg2, sizeof(channel));
 
   if (strchr(channel, ' ')) {
     raw_notify(player, "Channel name cannot contain spaces.");
@@ -489,31 +467,7 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   c->channels[where] = strdup(ch->name);
 
   do_joinchannel(player, ch);
-  do_setnewtitle(player, ch, title);
-
-  if (title[0])
-    notify_printf(player, "Channel %s added with alias %s and title %s.",
-                  ch->name, arg1, title);
-  else
-    notify_printf(player, "Channel %s added with alias %s.", ch->name, arg1);
-}
-
-static void do_setnewtitle(DbRef player, struct channel *ch, char *title) {
-  struct comuser *user;
-  char *new;
-
-  user = select_user(ch, player);
-
-  /* Make sure there can be no embedded newlines from %r */
-
-  if (!ch || !user)
-    return;
-
-  new = replace_string("\r\n", "", title);
-  if (user->title)
-    free(user->title);
-  user->title = strdup(new); /* strdup so we can free() safely */
-  free_lbuf(new);
+  notify_printf(player, "Channel %s added with alias %s.", ch->name, arg1);
 }
 
 void do_delcom(DbRef player, DbRef cause, int key, char *arg1) {
@@ -577,8 +531,6 @@ static void do_delcomchannel(DbRef player, char *channel) {
         }
         notify_printf(player, "You have left channel %s.", channel);
 
-        if (user->title)
-          free(user->title);
         free(user);
         ch->num_users--;
         if (i < ch->num_users)
@@ -693,38 +645,14 @@ static void do_listchannels(DbRef player) {
   raw_notify(player, "-- End of list of Channels --");
 }
 
-void do_comtitle(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
-  struct channel *ch;
-  char channel[100];
-
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
-    return;
-  }
-  if (!*arg1) {
-    raw_notify(player, "Need an alias to do comtitle.");
-    return;
-  }
-  strncpy(channel, get_channel_from_alias(player, arg1), 100);
-  channel[99] = '\0';
-
-  if (!*channel) {
-    raw_notify(player, "Unknown alias");
-    return;
-  }
-  if ((ch = select_channel(channel)) && select_user(ch, player)) {
-    notify_printf(player, "Title set to '%s' on channel %s.", arg2, channel);
-    do_setnewtitle(player, ch, arg2);
-  }
-  if (!ch) {
-    raw_notify(player, "Invalid comsys alias, please delete.");
-    return;
-  }
-}
-
 void do_comlist(DbRef player, DbRef cause, int key) {
+  struct channel *ch;
   struct comuser *user;
   struct commac *c;
+  Descriptor *descriptor;
+  char description[LBUF_SIZE];
+  int description_width;
+  int terminal_width;
   int i;
 
   if (!mudconf.have_comsys) {
@@ -732,20 +660,63 @@ void do_comlist(DbRef player, DbRef cause, int key) {
     return;
   }
   c = get_commac(player);
+  descriptor = mudstate.curr_descriptor;
+  terminal_width = 79;
+  if (descriptor != nullptr && descriptor->terminal_width > terminal_width)
+    terminal_width = descriptor->terminal_width;
+  if (terminal_width > LBUF_SIZE)
+    terminal_width = LBUF_SIZE;
+  description_width = terminal_width - 37;
 
-  raw_notify(player, "Alias     Channel             Title                      "
-                     "             Status");
+  raw_notify(player, "Alias     Channel             Status Description");
 
   for (i = 0; i < c->numchannels; i++) {
-    if ((user = select_user(select_channel(c->channels[i]), player))) {
-      notify_printf(player, "%-9.9s %-19.19s %-39.39s %s", c->alias + i * 6,
-                    c->channels[i], user->title, (user->on ? "on" : "off"));
+    ch = select_channel(c->channels[i]);
+    if ((user = select_user(ch, player))) {
+      comlist_description(ch, description, (size_t)description_width + 1);
+      notify_printf(player, "%-9.9s %-19.19s %-6.6s %.*s", c->alias + i * 6,
+                    c->channels[i], (user->on ? "on" : "off"),
+                    description_width, description);
     } else {
       notify_printf(player, "Bad Comsys Alias: %s for Channel: %s",
                     c->alias + i * 6, c->channels[i]);
     }
   }
   raw_notify(player, "-- End of comlist --");
+}
+
+static void comlist_description(struct channel *ch, char *buffer,
+                                size_t buffer_size) {
+  DbRef owner;
+  long flags;
+  char *description;
+  char *source;
+  char *destination;
+
+  if (buffer_size == 0)
+    return;
+  if (ch->chan_obj == NOTHING) {
+    strlcpy(buffer, "No description.", buffer_size);
+    return;
+  }
+
+  description = attribute_parent_get(ch->chan_obj, A_DESC, &owner, &flags);
+  if (!*description) {
+    strlcpy(buffer, "No description.", buffer_size);
+  } else {
+    source = description;
+    destination = buffer;
+    while (*source && (size_t)(destination - buffer) < buffer_size - 1) {
+      if (*source == '\r' || *source == '\n')
+        *destination = ' ';
+      else
+        *destination = *source;
+      destination++;
+      source++;
+    }
+    *destination = '\0';
+  }
+  free_lbuf(description);
 }
 
 void do_channelnuke(DbRef player) {

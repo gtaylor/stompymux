@@ -653,7 +653,6 @@ CMDENT command_table[] = {
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_addcom}},
     {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_allcom}},
     {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_comlist}},
-    {"comtitle", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_comtitle}},
     {"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_clearcom}},
     {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_delcom}},
     {"drop",
