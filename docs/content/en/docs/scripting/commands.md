@@ -80,8 +80,12 @@ Every command handler receives a context table as its first argument.
 | `ctx.cause` | dbref | dbref | The original MUX command cause. |
 | `ctx.command` | string | string | The command text tested by the Lua pattern. |
 | `ctx.scope` | `nil` | `"global"` | Present only for global commands. |
+| `ctx.descriptor` | number or `nil` | number or `nil` | The fd of the descriptor that typed the command, when the command came from a live connection rather than a queued or scheduled execution. |
 | `ctx.args` | empty table | empty table | Reserved for event arguments; command captures are passed as handler arguments instead. |
 
 Use `ctx.enactor` for player-facing notifications. An object module may use
 `ctx.object` with the [`mux` package](packages/mux/) to store persistent state.
-Global handlers must not assume an object is present.
+Global handlers must not assume an object is present. Use `ctx.descriptor`
+with [`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
+to start an [interactive flow](flows/) on the connection that issued the
+command.

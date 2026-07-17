@@ -56,6 +56,19 @@ mux.command("@emit A queued command from Lua.")
 Queued commands execute as `#1`. They are asynchronous: the function does not
 return a command result to Lua.
 
+## `mux.flow_start(descriptor, module, first_step)`
+
+Attaches an [interactive flow](../flows/) to a descriptor and shows its
+first prompt.
+
+```lua
+mux.flow_start(ctx.descriptor, "confirm_delete.lua", "confirm")
+```
+
+`descriptor` is normally `ctx.descriptor` from the calling command or event.
+Raises a Lua error if the descriptor doesn't exist, already has a flow
+running, or `module` has no `first_step` in its `flows` table.
+
 ## Availability and limits
 
 The `mux` table is the only server interface exposed to Lua modules. The Lua

@@ -32,11 +32,17 @@ command, replacing the old master-room programmable-command stage. See
 
 ## Module contract
 
-Each module returns a table with optional `commands`, `events`, and
-`schedules` entries. A command entry pairs a native Lua `pattern` with a
+Each module returns a table with optional `commands`, `events`, `schedules`,
+and `flows` entries. A command entry pairs a native Lua `pattern` with a
 `handler(ctx, ...)`; returning `true` handles the command, `false` or `nil`
 lets other matching continue. See [Commands](commands/) for pattern syntax
 and the handler context table.
+
+A module's `flows` table holds named step functions that
+[`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
+can drive as a multi-step conversation on a connected player's own
+descriptor - the interactive counterpart to `commands` for menus, prompts,
+and confirmations. See [Interactive flows](flows/).
 
 Object and global modules can also declare `schedules`: named entries with
 five-field UTC cron expressions. Object schedules run once for every object
@@ -58,8 +64,8 @@ exposed.
 ## The `mux` API
 
 The `mux` table is the only server interface exposed to Lua modules:
-`attr_get`, `attr_set`, `notify`, and `command`. Queued commands execute as
-`#1` after the current handler completes. See the
+`attr_get`, `attr_set`, `notify`, `command`, and `flow_start`. Queued
+commands execute as `#1` after the current handler completes. See the
 [`mux` package reference](packages/mux/) for the full API.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
@@ -103,3 +109,7 @@ have run for that room. Attaching the module suppresses the room's legacy
 
 `game/lua/global_logic/example.lua` defines the working `global-hello`
 global command.
+
+`game/lua/global_logic/flow_examples.lua` demonstrates
+[interactive flows](flows/): `flow-demo confirm`, `flow-demo menu`, and
+`flow-demo signup`.

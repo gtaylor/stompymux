@@ -3,7 +3,6 @@
 ## MUX Todos in the /src/ dir
 
 * CLI'ify stompymux
-* Redesign login flow to be more MUDDy
 * Rewrite WHO in Lua
 * Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
@@ -20,6 +19,8 @@
   `mux.command()` running as #1.
 * Improve Lua error and reload observability with handler, event/command,
   object, enactor, source location, traceback, and audit-log context.
+* Give a Lua-backed flow a chance to run cleanup code when it's cancelled by
+  the engine (e.g. @boot) rather than by its own step returning "cancel".
 
 ## BTech Todos in the /btech/ dir
 
