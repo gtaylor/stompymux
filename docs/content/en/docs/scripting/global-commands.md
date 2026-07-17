@@ -11,7 +11,7 @@ Global Lua logic modules live under `game/lua/global_logic`. Every
 domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
 `wizard/maintenance.lua`. Use numeric prefixes only when deliberate
 cross-domain priority is necessary.
-Use [`@luacheck`](lua-check/) to validate every Lua module before reloading.
+Use [`@luacheck`](validating-and-reloading/) to validate every Lua module before reloading.
 
 Each global module returns a table containing `commands`:
 
