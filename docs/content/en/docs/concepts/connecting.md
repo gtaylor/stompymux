@@ -5,46 +5,39 @@ type: docs
 weight: 15
 ---
 
-The connect screen is menu-driven, backed by the same interactive-flow
-engine [Lua uses](../../scripting/flows/) (`src/mux/network/input_flow.c`),
-with the connect/create logic itself in
-`src/mux/network/connect_flow.c`.
+The connect screen is backed by the same interactive-flow engine
+[Lua uses](../../scripting/flows/) (`src/mux/network/input_flow.c`), with the
+connect/create logic itself in `src/mux/network/connect_flow.c`.
 
-## Menu-driven connecting
+## The flow
 
-Pressing enter on a blank line, or sending anything that isn't a recognized
-`connect`/`create` command, shows a menu:
+A new connection drops straight into the flow - there's no banner-only
+pause, no menu, and no need to press enter first. The very first thing
+shown is:
 
 ```text
-c) Connect to an existing character
-n) Create a new character
-q) Quit
+Character name:
 ```
 
-Choosing **c**onnect prompts for a character name, then a password, and
-retries on a wrong password up to the server's configured retry limit before
-disconnecting. Choosing **n**ew prompts for a name, a password, and a
-confirmation of that password, retrying the password step on a mismatch.
-Both paths end by handing off to the same login/creation logic a one-line
-connect uses (below), so the menu is a different way to reach it, not a
-separate implementation.
+What happens next depends on whether that name belongs to an existing
+character:
 
-A partial one-line command, such as `connect somename` with no password,
-skips straight to the right prompt instead of re-showing the menu.
+- **Existing name** - prompts for a password. A wrong password re-prompts
+  for the name (not the password) and decrements a per-connection retry
+  counter; hitting zero disconnects.
+- **Unrecognized name** - asks `Create a new one? (Y/n)`. Answering yes (or
+  just pressing enter, per the `Y/n` convention) prompts for a password and
+  then a confirmation of that password, retrying the password step on a
+  mismatch. Answering no goes back to the name prompt.
 
-## The one-line form
-
-Existing clients and connect macros that blind-send
-`connect <name> <password>` or `create <name> <password>` in a single line
-keep working exactly as before - that form is detected up front and handled
-synchronously, without ever starting the menu-driven flow. There is no
-behavior change for anyone not using the new prompts.
+Every step is fully modal: whatever line the player sends is always the
+answer to the current prompt. There's no escape hatch back to ordinary
+commands, and pre-login `WHO`/`DOING`/`SESSION`/`QUIT` are no longer
+reachable - quitting is done by disconnecting the client.
 
 ## Rate limiting
 
-A wrong password decrements a per-connection retry counter; hitting zero
-disconnects. Separately, a global address-keyed token bucket throttles rapid
-repeated connect/create attempts regardless of which form (one-line or
-menu-driven) triggered them, disconnecting the attempt outright rather than
-allowing a retry. Both apply identically no matter which path led to the
-attempt.
+A wrong password decrements the per-connection retry counter described
+above. Separately, a global address-keyed token bucket throttles rapid
+repeated connect/create attempts regardless of which step triggered them,
+disconnecting the attempt outright rather than allowing a retry.

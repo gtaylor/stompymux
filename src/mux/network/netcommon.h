@@ -34,7 +34,6 @@ int boot_off(DbRef player, const char *message);
 int boot_by_port(int port, int no_god, char *message);
 void descriptor_run_command(Descriptor *d, char *command);
 int descriptor_command(Descriptor *d, char *command);
-int descriptor_unauthenticated_command(Descriptor *d, char *command);
 void descriptor_reload(DbRef player);
 void init_logout_cmdtab(void);
 void list_siteinfo(DbRef player);

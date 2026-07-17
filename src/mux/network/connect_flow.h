@@ -5,4 +5,4 @@
 
 #include "mux/network/descriptor.h"
 
-int descriptor_begin_connect_flow(Descriptor *descriptor, char *command);
+void descriptor_start_connect_flow(Descriptor *descriptor);

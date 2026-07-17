@@ -113,12 +113,14 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
       } else if (d->flags & DS_CONNECTED) {
         descriptor_run_command(d, d->input);
       } else {
-        if (!descriptor_unauthenticated_command(d, d->input)) {
-          dprintk("disconnect on %p fd %d, bailing.", d, d->descriptor);
-          if (!(d->flags & DS_DEAD))
-            descriptor_shutdown(d, R_QUIT);
-          break;
-        }
+        /* Every not-yet-connected descriptor has an active connect flow
+         * from the moment it's accepted; reaching here means something
+         * went wrong starting it. */
+        dprintk("no active flow on unauthenticated %p fd %d, bailing.", d,
+                d->descriptor);
+        if (!(d->flags & DS_DEAD))
+          descriptor_shutdown(d, R_QUIT);
+        break;
       }
       memset(d->input, 0, sizeof(d->input));
       d->input_tail = 0;

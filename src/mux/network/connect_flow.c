@@ -28,7 +28,6 @@ typedef enum ConnectResult {
 } ConnectResult;
 
 typedef struct ConnectFlowData {
-  int dark;
   char name[PLAYER_NAME_LIMIT + 1];
   char password[LBUF_SIZE];
 } ConnectFlowData;
@@ -108,52 +107,6 @@ static int login_throttle_allow(const char *address) {
   return 1;
 }
 
-static void parse_connect(const char *msg, char *command, char *user,
-                          char *pass) {
-  char *p;
-
-  if (strlen(msg) > (MBUF_SIZE - 1)) {
-    *command = '\0';
-    *user = '\0';
-    *pass = '\0';
-    return;
-  }
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = command;
-  while (*msg && isascii(*msg) && !isspace(*msg))
-    *p++ = *msg++;
-  *p = '\0';
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = user;
-  if (mudconf.name_spaces && (*msg == '\"')) {
-    for (; *msg && (*msg == '\"' || isspace(*msg)); msg++)
-      ;
-    while (*msg && *msg != '\"') {
-      while (*msg && !isspace(*msg) && (*msg != '\"'))
-        *p++ = *msg++;
-      if (*msg == '\"')
-        break;
-      while (*msg && isspace(*msg))
-        msg++;
-      if (*msg && (*msg != '\"'))
-        *p++ = ' ';
-    }
-    for (; *msg && *msg == '\"'; msg++)
-      ;
-  } else
-    while (*msg && isascii(*msg) && !isspace(*msg))
-      *p++ = *msg++;
-  *p = '\0';
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = pass;
-  while (*msg && isascii(*msg) && !isspace(*msg))
-    *p++ = *msg++;
-  *p = '\0';
-}
-
 /* Hide the length of a line that may contain a password from SESSION. */
 static void connect_flow_hide_input_length(Descriptor *d, const char *input) {
   d->input_tot -= (int)(strlen(input) + 1);
@@ -196,7 +149,7 @@ static int connect_flow_count_connected(void) {
 }
 
 static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
-                                                char *password, int dark) {
+                                                char *password) {
   int nplayers;
   DbRef player;
   char *buff;
@@ -231,9 +184,6 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
   if (((mudconf.control_flags & CF_LOGIN) &&
        (nplayers < mudconf.max_players)) ||
       is_wizard(player) || is_god(player)) {
-    if (dark && (is_wizard(player) || is_god(player)))
-      s_flags(player, obj_flags(player) | DARK);
-
     STARTLOG(LOG_LOGIN, "CON", "LOGIN") {
       buff = alloc_mbuf("connect_flow_attempt_login.LOG.login");
       snprintf(buff, MBUF_SIZE, "[%d/%s] Connected to ", d->descriptor,
@@ -327,54 +277,16 @@ static void connect_flow_data_free(void *flow_data) {
   free(data);
 }
 
-static FlowOutcome connect_flow_step_welcome(Descriptor *d, void *flow_data,
-                                             const char *step,
-                                             const char *input) {
-  static const FlowMenuItem items[] = {
-      {"c", "Connect to an existing character"},
-      {"n", "Create a new character"},
-      {"q", "Quit"},
-  };
-  ConnectFlowData *data = flow_data;
-  FlowOutcome outcome = {0};
-  char menu[512];
-  int choice;
-
-  if (input == nullptr) {
-    descriptor_welcome(d);
-    flow_render_menu(menu, sizeof(menu), nullptr, items, 3);
-    outcome.action = FLOW_ACTION_WAIT;
-    outcome.prompt = menu;
-    return outcome;
-  }
-
-  choice = flow_match_menu(items, 3, input);
-  if (choice == 0) {
-    data->dark = 0;
-    outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "connect_name", FLOW_STEP_NAME_SIZE - 1);
-    return outcome;
-  }
-  if (choice == 1) {
-    outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "create_name", FLOW_STEP_NAME_SIZE - 1);
-    return outcome;
-  }
-  if (choice == 2) {
-    descriptor_shutdown(d, R_QUIT);
-    outcome.action = FLOW_ACTION_CANCEL;
-    return outcome;
-  }
-
-  outcome.action = FLOW_ACTION_WAIT;
-  outcome.prompt = "Please enter C, N, or Q.";
-  return outcome;
+static int connect_flow_blank(const char *input) {
+  while (*input && isascii((unsigned char)*input) &&
+         isspace((unsigned char)*input))
+    input++;
+  return *input == '\0';
 }
 
-static FlowOutcome connect_flow_step_connect_name(Descriptor *d,
-                                                  void *flow_data,
-                                                  const char *step,
-                                                  const char *input) {
+static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
+                                              const char *step,
+                                              const char *input) {
   ConnectFlowData *data = flow_data;
   FlowOutcome outcome = {0};
 
@@ -383,17 +295,25 @@ static FlowOutcome connect_flow_step_connect_name(Descriptor *d,
     outcome.prompt = "Character name: ";
     return outcome;
   }
+  if (connect_flow_blank(input)) {
+    outcome.action = FLOW_ACTION_WAIT;
+    outcome.prompt = "Please enter a character name: ";
+    return outcome;
+  }
   StringCopyTrunc(data->name, input, sizeof(data->name) - 1);
   outcome.action = FLOW_ACTION_GOTO;
-  StringCopyTrunc(outcome.next_step, "connect_password",
-                  FLOW_STEP_NAME_SIZE - 1);
+  if (lookup_player(NOTHING, data->name, 0) != NOTHING) {
+    StringCopyTrunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
+  } else {
+    StringCopyTrunc(outcome.next_step, "confirm_create",
+                    FLOW_STEP_NAME_SIZE - 1);
+  }
   return outcome;
 }
 
-static FlowOutcome connect_flow_step_connect_password(Descriptor *d,
-                                                      void *flow_data,
-                                                      const char *step,
-                                                      const char *input) {
+static FlowOutcome connect_flow_step_password(Descriptor *d, void *flow_data,
+                                              const char *step,
+                                              const char *input) {
   ConnectFlowData *data = flow_data;
   FlowOutcome outcome = {0};
 
@@ -405,8 +325,7 @@ static FlowOutcome connect_flow_step_connect_password(Descriptor *d,
   connect_flow_hide_input_length(d, input);
   StringCopyTrunc(data->password, input, sizeof(data->password) - 1);
 
-  switch (
-      connect_flow_attempt_login(d, data->name, data->password, data->dark)) {
+  switch (connect_flow_attempt_login(d, data->name, data->password)) {
   case CONNECT_RESULT_CONNECTED:
     outcome.action = FLOW_ACTION_DONE;
     return outcome;
@@ -416,26 +335,40 @@ static FlowOutcome connect_flow_step_connect_password(Descriptor *d,
   case CONNECT_RESULT_RETRY:
   default:
     outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "connect_name", FLOW_STEP_NAME_SIZE - 1);
+    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
 }
 
-static FlowOutcome connect_flow_step_create_name(Descriptor *d, void *flow_data,
-                                                 const char *step,
-                                                 const char *input) {
+static FlowOutcome connect_flow_step_confirm_create(Descriptor *d,
+                                                    void *flow_data,
+                                                    const char *step,
+                                                    const char *input) {
   ConnectFlowData *data = flow_data;
   FlowOutcome outcome = {0};
+  static char prompt[SBUF_SIZE];
 
   if (input == nullptr) {
+    snprintf(prompt, sizeof(prompt),
+             "No character named '%s' exists. Create a new one? (Y/n) ",
+             data->name);
     outcome.action = FLOW_ACTION_WAIT;
-    outcome.prompt = "Choose a character name: ";
+    outcome.prompt = prompt;
     return outcome;
   }
-  StringCopyTrunc(data->name, input, sizeof(data->name) - 1);
-  outcome.action = FLOW_ACTION_GOTO;
-  StringCopyTrunc(outcome.next_step, "create_password",
-                  FLOW_STEP_NAME_SIZE - 1);
+  if (connect_flow_blank(input) || flow_parse_yesno(input) == FLOW_YESNO_YES) {
+    outcome.action = FLOW_ACTION_GOTO;
+    StringCopyTrunc(outcome.next_step, "create_password",
+                    FLOW_STEP_NAME_SIZE - 1);
+    return outcome;
+  }
+  if (flow_parse_yesno(input) == FLOW_YESNO_NO) {
+    outcome.action = FLOW_ACTION_GOTO;
+    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    return outcome;
+  }
+  outcome.action = FLOW_ACTION_WAIT;
+  outcome.prompt = "Please answer y or n: ";
   return outcome;
 }
 
@@ -489,21 +422,20 @@ connect_flow_step_create_confirm_password(Descriptor *d, void *flow_data,
   case CONNECT_RESULT_RETRY:
   default:
     outcome.action = FLOW_ACTION_GOTO;
-    StringCopyTrunc(outcome.next_step, "create_name", FLOW_STEP_NAME_SIZE - 1);
+    outcome.prompt = create_fail;
+    StringCopyTrunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }
 }
 
 static FlowOutcome connect_flow_dispatch(Descriptor *d, void *flow_data,
                                          const char *step, const char *input) {
-  if (!strcmp(step, "welcome"))
-    return connect_flow_step_welcome(d, flow_data, step, input);
-  if (!strcmp(step, "connect_name"))
-    return connect_flow_step_connect_name(d, flow_data, step, input);
-  if (!strcmp(step, "connect_password"))
-    return connect_flow_step_connect_password(d, flow_data, step, input);
-  if (!strcmp(step, "create_name"))
-    return connect_flow_step_create_name(d, flow_data, step, input);
+  if (!strcmp(step, "username"))
+    return connect_flow_step_username(d, flow_data, step, input);
+  if (!strcmp(step, "password"))
+    return connect_flow_step_password(d, flow_data, step, input);
+  if (!strcmp(step, "confirm_create"))
+    return connect_flow_step_confirm_create(d, flow_data, step, input);
   if (!strcmp(step, "create_password"))
     return connect_flow_step_create_password(d, flow_data, step, input);
   if (!strcmp(step, "create_confirm_password"))
@@ -513,60 +445,11 @@ static FlowOutcome connect_flow_dispatch(Descriptor *d, void *flow_data,
   return (FlowOutcome){.action = FLOW_ACTION_CANCEL};
 }
 
-static void connect_flow_start(Descriptor *d, const char *initial_step,
-                               const char *dark, const char *name) {
+void descriptor_start_connect_flow(Descriptor *d) {
   ConnectFlowData *data = malloc(sizeof(ConnectFlowData));
 
-  data->dark = dark != nullptr;
   data->name[0] = '\0';
   data->password[0] = '\0';
-  if (name != nullptr)
-    StringCopyTrunc(data->name, name, sizeof(data->name) - 1);
-
-  descriptor_flow_start(d, initial_step, connect_flow_dispatch, data,
+  descriptor_flow_start(d, "username", connect_flow_dispatch, data,
                         connect_flow_data_free);
-}
-
-int descriptor_begin_connect_flow(Descriptor *d, char *msg) {
-  char *command, *user, *password;
-
-  connect_flow_hide_input_length(d, msg);
-
-  command = alloc_lbuf("descriptor_begin_connect_flow.cmd");
-  user = alloc_lbuf("descriptor_begin_connect_flow.user");
-  password = alloc_lbuf("descriptor_begin_connect_flow.pass");
-  parse_connect(msg, command, user, password);
-
-  if (!strncmp(command, "co", 2) || !strncmp(command, "cd", 2)) {
-    int dark = !strncmp(command, "cd", 2);
-
-    if (*user && *password) {
-      connect_flow_attempt_login(d, user, password, dark);
-    } else {
-      connect_flow_start(d, *user ? "connect_password" : "connect_name",
-                         dark ? "dark" : nullptr, *user ? user : nullptr);
-    }
-  } else if (!strncmp(command, "cr", 2)) {
-    if (*user && *password) {
-      connect_flow_attempt_create(d, user, password);
-    } else {
-      connect_flow_start(d, *user ? "create_password" : "create_name", nullptr,
-                         *user ? user : nullptr);
-    }
-  } else {
-    STARTLOG(LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
-      char *buff = alloc_mbuf("descriptor_begin_connect_flow.LOG.bad");
-      snprintf(buff, MBUF_SIZE, "[%d/%s] Failed connect: '%.150s'",
-               d->descriptor, d->addr, msg);
-      log_text(buff);
-      free_mbuf(buff);
-      ENDLOG;
-    }
-    connect_flow_start(d, "welcome", nullptr, nullptr);
-  }
-
-  free_lbuf(command);
-  free_lbuf(user);
-  free_lbuf(password);
-  return 1;
 }

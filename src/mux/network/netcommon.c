@@ -17,7 +17,6 @@
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
-#include "mux/network/connect_flow.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -826,90 +825,6 @@ void init_logout_cmdtab(void) {
   hash_table_initialize(&mudstate.logout_cmd_htab, 3 * HASH_FACTOR);
   for (cp = logout_cmdtable; cp->flag; cp++)
     hash_table_add(cp->name, (int *)cp, &mudstate.logout_cmd_htab);
-}
-
-int descriptor_unauthenticated_command(Descriptor *d, char *command) {
-  char *arg;
-  NameTable *cp;
-
-  d->last_time = mudstate.now;
-  arg = command;
-
-  dassert(!(d->flags & DS_CONNECTED));
-  if (d->flags & DS_DEAD)
-    return 0;
-
-  while (*arg && !isspace(*arg))
-    arg++;
-
-  if (*arg)
-    *arg++ = '\0';
-
-  cp = (NameTable *)hash_table_find(command, &mudstate.logout_cmd_htab);
-  if (*arg)
-    *--arg = ' ';
-
-  if (!cp)
-    return descriptor_begin_connect_flow(d, command);
-
-  d->command_count++;
-  if (!(cp->flag & CMD_NOxFIX)) {
-    if (d->output_prefix) {
-      descriptor_queue_string(d, d->output_prefix);
-    }
-  }
-
-  switch (cp->flag & CMD_MASK) {
-  case CMD_QUIT:
-    descriptor_shutdown(d, R_QUIT);
-    return 0;
-  case CMD_WHO:
-    if (d->player || mudconf.allow_unloggedwho) {
-      dump_users(d, arg, CMD_WHO);
-    } else {
-      descriptor_queue_string(
-          d, "This MUX does not allow WHO at the login screen.\r\n");
-      descriptor_queue_string(d,
-                              "Please login or create a character first.\r\n");
-    }
-    break;
-  case CMD_DOING:
-    if (d->player || mudconf.allow_unloggedwho) {
-      dump_users(d, arg, CMD_DOING);
-    } else {
-      descriptor_queue_string(
-          d, "This MUX does not allow DOING at the login screen.\r\n");
-      descriptor_queue_string(d,
-                              "Please login or create a character first.\r\n");
-    }
-    break;
-  case CMD_SESSION:
-    if (d->player || mudconf.allow_unloggedwho) {
-      dump_users(d, arg, CMD_SESSION);
-    } else {
-      descriptor_queue_string(
-          d, "This MUX does not allow SESSION at the login screen.\r\n");
-      descriptor_queue_string(d,
-                              "Please login or create a character first.\r\n");
-    }
-    break;
-  case CMD_PREFIX:
-    set_userstring(&d->output_prefix, arg);
-    break;
-  case CMD_SUFFIX:
-    set_userstring(&d->output_suffix, arg);
-    break;
-  default:
-    log_error(LOG_BUGS, "BUG", "PARSE", "Prefix command with no handler: '%s'",
-              command);
-  }
-
-  if (!(cp->flag & CMD_NOxFIX)) {
-    if (d->output_suffix) {
-      descriptor_queue_string(d, d->output_suffix);
-    }
-  }
-  return 1;
 }
 
 int descriptor_command(Descriptor *d, char *command) {

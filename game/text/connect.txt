@@ -1,10 +1,4 @@
                                   StompyMUX
                                  -----------
-                       This site is under construction!                                 
- _____________________________________________________________________________
-|connect <name> <password> ...................... Connect to the MUX | WHO    |
-|connect "<full name>" <password> ............... Connect to the MUX |        |
-|create <name> <password>  .................. Create a New Character |        |
-|create "<full name>" <password> ............ Create a New Character | QUIT   |
-|Just press ENTER for a step-by-step menu                            |        |
-`-----------------------------------------------------------------------------'
+                       This site is under construction!
+

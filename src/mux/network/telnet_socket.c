@@ -13,6 +13,7 @@
 #include "libtelnet.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
+#include "mux/network/connect_flow.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
@@ -485,6 +486,7 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   event_add(d->sock_ev, nullptr);
   descriptor_retain(d);
   descriptor_welcome(d);
+  descriptor_start_connect_flow(d);
   return d;
 }
 
