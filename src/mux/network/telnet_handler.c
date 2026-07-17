@@ -84,6 +84,11 @@ void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size) {
   telnet_recv(d->telnet, buffer, size);
 }
 
+void descriptor_telnet_set_echo(Descriptor *d, int echo) {
+  telnet_negotiate(d->telnet, echo ? TELNET_WONT : TELNET_WILL,
+                   TELNET_TELOPT_ECHO);
+}
+
 static int telnet_connected_count(void) {
   Descriptor *d;
   int count = 0;

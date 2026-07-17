@@ -10,6 +10,7 @@
 #include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/netcommon.h"
+#include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
@@ -292,12 +293,12 @@ static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
 
   if (input == nullptr) {
     outcome.action = FLOW_ACTION_WAIT;
-    outcome.prompt = "Character name: ";
+    outcome.prompt = "Who are you? ";
     return outcome;
   }
   if (connect_flow_blank(input)) {
     outcome.action = FLOW_ACTION_WAIT;
-    outcome.prompt = "Please enter a character name: ";
+    outcome.prompt = "Who are you? ";
     return outcome;
   }
   StringCopyTrunc(data->name, input, sizeof(data->name) - 1);
@@ -318,10 +319,12 @@ static FlowOutcome connect_flow_step_password(Descriptor *d, void *flow_data,
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
+    descriptor_telnet_set_echo(d, 0);
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "Password: ";
     return outcome;
   }
+  descriptor_telnet_set_echo(d, 1);
   connect_flow_hide_input_length(d, input);
   StringCopyTrunc(data->password, input, sizeof(data->password) - 1);
 
@@ -380,6 +383,12 @@ static FlowOutcome connect_flow_step_create_password(Descriptor *d,
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
+    /* Echo is already suppressed if we got here via a retype mismatch;
+     * harmless to (re)request it either way. Left on through
+     * create_confirm_password - only restored once we're done with both
+     * password prompts, to avoid toggling it on and off faster than the
+     * client can acknowledge each request. */
+    descriptor_telnet_set_echo(d, 0);
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "Choose a password: ";
     return outcome;
@@ -399,12 +408,15 @@ connect_flow_step_create_confirm_password(Descriptor *d, void *flow_data,
   FlowOutcome outcome = {0};
 
   if (input == nullptr) {
+    descriptor_telnet_set_echo(d, 0);
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "Retype password: ";
     return outcome;
   }
   connect_flow_hide_input_length(d, input);
   if (strcmp(input, data->password) != 0) {
+    /* Still headed for another password prompt either way; leave echo
+     * suppressed rather than restoring and immediately re-suppressing it. */
     outcome.action = FLOW_ACTION_GOTO;
     outcome.prompt = "Passwords did not match.\r\n";
     StringCopyTrunc(outcome.next_step, "create_password",
@@ -412,6 +424,9 @@ connect_flow_step_create_confirm_password(Descriptor *d, void *flow_data,
     return outcome;
   }
 
+  /* Done with hidden input either way past this point (connecting,
+   * disconnecting, or back to a visible username prompt). */
+  descriptor_telnet_set_echo(d, 1);
   switch (connect_flow_attempt_create(d, data->name, data->password)) {
   case CONNECT_RESULT_CONNECTED:
     outcome.action = FLOW_ACTION_DONE;

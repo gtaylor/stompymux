@@ -23,8 +23,8 @@ struct InputFlow {
 };
 
 static void flow_send_prompt(Descriptor *d, const char *prompt) {
-  descriptor_queue_string(d, tprintf("%s%s%s \377\371", ANSI_HILITE,
-                                     prompt ? prompt : "", ANSI_NORMAL));
+  descriptor_queue_string(
+      d, tprintf("%s%s%s", ANSI_HILITE, prompt ? prompt : "", ANSI_NORMAL));
 }
 
 void descriptor_flow_destroy(Descriptor *d) {
