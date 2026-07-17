@@ -26,6 +26,8 @@ void descriptor_queue_write(Descriptor *descriptor, const char *buffer,
                             int size);
 void descriptor_queue_string(Descriptor *descriptor, const char *string);
 void descriptor_welcome(Descriptor *descriptor);
+void set_lastsite(Descriptor *descriptor, char *lastsite);
+void announce_connect(DbRef player, Descriptor *descriptor);
 void descriptor_announce_disconnect(DbRef player, Descriptor *descriptor,
                                     const char *reason);
 int boot_off(DbRef player, const char *message);

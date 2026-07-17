@@ -18,7 +18,12 @@ typedef struct FlowOutcome {
   FlowAction action;
   char next_step[FLOW_STEP_NAME_SIZE]; /* Used when action == FLOW_ACTION_GOTO.
                                         */
-  char *prompt; /* lbuf; text to show. nullptr repeats the last prompt. */
+  /*
+   * Text to show. For FLOW_ACTION_WAIT, nullptr repeats the last prompt.
+   * For FLOW_ACTION_GOTO/DONE/CANCEL, a non-null prompt is sent once as a
+   * message before the transition/teardown; nullptr sends nothing.
+   */
+  const char *prompt;
 } FlowOutcome;
 
 /*

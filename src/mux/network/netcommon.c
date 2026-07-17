@@ -17,6 +17,7 @@
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
+#include "mux/network/connect_flow.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -244,7 +245,7 @@ void descriptor_welcome(Descriptor *d) {
   fcache_dump(d, FC_CONN);
 }
 
-static void set_lastsite(Descriptor *d, char *lastsite) {
+void set_lastsite(Descriptor *d, char *lastsite) {
   long i, j;
   char buf[LBUF_SIZE];
 
@@ -273,52 +274,6 @@ static void set_userstring(char **userstring, const char *command) {
     }
     snprintf(*userstring, LBUF_SIZE - 1, "%s\r\n", command);
   }
-}
-
-static void parse_connect(const char *msg, char *command, char *user,
-                          char *pass) {
-  char *p;
-
-  if (strlen(msg) > (MBUF_SIZE - 1)) {
-    *command = '\0';
-    *user = '\0';
-    *pass = '\0';
-    return;
-  }
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = command;
-  while (*msg && isascii(*msg) && !isspace(*msg))
-    *p++ = *msg++;
-  *p = '\0';
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = user;
-  if (mudconf.name_spaces && (*msg == '\"')) {
-    for (; *msg && (*msg == '\"' || isspace(*msg)); msg++)
-      ;
-    while (*msg && *msg != '\"') {
-      while (*msg && !isspace(*msg) && (*msg != '\"'))
-        *p++ = *msg++;
-      if (*msg == '\"')
-        break;
-      while (*msg && isspace(*msg))
-        msg++;
-      if (*msg && (*msg != '\"'))
-        *p++ = ' ';
-    }
-    for (; *msg && *msg == '\"'; msg++)
-      ;
-  } else
-    while (*msg && isascii(*msg) && !isspace(*msg))
-      *p++ = *msg++;
-  *p = '\0';
-  while (*msg && isascii(*msg) && isspace(*msg))
-    msg++;
-  p = pass;
-  while (*msg && isascii(*msg) && !isspace(*msg))
-    *p++ = *msg++;
-  *p = '\0';
 }
 
 static const char *time_format_1(time_t dt) {
@@ -360,7 +315,7 @@ static const char *time_format_2(time_t dt) {
 
 void descriptor_hash_add(Descriptor *);
 
-static void announce_connect(DbRef player, Descriptor *d) {
+void announce_connect(DbRef player, Descriptor *d) {
   DbRef loc, aowner, temp;
   DbRef zone, obj;
 
@@ -873,309 +828,6 @@ void init_logout_cmdtab(void) {
     hash_table_add(cp->name, (int *)cp, &mudstate.logout_cmd_htab);
 }
 
-static void failconn(const char *logcode, const char *logtype,
-                     const char *logreason, Descriptor *d,
-                     int disconnect_reason, DbRef player, int filecache,
-                     const char *message, char *command, char *user,
-                     char *password, const char *cmdsave) {
-  char *buff;
-
-  STARTLOG(LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
-    buff = alloc_mbuf("failconn.LOG");
-    snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor, d->addr,
-             logtype);
-    log_text(buff);
-    free_mbuf(buff);
-    if (player != NOTHING)
-      log_name(player);
-    else
-      log_text(user);
-    log_text(" (");
-    log_text(logreason);
-    log_text(")");
-    ENDLOG;
-  }
-  fcache_dump(d, filecache);
-
-  if (*message) {
-    descriptor_queue_string(d, message);
-    descriptor_queue_write(d, "\r\n", 2);
-  }
-  free_lbuf(command);
-  free_lbuf(user);
-  free_lbuf(password);
-  descriptor_shutdown(d, disconnect_reason);
-  mudstate.debug_cmd = cmdsave;
-  return;
-}
-
-static const char *connect_fail =
-    "Either that player does not exist, or has a different password.\r\n";
-static const char *create_fail = "Either there is already a player with that "
-                                 "name, or that name is illegal.\r\n";
-
-constexpr int LOGIN_THROTTLE_ENTRIES = 1024;
-
-typedef struct LoginThrottleEntry LoginThrottleEntry;
-struct LoginThrottleEntry {
-  char address[sizeof(((Descriptor *)0)->addr)];
-  time_t last_refill;
-  unsigned int tokens;
-};
-
-static LoginThrottleEntry login_throttle_entries[LOGIN_THROTTLE_ENTRIES];
-static time_t login_hash_window;
-static int login_hash_count;
-
-static LoginThrottleEntry *login_throttle_entry(const char *address,
-                                                time_t now) {
-  LoginThrottleEntry *oldest;
-  int index;
-
-  oldest = &login_throttle_entries[0];
-  for (index = 0; index < LOGIN_THROTTLE_ENTRIES; index++) {
-    if (!strcmp(login_throttle_entries[index].address, address))
-      return &login_throttle_entries[index];
-    if (login_throttle_entries[index].last_refill < oldest->last_refill)
-      oldest = &login_throttle_entries[index];
-  }
-  snprintf(oldest->address, sizeof(oldest->address), "%s", address);
-  oldest->last_refill = now;
-  oldest->tokens = (unsigned int)mudconf.login_attempt_burst;
-  return oldest;
-}
-
-static int login_throttle_allow(const char *address) {
-  LoginThrottleEntry *entry;
-  time_t now;
-  time_t elapsed;
-  unsigned int refills;
-
-  if (mudconf.login_attempt_burst < 1 || mudconf.login_attempt_refill < 1 ||
-      mudconf.login_hash_limit < 1) {
-    return 0;
-  }
-
-  now = time(nullptr);
-  if (login_hash_window != now) {
-    login_hash_window = now;
-    login_hash_count = 0;
-  }
-  if (login_hash_count >= mudconf.login_hash_limit)
-    return 0;
-
-  entry = login_throttle_entry(address, now);
-  elapsed = now - entry->last_refill;
-  if (elapsed >= mudconf.login_attempt_refill) {
-    refills = (unsigned int)(elapsed / mudconf.login_attempt_refill);
-    if (refills >= (unsigned int)mudconf.login_attempt_burst ||
-        entry->tokens + refills >= (unsigned int)mudconf.login_attempt_burst) {
-      entry->tokens = (unsigned int)mudconf.login_attempt_burst;
-    } else {
-      entry->tokens += refills;
-    }
-    entry->last_refill += refills * (unsigned int)mudconf.login_attempt_refill;
-  }
-  if (entry->tokens == 0)
-    return 0;
-
-  entry->tokens--;
-  login_hash_count++;
-  return 1;
-}
-
-static int check_connect(Descriptor *d, char *msg) {
-  char *command, *user, *password, *buff;
-  const char *cmdsave;
-  DbRef player;
-  int nplayers;
-  Descriptor *d2;
-
-  cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = "< check_connect >";
-
-  /*
-   * Hide the password length from SESSION
-   */
-
-  d->input_tot -= (int)(strlen(msg) + 1);
-
-  /*
-   * Crack the command apart
-   */
-
-  command = alloc_lbuf("check_conn.cmd");
-  user = alloc_lbuf("check_conn.user");
-  password = alloc_lbuf("check_conn.pass");
-  parse_connect(msg, command, user, password);
-
-  if (!strncmp(command, "co", 2) || !strncmp(command, "cd", 2)) {
-    /*
-     * See if this connection would exceed the max #players
-     */
-
-    if (mudconf.max_players < 0) {
-      nplayers = mudconf.max_players - 1;
-    } else {
-      nplayers = 0;
-      DESC_ITER_CONN(d2)
-      nplayers++;
-    }
-
-    if (!login_throttle_allow(d->addr)) {
-      failconn("CON", "Connect", "Login throttled", d, R_BADLOGIN, NOTHING,
-               FC_CONN, connect_fail, command, user, password, cmdsave);
-      return 0;
-    }
-    player = connect_player(user, password, d->addr, d->username);
-    if (player == NOTHING) {
-
-      /*
-       * Not a player, or wrong password
-       */
-
-      descriptor_queue_string(d, connect_fail);
-      STARTLOG(LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
-        buff = alloc_lbuf("check_conn.LOG.bad");
-        user[3800] = '\0';
-        snprintf(buff, LBUF_SIZE, "[%d/%s] Failed connect to '%s'",
-                 d->descriptor, d->addr, user);
-        log_text(buff);
-        free_lbuf(buff);
-        ENDLOG;
-      }
-      if (--(d->retries_left) <= 0) {
-        free_lbuf(command);
-        free_lbuf(user);
-        free_lbuf(password);
-        descriptor_shutdown(d, R_BADLOGIN);
-        mudstate.debug_cmd = cmdsave;
-        return 0;
-      }
-    } else if (((mudconf.control_flags & CF_LOGIN) &&
-                (nplayers < mudconf.max_players)) ||
-               is_wizard(player) || is_god(player)) {
-
-      if (!strncmp(command, "cd", 2) && (is_wizard(player) || is_god(player)))
-        s_flags(player, obj_flags(player) | DARK);
-
-      /* Logins are enabled, or the player is a wizard or God. */
-
-      STARTLOG(LOG_LOGIN, "CON", "LOGIN") {
-        buff = alloc_mbuf("check_conn.LOG.login");
-        snprintf(buff, MBUF_SIZE, "[%d/%s] Connected to ", d->descriptor,
-                 d->addr);
-        log_text(buff);
-        log_name_and_loc(player);
-        free_mbuf(buff);
-        ENDLOG;
-      }
-      d->flags |= DS_CONNECTED;
-
-      d->connected_at = time(0);
-      d->player = player;
-      set_lastsite(d, nullptr);
-
-      announce_connect(player, d);
-
-    } else if (!(mudconf.control_flags & CF_LOGIN)) {
-      failconn("CON", "Connect", "Logins Disabled", d, R_GAMEDOWN, player,
-               FC_CONN_DOWN, mudconf.down_msg, command, user, password,
-               cmdsave);
-      return 0;
-    } else {
-      failconn("CON", "Connect", "Game Full", d, R_GAMEFULL, player,
-               FC_CONN_FULL, mudconf.full_msg, command, user, password,
-               cmdsave);
-      return 0;
-    }
-  } else if (!strncmp(command, "cr", 2)) {
-
-    /*
-     * Enforce game down
-     */
-
-    if (!(mudconf.control_flags & CF_LOGIN)) {
-      failconn("CRE", "Create", "Logins Disabled", d, R_GAMEDOWN, NOTHING,
-               FC_CONN_DOWN, mudconf.down_msg, command, user, password,
-               cmdsave);
-      return 0;
-    }
-    /*
-     * Enforce max #players
-     */
-
-    if (mudconf.max_players < 0) {
-      nplayers = mudconf.max_players;
-    } else {
-      nplayers = 0;
-      DESC_ITER_CONN(d2)
-      nplayers++;
-    }
-    if (nplayers > mudconf.max_players) {
-
-      /*
-       * Too many players on, reject the attempt
-       */
-
-      failconn("CRE", "Create", "Game Full", d, R_GAMEFULL, NOTHING,
-               FC_CONN_FULL, mudconf.full_msg, command, user, password,
-               cmdsave);
-      return 0;
-    }
-    if (!login_throttle_allow(d->addr)) {
-      failconn("CRE", "Create", "Login throttled", d, R_BADLOGIN, NOTHING,
-               FC_CONN, create_fail, command, user, password, cmdsave);
-      return 0;
-    }
-    player = create_player(user, password, NOTHING, 0);
-    if (player == NOTHING) {
-      descriptor_queue_string(d, create_fail);
-      STARTLOG(LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
-        buff = alloc_mbuf("check_conn.LOG.badcrea");
-        snprintf(buff, MBUF_SIZE, "[%d/%s] Create of '%s' failed",
-                 d->descriptor, d->addr, user);
-        log_text(buff);
-        free_mbuf(buff);
-        ENDLOG;
-      }
-    } else {
-      STARTLOG(LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
-        buff = alloc_mbuf("check_conn.LOG.create");
-        snprintf(buff, MBUF_SIZE, "[%d/%s] Created ", d->descriptor, d->addr);
-        log_text(buff);
-        log_name(player);
-        free_mbuf(buff);
-        ENDLOG;
-      }
-      move_object(player, mudconf.start_room);
-
-      d->flags |= DS_CONNECTED;
-      d->connected_at = time(0);
-      d->player = player;
-      set_lastsite(d, nullptr);
-      announce_connect(player, d);
-    }
-  } else {
-    descriptor_welcome(d);
-    STARTLOG(LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
-      buff = alloc_mbuf("check_conn.LOG.bad");
-      msg[150] = '\0';
-      snprintf(buff, MBUF_SIZE, "[%d/%s] Failed connect: '%s'", d->descriptor,
-               d->addr, msg);
-      log_text(buff);
-      free_mbuf(buff);
-      ENDLOG;
-    }
-  }
-  free_lbuf(command);
-  free_lbuf(user);
-  free_lbuf(password);
-
-  mudstate.debug_cmd = cmdsave;
-  return 1;
-}
-
 int descriptor_unauthenticated_command(Descriptor *d, char *command) {
   char *arg;
   NameTable *cp;
@@ -1198,7 +850,7 @@ int descriptor_unauthenticated_command(Descriptor *d, char *command) {
     *--arg = ' ';
 
   if (!cp)
-    return check_connect(d, command);
+    return descriptor_begin_connect_flow(d, command);
 
   d->command_count++;
   if (!(cp->flag & CMD_NOxFIX)) {

@@ -58,6 +58,8 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
       flow_send_prompt(d, flow->last_prompt);
       return;
     case FLOW_ACTION_GOTO:
+      if (outcome.prompt != nullptr)
+        descriptor_queue_string(d, outcome.prompt);
       if (++iterations > FLOW_MAX_GOTO_CHAIN) {
         log_error(LOG_BUGS, "FLOW", "LOOP",
                   "Interactive flow on descriptor %d exceeded %d GOTO steps "
