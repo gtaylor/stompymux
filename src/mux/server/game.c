@@ -1060,7 +1060,6 @@ int main(int argc, char *argv[]) {
   hash_table_initialize(&mudstate.player_htab, 250 * HASH_FACTOR);
   numeric_hash_table_initialize(&mudstate.fwdlist_htab, 25 * HASH_FACTOR);
   numeric_hash_table_initialize(&mudstate.parent_htab, 5 * HASH_FACTOR);
-  mudstate.desctree = red_black_tree_init(descriptor_compare, nullptr);
   vattr_init();
 
   configuration_read(config_file);

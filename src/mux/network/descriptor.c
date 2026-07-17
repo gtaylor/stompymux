@@ -5,7 +5,7 @@
 #include "mux/network/descriptor.h"
 
 #include "mux/server/libuv.h"
-#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -35,10 +35,21 @@ static const char *descriptor_disconnect_messages[] = {
     "unknown",  "quit",     "timeout",  "boot",    "netdeath",
     "shutdown", "badlogin", "nologins", "gamefull"};
 
-/* Head of the global list of active descriptors. */
-Descriptor *descriptor_list = nullptr;
-/* Number of active descriptors in the global descriptor list. */
-int ndescriptors = 0;
+/* Number of slots allocated when the descriptor registry first grows. */
+constexpr size_t DESCRIPTOR_REGISTRY_INITIAL_CAPACITY = 16;
+
+/* Flat storage for every descriptor owned by the server event loop. */
+typedef struct DescriptorRegistry {
+  /* Stable slots containing descriptors or nullptr when unused. */
+  Descriptor **slots;
+  /* Number of slots allocated in slots. */
+  size_t capacity;
+  /* Number of non-null descriptors in slots. */
+  size_t count;
+} DescriptorRegistry;
+
+/* Process-wide registry of descriptors that have completed setup. */
+static DescriptorRegistry descriptor_registry;
 
 /* Clear buffered input before destroying descriptor. */
 static void descriptor_clear_input(Descriptor *descriptor) {
@@ -46,86 +57,120 @@ static void descriptor_clear_input(Descriptor *descriptor) {
   memset(descriptor->input, 0, sizeof(descriptor->input));
 }
 
-/* Remove descriptor from the per-player descriptor hash chain. */
-static void descriptor_hash_remove(Descriptor *descriptor) {
-  Descriptor *hashed_descriptor;
-  char buffer[4096];
+/* Grow the descriptor registry enough to hold at least one more entry. */
+static bool descriptor_registry_grow(void) {
+  Descriptor **slots;
+  size_t old_capacity = descriptor_registry.capacity;
+  size_t new_capacity = old_capacity == 0 ? DESCRIPTOR_REGISTRY_INITIAL_CAPACITY
+                                          : old_capacity * 2;
 
-  hashed_descriptor =
-      red_black_tree_find(mudstate.desctree, (void *)descriptor->player);
-  if (hashed_descriptor == nullptr) {
-    snprintf(buffer, sizeof(buffer),
-             "descriptor_hash_remove: unable to find player(%ld)'s "
-             "descriptors from hashtable.\n",
-             descriptor->player);
-    log_text(buffer);
-    return;
-  }
-
-  if (hashed_descriptor == descriptor && hashed_descriptor->hashnext) {
-    red_black_tree_insert(mudstate.desctree, (void *)descriptor->player,
-                          descriptor->hashnext);
-    descriptor->hashnext = nullptr;
-    descriptor_release(descriptor);
-    return;
-  }
-  if (hashed_descriptor == descriptor) {
-    red_black_tree_delete(mudstate.desctree, (void *)descriptor->player);
-    descriptor_release(descriptor);
-    return;
-  }
-
-  while (hashed_descriptor->hashnext != nullptr) {
-    if (hashed_descriptor->hashnext == descriptor) {
-      hashed_descriptor->hashnext = descriptor->hashnext;
-      descriptor->hashnext = nullptr;
-      descriptor_release(descriptor);
-      return;
-    }
-    hashed_descriptor = hashed_descriptor->hashnext;
-  }
+  if (new_capacity < old_capacity ||
+      new_capacity > SIZE_MAX / sizeof(*descriptor_registry.slots))
+    return false;
+  slots = realloc(descriptor_registry.slots,
+                  new_capacity * sizeof(*descriptor_registry.slots));
+  if (slots == nullptr)
+    return false;
+  memset(&slots[old_capacity], 0,
+         (new_capacity - old_capacity) * sizeof(*slots));
+  descriptor_registry.slots = slots;
+  descriptor_registry.capacity = new_capacity;
+  return true;
 }
 
-/* Compare two player database references for the descriptor hash tree. */
-int descriptor_compare(void *vleft, void *vright, void *token) {
-  DbRef left = (DbRef)vleft;
-  DbRef right = (DbRef)vright;
+/* Add descriptor to the flat registry and retain its active reference. */
+bool descriptor_register(Descriptor *descriptor) {
+  size_t slot;
 
-  return (left > right) - (left < right);
-}
-
-/* Add descriptor to the descriptor hash chain for its player. */
-void descriptor_hash_add(Descriptor *descriptor) {
-  Descriptor *hashed_descriptor;
-
+  for (slot = 0; slot < descriptor_registry.capacity; slot++) {
+    if (descriptor_registry.slots[slot] == nullptr)
+      break;
+  }
+  if (slot == descriptor_registry.capacity && !descriptor_registry_grow())
+    return false;
+  descriptor_registry.slots[slot] = descriptor;
+  descriptor_registry.count++;
   descriptor_retain(descriptor);
-  hashed_descriptor =
-      red_black_tree_find(mudstate.desctree, (void *)descriptor->player);
-  descriptor->hashnext = hashed_descriptor;
-  red_black_tree_insert(mudstate.desctree, (void *)descriptor->player,
-                        descriptor);
+  return true;
+}
+
+/* Remove descriptor from the flat registry before destroying it. */
+static void descriptor_unregister(Descriptor *descriptor) {
+  size_t slot;
+
+  for (slot = 0; slot < descriptor_registry.capacity; slot++) {
+    if (descriptor_registry.slots[slot] != descriptor)
+      continue;
+    descriptor_registry.slots[slot] = nullptr;
+    descriptor_registry.count--;
+    return;
+  }
+  dassert(false);
+}
+
+/* Return the number of descriptors in the flat registry. */
+size_t descriptor_count(void) { return descriptor_registry.count; }
+
+/* Construct a descriptor iterator with the requested selection rule. */
+static DescriptorIterator
+descriptor_iterator_create(DescriptorIteratorKind kind, DbRef player) {
+  return (DescriptorIterator){.next_slot = 0, .kind = kind, .player = player};
+}
+
+/* Start an iterator over every registered descriptor. */
+DescriptorIterator descriptor_iterator_all(void) {
+  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_ALL, NOTHING);
+}
+
+/* Start an iterator over live authenticated descriptors. */
+DescriptorIterator descriptor_iterator_connected(void) {
+  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_CONNECTED, NOTHING);
+}
+
+/* Start an iterator over live authenticated descriptors for player. */
+DescriptorIterator descriptor_iterator_player(DbRef player) {
+  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_PLAYER, player);
+}
+
+/* Return whether descriptor satisfies iterator's selection rule. */
+static bool descriptor_iterator_matches(const DescriptorIterator *iterator,
+                                        const Descriptor *descriptor) {
+  if (iterator->kind == DESCRIPTOR_ITERATOR_ALL)
+    return true;
+  if (!descriptor->is_connected || descriptor->is_dead)
+    return false;
+  if (iterator->kind == DESCRIPTOR_ITERATOR_PLAYER)
+    return descriptor->player == iterator->player;
+  return true;
+}
+
+/* Return the next descriptor selected by iterator, or nullptr at the end. */
+Descriptor *descriptor_iterator_next(DescriptorIterator *iterator) {
+  Descriptor *descriptor;
+
+  while (iterator->next_slot < descriptor_registry.capacity) {
+    descriptor = descriptor_registry.slots[iterator->next_slot++];
+    if (descriptor != nullptr &&
+        descriptor_iterator_matches(iterator, descriptor))
+      return descriptor;
+  }
+  return nullptr;
 }
 
 /* Retain descriptor against destruction. */
 void descriptor_retain(Descriptor *descriptor) { descriptor->refcount++; }
 
+/* Destroy descriptor after all references and socket ownership have ended. */
 static void descriptor_free(Descriptor *descriptor) {
   dprintk("%p destructing", descriptor);
   descriptor_clear_input(descriptor);
   descriptor_flow_destroy(descriptor);
   descriptor_telnet_destroy(descriptor);
-
-  if (descriptor->prev != nullptr)
-    descriptor->prev->next = descriptor->next;
-  else
-    descriptor_list = descriptor->next;
-  if (descriptor->next != nullptr)
-    descriptor->next->prev = descriptor->prev;
-
-  ndescriptors--;
+  descriptor_unregister(descriptor);
   free(descriptor);
 }
 
+/* Complete socket teardown and destroy an otherwise unreferenced descriptor. */
 static void descriptor_socket_closed(uv_handle_t *handle) {
   Descriptor *descriptor = handle->data;
 
@@ -137,6 +182,7 @@ static void descriptor_socket_closed(uv_handle_t *handle) {
     descriptor_free(descriptor);
 }
 
+/* Force libuv to cancel pending I/O and close this descriptor. */
 void descriptor_force_close(Descriptor *descriptor) {
   if (descriptor->is_socket_closing)
     return;
@@ -157,50 +203,12 @@ void descriptor_release(Descriptor *descriptor) {
     descriptor_force_close(descriptor);
 }
 
-/* Return the first descriptor in the global descriptor list. */
-Descriptor *descriptor_first(void) { return descriptor_list; }
-
-/* Return the descriptor following descriptor in the global list. */
-Descriptor *descriptor_next(Descriptor *descriptor) { return descriptor->next; }
-
-/* Find the first authenticated descriptor in the global list. */
-Descriptor *descriptor_first_connected(void) {
-  Descriptor *descriptor;
-
-  for (descriptor = descriptor_first(); descriptor != nullptr;
-       descriptor = descriptor_next(descriptor)) {
-    if (descriptor->is_connected)
-      return descriptor;
-  }
-  return nullptr;
-}
-
-/* Find the next authenticated descriptor after descriptor. */
-Descriptor *descriptor_next_connected(Descriptor *descriptor) {
-  for (descriptor = descriptor_next(descriptor); descriptor != nullptr;
-       descriptor = descriptor_next(descriptor)) {
-    if (descriptor->is_connected)
-      return descriptor;
-  }
-  return nullptr;
-}
-
-/* Find the first descriptor associated with player. */
-Descriptor *descriptor_first_player(DbRef player) {
-  return red_black_tree_find(mudstate.desctree, (void *)player);
-}
-
-/* Return the next descriptor associated with descriptor's player. */
-Descriptor *descriptor_next_player(Descriptor *descriptor) {
-  return descriptor->hashnext;
-}
-
 /* Find an authenticated descriptor by its socket descriptor. */
 Descriptor *descriptor_find_by_fd(int fd) {
   Descriptor *descriptor;
+  DescriptorIterator iterator = descriptor_iterator_connected();
 
-  for (descriptor = descriptor_first_connected(); descriptor != nullptr;
-       descriptor = descriptor_next_connected(descriptor)) {
+  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     if (descriptor->descriptor == fd)
       return descriptor;
   }
@@ -234,7 +242,6 @@ void descriptor_shutdown(Descriptor *descriptor,
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_disconnect_messages[reason]);
-    descriptor_hash_remove(descriptor);
   }
   descriptor_release(descriptor); // NOLINT(clang-analyzer-unix.Malloc)
 }

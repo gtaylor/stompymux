@@ -91,10 +91,10 @@ void descriptor_telnet_set_echo(Descriptor *d, int echo) {
 
 static int telnet_connected_count(void) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   int count = 0;
 
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     count++;
   }
   return count;

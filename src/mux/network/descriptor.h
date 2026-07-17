@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <time.h>
 
 #include "mux/database/db.h"
@@ -20,12 +21,15 @@ typedef enum DescriptorShutdownReason {
   DESCRIPTOR_SHUTDOWN_GAMEFULL = 8,   /* Too many players logged in */
 } DescriptorShutdownReason;
 
+/* Opaque libtelnet protocol state owned by a descriptor. */
 typedef struct telnet_t telnet_t;
+/* Opaque interactive input-flow state owned by a descriptor. */
 typedef struct InputFlow InputFlow;
+/* Opaque libuv TCP handle owned by a descriptor. */
 typedef struct uv_tcp_s uv_tcp_t;
 
-typedef struct Descriptor Descriptor;
-struct Descriptor {
+/* Runtime state and resources for one client connection. */
+typedef struct Descriptor {
   /* Operating-system socket descriptor for this connection. */
   int descriptor;
   /* Whether the connection has authenticated as a player. */
@@ -54,8 +58,9 @@ struct Descriptor {
   int output_tot;
   /* Number of output bytes discarded because of queue limits. */
   int output_lost;
-  /* Whether libuv has started and completed closing this socket. */
+  /* Whether libuv has started closing this socket. */
   bool is_socket_closing;
+  /* Whether libuv has completed closing this socket. */
   bool is_socket_closed;
   /* Current size of buffered input. */
   int input_size;
@@ -93,43 +98,48 @@ struct Descriptor {
   int refcount;
   /* Active interactive input flow, if any. */
   InputFlow *flow;
-  /* Next descriptor for the same player in the descriptor hash chain. */
-  struct Descriptor *hashnext;
-  /* Next descriptor in the global descriptor list. */
-  struct Descriptor *next;
-  /* Previous descriptor in the global descriptor list. */
-  struct Descriptor *prev;
   /* Number of asynchronous writes still owned by libuv. */
   size_t pending_writes;
   /* libuv TCP stream for this client. */
   uv_tcp_t *socket;
-};
+} Descriptor;
 
-/* Head of the global list of active descriptors. */
-extern Descriptor *descriptor_list;
-/* Number of active descriptors in the global descriptor list. */
-extern int ndescriptors;
+/* Kinds of descriptor selected by a DescriptorIterator. */
+typedef enum DescriptorIteratorKind {
+  /* Select every descriptor, including descriptors that are closing. */
+  DESCRIPTOR_ITERATOR_ALL,
+  /* Select authenticated descriptors that are not closing. */
+  DESCRIPTOR_ITERATOR_CONNECTED,
+  /* Select live authenticated descriptors for one player. */
+  DESCRIPTOR_ITERATOR_PLAYER,
+} DescriptorIteratorKind;
 
-/* Compare two player database references for the descriptor hash tree. */
-int descriptor_compare(void *vleft, void *vright, void *token);
-/* Add descriptor to the descriptor hash chain for its player. */
-void descriptor_hash_add(Descriptor *descriptor);
+/* Cursor for a single pass through the flat descriptor registry. */
+typedef struct DescriptorIterator {
+  /* Registry slot to examine on the next call. */
+  size_t next_slot;
+  /* Selection rule applied while advancing the iterator. */
+  DescriptorIteratorKind kind;
+  /* Player selected by DESCRIPTOR_ITERATOR_PLAYER. */
+  DbRef player;
+} DescriptorIterator;
+
+/* Add descriptor to the flat registry and retain its active reference. */
+bool descriptor_register(Descriptor *descriptor);
+/* Return the number of descriptors in the flat registry. */
+size_t descriptor_count(void);
+/* Start an iterator over every registered descriptor. */
+DescriptorIterator descriptor_iterator_all(void);
+/* Start an iterator over live authenticated descriptors. */
+DescriptorIterator descriptor_iterator_connected(void);
+/* Start an iterator over live authenticated descriptors for player. */
+DescriptorIterator descriptor_iterator_player(DbRef player);
+/* Return the next descriptor selected by iterator, or nullptr at the end. */
+Descriptor *descriptor_iterator_next(DescriptorIterator *iterator);
 /* Retain descriptor against destruction. */
 void descriptor_retain(Descriptor *descriptor);
 /* Release a retained descriptor and destroy it when no references remain. */
 void descriptor_release(Descriptor *descriptor);
-/* Return the first descriptor in the global descriptor list. */
-Descriptor *descriptor_first(void);
-/* Return the descriptor following descriptor in the global list. */
-Descriptor *descriptor_next(Descriptor *descriptor);
-/* Return the first authenticated descriptor in the global list. */
-Descriptor *descriptor_first_connected(void);
-/* Return the next authenticated descriptor after descriptor. */
-Descriptor *descriptor_next_connected(Descriptor *descriptor);
-/* Return the first descriptor associated with player. */
-Descriptor *descriptor_first_player(DbRef player);
-/* Return the next descriptor associated with descriptor's player. */
-Descriptor *descriptor_next_player(Descriptor *descriptor);
 /* Find an authenticated descriptor by its socket descriptor. */
 Descriptor *descriptor_find_by_fd(int descriptor);
 /* Mark descriptor disconnected and perform its shutdown lifecycle. */

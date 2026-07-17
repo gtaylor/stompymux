@@ -34,10 +34,10 @@
 
 void make_portlist(DbRef player, DbRef target, char *buff, char **bufc) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   int i = 0;
 
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (d->player == target) {
       safe_str(tprintf("%d ", d->descriptor), buff, bufc);
       i = 1;
@@ -97,12 +97,15 @@ struct timeval msec_add(struct timeval t, int x) {
 struct timeval update_quotas(struct timeval last, struct timeval current) {
   int nslices;
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_all();
 
   nslices = msec_diff(current, last) /
             (mudconf.timeslice > 0 ? mudconf.timeslice : 1);
 
   if (nslices > 0) {
-    for (d = descriptor_first(); d != nullptr; d = descriptor_next(d)) {
+    while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+      if (d->is_dead)
+        continue;
       d->quota += mudconf.cmd_quota_incr * nslices;
       if (d->quota > mudconf.cmd_quota_max)
         d->quota = mudconf.cmd_quota_max;
@@ -115,6 +118,7 @@ struct timeval update_quotas(struct timeval last, struct timeval current) {
 
 void raw_notify_raw(DbRef player, const char *msg, const char *append) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
 
   if (!msg || !*msg)
     return;
@@ -129,8 +133,7 @@ void raw_notify_raw(DbRef player, const char *msg, const char *append) {
   if (!is_connected(player))
     return;
 
-  for (d = descriptor_first_player(player); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     descriptor_queue_string(d, msg);
     if (append != nullptr)
       descriptor_queue_write(d, append, (int)strlen(append));
@@ -144,6 +147,7 @@ void raw_notify(DbRef player, const char *msg) {
 
 void notify_printf(DbRef player, const char *format, ...) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
   char buffer[LBUF_SIZE];
   va_list ap;
   memset(buffer, 0, LBUF_SIZE);
@@ -156,14 +160,14 @@ void notify_printf(DbRef player, const char *format, ...) {
   strncat(buffer, "\r\n", LBUF_SIZE - 1);
   buffer[LBUF_SIZE - 1] = '\0';
 
-  for (d = descriptor_first_player(player); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     descriptor_queue_string(d, buffer);
   }
 }
 
 void raw_notify_newline(DbRef player) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
 
   if (mudstate.inpipe && (player == mudstate.poutobj)) {
     safe_str("\r\n", mudstate.poutnew, &mudstate.poutbufc);
@@ -172,8 +176,7 @@ void raw_notify_newline(DbRef player) {
   if (!is_connected(player))
     return;
 
-  for (d = descriptor_first_player(player); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     descriptor_queue_write(d, "\r\n", 2);
   }
 }
@@ -186,6 +189,7 @@ void raw_notify_newline(DbRef player) {
 void raw_broadcast(int inflags, const char *template, ...) {
   char buff[LBUF_SIZE];
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   va_list ap;
 
   if (!template || !*template)
@@ -195,8 +199,7 @@ void raw_broadcast(int inflags, const char *template, ...) {
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
 
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if ((obj_flags(d->player) & inflags) == inflags) {
       descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
@@ -302,14 +305,13 @@ void announce_connect(DbRef player, Descriptor *d) {
   int num, key, count;
   char *buf, *time_str;
   Descriptor *dtemp;
+  DescriptorIterator iterator;
 
   descriptor_queue_string(d, "Connected.\n\n");
 
-  descriptor_hash_add(d);
-
   count = 0;
-  for (dtemp = descriptor_first_connected(); dtemp != nullptr;
-       dtemp = descriptor_next_connected(dtemp))
+  iterator = descriptor_iterator_connected();
+  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     count++;
 
   if (mudstate.record_players < count)
@@ -333,8 +335,8 @@ void announce_connect(DbRef player, Descriptor *d) {
   }
   buf = alloc_lbuf("announce_connect");
   num = 0;
-  for (dtemp = descriptor_first_player(player); dtemp != nullptr;
-       dtemp = descriptor_next_player(dtemp))
+  iterator = descriptor_iterator_player(player);
+  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     num++;
 
   if (num < 2) {
@@ -432,6 +434,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   long aflags;
   char *buf, *atr_temp;
   Descriptor *dtemp;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
   char *argv[1];
 
   if (is_suspect(player)) {
@@ -443,14 +446,13 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   }
   loc = obj_location(player);
   num = 0;
-  for (dtemp = descriptor_first_player(player); dtemp != nullptr;
-       dtemp = descriptor_next_player(dtemp))
+  while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     num++;
 
   temp = mudstate.curr_enactor;
   mudstate.curr_enactor = player;
 
-  if (num < 2) {
+  if (num == 0) {
     buf = alloc_mbuf("descriptor_announce_disconnect.only");
 
     snprintf(buf, MBUF_SIZE, "%s has disconnected.", Name(player));
@@ -547,12 +549,12 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 }
 
 int boot_off(DbRef player, const char *message) {
-  Descriptor *d, *dnext;
+  Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
   int count;
 
   count = 0;
-  for (d = descriptor_first_player(player); d != nullptr; d = dnext) {
-    dnext = descriptor_next_player(d);
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (message && *message) {
       descriptor_queue_string(d, message);
       descriptor_queue_string(d, "\r\n");
@@ -564,12 +566,14 @@ int boot_off(DbRef player, const char *message) {
 }
 
 int boot_by_port(int port, int no_god, char *message) {
-  Descriptor *d, *dnext;
+  Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_all();
   int count;
 
   count = 0;
-  for (d = descriptor_first(); d != nullptr; d = dnext) {
-    dnext = descriptor_next(d);
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    if (d->is_dead)
+      continue;
     if ((d->descriptor == port) && (!no_god || !is_god(d->player))) {
       if (message && *message) {
         descriptor_queue_string(d, message);
@@ -590,12 +594,12 @@ int boot_by_port(int port, int no_god, char *message) {
 
 void descriptor_reload(DbRef player) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
   char *buf;
   DbRef aowner;
   Flag aflags;
 
-  for (d = descriptor_first_player(player); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     buf = attribute_parent_get(player, A_TIMEOUT, &aowner, &aflags);
     if (buf) {
       d->timeout = clamped_atoi(buf);
@@ -614,11 +618,11 @@ void descriptor_reload(DbRef player) {
 
 int fetch_idle(DbRef target) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(target);
   int result, idletime;
 
   result = -1;
-  for (d = descriptor_first_player(target); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     idletime = (int)(mudstate.now - d->last_time);
     if ((result == -1) || (idletime < result))
       result = idletime;
@@ -628,11 +632,11 @@ int fetch_idle(DbRef target) {
 
 int fetch_connect(DbRef target) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(target);
   int result, conntime;
 
   result = -1;
-  for (d = descriptor_first_player(target); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     conntime = (int)(mudstate.now - d->connected_at);
     if (conntime > result)
       result = conntime;
@@ -652,6 +656,7 @@ static char *trimmed_name(DbRef player) {
 
 static void dump_users(Descriptor *e, char *match) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   int count;
   char *buf, *fp, *sp, flist[4], slist[4];
   DbRef room_it;
@@ -665,8 +670,7 @@ static void dump_users(Descriptor *e, char *match) {
   descriptor_queue_string(e, "Player Name         On For  Idle ");
   descriptor_queue_string(e, "     Room    Cmds Host\r\n");
   count = 0;
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match && !(string_prefix(Name(d->player), match)))
       continue;
     count++;
@@ -721,6 +725,7 @@ static void dump_users(Descriptor *e, char *match) {
 
 static void dump_sessions(Descriptor *e, char *match) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   int count;
   char *buf;
 
@@ -738,8 +743,7 @@ static void dump_sessions(Descriptor *e, char *match) {
       e, "Port Pend  Lost     Total  Pend  Lost     Total\r\n");
 
   count = 0;
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match && !string_prefix(Name(d->player), match))
       continue;
     count++;
@@ -919,11 +923,11 @@ void list_siteinfo(DbRef player) {
 
 void make_ulist(DbRef player, char *buff, char **bufc) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   char *cp;
 
   cp = *bufc;
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (!is_wizard(player) && is_hidden(d->player))
       continue;
     if (cp != *bufc)
@@ -942,11 +946,11 @@ void make_ulist(DbRef player, char *buff, char **bufc) {
 
 DbRef find_connected_name(DbRef player, char *name) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected();
   DbRef found;
 
   found = NOTHING;
-  for (d = descriptor_first_connected(); d != nullptr;
-       d = descriptor_next_connected(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (is_good_obj(player) && !is_wizard(player) && is_hidden(d->player))
       continue;
     if (!string_prefix(Name(d->player), name))

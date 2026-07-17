@@ -110,11 +110,9 @@ void mux_release_socket(void) {
 
 int eradicate_broken_fd(int fd) {
   Descriptor *descriptor;
-  Descriptor *next;
+  DescriptorIterator iterator = descriptor_iterator_all();
 
-  for (descriptor = descriptor_first(); descriptor != nullptr;
-       descriptor = next) {
-    next = descriptor_next(descriptor);
+  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     if (fd == 0 || descriptor->descriptor == fd)
       descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
   }
@@ -275,12 +273,11 @@ static void accept_new_connection(uv_stream_t *server, int status) {
     return;
   }
 
-  if (descriptor_list != nullptr)
-    descriptor_list->prev = descriptor;
-  descriptor->next = descriptor_list;
-  descriptor_list = descriptor;
-  ndescriptors++;
-  descriptor_retain(descriptor);
+  if (!descriptor_register(descriptor)) {
+    descriptor_telnet_destroy(descriptor);
+    discard_connection(descriptor);
+    return;
+  }
   log_error(LOG_NET, "NET", "CONN", "Connection opened from %s %s.",
             address_name, address_port);
   if (uv_read_start((uv_stream_t *)descriptor->socket, descriptor_read_alloc,
@@ -298,14 +295,12 @@ void flush_sockets(void) {
 
 void close_sockets(int emergency, const char *message) {
   Descriptor *descriptor;
-  Descriptor *next;
+  DescriptorIterator iterator = descriptor_iterator_all();
 
   mux_release_socket();
-  for (descriptor = descriptor_first(); descriptor != nullptr;
-       descriptor = next) {
+  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     uv_buf_t buffer;
 
-    next = descriptor_next(descriptor);
     if (emergency) {
       buffer = uv_buf_init((char *)(uintptr_t)message,
                            (unsigned int)strlen(message));

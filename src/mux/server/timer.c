@@ -53,11 +53,13 @@ void init_timer(void) {
 }
 
 void check_idle(void) {
-  Descriptor *d, *dnext;
+  Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_all();
   time_t idletime;
 
-  for (d = descriptor_first(); d != nullptr; d = dnext) {
-    dnext = descriptor_next(d);
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    if (d->is_dead)
+      continue;
     if (d->is_connected) {
       idletime = mudstate.now - d->last_time;
       if ((idletime > d->timeout) && !can_idle(d->player)) {

@@ -16,6 +16,11 @@
 #include <time.h>
 #include <unistd.h>
 
+/* Number of simultaneous clients used to exercise descriptor registry growth.
+ */
+constexpr size_t TEST_CONNECTION_COUNT = 20;
+
+/* Wait for child to exit successfully, killing it after the timeout. */
 static int wait_child(pid_t child) {
   struct timespec delay = {.tv_sec = 0, .tv_nsec = 100000000};
   int status;
@@ -34,6 +39,7 @@ static int wait_child(pid_t child) {
   return -1;
 }
 
+/* Run a command with three arguments and return whether it succeeded. */
 static int run_command(const char *command, const char *first,
                        const char *second, const char *third) {
   int status;
@@ -51,6 +57,7 @@ static int run_command(const char *command, const char *first,
              : -1;
 }
 
+/* Reserve and return an unused loopback TCP port. */
 static int choose_port(void) {
   struct sockaddr_in address = {.sin_family = AF_INET,
                                 .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
@@ -68,6 +75,7 @@ static int choose_port(void) {
   return ntohs(address.sin_port);
 }
 
+/* Copy the game configuration while replacing its listening port. */
 static int write_config(const char *source_path, const char *target_path,
                         int port) {
   FILE *source = fopen(source_path, "r");
@@ -98,6 +106,7 @@ fail:
   return -1;
 }
 
+/* Connect one client to port once the child server begins listening. */
 static int connect_when_ready(int port) {
   struct sockaddr_in address = {.sin_family = AF_INET,
                                 .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
@@ -117,6 +126,7 @@ static int connect_when_ready(int port) {
   return -1;
 }
 
+/* Start a server, open enough clients to grow its registry, and stop it. */
 int main(int argc, char **argv) {
   char directory[] = "/tmp/stompymux-libuv-XXXXXX";
   char source_config[PATH_MAX];
@@ -124,11 +134,13 @@ int main(int argc, char **argv) {
   char copy_source[PATH_MAX];
   char received[512];
   struct pollfd readable;
+  int socket_fds[TEST_CONNECTION_COUNT];
   pid_t child = -1;
   int port;
-  int socket_fd = -1;
   int result = 1;
 
+  for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++)
+    socket_fds[index] = -1;
   if (argc != 3)
     return 1;
   if (mkdtemp(directory) == nullptr)
@@ -152,21 +164,25 @@ int main(int argc, char **argv) {
     execl(argv[1], argv[1], "stompymux.toml", nullptr);
     _exit(127);
   }
-  socket_fd = connect_when_ready(port);
-  if (socket_fd < 0)
-    goto done;
-  readable = (struct pollfd){.fd = socket_fd, .events = POLLIN};
-  if (poll(&readable, 1, 5000) != 1 ||
-      read(socket_fd, received, sizeof(received)) <= 0)
-    goto done;
+  for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++) {
+    socket_fds[index] = connect_when_ready(port);
+    if (socket_fds[index] < 0)
+      goto done;
+    readable = (struct pollfd){.fd = socket_fds[index], .events = POLLIN};
+    if (poll(&readable, 1, 5000) != 1 ||
+        read(socket_fds[index], received, sizeof(received)) <= 0)
+      goto done;
+  }
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
     goto done;
   child = -1;
   result = 0;
 
 done:
-  if (socket_fd >= 0)
-    close(socket_fd);
+  for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++) {
+    if (socket_fds[index] >= 0)
+      close(socket_fds[index]);
+  }
   if (child > 0) {
     kill(child, SIGKILL);
     waitpid(child, nullptr, 0);

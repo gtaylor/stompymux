@@ -122,18 +122,16 @@ static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
 
 static void server_lifecycle_drain_writes(MuxTimer *timer, void *arg) {
   Descriptor *descriptor;
-  Descriptor *next;
+  DescriptorIterator iterator;
   bool deadline_reached;
 
   deadline_reached = uv_hrtime() - shutdown_started_at >= 1000000000ULL;
-  if (descriptor_first() != nullptr && !deadline_reached)
+  if (descriptor_count() != 0 && !deadline_reached)
     return;
   if (deadline_reached) {
-    for (descriptor = descriptor_first(); descriptor != nullptr;
-         descriptor = next) {
-      next = descriptor_next(descriptor);
+    iterator = descriptor_iterator_all();
+    while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr)
       descriptor_force_close(descriptor);
-    }
   }
   mux_timer_destroy(shutdown_timer);
   shutdown_timer = nullptr;
@@ -221,7 +219,7 @@ void server_lifecycle_shutdown(void) {
     int status;
 
     uv_walk(&server_event_loop, server_lifecycle_close_timers, nullptr);
-    if (descriptor_first() != nullptr) {
+    if (descriptor_count() != 0) {
       shutdown_started_at = uv_hrtime();
       shutdown_timer = mux_timer_create(&server_event_loop,
                                         server_lifecycle_drain_writes, nullptr);

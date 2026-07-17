@@ -372,11 +372,10 @@ struct ServerState {
   HashTable attr_name_htab;  /* Attribute names hashtable */
   HashTable vattr_name_htab; /* User attribute names hashtable */
   HashTable player_htab;     /* Player name->number hashtable */
-  RedBlackTree desctree;
-  HashTable fwdlist_htab; /* Room forwardlists */
-  HashTable parent_htab;  /* Parent $-command exclusion */
-  int attr_next;          /* Next attr to alloc when freelist is empty */
-  OBJQE *qhead;           /* Per Object Queue Entries */
+  HashTable fwdlist_htab;    /* Room forwardlists */
+  HashTable parent_htab;     /* Parent $-command exclusion */
+  int attr_next;             /* Next attr to alloc when freelist is empty */
+  OBJQE *qhead;              /* Per Object Queue Entries */
   OBJQE *qtail;
   BQUE *qwait;           /* Head of wait queue */
   BQUE *qsemfirst;       /* Head of semaphore queue */

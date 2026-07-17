@@ -229,11 +229,10 @@ void fcache_dump_conn(Descriptor *d, int num) {
 
 void fcache_send(DbRef player, int num) {
   Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_player(player);
 
-  for (d = descriptor_first_player(player); d != nullptr;
-       d = descriptor_next_player(d)) {
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr)
     fcache_dump(d, num);
-  }
 }
 
 void fcache_load(DbRef player) {
