@@ -12,6 +12,8 @@
 #include "mux/world/player_cache.h"
 #include <netinet/in.h>
 
+typedef struct Descriptor Descriptor;
+
 /* ServerConfiguration:	runtime configurable parameters */
 
 typedef unsigned char Uchar;
@@ -325,23 +327,25 @@ struct forward_list {
 
 typedef struct ServerState ServerState;
 struct ServerState {
-  int record_players;    /* The maximum # of player logged on */
-  int initializing;      /* are we reading config file at startup? */
-  int panicking;         /* are we in the middle of dying horribly? */
-  int dumping;           /* Are we dumping? */
-  int logging;           /* Are we in the middle of logging? */
-  int generation;        /* DB global generation number */
-  DbRef curr_enactor;    /* Who initiated the current command */
-  DbRef curr_player;     /* Who is running the current command */
-  int alarm_triggered;   /* Has periodic alarm signal occurred? */
-  time_t now;            /* What time is it now? */
-  time_t dump_counter;   /* Countdown to next db dump */
-  time_t check_counter;  /* Countdown to next db check */
-  time_t idle_counter;   /* Countdown to next idle check */
-  time_t mstats_counter; /* Countdown to next mstats snapshot */
-  time_t events_counter; /* Countdown to next events check */
-  int events_flag;       /* Flags for check_events */
-  int events_lasthour;   /* Last hour we ran hourly maintenance */
+  int record_players;          /* The maximum # of player logged on */
+  int initializing;            /* are we reading config file at startup? */
+  int panicking;               /* are we in the middle of dying horribly? */
+  int dumping;                 /* Are we dumping? */
+  int logging;                 /* Are we in the middle of logging? */
+  int generation;              /* DB global generation number */
+  DbRef curr_enactor;          /* Who initiated the current command */
+  DbRef curr_player;           /* Who is running the current command */
+  Descriptor *curr_descriptor; /* Live descriptor for the current command,
+                                  if any (nullptr for queued commands) */
+  int alarm_triggered;         /* Has periodic alarm signal occurred? */
+  time_t now;                  /* What time is it now? */
+  time_t dump_counter;         /* Countdown to next db dump */
+  time_t check_counter;        /* Countdown to next db check */
+  time_t idle_counter;         /* Countdown to next idle check */
+  time_t mstats_counter;       /* Countdown to next mstats snapshot */
+  time_t events_counter;       /* Countdown to next events check */
+  int events_flag;             /* Flags for check_events */
+  int events_lasthour;         /* Last hour we ran hourly maintenance */
 
   int shutdown_flag;         /* Should interface be shut down? */
   char version[256];         /* MUX version string */

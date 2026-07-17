@@ -955,7 +955,9 @@ int descriptor_command(Descriptor *d, char *command) {
     }
     mudstate.curr_player = d->player;
     mudstate.curr_enactor = d->player;
+    mudstate.curr_descriptor = d;
     process_command(d->player, d->player, 1, command, (char **)nullptr, 0);
+    mudstate.curr_descriptor = nullptr;
     if (d->output_suffix) {
       descriptor_queue_string(d, d->output_suffix);
     }
@@ -1142,6 +1144,16 @@ DbRef find_connected_name(DbRef player, char *name) {
     found = d->player;
   }
   return found;
+}
+
+Descriptor *descriptor_find_by_fd(int fd) {
+  Descriptor *d;
+
+  DESC_ITER_CONN(d) {
+    if (d->descriptor == fd)
+      return d;
+  }
+  return nullptr;
 }
 
 void descriptor_run_command(Descriptor *d, char *command) {

@@ -20,6 +20,9 @@
 
 #include "mux/commands/command.h"
 #include "mux/database/attrs.h"
+#include "mux/network/descriptor.h"
+#include "mux/network/input_flow.h"
+#include "mux/network/netcommon.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
@@ -276,6 +279,7 @@ static int lua_host_command(lua_State *state) {
 }
 
 static int lua_require_module(lua_State *state);
+static int lua_host_flow_start(lua_State *state);
 
 static void lua_install_sandbox(LUA_RUNTIME *runtime) {
   static const char *blocked[] = {"io",         "os",        "debug",
@@ -304,6 +308,9 @@ static void lua_install_sandbox(LUA_RUNTIME *runtime) {
   lua_pushlightuserdata(runtime->state, runtime);
   lua_pushcclosure(runtime->state, lua_host_command, 1);
   lua_setfield(runtime->state, -2, "command");
+  lua_pushlightuserdata(runtime->state, runtime);
+  lua_pushcclosure(runtime->state, lua_host_flow_start, 1);
+  lua_setfield(runtime->state, -2, "flow_start");
   lua_setglobal(runtime->state, "mux");
   lua_pushlightuserdata(runtime->state, runtime);
   lua_pushcclosure(runtime->state, lua_require_module, 1);
@@ -786,6 +793,7 @@ static int lua_verify_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   int top = lua_gettop(runtime->state);
   int has_commands = 0;
   int has_schedules = 0;
+  int has_flows = 0;
 
   if (!lua_load_module(runtime, root, path, error, error_size)) {
     lua_settop(runtime->state, top);
@@ -814,11 +822,34 @@ static int lua_verify_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
       has_schedules = lua_objlen(runtime->state, -1) > 0;
     }
     lua_pop(runtime->state, 1);
+    lua_getfield(runtime->state, -1, "flows");
+    if (!lua_isnil(runtime->state, -1)) {
+      if (!lua_istable(runtime->state, -1)) {
+        lua_set_error(error, error_size, "flows in %s must be a table", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      lua_pushnil(runtime->state);
+      while (lua_next(runtime->state, -2) != 0) {
+        if (lua_type(runtime->state, -2) != LUA_TSTRING ||
+            !lua_isfunction(runtime->state, -1)) {
+          lua_set_error(error, error_size,
+                        "flows in %s must map step names to functions", path);
+          lua_settop(runtime->state, top);
+          return 0;
+        }
+        has_flows = 1;
+        lua_pop(runtime->state, 1);
+      }
+    }
+    lua_pop(runtime->state, 1);
   }
-  if (root == LUA_ROOT_GLOBAL_LOGIC && !has_commands && !has_schedules) {
-    lua_set_error(error, error_size,
-                  "global logic module %s must export commands or schedules",
-                  path);
+  if (root == LUA_ROOT_GLOBAL_LOGIC && !has_commands && !has_schedules &&
+      !has_flows) {
+    lua_set_error(
+        error, error_size,
+        "global logic module %s must export commands, schedules, or flows",
+        path);
     lua_settop(runtime->state, top);
     return 0;
   }
@@ -1127,6 +1158,10 @@ static void lua_push_context(lua_State *state, DbRef object, DbRef player,
   if (scope) {
     lua_pushstring(state, scope);
     lua_setfield(state, -2, "scope");
+  }
+  if (mudstate.curr_descriptor != nullptr) {
+    lua_pushinteger(state, mudstate.curr_descriptor->descriptor);
+    lua_setfield(state, -2, "descriptor");
   }
   lua_newtable(state);
   for (index = 0; index < nargs; index++) {
@@ -1530,6 +1565,244 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
     lua_log_error(runtime, thing, "EVENT", lua_tostring(state, -1));
   lua_settop(state, top);
   return 1;
+}
+
+constexpr int LUA_FLOW_MAX_FIELDS = 16;
+constexpr int LUA_FLOW_KEY_SIZE = 32;
+
+typedef struct LuaFlowField {
+  char key[LUA_FLOW_KEY_SIZE];
+  char *value;
+} LuaFlowField;
+
+typedef struct LuaFlowData {
+  LUA_MODULE_ROOT root;
+  char path[PATH_MAX];
+  LuaFlowField fields[LUA_FLOW_MAX_FIELDS];
+  int field_count;
+} LuaFlowData;
+
+static void lua_flow_data_clear_fields(LuaFlowData *data) {
+  int index;
+
+  for (index = 0; index < data->field_count; index++) {
+    free_lbuf(data->fields[index].value);
+    data->fields[index].value = nullptr;
+  }
+  data->field_count = 0;
+}
+
+static void lua_flow_data_free(void *flow_data) {
+  LuaFlowData *data = flow_data;
+
+  lua_flow_data_clear_fields(data);
+  free(data);
+}
+
+/* Decode the flat, C-owned scratch store into a fresh ctx.flow table. This
+ * (rather than a Lua registry reference) is what lets a flow survive
+ * @luareload rebuilding the whole lua_State out from under it. */
+static void lua_flow_decode(lua_State *state, LuaFlowData *data) {
+  int index;
+
+  lua_newtable(state);
+  for (index = 0; index < data->field_count; index++) {
+    lua_pushstring(state, data->fields[index].value);
+    lua_setfield(state, -2, data->fields[index].key);
+  }
+  lua_setfield(state, -2, "flow");
+}
+
+/* Harvest ctx.flow (at the given stack index) back into the scratch store.
+ * Only string/number values keyed by strings round-trip; anything else is
+ * dropped with a log message. */
+static void lua_flow_encode(lua_State *state, int flow_table_index,
+                            LuaFlowData *data) {
+  lua_flow_data_clear_fields(data);
+  lua_pushnil(state);
+  while (lua_next(state, flow_table_index) != 0) {
+    if (lua_type(state, -2) == LUA_TSTRING &&
+        (lua_isstring(state, -1) || lua_isnumber(state, -1)) &&
+        data->field_count < LUA_FLOW_MAX_FIELDS) {
+      LuaFlowField *field = &data->fields[data->field_count];
+
+      StringCopyTrunc(field->key, lua_tostring(state, -2),
+                      LUA_FLOW_KEY_SIZE - 1);
+      field->value = alloc_lbuf("lua_flow_field");
+      StringCopyTrunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
+      data->field_count++;
+    } else if (lua_type(state, -2) == LUA_TSTRING) {
+      log_error(LOG_BUGS, "LUA", "FLOW",
+                "Dropping unsupported ctx.flow.%s (must be a string or "
+                "number).",
+                lua_tostring(state, -2));
+    }
+    lua_pop(state, 1);
+  }
+}
+
+static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
+                                 const char *step, const char *input) {
+  static char prompt_buffer[LBUF_SIZE];
+  LuaFlowData *data = flow_data;
+  LUA_RUNTIME *runtime = lua_runtime;
+  lua_State *state;
+  FlowOutcome outcome = {.action = FLOW_ACTION_CANCEL};
+  Descriptor *previous_descriptor;
+  LUA_MODULE_ROOT previous_root;
+  char error[LBUF_SIZE];
+  const char *field;
+  int top;
+  int ctx_index;
+  int result_index;
+  int status;
+
+  if (!runtime) {
+    outcome.prompt = "The Lua runtime is unavailable.\r\n";
+    return outcome;
+  }
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, data->root, data->path, error, sizeof(error))) {
+    lua_log_load_error(d->player, data->path, error);
+    lua_settop(state, top);
+    return outcome;
+  }
+  lua_getfield(state, -1, "flows");
+  if (!lua_istable(state, -1)) {
+    lua_settop(state, top);
+    return outcome;
+  }
+  lua_getfield(state, -1, step);
+  if (!lua_isfunction(state, -1)) {
+    log_error(LOG_BUGS, "LUA", "FLOW", "Unknown flow step '%s' in %s.", step,
+              data->path);
+    lua_settop(state, top);
+    return outcome;
+  }
+
+  previous_descriptor = mudstate.curr_descriptor;
+  mudstate.curr_descriptor = d;
+  lua_push_context(state, NOTHING, d->player, d->player, nullptr, nullptr,
+                   "flow", nullptr, 0);
+  if (input != nullptr) {
+    lua_pushstring(state, input);
+    lua_setfield(state, -2, "input");
+  }
+  lua_flow_decode(state, data);
+  ctx_index = lua_gettop(state);
+  lua_pushvalue(state, ctx_index);
+  lua_insert(state, ctx_index - 1);
+  previous_root = runtime->current_root;
+  runtime->current_root = data->root;
+  status = lua_pcall_limited(runtime, 1, 1);
+  runtime->current_root = previous_root;
+  mudstate.curr_descriptor = previous_descriptor;
+  if (status) {
+    lua_log_error(runtime, d->player, "FLOW", lua_tostring(state, -1));
+    lua_settop(state, top);
+    outcome.prompt = "A script error interrupted this flow.\r\n";
+    return outcome;
+  }
+
+  result_index = lua_gettop(state);
+  ctx_index = result_index - 1;
+  lua_getfield(state, ctx_index, "flow");
+  lua_flow_encode(state, lua_gettop(state), data);
+  lua_pop(state, 1);
+
+  if (!lua_istable(state, result_index)) {
+    lua_settop(state, top);
+    return outcome;
+  }
+  lua_getfield(state, result_index, "action");
+  field = lua_tostring(state, -1);
+  if (!field || !strcmp(field, "wait"))
+    outcome.action = FLOW_ACTION_WAIT;
+  else if (!strcmp(field, "goto"))
+    outcome.action = FLOW_ACTION_GOTO;
+  else if (!strcmp(field, "done"))
+    outcome.action = FLOW_ACTION_DONE;
+  else
+    outcome.action = FLOW_ACTION_CANCEL;
+  lua_pop(state, 1);
+
+  lua_getfield(state, result_index, "step");
+  if (lua_isstring(state, -1))
+    StringCopyTrunc(outcome.next_step, lua_tostring(state, -1),
+                    FLOW_STEP_NAME_SIZE - 1);
+  lua_pop(state, 1);
+
+  lua_getfield(state, result_index, "prompt");
+  if (!lua_isstring(state, -1)) {
+    lua_pop(state, 1);
+    lua_getfield(state, result_index, "message");
+  }
+  if (lua_isstring(state, -1)) {
+    snprintf(prompt_buffer, sizeof(prompt_buffer), "%s",
+             lua_tostring(state, -1));
+    outcome.prompt = prompt_buffer;
+  }
+  lua_pop(state, 1);
+
+  lua_settop(state, top);
+  return outcome;
+}
+
+static int lua_verify_module_has_flow(LUA_RUNTIME *runtime,
+                                      LUA_MODULE_ROOT root, const char *path,
+                                      const char *first_step, char *error,
+                                      size_t error_size) {
+  int top = lua_gettop(runtime->state);
+  int ok = 0;
+
+  if (!lua_load_module(runtime, root, path, error, error_size)) {
+    lua_settop(runtime->state, top);
+    return 0;
+  }
+  lua_getfield(runtime->state, -1, "flows");
+  if (lua_istable(runtime->state, -1)) {
+    lua_getfield(runtime->state, -1, first_step);
+    ok = lua_isfunction(runtime->state, -1);
+  }
+  lua_settop(runtime->state, top);
+  if (!ok)
+    lua_set_error(error, error_size, "%s has no flow step '%s'", path,
+                  first_step);
+  return ok;
+}
+
+static int lua_host_flow_start(lua_State *state) {
+  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
+  int descriptor_id = (int)luaL_checkinteger(state, 1);
+  const char *module = luaL_checkstring(state, 2);
+  const char *first_step = luaL_checkstring(state, 3);
+  Descriptor *d;
+  LUA_MODULE_ROOT root;
+  char error[LBUF_SIZE];
+  LuaFlowData *data;
+
+  if (runtime->checking)
+    return luaL_error(state, "mux.flow_start is unavailable during @luacheck");
+
+  d = descriptor_find_by_fd(descriptor_id);
+  if (!d)
+    return luaL_error(state, "no such descriptor");
+  if (d->flow != nullptr)
+    return luaL_error(state, "descriptor already has an active flow");
+
+  root = lua_require_root(state, runtime);
+  if (!lua_verify_module_has_flow(runtime, root, module, first_step, error,
+                                  sizeof(error)))
+    return luaL_error(state, "%s", error);
+
+  data = malloc(sizeof(LuaFlowData));
+  data->root = root;
+  snprintf(data->path, sizeof(data->path), "%s", module);
+  data->field_count = 0;
+
+  descriptor_flow_start(d, first_step, lua_flow_step, data, lua_flow_data_free);
+  return 0;
 }
 
 void do_luaparent(DbRef player, DbRef cause, int key, char *target,

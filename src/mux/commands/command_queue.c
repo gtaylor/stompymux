@@ -818,6 +818,7 @@ int do_top(int ncmds) {
     if ((object >= 0) && !is_going(object)) {
       mudstate.curr_enactor = tmp->cause;
       mudstate.curr_player = object;
+      mudstate.curr_descriptor = nullptr;
       queue_adjust(obj_owner(object), -1);
       if (!is_halted(object)) {
         for (i = 0; i < MAX_GLOBAL_REGS; i++) {
