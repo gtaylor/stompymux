@@ -53,8 +53,6 @@ struct ServerConfiguration {
   char fixed_home_msg[128];  /* Message displayed when going home and FIXED */
   char fixed_tel_msg[128];   /* Message displayed when teleporting and FIXED */
   char public_channel[32];   /* Name of public channel */
-  int allow_unloggedwho; /* Whether unlogged-in clients can use WHO, DOING, and
-                            SESSION */
   int btech_explode_reactor; /* Allow or disallow explode reactor */
   int btech_explode_ammo;    /* Allow or disallow explode ammo */
   int btech_explode_stop;    /* Allow or disallow explode stop */
@@ -358,7 +356,6 @@ struct ServerState {
   HashTable command_htab;    /* Commands hashtable */
   HashTable macro_htab;      /* Macro command hashtable */
   HashTable channel_htab;    /* Channels hashtable */
-  HashTable logout_cmd_htab; /* Logged-out commands hashtable (WHO, etc) */
   HashTable func_htab;       /* Functions hashtable */
   HashTable ufunc_htab;      /* Local functions hashtable */
   HashTable powers_htab;     /* Powers hashtable */

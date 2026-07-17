@@ -3,6 +3,7 @@
 #include "mux/server/platform.h"
 
 #include "mux/lua/lua_runtime.h"
+#include "mux/lua/mux_package.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -60,10 +61,16 @@ struct lua_runtime_t {
   size_t global_module_count;
   LUA_SCHEDULE_JOB *schedule_jobs;
   size_t schedule_job_count;
+  LuaMuxPackage mux_package;
 };
 
 static LUA_RUNTIME *lua_runtime = nullptr;
 static time_t lua_schedule_high_water = -1;
+
+static int lua_runtime_is_checking(void *context);
+static int lua_runtime_flow_start(void *context, lua_State *state,
+                                  int descriptor_id, const char *module,
+                                  const char *first_step);
 
 static void lua_set_error(char *error, size_t error_size, const char *format,
                           ...) __attribute__((format(printf, 3, 4)));
@@ -196,90 +203,7 @@ static int lua_resolve_path(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static int lua_host_attr_get(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
-  const char *name = luaL_checkstring(state, 2);
-  Attribute *attribute;
-  char *value;
-  DbRef owner;
-  long flags;
-
-  if (runtime->checking)
-    return luaL_error(state, "mux.attr_get is unavailable during @luacheck");
-  if (!is_good_obj(object))
-    return luaL_error(state, "invalid object");
-  attribute = attribute_by_name(name);
-  if (!attribute) {
-    lua_pushnil(state);
-    return 1;
-  }
-  value = attribute_get(object, attribute->number, &owner, &flags);
-  if (!*value)
-    lua_pushnil(state);
-  else
-    lua_pushstring(state, value);
-  free_lbuf(value);
-  return 1;
-}
-
-static int lua_host_attr_set(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
-  const char *name = luaL_checkstring(state, 2);
-  const char *value = luaL_checkstring(state, 3);
-  char attribute_name[SBUF_SIZE];
-  int attribute;
-
-  if (runtime->checking)
-    return luaL_error(state, "mux.attr_set is unavailable during @luacheck");
-  if (!is_good_obj(object))
-    return luaL_error(state, "invalid object");
-  snprintf(attribute_name, sizeof(attribute_name), "%s", name);
-  attribute = mkattr(attribute_name);
-  if (attribute < 0)
-    return luaL_error(state, "invalid attribute");
-  if (attribute == A_LUAPARENT)
-    return luaL_error(state, "use @luaparent to change Luaparent");
-    /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
-       only read (copied) here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  attribute_add_raw(object, attribute, (char *)value);
-#pragma clang diagnostic pop
-  return 0;
-}
-
-static int lua_host_notify(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
-  const char *message = luaL_checkstring(state, 2);
-
-  if (runtime->checking)
-    return luaL_error(state, "mux.notify is unavailable during @luacheck");
-  if (!is_good_obj(object))
-    return luaL_error(state, "invalid object");
-  notify(object, message);
-  return 0;
-}
-
-static int lua_host_command(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
-  const char *command = luaL_checkstring(state, 1);
-
-  if (runtime->checking)
-    return luaL_error(state, "mux.command is unavailable during @luacheck");
-    /* wait_que()'s command parameter isn't const-correct; command is only
-       read here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  wait_que(1, 1, 0, NOTHING, 0, (char *)command, (char **)nullptr, 0, nullptr);
-#pragma clang diagnostic pop
-  return 0;
-}
-
 static int lua_require_module(lua_State *state);
-static int lua_host_flow_start(lua_State *state);
 
 static void lua_install_sandbox(LUA_RUNTIME *runtime) {
   static const char *blocked[] = {"io",         "os",        "debug",
@@ -295,23 +219,10 @@ static void lua_install_sandbox(LUA_RUNTIME *runtime) {
     lua_pushnil(runtime->state);
     lua_setglobal(runtime->state, blocked[index]);
   }
-  lua_newtable(runtime->state);
-  lua_pushlightuserdata(runtime->state, runtime);
-  lua_pushcclosure(runtime->state, lua_host_attr_get, 1);
-  lua_setfield(runtime->state, -2, "attr_get");
-  lua_pushlightuserdata(runtime->state, runtime);
-  lua_pushcclosure(runtime->state, lua_host_attr_set, 1);
-  lua_setfield(runtime->state, -2, "attr_set");
-  lua_pushlightuserdata(runtime->state, runtime);
-  lua_pushcclosure(runtime->state, lua_host_notify, 1);
-  lua_setfield(runtime->state, -2, "notify");
-  lua_pushlightuserdata(runtime->state, runtime);
-  lua_pushcclosure(runtime->state, lua_host_command, 1);
-  lua_setfield(runtime->state, -2, "command");
-  lua_pushlightuserdata(runtime->state, runtime);
-  lua_pushcclosure(runtime->state, lua_host_flow_start, 1);
-  lua_setfield(runtime->state, -2, "flow_start");
-  lua_setglobal(runtime->state, "mux");
+  runtime->mux_package.context = runtime;
+  runtime->mux_package.is_checking = lua_runtime_is_checking;
+  runtime->mux_package.flow_start = lua_runtime_flow_start;
+  lua_mux_package_install(runtime->state, &runtime->mux_package);
   lua_pushlightuserdata(runtime->state, runtime);
   lua_pushcclosure(runtime->state, lua_require_module, 1);
   lua_setglobal(runtime->state, "require");
@@ -1777,18 +1688,20 @@ static int lua_verify_module_has_flow(LUA_RUNTIME *runtime,
   return ok;
 }
 
-static int lua_host_flow_start(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
-  int descriptor_id = (int)luaL_checkinteger(state, 1);
-  const char *module = luaL_checkstring(state, 2);
-  const char *first_step = luaL_checkstring(state, 3);
+static int lua_runtime_is_checking(void *context) {
+  LUA_RUNTIME *runtime = context;
+
+  return runtime->checking;
+}
+
+static int lua_runtime_flow_start(void *context, lua_State *state,
+                                  int descriptor_id, const char *module,
+                                  const char *first_step) {
+  LUA_RUNTIME *runtime = context;
   Descriptor *d;
   LUA_MODULE_ROOT root;
   char error[LBUF_SIZE];
   LuaFlowData *data;
-
-  if (runtime->checking)
-    return luaL_error(state, "mux.flow_start is unavailable during @luacheck");
 
   d = descriptor_find_by_fd(descriptor_id);
   if (!d)

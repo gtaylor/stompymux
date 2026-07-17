@@ -22,7 +22,6 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_state.h"
-#include "mux/support/alloc.h"
 #include "mux/support/red_black_tree.h"
 
 static struct event *listen_sock_ev;
@@ -48,17 +47,6 @@ void descriptor_write(Descriptor *d, const char *buffer, size_t size) {
     telnet_send(d->telnet, buffer, size);
   else
     bufferevent_write(d->sock_buff, buffer, size);
-}
-
-static void telnet_socket_clear_strings(Descriptor *d) {
-  if (d->output_prefix != nullptr) {
-    free_lbuf(d->output_prefix);
-    d->output_prefix = nullptr;
-  }
-  if (d->output_suffix != nullptr) {
-    free_lbuf(d->output_suffix);
-    d->output_suffix = nullptr;
-  }
 }
 
 static void telnet_socket_free_queues(Descriptor *d) {
@@ -131,7 +119,6 @@ void descriptor_release(Descriptor *d) {
     telnet_socket_free_queues(d);
 
     descriptor_flow_destroy(d);
-    telnet_socket_clear_strings(d);
     if (d->descriptor) {
       fsync(d->descriptor);
       event_free(d->sock_ev);
@@ -260,7 +247,15 @@ void accept_client_input(evutil_socket_t fd, short event, void *arg) {
   descriptor_release(connection); // NOLINT(clang-analyzer-unix.Malloc)
 }
 
-static void bsd_write_callback(struct bufferevent *bufev, void *arg) {}
+static void bsd_write_callback(struct bufferevent *bufev, void *arg) {
+  Descriptor *d = arg;
+
+  if (d->flush_before_close &&
+      evbuffer_get_length(bufferevent_get_output(bufev)) == 0) {
+    d->flush_before_close = 0;
+    descriptor_release(d); // NOLINT(clang-analyzer-unix.Malloc)
+  }
+}
 
 static void bsd_read_callback(struct bufferevent *bufev, void *arg) {}
 
@@ -358,6 +353,12 @@ void descriptor_shutdown(Descriptor *d, int reason) {
   d->flags |= DS_DEAD;
   if (d->flags & DS_CONNECTED) {
     fcache_dump(d, FC_QUIT);
+    if (reason == R_QUIT && d->sock_buff != nullptr &&
+        evbuffer_get_length(bufferevent_get_output(d->sock_buff)) > 0) {
+      d->flush_before_close = 1;
+      descriptor_retain(d);
+      event_del(d->sock_ev);
+    }
 
     log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>", d->descriptor,
@@ -420,8 +421,6 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   d->addr[0] = '\0';
   d->username[0] = '\0';
   make_nonblocking(s);
-  d->output_prefix = nullptr;
-  d->output_suffix = nullptr;
   d->output_size = 0;
   d->output_tot = 0;
   d->output_lost = 0;
@@ -455,7 +454,7 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
     return nullptr;
   }
   bufferevent_setcb(d->sock_buff, bsd_read_callback, bsd_write_callback,
-                    bsd_error_callback, nullptr);
+                    bsd_error_callback, d);
   bufferevent_disable(d->sock_buff, EV_READ);
   bufferevent_enable(d->sock_buff, EV_WRITE);
   if (!descriptor_telnet_initialize(d)) {

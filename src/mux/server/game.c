@@ -1050,7 +1050,6 @@ int main(int argc, char *argv[]) {
   init_cmdtab();
   init_mactab();
   init_chantab();
-  init_logout_cmdtab();
   init_flagtab();
   init_powertab();
   init_functab();
@@ -1117,7 +1116,6 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&mudstate.command_htab);
   hash_table_reset(&mudstate.macro_htab);
   hash_table_reset(&mudstate.channel_htab);
-  hash_table_reset(&mudstate.logout_cmd_htab);
   hash_table_reset(&mudstate.func_htab);
   hash_table_reset(&mudstate.flags_htab);
   hash_table_reset(&mudstate.attr_name_htab);

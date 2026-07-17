@@ -33,7 +33,8 @@ character:
 Every step is fully modal: whatever line the player sends is always the
 answer to the current prompt. There's no escape hatch back to ordinary
 commands, and pre-login `WHO`/`DOING`/`SESSION`/`QUIT` are no longer
-reachable - quitting is done by disconnecting the client.
+reachable - quitting is done by disconnecting the client. After logging in,
+use `quit` to disconnect the current session.
 
 ## Rate limiting
 

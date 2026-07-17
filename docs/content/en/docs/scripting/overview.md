@@ -64,8 +64,9 @@ exposed.
 ## The `mux` API
 
 The `mux` table is the only server interface exposed to Lua modules:
-`attr_get`, `attr_set`, `notify`, `command`, and `flow_start`. Queued
-commands execute as `#1` after the current handler completes. See the
+`attr_get`, `attr_set`, `notify`, `command`, `connected_players`,
+`who_summary`, and `flow_start`. Queued commands execute as `#1` after the
+current handler completes. See the
 [`mux` package reference](packages/mux/) for the full API.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
@@ -109,6 +110,10 @@ have run for that room. Attaching the module suppresses the room's legacy
 
 `game/lua/global_logic/example.lua` defines the working `global-hello`
 global command.
+
+`game/lua/global_logic/who.lua` defines the player-facing `who` command.
+Wizards use the built-in `@who` command when they need privileged connection
+details.
 
 `game/lua/global_logic/flow_examples.lua` demonstrates
 [interactive flows](flows/): `flow-demo confirm`, `flow-demo menu`, and

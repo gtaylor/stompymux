@@ -8,7 +8,6 @@
 
 #include "mux/database/db.h"
 #include "mux/network/descriptor.h"
-#include "mux/support/name_table.h"
 
 typedef struct SiteData SiteData;
 
@@ -35,7 +34,6 @@ int boot_by_port(int port, int no_god, char *message);
 void descriptor_run_command(Descriptor *d, char *command);
 int descriptor_command(Descriptor *d, char *command);
 void descriptor_reload(DbRef player);
-void init_logout_cmdtab(void);
 void list_siteinfo(DbRef player);
 int site_data_check(struct sockaddr_storage *address, int address_length,
                     SiteData *site_list);
@@ -44,5 +42,3 @@ int fetch_connect(DbRef target);
 void make_ulist(DbRef player, char *buff, char **bufc);
 DbRef find_connected_name(DbRef player, char *name);
 Descriptor *descriptor_find_by_fd(int fd);
-
-extern NameTable logout_cmdtable[];

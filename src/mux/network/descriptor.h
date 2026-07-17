@@ -34,11 +34,10 @@ struct Descriptor {
   char addr[256];
   char username[11];
   DbRef player;
-  char *output_prefix;
-  char *output_suffix;
   int output_size;
   int output_tot;
   int output_lost;
+  int flush_before_close;
   int input_size;
   int input_tot;
   int input_lost;

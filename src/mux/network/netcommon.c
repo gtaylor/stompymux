@@ -27,17 +27,6 @@
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
 
-enum {
-  CMD_QUIT = 1,
-  CMD_WHO = 2,
-  CMD_DOING = 3,
-  CMD_PREFIX = 5,
-  CMD_SUFFIX = 6,
-  CMD_SESSION = 8,
-  CMD_MASK = 0xff,
-  CMD_NOxFIX = 0x100,
-};
-
 /*
  * ---------------------------------------------------------------------------
  * * make_portlist: Make a list of ports for PORTS().
@@ -256,22 +245,6 @@ void set_lastsite(Descriptor *d, char *lastsite) {
       attribute_get_string(buf, d->player, A_LASTSITE, &i, &j);
     }
     attribute_add_raw(d->player, A_LASTSITE, buf);
-  }
-}
-
-static void set_userstring(char **userstring, const char *command) {
-  while (*command && isascii(*command) && isspace(*command))
-    command++;
-  if (!*command) {
-    if (*userstring != nullptr) {
-      free_lbuf(*userstring);
-      *userstring = nullptr;
-    }
-  } else {
-    if (*userstring == nullptr) {
-      *userstring = alloc_lbuf("set_userstring");
-    }
-    snprintf(*userstring, LBUF_SIZE - 1, "%s\r\n", command);
   }
 }
 
@@ -665,9 +638,9 @@ static char *trimmed_name(DbRef player) {
   return cbuff;
 }
 
-static void dump_users(Descriptor *e, char *match, int key) {
+static void dump_users(Descriptor *e, char *match) {
   Descriptor *d;
-  int count, rcount, ucount;
+  int count;
   char *buf, *fp, *sp, flist[4], slist[4];
   DbRef room_it;
 
@@ -677,160 +650,88 @@ static void dump_users(Descriptor *e, char *match, int key) {
     match = nullptr;
 
   buf = alloc_lbuf("dump_users");
-  if (key == CMD_SESSION) {
-    descriptor_queue_string(e, "                               ");
-    descriptor_queue_string(
-        e, "     Characters Input----  Characters Output---\r\n");
-  }
   descriptor_queue_string(e, "Player Name         On For  Idle ");
-  if (key == CMD_SESSION) {
-    descriptor_queue_string(
-        e, "Port Pend  Lost     Total  Pend  Lost     Total\r\n");
-  } else if ((e->flags & DS_CONNECTED) && is_wizard(e->player) &&
-             (key == CMD_WHO)) {
-    descriptor_queue_string(e, "     Room    Cmds Host\r\n");
-  } else
-    descriptor_queue_string(e, "\r\n");
-  //	descriptor_queue_string(e,"------------------------------------------------------------------------------\r\n");
+  descriptor_queue_string(e, "     Room    Cmds Host\r\n");
   count = 0;
-  rcount = 0;
-  ucount = 0;
   DESC_ITER_CONN(d) {
-    if ((!mudconf.show_unfindable_who || !is_hidden(d->player)) ||
-        (e->flags & DS_CONNECTED) & is_wizard(e->player)) {
-      count++;
-      if (match && !(string_prefix(Name(d->player), match)))
-        continue;
-      rcount++;
-      if ((key == CMD_SESSION) &&
-          !(is_wizard(e->player) && (e->flags & DS_CONNECTED)) &&
-          (d->player != e->player))
-        continue;
+    if (match && !(string_prefix(Name(d->player), match)))
+      continue;
+    count++;
 
-      /*
-       * Get choice flags for wizards
-       */
-
-      fp = flist;
-      sp = slist;
-      if ((e->flags & DS_CONNECTED) && is_wizard(e->player)) {
-        if (is_hidden(d->player)) {
-          if (d->flags & DS_AUTODARK)
-            *fp++ = 'd';
-          else if (is_dark(d->player))
-            *fp++ = 'D';
-        }
-        if (!is_findable(d->player)) {
-          *fp++ = 'U';
-        } else {
-          room_it = where_room(d->player);
-          if (is_good_obj(room_it)) {
-            if (is_hideout(room_it))
-              *fp++ = 'u';
-          } else {
-            *fp++ = 'u';
-          }
-        }
-
-        if (is_suspect(d->player))
-          *fp++ = '+';
-        if (d->host_info & H_FORBIDDEN)
-          *sp++ = 'F';
-        if (d->host_info & H_SUSPECT)
-          *sp++ = '+';
-      }
-      *fp = '\0';
-      *sp = '\0';
-
-      if ((e->flags & DS_CONNECTED) && is_wizard(e->player) &&
-          (key == CMD_WHO)) {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
-                 trimmed_name(d->player),
-                 time_format_1(mudstate.now - d->connected_at),
-                 time_format_2(mudstate.now - d->last_time), flist,
-                 obj_location(d->player), d->command_count,
-                 (d->username[0] != '\0')
-                     ? tprintf("%s@%s", d->username, d->addr)
-                     : d->addr);
-      } else if (key == CMD_SESSION) {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
-                 trimmed_name(d->player),
-                 time_format_1(mudstate.now - d->connected_at),
-                 time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
-                                   ? (mudstate.now - d->last_time)
-                                   : 0),
-                 d->descriptor, d->input_size, d->input_lost, d->input_tot,
-                 d->output_size, d->output_lost, d->output_tot);
-      } else if (is_wizard(e->player)) {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s\r\n",
-                 trimmed_name(d->player),
-                 time_format_1(mudstate.now - d->connected_at),
-                 time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
-                                   ? (mudstate.now - d->last_time)
-                                   : 0),
-                 flist);
-      } else {
-        snprintf(buf, LBUF_SIZE, "%-16s%10s %5s\r\n", trimmed_name(d->player),
-                 time_format_1(mudstate.now - d->connected_at),
-                 time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
-                                   ? (mudstate.now - d->last_time)
-                                   : 0));
-      }
-      descriptor_queue_string(e, buf);
-    } else {
-      ucount++;
+    fp = flist;
+    sp = slist;
+    if (is_hidden(d->player)) {
+      if (d->flags & DS_AUTODARK)
+        *fp++ = 'd';
+      else if (is_dark(d->player))
+        *fp++ = 'D';
     }
+    if (!is_findable(d->player)) {
+      *fp++ = 'U';
+    } else {
+      room_it = where_room(d->player);
+      if (is_good_obj(room_it)) {
+        if (is_hideout(room_it))
+          *fp++ = 'u';
+      } else {
+        *fp++ = 'u';
+      }
+    }
+
+    if (is_suspect(d->player))
+      *fp++ = '+';
+    if (d->host_info & H_FORBIDDEN)
+      *sp++ = 'F';
+    if (d->host_info & H_SUSPECT)
+      *sp++ = '+';
+    *fp = '\0';
+    *sp = '\0';
+
+    snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
+             trimmed_name(d->player),
+             time_format_1(mudstate.now - d->connected_at),
+             time_format_2(mudstate.now - d->last_time), flist,
+             obj_location(d->player), d->command_count,
+             (d->username[0] != '\0') ? tprintf("%s@%s", d->username, d->addr)
+                                      : d->addr);
+    descriptor_queue_string(e, buf);
   }
-  count = rcount; /* previous mode was .. disgusting. */
-  /*
-   * sometimes I like the ternary operator....
-   */
-  if (ucount)
-    snprintf(buf, LBUF_SIZE,
-             "%d Visible Player%slogged in, (%d %s hidden), %d record, %s "
-             "maximum.\r\n",
-             count, (count == 1) ? " " : "s ", ucount,
-             (ucount == 1) ? "is" : "are", mudstate.record_players,
-             (mudconf.max_players == -1) ? "no"
-                                         : tprintf("%d", mudconf.max_players));
-  else
-    snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
-             count, (count == 1) ? " " : "s ", mudstate.record_players,
-             (mudconf.max_players == -1) ? "no"
-                                         : tprintf("%d", mudconf.max_players));
+  snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
+           count, (count == 1) ? " " : "s ", mudstate.record_players,
+           (mudconf.max_players == -1) ? "no"
+                                       : tprintf("%d", mudconf.max_players));
 
   descriptor_queue_string(e, buf);
 
   free_lbuf(buf);
 }
 
-NameTable logout_cmdtable[] = {
-    {"DOING", 5, CA_PUBLIC, CMD_DOING},
-    {"OUTPUTPREFIX", 12, CA_PUBLIC, CMD_PREFIX | CMD_NOxFIX},
-    {"OUTPUTSUFFIX", 12, CA_PUBLIC, CMD_SUFFIX | CMD_NOxFIX},
-    {"QUIT", 4, CA_PUBLIC, CMD_QUIT},
-    {"SESSION", 7, CA_PUBLIC, CMD_SESSION},
-    {"WHO", 3, CA_PUBLIC, CMD_WHO},
-    {nullptr, 0, 0, 0}};
+void do_who(DbRef player, DbRef cause, int key, char *match) {
+  Descriptor *descriptor = mudstate.curr_descriptor;
 
-void init_logout_cmdtab(void) {
-  NameTable *cp;
+  (void)cause;
+  (void)key;
+  if (descriptor == nullptr) {
+    notify(player, "@who is only available from an active connection.");
+    return;
+  }
+  dump_users(descriptor, match);
+}
 
-  /*
-   * Make the htab bigger than the number of entries so that we find
-   * things on the first check.  Remember that the admin can add
-   * aliases.
-   */
+void do_quit(DbRef player, DbRef cause, int key) {
+  Descriptor *descriptor = mudstate.curr_descriptor;
 
-  hash_table_initialize(&mudstate.logout_cmd_htab, 3 * HASH_FACTOR);
-  for (cp = logout_cmdtable; cp->flag; cp++)
-    hash_table_add(cp->name, (int *)cp, &mudstate.logout_cmd_htab);
+  (void)cause;
+  (void)key;
+  if (descriptor == nullptr || descriptor->player != player) {
+    notify(player, "quit is only available from an active connection.");
+    return;
+  }
+  descriptor_shutdown(descriptor, R_QUIT);
 }
 
 int descriptor_command(Descriptor *d, char *command) {
-  char *arg;
   const char *cmdsave;
-  NameTable *cp;
 
   cmdsave = mudstate.debug_cmd;
   mudstate.debug_cmd = "< descriptor_command >";
@@ -847,96 +748,21 @@ int descriptor_command(Descriptor *d, char *command) {
     return 1;
   }
 
-  /*
-   * Split off the command from the arguments
-   */
-
-  arg = command;
-  while (*arg && !isspace(*arg))
-    arg++;
-  if (*arg)
-    *arg++ = '\0';
-
   d->last_time = mudstate.now;
-
-  cp = (NameTable *)hash_table_find(command, &mudstate.logout_cmd_htab);
-
-  if (*arg)
-    *--arg = ' ';
-  if (cp == nullptr) {
-    d->command_count++;
-    if (d->output_prefix) {
-      descriptor_queue_string(d, d->output_prefix);
-    }
-    mudstate.curr_player = d->player;
-    mudstate.curr_enactor = d->player;
-    mudstate.curr_descriptor = d;
-    process_command(d->player, d->player, 1, command, (char **)nullptr, 0);
-    mudstate.curr_descriptor = nullptr;
-    if (d->output_suffix) {
-      descriptor_queue_string(d, d->output_suffix);
-    }
-  } else {
-    if (d->output_prefix) {
-      descriptor_queue_string(d, d->output_prefix);
-    }
-    switch (cp->flag & CMD_MASK) {
-    case CMD_QUIT:
-      descriptor_shutdown(d, R_QUIT);
-      return 0;
-    case CMD_WHO:
-      if (d->player || mudconf.allow_unloggedwho) {
-        dump_users(d, arg, CMD_WHO);
-      } else {
-        descriptor_queue_string(
-            d, "This MUX does not allow WHO at the login screen.\r\n");
-        descriptor_queue_string(
-            d, "Please login or create a character first.\r\n");
-      }
-      break;
-    case CMD_DOING:
-      if (d->player || mudconf.allow_unloggedwho) {
-        dump_users(d, arg, CMD_DOING);
-      } else {
-        descriptor_queue_string(
-            d, "This MUX does not allow DOING at the login screen.\r\n");
-        descriptor_queue_string(
-            d, "Please login or create a character first.\r\n");
-      }
-      break;
-    case CMD_SESSION:
-      if (d->player || mudconf.allow_unloggedwho) {
-        dump_users(d, arg, CMD_SESSION);
-      } else {
-        descriptor_queue_string(
-            d, "This MUX does not allow SESSION at the login screen.\r\n");
-        descriptor_queue_string(
-            d, "Please login or create a character first.\r\n");
-      }
-      break;
-    case CMD_PREFIX:
-      set_userstring(&d->output_prefix, arg);
-      break;
-    case CMD_SUFFIX:
-      set_userstring(&d->output_suffix, arg);
-      break;
-    default:
-      log_error(LOG_BUGS, "BUG", "PARSE",
-                "Prefix command with no handler: '%s'", command);
-    }
-    if (d->output_suffix) {
-      descriptor_queue_string(d, d->output_suffix);
-    }
-  }
+  d->command_count++;
+  mudstate.curr_player = d->player;
+  mudstate.curr_enactor = d->player;
+  mudstate.curr_descriptor = d;
+  process_command(d->player, d->player, 1, command, (char **)nullptr, 0);
+  mudstate.curr_descriptor = nullptr;
   mudstate.debug_cmd = cmdsave;
   return 1;
 }
 
 /*
- * ---------------------------------------------------------------------------
+ * --------------------------------------------------------------------------
  * * site_data_check: Check for site flags in a site list.
  */
-
 int site_data_check(struct sockaddr_storage *saddr, int saddr_len,
                     SiteData *site_list) {
   SiteData *this;

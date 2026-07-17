@@ -113,6 +113,7 @@ void do_pemit(DbRef, DbRef, int, char *,
 void do_power(DbRef, DbRef, int, char *, char *); /* Sets powers */
 void do_ps(DbRef, DbRef, int, char *);            /* List contents of queue */
 void do_queue(DbRef, DbRef, int, char *);         /* Force queue processing */
+void do_quit(DbRef, DbRef, int);                  /* Disconnect this session */
 void do_readcache(DbRef, DbRef, int);             /* Reread text file cache */
 void do_say(DbRef, DbRef, int, char *);           /* Messages to all */
 void do_search(DbRef, DbRef, int,
@@ -140,6 +141,7 @@ void do_verb(DbRef, DbRef, int, char *, char *[],
 void do_wait(DbRef, DbRef, int, char *, char *, char *[],
              int);                       /* Perform command after a wait */
 void do_wipe(DbRef, DbRef, int, char *); /* Mass-remove attrs from obj */
+void do_who(DbRef, DbRef, int, char *);  /* Wizard WHO listing */
 void do_dbclean(DbRef, DbRef, int);      /* Remove stale vattr entries */
 void do_addcommand(DbRef, DbRef, int, char *,
                    char *); /* Add or replace a global command */

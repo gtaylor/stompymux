@@ -661,6 +661,7 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {(GenericFnPtr)do_wipe}},
+    {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_who}},
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_addcom}},
     {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_allcom}},
     {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_comlist}},
@@ -729,6 +730,7 @@ CMDENT command_table[] = {
      SAY_POSE,
      CS_ONE_ARG | CS_INTERP,
      {(GenericFnPtr)do_say}},
+    {"quit", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_quit}},
     {"say",
      nullptr,
      CA_LOCATION,
@@ -1740,14 +1742,7 @@ static void list_cmdtable(DbRef player) {
   }
   *bp = '\0';
 
-  /*
-   * Players get the list of logged-out cmds too
-   */
-
-  if (typeof_obj(player) == TYPE_PLAYER)
-    name_table_display(player, logout_cmdtable, buf, 1);
-  else
-    notify(player, buf);
+  notify(player, buf);
   free_lbuf(buf);
 }
 

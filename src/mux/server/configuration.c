@@ -59,7 +59,6 @@ void configuration_initialize(void) {
   StringCopy(mudconf.gamedb, "");
   StringCopy(mudconf.mech_db, "mechs");
   StringCopy(mudconf.map_db, "maps");
-  mudconf.allow_unloggedwho = 0;
   mudconf.btech_explode_reactor = 1;
   mudconf.btech_explode_time = 120;
   mudconf.btech_explode_ammo = 1;
@@ -680,8 +679,6 @@ CONF conftable[] = {
     {"access", (GenericFnPtr)cf_access, CA_GOD, nullptr, (long)access_nametab},
     {"alias", (GenericFnPtr)cf_cmd_alias, CA_GOD, (int *)&mudstate.command_htab,
      0},
-    {"allow_unloggedwho", (GenericFnPtr)cf_int, CA_GOD,
-     &mudconf.allow_unloggedwho, 0},
     {"attr_access", (GenericFnPtr)cf_attr_access, CA_GOD, nullptr,
      (long)attraccess_nametab},
     {"attr_alias", (GenericFnPtr)cf_alias, CA_GOD,
@@ -951,10 +948,6 @@ CONF conftable[] = {
      &mudconf.log_options, (long)logoptions_nametab},
     {"log_options", (GenericFnPtr)configuration_modify_bits, CA_GOD,
      &mudconf.log_info, (long)logdata_nametab},
-    {"logout_cmd_access", (GenericFnPtr)cf_ntab_access, CA_GOD,
-     (int *)logout_cmdtable, (long)access_nametab},
-    {"logout_cmd_alias", (GenericFnPtr)cf_alias, CA_GOD,
-     (int *)&mudstate.logout_cmd_htab, 0},
     {"map_database", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.map_db,
      128},
     {"master_room", (GenericFnPtr)cf_int, CA_GOD, &mudconf.master_room, 0},

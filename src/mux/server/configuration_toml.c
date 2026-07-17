@@ -155,7 +155,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"battletech.xp.xpgain_cap", "btech_xpgain_cap", CFG_KIND_SCALAR},
 
     /* mux (base server behavior not covered by a more specific section) */
-    {"mux.allow_unloggedwho", "allow_unloggedwho", CFG_KIND_SCALAR},
     {"mux.badsite_file", "badsite_file", CFG_KIND_SCALAR},
     {"mux.namechange_days", "namechange_days", CFG_KIND_SCALAR},
     {"mux.allow_chanlurking", "allow_chanlurking", CFG_KIND_SCALAR},
@@ -269,7 +268,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"access.functions", "function_access", CFG_KIND_ACCESS_MAP},
     {"access.attrs", "attr_access", CFG_KIND_ACCESS_MAP},
     {"access.attr_commands", "attr_cmd_access", CFG_KIND_ACCESS_MAP},
-    {"access.logout_commands", "logout_cmd_access", CFG_KIND_ACCESS_MAP},
     {"access.lists", "list_access", CFG_KIND_ACCESS_MAP},
     {"access.config", "config_access", CFG_KIND_ACCESS_MAP},
     /* user_attr_access is a negatable bitmask, not a per-key access map,
@@ -281,7 +279,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"aliases.flags", "flag_alias", CFG_KIND_ALIAS_MAP},
     {"aliases.functions", "function_alias", CFG_KIND_ALIAS_MAP},
     {"aliases.attrs", "attr_alias", CFG_KIND_ALIAS_MAP},
-    {"aliases.logout_commands", "logout_cmd_alias", CFG_KIND_ALIAS_MAP},
 
     /* names */
     {"names.bad", "bad_name", CFG_KIND_STRING_LIST},

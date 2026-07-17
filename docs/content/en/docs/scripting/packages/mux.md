@@ -56,6 +56,30 @@ mux.command("@emit A queued command from Lua.")
 Queued commands execute as `#1`. They are asynchronous: the function does not
 return a command result to Lua.
 
+## `mux.connected_players()`
+
+Returns an array of player connections visible to the normal `who` command.
+Each entry has `name`, `connected_for`, and `idle_for` fields. The duration
+fields are elapsed seconds.
+
+```lua
+for _, player in ipairs(mux.connected_players()) do
+  mux.notify(ctx.enactor, player.name)
+end
+```
+
+The result does not expose hidden players or privileged connection details.
+
+## `mux.who_summary()`
+
+Returns the non-privileged WHO summary table with `hidden`, `record`, and
+`maximum` fields. `maximum` is `nil` when the game has no player limit.
+
+```lua
+local summary = mux.who_summary()
+local maximum = summary.maximum or "no"
+```
+
 ## `mux.flow_start(descriptor, module, first_step)`
 
 Attaches an [interactive flow](../flows/) to a descriptor and shows its

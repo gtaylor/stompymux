@@ -122,8 +122,6 @@ command_quota_increment = 1000
 timeslice = 50
 # Fork off a new process for db dumps.
 fork_dump = true
-# Allow players to do a WHO from the connect screen.
-allow_unloggedwho = 1
 # DBRef of the master room.
 master_room = 9
 # Room where players start after creation.
