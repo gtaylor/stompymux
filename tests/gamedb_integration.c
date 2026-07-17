@@ -64,10 +64,11 @@ static int run_server_in_directory_for(const char *binary_path, const char *conf
   return waitpid(child, status, 0) == child ? 0 : -1;
 }
 
-/* Wait for the child to enter its event loop before sending its test signal. */
-static int run_server_in_directory_after(const char *binary_path, const char *config,
-                                         const char *directory, int make_minimal,
-                                         int *status) {
+/* Start a child that has initialized its event loop but has not run a timer. */
+static pid_t start_server_in_directory_after(const char *binary_path,
+                                             const char *config,
+                                             const char *directory,
+                                             int make_minimal, int *status) {
   char ready_fd[32];
   char ready_signal;
   int ready_pipe[2];
@@ -107,6 +108,19 @@ static int run_server_in_directory_after(const char *binary_path, const char *co
     return -1;
   }
   close(ready_pipe[0]);
+  return child;
+}
+
+/* Wait for the child to enter its event loop before sending its test signal. */
+static int run_server_in_directory_after(const char *binary_path, const char *config,
+                                         const char *directory, int make_minimal,
+                                         int *status) {
+  pid_t child;
+
+  child = start_server_in_directory_after(binary_path, config, directory,
+                                          make_minimal, status);
+  if (child < 0)
+    return -1;
   if (kill(child, SIGTERM) < 0 && errno != ESRCH)
     return -1;
   return waitpid(child, status, 0) == child ? 0 : -1;
@@ -126,20 +140,14 @@ static int run_server_crash_in_directory(const char *binary_path, const char *co
   struct timespec delay;
   pid_t child;
 
-  child = fork();
+  child = start_server_in_directory_after(binary_path, config, directory, 0,
+                                          status);
   if (child < 0)
     return -1;
-  if (child == 0) {
-    if (chdir(directory) < 0)
-      _exit(127);
-    execl(binary_path, binary_path, config, NULL);
-    _exit(127);
-  }
-  delay.tv_sec = 1;
-  delay.tv_nsec = 0;
-  nanosleep(&delay, NULL);
   if (kill(child, SIGBUS) < 0)
     return -1;
+  delay.tv_sec = 1;
+  delay.tv_nsec = 0;
   nanosleep(&delay, NULL);
   if (kill(child, SIGKILL) < 0 && errno != ESRCH)
     return -1;
@@ -154,18 +162,10 @@ static int run_server_killed_in_directory(const char *binary_path, const char *c
   pid_t waited;
   int attempt;
 
-  child = fork();
+  child = start_server_in_directory_after(binary_path, config, directory, 0,
+                                          status);
   if (child < 0)
     return -1;
-  if (child == 0) {
-    if (chdir(directory) < 0)
-      _exit(127);
-    execl(binary_path, binary_path, config, NULL);
-    _exit(127);
-  }
-  delay.tv_sec = 1;
-  delay.tv_nsec = 0;
-  nanosleep(&delay, NULL);
   if (kill(child, SIGUSR2) < 0)
     return -1;
 
@@ -810,8 +810,8 @@ int main(int argc, char *argv[]) {
   if (fclose(file) != 0)
     return 2;
   if (result == 0 &&
-      (run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
-                               &status) < 0 ||
+      (run_server_in_directory_after(argv[1], sqlite_read_config, directory, 0,
+                                     &status) < 0 ||
        !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
        check_snapshot_dump_type(database, 0) < 0 ||
        check_btech_special_snapshot(database) < 0 ||
