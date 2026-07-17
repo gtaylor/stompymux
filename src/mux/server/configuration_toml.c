@@ -42,12 +42,14 @@ typedef struct {
 static const ConfigTomlMapping config_toml_map[] = {
     /* database */
     {"database.game_database", "game_database", CFG_KIND_SCALAR},
-    {"database.lua_directory", "lua_directory", CFG_KIND_SCALAR},
-    {"database.lua_instruction_limit", "lua_instruction_limit",
-     CFG_KIND_SCALAR},
-    {"database.lua_memory_limit", "lua_memory_limit", CFG_KIND_SCALAR},
     {"database.mech_database", "mech_database", CFG_KIND_SCALAR},
     {"database.map_database", "map_database", CFG_KIND_SCALAR},
+    {"database.dump_interval", "dump_interval", CFG_KIND_SCALAR},
+
+    /* lua */
+    {"lua.directory", "lua_directory", CFG_KIND_SCALAR},
+    {"lua.instruction_limit", "lua_instruction_limit", CFG_KIND_SCALAR},
+    {"lua.memory_limit", "lua_memory_limit", CFG_KIND_SCALAR},
 
     /* server */
     {"server.port", "port", CFG_KIND_SCALAR},
@@ -56,7 +58,6 @@ static const ConfigTomlMapping config_toml_map[] = {
      CFG_KIND_SCALAR},
     {"server.function_invocation_limit", "function_invocation_limit",
      CFG_KIND_SCALAR},
-    {"server.dump_interval", "dump_interval", CFG_KIND_SCALAR},
     {"server.events_daily_hour", "events_daily_hour", CFG_KIND_SCALAR},
 
     /* battletech */

@@ -56,9 +56,9 @@ extern CONF conftable[];
  */
 
 void configuration_initialize(void) {
-  StringCopy(mudconf.gamedb, "");
-  StringCopy(mudconf.mech_db, "mechs");
-  StringCopy(mudconf.map_db, "maps");
+  StringCopy(mudconf.database.gamedb, "");
+  StringCopy(mudconf.database.mech_db, "mechs");
+  StringCopy(mudconf.database.map_db, "maps");
   mudconf.btech_explode_reactor = 1;
   mudconf.btech_explode_time = 120;
   mudconf.btech_explode_ammo = 1;
@@ -173,7 +173,7 @@ void configuration_initialize(void) {
   mudconf.have_zones = 1;
   mudconf.paranoid_alloc = 0;
   mudconf.max_players = -1;
-  mudconf.dump_interval = 3600;
+  mudconf.database.dump_interval = 3600;
   mudconf.check_interval = 600;
   mudconf.events_daily_hour = 7;
   mudconf.dump_offset = 0;
@@ -263,9 +263,9 @@ void configuration_initialize(void) {
   mudconf.cache_depth = CACHE_DEPTH;
   mudconf.cache_width = CACHE_WIDTH;
   mudconf.cache_names = 1;
-  StringCopy(mudconf.lua_directory, "lua");
-  mudconf.lua_instruction_limit = 100000;
-  mudconf.lua_memory_limit = 64 * 1024 * 1024;
+  StringCopy(mudconf.lua.directory, "lua");
+  mudconf.lua.instruction_limit = 100000;
+  mudconf.lua.memory_limit = 64 * 1024 * 1024;
 
   mudconf.exit_parent = 0;
   mudconf.room_parent = 0;
@@ -880,7 +880,8 @@ CONF conftable[] = {
      (void *)mudconf.down_file, 32},
     {"down_message", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.down_msg,
      4096},
-    {"dump_interval", (GenericFnPtr)cf_int, CA_GOD, &mudconf.dump_interval, 0},
+    {"dump_interval", (GenericFnPtr)cf_int, CA_GOD,
+     &mudconf.database.dump_interval, 0},
     {"dump_message", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.dump_msg,
      128},
     {"postdump_message", (GenericFnPtr)cf_string, CA_GOD,
@@ -917,7 +918,7 @@ CONF conftable[] = {
     {"function_recursion_limit", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.func_nest_lim, 0},
     {"game_database", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.gamedb, 128},
+     (void *)mudconf.database.gamedb, sizeof(mudconf.database.gamedb)},
     {"good_name", (GenericFnPtr)cf_badname, CA_GOD, nullptr, 1},
     {"have_specials", (GenericFnPtr)cf_bool, CA_DISABLED,
      &mudconf.have_specials, 0},
@@ -939,23 +940,23 @@ CONF conftable[] = {
     {"lock_recursion_limit", (GenericFnPtr)cf_int, CA_WIZARD,
      &mudconf.lock_nest_lim, 0},
     {"lua_directory", (GenericFnPtr)cf_string, CA_GOD,
-     (void *)mudconf.lua_directory, sizeof(mudconf.lua_directory)},
+     (void *)mudconf.lua.directory, sizeof(mudconf.lua.directory)},
     {"lua_instruction_limit", (GenericFnPtr)cf_int, CA_GOD,
-     &mudconf.lua_instruction_limit, 0},
+     &mudconf.lua.instruction_limit, 0},
     {"lua_memory_limit", (GenericFnPtr)cf_int, CA_GOD,
-     &mudconf.lua_memory_limit, 0},
+     &mudconf.lua.memory_limit, 0},
     {"log", (GenericFnPtr)configuration_modify_bits, CA_GOD,
      &mudconf.log_options, (long)logoptions_nametab},
     {"log_options", (GenericFnPtr)configuration_modify_bits, CA_GOD,
      &mudconf.log_info, (long)logdata_nametab},
-    {"map_database", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.map_db,
-     128},
+    {"map_database", (GenericFnPtr)cf_string, CA_GOD,
+     (void *)mudconf.database.map_db, sizeof(mudconf.database.map_db)},
     {"master_room", (GenericFnPtr)cf_int, CA_GOD, &mudconf.master_room, 0},
     {"match_own_commands", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.match_mine,
      0},
     {"max_players", (GenericFnPtr)cf_int, CA_GOD, &mudconf.max_players, 0},
-    {"mech_database", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.mech_db,
-     128},
+    {"mech_database", (GenericFnPtr)cf_string, CA_GOD,
+     (void *)mudconf.database.mech_db, sizeof(mudconf.database.mech_db)},
     {"mud_name", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.mud_name, 32},
     {"notify_recursion_limit", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.ntfy_nest_lim, 0},

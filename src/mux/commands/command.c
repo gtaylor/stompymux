@@ -2221,7 +2221,7 @@ static void list_options(DbRef player) {
                              mudstate.freelist));
 
   snprintf(buff, MBUF_SIZE, "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
-           mudconf.dump_interval, mudconf.check_interval,
+           mudconf.database.dump_interval, mudconf.check_interval,
            mudconf.idle_interval);
   raw_notify(player, buff);
 

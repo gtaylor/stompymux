@@ -421,7 +421,7 @@ void LoadSpecialObjects(void) {
     return;
   }
 #endif
-  if (btech_persistence_load_special_state_path(mudconf.gamedb) < 0) {
+  if (btech_persistence_load_special_state_path(mudconf.database.gamedb) < 0) {
     exit(EXIT_FAILURE);
   }
   red_black_tree_walk(xcode_tree, WALK_INORDER, load_update2, NULL);

@@ -95,11 +95,11 @@ static int lua_pcall_limited(LUA_RUNTIME *runtime, int arguments, int results) {
   int status;
 
   lua_sethook(runtime->state, lua_instruction_hook, LUA_MASKCOUNT,
-              mudconf.lua_instruction_limit);
+              mudconf.lua.instruction_limit);
   status = lua_pcall(runtime->state, arguments, results, 0);
   lua_sethook(runtime->state, nullptr, 0, 0);
   if (!status && (size_t)lua_gc(runtime->state, LUA_GCCOUNT, 0) * 1024U >
-                     (size_t)mudconf.lua_memory_limit) {
+                     (size_t)mudconf.lua.memory_limit) {
     lua_pushstring(runtime->state, "Lua memory limit exceeded");
     return LUA_ERRMEM;
   }
@@ -345,7 +345,7 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
   LUA_RUNTIME *runtime;
   LUA_MODULE_ROOT root;
 
-  if (mudconf.lua_instruction_limit <= 0 || mudconf.lua_memory_limit <= 0) {
+  if (mudconf.lua.instruction_limit <= 0 || mudconf.lua.memory_limit <= 0) {
     lua_set_error(
         error, error_size,
         "lua_instruction_limit and lua_memory_limit must be positive");
@@ -356,11 +356,11 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
     lua_set_error(error, error_size, "out of memory");
     return nullptr;
   }
-  if (!realpath(mudconf.lua_directory, runtime->root)) {
-    if (errno != ENOENT || mkdir(mudconf.lua_directory, 0755) < 0 ||
-        !realpath(mudconf.lua_directory, runtime->root)) {
+  if (!realpath(mudconf.lua.directory, runtime->root)) {
+    if (errno != ENOENT || mkdir(mudconf.lua.directory, 0755) < 0 ||
+        !realpath(mudconf.lua.directory, runtime->root)) {
       lua_set_error(error, error_size, "unable to open lua_directory %s",
-                    mudconf.lua_directory);
+                    mudconf.lua.directory);
       free(runtime);
       return nullptr;
     }

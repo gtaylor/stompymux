@@ -802,27 +802,27 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
     pcache_sync();
     STARTLOG(LOG_ALWAYS, "DMP", "PANIC") {
       log_text("Panic dump: ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
     dump_database_internal(DUMP_CRASHED);
 
     STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
       log_text("Panic dump complete: ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
   } else if (key & SHUTDN_KILLED) {
     pcache_sync();
     STARTLOG(LOG_ALWAYS, "DMP", "KILLED") {
       log_text("Killed dump: ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
     dump_database_internal(DUMP_KILLED);
     STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
       log_text("Killed dump complete: ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
   }
@@ -841,7 +841,7 @@ void dump_database(void) {
   mudstate.dumping = 1;
   STARTLOG(LOG_DBSAVES, "DMP", "DUMP") {
     log_text("Dumping: ");
-    log_text(mudconf.gamedb);
+    log_text(mudconf.database.gamedb);
     ENDLOG;
   }
   pcache_sync();
@@ -849,7 +849,7 @@ void dump_database(void) {
   dump_database_internal(DUMP_NORMAL);
   STARTLOG(LOG_DBSAVES, "DMP", "DONE") {
     log_text("Dump complete: ");
-    log_text(mudconf.gamedb);
+    log_text(mudconf.database.gamedb);
     ENDLOG;
   }
   mudstate.dumping = 0;
@@ -860,7 +860,8 @@ void fork_and_dump(int key) {
     raw_broadcast(0, "%s", mudconf.dump_msg);
 
   mudstate.dumping = 1;
-  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s", mudconf.gamedb);
+  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
+            mudconf.database.gamedb);
 
   pcache_sync();
 
@@ -902,13 +903,13 @@ void fork_and_dump(int key) {
 static int load_game(void) {
   STARTLOG(LOG_STARTUP, "INI", "LOAD") {
     log_text("Loading: ");
-    log_text(mudconf.gamedb);
+    log_text(mudconf.database.gamedb);
     ENDLOG;
   };
-  if (gamedb_load(mudconf.gamedb) < 0) {
+  if (gamedb_load(mudconf.database.gamedb) < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "FATAL") {
       log_text("Error loading ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
     return -1;
@@ -1069,7 +1070,7 @@ int main(int argc, char *argv[]) {
     exit(2);
   }
 
-  if (!*mudconf.gamedb) {
+  if (!*mudconf.database.gamedb) {
     fprintf(stderr,
             "Required configuration directive game_database is missing.\n");
     exit(2);
@@ -1096,7 +1097,7 @@ int main(int argc, char *argv[]) {
   else if (load_game() < 0) {
     STARTLOG(LOG_ALWAYS, "INI", "LOAD") {
       log_text("Couldn't load: ");
-      log_text(mudconf.gamedb);
+      log_text(mudconf.database.gamedb);
       ENDLOG;
     }
     exit(2);

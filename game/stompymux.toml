@@ -17,11 +17,22 @@ include = ["aliases.toml"]
 
 [database]
 game_database = "data/stompymux.db.sqlite"
-lua_directory = "lua"
-lua_instruction_limit = 100000
-lua_memory_limit = 67108864
 mech_database = "mechs"
 map_database = "maps"
+# Interval at which to save the database.
+dump_interval = 1200
+
+# -----------------------------------------------
+#  Lua runtime
+# -----------------------------------------------
+
+[lua]
+# Directory containing global and object Lua modules.
+directory = "lua"
+# Maximum Lua VM instructions permitted for a single callback.
+instruction_limit = 100000
+# Maximum memory, in bytes, permitted for the Lua VM.
+memory_limit = 67108864
 
 # -----------------------------------------------
 #  Important Directives (Look these over!)
@@ -36,8 +47,6 @@ mud_name = "Big Stompy Robot Game"
 function_recursion_limit = 2000
 # Max # of times a command may make function calls.
 function_invocation_limit = 400000
-# Interval at which to save the database.
-dump_interval = 1200
 # The hour of the day to trigger @daily.
 events_daily_hour = 3
 

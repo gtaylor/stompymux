@@ -18,8 +18,9 @@ anything pulled in through `include`.
 
 | Section | Contents |
 | --- | --- |
-| `[database]` | SQLite game database path, Lua limits, mech/map database paths. |
-| `[server]` | Port, MUD name, function recursion/invocation limits, dump interval, daily-event hour. |
+| `[database]` | SQLite game database path, checkpoint dump interval, and mech/map database paths. |
+| `[lua]` | Lua module directory plus callback instruction and memory limits. |
+| `[server]` | Port, MUD name, function recursion/invocation limits, and daily-event hour. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX server behavior not covered by a more specific section. |
 | `[flags]` | Flags set on new players/exits/rooms/robots/things (`player`, `exit`, `room`, `robot`, `thing` arrays). |

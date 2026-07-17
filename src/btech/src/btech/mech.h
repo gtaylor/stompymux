@@ -1466,8 +1466,8 @@ extern void *FindObjectsData(DbRef key);
 #define create_object(name) create_obj(GOD, TYPE_THING, name)
 
 #define A_MECHREF A_MECHTYPE
-#define MECH_PATH mudconf.mech_db
-#define MAP_PATH mudconf.map_db
+#define MECH_PATH mudconf.database.mech_db
+#define MAP_PATH mudconf.database.map_db
 
 #define WSDUMP_MASK_ER                                                         \
   "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d"

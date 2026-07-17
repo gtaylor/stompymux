@@ -159,7 +159,7 @@ static int gamedb_store_extensions(sqlite3 *sqlite) {
   for (index = 0; index < sqlite_extension_count; index++) {
     if (sqlite_extensions[index].store(sqlite) < 0) {
       gamedb_log_extension_failure("writing", sqlite_extensions[index].name,
-                                   mudconf.gamedb, sqlite);
+                                   mudconf.database.gamedb, sqlite);
       return -1;
     }
   }
@@ -201,13 +201,14 @@ static int gamedb_target_path(char *target, size_t target_size, int dump_type) {
 
   switch (dump_type) {
   case DUMP_CRASHED:
-    length = snprintf(target, target_size, "%s.CRASH", mudconf.gamedb);
+    length = snprintf(target, target_size, "%s.CRASH", mudconf.database.gamedb);
     break;
   case DUMP_KILLED:
-    length = snprintf(target, target_size, "%s.KILLED", mudconf.gamedb);
+    length =
+        snprintf(target, target_size, "%s.KILLED", mudconf.database.gamedb);
     break;
   default:
-    length = snprintf(target, target_size, "%s", mudconf.gamedb);
+    length = snprintf(target, target_size, "%s", mudconf.database.gamedb);
     break;
   }
   return length < 0 || (size_t)length >= target_size ? -1 : 0;
@@ -717,7 +718,7 @@ int gamedb_dump(int dump_type) {
   int rc;
 
   if (gamedb_target_path(target, sizeof(target), dump_type) < 0) {
-    gamedb_log_failure("building path", mudconf.gamedb, nullptr);
+    gamedb_log_failure("building path", mudconf.database.gamedb, nullptr);
     return -1;
   }
   length = snprintf(temporary, sizeof(temporary), "%s.tmp.XXXXXX", target);

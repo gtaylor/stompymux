@@ -45,6 +45,12 @@ static int test_scalar_dispatch(void) {
   static const char toml[] = "[server]\n"
                             "port = 5555\n"
                             "mud_name = \"Test\"\n"
+                            "[database]\n"
+                            "dump_interval = 900\n"
+                            "[lua]\n"
+                            "directory = \"scripts\"\n"
+                            "instruction_limit = 50000\n"
+                            "memory_limit = 33554432\n"
                             "[mux]\n"
                             "fork_dump = true\n"
                             "public_flags = false\n";
@@ -56,8 +62,12 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 4 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 8 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
+       call_log_find(&log, "dump_interval", "900") &&
+       call_log_find(&log, "lua_directory", "scripts") &&
+       call_log_find(&log, "lua_instruction_limit", "50000") &&
+       call_log_find(&log, "lua_memory_limit", "33554432") &&
        call_log_find(&log, "fork_dump", "true") &&
        call_log_find(&log, "public_flags", "false");
   toml_free(result);

@@ -35,9 +35,10 @@ static struct event *timer_event;
 
 void init_timer(void) {
   mudstate.now = time(nullptr);
-  mudstate.dump_counter = ((mudconf.dump_offset == 0) ? mudconf.dump_interval
-                                                      : mudconf.dump_offset) +
-                          mudstate.now;
+  mudstate.dump_counter =
+      ((mudconf.dump_offset == 0) ? mudconf.database.dump_interval
+                                  : mudconf.dump_offset) +
+      mudstate.now;
   mudstate.check_counter =
       ((mudconf.check_offset == 0) ? mudconf.check_interval
                                    : mudconf.check_offset) +
@@ -160,7 +161,7 @@ static void dispatch(void) {
 
   if ((mudconf.control_flags & CF_CHECKPOINT) &&
       (mudstate.dump_counter <= mudstate.now)) {
-    mudstate.dump_counter = mudconf.dump_interval + mudstate.now;
+    mudstate.dump_counter = mudconf.database.dump_interval + mudstate.now;
     mudstate.debug_cmd = "< dump >";
     fork_and_dump(0);
   }

@@ -18,33 +18,44 @@ typedef struct Descriptor Descriptor;
 
 typedef unsigned char Uchar;
 
+typedef struct DatabaseConfiguration DatabaseConfiguration;
+struct DatabaseConfiguration {
+  char gamedb[128];  /* SQLite game database */
+  char mech_db[128]; /* Mecha templates */
+  char map_db[128];  /* Map templates */
+  int dump_interval; /* Interval between checkpoint dumps in seconds */
+};
+
+typedef struct LuaConfiguration LuaConfiguration;
+struct LuaConfiguration {
+  char directory[128];   /* Lua module root, relative to game directory */
+  int instruction_limit; /* Lua VM instructions per callback */
+  int memory_limit;      /* Lua VM memory cap in bytes */
+};
+
 typedef struct ServerConfiguration ServerConfiguration;
 struct ServerConfiguration {
-  int cache_trim;            /* Should cache be shrunk to original size */
-  int cache_steal_dirty;     /* Should cache code write dirty attrs */
-  int cache_depth;           /* Number of entries in each cache cell */
-  int cache_width;           /* Number of cache cells */
-  int cache_names;           /* Should object names be cached separately */
-  char gamedb[128];          /* SQLite game database */
-  char lua_directory[128];   /* Lua module root, relative to game directory */
-  int lua_instruction_limit; /* Lua VM instructions per callback */
-  int lua_memory_limit;      /* Lua VM memory cap in bytes */
-  char mech_db[128];         /* Mecha templates */
-  char map_db[128];          /* Map templates */
-  char config_file[128];     /* name of configuration file */
-  int have_specials;         /* Should the special hcode be active? */
-  int have_comsys;           /* Should the comsystem be active? */
-  int have_macros;           /* Should the macro system be active? */
-  int have_zones;            /* Should zones be active? */
-  int port;                  /* user port */
-  int conc_port;             /* concentrator port */
-  int init_size;             /* initial db size */
-  char conn_file[32];        /* display on connect */
-  char conn_dir[32];         /* display on connect */
-  char quit_file[32];        /* display on quit */
-  char down_file[32];        /* display this file if no logins */
-  char full_file[32];        /* display when max users exceeded */
-  char site_file[32];        /* display if conn from bad site */
+  int cache_trim;                 /* Should cache be shrunk to original size */
+  int cache_steal_dirty;          /* Should cache code write dirty attrs */
+  int cache_depth;                /* Number of entries in each cache cell */
+  int cache_width;                /* Number of cache cells */
+  int cache_names;                /* Should object names be cached separately */
+  DatabaseConfiguration database; /* Database configuration */
+  LuaConfiguration lua;           /* Lua runtime configuration */
+  char config_file[128];          /* name of configuration file */
+  int have_specials;              /* Should the special hcode be active? */
+  int have_comsys;                /* Should the comsystem be active? */
+  int have_macros;                /* Should the macro system be active? */
+  int have_zones;                 /* Should zones be active? */
+  int port;                       /* user port */
+  int conc_port;                  /* concentrator port */
+  int init_size;                  /* initial db size */
+  char conn_file[32];             /* display on connect */
+  char conn_dir[32];              /* display on connect */
+  char quit_file[32];             /* display on quit */
+  char down_file[32];             /* display this file if no logins */
+  char full_file[32];             /* display when max users exceeded */
+  char site_file[32];             /* display if conn from bad site */
   char help_dir[128];        /* Help article root, relative to game directory */
   char down_msg[4096];       /* Message displayed when logins are disabled */
   char full_msg[4096];       /* Message displayed when the game is full */
@@ -198,7 +209,6 @@ struct ServerConfiguration {
   int fork_vfork;          /* use vfork to fork */
   int paranoid_alloc;      /* Rigorous buffer integrity checks */
   int max_players;         /* Max # of connected players */
-  int dump_interval;       /* interval between ckp dumps in seconds */
   int check_interval;      /* interval between db check/cleans in secs */
   int events_daily_hour;   /* At what hour should @daily be executed? */
   int dump_offset;         /* when to take first checkpoint dump */

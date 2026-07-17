@@ -2,10 +2,9 @@
 
 ## MUX Todos in the /src/ dir
 
-* Remove channel member titles
-* What is @cstatus for?
+* remove `namechange_days` setting
+* Add bad names list
 * CLI'ify stompymux
-* Rewrite WHO in Lua
 * Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
 * utf8 support
