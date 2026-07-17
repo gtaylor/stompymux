@@ -220,7 +220,6 @@ tan = "wizard"
 # Limit commands access.
 [access.commands]
 "@name" = "wizard"
-"@program" = "wizard"
 "@lock" = "wizard"
 "@unlock" = "wizard"
 "@npemit" = "wizard"
