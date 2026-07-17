@@ -3,10 +3,10 @@
 
 #pragma once
 
-struct event_base;
+typedef struct uv_loop_s uv_loop_t;
 
 int server_lifecycle_initialize(void);
-struct event_base *server_lifecycle_event_base(void);
+uv_loop_t *server_lifecycle_loop(void);
 void server_lifecycle_prepare(void);
 int server_lifecycle_boot(int mindb);
 void server_lifecycle_run(int port);

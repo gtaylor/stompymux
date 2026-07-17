@@ -1,11 +1,11 @@
 /*
- * Server startup, service shutdown, and libevent lifecycle orchestration.
+ * Server startup, service shutdown, and libuv lifecycle orchestration.
  */
 
 #include "mux/server/platform.h"
 
+#include "mux/server/libuv.h"
 #include <errno.h>
-#include <event2/event.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -22,6 +22,7 @@
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
@@ -30,9 +31,11 @@
 #include "mux/server/timer.h"
 #include "mux/support/alloc.h"
 
-static struct event_base *server_event_base;
-static struct timeval queue_slice = {0, 0};
-static struct event *queue_event;
+static uv_loop_t server_event_loop;
+static bool server_event_loop_initialized;
+static MuxTimer *queue_timer;
+static MuxTimer *shutdown_timer;
+static uint64_t shutdown_started_at;
 static struct timeval last_slice;
 static struct timeval current_time;
 
@@ -97,12 +100,10 @@ static void server_lifecycle_process_preload(void) {
 }
 
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */
-static void server_lifecycle_run_queues(evutil_socket_t fd, short event,
-                                        void *arg) {
+static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
   pid_t child;
   int status = 0;
 
-  event_add(queue_event, &queue_slice);
   gettimeofday(&current_time, nullptr);
   last_slice = update_quotas(last_slice, current_time);
   child = waitpid(-1, &status, WNOHANG);
@@ -114,13 +115,39 @@ static void server_lifecycle_run_queues(evutil_socket_t fd, short event,
     do_top(mudconf.queue_chunk);
 }
 
-int server_lifecycle_initialize(void) {
-  server_event_base = event_base_new();
-  return server_event_base != nullptr;
+static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
+  if (uv_handle_get_type(handle) == UV_TIMER && !uv_is_closing(handle))
+    mux_timer_destroy(handle->data);
 }
 
-struct event_base *server_lifecycle_event_base(void) {
-  return server_event_base;
+static void server_lifecycle_drain_writes(MuxTimer *timer, void *arg) {
+  Descriptor *descriptor;
+  Descriptor *next;
+  bool deadline_reached;
+
+  deadline_reached = uv_hrtime() - shutdown_started_at >= 1000000000ULL;
+  if (descriptor_first() != nullptr && !deadline_reached)
+    return;
+  if (deadline_reached) {
+    for (descriptor = descriptor_first(); descriptor != nullptr;
+         descriptor = next) {
+      next = descriptor_next(descriptor);
+      descriptor_force_close(descriptor);
+    }
+  }
+  mux_timer_destroy(shutdown_timer);
+  shutdown_timer = nullptr;
+}
+
+int server_lifecycle_initialize(void) {
+  if (uv_loop_init(&server_event_loop) < 0)
+    return 0;
+  server_event_loop_initialized = true;
+  return 1;
+}
+
+uv_loop_t *server_lifecycle_loop(void) {
+  return server_event_loop_initialized ? &server_event_loop : nullptr;
 }
 
 /* Initialize process-wide state that must exist before database validation. */
@@ -150,36 +177,36 @@ int server_lifecycle_boot(int mindb) {
 /* Start socket listeners and run the event loop until a shutdown is requested.
  */
 void server_lifecycle_run(int port) {
-  queue_slice.tv_sec = 0;
-  queue_slice.tv_usec = mudconf.timeslice * 1000;
-  telnet_socket_listen(port);
-  queue_event =
-      evtimer_new(server_event_base, server_lifecycle_run_queues, nullptr);
-  if (queue_event == nullptr) {
+  if (!telnet_socket_listen(port))
+    return;
+  queue_timer = mux_timer_create(&server_event_loop,
+                                 server_lifecycle_run_queues, nullptr);
+  if (queue_timer == nullptr ||
+      !mux_timer_start(queue_timer, (uint64_t)mudconf.timeslice,
+                       (uint64_t)mudconf.timeslice)) {
     log_error(LOG_ALWAYS, "INI", "EVENT", "Unable to create queue timer.");
     return;
   }
-  evtimer_add(queue_event, &queue_slice);
   gettimeofday(&last_slice, nullptr);
   gettimeofday(&current_time, nullptr);
 #ifdef BTMUX_PERSISTENCE_TESTING
   server_lifecycle_signal_test_ready();
 #endif
-  event_base_dispatch(server_event_base);
+  uv_run(&server_event_loop, UV_RUN_DEFAULT);
 }
 
 /* Request that the active event loop return at its next safe opportunity. */
 void server_lifecycle_stop(void) {
-  if (server_event_base != nullptr)
-    event_base_loopexit(server_event_base, nullptr);
+  if (server_event_loop_initialized)
+    uv_stop(&server_event_loop);
 }
 
 /* Stop services and flush pending output before process exit. */
 void server_lifecycle_shutdown(void) {
   server_lifecycle_stop();
-  if (queue_event != nullptr) {
-    event_free(queue_event);
-    queue_event = nullptr;
+  if (queue_timer != nullptr) {
+    mux_timer_destroy(queue_timer);
+    queue_timer = nullptr;
   }
   timer_shutdown();
   heartbeat_stop();
@@ -188,8 +215,25 @@ void server_lifecycle_shutdown(void) {
 #ifdef ARBITRARY_LOGFILES
   logcache_destruct();
 #endif
-  if (server_event_base != nullptr) {
-    event_base_free(server_event_base);
-    server_event_base = nullptr;
+  signals_shutdown();
+  mux_release_socket();
+  if (server_event_loop_initialized) {
+    int status;
+
+    uv_walk(&server_event_loop, server_lifecycle_close_timers, nullptr);
+    if (descriptor_first() != nullptr) {
+      shutdown_started_at = uv_hrtime();
+      shutdown_timer = mux_timer_create(&server_event_loop,
+                                        server_lifecycle_drain_writes, nullptr);
+      if (shutdown_timer != nullptr)
+        mux_timer_start(shutdown_timer, 10, 10);
+    }
+    uv_run(&server_event_loop, UV_RUN_DEFAULT);
+    status = uv_loop_close(&server_event_loop);
+    if (status == 0)
+      server_event_loop_initialized = false;
+    else
+      log_error(LOG_ALWAYS, "INI", "EVENT",
+                "Unable to close libuv event loop: %s", uv_strerror(status));
   }
 }

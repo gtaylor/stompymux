@@ -13,6 +13,7 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
@@ -34,8 +35,8 @@ void free_qentry(struct bque *b) {
 static RedBlackTree obq = nullptr;
 
 static void cque_free_entry(BQUE *entry) {
-  if (entry->ev != nullptr)
-    event_free(entry->ev);
+  if (entry->timer != nullptr)
+    mux_timer_destroy(entry->timer);
   free_qentry(entry);
 }
 
@@ -97,13 +98,9 @@ static BQUE *cque_deque(DbRef player) {
 
 static void cque_enqueue(DbRef player, BQUE *cmd) {
   BQUE *point, *trail;
-  struct timeval tv;
   OBJQE *tmp;
 
   cmd->next = nullptr;
-
-  tv.tv_sec = cmd->waittime - mudstate.now;
-  tv.tv_usec = 0;
 
   if (cmd->sem == NOTHING) {
     /*
@@ -138,7 +135,8 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
         tmp->queued = 1;
       }
     } else {
-      evtimer_add(cmd->ev, &tv);
+      mux_timer_start(cmd->timer,
+                      (uint64_t)(cmd->waittime - mudstate.now) * 1000, 0);
       for (point = mudstate.qwait, trail = nullptr;
            point && point->waittime <= cmd->waittime; point = point->next) {
         trail = point;
@@ -159,7 +157,7 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
   }
 }
 
-static void wakeup_wait_que(evutil_socket_t fd, short event, void *arg) {
+static void wakeup_wait_que(MuxTimer *timer, void *arg) {
   BQUE *pending = (BQUE *)arg;
   BQUE *point;
 
@@ -262,8 +260,7 @@ int halt_que(DbRef player, DbRef object) {
         trail->next = next = point->next;
       else
         mudstate.qwait = next = point->next;
-      if (event_pending(point->ev, EV_TIMEOUT, nullptr))
-        event_del(point->ev);
+      mux_timer_stop(point->timer);
       free(point->text);
       cque_free_entry(point);
     } else
@@ -579,8 +576,8 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * Load the rest of the queue block
    */
 
-  tmp->ev = evtimer_new(server_lifecycle_event_base(), wakeup_wait_que, tmp);
-  if (tmp->ev == nullptr) {
+  tmp->timer = mux_timer_create(server_lifecycle_loop(), wakeup_wait_que, tmp);
+  if (tmp->timer == nullptr) {
     free(tmp->text);
     free_qentry(tmp);
     return nullptr;

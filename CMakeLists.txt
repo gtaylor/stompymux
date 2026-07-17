@@ -111,47 +111,18 @@ endif()
 add_library(tomlc17 STATIC "${TOMLC17_SOURCE_DIR}/src/tomlc17.c")
 target_include_directories(tomlc17 PUBLIC "${TOMLC17_SOURCE_DIR}/src")
 
-set(LIBEVENT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libevent")
-if(NOT EXISTS "${LIBEVENT_SOURCE_DIR}/CMakeLists.txt")
-  message(FATAL_ERROR "libevent submodule is missing; run git submodule update --init --recursive")
+set(LIBUV_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/libuv")
+if(NOT EXISTS "${LIBUV_SOURCE_DIR}/CMakeLists.txt")
+  message(FATAL_ERROR "libuv submodule is missing; run git submodule update --init --recursive")
 endif()
-set(EVENT__LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
-set(EVENT__DISABLE_OPENSSL ON CACHE STRING "" FORCE)
-set(EVENT__DISABLE_MBEDTLS ON CACHE STRING "" FORCE)
-set(EVENT__DISABLE_BENCHMARK ON CACHE BOOL "" FORCE)
-set(EVENT__DISABLE_TESTS ON CACHE BOOL "" FORCE)
-set(EVENT__DISABLE_REGRESS ON CACHE BOOL "" FORCE)
-set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "" FORCE)
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+set(LIBUV_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_BENCH OFF CACHE BOOL "" FORCE)
+set(ENABLE_CLANG_TIDY OFF CACHE BOOL "" FORCE)
 set(CMAKE_SKIP_INSTALL_RULES ON)
 block()
   set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.4)
-    cmake_diagnostic(PUSH)
-    cmake_diagnostic(SET CMD_DEPRECATED IGNORE)
-    add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
-    cmake_diagnostic(POP)
-  else()
-    get_property(BTMUX_WARN_DEPRECATED_CACHE_SET CACHE CMAKE_WARN_DEPRECATED
-      PROPERTY TYPE SET)
-    if(BTMUX_WARN_DEPRECATED_CACHE_SET)
-      get_property(BTMUX_WARN_DEPRECATED_CACHE_VALUE CACHE CMAKE_WARN_DEPRECATED
-        PROPERTY VALUE)
-    endif()
-    unset(CMAKE_WARN_DEPRECATED)
-    set(CMAKE_WARN_DEPRECATED FALSE CACHE BOOL
-      "Whether to issue warnings for deprecated functionality." FORCE)
-    add_subdirectory("${LIBEVENT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libevent" EXCLUDE_FROM_ALL)
-    unset(CMAKE_WARN_DEPRECATED)
-    if(BTMUX_WARN_DEPRECATED_CACHE_SET)
-      set(CMAKE_WARN_DEPRECATED "${BTMUX_WARN_DEPRECATED_CACHE_VALUE}" CACHE BOOL
-        "Whether to issue warnings for deprecated functionality." FORCE)
-    else()
-      unset(CMAKE_WARN_DEPRECATED CACHE)
-    endif()
-    unset(BTMUX_WARN_DEPRECATED_CACHE_SET)
-    unset(BTMUX_WARN_DEPRECATED_CACHE_VALUE)
-  endif()
+  add_subdirectory("${LIBUV_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/libuv" EXCLUDE_FROM_ALL)
 endblock()
 unset(CMAKE_SKIP_INSTALL_RULES)
 
@@ -316,7 +287,7 @@ target_compile_options(stompymux PRIVATE
   -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
   -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
   -Wconversion -Wsign-conversion>)
-target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet event_core SQLite3::SQLite3 libsodium tomlc17 cmark m)
+target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src"
@@ -325,6 +296,20 @@ target_include_directories(stompymux PRIVATE
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
 
 if(BUILD_TESTING)
+  add_executable(event_timer_test tests/event_timer.c
+    ${MUX_SOURCE_DIR}/server/event_timer.c)
+  target_link_libraries(event_timer_test PRIVATE btmux_options uv_a)
+  target_include_directories(event_timer_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME event_timer COMMAND event_timer_test)
+
+  add_executable(libuv_tcp_integration_test tests/libuv_tcp_integration.c)
+  target_link_libraries(libuv_tcp_integration_test PRIVATE btmux_options)
+  add_test(NAME libuv_tcp_integration
+    COMMAND libuv_tcp_integration_test
+      $<TARGET_FILE:stompymux> "${CMAKE_SOURCE_DIR}/game")
+
   add_executable(mux_header_interfaces_test tests/mux_header_interfaces.c)
   target_link_libraries(mux_header_interfaces_test PRIVATE btmux_options libsodium)
   target_include_directories(mux_header_interfaces_test PRIVATE

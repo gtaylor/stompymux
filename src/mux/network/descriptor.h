@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <event2/bufferevent.h>
-#include <event2/event.h>
 #include <stdbool.h>
 #include <time.h>
 
@@ -24,6 +22,7 @@ typedef enum DescriptorShutdownReason {
 
 typedef struct telnet_t telnet_t;
 typedef struct InputFlow InputFlow;
+typedef struct uv_tcp_s uv_tcp_t;
 
 typedef struct Descriptor Descriptor;
 struct Descriptor {
@@ -55,8 +54,9 @@ struct Descriptor {
   int output_tot;
   /* Number of output bytes discarded because of queue limits. */
   int output_lost;
-  /* Whether to release the descriptor after pending output flushes. */
-  bool is_flush_before_close;
+  /* Whether libuv has started and completed closing this socket. */
+  bool is_socket_closing;
+  bool is_socket_closed;
   /* Current size of buffered input. */
   int input_size;
   /* Total number of input bytes received during the connection. */
@@ -99,10 +99,10 @@ struct Descriptor {
   struct Descriptor *next;
   /* Previous descriptor in the global descriptor list. */
   struct Descriptor *prev;
-  /* libevent watcher for socket reads. */
-  struct event *sock_ev;
-  /* libevent buffered socket used for output. */
-  struct bufferevent *sock_buff;
+  /* Number of asynchronous writes still owned by libuv. */
+  size_t pending_writes;
+  /* libuv TCP stream for this client. */
+  uv_tcp_t *socket;
 };
 
 /* Head of the global list of active descriptors. */
@@ -135,3 +135,5 @@ Descriptor *descriptor_find_by_fd(int descriptor);
 /* Mark descriptor disconnected and perform its shutdown lifecycle. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason);
+/* Force libuv to cancel pending I/O and close this descriptor. */
+void descriptor_force_close(Descriptor *descriptor);

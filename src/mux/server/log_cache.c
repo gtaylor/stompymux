@@ -15,6 +15,7 @@
 #include "mux/database/attrs.h"
 #include "mux/database/flags.h"
 #include "mux/server/diagnostics.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
@@ -29,7 +30,7 @@ constexpr int LOGFILE_TIMEOUT = 300; // Five Minutes
 struct logfile_t {
   char *filename;
   int fd;
-  struct event *ev;
+  MuxTimer *timer;
 };
 
 RedBlackTree logfiles = nullptr;
@@ -40,9 +41,7 @@ static int logcache_compare(void *vleft, void *vright, void *arg) {
 
 static int logcache_close(struct logfile_t *log) {
   dprintk("closing logfile '%s'.", log->filename);
-  if (event_pending(log->ev, EV_TIMEOUT, nullptr))
-    event_del(log->ev);
-  event_free(log->ev);
+  mux_timer_destroy(log->timer);
   close(log->fd);
   red_black_tree_delete(logfiles, log->filename);
   if (log->filename)
@@ -53,17 +52,16 @@ static int logcache_close(struct logfile_t *log) {
   return 1;
 }
 
-static void logcache_expire(evutil_socket_t fd, short event, void *arg) {
+static void logcache_expire(MuxTimer *timer, void *arg) {
   dprintk("Expiring '%s'.", ((struct logfile_t *)arg)->filename);
   logcache_close((struct logfile_t *)arg);
 }
 
 static int _logcache_list(void *key, void *data, int depth, void *arg) {
-  struct timeval tv;
   struct logfile_t *log = (struct logfile_t *)data;
   DbRef player = *(DbRef *)arg;
-  event_pending(log->ev, EV_TIMEOUT, &tv);
-  notify_printf(player, "%-40s%ld", log->filename, tv.tv_sec - mudstate.now);
+  notify_printf(player, "%-40s%llu", log->filename,
+                (unsigned long long)(mux_timer_due_in(log->timer) / 1000));
   return 1;
 }
 
@@ -80,7 +78,6 @@ void logcache_list(DbRef player) {
 static int logcache_open(char *filename) {
   int fd;
   struct logfile_t *newlog;
-  struct timeval tv = {LOGFILE_TIMEOUT, 0};
 
   if (red_black_tree_exists(logfiles, filename)) {
     fprintf(stderr, "Serious braindamage, logcache_open() called for already "
@@ -103,15 +100,15 @@ static int logcache_open(char *filename) {
   newlog = malloc(sizeof(struct logfile_t));
   newlog->fd = fd;
   newlog->filename = strdup(filename);
-  newlog->ev =
-      evtimer_new(server_lifecycle_event_base(), logcache_expire, newlog);
-  if (newlog->ev == nullptr) {
+  newlog->timer =
+      mux_timer_create(server_lifecycle_loop(), logcache_expire, newlog);
+  if (newlog->timer == nullptr) {
     close(newlog->fd);
     free(newlog->filename);
     free(newlog);
     return 0;
   }
-  evtimer_add(newlog->ev, &tv);
+  mux_timer_start(newlog->timer, LOGFILE_TIMEOUT * 1000, 0);
   red_black_tree_insert(logfiles, newlog->filename, newlog);
   dprintk("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
@@ -145,7 +142,6 @@ void logcache_destruct(void) {
 
 int logcache_writelog(char *fname, char *fdata) {
   struct logfile_t *log;
-  struct timeval tv = {LOGFILE_TIMEOUT, 0};
   int len;
 
   if (!logfiles)
@@ -165,10 +161,7 @@ int logcache_writelog(char *fname, char *fdata) {
     }
   }
 
-  if (event_pending(log->ev, EV_TIMEOUT, nullptr)) {
-    event_del(log->ev);
-    event_add(log->ev, &tv);
-  }
+  mux_timer_start(log->timer, LOGFILE_TIMEOUT * 1000, 0);
 
   if (write(log->fd, fdata, (size_t)len) < 0) {
     fprintf(stderr,

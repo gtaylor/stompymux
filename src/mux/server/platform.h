@@ -47,8 +47,6 @@ typedef void (*GenericFnPtr)(void);
 
 #include <sys/resource.h>
 
-#include <event2/event.h>
-
 /* ATR_NAME:	Define if you want name to be stored as an attribute on the
  *		object rather than in the object structure.
  */

@@ -1019,7 +1019,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (!server_lifecycle_initialize()) {
-    fprintf(stderr, "Unable to create libevent event base.\n");
+    fprintf(stderr, "Unable to create libuv event loop.\n");
     exit(2);
   }
 

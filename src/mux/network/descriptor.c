@@ -4,7 +4,7 @@
 
 #include "mux/network/descriptor.h"
 
-#include <event2/buffer.h>
+#include "mux/server/libuv.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -20,13 +20,19 @@
 
 /* Human-readable labels for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_reasons[] = {
-    "Unspecified", "Quit",          "Inactivity Timeout",
-    "Booted",      "Remote Close or Net Failure", "Game Shutdown",
-    "Login Retry Limit", "Logins Disabled", "Too Many Connected Players"};
+    "Unspecified",
+    "Quit",
+    "Inactivity Timeout",
+    "Booted",
+    "Remote Close or Net Failure",
+    "Game Shutdown",
+    "Login Retry Limit",
+    "Logins Disabled",
+    "Too Many Connected Players"};
 
 /* A_ADISCONNECT reason strings for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_messages[] = {
-    "unknown", "quit",     "timeout", "boot",     "netdeath",
+    "unknown",  "quit",     "timeout",  "boot",    "netdeath",
     "shutdown", "badlogin", "nologins", "gamefull"};
 
 /* Head of the global list of active descriptors. */
@@ -103,47 +109,59 @@ void descriptor_hash_add(Descriptor *descriptor) {
 /* Retain descriptor against destruction. */
 void descriptor_retain(Descriptor *descriptor) { descriptor->refcount++; }
 
+static void descriptor_free(Descriptor *descriptor) {
+  dprintk("%p destructing", descriptor);
+  descriptor_clear_input(descriptor);
+  descriptor_flow_destroy(descriptor);
+  descriptor_telnet_destroy(descriptor);
+
+  if (descriptor->prev != nullptr)
+    descriptor->prev->next = descriptor->next;
+  else
+    descriptor_list = descriptor->next;
+  if (descriptor->next != nullptr)
+    descriptor->next->prev = descriptor->prev;
+
+  ndescriptors--;
+  free(descriptor);
+}
+
+static void descriptor_socket_closed(uv_handle_t *handle) {
+  Descriptor *descriptor = handle->data;
+
+  free(handle);
+  descriptor->socket = nullptr;
+  descriptor->is_socket_closed = true;
+  descriptor->descriptor = 0;
+  if (descriptor->refcount == 0)
+    descriptor_free(descriptor);
+}
+
+void descriptor_force_close(Descriptor *descriptor) {
+  if (descriptor->is_socket_closing)
+    return;
+  descriptor->is_socket_closing = true;
+  uv_read_stop((uv_stream_t *)descriptor->socket);
+  uv_close((uv_handle_t *)descriptor->socket, descriptor_socket_closed);
+}
+
 /* Release a retained descriptor and destroy it when no references remain. */
 void descriptor_release(Descriptor *descriptor) {
+  dassert(descriptor->refcount > 0);
   descriptor->refcount--;
-  if (descriptor->refcount == 0) {
-    dprintk("%p destructing", descriptor);
-    descriptor_clear_input(descriptor);
-
-    descriptor_flow_destroy(descriptor);
-    if (descriptor->descriptor) {
-      fsync(descriptor->descriptor);
-      event_free(descriptor->sock_ev);
-      descriptor->sock_ev = nullptr;
-      shutdown(descriptor->descriptor, 2);
-      close(descriptor->descriptor);
-    }
-    descriptor->descriptor = 0;
-    descriptor_telnet_destroy(descriptor);
-    if (descriptor->sock_buff)
-      bufferevent_free(descriptor->sock_buff);
-    descriptor->sock_buff = nullptr;
-
-    if (descriptor->prev) {
-      descriptor->prev->next = descriptor->next;
-    } else {
-      descriptor_list = descriptor->next;
-    }
-    if (descriptor->next)
-      descriptor->next->prev = descriptor->prev;
-
-    ndescriptors--;
-    free(descriptor);
-  }
+  if (descriptor->refcount != 0)
+    return;
+  if (descriptor->is_socket_closed)
+    descriptor_free(descriptor);
+  else
+    descriptor_force_close(descriptor);
 }
 
 /* Return the first descriptor in the global descriptor list. */
 Descriptor *descriptor_first(void) { return descriptor_list; }
 
 /* Return the descriptor following descriptor in the global list. */
-Descriptor *descriptor_next(Descriptor *descriptor) {
-  return descriptor->next;
-}
+Descriptor *descriptor_next(Descriptor *descriptor) { return descriptor->next; }
 
 /* Find the first authenticated descriptor in the global list. */
 Descriptor *descriptor_first_connected(void) {
@@ -192,21 +210,17 @@ Descriptor *descriptor_find_by_fd(int fd) {
 /* Disconnect descriptor and notify the game of its shutdown reason. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason) {
+  if (descriptor->is_dead)
+    return;
   descriptor->is_dead = true;
+  uv_read_stop((uv_stream_t *)descriptor->socket);
   if (descriptor->is_connected) {
     fcache_dump(descriptor, FC_QUIT);
-    if (reason == DESCRIPTOR_SHUTDOWN_QUIT && descriptor->sock_buff != nullptr &&
-        evbuffer_get_length(bufferevent_get_output(descriptor->sock_buff)) >
-            0) {
-      descriptor->is_flush_before_close = true;
-      descriptor_retain(descriptor);
-      event_del(descriptor->sock_ev);
-    }
-
     log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
-              descriptor->descriptor, descriptor->addr, Name(descriptor->player),
-              descriptor->player, descriptor_disconnect_reasons[reason]);
+              descriptor->descriptor, descriptor->addr,
+              Name(descriptor->player), descriptor->player,
+              descriptor_disconnect_reasons[reason]);
 
     log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%ld %s %d %ld %ld [%s] <%s> %s",
               descriptor->player,
@@ -218,9 +232,8 @@ void descriptor_shutdown(Descriptor *descriptor,
               obj_location(descriptor->player), descriptor->addr,
               descriptor_disconnect_reasons[reason], Name(descriptor->player));
 
-    descriptor_announce_disconnect(
-        descriptor->player, descriptor,
-        descriptor_disconnect_messages[reason]);
+    descriptor_announce_disconnect(descriptor->player, descriptor,
+                                   descriptor_disconnect_messages[reason]);
     descriptor_hash_remove(descriptor);
   }
   descriptor_release(descriptor); // NOLINT(clang-analyzer-unix.Malloc)

@@ -54,7 +54,6 @@
    further than LOOKAHEAD_STACK_SIZE in the future
    */
 
-#include <event2/event.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,6 +63,7 @@
 
 #include "mux/network/mux_event.h"
 #include "mux/server/diagnostics.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/server_lifecycle.h"
 
 int mux_event_tick = 0;
@@ -140,7 +140,7 @@ static void mux_event_type_list_remove(MuxEvent *e) {
   for (var = mux_event_list; var; var = var->next_in_main)                     \
     if (!is_zombie(var))
 
-static void mux_event_wakeup(evutil_socket_t fd, short event, void *arg) {
+static void mux_event_wakeup(MuxTimer *timer, void *arg) {
   MuxEvent *e = (MuxEvent *)arg;
 
   if (is_zombie(e)) {
@@ -156,8 +156,6 @@ static void mux_event_wakeup(evutil_socket_t fd, short event, void *arg) {
 void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
                    void *data, void *data2) {
   MuxEvent *e = (MuxEvent *)0xDEADBEEF;
-  struct timeval tv = {0, 0};
-
   int i;
 
   if (time < 1)
@@ -187,15 +185,12 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
   e->tick = mux_event_tick + time;
   e->next = nullptr;
 
-  tv.tv_sec = time;
-  tv.tv_usec = 0;
-
-  e->ev = evtimer_new(server_lifecycle_event_base(), mux_event_wakeup, e);
-  if (e->ev == nullptr) {
+  e->timer = mux_timer_create(server_lifecycle_loop(), mux_event_wakeup, e);
+  if (e->timer == nullptr) {
     free(e);
     return;
   }
-  evtimer_add(e->ev, &tv);
+  mux_timer_start(e->timer, (uint64_t)time * 1000, 0);
 
   mux_event_main_list_add(e);
   mux_event_type_list_add(type, e);
@@ -204,10 +199,8 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
 /* Remove event */
 
 static void mux_event_delete(MuxEvent *e) {
-  if (event_pending(e->ev, EV_TIMEOUT, nullptr))
-    event_del(e->ev);
-  event_free(e->ev);
-  e->ev = nullptr;
+  mux_timer_destroy(e->timer);
+  e->timer = nullptr;
 
   if (e->flags & FLAG_FREE_DATA)
     free((void *)e->data);

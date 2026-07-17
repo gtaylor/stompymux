@@ -2,9 +2,7 @@
 
 ## MUX Todos in the /src/ dir
 
-* remove `namechange_days` setting
 * Add bad names list
-* CLI'ify stompymux
 * Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
 * utf8 support

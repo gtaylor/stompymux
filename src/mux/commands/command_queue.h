@@ -2,6 +2,7 @@
  */
 
 #pragma once
+#include "mux/server/event_timer.h"
 #include "mux/server/platform.h"
 
 /* BQUE - Command queue */
@@ -21,7 +22,7 @@ struct bque {
   char *env[NUM_ENV_VARS]; /* environment vars */
   char *scr[NUM_ENV_VARS]; /* temp vars */
   int nargs;               /* How many args I have */
-  struct event *ev;        /* event structure for wait queue */
+  MuxTimer *timer;         /* timer for the wait queue */
 };
 
 /* Per object run queues */

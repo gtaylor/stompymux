@@ -40,6 +40,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/server/game.c
   ${MUX_MODULE_DIR}/server/log.c
   ${MUX_MODULE_DIR}/server/server_lifecycle.c
+  ${MUX_MODULE_DIR}/server/event_timer.c
   ${MUX_MODULE_DIR}/server/server_state.c
   ${MUX_MODULE_DIR}/server/signals.c
   ${MUX_MODULE_DIR}/server/timer.c

@@ -14,6 +14,7 @@
 #include "mux/database/db.h"
 #include "mux/database/powers.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
@@ -28,10 +29,9 @@ extern unsigned int alarm(unsigned int seconds);
 extern void pcache_trim(void);
 static void check_events(void);
 
-static void timer_callback(evutil_socket_t fd, short event, void *arg);
+static void timer_callback(MuxTimer *timer, void *arg);
 
-static struct timeval tv = {0, 100000};
-static struct event *timer_event;
+static MuxTimer *timer_event;
 
 void init_timer(void) {
   mudstate.now = time(nullptr);
@@ -47,9 +47,9 @@ void init_timer(void) {
   mudstate.mstats_counter = 15 + mudstate.now;
   mudstate.events_counter = 900 + mudstate.now;
   timer_event =
-      evtimer_new(server_lifecycle_event_base(), timer_callback, nullptr);
+      mux_timer_create(server_lifecycle_loop(), timer_callback, nullptr);
   if (timer_event != nullptr)
-    evtimer_add(timer_event, &tv);
+    mux_timer_start(timer_event, 100, 100);
 }
 
 void check_idle(void) {
@@ -220,15 +220,14 @@ static void dispatch(void) {
   mudstate.debug_cmd = cmdsave;
 }
 
-static void timer_callback(evutil_socket_t fd, short event, void *arg) {
+static void timer_callback(MuxTimer *timer, void *arg) {
   mudstate.alarm_triggered = 1;
-  evtimer_add(timer_event, &tv);
   dispatch();
 }
 
 void timer_shutdown(void) {
   if (timer_event != nullptr) {
-    event_free(timer_event);
+    mux_timer_destroy(timer_event);
     timer_event = nullptr;
   }
 }

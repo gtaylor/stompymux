@@ -5,9 +5,6 @@
 	path = third_party/libtelnet
 	url = https://github.com/seanmiddleditch/libtelnet.git
 	branch = develop
-[submodule "third_party/libevent"]
-	path = third_party/libevent
-	url = https://github.com/libevent/libevent.git
 [submodule "third_party/libsodium"]
 	path = third_party/libsodium
 	url = https://github.com/jedisct1/libsodium.git
@@ -17,3 +14,6 @@
 [submodule "third_party/cmark"]
 	path = third_party/cmark
 	url = https://github.com/commonmark/cmark.git
+[submodule "third_party/libuv"]
+	path = third_party/libuv
+	url = https://github.com/libuv/libuv.git

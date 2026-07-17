@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <event2/event.h>
+#include "mux/server/event_timer.h"
 
 /* EVENT_DEBUG adds some useful debugging information to the structure
    / allows more diverse set of error messages to be shown. However,
@@ -56,7 +56,7 @@ typedef struct my_event_type {
   struct my_event_type *prev_in_main;
   struct my_event_type *prev_in_type;
   struct my_event_type *next_in_type;
-  struct event *ev;
+  MuxTimer *timer;
 } MuxEvent;
 
 /* Some external things _do_ use this one */

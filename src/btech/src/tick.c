@@ -12,10 +12,10 @@
 #include "debug.h"
 #include "glue_types.h"
 #include "mech.h"
+#include "mux/server/event_timer.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
 
-#include <event2/event.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,31 +23,30 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static struct event *heartbeat_ev;
-static struct timeval heartbeat_tv = {1, 0};
+static MuxTimer *heartbeat_ev;
 static int heartbeat_running = 0;
 unsigned int global_tick = 0;
 extern RedBlackTree xcode_tree;
 
-void heartbeat_run(evutil_socket_t fd, short event, void *arg);
+static void heartbeat_run(MuxTimer *timer, void *arg);
 
 void heartbeat_init() {
   if (heartbeat_running)
     return;
-  dprintk("hearbeat initialized, %ds timeout.", (int)heartbeat_tv.tv_sec);
+  dprintk("hearbeat initialized, 1s timeout.");
   heartbeat_ev =
-      evtimer_new(server_lifecycle_event_base(), heartbeat_run, NULL);
-  if (heartbeat_ev == NULL)
+      mux_timer_create(server_lifecycle_loop(), heartbeat_run, nullptr);
+  if (heartbeat_ev == nullptr)
     return;
-  evtimer_add(heartbeat_ev, &heartbeat_tv);
+  mux_timer_start(heartbeat_ev, 1000, 1000);
   heartbeat_running = 1;
 }
 
 void heartbeat_stop() {
   if (!heartbeat_running)
     return;
-  event_free(heartbeat_ev);
-  heartbeat_ev = NULL;
+  mux_timer_destroy(heartbeat_ev);
+  heartbeat_ev = nullptr;
   dprintk("heartbeat stopped.\n");
   heartbeat_running = 0;
 }
@@ -74,8 +73,7 @@ static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-void heartbeat_run(evutil_socket_t fd, short event, void *arg) {
-  evtimer_add(heartbeat_ev, &heartbeat_tv);
+static void heartbeat_run(MuxTimer *timer, void *arg) {
   red_black_tree_walk(xcode_tree, WALK_INORDER, heartbeat_dispatch, NULL);
   global_tick++;
 }

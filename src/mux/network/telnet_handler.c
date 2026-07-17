@@ -278,7 +278,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     telnet_process_data(d, event->data.buffer, event->data.size);
     break;
   case TELNET_EV_SEND:
-    bufferevent_write(d->sock_buff, event->data.buffer, event->data.size);
+    descriptor_write_raw(d, event->data.buffer, event->data.size);
     break;
   case TELNET_EV_WILL:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE)

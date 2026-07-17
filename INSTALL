@@ -20,6 +20,11 @@ ________________________________________
  * Clang 20 or higher
  * [Just](https://github.com/casey/just) 1.56 or higher
 
+ Third-party libraries, including libuv, are pinned Git submodules. Initialize
+ them before configuring a fresh checkout:
+
+ git submodule update --init --recursive
+
  S2: COMPILING AND RUNNING THE SOURCE
  ------------------------------------
  To compile the Battletech MUX source, 'cd' into your root BTMux dir and use
