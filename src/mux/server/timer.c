@@ -150,8 +150,7 @@ static void dispatch(void) {
    * Free list reconstruction
    */
 
-  if ((mudconf.control_flags & CF_DBCHECK) &&
-      (mudstate.check_counter <= mudstate.now)) {
+  if (mudconf.is_db_check_enabled && mudstate.check_counter <= mudstate.now) {
     mudstate.check_counter = mudconf.check_interval + mudstate.now;
     mudstate.debug_cmd = "< dbck >";
     do_dbck(NOTHING, NOTHING, 0);
@@ -161,8 +160,8 @@ static void dispatch(void) {
    * Database dump routines
    */
 
-  if ((mudconf.control_flags & CF_CHECKPOINT) &&
-      (mudstate.dump_counter <= mudstate.now)) {
+  if (mudconf.is_checkpointing_enabled &&
+      mudstate.dump_counter <= mudstate.now) {
     mudstate.dump_counter = mudconf.database.dump_interval + mudstate.now;
     mudstate.debug_cmd = "< dump >";
     fork_and_dump(0);
@@ -180,8 +179,7 @@ static void dispatch(void) {
    * Idle user check
    */
 
-  if ((mudconf.control_flags & CF_IDLECHECK) &&
-      (mudstate.idle_counter <= mudstate.now)) {
+  if (mudconf.is_idle_check_enabled && mudstate.idle_counter <= mudstate.now) {
     mudstate.idle_counter = mudconf.idle_interval + mudstate.now;
     mudstate.debug_cmd = "< idlecheck >";
     check_idle();
@@ -190,8 +188,8 @@ static void dispatch(void) {
    * Check for execution of attribute events
    */
 
-  if ((mudconf.control_flags & CF_EVENTCHECK) &&
-      (mudstate.events_counter <= mudstate.now)) {
+  if (mudconf.is_event_check_enabled &&
+      mudstate.events_counter <= mudstate.now) {
     mudstate.events_counter = 900 + mudstate.now;
     mudstate.debug_cmd = "< eventcheck >";
     check_events();

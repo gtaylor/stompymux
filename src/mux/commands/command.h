@@ -72,6 +72,7 @@ void do_function(DbRef, DbRef, int, char *,
 void do_get(DbRef, DbRef, int, char *); /* Get an object */
 void do_give(DbRef, DbRef, int, char *, char *); /* Give something away */
 void do_global(DbRef, DbRef, int, char *);  /* Enable/disable global flags */
+void list_global_controls(DbRef);           /* List global control values */
 void do_halt(DbRef, DbRef, int, char *);    /* Remove commands from the queue */
 void do_help(DbRef, DbRef, int, char *);    /* Print info from help files */
 void do_helpreload(DbRef, DbRef, int);      /* Reindex help articles */

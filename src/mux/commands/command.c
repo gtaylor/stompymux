@@ -1030,8 +1030,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
    * Check global flags
    */
 
-  if (is_protected(cmdp, CA_GBL_INTERP) &&
-      !(mudconf.control_flags & CF_INTERP)) {
+  if (is_protected(cmdp, CA_GBL_INTERP) && !mudconf.is_interpreter_enabled) {
     notify(player, "Sorry, queueing and triggering are not allowed now.");
     return;
   }
@@ -2425,7 +2424,6 @@ NameTable list_names[] = {{"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},
 #endif
                           {nullptr, 0, 0, 0}};
 
-extern NameTable enable_names[];
 extern NameTable logoptions_nametab[];
 extern NameTable logdata_nametab[];
 
@@ -2456,8 +2454,7 @@ void do_list(DbRef player, DbRef cause, int extra, char *arg) {
     list_functable(player);
     break;
   case LIST_GLOBALS:
-    name_table_interpret(player, enable_names, mudconf.control_flags,
-                         "Global parameters:", "enabled", "disabled");
+    list_global_controls(player);
     break;
   case LIST_DF_FLAGS:
     list_df_flags(player);

@@ -187,8 +187,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
     return CONNECT_RESULT_RETRY;
   }
 
-  if (((mudconf.control_flags & CF_LOGIN) &&
-       (nplayers < mudconf.max_players)) ||
+  if ((mudconf.is_login_enabled && nplayers < mudconf.max_players) ||
       is_wizard(player) || is_god(player)) {
     STARTLOG(LOG_LOGIN, "CON", "LOGIN") {
       buff = alloc_mbuf("connect_flow_attempt_login.LOG.login");
@@ -207,7 +206,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
     return CONNECT_RESULT_CONNECTED;
   }
 
-  if (!(mudconf.control_flags & CF_LOGIN)) {
+  if (!mudconf.is_login_enabled) {
     connect_flow_terminate(d, "CON", "Connect", "Logins Disabled",
                            DESCRIPTOR_SHUTDOWN_GAMEDOWN, player, name,
                            FC_CONN_DOWN, mudconf.down_msg);
@@ -226,7 +225,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   DbRef player;
   char *buff;
 
-  if (!(mudconf.control_flags & CF_LOGIN)) {
+  if (!mudconf.is_login_enabled) {
     connect_flow_terminate(d, "CRE", "Create", "Logins Disabled",
                            DESCRIPTOR_SHUTDOWN_GAMEDOWN, NOTHING, name,
                            FC_CONN_DOWN, mudconf.down_msg);

@@ -236,9 +236,13 @@ void configuration_initialize(void) {
   mudconf.timeslice = 100;
   mudconf.cmd_quota_max = 100;
   mudconf.cmd_quota_incr = 5;
-  mudconf.control_flags = (int)0xffffffff; /*
-                                            * Everything for now...
-                                            */
+  mudconf.is_login_enabled = true;
+  mudconf.is_interpreter_enabled = true;
+  mudconf.is_checkpointing_enabled = true;
+  mudconf.is_db_check_enabled = true;
+  mudconf.is_idle_check_enabled = true;
+  mudconf.is_dequeue_enabled = true;
+  mudconf.is_event_check_enabled = true;
   mudconf.log_options = LOG_ALWAYS | LOG_BUGS | LOG_SECURITY | LOG_NET |
                         LOG_LOGIN | LOG_DBSAVES | LOG_CONFIGMODS | LOG_SHOUTS |
                         LOG_STARTUP | LOG_WIZARD | LOG_PROBLEMS | LOG_PCREATES;

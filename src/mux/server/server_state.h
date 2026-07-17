@@ -264,16 +264,24 @@ struct ServerConfiguration {
   int timeslice;        /* How often do we bump people's cmd quotas? */
   int cmd_quota_max;    /* Max commands at one time */
   int cmd_quota_incr;   /* Bump #cmds allowed by this each timeslice */
-  int control_flags;    /* Global runtime control flags */
-  int log_options;      /* What gets logged */
-  int log_info;         /* Info that goes into log entries */
-  Uchar markdata[8];    /* Masks for marking/unmarking */
-  int func_nest_lim;    /* Max nesting of functions */
-  int func_invk_lim;    /* Max funcs invoked by a command */
-  int ntfy_nest_lim;    /* Max nesting of notifys */
-  int lock_nest_lim;    /* Max nesting of lock evals */
-  int parent_nest_lim;  /* Max levels of parents */
-  int zone_nest_lim;    /* Max nesting of zones */
+
+  bool is_login_enabled;         /* Allow nonwizard logins */
+  bool is_interpreter_enabled;   /* Allow object triggering */
+  bool is_checkpointing_enabled; /* Perform automatic checkpoints */
+  bool is_db_check_enabled;      /* Periodically check and clean the DB */
+  bool is_idle_check_enabled;    /* Periodically check for idle users */
+  bool is_dequeue_enabled;       /* Remove entries from the command queue */
+  bool is_event_check_enabled;   /* Allow event checking */
+
+  int log_options;     /* What gets logged */
+  int log_info;        /* Info that goes into log entries */
+  Uchar markdata[8];   /* Masks for marking/unmarking */
+  int func_nest_lim;   /* Max nesting of functions */
+  int func_invk_lim;   /* Max funcs invoked by a command */
+  int ntfy_nest_lim;   /* Max nesting of notifys */
+  int lock_nest_lim;   /* Max nesting of lock evals */
+  int parent_nest_lim; /* Max levels of parents */
+  int zone_nest_lim;   /* Max nesting of zones */
   int room_parent;
   int exit_parent;
   int player_parent;
@@ -415,21 +423,6 @@ extern ServerState mudstate;
 void server_state_initialize(void);
 
 /* Global flags */
-
-/* Game control flags in mudconf.control_flags */
-
-constexpr int CF_LOGIN = 0x0001; /* Allow nonwiz logins to the mux */
-/* 0x0002 is reserved for the removed global building toggle. */
-constexpr int CF_INTERP = 0x0004;     /* Allow object triggering */
-constexpr int CF_CHECKPOINT = 0x0008; /* Perform auto-checkpointing */
-constexpr int CF_DBCHECK = 0x0010;    /* Periodically check/clean the DB */
-constexpr int CF_IDLECHECK = 0x0020;  /* Periodically check for idle users */
-
-/* empty		0x0040 */
-
-/* empty		0x0080 */
-constexpr int CF_DEQUEUE = 0x0100;    /* Remove entries from the queue */
-constexpr int CF_EVENTCHECK = 0x0200; /* Allow events checking */
 
 /* Host information codes */
 

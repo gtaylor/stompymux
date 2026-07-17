@@ -601,7 +601,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
 void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
               char *command, char *args[], int nargs, char *sargs[]) {
   BQUE *cmd;
-  if (mudconf.control_flags & CF_INTERP)
+  if (mudconf.is_interpreter_enabled)
     cmd = setup_que(player, cause, command, args, nargs, sargs);
   else
     cmd = nullptr;
@@ -724,7 +724,7 @@ void do_second(void) {
    * getting blown away  by scrolling text
    */
 
-  if ((mudconf.control_flags & CF_DEQUEUE) == 0)
+  if (!mudconf.is_dequeue_enabled)
     return;
 
   cmdsave = mudstate.debug_cmd;
@@ -778,7 +778,7 @@ int do_top(int ncmds) {
   char *command, *cp;
   const char *cmdsave;
 
-  if ((mudconf.control_flags & CF_DEQUEUE) == 0)
+  if (!mudconf.is_dequeue_enabled)
     return 0;
 
   cmdsave = mudstate.debug_cmd;
@@ -1016,27 +1016,28 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
 
 void do_queue(DbRef player, DbRef cause, int key, char *arg) {
   BQUE *point;
-  int i, ncmds, was_disabled;
+  int i, ncmds;
+  bool was_disabled;
 
   dprintk("WTF?");
-  was_disabled = 0;
+  was_disabled = false;
   if (key == QUEUE_KICK) {
     i = atoi(arg);
-    if ((mudconf.control_flags & CF_DEQUEUE) == 0) {
-      was_disabled = 1;
-      mudconf.control_flags |= CF_DEQUEUE;
+    if (!mudconf.is_dequeue_enabled) {
+      was_disabled = true;
+      mudconf.is_dequeue_enabled = true;
       notify(player, "Warning: automatic dequeueing is disabled.");
     }
     ncmds = do_top(i);
     if (was_disabled)
-      mudconf.control_flags &= ~CF_DEQUEUE;
+      mudconf.is_dequeue_enabled = false;
     if (!is_quiet(player))
       notify_printf(player, "%d commands processed.", ncmds);
   } else if (key == QUEUE_WARP) {
     i = atoi(arg);
-    if ((mudconf.control_flags & CF_DEQUEUE) == 0) {
-      was_disabled = 1;
-      mudconf.control_flags |= CF_DEQUEUE;
+    if (!mudconf.is_dequeue_enabled) {
+      was_disabled = true;
+      mudconf.is_dequeue_enabled = true;
       notify(player, "Warning: automatic dequeueing is disabled.");
     }
 
@@ -1054,7 +1055,7 @@ void do_queue(DbRef player, DbRef cause, int key, char *arg) {
 
     do_second();
     if (was_disabled)
-      mudconf.control_flags &= ~CF_DEQUEUE;
+      mudconf.is_dequeue_enabled = false;
     if (is_quiet(player))
       return;
     if (i > 0)

@@ -319,34 +319,87 @@ void do_cut(DbRef player, DbRef cause, int key, char *thing) {
   }
 }
 
-/**
- * Enable or disable global control flags
- */
-NameTable enable_names[] = {{"checkpointing", 2, CA_PUBLIC, CF_CHECKPOINT},
-                            {"cleaning", 2, CA_PUBLIC, CF_DBCHECK},
-                            {"dequeueing", 1, CA_PUBLIC, CF_DEQUEUE},
-                            {"idlechecking", 2, CA_PUBLIC, CF_IDLECHECK},
-                            {"interpret", 2, CA_PUBLIC, CF_INTERP},
-                            {"logins", 3, CA_PUBLIC, CF_LOGIN},
-                            {"eventchecking", 2, CA_PUBLIC, CF_EVENTCHECK},
-                            {nullptr, 0, 0, 0}};
+typedef enum GlobalControl {
+  GLOBAL_CONTROL_CHECKPOINTING,
+  GLOBAL_CONTROL_CLEANING,
+  GLOBAL_CONTROL_DEQUEUEING,
+  GLOBAL_CONTROL_IDLE_CHECKING,
+  GLOBAL_CONTROL_INTERPRET,
+  GLOBAL_CONTROL_LOGINS,
+  GLOBAL_CONTROL_EVENT_CHECKING,
+} GlobalControl;
+
+static NameTable enable_names[] = {
+    {"checkpointing", 2, CA_PUBLIC, GLOBAL_CONTROL_CHECKPOINTING},
+    {"cleaning", 2, CA_PUBLIC, GLOBAL_CONTROL_CLEANING},
+    {"dequeueing", 1, CA_PUBLIC, GLOBAL_CONTROL_DEQUEUEING},
+    {"idlechecking", 2, CA_PUBLIC, GLOBAL_CONTROL_IDLE_CHECKING},
+    {"interpret", 2, CA_PUBLIC, GLOBAL_CONTROL_INTERPRET},
+    {"logins", 3, CA_PUBLIC, GLOBAL_CONTROL_LOGINS},
+    {"eventchecking", 2, CA_PUBLIC, GLOBAL_CONTROL_EVENT_CHECKING},
+    {nullptr, 0, 0, 0}};
+
+static bool *global_control_value(int control) {
+  switch (control) {
+  case GLOBAL_CONTROL_CHECKPOINTING:
+    return &mudconf.is_checkpointing_enabled;
+  case GLOBAL_CONTROL_CLEANING:
+    return &mudconf.is_db_check_enabled;
+  case GLOBAL_CONTROL_DEQUEUEING:
+    return &mudconf.is_dequeue_enabled;
+  case GLOBAL_CONTROL_IDLE_CHECKING:
+    return &mudconf.is_idle_check_enabled;
+  case GLOBAL_CONTROL_INTERPRET:
+    return &mudconf.is_interpreter_enabled;
+  case GLOBAL_CONTROL_LOGINS:
+    return &mudconf.is_login_enabled;
+  case GLOBAL_CONTROL_EVENT_CHECKING:
+    return &mudconf.is_event_check_enabled;
+  default:
+    return nullptr;
+  }
+}
+
+void list_global_controls(DbRef player) {
+  char *buf = alloc_lbuf("list_global_controls");
+  char *bp = buf;
+
+  safe_str("Global parameters:", buf, &bp);
+  for (NameTable *control = enable_names; control->name; control++) {
+    bool *is_enabled = global_control_value(control->flag);
+
+    safe_chr(' ', buf, &bp);
+    safe_str(control->name, buf, &bp);
+    safe_str(*is_enabled ? "...enabled" : "...disabled", buf, &bp);
+    if ((control + 1)->name)
+      safe_chr(';', buf, &bp);
+  }
+  *bp = '\0';
+  notify(player, buf);
+  free_lbuf(buf);
+}
 
 void do_global(DbRef player, DbRef cause, int key, char *flag) {
-  int flagvalue;
+  int control;
+  bool *is_enabled;
 
   /*
    * Set or clear the indicated flag
    */
 
-  flagvalue = name_table_search(player, enable_names, flag);
-  if (flagvalue < 0) {
+  control = name_table_search(player, enable_names, flag);
+  if (control < 0) {
     notify_quiet(player, "I don't know about that flag.");
-  } else if (key == GLOB_ENABLE) {
-    mudconf.control_flags |= flagvalue;
+    return;
+  }
+
+  is_enabled = global_control_value(control);
+  if (key == GLOB_ENABLE) {
+    *is_enabled = true;
     if (!is_quiet(player))
       notify_quiet(player, "Enabled.");
   } else if (key == GLOB_DISABLE) {
-    mudconf.control_flags &= ~flagvalue;
+    *is_enabled = false;
     if (!is_quiet(player))
       notify_quiet(player, "Disabled.");
   } else {

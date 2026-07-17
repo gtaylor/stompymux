@@ -329,7 +329,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   s_connected(player);
 
   if (is_wizard(player)) {
-    if (!(mudconf.control_flags & CF_LOGIN)) {
+    if (!mudconf.is_login_enabled) {
       raw_notify(player, "*** Logins are disabled.");
     }
   }
