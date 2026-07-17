@@ -368,9 +368,8 @@ static int page_check(DbRef player, DbRef target) {
                 tprintf("Sorry, %s is not connected.", Name(target)));
     return 0;
   }
-  if (!could_doit(player, target, A_LPAGE) ||
-      (!is_wizard(player) && is_in_character_location(target) &&
-       !is_wizard(target))) {
+  if (!is_wizard(player) && is_in_character_location(target) &&
+      !is_wizard(target)) {
     if (is_wizard(target) && is_dark(target))
       page_return(player, target, "Away", A_AWAY,
                   tprintf("Sorry, %s is not connected.", Name(target)));
@@ -378,16 +377,6 @@ static int page_check(DbRef player, DbRef target) {
       page_return(player, target, "Reject", A_REJECT,
                   tprintf("Sorry, %s is not accepting pages.", Name(target)));
     return 0;
-  }
-  if (!could_doit(target, player, A_LPAGE)) {
-    if (is_wizard(player)) {
-      notify_printf(player, "Warning: %s can't return your page.",
-                    Name(target));
-      return 1;
-    } else {
-      notify_printf(player, "Sorry, %s can't return your page.", Name(target));
-      return 0;
-    }
   }
   return 1;
 }

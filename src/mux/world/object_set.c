@@ -144,14 +144,6 @@ void do_alias(DbRef player, DbRef cause, int key, char *name, char *alias) {
   }
 }
 
-void do_pagelock(DbRef player, DbRef cause, int key, char *name,
-                 char *keytext) {
-  /* So we can do a seperate pagelock command and still keep '@Lock' restricted
-   */
-
-  do_lock(player, cause, A_LPAGE, name, keytext);
-}
-
 /*
  * ---------------------------------------------------------------------------
  * * do_lock: Set a lock on an object or attribute.
@@ -230,12 +222,6 @@ void do_lock(DbRef player, DbRef cause, int key, char *name, char *keytext) {
       notify_quiet(player, "Locked.");
   }
   boolean_expression_free(okey);
-}
-
-void do_pageunlock(DbRef player, DbRef cause, int key, char *name) {
-  /* Added to get around '@lock' restrictions */
-
-  do_unlock(player, cause, A_LPAGE, name);
 }
 
 /*

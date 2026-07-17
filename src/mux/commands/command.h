@@ -89,10 +89,8 @@ void do_list(DbRef, DbRef, int, char *); /* List contents of internal tables */
 void do_list_file(DbRef, DbRef, int,
                   char *); /* List contents of message files */
 void do_lock(DbRef, DbRef, int, char *, char *); /* Set a lock on an object */
-void do_pagelock(DbRef, DbRef, int, char *, char *); /* Sets a Pagelock */
-void do_pageunlock(DbRef, DbRef, int, char *);       /* Removes a Pagelock */
-void do_look(DbRef, DbRef, int, char *); /* Look here or at something */
-void do_move(DbRef, DbRef, int, char *); /* Move about using exits */
+void do_look(DbRef, DbRef, int, char *);         /* Look here or at something */
+void do_move(DbRef, DbRef, int, char *);         /* Move about using exits */
 void do_mvattr(DbRef, DbRef, int, char *, char *[],
                int); /* Move attributes on object */
 void do_mudwho(DbRef, DbRef, int, char *,

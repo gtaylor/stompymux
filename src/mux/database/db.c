@@ -178,8 +178,6 @@ Attribute attr_table[] = {
     {"Oxenter", A_OXENTER, AF_ODARK, nullptr},
     {"Oxleave", A_OXLEAVE, AF_ODARK, nullptr},
     {"Oxtport", A_OXTPORT, AF_ODARK | AF_NOPROG, nullptr},
-    {"PageLock", A_LPAGE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"ParentLock", A_LPARENT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
      nullptr},
     {"PCequip", A_PCEQUIP, AF_MDARK, nullptr},

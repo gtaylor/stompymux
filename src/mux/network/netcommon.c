@@ -331,12 +331,6 @@ void announce_connect(DbRef player, Descriptor *d) {
       raw_notify(player, "*** Logins are disabled.");
     }
   }
-  buf = attribute_get(player, A_LPAGE, &aowner, &aflags);
-  if (buf && *buf) {
-    raw_notify(
-        player,
-        "Your PAGE LOCK is set. You may be unable to receive some pages.");
-  }
   num = 0;
   for (dtemp = descriptor_first_player(player); dtemp != nullptr;
        dtemp = descriptor_next_player(dtemp))
