@@ -234,6 +234,9 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
    * Make sure the password is OK.  Name is checked in create_obj
    */
 
+  if (!ok_new_player_name(name))
+    return NOTHING;
+
   pbuf = trim_spaces(password);
   if (!ok_password(pbuf)) {
     free_lbuf(pbuf);

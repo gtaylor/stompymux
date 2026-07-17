@@ -19,6 +19,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/validation.h"
 #include "mux/world/move.h"
 #include "mux/world/player.h"
 
@@ -314,6 +315,10 @@ static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
   outcome.action = FLOW_ACTION_GOTO;
   if (lookup_player(NOTHING, data->name, 0) != NOTHING) {
     StringCopyTrunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
+  } else if (!ok_new_player_name(data->name)) {
+    outcome.action = FLOW_ACTION_WAIT;
+    outcome.prompt = "New usernames must start with a letter and be at least "
+                     "two characters long.\r\nWho are you? ";
   } else {
     StringCopyTrunc(outcome.next_step, "confirm_create",
                     FLOW_STEP_NAME_SIZE - 1);

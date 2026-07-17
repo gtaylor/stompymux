@@ -162,6 +162,11 @@ int ok_player_name(const char *name) {
   return 1;
 }
 
+int ok_new_player_name(const char *name) {
+  return strlen(name) >= 2 && isalpha((unsigned char)*name) &&
+         ok_player_name(name);
+}
+
 int ok_attr_name(const char *attrname) {
   const char *scan;
 
