@@ -31,7 +31,7 @@
 /game*/lib/
 /game*/bin/
 /game*/text/*.indx
-/game*/stompymux.log*
+/game*/logs/stompymux.log*
 /buildnum.data
 
 # /btech/

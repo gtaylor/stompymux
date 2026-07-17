@@ -8,6 +8,8 @@ PATH=/usr/ucb:/bin:/usr/bin:.; export PATH
 
 BIN=./bin
 DATA=./data
+LOGS=./logs
+LOGFILE=$LOGS/stompymux.log
 
 #
 #	Make sure there isn't aready a MUX running.
@@ -25,9 +27,12 @@ fi
 #	Kick off MUX
 #
 ulimit -c unlimited
+if [ -f $LOGFILE ]; then
+	mv -f $LOGFILE $LOGFILE.old
+fi
 if [ -x $BIN/stompymux ]; then
 	echo Starting stompymux binary.
-	$BIN/stompymux stompymux.toml
+	$BIN/stompymux stompymux.toml >>$LOGFILE 2>&1
 else
 	echo No binary found!
 	exit 1

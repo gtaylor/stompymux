@@ -4,7 +4,6 @@
 
 * CLI'ify stompymux
 * Redesign login flow to be more MUDDy
-* Fix log emission to output to log dir (`logs/`)
 * Rewrite WHO in Lua
 * Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
