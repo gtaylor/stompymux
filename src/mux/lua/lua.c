@@ -1723,8 +1723,13 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
     outcome.action = FLOW_ACTION_GOTO;
   else if (!strcmp(field, "done"))
     outcome.action = FLOW_ACTION_DONE;
-  else
+  else {
+    if (strcmp(field, "cancel"))
+      log_error(LOG_BUGS, "LUA", "FLOW",
+                "Unknown flow action '%s' from step '%s' in %s; cancelling.",
+                field, step, data->path);
     outcome.action = FLOW_ACTION_CANCEL;
+  }
   lua_pop(state, 1);
 
   lua_getfield(state, result_index, "step");
