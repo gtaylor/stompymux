@@ -418,8 +418,8 @@ void server_state_initialize(void);
 
 /* Game control flags in mudconf.control_flags */
 
-constexpr int CF_LOGIN = 0x0001;      /* Allow nonwiz logins to the mux */
-constexpr int CF_BUILD = 0x0002;      /* Allow building commands */
+constexpr int CF_LOGIN = 0x0001; /* Allow nonwiz logins to the mux */
+/* 0x0002 is reserved for the removed global building toggle. */
 constexpr int CF_INTERP = 0x0004;     /* Allow object triggering */
 constexpr int CF_CHECKPOINT = 0x0008; /* Perform auto-checkpointing */
 constexpr int CF_DBCHECK = 0x0010;    /* Periodically check/clean the DB */

@@ -229,7 +229,7 @@ constexpr int CA_NO_ROBOT = 0x00002000; /* Not by ROBOT players */
 constexpr int CA_NO_SUSPECT = 0x00008000; /* Not by SUSPECT players */
 constexpr int CA_NO_IC = 0x00020000;      /* Not by IC players */
 
-constexpr int CA_GBL_BUILD = 0x01000000; /* Requires the global BUILDING flag */
+/* 0x01000000 is reserved for the removed global building restriction. */
 constexpr int CA_GBL_INTERP = 0x02000000; /* Requires the global INTERP flag */
 constexpr int CA_DISABLED = 0x04000000;   /* Command completely disabled */
 constexpr int CA_LOCATION = 0x10000000;   /* Invoker must have location */

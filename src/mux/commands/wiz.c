@@ -322,8 +322,7 @@ void do_cut(DbRef player, DbRef cause, int key, char *thing) {
 /**
  * Enable or disable global control flags
  */
-NameTable enable_names[] = {{"building", 1, CA_PUBLIC, CF_BUILD},
-                            {"checkpointing", 2, CA_PUBLIC, CF_CHECKPOINT},
+NameTable enable_names[] = {{"checkpointing", 2, CA_PUBLIC, CF_CHECKPOINT},
                             {"cleaning", 2, CA_PUBLIC, CF_DBCHECK},
                             {"dequeueing", 1, CA_PUBLIC, CF_DEQUEUE},
                             {"idlechecking", 2, CA_PUBLIC, CF_IDLECHECK},

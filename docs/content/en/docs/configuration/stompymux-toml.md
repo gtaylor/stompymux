@@ -41,7 +41,9 @@ directives take other shapes:
   target, e.g. `"@ch" = "@chown"`.
 - **Access directives** (`[access.*]`, excluding `user_attrs`) are tables
   mapping a command/function/attribute name to one or more permissions, e.g.
-  `encrypt = "wizard"` or `"@dig" = ["wizard", "builder"]`.
+  `encrypt = "wizard"` or `"@dig" = ["wizard", "need_location"]`.
+- Building commands are restricted to Wizards. There is no global building
+  toggle or `global_build` command-access permission.
 - **Site directives** (`[sites]`) are arrays of `{ address = "...", mask =
   "..." }` tables, applied in file order.
 
