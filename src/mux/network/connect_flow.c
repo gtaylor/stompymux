@@ -169,7 +169,8 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
     descriptor_queue_string(d, connect_fail);
     STARTLOG(LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
       buff = alloc_lbuf("connect_flow_attempt_login.LOG.bad");
-      snprintf(buff, LBUF_SIZE, "[%d/%s] Failed connect to '%.3800s'",
+      snprintf(buff, LBUF_SIZE,
+               "[%d/%s] Failed login attempt to player '%.3800s'",
                d->descriptor, d->addr, name);
       log_text(buff);
       free_lbuf(buff);
