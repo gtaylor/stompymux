@@ -2,6 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Remove channel member titles
+* What is @cstatus for?
 * CLI'ify stompymux
 * Rewrite WHO in Lua
 * Unit and integration test strategy for Lua

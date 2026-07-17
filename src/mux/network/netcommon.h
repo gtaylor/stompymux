@@ -41,4 +41,3 @@ int fetch_idle(DbRef target);
 int fetch_connect(DbRef target);
 void make_ulist(DbRef player, char *buff, char **bufc);
 DbRef find_connected_name(DbRef player, char *name);
-Descriptor *descriptor_find_by_fd(int fd);

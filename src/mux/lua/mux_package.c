@@ -109,7 +109,8 @@ static int lua_mux_connected_players(lua_State *state) {
   int index = 1;
 
   lua_newtable(state);
-  DESC_ITER_CONN(descriptor) {
+  for (descriptor = descriptor_first_connected(); descriptor != nullptr;
+       descriptor = descriptor_next_connected(descriptor)) {
     if (mudconf.show_unfindable_who && is_hidden(descriptor->player))
       continue;
     lua_newtable(state);
@@ -129,7 +130,8 @@ static int lua_mux_who_summary(lua_State *state) {
   Descriptor *descriptor;
   int hidden = 0;
 
-  DESC_ITER_CONN(descriptor) {
+  for (descriptor = descriptor_first_connected(); descriptor != nullptr;
+       descriptor = descriptor_next_connected(descriptor)) {
     if (mudconf.show_unfindable_who && is_hidden(descriptor->player))
       hidden++;
   }

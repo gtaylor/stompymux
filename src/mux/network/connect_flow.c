@@ -115,9 +115,9 @@ static void connect_flow_hide_input_length(Descriptor *d, const char *input) {
 
 static void connect_flow_terminate(Descriptor *d, const char *logcode,
                                    const char *logtype, const char *logreason,
-                                   int disconnect_reason, DbRef player,
-                                   const char *user, int filecache,
-                                   const char *message) {
+                                   DescriptorShutdownReason disconnect_reason,
+                                   DbRef player, const char *user,
+                                   int filecache, const char *message) {
   STARTLOG(LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
     char *buff = alloc_mbuf("connect_flow_terminate.LOG");
     snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor, d->addr,
@@ -145,7 +145,9 @@ static int connect_flow_count_connected(void) {
   Descriptor *d;
   int count = 0;
 
-  DESC_ITER_CONN(d) count++;
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d))
+    count++;
   return count;
 }
 
@@ -159,8 +161,9 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
                                      : connect_flow_count_connected();
 
   if (!login_throttle_allow(d->addr)) {
-    connect_flow_terminate(d, "CON", "Connect", "Login throttled", R_BADLOGIN,
-                           NOTHING, name, FC_CONN, connect_fail);
+    connect_flow_terminate(d, "CON", "Connect", "Login throttled",
+                           DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
+                           connect_fail);
     return CONNECT_RESULT_TERMINATED;
   }
 
@@ -177,7 +180,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       ENDLOG;
     }
     if (--(d->retries_left) <= 0) {
-      descriptor_shutdown(d, R_BADLOGIN);
+      descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_BADLOGIN);
       return CONNECT_RESULT_TERMINATED;
     }
     return CONNECT_RESULT_RETRY;
@@ -195,7 +198,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       free_mbuf(buff);
       ENDLOG;
     }
-    d->flags |= DS_CONNECTED;
+    d->is_connected = true;
     d->connected_at = time(0);
     d->player = player;
     set_lastsite(d, nullptr);
@@ -204,13 +207,15 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
   }
 
   if (!(mudconf.control_flags & CF_LOGIN)) {
-    connect_flow_terminate(d, "CON", "Connect", "Logins Disabled", R_GAMEDOWN,
-                           player, name, FC_CONN_DOWN, mudconf.down_msg);
+    connect_flow_terminate(d, "CON", "Connect", "Logins Disabled",
+                           DESCRIPTOR_SHUTDOWN_GAMEDOWN, player, name,
+                           FC_CONN_DOWN, mudconf.down_msg);
     return CONNECT_RESULT_TERMINATED;
   }
 
-  connect_flow_terminate(d, "CON", "Connect", "Game Full", R_GAMEFULL, player,
-                         name, FC_CONN_FULL, mudconf.full_msg);
+  connect_flow_terminate(d, "CON", "Connect", "Game Full",
+                         DESCRIPTOR_SHUTDOWN_GAMEFULL, player, name,
+                         FC_CONN_FULL, mudconf.full_msg);
   return CONNECT_RESULT_TERMINATED;
 }
 
@@ -221,22 +226,25 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   char *buff;
 
   if (!(mudconf.control_flags & CF_LOGIN)) {
-    connect_flow_terminate(d, "CRE", "Create", "Logins Disabled", R_GAMEDOWN,
-                           NOTHING, name, FC_CONN_DOWN, mudconf.down_msg);
+    connect_flow_terminate(d, "CRE", "Create", "Logins Disabled",
+                           DESCRIPTOR_SHUTDOWN_GAMEDOWN, NOTHING, name,
+                           FC_CONN_DOWN, mudconf.down_msg);
     return CONNECT_RESULT_TERMINATED;
   }
 
   nplayers = mudconf.max_players < 0 ? mudconf.max_players
                                      : connect_flow_count_connected();
   if (nplayers > mudconf.max_players) {
-    connect_flow_terminate(d, "CRE", "Create", "Game Full", R_GAMEFULL, NOTHING,
-                           name, FC_CONN_FULL, mudconf.full_msg);
+    connect_flow_terminate(d, "CRE", "Create", "Game Full",
+                           DESCRIPTOR_SHUTDOWN_GAMEFULL, NOTHING, name,
+                           FC_CONN_FULL, mudconf.full_msg);
     return CONNECT_RESULT_TERMINATED;
   }
 
   if (!login_throttle_allow(d->addr)) {
-    connect_flow_terminate(d, "CRE", "Create", "Login throttled", R_BADLOGIN,
-                           NOTHING, name, FC_CONN, create_fail);
+    connect_flow_terminate(d, "CRE", "Create", "Login throttled",
+                           DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
+                           create_fail);
     return CONNECT_RESULT_TERMINATED;
   }
 
@@ -264,7 +272,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   }
   move_object(player, mudconf.start_room);
 
-  d->flags |= DS_CONNECTED;
+  d->is_connected = true;
   d->connected_at = time(0);
   d->player = player;
   set_lastsite(d, nullptr);

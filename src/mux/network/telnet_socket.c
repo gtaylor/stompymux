@@ -14,7 +14,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/network/connect_flow.h"
-#include "mux/network/input_flow.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -22,7 +21,6 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/server_state.h"
-#include "mux/support/red_black_tree.h"
 
 static struct event *listen_sock_ev;
 #ifdef IPV6_SUPPORT
@@ -33,10 +31,6 @@ int mux_bound_socket = -1;
 #ifdef IPV6_SUPPORT
 int mux_bound_socket6 = -1;
 #endif
-int ndescriptors = 0;
-
-Descriptor *descriptor_list = nullptr;
-
 static void accept_new_connection(evutil_socket_t sock, short event, void *arg);
 static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
                                   int saddr_len);
@@ -47,103 +41,6 @@ void descriptor_write(Descriptor *d, const char *buffer, size_t size) {
     telnet_send(d->telnet, buffer, size);
   else
     bufferevent_write(d->sock_buff, buffer, size);
-}
-
-static void telnet_socket_free_queues(Descriptor *d) {
-  d->input_tail = 0;
-  memset(d->input, 0, sizeof(d->input));
-}
-
-int descriptor_compare(void *vleft, void *vright, void *token) {
-  DbRef left = (DbRef)vleft;
-  DbRef right = (DbRef)vright;
-
-  return (left > right) - (left < right);
-}
-
-void descriptor_hash_add(Descriptor *d) {
-  Descriptor *hdesc;
-
-  descriptor_retain(d);
-
-  hdesc =
-      (Descriptor *)red_black_tree_find(mudstate.desctree, (void *)d->player);
-  d->hashnext = hdesc;
-  red_black_tree_insert(mudstate.desctree, (void *)d->player, d);
-}
-
-static void desc_delhash(Descriptor *d) {
-  Descriptor *hdesc = nullptr;
-  char buffer[4096];
-
-  hdesc =
-      (Descriptor *)red_black_tree_find(mudstate.desctree, (void *)d->player);
-  if (!hdesc) {
-    snprintf(buffer, 4096,
-             "desc_delhash: unable to find player(%ld)'s descriptors from "
-             "hashtable.\n",
-             d->player);
-    log_text(buffer);
-    return;
-  }
-
-  if (hdesc == d && hdesc->hashnext) {
-    red_black_tree_insert(mudstate.desctree, (void *)d->player, d->hashnext);
-    d->hashnext = nullptr;
-    descriptor_release(d);
-    return;
-  } else if (hdesc == d) {
-    red_black_tree_delete(mudstate.desctree, (void *)d->player);
-    descriptor_release(d);
-    return;
-  }
-
-  while (hdesc->hashnext != nullptr) {
-    if (hdesc->hashnext == d) {
-      hdesc->hashnext = d->hashnext;
-      d->hashnext = nullptr;
-      descriptor_release(d);
-      break;
-    }
-    hdesc = hdesc->hashnext;
-  }
-  return;
-}
-
-void descriptor_retain(Descriptor *d) { d->refcount++; }
-
-void descriptor_release(Descriptor *d) {
-  d->refcount--;
-  if (d->refcount == 0) {
-    dprintk("%p destructing", d);
-    telnet_socket_free_queues(d);
-
-    descriptor_flow_destroy(d);
-    if (d->descriptor) {
-      fsync(d->descriptor);
-      event_free(d->sock_ev);
-      d->sock_ev = nullptr;
-      shutdown(d->descriptor, 2);
-      close(d->descriptor);
-    }
-    d->descriptor = 0;
-    descriptor_telnet_destroy(d);
-    if (d->sock_buff)
-      bufferevent_free(d->sock_buff);
-    d->sock_buff = nullptr;
-
-    if (d->prev) {
-      d->prev->next = d->next;
-    } else { /* d was the first one! */
-      descriptor_list = d->next;
-    }
-
-    if (d->next)
-      d->next->prev = d->prev;
-
-    ndescriptors--;
-    free(d);
-  }
 }
 
 static int bind_mux_socket(int port) {
@@ -202,7 +99,8 @@ int eradicate_broken_fd(int fd) {
   struct stat statbuf;
   Descriptor *d, *dtemp;
 
-  DESC_SAFEITER_ALL(d, dtemp) {
+  for (d = descriptor_first(); d != nullptr; d = dtemp) {
+    dtemp = descriptor_next(d);
     if ((fd && d->descriptor == fd) ||
         (!fd && fstat(d->descriptor, &statbuf) < 0)) {
       /* An invalid player connection... eject, eject, eject. */
@@ -211,7 +109,7 @@ int eradicate_broken_fd(int fd) {
                 d->player);
       event_del(d->sock_ev);
       close(d->descriptor);
-      descriptor_shutdown(d, R_SOCKDIED);
+      descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
     }
   }
   if (mux_bound_socket != -1 && fstat(mux_bound_socket, &statbuf) < 0) {
@@ -236,8 +134,8 @@ void accept_client_input(evutil_socket_t fd, short event, void *arg) {
   if (connection->descriptor != fd)
     return;
 
-  if (connection->flags & DS_AUTODARK) {
-    connection->flags &= ~DS_AUTODARK;
+  if (connection->is_autodark) {
+    connection->is_autodark = false;
     s_flags(connection->player, obj_flags(connection->player) & ~DARK);
   }
   descriptor_retain(connection);
@@ -250,9 +148,9 @@ void accept_client_input(evutil_socket_t fd, short event, void *arg) {
 static void bsd_write_callback(struct bufferevent *bufev, void *arg) {
   Descriptor *d = arg;
 
-  if (d->flush_before_close &&
+  if (d->is_flush_before_close &&
       evbuffer_get_length(bufferevent_get_output(bufev)) == 0) {
-    d->flush_before_close = 0;
+    d->is_flush_before_close = false;
     descriptor_release(d); // NOLINT(clang-analyzer-unix.Malloc)
   }
 }
@@ -326,65 +224,6 @@ static void accept_new_connection(evutil_socket_t sock, short event,
   return;
 }
 
-/*
- * Disconnect reasons that get written to the logfile
- */
-
-static const char *disc_reasons[] = {"Unspecified",
-                                     "Quit",
-                                     "Inactivity Timeout",
-                                     "Booted",
-                                     "Remote Close or Net Failure",
-                                     "Game Shutdown",
-                                     "Login Retry Limit",
-                                     "Logins Disabled",
-                                     "Too Many Connected Players"};
-
-/*
- * Disconnect reasons that get fed to A_ADISCONNECT via
- * descriptor_announce_disconnect
- */
-
-static const char *disc_messages[] = {"unknown",  "quit",     "timeout",
-                                      "boot",     "netdeath", "shutdown",
-                                      "badlogin", "nologins", "gamefull"};
-
-void descriptor_shutdown(Descriptor *d, int reason) {
-  d->flags |= DS_DEAD;
-  if (d->flags & DS_CONNECTED) {
-    fcache_dump(d, FC_QUIT);
-    if (reason == R_QUIT && d->sock_buff != nullptr &&
-        evbuffer_get_length(bufferevent_get_output(d->sock_buff)) > 0) {
-      d->flush_before_close = 1;
-      descriptor_retain(d);
-      event_del(d->sock_ev);
-    }
-
-    log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
-              "[%d/%s] Logout by %s(#%ld), <Reason: %s>", d->descriptor,
-              d->addr, Name(d->player), d->player, disc_reasons[reason]);
-
-    /*
-     * If requested, write an accounting record of the form: * *
-     * * * * * Plyr# Flags Cmds ConnTime Loc [Site]
-     * <DiscRsn>  * *  * Name
-     */
-
-    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%ld %s %d %ld %ld [%s] <%s> %s",
-              d->player,
-              decode_flags(GOD, obj_flags(d->player), obj_flags2(d->player),
-                           obj_flags3(d->player)),
-              d->command_count, mudstate.now - d->connected_at,
-              obj_location(d->player), d->addr, disc_reasons[reason],
-              Name(d->player));
-
-    descriptor_announce_disconnect(d->player, d, disc_messages[reason]);
-    desc_delhash(d);
-  }
-  descriptor_release(d); // NOLINT(clang-analyzer-unix.Malloc)
-  /* dprintk("shutdown."); */
-}
-
 static void make_nonblocking(int s) {
   long flags = 0;
 
@@ -410,7 +249,6 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   memset(d, 0, sizeof(Descriptor));
 
   d->descriptor = s;
-  d->flags = 0;
   d->connected_at = mudstate.now;
   d->retries_left = mudconf.retry_limit;
   d->command_count = 0;
@@ -493,7 +331,7 @@ static int process_input(Descriptor *d) {
   char buf[LBUF_SIZE];
   int got;
 
-  if (d->flags & DS_DEAD) {
+  if (d->is_dead) {
     dprintk("Bailing on process_input %p %d %s %ld", d, d->descriptor,
             (d->player ? Name(d->player) : ""), d->player);
     return 0;
@@ -510,7 +348,7 @@ static int process_input(Descriptor *d) {
       dprintk("error %s (errno %d) read on fd %d descriptor %p %s(%ld)\n",
               strerror(errno), errno, d->descriptor, d,
               (d->player ? Name(d->player) : ""), d->player);
-      descriptor_shutdown(d, R_SOCKDIED);
+      descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
       return 1;
     }
   }
@@ -532,7 +370,8 @@ static int process_input(Descriptor *d) {
 
 void flush_sockets() {
   Descriptor *d, *dnext;
-  DESC_SAFEITER_ALL(d, dnext) {
+  for (d = descriptor_first(); d != nullptr; d = dnext) {
+    dnext = descriptor_next(d);
     if (d->sock_buff != nullptr) {
       struct evbuffer *output = bufferevent_get_output(d->sock_buff);
 
@@ -546,7 +385,8 @@ void flush_sockets() {
 void close_sockets(int emergency, const char *message) {
   Descriptor *d, *dnext;
 
-  DESC_SAFEITER_ALL(d, dnext) {
+  for (d = descriptor_first(); d != nullptr; d = dnext) {
+    dnext = descriptor_next(d);
     if (emergency) {
       if (write(d->descriptor, message, strlen(message)) < 0)
         log_perror("NET", "FAIL", nullptr, "write");
@@ -567,7 +407,7 @@ void close_sockets(int emergency, const char *message) {
     } else {
       descriptor_queue_string(d, message);
       descriptor_queue_write(d, "\r\n", 2);
-      descriptor_shutdown(d, R_GOING_DOWN);
+      descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_GOING_DOWN);
     }
   }
   mux_release_socket();

@@ -36,7 +36,8 @@ void make_portlist(DbRef player, DbRef target, char *buff, char **bufc) {
   Descriptor *d;
   int i = 0;
 
-  DESC_ITER_CONN(d) {
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
     if (d->player == target) {
       safe_str(tprintf("%d ", d->descriptor), buff, bufc);
       i = 1;
@@ -101,7 +102,7 @@ struct timeval update_quotas(struct timeval last, struct timeval current) {
             (mudconf.timeslice > 0 ? mudconf.timeslice : 1);
 
   if (nslices > 0) {
-    DESC_ITER_ALL(d) {
+    for (d = descriptor_first(); d != nullptr; d = descriptor_next(d)) {
       d->quota += mudconf.cmd_quota_incr * nslices;
       if (d->quota > mudconf.cmd_quota_max)
         d->quota = mudconf.cmd_quota_max;
@@ -128,7 +129,8 @@ void raw_notify_raw(DbRef player, const char *msg, const char *append) {
   if (!is_connected(player))
     return;
 
-  DESC_ITER_PLAYER(player, d) {
+  for (d = descriptor_first_player(player); d != nullptr;
+       d = descriptor_next_player(d)) {
     descriptor_queue_string(d, msg);
     if (append != nullptr)
       descriptor_queue_write(d, append, (int)strlen(append));
@@ -154,7 +156,10 @@ void notify_printf(DbRef player, const char *format, ...) {
   strncat(buffer, "\r\n", LBUF_SIZE - 1);
   buffer[LBUF_SIZE - 1] = '\0';
 
-  DESC_ITER_PLAYER(player, d) { descriptor_queue_string(d, buffer); }
+  for (d = descriptor_first_player(player); d != nullptr;
+       d = descriptor_next_player(d)) {
+    descriptor_queue_string(d, buffer);
+  }
 }
 
 void raw_notify_newline(DbRef player) {
@@ -167,7 +172,10 @@ void raw_notify_newline(DbRef player) {
   if (!is_connected(player))
     return;
 
-  DESC_ITER_PLAYER(player, d) { descriptor_queue_write(d, "\r\n", 2); }
+  for (d = descriptor_first_player(player); d != nullptr;
+       d = descriptor_next_player(d)) {
+    descriptor_queue_write(d, "\r\n", 2);
+  }
 }
 
 /*
@@ -187,7 +195,8 @@ void raw_broadcast(int inflags, const char *template, ...) {
   vsnprintf(buff, LBUF_SIZE, template, ap);
   buff[LBUF_SIZE - 1] = '\0';
 
-  DESC_ITER_CONN(d) {
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
     if ((obj_flags(d->player) & inflags) == inflags) {
       descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
@@ -285,8 +294,6 @@ static const char *time_format_2(time_t dt) {
   return buf;
 }
 
-void descriptor_hash_add(Descriptor *);
-
 void announce_connect(DbRef player, Descriptor *d) {
   DbRef loc, aowner, temp;
   DbRef zone, obj;
@@ -301,8 +308,9 @@ void announce_connect(DbRef player, Descriptor *d) {
   descriptor_hash_add(d);
 
   count = 0;
-  DESC_ITER_CONN(dtemp)
-  count++;
+  for (dtemp = descriptor_first_connected(); dtemp != nullptr;
+       dtemp = descriptor_next_connected(dtemp))
+    count++;
 
   if (mudstate.record_players < count)
     mudstate.record_players = count;
@@ -330,7 +338,9 @@ void announce_connect(DbRef player, Descriptor *d) {
         "Your PAGE LOCK is set. You may be unable to receive some pages.");
   }
   num = 0;
-  DESC_ITER_PLAYER(player, dtemp) num++;
+  for (dtemp = descriptor_first_player(player); dtemp != nullptr;
+       dtemp = descriptor_next_player(dtemp))
+    num++;
 
   if (num < 2) {
     snprintf(buf, LBUF_SIZE, "%s has connected.", Name(player));
@@ -438,7 +448,9 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   }
   loc = obj_location(player);
   num = 0;
-  DESC_ITER_PLAYER(player, dtemp) num++;
+  for (dtemp = descriptor_first_player(player); dtemp != nullptr;
+       dtemp = descriptor_next_player(dtemp))
+    num++;
 
   temp = mudstate.curr_enactor;
   mudstate.curr_enactor = player;
@@ -519,9 +531,9 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                          Name(player), player, typeof_obj(zone)));
       }
     }
-    if (d->flags & DS_AUTODARK) {
+    if (d->is_autodark) {
       s_flags(d->player, obj_flags(d->player) & ~DARK);
-      d->flags &= ~DS_AUTODARK;
+      d->is_autodark = false;
     }
 
   } else {
@@ -544,12 +556,13 @@ int boot_off(DbRef player, const char *message) {
   int count;
 
   count = 0;
-  DESC_SAFEITER_PLAYER(player, d, dnext) {
+  for (d = descriptor_first_player(player); d != nullptr; d = dnext) {
+    dnext = descriptor_next_player(d);
     if (message && *message) {
       descriptor_queue_string(d, message);
       descriptor_queue_string(d, "\r\n");
     }
-    descriptor_shutdown(d, R_BOOT);
+    descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_BOOT);
     count++;
   }
   return count;
@@ -560,13 +573,14 @@ int boot_by_port(int port, int no_god, char *message) {
   int count;
 
   count = 0;
-  DESC_SAFEITER_ALL(d, dnext) {
+  for (d = descriptor_first(); d != nullptr; d = dnext) {
+    dnext = descriptor_next(d);
     if ((d->descriptor == port) && (!no_god || !is_god(d->player))) {
       if (message && *message) {
         descriptor_queue_string(d, message);
         descriptor_queue_string(d, "\r\n");
       }
-      descriptor_shutdown(d, R_BOOT);
+      descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_BOOT);
       count++;
     }
   }
@@ -585,7 +599,8 @@ void descriptor_reload(DbRef player) {
   DbRef aowner;
   Flag aflags;
 
-  DESC_ITER_PLAYER(player, d) {
+  for (d = descriptor_first_player(player); d != nullptr;
+       d = descriptor_next_player(d)) {
     buf = attribute_parent_get(player, A_TIMEOUT, &aowner, &aflags);
     if (buf) {
       d->timeout = clamped_atoi(buf);
@@ -607,7 +622,8 @@ int fetch_idle(DbRef target) {
   int result, idletime;
 
   result = -1;
-  DESC_ITER_PLAYER(target, d) {
+  for (d = descriptor_first_player(target); d != nullptr;
+       d = descriptor_next_player(d)) {
     idletime = (int)(mudstate.now - d->last_time);
     if ((result == -1) || (idletime < result))
       result = idletime;
@@ -620,7 +636,8 @@ int fetch_connect(DbRef target) {
   int result, conntime;
 
   result = -1;
-  DESC_ITER_PLAYER(target, d) {
+  for (d = descriptor_first_player(target); d != nullptr;
+       d = descriptor_next_player(d)) {
     conntime = (int)(mudstate.now - d->connected_at);
     if (conntime > result)
       result = conntime;
@@ -653,7 +670,8 @@ static void dump_users(Descriptor *e, char *match) {
   descriptor_queue_string(e, "Player Name         On For  Idle ");
   descriptor_queue_string(e, "     Room    Cmds Host\r\n");
   count = 0;
-  DESC_ITER_CONN(d) {
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
     if (match && !(string_prefix(Name(d->player), match)))
       continue;
     count++;
@@ -661,7 +679,7 @@ static void dump_users(Descriptor *e, char *match) {
     fp = flist;
     sp = slist;
     if (is_hidden(d->player)) {
-      if (d->flags & DS_AUTODARK)
+      if (d->is_autodark)
         *fp++ = 'd';
       else if (is_dark(d->player))
         *fp++ = 'D';
@@ -727,7 +745,7 @@ void do_quit(DbRef player, DbRef cause, int key) {
     notify(player, "quit is only available from an active connection.");
     return;
   }
-  descriptor_shutdown(descriptor, R_QUIT);
+  descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_QUIT);
 }
 
 int descriptor_command(Descriptor *d, char *command) {
@@ -740,7 +758,7 @@ int descriptor_command(Descriptor *d, char *command) {
      alive. This does not increment command count or idle time and is a
      good alternative to a lot of the current anti-disconnectors out there.
   */
-  if (!strcasecmp(command, "IDLE") && d->flags & DS_CONNECTED) {
+  if (!strcasecmp(command, "IDLE") && d->is_connected) {
     mudstate.curr_player = d->player;
     mudstate.curr_enactor = d->player;
     mudstate.debug_cmd = "idle";
@@ -853,7 +871,8 @@ void make_ulist(DbRef player, char *buff, char **bufc) {
   char *cp;
 
   cp = *bufc;
-  DESC_ITER_CONN(d) {
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
     if (!is_wizard(player) && is_hidden(d->player))
       continue;
     if (cp != *bufc)
@@ -875,7 +894,8 @@ DbRef find_connected_name(DbRef player, char *name) {
   DbRef found;
 
   found = NOTHING;
-  DESC_ITER_CONN(d) {
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
     if (is_good_obj(player) && !is_wizard(player) && is_hidden(d->player))
       continue;
     if (!string_prefix(Name(d->player), name))
@@ -885,16 +905,6 @@ DbRef find_connected_name(DbRef player, char *name) {
     found = d->player;
   }
   return found;
-}
-
-Descriptor *descriptor_find_by_fd(int fd) {
-  Descriptor *d;
-
-  DESC_ITER_CONN(d) {
-    if (d->descriptor == fd)
-      return d;
-  }
-  return nullptr;
 }
 
 void descriptor_run_command(Descriptor *d, char *command) {

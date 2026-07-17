@@ -55,22 +55,23 @@ void check_idle(void) {
   Descriptor *d, *dnext;
   time_t idletime;
 
-  DESC_SAFEITER_ALL(d, dnext) {
-    if (d->flags & DS_CONNECTED) {
+  for (d = descriptor_first(); d != nullptr; d = dnext) {
+    dnext = descriptor_next(d);
+    if (d->is_connected) {
       idletime = mudstate.now - d->last_time;
       if ((idletime > d->timeout) && !can_idle(d->player)) {
         descriptor_queue_string(d, "*** Inactivity Timeout ***\r\n");
-        descriptor_shutdown(d, R_TIMEOUT);
+        descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
       } else if (mudconf.idle_wiz_dark && (idletime > mudconf.idle_timeout) &&
                  can_idle(d->player) && !is_dark(d->player)) {
         s_flags(d->player, obj_flags(d->player) | DARK);
-        d->flags |= DS_AUTODARK;
+        d->is_autodark = true;
       }
     } else {
       idletime = mudstate.now - d->connected_at;
       if (idletime > mudconf.conn_timeout) {
         descriptor_queue_string(d, "*** Login Timeout ***\r\n");
-        descriptor_shutdown(d, R_TIMEOUT);
+        descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
       }
     }
   }

@@ -64,7 +64,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
   snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
   d->terminal_width = 80;
   d->terminal_height = 25;
-  d->charset_ascii = 1;
+  d->is_charset_ascii = true;
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_NAWS);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
@@ -93,7 +93,10 @@ static int telnet_connected_count(void) {
   Descriptor *d;
   int count = 0;
 
-  DESC_ITER_CONN(d) { count++; }
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
+    count++;
+  }
   return count;
 }
 
@@ -115,7 +118,7 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
       d->input_size = 0;
       if (d->flow != nullptr) {
         descriptor_flow_handle(d, d->input);
-      } else if (d->flags & DS_CONNECTED) {
+      } else if (d->is_connected) {
         descriptor_run_command(d, d->input);
       } else {
         /* Every not-yet-connected descriptor has an active connect flow
@@ -123,13 +126,13 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
          * went wrong starting it. */
         dprintk("no active flow on unauthenticated %p fd %d, bailing.", d,
                 d->descriptor);
-        if (!(d->flags & DS_DEAD))
-          descriptor_shutdown(d, R_QUIT);
+        if (!d->is_dead)
+          descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_QUIT);
         break;
       }
       memset(d->input, 0, sizeof(d->input));
       d->input_tail = 0;
-      if (d->flags & DS_DEAD)
+      if (d->is_dead)
         break;
     } else if (current == '\b' || current == 0x7f) {
       if (current == 127)
@@ -168,9 +171,9 @@ static void telnet_send_charset_request(Descriptor *d) {
   static const char request[] = {
       telnet_charset_request, ';', 'U', 'S', '-', 'A', 'S', 'C', 'I', 'I'};
 
-  if (d->charset_request_pending)
+  if (d->is_charset_request_pending)
     return;
-  d->charset_request_pending = 1;
+  d->is_charset_request_pending = true;
   telnet_subnegotiation(d->telnet, telnet_charset_option, request,
                         sizeof(request));
 }
@@ -185,7 +188,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     return;
 
   if (buffer[0] == telnet_charset_accepted) {
-    d->charset_request_pending = 0;
+    d->is_charset_request_pending = false;
     if (!telnet_charset_is_ascii(buffer + 1, size - 1)) {
       log_error(LOG_PROBLEMS, "TELNET", "CHARSET",
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
@@ -193,14 +196,14 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     return;
   }
   if (buffer[0] == telnet_charset_rejected) {
-    d->charset_request_pending = 0;
+    d->is_charset_request_pending = false;
     return;
   }
   if (buffer[0] != telnet_charset_request || size < 3) {
     telnet_send_charset_rejected(d->telnet);
     return;
   }
-  if (d->charset_request_pending) {
+  if (d->is_charset_request_pending) {
     telnet_send_charset_rejected(d->telnet);
     return;
   }
@@ -211,7 +214,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
     if (current != size && buffer[current] != separator)
       continue;
     if (telnet_charset_is_ascii(buffer + start, current - start)) {
-      d->charset_ascii = 1;
+      d->is_charset_ascii = true;
       telnet_send_charset_accepted(d->telnet);
       return;
     }
@@ -224,7 +227,7 @@ static void telnet_handle_gmcp(Descriptor *d, const char *buffer, size_t size) {
   static const char core_ping[] = "Core.Ping";
   size_t package_size = sizeof(core_ping) - 1;
 
-  if (!d->gmcp_enabled || size < package_size ||
+  if (!d->is_gmcp_enabled || size < package_size ||
       memcmp(buffer, core_ping, package_size) != 0 ||
       (size > package_size && buffer[package_size] != ' '))
     return;
@@ -284,21 +287,22 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
       telnet_send_mssp(telnet);
-    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 && !d->mccp_enabled)
+    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
+             !d->is_mccp_enabled)
       telnet_begin_compress2(telnet);
     else if (event->neg.telopt == telnet_charset_option)
       telnet_send_charset_request(d);
     else if (event->neg.telopt == telnet_gmcp_option)
-      d->gmcp_enabled = 1;
+      d->is_gmcp_enabled = true;
     break;
   case TELNET_EV_DONT:
     if (event->neg.telopt == telnet_charset_option)
-      d->charset_request_pending = 0;
+      d->is_charset_request_pending = false;
     else if (event->neg.telopt == telnet_gmcp_option)
-      d->gmcp_enabled = 0;
+      d->is_gmcp_enabled = false;
     break;
   case TELNET_EV_COMPRESS:
-    d->mccp_enabled = event->compress.state;
+    d->is_mccp_enabled = event->compress.state != 0;
     break;
   case TELNET_EV_WONT:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE) {
@@ -331,7 +335,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     break;
   case TELNET_EV_ERROR:
     log_error(LOG_PROBLEMS, "TELNET", "ERROR", "%s", event->error.msg);
-    descriptor_shutdown(d, R_SOCKDIED);
+    descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
     break;
   case TELNET_EV_IAC:
   case TELNET_EV_ZMP:

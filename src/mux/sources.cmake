@@ -25,6 +25,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua.c
   ${MUX_MODULE_DIR}/lua/mux_package.c
   ${MUX_MODULE_DIR}/network/connect_flow.c
+  ${MUX_MODULE_DIR}/network/descriptor.c
   ${MUX_MODULE_DIR}/network/input_flow.c
   ${MUX_MODULE_DIR}/network/mux_event.c
   ${MUX_MODULE_DIR}/network/netcommon.c
