@@ -138,7 +138,6 @@ constexpr int A_MAPCOLOR = 147;   /* ANSIMAP color scheme */
 constexpr int A_LASTPAGE = 200;  /* Player last paged */
 constexpr int A_DAILY = 204;     /* Daily attribute to be executed */
 constexpr int A_LSPEECH = 209;   /* Speechlocks */
-constexpr int A_PROGCMD = 210;   /* Command for exectution by @prog */
 constexpr int A_DESTROYER = 212; /* Who is destroying this object? */
 constexpr int A_UNUSED1 = 213;   /* Old luck.c, now unused. */
 

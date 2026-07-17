@@ -237,6 +237,11 @@ NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
                        {"events", 1, CA_WIZARD, TWARP_EVENTS | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
+/*
+ * Implement the @@ (comment) command. Very cpu-intensive :-)
+ */
+void do_comment(DbRef player, DbRef cause, int key) {}
+
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
  * hash table.
@@ -557,19 +562,7 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_UNPARSE,
      {(GenericFnPtr)do_pemit}},
     {"@power", nullptr, 0, 0, CS_TWO_ARG, {(GenericFnPtr)do_power}},
-    {"@program",
-     nullptr,
-     CA_PUBLIC,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_prog}},
     {"@ps", ps_sw, 0, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_ps}},
-    {"@quitprogram",
-     nullptr,
-     CA_PUBLIC,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_quitprog}},
     {"@readcache",
      nullptr,
      CA_WIZARD,

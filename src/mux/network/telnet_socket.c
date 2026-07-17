@@ -128,20 +128,6 @@ void descriptor_release(Descriptor *d) {
     dprintk("%p destructing", d);
     telnet_socket_free_queues(d);
 
-    if (d->program_data != nullptr) {
-      int num = 0;
-      Descriptor *dtemp;
-      DESC_ITER_PLAYER(d->player, dtemp) num++;
-
-      if (num == 0) {
-        int index;
-
-        for (index = 0; index < MAX_GLOBAL_REGS; index++) {
-          free_lbuf(d->program_data->wait_regs[index]);
-        }
-        free(d->program_data);
-      }
-    }
     telnet_socket_clear_strings(d);
     if (d->descriptor) {
       fsync(d->descriptor);
@@ -442,7 +428,6 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   memset(d->input, 0, sizeof(d->input));
   d->input_tail = 0;
   d->quota = mudconf.cmd_quota_max;
-  d->program_data = nullptr;
   d->last_time = 0;
   d->hashnext = nullptr;
   getnameinfo((struct sockaddr *)saddr, (socklen_t)saddr_len, d->addr,

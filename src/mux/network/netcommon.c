@@ -1083,28 +1083,11 @@ static int check_connect(Descriptor *d, char *msg) {
       d->player = player;
       set_lastsite(d, nullptr);
 
-      /* Check to see if the player is currently running
-       * an @program. If so, drop the new descriptor into
-       * it.
-       */
-
-      DESC_ITER_PLAYER(player, d2) {
-        if (d2->program_data != nullptr) {
-          d->program_data = d2->program_data;
-          break;
-        }
-      }
-
       buff = attribute_get(player, A_LAST, &aowner, &aflags);
       if ((buff == nullptr) || (*buff == '\0'))
         fcache_dump(d, FC_CREA_NEW);
       free_lbuf(buff);
       announce_connect(player, d);
-
-      /* If stuck in an @prog, show the prompt */
-
-      if (d->program_data != nullptr)
-        descriptor_queue_string(d, ">\377\371");
 
     } else if (!(mudconf.control_flags & CF_LOGIN)) {
       failconn("CON", "Connect", "Logins Disabled", d, R_GAMEDOWN, player,
@@ -1537,8 +1520,5 @@ void descriptor_run_command(Descriptor *d, char *command) {
     }
     d->quota--;
   }
-  if (d->program_data != nullptr)
-    descriptor_program_handle(d, command);
-  else
-    descriptor_command(d, command);
+  descriptor_command(d, command);
 }

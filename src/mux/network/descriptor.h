@@ -22,12 +22,6 @@ constexpr int R_GAMEFULL = 8;   /* Too many players logged in */
 
 typedef struct telnet_t telnet_t;
 
-typedef struct ProgramData ProgramData;
-struct ProgramData {
-  DbRef wait_cause;
-  char *wait_regs[MAX_GLOBAL_REGS];
-};
-
 typedef struct Descriptor Descriptor;
 struct Descriptor {
   int descriptor;
@@ -61,9 +55,6 @@ struct Descriptor {
   time_t last_time;
   int quota;
   int refcount;
-  int wait_for_input; /* Used by @prog */
-  DbRef wait_cause;   /* Used by @prog */
-  ProgramData *program_data;
   struct Descriptor *hashnext;
   struct Descriptor *next;
   struct Descriptor *prev;

@@ -185,8 +185,6 @@ Attribute attr_table[] = {
     {"PCequip", A_PCEQUIP, AF_MDARK, nullptr},
     {"Pilot", A_PILOTNUM, AF_MDARK, nullptr},
     {"Prefix", A_PREFIX, AF_ODARK | AF_NOPROG, nullptr},
-    {"ProgCmd", A_PROGCMD, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
-     nullptr},
     {"QueueMax", A_QUEUEMAX, AF_MDARK | AF_WIZARD | AF_NOPROG, nullptr},
     {"Ranknum", A_RANKNUM, AF_MDARK | AF_WIZARD, nullptr},
     {"ReceiveLock", A_LRECEIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,

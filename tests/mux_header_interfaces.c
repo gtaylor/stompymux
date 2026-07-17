@@ -46,7 +46,6 @@
 #include "mux/network/descriptor.h"
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
-#include "mux/network/program_input.h"
 #include "mux/support/fifo.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_handler.h"

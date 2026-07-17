@@ -9,7 +9,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/funceval.c
   ${MUX_MODULE_DIR}/commands/functions.c
   ${MUX_MODULE_DIR}/commands/macro.c
-  ${MUX_MODULE_DIR}/commands/program.c
   ${MUX_MODULE_DIR}/commands/verbs.c
   ${MUX_MODULE_DIR}/communication/commac.c
   ${MUX_MODULE_DIR}/communication/comsys.c
@@ -26,7 +25,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua.c
   ${MUX_MODULE_DIR}/network/mux_event.c
   ${MUX_MODULE_DIR}/network/netcommon.c
-  ${MUX_MODULE_DIR}/network/program_input.c
   ${MUX_MODULE_DIR}/network/telnet_handler.c
   ${MUX_MODULE_DIR}/network/telnet_socket.c
   ${MUX_MODULE_DIR}/persistence/commac_persistence_sqlite.c

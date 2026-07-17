@@ -8,7 +8,6 @@
 
 #include "mux/database/db.h"
 #include "mux/network/descriptor.h"
-#include "mux/network/program_input.h"
 #include "mux/support/name_table.h"
 
 typedef struct SiteData SiteData;

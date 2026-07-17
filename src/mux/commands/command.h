@@ -80,8 +80,6 @@ void do_helpreload(DbRef, DbRef, int);      /* Reindex help articles */
 void do_history(DbRef, DbRef, int, char *); /* View various history info */
 void do_multis(DbRef, DbRef, int);
 void do_inventory(DbRef, DbRef, int);            /* Print what I am carrying */
-void do_prog(DbRef, DbRef, int, char *, char *); /* Interactive input */
-void do_quitprog(DbRef, DbRef, int, char *);     /* Quits @prog */
 void do_last(DbRef, DbRef, int, char *);         /* Get recent login info */
 void do_leave(DbRef, DbRef, int);                /* Leave the current object */
 void do_link(DbRef, DbRef, int, char *, char *); /* Set home, dropto, or dest */
