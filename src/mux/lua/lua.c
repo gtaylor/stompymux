@@ -1717,7 +1717,7 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   }
   lua_getfield(state, result_index, "action");
   field = lua_tostring(state, -1);
-  if (!field || !strcmp(field, "wait"))
+  if (!field || !strcmp(field, "repeat"))
     outcome.action = FLOW_ACTION_WAIT;
   else if (!strcmp(field, "goto"))
     outcome.action = FLOW_ACTION_GOTO;

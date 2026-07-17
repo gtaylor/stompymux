@@ -24,7 +24,7 @@ return {
   flows = {
     confirm = function(ctx)
       if ctx.input == nil then
-        return { action = "wait", prompt = "Delete this? (y/n) " }
+        return { action = "repeat", prompt = "Delete this? (y/n) " }
       end
       if ctx.input:match("^[Yy]") then
         return { action = "done", message = "Deleted." }
@@ -63,7 +63,7 @@ flows = {
   step_name = function(ctx)
     if ctx.input == nil then
       -- Just became current (flow start, or after a "goto" into it).
-      return { action = "wait", prompt = "..." }
+      return { action = "repeat", prompt = "..." }
     end
     -- ctx.input is the line the player just sent.
     return { action = "done" }
@@ -75,12 +75,12 @@ A step returns a table describing what happens next:
 
 | Field | Meaning |
 | --- | --- |
-| `action` | One of `"wait"`, `"goto"`, `"done"`, or `"cancel"`. |
+| `action` | One of `"repeat"`, `"goto"`, `"done"`, or `"cancel"`. |
 | `step` | Required with `"goto"`: the next step name in the same `flows` table. |
-| `prompt` | Text to show. With `"wait"`, omitting it repeats the current prompt. |
+| `prompt` | Text to show. With `"repeat"`, omitting it repeats the current prompt. |
 | `message` | A one-shot message shown before a `"goto"`, `"done"`, or `"cancel"` teardown. |
 
-`"wait"` stays on the current step and (re)shows its prompt - use this to
+`"repeat"` stays on the current step and (re)shows its prompt - use this to
 reject invalid input without losing progress. `"goto"` moves to a named step
 in the same table, priming it immediately (so a chain of steps with no
 intervening input runs to completion, or until an internal safety limit
@@ -97,14 +97,14 @@ data on it as the player answers each prompt:
 flows = {
   ask_name = function(ctx)
     if ctx.input == nil then
-      return { action = "wait", prompt = "Name? " }
+      return { action = "repeat", prompt = "Name? " }
     end
     ctx.flow.name = ctx.input
     return { action = "goto", step = "ask_confirm" }
   end,
   ask_confirm = function(ctx)
     if ctx.input == nil then
-      return { action = "wait", prompt = "Confirm " .. ctx.flow.name .. "? (y/n) " }
+      return { action = "repeat", prompt = "Confirm " .. ctx.flow.name .. "? (y/n) " }
     end
     -- ...
   end,
