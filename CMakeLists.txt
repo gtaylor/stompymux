@@ -411,5 +411,5 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/tests/fixtures/configuration_toml")
 endif()
 
-install(TARGETS stompymux RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS stompymux RUNTIME DESTINATION ".")
 install(DIRECTORY game/lua DESTINATION ".")

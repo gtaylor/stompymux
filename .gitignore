@@ -29,7 +29,7 @@
 /config.cache
 /game*/data/
 /game*/lib/
-/game*/bin/
+/game*/stompymux
 /game*/text/*.indx
 /game*/logs/stompymux.log*
 /buildnum.data

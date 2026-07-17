@@ -32,15 +32,15 @@ ________________________________________
 
  ctest --test-dir build --output-on-failure
 
- The CMake install step installs the built binaries and library into the
- selected prefix. To install into the working game directory:
+ The CMake install step installs the built executable into the selected
+ prefix. To install into the working game directory:
 
  cmake --install build --prefix "$PWD/game"
 
- This installs 'stompymux' and 'mkindx' under 'game/bin'.
+ This installs 'stompymux' as 'game/stompymux'.
 
- To run the example database, cd into the /game directory after installing
- the binaries, and run './Startmux'.
+ To run the example database after installing the executable, use 'just run'.
+ This launches 'game/stompymux' with core dumps enabled.
 
  S3: COMPILE-TIME DIRECTIVES
  ---------------------------
@@ -100,13 +100,13 @@ ________________________________________
 
  S5: STARTING AND CONNECTING TO YOUR GAME
  ----------------------------------------
- Once your game is compiled and your game directory is populated,
- cd to game and type:
+ Once your game is compiled and your game directory is populated, run this
+ from the repository root:
 
- ./Startmux &
+ just run
 
- This will kick off your MUX. You should see 'stompymux' and a few other
- processes related to the game under the Linux/Unix command, 'ps'.
+ This will start StompyMUX in the foreground with core dumps enabled. You
+ should see the 'stompymux' process under the Linux/Unix command, 'ps'.
  Try connecting to the port you specified in stompymux.toml and see if
  you are greeted with a connection screen.
 

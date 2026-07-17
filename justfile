@@ -36,7 +36,7 @@ install: build
     cmake --install {{build_dir}} --prefix "$PWD/game"
 
 run:
-    cd game && ./Startmux
+    cd game && ulimit -c unlimited && exec ./stompymux stompymux.toml
 
 docsite:
     npm --prefix docs run build
