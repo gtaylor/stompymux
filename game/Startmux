@@ -2,14 +2,8 @@
 #
 #	Startmux - Kick off the stompymux process.
 #
-export LD_LIBRARY_PATH=/usr/local/lib
-PATH=/usr/ucb:/bin:/usr/bin:.; export PATH
-#
 
 BIN=./bin
-DATA=./data
-LOGS=./logs
-LOGFILE=$LOGS/stompymux.log
 
 #
 #	Make sure there isn't aready a MUX running.
@@ -27,12 +21,9 @@ fi
 #	Kick off MUX
 #
 ulimit -c unlimited
-if [ -f $LOGFILE ]; then
-	mv -f $LOGFILE $LOGFILE.old
-fi
 if [ -x $BIN/stompymux ]; then
 	echo Starting stompymux binary.
-	$BIN/stompymux stompymux.toml >>$LOGFILE 2>&1
+	$BIN/stompymux stompymux.toml
 else
 	echo No binary found!
 	exit 1
