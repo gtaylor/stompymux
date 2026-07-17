@@ -152,13 +152,10 @@ void configuration_initialize(void) {
   mudconf.init_size = 1000;
   StringCopy(mudconf.conn_file, "text/connect.txt");
   StringCopy(mudconf.conn_dir, "");
-  StringCopy(mudconf.creg_file, "text/register.txt");
-  StringCopy(mudconf.regf_file, "text/create_reg.txt");
   StringCopy(mudconf.quit_file, "text/quit.txt");
   StringCopy(mudconf.down_file, "text/down.txt");
   StringCopy(mudconf.full_file, "text/full.txt");
   StringCopy(mudconf.site_file, "text/badsite.txt");
-  StringCopy(mudconf.crea_file, "text/newuser.txt");
   StringCopy(mudconf.help_dir, "help");
   StringCopy(mudconf.down_msg, "");
   StringCopy(mudconf.full_msg, "");
@@ -880,8 +877,6 @@ CONF conftable[] = {
      (void *)mudconf.conn_dir, 32},
     {"connect_file", (GenericFnPtr)cf_string, CA_DISABLED,
      (void *)mudconf.conn_file, 32},
-    {"connect_reg_file", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.creg_file, 32},
     {"dark_sleepers", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.dark_sleepers, 0},
     {"default_home", (GenericFnPtr)cf_int, CA_GOD, &mudconf.default_home, 0},
     {"down_file", (GenericFnPtr)cf_string, CA_DISABLED,
@@ -969,8 +964,6 @@ CONF conftable[] = {
     {"mech_database", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.mech_db,
      128},
     {"mud_name", (GenericFnPtr)cf_string, CA_GOD, (void *)mudconf.mud_name, 32},
-    {"newuser_file", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.crea_file, 32},
     {"notify_recursion_limit", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.ntfy_nest_lim, 0},
     {"output_limit", (GenericFnPtr)cf_int, CA_GOD, &mudconf.output_limit, 0},
@@ -1015,10 +1008,6 @@ CONF conftable[] = {
      0},
     {"read_remote_name", (GenericFnPtr)cf_bool, CA_GOD, &mudconf.read_rem_name,
      0},
-    {"register_create_file", (GenericFnPtr)cf_string, CA_DISABLED,
-     (void *)mudconf.regf_file, 32},
-    {"register_site", (GenericFnPtr)cf_site, CA_GOD,
-     (int *)&mudstate.access_list, H_REGISTRATION},
     {"retry_limit", (GenericFnPtr)cf_int, CA_GOD, &mudconf.retry_limit, 0},
     {"login_attempt_burst", (GenericFnPtr)cf_int, CA_GOD,
      &mudconf.login_attempt_burst, 0},

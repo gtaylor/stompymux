@@ -118,7 +118,7 @@ static int test_access_map_dispatch(void) {
 
 static int test_site_list_dispatch(void) {
   static const char toml[] =
-      "[sites]\nregister = ["
+      "[sites]\nforbid = ["
       "{ address = \"1.2.3.4\", mask = \"255.255.255.0\" },"
       "{ address = \"5.6.7.8\", mask = \"255.255.255.255\" },"
       "]\n";
@@ -131,9 +131,9 @@ static int test_site_list_dispatch(void) {
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
   ok = log.count == 2 &&
-       !strcmp(log.calls[0].pname, "register_site") &&
+       !strcmp(log.calls[0].pname, "forbid_site") &&
        !strcmp(log.calls[0].args, "1.2.3.4 255.255.255.0") &&
-       !strcmp(log.calls[1].pname, "register_site") &&
+       !strcmp(log.calls[1].pname, "forbid_site") &&
        !strcmp(log.calls[1].args, "5.6.7.8 255.255.255.255");
   toml_free(result);
   return ok;

@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Do we still need register.txt?
 * CLI'ify stompymux
 * Redesign login flow to be more MUDDy
 * Fix log emission to output to log dir (`logs/`)

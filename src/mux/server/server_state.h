@@ -37,15 +37,12 @@ struct ServerConfiguration {
   int port;                  /* user port */
   int conc_port;             /* concentrator port */
   int init_size;             /* initial db size */
-  char conn_file[32];        /* display on connect if no registration */
-  char conn_dir[32];         /* display on connect if no registration */
-  char creg_file[32];        /* display on connect if registration */
-  char regf_file[32];        /* display on (failed) create if reg is on */
+  char conn_file[32];        /* display on connect */
+  char conn_dir[32];         /* display on connect */
   char quit_file[32];        /* display on quit */
   char down_file[32];        /* display this file if no logins */
   char full_file[32];        /* display when max users exceeded */
   char site_file[32];        /* display if conn from bad site */
-  char crea_file[32];        /* display this on login for new users */
   char help_dir[128];        /* Help article root, relative to game directory */
   char down_msg[4096];       /* Message displayed when logins are disabled */
   char full_msg[4096];       /* Message displayed when the game is full */
@@ -427,9 +424,8 @@ constexpr int CF_EVENTCHECK = 0x0200; /* Allow events checking */
 
 /* Host information codes */
 
-constexpr int H_REGISTRATION = 0x0001; /* Registration ALWAYS on */
-constexpr int H_FORBIDDEN = 0x0002;    /* Reject all connects */
-constexpr int H_SUSPECT = 0x0004; /* Notify wizards of connects/disconnects */
+constexpr int H_FORBIDDEN = 0x0002; /* Reject all connects */
+constexpr int H_SUSPECT = 0x0004;   /* Notify wizards of connects/disconnects */
 
 /* Event flags, for noting when an event has taken place */
 

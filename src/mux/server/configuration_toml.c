@@ -82,8 +82,7 @@ static const ConfigTomlMapping config_toml_map[] = {
      CFG_KIND_SCALAR},
     {"battletech.hotloadaddshalfbthmod", "btech_hotloadaddshalfbthmod",
      CFG_KIND_SCALAR},
-    {"battletech.nofusionvtolfuel", "btech_nofusionvtolfuel",
-     CFG_KIND_SCALAR},
+    {"battletech.nofusionvtolfuel", "btech_nofusionvtolfuel", CFG_KIND_SCALAR},
     {"battletech.tankfriendly", "btech_tankfriendly", CFG_KIND_SCALAR},
     {"battletech.newcharge", "btech_newcharge", CFG_KIND_SCALAR},
     {"battletech.tl3_charge", "btech_tl3_charge", CFG_KIND_SCALAR},
@@ -100,8 +99,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"battletech.stackdamage", "btech_stackdamage", CFG_KIND_SCALAR},
     {"battletech.mw_losmap", "btech_mw_losmap", CFG_KIND_SCALAR},
     {"battletech.exile_stun_code", "btech_exile_stun_code", CFG_KIND_SCALAR},
-    {"battletech.roll_on_backwalk", "btech_roll_on_backwalk",
-     CFG_KIND_SCALAR},
+    {"battletech.roll_on_backwalk", "btech_roll_on_backwalk", CFG_KIND_SCALAR},
     {"battletech.usedmechstore", "btech_usedmechstore", CFG_KIND_SCALAR},
     {"battletech.ooc_comsys", "btech_ooc_comsys", CFG_KIND_SCALAR},
     {"battletech.idf_requires_spotter", "btech_idf_requires_spotter",
@@ -115,8 +113,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"battletech.standcareful", "btech_standcareful", CFG_KIND_SCALAR},
     {"battletech.maxtechtime", "btech_maxtechtime", CFG_KIND_SCALAR},
     {"battletech.sprint_bth", "btech_sprint_bth", CFG_KIND_SCALAR},
-    {"battletech.tsm_sprint_bonus", "btech_tsm_sprint_bonus",
-     CFG_KIND_SCALAR},
+    {"battletech.tsm_sprint_bonus", "btech_tsm_sprint_bonus", CFG_KIND_SCALAR},
     {"battletech.vtol_ice_causes_fire", "btech_vtol_ice_causes_fire",
      CFG_KIND_SCALAR},
     {"battletech.glancing_blows", "btech_glancing_blows", CFG_KIND_SCALAR},
@@ -124,8 +121,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"battletech.blzmapmode", "btech_blzmapmode", CFG_KIND_SCALAR},
     {"battletech.extended_piloting", "btech_extended_piloting",
      CFG_KIND_SCALAR},
-    {"battletech.extended_gunnery", "btech_extended_gunnery",
-     CFG_KIND_SCALAR},
+    {"battletech.extended_gunnery", "btech_extended_gunnery", CFG_KIND_SCALAR},
     {"battletech.xploss_for_mw", "btech_xploss_for_mw", CFG_KIND_SCALAR},
     {"battletech.variable_techtime", "btech_variable_techtime",
      CFG_KIND_SCALAR},
@@ -147,8 +143,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"battletech.xp.bthmod", "btech_xp_bthmod", CFG_KIND_SCALAR},
     {"battletech.xp.missilemod", "btech_xp_missilemod", CFG_KIND_SCALAR},
     {"battletech.xp.ammomod", "btech_xp_ammomod", CFG_KIND_SCALAR},
-    {"battletech.xp.defaultweapdam", "btech_defaultweapdam",
-     CFG_KIND_SCALAR},
+    {"battletech.xp.defaultweapdam", "btech_defaultweapdam", CFG_KIND_SCALAR},
     {"battletech.xp.modifier", "btech_xp_modifier", CFG_KIND_SCALAR},
     {"battletech.xp.defaultweapbv", "btech_defaultweapbv", CFG_KIND_SCALAR},
     {"battletech.xp.use_pilot_bv_mod", "btech_xp_usePilotBVMod",
@@ -170,8 +165,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.cache_width", "cache_width", CFG_KIND_SCALAR},
     {"mux.check_interval", "check_interval", CFG_KIND_SCALAR},
     {"mux.check_offset", "check_offset", CFG_KIND_SCALAR},
-    {"mux.command_quota_increment", "command_quota_increment",
-     CFG_KIND_SCALAR},
+    {"mux.command_quota_increment", "command_quota_increment", CFG_KIND_SCALAR},
     {"mux.command_quota_max", "command_quota_max", CFG_KIND_SCALAR},
     {"mux.concentrator_port", "concentrator_port", CFG_KIND_SCALAR},
     {"mux.conn_timeout", "conn_timeout", CFG_KIND_SCALAR},
@@ -209,13 +203,10 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.master_room", "master_room", CFG_KIND_SCALAR},
     {"mux.match_own_commands", "match_own_commands", CFG_KIND_SCALAR},
     {"mux.max_players", "max_players", CFG_KIND_SCALAR},
-    {"mux.newuser_file", "newuser_file", CFG_KIND_SCALAR},
-    {"mux.notify_recursion_limit", "notify_recursion_limit",
-     CFG_KIND_SCALAR},
+    {"mux.notify_recursion_limit", "notify_recursion_limit", CFG_KIND_SCALAR},
     {"mux.output_limit", "output_limit", CFG_KIND_SCALAR},
     {"mux.paranoid_allocate", "paranoid_allocate", CFG_KIND_SCALAR},
-    {"mux.parent_recursion_limit", "parent_recursion_limit",
-     CFG_KIND_SCALAR},
+    {"mux.parent_recursion_limit", "parent_recursion_limit", CFG_KIND_SCALAR},
     {"mux.pemit_far_players", "pemit_far_players", CFG_KIND_SCALAR},
     {"mux.pemit_any_object", "pemit_any_object", CFG_KIND_SCALAR},
     {"mux.player_listen", "player_listen", CFG_KIND_SCALAR},
@@ -233,7 +224,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.quit_file", "quit_file", CFG_KIND_SCALAR},
     {"mux.read_remote_desc", "read_remote_desc", CFG_KIND_SCALAR},
     {"mux.read_remote_name", "read_remote_name", CFG_KIND_SCALAR},
-    {"mux.register_create_file", "register_create_file", CFG_KIND_SCALAR},
     {"mux.retry_limit", "retry_limit", CFG_KIND_SCALAR},
     {"mux.robot_speech", "robot_speech", CFG_KIND_SCALAR},
     {"mux.see_owned_dark", "see_owned_dark", CFG_KIND_SCALAR},
@@ -253,15 +243,14 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.player_zone", "player_zone", CFG_KIND_SCALAR},
 
     /* security */
-    {"security.player_password_length_limit",
-     "player_password_length_limit", CFG_KIND_SCALAR},
+    {"security.player_password_length_limit", "player_password_length_limit",
+     CFG_KIND_SCALAR},
     {"security.password_hash_opslimit", "password_hash_opslimit",
      CFG_KIND_SCALAR},
     {"security.password_hash_memlimit", "password_hash_memlimit",
      CFG_KIND_SCALAR},
     {"security.login_attempt_burst", "login_attempt_burst", CFG_KIND_SCALAR},
-    {"security.login_attempt_refill", "login_attempt_refill",
-     CFG_KIND_SCALAR},
+    {"security.login_attempt_refill", "login_attempt_refill", CFG_KIND_SCALAR},
     {"security.login_hash_limit", "login_hash_limit", CFG_KIND_SCALAR},
 
     /* flags (FLAGSET replace-whole-set directives) */
@@ -299,7 +288,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"names.good", "good_name", CFG_KIND_STRING_LIST},
 
     /* sites */
-    {"sites.register", "register_site", CFG_KIND_SITE_LIST},
     {"sites.forbid", "forbid_site", CFG_KIND_SITE_LIST},
     {"sites.suspect", "suspect_site", CFG_KIND_SITE_LIST},
     {"sites.trust", "trust_site", CFG_KIND_SITE_LIST},
@@ -417,8 +405,8 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
 
       if (value.u.tab.value[i].type != TOML_STRING)
         continue;
-      len = strlen(value.u.tab.key[i]) + 1 + strlen(value.u.tab.value[i].u.s) +
-            1;
+      len =
+          strlen(value.u.tab.key[i]) + 1 + strlen(value.u.tab.value[i].u.s) + 1;
       args = malloc(len);
       snprintf(args, len, "%s %s", value.u.tab.key[i],
                value.u.tab.value[i].u.s);
@@ -470,8 +458,8 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       size_t len;
 
       if (entry.type != TOML_TABLE) {
-        fprintf(stderr, "configuration_toml: '%s[%d]' expected a table\n",
-                path, i);
+        fprintf(stderr, "configuration_toml: '%s[%d]' expected a table\n", path,
+                i);
         continue;
       }
       address = toml_get(entry, "address");
@@ -499,8 +487,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
  */
 
 static void configuration_toml_walk_table(toml_datum_t table,
-                                          const char *parent_path,
-                                          bool is_root,
+                                          const char *parent_path, bool is_root,
                                           ConfigDirectiveSetFn set_fn,
                                           void *ctx) {
   int i;
@@ -615,10 +602,9 @@ static bool configuration_toml_load_merged(const char *path, int depth,
       toml_free(self);
       return false;
     }
-    configuration_toml_resolve(base_dir, entry.u.s, resolved,
-                               sizeof(resolved));
+    configuration_toml_resolve(base_dir, entry.u.s, resolved, sizeof(resolved));
     if (!configuration_toml_load_merged(resolved, depth + 1, &inc_result,
-                                       errbuf, errbuf_size)) {
+                                        errbuf, errbuf_size)) {
       if (have_acc)
         toml_free(acc);
       toml_free(self);

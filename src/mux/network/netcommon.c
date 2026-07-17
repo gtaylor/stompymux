@@ -237,15 +237,11 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
 extern int fcache_conn_c;
 
 void descriptor_welcome(Descriptor *d) {
-  if (d->host_info & H_REGISTRATION)
-    fcache_dump(d, FC_CONN_REG);
-  else {
-    if (fcache_conn_c) {
-      fcache_dump_conn(d, rand() % fcache_conn_c);
-      return;
-    }
-    fcache_dump(d, FC_CONN);
+  if (fcache_conn_c) {
+    fcache_dump_conn(d, rand() % fcache_conn_c);
+    return;
   }
+  fcache_dump(d, FC_CONN);
 }
 
 static void set_lastsite(Descriptor *d, char *lastsite) {
@@ -786,8 +782,6 @@ static void dump_users(Descriptor *e, char *match, int key) {
           *fp++ = '+';
         if (d->host_info & H_FORBIDDEN)
           *sp++ = 'F';
-        if (d->host_info & H_REGISTRATION)
-          *sp++ = 'R';
         if (d->host_info & H_SUSPECT)
           *sp++ = '+';
       }
@@ -993,8 +987,7 @@ static int login_throttle_allow(const char *address) {
 static int check_connect(Descriptor *d, char *msg) {
   char *command, *user, *password, *buff;
   const char *cmdsave;
-  DbRef player, aowner;
-  long aflags;
+  DbRef player;
   int nplayers;
   Descriptor *d2;
 
@@ -1083,10 +1076,6 @@ static int check_connect(Descriptor *d, char *msg) {
       d->player = player;
       set_lastsite(d, nullptr);
 
-      buff = attribute_get(player, A_LAST, &aowner, &aflags);
-      if ((buff == nullptr) || (*buff == '\0'))
-        fcache_dump(d, FC_CREA_NEW);
-      free_lbuf(buff);
       announce_connect(player, d);
 
     } else if (!(mudconf.control_flags & CF_LOGIN)) {
@@ -1139,38 +1128,33 @@ static int check_connect(Descriptor *d, char *msg) {
                FC_CONN, create_fail, command, user, password, cmdsave);
       return 0;
     }
-    if (d->host_info & H_REGISTRATION) {
-      fcache_dump(d, FC_CREA_REG);
-    } else {
-      player = create_player(user, password, NOTHING, 0);
-      if (player == NOTHING) {
-        descriptor_queue_string(d, create_fail);
-        STARTLOG(LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
-          buff = alloc_mbuf("check_conn.LOG.badcrea");
-          snprintf(buff, MBUF_SIZE, "[%d/%s] Create of '%s' failed",
-                   d->descriptor, d->addr, user);
-          log_text(buff);
-          free_mbuf(buff);
-          ENDLOG;
-        }
-      } else {
-        STARTLOG(LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
-          buff = alloc_mbuf("check_conn.LOG.create");
-          snprintf(buff, MBUF_SIZE, "[%d/%s] Created ", d->descriptor, d->addr);
-          log_text(buff);
-          log_name(player);
-          free_mbuf(buff);
-          ENDLOG;
-        }
-        move_object(player, mudconf.start_room);
-
-        d->flags |= DS_CONNECTED;
-        d->connected_at = time(0);
-        d->player = player;
-        set_lastsite(d, nullptr);
-        fcache_dump(d, FC_CREA_NEW);
-        announce_connect(player, d);
+    player = create_player(user, password, NOTHING, 0);
+    if (player == NOTHING) {
+      descriptor_queue_string(d, create_fail);
+      STARTLOG(LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
+        buff = alloc_mbuf("check_conn.LOG.badcrea");
+        snprintf(buff, MBUF_SIZE, "[%d/%s] Create of '%s' failed",
+                 d->descriptor, d->addr, user);
+        log_text(buff);
+        free_mbuf(buff);
+        ENDLOG;
       }
+    } else {
+      STARTLOG(LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
+        buff = alloc_mbuf("check_conn.LOG.create");
+        snprintf(buff, MBUF_SIZE, "[%d/%s] Created ", d->descriptor, d->addr);
+        log_text(buff);
+        log_name(player);
+        free_mbuf(buff);
+        ENDLOG;
+      }
+      move_object(player, mudconf.start_room);
+
+      d->flags |= DS_CONNECTED;
+      d->connected_at = time(0);
+      d->player = player;
+      set_lastsite(d, nullptr);
+      announce_connect(player, d);
     }
   } else {
     descriptor_welcome(d);
@@ -1418,9 +1402,6 @@ static const char *stat_string(int strtype, int flag) {
     switch (flag) {
     case H_FORBIDDEN:
       str = "Forbidden";
-      break;
-    case H_REGISTRATION:
-      str = "Registration";
       break;
     case 0:
       str = "Unrestricted";

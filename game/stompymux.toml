@@ -189,8 +189,6 @@ login_hash_limit = 5
 # -----------------------------------------------
 
 [sites]
-# Example: Permit this site registration access.
-# register = [ { address = "140.180.0.0", mask = "255.255.0.0" } ]
 # Example: Forbid this site from connecting.
 # forbid = [ { address = "216.184.159.82", mask = "255.255.255.255" } ]
 

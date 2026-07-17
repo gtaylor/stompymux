@@ -12,10 +12,7 @@ enum : int {
   FC_CONN_SITE = 1,
   FC_CONN_DOWN = 2,
   FC_CONN_FULL = 3,
-  FC_CONN_REG = 4,
-  FC_CREA_NEW = 5,
-  FC_CREA_REG = 6,
-  FC_QUIT = 7,
+  FC_QUIT = 4,
   FC_LAST = FC_QUIT,
 };
 

@@ -34,20 +34,14 @@ FCACHE fcache[] = {{mudconf.conn_file, nullptr, "Conn"},
                    {mudconf.site_file, nullptr, "Conn/Badsite"},
                    {mudconf.down_file, nullptr, "Conn/Down"},
                    {mudconf.full_file, nullptr, "Conn/Full"},
-                   {mudconf.creg_file, nullptr, "Conn/Reg"},
-                   {mudconf.crea_file, nullptr, "Crea/Newuser"},
-                   {mudconf.regf_file, nullptr, "Crea/RegFaill"},
                    {mudconf.quit_file, nullptr, "Quit"},
                    {nullptr, nullptr, nullptr}};
 
 NameTable list_files[] = {{"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
                           {"connect", 2, CA_WIZARD, FC_CONN},
-                          {"create_register", 2, CA_WIZARD, FC_CREA_REG},
                           {"down", 1, CA_WIZARD, FC_CONN_DOWN},
                           {"full", 1, CA_WIZARD, FC_CONN_FULL},
-                          {"newuser", 1, CA_WIZARD, FC_CREA_NEW},
                           {"quit", 1, CA_WIZARD, FC_QUIT},
-                          {"register_connect", 1, CA_WIZARD, FC_CONN_REG},
                           {nullptr, 0, 0, 0}};
 
 constexpr int MAX_CONN = 100;

@@ -24,7 +24,7 @@ anything pulled in through `include`.
 | `[mux]` | Base MUX server behavior not covered by a more specific section. |
 | `[flags]` | Flags set on new players/exits/rooms/robots/things (`player`, `exit`, `room`, `robot`, `thing` arrays). |
 | `[security]` | Password hashing and login rate limiting (see below). |
-| `[sites]` | Site ACLs: `register`, `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
+| `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
 | `[access.*]` | Per-command/function/attribute permission tables (`commands`, `functions`, `attrs`, `attr_commands`, `logout_commands`, `lists`, `config`, plus the `user_attrs` array). |
 | `[aliases.*]` | Command/flag/function/attribute alias tables (`commands`, `flags`, `functions`, `attrs`, `logout_commands`). |
 | `[names]` | `bad`/`good` player-name lists. |
