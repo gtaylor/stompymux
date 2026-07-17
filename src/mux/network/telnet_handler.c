@@ -9,6 +9,7 @@
 
 #include "libtelnet.h"
 #include "mux/commands/command.h"
+#include "mux/network/input_flow.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -107,7 +108,9 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
     current = (unsigned char)buffer[iter];
     if (current == '\n') {
       d->input_size = 0;
-      if (d->flags & DS_CONNECTED) {
+      if (d->flow != nullptr) {
+        descriptor_flow_handle(d, d->input);
+      } else if (d->flags & DS_CONNECTED) {
         descriptor_run_command(d, d->input);
       } else {
         if (!descriptor_unauthenticated_command(d, d->input)) {

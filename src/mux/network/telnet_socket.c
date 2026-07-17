@@ -13,6 +13,7 @@
 #include "libtelnet.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
+#include "mux/network/input_flow.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -128,6 +129,7 @@ void descriptor_release(Descriptor *d) {
     dprintk("%p destructing", d);
     telnet_socket_free_queues(d);
 
+    descriptor_flow_destroy(d);
     telnet_socket_clear_strings(d);
     if (d->descriptor) {
       fsync(d->descriptor);
@@ -429,6 +431,7 @@ static Descriptor *initializesock(int s, struct sockaddr_storage *saddr,
   d->input_tail = 0;
   d->quota = mudconf.cmd_quota_max;
   d->last_time = 0;
+  d->flow = nullptr;
   d->hashnext = nullptr;
   getnameinfo((struct sockaddr *)saddr, (socklen_t)saddr_len, d->addr,
               sizeof(d->addr), nullptr, 0, NI_NUMERICHOST);

@@ -21,6 +21,7 @@ constexpr int R_GAMEDOWN = 7;   /* Not admitting users now */
 constexpr int R_GAMEFULL = 8;   /* Too many players logged in */
 
 typedef struct telnet_t telnet_t;
+typedef struct InputFlow InputFlow;
 
 typedef struct Descriptor Descriptor;
 struct Descriptor {
@@ -55,6 +56,7 @@ struct Descriptor {
   time_t last_time;
   int quota;
   int refcount;
+  InputFlow *flow;
   struct Descriptor *hashnext;
   struct Descriptor *next;
   struct Descriptor *prev;

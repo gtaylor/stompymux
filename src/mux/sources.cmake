@@ -23,6 +23,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/help/help_index.c
   ${MUX_MODULE_DIR}/help/help_render.c
   ${MUX_MODULE_DIR}/lua/lua.c
+  ${MUX_MODULE_DIR}/network/input_flow.c
   ${MUX_MODULE_DIR}/network/mux_event.c
   ${MUX_MODULE_DIR}/network/netcommon.c
   ${MUX_MODULE_DIR}/network/telnet_handler.c
