@@ -343,16 +343,16 @@ struct forward_list {
 typedef struct ServerState ServerState;
 struct ServerState {
   int record_players;          /* The maximum # of player logged on */
-  int initializing;            /* are we reading config file at startup? */
-  int panicking;               /* are we in the middle of dying horribly? */
-  int dumping;                 /* Are we dumping? */
+  bool is_initializing;        /* Are we reading config file at startup? */
+  bool is_panicking;           /* Are we in the middle of dying horribly? */
+  bool is_dumping;             /* Are we dumping? */
   int logging;                 /* Are we in the middle of logging? */
   int generation;              /* DB global generation number */
   DbRef curr_enactor;          /* Who initiated the current command */
   DbRef curr_player;           /* Who is running the current command */
   Descriptor *curr_descriptor; /* Live descriptor for the current command,
                                   if any (nullptr for queued commands) */
-  int alarm_triggered;         /* Has periodic alarm signal occurred? */
+  bool is_alarm_triggered;     /* Has periodic alarm signal occurred? */
   time_t now;                  /* What time is it now? */
   time_t dump_counter;         /* Countdown to next db dump */
   time_t check_counter;        /* Countdown to next db check */
@@ -362,28 +362,28 @@ struct ServerState {
   int events_flag;             /* Flags for check_events */
   int events_lasthour;         /* Last hour we ran hourly maintenance */
 
-  int shutdown_flag;         /* Should interface be shut down? */
-  char version[256];         /* MUX version string */
-  time_t start_time;         /* When was MUX started */
-  time_t process_start_time; /* When this server process started */
-  char buffer[256];          /* A buffer for holding temp stuff */
-  const char *debug_cmd;     /* The command we are executing (if any) */
-  SiteData *access_list;     /* Access states for sites */
-  SiteData *suspect_list;    /* Sites that are suspect */
-  HashTable command_htab;    /* Commands hashtable */
-  HashTable macro_htab;      /* Macro command hashtable */
-  HashTable channel_htab;    /* Channels hashtable */
-  HashTable func_htab;       /* Functions hashtable */
-  HashTable ufunc_htab;      /* Local functions hashtable */
-  HashTable powers_htab;     /* Powers hashtable */
-  HashTable flags_htab;      /* Flags hashtable */
-  HashTable attr_name_htab;  /* Attribute names hashtable */
-  HashTable vattr_name_htab; /* User attribute names hashtable */
-  HashTable player_htab;     /* Player name->number hashtable */
-  HashTable fwdlist_htab;    /* Room forwardlists */
-  HashTable parent_htab;     /* Parent $-command exclusion */
-  int attr_next;             /* Next attr to alloc when freelist is empty */
-  OBJQE *qhead;              /* Per Object Queue Entries */
+  bool is_shutdown_requested; /* Should interface be shut down? */
+  char version[256];          /* MUX version string */
+  time_t start_time;          /* When was MUX started */
+  time_t process_start_time;  /* When this server process started */
+  char buffer[256];           /* A buffer for holding temp stuff */
+  const char *debug_cmd;      /* The command we are executing (if any) */
+  SiteData *access_list;      /* Access states for sites */
+  SiteData *suspect_list;     /* Sites that are suspect */
+  HashTable command_htab;     /* Commands hashtable */
+  HashTable macro_htab;       /* Macro command hashtable */
+  HashTable channel_htab;     /* Channels hashtable */
+  HashTable func_htab;        /* Functions hashtable */
+  HashTable ufunc_htab;       /* Local functions hashtable */
+  HashTable powers_htab;      /* Powers hashtable */
+  HashTable flags_htab;       /* Flags hashtable */
+  HashTable attr_name_htab;   /* Attribute names hashtable */
+  HashTable vattr_name_htab;  /* User attribute names hashtable */
+  HashTable player_htab;      /* Player name->number hashtable */
+  HashTable fwdlist_htab;     /* Room forwardlists */
+  HashTable parent_htab;      /* Parent $-command exclusion */
+  int attr_next;              /* Next attr to alloc when freelist is empty */
+  OBJQE *qhead;               /* Per Object Queue Entries */
   OBJQE *qtail;
   BQUE *qwait;           /* Head of wait queue */
   BQUE *qsemfirst;       /* Head of semaphore queue */
@@ -411,7 +411,7 @@ struct ServerState {
   int lock_nest_lev;     /* Current nesting of lock evals */
   char *global_regs[MAX_GLOBAL_REGS]; /* Global registers */
   int zone_nest_num;                  /* Global current zone nest position */
-  int inpipe;                         /* Boolean flag for command piping */
+  bool is_piping;                     /* Is command piping active? */
   char *pout;                         /* The output of the pipe used in %| */
   char *poutnew;  /* The output being build by the current command */
   char *poutbufc; /* Buffer position for poutnew */

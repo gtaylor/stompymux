@@ -471,7 +471,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * if they're not a player and connected (if we didn't
      * do this, they'd be notified twice! */
 
-    if (mudstate.inpipe &&
+    if (mudstate.is_piping &&
         (!is_player(target) || (is_player(target) && !is_connected(target)))) {
       raw_notify(target, msg_ns);
     }
@@ -830,7 +830,7 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
    * Set up for normal shutdown
    */
 
-  mudstate.shutdown_flag = 1;
+  mudstate.is_shutdown_requested = true;
   server_lifecycle_stop();
   return;
 }
@@ -838,7 +838,7 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
 int dump_database_internal(int dump_type) { return gamedb_dump(dump_type); }
 
 void dump_database(void) {
-  mudstate.dumping = 1;
+  mudstate.is_dumping = true;
   STARTLOG(LOG_DBSAVES, "DMP", "DUMP") {
     log_text("Dumping: ");
     log_text(mudconf.database.gamedb);
@@ -852,14 +852,14 @@ void dump_database(void) {
     log_text(mudconf.database.gamedb);
     ENDLOG;
   }
-  mudstate.dumping = 0;
+  mudstate.is_dumping = false;
 }
 
 void fork_and_dump(int key) {
   if (*mudconf.dump_msg)
     raw_broadcast(0, "%s", mudconf.dump_msg);
 
-  mudstate.dumping = 1;
+  mudstate.is_dumping = true;
   log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
             mudconf.database.gamedb);
 
@@ -872,7 +872,7 @@ void fork_and_dump(int key) {
       case -1: /* fork() failed */
         /* FIXME: Make this error message conform.  */
         log_perror("DMP", "FAIL", nullptr, "fork()");
-        mudstate.dumping = 0;
+        mudstate.is_dumping = false;
         return;
 
       case 0: /* child */
@@ -894,7 +894,7 @@ void fork_and_dump(int key) {
     }
   }
 
-  mudstate.dumping = 0;
+  mudstate.is_dumping = false;
 
   if (*mudconf.postdump_msg)
     raw_broadcast(0, "%s", mudconf.postdump_msg);
@@ -957,7 +957,7 @@ int is_hearer(DbRef thing) {
   long aflags;
   Attribute *ap;
 
-  if (mudstate.inpipe && (thing == mudstate.poutobj))
+  if (mudstate.is_piping && (thing == mudstate.poutobj))
     return 1;
 
   if (is_connected(thing) || is_puppet(thing))

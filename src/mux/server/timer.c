@@ -138,9 +138,9 @@ static void dispatch(void) {
    * this routine can be used to poll from interface.c
    */
 
-  if (!mudstate.alarm_triggered)
+  if (!mudstate.is_alarm_triggered)
     return;
-  mudstate.alarm_triggered = 0;
+  mudstate.is_alarm_triggered = false;
   mudstate.now = time(nullptr);
 
   do_second();
@@ -221,7 +221,7 @@ static void dispatch(void) {
 }
 
 static void timer_callback(MuxTimer *timer, void *arg) {
-  mudstate.alarm_triggered = 1;
+  mudstate.is_alarm_triggered = true;
   dispatch();
 }
 

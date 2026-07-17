@@ -285,7 +285,7 @@ void configuration_log_not_found(DbRef player, const char *cmd,
                                  const char *thingname, const char *thing) {
   char *buff;
 
-  if (mudstate.initializing) {
+  if (mudstate.is_initializing) {
     log_error(LOG_STARTUP, "CNF", "NFND", "%s: %s %s not found.", cmd,
               thingname, thing);
   } else {
@@ -303,7 +303,7 @@ void configuration_log_not_found(DbRef player, const char *cmd,
 
 void configuration_log_syntax(DbRef player, const char *cmd,
                               const char *template, const char *arg) {
-  if (mudstate.initializing) {
+  if (mudstate.is_initializing) {
     log_error(LOG_STARTUP, "CNF", "SYNTX", "%s: %s %s", cmd, template, arg);
   } else {
     notify_printf(player, "%s%s", template, arg);
@@ -333,7 +333,7 @@ static int cf_status_from_succfail(DbRef player, char *cmd, int success,
    */
 
   if (failure == 0) {
-    if (mudstate.initializing) {
+    if (mudstate.is_initializing) {
       log_error(LOG_STARTUP, "CNF", "NDATA", "%s: Nothing to set", cmd);
     } else {
       notify(player, "Nothing to set");
@@ -389,7 +389,7 @@ static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd) {
   retval = 0;
   if (strlen(str) >= (size_t)extra) {
     str[extra - 1] = '\0';
-    if (mudstate.initializing) {
+    if (mudstate.is_initializing) {
       log_error(LOG_STARTUP, "CNF", "NFND", "%s: String truncated", cmd);
     } else {
       notify(player, "String truncated");
@@ -635,7 +635,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd) {
    * are processed * * first.
    */
 
-  if (mudstate.initializing) {
+  if (mudstate.is_initializing) {
     if (head == nullptr) {
       *vp = (long *)site;
     } else {
@@ -1061,7 +1061,7 @@ int configuration_set(char *cp, char *ap, DbRef player) {
 
   for (tp = conftable; tp->pname; tp++) {
     if (!strcmp(tp->pname, cp)) {
-      if (!mudstate.initializing && !check_access(player, tp->flags)) {
+      if (!mudstate.is_initializing && !check_access(player, tp->flags)) {
         notify(player, "Permission denied.");
         return (-1);
       }
@@ -1069,7 +1069,7 @@ int configuration_set(char *cp, char *ap, DbRef player) {
       StringCopy(buff, ap);
       i = ((int (*)(void *, char *, long, DbRef, char *))tp->interpreter)(
           tp->loc, ap, tp->extra, player, cp);
-      if (!mudstate.initializing) {
+      if (!mudstate.is_initializing) {
         log_error(LOG_CONFIGMODS, "CFG", "UPDAT",
                   "%s entered config directive: %s with args '%s'. Status: %s",
                   Name(player), cp, buff,
@@ -1128,10 +1128,10 @@ int configuration_read(char *fn) {
   bool ok;
 
   StringCopy(mudconf.config_file, fn);
-  mudstate.initializing = 1;
+  mudstate.is_initializing = true;
   ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, nullptr,
                                errbuf, sizeof(errbuf));
-  mudstate.initializing = 0;
+  mudstate.is_initializing = false;
   if (!ok) {
     fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
     return -1;

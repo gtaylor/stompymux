@@ -123,7 +123,7 @@ void raw_notify_raw(DbRef player, const char *msg, const char *append) {
   if (!msg || !*msg)
     return;
 
-  if (mudstate.inpipe && (player == mudstate.poutobj)) {
+  if (mudstate.is_piping && (player == mudstate.poutobj)) {
     safe_str(msg, mudstate.poutnew, &mudstate.poutbufc);
     if (append != nullptr)
       safe_str(append, mudstate.poutnew, &mudstate.poutbufc);
@@ -169,7 +169,7 @@ void raw_notify_newline(DbRef player) {
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_player(player);
 
-  if (mudstate.inpipe && (player == mudstate.poutobj)) {
+  if (mudstate.is_piping && (player == mudstate.poutobj)) {
     safe_str("\r\n", mudstate.poutnew, &mudstate.poutbufc);
     return;
   }

@@ -834,7 +834,7 @@ int do_top(int ncmds) {
             if (cp && *cp) {
               while (command && (*command == '|')) {
                 command++;
-                mudstate.inpipe = 1;
+                mudstate.is_piping = true;
                 mudstate.poutnew = alloc_lbuf("process_command.pipe");
                 mudstate.poutbufc = mudstate.poutnew;
                 mudstate.poutobj = object;
@@ -849,7 +849,7 @@ int do_top(int ncmds) {
                 mudstate.pout = mudstate.poutnew;
                 cp = parse_to(&command, ';', 0);
               }
-              mudstate.inpipe = 0;
+              mudstate.is_piping = false;
               process_command(object, tmp->cause, 0, cp, tmp->env, tmp->nargs);
               if (mudstate.pout) {
                 free_lbuf(mudstate.pout);

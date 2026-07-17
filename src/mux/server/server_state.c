@@ -11,14 +11,15 @@ void server_state_initialize(void) {
 
   mudstate.events_flag = 0;
   mudstate.events_lasthour = -1;
-  mudstate.initializing = 0;
-  mudstate.panicking = 0;
-  mudstate.dumping = 0;
+  mudstate.is_initializing = false;
+  mudstate.is_panicking = false;
+  mudstate.is_dumping = false;
   mudstate.logging = 0;
   mudstate.generation = 0;
   mudstate.curr_player = NOTHING;
   mudstate.curr_enactor = NOTHING;
-  mudstate.shutdown_flag = 0;
+  mudstate.is_alarm_triggered = false;
+  mudstate.is_shutdown_requested = false;
   mudstate.attr_next = A_USER_START;
   mudstate.debug_cmd = "< init >";
   mudstate.access_list = nullptr;
@@ -55,7 +56,7 @@ void server_state_initialize(void) {
   mudstate.ntfy_nest_lev = 0;
   mudstate.lock_nest_lev = 0;
   mudstate.zone_nest_num = 0;
-  mudstate.inpipe = 0;
+  mudstate.is_piping = false;
   mudstate.pout = nullptr;
   mudstate.poutnew = nullptr;
   mudstate.poutbufc = nullptr;

@@ -945,7 +945,7 @@ int check_access(DbRef player, int mask) {
 
   if (mask & CA_DISABLED)
     return 0;
-  if (is_god(player) || mudstate.initializing)
+  if (is_god(player) || mudstate.is_initializing)
     return 1;
 
   succ = fail = 0;
