@@ -661,6 +661,7 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {(GenericFnPtr)do_wipe}},
+    {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_session}},
     {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_who}},
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_addcom}},
     {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_allcom}},

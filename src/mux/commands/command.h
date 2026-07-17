@@ -139,10 +139,11 @@ void do_version(DbRef, DbRef, int);        /* List MUX version number */
 void do_verb(DbRef, DbRef, int, char *, char *[],
              int); /* Execute a user-created verb */
 void do_wait(DbRef, DbRef, int, char *, char *, char *[],
-             int);                       /* Perform command after a wait */
-void do_wipe(DbRef, DbRef, int, char *); /* Mass-remove attrs from obj */
-void do_who(DbRef, DbRef, int, char *);  /* Wizard WHO listing */
-void do_dbclean(DbRef, DbRef, int);      /* Remove stale vattr entries */
+             int);                          /* Perform command after a wait */
+void do_wipe(DbRef, DbRef, int, char *);    /* Mass-remove attrs from obj */
+void do_session(DbRef, DbRef, int, char *); /* Wizard session listing */
+void do_who(DbRef, DbRef, int, char *);     /* Wizard WHO listing */
+void do_dbclean(DbRef, DbRef, int);         /* Remove stale vattr entries */
 void do_addcommand(DbRef, DbRef, int, char *,
                    char *); /* Add or replace a global command */
 void do_delcommand(DbRef, DbRef, int, char *,

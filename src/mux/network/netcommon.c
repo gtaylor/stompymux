@@ -724,6 +724,50 @@ static void dump_users(Descriptor *e, char *match) {
   free_lbuf(buf);
 }
 
+static void dump_sessions(Descriptor *e, char *match) {
+  Descriptor *d;
+  int count;
+  char *buf;
+
+  while (match && *match && isspace(*match))
+    match++;
+  if (!match || !*match)
+    match = nullptr;
+
+  buf = alloc_lbuf("dump_sessions");
+  descriptor_queue_string(e, "                               ");
+  descriptor_queue_string(
+      e, "     Characters Input----  Characters Output---\r\n");
+  descriptor_queue_string(e, "Player Name         On For  Idle ");
+  descriptor_queue_string(
+      e, "Port Pend  Lost     Total  Pend  Lost     Total\r\n");
+
+  count = 0;
+  for (d = descriptor_first_connected(); d != nullptr;
+       d = descriptor_next_connected(d)) {
+    if (match && !string_prefix(Name(d->player), match))
+      continue;
+    count++;
+
+    snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
+             trimmed_name(d->player),
+             time_format_1(mudstate.now - d->connected_at),
+             time_format_2((mudstate.now - d->last_time) > HIDDEN_IDLESECS
+                               ? (mudstate.now - d->last_time)
+                               : 0),
+             d->descriptor, d->input_size, d->input_lost, d->input_tot,
+             d->output_size, d->output_lost, d->output_tot);
+    descriptor_queue_string(e, buf);
+  }
+
+  snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
+           count, (count == 1) ? " " : "s ", mudstate.record_players,
+           (mudconf.max_players == -1) ? "no"
+                                       : tprintf("%d", mudconf.max_players));
+  descriptor_queue_string(e, buf);
+  free_lbuf(buf);
+}
+
 void do_who(DbRef player, DbRef cause, int key, char *match) {
   Descriptor *descriptor = mudstate.curr_descriptor;
 
@@ -734,6 +778,18 @@ void do_who(DbRef player, DbRef cause, int key, char *match) {
     return;
   }
   dump_users(descriptor, match);
+}
+
+void do_session(DbRef player, DbRef cause, int key, char *match) {
+  Descriptor *descriptor = mudstate.curr_descriptor;
+
+  (void)cause;
+  (void)key;
+  if (descriptor == nullptr) {
+    notify(player, "@session is only available from an active connection.");
+    return;
+  }
+  dump_sessions(descriptor, match);
 }
 
 void do_quit(DbRef player, DbRef cause, int key) {
