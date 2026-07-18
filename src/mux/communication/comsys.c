@@ -7,50 +7,56 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
+#include "mux/world/player.h"
+#include "mux/world/world_context.h"
 
+#include "mux/commands/command_invocation.h"
 #include "mux/commands/functions.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/mux_event_alloc.h"
 
-int num_channels;
-int max_channels;
-
 /* Static functions */
-static void do_show_com(void *);
-static void do_comlast(DbRef, struct channel *);
-static void do_comsend(struct channel *, char *);
-static void do_comprintf(struct channel *, const char *, ...);
-static void do_leavechannel(DbRef, struct channel *);
-static void do_comwho(DbRef, struct channel *);
-static void comlist_description(struct channel *, char *, size_t);
-static int do_test_access(DbRef, long, struct channel *);
-static char *get_channel_from_alias(DbRef, char *);
-static void do_processcom(DbRef, char *, char *);
-static void do_delcomchannel(DbRef, char *);
-static void do_listchannels(DbRef);
-static void do_comdisconnectraw_notify(DbRef, char *);
-static void do_comconnectraw_notify(DbRef, char *);
-static void do_comconnectchannel(DbRef, char *, char *, int);
-static void do_comdisconnectchannel(DbRef, char *);
-static void do_chclose(DbRef, char *);
-static void do_chloud(DbRef, char *);
-static void do_chsquelch(DbRef, char *);
-static void do_chtransparent(DbRef, char *);
-static void do_chopaque(DbRef, char *);
-static void do_chanobj(DbRef, char *, char *);
+static void do_show_com(void *, void *);
+static void do_comlast(EvaluationContext *, DbRef, struct channel *);
+static void do_comsend(EvaluationContext *, struct channel *, char *);
+static void do_comprintf(EvaluationContext *, struct channel *, const char *,
+                         ...);
+static void do_leavechannel(EvaluationContext *, DbRef, struct channel *);
+static void do_comwho(EvaluationContext *, DbRef, struct channel *);
+static void comlist_description(GameDatabase *, struct channel *, char *,
+                                size_t);
+static int do_test_access(EvaluationContext *, DbRef, long, struct channel *);
+static char *get_channel_from_alias(EvaluationContext *, DbRef, char *);
+static void do_processcom(EvaluationContext *, DbRef, char *, char *);
+static void do_delcomchannel(EvaluationContext *, DbRef, char *);
+static void do_listchannels(EvaluationContext *, DbRef);
+static void do_comdisconnectraw_notify(EvaluationContext *, DbRef, char *);
+static void do_comconnectraw_notify(EvaluationContext *, DbRef, char *);
+static void do_comconnectchannel(EvaluationContext *, DbRef, char *, char *,
+                                 int);
+static void do_comdisconnectchannel(EvaluationContext *, DbRef, char *);
+static void do_chclose(EvaluationContext *, DbRef, char *);
+static void do_chloud(EvaluationContext *, DbRef, char *);
+static void do_chsquelch(EvaluationContext *, DbRef, char *);
+static void do_chtransparent(EvaluationContext *, DbRef, char *);
+static void do_chopaque(EvaluationContext *, DbRef, char *);
+static void do_chanobj(EvaluationContext *, DbRef, char *, char *);
 
 /*
  * This is the hash table for channel names
  */
 
-void init_chantab(void) {
-  hash_table_initialize(&mudstate.channel_htab, 30 * HASH_FACTOR);
+void init_chantab(ChannelRegistry *channels) {
+  channel_registry_reset_statistics(channels);
 }
 
-void send_channel(const char *chan, const char *format, ...) {
+void send_channel(EvaluationContext *evaluation, const char *chan,
+                  const char *format, ...) {
   struct channel *ch;
   char buf[LBUF_SIZE];
   char data[LBUF_SIZE];
@@ -58,7 +64,7 @@ void send_channel(const char *chan, const char *format, ...) {
   char *newline;
   va_list ap;
 
-  if (!(ch = select_channel(chan)))
+  if (!(ch = select_channel(&evaluation->server->channels, chan)))
     return;
   va_start(ap, format);
   vsnprintf(data, LBUF_SIZE, format, ap);
@@ -71,15 +77,16 @@ void send_channel(const char *chan, const char *format, ...) {
   *bp = '\0';
   while ((newline = strchr(buf, '\n')))
     *newline = ' ';
-  do_comsend(ch, buf);
+  do_comsend(evaluation, ch, buf);
 }
 
-static char *get_channel_from_alias(DbRef player, char *alias) {
+static char *get_channel_from_alias(EvaluationContext *evaluation, DbRef player,
+                                    char *alias) {
   struct commac *c;
   int first, last, current = 0;
   int dir;
 
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   first = 0;
   last = c->numchannels - 1;
@@ -106,15 +113,21 @@ static char *get_channel_from_alias(DbRef player, char *alias) {
   }
 }
 
-static DbRef cheat_player;
+typedef struct ComHistoryView ComHistoryView;
+struct ComHistoryView {
+  EvaluationContext *evaluation;
+  DbRef player;
+};
 
-static void do_show_com(void *data) {
+static void do_show_com(void *data, void *context) {
   chmsg *d = data;
+  ComHistoryView *view = context;
+  DbRef player = view->player;
   struct tm *t;
   int day;
   char buf[LBUF_SIZE];
 
-  t = localtime(&mudstate.now);
+  t = localtime(&view->evaluation->server->clock.now);
   day = t->tm_mday;
   t = localtime(&d->time);
   if (day == t->tm_mday) {
@@ -122,19 +135,22 @@ static void do_show_com(void *data) {
   } else
     snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s", t->tm_mon + 1,
              t->tm_mday, t->tm_hour, t->tm_min, d->msg);
-  notify(cheat_player, buf);
+  notify(view->evaluation, player, buf);
 }
 
-static void do_comlast(DbRef player, struct channel *ch) {
+static void do_comlast(EvaluationContext *evaluation, DbRef player,
+                       struct channel *ch) {
   if (!fifo_length(&ch->last_messages)) {
-    notify_printf(player, "There haven't been any messages on %s.", ch->name);
+    notify_printf(evaluation, player, "There haven't been any messages on %s.",
+                  ch->name);
     return;
   }
-  cheat_player = player;
-  fifo_traverse_reverse(&ch->last_messages, do_show_com);
+  ComHistoryView view = {.evaluation = evaluation, .player = player};
+  fifo_traverse_reverse(&ch->last_messages, do_show_com, &view);
 }
 
-static void do_processcom(DbRef player, char *arg1, char *arg2) {
+static void do_processcom(EvaluationContext *evaluation, DbRef player,
+                          char *arg1, char *arg2) {
   struct channel *ch;
   struct comuser *user;
 
@@ -142,67 +158,83 @@ static void do_processcom(DbRef player, char *arg1, char *arg2) {
     arg2[LBUF_SIZE / 2 - strlen(arg1)] = '\0';
   }
   if (!*arg2) {
-    raw_notify(player, "No message.");
+    raw_notify(evaluation, player, "No message.");
     return;
   }
 
-  if (!is_wizard(player) && is_in_character_location(player)) {
-    raw_notify(player, "Permission denied.");
+  if (!is_wizard(evaluation->world->database, player) &&
+      is_in_character_location(evaluation->world->database,
+                               evaluation->world->configuration, player)) {
+    raw_notify(evaluation, player, "Permission denied.");
     return;
   }
 
-  if (!(ch = select_channel(arg1))) {
-    notify_printf(player, "Unknown channel %s.", arg1);
+  if (!(ch = select_channel(&evaluation->server->channels, arg1))) {
+    notify_printf(evaluation, player, "Unknown channel %s.", arg1);
     return;
   }
   if (!(user = select_user(ch, player))) {
-    raw_notify(player, "You are not listed as on that channel.  Delete this "
-                       "alias and re-add.");
+    raw_notify(evaluation, player,
+               "You are not listed as on that channel.  Delete this "
+               "alias and re-add.");
     return;
   }
   if (!strcasecmp(arg2, "on")) {
-    do_joinchannel(player, ch);
+    do_joinchannel(evaluation, player, ch);
   } else if (!strcasecmp(arg2, "off")) {
-    do_leavechannel(player, ch);
+    do_leavechannel(evaluation, player, ch);
     // Body matches the later bare `!user->on` branch, but this one fires
     // earlier so wizards/lurkers can still reach "who"/"last" below even
     // while not on the channel.
-  } else if (!user->on && !is_wizard(player) &&
-             !mudconf.allow_chanlurking) { // NOLINT(bugprone-branch-clone)
-    notify_printf(player, "You must be on %s to do that.", arg1);
+  } else if (!user->on && !is_wizard(evaluation->world->database, player) &&
+             !evaluation->world->configuration
+                  ->allow_chanlurking) { // NOLINT(bugprone-branch-clone)
+    notify_printf(evaluation, player, "You must be on %s to do that.", arg1);
     return;
   } else if (!strcasecmp(arg2, "who")) {
-    do_comwho(player, ch);
+    do_comwho(evaluation, player, ch);
   } else if (!strcasecmp(arg2, "last")) {
-    do_comlast(player, ch);
+    do_comlast(evaluation, player, ch);
   } else if (!user->on) {
-    notify_printf(player, "You must be on %s to do that.", arg1);
+    notify_printf(evaluation, player, "You must be on %s to do that.", arg1);
     return;
-  } else if (!do_test_access(player, CHANNEL_TRANSMIT, ch)) {
-    raw_notify(player, "That channel type cannot be transmitted on.");
+  } else if (!do_test_access(evaluation, player, CHANNEL_TRANSMIT, ch)) {
+    raw_notify(evaluation, player,
+               "That channel type cannot be transmitted on.");
     return;
   } else {
     if ((*arg2) == ':')
-      do_comprintf(ch, "[%s] %s %s", arg1, Name(player), arg2 + 1);
+      do_comprintf(evaluation, ch, "[%s] %s %s", arg1,
+                   game_object_name(evaluation->world->database, player),
+                   arg2 + 1);
     else if ((*arg2) == ';')
-      do_comprintf(ch, "[%s] %s%s", arg1, Name(player), arg2 + 1);
+      do_comprintf(evaluation, ch, "[%s] %s%s", arg1,
+                   game_object_name(evaluation->world->database, player),
+                   arg2 + 1);
     else
-      do_comprintf(ch, "[%s] %s: %s", arg1, Name(player), arg2);
+      do_comprintf(evaluation, ch, "[%s] %s: %s", arg1,
+                   game_object_name(evaluation->world->database, player), arg2);
   }
 }
 
-static void do_comsend(struct channel *ch, char *mess) {
+static void do_comsend(EvaluationContext *evaluation, struct channel *ch,
+                       char *mess) {
   struct comuser *user;
   chmsg *c;
 
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
-    if (user->on && do_test_access(user->who, CHANNEL_RECIEVE, ch) &&
-        (is_wizard(user->who) || !is_in_character_location(user->who))) {
-      if (typeof_obj(user->who) == TYPE_PLAYER && is_connected(user->who))
-        raw_notify(user->who, mess);
+    if (user->on &&
+        do_test_access(evaluation, user->who, CHANNEL_RECIEVE, ch) &&
+        (is_wizard(evaluation->world->database, user->who) ||
+         !is_in_character_location(evaluation->world->database,
+                                   evaluation->world->configuration,
+                                   user->who))) {
+      if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+          is_connected(evaluation->world->database, user->who))
+        raw_notify(evaluation, user->who, mess);
       else
-        notify(user->who, mess);
+        notify(evaluation, user->who, mess);
     }
   }
   /* Also, add it to the history of channel */
@@ -212,14 +244,16 @@ static void do_comsend(struct channel *ch, char *mess) {
   } else
     Create(c, chmsg, 1);
   c->msg = strdup(mess);
-  c->time = mudstate.now;
+  c->time = evaluation->server->clock.now;
   fifo_push(&ch->last_messages, c);
 }
 
-static void do_comprintf(struct channel *ch, const char *messfmt, ...)
-    __attribute__((format(printf, 2, 3)));
+static void do_comprintf(EvaluationContext *evaluation, struct channel *ch,
+                         const char *messfmt, ...)
+    __attribute__((format(printf, 3, 4)));
 
-static void do_comprintf(struct channel *ch, const char *messfmt, ...) {
+static void do_comprintf(EvaluationContext *evaluation, struct channel *ch,
+                         const char *messfmt, ...) {
   struct comuser *user;
   chmsg *c;
   va_list ap;
@@ -231,12 +265,17 @@ static void do_comprintf(struct channel *ch, const char *messfmt, ...) {
 
   ch->num_messages++;
   for (user = ch->on_users; user; user = user->on_next) {
-    if (user->on && do_test_access(user->who, CHANNEL_RECIEVE, ch) &&
-        (is_wizard(user->who) || !is_in_character_location(user->who))) {
-      if (typeof_obj(user->who) == TYPE_PLAYER && is_connected(user->who))
-        raw_notify(user->who, buffer);
+    if (user->on &&
+        do_test_access(evaluation, user->who, CHANNEL_RECIEVE, ch) &&
+        (is_wizard(evaluation->world->database, user->who) ||
+         !is_in_character_location(evaluation->world->database,
+                                   evaluation->world->configuration,
+                                   user->who))) {
+      if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+          is_connected(evaluation->world->database, user->who))
+        raw_notify(evaluation, user->who, buffer);
       else
-        notify(user->who, buffer);
+        notify(evaluation, user->who, buffer);
     }
   }
   /* Also, add it to the history of channel */
@@ -246,11 +285,12 @@ static void do_comprintf(struct channel *ch, const char *messfmt, ...) {
   } else
     Create(c, chmsg, 1);
   c->msg = strdup(buffer);
-  c->time = mudstate.now;
+  c->time = evaluation->server->clock.now;
   fifo_push(&ch->last_messages, c);
 }
 
-void do_joinchannel(DbRef player, struct channel *ch) {
+void do_joinchannel(EvaluationContext *evaluation, DbRef player,
+                    struct channel *ch) {
   struct comuser *user;
   int i;
 
@@ -275,25 +315,27 @@ void do_joinchannel(DbRef player, struct channel *ch) {
     user->who = player;
     user->on = 1;
 
-    if (is_undead(player)) {
+    if (is_undead(evaluation->world->database, player)) {
       user->on_next = ch->on_users;
       ch->on_users = user;
     }
   } else if (!user->on) {
     user->on = 1;
   } else {
-    notify_printf(player, "You are already on channel %s.", ch->name);
+    notify_printf(evaluation, player, "You are already on channel %s.",
+                  ch->name);
     return;
   }
-  notify_printf(player, "You have joined channel %s.", ch->name);
+  notify_printf(evaluation, player, "You have joined channel %s.", ch->name);
 
-  if (!is_dark(player)) {
-    do_comprintf(ch, "[%s] %s has joined this channel.", ch->name,
-                 Name(player));
+  if (!is_dark(evaluation->world->database, player)) {
+    do_comprintf(evaluation, ch, "[%s] %s has joined this channel.", ch->name,
+                 game_object_name(evaluation->world->database, player));
   }
 }
 
-static void do_leavechannel(DbRef player, struct channel *ch) {
+static void do_leavechannel(EvaluationContext *evaluation, DbRef player,
+                            struct channel *ch) {
   struct comuser *user;
   int i;
 
@@ -304,64 +346,77 @@ static void do_leavechannel(DbRef player, struct channel *ch) {
 
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
-    if (typeof_obj(ch->users[i]->who) == TYPE_THING)
-      did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_ALEAVE,
-             (char **)nullptr, 0);
+    if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
+        TYPE_THING)
+      did_it(evaluation, player, ch->users[i]->who, 0, nullptr, 0, nullptr,
+             A_ALEAVE, (char **)nullptr, 0);
   }
 
-  notify_printf(player, "You have left channel %s.", ch->name);
+  notify_printf(evaluation, player, "You have left channel %s.", ch->name);
 
-  if ((user->on) && (!is_dark(player))) {
-    char *c = Name(player);
+  if ((user->on) && (!is_dark(evaluation->world->database, player))) {
+    char *c = game_object_name(evaluation->world->database, player);
 
     if (c && *c) {
-      do_comprintf(ch, "[%s] %s has left this channel.", ch->name, c);
+      do_comprintf(evaluation, ch, "[%s] %s has left this channel.", ch->name,
+                   c);
     }
   }
   user->on = 0;
 }
 
-static void do_comwho(DbRef player, struct channel *ch) {
+static void do_comwho(EvaluationContext *evaluation, DbRef player,
+                      struct channel *ch) {
   struct comuser *user;
   char *buff;
 
-  raw_notify(player, "-- Players --");
+  raw_notify(evaluation, player, "-- Players --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (typeof_obj(user->who) == TYPE_PLAYER && user->on &&
-        is_connected(user->who) &&
-        (!is_hidden(user->who) ||
-         ((ch->type & CHANNEL_TRANSPARENT) && !is_dark(user->who)) ||
-         is_wizard(player)) &&
-        (!is_in_character_location(user->who) || is_wizard(user->who))) {
+    if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+        user->on && is_connected(evaluation->world->database, user->who) &&
+        (!is_hidden(evaluation->world->database, user->who) ||
+         ((ch->type & CHANNEL_TRANSPARENT) &&
+          !is_dark(evaluation->world->database, user->who)) ||
+         is_wizard(evaluation->world->database, player)) &&
+        (!is_in_character_location(evaluation->world->database,
+                                   evaluation->world->configuration,
+                                   user->who) ||
+         is_wizard(evaluation->world->database, user->who))) {
 
-      int i = fetch_idle(user->who);
+      int i = fetch_idle(evaluation->server->descriptors,
+                         &evaluation->server->clock, user->who);
 
-      buff = unparse_object(player, user->who, 0);
+      buff = unparse_object(evaluation->world->database, evaluation, player,
+                            user->who, 0);
       if (i > 30) {
         char *c = get_uptime_to_string(i);
 
-        notify_printf(player, "%s [idle %s]", buff, c);
+        notify_printf(evaluation, player, "%s [idle %s]", buff, c);
         free_sbuf(c);
       } else
-        notify_printf(player, "%s", buff);
+        notify_printf(evaluation, player, "%s", buff);
       free_lbuf(buff);
     }
   }
 
-  raw_notify(player, "-- Objects --");
+  raw_notify(evaluation, player, "-- Objects --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (typeof_obj(user->who) != TYPE_PLAYER && user->on &&
-        !(is_going(user->who) && is_god(obj_owner(user->who)))) {
-      buff = unparse_object(player, user->who, 0);
-      notify_printf(player, "%s", buff);
+    if (typeof_obj(evaluation->world->database, user->who) != TYPE_PLAYER &&
+        user->on &&
+        !(is_going(evaluation->world->database, user->who) &&
+          is_god(evaluation->world->database,
+                 game_object_owner(evaluation->world->database, user->who)))) {
+      buff = unparse_object(evaluation->world->database, evaluation, player,
+                            user->who, 0);
+      notify_printf(evaluation, player, "%s", buff);
       free_lbuf(buff);
     }
   }
-  notify_printf(player, "-- %s --", ch->name);
+  notify_printf(evaluation, player, "-- %s --", ch->name);
 }
 
-struct channel *select_channel(const char *channel) {
-  return (struct channel *)hash_table_find(channel, &mudstate.channel_htab);
+struct channel *select_channel(ChannelRegistry *channels, const char *channel) {
+  return (struct channel *)hash_table_find(channel, &channels->channels);
 }
 
 struct comuser *select_user(struct channel *ch, DbRef player) {
@@ -397,54 +452,59 @@ struct comuser *select_user(struct channel *ch, DbRef player) {
     return nullptr;
 }
 
-void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
+void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
+                      char *arg2) {
   char channel[200];
   struct channel *ch;
   int where;
   struct commac *c;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
   if (!*arg1) {
-    raw_notify(player, "You need to specify an alias.");
+    raw_notify(evaluation, player, "You need to specify an alias.");
     return;
   }
   if (!*arg2) {
-    raw_notify(player, "You need to specify a channel.");
+    raw_notify(evaluation, player, "You need to specify a channel.");
     return;
   }
 
   if (strlen(arg2) >= sizeof(channel)) {
-    raw_notify(player, "Channel name too long.");
+    raw_notify(evaluation, player, "Channel name too long.");
     return;
   }
   strlcpy(channel, arg2, sizeof(channel));
 
   if (strchr(channel, ' ')) {
-    raw_notify(player, "Channel name cannot contain spaces.");
+    raw_notify(evaluation, player, "Channel name cannot contain spaces.");
     return;
   }
 
-  if (!(ch = select_channel(channel))) {
-    notify_printf(player, "Channel %s does not exist yet.", channel);
+  if (!(ch = select_channel(&evaluation->server->channels, channel))) {
+    notify_printf(evaluation, player, "Channel %s does not exist yet.",
+                  channel);
     return;
   }
-  if (!do_test_access(player, CHANNEL_JOIN, ch)) {
-    raw_notify(player, "Sorry, this channel type does not allow you to join.");
+  if (!do_test_access(evaluation, player, CHANNEL_JOIN, ch)) {
+    raw_notify(evaluation, player,
+               "Sorry, this channel type does not allow you to join.");
     return;
   }
   if (select_user(ch, player)) {
-    raw_notify(player, "Warning: you are already listed on that channel.");
+    raw_notify(evaluation, player,
+               "Warning: you are already listed on that channel.");
   }
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
   for (where = 0;
        where < c->numchannels && (strcasecmp(arg1, c->alias + where * 6) > 0);
        where++)
     ;
   if (where < c->numchannels && !strcasecmp(arg1, c->alias + where * 6)) {
-    notify_printf(player, "That alias is already in use for channel %s.",
+    notify_printf(evaluation, player,
+                  "That alias is already in use for channel %s.",
                   c->channels[where]);
     return;
   }
@@ -466,28 +526,38 @@ void do_addcom(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   c->alias[where * 6 + 5] = '\0';
   c->channels[where] = strdup(ch->name);
 
-  do_joinchannel(player, ch);
-  notify_printf(player, "Channel %s added with alias %s.", ch->name, arg1);
+  do_joinchannel(evaluation, player, ch);
+  notify_printf(evaluation, player, "Channel %s added with alias %s.", ch->name,
+                arg1);
 }
 
-void do_delcom(DbRef player, DbRef cause, int key, char *arg1) {
+void do_addcom(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  comsys_add_alias(evaluation, invocation->player, invocation->first,
+                   invocation->second);
+}
+
+void do_delcom(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *arg1 = invocation->first;
   int i;
   struct commac *c;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
   if (!arg1) {
-    raw_notify(player, "Need an alias to delete.");
+    raw_notify(evaluation, player, "Need an alias to delete.");
     return;
   }
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
     if (!strcasecmp(arg1, c->alias + i * 6)) {
-      do_delcomchannel(player, c->channels[i]);
-      notify_printf(player, "Channel %s deleted.", c->channels[i]);
+      do_delcomchannel(evaluation, player, c->channels[i]);
+      notify_printf(evaluation, player, "Channel %s deleted.", c->channels[i]);
       free(c->channels[i]);
 
       c->numchannels--;
@@ -500,36 +570,39 @@ void do_delcom(DbRef player, DbRef cause, int key, char *arg1) {
       return;
     }
   }
-  raw_notify(player, "Unable to find that alias.");
+  raw_notify(evaluation, player, "Unable to find that alias.");
 }
 
-static void do_delcomchannel(DbRef player, char *channel) {
+static void do_delcomchannel(EvaluationContext *evaluation, DbRef player,
+                             char *channel) {
   struct channel *ch;
   struct comuser *user;
   int i;
 
-  if (!(ch = select_channel(channel))) {
-    notify_printf(player, "Unknown channel %s.", channel);
+  if (!(ch = select_channel(&evaluation->server->channels, channel))) {
+    notify_printf(evaluation, player, "Unknown channel %s.", channel);
   } else {
 
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
-      if (typeof_obj(ch->users[i]->who) == TYPE_THING)
-        did_it(player, ch->users[i]->who, 0, nullptr, 0, nullptr, A_ALEAVE,
-               (char **)nullptr, 0);
+      if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
+          TYPE_THING)
+        did_it(evaluation, player, ch->users[i]->who, 0, nullptr, 0, nullptr,
+               A_ALEAVE, (char **)nullptr, 0);
     }
 
     for (i = 0; i < ch->num_users; i++) {
       user = ch->users[i];
       if (user->who == player) {
-        do_comdisconnectchannel(player, channel);
-        if (user->on && !is_dark(player)) {
-          char *c = Name(player);
+        do_comdisconnectchannel(evaluation, player, channel);
+        if (user->on && !is_dark(evaluation->world->database, player)) {
+          char *c = game_object_name(evaluation->world->database, player);
 
           if (c && *c)
-            do_comprintf(ch, "[%s] %s has left this channel.", channel, c);
+            do_comprintf(evaluation, ch, "[%s] %s has left this channel.",
+                         channel, c);
         }
-        notify_printf(player, "You have left channel %s.", channel);
+        notify_printf(evaluation, player, "You have left channel %s.", channel);
 
         free(user);
         ch->num_users--;
@@ -541,23 +614,26 @@ static void do_delcomchannel(DbRef player, char *channel) {
   }
 }
 
-void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
+void do_createchannel(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *channel = invocation->first;
   struct channel *newchannel;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  if (select_channel(channel)) {
-    notify_printf(player, "Channel %s already exists.", channel);
+  if (select_channel(&evaluation->server->channels, channel)) {
+    notify_printf(evaluation, player, "Channel %s already exists.", channel);
     return;
   }
   if (!*channel) {
-    raw_notify(player, "You must specify a channel to create.");
+    raw_notify(evaluation, player, "You must specify a channel to create.");
     return;
   }
-  if (!(is_comm_all(player))) {
-    raw_notify(player, "You do not have permission to do that.");
+  if (!(is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
   newchannel = (struct channel *)malloc(sizeof(struct channel));
@@ -578,59 +654,67 @@ void do_createchannel(DbRef player, DbRef cause, int key, char *channel) {
   newchannel->chan_obj = NOTHING;
   newchannel->num_messages = 0;
 
-  num_channels++;
+  evaluation->server->channels.count++;
 
-  hash_table_add(newchannel->name, (int *)newchannel, &mudstate.channel_htab);
+  hash_table_add(newchannel->name, (int *)newchannel,
+                 &evaluation->server->channels.channels);
 
-  notify_printf(player, "Channel %s created.", channel);
+  notify_printf(evaluation, player, "Channel %s created.", channel);
 }
 
-void do_destroychannel(DbRef player, DbRef cause, int key, char *channel) {
+void do_destroychannel(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *channel = invocation->first;
   struct channel *ch;
   int j;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  ch = (struct channel *)hash_table_find(channel, &mudstate.channel_htab);
+  ch = (struct channel *)hash_table_find(
+      channel, &evaluation->server->channels.channels);
 
   if (!ch) {
-    notify_printf(player, "Could not find channel %s.", channel);
+    notify_printf(evaluation, player, "Could not find channel %s.", channel);
     return;
-  } else if (!(is_comm_all(player)) && (player != ch->charge_who)) {
-    raw_notify(player, "You do not have permission to do that. ");
+  } else if (!(is_comm_all(evaluation->world->database, player)) &&
+             (player != ch->charge_who)) {
+    raw_notify(evaluation, player, "You do not have permission to do that. ");
     return;
   }
-  num_channels--;
-  hash_table_delete(channel, &mudstate.channel_htab);
+  evaluation->server->channels.count--;
+  hash_table_delete(channel, &evaluation->server->channels.channels);
 
   for (j = 0; j < ch->num_users; j++) {
     free(ch->users[j]);
   }
   free(ch->users);
   free(ch);
-  notify_printf(player, "Channel %s destroyed.", channel);
+  notify_printf(evaluation, player, "Channel %s destroyed.", channel);
 }
 
-static void do_listchannels(DbRef player) {
+static void do_listchannels(EvaluationContext *evaluation, DbRef player) {
   struct channel *ch;
   int perm;
 
-  if (!(perm = is_comm_all(player))) {
+  if (!(perm = is_comm_all(evaluation->world->database, player))) {
     raw_notify(
-        player,
+        evaluation, player,
         "Warning: Only public channels and your channels will be shown.");
   }
-  raw_notify(player,
+  raw_notify(evaluation, player,
              "** Channel             --Flags--  Obj   Owner Users   Messages");
 
-  for (ch = (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
-       ch; ch = (struct channel *)hash_table_next_entry(&mudstate.channel_htab))
+  for (ch = (struct channel *)hash_table_first_entry(
+           &evaluation->server->channels.channels);
+       ch; ch = (struct channel *)hash_table_next_entry(
+               &evaluation->server->channels.channels))
     if (perm || (ch->type & CHANNEL_PUBLIC) || ch->charge_who == player) {
 
       notify_printf(
-          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
+          evaluation, player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
           (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
           (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name,
           (ch->type & (CHANNEL_PL_MULT * CHANNEL_JOIN)) ? 'J' : '-',
@@ -642,10 +726,12 @@ static void do_listchannels(DbRef player) {
           (ch->chan_obj != NOTHING) ? ch->chan_obj : -1, ch->charge_who,
           ch->num_users, ch->num_messages);
     }
-  raw_notify(player, "-- End of list of Channels --");
+  raw_notify(evaluation, player, "-- End of list of Channels --");
 }
 
-void do_comlist(DbRef player, DbRef cause, int key) {
+void do_comlist(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
   struct channel *ch;
   struct comuser *user;
   struct commac *c;
@@ -655,12 +741,12 @@ void do_comlist(DbRef player, DbRef cause, int key) {
   int terminal_width;
   int i;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  c = get_commac(player);
-  descriptor = mudstate.curr_descriptor;
+  c = get_commac(&evaluation->server->channels, player);
+  descriptor = evaluation->command->descriptor;
   terminal_width = 79;
   if (descriptor != nullptr && descriptor->terminal_width > terminal_width)
     terminal_width = descriptor->terminal_width;
@@ -668,25 +754,27 @@ void do_comlist(DbRef player, DbRef cause, int key) {
     terminal_width = LBUF_SIZE;
   description_width = terminal_width - 37;
 
-  raw_notify(player, "Alias     Channel             Status Description");
+  raw_notify(evaluation, player,
+             "Alias     Channel             Status Description");
 
   for (i = 0; i < c->numchannels; i++) {
-    ch = select_channel(c->channels[i]);
+    ch = select_channel(&evaluation->server->channels, c->channels[i]);
     if ((user = select_user(ch, player))) {
-      comlist_description(ch, description, (size_t)description_width + 1);
-      notify_printf(player, "%-9.9s %-19.19s %-6.6s %.*s", c->alias + i * 6,
-                    c->channels[i], (user->on ? "on" : "off"),
+      comlist_description(evaluation->world->database, ch, description,
+                          (size_t)description_width + 1);
+      notify_printf(evaluation, player, "%-9.9s %-19.19s %-6.6s %.*s",
+                    c->alias + i * 6, c->channels[i], (user->on ? "on" : "off"),
                     description_width, description);
     } else {
-      notify_printf(player, "Bad Comsys Alias: %s for Channel: %s",
+      notify_printf(evaluation, player, "Bad Comsys Alias: %s for Channel: %s",
                     c->alias + i * 6, c->channels[i]);
     }
   }
-  raw_notify(player, "-- End of comlist --");
+  raw_notify(evaluation, player, "-- End of comlist --");
 }
 
-static void comlist_description(struct channel *ch, char *buffer,
-                                size_t buffer_size) {
+static void comlist_description(GameDatabase *database, struct channel *ch,
+                                char *buffer, size_t buffer_size) {
   DbRef owner;
   long flags;
   char *description;
@@ -700,7 +788,8 @@ static void comlist_description(struct channel *ch, char *buffer,
     return;
   }
 
-  description = attribute_parent_get(ch->chan_obj, A_DESC, &owner, &flags);
+  description =
+      attribute_parent_get(database, ch->chan_obj, A_DESC, &owner, &flags);
   if (!*description) {
     strlcpy(buffer, "No description.", buffer_size);
   } else {
@@ -719,16 +808,17 @@ static void comlist_description(struct channel *ch, char *buffer,
   free_lbuf(description);
 }
 
-void do_channelnuke(DbRef player) {
+void do_channelnuke(EvaluationContext *evaluation, DbRef player) {
   struct channel *ch;
   int j;
 
-  for (ch = (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
-       ch;
-       ch = (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
+  for (ch = (struct channel *)hash_table_first_entry(
+           &evaluation->server->channels.channels);
+       ch; ch = (struct channel *)hash_table_next_entry(
+               &evaluation->server->channels.channels)) {
     if (ch->charge_who == player) {
-      num_channels--;
-      hash_table_delete(ch->name, &mudstate.channel_htab);
+      evaluation->server->channels.count--;
+      hash_table_delete(ch->name, &evaluation->server->channels.channels);
 
       for (j = 0; j < ch->num_users; j++)
         free(ch->users[j]);
@@ -738,44 +828,58 @@ void do_channelnuke(DbRef player) {
   }
 }
 
-void do_clearcom(DbRef player, DbRef cause, int key) {
+void comsys_clear_player(EvaluationContext *evaluation, DbRef player) {
   int i;
   struct commac *c;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   for (i = (c->numchannels) - 1; i > -1; --i) {
-    do_delcom(player, player, 0, c->alias + i * 6);
+    do_delcomchannel(evaluation, player, c->channels[i]);
+    free(c->channels[i]);
+    c->numchannels--;
   }
 }
 
-void do_allcom(DbRef player, DbRef cause, int key, char *arg1) {
+void do_clearcom(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  comsys_clear_player(evaluation, invocation->player);
+}
+
+void do_allcom(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *arg1 = invocation->first;
   int i;
   struct commac *c;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   if ((strcasecmp(arg1, "who") != 0) && (strcasecmp(arg1, "on") != 0) &&
       (strcasecmp(arg1, "off") != 0)) {
-    raw_notify(player, "Only options available are: on, off and who.");
+    raw_notify(evaluation, player,
+               "Only options available are: on, off and who.");
     return;
   }
   for (i = 0; i < c->numchannels; i++) {
-    do_processcom(player, c->channels[i], arg1);
+    do_processcom(evaluation, player, c->channels[i], arg1);
     if (strcasecmp(arg1, "who") == 0)
-      raw_notify(player, "");
+      raw_notify(evaluation, player, "");
   }
 }
 
-void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
+void do_channelwho(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *arg1 = invocation->first;
   struct channel *ch;
   struct comuser *user;
   char channel[100];
@@ -784,8 +888,8 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
   int i;
   char ansibuffer[LBUF_SIZE];
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
   cp = strchr(arg1, '/');
@@ -795,7 +899,7 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
   } else {
     /* channelname/all */
     if (cp - arg1 >= 100) {
-      raw_notify(player, "Channel name too long.");
+      raw_notify(evaluation, player, "Channel name too long.");
       return;
     }
     strncpy(channel, arg1, (size_t)(cp - arg1));
@@ -804,67 +908,80 @@ void do_channelwho(DbRef player, DbRef cause, int key, char *arg1) {
       flag = 1;
   }
 
-  if (!(ch = select_channel(channel))) {
-    notify_printf(player, "Unknown channel \"%s\".", channel);
+  if (!(ch = select_channel(&evaluation->server->channels, channel))) {
+    notify_printf(evaluation, player, "Unknown channel \"%s\".", channel);
     return;
   }
-  if (!((is_comm_all(player)) || (player == ch->charge_who))) {
-    raw_notify(player, "You do not have permission to do that.");
+  if (!((is_comm_all(evaluation->world->database, player)) ||
+        (player == ch->charge_who))) {
+    raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
-  notify_printf(player, "-- %s --", ch->name);
-  notify_printf(player, "%-29.29s %-6.6s %-6.6s", "Name", "Status", "Player");
+  notify_printf(evaluation, player, "-- %s --", ch->name);
+  notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", "Name", "Status",
+                "Player");
   for (i = 0; i < ch->num_users; i++) {
     user = ch->users[i];
-    if ((flag || is_undead(user->who)) &&
-        (!is_hidden(user->who) ||
-         ((ch->type & CHANNEL_TRANSPARENT) && !is_dark(user->who)) ||
-         is_wizard(player))) {
-      cp = unparse_object(player, user->who, 0);
+    if ((flag || is_undead(evaluation->world->database, user->who)) &&
+        (!is_hidden(evaluation->world->database, user->who) ||
+         ((ch->type & CHANNEL_TRANSPARENT) &&
+          !is_dark(evaluation->world->database, user->who)) ||
+         is_wizard(evaluation->world->database, player))) {
+      cp = unparse_object(evaluation->world->database, evaluation, player,
+                          user->who, 0);
       strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
-      notify_printf(player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
-                    ((user->on) ? "on " : "off"),
-                    (typeof_obj(user->who) == TYPE_PLAYER) ? "yes" : "no ");
+      notify_printf(
+          evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
+          ((user->on) ? "on " : "off"),
+          (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER)
+              ? "yes"
+              : "no ");
       free_lbuf(cp);
     }
   }
-  notify_printf(player, "-- %s --", ch->name);
+  notify_printf(evaluation, player, "-- %s --", ch->name);
 }
 
-static void do_comdisconnectraw_notify(DbRef player, char *chan) {
+static void do_comdisconnectraw_notify(EvaluationContext *evaluation,
+                                       DbRef player, char *chan) {
   struct channel *ch;
   struct comuser *cu;
 
-  if (!(ch = select_channel(chan)))
+  if (!(ch = select_channel(&evaluation->server->channels, chan)))
     return;
   if (!(cu = select_user(ch, player)))
     return;
 
-  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!is_dark(player))) {
-    do_comprintf(ch, "[%s] %s has disconnected.", ch->name, Name(player));
+  if ((ch->type & CHANNEL_LOUD) && (cu->on) &&
+      (!is_dark(evaluation->world->database, player))) {
+    do_comprintf(evaluation, ch, "[%s] %s has disconnected.", ch->name,
+                 game_object_name(evaluation->world->database, player));
   }
 }
 
-static void do_comconnectraw_notify(DbRef player, char *chan) {
+static void do_comconnectraw_notify(EvaluationContext *evaluation, DbRef player,
+                                    char *chan) {
   struct channel *ch;
   struct comuser *cu;
 
-  if (!(ch = select_channel(chan)))
+  if (!(ch = select_channel(&evaluation->server->channels, chan)))
     return;
   if (!(cu = select_user(ch, player)))
     return;
 
-  if ((ch->type & CHANNEL_LOUD) && (cu->on) && (!is_dark(player))) {
-    do_comprintf(ch, "[%s] %s has connected.", ch->name, Name(player));
+  if ((ch->type & CHANNEL_LOUD) && (cu->on) &&
+      (!is_dark(evaluation->world->database, player))) {
+    do_comprintf(evaluation, ch, "[%s] %s has connected.", ch->name,
+                 game_object_name(evaluation->world->database, player));
   }
 }
 
-static void do_comconnectchannel(DbRef player, char *channel, char *alias,
-                                 int i) {
+static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
+                                 char *channel, char *alias, int i) {
   struct channel *ch;
   struct comuser *user;
 
-  if ((ch = select_channel(channel))) {
+  if ((ch = select_channel(&evaluation->server->channels, channel))) {
     for (user = ch->on_users; user && user->who != player; user = user->on_next)
       ;
 
@@ -873,52 +990,56 @@ static void do_comconnectchannel(DbRef player, char *channel, char *alias,
         user->on_next = ch->on_users;
         ch->on_users = user;
       } else
-        notify_printf(player, "Bad Comsys Alias: %s for Channel: %s",
-                      alias + i * 6, channel);
+        notify_printf(evaluation, player,
+                      "Bad Comsys Alias: %s for Channel: %s", alias + i * 6,
+                      channel);
     }
   } else
-    notify_printf(player, "Bad Comsys Alias: %s for Channel: %s", alias + i * 6,
-                  channel);
+    notify_printf(evaluation, player, "Bad Comsys Alias: %s for Channel: %s",
+                  alias + i * 6, channel);
 }
 
-void do_comdisconnect(DbRef player) {
+void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {
   int i;
   struct commac *c;
 
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
-    do_comdisconnectchannel(player, c->channels[i]);
-    do_comdisconnectraw_notify(player, c->channels[i]);
+    do_comdisconnectchannel(evaluation, player, c->channels[i]);
+    do_comdisconnectraw_notify(evaluation, player, c->channels[i]);
   }
-  send_channel("MUXConnections", "* %s has disconnected *", Name(player));
+  send_channel(evaluation, "MUXConnections", "* %s has disconnected *",
+               game_object_name(evaluation->world->database, player));
 }
 
-void do_comconnect(DbRef player, Descriptor *d) {
+void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d) {
   struct commac *c;
   int i;
   char *lsite;
 
-  c = get_commac(player);
+  c = get_commac(&evaluation->server->channels, player);
 
   for (i = 0; i < c->numchannels; i++) {
-    do_comconnectchannel(player, c->channels[i], c->alias, i);
-    do_comconnectraw_notify(player, c->channels[i]);
+    do_comconnectchannel(evaluation, player, c->channels[i], c->alias, i);
+    do_comconnectraw_notify(evaluation, player, c->channels[i]);
   }
   lsite = d->addr;
   if (lsite && *lsite)
-    send_channel("MUXConnections", "* %s has connected from %s *", Name(player),
-                 lsite);
+    send_channel(evaluation, "MUXConnections", "* %s has connected from %s *",
+                 game_object_name(evaluation->world->database, player), lsite);
   else
-    send_channel("MUXConnections", "* %s has connected from somewhere *",
-                 Name(player));
+    send_channel(evaluation, "MUXConnections",
+                 "* %s has connected from somewhere *",
+                 game_object_name(evaluation->world->database, player));
 }
 
-static void do_comdisconnectchannel(DbRef player, char *channel) {
+static void do_comdisconnectchannel(EvaluationContext *evaluation, DbRef player,
+                                    char *channel) {
   struct comuser *user, *prevuser = nullptr;
   struct channel *ch;
 
-  if (!(ch = select_channel(channel)))
+  if (!(ch = select_channel(&evaluation->server->channels, channel)))
     return;
   for (user = ch->on_users; user;) {
     if (user->who == player) {
@@ -934,22 +1055,27 @@ static void do_comdisconnectchannel(DbRef player, char *channel) {
   }
 }
 
-void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
-                    char *arg2) {
+void do_editchannel(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int flag = invocation->key;
+  char *arg1 = invocation->first;
+  char *arg2 = invocation->second;
   char *s;
   struct channel *ch;
   int add_remove = 1;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  if (!(ch = select_channel(arg1))) {
-    notify_printf(player, "Unknown channel %s.", arg1);
+  if (!(ch = select_channel(&evaluation->server->channels, arg1))) {
+    notify_printf(evaluation, player, "Unknown channel %s.", arg1);
     return;
   }
-  if (!((is_comm_all(player)) || (player == ch->charge_who))) {
-    raw_notify(player, "Permission denied.");
+  if (!((is_comm_all(evaluation->world->database, player)) ||
+        (player == ch->charge_who))) {
+    raw_notify(evaluation, player, "Permission denied.");
     return;
   }
   s = arg2;
@@ -959,61 +1085,61 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
   }
   switch (flag) {
   case 0:
-    if (lookup_player(player, arg2, 1) != NOTHING) {
-      ch->charge_who = (int)lookup_player(player, arg2, 1);
-      raw_notify(player, "Set.");
+    if (lookup_player(evaluation->world, player, arg2, 1) != NOTHING) {
+      ch->charge_who = (int)lookup_player(evaluation->world, player, arg2, 1);
+      raw_notify(evaluation, player, "Set.");
       return;
     } else {
-      raw_notify(player, "Invalid player.");
+      raw_notify(evaluation, player, "Invalid player.");
       return;
     }
   case 3:
     if (strcasecmp(s, "join") == 0) {
       add_remove ? (ch->type |= (CHANNEL_PL_MULT * CHANNEL_JOIN))
                  : (ch->type &= ~(CHANNEL_PL_MULT * CHANNEL_JOIN));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@cpflags: Set." : "@cpflags: Cleared.");
       return;
     }
     if (strcasecmp(s, "receive") == 0) {
       add_remove ? (ch->type |= (CHANNEL_PL_MULT * CHANNEL_RECIEVE))
                  : (ch->type &= ~(CHANNEL_PL_MULT * CHANNEL_RECIEVE));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@cpflags: Set." : "@cpflags: Cleared.");
       return;
     }
     if (strcasecmp(s, "transmit") == 0) {
       add_remove ? (ch->type |= (CHANNEL_PL_MULT * CHANNEL_TRANSMIT))
                  : (ch->type &= ~(CHANNEL_PL_MULT * CHANNEL_TRANSMIT));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@cpflags: Set." : "@cpflags: Cleared.");
       return;
     }
-    raw_notify(player, "@cpflags: Unknown Flag.");
+    raw_notify(evaluation, player, "@cpflags: Unknown Flag.");
     break;
   case 4:
     if (strcasecmp(s, "join") == 0) {
       add_remove ? (ch->type |= (CHANNEL_OBJ_MULT * CHANNEL_JOIN))
                  : (ch->type &= ~(CHANNEL_OBJ_MULT * CHANNEL_JOIN));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@coflags: Set." : "@coflags: Cleared.");
       return;
     }
     if (strcasecmp(s, "receive") == 0) {
       add_remove ? (ch->type |= (CHANNEL_OBJ_MULT * CHANNEL_RECIEVE))
                  : (ch->type &= ~(CHANNEL_OBJ_MULT * CHANNEL_RECIEVE));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@coflags: Set." : "@coflags: Cleared.");
       return;
     }
     if (strcasecmp(s, "transmit") == 0) {
       add_remove ? (ch->type |= (CHANNEL_OBJ_MULT * CHANNEL_TRANSMIT))
                  : (ch->type &= ~(CHANNEL_OBJ_MULT * CHANNEL_TRANSMIT));
-      raw_notify(player,
+      raw_notify(evaluation, player,
                  (add_remove) ? "@coflags: Set." : "@coflags: Cleared.");
       return;
     }
-    raw_notify(player, "@coflags: Unknown Flag.");
+    raw_notify(evaluation, player, "@coflags: Unknown Flag.");
     break;
   default:
     break;
@@ -1021,10 +1147,11 @@ void do_editchannel(DbRef player, DbRef cause, int flag, char *arg1,
   return;
 }
 
-static int do_test_access(DbRef player, long access, struct channel *chan) {
+static int do_test_access(EvaluationContext *evaluation, DbRef player,
+                          long access, struct channel *chan) {
   long flag_value = access;
 
-  if (is_comm_all(player))
+  if (is_comm_all(evaluation->world->database, player))
     return (1);
 
   /*
@@ -1040,20 +1167,20 @@ static int do_test_access(DbRef player, long access, struct channel *chan) {
 
   if ((flag_value & CHANNEL_JOIN) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit(player, chan->chan_obj, A_LOCK))
+    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LOCK))
       return (1);
   }
   if ((flag_value & CHANNEL_TRANSMIT) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit(player, chan->chan_obj, A_LUSE))
+    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LUSE))
       return (1);
   }
   if ((flag_value & CHANNEL_RECIEVE) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit(player, chan->chan_obj, A_LENTER))
+    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LENTER))
       return (1);
   }
-  if (typeof_obj(player) == TYPE_PLAYER)
+  if (typeof_obj(evaluation->world->database, player) == TYPE_PLAYER)
     flag_value *= CHANNEL_PL_MULT;
   else
     flag_value *= CHANNEL_OBJ_MULT;
@@ -1065,7 +1192,7 @@ static int do_test_access(DbRef player, long access, struct channel *chan) {
   return (int)(((long)chan->type & flag_value));
 }
 
-int do_comsystem(DbRef who, char *cmd) {
+int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   char *t;
   char *ch;
   char *alias;
@@ -1081,9 +1208,9 @@ int do_comsystem(DbRef who, char *cmd) {
   if (*t)
     t++;
 
-  ch = get_channel_from_alias(who, alias);
+  ch = get_channel_from_alias(evaluation, who, alias);
   if (ch && *ch) {
-    do_processcom(who, ch, t);
+    do_processcom(evaluation, who, ch, t);
     free_lbuf(alias);
     return 0;
   }
@@ -1091,165 +1218,200 @@ int do_comsystem(DbRef who, char *cmd) {
   return 1;
 }
 
-static void do_chclose(DbRef player, char *chan) {
+static void do_chclose(EvaluationContext *evaluation, DbRef player,
+                       char *chan) {
   struct channel *ch;
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type &= (~(CHANNEL_PUBLIC));
-  notify_printf(player, "@cset: Channel %s taken off the public listings.",
-                chan);
+  notify_printf(evaluation, player,
+                "@cset: Channel %s taken off the public listings.", chan);
   return;
 }
 
-void do_cemit(DbRef player, DbRef cause, int key, char *chan, char *text) {
+void do_cemit(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *chan = invocation->first;
+  char *text = invocation->second;
   struct channel *ch;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "Channel %s does not exist.", chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "Permission denied.");
     return;
   }
   if (key == CEMIT_NOHEADER)
-    do_comsend(ch, text);
+    do_comsend(evaluation, ch, text);
   else
-    do_comprintf(ch, "[%s] %s", chan, text);
+    do_comprintf(evaluation, ch, "[%s] %s", chan, text);
 }
 
-void do_chopen(DbRef player, DbRef cause, int key, char *chan, char *object) {
+void do_chopen(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *chan = invocation->first;
+  char *object = invocation->second;
   struct channel *ch;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
   switch (key) {
   case CSET_PRIVATE:
-    do_chclose(player, chan);
+    do_chclose(evaluation, player, chan);
     return;
   case CSET_LOUD:
-    do_chloud(player, chan);
+    do_chloud(evaluation, player, chan);
     return;
   case CSET_QUIET:
-    do_chsquelch(player, chan);
+    do_chsquelch(evaluation, player, chan);
     return;
   case CSET_LIST:
-    do_chanlist(player, NOTHING, 1);
+    CommandInvocation list_invocation = *invocation;
+    list_invocation.key = 1;
+    do_chanlist(&list_invocation);
     return;
   case CSET_OBJECT:
-    do_chanobj(player, chan, object);
+    do_chanobj(evaluation, player, chan, object);
     return;
   case CSET_STATUS:
-    do_chanstatus(player, NOTHING, 1, chan);
+    CommandInvocation status_invocation = *invocation;
+    status_invocation.key = 1;
+    status_invocation.first = chan;
+    do_chanstatus(&status_invocation);
     return;
   case CSET_TRANSPARENT:
-    do_chtransparent(player, chan);
+    do_chtransparent(evaluation, player, chan);
     return;
   case CSET_OPAQUE:
-    do_chopaque(player, chan);
+    do_chopaque(evaluation, player, chan);
     return;
   default:
     break;
   }
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type |= (CHANNEL_PUBLIC);
-  notify_printf(player, "@cset: Channel %s placed on the public listings.",
-                chan);
+  notify_printf(evaluation, player,
+                "@cset: Channel %s placed on the public listings.", chan);
   return;
 }
 
-static void do_chloud(DbRef player, char *chan) {
+static void do_chloud(EvaluationContext *evaluation, DbRef player, char *chan) {
   struct channel *ch;
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type |= (CHANNEL_LOUD);
-  notify_printf(player, "@cset: Channel %s now sends connect/disconnect msgs.",
-                chan);
+  notify_printf(evaluation, player,
+                "@cset: Channel %s now sends connect/disconnect msgs.", chan);
   return;
 }
 
-static void do_chsquelch(DbRef player, char *chan) {
+static void do_chsquelch(EvaluationContext *evaluation, DbRef player,
+                         char *chan) {
   struct channel *ch;
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type &= ~(CHANNEL_LOUD);
-  notify_printf(player, "@cset: Channel %s connect/disconnect msgs muted.",
-                chan);
+  notify_printf(evaluation, player,
+                "@cset: Channel %s connect/disconnect msgs muted.", chan);
   return;
 }
 
-static void do_chtransparent(DbRef player, char *chan) {
+static void do_chtransparent(EvaluationContext *evaluation, DbRef player,
+                             char *chan) {
   struct channel *ch;
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type |= CHANNEL_TRANSPARENT;
-  notify_printf(player,
+  notify_printf(evaluation, player,
                 "@cset: Channel %s now shows all listeners to everyone.", chan);
   return;
 }
 
-static void do_chopaque(DbRef player, char *chan) {
+static void do_chopaque(EvaluationContext *evaluation, DbRef player,
+                        char *chan) {
   struct channel *ch;
 
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cset: Channel %s does not exist.", chan);
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cset: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if ((player != ch->charge_who) && (!is_comm_all(player))) {
-    raw_notify(player, "@cset: Permission denied.");
+  if ((player != ch->charge_who) &&
+      (!is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "@cset: Permission denied.");
     return;
   }
   ch->type &= ~CHANNEL_TRANSPARENT;
   notify_printf(
-      player, "@cset: Channel %s now does not show all listeners to everyone.",
-      chan);
+      evaluation, player,
+      "@cset: Channel %s now does not show all listeners to everyone.", chan);
   return;
 }
 
-void do_chboot(DbRef player, DbRef cause, int key, char *channel,
-               char *victim) {
+void do_chboot(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *channel = invocation->first;
+  char *victim = invocation->second;
   struct comuser *user;
   struct channel *ch;
   struct comuser *vu;
@@ -1260,69 +1422,79 @@ void do_chboot(DbRef player, DbRef cause, int key, char *channel,
    * *  * *  * *  * * long.
    */
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  if (!(ch = select_channel(channel))) {
-    raw_notify(player, "@cboot: Unknown channel.");
+  if (!(ch = select_channel(&evaluation->server->channels, channel))) {
+    raw_notify(evaluation, player, "@cboot: Unknown channel.");
     return;
   }
   if (!(user = select_user(ch, player))) {
-    raw_notify(player, "@cboot: You are not on that channel.");
+    raw_notify(evaluation, player, "@cboot: You are not on that channel.");
     return;
   }
-  if (!((ch->charge_who == player) || is_comm_all(player))) {
-    raw_notify(player, "Permission denied.");
+  if (!((ch->charge_who == player) ||
+        is_comm_all(evaluation->world->database, player))) {
+    raw_notify(evaluation, player, "Permission denied.");
     return;
   }
-  thing = match_thing(player, victim);
+  thing = match_thing(&evaluation->command->match, player, victim);
 
   if (thing == NOTHING) {
     return;
   }
   if (!(vu = select_user(ch, thing))) {
-    notify_printf(player, "@cboot: %s in not on the channel.", Name(thing));
+    notify_printf(evaluation, player, "@cboot: %s in not on the channel.",
+                  game_object_name(evaluation->world->database, thing));
     return;
   }
   /*
    * We should be in the clear now. :)
    */
-  do_comprintf(ch, "[%s] %s boots %s off the channel.", ch->name,
-               unparse_object_numonly(player), unparse_object_numonly(thing));
-  do_delcomchannel(thing, channel);
+  do_comprintf(evaluation, ch, "[%s] %s boots %s off the channel.", ch->name,
+               unparse_object_numonly(evaluation->world->database, player),
+               unparse_object_numonly(evaluation->world->database, thing));
+  do_delcomchannel(evaluation, thing, channel);
 }
 
-static void do_chanobj(DbRef player, char *channel, char *object) {
+static void do_chanobj(EvaluationContext *evaluation, DbRef player,
+                       char *channel, char *object) {
   struct channel *ch;
   DbRef thing;
   char *buff;
 
-  init_match(player, object, NOTYPE);
-  match_everything(0);
-  thing = match_result();
+  init_match(&evaluation->command->match, player, object, NOTYPE);
+  match_everything(&evaluation->command->match, 0);
+  thing = match_result(&evaluation->command->match);
 
-  if (!(ch = select_channel(channel))) {
-    raw_notify(player, "That channel does not exist.");
+  if (!(ch = select_channel(&evaluation->server->channels, channel))) {
+    raw_notify(evaluation, player, "That channel does not exist.");
     return;
   }
   if (thing == NOTHING) {
     ch->chan_obj = NOTHING;
-    raw_notify(player, "Set.");
+    raw_notify(evaluation, player, "Set.");
     return;
   }
-  if (!(ch->charge_who == player) && !is_comm_all(player)) {
-    raw_notify(player, "Permission denied.");
+  if (!(ch->charge_who == player) &&
+      !is_comm_all(evaluation->world->database, player)) {
+    raw_notify(evaluation, player, "Permission denied.");
     return;
   }
   ch->chan_obj = (int)thing;
-  buff = unparse_object(player, thing, 0);
-  notify_printf(player, "Channel %s is now using %s as channel object.",
-                ch->name, buff);
+  buff =
+      unparse_object(evaluation->world->database, evaluation, player, thing, 0);
+  notify_printf(evaluation, player,
+                "Channel %s is now using %s as channel object.", ch->name,
+                buff);
   free_lbuf(buff);
 }
 
-void do_chanlist(DbRef player, DbRef cause, int key) {
+void do_chanlist(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
   DbRef owner;
   struct channel *ch;
   long flags;
@@ -1330,29 +1502,32 @@ void do_chanlist(DbRef player, DbRef cause, int key) {
   char *buf;
   char *atrstr;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
   flags = 0;
 
   if (key & CLIST_FULL) {
-    do_listchannels(player);
+    do_listchannels(evaluation, player);
     return;
   }
   temp = alloc_mbuf("do_chanlist_temp");
   buf = alloc_mbuf("do_chanlist_buf");
 
-  raw_notify(player, "** Channel       Owner           Description");
+  raw_notify(evaluation, player,
+             "** Channel       Owner           Description");
 
-  for (ch = (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
-       ch;
-       ch = (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
-    if (is_comm_all(player) || (ch->type & CHANNEL_PUBLIC) ||
-        ch->charge_who == player ||
-        (do_test_access(player, CHANNEL_JOIN, ch))) {
+  for (ch = (struct channel *)hash_table_first_entry(
+           &evaluation->server->channels.channels);
+       ch; ch = (struct channel *)hash_table_next_entry(
+               &evaluation->server->channels.channels)) {
+    if (is_comm_all(evaluation->world->database, player) ||
+        (ch->type & CHANNEL_PUBLIC) || ch->charge_who == player ||
+        (do_test_access(evaluation, player, CHANNEL_JOIN, ch))) {
 
-      atrstr = attribute_parent_get(ch->chan_obj, A_DESC, &owner, &flags);
+      atrstr = attribute_parent_get(evaluation->world->database, ch->chan_obj,
+                                    A_DESC, &owner, &flags);
       if ((ch->chan_obj == NOTHING) || !*atrstr)
         snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
@@ -1362,17 +1537,22 @@ void do_chanlist(DbRef player, DbRef cause, int key) {
       snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-15.15s %-45.45s",
                (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
                (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name,
-               Name(ch->charge_who), buf);
+               game_object_name(evaluation->world->database, ch->charge_who),
+               buf);
 
-      raw_notify(player, temp);
+      raw_notify(evaluation, player, temp);
     }
   }
   free_mbuf(temp);
   free_mbuf(buf);
-  raw_notify(player, "-- End of list of Channels --");
+  raw_notify(evaluation, player, "-- End of list of Channels --");
 }
 
-void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
+void do_chanstatus(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *chan = invocation->first;
   DbRef owner;
   struct channel *ch;
   long flags;
@@ -1380,8 +1560,8 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
   char *buf;
   char *atrstr;
 
-  if (!mudconf.have_comsys) {
-    raw_notify(player, "Comsys disabled.");
+  if (!evaluation->world->configuration->have_comsys) {
+    raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
 
@@ -1389,23 +1569,26 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
     struct channel *selected_channel;
     int perm;
 
-    if (!(perm = is_comm_all(player))) {
+    if (!(perm = is_comm_all(evaluation->world->database, player))) {
       raw_notify(
-          player,
+          evaluation, player,
           "Warning: Only public channels and your channels will be shown.");
     }
-    raw_notify(player, "** Channel             --Flags--  Obj   Own   Charge  "
-                       "Balance  Users   Messages");
+    raw_notify(evaluation, player,
+               "** Channel             --Flags--  Obj   Own   Charge  "
+               "Balance  Users   Messages");
 
-    if (!(selected_channel = select_channel(chan))) {
-      notify_printf(player, "@cstatus: Channel %s does not exist.", chan);
+    if (!(selected_channel =
+              select_channel(&evaluation->server->channels, chan))) {
+      notify_printf(evaluation, player, "@cstatus: Channel %s does not exist.",
+                    chan);
       return;
     }
     if (perm || (selected_channel->type & CHANNEL_PUBLIC) ||
         selected_channel->charge_who == player) {
 
       notify_printf(
-          player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
+          evaluation, player, "%c%c %-20.20s %c%c%c/%c%c%c %5d %5d %6d %10d",
           (selected_channel->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
           (selected_channel->type & (CHANNEL_LOUD)) ? 'L' : '-',
           selected_channel->name,
@@ -1427,21 +1610,24 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
           selected_channel->charge_who, selected_channel->num_users,
           selected_channel->num_messages);
     }
-    raw_notify(player, "-- End of list of Channels --");
+    raw_notify(evaluation, player, "-- End of list of Channels --");
     return;
   }
   temp = alloc_mbuf("do_chanstatus_temp");
   buf = alloc_mbuf("do_chanstatus_buf");
 
-  raw_notify(player, "** Channel       Owner           Description");
-  if (!(ch = select_channel(chan))) {
-    notify_printf(player, "@cstatus: Channel %s does not exist.", chan);
+  raw_notify(evaluation, player,
+             "** Channel       Owner           Description");
+  if (!(ch = select_channel(&evaluation->server->channels, chan))) {
+    notify_printf(evaluation, player, "@cstatus: Channel %s does not exist.",
+                  chan);
     return;
   }
-  if (is_comm_all(player) || (ch->type & CHANNEL_PUBLIC) ||
-      ch->charge_who == player) {
+  if (is_comm_all(evaluation->world->database, player) ||
+      (ch->type & CHANNEL_PUBLIC) || ch->charge_who == player) {
 
-    atrstr = attribute_parent_get(ch->chan_obj, A_DESC, &owner, &flags);
+    atrstr = attribute_parent_get(evaluation->world->database, ch->chan_obj,
+                                  A_DESC, &owner, &flags);
     if ((ch->chan_obj == NOTHING) || !*atrstr)
       snprintf(buf, MBUF_SIZE, "%s", "No description.");
     else
@@ -1451,30 +1637,33 @@ void do_chanstatus(DbRef player, DbRef cause, int key, char *chan) {
     snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-15.15s %-45.45s",
              (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
              (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name,
-             Name(ch->charge_who), buf);
+             game_object_name(evaluation->world->database, ch->charge_who),
+             buf);
 
-    raw_notify(player, temp);
+    raw_notify(evaluation, player, temp);
   }
   free_mbuf(temp);
   free_mbuf(buf);
-  raw_notify(player, "-- End of list of Channels --");
+  raw_notify(evaluation, player, "-- End of list of Channels --");
 }
 
 void fun_cemit(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   struct channel *ch;
 
-  if (!(ch = select_channel(fargs[0]))) {
+  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
 
-  if (!mudconf.have_comsys ||
-      (!is_comm_all(player) && (player != ch->charge_who))) {
+  if (!context->world->configuration->have_comsys ||
+      (!is_comm_all(context->world->database, player) &&
+       (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
 
-  do_comprintf(ch, "[%s] %s", fargs[0], fargs[1]);
+  do_comprintf(context, ch, "[%s] %s", fargs[0], fargs[1]);
   *buff = '\0';
 }

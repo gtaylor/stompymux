@@ -354,7 +354,7 @@ void addMechToC3Network(MECH *mech, MECH *mechToAdd) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     if (otherRef != mechToAdd->mynum) {
@@ -405,7 +405,7 @@ void clearC3Network(MECH *mech, int tClearFromOthers) {
       if (!otherMech)
         continue;
 
-      if (!is_good_obj(otherMech->mynum))
+      if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
         continue;
 
       clearMechFromC3Network(mech->mynum, otherMech);
@@ -441,7 +441,7 @@ void validateC3Network(MECH *mech) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     debugC3(tprintf("C3 VALIDATE INFO: %ld is now in %ld's C3 network",

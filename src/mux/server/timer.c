@@ -15,64 +15,85 @@
 #include "mux/database/powers.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/maintenance.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 #include "mux/server/timer.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 
 extern void pool_reset(void);
-extern void fork_and_dump(int key);
 extern unsigned int alarm(unsigned int seconds);
-extern void pcache_trim(void);
-static void check_events(void);
+static void check_events(MaintenanceContext *maintenance);
 
 static void timer_callback(MuxTimer *timer, void *arg);
 
-static MuxTimer *timer_event;
+struct ServerTimer {
+  MuxTimer *event;
+  MaintenanceContext *maintenance;
+};
 
-void init_timer(void) {
-  mudstate.now = time(nullptr);
-  mudstate.dump_counter =
-      ((mudconf.dump_offset == 0) ? mudconf.database.dump_interval
-                                  : mudconf.dump_offset) +
-      mudstate.now;
-  mudstate.check_counter =
-      ((mudconf.check_offset == 0) ? mudconf.check_interval
-                                   : mudconf.check_offset) +
-      mudstate.now;
-  mudstate.idle_counter = mudconf.idle_interval + mudstate.now;
-  mudstate.mstats_counter = 15 + mudstate.now;
-  mudstate.events_counter = 900 + mudstate.now;
-  timer_event =
-      mux_timer_create(server_lifecycle_loop(), timer_callback, nullptr);
-  if (timer_event != nullptr)
-    mux_timer_start(timer_event, 100, 100);
+ServerTimer *server_timer_create(uv_loop_t *loop,
+                                 MaintenanceContext *maintenance) {
+  ServerTimer *timer = calloc(1, sizeof(*timer));
+
+  if (timer == nullptr)
+    return nullptr;
+  timer->maintenance = maintenance;
+  maintenance->clock->now = time(nullptr);
+  maintenance->clock->dump_deadline =
+      ((maintenance->configuration->dump_offset == 0)
+           ? maintenance->configuration->database.dump_interval
+           : maintenance->configuration->dump_offset) +
+      maintenance->clock->now;
+  maintenance->clock->check_deadline =
+      ((maintenance->configuration->check_offset == 0)
+           ? maintenance->configuration->check_interval
+           : maintenance->configuration->check_offset) +
+      maintenance->clock->now;
+  maintenance->clock->idle_deadline =
+      maintenance->configuration->idle_interval + maintenance->clock->now;
+  maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
+  maintenance->clock->events_deadline = 900 + maintenance->clock->now;
+  timer->event = mux_timer_create(loop, timer_callback, timer);
+  if (timer->event == nullptr || !mux_timer_start(timer->event, 100, 100)) {
+    server_timer_destroy(timer);
+    return nullptr;
+  }
+  return timer;
 }
 
-void check_idle(void) {
+static void check_idle(MaintenanceContext *maintenance) {
   Descriptor *d;
-  DescriptorIterator iterator = descriptor_iterator_all();
+  DescriptorIterator iterator =
+      descriptor_iterator_all(maintenance->descriptors);
   time_t idletime;
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (d->is_dead)
       continue;
     if (d->is_connected) {
-      idletime = mudstate.now - d->last_time;
-      if ((idletime > d->timeout) && !can_idle(d->player)) {
+      idletime = maintenance->clock->now - d->last_time;
+      if ((idletime > d->timeout) &&
+          !can_idle(&maintenance->server->database, d->player)) {
         descriptor_queue_string(d, "*** Inactivity Timeout ***\r\n");
         descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
-      } else if (mudconf.idle_wiz_dark && (idletime > mudconf.idle_timeout) &&
-                 can_idle(d->player) && !is_dark(d->player)) {
-        s_flags(d->player, obj_flags(d->player) | DARK);
+      } else if (maintenance->configuration->idle_wiz_dark &&
+                 (idletime > maintenance->configuration->idle_timeout) &&
+                 can_idle(&maintenance->server->database, d->player) &&
+                 !is_dark(&maintenance->server->database, d->player)) {
+        game_object_set_flags(
+            &maintenance->server->database, d->player,
+            game_object_flags(&maintenance->server->database, d->player) |
+                DARK);
         d->is_autodark = true;
       }
     } else {
-      idletime = mudstate.now - d->connected_at;
-      if (idletime > mudconf.conn_timeout) {
+      idletime = maintenance->clock->now - d->connected_at;
+      if (idletime > maintenance->configuration->conn_timeout) {
         descriptor_queue_string(d, "*** Login Timeout ***\r\n");
         descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
       }
@@ -80,91 +101,102 @@ void check_idle(void) {
   }
 }
 
-static void check_events(void) {
+static void check_events(MaintenanceContext *maintenance) {
   struct tm *ltime;
   DbRef thing, parent;
   int lev;
 
-  ltime = localtime(&mudstate.now);
-  if ((ltime->tm_hour == mudconf.events_daily_hour) &&
-      !(mudstate.events_flag & ET_DAILY)) {
-    mudstate.events_flag = mudstate.events_flag | ET_DAILY;
-    DO_WHOLE_DB(thing) {
-      if (is_going(thing))
+  ltime = localtime(&maintenance->clock->now);
+  if ((ltime->tm_hour == maintenance->configuration->events_daily_hour) &&
+      !(maintenance->clock->events_run & ET_DAILY)) {
+    maintenance->clock->events_run = maintenance->clock->events_run | ET_DAILY;
+    DO_WHOLE_DB(&maintenance->server->database, thing) {
+      if (is_going(&maintenance->server->database, thing))
         continue;
 
-      ITER_PARENTS(thing, parent, lev) {
-        if (obj_flags2(thing) & HAS_DAILY) {
-          did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_DAILY,
-                 (char **)nullptr, 0);
+      ITER_PARENTS(&maintenance->server->database, maintenance->configuration,
+                   thing, parent, lev) {
+        if (game_object_flags2(&maintenance->server->database, thing) &
+            HAS_DAILY) {
+          did_it(&maintenance->command->evaluation,
+                 game_object_owner(&maintenance->server->database, thing),
+                 thing, 0, nullptr, 0, nullptr, A_DAILY, (char **)nullptr, 0);
 
           break;
         }
       }
     }
   }
-  if (ltime->tm_hour != mudstate.events_lasthour) {
-    if (mudstate.events_lasthour >= 0) {
+  if (ltime->tm_hour != maintenance->clock->events_last_hour) {
+    if (maintenance->clock->events_last_hour >= 0) {
       /* Run hourly maintenance */
-      DO_WHOLE_DB(thing) {
-        if (is_going(thing))
+      DO_WHOLE_DB(&maintenance->server->database, thing) {
+        if (is_going(&maintenance->server->database, thing))
           continue;
 
-        ITER_PARENTS(thing, parent, lev) {
-          if (obj_flags2(thing) & HAS_HOURLY) {
-            did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_HOURLY,
-                   (char **)nullptr, 0);
+        ITER_PARENTS(&maintenance->server->database, maintenance->configuration,
+                     thing, parent, lev) {
+          if (game_object_flags2(&maintenance->server->database, thing) &
+              HAS_HOURLY) {
+            did_it(&maintenance->command->evaluation,
+                   game_object_owner(&maintenance->server->database, thing),
+                   thing, 0, nullptr, 0, nullptr, A_HOURLY, (char **)nullptr,
+                   0);
 
             break;
           }
         }
       }
     }
-    mudstate.events_lasthour = ltime->tm_hour;
+    maintenance->clock->events_last_hour = ltime->tm_hour;
   }
   if (ltime->tm_hour == 23) { /*
                                * Nightly resetting
                                */
-    mudstate.events_flag = 0;
+    maintenance->clock->events_run = 0;
   }
 }
 
-static void dispatch(void) {
+static void dispatch(MaintenanceContext *maintenance) {
   const char *cmdsave;
 
-  cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = "< dispatch >";
+  cmdsave = maintenance->command->debug_command;
+  maintenance->command->debug_command = "< dispatch >";
   /*
    * this routine can be used to poll from interface.c
    */
 
-  if (!mudstate.is_alarm_triggered)
+  if (!maintenance->clock->tick_pending)
     return;
-  mudstate.is_alarm_triggered = false;
-  mudstate.now = time(nullptr);
+  maintenance->clock->tick_pending = false;
+  maintenance->clock->now = time(nullptr);
 
-  do_second();
-  lua_schedule_tick(mudstate.now);
+  do_second(maintenance->commands);
+  lua_schedule_tick(*maintenance->lua, maintenance->clock->now);
 
   /*
    * Free list reconstruction
    */
 
-  if (mudconf.is_db_check_enabled && mudstate.check_counter <= mudstate.now) {
-    mudstate.check_counter = mudconf.check_interval + mudstate.now;
-    mudstate.debug_cmd = "< dbck >";
-    do_dbck(NOTHING, NOTHING, 0);
-    pcache_trim();
+  if (maintenance->configuration->is_db_check_enabled &&
+      maintenance->clock->check_deadline <= maintenance->clock->now) {
+    maintenance->clock->check_deadline =
+        maintenance->configuration->check_interval + maintenance->clock->now;
+    maintenance->command->debug_command = "< dbck >";
+    database_check(&maintenance->command->evaluation, NOTHING, 0);
+    pcache_trim(maintenance->players);
   }
   /*
    * Database dump routines
    */
 
-  if (mudconf.is_checkpointing_enabled &&
-      mudstate.dump_counter <= mudstate.now) {
-    mudstate.dump_counter = mudconf.database.dump_interval + mudstate.now;
-    mudstate.debug_cmd = "< dump >";
-    fork_and_dump(0);
+  if (maintenance->configuration->is_checkpointing_enabled &&
+      maintenance->clock->dump_deadline <= maintenance->clock->now) {
+    maintenance->clock->dump_deadline =
+        maintenance->configuration->database.dump_interval +
+        maintenance->clock->now;
+    maintenance->command->debug_command = "< dump >";
+    fork_and_dump(maintenance->server, 0);
   }
   /*
      Mech stuff ; hopefully it means once ~per sec, although you
@@ -172,84 +204,93 @@ static void dispatch(void) {
      needed (see UpdateSpecialObjects for details)
    */
 
-  if (mudconf.have_specials)
+  if (maintenance->configuration->have_specials)
     UpdateSpecialObjects();
 
   /*
    * Idle user check
    */
 
-  if (mudconf.is_idle_check_enabled && mudstate.idle_counter <= mudstate.now) {
-    mudstate.idle_counter = mudconf.idle_interval + mudstate.now;
-    mudstate.debug_cmd = "< idlecheck >";
-    check_idle();
+  if (maintenance->configuration->is_idle_check_enabled &&
+      maintenance->clock->idle_deadline <= maintenance->clock->now) {
+    maintenance->clock->idle_deadline =
+        maintenance->configuration->idle_interval + maintenance->clock->now;
+    maintenance->command->debug_command = "< idlecheck >";
+    check_idle(maintenance);
   }
   /*
    * Check for execution of attribute events
    */
 
-  if (mudconf.is_event_check_enabled &&
-      mudstate.events_counter <= mudstate.now) {
-    mudstate.events_counter = 900 + mudstate.now;
-    mudstate.debug_cmd = "< eventcheck >";
-    check_events();
+  if (maintenance->configuration->is_event_check_enabled &&
+      maintenance->clock->events_deadline <= maintenance->clock->now) {
+    maintenance->clock->events_deadline = 900 + maintenance->clock->now;
+    maintenance->command->debug_command = "< eventcheck >";
+    check_events(maintenance);
   }
   /*
    * Memory use stats
    */
 
-  if (mudstate.mstats_counter <= mudstate.now) {
+  if (maintenance->clock->metrics_deadline <= maintenance->clock->now) {
 
     int curr;
 
-    mudstate.mstats_counter = 15 + mudstate.now;
-    curr = mudstate.mstat_curr;
-    if (mudstate.now > mudstate.mstat_secs[curr]) {
+    maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
+    curr = maintenance->clock->current_sample;
+    if (maintenance->clock->now > maintenance->clock->sample_time[curr]) {
 
       struct rusage usage;
 
       curr = 1 - curr;
       getrusage(RUSAGE_SELF, &usage);
-      mudstate.mstat_ixrss[curr] = (int)usage.ru_ixrss;
-      mudstate.mstat_idrss[curr] = (int)usage.ru_idrss;
-      mudstate.mstat_isrss[curr] = (int)usage.ru_isrss;
-      mudstate.mstat_secs[curr] = (int)mudstate.now;
-      mudstate.mstat_curr = curr;
+      maintenance->clock->shared_memory[curr] = (int)usage.ru_ixrss;
+      maintenance->clock->private_memory[curr] = (int)usage.ru_idrss;
+      maintenance->clock->stack_memory[curr] = (int)usage.ru_isrss;
+      maintenance->clock->sample_time[curr] = (int)maintenance->clock->now;
+      maintenance->clock->current_sample = curr;
     }
   }
-  mudstate.debug_cmd = cmdsave;
+  maintenance->command->debug_command = cmdsave;
 }
 
 static void timer_callback(MuxTimer *timer, void *arg) {
-  mudstate.is_alarm_triggered = true;
-  dispatch();
+  ServerTimer *server_timer = arg;
+  MaintenanceContext *maintenance = server_timer->maintenance;
+
+  maintenance->clock->tick_pending = true;
+  dispatch(maintenance);
 }
 
-void timer_shutdown(void) {
-  if (timer_event != nullptr) {
-    mux_timer_destroy(timer_event);
-    timer_event = nullptr;
-  }
+void server_timer_destroy(ServerTimer *timer) {
+  if (timer == nullptr)
+    return;
+  if (timer->event != nullptr)
+    mux_timer_destroy(timer->event);
+  free(timer);
 }
 
 /**
  * Adjust various internal timers.
  */
-void do_timewarp(DbRef player, DbRef cause, int key, char *arg) {
+void do_timewarp(CommandInvocation *invocation) {
   int secs;
+  RuntimeClock *clock = &invocation->context->server->clock;
 
-  secs = clamped_atoi(arg);
+  secs = clamped_atoi(invocation->first);
 
-  if ((key == 0) || (key & TWARP_QUEUE)) /*
-                                          * Sem/Wait queues
-                                          */
-    do_queue(player, cause, QUEUE_WARP, arg);
-  if (key & TWARP_DUMP)
-    mudstate.dump_counter -= secs;
-  if (key & TWARP_CLEAN)
-    mudstate.check_counter -= secs;
-  if (key & TWARP_IDLE)
-    mudstate.idle_counter -= secs;
-  if (key & TWARP_EVENTS)
-    mudstate.events_counter -= secs;
+  if ((invocation->key == 0) || (invocation->key & TWARP_QUEUE)) {
+    CommandInvocation queue_invocation = *invocation;
+
+    queue_invocation.key = QUEUE_WARP;
+    do_queue(&queue_invocation);
+  }
+  if (invocation->key & TWARP_DUMP)
+    clock->dump_deadline -= secs;
+  if (invocation->key & TWARP_CLEAN)
+    clock->check_deadline -= secs;
+  if (invocation->key & TWARP_IDLE)
+    clock->idle_deadline -= secs;
+  if (invocation->key & TWARP_EVENTS)
+    clock->events_deadline -= secs;
 }

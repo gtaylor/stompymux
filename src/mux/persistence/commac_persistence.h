@@ -2,5 +2,7 @@
 
 #pragma once
 
+typedef struct PersistenceContext PersistenceContext;
+
 /* Register the authoritative commac/comsys/macro SQLite extension. */
-int commac_persistence_register(void);
+int commac_persistence_register(PersistenceContext *context);

@@ -5,4 +5,8 @@
 
 #include "mux/network/descriptor.h"
 
+typedef struct LoginThrottle LoginThrottle;
+
+LoginThrottle *login_throttle_create(void);
+void login_throttle_destroy(LoginThrottle *throttle);
 void descriptor_start_connect_flow(Descriptor *descriptor);

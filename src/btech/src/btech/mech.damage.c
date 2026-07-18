@@ -285,7 +285,7 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
   /* Hmm.. This should be interesting */
   if (MechType(wounded) == CLASS_MECH && intDamage && (hitloc == CTORSO) &&
       GetSectInt(wounded, hitloc) == GetSectOInt(wounded, hitloc))
-    MechBoomStart(wounded) = mux_event_tick;
+    MechBoomStart(wounded) = btech_context_active()->events->tick;
 
   if (GetSectInt(wounded, hitloc) <= intDamage) {
     intDamage -= GetSectInt(wounded, hitloc);
@@ -417,8 +417,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     /* If we're a VTOL and the hitloc is the rotor,
        we'll cut the damage by some value */
     if ((MechType(wounded) == CLASS_VTOL) && (hitloc == ROTOR)) {
-      if (mudconf.btech_divrotordamage > 0)
-        damage = damage / mudconf.btech_divrotordamage;
+      if (btech_context_active()->configuration->btech_divrotordamage > 0)
+        damage = damage /
+                 btech_context_active()->configuration->btech_divrotordamage;
       if (damage < 1)
         damage = 1;
     }
@@ -432,7 +433,8 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     if (!global_physical_flag)
       AccumulateGunXP(attackPilot, attacker, wounded, damage, 1, cause, bth);
     else if (global_physical_flag == 1)
-      if (!Destroyed(wounded) && is_in_character(wounded->mynum) &&
+      if (!Destroyed(wounded) &&
+          is_in_character(btech_context_active()->database, wounded->mynum) &&
           MechTeam(wounded) != MechTeam(attacker))
         if (MechType(wounded) != CLASS_MW || MechType(attacker) == CLASS_MW)
           AccumulatePilXP(attackPilot, attacker, damage / 3, 1);
@@ -554,7 +556,8 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
   if (damage > 0 && intDamage <= 0 && !was_transfer && !Fallen(wounded)) {
-    if (mudconf.btech_newstagger && MechType(wounded) == CLASS_MECH) {
+    if (btech_context_active()->configuration->btech_newstagger &&
+        MechType(wounded) == CLASS_MECH) {
 
       // So now that stagger isn't completely retarded, here's how it works
       // you take damage and every point of damage gets added to a linked list
@@ -570,7 +573,8 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
       if (damagePointer == NULL) {
         (wounded)->rd.staggerDamageList = malloc(sizeof(damageNode));
         (wounded)->rd.staggerDamageList->amount = damage;
-        (wounded)->rd.staggerDamageList->occuredAt = mudstate.now;
+        (wounded)->rd.staggerDamageList->occuredAt =
+            btech_context_active()->clock->now;
         (wounded)->rd.staggerDamageList->attackerNum = attacker->mynum;
         (wounded)->rd.staggerDamageList->counted = 0;
         (wounded)->rd.staggerDamageList->next = NULL;
@@ -582,7 +586,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
         // set the last node equal to our new damage pointer
         damagePointer->next = malloc(sizeof(damageNode));
         damagePointer->next->amount = damage;
-        damagePointer->next->occuredAt = mudstate.now;
+        damagePointer->next->occuredAt = btech_context_active()->clock->now;
         damagePointer->next->attackerNum = attacker->mynum;
         damagePointer->next->counted = 0;
         damagePointer->next->next = NULL;
@@ -671,9 +675,11 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
      * negative num. If its negative, (lower then -1 which will stay as
      * selfdamage) we'll check a 'Physical Weapons Table' and abs() the value
      * and pick the name out from there */
-    if (mudconf.btech_statengine_obj > 0 && wWeapIndx != -1)
+    if (btech_context_active()->configuration->btech_statengine_obj > 0 &&
+        wWeapIndx != -1)
       notify_with_cause(
-          mudconf.btech_statengine_obj, GOD,
+          BTECH_EVALUATION_CONTEXT,
+          btech_context_active()->configuration->btech_statengine_obj, GOD,
           tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
                   attacker->mapindex, MechPilot(attacker), MechPilot(wounded),
                   MechType_Ref(attacker), MechType_Ref(wounded),
@@ -893,7 +899,8 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(wounded, i) && GetSectInt(wounded, i))
         return;
-    if (mux_event_count_type_data(EVENT_NUKEMECH, (void *)wounded)) {
+    if (mux_event_count_type_data(btech_context_active()->events,
+                                  EVENT_NUKEMECH, (void *)wounded)) {
       fprintf(stderr, "And nuke event already existed.\n");
       return;
     }
@@ -951,7 +958,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
   }
 
   /* Ensure the template's timely demise */
-  if (is_in_character(wounded->mynum)) {
+  if (is_in_character(btech_context_active()->database, wounded->mynum)) {
     /* Clear the freqs on the unit... */
     for (j = 0; j < FREQS; j++) {
       wounded->freq[j] = 0;
@@ -1001,7 +1008,7 @@ skip_nuke:
       /* If it's the head or a MW's CT, kill the contents if IC */
       if (hitloc == HEAD ||
           ((MechType(wounded) == CLASS_MW) && (hitloc == CTORSO))) {
-        if (is_in_character(wounded->mynum)) {
+        if (is_in_character(btech_context_active()->database, wounded->mynum)) {
           for (j = 0; j < FREQS; j++) {
             wounded->freq[j] = 0;
             wounded->freqmodes[j] = 0;

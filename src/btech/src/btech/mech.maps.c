@@ -40,7 +40,7 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
   x = MechX(mech);
   y = MechY(mech);
   MapCoordToRealCoord(x, y, &fx, &fy);
-  notify_printf(player,
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
                 "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
                 "Bearing to center: %d",
                 x, y, MechZ(mech),
@@ -81,7 +81,7 @@ static int parse_tacargs(DbRef player, MECH *mech, char **args, int argc,
     *y = MechY(mech);
     return 1;
   default:
-    notify(player, "Invalid number of parameters!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of parameters!");
     return 0;
   }
 }
@@ -199,19 +199,21 @@ static void set_colorscheme(DbRef player) {
         custom_color_str[i] = '\0';
         break;
       default:
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "Invalid character '%c' in MAPCOLOR "
                       "attribute!",
                       custom_color_str[i]);
-        notify(player, "Using default: " DEFAULT_COLOR_STRING);
+        notify(BTECH_EVALUATION_CONTEXT, player,
+               "Using default: " DEFAULT_COLOR_STRING);
         memcpy(custom_color_str, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
         return;
       }
     }
     return;
   } else if (*str) {
-    notify(player, "Invalid MAPCOLOR attribute!");
-    notify(player, "Using default: " DEFAULT_COLOR_STRING);
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid MAPCOLOR attribute!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Using default: " DEFAULT_COLOR_STRING);
   }
   memcpy(custom_color_str, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
 }
@@ -229,7 +231,8 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   mech_map = getMap(mech->mapindex);
 
   dolos = MapIsDark(mech_map) ||
-          (MechType(mech) == CLASS_MW && mudconf.btech_mw_losmap);
+          (MechType(mech) == CLASS_MW &&
+           btech_context_active()->configuration->btech_mw_losmap);
 
   DOCHECK(mech_map->map_width <= 0 || mech_map->map_height <= 0,
           "Nothing to see on this map, move along.");
@@ -279,7 +282,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
 
   navigate_sketch_mechs(mech, mech_map, x, y, mybuff);
   for (i = 0; i < NAVIGATE_LINES; i++)
-    notify(player, mybuff[i]);
+    notify(BTECH_EVALUATION_CONTEXT, player, mybuff[i]);
 }
 
 /* INDENT OFF */
@@ -559,9 +562,9 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff), "%c",
              trash1[2]);
   }
-  notify(player, topbuff);
-  notify(player, midbuff);
-  notify(player, botbuff);
+  notify(BTECH_EVALUATION_CONTEXT, player, topbuff);
+  notify(BTECH_EVALUATION_CONTEXT, player, midbuff);
+  notify(BTECH_EVALUATION_CONTEXT, player, botbuff);
 
   if (mode & LRS_MECHMODE) {
     for (i = 0; i < map->first_free; i++) {
@@ -639,8 +642,8 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     }
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
              " %-3d", loop);
-    notify(player, topbuff);
-    notify(player, botbuff);
+    notify(BTECH_EVALUATION_CONTEXT, player, topbuff);
+    notify(BTECH_EVALUATION_CONTEXT, player, botbuff);
   }
 }
 
@@ -654,7 +657,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
 
-  if (is_ansimap(player))
+  if (is_ansimap(btech_context_active()->database, player))
     mode |= LRS_COLORMODE;
 
   map = getMap(mech->mapindex);
@@ -694,18 +697,22 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     mode |= LRS_LOSMODE | LRS_MECHMODE | LRS_TERRAINMODE;
     break;
   default:
-    notify_printf(player, "Unknown LRS sensor type '%s'!", args[0]);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Unknown LRS sensor type '%s'!", args[0]);
     return;
   }
 
-  if (MapIsDark(map) || (MechType(mech) == CLASS_MW && mudconf.btech_mw_losmap))
+  if (MapIsDark(map) ||
+      (MechType(mech) == CLASS_MW &&
+       btech_context_active()->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
   str = silly_atr_get(player, A_LRSHEIGHT);
   if (*str) {
     displayHeight = atoi(str);
     if (displayHeight < 10 || displayHeight > 40) {
-      notify(player, "Illegal LRSHeight attribute.  Must be between 10 and 40");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Illegal LRSHeight attribute.  Must be between 10 and 40");
       displayHeight = LRS_DISPLAY_HEIGHT;
     }
   }
@@ -1379,7 +1386,7 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
 
 char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
                    int wy, int labels, int dohexlos) {
-  int docolour = is_ansimap(player);
+  int docolour = is_ansimap(btech_context_active()->database, player);
   int dounderlying = labels & 64;
   int dispcols;
   int disprows;
@@ -1622,7 +1629,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   DOCHECK(!MechTacRange(mech), "Your system seems to be inoperational.");
 
   if (MapIsDark(mech_map) ||
-      (MechType(mech) == CLASS_MW && mudconf.btech_mw_losmap))
+      (MechType(mech) == CLASS_MW &&
+       btech_context_active()->configuration->btech_mw_losmap))
     dohexlos = 1;
 
   /* Check to see which type of tactical to display
@@ -1655,7 +1663,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       break;
 
     default:
-      notify(player, "Invalid tactical map flag.");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tactical map flag.");
       return;
     }
 
@@ -1680,8 +1688,9 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
              displayHeight > 24 || displayHeight < 5 || displayWidth > 40 ||
              displayWidth < 5) {
 
-    notify(player, "Illegal Tacsize attribute. Must be in format "
-                   "'Height Width' . Height : 5-24 Width : 5-40");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Illegal Tacsize attribute. Must be in format "
+           "'Height Width' . Height : 5-24 Width : 5-40");
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
   }
@@ -1709,7 +1718,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Draw the map for the player */
   for (i = 0; maptext[i]; i++)
-    notify(player, maptext[i]);
+    notify(BTECH_EVALUATION_CONTEXT, player, maptext[i]);
 }
 
 /* XXX Fix 'enterbase <dir>' */
@@ -1750,7 +1759,8 @@ static void mech_enter_event(MuxEvent *e) {
                    tprintf("has entered %s at %d,%d.", structure_name(mapo),
                            MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
-  if (MechType(mech) == CLASS_MW && !is_in_character(mapo->obj)) {
+  if (MechType(mech) == CLASS_MW &&
+      !is_in_character(btech_context_active()->database, mapo->obj)) {
     enter_mw_bay(mech, mapo->obj);
     return;
   }
@@ -1833,8 +1843,8 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
     memset(fail_mesg, 0, sizeof(fail_mesg));
     snprintf(fail_mesg, SBUF_SIZE, "The hangar is locked.");
 
-    did_it(player, newmap->mynum, A_FAIL, fail_mesg, 0, NULL, A_AFAIL,
-           (char **)NULL, 0);
+    did_it(BTECH_EVALUATION_CONTEXT, player, newmap->mynum, A_FAIL, fail_mesg,
+           0, NULL, A_AFAIL, (char **)NULL, 0);
 
     return;
   }

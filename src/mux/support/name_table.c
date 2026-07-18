@@ -7,23 +7,26 @@
 #include "mux/commands/command.h"
 #include "mux/database/db.h"
 #include "mux/server/configuration.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 
 /*
  * ---------------------------------------------------------------------------
  * * name_table_search: Search a name table for a match and return the flag
  * value.
  */
-int name_table_search(DbRef player, NameTable *ntab, char *flagname) {
-  NameTable *nt;
+int name_table_search(GameDatabase *database,
+                      const ServerConfiguration *configuration, DbRef player,
+                      const NameTable *ntab, char *flagname) {
+  const NameTable *nt;
 
   for (nt = ntab; nt->name; nt++) {
     if (minmatch(flagname, nt->name, nt->minlen)) {
-      if (check_access(player, nt->perm)) {
+      if (check_access(database, configuration, player, nt->perm)) {
         return nt->flag;
       } else
         return -2;
@@ -38,13 +41,15 @@ int name_table_search(DbRef player, NameTable *ntab, char *flagname) {
  * to it.
  */
 
-NameTable *name_table_find_entry(DbRef player, NameTable *ntab,
+NameTable *name_table_find_entry(GameDatabase *database,
+                                 const ServerConfiguration *configuration,
+                                 DbRef player, NameTable *ntab,
                                  char *flagname) {
   NameTable *nt;
 
   for (nt = ntab; nt->name; nt++) {
     if (minmatch(flagname, nt->name, nt->minlen)) {
-      if (check_access(player, nt->perm)) {
+      if (check_access(database, configuration, player, nt->perm)) {
         return nt;
       }
     }
@@ -57,8 +62,9 @@ NameTable *name_table_find_entry(DbRef player, NameTable *ntab,
  * * name_table_display: Print out the names of the entries in a name table.
  */
 
-void name_table_display(DbRef player, NameTable *ntab, const char *prefix,
-                        int list_if_none) {
+void name_table_display(EvaluationContext *evaluation,
+                        const ServerConfiguration *configuration, DbRef player,
+                        NameTable *ntab, const char *prefix, int list_if_none) {
   char *buf, *bp;
   const char *cp;
   NameTable *nt;
@@ -70,7 +76,9 @@ void name_table_display(DbRef player, NameTable *ntab, const char *prefix,
   for (cp = prefix; *cp; cp++)
     *bp++ = *cp;
   for (nt = ntab; nt->name; nt++) {
-    if (is_god(player) || check_access(player, nt->perm)) {
+    if (is_god(evaluation->world->database, player) ||
+        check_access(evaluation->world->database, configuration, player,
+                     nt->perm)) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;
@@ -79,7 +87,7 @@ void name_table_display(DbRef player, NameTable *ntab, const char *prefix,
   }
   *bp = '\0';
   if (got_one || list_if_none)
-    notify(player, buf);
+    notify(evaluation, player, buf);
   free_lbuf(buf);
 }
 
@@ -88,7 +96,9 @@ void name_table_display(DbRef player, NameTable *ntab, const char *prefix,
  * * name_table_interpret: Print values for flags defined in name table.
  */
 
-void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
+void name_table_interpret(EvaluationContext *evaluation,
+                          const ServerConfiguration *configuration,
+                          DbRef player, NameTable *ntab, int flagword,
                           const char *prefix, const char *true_text,
                           const char *false_text) {
   char *buf, *bp;
@@ -101,7 +111,9 @@ void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
     *bp++ = *cp;
   nt = ntab;
   while (nt->name) {
-    if (is_god(player) || check_access(player, nt->perm)) {
+    if (is_god(evaluation->world->database, player) ||
+        check_access(evaluation->world->database, configuration, player,
+                     nt->perm)) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;
@@ -119,7 +131,7 @@ void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
     }
   }
   *bp = '\0';
-  notify(player, buf);
+  notify(evaluation, player, buf);
   free_lbuf(buf);
 }
 
@@ -128,8 +140,10 @@ void name_table_interpret(DbRef player, NameTable *ntab, int flagword,
  * * name_table_list_set: Print values for flags defined in name table.
  */
 
-void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
-                         const char *prefix, int list_if_none) {
+void name_table_list_set(EvaluationContext *evaluation,
+                         const ServerConfiguration *configuration, DbRef player,
+                         NameTable *ntab, int flagword, const char *prefix,
+                         int list_if_none) {
   char *buf, *bp;
   const char *cp;
   NameTable *nt;
@@ -142,7 +156,9 @@ void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
   got_one = 0;
   while (nt->name) {
     if (((flagword & nt->flag) != 0) &&
-        (is_god(player) || check_access(player, nt->perm))) {
+        (is_god(evaluation->world->database, player) ||
+         check_access(evaluation->world->database, configuration, player,
+                      nt->perm))) {
       *bp++ = ' ';
       for (cp = nt->name; *cp; cp++)
         *bp++ = *cp;
@@ -152,11 +168,12 @@ void name_table_list_set(DbRef player, NameTable *ntab, int flagword,
   }
   *bp = '\0';
   if (got_one || list_if_none)
-    notify(player, buf);
+    notify(evaluation, player, buf);
   free_lbuf(buf);
 }
 
-int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
+                   MuxServer *server) {
   NameTable *np;
   char *ap;
 
@@ -168,9 +185,10 @@ int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd) {
     ap++;
   for (np = (NameTable *)vp; np->name; np++) {
     if (minmatch(str, np->name, np->minlen)) {
-      return configuration_modify_bits(&(np->perm), ap, extra, player, cmd);
+      return configuration_modify_bits(&(np->perm), ap, extra, player, cmd,
+                                       server);
     }
   }
-  configuration_log_not_found(player, cmd, "Entry", str);
+  configuration_log_not_found(server, player, cmd, "Entry", str);
   return -1;
 }

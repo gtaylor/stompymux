@@ -5,7 +5,7 @@
 #include "mux/server/configuration.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
@@ -86,9 +86,11 @@ int is_number(char *str) {
   return ((*str || !got_one) ? 0 : 1);
 }
 
-int ok_name(const char *name) {
+int ok_name(const ServerConfiguration *configuration, const char *name) {
   const char *cp;
   char new[LBUF_SIZE];
+
+  (void)configuration;
 
   /* Disallow pure ANSI names */
   strncpy(new, name, LBUF_SIZE - 1);
@@ -123,11 +125,12 @@ int ok_name(const char *name) {
   return (name && *name && *name != LOOKUP_TOKEN && *name != NUMBER_TOKEN &&
           *name != NOT_TOKEN && !index(name, ARG_DELIMITER) &&
           !index(name, AND_TOKEN) && !index(name, OR_TOKEN) &&
-          string_compare(name, "me") && string_compare(name, "home") &&
-          string_compare(name, "here"));
+          string_compare(configuration, name, "me") &&
+          string_compare(configuration, name, "home") &&
+          string_compare(configuration, name, "here"));
 }
 
-int ok_player_name(const char *name) {
+int ok_player_name(const ServerConfiguration *configuration, const char *name) {
   const char *cp, *good_chars;
 
   /*
@@ -141,10 +144,10 @@ int ok_player_name(const char *name) {
    * Not too long and a good name for a thing
    */
 
-  if (!ok_name(name) || (strlen(name) >= PLAYER_NAME_LIMIT))
+  if (!ok_name(configuration, name) || (strlen(name) >= PLAYER_NAME_LIMIT))
     return 0;
 
-  if (mudconf.name_spaces)
+  if (configuration->name_spaces)
     good_chars = " `$_-.,'";
   else
     good_chars = "`$_-.,'";
@@ -162,9 +165,10 @@ int ok_player_name(const char *name) {
   return 1;
 }
 
-int ok_new_player_name(const char *name) {
+int ok_new_player_name(const ServerConfiguration *configuration,
+                       const char *name) {
   return strlen(name) >= 2 && isalpha((unsigned char)*name) &&
-         ok_player_name(name);
+         ok_player_name(configuration, name);
 }
 
 int ok_attr_name(const char *attrname) {
@@ -181,11 +185,12 @@ int ok_attr_name(const char *attrname) {
   return 1;
 }
 
-int ok_password(const char *password) {
+int ok_password(const ServerConfiguration *configuration,
+                const char *password) {
   const char *scan;
 
   if (*password == '\0' ||
-      strlen(password) > (size_t)mudconf.player_password_length_limit)
+      strlen(password) > (size_t)configuration->player_password_length_limit)
     return 0;
 
   for (scan = password; *scan; scan++) {

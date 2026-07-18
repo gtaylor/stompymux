@@ -13,20 +13,29 @@
  * references them; stub them out so this test can link help_render.c
  * without pulling in help_index.c and its server-wide dependencies.
  */
-char *help_index_read_body(const HelpArticle *article, size_t *out_length) {
+char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
+                           size_t *out_length) {
+  (void)index;
   (void)article;
   (void)out_length;
   return nullptr;
 }
 
-size_t help_index_article_count(void) { return 0; }
-
-const HelpArticle *help_index_article_at(size_t index) {
+size_t help_index_article_count(const HelpIndex *index) {
   (void)index;
+  return 0;
+}
+
+const HelpArticle *help_index_article_at(const HelpIndex *index,
+                                         size_t article_index) {
+  (void)index;
+  (void)article_index;
   return nullptr;
 }
 
-void notify_checked(DbRef target, DbRef sender, const char *message, int key) {
+void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
+                    const char *message, int key) {
+  (void)evaluation;
   (void)target;
   (void)sender;
   (void)message;

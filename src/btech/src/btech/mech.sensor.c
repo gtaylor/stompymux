@@ -217,8 +217,10 @@ int Sensor_Sees(MECH *mech, MECH *target, int f, int arc, float range, int snum,
     }
   }
   if (range < 3 || Number(1, 10000) < ((chance * ch2) / chance_divisor)) {
-    if (target && is_in_character(mech->mynum) &&
-        is_in_character(target->mynum) && MechTeam(mech) != MechTeam(target))
+    if (target &&
+        is_in_character(btech_context_active()->database, mech->mynum) &&
+        is_in_character(btech_context_active()->database, target->mynum) &&
+        MechTeam(mech) != MechTeam(target))
       if (!Number(0, 5))
         MadePerceptionRoll(mech, -2);
     return 1;
@@ -583,14 +585,15 @@ static void sensor_mode(MECH *mech, char *msg, DbRef player, int p, int s,
     for (i = 0; i < strlen(msg); i++)
       buf[i] = '-';
     buf[strlen(msg)] = 0;
-    notify(player, msg);
-    notify(player, buf);
-    notify_printf(player, "Primary:   %s",
+    notify(BTECH_EVALUATION_CONTEXT, player, msg);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Primary:   %s",
                   sensor_mode_name(mech, p, 0, verbose));
-    notify_printf(player, "Secondary: %s",
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Secondary: %s",
                   sensor_mode_name(mech, s, 0, verbose));
   } else
-    notify_printf(player, "%s: %s", msg, sensor_mode_name(mech, p, 1, verbose));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s: %s", msg,
+                  sensor_mode_name(mech, p, 1, verbose));
 }
 
 static int tmp_prim;
@@ -614,7 +617,8 @@ char *mechSensorInfo(int mode, MECH *mech, char *arg) {
   buffer[0] = SensorInf[(short)MechSensor(mech)[0]];
   buffer[1] = SensorInf[(short)MechSensor(mech)[1]];
   if (SensorChange(mech)) {
-    mux_event_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
+    mux_event_gothru_type_data(btech_context_active()->events, EVENT_SCHANGE,
+                               (void *)mech, sensor_check);
     if (tmp_found) {
       buffer[2] = SensorInf[tmp_prim + NUM_SENSORS];
       buffer[3] = SensorInf[tmp_sec + NUM_SENSORS];
@@ -632,7 +636,8 @@ static void show_sensor(DbRef player, MECH *mech, int verbose) {
   sensor_mode(mech, "Sensors", player, MechSensor(mech)[0], MechSensor(mech)[1],
               verbose);
   if (SensorChange(mech)) {
-    mux_event_gothru_type_data(EVENT_SCHANGE, (void *)mech, sensor_check);
+    mux_event_gothru_type_data(btech_context_active()->events, EVENT_SCHANGE,
+                               (void *)mech, sensor_check);
     if (tmp_found)
       sensor_mode(mech, "Wanted", player, tmp_prim, tmp_sec, 0);
   }

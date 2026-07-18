@@ -9,7 +9,9 @@
 #include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 
@@ -22,20 +24,21 @@
  * returned as NULL.
  */
 
-static char *parse_to_cleanup(int eval, int first, char *cstr, char *rstr,
+static char *parse_to_cleanup(const ServerConfiguration *configuration,
+                              int eval, int first, char *cstr, char *rstr,
                               char *zstr) {
-  if ((mudconf.space_compress || (eval & EV_STRIP_TS)) &&
+  if ((configuration->space_compress || (eval & EV_STRIP_TS)) &&
       !(eval & EV_NO_COMPRESS) && !first && (cstr[-1] == ' '))
     zstr--;
   if ((eval & EV_STRIP_AROUND) && (*rstr == '{') && (zstr[-1] == '}')) {
     rstr++;
-    if (mudconf.space_compress &&
+    if (configuration->space_compress &&
         (!(eval & EV_NO_COMPRESS) || (eval & EV_STRIP_LS)))
       while (*rstr && isspace(*rstr))
         rstr++;
     rstr[-1] = '\0';
     zstr--;
-    if (mudconf.space_compress &&
+    if (configuration->space_compress &&
         (!(eval & EV_NO_COMPRESS) || (eval & EV_STRIP_TS)))
       while (zstr[-1] && isspace(zstr[-1]))
         zstr--;
@@ -57,7 +60,8 @@ problems with copying a memory location to itself. */
       *zstr++ = *cstr++;                                                       \
   } while (0)
 
-char *parse_to(char **dstr, char delim, int eval) {
+char *parse_to(const ServerConfiguration *configuration, char **dstr,
+               char delim, int eval) {
 #define stacklim 32
   char stack[stacklim];
   char *rstr, *cstr, *zstr;
@@ -73,7 +77,7 @@ char *parse_to(char **dstr, char delim, int eval) {
   sp = 0;
   first = 1;
   rstr = *dstr;
-  if ((mudconf.space_compress || (eval & EV_STRIP_LS)) &&
+  if ((configuration->space_compress || (eval & EV_STRIP_LS)) &&
       !(eval & EV_NO_COMPRESS)) {
     while (*rstr && isspace(*rstr))
       rstr++;
@@ -113,7 +117,7 @@ char *parse_to(char **dstr, char delim, int eval) {
       if (tp >= 0)
         sp = tp;
       else if (*cstr == delim) {
-        rstr = parse_to_cleanup(eval, first, cstr, rstr, zstr);
+        rstr = parse_to_cleanup(configuration, eval, first, cstr, rstr, zstr);
         *dstr = ++cstr;
         return rstr;
       }
@@ -160,7 +164,7 @@ char *parse_to(char **dstr, char delim, int eval) {
       break;
     default:
       if ((*cstr == delim) && (sp == 0)) {
-        rstr = parse_to_cleanup(eval, first, cstr, rstr, zstr);
+        rstr = parse_to_cleanup(configuration, eval, first, cstr, rstr, zstr);
         *dstr = ++cstr;
         return rstr;
       }
@@ -168,7 +172,7 @@ char *parse_to(char **dstr, char delim, int eval) {
       case ' ': /*
                  * space
                  */
-        if (mudconf.space_compress && !(eval & EV_NO_COMPRESS)) {
+        if (configuration->space_compress && !(eval & EV_NO_COMPRESS)) {
           if (first)
             rstr++;
           else if (cstr[-1] == ' ')
@@ -195,7 +199,7 @@ char *parse_to(char **dstr, char delim, int eval) {
       NEXTCHAR;
     }
   }
-  rstr = parse_to_cleanup(eval, first, cstr, rstr, zstr);
+  rstr = parse_to_cleanup(configuration, eval, first, cstr, rstr, zstr);
   *dstr = nullptr;
   return rstr;
 }
@@ -208,9 +212,9 @@ char *parse_to(char **dstr, char delim, int eval) {
  * * is destructively modified.
  */
 
-char *parse_arglist(DbRef player, DbRef cause, char *dstr, char delim,
-                    DbRef eval, char *fargs[], DbRef nfargs, char *cargs[],
-                    DbRef ncargs) {
+char *parse_arglist(EvaluationContext *context, DbRef player, DbRef cause,
+                    char *dstr, char delim, DbRef eval, char *fargs[],
+                    DbRef nfargs, char *cargs[], DbRef ncargs) {
   char *rstr, *tstr, *bp, *str;
   int arg, peval;
 
@@ -218,21 +222,21 @@ char *parse_arglist(DbRef player, DbRef cause, char *dstr, char delim,
     fargs[arg] = nullptr;
   if (dstr == nullptr)
     return nullptr;
-  rstr = parse_to(&dstr, delim, 0);
+  rstr = parse_to(context->server->configuration, &dstr, delim, 0);
   arg = 0;
 
   peval = (int)(eval & ~EV_EVAL);
 
   while ((arg < nfargs) && rstr) {
     if (arg < (nfargs - 1))
-      tstr = parse_to(&rstr, ',', peval);
+      tstr = parse_to(context->server->configuration, &rstr, ',', peval);
     else
-      tstr = parse_to(&rstr, '\0', peval);
+      tstr = parse_to(context->server->configuration, &rstr, '\0', peval);
     if (eval & EV_EVAL) {
       bp = fargs[arg] = alloc_lbuf("parse_arglist");
       str = tstr;
-      exec(fargs[arg], &bp, 0, player, cause, (int)(eval | EV_FCHECK), &str,
-           cargs, (int)ncargs);
+      exec(context, fargs[arg], &bp, 0, player, cause, (int)(eval | EV_FCHECK),
+           &str, cargs, (int)ncargs);
       *bp = '\0';
     } else {
       fargs[arg] = alloc_lbuf("parse_arglist");
@@ -259,38 +263,31 @@ struct tcache_ent {
   char *orig;
   char *result;
   struct tcache_ent *next;
-} *tcache_head;
-int tcache_top, tcache_count;
+};
 
-void tcache_init(void) {
-  tcache_head = nullptr;
-  tcache_top = 1;
-  tcache_count = 0;
-}
-
-static int tcache_empty(void) {
-  if (tcache_top) {
-    tcache_top = 0;
-    tcache_count = 0;
+static int tcache_empty(EvaluationContext *context) {
+  if (context->trace_top) {
+    context->trace_top = false;
+    context->trace_count = 0;
     return 1;
   }
   return 0;
 }
 
-static void tcache_add(char *orig, char *result) {
+static void tcache_add(EvaluationContext *context, char *orig, char *result) {
   char *tp;
   TCENT *xp;
 
   if (strcmp(orig, result)) {
-    tcache_count++;
-    if (tcache_count <= mudconf.trace_limit) {
+    context->trace_count++;
+    if (context->trace_count <= context->server->configuration->trace_limit) {
       xp = (TCENT *)alloc_sbuf("tcache_add.sbuf");
       tp = alloc_lbuf("tcache_add.lbuf");
       StringCopy(tp, result);
       xp->orig = orig;
       xp->result = tp;
-      xp->next = tcache_head;
-      tcache_head = xp;
+      xp->next = context->trace_head;
+      context->trace_head = xp;
     } else {
       free_lbuf(orig);
     }
@@ -299,24 +296,27 @@ static void tcache_add(char *orig, char *result) {
   }
 }
 
-static void tcache_finish(DbRef player) {
+static void tcache_finish(EvaluationContext *context, DbRef player) {
   TCENT *xp;
 
-  while (tcache_head != nullptr) {
-    xp = tcache_head;
-    tcache_head = xp->next;
-    notify_printf(obj_owner(player), "%s(#%ld)} '%s' -> '%s'", Name(player),
-                  player, xp->orig, xp->result);
+  while (context->trace_head != nullptr) {
+    xp = context->trace_head;
+    context->trace_head = xp->next;
+    notify_printf(context, game_object_owner(context->world->database, player),
+                  "%s(#%ld)} '%s' -> '%s'",
+                  game_object_name(context->world->database, player), player,
+                  xp->orig, xp->result);
     free_lbuf(xp->orig);
     free_lbuf(xp->result);
     free_sbuf(xp);
   }
-  tcache_top = 1;
-  tcache_count = 0;
+  context->trace_top = true;
+  context->trace_count = 0;
 }
 
-void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
-          int eval, char **dstr, char *cargs[], int ncargs) {
+void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
+          DbRef player, DbRef cause, int eval, char **dstr, char *cargs[],
+          int ncargs) {
 #define NFARGS 30
   char *fargs[NFARGS];
   char *preserve[MAX_GLOBAL_REGS];
@@ -340,7 +340,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   alldone = 0;
   ansi = 0;
 
-  do_trace = is_trace(player) && !(eval & EV_NOTRACE);
+  do_trace = is_trace(context->world->database, player) && !(eval & EV_NOTRACE);
   is_top = 0;
 
   /* Extend the buffer if we need to. */
@@ -360,7 +360,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
 
   savestr = nullptr;
   if (do_trace) {
-    is_top = tcache_empty();
+    is_top = tcache_empty(context);
     savestr = alloc_lbuf("exec.save");
     StringCopy(savestr, *dstr);
   }
@@ -373,7 +373,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
        * *  * * previous char was not a space
        */
 
-      if (!(mudconf.space_compress && at_space) || (eval & EV_NO_COMPRESS)) {
+      if (!(context->server->configuration->space_compress && at_space) ||
+          (eval & EV_NO_COMPRESS)) {
         safe_chr(' ', buff, bufc);
         at_space = 1;
       }
@@ -405,14 +406,14 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         *dstr = tstr;
         break;
       }
-      tbuf = parse_to(dstr, ']', 0);
+      tbuf = parse_to(context->server->configuration, dstr, ']', 0);
       if (*dstr == nullptr) {
         safe_chr('[', buff, bufc);
         *dstr = tstr;
       } else {
         str = tbuf;
-        exec(buff, bufc, 0, player, cause, (eval | EV_FCHECK | EV_FMAND), &str,
-             cargs, ncargs);
+        exec(context, buff, bufc, 0, player, cause,
+             (eval | EV_FCHECK | EV_FMAND), &str, cargs, ncargs);
         (*dstr)--;
       }
       break;
@@ -425,7 +426,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
 
       at_space = 0;
       tstr = (*dstr)++;
-      tbuf = parse_to(dstr, '}', 0);
+      tbuf = parse_to(context->server->configuration, dstr, '}', 0);
       if (*dstr == nullptr) {
         safe_chr('{', buff, bufc);
         *dstr = tstr;
@@ -442,8 +443,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
           tbuf++;
         }
         str = tbuf;
-        exec(buff, bufc, 0, player, cause, (eval & ~(EV_STRIP | EV_FCHECK)),
-             &str, cargs, ncargs);
+        exec(context, buff, bufc, 0, player, cause,
+             (eval & ~(EV_STRIP | EV_FCHECK)), &str, cargs, ncargs);
         if (!(eval & EV_STRIP)) {
           safe_chr('}', buff, bufc);
         }
@@ -468,7 +469,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         (*dstr)--;
         break;
       case '|': /* piped command output */
-        safe_str(mudstate.pout, buff, bufc);
+        safe_str(context->pipe_output, buff, bufc);
         break;
       case '%': /*
                  * Percent - a literal %
@@ -635,7 +636,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         if ((ch < 'A') || (ch > 'Z'))
           break;
         i = 100 + ch - 'A';
-        atr_gotten = attribute_parent_get(player, i, &aowner, &aflags);
+        atr_gotten = attribute_parent_get(context->world->database, player, i,
+                                          &aowner, &aflags);
         safe_str(atr_gotten, buff, bufc);
         free_lbuf(atr_gotten);
         break;
@@ -643,8 +645,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       case 'q':
         (*dstr)++;
         i = (**dstr - '0');
-        if ((i >= 0) && (i <= 9) && mudstate.global_regs[i]) {
-          safe_str(mudstate.global_regs[i], buff, bufc);
+        if ((i >= 0) && (i <= 9) && context->registers[i]) {
+          safe_str(context->registers[i], buff, bufc);
         }
         if (!**dstr)
           (*dstr)--;
@@ -695,7 +697,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
                  * Invoker name
                  */
       case 'n':
-        safe_str(Name(cause), buff, bufc);
+        safe_str(game_object_name(context->world->database, cause), buff, bufc);
         break;
       case 'L': /*
                  * Invoker location db#
@@ -703,7 +705,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       case 'l':
         if (!(eval & EV_NO_LOCATION)) {
           tbuf = alloc_sbuf("exec.exloc");
-          snprintf(tbuf, SBUF_SIZE, "#%ld", where_is(cause));
+          snprintf(tbuf, SBUF_SIZE, "#%ld",
+                   where_is(context->world->database, cause));
           safe_str(tbuf, buff, bufc);
           free_sbuf(tbuf);
         }
@@ -738,7 +741,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       tbufc = tbuf = alloc_sbuf("exec.tbuf");
       safe_sb_str(oldp, tbuf, &tbufc);
       *tbufc = '\0';
-      if (mudconf.space_compress) {
+      if (context->server->configuration->space_compress) {
         while ((--tbufc >= tbuf) && isspace(*tbufc))
           ;
         tbufc++;
@@ -746,7 +749,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
       }
       for (tbufc = tbuf; *tbufc; tbufc++)
         *tbufc = ToLower(*tbufc);
-      fp = (FUN *)hash_table_find(tbuf, &mudstate.func_htab);
+      fp = (FUN *)hash_table_find(tbuf,
+                                  &context->server->command_registry.functions);
 
       /*
        * If not a builtin func, check for global func
@@ -754,7 +758,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
 
       ufp = nullptr;
       if (fp == nullptr) {
-        ufp = (UFUN *)hash_table_find(tbuf, &mudstate.ufunc_htab);
+        ufp = (UFUN *)hash_table_find(
+            tbuf, &context->server->command_registry.user_function_index);
       }
       /*
        * Do the right thing if it doesn't exist
@@ -792,8 +797,8 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
         feval = (eval & ~EV_EVAL) | EV_STRIP_ESC;
       else
         feval = eval;
-      *dstr = parse_arglist(player, cause, *dstr + 1, ')', feval, fargs, nfargs,
-                            cargs, ncargs);
+      *dstr = parse_arglist(context, player, cause, *dstr + 1, ')', feval,
+                            fargs, nfargs, cargs, ncargs);
 
       /*
        * If no closing delim, just insert the '(' and * * *
@@ -826,12 +831,14 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
        */
 
       if (ufp) {
-        mudstate.func_nest_lev++;
-        if (!check_access(player, ufp->perms)) {
+        context->function_nesting++;
+        if (!check_access(context->world->database,
+                          context->server->configuration, player, ufp->perms)) {
           safe_str("#-1 PERMISSION DENIED", buff, &oldp);
           *bufc = oldp;
         } else {
-          tstr = attribute_get(ufp->obj, ufp->atr, &aowner, &aflags);
+          tstr = attribute_get(context->world->database, ufp->obj, ufp->atr,
+                               &aowner, &aflags);
           if (ufp->flags & FN_PRIV)
             i = (int)ufp->obj;
           else
@@ -840,28 +847,28 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
 
           if (ufp->flags & FN_PRES) {
             for (j = 0; j < MAX_GLOBAL_REGS; j++) {
-              if (!mudstate.global_regs[j])
+              if (!context->registers[j])
                 preserve[j] = nullptr;
               else {
                 preserve[j] = alloc_lbuf("eval_regs");
-                StringCopy(preserve[j], mudstate.global_regs[j]);
+                StringCopy(preserve[j], context->registers[j]);
               }
             }
           }
 
-          exec(buff, &oldp, 0, i, cause, feval, &str, fargs, nfargs);
+          exec(context, buff, &oldp, 0, i, cause, feval, &str, fargs, nfargs);
           *bufc = oldp;
 
           if (ufp->flags & FN_PRES) {
             for (j = 0; j < MAX_GLOBAL_REGS; j++) {
               if (preserve[j]) {
-                if (!mudstate.global_regs[j])
-                  mudstate.global_regs[j] = alloc_lbuf("eval_regs");
-                StringCopy(mudstate.global_regs[j], preserve[j]);
+                if (!context->registers[j])
+                  context->registers[j] = alloc_lbuf("eval_regs");
+                StringCopy(context->registers[j], preserve[j]);
                 free_lbuf(preserve[j]);
               } else {
-                if (mudstate.global_regs[j])
-                  *(mudstate.global_regs[i]) = '\0';
+                if (context->registers[j])
+                  *(context->registers[i]) = '\0';
               }
             }
           }
@@ -873,7 +880,7 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
          * Return the space allocated for the args
          */
 
-        mudstate.func_nest_lev--;
+        context->function_nesting--;
         for (i = 0; i < nfargs; i++)
           if (fargs[i] != nullptr)
             free_lbuf(fargs[i]);
@@ -902,22 +909,28 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
          * Check recursion limit
          */
 
-        mudstate.func_nest_lev++;
-        mudstate.func_invk_ctr++;
-        if (mudstate.func_nest_lev >= mudconf.func_nest_lim) {
+        context->function_nesting++;
+        context->function_invocations++;
+        if (context->function_nesting >=
+            context->server->configuration->func_nest_lim) {
           safe_str("#-1 FUNCTION RECURSION LIMIT EXCEEDED", buff, bufc);
-        } else if (mudstate.func_invk_ctr == mudconf.func_invk_lim) {
+        } else if (context->function_invocations ==
+                   context->server->configuration->func_invk_lim) {
           safe_str("#-1 FUNCTION INVOCATION LIMIT EXCEEDED", buff, bufc);
-        } else if (!check_access(player, fp->perms)) {
+        } else if (!check_access(context->world->database,
+                                 context->server->configuration, player,
+                                 fp->perms)) {
           safe_str("#-1 PERMISSION DENIED", buff, &oldp);
           *bufc = oldp;
-        } else if (mudstate.func_invk_ctr < mudconf.func_invk_lim) {
-          fp->fun(buff, &oldp, player, cause, fargs, nfargs, cargs, ncargs);
+        } else if (context->function_invocations <
+                   context->server->configuration->func_invk_lim) {
+          fp->fun(buff, &oldp, player, cause, fargs, nfargs, cargs, ncargs,
+                  context);
           *bufc = oldp;
         } else {
           **bufc = '\0';
         }
-        mudstate.func_nest_lev--;
+        context->function_nesting--;
       } else {
         *bufc = oldp;
         tstr = alloc_sbuf("exec.funcargs");
@@ -957,13 +970,13 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
    * buffer, too.
    */
 
-  if (mudconf.space_compress && at_space && !(eval & EV_NO_COMPRESS) &&
-      (start != *bufc))
+  if (context->server->configuration->space_compress && at_space &&
+      !(eval & EV_NO_COMPRESS) && (start != *bufc))
     (*bufc)--;
 
   /*
-   * The is_ansi() function knows how to take care of itself. However,
-   * if the player used a %c sub in the string, and hasn't yet
+   * The is_ansi(context->world->database, ) function knows how to take care of
+   * itself. However, if the player used a %c sub in the string, and hasn't yet
    * terminated the color with a %cn yet, we'll have to do it for
    * them.
    */
@@ -988,16 +1001,17 @@ void exec(char *buff, char **bufc, int tflags, DbRef player, DbRef cause,
   }
 
   if (do_trace) {
-    tcache_add(savestr, start);
-    save_count = tcache_count - mudconf.trace_limit;
+    tcache_add(context, savestr, start);
+    save_count =
+        context->trace_count - context->server->configuration->trace_limit;
     ;
-    if (is_top || !mudconf.trace_topdown)
-      tcache_finish(player);
+    if (is_top || !context->server->configuration->trace_topdown)
+      tcache_finish(context, player);
     if (is_top && (save_count > 0)) {
       tbuf = alloc_mbuf("exec.trace_diag");
       snprintf(tbuf, MBUF_SIZE, "%d lines of trace output discarded.",
                save_count);
-      notify(player, tbuf);
+      notify(context, player, tbuf);
       free_mbuf(tbuf);
     }
   }

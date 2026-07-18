@@ -27,6 +27,8 @@ typedef struct telnet_t telnet_t;
 typedef struct InputFlow InputFlow;
 /* Opaque libuv TCP handle owned by a descriptor. */
 typedef struct uv_tcp_s uv_tcp_t;
+typedef struct DescriptorRegistry DescriptorRegistry;
+typedef struct MuxServer MuxServer;
 
 /* Runtime state and resources for one client connection. */
 typedef struct Descriptor {
@@ -102,6 +104,8 @@ typedef struct Descriptor {
   size_t pending_writes;
   /* libuv TCP stream for this client. */
   uv_tcp_t *socket;
+  /* Registry that owns this descriptor's active reference. */
+  DescriptorRegistry *registry;
 } Descriptor;
 
 /* Kinds of descriptor selected by a DescriptorIterator. */
@@ -116,6 +120,8 @@ typedef enum DescriptorIteratorKind {
 
 /* Cursor for a single pass through the flat descriptor registry. */
 typedef struct DescriptorIterator {
+  /* Registry traversed by this iterator. */
+  DescriptorRegistry *registry;
   /* Registry slot to examine on the next call. */
   size_t next_slot;
   /* Selection rule applied while advancing the iterator. */
@@ -124,16 +130,20 @@ typedef struct DescriptorIterator {
   DbRef player;
 } DescriptorIterator;
 
+DescriptorRegistry *descriptor_registry_create(MuxServer *server);
+MuxServer *descriptor_server(Descriptor *descriptor);
+void descriptor_registry_destroy(DescriptorRegistry *registry);
 /* Add descriptor to the flat registry and retain its active reference. */
-bool descriptor_register(Descriptor *descriptor);
+bool descriptor_register(DescriptorRegistry *registry, Descriptor *descriptor);
 /* Return the number of descriptors in the flat registry. */
-size_t descriptor_count(void);
+size_t descriptor_count(const DescriptorRegistry *registry);
 /* Start an iterator over every registered descriptor. */
-DescriptorIterator descriptor_iterator_all(void);
+DescriptorIterator descriptor_iterator_all(DescriptorRegistry *registry);
 /* Start an iterator over live authenticated descriptors. */
-DescriptorIterator descriptor_iterator_connected(void);
+DescriptorIterator descriptor_iterator_connected(DescriptorRegistry *registry);
 /* Start an iterator over live authenticated descriptors for player. */
-DescriptorIterator descriptor_iterator_player(DbRef player);
+DescriptorIterator descriptor_iterator_player(DescriptorRegistry *registry,
+                                              DbRef player);
 /* Return the next descriptor selected by iterator, or nullptr at the end. */
 Descriptor *descriptor_iterator_next(DescriptorIterator *iterator);
 /* Retain descriptor against destruction. */
@@ -141,7 +151,7 @@ void descriptor_retain(Descriptor *descriptor);
 /* Release a retained descriptor and destroy it when no references remain. */
 void descriptor_release(Descriptor *descriptor);
 /* Find an authenticated descriptor by its socket descriptor. */
-Descriptor *descriptor_find_by_fd(int descriptor);
+Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int descriptor);
 /* Mark descriptor disconnected and perform its shutdown lifecycle. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason);

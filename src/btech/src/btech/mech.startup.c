@@ -192,7 +192,8 @@ static void mech_startup_event(MuxEvent *e) {
   MechLOSBroadcast(mech, "powers up!");
   MechVerticalSpeed(mech) = 0;
   EvalBit(MechSpecials(mech), SS_ABILITY,
-          ((MechPilot(mech) > 0 && is_player(MechPilot(mech)))
+          ((MechPilot(mech) > 0 &&
+            is_player(btech_context_active()->database, MechPilot(mech)))
                ? char_getvalue(MechPilot(mech), "Sixth_Sense")
                : 0));
   if (FlyingT(mech)) {
@@ -200,7 +201,8 @@ static void mech_startup_event(MuxEvent *e) {
       MechStatus(mech) |= LANDED;
   }
   MechComm(mech) = DEFAULT_COMM;
-  if (is_player(MechPilot(mech)) && !is_quiet(mech->mynum)) {
+  if (is_player(btech_context_active()->database, MechPilot(mech)) &&
+      !is_quiet(btech_context_active()->database, mech->mynum)) {
     MechComm(mech) =
         char_getskilltarget(MechPilot(mech), "Comm-Conventional", 0);
     MechPer(mech) = char_getskilltarget(MechPilot(mech), "Perception", 0);
@@ -209,7 +211,7 @@ static void mech_startup_event(MuxEvent *e) {
     MechPer(mech) = 6;
   }
   MechCommLast(mech) = 0;
-  MechLastStartup(mech) = mudstate.now;
+  MechLastStartup(mech) = btech_context_active()->clock->now;
   if (is_aero(mech) && !Landed(mech)) {
     MechDesiredAngle(mech) = -90;
     MechStartFX(mech) = 0.0;
@@ -227,8 +229,10 @@ void mech_startup(DbRef player, void *data, char *buffer) {
 
   cch(MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON);
   skipws(buffer);
-  DOCHECK(!(is_good_obj(player) &&
-            (is_alive(player) || is_robot(player) || is_hardcode(player))),
+  DOCHECK(!(is_good_obj(btech_context_active()->database, player) &&
+            (is_alive(btech_context_active()->database, player) ||
+             is_robot(btech_context_active()->database, player) ||
+             is_hardcode(btech_context_active()->database, player))),
           "That is not a valid player!");
   DOCHECK(MechType(mech) == CLASS_MW && Started(mech),
           "You're up and about already!");
@@ -244,7 +248,8 @@ void mech_startup(DbRef player, void *data, char *buffer) {
           "This 'Mech is still under repairs (see checkstatus for more info)");
   DOCHECK(MechHeat(mech) > 30., "This 'Mech is too hot to start back up!");
   DOCHECK(
-      is_in_character(mech->mynum) && !Wiz(player) &&
+      is_in_character(btech_context_active()->database, mech->mynum) &&
+          !Wiz(player) &&
           (char_lookupplayer(GOD, GOD, 0,
                              silly_atr_get(mech->mynum, A_PILOTNUM)) != player),
       "This isn't your mech!");
@@ -255,7 +260,7 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   }
   MechPilot(mech) = player;
 
-  /*   if (is_in_character(mech->mynum)) */
+  /*   if (is_in_character(btech_context_active()->database, mech->mynum)) */
   /* Initialize the PilotDamage from the new pilot */
   fix_pilotdamage(mech, player);
   mech_notify(mech, MECHALL, "Startup Cycle commencing...");

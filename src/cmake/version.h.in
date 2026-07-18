@@ -2,4 +2,6 @@
 
 #define MUX_BUILD_DATE "@MUX_BUILD_DATE@"
 
-void init_version(void);
+typedef struct MuxServer MuxServer;
+
+void init_version(MuxServer *server);

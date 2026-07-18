@@ -33,7 +33,7 @@ int cleartic_sub_func(MECH *mech, DbRef player, int low, int high) {
   for (i = low; i <= high; i++) {
     for (j = 0; j < TICLONGS; j++)
       mech->tic[i][j] = 0;
-    notify_printf(player, "TIC #%d cleared!", i);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "TIC #%d cleared!", i);
   }
   return 0;
 }
@@ -57,10 +57,11 @@ int addtic_sub_func(MECH *mech, DbRef player, int low, int high) {
     mech->tic[present_tic][j] |= 1 << (i % SINGLE_TICLONG_SIZE);
   }
   if (low != high)
-    notify_printf(player, "Weapons #%d - #%d added to TIC %d!", low, high,
-                  present_tic);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Weapons #%d - #%d added to TIC %d!", low, high, present_tic);
   else
-    notify_printf(player, "Weapon #%d added to TIC %d!", low, present_tic);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Weapon #%d added to TIC %d!", low, present_tic);
   return 0;
 }
 
@@ -84,10 +85,12 @@ int deltic_sub_func(MECH *mech, DbRef player, int low, int high) {
     mech->tic[present_tic][j] &= ~(1 << (i % SINGLE_TICLONG_SIZE));
   }
   if (low != high)
-    notify_printf(player, "Weapons #%d - #%d removed from TIC %d!", low, high,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Weapons #%d - #%d removed from TIC %d!", low, high,
                   present_tic);
   else
-    notify_printf(player, "Weapon #%d removed from TIC %d!", low, present_tic);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Weapon #%d removed from TIC %d!", low, present_tic);
   return 0;
 }
 
@@ -116,7 +119,8 @@ int firetic_sub_func(MECH *mech, DbRef player, int low, int high) {
   int f = Fallen(mech);
 
   for (i = low; i <= high; i++) {
-    notify_printf(player, "Firing weapons in tic #%d!", i);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Firing weapons in tic #%d!", i);
     count = 0;
     for (k = 0; k < TICLONGS; k++)
       if (mech->tic[i][k])
@@ -135,7 +139,8 @@ int firetic_sub_func(MECH *mech, DbRef player, int low, int high) {
             count++;
           }
     if (!count)
-      notify_printf(player, "*Click* (the tic contained no weapons)");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "*Click* (the tic contained no weapons)");
   }
   return 0;
 }
@@ -276,22 +281,24 @@ void heat_cutoff_event(MuxEvent *e) {
 void heat_cutoff(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
-  if (mudconf.btech_heatcutoff < 1) {
-    notify(player, "This command has been disabled.");
+  if (btech_context_active()->configuration->btech_heatcutoff < 1) {
+    notify(BTECH_EVALUATION_CONTEXT, player, "This command has been disabled.");
     return;
   }
 
   cch(MECH_USUALSMO);
   if (HeatcutoffChanging(mech)) {
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "You are already toggling heat cutoff status. Please be patient.");
     return;
   }
   if (Heatcutoff(mech)) {
-    notify(player, "Disengaging heat dissipation cutoff...");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Disengaging heat dissipation cutoff...");
     MECHEVENT(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4, 0);
   } else {
-    notify(player, "Engaging heat dissipation cutoff...");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Engaging heat dissipation cutoff...");
     MECHEVENT(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4, 1);
   }
 }

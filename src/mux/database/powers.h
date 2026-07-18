@@ -6,6 +6,8 @@
 #include "mux/database/flags.h"
 #include "mux/support/hash_table.h"
 
+typedef struct WorldContext WorldContext;
+
 constexpr int POWER_EXT = 0x1; /* Lives in extended powers word */
 
 /* First word of powers */
@@ -55,7 +57,7 @@ typedef struct power_entry {
   int powervalue;        /* Which bit in the object is the flag */
   int powerpower;        /* Ctrl flags for this power (recursive? :-) */
   int listperm;          /* Who sees this flag when set */
-  int (*handler)(DbRef, DbRef, Power, int,
+  int (*handler)(EvaluationContext *, DbRef, DbRef, Power, int,
                  int); /* Handler for setting/clearing this flag */
 } POWERENT;
 
@@ -64,39 +66,50 @@ typedef struct powerset {
   Power word2;
 } POWERSET;
 
-extern void init_powertab(void);
-extern void display_powertab(DbRef);
-extern void power_set(DbRef, DbRef, char *, int);
-extern char *power_description(DbRef, DbRef);
-extern POWERENT *find_power(DbRef, char *);
-extern int has_power(DbRef, DbRef, char *);
-extern int decode_power(DbRef, char *, POWERSET *);
+typedef struct WorldIndexes WorldIndexes;
+typedef struct EvaluationContext EvaluationContext;
 
-static inline bool is_find_unfindable(DbRef c) {
-  return (obj_powers(c) & POW_FIND_UNFIND) != 0;
+extern void init_powertab(WorldIndexes *indexes);
+extern void display_powertab(EvaluationContext *, DbRef);
+extern void power_set(EvaluationContext *, WorldIndexes *, DbRef, DbRef, char *,
+                      int);
+extern char *power_description(GameDatabase *, DbRef, DbRef);
+extern POWERENT *find_power(WorldIndexes *, DbRef, char *);
+extern int has_power(WorldContext *, DbRef, DbRef, char *);
+extern int decode_power(EvaluationContext *, WorldIndexes *, DbRef, char *,
+                        POWERSET *);
+
+static inline bool is_find_unfindable(GameDatabase *database, DbRef c) {
+  return (game_object_powers(database, c) & POW_FIND_UNFIND) != 0;
 }
-static inline bool can_idle(DbRef c) {
-  return (obj_powers(c) & POW_IDLE) != 0 || is_wizard(c);
+static inline bool can_idle(GameDatabase *database, DbRef c) {
+  return (game_object_powers(database, c) & POW_IDLE) != 0 ||
+         is_wizard(database, c);
 }
-static inline bool is_long_fingers(DbRef c) {
-  return (obj_powers(c) & POW_LONGFINGERS) != 0 || is_wizard(c);
+static inline bool is_long_fingers(GameDatabase *database, DbRef c) {
+  return (game_object_powers(database, c) & POW_LONGFINGERS) != 0 ||
+         is_wizard(database, c);
 }
-static inline bool is_comm_all(DbRef c) {
-  return (obj_powers(c) & POW_COMM_ALL) != 0 || is_wizard(c);
+static inline bool is_comm_all(GameDatabase *database, DbRef c) {
+  return (game_object_powers(database, c) & POW_COMM_ALL) != 0 ||
+         is_wizard(database, c);
 }
-static inline bool is_pass_locks(DbRef c) {
-  return (obj_powers(c) & POW_PASS_LOCKS) != 0;
+static inline bool is_pass_locks(GameDatabase *database, DbRef c) {
+  return (game_object_powers(database, c) & POW_PASS_LOCKS) != 0;
 }
 
 /* Mecha */
-static inline bool is_security(DbRef c) {
-  return (obj_powers2(c) & POW_SECURITY) != 0 || is_wizard(c);
+static inline bool is_security(GameDatabase *database, DbRef c) {
+  return (game_object_powers2(database, c) & POW_SECURITY) != 0 ||
+         is_wizard(database, c);
 }
-static inline bool is_tech_power(DbRef c) {
-  return (obj_powers2(c) & POW_TECH) != 0 || is_wizard(c);
+static inline bool is_tech_power(GameDatabase *database, DbRef c) {
+  return (game_object_powers2(database, c) & POW_TECH) != 0 ||
+         is_wizard(database, c);
 }
-static inline bool is_template_power(DbRef c) {
-  return (obj_powers2(c) & POW_TEMPLATE) != 0 || is_wizard(c);
+static inline bool is_template_power(GameDatabase *database, DbRef c) {
+  return (game_object_powers2(database, c) & POW_TEMPLATE) != 0 ||
+         is_wizard(database, c);
 }
 
 /* End Mecha */

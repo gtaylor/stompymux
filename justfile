@@ -18,10 +18,15 @@ tidy:
     cmake -S . -B {{build_dir}} -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     find src -type f -name '*.c' -print0 | xargs -0 -r -n1 {{clang_tidy}} -p {{build_dir}}
 
-lint: fmt tidy
+lint: fmt lint-legacy-context tidy
+
+# Core and BTech code must use scoped contexts rather than legacy aliases.
+lint-legacy-context:
+    count="$(rg -l '\b(mudstate|mudconf)\b' src/mux src/btech --glob '*.c' --glob '*.h' | wc -l || true)"; test "$count" -eq 0 || { echo "legacy context used by $count source files" >&2; exit 1; }
 
 lint-changes:
     git diff --name-only -z --diff-filter=ACMR HEAD -- src | while IFS= read -r -d '' file; do case "$file" in *.c|*.h|*.h.in) clang-format -i "$file" ;; esac; done
+    just lint-legacy-context
     cmake -S . -B {{build_dir}} -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     git diff --name-only -z --diff-filter=ACMR HEAD -- src | while IFS= read -r -d '' file; do case "$file" in *.c) {{clang_tidy}} -p {{build_dir}} "$file" ;; esac; done
 

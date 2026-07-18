@@ -54,6 +54,7 @@
    further than LOOKAHEAD_STACK_SIZE in the future
    */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,20 +65,49 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
-#include "mux/server/server_lifecycle.h"
 
-int mux_event_tick = 0;
+void mux_event_scheduler_initialize(MuxEventScheduler *scheduler) {
+  memset(scheduler, 0, sizeof(*scheduler));
+  scheduler->last_type = -1;
+}
+
+void mux_event_scheduler_set_loop(MuxEventScheduler *scheduler,
+                                  uv_loop_t *loop) {
+  scheduler->loop = loop;
+}
+
+void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
+  MuxEvent *event;
+  MuxEvent *next;
+
+  if (scheduler == nullptr)
+    return;
+  for (event = scheduler->events; event != nullptr; event = next) {
+    next = event->next_in_main;
+    if (event->flags & FLAG_FREE_DATA)
+      free(event->data);
+    if (event->flags & FLAG_FREE_DATA2)
+      free(event->data2);
+    free(event);
+  }
+  for (event = scheduler->free_events; event != nullptr; event = next) {
+    next = event->next;
+    free(event);
+  }
+  free(scheduler->first_by_type);
+  mux_event_scheduler_initialize(scheduler);
+}
 
 /* Stack of the events according to date */
-static MuxEvent **mux_event_first_in_type = nullptr;
+#define mux_event_first_in_type (scheduler->first_by_type)
 
 /* Whole list (dual linked) */
-static MuxEvent *mux_event_list = nullptr;
+#define mux_event_list (scheduler->events)
 
 /* List of 'free' events */
-static MuxEvent *mux_event_free_list = nullptr;
+#define mux_event_free_list (scheduler->free_events)
 
-static int last_muxevent_type = -1;
+#define last_muxevent_type (scheduler->last_type)
 /* The main add-to-lists event handling function */
 
 extern void prerun_event(MuxEvent *e);
@@ -85,7 +115,7 @@ extern void postrun_event(MuxEvent *e);
 
 static void mux_event_delete(MuxEvent *);
 
-static void mux_event_main_list_add(MuxEvent *e) {
+static void mux_event_main_list_add(MuxEventScheduler *scheduler, MuxEvent *e) {
   MuxEvent *old_head = mux_event_list;
 
   e->next_in_main = old_head;
@@ -96,6 +126,7 @@ static void mux_event_main_list_add(MuxEvent *e) {
 }
 
 static void mux_event_main_list_remove(MuxEvent *e) {
+  MuxEventScheduler *scheduler = e->scheduler;
   if (e->prev_in_main)
     e->prev_in_main->next_in_main = e->next_in_main;
   if (e->next_in_main)
@@ -107,7 +138,8 @@ static void mux_event_main_list_remove(MuxEvent *e) {
   }
 }
 
-static void mux_event_type_list_add(int type, MuxEvent *e) {
+static void mux_event_type_list_add(MuxEventScheduler *scheduler, int type,
+                                    MuxEvent *e) {
   MuxEvent *old_head = mux_event_first_in_type[type];
 
   e->next_in_type = old_head;
@@ -118,6 +150,7 @@ static void mux_event_type_list_add(int type, MuxEvent *e) {
 }
 
 static void mux_event_type_list_remove(MuxEvent *e) {
+  MuxEventScheduler *scheduler = e->scheduler;
   int type = (int)e->type;
 
   if (e->prev_in_type)
@@ -153,8 +186,8 @@ static void mux_event_wakeup(MuxTimer *timer, void *arg) {
   mux_event_delete(e);
 }
 
-void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
-                   void *data, void *data2) {
+void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
+                   void (*func)(MuxEvent *), void *data, void *data2) {
   MuxEvent *e = (MuxEvent *)0xDEADBEEF;
   int i;
 
@@ -182,23 +215,25 @@ void mux_event_add(int time, int flags, int type, void (*func)(MuxEvent *),
   e->data = data;
   e->data2 = data2;
   e->type = (char)type;
-  e->tick = mux_event_tick + time;
+  e->tick = scheduler->tick + time;
+  e->scheduler = scheduler;
   e->next = nullptr;
 
-  e->timer = mux_timer_create(server_lifecycle_loop(), mux_event_wakeup, e);
+  e->timer = mux_timer_create(scheduler->loop, mux_event_wakeup, e);
   if (e->timer == nullptr) {
     free(e);
     return;
   }
   mux_timer_start(e->timer, (uint64_t)time * 1000, 0);
 
-  mux_event_main_list_add(e);
-  mux_event_type_list_add(type, e);
+  mux_event_main_list_add(scheduler, e);
+  mux_event_type_list_add(scheduler, type, e);
 }
 
 /* Remove event */
 
 static void mux_event_delete(MuxEvent *e) {
+  MuxEventScheduler *scheduler = e->scheduler;
   mux_timer_destroy(e->timer);
   e->timer = nullptr;
 
@@ -216,9 +251,9 @@ static void mux_event_delete(MuxEvent *e) {
 
 /* Run the thingy */
 
-void mux_event_run() { mux_event_tick += 1; }
+void mux_event_run(MuxEventScheduler *scheduler) { scheduler->tick += 1; }
 
-int mux_event_run_by_type(int type) {
+int mux_event_run_by_type(MuxEventScheduler *scheduler, int type) {
   MuxEvent *e;
   int ran = 0;
 
@@ -236,15 +271,20 @@ int mux_event_run_by_type(int type) {
   return ran;
 }
 
-int mux_event_last_type() { return last_muxevent_type; }
+int mux_event_last_type(const MuxEventScheduler *scheduler) {
+  return scheduler->last_type;
+}
 
 /* Initialize the events */
 
-void mux_event_initialize() { dprintk("muxevent initializing"); }
+void mux_event_initialize(MuxEventScheduler *scheduler) {
+  (void)scheduler;
+  dprintk("muxevent initializing");
+}
 
 /* Event removal functions */
 
-void mux_event_remove_data(void *data) {
+void mux_event_remove_data(MuxEventScheduler *scheduler, void *data) {
   MuxEvent *e;
 
   for (e = mux_event_list; e; e = e->next_in_main)
@@ -252,7 +292,8 @@ void mux_event_remove_data(void *data) {
       e->flags |= FLAG_ZOMBIE;
 }
 
-void mux_event_remove_type_data(int type, void *data) {
+void mux_event_remove_type_data(MuxEventScheduler *scheduler, int type,
+                                void *data) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)
@@ -264,7 +305,8 @@ void mux_event_remove_type_data(int type, void *data) {
     }
 }
 
-void mux_event_remove_type_data2(int type, void *data) {
+void mux_event_remove_type_data2(MuxEventScheduler *scheduler, int type,
+                                 void *data) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)
@@ -274,7 +316,8 @@ void mux_event_remove_type_data2(int type, void *data) {
       e->flags |= FLAG_ZOMBIE;
 }
 
-void mux_event_remove_type_data_data(int type, void *data, void *data2) {
+void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
+                                     void *data, void *data2) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)
@@ -285,14 +328,15 @@ void mux_event_remove_type_data_data(int type, void *data, void *data2) {
 }
 
 /* return the args of the event */
-void mux_event_get_type_data(int type, void *data, long *data2) {
+void mux_event_get_type_data(MuxEventScheduler *scheduler, int type, void *data,
+                             long *data2) {
   MuxEvent *e;
 
   LoopType(type, e) if (e->data == data) *data2 = (long)e->data2;
 }
 
 /* All the counting / other kinds of 'useless' functions */
-int mux_event_count_type(int type) {
+int mux_event_count_type(MuxEventScheduler *scheduler, int type) {
   MuxEvent *e;
   int count = 0;
 
@@ -302,7 +346,8 @@ int mux_event_count_type(int type) {
   return count;
 }
 
-int mux_event_count_type_data(int type, void *data) {
+int mux_event_count_type_data(MuxEventScheduler *scheduler, int type,
+                              void *data) {
   MuxEvent *e;
   int count = 0;
 
@@ -312,7 +357,8 @@ int mux_event_count_type_data(int type, void *data) {
   return count;
 }
 
-int mux_event_count_type_data2(int type, void *data) {
+int mux_event_count_type_data2(MuxEventScheduler *scheduler, int type,
+                               void *data) {
   MuxEvent *e;
   int count = 0;
 
@@ -322,7 +368,8 @@ int mux_event_count_type_data2(int type, void *data) {
   return count;
 }
 
-int mux_event_count_type_data_data(int type, void *data, void *data2) {
+int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
+                                   void *data, void *data2) {
   MuxEvent *e;
   int count = 0;
 
@@ -332,7 +379,7 @@ int mux_event_count_type_data_data(int type, void *data, void *data2) {
   return count;
 }
 
-int mux_event_count_data(int type, void *data) {
+int mux_event_count_data(MuxEventScheduler *scheduler, int type, void *data) {
   MuxEvent *e;
   int count = 0;
 
@@ -340,8 +387,8 @@ int mux_event_count_data(int type, void *data) {
   return count;
 }
 
-void mux_event_gothru_type_data(int type, void *data,
-                                void (*func)(MuxEvent *)) {
+void mux_event_gothru_type_data(MuxEventScheduler *scheduler, int type,
+                                void *data, void (*func)(MuxEvent *)) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)
@@ -349,7 +396,8 @@ void mux_event_gothru_type_data(int type, void *data,
   LoopType(type, e) if (e->data == data) func(e);
 }
 
-void mux_event_gothru_type(int type, void (*func)(MuxEvent *)) {
+void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
+                           void (*func)(MuxEvent *)) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)
@@ -357,18 +405,20 @@ void mux_event_gothru_type(int type, void (*func)(MuxEvent *)) {
   LoopType(type, e) func(e);
 }
 
-int mux_event_last_type_data(int type, void *data) {
+int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
+                             void *data) {
   MuxEvent *e;
   int last = 0, t;
 
   if (type > last_muxevent_type)
     return last;
-  LoopType(type, e) if (e->data == data) if ((t = (e->tick - mux_event_tick)) >
+  LoopType(type, e) if (e->data == data) if ((t = (e->tick - scheduler->tick)) >
                                              last) last = t;
   return last;
 }
 
-long mux_event_count_type_data_firstev(int type, void *data) {
+long mux_event_count_type_data_firstev(MuxEventScheduler *scheduler, int type,
+                                       void *data) {
   MuxEvent *e;
 
   if (type > last_muxevent_type)

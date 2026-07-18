@@ -5,16 +5,18 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_invocation.h"
 #include "mux/database/attrs.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/object_spatial.h"
 
-void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
-            const char *odef, int awhat, char *args[], int nargs) {
+void did_it(EvaluationContext *evaluation, DbRef player, DbRef thing, int what,
+            const char *def, int owhat, const char *odef, int awhat,
+            char *args[], int nargs) {
   char *d, *buff, *act, *charges, *bp, *str;
   DbRef loc, aowner;
   int num;
@@ -25,66 +27,85 @@ void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
    */
 
   if (what > 0) {
-    d = attribute_parent_get(thing, what, &aowner, &aflags);
+    d = attribute_parent_get(evaluation->world->database, thing, what, &aowner,
+                             &aflags);
     if (*d) {
       buff = bp = alloc_lbuf("did_it.1");
       str = d;
-      exec(buff, &bp, 0, thing, player, EV_EVAL | EV_FIGNORE | EV_TOP, &str,
-           args, nargs);
+      exec(evaluation, buff, &bp, 0, thing, player,
+           EV_EVAL | EV_FIGNORE | EV_TOP, &str, args, nargs);
       *bp = '\0';
-      notify(player, buff);
+      notify(evaluation, player, buff);
       free_lbuf(buff);
     } else if (def) {
-      notify(player, def);
+      notify(evaluation, player, def);
     }
     free_lbuf(d);
   } else if ((what < 0) && def) {
-    notify(player, def);
+    notify(evaluation, player, def);
   }
   /*
    * message to neighbors
    */
 
-  if ((owhat > 0) && has_location(player) &&
-      is_good_obj(loc = obj_location(player))) {
-    d = attribute_parent_get(thing, owhat, &aowner, &aflags);
+  if ((owhat > 0) && has_location(evaluation->world->database, player) &&
+      is_good_obj(
+          evaluation->world->database,
+          loc = game_object_location(evaluation->world->database, player))) {
+    d = attribute_parent_get(evaluation->world->database, thing, owhat, &aowner,
+                             &aflags);
     if (*d) {
       buff = bp = alloc_lbuf("did_it.2");
       str = d;
-      exec(buff, &bp, 0, thing, player, EV_EVAL | EV_FIGNORE | EV_TOP, &str,
-           args, nargs);
+      exec(evaluation, buff, &bp, 0, thing, player,
+           EV_EVAL | EV_FIGNORE | EV_TOP, &str, args, nargs);
       *bp = '\0';
       if (*buff)
-        notify_except2(loc, player, player, thing,
-                       tprintf("%s %s", Name(player), buff));
+        notify_except2(
+            evaluation, loc, player, player, thing,
+            tprintf("%s %s",
+                    game_object_name(evaluation->world->database, player),
+                    buff));
       free_lbuf(buff);
     } else if (odef) {
-      notify_except2(loc, player, player, thing,
-                     tprintf("%s %s", Name(player), odef));
+      notify_except2(
+          evaluation, loc, player, player, thing,
+          tprintf("%s %s",
+                  game_object_name(evaluation->world->database, player), odef));
     }
     free_lbuf(d);
-  } else if ((owhat < 0) && odef && has_location(player) &&
-             is_good_obj(loc = obj_location(player))) {
-    notify_except2(loc, player, player, thing,
-                   tprintf("%s %s", Name(player), odef));
+  } else if ((owhat < 0) && odef &&
+             has_location(evaluation->world->database, player) &&
+             is_good_obj(evaluation->world->database,
+                         loc = game_object_location(evaluation->world->database,
+                                                    player))) {
+    notify_except2(
+        evaluation, loc, player, player, thing,
+        tprintf("%s %s", game_object_name(evaluation->world->database, player),
+                odef));
   }
   /*
    * do the action attribute
    */
 
   if (awhat > 0) {
-    if (lua_event_dispatch(player, thing, awhat, args, nargs))
+    if (lua_event_dispatch(evaluation->server->lua, player, thing, awhat, args,
+                           nargs))
       return;
-    if (*(act = attribute_parent_get(thing, awhat, &aowner, &aflags))) {
-      charges = attribute_parent_get(thing, A_CHARGES, &aowner, &aflags);
+    if (*(act = attribute_parent_get(evaluation->world->database, thing, awhat,
+                                     &aowner, &aflags))) {
+      charges = attribute_parent_get(evaluation->world->database, thing,
+                                     A_CHARGES, &aowner, &aflags);
       if (*charges) {
         num = atoi(charges);
         if (num > 0) {
           buff = alloc_sbuf("did_it.charges");
           snprintf(buff, SBUF_SIZE, "%d", num - 1);
-          attribute_add_raw(thing, A_CHARGES, buff);
+          attribute_add_raw(evaluation->world->database, thing, A_CHARGES,
+                            buff);
           free_sbuf(buff);
-        } else if (*(buff = attribute_parent_get(thing, A_RUNOUT, &aowner,
+        } else if (*(buff = attribute_parent_get(evaluation->world->database,
+                                                 thing, A_RUNOUT, &aowner,
                                                  &aflags))) {
           free_lbuf(act);
           act = buff;
@@ -96,8 +117,8 @@ void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
         }
       }
       free_lbuf(charges);
-      wait_que(thing, player, 0, NOTHING, 0, act, args, nargs,
-               mudstate.global_regs);
+      wait_que(evaluation->server->commands, thing, player, 0, NOTHING, 0, act,
+               args, nargs, evaluation->registers);
     }
     free_lbuf(act);
   }
@@ -106,8 +127,14 @@ void did_it(DbRef player, DbRef thing, int what, const char *def, int owhat,
 /**
  * Command interface to did_it.
  */
-void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
-             int nargs) {
+void do_verb(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  const ServerConfiguration *configuration = evaluation->world->configuration;
+  DbRef player = invocation->player;
+  DbRef cause = invocation->cause;
+  char *victim_str = invocation->first;
+  char **args = invocation->vector;
+  int nargs = invocation->vector_count;
   DbRef actor, victim, aowner;
   int what, owhat, awhat, nxargs, restriction, i;
   long aflags;
@@ -120,17 +147,17 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (!victim_str || !*victim_str) {
-    notify(player, "Nothing to do.");
+    notify(evaluation, player, "Nothing to do.");
     return;
   }
   /*
    * Get the victim
    */
 
-  init_match(player, victim_str, NOTYPE);
-  match_everything(MAT_EXIT_PARENTS);
-  victim = noisy_match_result();
-  if (!is_good_obj(victim))
+  init_match(&invocation->context->match, player, victim_str, NOTYPE);
+  match_everything(&invocation->context->match, MAT_EXIT_PARENTS);
+  victim = noisy_match_result(&invocation->context->match);
+  if (!is_good_obj(evaluation->world->database, victim))
     return;
 
   /*
@@ -138,10 +165,10 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if ((nargs >= 1) && args[0] && *args[0]) {
-    init_match(player, args[0], NOTYPE);
-    match_everything(MAT_EXIT_PARENTS);
-    actor = noisy_match_result();
-    if (!is_good_obj(actor))
+    init_match(&invocation->context->match, player, args[0], NOTYPE);
+    match_everything(&invocation->context->match, MAT_EXIT_PARENTS);
+    actor = noisy_match_result(&invocation->context->match);
+    if (!is_good_obj(evaluation->world->database, actor))
       return;
   } else {
     actor = cause;
@@ -156,11 +183,11 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    *      victim are defaulted.
    */
 
-  if (!is_controls(player, actor)) {
-    notify_quiet(player, "Permission denied,");
+  if (!is_controls(evaluation, player, actor)) {
+    notify_quiet(evaluation, player, "Permission denied,");
     return;
   }
-  restriction = !is_controls(player, victim);
+  restriction = !is_controls(evaluation, player, victim);
 
   what = -1;
   owhat = -1;
@@ -174,7 +201,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (nargs >= 2) {
-    ap = attribute_by_name(args[1]);
+    ap = attribute_by_name(evaluation->world->database, args[1]);
     if (ap && (ap->number > 0))
       what = ap->number;
   }
@@ -190,7 +217,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (nargs >= 4) {
-    ap = attribute_by_name(args[3]);
+    ap = attribute_by_name(evaluation->world->database, args[3]);
     if (ap && (ap->number > 0))
       owhat = ap->number;
   }
@@ -206,7 +233,7 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (nargs >= 6) {
-    ap = attribute_by_name(args[5]);
+    ap = attribute_by_name(evaluation->world->database, args[5]);
     if (ap)
       awhat = ap->number;
   }
@@ -215,8 +242,8 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    */
 
   if (nargs >= 7) {
-    parse_arglist(victim, actor, args[6], '\0', EV_STRIP_LS | EV_STRIP_TS,
-                  xargs, 10, (char **)nullptr, 0);
+    parse_arglist(evaluation, victim, actor, args[6], '\0',
+                  EV_STRIP_LS | EV_STRIP_TS, xargs, 10, (char **)nullptr, 0);
     for (nxargs = 0; (nxargs < 10) && xargs[nxargs]; nxargs++)
       ;
   }
@@ -227,22 +254,26 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
   if (restriction) {
     ap = nullptr;
     if (what != -1) {
-      attribute_get_info(victim, what, &aowner, &aflags);
-      ap = attribute_by_number(what);
+      attribute_get_info(evaluation->world->database, victim, what, &aowner,
+                         &aflags);
+      ap = attribute_by_number(evaluation->world->database, what);
     }
-    if (!ap || !read_attr(player, victim, ap, aowner, aflags) ||
-        ((ap->number == A_DESC) && !mudconf.read_rem_desc &&
-         !is_examinable(player, victim) && !nearby(player, victim)))
+    if (!ap || !read_attr(evaluation, player, victim, ap, aowner, aflags) ||
+        ((ap->number == A_DESC) && !configuration->read_rem_desc &&
+         !is_examinable(evaluation, player, victim) &&
+         !nearby(evaluation->world->database, player, victim)))
       what = -1;
 
     ap = nullptr;
     if (owhat != -1) {
-      attribute_get_info(victim, owhat, &aowner, &aflags);
-      ap = attribute_by_number(owhat);
+      attribute_get_info(evaluation->world->database, victim, owhat, &aowner,
+                         &aflags);
+      ap = attribute_by_number(evaluation->world->database, owhat);
     }
-    if (!ap || !read_attr(player, victim, ap, aowner, aflags) ||
-        ((ap->number == A_DESC) && !mudconf.read_rem_desc &&
-         !is_examinable(player, victim) && !nearby(player, victim)))
+    if (!ap || !read_attr(evaluation, player, victim, ap, aowner, aflags) ||
+        ((ap->number == A_DESC) && !configuration->read_rem_desc &&
+         !is_examinable(evaluation, player, victim) &&
+         !nearby(evaluation->world->database, player, victim)))
       owhat = -1;
 
     awhat = 0;
@@ -251,7 +282,8 @@ void do_verb(DbRef player, DbRef cause, int key, char *victim_str, char *args[],
    * Go do it
    */
 
-  did_it(actor, victim, what, whatd, owhat, owhatd, awhat, xargs, nxargs);
+  did_it(evaluation, actor, victim, what, whatd, owhat, owhatd, awhat, xargs,
+         nxargs);
 
   /*
    * Free user args

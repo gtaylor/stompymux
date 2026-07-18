@@ -24,20 +24,28 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"
+#include "mux/server/maintenance.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 #include "mux/server/signals.h"
 #include "mux/server/timer.h"
 #include "mux/support/alloc.h"
 
-static uv_loop_t server_event_loop;
-static bool server_event_loop_initialized;
-static MuxTimer *queue_timer;
-static MuxTimer *shutdown_timer;
-static uint64_t shutdown_started_at;
-static struct timeval last_slice;
-static struct timeval current_time;
+struct ServerLifecycle {
+  uv_loop_t event_loop;
+  bool event_loop_initialized;
+  MuxTimer *queue_timer;
+  MuxTimer *shutdown_timer;
+  uint64_t shutdown_started_at;
+  struct timeval last_slice;
+  struct timeval current_time;
+  MaintenanceContext *maintenance;
+  SignalHandlers *signals;
+  TelnetSockets *sockets;
+  ServerTimer *timer;
+};
 
 #ifdef BTMUX_PERSISTENCE_TESTING
 /* Notify the integration test only after the server can handle shutdown. */
@@ -60,7 +68,7 @@ static void server_lifecycle_signal_test_ready(void) {
 #endif
 
 /* Run startup attributes and restore each object's forward list after load. */
-static void server_lifecycle_process_preload(void) {
+static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
   DbRef thing;
   DbRef parent;
   DbRef aowner;
@@ -71,27 +79,34 @@ static void server_lifecycle_process_preload(void) {
 
   forward_list = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
   text = alloc_lbuf("process_preload.string");
-  DO_WHOLE_DB(thing) {
-    if (is_going(thing))
+  DO_WHOLE_DB(&lifecycle->maintenance->server->database, thing) {
+    if (is_going(&lifecycle->maintenance->server->database, thing))
       continue;
 
-    do_top(10);
-    ITER_PARENTS(thing, parent, level) {
-      if (obj_flags(thing) & HAS_STARTUP) {
-        did_it(obj_owner(thing), thing, 0, nullptr, 0, nullptr, A_STARTUP,
-               nullptr, 0);
-        do_second();
-        do_top(10);
+    do_top(lifecycle->maintenance->commands, 10);
+    ITER_PARENTS(&lifecycle->maintenance->server->database,
+                 lifecycle->maintenance->configuration, thing, parent, level) {
+      if (game_object_flags(&lifecycle->maintenance->server->database, thing) &
+          HAS_STARTUP) {
+        did_it(
+            &lifecycle->maintenance->command->evaluation,
+            game_object_owner(&lifecycle->maintenance->server->database, thing),
+            thing, 0, nullptr, 0, nullptr, A_STARTUP, nullptr, 0);
+        do_second(lifecycle->maintenance->commands);
+        do_top(lifecycle->maintenance->commands, 10);
         break;
       }
     }
 
-    if (has_fwdlist(thing)) {
-      (void)attribute_get_string(text, thing, A_FORWARDLIST, &aowner, &aflags);
+    if (has_fwdlist(&lifecycle->maintenance->server->database, thing)) {
+      (void)attribute_get_string(&lifecycle->maintenance->server->database,
+                                 text, thing, A_FORWARDLIST, &aowner, &aflags);
       if (*text) {
-        fwdlist_load(forward_list, GOD, text);
+        fwdlist_load(&lifecycle->maintenance->command->evaluation, forward_list,
+                     GOD, text);
         if (forward_list->count > 0)
-          fwdlist_set(thing, forward_list);
+          fwdlist_set(&lifecycle->maintenance->server->database, thing,
+                      forward_list);
       }
     }
   }
@@ -101,18 +116,23 @@ static void server_lifecycle_process_preload(void) {
 
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */
 static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
+  ServerLifecycle *lifecycle = arg;
   pid_t child;
   int status = 0;
 
-  gettimeofday(&current_time, nullptr);
-  last_slice = update_quotas(last_slice, current_time);
+  gettimeofday(&lifecycle->current_time, nullptr);
+  lifecycle->last_slice =
+      update_quotas(lifecycle->maintenance->configuration,
+                    lifecycle->maintenance->descriptors, lifecycle->last_slice,
+                    lifecycle->current_time);
   child = waitpid(-1, &status, WNOHANG);
   if (child > 0) {
     dprintk("unexpected child %d exited with exit status %d.", child,
             WEXITSTATUS(status));
   }
-  if (mudconf.queue_chunk)
-    do_top(mudconf.queue_chunk);
+  if (lifecycle->maintenance->configuration->queue_chunk)
+    do_top(lifecycle->maintenance->commands,
+           lifecycle->maintenance->configuration->queue_chunk);
 }
 
 static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
@@ -121,117 +141,171 @@ static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
 }
 
 static void server_lifecycle_drain_writes(MuxTimer *timer, void *arg) {
+  ServerLifecycle *lifecycle = arg;
   Descriptor *descriptor;
   DescriptorIterator iterator;
   bool deadline_reached;
 
-  deadline_reached = uv_hrtime() - shutdown_started_at >= 1000000000ULL;
-  if (descriptor_count() != 0 && !deadline_reached)
+  deadline_reached =
+      uv_hrtime() - lifecycle->shutdown_started_at >= 1000000000ULL;
+  if (descriptor_count(lifecycle->maintenance->descriptors) != 0 &&
+      !deadline_reached)
     return;
   if (deadline_reached) {
-    iterator = descriptor_iterator_all();
+    iterator = descriptor_iterator_all(lifecycle->maintenance->descriptors);
     while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr)
       descriptor_force_close(descriptor);
   }
-  mux_timer_destroy(shutdown_timer);
-  shutdown_timer = nullptr;
+  mux_timer_destroy(lifecycle->shutdown_timer);
+  lifecycle->shutdown_timer = nullptr;
 }
 
-int server_lifecycle_initialize(void) {
-  if (uv_loop_init(&server_event_loop) < 0)
-    return 0;
-  server_event_loop_initialized = true;
-  return 1;
+ServerLifecycle *server_lifecycle_create(MaintenanceContext *maintenance) {
+  ServerLifecycle *lifecycle = calloc(1, sizeof(*lifecycle));
+
+  if (lifecycle == nullptr)
+    return nullptr;
+  if (uv_loop_init(&lifecycle->event_loop) < 0) {
+    free(lifecycle);
+    return nullptr;
+  }
+  lifecycle->event_loop_initialized = true;
+  lifecycle->maintenance = maintenance;
+  lifecycle->sockets =
+      telnet_sockets_create(&lifecycle->event_loop, maintenance->server);
+  if (lifecycle->sockets == nullptr) {
+    uv_loop_close(&lifecycle->event_loop);
+    free(lifecycle);
+    return nullptr;
+  }
+  return lifecycle;
 }
 
-uv_loop_t *server_lifecycle_loop(void) {
-  return server_event_loop_initialized ? &server_event_loop : nullptr;
+void server_lifecycle_destroy(ServerLifecycle *lifecycle) {
+  if (lifecycle == nullptr)
+    return;
+  if (lifecycle->event_loop_initialized)
+    server_lifecycle_shutdown(lifecycle);
+  telnet_sockets_destroy(lifecycle->sockets);
+  free(lifecycle);
+}
+
+uv_loop_t *server_lifecycle_loop(ServerLifecycle *lifecycle) {
+  return lifecycle != nullptr && lifecycle->event_loop_initialized
+             ? &lifecycle->event_loop
+             : nullptr;
 }
 
 /* Initialize process-wide state that must exist before database validation. */
-void server_lifecycle_prepare(void) {
+void server_lifecycle_prepare(ServerLifecycle *lifecycle) {
   srandom((unsigned int)getpid());
-  bind_signals();
+  lifecycle->signals = signal_handlers_create(server_lifecycle_loop(lifecycle),
+                                              lifecycle->maintenance->server);
+}
+
+void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle) {
+  if (lifecycle != nullptr)
+    signal_handlers_unbind(lifecycle->signals);
 }
 
 /* Start services required after the database and descriptor state are ready. */
-int server_lifecycle_boot(int mindb) {
+int server_lifecycle_boot(ServerLifecycle *lifecycle, int mindb) {
   char lua_error[LBUF_SIZE];
 
-  mudstate.now = time(nullptr);
-  if (!lua_initialize(lua_error, sizeof(lua_error))) {
-    log_error(LOG_ALWAYS, "INI", "LUA", "Unable to initialize Lua: %s",
-              lua_error);
+  lifecycle->maintenance->clock->now = time(nullptr);
+  if (!lua_initialize(lifecycle->maintenance->lua,
+                      lifecycle->maintenance->server, lua_error,
+                      sizeof(lua_error))) {
+    log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI", "LUA",
+              "Unable to initialize Lua: %s", lua_error);
     return 0;
   }
-  server_lifecycle_process_preload();
-#ifdef ARBITRARY_LOGFILES
-  logcache_init();
-#endif
-  init_timer();
-  return 1;
+  server_lifecycle_process_preload(lifecycle);
+  lifecycle->timer =
+      server_timer_create(&lifecycle->event_loop, lifecycle->maintenance);
+  return lifecycle->timer != nullptr;
 }
 
 /* Start socket listeners and run the event loop until a shutdown is requested.
  */
-void server_lifecycle_run(int port) {
-  if (!telnet_socket_listen(port))
+void server_lifecycle_run(ServerLifecycle *lifecycle, int port) {
+  if (!telnet_sockets_listen(lifecycle->sockets, port))
     return;
-  queue_timer = mux_timer_create(&server_event_loop,
-                                 server_lifecycle_run_queues, nullptr);
-  if (queue_timer == nullptr ||
-      !mux_timer_start(queue_timer, (uint64_t)mudconf.timeslice,
-                       (uint64_t)mudconf.timeslice)) {
-    log_error(LOG_ALWAYS, "INI", "EVENT", "Unable to create queue timer.");
+  lifecycle->queue_timer = mux_timer_create(
+      &lifecycle->event_loop, server_lifecycle_run_queues, lifecycle);
+  if (lifecycle->queue_timer == nullptr ||
+      !mux_timer_start(
+          lifecycle->queue_timer,
+          (uint64_t)lifecycle->maintenance->configuration->timeslice,
+          (uint64_t)lifecycle->maintenance->configuration->timeslice)) {
+    log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI", "EVENT",
+              "Unable to create queue timer.");
     return;
   }
-  gettimeofday(&last_slice, nullptr);
-  gettimeofday(&current_time, nullptr);
+  gettimeofday(&lifecycle->last_slice, nullptr);
+  gettimeofday(&lifecycle->current_time, nullptr);
 #ifdef BTMUX_PERSISTENCE_TESTING
   server_lifecycle_signal_test_ready();
 #endif
-  uv_run(&server_event_loop, UV_RUN_DEFAULT);
+  uv_run(&lifecycle->event_loop, UV_RUN_DEFAULT);
 }
 
 /* Request that the active event loop return at its next safe opportunity. */
-void server_lifecycle_stop(void) {
-  if (server_event_loop_initialized)
-    uv_stop(&server_event_loop);
+void server_lifecycle_stop(ServerLifecycle *lifecycle) {
+  if (lifecycle != nullptr && lifecycle->event_loop_initialized)
+    uv_stop(&lifecycle->event_loop);
+}
+
+void server_lifecycle_release_sockets(ServerLifecycle *lifecycle) {
+  if (lifecycle != nullptr)
+    telnet_sockets_release(lifecycle->sockets);
+}
+
+void server_lifecycle_close_connections(ServerLifecycle *lifecycle,
+                                        bool emergency, const char *message) {
+  if (lifecycle != nullptr)
+    telnet_sockets_close(lifecycle->sockets, emergency, message);
+}
+
+int server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd) {
+  if (lifecycle == nullptr)
+    return 0;
+  return telnet_sockets_eradicate_fd(lifecycle->sockets, fd);
 }
 
 /* Stop services and flush pending output before process exit. */
-void server_lifecycle_shutdown(void) {
-  server_lifecycle_stop();
-  if (queue_timer != nullptr) {
-    mux_timer_destroy(queue_timer);
-    queue_timer = nullptr;
+void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
+  if (lifecycle == nullptr)
+    return;
+  if (lifecycle->queue_timer != nullptr) {
+    mux_timer_destroy(lifecycle->queue_timer);
+    lifecycle->queue_timer = nullptr;
   }
-  timer_shutdown();
+  server_timer_destroy(lifecycle->timer);
+  lifecycle->timer = nullptr;
   heartbeat_stop();
-  lua_shutdown();
-  flush_sockets();
-#ifdef ARBITRARY_LOGFILES
-  logcache_destruct();
-#endif
-  signals_shutdown();
-  mux_release_socket();
-  if (server_event_loop_initialized) {
+  lua_shutdown(lifecycle->maintenance->lua);
+  signal_handlers_destroy(lifecycle->signals);
+  lifecycle->signals = nullptr;
+  telnet_sockets_release(lifecycle->sockets);
+  if (lifecycle->event_loop_initialized) {
     int status;
 
-    uv_walk(&server_event_loop, server_lifecycle_close_timers, nullptr);
-    if (descriptor_count() != 0) {
-      shutdown_started_at = uv_hrtime();
-      shutdown_timer = mux_timer_create(&server_event_loop,
-                                        server_lifecycle_drain_writes, nullptr);
-      if (shutdown_timer != nullptr)
-        mux_timer_start(shutdown_timer, 10, 10);
+    uv_walk(&lifecycle->event_loop, server_lifecycle_close_timers, nullptr);
+    if (descriptor_count(lifecycle->maintenance->descriptors) != 0) {
+      lifecycle->shutdown_started_at = uv_hrtime();
+      lifecycle->shutdown_timer = mux_timer_create(
+          &lifecycle->event_loop, server_lifecycle_drain_writes, lifecycle);
+      if (lifecycle->shutdown_timer != nullptr)
+        mux_timer_start(lifecycle->shutdown_timer, 10, 10);
     }
-    uv_run(&server_event_loop, UV_RUN_DEFAULT);
-    status = uv_loop_close(&server_event_loop);
+    uv_run(&lifecycle->event_loop, UV_RUN_DEFAULT);
+    status = uv_loop_close(&lifecycle->event_loop);
     if (status == 0)
-      server_event_loop_initialized = false;
+      lifecycle->event_loop_initialized = false;
     else
-      log_error(LOG_ALWAYS, "INI", "EVENT",
-                "Unable to close libuv event loop: %s", uv_strerror(status));
+      log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI",
+                "EVENT", "Unable to close libuv event loop: %s",
+                uv_strerror(status));
   }
 }

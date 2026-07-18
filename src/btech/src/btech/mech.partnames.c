@@ -214,14 +214,16 @@ int find_matching_short_part(char *wc, int *ind, int *id, int *brand) {
 void ListForms(DbRef player, void *data, char *buffer) {
   int i;
 
-  notify(player, "Listing of forms:");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Listing of forms:");
   for (i = 0; i < object_count; i++)
-    notify_printf(player, "%3d %-20s %-25s %s", i, short_sorted[i]->shorty,
-                  short_sorted[i]->longy, short_sorted[i]->vlongy);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%3d %-20s %-25s %s", i,
+                  short_sorted[i]->shorty, short_sorted[i]->longy,
+                  short_sorted[i]->vlongy);
 }
 
 void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                     char *fargs[], int nfargs, char *cargs[], int ncargs,
+                     EvaluationContext *context) {
   /* fargs[0] = name to match on
    */
 
@@ -308,7 +310,7 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
 /* List the canonical category names accepted by btpartslist(). */
 void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
                              char *fargs[], int nfargs, char *cargs[],
-                             int ncargs) {
+                             int ncargs, EvaluationContext *context) {
   FUNCHECK(!WizR(player), "#-1 PERMISSION DENIED");
   safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
 }
@@ -318,7 +320,8 @@ void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
  * Requiring the category keeps this softcode result within one LBUF.
  */
 void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                     char *fargs[], int nfargs, char *cargs[], int ncargs,
+                     EvaluationContext *context) {
   BT_PART_CATEGORY category;
   PN *part_name;
   size_t used;
@@ -359,7 +362,8 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                    char *fargs[], int nfargs, char *cargs[], int ncargs,
+                    EvaluationContext *context) {
   /* fargs[0] = partnumer to find name for
    * fargs[1] = 'short', 'long' or 'vlong'
    */

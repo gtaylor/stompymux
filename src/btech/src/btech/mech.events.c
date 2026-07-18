@@ -26,7 +26,8 @@
 
 void mech_heartbeat(MECH *mech) {
   UpdateRecycling(mech);
-  if (mudconf.btech_newstagger >= 1 && MechType(mech) == CLASS_MECH) {
+  if (btech_context_active()->configuration->btech_newstagger >= 1 &&
+      MechType(mech) == CLASS_MECH) {
     // no sense checking if a fallen mech will fall down again, and let's not
     // let jumping mechs stagger.
     if (!Fallen(mech) && !Jumping(mech)) {
@@ -45,13 +46,14 @@ void mech_heartbeat(MECH *mech) {
 }
 
 void mech_staggercheck_heartbeat(MECH *mech) {
-  time_t now = mudstate.now;
+  time_t now = btech_context_active()->clock->now;
   int curStaggerDamage = 0;
   int prevStaggerDamage = 0;
   int staggerLevel = 0;
 
   // if we've not checked stagger since last time... ruhroh!
-  if (now - (mech)->rd.lastStaggerCheck >= mudconf.btech_newstaggertime) {
+  if (now - (mech)->rd.lastStaggerCheck >=
+      btech_context_active()->configuration->btech_newstaggertime) {
     (mech)->rd.lastStaggerCheck = now;
 
     // curStagger is stuff we haven't rolled against
@@ -65,8 +67,9 @@ void mech_staggercheck_heartbeat(MECH *mech) {
       staggerLevel = curStaggerDamage / 20;
 
       // Dont need to remove stagger anymore, it clears on fall,
-      // unless we're using mudconf.btech_newstagger = 2
-      if (mudconf.btech_newstagger == 2)
+      // unless we're using
+      // btech_context_active()->configuration->btech_newstagger = 2
+      if (btech_context_active()->configuration->btech_newstagger == 2)
         RemoveStaggerDamage(mech, staggerLevel);
       else {
         MarkStaggerDamage(mech, staggerLevel);
@@ -126,7 +129,7 @@ int calcNewStaggerBTHMod(MECH *mech, int staggerLevel) {
       tonnageMod = -2;
 
     // disable tonnage mods if so configured
-    if (mudconf.btech_newstaggertons)
+    if (btech_context_active()->configuration->btech_newstaggertons)
       bthMod += tonnageMod;
   }
 
@@ -239,8 +242,11 @@ void ProlongUncon(MECH *mech, int len) {
     MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
     return;
   }
-  l = mux_event_last_type_data(EVENT_RECOVERY, (void *)mech) + len;
-  mux_event_remove_type_data(EVENT_RECOVERY, (void *)mech);
+  l = mux_event_last_type_data(btech_context_active()->events, EVENT_RECOVERY,
+                               (void *)mech) +
+      len;
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_RECOVERY,
+                             (void *)mech);
   MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
 
@@ -385,7 +391,7 @@ void aero_move_event(MuxEvent *e) {
       MechStartFZ(mech) = MechStartFZ(mech) - 1;
     move_mech(mech);
     if (IsDS(mech) && MechZ(mech) <= (MechElevation(mech) + 5) &&
-        ((mux_event_tick / WEAPON_TICK) % 10) == 0)
+        ((btech_context_active()->events->tick / WEAPON_TICK) % 10) == 0)
       DS_BlastNearbyMechsAndTrees(
           mech, "You are hit by the DropShip's plasma exhaust!",
           "is hit directly by DropShip's exhaust!",

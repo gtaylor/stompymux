@@ -2,23 +2,27 @@
 
 #include "mux/server/platform.h"
 
+#include <assert.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 
 #include "mux/commands/command.h"
+#include "mux/commands/macro.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/player_cache.h"
+#include "mux/world/world_context.h"
 
 #ifndef O_ACCMODE
 #define O_ACCMODE (O_RDONLY | O_WRONLY | O_RDWR)
@@ -28,19 +32,37 @@
  * Restart definitions
  */
 
-GameObject *db = nullptr;
-NAME *names = nullptr;
-NAME *purenames = nullptr;
+void game_database_initialize(GameDatabase *database) {
+  memset(database, 0, sizeof(*database));
+  database->freelist = NOTHING;
+}
 
-int corrupt;
+void game_database_bind_services(GameDatabase *database,
+                                 ServerConfiguration *configuration,
+                                 WorldIndexes *indexes,
+                                 DescriptorRegistry *descriptors,
+                                 PlayerCache *players, VattrStore *vattrs,
+                                 ServerLog *log) {
+  database->configuration = configuration;
+  database->indexes = indexes;
+  database->descriptors = descriptors;
+  database->players = players;
+  database->vattrs = vattrs;
+  database->log = log;
+}
 
-extern void del_commac(DbRef);
-extern void do_clear_macro(DbRef player, char *s);
-
-extern VATTR *vattr_rename(char *, char *);
+void game_database_destroy(GameDatabase *database) {
+  if (database == nullptr)
+    return;
+  db_free(database);
+  free(database->attributes_by_number);
+  database->attributes_by_number = nullptr;
+  database->attribute_capacity = 0;
+}
 
 typedef struct atrcount ATRCOUNT;
 struct atrcount {
+  GameDatabase *database;
   DbRef thing;
   int count;
 };
@@ -56,7 +78,7 @@ extern unsigned int malloc_sbrk_used; /* Amount of data space used now */
 /*
  * Check routine forward declaration.
  */
-extern int fwdlist_ck(int, DbRef, DbRef, int, char *);
+extern int fwdlist_ck(EvaluationContext *, int, DbRef, DbRef, int, char *);
 
 // Flags for character stats/skills attributes.
 constexpr int PLSTAT_MODE = AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL;
@@ -257,7 +279,7 @@ Attribute attr_table[] = {
  * ---------------------------------------------------------------------------
  * * fwdlist_set, fwdlist_clr: Manage cached forwarding lists
  */
-void fwdlist_set(DbRef thing, FWDLIST *ifp) {
+void fwdlist_set(GameDatabase *database, DbRef thing, FWDLIST *ifp) {
   FWDLIST *fp, *xfp;
   int i;
 
@@ -266,7 +288,7 @@ void fwdlist_set(DbRef thing, FWDLIST *ifp) {
    */
 
   if (!ifp || (ifp->count <= 0)) {
-    fwdlist_clr(thing);
+    fwdlist_clr(database, thing);
     return;
   }
   /*
@@ -284,26 +306,27 @@ void fwdlist_set(DbRef thing, FWDLIST *ifp) {
    * Replace an existing forwardlist, or add a new one
    */
 
-  xfp = fwdlist_get(thing);
+  xfp = fwdlist_get(database, thing);
   if (xfp) {
     free(xfp);
-    numeric_hash_table_replace(thing, (int *)fp, &mudstate.fwdlist_htab);
+    numeric_hash_table_replace(thing, (int *)fp,
+                               &database->indexes->forward_lists);
   } else {
-    numeric_hash_table_add(thing, (int *)fp, &mudstate.fwdlist_htab);
+    numeric_hash_table_add(thing, (int *)fp, &database->indexes->forward_lists);
   }
 }
 
-void fwdlist_clr(DbRef thing) {
+void fwdlist_clr(GameDatabase *database, DbRef thing) {
   FWDLIST *xfp;
 
   /*
    * If a forwardlist exists, delete it
    */
 
-  xfp = fwdlist_get(thing);
+  xfp = fwdlist_get(database, thing);
   if (xfp) {
     free(xfp);
-    numeric_hash_table_delete(thing, &mudstate.fwdlist_htab);
+    numeric_hash_table_delete(thing, &database->indexes->forward_lists);
   }
 }
 
@@ -311,7 +334,8 @@ void fwdlist_clr(DbRef thing) {
  * ---------------------------------------------------------------------------
  * * fwdlist_load: Load text into a forwardlist.
  */
-int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
+int fwdlist_load(EvaluationContext *evaluation, FWDLIST *fp, DbRef player,
+                 char *atext) {
   DbRef target;
   char *tp, *bp, *dp;
   int count, errors, fail;
@@ -342,11 +366,12 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
                      */
     if ((*dp++ == '#') && isdigit(*dp)) {
       target = clamped_atol(dp);
-      fail = (!is_good_obj(target) ||
-              (!is_god(player) && !is_controls(player, target)));
+      fail = (!is_good_obj(evaluation->world->database, target) ||
+              (!is_god(evaluation->world->database, player) &&
+               !is_controls(evaluation, player, target)));
       if (fail) {
-        notify_printf(player, "Cannot forward to #%ld: Permission denied.",
-                      target);
+        notify_printf(evaluation, player,
+                      "Cannot forward to #%ld: Permission denied.", target);
         errors++;
       } else {
         fp->data[count++] = (int)target;
@@ -363,7 +388,7 @@ int fwdlist_load(FWDLIST *fp, DbRef player, char *atext) {
  * ---------------------------------------------------------------------------
  * * fwdlist_rewrite: Generate a text string from a FWDLIST buffer.
  */
-int fwdlist_rewrite(FWDLIST *fp, char *atext) {
+int fwdlist_rewrite(GameDatabase *database, FWDLIST *fp, char *atext) {
   char *tp, *bp;
   int i, count;
 
@@ -372,7 +397,7 @@ int fwdlist_rewrite(FWDLIST *fp, char *atext) {
     tp = alloc_sbuf("fwdlist_rewrite.errors");
     bp = atext;
     for (i = 0; i < fp->count; i++) {
-      if (is_good_obj(fp->data[i])) {
+      if (is_good_obj(database, fp->data[i])) {
         snprintf(tp, SBUF_SIZE, "#%d ", fp->data[i]);
         safe_str(tp, atext, &bp);
       } else {
@@ -394,7 +419,8 @@ int fwdlist_rewrite(FWDLIST *fp, char *atext) {
  * * fwdlist_ck:  Check a list of dbref numbers to forward to for AUDIBLE
  */
 
-int fwdlist_ck(int key, DbRef player, DbRef thing, int anum, char *atext) {
+int fwdlist_ck(EvaluationContext *evaluation, int key, DbRef player,
+               DbRef thing, int anum, char *atext) {
   FWDLIST *fp;
   int count;
 
@@ -402,7 +428,7 @@ int fwdlist_ck(int key, DbRef player, DbRef thing, int anum, char *atext) {
 
   if (atext && *atext) {
     fp = (FWDLIST *)alloc_lbuf("fwdlist_ck.fp");
-    fwdlist_load(fp, player, atext);
+    fwdlist_load(evaluation, fp, player, atext);
   } else {
     fp = nullptr;
   }
@@ -411,17 +437,19 @@ int fwdlist_ck(int key, DbRef player, DbRef thing, int anum, char *atext) {
    * Set the cached forwardlist
    */
 
-  fwdlist_set(thing, fp);
-  count = atext ? fwdlist_rewrite(fp, atext) : (fp ? fp->count : 0);
+  fwdlist_set(evaluation->world->database, thing, fp);
+  count = atext ? fwdlist_rewrite(evaluation->world->database, fp, atext)
+                : (fp ? fp->count : 0);
   if (fp)
     free_lbuf(fp);
   return ((count > 0) || !atext || !*atext);
 }
 
-FWDLIST *fwdlist_get(DbRef thing) {
+FWDLIST *fwdlist_get(GameDatabase *database, DbRef thing) {
   FWDLIST *fp;
 
-  fp = ((FWDLIST *)numeric_hash_table_find(thing, &mudstate.fwdlist_htab));
+  fp = ((FWDLIST *)numeric_hash_table_find(thing,
+                                           &database->indexes->forward_lists));
 
   return fp;
 }
@@ -453,59 +481,62 @@ static char *set_string(char **ptr, char *new) {
  * ---------------------------------------------------------------------------
  * * Name, s_Name: Get or set an object's name.
  */
-INLINE char *Name(DbRef thing) {
+INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
   DbRef aowner;
   long aflags;
   char *buff;
-  static char *tbuff[MBUF_SIZE];
   char buffer[MBUF_SIZE];
 
-  if (mudconf.cache_names) {
-    if (thing > mudstate.db_top || thing < 0) {
+  if (database->configuration->cache_names) {
+    if (thing > database->top || thing < 0) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
       return (char *)"#-1 INVALID DBREF";
 #pragma clang diagnostic pop
     }
-    if (!purenames[thing]) {
-      buff = attribute_get(thing, A_NAME, &aowner, &aflags);
+    if (!database->pure_names[thing]) {
+      buff = attribute_get(database, thing, A_NAME, &aowner, &aflags);
       strip_ansi_r(buffer, buff, MBUF_SIZE);
-      set_string(&purenames[thing], buffer);
+      set_string(&database->pure_names[thing], buffer);
       free_lbuf(buff);
     }
   }
 
-  attribute_get_string((char *)tbuff, thing, A_NAME, &aowner, &aflags);
-  return ((char *)tbuff);
+  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aowner,
+                       &aflags);
+  return database->name_buffer;
 }
 
-INLINE char *PureName(DbRef thing) {
+INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   DbRef aowner;
   long aflags;
   char *buff;
-  static char *tbuff[LBUF_SIZE];
-  char new[LBUF_SIZE];
 
-  if (mudconf.cache_names) {
-    if (thing > mudstate.db_top || thing < 0) {
+  if (database->configuration->cache_names) {
+    if (thing > database->top || thing < 0) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
       return (char *)"#-1 INVALID DBREF";
 #pragma clang diagnostic pop
     }
-    if (!purenames[thing]) {
-      buff = attribute_get(thing, A_NAME, &aowner, &aflags);
-      set_string(&purenames[thing], strip_ansi_r(new, buff, strlen(buff)));
+    if (!database->pure_names[thing]) {
+      char new[LBUF_SIZE];
+
+      buff = attribute_get(database, thing, A_NAME, &aowner, &aflags);
+      set_string(&database->pure_names[thing],
+                 strip_ansi_r(new, buff, strlen(buff)));
       free_lbuf(buff);
     }
-    return purenames[thing];
+    return database->pure_names[thing];
   }
 
-  attribute_get_string((char *)tbuff, thing, A_NAME, &aowner, &aflags);
-  return (strip_ansi_r(new, (char *)tbuff, strlen((char *)tbuff)));
+  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aowner,
+                       &aflags);
+  return strip_ansi_r(database->pure_name_buffer, database->name_buffer,
+                      strlen(database->name_buffer));
 }
 
-INLINE void object_name_set(DbRef thing, char *s) {
+INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
   char new[MBUF_SIZE];
   /* Truncate the name if we have to */
 
@@ -513,19 +544,19 @@ INLINE void object_name_set(DbRef thing, char *s) {
   if (s && (strlen(s) > MBUF_SIZE))
     s[MBUF_SIZE] = '\0';
 
-  attribute_add_raw(thing, A_NAME, (char *)s);
+  attribute_add_raw(database, thing, A_NAME, (char *)s);
 
-  if (mudconf.cache_names) {
-    set_string(&purenames[thing], strip_ansi_r(new, s, strlen(s)));
+  if (database->configuration->cache_names) {
+    set_string(&database->pure_names[thing], strip_ansi_r(new, s, strlen(s)));
   }
 }
 
-void object_password_set(DbRef thing, const char *s) {
+void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
   /* attribute_add_raw()'s buffer parameter isn't const-correct; s is only
      read (copied) here, never mutated. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  attribute_add_raw(thing, A_PASS, (char *)s);
+  attribute_add_raw(database, thing, A_PASS, (char *)s);
 #pragma clang diagnostic pop
 }
 
@@ -536,8 +567,13 @@ void object_password_set(DbRef thing, const char *s) {
 
 extern NameTable attraccess_nametab[];
 
-void do_attribute(DbRef player, DbRef cause, int key, char *aname,
-                  char *value) {
+void do_attribute(CommandInvocation *invocation) {
+  MuxServer *server = invocation->context->server;
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  const DbRef player = invocation->player;
+  const int key = invocation->key;
+  char *aname = invocation->first;
+  char *value = invocation->second;
   int success, negate, f;
   char *buff, *sp, *p, *q;
   VATTR *va;
@@ -552,9 +588,10 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
     *p = ToUpper(*q);
   *p = '\0';
 
-  va = (VATTR *)vattr_find(buff);
+  va = (VATTR *)vattr_find(server->vattrs, buff);
   if (!va) {
-    notify_printf(player, "No such user-named attribute: %s", buff);
+    notify_printf(&invocation->context->evaluation, player,
+                  "No such user-named attribute: %s", buff);
     free_sbuf(buff);
     return;
   }
@@ -584,7 +621,8 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
        * Set or clear the appropriate bit
        */
 
-      f = name_table_search(player, attraccess_nametab, sp);
+      f = name_table_search(&server->database, server->configuration, player,
+                            attraccess_nametab, sp);
       if (f > 0) {
         success = 1;
         if (negate)
@@ -592,7 +630,8 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
         else
           va->flags |= f;
       } else {
-        notify_printf(player, "Unknown permission: %s.", sp);
+        notify_printf(&invocation->context->evaluation, player,
+                      "Unknown permission: %s.", sp);
       }
 
       /*
@@ -601,9 +640,9 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
 
       sp = strtok(nullptr, " ");
     }
-    if (success && !is_quiet(player))
-      notify_printf(player, "Attribute access for %s changed to %s.", va->name,
-                    value);
+    if (success && !is_quiet(&server->database, player))
+      notify_printf(&invocation->context->evaluation, player,
+                    "Attribute access for %s changed to %s.", va->name, value);
     break;
 
   case ATTRIB_RENAME:
@@ -612,16 +651,16 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
      * Make sure the new name doesn't already exist
      */
 
-    va2 = attribute_by_name(value);
+    va2 = attribute_by_name(invocation->context->world->database, value);
     if (va2) {
-      notify(player, "An attribute with that name already exists.");
+      notify(evaluation, player, "An attribute with that name already exists.");
       free_sbuf(buff);
       return;
     }
-    if (vattr_rename(va->name, value) == nullptr)
-      notify(player, "Attribute rename failed.");
+    if (vattr_rename(server->vattrs, va->name, value) == nullptr)
+      notify(evaluation, player, "Attribute rename failed.");
     else
-      notify(player, "Attribute renamed.");
+      notify(evaluation, player, "Attribute renamed.");
     break;
 
   case ATTRIB_DELETE:
@@ -630,8 +669,8 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
      * Remove the attribute
      */
 
-    vattr_delete(buff);
-    notify(player, "Attribute deleted.");
+    vattr_delete(server->vattrs, buff);
+    notify(evaluation, player, "Attribute deleted.");
     break;
   default:
     break;
@@ -645,12 +684,18 @@ void do_attribute(DbRef player, DbRef cause, int key, char *aname,
  * * do_fixdb: Directly edit database fields
  */
 
-void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
+void do_fixdb(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  WorldContext *world = invocation->context->world;
+  const DbRef player = invocation->player;
+  const int key = invocation->key;
+  char *arg1 = invocation->first;
+  char *arg2 = invocation->second;
   DbRef thing, res;
 
-  init_match(player, arg1, NOTYPE);
-  match_everything(0);
-  thing = noisy_match_result();
+  init_match(&invocation->context->match, player, arg1, NOTYPE);
+  match_everything(&invocation->context->match, 0);
+  thing = noisy_match_result(&invocation->context->match);
   if (thing == NOTHING)
     return;
 
@@ -661,9 +706,9 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   case FIXDB_CON:
   case FIXDB_EXITS:
   case FIXDB_NEXT:
-    init_match(player, arg2, NOTYPE);
-    match_everything(0);
-    res = noisy_match_result();
+    init_match(&invocation->context->match, player, arg2, NOTYPE);
+    match_everything(&invocation->context->match, 0);
+    res = noisy_match_result(&invocation->context->match);
     break;
   default:
     break;
@@ -671,60 +716,63 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
 
   switch (key) {
   case FIXDB_OWNER:
-    s_owner(thing, res);
-    if (!is_quiet(player))
-      notify_printf(player, "Owner set to #%ld", res);
+    game_object_set_owner(world->database, thing, res);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Owner set to #%ld", res);
     break;
   case FIXDB_LOC:
-    s_location(thing, res);
-    if (!is_quiet(player))
-      notify_printf(player, "Location set to #%ld", res);
+    game_object_set_location(world->database, thing, res);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Location set to #%ld", res);
     break;
   case FIXDB_CON:
-    s_contents(thing, res);
-    if (!is_quiet(player))
-      notify_printf(player, "Contents set to #%ld", res);
+    game_object_set_contents(world->database, thing, res);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Contents set to #%ld", res);
     break;
   case FIXDB_EXITS:
-    s_exits(thing, res);
-    if (!is_quiet(player))
-      notify_printf(player, "Exits set to #%ld", res);
+    game_object_set_exits(world->database, thing, res);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Exits set to #%ld", res);
     break;
   case FIXDB_NEXT:
-    s_next(thing, res);
-    if (!is_quiet(player))
-      notify_printf(player, "Next set to #%ld", res);
+    game_object_set_next(world->database, thing, res);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Next set to #%ld", res);
     break;
   case FIXDB_NAME:
-    if (typeof_obj(thing) == TYPE_PLAYER) {
-      if (!ok_player_name(arg2)) {
-        notify(player, "That's not a good name for a player.");
+    if (typeof_obj(world->database, thing) == TYPE_PLAYER) {
+      if (!ok_player_name(world->configuration, arg2)) {
+        notify(evaluation, player, "That's not a good name for a player.");
         return;
       }
-      if (lookup_player(NOTHING, arg2, 0) != NOTHING) {
-        notify(player, "That name is already in use.");
+      if (lookup_player(world, NOTHING, arg2, 0) != NOTHING) {
+        notify(evaluation, player, "That name is already in use.");
         return;
       }
-      STARTLOG(LOG_SECURITY, "SEC", "CNAME") {
-        log_name(thing), log_text(" renamed to ");
+      STARTLOG(&evaluation->server->log, LOG_SECURITY, "SEC", "CNAME") {
+        log_name(&evaluation->server->log, thing), log_text(" renamed to ");
         log_text(arg2);
-        ENDLOG;
+        ENDLOG(&evaluation->server->log);
       }
-      if (is_suspect(player)) {
-        send_channel("Suspect", "%s renamed to %s", Name(thing), arg2);
+      if (is_suspect(world->database, player)) {
+        send_channel(evaluation, "Suspect", "%s renamed to %s",
+                     game_object_name(evaluation->world->database, thing),
+                     arg2);
       }
-      delete_player_name(thing, Name(thing));
+      delete_player_name(world, thing,
+                         game_object_name(evaluation->world->database, thing));
 
-      object_name_set(thing, arg2);
-      add_player_name(thing, arg2);
+      object_name_set(invocation->context->world->database, thing, arg2);
+      add_player_name(world, thing, arg2);
     } else {
-      if (!ok_name(arg2)) {
-        notify(player, "Warning: That is not a reasonable name.");
+      if (!ok_name(world->configuration, arg2)) {
+        notify(evaluation, player, "Warning: That is not a reasonable name.");
       }
-      object_name_set(thing, arg2);
+      object_name_set(invocation->context->world->database, thing, arg2);
     }
-    if (!is_quiet(player))
-      notify_printf(player, "Name set to %s", arg2);
+    if (!is_quiet(world->database, player))
+      notify_printf(evaluation, player, "Name set to %s", arg2);
     break;
   default:
     break;
@@ -736,20 +784,20 @@ void do_fixdb(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
  * * init_attrtab: Initialize the attribute hash tables.
  */
 
-void init_attrtab(void) {
+void init_attrtab(GameDatabase *database) {
   Attribute *a;
   char *buff, *p;
   const char *q;
 
-  hash_table_initialize(&mudstate.attr_name_htab, 512);
+  hash_table_initialize(&database->indexes->attributes, 512);
   buff = alloc_sbuf("init_attrtab");
   for (a = attr_table; a->number; a++) {
-    anum_extend(a->number);
-    anum_set(a->number, a);
+    anum_extend(database, a->number);
+    anum_set(database, a->number, a);
     for (p = buff, q = a->name; *q; p++, q++)
       *p = ToUpper(*q);
     *p = '\0';
-    hash_table_add(buff, (int *)a, &mudstate.attr_name_htab);
+    hash_table_add(buff, (int *)a, &database->indexes->attributes);
   }
   free_sbuf(buff);
 }
@@ -759,7 +807,7 @@ void init_attrtab(void) {
  * * attribute_by_name: Look up an attribute by name.
  */
 
-Attribute *attribute_by_name(const char *s) {
+Attribute *attribute_by_name(GameDatabase *database, const char *s) {
   char *buff, *p;
   const char *q;
   Attribute *a;
@@ -783,7 +831,7 @@ Attribute *attribute_by_name(const char *s) {
    * Look for a predefined attribute
    */
 
-  a = (Attribute *)hash_table_find(buff, &mudstate.attr_name_htab);
+  a = (Attribute *)hash_table_find(buff, &database->indexes->attributes);
   if (a != nullptr) {
     free_sbuf(buff);
     return a;
@@ -792,7 +840,7 @@ Attribute *attribute_by_name(const char *s) {
    * Nope, look for a user attribute
    */
 
-  va = (VATTR *)vattr_find(buff);
+  va = (VATTR *)vattr_find(database->vattrs, buff);
   free_sbuf(buff);
 
   /*
@@ -818,33 +866,40 @@ Attribute *attribute_by_name(const char *s) {
  * * anum_extend: Grow the attr num lookup table.
  */
 
-Attribute **anum_table = nullptr;
-int anum_alc_top = 0;
+Attribute *game_database_anum_get(GameDatabase *database, int number) {
+  return database->attributes_by_number[number];
+}
 
-void anum_extend(int newtop) {
+void game_database_anum_set(GameDatabase *database, int number,
+                            Attribute *attribute) {
+  database->attributes_by_number[number] = attribute;
+}
+
+void anum_extend(GameDatabase *database, int newtop) {
   Attribute **anum_table2;
   int delta, i;
 
-  delta = mudconf.init_size;
+  delta = database->configuration->init_size;
 
-  if (newtop <= anum_alc_top)
+  if (newtop <= database->attribute_capacity)
     return;
-  if (newtop < anum_alc_top + delta)
-    newtop = anum_alc_top + delta;
-  if (anum_table == nullptr) {
-    anum_table = malloc((size_t)(newtop + 1) * sizeof(Attribute *));
+  if (newtop < database->attribute_capacity + delta)
+    newtop = database->attribute_capacity + delta;
+  if (database->attributes_by_number == nullptr) {
+    database->attributes_by_number =
+        malloc((size_t)(newtop + 1) * sizeof(Attribute *));
     for (i = 0; i <= newtop; i++)
-      anum_table[i] = nullptr;
+      database->attributes_by_number[i] = nullptr;
   } else {
     anum_table2 = malloc((size_t)(newtop + 1) * sizeof(Attribute *));
-    for (i = 0; i <= anum_alc_top; i++)
-      anum_table2[i] = anum_table[i];
-    for (i = anum_alc_top + 1; i <= newtop; i++)
+    for (i = 0; i <= database->attribute_capacity; i++)
+      anum_table2[i] = database->attributes_by_number[i];
+    for (i = database->attribute_capacity + 1; i <= newtop; i++)
       anum_table2[i] = nullptr;
-    free((char *)anum_table);
-    anum_table = anum_table2;
+    free((char *)database->attributes_by_number);
+    database->attributes_by_number = anum_table2;
   }
-  anum_alc_top = newtop;
+  database->attribute_capacity = newtop;
 }
 
 /*
@@ -852,7 +907,7 @@ void anum_extend(int newtop) {
  * * attribute_by_number: Look up an attribute by number.
  */
 
-Attribute *attribute_by_number(int anum) {
+Attribute *attribute_by_number(GameDatabase *database, int anum) {
   VATTR *va;
   static Attribute tattr;
 
@@ -861,16 +916,16 @@ Attribute *attribute_by_number(int anum) {
    */
 
   if (anum < A_USER_START)
-    return anum_get(anum);
+    return anum_get(database, anum);
 
-  if (anum >= anum_alc_top)
+  if (anum >= database->attribute_capacity)
     return nullptr;
 
   /*
    * It's a user-defined attribute, we need to copy data
    */
 
-  va = (VATTR *)anum_get(anum);
+  va = (VATTR *)anum_get(database, anum);
   if (va != nullptr) {
     tattr.name = va->name;
     tattr.number = va->number;
@@ -890,17 +945,18 @@ Attribute *attribute_by_number(int anum) {
  * * mkattr: Lookup attribute by name, creating if needed.
  */
 
-int mkattr(char *buff) {
+int mkattr(GameDatabase *database, char *buff) {
   Attribute *ap;
   VATTR *va;
 
-  if (!(ap = attribute_by_name(buff))) {
+  if (!(ap = attribute_by_name(database, buff))) {
 
     /*
      * Unknown attr, create a new one
      */
 
-    va = vattr_alloc(buff, mudconf.vattr_flags);
+    va = vattr_alloc(database->vattrs, buff,
+                     database->configuration->vattr_flags);
     if (!va || !(va->number))
       return -1;
     return va->number;
@@ -915,20 +971,20 @@ int mkattr(char *buff) {
  * * Commer: check if an object has any $-commands in its attributes.
  */
 
-int has_commands(DbRef thing) {
+int has_commands(GameDatabase *database, DbRef thing) {
   char *s, *as, c;
   int attr;
   long aflags;
   DbRef aowner;
   Attribute *ap;
 
-  for (attr = attribute_list_first(thing, &as); attr;
+  for (attr = attribute_list_first(database, thing, &as); attr;
        attr = attribute_list_next(&as)) {
-    ap = attribute_by_number(attr);
+    ap = attribute_by_number(database, attr);
     if (!ap || (ap->flags & AF_NOPROG))
       continue;
 
-    s = attribute_get(thing, attr, &aowner, &aflags);
+    s = attribute_get(database, thing, attr, &aowner, &aflags);
     c = *s;
     free_lbuf(s);
     if ((c == '$') && !(aflags & AF_NOPROG)) {
@@ -949,15 +1005,17 @@ int has_commands(DbRef thing) {
  * ---------------------------------------------------------------------------
  * * attribute_encode: Encode an attribute string.
  */
-static char *attribute_encode(char *iattr, DbRef thing, DbRef owner, long flags,
-                              int atr, char *dest_buffer) {
+static char *attribute_encode(GameDatabase *database, char *iattr, DbRef thing,
+                              DbRef owner, long flags, int atr,
+                              char *dest_buffer) {
 
   /*
    * If using the default owner and flags (almost all attributes will),
    * * * * * * * just store the string.
    */
 
-  if (((owner == obj_owner(thing)) || (owner == NOTHING)) && !flags) {
+  if (((owner == game_object_owner(database, thing)) || (owner == NOTHING)) &&
+      !flags) {
     memset(dest_buffer, 0, LBUF_SIZE);
     strncpy(dest_buffer, iattr, LBUF_SIZE - 1);
     return dest_buffer;
@@ -968,7 +1026,7 @@ static char *attribute_encode(char *iattr, DbRef thing, DbRef owner, long flags,
    */
 
   if (owner == NOTHING)
-    owner = obj_owner(thing);
+    owner = game_object_owner(database, thing);
   memset(dest_buffer, 0, LBUF_SIZE);
   snprintf(dest_buffer, LBUF_SIZE - 1, "%c%ld:%ld:%s", ATR_INFO_CHAR, owner,
            flags, iattr);
@@ -980,8 +1038,8 @@ static char *attribute_encode(char *iattr, DbRef thing, DbRef owner, long flags,
  * * attribute_decode: Decode an attribute string.
  */
 
-static void attribute_decode(char *iattr, char *oattr, DbRef thing,
-                             DbRef *owner, long *flags, int atr) {
+static void attribute_decode(GameDatabase *database, char *iattr, char *oattr,
+                             DbRef thing, DbRef *owner, long *flags, int atr) {
   char *cp;
   int neg;
   int attrOwner;
@@ -1021,7 +1079,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
 
     if (*cp++ != ':') {
       if (owner)
-        *owner = obj_owner(thing);
+        *owner = game_object_owner(database, thing);
       if (flags)
         *flags = 0;
       if (oattr) {
@@ -1044,7 +1102,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
 
     if (*cp++ != ':') {
       if (owner)
-        *owner = obj_owner(thing);
+        *owner = game_object_owner(database, thing);
       if (flags)
         *flags = 0;
       if (oattr) {
@@ -1058,7 +1116,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
     if (oattr)
       StringCopy(oattr, cp);
     if (attrOwner == NOTHING && owner)
-      *owner = obj_owner(thing);
+      *owner = game_object_owner(database, thing);
   } else {
 
     /*
@@ -1066,7 +1124,7 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
      */
 
     if (owner)
-      *owner = obj_owner(thing);
+      *owner = game_object_owner(database, thing);
     if (flags)
       *flags = 0;
     if (oattr)
@@ -1079,30 +1137,31 @@ static void attribute_decode(char *iattr, char *oattr, DbRef thing,
  * * attribute_clear: clear an attribute in the list.
  */
 
-void attribute_clear(DbRef thing, int atr) {
+void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
   AttributeList *list;
   int hi, lo, mid;
 
-  if (!db[thing].at_count || !db[thing].ahead)
+  if (!database->objects[thing].at_count || !database->objects[thing].ahead)
     return;
 
-  if (db[thing].at_count < 0)
+  if (database->objects[thing].at_count < 0)
     abort();
 
   /*
    * Binary search for the attribute.
    */
   lo = 0;
-  hi = db[thing].at_count - 1;
-  list = db[thing].ahead;
+  hi = database->objects[thing].at_count - 1;
+  list = database->objects[thing].ahead;
   while (lo <= hi) {
     mid = ((hi - lo) >> 1) + lo;
     if (list[mid].number == atr) {
       free(list[mid].data);
-      db[thing].at_count -= 1;
-      if (mid != db[thing].at_count)
+      database->objects[thing].at_count -= 1;
+      if (mid != database->objects[thing].at_count)
         bcopy((char *)(list + mid + 1), (char *)(list + mid),
-              (size_t)(db[thing].at_count - mid) * sizeof(AttributeList));
+              (size_t)(database->objects[thing].at_count - mid) *
+                  sizeof(AttributeList));
       break;
     } else if (list[mid].number > atr) {
       hi = mid - 1;
@@ -1113,25 +1172,31 @@ void attribute_clear(DbRef thing, int atr) {
 
   switch (atr) {
   case A_STARTUP:
-    s_flags(thing, obj_flags(thing) & ~HAS_STARTUP);
+    game_object_set_flags(database, thing,
+                          game_object_flags(database, thing) & ~HAS_STARTUP);
     break;
   case A_DAILY:
-    s_flags2(thing, obj_flags2(thing) & ~HAS_DAILY);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) & ~HAS_DAILY);
     break;
   case A_HOURLY:
-    s_flags2(thing, obj_flags2(thing) & ~HAS_HOURLY);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) & ~HAS_HOURLY);
     break;
   case A_FORWARDLIST:
-    s_flags2(thing, obj_flags2(thing) & ~HAS_FWDLIST);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) & ~HAS_FWDLIST);
     break;
   case A_LISTEN:
-    s_flags2(thing, obj_flags2(thing) & ~HAS_LISTEN);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) & ~HAS_LISTEN);
     break;
   case A_TIMEOUT:
-    descriptor_reload(thing);
+    descriptor_reload(database, database->configuration, database->descriptors,
+                      thing);
     break;
   case A_QUEUEMAX:
-    pcache_reload(thing);
+    pcache_reload(database->players, thing);
     break;
   default:
     break;
@@ -1143,14 +1208,15 @@ void attribute_clear(DbRef thing, int atr) {
  * * attribute_add_raw, attribute_add: add attribute of type atr to list
  */
 
-void attribute_add_raw(DbRef thing, int atr, char *buff) {
+void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
+                       char *buff) {
   AttributeList *list;
   char *text;
   int found = 0;
   int hi, lo, mid;
 
   if (!buff || !*buff) {
-    attribute_clear(thing, atr);
+    attribute_clear(database, thing, atr);
     return;
   }
   if (strlen(buff) >= LBUF_SIZE) {
@@ -1161,13 +1227,13 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
   }
   StringCopy(text, buff);
 
-  if (!db[thing].ahead) {
+  if (!database->objects[thing].ahead) {
     if ((list = malloc(sizeof(AttributeList))) == nullptr) {
       free(text);
       return;
     }
-    db[thing].ahead = list;
-    db[thing].at_count = 1;
+    database->objects[thing].ahead = list;
+    database->objects[thing].at_count = 1;
     list[0].number = atr;
     list[0].data = text;
     list[0].size = (int)strlen(text) + 1;
@@ -1178,9 +1244,9 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
      * Binary search for the attribute
      */
     lo = 0;
-    hi = db[thing].at_count - 1;
+    hi = database->objects[thing].at_count - 1;
 
-    list = db[thing].ahead;
+    list = database->objects[thing].ahead;
     while (lo <= hi) {
       mid = ((hi - lo) >> 1) + lo;
       if (list[mid].number == atr) {
@@ -1202,83 +1268,96 @@ void attribute_add_raw(DbRef thing, int atr, char *buff) {
        * and the attribute should be inserted between them.
        */
 
-      list = realloc(db[thing].ahead,
-                     (size_t)(db[thing].at_count + 1) * sizeof(AttributeList));
+      list = realloc(database->objects[thing].ahead,
+                     (size_t)(database->objects[thing].at_count + 1) *
+                         sizeof(AttributeList));
 
-      if (!list)
+      if (!list) {
+        free(text);
         return;
+      }
 
       /*
        * Move the stuff upwards one slot
        */
-      if (lo < db[thing].at_count)
+      if (lo < database->objects[thing].at_count)
         bcopy((char *)(list + lo), (char *)(list + lo + 1),
-              (size_t)(db[thing].at_count - lo) * sizeof(AttributeList));
+              (size_t)(database->objects[thing].at_count - lo) *
+                  sizeof(AttributeList));
 
       list[lo].data = text;
       list[lo].number = atr;
       list[lo].size = (int)strlen(text) + 1;
-      db[thing].at_count++;
-      db[thing].ahead = list;
+      database->objects[thing].at_count++;
+      database->objects[thing].ahead = list;
     }
   }
 
   switch (atr) {
   case A_STARTUP:
-    s_flags(thing, obj_flags(thing) | HAS_STARTUP);
+    game_object_set_flags(database, thing,
+                          game_object_flags(database, thing) | HAS_STARTUP);
     break;
   case A_DAILY:
-    s_flags2(thing, obj_flags2(thing) | HAS_DAILY);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) | HAS_DAILY);
     break;
   case A_HOURLY:
-    s_flags2(thing, obj_flags2(thing) | HAS_HOURLY);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) | HAS_HOURLY);
     break;
   case A_FORWARDLIST:
-    s_flags2(thing, obj_flags2(thing) | HAS_FWDLIST);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) | HAS_FWDLIST);
     break;
   case A_LISTEN:
-    s_flags2(thing, obj_flags2(thing) | HAS_LISTEN);
+    game_object_set_flags2(database, thing,
+                           game_object_flags2(database, thing) | HAS_LISTEN);
     break;
   case A_TIMEOUT:
-    descriptor_reload(thing);
+    descriptor_reload(database, database->configuration, database->descriptors,
+                      thing);
     break;
   case A_QUEUEMAX:
-    pcache_reload(thing);
+    pcache_reload(database->players, thing);
     break;
   default:
     break;
   }
 }
 
-void attribute_add(DbRef thing, int atr, char *buff, DbRef owner, long flags) {
+void attribute_add(GameDatabase *database, DbRef thing, int atr, char *buff,
+                   DbRef owner, long flags) {
   char *tbuff;
   char buffer[LBUF_SIZE];
 
   if (!buff || !*buff) {
-    attribute_clear(thing, atr);
+    attribute_clear(database, thing, atr);
   } else {
-    tbuff = attribute_encode(buff, thing, owner, flags, atr, buffer);
-    attribute_add_raw(thing, atr, tbuff);
+    tbuff = attribute_encode(database, buff, thing, owner, flags, atr, buffer);
+    attribute_add_raw(database, thing, atr, tbuff);
   }
 }
 
-void attribute_set_owner(DbRef thing, int atr, DbRef owner) {
+void attribute_set_owner(GameDatabase *database, DbRef thing, int atr,
+                         DbRef owner) {
   DbRef aowner;
   long aflags;
   char *buff;
 
-  buff = attribute_get(thing, atr, &aowner, &aflags);
-  attribute_add(thing, atr, buff, owner, aflags);
+  buff = attribute_get(database, thing, atr, &aowner, &aflags);
+  attribute_add(database, thing, atr, buff, owner, aflags);
   free_lbuf(buff);
 }
 
-void attribute_set_flags(DbRef thing, int atr, DbRef flags) {
+void attribute_set_flags(GameDatabase *database, DbRef thing, int atr,
+                         DbRef flags) {
   DbRef aowner;
   long aflags;
   char *buff;
 
-  buff = attribute_get(thing, atr, &aowner, &aflags);
-  attribute_add(thing, atr, buff, aowner, flags);
+  buff = attribute_get(database, thing, atr, &aowner, &aflags);
+  attribute_add(database, thing, atr, buff, aowner, flags);
   free_lbuf(buff);
 }
 
@@ -1288,17 +1367,17 @@ void attribute_set_flags(DbRef thing, int atr, DbRef flags) {
  * attribute from the database.
  */
 
-int get_atr(char *name) {
+int get_atr(GameDatabase *database, char *name) {
   Attribute *ap;
 
-  if (!(ap = attribute_by_name(name)))
+  if (!(ap = attribute_by_name(database, name)))
     return 0;
   if (!(ap->number))
     return -1;
   return ap->number;
 }
 
-char *attribute_get_raw(DbRef thing, int atr) {
+char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
   int lo, mid, hi;
   AttributeList *list;
 
@@ -1309,8 +1388,8 @@ char *attribute_get_raw(DbRef thing, int atr) {
    * Binary search for the attribute
    */
   lo = 0;
-  hi = db[thing].at_count - 1;
-  list = db[thing].ahead;
+  hi = database->objects[thing].at_count - 1;
+  list = database->objects[thing].ahead;
   if (!list)
     return nullptr;
 
@@ -1328,97 +1407,103 @@ char *attribute_get_raw(DbRef thing, int atr) {
   return nullptr;
 }
 
-char *attribute_get_string(char *s, DbRef thing, int atr, DbRef *owner,
-                           long *flags) {
+char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
+                           int atr, DbRef *owner, long *flags) {
   char *buff;
 
-  buff = attribute_get_raw(thing, atr);
+  buff = attribute_get_raw(database, thing, atr);
   if (!buff) {
     if (owner)
-      *owner = obj_owner(thing);
+      *owner = game_object_owner(database, thing);
     if (flags)
       *flags = 0;
     *s = '\0';
   } else {
-    attribute_decode(buff, s, thing, owner, flags, atr);
+    attribute_decode(database, buff, s, thing, owner, flags, atr);
   }
   return s;
 }
 
-char *attribute_get(DbRef thing, int atr, DbRef *owner, long *flags) {
+char *attribute_get(GameDatabase *database, DbRef thing, int atr, DbRef *owner,
+                    long *flags) {
   char *buff;
 
   buff = alloc_lbuf("attribute_get");
-  return attribute_get_string(buff, thing, atr, owner, flags);
+  return attribute_get_string(database, buff, thing, atr, owner, flags);
 }
 
-int attribute_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
+int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
+                       DbRef *owner, long *flags) {
   char *buff;
 
-  buff = attribute_get_raw(thing, atr);
+  buff = attribute_get_raw(database, thing, atr);
   if (!buff) {
-    *owner = obj_owner(thing);
+    *owner = game_object_owner(database, thing);
     *flags = 0;
     return 0;
   }
-  attribute_decode(buff, nullptr, thing, owner, flags, atr);
+  attribute_decode(database, buff, nullptr, thing, owner, flags, atr);
   return 1;
 }
 
-char *attribute_parent_get_string(char *s, DbRef thing, int atr, DbRef *owner,
-                                  long *flags) {
+char *attribute_parent_get_string(GameDatabase *database, char *s, DbRef thing,
+                                  int atr, DbRef *owner, long *flags) {
   char *buff;
   DbRef parent;
   int lev;
 
   Attribute *ap;
 
-  ITER_PARENTS(thing, parent, lev) {
-    buff = attribute_get_raw(parent, atr);
+  ITER_PARENTS(database, database->configuration, thing, parent, lev) {
+    buff = attribute_get_raw(database, parent, atr);
     if (buff && *buff) {
-      attribute_decode(buff, s, thing, owner, flags, atr);
+      attribute_decode(database, buff, s, thing, owner, flags, atr);
       if ((lev == 0) || !(*flags & AF_PRIVATE))
         return s;
     }
-    if ((lev == 0) && is_good_obj(obj_parent(parent))) {
-      ap = attribute_by_number(atr);
+    if ((lev == 0) &&
+        is_good_obj(database, game_object_parent(database, parent))) {
+      ap = attribute_by_number(database, atr);
       if (!ap || ap->flags & AF_PRIVATE)
         break;
     }
   }
-  *owner = obj_owner(thing);
+  *owner = game_object_owner(database, thing);
   *flags = 0;
   *s = '\0';
   return s;
 }
 
-char *attribute_parent_get(DbRef thing, int atr, DbRef *owner, long *flags) {
+char *attribute_parent_get(GameDatabase *database, DbRef thing, int atr,
+                           DbRef *owner, long *flags) {
   char *buff;
 
   buff = alloc_lbuf("attribute_parent_get");
-  return attribute_parent_get_string(buff, thing, atr, owner, flags);
+  return attribute_parent_get_string(database, buff, thing, atr, owner, flags);
 }
 
-int attribute_parent_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
+int attribute_parent_get_info(GameDatabase *database, DbRef thing, int atr,
+                              DbRef *owner, long *flags) {
   char *buff;
   DbRef parent;
   int lev;
   Attribute *ap;
 
-  ITER_PARENTS(thing, parent, lev) {
-    buff = attribute_get_raw(parent, atr);
+  ITER_PARENTS(database, database->configuration, thing, parent, lev) {
+    buff = attribute_get_raw(database, parent, atr);
     if (buff && *buff) {
-      attribute_decode(buff, nullptr, thing, owner, flags, atr);
+      attribute_decode(database, buff, nullptr, thing, owner, flags, atr);
       if ((lev == 0) || !(*flags & AF_PRIVATE))
         return 1;
     }
-    if ((lev == 0) && is_good_obj(obj_parent(parent))) {
-      ap = attribute_by_number(atr);
+    if ((lev == 0) &&
+        is_good_obj(database, game_object_parent(database, parent))) {
+      ap = attribute_by_number(database, atr);
       if (!ap || ap->flags & AF_PRIVATE)
         break;
     }
   }
-  *owner = obj_owner(thing);
+  *owner = game_object_owner(database, thing);
   *flags = 0;
   return 0;
 }
@@ -1428,9 +1513,9 @@ int attribute_parent_get_info(DbRef thing, int atr, DbRef *owner, long *flags) {
  * * attribute_free: Return all attributes of an object.
  */
 
-void attribute_free(DbRef thing) {
-  free(db[thing].ahead);
-  db[thing].ahead = nullptr;
+void attribute_free(GameDatabase *database, DbRef thing) {
+  free(database->objects[thing].ahead);
+  database->objects[thing].ahead = nullptr;
 }
 
 /*
@@ -1440,28 +1525,31 @@ void attribute_free(DbRef thing) {
  * * the player are copied.
  */
 
-void attribute_copy(DbRef player, DbRef dest, DbRef source) {
+void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef dest,
+                    DbRef source) {
   int attr;
   long aflags;
   DbRef owner, aowner;
   char *as, *buf;
   Attribute *at;
 
-  owner = obj_owner(dest);
-  for (attr = attribute_list_first(source, &as); attr;
-       attr = attribute_list_next(&as)) {
-    buf = attribute_get(source, attr, &aowner, &aflags);
+  owner = game_object_owner(evaluation->world->database, dest);
+  for (attr = attribute_list_first(evaluation->world->database, source, &as);
+       attr; attr = attribute_list_next(&as)) {
+    buf = attribute_get(evaluation->world->database, source, attr, &aowner,
+                        &aflags);
     if (!(aflags & AF_LOCK))
       aowner = owner; /*
                        * chg owner
                        */
-    at = attribute_by_number(attr);
+    at = attribute_by_number(evaluation->world->database, attr);
     if (attr && at) {
-      if (write_attr(owner, dest, at, aflags))
+      if (write_attr(evaluation, owner, dest, at, aflags))
         /*
          * Only set attrs that owner has perm to set
          */
-        attribute_add(dest, attr, buf, aowner, aflags);
+        attribute_add(evaluation->world->database, dest, attr, buf, aowner,
+                      aflags);
     }
     free_lbuf(buf);
   }
@@ -1476,18 +1564,18 @@ void attribute_copy(DbRef player, DbRef dest, DbRef source) {
  * * current owner if they are not locked.
  */
 
-void attribute_change_owner(DbRef obj) {
+void attribute_change_owner(GameDatabase *database, DbRef obj) {
   int attr;
   long aflags;
   DbRef owner, aowner;
   char *as, *buf;
 
-  owner = obj_owner(obj);
-  for (attr = attribute_list_first(obj, &as); attr;
+  owner = game_object_owner(database, obj);
+  for (attr = attribute_list_first(database, obj, &as); attr;
        attr = attribute_list_next(&as)) {
-    buf = attribute_get(obj, attr, &aowner, &aflags);
+    buf = attribute_get(database, obj, attr, &aowner, &aflags);
     if ((aowner != owner) && !(aflags & AF_LOCK))
-      attribute_add(obj, attr, buf, owner, aflags);
+      attribute_add(database, obj, attr, buf, owner, aflags);
     free_lbuf(buf);
   }
   if (as)
@@ -1506,13 +1594,13 @@ int attribute_list_next(char **attrp) {
     return 0;
   } else {
     atr = (ATRCOUNT *)(void *)*attrp;
-    if (atr->count > db[atr->thing].at_count) {
+    if (atr->count > atr->database->objects[atr->thing].at_count) {
       free(atr);
       *attrp = nullptr;
       return 0;
     }
     atr->count++;
-    return db[atr->thing].ahead[atr->count - 2].number;
+    return atr->database->objects[atr->thing].ahead[atr->count - 2].number;
   }
 }
 
@@ -1521,20 +1609,21 @@ int attribute_list_next(char **attrp) {
  * * attribute_list_first: Returns the head of the attr list for object 'thing'
  */
 
-int attribute_list_first(DbRef thing, char **attrp) {
+int attribute_list_first(GameDatabase *database, DbRef thing, char **attrp) {
   ATRCOUNT *atr;
 
-  if (db[thing].at_count) {
+  if (database->objects[thing].at_count) {
     atr = malloc(sizeof(ATRCOUNT));
+    atr->database = database;
     atr->thing = thing;
     atr->count = 2;
     *attrp = (char *)atr;
-    if (!db[thing].ahead[0].number) {
+    if (!database->objects[thing].ahead[0].number) {
       free(atr);
       *attrp = nullptr;
       return 0;
     }
-    return db[thing].ahead[0].number;
+    return database->objects[thing].ahead[0].number;
   }
   *attrp = nullptr;
   return 0;
@@ -1548,76 +1637,79 @@ int attribute_list_first(DbRef thing, char **attrp) {
 // So mistaken refs to #-1 won't die.
 constexpr int SIZE_HACK = 1;
 
-static void initialize_objects(DbRef first, DbRef last) {
+static void initialize_objects(GameDatabase *database, DbRef first,
+                               DbRef last) {
   DbRef thing;
 
   for (thing = first; thing < last; thing++) {
-    memset(&db[thing], 0, sizeof(db[0]));
-    s_owner(thing, GOD);
-    s_flags(thing, (TYPE_GARBAGE | GOING));
-    s_flags2(thing, 0);
-    s_flags3(thing, 0);
-    s_powers(thing, 0);
-    s_powers2(thing, 0);
-    s_location(thing, NOTHING);
-    s_contents(thing, NOTHING);
-    s_exits(thing, NOTHING);
-    s_link(thing, NOTHING);
-    s_next(thing, NOTHING);
-    s_zone(thing, NOTHING);
-    s_parent(thing, NOTHING);
-    s_stack(thing, nullptr);
-    db[thing].ahead = nullptr;
-    db[thing].at_count = 0;
+    memset(game_database_object(database, thing), 0, sizeof(GameObject));
+    game_object_set_owner(database, thing, GOD);
+    game_object_set_flags(database, thing, (TYPE_GARBAGE | GOING));
+    game_object_set_flags2(database, thing, 0);
+    game_object_set_flags3(database, thing, 0);
+    game_object_set_powers(database, thing, 0);
+    game_object_set_powers2(database, thing, 0);
+    game_object_set_location(database, thing, NOTHING);
+    game_object_set_contents(database, thing, NOTHING);
+    game_object_set_exits(database, thing, NOTHING);
+    game_object_set_link(database, thing, NOTHING);
+    game_object_set_next(database, thing, NOTHING);
+    game_object_set_zone(database, thing, NOTHING);
+    game_object_set_parent(database, thing, NOTHING);
+    game_object_set_stack(database, thing, nullptr);
+    game_database_object(database, thing)->ahead = nullptr;
+    game_database_object(database, thing)->at_count = 0;
   }
 }
 
-void db_grow(DbRef newtop) {
+void db_grow(GameDatabase *database, DbRef newtop) {
   int newsize, marksize, delta, i;
-  MARKBUF *newmarkbuf;
+  DatabaseMarkBuffer *newmarkbuf;
   GameObject *newdb;
   NAME *newpurenames;
 
   char *cp;
 
-  delta = mudconf.init_size;
+  delta = database->configuration->init_size;
 
   /*
    * Determine what to do based on requested size, current top and  * *
    *
    * *  * *  * *  * * size.  Make sure we grow in reasonable-sized
-   * chunks to * * prevent *  * *  * frequent reallocations of the db
-   * array.
+   * chunks to * * prevent *  * *  * frequent reallocations of the
+   * database->objects array.
    */
 
   /*
-   * If requested size is smaller than the current db size, ignore it
+   * If requested size is smaller than the current database->objects size,
+   * ignore it
    */
 
-  if (newtop <= mudstate.db_top) {
+  if (newtop <= database->top) {
     return;
   }
   /*
-   * If requested size is greater than the current db size but smaller
+   * If requested size is greater than the current database->objects size but
+   * smaller
    * * * * * * * than the amount of space we have allocated, raise the
-   * db  * *  * size * * and * initialize the new area.
+   * database->objects  * *  * size * * and * initialize the new area.
    */
 
-  if (newtop <= mudstate.db_size) {
-    for (i = mudstate.db_top; i < newtop; i++) {
-      if (mudconf.cache_names)
-        purenames[i] = nullptr;
+  if (newtop <= database->size) {
+    for (i = database->top; i < newtop; i++) {
+      if (database->configuration->cache_names)
+        database->pure_names[i] = nullptr;
     }
-    initialize_objects(mudstate.db_top, newtop);
-    mudstate.db_top = (int)newtop;
+    initialize_objects(database, database->top, newtop);
+    database->top = (int)newtop;
     return;
   }
   /*
    * Grow by a minimum of delta objects
    */
 
-  if (newtop <= mudstate.db_size + delta) {
-    newsize = mudstate.db_size + delta;
+  if (newtop <= database->size + delta) {
+    newsize = database->size + delta;
   } else {
     newsize = (int)newtop;
   }
@@ -1626,35 +1718,35 @@ void db_grow(DbRef newtop) {
    * Enforce minimumdatabase size
    */
 
-  if (newsize < mudstate.min_size)
-    newsize = mudstate.min_size + delta;
+  if (newsize < database->minimum_size)
+    newsize = database->minimum_size + delta;
   ;
 
   /*
    * Grow the name tables
    */
 
-  if (mudconf.cache_names) {
+  if (database->configuration->cache_names) {
     newpurenames = (NAME *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (!newpurenames) {
       log_simple(
-          LOG_ALWAYS, "ALC", "DB",
+          database->log, LOG_ALWAYS, "ALC", "DB",
           tprintf("Could not allocate space for %d item name cache.", newsize));
       abort();
     }
     bzero((char *)newpurenames, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
-    if (purenames) {
+    if (database->pure_names) {
 
       /*
        * An old name cache exists.  Copy it.
        */
 
-      purenames -= SIZE_HACK;
-      bcopy((char *)purenames, (char *)newpurenames,
+      database->pure_names -= SIZE_HACK;
+      bcopy((char *)database->pure_names, (char *)newpurenames,
             (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
-      cp = (char *)purenames;
+      cp = (char *)database->pure_names;
       free(cp);
     } else {
 
@@ -1663,37 +1755,37 @@ void db_grow(DbRef newtop) {
        * 'reserved' area in case it gets referenced.
        */
 
-      purenames = newpurenames;
+      database->pure_names = newpurenames;
       for (i = 0; i < SIZE_HACK; i++) {
-        purenames[i] = nullptr;
+        database->pure_names[i] = nullptr;
       }
     }
-    purenames = newpurenames + SIZE_HACK;
+    database->pure_names = newpurenames + SIZE_HACK;
     newpurenames = nullptr;
   }
   /*
-   * Grow the db array
+   * Grow the database->objects array
    */
 
   newdb =
       (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
-    log_simple(LOG_ALWAYS, "ALC", "DB",
+    log_simple(database->log, LOG_ALWAYS, "ALC", "DB",
                tprintf("Could not allocate space for %d item struct database.",
                        newsize));
     abort();
   }
-  if (db) {
+  if (database->objects) {
 
     /*
      * An old struct database exists.  Copy it to the new buffer
      */
 
-    db -= SIZE_HACK;
-    bcopy((char *)db, (char *)newdb,
-          (size_t)(mudstate.db_top + SIZE_HACK) * sizeof(GameObject));
-    cp = (char *)db;
+    database->objects -= SIZE_HACK;
+    bcopy((char *)database->objects, (char *)newdb,
+          (size_t)(database->top + SIZE_HACK) * sizeof(GameObject));
+    cp = (char *)database->objects;
     free(cp);
   } else {
 
@@ -1703,107 +1795,117 @@ void db_grow(DbRef newtop) {
      * *  * * 'reserved' area in case it gets referenced.
      */
 
-    db = newdb;
+    database->objects = newdb;
     for (i = 0; i < SIZE_HACK; i++) {
-      s_owner(i, GOD);
-      s_flags(i, (TYPE_GARBAGE | GOING));
-      s_powers(i, 0);
-      s_powers2(i, 0);
-      s_location(i, NOTHING);
-      s_contents(i, NOTHING);
-      s_exits(i, NOTHING);
-      s_link(i, NOTHING);
-      s_next(i, NOTHING);
-      s_zone(i, NOTHING);
-      s_parent(i, NOTHING);
-      s_stack(i, nullptr);
-      db[i].ahead = nullptr;
-      db[i].at_count = 0;
+      game_object_set_owner(database, i, GOD);
+      game_object_set_flags(database, i, (TYPE_GARBAGE | GOING));
+      game_object_set_powers(database, i, 0);
+      game_object_set_powers2(database, i, 0);
+      game_object_set_location(database, i, NOTHING);
+      game_object_set_contents(database, i, NOTHING);
+      game_object_set_exits(database, i, NOTHING);
+      game_object_set_link(database, i, NOTHING);
+      game_object_set_next(database, i, NOTHING);
+      game_object_set_zone(database, i, NOTHING);
+      game_object_set_parent(database, i, NOTHING);
+      game_object_set_stack(database, i, nullptr);
+      game_database_object(database, i)->ahead = nullptr;
+      game_database_object(database, i)->at_count = 0;
     }
   }
-  db = newdb + SIZE_HACK;
+  database->objects = newdb + SIZE_HACK;
   newdb = nullptr;
 
-  for (i = mudstate.db_top; i < newtop; i++) {
-    if (mudconf.cache_names) {
-      purenames[i] = nullptr;
+  for (i = database->top; i < newtop; i++) {
+    if (database->configuration->cache_names) {
+      database->pure_names[i] = nullptr;
     }
   }
-  initialize_objects(mudstate.db_top, newtop);
-  mudstate.db_top = (int)newtop;
-  mudstate.db_size = newsize;
+  initialize_objects(database, database->top, newtop);
+  database->top = (int)newtop;
+  database->size = newsize;
 
   /*
-   * Grow the db mark buffer
+   * Grow the database->objects mark buffer
    */
 
   marksize = (newsize + 7) >> 3;
-  newmarkbuf = (MARKBUF *)malloc((size_t)marksize);
+  newmarkbuf = (DatabaseMarkBuffer *)malloc((size_t)marksize);
   bzero((char *)newmarkbuf, (size_t)marksize);
-  if (mudstate.markbits) {
+  if (database->markbits) {
     marksize = (int)((newtop + 7) >> 3);
-    bcopy((char *)mudstate.markbits, (char *)newmarkbuf, (size_t)marksize);
-    cp = (char *)mudstate.markbits;
+    bcopy((char *)database->markbits, (char *)newmarkbuf, (size_t)marksize);
+    cp = (char *)database->markbits;
     free(cp);
   }
-  mudstate.markbits = newmarkbuf;
+  database->markbits = newmarkbuf;
 }
 
-void db_free(void) {
+void db_free(GameDatabase *database) {
   char *cp;
 
-  if (db != nullptr) {
-    db -= SIZE_HACK;
-    cp = (char *)db;
+  if (database->objects != nullptr) {
+    database->objects -= SIZE_HACK;
+    cp = (char *)database->objects;
     free(cp);
-    db = nullptr;
+    database->objects = nullptr;
   }
-  mudstate.db_top = 0;
-  mudstate.db_size = 0;
-  mudstate.freelist = NOTHING;
+  if (database->pure_names != nullptr) {
+    database->pure_names -= SIZE_HACK;
+    free(database->pure_names);
+    database->pure_names = nullptr;
+  }
+  free(database->markbits);
+  database->markbits = nullptr;
+  database->top = 0;
+  database->size = 0;
+  database->freelist = NOTHING;
 }
 
-void db_make_minimal(void) {
+void db_make_minimal(EvaluationContext *evaluation) {
+  GameDatabase *database = evaluation->world->database;
   DbRef obj;
 
-  db_free();
-  db_grow(1);
+  db_free(database);
+  db_grow(database, 1);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  object_name_set(0, (char *)"Limbo");
+  object_name_set(database, 0, (char *)"Limbo");
 #pragma clang diagnostic pop
-  s_flags(0, TYPE_ROOM);
-  s_powers(0, 0);
-  s_powers2(0, 0);
-  s_location(0, NOTHING);
-  s_exits(0, NOTHING);
-  s_link(0, NOTHING);
-  s_parent(0, NOTHING);
-  s_zone(0, NOTHING);
-  s_owner(0, 1);
-  db[0].ahead = nullptr;
-  db[0].at_count = 0;
+  game_object_set_flags(database, 0, TYPE_ROOM);
+  game_object_set_powers(database, 0, 0);
+  game_object_set_powers2(database, 0, 0);
+  game_object_set_location(database, 0, NOTHING);
+  game_object_set_exits(database, 0, NOTHING);
+  game_object_set_link(database, 0, NOTHING);
+  game_object_set_parent(database, 0, NOTHING);
+  game_object_set_zone(database, 0, NOTHING);
+  game_object_set_owner(database, 0, 1);
+  database->objects[0].ahead = nullptr;
+  database->objects[0].at_count = 0;
   /*
    * should be #1
    */
-  load_player_names();
+  load_player_names(evaluation->world);
   /* create_player()'s parameters aren't const-correct; these literals are
      only read here. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  obj = create_player((char *)"Wizard", (char *)"potrzebie", NOTHING, 0);
+  obj = create_player(evaluation, (char *)"Wizard", (char *)"potrzebie",
+                      NOTHING, 0);
 #pragma clang diagnostic pop
-  s_flags(obj, obj_flags(obj) | WIZARD);
-  s_powers(obj, 0);
-  s_powers2(obj, 0);
+  game_object_set_flags(database, obj,
+                        game_object_flags(database, obj) | WIZARD);
+  game_object_set_powers(database, obj, 0);
+  game_object_set_powers2(database, obj, 0);
 
   /*
    * Manually link to Limbo, just in case
    */
-  s_location(obj, 0);
-  s_next(obj, NOTHING);
-  s_contents(0, obj);
-  s_link(obj, 0);
+  game_object_set_location(database, obj, 0);
+  game_object_set_next(database, obj, NOTHING);
+  game_object_set_contents(database, 0, obj);
+  game_object_set_link(database, obj, 0);
 }
 
 DbRef parse_dbref(const char *s) {
@@ -1893,12 +1995,13 @@ BooleanExpression *boolean_expression_duplicate(BooleanExpression *b) {
 /*
  * check_zone - checks back through a zone tree for control
  */
-int check_zone(DbRef player, DbRef thing) {
-  mudstate.zone_nest_num++;
-
-  if (!mudconf.have_zones || (obj_zone(thing) == NOTHING) ||
-      (mudstate.zone_nest_num == mudconf.zone_nest_lim) || (is_player(thing))) {
-    mudstate.zone_nest_num = 0;
+static int check_zone_at_depth(EvaluationContext *evaluation, DbRef player,
+                               DbRef thing, int depth) {
+  GameDatabase *database = evaluation->world->database;
+  if (!database->configuration->have_zones ||
+      (game_object_zone(database, thing) == NOTHING) ||
+      (depth == database->configuration->zone_nest_lim) ||
+      is_player(database, thing)) {
     return 0;
   }
 
@@ -1906,37 +2009,44 @@ int check_zone(DbRef player, DbRef thing) {
    * If the zone doesn't have an enterlock, DON'T allow control.
    */
 
-  if (attribute_get_raw(obj_zone(thing), A_LENTER) &&
-      could_doit(player, obj_zone(thing), A_LENTER)) {
-    mudstate.zone_nest_num = 0;
+  if (attribute_get_raw(database, game_object_zone(database, thing),
+                        A_LENTER) &&
+      could_doit_with_context(evaluation, player,
+                              game_object_zone(database, thing), A_LENTER)) {
     return 1;
-  } else {
-    return check_zone(player, obj_zone(thing));
   }
+  return check_zone_at_depth(evaluation, player,
+                             game_object_zone(database, thing), depth + 1);
 }
 
-int check_zone_for_player(DbRef player, DbRef thing) {
-  mudstate.zone_nest_num++;
+int check_zone(EvaluationContext *evaluation, DbRef player, DbRef thing) {
+  return check_zone_at_depth(evaluation, player, thing, 1);
+}
 
-  if (!mudconf.have_zones || (obj_zone(thing) == NOTHING) ||
-      (mudstate.zone_nest_num == mudconf.zone_nest_lim) ||
-      !(is_player(thing))) {
-    mudstate.zone_nest_num = 0;
+int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
+                          DbRef thing) {
+  GameDatabase *database = evaluation->world->database;
+  if (!database->configuration->have_zones ||
+      (game_object_zone(database, thing) == NOTHING) ||
+      database->configuration->zone_nest_lim == 1 ||
+      !is_player(database, thing)) {
     return 0;
   }
 
-  if (attribute_get_raw(obj_zone(thing), A_LENTER) &&
-      could_doit(player, obj_zone(thing), A_LENTER)) {
-    mudstate.zone_nest_num = 0;
+  if (attribute_get_raw(database, game_object_zone(database, thing),
+                        A_LENTER) &&
+      could_doit_with_context(evaluation, player,
+                              game_object_zone(database, thing), A_LENTER)) {
     return 1;
-  } else {
-    return check_zone(player, obj_zone(thing));
   }
+  return check_zone_at_depth(evaluation, player,
+                             game_object_zone(database, thing), 2);
 }
 
-void toast_player(DbRef player) {
-  do_clearcom(player, player, 0);
-  do_channelnuke(player);
-  del_commac(player);
-  do_clear_macro(player, nullptr);
+void toast_player(EvaluationContext *evaluation, DbRef player) {
+  comsys_clear_player(evaluation, player);
+  do_channelnuke(evaluation, player);
+  del_commac(&evaluation->server->channels, player);
+  do_clear_macro(&evaluation->command->match, &evaluation->server->macros,
+                 player, nullptr);
 }

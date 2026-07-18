@@ -152,7 +152,7 @@ void heat_effect(MECH *mech, MECH *tempMech, int heatdam, int fromInferno) {
 
     if (((MechType(tempMech) == CLASS_VEH_GROUND) ||
          (MechType(tempMech) == CLASS_VTOL)) &&
-        mudconf.btech_fasaadvvhlfire) {
+        btech_context_active()->configuration->btech_fasaadvvhlfire) {
       if (fromInferno)
         vehicle_start_burn(tempMech, mech);
       else
@@ -210,9 +210,10 @@ void Plasma_Hit(MECH *mech, MECH *hitMech, int LOS) {
 // extern int global_kill_cheat;
 void KillMechContentsIfIC(DbRef aRef) {
   // global_kill_cheat = 1;
-  if (!is_in_character(aRef))
+  if (!is_in_character(btech_context_active()->database, aRef))
     return;
-  if (!mudconf.btech_ic || mudconf.btech_xploss >= 1000)
+  if (!btech_context_active()->configuration->btech_ic ||
+      btech_context_active()->configuration->btech_xploss >= 1000)
     tele_contents(aRef, AFTERLIFE_DBREF, TELE_LOUD);
   else
     tele_contents(aRef, AFTERLIFE_DBREF, TELE_XP | TELE_LOUD);
@@ -267,9 +268,11 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
   // global_kill_cheat = 1;
 
   // Destroy Contents Right Away
-  if (mudconf.btech_transported_unit_death) {
-    SAFE_DOLIST(a, b, obj_contents(target->mynum))
-    if (IsMech(a) && is_in_character(a)) {
+  if (btech_context_active()->configuration->btech_transported_unit_death) {
+    SAFE_DOLIST(
+        btech_context_active()->database, a, b,
+        game_object_contents(btech_context_active()->database, target->mynum))
+    if (IsMech(a) && is_in_character(btech_context_active()->database, a)) {
       ctarget = getMech(a);
       mech_notify(
           ctarget, MECHALL,
@@ -305,7 +308,7 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
     }
     if (target->mapindex != -1) {
       mech_map = getMap(target->mapindex);
-      if ((mudconf.btech_vtol_ice_causes_fire) &&
+      if ((btech_context_active()->configuration->btech_vtol_ice_causes_fire) &&
           (MechSpecials(target) & ICE_TECH) &&
           (MechType(target) == CLASS_VTOL)) {
         MechLOSBroadcast(target, "explodes in a ball of flames!");
@@ -328,8 +331,8 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
     Destroy(target);
   }
   if (MechType(target) == CLASS_MW) {
-    if (is_in_character(target->mynum)) {
-      if (mudconf.btech_xploss_for_mw) {
+    if (is_in_character(btech_context_active()->database, target->mynum)) {
+      if (btech_context_active()->configuration->btech_xploss_for_mw) {
         KillMechContentsIfIC(target->mynum);
       } else {
         tele_contents(target->mynum, AFTERLIFE_DBREF, TELE_LOUD);

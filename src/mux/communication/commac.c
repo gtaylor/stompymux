@@ -1,13 +1,12 @@
 /* commac.c - Player communication macro storage and lookup. */
 
 #include "mux/communication/commac.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/database/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 
-struct commac *commac_table[NUM_COMMAC];
-
-void purge_commac(void) {
+void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
   struct commac *c;
   struct commac *d;
   int i;
@@ -18,27 +17,29 @@ void purge_commac(void) {
         * * ABORT_PURGE_COMSYS                                                 \
         */
 
-  for (i = 0; i < NUM_COMMAC; i++) {
-    c = commac_table[i];
+  for (i = 0; i < COMMAC_BUCKET_COUNT; i++) {
+    c = registry->commacs[i];
     while (c) {
       d = c;
       c = c->next;
       if (d->numchannels == 0 && d->curmac == -1 && d->macros[1] == -1 &&
           d->macros[2] == -1 && d->macros[3] == -1 && d->macros[4] == -1 &&
           d->macros[0] == -1) {
-        del_commac(d->who);
+        del_commac(registry, d->who);
         continue;
       }
 
       /*
-       * if ((typeof_obj(d->who) != TYPE_PLAYER) && (is_god(obj_owner(d->who)))
+       * if ((typeof_obj(database, d->who) != TYPE_PLAYER) &&
+       * (is_god(game_object_owner(evaluation->world->database, d->who)))
        * &&
-       * * (is_going(d->who)))
+       * * (is_going(database, d->who)))
        */
-      if (typeof_obj(d->who) == TYPE_PLAYER)
+      if (typeof_obj(database, d->who) == TYPE_PLAYER)
         continue;
-      if (is_god(obj_owner(d->who)) && is_going(d->who)) {
-        del_commac(d->who);
+      if (is_god(database, game_object_owner(database, d->who)) &&
+          is_going(database, d->who)) {
+        del_commac(registry, d->who);
         continue;
       }
     }
@@ -65,13 +66,13 @@ struct commac *create_new_commac(void) {
   return c;
 }
 
-struct commac *get_commac(DbRef which) {
+struct commac *get_commac(ChannelRegistry *registry, DbRef which) {
   struct commac *c;
 
   if (which < 0)
     return nullptr;
 
-  c = commac_table[which % NUM_COMMAC];
+  c = registry->commacs[which % COMMAC_BUCKET_COUNT];
 
   while (c && (c->who != which))
     c = c->next;
@@ -79,33 +80,33 @@ struct commac *get_commac(DbRef which) {
   if (!c) {
     c = create_new_commac();
     c->who = which;
-    add_commac(c);
+    add_commac(registry, c);
   }
   return c;
 }
 
-void add_commac(struct commac *c) {
+void add_commac(ChannelRegistry *registry, struct commac *c) {
   if (c->who < 0)
     return;
 
-  c->next = commac_table[c->who % NUM_COMMAC];
-  commac_table[c->who % NUM_COMMAC] = c;
+  c->next = registry->commacs[c->who % COMMAC_BUCKET_COUNT];
+  registry->commacs[c->who % COMMAC_BUCKET_COUNT] = c;
 }
 
-void del_commac(DbRef who) {
+void del_commac(ChannelRegistry *registry, DbRef who) {
   struct commac *c;
   struct commac *last;
 
   if (who < 0)
     return;
 
-  c = commac_table[who % NUM_COMMAC];
+  c = registry->commacs[who % COMMAC_BUCKET_COUNT];
 
   if (c == nullptr)
     return;
 
   if (c->who == who) {
-    commac_table[who % NUM_COMMAC] = c->next;
+    registry->commacs[who % COMMAC_BUCKET_COUNT] = c->next;
     destroy_commac(c);
     return;
   }

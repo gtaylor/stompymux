@@ -4,16 +4,17 @@
 
 #include <time.h>
 
+#include "mux/commands/command_context.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 
 typedef struct fun {
   const char *name; /* function name */
-  void (*fun)(char *, char **, DbRef, DbRef, char **, int, char **,
-              int); /* handler */
-  int nargs;        /* Number of args needed or expected */
-  int flags;        /* Function flags */
-  int perms;        /* Access to function */
+  void (*fun)(char *, char **, DbRef, DbRef, char **, int, char **, int,
+              EvaluationContext *); /* handler */
+  int nargs;                        /* Number of args needed or expected */
+  int flags;                        /* Function flags */
+  int perms;                        /* Access to function */
 } FUN;
 
 typedef struct ufun {
@@ -30,8 +31,8 @@ constexpr int FN_NO_EVAL = 2; /* Don't evaluate args to function */
 constexpr int FN_PRIV = 4;    /* Perform user-def function as holding obj */
 constexpr int FN_PRES = 8;    /* Preseve r-regs before user-def functions */
 
-typedef void FunProto(char *, char **, DbRef, DbRef, char **, int, char **,
-                      int);
+typedef void FunProto(char *, char **, DbRef, DbRef, char **, int, char **, int,
+                      EvaluationContext *);
 
 FunProto fun_alphamax;
 FunProto fun_alphamin;
@@ -116,25 +117,35 @@ FunProto fun_zplayers;
 FunProto fun_zrooms;
 FunProto fun_zwho;
 
-extern void init_functab(void);
+typedef struct CommandRegistry CommandRegistry;
+typedef struct CommandInvocation CommandInvocation;
+typedef struct ServerConfiguration ServerConfiguration;
+
+extern void init_functab(MuxServer *server);
 char *trim_space_sep(char *str, char sep);
 char *next_token(char *str, char sep);
 char *split_token(char **sp, char sep);
 int list2arr(char *arr[], int maxlen, char *list, char sep);
 void arr2list(char *arr[], int alen, char *list, char **bufc, char sep);
-int nearby_or_control(DbRef player, DbRef thing);
+int nearby_or_control(EvaluationContext *evaluation, DbRef player, DbRef thing);
 int fn_range_check(const char *fname, int nfargs, int minargs, int maxargs,
                    char *result, char **bufc);
 int delim_check(char *fargs[], int nfargs, int sep_arg, char *sep, char *buff,
                 char **bufc, int eval, DbRef player, DbRef cause, char *cargs[],
-                int ncargs);
+                int ncargs, EvaluationContext *context);
 int countwords(char *str, char sep);
-int do_convtime(char *str, struct tm *ttm);
+int do_convtime(const ServerConfiguration *configuration, char *str,
+                struct tm *ttm);
 char *get_uptime_to_string(int uptime);
-int check_read_perms(DbRef player, DbRef thing, Attribute *attr, DbRef aowner,
-                     long aflags, char *buff, char **bufc);
+int check_read_perms(EvaluationContext *context,
+                     const ServerConfiguration *configuration, DbRef player,
+                     DbRef thing, Attribute *attr, DbRef aowner, long aflags,
+                     char *buff, char **bufc);
 int xlate(char *arg);
-extern void list_functable(DbRef);
-extern DbRef match_thing(DbRef, char *);
-void do_function(DbRef player, DbRef cause, int key, char *fname, char *target);
-int cf_func_access(int *vp, char *str, long extra, DbRef player, char *cmd);
+extern void list_functable(EvaluationContext *evaluation,
+                           const ServerConfiguration *configuration,
+                           CommandRegistry *registry, DbRef player);
+extern DbRef match_thing(MatchContext *match, DbRef player, char *name);
+void do_function(CommandInvocation *invocation);
+int cf_func_access(int *vp, char *str, long extra, DbRef player, char *cmd,
+                   MuxServer *server);

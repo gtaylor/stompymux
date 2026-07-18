@@ -43,7 +43,8 @@ void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
 
   total_damage = num_missiles_hit * damage;
 
-  if (target && mudconf.btech_moddamagewithwoods &&
+  if (target &&
+      btech_context_active()->configuration->btech_moddamagewithwoods &&
       IsForestHex(mech_map, MechX(target), MechY(target)) && (fireMode > -1) &&
       (ammoMode > -1) &&
       ((MechZ(target) - 2) <=
@@ -302,7 +303,10 @@ int MissileHitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
 
   missileindex = MissileHitIndex(
       mech, hitMech, weapindx, wSection, wCritSlot,
-      (mudconf.btech_glancing_blows) && (player_roll == baseToHit) ? 1 : 0);
+      (btech_context_active()->configuration->btech_glancing_blows) &&
+              (player_roll == baseToHit)
+          ? 1
+          : 0);
   if (missileindex < 0)
     hit = MIN(incoming, 1);
   else
@@ -346,7 +350,8 @@ int MissileHitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
       hex_hit(mech, hitX, hitY, weapindx,
               GetPartAmmoMode(mech, wSection, wCritSlot), 0, 0);
   } else {
-    if (mudconf.btech_glancing_blows && (player_roll == baseToHit) && hitMech) {
+    if (btech_context_active()->configuration->btech_glancing_blows &&
+        (player_roll == baseToHit) && hitMech) {
       if (!(MechWeapons[weapindx].special & STREAK)) {
         MechLOSBroadcast(hitMech, "is nicked by a glancing blow!");
         mech_notify(hitMech, MECHALL, "You are nicked by a glancing blow!");

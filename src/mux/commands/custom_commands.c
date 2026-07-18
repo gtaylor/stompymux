@@ -5,14 +5,23 @@
 #include "mux/server/platform.h"
 
 #include "mux/database/attrs.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 
-void do_switch(DbRef player, DbRef cause, int key, char *expr, char *args[],
-               int nargs, char *cargs[], int ncargs) {
+void do_switch(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  DbRef cause = invocation->cause;
+  int key = invocation->key;
+  char *expr = invocation->first;
+  char **args = invocation->vector;
+  int nargs = invocation->vector_count;
+  char **cargs = invocation->command_arguments;
+  int ncargs = invocation->command_argument_count;
   int a, any;
   char *buff, *bp, *str;
 
@@ -20,7 +29,7 @@ void do_switch(DbRef player, DbRef cause, int key, char *expr, char *args[],
     return;
 
   if (key == SWITCH_DEFAULT) {
-    if (mudconf.switch_df_all)
+    if (invocation->context->server->configuration->switch_df_all)
       key = SWITCH_ANY;
     else
       key = SWITCH_ONE;
@@ -34,12 +43,13 @@ void do_switch(DbRef player, DbRef cause, int key, char *expr, char *args[],
   for (a = 0; (a < (nargs - 1)) && args[a] && args[a + 1]; a += 2) {
     bp = buff;
     str = args[a];
-    exec(buff, &bp, 0, player, cause, EV_FCHECK | EV_EVAL | EV_TOP, &str, cargs,
-         ncargs);
+    exec(evaluation, buff, &bp, 0, player, cause, EV_FCHECK | EV_EVAL | EV_TOP,
+         &str, cargs, ncargs);
     *bp = '\0';
     if (wild_match(buff, expr)) {
-      wait_que(player, cause, 0, NOTHING, 0, args[a + 1], cargs, ncargs,
-               mudstate.global_regs);
+      wait_que(invocation->context->server->commands, player, cause, 0, NOTHING,
+               0, args[a + 1], cargs, ncargs,
+               invocation->context->evaluation.registers);
       if (key == SWITCH_ONE) {
         free_lbuf(buff);
         return;
@@ -49,12 +59,17 @@ void do_switch(DbRef player, DbRef cause, int key, char *expr, char *args[],
   }
   free_lbuf(buff);
   if ((a < nargs) && !any && args[a])
-    wait_que(player, cause, 0, NOTHING, 0, args[a], cargs, ncargs,
-             mudstate.global_regs);
+    wait_que(invocation->context->server->commands, player, cause, 0, NOTHING,
+             0, args[a], cargs, ncargs,
+             invocation->context->evaluation.registers);
 }
 
-void do_addcommand(DbRef player, DbRef cause, int key, char *name,
-                   char *command) {
+void do_addcommand(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  char *command = invocation->second;
+  CommandRegistry *registry = &invocation->context->server->command_registry;
   CMDENT *old, *cmd;
   ADDENT *add, *nextp;
 
@@ -63,11 +78,13 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
   char *s;
 
   if (!*name) {
-    notify(player, "Sorry.");
+    notify(evaluation, player, "Sorry.");
     return;
   }
-  if (!parse_attrib(player, command, &thing, &atr) || (atr == NOTHING)) {
-    notify(player, "No such attribute.");
+  if (!parse_attrib(&invocation->context->match, player, command, &thing,
+                    &atr) ||
+      (atr == NOTHING)) {
+    notify(evaluation, player, "No such attribute.");
     return;
   }
 
@@ -77,7 +94,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     *s = (char)tolower(*s);
   }
 
-  old = (CMDENT *)hash_table_find(name, &mudstate.command_htab);
+  old = (CMDENT *)hash_table_find(name, &registry->commands);
 
   if (old && (old->callseq & CS_ADDED)) {
 
@@ -86,7 +103,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
 
     for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
       if ((nextp->thing == thing) && (nextp->atr == atr)) {
-        notify_printf(player, "%s already added.", name);
+        notify_printf(evaluation, player, "%s already added.", name);
         return;
       }
     }
@@ -102,7 +119,7 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
   } else {
     if (old) {
       /* Delete the old built-in and rename it __name */
-      hash_table_delete(name, &mudstate.command_htab);
+      hash_table_delete(name, &registry->commands);
     }
 
     cmd = malloc(sizeof(CMDENT));
@@ -123,22 +140,26 @@ void do_addcommand(DbRef player, DbRef cause, int key, char *name,
     add->next = nullptr;
     cmd->handler.added = add;
 
-    hash_table_add(name, (int *)cmd, &mudstate.command_htab);
+    hash_table_add(name, (int *)cmd, &registry->commands);
 
     if (old) {
       /* Fix any aliases of this command. */
-      hash_table_replace_all((int *)old, (int *)cmd, &mudstate.command_htab);
-      hash_table_add(tprintf("__%s", name), (int *)old, &mudstate.command_htab);
+      hash_table_replace_all((int *)old, (int *)cmd, &registry->commands);
+      hash_table_add(tprintf("__%s", name), (int *)old, &registry->commands);
     }
   }
 
   /* We reset the one letter commands here so you can overload them */
 
-  set_prefix_cmds();
-  notify_printf(player, "%s added.", name);
+  set_prefix_cmds(registry);
+  notify_printf(evaluation, player, "%s added.", name);
 }
 
-void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
+void do_listcommands(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  CommandRegistry *registry = &invocation->context->server->command_registry;
   CMDENT *old;
   ADDENT *nextp;
   int didit = 0;
@@ -152,7 +173,7 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
   }
 
   if (*name) {
-    old = (CMDENT *)hash_table_find(name, &mudstate.command_htab);
+    old = (CMDENT *)hash_table_find(name, &registry->commands);
 
     if (old && (old->callseq & CS_ADDED)) {
 
@@ -160,19 +181,22 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
          added using the same object and attribute... */
 
       for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
-        notify_printf(player, "%s: #%ld/%s", nextp->name, nextp->thing,
-                      ((Attribute *)attribute_by_number(nextp->atr))->name);
+        notify_printf(evaluation, player, "%s: #%ld/%s", nextp->name,
+                      nextp->thing,
+                      ((Attribute *)attribute_by_number(
+                           invocation->context->world->database, nextp->atr))
+                          ->name);
       }
     } else {
-      notify_printf(player, "%s not found in command table.", name);
+      notify_printf(evaluation, player, "%s not found in command table.", name);
     }
     return;
   } else {
-    for (keyname = hash_table_first_key(&mudstate.command_htab);
+    for (keyname = hash_table_first_key(&registry->commands);
          keyname != nullptr;
-         keyname = hash_table_next_key(&mudstate.command_htab)) {
+         keyname = hash_table_next_key(&registry->commands)) {
 
-      old = (CMDENT *)hash_table_find(keyname, &mudstate.command_htab);
+      old = (CMDENT *)hash_table_find(keyname, &registry->commands);
 
       if (old && (old->callseq & CS_ADDED)) {
 
@@ -180,19 +204,26 @@ void do_listcommands(DbRef player, DbRef cause, int key, char *name) {
              nextp = nextp->next) {
           if (strcmp(keyname, nextp->name))
             continue;
-          notify_printf(player, "%s: #%ld/%s", nextp->name, nextp->thing,
-                        ((Attribute *)attribute_by_number(nextp->atr))->name);
+          notify_printf(evaluation, player, "%s: #%ld/%s", nextp->name,
+                        nextp->thing,
+                        ((Attribute *)attribute_by_number(
+                             invocation->context->world->database, nextp->atr))
+                            ->name);
           didit = 1;
         }
       }
     }
   }
   if (!didit)
-    notify(player, "No added commands found in command table.");
+    notify(evaluation, player, "No added commands found in command table.");
 }
 
-void do_delcommand(DbRef player, DbRef cause, int key, char *name,
-                   char *command) {
+void do_delcommand(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  char *command = invocation->second;
+  CommandRegistry *registry = &invocation->context->server->command_registry;
   CMDENT *old, *cmd;
   ADDENT *prev = nullptr, *nextp;
 
@@ -201,13 +232,15 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
   char *s;
 
   if (!*name) {
-    notify(player, "Sorry.");
+    notify(evaluation, player, "Sorry.");
     return;
   }
 
   if (*command) {
-    if (!parse_attrib(player, command, &thing, &atr) || (atr == NOTHING)) {
-      notify(player, "No such attribute.");
+    if (!parse_attrib(&invocation->context->match, player, command, &thing,
+                      &atr) ||
+        (atr == NOTHING)) {
+      notify(evaluation, player, "No such attribute.");
       return;
     }
   }
@@ -218,7 +251,7 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
     *s = (char)tolower(*s);
   }
 
-  old = (CMDENT *)hash_table_find(name, &mudstate.command_htab);
+  old = (CMDENT *)hash_table_find(name, &registry->commands);
 
   if (old && (old->callseq & CS_ADDED)) {
     if (!*command) {
@@ -228,16 +261,16 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
         free(prev->name);
         free(prev);
       }
-      hash_table_delete(name, &mudstate.command_htab);
-      if ((cmd = (CMDENT *)hash_table_find(
-               tprintf("__%s", name), &mudstate.command_htab)) != nullptr) {
-        hash_table_delete(tprintf("__%s", name), &mudstate.command_htab);
-        hash_table_add(name, (int *)cmd, &mudstate.command_htab);
-        hash_table_replace_all((int *)old, (int *)cmd, &mudstate.command_htab);
+      hash_table_delete(name, &registry->commands);
+      if ((cmd = (CMDENT *)hash_table_find(tprintf("__%s", name),
+                                           &registry->commands)) != nullptr) {
+        hash_table_delete(tprintf("__%s", name), &registry->commands);
+        hash_table_add(name, (int *)cmd, &registry->commands);
+        hash_table_replace_all((int *)old, (int *)cmd, &registry->commands);
       }
       free(old);
-      set_prefix_cmds();
-      notify(player, "Done.");
+      set_prefix_cmds(registry);
+      notify(evaluation, player, "Done.");
       return;
     } else {
       for (nextp = old->handler.added; nextp != nullptr; nextp = nextp->next) {
@@ -246,15 +279,14 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
           free(nextp->name);
           if (!prev) {
             if (!nextp->next) {
-              hash_table_delete(name, &mudstate.command_htab);
+              hash_table_delete(name, &registry->commands);
               if ((cmd = (CMDENT *)hash_table_find(tprintf("__%s", name),
-                                                   &mudstate.command_htab)) !=
+                                                   &registry->commands)) !=
                   nullptr) {
-                hash_table_delete(tprintf("__%s", name),
-                                  &mudstate.command_htab);
-                hash_table_add(name, (int *)cmd, &mudstate.command_htab);
+                hash_table_delete(tprintf("__%s", name), &registry->commands);
+                hash_table_add(name, (int *)cmd, &registry->commands);
                 hash_table_replace_all((int *)old, (int *)cmd,
-                                       &mudstate.command_htab);
+                                       &registry->commands);
               }
               free(old);
             } else {
@@ -265,15 +297,15 @@ void do_delcommand(DbRef player, DbRef cause, int key, char *name,
             prev->next = nextp->next;
             free(nextp);
           }
-          set_prefix_cmds();
-          notify(player, "Done.");
+          set_prefix_cmds(registry);
+          notify(evaluation, player, "Done.");
           return;
         }
         prev = nextp;
       }
-      notify(player, "Command not found in command table.");
+      notify(evaluation, player, "Command not found in command table.");
     }
   } else {
-    notify(player, "Command not found in command table.");
+    notify(evaluation, player, "Command not found in command table.");
   }
 }

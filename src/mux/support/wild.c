@@ -18,7 +18,7 @@
 #include "mux/database/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/wild.h"
 
@@ -32,8 +32,11 @@ static inline bool is_notequal(char a, char b) {
   return (a != b) && (fixcase(a) != fixcase(b));
 }
 
-static char **arglist; /* Argument return space */
-static int numargs;    /* Argument return size  */
+typedef struct WildcardContext WildcardContext;
+struct WildcardContext {
+  char **arguments;
+  int argument_count;
+};
 
 /**
  * Do a wildcard match, without remembering the wild data.
@@ -132,10 +135,10 @@ int quick_wild(const char *tstr, const char *dstr) {
  * DO NOT CALL THIS FUNCTION DIRECTLY - DOING SO MAY RESULT IN
  * SERVER CRASHES AND IMPROPER ARGUMENT RETURN.
  *
- * Side Effect: this routine modifies the 'arglist' static global
- * variable.
+ * Captures are stored in the stack-owned context supplied by wild().
  */
-static int wild1(const char *tstr, const char *dstr, int arg) {
+static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
+                 int arg) {
   const char *datapos;
   int argpos, numextra;
 
@@ -148,15 +151,15 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
        */
       if (!*dstr)
         return 0;
-      arglist[arg][0] = *dstr;
-      arglist[arg][1] = '\0';
+      context->arguments[arg][0] = *dstr;
+      context->arguments[arg][1] = '\0';
       arg++;
 
       /*
        * Jump to the fast routine if we can.
        */
 
-      if (arg >= numargs)
+      if (arg >= context->argument_count)
         return quick_wild(tstr + 1, dstr + 1);
       break;
     case '\\':
@@ -188,8 +191,8 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
    */
 
   if (!tstr[1]) {
-    StringCopyTrunc(arglist[arg], dstr, LBUF_SIZE - 1);
-    arglist[arg][LBUF_SIZE - 1] = '\0';
+    StringCopyTrunc(context->arguments[arg], dstr, LBUF_SIZE - 1);
+    context->arguments[arg][LBUF_SIZE - 1] = '\0';
     return 1;
   }
   /*
@@ -210,14 +213,14 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
        *
        * * before a fixed string.
        */
-      arglist[argpos][0] = '\0';
+      context->arguments[argpos][0] = '\0';
       argpos++;
 
       /*
        * Jump to the fast routine if we can.
        */
 
-      if (argpos >= numargs)
+      if (argpos >= context->argument_count)
         return quick_wild(tstr, dstr);
 
       /*
@@ -225,8 +228,8 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
        */
 
       while (argpos < arg) {
-        arglist[argpos][0] = *datapos;
-        arglist[argpos][1] = '\0';
+        context->arguments[argpos][0] = *datapos;
+        context->arguments[argpos][1] = '\0';
         datapos++;
         argpos++;
 
@@ -234,7 +237,7 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
          * Jump to the fast routine if we can.
          */
 
-        if (argpos >= numargs)
+        if (argpos >= context->argument_count)
           return quick_wild(tstr, dstr);
       }
     }
@@ -292,17 +295,18 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
      *
      * * does, using the fastest method, as usual.
      */
-    if (!*dstr || ((arg < numargs) ? wild1(tstr + 1, dstr + 1, arg)
-                                   : quick_wild(tstr + 1, dstr + 1))) {
+    if (!*dstr || ((arg < context->argument_count)
+                       ? wild1(context, tstr + 1, dstr + 1, arg)
+                       : quick_wild(tstr + 1, dstr + 1))) {
 
       /*
        * Found a match!  Fill in all remaining arguments. *
        *
        * *  * *  * * First do the '*'...
        */
-      StringCopyTrunc(arglist[argpos], datapos,
+      StringCopyTrunc(context->arguments[argpos], datapos,
                       (size_t)((dstr - datapos) - numextra));
-      arglist[argpos][(dstr - datapos) - numextra] = '\0';
+      context->arguments[argpos][(dstr - datapos) - numextra] = '\0';
       datapos = dstr - numextra;
       argpos++;
 
@@ -311,10 +315,10 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
        */
 
       while (numextra) {
-        if (argpos >= numargs)
+        if (argpos >= context->argument_count)
           return 1;
-        arglist[argpos][0] = *datapos;
-        arglist[argpos][1] = '\0';
+        context->arguments[argpos][0] = *datapos;
+        context->arguments[argpos][1] = '\0';
         datapos++;
         argpos++;
         numextra--;
@@ -338,12 +342,12 @@ static int wild1(const char *tstr, const char *dstr, int arg) {
  *
  * This function may crash if alloc_lbuf() fails.
  *
- * Side Effect: this routine modifies the 'arglist' and 'numargs'
- * static global variables.
+ * Capture recursion is scoped to this invocation.
  */
 int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   int i, value;
   const char *scan;
+  WildcardContext context = {.arguments = args, .argument_count = nargs};
 
   /*
    * Initialize the return array.
@@ -391,17 +395,10 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   }
 
   /*
-   * Put stuff in globals for quick recursion.
-   */
-
-  arglist = args;
-  numargs = nargs;
-
-  /*
    * Do the match.
    */
 
-  value = nargs ? wild1(tstr, dstr, 0) : quick_wild(tstr, dstr);
+  value = nargs ? wild1(&context, tstr, dstr, 0) : quick_wild(tstr, dstr);
 
   /*
    * Clean out any fake match data left by wild1.

@@ -1386,7 +1386,8 @@ int cargo_count = sizeof(cargo) / sizeof(char *) - 1;
 #define CLCH(a)                                                                \
   do {                                                                         \
     if (temp_brand_flag) {                                                     \
-      if ((!mudconf.btech_parts) || (MechWeapons[a].special & CLAT))           \
+      if ((!btech_context_active()->configuration->btech_parts) ||             \
+          (MechWeapons[a].special & CLAT))                                     \
         return NULL;                                                           \
       else if (MechWeapons[a].special & CLAT)                                  \
         isclan = 1;                                                            \
@@ -1507,7 +1508,7 @@ static int dump_item(FILE *fp, MECH *mech, int x, int y) {
       break;
     if (GetPartAmmoMode(mech, x, y1) != GetPartAmmoMode(mech, x, y))
       break;
-    if (mudconf.btech_parts)
+    if (btech_context_active()->configuration->btech_parts)
       if (GetPartBrand(mech, x, y1) != GetPartBrand(mech, x, y))
         break;
   }
@@ -1536,8 +1537,9 @@ static int dump_item(FILE *fp, MECH *mech, int x, int y) {
                 ? BuildBitStringwdelim2(crit_fire_modes, crit_ammo_modes,
                                         wFireModes, wAmmoModes)
                 : "-",
-            !mudconf.btech_parts ? ""
-                                 : tprintf("%d ", GetPartBrand(mech, x, y)));
+            !btech_context_active()->configuration->btech_parts
+                ? ""
+                : tprintf("%d ", GetPartBrand(mech, x, y)));
   else if (IsAmmo(MechSections(mech)[x].criticals[y].type))
     fprintf(
         fp, "    %s		  { %s %d %s - }\n", crit,
@@ -1552,11 +1554,13 @@ static int dump_item(FILE *fp, MECH *mech, int x, int y) {
     fprintf(fp, "    %s		  { %s - - - }\n", crit,
             get_parts_vlong_name(GetPartType(mech, x, y), 0));
   else {
-    fprintf(
-        fp, "    %s		  { %s %s - %s}\n", crit,
-        get_parts_vlong_name(GetPartType(mech, x, y), 0),
-        GetPartData(mech, x, y) ? tprintf("%d", GetPartData(mech, x, y)) : "-",
-        !mudconf.btech_parts ? "" : tprintf("%d ", GetPartBrand(mech, x, y)));
+    fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
+            get_parts_vlong_name(GetPartType(mech, x, y), 0),
+            GetPartData(mech, x, y) ? tprintf("%d", GetPartData(mech, x, y))
+                                    : "-",
+            !btech_context_active()->configuration->btech_parts
+                ? ""
+                : tprintf("%d ", GetPartBrand(mech, x, y)));
   }
   return (y1 - y + 1);
 }
@@ -1700,7 +1704,7 @@ int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
   FILE *fp;
   int x, x2, inf_x;
   char **locs;
-  char *d, *c = ctime(&mudstate.now);
+  char *d, *c = ctime(&btech_context_active()->clock->now);
 
   if (!MechComputer(mech))
     computer_conversion(mech);
@@ -1719,8 +1723,9 @@ int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
   fprintf(fp, "Tons             { %d }\n", MechTons(mech));
   if ((d = strrchr(c, '\n')))
     *d = 0;
-  fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n", Name(player),
-          player, c);
+  fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
+          game_object_name(btech_context_active()->database, player), player,
+          c);
 #define SILLY_UTTERANCE(ran, cran, dran, name)                                 \
   if ((!MechComputer(mech) && ran != dran) ||                                  \
       (MechComputer(mech) && ran != cran))                                     \
@@ -2254,7 +2259,8 @@ int update_oweight(MECH *mech, int value) {
   MechCritStatus(mech) |= OWEIGHT_OK;
 
   /* Check to prevent silliness */
-  if (!mudconf.btech_dynspeed || (value == 1 && !Destroyed(mech)))
+  if (!btech_context_active()->configuration->btech_dynspeed ||
+      (value == 1 && !Destroyed(mech)))
     value = MechTons(mech) * 1024;
   MechRTonsV(mech) = value;
   return value;
@@ -2428,7 +2434,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       TEMPLATE_GERR(!(find_matching_vlong_part(buf, NULL, &type, &brand)),
                     "Unable to find %s", buf);
       SetPartType(mech, section, critical, type);
-      if (!mudconf.btech_parts)
+      if (!btech_context_active()->configuration->btech_parts)
         brand = 0;
       SetPartBrand(mech, section, critical, brand);
       SetPartDesiredAmmoLoc(mech, section, critical, -1);
@@ -2466,7 +2472,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         GetPartAmmoMode(mech, section, critical) = wAmmoModes;
 
         line2 = one_arg(line2, buf);
-        if (mudconf.btech_parts)
+        if (btech_context_active()->configuration->btech_parts)
           if (atoi(buf)) {
             SetPartBrand(mech, section, critical, atoi(buf));
           }
@@ -2522,7 +2528,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         GetPartAmmoMode(mech, section, critical) = 0;
         if ((line2 = one_arg(line2, buf)))
           if ((line2 = one_arg(line2, buf))) {
-            if (mudconf.btech_parts)
+            if (btech_context_active()->configuration->btech_parts)
               if (atoi(buf)) {
                 SetPartBrand(mech, section, critical, atoi(buf));
               }
@@ -2623,7 +2629,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   else
     value = 6;
 
-  if (mudconf.btech_parts)
+  if (btech_context_active()->configuration->btech_parts)
     for (x = 0; x < value; x++)
       for (y = 0; y < CritsInLoc(mech, x); y++)
         if ((t = GetPartType(mech, x, y))) {

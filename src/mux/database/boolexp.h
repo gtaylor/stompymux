@@ -4,14 +4,26 @@
 
 #include "mux/database/db.h"
 
-int boolean_expression_evaluate(DbRef player, DbRef thing, DbRef from,
-                                BooleanExpression *expression);
-BooleanExpression *boolean_expression_parse(DbRef player, const char *text,
-                                            int internal);
-int eval_boolexp_atr(DbRef player, DbRef thing, DbRef from, char *key);
+typedef struct EvaluationContext EvaluationContext;
 
-char *boolean_expression_unparse(DbRef player, BooleanExpression *expression);
-char *boolean_expression_unparse_quiet(DbRef player,
-                                       BooleanExpression *expression);
-char *boolean_expression_unparse_function(DbRef player,
-                                          BooleanExpression *expression);
+int boolean_expression_evaluate(EvaluationContext *context, DbRef player,
+                                DbRef thing, DbRef from,
+                                BooleanExpression *expression);
+BooleanExpression *boolean_expression_parse(GameDatabase *database,
+                                            EvaluationContext *evaluation,
+                                            DbRef player, const char *text,
+                                            int internal);
+int eval_boolexp_atr(EvaluationContext *context, DbRef player, DbRef thing,
+                     DbRef from, char *key);
+
+void boolean_expression_unparse(GameDatabase *database,
+                                EvaluationContext *evaluation, char *buffer,
+                                DbRef player, BooleanExpression *expression);
+void boolean_expression_unparse_quiet(GameDatabase *database,
+                                      EvaluationContext *evaluation,
+                                      char *buffer, DbRef player,
+                                      BooleanExpression *expression);
+void boolean_expression_unparse_function(GameDatabase *database,
+                                         EvaluationContext *evaluation,
+                                         char *buffer, DbRef player,
+                                         BooleanExpression *expression);

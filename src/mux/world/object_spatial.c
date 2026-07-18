@@ -7,21 +7,22 @@
 
 #include "mux/database/powers.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
+#include "mux/world/world_context.h"
 
-DbRef where_is(DbRef what) {
+DbRef where_is(GameDatabase *database, DbRef what) {
   DbRef loc;
 
-  if (!is_good_obj(what))
+  if (!is_good_obj(database, what))
     return NOTHING;
 
-  switch (typeof_obj(what)) {
+  switch (typeof_obj(database, what)) {
   case TYPE_PLAYER:
   case TYPE_THING:
-    loc = obj_location(what);
+    loc = game_object_location(database, what);
     break;
   case TYPE_EXIT:
-    loc = obj_exits(what);
+    loc = game_object_exits(database, what);
     break;
   default:
     loc = NOTHING;
@@ -34,22 +35,25 @@ DbRef where_is(DbRef what) {
  * Return room containing player, or NOTHING if no room or
  * recursion exceeded.  If player is a room, returns itself.
  */
-DbRef where_room(DbRef what) {
+DbRef where_room(GameDatabase *database,
+                 const ServerConfiguration *configuration, DbRef what) {
   int count;
 
-  for (count = mudconf.ntfy_nest_lim; count > 0; count--) {
-    if (!is_good_obj(what))
+  for (count = configuration->ntfy_nest_lim; count > 0; count--) {
+    if (!is_good_obj(database, what))
       break;
-    if (is_room(what))
+    if (is_room(database, what))
       return what;
-    if (!has_location(what))
+    if (!has_location(database, what))
       break;
-    what = obj_location(what);
+    what = game_object_location(database, what);
   }
   return NOTHING;
 }
 
-int locatable(DbRef player, DbRef it, DbRef cause) {
+int locatable(EvaluationContext *evaluation,
+              const ServerConfiguration *configuration, DbRef player, DbRef it,
+              DbRef cause) {
   DbRef loc_it, room_it;
   int findable_room;
 
@@ -57,10 +61,10 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * No sense if trying to locate a bad object
    */
 
-  if (!is_good_obj(it))
+  if (!is_good_obj(evaluation->world->database, it))
     return 0;
 
-  loc_it = where_is(it);
+  loc_it = where_is(evaluation->world->database, it);
 
   /*
    * Succeed if we can examine the target, if we are the target, * if *
@@ -69,16 +73,18 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * * or  * *  * if the target caused the lookup.
    */
 
-  if (is_examinable(player, it) || is_find_unfindable(player) ||
+  if (is_examinable(evaluation, player, it) ||
+      is_find_unfindable(evaluation->world->database, player) ||
       (loc_it == player) ||
       ((loc_it != NOTHING) &&
-       (is_examinable(player, loc_it) || loc_it == where_is(player))) ||
-      is_wizard(cause) || (it == cause))
+       (is_examinable(evaluation, player, loc_it) ||
+        loc_it == where_is(evaluation->world->database, player))) ||
+      is_wizard(evaluation->world->database, cause) || (it == cause))
     return 1;
 
-  room_it = where_room(it);
-  if (is_good_obj(room_it))
-    findable_room = !is_hideout(room_it);
+  room_it = where_room(evaluation->world->database, configuration, it);
+  if (is_good_obj(evaluation->world->database, room_it))
+    findable_room = !is_hideout(evaluation->world->database, room_it);
   else
     findable_room = 1;
 
@@ -87,8 +93,9 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
    * * * findable and the containing room is not unfindable.
    */
 
-  if (((room_it != NOTHING) && is_examinable(player, room_it)) ||
-      is_find_unfindable(player) || (is_findable(it) && findable_room))
+  if (((room_it != NOTHING) && is_examinable(evaluation, player, room_it)) ||
+      is_find_unfindable(evaluation->world->database, player) ||
+      (is_findable(evaluation->world->database, it) && findable_room))
     return 1;
 
   /*
@@ -102,15 +109,15 @@ int locatable(DbRef player, DbRef it, DbRef cause) {
  * Check if thing is nearby player (in inventory, in same room, or
  * IS the room.
  */
-int nearby(DbRef player, DbRef thing) {
+int nearby(GameDatabase *database, DbRef player, DbRef thing) {
   DbRef thing_loc, player_loc;
 
-  if (!is_good_obj(player) || !is_good_obj(thing))
+  if (!is_good_obj(database, player) || !is_good_obj(database, thing))
     return 0;
-  thing_loc = where_is(thing);
+  thing_loc = where_is(database, thing);
   if (thing_loc == player)
     return 1;
-  player_loc = where_is(player);
+  player_loc = where_is(database, player);
   if ((thing_loc == player_loc) || (thing == player_loc))
     return 1;
   return 0;
@@ -119,16 +126,17 @@ int nearby(DbRef player, DbRef thing) {
 /**
  * Checks to see if the exit is visible. Used in lexits().
  */
-int exit_visible(DbRef exit, DbRef player, int key) {
+int exit_visible(EvaluationContext *evaluation, DbRef exit, DbRef player,
+                 int key) {
   if (key & VE_LOC_XAM) // Exam exit's loc
     return 1;
-  if (is_examinable(player, exit)) // Exam exit
+  if (is_examinable(evaluation, player, exit)) // Exam exit
     return 1;
-  if (is_light(exit)) // Exit is light
+  if (is_light(evaluation->world->database, exit)) // Exit is light
     return 1;
   if (key & (VE_LOC_DARK | VE_BASE_DARK))
-    return 0;        // Dark loc or base
-  if (is_dark(exit)) // Dark exit
+    return 0;                                     // Dark loc or base
+  if (is_dark(evaluation->world->database, exit)) // Dark exit
     return 0;
   return 1; // Default
 }
@@ -136,10 +144,11 @@ int exit_visible(DbRef exit, DbRef player, int key) {
 /**
  * Checks to see if the exit is visible to look.
  */
-int exit_displayable(DbRef exit, DbRef player, int key) {
-  if (is_dark(exit)) // Dark exit
+int exit_displayable(GameDatabase *database, DbRef exit, DbRef player,
+                     int key) {
+  if (is_dark(database, exit)) // Dark exit
     return 0;
-  if (is_light(exit)) // Light exit
+  if (is_light(database, exit)) // Light exit
     return 1;
   if (key & (VE_LOC_DARK | VE_BASE_DARK))
     return 0; // Dark loc or base

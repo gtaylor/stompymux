@@ -4,6 +4,9 @@
 
 #include "mux/server/platform.h"
 
+typedef struct GameDatabase GameDatabase;
+typedef struct ChannelRegistry ChannelRegistry;
+
 struct commac {
   DbRef who;
 
@@ -18,15 +21,11 @@ struct commac {
   struct commac *next;
 };
 
-constexpr int NUM_COMMAC = 500;
-
-extern struct commac *commac_table[NUM_COMMAC];
-
-void purge_commac(void);
+void purge_commac(ChannelRegistry *registry, GameDatabase *database);
 
 void sort_com_aliases(struct commac *c);
-struct commac *get_commac(DbRef which);
+struct commac *get_commac(ChannelRegistry *registry, DbRef which);
 struct commac *create_new_commac(void);
 void destroy_commac(struct commac *c);
-void add_commac(struct commac *c);
-void del_commac(DbRef who);
+void add_commac(ChannelRegistry *registry, struct commac *c);
+void del_commac(ChannelRegistry *registry, DbRef who);

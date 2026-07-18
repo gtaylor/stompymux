@@ -16,7 +16,8 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
-#include "mux/server/server_state.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/server_config.h"
 
 /* Human-readable labels for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_reasons[] = {
@@ -39,17 +40,15 @@ static const char *descriptor_disconnect_messages[] = {
 constexpr size_t DESCRIPTOR_REGISTRY_INITIAL_CAPACITY = 16;
 
 /* Flat storage for every descriptor owned by the server event loop. */
-typedef struct DescriptorRegistry {
+struct DescriptorRegistry {
+  MuxServer *server;
   /* Stable slots containing descriptors or nullptr when unused. */
   Descriptor **slots;
   /* Number of slots allocated in slots. */
   size_t capacity;
   /* Number of non-null descriptors in slots. */
   size_t count;
-} DescriptorRegistry;
-
-/* Process-wide registry of descriptors that have completed setup. */
-static DescriptorRegistry descriptor_registry;
+};
 
 /* Clear buffered input before destroying descriptor. */
 static void descriptor_clear_input(Descriptor *descriptor) {
@@ -58,78 +57,106 @@ static void descriptor_clear_input(Descriptor *descriptor) {
 }
 
 /* Grow the descriptor registry enough to hold at least one more entry. */
-static bool descriptor_registry_grow(void) {
+static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   Descriptor **slots;
-  size_t old_capacity = descriptor_registry.capacity;
+  size_t old_capacity = registry->capacity;
   size_t new_capacity = old_capacity == 0 ? DESCRIPTOR_REGISTRY_INITIAL_CAPACITY
                                           : old_capacity * 2;
 
   if (new_capacity < old_capacity ||
-      new_capacity > SIZE_MAX / sizeof(*descriptor_registry.slots))
+      new_capacity > SIZE_MAX / sizeof(*registry->slots))
     return false;
-  slots = realloc(descriptor_registry.slots,
-                  new_capacity * sizeof(*descriptor_registry.slots));
+  slots = realloc(registry->slots, new_capacity * sizeof(*registry->slots));
   if (slots == nullptr)
     return false;
   memset(&slots[old_capacity], 0,
          (new_capacity - old_capacity) * sizeof(*slots));
-  descriptor_registry.slots = slots;
-  descriptor_registry.capacity = new_capacity;
+  registry->slots = slots;
+  registry->capacity = new_capacity;
   return true;
 }
 
+DescriptorRegistry *descriptor_registry_create(MuxServer *server) {
+  DescriptorRegistry *registry = calloc(1, sizeof(*registry));
+  if (registry != nullptr)
+    registry->server = server;
+  return registry;
+}
+
+MuxServer *descriptor_server(Descriptor *descriptor) {
+  return descriptor->registry->server;
+}
+
+void descriptor_registry_destroy(DescriptorRegistry *registry) {
+  if (registry == nullptr)
+    return;
+  dassert(registry->count == 0);
+  free(registry->slots);
+  free(registry);
+}
+
 /* Add descriptor to the flat registry and retain its active reference. */
-bool descriptor_register(Descriptor *descriptor) {
+bool descriptor_register(DescriptorRegistry *registry, Descriptor *descriptor) {
   size_t slot;
 
-  for (slot = 0; slot < descriptor_registry.capacity; slot++) {
-    if (descriptor_registry.slots[slot] == nullptr)
+  for (slot = 0; slot < registry->capacity; slot++) {
+    if (registry->slots[slot] == nullptr)
       break;
   }
-  if (slot == descriptor_registry.capacity && !descriptor_registry_grow())
+  if (slot == registry->capacity && !descriptor_registry_grow(registry))
     return false;
-  descriptor_registry.slots[slot] = descriptor;
-  descriptor_registry.count++;
+  registry->slots[slot] = descriptor;
+  registry->count++;
+  descriptor->registry = registry;
   descriptor_retain(descriptor);
   return true;
 }
 
 /* Remove descriptor from the flat registry before destroying it. */
 static void descriptor_unregister(Descriptor *descriptor) {
+  DescriptorRegistry *registry = descriptor->registry;
   size_t slot;
 
-  for (slot = 0; slot < descriptor_registry.capacity; slot++) {
-    if (descriptor_registry.slots[slot] != descriptor)
+  for (slot = 0; slot < registry->capacity; slot++) {
+    if (registry->slots[slot] != descriptor)
       continue;
-    descriptor_registry.slots[slot] = nullptr;
-    descriptor_registry.count--;
+    registry->slots[slot] = nullptr;
+    registry->count--;
+    descriptor->registry = nullptr;
     return;
   }
   dassert(false);
 }
 
 /* Return the number of descriptors in the flat registry. */
-size_t descriptor_count(void) { return descriptor_registry.count; }
+size_t descriptor_count(const DescriptorRegistry *registry) {
+  return registry->count;
+}
 
 /* Construct a descriptor iterator with the requested selection rule. */
 static DescriptorIterator
-descriptor_iterator_create(DescriptorIteratorKind kind, DbRef player) {
-  return (DescriptorIterator){.next_slot = 0, .kind = kind, .player = player};
+descriptor_iterator_create(DescriptorRegistry *registry,
+                           DescriptorIteratorKind kind, DbRef player) {
+  return (DescriptorIterator){
+      .registry = registry, .next_slot = 0, .kind = kind, .player = player};
 }
 
 /* Start an iterator over every registered descriptor. */
-DescriptorIterator descriptor_iterator_all(void) {
-  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_ALL, NOTHING);
+DescriptorIterator descriptor_iterator_all(DescriptorRegistry *registry) {
+  return descriptor_iterator_create(registry, DESCRIPTOR_ITERATOR_ALL, NOTHING);
 }
 
 /* Start an iterator over live authenticated descriptors. */
-DescriptorIterator descriptor_iterator_connected(void) {
-  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_CONNECTED, NOTHING);
+DescriptorIterator descriptor_iterator_connected(DescriptorRegistry *registry) {
+  return descriptor_iterator_create(registry, DESCRIPTOR_ITERATOR_CONNECTED,
+                                    NOTHING);
 }
 
 /* Start an iterator over live authenticated descriptors for player. */
-DescriptorIterator descriptor_iterator_player(DbRef player) {
-  return descriptor_iterator_create(DESCRIPTOR_ITERATOR_PLAYER, player);
+DescriptorIterator descriptor_iterator_player(DescriptorRegistry *registry,
+                                              DbRef player) {
+  return descriptor_iterator_create(registry, DESCRIPTOR_ITERATOR_PLAYER,
+                                    player);
 }
 
 /* Return whether descriptor satisfies iterator's selection rule. */
@@ -148,8 +175,8 @@ static bool descriptor_iterator_matches(const DescriptorIterator *iterator,
 Descriptor *descriptor_iterator_next(DescriptorIterator *iterator) {
   Descriptor *descriptor;
 
-  while (iterator->next_slot < descriptor_registry.capacity) {
-    descriptor = descriptor_registry.slots[iterator->next_slot++];
+  while (iterator->next_slot < iterator->registry->capacity) {
+    descriptor = iterator->registry->slots[iterator->next_slot++];
     if (descriptor != nullptr &&
         descriptor_iterator_matches(iterator, descriptor))
       return descriptor;
@@ -204,9 +231,9 @@ void descriptor_release(Descriptor *descriptor) {
 }
 
 /* Find an authenticated descriptor by its socket descriptor. */
-Descriptor *descriptor_find_by_fd(int fd) {
+Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int fd) {
   Descriptor *descriptor;
-  DescriptorIterator iterator = descriptor_iterator_connected();
+  DescriptorIterator iterator = descriptor_iterator_connected(registry);
 
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     if (descriptor->descriptor == fd)
@@ -218,27 +245,35 @@ Descriptor *descriptor_find_by_fd(int fd) {
 /* Disconnect descriptor and notify the game of its shutdown reason. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason) {
+  MuxServer *server = descriptor_server(descriptor);
   if (descriptor->is_dead)
     return;
   descriptor->is_dead = true;
   uv_read_stop((uv_stream_t *)descriptor->socket);
   if (descriptor->is_connected) {
-    fcache_dump(descriptor, FC_QUIT);
-    log_error(LOG_NET | LOG_LOGIN, "NET", "DISC",
+    fcache_dump(server->files, descriptor, FC_QUIT);
+    log_error(&server->log, LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
               descriptor->descriptor, descriptor->addr,
-              Name(descriptor->player), descriptor->player,
-              descriptor_disconnect_reasons[reason]);
+              game_object_name(&server->database, descriptor->player),
+              descriptor->player, descriptor_disconnect_reasons[reason]);
 
-    log_error(LOG_ACCOUNTING, "DIS", "ACCT", "%ld %s %d %ld %ld [%s] <%s> %s",
-              descriptor->player,
-              decode_flags(GOD, obj_flags(descriptor->player),
-                           obj_flags2(descriptor->player),
-                           obj_flags3(descriptor->player)),
+    log_error(&server->log, LOG_ACCOUNTING, "DIS", "ACCT",
+              "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player,
+              decode_flags(
+                  &descriptor_server(descriptor)->database, GOD,
+                  game_object_flags(&descriptor_server(descriptor)->database,
+                                    descriptor->player),
+                  game_object_flags2(&descriptor_server(descriptor)->database,
+                                     descriptor->player),
+                  game_object_flags3(&descriptor_server(descriptor)->database,
+                                     descriptor->player)),
               descriptor->command_count,
-              mudstate.now - descriptor->connected_at,
-              obj_location(descriptor->player), descriptor->addr,
-              descriptor_disconnect_reasons[reason], Name(descriptor->player));
+              server->clock.now - descriptor->connected_at,
+              game_object_location(&descriptor_server(descriptor)->database,
+                                   descriptor->player),
+              descriptor->addr, descriptor_disconnect_reasons[reason],
+              game_object_name(&server->database, descriptor->player));
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_disconnect_messages[reason]);

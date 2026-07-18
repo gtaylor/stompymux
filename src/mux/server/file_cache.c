@@ -7,9 +7,10 @@
 
 #include "mux/commands/command.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 
 typedef struct filecache_hdr FCACHE;
@@ -17,7 +18,7 @@ typedef struct filecache_block_hdr FBLKHDR;
 typedef struct filecache_block FBLOCK;
 
 struct filecache_hdr {
-  char *filename;
+  const char *filename;
   FBLOCK *fileblock;
   const char *desc;
 };
@@ -30,12 +31,13 @@ struct filecache_block {
   char data[MBUF_SIZE - sizeof(FBLKHDR)];
 };
 
-FCACHE fcache[] = {{mudconf.conn_file, nullptr, "Conn"},
-                   {mudconf.site_file, nullptr, "Conn/Badsite"},
-                   {mudconf.down_file, nullptr, "Conn/Down"},
-                   {mudconf.full_file, nullptr, "Conn/Full"},
-                   {mudconf.quit_file, nullptr, "Quit"},
-                   {nullptr, nullptr, nullptr}};
+struct FileCache {
+  FCACHE entries[FC_LAST + 1];
+  FCACHE connection_entries[100];
+  int connection_count;
+  const ServerConfiguration *configuration;
+  DescriptorRegistry *descriptors;
+};
 
 NameTable list_files[] = {{"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
                           {"connect", 2, CA_WIZARD, FC_CONN},
@@ -45,18 +47,23 @@ NameTable list_files[] = {{"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
                           {nullptr, 0, 0, 0}};
 
 constexpr int MAX_CONN = 100;
-int fcache_conn_c = 0;
-FCACHE fcache_conn[MAX_CONN];
 
-void do_list_file(DbRef player, DbRef cause, int extra, char *arg) {
+void do_list_file(CommandInvocation *invocation) {
   int flagvalue;
 
-  flagvalue = name_table_search(player, list_files, arg);
+  flagvalue =
+      name_table_search(&invocation->context->server->database,
+                        invocation->context->server->configuration,
+                        invocation->player, list_files, invocation->first);
   if (flagvalue < 0) {
-    name_table_display(player, list_files, "Unknown file.  Use one of:", 1);
+    name_table_display(&invocation->context->evaluation,
+                       invocation->context->server->configuration,
+                       invocation->player, list_files,
+                       "Unknown file.  Use one of:", 1);
     return;
   }
-  fcache_send(player, flagvalue);
+  fcache_send(invocation->context->server->files, invocation->player,
+              flagvalue);
 }
 
 static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
@@ -78,7 +85,8 @@ static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
   return fp;
 }
 
-static int fcache_read(FBLOCK **cp, char *filename) {
+static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
+                       const char *filename) {
   int n, nmax, tchars, fd;
   char *buff;
   FBLOCK *fp, *tfp;
@@ -105,8 +113,8 @@ static int fcache_read(FBLOCK **cp, char *filename) {
      * Failure: log the event
      */
 
-    log_error(LOG_PROBLEMS, "FIL", "OPEN", "Couldn't open file '%s'.",
-              filename);
+    log_error(&evaluation->server->log, LOG_PROBLEMS, "FIL", "OPEN",
+              "Couldn't open file '%s'.", filename);
 
     return -1;
   }
@@ -159,12 +167,27 @@ static int fcache_read(FBLOCK **cp, char *filename) {
   return tchars;
 }
 
-static void fcache_read_dir(char *dir, FCACHE foo[], int *cnt, int max) {
+static void fcache_clear_entry(FCACHE *entry) {
+  FBLOCK *block = entry->fileblock;
+
+  while (block != nullptr) {
+    FBLOCK *next = block->hdr.nxt;
+
+    free_mbuf(block);
+    block = next;
+  }
+  entry->fileblock = nullptr;
+}
+
+static void fcache_read_dir(EvaluationContext *evaluation, const char *dir,
+                            FCACHE foo[], int *cnt, int max) {
   DIR *d;
   struct dirent *de;
   char buf[LBUF_SIZE] = {0};
 
-  bzero(&foo[0], sizeof(FCACHE) * (size_t)max);
+  for (int index = 0; index < *cnt; index++)
+    fcache_clear_entry(&foo[index]);
+  memset(foo, 0, sizeof(FCACHE) * (size_t)max);
   if (!(d = opendir(dir)))
     return;
   for (*cnt = 0; *cnt < max;) {
@@ -175,20 +198,20 @@ static void fcache_read_dir(char *dir, FCACHE foo[], int *cnt, int max) {
     if (!strstr(de->d_name, ".txt"))
       continue;
     snprintf(buf, sizeof(buf), "%s/%s", dir, de->d_name);
-    fcache_read(&(foo[*cnt].fileblock), buf);
+    fcache_read(evaluation, &(foo[*cnt].fileblock), buf);
     (*cnt)++;
   }
   closedir(d);
 }
 
-void fcache_rawdump(int fd, int num) {
+void fcache_rawdump(const FileCache *cache, int fd, int num) {
   int cnt, remaining;
   char *start;
   FBLOCK *fp;
 
   if ((num < 0) || (num > FC_LAST))
     return;
-  fp = fcache[num].fileblock;
+  fp = cache->entries[num].fileblock;
 
   while (fp != nullptr) {
     start = fp->data;
@@ -206,7 +229,7 @@ void fcache_rawdump(int fd, int num) {
   return;
 }
 
-static void fcache_dumpbase(Descriptor *d, FCACHE fc[], int num) {
+static void fcache_dumpbase(Descriptor *d, const FCACHE fc[], int num) {
   FBLOCK *fp;
 
   fp = fc[num].fileblock;
@@ -217,36 +240,38 @@ static void fcache_dumpbase(Descriptor *d, FCACHE fc[], int num) {
   }
 }
 
-void fcache_dump(Descriptor *d, int num) {
+void fcache_dump(const FileCache *cache, Descriptor *d, int num) {
   if ((num < 0) || (num > FC_LAST))
     return;
-  fcache_dumpbase(d, fcache, num);
+  fcache_dumpbase(d, cache->entries, num);
 }
 
-void fcache_dump_conn(Descriptor *d, int num) {
-  fcache_dumpbase(d, fcache_conn, num);
+void fcache_dump_conn(const FileCache *cache, Descriptor *d, int num) {
+  fcache_dumpbase(d, cache->connection_entries, num);
 }
 
-void fcache_send(DbRef player, int num) {
+void fcache_send(FileCache *cache, DbRef player, int num) {
   Descriptor *d;
-  DescriptorIterator iterator = descriptor_iterator_player(player);
+  DescriptorIterator iterator =
+      descriptor_iterator_player(cache->descriptors, player);
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr)
-    fcache_dump(d, num);
+    fcache_dump(cache, d, num);
 }
 
-void fcache_load(DbRef player) {
+void fcache_load(EvaluationContext *evaluation, FileCache *cache,
+                 DbRef player) {
   FCACHE *fp;
   char *buff, *bufc, *sbuf;
   int i;
 
   buff = bufc = alloc_lbuf("fcache_load.lbuf");
   sbuf = alloc_sbuf("fcache_load.sbuf");
-  for (fp = fcache; fp->filename; fp++) {
-    i = fcache_read(&fp->fileblock, fp->filename);
-    if ((player != NOTHING) && !is_quiet(player)) {
+  for (fp = cache->entries; fp < cache->entries + FC_LAST + 1; fp++) {
+    i = fcache_read(evaluation, &fp->fileblock, fp->filename);
+    if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
       snprintf(sbuf, SBUF_SIZE, "%d", i);
-      if (fp == fcache)
+      if (fp == cache->entries)
         safe_str("File sizes: ", buff, &bufc);
       else
         safe_str("  ", buff, &bufc);
@@ -256,20 +281,48 @@ void fcache_load(DbRef player) {
     }
   }
   *bufc = '\0';
-  if (*mudconf.conn_dir)
-    fcache_read_dir(mudconf.conn_dir, fcache_conn, &fcache_conn_c, MAX_CONN);
-  if ((player != NOTHING) && !is_quiet(player)) {
-    notify(player, buff);
+  if (*cache->configuration->conn_dir)
+    fcache_read_dir(evaluation, cache->configuration->conn_dir,
+                    cache->connection_entries, &cache->connection_count,
+                    MAX_CONN);
+  if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
+    notify(evaluation, player, buff);
   }
   free_lbuf(buff);
   free_sbuf(sbuf);
 }
 
-void fcache_init(void) {
-  FCACHE *fp;
+FileCache *file_cache_create(EvaluationContext *evaluation,
+                             const ServerConfiguration *configuration,
+                             DescriptorRegistry *descriptors) {
+  FileCache *cache = calloc(1, sizeof(*cache));
 
-  for (fp = fcache; fp->filename; fp++) {
-    fp->fileblock = nullptr;
-  }
-  fcache_load(NOTHING);
+  if (cache == nullptr)
+    return nullptr;
+  cache->configuration = configuration;
+  cache->descriptors = descriptors;
+  cache->entries[FC_CONN] = (FCACHE){configuration->conn_file, nullptr, "Conn"};
+  cache->entries[FC_CONN_SITE] =
+      (FCACHE){configuration->site_file, nullptr, "Conn/Badsite"};
+  cache->entries[FC_CONN_DOWN] =
+      (FCACHE){configuration->down_file, nullptr, "Conn/Down"};
+  cache->entries[FC_CONN_FULL] =
+      (FCACHE){configuration->full_file, nullptr, "Conn/Full"};
+  cache->entries[FC_QUIT] = (FCACHE){configuration->quit_file, nullptr, "Quit"};
+  fcache_load(evaluation, cache, NOTHING);
+  return cache;
+}
+
+void file_cache_destroy(FileCache *cache) {
+  if (cache == nullptr)
+    return;
+  for (int index = 0; index <= FC_LAST; index++)
+    fcache_clear_entry(&cache->entries[index]);
+  for (int index = 0; index < cache->connection_count; index++)
+    fcache_clear_entry(&cache->connection_entries[index]);
+  free(cache);
+}
+
+int file_cache_connection_count(const FileCache *cache) {
+  return cache->connection_count;
 }

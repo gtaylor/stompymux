@@ -100,7 +100,8 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     MechElev(mech) = GetElev(mech_map, MechX(mech), MechY(mech));
   }
   clear_mech_from_LOS(mech);
-  notify_printf(player, "Pos changed to %d,%d,%d", x, y, z);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Pos changed to %d,%d,%d", x,
+                y, z);
   SendLoc(
       tprintf("#%d set #%d's pos to %d,%d,%d.", player, mech->mynum, x, y, z));
 }
@@ -137,7 +138,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   }
 
   if (newindex == -1) {
-    notify(player, "Mech removed from map.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Mech removed from map.");
     SendLoc(tprintf("#%d removed #%d from map #%d.", player, mech->mynum,
                     oldmap->mynum));
     return;
@@ -186,11 +187,13 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
     MechTerrain(mech) = GetTerrain(newmap, MechX(mech), MechY(mech));
     MechElev(mech) = GetElev(newmap, MechX(mech), MechY(mech));
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "You're current position is out of bounds, Pos changed to 0,0");
   }
-  notify_printf(player, "MapIndex changed to %d", newindex);
-  notify_printf(player, "Your ID: %c%c", MechID(mech)[0], MechID(mech)[1]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "MapIndex changed to %d",
+                newindex);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Your ID: %c%c",
+                MechID(mech)[0], MechID(mech)[1]);
   SendLoc(
       tprintf("#%d set #%d's mapindex to #%d.", player, mech->mynum, newindex));
   UnZombifyMech(mech);
@@ -207,7 +210,7 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   DOCHECK(mech->mapindex == -1, "Mech is not on a map:  Can't set team");
   newmap = ValidMap(player, mech->mapindex);
   if (!newmap) {
-    notify(player, "Map index reset!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Map index reset!");
     mech->mapindex = -1;
     return;
   }
@@ -217,7 +220,7 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   if (team < 0)
     team = 0;
   MechTeam(mech) = team;
-  notify_printf(player, "Team set to %d", team);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Team set to %d", team);
 }
 
 #define SPECIAL_FREE 0

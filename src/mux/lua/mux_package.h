@@ -5,6 +5,7 @@
 #include <lua.h>
 
 typedef struct LuaMuxPackage LuaMuxPackage;
+typedef struct MuxServer MuxServer;
 
 typedef int (*LuaMuxPackageCheckingFn)(void *context);
 typedef int (*LuaMuxPackageFlowStartFn)(void *context, lua_State *state,
@@ -12,6 +13,7 @@ typedef int (*LuaMuxPackageFlowStartFn)(void *context, lua_State *state,
                                         const char *first_step);
 
 struct LuaMuxPackage {
+  MuxServer *server;
   void *context;
   LuaMuxPackageCheckingFn is_checking;
   LuaMuxPackageFlowStartFn flow_start;

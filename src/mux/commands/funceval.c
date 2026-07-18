@@ -10,6 +10,7 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/functions.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/database/attrs.h"
@@ -18,13 +19,16 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/network/netcommon.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/world/match.h"
+#include "mux/world/object_set.h"
 #include "mux/world/search.h"
+#include "mux/world/walkdb.h"
 
 #define NSUBEXP 10
 
@@ -46,27 +50,29 @@ extern NameTable indiv_attraccess_nametab[];
   if (!fn_range_check(xname, nfargs, xnargs - 1, xnargs, buff, bufc))          \
     return;                                                                    \
   if (!delim_check(fargs, nfargs, xnargs, &sep, buff, bufc, 0, player, cause,  \
-                   cargs, ncargs))                                             \
+                   cargs, ncargs, context))                                    \
     return;
 
 #define evarargs_preamble(xname, xnargs)                                       \
   if (!fn_range_check(xname, nfargs, xnargs - 1, xnargs, buff, bufc))          \
     return;                                                                    \
   if (!delim_check(fargs, nfargs, xnargs, &sep, buff, bufc, 1, player, cause,  \
-                   cargs, ncargs))                                             \
+                   cargs, ncargs, context))                                    \
     return;
 
 /* Returns the dbref of the specified channel's channel object. */
 void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   struct channel *ch;
 
-  if (!(ch = select_channel(fargs[0]))) {
+  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!mudconf.have_comsys ||
-      (!is_comm_all(player) && (player != ch->charge_who))) {
+  if (!context->server->configuration->have_comsys ||
+      (!is_comm_all(context->world->database, player) &&
+       (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -79,24 +85,26 @@ void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
 /* Lists who is on a channel. */
 void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   struct channel *ch;
   struct comuser *user;
   size_t len = 0;
   static char smbuf[SBUF_SIZE];
 
-  if (!(ch = select_channel(fargs[0]))) {
+  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!mudconf.have_comsys ||
-      (!is_comm_all(player) && (player != ch->charge_who))) {
+  if (!context->server->configuration->have_comsys ||
+      (!is_comm_all(context->world->database, player) &&
+       (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
   for (user = ch->on_users; user; user = user->on_next) {
 
-    /*      if (is_connected(user->who)) */
+    /*      if (is_connected(context->world->database, user->who)) */
     {
       if (len) {
         snprintf(smbuf, sizeof(smbuf), " #%ld", user->who);
@@ -116,28 +124,32 @@ void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
 /* Returns a list of all channels. */
 void fun_clist(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   struct channel *ch;
 
-  if (!(ch = select_channel(fargs[0]))) {
+  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!mudconf.have_comsys ||
-      (!is_comm_all(player) && (player != ch->charge_who))) {
+  if (!context->server->configuration->have_comsys ||
+      (!is_comm_all(context->world->database, player) &&
+       (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
 
-  for (ch = (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
-       ch;
-       ch = (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
+  for (ch = (struct channel *)hash_table_first_entry(
+           &context->server->channels.channels);
+       ch; ch = (struct channel *)hash_table_next_entry(
+               &context->server->channels.channels)) {
     safe_tprintf_str(buff, bufc, "%s ", ch->name);
   }
 }
 
 void fun_beep(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   safe_chr(BEEP_CHAR, buff, bufc);
 }
 
@@ -146,7 +158,8 @@ void fun_beep(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  */
 
 void fun_ansi(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *s = fargs[0];
 
   while (*s) {
@@ -264,45 +277,65 @@ void fun_ansi(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_zone(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   DbRef it;
 
-  if (!mudconf.have_zones) {
+  if (!context->server->configuration->have_zones) {
     return;
   }
-  it = match_thing(player, fargs[0]);
-  if (it == NOTHING || !is_examinable(player, it)) {
+  it = match_thing(&context->command->match, player, fargs[0]);
+  if (it == NOTHING || !is_examinable(context, player, it)) {
     safe_str("#-1", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "#%ld", obj_zone(it));
+  safe_tprintf_str(buff, bufc, "#%ld",
+                   game_object_zone(context->world->database, it));
 }
 
 void fun_link(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
-  do_link(player, cause, 0, fargs[0], fargs[1]);
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
+  CommandInvocation invocation = {.context = context->command,
+                                  .player = player,
+                                  .cause = cause,
+                                  .first = fargs[0],
+                                  .second = fargs[1]};
+
+  do_link(&invocation);
 }
 
 void fun_tel(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
-  do_teleport(player, cause, 0, fargs[0], fargs[1]);
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
+  CommandInvocation invocation = {.context = context->command,
+                                  .player = player,
+                                  .cause = cause,
+                                  .first = fargs[0],
+                                  .second = fargs[1]};
+
+  do_teleport(&invocation);
 }
 
 void fun_pemit(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  do_pemit_list(player, fargs[0], fargs[1]);
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
+  do_pemit_list(context, context->server->configuration, player, fargs[0],
+                fargs[1]);
 }
 
 /*------------------------------------------------------------------------
  * fun_create: Creates a room, thing or exit
  */
 
-static int check_command(DbRef player, const char *name, char *buff,
-                         char **bufc) {
+static int check_command(GameDatabase *database,
+                         const ServerConfiguration *configuration,
+                         CommandRegistry *registry, DbRef player,
+                         const char *name, char *buff, char **bufc) {
   CMDENT *cmd;
 
-  if ((cmd = (CMDENT *)hash_table_find(name, &mudstate.command_htab)))
-    if (!check_access(player, cmd->perms)) {
+  if ((cmd = (CMDENT *)hash_table_find(name, &registry->commands)))
+    if (!check_access(database, configuration, player, cmd->perms)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return (1);
     }
@@ -310,7 +343,8 @@ static int check_command(DbRef player, const char *name, char *buff,
 }
 
 void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   DbRef thing;
   char sep, *name;
 
@@ -328,33 +362,41 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
 
   switch (sep) {
   case 'r':
-    if (check_command(player, "@dig", buff, bufc)) {
+    if (check_command(context->world->database, context->server->configuration,
+                      &context->server->command_registry, player, "@dig", buff,
+                      bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    thing = create_obj(player, TYPE_ROOM, name);
+    thing = create_obj(context, player, TYPE_ROOM, name);
     break;
   case 'e':
-    if (check_command(player, "@open", buff, bufc)) {
+    if (check_command(context->world->database, context->server->configuration,
+                      &context->server->command_registry, player, "@open", buff,
+                      bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    thing = create_obj(player, TYPE_EXIT, name);
+    thing = create_obj(context, player, TYPE_EXIT, name);
     if (thing != NOTHING) {
-      s_exits(thing, player);
-      s_next(thing, obj_exits(player));
-      s_exits(player, thing);
+      game_object_set_exits(context->world->database, thing, player);
+      game_object_set_next(context->world->database, thing,
+                           game_object_exits(context->world->database, player));
+      game_object_set_exits(context->world->database, player, thing);
     }
     break;
   default:
-    if (check_command(player, "@create", buff, bufc)) {
+    if (check_command(context->world->database, context->server->configuration,
+                      &context->server->command_registry, player, "@create",
+                      buff, bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    thing = create_obj(player, TYPE_THING, name);
+    thing = create_obj(context, player, TYPE_THING, name);
     if (thing != NOTHING) {
-      move_via_generic(thing, player, NOTHING, 0);
-      s_home(thing, new_home(player));
+      move_via_generic(context, thing, player, NOTHING, 0);
+      game_object_set_link(context->world->database, thing,
+                           new_home(context, player));
     }
     break;
   }
@@ -365,34 +407,38 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
  * fun_set: sets an attribute on an object
  */
 
-static void set_attr_internal(DbRef player, DbRef thing, int attrnum,
-                              char *attrtext, int key, char *buff,
-                              char **bufc) {
+static void set_attr_internal(EvaluationContext *context, DbRef player,
+                              DbRef thing, int attrnum, char *attrtext, int key,
+                              char *buff, char **bufc) {
   DbRef aowner;
   long aflags;
   int could_hear;
   Attribute *attr;
 
-  attr = attribute_by_number(attrnum);
-  attribute_parent_get_info(thing, attrnum, &aowner, &aflags);
-  if (attr && set_attr(player, thing, attr, aflags)) {
+  attr = attribute_by_number(context->world->database, attrnum);
+  attribute_parent_get_info(context->world->database, thing, attrnum, &aowner,
+                            &aflags);
+  if (attr && set_attr(context, player, thing, attr, aflags)) {
     if ((attr->check != nullptr) &&
-        (!(*attr->check)(0, player, thing, attrnum, attrtext))) {
+        (!(*attr->check)(context, 0, player, thing, attrnum, attrtext))) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    could_hear = is_hearer(thing);
-    attribute_add(thing, attrnum, attrtext, obj_owner(player), aflags);
-    handle_ears(thing, could_hear, is_hearer(thing));
-    if (!(key & SET_QUIET) && !is_quiet(player) && !is_quiet(thing))
-      notify_quiet(player, "Set.");
+    could_hear = is_hearer(context, thing);
+    attribute_add(context->world->database, thing, attrnum, attrtext,
+                  game_object_owner(context->world->database, player), aflags);
+    handle_ears(context, thing, could_hear, is_hearer(context, thing));
+    if (!(key & SET_QUIET) && !is_quiet(context->world->database, player) &&
+        !is_quiet(context->world->database, thing))
+      notify_quiet(context, player, "Set.");
   } else {
     safe_str("#-1 PERMISSION DENIED.", buff, bufc);
   }
 }
 
 void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   DbRef thing, thing2, aowner;
   char *p, *buff2;
   int atr, atr2, clear, flagvalue;
@@ -403,7 +449,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    * obj/attr form?
    */
 
-  if (parse_attrib(player, fargs[0], &thing, &atr)) {
+  if (parse_attrib(&context->command->match, player, fargs[0], &thing, &atr)) {
     if (atr != NOTHING) {
 
       /*
@@ -427,7 +473,9 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
        * valid attribute flag?
        */
 
-      flagvalue = name_table_search(player, indiv_attraccess_nametab, fargs[1]);
+      flagvalue = name_table_search(context->world->database,
+                                    context->server->configuration, player,
+                                    indiv_attraccess_nametab, fargs[1]);
       if (flagvalue < 0) {
         safe_str("#-1 CAN NOT SET", buff, bufc);
         return;
@@ -436,7 +484,8 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
        * make sure attribute is present
        */
 
-      if (!attribute_get_info(thing, atr, &aowner, &aflags)) {
+      if (!attribute_get_info(context->world->database, thing, atr, &aowner,
+                              &aflags)) {
         safe_str("#-1 ATTRIBUTE NOT PRESENT ON OBJECT", buff, bufc);
         return;
       }
@@ -444,8 +493,8 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
        * can we write to attribute?
        */
 
-      attr = attribute_by_number(atr);
-      if (!attr || !set_attr(player, thing, attr, aflags)) {
+      attr = attribute_by_number(context->world->database, atr);
+      if (!attr || !set_attr(context, player, thing, attr, aflags)) {
         safe_str("#-1 PERMISSION DENIED", buff, bufc);
         return;
       }
@@ -457,7 +506,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
         aflags &= ~flagvalue;
       else
         aflags |= flagvalue;
-      attribute_set_flags(thing, atr, aflags);
+      attribute_set_flags(context->world->database, thing, atr, aflags);
 
       return;
     }
@@ -466,7 +515,8 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    * find thing
    */
 
-  if ((thing = match_controlled(player, fargs[0])) == NOTHING) {
+  if ((thing = match_controlled(&context->command->match, player, fargs[0])) ==
+      NOTHING) {
     safe_str("#-1", buff, bufc);
     return;
   }
@@ -478,18 +528,18 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
   if (*p) {
     *p++ = 0;
-    atr = mkattr(fargs[1]);
+    atr = mkattr(context->world->database, fargs[1]);
     if (atr <= 0) {
       safe_str("#-1 UNABLE TO CREATE ATTRIBUTE", buff, bufc);
       return;
     }
-    attr = attribute_by_number(atr);
+    attr = attribute_by_number(context->world->database, atr);
     if (!attr) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
-    attribute_get_info(thing, atr, &aowner, &aflags);
-    if (!set_attr(player, thing, attr, aflags)) {
+    attribute_get_info(context->world->database, thing, atr, &aowner, &aflags);
+    if (!set_attr(context, player, thing, attr, aflags)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
@@ -500,16 +550,19 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
      */
     if (*p == '_') {
       StringCopy(buff2, p + 1);
-      if (!parse_attrib(player, p + 1, &thing2, &atr2) || (atr == NOTHING)) {
+      if (!parse_attrib(&context->command->match, player, p + 1, &thing2,
+                        &atr2) ||
+          (atr == NOTHING)) {
         free_lbuf(buff2);
         safe_str("#-1 NO MATCH", buff, bufc);
         return;
       }
-      attr2 = attribute_by_number(atr);
+      attr2 = attribute_by_number(context->world->database, atr);
       p = buff2;
-      attribute_parent_get_string(buff2, thing2, atr2, &aowner, &aflags);
+      attribute_parent_get_string(context->world->database, buff2, thing2, atr2,
+                                  &aowner, &aflags);
 
-      if (!attr2 || !see_attr(player, thing2, attr2, aowner, aflags)) {
+      if (!attr2 || !see_attr(context, player, thing2, attr2, aowner, aflags)) {
         free_lbuf(buff2);
         safe_str("#-1 PERMISSION DENIED", buff, bufc);
         return;
@@ -519,14 +572,14 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
      * set it
      */
 
-    set_attr_internal(player, thing, atr, p, 0, buff, bufc);
+    set_attr_internal(context, player, thing, atr, p, 0, buff, bufc);
     free_lbuf(buff2);
     return;
   }
   /*
    * set/clear a flag
    */
-  flag_set(thing, player, fargs[1], 0);
+  flag_set(context, context->world->indexes, thing, player, fargs[1], 0);
 }
 
 /*
@@ -604,18 +657,21 @@ static char *crypt_code(char *code, char *text, int type) {
  * Borrowed from DarkZone
  */
 void fun_zwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      (!is_controls(context, player, it) &&
+       !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_PLAYER) {
-      if (obj_zone(i) == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_PLAYER) {
+      if (game_object_zone(context->world->database, i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -635,18 +691,21 @@ void fun_zwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_zrooms(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      (!is_controls(context, player, it) &&
+       !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_ROOM) {
-      if (obj_zone(i) == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_ROOM) {
+      if (game_object_zone(context->world->database, i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -666,18 +725,21 @@ void fun_zrooms(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_zexits(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      (!is_controls(context, player, it) &&
+       !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_EXIT) {
-      if (obj_zone(i) == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_EXIT) {
+      if (game_object_zone(context->world->database, i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -697,18 +759,21 @@ void fun_zexits(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_zobjects(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      (!is_controls(context, player, it) &&
+       !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_THING) {
-      if (obj_zone(i) == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_THING) {
+      if (game_object_zone(context->world->database, i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -728,19 +793,22 @@ void fun_zobjects(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_zplayers(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || (!is_controls(player, it) && !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      (!is_controls(context, player, it) &&
+       !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_PLAYER)
-      if (obj_zone(i) == it) {
-        if (!(is_connected(i)))
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_PLAYER)
+      if (game_object_zone(context->world->database, i) == it) {
+        if (!(is_connected(context->world->database, i)))
           continue;
         if (len) {
           static char smbuf[SBUF_SIZE];
@@ -763,18 +831,21 @@ void fun_zplayers(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from DarkZone
  */
 void fun_inzone(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!mudconf.have_zones || !(is_controls(player, it) || !is_wizard(player))) {
+  if (!context->server->configuration->have_zones ||
+      !(is_controls(context, player, it) ||
+        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (typeof_obj(i) == TYPE_ROOM)
-      if (db[i].zone == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (typeof_obj(context->world->database, i) == TYPE_ROOM)
+      if (game_object_zone(context->world->database, i) == it) {
         if (len) {
           static char smbuf[SBUF_SIZE];
 
@@ -796,17 +867,19 @@ void fun_inzone(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from DarkZone
  */
 void fun_children(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
   DbRef i;
   size_t len = 0;
 
-  if (!(is_controls(player, it)) || !(is_wizard(player))) {
+  if (!(is_controls(context, player, it)) ||
+      !(is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < mudstate.db_top; i++)
-    if (obj_parent(i) == it) {
+  for (i = 0; i < context->server->database.top; i++)
+    if (game_object_parent(context->world->database, i) == it) {
       if (len) {
         static char smbuf[SBUF_SIZE];
 
@@ -825,17 +898,20 @@ void fun_children(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_encrypt(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   safe_str(crypt_code(fargs[1], fargs[0], 1), buff, bufc);
 }
 
 void fun_decrypt(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   safe_str(crypt_code(fargs[1], fargs[0], 0), buff, bufc);
 }
 
 void fun_objeval(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef obj;
   char *name, *bp, *str;
 
@@ -844,23 +920,26 @@ void fun_objeval(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   name = bp = alloc_lbuf("fun_objeval");
   str = fargs[0];
-  exec(name, &bp, 0, player, cause, EV_FCHECK | EV_STRIP | EV_EVAL, &str, cargs,
-       ncargs);
+  exec(context, name, &bp, 0, player, cause, EV_FCHECK | EV_STRIP | EV_EVAL,
+       &str, cargs, ncargs);
   *bp = '\0';
-  obj = match_thing(player, name);
+  obj = match_thing(&context->command->match, player, name);
 
   if ((obj == NOTHING) ||
-      ((obj_owner(obj) != player) && (!(is_wizard(player)))) || (obj == GOD))
+      ((game_object_owner(context->world->database, obj) != player) &&
+       (!(is_wizard(context->world->database, player)))) ||
+      (obj == GOD))
     obj = player;
 
   str = fargs[1];
-  exec(buff, bufc, 0, obj, obj, EV_FCHECK | EV_STRIP | EV_EVAL, &str, cargs,
-       ncargs);
+  exec(context, buff, bufc, 0, obj, obj, EV_FCHECK | EV_STRIP | EV_EVAL, &str,
+       cargs, ncargs);
   free_lbuf(name);
 }
 
 void fun_squish(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   char *p, *q, *bp;
   bp = alloc_lbuf("fun_squish");
   StringCopy(bp, fargs[0]);
@@ -880,7 +959,8 @@ void fun_squish(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_stripansi(char *buff, char **bufc, DbRef player, DbRef cause,
-                   char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                   char *fargs[], int nfargs, char *cargs[], int ncargs,
+                   EvaluationContext *context) {
   char new[LBUF_SIZE];
 
   strncpy(new, fargs[0], LBUF_SIZE - 1);
@@ -891,15 +971,16 @@ void fun_stripansi(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_zfun(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   DbRef aowner;
   long aflags;
   int attrib;
   char *tbuf1, *str;
 
-  DbRef zone = obj_zone(player);
+  DbRef zone = game_object_zone(context->world->database, player);
 
-  if (!mudconf.have_zones) {
+  if (!context->server->configuration->have_zones) {
     safe_str("#-1 ZONES DISABLED", buff, bufc);
     return;
   }
@@ -913,26 +994,30 @@ void fun_zfun(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   /*
    * find the user function attribute
    */
-  attrib = get_atr(upcasestr(fargs[0]));
+  attrib = get_atr(context->world->database, upcasestr(fargs[0]));
   if (!attrib) {
     safe_str("#-1 NO SUCH USER FUNCTION", buff, bufc);
     return;
   }
-  tbuf1 = attribute_parent_get(zone, attrib, &aowner, &aflags);
-  if (!see_attr(player, zone, (Attribute *)attribute_by_number(attrib), aowner,
-                aflags)) {
+  tbuf1 = attribute_parent_get(context->world->database, zone, attrib, &aowner,
+                               &aflags);
+  if (!see_attr(
+          context, player, zone,
+          (Attribute *)attribute_by_number(context->world->database, attrib),
+          aowner, aflags)) {
     safe_str("#-1 NO PERMISSION TO GET ATTRIBUTE", buff, bufc);
     free_lbuf(tbuf1);
     return;
   }
   str = tbuf1;
-  exec(buff, bufc, 0, zone, player, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       &(fargs[1]), nfargs - 1);
+  exec(context, buff, bufc, 0, zone, player, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, &(fargs[1]), nfargs - 1);
   free_lbuf(tbuf1);
 }
 
 void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   int spaces, number, ansinumber, count, i;
   static char buf[LBUF_SIZE];
   char *p, *q;
@@ -949,8 +1034,8 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   cp = curr = bp = alloc_lbuf("fun_columns");
   str = fargs[0];
-  exec(curr, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str, cargs,
-       ncargs);
+  exec(context, curr, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+       &str, cargs, ncargs);
   *bp = '\0';
   cp = trim_space_sep(cp, sep);
   if (!*cp) {
@@ -1019,7 +1104,7 @@ void fun_columns(char *buff, char **bufc, DbRef player, DbRef cause,
 /*
  * Code for objmem and playmem borrowed from PennMUSH 1.50
  */
-static int mem_usage(DbRef thing) {
+static int mem_usage(GameDatabase *database, DbRef thing) {
   int k;
   int ca;
   char *as;
@@ -1028,48 +1113,51 @@ static int mem_usage(DbRef thing) {
 
   k = sizeof(struct GameObject);
 
-  k += (int)strlen(Name(thing)) + 1;
-  for (ca = attribute_list_first(thing, &as); ca;
+  k += (int)strlen(game_object_name(database, thing)) + 1;
+  for (ca = attribute_list_first(database, thing, &as); ca;
        ca = attribute_list_next(&as)) {
-    str = attribute_get_raw(thing, ca);
+    str = attribute_get_raw(database, thing, ca);
     if (str && *str)
       k += (int)strlen(str);
-    attr = attribute_by_number(ca);
+    attr = attribute_by_number(database, ca);
     if (attr) {
       str = attr->name;
       if (str && *str)
-        k += (int)strlen(((Attribute *)attribute_by_number(ca))->name);
+        k += (int)strlen(attribute_by_number(database, ca)->name);
     }
   }
   return k;
 }
 
 void fun_objmem(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   DbRef thing;
 
-  thing = match_thing(player, fargs[0]);
-  if (thing == NOTHING || !is_examinable(player, thing)) {
+  thing = match_thing(&context->command->match, player, fargs[0]);
+  if (thing == NOTHING || !is_examinable(context, player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "%d", mem_usage(thing));
+  safe_tprintf_str(buff, bufc, "%d",
+                   mem_usage(context->world->database, thing));
 }
 
 void fun_playmem(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   int tot = 0;
   DbRef thing;
   DbRef j;
 
-  thing = match_thing(player, fargs[0]);
-  if (thing == NOTHING || !is_examinable(player, thing)) {
+  thing = match_thing(&context->command->match, player, fargs[0]);
+  if (thing == NOTHING || !is_examinable(context, player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  DO_WHOLE_DB(j)
-  if (obj_owner(j) == thing)
-    tot += mem_usage(j);
+  DO_WHOLE_DB(context->world->database, j)
+  if (game_object_owner(context->world->database, j) == thing)
+    tot += mem_usage(context->world->database, j);
   safe_tprintf_str(buff, bufc, "%d", tot);
 }
 
@@ -1077,14 +1165,15 @@ void fun_playmem(char *buff, char **bufc, DbRef player, DbRef cause,
  * Code for andflags() and orflags() borrowed from PennMUSH 1.50.
  * type = 0 for orflags, 1 for andflags.
  */
-static int handle_flaglists(DbRef player, char *name, char *fstr, int type) {
+static int handle_flaglists(EvaluationContext *context, DbRef player,
+                            char *name, char *fstr, int type) {
   char *s;
   char flagletter[2];
   FLAGSET fset;
   Flag p_type;
   int negate, temp;
   int ret = type;
-  DbRef it = match_thing(player, name);
+  DbRef it = match_thing(&context->command->match, player, name);
 
   negate = temp = 0;
 
@@ -1111,7 +1200,7 @@ static int handle_flaglists(DbRef player, char *name, char *fstr, int type) {
     flagletter[0] = *s;
     flagletter[1] = '\0';
 
-    if (!convert_flags(player, flagletter, &fset, &p_type)) {
+    if (!convert_flags(context, player, flagletter, &fset, &p_type)) {
 
       /*
        * Either we got a '!' that wasn't followed by a * *
@@ -1131,11 +1220,14 @@ static int handle_flaglists(DbRef player, char *name, char *fstr, int type) {
        * does the object have this flag?
        */
 
-      if ((obj_flags(it) & fset.word1) || (obj_flags2(it) & fset.word2) ||
-          (typeof_obj(it) == p_type)) {
-        if (is_player(it) && (fset.word2 == CONNECTED) &&
-            ((obj_flags(it) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-            !is_wizard(player))
+      if ((game_object_flags(context->world->database, it) & fset.word1) ||
+          (game_object_flags2(context->world->database, it) & fset.word2) ||
+          (typeof_obj(context->world->database, it) == p_type)) {
+        if (is_player(context->world->database, it) &&
+            (fset.word2 == CONNECTED) &&
+            ((game_object_flags(context->world->database, it) &
+              (WIZARD | DARK)) == (WIZARD | DARK)) &&
+            !is_wizard(context->world->database, player))
           temp = 0;
         else
           temp = 1;
@@ -1175,19 +1267,22 @@ static int handle_flaglists(DbRef player, char *name, char *fstr, int type) {
 }
 
 void fun_orflags(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   safe_tprintf_str(buff, bufc, "%d",
-                   handle_flaglists(player, fargs[0], fargs[1], 0));
+                   handle_flaglists(context, player, fargs[0], fargs[1], 0));
 }
 
 void fun_andflags(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   safe_tprintf_str(buff, bufc, "%d",
-                   handle_flaglists(player, fargs[0], fargs[1], 1));
+                   handle_flaglists(context, player, fargs[0], fargs[1], 1));
 }
 
 void fun_strtrunc(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   int number, count = 0;
   static char buf[LBUF_SIZE];
   char *p = (char *)fargs[0];
@@ -1230,7 +1325,8 @@ void fun_strtrunc(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_ifelse(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   /* This function now assumes that its arguments have not been
      evaluated. */
 
@@ -1238,24 +1334,25 @@ void fun_ifelse(char *buff, char **bufc, DbRef player, DbRef cause,
 
   mbuff = bp = alloc_lbuf("fun_ifelse");
   str = fargs[0];
-  exec(mbuff, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-       cargs, ncargs);
+  exec(context, mbuff, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+       &str, cargs, ncargs);
   *bp = '\0';
 
   if (!xlate(mbuff)) {
     str = fargs[2];
-    exec(buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-         cargs, ncargs);
+    exec(context, buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+         &str, cargs, ncargs);
   } else {
     str = fargs[1];
-    exec(buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-         cargs, ncargs);
+    exec(context, buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+         &str, cargs, ncargs);
   }
   free_lbuf(mbuff);
 }
 
 void fun_inc(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   int number;
 
   if (!is_number(fargs[0])) {
@@ -1267,7 +1364,8 @@ void fun_inc(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_dec(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   int number;
 
   if (!is_number(fargs[0])) {
@@ -1289,30 +1387,33 @@ void fun_dec(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  */
 
 void fun_hasattr(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef thing, aowner;
   long aflags;
   Attribute *attr;
   char *tbuf;
 
-  thing = match_thing(player, fargs[0]);
+  thing = match_thing(&context->command->match, player, fargs[0]);
   if (thing == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!is_examinable(player, thing)) {
+  } else if (!is_examinable(context, player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  attr = attribute_by_name(fargs[1]);
+  attr = attribute_by_name(context->world->database, fargs[1]);
   if (!attr) {
     safe_str("0", buff, bufc);
     return;
   }
-  attribute_get_info(thing, attr->number, &aowner, &aflags);
-  if (!see_attr(player, thing, attr, aowner, aflags))
+  attribute_get_info(context->world->database, thing, attr->number, &aowner,
+                     &aflags);
+  if (!see_attr(context, player, thing, attr, aowner, aflags))
     safe_str("0", buff, bufc);
   else {
-    tbuf = attribute_get(thing, attr->number, &aowner, &aflags);
+    tbuf = attribute_get(context->world->database, thing, attr->number, &aowner,
+                         &aflags);
     if (*tbuf)
       safe_str("1", buff, bufc);
     else
@@ -1322,30 +1423,33 @@ void fun_hasattr(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_hasattrp(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   DbRef thing, aowner;
   long aflags;
   Attribute *attr;
   char *tbuf;
 
-  thing = match_thing(player, fargs[0]);
+  thing = match_thing(&context->command->match, player, fargs[0]);
   if (thing == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!is_examinable(player, thing)) {
+  } else if (!is_examinable(context, player, thing)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  attr = attribute_by_name(fargs[1]);
+  attr = attribute_by_name(context->world->database, fargs[1]);
   if (!attr) {
     safe_str("0", buff, bufc);
     return;
   }
-  attribute_parent_get_info(thing, attr->number, &aowner, &aflags);
-  if (!see_attr(player, thing, attr, aowner, aflags))
+  attribute_parent_get_info(context->world->database, thing, attr->number,
+                            &aowner, &aflags);
+  if (!see_attr(context, player, thing, attr, aowner, aflags))
     safe_str("0", buff, bufc);
   else {
-    tbuf = attribute_parent_get(thing, attr->number, &aowner, &aflags);
+    tbuf = attribute_parent_get(context->world->database, thing, attr->number,
+                                &aowner, &aflags);
     if (*tbuf)
       safe_str("1", buff, bufc);
     else
@@ -1368,7 +1472,8 @@ void fun_hasattrp(char *buff, char **bufc, DbRef player, DbRef cause,
  * default(), edefault(), and udefault() borrowed from TinyMUSH 2.2
  */
 void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef thing, aowner;
   int attrib;
   long aflags;
@@ -1377,8 +1482,8 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
 
   objname = bp = alloc_lbuf("fun_default");
   str = fargs[0];
-  exec(objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
   *bp = '\0';
 
   /*
@@ -1388,12 +1493,16 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (objname != nullptr) {
-    if (parse_attrib(player, objname, &thing, &attrib) && (attrib != NOTHING)) {
-      attr = attribute_by_number(attrib);
+    if (parse_attrib(&context->command->match, player, objname, &thing,
+                     &attrib) &&
+        (attrib != NOTHING)) {
+      attr = attribute_by_number(context->world->database, attrib);
       if (attr && !(attr->flags & AF_IS_LOCK)) {
-        atr_gotten = attribute_parent_get(thing, attrib, &aowner, &aflags);
+        atr_gotten = attribute_parent_get(context->world->database, thing,
+                                          attrib, &aowner, &aflags);
         if (*atr_gotten &&
-            check_read_perms(player, thing, attr, aowner, aflags, buff, bufc)) {
+            check_read_perms(context, context->server->configuration, player,
+                             thing, attr, aowner, aflags, buff, bufc)) {
           safe_str(atr_gotten, buff, bufc);
           free_lbuf(atr_gotten);
           free_lbuf(objname);
@@ -1411,12 +1520,13 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   str = fargs[1];
-  exec(buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
 }
 
 void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   DbRef thing, aowner;
   int attrib;
   long aflags;
@@ -1425,8 +1535,8 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
 
   objname = bp = alloc_lbuf("fun_edefault");
   str = fargs[0];
-  exec(objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
   *bp = '\0';
 
   /*
@@ -1436,15 +1546,19 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (objname != nullptr) {
-    if (parse_attrib(player, objname, &thing, &attrib) && (attrib != NOTHING)) {
-      attr = attribute_by_number(attrib);
+    if (parse_attrib(&context->command->match, player, objname, &thing,
+                     &attrib) &&
+        (attrib != NOTHING)) {
+      attr = attribute_by_number(context->world->database, attrib);
       if (attr && !(attr->flags & AF_IS_LOCK)) {
-        atr_gotten = attribute_parent_get(thing, attrib, &aowner, &aflags);
+        atr_gotten = attribute_parent_get(context->world->database, thing,
+                                          attrib, &aowner, &aflags);
         if (*atr_gotten &&
-            check_read_perms(player, thing, attr, aowner, aflags, buff, bufc)) {
+            check_read_perms(context, context->server->configuration, player,
+                             thing, attr, aowner, aflags, buff, bufc)) {
           str = atr_gotten;
-          exec(buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL, &str,
-               (char **)nullptr, 0);
+          exec(context, buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL,
+               &str, (char **)nullptr, 0);
           free_lbuf(atr_gotten);
           free_lbuf(objname);
           return;
@@ -1461,12 +1575,13 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   str = fargs[1];
-  exec(buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
 }
 
 void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   DbRef thing, aowner;
   long aflags;
   int anum;
@@ -1480,8 +1595,8 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
 
   str = fargs[0];
   objname = bp = alloc_lbuf("fun_udefault");
-  exec(objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, objname, &bp, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
   *bp = '\0';
 
   /*
@@ -1491,22 +1606,25 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   if (objname != nullptr) {
-    if (parse_attrib(player, objname, &thing, &anum)) {
-      if ((anum == NOTHING) || (!is_good_obj(thing)))
+    if (parse_attrib(&context->command->match, player, objname, &thing,
+                     &anum)) {
+      if ((anum == NOTHING) || (!is_good_obj(context->world->database, thing)))
         ap = nullptr;
       else
-        ap = attribute_by_number(anum);
+        ap = attribute_by_number(context->world->database, anum);
     } else {
       thing = player;
-      ap = attribute_by_name(objname);
+      ap = attribute_by_name(context->world->database, objname);
     }
     if (ap) {
-      atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
+      atext = attribute_parent_get(context->world->database, thing, ap->number,
+                                   &aowner, &aflags);
       if (atext) {
         if (*atext &&
-            check_read_perms(player, thing, ap, aowner, aflags, buff, bufc)) {
+            check_read_perms(context, context->server->configuration, player,
+                             thing, ap, aowner, aflags, buff, bufc)) {
           str = atext;
-          exec(buff, bufc, 0, thing, cause, EV_FCHECK | EV_EVAL, &str,
+          exec(context, buff, bufc, 0, thing, cause, EV_FCHECK | EV_EVAL, &str,
                &(fargs[2]), nfargs - 1);
           free_lbuf(atext);
           free_lbuf(objname);
@@ -1524,8 +1642,8 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
    */
 
   str = fargs[1];
-  exec(buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK, &str,
-       cargs, ncargs);
+  exec(context, buff, bufc, 0, player, cause, EV_EVAL | EV_STRIP | EV_FCHECK,
+       &str, cargs, ncargs);
 }
 
 /*
@@ -1537,16 +1655,19 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_findable(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef obj = match_thing(player, fargs[0]);
-  DbRef victim = match_thing(player, fargs[1]);
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
+  DbRef obj = match_thing(&context->command->match, player, fargs[0]);
+  DbRef victim = match_thing(&context->command->match, player, fargs[1]);
 
   if (obj == NOTHING)
     safe_str("#-1 ARG1 NOT FOUND", buff, bufc);
   else if (victim == NOTHING)
     safe_str("#-1 ARG2 NOT FOUND", buff, bufc);
   else
-    safe_tprintf_str(buff, bufc, "%d", locatable(obj, victim, obj));
+    safe_tprintf_str(
+        buff, bufc, "%d",
+        locatable(context, context->server->configuration, obj, victim, obj));
 }
 
 /*
@@ -1558,7 +1679,8 @@ void fun_findable(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_isword(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   char *p;
 
   for (p = fargs[0]; *p; p++) {
@@ -1582,32 +1704,36 @@ void fun_isword(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_visible(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef it, thing, aowner;
   long aflags;
   int atr;
   Attribute *ap;
 
-  if ((it = match_thing(player, fargs[0])) == NOTHING) {
+  if ((it = match_thing(&context->command->match, player, fargs[0])) ==
+      NOTHING) {
     safe_str("0", buff, bufc);
     return;
   }
-  if (parse_attrib(player, fargs[1], &thing, &atr)) {
+  if (parse_attrib(&context->command->match, player, fargs[1], &thing, &atr)) {
     if (atr == NOTHING) {
-      safe_tprintf_str(buff, bufc, "%d", is_examinable(it, thing));
+      safe_tprintf_str(buff, bufc, "%d", is_examinable(context, it, thing));
       return;
     }
-    ap = attribute_by_number(atr);
-    attribute_parent_get_info(thing, atr, &aowner, &aflags);
-    safe_tprintf_str(buff, bufc, "%d", see_attr(it, thing, ap, aowner, aflags));
+    ap = attribute_by_number(context->world->database, atr);
+    attribute_parent_get_info(context->world->database, thing, atr, &aowner,
+                              &aflags);
+    safe_tprintf_str(buff, bufc, "%d",
+                     see_attr(context, it, thing, ap, aowner, aflags));
     return;
   }
-  thing = match_thing(player, fargs[1]);
-  if (!is_good_obj(thing)) {
+  thing = match_thing(&context->command->match, player, fargs[1]);
+  if (!is_good_obj(context->world->database, thing)) {
     safe_str("0", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "%d", is_examinable(it, thing));
+  safe_tprintf_str(buff, bufc, "%d", is_examinable(context, it, thing));
 }
 
 /*
@@ -1622,7 +1748,8 @@ void fun_visible(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_elements(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   int nwords, cur;
   char *ptrs[LBUF_SIZE / 2];
   char *wordlist, *s, *r, sep, *oldp;
@@ -1671,7 +1798,8 @@ void fun_elements(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_grab(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *r, *s, sep;
 
   varargs_preamble("GRAB", 3);
@@ -1692,7 +1820,8 @@ void fun_grab(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
 /* Same as grab, but return all matches */
 void fun_graball(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   char *r, *s, sep, *b;
 
   varargs_preamble("GRABALL", 3);
@@ -1718,7 +1847,8 @@ void fun_graball(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_scramble(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   int n, i, j;
   char c, *old;
 
@@ -1761,7 +1891,8 @@ static void swap(char **p, char **q) {
 }
 
 void fun_shuffle(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   char *words[LBUF_SIZE];
   int n, i, j;
   char sep;
@@ -1784,11 +1915,16 @@ void fun_shuffle(char *buff, char **bufc, DbRef player, DbRef cause,
  * sortby() code borrowed from TinyMUSH 2.2
  */
 
-static char ucomp_buff[LBUF_SIZE];
-static DbRef ucomp_cause;
-static DbRef ucomp_player;
+typedef struct UserFunctionComparatorContext UserFunctionComparatorContext;
+struct UserFunctionComparatorContext {
+  const char *code;
+  DbRef player;
+  DbRef cause;
+  EvaluationContext *evaluation;
+};
 
-static int u_comp(const void *s1, const void *s2) {
+static int u_comp(const void *s1, const void *s2, void *arg) {
+  const UserFunctionComparatorContext *sort_context = arg;
   /*
    * Note that this function is for use in conjunction with our own * *
    *
@@ -1798,8 +1934,10 @@ static int u_comp(const void *s1, const void *s2) {
   char *result, *tbuf, *elems[2], *bp, *str;
   int n;
 
-  if ((mudstate.func_invk_ctr > mudconf.func_invk_lim) ||
-      (mudstate.func_nest_lev > mudconf.func_nest_lim))
+  if ((sort_context->evaluation->function_invocations >
+       sort_context->evaluation->server->configuration->func_invk_lim) ||
+      (sort_context->evaluation->function_nesting >
+       sort_context->evaluation->server->configuration->func_nest_lim))
     return 0;
 
   tbuf = alloc_lbuf("u_comp");
@@ -1810,11 +1948,12 @@ static int u_comp(const void *s1, const void *s2) {
   elems[0] = (char *)s1;
   elems[1] = (char *)s2;
 #pragma clang diagnostic pop
-  StringCopy(tbuf, ucomp_buff);
+  StringCopy(tbuf, sort_context->code);
   result = bp = alloc_lbuf("u_comp");
   str = tbuf;
-  exec(result, &bp, 0, ucomp_player, ucomp_cause,
-       EV_STRIP | EV_FCHECK | EV_EVAL, &str, &(elems[0]), 2);
+  exec(sort_context->evaluation, result, &bp, 0, sort_context->player,
+       sort_context->cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str, &(elems[0]),
+       2);
   *bp = '\0';
   if (!result)
     n = 0;
@@ -1827,7 +1966,8 @@ static int u_comp(const void *s1, const void *s2) {
 }
 
 static void sane_qsort(void *array[], int left, int right,
-                       int (*compare)(const void *, const void *)) {
+                       int (*compare)(const void *, const void *, void *),
+                       void *context) {
   /*
    * Andrew Molitor's qsort, which doesn't require transitivity between
    * * * * * comparisons (essential for preventing crashes due to *
@@ -1864,7 +2004,7 @@ loop:
      * pivot. If it is, swap it with the next thing along
      */
 
-    if ((*compare)(array[i], array[left]) < 0) {
+    if ((*compare)(array[i], array[left], context) < 0) {
       last++;
       if (last == i)
         continue;
@@ -1894,18 +2034,20 @@ loop:
    */
 
   if ((last - left) < (right - last)) {
-    sane_qsort(array, left, last - 1, compare);
+    sane_qsort(array, left, last - 1, compare, context);
     left = last + 1;
     goto loop;
   } else {
-    sane_qsort(array, last + 1, right, compare);
+    sane_qsort(array, last + 1, right, compare, context);
     right = last - 1;
     goto loop;
   }
 }
 
 void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
+  UserFunctionComparatorContext comparator_context;
   char *atext, *list, *ptrs[LBUF_SIZE / 2], sep;
   int nptrs, anum;
   long aflags;
@@ -1917,29 +2059,33 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
   }
   varargs_preamble("SORTBY", 3);
 
-  if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !is_good_obj(thing))
+  if (parse_attrib(&context->command->match, player, fargs[0], &thing, &anum)) {
+    if ((anum == NOTHING) || !is_good_obj(context->world->database, thing))
       ap = nullptr;
     else
-      ap = attribute_by_number(anum);
+      ap = attribute_by_number(context->world->database, anum);
   } else {
     thing = player;
-    ap = attribute_by_name(fargs[0]);
+    ap = attribute_by_name(context->world->database, fargs[0]);
   }
 
   if (!ap) {
     return;
   }
-  atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
+  atext = attribute_parent_get(context->world->database, thing, ap->number,
+                               &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(context, player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
-  StringCopy(ucomp_buff, atext);
-  ucomp_player = thing;
-  ucomp_cause = cause;
+  comparator_context = (UserFunctionComparatorContext){
+      .code = atext,
+      .player = thing,
+      .cause = cause,
+      .evaluation = context,
+  };
 
   list = alloc_lbuf("fun_sortby");
   StringCopy(list, fargs[1]);
@@ -1948,7 +2094,7 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
   if (nptrs > 1) /*
                   * pointless to sort less than 2 elements
                   */
-    sane_qsort((void *)ptrs, 0, nptrs - 1, u_comp);
+    sane_qsort((void *)ptrs, 0, nptrs - 1, u_comp, &comparator_context);
 
   arr2list(ptrs, nptrs, buff, bufc, sep);
   free_lbuf(list);
@@ -1964,7 +2110,8 @@ void fun_sortby(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from TinyMUSH 2.2
  */
 void fun_last(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *s, *last, sep;
   int len, i;
 
@@ -2002,7 +2149,8 @@ void fun_last(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  * Borrowed from TinyMUSH 2.2
  */
 void fun_matchall(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   int wcount;
   char *r, *s, *old, sep, tbuf[16];
 
@@ -2041,17 +2189,19 @@ void fun_matchall(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from TinyMUSH 2.2
  */
 void fun_ports(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   DbRef target;
 
-  if (!is_wizard(player)) {
+  if (!is_wizard(context->world->database, player)) {
     return;
   }
-  target = lookup_player(player, fargs[0], 1);
-  if (!is_good_obj(target) || !is_connected(target)) {
+  target = lookup_player(context->world, player, fargs[0], 1);
+  if (!is_good_obj(context->world->database, target) ||
+      !is_connected(context->world->database, target)) {
     return;
   }
-  make_portlist(player, target, buff, bufc);
+  make_portlist(context->server->descriptors, player, target, buff, bufc);
 }
 
 /*
@@ -2064,7 +2214,8 @@ void fun_ports(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   DbRef aowner, thing;
   long aflags;
   int anum;
@@ -2078,23 +2229,24 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
    * Get the attribute, check the permissions.
    */
 
-  if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !is_good_obj(thing))
+  if (parse_attrib(&context->command->match, player, fargs[0], &thing, &anum)) {
+    if ((anum == NOTHING) || !is_good_obj(context->world->database, thing))
       ap = nullptr;
     else
-      ap = attribute_by_number(anum);
+      ap = attribute_by_number(context->world->database, anum);
   } else {
     thing = player;
-    ap = attribute_by_name(fargs[0]);
+    ap = attribute_by_name(context->world->database, fargs[0]);
   }
 
   if (!ap) {
     return;
   }
-  atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
+  atext = attribute_parent_get(context->world->database, thing, ap->number,
+                               &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(context, player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2119,8 +2271,8 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     os[1] = split_token(&cp2, sep);
     StringCopy(atextbuf, atext);
     str = atextbuf;
-    exec(buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-         &(os[0]), 2);
+    exec(context, buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+         &str, &(os[0]), 2);
   }
   free_lbuf(atext);
   free_lbuf(atextbuf);
@@ -2138,7 +2290,8 @@ void fun_mix(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  * Borrowed from TinyMUSH 2.2
  */
 void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef aowner, thing;
   long aflags;
   int anum, flag = 0;
@@ -2151,23 +2304,24 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
 
-  if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !is_good_obj(thing))
+  if (parse_attrib(&context->command->match, player, fargs[0], &thing, &anum)) {
+    if ((anum == NOTHING) || !is_good_obj(context->world->database, thing))
       ap = nullptr;
     else
-      ap = attribute_by_number(anum);
+      ap = attribute_by_number(context->world->database, anum);
   } else {
     thing = player;
-    ap = attribute_by_name(fargs[0]);
+    ap = attribute_by_name(context->world->database, fargs[0]);
   }
 
   if (!ap) {
     return;
   }
-  atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
+  atext = attribute_parent_get(context->world->database, thing, ap->number,
+                               &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(context, player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2199,8 +2353,8 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
 
       StringCopy(atextbuf, atext);
       str = atextbuf;
-      exec(buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-           &bp, 1);
+      exec(context, buff, bufc, 0, player, cause,
+           EV_STRIP | EV_FCHECK | EV_EVAL, &str, &bp, 1);
       prev = cbuf[0];
     }
   } else {
@@ -2209,8 +2363,8 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
 
       StringCopy(atextbuf, atext);
       str = atextbuf;
-      exec(buff, bufc, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-           &bp, 1);
+      exec(context, buff, bufc, 0, player, cause,
+           EV_STRIP | EV_FCHECK | EV_EVAL, &str, &bp, 1);
     }
   }
 
@@ -2227,7 +2381,8 @@ void fun_foreach(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from TinyMUSH 2.2
  */
 void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   DbRef aowner, thing;
   long aflags;
   int anum, nptrs1, nptrs2, nresults, i, j;
@@ -2246,23 +2401,24 @@ void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
    * Find our object and attribute
    */
 
-  if (parse_attrib(player, fargs[0], &thing, &anum)) {
-    if ((anum == NOTHING) || !is_good_obj(thing))
+  if (parse_attrib(&context->command->match, player, fargs[0], &thing, &anum)) {
+    if ((anum == NOTHING) || !is_good_obj(context->world->database, thing))
       ap = nullptr;
     else
-      ap = attribute_by_number(anum);
+      ap = attribute_by_number(context->world->database, anum);
   } else {
     thing = player;
-    ap = attribute_by_name(fargs[0]);
+    ap = attribute_by_name(context->world->database, fargs[0]);
   }
 
   if (!ap) {
     return;
   }
-  atext = attribute_parent_get(thing, ap->number, &aowner, &aflags);
+  atext = attribute_parent_get(context->world->database, thing, ap->number,
+                               &aowner, &aflags);
   if (!atext) {
     return;
-  } else if (!*atext || !see_attr(player, thing, ap, aowner, aflags)) {
+  } else if (!*atext || !see_attr(context, player, thing, ap, aowner, aflags)) {
     free_lbuf(atext);
     return;
   }
@@ -2290,8 +2446,8 @@ void fun_munge(char *buff, char **bufc, DbRef player, DbRef cause,
 
   bp = rlist = alloc_lbuf("fun_munge");
   str = atext;
-  exec(rlist, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL, &str,
-       &fargs[1], 1);
+  exec(context, rlist, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL,
+       &str, &fargs[1], 1);
   *bp = '\0';
 
   /*
@@ -2349,7 +2505,8 @@ static int getrandom(int x) {
 }
 
 void fun_die(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   int n, die, count;
   int total = 0;
 
@@ -2377,7 +2534,8 @@ void fun_die(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  * Borrowed from PennMUSH 1.50
  */
 void fun_lit(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   /*
    * Just returns the argument, literally
    */
@@ -2388,7 +2546,8 @@ void fun_lit(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  * shl() and shr() borrowed from PennMUSH 1.50
  */
 void fun_shl(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   if (is_number(fargs[0]) && is_number(fargs[1]))
     safe_tprintf_str(buff, bufc, "%d", atoi(fargs[0]) << atoi(fargs[1]));
   else
@@ -2396,7 +2555,8 @@ void fun_shl(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_shr(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   if (is_number(fargs[0]) && is_number(fargs[1]))
     safe_tprintf_str(buff, bufc, "%d", atoi(fargs[0]) >> atoi(fargs[1]));
   else
@@ -2415,7 +2575,8 @@ void fun_shr(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 #define MAXDIM 20
 
 void fun_vadd(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *v1[LBUF_SIZE], *v2[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, m, i;
@@ -2452,7 +2613,8 @@ void fun_vadd(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_vsub(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *v1[LBUF_SIZE], *v2[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, m, i;
@@ -2489,7 +2651,8 @@ void fun_vsub(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_vmul(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *v1[LBUF_SIZE], *v2[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, m, i;
@@ -2551,7 +2714,8 @@ void fun_vmul(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_vmag(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *v1[LBUF_SIZE];
   int n, i;
   double tmp, res = 0;
@@ -2586,7 +2750,8 @@ void fun_vmag(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_vunit(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   char *v1[LBUF_SIZE];
   char vres[MAXDIM][LBUF_SIZE];
   int n, i;
@@ -2628,7 +2793,8 @@ void fun_vunit(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_vdim(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char sep;
 
   if (fargs == 0)
@@ -2640,7 +2806,8 @@ void fun_vdim(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_strcat(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   int i;
 
   safe_str(fargs[0], buff, bufc);
@@ -2652,8 +2819,9 @@ void fun_strcat(char *buff, char **bufc, DbRef player, DbRef cause,
 /*
  * grep() and grepi() code borrowed from PennMUSH 1.50
  */
-static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
-                       size_t len, int insensitive) {
+static char *grep_util(EvaluationContext *context, DbRef player, DbRef thing,
+                       char *pattern, char *lookfor, size_t len,
+                       int insensitive) {
   /*
    * returns a list of attributes which match <pattern> on <thing> * *
    * * * whose contents have <lookfor>
@@ -2664,15 +2832,20 @@ static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
   int found;
   int ca;
   long aflags;
+  ObjectList attributes;
 
   tbuf1 = alloc_lbuf("grep_util");
   bufc = buf = alloc_lbuf("grep_util.parse_attrib");
   bp = tbuf1;
   safe_tprintf_str(buf, &bufc, "#%ld/%s", thing, pattern);
-  olist_push();
-  if (parse_attrib_wild(player, buf, &thing, 0, 0, 1)) {
-    for (ca = (int)olist_first(); ca != NOTHING; ca = (int)olist_next()) {
-      attrib = attribute_get(thing, ca, &aowner, &aflags);
+  object_list_initialize(&attributes);
+  if (parse_attrib_wild(&context->command->match, player, buf, &thing, 0, 0, 1,
+                        &attributes, context->server->configuration,
+                        &context->server->world_indexes)) {
+    for (ca = (int)object_list_first(&attributes); ca != NOTHING;
+         ca = (int)object_list_next(&attributes)) {
+      attrib =
+          attribute_get(context->world->database, thing, ca, &aowner, &aflags);
       text = attrib;
       found = 0;
       while (*text && !found) {
@@ -2687,27 +2860,29 @@ static char *grep_util(DbRef player, DbRef thing, char *pattern, char *lookfor,
         if (bp != tbuf1)
           safe_chr(' ', tbuf1, &bp);
 
-        safe_str((attribute_by_number(ca))->name, tbuf1, &bp);
+        safe_str((attribute_by_number(context->world->database, ca))->name,
+                 tbuf1, &bp);
       }
       free_lbuf(attrib);
     }
   }
   free_lbuf(buf);
   *bp = '\0';
-  olist_pop();
+  object_list_destroy(&attributes);
   return tbuf1;
 }
 
 void fun_grep(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   char *tp;
 
-  DbRef it = match_thing(player, fargs[0]);
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
 
   if (it == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(is_examinable(player, it))) {
+  } else if (!(is_examinable(context, player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -2722,21 +2897,22 @@ void fun_grep(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     safe_str("#-1 INVALID GREP PATTERN", buff, bufc);
     return;
   }
-  tp = grep_util(player, it, fargs[1], fargs[2], strlen(fargs[2]), 0);
+  tp = grep_util(context, player, it, fargs[1], fargs[2], strlen(fargs[2]), 0);
   safe_str(tp, buff, bufc);
   free_lbuf(tp);
 }
 
 void fun_grepi(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   char *tp;
 
-  DbRef it = match_thing(player, fargs[0]);
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
 
   if (it == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(is_examinable(player, it))) {
+  } else if (!(is_examinable(context, player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -2751,7 +2927,7 @@ void fun_grepi(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 INVALID GREP PATTERN", buff, bufc);
     return;
   }
-  tp = grep_util(player, it, fargs[1], fargs[2], strlen(fargs[2]), 1);
+  tp = grep_util(context, player, it, fargs[1], fargs[2], strlen(fargs[2]), 1);
   safe_str(tp, buff, bufc);
   free_lbuf(tp);
 }
@@ -2760,7 +2936,8 @@ void fun_grepi(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_art(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
 
   /*
    * checks a word and returns the appropriate article, "a" or "an"
@@ -2777,7 +2954,8 @@ void fun_art(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  * Borrowed from PennMUSH 1.50
  */
 void fun_alphamax(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   char *amax;
   int i = 1;
 
@@ -2799,7 +2977,8 @@ void fun_alphamax(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_alphamin(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   char *amin;
   int i = 1;
 
@@ -2822,7 +3001,8 @@ void fun_alphamin(char *buff, char **bufc, DbRef player, DbRef cause,
  */
 
 void fun_valid(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
 
   /*
    * Checks to see if a given <something> is valid as a parameter of a
@@ -2832,7 +3012,8 @@ void fun_valid(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!fargs[0] || !*fargs[0] || !fargs[1] || !*fargs[1])
     safe_str("0", buff, bufc);
   else if (!strcasecmp(fargs[0], "name"))
-    safe_tprintf_str(buff, bufc, "%d", ok_name(fargs[1]));
+    safe_tprintf_str(buff, bufc, "%d",
+                     ok_name(context->server->configuration, fargs[1]));
   else
     safe_str("#-1", buff, bufc);
 }
@@ -2841,8 +3022,9 @@ void fun_valid(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_hastype(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
-  DbRef it = match_thing(player, fargs[0]);
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
+  DbRef it = match_thing(&context->command->match, player, fargs[0]);
 
   if (it == NOTHING) {
     safe_str("#-1 NO MATCH", buff, bufc);
@@ -2855,19 +3037,27 @@ void fun_hastype(char *buff, char **bufc, DbRef player, DbRef cause,
   switch (*fargs[1]) {
   case 'r':
   case 'R':
-    safe_str((typeof_obj(it) == TYPE_ROOM) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(context->world->database, it) == TYPE_ROOM) ? "1"
+                                                                     : "0",
+             buff, bufc);
     break;
   case 'e':
   case 'E':
-    safe_str((typeof_obj(it) == TYPE_EXIT) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(context->world->database, it) == TYPE_EXIT) ? "1"
+                                                                     : "0",
+             buff, bufc);
     break;
   case 'p':
   case 'P':
-    safe_str((typeof_obj(it) == TYPE_PLAYER) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(context->world->database, it) == TYPE_PLAYER) ? "1"
+                                                                       : "0",
+             buff, bufc);
     break;
   case 't':
   case 'T':
-    safe_str((typeof_obj(it) == TYPE_THING) ? "1" : "0", buff, bufc);
+    safe_str((typeof_obj(context->world->database, it) == TYPE_THING) ? "1"
+                                                                      : "0",
+             buff, bufc);
     break;
   default:
     safe_str("#-1 NO SUCH TYPE", buff, bufc);
@@ -2879,45 +3069,49 @@ void fun_hastype(char *buff, char **bufc, DbRef player, DbRef cause,
  * Borrowed from PennMUSH 1.50
  */
 void fun_lparent(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   DbRef it;
   DbRef par;
   char tbuf1[20] = {0};
 
-  it = match_thing(player, fargs[0]);
-  if (!is_good_obj(it)) {
+  it = match_thing(&context->command->match, player, fargs[0]);
+  if (!is_good_obj(context->world->database, it)) {
     safe_str("#-1 NO MATCH", buff, bufc);
     return;
-  } else if (!(is_examinable(player, it))) {
+  } else if (!(is_examinable(context, player, it))) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
   snprintf(tbuf1, sizeof(tbuf1), "#%ld", it);
   safe_str(tbuf1, buff, bufc);
-  par = obj_parent(it);
+  par = game_object_parent(context->world->database, it);
 
-  while (is_good_obj(par) && is_examinable(player, it)) {
+  while (is_good_obj(context->world->database, par) &&
+         is_examinable(context, player, it)) {
     snprintf(tbuf1, sizeof(tbuf1), " #%ld", par);
     safe_str(tbuf1, buff, bufc);
     it = par;
-    par = obj_parent(par);
+    par = game_object_parent(context->world->database, par);
   }
 }
 
 /* stacksize - returns how many items are stuffed onto an object stack */
 
-static int stacksize(DbRef doer) {
+static int stacksize(GameDatabase *database, DbRef doer) {
   int i;
   AttributeStack *sp;
 
-  for (i = 0, sp = obj_stack(doer); sp != nullptr; sp = sp->next, i++)
+  for (i = 0, sp = game_object_stack(database, doer); sp != nullptr;
+       sp = sp->next, i++)
     ;
 
   return i;
 }
 
 void fun_lstack(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                char *fargs[], int nfargs, char *cargs[], int ncargs,
+                EvaluationContext *context) {
   AttributeStack *sp;
   DbRef doer;
 
@@ -2928,14 +3122,15 @@ void fun_lstack(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!fargs[0]) {
     doer = player;
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = obj_stack(doer); sp != nullptr; sp = sp->next) {
+  for (sp = game_object_stack(context->world->database, doer); sp != nullptr;
+       sp = sp->next) {
     safe_str(sp->data, buff, bufc);
     safe_chr(' ', buff, bufc);
   }
@@ -2945,7 +3140,8 @@ void fun_lstack(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_empty(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   AttributeStack *sp, *next;
   DbRef doer;
 
@@ -2956,24 +3152,26 @@ void fun_empty(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!fargs[0]) {
     doer = player;
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  for (sp = obj_stack(doer); sp != nullptr; sp = next) {
+  for (sp = game_object_stack(context->world->database, doer); sp != nullptr;
+       sp = next) {
     next = sp->next;
     free_lbuf(sp->data);
     free(sp);
   }
 
-  s_stack(doer, nullptr);
+  game_object_set_stack(context->world->database, doer, nullptr);
 }
 
 void fun_items(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs) {
+               char *fargs[], int nfargs, char *cargs[], int ncargs,
+               EvaluationContext *context) {
   DbRef doer;
 
   if (nfargs > 1) {
@@ -2983,18 +3181,19 @@ void fun_items(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!fargs[0]) {
     doer = player;
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  safe_tprintf_str(buff, bufc, "%d", stacksize(doer));
+  safe_tprintf_str(buff, bufc, "%d", stacksize(context->world->database, doer));
 }
 
 void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   AttributeStack *sp;
   DbRef doer;
   int count, pos;
@@ -3006,10 +3205,10 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   if (!fargs[0]) {
     doer = player;
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3019,15 +3218,15 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     pos = atoi(fargs[1]);
   }
 
-  if (stacksize(doer) == 0) {
+  if (stacksize(context->world->database, doer) == 0) {
     return;
   }
-  if (pos > (stacksize(doer) - 1)) {
+  if (pos > (stacksize(context->world->database, doer) - 1)) {
     safe_str("#-1 POSITION TOO LARGE", buff, bufc);
     return;
   }
   count = 0;
-  sp = obj_stack(doer);
+  sp = game_object_stack(context->world->database, doer);
   while (count != pos) {
     if (sp == nullptr) {
       return;
@@ -3040,7 +3239,8 @@ void fun_peek(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-             int nfargs, char *cargs[], int ncargs) {
+             int nfargs, char *cargs[], int ncargs,
+             EvaluationContext *context) {
   AttributeStack *sp, *prev = nullptr;
   DbRef doer;
   int count, pos;
@@ -3053,10 +3253,10 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   if (!fargs[0]) {
     doer = player;
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
@@ -3067,14 +3267,14 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     pos = atoi(fargs[1]);
   }
 
-  sp = obj_stack(doer);
+  sp = game_object_stack(context->world->database, doer);
   count = 0;
 
-  if (stacksize(doer) == 0) {
+  if (stacksize(context->world->database, doer) == 0) {
     return;
   }
 
-  if (pos > (stacksize(doer) - 1)) {
+  if (pos > (stacksize(context->world->database, doer) - 1)) {
     safe_str("#-1 POSITION TOO LARGE", buff, bufc);
     return;
   }
@@ -3090,7 +3290,7 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
   safe_str(sp->data, buff, bufc);
   if (count == 0) {
-    s_stack(doer, sp->next);
+    game_object_set_stack(context->world->database, doer, sp->next);
     free_lbuf(sp->data);
     free(sp);
   } else {
@@ -3101,7 +3301,8 @@ void fun_pop(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 }
 
 void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
-              int nfargs, char *cargs[], int ncargs) {
+              int nfargs, char *cargs[], int ncargs,
+              EvaluationContext *context) {
   AttributeStack *sp;
   DbRef doer;
   char *data;
@@ -3114,23 +3315,24 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     doer = player;
     data = fargs[0];
   } else {
-    doer = match_thing(player, fargs[0]);
+    doer = match_thing(&context->command->match, player, fargs[0]);
     data = fargs[1];
   }
 
-  if (!is_controls(player, doer)) {
+  if (!is_controls(context, player, doer)) {
     safe_str("#-1 PERMISSION DENIED", buff, bufc);
     return;
   }
-  if (stacksize(doer) >= mudconf.stack_limit) {
+  if (stacksize(context->world->database, doer) >=
+      context->server->configuration->stack_limit) {
     safe_str("#-1 STACK SIZE EXCEEDED", buff, bufc);
     return;
   }
   sp = malloc(sizeof(AttributeStack));
-  sp->next = obj_stack(doer);
+  sp->next = game_object_stack(context->world->database, doer);
   sp->data = alloc_lbuf("push");
   StringCopy(sp->data, data);
-  s_stack(doer, sp);
+  game_object_set_stack(context->world->database, doer, sp);
 }
 
 /* ---------------------------------------------------------------------------
@@ -3148,7 +3350,8 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
  */
 
 void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
-                  char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                  char *fargs[], int nfargs, char *cargs[], int ncargs,
+                  EvaluationContext *context) {
   int i, nqregs, curq, len;
   char *qregs[10];
   regex_t re;
@@ -3163,7 +3366,7 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
   if ((errcode = regcomp(&re, fargs[1], REG_EXTENDED)) != 0) {
     /* Matching error. */
     regerror(errcode, &re, errbuf, LINE_MAX);
-    notify_quiet(player, errbuf);
+    notify_quiet(context, player, errbuf);
     safe_chr('0', buff, bufc);
     return;
   }
@@ -3195,11 +3398,11 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
     if (curq < 0 || curq > 9)
       continue;
 
-    if (!mudstate.global_regs[curq])
-      mudstate.global_regs[curq] = alloc_lbuf("fun_regmatch");
+    if (!context->registers[curq])
+      context->registers[curq] = alloc_lbuf("fun_regmatch");
 
     if (!got_match || pmatch[i].rm_so == -1 || pmatch[i].rm_eo == -1) {
-      mudstate.global_regs[curq][0] = '\0';
+      context->registers[curq][0] = '\0';
       continue;
     }
     len = pmatch[i].rm_eo - pmatch[i].rm_so;
@@ -3207,9 +3410,8 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
       len = 0;
     if (len >= LBUF_SIZE)
       len = LBUF_SIZE - 1;
-    strncpy(mudstate.global_regs[curq], fargs[0] + pmatch[i].rm_so,
-            (size_t)len);
-    mudstate.global_regs[curq][len] = '\0'; /* must null-terminate */
+    strncpy(context->registers[curq], fargs[0] + pmatch[i].rm_so, (size_t)len);
+    context->registers[curq][len] = '\0'; /* must null-terminate */
   }
   regfree(&re);
 }
@@ -3221,7 +3423,8 @@ void fun_regmatch(char *buff, char **bufc, DbRef player, DbRef cause,
  */
 
 void fun_translate(char *buff, char **bufc, DbRef player, DbRef cause,
-                   char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                   char *fargs[], int nfargs, char *cargs[], int ncargs,
+                   EvaluationContext *context) {
   int type = 0;
 
   if (fargs[0] && fargs[1]) {
@@ -3242,29 +3445,34 @@ void fun_translate(char *buff, char **bufc, DbRef player, DbRef cause,
 extern NameTable lock_sw;
 
 void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                 char *fargs[], int nfargs, char *cargs[], int ncargs,
+                 EvaluationContext *context) {
   int switchkey = 0;
   DbRef thing, aowner;
   int atr;
   long aflags;
   Attribute *ap;
   struct BooleanExpression *okey;
+  char lock_text[LBUF_SIZE];
 
   if (*fargs[0]) {
-    switchkey = name_table_search(player, &lock_sw, fargs[0]);
+    switchkey = name_table_search(context->world->database,
+                                  context->server->configuration, player,
+                                  &lock_sw, fargs[0]);
     if (switchkey < 0) {
       safe_str("#-1 SWITCH ERROR", buff, bufc);
       return;
     }
   }
 
-  if (parse_attrib(player, fargs[1], &thing, &atr)) {
+  if (parse_attrib(&context->command->match, player, fargs[1], &thing, &atr)) {
     if (atr != NOTHING) {
-      if (!attribute_get_info(thing, atr, &aowner, &aflags)) {
+      if (!attribute_get_info(context->world->database, thing, atr, &aowner,
+                              &aflags)) {
         safe_str("#-1 ATTR NOT FOUND", buff, bufc);
         return;
       }
-      ap = attribute_by_number(atr);
+      ap = attribute_by_number(context->world->database, atr);
 
       /*
        * You may lock an attribute iff: you could write the
@@ -3273,15 +3481,17 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
        * and are trying to do something to #1.
        */
 
-      if (ap && (is_god(player) ||
-                 (!is_god(thing) &&
-                  (set_attr(player, player, ap, 0) &&
-                   (is_wizard(player) || aowner == obj_owner(player)))))) {
+      if (ap && (is_god(context->world->database, player) ||
+                 (!is_god(context->world->database, thing) &&
+                  (set_attr(context, player, player, ap, 0) &&
+                   (is_wizard(context->world->database, player) ||
+                    aowner == game_object_owner(context->world->database,
+                                                player)))))) {
         if (*fargs[2])
           aflags |= AF_LOCK;
         else
           aflags &= ~AF_LOCK;
-        attribute_set_flags(thing, atr, aflags);
+        attribute_set_flags(context->world->database, thing, atr, aflags);
         safe_str("1", buff, bufc);
       } else {
         safe_str("#-1 PERMISSION DENIED", buff, bufc);
@@ -3289,9 +3499,9 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
       return;
     }
   }
-  init_match(player, fargs[1], NOTYPE);
-  match_everything(MAT_EXIT_PARENTS);
-  thing = match_result();
+  init_match(&context->command->match, player, fargs[1], NOTYPE);
+  match_everything(&context->command->match, MAT_EXIT_PARENTS);
+  thing = match_result(&context->command->match);
 
   switch (thing) {
   case NOTHING:
@@ -3301,7 +3511,7 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 AMBIGUOUS MATCH", buff, bufc);
     return;
   default:
-    if (!is_controls(player, thing)) {
+    if (!is_controls(context, player, thing)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
     }
@@ -3311,12 +3521,13 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
     switchkey = A_LOCK;
 
   if (!*fargs[2]) {
-    attribute_clear(thing, switchkey);
+    attribute_clear(context->world->database, thing, switchkey);
     safe_str("1", buff, bufc);
     return;
   }
 
-  okey = boolean_expression_parse(player, fargs[2], 0);
+  okey = boolean_expression_parse(context->world->database, context, player,
+                                  fargs[2], 0);
   if (okey == TRUE_BOOLEXP) {
     safe_str("#-1 KEY ERROR", buff, bufc);
   } else {
@@ -3325,8 +3536,9 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
      * everything ok, do it
      */
 
-    attribute_add_raw(thing, switchkey,
-                      boolean_expression_unparse_quiet(player, okey));
+    boolean_expression_unparse_quiet(context->world->database, context,
+                                     lock_text, player, okey);
+    attribute_add_raw(context->world->database, thing, switchkey, lock_text);
     safe_str("1", buff, bufc);
   }
   boolean_expression_free(okey);

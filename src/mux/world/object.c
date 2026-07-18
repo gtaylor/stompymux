@@ -11,35 +11,38 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/world/world_context.h"
 
-#define IS_CLEAN(i)                                                            \
-  (is_flag_set(i, TYPE_GARBAGE, GOING) && (obj_location(i) == NOTHING) &&      \
-   (obj_contents(i) == NOTHING) && (obj_exits(i) == NOTHING) &&                \
-   (obj_next(i) == NOTHING) && (obj_owner(i) == GOD))
+#define IS_CLEAN(database, i)                                                  \
+  (is_flag_set((database), (i), TYPE_GARBAGE, GOING) &&                        \
+   (game_object_location(database, i) == NOTHING) &&                           \
+   (game_object_contents(database, i) == NOTHING) &&                           \
+   (game_object_exits(database, i) == NOTHING) &&                              \
+   (game_object_next(database, i) == NOTHING) &&                               \
+   (game_object_owner(database, i) == GOD))
 
-#define ZAP_LOC(i)                                                             \
+#define ZAP_LOC(database, i)                                                   \
   {                                                                            \
-    s_location(i, NOTHING);                                                    \
-    s_next(i, NOTHING);                                                        \
+    game_object_set_location(database, i, NOTHING);                            \
+    game_object_set_next(database, i, NOTHING);                                \
   }
-
-static int check_type;
-extern int boot_off(DbRef player, const char *message);
 
 /**
  * Log_pointer_err, Log_header_err, Log_simple_damage: Write errors to the
  * log file.
  */
-static void Log_pointer_err(DbRef prior, DbRef obj, DbRef loc, DbRef ref,
+static void Log_pointer_err(EvaluationContext *evaluation, DbRef prior,
+                            DbRef obj, DbRef loc, DbRef ref,
                             const char *reftype, const char *errtype) {
-  STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(obj);
+  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(&evaluation->server->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(loc);
+      log_type_and_name(&evaluation->server->log, loc);
     }
     log_text(": ");
     if (prior == NOTHING) {
@@ -48,44 +51,46 @@ static void Log_pointer_err(DbRef prior, DbRef obj, DbRef loc, DbRef ref,
       log_text("Next pointer");
     }
     log_text(" ");
-    log_type_and_name(ref);
+    log_type_and_name(&evaluation->server->log, ref);
     log_text(" ");
     log_text(errtype);
-    ENDLOG;
+    ENDLOG(&evaluation->server->log);
   }
 }
 
-static void Log_header_err(DbRef obj, DbRef loc, DbRef val, int is_object,
-                           const char *valtype, const char *errtype) {
-  STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(obj);
+static void Log_header_err(EvaluationContext *evaluation, DbRef obj, DbRef loc,
+                           DbRef val, int is_object, const char *valtype,
+                           const char *errtype) {
+  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(&evaluation->server->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(loc);
+      log_type_and_name(&evaluation->server->log, loc);
     }
     log_text(": ");
     log_text(valtype);
     log_text(" ");
     if (is_object)
-      log_type_and_name(val);
+      log_type_and_name(&evaluation->server->log, val);
     else
       log_number((int)val);
     log_text(" ");
     log_text(errtype);
-    ENDLOG;
+    ENDLOG(&evaluation->server->log);
   }
 }
 
-static void log_simple_error(DbRef obj, DbRef loc, const char *errtype) {
-  STARTLOG(LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(obj);
+static void log_simple_error(EvaluationContext *evaluation, DbRef obj,
+                             DbRef loc, const char *errtype) {
+  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(&evaluation->server->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(loc);
+      log_type_and_name(&evaluation->server->log, loc);
     }
     log_text(": ");
     log_text(errtype);
-    ENDLOG;
+    ENDLOG(&evaluation->server->log);
   }
 }
 
@@ -93,31 +98,33 @@ static void log_simple_error(DbRef obj, DbRef loc, const char *errtype) {
  * start_home, default_home, can_set_home, new_home, clone_home:
  * Routines for validating and determining homes.
  */
-DbRef start_home(void) {
-  if (mudconf.start_home != NOTHING)
-    return mudconf.start_home;
-  return mudconf.start_room;
+DbRef start_home(WorldContext *world) {
+  if (world->configuration->start_home != NOTHING)
+    return world->configuration->start_home;
+  return world->configuration->start_room;
 }
 
-DbRef default_home(void) {
-  if (mudconf.default_home != NOTHING)
-    return mudconf.default_home;
-  if (mudconf.start_home != NOTHING)
-    return mudconf.start_home;
-  return mudconf.start_room;
+DbRef default_home(WorldContext *world) {
+  if (world->configuration->default_home != NOTHING)
+    return world->configuration->default_home;
+  if (world->configuration->start_home != NOTHING)
+    return world->configuration->start_home;
+  return world->configuration->start_room;
 }
 
-int can_set_home(DbRef player, DbRef thing, DbRef home) {
-  if (!is_good_obj(player) || !is_good_obj(home) || (thing == home))
+int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
+                 DbRef home) {
+  if (!is_good_obj(evaluation->world->database, player) ||
+      !is_good_obj(evaluation->world->database, home) || (thing == home))
     return 0;
 
-  switch (typeof_obj(home)) {
+  switch (typeof_obj(evaluation->world->database, home)) {
   case TYPE_PLAYER:
   case TYPE_ROOM:
   case TYPE_THING:
-    if (is_going(home))
+    if (is_going(evaluation->world->database, home))
       return 0;
-    if (is_controls(player, home))
+    if (is_controls(evaluation, player, home))
       return 1;
   default:
     break;
@@ -125,38 +132,47 @@ int can_set_home(DbRef player, DbRef thing, DbRef home) {
   return 0;
 }
 
-DbRef new_home(DbRef player) {
+DbRef new_home(EvaluationContext *evaluation, DbRef player) {
+  WorldContext *world = evaluation->world;
   DbRef loc;
 
-  loc = obj_location(player);
-  if (can_set_home(obj_owner(player), player, loc))
+  loc = game_object_location(evaluation->world->database, player);
+  if (can_set_home(evaluation,
+                   game_object_owner(evaluation->world->database, player),
+                   player, loc))
     return loc;
-  loc = obj_home(obj_owner(player));
-  if (can_set_home(obj_owner(player), player, loc))
+  loc =
+      game_object_link(evaluation->world->database,
+                       game_object_owner(evaluation->world->database, player));
+  if (can_set_home(evaluation,
+                   game_object_owner(evaluation->world->database, player),
+                   player, loc))
     return loc;
-  return default_home();
+  return default_home(world);
 }
 
-DbRef clone_home(DbRef player, DbRef thing) {
+DbRef clone_home(EvaluationContext *evaluation, DbRef player, DbRef thing) {
   DbRef loc;
 
-  loc = obj_home(thing);
-  if (can_set_home(obj_owner(player), player, loc))
+  loc = game_object_link(evaluation->world->database, thing);
+  if (can_set_home(evaluation,
+                   game_object_owner(evaluation->world->database, player),
+                   player, loc))
     return loc;
-  return new_home(player);
+  return new_home(evaluation, player);
 }
 
 /**
  * Build a freelist
  */
-static void make_freelist(void) {
+static void make_freelist(GameDatabase *database) {
   DbRef i;
 
-  mudstate.freelist = NOTHING;
-  DO_WHOLE_DB_REV(i) {
-    if (IS_CLEAN(i)) {
-      s_link(i, mudstate.freelist);
-      mudstate.freelist = i;
+  database->freelist = NOTHING;
+  DO_WHOLE_DB_REV(database, i) {
+    if (IS_CLEAN(database, i)) {
+      game_object_set_link(database, i, database->freelist);
+      database->freelist = i;
     }
   }
 }
@@ -164,7 +180,8 @@ static void make_freelist(void) {
 /**
  * Create an object of the indicated type.
  */
-DbRef create_obj(DbRef player, int objtype, char *name) {
+DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
+                 char *name) {
   DbRef obj, owner;
   int okname = 0, self_owned, require_inherit;
   Flag f1, f2, f3;
@@ -176,53 +193,54 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
 
   switch (objtype) {
   case TYPE_ROOM:
-    f1 = mudconf.room_flags.word1;
-    f2 = mudconf.room_flags.word2;
-    f3 = mudconf.room_flags.word3;
-    okname = ok_name(name);
+    f1 = evaluation->world->configuration->room_flags.word1;
+    f2 = evaluation->world->configuration->room_flags.word2;
+    f3 = evaluation->world->configuration->room_flags.word3;
+    okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_THING:
-    f1 = mudconf.thing_flags.word1;
-    f2 = mudconf.thing_flags.word2;
-    f3 = mudconf.thing_flags.word3;
-    okname = ok_name(name);
+    f1 = evaluation->world->configuration->thing_flags.word1;
+    f2 = evaluation->world->configuration->thing_flags.word2;
+    f3 = evaluation->world->configuration->thing_flags.word3;
+    okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_EXIT:
-    f1 = mudconf.exit_flags.word1;
-    f2 = mudconf.exit_flags.word2;
-    f3 = mudconf.exit_flags.word3;
-    okname = ok_name(name);
+    f1 = evaluation->world->configuration->exit_flags.word1;
+    f2 = evaluation->world->configuration->exit_flags.word2;
+    f3 = evaluation->world->configuration->exit_flags.word3;
+    okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_PLAYER:
     if (player != NOTHING) {
-      f1 = mudconf.robot_flags.word1;
-      f2 = mudconf.robot_flags.word2;
-      f3 = mudconf.robot_flags.word3;
+      f1 = evaluation->world->configuration->robot_flags.word1;
+      f2 = evaluation->world->configuration->robot_flags.word2;
+      f3 = evaluation->world->configuration->robot_flags.word3;
       require_inherit = 1;
     } else {
-      f1 = mudconf.player_flags.word1;
-      f2 = mudconf.player_flags.word2;
-      f3 = mudconf.player_flags.word3;
+      f1 = evaluation->world->configuration->player_flags.word1;
+      f2 = evaluation->world->configuration->player_flags.word2;
+      f3 = evaluation->world->configuration->player_flags.word3;
       self_owned = 1;
     }
     buff = munge_space(name);
-    if (!badname_check(buff)) {
-      notify(player, "That name is not allowed.");
+    if (!badname_check(evaluation->world, buff)) {
+      notify(evaluation, player, "That name is not allowed.");
       free_lbuf(buff);
       return NOTHING;
     }
     if (*buff) {
-      okname = ok_player_name(buff);
+      okname = ok_player_name(evaluation->world->configuration, buff);
       if (!okname) {
-        notify(player, "That's a silly name for a player.");
+        notify(evaluation, player, "That's a silly name for a player.");
         free_lbuf(buff);
         return NOTHING;
       }
     }
     if (okname) {
-      okname = (lookup_player(NOTHING, buff, 0) == NOTHING);
+      okname = (lookup_player(evaluation->world, NOTHING, buff, 0) == NOTHING);
       if (!okname) {
-        notify_printf(player, "The name %s is already taken.", name);
+        notify_printf(evaluation, player, "The name %s is already taken.",
+                      name);
         free_lbuf(buff);
         return NOTHING;
       }
@@ -230,24 +248,24 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
     free_lbuf(buff);
     break;
   default:
-    log_simple(LOG_BUGS, "BUG", "OTYPE",
+    log_simple(&evaluation->server->log, LOG_BUGS, "BUG", "OTYPE",
                tprintf("Bad object type in create_obj: %d.", objtype));
     return NOTHING;
   }
 
   if (!self_owned) {
-    if (!is_good_obj(player))
+    if (!is_good_obj(evaluation->world->database, player))
       return NOTHING;
-    owner = obj_owner(player);
-    if (!is_good_obj(owner))
+    owner = game_object_owner(evaluation->world->database, player);
+    if (!is_good_obj(evaluation->world->database, owner))
       return NOTHING;
   } else {
     owner = NOTHING;
   }
 
   if (require_inherit) {
-    if (!is_inherits(player)) {
-      notify(player, "Permission denied.");
+    if (!is_inherits(evaluation->world->database, player)) {
+      notify(evaluation, player, "Permission denied.");
       return NOTHING;
     }
   }
@@ -258,65 +276,77 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
    */
 
   obj = NOTHING;
-  if (mudstate.freelist != NOTHING) {
-    obj = mudstate.freelist;
-    if (is_good_obj(obj) && IS_CLEAN(obj)) {
-      mudstate.freelist = obj_link(obj);
+  if (evaluation->world->database->freelist != NOTHING) {
+    obj = evaluation->world->database->freelist;
+    if (is_good_obj(evaluation->world->database, obj) &&
+        IS_CLEAN(evaluation->world->database, obj)) {
+      evaluation->world->database->freelist =
+          game_object_link(evaluation->world->database, obj);
     } else {
-      log_simple(LOG_PROBLEMS, "FRL", "DAMAG",
+      log_simple(&evaluation->server->log, LOG_PROBLEMS, "FRL", "DAMAG",
                  tprintf("Freelist damaged, bad object #%ld.", obj));
       obj = NOTHING;
-      mudstate.freelist = NOTHING;
+      evaluation->world->database->freelist = NOTHING;
     }
   }
   if (obj == NOTHING) {
-    obj = mudstate.db_top;
-    db_grow(mudstate.db_top + 1);
+    obj = evaluation->world->database->top;
+    db_grow(evaluation->world->database, evaluation->world->database->top + 1);
   }
-  attribute_free(obj); // Just in case...
+  attribute_free(evaluation->world->database, obj); // Just in case...
 
   /*
    * Set things up according to the object type
    */
 
-  s_location(obj, NOTHING);
-  s_contents(obj, NOTHING);
-  s_exits(obj, NOTHING);
-  s_next(obj, NOTHING);
-  s_link(obj, NOTHING);
+  game_object_set_location(evaluation->world->database, obj, NOTHING);
+  game_object_set_contents(evaluation->world->database, obj, NOTHING);
+  game_object_set_exits(evaluation->world->database, obj, NOTHING);
+  game_object_set_next(evaluation->world->database, obj, NOTHING);
+  game_object_set_link(evaluation->world->database, obj, NOTHING);
 
-  if (objtype == TYPE_ROOM && mudconf.room_parent > 0)
-    s_parent(obj, mudconf.room_parent);
-  else if (objtype == TYPE_EXIT && mudconf.exit_parent > 0)
-    s_parent(obj, mudconf.exit_parent);
-  else if (objtype == TYPE_PLAYER && mudconf.player_parent > 0)
-    s_parent(obj, mudconf.player_parent);
+  if (objtype == TYPE_ROOM && evaluation->world->configuration->room_parent > 0)
+    game_object_set_parent(evaluation->world->database, obj,
+                           evaluation->world->configuration->room_parent);
+  else if (objtype == TYPE_EXIT &&
+           evaluation->world->configuration->exit_parent > 0)
+    game_object_set_parent(evaluation->world->database, obj,
+                           evaluation->world->configuration->exit_parent);
+  else if (objtype == TYPE_PLAYER &&
+           evaluation->world->configuration->player_parent > 0)
+    game_object_set_parent(evaluation->world->database, obj,
+                           evaluation->world->configuration->player_parent);
   else
-    s_parent(obj, NOTHING);
+    game_object_set_parent(evaluation->world->database, obj, NOTHING);
 
-  if (objtype == TYPE_PLAYER && mudconf.player_zone > 0)
-    s_zone(obj, mudconf.player_zone);
+  if (objtype == TYPE_PLAYER &&
+      evaluation->world->configuration->player_zone > 0)
+    game_object_set_zone(evaluation->world->database, obj,
+                         evaluation->world->configuration->player_zone);
   else
-    s_zone(obj, obj_zone(player));
+    game_object_set_zone(evaluation->world->database, obj,
+                         game_object_zone(evaluation->world->database, player));
 
-  s_flags(obj, objtype | f1);
-  s_flags2(obj, f2);
-  s_flags3(obj, f3);
-  s_owner(obj, (self_owned ? obj : owner));
-  unmark(obj);
+  game_object_set_flags(evaluation->world->database, obj, objtype | f1);
+  game_object_set_flags2(evaluation->world->database, obj, f2);
+  game_object_set_flags3(evaluation->world->database, obj, f3);
+  game_object_set_owner(evaluation->world->database, obj,
+                        (self_owned ? obj : owner));
+  unmark(evaluation->world->database, obj);
   buff = munge_space((char *)name);
-  object_name_set(obj, buff);
+  object_name_set(evaluation->world->database, obj, buff);
   free_lbuf(buff);
 
   if (objtype == TYPE_PLAYER) {
     time(&tt);
     buff = (char *)ctime(&tt);
     buff[strlen(buff) - 1] = '\0';
-    attribute_add_raw(obj, A_LAST, buff);
+    attribute_add_raw(evaluation->world->database, obj, A_LAST, buff);
 
-    add_player_name(obj, Name(obj));
+    add_player_name(evaluation->world, obj,
+                    game_object_name(evaluation->world->database, obj));
   }
-  make_freelist();
+  make_freelist(evaluation->world->database);
   return obj;
 }
 
@@ -324,96 +354,104 @@ DbRef create_obj(DbRef player, int objtype, char *name) {
  * Destroy an object. Assumes it has already been removed from
  * all lists and has no contents or exits.
  */
-void destroy_obj(DbRef player, DbRef obj) {
+void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
   DbRef owner;
   int good_owner;
   AttributeStack *sp, *next;
   char *tname;
 
-  if (!is_good_obj(obj))
+  if (!is_good_obj(evaluation->world->database, obj))
     return;
 
   /*
    * Validate the owner
    */
 
-  owner = obj_owner(obj);
-  good_owner = is_good_owner(owner);
+  owner = game_object_owner(evaluation->world->database, obj);
+  good_owner = is_good_owner(evaluation->world->database, owner);
 
   /*
    * Halt any pending commands (waiting or semaphore)
    */
-  if (halt_que(NOTHING, obj) > 0) {
-    if (good_owner && !is_quiet(obj) && !is_quiet(owner)) {
-      notify(owner, "Halted.");
+  if (halt_que(evaluation->server->commands, NOTHING, obj) > 0) {
+    if (good_owner && !is_quiet(evaluation->world->database, obj) &&
+        !is_quiet(evaluation->world->database, owner)) {
+      notify(evaluation, owner, "Halted.");
     }
   }
-  nfy_que(obj, 0, NFY_DRAIN, 0);
+  nfy_que(evaluation->server->commands, obj, 0, NFY_DRAIN, 0);
 
-  if ((player != NOTHING) && !is_quiet(player)) {
-    if (good_owner && obj_owner(player) != owner) {
+  if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
+    if (good_owner &&
+        game_object_owner(evaluation->world->database, player) != owner) {
       if (owner == obj) {
-        notify_printf(player, "Destroyed. %s(#%ld)", Name(obj), obj);
+        notify_printf(evaluation, player, "Destroyed. %s(#%ld)",
+                      game_object_name(evaluation->world->database, obj), obj);
       } else {
         tname = alloc_sbuf("destroy_obj");
-        StringCopy(tname, Name(owner));
-        notify_printf(player, "Destroyed. %s's %s(#%ld)", tname, Name(obj),
-                      obj);
+        StringCopy(tname, game_object_name(evaluation->world->database, owner));
+        notify_printf(evaluation, player, "Destroyed. %s's %s(#%ld)", tname,
+                      game_object_name(evaluation->world->database, obj), obj);
         free_sbuf(tname);
       }
-    } else if (!is_quiet(obj)) {
-      notify(player, "Destroyed.");
+    } else if (!is_quiet(evaluation->world->database, obj)) {
+      notify(evaluation, player, "Destroyed.");
     }
   }
 
-  attribute_free(obj);
+  attribute_free(evaluation->world->database, obj);
   /* object_name_set()'s parameter isn't const-correct; "Garbage" is only
      read (copied) here. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  object_name_set(obj, (char *)"Garbage");
+  object_name_set(evaluation->world->database, obj, (char *)"Garbage");
 #pragma clang diagnostic pop
-  s_flags(obj, (TYPE_GARBAGE | GOING));
-  s_flags2(obj, 0);
-  s_flags3(obj, 0);
-  s_powers(obj, 0);
-  s_powers2(obj, 0);
-  s_location(obj, NOTHING);
-  s_contents(obj, NOTHING);
-  s_exits(obj, NOTHING);
-  s_next(obj, NOTHING);
-  s_link(obj, NOTHING);
-  s_owner(obj, GOD);
-  s_parent(obj, NOTHING);
-  s_zone(obj, NOTHING);
+  game_object_set_flags(evaluation->world->database, obj,
+                        (TYPE_GARBAGE | GOING));
+  game_object_set_flags2(evaluation->world->database, obj, 0);
+  game_object_set_flags3(evaluation->world->database, obj, 0);
+  game_object_set_powers(evaluation->world->database, obj, 0);
+  game_object_set_powers2(evaluation->world->database, obj, 0);
+  game_object_set_location(evaluation->world->database, obj, NOTHING);
+  game_object_set_contents(evaluation->world->database, obj, NOTHING);
+  game_object_set_exits(evaluation->world->database, obj, NOTHING);
+  game_object_set_next(evaluation->world->database, obj, NOTHING);
+  game_object_set_link(evaluation->world->database, obj, NOTHING);
+  game_object_set_owner(evaluation->world->database, obj, GOD);
+  game_object_set_parent(evaluation->world->database, obj, NOTHING);
+  game_object_set_zone(evaluation->world->database, obj, NOTHING);
 
   /*
    * Clear the stack
    */
-  for (sp = obj_stack(obj); sp != nullptr; sp = next) {
+  for (sp = game_object_stack(evaluation->world->database, obj); sp != nullptr;
+       sp = next) {
     next = sp->next;
     free_lbuf(sp->data);
     free(sp);
   }
 
-  s_stack(obj, nullptr);
+  game_object_set_stack(evaluation->world->database, obj, nullptr);
 
-  if (mudconf.have_comsys)
-    toast_player(obj);
+  if (evaluation->world->configuration->have_comsys)
+    toast_player(evaluation, obj);
 
-  make_freelist();
+  make_freelist(evaluation->world->database);
   return;
 }
 
 /**
  * Get rid of KEY contents of object.
  */
-void divest_object(DbRef thing) {
+void divest_object(EvaluationContext *evaluation, DbRef thing) {
   DbRef curr, temp;
 
-  SAFE_DOLIST(curr, temp, obj_contents(thing)) {
-    if (!is_controls(thing, curr) && has_location(curr) && has_key_flag(curr)) {
-      move_via_generic(curr, HOME, NOTHING, 0);
+  SAFE_DOLIST(evaluation->world->database, curr, temp,
+              game_object_contents(evaluation->world->database, thing)) {
+    if (!is_controls(evaluation, thing, curr) &&
+        has_location(evaluation->world->database, curr) &&
+        has_key_flag(evaluation->world->database, curr)) {
+      move_via_generic(evaluation, curr, HOME, NOTHING, 0);
     }
   }
 }
@@ -421,31 +459,35 @@ void divest_object(DbRef thing) {
 /**
  * Empties the contents of a GOING object.
  */
-void empty_obj(DbRef obj) {
+void empty_obj(EvaluationContext *evaluation, DbRef obj) {
   DbRef targ, next;
 
   /*
    * Send the contents home
    */
 
-  SAFE_DOLIST(targ, next, obj_contents(obj)) {
-    if (!has_location(targ)) {
-      log_simple_error(targ, obj,
+  SAFE_DOLIST(evaluation->world->database, targ, next,
+              game_object_contents(evaluation->world->database, obj)) {
+    if (!has_location(evaluation->world->database, targ)) {
+      log_simple_error(evaluation, targ, obj,
                        "Funny object type in contents list of GOING location. "
                        "Flush terminated.");
       break;
-    } else if (obj_location(targ) != obj) {
-      Log_header_err(targ, obj, obj_location(targ), 1, "Location",
+    } else if (game_object_location(evaluation->world->database, targ) != obj) {
+      Log_header_err(evaluation, targ, obj,
+                     game_object_location(evaluation->world->database, targ), 1,
+                     "Location",
                      "indicates object really in another location during "
                      "cleanup of GOING location.  Flush terminated.");
       break;
     } else {
-      ZAP_LOC(targ);
-      if (obj_home(targ) == obj) {
-        s_home(targ, new_home(targ));
+      ZAP_LOC(evaluation->world->database, targ);
+      if (game_object_link(evaluation->world->database, targ) == obj) {
+        game_object_set_link(evaluation->world->database, targ,
+                             new_home(evaluation, targ));
       }
-      move_via_generic(targ, HOME, NOTHING, 0);
-      divest_object(targ);
+      move_via_generic(evaluation, targ, HOME, NOTHING, 0);
+      divest_object(evaluation, targ);
     }
   }
 
@@ -453,20 +495,23 @@ void empty_obj(DbRef obj) {
    * Destroy the exits
    */
 
-  SAFE_DOLIST(targ, next, obj_exits(obj)) {
-    if (!is_exit(targ)) {
+  SAFE_DOLIST(evaluation->world->database, targ, next,
+              game_object_exits(evaluation->world->database, obj)) {
+    if (!is_exit(evaluation->world->database, targ)) {
       log_simple_error(
-          targ, obj,
+          evaluation, targ, obj,
           "Funny object type in exit list of GOING location. Flush "
           "terminated.");
       break;
-    } else if (obj_exits(targ) != obj) {
-      Log_header_err(targ, obj, obj_exits(targ), 1, "Location",
+    } else if (game_object_exits(evaluation->world->database, targ) != obj) {
+      Log_header_err(evaluation, targ, obj,
+                     game_object_exits(evaluation->world->database, targ), 1,
+                     "Location",
                      "indicates exit really in another location during cleanup "
                      "of GOING location.  Flush terminated.");
       break;
     } else {
-      destroy_obj(NOTHING, targ);
+      destroy_obj(evaluation, NOTHING, targ);
     }
   }
 }
@@ -474,27 +519,31 @@ void empty_obj(DbRef obj) {
 /**
  * Destroys an exit.
  */
-void destroy_exit(DbRef exit) {
+void destroy_exit(EvaluationContext *evaluation, DbRef exit) {
   DbRef loc;
 
-  loc = obj_exits(exit);
-  s_exits(loc, remove_first(obj_exits(loc), exit));
-  destroy_obj(NOTHING, exit);
+  loc = game_object_exits(evaluation->world->database, exit);
+  game_object_set_exits(
+      evaluation->world->database, loc,
+      remove_first(evaluation->world->database,
+                   game_object_exits(evaluation->world->database, loc), exit));
+  destroy_obj(evaluation, NOTHING, exit);
 }
 
 /**
  * Destroys a thing.
  */
-void destroy_thing(DbRef thing) {
-  move_via_generic(thing, NOTHING, obj_owner(thing), 0);
-  empty_obj(thing);
-  destroy_obj(NOTHING, thing);
+void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
+  move_via_generic(evaluation, thing, NOTHING,
+                   game_object_owner(evaluation->world->database, thing), 0);
+  empty_obj(evaluation, thing);
+  destroy_obj(evaluation, NOTHING, thing);
 }
 
 /**
  * Destroys a player.
  */
-void destroy_player(DbRef victim) {
+void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   DbRef aowner, player;
   int count;
   long aflags;
@@ -503,39 +552,43 @@ void destroy_player(DbRef victim) {
   /*
    * Bye bye...
    */
-  player = (DbRef)atoi(attribute_get_raw(victim, A_DESTROYER));
-  toast_player(victim);
-  boot_off(victim, "You have been destroyed!");
-  halt_que(victim, NOTHING);
-  count = chown_all(victim, player);
+  player = (DbRef)atoi(
+      attribute_get_raw(evaluation->world->database, victim, A_DESTROYER));
+  toast_player(evaluation, victim);
+  boot_off(evaluation->world->descriptors, victim, "You have been destroyed!");
+  halt_que(evaluation->server->commands, victim, NOTHING);
+  count = chown_all(evaluation->world->database, victim, player);
 
   /*
    * Remove the name from the name hash table
    */
 
-  delete_player_name(victim, Name(victim));
-  buf = attribute_parent_get(victim, A_ALIAS, &aowner, &aflags);
-  delete_player_name(victim, buf);
+  delete_player_name(evaluation->world, victim,
+                     game_object_name(evaluation->world->database, victim));
+  buf = attribute_parent_get(evaluation->world->database, victim, A_ALIAS,
+                             &aowner, &aflags);
+  delete_player_name(evaluation->world, victim, buf);
   free_lbuf(buf);
 
-  move_via_generic(victim, NOTHING, player, 0);
-  destroy_obj(NOTHING, victim);
-  notify_quiet(player, tprintf("(%d objects @chowned to you)", count));
+  move_via_generic(evaluation, victim, NOTHING, player, 0);
+  destroy_obj(evaluation, NOTHING, victim);
+  notify_quiet(evaluation, player,
+               tprintf("(%d objects @chowned to you)", count));
 }
 
 /**
  * Purges a GOING object.
  */
-static void purge_going(void) {
+static void purge_going(EvaluationContext *evaluation, bool full_check) {
   DbRef i;
 
-  DO_WHOLE_DB(i) {
-    if (!is_going(i))
+  DO_WHOLE_DB(evaluation->world->database, i) {
+    if (!is_going(evaluation->world->database, i))
       continue;
 
-    switch (typeof_obj(i)) {
+    switch (typeof_obj(evaluation->world->database, i)) {
     case TYPE_PLAYER:
-      destroy_player(i);
+      destroy_player(evaluation, i);
       break;
     case TYPE_ROOM:
 
@@ -543,14 +596,14 @@ static void purge_going(void) {
        * Room scheduled for destruction... do it
        */
 
-      empty_obj(i);
-      destroy_obj(NOTHING, i);
+      empty_obj(evaluation, i);
+      destroy_obj(evaluation, NOTHING, i);
       break;
     case TYPE_THING:
-      destroy_thing(i);
+      destroy_thing(evaluation, i);
       break;
     case TYPE_EXIT:
-      destroy_exit(i);
+      destroy_exit(evaluation, i);
       break;
     case TYPE_GARBAGE:
       break;
@@ -560,9 +613,9 @@ static void purge_going(void) {
        * Something else... How did this happen?
        */
 
-      log_simple_error(i, NOTHING,
+      log_simple_error(evaluation, i, NOTHING,
                        "GOING object with unexpected type.  Destroyed.");
-      destroy_obj(NOTHING, i);
+      destroy_obj(evaluation, NOTHING, i);
     }
   }
 }
@@ -570,95 +623,111 @@ static void purge_going(void) {
 /**
  * Look for references to GOING or illegal objects.
  */
-static void check_dead_refs(void) {
+static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
   DbRef targ, owner, i, j;
   long aflags;
   int dirty;
   char *str;
   FWDLIST *fp;
 
-  DO_WHOLE_DB(i) {
+  DO_WHOLE_DB(evaluation->world->database, i) {
 
     /*
      * Check the parent
      */
 
-    targ = obj_parent(i);
-    if (is_good_obj(targ)) {
-      if (is_going(targ)) {
-        s_parent(i, NOTHING);
-        owner = obj_owner(i);
+    targ = game_object_parent(evaluation->world->database, i);
+    if (is_good_obj(evaluation->world->database, targ)) {
+      if (is_going(evaluation->world->database, targ)) {
+        game_object_set_parent(evaluation->world->database, i, NOTHING);
+        owner = game_object_owner(evaluation->world->database, i);
 
-        if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-          notify_printf(owner, "Parent cleared on %s(#%ld)", Name(i), i);
+        if (is_good_owner(evaluation->world->database, owner) &&
+            !is_quiet(evaluation->world->database, i) &&
+            !is_quiet(evaluation->world->database, owner)) {
+          notify_printf(evaluation, owner, "Parent cleared on %s(#%ld)",
+                        game_object_name(evaluation->world->database, i), i);
         }
       }
     } else if (targ != NOTHING) {
-      Log_header_err(i, obj_location(i), targ, 1, "Parent",
-                     "is invalid.  Cleared.");
-      s_parent(i, NOTHING);
+      Log_header_err(evaluation, i,
+                     game_object_location(evaluation->world->database, i), targ,
+                     1, "Parent", "is invalid.  Cleared.");
+      game_object_set_parent(evaluation->world->database, i, NOTHING);
     }
     /*
      * Check the zone
      */
 
-    targ = obj_zone(i);
-    if (is_good_obj(targ)) {
-      if (is_going(targ)) {
-        s_zone(i, NOTHING);
-        owner = obj_owner(i);
-        if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-          notify_printf(owner, "Zone cleared on %s(#%ld)", Name(i), i);
+    targ = game_object_zone(evaluation->world->database, i);
+    if (is_good_obj(evaluation->world->database, targ)) {
+      if (is_going(evaluation->world->database, targ)) {
+        game_object_set_zone(evaluation->world->database, i, NOTHING);
+        owner = game_object_owner(evaluation->world->database, i);
+        if (is_good_owner(evaluation->world->database, owner) &&
+            !is_quiet(evaluation->world->database, i) &&
+            !is_quiet(evaluation->world->database, owner)) {
+          notify_printf(evaluation, owner, "Zone cleared on %s(#%ld)",
+                        game_object_name(evaluation->world->database, i), i);
         }
       }
     } else if (targ != NOTHING) {
-      Log_header_err(i, obj_location(i), targ, 1, "Zone",
-                     "is invalid. Cleared.");
-      s_zone(i, NOTHING);
+      Log_header_err(evaluation, i,
+                     game_object_location(evaluation->world->database, i), targ,
+                     1, "Zone", "is invalid. Cleared.");
+      game_object_set_zone(evaluation->world->database, i, NOTHING);
     }
-    switch (typeof_obj(i)) {
+    switch (typeof_obj(evaluation->world->database, i)) {
     case TYPE_PLAYER:
     case TYPE_THING:
 
-      if (is_going(i))
+      if (is_going(evaluation->world->database, i))
         break;
 
       /*
        * Check the home
        */
 
-      targ = obj_home(i);
-      if (is_good_obj(targ)) {
-        if (is_going(targ)) {
-          s_home(i, new_home(i));
-          owner = obj_owner(i);
-          if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-            notify_printf(owner, "Home reset on %s(#%ld)", Name(i), i);
+      targ = game_object_link(evaluation->world->database, i);
+      if (is_good_obj(evaluation->world->database, targ)) {
+        if (is_going(evaluation->world->database, targ)) {
+          game_object_set_link(evaluation->world->database, i,
+                               new_home(evaluation, i));
+          owner = game_object_owner(evaluation->world->database, i);
+          if (is_good_owner(evaluation->world->database, owner) &&
+              !is_quiet(evaluation->world->database, i) &&
+              !is_quiet(evaluation->world->database, owner)) {
+            notify_printf(evaluation, owner, "Home reset on %s(#%ld)",
+                          game_object_name(evaluation->world->database, i), i);
           }
         }
       } else if (targ != NOTHING) {
-        Log_header_err(i, obj_location(i), targ, 1, "Home",
-                       "is invalid.  Cleared.");
-        s_home(i, new_home(i));
+        Log_header_err(evaluation, i,
+                       game_object_location(evaluation->world->database, i),
+                       targ, 1, "Home", "is invalid.  Cleared.");
+        game_object_set_link(evaluation->world->database, i,
+                             new_home(evaluation, i));
       }
       /*
        * Check the location
        */
 
-      targ = obj_location(i);
-      if (!is_good_obj(targ)) {
-        Log_pointer_err(NOTHING, i, NOTHING, targ, "Location",
+      targ = game_object_location(evaluation->world->database, i);
+      if (!is_good_obj(evaluation->world->database, targ)) {
+        Log_pointer_err(evaluation, NOTHING, i, NOTHING, targ, "Location",
                         "is invalid.  Moved to home.");
-        ZAP_LOC(i);
-        move_object(i, HOME);
+        ZAP_LOC(evaluation->world->database, i);
+        move_object(evaluation, i, HOME);
       }
       /*
-       * Check for self-referential obj_next()
+       * Check for self-referential
+       * game_object_next(evaluation->world->database, )
        */
 
-      if (obj_next(i) == i) {
-        log_simple_error(i, NOTHING, "Next points to self.  Next cleared.");
-        s_next(i, NOTHING);
+      if (game_object_next(evaluation->world->database, i) == i) {
+        log_simple_error(evaluation, i, NOTHING,
+                         "Next points to self.  Next cleared.");
+        game_object_set_next(evaluation->world->database, i, NOTHING);
       }
       break;
     case TYPE_ROOM:
@@ -667,38 +736,44 @@ static void check_dead_refs(void) {
        * Check the dropto
        */
 
-      targ = obj_dropto(i);
-      if (is_good_obj(targ)) {
-        if (is_going(targ)) {
-          s_dropto(i, NOTHING);
-          owner = obj_owner(i);
-          if (is_good_owner(owner) && !is_quiet(i) && !is_quiet(owner)) {
-            notify_printf(owner, "Dropto removed from %s(#%ld)", Name(i), i);
+      targ = game_object_location(evaluation->world->database, i);
+      if (is_good_obj(evaluation->world->database, targ)) {
+        if (is_going(evaluation->world->database, targ)) {
+          game_object_set_location(evaluation->world->database, i, NOTHING);
+          owner = game_object_owner(evaluation->world->database, i);
+          if (is_good_owner(evaluation->world->database, owner) &&
+              !is_quiet(evaluation->world->database, i) &&
+              !is_quiet(evaluation->world->database, owner)) {
+            notify_printf(evaluation, owner, "Dropto removed from %s(#%ld)",
+                          game_object_name(evaluation->world->database, i), i);
           }
         }
       } else if ((targ != NOTHING) && (targ != HOME)) {
-        Log_header_err(i, NOTHING, targ, 1, "Dropto", "is invalid.  Cleared.");
-        s_dropto(i, NOTHING);
+        Log_header_err(evaluation, i, NOTHING, targ, 1, "Dropto",
+                       "is invalid.  Cleared.");
+        game_object_set_location(evaluation->world->database, i, NOTHING);
       }
-      if (check_type & DBCK_FULL) {
+      if (full_check) {
 
         /*
          * NEXT should be null
          */
 
-        if (obj_next(i) != NOTHING) {
-          Log_header_err(i, NOTHING, obj_next(i), 1, "Next pointer",
-                         "should be NOTHING.  Reset.");
-          s_next(i, NOTHING);
+        if (game_object_next(evaluation->world->database, i) != NOTHING) {
+          Log_header_err(evaluation, i, NOTHING,
+                         game_object_next(evaluation->world->database, i), 1,
+                         "Next pointer", "should be NOTHING.  Reset.");
+          game_object_set_next(evaluation->world->database, i, NOTHING);
         }
         /*
          * LINK should be null
          */
 
-        if (obj_link(i) != NOTHING) {
-          Log_header_err(i, NOTHING, obj_link(i), 1, "Link pointer ",
-                         "should be NOTHING.  Reset.");
-          s_link(i, NOTHING);
+        if (game_object_link(evaluation->world->database, i) != NOTHING) {
+          Log_header_err(evaluation, i, NOTHING,
+                         game_object_link(evaluation->world->database, i), 1,
+                         "Link pointer ", "should be NOTHING.  Reset.");
+          game_object_set_link(evaluation->world->database, i, NOTHING);
         }
       }
       break;
@@ -708,54 +783,62 @@ static void check_dead_refs(void) {
        * If it points to something GOING, set it going
        */
 
-      targ = obj_location(i);
-      if (is_good_obj(targ)) {
-        if (is_going(targ)) {
-          s_going(i);
+      targ = game_object_location(evaluation->world->database, i);
+      if (is_good_obj(evaluation->world->database, targ)) {
+        if (is_going(evaluation->world->database, targ)) {
+          s_going(evaluation->world->database, i);
         }
       } else if (targ == HOME) {
         /*
          * null case, HOME is always valid
          */
       } else if (targ != NOTHING) {
-        Log_header_err(i, obj_exits(i), targ, 1, "Destination",
-                       "is invalid.  Exit destroyed.");
-        s_going(i);
+        Log_header_err(evaluation, i,
+                       game_object_exits(evaluation->world->database, i), targ,
+                       1, "Destination", "is invalid.  Exit destroyed.");
+        s_going(evaluation->world->database, i);
       } else {
-        if (!has_contents(targ)) {
-          Log_header_err(i, obj_exits(i), targ, 1, "Destination",
-                         "is not a valid type.  Exit destroyed.");
-          s_going(i);
+        if (!has_contents(evaluation->world->database, targ)) {
+          Log_header_err(
+              evaluation, i, game_object_exits(evaluation->world->database, i),
+              targ, 1, "Destination", "is not a valid type.  Exit destroyed.");
+          s_going(evaluation->world->database, i);
         }
       }
 
       /*
-       * Check for self-referential obj_next()
+       * Check for self-referential
+       * game_object_next(evaluation->world->database, )
        */
 
-      if (obj_next(i) == i) {
-        log_simple_error(i, NOTHING, "Next points to self.  Next cleared.");
-        s_next(i, NOTHING);
+      if (game_object_next(evaluation->world->database, i) == i) {
+        log_simple_error(evaluation, i, NOTHING,
+                         "Next points to self.  Next cleared.");
+        game_object_set_next(evaluation->world->database, i, NOTHING);
       }
-      if (check_type & DBCK_FULL) {
+      if (full_check) {
 
         /*
          * CONTENTS should be null
          */
 
-        if (obj_contents(i) != NOTHING) {
-          Log_header_err(i, obj_exits(i), obj_contents(i), 1, "Contents",
-                         "should be NOTHING.  Reset.");
-          s_contents(i, NOTHING);
+        if (game_object_contents(evaluation->world->database, i) != NOTHING) {
+          Log_header_err(evaluation, i,
+                         game_object_exits(evaluation->world->database, i),
+                         game_object_contents(evaluation->world->database, i),
+                         1, "Contents", "should be NOTHING.  Reset.");
+          game_object_set_contents(evaluation->world->database, i, NOTHING);
         }
         /*
          * LINK should be null
          */
 
-        if (obj_link(i) != NOTHING) {
-          Log_header_err(i, obj_exits(i), obj_link(i), 1, "Link",
-                         "should be NOTHING.  Reset.");
-          s_link(i, NOTHING);
+        if (game_object_link(evaluation->world->database, i) != NOTHING) {
+          Log_header_err(evaluation, i,
+                         game_object_exits(evaluation->world->database, i),
+                         game_object_link(evaluation->world->database, i), 1,
+                         "Link", "should be NOTHING.  Reset.");
+          game_object_set_link(evaluation->world->database, i, NOTHING);
         }
       }
       break;
@@ -767,8 +850,9 @@ static void check_dead_refs(void) {
        * Funny object type, destroy it
        */
 
-      log_simple_error(i, NOTHING, "Funny object type.  Destroyed.");
-      destroy_obj(NOTHING, i);
+      log_simple_error(evaluation, i, NOTHING,
+                       "Funny object type.  Destroyed.");
+      destroy_obj(evaluation, NOTHING, i);
     }
 
     /*
@@ -776,12 +860,14 @@ static void check_dead_refs(void) {
      */
 
     dirty = 0;
-    fp = fwdlist_get(i);
+    fp = fwdlist_get(evaluation->world->database, i);
     if (fp) {
       for (j = 0; j < fp->count; j++) {
         targ = fp->data[j];
-        if ((is_good_obj(targ) && is_going(targ)) ||
-            (!is_good_obj(targ) && (targ != NOTHING))) {
+        if ((is_good_obj(evaluation->world->database, targ) &&
+             is_going(evaluation->world->database, targ)) ||
+            (!is_good_obj(evaluation->world->database, targ) &&
+             (targ != NOTHING))) {
           fp->data[j] = NOTHING;
           dirty = 1;
         }
@@ -789,50 +875,55 @@ static void check_dead_refs(void) {
     }
     if (dirty) {
       str = alloc_lbuf("purge_going");
-      (void)fwdlist_rewrite(fp, str);
-      attribute_get_info(i, A_FORWARDLIST, &owner, &aflags);
-      attribute_add(i, A_FORWARDLIST, str, owner, aflags);
+      (void)fwdlist_rewrite(evaluation->world->database, fp, str);
+      attribute_get_info(evaluation->world->database, i, A_FORWARDLIST, &owner,
+                         &aflags);
+      attribute_add(evaluation->world->database, i, A_FORWARDLIST, str, owner,
+                    aflags);
       free_lbuf(str);
     }
     /*
      * Check owner
      */
 
-    owner = obj_owner(i);
-    if (!is_good_obj(owner)) {
-      Log_header_err(i, NOTHING, owner, 1, "Owner", "is invalid.  Set to GOD.");
+    owner = game_object_owner(evaluation->world->database, i);
+    if (!is_good_obj(evaluation->world->database, owner)) {
+      Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
+                     "is invalid.  Set to GOD.");
       owner = GOD;
-      s_owner(i, owner);
-      halt_que(NOTHING, i);
-      s_halted(i);
-    } else if (check_type & DBCK_FULL) {
-      if (is_going(owner)) {
-        Log_header_err(i, NOTHING, owner, 1, "Owner",
+      game_object_set_owner(evaluation->world->database, i, owner);
+      halt_que(evaluation->server->commands, NOTHING, i);
+      s_halted(evaluation->world->database, i);
+    } else if (full_check) {
+      if (is_going(evaluation->world->database, owner)) {
+        Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
                        "is set GOING.  Set to GOD.");
-        s_owner(i, owner);
-        halt_que(NOTHING, i);
-        s_halted(i);
-      } else if (!is_owns_others(owner)) {
-        Log_header_err(i, NOTHING, owner, 1, "Owner",
+        game_object_set_owner(evaluation->world->database, i, owner);
+        halt_que(evaluation->server->commands, NOTHING, i);
+        s_halted(evaluation->world->database, i);
+      } else if (!is_owns_others(evaluation->world->database, owner)) {
+        Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
                        "is not a valid owner type.");
-      } else if (is_player(i) && (owner != i)) {
-        Log_header_err(i, NOTHING, owner, 1, "Player",
+      } else if (is_player(evaluation->world->database, i) && (owner != i)) {
+        Log_header_err(evaluation, i, NOTHING, owner, 1, "Player",
                        "is the owner instead of the player.");
       }
     }
-    if (check_type & DBCK_FULL) {
+    if (full_check) {
 
       /*
        * Check for wizards
        */
 
-      if (is_wizard(i)) {
-        if (is_player(i)) {
-          log_simple_error(i, NOTHING, "Player is a WIZARD.");
+      if (is_wizard(evaluation->world->database, i)) {
+        if (is_player(evaluation->world->database, i)) {
+          log_simple_error(evaluation, i, NOTHING, "Player is a WIZARD.");
         }
-        if (!is_wizard(obj_owner(i))) {
-          Log_header_err(i, NOTHING, obj_owner(i), 1, "Owner",
-                         "of a WIZARD object is not a wizard");
+        if (!is_wizard(evaluation->world->database,
+                       game_object_owner(evaluation->world->database, i))) {
+          Log_header_err(evaluation, i, NOTHING,
+                         game_object_owner(evaluation->world->database, i), 1,
+                         "Owner", "of a WIZARD object is not a wizard");
         }
       }
     }
@@ -854,108 +945,111 @@ static void check_dead_refs(void) {
  *       Member in another chain (recursive check)       - terminate chain.
  *       Location of member is not specified location    - reset it.
  */
-static void check_loc_exits(DbRef loc) {
+static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
+                            bool full_check) {
   DbRef exit, back, temp, exitloc, dest;
 
-  if (!is_good_obj(loc))
+  if (!is_good_obj(evaluation->world->database, loc))
     return;
 
   /*
    * Only check players, rooms, and things that aren't GOING
    */
 
-  if (is_exit(loc) || is_going(loc))
+  if (is_exit(evaluation->world->database, loc) ||
+      is_going(evaluation->world->database, loc))
     return;
 
   /*
    * If marked, we've checked here already
    */
 
-  if (is_marked(loc))
+  if (is_marked(evaluation->world->database, loc))
     return;
-  mark(loc);
+  mark(evaluation->world->database, loc);
 
   /*
    * Check all the exits
    */
 
   back = NOTHING;
-  exit = obj_exits(loc);
+  exit = game_object_exits(evaluation->world->database, loc);
   while (exit != NOTHING) {
 
     exitloc = NOTHING;
     dest = NOTHING;
 
-    if (is_good_obj(exit)) {
-      exitloc = obj_exits(exit);
-      dest = obj_location(exit);
+    if (is_good_obj(evaluation->world->database, exit)) {
+      exitloc = game_object_exits(evaluation->world->database, exit);
+      dest = game_object_location(evaluation->world->database, exit);
     }
-    if (!is_good_obj(exit)) {
+    if (!is_good_obj(evaluation->world->database, exit)) {
 
       /*
        * A bad pointer - terminate chain
        */
 
-      Log_pointer_err(back, loc, NOTHING, exit, "Exit list",
+      Log_pointer_err(evaluation, back, loc, NOTHING, exit, "Exit list",
                       "is invalid.  List nulled.");
       if (back != NOTHING) {
-        s_next(back, NOTHING);
+        game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
-        s_exits(loc, NOTHING);
+        game_object_set_exits(evaluation->world->database, loc, NOTHING);
       }
       exit = NOTHING;
-    } else if (!is_exit(exit)) {
+    } else if (!is_exit(evaluation->world->database, exit)) {
 
       /*
        * Not an exit - terminate chain
        */
 
-      Log_pointer_err(back, loc, NOTHING, exit, "Exitlist member",
+      Log_pointer_err(evaluation, back, loc, NOTHING, exit, "Exitlist member",
                       "is not an exit.  List terminated.");
       if (back != NOTHING) {
-        s_next(back, NOTHING);
+        game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
-        s_exits(loc, NOTHING);
+        game_object_set_exits(evaluation->world->database, loc, NOTHING);
       }
       exit = NOTHING;
-    } else if (is_going(exit)) {
+    } else if (is_going(evaluation->world->database, exit)) {
 
       /*
        * Going - silently filter out
        */
 
-      temp = obj_next(exit);
+      temp = game_object_next(evaluation->world->database, exit);
       if (back != NOTHING) {
-        s_next(back, temp);
+        game_object_set_next(evaluation->world->database, back, temp);
       } else {
-        s_exits(loc, temp);
+        game_object_set_exits(evaluation->world->database, loc, temp);
       }
-      destroy_obj(NOTHING, exit);
+      destroy_obj(evaluation, NOTHING, exit);
       exit = temp;
       continue;
-    } else if (is_marked(exit)) {
+    } else if (is_marked(evaluation->world->database, exit)) {
 
       /*
        * Already in another list - terminate chain
        */
 
-      Log_pointer_err(back, loc, NOTHING, exit, "Exitlist member",
+      Log_pointer_err(evaluation, back, loc, NOTHING, exit, "Exitlist member",
                       "is in another exitlist.  Cleared.");
       if (back != NOTHING) {
-        s_next(back, NOTHING);
+        game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
-        s_exits(loc, NOTHING);
+        game_object_set_exits(evaluation->world->database, loc, NOTHING);
       }
       exit = NOTHING;
-    } else if (!is_good_obj(dest) && (dest != HOME) && (dest != NOTHING)) {
+    } else if (!is_good_obj(evaluation->world->database, dest) &&
+               (dest != HOME) && (dest != NOTHING)) {
 
       /*
        * Destination is not in the db.  Null it.
        */
 
-      Log_pointer_err(back, loc, NOTHING, exit, "Destination",
+      Log_pointer_err(evaluation, back, loc, NOTHING, exit, "Destination",
                       "is invalid.  Cleared.");
-      s_location(exit, NOTHING);
+      game_object_set_location(evaluation->world->database, exit, NOTHING);
 
     } else if (exitloc != loc) {
 
@@ -967,19 +1061,19 @@ static void check_loc_exits(DbRef loc) {
        * exitlist. If not, assume we own the exit.
        */
 
-      check_loc_exits(exitloc);
-      if (is_marked(exit)) {
+      check_loc_exits(evaluation, exitloc, full_check);
+      if (is_marked(evaluation->world->database, exit)) {
 
         /*
          * It's in the other list, give it up
          */
 
-        Log_pointer_err(back, loc, NOTHING, exit, "",
+        Log_pointer_err(evaluation, back, loc, NOTHING, exit, "",
                         "is in another exitlist.  List terminated.");
         if (back != NOTHING) {
-          s_next(back, NOTHING);
+          game_object_set_next(evaluation->world->database, back, NOTHING);
         } else {
-          s_exits(loc, NOTHING);
+          game_object_set_exits(evaluation->world->database, loc, NOTHING);
         }
         exit = NOTHING;
       } else {
@@ -988,9 +1082,9 @@ static void check_loc_exits(DbRef loc) {
          * Not in the other list, assume in ours
          */
 
-        Log_header_err(exit, loc, exitloc, 1, "Not on chain for location",
-                       "Reset.");
-        s_exits(exit, loc);
+        Log_header_err(evaluation, exit, loc, exitloc, 1,
+                       "Not on chain for location", "Reset.");
+        game_object_set_exits(evaluation->world->database, exit, loc);
       }
     }
     if (exit != NOTHING) {
@@ -999,7 +1093,7 @@ static void check_loc_exits(DbRef loc) {
        * All OK (or all was made OK)
        */
 
-      if (check_type & DBCK_FULL) {
+      if (full_check) {
 
         /*
          * Make sure exit owner owns at least one of
@@ -1007,31 +1101,36 @@ static void check_loc_exits(DbRef loc) {
          * warn * if * * he doesn't.
          */
 
-        temp = obj_owner(exit);
-        if ((temp != obj_owner(loc)) &&
-            (temp != obj_owner(obj_location(exit)))) {
-          Log_header_err(exit, loc, temp, 1, "Owner",
+        temp = game_object_owner(evaluation->world->database, exit);
+        if ((temp != game_object_owner(evaluation->world->database, loc)) &&
+            (temp !=
+             game_object_owner(
+                 evaluation->world->database,
+                 game_object_location(evaluation->world->database, exit)))) {
+          Log_header_err(evaluation, exit, loc, temp, 1, "Owner",
                          "does not own either the source or destination.");
         }
       }
-      mark(exit);
+      mark(evaluation->world->database, exit);
       back = exit;
-      exit = obj_next(exit);
+      exit = game_object_next(evaluation->world->database, exit);
     }
   }
   return;
 }
 
-static void check_exit_chains(void) {
+static void check_exit_chains(EvaluationContext *evaluation, bool full_check) {
   DbRef i;
 
-  unmark_all();
-  DO_WHOLE_DB(i)
-  check_loc_exits(i);
-  DO_WHOLE_DB(i) {
-    if (is_exit(i) && !is_marked(i)) {
-      log_simple_error(i, NOTHING, "Disconnected exit.  Destroyed.");
-      destroy_obj(NOTHING, i);
+  unmark_all(evaluation->world->database);
+  DO_WHOLE_DB(evaluation->world->database, i)
+  check_loc_exits(evaluation, i, full_check);
+  DO_WHOLE_DB(evaluation->world->database, i) {
+    if (is_exit(evaluation->world->database, i) &&
+        !is_marked(evaluation->world->database, i)) {
+      log_simple_error(evaluation, i, NOTHING,
+                       "Disconnected exit.  Destroyed.");
+      destroy_obj(evaluation, NOTHING, i);
     }
   }
 }
@@ -1052,9 +1151,11 @@ static void check_exit_chains(void) {
  *       Location of member is not specified location    - reset it.
  */
 
-static void check_loc_contents(DbRef);
+static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
+                               bool full_check);
 
-static void check_misplaced_obj(DbRef *obj, DbRef back, DbRef loc) {
+static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
+                                DbRef back, DbRef loc, bool full_check) {
   /*
    * Object thinks it's in another place. Check the contents list
    * there and see if it contains this object. If it does, then
@@ -1063,25 +1164,25 @@ static void check_misplaced_obj(DbRef *obj, DbRef back, DbRef loc) {
    * assume we own the object.
    */
 
-  if (!is_good_obj(*obj))
+  if (!is_good_obj(evaluation->world->database, *obj))
     return;
-  loc = obj_location(*obj);
-  unmark(*obj);
-  if (is_good_obj(loc)) {
-    check_loc_contents(loc);
+  loc = game_object_location(evaluation->world->database, *obj);
+  unmark(evaluation->world->database, *obj);
+  if (is_good_obj(evaluation->world->database, loc)) {
+    check_loc_contents(evaluation, loc, full_check);
   }
-  if (is_marked(*obj)) {
+  if (is_marked(evaluation->world->database, *obj)) {
 
     /*
      * It's in the other list, give it up
      */
 
-    Log_pointer_err(back, loc, NOTHING, *obj, "",
+    Log_pointer_err(evaluation, back, loc, NOTHING, *obj, "",
                     "is in another contents list.  Cleared.");
     if (back != NOTHING) {
-      s_next(back, NOTHING);
+      game_object_set_next(evaluation->world->database, back, NOTHING);
     } else {
-      s_contents(loc, NOTHING);
+      game_object_set_contents(evaluation->world->database, loc, NOTHING);
     }
     *obj = NOTHING;
   } else {
@@ -1089,24 +1190,27 @@ static void check_misplaced_obj(DbRef *obj, DbRef back, DbRef loc) {
      * Not in the other list, assume in ours
      */
 
-    Log_header_err(*obj, loc, obj_contents(*obj), 1, "Location",
-                   "is invalid.  Reset.");
-    s_contents(*obj, loc);
+    Log_header_err(evaluation, *obj, loc,
+                   game_object_contents(evaluation->world->database, *obj), 1,
+                   "Location", "is invalid.  Reset.");
+    game_object_set_contents(evaluation->world->database, *obj, loc);
   }
   return;
 }
 
-static void check_loc_contents(DbRef loc) {
+static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
+                               bool full_check) {
   DbRef obj, back, temp;
 
-  if (!is_good_obj(loc))
+  if (!is_good_obj(evaluation->world->database, loc))
     return;
 
   /*
    * Only check players, rooms, and things that aren't GOING
    */
 
-  if (is_exit(loc) || is_going(loc))
+  if (is_exit(evaluation->world->database, loc) ||
+      is_going(evaluation->world->database, loc))
     return;
 
   /*
@@ -1114,77 +1218,78 @@ static void check_loc_contents(DbRef loc) {
    */
 
   back = NOTHING;
-  obj = obj_contents(loc);
+  obj = game_object_contents(evaluation->world->database, loc);
   while (obj != NOTHING) {
-    if (!is_good_obj(obj)) {
+    if (!is_good_obj(evaluation->world->database, obj)) {
 
       /*
        * A bad pointer - terminate chain
        */
 
-      Log_pointer_err(back, loc, NOTHING, obj, "Contents list",
+      Log_pointer_err(evaluation, back, loc, NOTHING, obj, "Contents list",
                       "is invalid.  Cleared.");
       if (back != NOTHING) {
-        s_next(back, NOTHING);
+        game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
-        s_contents(loc, NOTHING);
+        game_object_set_contents(evaluation->world->database, loc, NOTHING);
       }
       obj = NOTHING;
-    } else if (!has_location(obj)) {
+    } else if (!has_location(evaluation->world->database, obj)) {
 
       /*
        * Not a player or thing - terminate chain
        */
 
-      Log_pointer_err(back, loc, NOTHING, obj, "",
+      Log_pointer_err(evaluation, back, loc, NOTHING, obj, "",
                       "is not a player or thing.  Cleared.");
       if (back != NOTHING) {
-        s_next(back, NOTHING);
+        game_object_set_next(evaluation->world->database, back, NOTHING);
       } else {
-        s_contents(loc, NOTHING);
+        game_object_set_contents(evaluation->world->database, loc, NOTHING);
       }
       obj = NOTHING;
-    } else if (is_going(obj) && (typeof_obj(obj) == TYPE_GARBAGE)) {
+    } else if (is_going(evaluation->world->database, obj) &&
+               (typeof_obj(evaluation->world->database, obj) == TYPE_GARBAGE)) {
 
       /*
        * Going - silently filter out
        */
 
-      temp = obj_next(obj);
+      temp = game_object_next(evaluation->world->database, obj);
       if (back != NOTHING) {
-        s_next(back, temp);
+        game_object_set_next(evaluation->world->database, back, temp);
       } else {
-        s_contents(loc, temp);
+        game_object_set_contents(evaluation->world->database, loc, temp);
       }
-      destroy_obj(NOTHING, obj);
+      destroy_obj(evaluation, NOTHING, obj);
       obj = temp;
       continue;
-    } else if (is_marked(obj)) {
+    } else if (is_marked(evaluation->world->database, obj)) {
 
       /*
        * Already visited - either truncate or ignore
        */
 
-      if (obj_location(obj) != loc) {
+      if (game_object_location(evaluation->world->database, obj) != loc) {
 
         /*
          * Location wrong - either truncate or fix
          */
 
-        check_misplaced_obj(&obj, back, loc);
+        check_misplaced_obj(evaluation, &obj, back, loc, full_check);
       } else {
 
         /*
          * Location right - recursive contents
          */
       }
-    } else if (obj_location(obj) != loc) {
+    } else if (game_object_location(evaluation->world->database, obj) != loc) {
 
       /*
        * Location wrong - either truncate or fix
        */
 
-      check_misplaced_obj(&obj, back, loc);
+      check_misplaced_obj(evaluation, &obj, back, loc, full_check);
     }
     if (obj != NOTHING) {
 
@@ -1192,7 +1297,7 @@ static void check_loc_contents(DbRef loc) {
        * All OK (or all was made OK)
        */
 
-      if (check_type & DBCK_FULL) {
+      if (full_check) {
 
         /*
          * Check for wizard command-handlers inside *
@@ -1201,10 +1306,12 @@ static void check_loc_contents(DbRef loc) {
          * one.
          */
 
-        if (is_wizard(obj) && !is_wizard(loc)) {
-          if (has_commands(obj)) {
+        if (is_wizard(evaluation->world->database, obj) &&
+            !is_wizard(evaluation->world->database, loc)) {
+          if (has_commands(evaluation->world->database, obj)) {
             log_simple_error(
-                obj, loc, "Wizard command handling object inside nonwizard.");
+                evaluation, obj, loc,
+                "Wizard command handling object inside nonwizard.");
           }
         }
         /*
@@ -1212,77 +1319,92 @@ static void check_loc_contents(DbRef loc) {
          * * * * * objects.
          */
 
-        if (is_wizard(loc) && !is_wizard(obj) && !is_wizard(obj_owner(obj))) {
-          log_simple_error(obj, loc, "Nonwizard object inside wizard.");
+        if (is_wizard(evaluation->world->database, loc) &&
+            !is_wizard(evaluation->world->database, obj) &&
+            !is_wizard(evaluation->world->database,
+                       game_object_owner(evaluation->world->database, obj))) {
+          log_simple_error(evaluation, obj, loc,
+                           "Nonwizard object inside wizard.");
         }
       }
-      mark(obj);
+      mark(evaluation->world->database, obj);
       back = obj;
-      obj = obj_next(obj);
+      obj = game_object_next(evaluation->world->database, obj);
     }
   }
   return;
 }
 
-static void check_contents_chains(void) {
+static void check_contents_chains(EvaluationContext *evaluation,
+                                  bool full_check) {
   DbRef i;
 
-  unmark_all();
-  DO_WHOLE_DB(i)
-  check_loc_contents(i);
-  DO_WHOLE_DB(i)
-  if (!is_going(i) && !is_marked(i) && has_location(i)) {
-    log_simple_error(i, obj_location(i), "Orphaned object, moved home.");
-    ZAP_LOC(i);
-    move_via_generic(i, HOME, NOTHING, 0);
+  unmark_all(evaluation->world->database);
+  DO_WHOLE_DB(evaluation->world->database, i)
+  check_loc_contents(evaluation, i, full_check);
+  DO_WHOLE_DB(evaluation->world->database, i)
+  if (!is_going(evaluation->world->database, i) &&
+      !is_marked(evaluation->world->database, i) &&
+      has_location(evaluation->world->database, i)) {
+    log_simple_error(evaluation, i,
+                     game_object_location(evaluation->world->database, i),
+                     "Orphaned object, moved home.");
+    ZAP_LOC(evaluation->world->database, i);
+    move_via_generic(evaluation, i, HOME, NOTHING, 0);
   }
 }
 
 /**
  * mark_place, check_floating: Look for floating rooms not set FLOATING.
  */
-static void mark_place(DbRef loc) {
+static void mark_place(GameDatabase *database, DbRef loc) {
   DbRef exit;
 
   /*
    * If already marked, exit.  Otherwise set marked.
    */
 
-  if (!is_good_obj(loc))
+  if (!is_good_obj(database, loc))
     return;
-  if (is_marked(loc))
+  if (is_marked(database, loc))
     return;
-  mark(loc);
+  mark(database, loc);
 
   /*
    * Visit all places you can get to via exits from here.
    */
 
-  for (exit = obj_exits(loc); exit != NOTHING; exit = obj_next(exit)) {
-    if (is_good_obj(obj_location(exit)))
-      mark_place(obj_location(exit));
+  for (exit = game_object_exits(database, loc); exit != NOTHING;
+       exit = game_object_next(database, exit)) {
+    if (is_good_obj(database, game_object_location(database, exit)))
+      mark_place(database, game_object_location(database, exit));
   }
 }
 
-static void check_floating(void) {
+static void check_floating(EvaluationContext *evaluation) {
   DbRef owner, i;
 
   /*
    * Mark everyplace you can get to via exits from the starting room
    */
 
-  unmark_all();
-  mark_place(mudconf.start_room);
+  unmark_all(evaluation->world->database);
+  mark_place(evaluation->world->database,
+             evaluation->world->configuration->start_room);
 
   /*
    * Look for rooms not marked and not set FLOATING
    */
 
-  DO_WHOLE_DB(i) {
-    if (is_room(i) && !is_floating(i) && !is_going(i) && !is_marked(i)) {
-      owner = obj_owner(i);
-      if (is_good_owner(owner)) {
-        notify_printf(owner, "You own a floating room: %s(#%ld)", Name(i), i);
+  DO_WHOLE_DB(evaluation->world->database, i) {
+    if (is_room(evaluation->world->database, i) &&
+        !is_floating(evaluation->world->database, i) &&
+        !is_going(evaluation->world->database, i) &&
+        !is_marked(evaluation->world->database, i)) {
+      owner = game_object_owner(evaluation->world->database, i);
+      if (is_good_owner(evaluation->world->database, owner)) {
+        notify_printf(evaluation, owner, "You own a floating room: %s(#%ld)",
+                      game_object_name(evaluation->world->database, i), i);
       }
     }
   }
@@ -1291,17 +1413,23 @@ static void check_floating(void) {
 /**
  * Perform a database consistency check and clean up damage.
  */
-void do_dbck(DbRef player, DbRef cause, int key) {
-  check_type = key;
-  make_freelist();
-  check_dead_refs();
-  check_exit_chains();
-  check_contents_chains();
-  check_floating();
-  purge_going();
+void database_check(EvaluationContext *evaluation, DbRef player, int key) {
+  const bool full_check = (key & DBCK_FULL) != 0;
+
+  make_freelist(evaluation->world->database);
+  check_dead_refs(evaluation, full_check);
+  check_exit_chains(evaluation, full_check);
+  check_contents_chains(evaluation, full_check);
+  check_floating(evaluation);
+  purge_going(evaluation, full_check);
 
   if (player != NOTHING) {
-    if (!is_quiet(player))
-      notify(player, "Done.");
+    if (!is_quiet(evaluation->world->database, player))
+      notify(evaluation, player, "Done.");
   }
+}
+
+void do_dbck(CommandInvocation *invocation) {
+  database_check(&invocation->context->evaluation, invocation->player,
+                 invocation->key);
 }

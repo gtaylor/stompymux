@@ -53,7 +53,7 @@ void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     for (i = 0; cmds_help[i]; i++)
       snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s",
                i > 0 ? ',' : ' ', cmds_help[i]);
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
     return;
   }
   i = listmatch(cmds, arg1);
@@ -78,6 +78,7 @@ void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     list_charvaluestuff(player, CHAR_ATTRIBUTE);
     return;
   }
-  notify(player, "Invalid arguments to +show command!");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Invalid arguments to +show command!");
   return;
 }

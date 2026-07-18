@@ -91,7 +91,7 @@ CSEEFUNC(electrom_csee, !(map->sensorflags & (1 << SENSOR_EM)) &&
    ground. Period. */
 CSEEFUNC(seismic_csee,
          !(map->sensorflags & (1 << SENSOR_SE)) && t && (!Jumping(m)) &&
-             (mudconf.btech_seismic_see_stopped
+             (btech_context_active()->configuration->btech_seismic_see_stopped
                   ? 1
                   : (fabsf(MechSpeed(t)) > MP1)) &&
              (((MechMove(m) != MOVE_VTOL) ||

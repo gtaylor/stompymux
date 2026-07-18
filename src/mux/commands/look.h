@@ -4,4 +4,7 @@
 
 #include "mux/database/db.h"
 
-void look_in(DbRef player, DbRef location, int key);
+typedef struct EvaluationContext EvaluationContext;
+
+void look_in(EvaluationContext *evaluation, DbRef player, DbRef location,
+             int key);

@@ -139,7 +139,7 @@ void buildTempNetwork(MECH *mech, DbRef *myNetwork, int *networkSize,
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     myTempNetwork[tempNetworkSize] = otherMech->mynum;
@@ -182,7 +182,7 @@ void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     snprintf(buf, LBUF_SIZE, "%%ch%s/%s: %s%%cn", (tIsC3 ? "C3" : "C3i"), c,
@@ -223,7 +223,8 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
    * Send then a 'contacts' style report. This is different from the
    * normal contacts since it has a 'physical' range in it too.
    */
-  notify_printf(player, "%s Contacts:", tIsC3 ? "C3" : "C3i");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "%s Contacts:", tIsC3 ? "C3" : "C3i");
 
   for (i = 0; i < objMap->first_free; i++) {
     if (!(objMap->mechsOnMap[i] != mech->mynum && objMap->mechsOnMap[i] != -1))
@@ -234,7 +235,7 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     tShowStatusInfo = 0;
@@ -339,9 +340,10 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
       }
 
   for (i = 0; i < buffindex; i++)
-    notify(player, bufflist[sbuff[i]]);
+    notify(BTECH_EVALUATION_CONTEXT, player, bufflist[sbuff[i]]);
 
-  notify_printf(player, "End %s Contact List", tIsC3 ? "C3" : "C3i");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "End %s Contact List",
+                tIsC3 ? "C3" : "C3i");
 }
 
 void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
@@ -354,7 +356,8 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
   int networkSize;
   DbRef myNetwork[C3_NETWORK_SIZE];
 
-  notify_printf(player, "%s Network Status:", tIsC3 ? "C3" : "C3i");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "%s Network Status:", tIsC3 ? "C3" : "C3i");
 
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
 
@@ -364,7 +367,7 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     range = FlMechRange(objMap, mech, otherMech);
@@ -384,10 +387,11 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
              getRemainingArmorPercent(otherMech),
              getRemainingInternalPercent(otherMech));
 
-    notify(player, buff);
+    notify(BTECH_EVALUATION_CONTEXT, player, buff);
   }
 
-  notify_printf(player, "End %s Network Status", tIsC3 ? "C3" : "C3i");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "End %s Network Status",
+                tIsC3 ? "C3" : "C3i");
 }
 
 int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
@@ -409,7 +413,7 @@ int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     if (otherMech == mechTarget)
@@ -482,7 +486,7 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(otherMech->mynum))
+    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
       continue;
 
     if (mechTarget) {

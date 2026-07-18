@@ -13,6 +13,7 @@
 #include "glue_types.h"
 #include "mech.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
 
@@ -35,7 +36,8 @@ void heartbeat_init() {
     return;
   dprintk("hearbeat initialized, 1s timeout.");
   heartbeat_ev =
-      mux_timer_create(server_lifecycle_loop(), heartbeat_run, nullptr);
+      mux_timer_create(server_lifecycle_loop(btech_context_active()->lifecycle),
+                       heartbeat_run, nullptr);
   if (heartbeat_ev == nullptr)
     return;
   mux_timer_start(heartbeat_ev, 1000, 1000);

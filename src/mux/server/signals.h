@@ -2,6 +2,12 @@
 
 #pragma once
 
-void bind_signals(void);
-void unbind_signals(void);
-void signals_shutdown(void);
+typedef struct uv_loop_s uv_loop_t;
+typedef struct ServerLifecycle ServerLifecycle;
+typedef struct SignalHandlers SignalHandlers;
+typedef struct DescriptorRegistry DescriptorRegistry;
+typedef struct MuxServer MuxServer;
+
+SignalHandlers *signal_handlers_create(uv_loop_t *loop, MuxServer *server);
+void signal_handlers_unbind(SignalHandlers *handlers);
+void signal_handlers_destroy(SignalHandlers *handlers);

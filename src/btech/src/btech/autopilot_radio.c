@@ -725,7 +725,8 @@ void auto_radio_command_sensor(AUTO *autopilot, MECH *mech, char **args,
   char buf[SBUF_SIZE];
 
   /* Make sure no sensor event running */
-  mux_event_remove_type_data(EVENT_AUTO_SENSOR, autopilot);
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_AUTO_SENSOR,
+                             autopilot);
 
   if ((argc - 1) == 2) {
 
@@ -1161,8 +1162,10 @@ void auto_reply(MECH *mech, char *buf) {
     return;
 
   /* Make sure valid objects */
-  if (!(FindObjectsData(MechAuto(mech))) || !is_good_obj(MechAuto(mech)) ||
-      obj_location(MechAuto(mech)) != mech->mynum) {
+  if (!(FindObjectsData(MechAuto(mech))) ||
+      !is_good_obj(btech_context_active()->database, MechAuto(mech)) ||
+      game_object_location(btech_context_active()->database, MechAuto(mech)) !=
+          mech->mynum) {
     MechAuto(mech) = -1;
     return;
   }

@@ -65,8 +65,10 @@ void explode_unit(MECH *wounded, MECH *attacker) {
 
   from = wounded->mynum;
 
-  SAFE_DOLIST(i, tmpnext, obj_contents(from)) {
-    if (is_good_obj(i) && is_hardcode(i)) {
+  SAFE_DOLIST(btech_context_active()->database, i, tmpnext,
+              game_object_contents(btech_context_active()->database, from)) {
+    if (is_good_obj(btech_context_active()->database, i) &&
+        is_hardcode(btech_context_active()->database, i)) {
       if ((target = getMech(i))) {
         if (MechType(target) == CLASS_BSUIT) {
           KillMechContentsIfIC(target->mynum);
@@ -2270,20 +2272,21 @@ void HandleCritical(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     return;
   if (MechType(wounded) == CLASS_MW && Number(1, 2) == 1)
     return;
-  if (MechType(wounded) != CLASS_MECH && !mudconf.btech_vcrit)
+  if (MechType(wounded) != CLASS_MECH &&
+      !btech_context_active()->configuration->btech_vcrit)
     return;
   if (MechType(wounded) == CLASS_VEH_GROUND ||
       MechType(wounded) == CLASS_VEH_NAVAL) {
-    if (mudconf.btech_fasaadvvhlcrit) {
+    if (btech_context_active()->configuration->btech_fasaadvvhlcrit) {
       for (i = 0; i < num; i++)
         HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
 
       return;
-    } else if (!mudconf.btech_fasacrit) {
+    } else if (!btech_context_active()->configuration->btech_fasacrit) {
       for (i = 0; i < num; i++)
         HandleVehicleCrit(wounded, attacker, LOS, hitloc, num);
       return;
-    } else if (mudconf.btech_fasacrit) {
+    } else if (btech_context_active()->configuration->btech_fasacrit) {
       for (i = 0; i < num; i++)
         HandleFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
       return;
@@ -2292,7 +2295,7 @@ void HandleCritical(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   if (IsDS(wounded))
     return;
   if (MechType(wounded) == CLASS_VTOL) {
-    if (mudconf.btech_fasaadvvtolcrit) {
+    if (btech_context_active()->configuration->btech_fasaadvvtolcrit) {
       for (i = 0; i < num; i++)
         HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
 

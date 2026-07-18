@@ -8,8 +8,10 @@
 #include "mux/support/name_table.h"
 #include "mux/support/red_black_tree.h"
 
+typedef struct MuxServer MuxServer;
+
 int cf_ntab_access(void *value, char *string, long extra, DbRef player,
-                   char *command);
+                   char *command, MuxServer *server);
 
 struct HashTable {
   long long checks, scans, max_scan, hits, entries, deletes, nulls;
@@ -31,12 +33,19 @@ void hash_table_flush(HashTable *, int);
 int hash_table_replace(char *, void *, HashTable *);
 void hash_table_replace_all(void *, void *, HashTable *);
 char *hash_table_info(const char *, HashTable *);
-int name_table_search(DbRef, NameTable *, char *);
-NameTable *name_table_find_entry(DbRef, NameTable *, char *);
-void name_table_display(DbRef, NameTable *, const char *, int);
-void name_table_interpret(DbRef, NameTable *, int, const char *, const char *,
+typedef struct ServerConfiguration ServerConfiguration;
+
+int name_table_search(GameDatabase *, const ServerConfiguration *, DbRef,
+                      const NameTable *, char *);
+NameTable *name_table_find_entry(GameDatabase *, const ServerConfiguration *,
+                                 DbRef, NameTable *, char *);
+void name_table_display(EvaluationContext *, const ServerConfiguration *, DbRef,
+                        NameTable *, const char *, int);
+void name_table_interpret(EvaluationContext *, const ServerConfiguration *,
+                          DbRef, NameTable *, int, const char *, const char *,
                           const char *);
-void name_table_list_set(DbRef, NameTable *, int, const char *, int);
+void name_table_list_set(EvaluationContext *, const ServerConfiguration *,
+                         DbRef, NameTable *, int, const char *, int);
 void *hash_table_next_entry(HashTable *htab);
 void *hash_table_first_entry(HashTable *htab);
 char *hash_table_first_key(HashTable *htab);

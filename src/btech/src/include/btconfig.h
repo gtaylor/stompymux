@@ -1,3 +1,4 @@
+#include "btech/btech_context.h"
 #include "mux/server/platform.h"
 
 #pragma once
@@ -60,10 +61,10 @@
 #define PIL_XP_EVERY_N_STEPS 10
 
 /* Where dead pilots go */
-#define AFTERLIFE_DBREF mudconf.afterlife_dbref
+#define AFTERLIFE_DBREF btech_context_active()->configuration->afterlife_dbref
 
 /* Where used MW templates go to wait for reincarnation (<g>) */
-#define USED_MW_STORE mudconf.btech_usedmechstore
+#define USED_MW_STORE btech_context_active()->configuration->btech_usedmechstore
 
 #define MINE_NEXT_MODIFIER 2 / 3
 #define MINE_MIN 5

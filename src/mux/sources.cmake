@@ -2,6 +2,8 @@ set(MUX_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command.c
+  ${MUX_MODULE_DIR}/commands/command_context.c
+  ${MUX_MODULE_DIR}/commands/command_invocation.c
   ${MUX_MODULE_DIR}/commands/command_queue.c
   ${MUX_MODULE_DIR}/commands/builder_commands.c
   ${MUX_MODULE_DIR}/commands/custom_commands.c
@@ -11,6 +13,8 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/macro.c
   ${MUX_MODULE_DIR}/commands/verbs.c
   ${MUX_MODULE_DIR}/communication/commac.c
+  ${MUX_MODULE_DIR}/communication/channel_registry.c
+  ${MUX_MODULE_DIR}/communication/comsys_context.c
   ${MUX_MODULE_DIR}/communication/comsys.c
   ${MUX_MODULE_DIR}/communication/speech.c
   ${MUX_MODULE_DIR}/database/boolexp.c
@@ -33,15 +37,19 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/network/telnet_socket.c
   ${MUX_MODULE_DIR}/persistence/commac_persistence_sqlite.c
   ${MUX_MODULE_DIR}/persistence/gamedb_sqlite.c
+  ${MUX_MODULE_DIR}/persistence/persistence_registry.c
   ${MUX_MODULE_DIR}/server/configuration.c
   ${MUX_MODULE_DIR}/server/configuration_toml.c
   ${MUX_MODULE_DIR}/server/diagnostics.c
   ${MUX_MODULE_DIR}/server/file_cache.c
   ${MUX_MODULE_DIR}/server/game.c
   ${MUX_MODULE_DIR}/server/log.c
+  ${MUX_MODULE_DIR}/server/maintenance.c
+  ${MUX_MODULE_DIR}/server/mux_server.c
+  ${MUX_MODULE_DIR}/server/runtime_clock.c
   ${MUX_MODULE_DIR}/server/server_lifecycle.c
   ${MUX_MODULE_DIR}/server/event_timer.c
-  ${MUX_MODULE_DIR}/server/server_state.c
+  ${MUX_MODULE_DIR}/server/server_registries.c
   ${MUX_MODULE_DIR}/server/signals.c
   ${MUX_MODULE_DIR}/server/timer.c
   ${MUX_MODULE_DIR}/server/version.c

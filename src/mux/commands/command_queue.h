@@ -8,6 +8,8 @@
 /* BQUE - Command queue */
 
 typedef struct bque BQUE;
+typedef struct CommandQueue CommandQueue;
+typedef struct MuxServer MuxServer;
 struct bque {
   BQUE *next;
 
@@ -23,6 +25,7 @@ struct bque {
   char *scr[NUM_ENV_VARS]; /* temp vars */
   int nargs;               /* How many args I have */
   MuxTimer *timer;         /* timer for the wait queue */
+  CommandQueue *queue;     /* scheduler that owns this entry */
 };
 
 /* Per object run queues */
@@ -38,13 +41,15 @@ struct objqe {
   int queued;
 };
 
-int cque_init(void);
-void do_second(void);
-int nfy_que(DbRef player, int key, int wait, int attr);
-int halt_que(DbRef player, DbRef cause);
-void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
-              char *command, char *arguments[], int argument_count,
-              char *commands[]);
-int que_next(void);
-int do_top(int command_count);
-void recover_queue_deposits(void);
+CommandQueue *command_queue_create(MuxServer *server);
+void command_queue_destroy(CommandQueue *queue);
+int cque_init(CommandQueue *queue);
+void do_second(CommandQueue *queue);
+int nfy_que(CommandQueue *queue, DbRef player, int key, int wait, int attr);
+int halt_que(CommandQueue *queue, DbRef player, DbRef cause);
+void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
+              DbRef sem, int attr, char *command, char *arguments[],
+              int argument_count, char *commands[]);
+int que_next(CommandQueue *queue);
+int do_top(CommandQueue *queue, int command_count);
+void recover_queue_deposits(CommandQueue *queue);

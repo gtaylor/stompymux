@@ -4,23 +4,24 @@
 
 #include "mux/server/platform.h"
 
-DbRef insert_first(DbRef head, DbRef thing) {
-  s_next(thing, head);
+DbRef insert_first(GameDatabase *database, DbRef head, DbRef thing) {
+  game_object_set_next(database, thing, head);
   return thing;
 }
 
 /*
  * Removes first object from a list
  */
-DbRef remove_first(DbRef head, DbRef thing) {
+DbRef remove_first(GameDatabase *database, DbRef head, DbRef thing) {
   DbRef prev;
 
   if (head == thing)
-    return (obj_next(thing));
+    return game_object_next(database, thing);
 
-  DOLIST(prev, head) {
-    if (obj_next(prev) == thing) {
-      s_next(prev, obj_next(thing));
+  for (prev = head; prev != NOTHING && game_object_next(database, prev) != prev;
+       prev = game_object_next(database, prev)) {
+    if (game_object_next(database, prev) == thing) {
+      game_object_set_next(database, prev, game_object_next(database, thing));
       return head;
     }
   }
@@ -30,13 +31,13 @@ DbRef remove_first(DbRef head, DbRef thing) {
 /**
  * Reverse the order of members in a list.
  */
-DbRef reverse_list(DbRef list) {
+DbRef reverse_list(GameDatabase *database, DbRef list) {
   DbRef newlist, rest;
 
   newlist = NOTHING;
   while (list != NOTHING) {
-    rest = obj_next(list);
-    s_next(list, newlist);
+    rest = game_object_next(database, list);
+    game_object_set_next(database, list, newlist);
     newlist = list;
     list = rest;
   }
@@ -46,8 +47,9 @@ DbRef reverse_list(DbRef list) {
 /**
  * Indicate if thing is in list
  */
-int member(DbRef thing, DbRef list) {
-  DOLIST(list, list) {
+int member(GameDatabase *database, DbRef thing, DbRef list) {
+  for (; list != NOTHING && game_object_next(database, list) != list;
+       list = game_object_next(database, list)) {
     if (list == thing)
       return 1;
   }

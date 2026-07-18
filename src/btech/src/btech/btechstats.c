@@ -131,7 +131,7 @@ static int char_xp_bonus(PSTATS *s, int code) {
 		return 0;
 	xp = s->xp[code];
 	while (xp > (t * count)) {
-		xp -= t * count * (mudconf.btech_ic ? 1 : 4);
+		xp -= t * count * (btech_context_active()->configuration->btech_ic ? 1 : 4);
 		count++;
 	}
 	return count - 1;
@@ -151,9 +151,9 @@ void list_charvaluestuff(DbRef player, int flag) {
   char buf[80] = {0};
 
   if (flag == -1)
-    notify(player, "List of charvalues available:");
+    notify(BTECH_EVALUATION_CONTEXT, player, "List of charvalues available:");
   if (flag >= 0) {
-    notify_printf(player,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "List of %s available:", btech_charvaluetype_names[flag]);
   }
   buf[0] = 0;
@@ -168,16 +168,17 @@ void list_charvaluestuff(DbRef player, int flag) {
       snprintf(buf + strlen(buf), 80 - strlen(buf), "%-23s ",
                char_values[i].name);
       if (!((++found) % 3)) {
-        notify(player, buf);
+        notify(BTECH_EVALUATION_CONTEXT, player, buf);
         strcpy(buf, " ");
       }
     }
   }
   if (found % 3) {
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
-  notify(player, " ");
-  notify_printf(player, "Total of %d things found.", found);
+  notify(BTECH_EVALUATION_CONTEXT, player, " ");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Total of %d things found.",
+                found);
 }
 
 /*****************************/
@@ -369,10 +370,10 @@ int char_gainxpbycode(DbRef player, int code, int amount, int override) {
    * within 30s to keep from spamming
    */
   if (override == 0)
-    if (!((mudstate.now > (s->last_use[code] + 30)) ||
+    if (!((btech_context_active()->clock->now > (s->last_use[code] + 30)) ||
           (char_values[code].flag & SK_XP)))
       return 0;
-  s->last_use[code] = mudstate.now;
+  s->last_use[code] = btech_context_active()->clock->now;
   s->xp[code] += amount;
   s->xp[code] =
       s->xp[code] % XP_MAX + XP_MAX * figure_xp_bonus(player, s, code);
@@ -397,8 +398,10 @@ int char_getskillsuccess(DbRef player, char *name, int modifier, int loud) {
   else
     roll = char_rollskilled();
   if (loud) {
-    notify_printf(player, "You make a %s skill roll!", name);
-    notify_printf(player, "Modified skill BTH : %d Roll : %d", val, roll);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "You make a %s skill roll!",
+                  name);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Modified skill BTH : %d Roll : %d", val, roll);
   }
 
   if (roll >= val)
@@ -529,7 +532,9 @@ static void show_charstatus(DbRef player, PSTATS *s, DbRef thing) {
   coolmenu *c = NULL;
 
   if (thing) {
-    addmenu(tprintf("%%cgName     %%c: %s (#%ld)", Name(thing), thing));
+    addmenu(tprintf("%%cgName     %%c: %s (#%ld)",
+                    game_object_name(btech_context_active()->database, thing),
+                    thing));
     if (*(p = silly_atr_get(thing, A_FACTION)))
       addmenu(tprintf("%%cgFaction  %%c: %s", p));
 #if 0
@@ -654,7 +659,7 @@ void do_charstatus(DbRef player, DbRef cause, int key, char *arg1) {
     DOCHECK(thing == NOTHING, "I don't know who that is");
 
     if (thing != player && !(WizR(player))) {
-      notify(player,
+      notify(BTECH_EVALUATION_CONTEXT, player,
              "You do not have the authority to check that players stats");
       return;
     }
@@ -677,7 +682,8 @@ void do_charclear(DbRef player, DbRef cause, int key, char *arg1) {
   silly_atr_set(thing, A_SKILLS, "");
   silly_atr_set(thing, A_ADVS, "");
   silly_atr_set(thing, A_HEALTH, "");
-  notify_printf(player, "Player #%ld stats cleared", thing);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Player #%ld stats cleared",
+                thing);
 }
 
 #if 0
@@ -689,11 +695,11 @@ DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1)
 	if(!arg1 || !*arg1)
 		return NOTHING;
 
-	if(!string_compare(arg1, "me") && (typeof_obj(player) == TYPE_PLAYER))
+	if(!string_compare(btech_context_active()->configuration, arg1, "me") && (typeof_obj(btech_context_active()->database, player) == TYPE_PLAYER))
 		return player;
 	if(arg1[0] == '#') {
 		if(sscanf(arg1, "#%d", &which) == 1)
-			if(which >= 0 && is_player(which))
+			if(which >= 0 && is_player(btech_context_active()->database, which))
 				return which;
 		return NOTHING;
 	}
@@ -702,7 +708,7 @@ DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1)
 #endif
 
 DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1) {
-  return lookup_player(player, arg1, 0);
+  return lookup_player(BTECH_WORLD_CONTEXT, player, arg1, 0);
 }
 
 static int loc_mod(int loc) {
@@ -768,8 +774,10 @@ void initialize_pc(DbRef player, MECH *mech) {
   case 3:
     if (strcmp(buf3, "-")) {
       if (!find_matching_vlong_part(buf3, NULL, &id, &brand)) {
-        SendError(tprintf("Invalid PC weapon #1 for %s(#%ld): %s", Name(player),
-                          player, buf3));
+        SendError(
+            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
+                    game_object_name(btech_context_active()->database, player),
+                    player, buf3));
         return;
       }
       if (IsWeapon(id)) {
@@ -789,8 +797,10 @@ void initialize_pc(DbRef player, MECH *mech) {
   case 2:
     if (strcmp(buf2, "-")) {
       if (!find_matching_vlong_part(buf2, NULL, &id, &brand)) {
-        SendError(tprintf("Invalid PC weapon #1 for %s(#%ld): %s", Name(player),
-                          player, buf2));
+        SendError(
+            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
+                    game_object_name(btech_context_active()->database, player),
+                    player, buf2));
         return;
       }
       if (IsWeapon(id)) {
@@ -809,14 +819,18 @@ void initialize_pc(DbRef player, MECH *mech) {
     [[fallthrough]];
   case 1:
     if (strlen(buf1) != PC_LOCS) {
-      SendError(tprintf("Invalid armor string for %s(#%ld): %s", Name(player),
-                        player, buf1));
+      SendError(
+          tprintf("Invalid armor string for %s(#%ld): %s",
+                  game_object_name(btech_context_active()->database, player),
+                  player, buf1));
       return;
     }
     for (i = 0; buf1[i]; i++)
       if (!isdigit(buf1[i])) {
-        SendError(tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
-                          Name(player), player, buf1, i + 1, buf1[i]));
+        SendError(
+            tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
+                    game_object_name(btech_context_active()->database, player),
+                    player, buf1, i + 1, buf1[i]));
         return;
       }
     for (i = 0; buf1[i]; i++) {
@@ -885,7 +899,8 @@ int handlemwconc(MECH *mech, int initial) {
 
   int m, roll;
 
-  if (is_in_character(mech->mynum) && MechPilot(mech) > 0)
+  if (is_in_character(btech_context_active()->database, mech->mynum) &&
+      MechPilot(mech) > 0)
     m = mw_ic_bth(mech);
   else {
     if (initial)
@@ -940,7 +955,8 @@ void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
   if (mech->mynum < 0)
     return;
   /* check to see if mech is IC */
-  if (!is_in_character(mech->mynum) || !GotPilot(mech)) {
+  if (!is_in_character(btech_context_active()->database, mech->mynum) ||
+      !GotPilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -994,7 +1010,8 @@ void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
   if (mech->mynum < 0)
     return;
   /* check to see if mech is IC */
-  if (!is_in_character(mech->mynum) || !GotPilot(mech)) {
+  if (!is_in_character(btech_context_active()->database, mech->mynum) ||
+      !GotPilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -1059,8 +1076,10 @@ void AccumulateTechXP(DbRef pilot, MECH *mech, int reason) {
 
   // We emit all tech XP gains to the MechTechXP channel.
   if (char_gainxp(pilot, skname, xp))
-    SendTechXP(tprintf("%s gained %d %s XP (changing mech #%ld)", Name(pilot),
-                       xp, skname, mech ? mech->mynum : -1));
+    SendTechXP(
+        tprintf("%s gained %d %s XP (changing mech #%ld)",
+                game_object_name(btech_context_active()->database, pilot), xp,
+                skname, mech ? mech->mynum : -1));
 }
 
 void AccumulateTechWeaponsXP(DbRef pilot, MECH *mech, int reason) {
@@ -1073,8 +1092,10 @@ void AccumulateTechWeaponsXP(DbRef pilot, MECH *mech, int reason) {
 
   // We emit all tech xp gains to MechTechXP channel.
   if (char_gainxp(pilot, skname, xp))
-    SendTechXP(tprintf("%s gained %d %s XP (changing mech #%ld)", Name(pilot),
-                       xp, skname, mech ? mech->mynum : -1));
+    SendTechXP(
+        tprintf("%s gained %d %s XP (changing mech #%ld)",
+                game_object_name(btech_context_active()->database, pilot), xp,
+                skname, mech ? mech->mynum : -1));
 }
 
 void AccumulateCommXP(DbRef pilot, MECH *mech) {
@@ -1083,20 +1104,21 @@ void AccumulateCommXP(DbRef pilot, MECH *mech) {
   xp = 1;
   if (!RGotPilot(mech))
     return;
-  if (!is_in_character(mech->mynum))
+  if (!is_in_character(btech_context_active()->database, mech->mynum))
     return;
-  if (!is_connected(pilot))
+  if (!is_connected(btech_context_active()->database, pilot))
     return;
   if (char_gainxp(pilot, "Comm-Conventional", xp))
-    SendXP(tprintf("%s gained %d %s XP (in #%ld)", Name(pilot), xp,
-                   "Comm-Conventional", mech->mynum));
+    SendXP(tprintf("%s gained %d %s XP (in #%ld)",
+                   game_object_name(btech_context_active()->database, pilot),
+                   xp, "Comm-Conventional", mech->mynum));
 }
 
 void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
   char *skname;
   int xp;
 
-  if (!is_in_character(mech->mynum))
+  if (!is_in_character(btech_context_active()->database, mech->mynum))
     return;
 
   if (!RGotPilot(mech))
@@ -1118,17 +1140,20 @@ void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(pilot, skname, xp))
-    SendPilotXP(tprintf("%s gained %d %s XP", Name(pilot), xp, skname));
+    SendPilotXP(tprintf(
+        "%s gained %d %s XP",
+        game_object_name(btech_context_active()->database, pilot), xp, skname));
   /*
       if (char_gainxp(pilot, skname, xp))
-              SendXP(tprintf("%s gained %d %s XP", Name(pilot), xp, skname));
+              SendXP(tprintf("%s gained %d %s XP",
+     game_object_name(btech_context_active()->database, pilot), xp, skname));
   */
 }
 
 void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
-  if (!is_in_character(attacker->mynum))
+  if (!is_in_character(btech_context_active()->database, attacker->mynum))
     return;
   if (!RGotPilot(attacker))
     return;
@@ -1140,16 +1165,17 @@ void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
     return;
   if (MechTeam(wounded) == MechTeam(attacker))
     return;
-  if (!is_in_character(wounded->mynum))
+  if (!is_in_character(btech_context_active()->database, wounded->mynum))
     return;
   if (char_gainxp(pilot, "Gunnery-Spotting", xp))
-    SendXP(tprintf("%s gained spotting XP", Name(pilot)));
+    SendXP(tprintf("%s gained spotting XP",
+                   game_object_name(btech_context_active()->database, pilot)));
 }
 
 int MadePerceptionRoll(MECH *mech, int modifier) {
   int pilot;
 
-  if (!is_in_character(mech->mynum))
+  if (!is_in_character(btech_context_active()->database, mech->mynum))
     return 0;
   if (!RGotGPilot(mech))
     return 0;
@@ -1161,7 +1187,8 @@ int MadePerceptionRoll(MECH *mech, int modifier) {
   if (Roll() < (MechPer(mech) + modifier))
     return 0;
   if (char_gainxp(pilot, "Perception", 1))
-    SendXP(tprintf("%s gained 1 perception XP", Name(pilot)));
+    SendXP(tprintf("%s gained 1 perception XP",
+                   game_object_name(btech_context_active()->database, pilot)));
   return 1;
 }
 
@@ -1169,7 +1196,7 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   int xp = 1;
 
   /* If not in character ie: like in simulator - no xp */
-  if (!is_in_character(attacker->mynum))
+  if (!is_in_character(btech_context_active()->database, attacker->mynum))
     return;
 
   if (!RGotGPilot(attacker))
@@ -1191,23 +1218,27 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
     return;
 
   /* If target not in character ie: in simulator - no xp */
-  if (!is_in_character(wounded->mynum))
+  if (!is_in_character(btech_context_active()->database, wounded->mynum))
     return;
 
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(pilot, "Gunnery-Artillery", xp))
-    SendAttackXP(tprintf("%s gained %d artillery XP", Name(pilot), xp));
+    SendAttackXP(
+        tprintf("%s gained %d artillery XP",
+                game_object_name(btech_context_active()->database, pilot), xp));
 }
 
 void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason) {
   if (!mech)
     return;
 
-  if (mech && is_in_character(mech->mynum) && is_player(pilot))
+  if (mech && is_in_character(btech_context_active()->database, mech->mynum) &&
+      is_player(btech_context_active()->database, pilot))
     if (char_gainxp(pilot, "computer", MAX(1, reason)))
-      SendXP(tprintf("%s gained %d computer XP (mech #%ld)", Name(pilot),
+      SendXP(tprintf("%s gained %d computer XP (mech #%ld)",
+                     game_object_name(btech_context_active()->database, pilot),
                      reason, mech ? mech->mynum : -1));
 }
 
@@ -1296,7 +1327,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
 
   weapTypeMod = 1;
 
-  if (mudconf.btech_oldxpsystem) {
+  if (btech_context_active()->configuration->btech_oldxpsystem) {
     AccumulateGunXPold(pilot, attacker, wounded, damage, multiplier, weapindx,
                        bth);
     return;
@@ -1310,7 +1341,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
     return;
 
   /* Is attacker in character ie: not in simulator */
-  if (!is_in_character(attacker->mynum))
+  if (!is_in_character(btech_context_active()->database, attacker->mynum))
     return;
 
   if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
@@ -1335,7 +1366,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
     return;
 
   /* Is the target in character ie: in simulators */
-  if (!is_in_character(wounded->mynum))
+  if (!is_in_character(btech_context_active()->database, wounded->mynum))
     return;
 
   /* No skill to match the weapon we're shooting with? */
@@ -1350,11 +1381,12 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
   if (!(bth <= 12))
     return;
 
-  multiplier = multiplier * mudconf.btech_xp_modifier;
+  multiplier =
+      multiplier * btech_context_active()->configuration->btech_xp_modifier;
 
-  if (mudconf.btech_xp_bthmod) {
+  if (btech_context_active()->configuration->btech_xp_bthmod) {
     if (!(bth >= 3 && bth <= 12)) {
-      if (mudconf.btech_noisy_xpgain)
+      if (btech_context_active()->configuration->btech_noisy_xpgain)
         SendXP(tprintf("#%ld in #%ld 1 noxp #%ld", pilot, attacker->mynum,
                        wounded->mynum));
       return; /* sure hits aren't interesting */
@@ -1366,7 +1398,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
   my_BV = MechBV(attacker);
   th_BV = MechBV(wounded);
 
-  if (mudconf.btech_xp_usePilotBVMod) {
+  if (btech_context_active()->configuration->btech_xp_usePilotBVMod) {
     myPilotBVMod = getPilotBVMod(attacker, weapindx);
     theirPilotBVMod = getPilotBVMod(wounded, weapindx);
 
@@ -1385,16 +1417,16 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
   th_speed = NewMoveValue(wounded) + 1;
 
   if (MechWeapons[weapindx].type == TMISSILE)
-    weapTypeMod = mudconf.btech_xp_missilemod;
+    weapTypeMod = btech_context_active()->configuration->btech_xp_missilemod;
   else if (MechWeapons[weapindx].type == TAMMO)
-    weapTypeMod = mudconf.btech_xp_ammomod;
+    weapTypeMod = btech_context_active()->configuration->btech_xp_ammomod;
 
-  if (mudconf.btech_defaultweapdam > 1)
+  if (btech_context_active()->configuration->btech_defaultweapdam > 1)
     damagemod = damage;
   else
     damagemod = 1;
 
-  if (mudconf.btech_xp_vrtmod)
+  if (btech_context_active()->configuration->btech_xp_vrtmod)
     vrtmod = (MechWeapons[weapindx].vrt < 30
                   ? sqrt((double)MechWeapons[weapindx].vrt / 30.0)
                   : 1);
@@ -1403,28 +1435,33 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
 
   multiplier =
       (vrtmod * weapTypeMod * multiplier *
-       sqrt((double)(th_BV + 1) * th_speed * mudconf.btech_defaultweapbv /
-            mudconf.btech_defaultweapdam)) /
+       sqrt((double)(th_BV + 1) * th_speed *
+            btech_context_active()->configuration->btech_defaultweapbv /
+            btech_context_active()->configuration->btech_defaultweapdam)) /
       (sqrt((double)(my_BV + 1) * my_speed * MechWeapons[weapindx].battlevalue /
             damagemod));
 
-  if (mudconf.btech_perunit_xpmod)
+  if (btech_context_active()->configuration->btech_perunit_xpmod)
     multiplier =
         multiplier *
         MechXPMod(attacker); /* Per unit XP Mod. Defaults to 1 anyways */
 
   /* Change the Cap to be variable depending on what a mux wants */
 
-  xp = BOUNDED(1, (int)(multiplier * damage / 100), mudconf.btech_xpgain_cap);
+  xp = BOUNDED(1, (int)(multiplier * damage / 100),
+               btech_context_active()->configuration->btech_xpgain_cap);
 
-  strcpy(buf, Name(wounded->mynum));
+  strcpy(buf,
+         game_object_name(btech_context_active()->database, wounded->mynum));
 
   // Emit XP gain over MechAttackXP
   if (char_gainxp(pilot, skname, (int)xp)) {
-    SendAttackXP(tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
-                         "(%d damage) against %s",
-                         Name(pilot), (int)xp, multiplier, damage, buf));
-    if (mudconf.btech_noisy_xpgain)
+    SendAttackXP(
+        tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
+                "(%d damage) against %s",
+                game_object_name(btech_context_active()->database, pilot),
+                (int)xp, multiplier, damage, buf));
+    if (btech_context_active()->configuration->btech_noisy_xpgain)
       SendXP(tprintf("#%ld in #%ld %d damage #%ld", pilot, attacker->mynum,
                      damage, wounded->mynum));
   }
@@ -1439,7 +1476,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
   char buf[MBUF_SIZE];
 
   /* Is the attacker in character ie: in simulators */
-  if (!is_in_character(attacker->mynum))
+  if (!is_in_character(btech_context_active()->database, attacker->mynum))
     return;
 
   if (!RGotGPilot(attacker))
@@ -1461,7 +1498,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
     return;
 
   /* if target is in character ie: in simulators or something */
-  if (!is_in_character(wounded->mynum))
+  if (!is_in_character(btech_context_active()->database, wounded->mynum))
     return;
 
   if (!(skname = FindGunnerySkillName(attacker, weapindx)))
@@ -1481,7 +1518,9 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
     /* Bring this to the attention of the admins */
     SendError(tprintf(
         "AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
-        attacker->mynum, Name(attacker->mynum), (short)MechTons(attacker)));
+        attacker->mynum,
+        game_object_name(btech_context_active()->database, attacker->mynum),
+        (short)MechTons(attacker)));
     return;
   }
 
@@ -1495,7 +1534,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
 
   multiplier = multiplier * bth_modifier[bth - 3] / 36;
   multiplier = multiplier * 2; /* For average shot */
-  if (mudconf.btech_perunit_xpmod)
+  if (btech_context_active()->configuration->btech_perunit_xpmod)
     multiplier = multiplier *
                  MechXPMod(attacker); /* Per unit XP Modifier. Defaults to 1 */
 
@@ -1504,18 +1543,22 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
 
   xp = BOUNDED(1, (int)(multiplier * numOccurences) / 100,
                50); /*Hardcoded limit */
-  strcpy(buf, Name(wounded->mynum));
+  strcpy(buf,
+         game_object_name(btech_context_active()->database, wounded->mynum));
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(pilot, skname, (int)xp))
-    SendAttackXP(tprintf("%s gained %d gun XP from feat of %f %% "
-                         "difficulty (%d occurences) against %s",
-                         Name(pilot), (int)xp, multiplier, numOccurences, buf));
+    SendAttackXP(
+        tprintf("%s gained %d gun XP from feat of %f %% "
+                "difficulty (%d occurences) against %s",
+                game_object_name(btech_context_active()->database, pilot),
+                (int)xp, multiplier, numOccurences, buf));
 }
 
 void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *context) {
   /* fargs[0] = char id (#222)
      fargs[1] = value name / value loc #
      fargs[2] = flaggo (?) */
@@ -1553,7 +1596,8 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
 }
 
 void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *context) {
   /* fargs[0] = char id (#222)
      fargs[1] = value name / value loc #
      fargs[2] = value to be set
@@ -1584,7 +1628,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
      * I.e. Setting someone to Level 2 Gun-Bmech with A Physical Attribute of 7+
      * will give you a 5+ in Gun-Bmech */
     char_setvaluebycode(target, targetcode, targetvalue);
-    safe_tprintf_str(buff, bufc, "%s's %s set to %d", Name(target),
+    safe_tprintf_str(buff, bufc, "%s's %s set to %d",
+                     game_object_name(btech_context_active()->database, target),
                      char_values[targetcode].name,
                      char_getvaluebycode(target, targetcode));
     break;
@@ -1606,7 +1651,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
       char_setvaluebycode(target, targetcode, 0);
     }
 
-    safe_tprintf_str(buff, bufc, "%s's %s set to %d", Name(target),
+    safe_tprintf_str(buff, bufc, "%s's %s set to %d",
+                     game_object_name(btech_context_active()->database, target),
                      char_values[targetcode].name,
                      targetvalue >= 0 ? char_getvaluebycode(target, targetcode)
                                       : 0);
@@ -1620,7 +1666,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
 
     SendXP(tprintf("%ld set %ld's %s XP to %d", player, target,
                    char_values[targetcode].name, targetvalue));
-    safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.", Name(target),
+    safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
+                     game_object_name(btech_context_active()->database, target),
                      char_values[targetcode].name, targetvalue);
 
     break;
@@ -1630,7 +1677,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
     char_gainxpbycode(target, targetcode, targetvalue, 1);
     SendXP(tprintf("#%ld added %d more %s XP to #%ld", player, targetvalue,
                    char_values[targetcode].name, target));
-    safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.", Name(target),
+    safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
+                     game_object_name(btech_context_active()->database, target),
                      targetvalue, char_values[targetcode].name);
 
     break;
@@ -1648,7 +1696,8 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
 ** characters need all of them.
 */
 void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs) {
+                    char *fargs[], int nfargs, char *cargs[], int ncargs,
+                    EvaluationContext *context) {
   int i;
   int type = 0;
   int first = 1;
@@ -1714,7 +1763,7 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
   PSTATS *s;
 
 #if 0
-	notify(player, "Support discontinued. Bother a wiz if this bothers you.");
+	notify(BTECH_EVALUATION_CONTEXT, player, "Support discontinued. Bother a wiz if this bothers you.");
 	return;
 #endif
 
@@ -1725,8 +1774,8 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
   DOCHECK((hm = char_getvaluecode(buffer)) < 0, "Invalid value name!");
   DOCHECK(char_values[hm].type != CHAR_SKILL,
           "Only skills have XP (for now at least)");
-  DO_WHOLE_DB(i) {
-    if (!is_player(i))
+  DO_WHOLE_DB(btech_context_active()->database, i) {
+    if (!is_player(btech_context_active()->database, i))
       continue;
     if (Wiz(i))
       continue;
@@ -1753,7 +1802,9 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
     }
   addline();
   for (i = 0; i < MIN(16, count); i++) {
-    addmenu(tprintf("%3d. %s", i + 1, Name(top[i])));
+    addmenu(
+        tprintf("%3d. %s", i + 1,
+                game_object_name(btech_context_active()->database, top[i])));
     addmenu(tprintf("%d (%.3f %%)", topv[i], (100.0 * topv[i]) / gt));
   }
   addline();
@@ -1888,7 +1939,7 @@ static void store_advs(DbRef player, PSTATS *s) {
 }
 
 static void store_stats(DbRef player, PSTATS *s, int modes) {
-  if (!is_player(player))
+  if (!is_player(btech_context_active()->database, player))
     return;
   if (modes & VALUES_HEALTH)
     store_health(player, s);
@@ -1931,7 +1982,7 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
   DOCHECK((code = char_getvaluecode(args[0])) < 0, "That isn't any charvalue!");
   DOCHECK(char_values[code].type != CHAR_SKILL, "That isn't any skill!");
   char_values[code].xpthreshold = xpt;
-  log_error(LOG_WIZARD, "WIZ", "CHANGE",
+  log_error(btech_context_active()->log, LOG_WIZARD, "WIZ", "CHANGE",
             "Exp threshold for %s changed to %d by #%ld",
             char_values[code].name, xpt, player);
 }

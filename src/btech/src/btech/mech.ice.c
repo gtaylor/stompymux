@@ -151,9 +151,9 @@ void ice_growth(DbRef player, MAP *map, int num) {
       if (GetRTerrain(map, x, y) == TMP_TERR)
         SetTerrain(map, x, y, ICE);
   if (count)
-    notify_printf(player, "%d hexes 'iced'.", count);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d hexes 'iced'.", count);
   else
-    notify(player, "No hexes 'iced'.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "No hexes 'iced'.");
 }
 
 void ice_melt(DbRef player, MAP *map, int num) {
@@ -173,9 +173,9 @@ void ice_melt(DbRef player, MAP *map, int num) {
       if (GetRTerrain(map, x, y) == TMP_TERR)
         SetTerrain(map, x, y, WATER);
   if (count)
-    notify_printf(player, "%d hexes melted.", count);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d hexes melted.", count);
   else
-    notify(player, "No hexes melted.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "No hexes melted.");
 }
 
 void map_addice(DbRef player, MAP *map, char *buffer) {

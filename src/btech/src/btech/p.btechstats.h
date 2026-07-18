@@ -9,6 +9,7 @@
 
 /* Generated at Mon Mar 22 10:40:18 CET 1999 from btechstats.c */
 
+#include "mux/commands/command_context.h"
 #include "mux/server/platform.h"
 
 #pragma once
@@ -61,11 +62,14 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
                         int numOccurences, float multiplier, int weapindx,
                         int bth);
 void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs);
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *context);
 void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
-                        char *fargs[], int nfargs, char *cargs[], int ncargs);
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *context);
 void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
-                    char *fargs[], int nfargs, char *cargs[], int ncargs);
+                    char *fargs[], int nfargs, char *cargs[], int ncargs,
+                    EvaluationContext *context);
 void debug_xptop(DbRef player, void *data, char *buffer);
 void debug_setxplevel(DbRef player, void *data, char *buffer);
 int btthreshold_func(char *skillname);

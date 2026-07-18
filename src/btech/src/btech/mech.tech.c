@@ -17,9 +17,12 @@
 #include "p.mech.utils.h"
 
 int game_lag(void) {
-  if (!mux_event_tick)
+  if (!btech_context_active()->events->tick)
     return 0;
-  return 100 * (mudstate.now - mudstate.process_start_time) / mux_event_tick -
+  return 100 *
+             (btech_context_active()->clock->now -
+              btech_context_active()->process_start_time) /
+             btech_context_active()->events->tick -
          100;
 }
 
@@ -36,13 +39,13 @@ int player_techtime(DbRef player) {
 
   if (tt_attr) {
     techtime = (time_t)atoi(tt_attr);
-    if (techtime < mudstate.now)
-      techtime = mudstate.now;
+    if (techtime < btech_context_active()->clock->now)
+      techtime = btech_context_active()->clock->now;
   } else {
-    techtime = mudstate.now;
+    techtime = btech_context_active()->clock->now;
   }
 
-  tused = (techtime - mudstate.now) / TECH_TICK;
+  tused = (techtime - btech_context_active()->clock->now) / TECH_TICK;
 
   return tused;
 }
@@ -56,13 +59,14 @@ int tech_roll(DbRef player, MECH *mech, int diff) {
   s = FindTechSkill(player, mech);
   s += diff;
   succ = r >= s;
-  if (is_wizard(player)) {
-    notify_printf(player, "Tech - BTH: %d(Base:%d, Mod:%d) Roll: %d", s,
-                  s - diff, diff, r);
+  if (is_wizard(btech_context_active()->database, player)) {
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Tech - BTH: %d(Base:%d, Mod:%d) Roll: %d", s, s - diff, diff,
+                  r);
   } else {
-    notify_printf(player, "BTH: %d Roll: %d", s, r);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "BTH: %d Roll: %d", s, r);
   }
-  if (succ && is_in_character(mech->mynum))
+  if (succ && is_in_character(btech_context_active()->database, mech->mynum))
     AccumulateTechXP(player, mech, BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
 }
@@ -76,13 +80,14 @@ int tech_weapon_roll(DbRef player, MECH *mech, int diff) {
   s = char_getskilltarget(player, "technician-weapons", 0);
   s += diff;
   succ = r >= s;
-  if (is_wizard(player)) {
-    notify_printf(player, "Tech-W - BTH: %d(Base:%d, Mod:%d) Roll: %d", s,
-                  s - diff, diff, r);
+  if (is_wizard(btech_context_active()->database, player)) {
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Tech-W - BTH: %d(Base:%d, Mod:%d) Roll: %d", s, s - diff,
+                  diff, r);
   } else {
-    notify_printf(player, "BTH: %d Roll: %d", s, r);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "BTH: %d Roll: %d", s, r);
   }
-  if (succ && is_in_character(mech->mynum))
+  if (succ && is_in_character(btech_context_active()->database, mech->mynum))
     AccumulateTechWeaponsXP(player, mech, BOUNDED(1, s - 7, MAX(2, 1 + diff)));
   return (r - s);
 }
@@ -99,27 +104,27 @@ void tech_status(DbRef player, time_t dat) {
     olds = silly_atr_get(player, A_TECHTIME);
     if (olds) {
       dat = (time_t)atoi(olds);
-      if (dat < mudstate.now)
-        dat = mudstate.now;
+      if (dat < btech_context_active()->clock->now)
+        dat = btech_context_active()->clock->now;
     } else
-      dat = mudstate.now;
+      dat = btech_context_active()->clock->now;
   }
-  if (dat <= mudstate.now)
-    notify(player, "You have no jobs pending!");
+  if (dat <= btech_context_active()->clock->now)
+    notify(BTECH_EVALUATION_CONTEXT, player, "You have no jobs pending!");
   else {
-    un = (dat - mudstate.now) / TECH_TICK;
+    un = (dat - btech_context_active()->clock->now) / TECH_TICK;
     snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
              TECH_UNIT, un != 1 ? "s" : "");
-    if (un >= mudconf.btech_maxtechtime)
+    if (un >= btech_context_active()->configuration->btech_maxtechtime)
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
                " and you're too tired to do more efficiently.");
     else {
-      un = mudconf.btech_maxtechtime - un;
+      un = btech_context_active()->configuration->btech_maxtechtime - un;
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
                " and you're ready to do at least %d more %s%s of work.", un,
                TECH_UNIT, un == 1 ? "" : "s");
     }
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
 }
 
@@ -129,14 +134,14 @@ int tech_addtechtime(DbRef player, int time) {
 
   if (olds) {
     old = (time_t)atoi(olds);
-    if (old < mudstate.now)
-      old = mudstate.now;
+    if (old < btech_context_active()->clock->now)
+      old = btech_context_active()->clock->now;
   } else
-    old = mudstate.now;
+    old = btech_context_active()->clock->now;
   old += time * TECH_TICK;
   silly_atr_set(player, A_TECHTIME, tprintf("%ld", old));
   tech_status(player, old);
-  return (old - mudstate.now);
+  return (old - btech_context_active()->clock->now);
 }
 
 int tech_parsepart_advanced(MECH *mech, char *buffer, int *loc, int *pos,
@@ -223,7 +228,7 @@ int tech_parsegun(MECH *mech, char *buffer, int *loc, int *pos, int *brand) {
 int cheated_last = 0;
 
 static void cheat_find_last(MuxEvent *e) {
-  int ofs = e->tick - mux_event_tick;
+  int ofs = e->tick - btech_context_active()->events->tick;
   long amount = (((long)e->data2) % PLAYERPOS) / 16 - 1;
 
   switch (e->type) {
@@ -243,6 +248,7 @@ int figure_latest_tech_event(MECH *mech) {
 
   cheated_last = 0;
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    mux_event_gothru_type_data(i, (void *)mech, cheat_find_last);
+    mux_event_gothru_type_data(btech_context_active()->events, i, (void *)mech,
+                               cheat_find_last);
   return cheated_last;
 }

@@ -42,13 +42,15 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
   float f1, f2, chanceperc, optimalrolls;
 
   if (!rollstat.totrolls) {
-    notify(player, "No rolls to show statistics for!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "No rolls to show statistics for!");
     return;
   }
   for (i = 0; i < 11; i++) {
     if (i == 0) {
-      notify(player, "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
-                     " %Miss Chance");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
+             " %Miss Chance");
     }
     f1 = (float)chances[i] * 100.0 / 36.0;
     f2 = (float)rollstat.rolls[i] * 100.0 / rollstat.totrolls;
@@ -58,19 +60,21 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
     }
     chanceperc = (float)chancetotal / 36.0 * 100;
     optimalrolls = f1 / 100 * rollstat.totrolls;
-    notify_printf(player, "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f", i + 2,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f", i + 2,
                   rollstat.rolls[i], f2, (int)optimalrolls, f1, chanceperc,
                   100.0 - chanceperc);
   }
-  notify_printf(player, "Total rolls: %d", rollstat.totrolls);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Total rolls: %d",
+                rollstat.totrolls);
 
   /*	i = 0;
 
-          if(is_wizard(player)) {
+          if(is_wizard(btech_context_active()->database, player)) {
           for(i = 0; i < 11; i++) {
                   if(i == 0) {
-                          notify(player, "\nWeapon Fire Stats\nBTH   #Misses
-     #Hits           #Glances              Total");
+                          notify(BTECH_EVALUATION_CONTEXT, player, "\nWeapon
+     Fire Stats\nBTH   #Misses #Hits           #Glances              Total");
                   }
                   hitavg = missavg = glanceavg = 0.0;
                   hitstatstotal = rollstat.hitstats[i][0] +
@@ -84,7 +88,8 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
      rollstat.hitstats[i][1] / (float) hitstatstotal) * 100.0; glanceavg = (
      (float) rollstat.hitstats[i][2] / (float) hitstatstotal) * 100.0;
                   }
-                  notify_printf(player,"%3d  %8d (%5.1f%%)  %8d (%5.1f%%)  %8d
+                  notify_printf(BTECH_EVALUATION_CONTEXT, player,"%3d  %8d
+     (%5.1f%%)  %8d (%5.1f%%)  %8d
      (%5.1f%%)  %8d", i+2,
      rollstat.hitstats[i][0],missavg,rollstat.hitstats[i][1],hitavg,rollstat.hitstats[i][2],glanceavg,hitstatstotal);
           }
@@ -95,9 +100,9 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
      totalhitrolls[3]) * 100.0; glanceavg = ( (float) totalhitrolls[2] / (float)
      totalhitrolls[3]) * 100.0;
           }
-          notify_printf(player,"ALL  %8d (%5.1f%%)  %8d (%5.1f%%)  %8d (%5.1f%%)
-     %8d", totalhitrolls[0], missavg, totalhitrolls[1], hitavg,
-     totalhitrolls[2], glanceavg, totalhitrolls[3]);
+          notify_printf(BTECH_EVALUATION_CONTEXT, player,"ALL  %8d (%5.1f%%) %8d
+     (%5.1f%%)  %8d (%5.1f%%) %8d", totalhitrolls[0], missavg, totalhitrolls[1],
+     hitavg, totalhitrolls[2], glanceavg, totalhitrolls[3]);
 
           }
   */

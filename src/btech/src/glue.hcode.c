@@ -26,15 +26,15 @@ char *silly_atr_get(int id, int flag) {
   long i, j;
   static char buf[LBUF_SIZE];
 
-  attribute_get_string(buf, id, flag, &i, &j);
+  attribute_get_string(btech_context_active()->database, buf, id, flag, &i, &j);
   return buf;
 #if 0 /* This would waste memory, so.. :P */
-	return attribute_parent_get(id, flag, &i, &j);
+	return attribute_parent_get(btech_context_active()->database, id, flag, &i, &j);
 #endif
 }
 
 void silly_atr_set(int id, int flag, char *dat) {
-  attribute_add_raw(id, flag, dat);
+  attribute_add_raw(btech_context_active()->database, id, flag, dat);
 }
 
 void KillText(char **mapt) {
@@ -49,7 +49,7 @@ void ShowText(char **mapt, DbRef player) {
   int i;
 
   for (i = 0; mapt[i]; i++)
-    notify(player, mapt[i]);
+    notify(BTECH_EVALUATION_CONTEXT, player, mapt[i]);
 }
 
 int BOUNDED(int min, int val, int max) {

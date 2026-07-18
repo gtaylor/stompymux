@@ -12,11 +12,13 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 
 typedef struct DescriptorWrite DescriptorWrite;
+typedef struct TelnetListener TelnetListener;
 struct DescriptorWrite {
   uv_write_t request;
   Descriptor *descriptor;
@@ -24,12 +26,20 @@ struct DescriptorWrite {
   char data[];
 };
 
-static uv_tcp_t listener4;
-static bool listener4_initialized;
+struct TelnetListener {
+  uv_tcp_t handle;
+  TelnetSockets *owner;
+  bool initialized;
+};
+
+struct TelnetSockets {
+  uv_loop_t *loop;
+  MuxServer *server;
+  TelnetListener listener4;
 #ifdef IPV6_SUPPORT
-static uv_tcp_t listener6;
-static bool listener6_initialized;
+  TelnetListener listener6;
 #endif
+};
 
 static void descriptor_read_alloc(uv_handle_t *handle, size_t suggested_size,
                                   uv_buf_t *buffer);
@@ -45,8 +55,9 @@ static void descriptor_write_complete(uv_write_t *request, int status) {
   descriptor->output_size -= (int)write->size;
   free(write);
   if (status < 0 && !descriptor->is_dead) {
-    log_error(LOG_PROBLEMS, "NET", "WRITE", "Write failed on fd %d: %s",
-              descriptor->descriptor, uv_strerror(status));
+    log_error(&descriptor_server(descriptor)->log, LOG_PROBLEMS, "NET", "WRITE",
+              "Write failed on fd %d: %s", descriptor->descriptor,
+              uv_strerror(status));
     descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
   }
   descriptor_release(descriptor); // NOLINT(clang-analyzer-unix.Malloc)
@@ -94,23 +105,46 @@ void descriptor_write(Descriptor *descriptor, const char *buffer, size_t size) {
 }
 
 static void listener_closed(uv_handle_t *handle) {
-  bool *initialized = handle->data;
+  TelnetListener *listener = handle->data;
 
-  *initialized = false;
+  listener->initialized = false;
 }
 
-void mux_release_socket(void) {
-  if (listener4_initialized && !uv_is_closing((uv_handle_t *)&listener4))
-    uv_close((uv_handle_t *)&listener4, listener_closed);
+TelnetSockets *telnet_sockets_create(uv_loop_t *loop, MuxServer *server) {
+  TelnetSockets *sockets = calloc(1, sizeof(*sockets));
+
+  if (sockets == nullptr)
+    return nullptr;
+  sockets->loop = loop;
+  sockets->server = server;
+  sockets->listener4.owner = sockets;
 #ifdef IPV6_SUPPORT
-  if (listener6_initialized && !uv_is_closing((uv_handle_t *)&listener6))
-    uv_close((uv_handle_t *)&listener6, listener_closed);
+  sockets->listener6.owner = sockets;
+#endif
+  return sockets;
+}
+
+void telnet_sockets_destroy(TelnetSockets *sockets) { free(sockets); }
+
+void telnet_sockets_release(TelnetSockets *sockets) {
+  if (sockets == nullptr)
+    return;
+  TelnetListener *listener4 = &sockets->listener4;
+  if (listener4->initialized &&
+      !uv_is_closing((uv_handle_t *)&listener4->handle))
+    uv_close((uv_handle_t *)&listener4->handle, listener_closed);
+#ifdef IPV6_SUPPORT
+  TelnetListener *listener6 = &sockets->listener6;
+  if (listener6->initialized &&
+      !uv_is_closing((uv_handle_t *)&listener6->handle))
+    uv_close((uv_handle_t *)&listener6->handle, listener_closed);
 #endif
 }
 
-int eradicate_broken_fd(int fd) {
+int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
   Descriptor *descriptor;
-  DescriptorIterator iterator = descriptor_iterator_all();
+  DescriptorIterator iterator =
+      descriptor_iterator_all(sockets->server->descriptors);
 
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     if (fd == 0 || descriptor->descriptor == fd)
@@ -119,18 +153,17 @@ int eradicate_broken_fd(int fd) {
   return 0;
 }
 
-static bool listener_start(uv_tcp_t *listener, bool *initialized, int port,
-                           bool ipv6) {
+static bool listener_start(TelnetListener *listener, int port, bool ipv6) {
   struct sockaddr_in address4;
   struct sockaddr_in6 address6;
   const struct sockaddr *address;
   int status;
 
-  status = uv_tcp_init(server_lifecycle_loop(), listener);
+  status = uv_tcp_init(listener->owner->loop, &listener->handle);
   if (status < 0)
     goto fail;
-  *initialized = true;
-  listener->data = initialized;
+  listener->initialized = true;
+  listener->handle.data = listener;
   if (ipv6) {
     uv_ip6_addr("::", port, &address6);
     address = (const struct sockaddr *)&address6;
@@ -138,28 +171,29 @@ static bool listener_start(uv_tcp_t *listener, bool *initialized, int port,
     uv_ip4_addr("0.0.0.0", port, &address4);
     address = (const struct sockaddr *)&address4;
   }
-  status = uv_tcp_bind(listener, address, ipv6 ? UV_TCP_IPV6ONLY : 0);
+  status = uv_tcp_bind(&listener->handle, address, ipv6 ? UV_TCP_IPV6ONLY : 0);
   if (status < 0)
     goto fail_close;
-  status = uv_listen((uv_stream_t *)listener, 25, accept_new_connection);
+  status =
+      uv_listen((uv_stream_t *)&listener->handle, 25, accept_new_connection);
   if (status < 0)
     goto fail_close;
   return true;
 
 fail_close:
-  uv_close((uv_handle_t *)listener, listener_closed);
+  uv_close((uv_handle_t *)&listener->handle, listener_closed);
 fail:
-  log_error(LOG_ALWAYS, "NET", "LISTEN", "Unable to listen on port %d: %s",
-            port, uv_strerror(status));
+  log_error(&listener->owner->server->log, LOG_ALWAYS, "NET", "LISTEN",
+            "Unable to listen on port %d: %s", port, uv_strerror(status));
   return false;
 }
 
-bool telnet_socket_listen(int port) {
-  if (!listener_start(&listener4, &listener4_initialized, port, false))
+bool telnet_sockets_listen(TelnetSockets *sockets, int port) {
+  if (!listener_start(&sockets->listener4, port, false))
     return false;
 #ifdef IPV6_SUPPORT
-  if (!listener_start(&listener6, &listener6_initialized, port, true)) {
-    mux_release_socket();
+  if (!listener_start(&sockets->listener6, port, true)) {
+    telnet_sockets_release(sockets);
     return false;
   }
 #endif
@@ -199,12 +233,16 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
   }
   if (descriptor->is_autodark) {
     descriptor->is_autodark = false;
-    s_flags(descriptor->player, obj_flags(descriptor->player) & ~DARK);
+    game_object_set_flags(
+        &descriptor_server(descriptor)->database, descriptor->player,
+        game_object_flags(&descriptor_server(descriptor)->database,
+                          descriptor->player) &
+            ~DARK);
   }
   descriptor->input_tot += (int)read_size;
   descriptor_retain(descriptor);
-  if (is_wizard(descriptor->player) && read_size >= 9 &&
-      strncmp("@segfault", buffer->base, 9) == 0) {
+  if (is_wizard(&descriptor_server(descriptor)->database, descriptor->player) &&
+      read_size >= 9 && strncmp("@segfault", buffer->base, 9) == 0) {
     descriptor_queue_string(descriptor,
                             "@segfault failed. (check logfile for reason.)\n");
     *(char *)0xDEADBEEF = '9';
@@ -215,6 +253,8 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
 }
 
 static void accept_new_connection(uv_stream_t *server, int status) {
+  TelnetListener *listener = server->data;
+  MuxServer *mux = listener->owner->server;
   Descriptor *descriptor;
   struct sockaddr_storage address;
   int address_size = sizeof(address);
@@ -232,7 +272,7 @@ static void accept_new_connection(uv_stream_t *server, int status) {
     free(descriptor);
     return;
   }
-  if (uv_tcp_init(server_lifecycle_loop(), descriptor->socket) < 0) {
+  if (uv_tcp_init(listener->owner->loop, descriptor->socket) < 0) {
     free(descriptor->socket);
     free(descriptor);
     return;
@@ -250,22 +290,23 @@ static void accept_new_connection(uv_stream_t *server, int status) {
               address_name, sizeof(address_name), address_port,
               sizeof(address_port), NI_NUMERICHOST | NI_NUMERICSERV);
 
-  if (site_data_check(&address, address_size, mudstate.access_list) ==
-      H_FORBIDDEN) {
-    log_error(LOG_NET | LOG_SECURITY, "NET", "SiteData",
+  if (site_data_check(&address, address_size,
+                      mux->access_control.access_sites) == H_FORBIDDEN) {
+    log_error(&mux->log, LOG_NET | LOG_SECURITY, "NET", "SiteData",
               "Connection refused from %s %s.", address_name, address_port);
-    fcache_rawdump(descriptor->descriptor, FC_CONN_SITE);
+    fcache_rawdump(mux->files, descriptor->descriptor, FC_CONN_SITE);
     discard_connection(descriptor);
     return;
   }
 
-  descriptor->connected_at = mudstate.now;
-  descriptor->retries_left = mudconf.retry_limit;
-  descriptor->timeout = mudconf.idle_timeout;
-  descriptor->host_info =
-      site_data_check(&address, address_size, mudstate.access_list) |
-      site_data_check(&address, address_size, mudstate.suspect_list);
-  descriptor->quota = mudconf.cmd_quota_max;
+  descriptor->connected_at = mux->clock.now;
+  descriptor->retries_left = mux->configuration->retry_limit;
+  descriptor->timeout = mux->configuration->idle_timeout;
+  descriptor->host_info = site_data_check(&address, address_size,
+                                          mux->access_control.access_sites) |
+                          site_data_check(&address, address_size,
+                                          mux->access_control.suspect_sites);
+  descriptor->quota = mux->configuration->cmd_quota_max;
   snprintf(descriptor->addr, sizeof(descriptor->addr), "%s", address_name);
   uv_tcp_nodelay(descriptor->socket, 1);
   if (!descriptor_telnet_initialize(descriptor)) {
@@ -273,12 +314,12 @@ static void accept_new_connection(uv_stream_t *server, int status) {
     return;
   }
 
-  if (!descriptor_register(descriptor)) {
+  if (!descriptor_register(mux->descriptors, descriptor)) {
     descriptor_telnet_destroy(descriptor);
     discard_connection(descriptor);
     return;
   }
-  log_error(LOG_NET, "NET", "CONN", "Connection opened from %s %s.",
+  log_error(&mux->log, LOG_NET, "NET", "CONN", "Connection opened from %s %s.",
             address_name, address_port);
   if (uv_read_start((uv_stream_t *)descriptor->socket, descriptor_read_alloc,
                     descriptor_read) < 0) {
@@ -289,15 +330,13 @@ static void accept_new_connection(uv_stream_t *server, int status) {
   descriptor_start_connect_flow(descriptor);
 }
 
-void flush_sockets(void) {
-  /* uv_write submits output directly to the loop; no manual flush is needed. */
-}
-
-void close_sockets(int emergency, const char *message) {
+void telnet_sockets_close(TelnetSockets *sockets, bool emergency,
+                          const char *message) {
   Descriptor *descriptor;
-  DescriptorIterator iterator = descriptor_iterator_all();
+  DescriptorIterator iterator =
+      descriptor_iterator_all(sockets->server->descriptors);
 
-  mux_release_socket();
+  telnet_sockets_release(sockets);
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     uv_buf_t buffer;
 
@@ -314,5 +353,3 @@ void close_sockets(int emergency, const char *message) {
       descriptor_force_close(descriptor);
   }
 }
-
-void emergency_shutdown(void) { close_sockets(1, "Going down - Bye.\n"); }

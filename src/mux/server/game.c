@@ -8,6 +8,7 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_queue.h"
+#include "mux/commands/functions.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
@@ -17,14 +18,16 @@
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
 #include "mux/help/help_index.h"
+#include "mux/network/connect_flow.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 #include "mux/server/version.h"
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
@@ -35,32 +38,21 @@
 
 #define NSUBEXP 10
 
-extern void init_cmdtab(void);
-extern void configuration_initialize(void);
-extern void pcache_init(void);
-extern int configuration_read(char *fn);
-extern void init_functab(void);
-extern void raw_notify(DbRef, const char *);
-extern void do_dbck(DbRef, DbRef, int);
+extern void init_cmdtab(CommandRegistry *registry);
 
-void fork_and_dump(int);
-void dump_database(void);
-void do_dump_optimize(DbRef, DbRef, int);
-void pcache_sync(void);
-int dump_database_internal(int);
-static void init_rlimit(void);
-
-int reserved;
-
-extern int corrupt;
+void do_dump_optimize(EvaluationContext *, DbRef, DbRef, int);
+static void init_rlimit(MuxServer *server);
 
 /*
  * used to allocate storage for temporary stuff, cleared before command
  * execution
  */
 
-void do_dump(DbRef player, DbRef cause, int key) {
-  notify(player, "Dumping...");
+void do_dump(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  notify(evaluation, player, "Dumping...");
 
   /*
    * DUMP_OPTIMIZE takes advantage of a feature of GDBM to compress
@@ -69,35 +61,36 @@ void do_dump(DbRef player, DbRef cause, int key) {
    */
 
   if (key & DUMP_OPTIMIZE)
-    do_dump_optimize(player, cause, key);
+    do_dump_optimize(evaluation, player, invocation->cause, key);
   else
-    fork_and_dump(key);
+    fork_and_dump(invocation->context->server, key);
 }
 
-void do_dump_optimize(DbRef player, DbRef cause, int key) {
-  raw_notify(player, "Database is memory based.");
+void do_dump_optimize(EvaluationContext *evaluation, DbRef player, DbRef cause,
+                      int key) {
+  raw_notify(evaluation, player, "Database is memory based.");
 }
 
 /**
  * print out stuff into error file
  */
-void report(void) {
-  STARTLOG(LOG_BUGS, "BUG", "INFO") {
+void report(CommandContext *command) {
+  STARTLOG(&command->server->log, LOG_BUGS, "BUG", "INFO") {
     log_text("Command: '");
-    log_text(mudstate.debug_cmd);
+    log_text(command->debug_command);
     log_text("'");
-    ENDLOG;
+    ENDLOG(&command->server->log);
   }
-  if (is_good_obj(mudstate.curr_player)) {
-    STARTLOG(LOG_BUGS, "BUG", "INFO") {
+  if (is_good_obj(command->world->database, command->player)) {
+    STARTLOG(&command->server->log, LOG_BUGS, "BUG", "INFO") {
       log_text("Player: ");
-      log_name_and_loc(mudstate.curr_player);
-      if ((mudstate.curr_enactor != mudstate.curr_player) &&
-          is_good_obj(mudstate.curr_enactor)) {
+      log_name_and_loc(&command->server->log, command->player);
+      if ((command->enactor != command->player) &&
+          is_good_obj(command->world->database, command->enactor)) {
         log_text(" Enactor: ");
-        log_name_and_loc(mudstate.curr_enactor);
+        log_name_and_loc(&command->server->log, command->enactor);
       }
-      ENDLOG;
+      ENDLOG(&command->server->log);
     }
   }
 }
@@ -171,8 +164,9 @@ static int regexp_match(const char *pattern, const char *str, char *args[],
 /**
  * Check attribute list for wild card matches and queue them.
  */
-static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
-                               char type, const char *str, int check_exclude,
+static int attribute_match_one(EvaluationContext *evaluation, DbRef thing,
+                               DbRef parent, DbRef player, char type,
+                               const char *str, int check_exclude,
                                int hash_insert) {
   DbRef aowner;
   int match, attr, i;
@@ -187,13 +181,13 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
    * See if we can do it.  Silently fail if we can't.
    */
 
-  if (!could_doit(player, parent, A_LUSE))
+  if (!could_doit_with_context(evaluation, player, parent, A_LUSE))
     return -1;
 
   match = 0;
-  for (attr = attribute_list_first(parent, &as); attr;
-       attr = attribute_list_next(&as)) {
-    ap = attribute_by_number(attr);
+  for (attr = attribute_list_first(evaluation->world->database, parent, &as);
+       attr; attr = attribute_list_next(&as)) {
+    ap = attribute_by_number(evaluation->world->database, attr);
 
     /*
      * Never check NOPROG attributes.
@@ -210,10 +204,12 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
 
     if (check_exclude &&
         ((ap->flags & AF_PRIVATE) ||
-         numeric_hash_table_find(ap->number, &mudstate.parent_htab))) {
+         numeric_hash_table_find(
+             ap->number, &evaluation->world->indexes->parent_commands))) {
       continue;
     }
-    attribute_get_string(buff, parent, attr, &aowner, &aflags);
+    attribute_get_string(evaluation->world->database, buff, parent, attr,
+                         &aowner, &aflags);
 
     /*
      * Skip if private and on a parent
@@ -228,7 +224,8 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
      */
 
     if (hash_insert)
-      numeric_hash_table_add(ap->number, (int *)&attr, &mudstate.parent_htab);
+      numeric_hash_table_add(ap->number, (int *)&attr,
+                             &evaluation->world->indexes->parent_commands);
 
     /*
      * Check for the leadin character after excluding the attrib
@@ -251,7 +248,8 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
     if (((aflags & AF_REGEXP) && regexp_match(buff + 1, str, args, 10)) ||
         wild(buff + 1, str, args, 10)) {
       match = 1;
-      wait_que(thing, player, 0, NOTHING, 0, s, args, 10, mudstate.global_regs);
+      wait_que(evaluation->server->commands, thing, player, 0, NOTHING, 0, s,
+               args, 10, evaluation->registers);
       for (i = 0; i < 10; i++) {
         if (args[i])
           free_lbuf(args[i]);
@@ -261,8 +259,8 @@ static int attribute_match_one(DbRef thing, DbRef parent, DbRef player,
   return (match);
 }
 
-int attribute_match(DbRef thing, DbRef player, char type, const char *str,
-                    int check_parents) {
+int attribute_match(EvaluationContext *evaluation, DbRef thing, DbRef player,
+                    char type, const char *str, int check_parents) {
   int match, lev, result, exclude, insert;
   DbRef parent;
 
@@ -270,7 +268,7 @@ int attribute_match(DbRef thing, DbRef player, char type, const char *str,
    * If thing is halted, don't check anything
    */
 
-  if (is_halted(thing))
+  if (is_halted(evaluation->world->database, thing))
     return 0;
 
   /*
@@ -279,7 +277,8 @@ int attribute_match(DbRef thing, DbRef player, char type, const char *str,
 
   match = 0;
   if (!check_parents)
-    return attribute_match_one(thing, thing, player, type, str, 0, 0);
+    return attribute_match_one(evaluation, thing, thing, player, type, str, 0,
+                               0);
 
   /*
    * Check parents, ignoring halted objects
@@ -287,12 +286,14 @@ int attribute_match(DbRef thing, DbRef player, char type, const char *str,
 
   exclude = 0;
   insert = 1;
-  numeric_hash_table_flush(&mudstate.parent_htab, 0);
-  ITER_PARENTS(thing, parent, lev) {
-    if (!is_good_obj(obj_parent(parent)))
+  numeric_hash_table_flush(&evaluation->world->indexes->parent_commands, 0);
+  ITER_PARENTS(evaluation->world->database, evaluation->world->configuration,
+               thing, parent, lev) {
+    if (!is_good_obj(evaluation->world->database,
+                     game_object_parent(evaluation->world->database, parent)))
       insert = 0;
-    result =
-        attribute_match_one(thing, parent, player, type, str, exclude, insert);
+    result = attribute_match_one(evaluation, thing, parent, player, type, str,
+                                 exclude, insert);
     if (result > 0) {
       match = 1;
     } else if (result < 0) {
@@ -308,25 +309,27 @@ int attribute_match(DbRef thing, DbRef player, char type, const char *str,
  * Notifies the object #target of the message msg, and
  * optionally notify the contents, neighbors, and location also.
  */
-int check_filter(DbRef object, DbRef player, int filter, const char *msg) {
+int check_filter(EvaluationContext *evaluation, DbRef object, DbRef player,
+                 int filter, const char *msg) {
   long aflags;
   DbRef aowner;
   char *buf, *nbuf, *cp, *dp, *str;
 
-  buf = attribute_parent_get(object, filter, &aowner, &aflags);
+  buf = attribute_parent_get(evaluation->world->database, object, filter,
+                             &aowner, &aflags);
   if (!*buf) {
     free_lbuf(buf);
     return (1);
   }
   nbuf = dp = alloc_lbuf("check_filter");
   str = buf;
-  exec(nbuf, &dp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP, &str,
-       (char **)nullptr, 0);
+  exec(evaluation, nbuf, &dp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP,
+       &str, (char **)nullptr, 0);
   *dp = '\0';
   dp = nbuf;
   free_lbuf(buf);
   do {
-    cp = parse_to(&dp, ',', EV_STRIP);
+    cp = parse_to(evaluation->world->configuration, &dp, ',', EV_STRIP);
     if (quick_wild(cp, msg)) {
       free_lbuf(nbuf);
       return (0);
@@ -336,21 +339,23 @@ int check_filter(DbRef object, DbRef player, int filter, const char *msg) {
   return (1);
 }
 
-static char *add_prefix(DbRef object, DbRef player, int prefix, const char *msg,
+static char *add_prefix(EvaluationContext *evaluation, DbRef object,
+                        DbRef player, int prefix, const char *msg,
                         const char *dflt) {
   long aflags;
   DbRef aowner;
   char *buf, *nbuf, *cp, *bp, *str;
 
-  buf = attribute_parent_get(object, prefix, &aowner, &aflags);
+  buf = attribute_parent_get(evaluation->world->database, object, prefix,
+                             &aowner, &aflags);
   if (!*buf) {
     cp = buf;
     safe_str(dflt, buf, &cp);
   } else {
     nbuf = bp = alloc_lbuf("add_prefix");
     str = buf;
-    exec(nbuf, &bp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP, &str,
-         (char **)nullptr, 0);
+    exec(evaluation, nbuf, &bp, 0, object, player,
+         EV_FIGNORE | EV_EVAL | EV_TOP, &str, (char **)nullptr, 0);
     *bp = '\0';
     free_lbuf(buf);
     buf = nbuf;
@@ -363,15 +368,16 @@ static char *add_prefix(DbRef object, DbRef player, int prefix, const char *msg,
   return (buf);
 }
 
-static char *dflt_from_msg(DbRef sender, DbRef sendloc) {
+static char *dflt_from_msg(GameDatabase *database, DbRef sender,
+                           DbRef sendloc) {
   char *tp, *tbuff;
 
   tp = tbuff = alloc_lbuf("notify_checked.fwdlist");
   safe_str("From ", tbuff, &tp);
-  if (is_good_obj(sendloc))
-    safe_str(Name(sendloc), tbuff, &tp);
+  if (is_good_obj(database, sendloc))
+    safe_str(game_object_name(database, sendloc), tbuff, &tp);
   else
-    safe_str(Name(sender), tbuff, &tp);
+    safe_str(game_object_name(database, sender), tbuff, &tp);
   safe_chr(',', tbuff, &tp);
   *tp = '\0';
   return tbuff;
@@ -379,7 +385,8 @@ static char *dflt_from_msg(DbRef sender, DbRef sendloc) {
 
 char *colorize(DbRef player, char *from);
 
-void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
+void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
+                    const char *msg, int key) {
   char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = nullptr;
   char *args[10];
   DbRef aowner, targetloc, recip, obj;
@@ -392,16 +399,17 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
    * If speaker is invalid or message is empty, just exit
    */
 
-  if (!is_good_obj(target) || !msg || !*msg)
+  if (!is_good_obj(evaluation->world->database, target) || !msg || !*msg)
     return;
 
   /*
    * Enforce a recursion limit
    */
 
-  mudstate.ntfy_nest_lev++;
-  if (mudstate.ntfy_nest_lev >= mudconf.ntfy_nest_lim) {
-    mudstate.ntfy_nest_lev--;
+  evaluation->notification_nesting++;
+  if (evaluation->notification_nesting >=
+      evaluation->world->configuration->ntfy_nest_lim) {
+    evaluation->notification_nesting--;
     return;
   }
   /*
@@ -411,9 +419,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
   if (key & MSG_ME) {
     mp = msg_ns = alloc_lbuf("notify_checked");
-    if (is_nospoof(target) && (target != sender) &&
-        (target != mudstate.curr_enactor) &&
-        (target != mudstate.curr_player && is_good_obj(sender))) {
+    if (is_nospoof(evaluation->world->database, target) && (target != sender) &&
+        (target != evaluation->command->enactor) &&
+        (target != evaluation->command->player &&
+         is_good_obj(evaluation->world->database, sender))) {
 
       /*
        * I'd really like to use tprintf here but I can't
@@ -424,17 +433,21 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
       tbuff = alloc_sbuf("notify_checked.nospoof");
       safe_chr('[', msg_ns, &mp);
-      safe_str(Name(sender), msg_ns, &mp);
+      safe_str(game_object_name(evaluation->world->database, sender), msg_ns,
+               &mp);
       snprintf(tbuff, SBUF_SIZE, "(#%ld)", sender);
       safe_str(tbuff, msg_ns, &mp);
 
-      if (sender != obj_owner(sender)) {
+      if (sender != game_object_owner(evaluation->world->database, sender)) {
         safe_chr('{', msg_ns, &mp);
-        safe_str(Name(obj_owner(sender)), msg_ns, &mp);
+        safe_str(game_object_name(
+                     evaluation->world->database,
+                     game_object_owner(evaluation->world->database, sender)),
+                 msg_ns, &mp);
         safe_chr('}', msg_ns, &mp);
       }
-      if (sender != mudstate.curr_enactor) {
-        snprintf(tbuff, SBUF_SIZE, "<-(#%ld)", mudstate.curr_enactor);
+      if (sender != evaluation->command->enactor) {
+        snprintf(tbuff, SBUF_SIZE, "<-(#%ld)", evaluation->command->enactor);
         safe_str(tbuff, msg_ns, &mp);
       }
       safe_str("] ", msg_ns, &mp);
@@ -450,18 +463,18 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
    * msg contains the raw message, msg_ns contains the NOSPOOFed msg
    */
 
-  check_listens = is_halted(target) ? 0 : 1;
-  switch (typeof_obj(target)) {
+  check_listens = is_halted(evaluation->world->database, target) ? 0 : 1;
+  switch (typeof_obj(evaluation->world->database, target)) {
   case TYPE_PLAYER:
     if (key & MSG_ME) {
       if (key & MSG_COLORIZE)
         colbuf = colorize(target, msg_ns);
-      raw_notify(target, colbuf ? colbuf : msg_ns);
+      raw_notify(evaluation, target, colbuf ? colbuf : msg_ns);
     }
 
     if (colbuf)
       free_lbuf(colbuf);
-    if (!mudconf.player_listen)
+    if (!evaluation->world->configuration->player_listen)
       check_listens = 0;
     [[fallthrough]];
   case TYPE_THING:
@@ -471,31 +484,41 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * if they're not a player and connected (if we didn't
      * do this, they'd be notified twice! */
 
-    if (mudstate.is_piping &&
-        (!is_player(target) || (is_player(target) && !is_connected(target)))) {
-      raw_notify(target, msg_ns);
+    if (evaluation->is_piping &&
+        (!is_player(evaluation->world->database, target) ||
+         (is_player(evaluation->world->database, target) &&
+          !is_connected(evaluation->world->database, target)))) {
+      raw_notify(evaluation, target, msg_ns);
     }
 
     /*
      * Forward puppet message if it is for me
      */
 
-    has_neighbors = has_location(target);
-    targetloc = where_is(target);
-    target_audible = is_audible(target);
+    has_neighbors = has_location(evaluation->world->database, target);
+    targetloc = where_is(evaluation->world->database, target);
+    target_audible = is_audible(evaluation->world->database, target);
 
-    if ((key & MSG_ME) && is_puppet(target) && (target != obj_owner(target)) &&
+    if ((key & MSG_ME) && is_puppet(evaluation->world->database, target) &&
+        (target != game_object_owner(evaluation->world->database, target)) &&
         ((key & MSG_PUP_ALWAYS) ||
-         ((targetloc != obj_location(obj_owner(target))) &&
-          (targetloc != obj_owner(target))))) {
+         ((targetloc !=
+           game_object_location(
+               evaluation->world->database,
+               game_object_owner(evaluation->world->database, target))) &&
+          (targetloc !=
+           game_object_owner(evaluation->world->database, target))))) {
       tp = tbuff = alloc_lbuf("notify_checked.puppet");
-      safe_str(Name(target), tbuff, &tp);
+      safe_str(game_object_name(evaluation->world->database, target), tbuff,
+               &tp);
       safe_str("> ", tbuff, &tp);
       if (key & MSG_COLORIZE)
-        colbuf = colorize(obj_owner(target), msg_ns);
+        colbuf = colorize(
+            game_object_owner(evaluation->world->database, target), msg_ns);
       safe_str(colbuf ? colbuf : msg_ns, tbuff, &tp);
       *tp = '\0';
-      raw_notify(obj_owner(target), tbuff);
+      raw_notify(evaluation,
+                 game_object_owner(evaluation->world->database, target), tbuff);
       if (colbuf)
         free_lbuf(colbuf);
       free_lbuf(tbuff);
@@ -506,8 +529,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
     pass_listen = 0;
     nargs = 0;
-    if (check_listens && (key & (MSG_ME | MSG_INV_L)) && has_listen(target)) {
-      tp = attribute_get(target, A_LISTEN, &aowner, &aflags);
+    if (check_listens && (key & (MSG_ME | MSG_INV_L)) &&
+        has_listen(evaluation->world->database, target)) {
+      tp = attribute_get(evaluation->world->database, target, A_LISTEN, &aowner,
+                         &aflags);
       if (*tp && wild(tp, msg, args, 10)) {
         for (nargs = 10; nargs && (!args[nargs - 1] || !(*args[nargs - 1]));
              nargs--)
@@ -524,8 +549,10 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
     if (sender < 0)
       sender = GOD;
     pass_uselock = 0;
-    if ((key & MSG_ME) && check_listens && (pass_listen || is_monitor(target)))
-      pass_uselock = could_doit(sender, target, A_LUSE);
+    if ((key & MSG_ME) && check_listens &&
+        (pass_listen || is_monitor(evaluation->world->database, target)))
+      pass_uselock =
+          could_doit_with_context(evaluation, sender, target, A_LUSE);
 
     /*
      * Process AxHEAR if we pass LISTEN, USElock and it's for me
@@ -533,10 +560,13 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
 
     if ((key & MSG_ME) && pass_listen && pass_uselock) {
       if (sender != target)
-        did_it(sender, target, 0, nullptr, 0, nullptr, A_AHEAR, args, nargs);
+        did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AHEAR,
+               args, nargs);
       else
-        did_it(sender, target, 0, nullptr, 0, nullptr, A_AMHEAR, args, nargs);
-      did_it(sender, target, 0, nullptr, 0, nullptr, A_AAHEAR, args, nargs);
+        did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AMHEAR,
+               args, nargs);
+      did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AAHEAR, args,
+             nargs);
     }
     /*
      * Get rid of match arguments. We don't need them anymore
@@ -554,27 +584,30 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      * \todo Eventually come up with a cleaner method for making sure
      * the sender isn't the same as the target.
      */
-    if ((key & MSG_ME) && (sender != target || is_wizard(target)) &&
-        pass_uselock && is_monitor(target)) {
-      (void)attribute_match(target, sender, AMATCH_LISTEN, msg, 0);
+    if ((key & MSG_ME) &&
+        (sender != target || is_wizard(evaluation->world->database, target)) &&
+        pass_uselock && is_monitor(evaluation->world->database, target)) {
+      (void)attribute_match(evaluation, target, sender, AMATCH_LISTEN, msg, 0);
     }
     /*
      * Deliver message to forwardlist members
      */
 
-    if ((key & MSG_FWDLIST) && is_audible(target) &&
-        check_filter(target, sender, A_FILTER, msg)) {
-      tbuff = dflt_from_msg(sender, target);
-      buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
+    if ((key & MSG_FWDLIST) &&
+        is_audible(evaluation->world->database, target) &&
+        check_filter(evaluation, target, sender, A_FILTER, msg)) {
+      tbuff = dflt_from_msg(evaluation->world->database, sender, target);
+      buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
       free_lbuf(tbuff);
 
-      fp = fwdlist_get(target);
+      fp = fwdlist_get(evaluation->world->database, target);
       if (fp) {
         for (i = 0; i < fp->count; i++) {
           recip = fp->data[i];
-          if (!is_good_obj(recip) || (recip == target))
+          if (!is_good_obj(evaluation->world->database, recip) ||
+              (recip == target))
             continue;
-          notify_checked(recip, sender, buff,
+          notify_checked(evaluation, recip, sender, buff,
                          (MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE));
         }
       }
@@ -585,12 +618,15 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (key & MSG_INV_EXITS) {
-      DOLIST(obj, obj_exits(target)) {
-        recip = obj_location(obj);
-        if (is_audible(obj) &&
-            ((recip != target) && check_filter(obj, sender, A_FILTER, msg))) {
-          buff = add_prefix(obj, target, A_PREFIX, msg, "From a distance,");
-          notify_checked(recip, sender, buff,
+      DOLIST(evaluation->world->database, obj,
+             game_object_exits(evaluation->world->database, target)) {
+        recip = game_object_location(evaluation->world->database, obj);
+        if (is_audible(evaluation->world->database, obj) &&
+            ((recip != target) &&
+             check_filter(evaluation, obj, sender, A_FILTER, msg))) {
+          buff = add_prefix(evaluation, obj, target, A_PREFIX, msg,
+                            "From a distance,");
+          notify_checked(evaluation, recip, sender, buff,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
           free_lbuf(buff);
         }
@@ -610,24 +646,31 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
        */
 
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(sender, target);
-        buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
+        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
+        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix() allocation. */
+         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
         buff = (char *)msg;
 #pragma clang diagnostic pop
       }
 
-      DOLIST(obj, obj_exits(obj_location(target))) {
-        recip = obj_location(obj);
-        if (is_good_obj(recip) && is_audible(obj) && (recip != targetloc) &&
-            (recip != target) && check_filter(obj, sender, A_FILTER, msg)) {
-          tbuff = add_prefix(obj, target, A_PREFIX, buff, "From a distance,");
-          notify_checked(recip, sender, tbuff,
+      DOLIST(evaluation->world->database, obj,
+             game_object_exits(
+                 evaluation->world->database,
+                 game_object_location(evaluation->world->database, target))) {
+        recip = game_object_location(evaluation->world->database, obj);
+        if (is_good_obj(evaluation->world->database, recip) &&
+            is_audible(evaluation->world->database, obj) &&
+            (recip != targetloc) && (recip != target) &&
+            check_filter(evaluation, obj, sender, A_FILTER, msg)) {
+          tbuff = add_prefix(evaluation, obj, target, A_PREFIX, buff,
+                             "From a distance,");
+          notify_checked(evaluation, recip, sender, tbuff,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
           free_lbuf(tbuff);
         }
@@ -641,7 +684,7 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (((key & MSG_INV) || ((key & MSG_INV_L) && pass_listen)) &&
-        (check_filter(target, sender, A_INFILTER, msg))) {
+        (check_filter(evaluation, target, sender, A_INFILTER, msg))) {
 
       /*
        * Don't prefix the message if we were given the * *
@@ -649,18 +692,20 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
        */
 
       if (key & MSG_S_OUTSIDE) {
-        buff = add_prefix(target, sender, A_INPREFIX, msg, "");
+        buff = add_prefix(evaluation, target, sender, A_INPREFIX, msg, "");
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix() allocation. */
+         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
         buff = (char *)msg;
 #pragma clang diagnostic pop
       }
-      DOLIST(obj, obj_contents(target)) {
+      DOLIST(evaluation->world->database, obj,
+             game_object_contents(evaluation->world->database, target)) {
         if (obj != target) {
-          notify_checked(obj, sender, buff,
+          notify_checked(evaluation, obj, sender, buff,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
@@ -672,23 +717,26 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (has_neighbors &&
-        ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible &&
-                             check_filter(target, sender, A_FILTER, msg)))) {
+        ((key & MSG_NBR) ||
+         ((key & MSG_NBR_A) && target_audible &&
+          check_filter(evaluation, target, sender, A_FILTER, msg)))) {
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(sender, target);
-        buff = add_prefix(target, sender, A_PREFIX, msg, "");
+        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
+        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, "");
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix() allocation. */
+         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
         buff = (char *)msg;
 #pragma clang diagnostic pop
       }
-      DOLIST(obj, obj_contents(targetloc)) {
+      DOLIST(evaluation->world->database, obj,
+             game_object_contents(evaluation->world->database, targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
-          notify_checked(obj, sender, buff,
+          notify_checked(evaluation, obj, sender, buff,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE |
                              (key & MSG_COLORIZE));
         }
@@ -702,21 +750,24 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
      */
 
     if (has_neighbors &&
-        ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible &&
-                             check_filter(target, sender, A_FILTER, msg)))) {
+        ((key & MSG_LOC) ||
+         ((key & MSG_LOC_A) && target_audible &&
+          check_filter(evaluation, target, sender, A_FILTER, msg)))) {
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(sender, target);
-        buff = add_prefix(target, sender, A_PREFIX, msg, tbuff);
+        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
+        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix() allocation. */
+         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
         buff = (char *)msg;
 #pragma clang diagnostic pop
       }
-      notify_checked(targetloc, sender, buff, MSG_ME | MSG_F_UP | MSG_S_INSIDE);
+      notify_checked(evaluation, targetloc, sender, buff,
+                     MSG_ME | MSG_F_UP | MSG_S_INSIDE);
       if (key & MSG_S_INSIDE) {
         free_lbuf(buff);
       }
@@ -727,57 +778,71 @@ void notify_checked(DbRef target, DbRef sender, const char *msg, int key) {
   }
   if (msg_ns)
     free_lbuf(msg_ns);
-  mudstate.ntfy_nest_lev--;
+  evaluation->notification_nesting--;
 }
 
-void notify_except(DbRef loc, DbRef player, DbRef exception, const char *msg) {
+void notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
+                   DbRef exception, const char *msg) {
   DbRef first;
 
   if (loc != exception)
-    notify_checked(loc, player, msg,
+    notify_checked(evaluation, loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
-  DOLIST(first, obj_contents(loc)) {
+  DOLIST(evaluation->world->database, first,
+         game_object_contents(evaluation->world->database, loc)) {
     if (first != exception)
-      notify_checked(first, player, msg, (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
+      notify_checked(evaluation, first, player, msg,
+                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
   }
 }
 
-void notify_except2(DbRef loc, DbRef player, DbRef exc1, DbRef exc2,
-                    const char *msg) {
+void notify_except2(EvaluationContext *evaluation, DbRef loc, DbRef player,
+                    DbRef exc1, DbRef exc2, const char *msg) {
   DbRef first;
 
   if ((loc != exc1) && (loc != exc2))
-    notify_checked(loc, player, msg,
+    notify_checked(evaluation, loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A));
-  DOLIST(first, obj_contents(loc)) {
+  DOLIST(evaluation->world->database, first,
+         game_object_contents(evaluation->world->database, loc)) {
     if (first != exc1 && first != exc2) {
-      notify_checked(first, player, msg, (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
+      notify_checked(evaluation, first, player, msg,
+                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
     }
   }
 }
 
-void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
+void do_shutdown(CommandInvocation *invocation) {
+  server_shutdown(invocation->context->server, invocation->player,
+                  invocation->key, invocation->first);
+}
+
+void server_shutdown(MuxServer *server, DbRef player, int key,
+                     const char *message) {
   ResetSpecialObjects();
   if (player != NOTHING) {
-    raw_broadcast(0, "Game: Shutdown by %s", Name(obj_owner(player)));
-    STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
+    raw_broadcast(
+        server->descriptors, 0, "Game: Shutdown by %s",
+        game_object_name(&server->database,
+                         game_object_owner(&server->database, player)));
+    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Shutdown by ");
-      log_name(player);
-      ENDLOG;
+      log_name(&server->log, player);
+      ENDLOG(&server->log);
     }
   } else {
-    raw_broadcast(0, "Game: Fatal Error: %s", message);
-    STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
+    raw_broadcast(server->descriptors, 0, "Game: Fatal Error: %s", message);
+    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Fatal error: ");
       log_text(message);
-      ENDLOG;
+      ENDLOG(&server->log);
     }
   }
   if (player != NOTHING) {
-    STARTLOG(LOG_ALWAYS, "WIZ", "SHTDN") {
+    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Shutdown status: ");
       log_text(message);
-      ENDLOG;
+      ENDLOG(&server->log);
     }
   }
 
@@ -793,92 +858,91 @@ void do_shutdown(DbRef player, DbRef cause, int key, char *message) {
      * Close down the network interface
      */
 
-    emergency_shutdown();
+    server_lifecycle_close_connections(server->lifecycle, true,
+                                       "Going down - Bye.\n");
 
     /*
      * Close the attribute text db and dump the header db
      */
 
-    pcache_sync();
-    STARTLOG(LOG_ALWAYS, "DMP", "PANIC") {
+    pcache_sync(server->players);
+    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "PANIC") {
       log_text("Panic dump: ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server->configuration->database.gamedb);
+      ENDLOG(&server->log);
     }
-    dump_database_internal(DUMP_CRASHED);
+    dump_database_internal(server, DUMP_CRASHED);
 
-    STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
+    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "DONE") {
       log_text("Panic dump complete: ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server->configuration->database.gamedb);
+      ENDLOG(&server->log);
     }
   } else if (key & SHUTDN_KILLED) {
-    pcache_sync();
-    STARTLOG(LOG_ALWAYS, "DMP", "KILLED") {
+    pcache_sync(server->players);
+    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "KILLED") {
       log_text("Killed dump: ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server->configuration->database.gamedb);
+      ENDLOG(&server->log);
     }
-    dump_database_internal(DUMP_KILLED);
-    STARTLOG(LOG_ALWAYS, "DMP", "DONE") {
+    dump_database_internal(server, DUMP_KILLED);
+    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "DONE") {
       log_text("Killed dump complete: ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server->configuration->database.gamedb);
+      ENDLOG(&server->log);
     }
   }
   /*
    * Set up for normal shutdown
    */
 
-  mudstate.is_shutdown_requested = true;
-  server_lifecycle_stop();
+  server_lifecycle_stop(server->lifecycle);
   return;
 }
 
-int dump_database_internal(int dump_type) { return gamedb_dump(dump_type); }
-
-void dump_database(void) {
-  mudstate.is_dumping = true;
-  STARTLOG(LOG_DBSAVES, "DMP", "DUMP") {
-    log_text("Dumping: ");
-    log_text(mudconf.database.gamedb);
-    ENDLOG;
-  }
-  pcache_sync();
-
-  dump_database_internal(DUMP_NORMAL);
-  STARTLOG(LOG_DBSAVES, "DMP", "DONE") {
-    log_text("Dump complete: ");
-    log_text(mudconf.database.gamedb);
-    ENDLOG;
-  }
-  mudstate.is_dumping = false;
+int dump_database_internal(MuxServer *server, int dump_type) {
+  return gamedb_dump(&server->persistence, dump_type);
 }
 
-void fork_and_dump(int key) {
-  if (*mudconf.dump_msg)
-    raw_broadcast(0, "%s", mudconf.dump_msg);
+void dump_database(MuxServer *server) {
+  STARTLOG(&server->log, LOG_DBSAVES, "DMP", "DUMP") {
+    log_text("Dumping: ");
+    log_text(server->configuration->database.gamedb);
+    ENDLOG(&server->log);
+  }
+  pcache_sync(server->players);
 
-  mudstate.is_dumping = true;
-  log_error(LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
-            mudconf.database.gamedb);
+  dump_database_internal(server, DUMP_NORMAL);
+  STARTLOG(&server->log, LOG_DBSAVES, "DMP", "DONE") {
+    log_text("Dump complete: ");
+    log_text(server->configuration->database.gamedb);
+    ENDLOG(&server->log);
+  }
+}
 
-  pcache_sync();
+void fork_and_dump(MuxServer *server, int key) {
+  if (*server->configuration->dump_msg)
+    raw_broadcast(server->descriptors, 0, "%s",
+                  server->configuration->dump_msg);
+
+  log_error(&server->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
+            server->configuration->database.gamedb);
+
+  pcache_sync(server->players);
 
   if (!key || (key & DUMP_STRUCT)) {
-    if (mudconf.fork_dump) {
+    if (server->configuration->fork_dump) {
       /* Fork and dump.  */
       switch (fork()) {
       case -1: /* fork() failed */
         /* FIXME: Make this error message conform.  */
-        log_perror("DMP", "FAIL", nullptr, "fork()");
-        mudstate.is_dumping = false;
+        log_perror(&server->log, "DMP", "FAIL", nullptr, "fork()");
         return;
 
       case 0: /* child */
         dprintk("child database write process starting.");
-        unbind_signals();
-        dump_database_internal(DUMP_NORMAL);
+        server_lifecycle_unbind_signals(server->lifecycle);
+        dump_database_internal(server, DUMP_NORMAL);
         dprintk("child database write process finished.");
         /* You generally don't want to run atexit()
          * handlers and that sort of thing.  */
@@ -890,38 +954,38 @@ void fork_and_dump(int key) {
       }
     } else {
       /* Just dump.  */
-      dump_database_internal(DUMP_NORMAL);
+      dump_database_internal(server, DUMP_NORMAL);
     }
   }
 
-  mudstate.is_dumping = false;
-
-  if (*mudconf.postdump_msg)
-    raw_broadcast(0, "%s", mudconf.postdump_msg);
+  if (*server->configuration->postdump_msg)
+    raw_broadcast(server->descriptors, 0, "%s",
+                  server->configuration->postdump_msg);
 }
 
-static int load_game(void) {
-  STARTLOG(LOG_STARTUP, "INI", "LOAD") {
+static int load_game(MuxServer *server) {
+  STARTLOG(&server->log, LOG_STARTUP, "INI", "LOAD") {
     log_text("Loading: ");
-    log_text(mudconf.database.gamedb);
-    ENDLOG;
+    log_text(server->configuration->database.gamedb);
+    ENDLOG(&server->log);
   };
-  if (gamedb_load(mudconf.database.gamedb) < 0) {
-    STARTLOG(LOG_ALWAYS, "INI", "FATAL") {
+  if (gamedb_load(&server->persistence,
+                  server->configuration->database.gamedb) < 0) {
+    STARTLOG(&server->log, LOG_ALWAYS, "INI", "FATAL") {
       log_text("Error loading ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server->configuration->database.gamedb);
+      ENDLOG(&server->log);
     }
     return -1;
   }
 
   /* Load the mecha stuff.. */
-  if (mudconf.have_specials)
+  if (server->configuration->have_specials)
     LoadSpecialObjects();
 
-  STARTLOG(LOG_STARTUP, "INI", "LOAD") {
+  STARTLOG(&server->log, LOG_STARTUP, "INI", "LOAD") {
     log_text("Load complete.");
-    ENDLOG;
+    ENDLOG(&server->log);
   }
   /*
    * everything ok
@@ -932,54 +996,58 @@ static int load_game(void) {
 /**
  * match a list of things, using the no_command flag
  */
-int list_check(DbRef thing, DbRef player, char type, char *str,
-               int check_parent) {
+int list_check(EvaluationContext *evaluation, DbRef thing, DbRef player,
+               char type, char *str, int check_parent) {
   int match, limit;
 
   match = 0;
-  limit = mudstate.db_top;
+  limit = evaluation->world->database->top;
   while (thing != NOTHING) {
-    if ((thing != player) && (!(is_no_command(thing)))) {
-      if (attribute_match(thing, player, type, str, check_parent) > 0)
+    if ((thing != player) &&
+        (!(is_no_command(evaluation->world->database, thing)))) {
+      if (attribute_match(evaluation, thing, player, type, str, check_parent) >
+          0)
         match = 1;
     }
-    thing = obj_next(thing);
+    thing = game_object_next(evaluation->world->database, thing);
     if (--limit < 0)
       return match;
   }
   return match;
 }
 
-int is_hearer(DbRef thing) {
+int is_hearer(EvaluationContext *evaluation, DbRef thing) {
   char *as, *buff, *s;
   DbRef aowner;
   int attr;
   long aflags;
   Attribute *ap;
 
-  if (mudstate.is_piping && (thing == mudstate.poutobj))
+  if (evaluation->is_piping && (thing == evaluation->pipe_object))
     return 1;
 
-  if (is_connected(thing) || is_puppet(thing))
+  if (is_connected(evaluation->world->database, thing) ||
+      is_puppet(evaluation->world->database, thing))
     return 1;
 
-  if (is_monitor(thing))
+  if (is_monitor(evaluation->world->database, thing))
     buff = alloc_lbuf("Hearer");
   else
     buff = nullptr;
-  for (attr = attribute_list_first(thing, &as); attr;
-       attr = attribute_list_next(&as)) {
+  for (attr = attribute_list_first(evaluation->world->database, thing, &as);
+       attr; attr = attribute_list_next(&as)) {
     if (attr == A_LISTEN) {
       if (buff)
         free_lbuf(buff);
       return 1;
     }
-    if (buff && is_monitor(thing)) {
-      ap = attribute_by_number(attr);
+    if (buff && is_monitor(evaluation->world->database, thing)) {
+      ap = attribute_by_number(evaluation->world->database, attr);
       if (!ap || (ap->flags & AF_NOPROG))
         continue;
 
-      attribute_get_string(buff, thing, attr, &aowner, &aflags);
+      attribute_get_string(evaluation->world->database, buff, thing, attr,
+                           &aowner, &aflags);
 
       /*
        * Make sure we can execute it
@@ -1005,22 +1073,20 @@ int is_hearer(DbRef thing) {
   return 0;
 }
 
-void do_readcache(DbRef player, DbRef cause, int key) { fcache_load(player); }
+void do_readcache(CommandInvocation *invocation) {
+  fcache_load(&invocation->context->evaluation,
+              invocation->context->server->files, invocation->player);
+}
 
 int main(int argc, char *argv[]) {
+  MuxServer server;
   char *config_file;
-  int index;
   int mindb;
 
   if (argc > 3 || (argc > 2 && strcmp(argv[1], "-s")) ||
       (argc > 1 && !strcmp(argv[1], "--restart"))) {
     fprintf(stderr, "Usage: %s [-s] [config-file]\n", argv[0]);
     exit(1);
-  }
-
-  if (!server_lifecycle_initialize()) {
-    fprintf(stderr, "Unable to create libuv event loop.\n");
-    exit(2);
   }
 
   mindb = 0; /* Are we creating a new db? */
@@ -1039,95 +1105,93 @@ int main(int argc, char *argv[]) {
       config_file = argv[1];
     }
   }
-  corrupt = 0; /* Database isn't corrupted. */
-  memset(&mudstate, 0, sizeof(mudstate));
-  time(&mudstate.start_time);
-  time(&mudstate.process_start_time);
-  mudstate.db_top = -1;
-  tcache_init();
-  pcache_init();
-  configuration_initialize();
-  init_rlimit();
-  init_cmdtab();
-  init_mactab();
-  init_chantab();
-  init_flagtab();
-  init_powertab();
-  init_functab();
-  init_attrtab();
-  init_version();
+  if (!mux_server_create(&server)) {
+    fprintf(stderr, "Unable to create MUX server resources.\n");
+    exit(2);
+  }
+  time(&server.start_time);
+  server.process_start_time = server.start_time;
+  server.btech.process_start_time = server.process_start_time;
+  server.database.top = -1;
+  configuration_initialize(&server);
+  init_rlimit(&server);
+  init_cmdtab(&server.command_registry);
+  init_mactab(&server.command_registry);
+  init_chantab(&server.channels);
+  init_flagtab(&server.world_indexes);
+  init_powertab(&server.world_indexes);
+  init_functab(&server);
+  init_attrtab(&server.database);
+  init_version(&server);
 
-  hash_table_initialize(&mudstate.player_htab, 250 * HASH_FACTOR);
-  numeric_hash_table_initialize(&mudstate.fwdlist_htab, 25 * HASH_FACTOR);
-  numeric_hash_table_initialize(&mudstate.parent_htab, 5 * HASH_FACTOR);
-  vattr_init();
-
-  configuration_read(config_file);
+  hash_table_initialize(&server.world_indexes.players, 250 * HASH_FACTOR);
+  numeric_hash_table_initialize(&server.world_indexes.forward_lists,
+                                25 * HASH_FACTOR);
+  numeric_hash_table_initialize(&server.world_indexes.parent_commands,
+                                5 * HASH_FACTOR);
+  configuration_read(&server, config_file);
 
   if (!password_initialize()) {
     fprintf(stderr, "Unable to initialize password hashing.\n");
     exit(2);
   }
 
-  if (!*mudconf.database.gamedb) {
+  if (!*server.configuration->database.gamedb) {
     fprintf(stderr,
             "Required configuration directive game_database is missing.\n");
     exit(2);
   }
 
-  if (btech_persistence_register() < 0) {
+  if (btech_persistence_register(&server.persistence) < 0) {
     fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
     exit(2);
   }
 
-  if (commac_persistence_register() < 0) {
+  if (commac_persistence_register(&server.persistence) < 0) {
     fprintf(stderr, "Unable to register commac SQLite persistence.\n");
     exit(2);
   }
 
-  fcache_init();
-  help_index_init();
-  db_free();
+  if (!mux_server_load_content(&server)) {
+    fprintf(stderr, "Unable to load MUX server content.\n");
+    exit(2);
+  }
+  db_free(&server.database);
 
-  mudstate.record_players = 0;
+  server.record_players = 0;
 
   if (mindb)
-    db_make_minimal();
-  else if (load_game() < 0) {
-    STARTLOG(LOG_ALWAYS, "INI", "LOAD") {
+    db_make_minimal(&server.background_command.evaluation);
+  else if (load_game(&server) < 0) {
+    STARTLOG(&server.log, LOG_ALWAYS, "INI", "LOAD") {
       log_text("Couldn't load: ");
-      log_text(mudconf.database.gamedb);
-      ENDLOG;
+      log_text(server.configuration->database.gamedb);
+      ENDLOG(&server.log);
     }
     exit(2);
   }
-  server_lifecycle_prepare();
+  server_lifecycle_prepare(server.lifecycle);
 
   /*
    * Do a consistency check and set up the freelist
    */
 
-  do_dbck(NOTHING, NOTHING, 0);
+  database_check(&server.background_command.evaluation, NOTHING, 0);
 
   /*
    * Reset all the hash stats
    */
 
-  hash_table_reset(&mudstate.command_htab);
-  hash_table_reset(&mudstate.macro_htab);
-  hash_table_reset(&mudstate.channel_htab);
-  hash_table_reset(&mudstate.func_htab);
-  hash_table_reset(&mudstate.flags_htab);
-  hash_table_reset(&mudstate.attr_name_htab);
-  hash_table_reset(&mudstate.player_htab);
-  numeric_hash_table_reset(&mudstate.fwdlist_htab);
+  hash_table_reset(&server.command_registry.commands);
+  hash_table_reset(&server.command_registry.macros);
+  channel_registry_reset_statistics(&server.channels);
+  hash_table_reset(&server.command_registry.functions);
+  hash_table_reset(&server.world_indexes.flags);
+  hash_table_reset(&server.world_indexes.attributes);
+  hash_table_reset(&server.world_indexes.players);
+  numeric_hash_table_reset(&server.world_indexes.forward_lists);
 
-  for (index = 0; index < MAX_GLOBAL_REGS; index++) {
-    mudstate.global_regs[index] = alloc_lbuf("main.global_reg");
-    memset(mudstate.global_regs[index], 0, LBUF_SIZE);
-  }
-
-  if (!server_lifecycle_boot(mindb)) {
+  if (!server_lifecycle_boot(server.lifecycle, mindb)) {
     exit(2);
   }
 
@@ -1139,31 +1203,32 @@ int main(int argc, char *argv[]) {
    * go do it
    */
 
-  server_lifecycle_run(mudconf.port);
+  server_lifecycle_run(server.lifecycle, server.configuration->port);
 
 #ifdef MCHECK
   muntrace();
 #endif
 
-  close_sockets(0, "Going down - Bye");
-  dump_database();
+  server_lifecycle_close_connections(server.lifecycle, false,
+                                     "Going down - Bye");
+  dump_database(&server);
 
-  server_lifecycle_shutdown();
+  mux_server_destroy(&server);
   exit(0);
 }
 
-static void init_rlimit(void) {
+static void init_rlimit(MuxServer *server) {
   struct rlimit *rlp;
 
   rlp = (struct rlimit *)alloc_lbuf("rlimit");
 
   if (getrlimit(RLIMIT_NOFILE, rlp)) {
-    log_perror("RLM", "FAIL", nullptr, "getrlimit()");
+    log_perror(&server->log, "RLM", "FAIL", nullptr, "getrlimit()");
     free_lbuf(rlp);
     return;
   }
   rlp->rlim_cur = rlp->rlim_max;
   if (setrlimit(RLIMIT_NOFILE, rlp))
-    log_perror("RLM", "FAIL", nullptr, "setrlimit()");
+    log_perror(&server->log, "RLM", "FAIL", nullptr, "setrlimit()");
   free_lbuf(rlp);
 }

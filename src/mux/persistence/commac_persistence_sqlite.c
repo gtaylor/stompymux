@@ -8,12 +8,13 @@
 #include <string.h>
 
 #include "mux/commands/macro.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/db.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 
 /* The legacy file is read during this phase; SQLite is an atomic dump mirror.
  */
@@ -88,7 +89,8 @@ static int commac_sqlite_bind_text(sqlite3_stmt *statement, int index,
 }
 
 /* Save all per-object aliases and selected macro-set slots. */
-static int commac_store_entries(sqlite3 *sqlite) {
+static int commac_store_entries(ChannelRegistry *registry,
+                                GameDatabase *database, sqlite3 *sqlite) {
   sqlite3_stmt *entry = nullptr;
   sqlite3_stmt *alias = nullptr;
   struct commac *commac;
@@ -96,7 +98,7 @@ static int commac_store_entries(sqlite3 *sqlite) {
   int index;
   int result = -1;
 
-  purge_commac();
+  purge_commac(registry, database);
   if (sqlite3_prepare_v2(sqlite,
                          "INSERT INTO commac_entries "
                          "(who, curmac, macro_slot_0, macro_slot_1, "
@@ -109,8 +111,8 @@ static int commac_store_entries(sqlite3 *sqlite) {
           "(who, position, alias, channel_name) VALUES (?, ?, ?, ?);",
           -1, &alias, nullptr) == SQLITE_OK) {
     result = 0;
-    for (bucket = 0; result == 0 && bucket < NUM_COMMAC; bucket++) {
-      for (commac = commac_table[bucket]; commac; commac = commac->next) {
+    for (bucket = 0; result == 0 && bucket < COMMAC_BUCKET_COUNT; bucket++) {
+      for (commac = registry->commacs[bucket]; commac; commac = commac->next) {
         if (commac_sqlite_bind_int(entry, 1, commac->who) < 0 ||
             commac_sqlite_bind_int(entry, 2, commac->curmac) < 0 ||
             commac_sqlite_bind_int(entry, 3, commac->macros[0]) < 0 ||
@@ -139,28 +141,30 @@ static int commac_store_entries(sqlite3 *sqlite) {
   return result;
 }
 
-/* This context lets Fifo's callback insert channel history in FIFO order. */
-static sqlite3_stmt *commac_message_statement;
-static const char *commac_message_channel;
-static int commac_message_position;
-static int commac_message_result;
+typedef struct CommacMessageStoreContext CommacMessageStoreContext;
+struct CommacMessageStoreContext {
+  sqlite3_stmt *statement;
+  const char *channel;
+  int position;
+  int result;
+};
 
-static void commac_store_message(void *data) {
+static void commac_store_message(void *data, void *context_pointer) {
   chmsg *message = data;
+  CommacMessageStoreContext *context = context_pointer;
 
-  if (commac_message_result < 0 ||
-      commac_sqlite_bind_text(commac_message_statement, 1,
-                              commac_message_channel) < 0 ||
-      commac_sqlite_bind_int(commac_message_statement, 2,
-                             commac_message_position++) < 0 ||
-      commac_sqlite_bind_int(commac_message_statement, 3, message->time) < 0 ||
-      commac_sqlite_bind_text(commac_message_statement, 4, message->msg) < 0 ||
-      commac_sqlite_step(commac_message_statement) < 0)
-    commac_message_result = -1;
+  if (context->result < 0 ||
+      commac_sqlite_bind_text(context->statement, 1, context->channel) < 0 ||
+      commac_sqlite_bind_int(context->statement, 2, context->position++) < 0 ||
+      commac_sqlite_bind_int(context->statement, 3, message->time) < 0 ||
+      commac_sqlite_bind_text(context->statement, 4, message->msg) < 0 ||
+      commac_sqlite_step(context->statement) < 0)
+    context->result = -1;
 }
 
 /* Save configured channels, persisted player memberships, and history. */
-static int commac_store_comsys(sqlite3 *sqlite) {
+static int commac_store_comsys(sqlite3 *sqlite,
+                               const PersistenceContext *context) {
   sqlite3_stmt *channel = nullptr;
   sqlite3_stmt *user_statement = nullptr;
   sqlite3_stmt *message = nullptr;
@@ -187,11 +191,11 @@ static int commac_store_comsys(sqlite3 *sqlite) {
           "(channel_name, position, sent_at, message) VALUES (?, ?, ?, ?);",
           -1, &message, nullptr) == SQLITE_OK) {
     result = 0;
-    for (current =
-             (struct channel *)hash_table_first_entry(&mudstate.channel_htab);
+    for (current = (struct channel *)hash_table_first_entry(
+             &context->channels->channels);
          result == 0 && current;
-         current =
-             (struct channel *)hash_table_next_entry(&mudstate.channel_htab)) {
+         current = (struct channel *)hash_table_next_entry(
+             &context->channels->channels)) {
       if (commac_sqlite_bind_text(channel, 1, current->name) < 0 ||
           commac_sqlite_bind_int(channel, 2, current->type) < 0 ||
           commac_sqlite_bind_int(channel, 3, current->temp1) < 0 ||
@@ -208,7 +212,8 @@ static int commac_store_comsys(sqlite3 *sqlite) {
       position = 0;
       for (index = 0; result == 0 && index < current->num_users; index++) {
         user = current->users[index];
-        if (!is_player(user->who) && !is_robot(user->who))
+        if (!is_player(context->database, user->who) &&
+            !is_robot(context->database, user->who))
           continue;
         if (commac_sqlite_bind_text(user_statement, 1, current->name) < 0 ||
             commac_sqlite_bind_int(user_statement, 2, position++) < 0 ||
@@ -217,12 +222,15 @@ static int commac_store_comsys(sqlite3 *sqlite) {
             commac_sqlite_step(user_statement) < 0)
           result = -1;
       }
-      commac_message_statement = message;
-      commac_message_channel = current->name;
-      commac_message_position = 0;
-      commac_message_result = 0;
-      fifo_traverse_reverse(&current->last_messages, commac_store_message);
-      if (commac_message_result < 0)
+      CommacMessageStoreContext message_context = {
+          .statement = message,
+          .channel = current->name,
+          .position = 0,
+          .result = 0,
+      };
+      fifo_traverse_reverse(&current->last_messages, commac_store_message,
+                            &message_context);
+      if (message_context.result < 0)
         result = -1;
     }
   }
@@ -233,10 +241,11 @@ static int commac_store_comsys(sqlite3 *sqlite) {
 }
 
 /* Save macro-set numbering because commac slots refer to these indexes. */
-static int commac_store_macros(sqlite3 *sqlite) {
+static int commac_store_macros(sqlite3 *sqlite,
+                               const PersistenceContext *context) {
   sqlite3_stmt *set = nullptr;
   sqlite3_stmt *entry = nullptr;
-  struct macros *macro;
+  MacroSet *macro;
   int index;
   int macro_index;
   int result = -1;
@@ -252,8 +261,8 @@ static int commac_store_macros(sqlite3 *sqlite) {
           "(set_index, position, alias, expansion) VALUES (?, ?, ?, ?);",
           -1, &entry, nullptr) == SQLITE_OK) {
     result = 0;
-    for (index = 0; result == 0 && index < nummacros; index++) {
-      macro = macros[index];
+    for (index = 0; result == 0 && index < context->macros->count; index++) {
+      macro = context->macros->sets[index];
       if (commac_sqlite_bind_int(set, 1, index) < 0 ||
           commac_sqlite_bind_int(set, 2, macro->player) < 0 ||
           commac_sqlite_bind_int(set, 3, macro->status) < 0 ||
@@ -262,7 +271,7 @@ static int commac_store_macros(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      for (macro_index = 0; result == 0 && macro_index < macro->nummacros;
+      for (macro_index = 0; result == 0 && macro_index < macro->macro_count;
            macro_index++) {
         if (commac_sqlite_bind_int(entry, 1, index) < 0 ||
             commac_sqlite_bind_int(entry, 2, macro_index) < 0 ||
@@ -279,13 +288,16 @@ static int commac_store_macros(sqlite3 *sqlite) {
   return result;
 }
 
-static int commac_persistence_store(sqlite3 *sqlite) {
-  if (!mudconf.have_comsys && !mudconf.have_macros)
+static int commac_persistence_store(sqlite3 *sqlite,
+                                    PersistenceContext *context) {
+  if (!context->configuration->have_comsys &&
+      !context->configuration->have_macros)
     return 0;
   return commac_sqlite_exec(sqlite, commac_schema_sql) < 0 ||
-                 commac_store_entries(sqlite) < 0 ||
-                 commac_store_comsys(sqlite) < 0 ||
-                 commac_store_macros(sqlite) < 0
+                 commac_store_entries(context->channels, context->database,
+                                      sqlite) < 0 ||
+                 commac_store_comsys(sqlite, context) < 0 ||
+                 commac_store_macros(sqlite, context) < 0
              ? -1
              : 0;
 }
@@ -332,12 +344,13 @@ static int commac_load_alias(struct commac *commac, const char *alias,
 }
 
 /* Find an existing entry without creating one for a malformed alias row. */
-static struct commac *commac_find_loaded(DbRef who) {
+static struct commac *commac_find_loaded(ChannelRegistry *registry, DbRef who) {
   struct commac *commac;
 
   if (who < 0)
     return nullptr;
-  for (commac = commac_table[who % NUM_COMMAC]; commac; commac = commac->next) {
+  for (commac = registry->commacs[who % COMMAC_BUCKET_COUNT]; commac;
+       commac = commac->next) {
     if (commac->who == who)
       return commac;
   }
@@ -345,7 +358,8 @@ static struct commac *commac_find_loaded(DbRef who) {
 }
 
 /* Restore commac records and aliases before macro slots are validated. */
-static int commac_load_entries(sqlite3 *sqlite) {
+static int commac_load_entries(sqlite3 *sqlite,
+                               const PersistenceContext *context) {
   sqlite3_stmt *entries = nullptr;
   sqlite3_stmt *aliases = nullptr;
   struct commac *commac;
@@ -366,7 +380,8 @@ static int commac_load_entries(sqlite3 *sqlite) {
     while (result == 0 && (step = sqlite3_step(entries)) == SQLITE_ROW) {
       commac = create_new_commac();
       if (commac_column_int(entries, 0, &who) < 0 || who < 0 ||
-          who >= mudstate.db_top || commac_column_int(entries, 1, &value) < 0) {
+          who >= context->database->top ||
+          commac_column_int(entries, 1, &value) < 0) {
         destroy_commac(commac);
         result = -1;
         break;
@@ -383,7 +398,7 @@ static int commac_load_entries(sqlite3 *sqlite) {
         destroy_commac(commac);
         break;
       }
-      add_commac(commac);
+      add_commac(context->channels, commac);
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;
@@ -396,7 +411,7 @@ static int commac_load_entries(sqlite3 *sqlite) {
                          -1, &aliases, nullptr) == SQLITE_OK) {
     while (result == 0 && (step = sqlite3_step(aliases)) == SQLITE_ROW) {
       if (commac_column_int(aliases, 0, &who) < 0 ||
-          !(commac = commac_find_loaded(who)) ||
+          !(commac = commac_find_loaded(context->channels, who)) ||
           commac_column_text(aliases, 1, &alias, 5) < 0 ||
           commac_column_text(aliases, 2, &channel, LBUF_SIZE - 1) < 0 ||
           commac_load_alias(commac, alias, channel) < 0)
@@ -408,17 +423,18 @@ static int commac_load_entries(sqlite3 *sqlite) {
     result = -1;
   sqlite3_finalize(aliases);
   if (result == 0) {
-    for (who = 0; who < NUM_COMMAC; who++) {
-      for (commac = commac_table[who]; commac; commac = commac->next)
+    for (who = 0; who < COMMAC_BUCKET_COUNT; who++) {
+      for (commac = context->channels->commacs[who]; commac;
+           commac = commac->next)
         sort_com_aliases(commac);
     }
-    purge_commac();
+    purge_commac(context->channels, context->database);
   }
   return result;
 }
 
 /* Restore channels first so memberships and history can reference them. */
-static int commac_load_channels(sqlite3 *sqlite) {
+static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
   struct channel *channel;
   const char *name;
@@ -426,7 +442,7 @@ static int commac_load_channels(sqlite3 *sqlite) {
   int result = -1;
   int step;
 
-  num_channels = 0;
+  context->channels->count = 0;
   if (sqlite3_prepare_v2(sqlite,
                          "SELECT name, type, temp1, temp2, charge, charge_who, "
                          "amount_col, num_messages, chan_obj "
@@ -476,8 +492,9 @@ static int commac_load_channels(sqlite3 *sqlite) {
         free(channel);
         break;
       }
-      hash_table_add(channel->name, (int *)channel, &mudstate.channel_htab);
-      num_channels++;
+      hash_table_add(channel->name, (int *)channel,
+                     &context->channels->channels);
+      context->channels->count++;
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;
@@ -487,7 +504,8 @@ static int commac_load_channels(sqlite3 *sqlite) {
 }
 
 /* Restore the persisted player/robot channel memberships. */
-static int commac_load_users(sqlite3 *sqlite) {
+static int commac_load_users(sqlite3 *sqlite,
+                             const PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
   struct channel *channel;
   struct comuser *user;
@@ -505,9 +523,9 @@ static int commac_load_users(sqlite3 *sqlite) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = select_channel(name)) ||
+          !(channel = channel_registry_find(context->channels, name)) ||
           commac_column_int(statement, 1, &who) < 0 || who < 0 ||
-          who >= mudstate.db_top ||
+          who >= context->database->top ||
           commac_column_int(statement, 2, &is_on) < 0) {
         result = -1;
         break;
@@ -531,7 +549,7 @@ static int commac_load_users(sqlite3 *sqlite) {
       user->who = who;
       user->on = (int)is_on;
       channel->users[channel->num_users++] = user;
-      if (is_undead(who)) {
+      if (is_undead(context->database, who)) {
         user->on_next = channel->on_users;
         channel->on_users = user;
       }
@@ -544,7 +562,8 @@ static int commac_load_users(sqlite3 *sqlite) {
 }
 
 /* Restore bounded channel history in the oldest-to-newest queue order. */
-static int commac_load_messages(sqlite3 *sqlite) {
+static int commac_load_messages(sqlite3 *sqlite,
+                                const PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;
   struct channel *channel;
   chmsg *message;
@@ -562,7 +581,7 @@ static int commac_load_messages(sqlite3 *sqlite) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       if (commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          !(channel = select_channel(name)) ||
+          !(channel = channel_registry_find(context->channels, name)) ||
           commac_column_int(statement, 1, &sent_at) < 0 ||
           commac_column_text(statement, 2, &text, LBUF_SIZE - 1) < 0) {
         result = -1;
@@ -586,10 +605,10 @@ static int commac_load_messages(sqlite3 *sqlite) {
 
 /* Restore macro indexes and definitions, then drop owners no longer in the DB.
  */
-static int commac_load_macros(sqlite3 *sqlite) {
+static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
   sqlite3_stmt *sets = nullptr;
   sqlite3_stmt *entries = nullptr;
-  struct macros *macro;
+  MacroSet *macro;
   const char *description;
   const char *alias;
   const char *expansion;
@@ -601,9 +620,9 @@ static int commac_load_macros(sqlite3 *sqlite) {
   int result = -1;
   int step;
 
-  nummacros = 0;
-  maxmacros = 0;
-  macros = nullptr;
+  context->macros->count = 0;
+  context->macros->capacity = 0;
+  context->macros->sets = nullptr;
   if (sqlite3_prepare_v2(
           sqlite,
           "SELECT set_index, owner, status, description FROM macro_sets "
@@ -611,16 +630,19 @@ static int commac_load_macros(sqlite3 *sqlite) {
           -1, &sets, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(sets)) == SQLITE_ROW) {
-      expected_set = nummacros;
+      expected_set = context->macros->count;
       if (commac_column_int(sets, 0, &value) < 0 || value != expected_set ||
           commac_column_int(sets, 1, &owner) < 0 || owner < 0 ||
-          owner >= mudstate.db_top || commac_column_int(sets, 2, &status) < 0 ||
+          owner >= context->database->top ||
+          commac_column_int(sets, 2, &status) < 0 ||
           commac_column_text(sets, 3, &description, LBUF_SIZE - 1) < 0) {
         result = -1;
         break;
       }
-      macros = realloc(macros, sizeof(*macros) * (size_t)(nummacros + 1));
-      if (!macros) {
+      context->macros->sets = realloc(context->macros->sets,
+                                      sizeof(*context->macros->sets) *
+                                          (size_t)(context->macros->count + 1));
+      if (!context->macros->sets) {
         result = -1;
         break;
       }
@@ -629,7 +651,7 @@ static int commac_load_macros(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      macros[nummacros++] = macro;
+      context->macros->sets[context->macros->count++] = macro;
       macro->player = (int)owner;
       macro->status = (char)status;
       macro->desc = strdup(description);
@@ -648,7 +670,7 @@ static int commac_load_macros(sqlite3 *sqlite) {
     expected_entry = 0;
     while (result == 0 && (step = sqlite3_step(entries)) == SQLITE_ROW) {
       if (commac_column_int(entries, 0, &value) < 0 || value < 0 ||
-          value >= nummacros || (int)value < expected_set) {
+          value >= context->macros->count || (int)value < expected_set) {
         result = -1;
         break;
       }
@@ -656,7 +678,7 @@ static int commac_load_macros(sqlite3 *sqlite) {
         expected_set = (int)value;
         expected_entry = 0;
       }
-      macro = macros[value];
+      macro = context->macros->sets[value];
       if (commac_column_int(entries, 1, &value) < 0 ||
           value != expected_entry++ ||
           commac_column_text(entries, 2, &alias, 4) < 0 ||
@@ -664,17 +686,18 @@ static int commac_load_macros(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      macro->alias = realloc(macro->alias, (size_t)(macro->nummacros + 1) * 5);
+      macro->alias =
+          realloc(macro->alias, (size_t)(macro->macro_count + 1) * 5);
       macro->string =
           realloc(macro->string,
-                  sizeof(*macro->string) * (size_t)(macro->nummacros + 1));
+                  sizeof(*macro->string) * (size_t)(macro->macro_count + 1));
       if (!macro->alias || !macro->string) {
         result = -1;
         break;
       }
-      StringCopy(macro->alias + macro->nummacros * 5, alias);
-      macro->string[macro->nummacros++] = strdup(expansion);
-      macro->maxmacros = macro->nummacros;
+      StringCopy(macro->alias + macro->macro_count * 5, alias);
+      macro->string[macro->macro_count++] = strdup(expansion);
+      macro->macro_capacity = macro->macro_count;
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;
@@ -683,9 +706,10 @@ static int commac_load_macros(sqlite3 *sqlite) {
   sqlite3_finalize(entries);
   if (result == 0) {
     expected_set = 0;
-    while (expected_set < nummacros) {
-      if (!is_player(macros[expected_set]->player))
-        clear_macro_set(expected_set);
+    while (expected_set < context->macros->count) {
+      if (!is_player(context->database,
+                     context->macros->sets[expected_set]->player))
+        clear_macro_set(context->macros, expected_set);
       else
         expected_set++;
     }
@@ -694,18 +718,21 @@ static int commac_load_macros(sqlite3 *sqlite) {
 }
 
 /* SQLite is now authoritative for all commac, comsys, and macro state. */
-static int commac_persistence_load(sqlite3 *sqlite) {
-  if (!mudconf.have_comsys && !mudconf.have_macros)
+static int commac_persistence_load(sqlite3 *sqlite,
+                                   PersistenceContext *context) {
+  if (!context->configuration->have_comsys &&
+      !context->configuration->have_macros)
     return 0;
-  return commac_load_entries(sqlite) < 0 || commac_load_channels(sqlite) < 0 ||
-                 commac_load_users(sqlite) < 0 ||
-                 commac_load_messages(sqlite) < 0 ||
-                 commac_load_macros(sqlite) < 0
+  return commac_load_entries(sqlite, context) < 0 ||
+                 commac_load_channels(sqlite, context) < 0 ||
+                 commac_load_users(sqlite, context) < 0 ||
+                 commac_load_messages(sqlite, context) < 0 ||
+                 commac_load_macros(sqlite, context) < 0
              ? -1
              : 0;
 }
 
-int commac_persistence_register(void) {
+int commac_persistence_register(PersistenceContext *context) {
   return persistence_register_sqlite_extension(
-      "commac", commac_persistence_load, commac_persistence_store);
+      context, "commac", commac_persistence_load, commac_persistence_store);
 }

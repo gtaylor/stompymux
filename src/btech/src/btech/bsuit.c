@@ -287,7 +287,7 @@ int FindBSuitTarget(DbRef player, MECH *mech, MECH **target, char *buffer) {
     DOCHECK1(!(t), "Invalid default target!");
     break;
   default:
-    notify(player, "Invalid target!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid target!");
     return 1;
   }
   range = FaMechRange(mech, t);
@@ -672,10 +672,11 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
   int terrain;
 
   cch(MECH_USUALO);
-  DOCHECK(((HasCamo(mech)) || (is_wizard(player)))
-              ? 0
-              : MechType(mech) != CLASS_BSUIT && MechType(mech) != CLASS_MW,
-          "You aren't capable of such curious things.");
+  DOCHECK(
+      ((HasCamo(mech)) || (is_wizard(btech_context_active()->database, player)))
+          ? 0
+          : MechType(mech) != CLASS_BSUIT && MechType(mech) != CLASS_MW,
+      "You aren't capable of such curious things.");
 
   if (!map) {
     mech_notify(mech, MECHALL, "You are not on a map!");

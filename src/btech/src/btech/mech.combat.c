@@ -100,7 +100,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
   DOCHECK(argc != 1, "Invalid number of arguments to function!");
   if (!strcmp(args[0], "-")) {
     MechAim(mech) = NUM_SECTIONS;
-    notify(player, "Targetting disabled.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Targetting disabled.");
     return;
   }
   DOCHECK(MechTarget(mech) < 0 || !(target = FindObjectsData(MechTarget(mech))),
@@ -112,7 +112,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
   MechAim(mech) = index;
   MechAimType(mech) = type;
   ArmorStringFromIndex(index, section, type, move);
-  notify_printf(player, "%s targetted.", section);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s targetted.", section);
 }
 
 /* Varying messages based on the distance to foe, and size of your vehicle
@@ -244,7 +244,8 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     if (MechSpotter(mech) == mech->mynum)
       ClearFireAdjustments(mech_map, mech->mynum);
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
-    notify_printf(player, "Target coordinates set at (X,Y) %d, %d", newx, newy);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Target coordinates set at (X,Y) %d, %d", newx, newy);
     StopLock(mech);
     MechStatus(mech) |= LOCK_TARGET;
 #if LOCK_TICK > 0
@@ -276,7 +277,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       mode = LOCK_HEX;
       break;
     default:
-      notify(player, "Invalid mode selected!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid mode selected!");
       return;
     }
     mech_map = getMap(mech->mapindex);
@@ -292,21 +293,22 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
     switch (mode) {
     case LOCK_HEX:
-      notify_printf(player, "Target coordinates set to hex at (X,Y) %d, %d",
-                    newx, newy);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Target coordinates set to hex at (X,Y) %d, %d", newx,
+                    newy);
       break;
     case LOCK_HEX_CLR:
-      notify_printf(player,
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
                     "Target coordinates set to clearing hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     case LOCK_HEX_IGN:
-      notify_printf(player,
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
                     "Target coordinates set to igniting hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     default:
-      notify_printf(player,
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
                     "Target coordinates set to building at (X,Y) %d, %d", newx,
                     newy);
       break;
@@ -427,7 +429,7 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
       /* Get the section name and print the message */
       ArmorStringFromIndex(section, location, MechType(mech), MechMove(mech));
-      notify_printf(player,
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
                     "%s%s is still recovering from a "
                     "previous action!",
                     MechType(mech) == CLASS_BSUIT ? "" : "Your ", location);
@@ -545,7 +547,7 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
           DOCHECK0(!LOS, "That target is not in your direct line of sight, and "
                          "you cannot fire your IDF weapons underground!");
         }
-        if (mudconf.btech_idf_requires_spotter &&
+        if (btech_context_active()->configuration->btech_idf_requires_spotter &&
             (MechWeapons[weaptype].special & IDF) && (MechSpotter(mech) == -1))
           DOCHECK0(!LOS, "That target is not in your direct line of sight"
                          " and you do not have a spotter set!!");
@@ -581,7 +583,7 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
         LOS = LOS_NB(mech, tempMech, mapx, mapy, range);
 
         /* Check for Spotter here */
-        if (mudconf.btech_idf_requires_spotter &&
+        if (btech_context_active()->configuration->btech_idf_requires_spotter &&
             (MechWeapons[weaptype].special & IDF) && (MechSpotter(mech) == -1))
           DOCHECK0(!LOS, "That hex target is not in your direct line of sight"
                          " and you do not have a spotter set!!");
@@ -1169,19 +1171,23 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
    * We need to do a little handling here. The rest happens over it HitTarget
    */
   RbaseToHit = baseToHit;
-  if (mudconf.btech_glancing_blows == 2)
+  if (btech_context_active()->configuration->btech_glancing_blows == 2)
     RbaseToHit = baseToHit - 1; /* only time we modify it */
 
   if (!isarty) {
-    /*		if(is_in_character(mech->mynum)) {
-                            if((roll < RbaseToHit) && (RbaseToHit < 13) &&
+    /*		if(is_in_character(btech_context_active()->database,
+       mech->mynum)) { if((roll < RbaseToHit) && (RbaseToHit < 13) &&
        (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][0]++; if((roll ==
-       RbaseToHit) && (mudconf.btech_glancing_blows) && (RbaseToHit < 13) &&
-       (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][2]++; if((roll >=
-       RbaseToHit) && (!mudconf.btech_glancing_blows) && (RbaseToHit < 13) &&
-       (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][1]++; if((roll >
-       RbaseToHit) && (mudconf.btech_glancing_blows) && (RbaseToHit < 13) &&
-       (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][1]++;
+       RbaseToHit) &&
+       (btech_context_active()->configuration->btech_glancing_blows) &&
+       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
+       2][2]++; if((roll >= RbaseToHit) &&
+       (!btech_context_active()->configuration->btech_glancing_blows) &&
+       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
+       2][1]++; if((roll > RbaseToHit) &&
+       (btech_context_active()->configuration->btech_glancing_blows) &&
+       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
+       2][1]++;
                     }
     */
     MechFireBroadcast(mech, ishex ? NULL : target, mapx, mapy, mech_map,
@@ -1402,7 +1408,8 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
 
   /* Check to see if we have an energy weapon and we're modding the damage based
    * on range */
-  if (mudconf.btech_moddamagewithrange && IsEnergy(weapindx)) {
+  if (btech_context_active()->configuration->btech_moddamagewithrange &&
+      IsEnergy(weapindx)) {
     if (fRange <= 1.0)
       wWeapDamage++;
     else {
@@ -1428,7 +1435,7 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
     wWeapDamage -= modifier;
 
   if (hitMech && !isTempCalc) {
-    if (mudconf.btech_moddamagewithwoods &&
+    if (btech_context_active()->configuration->btech_moddamagewithwoods &&
         IsForestHex(mech_map, MechX(hitMech), MechY(hitMech)) &&
         ((MechZ(hitMech) - 2) <=
          Elevation(mech_map, MechX(hitMech), MechY(hitMech)))) {
@@ -1501,7 +1508,8 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
         wGattlingShots, wBaseWeapDamage, wAmmoMode, type, modifier, 0);
 
     /* Check if it is a glancing blow, if so, make an emit */
-    if ((mudconf.btech_glancing_blows) && (player_roll == bth) && hitMech) {
+    if ((btech_context_active()->configuration->btech_glancing_blows) &&
+        (player_roll == bth) && hitMech) {
       /* Yes, even though we have two different glance modes, the above is
        * correct because we modified the bth in FireWeapon. Nothing to see here.
        * move along
@@ -1644,7 +1652,10 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
 
   missileindex = MissileHitIndex(
       mech, hitMech, weapindx, wSection, wCritSlot,
-      (mudconf.btech_glancing_blows) && (player_roll == bth) ? 1 : 0);
+      (btech_context_active()->configuration->btech_glancing_blows) &&
+              (player_roll == bth)
+          ? 1
+          : 0);
   /* This is how we'll handle glancing. Any roll < 2 is considering just one
    * missile hit, full damage */
   if (missileindex == -1)

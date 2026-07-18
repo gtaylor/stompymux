@@ -52,9 +52,11 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
 
   if (!m)
     return;
-  notify_printf(player, "Checking %d entries..", m->first_free);
-  DOLIST(k, obj_contents(m->mynum)) {
-    if (is_hardcode(k)) {
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Checking %d entries..",
+                m->first_free);
+  DOLIST(btech_context_active()->database, k,
+         game_object_contents(btech_context_active()->database, m->mynum)) {
+    if (is_hardcode(btech_context_active()->database, k)) {
       if (WhichSpecial(k) == GTYPE_MECH) {
         MECH *map_mech;
 
@@ -73,22 +75,24 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
   for (i = 0; i < m->first_free; i++)
     if ((k = m->mechsOnMap[i]) >= 0) {
       if (!IsMech(k)) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "Error: #%d isn't mech yet is in mapindex. Fixing..", k);
         m->mechsOnMap[i] = -1;
       } else if (!(mek = getMech(k))) {
-        notify_printf(player, "Error: #%d has no mech data. Removing..", k);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Error: #%d has no mech data. Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mek->mapindex != m->mynum) {
-        notify_printf(player, "Error: #%d isn't really here! Removing..", k);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Error: #%d isn't really here! Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mek->mapnumber != i) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "Error: #%d has invalid mapnumber (mn:%d <-> real:%d)..",
                       k, mek->mapnumber, i);
       }
     }
-  notify(player, "Done.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Done.");
 }
 
 /* Selectors */
@@ -118,7 +122,7 @@ void map_view(DbRef player, void *data, char *buffer) {
     y = BOUNDED(0, atoi(args[1]), mech_map->map_height - 1);
     break;
   default:
-    notify(player, "Invalid number of parameters!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of parameters!");
     return;
   }
 
@@ -134,8 +138,9 @@ void map_view(DbRef player, void *data, char *buffer) {
              displayHeight > 24 || displayHeight < 5 || displayWidth < 5 ||
              displayWidth > 40) {
 
-    notify(player, "Illegal Tacsize attribute. Must be in format "
-                   "'Height Width' . Height : 5-24 Width : 5-40");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Illegal Tacsize attribute. Must be in format "
+           "'Height Width' . Height : 5-24 Width : 5-40");
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
   }
@@ -153,7 +158,7 @@ void map_view(DbRef player, void *data, char *buffer) {
 
   /* Display the map to the player */
   for (i = 0; maptext[i]; i++)
-    notify(player, maptext[i]);
+    notify(BTECH_EVALUATION_CONTEXT, player, maptext[i]);
 }
 
 void map_addhex(DbRef player, void *data, char *buffer) {
@@ -177,7 +182,7 @@ void map_addhex(DbRef player, void *data, char *buffer) {
   else
     SetTerrain(map, x, y, args[2][0]);
   SetElevation(map, x, y, (elev <= MAX_ELEV) ? elev : MAX_ELEV);
-  notify(player, "Hex set!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Hex set!");
 }
 
 void map_mapemit(DbRef player, void *data, char *buffer) {
@@ -190,7 +195,7 @@ void map_mapemit(DbRef player, void *data, char *buffer) {
     buffer++;
   DOCHECK(!buffer || !*buffer, "What do you want to @mapemit?");
   MapBroadcast(map, buffer);
-  notify(player, "Message sent!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Message sent!");
 }
 
 /* Logic: OPPOSITE sides must have water, within r<=3 of each other */
@@ -390,27 +395,31 @@ void map_loadmap(DbRef player, void *data, char *buffer) {
 
   DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
           "Invalid number of arguments!");
-  notify_printf(player, "Loading %s", args[0]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Loading %s", args[0]);
   switch (map_checkmapfile(map, args[0])) {
   case -1:
-    notify(player, "#-1 Map not found.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "#-1 Map not found.");
     return;
   case -2:
-    notify(player, "#-1 Map invalid - Bad Height/Width.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "#-1 Map invalid - Bad Height/Width.");
     return;
   case -3:
-    notify(player, "#-1 Map invalid - Height not loaded properly");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "#-1 Map invalid - Height not loaded properly");
     return;
   case 1:
     map_load(map, args[0]);
     break;
   default:
-    notify(player, "Unknown error while loading map!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Unknown error while loading map!");
     return;
   }
 
   if (player != 1) {
-    notify(player, "Clearing Mechs off Newly Loaded Map");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Clearing Mechs off Newly Loaded Map");
     map_clearmechs(player, data, "");
     del_mapobjs(map);
   }
@@ -437,7 +446,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
           "Invalid number of arguments!");
   if (strlen(args[0]) >= MAP_NAME_SIZE)
     args[0][MAP_NAME_SIZE] = 0;
-  notify_printf(player, "Saving %s", args[0]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s", args[0]);
   openfile = map_filename(args[0]);
   DOCHECK(!openfile, "Unable to open the map file!");
   fp = my_open_file(openfile, "w", &filemode);
@@ -487,7 +496,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   }
   if ((i = (map->flags & ~(MAPFLAG_MAPO))))
     fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
-  notify(player, "Saving complete!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
   my_close_file(fp, &filemode);
 }
 
@@ -534,7 +543,7 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
     oldmap->map_height = y;
     oldmap->map_width = x;
     oldmap->map = map;
-    notify(player, "Size set.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Size set.");
   }
 }
 
@@ -555,11 +564,11 @@ void map_update(DbRef obj, void *data) {
   int ma, ml, wind, wspeed, cloudbase = 200;
   int oldl, oldv, i, j;
 
-  /* Changed from % 25 to % 60. %60 never hit when mux_event_tick came here and
-     was odd. % 25 should hit when its odd or even (25 75 125... when odd 50 100
-     150... when even */
+  /* Changed from % 25 to % 60. %60 never hit when
+     btech_context_active()->events->tick came here and was odd. % 25 should hit
+     when its odd or even (25 75 125... when odd 50 100 150... when even */
 
-  if (!(mux_event_tick % 25)) {
+  if (!(btech_context_active()->events->tick % 25)) {
     oldl = map->maplight;
     oldv = map->mapvis;
     if (!(tmps = silly_atr_get(obj, A_MAPVIS)) ||
@@ -669,7 +678,7 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
           "Supply target type too!");
   switch (listmatch(cmds, args[0])) {
   case MECHS:
-    notify(player, "--- Mechs on Map ---");
+    notify(BTECH_EVALUATION_CONTEXT, player, "--- Mechs on Map ---");
     for (i = 0; i < map->first_free; i++) {
       if (map->mechsOnMap[i] != -1) {
         tempMech = getMech(map->mechsOnMap[i]);
@@ -678,16 +687,18 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
           strcpy(valid, "Valid Data");
         else
           strcpy(valid, "Invalid Object Data!  Remove this Mech!");
-        notify_printf(player, "Mech DB Number: %ld : [%s]\t%s",
-                      map->mechsOnMap[i], ID, valid);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Mech DB Number: %ld : [%s]\t%s", map->mechsOnMap[i], ID,
+                      valid);
         count++;
       }
     }
-    notify_printf(player, "%d Mechs On Map", count);
-    notify_printf(player, "%d positions open", MAX_MECHS_PER_MAP - count);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d Mechs On Map", count);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d positions open",
+                  MAX_MECHS_PER_MAP - count);
     if (count != map->first_free)
-      notify_printf(player, "%d is first free slot, according to db.",
-                    map->first_free);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "%d is first free slot, according to db.", map->first_free);
     return;
     break;
   case OBJS:
@@ -695,7 +706,8 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
     return;
     break;
   }
-  notify_printf(player, "Invalid argument (%s)!", args[0]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Invalid argument (%s)!",
+                args[0]);
   return;
 }
 

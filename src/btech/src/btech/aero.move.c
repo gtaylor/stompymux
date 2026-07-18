@@ -171,12 +171,12 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
   if (Fallen(mech) || (MMaxSpeed(mech) <= MP1) ||
       ((SectIsDestroyed(mech, ROTOR)) && MechType(mech) == CLASS_VTOL)) {
     DOCHECK(MechType(mech) == CLASS_VTOL, "The rotor's dead!");
-    notify(player, "The engines are dead!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "The engines are dead!");
     return;
   }
   if (!AeroFreeFuel(mech) && AeroFuel(mech) < 1) {
     DOCHECK(MechType(mech) == CLASS_VTOL, "Your VTOL's out of fuel!");
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "Your craft's out of fuel! No taking off until it's refueled.");
     return;
   }
@@ -264,7 +264,7 @@ int ImproperLZ(MECH *mech, int x, int y) {
   MAP *map = getMap(mech->mapindex);
 
   if (GetRTerrain(map, x, y) != GRASSLAND && GetRTerrain(map, x, y) != ROAD)
-    if (mudconf.btech_blzmapmode == 0)
+    if (btech_context_active()->configuration->btech_blzmapmode == 0)
       return INVALID_TERRAIN;
 
   improper_lz_status = 0;
@@ -272,7 +272,7 @@ int ImproperLZ(MECH *mech, int x, int y) {
   visit_neighbor_hexes(map, x, y, ImproperLZ_callback);
 
   if (improper_lz_status != 6)
-    if (mudconf.btech_blzmapmode == 0)
+    if (btech_context_active()->configuration->btech_blzmapmode == 0)
       return UNEVEN_TERRAIN;
   if (is_blocked_lz(mech, map, x, y))
     return BLOCKED_LZ;
@@ -304,7 +304,8 @@ void aero_land(DbRef player, void *data, char *buffer) {
           "The engines are dead!");
   if (MechStatus(mech) & LANDED) {
     if (TakingOff(mech)) {
-      mech_printf(mech, MECHALL, "Launch aborted by %s.", Name(player));
+      mech_printf(mech, MECHALL, "Launch aborted by %s.",
+                  game_object_name(btech_context_active()->database, player));
       if (IsDS(mech))
         SendDSInfo(tprintf("DS #%ld aborted takeoff at %d %d "
                            "on map #%ld",
@@ -312,7 +313,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
       StopTakeOff(mech);
       return;
     }
-    notify(player, "You're already landed!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You're already landed!");
     return;
   }
   DOCHECK(MechZ(mech) > MechElevation(mech) + 1,
@@ -329,10 +330,10 @@ void aero_land(DbRef player, void *data, char *buffer) {
   if (MechSpeed(mech) < land_data[i].minhoriz) {
     if (MechStartFZ(mech) <= 0)
       notify(
-          player,
+          BTECH_EVALUATION_CONTEXT, player,
           "You're falling, not landing! Pick up some horizontal speed first.");
     else
-      notify(player, "You're climbing not landing!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "You're climbing not landing!");
     return;
   }
   t = MechRTerrain(mech);
@@ -357,8 +358,8 @@ void aero_land(DbRef player, void *data, char *buffer) {
   MechStartFX(mech) = 0.0;
   MechStartFY(mech) = 0.0;
   MechStartFZ(mech) = 0.0;
-  did_it(mech->mynum, mech->mynum, 0, NULL, 0, NULL, A_AAEROLAND, (char **)NULL,
-         0);
+  did_it(BTECH_EVALUATION_CONTEXT, mech->mynum, mech->mynum, 0, NULL, 0, NULL,
+         A_AAEROLAND, (char **)NULL, 0);
   possible_mine_poof(mech, MINE_LAND);
 }
 
@@ -372,14 +373,14 @@ void aero_ControlEffect(MECH *mech) {
   mech_notify(mech, MECHALL, "You lose control of your craft!");
   MechLOSBroadcast(mech, "spins out of control!");
   StartSpinning(mech);
-  MechStartSpin(mech) = mudstate.now;
+  MechStartSpin(mech) = btech_context_active()->clock->now;
 }
 
 void ds_BridgeHit(MECH *mech) {
   /* Implementation: Kill all players on bridge :-) */
   if (Destroyed(mech))
     return;
-  if (is_in_character(mech->mynum))
+  if (is_in_character(btech_context_active()->database, mech->mynum))
     mech_notify(mech, MECHALL,
                 "DUCK! The shot seems to be coming straight for the bridge!");
   KillMechContentsIfIC(mech->mynum);
@@ -559,15 +560,17 @@ void aero_update(MECH *mech) {
   }
   if (Started(mech) || MechPlusHeat(mech) > 0.)
     UpdateHeat(mech);
-  if (!(mudstate.now / 3 % 5)) {
+  if (!(btech_context_active()->clock->now / 3 % 5)) {
     if (!Spinning(mech))
       return;
     if (Destroyed(mech))
       return;
     if (Landed(mech))
       return;
-    if (MadePilotSkillRoll(mech,
-                           (MechStartSpin(mech) - mudstate.now) / 15 + 8)) {
+    if (MadePilotSkillRoll(
+            mech,
+            (MechStartSpin(mech) - btech_context_active()->clock->now) / 15 +
+                8)) {
       mech_notify(mech, MECHALL, "You recover control of your craft.");
       StopSpinning(mech);
     }
@@ -588,8 +591,8 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   DOCHECK(is_aero(mech) && Spinning(mech) && !Landed(mech),
           "You are unable to control your craft at the moment.");
   if (mech_parseattributes(arg, args, 1) != 1) {
-    notify_printf(player, "Your current thrust is %.2f.",
-                  MechDesiredSpeed(mech));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Your current thrust is %.2f.", MechDesiredSpeed(mech));
     return;
   }
   newspeed = atof(args[0]);
@@ -604,7 +607,8 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   DOCHECK(newspeed < 0,
           "Doh, thrust backwards.. where's your sense of adventure?");
   if (newspeed > maxspeed) {
-    notify_printf(player, "Maximum thrust: %.2f (%.2f kb/sec2)", maxspeed,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Maximum thrust: %.2f (%.2f kb/sec2)", maxspeed,
                   maxspeed / 10);
     return;
   }
@@ -619,7 +623,8 @@ void aero_vheading(DbRef player, void *data, char *arg, int flag) {
   MECH *mech = (MECH *)data;
 
   if (mech_parseattributes(arg, args, 1) != 1) {
-    notify_printf(player, "Present angle: %d degrees.", MechDesiredAngle(mech));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Present angle: %d degrees.", MechDesiredAngle(mech));
     return;
   }
   i = flag * atoi(args[0]);
@@ -688,7 +693,7 @@ void aero_checklz(DbRef player, MECH *mech, char *buffer) {
     y = MechY(mech);
     break;
   default:
-    notify(player, "Invalid number of parameters!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of parameters!");
     return;
   }
 

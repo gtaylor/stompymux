@@ -87,16 +87,18 @@ int loading_bay_whine(DbRef player, DbRef cargobay, MECH *mech) {
   if (c && *c)
     if (sscanf(c, "%d %d %d", &i1, &i2, &i3) >= 2)
       if (MechX(mech) != i1 || MechY(mech) != i2) {
-        notify(player, "You're not where the cargo is!");
+        notify(BTECH_EVALUATION_CONTEXT, player,
+               "You're not where the cargo is!");
         if (i3)
-          notify_printf(player, "Try looking around %d,%d instead.", i1, i2);
+          notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                        "Try looking around %d,%d instead.", i1, i2);
         return 1;
       }
   return 0;
 }
 
 void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
-  int loc = obj_location(player);
+  int loc = game_object_location(btech_context_active()->database, player);
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   char *t;
   int ol, nl, items = 0, kinds = 0;
@@ -124,10 +126,10 @@ void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
       }
   t = silly_atr_get(loc, A_ECONPARTS);
   nl = strlen(t);
-  notify_printf(player, "Fixing done. Original length: %d. New length: %d.", ol,
-                nl);
-  notify_printf(player, "Items in new: %d. Unique items in new: %d.", items,
-                kinds);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Fixing done. Original length: %d. New length: %d.", ol, nl);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
 
 void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
@@ -191,30 +193,45 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
 
 #define MY_DO_LIST(t)                                                          \
   if (*buffer)                                                                 \
-    list_matching(player,                                                      \
-                  tprintf("Part listing for %s matching %s", Name(t), buffer), \
-                  t, buffer);                                                  \
+    list_matching(                                                             \
+        player,                                                                \
+        tprintf("Part listing for %s matching %s",                             \
+                game_object_name(btech_context_active()->database, t),         \
+                buffer),                                                       \
+        t, buffer);                                                            \
   else                                                                         \
-    list_matching(player, tprintf("Part listing for %s", Name(t)), t, NULL)
+    list_matching(                                                             \
+        player,                                                                \
+        tprintf("Part listing for %s",                                         \
+                game_object_name(btech_context_active()->database, t)),        \
+        t, NULL)
 
 void mech_manifest(DbRef player, void *data, char *buffer) {
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(obj_location(player));
+  MY_DO_LIST(game_object_location(btech_context_active()->database, player));
 }
 
 void mech_stores(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUAL);
-  DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
-              is_in_character(obj_location(mech->mynum)),
-          "You aren't inside a hangar!");
-  if (loading_bay_whine(player, obj_location(mech->mynum), mech))
+  DOCHECK(
+      game_object_location(btech_context_active()->database, mech->mynum) !=
+              mech->mapindex ||
+          is_in_character(btech_context_active()->database,
+                          game_object_location(btech_context_active()->database,
+                                               mech->mynum)),
+      "You aren't inside a hangar!");
+  if (loading_bay_whine(
+          player,
+          game_object_location(btech_context_active()->database, mech->mynum),
+          mech))
     return;
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(obj_location(mech->mynum));
+  MY_DO_LIST(
+      game_object_location(btech_context_active()->database, mech->mynum));
 }
 
 #ifdef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
@@ -274,8 +291,12 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
                   "time. ('%s' matches: %d)",
                   args[0], count));
   if (mort) {
-    DOCHECK(obj_location(player) != loc1, "You ain't in your 'mech!");
-    DOCHECK(obj_location(loc1) != loc2, "You ain't in hangar!");
+    DOCHECK(game_object_location(btech_context_active()->database, player) !=
+                loc1,
+            "You ain't in your 'mech!");
+    DOCHECK(game_object_location(btech_context_active()->database, loc1) !=
+                loc2,
+            "You ain't in hangar!");
   }
   i = -1;
 #define MY_ECON_MODIFY(loc, num)                                               \
@@ -299,13 +320,15 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
     if (count)
       switch (mort) {
       case 0:
-        notify_printf(player, "You %s %d %s%s.", mod > 0 ? "add" : "remove",
-                      count, c, count > 1 ? "s" : "");
+        notify_printf(BTECH_EVALUATION_CONTEXT, player, "You %s %d %s%s.",
+                      mod > 0 ? "add" : "remove", count, c,
+                      count > 1 ? "s" : "");
         break;
       case 1:
         MY_ECON_MODIFY(loc2, (0 - mod) * count);
-        notify_printf(player, "You %s %d %s%s.", mod > 0 ? "load" : "unload",
-                      count, c, count > 1 ? "s" : "");
+        notify_printf(BTECH_EVALUATION_CONTEXT, player, "You %s %d %s%s.",
+                      mod > 0 ? "load" : "unload", count, c,
+                      count > 1 ? "s" : "");
         break;
       }
   }
@@ -313,11 +336,16 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
 }
 
 void mech_Raddstuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(player, buffer, obj_location(player), -1, 1, 0);
+  stuff_change_sub(
+      player, buffer,
+      game_object_location(btech_context_active()->database, player), -1, 1, 0);
 }
 
 void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(player, buffer, obj_location(player), -1, -1, 0);
+  stuff_change_sub(
+      player, buffer,
+      game_object_location(btech_context_active()->database, player), -1, -1,
+      0);
 }
 
 void mech_loadcargo(DbRef player, void *data, char *buffer) {
@@ -326,10 +354,17 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
   cch(MECH_USUALO);
   DOCHECK(!(MechSpecials(mech) & CARGO_TECH), "This unit cannot haul cargo!");
   DOCHECK(fabs(MechSpeed(mech)) > 0.0, "You're moving too fast!");
-  DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
-              is_in_character(obj_location(mech->mynum)),
-          "You aren't inside hangar!");
-  if (loading_bay_whine(player, obj_location(mech->mynum), mech))
+  DOCHECK(
+      game_object_location(btech_context_active()->database, mech->mynum) !=
+              mech->mapindex ||
+          is_in_character(btech_context_active()->database,
+                          game_object_location(btech_context_active()->database,
+                                               mech->mynum)),
+      "You aren't inside hangar!");
+  if (loading_bay_whine(
+          player,
+          game_object_location(btech_context_active()->database, mech->mynum),
+          mech))
     return;
   stuff_change_sub(player, buffer, mech->mynum, mech->mapindex, 1, 1);
   correct_speed(mech);
@@ -345,7 +380,10 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
 }
 
 void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
-  notify(player, "Inventory cleaned!");
-  silly_atr_set(obj_location(player), A_ECONPARTS, "");
-  SendEcon(tprintf("#%ld reset #%ld's stuff.", player, obj_location(player)));
+  notify(BTECH_EVALUATION_CONTEXT, player, "Inventory cleaned!");
+  silly_atr_set(game_object_location(btech_context_active()->database, player),
+                A_ECONPARTS, "");
+  SendEcon(
+      tprintf("#%ld reset #%ld's stuff.", player,
+              game_object_location(btech_context_active()->database, player)));
 }

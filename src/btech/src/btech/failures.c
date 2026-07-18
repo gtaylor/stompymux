@@ -243,7 +243,7 @@ void CheckGenericFail(MECH *mech, int type, int *result, int *mod) {
     *result = FAIL_NONE;
   if (i < 0)
     return;
-  if (mudconf.btech_parts) {
+  if (btech_context_active()->configuration->btech_parts) {
     if (!l)
       l = 5;
   } else
@@ -297,7 +297,7 @@ void CheckWeaponFailed(MECH *mech, int weapnum, int weaptype, int section,
   *type = FAIL_NONE;
   if (i < 0)
     return;
-  if (mudconf.btech_parts) {
+  if (btech_context_active()->configuration->btech_parts) {
     if (!l)
       l = 5;
     if (MechWeapons[Weapon2I(t)].special & PCOMBAT)

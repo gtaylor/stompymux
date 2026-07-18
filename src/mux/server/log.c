@@ -4,6 +4,7 @@
 
 #include "mux/server/platform.h"
 
+#include <assert.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
@@ -12,8 +13,9 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/server/log.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #ifdef ARBITRARY_LOGFILES
@@ -44,6 +46,18 @@ NameTable logoptions_nametab[] = {{"accounting", 2, 0, LOG_ACCOUNTING},
                                   {"wizard", 1, 0, LOG_WIZARD},
                                   {nullptr, 0, 0, 0}};
 
+void server_log_initialize(ServerLog *log, GameDatabase *database,
+                           const ServerConfiguration *configuration) {
+  assert(log != nullptr);
+  memset(log, 0, sizeof(*log));
+  log->database = database;
+  log->configuration = configuration;
+}
+
+bool server_log_is_enabled(const ServerLog *log, int key) {
+  return (key & log->configuration->log_options) != 0;
+}
+
 char *strip_ansi_r(char *dest, const char *raw, size_t n) {
   const char *p = raw;
   char *q = dest;
@@ -68,12 +82,12 @@ char *strip_ansi_r(char *dest, const char *raw, size_t n) {
  * See if it's is OK to log something, and if so, start writing the
  * log entry.
  */
-int start_log(const char *primary, const char *secondary) {
+int start_log(ServerLog *log, const char *primary, const char *secondary) {
   struct tm *tp;
   time_t now;
 
-  mudstate.logging++;
-  switch (mudstate.logging) {
+  log->nesting++;
+  switch (log->nesting) {
   case 1:
   case 2:
 
@@ -81,14 +95,14 @@ int start_log(const char *primary, const char *secondary) {
      * Format the timestamp
      */
 
-    if ((mudconf.log_info & LOGOPT_TIMESTAMP) != 0) {
+    if ((log->configuration->log_info & LOGOPT_TIMESTAMP) != 0) {
       time((time_t *)(&now));
       tp = localtime((time_t *)(&now));
-      snprintf(mudstate.buffer, 256 /* TODO */, "%d%02d%02d.%02d%02d%02d ",
-               tp->tm_year + 1900, tp->tm_mon + 1, tp->tm_mday, tp->tm_hour,
-               tp->tm_min, tp->tm_sec);
+      snprintf(log->timestamp, sizeof(log->timestamp),
+               "%d%02d%02d.%02d%02d%02d ", tp->tm_year + 1900, tp->tm_mon + 1,
+               tp->tm_mday, tp->tm_hour, tp->tm_min, tp->tm_sec);
     } else {
-      mudstate.buffer[0] = '\0';
+      log->timestamp[0] = '\0';
     }
 
     /*
@@ -96,21 +110,21 @@ int start_log(const char *primary, const char *secondary) {
      */
 
     if (secondary && *secondary)
-      fprintf(stderr, "%s%s %3s/%-5s: ", mudstate.buffer, mudconf.mud_name,
-              primary, secondary);
+      fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
+              log->configuration->mud_name, primary, secondary);
     else
-      fprintf(stderr, "%s%s %-9s: ", mudstate.buffer, mudconf.mud_name,
-              primary);
+      fprintf(stderr, "%s%s %-9s: ", log->timestamp,
+              log->configuration->mud_name, primary);
     /*
      * If a recursive call, log it and return indicating no log
      */
 
-    if (mudstate.logging == 1)
+    if (log->nesting == 1)
       return 1;
     fprintf(stderr, "Recursive logging request.\r\n");
     [[fallthrough]];
   default:
-    mudstate.logging--;
+    log->nesting--;
   }
   return 0;
 }
@@ -118,18 +132,18 @@ int start_log(const char *primary, const char *secondary) {
 /**
  * Finish up writing a log entry
  */
-void end_log(void) {
+void end_log(ServerLog *log) {
   fprintf(stderr, "\n");
   fflush(stderr);
-  mudstate.logging--;
+  log->nesting--;
 }
 
 /**
  * Write perror message to the log
  */
-void log_perror(const char *primary, const char *secondary, const char *extra,
-                const char *failing_object) {
-  start_log(primary, secondary);
+void log_perror(ServerLog *log, const char *primary, const char *secondary,
+                const char *extra, const char *failing_object) {
+  start_log(log, primary, secondary);
   if (extra && *extra) {
     log_text("(");
     log_text(extra);
@@ -137,7 +151,7 @@ void log_perror(const char *primary, const char *secondary, const char *extra,
   }
   perror(failing_object);
   fflush(stderr);
-  mudstate.logging--;
+  log->nesting--;
 }
 
 /**
@@ -149,24 +163,25 @@ void log_text(const char *text) {
   fprintf(stderr, "%s", strip_ansi_r(new, text, strlen(text)));
 }
 
-void log_simple(int key, const char *primary, const char *secondary,
-                const char *message) {
-  if ((key & mudconf.log_options) != 0 && start_log(primary, secondary)) {
+void log_simple(ServerLog *log, int key, const char *primary,
+                const char *secondary, const char *message) {
+  if ((key & log->configuration->log_options) != 0 &&
+      start_log(log, primary, secondary)) {
     log_text(message);
-    end_log();
+    end_log(log);
   }
 }
 
-void log_error(int key, const char *primary, const char *secondary,
-               const char *format, ...) {
+void log_error(ServerLog *log, int key, const char *primary,
+               const char *secondary, const char *format, ...) {
   char buffer[LBUF_SIZE];
   char stripped_buffer[LBUF_SIZE];
   va_list ap;
 
-  if (!(key & mudconf.log_options))
+  if (!(key & log->configuration->log_options))
     return;
 
-  if (mudconf.log_info & LOGOPT_TIMESTAMP) {
+  if (log->configuration->log_info & LOGOPT_TIMESTAMP) {
     time_t now;
     struct tm tm;
     time(&now);
@@ -176,10 +191,11 @@ void log_error(int key, const char *primary, const char *secondary,
   }
 
   if (secondary) {
-    fprintf(stderr, "%s%s %3s/%-5s: ", mudstate.buffer, mudconf.mud_name,
-            primary, secondary);
+    fprintf(stderr, "%s%s %3s/%-5s: ", log->timestamp,
+            log->configuration->mud_name, primary, secondary);
   } else {
-    fprintf(stderr, "%s%s %-9s: ", mudstate.buffer, mudconf.mud_name, primary);
+    fprintf(stderr, "%s%s %-9s: ", log->timestamp, log->configuration->mud_name,
+            primary);
   }
 
   va_start(ap, format);
@@ -200,23 +216,25 @@ void log_number(int num) { fprintf(stderr, "%d", num); }
  * If the object does not own itself, append the name, db number, and flags
  * of the owner.
  */
-void log_name(DbRef target) {
+void log_name(ServerLog *log, DbRef target) {
   char *tp;
   char new[LBUF_SIZE];
 
-  if ((mudconf.log_info & LOGOPT_FLAGS) != 0)
-    tp = unparse_object((DbRef)GOD, target, 0);
+  if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
+    tp = unparse_object(log->database, nullptr, (DbRef)GOD, target, 0);
   else
-    tp = unparse_object_numonly(target);
+    tp = unparse_object_numonly(log->database, target);
   strncpy(new, tp, LBUF_SIZE - 1);
   fprintf(stderr, "%s", strip_ansi_r(new, tp, strlen(tp)));
   free_lbuf(tp);
-  if (((mudconf.log_info & LOGOPT_OWNER) != 0) &&
-      (target != obj_owner(target))) {
-    if ((mudconf.log_info & LOGOPT_FLAGS) != 0)
-      tp = unparse_object((DbRef)GOD, obj_owner(target), 0);
+  if (((log->configuration->log_info & LOGOPT_OWNER) != 0) &&
+      (target != game_object_owner(log->database, target))) {
+    if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
+      tp = unparse_object(log->database, nullptr, (DbRef)GOD,
+                          game_object_owner(log->database, target), 0);
     else
-      tp = unparse_object_numonly(obj_owner(target));
+      tp = unparse_object_numonly(log->database,
+                                  game_object_owner(log->database, target));
     strncpy(new, tp, LBUF_SIZE - 1);
     fprintf(stderr, "[%s]", strip_ansi_r(new, tp, strlen(tp)));
     free_lbuf(tp);
@@ -227,11 +245,12 @@ void log_name(DbRef target) {
 /**
  * Log both the name and location of an object
  */
-void log_name_and_loc(DbRef player) {
-  log_name(player);
-  if ((mudconf.log_info & LOGOPT_LOC) && has_location(player)) {
+void log_name_and_loc(ServerLog *log, DbRef player) {
+  log_name(log, player);
+  if ((log->configuration->log_info & LOGOPT_LOC) &&
+      has_location(log->database, player)) {
     log_text(" in ");
-    log_name(obj_location(player));
+    log_name(log, game_object_location(log->database, player));
   }
   return;
 }
@@ -239,11 +258,11 @@ void log_name_and_loc(DbRef player) {
 /*
  * Returns the object type of specified object.
  */
-const char *OBJTYP(DbRef thing) {
-  if (!is_good_obj(thing)) {
+const char *object_type_name(GameDatabase *database, DbRef thing) {
+  if (!is_good_obj(database, thing)) {
     return "??OUT-OF-RANGE??";
   }
-  switch (typeof_obj(thing)) {
+  switch (typeof_obj(database, thing)) {
   case TYPE_PLAYER:
     return "PLAYER";
   case TYPE_THING:
@@ -259,20 +278,21 @@ const char *OBJTYP(DbRef thing) {
   }
 }
 
-void log_type_and_name(DbRef thing) {
+void log_type_and_name(ServerLog *log, DbRef thing) {
   char nbuf[16];
 
-  log_text(OBJTYP(thing));
+  log_text(object_type_name(log->database, thing));
   snprintf(nbuf, sizeof(nbuf), " #%ld(", thing);
   log_text(nbuf);
-  if (is_good_obj(thing))
-    log_text(Name(thing));
+  if (is_good_obj(log->database, thing))
+    log_text(game_object_name(log->database, thing));
   log_text(")");
   return;
 }
 
 #ifdef ARBITRARY_LOGFILES
-int log_to_file(DbRef thing, const char *logfile, const char *message) {
+int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
+                const char *message) {
   char pathname[210]; /* Arbitrary limit in logfile length */
   char message_buffer[4096];
 
@@ -295,29 +315,34 @@ int log_to_file(DbRef thing, const char *logfile, const char *message) {
 
   snprintf(message_buffer, 4096, "%s\n", message);
 
-  if (!logcache_writelog(pathname, message_buffer)) {
-    notify(thing, "Serious failure while trying to write to log.");
+  if (!log_cache_write(evaluation->server->log.cache, pathname,
+                       message_buffer)) {
+    notify(evaluation, thing, "Serious failure while trying to write to log.");
     return 0;
   }
   return 1;
 }
 
-void do_log(DbRef player, DbRef cause, int key, char *logfile, char *message) {
+void do_log(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *logfile = invocation->first;
+  char *message = invocation->second;
   if (!message || !*message) {
-    notify(player, "Nothing to log!");
+    notify(evaluation, player, "Nothing to log!");
     return;
   }
 
   if (!logfile || !*logfile) {
-    notify(player, "Invalid logfile.");
+    notify(evaluation, player, "Invalid logfile.");
     return;
   }
 
-  if (!log_to_file(player, logfile, message)) {
-    notify(player, "Request failed.");
+  if (!log_to_file(evaluation, player, logfile, message)) {
+    notify(evaluation, player, "Request failed.");
     return;
   }
 
-  notify(player, "Message logged.");
+  notify(evaluation, player, "Message logged.");
 }
 #endif

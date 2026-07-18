@@ -113,7 +113,7 @@ global command.
 
 `game/lua/global_logic/who.lua` defines the player-facing `who` command.
 Wizards use the built-in `@who` command when they need privileged connection
-details.
+details and `@session` for per-client queue and traffic counters.
 
 `game/lua/global_logic/flow_examples.lua` demonstrates
 [interactive flows](flows/): `flow-demo confirm`, `flow-demo menu`, and

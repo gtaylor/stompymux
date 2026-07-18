@@ -72,7 +72,7 @@
   [[maybe_unused]] char *c;
 
 #define TECHCOMMANDC                                                           \
-  DOCHECK(!(is_tech_power(player)),                                            \
+  DOCHECK(!(is_tech_power(btech_context_active()->database, player)),          \
           "Insufficient clearance to access the command.");                    \
   DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
   isds = DropShip(MechType(mech));                                             \
@@ -84,7 +84,7 @@
           "The 'mech isn't in a repair stall!");
 
 #define TECHCOMMANDD                                                           \
-  DOCHECK(!(is_tech_power(player)),                                            \
+  DOCHECK(!(is_tech_power(btech_context_active()->database, player)),          \
           "Insufficient clearance to access the command.");                    \
   DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
   isds = DropShip(MechType(mech));                                             \
@@ -92,8 +92,8 @@
           "The mech's starting up! Please stop the sequence first.");          \
   DOCHECK(Started(mech) && !Wiz(player),                                       \
           "The mech's started up ; please shut it down first.");               \
-  DOCHECK(mudconf.btech_limitedrepairs && !isds && !MechStall(mech) &&         \
-              !Wiz(player),                                                    \
+  DOCHECK(btech_context_active()->configuration->btech_limitedrepairs &&       \
+              !isds && !MechStall(mech) && !Wiz(player),                       \
           "The 'mech isn't in a repair stall!");
 
 #define ETECHCOMMAND(a) void a(DbRef player, void *data, char *buffer)
@@ -110,15 +110,18 @@
 
 #define ETECHEVENT(a) extern void a(MuxEvent *e)
 
-#define START(a) notify(player, a)
+#define START(a) notify(BTECH_EVALUATION_CONTEXT, player, a)
 #ifndef BT_FREETECHTIME
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  mux_event_add(MAX(1, time), 0, type, fu, (void *)d1,                         \
-                (void *)((d2) + player * PLAYERPOS))
+  mux_event_add(btech_context_active()->events, MAX(1, time), 0, type, fu,     \
+                (void *)d1, (void *)((d2) + player * PLAYERPOS))
 #else
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  mux_event_add((mudconf.btech_freetechtime ? 2 : MAX(2, time)), 0, type, fu,  \
-                (void *)d1, (void *)((d2) + player * PLAYERPOS))
+  mux_event_add(btech_context_active()->events,                                \
+                (btech_context_active()->configuration->btech_freetechtime     \
+                     ? 2                                                       \
+                     : MAX(2, time)),                                          \
+                0, type, fu, (void *)d1, (void *)((d2) + player * PLAYERPOS))
 #endif
 #define REPAIREVENT(time, d1, d2, fu, type)                                    \
   FIXEVENT((time) * TECH_TICK, d1, d2, fu, type)
@@ -281,17 +284,26 @@ ECMD(tech_fix);
 #endif
 
 #define GrabPartsM(m, a, b, c)                                                 \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum), a, b,    \
-                    0 - c)
+  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+                            : game_object_location(                            \
+                                  btech_context_active()->database, m->mynum), \
+                    a, b, 0 - c)
 #define PartAvailM(m, a, b, c)                                                 \
-  (econ_find_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum), a, b) >= c)
+  (econ_find_items(IsDS(m) ? AeroBay(m, 0)                                     \
+                           : game_object_location(                             \
+                                 btech_context_active()->database, m->mynum),  \
+                   a, b) >= c)
 #ifndef BT_COMPLEXREPAIRS
 #define AddPartsM(m, a, b, c)                                                  \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum),          \
+  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+                            : game_object_location(                            \
+                                  btech_context_active()->database, m->mynum), \
                     alias_part(m, a), b, c)
 #else
 #define AddPartsM(m, l, a, b, c)                                               \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0) : obj_location(m->mynum),          \
+  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+                            : game_object_location(                            \
+                                  btech_context_active()->database, m->mynum), \
                     alias_part(m, a, l), b, c)
 #endif
 #define AVCHECKM(m, a, b, c)                                                   \

@@ -35,11 +35,14 @@ static char *c_desc[] = {
     "3 - Shorter form"};
 
 void show_brief_flags(DbRef player, MECH *mech) {
-  notify_printf(player, "Brief status for %s:", GetMechToMechID(mech, mech));
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Brief status for %s:", GetMechToMechID(mech, mech));
 #ifdef ADVANCED_LOS
-  notify_printf(player, "    (A)utocontacts: %s", ac_desc[mech->brief / 4]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "    (A)utocontacts: %s",
+                ac_desc[mech->brief / 4]);
 #endif
-  notify_printf(player, "    (C)ontacts:     %s", c_desc[mech->brief % 4]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "    (C)ontacts:     %s",
+                c_desc[mech->brief % 4]);
 }
 
 void mech_brief(DbRef player, void *data, char *buffer) {
@@ -328,7 +331,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
                     SEE_ALLY | SEE_TARGET);
       } else
-        notify_printf(player, "Ignoring %c as contact option.", c);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Ignoring %c as contact option.", c);
     }
   } else {
     see_what = (SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA | SEE_ALLY | SEE_TARGET);
@@ -337,7 +341,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   }
 
   if (isvb <= 2)
-    notify(player, "Line of Sight Contacts:");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Line of Sight Contacts:");
 
   for (loop = 0; loop < mech_map->first_free; loop++) {
     if (!(mech_map->mechsOnMap[loop] != mech->mynum &&
@@ -365,7 +369,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     if (!(losflag = InLineOfSight(mech, tempMech, MechX(tempMech),
                                   MechY(tempMech), range)))
       continue;
-    if (is_good_obj(tempMech->mynum)) {
+    if (is_good_obj(btech_context_active()->database, tempMech->mynum)) {
       if (!InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             0.0)) {
         mech_name = "something";
@@ -422,31 +426,32 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       snprintf(buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
                MechIDS(tempMech, MechSeemsFriend(mech, tempMech)), mech_name,
                MechTons(tempMech));
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
       snprintf(buff, sizeof(buff), "      Range: %.1f hex\tBearing: %d degrees",
                range, bearing);
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
       snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
                MechSpeed(tempMech), MechVFacing(tempMech));
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
       snprintf(buff, sizeof(buff), "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
                MechX(tempMech), MechY(tempMech), MechHeat(tempMech));
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
       snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
-      notify(player, buff);
-      notify_printf(player, "      Mech is in %s Arc",
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "      Mech is in %s Arc",
                     GetArcID(mech, InWeaponArc(mech, MechFX(tempMech),
                                                MechFY(tempMech))));
       if (MechStatus(tempMech) & DESTROYED)
-        notify(player, "      Mech Destroyed");
+        notify(BTECH_EVALUATION_CONTEXT, player, "      Mech Destroyed");
       if (!(MechStatus(tempMech) & STARTED))
-        notify(player, "      Mech Shutdown");
+        notify(BTECH_EVALUATION_CONTEXT, player, "      Mech Shutdown");
       if (Fallen(tempMech))
-        notify(player, "      Mech has Fallen!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "      Mech has Fallen!");
       if (Jumping(tempMech))
-        notify_printf(player, "      Mech is Jumping!\tJump Heading: %d",
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "      Mech is Jumping!\tJump Heading: %d",
                       MechJumpHeading(tempMech));
-      notify(player, " ");
+      notify(BTECH_EVALUATION_CONTEXT, player, " ");
     }
   }
 
@@ -475,9 +480,15 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
 
       mech_name = silly_atr_get(building->obj, A_MECHNAME);
       if (!mech_name || !*mech_name) {
-        strncpy(new, Name(building->obj), LBUF_SIZE - 1);
-        mech_name =
-            strip_ansi_r(new, Name(building->obj), strlen(Name(building->obj)));
+        strncpy(
+            new,
+            game_object_name(btech_context_active()->database, building->obj),
+            LBUF_SIZE - 1);
+        mech_name = strip_ansi_r(
+            new,
+            game_object_name(btech_context_active()->database, building->obj),
+            strlen(game_object_name(btech_context_active()->database,
+                                    building->obj)));
       }
 
       snprintf(buff, sizeof(buff),
@@ -510,11 +521,11 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           sbuff[j] = loop;
         }
     for (loop = 0; loop < buffindex; loop++)
-      notify(player, bufflist[sbuff[loop]]);
+      notify(BTECH_EVALUATION_CONTEXT, player, bufflist[sbuff[loop]]);
   }
 
   if (isvb <= 2)
-    notify(player, "End Contact List");
+    notify(BTECH_EVALUATION_CONTEXT, player, "End Contact List");
 }
 
 #undef SEE_DEAD

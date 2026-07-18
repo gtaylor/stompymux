@@ -273,8 +273,9 @@ static int engine_weight(MECH *mech) {
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
   if (MechMove(mech) != MOVE_HOVER) {
-    SendError(tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
-                      Name(mech->mynum)));
+    SendError(tprintf(
+        "Error in #%ld (%s) : No engine found!", mech->mynum,
+        game_object_name(btech_context_active()->database, mech->mynum)));
   }
 
   return 0;
@@ -635,7 +636,7 @@ int mech_weight_sub(DbRef player, MECH *mech, int interactive) {
       MechType(mech) == CLASS_VEH_NAVAL)
     return mech_weight_sub_veh(player, mech, interactive);
   if (interactive > 0)
-    notify(player, "Invalid vehicle type!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid vehicle type!");
   return 1;
 }
 

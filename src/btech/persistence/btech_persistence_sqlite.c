@@ -501,7 +501,8 @@ static int btech_special_column_ushort(sqlite3_stmt *statement, int column,
 static int btech_special_column_dbref(sqlite3_stmt *statement, int column,
                                       DbRef *value) {
   if (btech_special_column_long(statement, column, value) < 0 ||
-      (*value != NOTHING && !is_good_obj(*value)))
+      (*value != NOTHING &&
+       !is_good_obj(btech_context_active()->database, *value)))
     return -1;
   return 0;
 }
@@ -1115,7 +1116,8 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
     }
     if (ordinal != expected_ordinal || x < 0 || x >= map->map_width || y < 0 ||
         y >= map->map_height ||
-        (object_dbref != NOTHING && !is_good_obj(object_dbref))) {
+        (object_dbref != NOTHING &&
+         !is_good_obj(btech_context_active()->database, object_dbref))) {
       result = -1;
       break;
     }
@@ -1322,8 +1324,8 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
       result = -1;
       break;
     }
-    mux_event_add(remaining_ticks, 0, event_type, function, mech,
-                  (void *)event_data);
+    mux_event_add(btech_context_active()->events, remaining_ticks, 0,
+                  event_type, function, mech, (void *)event_data);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -1748,7 +1750,8 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
         x < SHRT_MIN || x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
         z < SHRT_MIN || z > SHRT_MAX || last_x < SHRT_MIN ||
         last_x > SHRT_MAX || last_y < SHRT_MIN || last_y > SHRT_MAX ||
-        (pilot != NOTHING && !is_good_obj(pilot))) {
+        (pilot != NOTHING &&
+         !is_good_obj(btech_context_active()->database, pilot))) {
       result = -1;
       break;
     }
@@ -1804,7 +1807,8 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
         mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &bay_index) < 0 ||
         btech_special_column_long(statement, 2, &bay_dbref) < 0 ||
-        (bay_dbref != NOTHING && !is_good_obj(bay_dbref))) {
+        (bay_dbref != NOTHING &&
+         !is_good_obj(btech_context_active()->database, bay_dbref))) {
       result = -1;
       break;
     }
@@ -1865,7 +1869,8 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
         mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &turret_index) < 0 ||
         btech_special_column_long(statement, 2, &turret_dbref) < 0 ||
-        (turret_dbref != NOTHING && !is_good_obj(turret_dbref))) {
+        (turret_dbref != NOTHING &&
+         !is_good_obj(btech_context_active()->database, turret_dbref))) {
       result = -1;
       break;
     }
@@ -1939,8 +1944,10 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
         c3_size > C3_NETWORK_SIZE || total_masters < -1 ||
         total_masters > C3_NETWORK_SIZE || working_masters < -1 ||
         working_masters > C3_NETWORK_SIZE ||
-        (tag_target != NOTHING && !is_good_obj(tag_target)) ||
-        (tagged_by != NOTHING && !is_good_obj(tagged_by))) {
+        (tag_target != NOTHING &&
+         !is_good_obj(btech_context_active()->database, tag_target)) ||
+        (tagged_by != NOTHING &&
+         !is_good_obj(btech_context_active()->database, tagged_by))) {
       result = -1;
       break;
     }
@@ -2508,7 +2515,8 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
 
 /* Resolve a preallocated special object and reject a row of the wrong type. */
 static void *btech_special_object(DbRef object, GlueType type) {
-  if (!is_good_obj(object) || WhichSpecial(object) != (int)type)
+  if (!is_good_obj(btech_context_active()->database, object) ||
+      WhichSpecial(object) != (int)type)
     return NULL;
   return FindObjectsData(object);
 }
@@ -3620,7 +3628,7 @@ static int btech_repair_result;
 
 static void btech_store_repair_event(MuxEvent *event) {
   MECH *mech = event->data;
-  long remaining = event->tick - mux_event_tick;
+  long remaining = event->tick - btech_context_active()->events->tick;
 
   if (btech_repair_result < 0 || !mech)
     return;
@@ -3641,7 +3649,10 @@ static void btech_store_repair_event(MuxEvent *event) {
 }
 
 /* Mirror map dynamic state and repair queues without changing legacy reads. */
-static int btech_persistence_store_special_state(sqlite3 *sqlite) {
+static int
+btech_persistence_store_special_state(sqlite3 *sqlite,
+                                      PersistenceContext *persistence) {
+  (void)persistence;
   BTECH_MAP_STORE_CONTEXT maps = {NULL, NULL, NULL, NULL, NULL, NULL, -1};
   BTECH_OBJECT_STORE_CONTEXT objects;
   sqlite3_stmt *repairs = NULL;
@@ -3792,7 +3803,8 @@ static int btech_persistence_store_special_state(sqlite3 *sqlite) {
   for (type = FIRST_TECH_EVENT;
        type <= LAST_TECH_EVENT && btech_repair_result == 0; type++) {
     btech_repair_type = type;
-    mux_event_gothru_type(type, btech_store_repair_event);
+    mux_event_gothru_type(btech_context_active()->events, type,
+                          btech_store_repair_event);
   }
   result =
       maps.result < 0 || objects.result < 0 || btech_repair_result < 0 ? -1 : 0;
@@ -3808,7 +3820,10 @@ static int btech_persistence_store_special_state(sqlite3 *sqlite) {
 }
 
 /* Reads remain on the legacy files during this first BTech dual-write slice. */
-static int btech_persistence_preload_special_state(sqlite3 *sqlite) {
+static int
+btech_persistence_preload_special_state(sqlite3 *sqlite,
+                                        PersistenceContext *persistence) {
+  (void)persistence;
   (void)sqlite;
   return 0;
 }
@@ -3923,7 +3938,7 @@ static int btech_special_load_all(sqlite3 *sqlite) {
 #define BTECH_LOAD(stage, function)                                            \
   do {                                                                         \
     if ((function)(sqlite) < 0) {                                              \
-      log_error(LOG_ALWAYS, "BTP", "FAIL",                                     \
+      log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",        \
                 "SQLite BTech validation failed at %s.", (char *)stage);       \
       return -1;                                                               \
     }                                                                          \
@@ -3970,11 +3985,11 @@ int btech_persistence_load_special_state_path(const char *path) {
   sqlite = NULL;
   result = -1;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-    log_error(LOG_ALWAYS, "BTP", "FAIL",
+    log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",
               "Cannot open SQLite BTech state from %s: %s", (char *)path,
               sqlite ? sqlite3_errmsg(sqlite) : strerror(errno));
   } else if (btech_special_load_all(sqlite) < 0) {
-    log_error(LOG_ALWAYS, "BTP", "FAIL",
+    log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",
               "Invalid or incomplete SQLite BTech state in %s: %s",
               (char *)path, sqlite3_errmsg(sqlite));
   } else {
@@ -4166,7 +4181,7 @@ static int btech_load_costs(sqlite3 *sqlite) {
   }
   sqlite3_finalize(statement);
   if (skipped)
-    log_error(LOG_ALWAYS, "ECO", "INFO",
+    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "INFO",
               "Ignored %d SQLite economy rows for parts unavailable in this "
               "build.",
               skipped);
@@ -4174,7 +4189,9 @@ static int btech_load_costs(sqlite3 *sqlite) {
 }
 
 /* Restore economy prices from the SQLite game database. */
-static int btech_persistence_load_economy(sqlite3 *sqlite) {
+static int btech_persistence_load_economy(sqlite3 *sqlite,
+                                          PersistenceContext *persistence) {
+  (void)persistence;
   size_t index;
   int exists;
   int has_item_name;
@@ -4190,7 +4207,7 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   if (btech_economy_table_exists(sqlite, &exists) < 0)
     return -1;
   if (!exists) {
-    log_error(LOG_ALWAYS, "ECO", "FAIL",
+    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "FAIL",
               "SQLite game database lacks required btech_economy_costs data.");
     return -1;
   }
@@ -4199,7 +4216,7 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
   if (btech_economy_table_has_item_name(sqlite, &has_item_name) < 0)
     return -1;
   if (!has_item_name) {
-    log_error(LOG_ALWAYS, "ECO", "FAIL",
+    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "FAIL",
               "SQLite economy data lacks required item_name schema.");
     return -1;
   }
@@ -4209,7 +4226,9 @@ static int btech_persistence_load_economy(sqlite3 *sqlite) {
 
 /* Write non-default advanced-economy prices in the core snapshot transaction.
  */
-static int btech_persistence_store_economy(sqlite3 *sqlite) {
+static int btech_persistence_store_economy(sqlite3 *sqlite,
+                                           PersistenceContext *persistence) {
+  (void)persistence;
   BTECH_ECONOMY_COST_SET *cost_set;
   sqlite3_stmt *statement;
   const char *part_name;
@@ -4260,13 +4279,14 @@ static int btech_persistence_store_economy(sqlite3 *sqlite) {
 #endif
 
 /* Register BTech's data tables without making core MUX depend on BTech data. */
-int btech_persistence_register(void) {
+int btech_persistence_register(PersistenceContext *context) {
   if (persistence_register_sqlite_extension(
-          "btech_special_state", btech_persistence_preload_special_state,
+          context, "btech_special_state",
+          btech_persistence_preload_special_state,
           btech_persistence_store_special_state) < 0)
     return -1;
 #ifdef BT_ADVANCED_ECON
-  return persistence_register_sqlite_extension("btech_economy",
+  return persistence_register_sqlite_extension(context, "btech_economy",
                                                btech_persistence_load_economy,
                                                btech_persistence_store_economy);
 #else

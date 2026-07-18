@@ -14,10 +14,11 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 
-static int telnet_connected_count(void);
+static int telnet_connected_count(MuxServer *server);
 static int telnet_charset_is_ascii(const char *buffer, size_t size);
 static void telnet_process_data(Descriptor *d, const char *buffer, size_t size);
 static void telnet_handle_charset(Descriptor *d, const char *buffer,
@@ -27,7 +28,7 @@ static void telnet_send_charset_rejected(telnet_t *telnet);
 static void telnet_send_charset_request(Descriptor *d);
 static void telnet_handle_gmcp(Descriptor *d, const char *buffer, size_t size);
 static void telnet_send_gmcp(telnet_t *telnet, const char *package);
-static void telnet_send_mssp(telnet_t *telnet);
+static void telnet_send_mssp(Descriptor *descriptor);
 static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
                                   const char *value);
 static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
@@ -55,7 +56,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
   d->telnet =
       telnet_init(telnet_options, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
   if (d->telnet == nullptr) {
-    log_error(LOG_PROBLEMS, "TELNET", "ERROR",
+    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "ERROR",
               "Unable to allocate Telnet state for descriptor %d.",
               d->descriptor);
     return 0;
@@ -89,9 +90,10 @@ void descriptor_telnet_set_echo(Descriptor *d, int echo) {
                    TELNET_TELOPT_ECHO);
 }
 
-static int telnet_connected_count(void) {
+static int telnet_connected_count(MuxServer *server) {
   Descriptor *d;
-  DescriptorIterator iterator = descriptor_iterator_connected();
+  DescriptorIterator iterator =
+      descriptor_iterator_connected(server->descriptors);
   int count = 0;
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
@@ -190,7 +192,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
   if (buffer[0] == telnet_charset_accepted) {
     d->is_charset_request_pending = false;
     if (!telnet_charset_is_ascii(buffer + 1, size - 1)) {
-      log_error(LOG_PROBLEMS, "TELNET", "CHARSET",
+      log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "CHARSET",
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
     }
     return;
@@ -250,17 +252,19 @@ static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
   telnet_send(telnet, value, strlen(value));
 }
 
-static void telnet_send_mssp(telnet_t *telnet) {
+static void telnet_send_mssp(Descriptor *descriptor) {
+  MuxServer *server = descriptor_server(descriptor);
+  telnet_t *telnet = descriptor->telnet;
   char players[32];
   char uptime[32];
   char port[32];
 
-  snprintf(players, sizeof(players), "%d", telnet_connected_count());
-  snprintf(uptime, sizeof(uptime), "%lld", (long long)mudstate.start_time);
-  snprintf(port, sizeof(port), "%d", mudconf.port);
+  snprintf(players, sizeof(players), "%d", telnet_connected_count(server));
+  snprintf(uptime, sizeof(uptime), "%lld", (long long)server->start_time);
+  snprintf(port, sizeof(port), "%d", server->configuration->port);
 
   telnet_begin_sb(telnet, TELNET_TELOPT_MSSP);
-  telnet_send_mssp_pair(telnet, "NAME", mudconf.mud_name);
+  telnet_send_mssp_pair(telnet, "NAME", server->configuration->mud_name);
   telnet_send_mssp_pair(telnet, "PLAYERS", players);
   telnet_send_mssp_pair(telnet, "UPTIME", uptime);
   telnet_send_mssp_pair(telnet, "CODEBASE", "BattleTechMUX");
@@ -286,7 +290,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     break;
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
-      telnet_send_mssp(telnet);
+      telnet_send_mssp(d);
     else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
              !d->is_mccp_enabled)
       telnet_begin_compress2(telnet);
@@ -331,10 +335,12 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     }
     break;
   case TELNET_EV_WARNING:
-    log_error(LOG_PROBLEMS, "TELNET", "WARN", "%s", event->error.msg);
+    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "WARN", "%s",
+              event->error.msg);
     break;
   case TELNET_EV_ERROR:
-    log_error(LOG_PROBLEMS, "TELNET", "ERROR", "%s", event->error.msg);
+    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "ERROR", "%s",
+              event->error.msg);
     descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
     break;
   case TELNET_EV_IAC:

@@ -13,7 +13,7 @@
 #ifndef DOCHECK
 #define DOCHECK(a, b)                                                          \
   if (a) {                                                                     \
-    notify(player, b);                                                         \
+    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
     return;                                                                    \
   }
 #endif

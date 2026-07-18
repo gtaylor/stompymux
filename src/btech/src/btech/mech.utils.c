@@ -107,9 +107,10 @@ int round_to_quarterton(int weight) {
 }
 
 int MNumber(MECH *mech, int low, int high) {
-  if ((mux_event_tick / RANDOM_TICK) != MechLastRndU(mech)) {
+  if ((btech_context_active()->events->tick / RANDOM_TICK) !=
+      MechLastRndU(mech)) {
     MechRnd(mech) = (int)genrand_int31();
-    MechLastRndU(mech) = mux_event_tick / RANDOM_TICK;
+    MechLastRndU(mech) = btech_context_active()->events->tick / RANDOM_TICK;
   }
   return (low + MechRnd(mech) % (high - low + 1));
 }
@@ -172,7 +173,8 @@ MAP *ValidMap(DbRef player, DbRef map) {
   char *str;
   MAP *maps;
 
-  DOCHECKN(!is_good_obj(map), "Index out of range!");
+  DOCHECKN(!is_good_obj(btech_context_active()->database, map),
+           "Index out of range!");
   str = silly_atr_get(map, A_XTYPE);
   DOCHECKN(!str || !*str, "That is not a valid map! (no XTYPE!)");
   DOCHECKN(strcmp("MAP", str), "That is not a valid map!");
@@ -260,8 +262,9 @@ static int Leave_Hangar(MAP *map, MECH *mech) {
   loud_teleport(mech->mynum, mech->mapindex);
   if (car)
     loud_teleport(car->mynum, mech->mapindex);
-  if (is_in_character(mech->mynum) &&
-      obj_location(MechPilot(mech)) != mech->mynum) {
+  if (is_in_character(btech_context_active()->database, mech->mynum) &&
+      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+          mech->mynum) {
     mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
     mech_notify(mech, MECHALL,
                 "%ch%cr%cfAutomatic self-destruct sequence initiated...%c");
@@ -430,7 +433,7 @@ int InWeaponArc(MECH *mech, float x, float y) {
 }
 
 char *FindGunnerySkillName(MECH *mech, int weapindx) {
-  if (!mudconf.btech_extended_gunnery) {
+  if (!btech_context_active()->configuration->btech_extended_gunnery) {
     switch (MechType(mech)) {
     case CLASS_BSUIT:
       return "Gunnery-BSuit";
@@ -485,7 +488,7 @@ char *FindGunnerySkillName(MECH *mech, int weapindx) {
 }
 
 char *FindPilotingSkillName(MECH *mech) {
-  if (!mudconf.btech_extended_piloting) {
+  if (!btech_context_active()->configuration->btech_extended_piloting) {
     switch (MechType(mech)) {
     case CLASS_MW:
       return "Running";
@@ -545,7 +548,7 @@ char *FindPilotingSkillName(MECH *mech) {
 
 // TODO: Replace this with a function.
 #define GENERIC_FIND_MECHSKILL(num, n)                                         \
-  if (is_quiet(mech->mynum)) {                                                 \
+  if (is_quiet(btech_context_active()->database, mech->mynum)) {               \
     str = silly_atr_get(mech->mynum, A_MECHSKILLS);                            \
     if (*str)                                                                  \
       if (sscanf(str, "%d %d %d %d", &i[0], &i[1], &i[2], &i[3]) > num)        \
@@ -635,8 +638,9 @@ int MechPilotSkillRoll_BTH(MECH *mech, int mods) {
   if (MechSpecials2(mech) & SMALLCOCKPIT_TECH)
     mods++;
 
-  if (is_in_character(mech->mynum) &&
-      obj_location(MechPilot(mech)) != mech->mynum)
+  if (is_in_character(btech_context_active()->database, mech->mynum) &&
+      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+          mech->mynum)
     mods += 5;
   return mods;
 }
@@ -2560,7 +2564,8 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
 
   /* Very Rare Occassion where using btsetxcodevalue(mech,mechdamage,) triggers
    * this, we'll just ignore */
-  if ((mech->mynum == attacker->mynum) && !is_good_obj(mech->mynum))
+  if ((mech->mynum == attacker->mynum) &&
+      !is_good_obj(btech_context_active()->database, mech->mynum))
     return;
 
   if (mech != attacker)
@@ -2593,7 +2598,8 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
   }
 
   /* Trigger AMECHDEST.  */
-  if (is_good_obj(mech->mynum) && is_good_obj(attacker->mynum)) {
+  if (is_good_obj(btech_context_active()->database, mech->mynum) &&
+      is_good_obj(btech_context_active()->database, attacker->mynum)) {
     char *reason_copy = NULL;
 
     char *args[1] = {NULL};
@@ -2611,8 +2617,8 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
       }
     }
 
-    did_it(attacker->mynum, mech->mynum, 0, NULL, 0, NULL, A_AMECHDEST, args,
-           nargs);
+    did_it(BTECH_EVALUATION_CONTEXT, attacker->mynum, mech->mynum, 0, NULL, 0,
+           NULL, A_AMECHDEST, args, nargs);
 
     if (reason_copy) {
       free_lbuf(reason_copy);
@@ -2703,7 +2709,7 @@ void SetPartCost(int p, unsigned long long int cost) {
 
 void CalcFasaCost_AddPrice(float *total, char *desc, float value) {
   *total += value;
-  if (mudconf.btech_cost_debug)
+  if (btech_context_active()->configuration->btech_cost_debug)
     SendDebug(tprintf("Addprice - %25s %8.0f", desc, value));
 }
 
@@ -3054,7 +3060,7 @@ unsigned long long int CalcFasaCost(MECH *mech) {
   ammoweapcount = FindAmmunition(mech, ammoweap, ammo, ammomax, modearray, 0);
 
   if (ammoweapcount > 0) {
-    if (mudconf.btech_cost_debug)
+    if (btech_context_active()->configuration->btech_cost_debug)
       SendDebug("Ammo Costs");
     for (i = 0; i < ammoweapcount; i++) {
       /* ArtemisIV ammo is X2 */
@@ -3296,19 +3302,19 @@ float skillmul[HIGH_SKILL][HIGH_SKILL] = {
 
 void Calc_AddOffBV(float *offbv, char *desc, float value) {
   *offbv += value;
-  if (mudconf.btech_cost_debug)
+  if (btech_context_active()->configuration->btech_cost_debug)
     SendDebug(tprintf("AddOffBV %25s %8.2f", desc, value));
 }
 
 void Calc_AddDefBV(float *defbv, char *desc, float value) {
   *defbv += value;
-  if (mudconf.btech_cost_debug)
+  if (btech_context_active()->configuration->btech_cost_debug)
     SendDebug(tprintf("AddDefBV %25s %8.2f", desc, value));
 }
 
 void Calc_SubDefBV(float *defbv, char *desc, float value) {
   *defbv -= value;
-  if (mudconf.btech_cost_debug)
+  if (btech_context_active()->configuration->btech_cost_debug)
     SendDebug(tprintf("SubDefBV %25s-%8.2f", desc, value));
 }
 
@@ -3674,10 +3680,10 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
     return 0;
 
   if (gunstat == 100 || pilstat == 100) {
-    if (mux_event_tick - MechBVLast(mech) < 30)
+    if (btech_context_active()->events->tick - MechBVLast(mech) < 30)
       return MechBV(mech);
     else
-      MechBVLast(mech) = mux_event_tick;
+      MechBVLast(mech) = btech_context_active()->events->tick;
   }
 
   type = MechType(mech);
@@ -4114,7 +4120,7 @@ int ProperArmor(MECH *mech) {
 int ProperInternal(MECH *mech) {
   int part = 0;
 
-  if (mudconf.btech_complexrepair) {
+  if (btech_context_active()->configuration->btech_complexrepair) {
     part = (MechSpecials(mech) & ES_TECH       ? TON_ESINTERNAL_FIRST
             : MechSpecials(mech) & REINFI_TECH ? TON_REINTERNAL_FIRST
             : MechSpecials(mech) & COMPI_TECH  ? TON_COINTERNAL_FIRST
@@ -4135,7 +4141,7 @@ int alias_part(MECH *mech, int t, int loc) {
   if (!IsSpecial(t))
     return t;
 
-  if (mudconf.btech_complexrepair) {
+  if (btech_context_active()->configuration->btech_complexrepair) {
     int tonmod = GetPartMod(mech, t);
     int locmod;
     if (MechIsQuad(mech))

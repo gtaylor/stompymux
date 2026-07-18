@@ -5,9 +5,24 @@
 
 #include "mux/database/db.h"
 
-int chown_all(DbRef from_player, DbRef to_player);
-void olist_push(void);
-void olist_pop(void);
-void olist_add(DbRef object);
-DbRef olist_first(void);
-DbRef olist_next(void);
+typedef struct ObjectListBlock ObjectListBlock;
+struct ObjectListBlock {
+  ObjectListBlock *next;
+  DbRef data[(LBUF_SIZE - sizeof(ObjectListBlock *)) / sizeof(DbRef)];
+};
+
+typedef struct ObjectList ObjectList;
+struct ObjectList {
+  ObjectListBlock *head;
+  ObjectListBlock *tail;
+  ObjectListBlock *cursor_block;
+  int count;
+  int cursor_index;
+};
+
+int chown_all(GameDatabase *database, DbRef from_player, DbRef to_player);
+void object_list_initialize(ObjectList *list);
+void object_list_destroy(ObjectList *list);
+void object_list_add(ObjectList *list, DbRef object);
+DbRef object_list_first(ObjectList *list);
+DbRef object_list_next(ObjectList *list);

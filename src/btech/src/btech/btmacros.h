@@ -59,11 +59,14 @@
 
 /* GotPilot checks if mech's pilot is valid and inside his machine */
 #define GotPilot(mech)                                                         \
-  (MechPilot(mech) > 0 && obj_location(MechPilot(mech)) == mech->mynum)
+  (MechPilot(mech) > 0 &&                                                      \
+   game_object_location(btech_context_active()->database, MechPilot(mech)) ==  \
+       mech->mynum)
 
 #define RGotPilot(mech)                                                        \
   ((GotPilot(mech)) &&                                                         \
-   (is_connected(MechPilot(mech)) || !is_player(MechPilot(mech))))
+   (is_connected(btech_context_active()->database, MechPilot(mech)) ||         \
+    !is_player(btech_context_active()->database, MechPilot(mech))))
 
 #define GotGPilot(mech)                                                        \
   ((pilot_override && GunPilot(mech) > 0) ||                                   \
@@ -71,7 +74,8 @@
 
 #define RGotGPilot(mech)                                                       \
   ((pilot_override && GunPilot(mech) > 0 &&                                    \
-    (is_connected(GunPilot(mech)) || !is_player(GunPilot(mech)))) ||           \
+    (is_connected(btech_context_active()->database, GunPilot(mech)) ||         \
+     !is_player(btech_context_active()->database, GunPilot(mech)))) ||         \
    (!pilot_override && RGotPilot(mech)))
 
 #define AeroBay(a, b) (a)->pd.bay[b]
@@ -83,7 +87,8 @@
 #define AeroTurret(a, b) (a)->pd.turret[b]
 #define AeroUnusableArcs(a) (a)->pd.unusable_arcs
 #define AeroFreeFuel(a)                                                        \
-  ((MechType(a) == CLASS_VTOL) && mudconf.btech_nofusionvtolfuel &&            \
+  ((MechType(a) == CLASS_VTOL) &&                                              \
+   btech_context_active()->configuration->btech_nofusionvtolfuel &&            \
    (!(MechSpecials(a) & ICE_TECH)))
 #define DSLastMsg(a) (a)->rd.last_ds_msg
 #define GunPilot(a) (pilot_override > 0 ? pilot_override : MechPilot(a))
@@ -322,18 +327,24 @@
 #define MECHEVENT(mech, type, func, time, data)                                \
   do {                                                                         \
     if (mech->mynum > 0)                                                       \
-      mux_event_add(time, 0, type, func, (void *)(mech), (void *)(data));      \
+      mux_event_add(btech_context_active()->events, time, 0, type, func,       \
+                    (void *)(mech), (void *)(data));                           \
   } while (0)
 
 #define AUTOEVENT(auto, type, func, time, data)                                \
-  mux_event_add(time, 0, type, func, (void *)(auto), (void *)(data))
+  mux_event_add(btech_context_active()->events, time, 0, type, func,           \
+                (void *)(auto), (void *)(data))
 
 #define MAPEVENT(map, type, func, time, data)                                  \
-  mux_event_add(time, 0, type, func, (void *)(map), (void *)(data))
-#define StopDec(a) mux_event_remove_type_data2(EVENT_DECORATION, (void *)a)
+  mux_event_add(btech_context_active()->events, time, 0, type, func,           \
+                (void *)(map), (void *)(data))
+#define StopDec(a)                                                             \
+  mux_event_remove_type_data2(btech_context_active()->events,                  \
+                              EVENT_DECORATION, (void *)a)
 
 #define OBJEVENT(obj, type, func, time, data)                                  \
-  mux_event_add(time, 0, type, func, (void *)obj, (void *)(data))
+  mux_event_add(btech_context_active()->events, time, 0, type, func,           \
+                (void *)obj, (void *)(data))
 
 #define GetPartType(a, b, c) MechSections(a)[b].criticals[c].type
 #define SetPartType(a, b, c, d) GetPartType(a, b, c) = d
@@ -469,54 +480,103 @@
 
 #define CanJump(a) (!(Stabilizing(a)) && !(Jumping(a)))
 
-/* #define Jumping(a)           mux_event_count_type_data(EVENT_JUMP,(void *) a)
+/* #define Jumping(a) mux_event_count_type_data(btech_context_active()->events,
+ * EVENT_JUMP,(void *) a)
  */
 
 /* crew stunned related events and macros */
-#define CrewStunned(a) mux_event_count_type_data(EVENT_UNSTUN_CREW, (void *)a)
+#define CrewStunned(a)                                                         \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_UNSTUN_CREW, \
+                            (void *)a)
 #define StunCrew(a) MECHEVENT(a, EVENT_UNSTUN_CREW, unstun_crew_event, 60, 0)
 
 /* Exile Stun code */
-#define CrewStunning(a) mux_event_count_type_data(EVENT_CREWSTUN, (void *)a)
+#define CrewStunning(a)                                                        \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_CREWSTUN,    \
+                            (void *)a)
 #define StopCrewStunning(a)                                                    \
-  mux_event_remove_type_data(EVENT_CREWSTUN, (void *)a)
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_CREWSTUN,   \
+                             (void *)a)
 
-#define Burning(a) mux_event_count_type_data(EVENT_VEHICLEBURN, (void *)a)
+#define Burning(a)                                                             \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_VEHICLEBURN, \
+                            (void *)a)
 #define BurningSide(a, side)                                                   \
-  mux_event_count_type_data_data(EVENT_VEHICLEBURN, (void *)a, (void *)side)
-#define StopBurning(a) mux_event_remove_type_data(EVENT_VEHICLEBURN, (void *)a)
+  mux_event_count_type_data_data(btech_context_active()->events,               \
+                                 EVENT_VEHICLEBURN, (void *)a, (void *)side)
+#define StopBurning(a)                                                         \
+  mux_event_remove_type_data(btech_context_active()->events,                   \
+                             EVENT_VEHICLEBURN, (void *)a)
 #define StopBurningSide(a, side)                                               \
-  mux_event_remove_type_data_data(EVENT_VEHICLEBURN, (void *)a, (void *)side)
+  mux_event_remove_type_data_data(btech_context_active()->events,              \
+                                  EVENT_VEHICLEBURN, (void *)a, (void *)side)
 #define Extinguishing(a)                                                       \
-  mux_event_count_type_data(EVENT_VEHICLE_EXTINGUISH, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_VEHICLE_EXTINGUISH, (void *)a)
 #define Jellied(a) (MechCritStatus(a) & JELLIED)
-#define Exploding(a) mux_event_count_type_data(EVENT_EXPLODE, (void *)a)
-#define Dumping(a) mux_event_count_type_data(EVENT_DUMP, (void *)a)
+#define Exploding(a)                                                           \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_EXPLODE,     \
+                            (void *)a)
+#define Dumping(a)                                                             \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_DUMP,        \
+                            (void *)a)
 #define Dumping_Type(a, type)                                                  \
-  (mux_event_count_type_data_data(EVENT_DUMP, (void *)a, (void *)type) ||      \
-   mux_event_count_type_data_data(EVENT_DUMP, (void *)a, (void *)0))
+  (mux_event_count_type_data_data(btech_context_active()->events, EVENT_DUMP,  \
+                                  (void *)a, (void *)type) ||                  \
+   mux_event_count_type_data_data(btech_context_active()->events, EVENT_DUMP,  \
+                                  (void *)a, (void *)0))
 #define DumpingData(a, data2)                                                  \
-  mux_event_get_type_data(EVENT_DUMP, (void *)a, (void *)data2)
-#define ChangingLateral(a) mux_event_count_type_data(EVENT_LATERAL, (void *)a)
-#define Seeing(a) mux_event_count_type_data(EVENT_PLOS, (void *)a)
-#define Locking(a) mux_event_count_type_data(EVENT_LOCK, (void *)a)
-#define Hiding(a) mux_event_count_type_data(EVENT_HIDE, (void *)a)
+  mux_event_get_type_data(btech_context_active()->events, EVENT_DUMP,          \
+                          (void *)a, (void *)data2)
+#define ChangingLateral(a)                                                     \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_LATERAL,     \
+                            (void *)a)
+#define Seeing(a)                                                              \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_PLOS,        \
+                            (void *)a)
+#define Locking(a)                                                             \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_LOCK,        \
+                            (void *)a)
+#define Hiding(a)                                                              \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_HIDE,        \
+                            (void *)a)
 #define HasCamo(a) (MechSpecials2(a) & CAMO_TECH)
 #define Digging(a) (MechTankCritStatus(a) & DIGGING_IN)
 #define MechDugIn(a) (MechTankCritStatus(mech) & DUG_IN)
 #define ChangingHulldown(a)                                                    \
-  mux_event_count_type_data(EVENT_CHANGING_HULLDOWN, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_CHANGING_HULLDOWN, (void *)a)
 #define IsHulldown(a) (MechStatus(a) & HULLDOWN)
-#define Falling(a) mux_event_count_type_data(EVENT_FALL, (void *)a)
-#define Moving(a) mux_event_count_type_data(EVENT_MOVE, (void *)a)
-#define RemovingPods(a) mux_event_count_type_data(EVENT_REMOVE_PODS, (void *)a)
-#define SensorChange(a) mux_event_count_type_data(EVENT_SCHANGE, (void *)a)
-#define Stabilizing(a) mux_event_count_type_data(EVENT_JUMPSTABIL, (void *)a)
-#define Standrecovering(a) mux_event_count_type_data(EVENT_STANDFAIL, (void *)a)
-#define Standing(a) mux_event_count_type_data(EVENT_STAND, (void *)a)
-#define Starting(a) mux_event_count_type_data(EVENT_STARTUP, (void *)a)
-#define Recovering(a) mux_event_count_type_data(EVENT_RECOVERY, (void *)a)
-#define TakingOff(a) mux_event_count_type_data(EVENT_TAKEOFF, (void *)a)
+#define Falling(a)                                                             \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_FALL,        \
+                            (void *)a)
+#define Moving(a)                                                              \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_MOVE,        \
+                            (void *)a)
+#define RemovingPods(a)                                                        \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_REMOVE_PODS, \
+                            (void *)a)
+#define SensorChange(a)                                                        \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_SCHANGE,     \
+                            (void *)a)
+#define Stabilizing(a)                                                         \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_JUMPSTABIL,  \
+                            (void *)a)
+#define Standrecovering(a)                                                     \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_STANDFAIL,   \
+                            (void *)a)
+#define Standing(a)                                                            \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_STAND,       \
+                            (void *)a)
+#define Starting(a)                                                            \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_STARTUP,     \
+                            (void *)a)
+#define Recovering(a)                                                          \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_RECOVERY,    \
+                            (void *)a)
+#define TakingOff(a)                                                           \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_TAKEOFF,     \
+                            (void *)a)
 #define FlyingT(a) (is_aero(a) || MechMove(a) == MOVE_VTOL)
 #define RollingT(a) ((MechType(a) == CLASS_AERO) || (MechType(a) == CLASS_DS))
 #define MaybeMove(a)                                                           \
@@ -539,7 +599,7 @@
 #define UpdateRecycling(a)                                                     \
   do {                                                                         \
     if (Started(a) && !Destroyed(a) &&                                         \
-        a->rd.last_weapon_recycle != mux_event_tick)                           \
+        a->rd.last_weapon_recycle != btech_context_active()->events->tick)     \
       recycle_weaponry(a);                                                     \
   } while (0)
 
@@ -551,38 +611,76 @@
   (MechSections(mech)[RARM].recycle || MechSections(mech)[LARM].recycle ||     \
    MechSections(mech)[RLEG].recycle || MechSections(mech)[LLEG].recycle)
 
-#define StopExploding(a) mux_event_remove_type_data(EVENT_EXPLODE, (void *)a)
-#define StopLateral(a) mux_event_remove_type_data(EVENT_LATERAL, (void *)a)
-#define StopMasc(a) mux_event_remove_type_data(EVENT_MASC_FAIL, (void *)a)
-#define StopMascR(a) mux_event_remove_type_data(EVENT_MASC_REGEN, (void *)a)
-#define StopSCharge(a) mux_event_remove_type_data(EVENT_SCHARGE_FAIL, (void *)a)
+#define StopExploding(a)                                                       \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_EXPLODE,    \
+                             (void *)a)
+#define StopLateral(a)                                                         \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_LATERAL,    \
+                             (void *)a)
+#define StopMasc(a)                                                            \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_MASC_FAIL,  \
+                             (void *)a)
+#define StopMascR(a)                                                           \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_MASC_REGEN, \
+                             (void *)a)
+#define StopSCharge(a)                                                         \
+  mux_event_remove_type_data(btech_context_active()->events,                   \
+                             EVENT_SCHARGE_FAIL, (void *)a)
 #define StopSChargeR(a)                                                        \
-  mux_event_remove_type_data(EVENT_SCHARGE_REGEN, (void *)a)
-#define StopDump(a) mux_event_remove_type_data(EVENT_DUMP, (void *)a)
-#define StopJump(a) mux_event_remove_type_data(EVENT_JUMP, (void *)a)
-#define StopOOD(a) mux_event_remove_type_data(EVENT_OOD, (void *)a)
-#define StopMoving(a) mux_event_remove_type_data(EVENT_MOVE, (void *)a)
-#define StopStand(a) mux_event_remove_type_data(EVENT_STAND, (void *)a)
+  mux_event_remove_type_data(btech_context_active()->events,                   \
+                             EVENT_SCHARGE_REGEN, (void *)a)
+#define StopDump(a)                                                            \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_DUMP,       \
+                             (void *)a)
+#define StopJump(a)                                                            \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_JUMP,       \
+                             (void *)a)
+#define StopOOD(a)                                                             \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_OOD,        \
+                             (void *)a)
+#define StopMoving(a)                                                          \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_MOVE,       \
+                             (void *)a)
+#define StopStand(a)                                                           \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_STAND,      \
+                             (void *)a)
 #define StopStabilization(a)                                                   \
-  mux_event_remove_type_data(EVENT_JUMPSTABIL, (void *)a)
-#define StopSensorChange(a) mux_event_remove_type_data(EVENT_SCHANGE, (void *)a)
-#define StopStartup(a) mux_event_remove_type_data(EVENT_STARTUP, (void *)a)
-#define StopHiding(a) mux_event_remove_type_data(EVENT_HIDE, (void *)a)
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_JUMPSTABIL, \
+                             (void *)a)
+#define StopSensorChange(a)                                                    \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_SCHANGE,    \
+                             (void *)a)
+#define StopStartup(a)                                                         \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_STARTUP,    \
+                             (void *)a)
+#define StopHiding(a)                                                          \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_HIDE,       \
+                             (void *)a)
 #define StopDigging(a)                                                         \
-  mux_event_remove_type_data(EVENT_DIG, (void *)a);                            \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_DIG,        \
+                             (void *)a);                                       \
   MechTankCritStatus(a) &= ~DIGGING_IN
 #define StopHullDown(a)                                                        \
-  mux_event_remove_type_data(EVENT_CHANGING_HULLDOWN, (void *)a)
-#define StopTakeOff(a) mux_event_remove_type_data(EVENT_TAKEOFF, (void *)a)
+  mux_event_remove_type_data(btech_context_active()->events,                   \
+                             EVENT_CHANGING_HULLDOWN, (void *)a)
+#define StopTakeOff(a)                                                         \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_TAKEOFF,    \
+                             (void *)a)
 #define UnjammingTurret(a)                                                     \
-  mux_event_count_type_data(EVENT_UNJAM_TURRET, (void *)a)
-#define UnJammingAmmo(a) mux_event_count_type_data(EVENT_UNJAM_AMMO, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_UNJAM_TURRET, (void *)a)
+#define UnJammingAmmo(a)                                                       \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_UNJAM_AMMO,  \
+                            (void *)a)
 #define UnJammingAmmoData(a, type)                                             \
-  mux_event_get_type_data(EVENT_UNJAM_AMMO, (void *)a, (void *)type)
+  mux_event_get_type_data(btech_context_active()->events, EVENT_UNJAM_AMMO,    \
+                          (void *)a, (void *)type)
 #define WeaponUnJammingAmmo(a, type)                                           \
-  mux_event_count_type_data_data(EVENT_UNJAM_AMMO, (void *)a, (void *)type)
+  mux_event_count_type_data_data(btech_context_active()->events,               \
+                                 EVENT_UNJAM_AMMO, (void *)a, (void *)type)
 #define EnteringHangar(a)                                                      \
-  mux_event_count_type_data(EVENT_ENTER_HANGAR, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_ENTER_HANGAR, (void *)a)
 #define OODing(a) MechCocoon(a)
 #define C_OODing(a) (MechCocoon(a) > 0)
 #define InSpecial(a) (MechStatus(a) & UNDERSPECIAL)
@@ -614,7 +712,7 @@
   StopStand(a);                                                                \
   StopHullDown(a);                                                             \
   MechStatus(a) &= ~HULLDOWN;                                                  \
-  if (mudconf.btech_newstagger) {                                              \
+  if (btech_context_active()->configuration->btech_newstagger) {               \
     ClearAllStaggerDamage(a);                                                  \
   };
 
@@ -625,13 +723,16 @@
   MarkForLOSUpdate(a)
 #define StandMechTime(a) (30 / BOUNDED(1, (MechMaxSpeed(a) / MP2), 30))
 #define StopLock(a)                                                            \
-  mux_event_remove_type_data(EVENT_LOCK, (void *)a);                           \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_LOCK,       \
+                             (void *)a);                                       \
   MechStatus(a) &= ~LOCK_MODES;                                                \
   MechAim(a) = NUM_SECTIONS;
 #define SearchlightChanging(a)                                                 \
-  mux_event_count_type_data(EVENT_SLITECHANGING, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_SLITECHANGING, (void *)a)
 #define HeatcutoffChanging(a)                                                  \
-  mux_event_count_type_data(EVENT_HEATCUTOFFCHANGING, (void *)a)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_HEATCUTOFFCHANGING, (void *)a)
 
 #define SeeWhenShutdown(a) (MechStatus(mech) & AUTOCON_WHEN_SHUTDOWN)
 
@@ -715,7 +816,7 @@
     MechStatus(a) |= DESTROYED;                                                \
     MechCritStatus(a) &= ~MECH_STUNNED;                                        \
     StopBSuitSwarmers(FindObjectsData(a->mapindex), a, 1);                     \
-    mux_event_remove_data((void *)a);                                          \
+    mux_event_remove_data(btech_context_active()->events, (void *)a);          \
     if ((MechType(a) == CLASS_MECH && Jumping(a)) ||                           \
         (MechType(a) != CLASS_MECH && MechZ(a) > MechUpperElevation(a)))       \
       MECHEVENT(a, EVENT_FALL, mech_fall_event, FALL_TICK, -1);                \
@@ -757,35 +858,58 @@
   SetMap(mapn, x, y, GetTerrain(mapn, x, y), e)
 
 /* For now I don't care about allocations */
-#define ScenError(...) send_channel("ScenErrors", __VA_ARGS__)
-#define ScenStatus(...) send_channel("ScenStatus", __VA_ARGS__)
-#define SendAI(...) send_channel("MechAI", __VA_ARGS__)
+#define ScenError(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "ScenErrors", __VA_ARGS__)
+#define ScenStatus(...)                                                        \
+  send_channel(BTECH_EVALUATION_CONTEXT, "ScenStatus", __VA_ARGS__)
+#define SendAI(...)                                                            \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechAI", __VA_ARGS__)
 #define SendAlloc(msg)
 #define SendLoc(msg)
-#define SendCustom(...) send_channel("MechCustom", __VA_ARGS__)
-#define SendDB(...) send_channel("DBInfo", __VA_ARGS__)
-#define SendDebug(...) send_channel("MechDebugInfo", __VA_ARGS__)
-#define SendDeath(...) send_channel("MechDeaths", __VA_ARGS__)
-#define SendEcon(...) send_channel("MechEconInfo", __VA_ARGS__)
-#define SendError(...) send_channel("MechErrors", __VA_ARGS__)
-#define SendMapError(...) send_channel("MapErrors", __VA_ARGS__)
-#define SendEvent(...) send_channel("EventInfo", __VA_ARGS__)
-#define SendSensor(...) send_channel("MechSensor", __VA_ARGS__)
-#define SendTrigger(...) send_channel("MineTriggers", __VA_ARGS__)
-#define SendXP(...) send_channel("MechXP", __VA_ARGS__)
-#define SendDSInfo(...) send_channel("DSInfo", __VA_ARGS__)
+#define SendCustom(...)                                                        \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechCustom", __VA_ARGS__)
+#define SendDB(...)                                                            \
+  send_channel(BTECH_EVALUATION_CONTEXT, "DBInfo", __VA_ARGS__)
+#define SendDebug(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechDebugInfo", __VA_ARGS__)
+#define SendDeath(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechDeaths", __VA_ARGS__)
+#define SendEcon(...)                                                          \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechEconInfo", __VA_ARGS__)
+#define SendError(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechErrors", __VA_ARGS__)
+#define SendMapError(...)                                                      \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MapErrors", __VA_ARGS__)
+#define SendEvent(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "EventInfo", __VA_ARGS__)
+#define SendSensor(...)                                                        \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechSensor", __VA_ARGS__)
+#define SendTrigger(...)                                                       \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MineTriggers", __VA_ARGS__)
+#define SendXP(...)                                                            \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechXP", __VA_ARGS__)
+#define SendDSInfo(...)                                                        \
+  send_channel(BTECH_EVALUATION_CONTEXT, "DSInfo", __VA_ARGS__)
 
 /*
  * Exile Added Channel Message Emits
  */
-#define SendAttackEmits(...) send_channel("MechAttackEmits", __VA_ARGS__)
-#define SendAttacks(...) send_channel("MechAttacks", __VA_ARGS__)
-#define SendAttackXP(...) send_channel("MechAttackXP", __VA_ARGS__)
-#define SendBTHDebug(...) send_channel("MechBTHDebug", __VA_ARGS__)
-#define SendFreqs(...) send_channel("MechFreqs", __VA_ARGS__)
-#define SendPilotXP(...) send_channel("MechPilotXP", __VA_ARGS__)
-#define SendTechXP(...) send_channel("MechTechXP", __VA_ARGS__)
-#define SendTAC(...) send_channel("TACInfo", __VA_ARGS__)
+#define SendAttackEmits(...)                                                   \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechAttackEmits", __VA_ARGS__)
+#define SendAttacks(...)                                                       \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechAttacks", __VA_ARGS__)
+#define SendAttackXP(...)                                                      \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechAttackXP", __VA_ARGS__)
+#define SendBTHDebug(...)                                                      \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechBTHDebug", __VA_ARGS__)
+#define SendFreqs(...)                                                         \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechFreqs", __VA_ARGS__)
+#define SendPilotXP(...)                                                       \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechPilotXP", __VA_ARGS__)
+#define SendTechXP(...)                                                        \
+  send_channel(BTECH_EVALUATION_CONTEXT, "MechTechXP", __VA_ARGS__)
+#define SendTAC(...)                                                           \
+  send_channel(BTECH_EVALUATION_CONTEXT, "TACInfo", __VA_ARGS__)
 
 /*
  * This is the prototype for functions
@@ -795,7 +919,7 @@
 
 #define TEMPLATE_ERR(a, ...)                                                   \
   if (a) {                                                                     \
-    notify(player, tprintf(__VA_ARGS__));                                      \
+    notify(BTECH_EVALUATION_CONTEXT, player, tprintf(__VA_ARGS__));            \
     if (fp)                                                                    \
       fclose(fp);                                                              \
     return -1;                                                                 \
@@ -1040,7 +1164,8 @@
 #define EnableStealthArmor(mech) (MechStatus2(mech) |= STH_ARMOR_ON)
 #define DisableStealthArmor(mech) (MechStatus2(mech) &= ~STH_ARMOR_ON)
 #define StealthArmorChanging(mech)                                             \
-  mux_event_count_type_data(EVENT_STEALTH_ARMOR, (void *)mech)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_STEALTH_ARMOR, (void *)mech)
 
 #define DestroyNullSigSys(mech) (MechCritStatus(mech) |= NSS_DESTROYED)
 #define NullSigSysDest(mech) (MechCritStatus(mech) & NSS_DESTROYED)
@@ -1048,7 +1173,8 @@
 #define EnableNullSigSys(mech) (MechStatus2(mech) |= NULLSIGSYS_ON)
 #define DisableNullSigSys(mech) (MechStatus2(mech) &= ~NULLSIGSYS_ON)
 #define NullSigSysChanging(mech)                                               \
-  mux_event_count_type_data(EVENT_NSS, (void *)mech)
+  mux_event_count_type_data(btech_context_active()->events, EVENT_NSS,         \
+                            (void *)mech)
 
 /* C3 macros */
 
@@ -1075,7 +1201,9 @@
 #define HasTAG(mech) ((MechSpecials2(mech) & TAG_TECH) || HasC3m(mech))
 #define TAGTarget(mech) (mech)->sd.tagTarget
 #define TaggedBy(mech) (mech)->sd.taggedBy
-#define TagRecycling(a) mux_event_count_type_data(EVENT_TAG_RECYCLE, (void *)a)
+#define TagRecycling(a)                                                        \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_TAG_RECYCLE, \
+                            (void *)a)
 
 /* Club stuff */
 #define CarryingClub(mech)                                                     \
@@ -1095,7 +1223,8 @@
 /* New stagger stuff */
 #define Staggering(mech) (StaggerLevel(mech) > 0)
 #define CheckingStaggerDamage(mech)                                            \
-  mux_event_count_type_data(EVENT_CHECK_STAGGER, (void *)mech)
+  mux_event_count_type_data(btech_context_active()->events,                    \
+                            EVENT_CHECK_STAGGER, (void *)mech)
 #define StartStaggerCheck(mech)                                                \
   do {                                                                         \
     MECHEVENT(mech, EVENT_CHECK_STAGGER, check_stagger_event, 5, 0);           \
@@ -1103,7 +1232,8 @@
   } while (0)
 #define StopStaggerCheck(mech)                                                 \
   do {                                                                         \
-    mux_event_remove_type_data(EVENT_CHECK_STAGGER, (void *)mech);             \
+    mux_event_remove_type_data(btech_context_active()->events,                 \
+                               EVENT_CHECK_STAGGER, (void *)mech);             \
     (mech)->rd.staggerDamage = 0;                                              \
     (mech)->rd.lastStaggerNotify = 0;                                          \
     SendDebug(tprintf("Stopping stagger check for %ld.", mech->mynum));        \
@@ -1123,15 +1253,24 @@
 #define MechToMech_LOSFlag(map, from, to)                                      \
   ((map)->LOSinfo[from->mapnumber][to->mapnumber])
 
-#define MoveModeChange(a) mux_event_count_type_data(EVENT_MOVEMODE, (void *)a)
+#define MoveModeChange(a)                                                      \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_MOVEMODE,    \
+                            (void *)a)
 #define MoveModeLock(a)                                                        \
   (MechStatus2(a) & MOVE_MODES_LOCK ||                                         \
    (MoveModeChange(a) && !(MechStatus2(a) & DODGING)))
 #define MoveModeData(a)                                                        \
-  mux_event_count_type_data_firstev(EVENT_MOVEMODE, (void *)a)
-#define StopMoveMode(a) mux_event_remove_type_data(EVENT_MOVEMODE, (void *)a)
+  mux_event_count_type_data_firstev(btech_context_active()->events,            \
+                                    EVENT_MOVEMODE, (void *)a)
+#define StopMoveMode(a)                                                        \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_MOVEMODE,   \
+                             (void *)a)
 #define Sprinting(a) (MechStatus2(a) & SPRINTING)
 #define Evading(a) (MechStatus2(a) & EVADING)
 #define Dodging(a) (MechStatus2(a) & DODGING)
-#define SideSlipping(a) mux_event_count_type_data(EVENT_SIDESLIP, (void *)a)
-#define StopSideslip(a) mux_event_remove_type_data(EVENT_SIDESLIP, (void *)a)
+#define SideSlipping(a)                                                        \
+  mux_event_count_type_data(btech_context_active()->events, EVENT_SIDESLIP,    \
+                            (void *)a)
+#define StopSideslip(a)                                                        \
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_SIDESLIP,   \
+                             (void *)a)

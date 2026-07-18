@@ -14,14 +14,19 @@
 #include "mux/help/help_types.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
-#include "mux/server/server_state.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/server_config.h"
 
-static HelpArticleVector help_articles;
-static HelpKeywordEntry *help_keywords;
-static size_t help_keyword_count;
-static size_t help_default_article_index = SIZE_MAX;
-static size_t help_last_error_count;
-static size_t help_last_warning_count;
+struct HelpIndex {
+  ServerLog *log;
+  HelpArticleVector articles;
+  HelpKeywordEntry *keywords;
+  size_t keyword_count;
+  size_t default_article_index;
+  size_t last_error_count;
+  size_t last_warning_count;
+  char *root_directory;
+};
 
 static char *help_join_path(const char *base, const char *name) {
   size_t base_length = strlen(base);
@@ -124,7 +129,8 @@ static bool help_locate_frontmatter(const char *content,
   }
 }
 
-static void help_index_process_file(const char *absolute_path,
+static void help_index_process_file(EvaluationContext *evaluation,
+                                    HelpIndex *index, const char *absolute_path,
                                     const char *relative_path, DbRef player,
                                     int *error_count) {
   char *content;
@@ -136,20 +142,22 @@ static void help_index_process_file(const char *absolute_path,
 
   content = help_slurp_file(absolute_path, nullptr);
   if (!content) {
-    log_error(LOG_PROBLEMS, "HLP", "READ", "%s: unable to read file",
-              relative_path);
+    if (index->log != nullptr)
+      log_error(index->log, LOG_PROBLEMS, "HLP", "READ",
+                "%s: unable to read file", relative_path);
     if (player != NOTHING)
-      notify_printf(player, "Help index error: %s: unable to read file",
-                    relative_path);
+      notify_printf(evaluation, player,
+                    "Help index error: %s: unable to read file", relative_path);
     (*error_count)++;
     return;
   }
   if (!help_locate_frontmatter(content, &toml_start, &toml_length,
                                &body_start)) {
-    log_error(LOG_PROBLEMS, "HLP", "PARSE",
-              "%s: missing +++ frontmatter delimiters", relative_path);
+    if (index->log != nullptr)
+      log_error(index->log, LOG_PROBLEMS, "HLP", "PARSE",
+                "%s: missing +++ frontmatter delimiters", relative_path);
     if (player != NOTHING)
-      notify_printf(player,
+      notify_printf(evaluation, player,
                     "Help index error: %s: missing +++ frontmatter "
                     "delimiters",
                     relative_path);
@@ -161,26 +169,34 @@ static void help_index_process_file(const char *absolute_path,
   memset(&article, 0, sizeof(article));
   if (!help_frontmatter_parse(toml_start, toml_length, &article, error,
                               sizeof(error))) {
-    log_error(LOG_PROBLEMS, "HLP", "PARSE", "%s: %s", relative_path, error);
+    if (index->log != nullptr)
+      log_error(index->log, LOG_PROBLEMS, "HLP", "PARSE", "%s: %s",
+                relative_path, error);
     if (player != NOTHING)
-      notify_printf(player, "Help index error: %s: %s", relative_path, error);
+      notify_printf(evaluation, player, "Help index error: %s: %s",
+                    relative_path, error);
     (*error_count)++;
     help_frontmatter_free(&article);
     free(content);
     return;
   }
   if (error[0]) {
-    log_error(LOG_STARTUP, "HLP", "WARN", "%s: %s", relative_path, error);
+    if (index->log != nullptr)
+      log_error(index->log, LOG_STARTUP, "HLP", "WARN", "%s: %s", relative_path,
+                error);
     if (player != NOTHING)
-      notify_printf(player, "Help index warning: %s: %s", relative_path, error);
+      notify_printf(evaluation, player, "Help index warning: %s: %s",
+                    relative_path, error);
   }
 
   article.relative_path = strdup(relative_path);
-  help_article_vector_push(&help_articles, &article);
+  help_article_vector_push(&index->articles, &article);
   free(content);
 }
 
-static void help_index_walk_directory(const char *absolute_dir,
+static void help_index_walk_directory(EvaluationContext *evaluation,
+                                      HelpIndex *index,
+                                      const char *absolute_dir,
                                       const char *relative_prefix, DbRef player,
                                       int *error_count) {
   DIR *stream;
@@ -192,10 +208,11 @@ static void help_index_walk_directory(const char *absolute_dir,
 
   stream = opendir(absolute_dir);
   if (!stream) {
-    log_error(LOG_PROBLEMS, "HLP", "OPENDIR",
-              "unable to open help directory '%s'", absolute_dir);
+    if (index->log != nullptr)
+      log_error(index->log, LOG_PROBLEMS, "HLP", "OPENDIR",
+                "unable to open help directory '%s'", absolute_dir);
     if (player != NOTHING)
-      notify_printf(player,
+      notify_printf(evaluation, player,
                     "Help index error: unable to open help directory '%s'",
                     absolute_dir);
     (*error_count)++;
@@ -223,14 +240,14 @@ static void help_index_walk_directory(const char *absolute_dir,
 
     if (stat(absolute_child, &status) == 0) {
       if (S_ISDIR(status.st_mode)) {
-        help_index_walk_directory(absolute_child, relative_child, player,
-                                  error_count);
+        help_index_walk_directory(evaluation, index, absolute_child,
+                                  relative_child, player, error_count);
       } else if (S_ISREG(status.st_mode)) {
         size_t name_length = strlen(entry_names[i]);
 
         if (name_length > 3 && !strcmp(entry_names[i] + name_length - 3, ".md"))
-          help_index_process_file(absolute_child, relative_child, player,
-                                  error_count);
+          help_index_process_file(evaluation, index, absolute_child,
+                                  relative_child, player, error_count);
       }
     }
     free(absolute_child);
@@ -240,18 +257,20 @@ static void help_index_walk_directory(const char *absolute_dir,
   free(entry_names);
 }
 
-static void help_index_build_keywords(DbRef player, int *warning_count) {
+static void help_index_build_keywords(EvaluationContext *evaluation,
+                                      HelpIndex *index, DbRef player,
+                                      int *warning_count) {
   size_t total_keywords = 0;
   size_t i, k;
 
-  for (i = 0; i < help_articles.count; i++)
-    total_keywords += help_articles.items[i].keywords.count;
+  for (i = 0; i < index->articles.count; i++)
+    total_keywords += index->articles.items[i].keywords.count;
   if (total_keywords == 0)
     return;
-  help_keywords = malloc(total_keywords * sizeof(HelpKeywordEntry));
+  index->keywords = malloc(total_keywords * sizeof(HelpKeywordEntry));
 
-  for (i = 0; i < help_articles.count; i++) {
-    HelpArticle *article = &help_articles.items[i];
+  for (i = 0; i < index->articles.count; i++) {
+    HelpArticle *article = &index->articles.items[i];
 
     for (k = 0; k < article->keywords.count; k++) {
       char *keyword_lower = strdup(article->keywords.items[k]);
@@ -262,22 +281,23 @@ static void help_index_build_keywords(DbRef player, int *warning_count) {
       for (p = keyword_lower; *p; p++)
         *p = (char)tolower((unsigned char)*p);
 
-      for (existing = 0; existing < help_keyword_count; existing++) {
-        if (!strcmp(help_keywords[existing].keyword, keyword_lower)) {
+      for (existing = 0; existing < index->keyword_count; existing++) {
+        if (!strcmp(index->keywords[existing].keyword, keyword_lower)) {
           duplicate = true;
           break;
         }
       }
       if (duplicate) {
         HelpArticle *owner =
-            &help_articles.items[help_keywords[existing].article_index];
+            &index->articles.items[index->keywords[existing].article_index];
 
-        log_error(LOG_STARTUP, "HLP", "DUPKW",
-                  "keyword '%s' declared by both '%s' and '%s'; '%s' wins",
-                  keyword_lower, owner->relative_path, article->relative_path,
-                  owner->relative_path);
+        if (index->log != nullptr)
+          log_error(index->log, LOG_STARTUP, "HLP", "DUPKW",
+                    "keyword '%s' declared by both '%s' and '%s'; '%s' wins",
+                    keyword_lower, owner->relative_path, article->relative_path,
+                    owner->relative_path);
         if (player != NOTHING)
-          notify_printf(player,
+          notify_printf(evaluation, player,
                         "Help index warning: keyword '%s' declared by both "
                         "'%s' and '%s'; '%s' wins",
                         keyword_lower, owner->relative_path,
@@ -286,88 +306,116 @@ static void help_index_build_keywords(DbRef player, int *warning_count) {
         free(keyword_lower);
         continue;
       }
-      help_keywords[help_keyword_count].keyword = keyword_lower;
-      help_keywords[help_keyword_count].article_index = i;
-      help_keyword_count++;
+      index->keywords[index->keyword_count].keyword = keyword_lower;
+      index->keywords[index->keyword_count].article_index = i;
+      index->keyword_count++;
     }
   }
-  qsort(help_keywords, help_keyword_count, sizeof(HelpKeywordEntry),
+  qsort(index->keywords, index->keyword_count, sizeof(HelpKeywordEntry),
         help_index_keyword_compare);
 }
 
-static void help_index_reset(void) {
+static void help_index_reset(HelpIndex *index) {
   size_t i;
 
-  for (i = 0; i < help_articles.count; i++)
-    help_frontmatter_free(&help_articles.items[i]);
-  free(help_articles.items);
-  help_articles.items = nullptr;
-  help_articles.count = 0;
-  help_articles.capacity = 0;
+  for (i = 0; i < index->articles.count; i++)
+    help_frontmatter_free(&index->articles.items[i]);
+  free(index->articles.items);
+  index->articles = (HelpArticleVector){0};
 
-  for (i = 0; i < help_keyword_count; i++)
-    free(help_keywords[i].keyword);
-  free(help_keywords);
-  help_keywords = nullptr;
-  help_keyword_count = 0;
+  for (i = 0; i < index->keyword_count; i++)
+    free(index->keywords[i].keyword);
+  free(index->keywords);
+  index->keywords = nullptr;
+  index->keyword_count = 0;
 
-  help_default_article_index = SIZE_MAX;
+  index->default_article_index = SIZE_MAX;
 }
 
-static void help_index_rebuild(DbRef player) {
+static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
+                               DbRef player) {
   int error_count = 0;
   int warning_count = 0;
   size_t i;
 
-  help_index_reset();
-  help_index_walk_directory(mudconf.help_dir, "", player, &error_count);
-  help_index_build_keywords(player, &warning_count);
+  help_index_reset(index);
+  help_index_walk_directory(evaluation, index, index->root_directory, "",
+                            player, &error_count);
+  help_index_build_keywords(evaluation, index, player, &warning_count);
 
-  for (i = 0; i < help_articles.count; i++) {
-    if (!strcmp(help_articles.items[i].relative_path, "index.md")) {
-      help_default_article_index = i;
+  for (i = 0; i < index->articles.count; i++) {
+    if (!strcmp(index->articles.items[i].relative_path, "index.md")) {
+      index->default_article_index = i;
       break;
     }
   }
 
-  help_last_error_count = (size_t)error_count;
-  help_last_warning_count = (size_t)warning_count;
+  index->last_error_count = (size_t)error_count;
+  index->last_warning_count = (size_t)warning_count;
 
-  log_error(LOG_STARTUP, "HLP", "IDX",
-            "Indexed %zu article(s), %zu keyword(s), %d error(s), %d "
-            "warning(s)",
-            help_articles.count, help_keyword_count, error_count,
-            warning_count);
+  if (index->log != nullptr)
+    log_error(index->log, LOG_STARTUP, "HLP", "IDX",
+              "Indexed %zu article(s), %zu keyword(s), %d error(s), %d "
+              "warning(s)",
+              index->articles.count, index->keyword_count, error_count,
+              warning_count);
   if (player != NOTHING)
-    notify_printf(player,
+    notify_printf(evaluation, player,
                   "Help reindexed: %zu article(s), %zu keyword(s), %d "
                   "error(s), %d warning(s).",
-                  help_articles.count, help_keyword_count, error_count,
+                  index->articles.count, index->keyword_count, error_count,
                   warning_count);
 }
 
-void help_index_init(void) { help_index_rebuild(NOTHING); }
+HelpIndex *help_index_create(EvaluationContext *evaluation, ServerLog *log,
+                             const char *root_directory, DbRef player) {
+  HelpIndex *index = calloc(1, sizeof(*index));
 
-void help_index_reload(DbRef player) { help_index_rebuild(player); }
-
-const HelpArticle *help_index_default_article(void) {
-  if (help_default_article_index == SIZE_MAX)
+  if (index == nullptr)
     return nullptr;
-  return &help_articles.items[help_default_article_index];
+  index->log = log;
+  index->root_directory = strdup(root_directory);
+  if (index->root_directory == nullptr) {
+    free(index);
+    return nullptr;
+  }
+  index->default_article_index = SIZE_MAX;
+  help_index_rebuild(evaluation, index, player);
+  return index;
 }
 
-const HelpArticle *help_index_find_exact(const char *keyword_lower,
+void help_index_destroy(HelpIndex *index) {
+  if (index == nullptr)
+    return;
+  help_index_reset(index);
+  free(index->root_directory);
+  free(index);
+}
+
+void help_index_reload(EvaluationContext *evaluation, HelpIndex *index,
+                       DbRef player) {
+  help_index_rebuild(evaluation, index, player);
+}
+
+const HelpArticle *help_index_default_article(const HelpIndex *index) {
+  if (index->default_article_index == SIZE_MAX)
+    return nullptr;
+  return &index->articles.items[index->default_article_index];
+}
+
+const HelpArticle *help_index_find_exact(const HelpIndex *index,
+                                         const char *keyword_lower,
                                          bool viewer_is_wizard) {
   size_t low = 0;
-  size_t high = help_keyword_count;
+  size_t high = index->keyword_count;
 
   while (low < high) {
     size_t mid = low + (high - low) / 2;
-    int comparison = strcmp(help_keywords[mid].keyword, keyword_lower);
+    int comparison = strcmp(index->keywords[mid].keyword, keyword_lower);
 
     if (comparison == 0) {
       const HelpArticle *article =
-          &help_articles.items[help_keywords[mid].article_index];
+          &index->articles.items[index->keywords[mid].article_index];
 
       if (article->wizard_only && !viewer_is_wizard)
         return nullptr;
@@ -381,29 +429,41 @@ const HelpArticle *help_index_find_exact(const char *keyword_lower,
   return nullptr;
 }
 
-size_t help_index_article_count(void) { return help_articles.count; }
-
-const HelpArticle *help_index_article_at(size_t index) {
-  return &help_articles.items[index];
+size_t help_index_article_count(const HelpIndex *index) {
+  return index->articles.count;
 }
 
-size_t help_index_last_error_count(void) { return help_last_error_count; }
-
-size_t help_index_last_warning_count(void) { return help_last_warning_count; }
-
-size_t help_index_keyword_count(void) { return help_keyword_count; }
-
-const char *help_index_keyword_at(size_t index) {
-  return help_keywords[index].keyword;
+const HelpArticle *help_index_article_at(const HelpIndex *index,
+                                         size_t article_index) {
+  return &index->articles.items[article_index];
 }
 
-const HelpArticle *help_index_keyword_article_at(size_t index) {
-  return &help_articles.items[help_keywords[index].article_index];
+size_t help_index_last_error_count(const HelpIndex *index) {
+  return index->last_error_count;
 }
 
-char *help_index_read_body(const HelpArticle *article, size_t *out_length) {
+size_t help_index_last_warning_count(const HelpIndex *index) {
+  return index->last_warning_count;
+}
+
+size_t help_index_keyword_count(const HelpIndex *index) {
+  return index->keyword_count;
+}
+
+const char *help_index_keyword_at(const HelpIndex *index,
+                                  size_t keyword_index) {
+  return index->keywords[keyword_index].keyword;
+}
+
+const HelpArticle *help_index_keyword_article_at(const HelpIndex *index,
+                                                 size_t keyword_index) {
+  return &index->articles.items[index->keywords[keyword_index].article_index];
+}
+
+char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
+                           size_t *out_length) {
   char *absolute_path =
-      help_join_path(mudconf.help_dir, article->relative_path);
+      help_join_path(index->root_directory, article->relative_path);
   char *content;
   const char *toml_start;
   size_t toml_length;

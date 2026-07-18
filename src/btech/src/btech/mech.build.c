@@ -27,9 +27,12 @@ int CheckData(DbRef player, void *data) {
   int returnValue = 1;
 
   if (data == NULL) {
-    notify(player, "There is a problem with that item.");
-    notify(player, "The data is not properly allocated.");
-    notify(player, "Please notify a director of this.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "There is a problem with that item.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "The data is not properly allocated.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Please notify a director of this.");
     returnValue = 0;
   }
   return (returnValue);

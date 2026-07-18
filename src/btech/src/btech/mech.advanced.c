@@ -44,7 +44,7 @@
       MechStatus(mech) |= (setstatus);                                         \
     }                                                                          \
   } else                                                                       \
-    notify(player, donthave)
+    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
 
 #define TOGGLE_SPECIALS_MACRO_CHECK(neededspecial, setstatus, offstatus,       \
                                     msgon, msgoff, donthave)                   \
@@ -58,7 +58,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(player, donthave)
+    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
 
 #define TOGGLE_SPECIALS_MACRO_CHECK2(neededspecial, setstatus, offstatus,      \
                                      msgon, msgoff, donthave)                  \
@@ -72,7 +72,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(player, donthave)
+    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
 
 #define TOGGLE_INFANTRY_MACRO_CHECK(neededspecial, setstatus, offstatus,       \
                                     msgon, msgoff, donthave)                   \
@@ -86,7 +86,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(player, donthave)
+    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
 
 static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
@@ -381,7 +381,7 @@ static int mech_toggle_mode_sub_func(MECH *mech, DbRef player, int index,
     }
   }
   if (temp_nspec != RAC) /* Keep RAC type weapons on this setting */
-    notify(player, temp_cant);
+    notify(BTECH_EVALUATION_CONTEXT, player, temp_cant);
   return 0;
 }
 #ifdef __clang__
@@ -816,7 +816,9 @@ static void mech_masc_event(MuxEvent *e) {
     return;
   if (MechStatus(mech) & SCHARGE_ENABLED)
     roll--;
-  if (needed < 10 && is_good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
+  if (needed < 10 &&
+      is_good_obj(btech_context_active()->database, MechPilot(mech)) &&
+      WizP(MechPilot(mech)))
     roll = Number(needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
@@ -907,7 +909,9 @@ static void mech_scharge_event(MuxEvent *e) {
     return;
   if (MechStatus(mech) & MASC_ENABLED)
     roll = roll - 1;
-  if (needed < 10 && is_good_obj(MechPilot(mech)) && WizP(MechPilot(mech)))
+  if (needed < 10 &&
+      is_good_obj(btech_context_active()->database, MechPilot(mech)) &&
+      WizP(MechPilot(mech)))
     roll = Number(needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);
@@ -1044,13 +1048,14 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   char *args[3];
   int i;
   int ammoloc, ammocritnum;
-  long time = (long)mudconf.btech_explode_time;
+  long time = (long)btech_context_active()->configuration->btech_explode_time;
   int ammo = 1;
   int argc;
   int override = 0;
 
   cch(MECH_USUALO);
-  override = (strstr(buffer, "override") != NULL) && is_wizard(player);
+  override = (strstr(buffer, "override") != NULL) &&
+             is_wizard(btech_context_active()->database, player);
   argc = mech_parseattributes(buffer, args, 2);
   DOCHECK(argc < 1, "Invalid number of arguments!");
 
@@ -1066,7 +1071,8 @@ void mech_explode(DbRef player, void *data, char *buffer) {
 
   if (!strcasecmp(buffer, "stop")) {
     if (!override) {
-      DOCHECK(!mudconf.btech_explode_stop, "It's too late to turn back now!");
+      DOCHECK(!btech_context_active()->configuration->btech_explode_stop,
+              "It's too late to turn back now!");
     }
     DOCHECK(!Exploding(mech),
             "Your mech isn't undergoing a self-destruct sequence!");
@@ -1085,7 +1091,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
        Find SOME ammo to explode ; if possible, we engage the 'boom' process
      */
     if (!override) {
-      DOCHECK(!mudconf.btech_explode_ammo,
+      DOCHECK(!btech_context_active()->configuration->btech_explode_ammo,
               "You can't bring yourself to do it!");
       DOCHECK(MechStatus(mech) & EXPLODE_SAFE,
               "That's not a possibility here.");
@@ -1099,7 +1105,7 @@ void mech_explode(DbRef player, void *data, char *buffer) {
     time = time / 2;
   } else {
     if (!override) {
-      DOCHECK(!mudconf.btech_explode_reactor,
+      DOCHECK(!btech_context_active()->configuration->btech_explode_reactor,
               "You can't bring yourself to do it!");
       DOCHECK(MechType(mech) != CLASS_MECH,
               "Only mechs can do the 'big boom' effect.");
@@ -1399,28 +1405,31 @@ void show_narc_pods(DbRef player, MECH *mech, char *buffer) {
         checkAllSections(mech, INARC_ECM_ATTACHED) ||
         checkAllSections(mech, INARC_NEMESIS_ATTACHED))) {
 
-    notify(player, "There are no NARC or iNARC pods attached to this unit.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "There are no NARC or iNARC pods attached to this unit.");
 
     return;
   }
 
-  notify(player, "=========================Attached NARC and iNARC "
-                 "Pods========================");
-  notify(player, "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
-                 "-||- iNemesis --");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "=========================Attached NARC and iNARC "
+         "Pods========================");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
+         "-||- iNemesis --");
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (GetSectOInt(mech, i) > 0) {
       ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
 
       if (SectIsDestroyed(mech, i)) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       " %-14.13s||********||***********||************||********"
                       "||************* ",
                       location);
       } else {
         notify_printf(
-            player,
+            BTECH_EVALUATION_CONTEXT, player,
             " %-14.13s||....%s...||.....%s.....||......%s.....||....%s...||...."
             "..%s...... ",
             location,
@@ -1833,7 +1842,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     }
     if (i == NUM_MECHPREFERENCES) {
       snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
       return;
     }
 
@@ -1848,8 +1857,9 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
           (strcasecmp(args[1], "OFF") != 0)) {
 
         /* Insert notify here */
-        notify(player, "Only accept ON or OFF as valid extra "
-                       "parameter for mechprefs pref");
+        notify(BTECH_EVALUATION_CONTEXT, player,
+               "Only accept ON or OFF as valid extra "
+               "parameter for mechprefs pref");
         return;
       }
 
@@ -1905,6 +1915,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     /* Tell them the preference has been changed */
     snprintf(buf, LBUF_SIZE, "%s %s", info.msg, newstate);
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
 }

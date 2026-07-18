@@ -83,7 +83,7 @@ void map_setconditions(DbRef player, MAP *map, char *buffer) {
   map->temp = temp;
   map->grav = grav;
   map->flags = fl;
-  notify(player, "Conditions set!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Conditions set!");
   alter_conditions(map);
 }
 
@@ -134,7 +134,9 @@ void reactor_explosion(MECH *wounded, MECH *attacker) {
       "%ch%crYou bear full brunt of the blast!%cn",
       "is hit badly by the blast!",
       "%ch%cyYou receive some damage from the blast!%cn",
-      "is hit by the blast!", mudconf.btech_explode_reactor > 1, 3, 5, 1, 2);
+      "is hit by the blast!",
+      btech_context_active()->configuration->btech_explode_reactor > 1, 3, 5, 1,
+      2);
   MechZ(wounded) = z;
   headhitmwdamage(wounded, attacker, 4);
 }
@@ -223,8 +225,9 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
             }
             // check_stackpole(wounded, attacker);
 
-            if (mudconf.btech_stackpole &&
-                (MechBoomStart(wounded) + MAX_BOOM_TIME) >= mux_event_tick &&
+            if (btech_context_active()->configuration->btech_stackpole &&
+                (MechBoomStart(wounded) + MAX_BOOM_TIME) >=
+                    btech_context_active()->events->tick &&
                 Roll() >= BOOM_BTH && (Started(wounded) || Starting(wounded))) {
 
               HexLOSBroadcast(getMap(wounded->mapindex), MechX(wounded),

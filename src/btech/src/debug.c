@@ -36,12 +36,12 @@ void debug_list(DbRef player, void *data, char *buffer) {
 }
 
 void debug_savedb(DbRef player, void *data, char *buffer) {
-  if (gamedb_dump(DUMP_NORMAL) < 0)
+  if (gamedb_dump(btech_context_active()->persistence, DUMP_NORMAL) < 0)
     notify(
-        player,
+        BTECH_EVALUATION_CONTEXT, player,
         "SQLite checkpoint failed; the previous snapshot remains available.");
   else
-    notify(player, "SQLite checkpoint complete.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "SQLite checkpoint complete.");
 }
 
 static int *number;
@@ -85,8 +85,8 @@ static int debug_check_stuff(void *key, void *data, int depth, void *arg) {
   number[xcode_obj->type]++;
 
   if (cheat_player > 0)
-    notify_printf(cheat_player, "#%5ld: %10s %5ld", key_val,
-                  SpecialObjects[xcode_obj->type].type,
+    notify_printf(BTECH_EVALUATION_CONTEXT, cheat_player, "#%5ld: %10s %5ld",
+                  key_val, SpecialObjects[xcode_obj->type].type,
                   xcode_obj->type == GTYPE_AUTO ? ((AUTO *)xcode_obj)->mymechnum
                                                 : 0);
 
@@ -117,17 +117,19 @@ void debug_memory(DbRef player, void *data, char *buffer) {
   for (i = 0; i < global_specials; i++) {
     if (number[i]) {
       if (smallest[i] == largest[i])
-        notify_printf(player, "%4d %-20s: %d bytes total, %d each", number[i],
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "%4d %-20s: %d bytes total, %d each", number[i],
                       SpecialObjects[i].type, total[i], total[i] / number[i]);
       else
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "%4d %-20s: %d bytes total, %d avg, %d/%d small/large",
                       number[i], SpecialObjects[i].type, total[i],
                       total[i] / number[i], smallest[i], largest[i]);
     }
     gtotal += total[i];
   }
-  notify_printf(player, "Grand total: %d bytes.", gtotal);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Grand total: %d bytes.",
+                gtotal);
   free((void *)number);
   free((void *)total);
   free((void *)smallest);
@@ -149,7 +151,7 @@ void ShutDownMap(DbRef player, DbRef mapnumber) {
         mech = getMech(map->mechsOnMap[j]);
         if (mech) {
           notify_printf(
-              player,
+              BTECH_EVALUATION_CONTEXT, player,
               "Shutting down Mech #%ld and resetting map index to -1....",
               map->mechsOnMap[j]);
           mech_shutdown(GOD, (void *)mech, "");
@@ -161,7 +163,7 @@ void ShutDownMap(DbRef player, DbRef mapnumber) {
         }
       }
     map->first_free = 0;
-    notify(player, "Map Cleared");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Map Cleared");
     return;
   }
 }
@@ -188,10 +190,11 @@ void debug_setvrt(DbRef player, void *data, char *buffer) {
           "That is no weapon!");
   DOCHECK(!IsWeapon(id), "That is no weapon!");
   MechWeapons[Weapon2I(id)].vrt = vrt;
-  notify_printf(player, "VRT for %s set to %d.", MechWeapons[Weapon2I(id)].name,
-                vrt);
-  log_error(LOG_WIZARD, "WIZ", "CHANGE", "VRT for %s set to %d by #%ld",
-            MechWeapons[Weapon2I(id)].name, vrt, player);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "VRT for %s set to %d.",
+                MechWeapons[Weapon2I(id)].name, vrt);
+  log_error(btech_context_active()->log, LOG_WIZARD, "WIZ", "CHANGE",
+            "VRT for %s set to %d by #%ld", MechWeapons[Weapon2I(id)].name, vrt,
+            player);
 }
 
 void debug_setwbv(DbRef player, void *data, char *buffer) {
@@ -206,6 +209,6 @@ void debug_setwbv(DbRef player, void *data, char *buffer) {
           "That is no weapon!");
   DOCHECK(!IsWeapon(id), "That is no weapon!");
   MechWeapons[Weapon2I(id)].battlevalue = bv;
-  notify_printf(player, "BV for %s set to %d.", MechWeapons[Weapon2I(id)].name,
-                bv);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "BV for %s set to %d.",
+                MechWeapons[Weapon2I(id)].name, bv);
 }

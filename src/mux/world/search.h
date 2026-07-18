@@ -6,6 +6,9 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 
+typedef struct ObjectList ObjectList;
+typedef struct EvaluationContext EvaluationContext;
+
 /* Search structure, used by @search and search(). */
 
 typedef struct SearchCriteria SearchCriteria;
@@ -36,6 +39,10 @@ struct DatabaseStatistics {
   int s_garbage;
 };
 
-extern int search_criteria_setup(DbRef, char *, SearchCriteria *);
-extern void search_criteria_perform(DbRef, DbRef, SearchCriteria *);
-extern int database_statistics_get(DbRef, DbRef, DatabaseStatistics *);
+extern int search_criteria_setup(EvaluationContext *context, DbRef player,
+                                 char *search, SearchCriteria *criteria);
+extern void search_criteria_perform(EvaluationContext *context, DbRef player,
+                                    DbRef cause, SearchCriteria *criteria,
+                                    ObjectList *results);
+extern int database_statistics_get(EvaluationContext *, DbRef, DbRef,
+                                   DatabaseStatistics *);

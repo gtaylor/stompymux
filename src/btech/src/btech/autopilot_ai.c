@@ -148,7 +148,7 @@ static int ai_crash(MAP *map, MECH *m, LOC *l) {
       (MechMove(m) != MOVE_FLY || Landed(m)))
     tempspeed = terrain_speed(m, tempspeed, maxspeed, l->t, l->e);
   if (ch) {
-    if (mudconf.btech_slowdown == 2) {
+    if (btech_context_active()->configuration->btech_slowdown == 2) {
       int dif = MechFacing(m) - MechDesiredFacing(m);
 
       if (dif < 0)
@@ -159,7 +159,7 @@ static int ai_crash(MAP *map, MECH *m, LOC *l) {
         dif = (dif - 1) / 30 + 2;
         tempspeed = tempspeed * (10 - dif) / 10;
       }
-    } else if (mudconf.btech_slowdown == 1) {
+    } else if (btech_context_active()->configuration->btech_slowdown == 1) {
       if (l->h != l->dh)
         tempspeed = tempspeed * 2.0 / 3.0;
       else
@@ -744,8 +744,9 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
   MAP *map = getMap(m->mapindex);
 
   o = ai_opponents(a, m);
-  if (a->last_upd > mudstate.now || (mudstate.now - a->last_upd) > AUTO_GOET) {
-    if ((mux_event_tick - a->last_upd) > AUTO_GOTT) {
+  if (a->last_upd > btech_context_active()->clock->now ||
+      (btech_context_active()->clock->now - a->last_upd) > AUTO_GOET) {
+    if ((btech_context_active()->events->tick - a->last_upd) > AUTO_GOTT) {
       a->b_msc = MAGIC_NUM;
       a->w_msc = MAGIC_NUM;
       a->b_bsc = MAGIC_NUM;
@@ -759,7 +760,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
       UNREF(a->w_dan, a->b_dan, 8);
       a->b_dan = MAX(a->b_dan, (40 + 20 * 29 + 100) * 30); /* To stay focused */
     }
-    a->last_upd = mudstate.now;
+    a->last_upd = btech_context_active()->clock->now;
   }
   /* Got either opponents (nasty) or [possibly] blocked path (slightly nasty),
    * i.e. 12sec */
@@ -767,7 +768,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
     getFriends(m, map, 0);
   if (o) {
     getEnemies(m, map, 0);
-    if (!((mux_event_tick / AUTOPILOT_GOTO_TICK) %
+    if (!((btech_context_active()->events->tick / AUTOPILOT_GOTO_TICK) %
           4)) { /* Just every fourth tick, i.e. 12sec */
       /* Thorough check */
       ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 1, dx, dy, delx,
@@ -786,7 +787,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
     }
     return 1; /* We want to keep fighting near foes */
   }
-  if (!((mux_event_tick / AUTOPILOT_GOTO_TICK) %
+  if (!((btech_context_active()->events->tick / AUTOPILOT_GOTO_TICK) %
         4)) { /* Just every fourth tick, i.e. 12sec */
     /* Thorough check */
     ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 0, dx, dy, delx, dely,
@@ -857,7 +858,8 @@ void mech_snipe(DbRef player, MECH *mech, char *buffer) {
   char *args[3];
   DbRef d;
 
-  DOCHECK(!is_wizard(player), "Permission denied.");
+  DOCHECK(!is_wizard(btech_context_active()->database, player),
+          "Permission denied.");
   DOCHECK(mech_parseattributes(buffer, args, 3) != 2,
           "Please supply target ID _and_ weapon(s) to use");
   DOCHECK((d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,

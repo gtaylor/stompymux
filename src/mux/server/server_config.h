@@ -1,11 +1,14 @@
-/* server_state.h - Global configuration and mutable server state */
+/* server_config.h - Runtime configuration, access, and logging constants. */
 
 #pragma once
 
+#include "mux/commands/command_context.h"
 #include "mux/commands/command_queue.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/server/platform.h"
+#include "mux/server/runtime_clock.h"
+#include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
@@ -13,6 +16,19 @@
 #include <netinet/in.h>
 
 typedef struct Descriptor Descriptor;
+typedef struct DescriptorRegistry DescriptorRegistry;
+typedef struct HelpIndex HelpIndex;
+typedef struct LoginThrottle LoginThrottle;
+typedef struct PlayerCache PlayerCache;
+typedef struct FileCache FileCache;
+typedef struct ServerLifecycle ServerLifecycle;
+typedef struct CommandQueue CommandQueue;
+typedef struct ChannelRegistry ChannelRegistry;
+typedef struct LogCache LogCache;
+typedef struct LuaRuntime LuaRuntime;
+typedef struct MacroRegistry MacroRegistry;
+typedef struct PersistenceContext PersistenceContext;
+typedef struct VattrStore VattrStore;
 
 /* ServerConfiguration:	runtime configurable parameters */
 
@@ -35,6 +51,7 @@ struct LuaConfiguration {
 
 typedef struct ServerConfiguration ServerConfiguration;
 struct ServerConfiguration {
+  bool is_initializing;           /* Are we reading the startup config? */
   int cache_trim;                 /* Should cache be shrunk to original size */
   int cache_steal_dirty;          /* Should cache code write dirty attrs */
   int cache_depth;                /* Number of entries in each cache cell */
@@ -275,7 +292,6 @@ struct ServerConfiguration {
 
   int log_options;     /* What gets logged */
   int log_info;        /* Info that goes into log entries */
-  Uchar markdata[8];   /* Masks for marking/unmarking */
   int func_nest_lim;   /* Max nesting of functions */
   int func_invk_lim;   /* Max funcs invoked by a command */
   int ntfy_nest_lim;   /* Max nesting of notifys */
@@ -288,44 +304,12 @@ struct ServerConfiguration {
   int player_zone;
 };
 
-extern ServerConfiguration mudconf;
-
 typedef struct SiteData SiteData;
 struct SiteData {
   struct SiteData *next;  /* Next site in chain */
   struct in_addr address; /* Host or network address */
   struct in_addr mask;    /* Mask to apply before comparing */
   int flag;               /* Value to return on match */
-};
-
-typedef struct objlist_block OBLOCK;
-struct objlist_block {
-  struct objlist_block *next;
-  DbRef data[(LBUF_SIZE - sizeof(OBLOCK *)) / sizeof(DbRef)];
-};
-
-constexpr int OBLOCK_SIZE = (LBUF_SIZE - sizeof(OBLOCK *)) / sizeof(DbRef);
-
-typedef struct objlist_stack OLSTK;
-struct objlist_stack {
-  struct objlist_stack *next; /* Next object list in stack */
-  OBLOCK *head;               /* Head of object list */
-  OBLOCK *tail;               /* Tail of object list */
-  OBLOCK *cblock;             /* Current block for scan */
-  int count;                  /* Number of objs in last obj list block */
-  int citm;                   /* Current item for scan */
-};
-
-typedef struct markbuf MARKBUF;
-struct markbuf {
-  char chunk[5000];
-};
-
-typedef struct alist ALIST;
-struct alist {
-  char *data;
-  int len;
-  struct alist *next;
 };
 
 typedef struct badname_struc BADNAME;
@@ -339,88 +323,6 @@ struct forward_list {
   int count;
   int data[1000];
 };
-
-typedef struct ServerState ServerState;
-struct ServerState {
-  int record_players;          /* The maximum # of player logged on */
-  bool is_initializing;        /* Are we reading config file at startup? */
-  bool is_panicking;           /* Are we in the middle of dying horribly? */
-  bool is_dumping;             /* Are we dumping? */
-  int logging;                 /* Are we in the middle of logging? */
-  int generation;              /* DB global generation number */
-  DbRef curr_enactor;          /* Who initiated the current command */
-  DbRef curr_player;           /* Who is running the current command */
-  Descriptor *curr_descriptor; /* Live descriptor for the current command,
-                                  if any (nullptr for queued commands) */
-  bool is_alarm_triggered;     /* Has periodic alarm signal occurred? */
-  time_t now;                  /* What time is it now? */
-  time_t dump_counter;         /* Countdown to next db dump */
-  time_t check_counter;        /* Countdown to next db check */
-  time_t idle_counter;         /* Countdown to next idle check */
-  time_t mstats_counter;       /* Countdown to next mstats snapshot */
-  time_t events_counter;       /* Countdown to next events check */
-  int events_flag;             /* Flags for check_events */
-  int events_lasthour;         /* Last hour we ran hourly maintenance */
-
-  bool is_shutdown_requested; /* Should interface be shut down? */
-  char version[256];          /* MUX version string */
-  time_t start_time;          /* When was MUX started */
-  time_t process_start_time;  /* When this server process started */
-  char buffer[256];           /* A buffer for holding temp stuff */
-  const char *debug_cmd;      /* The command we are executing (if any) */
-  SiteData *access_list;      /* Access states for sites */
-  SiteData *suspect_list;     /* Sites that are suspect */
-  HashTable command_htab;     /* Commands hashtable */
-  HashTable macro_htab;       /* Macro command hashtable */
-  HashTable channel_htab;     /* Channels hashtable */
-  HashTable func_htab;        /* Functions hashtable */
-  HashTable ufunc_htab;       /* Local functions hashtable */
-  HashTable powers_htab;      /* Powers hashtable */
-  HashTable flags_htab;       /* Flags hashtable */
-  HashTable attr_name_htab;   /* Attribute names hashtable */
-  HashTable vattr_name_htab;  /* User attribute names hashtable */
-  HashTable player_htab;      /* Player name->number hashtable */
-  HashTable fwdlist_htab;     /* Room forwardlists */
-  HashTable parent_htab;      /* Parent $-command exclusion */
-  int attr_next;              /* Next attr to alloc when freelist is empty */
-  OBJQE *qhead;               /* Per Object Queue Entries */
-  OBJQE *qtail;
-  BQUE *qwait;           /* Head of wait queue */
-  BQUE *qsemfirst;       /* Head of semaphore queue */
-  BQUE *qsemlast;        /* Tail of semaphore queue */
-  BADNAME *badname_head; /* List of disallowed names */
-  int mstat_ixrss[2];    /* Summed shared size */
-  int mstat_idrss[2];    /* Summed private data size */
-  int mstat_isrss[2];    /* Summed private stack size */
-  int mstat_secs[2];     /* Time of samples */
-  int mstat_curr;        /* Which sample is latest */
-  ALIST iter_alist;      /* Attribute list for iterations */
-  char *mod_alist;       /* Attribute list for modifying */
-  int mod_size;          /* Length of modified buffer */
-  DbRef mod_al_id;       /* Where did mod_alist come from? */
-  OLSTK *olist;          /* Stack of object lists for nested searches */
-  DbRef freelist;        /* Head of object freelist */
-  int min_size;          /* Minimum db size (from file header) */
-  int db_top;            /* Number of items in the db */
-  int db_size;           /* Allocated size of db structure */
-  int db_revision;       /* database revision */
-  MARKBUF *markbits;     /* temp storage for marking/unmarking */
-  int func_nest_lev;     /* Current nesting of functions */
-  int func_invk_ctr;     /* Functions invoked so far by this command */
-  int ntfy_nest_lev;     /* Current nesting of notifys */
-  int lock_nest_lev;     /* Current nesting of lock evals */
-  char *global_regs[MAX_GLOBAL_REGS]; /* Global registers */
-  int zone_nest_num;                  /* Global current zone nest position */
-  bool is_piping;                     /* Is command piping active? */
-  char *pout;                         /* The output of the pipe used in %| */
-  char *poutnew;  /* The output being build by the current command */
-  char *poutbufc; /* Buffer position for poutnew */
-  DbRef poutobj;  /* Object doing the piping */
-};
-
-extern ServerState mudstate;
-
-void server_state_initialize(void);
 
 /* Global flags */
 
@@ -454,7 +356,7 @@ constexpr int LOG_PROBLEMS = 0x00008000; /* Log runtime problems */
 constexpr int LOG_SUSPECTCMDS =
     0x00010000; /* Log commands by people set SUSPECT */
 // Stored as int (not unsigned) so it combines cleanly with the other LOG_*
-// bitmask constants and mudconf.log_options without signedness conversions;
+// bitmask constants and configuration log options without conversions;
 // C23 guarantees the top-bit pattern converts to INT_MIN deterministically.
 constexpr int LOG_ALWAYS = (int)0x80000000U; /* Always log it */
 

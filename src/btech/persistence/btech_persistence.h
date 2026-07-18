@@ -2,11 +2,13 @@
 
 #pragma once
 
+typedef struct PersistenceContext PersistenceContext;
+
 /*
  * Register BTech's optional SQLite persistence extension. This must happen
  * during startup before the MUX game database is loaded or dumped.
  */
-int btech_persistence_register(void);
+int btech_persistence_register(PersistenceContext *context);
 
 /*
  * Load BTech special-object state after LoadSpecialObjects() has constructed

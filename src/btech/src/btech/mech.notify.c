@@ -255,15 +255,15 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
 
   if (MechStatus(mech) & COMBAT_SAFE) {
     strcpy(buf + spaces, "%cb%chCOMBAT SAFE%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (Fortified(mech)) {
     strcpy(buf + spaces, "%ch%cgFORTIFIED%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (WeaponsHold(mech)) {
     strcpy(buf + spaces, "%ch%crWEAPONS HOLD%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (Fallen(mech)) {
     switch (MechMove(mech)) {
@@ -298,50 +298,50 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
       strcpy(buf + spaces, "%cr%chFOIL DESTROYED%cn");
       break;
     }
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (IsHulldown(mech)) {
     strcpy(buf + spaces, "%cg%chHULLDOWN%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechDugIn(mech)) {
     strcpy(buf + spaces, "%cg%chDUG IN%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (Digging(mech)) {
     strcpy(buf + spaces, "%cgDIGGING IN%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (Staggering(mech)) {
     strcpy(buf + spaces, "%cr%chSTAGGERING%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechCritStatus(mech) & SLITE_DEST) {
     strcpy(buf + spaces, "%cr%chSEARCHLIGHT DESTROYED%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechLites(mech)) {
     strcpy(buf + spaces, "%cg%chSEARCHLIGHT ON%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   } else if (MechLit(mech)) {
     strcpy(buf + spaces, "%cg%chILLUMINATED%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (Burning(mech) || Jellied(mech)) {
     strcpy(buf + spaces, "%cr%chON FIRE%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechCritStatus(mech) & HIDDEN) {
     strcpy(buf + spaces, tprintf("%%ch%%cgHIDDEN%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (IsMechSwarmed(mech)) {
     strcpy(buf + spaces, "%cr%chSWARMED BY ENEMY SUITS%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (IsMechMounted(mech)) {
     strcpy(buf + spaces, "%cr%chMOUNTED BY FRIENDLY SUITS%cn");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechSwarmTarget(mech) > 0) {
     if (getMech(MechSwarmTarget(mech))) {
@@ -350,96 +350,96 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
       else
         strcpy(buf + spaces, "%cg%chSWARMING ENEMY UNIT%cn");
 
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
   }
 #ifdef BT_MOVEMENT_MODES
   if (MechStatus2(mech) & DODGING) {
     strcpy(buf + spaces, tprintf("%%ch%%crDODGING%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechStatus2(mech) & EVADING) {
     strcpy(buf + spaces, tprintf("%%ch%%crEVADING%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechStatus2(mech) & SPRINTING) {
     strcpy(buf + spaces, tprintf("%%ch%%crSPRINTING%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MoveModeChange(mech)) {
     strcpy(buf + spaces, tprintf("%%ch%%cyCHANGING MOVEMENT MODE%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (SideSlipping(mech)) {
     strcpy(buf + spaces, tprintf("%%ch%%cySIDESLIPPING%%c"));
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
   if (MechTankCritStatus(mech) & CREW_STUNNED ||
       MechCritStatus(mech) & MECH_STUNNED) {
     strcpy(buf + spaces, "%ch%crSTUNNED%c");
-    notify(player, buf);
+    notify(BTECH_EVALUATION_CONTEXT, player, buf);
   }
 #endif
   if (level == 0) { /* our own 'status' */
     if (ECMProtected(mech)) {
       strcpy(buf + spaces, "%cg%chPROTECTED BY ECM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (AngelECMProtected(mech)) {
       strcpy(buf + spaces, "%cg%chPROTECTED BY ANGEL ECM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (ECMDisturbed(mech)) {
       strcpy(buf + spaces, "%cy%chAFFECTED BY ECM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (AngelECMDisturbed(mech)) {
       strcpy(buf + spaces, "%cy%chAFFECTED BY ANGEL ECM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (ECMCountered(mech)) {
       strcpy(buf + spaces, "%cy%chCOUNTERED BY ECCM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (StealthArmorActive(mech)) {
       strcpy(buf + spaces, "%cg%chSTEALTH ARMOR ACTIVE%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (NullSigSysActive(mech)) {
       strcpy(buf + spaces, "%cg%chNULL SIGNATURE SYSTEM ACTIVE%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (checkAllSections(mech, NARC_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chNARC POD ATTACHED%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (checkAllSections(mech, INARC_HOMING_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC HOMING POD ATTACHED%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (checkAllSections(mech, INARC_HAYWIRE_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC HAYWIRE POD ATTACHED%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (checkAllSections(mech, INARC_ECM_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC ECM POD ATTACHED%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (Extinguishing(mech)) {
       strcpy(buf + spaces, "%cy%chEXTINGUISHING FIRE%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (MechStatus2(mech) & AUTOTURN_TURRET) {
       strcpy(buf + spaces, "%cg%chTURRET AUTO-TURN ENGAGED%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (MechSections(mech)[RARM].specials & CARRYING_CLUB) {
       strcpy(buf + spaces, "%cg%chCARRYING CLUB - RIGHT ARM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
     if (MechSections(mech)[LARM].specials & CARRYING_CLUB) {
       strcpy(buf + spaces, "%cg%chCARRYING CLUB - LEFT ARM%cn");
-      notify(player, buf);
+      notify(BTECH_EVALUATION_CONTEXT, player, buf);
     }
   }
   for (i = 0; temp_flag_info_struct[i].flag; i++)
@@ -447,12 +447,12 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
       if (MechStatus(mech) & temp_flag_info_struct[i].flag) {
         if (temp_flag_info_struct[i].onmsg) {
           strcpy(buf + spaces, temp_flag_info_struct[i].onmsg);
-          notify(player, buf);
+          notify(BTECH_EVALUATION_CONTEXT, player, buf);
         }
       } else {
         if (temp_flag_info_struct[i].offmsg) {
           strcpy(buf + spaces, temp_flag_info_struct[i].offmsg);
-          notify(player, buf);
+          notify(BTECH_EVALUATION_CONTEXT, player, buf);
         }
       }
     }
@@ -481,7 +481,7 @@ const char *GetMechToMechID_base(MECH *see, MECH *mech, int inlos) {
   char *mname;
   static char ids[SBUF_SIZE];
 
-  if (!is_good_obj(mech->mynum))
+  if (!is_good_obj(btech_context_active()->database, mech->mynum))
     return "";
 
   if (!inlos)
@@ -508,7 +508,7 @@ const char *GetMechToMechID(MECH *see, MECH *mech) {
     dprintk("bad see");
     return "";
   }
-  if (!is_good_obj(mech->mynum))
+  if (!is_good_obj(btech_context_active()->database, mech->mynum))
     return "";
 
   if (!InLineOfSight_NB(see, mech, 0, 0, 0)) {
@@ -528,7 +528,7 @@ const char *GetMechID(MECH *mech) {
   char *mname;
   static char ids[SBUF_SIZE];
 
-  if (!is_good_obj(mech->mynum))
+  if (!is_good_obj(btech_context_active()->database, mech->mynum))
     return "";
 
   mname = silly_atr_get(mech->mynum, A_MECHNAME);
@@ -562,7 +562,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   DOCHECK(!freq && strcmp(buffer, "0"), "Invalid frequency!");
   DOCHECK(freq < 0, "Are you trying to kid me?");
   DOCHECK(freq > 999999, "Invalid frequency - range is from 0 to 999999.");
-  notify_printf(player, "Channel %c set to %d.", 'A' + chn, freq);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Channel %c set to %d.",
+                'A' + chn, freq);
   mech->freq[chn] = freq;
 
   /* Code added from Exile to check for possible cheat freq acquring.
@@ -605,13 +606,14 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
   skipws(buffer);
   if (!*buffer) {
     mech->chantitle[chn][0] = 0;
-    notify_printf(player, "Channel %c title cleared.", 'A' + chn);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Channel %c title cleared.",
+                  'A' + chn);
     return;
   }
   strncpy(mech->chantitle[chn], buffer, CHTITLELEN);
   mech->chantitle[chn][CHTITLELEN] = 0;
-  notify_printf(player, "Channel %c title set to set to %s.", 'A' + chn,
-                buffer);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Channel %c title set to set to %s.", 'A' + chn, buffer);
 }
 
 /*                    1234567890123456 */
@@ -660,7 +662,8 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   skipws(buffer);
   if (!buffer || !*buffer) {
     mech->freqmodes[chn] = 0;
-    notify_printf(player, "Channel %c <send> mode set to analog.", 'A' + chn);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Channel %c <send> mode set to analog.", 'A' + chn);
     return;
   }
   while (buffer && *buffer) {
@@ -729,8 +732,9 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     i = strlen(buf);
   }
   buf[i] = 0;
-  notify_printf(player, "Channel %c <send> mode set to %s (flags:%s).",
-                'A' + chn, nm & FREQ_DIGITAL ? "digital" : "analog", buf);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Channel %c <send> mode set to %s (flags:%s).", 'A' + chn,
+                nm & FREQ_DIGITAL ? "digital" : "analog", buf);
 }
 
 void mech_list_freqs(DbRef player, void *data, char *buffer) {
@@ -738,9 +742,11 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   /* UH, this is code that _pretends_ it works :-) */
-  notify(player, "# -- Mode -- Frequency -- Comtitle");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "# -- Mode -- Frequency -- Comtitle");
   for (i = 0; i < MFreqs(mech); i++)
-    notify_printf(player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "%c    %c%c%c%c    %-9d    %s", 'A' + i,
                   mech->freqmodes[i] & FREQ_DIGITAL ? 'D' : 'A',
                   mech->freqmodes[i] & FREQ_RELAY ? 'R' : '-',
                   mech->freqmodes[i] & FREQ_MUTE ? 'M' : '-',
@@ -778,7 +784,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   if (!fail)
     for (i = 0; args[2][i]; i++) {
       if ((BOUNDED(32, args[2][i], 255)) != args[2][i]) {
-        notify(player,
+        notify(BTECH_EVALUATION_CONTEXT, player,
                "Invalid: No control characters in radio messages, please.");
         for (i = 0; i < 3; i++) {
           if (args[i])
@@ -789,7 +795,8 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     }
 
   if (fail) {
-    notify(player, "Invalid format! Usage: sendchannel <letter>=<string>");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Invalid format! Usage: sendchannel <letter>=<string>");
     for (i = 0; i < 3; i++) {
       if (args[i])
         free(args[i]);
@@ -797,12 +804,14 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (mech->freq[chn] == 0 && is_in_character(mech->mapindex)) {
-    send_channel("ZeroFrequencies",
+  if (mech->freq[chn] == 0 &&
+      is_in_character(btech_context_active()->database, mech->mapindex)) {
+    send_channel(BTECH_EVALUATION_CONTEXT, "ZeroFrequencies",
                  "Player #%d (%s) in mech #%d (channel %c) "
                  "on map #%d 0-freqs \"%s\"",
-                 player, Name(player), mech->mynum, chn + 'A', mech->mapindex,
-                 args[2]);
+                 player,
+                 game_object_name(btech_context_active()->database, player),
+                 mech->mynum, chn + 'A', mech->mapindex, args[2]);
   }
 
   sendchannelstuff(mech, chn, args[2]);
@@ -903,7 +912,7 @@ int common_checks(DbRef player, MECH *mech, int flag) {
   if ((flag & MECH_CONSISTENT) && !CheckData(player, mech))
     return 0;
 
-  if (!is_wizard(player)) {
+  if (!is_wizard(btech_context_active()->database, player)) {
     /* ----------------------------- */
     /* INSERT UNSUPPORTED TYPES HERE */
     /* ----------------------------- */
@@ -917,7 +926,7 @@ int common_checks(DbRef player, MECH *mech, int flag) {
 
   /*
       if (MechAuto(mech) > 0)
-          if (is_player(MechPilot(mech)))
+          if (is_player(btech_context_active()->database, MechPilot(mech)))
               MechAuto(mech) = -1;
   */
   MechLastUse(mech) = 0;
@@ -936,15 +945,18 @@ int common_checks(DbRef player, MECH *mech, int flag) {
              "You are unconscious....zzzzzzz");
 
   if (flag & MECH_PILOTONLY)
-    DOCHECK0(!is_wizard(player) && is_in_character(mech->mynum) &&
-                 MechPilot(mech) != player,
-             "Now now, only the pilot can push that button.");
+    DOCHECK0(
+        !is_wizard(btech_context_active()->database, player) &&
+            is_in_character(btech_context_active()->database, mech->mynum) &&
+            MechPilot(mech) != player,
+        "Now now, only the pilot can push that button.");
 
   if (flag & MECH_MAP) {
     DOCHECK0(mech->mapindex < 0, "You are on no map!");
     mech_map = getMap(mech->mapindex);
     if (!mech_map) {
-      notify(player, "You are on an invalid map! Map index reset!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "You are on an invalid map! Map index reset!");
       mech_shutdown(player, (void *)mech, "");
       mech->mapindex = -1;
       return 0;
@@ -1248,12 +1260,16 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
         if (!a) {
           /* No AI there so reset the AI value on the mech */
           MechAuto(tempMech) = -1;
-        } else if (a && obj_location(a->mynum) != tempMech->mynum) {
+        } else if (a && game_object_location(btech_context_active()->database,
+                                             a->mynum) != tempMech->mynum) {
           /* Check to see if the AI is still in the same mech */
-          snprintf(ai_buf, LBUF_SIZE,
-                   "Autopilot #%ld (Location: #%ld) "
-                   "reported on Mech #%ld but not in the proper location",
-                   a->mynum, obj_location(a->mynum), tempMech->mynum);
+          snprintf(
+              ai_buf, LBUF_SIZE,
+              "Autopilot #%ld (Location: #%ld) "
+              "reported on Mech #%ld but not in the proper location",
+              a->mynum,
+              game_object_location(btech_context_active()->database, a->mynum),
+              tempMech->mynum);
           SendAI(ai_buf);
         } else if (a && !ECMDisturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
@@ -1313,10 +1329,12 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
 
       if (!obs)
         mech_notify(tempMech, MECHALL, buf);
-      if (isxp && is_in_character(tempMech->mynum))
-        if ((MechCommLast(tempMech) + 60) < mux_event_tick) {
+      if (isxp &&
+          is_in_character(btech_context_active()->database, tempMech->mynum))
+        if ((MechCommLast(tempMech) + 60) <
+            btech_context_active()->events->tick) {
           AccumulateCommXP(MechPilot(tempMech), tempMech);
-          MechCommLast(tempMech) = mux_event_tick;
+          MechCommLast(tempMech) = btech_context_active()->events->tick;
         }
     }
   } /* End of looping through all the units on the map */
@@ -1696,17 +1714,18 @@ void mech_notify(MECH *mech, int type, char *buffer) {
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))
-      notify(MechPilot(mech), buffer);
+      notify(BTECH_EVALUATION_CONTEXT, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(mech->mynum, NOTHING, mech->mynum, buffer);
+    notify_except(BTECH_EVALUATION_CONTEXT, mech->mynum, NOTHING, mech->mynum,
+                  buffer);
     if (arc_override)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(AeroTurret(mech, i), NOTHING, AeroTurret(mech, i),
-                        buffer);
+          notify_except(BTECH_EVALUATION_CONTEXT, AeroTurret(mech, i), NOTHING,
+                        AeroTurret(mech, i), buffer);
   }
 }
 
@@ -1729,16 +1748,17 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))
-      notify(MechPilot(mech), buffer);
+      notify(BTECH_EVALUATION_CONTEXT, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(mech->mynum, NOTHING, mech->mynum, buffer);
+    notify_except(BTECH_EVALUATION_CONTEXT, mech->mynum, NOTHING, mech->mynum,
+                  buffer);
     if (arc_override)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(AeroTurret(mech, i), NOTHING, AeroTurret(mech, i),
-                        buffer);
+          notify_except(BTECH_EVALUATION_CONTEXT, AeroTurret(mech, i), NOTHING,
+                        AeroTurret(mech, i), buffer);
   }
 }

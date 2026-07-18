@@ -99,7 +99,7 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   if (!GotPilot(mech) || MechPilot(mech) != player) {
-    notify(player, "You're not the pilot!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You're not the pilot!");
     return;
   }
 
@@ -266,7 +266,7 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     eta_y = atoi(args[1]);
     break;
   default:
-    notify(player, "Invalid arguments!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid arguments!");
     return;
   }
   MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
@@ -329,7 +329,7 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
 
     if ((MechSpecials(mech) & TRIPLE_MYOMER_TECH) && (MechHeat(mech) >= 9.)) {
       if ((MechStatus2(mech) & SPRINTING)) {
-        if (mudconf.btech_tsm_sprint_bonus)
+        if (btech_context_active()->configuration->btech_tsm_sprint_bonus)
           mspeed = ceil((rint((mspeed / 1.5) / MP1) + 1) * 1.5) * MP1;
 
       } else {
@@ -359,7 +359,8 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
         if (MechSpecials(mech) & SALVAGE_TECH)
           lugged = lugged / 2;
         if ((MechSpecials(mech) & TRIPLE_MYOMER_TECH) &&
-            (MechHeat(mech) >= 9.) && mudconf.btech_tsm_tow_bonus)
+            (MechHeat(mech) >= 9.) &&
+            btech_context_active()->configuration->btech_tsm_tow_bonus)
           lugged = lugged / 2;
 
         if (MechSpecials2(mech) & CARRIER_TECH)
@@ -482,7 +483,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   water_extinguish_inferno(mech);
 
   // as per ps, prone clears stagger
-  if (mudconf.btech_newstagger)
+  if (btech_context_active()->configuration->btech_newstagger)
     ClearAllStaggerDamage(mech);
 
   possible_mine_poof(mech, MINE_STEP);
@@ -525,7 +526,8 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   /* Check to see if the user specified an argument for the command */
   if (proper_explodearguments(buffer, args, 2)) {
     if (strcmp(args[0], "check") == 0) {
-      notify_printf(player, "Your BTH to stand would be: %d", bth);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Your BTH to stand would be: %d", bth);
       for (i = 0; i < 2; i++) {
         if (args[i])
           free(args[i]);
@@ -534,11 +536,12 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     } else if (strcmp(args[0], "anyway") == 0) {
       standanyway = 1;
     } else if ((strcmp(args[0], "careful") == 0) &&
-               mudconf.btech_standcareful) {
+               btech_context_active()->configuration->btech_standcareful) {
       standcarefulmod = -2;
     } else {
-      notify_printf(player, "Unknown argument! use 'stand check'%s",
-                    mudconf.btech_standcareful
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Unknown argument! use 'stand check'%s",
+                    btech_context_active()->configuration->btech_standcareful
                         ? ", 'stand careful' or 'stand anyway'"
                         : " or 'stand anyway'");
       for (i = 0; i < 2; i++) {
@@ -627,7 +630,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
       MaybeMove(mech);
     }
   } else
-    notify(player, "You're not jumping!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You're not jumping!");
 }
 
 /* Facing related */
@@ -660,7 +663,8 @@ void mech_heading(DbRef player, void *data, char *buffer) {
     mech_printf(mech, MECHALL, "Heading changed to %d.", newheading);
     MaybeMove(mech);
   } else {
-    notify_printf(player, "Your current heading is %i.", MechFacing(mech));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Your current heading is %i.", MechFacing(mech));
   }
 }
 
@@ -684,7 +688,8 @@ void mech_turret(DbRef player, void *data, char *buffer) {
     mech_printf(mech, MECHALL, "Turret facing changed to %d.",
                 AcceptableDegree(MechTurretFacing(mech) + MechFacing(mech)));
   } else {
-    notify_printf(player, "Your turret is currently facing %d.",
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Your turret is currently facing %d.",
                   AcceptableDegree(MechTurretFacing(mech) + MechFacing(mech)));
   }
 
@@ -731,11 +736,12 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You center your torso.");
       break;
     default:
-      notify(player, "Rotate must have LEFT RIGHT or CENTER.");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Rotate must have LEFT RIGHT or CENTER.");
       break;
     }
   } else
-    notify(player, "Invalid number of arguments!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of arguments!");
   MarkForLOSUpdate(mech);
 }
 
@@ -776,7 +782,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode");
 
   if (mech_parseattributes(buffer, args, 1) != 1) {
-    notify_printf(player, "Your current speed is %.2f.", MechSpeed(mech));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Your current speed is %.2f.", MechSpeed(mech));
     return;
   }
   DOCHECK(FlyingT(mech) && AeroFuel(mech) <= 0 && !AeroFreeFuel(mech),
@@ -854,16 +861,18 @@ void mech_speed(DbRef player, void *data, char *buffer) {
                  MechRTerrain(mech) == HIGHWATER),
             "You can't run through water!");
   }
-  if (!is_wizard(player) && is_in_character(mech->mynum) &&
+  if (!is_wizard(btech_context_active()->database, player) &&
+      is_in_character(btech_context_active()->database, mech->mynum) &&
       MechPilot(mech) != player) {
     if (newspeed < 0.0) {
       notify(
-          player,
+          BTECH_EVALUATION_CONTEXT, player,
           "Not being the Pilot of this beast, you cannot move it backwards.");
       return;
     } else if (newspeed > walkspeed) {
-      notify(player, "Not being the Pilot of this beast, you cannot go faster "
-                     "than walking speed.");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Not being the Pilot of this beast, you cannot go faster "
+             "than walking speed.");
       return;
     }
   }
@@ -908,7 +917,7 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   if ((newspeed > maxspeed) || (newspeed < -maxspeed)) {
     snprintf(buff, sizeof(buff), "Max vertical speed is + %d KPH and - %d KPH",
              (int)maxspeed, (int)maxspeed);
-    notify(player, buff);
+    notify(BTECH_EVALUATION_CONTEXT, player, buff);
   } else {
     DOCHECK(Fallen(mech), "Your vehicle's movement system is destroyed.");
     DOCHECK(MechType(mech) == CLASS_VTOL && Landed(mech),
@@ -1636,7 +1645,7 @@ void LandMech(MECH *mech) {
   MechFloods(mech);
   water_extinguish_inferno(mech);
   // this is only for non-new-stagger
-  if (!mudconf.btech_newstagger)
+  if (!btech_context_active()->configuration->btech_newstagger)
     StopStaggerCheck(mech);
 }
 
@@ -1734,7 +1743,7 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
     StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 0);
 
   /* Clear stagger damage if we use new stagger*/
-  if (mudconf.btech_newstagger)
+  if (btech_context_active()->configuration->btech_newstagger)
     ClearAllStaggerDamage(mech);
 
   /* damage pilot */
@@ -2011,8 +2020,8 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
   switch (mode) {
   case 1:
   case 2:
-    if (mudconf.btech_stacking == 2) {
-      int factor = mudconf.btech_stackdamage;
+    if (btech_context_active()->configuration->btech_stacking == 2) {
+      int factor = btech_context_active()->configuration->btech_stackdamage;
       mech_printf(me, MECHALL, "You land on %s!", GetMechToMechID(me, mech));
       mech_printf(mech, MECHALL, "%s lands on you!", GetMechToMechID(mech, me));
       MechLOSBroadcasti(me, mech, "lands on %s!");
@@ -2034,8 +2043,8 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
     }
     return 1;
   }
-  if (mudconf.btech_stacking == 2) {
-    int factor = mudconf.btech_stackdamage;
+  if (btech_context_active()->configuration->btech_stacking == 2) {
+    int factor = btech_context_active()->configuration->btech_stackdamage;
     mech_printf(me, MECHALL, "You bump into %s!", GetMechToMechID(me, mech));
     mech_printf(mech, MECHALL, "%s bumps into you!", GetMechToMechID(mech, me));
     MechLOSBroadcasti(me, mech, "bumps into %s!");
@@ -2071,7 +2080,7 @@ int domino_space(MECH *mech, int mode) {
     return 0;
   if (MechType(mech) != CLASS_MECH)
     return 0;
-  if (mudconf.btech_stacking == 0)
+  if (btech_context_active()->configuration->btech_stacking == 0)
     return 0;
   cnt = mechs_in_hex(map, MechX(mech), MechY(mech), -1, 0);
   if (cnt <= 2)

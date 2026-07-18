@@ -228,7 +228,7 @@ int Dump_Decrease(MECH *mech, int loc, int pos, int *hm) {
       if ((c = GetPartData(mech, loc, pos))) {
         weapindx = Ammo2WeaponI(index);
         if (MechWeapons[weapindx].ammoperton < DUMP_SPEED) {
-          if ((mux_event_tick %
+          if ((btech_context_active()->events->tick %
                (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
             RUP(2);
           /* fine, we remove 1 */

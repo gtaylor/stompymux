@@ -34,8 +34,11 @@ void inferno_burn(MECH *mech, int time) {
     return;
   }
 
-  l = mux_event_last_type_data(EVENT_BURN, (void *)mech) + time;
-  mux_event_remove_type_data(EVENT_BURN, (void *)mech);
+  l = mux_event_last_type_data(btech_context_active()->events, EVENT_BURN,
+                               (void *)mech) +
+      time;
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_BURN,
+                             (void *)mech);
   MECHEVENT(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
 
@@ -139,7 +142,8 @@ void water_extinguish_inferno(MECH *mech) {
       (elev == -1 && !Fallen(mech)))
     return;
 
-  mux_event_remove_type_data(EVENT_BURN, (void *)mech);
+  mux_event_remove_type_data(btech_context_active()->events, EVENT_BURN,
+                             (void *)mech);
   MechCritStatus(mech) &= ~JELLIED;
 
   mech_notify(mech, MECHALL, "The flames extinguish in a roar of steam!");

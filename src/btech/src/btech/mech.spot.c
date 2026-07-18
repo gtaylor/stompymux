@@ -238,7 +238,7 @@ int FireSpot(DbRef player, MECH *mech, MAP *mech_map, int weaponnum,
     return 1;
   }
   if (!(MechTargX(spotter) >= 0 && MechTargY(spotter) >= 0)) {
-    notify(player, "Your spotter has no target set!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Your spotter has no target set!");
     return 1;
   }
   if (!IsArtillery(weapontype))

@@ -62,8 +62,8 @@ void mech_ood_event(MuxEvent *e) {
   /* Time to hit da ground */
   mech_notify(mech, MECHALL, "Your unit touches down!");
 
-  did_it(mech->mynum, mech->mynum, 0, NULL, 0, NULL, A_AOODLAND, (char **)NULL,
-         0);
+  did_it(BTECH_EVALUATION_CONTEXT, mech->mynum, mech->mynum, 0, NULL, 0, NULL,
+         A_AOODLAND, (char **)NULL, 0);
 
   if (MechStatus(mech) & COMBAT_SAFE) {
     /* If we're combat safe, we land regardless, since we're not gonna take any
@@ -103,8 +103,9 @@ void mech_ood_event(MuxEvent *e) {
 
   MechCocoon(mech) = 0;
 
-  if (is_in_character(mech->mynum) &&
-      obj_location(MechPilot(mech)) != mech->mynum)
+  if (is_in_character(btech_context_active()->database, mech->mynum) &&
+      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+          mech->mynum)
     roll_needed += 99;
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
@@ -243,7 +244,7 @@ void initiate_ood(DbRef player, MECH *mech, char *buffer) {
   MechZ(mech) = z;
   MechFZ(mech) = ZSCALE * MechZ(mech);
   MarkForLOSUpdate(mech);
-  notify(player, "OOD initiated.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "OOD initiated.");
   if (Evading(mech)) {
     MechStatus2(mech) &= ~EVADING;
   }

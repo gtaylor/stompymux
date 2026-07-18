@@ -2,10 +2,8 @@
 
 #include <string.h>
 
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/validation.h"
-
-ServerConfiguration mudconf;
 
 char *strip_ansi_r(char *destination, const char *source, size_t size) {
   memcpy(destination, source, size);
@@ -13,16 +11,21 @@ char *strip_ansi_r(char *destination, const char *source, size_t size) {
   return destination;
 }
 
-int string_compare(const char *first, const char *second) {
+int string_compare(const ServerConfiguration *configuration, const char *first,
+                   const char *second) {
+  (void)configuration;
   return strcmp(first, second);
 }
 
 int main(void) {
-  if (!ok_new_player_name("Alice") || !ok_new_player_name("A1") ||
-      !ok_new_player_name("a_"))
+  ServerConfiguration configuration = {0};
+  if (!ok_new_player_name(&configuration, "Alice") ||
+      !ok_new_player_name(&configuration, "A1") ||
+      !ok_new_player_name(&configuration, "a_"))
     return 1;
-  if (ok_new_player_name("A") || ok_new_player_name("1a") ||
-      ok_new_player_name("_a"))
+  if (ok_new_player_name(&configuration, "A") ||
+      ok_new_player_name(&configuration, "1a") ||
+      ok_new_player_name(&configuration, "_a"))
     return 1;
   return 0;
 }

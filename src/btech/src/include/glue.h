@@ -23,6 +23,8 @@
 /* Parameter to the save/load function */
 #pragma once
 
+typedef struct EvaluationContext EvaluationContext;
+
 #define VERIFY 0
 #define SAVE 1
 #define LOAD 2
@@ -47,8 +49,13 @@
 void heartbeat_stop(void);
 
 #define Have_MechPower(a, b)                                                   \
-  (((obj_powers2((obj_owner(a))) & (b)) || is_wizard(obj_owner(a))) &&         \
-   is_inherits((a)))
+  (((game_object_powers2(                                                      \
+         btech_context_active()->database,                                     \
+         (game_object_owner(btech_context_active()->database, a))) &           \
+     (b)) ||                                                                   \
+    is_wizard(btech_context_active()->database,                                \
+              game_object_owner(btech_context_active()->database, a))) &&      \
+   is_inherits(btech_context_active()->database, (a)))
 
 typedef struct CommandsStruct {
   int flag;
@@ -912,4 +919,4 @@ CommandsStruct sscommands[] = {
 
 #endif
 
-void send_channel(char *, const char *, ...);
+void send_channel(EvaluationContext *, const char *, const char *, ...);

@@ -67,9 +67,11 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
           "You need to be under the bridge to pick up this unit.");
   DOCHECK(Towed(target), "That target's already being towed by someone!");
   DOCHECK(MechSwarmTarget(target) == mech->mynum, "You can't grab hold!");
-  DOCHECK(MechTons(mech) < 5 ||
-              (!is_in_character(target->mynum) && !Towable(target)),
-          "You can't tow that!");
+  DOCHECK(
+      MechTons(mech) < 5 ||
+          (!is_in_character(btech_context_active()->database, target->mynum) &&
+           !Towable(target)),
+      "You can't tow that!");
   DOCHECK(MechCritStatus(target) & HIDDEN,
           "You cannot pickup hiding targets....");
   DOCHECK(Burning(target), "You can't tow a burning unit!");
@@ -195,8 +197,10 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   DOCHECK(MechMove(towMech) == MOVE_NONE, "That unit can not tow!");
   DOCHECK(MechTons(towMech) < 5, "That unit can not tow!");
   DOCHECK(Destroyed(towMech), "Destroyed units can not tow!");
-  DOCHECK((MechTons(towMech) < 5) || (!is_in_character(towMech->mynum)),
-          "That unit can not tow!");
+  DOCHECK(
+      (MechTons(towMech) < 5) ||
+          (!is_in_character(btech_context_active()->database, towMech->mynum)),
+      "That unit can not tow!");
   DOCHECK(Burning(towMech), "You can not attach tow cables to a burning unit!");
   DOCHECK((MechSpecials(towMech) & SALVAGE_TECH),
           "That is a dedicated towing unit and can pick up the target itself!");
@@ -223,7 +227,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
           "You must be on the same elevation as the target!");
   DOCHECK(MechCarrying(target) > 0, "That target is towing someone else!");
   DOCHECK(Towed(target), "That target is already being towed by someone!");
-  DOCHECK((!is_in_character(target->mynum) && !Towable(target)),
+  DOCHECK((!is_in_character(btech_context_active()->database, target->mynum) &&
+           !Towable(target)),
           "That unit can not be towed!");
   DOCHECK(MechType(target) == CLASS_MW, "That unit can not be towed!");
   DOCHECK(MechMove(target) == MOVE_NONE, "That unit can not be towed!");

@@ -81,7 +81,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         options = SHOW_WEAPONS;
         break;
       default:
-        notify(player, "Truly odd option!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Truly odd option!");
         return;
       }
     }
@@ -140,7 +140,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       dob = 1;
       break;
     default:
-      notify(player, "Invalid 3rd argument!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid 3rd argument!");
       return;
     }
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
@@ -178,7 +178,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         options = SHOW_WEAPONS;
         break;
       default:
-        notify(player, "Truly odd option!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Truly odd option!");
         return;
       }
       break;
@@ -214,7 +214,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     return;
   }
   if (!dob && !doh) {
-    notify(player, "You see nobody in the hex!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You see nobody in the hex!");
     return;
   }
   if (dob)
@@ -321,7 +321,7 @@ void ShowTurretFacing(DbRef player, int spaces, MECH *mech) {
                i ? tprintf(" (%d offset from heading)", i) : "");
     else
       snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees", j);
-    notify(player, buff);
+    notify(BTECH_EVALUATION_CONTEXT, player, buff);
   }
 }
 
@@ -335,84 +335,99 @@ void PrintReport(DbRef player, MECH *mech, MECH *tempMech, float range) {
   snprintf(buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
            MechIDS(tempMech, MechSeemsFriend(mech, tempMech)), mech_name,
            MechTons(tempMech));
-  notify(player, buff);
+  notify(BTECH_EVALUATION_CONTEXT, player, buff);
   bearing = FindBearing(MechFX(mech), MechFY(mech), MechFX(tempMech),
                         MechFY(tempMech));
   snprintf(buff, sizeof(buff), "      Range: %.1f hex\t\tBearing: %d degrees",
            range, bearing);
-  notify(player, buff);
+  notify(BTECH_EVALUATION_CONTEXT, player, buff);
   snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\t\tHeading: %d degrees",
            MechSpeed(tempMech), MechVFacing(tempMech));
-  notify(player, buff);
+  notify(BTECH_EVALUATION_CONTEXT, player, buff);
   if (FlyingT(tempMech))
-    notify_printf(player, "      Vertical speed: %.1f KPH",
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "      Vertical speed: %.1f KPH",
                   MechVerticalSpeed(tempMech));
   snprintf(buff, sizeof(buff),
            "      X, Y, Z: %3d, %3d, %3d\tHeat: %.0f deg C.", MechX(tempMech),
            MechY(tempMech), MechZ(tempMech), 10. * MechHeat(tempMech));
-  notify(player, buff);
+  notify(BTECH_EVALUATION_CONTEXT, player, buff);
   if (MechLateral(tempMech))
-    notify_printf(player, "      Mech is moving laterally %s",
-                  LateralDesc(tempMech));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "      Mech is moving laterally %s", LateralDesc(tempMech));
   ShowTurretFacing(player, 6, tempMech);
 
   switch (MechMove(tempMech)) {
   case MOVE_NONE:
-    notify(player, "      Type: INSTALLATION");
+    notify(BTECH_EVALUATION_CONTEXT, player, "      Type: INSTALLATION");
     break;
   case MOVE_BIPED:
     switch (MechType(tempMech)) {
     case CLASS_MW:
-      notify(player, "      Type: MECHWARRIOR         Movement: BIPED");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "      Type: MECHWARRIOR         Movement: BIPED");
       break;
     case CLASS_MECH:
-      notify(player, "      Type: MECH                Movement: BIPED");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "      Type: MECH                Movement: BIPED");
       break;
     case CLASS_BSUIT:
-      notify(player, "      Type: BATTLESUIT(S)       Movement: BIPED");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "      Type: BATTLESUIT(S)       Movement: BIPED");
     }
     break;
   case MOVE_QUAD:
-    notify(player, "      Type: MECH                Movement: QUAD");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: MECH                Movement: QUAD");
     break;
   case MOVE_TRACK:
-    notify(player, "      Type: VEHICLE             Movement: TRACKED");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: VEHICLE             Movement: TRACKED");
     break;
   case MOVE_WHEEL:
-    notify(player, "      Type: VEHICLE             Movement: WHEELED");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: VEHICLE             Movement: WHEELED");
     break;
   case MOVE_HOVER:
-    notify(player, "      Type: VEHICLE             Movement: HOVER");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: VEHICLE             Movement: HOVER");
     break;
   case MOVE_VTOL:
-    notify(player, "      Type: VTOL                Movement: VTOL");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: VTOL                Movement: VTOL");
     break;
   case MOVE_FLY:
-    notify_printf(player, "      Type: %-9s             Movement: FLIGHT",
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "      Type: %-9s             Movement: FLIGHT",
                   MechType(tempMech) == CLASS_AERO ? "AEROSPACE" : "DROPSHIP");
     break;
   case MOVE_HULL:
-    notify(player, "      Type: NAVAL               Movement: HULL");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: NAVAL               Movement: HULL");
     break;
   case MOVE_SUB:
-    notify(player, "      Type: NAVAL               Movement: SUBMARINE");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: NAVAL               Movement: SUBMARINE");
     break;
   case MOVE_FOIL:
-    notify(player, "      Type: NAVAL               Movement: HYDROFOIL");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "      Type: NAVAL               Movement: HYDROFOIL");
     break;
   }
 
   weaponarc = InWeaponArc(mech, MechFX(tempMech), MechFY(tempMech));
   if (weaponarc & TURRETARC) {
-    notify(player, "      In Turret Arc");
+    notify(BTECH_EVALUATION_CONTEXT, player, "      In Turret Arc");
     weaponarc &= ~TURRETARC;
   }
-  notify_printf(player, "      In %s Weapons Arc", GetArcID(mech, weaponarc));
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "      In %s Weapons Arc",
+                GetArcID(mech, weaponarc));
   Mech_ShowFlags(player, tempMech, 6, 1);
   if (Jumping(tempMech))
-    notify_printf(player, "      Mech is Jumping!\tJump Heading: %d",
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "      Mech is Jumping!\tJump Heading: %d",
                   MechJumpHeading(tempMech));
-  notify(player, " ");
+  notify(BTECH_EVALUATION_CONTEXT, player, " ");
 }
 
 void PrintEnemyStatus(DbRef player, MECH *mymech, MECH *mech, float range,
@@ -429,13 +444,14 @@ void PrintEnemyStatus(DbRef player, MECH *mymech, MECH *mech, float range,
     PrintArmorStatus(player, mech, owner);
   if (opt & SHOW_INFO) {
     if (MechStatus(mech) & TORSO_RIGHT)
-      notify(player, "Torso is 60 degrees right");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Torso is 60 degrees right");
     if (MechStatus(mech) & TORSO_LEFT)
-      notify(player, "Torso is 60 degrees left");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Torso is 60 degrees left");
     if (MechCarrying(mech) > 0)
       if ((tempMech = getMech(MechCarrying(mech))))
-        notify_printf(player, "Towing %s.", GetMechToMechID(mech, tempMech));
-    notify(player, " ");
+        notify_printf(BTECH_EVALUATION_CONTEXT, player, "Towing %s.",
+                      GetMechToMechID(mech, tempMech));
+    notify(BTECH_EVALUATION_CONTEXT, player, " ");
   }
   if (opt & SHOW_WEAPONS) {
     if (owner)
@@ -473,13 +489,14 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
-            notify(player, "Target is not in line of sight!");
+            notify(BTECH_EVALUATION_CONTEXT, player,
+                   "Target is not in line of sight!");
             return;
           }
         }
       }
       if (!FindTargetXY(mech, &x1, &y1, &z1)) {
-        notify(player, "There is no default target!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "There is no default target!");
       } else {
         strcpy(buff, "Bearing to default target is: ");
       }
@@ -489,7 +506,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
             iy1 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Bearing to  %d,%d is: ", ix1, iy1);
@@ -505,7 +522,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
             iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Bearing to %d,%d from %d,%d is: ", ix1,
@@ -514,16 +531,17 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
       }
     } else {
-      notify(player, "Invalid number of attributes to Bearing function!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Invalid number of attributes to Bearing function!");
     }
     if (x1 != -1) {
       temp = FindBearing(x0, y0, x1, y1);
       snprintf(trash, sizeof(trash), "%.0f degrees.", temp);
       strcat(buff, trash);
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
     }
   } else {
-    notify(player, "You are not on a map!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You are not on a map!");
   }
 }
 
@@ -558,7 +576,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
-            notify(player, "Target is not in line of sight!");
+            notify(BTECH_EVALUATION_CONTEXT, player,
+                   "Target is not in line of sight!");
             return;
           }
         }
@@ -574,7 +593,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
             iy1 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
@@ -595,7 +614,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
             iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Range to %d,%d from %d,%d is: ", ix1, iy1,
@@ -610,7 +629,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
         }
       }
     } else {
-      notify(player, "Invalid number of attributes to Range function!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Invalid number of attributes to Range function!");
       x1 = y1 = -1;
     }
     if (x1 != -1) {
@@ -624,10 +644,10 @@ void mech_range(DbRef player, void *data, char *buffer) {
       else
         snprintf(trash, sizeof(trash), "%s hexes.", buf1);
       strcat(buff, trash);
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
     }
   } else {
-    notify(player, "You are not on a map!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You are not on a map!");
   }
 }
 
@@ -662,7 +682,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
-            notify(player, "Target is not in line of sight!");
+            notify(BTECH_EVALUATION_CONTEXT, player,
+                   "Target is not in line of sight!");
             return;
           }
         }
@@ -676,7 +697,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[1]);
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
             iy1 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
@@ -690,7 +711,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       iz1 = atoi(args[2]);
       if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
             iy1 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d,%d is: ", ix1, iy1, iz1);
@@ -708,7 +729,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
             iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff), "Vector to %d,%d from %d,%d is: ", ix1,
@@ -730,7 +751,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
             iy1 < mech_map->map_height && ix0 >= 0 &&
             ix0 <= mech_map->map_width && iy0 >= 0 &&
             iy0 < mech_map->map_height)) {
-        notify(player, "Invalid map coordinates!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
         snprintf(buff, sizeof(buff),
@@ -743,7 +764,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       }
 
     } else {
-      notify(player, "Invalid number of attributes to Vector function!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Invalid number of attributes to Vector function!");
       x1 = y1 = -1;
     }
     if (x1 != -1) {
@@ -771,10 +793,10 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  FindZBearing(x0, y0, z0, x1, y1, z1));
       strcat(buff, trash);
 
-      notify(player, buff);
+      notify(BTECH_EVALUATION_CONTEXT, player, buff);
     }
   } else {
-    notify(player, "You are not on a map!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "You are not on a map!");
   }
 }
 
@@ -791,11 +813,14 @@ void PrintEnemyWeaponStatus(MECH *mech, DbRef player) {
   int running_sum = 0;
 
   recycle_weaponry(mech);
-  notify(player, "================WEAPON SYSTEMS================");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "================WEAPON SYSTEMS================");
   if (MechType(mech) == CLASS_BSUIT)
-    notify(player, "----- Weapon ------ [##]  Holder ------ Status");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "----- Weapon ------ [##]  Holder ------ Status");
   else
-    notify(player, "----- Weapon ------ [##]  Location ---- Status");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "----- Weapon ------ [##]  Location ---- Status");
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     if (SectIsDestroyed(mech, loop))
       continue;
@@ -818,7 +843,7 @@ void PrintEnemyWeaponStatus(MECH *mech, DbRef player) {
             strcat(weapbuff, "%cgReady%c");
           }
         }
-        notify(player, weapbuff);
+        notify(BTECH_EVALUATION_CONTEXT, player, weapbuff);
       }
       running_sum += count;
     }
@@ -839,7 +864,8 @@ void mech_sight(DbRef player, void *data, char *buffer) {
     weapnum = atoi(args[0]);
     FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 1);
   } else {
-    notify(player, "Not enough arguments to the function");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Not enough arguments to the function");
   }
 }
 
@@ -868,9 +894,9 @@ void mech_view(DbRef player, void *data, char *buffer) {
                               FaMechRange(mech, target)),
             "That target isn't seen well enough by the scannfers for viewing!");
     if (*(target_desc = silly_atr_get(target->mynum, A_MECHDESC)))
-      notify(player, target_desc);
+      notify(BTECH_EVALUATION_CONTEXT, player, target_desc);
     else
-      notify(player, "That target has no markings.");
+      notify(BTECH_EVALUATION_CONTEXT, player, "That target has no markings.");
   } else if (argc == 1) { /* ID number */
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
@@ -892,9 +918,10 @@ void mech_view(DbRef player, void *data, char *buffer) {
             "That target isn't seen well enough by the scanners for viewing!");
 
     if (*(target_desc = silly_atr_get(target->mynum, A_MECHDESC)))
-      notify(player, target_desc);
+      notify(BTECH_EVALUATION_CONTEXT, player, target_desc);
     else
-      notify(player, "That target has no markings.");
+      notify(BTECH_EVALUATION_CONTEXT, player, "That target has no markings.");
   } else
-    notify(player, "Invalid number of arguments to function.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Invalid number of arguments to function.");
 }

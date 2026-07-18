@@ -33,7 +33,7 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
               (NUM_BAYS + 1),
           "Invalid number of arguments!");
   for (i = 0; i < argc; i++) {
-    it = match_thing(player, args[i]);
+    it = match_thing(BTECH_MATCH_CONTEXT, player, args[i]);
     DOCHECK(it == NOTHING, tprintf("Argument %d is invalid.", i + 1));
     DOCHECK(!IsMap(it), tprintf("Argument %d is not a map.", i + 1));
     map = FindObjectsData(it);
@@ -42,7 +42,7 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
   }
   for (i = argc; i < NUM_BAYS; i++)
     AeroBay(ds, i) = -1;
-  notify_printf(player, "%d bay(s) set up!", argc);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d bay(s) set up!", argc);
 }
 
 extern int dirs[6][2];
@@ -150,7 +150,8 @@ static void mech_enterbay_event(MuxEvent *e) {
   MechLOSBroadcast(mech, tprintf("has entered %s at %d,%d.", GetMechID(ds),
                                  MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
-  if (MechType(mech) == CLASS_MW && !is_in_character(ref)) {
+  if (MechType(mech) == CLASS_MW &&
+      !is_in_character(btech_context_active()->database, ref)) {
     enter_mw_bay(mech, ref);
     return;
   }
@@ -193,8 +194,9 @@ static int DS_Bay_Is_EnterOK(MECH *mech, MECH *ds, DbRef bayref) {
   for (i = 0; i < NUM_BAYS; i++)
     if (AeroBay(ds, i) > 0)
       if (AeroBay(ds, i) == bayref)
-        return mux_event_count_type_data2(EVENT_ENTER_HANGAR, (void *)bayref) >
-                       0
+        return mux_event_count_type_data2(btech_context_active()->events,
+                                          EVENT_ENTER_HANGAR,
+                                          (void *)bayref) > 0
                    ? 0
                    : 1;
   return 0;
@@ -256,7 +258,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
     char *msg = silly_atr_get(ref, A_FAIL);
     if (!msg || !*msg)
       msg = "You are unable to enter the bay!";
-    notify(player, msg);
+    notify(BTECH_EVALUATION_CONTEXT, player, msg);
     return;
   }
   DOCHECK(!DS_Bay_Is_EnterOK(mech, ds, AeroBay(ds, bayn)),
@@ -321,8 +323,9 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   MechLOSBroadcasti(mech, ds, "has left %s's bay.");
   mech_notify(ds, MECHALL, tprintf("%s has left the bay.", GetMechID(mech)));
   ContinueFlying(mech);
-  if (is_in_character(mech->mynum) &&
-      obj_location(MechPilot(mech)) != mech->mynum) {
+  if (is_in_character(btech_context_active()->database, mech->mynum) &&
+      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+          mech->mynum) {
     mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
     mech_notify(mech, MECHALL,
                 "%ch%cr%cfAutomatic self-destruct sequence initiated.%c");
@@ -338,7 +341,7 @@ int Leave_DS(MAP *map, MECH *mech) {
   DOCHECKMA0(!DS_Bay_Is_Open(mech, car, map->mynum),
              "The door has been jammed!");
   DOCHECKMA0(!Landed(car) && !FlyingT(mech), "The 'ship is still airborne!");
-  DOCHECKMA0(is_zombie(car->mynum),
+  DOCHECKMA0(is_zombie(btech_context_active()->database, car->mynum),
              "You don't feel leaving right now would be prudent..");
   return Leave_DS_Bay(map, car, mech, map->mynum);
 }

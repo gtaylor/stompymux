@@ -126,8 +126,9 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
 
   /* Make sure they specified an argument */
   if (!*buffer) {
-    notify(player, "No argument used : Usage delcommand [num]\n");
-    notify_printf(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "No argument used : Usage delcommand [num]\n");
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "Must be within the range"
                   " 1 to %d or -1 for all\n",
                   doubly_linked_list_size(autopilot->commands));
@@ -136,7 +137,7 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
 
   /* Make sure its a number */
   if (Readnum(p, buffer)) {
-    notify_printf(player,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",
                   doubly_linked_list_size(autopilot->commands));
@@ -148,7 +149,7 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
   if (p == -1) {
     remove_all_commands = 1;
   } else if ((p > doubly_linked_list_size(autopilot->commands)) || (p < 1)) {
-    notify_printf(player,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "Invalid Argument : Must be within the range"
                   " 1 to %d or -1 for all\n",
                   doubly_linked_list_size(autopilot->commands));
@@ -176,7 +177,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
     /* Destroy the command_node */
     auto_destroy_command_node(temp_command_node);
 
-    notify_printf(player, "Command #%d Successfully Removed\n", p);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Command #%d Successfully Removed\n", p);
 
   } else {
 
@@ -205,7 +207,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
       }
     }
 
-    notify(player, "All the commands have been removed.\n");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "All the commands have been removed.\n");
   }
 }
 
@@ -214,8 +217,9 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
  * command list
  */
 void auto_jump(DbRef player, void *data, char *buffer) {
-  notify(player, "jump has been temporarly disabled till I can figure out"
-                 " how I want to change it - Dany");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "jump has been temporarly disabled till I can figure out"
+         " how I want to change it - Dany");
 #if 0
 	skipws(buffer);
 	DOCHECK(!*buffer, "Argument expected!");
@@ -224,7 +228,7 @@ void auto_jump(DbRef player, void *data, char *buffer) {
 	DOCHECK(!auto_valid_progline(a, p),
 			"Invalid : Argument out of range, or argument, not command.");
 	PG(a) = p;
-	notify_printf(player, "Program Counter set to #%d.", p);
+	notify_printf(BTECH_EVALUATION_CONTEXT, player, "Program Counter set to #%d.", p);
 #endif
 }
 
@@ -277,7 +281,8 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
         if (args[j])
           free(args[j]);
       }
-      notify(player, "Not the proper number of arguments!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Not the proper number of arguments!");
       return;
     }
 
@@ -304,7 +309,7 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
   doubly_linked_list_insert_end(autopilot->commands, temp_dllist_node);
 
   /* Let the player know it worked */
-  notify_printf(player, "Command Added: %s",
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Command Added: %s",
                 auto_show_command(temp_command_node));
 }
 
@@ -320,11 +325,16 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
 
   addline();
 
-  snprintf(buf, MBUF_SIZE, "Autopilot data for %s", Name(autopilot->mynum));
+  snprintf(
+      buf, MBUF_SIZE, "Autopilot data for %s",
+      game_object_name(btech_context_active()->database, autopilot->mynum));
   vsi(buf);
 
-  snprintf(buf, MBUF_SIZE, "Controling unit %s",
-           Name(obj_location(autopilot->mynum)));
+  snprintf(
+      buf, MBUF_SIZE, "Controling unit %s",
+      game_object_name(btech_context_active()->database,
+                       game_object_location(btech_context_active()->database,
+                                            autopilot->mynum)));
   vsi(buf);
 
   addline();
@@ -361,22 +371,24 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
   AUTO *autopilot = (AUTO *)data;
   int i, j, total;
 
-  notify(player, "Events by type: ");
-  notify(player, "-------------------------------");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Events by type: ");
+  notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------");
 
   total = 0;
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++) {
 
-    if ((j = mux_event_count_type_data(i, (void *)autopilot))) {
-      notify_printf(player, "%-20s%d", mux_event_names[i], j);
+    if ((j = mux_event_count_type_data(btech_context_active()->events, i,
+                                       (void *)autopilot))) {
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "%-20s%d",
+                    mux_event_names[i], j);
       total += j;
     }
   }
 
   if (total) {
-    notify(player, "-------------------------------");
-    notify_printf(player, "%d total", total);
+    notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------");
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d total", total);
   }
 }
 
@@ -388,7 +400,8 @@ static int auto_pilot_on(AUTO *autopilot) {
   int i, j, count = 0;
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++)
-    if ((j = mux_event_count_type_data(i, (void *)autopilot)))
+    if ((j = mux_event_count_type_data(btech_context_active()->events, i,
+                                       (void *)autopilot)))
       count += j;
 
   if (!count) {
@@ -410,7 +423,8 @@ extern void auto_stop_pilot(AUTO *autopilot) {
       ~(AUTOPILOT_AUTOGUN | AUTOPILOT_GUNZOMBIE | AUTOPILOT_PILZOMBIE);
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++)
-    mux_event_remove_type_data(i, (void *)autopilot);
+    mux_event_remove_type_data(btech_context_active()->events, i,
+                               (void *)autopilot);
 }
 
 /*
@@ -462,7 +476,8 @@ void auto_engage(DbRef player, void *data, char *buffer) {
   MECH *mech;
 
   autopilot->mymech = mech =
-      getMech((autopilot->mymechnum = obj_location(autopilot->mynum)));
+      getMech((autopilot->mymechnum = game_object_location(
+                   btech_context_active()->database, autopilot->mynum)));
   DOCHECK(!autopilot, "Internal error! - Bad AI object!");
   DOCHECK(!mech, "Error: The autopilot isn't inside a 'mech!");
   DOCHECK(auto_pilot_on(autopilot),
@@ -477,7 +492,7 @@ void auto_engage(DbRef player, void *data, char *buffer) {
 
   autopilot->mapindex = mech->mapindex;
 
-  notify(player, "Engaging autopilot...");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Engaging autopilot...");
   AUTOEVENT(autopilot, EVENT_AUTOCOM, auto_com_event, AUTOPILOT_NC_DELAY, 0);
 
   return;
@@ -494,7 +509,7 @@ void auto_disengage(DbRef player, void *data, char *buffer) {
           "The autopilot's already offline! You have to engage it first.");
 
   auto_stop_pilot(autopilot);
-  notify(player, "Autopilot has been disengaged.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Autopilot has been disengaged.");
 
   return;
 }

@@ -367,5 +367,5 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
 void mech_losemit(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSP);
   MechLOSBroadcast(mech, buffer);
-  notify(player, "Broadcast done.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Broadcast done.");
 }

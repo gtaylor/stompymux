@@ -6,14 +6,15 @@
 
 #include "mux/commands/command.h"
 #include "mux/database/db.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 
 #include "mux/server/version.h"
 
-void do_version(DbRef player, DbRef cause, int extra) {
-  notify(player, mudstate.version);
+void do_version(CommandInvocation *invocation) {
+  notify(&invocation->context->evaluation, invocation->player,
+         invocation->context->server->version);
 }
 
 const char *mux_version = BTMUX_VERSION_STRING
@@ -24,12 +25,12 @@ const char *mux_version = BTMUX_VERSION_STRING
 #endif
     " built on " MUX_BUILD_DATE;
 
-void init_version(void) {
-  strlcpy(mudstate.version, mux_version, sizeof(mudstate.version));
+void init_version(MuxServer *server) {
+  strlcpy(server->version, mux_version, sizeof(server->version));
 
-  STARTLOG(LOG_ALWAYS, "INI", "START") {
+  STARTLOG(&server->log, LOG_ALWAYS, "INI", "START") {
     log_text("Starting: ");
-    log_text(mudstate.version);
-    ENDLOG;
+    log_text(server->version);
+    ENDLOG(&server->log);
   }
 }

@@ -12,34 +12,79 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
+#include "mux/world/world_context.h"
 
-bool is_good_obj(DbRef x) {
-  return x >= 0 && x < mudstate.db_top && typeof_obj(x) < NOTYPE;
-}
-
-bool is_safe(DbRef x, DbRef p) {
-  return is_owns_others(x) || (obj_flags(x) & SAFE) ||
-         (mudconf.safe_unowned && (obj_owner(x) != obj_owner(p)));
+bool is_good_obj(GameDatabase *database, DbRef x) {
+  return x >= 0 && x < database->top && typeof_obj(database, x) < NOTYPE;
 }
 
-void mark(DbRef x) {
-  mudstate.markbits->chunk[x >> 3] =
-      (char)(mudstate.markbits->chunk[x >> 3] | mudconf.markdata[x & 7]);
+bool is_safe(GameDatabase *database, const ServerConfiguration *configuration,
+             DbRef x, DbRef p) {
+  return is_owns_others(database, x) ||
+         (game_object_flags(database, x) & SAFE) ||
+         (configuration->safe_unowned &&
+          (game_object_owner(database, x) != game_object_owner(database, p)));
 }
-void unmark(DbRef x) {
-  mudstate.markbits->chunk[x >> 3] =
-      (char)(mudstate.markbits->chunk[x >> 3] & ~mudconf.markdata[x & 7]);
+
+bool is_examinable(EvaluationContext *evaluation, DbRef p, DbRef x) {
+  GameDatabase *database = evaluation->world->database;
+  return is_wizard(database, p) ||
+         (game_object_owner(database, p) == game_object_owner(database, x)) ||
+         is_on_enter_lock(evaluation, p, x);
 }
-bool is_marked(DbRef x) {
-  return mudstate.markbits->chunk[x >> 3] & mudconf.markdata[x & 7];
+
+bool is_myopic_exam(EvaluationContext *evaluation, DbRef p, DbRef x) {
+  GameDatabase *database = evaluation->world->database;
+  return !is_myopic(database, p) &&
+         (is_wizard(database, p) ||
+          (game_object_owner(database, p) == game_object_owner(database, x)) ||
+          is_on_enter_lock(evaluation, p, x));
 }
-void unmark_all(void) {
+
+bool is_controls(EvaluationContext *evaluation, DbRef p, DbRef x) {
+  GameDatabase *database = evaluation->world->database;
+  return is_good_obj(database, x) &&
+         !(is_god(database, x) && !is_god(database, p)) &&
+         (is_wizard(database, p) ||
+          ((game_object_owner(database, p) == game_object_owner(database, x)) &&
+           (is_inherits(database, p) || !is_inherits(database, x))) ||
+          is_on_enter_lock(evaluation, p, x));
+}
+
+bool can_link_exit(EvaluationContext *evaluation, DbRef p, DbRef x) {
+  GameDatabase *database = evaluation->world->database;
+  return typeof_obj(database, x) == TYPE_EXIT &&
+         (game_object_location(database, x) == NOTHING ||
+          is_controls(evaluation, p, x));
+}
+
+bool is_linkable(EvaluationContext *evaluation, DbRef p, DbRef x) {
+  GameDatabase *database = evaluation->world->database;
+  return is_good_obj(database, x) && has_contents(database, x) &&
+         is_controls(evaluation, p, x);
+}
+
+void mark(GameDatabase *database, DbRef x) {
+  const unsigned char mask = (unsigned char)(1U << (x & 7));
+  database->markbits->chunk[x >> 3] =
+      (char)((unsigned char)database->markbits->chunk[x >> 3] | mask);
+}
+void unmark(GameDatabase *database, DbRef x) {
+  const unsigned char mask = (unsigned char)(1U << (x & 7));
+  database->markbits->chunk[x >> 3] =
+      (char)((unsigned char)database->markbits->chunk[x >> 3] &
+             (unsigned char)~mask);
+}
+bool is_marked(GameDatabase *database, DbRef x) {
+  const unsigned char mask = (unsigned char)(1U << (x & 7));
+  return ((unsigned char)database->markbits->chunk[x >> 3] & mask) != 0;
+}
+void unmark_all(GameDatabase *database) {
   DbRef i;
 
-  for (i = 0; i < ((mudstate.db_top + 7) >> 3); i++)
-    mudstate.markbits->chunk[i] = 0x0;
+  for (i = 0; i < ((database->top + 7) >> 3); i++)
+    database->markbits->chunk[i] = 0x0;
 }
 
 static bool has_priv_suffix(const char *name) {
@@ -47,47 +92,60 @@ static bool has_priv_suffix(const char *name) {
          !strcasecmp(name + (strlen(name) - 5), ".PRIV");
 }
 
-bool see_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
+              DbRef o, long f) {
   return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
-         ((is_god(p) || (f & AF_VISUAL) ||
-           (((obj_owner(p) == o) || is_examinable(p, x)) &&
+         ((is_god(evaluation->world->database, p) || (f & AF_VISUAL) ||
+           (((game_object_owner(evaluation->world->database, p) == o) ||
+             is_examinable(evaluation, p, x)) &&
             !(a->flags & (AF_DARK | AF_MDARK)) && !(f & (AF_DARK | AF_MDARK)) &&
             !has_priv_suffix(a->name)) ||
-           (is_wizard(p) && !(a->flags & AF_DARK)) ||
+           (is_wizard(evaluation->world->database, p) &&
+            !(a->flags & AF_DARK)) ||
            (!(a->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&
             !has_priv_suffix(a->name))));
 }
-bool see_attr_explicit(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+bool see_attr_explicit(GameDatabase *database, DbRef p, DbRef x, Attribute *a,
+                       DbRef o, long f) {
   return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
          ((f & AF_VISUAL) ||
-          ((obj_owner(p) == o) && !(a->flags & (AF_DARK | AF_MDARK)) &&
-           !has_priv_suffix(a->name)));
+          ((game_object_owner(database, p) == o) &&
+           !(a->flags & (AF_DARK | AF_MDARK)) && !has_priv_suffix(a->name)));
 }
-bool set_attr(DbRef p, DbRef x, Attribute *a, long f) {
+bool set_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
+              long f) {
   return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
-         (is_god(p) ||
-          (!is_god(x) && !(f & AF_LOCK) &&
-           ((is_controls(p, x) && !(a->flags & (AF_WIZARD | AF_GOD)) &&
+         (is_god(evaluation->world->database, p) ||
+          (!is_god(evaluation->world->database, x) && !(f & AF_LOCK) &&
+           ((is_controls(evaluation, p, x) &&
+             !(a->flags & (AF_WIZARD | AF_GOD)) &&
              !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
-            (is_wizard(p) && !(a->flags & AF_GOD)))));
+            (is_wizard(evaluation->world->database, p) &&
+             !(a->flags & AF_GOD)))));
 }
-bool read_attr(DbRef p, DbRef x, Attribute *a, DbRef o, long f) {
+bool read_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
+               DbRef o, long f) {
   return !(a->flags & AF_INTERNAL) &&
-         ((is_god(p) || (f & AF_VISUAL) ||
-           (((obj_owner(p) == o) || is_examinable(p, x)) &&
+         ((is_god(evaluation->world->database, p) || (f & AF_VISUAL) ||
+           (((game_object_owner(evaluation->world->database, p) == o) ||
+             is_examinable(evaluation, p, x)) &&
             !(a->flags & (AF_DARK | AF_MDARK)) && !(f & (AF_DARK | AF_MDARK)) &&
             !has_priv_suffix(a->name)) ||
-           (is_wizard(p) && !(a->flags & AF_DARK)) ||
+           (is_wizard(evaluation->world->database, p) &&
+            !(a->flags & AF_DARK)) ||
            (!(a->flags & (AF_DARK | AF_MDARK | AF_ODARK)) &&
             !has_priv_suffix(a->name))));
 }
-bool write_attr(DbRef p, DbRef x, Attribute *a, long f) {
+bool write_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
+                long f) {
   return !(a->flags & AF_INTERNAL) &&
-         (is_god(p) ||
-          (!is_god(x) && !(f & AF_LOCK) &&
-           ((is_controls(p, x) && !(a->flags & (AF_WIZARD | AF_GOD)) &&
+         (is_god(evaluation->world->database, p) ||
+          (!is_god(evaluation->world->database, x) && !(f & AF_LOCK) &&
+           ((is_controls(evaluation, p, x) &&
+             !(a->flags & (AF_WIZARD | AF_GOD)) &&
              !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
-            (is_wizard(p) && !(a->flags & AF_GOD)))));
+            (is_wizard(evaluation->world->database, p) &&
+             !(a->flags & AF_GOD)))));
 }
 
 /**
@@ -97,26 +155,39 @@ bool write_attr(DbRef p, DbRef x, Attribute *a, long f) {
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_any(DbRef target, DbRef player, Flag flag, int fflags,
-                  int reset) {
+static int fh_any(EvaluationContext *evaluation, DbRef target, DbRef player,
+                  Flag flag, int fflags, int reset) {
+  (void)evaluation;
   if (fflags & FLAG_WORD3) {
     if (reset)
-      s_flags3(target, obj_flags3(target) & ~flag);
+      game_object_set_flags3(
+          evaluation->world->database, target,
+          game_object_flags3(evaluation->world->database, target) & ~flag);
     else
-      s_flags3(target, obj_flags3(target) | flag);
+      game_object_set_flags3(
+          evaluation->world->database, target,
+          game_object_flags3(evaluation->world->database, target) | flag);
   } else if (fflags & FLAG_WORD2) {
     if (reset)
-      s_flags2(target, obj_flags2(target) & ~flag);
+      game_object_set_flags2(
+          evaluation->world->database, target,
+          game_object_flags2(evaluation->world->database, target) & ~flag);
     else
-      s_flags2(target, obj_flags2(target) | flag);
+      game_object_set_flags2(
+          evaluation->world->database, target,
+          game_object_flags2(evaluation->world->database, target) | flag);
   } else {
     if (reset)
-      s_flags(target, obj_flags(target) & ~flag);
+      game_object_set_flags(
+          evaluation->world->database, target,
+          game_object_flags(evaluation->world->database, target) & ~flag);
     else
-      s_flags(target, obj_flags(target) | flag);
+      game_object_set_flags(
+          evaluation->world->database, target,
+          game_object_flags(evaluation->world->database, target) | flag);
   }
   return 1;
-} /* end fh_and() */
+} /* end fh_and(evaluation, ) */
 
 /**
  * Function to block out non-GOD for setting or clearing a bit.
@@ -126,13 +197,13 @@ static int fh_any(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_god(DbRef target, DbRef player, Flag flag, int fflags,
-                  int reset) {
-  if (!is_god(player))
+static int fh_god(EvaluationContext *evaluation, DbRef target, DbRef player,
+                  Flag flag, int fflags, int reset) {
+  if (!is_god(evaluation->world->database, player))
     return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_god() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_god(evaluation, ) */
 
 /**
  * Blocks out non-WIZARDS setting or clearing a bit.
@@ -142,13 +213,14 @@ static int fh_god(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_wiz(DbRef target, DbRef player, Flag flag, int fflags,
-                  int reset) {
-  if (!is_wizard(player) && !is_god(player))
+static int fh_wiz(EvaluationContext *evaluation, DbRef target, DbRef player,
+                  Flag flag, int fflags, int reset) {
+  if (!is_wizard(evaluation->world->database, player) &&
+      !is_god(evaluation->world->database, player))
     return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_wiz() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_wiz(evaluation, ) */
 
 /**
  * Only allows the bit to be set on players by WIZARDS.
@@ -158,14 +230,15 @@ static int fh_wiz(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_fixed(DbRef target, DbRef player, Flag flag, int fflags,
-                    int reset) {
-  if (is_player(target))
-    if (!is_wizard(player) && !is_god(player))
+static int fh_fixed(EvaluationContext *evaluation, DbRef target, DbRef player,
+                    Flag flag, int fflags, int reset) {
+  if (is_player(evaluation->world->database, target))
+    if (!is_wizard(evaluation->world->database, player) &&
+        !is_god(evaluation->world->database, player))
       return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_fixed() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_fixed(evaluation, ) */
 
 /**
  * Only allows players to set or clear this bit.
@@ -175,13 +248,13 @@ static int fh_fixed(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_inherit(DbRef target, DbRef player, Flag flag, int fflags,
-                      int reset) {
-  if (!is_inherits(player))
+static int fh_inherit(EvaluationContext *evaluation, DbRef target, DbRef player,
+                      Flag flag, int fflags, int reset) {
+  if (!is_inherits(evaluation->world->database, player))
     return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_inherit() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_inherit(evaluation, ) */
 
 /**
  * Only allows GOD to set/clear this bit. Used for WIZARD flag.
@@ -191,17 +264,17 @@ static int fh_inherit(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_wiz_bit(DbRef target, DbRef player, Flag flag, int fflags,
-                      int reset) {
-  if (!is_god(player))
+static int fh_wiz_bit(EvaluationContext *evaluation, DbRef target, DbRef player,
+                      Flag flag, int fflags, int reset) {
+  if (!is_god(evaluation->world->database, player))
     return 0;
-  if (is_god(target) && reset) {
-    notify(player, "You cannot make yourself mortal.");
+  if (is_god(evaluation->world->database, target) && reset) {
+    notify(evaluation, player, "You cannot make yourself mortal.");
     return 0;
   }
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_wiz_bit() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_wiz_bit(evaluation, ) */
 
 /**
  * Manipulates the dark bit. Only Wizards may set it on players.
@@ -211,13 +284,14 @@ static int fh_wiz_bit(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_dark_bit(DbRef target, DbRef player, Flag flag, int fflags,
-                       int reset) {
-  if (!reset && is_player(target) && !is_wizard(player))
+static int fh_dark_bit(EvaluationContext *evaluation, DbRef target,
+                       DbRef player, Flag flag, int fflags, int reset) {
+  if (!reset && is_player(evaluation->world->database, target) &&
+      !is_wizard(evaluation->world->database, player))
     return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_dark_bit() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_dark_bit(evaluation, ) */
 
 /**
  * Manipulates the going bit.
@@ -227,18 +301,19 @@ static int fh_dark_bit(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_going_bit(DbRef target, DbRef player, Flag flag, int fflags,
-                        int reset) {
-  if (is_going(target) && reset && (typeof_obj(target) != TYPE_GARBAGE)) {
-    notify(player, "Your object has been spared from destruction.");
-    return (fh_any(target, player, flag, fflags, reset));
+static int fh_going_bit(EvaluationContext *evaluation, DbRef target,
+                        DbRef player, Flag flag, int fflags, int reset) {
+  if (is_going(evaluation->world->database, target) && reset &&
+      (typeof_obj(evaluation->world->database, target) != TYPE_GARBAGE)) {
+    notify(evaluation, player, "Your object has been spared from destruction.");
+    return (fh_any(evaluation, target, player, flag, fflags, reset));
   }
 
-  if (!is_god(player))
+  if (!is_god(evaluation->world->database, player))
     return 0;
 
-  return (fh_any(target, player, flag, fflags, reset));
-} /* end fh_going_bit() */
+  return (fh_any(evaluation, target, player, flag, fflags, reset));
+} /* end fh_going_bit(evaluation, ) */
 
 /**
  * Sets or clears bits that affect hearing.
@@ -248,23 +323,23 @@ static int fh_going_bit(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_hear_bit(DbRef target, DbRef player, Flag flag, int fflags,
-                       int reset) {
+static int fh_hear_bit(EvaluationContext *evaluation, DbRef target,
+                       DbRef player, Flag flag, int fflags, int reset) {
   int could_hear;
 
-  if (is_player(target) && (flag & MONITOR)) {
-    if (is_wizard(player))
-      fh_any(target, player, flag, fflags, reset);
+  if (is_player(evaluation->world->database, target) && (flag & MONITOR)) {
+    if (is_wizard(evaluation->world->database, player))
+      fh_any(evaluation, target, player, flag, fflags, reset);
     else
       return 0;
   }
 
-  could_hear = is_hearer(target);
-  fh_any(target, player, flag, fflags, reset);
-  handle_ears(target, could_hear, is_hearer(target));
+  could_hear = is_hearer(evaluation, target);
+  fh_any(evaluation, target, player, flag, fflags, reset);
+  handle_ears(evaluation, target, could_hear, is_hearer(evaluation, target));
 
   return 1;
-} /* end fh_hear_bit() */
+} /* end fh_hear_bit(evaluation, ) */
 
 /**
  * Sets or clears bits that affect xcode in glue.h.
@@ -274,18 +349,18 @@ static int fh_hear_bit(DbRef target, DbRef player, Flag flag, int fflags,
  * @param fflags ??
  * @param reset If 1, we're resetting the flag
  */
-static int fh_xcode_bit(DbRef target, DbRef player, Flag flag, int fflags,
-                        int reset) {
+static int fh_xcode_bit(EvaluationContext *evaluation, DbRef target,
+                        DbRef player, Flag flag, int fflags, int reset) {
   int got_xcode;
   int new_xcode;
 
-  got_xcode = is_hardcode(target);
-  fh_wiz(target, player, flag, fflags, reset);
-  new_xcode = is_hardcode(target);
+  got_xcode = is_hardcode(evaluation->world->database, target);
+  fh_wiz(evaluation, target, player, flag, fflags, reset);
+  new_xcode = is_hardcode(evaluation->world->database, target);
   handle_xcode(player, target, got_xcode, new_xcode);
 
   return 1;
-} /* end fh_xcode_bit() */
+} /* end fh_xcode_bit(evaluation, ) */
 
 /**
  * Alphabetized flag listing
@@ -358,19 +433,19 @@ OBJENT object_types[8] = {
 /**
  * Initializes flag hash tables.
  */
-void init_flagtab(void) {
+void init_flagtab(WorldIndexes *indexes) {
   FLAGENT *fp;
   char *nbuf, *np;
   const char *bp;
 
-  hash_table_initialize(&mudstate.flags_htab, 100 * HASH_FACTOR);
+  hash_table_initialize(&indexes->flags, 100 * HASH_FACTOR);
   nbuf = alloc_sbuf("init_flagtab");
 
   for (fp = gen_flags; fp->flagname; fp++) {
     for (np = nbuf, bp = fp->flagname; *bp; np++, bp++)
       *np = ToLower(*bp);
     *np = '\0';
-    hash_table_add(nbuf, (int *)fp, &mudstate.flags_htab);
+    hash_table_add(nbuf, (int *)fp, &indexes->flags);
   }
 
   free_sbuf(nbuf);
@@ -379,7 +454,7 @@ void init_flagtab(void) {
 /**
  * Displays available flags. Used in @list flags.
  */
-void display_flagtab(DbRef player) {
+void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   char *buf, *bp;
   FLAGENT *fp;
 
@@ -387,9 +462,10 @@ void display_flagtab(DbRef player) {
   safe_str("Flags:", buf, &bp);
 
   for (fp = gen_flags; fp->flagname; fp++) {
-    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
+    if ((fp->listperm & CA_WIZARD) &&
+        !is_wizard(evaluation->world->database, player))
       continue;
-    if ((fp->listperm & CA_GOD) && !is_god(player))
+    if ((fp->listperm & CA_GOD) && !is_god(evaluation->world->database, player))
       continue;
     safe_chr(' ', buf, &bp);
     safe_str(fp->flagname, buf, &bp);
@@ -399,21 +475,21 @@ void display_flagtab(DbRef player) {
   }
 
   *bp = '\0';
-  notify(player, buf);
+  notify(evaluation, player, buf);
   free_lbuf(buf);
 } /* end display_flagtab() */
 
 /**
  * ??
  */
-FLAGENT *find_flag(DbRef thing, char *flagname) {
+FLAGENT *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
   char *cp;
 
   /* Make sure the flag name is valid */
   for (cp = flagname; *cp; cp++)
     *cp = ToLower(*cp);
 
-  return (FLAGENT *)hash_table_find(flagname, &mudstate.flags_htab);
+  return (FLAGENT *)hash_table_find(flagname, &indexes->flags);
 } /* end find_flag() */
 
 /**
@@ -423,7 +499,8 @@ FLAGENT *find_flag(DbRef thing, char *flagname) {
  * @paran flag The flag being set/unset
  * @param key Are we @set/quiet'in?
  */
-void flag_set(DbRef target, DbRef player, char *flag, int key) {
+void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
+              DbRef target, DbRef player, char *flag, int key) {
   FLAGENT *fp;
   int negate, result;
 
@@ -447,26 +524,28 @@ void flag_set(DbRef target, DbRef player, char *flag, int key) {
 
   if (*flag == '\0') {
     if (negate)
-      notify(player, "You must specify a flag to clear.");
+      notify(evaluation, player, "You must specify a flag to clear.");
     else
-      notify(player, "You must specify a flag to set.");
+      notify(evaluation, player, "You must specify a flag to set.");
     return;
   }
-  fp = find_flag(target, flag);
+  fp = find_flag(indexes, target, flag);
   if (fp == nullptr) {
-    notify(player, "I don't understand that flag.");
+    notify(evaluation, player, "I don't understand that flag.");
     return;
   }
   /*
    * Invoke the flag handler, and print feedback
    */
 
-  result = fp->handler(target, player, fp->flagvalue, fp->flagflag, negate);
+  result = fp->handler(evaluation, target, player, fp->flagvalue, fp->flagflag,
+                       negate);
   if (!result)
-    notify(player, "Permission denied.");
-  else if (!(key & SET_QUIET) && !is_quiet(player))
-    notify_printf(player, "%s - %s %s", Name(target), fp->flagname,
-                  negate ? "cleared." : "set.");
+    notify(evaluation, player, "Permission denied.");
+  else if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))
+    notify_printf(evaluation, player, "%s - %s %s",
+                  game_object_name(evaluation->world->database, target),
+                  fp->flagname, negate ? "cleared." : "set.");
   return;
 } /* end flag_set() */
 
@@ -477,8 +556,8 @@ void flag_set(DbRef target, DbRef player, char *flag, int key) {
  * @param flag2word ??
  * @param flag3word ??
  */
-char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
-                   Flag flag3word) {
+char *decode_flags(GameDatabase *database, DbRef player, Flag flagword,
+                   Flag flag2word, Flag flag3word) {
   char *buf, *bp;
   FLAGENT *fp;
   int flagtype;
@@ -487,7 +566,7 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
   buf = bp = alloc_sbuf("decode_flags");
   *bp = '\0';
 
-  if (!is_good_obj(player)) {
+  if (!is_good_obj(database, player)) {
     StringCopy(buf, "#-2 ERROR");
     return buf;
   }
@@ -504,16 +583,16 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
     else
       fv = flagword;
     if (fv & fp->flagvalue) {
-      if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
+      if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;
-      if ((fp->listperm & CA_GOD) && !is_god(player))
+      if ((fp->listperm & CA_GOD) && !is_god(database, player))
         continue;
       /*
        * don't show CONNECT on dark wizards to mortals
        */
       if ((flagtype == TYPE_PLAYER) && (fp->flagvalue == CONNECTED) &&
           ((flagword & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-          !is_wizard(player))
+          !is_wizard(database, player))
         continue;
       safe_sb_chr(fp->flaglett, buf, &bp);
     }
@@ -529,32 +608,33 @@ char *decode_flags(DbRef player, Flag flagword, Flag flag2word,
  * @param target The object with the flag
  * @param flagname The flag in question
  */
-int has_flag(DbRef player, DbRef target, char *flagname) {
+int has_flag(WorldContext *world, DbRef player, DbRef target, char *flagname) {
   FLAGENT *fp;
   Flag fv;
 
-  fp = find_flag(target, flagname);
+  fp = find_flag(world->indexes, target, flagname);
   if (fp == nullptr)
     return 0;
 
   if (fp->flagflag & FLAG_WORD3)
-    fv = obj_flags3(target);
+    fv = game_object_flags3(world->database, target);
   else if (fp->flagflag & FLAG_WORD2)
-    fv = obj_flags2(target);
+    fv = game_object_flags2(world->database, target);
   else
-    fv = obj_flags(target);
+    fv = game_object_flags(world->database, target);
 
   if (fv & fp->flagvalue) {
-    if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
+    if ((fp->listperm & CA_WIZARD) && !is_wizard(world->database, player))
       return 0;
-    if ((fp->listperm & CA_GOD) && !is_god(player))
+    if ((fp->listperm & CA_GOD) && !is_god(world->database, player))
       return 0;
     /*
      * don't show CONNECT on dark wizards to mortals
      */
-    if (is_player(target) && (fp->flagvalue == CONNECTED) &&
-        ((obj_flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-        !is_wizard(player))
+    if (is_player(world->database, target) && (fp->flagvalue == CONNECTED) &&
+        ((game_object_flags(world->database, target) & (WIZARD | DARK)) ==
+         (WIZARD | DARK)) &&
+        !is_wizard(world->database, player))
       return 0;
     return 1;
   }
@@ -566,7 +646,7 @@ int has_flag(DbRef player, DbRef target, char *flagname) {
  * @param player The player to send to
  * @param target The object whose flags we're checking
  */
-char *flag_description(DbRef player, DbRef target) {
+char *flag_description(GameDatabase *database, DbRef player, DbRef target) {
   char *buff, *bp;
   FLAGENT *fp;
   int otype;
@@ -576,7 +656,7 @@ char *flag_description(DbRef player, DbRef target) {
    * Allocate the return buffer
    */
 
-  otype = typeof_obj(target);
+  otype = typeof_obj(database, target);
   bp = buff = alloc_mbuf("flag_description");
 
   /*
@@ -596,22 +676,23 @@ char *flag_description(DbRef player, DbRef target) {
 
   for (fp = gen_flags; fp->flagname; fp++) {
     if (fp->flagflag & FLAG_WORD3)
-      fv = obj_flags3(target);
+      fv = game_object_flags3(database, target);
     else if (fp->flagflag & FLAG_WORD2)
-      fv = obj_flags2(target);
+      fv = game_object_flags2(database, target);
     else
-      fv = obj_flags(target);
+      fv = game_object_flags(database, target);
     if (fv & fp->flagvalue) {
-      if ((fp->listperm & CA_WIZARD) && !is_wizard(player))
+      if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;
-      if ((fp->listperm & CA_GOD) && !is_god(player))
+      if ((fp->listperm & CA_GOD) && !is_god(database, player))
         continue;
       /*
        * don't show CONNECT on dark wizards to mortals
        */
-      if (is_player(target) && (fp->flagvalue == CONNECTED) &&
-          ((obj_flags(target) & (WIZARD | DARK)) == (WIZARD | DARK)) &&
-          !is_wizard(player))
+      if (is_player(database, target) && (fp->flagvalue == CONNECTED) &&
+          ((game_object_flags(database, target) & (WIZARD | DARK)) ==
+           (WIZARD | DARK)) &&
+          !is_wizard(database, player))
         continue;
       safe_mb_chr(' ', buff, &bp);
       safe_mb_str(fp->flagname, buff, &bp);
@@ -630,7 +711,7 @@ char *flag_description(DbRef player, DbRef target) {
  * Returns an lbuf containing the name and number of an object.
  * @param target The target object
  */
-char *unparse_object_numonly(DbRef target) {
+char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buf;
 
   buf = alloc_lbuf("unparse_object_numonly");
@@ -638,10 +719,11 @@ char *unparse_object_numonly(DbRef target) {
     StringCopy(buf, "*NOTHING*");
   } else if (target == HOME) {
     StringCopy(buf, "*HOME*");
-  } else if (!is_good_obj(target)) {
+  } else if (!is_good_obj(database, target)) {
     snprintf(buf, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else {
-    snprintf(buf, LBUF_SIZE, "%s(#%ld)", Name(target), target);
+    snprintf(buf, LBUF_SIZE, "%s(#%ld)", game_object_name(database, target),
+             target);
   }
   return buf;
 } /* end unparse_object_numonly() */
@@ -649,7 +731,8 @@ char *unparse_object_numonly(DbRef target) {
 /**
  * Returns an lbuf pointing to the object name and possibly the db# and flags.
  */
-char *unparse_object(DbRef player, DbRef target, int obey_myopic) {
+char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
+                     DbRef player, DbRef target, int obey_myopic) {
   char *buf, *fp;
   int exam;
 
@@ -658,27 +741,27 @@ char *unparse_object(DbRef player, DbRef target, int obey_myopic) {
     StringCopy(buf, "*NOTHING*");
   } else if (target == HOME) {
     StringCopy(buf, "*HOME*");
-  } else if (!is_good_obj(target)) {
+  } else if (!is_good_obj(database, target)) {
     snprintf(buf, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else {
     if (obey_myopic)
-      exam = is_myopic_exam(player, target);
+      exam = is_myopic_exam(evaluation, player, target);
     else
-      exam = is_examinable(player, target);
+      exam = is_examinable(evaluation, player, target);
     if (exam) {
 
       /*
        * show everything
        */
-      fp = unparse_flags(player, target);
-      snprintf(buf, LBUF_SIZE, "%s(#%ld%s%s)", Name(target), target,
-               *fp ? ":" : "", fp);
+      fp = unparse_flags(database, player, target);
+      snprintf(buf, LBUF_SIZE, "%s(#%ld%s%s)",
+               game_object_name(database, target), target, *fp ? ":" : "", fp);
       free_sbuf(fp);
     } else {
       /*
        * show only the name.
        */
-      StringCopy(buf, Name(target));
+      StringCopy(buf, game_object_name(database, target));
     }
   }
   return buf;
@@ -692,7 +775,8 @@ char *unparse_object(DbRef player, DbRef target, int obey_myopic) {
  * @param fset ??
  * @param p_type ??
  */
-int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
+int convert_flags(EvaluationContext *evaluation, DbRef player, char *flaglist,
+                  FLAGSET *fset, Flag *p_type) {
   int i, handled;
   char *s;
   Flag flag1mask, flag2mask, flag3mask, type;
@@ -710,10 +794,13 @@ int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
 
     for (i = 0; (i <= 7) && !handled; i++) {
       if ((object_types[i].lett == *s) &&
-          !(((object_types[i].perm & CA_WIZARD) && !is_wizard(player)) ||
-            ((object_types[i].perm & CA_GOD) && !is_god(player)))) {
+          !(((object_types[i].perm & CA_WIZARD) &&
+             !is_wizard(evaluation->world->database, player)) ||
+            ((object_types[i].perm & CA_GOD) &&
+             !is_god(evaluation->world->database, player)))) {
         if ((type != NOTYPE) && (type != i)) {
-          notify_printf(player, "%c: Conflicting type specifications.", *s);
+          notify_printf(evaluation, player,
+                        "%c: Conflicting type specifications.", *s);
           return 0;
         }
         type = i;
@@ -729,8 +816,10 @@ int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
       continue;
     for (fp = gen_flags; (fp->flagname) && !handled; fp++) {
       if ((fp->flaglett == *s) &&
-          !(((fp->listperm & CA_WIZARD) && !is_wizard(player)) ||
-            ((fp->listperm & CA_GOD) && !is_god(player)))) {
+          !(((fp->listperm & CA_WIZARD) &&
+             !is_wizard(evaluation->world->database, player)) ||
+            ((fp->listperm & CA_GOD) &&
+             !is_god(evaluation->world->database, player)))) {
         if (fp->flagflag & FLAG_WORD3)
           flag3mask |= fp->flagvalue;
         else if (fp->flagflag & FLAG_WORD2)
@@ -742,7 +831,7 @@ int convert_flags(DbRef player, char *flaglist, FLAGSET *fset, Flag *p_type) {
     }
 
     if (!handled) {
-      notify_printf(player,
+      notify_printf(evaluation, player,
                     "%c: Flag unknown or not valid for specified object type",
                     *s);
       return 0;

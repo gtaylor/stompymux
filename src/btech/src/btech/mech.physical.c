@@ -339,7 +339,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -418,10 +418,11 @@ void mech_club(DbRef player, void *data, char *buffer) {
   DOCHECKMA(SectHasBusyWeap(mech, LARM) || SectHasBusyWeap(mech, RARM),
             "You have weapons recycling on your arms.");
 
-  PhysicalAttack(
-      mech, 5,
-      (mudconf.btech_phys_use_pskill ? FindPilotPiloting(mech) - 1 : 4),
-      PA_CLUB, argc, args, mech_map, RARM);
+  PhysicalAttack(mech, 5,
+                 (btech_context_active()->configuration->btech_phys_use_pskill
+                      ? FindPilotPiloting(mech) - 1
+                      : 4),
+                 PA_CLUB, argc, args, mech_map, RARM);
 } // end mech_club()
 
 /**
@@ -471,7 +472,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -534,7 +535,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -576,7 +577,7 @@ void mech_claw(DbRef player, void *data, char *buffer) {
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -655,7 +656,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -725,7 +726,7 @@ void mech_sword(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is defined, use the pilot's piloting skill,
   // otherwise use a constant skill 3.
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 2;
 
   // Which arm(s) have sword crits?
@@ -811,10 +812,11 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
     return;
   }
 
-  PhysicalAttack(
-      mech, 5,
-      (mudconf.btech_phys_use_pskill ? FindPilotPiloting(mech) - 2 : 3),
-      AttackType, argc, args, mech_map, leg);
+  PhysicalAttack(mech, 5,
+                 (btech_context_active()->configuration->btech_phys_use_pskill
+                      ? FindPilotPiloting(mech) - 2
+                      : 3),
+                 AttackType, argc, args, mech_map, leg);
 } // end mech_kickortrip()
 
 /**
@@ -940,7 +942,7 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     // Something other than 0-1 arguments.
   default:
-    notify(player, "Invalid number of arguments!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of arguments!");
   }
 } // end mech_charge()
 
@@ -1353,12 +1355,13 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
     SetRecycleLimb(mech, LARM, PHYSICAL_RECYCLE_TIME);
 
   RbaseToHit = baseToHit;
-  if (mudconf.btech_glancing_blows == 2)
+  if (btech_context_active()->configuration->btech_glancing_blows == 2)
     RbaseToHit = baseToHit - 1;
   // We've successfully hit the target.
   if (roll >= RbaseToHit) {
     phys_succeed(mech, target, AttackType);
-    if (mudconf.btech_glancing_blows && (roll == RbaseToHit)) {
+    if (btech_context_active()->configuration->btech_glancing_blows &&
+        (roll == RbaseToHit)) {
       MechLOSBroadcast(target, "is nicked by a glancing blow!");
       mech_notify(target, MECHALL, "You are nicked by a glancing blow!");
       glance = 1;
@@ -1681,7 +1684,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
 
   DOCHECKMA0((MechTeam(mech) == MechTeam(target)) && MapNoFriendlyFire(map),
              "Friendly DFA? I don't think so....");
-  if (mudconf.btech_phys_use_pskill)
+  if (btech_context_active()->configuration->btech_phys_use_pskill)
     baseToHit = FindPilotPiloting(mech);
 
   baseToHit += (HasBoolAdvantage(MechPilot(mech), "melee_specialist")
@@ -2057,7 +2060,7 @@ void ChargeMech(MECH *mech, MECH *target) {
     MechStatus(mech) |= ts;
 
     /* Now to calculate how much damage the first unit will do */
-    if (mudconf.btech_newcharge)
+    if (btech_context_active()->configuration->btech_newcharge)
       target_damage =
           (((((float)MechChargeDistance(mech)) * MP1) -
             MechSpeed(target) *
@@ -2194,7 +2197,8 @@ void ChargeMech(MECH *mech, MECH *target) {
 
       /* Ok now how much damage will the first unit take from
        * charging */
-      if (mudconf.btech_newcharge && mudconf.btech_tl3_charge)
+      if (btech_context_active()->configuration->btech_newcharge &&
+          btech_context_active()->configuration->btech_tl3_charge)
         target_damage =
             (((((float)MechChargeDistance(mech)) * MP1) -
               MechSpeed(target) * cos((MechFacing(mech) - MechFacing(target)) *
@@ -2275,7 +2279,8 @@ void ChargeMech(MECH *mech, MECH *target) {
 
       /* Ok now how much damage will the second unit take from
        * charging */
-      if (mudconf.btech_newcharge && mudconf.btech_tl3_charge)
+      if (btech_context_active()->configuration->btech_newcharge &&
+          btech_context_active()->configuration->btech_tl3_charge)
         target_damage =
             (((((float)MechChargeDistance(target)) * MP1) -
               MechSpeed(mech) * cos((MechFacing(target) - MechFacing(mech)) *
@@ -2404,7 +2409,7 @@ void ChargeMech(MECH *mech, MECH *target) {
                                  "arc and you are unable to charge it.");
 
   /* Damage inflicted by the charge */
-  if (mudconf.btech_newcharge)
+  if (btech_context_active()->configuration->btech_newcharge)
     target_damage =
         (((((float)MechChargeDistance(mech)) * MP1) -
           MechSpeed(target) *
@@ -2486,7 +2491,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     isrear = (hitGroup == BACK);
 
     /* Damage done to the attacker for the charge */
-    if (mudconf.btech_newcharge && mudconf.btech_tl3_charge)
+    if (btech_context_active()->configuration->btech_newcharge &&
+        btech_context_active()->configuration->btech_tl3_charge)
       mech_damage =
           (((((float)MechChargeDistance(mech)) * MP1) -
             MechSpeed(target) *

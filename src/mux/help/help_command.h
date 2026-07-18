@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/commands/command_invocation.h"
 
-void do_help(DbRef player, DbRef cause, int key, char *message);
-void do_helpreload(DbRef player, DbRef cause, int key);
+void do_help(CommandInvocation *invocation);
+void do_helpreload(CommandInvocation *invocation);

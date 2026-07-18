@@ -26,36 +26,39 @@
 #define my_parsepart(loc, part)                                                \
   switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
   case -1:                                                                     \
-    notify(player, "Invalid section!");                                        \
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid section!");              \
     return;                                                                    \
   case -2:                                                                     \
-    notify(player, "Invalid part!");                                           \
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid part!");                 \
     return;                                                                    \
   }
 
 #define my_parsepart2(loc, part, brand)                                        \
   switch (tech_parsepart(mech, buffer, loc, part, brand)) {                    \
   case -1:                                                                     \
-    notify(player, "Invalid section!");                                        \
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid section!");              \
     return;                                                                    \
   case -2:                                                                     \
-    notify(player, "Invalid part!");                                           \
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid part!");                 \
     return;                                                                    \
   }
 
 #define my_parsegun(loc, part, brand)                                          \
   switch (tech_parsegun(mech, buffer, loc, part, brand)) {                     \
   case -1:                                                                     \
-    notify(player, "Invalid gun #!");                                          \
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid gun #!");                \
     return;                                                                    \
   case -2:                                                                     \
-    notify(player, "Invalid object to replace with!");                         \
+    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+           "Invalid object to replace with!");                                 \
     return;                                                                    \
   case -3:                                                                     \
-    notify(player, "Invalid object type - not matching with original.");       \
+    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+           "Invalid object type - not matching with original.");               \
     return;                                                                    \
   case -4:                                                                     \
-    notify(player, "Invalid gun location - subscript out of range.");          \
+    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+           "Invalid gun location - subscript out of range.");                  \
     return;                                                                    \
   }
 
@@ -87,21 +90,25 @@ static void tech_check_loc(MuxEvent *e) {
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
   tmp_part = part;                                                             \
-  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
+  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
+                             fun);                                             \
   return tmp_flag
 
 #define CHECKL(t, fun)                                                         \
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
-  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
+  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
+                             fun);                                             \
   return tmp_flag
 
 #define CHECK2(t, t2, fun)                                                     \
   tmp_flag = 0;                                                                \
   tmp_loc = loc;                                                               \
   tmp_part = part;                                                             \
-  mux_event_gothru_type_data(t, (void *)mech, fun);                            \
-  mux_event_gothru_type_data(t2, (void *)mech, fun);                           \
+  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
+                             fun);                                             \
+  mux_event_gothru_type_data(btech_context_active()->events, t2, (void *)mech, \
+                             fun);                                             \
   return tmp_flag
 
 /* Replace/reload */
@@ -174,8 +181,10 @@ int SomeoneScrappingPart(MECH *mech, int loc, int part) {
 int CanScrapLoc(MECH *mech, int loc) {
   tmp_flag = 0;
   tmp_loc = loc % 8;
-  mux_event_gothru_type_data(EVENT_REPAIR_REPL, (void *)mech, tech_check_loc);
-  mux_event_gothru_type_data(EVENT_REPAIR_RELO, (void *)mech, tech_check_loc);
+  mux_event_gothru_type_data(btech_context_active()->events, EVENT_REPAIR_REPL,
+                             (void *)mech, tech_check_loc);
+  mux_event_gothru_type_data(btech_context_active()->events, EVENT_REPAIR_RELO,
+                             (void *)mech, tech_check_loc);
   return !tmp_flag && !SomeoneFixing(mech, loc);
 }
 
@@ -209,7 +218,8 @@ void tech_checkstatus(DbRef player, void *data, char *buffer) {
 
   DOCHECK(!i, "The mech's ready to rock!");
   ms = silly_get_uptime_to_string(game_lag_time(i));
-  notify_printf(player, "The 'mech has approximately %s until done.", ms);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "The 'mech has approximately %s until done.", ms);
 }
 
 TECHCOMMANDH(tech_removegun) {
@@ -228,7 +238,8 @@ TECHCOMMANDH(tech_removegun) {
   DOCHECK(SomeoneScrappingLoc(mech, loc),
           "Someone's scrapping that section - no additional removals are "
           "possible!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
@@ -274,7 +285,8 @@ TECHCOMMANDH(tech_removepart) {
           "possible!");
   DOCHECK(!CanScrapPart(mech, loc, part),
           "Someone's tinkering with it already!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
@@ -334,7 +346,8 @@ TECHCOMMANDH(tech_removesection) {
           "You need to remove the outer sections first!");
   DOCHECK(SomeoneScrappingLoc(mech, loc), "Someone's scrapping it already!");
   DOCHECK(!CanScrapLoc(mech, loc), "Someone's tinkering with it already!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
@@ -364,7 +377,8 @@ TECHCOMMANDH(tech_replacegun) {
   DOCHECK(!PartIsNonfunctional(mech, loc, part), "That gun isn't hurtin'!");
   DOCHECK(SomeoneScrappingLoc(mech, loc),
           "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   if (brand) {
@@ -387,13 +401,17 @@ TECHCOMMANDH(tech_replacegun) {
 
   DOCHECK(IsAmmo(GetPartType(mech, loc, part))
               ? 0
-              : econ_find_items(IsDS(mech) ? AeroBay(mech, 0)
-                                           : obj_location(mech->mynum),
-                                parttype, GetPartBrand(mech, loc, part)) < 1,
+              : econ_find_items(
+                    IsDS(mech)
+                        ? AeroBay(mech, 0)
+                        : game_object_location(btech_context_active()->database,
+                                               mech->mynum),
+                    parttype, GetPartBrand(mech, loc, part)) < 1,
           tprintf("Not enough units of %s in store.",
                   part_name(parttype, GetPartBrand(mech, loc, part))));
 
-  notify_printf(player, "You start replacing the gun...");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "You start replacing the gun...");
   rollmod =
       REPLACE_DIFFICULTY + WEAPTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_weapon_roll(player, mech, rollmod);
@@ -404,25 +422,31 @@ TECHCOMMANDH(tech_replacegun) {
 
   if (roll < 0) {
     notify_printf(
-        player, "Your attempt is unsuccessful, but you try to save the gun...");
+        BTECH_EVALUATION_CONTEXT, player,
+        "Your attempt is unsuccessful, but you try to save the gun...");
     rollmod = REPLACE_DIFFICULTY;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(player, "You muck around, wasting the gun for good...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You muck around, wasting the gun for good...");
       /* part goes , 1.5 * techtime*/
       if (!(IsAmmo(GetPartType(mech, loc, part))))
-        econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                     : obj_location(mech->mynum),
-                          parttype, GetPartBrand(mech, loc, part), -1);
+        econ_change_items(
+            IsDS(mech) ? AeroBay(mech, 0)
+                       : game_object_location(btech_context_active()->database,
+                                              mech->mynum),
+            parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
       mux_event_add(
+          btech_context_active()->events,
           MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
           very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
 
     } else {
-      notify_printf(player, "You manage to save the gun...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You manage to save the gun...");
       /* part doesn't go. 1.5 * techtime, but lets mod the fix time if
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
@@ -431,17 +455,23 @@ TECHCOMMANDH(tech_replacegun) {
         fixtime = fail_fixtime;
       else
         fixtime =
-            mudconf.btech_variable_techtime
+            btech_context_active()->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
                       (1000 /
-                       (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                       (100 -
+                        (roll ? btech_context_active()
+                                        ->configuration->btech_techtime_mod *
+                                    roll
+                              : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(player, "Your skill manages to save %d minute%s",
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Your skill manages to save %d minute%s",
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(player, fixtime);
       mux_event_add(
+          btech_context_active()->events,
           MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
           very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
@@ -452,21 +482,29 @@ TECHCOMMANDH(tech_replacegun) {
       fixtime = base_fixtime;
     else
       fixtime =
-          mudconf.btech_variable_techtime
+          btech_context_active()->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
                     (1000 /
-                     (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                     (100 - (roll
+                                 ? btech_context_active()
+                                           ->configuration->btech_techtime_mod *
+                                       roll
+                                 : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(player, "Your skill manages to save %d minute%s",
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Your skill manages to save %d minute%s",
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
     if (!(IsAmmo(GetPartType(mech, loc, part))))
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        parttype, GetPartBrand(mech, loc, part), -1);
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
     mux_event_add(
+        btech_context_active()->events,
         MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
         mux_event_tickmech_replacegun, (void *)mech,
         (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
@@ -511,16 +549,17 @@ TECHCOMMANDH(tech_repairgun) {
   if (PartIsDestroyed(mech, loc, part)) {
     if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, loc, part))) < 5 ||
         PartIsDestroyed(mech, loc, part + 1)) {
-      notify(player, "That gun is gone for good!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "That gun is gone for good!");
       return;
     }
     extra_hard = 1;
   } else if (!PartTempNuke(mech, loc, part)) {
-    notify(player, "That gun isn't hurtin'!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "That gun isn't hurtin'!");
     return;
   }
 
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOCPOS(REPAIR_DIFFICULTY +
@@ -550,11 +589,12 @@ TECHCOMMANDH(tech_fixenhcrit) {
   DOCHECK(PartIsDisabled(mech, loc, part), "That gun can't be fixed yet!");
 
   if (!PartIsDamaged(mech, loc, part)) {
-    notify(player, "That gun isn't damaged!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "That gun isn't damaged!");
     return;
   }
 
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOCPOS(ENHCRIT_DIFFICULTY, repairenhcrit_fail, repairenhcrit_succ,
@@ -585,7 +625,8 @@ TECHCOMMANDH(tech_replacepart) {
           "Someone's repairing that part already!");
   DOCHECK(SomeoneScrappingLoc(mech, loc),
           "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   /* little cheating here to get the proper part, since we aren't doing complex
@@ -607,13 +648,17 @@ TECHCOMMANDH(tech_replacepart) {
 
   DOCHECK(IsAmmo(GetPartType(mech, loc, part))
               ? 0
-              : econ_find_items(IsDS(mech) ? AeroBay(mech, 0)
-                                           : obj_location(mech->mynum),
-                                parttype, GetPartBrand(mech, loc, part)) < 1,
+              : econ_find_items(
+                    IsDS(mech)
+                        ? AeroBay(mech, 0)
+                        : game_object_location(btech_context_active()->database,
+                                               mech->mynum),
+                    parttype, GetPartBrand(mech, loc, part)) < 1,
           tprintf("Not enough units of %s in store.",
                   part_name(parttype, GetPartBrand(mech, loc, part))));
 
-  notify_printf(player, "You start replacing the part...");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "You start replacing the part...");
   rollmod =
       REPLACE_DIFFICULTY + PARTTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_roll(player, mech, rollmod);
@@ -622,24 +667,29 @@ TECHCOMMANDH(tech_replacepart) {
 
   if (roll < 0) {
     notify_printf(
-        player,
+        BTECH_EVALUATION_CONTEXT, player,
         "Your attempt is unsuccessful, but you try to save the part...");
     rollmod = rollmod + 1;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(player, "You muck around, wasting the part for good...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You muck around, wasting the part for good...");
       /* part goes , 1.5 * techtime*/
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        parttype, GetPartBrand(mech, loc, part), -1);
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          parttype, GetPartBrand(mech, loc, part), -1);
       tech_addtechtime(player, fixtime);
-      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+      mux_event_add(btech_context_active()->events,
+                    MAX(1, player_techtime(player) * TECH_TICK), 0,
                     EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
                     (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
 
     } else {
-      notify_printf(player, "You manage to save the part...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You manage to save the part...");
       /* part doesn't go. 1.5 * techtime, but lets mod the fix time if
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
@@ -648,17 +698,23 @@ TECHCOMMANDH(tech_replacepart) {
         fixtime = fail_fixtime;
       else
         fixtime =
-            mudconf.btech_variable_techtime
+            btech_context_active()->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
                       (1000 /
-                       (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                       (100 -
+                        (roll ? btech_context_active()
+                                        ->configuration->btech_techtime_mod *
+                                    roll
+                              : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(player, "Your skill manages to save %d minute%s",
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Your skill manages to save %d minute%s",
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
       tech_addtechtime(player, fixtime);
-      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+      mux_event_add(btech_context_active()->events,
+                    MAX(1, player_techtime(player) * TECH_TICK), 0,
                     EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
                     (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
     }
@@ -668,20 +724,29 @@ TECHCOMMANDH(tech_replacepart) {
       fixtime = base_fixtime;
     else
       fixtime =
-          mudconf.btech_variable_techtime
+          btech_context_active()->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
                     (1000 /
-                     (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                     (100 - (roll
+                                 ? btech_context_active()
+                                           ->configuration->btech_techtime_mod *
+                                       roll
+                                 : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(player, "Your skill manages to save %d minute%s",
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Your skill manages to save %d minute%s",
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
 
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
+    econ_change_items(IsDS(mech)
+                          ? AeroBay(mech, 0)
+                          : game_object_location(
+                                btech_context_active()->database, mech->mynum),
                       parttype, GetPartBrand(mech, loc, part), -1);
     tech_addtechtime(player, fixtime);
-    mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+    mux_event_add(btech_context_active()->events,
+                  MAX(1, player_techtime(player) * TECH_TICK), 0,
                   EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
                   (void *)mech,
                   (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
@@ -715,7 +780,8 @@ TECHCOMMANDH(tech_repairpart) {
           "Someone's repairing that part already!");
   DOCHECK(SomeoneScrappingLoc(mech, loc),
           "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOCPOS(REPAIR_DIFFICULTY +
@@ -730,7 +796,8 @@ TECHCOMMANDH(tech_toggletype) {
 
   TECHCOMMANDB;
 
-  DOCHECK((!is_wizard(player)) && is_in_character(mech->mynum),
+  DOCHECK((!is_wizard(btech_context_active()->database, player)) &&
+              is_in_character(btech_context_active()->database, mech->mynum),
           "This command only works in simpods!");
   my_parsepart2(&loc, &part, &atype);
   DOCHECK(!IsAmmo((t = GetPartType(mech, loc, part))), "That's no ammo!");
@@ -777,7 +844,8 @@ TECHCOMMANDH(tech_reload) {
   }
   change = 0;
 
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOCPOS_VAL(RELOAD_DIFFICULTY, reload_fail, reload_succ, reload_econ,
@@ -811,7 +879,8 @@ TECHCOMMANDH(tech_unload) {
     change = 2;
   else
     change = 1;
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   if (tech_roll(player, mech, REMOVES_DIFFICULTY) < 0)
@@ -850,7 +919,8 @@ TECHCOMMANDH(tech_fixarmor) {
   DOCHECK(from == to, "The location doesn't need armor repair!");
   change = to - from;
   ochange = change;
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
   DOTECH_LOC_VAL_S(FIXARMOR_DIFFICULTY, fixarmor_fail, fixarmor_succ,
                    fixarmor_econ, &change, FIXARMOR_TIME * ochange, loc,
@@ -877,7 +947,8 @@ TECHCOMMANDH(tech_fixinternal) {
   DOCHECK(SomeoneScrappingLoc(mech, loc),
           "Someone's scrapping that section - no repairs are possible!");
   ochange = change;
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOC_VAL_S(FIXINTERNAL_DIFFICULTY, fixinternal_fail, fixinternal_succ,
@@ -948,15 +1019,20 @@ TECHCOMMANDH(tech_reattach) {
           "Someone's attaching that section already!");
   DOCHECK(!unit_is_fixable(mech),
           "You see nothing to reattach it to (read:unit is cored).");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
-  internal_stock =
-      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
-                      ProperInternal(mech), 0);
-  electric_stock =
-      econ_find_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
-                      Cargo(S_ELECTRONIC), 0);
+  internal_stock = econ_find_items(
+      IsDS(mech)
+          ? AeroBay(mech, 0)
+          : game_object_location(btech_context_active()->database, mech->mynum),
+      ProperInternal(mech), 0);
+  electric_stock = econ_find_items(
+      IsDS(mech)
+          ? AeroBay(mech, 0)
+          : game_object_location(btech_context_active()->database, mech->mynum),
+      Cargo(S_ELECTRONIC), 0);
 
   DOCHECK(internal_stock < GetSectOInt(mech, loc),
           tprintf("Not enough %ss in stock. You need %d more.",
@@ -966,7 +1042,8 @@ TECHCOMMANDH(tech_reattach) {
           tprintf("Not enough Electrics in stock. You need %d more.",
                   GetSectOInt(mech, loc) - electric_stock));
 
-  notify_printf(player, "You start replacing the section...");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "You start replacing the section...");
   rollmod = REATTACH_DIFFICULTY;
   roll = tech_roll(player, mech, rollmod);
   base_fixtime = REATTACH_TIME;
@@ -974,49 +1051,66 @@ TECHCOMMANDH(tech_reattach) {
 
   if (roll < 0) {
     notify_printf(
-        player,
+        BTECH_EVALUATION_CONTEXT, player,
         "Your attempt is unsuccessful, but you try to save the section...");
     rollmod = REATTACH_DIFFICULTY;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(player, "You muck around, wasting the section for good...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You muck around, wasting the section for good...");
       /* TODO: maybe save X% of materials like before? */
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
-      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+      mux_event_add(btech_context_active()->events,
+                    MAX(1, player_techtime(player) * TECH_TICK), 0,
                     EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
                     (void *)(loc + player * PLAYERPOS));
 
     } else {
-      notify_printf(player, "You manage to replace the section...");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "You manage to replace the section...");
       /* it's a saving roll, so it is what it is */
       if (roll == 0)
         fixtime = fail_fixtime;
       else
         fixtime =
-            mudconf.btech_variable_techtime
+            btech_context_active()->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
                       (1000 /
-                       (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                       (100 -
+                        (roll ? btech_context_active()
+                                        ->configuration->btech_techtime_mod *
+                                    roll
+                              : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(player, "Your skill manages to save %d minute%s",
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Your skill manages to save %d minute%s",
                       fail_fixtime - fixtime,
                       fail_fixtime - fixtime == 1 ? "!" : "s!");
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(IsDS(mech) ? AeroBay(mech, 0)
-                                   : obj_location(mech->mynum),
-                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(
+          IsDS(mech) ? AeroBay(mech, 0)
+                     : game_object_location(btech_context_active()->database,
+                                            mech->mynum),
+          Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
       tech_addtechtime(player, fixtime);
-      mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+      mux_event_add(btech_context_active()->events,
+                    MAX(1, player_techtime(player) * TECH_TICK), 0,
                     EVENT_REPAIR_REAT, mux_event_tickmech_reattach,
                     (void *)mech, (void *)(loc + player * PLAYERPOS));
     }
@@ -1025,21 +1119,33 @@ TECHCOMMANDH(tech_reattach) {
       fixtime = base_fixtime;
     else
       fixtime =
-          mudconf.btech_variable_techtime
+          btech_context_active()->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
                     (1000 /
-                     (100 - (roll ? mudconf.btech_techtime_mod * roll : 0)))
+                     (100 - (roll
+                                 ? btech_context_active()
+                                           ->configuration->btech_techtime_mod *
+                                       roll
+                                 : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(player, "Your skill manages to save %d minute%s",
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Your skill manages to save %d minute%s",
                     base_fixtime - fixtime,
                     base_fixtime - fixtime == 1 ? "!" : "s!");
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
+    econ_change_items(IsDS(mech)
+                          ? AeroBay(mech, 0)
+                          : game_object_location(
+                                btech_context_active()->database, mech->mynum),
                       ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-    econ_change_items(IsDS(mech) ? AeroBay(mech, 0) : obj_location(mech->mynum),
+    econ_change_items(IsDS(mech)
+                          ? AeroBay(mech, 0)
+                          : game_object_location(
+                                btech_context_active()->database, mech->mynum),
                       Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
     tech_addtechtime(player, fixtime);
-    mux_event_add(MAX(1, player_techtime(player) * TECH_TICK), 0,
+    mux_event_add(btech_context_active()->events,
+                  MAX(1, player_techtime(player) * TECH_TICK), 0,
                   EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
                   (void *)(loc + player * PLAYERPOS));
   }
@@ -1076,7 +1182,8 @@ TECHCOMMANDH(tech_replacesuit) {
           "Someone's already rebuilding that suit!");
   DOCHECK(wSuits <= 0, "You are unable to replace the suits here! None of the "
                        "buggers are still alive!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOC(REPLACESUIT_DIFFICULTY, replacesuit_fail, replacesuit_succ,
@@ -1102,7 +1209,8 @@ TECHCOMMANDH(tech_reseal) {
           "You need to reattach adjacent locations first!");
   DOCHECK(SomeoneResealing(mech, loc),
           "Someone's sealing that section already!");
-  DOCHECK(player_techtime(player) >= mudconf.btech_maxtechtime,
+  DOCHECK(player_techtime(player) >=
+              btech_context_active()->configuration->btech_maxtechtime,
           "You're too tired to do that!");
 
   DOTECH_LOC(RESEAL_DIFFICULTY, reseal_fail, reseal_succ, reseal_econ,
@@ -1114,7 +1222,8 @@ TECHCOMMANDH(tech_fixextra) {
   TECHCOMMANDB;
 
   TECHCOMMANDC;
-  notify(player, "Fixed extra stuff - reseals, ammo feeds, etc.");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Fixed extra stuff - reseals, ammo feeds, etc.");
   do_fixextra(mech);
 }
 
@@ -1122,8 +1231,8 @@ TECHCOMMANDH(tech_magic) {
   TECHCOMMANDB;
 
   TECHCOMMANDC;
-  notify(player, "Doing the magic..");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Doing the magic..");
   do_magic(mech);
   mech_int_check(mech, 1);
-  notify(player, "Done!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Done!");
 }

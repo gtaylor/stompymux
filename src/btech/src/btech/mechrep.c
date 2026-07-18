@@ -38,12 +38,12 @@ extern char *strtok(char *s, const char *ct);
 
 /* EXTERNS THAT SHOULDN'T BE IN HERE! */
 extern void *FindObjectsData(DbRef key);
-void mux_event_remove_data(void *data);
 
 #define MECHREP_COMMON(a)                                                      \
   struct mechrep_data *rep = (struct mechrep_data *)data;                      \
   MECH *mech;                                                                  \
-  DOCHECK(!is_template_power(player), "I'm sorry Dave, can't do that.");       \
+  DOCHECK(!is_template_power(btech_context_active()->database, player),        \
+          "I'm sorry Dave, can't do that.");                                   \
   if (!CheckData(player, rep))                                                 \
     return;                                                                    \
   if (a) {                                                                     \
@@ -80,7 +80,7 @@ void mechrep_Rresetcrits(DbRef player, void *data, char *buffer) {
   int i;
 
   MECHREP_COMMON(1);
-  notify(player, "Default criticals set!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Default criticals set!");
   for (i = 0; i < NUM_SECTIONS; i++)
     FillDefaultCriticals(mech, i);
 }
@@ -107,20 +107,24 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   switch (mech_parseattributes(buffer, args, 2)) {
   case 0:
-    notify(player, "This remains to be done [showing of stuff when no args]");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "This remains to be done [showing of stuff when no args]");
     return;
   case 2:
-    notify(player, "Too many args, unable to cope().");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Too many args, unable to cope().");
     return;
   }
   i = BOUNDED(1, atoi(args[0]), 5);
-  notify_printf(player, "Radio level set to %d.", i);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Radio level set to %d.", i);
   MechRadio(mech) = i;
   MechRadioType(mech) = generic_radio_type(MechRadio(mech), 0);
-  notify_printf(player, "Number of freqs: %d  Extra stuff: %d",
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Number of freqs: %d  Extra stuff: %d",
                 MechRadioType(mech) % 16, (MechRadioType(mech) / 16) * 16);
   MechRadioRange(mech) = MechComputersRadioRange(mech);
-  notify_printf(player, "Radio range set to %d.", (int)MechRadioRange(mech));
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Radio range set to %d.",
+                (int)MechRadioRange(mech));
 }
 
 void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
@@ -130,14 +134,16 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(0);
   switch (mech_parseattributes(buffer, args, 2)) {
   case 1:
-    newmech = match_thing(player, args[0]);
-    DOCHECK(!(is_good_obj(newmech) && is_hardcode(newmech)),
+    newmech = match_thing(BTECH_MATCH_CONTEXT, player, args[0]);
+    DOCHECK(!(is_good_obj(btech_context_active()->database, newmech) &&
+              is_hardcode(btech_context_active()->database, newmech)),
             "That is not a BattleMech or Vehicle!");
     rep->current_target = newmech;
-    notify_printf(player, "Mech to repair changed to #%d", newmech);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "Mech to repair changed to #%d", newmech);
     break;
   default:
-    notify(player, "Too many arguments!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Too many arguments!");
   }
 }
 
@@ -151,49 +157,50 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
   case 'M':
     MechType(mech) = CLASS_MECH;
     MechMove(mech) = MOVE_BIPED;
-    notify(player, "Type set to MECH");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to MECH");
     break;
   case 'Q':
     MechType(mech) = CLASS_MECH;
     MechMove(mech) = MOVE_QUAD;
-    notify(player, "Type set to QUAD");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to QUAD");
     break;
   case 'G':
     MechType(mech) = CLASS_VEH_GROUND;
-    notify(player, "Type set to VEHICLE");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to VEHICLE");
     break;
   case 'V':
     MechType(mech) = CLASS_VTOL;
     MechMove(mech) = MOVE_VTOL;
-    notify(player, "Type set to VTOL");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to VTOL");
     break;
   case 'N':
     MechType(mech) = CLASS_VEH_NAVAL;
-    notify(player, "Type set to NAVAL");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to NAVAL");
     break;
   case 'A':
     MechType(mech) = CLASS_AERO;
     MechMove(mech) = MOVE_FLY;
-    notify(player, "Type set to AeroSpace");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to AeroSpace");
     break;
   case 'D':
     MechType(mech) = CLASS_DS;
     MechMove(mech) = MOVE_FLY;
-    notify(player, "Type set to DropShip");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to DropShip");
     break;
   case 'S':
     MechType(mech) = CLASS_SPHEROID_DS;
     MechMove(mech) = MOVE_FLY;
-    notify(player, "Type set to SpheroidDropship");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to SpheroidDropship");
     break;
   case 'B':
     MechType(mech) = CLASS_BSUIT;
     MechMove(mech) = MOVE_BIPED;
-    notify(player, "Type set to BattleSuit");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to BattleSuit");
     break;
   default:
-    notify(player, "Types are: MECH, GROUND, VTOL, NAVAL, AERO, DROPSHIP and "
-                   "SPHEROIDDROPSHIP");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Types are: MECH, GROUND, VTOL, NAVAL, AERO, DROPSHIP and "
+           "SPHEROIDDROPSHIP");
     break;
   }
 }
@@ -207,7 +214,8 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
             tprintf("Invalid number of arguments to Set%s!", valstring));      \
     f = atof(args[0]);                                                         \
     valname = f * modifier;                                                    \
-    notify(player, tprintf("%s changed to %.2f.", valstring, valname));        \
+    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+           tprintf("%s changed to %.2f.", valstring, valname));                \
   }
 
 #define SETVALUE_FUNCTION_INT(funcname, valname, valstring, modifier)          \
@@ -219,7 +227,8 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
             tprintf("Invalid number of arguments to Set%s!", valstring));      \
     f = atoi(args[0]);                                                         \
     valname = f * modifier;                                                    \
-    notify(player, tprintf("%s changed to %d.", valstring, valname));          \
+    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+           tprintf("%s changed to %d.", valstring, valname));                  \
   }
 
 SETVALUE_FUNCTION_FLOAT(mechrep_Rsetspeed, MechMaxSpeed(mech), "Maxspeed",
@@ -245,59 +254,60 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
   switch (toupper(args[0][0])) {
   case 'T':
     MechMove(mech) = MOVE_TRACK;
-    notify(player, "Movement set to TRACKED");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to TRACKED");
     break;
   case 'W':
     MechMove(mech) = MOVE_WHEEL;
-    notify(player, "Movement set to WHEELED");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to WHEELED");
     break;
   case 'H':
     switch (toupper(args[0][1])) {
     case 'O':
       MechMove(mech) = MOVE_HOVER;
-      notify(player, "Movement set to HOVER");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to HOVER");
       break;
     case 'U':
       MechMove(mech) = MOVE_HULL;
-      notify(player, "Movement set to HULL");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to HULL");
       break;
     }
     break;
   case 'V':
     MechMove(mech) = MOVE_VTOL;
-    notify(player, "Movement set to VTOL");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to VTOL");
     break;
   case 'Q':
     MechMove(mech) = MOVE_QUAD;
-    notify(player, "Movement set to QUAD");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to QUAD");
     break;
   case 'B':
     MechMove(mech) = MOVE_BIPED;
-    notify(player, "Movement set to BIPED");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to BIPED");
     break;
   case 'S':
     MechMove(mech) = MOVE_SUB;
-    notify(player, "Movement set to SUB");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to SUB");
     break;
   case 'F':
     switch (toupper(args[0][1])) {
     case 'O':
       MechMove(mech) = MOVE_FOIL;
-      notify(player, "Movement set to FOIL");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to FOIL");
       break;
     case 'L':
       MechMove(mech) = MOVE_FLY;
-      notify(player, "Movement set to FLY");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to FLY");
       break;
     }
     break;
   case 'N':
     MechMove(mech) = MOVE_NONE;
-    notify(player, "Movement set to NONE");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to NONE");
     break;
   default:
-    notify(player, "Types are: TRACK, WHEEL, VTOL, QUAD, BIPED, HOVER, HULL, "
-                   "FLY, SUB, FOIL and NONE");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Types are: TRACK, WHEEL, VTOL, QUAD, BIPED, HOVER, HULL, "
+           "FLY, SUB, FOIL and NONE");
     break;
   }
 }
@@ -476,12 +486,12 @@ void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   if (mech_parseattributes(buffer, args, 1) == 1)
     if (mech_loadnew(player, mech, args[0]) == 1) {
-      mux_event_remove_data((void *)mech);
+      mux_event_remove_data(btech_context_active()->events, (void *)mech);
       clear_mech_from_LOS(mech);
-      notify(player, "Template loaded.");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Template loaded.");
       return;
     }
-  notify(player, "Unable to read that template.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Unable to read that template.");
 }
 
 void clear_mech(MECH *mech, int flag) {
@@ -739,7 +749,7 @@ void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
   c = silly_atr_get(mech->mynum, A_MECHREF);
   DOCHECK(!c || !*c, "Sorry, I don't know what type of mech this is");
   DOCHECK(mech_loadnew(player, mech, c) == 1, "Restoration complete!");
-  notify(player, "Unable to restore this mech!.");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Unable to restore this mech!.");
 }
 
 void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
@@ -755,7 +765,7 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
           "You must specify a template name!");
   DOCHECK(strstr(args[0], "/"), "Invalid file name!");
-  notify_printf(player, "Saving %s...", args[0]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s...", args[0]);
   snprintf(openfile, sizeof(openfile), "%s/", MECH_PATH);
   strcat(openfile, args[0]);
   DOCHECK(!(fp = fopen(openfile, "w")),
@@ -776,7 +786,7 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   fprintf(fp, "%d %d\n", MechType(mech), MechMove(mech));
   fprintf(fp, "%d\n", MechRadioRange(mech));
   fclose(fp);
-  notify(player, "Saving complete!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
 }
 
 /*
@@ -792,31 +802,33 @@ void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
 
   // No template name given.
   if (mech_parseattributes(buffer, args, 1) != 1) {
-    notify(player, "You must specify a template name!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "You must specify a template name!");
     return;
   }
 
   // Anti-twink measure. Don't allow directory saving... yet
   if (strstr(args[0], "/")) {
-    notify(player, "Invalid file name!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid file name!");
     return;
   }
 
-  notify_printf(player, "Saving %s", args[0]);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s", args[0]);
   snprintf(openfile, sizeof(openfile), "%s/", MECH_PATH);
   strcat(openfile, args[0]);
 
   // Just warn on overweight.
   if (mech_weight_sub(GOD, mech, -1) > (MechTons(mech) * 1024))
-    notify(player, "Warning: Template Overweight, see @weight.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Warning: Template Overweight, see @weight.");
 
   // I/O or Permissions error.
   if (save_template(player, mech, args[0], openfile) < 0) {
-    notify(player, "Error saving the template file!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Error saving the template file!");
     return;
   }
 
-  notify(player, "Saving complete!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
 } // end mechrep_Rsavetemp2
 
 /*
@@ -827,44 +839,51 @@ void invalid_section(DbRef player, MECH *mech) {
   int mechtype = MechType(mech);
   int movetype = MechMove(mech);
 
-  notify(player, "Not a legal armor location, must be one of:");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Not a legal armor location, must be one of:");
 
   switch (mechtype) {
   case CLASS_MW:
   case CLASS_MECH:
-    notify(player, "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
 
     if (movetype == MOVE_QUAD)
-      notify(player, "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
     else
-      notify(player, "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
 
     break;
   case CLASS_VEH_NAVAL:
   case CLASS_VEH_GROUND:
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), TURRET (TU)");
     break;
   case CLASS_VTOL:
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), ROTOR (RO)");
     break;
   case CLASS_AERO:
-    notify(player, "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
     break;
   case CLASS_DS:
-    notify(player, "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
-                   "(RR), ASIDE (AS)");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
+           "(RR), ASIDE (AS)");
     break;
   case CLASS_SPHEROID_DS:
-    notify(player, "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
-                   "(RR), ASIDE (AS)");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
+           "(RR), ASIDE (AS)");
     break;
   case CLASS_BSUIT:
-    notify(player, "S1, S2, S3, S4, S5, S6, S7, S8");
+    notify(BTECH_EVALUATION_CONTEXT, player, "S1, S2, S3, S4, S5, S6, S7, S8");
     break;
   default:
-    notify(player, "Invalid or unknown unit type!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid or unknown unit type!");
   }
 }
 
@@ -894,9 +913,10 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // One Argument Given.
     temp = atoi(args[1]);
     if (temp < 0)
-      notify(player, "Invalid armor value!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid armor value!");
     else {
-      notify_printf(player, "Front armor set to    : %d", temp);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Front armor set to    : %d", temp);
       SetSectArmor(mech, index, temp);
       SetSectOArmor(mech, index, temp);
     }
@@ -906,9 +926,10 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // Two Arguments Given.
     temp = atoi(args[2]);
     if (temp < 0)
-      notify(player, "Invalid Internal armor value!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Internal armor value!");
     else {
-      notify_printf(player, "Internal armor set to : %d", temp);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Internal armor set to : %d", temp);
       SetSectInt(mech, index, temp);
       SetSectOInt(mech, index, temp);
     }
@@ -919,14 +940,16 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     temp = atoi(args[3]);
     if (index == CTORSO || index == RTORSO || index == LTORSO) {
       if (temp < 0)
-        notify(player, "Invalid Rear armor value!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Rear armor value!");
       else {
-        notify_printf(player, "Rear armor set to     : %d", temp);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "Rear armor set to     : %d", temp);
         SetSectRArmor(mech, index, temp);
         SetSectORArmor(mech, index, temp);
       }
     } else
-      notify(player, "Only the torso can have rear armor.");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Only the torso can have rear armor.");
   }
 }
 
@@ -964,7 +987,8 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   weapindex = WeaponIndexFromString(args[0]);
 
   if (weapindex == -1) {
-    notify_printf(player, "That is not a valid weapon!");
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "That is not a valid weapon!");
     DumpWeapons(player);
     return;
   }
@@ -1016,15 +1040,17 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   /* Check to see if player gives enough crits and start adding if so. */
   if (argc < weapnumcrits && weapnumcrits < 9) {
     notify_printf(
-        player, "Not enough critical slots specified! (Given: %i, Needed: %i)",
-        argc, weapnumcrits);
+        BTECH_EVALUATION_CONTEXT, player,
+        "Not enough critical slots specified! (Given: %i, Needed: %i)", argc,
+        weapnumcrits);
   } else if (argc > weapnumcrits) {
-    notify_printf(player,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "Too many critical slots specified! (Given: %i, Needed: %i)",
                   argc, weapnumcrits);
   } else {
     if (argc < weapnumcrits) // notify player of split crit
-      notify_printf(player, "Weapon will be split! %d additional crits needed.",
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Weapon will be split! %d additional crits needed.",
                     weapnumcrits - argc);
     for (loop = 0; loop < argc; loop++) {
       temp = atoi(args[2 + loop]);
@@ -1052,7 +1078,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
       else
         MechSpecials(mech) |= IS_ANTI_MISSILE_TECH;
     }
-    notify_printf(player, "Weapon added.");
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Weapon added.");
   }
 } /* end mechrep_Raddweap() */
 
@@ -1069,17 +1095,18 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
                                              &critical, 0);
 
   if (weaptype < 0) {
-    notify(player, "Invalid Weapon #!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Weapon #!");
     return;
   }
 
   if (MechWeapons[weaptype].ammoperton == 0) {
-    notify(player, "That weapon doesn't require ammo!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "That weapon doesn't require ammo!");
     return;
   }
 
   if (MechSections(mech)[section].criticals[critical].firemode & OS_MODE) {
-    notify(player, "Keeping One Shot Mode!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Keeping One Shot Mode!");
     MechSections(mech)[section].criticals[critical].ammomode = 0;
   } else if (!(MechSections(mech)[section].criticals[critical].firemode &
                HALFTON_MODE)) {
@@ -1170,7 +1197,7 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     MechSections(mech)[section].criticals[critical].firemode = 0;
   }
 
-  notify(player, "Firemode changed!");
+  notify(BTECH_EVALUATION_CONTEXT, player, "Firemode changed!");
 }
 /*
  * Logic for the 'reload' mechrep command.
@@ -1188,7 +1215,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
   weapindex = WeaponIndexFromString(args[0]);
 
   if (weapindex == -1) {
-    notify(player, "That is not a valid weapon!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "That is not a valid weapon!");
     DumpWeapons(player);
     return;
   }
@@ -1206,7 +1233,8 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
   DOCHECK(subsect < 0 || subsect >= CritsInLoc(mech, index),
           "Critslot out of range!");
   if (MechWeapons[weapindex].ammoperton == 0)
-    notify(player, "That weapon doesn't require ammo!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "That weapon doesn't require ammo!");
   else {
     MechSections(mech)[index].criticals[subsect].type = I2Ammo(weapindex);
     if (!(MechSections(mech)[index].criticals[subsect].firemode &
@@ -1303,7 +1331,7 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
     MechSections(mech)[index].criticals[subsect].data =
         FullAmmo(mech, index, subsect);
-    notify(player, "Weapon loaded!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Weapon loaded!");
   }
 }
 
@@ -1333,11 +1361,12 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
   DOCHECK(subsect < 0 || subsect >= CritsInLoc(mech, index),
           "Critslot out of range!");
   if (MechWeapons[Ammo2I(GetPartType(mech, index, subsect))].ammoperton == 0)
-    notify(player, "That weapon doesn't require ammo!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "That weapon doesn't require ammo!");
   else {
     MechSections(mech)[index].criticals[subsect].data =
         FullAmmo(mech, index, subsect);
-    notify(player, "Weapon restocked!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Weapon restocked!");
   }
 }
 
@@ -1370,13 +1399,13 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'a':
     /* armor */
     SetSectArmor(mech, index, temp);
-    notify(player, "Armor repaired!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Armor repaired!");
     break;
   case 'I':
   case 'i':
     /* internal */
     SetSectInt(mech, index, temp);
-    notify(player, "Internal structure repaired!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Internal structure repaired!");
     break;
   case 'C':
   case 'c':
@@ -1384,9 +1413,10 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     temp--;
     if (temp >= 0 && temp < NUM_CRITICALS) {
       mech_RepairPart(mech, index, temp);
-      notify(player, "Critical location repaired!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Critical location repaired!");
     } else {
-      notify(player, "Critical Location out of range!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Critical Location out of range!");
     }
     break;
   case 'R':
@@ -1394,19 +1424,21 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     /* rear */
     if (index == CTORSO || index == LTORSO || index == RTORSO) {
       SetSectRArmor(mech, index, temp);
-      notify(player, "Rear armor repaired!");
+      notify(BTECH_EVALUATION_CONTEXT, player, "Rear armor repaired!");
     } else {
-      notify(player, "Only the center, rear and left torso have rear armor!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Only the center, rear and left torso have rear armor!");
     }
     break;
   case 'S':
   case 's':
     /* reattach */
     mech_ReAttach(mech, index);
-    notify(player, "Section reattached.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Section reattached.");
     break;
   default:
-    notify(player, "Illegal Type-> must be ARMOR, INTERNAL, CRIT, REAR");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Illegal Type-> must be ARMOR, INTERNAL, CRIT, REAR");
     return;
   }
 }
@@ -1431,7 +1463,8 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
 
   if (itemcode == -1)
     if (strcasecmp(args[0], "empty")) {
-      notify(player, "That is not a valid special object!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "That is not a valid special object!");
       DumpMechSpecialObjects(player);
       return;
     }
@@ -1457,62 +1490,71 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   case CASE:
     MechSections(mech)[(MechType(mech) == CLASS_VEH_GROUND) ? BSIDE : index]
         .config |= CASE_TECH;
-    notify(player, "CASE Technology added to section.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "CASE Technology added to section.");
     break;
   case TRIPLE_STRENGTH_MYOMER:
     MechSpecials(mech) |= TRIPLE_MYOMER_TECH;
-    notify(player, "Triple Strength Myomer Technology added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Triple Strength Myomer Technology added to 'Mech.");
     break;
   case MASC:
     MechSpecials(mech) |= MASC_TECH;
-    notify(player, "Myomer Accelerator Signal Circuitry added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Myomer Accelerator Signal Circuitry added to 'Mech.");
     break;
   case C3_MASTER:
     MechSpecials(mech) |= C3_MASTER_TECH;
-    notify(player, "C3 Command Unit added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Command Unit added to 'Mech.");
     break;
   case C3_SLAVE:
     MechSpecials(mech) |= C3_SLAVE_TECH;
-    notify(player, "C3 Slave Unit added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Slave Unit added to 'Mech.");
     break;
   case ARTEMIS_IV:
     MechSpecials(mech) |= ARTEMIS_IV_TECH;
-    notify(player, "Artemis IV Fire-Control System added to 'Mech.");
-    notify_printf(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Artemis IV Fire-Control System added to 'Mech.");
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "System will control the weapon which starts at slot %d.",
                   newdata);
     break;
   case ECM:
     MechSpecials(mech) |= ECM_TECH;
-    notify(player, "Guardian ECM Suite added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Guardian ECM Suite added to 'Mech.");
     break;
   case ANGELECM:
     MechSpecials2(mech) |= ANGEL_ECM_TECH;
-    notify(player, "Angel ECM Suite added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Angel ECM Suite added to 'Mech.");
     break;
   case BEAGLE_PROBE:
     MechSpecials(mech) |= BEAGLE_PROBE_TECH;
-    notify(player, "Beagle Active Probe added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Beagle Active Probe added to 'Mech.");
     break;
   case LIGHT_BAP:
     MechSpecials(mech) |= LIGHT_BAP_TECH;
-    notify(player, "Light Beagle Active Probe added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Light Beagle Active Probe added to 'Mech.");
     break;
   case TAG:
     MechSpecials2(mech) |= TAG_TECH;
-    notify(player, "TAG added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "TAG added to 'Mech.");
     break;
   case C3I:
     MechSpecials2(mech) |= C3I_TECH;
-    notify(player, "Improved C3 added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Improved C3 added to 'Mech.");
     break;
   case BLOODHOUND_PROBE:
     MechSpecials2(mech) |= BLOODHOUND_PROBE_TECH;
-    notify(player, "Bloodhound Active Probe added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Bloodhound Active Probe added to 'Mech.");
     break;
   case TARGETING_COMPUTER:
     MechSpecials2(mech) |= TCOMP_TECH;
-    notify(player, "Targeting Computer added to 'Mech.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Targeting Computer added to 'Mech.");
     break;
   case SPLIT_CRIT_LEFT:
   case SPLIT_CRIT_RIGHT:
@@ -1520,7 +1562,8 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
     break;
   }
   ArmorStringFromIndex(index, location, MechType(mech), MechMove(mech));
-  notify_printf(player, "Critical slot %s (%d) filled.", location, subsect + 1);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Critical slot %s (%d) filled.", location, subsect + 1);
 }
 
 extern char *specials[];
@@ -1540,81 +1583,90 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
   char location[20];
 
   MECHREP_COMMON(1);
-  notify(player, "--------Advanced Technology--------");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "--------Advanced Technology--------");
   if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
-    notify(player, "Triple Strength Myomer");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Triple Strength Myomer");
   if (MechSpecials(mech) & MASC_TECH)
-    notify(player, "Myomer Accelerator Signal Circuitry");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Myomer Accelerator Signal Circuitry");
   for (i = 0; i < NUM_SECTIONS; i++)
     if (MechSections(mech)[i].config & CASE_TECH) {
       ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
-      notify_printf(player, "Cellular Ammunition Storage Equipment in %s",
-                    location);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "Cellular Ammunition Storage Equipment in %s", location);
     }
   if (MechSpecials(mech) & CLAN_TECH) {
-    notify(player, "Mech is set to Clan Tech.  This means:");
-    notify(player, "    Mech automatically has Double Heat Sink Tech");
-    notify(player, "    Mech automatically has CASE in all sections");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Mech is set to Clan Tech.  This means:");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "    Mech automatically has Double Heat Sink Tech");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "    Mech automatically has CASE in all sections");
   }
   if (MechSpecials(mech) & DOUBLE_HEAT_TECH)
-    notify(player, "Mech uses Double Heat Sinks");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Mech uses Double Heat Sinks");
   if (MechSpecials(mech) & CL_ANTI_MISSILE_TECH)
-    notify(player, "Clan style Anti-Missile System");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Clan style Anti-Missile System");
   if (MechSpecials(mech) & IS_ANTI_MISSILE_TECH)
-    notify(player, "Inner Sphere style Anti-Missile System");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Inner Sphere style Anti-Missile System");
   if (MechSpecials(mech) & FLIPABLE_ARMS)
-    notify(player, "The arms may be flipped into the rear firing arc");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "The arms may be flipped into the rear firing arc");
   if (MechSpecials(mech) & C3_MASTER_TECH)
-    notify(player, "C3 Command Computer");
+    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Command Computer");
   if (MechSpecials(mech) & C3_SLAVE_TECH)
-    notify(player, "C3 Slave Computer");
+    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Slave Computer");
   if (MechSpecials(mech) & ARTEMIS_IV_TECH)
-    notify(player, "Artemis IV Fire-Control System");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Artemis IV Fire-Control System");
   if (MechSpecials(mech) & ECM_TECH)
-    notify(player, "Guardian ECM Suite");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Guardian ECM Suite");
   if (MechSpecials(mech) & LIGHT_BAP_TECH)
-    notify(player, "Light Beagle Active Probe");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Light Beagle Active Probe");
   if (MechSpecials2(mech) & ANGEL_ECM_TECH)
-    notify(player, "Angel ECM Suite");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Angel ECM Suite");
   if (MechSpecials(mech) & BEAGLE_PROBE_TECH)
-    notify(player, "Beagle Active Probe");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Beagle Active Probe");
   if (MechSpecials2(mech) & TAG_TECH)
-    notify(player, "Target Aquisition Gear");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Target Aquisition Gear");
   if (MechSpecials2(mech) & C3I_TECH)
-    notify(player, "Improved C3");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Improved C3");
   if (MechSpecials2(mech) & BLOODHOUND_PROBE_TECH)
-    notify(player, "Bloodhound Active Probe");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Bloodhound Active Probe");
   if (MechSpecials(mech) & ICE_TECH)
-    notify(player, "It has ICE engine");
+    notify(BTECH_EVALUATION_CONTEXT, player, "It has ICE engine");
 
   /* Infantry related stuff */
   if (MechInfantrySpecials(mech) & INF_SWARM_TECH)
-    notify(player, "Can swarm enemy units");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Can swarm enemy units");
   if (MechInfantrySpecials(mech) & INF_MOUNT_TECH)
-    notify(player, "Can mount friendly units");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Can mount friendly units");
   if (MechInfantrySpecials(mech) & INF_ANTILEG_TECH)
-    notify(player, "Can do anti-leg attacks");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Can do anti-leg attacks");
   if (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
-    notify(player, "Has CS Purifier Stealth");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Has CS Purifier Stealth");
   if (MechInfantrySpecials(mech) & DC_KAGE_STEALTH_TECH)
-    notify(player, "Has DC Kage Stealth");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Has DC Kage Stealth");
   if (MechInfantrySpecials(mech) & FWL_ACHILEUS_STEALTH_TECH)
-    notify(player, "Has FWL Achileus Stealth");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Has FWL Achileus Stealth");
   if (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH)
-    notify(player, "Has FC Infiltrator Stealth");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Has FC Infiltrator Stealth");
   if (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH)
-    notify(player, "Has FC InfiltratorII Stealth");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Has FC InfiltratorII Stealth");
   if (MechInfantrySpecials(mech) & MUST_JETTISON_TECH)
-    notify(player, "Must jettison backpack before jumping/using specials");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Must jettison backpack before jumping/using specials");
   if (MechInfantrySpecials(mech) & CAN_JETTISON_TECH)
-    notify(player, "Can jettison backpack");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Can jettison backpack");
 
-  notify(player, "Brief version (May have something previous hadn't):");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Brief version (May have something previous hadn't):");
   techstring = mechrep_gettechstring(mech);
   if (techstring && techstring[0])
-    notify(player, techstring);
+    notify(BTECH_EVALUATION_CONTEXT, player, techstring);
   else
-    notify(player, "-");
+    notify(BTECH_EVALUATION_CONTEXT, player, "-");
 }
 
 char *mechrep_gettechstring(MECH *mech) {
@@ -1636,15 +1688,15 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Make sure what they gave was valid */
   if (((nv < 0) && (nv2 < 0)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(player, "Invalid tech: Available techs:");
-    notify(player, "\tAll");
-    notify(player, "\tCase");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tech: Available techs:");
+    notify(BTECH_EVALUATION_CONTEXT, player, "\tAll");
+    notify(BTECH_EVALUATION_CONTEXT, player, "\tCase");
 
     for (nv = 0; specials[nv]; nv++)
-      notify_printf(player, "\t%s", specials[nv]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials[nv]);
 
     for (nv = 0; specials2[nv]; nv++)
-      notify_printf(player, "\t%s", specials2[nv]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials2[nv]);
 
     return;
   }
@@ -1652,7 +1704,7 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Check to see if user specified anything */
   if (((!nv) && (!nv2)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(player, "Nothing specified");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing specified");
     return;
   }
 
@@ -1680,7 +1732,7 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 
     MechSpecials(mech) = 0;
     MechSpecials2(mech) = 0;
-    notify(player, "All Advanced Technology Removed");
+    notify(BTECH_EVALUATION_CONTEXT, player, "All Advanced Technology Removed");
     return;
   }
 
@@ -1697,7 +1749,7 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
         MechSections(mech)[i].config &= ~CASE_TECH;
       }
     }
-    notify(player, "Case Technology Removed");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Case Technology Removed");
     return;
   }
 
@@ -1730,12 +1782,14 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
     }
 
     MechSpecials(mech) &= ~nv;
-    notify_printf(player, "%s Technology Removed", buffer);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s Technology Removed",
+                  buffer);
 
   } else {
 
     MechSpecials2(mech) &= ~nv2;
-    notify_printf(player, "%s Technology Removed", buffer);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s Technology Removed",
+                  buffer);
   }
   return;
 }
@@ -1748,28 +1802,30 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   nv2 = BuildBitVector(specials2, buffer);
 
   if ((nv < 0) && (nv2 < 0)) {
-    notify(player, "Invalid tech: Available techs:");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tech: Available techs:");
 
     for (nv = 0; specials[nv]; nv++)
-      notify_printf(player, "\t%s", specials[nv]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials[nv]);
 
     for (nv = 0; specials2[nv]; nv++)
-      notify_printf(player, "\t%s", specials2[nv]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials2[nv]);
 
     return;
   }
 
   if ((!nv) && (!nv2)) {
-    notify(player, "Nothing set!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing set!");
     return;
   }
 
   if (nv > 0) {
     MechSpecials(mech) |= nv;
-    notify_printf(player, "Set: %s", BuildBitString(specials, nv));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
+                  BuildBitString(specials, nv));
   } else {
     MechSpecials2(mech) |= nv2;
-    notify_printf(player, "Set: %s", BuildBitString(specials2, nv2));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
+                  BuildBitString(specials2, nv2));
   }
 }
 
@@ -1777,7 +1833,8 @@ void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   MechInfantrySpecials(mech) = 0;
-  notify(player, "Advanced Infantry Technology Deleted");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Advanced Infantry Technology Deleted");
 }
 
 void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
@@ -1787,27 +1844,30 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   nv = BuildBitVector(infantry_specials, buffer);
 
   if (MechType(mech) != CLASS_BSUIT) {
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "That is not a valid target for infantry technologies. Try a Suit!");
     return;
   }
 
   if (nv < 0) {
-    notify(player, "Invalid infantry tech: Available techs:");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Invalid infantry tech: Available techs:");
 
     for (nv = 0; infantry_specials[nv]; nv++)
-      notify_printf(player, "\t%s", infantry_specials[nv]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s",
+                    infantry_specials[nv]);
     return;
   }
 
   if (!nv) {
-    notify(player, "Nothing set!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing set!");
     return;
   }
 
   if (nv > 0) {
     MechInfantrySpecials(mech) |= nv;
-    notify_printf(player, "Set: %s", BuildBitString(infantry_specials, nv));
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
+                  BuildBitString(infantry_specials, nv));
   }
 }
 
@@ -1829,7 +1889,8 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
   max = (BOUNDED(1, max, 100));
   CarMaxTon(mech) = (char)max;
 
-  notify_printf(player, "%3.2f cargospace and %d tons of maxton space set.",
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "%3.2f cargospace and %d tons of maxton space set.",
                 (float)((float)cargo / 100), (int)max);
 }
 

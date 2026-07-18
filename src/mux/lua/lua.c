@@ -24,8 +24,9 @@
 #include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/netcommon.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
 
@@ -38,7 +39,7 @@ typedef enum lua_module_root_e {
   LUA_ROOT_COUNT,
 } LUA_MODULE_ROOT;
 
-typedef struct lua_runtime_t LUA_RUNTIME;
+typedef struct LuaRuntime LuaRuntime;
 typedef struct lua_schedule_job_t LUA_SCHEDULE_JOB;
 struct lua_schedule_job_t {
   LUA_MODULE_ROOT root;
@@ -50,7 +51,9 @@ struct lua_schedule_job_t {
   char *cron;
 };
 
-struct lua_runtime_t {
+struct LuaRuntime {
+  LuaRuntime **owner;
+  MuxServer *server;
   lua_State *state;
   char root[PATH_MAX];
   char roots[LUA_ROOT_COUNT][PATH_MAX];
@@ -61,11 +64,9 @@ struct lua_runtime_t {
   size_t global_module_count;
   LUA_SCHEDULE_JOB *schedule_jobs;
   size_t schedule_job_count;
+  time_t schedule_high_water;
   LuaMuxPackage mux_package;
 };
-
-static LUA_RUNTIME *lua_runtime = nullptr;
-static time_t lua_schedule_high_water = -1;
 
 static int lua_runtime_is_checking(void *context);
 static int lua_runtime_flow_start(void *context, lua_State *state,
@@ -91,32 +92,34 @@ static void lua_instruction_hook(lua_State *state, lua_Debug *debug) {
   luaL_error(state, "Lua instruction limit exceeded");
 }
 
-static int lua_pcall_limited(LUA_RUNTIME *runtime, int arguments, int results) {
+static int lua_pcall_limited(LuaRuntime *runtime, int arguments, int results) {
   int status;
 
   lua_sethook(runtime->state, lua_instruction_hook, LUA_MASKCOUNT,
-              mudconf.lua.instruction_limit);
+              runtime->server->configuration->lua.instruction_limit);
   status = lua_pcall(runtime->state, arguments, results, 0);
   lua_sethook(runtime->state, nullptr, 0, 0);
   if (!status && (size_t)lua_gc(runtime->state, LUA_GCCOUNT, 0) * 1024U >
-                     (size_t)mudconf.lua.memory_limit) {
+                     (size_t)runtime->server->configuration->lua.memory_limit) {
     lua_pushstring(runtime->state, "Lua memory limit exceeded");
     return LUA_ERRMEM;
   }
   return status;
 }
 
-static void lua_log_error(LUA_RUNTIME *runtime, DbRef object, const char *kind,
+static void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
                           const char *error) {
-  log_error(LOG_PROBLEMS, "LUA", kind, "object #%ld module %s: %s", object,
+  log_error(&runtime->server->log, LOG_PROBLEMS, "LUA", kind,
+            "object #%ld module %s: %s", object,
             runtime->module[0] ? runtime->module : "<unknown>",
             error ? error : "unknown Lua error");
 }
 
-static void lua_log_load_error(DbRef object, const char *path,
-                               const char *error) {
-  log_error(LOG_PROBLEMS, "LUA", "LOAD", "object #%ld module %s: %s", object,
-            path ? path : "<unknown>", error ? error : "unknown Lua error");
+static void lua_log_load_error(LuaRuntime *runtime, DbRef object,
+                               const char *path, const char *error) {
+  log_error(&runtime->server->log, LOG_PROBLEMS, "LUA", "LOAD",
+            "object #%ld module %s: %s", object, path ? path : "<unknown>",
+            error ? error : "unknown Lua error");
 }
 
 static int lua_valid_relative_path(const char *path) {
@@ -172,7 +175,7 @@ static int lua_join_path(char *destination, size_t destination_size,
   return 1;
 }
 
-static int lua_resolve_path(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_resolve_path(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                             const char *path, char *resolved,
                             size_t resolved_size, char *error,
                             size_t error_size) {
@@ -205,7 +208,7 @@ static int lua_resolve_path(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
 
 static int lua_require_module(lua_State *state);
 
-static void lua_install_sandbox(LUA_RUNTIME *runtime) {
+static void lua_install_sandbox(LuaRuntime *runtime) {
   static const char *blocked[] = {"io",         "os",        "debug",
                                   "package",    "coroutine", "jit",
                                   "ffi",        "dofile",    "loadfile",
@@ -220,6 +223,7 @@ static void lua_install_sandbox(LUA_RUNTIME *runtime) {
     lua_setglobal(runtime->state, blocked[index]);
   }
   runtime->mux_package.context = runtime;
+  runtime->mux_package.server = runtime->server;
   runtime->mux_package.is_checking = lua_runtime_is_checking;
   runtime->mux_package.flow_start = lua_runtime_flow_start;
   lua_mux_package_install(runtime->state, &runtime->mux_package);
@@ -230,7 +234,7 @@ static void lua_install_sandbox(LUA_RUNTIME *runtime) {
   lua_setfield(runtime->state, LUA_REGISTRYINDEX, LUA_MODULES_KEY);
 }
 
-static int lua_load_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_load_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                            const char *path, char *error, size_t error_size) {
   lua_State *state = runtime->state;
   char resolved[PATH_MAX];
@@ -284,8 +288,7 @@ static int lua_load_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static LUA_MODULE_ROOT lua_require_root(lua_State *state,
-                                        LUA_RUNTIME *runtime) {
+static LUA_MODULE_ROOT lua_require_root(lua_State *state, LuaRuntime *runtime) {
   lua_Debug debug;
   int root = (int)runtime->current_root;
 
@@ -302,7 +305,7 @@ static LUA_MODULE_ROOT lua_require_root(lua_State *state,
 }
 
 static int lua_require_module(lua_State *state) {
-  LUA_RUNTIME *runtime = lua_touserdata(state, lua_upvalueindex(1));
+  LuaRuntime *runtime = lua_touserdata(state, lua_upvalueindex(1));
   const char *name = luaL_checkstring(state, 1);
   LUA_MODULE_ROOT root = lua_require_root(state, runtime);
   char path[PATH_MAX];
@@ -341,11 +344,14 @@ static int lua_require_module(lua_State *state) {
   return luaL_error(state, "Lua module %s is unavailable", name);
 }
 
-static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
-  LUA_RUNTIME *runtime;
+static LuaRuntime *lua_runtime_create(LuaRuntime **owner, MuxServer *server,
+                                      char *error, size_t error_size) {
+  LuaRuntime *runtime;
   LUA_MODULE_ROOT root;
+  ServerConfiguration *configuration = server->configuration;
 
-  if (mudconf.lua.instruction_limit <= 0 || mudconf.lua.memory_limit <= 0) {
+  if (configuration->lua.instruction_limit <= 0 ||
+      configuration->lua.memory_limit <= 0) {
     lua_set_error(
         error, error_size,
         "lua_instruction_limit and lua_memory_limit must be positive");
@@ -356,11 +362,14 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
     lua_set_error(error, error_size, "out of memory");
     return nullptr;
   }
-  if (!realpath(mudconf.lua.directory, runtime->root)) {
-    if (errno != ENOENT || mkdir(mudconf.lua.directory, 0755) < 0 ||
-        !realpath(mudconf.lua.directory, runtime->root)) {
+  runtime->owner = owner;
+  runtime->server = server;
+  runtime->schedule_high_water = -1;
+  if (!realpath(configuration->lua.directory, runtime->root)) {
+    if (errno != ENOENT || mkdir(configuration->lua.directory, 0755) < 0 ||
+        !realpath(configuration->lua.directory, runtime->root)) {
       lua_set_error(error, error_size, "unable to open lua_directory %s",
-                    mudconf.lua.directory);
+                    configuration->lua.directory);
       free(runtime);
       return nullptr;
     }
@@ -393,7 +402,7 @@ static LUA_RUNTIME *lua_runtime_create(char *error, size_t error_size) {
   return runtime;
 }
 
-static void lua_runtime_destroy(LUA_RUNTIME *runtime) {
+static void lua_runtime_destroy(LuaRuntime *runtime) {
   size_t index;
 
   if (!runtime)
@@ -450,7 +459,7 @@ static int lua_add_module(char ***modules, size_t *module_count,
   return 1;
 }
 
-static int lua_collect_modules(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_collect_modules(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                                const char *relative, char ***modules,
                                size_t *module_count, char *error,
                                size_t error_size) {
@@ -521,9 +530,8 @@ static int lua_collect_modules(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static int lua_collect_global_modules(LUA_RUNTIME *runtime,
-                                      const char *relative, char *error,
-                                      size_t error_size) {
+static int lua_collect_global_modules(LuaRuntime *runtime, const char *relative,
+                                      char *error, size_t error_size) {
   return lua_collect_modules(runtime, LUA_ROOT_GLOBAL_LOGIC, relative,
                              &runtime->global_modules,
                              &runtime->global_module_count, error, error_size);
@@ -699,7 +707,7 @@ invalid:
   return 0;
 }
 
-static int lua_verify_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                              const char *path, char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
   int has_commands = 0;
@@ -768,7 +776,7 @@ static int lua_verify_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static int lua_load_global_modules(LUA_RUNTIME *runtime, char *error,
+static int lua_load_global_modules(LuaRuntime *runtime, char *error,
                                    size_t error_size) {
   size_t index;
 
@@ -784,22 +792,23 @@ static int lua_load_global_modules(LUA_RUNTIME *runtime, char *error,
   return 1;
 }
 
-static int lua_load_attached_modules(LUA_RUNTIME *runtime, char *error,
+static int lua_load_attached_modules(LuaRuntime *runtime, char *error,
                                      size_t error_size, int ignore_errors) {
   DbRef object;
 
-  for (object = 0; object < mudstate.db_top; object++) {
+  for (object = 0; object < runtime->server->database.top; object++) {
     char *path;
     DbRef owner;
     long flags;
 
-    if (!is_good_obj(object))
+    if (!is_good_obj(&runtime->server->database, object))
       continue;
-    path = attribute_get(object, A_LUAPARENT, &owner, &flags);
+    path = attribute_get(&runtime->server->database, object, A_LUAPARENT,
+                         &owner, &flags);
     if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
                                     error_size)) {
       if (ignore_errors) {
-        lua_log_load_error(object, path, error);
+        lua_log_load_error(runtime, object, path, error);
         free_lbuf(path);
         continue;
       }
@@ -811,8 +820,9 @@ static int lua_load_attached_modules(LUA_RUNTIME *runtime, char *error,
   return 1;
 }
 
-int lua_initialize(char *error, size_t error_size) {
-  LUA_RUNTIME *runtime = lua_runtime_create(error, error_size);
+int lua_initialize(LuaRuntime **owner, MuxServer *server, char *error,
+                   size_t error_size) {
+  LuaRuntime *runtime = lua_runtime_create(owner, server, error, error_size);
 
   if (!runtime)
     return 0;
@@ -821,18 +831,19 @@ int lua_initialize(char *error, size_t error_size) {
     lua_runtime_destroy(runtime);
     return 0;
   }
-  lua_runtime = runtime;
+  *owner = runtime;
   return 1;
 }
 
-void lua_shutdown(void) {
-  lua_runtime_destroy(lua_runtime);
-  lua_runtime = nullptr;
+void lua_shutdown(LuaRuntime **owner) {
+  lua_runtime_destroy(*owner);
+  *owner = nullptr;
 }
 
-int lua_reload(char *error, size_t error_size) {
-  LUA_RUNTIME *replacement = lua_runtime_create(error, error_size);
-  LUA_RUNTIME *previous;
+int lua_reload(LuaRuntime **owner, char *error, size_t error_size) {
+  LuaRuntime *replacement =
+      lua_runtime_create(owner, (*owner)->server, error, error_size);
+  LuaRuntime *previous;
 
   if (!replacement)
     return 0;
@@ -841,13 +852,13 @@ int lua_reload(char *error, size_t error_size) {
     lua_runtime_destroy(replacement);
     return 0;
   }
-  previous = lua_runtime;
-  lua_runtime = replacement;
+  previous = *owner;
+  *owner = replacement;
   lua_runtime_destroy(previous);
   return 1;
 }
 
-static int lua_check_one_module(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_check_one_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                                 const char *path, char *error,
                                 size_t error_size) {
   char detail[LBUF_SIZE];
@@ -907,7 +918,8 @@ static int lua_add_parent_check(LUA_PARENT_CHECK **checks, size_t *check_count,
   return 1;
 }
 
-static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
+static int lua_check_luaparents(EvaluationContext *evaluation,
+                                LuaRuntime *runtime, DbRef player,
                                 int *has_errors, char *error,
                                 size_t error_size) {
   LUA_PARENT_CHECK *checks = nullptr;
@@ -916,15 +928,16 @@ static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
   size_t index;
 
   *has_errors = 0;
-  for (object = 0; object < mudstate.db_top; object++) {
+  for (object = 0; object < runtime->server->database.top; object++) {
     char *path;
     DbRef owner;
     long flags;
     char detail[LBUF_SIZE];
 
-    if (!is_good_obj(object))
+    if (!is_good_obj(&runtime->server->database, object))
       continue;
-    path = attribute_get(object, A_LUAPARENT, &owner, &flags);
+    path = attribute_get(&runtime->server->database, object, A_LUAPARENT,
+                         &owner, &flags);
     if (!*path) {
       free_lbuf(path);
       continue;
@@ -947,7 +960,7 @@ static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
     free_lbuf(path);
   }
   for (index = 0; index < check_count; index++) {
-    notify_printf(player, "%zu %s are unable to read %s: %s",
+    notify_printf(evaluation, player, "%zu %s are unable to read %s: %s",
                   checks[index].object_count,
                   checks[index].object_count == 1 ? "object" : "objects",
                   checks[index].path, checks[index].error);
@@ -957,8 +970,9 @@ static int lua_check_luaparents(LUA_RUNTIME *runtime, DbRef player,
   return 1;
 }
 
-int lua_check(DbRef player, char *error, size_t error_size) {
-  LUA_RUNTIME *runtime = lua_runtime_create(error, error_size);
+int lua_check(EvaluationContext *evaluation, MuxServer *server, DbRef player,
+              char *error, size_t error_size) {
+  LuaRuntime *runtime = lua_runtime_create(nullptr, server, error, error_size);
   LUA_MODULE_ROOT root;
   int has_luaparent_errors;
   int result = 1;
@@ -966,8 +980,8 @@ int lua_check(DbRef player, char *error, size_t error_size) {
   if (!runtime)
     return 0;
   runtime->checking = 1;
-  if (!lua_check_luaparents(runtime, player, &has_luaparent_errors, error,
-                            error_size)) {
+  if (!lua_check_luaparents(evaluation, runtime, player, &has_luaparent_errors,
+                            error, error_size)) {
     result = 0;
     goto done;
   }
@@ -1003,10 +1017,11 @@ done:
   return result;
 }
 
-int lua_validate_path(const char *path, char *error, size_t error_size) {
+int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
+                      size_t error_size) {
   char resolved[PATH_MAX];
 
-  if (!lua_runtime) {
+  if (!runtime) {
     lua_set_error(error, error_size, "Lua is not initialized");
     return 0;
   }
@@ -1016,21 +1031,23 @@ int lua_validate_path(const char *path, char *error, size_t error_size) {
                   "Lua parent paths are relative to object_logic");
     return 0;
   }
-  return lua_resolve_path(lua_runtime, LUA_ROOT_OBJECT_LOGIC, path, resolved,
+  return lua_resolve_path(runtime, LUA_ROOT_OBJECT_LOGIC, path, resolved,
                           sizeof(resolved), error, error_size);
 }
 
-static int lua_effective_path(DbRef object, char *path, size_t path_size,
-                              DbRef *source) {
+static int lua_effective_path(LuaRuntime *runtime, DbRef object, char *path,
+                              size_t path_size, DbRef *source) {
   DbRef parent;
   int level;
 
-  ITER_PARENTS(object, parent, level) {
+  ITER_PARENTS(&runtime->server->database, runtime->server->configuration,
+               object, parent, level) {
     char *value;
     DbRef owner;
     long flags;
 
-    value = attribute_get(parent, A_LUAPARENT, &owner, &flags);
+    value = attribute_get(&runtime->server->database, parent, A_LUAPARENT,
+                          &owner, &flags);
     if (*value) {
       snprintf(path, path_size, "%s", value);
       if (source)
@@ -1043,14 +1060,14 @@ static int lua_effective_path(DbRef object, char *path, size_t path_size,
   return 0;
 }
 
-static void lua_push_context(lua_State *state, DbRef object, DbRef player,
-                             DbRef cause, const char *command,
-                             const char *event, const char *scope, char *args[],
-                             int nargs) {
+static void lua_push_context(Descriptor *descriptor, lua_State *state,
+                             DbRef object, DbRef player, DbRef cause,
+                             const char *command, const char *event,
+                             const char *scope, char *args[], int nargs) {
   int index;
 
   lua_newtable(state);
-  if (is_good_obj(object)) {
+  if (is_good_obj(&descriptor_server(descriptor)->database, object)) {
     lua_pushinteger(state, object);
     lua_setfield(state, -2, "object");
   }
@@ -1070,8 +1087,8 @@ static void lua_push_context(lua_State *state, DbRef object, DbRef player,
     lua_pushstring(state, scope);
     lua_setfield(state, -2, "scope");
   }
-  if (mudstate.curr_descriptor != nullptr) {
-    lua_pushinteger(state, mudstate.curr_descriptor->descriptor);
+  if (descriptor != nullptr) {
+    lua_pushinteger(state, descriptor->descriptor);
     lua_setfield(state, -2, "descriptor");
   }
   lua_newtable(state);
@@ -1098,7 +1115,7 @@ static unsigned long lua_schedule_hash(const char *path, const char *name,
   return hash;
 }
 
-static int lua_schedule_add_job(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                                 const char *path, const char *name,
                                 const char *cron, DbRef object, time_t minute) {
   LUA_SCHEDULE_JOB *jobs;
@@ -1136,7 +1153,7 @@ static int lua_schedule_add_job(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static void lua_schedule_collect_module(LUA_RUNTIME *runtime,
+static void lua_schedule_collect_module(LuaRuntime *runtime,
                                         LUA_MODULE_ROOT root, const char *path,
                                         DbRef object, time_t minute) {
   lua_State *state = runtime->state;
@@ -1146,7 +1163,7 @@ static void lua_schedule_collect_module(LUA_RUNTIME *runtime,
   char error[LBUF_SIZE];
 
   if (!lua_load_module(runtime, root, path, error, sizeof(error))) {
-    lua_log_load_error(object, path, error);
+    lua_log_load_error(runtime, object, path, error);
     lua_settop(state, top);
     return;
   }
@@ -1175,7 +1192,7 @@ static void lua_schedule_collect_module(LUA_RUNTIME *runtime,
   lua_settop(state, top);
 }
 
-static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
+static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
   lua_State *state = runtime->state;
   int top = lua_gettop(state);
   int schedules;
@@ -1183,10 +1200,11 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
   char error[LBUF_SIZE];
 
   if (job->root == LUA_ROOT_OBJECT_LOGIC &&
-      (!is_good_obj(job->object) || is_going(job->object)))
+      (!is_good_obj(&runtime->server->database, job->object) ||
+       is_going(&runtime->server->database, job->object)))
     return;
   if (!lua_load_module(runtime, job->root, job->path, error, sizeof(error))) {
-    lua_log_load_error(job->object, job->path, error);
+    lua_log_load_error(runtime, job->object, job->path, error);
     lua_settop(state, top);
     return;
   }
@@ -1211,9 +1229,13 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
       int status;
 
       lua_push_context(
-          state, job->object,
-          job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
-          job->root == LUA_ROOT_OBJECT_LOGIC ? obj_owner(job->object) : NOTHING,
+          nullptr, state, job->object,
+          job->root == LUA_ROOT_OBJECT_LOGIC
+              ? game_object_owner(&runtime->server->database, job->object)
+              : NOTHING,
+          job->root == LUA_ROOT_OBJECT_LOGIC
+              ? game_object_owner(&runtime->server->database, job->object)
+              : NOTHING,
           nullptr, "schedule",
           job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global", nullptr, 0);
       lua_pushstring(state, job->name);
@@ -1232,11 +1254,11 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
       runtime->current_root = previous_root;
       if (status) {
         if (job->root == LUA_ROOT_OBJECT_LOGIC)
-          log_error(LOG_PROBLEMS, "LUA", "SCHEDULE",
+          log_error(&runtime->server->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
                     "object #%ld module %s schedule %s: %s", job->object,
                     job->path, job->name, lua_tostring(state, -1));
         else
-          log_error(LOG_PROBLEMS, "LUA", "SCHEDULE",
+          log_error(&runtime->server->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
                     "global module %s schedule %s: %s", job->path, job->name,
                     lua_tostring(state, -1));
       }
@@ -1249,28 +1271,28 @@ static void lua_schedule_run_job(LUA_RUNTIME *runtime, LUA_SCHEDULE_JOB *job) {
   lua_settop(state, top);
 }
 
-void lua_schedule_tick(time_t now) {
-  LUA_RUNTIME *runtime = lua_runtime;
+void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
   time_t minute = now / 60;
   size_t index;
 
   if (!runtime)
     return;
-  if (lua_schedule_high_water < 0)
-    lua_schedule_high_water = minute;
-  if (minute > lua_schedule_high_water) {
+  if (runtime->schedule_high_water < 0)
+    runtime->schedule_high_water = minute;
+  if (minute > runtime->schedule_high_water) {
     DbRef object;
 
-    lua_schedule_high_water = minute;
+    runtime->schedule_high_water = minute;
     for (index = 0; index < runtime->global_module_count; index++)
       lua_schedule_collect_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
                                   runtime->global_modules[index], NOTHING,
                                   minute);
-    for (object = 0; object < mudstate.db_top; object++) {
+    for (object = 0; object < runtime->server->database.top; object++) {
       char path[PATH_MAX];
 
-      if (!is_good_obj(object) || is_going(object) ||
-          !lua_effective_path(object, path, sizeof(path), nullptr))
+      if (!is_good_obj(&runtime->server->database, object) ||
+          is_going(&runtime->server->database, object) ||
+          !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       lua_schedule_collect_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
                                   minute);
@@ -1300,10 +1322,10 @@ void lua_schedule_tick(time_t now) {
   }
 }
 
-static int lua_module_command_match(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
-                                    const char *path, DbRef thing, DbRef player,
-                                    DbRef cause, const char *command,
-                                    int stop_on_handled) {
+static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                                    LUA_MODULE_ROOT root, const char *path,
+                                    DbRef thing, DbRef player, DbRef cause,
+                                    const char *command, int stop_on_handled) {
   lua_State *state;
   char error[LBUF_SIZE];
   int top;
@@ -1315,7 +1337,7 @@ static int lua_module_command_match(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   state = runtime->state;
   top = lua_gettop(state);
   if (!lua_load_module(runtime, root, path, error, sizeof(error))) {
-    lua_log_load_error(thing, path, error);
+    lua_log_load_error(runtime, thing, path, error);
     lua_settop(state, top);
     return 1;
   }
@@ -1365,7 +1387,7 @@ static int lua_module_command_match(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
       continue;
     lua_getfield(state, entry, "handler");
     lua_insert(state, entry + 1);
-    lua_push_context(state, thing, player, cause, command, nullptr,
+    lua_push_context(descriptor, state, thing, player, cause, command, nullptr,
                      root == LUA_ROOT_GLOBAL_LOGIC ? "global" : nullptr,
                      nullptr, 0);
     lua_insert(state, entry + 2);
@@ -1388,46 +1410,47 @@ static int lua_module_command_match(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return handled;
 }
 
-int lua_command_match(DbRef thing, DbRef player, DbRef cause,
-                      const char *command) {
+int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
+                      DbRef player, DbRef cause, const char *command) {
   char path[PATH_MAX];
 
-  if (!lua_runtime || is_halted(thing) ||
-      !lua_effective_path(thing, path, sizeof(path), nullptr))
+  if (!runtime || is_halted(&runtime->server->database, thing) ||
+      !lua_effective_path(runtime, thing, path, sizeof(path), nullptr))
     return 0;
-  return lua_module_command_match(lua_runtime, LUA_ROOT_OBJECT_LOGIC, path,
-                                  thing, player, cause, command, 0);
+  return lua_module_command_match(runtime, descriptor, LUA_ROOT_OBJECT_LOGIC,
+                                  path, thing, player, cause, command, 0);
 }
 
-int lua_global_command_match(DbRef player, DbRef cause, const char *command) {
+int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                             DbRef player, DbRef cause, const char *command) {
   size_t index;
 
-  if (!lua_runtime)
+  if (!runtime)
     return 0;
-  for (index = 0; index < lua_runtime->global_module_count; index++) {
-    if (lua_module_command_match(lua_runtime, LUA_ROOT_GLOBAL_LOGIC,
-                                 lua_runtime->global_modules[index], NOTHING,
+  for (index = 0; index < runtime->global_module_count; index++) {
+    if (lua_module_command_match(runtime, descriptor, LUA_ROOT_GLOBAL_LOGIC,
+                                 runtime->global_modules[index], NOTHING,
                                  player, cause, command, 1))
       return 1;
   }
   return 0;
 }
 
-int lua_list_command_match(DbRef first, DbRef player, DbRef cause,
+int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                           DbRef first, DbRef player, DbRef cause,
                            const char *command) {
   DbRef thing;
   int handled = 0;
 
-  DOLIST(thing, first) {
-    if (lua_command_match(thing, player, cause, command))
+  DOLIST(&runtime->server->database, thing, first) {
+    if (lua_command_match(runtime, descriptor, thing, player, cause, command))
       handled++;
   }
   return handled;
 }
 
-int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
-                       int nargs) {
-  LUA_RUNTIME *runtime = lua_runtime;
+int lua_event_dispatch(LuaRuntime *runtime, DbRef player, DbRef thing,
+                       int attribute, char *args[], int nargs) {
   lua_State *state;
   Attribute *definition;
   char path[PATH_MAX];
@@ -1437,9 +1460,10 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
   int index;
   int status;
 
-  if (!runtime || !lua_effective_path(thing, path, sizeof(path), nullptr))
+  if (!runtime ||
+      !lua_effective_path(runtime, thing, path, sizeof(path), nullptr))
     return 0;
-  definition = attribute_by_number(attribute);
+  definition = attribute_by_number(&runtime->server->database, attribute);
   if (!definition)
     return 1;
   snprintf(event, sizeof(event), "%s", definition->name);
@@ -1449,7 +1473,7 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
   top = lua_gettop(state);
   if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
                        sizeof(error))) {
-    lua_log_load_error(thing, path, error);
+    lua_log_load_error(runtime, thing, path, error);
     lua_settop(state, top);
     return 1;
   }
@@ -1463,8 +1487,8 @@ int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
     lua_settop(state, top);
     return 1;
   }
-  lua_push_context(state, thing, player, player, nullptr, event, nullptr, args,
-                   nargs);
+  lua_push_context(nullptr, state, thing, player, player, nullptr, event,
+                   nullptr, args, nargs);
   {
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
@@ -1487,6 +1511,7 @@ typedef struct LuaFlowField {
 } LuaFlowField;
 
 typedef struct LuaFlowData {
+  LuaRuntime **runtime_owner;
   LUA_MODULE_ROOT root;
   char path[PATH_MAX];
   LuaFlowField fields[LUA_FLOW_MAX_FIELDS];
@@ -1527,8 +1552,8 @@ static void lua_flow_decode(lua_State *state, LuaFlowData *data) {
 /* Harvest ctx.flow (at the given stack index) back into the scratch store.
  * Only string/number values keyed by strings round-trip; anything else is
  * dropped with a log message. */
-static void lua_flow_encode(lua_State *state, int flow_table_index,
-                            LuaFlowData *data) {
+static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
+                            int flow_table_index, LuaFlowData *data) {
   lua_flow_data_clear_fields(data);
   lua_pushnil(state);
   while (lua_next(state, flow_table_index) != 0) {
@@ -1543,7 +1568,7 @@ static void lua_flow_encode(lua_State *state, int flow_table_index,
       StringCopyTrunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
       data->field_count++;
     } else if (lua_type(state, -2) == LUA_TSTRING) {
-      log_error(LOG_BUGS, "LUA", "FLOW",
+      log_error(&runtime->server->log, LOG_BUGS, "LUA", "FLOW",
                 "Dropping unsupported ctx.flow.%s (must be a string or "
                 "number).",
                 lua_tostring(state, -2));
@@ -1556,10 +1581,10 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
                                  const char *step, const char *input) {
   static char prompt_buffer[LBUF_SIZE];
   LuaFlowData *data = flow_data;
-  LUA_RUNTIME *runtime = lua_runtime;
+  LuaRuntime *runtime =
+      data->runtime_owner != nullptr ? *data->runtime_owner : nullptr;
   lua_State *state;
   FlowOutcome outcome = {.action = FLOW_ACTION_CANCEL};
-  Descriptor *previous_descriptor;
   LUA_MODULE_ROOT previous_root;
   char error[LBUF_SIZE];
   const char *field;
@@ -1575,7 +1600,7 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   state = runtime->state;
   top = lua_gettop(state);
   if (!lua_load_module(runtime, data->root, data->path, error, sizeof(error))) {
-    lua_log_load_error(d->player, data->path, error);
+    lua_log_load_error(runtime, d->player, data->path, error);
     lua_settop(state, top);
     return outcome;
   }
@@ -1586,15 +1611,13 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   }
   lua_getfield(state, -1, step);
   if (!lua_isfunction(state, -1)) {
-    log_error(LOG_BUGS, "LUA", "FLOW", "Unknown flow step '%s' in %s.", step,
-              data->path);
+    log_error(&runtime->server->log, LOG_BUGS, "LUA", "FLOW",
+              "Unknown flow step '%s' in %s.", step, data->path);
     lua_settop(state, top);
     return outcome;
   }
 
-  previous_descriptor = mudstate.curr_descriptor;
-  mudstate.curr_descriptor = d;
-  lua_push_context(state, NOTHING, d->player, d->player, nullptr, nullptr,
+  lua_push_context(d, state, NOTHING, d->player, d->player, nullptr, nullptr,
                    "flow", nullptr, 0);
   if (input != nullptr) {
     lua_pushstring(state, input);
@@ -1608,7 +1631,6 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   runtime->current_root = data->root;
   status = lua_pcall_limited(runtime, 1, 1);
   runtime->current_root = previous_root;
-  mudstate.curr_descriptor = previous_descriptor;
   if (status) {
     lua_log_error(runtime, d->player, "FLOW", lua_tostring(state, -1));
     lua_settop(state, top);
@@ -1619,7 +1641,7 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   result_index = lua_gettop(state);
   ctx_index = result_index - 1;
   lua_getfield(state, ctx_index, "flow");
-  lua_flow_encode(state, lua_gettop(state), data);
+  lua_flow_encode(runtime, state, lua_gettop(state), data);
   lua_pop(state, 1);
 
   if (!lua_istable(state, result_index)) {
@@ -1636,7 +1658,7 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
     outcome.action = FLOW_ACTION_DONE;
   else {
     if (strcmp(field, "cancel"))
-      log_error(LOG_BUGS, "LUA", "FLOW",
+      log_error(&runtime->server->log, LOG_BUGS, "LUA", "FLOW",
                 "Unknown flow action '%s' from step '%s' in %s; cancelling.",
                 field, step, data->path);
     outcome.action = FLOW_ACTION_CANCEL;
@@ -1665,10 +1687,9 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   return outcome;
 }
 
-static int lua_verify_module_has_flow(LUA_RUNTIME *runtime,
-                                      LUA_MODULE_ROOT root, const char *path,
-                                      const char *first_step, char *error,
-                                      size_t error_size) {
+static int lua_verify_module_has_flow(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+                                      const char *path, const char *first_step,
+                                      char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
   int ok = 0;
 
@@ -1689,7 +1710,7 @@ static int lua_verify_module_has_flow(LUA_RUNTIME *runtime,
 }
 
 static int lua_runtime_is_checking(void *context) {
-  LUA_RUNTIME *runtime = context;
+  LuaRuntime *runtime = context;
 
   return runtime->checking;
 }
@@ -1697,13 +1718,13 @@ static int lua_runtime_is_checking(void *context) {
 static int lua_runtime_flow_start(void *context, lua_State *state,
                                   int descriptor_id, const char *module,
                                   const char *first_step) {
-  LUA_RUNTIME *runtime = context;
+  LuaRuntime *runtime = context;
   Descriptor *d;
   LUA_MODULE_ROOT root;
   char error[LBUF_SIZE];
   LuaFlowData *data;
 
-  d = descriptor_find_by_fd(descriptor_id);
+  d = descriptor_find_by_fd(runtime->server->descriptors, descriptor_id);
   if (!d)
     return luaL_error(state, "no such descriptor");
   if (d->flow != nullptr)
@@ -1715,6 +1736,7 @@ static int lua_runtime_flow_start(void *context, lua_State *state,
     return luaL_error(state, "%s", error);
 
   data = malloc(sizeof(LuaFlowData));
+  data->runtime_owner = runtime->owner;
   data->root = root;
   snprintf(data->path, sizeof(data->path), "%s", module);
   data->field_count = 0;
@@ -1723,16 +1745,16 @@ static int lua_runtime_flow_start(void *context, lua_State *state,
   return 0;
 }
 
-void do_luaparent(DbRef player, DbRef cause, int key, char *target,
-                  char *path) {
+void do_luaparent(CommandInvocation *invocation) {
+  DbRef player = invocation->player;
+  char *target = invocation->first;
+  char *path = invocation->second;
   DbRef thing;
   char error[LBUF_SIZE];
 
-  (void)cause;
-  (void)key;
-  init_match(player, target, NOTYPE);
-  match_everything(0);
-  thing = noisy_match_result();
+  init_match(&invocation->context->match, player, target, NOTYPE);
+  match_everything(&invocation->context->match, 0);
+  thing = noisy_match_result(&invocation->context->match);
   if (thing == NOTHING)
     return;
   if (!*path) {
@@ -1740,32 +1762,39 @@ void do_luaparent(DbRef player, DbRef cause, int key, char *target,
        only read here. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-    attribute_add_raw(thing, A_LUAPARENT, (char *)"");
+    attribute_add_raw(&invocation->context->server->database, thing,
+                      A_LUAPARENT, (char *)"");
 #pragma clang diagnostic pop
-    notify_quiet(player, "Lua parent cleared.");
+    notify_quiet(&invocation->context->evaluation, player,
+                 "Lua parent cleared.");
     return;
   }
-  if (!lua_validate_path(path, error, sizeof(error))) {
-    notify_printf(player, "Lua parent not set: %s", error);
+  if (!lua_validate_path(invocation->context->server->lua, path, error,
+                         sizeof(error))) {
+    notify_printf(&invocation->context->evaluation, player,
+                  "Lua parent not set: %s", error);
     return;
   }
-  attribute_add_raw(thing, A_LUAPARENT, path);
-  notify_quiet(player, "Lua parent set.");
+  attribute_add_raw(&invocation->context->server->database, thing, A_LUAPARENT,
+                    path);
+  notify_quiet(&invocation->context->evaluation, player, "Lua parent set.");
 }
 
-void do_luacheck(DbRef player, DbRef cause, int key) {
+void do_luacheck(CommandInvocation *invocation) {
+  DbRef player = invocation->player;
   char error[LBUF_SIZE];
 
-  (void)cause;
-  (void)key;
-  if (!lua_check(player, error, sizeof(error))) {
-    notify_printf(player, "Lua check failed: %s", error);
+  if (!lua_check(&invocation->context->evaluation, invocation->context->server,
+                 player, error, sizeof(error))) {
+    notify_printf(&invocation->context->evaluation, player,
+                  "Lua check failed: %s", error);
     return;
   }
-  notify_quiet(player, "All Lua module checks passed.");
+  notify_quiet(&invocation->context->evaluation, player,
+               "All Lua module checks passed.");
 }
 
-static int lua_schedule_count(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
+static int lua_schedule_count(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                               const char *path, int *count, char *error,
                               size_t error_size) {
   lua_State *state = runtime->state;
@@ -1781,7 +1810,8 @@ static int lua_schedule_count(LUA_RUNTIME *runtime, LUA_MODULE_ROOT root,
   return 1;
 }
 
-static void lua_schedule_show_module(DbRef player, LUA_RUNTIME *runtime,
+static void lua_schedule_show_module(EvaluationContext *evaluation,
+                                     DbRef player, LuaRuntime *runtime,
                                      LUA_MODULE_ROOT root, const char *path,
                                      int show_objects) {
   lua_State *state;
@@ -1791,16 +1821,17 @@ static void lua_schedule_show_module(DbRef player, LUA_RUNTIME *runtime,
   char error[LBUF_SIZE];
 
   if (!runtime || !lua_load_module(runtime, root, path, error, sizeof(error))) {
-    notify_printf(player, "Lua schedule unavailable: %s", error);
+    notify_printf(evaluation, player, "Lua schedule unavailable: %s", error);
     return;
   }
   state = runtime->state;
   top = lua_gettop(state) - 1;
-  notify_printf(player, "Schedules for %s/%s:", lua_root_name(root), path);
+  notify_printf(evaluation, player, "Schedules for %s/%s:", lua_root_name(root),
+                path);
   lua_getfield(state, -1, "schedules");
   schedules = lua_gettop(state);
   if (!lua_istable(state, schedules))
-    notify_quiet(player, "  (none)");
+    notify_quiet(evaluation, player, "  (none)");
   for (index = 1; lua_istable(state, schedules) &&
                   index <= (int)lua_objlen(state, schedules);
        index++) {
@@ -1814,70 +1845,77 @@ static void lua_schedule_show_module(DbRef player, LUA_RUNTIME *runtime,
     lua_getfield(state, -1, "cron");
     cron = lua_tostring(state, -1);
     lua_pop(state, 2);
-    notify_printf(player, "  %s: %s", name ? name : "<invalid>",
+    notify_printf(evaluation, player, "  %s: %s", name ? name : "<invalid>",
                   cron ? cron : "<invalid>");
   }
   lua_settop(state, top);
   if (show_objects) {
     DbRef object;
 
-    notify_quiet(player, "Objects:");
-    for (object = 0; object < mudstate.db_top; object++) {
+    notify_quiet(evaluation, player, "Objects:");
+    for (object = 0; object < runtime->server->database.top; object++) {
       char effective[PATH_MAX];
 
       DbRef source;
 
-      if (is_good_obj(object) &&
-          lua_effective_path(object, effective, sizeof(effective), &source) &&
+      if (is_good_obj(&runtime->server->database, object) &&
+          lua_effective_path(runtime, object, effective, sizeof(effective),
+                             &source) &&
           !strcmp(effective, path))
-        notify_printf(player, "  %s (#%ld, attached on #%ld)", Name(object),
+        notify_printf(evaluation, player, "  %s (#%ld, attached on #%ld)",
+                      game_object_name(&runtime->server->database, object),
                       object, source);
     }
   }
 }
 
-void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
-  LUA_RUNTIME *runtime = lua_runtime;
-  LUA_RUNTIME *inspection;
+void do_luaschedule(CommandInvocation *invocation) {
+  DbRef player = invocation->player;
+  char *argument = invocation->first;
+  LuaRuntime *runtime = invocation->context->server->lua;
+  LuaRuntime *inspection;
   char error[LBUF_SIZE];
 
-  (void)cause;
-  (void)key;
   if (!runtime) {
-    notify_quiet(player, "Lua is not initialized.");
+    notify_quiet(&invocation->context->evaluation, player,
+                 "Lua is not initialized.");
     return;
   }
-  inspection = lua_runtime_create(error, sizeof(error));
+  inspection =
+      lua_runtime_create(nullptr, runtime->server, error, sizeof(error));
   if (!inspection) {
-    notify_printf(player, "Lua schedule unavailable: %s", error);
+    notify_printf(&invocation->context->evaluation, player,
+                  "Lua schedule unavailable: %s", error);
     return;
   }
   inspection->checking = 1;
   if (*argument) {
     if (!strncmp(argument, "global_logic/", 13)) {
-      lua_schedule_show_module(player, inspection, LUA_ROOT_GLOBAL_LOGIC,
-                               argument + 13, 0);
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_GLOBAL_LOGIC, argument + 13,
+                               0);
       goto done;
     }
     if (lua_valid_relative_path(argument)) {
-      lua_schedule_show_module(player, inspection, LUA_ROOT_OBJECT_LOGIC,
-                               argument, 1);
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_OBJECT_LOGIC, argument, 1);
       goto done;
     }
-    init_match(player, argument, NOTYPE);
-    match_everything(0);
+    init_match(&invocation->context->match, player, argument, NOTYPE);
+    match_everything(&invocation->context->match, 0);
     {
-      DbRef object = noisy_match_result();
+      DbRef object = noisy_match_result(&invocation->context->match);
       char path[PATH_MAX];
 
       if (object == NOTHING)
         goto done;
-      if (!lua_effective_path(object, path, sizeof(path), nullptr)) {
-        notify_quiet(player, "That object has no effective Luaparent.");
+      if (!lua_effective_path(runtime, object, path, sizeof(path), nullptr)) {
+        notify_quiet(&invocation->context->evaluation, player,
+                     "That object has no effective Luaparent.");
         goto done;
       }
-      lua_schedule_show_module(player, inspection, LUA_ROOT_OBJECT_LOGIC, path,
-                               0);
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_OBJECT_LOGIC, path, 0);
       goto done;
     }
   }
@@ -1895,14 +1933,15 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
                              runtime->global_modules[index], &count, error,
                              sizeof(error)) &&
           count)
-        notify_printf(player, "global_logic/%s: %d schedules (global)",
+        notify_printf(&invocation->context->evaluation, player,
+                      "global_logic/%s: %d schedules (global)",
                       runtime->global_modules[index], count);
     }
-    for (object = 0; object < mudstate.db_top; object++) {
+    for (object = 0; object < runtime->server->database.top; object++) {
       char path[PATH_MAX];
 
-      if (!is_good_obj(object) ||
-          !lua_effective_path(object, path, sizeof(path), nullptr))
+      if (!is_good_obj(&runtime->server->database, object) ||
+          !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       for (index = 0; index < path_count; index++) {
         if (!strcmp(paths[index], path)) {
@@ -1931,7 +1970,8 @@ void do_luaschedule(DbRef player, DbRef cause, int key, char *argument) {
       if (lua_schedule_count(inspection, LUA_ROOT_OBJECT_LOGIC, paths[index],
                              &count, error, sizeof(error)) &&
           count)
-        notify_printf(player, "object_logic/%s: %d schedules (%zu objects)",
+        notify_printf(&invocation->context->evaluation, player,
+                      "object_logic/%s: %d schedules (%zu objects)",
                       paths[index], count, counts[index]);
       free(paths[index]);
     }
@@ -1942,14 +1982,14 @@ done:
   lua_runtime_destroy(inspection);
 }
 
-void do_luareload(DbRef player, DbRef cause, int key) {
+void do_luareload(CommandInvocation *invocation) {
+  DbRef player = invocation->player;
   char error[LBUF_SIZE];
 
-  (void)cause;
-  (void)key;
-  if (!lua_reload(error, sizeof(error))) {
-    notify_printf(player, "Lua reload failed: %s", error);
+  if (!lua_reload(&invocation->context->server->lua, error, sizeof(error))) {
+    notify_printf(&invocation->context->evaluation, player,
+                  "Lua reload failed: %s", error);
     return;
   }
-  notify_quiet(player, "Lua reloaded.");
+  notify_quiet(&invocation->context->evaluation, player, "Lua reloaded.");
 }

@@ -172,6 +172,7 @@ if(BTECH_ENABLE_ASAN)
 endif()
 
 set(BTECH_SOURCES
+  ${BTECH_SOURCE_DIR}/src/btech_context.c
   ${BTECH_SOURCE_DIR}/persistence/btech_persistence_sqlite.c
   ${BTECH_SOURCE_DIR}/src/coolmenu.c
   ${BTECH_SOURCE_DIR}/src/debug.c

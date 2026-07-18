@@ -7,20 +7,26 @@
 #include <stddef.h>
 #include <time.h>
 
-int lua_initialize(char *error, size_t error_size);
-void lua_shutdown(void);
-int lua_reload(char *error, size_t error_size);
-int lua_check(DbRef player, char *error, size_t error_size);
-int lua_validate_path(const char *path, char *error, size_t error_size);
-int lua_command_match(DbRef thing, DbRef player, DbRef cause,
-                      const char *command);
-int lua_list_command_match(DbRef first, DbRef player, DbRef cause,
+typedef struct LuaRuntime LuaRuntime;
+typedef struct Descriptor Descriptor;
+typedef struct MuxServer MuxServer;
+typedef struct EvaluationContext EvaluationContext;
+
+int lua_initialize(LuaRuntime **owner, MuxServer *server, char *error,
+                   size_t error_size);
+void lua_shutdown(LuaRuntime **owner);
+int lua_reload(LuaRuntime **owner, char *error, size_t error_size);
+int lua_check(EvaluationContext *evaluation, MuxServer *server, DbRef player,
+              char *error, size_t error_size);
+int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
+                      size_t error_size);
+int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
+                      DbRef player, DbRef cause, const char *command);
+int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                           DbRef first, DbRef player, DbRef cause,
                            const char *command);
-int lua_global_command_match(DbRef player, DbRef cause, const char *command);
-int lua_event_dispatch(DbRef player, DbRef thing, int attribute, char *args[],
-                       int nargs);
-void lua_schedule_tick(time_t now);
-void do_luaparent(DbRef player, DbRef cause, int key, char *target, char *path);
-void do_luacheck(DbRef player, DbRef cause, int key);
-void do_luareload(DbRef player, DbRef cause, int key);
-void do_luaschedule(DbRef player, DbRef cause, int key, char *argument);
+int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                             DbRef player, DbRef cause, const char *command);
+int lua_event_dispatch(LuaRuntime *runtime, DbRef player, DbRef thing,
+                       int attribute, char *args[], int nargs);
+void lua_schedule_tick(LuaRuntime *runtime, time_t now);

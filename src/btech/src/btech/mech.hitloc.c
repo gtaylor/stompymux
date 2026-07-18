@@ -260,8 +260,9 @@ int ModifyHeadHit(int hitGroup, MECH *mech) {
     return newloc;
   }
 
-  if (newloc != HEAD && (mudconf.btech_exile_stun_code ==
-                         1)) { // set exile_stun_code >1 to disable 'stun' part
+  if (newloc != HEAD &&
+      (btech_context_active()->configuration->btech_exile_stun_code ==
+       1)) { // set exile_stun_code >1 to disable 'stun' part
 
     mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
     mech_notify(mech, MECHALL,
@@ -375,7 +376,8 @@ int crittable(MECH *mech, int loc, int tres) {
     return 0;
   if (!GetSectOArmor(mech, loc))
     return 1;
-  if (MechType(mech) != CLASS_MECH && mudconf.btech_vcrit <= 1)
+  if (MechType(mech) != CLASS_MECH &&
+      btech_context_active()->configuration->btech_vcrit <= 1)
     return 0;
 
   /* Calculate percentage of armor remaining */
@@ -463,7 +465,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -494,7 +496,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -525,7 +527,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -541,7 +543,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return LSIDE;
       case 3:
-        if (mudconf.btech_tankfriendly) {
+        if (btech_context_active()->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -655,7 +657,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return RSIDE;
       case 3:
-        if (mudconf.btech_tankfriendly) {
+        if (btech_context_active()->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -780,8 +782,8 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return side;
       case 3:
-        if (mudconf.btech_tankshield) {
-          if (mudconf.btech_tankfriendly) {
+        if (btech_context_active()->configuration->btech_tankshield) {
+          if (btech_context_active()->configuration->btech_tankfriendly) {
             if (!Fallen(mech)) {
               mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
               switch (MechMove(mech)) {
@@ -842,7 +844,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         return side;
       case 4:
         /* MP -1 */
-        if (mudconf.btech_tankshield) {
+        if (btech_context_active()->configuration->btech_tankshield) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -898,7 +900,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 12:
         /* A Roll on Determining Critical Hits Table */
         if (crittable(mech, (GetSectInt(mech, TURRET)) ? TURRET : side,
-                      mudconf.btech_critlevel))
+                      btech_context_active()->configuration->btech_critlevel))
           *iscritical = 1;
         return (GetSectInt(mech, TURRET)) ? TURRET : side;
       }
@@ -1501,7 +1503,8 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
         break;
       case 3:
         hitloc = side;
-        if (crittable(mech, hitloc, mudconf.btech_critlevel))
+        if (crittable(mech, hitloc,
+                      btech_context_active()->configuration->btech_critlevel))
           DoMotiveSystemHit(mech, 0);
         break;
       case 4:
@@ -1541,7 +1544,8 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 3:
         hitloc = side;
 
-        if (crittable(mech, hitloc, mudconf.btech_critlevel))
+        if (crittable(mech, hitloc,
+                      btech_context_active()->configuration->btech_critlevel))
           DoMotiveSystemHit(mech, 0);
         break;
       case 4:
@@ -1650,7 +1654,8 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
     break;
   }
 
-  if (!crittable(mech, hitloc, mudconf.btech_critlevel))
+  if (!crittable(mech, hitloc,
+                 btech_context_active()->configuration->btech_critlevel))
     *iscritical = 0;
 
   return hitloc;
@@ -1706,7 +1711,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -1733,7 +1738,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -1760,7 +1765,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2177,25 +2182,25 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
    * the others don't */
   switch (MechType(mech)) {
   case CLASS_VTOL:
-    if (mudconf.btech_fasaadvvtolcrit)
+    if (btech_context_active()->configuration->btech_fasaadvvtolcrit)
       return FindAdvFasaVehicleHitLocation(mech, hitGroup, iscritical, isrear);
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (mudconf.btech_fasacrit)
+    else if (btech_context_active()->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   case CLASS_VEH_GROUND:
-    if (mudconf.btech_fasaadvvhlcrit)
+    if (btech_context_active()->configuration->btech_fasaadvvhlcrit)
       return FindAdvFasaVehicleHitLocation(mech, hitGroup, iscritical, isrear);
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (mudconf.btech_fasacrit)
+    else if (btech_context_active()->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   default:
     if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (mudconf.btech_fasacrit)
+    else if (btech_context_active()->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   }
@@ -2242,7 +2247,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return RLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2275,7 +2280,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return LLEG;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2308,7 +2313,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return LARM;
       case 12:
-        if (mudconf.btech_exile_stun_code)
+        if (btech_context_active()->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2869,7 +2874,7 @@ int FindAreaHitGroup(MECH *mech, MECH *target) {
    * The left side and right side are simply the leftovers, and are
    * determined by whether an arc is less than or greater than 180.
    */
-  switch (mudconf.btech_hit_arcs) {
+  switch (btech_context_active()->configuration->btech_hit_arcs) {
   case 0: /* TW rules */
   default:
     m_fs_hw = 90;

@@ -189,7 +189,8 @@
 
 /* Basic checks for the autopilot */
 #define AUTO_CHECKS(a)                                                         \
-  if (obj_location(a->mynum) != a->mymechnum)                                  \
+  if (game_object_location(btech_context_active()->database, a->mynum) !=      \
+      a->mymechnum)                                                            \
     return;                                                                    \
   if (Destroyed(mech))                                                         \
     return;

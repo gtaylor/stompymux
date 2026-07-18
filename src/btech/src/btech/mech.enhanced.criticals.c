@@ -419,10 +419,12 @@ void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
 
   cch(MECH_USUALSP);
 
-  notify(player, "=========================WEAPON SYSTEMS "
-                 "STATUS=========================");
-  notify(player, "[##] -------- Weapon Name -------- || Location -------- || "
-                 "Status -----");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "=========================WEAPON SYSTEMS "
+         "STATUS=========================");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "[##] -------- Weapon Name -------- || Location -------- || "
+         "Status -----");
 
   for (secIter = 0; secIter < NUM_SECTIONS; secIter++) {
     wWeapsInSec = FindWeapons(mech, secIter, weaparray, weapdata, critical);
@@ -475,7 +477,7 @@ void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
           strcat(weapbuff, "|| %cg%chOPERATIONAL%cn");
       }
 
-      notify(player, weapbuff);
+      notify(BTECH_EVALUATION_CONTEXT, player, weapbuff);
 
       showWeaponDamageAndInfo(player, mech, secIter, critical[weapIter]);
     }
@@ -546,13 +548,14 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
     tPrintSpace = 1;
 
     if (awDamage[0] > 0) {
-      notify_printf(player, "      General damage (%d hit%s): +%d to hit.",
-                    awDamage[0], awDamage[0] > 1 ? "s" : "", awDamage[0]);
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "      General damage (%d hit%s): +%d to hit.", awDamage[0],
+                    awDamage[0] > 1 ? "s" : "", awDamage[0]);
     }
 
     if (IsEnergy(wWeapIndex)) {
       if (awDamage[1] > 0) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "      Focus misalignment (%d hit%s): -%d damage. +%d to "
                       "hit at >%d hexes.",
                       awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1],
@@ -560,7 +563,7 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "      Charging crystal damage (%d hit%s): +%d heat. "
                       "Explodes on %d or less.%%c",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2],
@@ -569,14 +572,14 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
     } else if (IsMissile(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(
-            player,
+            BTECH_EVALUATION_CONTEXT, player,
             "      Ranging system damage (%d hit%s): +%d to hit at >%d hexes.",
             awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1],
             MechWeapons[wWeapIndex].shortrange);
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "      Ammo feed damage (%d hit%s): Can't switch ammo. "
                       "Explodes on %d or less.",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2] + 1);
@@ -584,13 +587,13 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
     } else if (IsBallistic(wWeapIndex) || IsArtillery(wWeapIndex)) {
       if (awDamage[1] > 0) {
         notify_printf(
-            player,
+            BTECH_EVALUATION_CONTEXT, player,
             "      %%cr%%chBarrel damage (%d hit%s): Jams on a %d or less.%%c",
             awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1] + 1);
       }
 
       if (awDamage[2] > 0) {
-        notify_printf(player,
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
                       "      Ammo feed damage (%d hit%s): Can't switch ammo. "
                       "Explodes on %d or less.",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2] + 1);
@@ -598,23 +601,25 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
     }
 
     if ((awDamage[0] == 0) && (awDamage[1] == 0) && (awDamage[2] == 0))
-      notify_printf(player, "      Damaged, but fully operational.");
+      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                    "      Damaged, but fully operational.");
     tPrintSpace = 1;
   }
 
   if (wAmmoLoc >= 0) {
     ArmorStringFromIndex(wAmmoLoc, strLocation, MechType(mech), MechMove(mech));
-    notify_printf(player, "      Prefered ammo source: %s", strLocation);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "      Prefered ammo source: %s", strLocation);
     tPrintSpace = 1;
   }
 
   if ((awNonOpCrits[0] > 0) || (awNonOpCrits[1] > 0) || (awNonOpCrits[2] > 0)) {
-    notify_printf(player,
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
                   "      Slot status: Damaged: %d. Destroyed: %d. Disabled: %d",
                   awNonOpCrits[0], awNonOpCrits[1], awNonOpCrits[2]);
     tPrintSpace = 1;
   }
 
   if (tPrintSpace)
-    notify(player, " ");
+    notify(BTECH_EVALUATION_CONTEXT, player, " ");
 }

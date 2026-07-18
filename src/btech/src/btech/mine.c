@@ -136,8 +136,8 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
 
     // Trigger the unit's AMECHDEST attribute.
     if (mech->mynum > 0)
-      did_it(mech->mynum, mech->mynum, 0, NULL, 0, NULL, A_AMINETRIGGER,
-             (char **)NULL, 0);
+      did_it(BTECH_EVALUATION_CONTEXT, mech->mynum, mech->mynum, 0, NULL, 0,
+             NULL, A_AMINETRIGGER, (char **)NULL, 0);
 
     return;
   case MINE_VIBRA:
@@ -355,7 +355,8 @@ void map_add_mine(DbRef player, void *data, char *buffer) {
   foo.obj = player;
   add_mapobj(map, &map->mapobj[TYPE_MINE], &foo, 1);
 
-  notify_printf(player, "%s mine added to (%d,%d) (strength: %d / extra: %d)",
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "%s mine added to (%d,%d) (strength: %d / extra: %d)",
                 mine_type_names[type], x, y, str, extra);
   recalculate_minefields(map);
 }

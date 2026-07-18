@@ -129,7 +129,8 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
          * get */
         rbth = (MechWeapons[weapindx].min - range + 1);
       } else {
-        if (mudconf.btech_hotloadaddshalfbthmod) {
+        if (btech_context_active()
+                ->configuration->btech_hotloadaddshalfbthmod) {
           rbth = ((MechWeapons[weapindx].min - range + 2) / 2);
         }
       }
@@ -312,10 +313,10 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   if (target) {
     /* Add the dig-in bonus */
     if (MechDugIn(target) &&
-        (!mudconf.btech_dig_only_fs ||
+        (!btech_context_active()->configuration->btech_dig_only_fs ||
          (FindAreaHitGroup(mech, target) == FRONT)) &&
         (MechZ(target) >= MechZ(mech)))
-      BTHADD("DugIn", mudconf.btech_digbonus);
+      BTHADD("DugIn", btech_context_active()->configuration->btech_digbonus);
 
     /* -3 if it's a DS... most people can hit the broadside of a barn */
     if (IsDS(target))
@@ -376,7 +377,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
         BTHADD("Terrain/is_light(Sensor)", j);
     }
 
-    if (mudconf.btech_moddamagewithwoods &&
+    if (btech_context_active()->configuration->btech_moddamagewithwoods &&
         IsForestHex(mech_map, MechX(target), MechY(target)) &&
         ((MechZ(target) - 2) <=
          Elevation(mech_map, MechX(target), MechY(target)))) {
@@ -389,7 +390,8 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
 #ifdef BT_MOVEMENT_MODES
     if (MechStatus2(target) & (SPRINTING | EVADING)) {
       if (MechStatus2(target) & SPRINTING)
-        BTHADD("SprintingTarget", mudconf.btech_sprint_bth);
+        BTHADD("SprintingTarget",
+               btech_context_active()->configuration->btech_sprint_bth);
       if (!Fallen(target) && MechStatus2(target) & EVADING)
         BTHADD("EvadingTarget", 1);
       // Lets not penalize the mech any further (or reward) while its changing
@@ -413,7 +415,8 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   /* Check for damage */
   BTHADD("CritDamage", getCritAddedBTH(mech, section, critical, wRangeBracket));
   if (MechBTHDebug(mech))
-    notify_printf(MechPilot(mech), "BTHDebug: %s", bthbuf);
+    notify_printf(BTECH_EVALUATION_CONTEXT, MechPilot(mech), "BTHDebug: %s",
+                  bthbuf);
 
   BTHEND(mech);
   return baseToHit;
@@ -550,7 +553,7 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
       if (!HotLoading(weapindx, firemode)) {
         *wBTH = MechWeapons[weapindx].min - range;
       } else {
-        if (mudconf.btech_hotloadaddshalfbthmod)
+        if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
           *wBTH = ((MechWeapons[weapindx].min - range + 1) / 2);
         else
           *wBTH = 0;
@@ -561,7 +564,7 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
   }
 
   if (HotLoading(weapindx, firemode)) {
-    if (mudconf.btech_hotloadaddshalfbthmod)
+    if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
       *wBTH = ((MechWeapons[weapindx].min - range + 1) / 2);
     else
       *wBTH = 0;
@@ -655,7 +658,7 @@ int FindBTHByC3Range(MECH *mech, MECH *target, int section, int weapindx,
 
   /* We don't care about min range if we're Hotloading */
   if (!HotLoading(weapindx, mode)) {
-    if (mudconf.btech_hotloadaddshalfbthmod)
+    if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
       *wBTH = ((MechWeapons[weapindx].min - realRange + 1) / 2);
     else
       *wBTH = 0;
@@ -700,7 +703,7 @@ int AttackMovementMods(MECH *mech) {
 
   speed = MechSpeed(mech);
 
-  if (mudconf.btech_fasaturn)
+  if (btech_context_active()->configuration->btech_fasaturn)
     if (MechFacing(mech) != MechDesiredFacing(mech))
       base++;
 
@@ -766,7 +769,7 @@ int TargetMovementMods(MECH *mech, MECH *target, float range) {
       returnValue = 3;
     } else {
       /* Moving more than 9 hexes */
-      if (mudconf.btech_extendedmovemod)
+      if (btech_context_active()->configuration->btech_extendedmovemod)
         returnValue = 4 + (target_speed - 10 * MP1) / MP4;
       else
         returnValue = 4;

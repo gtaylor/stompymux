@@ -30,6 +30,9 @@ character:
   then a confirmation of that password, retrying the password step on a
   mismatch. Answering no goes back to the name prompt.
 
+New character names must start with a letter and contain at least two
+characters. Existing characters with older names remain able to log in.
+
 Every step is fully modal: whatever line the player sends is always the
 answer to the current prompt. There's no escape hatch back to ordinary
 commands, and pre-login `WHO`/`DOING`/`SESSION`/`QUIT` are no longer

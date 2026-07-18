@@ -7,44 +7,74 @@
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/world/player_cache.h"
 
-RedBlackTree pcache_tree;
-PCACHE *pcache_head;
+struct PlayerCache {
+  RedBlackTree tree;
+  PCACHE *head;
+  const ServerConfiguration *configuration;
+  GameDatabase *database;
+};
 
 static int compare_pcache(DbRef left, DbRef right) {
   return (left > right) - (left < right);
 }
 
-void pcache_init(void) {
-  pcache_tree = red_black_tree_init(
+PlayerCache *player_cache_create(const ServerConfiguration *configuration,
+                                 GameDatabase *database) {
+  PlayerCache *cache = calloc(1, sizeof(*cache));
+
+  if (cache == nullptr)
+    return nullptr;
+  cache->configuration = configuration;
+  cache->database = database;
+  cache->tree = red_black_tree_init(
       (int (*)(void *, void *, void *))(GenericFnPtr)compare_pcache, nullptr);
-  pcache_head = nullptr;
+  if (cache->tree == nullptr) {
+    free(cache);
+    return nullptr;
+  }
+  return cache;
 }
 
-static void pcache_reload1(DbRef player, PCACHE *pp) {
+void player_cache_destroy(PlayerCache *cache) {
+  PCACHE *entry;
+
+  if (cache == nullptr)
+    return;
+  pcache_sync(cache);
+  while ((entry = cache->head) != nullptr) {
+    cache->head = entry->next;
+    free(entry);
+  }
+  red_black_tree_destroy(cache->tree);
+  free(cache);
+}
+
+static void pcache_reload1(PlayerCache *cache, DbRef player, PCACHE *pp) {
   char *cp;
 
-  cp = attribute_get_raw(player, A_QUEUEMAX);
+  cp = attribute_get_raw(cache->database, player, A_QUEUEMAX);
   if (cp && *cp)
     pp->qmax = atoi(cp);
-  else if (!is_wizard(player))
-    pp->qmax = mudconf.queuemax;
+  else if (!is_wizard(cache->database, player))
+    pp->qmax = cache->configuration->queuemax;
   else
     pp->qmax = -1;
 }
 
-PCACHE *pcache_find(DbRef player) {
+PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
   PCACHE *pp;
 
-  if (!is_good_obj(player) || !is_owns_others(player))
+  if (!is_good_obj(cache->database, player) ||
+      !is_owns_others(cache->database, player))
     return nullptr;
 
-  pp = (PCACHE *)red_black_tree_find(pcache_tree, (void *)player);
+  pp = (PCACHE *)red_black_tree_find(cache->tree, (void *)player);
   if (pp) {
     pp->cflags |= PF_REF;
     return pp;
@@ -53,39 +83,39 @@ PCACHE *pcache_find(DbRef player) {
   pp->queue = 0;
   pp->cflags = PF_REF;
   pp->player = player;
-  pcache_reload1(player, pp);
-  pp->next = pcache_head;
-  pcache_head = pp;
-  red_black_tree_insert(pcache_tree, (void *)player, (void *)pp);
+  pcache_reload1(cache, player, pp);
+  pp->next = cache->head;
+  cache->head = pp;
+  red_black_tree_insert(cache->tree, (void *)player, (void *)pp);
   return pp;
 }
 
-void pcache_reload(DbRef player) {
+void pcache_reload(PlayerCache *cache, DbRef player) {
   PCACHE *pp;
 
-  pp = pcache_find(player);
+  pp = pcache_find(cache, player);
   if (!pp)
     return;
-  pcache_reload1(player, pp);
+  pcache_reload1(cache, player, pp);
 }
 
-static void pcache_save(PCACHE *pp) {
+static void pcache_save(PlayerCache *cache, PCACHE *pp) {
   IBUF tbuf;
 
   if (pp->cflags & PF_DEAD)
     return;
   if (pp->cflags & PF_QMAX_CH) {
     snprintf(tbuf, sizeof(tbuf), "%d", pp->qmax);
-    attribute_add_raw(pp->player, A_QUEUEMAX, tbuf);
+    attribute_add_raw(cache->database, pp->player, A_QUEUEMAX, tbuf);
   }
   pp->cflags &= ~PF_QMAX_CH;
 }
 
-void pcache_trim(void) {
+void pcache_trim(PlayerCache *cache) {
   PCACHE *pp, *pplast, *ppnext;
   return;
 
-  pp = pcache_head;
+  pp = cache->head;
   pplast = nullptr;
   while (pp) {
     if (!(pp->cflags & PF_DEAD) && (pp->queue || (pp->cflags & PF_REF))) {
@@ -97,10 +127,10 @@ void pcache_trim(void) {
       if (pplast)
         pplast->next = ppnext;
       else
-        pcache_head = ppnext;
+        cache->head = ppnext;
       if (!(pp->cflags & PF_DEAD)) {
-        pcache_save(pp);
-        red_black_tree_delete(pcache_tree, (void *)pp->player);
+        pcache_save(cache, pp);
+        red_black_tree_delete(cache->tree, (void *)pp->player);
       }
       free(pp);
       pp = ppnext;
@@ -108,21 +138,21 @@ void pcache_trim(void) {
   }
 }
 
-void pcache_sync(void) {
+void pcache_sync(PlayerCache *cache) {
   PCACHE *pp;
 
-  pp = pcache_head;
+  pp = cache->head;
   while (pp) {
-    pcache_save(pp);
+    pcache_save(cache, pp);
     pp = pp->next;
   }
 }
 
-int queue_adjust(DbRef player, int adj) {
+int queue_adjust(PlayerCache *cache, DbRef player, int adj) {
   PCACHE *pp;
 
-  if (is_owns_others(player)) {
-    pp = pcache_find(player);
+  if (is_owns_others(cache->database, player)) {
+    pp = pcache_find(cache, player);
     if (pp)
       pp->queue += adj;
     return pp->queue;
@@ -130,30 +160,30 @@ int queue_adjust(DbRef player, int adj) {
   return 0;
 }
 
-void queue_set(DbRef player, int val) {
+void queue_set(PlayerCache *cache, DbRef player, int val) {
   PCACHE *pp;
 
-  if (is_owns_others(player)) {
-    pp = pcache_find(player);
+  if (is_owns_others(cache->database, player)) {
+    pp = pcache_find(cache, player);
     if (pp)
       pp->queue = val;
   }
 }
 
-int queue_maximum(DbRef player) {
+int queue_maximum(PlayerCache *cache, DbRef player) {
   PCACHE *pp;
   int m;
 
   m = 0;
-  if (is_owns_others(player)) {
-    pp = pcache_find(player);
+  if (is_owns_others(cache->database, player)) {
+    pp = pcache_find(cache, player);
     if (pp) {
       if (pp->qmax >= 0) {
         m = pp->qmax;
       } else {
-        m = mudstate.db_top + 1;
-        if (m < mudconf.queuemax)
-          m = mudconf.queuemax;
+        m = cache->database->top + 1;
+        if (m < cache->configuration->queuemax)
+          m = cache->configuration->queuemax;
       }
     }
   }

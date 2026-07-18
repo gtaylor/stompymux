@@ -77,7 +77,7 @@ int HandledCommand(DbRef player, DbRef loc, char *command);
 void CreateNewSpecialObject(DbRef player, DbRef key);
 void DisposeSpecialObject(DbRef player, DbRef key);
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
-void raw_notify(DbRef player, const char *msg);
+void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 
 /*************PERSONAL PROTOS*****************/
 void *NewSpecialObject(long id, int type);
@@ -157,7 +157,8 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   if (type < 0 ||
       (SpecialObjects[type].datasize > 0 &&
        !(xcode_obj = red_black_tree_find(xcode_tree, (void *)location)))) {
-    if (type >= 0 || !is_hardcode(location) || is_zombie(location))
+    if (type >= 0 || !is_hardcode(btech_context_active()->database, location) ||
+        is_zombie(btech_context_active()->database, location))
       return 0;
     if ((type = WhichSpecialS(location)) >= 0) {
       if (SpecialObjects[type].datasize > 0)
@@ -188,11 +189,14 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   while (*a == ' ')                                                            \
   a++
     if (cmd->helpmsg[0] != '@' ||
-        Have_MechPower(obj_owner(player), typeOfObject->power_needed)) {
+        Have_MechPower(
+            game_object_owner(btech_context_active()->database, player),
+            typeOfObject->power_needed)) {
       SKIPSTUFF(command);
       ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
     } else
-      notify(player, "Sorry, that command is restricted!");
+      notify(BTECH_EVALUATION_CONTEXT, player,
+             "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
     SKIPSTUFF(command);
@@ -203,7 +207,9 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   return 0;
 }
 
-#define OkayHcode(a) (a >= 0 && is_hardcode(a) && !is_zombie(a))
+#define OkayHcode(a)                                                           \
+  (a >= 0 && is_hardcode(btech_context_active()->database, a) &&               \
+   !is_zombie(btech_context_active()->database, a))
 
 /* Main entry point */
 int HandledCommand(DbRef player, DbRef loc, char *command) {
@@ -215,12 +221,13 @@ int HandledCommand(DbRef player, DbRef loc, char *command) {
     return 1;
   if (OkayHcode(loc) && HandledCommand_sub(player, loc, command))
     return 1;
-  SAFE_DOLIST(curr, temp, obj_contents(player)) {
+  SAFE_DOLIST(btech_context_active()->database, curr, temp,
+              game_object_contents(btech_context_active()->database, player)) {
     if (OkayHcode(curr))
       if (HandledCommand_sub(player, curr, command))
         return 1;
 #if 0 /* Recursion is evil ; let's not do that, this time */
-		if(has_contents(curr))
+		if(has_contents(btech_context_active()->database, curr))
 			if(HandledCommand_contents(player, curr, command))
 				return 1;
 #endif
@@ -304,8 +311,12 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
 
     if (!(map = getMap(mech->mapindex))) {
       /* Ugly kludge */
-      if ((map = getMap(obj_location(mech->mynum))))
-        mech_Rsetmapindex(GOD, mech, tprintf("%ld", obj_location(mech->mynum)));
+      if ((map = getMap(game_object_location(btech_context_active()->database,
+                                             mech->mynum))))
+        mech_Rsetmapindex(
+            GOD, mech,
+            tprintf("%ld", game_object_location(
+                               btech_context_active()->database, mech->mynum)));
       if (!(map = getMap(mech->mapindex)))
         return 1;
     }
@@ -363,10 +374,12 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
        * the durable command list; it recreates goal-specific events itself.
        */
       if (MechAuto(autopilot->mymech) == autopilot->mynum &&
-          obj_location(autopilot->mynum) == autopilot->mymechnum &&
+          game_object_location(btech_context_active()->database,
+                               autopilot->mynum) == autopilot->mymechnum &&
           autopilot->commands &&
           doubly_linked_list_size(autopilot->commands) > 0 &&
-          !mux_event_count_type_data(EVENT_AUTOCOM, autopilot))
+          !mux_event_count_type_data(btech_context_active()->events,
+                                     EVENT_AUTOCOM, autopilot))
         AUTO_COM(autopilot, AUTOPILOT_NC_DELAY);
       if (Gunning(autopilot))
         DoStartGun(autopilot);
@@ -385,7 +398,7 @@ void LoadSpecialObjects(void) {
 
   init_xcode_tree();
 
-  mux_event_initialize();
+  mux_event_initialize(btech_context_active()->events);
   mux_event_count_initialize();
   init_stat();
   initialize_partname_tables();
@@ -399,14 +412,16 @@ void LoadSpecialObjects(void) {
   }
   /* Loop through the entire database, and if it has the special */
   /* object flag, add it to our linked list. */
-  DO_WHOLE_DB(i)
-  if (is_hardcode(i) && !is_going(i) && !is_halted(i)) {
+  DO_WHOLE_DB(btech_context_active()->database, i)
+  if (is_hardcode(btech_context_active()->database, i) &&
+      !is_going(btech_context_active()->database, i) &&
+      !is_halted(btech_context_active()->database, i)) {
     type = WhichSpecialS(i);
     if (type >= 0) {
       if (SpecialObjects[type].datasize > 0)
         NewSpecialObject(i, type);
     } else
-      c_hardcode(i); /* Reset the flag */
+      c_hardcode(btech_context_active()->database, i); /* Reset the flag */
   }
   for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
     InitSpecialHash(i);
@@ -421,7 +436,8 @@ void LoadSpecialObjects(void) {
     return;
   }
 #endif
-  if (btech_persistence_load_special_state_path(mudconf.database.gamedb) < 0) {
+  if (btech_persistence_load_special_state_path(
+          btech_context_active()->configuration->database.gamedb) < 0) {
     exit(EXIT_FAILURE);
   }
   red_black_tree_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
@@ -437,7 +453,8 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
 
   if (!SpecialObjects[xcode_obj->type].updateTime)
     return 1;
-  if ((mudstate.now % SpecialObjects[xcode_obj->type].updateTime))
+  if ((btech_context_active()->clock->now %
+       SpecialObjects[xcode_obj->type].updateTime))
     return 1;
   ((void (*)(DbRef, void *))SpecialObjects[xcode_obj->type].updatefunc)(
       (DbRef)key, xcode_obj);
@@ -454,20 +471,21 @@ void UpdateSpecialObjects(void) {
 
   const char *cmdsave;
   int i;
-  int times = lastrun ? (mudstate.now - lastrun) : 1;
+  int times = lastrun ? (btech_context_active()->clock->now - lastrun) : 1;
 
   if (times > 20)
     times = 20; /* Machine's hopelessly lagged,
                            we don't want to make it [much] worse */
-  cmdsave = mudstate.debug_cmd;
+  cmdsave = btech_context_active()->command_context->debug_command;
   for (i = 0; i < times; i++) {
-    mux_event_run();
-    mudstate.debug_cmd = (char *)"< Generic hcode update handler>";
+    mux_event_run(btech_context_active()->events);
+    btech_context_active()->command_context->debug_command =
+        (char *)"< Generic hcode update handler>";
     red_black_tree_walk(xcode_tree, WALK_INORDER, UpdateSpecialObject_func,
                         NULL);
   }
-  lastrun = mudstate.now;
-  mudstate.debug_cmd = cmdsave;
+  lastrun = btech_context_active()->clock->now;
+  btech_context_active()->command_context->debug_command = cmdsave;
 }
 
 void *NewSpecialObject(long id, int type) {
@@ -500,11 +518,13 @@ void CreateNewSpecialObject(DbRef player, DbRef key) {
 
   str = silly_atr_get(key, A_XTYPE);
   if (!(str && *str)) {
-    notify(player, "You must first set the XTYPE using @xtype <object>=<type>");
-    notify(player, "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-                   "AUTOPILOT, TURRET.");
-    notify(player, "Resetting hardcode flag.");
-    c_hardcode(key); /* Reset the flag */
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "You must first set the XTYPE using @xtype <object>=<type>");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
+           "AUTOPILOT, TURRET.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Resetting hardcode flag.");
+    c_hardcode(btech_context_active()->database, key); /* Reset the flag */
     return;
   }
 
@@ -516,14 +536,15 @@ void CreateNewSpecialObject(DbRef player, DbRef key) {
     if (typeOfObject->datasize) {
       new = NewSpecialObject(key, type);
       if (!new)
-        notify(player, "Memory allocation failure!");
+        notify(BTECH_EVALUATION_CONTEXT, player, "Memory allocation failure!");
     }
   } else {
-    notify(player, "That is not a valid XTYPE!");
-    notify(player, "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-                   "AUTOPILOT, TURRET.");
-    notify(player, "Resetting HARDCODE flag.");
-    c_hardcode(key);
+    notify(BTECH_EVALUATION_CONTEXT, player, "That is not a valid XTYPE!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
+           "AUTOPILOT, TURRET.");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Resetting HARDCODE flag.");
+    c_hardcode(btech_context_active()->database, key);
   }
 }
 
@@ -537,17 +558,19 @@ void DisposeSpecialObject(DbRef player, DbRef key) {
 
   i = WhichSpecialS(key);
   if (i < 0) {
-    notify(player,
+    notify(BTECH_EVALUATION_CONTEXT, player,
            "CRITICAL: Unable to free data, inconsistency somewhere. Please");
-    notify(player, "contact a wizard about this _NOW_!");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "contact a wizard about this _NOW_!");
     return;
   }
   typeOfObject = &SpecialObjects[i];
 
   if (typeOfObject->datasize > 0 && WhichSpecial(key) != i) {
-    notify(player, "Semi-critical error has occured. For some reason the "
-                   "object's data differs\nfrom the data on the object. Please "
-                   "contact a wizard about this.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Semi-critical error has occured. For some reason the "
+           "object's data differs\nfrom the data on the object. Please "
+           "contact a wizard about this.");
     i = WhichSpecial(key);
   }
   if (xcode_obj) {
@@ -555,54 +578,58 @@ void DisposeSpecialObject(DbRef player, DbRef key) {
       ((void (*)(DbRef, void **, int))typeOfObject->allocfreefunc)(
           key, (void **)&xcode_obj, SPECIAL_FREE);
     red_black_tree_delete(xcode_tree, (void *)key);
-    mux_event_remove_data(xcode_obj);
+    mux_event_remove_data(btech_context_active()->events, xcode_obj);
     free(xcode_obj);
   } else if (typeOfObject->datasize > 0) {
-    notify(player, "This object is not in the special object DBASE.");
-    notify(player, "Please contact a wizard about this bug. ");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "This object is not in the special object DBASE.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Please contact a wizard about this bug. ");
   }
 }
 
 void Dump_Mech(DbRef player, int type, char *typestr) {
-  notify(player, "Support discontinued. Bother a wiz if this bothers you.");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Support discontinued. Bother a wiz if this bothers you.");
 #if 0
 	MECH *mech;
 	char buff[100];
 	int i, running = 0, count = 0;
 	Node *temp;
 
-	notify(player, "ID    # STATUS      MAP #      PILOT #");
-	notify(player, "----------------------------------------");
+	notify(BTECH_EVALUATION_CONTEXT, player, "ID    # STATUS      MAP #      PILOT #");
+	notify(BTECH_EVALUATION_CONTEXT, player, "----------------------------------------");
 	for(temp = TreeTop(xcode_tree); temp; temp = TreeNext(temp))
 		if(WhichSpecial((i = NodeKey(temp))) == type) {
 			mech = (MECH *) NodeData(temp);
 			sprintf(buff, "#%5d %-8s    #%5d    #%5d", mech->mynum,
 					!Started(mech) ? "SHUTDOWN" : "RUNNING", mech->mapindex,
 					MechPilot(mech));
-			notify(player, buff);
+			notify(BTECH_EVALUATION_CONTEXT, player, buff);
 			if(MechStatus(mech) & STARTED)
 				running++;
 			count++;
 		}
 	sprintf(buff, "%d %ss running out of %d %ss allocated.", running,
 			typestr, count, typestr);
-	notify(player, buff);
-	notify(player, "Done listing");
+	notify(BTECH_EVALUATION_CONTEXT, player, buff);
+	notify(BTECH_EVALUATION_CONTEXT, player, "Done listing");
 #endif
 }
 
 void DumpMechs(DbRef player) { Dump_Mech(player, GTYPE_MECH, "mech"); }
 
 void DumpMaps(DbRef player) {
-  notify(player, "Support discontinued. Bother a wiz if this bothers you.");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "Support discontinued. Bother a wiz if this bothers you.");
 #if 0
 	MAP *map;
 	char buff[100];
 	int j, count;
 	Node *temp;
 
-	notify(player, "MAP #       NAME              X x Y   MECHS");
-	notify(player, "-------------------------------------------");
+	notify(BTECH_EVALUATION_CONTEXT, player, "MAP #       NAME              X x Y   MECHS");
+	notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------------------");
 	for(temp = TreeTop(xcode_tree); temp; temp = TreeNext(temp))
 		if(WhichSpecial(NodeKey(temp)) == GTYPE_MAP) {
 			count = 0;
@@ -612,9 +639,9 @@ void DumpMaps(DbRef player) {
 					count++;
 			sprintf(buff, "#%5d    %-17.17s %3d x%3d       %d", map->mynum,
 					map->mapname, map->map_width, map->map_height, count);
-			notify(player, buff);
+			notify(BTECH_EVALUATION_CONTEXT, player, buff);
 		}
-	notify(player, "Done listing");
+	notify(BTECH_EVALUATION_CONTEXT, player, "Done listing");
 #endif
 }
 
@@ -623,9 +650,9 @@ void DumpMaps(DbRef player) {
 int WhichSpecial(DbRef key) {
   XCODE *xcode_obj;
 
-  if (!is_good_obj(key))
+  if (!is_good_obj(btech_context_active()->database, key))
     return -1;
-  if (!is_hardcode(key))
+  if (!is_hardcode(btech_context_active()->database, key))
     return -1;
   if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)key)))
     return -1;
@@ -641,7 +668,7 @@ int WhichSpecial(DbRef key)
   int returnValue = -1;
   char *str;
 
-  if (!is_hardcode(key))
+  if (!is_hardcode(btech_context_active()->database, key))
     return -1;
   str = silly_atr_get(key, A_XTYPE);
   if (str && *str) {
@@ -832,7 +859,9 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
   for (i = 0; SpecialObjects[id].commands[i].name; i++) {
     if (!SpecialObjects[id].commands[i].func &&
         (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
-         Have_MechPower(obj_owner(player), powerneeded)))
+         Have_MechPower(
+             game_object_owner(btech_context_active()->database, player),
+             powerneeded)))
       if (id != GTYPE_MECH ||
           Can_Use_Command(mech, SpecialObjects[id].commands[i].flag)) {
         if (count)
@@ -862,7 +891,9 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
         sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
         if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-            Have_MechPower(obj_owner(player), powerneeded))
+            Have_MechPower(
+                game_object_owner(btech_context_active()->database, player),
+                powerneeded))
           if (id != GTYPE_MECH ||
               Can_Use_Command(mech, SpecialObjects[id].commands[j].flag)) {
             strcpy(buf, SpecialObjects[id].commands[j].name);
@@ -916,7 +947,9 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
             if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-                Have_MechPower(obj_owner(player), powerneeded))
+                Have_MechPower(
+                    game_object_owner(btech_context_active()->database, player),
+                    powerneeded))
               if (id != GTYPE_MECH ||
                   Can_Use_Command(mech, SpecialObjects[id].commands[j].flag))
                 cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,
@@ -953,9 +986,9 @@ void handle_xcode(DbRef player, DbRef obj, int from, int to) {
   if (from == to)
     return;
   if (!to) {
-    s_hardcode(obj);
+    s_hardcode(btech_context_active()->database, obj);
     DisposeSpecialObject(player, obj);
-    c_hardcode(obj);
+    c_hardcode(btech_context_active()->database, obj);
   } else
     CreateNewSpecialObject(player, obj);
 }
@@ -1023,7 +1056,7 @@ char *colorize(DbRef player, char *from) {
       color_wanted &= ~color_table[i].negbit;
       color_wanted |= color_table[i].bit;
     } else {
-      if (color_wanted && is_ansi(player)) {
+      if (color_wanted && is_ansi(btech_context_active()->database, player)) {
         *q = 0;
         /* Generate efficient color string */
         strcpy(q, ANSI_START);
@@ -1046,7 +1079,7 @@ char *colorize(DbRef player, char *from) {
     }
   }
   *q = 0;
-  if (color_wanted && is_ansi(player)) {
+  if (color_wanted && is_ansi(btech_context_active()->database, player)) {
     /* Generate efficient color string */
     strcpy(q, ANSI_START);
     q += ANSI_START_LEN;
@@ -1074,7 +1107,7 @@ void mecha_notify(DbRef player, char *msg) {
   char *tmp;
 
   tmp = colorize(player, msg);
-  raw_notify(player, tmp);
+  raw_notify(BTECH_EVALUATION_CONTEXT, player, tmp);
   free_lbuf(tmp);
 }
 
@@ -1082,20 +1115,21 @@ void mecha_notify_except(DbRef loc, DbRef player, DbRef exception, char *msg) {
   DbRef first;
 
   if (loc != exception)
-    notify_checked(loc, player, msg,
+    notify_checked(BTECH_EVALUATION_CONTEXT, loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A |
                     MSG_COLORIZE));
-  DOLIST(first, obj_contents(loc)) {
+  DOLIST(btech_context_active()->database, first,
+         game_object_contents(btech_context_active()->database, loc)) {
     if (first != exception) {
-      notify_checked(first, player, msg,
+      notify_checked(BTECH_EVALUATION_CONTEXT, first, player, msg,
                      (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE | MSG_COLORIZE));
     }
   }
 }
 
 void ResetSpecialObjects() {
-  mux_event_run_by_type(EVENT_HIDE);
-  mux_event_run_by_type(EVENT_BLINDREC);
+  mux_event_run_by_type(btech_context_active()->events, EVENT_HIDE);
+  mux_event_run_by_type(btech_context_active()->events, EVENT_BLINDREC);
 }
 
 MAP *getMap(DbRef d) {
@@ -1111,9 +1145,9 @@ MAP *getMap(DbRef d) {
 MECH *getMech(DbRef d) {
   XCODE *xcode_obj;
 
-  if (!(is_good_obj(d)))
+  if (!(is_good_obj(btech_context_active()->database, d)))
     return NULL;
-  if (!(is_hardcode(d)))
+  if (!(is_hardcode(btech_context_active()->database, d)))
     return NULL;
   if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
     return NULL;

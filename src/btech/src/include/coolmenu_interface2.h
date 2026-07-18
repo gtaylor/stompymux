@@ -54,10 +54,11 @@ static void update_entry(DbRef player, coolmenu *c, char l, int val) {
   }
   DOCHECK(!val, "Uh.. You think about changing something and then don't.");
   if (val > 0)
-    notify_printf(player, "%s increased by %d to %d!", d->text, val, d->value);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s increased by %d to %d!",
+                  d->text, val, d->value);
   else
-    notify_printf(player, "%s decreased by %d to %d!", d->text, 0 - val,
-                  d->value);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s decreased by %d to %d!",
+                  d->text, 0 - val, d->value);
   DASMAGIC3;
   MAYBESHOW;
 }
@@ -69,9 +70,9 @@ static void update_entry_toggle(DbRef player, coolmenu *c, char l) {
   DOCHECK(!(d->flags & CM_TOGGLE), "Invalid type of field!");
 #ifndef REAL_SNEAKY_SET
   if (d->value)
-    notify_printf(player, "%s set off!", d->text);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s set off!", d->text);
   else
-    notify_printf(player, "%s set on!", d->text);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s set on!", d->text);
 #endif
   d->value = !d->value;
   DASMAGIC3;
@@ -93,7 +94,8 @@ static void update_entry_set(DbRef player, coolmenu *c, char l, char *buffer) {
     if (i > d->maxvalue)
       i = d->maxvalue;
     DOCHECK(i < 0, "You consider a negative value, and then forget about it.");
-    notify_printf(player, "%s set to %d!", d->text, i);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s set to %d!", d->text,
+                  i);
     d->value = i;
   }
   DASMAGIC3;
@@ -110,7 +112,7 @@ static void update_entry_set(DbRef player, coolmenu *c, char l, char *buffer) {
       if (atoi(buffer) > 0)                                                    \
         update_entry(player, DASMAGIC2, letter, mod *atoi(buffer));            \
       else                                                                     \
-        notify(player, "Invalid argument!");                                   \
+        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid argument!");         \
     } else                                                                     \
       update_entry(player, DASMAGIC2, letter, mod * 1);                        \
   }
@@ -120,7 +122,7 @@ static void update_entry_set(DbRef player, coolmenu *c, char l, char *buffer) {
     DASMAGIC;                                                                  \
     DOCHECK(!c, "Huh?");                                                       \
     if (buffer && (strlen(buffer) > 1 || (buffer[0] && buffer[0] != ' ')))     \
-      notify(player, "Invalid argument!");                                     \
+      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid argument!");           \
     else                                                                       \
       update_entry_toggle(player, DASMAGIC2, letter);                          \
   }
@@ -130,7 +132,7 @@ static void update_entry_set(DbRef player, coolmenu *c, char l, char *buffer) {
     DASMAGIC;                                                                  \
     DOCHECK(!c, "Huh?");                                                       \
     if (!(buffer && (strlen(buffer) > 1 || (buffer[0] && buffer[0] != ' '))))  \
-      notify(player, "Lack argument(s)!");                                     \
+      notify(BTECH_EVALUATION_CONTEXT, player, "Lack argument(s)!");           \
     else                                                                       \
       update_entry_set(player, DASMAGIC2, letter, buffer);                     \
   }

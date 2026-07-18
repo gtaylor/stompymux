@@ -8,7 +8,7 @@
 
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
@@ -305,8 +305,9 @@ char *grabto(char **str, char targ) {
   return savec;
 }
 
-int string_compare(const char *s1, const char *s2) {
-  if (!mudconf.space_compress) {
+int string_compare(const ServerConfiguration *configuration, const char *s1,
+                   const char *s2) {
+  if (!configuration->space_compress) {
     while (*s1 && *s2 && ToLower(*s1) == ToLower(*s2))
       s1++, s2++;
 

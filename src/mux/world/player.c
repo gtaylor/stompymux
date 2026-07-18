@@ -6,16 +6,18 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_invocation.h"
+#include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/player.h"
+#include "mux/world/world_context.h"
 
 // # of successful logins to save data for
 constexpr int NUM_GOOD = 4;
@@ -131,26 +133,28 @@ static void encrypt_logindata(char *atrbuf, LDATA *info) {
  * If successful, report the number of failures since the last successful
  * login.
  */
-void record_login(DbRef player, int isgood, char *ldate, char *lhost,
-                  char *lusername) {
+void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
+                  char *ldate, char *lhost, char *lusername) {
   LDATA login_info;
   char *atrbuf;
   DbRef aowner;
   long aflags;
   int i;
 
-  atrbuf = attribute_get(player, A_LOGINDATA, &aowner, &aflags);
+  atrbuf = attribute_get(evaluation->world->database, player, A_LOGINDATA,
+                         &aowner, &aflags);
   decrypt_logindata(atrbuf, &login_info);
   if (isgood) {
     if (login_info.new_bad > 0) {
-      notify(player, "");
+      notify(evaluation, player, "");
       notify_printf(
-          player,
+          evaluation, player,
           "**** %d failed connect%s since your last successful connect. ****",
           login_info.new_bad, (login_info.new_bad == 1 ? "" : "s"));
-      notify_printf(player, "Most recent attempt was from %s on %s.",
+      notify_printf(evaluation, player,
+                    "Most recent attempt was from %s on %s.",
                     login_info.bad[0].host, login_info.bad[0].dtm);
-      notify(player, "");
+      notify(evaluation, player, "");
       login_info.new_bad = 0;
     }
     for (i = NUM_GOOD - 1; i > 0; i--) {
@@ -161,9 +165,10 @@ void record_login(DbRef player, int isgood, char *ldate, char *lhost,
     login_info.good[0].host = lhost;
     login_info.tot_good++;
     if (*lusername)
-      attribute_add_raw(player, A_LASTSITE, tprintf("%s@%s", lusername, lhost));
+      attribute_add_raw(evaluation->world->database, player, A_LASTSITE,
+                        tprintf("%s@%s", lusername, lhost));
     else
-      attribute_add_raw(player, A_LASTSITE, lhost);
+      attribute_add_raw(evaluation->world->database, player, A_LASTSITE, lhost);
   } else {
     for (i = NUM_BAD - 1; i > 0; i--) {
       login_info.bad[i].dtm = login_info.bad[i - 1].dtm;
@@ -175,22 +180,23 @@ void record_login(DbRef player, int isgood, char *ldate, char *lhost,
     login_info.new_bad++;
   }
   encrypt_logindata(atrbuf, &login_info);
-  attribute_add_raw(player, A_LOGINDATA, atrbuf);
+  attribute_add_raw(evaluation->world->database, player, A_LOGINDATA, atrbuf);
   free_lbuf(atrbuf);
 }
 
 /**
  * Test a password to see if it is correct.
  */
-int check_pass(DbRef player, const char *password) {
+int check_pass(WorldContext *world, DbRef player, const char *password) {
   DbRef aowner;
   long aflags;
   char *target;
   int matches;
 
-  if (strlen(password) > (size_t)mudconf.player_password_length_limit)
+  if (strlen(password) >
+      (size_t)world->configuration->player_password_length_limit)
     return 0;
-  target = attribute_get(player, A_PASS, &aowner, &aflags);
+  target = attribute_get(world->database, player, A_PASS, &aowner, &aflags);
   matches = *target && password_verify(password, target);
   free_lbuf(target);
   return matches;
@@ -199,7 +205,8 @@ int check_pass(DbRef player, const char *password) {
 /**
  * Try to connect to an existing player.
  */
-DbRef connect_player(char *name, char *password, char *host, char *username) {
+DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
+                     char *name, char *password, char *host, char *username) {
   DbRef player;
   time_t tt;
   char *time_str;
@@ -208,24 +215,26 @@ DbRef connect_player(char *name, char *password, char *host, char *username) {
   time_str = ctime(&tt);
   time_str[strlen(time_str) - 1] = '\0';
 
-  if ((player = lookup_player(NOTHING, name, 0)) == NOTHING)
+  if ((player = lookup_player(world, NOTHING, name, 0)) == NOTHING)
     return NOTHING;
-  if (!check_pass(player, password)) {
-    record_login(player, 0, time_str, host, username);
+  if (!check_pass(world, player, password)) {
+    record_login(evaluation, player, 0, time_str, host, username);
     return NOTHING;
   }
   time(&tt);
   time_str = ctime(&tt);
   time_str[strlen(time_str) - 1] = '\0';
 
-  attribute_add_raw(player, A_LAST, time_str);
+  attribute_add_raw(world->database, player, A_LAST, time_str);
   return player;
 }
 
 /**
  * Create a new player.
  */
-DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
+DbRef create_player(EvaluationContext *evaluation, char *name, char *password,
+                    DbRef creator, int isrobot) {
+  WorldContext *world = evaluation->world;
   DbRef player;
   char hashed_password[crypto_pwhash_STRBYTES];
   char *pbuf;
@@ -234,15 +243,15 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
    * Make sure the password is OK.  Name is checked in create_obj
    */
 
-  if (!ok_new_player_name(name))
+  if (!ok_new_player_name(world->configuration, name))
     return NOTHING;
 
   pbuf = trim_spaces(password);
-  if (!ok_password(pbuf)) {
+  if (!ok_password(world->configuration, pbuf)) {
     free_lbuf(pbuf);
     return NOTHING;
   }
-  if (!password_hash(pbuf, hashed_password)) {
+  if (!password_hash(world->configuration, pbuf, hashed_password)) {
     free_lbuf(pbuf);
     return NOTHING;
   }
@@ -250,7 +259,7 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
    * If so, go create him
    */
 
-  player = create_obj(creator, TYPE_PLAYER, name);
+  player = create_obj(evaluation, creator, TYPE_PLAYER, name);
   if (player == NOTHING) {
     sodium_memzero(hashed_password, sizeof(hashed_password));
     free_lbuf(pbuf);
@@ -259,16 +268,20 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
   /*
    * initialize everything
    */
-  /* do_addcom()'s parameter isn't const-correct; "pub" is only read. */
+  /* comsys_add_alias()'s parameter isn't const-correct; "pub" is only read. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  if (*mudconf.public_channel)
-    do_addcom(player, player, 0, (char *)"pub", mudconf.public_channel);
+  if (*world->configuration->public_channel)
+    comsys_add_alias(evaluation, player, (char *)"pub",
+                     world->configuration->public_channel);
 #pragma clang diagnostic pop
 
-  object_password_set(player, hashed_password);
-  s_home(player, start_home());
-  s_fixed(player);
+  object_password_set(world->database, player, hashed_password);
+  game_object_set_link(world->database, player,
+                       world->configuration->start_home != NOTHING
+                           ? world->configuration->start_home
+                           : world->configuration->start_room);
+  s_fixed(world->database, player);
   sodium_memzero(hashed_password, sizeof(hashed_password));
   free_lbuf(pbuf);
   return player;
@@ -277,24 +290,28 @@ DbRef create_player(char *name, char *password, DbRef creator, int isrobot) {
 /**
  * Change the password for a player
  */
-void do_password(DbRef player, DbRef cause, int key, char *oldpass,
-                 char *newpass) {
+void do_password(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *oldpass = invocation->first;
+  char *newpass = invocation->second;
+  WorldContext *world = invocation->context->world;
   DbRef aowner;
   long aflags;
   char hashed_password[crypto_pwhash_STRBYTES];
   char *target;
 
-  target = attribute_get(player, A_PASS, &aowner, &aflags);
-  if (!*target || !check_pass(player, oldpass)) {
-    notify(player, "Sorry.");
-  } else if (!ok_password(newpass)) {
-    notify(player, "Bad new password.");
-  } else if (!password_hash(newpass, hashed_password)) {
-    notify(player, "Unable to change password.");
+  target = attribute_get(world->database, player, A_PASS, &aowner, &aflags);
+  if (!*target || !check_pass(world, player, oldpass)) {
+    notify(evaluation, player, "Sorry.");
+  } else if (!ok_password(world->configuration, newpass)) {
+    notify(evaluation, player, "Bad new password.");
+  } else if (!password_hash(world->configuration, newpass, hashed_password)) {
+    notify(evaluation, player, "Unable to change password.");
   } else {
-    attribute_add_raw(player, A_PASS, hashed_password);
+    attribute_add_raw(world->database, player, A_PASS, hashed_password);
     sodium_memzero(hashed_password, sizeof(hashed_password));
-    notify(player, "Password changed.");
+    notify(evaluation, player, "Password changed.");
   }
   free_lbuf(target);
 }
@@ -302,40 +319,51 @@ void do_password(DbRef player, DbRef cause, int key, char *oldpass,
 /**
  * Display login history data.
  */
-static void disp_from_on(DbRef player, char *dtm_str, char *host_str) {
+static void disp_from_on(EvaluationContext *evaluation, DbRef player,
+                         char *dtm_str, char *host_str) {
   if (dtm_str && *dtm_str && host_str && *host_str) {
-    notify_printf(player, "     From: %s   On: %s", dtm_str, host_str);
+    notify_printf(evaluation, player, "     From: %s   On: %s", dtm_str,
+                  host_str);
   }
 }
 
-void do_last(DbRef player, DbRef cause, int key, char *who) {
+void do_last(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *who = invocation->first;
+  WorldContext *world = invocation->context->world;
   DbRef target, aowner;
   LDATA login_info;
   char *atrbuf;
   int i;
   long aflags;
 
-  if (!who || !*who || !(string_compare(who, "me"))) {
-    target = obj_owner(player);
+  if (!who || !*who || !(string_compare(world->configuration, who, "me"))) {
+    target = game_object_owner(world->database, player);
   } else {
-    target = lookup_player(player, who, 1);
+    target = lookup_player(world, player, who, 1);
   }
 
   if (target == NOTHING) {
-    notify(player, "I couldn't find that player.");
-  } else if (!is_controls(player, target)) {
-    notify(player, "Permission denied.");
+    notify(evaluation, player, "I couldn't find that player.");
+  } else if (!is_controls(evaluation, player, target)) {
+    notify(evaluation, player, "Permission denied.");
   } else {
-    atrbuf = attribute_get(target, A_LOGINDATA, &aowner, &aflags);
+    atrbuf =
+        attribute_get(world->database, target, A_LOGINDATA, &aowner, &aflags);
     decrypt_logindata(atrbuf, &login_info);
 
-    notify_printf(player, "Total successful connects: %d", login_info.tot_good);
+    notify_printf(&invocation->context->evaluation, player,
+                  "Total successful connects: %d", login_info.tot_good);
     for (i = 0; i < NUM_GOOD; i++) {
-      disp_from_on(player, login_info.good[i].host, login_info.good[i].dtm);
+      disp_from_on(&invocation->context->evaluation, player,
+                   login_info.good[i].host, login_info.good[i].dtm);
     }
-    notify_printf(player, "Total failed connects: %d", login_info.tot_bad);
+    notify_printf(&invocation->context->evaluation, player,
+                  "Total failed connects: %d", login_info.tot_bad);
     for (i = 0; i < NUM_BAD; i++) {
-      disp_from_on(player, login_info.bad[i].host, login_info.bad[i].dtm);
+      disp_from_on(&invocation->context->evaluation, player,
+                   login_info.bad[i].host, login_info.bad[i].dtm);
     }
     free_lbuf(atrbuf);
   }
@@ -345,7 +373,7 @@ void do_last(DbRef player, DbRef cause, int key, char *who) {
  * add_player_name, delete_player_name, lookup_player:
  * Manage playername->dbref mapping
  */
-int add_player_name(DbRef player, char *name) {
+int add_player_name(WorldContext *world, DbRef player, char *name) {
   int stat;
   DbRef *p;
   char *temp, *tp;
@@ -360,7 +388,7 @@ int add_player_name(DbRef player, char *name) {
   for (tp = temp; *tp; tp++)
     *tp = ToLower(*tp);
 
-  p = (long *)hash_table_find(temp, &mudstate.player_htab);
+  p = (long *)hash_table_find(temp, &world->indexes->players);
   if (p) {
 
     /*
@@ -374,7 +402,8 @@ int add_player_name(DbRef player, char *name) {
       free_lbuf(temp);
       return 0;
     }
-    if (is_good_obj(*p) && (typeof_obj(*p) == TYPE_PLAYER)) {
+    if (is_good_obj(world->database, *p) &&
+        (typeof_obj(world->database, *p) == TYPE_PLAYER)) {
       free_lbuf(temp);
       if (*p == player) {
         return 1;
@@ -389,20 +418,20 @@ int add_player_name(DbRef player, char *name) {
     p = malloc(sizeof(DbRef));
 
     *p = player;
-    stat = hash_table_replace(temp, p, &mudstate.player_htab);
+    stat = hash_table_replace(temp, p, &world->indexes->players);
     free_lbuf(temp);
   } else {
     p = malloc(sizeof(DbRef));
 
     *p = player;
-    stat = hash_table_add(temp, p, &mudstate.player_htab);
+    stat = hash_table_add(temp, p, &world->indexes->players);
     free_lbuf(temp);
     stat = (stat < 0) ? 0 : 1;
   }
   return stat;
 }
 
-int delete_player_name(DbRef player, char *name) {
+int delete_player_name(WorldContext *world, DbRef player, char *name) {
   DbRef *p;
   char *temp, *tp;
 
@@ -412,22 +441,23 @@ int delete_player_name(DbRef player, char *name) {
   for (tp = temp; *tp; tp++)
     *tp = ToLower(*tp);
 
-  p = (long *)hash_table_find(temp, &mudstate.player_htab);
+  p = (long *)hash_table_find(temp, &world->indexes->players);
   if (!p || (*p == NOTHING) || ((player != NOTHING) && (*p != player))) {
     free_lbuf(temp);
     return 0;
   }
   free(p);
-  hash_table_delete(temp, &mudstate.player_htab);
+  hash_table_delete(temp, &world->indexes->players);
   free_lbuf(temp);
   return 1;
 }
 
-DbRef lookup_player(DbRef doer, char *name, int check_who) {
+DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
+                    int check_who) {
   DbRef *p, thing;
   char *temp, *tp;
 
-  if (!string_compare(name, "me"))
+  if (!string_compare(world->configuration, name, "me"))
     return doer;
 
   if (*name == NUMBER_TOKEN) {
@@ -435,9 +465,10 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
     if (!is_number(name))
       return NOTHING;
     thing = clamped_atol(name);
-    if (!is_good_obj(thing))
+    if (!is_good_obj(world->database, thing))
       return NOTHING;
-    if (!((typeof_obj(thing) == TYPE_PLAYER) || is_god(doer)))
+    if (!((typeof_obj(world->database, thing) == TYPE_PLAYER) ||
+          is_god(world->database, doer)))
       thing = NOTHING;
     return thing;
   }
@@ -446,16 +477,17 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
   *tp = '\0';
   for (tp = temp; *tp; tp++)
     *tp = ToLower(*tp);
-  p = (long *)hash_table_find(temp, &mudstate.player_htab);
+  p = (long *)hash_table_find(temp, &world->indexes->players);
   free_lbuf(temp);
   if (!p) {
     if (check_who) {
-      thing = find_connected_name(doer, name);
-      if (is_dark(thing))
+      thing =
+          find_connected_name(world->database, world->descriptors, doer, name);
+      if (is_dark(world->database, thing))
         thing = NOTHING;
     } else
       thing = NOTHING;
-  } else if (!is_good_obj(*p)) {
+  } else if (!is_good_obj(world->database, *p)) {
     thing = NOTHING;
   } else
     thing = *p;
@@ -463,22 +495,23 @@ DbRef lookup_player(DbRef doer, char *name, int check_who) {
   return thing;
 }
 
-void load_player_names(void) {
+void load_player_names(WorldContext *world) {
   DbRef i, aowner;
   long aflags;
   char *alias;
 
-  DO_WHOLE_DB(i) {
-    if (typeof_obj(i) == TYPE_PLAYER) {
-      add_player_name(i, Name(i));
+  DO_WHOLE_DB(world->database, i) {
+    if (typeof_obj(world->database, i) == TYPE_PLAYER) {
+      add_player_name(world, i, game_object_name(world->database, i));
     }
   }
   alias = alloc_lbuf("load_player_names");
-  DO_WHOLE_DB(i) {
-    if (typeof_obj(i) == TYPE_PLAYER) {
-      alias = attribute_parent_get_string(alias, i, A_ALIAS, &aowner, &aflags);
+  DO_WHOLE_DB(world->database, i) {
+    if (typeof_obj(world->database, i) == TYPE_PLAYER) {
+      alias = attribute_parent_get_string(world->database, alias, i, A_ALIAS,
+                                          &aowner, &aflags);
       if (*alias)
-        add_player_name(i, alias);
+        add_player_name(world, i, alias);
     }
   }
   free_lbuf(alias);
@@ -487,7 +520,7 @@ void load_player_names(void) {
 /**
  * badname_add, badname_check, badname_list: Add/look for/display bad names.
  */
-void badname_add(char *bad_name) {
+void badname_add(WorldContext *world, char *bad_name) {
   BADNAME *bp;
 
   /*
@@ -496,12 +529,12 @@ void badname_add(char *bad_name) {
 
   bp = (BADNAME *)malloc(sizeof(BADNAME));
   bp->name = malloc(strlen(bad_name) + 1);
-  bp->next = mudstate.badname_head;
-  mudstate.badname_head = bp;
+  bp->next = world->access_control->bad_names;
+  world->access_control->bad_names = bp;
   StringCopy(bp->name, bad_name);
 }
 
-void badname_remove(char *bad_name) {
+void badname_remove(WorldContext *world, char *bad_name) {
   BADNAME *bp, *backp;
 
   /*
@@ -509,12 +542,12 @@ void badname_remove(char *bad_name) {
    */
 
   backp = nullptr;
-  for (bp = mudstate.badname_head; bp; backp = bp, bp = bp->next) {
-    if (!string_compare(bad_name, bp->name)) {
+  for (bp = world->access_control->bad_names; bp; backp = bp, bp = bp->next) {
+    if (!string_compare(world->configuration, bad_name, bp->name)) {
       if (backp)
         backp->next = bp->next;
       else
-        mudstate.badname_head = bp->next;
+        world->access_control->bad_names = bp->next;
       free(bp->name);
       free(bp);
       return;
@@ -522,7 +555,7 @@ void badname_remove(char *bad_name) {
   }
 }
 
-int badname_check(char *bad_name) {
+int badname_check(WorldContext *world, char *bad_name) {
   BADNAME *bp;
 
   /*
@@ -532,14 +565,15 @@ int badname_check(char *bad_name) {
    * true.
    */
 
-  for (bp = mudstate.badname_head; bp; bp = bp->next) {
+  for (bp = world->access_control->bad_names; bp; bp = bp->next) {
     if (quick_wild(bp->name, bad_name))
       return 0;
   }
   return 1;
 }
 
-void badname_list(DbRef player, const char *prefix) {
+void badname_list(EvaluationContext *evaluation, WorldContext *world,
+                  DbRef player, const char *prefix) {
   BADNAME *bp;
   char *buff, *bufp;
 
@@ -549,7 +583,7 @@ void badname_list(DbRef player, const char *prefix) {
 
   buff = bufp = alloc_lbuf("badname_list");
   safe_str(prefix, buff, &bufp);
-  for (bp = mudstate.badname_head; bp; bp = bp->next) {
+  for (bp = world->access_control->bad_names; bp; bp = bp->next) {
     safe_chr(' ', buff, &bufp);
     safe_str(bp->name, buff, &bufp);
   }
@@ -559,6 +593,6 @@ void badname_list(DbRef player, const char *prefix) {
    * Now display it
    */
 
-  notify(player, buff);
+  notify(evaluation, player, buff);
   free_lbuf(buff);
 }

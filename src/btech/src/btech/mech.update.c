@@ -77,9 +77,10 @@ void bridge_set_elevation(MECH *mech) {
 }
 
 int DSOkToNotify(MECH *mech) {
-  if (DSLastMsg(mech) > mux_event_tick ||
-      (mux_event_tick - DSLastMsg(mech)) >= DS_SPAM_TIME) {
-    DSLastMsg(mech) = mux_event_tick;
+  if (DSLastMsg(mech) > btech_context_active()->events->tick ||
+      (btech_context_active()->events->tick - DSLastMsg(mech)) >=
+          DS_SPAM_TIME) {
+    DSLastMsg(mech) = btech_context_active()->events->tick;
     return 1;
   }
   return 0;
@@ -212,7 +213,8 @@ void move_mech(MECH *mech) {
   }
 
   /* Is the unit charging - and if so have they been charging to long */
-  if (mudconf.btech_newcharge && MechChargeTarget(mech) > 0) {
+  if (btech_context_active()->configuration->btech_newcharge &&
+      MechChargeTarget(mech) > 0) {
     if (MechChargeTimer(mech)++ > CHARGE_TIMER_LIMIT) {
       mech_notify(mech, MECHALL, "Charge timed out, charge reset.");
       MechChargeTarget(mech) = -1;
@@ -241,7 +243,7 @@ void move_mech(MECH *mech) {
                                    (MechFY(mech) - MechStartFY(mech)));
 
       /*! \todo {Not sure what ODDJUMP is but need to figure it out, possibly
-       * make this a mudconf parameter} */
+       * make this a configuration parameter} */
 #ifndef ODDJUMP
       MechFZ(mech) = ((4 * JumpSpeedMP(mech, mech_map) * ZSCALE) /
                       (MechJumpLength(mech) * MechJumpLength(mech))) *
@@ -284,7 +286,7 @@ void move_mech(MECH *mech) {
 
       /* The famous jumping on bridge collision code */
       /*! \todo {possibly turn the bridge collision code into
-       * a mudconf parameter} */
+       * a configuration parameter} */
       if (MechRTerrain(mech) == BRIDGE && collision_check(mech, JUMP, 0, 0) &&
           MechZ(mech) > 0) {
 
@@ -341,7 +343,8 @@ void move_mech(MECH *mech) {
       upd_z = 1;
 
       /* If we're charging record distance traveled */
-      if (MechChargeTarget(mech) > 0 && mudconf.btech_newcharge) {
+      if (MechChargeTarget(mech) > 0 &&
+          btech_context_active()->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -363,7 +366,7 @@ void move_mech(MECH *mech) {
     /* Is the tank moving? */
     if (fabs(MechSpeed(mech)) > 0.0) {
 
-      /*! \todo {Possibly put in a mudconf parameter for this since
+      /*! \todo {Possibly put in a configuration parameter for this since
        * I think the LATERAL command could check for it} */
 #ifndef BT_MOVEMENT_MODES
       FindComponents(MechSpeed(mech) * MOVE_MOD * MAPMOVEMOD(mech_map),
@@ -377,7 +380,8 @@ void move_mech(MECH *mech) {
       upd_z = 1;
 
       /* If we're charging record the distance traveled */
-      if (MechChargeTarget(mech) > 0 && mudconf.btech_newcharge) {
+      if (MechChargeTarget(mech) > 0 &&
+          btech_context_active()->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -396,7 +400,7 @@ void move_mech(MECH *mech) {
     /* If we're moving update position */
     if (fabs(MechSpeed(mech)) > 0.0) {
 
-      /*! \todo {Check the todo before this one, mudconf parameter maybe?} */
+      /*! \todo {Check the todo before this one, configuration parameter?} */
 #ifndef BT_MOVEMENT_MODES
       FindComponents(MechSpeed(mech) * MOVE_MOD * MAPMOVEMOD(mech_map),
                      MechFacing(mech), &newx, &newy);
@@ -409,7 +413,8 @@ void move_mech(MECH *mech) {
       upd_z = 1;
 
       /* Record the charge distance */
-      if (MechChargeTarget(mech) > 0 && mudconf.btech_newcharge) {
+      if (MechChargeTarget(mech) > 0 &&
+          btech_context_active()->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -644,7 +649,7 @@ void move_mech(MECH *mech) {
       steppable_base_check(mech, x, y);
 
       /* Pilot XP */
-      if (is_in_character(mech->mynum)) {
+      if (is_in_character(btech_context_active()->database, mech->mynum)) {
         MechHexes(mech)++;
         if (!((int)MechHexes(mech) % PIL_XP_EVERY_N_STEPS))
           if (RGotPilot(mech))
@@ -814,7 +819,7 @@ void UpdateHeading(MECH *mech) {
     mw_mod = 60;
   else if (MechIsQuad(mech))
     mw_mod = 2;
-  if (mudconf.btech_fasaturn) {
+  if (btech_context_active()->configuration->btech_fasaturn) {
 #define FASA_TURN_MOD 3 / 2
     if (Jumping(mech))
       offset = 2 * SHO2FSIM(1) * 2 * 360 * FASA_TURN_MOD / 60;
@@ -997,7 +1002,7 @@ void UpdateSpeed(MECH *mech) {
     tempspeed = terrain_speed(mech, tempspeed, maxspeed, MechRTerrain(mech),
                               MechElevation(mech));
   if (MechCritStatus(mech) & CHEAD) {
-    if (mudconf.btech_slowdown == 2) {
+    if (btech_context_active()->configuration->btech_slowdown == 2) {
       /* _New_ slowdown based on facing vs desired difference */
       int dif = MechFacing(mech) - MechDesiredFacing(mech);
 
@@ -1015,7 +1020,7 @@ void UpdateSpeed(MECH *mech) {
         else
           tempspeed = tempspeed * (10 - dif) / 10; /* Lower 20-80% */
       }
-    } else if (mudconf.btech_slowdown == 1) {
+    } else if (btech_context_active()->configuration->btech_slowdown == 1) {
       if (MechFacing(mech) != MechDesiredFacing(mech))
         tempspeed = tempspeed * 2.0 / 3.0;
       else
@@ -1118,7 +1123,7 @@ void ammo_explosion(MECH *attacker, MECH *mech, int ammoloc, int ammocritnum,
     return;
   if (GetPartAmmoMode(mech, ammoloc, ammocritnum) & INFERNO_MODE) {
     Inferno_Hit(mech, mech, damage / 4, 0);
-    if (mudconf.btech_inferno_penalty)
+    if (btech_context_active()->configuration->btech_inferno_penalty)
       MechWeapHeat(mech) += 30.0;
     damage = damage / 2;
   }
@@ -1154,13 +1159,13 @@ void HandleOverheat(MECH *mech) {
   if (MechHeat(mech) < 10.)
     return;
   /* Has it been a TURN already ? */
-  if ((MechHeatLast(mech) + TURN) > mux_event_tick)
+  if ((MechHeatLast(mech) + TURN) > btech_context_active()->events->tick)
     return;
-  MechHeatLast(mech) = mux_event_tick;
+  MechHeatLast(mech) = btech_context_active()->events->tick;
 
   /* Ammo - done first so infernobooms shut you down */
   if (MechHeat(mech) >= 10.) {
-    if (mudconf.btech_inferno_penalty)
+    if (btech_context_active()->configuration->btech_inferno_penalty)
       hasinferno = FindInfernoAmmo(mech, &ammoloc, &ammocritnum);
     if (MechHeat(mech) >= 28.) {
       /* Ammo explosion (Avoid 8+, infernos 12+) */
@@ -1216,7 +1221,7 @@ void HandleOverheat(MECH *mech) {
 
   avoided = 0;
 #ifdef BT_EXILE_MW3STATS
-  if (!is_player(MechPilot(mech))) {
+  if (!is_player(btech_context_active()->database, MechPilot(mech))) {
 #endif
     if (MechHeat(mech) >= 30.) {
       /* Shutdown */
@@ -1448,7 +1453,7 @@ void UpdateHeat(MECH *mech) {
    * Bruise, w/o Lifesupport) */
   /* Custom Rule: Give bruise if heat > 30 and Random 0 or 1 */
 
-  if ((mux_event_tick % TURN) == 0)
+  if ((btech_context_active()->events->tick % TURN) == 0)
     if (MechCritStatus(mech) & LIFE_SUPPORT_DESTROYED ||
         (MechHeat(mech) > 30. && Number(0, 1) == 0)) {
       if (MechHeat(mech) > 25.) {
@@ -1495,15 +1500,15 @@ int recycle_weaponry(MECH *mech) {
   unsigned char weapdata[MAX_WEAPS_SECTION];
   char location[20];
 
-  int diff = (mux_event_tick - MechLWRT(mech));
+  int diff = (btech_context_active()->events->tick - MechLWRT(mech));
   int lowest = 0;
 
   if (diff < 1) {
     if (diff < 0)
-      MechLWRT(mech) = mux_event_tick;
+      MechLWRT(mech) = btech_context_active()->events->tick;
     return 1;
   }
-  MechLWRT(mech) = mux_event_tick;
+  MechLWRT(mech) = btech_context_active()->events->tick;
 
   if (!Started(mech) || Destroyed(mech))
     return 0;
@@ -1691,10 +1696,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!mudconf.btech_skidcliff &&
+          (!btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (mudconf.btech_skidcliff &&
+          (btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -1706,7 +1711,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         mech_notify(mech, MECHALL,
                     "You run headlong into the cliff and fall down!");
         MechLOSBroadcast(mech, "runs headlong into a cliff and falls down!");
-        if (!mudconf.btech_skidcliff)
+        if (!btech_context_active()->configuration->btech_skidcliff)
           MechFalls(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
         else
           MechFalls(mech, 1, 0);
@@ -1720,7 +1725,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = mudconf.btech_skidcliff
+      avoidbth = btech_context_active()->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -1745,7 +1750,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (mudconf.btech_roll_on_backwalk && (MechSpeed(mech) < 0) &&
+    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+               (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
@@ -1885,10 +1891,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!mudconf.btech_skidcliff &&
+          (!btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (mudconf.btech_skidcliff &&
+          (btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -1897,7 +1903,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!mudconf.btech_skidcliff) {
+        if (!btech_context_active()->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -1915,7 +1921,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = mudconf.btech_skidcliff
+      avoidbth = btech_context_active()->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
       if (MechPilot(mech) == -1 ||
@@ -1946,7 +1952,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (mudconf.btech_roll_on_backwalk && (MechSpeed(mech) < 0) &&
+    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+               (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
@@ -2004,7 +2011,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     /* New terrain restrictions */
-    if (mudconf.btech_newterrain) {
+    if (btech_context_active()->configuration->btech_newterrain) {
       tt = MechRTerrain(mech);
       if ((tt == HEAVY_FOREST) && fabs(MechSpeed(mech)) > MP1) {
 
@@ -2054,10 +2061,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!mudconf.btech_skidcliff &&
+          (!btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (mudconf.btech_skidcliff &&
+          (btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -2066,7 +2073,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!mudconf.btech_skidcliff) {
+        if (!btech_context_active()->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -2085,7 +2092,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = mudconf.btech_skidcliff
+      avoidbth = btech_context_active()->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -2118,7 +2125,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (mudconf.btech_roll_on_backwalk && (MechSpeed(mech) < 0) &&
+    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+               (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
@@ -2176,7 +2184,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     /* New terrain restrictions */
-    if (mudconf.btech_newterrain) {
+    if (btech_context_active()->configuration->btech_newterrain) {
       tt = MechRTerrain(mech);
       if ((tt == HEAVY_FOREST || tt == LIGHT_FOREST) &&
           fabs(MechSpeed(mech)) > MP1) {
@@ -2276,10 +2284,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
       if (MechPilot(mech) == -1 ||
-          (!mudconf.btech_skidcliff &&
+          (!btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (mudconf.btech_skidcliff &&
+          (btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -2288,7 +2296,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!mudconf.btech_skidcliff) {
+        if (!btech_context_active()->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "smashes into a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -2307,7 +2315,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
 
-      avoidbth = mudconf.btech_skidcliff
+      avoidbth = btech_context_active()->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -2339,10 +2347,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You notice the underside of the bridge in front of you!");
 
       if (MechPilot(mech) == -1 ||
-          (!mudconf.btech_skidcliff &&
+          (!btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll(mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) /
                                         3)) ||
-          (mudconf.btech_skidcliff &&
+          (btech_context_active()->configuration->btech_skidcliff &&
            MadePilotSkillRoll(mech, SkidMod(fabs(MechSpeed(mech)) / MP1)))) {
 
         mech_notify(mech, MECHALL,
@@ -2361,7 +2369,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (mudconf.btech_roll_on_backwalk && (MechSpeed(mech) < 0) &&
+    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+               (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain)) &&
                !isunder) {
 
@@ -2459,7 +2468,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (Landed(mech) && mudconf.btech_roll_on_backwalk &&
+    } else if (Landed(mech) &&
+               btech_context_active()->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
@@ -2538,8 +2548,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
   if (!done) {
     possible_mine_poof(mech, MINE_STEP);
-    if (mudconf.btech_fasaadvvhlfire && (MechType(mech) == CLASS_VEH_GROUND) &&
-        (MechTerrain(mech) == FIRE))
+    if (btech_context_active()->configuration->btech_fasaadvvhlfire &&
+        (MechType(mech) == CLASS_VEH_GROUND) && (MechTerrain(mech) == FIRE))
       checkVehicleInFire(mech, 1);
   }
   MarkForLOSUpdate(mech);
@@ -2597,7 +2607,7 @@ void ClearAllStaggerDamage(MECH *mech) {
 // ago
 void ClearStaggerDamage(MECH *mech) {
   int oneTurn = 60;
-  time_t now = mudstate.now;
+  time_t now = btech_context_active()->clock->now;
   struct damageNode *damage;
   struct damageNode *old;
 
@@ -2618,7 +2628,7 @@ void ClearStaggerDamage(MECH *mech) {
 
 int CurrentStaggerDamage(MECH *mech) {
   int sum = 0;
-  time_t now = mudstate.now;
+  time_t now = btech_context_active()->clock->now;
   int oneTurn = 60;
   struct damageNode *damage;
 
@@ -2636,7 +2646,7 @@ int CurrentStaggerDamage(MECH *mech) {
 
 int CurrentCountedStaggerDamage(MECH *mech) {
   int sum = 0;
-  time_t now = mudstate.now;
+  time_t now = btech_context_active()->clock->now;
   int oneTurn = 60;
   struct damageNode *damage;
 
@@ -2655,9 +2665,9 @@ int CurrentCountedStaggerDamage(MECH *mech) {
 void CheckDamage(MECH *wounded) {
   /* should be called from UpdatePilotSkillRolls */
   /* this is so that a roll will be made only when the mech takes damage */
-  int now = mux_event_tick % TURN;
+  int now = btech_context_active()->events->tick % TURN;
 
-  if (!mudconf.btech_newstagger) {
+  if (!btech_context_active()->configuration->btech_newstagger) {
     if (!IsDS(wounded) && MechTurnDamage(wounded) >= 20 &&
         (!MechStaggeredLastTurn(wounded) || MechStaggerStamp(wounded) == now)) {
 
@@ -2685,9 +2695,10 @@ void UpdatePilotSkillRolls(MECH *mech) {
   int makeroll = 0, grav = 0;
   float maxspeed;
 
-  int temp_tick = mux_event_tick;
+  int temp_tick = btech_context_active()->events->tick;
 
-  /* If for some reason, we get here and mux_event_tick is odd all the time....
+  /* If for some reason, we get here and btech_context_active()->events->tick is
+   * odd all the time....
    */
   if ((temp_tick & 1) != 0)
     temp_tick++;

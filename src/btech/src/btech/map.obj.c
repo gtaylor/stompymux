@@ -45,7 +45,8 @@ int find_entrance(MAP *map, char dir, int *x, int *y) {
 char *structure_name(mapobj *mapo) {
   static char buf[MBUF_SIZE] = {0};
 
-  snprintf(buf, MBUF_SIZE, "the %s", Name(mapo->obj));
+  snprintf(buf, MBUF_SIZE, "the %s",
+           game_object_name(btech_context_active()->database, mapo->obj));
   return buf;
 }
 
@@ -499,18 +500,23 @@ void list_mapobjs(DbRef player, MAP *map) {
   mapobj *tmp;
   int i;
 
-  notify(player, "X   Y   Type  obj   dc   ds     di");
-  notify(player, "--------------------------------------------");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "X   Y   Type  obj   dc   ds     di");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "--------------------------------------------");
   for (i = 0; i < NUM_MAPOBJTYPES; i++)
     for (tmp = first_mapobj(map, i); tmp; tmp = next_mapobj(tmp)) {
       if (i == TYPE_BITS)
-        notify(player, "--- MAP/HANGAR INFORMATION OBJECT ---");
+        notify(BTECH_EVALUATION_CONTEXT, player,
+               "--- MAP/HANGAR INFORMATION OBJECT ---");
       else
-        notify_printf(player, "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x,
-                      tmp->y, map_types[i], (int)tmp->obj, tmp->datac,
-                      tmp->datas, tmp->datai);
+        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                      "%-3d %-3d %-5s %-5d %-4d %-6d %ld", tmp->x, tmp->y,
+                      map_types[i], (int)tmp->obj, tmp->datac, tmp->datas,
+                      tmp->datai);
     }
-  notify(player, "--------------------------------------------");
+  notify(BTECH_EVALUATION_CONTEXT, player,
+         "--------------------------------------------");
 }
 
 void map_addfire(DbRef player, void *data, char *buffer) {
@@ -520,15 +526,16 @@ void map_addfire(DbRef player, void *data, char *buffer) {
   int x, y, d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
-    notify(player, "Error: Invalid number of attributes to addfire command.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Error: Invalid number of attributes to addfire command.");
     return;
   }
   x = atoi(args[0]);
   y = atoi(args[1]);
   d = atoi(args[2]);
   add_decoration(map, x, y, TYPE_FIRE, FIRE, d);
-  notify_printf(player, "Added: Fire at (%d,%d) with duration of %ds.", x, y,
-                d);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Added: Fire at (%d,%d) with duration of %ds.", x, y, d);
 }
 
 void map_addsmoke(DbRef player, void *data, char *buffer) {
@@ -537,15 +544,16 @@ void map_addsmoke(DbRef player, void *data, char *buffer) {
   int x, y, d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
-    notify(player, "Error: Invalid number of attributes to addsmoke command.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Error: Invalid number of attributes to addsmoke command.");
     return;
   }
   x = atoi(args[0]);
   y = atoi(args[1]);
   d = atoi(args[2]);
   add_decoration(map, x, y, TYPE_SMOKE, SMOKE, d);
-  notify_printf(player, "Added: Smoke at (%d,%d) with duration of %ds.", x, y,
-                d);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Added: Smoke at (%d,%d) with duration of %ds.", x, y, d);
 }
 
 /* x y dist */
@@ -579,8 +587,8 @@ void map_add_block(DbRef player, void *data, char *buffer) {
   foo.obj = player;
   foo.datac = team;
   add_mapobj(map, &map->mapobj[TYPE_B_LZ], &foo, 1);
-  notify_printf(player, "Landingzone-block added to %d,%d (distance: %d)", x, y,
-                str);
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                "Landingzone-block added to %d,%d (distance: %d)", x, y, str);
 }
 
 int is_blocked_lz(MECH *mech, MAP *map, int x, int y) {
@@ -609,7 +617,7 @@ void map_setlinked(DbRef player, void *data, char *buffer) {
   bzero(&foo, sizeof(mapobj));
   foo.datac = 1;
   add_mapobj(map, &map->mapobj[TYPE_LINKED], &foo, 1);
-  notify_printf(player, "Map set to linked.");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Map set to linked.");
 }
 
 int mapobj_del(MAP *map, int x, int y, int tt) {
@@ -635,7 +643,8 @@ void map_delobj(DbRef player, void *data, char *buffer) {
 
   switch (mech_parseattributes(buffer, args, 3)) {
   case 0:
-    notify(player, "Error: Invalid number of attributes to delobj command.");
+    notify(BTECH_EVALUATION_CONTEXT, player,
+           "Error: Invalid number of attributes to delobj command.");
     return;
   case 1:
     DOCHECK((tt = listmatch(map_types, args[0])) < 0, "Invalid type!");
@@ -644,7 +653,8 @@ void map_delobj(DbRef player, void *data, char *buffer) {
       del_mapobj(map, foo, tt, 1);
       count++;
     }
-    notify_printf(player, "%d objects deleted!", count);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d objects deleted!",
+                  count);
     if (tt == TYPE_MINE)
       mdel = 1;
     break;
@@ -661,7 +671,8 @@ void map_delobj(DbRef player, void *data, char *buffer) {
           count++;
         }
       }
-    notify_printf(player, "%d objects at (%d,%d) deleted.", count, x, y);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+                  "%d objects at (%d,%d) deleted.", count, x, y);
     break;
   case 3:
     DOCHECK((tt = listmatch(map_types, args[0])) < 0, "Invalid type!");
@@ -676,11 +687,11 @@ void map_delobj(DbRef player, void *data, char *buffer) {
         count++;
       }
     }
-    notify_printf(player, "%d %s at (%d,%d) deleted.", count, map_types[tt], x,
-                  y);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d %s at (%d,%d) deleted.",
+                  count, map_types[tt], x, y);
     break;
   default:
-    notify(player, "Invalid number of arguments!");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of arguments!");
     return;
   }
   if (mdel)
@@ -832,10 +843,10 @@ void recursively_updatelinks(DbRef from, DbRef loc) {
 void map_updatelinks(DbRef player, void *data, char *buffer) {
   DbRef ourloc;
 
-  ourloc = obj_location(player);
+  ourloc = game_object_location(btech_context_active()->database, player);
   bzero(update_stats, sizeof(update_stats));
   recursively_updatelinks(NOTHING, ourloc);
-  notify_printf(player,
+  notify_printf(BTECH_EVALUATION_CONTEXT, player,
                 "Updated %d BUILD objs, %d LEAVE objs, %d ENTRANCE objs.",
                 update_stats[0], update_stats[1], update_stats[2]);
 }
@@ -942,7 +953,7 @@ static void damage_cf(MECH *mech, mapobj *o, int from, int to, int damage) {
                 "You hit %s for %d points of damage, destroying it!",
                 structure_name(o), damage);
     notify_except(
-        o->obj, NOTHING, o->obj,
+        BTECH_EVALUATION_CONTEXT, o->obj, NOTHING, o->obj,
         tprintf("%s is hit for %d more points of damage, destroying it!",
                 MyToUpper(structure_name(o)), damage));
     MechLOSBroadcast(mech,
@@ -951,7 +962,7 @@ static void damage_cf(MECH *mech, mapobj *o, int from, int to, int damage) {
   } else {
     mech_printf(mech, MECHALL, "You hit %s for %d points of damage.",
                 structure_name(o), damage);
-    notify_except(o->obj, NOTHING, o->obj,
+    notify_except(BTECH_EVALUATION_CONTEXT, o->obj, NOTHING, o->obj,
                   tprintf("%s is hit for %d points of damage.",
                           MyToUpper(structure_name(o)), damage));
   }

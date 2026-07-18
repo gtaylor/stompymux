@@ -2,10 +2,13 @@
 
 #pragma once
 
+typedef struct ServerConfiguration ServerConfiguration;
+
 char *munge_space(char *string);
 char *trim_spaces(char *string);
 char *grabto(char **str, char targ);
-int string_compare(const char *s1, const char *s2);
+int string_compare(const ServerConfiguration *configuration, const char *s1,
+                   const char *s2);
 int string_prefix(const char *string, const char *prefix);
 const char *string_match(const char *src, const char *sub);
 char *dollar_to_space(const char *str);

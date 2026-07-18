@@ -5,4 +5,4 @@ type: docs
 weight: 10
 ---
 
-Guides for installing, running, extending, and administering BattleTechMUX.
+Guides for installing, running, extending, and administering StompyMUX.

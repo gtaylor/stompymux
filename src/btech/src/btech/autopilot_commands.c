@@ -163,9 +163,9 @@ void gradually_load(MECH * mech, int loc, int percent)
 void autopilot_load_cargo(DbRef player, MECH * mech, int percent)
 {
 	DOCHECK(fabs(MechSpeed(mech)) > MP1, "You're moving too fast!");
-	DOCHECK(obj_location(mech->mynum) != mech->mapindex ||
-			is_in_character(obj_location(mech->mynum)), "You aren't inside hangar!");
-	if(loading_bay_whine(player, obj_location(mech->mynum), mech))
+	DOCHECK(game_object_location(btech_context_active()->database, mech->mynum) != mech->mapindex ||
+			is_in_character(btech_context_active()->database, game_object_location(btech_context_active()->database, mech->mynum)), "You aren't inside hangar!");
+	if(loading_bay_whine(player, game_object_location(btech_context_active()->database, mech->mynum), mech))
 		return;
 	gradually_load(mech, mech->mapindex, percent);
 	SetCargoWeight(mech);
@@ -186,8 +186,9 @@ void auto_cal_mapindex(MECH *mech) {
 
   if (MechAuto(mech) > 0) {
     if (!(autopilot = FindObjectsData(MechAuto(mech))) ||
-        !is_good_obj(MechAuto(mech)) ||
-        obj_location(MechAuto(mech)) != mech->mynum) {
+        !is_good_obj(btech_context_active()->database, MechAuto(mech)) ||
+        game_object_location(btech_context_active()->database,
+                             MechAuto(mech)) != mech->mynum) {
       snprintf(error_buf, MBUF_SIZE,
                "Mech #%ld thinks it has the Autopilot #%d on it"
                " but FindObj breaks",
@@ -1136,7 +1137,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1296,7 +1298,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1551,7 +1554,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1928,7 +1932,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2090,7 +2095,8 @@ void auto_leave_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2212,7 +2218,8 @@ void auto_enter_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2674,7 +2681,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (obj_location(autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(btech_context_active()->database,
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */

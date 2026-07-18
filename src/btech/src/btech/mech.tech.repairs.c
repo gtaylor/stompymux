@@ -42,8 +42,9 @@ static void describe_repairs(MuxEvent *e) {
            ShortArmorSectionString(MechType(mech), MechMove(mech), loc % 8),
            loc >= 8 ? "(R)" : "");
   snprintf(buf2, sizeof(buf2), "%-5ld ", player);
-  snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
-           game_lag_time((e->tick - mux_event_tick) / 60));
+  snprintf(
+      buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
+      game_lag_time((e->tick - btech_context_active()->events->tick) / 60));
   switch (type) {
   case EVENT_REPAIR_REPL:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
@@ -154,7 +155,8 @@ static void describe_repairs(MuxEvent *e) {
 
   /*   snprintf(buf2+strlen(buf2), sizeof(buf2) - strlen(buf2), " - %s", */
 
-  /*        get_uptime_to_string(e->tick - mux_event_tick)); */
+  /*        get_uptime_to_string(e->tick -
+   * btech_context_active()->events->tick)); */
   vsi(buf2);
 }
 
@@ -171,7 +173,8 @@ void tech_repairs(DbRef player, MECH *mech, char *buffer) {
   vsi(tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
   addline();
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    mux_event_gothru_type_data(i, (void *)mech, describe_repairs);
+    mux_event_gothru_type_data(btech_context_active()->events, i, (void *)mech,
+                               describe_repairs);
   addline();
   vsi("Note: Time = Time remaining in minutes. Plr = Tech's dbref");
   addline();

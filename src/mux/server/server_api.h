@@ -15,7 +15,7 @@
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/server/signals.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
@@ -76,35 +76,44 @@ constexpr int MSG_F_DOWN = MSG_INV_L;
 
 /* Notifications are defined by game.h; these compatibility functions remain
  * here. */
-static inline void notify(DbRef p, const char *m) {
-  notify_checked(p, p, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
+static inline void notify(EvaluationContext *evaluation, DbRef p,
+                          const char *m) {
+  notify_checked(evaluation, p, p, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
 }
-static inline void notify_quiet(DbRef p, const char *m) {
-  notify_checked(p, p, m, MSG_PUP_ALWAYS | MSG_ME);
+static inline void notify_quiet(EvaluationContext *evaluation, DbRef p,
+                                const char *m) {
+  notify_checked(evaluation, p, p, m, MSG_PUP_ALWAYS | MSG_ME);
 }
-static inline void notify_with_cause(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
+static inline void notify_with_cause(EvaluationContext *evaluation, DbRef p,
+                                     DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
 }
-static inline void notify_quiet_with_cause(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m, MSG_PUP_ALWAYS | MSG_ME);
+static inline void notify_quiet_with_cause(EvaluationContext *evaluation,
+                                           DbRef p, DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m, MSG_PUP_ALWAYS | MSG_ME);
 }
-static inline void notify_puppet(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m, MSG_ME_ALL | MSG_F_DOWN);
+static inline void notify_puppet(EvaluationContext *evaluation, DbRef p,
+                                 DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m, MSG_ME_ALL | MSG_F_DOWN);
 }
-static inline void notify_quiet_puppet(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m, MSG_ME);
+static inline void notify_quiet_puppet(EvaluationContext *evaluation, DbRef p,
+                                       DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m, MSG_ME);
 }
-static inline void notify_all(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m,
+static inline void notify_all(EvaluationContext *evaluation, DbRef p, DbRef c,
+                              const char *m) {
+  notify_checked(evaluation, p, c, m,
                  MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
 }
-static inline void notify_all_from_inside(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m,
+static inline void notify_all_from_inside(EvaluationContext *evaluation,
+                                          DbRef p, DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m,
                  MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
                      MSG_S_INSIDE);
 }
-static inline void notify_all_from_outside(DbRef p, DbRef c, const char *m) {
-  notify_checked(p, c, m,
+static inline void notify_all_from_outside(EvaluationContext *evaluation,
+                                           DbRef p, DbRef c, const char *m) {
+  notify_checked(evaluation, p, c, m,
                  MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS |
                      MSG_S_OUTSIDE);
 }
@@ -327,6 +336,6 @@ constexpr int VE_BASE_LIGHT = 0x20; /* Base location (pre-parent) is light */
 
 /* Signal handling directives */
 
-#define STARTLOG(key, p, s)                                                    \
-  if ((((key) & mudconf.log_options) != 0) && start_log(p, s))
-#define ENDLOG end_log()
+#define STARTLOG(log, key, p, s)                                               \
+  if (server_log_is_enabled(log, key) && start_log(log, p, s))
+#define ENDLOG(log) end_log(log)

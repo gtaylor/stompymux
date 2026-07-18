@@ -9,7 +9,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 
 struct string_dict_entry {
   char *key;

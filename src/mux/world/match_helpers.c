@@ -2,13 +2,13 @@
  */
 
 #include "mux/world/match.h"
+#include "mux/world/world_context.h"
 
 #include "mux/server/platform.h"
 
 #include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 
 static DbRef promote_dflt(DbRef old, DbRef new) {
@@ -30,8 +30,8 @@ static DbRef promote_dflt(DbRef old, DbRef new) {
   return NOTHING;
 }
 
-DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
-                      int check_enter) {
+DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
+                      char *target, DbRef dflt, int check_enter) {
   DbRef result, result1;
   int control;
   char *buff, *start, *place, *s1, *d1, *temp;
@@ -40,7 +40,7 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
    * First, check normally
    */
 
-  if (is_good_obj(dflt))
+  if (is_good_obj(match_context->evaluation->world->database, dflt))
     return dflt;
 
   /*
@@ -105,17 +105,17 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * * * * past if we can't find it.
      */
 
-    init_match(thing, buff, NOTYPE);
+    init_match(match_context, thing, buff, NOTYPE);
     if (player == thing) {
-      match_neighbor();
-      match_possession();
+      match_neighbor(match_context);
+      match_possession(match_context);
     } else {
-      match_possession();
+      match_possession(match_context);
     }
-    result1 = match_result();
+    result1 = match_result(match_context);
 
     free_lbuf(buff);
-    if (!is_good_obj(result1)) {
+    if (!is_good_obj(match_context->evaluation->world->database, result1)) {
       dflt = promote_dflt(dflt, result1);
       continue;
     }
@@ -124,8 +124,10 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * * * * skip past.
      */
 
-    control = is_controls(player, result1);
-    if ((is_dark(result1) || is_opaque(result1)) && !control) {
+    control = is_controls(match_context->evaluation, player, result1);
+    if ((is_dark(match_context->evaluation->world->database, result1) ||
+         is_opaque(match_context->evaluation->world->database, result1)) &&
+        !control) {
       dflt = promote_dflt(dflt, NOTHING);
       continue;
     }
@@ -133,7 +135,9 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * Validate object has the ENTER bit set, if requested
      */
 
-    if ((check_enter) && !is_enter_ok(result1) && !control) {
+    if ((check_enter) &&
+        !is_enter_ok(match_context->evaluation->world->database, result1) &&
+        !control) {
       dflt = promote_dflt(dflt, NOPERM);
       continue;
     }
@@ -141,11 +145,12 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
      * Look for the object in the container
      */
 
-    init_match(result1, target, NOTYPE);
-    match_possession();
-    result = match_result();
-    result = match_possessed(player, result1, target, result, check_enter);
-    if (is_good_obj(result))
+    init_match(match_context, result1, target, NOTYPE);
+    match_possession(match_context);
+    result = match_result(match_context);
+    result = match_possessed(match_context, player, result1, target, result,
+                             check_enter);
+    if (is_good_obj(match_context->evaluation->world->database, result))
       return result;
     dflt = promote_dflt(dflt, result);
   }
@@ -155,24 +160,26 @@ DbRef match_possessed(DbRef player, DbRef thing, char *target, DbRef dflt,
 /**
  * break up <what>,<low>,<high> syntax
  */
-void parse_range(char **name, DbRef *low_bound, DbRef *high_bound) {
+void parse_range(GameDatabase *database,
+                 const ServerConfiguration *configuration, char **name,
+                 DbRef *low_bound, DbRef *high_bound) {
   char *buff1, *buff2;
 
   buff1 = *name;
   if (buff1 && *buff1)
-    *name = parse_to(&buff1, ',', EV_STRIP_TS);
+    *name = parse_to(configuration, &buff1, ',', EV_STRIP_TS);
   if (buff1 && *buff1) {
-    buff2 = parse_to(&buff1, ',', EV_STRIP_TS);
+    buff2 = parse_to(configuration, &buff1, ',', EV_STRIP_TS);
     if (buff1 && *buff1) {
       while (*buff1 && isspace(*buff1))
         buff1++;
       if (*buff1 == NUMBER_TOKEN)
         buff1++;
       *high_bound = atoi(buff1);
-      if (*high_bound >= mudstate.db_top)
-        *high_bound = mudstate.db_top - 1;
+      if (*high_bound >= database->top)
+        *high_bound = database->top - 1;
     } else {
-      *high_bound = mudstate.db_top - 1;
+      *high_bound = database->top - 1;
     }
     while (*buff2 && isspace(*buff2))
       buff2++;
@@ -183,11 +190,12 @@ void parse_range(char **name, DbRef *low_bound, DbRef *high_bound) {
       *low_bound = 0;
   } else {
     *low_bound = 0;
-    *high_bound = mudstate.db_top - 1;
+    *high_bound = database->top - 1;
   }
 }
 
-int parse_thing_slash(DbRef player, char *thing, char **after, DbRef *it) {
+int parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
+                      char **after, DbRef *it) {
   char *str;
 
   /*
@@ -212,33 +220,36 @@ int parse_thing_slash(DbRef player, char *thing, char **after, DbRef *it) {
    * Look for the object
    */
 
-  init_match(player, thing, NOTYPE);
-  match_everything(MAT_EXIT_PARENTS);
-  *it = match_result();
+  init_match(match_context, player, thing, NOTYPE);
+  match_everything(match_context, MAT_EXIT_PARENTS);
+  *it = match_result(match_context);
 
   /*
    * Return status of search
    */
 
-  return (is_good_obj(*it));
+  return (is_good_obj(match_context->evaluation->world->database, *it));
 }
 
 extern NameTable lock_sw[];
 
-int get_obj_and_lock(DbRef player, char *what, DbRef *it, Attribute **attr,
-                     char *errmsg, char **bufc) {
+int get_obj_and_lock(MatchContext *match_context,
+                     const ServerConfiguration *configuration, DbRef player,
+                     char *what, DbRef *it, Attribute **attr, char *errmsg,
+                     char **bufc) {
   char *str, *tbuf;
   int anum;
 
   tbuf = alloc_lbuf("get_obj_and_lock");
   StringCopy(tbuf, what);
-  if (parse_thing_slash(player, tbuf, &str, it)) {
+  if (parse_thing_slash(match_context, player, tbuf, &str, it)) {
 
     /*
      * <obj>/<lock> syntax, use the named lock
      */
 
-    anum = name_table_search(player, lock_sw, str);
+    anum = name_table_search(match_context->evaluation->world->database,
+                             configuration, player, lock_sw, str);
     if (anum < 0) {
       free_lbuf(tbuf);
       safe_str("#-1 LOCK NOT FOUND", errmsg, bufc);
@@ -250,8 +261,8 @@ int get_obj_and_lock(DbRef player, char *what, DbRef *it, Attribute **attr,
      * Not <obj>/<lock>, do a normal get of the default lock
      */
 
-    *it = match_thing(player, what);
-    if (!is_good_obj(*it)) {
+    *it = match_thing(match_context, player, what);
+    if (!is_good_obj(match_context->evaluation->world->database, *it)) {
       free_lbuf(tbuf);
       safe_str("#-1 NOT FOUND", errmsg, bufc);
       return 0;
@@ -264,7 +275,7 @@ int get_obj_and_lock(DbRef player, char *what, DbRef *it, Attribute **attr,
    */
 
   free_lbuf(tbuf);
-  *attr = attribute_by_number(anum);
+  *attr = attribute_by_number(match_context->evaluation->world->database, anum);
   if (!(*attr)) {
     safe_str("#-1 LOCK NOT FOUND", errmsg, bufc);
     return 0;

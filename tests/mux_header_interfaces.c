@@ -57,7 +57,7 @@
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_state.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/signals.h"
 #include "mux/server/timer.h"

@@ -17,15 +17,14 @@
 #include "mux/database/vattr.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/configuration.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
 
 #ifdef ARBITRARY_LOGFILES
-extern void logcache_init(void);
-void logcache_list(DbRef player);
+#include "mux/server/log_cache.h"
 #endif
 
 constexpr char CACHING[] = "object";
@@ -241,6 +240,13 @@ NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
  */
 void do_comment(DbRef player, DbRef cause, int key) {}
 
+DEFINE_COMMAND_ADAPTER(do_charclear)
+DEFINE_COMMAND_ADAPTER(do_comment)
+#ifdef ARBITRARY_LOGFILES
+#endif
+DEFINE_COMMAND_ADAPTER(do_show)
+DEFINE_COMMAND_ADAPTER(do_show_stat)
+
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
  * hash table.
@@ -250,606 +256,568 @@ void do_comment(DbRef player, DbRef cause, int key) {}
  */
 
 CMDENT command_table[] = {
-    {"@@", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_comment}},
+    {"@@",
+     nullptr,
+     CA_WIZARD,
+     0,
+     CS_NO_ARGS,
+     {.invoke = do_comment_command_adapter}},
     {"@addcommand",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_addcommand}},
+     {.invoke = do_addcommand}},
     {"@admin",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_admin}},
-    {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_alias}},
+     {.invoke = do_admin}},
+    {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
     {"@attribute",
      attrib_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_attribute}},
+     {.invoke = do_attribute}},
     {"@boot",
      boot_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_boot}},
-    {"@cboot", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_chboot}},
-    {"@cchown",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG,
-     {(GenericFnPtr)do_editchannel}},
+     {.invoke = do_boot}},
+    {"@cboot", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chboot}},
+    {"@cchown", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_editchannel}},
     {"@ccreate",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_createchannel}},
+     {.invoke = do_createchannel}},
     {"@cdestroy",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_destroychannel}},
-    {"@cemit", cemit_sw, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_cemit}},
+     {.invoke = do_destroychannel}},
+    {"@cemit", cemit_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_cemit}},
     {"@chown",
      nullptr,
      CA_WIZARD,
      CHOWN_ONE,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_chown}},
+     {.invoke = do_chown}},
     {"@chownall",
      nullptr,
      CA_WIZARD,
      CHOWN_ALL,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_chownall}},
+     {.invoke = do_chownall}},
     {"@chzone",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_chzone}},
+     {.invoke = do_chzone}},
     {"@clone",
      clone_sw,
      CA_WIZARD | CA_CONTENTS,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_clone}},
-    {"@clist", clist_sw, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_chanlist}},
+     {.invoke = do_clone}},
+    {"@clist", clist_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_chanlist}},
     {"@cstatus",
      cstatus_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_chanstatus}},
-    {"@coflags",
-     nullptr,
-     CA_WIZARD,
-     4,
-     CS_TWO_ARG,
-     {(GenericFnPtr)do_editchannel}},
+     {.invoke = do_chanstatus}},
+    {"@coflags", nullptr, CA_WIZARD, 4, CS_TWO_ARG, {.invoke = do_editchannel}},
     {"@cpattr",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_ARGV,
-     {(GenericFnPtr)do_cpattr}},
-    {"@cpflags",
-     nullptr,
-     CA_WIZARD,
-     3,
-     CS_TWO_ARG,
-     {(GenericFnPtr)do_editchannel}},
+     {.invoke = do_cpattr}},
+    {"@cpflags", nullptr, CA_WIZARD, 3, CS_TWO_ARG, {.invoke = do_editchannel}},
     {"@create",
      nullptr,
      CA_WIZARD | CA_CONTENTS,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_create}},
+     {.invoke = do_create}},
     {"@cset",
      cset_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_chopen}},
+     {.invoke = do_chopen}},
     {"@cut",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_cut}},
-    {"@cwho", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_channelwho}},
-    {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dbck}},
-    {"@dbclean", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dbclean}},
+     {.invoke = do_cut}},
+    {"@cwho", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_channelwho}},
+    {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
+    {"@dbclean", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbclean}},
     {"@delcommand",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_delcommand}},
+     {.invoke = do_delcommand}},
     {"@destroy",
      destroy_sw,
      CA_WIZARD,
      DEST_ONE,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_destroy}},
+     {.invoke = do_destroy}},
     /*{"@destroyall", NULL, CA_WIZARD,
-       DEST_ALL, CS_ONE_ARG, {(GenericFnPtr)do_destroy}}, */
+       DEST_ALL, CS_ONE_ARG, {.invoke = do_destroy}}, */
     {"@dig",
      dig_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_ARGV | CS_INTERP,
-     {(GenericFnPtr)do_dig}},
+     {.invoke = do_dig}},
     {"@disable",
      nullptr,
      CA_WIZARD,
      GLOB_DISABLE,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_global}},
+     {.invoke = do_global}},
     {"@dolist",
      dolist_sw,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
-     {(GenericFnPtr)do_dolist}},
+     {.invoke = do_dolist}},
     {"@drain",
      nullptr,
      CA_WIZARD | CA_GBL_INTERP,
      NFY_DRAIN,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_notify}},
-    {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {(GenericFnPtr)do_dump}},
+     {.invoke = do_notify}},
+    {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dump}},
     {"@edit",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_ARGV | CS_STRIP_AROUND,
-     {(GenericFnPtr)do_edit}},
+     {.invoke = do_edit}},
     {"@emit",
      emit_sw,
      CA_WIZARD | CA_LOCATION,
      SAY_EMIT,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_say}},
+     {.invoke = do_say}},
     {"@enable",
      nullptr,
      CA_WIZARD,
      GLOB_ENABLE,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_global}},
+     {.invoke = do_global}},
     {"@entrances",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_entrances}},
+     {.invoke = do_entrances}},
     {"@femit",
      femit_sw,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FEMIT,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_pemit}},
+     {.invoke = do_pemit}},
     {"@find",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_find}},
+     {.invoke = do_find}},
     {"@fixdb",
      fixdb_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_fixdb}},
-    /*{"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, {(GenericFnPtr)do_fnd}}, */
+     {.invoke = do_fixdb}},
+    /*{"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, {.invoke =
+       do_fnd_command_adapter}}, */
     {"@force",
      nullptr,
      CA_WIZARD | CA_GBL_INTERP,
      FRC_COMMAND,
      CS_TWO_ARG | CS_INTERP | CS_CMDARG | CS_NO_MACRO,
-     {(GenericFnPtr)do_force}},
+     {.invoke = do_force}},
     {"@fpose",
      fpose_sw,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FPOSE,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_pemit}},
+     {.invoke = do_pemit}},
     {"@fsay",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FSAY,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_pemit}},
+     {.invoke = do_pemit}},
     {"@function",
      function_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_function}},
+     {.invoke = do_function}},
     {"@halt",
      halt_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_halt}},
+     {.invoke = do_halt}},
     {"@kick",
      nullptr,
      CA_WIZARD,
      QUEUE_KICK,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_queue}},
+     {.invoke = do_queue}},
     {"@last",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_last}},
+     {.invoke = do_last}},
     {"@link",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_link}},
-    {"@luaparent",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG,
-     {(GenericFnPtr)do_luaparent}},
-    {"@luacheck",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_NO_ARGS,
-     {(GenericFnPtr)do_luacheck}},
-    {"@luareload",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_NO_ARGS,
-     {(GenericFnPtr)do_luareload}},
+     {.invoke = do_link}},
+    {"@luaparent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_luaparent}},
+    {"@luacheck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_luacheck}},
+    {"@luareload", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_luareload}},
     {"@luaschedule",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_luaschedule}},
+     {.invoke = do_luaschedule}},
     {"@list",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_list}},
+     {.invoke = do_list}},
     {"@listcommands",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_listcommands}},
+     {.invoke = do_listcommands}},
     {"@list_file",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_list_file}},
+     {.invoke = do_list_file}},
     {"@lock",
      lock_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_lock}},
+     {.invoke = do_lock}},
 #ifdef ARBITRARY_LOGFILES
-    {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_log}},
+    {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
 #endif
     {"@mvattr",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_ARGV,
-     {(GenericFnPtr)do_mvattr}},
+     {.invoke = do_mvattr}},
     {"@name",
      nullptr,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_name}},
+     {.invoke = do_name}},
     {"@newpassword",
      nullptr,
      CA_WIZARD,
      PASS_ANY,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_newpassword}},
+     {.invoke = do_newpassword}},
     {"@notify",
      notify_sw,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_notify}},
+     {.invoke = do_notify}},
     {"@oemit",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      PEMIT_OEMIT,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_pemit}},
+     {.invoke = do_pemit}},
     {"@open",
      open_sw,
      CA_WIZARD,
      0,
      CS_TWO_ARG | CS_ARGV | CS_INTERP,
-     {(GenericFnPtr)do_open}},
-    {"@parent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_parent}},
+     {.invoke = do_open}},
+    {"@parent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_parent}},
     {"@password",
      nullptr,
      CA_WIZARD,
      PASS_MINE,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_password}},
+     {.invoke = do_password}},
     {"@pcreate",
      nullptr,
      CA_WIZARD,
      PCRE_PLAYER,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_pcreate}},
+     {.invoke = do_pcreate}},
     {"@pemit",
      pemit_sw,
      CA_WIZARD,
      PEMIT_PEMIT,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_pemit}},
+     {.invoke = do_pemit}},
     {"@npemit",
      pemit_sw,
      CA_WIZARD,
      PEMIT_PEMIT,
      CS_TWO_ARG | CS_UNPARSE,
-     {(GenericFnPtr)do_pemit}},
-    {"@power", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_power}},
-    {"@ps", ps_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP, {(GenericFnPtr)do_ps}},
-    {"@readcache",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_NO_ARGS,
-     {(GenericFnPtr)do_readcache}},
+     {.invoke = do_pemit}},
+    {"@power", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_power}},
+    {"@ps", ps_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP, {.invoke = do_ps}},
+    {"@readcache", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_readcache}},
     {"@helpreload",
      nullptr,
      CA_WIZARD,
      0,
      CS_NO_ARGS,
-     {(GenericFnPtr)do_helpreload}},
+     {.invoke = do_helpreload}},
     {"@robot",
      nullptr,
      CA_WIZARD | CA_PLAYER,
      PCRE_ROBOT,
      CS_TWO_ARG,
-     {(GenericFnPtr)do_pcreate}},
+     {.invoke = do_pcreate}},
     {"@search",
      nullptr,
      CA_WIZARD,
      SRCH_SEARCH,
      CS_ONE_ARG | CS_NOINTERP,
-     {(GenericFnPtr)do_search}},
-    {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {(GenericFnPtr)do_set}},
-    {"@shutdown",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG,
-     {(GenericFnPtr)do_shutdown}},
+     {.invoke = do_search}},
+    {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_set}},
+    {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
     {"@stats",
      stats_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_stats}},
-    {"@sweep", sweep_sw, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_sweep}},
+     {.invoke = do_stats}},
+    {"@sweep", sweep_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_sweep}},
     {"@switch",
      switch_sw,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG | CS_ARGV | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND,
-     {(GenericFnPtr)do_switch}},
+     {.invoke = do_switch}},
     {"@teleport",
      teleport_sw,
      CA_WIZARD,
      TELEPORT_DEFAULT,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_teleport}},
+     {.invoke = do_teleport}},
     {"@timewarp",
      warp_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_timewarp}},
+     {.invoke = do_timewarp}},
     {"@trigger",
      trig_sw,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG | CS_ARGV,
-     {(GenericFnPtr)do_trigger}},
+     {.invoke = do_trigger}},
     {"@unlink",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_unlink}},
+     {.invoke = do_unlink}},
     {"@unlock",
      lock_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_unlock}},
+     {.invoke = do_unlock}},
     {"@verb",
      nullptr,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG | CS_ARGV | CS_INTERP | CS_STRIP_AROUND,
-     {(GenericFnPtr)do_verb}},
+     {.invoke = do_verb}},
     {"@wait",
      nullptr,
      CA_WIZARD | CA_GBL_INTERP,
      0,
      CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
-     {(GenericFnPtr)do_wait}},
+     {.invoke = do_wait}},
     {"@wall",
      wall_sw,
      CA_WIZARD,
      SAY_SHOUT,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_say}},
+     {.invoke = do_say}},
     {"@wipe",
      wall_sw,
      CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_wipe}},
-    {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_session}},
-    {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {(GenericFnPtr)do_who}},
-    {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_addcom}},
-    {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_allcom}},
-    {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_comlist}},
-    {"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {(GenericFnPtr)do_clearcom}},
-    {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {(GenericFnPtr)do_delcom}},
+     {.invoke = do_wipe}},
+    {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_session}},
+    {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_who}},
+    {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_addcom}},
+    {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_allcom}},
+    {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {.invoke = do_comlist}},
+    {"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {.invoke = do_clearcom}},
+    {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_delcom}},
     {"drop",
      drop_sw,
      CA_CONTENTS | CA_LOCATION,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_drop}},
+     {.invoke = do_drop}},
     {"enter",
      enter_sw,
      CA_LOCATION,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_enter}},
+     {.invoke = do_enter}},
     {"examine",
      examine_sw,
      0,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_examine}},
-    {"get",
-     get_sw,
-     CA_LOCATION,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_get}},
+     {.invoke = do_examine}},
+    {"get", get_sw, CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP, {.invoke = do_get}},
     {"give",
      give_sw,
      CA_LOCATION,
      0,
      CS_TWO_ARG | CS_INTERP,
-     {(GenericFnPtr)do_give}},
+     {.invoke = do_give}},
     {"goto",
      goto_sw,
      CA_LOCATION,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_move}},
-    {"help", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_help}},
+     {.invoke = do_move}},
+    {"help", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_help}},
     {"inventory",
      nullptr,
      0,
      LOOK_INVENTORY,
      CS_NO_ARGS,
-     {(GenericFnPtr)do_inventory}},
+     {.invoke = do_inventory}},
     {"leave",
      leave_sw,
      CA_LOCATION,
      0,
      CS_NO_ARGS | CS_INTERP,
-     {(GenericFnPtr)do_leave}},
+     {.invoke = do_leave}},
     {"look",
      look_sw,
      CA_LOCATION,
      LOOK_LOOK,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_look}},
-    {"page", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, {(GenericFnPtr)do_page}},
+     {.invoke = do_look}},
+    {"page", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, {.invoke = do_page}},
     {"pose",
      pose_sw,
      CA_LOCATION,
      SAY_POSE,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_say}},
-    {"quit", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_quit}},
+     {.invoke = do_say}},
+    {"quit", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_quit}},
     {"say",
      nullptr,
      CA_LOCATION,
      SAY_SAY,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_say}},
-    {"think", nullptr, 0, 0, CS_ONE_ARG, {(GenericFnPtr)do_think}},
+     {.invoke = do_say}},
+    {"think", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_think}},
     {"use",
      nullptr,
      CA_GBL_INTERP,
      0,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_use}},
-    {"version", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_version}},
-    {"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {(GenericFnPtr)do_show}},
-    {"+rolls", nullptr, 0, 0, CS_NO_ARGS, {(GenericFnPtr)do_show_stat}},
+     {.invoke = do_use}},
+    {"version", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_version}},
+    {"+show",
+     nullptr,
+     CA_NO_IC,
+     0,
+     CS_TWO_ARG,
+     {.invoke = do_show_command_adapter}},
+    {"+rolls",
+     nullptr,
+     0,
+     0,
+     CS_NO_ARGS,
+     {.invoke = do_show_stat_command_adapter}},
     {"+charclear",
      nullptr,
      CA_WIZARD,
      0,
      CS_ONE_ARG,
-     {(GenericFnPtr)do_charclear}},
+     {.invoke = do_charclear_command_adapter}},
     {"\\",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP,
-     {(GenericFnPtr)do_say}},
+     {.invoke = do_say}},
     {"#",
      nullptr,
      CA_GBL_INTERP | CF_DARK,
      0,
      CS_ONE_ARG | CS_INTERP | CS_CMDARG,
-     {(GenericFnPtr)do_force_prefixed}},
+     {.invoke = do_force_prefixed}},
     {":",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP | CS_LEADIN,
-     {(GenericFnPtr)do_say}},
+     {.invoke = do_say}},
     {";",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP | CS_LEADIN,
-     {(GenericFnPtr)do_say}},
+     {.invoke = do_say}},
     {"\"",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP | CS_LEADIN,
-     {(GenericFnPtr)do_say}},
-    {"&",
-     nullptr,
-     CF_DARK,
-     0,
-     CS_TWO_ARG | CS_LEADIN,
-     {(GenericFnPtr)do_setvattr}},
+     {.invoke = do_say}},
+    {"&", nullptr, CF_DARK, 0, CS_TWO_ARG | CS_LEADIN, {.invoke = do_setvattr}},
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
-CMDENT *prefix_cmds[256];
-
-CMDENT *goto_cmdp;
-
-void init_cmdtab(void) {
+void init_cmdtab(CommandRegistry *registry) {
   CMDENT *cp;
   Attribute *ap;
   char *p;
   const char *q;
   char *cbuff;
 
-  hash_table_initialize(&mudstate.command_htab, 250 * HASH_FACTOR);
+  hash_table_initialize(&registry->commands, 250 * HASH_FACTOR);
 
   /*
    * Load attribute-setting commands
@@ -872,8 +840,8 @@ void init_cmdtab(void) {
       }
       cp->extra = ap->number;
       cp->callseq = CS_TWO_ARG;
-      cp->handler.fn = (GenericFnPtr)do_setattr;
-      hash_table_add(cp->cmdname, (int *)cp, &mudstate.command_htab);
+      cp->handler.invoke = do_setattr;
+      hash_table_add(cp->cmdname, (int *)cp, &registry->commands);
     }
   }
   free_sbuf(cbuff);
@@ -883,14 +851,14 @@ void init_cmdtab(void) {
    */
 
   for (cp = command_table; cp->cmdname; cp++)
-    hash_table_add(cp->cmdname, (int *)cp, &mudstate.command_htab);
+    hash_table_add(cp->cmdname, (int *)cp, &registry->commands);
 
-  set_prefix_cmds();
+  set_prefix_cmds(registry);
 
-  goto_cmdp = (CMDENT *)hash_table_find("goto", &mudstate.command_htab);
+  registry->goto_command = hash_table_find("goto", &registry->commands);
 }
 
-void set_prefix_cmds() {
+void set_prefix_cmds(CommandRegistry *registry) {
   int i;
 
   /*
@@ -901,36 +869,38 @@ void set_prefix_cmds() {
    */
 
   for (i = 0; i < A_USER_START; i++)
-    prefix_cmds[i] = nullptr;
-  prefix_cmds['"'] = (CMDENT *)hash_table_find("\"", &mudstate.command_htab);
-  prefix_cmds[':'] = (CMDENT *)hash_table_find(":", &mudstate.command_htab);
-  prefix_cmds[';'] = (CMDENT *)hash_table_find(";", &mudstate.command_htab);
-  prefix_cmds['\\'] = (CMDENT *)hash_table_find("\\", &mudstate.command_htab);
-  prefix_cmds['#'] = (CMDENT *)hash_table_find("#", &mudstate.command_htab);
-  prefix_cmds['&'] = (CMDENT *)hash_table_find("&", &mudstate.command_htab);
-  prefix_cmds['-'] = (CMDENT *)hash_table_find("-", &mudstate.command_htab);
-  prefix_cmds['~'] = (CMDENT *)hash_table_find("~", &mudstate.command_htab);
+    registry->prefix_commands[i] = nullptr;
+  registry->prefix_commands['"'] = hash_table_find("\"", &registry->commands);
+  registry->prefix_commands[':'] = hash_table_find(":", &registry->commands);
+  registry->prefix_commands[';'] = hash_table_find(";", &registry->commands);
+  registry->prefix_commands['\\'] = hash_table_find("\\", &registry->commands);
+  registry->prefix_commands['#'] = hash_table_find("#", &registry->commands);
+  registry->prefix_commands['&'] = hash_table_find("&", &registry->commands);
+  registry->prefix_commands['-'] = hash_table_find("-", &registry->commands);
+  registry->prefix_commands['~'] = hash_table_find("~", &registry->commands);
 }
 
 /*
  * Returns 1 if player is in an IC location, 0 if not. Take into account
  * the ooc_comsys directive.
  */
-int is_in_character_location(DbRef player) {
-  DbRef d = obj_location(player);
+int is_in_character_location(GameDatabase *database,
+                             const ServerConfiguration *configuration,
+                             DbRef player) {
+  DbRef d = game_object_location(database, player);
   int z = 0;
 
-  while (is_player(d)) {
+  while (is_player(database, d)) {
     DbRef od = d;
 
-    if ((d = obj_location(d)) == od)
+    if ((d = game_object_location(database, d)) == od)
       break;
     if (z++ >= 100)
       break;
   }
-  if (mudconf.btech_ooc_comsys && !is_gagged(player))
+  if (configuration->btech_ooc_comsys && !is_gagged(database, player))
     return 0;
-  else if (is_in_character(d) || is_gagged(player))
+  else if (is_in_character(database, d) || is_gagged(database, player))
     return 1;
   return 0;
 } /* end In_IC_Loc() */
@@ -940,31 +910,33 @@ int is_in_character_location(DbRef player) {
  * * check_access: Check if player has access to function.
  */
 
-int check_access(DbRef player, int mask) {
+int check_access(GameDatabase *database,
+                 const ServerConfiguration *configuration, DbRef player,
+                 int mask) {
   int succ, fail;
 
   if (mask & CA_DISABLED)
     return 0;
-  if (is_god(player) || mudstate.is_initializing)
+  if (is_god(database, player) || configuration->is_initializing)
     return 1;
 
   succ = fail = 0;
   if (mask & CA_GOD)
     fail++;
   if (mask & CA_WIZARD) {
-    if (is_wizard(player))
+    if (is_wizard(database, player))
       succ++;
     else
       fail++;
   }
   if ((succ == 0) && (mask & CA_ADMIN)) {
-    if (is_wizard(player))
+    if (is_wizard(database, player))
       succ++;
     else
       fail++;
   }
   if ((succ == 0) && (mask & CA_ROBOT)) {
-    if (is_robot_player(player))
+    if (is_robot_player(database, player))
       succ++;
     else
       fail++;
@@ -978,25 +950,48 @@ int check_access(DbRef player, int mask) {
    * Check for forbidden flags.
    */
 
-  if (!is_wizard(player) &&
-      (((mask & CA_NO_ROBOT) && is_robot_player(player)) ||
-       ((mask & CA_NO_SUSPECT) && is_suspect(player)) ||
-       (!mudconf.btech_ooc_comsys && (mask & CA_NO_IC) &&
-        is_in_character_location(player)) ||
-       ((mask & CA_NO_IC) && is_gagged(player))))
+  if (!is_wizard(database, player) &&
+      (((mask & CA_NO_ROBOT) && is_robot_player(database, player)) ||
+       ((mask & CA_NO_SUSPECT) && is_suspect(database, player)) ||
+       (!configuration->btech_ooc_comsys && (mask & CA_NO_IC) &&
+        is_in_character_location(database, configuration, player)) ||
+       ((mask & CA_NO_IC) && is_gagged(database, player))))
     return 0;
   return 1;
 }
 
 static inline bool is_protected(CMDENT *cmdp, int x) { return cmdp->perms & x; }
 
+static void command_invoke(CMDENT *command, CommandContext *context,
+                           DbRef player, DbRef cause, int key, char *unparsed,
+                           char *first, char *second, char **vector,
+                           int vector_count, char **command_arguments,
+                           int command_argument_count) {
+  CommandInvocation invocation = {
+      .context = context,
+      .player = player,
+      .cause = cause,
+      .key = key,
+      .unparsed = unparsed,
+      .first = first,
+      .second = second,
+      .vector = vector,
+      .vector_count = vector_count,
+      .command_arguments = command_arguments,
+      .command_argument_count = command_argument_count,
+  };
+
+  command->handler.invoke(&invocation);
+}
+
 /*
  * ---------------------------------------------------------------------------
  * * process_cmdent: Perform indicated command with passed args.
  */
-static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
-                           DbRef cause, int interactive, char *arg,
-                           char *unp_command, char *cargs[], int ncargs) {
+static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
+                           DbRef player, DbRef cause, int interactive,
+                           char *arg, char *unp_command, char *cargs[],
+                           int ncargs) {
   char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00', *bp = nullptr,
        *str = nullptr, *buff = nullptr, *s = nullptr, *j = nullptr,
        *new = nullptr;
@@ -1016,22 +1011,28 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
    */
 
   fail = 0;
-  if (is_protected(cmdp, CA_LOCATION) && !has_location(player))
+  if (is_protected(cmdp, CA_LOCATION) &&
+      !has_location(context->world->database, player))
     fail++;
-  if (is_protected(cmdp, CA_CONTENTS) && !has_contents(player))
+  if (is_protected(cmdp, CA_CONTENTS) &&
+      !has_contents(context->world->database, player))
     fail++;
-  if (is_protected(cmdp, CA_PLAYER) && (typeof_obj(player) != TYPE_PLAYER))
+  if (is_protected(cmdp, CA_PLAYER) &&
+      (typeof_obj(context->world->database, player) != TYPE_PLAYER))
     fail++;
   if (fail > 0) {
-    notify(player, "Command incompatible with invoker type.");
+    notify(&context->evaluation, player,
+           "Command incompatible with invoker type.");
     return;
   }
   /*
    * Check global flags
    */
 
-  if (is_protected(cmdp, CA_GBL_INTERP) && !mudconf.is_interpreter_enabled) {
-    notify(player, "Sorry, queueing and triggering are not allowed now.");
+  if (is_protected(cmdp, CA_GBL_INTERP) &&
+      !context->server->configuration->is_interpreter_enabled) {
+    notify(&context->evaluation, player,
+           "Sorry, queueing and triggering are not allowed now.");
     return;
   }
   key = cmdp->extra & ~SW_MULTIPLE;
@@ -1047,8 +1048,9 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
    */
 
   /* Asumption: base command permission required for all sub-commands */
-  if (!check_access(player, cmdp->perms)) {
-    notify(player, "Permission denied.");
+  if (!check_access(context->world->database, context->server->configuration,
+                    player, cmdp->perms)) {
+    notify(&context->evaluation, player, "Permission denied.");
     return;
   }
 
@@ -1065,17 +1067,21 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
       buf1 = (char *)index(switchp, '/');
       if (buf1)
         *buf1++ = '\0';
-      xkey = name_table_search(player, cmdp->switches, switchp);
+      xkey = name_table_search(context->world->database,
+                               context->server->configuration, player,
+                               cmdp->switches, switchp);
       if (xkey == -1) {
-        notify_printf(player, "Unrecognized switch '%s' for command '%s'.",
-                      switchp, cmdp->cmdname);
+        notify_printf(&context->evaluation, player,
+                      "Unrecognized switch '%s' for command '%s'.", switchp,
+                      cmdp->cmdname);
         return;
       } else if (xkey == -2) {
-        notify(player, "Permission denied.");
+        notify(&context->evaluation, player, "Permission denied.");
         return;
       } else if (!(xkey & SW_MULTIPLE)) {
         if (i == 1) {
-          notify(player, "Illegal combination of switches.");
+          notify(&context->evaluation, player,
+                 "Illegal combination of switches.");
           return;
         }
         i = 1;
@@ -1086,7 +1092,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
       switchp = buf1;
     } while (buf1);
   } else if (switchp && !(cmdp->callseq & CS_ADDED)) {
-    notify_printf(player, "Command %s does not take switches.", cmdp->cmdname);
+    notify_printf(&context->evaluation, player,
+                  "Command %s does not take switches.", cmdp->cmdname);
     return;
   }
   /*
@@ -1108,7 +1115,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
   case CS_NO_ARGS: /*
                     * <cmd>   (no args)
                     */
-    ((void (*)(DbRef, DbRef, int))cmdp->handler.fn)(player, cause, key);
+    command_invoke(cmdp, context, player, cause, key, unp_command, nullptr,
+                   nullptr, nullptr, 0, nullptr, 0);
     break;
   case CS_ONE_ARG: /*
                     * <cmd> <arg>
@@ -1119,7 +1127,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
      */
 
     if (cmdp->callseq & CS_UNPARSE) {
-      ((void (*)(DbRef, char *))cmdp->handler.fn)(player, unp_command);
+      command_invoke(cmdp, context, player, cause, key, unp_command, nullptr,
+                     nullptr, nullptr, 0, nullptr, 0);
       break;
     }
     /* Interpret if necessary, but not twice for CS_ADDED */
@@ -1127,24 +1136,26 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
     if ((interp & EV_EVAL) && !(cmdp->callseq & CS_ADDED)) {
       buf1 = bp = alloc_lbuf("process_cmdent");
       str = arg;
-      exec(buf1, &bp, 0, player, cause, interp | EV_FCHECK | EV_TOP, &str,
-           cargs, ncargs);
+      exec(&context->evaluation, buf1, &bp, 0, player, cause,
+           interp | EV_FCHECK | EV_TOP, &str, cargs, ncargs);
       length = strnlen(buf1, LBUF_SIZE - 1);
       buf1[length] = '\0';
     } else
-      buf1 = parse_to(&arg, '\0', interp | EV_TOP);
+      buf1 =
+          parse_to(context->server->configuration, &arg, '\0', interp | EV_TOP);
 
     /*
      * Call the correct handler
      */
 
     if (cmdp->callseq & CS_CMDARG) {
-      ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler.fn)(
-          player, cause, key, buf1, cargs, ncargs);
+      command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                     nullptr, cargs, ncargs, nullptr, 0);
     } else {
       if (cmdp->callseq & CS_ADDED) {
         for (add = cmdp->handler.added; add != nullptr; add = add->next) {
-          buff = attribute_get(add->thing, add->atr, &aowner, &aflags);
+          buff = attribute_get(context->world->database, add->thing, add->atr,
+                               &aowner, &aflags);
           /* Skip the '$' character, and the next */
           for (s = buff + 2; *s && (*s != ':'); s++)
             ;
@@ -1185,8 +1196,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
           }
 
           if (wild(buff + 1, new, aargs, 10)) {
-            wait_que(add->thing, player, 0, NOTHING, 0, s, aargs, 10,
-                     mudstate.global_regs);
+            wait_que(context->server->commands, add->thing, player, 0, NOTHING,
+                     0, s, aargs, 10, context->evaluation.registers);
             for (i = 0; i < 10; i++) {
               if (aargs[i])
                 free_lbuf(aargs[i]);
@@ -1196,8 +1207,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
           free_lbuf(buff);
         }
       } else
-        ((void (*)(DbRef, DbRef, int, char *))cmdp->handler.fn)(player, cause,
-                                                                key, buf1);
+        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                       nullptr, nullptr, 0, nullptr, 0);
     }
 
     /*
@@ -1216,7 +1227,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
      * Interpret ARG1
      */
 
-    buf2 = parse_to(&arg, '=', EV_STRIP_TS);
+    buf2 = parse_to(context->server->configuration, &arg, '=', EV_STRIP_TS);
 
     /*
      * Handle when no '=' was specified
@@ -1228,8 +1239,8 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
     }
     buf1 = bp = alloc_lbuf("process_cmdent.2");
     str = buf2;
-    exec(buf1, &bp, 0, player, cause, EV_STRIP | EV_FCHECK | EV_EVAL | EV_TOP,
-         &str, cargs, ncargs);
+    exec(&context->evaluation, buf1, &bp, 0, player, cause,
+         EV_STRIP | EV_FCHECK | EV_EVAL | EV_TOP, &str, cargs, ncargs);
     length = strnlen(buf1, LBUF_SIZE - 1);
     buf1[length] = '\0';
 
@@ -1239,7 +1250,7 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
        * Arg2 is ARGV style.  Go get the args
        */
 
-      parse_arglist(player, cause, arg, '\0',
+      parse_arglist(&context->evaluation, player, cause, arg, '\0',
                     interp | EV_STRIP_LS | EV_STRIP_TS, args, MAX_ARG, cargs,
                     ncargs);
       for (nargs = 0; (nargs < MAX_ARG) && args[nargs]; nargs++)
@@ -1250,12 +1261,11 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
        */
 
       if (cmdp->callseq & CS_CMDARG) {
-        ((void (*)(DbRef, DbRef, int, char *, char **, int, char **,
-                   int))cmdp->handler.fn)(player, cause, key, buf1, args, nargs,
-                                          cargs, ncargs);
+        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                       nullptr, args, nargs, cargs, ncargs);
       } else {
-        ((void (*)(DbRef, DbRef, int, char *, char **, int))cmdp->handler.fn)(
-            player, cause, key, buf1, args, nargs);
+        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                       nullptr, args, nargs, nullptr, 0);
       }
 
       /*
@@ -1275,15 +1285,16 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
       if (interp & EV_EVAL) {
         buf2 = bp = alloc_lbuf("process_cmdent.3");
         str = arg;
-        exec(buf2, &bp, 0, player, cause, interp | EV_FCHECK | EV_TOP, &str,
-             cargs, ncargs);
+        exec(&context->evaluation, buf2, &bp, 0, player, cause,
+             interp | EV_FCHECK | EV_TOP, &str, cargs, ncargs);
         length = strnlen(buf2, LBUF_SIZE - 1);
         buf2[length] = '\0';
       } else if (cmdp->callseq & CS_UNPARSE) {
-        buf2 = parse_to(&arg, '\0', interp | EV_TOP | EV_NO_COMPRESS);
+        buf2 = parse_to(context->server->configuration, &arg, '\0',
+                        interp | EV_TOP | EV_NO_COMPRESS);
       } else {
-        buf2 =
-            parse_to(&arg, '\0', interp | EV_STRIP_LS | EV_STRIP_TS | EV_TOP);
+        buf2 = parse_to(context->server->configuration, &arg, '\0',
+                        interp | EV_STRIP_LS | EV_STRIP_TS | EV_TOP);
       }
 
       /*
@@ -1291,12 +1302,11 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
        */
 
       if (cmdp->callseq & CS_CMDARG) {
-        ((void (*)(DbRef, DbRef, int, char *, char *, char **,
-                   int))cmdp->handler.fn)(player, cause, key, buf1, buf2, cargs,
-                                          ncargs);
+        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                       buf2, cargs, ncargs, nullptr, 0);
       } else {
-        ((void (*)(DbRef, DbRef, int, char *, char *))cmdp->handler.fn)(
-            player, cause, key, buf1, buf2);
+        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                       buf2, nullptr, 0, nullptr, 0);
       }
 
       /*
@@ -1324,8 +1334,14 @@ static void process_cmdent(CMDENT *cmdp, char *switchp, DbRef player,
  * * process_command: Execute a command.
  */
 
-void process_command(DbRef player, DbRef cause, int interactive, char *command,
-                     char *args[], int nargs) {
+void process_command(CommandContext *context, char *command, char *args[],
+                     int nargs) {
+  MuxServer *server = context->server;
+  ServerConfiguration *configuration = server->configuration;
+  CommandRegistry *registry = &server->command_registry;
+  const DbRef player = context->player;
+  const DbRef cause = context->enactor;
+  const bool interactive = context->interactive;
   char *p = nullptr, *q = nullptr, *arg = nullptr, *lcbuf = nullptr,
        *slashp = nullptr, *bp = nullptr, *str = nullptr;
   const char *cmdsave = nullptr;
@@ -1341,17 +1357,17 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Robustify player
    */
 
-  cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = "< process_command >";
+  cmdsave = context->debug_command;
+  context->debug_command = "< process_command >";
 
   if (!command) {
     abort();
   }
 
-  if (!is_good_obj(player)) {
-    log_error(LOG_BUGS, "CMD", "PLYR", "Bad player in process_command: %ld",
-              player);
-    mudstate.debug_cmd = cmdsave;
+  if (!is_good_obj(context->world->database, player)) {
+    log_error(&context->server->log, LOG_BUGS, "CMD", "PLYR",
+              "Bad player in process_command: %ld", player);
+    context->debug_command = cmdsave;
     goto exit;
   }
 
@@ -1359,47 +1375,51 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Make sure player isn't going or halted
    */
 
-  if (is_going(player) ||
-      (is_halted(player) &&
-       !((typeof_obj(player) == TYPE_PLAYER) && interactive))) {
-    notify_printf(obj_owner(player),
+  if (is_going(context->world->database, player) ||
+      (is_halted(context->world->database, player) &&
+       !((typeof_obj(context->world->database, player) == TYPE_PLAYER) &&
+         interactive))) {
+    notify_printf(&context->evaluation,
+                  game_object_owner(context->world->database, player),
                   "Attempt to execute command by halted object #%ld", player);
-    mudstate.debug_cmd = cmdsave;
+    context->debug_command = cmdsave;
     goto exit;
   }
 
-  if (is_suspect(player)) {
-    STARTLOG(LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD", "SUS") {
-      log_name_and_loc(player);
+  if (is_suspect(context->world->database, player)) {
+    STARTLOG(&context->server->log, LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD",
+             "SUS") {
+      log_name_and_loc(&context->server->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG;
+      ENDLOG(&context->server->log);
     }
-    send_channel("SuspectsLog", "%s (#%ld) (in #%ld) entered: %s", Name(player),
-                 player, obj_location(player), command);
+    send_channel(
+        &context->evaluation, "SuspectsLog", "%s (#%ld) (in #%ld) entered: %s",
+        game_object_name(context->world->database, player), player,
+        game_object_location(context->world->database, player), command);
   } else {
-    STARTLOG(LOG_ALLCOMMANDS, "CMD", "ALL") {
-      log_name_and_loc(player);
+    STARTLOG(&context->server->log, LOG_ALLCOMMANDS, "CMD", "ALL") {
+      log_name_and_loc(&context->server->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG;
+      ENDLOG(&context->server->log);
     }
   }
 
   /*
    * Reset recursion limits
    */
-  mudstate.func_nest_lev = 0;
-  mudstate.func_invk_ctr = 0;
-  mudstate.ntfy_nest_lev = 0;
-  mudstate.lock_nest_lev = 0;
+  command_context_reset_limits(context);
 
-  if (is_verbose(player))
-    notify_printf(obj_owner(player), "%s] %s", Name(player), command);
+  if (is_verbose(context->world->database, player))
+    notify_printf(&context->evaluation,
+                  game_object_owner(context->world->database, player), "%s] %s",
+                  game_object_name(context->world->database, player), command);
 
   /*
    * Eat leading whitespace, and space-compress if configured
@@ -1407,12 +1427,12 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
 
   while (*command && isspace(*command))
     command++;
-  mudstate.debug_cmd = command;
+  context->debug_command = command;
 
   /*
    * Can we fix the @npemit thing?
    */
-  if (mudconf.space_compress && strncmp(command, "@npemit", 7)) {
+  if (configuration->space_compress && strncmp(command, "@npemit", 7)) {
     p = q = command;
     while (*p) {
       while (*p && !isspace(*p))
@@ -1433,14 +1453,15 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    */
 
   i = command[0] & 0xff;
-  if ((prefix_cmds[i] != nullptr) && command[0]) {
-    process_cmdent(prefix_cmds[i], nullptr, player, cause, interactive, command,
-                   command, args, nargs);
-    mudstate.debug_cmd = cmdsave;
+  if ((registry->prefix_commands[i] != nullptr) && command[0]) {
+    process_cmdent(context, registry->prefix_commands[i], nullptr, player,
+                   cause, interactive, command, command, args, nargs);
+    context->debug_command = cmdsave;
     goto exit;
   }
-  if (mudconf.have_macros && (command[0] == '.') && interactive) {
-    macerr = do_macro(player, command, &macroout);
+  if (configuration->have_macros && (command[0] == '.') && interactive) {
+    macerr = do_macro(&context->match, &context->server->command_registry,
+                      &context->server->macros, player, command, &macroout);
     if (!macerr)
       goto exit;
     if (macerr == 1) {
@@ -1449,58 +1470,64 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
     }
   } else
     macerr = 0;
-  if (mudconf.have_comsys)
-    if (!do_comsystem(player, command))
+  if (configuration->have_comsys)
+    if (!do_comsystem(&context->evaluation, player, command))
       goto exit;
 
   /* Handle mecha stuff.. */
-  if (mudconf.have_specials)
-    if (HandledCommand(player, obj_location(player), command))
+  if (configuration->have_specials)
+    if (HandledCommand(player,
+                       game_object_location(context->world->database, player),
+                       command))
       goto exit;
   /*
    * Check for the HOME command
    */
 
-  if (string_compare(command, "home") == 0) {
-    if (((is_fixed(player)) || (is_fixed(obj_owner(player)))) &&
-        !(is_wizard(player))) {
-      notify(player, mudconf.fixed_home_msg);
+  if (string_compare(configuration, command, "home") == 0) {
+    if (((is_fixed(context->world->database, player)) ||
+         (is_fixed(context->world->database,
+                   game_object_owner(context->world->database, player)))) &&
+        !(is_wizard(context->world->database, player))) {
+      notify(&context->evaluation, player, configuration->fixed_home_msg);
       goto exit;
     }
     /* do_move()'s parameter isn't const-correct; "home" is only read. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-    do_move(player, cause, 0, (char *)"home");
+    move_command(&context->evaluation, player, cause, 0, (char *)"home");
 #pragma clang diagnostic pop
-    mudstate.debug_cmd = cmdsave;
+    context->debug_command = cmdsave;
     goto exit;
   }
 
   /*
    * Only check for exits if we may use the goto command
    */
-  if (check_access(player, goto_cmdp->perms)) {
+  if (check_access(context->world->database, configuration, player,
+                   ((CMDENT *)registry->goto_command)->perms)) {
     /*
      * Check for an exit name
      */
-    init_match_check_keys(player, command, TYPE_EXIT);
-    match_exit_with_parents();
-    exit = last_match_result();
+    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+    match_exit_with_parents(&context->match);
+    exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      move_exit(player, exit, 0, "You can't go that way.", 0);
-      mudstate.debug_cmd = cmdsave;
+      move_exit(&context->evaluation, player, exit, 0, "You can't go that way.",
+                0);
+      context->debug_command = cmdsave;
       goto exit;
     }
     /*
      * Check for an exit in the master room
      */
 
-    init_match_check_keys(player, command, TYPE_EXIT);
-    match_master_exit();
-    exit = last_match_result();
+    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+    match_master_exit(&context->match);
+    exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      move_exit(player, exit, 1, nullptr, 0);
-      mudstate.debug_cmd = cmdsave;
+      move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
+      context->debug_command = cmdsave;
       goto exit;
     }
   }
@@ -1544,16 +1571,17 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Check for a builtin command (or an alias of a builtin command)
    */
 
-  cmdp = (CMDENT *)hash_table_find(lcbuf, &mudstate.command_htab);
+  cmdp = (CMDENT *)hash_table_find(lcbuf, &registry->commands);
   if (cmdp != nullptr) {
     if ((cmdp->callseq & CS_NO_MACRO) && macerr == 1)
-      notify(player, "This command is unavailable as macro. Please use an "
-                     "attribute instead.");
+      notify(&context->evaluation, player,
+             "This command is unavailable as macro. Please use an "
+             "attribute instead.");
     else
-      process_cmdent(cmdp, slashp, player, cause, interactive, arg, command,
-                     args, nargs);
+      process_cmdent(context, cmdp, slashp, player, cause, interactive, arg,
+                     command, args, nargs);
     free_lbuf(lcbuf);
-    mudstate.debug_cmd = cmdsave;
+    context->debug_command = cmdsave;
     goto exit;
   }
   /*
@@ -1566,8 +1594,8 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
 
   bp = lcbuf;
   str = command;
-  exec(lcbuf, &bp, 0, player, cause, EV_EVAL | EV_FCHECK | EV_STRIP | EV_TOP,
-       &str, args, nargs);
+  exec(&context->evaluation, lcbuf, &bp, 0, player, cause,
+       EV_EVAL | EV_FCHECK | EV_STRIP | EV_TOP, &str, args, nargs);
   length = strnlen(lcbuf, LBUF_SIZE - 1);
   lcbuf[length] = '\0';
   succ = 0;
@@ -1576,15 +1604,22 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Idea for enter/leave aliases from R'nice@TinyTIM
    */
 
-  if (has_location(player) && is_good_obj(obj_location(player))) {
+  if (has_location(context->world->database, player) &&
+      is_good_obj(context->world->database,
+                  game_object_location(context->world->database, player))) {
 
     /* Check for a leave alias */
-    p = attribute_parent_get(obj_location(player), A_LALIAS, &aowner, &aflags);
+    p = attribute_parent_get(
+        context->world->database,
+        game_object_location(context->world->database, player), A_LALIAS,
+        &aowner, &aflags);
     if (p && *p) {
       if (matches_exit_from_list(lcbuf, p)) {
         free_lbuf(lcbuf);
         free_lbuf(p);
-        do_leave(player, player, 0);
+        CommandInvocation invocation = {
+            .context = context, .player = player, .cause = player};
+        do_leave(&invocation);
         goto exit;
       }
     }
@@ -1594,13 +1629,17 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
      * Check for enter aliases
      */
 
-    DOLIST(exit, obj_contents(obj_location(player))) {
-      p = attribute_parent_get(exit, A_EALIAS, &aowner, &aflags);
+    DOLIST(context->world->database, exit,
+           game_object_contents(
+               context->world->database,
+               game_object_location(context->world->database, player))) {
+      p = attribute_parent_get(context->world->database, exit, A_EALIAS,
+                               &aowner, &aflags);
       if (p && *p) {
         if (matches_exit_from_list(lcbuf, p)) {
           free_lbuf(lcbuf);
           free_lbuf(p);
-          do_enter_internal(player, exit, 0);
+          do_enter_internal(&context->evaluation, player, exit, 0);
           goto exit;
         }
       }
@@ -1612,44 +1651,87 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * unmatched command; local and zone legacy matching remains available when
    * no Lua handler accepts it.
    */
-  if (mudconf.match_mine && !is_no_command(player) &&
-      ((typeof_obj(player) != TYPE_PLAYER) || mudconf.match_mine_pl))
-    lua_succ += lua_command_match(player, player, cause, command);
-  if (has_location(player)) {
-    lua_succ += lua_list_command_match(obj_contents(obj_location(player)),
-                                       player, cause, command);
-    if (!is_no_command(obj_location(player)))
-      lua_succ +=
-          lua_command_match(obj_location(player), player, cause, command);
+  if (configuration->match_mine &&
+      !is_no_command(context->world->database, player) &&
+      ((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
+       configuration->match_mine_pl))
+    lua_succ += lua_command_match(server->lua, context->descriptor, player,
+                                  player, cause, command);
+  if (has_location(context->world->database, player)) {
+    lua_succ += lua_list_command_match(
+        server->lua, context->descriptor,
+        game_object_contents(
+            context->world->database,
+            game_object_location(context->world->database, player)),
+        player, cause, command);
+    if (!is_no_command(context->world->database,
+                       game_object_location(context->world->database, player)))
+      lua_succ += lua_command_match(
+          server->lua, context->descriptor,
+          game_object_location(context->world->database, player), player, cause,
+          command);
   }
-  if (has_contents(player))
-    lua_succ +=
-        lua_list_command_match(obj_contents(player), player, cause, command);
-  if (!lua_succ && mudconf.have_zones &&
-      (obj_zone(obj_location(player)) != NOTHING)) {
-    if (typeof_obj(obj_zone(obj_location(player))) == TYPE_ROOM) {
-      if (obj_location(player) != obj_zone(player))
-        lua_succ +=
-            lua_list_command_match(obj_contents(obj_zone(obj_location(player))),
-                                   player, cause, command);
-    } else if (!is_no_command(obj_zone(obj_location(player)))) {
-      lua_succ += lua_command_match(obj_zone(obj_location(player)), player,
-                                    cause, command);
+  if (has_contents(context->world->database, player))
+    lua_succ += lua_list_command_match(
+        server->lua, context->descriptor,
+        game_object_contents(context->world->database, player), player, cause,
+        command);
+  if (!lua_succ && configuration->have_zones &&
+      (game_object_zone(context->world->database,
+                        game_object_location(context->world->database,
+                                             player)) != NOTHING)) {
+    if (typeof_obj(context->world->database,
+                   game_object_zone(context->world->database,
+                                    game_object_location(
+                                        context->world->database, player))) ==
+        TYPE_ROOM) {
+      if (game_object_location(context->world->database, player) !=
+          game_object_zone(context->world->database, player))
+        lua_succ += lua_list_command_match(
+            server->lua, context->descriptor,
+            game_object_contents(
+                context->world->database,
+                game_object_zone(
+                    context->world->database,
+                    game_object_location(context->world->database, player))),
+            player, cause, command);
+    } else if (!is_no_command(
+                   context->world->database,
+                   game_object_zone(context->world->database,
+                                    game_object_location(
+                                        context->world->database, player)))) {
+      lua_succ += lua_command_match(
+          server->lua, context->descriptor,
+          game_object_zone(
+              context->world->database,
+              game_object_location(context->world->database, player)),
+          player, cause, command);
     }
   }
-  if (!lua_succ && mudconf.have_zones && (obj_zone(player) != NOTHING) &&
-      !is_no_command(obj_zone(player)) &&
-      (obj_zone(obj_location(player)) != obj_zone(player)))
-    lua_succ += lua_command_match(obj_zone(player), player, cause, command);
+  if (!lua_succ && configuration->have_zones &&
+      (game_object_zone(context->world->database, player) != NOTHING) &&
+      !is_no_command(context->world->database,
+                     game_object_zone(context->world->database, player)) &&
+      (game_object_zone(
+           context->world->database,
+           game_object_location(context->world->database, player)) !=
+       game_object_zone(context->world->database, player)))
+    lua_succ +=
+        lua_command_match(server->lua, context->descriptor,
+                          game_object_zone(context->world->database, player),
+                          player, cause, command);
   if (lua_succ)
     succ = lua_succ;
   /*
    * Check for $-command matches on me
    */
 
-  if (!lua_succ && mudconf.match_mine && (!(is_no_command(player)))) {
-    if (((typeof_obj(player) != TYPE_PLAYER) || mudconf.match_mine_pl) &&
-        (attribute_match(player, player, AMATCH_CMD, lcbuf, 1) > 0)) {
+  if (!lua_succ && configuration->match_mine &&
+      (!(is_no_command(context->world->database, player)))) {
+    if (((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
+         configuration->match_mine_pl) &&
+        (attribute_match(&context->evaluation, player, player, AMATCH_CMD,
+                         lcbuf, 1) > 0)) {
       succ++;
     }
   }
@@ -1657,13 +1739,21 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Check for $-command matches on nearby things and on my room
    */
 
-  if (!lua_succ && has_location(player)) {
-    succ += list_check(obj_contents(obj_location(player)), player, AMATCH_CMD,
-                       lcbuf, 1);
+  if (!lua_succ && has_location(context->world->database, player)) {
+    succ +=
+        list_check(&context->evaluation,
+                   game_object_contents(
+                       context->world->database,
+                       game_object_location(context->world->database, player)),
+                   player, AMATCH_CMD, lcbuf, 1);
 
-    if (!(is_no_command(obj_location(player))))
-      if (attribute_match(obj_location(player), player, AMATCH_CMD, lcbuf, 1) >
-          0) {
+    if (!(is_no_command(
+            context->world->database,
+            game_object_location(context->world->database, player))))
+      if (attribute_match(
+              &context->evaluation,
+              game_object_location(context->world->database, player), player,
+              AMATCH_CMD, lcbuf, 1) > 0) {
         succ++;
       }
   }
@@ -1672,35 +1762,50 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * Check for $-command matches in my inventory
    */
 
-  if (!lua_succ && has_contents(player))
-    succ += list_check(obj_contents(player), player, AMATCH_CMD, lcbuf, 1);
+  if (!lua_succ && has_contents(context->world->database, player))
+    succ += list_check(&context->evaluation,
+                       game_object_contents(context->world->database, player),
+                       player, AMATCH_CMD, lcbuf, 1);
 
   /*
    * now do check on zones
    */
 
-  if (!lua_succ && (!succ) && mudconf.have_zones &&
-      (obj_zone(obj_location(player)) != NOTHING)) {
-    if (typeof_obj(obj_zone(obj_location(player))) == TYPE_ROOM) {
+  if (!lua_succ && (!succ) && configuration->have_zones &&
+      (game_object_zone(context->world->database,
+                        game_object_location(context->world->database,
+                                             player)) != NOTHING)) {
+    if (typeof_obj(context->world->database,
+                   game_object_zone(context->world->database,
+                                    game_object_location(
+                                        context->world->database, player))) ==
+        TYPE_ROOM) {
 
       /*
        * zone of player's location is a parent room
        */
-      if (obj_location(player) != obj_zone(player)) {
+      if (game_object_location(context->world->database, player) !=
+          game_object_zone(context->world->database, player)) {
 
         /*
          * check parent room exits
          */
-        init_match_check_keys(player, command, TYPE_EXIT);
-        match_zone_exit();
-        exit = last_match_result();
+        init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+        match_zone_exit(&context->match);
+        exit = last_match_result(&context->match);
         if (exit != NOTHING) {
-          move_exit(player, exit, 1, nullptr, 0);
-          mudstate.debug_cmd = cmdsave;
+          move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
+          context->debug_command = cmdsave;
           goto exit;
         }
-        succ += list_check(obj_contents(obj_zone(obj_location(player))), player,
-                           AMATCH_CMD, lcbuf, 1);
+        succ += list_check(
+            &context->evaluation,
+            game_object_contents(
+                context->world->database,
+                game_object_zone(
+                    context->world->database,
+                    game_object_location(context->world->database, player))),
+            player, AMATCH_CMD, lcbuf, 1);
       } /*
          * * end of parent room checks
          */
@@ -1709,11 +1814,21 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
        * try matching commands on area zone object
        */
 
-      if ((!succ) && mudconf.have_zones &&
-          (obj_zone(obj_location(player)) != NOTHING) &&
-          (!(is_no_command(obj_zone(obj_location(player))))))
-        succ += attribute_match(obj_zone(obj_location(player)), player,
-                                AMATCH_CMD, lcbuf, 1);
+      if ((!succ) && configuration->have_zones &&
+          (game_object_zone(context->world->database,
+                            game_object_location(context->world->database,
+                                                 player)) != NOTHING) &&
+          (!(is_no_command(
+              context->world->database,
+              game_object_zone(
+                  context->world->database,
+                  game_object_location(context->world->database, player))))))
+        succ += attribute_match(
+            &context->evaluation,
+            game_object_zone(
+                context->world->database,
+                game_object_location(context->world->database, player)),
+            player, AMATCH_CMD, lcbuf, 1);
   }
   /*
    * * end of matching on zone of player's * *
@@ -1723,10 +1838,17 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * if nothing matched with parent room/zone object, try matching
    * zone commands on the player's personal zone
    */
-  if (!lua_succ && (!succ) && mudconf.have_zones &&
-      (obj_zone(player) != NOTHING) && (!(is_no_command(obj_zone(player)))) &&
-      (obj_zone(obj_location(player)) != obj_zone(player))) {
-    succ += attribute_match(obj_zone(player), player, AMATCH_CMD, lcbuf, 1);
+  if (!lua_succ && (!succ) && configuration->have_zones &&
+      (game_object_zone(context->world->database, player) != NOTHING) &&
+      (!(is_no_command(context->world->database,
+                       game_object_zone(context->world->database, player)))) &&
+      (game_object_zone(
+           context->world->database,
+           game_object_location(context->world->database, player)) !=
+       game_object_zone(context->world->database, player))) {
+    succ += attribute_match(&context->evaluation,
+                            game_object_zone(context->world->database, player),
+                            player, AMATCH_CMD, lcbuf, 1);
   }
   /*
    * Global Lua commands replace the master-room programmable-command stage.
@@ -1734,7 +1856,8 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    * the command. Master-room exits remain part of normal exit matching.
    */
   if (!lua_succ && !succ)
-    succ += lua_global_command_match(player, cause, command);
+    succ += lua_global_command_match(server->lua, context->descriptor, player,
+                                     cause, command);
   free_lbuf(lcbuf);
 
   /*
@@ -1742,17 +1865,17 @@ void process_command(DbRef player, DbRef cause, int interactive, char *command,
    */
 
   if (!succ) {
-    notify(player, "Huh?  (Type \"help\" for help.)");
-    STARTLOG(LOG_BADCOMMANDS, "CMD", "BAD") {
-      log_name_and_loc(player);
+    notify(&context->evaluation, player, "Huh?  (Type \"help\" for help.)");
+    STARTLOG(&context->server->log, LOG_BADCOMMANDS, "CMD", "BAD") {
+      log_name_and_loc(&context->server->log, player);
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG;
+      ENDLOG(&context->server->log);
     }
   }
-  mudstate.debug_cmd = cmdsave;
+  context->debug_command = cmdsave;
 
 exit:
   return;
@@ -1763,7 +1886,9 @@ exit:
  * * list_cmdtable: List internal commands.
  */
 
-static void list_cmdtable(DbRef player) {
+static void list_cmdtable(EvaluationContext *evaluation,
+                          const ServerConfiguration *configuration,
+                          DbRef player) {
   CMDENT *cmdp;
   char *buf, *bp;
   const char *cp;
@@ -1773,7 +1898,8 @@ static void list_cmdtable(DbRef player) {
   for (cp = "Commands:"; *cp; cp++)
     *bp++ = *cp;
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
-    if (check_access(player, cmdp->perms)) {
+    if (check_access(evaluation->world->database, configuration, player,
+                     cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
         *bp++ = ' ';
         for (cp = cmdp->cmdname; *cp; cp++)
@@ -1783,7 +1909,7 @@ static void list_cmdtable(DbRef player) {
   }
   *bp = '\0';
 
-  notify(player, buf);
+  notify(evaluation, player, buf);
   free_lbuf(buf);
 }
 
@@ -1792,7 +1918,7 @@ static void list_cmdtable(DbRef player) {
  * * list_attrtable: List available attributes.
  */
 
-static void list_attrtable(DbRef player) {
+static void list_attrtable(EvaluationContext *evaluation, DbRef player) {
   Attribute *ap;
   char *buf, *bp;
   const char *cp;
@@ -1802,14 +1928,14 @@ static void list_attrtable(DbRef player) {
   for (cp = "Attributes:"; *cp; cp++)
     *bp++ = *cp;
   for (ap = attr_table; ap->name; ap++) {
-    if (see_attr(player, player, ap, player, 0)) {
+    if (see_attr(evaluation, player, player, ap, player, 0)) {
       *bp++ = ' ';
       for (cp = ap->name; *cp; cp++)
         *bp++ = *cp;
     }
   }
   *bp = '\0';
-  raw_notify(player, buf);
+  raw_notify(evaluation, player, buf);
   free_lbuf(buf);
 }
 
@@ -1831,7 +1957,9 @@ NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
                               {"dark", 4, CA_GOD, CF_DARK},
                               {nullptr, 0, 0, 0}};
 
-static void list_cmdaccess(DbRef player) {
+static void list_cmdaccess(EvaluationContext *evaluation,
+                           const ServerConfiguration *configuration,
+                           CommandRegistry *registry, DbRef player) {
   char *buff, *p;
   const char *q;
   CMDENT *cmdp;
@@ -1839,10 +1967,12 @@ static void list_cmdaccess(DbRef player) {
 
   buff = alloc_sbuf("list_cmdaccess");
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
-    if (check_access(player, cmdp->perms)) {
+    if (check_access(evaluation->world->database, configuration, player,
+                     cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
         snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
-        name_table_list_set(player, access_nametab, cmdp->perms, buff, 1);
+        name_table_list_set(evaluation, configuration, player, access_nametab,
+                            cmdp->perms, buff, 1);
       }
     }
   }
@@ -1854,14 +1984,16 @@ static void list_cmdaccess(DbRef player) {
     if (ap->flags & AF_NOCMD)
       continue;
     *p = '\0';
-    cmdp = (CMDENT *)hash_table_find(buff, &mudstate.command_htab);
+    cmdp = (CMDENT *)hash_table_find(buff, &registry->commands);
     if (cmdp == nullptr)
       continue;
-    if (!check_access(player, cmdp->perms))
+    if (!check_access(evaluation->world->database, configuration, player,
+                      cmdp->perms))
       continue;
     if (!(cmdp->perms & CF_DARK)) {
       snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
-      name_table_list_set(player, access_nametab, cmdp->perms, buff, 1);
+      name_table_list_set(evaluation, configuration, player, access_nametab,
+                          cmdp->perms, buff, 1);
     }
   }
   free_sbuf(buff);
@@ -1872,17 +2004,21 @@ static void list_cmdaccess(DbRef player) {
  * * list_cmdswitches: List switches for commands.
  */
 
-static void list_cmdswitches(DbRef player) {
+static void list_cmdswitches(EvaluationContext *evaluation,
+                             const ServerConfiguration *configuration,
+                             DbRef player) {
   char *buff;
   CMDENT *cmdp;
 
   buff = alloc_sbuf("list_cmdswitches");
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (cmdp->switches) {
-      if (check_access(player, cmdp->perms)) {
+      if (check_access(evaluation->world->database, configuration, player,
+                       cmdp->perms)) {
         if (!(cmdp->perms & CF_DARK)) {
           snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
-          name_table_display(player, cmdp->switches, buff, 0);
+          name_table_display(evaluation, configuration, player, cmdp->switches,
+                             buff, 0);
         }
       }
     }
@@ -1922,15 +2058,18 @@ NameTable indiv_attraccess_nametab[] = {
 
 /* *INDENT-ON* */
 
-static void list_attraccess(DbRef player) {
+static void list_attraccess(EvaluationContext *evaluation,
+                            const ServerConfiguration *configuration,
+                            DbRef player) {
   char *buff;
   Attribute *ap;
 
   buff = alloc_sbuf("list_attraccess");
   for (ap = attr_table; ap->name; ap++) {
-    if (read_attr(player, player, ap, player, 0)) {
+    if (read_attr(evaluation, player, player, ap, player, 0)) {
       snprintf(buff, SBUF_SIZE, "%s:", ap->name);
-      name_table_list_set(player, attraccess_nametab, ap->flags, buff, 1);
+      name_table_list_set(evaluation, configuration, player, attraccess_nametab,
+                          ap->flags, buff, 1);
     }
   }
   free_sbuf(buff);
@@ -1941,7 +2080,8 @@ static void list_attraccess(DbRef player) {
  * * cf_access: Change command or switch permissions.
  */
 
-int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
+              MuxServer *server) {
   CMDENT *cmdp;
   char *ap;
   int set_switch;
@@ -1959,14 +2099,16 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
       ap++;
   }
 
-  cmdp = (CMDENT *)hash_table_find(str, &mudstate.command_htab);
+  cmdp = (CMDENT *)hash_table_find(str, &server->command_registry.commands);
   if (cmdp != nullptr) {
     if (set_switch)
-      return cf_ntab_access((int *)cmdp->switches, ap, extra, player, cmd);
+      return cf_ntab_access((int *)cmdp->switches, ap, extra, player, cmd,
+                            server);
     else
-      return configuration_modify_bits(&(cmdp->perms), ap, extra, player, cmd);
+      return configuration_modify_bits(&(cmdp->perms), ap, extra, player, cmd,
+                                       server);
   } else {
-    configuration_log_not_found(player, cmd, "Command", str);
+    configuration_log_not_found(server, player, cmd, "Command", str);
     return -1;
   }
 }
@@ -1976,7 +2118,8 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
  * * cf_acmd_access: Chante command permissions for all attr-setting cmds.
  */
 
-int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
+                   MuxServer *server) {
   CMDENT *cmdp;
   Attribute *ap;
   char *buff, *p;
@@ -1990,11 +2133,11 @@ int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
     for (q = ap->name; *q; p++, q++)
       *p = ToLower(*q);
     *p = '\0';
-    cmdp = (CMDENT *)hash_table_find(buff, &mudstate.command_htab);
+    cmdp = (CMDENT *)hash_table_find(buff, &server->command_registry.commands);
     if (cmdp != nullptr) {
       save = cmdp->perms;
-      failure =
-          configuration_modify_bits(&(cmdp->perms), str, extra, player, cmd);
+      failure = configuration_modify_bits(&(cmdp->perms), str, extra, player,
+                                          cmd, server);
       if (failure != 0) {
         cmdp->perms = save;
         free_sbuf(buff);
@@ -2011,7 +2154,8 @@ int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
  * * cf_attr_access: Change access on an attribute.
  */
 
-int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
+                   MuxServer *server) {
   Attribute *ap;
   char *sp;
 
@@ -2022,11 +2166,12 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
   while (*sp && isspace(*sp))
     sp++;
 
-  ap = attribute_by_name(str);
+  ap = attribute_by_name(&server->database, str);
   if (ap != nullptr)
-    return configuration_modify_bits(&(ap->flags), sp, extra, player, cmd);
+    return configuration_modify_bits(&(ap->flags), sp, extra, player, cmd,
+                                     server);
   else {
-    configuration_log_not_found(player, cmd, "Attribute", str);
+    configuration_log_not_found(server, player, cmd, "Attribute", str);
     return -1;
   }
 }
@@ -2036,7 +2181,8 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd) {
  * * cf_cmd_alias: Add a command alias.
  */
 
-int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
+int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
+                 MuxServer *server) {
   char *alias, *orig, *ap;
   CMDENT *cmdp, *cmd2;
   NameTable *nt;
@@ -2068,16 +2214,17 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
 
     cmdp = (CMDENT *)hash_table_find(orig, (HashTable *)vp);
     if (cmdp == nullptr) {
-      configuration_log_not_found(player, cmd, "Command", orig);
+      configuration_log_not_found(server, player, cmd, "Command", orig);
       return -1;
     }
     /*
      * Look up the switch
      */
 
-    nt = name_table_find_entry(player, (NameTable *)cmdp->switches, ap);
+    nt = name_table_find_entry(&server->database, server->configuration, player,
+                               (NameTable *)cmdp->switches, ap);
     if (!nt) {
-      configuration_log_not_found(player, cmd, "Switch", ap);
+      configuration_log_not_found(server, player, cmd, "Switch", ap);
       return -1;
     }
     /*
@@ -2110,7 +2257,7 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
 
     hp = hash_table_find(orig, (HashTable *)vp);
     if (hp == nullptr) {
-      configuration_log_not_found(player, cmd, "Entry", orig);
+      configuration_log_not_found(server, player, cmd, "Entry", orig);
       return -1;
     }
     hash_table_add(alias, hp, (HashTable *)vp);
@@ -2123,26 +2270,37 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd) {
  * * list_df_flags: List default flags at create time.
  */
 
-static void list_df_flags(DbRef player) {
+static void list_df_flags(EvaluationContext *evaluation,
+                          const ServerConfiguration *configuration,
+                          DbRef player) {
   char *playerb, *roomb, *thingb, *exitb, *robotb, *buff;
 
-  playerb =
-      decode_flags(player, (mudconf.player_flags.word1 | TYPE_PLAYER),
-                   mudconf.player_flags.word2, mudconf.player_flags.word3);
-  roomb = decode_flags(player, (mudconf.room_flags.word1 | TYPE_ROOM),
-                       mudconf.room_flags.word2, mudconf.room_flags.word3);
-  exitb = decode_flags(player, (mudconf.exit_flags.word1 | TYPE_EXIT),
-                       mudconf.exit_flags.word2, mudconf.exit_flags.word3);
-  thingb = decode_flags(player, (mudconf.thing_flags.word1 | TYPE_THING),
-                        mudconf.thing_flags.word2, mudconf.thing_flags.word3);
-  robotb = decode_flags(player, (mudconf.robot_flags.word1 | TYPE_PLAYER),
-                        mudconf.robot_flags.word2, mudconf.robot_flags.word3);
+  playerb = decode_flags(evaluation->world->database, player,
+                         (configuration->player_flags.word1 | TYPE_PLAYER),
+                         configuration->player_flags.word2,
+                         configuration->player_flags.word3);
+  roomb = decode_flags(evaluation->world->database, player,
+                       (configuration->room_flags.word1 | TYPE_ROOM),
+                       configuration->room_flags.word2,
+                       configuration->room_flags.word3);
+  exitb = decode_flags(evaluation->world->database, player,
+                       (configuration->exit_flags.word1 | TYPE_EXIT),
+                       configuration->exit_flags.word2,
+                       configuration->exit_flags.word3);
+  thingb = decode_flags(evaluation->world->database, player,
+                        (configuration->thing_flags.word1 | TYPE_THING),
+                        configuration->thing_flags.word2,
+                        configuration->thing_flags.word3);
+  robotb = decode_flags(evaluation->world->database, player,
+                        (configuration->robot_flags.word1 | TYPE_PLAYER),
+                        configuration->robot_flags.word2,
+                        configuration->robot_flags.word3);
   buff = alloc_lbuf("list_df_flags");
   snprintf(buff, LBUF_SIZE,
            "Default flags: Players...%s Rooms...%s Exits...%s Things...%s "
            "Robots...%s",
            playerb, roomb, exitb, thingb, robotb);
-  raw_notify(player, buff);
+  raw_notify(evaluation, player, buff);
   free_lbuf(buff);
   free_sbuf(playerb);
   free_sbuf(roomb);
@@ -2153,159 +2311,179 @@ static void list_df_flags(DbRef player) {
 
 /*
  * ---------------------------------------------------------------------------
- * * list_options: List more game options from mudconf.
+ * * list_options: List more game options from the server configuration.
  */
 
 static const char *switchd[] = {"/first", "/all"};
 static const char *examd[] = {"/brief", "/full"};
 static const char *ed[] = {"Disabled", "Enabled"};
 
-static void list_options(DbRef player) {
+static void list_options(EvaluationContext *evaluation, MuxServer *server,
+                         DbRef player) {
+  const ServerConfiguration *configuration = server->configuration;
   char *buff;
   time_t now;
 
   now = time(nullptr);
-  if (mudconf.name_spaces)
-    raw_notify(player, "Player names may contain spaces.");
+  if (configuration->name_spaces)
+    raw_notify(evaluation, player, "Player names may contain spaces.");
   else
-    raw_notify(player, "Player names may not contain spaces.");
-  if (!mudconf.robot_speak)
-    raw_notify(player, "Robots are not allowed to speak in public areas.");
-  if (mudconf.player_listen)
-    raw_notify(player,
+    raw_notify(evaluation, player, "Player names may not contain spaces.");
+  if (!configuration->robot_speak)
+    raw_notify(evaluation, player,
+               "Robots are not allowed to speak in public areas.");
+  if (configuration->player_listen)
+    raw_notify(evaluation, player,
                "The @Listen/@Ahear attribute set works on player objects.");
-  if (mudconf.ex_flags)
+  if (configuration->ex_flags)
     raw_notify(
-        player,
+        evaluation, player,
         "The 'examine' command lists the flag names for the object's flags.");
-  if (!mudconf.quiet_look)
-    raw_notify(player, "The 'look' command shows visible attributes in "
-                       "addition to the description.");
-  if (mudconf.see_own_dark)
-    raw_notify(player, "The 'look' command lists DARK objects owned by you.");
-  if (!mudconf.dark_sleepers)
-    raw_notify(player, "The 'look' command shows disconnected players.");
-  if (mudconf.trace_topdown) {
-    raw_notify(player, "Trace output is presented top-down (whole expression "
-                       "first, then sub-exprs).");
-    raw_notify(player, tprintf("Only %d lines of trace output are displayed.",
-                               mudconf.trace_limit));
+  if (!configuration->quiet_look)
+    raw_notify(evaluation, player,
+               "The 'look' command shows visible attributes in "
+               "addition to the description.");
+  if (configuration->see_own_dark)
+    raw_notify(evaluation, player,
+               "The 'look' command lists DARK objects owned by you.");
+  if (!configuration->dark_sleepers)
+    raw_notify(evaluation, player,
+               "The 'look' command shows disconnected players.");
+  if (configuration->trace_topdown) {
+    raw_notify(evaluation, player,
+               "Trace output is presented top-down (whole expression "
+               "first, then sub-exprs).");
+    raw_notify(evaluation, player,
+               tprintf("Only %d lines of trace output are displayed.",
+                       configuration->trace_limit));
   } else {
-    raw_notify(player,
+    raw_notify(evaluation, player,
                "Trace output is presented bottom-up (subexpressions first).");
   }
-  if (mudconf.pemit_players)
-    raw_notify(player,
+  if (configuration->pemit_players)
+    raw_notify(evaluation, player,
                "The '@pemit' command may be used to emit to faraway players.");
-  if (mudconf.pub_flags)
-    raw_notify(player,
+  if (configuration->pub_flags)
+    raw_notify(evaluation, player,
                "The 'flags()' function will return the flags of any object.");
-  if (mudconf.read_rem_desc)
+  if (configuration->read_rem_desc)
     raw_notify(
-        player,
+        evaluation, player,
         "The 'get()' function will return the description of faraway objects,");
-  if (mudconf.read_rem_name)
+  if (configuration->read_rem_name)
     raw_notify(
-        player,
+        evaluation, player,
         "The 'name()' function will return the name of faraway objects.");
-  raw_notify(player,
+  raw_notify(evaluation, player,
              tprintf("The default switch for the '@switch' command is %s.",
-                     switchd[mudconf.switch_df_all]));
-  raw_notify(player,
+                     switchd[configuration->switch_df_all]));
+  raw_notify(evaluation, player,
              tprintf("The default switch for the 'examine' command is %s.",
-                     examd[mudconf.exam_public]));
-  if (mudconf.sweep_dark)
-    raw_notify(player, "Players may @sweep dark locations.");
-  if (mudconf.fascist_tport)
-    raw_notify(player, "You may only @teleport out of locations you control.");
+                     examd[configuration->exam_public]));
+  if (configuration->sweep_dark)
+    raw_notify(evaluation, player, "Players may @sweep dark locations.");
+  if (configuration->fascist_tport)
+    raw_notify(evaluation, player,
+               "You may only @teleport out of locations you control.");
   raw_notify(
-      player,
+      evaluation, player,
       tprintf("Players may have at most %d commands in the queue at one time.",
-              mudconf.queuemax));
-  if (mudconf.match_mine) {
-    if (mudconf.match_mine_pl)
-      raw_notify(player, "All objects search themselves for $-commands.");
+              configuration->queuemax));
+  if (configuration->match_mine) {
+    if (configuration->match_mine_pl)
+      raw_notify(evaluation, player,
+                 "All objects search themselves for $-commands.");
     else
       raw_notify(
-          player,
+          evaluation, player,
           "Objects other than players search themselves for $-commands.");
   }
-  if (!is_wizard(player))
+  if (!is_wizard(evaluation->world->database, player))
     return;
   buff = alloc_mbuf("list_options");
 
   raw_notify(
-      player,
+      evaluation, player,
       tprintf(
           "%d commands are run from the queue when there is no net activity.",
-          mudconf.queue_chunk));
+          configuration->queue_chunk));
   raw_notify(
-      player,
+      evaluation, player,
       tprintf("%d commands are run from the queue when there is net activity.",
-              mudconf.active_q_chunk));
-  if (mudconf.idle_wiz_dark)
-    raw_notify(player, "Wizards idle for longer than the default timeout are "
-                       "automatically set DARK.");
-  if (mudconf.safe_unowned)
-    raw_notify(player,
+              configuration->active_q_chunk));
+  if (configuration->idle_wiz_dark)
+    raw_notify(evaluation, player,
+               "Wizards idle for longer than the default timeout are "
+               "automatically set DARK.");
+  if (configuration->safe_unowned)
+    raw_notify(evaluation, player,
                "Objects not owned by you are automatically considered SAFE.");
-  if (mudconf.paranoid_alloc)
-    raw_notify(player, "The buffer pools are checked for consistency on each "
-                       "allocate or free.");
-  raw_notify(player,
+  if (configuration->paranoid_alloc)
+    raw_notify(evaluation, player,
+               "The buffer pools are checked for consistency on each "
+               "allocate or free.");
+  raw_notify(evaluation, player,
              tprintf("The %s cache is %d entries wide by %d entries deep.",
-                     CACHING, mudconf.cache_width, mudconf.cache_depth));
-  if (mudconf.cache_names)
-    raw_notify(player, "A seperate name cache is used.");
-  if (mudconf.cache_trim)
+                     CACHING, configuration->cache_width,
+                     configuration->cache_depth));
+  if (configuration->cache_names)
+    raw_notify(evaluation, player, "A seperate name cache is used.");
+  if (configuration->cache_trim)
     raw_notify(
-        player,
+        evaluation, player,
         "The cache depth is periodically trimmed back to its initial value.");
-  if (mudconf.fork_dump) {
-    raw_notify(player, "Database dumps are performed by a fork()ed process.");
-    if (mudconf.fork_vfork)
-      raw_notify(player, "The 'vfork()' call is used to perform the fork.");
+  if (configuration->fork_dump) {
+    raw_notify(evaluation, player,
+               "Database dumps are performed by a fork()ed process.");
+    if (configuration->fork_vfork)
+      raw_notify(evaluation, player,
+                 "The 'vfork()' call is used to perform the fork.");
   }
-  if (mudconf.max_players >= 0)
-    raw_notify(player,
+  if (configuration->max_players >= 0)
+    raw_notify(evaluation, player,
                tprintf("There may be at most %d players logged in at once.",
-                       mudconf.max_players));
-  raw_notify(player, tprintf("The head of the object freelist is #%ld.",
-                             mudstate.freelist));
+                       configuration->max_players));
+  raw_notify(evaluation, player,
+             tprintf("The head of the object freelist is #%ld.",
+                     server->database.freelist));
 
   snprintf(buff, MBUF_SIZE, "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
-           mudconf.database.dump_interval, mudconf.check_interval,
-           mudconf.idle_interval);
-  raw_notify(player, buff);
+           configuration->database.dump_interval, configuration->check_interval,
+           configuration->idle_interval);
+  raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Timers: Dump...%ld  Clean...%ld  Idlecheck...%ld",
-           (long)mudstate.dump_counter - now,
-           (long)mudstate.check_counter - now,
-           (long)mudstate.idle_counter - now);
-  raw_notify(player, buff);
+           (long)server->clock.dump_deadline - now,
+           (long)server->clock.check_deadline - now,
+           (long)server->clock.idle_deadline - now);
+  raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Timeouts: Idle...%d  Connect...%d  Tries...%d",
-           mudconf.idle_timeout, mudconf.conn_timeout, mudconf.retry_limit);
-  raw_notify(player, buff);
+           configuration->idle_timeout, configuration->conn_timeout,
+           configuration->retry_limit);
+  raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE,
            "Scheduling: Timeslice...%d  Max_Quota...%d  Increment...%d",
-           mudconf.timeslice, mudconf.cmd_quota_max, mudconf.cmd_quota_incr);
-  raw_notify(player, buff);
+           configuration->timeslice, configuration->cmd_quota_max,
+           configuration->cmd_quota_incr);
+  raw_notify(evaluation, player, buff);
 
-  snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[mudconf.space_compress]);
-  raw_notify(player, buff);
+  snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[configuration->space_compress]);
+  raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE,
            "New characters: Room...#%d  Home...#%d  DefaultHome...#%d",
-           mudconf.start_room, mudconf.start_home, mudconf.default_home);
-  raw_notify(player, buff);
+           configuration->start_room, configuration->start_home,
+           configuration->default_home);
+  raw_notify(evaluation, player, buff);
 
   snprintf(
       buff, MBUF_SIZE,
       "Misc: IdleQueueChunk...%d  ActiveQueueChunk...%d  Master_room...#%d",
-      mudconf.queue_chunk, mudconf.active_q_chunk, mudconf.master_room);
-  raw_notify(player, buff);
+      configuration->queue_chunk, configuration->active_q_chunk,
+      configuration->master_room);
+  raw_notify(evaluation, player, buff);
 
   free_mbuf(buff);
 }
@@ -2314,8 +2492,8 @@ static void list_options(DbRef player) {
  * ---------------------------------------------------------------------------
  * * list_db_stats: Get useful info from the DB layer about hash stats, etc.
  */
-static void list_db_stats(DbRef player) {
-  raw_notify(player, "Database is memory based.");
+static void list_db_stats(EvaluationContext *evaluation, DbRef player) {
+  raw_notify(evaluation, player, "Database is memory based.");
 }
 
 /*
@@ -2325,7 +2503,8 @@ static void list_db_stats(DbRef player) {
  * *     posted to the net by Howard/Dark_Lord.
  */
 
-static void list_process(DbRef player) {
+static void list_process(EvaluationContext *evaluation,
+                         const RuntimeClock *clock, DbRef player) {
   int pid, psize, maxfds;
 
   struct rusage usage;
@@ -2336,9 +2515,9 @@ static void list_process(DbRef player) {
    * Calculate memory use from the aggregate totals
    */
 
-  curr = mudstate.mstat_curr;
+  curr = clock->current_sample;
   last = 1 - curr;
-  dur = mudstate.mstat_secs[curr] - mudstate.mstat_secs[last];
+  dur = clock->sample_time[curr] - clock->sample_time[last];
   if (dur > 0) {
   }
   maxfds = getdtablesize();
@@ -2350,32 +2529,37 @@ static void list_process(DbRef player) {
    * Go display everything
    */
 
-  raw_notify(player, tprintf("Process ID:  %10d        %10d bytes per page",
-                             pid, psize));
-  raw_notify(player, tprintf("Time used:   %10ld user   %10ld sys",
-                             usage.ru_utime.tv_sec, usage.ru_stime.tv_sec));
+  raw_notify(
+      evaluation, player,
+      tprintf("Process ID:  %10d        %10d bytes per page", pid, psize));
+  raw_notify(evaluation, player,
+             tprintf("Time used:   %10ld user   %10ld sys",
+                     usage.ru_utime.tv_sec, usage.ru_stime.tv_sec));
 
   /*
-   * raw_notify(player,
+   * raw_notify(evaluation, player,
    * * tprintf("Resident mem:%10d shared %10d private%10d stack",
    * * ixrss, idrss, isrss));
    */
-  raw_notify(player,
+  raw_notify(evaluation, player,
              tprintf("Integral mem:%10ld shared %10ld private%10ld stack",
                      usage.ru_ixrss, usage.ru_idrss, usage.ru_isrss));
-  raw_notify(player, tprintf("Max res mem: %10ld pages  %10ld bytes",
-                             usage.ru_maxrss, (usage.ru_maxrss * psize)));
-  raw_notify(player,
+  raw_notify(evaluation, player,
+             tprintf("Max res mem: %10ld pages  %10ld bytes", usage.ru_maxrss,
+                     (usage.ru_maxrss * psize)));
+  raw_notify(evaluation, player,
              tprintf("Page faults: %10ld hard   %10ld soft   %10ld swapouts",
                      usage.ru_majflt, usage.ru_minflt, usage.ru_nswap));
-  raw_notify(player, tprintf("Disk I/O:    %10ld reads  %10ld writes",
-                             usage.ru_inblock, usage.ru_oublock));
-  raw_notify(player, tprintf("Network I/O: %10ld in     %10ld out",
-                             usage.ru_msgrcv, usage.ru_msgsnd));
-  raw_notify(player,
+  raw_notify(evaluation, player,
+             tprintf("Disk I/O:    %10ld reads  %10ld writes", usage.ru_inblock,
+                     usage.ru_oublock));
+  raw_notify(evaluation, player,
+             tprintf("Network I/O: %10ld in     %10ld out", usage.ru_msgrcv,
+                     usage.ru_msgsnd));
+  raw_notify(evaluation, player,
              tprintf("Context swi: %10ld vol    %10ld forced %10ld sigs",
                      usage.ru_nvcsw, usage.ru_nivcsw, usage.ru_nsignals));
-  raw_notify(player, tprintf("Descs avail: %10d", maxfds));
+  raw_notify(evaluation, player, tprintf("Descs avail: %10d", maxfds));
 }
 
 /*
@@ -2427,71 +2611,85 @@ NameTable list_names[] = {{"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},
 extern NameTable logoptions_nametab[];
 extern NameTable logdata_nametab[];
 
-void do_list(DbRef player, DbRef cause, int extra, char *arg) {
+void do_list(CommandInvocation *invocation) {
+  MuxServer *server = invocation->context->server;
+  ServerConfiguration *configuration = server->configuration;
+  const DbRef player = invocation->player;
+  char *arg = invocation->first;
   int flagvalue;
 
-  flagvalue = name_table_search(player, list_names, arg);
+  flagvalue = name_table_search(&server->database, configuration, player,
+                                list_names, arg);
   switch (flagvalue) {
   case LIST_ATTRIBUTES:
-    list_attrtable(player);
+    list_attrtable(&invocation->context->evaluation, player);
     break;
   case LIST_COMMANDS:
-    list_cmdtable(player);
+    list_cmdtable(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_SWITCHES:
-    list_cmdswitches(player);
+    list_cmdswitches(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_OPTIONS:
-    list_options(player);
+    list_options(&invocation->context->evaluation, server, player);
     break;
   case LIST_SITEINFO:
-    list_siteinfo(player);
+    list_siteinfo(&invocation->context->evaluation,
+                  invocation->context->world->access_control, player);
     break;
   case LIST_FLAGS:
-    display_flagtab(player);
+    display_flagtab(&invocation->context->evaluation, player);
     break;
   case LIST_FUNCTIONS:
-    list_functable(player);
+    list_functable(&invocation->context->evaluation, configuration,
+                   &server->command_registry, player);
     break;
   case LIST_GLOBALS:
-    list_global_controls(player);
+    list_global_controls(&invocation->context->evaluation, configuration,
+                         player);
     break;
   case LIST_DF_FLAGS:
-    list_df_flags(player);
+    list_df_flags(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_PERMS:
-    list_cmdaccess(player);
+    list_cmdaccess(&invocation->context->evaluation, configuration,
+                   &server->command_registry, player);
     break;
   case LIST_CONF_PERMS:
-    configuration_list_access(player);
+    configuration_list_access(server, player);
     break;
   case LIST_POWERS:
-    display_powertab(player);
+    display_powertab(&invocation->context->evaluation, player);
     break;
   case LIST_ATTRPERMS:
-    list_attraccess(player);
+    list_attraccess(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_LOGGING:
-    name_table_interpret(player, logoptions_nametab, mudconf.log_options,
+    name_table_interpret(&invocation->context->evaluation, configuration,
+                         player, logoptions_nametab, configuration->log_options,
                          "Events Logged:", "enabled", "disabled");
-    name_table_interpret(player, logdata_nametab, mudconf.log_info,
+    name_table_interpret(&invocation->context->evaluation, configuration,
+                         player, logdata_nametab, configuration->log_info,
                          "Information Logged:", "yes", "no");
     break;
   case LIST_DB_STATS:
-    list_db_stats(player);
+    list_db_stats(&invocation->context->evaluation, player);
     break;
   case LIST_PROCESS:
-    list_process(player);
+    list_process(&invocation->context->evaluation, &server->clock, player);
     break;
   case LIST_BADNAMES:
-    badname_list(player, "Disallowed names:");
+    badname_list(&invocation->context->evaluation, &server->world, player,
+                 "Disallowed names:");
     break;
 #ifdef ARBITRARY_LOGFILES
   case LIST_LOGFILES:
-    logcache_list(player);
+    log_cache_list(&invocation->context->evaluation,
+                   invocation->context->server->log.cache, player);
     break;
 #endif
   default:
-    name_table_display(player, list_names, "Unknown option.  Use one of:", 1);
+    name_table_display(&invocation->context->evaluation, configuration, player,
+                       list_names, "Unknown option.  Use one of:", 1);
   }
 }

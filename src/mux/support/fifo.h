@@ -30,4 +30,5 @@ typedef struct Fifo {
 int fifo_length(Fifo **foo);
 void *fifo_pop(Fifo **foo);
 void fifo_push(Fifo **foo, void *data);
-void fifo_traverse_reverse(Fifo **foo, void (*func)(void *));
+void fifo_traverse_reverse(Fifo **foo, void (*func)(void *, void *),
+                           void *context);

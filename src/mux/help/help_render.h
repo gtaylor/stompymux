@@ -8,6 +8,8 @@
 #include "mux/database/db.h"
 #include "mux/help/help_types.h"
 
+typedef struct HelpIndex HelpIndex;
+
 typedef struct HelpTextBuffer {
   char *data;
   size_t length;
@@ -32,8 +34,10 @@ void help_render_markdown(const char *markdown, size_t length,
  * matching articles is appended, with wizard_only articles omitted unless
  * viewer_is_wizard is true.
  */
-void help_article_render_body(const HelpArticle *article, bool viewer_is_wizard,
+void help_article_render_body(const HelpIndex *index,
+                              const HelpArticle *article, bool viewer_is_wizard,
                               HelpTextBuffer *out);
 
 /* Splits buffer->data on '\n' and calls notify() once per line. */
-void help_render_send(DbRef player, const HelpTextBuffer *buffer);
+void help_render_send(EvaluationContext *evaluation, DbRef player,
+                      const HelpTextBuffer *buffer);

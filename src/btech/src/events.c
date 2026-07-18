@@ -55,29 +55,30 @@ void debug_EventTypes(DbRef player, void *data, char *buffer) {
           t[j] = s;
         }
     /* Then, display */
-    notify(player, "Event history (by use)");
+    notify(BTECH_EVALUATION_CONTEXT, player, "Event history (by use)");
     for (i = 0; i < MAX_EVENTS; i++)
       if (mux_event_exec_count[t[i]])
-        notify_printf(player, "%-3d%-20s%10d %.3f%%", t[i],
-                      mux_event_names[t[i]], mux_event_exec_count[t[i]],
+        notify_printf(BTECH_EVALUATION_CONTEXT, player, "%-3d%-20s%10d %.3f%%",
+                      t[i], mux_event_names[t[i]], mux_event_exec_count[t[i]],
                       ((float)100.0 * mux_event_exec_count[t[i]] /
                        (tot_ev ? tot_ev : 1)));
 
     return;
   }
-  notify(player, "Events by type: ");
-  notify(player, "-------------------------------");
-  k = mux_event_last_type();
+  notify(BTECH_EVALUATION_CONTEXT, player, "Events by type: ");
+  notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------");
+  k = mux_event_last_type(btech_context_active()->events);
   for (i = 0; i <= k; i++) {
-    j = mux_event_count_type(i);
+    j = mux_event_count_type(btech_context_active()->events, i);
     if (!j)
       continue;
     tot += j;
-    notify_printf(player, "%-20s%d", mux_event_names[i], j);
+    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%-20s%d",
+                  mux_event_names[i], j);
   }
   if (tot)
-    notify(player, "-------------------------------");
-  notify_printf(player, "%d total", tot);
+    notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------");
+  notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d total", tot);
 }
 
 void prerun_event(MuxEvent *e) {}

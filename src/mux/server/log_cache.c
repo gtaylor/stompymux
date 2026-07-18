@@ -18,8 +18,8 @@
 #include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 #include "mux/support/red_black_tree.h"
 
 /* The LOGFILE_TIMEOUT field describes how long a mux should keep an idle
@@ -28,22 +28,29 @@
 constexpr int LOGFILE_TIMEOUT = 300; // Five Minutes
 
 struct logfile_t {
+  LogCache *cache;
   char *filename;
   int fd;
   MuxTimer *timer;
 };
 
-RedBlackTree logfiles = nullptr;
+struct LogCache {
+  uv_loop_t *loop;
+  ServerLog *log;
+  RedBlackTree files;
+};
 
 static int logcache_compare(void *vleft, void *vright, void *arg) {
   return strcmp((char *)vleft, (char *)vright);
 }
 
-static int logcache_close(struct logfile_t *log) {
+static int log_cache_close(LogCache *cache, struct logfile_t *log,
+                           bool remove_from_cache) {
   dprintk("closing logfile '%s'.", log->filename);
   mux_timer_destroy(log->timer);
   close(log->fd);
-  red_black_tree_delete(logfiles, log->filename);
+  if (remove_from_cache)
+    red_black_tree_delete(cache->files, log->filename);
   if (log->filename)
     free(log->filename);
   log->filename = nullptr;
@@ -53,33 +60,43 @@ static int logcache_close(struct logfile_t *log) {
 }
 
 static void logcache_expire(MuxTimer *timer, void *arg) {
-  dprintk("Expiring '%s'.", ((struct logfile_t *)arg)->filename);
-  logcache_close((struct logfile_t *)arg);
+  struct logfile_t *log = arg;
+
+  dprintk("Expiring '%s'.", log->filename);
+  log_cache_close(log->cache, log, true);
 }
+
+typedef struct LogCacheListContext {
+  EvaluationContext *evaluation;
+  DbRef player;
+} LogCacheListContext;
 
 static int _logcache_list(void *key, void *data, int depth, void *arg) {
   struct logfile_t *log = (struct logfile_t *)data;
-  DbRef player = *(DbRef *)arg;
-  notify_printf(player, "%-40s%llu", log->filename,
+  LogCacheListContext *context = arg;
+  notify_printf(context->evaluation, context->player, "%-40s%llu",
+                log->filename,
                 (unsigned long long)(mux_timer_due_in(log->timer) / 1000));
   return 1;
 }
 
-void logcache_list(DbRef player) {
-  notify(player, "/--------------------------- Open Logfiles");
-  if (red_black_tree_size(logfiles) == 0) {
-    notify(player, "- There are no open logfile handles.");
+void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
+                    DbRef player) {
+  LogCacheListContext context = {.evaluation = evaluation, .player = player};
+  notify(evaluation, player, "/--------------------------- Open Logfiles");
+  if (red_black_tree_size(cache->files) == 0) {
+    notify(evaluation, player, "- There are no open logfile handles.");
     return;
   }
-  notify(player, "Filename                               Timeout");
-  red_black_tree_walk(logfiles, WALK_INORDER, _logcache_list, &player);
+  notify(evaluation, player, "Filename                               Timeout");
+  red_black_tree_walk(cache->files, WALK_INORDER, _logcache_list, &context);
 }
 
-static int logcache_open(char *filename) {
+static int log_cache_open(LogCache *cache, char *filename) {
   int fd;
   struct logfile_t *newlog;
 
-  if (red_black_tree_exists(logfiles, filename)) {
+  if (red_black_tree_exists(cache->files, filename)) {
     fprintf(stderr, "Serious braindamage, logcache_open() called for already "
                     "open logfile.\n");
     return 0;
@@ -94,14 +111,15 @@ static int logcache_open(char *filename) {
     return 0;
   }
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
-    log_perror("LOGCACHE", "FAIL", nullptr, "fcntl(fd, F_SETFD, FD_CLOEXEC)");
+    log_perror(cache->log, "LOGCACHE", "FAIL", nullptr,
+               "fcntl(fd, F_SETFD, FD_CLOEXEC)");
   }
 
   newlog = malloc(sizeof(struct logfile_t));
+  newlog->cache = cache;
   newlog->fd = fd;
   newlog->filename = strdup(filename);
-  newlog->timer =
-      mux_timer_create(server_lifecycle_loop(), logcache_expire, newlog);
+  newlog->timer = mux_timer_create(cache->loop, logcache_expire, newlog);
   if (newlog->timer == nullptr) {
     close(newlog->fd);
     free(newlog->filename);
@@ -109,53 +127,53 @@ static int logcache_open(char *filename) {
     return 0;
   }
   mux_timer_start(newlog->timer, LOGFILE_TIMEOUT * 1000, 0);
-  red_black_tree_insert(logfiles, newlog->filename, newlog);
+  red_black_tree_insert(cache->files, newlog->filename, newlog);
   dprintk("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
 }
 
-void logcache_init(void) {
-  if (!logfiles) {
-    dprintk("logcache initialized.");
-    logfiles = red_black_tree_init(logcache_compare, nullptr);
-  } else {
-    dprintk("REDUNDANT CALL TO logcache_init()!");
+LogCache *log_cache_create(uv_loop_t *loop, ServerLog *log) {
+  LogCache *cache = calloc(1, sizeof(*cache));
+
+  if (cache == nullptr)
+    return nullptr;
+  cache->loop = loop;
+  cache->log = log;
+  cache->files = red_black_tree_init(logcache_compare, nullptr);
+  if (cache->files == nullptr) {
+    free(cache);
+    return nullptr;
   }
+  return cache;
 }
 
-static int _logcache_destruct(void *key, void *data, int depth, void *arg) {
+static void log_cache_release_file(void *key, void *data, void *arg) {
+  LogCache *cache = arg;
   struct logfile_t *log = (struct logfile_t *)data;
-  logcache_close(log);
-  return 1;
+
+  log_cache_close(cache, log, false);
 }
 
-void logcache_destruct(void) {
-  dprintk("logcache destructing.");
-  if (!logfiles) {
-    dprintk("logcache_destruct() CALLED WHILE UNITIALIZED!");
+void log_cache_destroy(LogCache *cache) {
+  if (cache == nullptr)
     return;
-  }
-  red_black_tree_walk(logfiles, WALK_INORDER, _logcache_destruct, nullptr);
-  red_black_tree_destroy(logfiles);
-  logfiles = nullptr;
+  red_black_tree_release(cache->files, log_cache_release_file, cache);
+  free(cache);
 }
 
-int logcache_writelog(char *fname, char *fdata) {
+int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
   struct logfile_t *log;
   int len;
 
-  if (!logfiles)
-    logcache_init();
-
   len = (int)strlen(fdata);
 
-  log = red_black_tree_find(logfiles, fname);
+  log = red_black_tree_find(cache->files, fname);
 
   if (!log) {
-    if (logcache_open(fname) < 0) {
+    if (!log_cache_open(cache, fname)) {
       return 0;
     }
-    log = red_black_tree_find(logfiles, fname);
+    log = red_black_tree_find(cache->files, fname);
     if (!log) {
       return 0;
     }
@@ -168,7 +186,7 @@ int logcache_writelog(char *fname, char *fdata) {
             "System failed to write data to file with error '%s' on logfile "
             "'%s'. Closing.\n",
             strerror(errno), log->filename);
-    logcache_close(log);
+    log_cache_close(cache, log, true);
   }
   return 1;
 }

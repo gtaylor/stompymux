@@ -14,10 +14,11 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/server/server_state.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/world/match.h"
@@ -32,7 +33,58 @@ void free_qentry(struct bque *b) {
     free(b);
 }
 
-static RedBlackTree obq = nullptr;
+struct CommandQueue {
+  MuxServer *server;
+  RedBlackTree object_queues;
+  OBJQE *head;
+  OBJQE *tail;
+  BQUE *wait;
+  BQUE *semaphore_first;
+  BQUE *semaphore_last;
+};
+
+static void cque_free_entry(BQUE *entry);
+
+static void command_queue_free_entries(BQUE *entry) {
+  while (entry != nullptr) {
+    BQUE *next = entry->next;
+
+    free(entry->text);
+    cque_free_entry(entry);
+    entry = next;
+  }
+}
+
+static void command_queue_free_object(void *key, void *data, void *arg) {
+  OBJQE *object_queue = data;
+
+  command_queue_free_entries(object_queue->cque);
+  free(object_queue);
+}
+
+CommandQueue *command_queue_create(MuxServer *server) {
+  CommandQueue *queue = calloc(1, sizeof(*queue));
+
+  if (queue == nullptr)
+    return nullptr;
+  queue->server = server;
+  if (!cque_init(queue)) {
+    free(queue);
+    return nullptr;
+  }
+  return queue;
+}
+
+void command_queue_destroy(CommandQueue *queue) {
+  if (queue == nullptr)
+    return;
+  command_queue_free_entries(queue->wait);
+  command_queue_free_entries(queue->semaphore_first);
+  if (queue->object_queues != nullptr)
+    red_black_tree_release(queue->object_queues, command_queue_free_object,
+                           nullptr);
+  free(queue);
+}
 
 static void cque_free_entry(BQUE *entry) {
   if (entry->timer != nullptr)
@@ -44,22 +96,22 @@ static int objqe_compare(DbRef left, DbRef right, void *arg) {
   return (right > left) - (right < left);
 }
 
-int cque_init(void) {
-  obq = red_black_tree_init(
+int cque_init(CommandQueue *queue) {
+  queue->object_queues = red_black_tree_init(
       (int (*)(void *, void *, void *))(GenericFnPtr)objqe_compare, nullptr);
   return 1;
 }
 
-static OBJQE *cque_find(DbRef player) {
+static OBJQE *cque_find(CommandQueue *queue, DbRef player) {
   OBJQE *tmp = nullptr;
 
-  if (obq == nullptr) {
-    cque_init();
+  if (queue->object_queues == nullptr) {
+    cque_init(queue);
   }
 
-  tmp = red_black_tree_find(obq, (void *)player);
+  tmp = red_black_tree_find(queue->object_queues, (void *)player);
 
-  if (!tmp && is_good_obj(player)) {
+  if (!tmp && is_good_obj(&queue->server->database, player)) {
     tmp = malloc(sizeof(OBJQE));
     tmp->obj = player;
     tmp->cque = nullptr;
@@ -68,17 +120,17 @@ static OBJQE *cque_find(DbRef player) {
     tmp->queued = 0;
     tmp->wait_que = nullptr;
     tmp->pending_que = nullptr;
-    red_black_tree_insert(obq, (void *)player, tmp);
+    red_black_tree_insert(queue->object_queues, (void *)player, tmp);
   }
 
   return tmp;
 }
 
-static BQUE *cque_deque(DbRef player) {
+static BQUE *cque_deque(CommandQueue *queue, DbRef player) {
   OBJQE *tmp;
   BQUE *cmd;
 
-  tmp = cque_find(player);
+  tmp = cque_find(queue, player);
   if (!tmp)
     return nullptr;
 
@@ -96,7 +148,7 @@ static BQUE *cque_deque(DbRef player) {
   return cmd;
 }
 
-static void cque_enqueue(DbRef player, BQUE *cmd) {
+static void cque_enqueue(CommandQueue *queue, DbRef player, BQUE *cmd) {
   BQUE *point, *trail;
   OBJQE *tmp;
 
@@ -108,9 +160,9 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
      * Otherwise put on the normal queue.
      */
 
-    if (cmd->waittime <= mudstate.now) {
+    if (cmd->waittime <= queue->server->clock.now) {
       cmd->waittime = 0;
-      tmp = cque_find(player);
+      tmp = cque_find(queue, player);
 
       dassert(tmp);
 
@@ -124,20 +176,21 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
       }
 
       if (!tmp->queued) {
-        if (!mudstate.qhead) {
-          mudstate.qhead = mudstate.qtail = tmp;
+        if (!queue->head) {
+          queue->head = queue->tail = tmp;
           tmp->next = nullptr;
         } else {
-          mudstate.qtail->next = tmp;
-          mudstate.qtail = tmp;
-          mudstate.qtail->next = nullptr;
+          queue->tail->next = tmp;
+          queue->tail = tmp;
+          queue->tail->next = nullptr;
         }
         tmp->queued = 1;
       }
     } else {
-      mux_timer_start(cmd->timer,
-                      (uint64_t)(cmd->waittime - mudstate.now) * 1000, 0);
-      for (point = mudstate.qwait, trail = nullptr;
+      mux_timer_start(
+          cmd->timer,
+          (uint64_t)(cmd->waittime - queue->server->clock.now) * 1000, 0);
+      for (point = queue->wait, trail = nullptr;
            point && point->waittime <= cmd->waittime; point = point->next) {
         trail = point;
       }
@@ -145,26 +198,27 @@ static void cque_enqueue(DbRef player, BQUE *cmd) {
       if (trail != nullptr)
         trail->next = cmd;
       else
-        mudstate.qwait = cmd;
+        queue->wait = cmd;
     }
   } else {
     cmd->next = nullptr;
-    if (mudstate.qsemlast != nullptr)
-      mudstate.qsemlast->next = cmd;
+    if (queue->semaphore_last != nullptr)
+      queue->semaphore_last->next = cmd;
     else
-      mudstate.qsemfirst = cmd;
-    mudstate.qsemlast = cmd;
+      queue->semaphore_first = cmd;
+    queue->semaphore_last = cmd;
   }
 }
 
 static void wakeup_wait_que(MuxTimer *timer, void *arg) {
   BQUE *pending = (BQUE *)arg;
+  CommandQueue *queue = pending->queue;
   BQUE *point;
 
-  if (mudstate.qwait == pending) {
-    mudstate.qwait = pending->next;
+  if (queue->wait == pending) {
+    queue->wait = pending->next;
   } else {
-    for (point = mudstate.qwait; point; point = point->next) {
+    for (point = queue->wait; point; point = point->next) {
       if (point->next == pending) {
         point->next = point->next->next;
         break;
@@ -173,7 +227,7 @@ static void wakeup_wait_que(MuxTimer *timer, void *arg) {
   }
 
   pending->waittime = 0;
-  cque_enqueue(pending->player, pending);
+  cque_enqueue(queue, pending->player, pending);
 }
 
 /*
@@ -181,21 +235,22 @@ static void wakeup_wait_que(MuxTimer *timer, void *arg) {
  * * add_to: Adjust an object's queue or semaphore count.
  */
 
-static int add_to(DbRef player, int am, int attrnum) {
+static int add_to(GameDatabase *database, DbRef player, int am, int attrnum) {
   int num;
   long aflags;
   DbRef aowner;
   char buff[20] = {0};
   char *atr_gotten;
 
-  num = atoi(atr_gotten = attribute_get(player, attrnum, &aowner, &aflags));
+  num = atoi(atr_gotten =
+                 attribute_get(database, player, attrnum, &aowner, &aflags));
   free_lbuf(atr_gotten);
   num += am;
   if (num)
     snprintf(buff, sizeof(buff), "%d", num);
   else
     *buff = '\0';
-  attribute_add_raw(player, attrnum, buff);
+  attribute_add_raw(database, player, attrnum, buff);
   return (num);
 }
 
@@ -204,8 +259,10 @@ static int add_to(DbRef player, int am, int attrnum) {
  * * que_want: Do we want this queue entry?
  */
 
-static int que_want(BQUE *entry, DbRef ptarg, DbRef otarg) {
-  if ((ptarg != NOTHING) && (ptarg != obj_owner(entry->player)))
+static int que_want(GameDatabase *database, BQUE *entry, DbRef ptarg,
+                    DbRef otarg) {
+  if ((ptarg != NOTHING) &&
+      (ptarg != game_object_owner(database, entry->player)))
     return 0;
   if ((otarg != NOTHING) && (otarg != entry->player))
     return 0;
@@ -217,7 +274,7 @@ static int que_want(BQUE *entry, DbRef ptarg, DbRef otarg) {
  * * halt_que: Remove all queued commands from a certain player
  */
 
-int halt_que(DbRef player, DbRef object) {
+int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
   BQUE *trail, *point, *next;
   OBJQE *pque;
 
@@ -228,9 +285,9 @@ int halt_que(DbRef player, DbRef object) {
   /* Player's que */
   // XXX: nuke queu
 
-  pque = cque_find(player);
+  pque = cque_find(queue, player);
   if (pque && pque->cque) {
-    while ((point = cque_deque(player)) != nullptr) {
+    while ((point = cque_deque(queue, player)) != nullptr) {
       free(point->text);
       point->text = nullptr;
       cque_free_entry(point);
@@ -238,9 +295,9 @@ int halt_que(DbRef player, DbRef object) {
       numhalted++;
     }
   }
-  pque = cque_find(object);
+  pque = cque_find(queue, object);
   if (pque && pque->cque) {
-    while ((point = cque_deque(object)) != nullptr) {
+    while ((point = cque_deque(queue, object)) != nullptr) {
       free(point->text);
       point->text = nullptr;
       cque_free_entry(point);
@@ -253,13 +310,13 @@ int halt_que(DbRef player, DbRef object) {
    * Wait queue
    */
 
-  for (point = mudstate.qwait, trail = nullptr; point; point = next)
-    if (que_want(point, player, object)) {
+  for (point = queue->wait, trail = nullptr; point; point = next)
+    if (que_want(&queue->server->database, point, player, object)) {
       numhalted++;
       if (trail)
         trail->next = next = point->next;
       else
-        mudstate.qwait = next = point->next;
+        queue->wait = next = point->next;
       mux_timer_stop(point->timer);
       free(point->text);
       cque_free_entry(point);
@@ -270,27 +327,27 @@ int halt_que(DbRef player, DbRef object) {
    * Semaphore queue
    */
 
-  for (point = mudstate.qsemfirst, trail = nullptr; point; point = next)
-    if (que_want(point, player, object)) {
+  for (point = queue->semaphore_first, trail = nullptr; point; point = next)
+    if (que_want(&queue->server->database, point, player, object)) {
       numhalted++;
       if (trail)
         trail->next = next = point->next;
       else
-        mudstate.qsemfirst = next = point->next;
-      if (point == mudstate.qsemlast)
-        mudstate.qsemlast = trail;
-      add_to(point->sem, -1, point->attr);
+        queue->semaphore_first = next = point->next;
+      if (point == queue->semaphore_last)
+        queue->semaphore_last = trail;
+      add_to(&queue->server->database, point->sem, -1, point->attr);
       free(point->text);
       cque_free_entry(point);
     } else
       next = (trail = point)->next;
 
   if (player == NOTHING)
-    player = obj_owner(object);
+    player = game_object_owner(&queue->server->database, object);
   if (object == NOTHING)
-    queue_set(player, 0);
+    queue_set(queue->server->players, player, 0);
   else
-    queue_adjust(player, -numhalted);
+    queue_adjust(queue->server->players, player, -numhalted);
   return numhalted;
 }
 
@@ -299,12 +356,17 @@ int halt_que(DbRef player, DbRef object) {
  * * do_halt: Command interface to halt_que.
  */
 
-void do_halt(DbRef player, DbRef cause, int key, char *target) {
+void do_halt(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *target = invocation->first;
+  CommandQueue *queue = invocation->context->server->commands;
   DbRef player_targ, obj_targ;
   int numhalted;
 
-  if ((key & HALT_ALL) && !is_wizard(player)) {
-    notify(player, "Permission denied.");
+  if ((key & HALT_ALL) && !is_wizard(&queue->server->database, player)) {
+    notify(evaluation, player, "Permission denied.");
     return;
   }
   /*
@@ -316,23 +378,23 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
     if (key & HALT_ALL) {
       player_targ = NOTHING;
     } else {
-      player_targ = obj_owner(player);
-      if (typeof_obj(player) != TYPE_PLAYER)
+      player_targ = game_object_owner(&queue->server->database, player);
+      if (typeof_obj(&queue->server->database, player) != TYPE_PLAYER)
         obj_targ = player;
     }
   } else {
-    if (is_wizard(player))
-      obj_targ = match_thing(player, target);
+    if (is_wizard(&queue->server->database, player))
+      obj_targ = match_thing(&invocation->context->match, player, target);
     else
-      obj_targ = match_controlled(player, target);
+      obj_targ = match_controlled(&invocation->context->match, player, target);
 
     if (obj_targ == NOTHING)
       return;
     if (key & HALT_ALL) {
-      notify(player, "Can't specify a target and /all");
+      notify(evaluation, player, "Can't specify a target and /all");
       return;
     }
-    if (typeof_obj(obj_targ) == TYPE_PLAYER) {
+    if (typeof_obj(&queue->server->database, obj_targ) == TYPE_PLAYER) {
       player_targ = obj_targ;
       obj_targ = NOTHING;
     } else {
@@ -340,13 +402,16 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
     }
   }
 
-  numhalted = halt_que(player_targ, obj_targ);
-  if (is_quiet(player))
+  numhalted = halt_que(queue, player_targ, obj_targ);
+  if (is_quiet(&queue->server->database, player))
     return;
   if (numhalted == 1)
-    notify(obj_owner(player), "1 queue entries removed.");
+    notify(evaluation, game_object_owner(&queue->server->database, player),
+           "1 queue entries removed.");
   else
-    notify_printf(obj_owner(player), "%d queue entries removed.", numhalted);
+    notify_printf(evaluation,
+                  game_object_owner(&queue->server->database, player),
+                  "%d queue entries removed.", numhalted);
 }
 
 /*
@@ -354,7 +419,7 @@ void do_halt(DbRef player, DbRef cause, int key, char *target) {
  * * nfy_que: Notify commands from the queue and perform or discard them.
  */
 
-int nfy_que(DbRef sem, int attr, int key, int count) {
+int nfy_que(CommandQueue *queue, DbRef sem, int attr, int key, int count) {
   BQUE *point, *trail, *next;
   int num;
   long aflags;
@@ -362,7 +427,7 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
   char *str;
 
   if (attr) {
-    str = attribute_get(sem, attr, &aowner, &aflags);
+    str = attribute_get(&queue->server->database, sem, attr, &aowner, &aflags);
     num = atoi(str);
     free_lbuf(str);
   } else {
@@ -371,15 +436,15 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
 
   if (num > 0) {
     num = 0;
-    for (point = mudstate.qsemfirst, trail = nullptr; point; point = next) {
+    for (point = queue->semaphore_first, trail = nullptr; point; point = next) {
       if ((point->sem == sem) && ((point->attr == attr) || !attr)) {
         num++;
         if (trail)
           trail->next = next = point->next;
         else
-          mudstate.qsemfirst = next = point->next;
-        if (point == mudstate.qsemlast)
-          mudstate.qsemlast = trail;
+          queue->semaphore_first = next = point->next;
+        if (point == queue->semaphore_last)
+          queue->semaphore_last = trail;
 
         /*
          * Either run or discard the command
@@ -388,9 +453,11 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
         if (key != NFY_DRAIN) {
           point->sem = NOTHING;
           point->waittime = 0;
-          cque_enqueue(point->player, point);
+          cque_enqueue(queue, point->player, point);
         } else {
-          queue_adjust(obj_owner(point->player), -1);
+          queue_adjust(
+              queue->server->players,
+              game_object_owner(&queue->server->database, point->player), -1);
           free(point->text);
           cque_free_entry(point);
         }
@@ -414,9 +481,9 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
    */
 
   if (key == NFY_NFY)
-    add_to(sem, -count, attr);
+    add_to(&queue->server->database, sem, -count, attr);
   else
-    attribute_clear(sem, attr);
+    attribute_clear(&queue->server->database, sem, attr);
 
   return num;
 }
@@ -426,37 +493,44 @@ int nfy_que(DbRef sem, int attr, int key, int count) {
  * * do_notify: Command interface to nfy_que
  */
 
-void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
+void do_notify(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *what = invocation->first;
+  char *count = invocation->second;
+  CommandQueue *queue = invocation->context->server->commands;
   DbRef thing, aowner;
   int loccount, attr = -1;
   long aflags;
   Attribute *ap;
   char *obj;
 
-  obj = parse_to(&what, '/', 0);
-  init_match(player, obj, NOTYPE);
-  match_everything(0);
+  obj = parse_to(queue->server->configuration, &what, '/', 0);
+  init_match(&invocation->context->match, player, obj, NOTYPE);
+  match_everything(&invocation->context->match, 0);
 
-  if ((thing = noisy_match_result()) < 0) {
-    notify(player, "No match.");
-  } else if (!is_controls(player, thing)) {
-    notify(player, "Permission denied.");
+  if ((thing = noisy_match_result(&invocation->context->match)) < 0) {
+    notify(evaluation, player, "No match.");
+  } else if (!is_controls(evaluation, player, thing)) {
+    notify(evaluation, player, "Permission denied.");
   } else {
     if (!what || !*what) {
       ap = nullptr;
     } else {
-      ap = attribute_by_name(what);
+      ap = attribute_by_name(invocation->context->world->database, what);
     }
 
     if (!ap) {
       attr = A_SEMAPHORE;
     } else {
       /* Do they have permission to set this attribute? */
-      attribute_parent_get_info(thing, ap->number, &aowner, &aflags);
-      if (set_attr(player, thing, ap, aflags)) {
+      attribute_parent_get_info(&queue->server->database, thing, ap->number,
+                                &aowner, &aflags);
+      if (set_attr(evaluation, player, thing, ap, aflags)) {
         attr = ap->number;
       } else {
-        notify_quiet(player, "Permission denied.");
+        notify_quiet(evaluation, player, "Permission denied.");
         return;
       }
     }
@@ -466,12 +540,13 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
     else
       loccount = 1;
     if (loccount > 0) {
-      nfy_que(thing, attr, key, loccount);
-      if (!(is_quiet(player) || is_quiet(thing))) {
+      nfy_que(queue, thing, attr, key, loccount);
+      if (!(is_quiet(&queue->server->database, player) ||
+            is_quiet(&queue->server->database, thing))) {
         if (key == NFY_DRAIN)
-          notify_quiet(player, "Drained.");
+          notify_quiet(evaluation, player, "Drained.");
         else
-          notify_quiet(player, "Notified.");
+          notify_quiet(evaluation, player, "Notified.");
       }
     }
   }
@@ -482,8 +557,9 @@ void do_notify(DbRef player, DbRef cause, int key, char *what, char *count) {
  * * setup_que: Set up a queue entry.
  */
 
-static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
-                       int nargs, char *sargs[]) {
+static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
+                       char *command, char *args[], int nargs, char *sargs[]) {
+  EvaluationContext *evaluation = &queue->server->background_command.evaluation;
   int a;
   size_t tlen;
   BQUE *tmp;
@@ -493,7 +569,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * Can we run commands at all?
    */
 
-  if (is_halted(player))
+  if (is_halted(&queue->server->database, player))
     return nullptr;
 
   /*
@@ -501,16 +577,20 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * * * * * * * limited to QUEUE_QUOTA. -mnp
    */
 
-  a = queue_maximum(obj_owner(player));
-  if (queue_adjust(obj_owner(player), 1) > a) {
-    notify(obj_owner(player),
+  a = queue_maximum(queue->server->players,
+                    game_object_owner(&queue->server->database, player));
+  if (queue_adjust(queue->server->players,
+                   game_object_owner(&queue->server->database, player),
+                   1) > a) {
+    notify(evaluation, game_object_owner(&queue->server->database, player),
            "Run away objects: too many commands queued.  Halted.");
-    halt_que(obj_owner(player), NOTHING);
+    halt_que(queue, game_object_owner(&queue->server->database, player),
+             NOTHING);
 
     /*
      * halt also means no command execution allowed
      */
-    s_halted(player);
+    s_halted(&queue->server->database, player);
     return nullptr;
   }
   /*
@@ -576,7 +656,8 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
    * Load the rest of the queue block
    */
 
-  tmp->timer = mux_timer_create(server_lifecycle_loop(), wakeup_wait_que, tmp);
+  tmp->timer = mux_timer_create(server_lifecycle_loop(queue->server->lifecycle),
+                                wakeup_wait_que, tmp);
   if (tmp->timer == nullptr) {
     free(tmp->text);
     free_qentry(tmp);
@@ -590,6 +671,7 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
   tmp->attr = 0;
   tmp->cause = cause;
   tmp->nargs = nargs;
+  tmp->queue = queue;
   return tmp;
 }
 
@@ -598,11 +680,12 @@ static BQUE *setup_que(DbRef player, DbRef cause, char *command, char *args[],
  * * wait_que: Add commands to the wait or semaphore queues.
  */
 
-void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
-              char *command, char *args[], int nargs, char *sargs[]) {
+void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
+              DbRef sem, int attr, char *command, char *args[], int nargs,
+              char *sargs[]) {
   BQUE *cmd;
-  if (mudconf.is_interpreter_enabled)
-    cmd = setup_que(player, cause, command, args, nargs, sargs);
+  if (queue->server->configuration->is_interpreter_enabled)
+    cmd = setup_que(queue, player, cause, command, args, nargs, sargs);
   else
     cmd = nullptr;
 
@@ -611,7 +694,7 @@ void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
   }
 
   if (wait > 0) {
-    cmd->waittime = (int)(mudstate.now + wait);
+    cmd->waittime = (int)(queue->server->clock.now + wait);
   } else {
     cmd->waittime = 0;
   }
@@ -619,7 +702,7 @@ void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
   cmd->sem = sem;
   cmd->attr = attr;
 
-  cque_enqueue(player, cmd);
+  cque_enqueue(queue, player, cmd);
 }
 
 /*
@@ -627,8 +710,15 @@ void wait_que(DbRef player, DbRef cause, int wait, DbRef sem, int attr,
  * * do_wait: Command interface to wait_que
  */
 
-void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
-             char *cargs[], int ncargs) {
+void do_wait(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  DbRef cause = invocation->cause;
+  char *event = invocation->first;
+  char *cmd = invocation->second;
+  char **cargs = invocation->vector;
+  int ncargs = invocation->vector_count;
+  CommandQueue *queue = invocation->context->server->commands;
   DbRef thing, aowner;
   int howlong, num, attr;
   long aflags;
@@ -641,23 +731,23 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
 
   if (is_number(event)) {
     howlong = atoi(event);
-    wait_que(player, cause, howlong, NOTHING, 0, cmd, cargs, ncargs,
-             mudstate.global_regs);
+    wait_que(queue, player, cause, howlong, NOTHING, 0, cmd, cargs, ncargs,
+             invocation->context->evaluation.registers);
     return;
   }
   /*
    * Semaphore wait with optional timeout
    */
 
-  what = parse_to(&event, '/', 0);
-  init_match(player, what, NOTYPE);
-  match_everything(0);
+  what = parse_to(queue->server->configuration, &event, '/', 0);
+  init_match(&invocation->context->match, player, what, NOTYPE);
+  match_everything(&invocation->context->match, 0);
 
-  thing = noisy_match_result();
-  if (!is_good_obj(thing)) {
-    notify(player, "No match.");
-  } else if (!is_controls(player, thing)) {
-    notify(player, "Permission denied.");
+  thing = noisy_match_result(&invocation->context->match);
+  if (!is_good_obj(&queue->server->database, thing)) {
+    notify(evaluation, player, "No match.");
+  } else if (!is_controls(evaluation, player, thing)) {
+    notify(evaluation, player, "Permission denied.");
   } else {
 
     /*
@@ -673,26 +763,27 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
     }
 
     if (event && *event && !is_number(event)) {
-      ap = attribute_by_name(event);
+      ap = attribute_by_name(invocation->context->world->database, event);
       if (!ap) {
-        attr = mkattr(event);
+        attr = mkattr(invocation->context->world->database, event);
         if (attr <= 0) {
-          notify_quiet(player, "Invalid attribute.");
+          notify_quiet(evaluation, player, "Invalid attribute.");
           return;
         }
-        ap = attribute_by_number(attr);
+        ap = attribute_by_number(invocation->context->world->database, attr);
       }
-      attribute_parent_get_info(thing, ap->number, &aowner, &aflags);
-      if (attr && set_attr(player, thing, ap, aflags)) {
+      attribute_parent_get_info(&queue->server->database, thing, ap->number,
+                                &aowner, &aflags);
+      if (attr && set_attr(evaluation, player, thing, ap, aflags)) {
         attr = ap->number;
         howlong = 0;
       } else {
-        notify_quiet(player, "Permission denied.");
+        notify_quiet(evaluation, player, "Permission denied.");
         return;
       }
     }
 
-    num = add_to(thing, 1, attr);
+    num = add_to(&queue->server->database, thing, 1, attr);
     if (num <= 0) {
 
       /*
@@ -702,8 +793,8 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
       thing = NOTHING;
       howlong = 0;
     }
-    wait_que(player, cause, howlong, thing, attr, cmd, cargs, ncargs,
-             mudstate.global_regs);
+    wait_que(queue, player, cause, howlong, thing, attr, cmd, cargs, ncargs,
+             invocation->context->evaluation.registers);
   }
 }
 
@@ -712,7 +803,7 @@ void do_wait(DbRef player, DbRef cause, int key, char *event, char *cmd,
  * * do_second: Check the wait and semaphore queues for commands to remove.
  */
 
-void do_second(void) {
+void do_second(CommandQueue *queue) {
   BQUE *trail, *point, *next;
   const char *cmdsave;
 
@@ -724,11 +815,11 @@ void do_second(void) {
    * getting blown away  by scrolling text
    */
 
-  if (!mudconf.is_dequeue_enabled)
+  if (!queue->server->configuration->is_dequeue_enabled)
     return;
 
-  cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = "< do_second >";
+  cmdsave = queue->server->background_command.debug_command;
+  queue->server->background_command.debug_command = "< do_second >";
 
   /*
    * Note: the point->waittime test would be 0 except the command is
@@ -740,29 +831,29 @@ void do_second(void) {
    * Check the semaphore queue for expired timed-waits
    */
 
-  for (point = mudstate.qsemfirst, trail = nullptr; point; point = next) {
+  for (point = queue->semaphore_first, trail = nullptr; point; point = next) {
     if (point->waittime == 0) {
       next = (trail = point)->next;
       continue; /*
                  * Skip if not timed-wait
                  */
     }
-    if (point->waittime <= mudstate.now) {
+    if (point->waittime <= queue->server->clock.now) {
       if (trail != nullptr)
         trail->next = next = point->next;
       else
-        mudstate.qsemfirst = next = point->next;
-      if (point == mudstate.qsemlast)
-        mudstate.qsemlast = trail;
-      add_to(point->sem, -1, point->attr);
+        queue->semaphore_first = next = point->next;
+      if (point == queue->semaphore_last)
+        queue->semaphore_last = trail;
+      add_to(&queue->server->database, point->sem, -1, point->attr);
       point->sem = NOTHING;
       point->waittime = 0;
       printk("promoting, %ld/%s", point->player, point->comm);
-      cque_enqueue(point->player, point);
+      cque_enqueue(queue, point->player, point);
     } else
       next = (trail = point)->next;
   }
-  mudstate.debug_cmd = cmdsave;
+  queue->server->background_command.debug_command = cmdsave;
   return;
 }
 
@@ -771,58 +862,63 @@ void do_second(void) {
  * * do_top: Execute the command at the top of the queue
  */
 
-int do_top(int ncmds) {
+int do_top(CommandQueue *queue, int ncmds) {
   BQUE *tmp;
+  CommandContext *previous_context = queue->server->btech.command_context;
   DbRef object;
   int count, i;
   char *command, *cp;
-  const char *cmdsave;
 
-  if (!mudconf.is_dequeue_enabled)
+  if (!queue->server->configuration->is_dequeue_enabled)
     return 0;
 
-  cmdsave = mudstate.debug_cmd;
-  mudstate.debug_cmd = "< do_top >";
-
-  if (!mudstate.qhead)
+  if (!queue->head)
     return 0;
 
   count = 0;
 
-  while (count < ncmds && mudstate.qhead) {
-    if (!mudstate.qhead)
+  while (count < ncmds && queue->head) {
+    if (!queue->head)
       break;
 
-    object = mudstate.qhead->obj;
-    tmp = cque_deque(object);
+    object = queue->head->obj;
+    tmp = cque_deque(queue, object);
 
-    if (!mudstate.qhead->cque) {
-      mudstate.qhead->queued = 0;
-      mudstate.qhead = mudstate.qhead->next;
-      if (mudstate.qhead == nullptr)
-        mudstate.qtail = nullptr;
+    if (!queue->head->cque) {
+      queue->head->queued = 0;
+      queue->head = queue->head->next;
+      if (queue->head == nullptr)
+        queue->tail = nullptr;
     } else {
-      mudstate.qtail->next = mudstate.qhead;
-      mudstate.qtail = mudstate.qtail->next;
-      mudstate.qhead = mudstate.qhead->next;
-      mudstate.qtail->next = nullptr;
+      queue->tail->next = queue->head;
+      queue->tail = queue->tail->next;
+      queue->head = queue->head->next;
+      queue->tail->next = nullptr;
     }
     if (!tmp)
       continue;
 
     dassert(tmp);
     count++;
-    if ((object >= 0) && !is_going(object)) {
-      mudstate.curr_enactor = tmp->cause;
-      mudstate.curr_player = object;
-      mudstate.curr_descriptor = nullptr;
-      queue_adjust(obj_owner(object), -1);
-      if (!is_halted(object)) {
+    if ((object >= 0) && !is_going(&queue->server->database, object)) {
+      CommandContext context;
+
+      if (!command_context_initialize(&context, queue->server, object,
+                                      tmp->cause, nullptr, false)) {
+        free(tmp->text);
+        cque_free_entry(tmp);
+        continue;
+      }
+      context.debug_command = "< do_top >";
+      btech_context_set_command(&queue->server->btech, &context);
+      queue_adjust(queue->server->players,
+                   game_object_owner(&queue->server->database, object), -1);
+      if (!is_halted(&queue->server->database, object)) {
         for (i = 0; i < MAX_GLOBAL_REGS; i++) {
           if (tmp->scr[i]) {
-            StringCopy(mudstate.global_regs[i], tmp->scr[i]);
+            StringCopy(context.evaluation.registers[i], tmp->scr[i]);
           } else {
-            *mudstate.global_regs[i] = '\0';
+            *context.evaluation.registers[i] = '\0';
           }
         }
 
@@ -830,43 +926,43 @@ int do_top(int ncmds) {
 
         if (command) {
           while (command) {
-            cp = parse_to(&command, ';', 0);
+            cp = parse_to(queue->server->configuration, &command, ';', 0);
             if (cp && *cp) {
               while (command && (*command == '|')) {
                 command++;
-                mudstate.is_piping = true;
-                mudstate.poutnew = alloc_lbuf("process_command.pipe");
-                mudstate.poutbufc = mudstate.poutnew;
-                mudstate.poutobj = object;
-                process_command(object, tmp->cause, 0, cp, tmp->env,
-                                tmp->nargs);
-                if (mudstate.pout) {
-                  free_lbuf(mudstate.pout);
-                  mudstate.pout = nullptr;
+                context.evaluation.is_piping = true;
+                context.evaluation.pipe_next =
+                    alloc_lbuf("process_command.pipe");
+                context.evaluation.pipe_cursor = context.evaluation.pipe_next;
+                context.evaluation.pipe_object = object;
+                process_command(&context, cp, tmp->env, tmp->nargs);
+                if (context.evaluation.pipe_output) {
+                  free_lbuf(context.evaluation.pipe_output);
+                  context.evaluation.pipe_output = nullptr;
                 }
 
-                *mudstate.poutbufc = '\0';
-                mudstate.pout = mudstate.poutnew;
-                cp = parse_to(&command, ';', 0);
+                *context.evaluation.pipe_cursor = '\0';
+                context.evaluation.pipe_output = context.evaluation.pipe_next;
+                cp = parse_to(queue->server->configuration, &command, ';', 0);
               }
-              mudstate.is_piping = false;
-              process_command(object, tmp->cause, 0, cp, tmp->env, tmp->nargs);
-              if (mudstate.pout) {
-                free_lbuf(mudstate.pout);
-                mudstate.pout = nullptr;
+              context.evaluation.is_piping = false;
+              process_command(&context, cp, tmp->env, tmp->nargs);
+              if (context.evaluation.pipe_output) {
+                free_lbuf(context.evaluation.pipe_output);
+                context.evaluation.pipe_output = nullptr;
+                context.evaluation.pipe_next = nullptr;
               }
             }
           }
         }
       }
+      btech_context_set_command(&queue->server->btech, previous_context);
+      command_context_destroy(&context);
     }
     free(tmp->text);
     cque_free_entry(tmp);
   }
 
-  for (i = 0; i < MAX_GLOBAL_REGS; i++)
-    *mudstate.global_regs[i] = '\0';
-  mudstate.debug_cmd = cmdsave;
   return count;
 }
 
@@ -875,7 +971,8 @@ int do_top(int ncmds) {
  * * do_ps: tell player what commands they have pending in the queue
  */
 
-static void show_que(DbRef player, int key, BQUE *queue, int *qent,
+static void show_que(EvaluationContext *evaluation, DbRef player, int key,
+                     BQUE *queue, RuntimeClock *clock, int *qent,
                      const char *header) {
   BQUE *tmp;
   char *bp, *bufp;
@@ -886,22 +983,26 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
     if (key == PS_SUMM)
       continue;
     if (*qent == 1)
-      notify_printf(player, "----- %s Queue -----", header);
+      notify_printf(evaluation, player, "----- %s Queue -----", header);
 
-    bufp = unparse_object(player, tmp->player, 0);
+    bufp = unparse_object(evaluation->world->database, evaluation, player,
+                          tmp->player, 0);
     if (!(key & PS_ALL))
-      if ((player != obj_owner(tmp->player)))
+      if ((player !=
+           game_object_owner(evaluation->world->database, tmp->player)))
         continue;
-    if ((tmp->waittime > 0) && (is_good_obj(tmp->sem)))
-      notify_printf(player, "[#%ld/%ld]%s:%s", tmp->sem,
-                    tmp->waittime - mudstate.now, bufp, tmp->comm);
+    if ((tmp->waittime > 0) &&
+        is_good_obj(evaluation->world->database, tmp->sem))
+      notify_printf(evaluation, player, "[#%ld/%ld]%s:%s", tmp->sem,
+                    tmp->waittime - clock->now, bufp, tmp->comm);
     else if (tmp->waittime > 0)
-      notify_printf(player, "[%ld]%s:%s", tmp->waittime - mudstate.now, bufp,
+      notify_printf(evaluation, player, "[%ld]%s:%s",
+                    tmp->waittime - clock->now, bufp, tmp->comm);
+    else if (is_good_obj(evaluation->world->database, tmp->sem))
+      notify_printf(evaluation, player, "[#%ld]%s:%s", tmp->sem, bufp,
                     tmp->comm);
-    else if (is_good_obj(tmp->sem))
-      notify_printf(player, "[#%ld]%s:%s", tmp->sem, bufp, tmp->comm);
     else
-      notify_printf(player, "%s:%s", bufp, tmp->comm);
+      notify_printf(evaluation, player, "%s:%s", bufp, tmp->comm);
 
     bp = bufp;
     if (key == PS_LONG) {
@@ -915,8 +1016,9 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
         }
       }
       *bp = '\0';
-      bp = unparse_object(player, tmp->cause, 0);
-      notify_printf(player, "   Enactor: %s%s", bp, bufp);
+      bp = unparse_object(evaluation->world->database, evaluation, player,
+                          tmp->cause, 0);
+      notify_printf(evaluation, player, "   Enactor: %s%s", bp, bufp);
       free_lbuf(bp);
     }
     free_lbuf(bufp);
@@ -924,7 +1026,12 @@ static void show_que(DbRef player, int key, BQUE *queue, int *qent,
   return;
 }
 
-void do_ps(DbRef player, DbRef cause, int key, char *target) {
+void do_ps(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *target = invocation->first;
+  CommandQueue *queue = invocation->context->server->commands;
   DbRef player_targ, obj_targ;
   int pqent, pqtot, wqent, wqtot, sqent, sqtot;
   OBJQE *objq;
@@ -934,8 +1041,8 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
    * Figure out what to list the queue for
    */
 
-  if ((key & PS_ALL) && !is_wizard(player)) {
-    notify(player, "Permission denied.");
+  if ((key & PS_ALL) && !is_wizard(&queue->server->database, player)) {
+    notify(evaluation, player, "Permission denied.");
     return;
   }
   if (!target || !*target) {
@@ -943,20 +1050,20 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
     if (key & PS_ALL) {
       player_targ = NOTHING;
     } else {
-      player_targ = obj_owner(player);
-      if (typeof_obj(player) != TYPE_PLAYER)
+      player_targ = game_object_owner(&queue->server->database, player);
+      if (typeof_obj(&queue->server->database, player) != TYPE_PLAYER)
         obj_targ = player;
     }
   } else {
-    player_targ = obj_owner(player);
-    obj_targ = match_controlled(player, target);
+    player_targ = game_object_owner(&queue->server->database, player);
+    obj_targ = match_controlled(&invocation->context->match, player, target);
     if (obj_targ == NOTHING)
       return;
     if (key & PS_ALL) {
-      notify(player, "Can't specify a target and /all");
+      notify(evaluation, player, "Can't specify a target and /all");
       return;
     }
-    if (typeof_obj(obj_targ) == TYPE_PLAYER) {
+    if (typeof_obj(&queue->server->database, obj_targ) == TYPE_PLAYER) {
       player_targ = obj_targ;
       obj_targ = NOTHING;
     }
@@ -969,7 +1076,7 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
   case PS_LONG:
     break;
   default:
-    notify(player, "Illegal combination of switches.");
+    notify(evaluation, player, "Illegal combination of switches.");
     return;
   }
 
@@ -979,17 +1086,19 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
   pqent = 0;
   pqtot = 0;
   if (player_targ == NOTHING) {
-    objq = mudstate.qhead;
+    objq = queue->head;
     while (objq && (objq = objq->next) != nullptr) {
       pqent = 0;
-      show_que(player, tempkey, objq->cque, &pqent, "PLAYAH");
+      show_que(evaluation, player, tempkey, objq->cque, &queue->server->clock,
+               &pqent, "PLAYAH");
       pqtot += pqent;
     }
   } else {
     pqent = 0;
-    objq = cque_find(player_targ);
+    objq = cque_find(queue, player_targ);
     if (objq) {
-      show_que(player, tempkey, objq->cque, &pqent, "PLAYAH");
+      show_que(evaluation, player, tempkey, objq->cque, &queue->server->clock,
+               &pqent, "PLAYAH");
     }
   }
 
@@ -997,14 +1106,16 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
   sqent = 0;
   wqtot = 0;
   sqtot = 0;
-  show_que(player, tempkey, mudstate.qwait, &wqent, "Wait");
-  show_que(player, tempkey, mudstate.qsemfirst, &sqent, "Semaphore");
+  show_que(evaluation, player, tempkey, queue->wait, &queue->server->clock,
+           &wqent, "Wait");
+  show_que(evaluation, player, tempkey, queue->semaphore_first,
+           &queue->server->clock, &sqent, "Semaphore");
 
   /*
    * Display stats
    */
 
-  notify_printf(player,
+  notify_printf(evaluation, player,
                 "Totals: Player...%d/%d  Wait...%d/%d  Semaphore...%d/%d",
                 pqent, pqtot, wqent, wqtot, sqent, sqtot);
 }
@@ -1014,7 +1125,12 @@ void do_ps(DbRef player, DbRef cause, int key, char *target) {
  * * do_queue: Queue management
  */
 
-void do_queue(DbRef player, DbRef cause, int key, char *arg) {
+void do_queue(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *arg = invocation->first;
+  CommandQueue *queue = invocation->context->server->commands;
   BQUE *point;
   int i, ncmds;
   bool was_disabled;
@@ -1023,29 +1139,29 @@ void do_queue(DbRef player, DbRef cause, int key, char *arg) {
   was_disabled = false;
   if (key == QUEUE_KICK) {
     i = atoi(arg);
-    if (!mudconf.is_dequeue_enabled) {
+    if (!queue->server->configuration->is_dequeue_enabled) {
       was_disabled = true;
-      mudconf.is_dequeue_enabled = true;
-      notify(player, "Warning: automatic dequeueing is disabled.");
+      queue->server->configuration->is_dequeue_enabled = true;
+      notify(evaluation, player, "Warning: automatic dequeueing is disabled.");
     }
-    ncmds = do_top(i);
+    ncmds = do_top(queue, i);
     if (was_disabled)
-      mudconf.is_dequeue_enabled = false;
-    if (!is_quiet(player))
-      notify_printf(player, "%d commands processed.", ncmds);
+      queue->server->configuration->is_dequeue_enabled = false;
+    if (!is_quiet(&queue->server->database, player))
+      notify_printf(evaluation, player, "%d commands processed.", ncmds);
   } else if (key == QUEUE_WARP) {
     i = atoi(arg);
-    if (!mudconf.is_dequeue_enabled) {
+    if (!queue->server->configuration->is_dequeue_enabled) {
       was_disabled = true;
-      mudconf.is_dequeue_enabled = true;
-      notify(player, "Warning: automatic dequeueing is disabled.");
+      queue->server->configuration->is_dequeue_enabled = true;
+      notify(evaluation, player, "Warning: automatic dequeueing is disabled.");
     }
 
     /*
      * Handle the semaphore queue
      */
 
-    for (point = mudstate.qsemfirst; point; point = point->next) {
+    for (point = queue->semaphore_first; point; point = point->next) {
       if (point->waittime > 0) {
         point->waittime -= i;
         if (point->waittime <= 0)
@@ -1053,16 +1169,16 @@ void do_queue(DbRef player, DbRef cause, int key, char *arg) {
       }
     }
 
-    do_second();
+    do_second(queue);
     if (was_disabled)
-      mudconf.is_dequeue_enabled = false;
-    if (is_quiet(player))
+      queue->server->configuration->is_dequeue_enabled = false;
+    if (is_quiet(&queue->server->database, player))
       return;
     if (i > 0)
-      notify_printf(player, "WaitQ timer advanced %d seconds.", i);
+      notify_printf(evaluation, player, "WaitQ timer advanced %d seconds.", i);
     else if (i < 0)
-      notify_printf(player, "WaitQ timer set back %d seconds.", i);
+      notify_printf(evaluation, player, "WaitQ timer set back %d seconds.", i);
     else
-      notify(player, "Object queue appended to player queue.");
+      notify(evaluation, player, "Object queue appended to player queue.");
   }
 }

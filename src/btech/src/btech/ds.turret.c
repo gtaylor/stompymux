@@ -225,19 +225,26 @@ void newturret(DbRef key, void **data, int selector) {
 void turret_initialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
   DOCHECK(
-      player != tur->gunner && is_connected(tur->gunner) &&
-          obj_location(tur->gunner) == obj_location(player),
-      tprintf("You need %s to leave or disconnect first.", Name(tur->gunner)));
+      player != tur->gunner &&
+          is_connected(btech_context_active()->database, tur->gunner) &&
+          game_object_location(btech_context_active()->database, tur->gunner) ==
+              game_object_location(btech_context_active()->database, player),
+      tprintf("You need %s to leave or disconnect first.",
+              game_object_name(btech_context_active()->database, tur->gunner)));
   DOCHECK(player == tur->gunner, "You grap firmer hold on the joystick..");
-  notify_except(tur->mynum, NOTHING, tur->mynum,
-                tprintf("%s initialized as gunner.", Name(player)));
+  notify_except(
+      BTECH_EVALUATION_CONTEXT, tur->mynum, NOTHING, tur->mynum,
+      tprintf("%s initialized as gunner.",
+              game_object_name(btech_context_active()->database, player)));
   tur->gunner = player;
 }
 
 void turret_deinitialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
   DOCHECK(player != tur->gunner, "You aren't gunner!");
-  notify_except(tur->mynum, NOTHING, tur->mynum,
-                tprintf("%s deinitialized as gunner.", Name(player)));
+  notify_except(
+      BTECH_EVALUATION_CONTEXT, tur->mynum, NOTHING, tur->mynum,
+      tprintf("%s deinitialized as gunner.",
+              game_object_name(btech_context_active()->database, player)));
   tur->gunner = -1;
 }

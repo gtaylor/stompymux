@@ -88,19 +88,20 @@ static int help_index_entry_compare(const void *a, const void *b) {
   return strcasecmp(left->article_tags.items[0], right->article_tags.items[0]);
 }
 
-static void help_render_index_section(const HelpArticle *index_article,
+static void help_render_index_section(const HelpIndex *index,
+                                      const HelpArticle *index_article,
                                       bool viewer_is_wizard,
                                       HelpTextBuffer *out) {
   const HelpArticle **entries;
   size_t count = 0;
-  size_t total = help_index_article_count();
+  size_t total = help_index_article_count(index);
   size_t i;
 
   if (total == 0)
     return;
   entries = malloc(total * sizeof(const HelpArticle *));
   for (i = 0; i < total; i++) {
-    const HelpArticle *candidate = help_index_article_at(i);
+    const HelpArticle *candidate = help_index_article_at(index, i);
 
     if (candidate == index_article)
       continue;
@@ -221,11 +222,12 @@ void help_render_markdown(const char *markdown, size_t length,
   cmark_node_free(root);
 }
 
-void help_article_render_body(const HelpArticle *article, bool viewer_is_wizard,
+void help_article_render_body(const HelpIndex *index,
+                              const HelpArticle *article, bool viewer_is_wizard,
                               HelpTextBuffer *out) {
   char *body;
 
-  body = help_index_read_body(article, nullptr);
+  body = help_index_read_body(index, article, nullptr);
   if (!body) {
     help_text_buffer_append_str(out, "Unable to render article.");
     return;
@@ -234,10 +236,11 @@ void help_article_render_body(const HelpArticle *article, bool viewer_is_wizard,
   free(body);
 
   if (article->show_index_for_article_tags.count > 0)
-    help_render_index_section(article, viewer_is_wizard, out);
+    help_render_index_section(index, article, viewer_is_wizard, out);
 }
 
-void help_render_send(DbRef player, const HelpTextBuffer *buffer) {
+void help_render_send(EvaluationContext *evaluation, DbRef player,
+                      const HelpTextBuffer *buffer) {
   const char *cursor = buffer->data;
 
   if (!cursor)
@@ -253,7 +256,7 @@ void help_render_send(DbRef player, const HelpTextBuffer *buffer) {
     if (line_length == 0) {
       /* notify() silently drops empty messages, so a blank line needs a
        * single space to actually reach the player. */
-      notify(player, " ");
+      notify(evaluation, player, " ");
       if (!line_end)
         break;
       cursor = line_end + 1;
@@ -261,7 +264,7 @@ void help_render_send(DbRef player, const HelpTextBuffer *buffer) {
     }
     memcpy(line, cursor, line_length);
     line[line_length] = '\0';
-    notify(player, line);
+    notify(evaluation, player, line);
     if (!line_end)
       break;
     cursor = line_end + 1;
