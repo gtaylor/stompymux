@@ -33,31 +33,33 @@
 #include "p.mechfile.h"
 #include "p.spath.h"
 
-static char *map_filename(const char *mapname) {
+static char *map_filename(const MAP *map, const char *mapname) {
+  const char *map_path = map->xcode.context->configuration->database.map_db;
   char *path;
   size_t pathlen;
 
-  pathlen = strlen(MAP_PATH) + strlen("/") + strlen(mapname) + 1;
+  pathlen = strlen(map_path) + strlen("/") + strlen(mapname) + 1;
   path = malloc(pathlen);
   if (!path)
     return NULL;
-  snprintf(path, pathlen, "%s/%s", MAP_PATH, mapname);
+  snprintf(path, pathlen, "%s/%s", map_path, mapname);
   return path;
 }
 
 void debug_fixmap(DbRef player, void *data, char *buffer) {
   MAP *m = (MAP *)data;
+  GameDatabase *database;
   int i, k;
   MECH *mek;
 
   if (!m)
     return;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Checking %d entries..",
-                m->first_free);
-  DOLIST(btech_context_active()->database, k,
-         game_object_contents(btech_context_active()->database, m->mynum)) {
-    if (is_hardcode(btech_context_active()->database, k)) {
-      if (WhichSpecial(k) == GTYPE_MECH) {
+  database = m->xcode.context->database;
+  notify_printf(btech_context_evaluation(m->xcode.context), player,
+                "Checking %d entries..", m->first_free);
+  DOLIST(database, k, game_object_contents(database, m->mynum)) {
+    if (is_hardcode(database, k)) {
+      if (btech_context_which_special(m->xcode.context, k) == GTYPE_MECH) {
         MECH *map_mech;
 
         /* Check if it's on the map */
@@ -66,7 +68,7 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
             break;
         if (i != m->first_free)
           continue;
-        map_mech = getMech(k);
+        map_mech = btech_context_get_mech(m->xcode.context, k);
         map_mech->mapindex = -1; /* Eep. */
         map_mech->mapnumber = 0;
       }
@@ -74,25 +76,25 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
   }
   for (i = 0; i < m->first_free; i++)
     if ((k = m->mechsOnMap[i]) >= 0) {
-      if (!IsMech(k)) {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      if (btech_context_which_special(m->xcode.context, k) != GTYPE_MECH) {
+        notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d isn't mech yet is in mapindex. Fixing..", k);
         m->mechsOnMap[i] = -1;
-      } else if (!(mek = getMech(k))) {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      } else if (!(mek = btech_context_get_mech(m->xcode.context, k))) {
+        notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d has no mech data. Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mek->mapindex != m->mynum) {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+        notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d isn't really here! Removing..", k);
         m->mechsOnMap[i] = -1;
       } else if (mek->mapnumber != i) {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+        notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d has invalid mapnumber (mn:%d <-> real:%d)..",
                       k, mek->mapnumber, i);
       }
     }
-  notify(BTECH_EVALUATION_CONTEXT, player, "Done.");
+  notify(btech_context_evaluation(m->xcode.context), player, "Done.");
 }
 
 /* Selectors */
@@ -108,11 +110,14 @@ void map_view(DbRef player, void *data, char *buffer) {
   char *args[2];
   int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
   char *str;
-  char **maptext;
+  char *const *maptext;
+  MapText *map_text;
 
   /* Check if its a valid map */
   if (!mech_map)
     return;
+  EvaluationContext *evaluation =
+      btech_context_evaluation(mech_map->xcode.context);
 
   /* Make sure the proper number of arguments '<X> <Y>' were passed */
   argc = mech_parseattributes(buffer, args, 2);
@@ -122,7 +127,7 @@ void map_view(DbRef player, void *data, char *buffer) {
     y = BOUNDED(0, atoi(args[1]), mech_map->map_height - 1);
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of parameters!");
+    notify(evaluation, player, "Invalid number of parameters!");
     return;
   }
 
@@ -130,7 +135,8 @@ void map_view(DbRef player, void *data, char *buffer) {
    * the player, if doesn't exist set the height and width to
    * default params. If it does exist, check the values and
    * make sure they are legit. */
-  str = silly_atr_get(player, A_TACSIZE);
+  str = btech_attribute_read(mech_map->xcode.context->database, player,
+                             A_TACSIZE, (char[LBUF_SIZE]){0});
   if (!*str) {
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
@@ -138,7 +144,7 @@ void map_view(DbRef player, void *data, char *buffer) {
              displayHeight > 24 || displayHeight < 5 || displayWidth < 5 ||
              displayWidth > 40) {
 
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(evaluation, player,
            "Illegal Tacsize attribute. Must be in format "
            "'Height Width' . Height : 5-24 Width : 5-40");
     displayHeight = MAP_DISPLAY_HEIGHT;
@@ -153,12 +159,18 @@ void map_view(DbRef player, void *data, char *buffer) {
                                                        : mech_map->map_width;
 
   /* Get the map data */
-  maptext = MakeMapText(player, NULL, mech_map, x, y, displayWidth,
-                        displayHeight, 3, 0);
+  map_text = map_text_create(player, nullptr, mech_map, x, y, displayWidth,
+                             displayHeight, 3, 0);
+  if (map_text == nullptr) {
+    notify(evaluation, player, "Unable to render the tactical map.");
+    return;
+  }
+  maptext = map_text_lines(map_text);
 
   /* Display the map to the player */
   for (i = 0; maptext[i]; i++)
-    notify(BTECH_EVALUATION_CONTEXT, player, maptext[i]);
+    notify(evaluation, player, maptext[i]);
+  map_text_destroy(map_text);
 }
 
 void map_addhex(DbRef player, void *data, char *buffer) {
@@ -167,14 +179,14 @@ void map_addhex(DbRef player, void *data, char *buffer) {
   char *args[4], elev;
 
   map = (MAP *)data;
-  if (!CheckData(player, map))
-    return;
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(argc != 4, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(map->xcode.context, argc != 4,
+                  "Invalid number of arguments!");
   x = atoi(args[0]);
   y = atoi(args[1]);
   elev = abs(atoi(args[3]));
-  DOCHECK(
+  DOCHECK_CONTEXT(
+      map->xcode.context,
       !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
       "X,Y out of range!");
   if (args[2][0] == '.')
@@ -182,25 +194,24 @@ void map_addhex(DbRef player, void *data, char *buffer) {
   else
     SetTerrain(map, x, y, args[2][0]);
   SetElevation(map, x, y, (elev <= MAX_ELEV) ? elev : MAX_ELEV);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Hex set!");
+  notify(btech_context_evaluation(map->xcode.context), player, "Hex set!");
 }
 
 void map_mapemit(DbRef player, void *data, char *buffer) {
   MAP *map;
 
   map = (MAP *)data;
-  if (!CheckData(player, map))
-    return;
   while (*buffer == ' ')
     buffer++;
-  DOCHECK(!buffer || !*buffer, "What do you want to @mapemit?");
+  DOCHECK_CONTEXT(map->xcode.context, !buffer || !*buffer,
+                  "What do you want to @mapemit?");
   MapBroadcast(map, buffer);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Message sent!");
+  notify(btech_context_evaluation(map->xcode.context), player, "Message sent!");
 }
 
 /* Logic: OPPOSITE sides must have water, within r<=3 of each other */
 
-extern int dirs[6][2];
+extern const int dirs[6][2];
 
 int water_distance(MAP *map, int x, int y, int dir, int max) {
   int i;
@@ -256,7 +267,7 @@ int map_checkmapfile(MAP *map, char *mapname) {
 
   if (strlen(mapname) >= MAP_NAME_SIZE)
     mapname[MAP_NAME_SIZE] = 0;
-  openfile = map_filename(mapname);
+  openfile = map_filename(map, mapname);
   if (!openfile)
     return -1;
   fp = my_open_file(openfile, "r", &filemode);
@@ -268,7 +279,8 @@ int map_checkmapfile(MAP *map, char *mapname) {
 
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(tprintf("Map #%ld: Invalid height and or/width on %s",
+    SendMapError(map->xcode.context,
+                 tprintf("Map #%ld: Invalid height and or/width on %s",
                          map->mynum, mapname));
     my_close_file(fp, &filemode);
     return -2; // Bad Height/Width
@@ -282,7 +294,8 @@ int map_checkmapfile(MAP *map, char *mapname) {
   }
 
   if (i != height) {
-    SendMapError(tprintf("Map #%ld: Mapfile possibly corrupt and/or "
+    SendMapError(map->xcode.context,
+                 tprintf("Map #%ld: Mapfile possibly corrupt and/or "
                          "height/width flipped. Height != what was read in %s",
                          map->mynum, mapname));
     my_close_file(fp, &filemode);
@@ -305,7 +318,7 @@ int map_load(MAP *map, char *mapname) {
 
   if (strlen(mapname) >= MAP_NAME_SIZE)
     mapname[MAP_NAME_SIZE] = 0;
-  openfile = map_filename(mapname);
+  openfile = map_filename(map, mapname);
   if (!openfile)
     return -1;
   fp = my_open_file(openfile, "r", &filemode);
@@ -321,7 +334,8 @@ int map_load(MAP *map, char *mapname) {
   }
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(tprintf("Map #%ld: Invalid height and/or width", map->mynum));
+    SendMapError(map->xcode.context,
+                 tprintf("Map #%ld: Invalid height and/or width", map->mynum));
     width = DEFAULT_MAP_WIDTH;
     height = DEFAULT_MAP_HEIGHT;
   }
@@ -352,7 +366,8 @@ int map_load(MAP *map, char *mapname) {
         break;
       }
       if (!strcmp(GetTerrainName_base(terr), "Unknown")) {
-        SendMapError(tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
+        SendMapError(map->xcode.context,
+                     tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
                              map->mynum, j, i, terr));
         terr = GRASSLAND;
       }
@@ -360,9 +375,9 @@ int map_load(MAP *map, char *mapname) {
     }
   }
   if (i != height) {
-    SendMapError(tprintf("Error: EOF reached prematurely. "
-                         "(x%d != %d || y%d != %d)",
-                         j, width, i, height));
+    SendMapError(map->xcode.context, tprintf("Error: EOF reached prematurely. "
+                                             "(x%d != %d || y%d != %d)",
+                                             j, width, i, height));
     my_close_file(fp, &filemode);
     return -2;
   }
@@ -390,35 +405,35 @@ void map_loadmap(DbRef player, void *data, char *buffer) {
 
   map = (MAP *)data;
 
-  if (!CheckData(player, map))
-    return;
-
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Invalid number of arguments!");
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Loading %s", args[0]);
+  DOCHECK_CONTEXT(map->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Invalid number of arguments!");
+  notify_printf(btech_context_evaluation(map->xcode.context), player,
+                "Loading %s", args[0]);
   switch (map_checkmapfile(map, args[0])) {
   case -1:
-    notify(BTECH_EVALUATION_CONTEXT, player, "#-1 Map not found.");
+    notify(btech_context_evaluation(map->xcode.context), player,
+           "#-1 Map not found.");
     return;
   case -2:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(map->xcode.context), player,
            "#-1 Map invalid - Bad Height/Width.");
     return;
   case -3:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(map->xcode.context), player,
            "#-1 Map invalid - Height not loaded properly");
     return;
   case 1:
     map_load(map, args[0]);
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(map->xcode.context), player,
            "Unknown error while loading map!");
     return;
   }
 
   if (player != 1) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(map->xcode.context), player,
            "Clearing Mechs off Newly Loaded Map");
     map_clearmechs(player, data, "");
     del_mapobjs(map);
@@ -439,19 +454,19 @@ void map_savemap(DbRef player, void *data, char *buffer) {
 
   map = (MAP *)data;
 
-  if (!CheckData(player, map))
-    return;
-
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(map->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Invalid number of arguments!");
   if (strlen(args[0]) >= MAP_NAME_SIZE)
     args[0][MAP_NAME_SIZE] = 0;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s", args[0]);
-  openfile = map_filename(args[0]);
-  DOCHECK(!openfile, "Unable to open the map file!");
+  notify_printf(btech_context_evaluation(map->xcode.context), player,
+                "Saving %s", args[0]);
+  openfile = map_filename(map, args[0]);
+  DOCHECK_CONTEXT(map->xcode.context, !openfile,
+                  "Unable to open the map file!");
   fp = my_open_file(openfile, "w", &filemode);
   free(openfile);
-  DOCHECK(!fp, "Unable to open the map file!");
+  DOCHECK_CONTEXT(map->xcode.context, !fp, "Unable to open the map file!");
   fprintf(fp, "%d %d\n", map->map_width, map->map_height);
   for (i = 0; i < map->map_height; i++) {
     mapobj *mo;
@@ -470,6 +485,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         else if (!(map->flags & MAPFLAG_FIRES)) {
           SetTerrain(map, j, i, ' ');
           SendEvent(
+              map->xcode.context,
               tprintf("[lost?] fire event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
@@ -482,6 +498,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         if (terrain == SMOKE) {
           SetTerrain(map, j, i, ' ');
           SendEvent(
+              map->xcode.context,
               tprintf("[lost?] smoke event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
@@ -496,7 +513,8 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   }
   if ((i = (map->flags & ~(MAPFLAG_MAPO))))
     fprintf(fp, "%d: %d %d\n", i, map->grav, map->temp);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
+  notify(btech_context_evaluation(map->xcode.context), player,
+         "Saving complete!");
   my_close_file(fp, &filemode);
 }
 
@@ -507,34 +525,36 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
   char *args[4];
 
   oldmap = (MAP *)data;
-  if (!CheckData(player, oldmap))
-    return;
-  DOCHECK(oldmap->mapobj[TYPE_BITS], "Invalid map for size change, sorry.");
-  DOCHECK((argc = mech_parseattributes(buffer, args, 4)) != 2,
-          "Invalid number of arguments (X/Y expected)");
+  DOCHECK_CONTEXT(oldmap->xcode.context, oldmap->mapobj[TYPE_BITS],
+                  "Invalid map for size change, sorry.");
+  DOCHECK_CONTEXT(oldmap->xcode.context,
+                  (argc = mech_parseattributes(buffer, args, 4)) != 2,
+                  "Invalid number of arguments (X/Y expected)");
   x = atoi(args[0]);
   y = atoi(args[1]);
-  DOCHECK(!((x >= 0) && (x <= MAPX) && (y >= 0) && (y <= MAPY)),
-          "X,Y out of range!");
+  DOCHECK_CONTEXT(oldmap->xcode.context,
+                  !((x >= 0) && (x <= MAPX) && (y >= 0) && (y <= MAPY)),
+                  "X,Y out of range!");
   /* allocate new map space */
   Create(map, unsigned char *, y);
   for (i = 0; i < y; i++)
     Create(map[i], unsigned char, x);
 
   if (failed)
-    SendMapError("Memory allocation failed in setmapsize!");
+    SendMapError(oldmap->xcode.context,
+                 "Memory allocation failed in setmapsize!");
   else {
     /* Initialize the hexes in the new map to blank */
     for (i = 0; i < y; i++)
       for (j = 0; j < x; j++)
-        SetMapB(map, j, i, ' ', 0);
+        SetMapB(&oldmap->xcode.context->map_coding, map, j, i, ' ', 0);
     /* Copy old map into new map */
     x1 = (oldmap->map_width < x) ? oldmap->map_width : x;
     y1 = (oldmap->map_height < y) ? oldmap->map_height : y;
     for (i = 0; i < y1; i++)
       for (j = 0; j < x1; j++)
-        SetMapB(map, j, i, GetTerrain(oldmap, j, i),
-                GetElevation(oldmap, j, i));
+        SetMapB(&oldmap->xcode.context->map_coding, map, j, i,
+                GetTerrain(oldmap, j, i), GetElevation(oldmap, j, i));
     /* Now free the old map */
     for (i = oldmap->map_height - 1; i >= 0; i--)
       free((char *)(oldmap->map[i]));
@@ -543,7 +563,8 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
     oldmap->map_height = y;
     oldmap->map_width = x;
     oldmap->map = map;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Size set.");
+    notify(btech_context_evaluation(oldmap->xcode.context), player,
+           "Size set.");
   }
 }
 
@@ -551,8 +572,8 @@ void map_clearmechs(DbRef player, void *data, char *buffer) {
   MAP *map;
 
   map = (MAP *)data;
-  if (CheckData(player, map))
-    ShutDownMap(player, map->mynum);
+  if (map != nullptr)
+    ShutDownMap(map->xcode.context, player, map->mynum);
 }
 
 extern void update_LOSinfo(DbRef, MAP *);
@@ -564,14 +585,14 @@ void map_update(DbRef obj, void *data) {
   int ma, ml, wind, wspeed, cloudbase = 200;
   int oldl, oldv, i, j;
 
-  /* Changed from % 25 to % 60. %60 never hit when
-     btech_context_active()->events->tick came here and was odd. % 25 should hit
-     when its odd or even (25 75 125... when odd 50 100 150... when even */
+  /* Changed from % 25 to % 60. %60 never hit when the event tick came here
+     and was odd. %25 should hit when it is odd or even. */
 
-  if (!(btech_context_active()->events->tick % 25)) {
+  if (!(map->xcode.context->events->tick % 25)) {
     oldl = map->maplight;
     oldv = map->mapvis;
-    if (!(tmps = silly_atr_get(obj, A_MAPVIS)) ||
+    if (!(tmps = btech_attribute_read(map->xcode.context->database, obj,
+                                      A_MAPVIS, (char[LBUF_SIZE]){0})) ||
         sscanf(tmps, "%d %d %d %d %d %[^\n]", &ma, &ml, &wind, &wspeed,
                &cloudbase, changemsg) < 4) {
       ma = 30;
@@ -590,7 +611,7 @@ void map_update(DbRef obj, void *data) {
       for (i = 0; i < map->first_free; i++) {
         if ((j = map->mechsOnMap[i]) < 0)
           continue;
-        if (!(mech = getMech(j)))
+        if (!(mech = btech_context_get_mech(map->xcode.context, j)))
           continue;
         if (ml != oldl)
           sensor_light_availability_check(mech);
@@ -665,39 +686,41 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
   int i;
   int count = 0;
   char valid[50];
-  char *ID;
+  MechId id;
   char *args[2];
   char *cmds[] = {"MECHS", "OBJS", NULL};
   enum { MECHS, OBJS };
 
   map = (MAP *)data;
 
-  if (!CheckData(player, map))
-    return;
-  DOCHECK(mech_parseattributes(buffer, args, 1) == 0,
-          "Supply target type too!");
+  DOCHECK_CONTEXT(map->xcode.context,
+                  mech_parseattributes(buffer, args, 1) == 0,
+                  "Supply target type too!");
   switch (listmatch(cmds, args[0])) {
   case MECHS:
-    notify(BTECH_EVALUATION_CONTEXT, player, "--- Mechs on Map ---");
+    notify(btech_context_evaluation(map->xcode.context), player,
+           "--- Mechs on Map ---");
     for (i = 0; i < map->first_free; i++) {
       if (map->mechsOnMap[i] != -1) {
-        tempMech = getMech(map->mechsOnMap[i]);
-        ID = MechIDS(tempMech, 0);
+        tempMech =
+            btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
+        id = mech_id(tempMech, false);
         if (tempMech)
           strcpy(valid, "Valid Data");
         else
           strcpy(valid, "Invalid Object Data!  Remove this Mech!");
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                      "Mech DB Number: %ld : [%s]\t%s", map->mechsOnMap[i], ID,
-                      valid);
+        notify_printf(btech_context_evaluation(map->xcode.context), player,
+                      "Mech DB Number: %ld : [%s]\t%s", map->mechsOnMap[i],
+                      id.text, valid);
         count++;
       }
     }
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d Mechs On Map", count);
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d positions open",
-                  MAX_MECHS_PER_MAP - count);
+    notify_printf(btech_context_evaluation(map->xcode.context), player,
+                  "%d Mechs On Map", count);
+    notify_printf(btech_context_evaluation(map->xcode.context), player,
+                  "%d positions open", MAX_MECHS_PER_MAP - count);
     if (count != map->first_free)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(map->xcode.context), player,
                     "%d is first free slot, according to db.", map->first_free);
     return;
     break;
@@ -706,22 +729,22 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
     return;
     break;
   }
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Invalid argument (%s)!",
-                args[0]);
+  notify_printf(btech_context_evaluation(map->xcode.context), player,
+                "Invalid argument (%s)!", args[0]);
   return;
 }
 
 void clear_hex(MECH *mech, int x, int y, int meant) {
   MAP *map;
 
-  if (!(map = getMap(mech->mapindex)))
+  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
   switch (GetTerrain(map, x, y)) {
   case HEAVY_FOREST:
     SetTerrain(map, x, y, LIGHT_FOREST);
     break;
   case LIGHT_FOREST:
-    if (Number(1, 2) == 1)
+    if (btech_random_range(map->xcode.context, 1, 2) == 1)
       SetTerrain(map, x, y, ROUGH);
     else
       SetTerrain(map, x, y, GRASSLAND);
@@ -738,14 +761,13 @@ void clear_hex(MECH *mech, int x, int y, int meant) {
   }
 }
 
-MAP *spath_map;
-
 void UpdateMechsTerrain(MAP *map, int x, int y, int t) {
   MECH *mech;
   int i;
 
   for (i = 0; i < map->first_free; i++) {
-    if (!(mech = FindObjectsData(map->mechsOnMap[i])))
+    if (!(mech =
+              btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
       continue;
     if (MechX(mech) != x || MechY(mech) != y)
       continue;

@@ -2,14 +2,15 @@
  * wiz.c -- Wizard-only commands
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/powers.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -26,7 +27,7 @@ void do_teleport(CommandInvocation *invocation) {
   char *arg1 = invocation->first;
   char *arg2 = invocation->second;
   ServerConfiguration *configuration =
-      invocation->context->server->configuration;
+      invocation->context->world->configuration;
   DbRef victim, destination, loc, exitloc;
   char *to;
   int hush = 0;
@@ -191,7 +192,7 @@ void do_force_prefixed(CommandInvocation *invocation) {
   char *command = invocation->first;
   char *cp;
 
-  cp = parse_to(invocation->context->server->configuration, &command, ' ', 0);
+  cp = parse_to(invocation->context->world->configuration, &command, ' ', 0);
   if (!command)
     return;
   while (*command && isspace(*command))
@@ -224,8 +225,8 @@ void do_force(CommandInvocation *invocation) {
    * force victim to do command
    */
 
-  wait_que(invocation->context->server->commands, victim, player, 0, NOTHING, 0,
-           command, args, nargs, invocation->context->evaluation.registers);
+  wait_que(invocation->context->runtime->commands, victim, player, 0, NOTHING,
+           0, command, args, nargs, invocation->context->evaluation.registers);
 }
 
 void do_newpassword(CommandInvocation *invocation) {
@@ -234,7 +235,7 @@ void do_newpassword(CommandInvocation *invocation) {
   char *name = invocation->first;
   char *password = invocation->second;
   ServerConfiguration *configuration =
-      invocation->context->server->configuration;
+      invocation->context->world->configuration;
   DbRef victim;
   char hashed_password[crypto_pwhash_STRBYTES];
   char *buf;
@@ -263,11 +264,11 @@ void do_newpassword(CommandInvocation *invocation) {
   }
   object_password_set(evaluation->world->database, victim, hashed_password);
   sodium_memzero(hashed_password, sizeof(hashed_password));
-  STARTLOG(&evaluation->server->log, LOG_WIZARD, "WIZ", "PASS") {
-    log_name(&evaluation->server->log, player);
+  STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "PASS") {
+    log_name(evaluation->log, player);
     log_text(" changed the password of ");
-    log_name(&evaluation->server->log, victim);
-    ENDLOG(&evaluation->server->log);
+    log_name(evaluation->log, victim);
+    ENDLOG(evaluation->log);
   }
   buf = alloc_lbuf("do_newpassword");
   notify_quiet(evaluation, player, "Password changed.");
@@ -297,14 +298,14 @@ void do_boot(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "That's not a number!");
       return;
     }
-    STARTLOG(&evaluation->server->log, LOG_WIZARD, "WIZ", "BOOT") {
+    STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
       buf = alloc_sbuf("do_boot.port");
       snprintf(buf, SBUF_SIZE, "Port %ld", victim);
       log_text(buf);
       log_text(" was @booted by ");
-      log_name(&evaluation->server->log, player);
+      log_name(evaluation->log, player);
       free_sbuf(buf);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
   } else {
     init_match(&invocation->context->match, player, name, TYPE_PLAYER);
@@ -324,11 +325,11 @@ void do_boot(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "You can only boot off other players!");
       return;
     }
-    STARTLOG(&evaluation->server->log, LOG_WIZARD, "WIZ", "BOOT") {
-      log_name_and_loc(&evaluation->server->log, victim);
+    STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
+      log_name_and_loc(evaluation->log, victim);
       log_text(" was @booted by ");
-      log_name(&evaluation->server->log, player);
-      ENDLOG(&evaluation->server->log);
+      log_name(evaluation->log, player);
+      ENDLOG(evaluation->log);
     }
     notify_quiet(evaluation, player,
                  tprintf("You booted %s off!",
@@ -346,10 +347,10 @@ void do_boot(CommandInvocation *invocation) {
   }
 
   if (key & BOOT_PORT)
-    count = boot_by_port(invocation->context->server->descriptors, (int)victim,
+    count = boot_by_port(invocation->context->runtime->descriptors, (int)victim,
                          !is_god(evaluation->world->database, player), buf);
   else
-    count = boot_off(invocation->context->server->descriptors, victim, buf);
+    count = boot_off(invocation->context->runtime->descriptors, victim, buf);
   notify_quiet(
       evaluation, player,
       tprintf("%d connection%s closed.", count, (count == 1 ? "" : "s")));
@@ -457,16 +458,16 @@ void do_global(CommandInvocation *invocation) {
    * Set or clear the indicated flag
    */
 
-  control = name_table_search(&invocation->context->server->database,
-                              invocation->context->server->configuration,
-                              player, enable_names, flag);
+  control = name_table_search(invocation->context->world->database,
+                              invocation->context->world->configuration, player,
+                              enable_names, flag);
   if (control < 0) {
     notify_quiet(evaluation, player, "I don't know about that flag.");
     return;
   }
 
   is_enabled =
-      global_control_value(invocation->context->server->configuration, control);
+      global_control_value(invocation->context->world->configuration, control);
   if (key == GLOB_ENABLE) {
     *is_enabled = true;
     if (!is_quiet(evaluation->world->database, player))

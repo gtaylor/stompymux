@@ -34,10 +34,10 @@ void inferno_burn(MECH *mech, int time) {
     return;
   }
 
-  l = mux_event_last_type_data(btech_context_active()->events, EVENT_BURN,
+  l = mux_event_last_type_data(mech->xcode.context->events, EVENT_BURN,
                                (void *)mech) +
       time;
-  mux_event_remove_type_data(btech_context_active()->events, EVENT_BURN,
+  mux_event_remove_type_data(mech->xcode.context->events, EVENT_BURN,
                              (void *)mech);
   MECHEVENT(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
@@ -45,11 +45,12 @@ void inferno_burn(MECH *mech, int time) {
 static void vehicle_burn_event(MuxEvent *objEvent) {
   MECH *objMech = (MECH *)objEvent->data; /* get the mech */
   long wLoc = (long)objEvent->data2;      /* and now the loc to damage */
-  int wDamRoll = Number(1, 6);            /* do 1d6 damage */
+  int wDamRoll;
   char strLocName[30];
 
   if (!objMech)
     return;
+  wDamRoll = btech_random_range(objMech->xcode.context, 1, 6);
 
   ArmorStringFromIndex(wLoc, strLocName, MechType(objMech), MechMove(objMech));
 
@@ -88,7 +89,7 @@ void vehicle_start_burn(MECH *objMech, MECH *objAttacker) {
 
   for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
     if (GetSectInt(objMech, wIter) && !BurningSide(objMech, wIter)) {
-      wDamage = Number(1, 6);
+      wDamage = btech_random_range(objMech->xcode.context, 1, 6);
       ArmorStringFromIndex(wIter, strLocName, MechType(objMech),
                            MechMove(objMech));
       mech_printf(objMech, MECHALL, "Your %s catches on fire!", strLocName);
@@ -119,10 +120,13 @@ void vehicle_extinquish_fire_event(MuxEvent *e) {
 void vehicle_extinquish_fire(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALS);
 
-  DOCHECK(Started(mech), "Your tank is started! You can not extinguish the "
-                         "flames while your tank is started!");
-  DOCHECK(!Burning(mech), "This unit is not on fire!");
-  DOCHECK(Extinguishing(mech), "You're already trying to put out the fire!");
+  DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
+                  "Your tank is started! You can not extinguish the "
+                  "flames while your tank is started!");
+  DOCHECK_CONTEXT(mech->xcode.context, !Burning(mech),
+                  "This unit is not on fire!");
+  DOCHECK_CONTEXT(mech->xcode.context, Extinguishing(mech),
+                  "You're already trying to put out the fire!");
 
   mech_notify(mech, MECHALL, "You begin to extinguish the fires!");
 
@@ -136,13 +140,13 @@ void vehicle_extinquish_fire(DbRef player, MECH *mech, char *buffer) {
  */
 void water_extinguish_inferno(MECH *mech) {
   int elev = MechElevation(mech);
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!InWater(mech) || MechType(mech) != CLASS_MECH || !Jellied(mech) ||
       (elev == -1 && !Fallen(mech)))
     return;
 
-  mux_event_remove_type_data(btech_context_active()->events, EVENT_BURN,
+  mux_event_remove_type_data(mech->xcode.context->events, EVENT_BURN,
                              (void *)mech);
   MechCritStatus(mech) &= ~JELLIED;
 
@@ -156,7 +160,7 @@ void water_extinguish_inferno(MECH *mech) {
 }
 
 void checkVehicleInFire(MECH *objMech, int fromHexFire) {
-  int wRoll = Roll();
+  int wRoll = btech_random_roll(objMech->xcode.context);
   int wIter;
   int wDamage = 0;
 
@@ -202,7 +206,7 @@ void checkVehicleInFire(MECH *objMech, int fromHexFire) {
                 "%cr%chThe fire sweeps across your unit damaging it!%cn");
 
     for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-      wDamage = Number(1, 6);
+      wDamage = btech_random_range(objMech->xcode.context, 1, 6);
 
       if (GetSectInt(objMech, wIter))
         DamageMech(objMech, objMech, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,

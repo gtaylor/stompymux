@@ -14,14 +14,15 @@
 #include "mux/commands/command_context.h"
 
 /* glue.scode.c */
-char *mechIDfunc(int mode, MECH *mech);
+char *mechIDfunc(MECH *mech, char buffer[static LBUF_SIZE]);
 char *mechTypefunc(int mode, MECH *mech, char *arg);
 char *mechMovefunc(int mode, MECH *mech, char *arg);
-char *mechTechTimefunc(int mode, MECH *mech);
+char *mechTechTimefunc(MECH *mech, char buffer[static LBUF_SIZE]);
 void apply_mechDamage(MECH *omech, char *buf);
-char *mechDamagefunc(int mode, MECH *mech, char *arg);
-char *mechCentBearingfunc(int mode, MECH *mech, char *arg);
-char *mechCentDistfunc(int mode, MECH *mech, char *arg);
+char *mechDamagefunc(int mode, MECH *mech, char *arg,
+                     char buffer[static LBUF_SIZE]);
+char *mechCentBearingfunc(MECH *mech, char buffer[static LBUF_SIZE]);
+char *mechCentDistfunc(MECH *mech, char buffer[static LBUF_SIZE]);
 void fun_btsetxcodevalue(char *buff, char **bufc, DbRef player, DbRef cause,
                          char *fargs[], int nfargs, char *cargs[], int ncargs,
                          EvaluationContext *context);
@@ -45,7 +46,7 @@ void fun_btmapterr(char *buff, char **bufc, DbRef player, DbRef cause,
 void fun_btmapelev(char *buff, char **bufc, DbRef player, DbRef cause,
                    char *fargs[], int nfargs, char *cargs[], int ncargs,
                    EvaluationContext *context);
-void list_xcodevalues(DbRef player);
+void list_xcodevalues(EvaluationContext *context, DbRef player);
 void fun_btdesignex(char *buff, char **bufc, DbRef player, DbRef cause,
                     char *fargs[], int nfargs, char *cargs[], int ncargs,
                     EvaluationContext *context);

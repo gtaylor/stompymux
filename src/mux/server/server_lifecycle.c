@@ -2,7 +2,9 @@
  * Server startup, service shutdown, and libuv lifecycle orchestration.
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/server/libuv.h"
 #include <errno.h>
@@ -25,7 +27,6 @@
 #include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/maintenance.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
@@ -79,34 +80,32 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
 
   forward_list = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
   text = alloc_lbuf("process_preload.string");
-  DO_WHOLE_DB(&lifecycle->maintenance->server->database, thing) {
-    if (is_going(&lifecycle->maintenance->server->database, thing))
+  DO_WHOLE_DB(lifecycle->maintenance->database, thing) {
+    if (is_going(lifecycle->maintenance->database, thing))
       continue;
 
     do_top(lifecycle->maintenance->commands, 10);
-    ITER_PARENTS(&lifecycle->maintenance->server->database,
+    ITER_PARENTS(lifecycle->maintenance->database,
                  lifecycle->maintenance->configuration, thing, parent, level) {
-      if (game_object_flags(&lifecycle->maintenance->server->database, thing) &
+      if (game_object_flags(lifecycle->maintenance->database, thing) &
           HAS_STARTUP) {
-        did_it(
-            &lifecycle->maintenance->command->evaluation,
-            game_object_owner(&lifecycle->maintenance->server->database, thing),
-            thing, 0, nullptr, 0, nullptr, A_STARTUP, nullptr, 0);
+        did_it(&lifecycle->maintenance->command->evaluation,
+               game_object_owner(lifecycle->maintenance->database, thing),
+               thing, 0, nullptr, 0, nullptr, A_STARTUP, nullptr, 0);
         do_second(lifecycle->maintenance->commands);
         do_top(lifecycle->maintenance->commands, 10);
         break;
       }
     }
 
-    if (has_fwdlist(&lifecycle->maintenance->server->database, thing)) {
-      (void)attribute_get_string(&lifecycle->maintenance->server->database,
-                                 text, thing, A_FORWARDLIST, &aowner, &aflags);
+    if (has_fwdlist(lifecycle->maintenance->database, thing)) {
+      (void)attribute_get_string(lifecycle->maintenance->database, text, thing,
+                                 A_FORWARDLIST, &aowner, &aflags);
       if (*text) {
         fwdlist_load(&lifecycle->maintenance->command->evaluation, forward_list,
                      GOD, text);
         if (forward_list->count > 0)
-          fwdlist_set(&lifecycle->maintenance->server->database, thing,
-                      forward_list);
+          fwdlist_set(lifecycle->maintenance->database, thing, forward_list);
       }
     }
   }
@@ -172,7 +171,7 @@ ServerLifecycle *server_lifecycle_create(MaintenanceContext *maintenance) {
   lifecycle->event_loop_initialized = true;
   lifecycle->maintenance = maintenance;
   lifecycle->sockets =
-      telnet_sockets_create(&lifecycle->event_loop, maintenance->server);
+      telnet_sockets_create(&lifecycle->event_loop, maintenance->connections);
   if (lifecycle->sockets == nullptr) {
     uv_loop_close(&lifecycle->event_loop);
     free(lifecycle);
@@ -200,7 +199,7 @@ uv_loop_t *server_lifecycle_loop(ServerLifecycle *lifecycle) {
 void server_lifecycle_prepare(ServerLifecycle *lifecycle) {
   srandom((unsigned int)getpid());
   lifecycle->signals = signal_handlers_create(server_lifecycle_loop(lifecycle),
-                                              lifecycle->maintenance->server);
+                                              lifecycle->maintenance->control);
 }
 
 void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle) {
@@ -214,9 +213,9 @@ int server_lifecycle_boot(ServerLifecycle *lifecycle, int mindb) {
 
   lifecycle->maintenance->clock->now = time(nullptr);
   if (!lua_initialize(lifecycle->maintenance->lua,
-                      lifecycle->maintenance->server, lua_error,
+                      lifecycle->maintenance->lua_services, lua_error,
                       sizeof(lua_error))) {
-    log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI", "LUA",
+    log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "LUA",
               "Unable to initialize Lua: %s", lua_error);
     return 0;
   }
@@ -238,7 +237,7 @@ void server_lifecycle_run(ServerLifecycle *lifecycle, int port) {
           lifecycle->queue_timer,
           (uint64_t)lifecycle->maintenance->configuration->timeslice,
           (uint64_t)lifecycle->maintenance->configuration->timeslice)) {
-    log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI", "EVENT",
+    log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "EVENT",
               "Unable to create queue timer.");
     return;
   }
@@ -283,7 +282,7 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
   }
   server_timer_destroy(lifecycle->timer);
   lifecycle->timer = nullptr;
-  heartbeat_stop();
+  heartbeat_stop(lifecycle->maintenance->btech);
   lua_shutdown(lifecycle->maintenance->lua);
   signal_handlers_destroy(lifecycle->signals);
   lifecycle->signals = nullptr;
@@ -304,8 +303,7 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
     if (status == 0)
       lifecycle->event_loop_initialized = false;
     else
-      log_error(&lifecycle->maintenance->server->log, LOG_ALWAYS, "INI",
-                "EVENT", "Unable to close libuv event loop: %s",
-                uv_strerror(status));
+      log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "EVENT",
+                "Unable to close libuv event loop: %s", uv_strerror(status));
   }
 }

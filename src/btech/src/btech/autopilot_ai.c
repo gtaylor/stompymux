@@ -36,22 +36,38 @@
 #define NORM_SAFE 32
 #define MAX_SIM_PATHS 40
 
-typedef struct {
+typedef struct LocationSimulation LocationSimulation;
+struct LocationSimulation {
   int e, t;
   float s, ds;
   float fx, fy;
   short x, y, lx, ly;
   int h;
   int dh;
-} LOC;
+};
+
+typedef struct AiPathUnitSimulation AiPathUnitSimulation;
+struct AiPathUnitSimulation {
+  LocationSimulation location;
+  MECH *mech;
+  bool out;
+};
+
+typedef struct AiPathContext AiPathContext;
+struct AiPathContext {
+  AiPathUnitSimulation enemies[MAX_MECHS_PER_MAP];
+  int enemy_count;
+  AiPathUnitSimulation friends[MAX_MECHS_PER_MAP];
+  int friend_count;
+};
 
 enum { SP_OPT_NORM, SP_OPT_FASTER, SP_OPT_SLOWER, SP_OPT_C };
-int sp_opt[SP_OPT_C] = {0, 1,
-                        -1}; /* We prefer to keep at same speed, however */
+static const int sp_opt[SP_OPT_C] = {
+    0, 1, -1}; /* We prefer to keep at same speed, however */
 
 #define MNORM_COUNT 37
 
-int move_norm_opt[MNORM_COUNT][2] = {
+static const int move_norm_opt[MNORM_COUNT][2] = {
     {0, SP_OPT_FASTER},    {0, SP_OPT_NORM},     {0, SP_OPT_SLOWER},
     {-1, SP_OPT_NORM},     {1, SP_OPT_NORM},     {-2, SP_OPT_NORM},
     {2, SP_OPT_NORM},      {-3, SP_OPT_NORM},    {3, SP_OPT_NORM},
@@ -69,28 +85,28 @@ int move_norm_opt[MNORM_COUNT][2] = {
 #define CFAST_COUNT 9
 
 /* Update: Just do subset if we're in silly mood */
-int combat_fast_opt[CFAST_COUNT][2] = {
+static const int combat_fast_opt[CFAST_COUNT][2] = {
     {0, SP_OPT_FASTER}, {0, SP_OPT_NORM},   {0, SP_OPT_SLOWER},
     {-10, SP_OPT_NORM}, {10, SP_OPT_NORM},  {-30, SP_OPT_NORM},
     {30, SP_OPT_NORM},  {-60, SP_OPT_NORM}, {60, SP_OPT_NORM}};
 
 void sendAIM(AUTO *a, MECH *m, char *msg) {
   auto_reply(m, msg);
-  SendAI(msg);
+  SendAI(a->xcode.context, msg);
 }
 
-char *AI_Info(MECH *m, AUTO *a) {
-  static char buf[MBUF_SIZE];
+AiInfo ai_info(MECH *m, AUTO *a) {
+  AiInfo info;
 
-  snprintf(buf, MBUF_SIZE, "Unit#%ld on #%ld [A#%ld]:", m->mynum, m->mapindex,
-           a->mynum);
-  return buf;
+  snprintf(info.text, sizeof(info.text), "Unit#%ld on #%ld [A#%ld]:", m->mynum,
+           m->mapindex, a->mynum);
+  return info;
 }
 
 extern float terrain_speed(MECH *mech, float tempspeed, float maxspeed,
                            int terrain, int elev);
 
-static int ai_crash(MAP *map, MECH *m, LOC *l) {
+static int ai_crash(MAP *map, MECH *m, LocationSimulation *l) {
   float newx = 0.0, newy = 0.0;
   float tempspeed, maxspeed, acc;
   int offset;
@@ -148,7 +164,7 @@ static int ai_crash(MAP *map, MECH *m, LOC *l) {
       (MechMove(m) != MOVE_FLY || Landed(m)))
     tempspeed = terrain_speed(m, tempspeed, maxspeed, l->t, l->e);
   if (ch) {
-    if (btech_context_active()->configuration->btech_slowdown == 2) {
+    if (m->xcode.context->configuration->btech_slowdown == 2) {
       int dif = MechFacing(m) - MechDesiredFacing(m);
 
       if (dif < 0)
@@ -159,7 +175,7 @@ static int ai_crash(MAP *map, MECH *m, LOC *l) {
         dif = (dif - 1) / 30 + 2;
         tempspeed = tempspeed * (10 - dif) / 10;
       }
-    } else if (btech_context_active()->configuration->btech_slowdown == 1) {
+    } else if (m->xcode.context->configuration->btech_slowdown == 1) {
       if (l->h != l->dh)
         tempspeed = tempspeed * 2.0 / 3.0;
       else
@@ -268,49 +284,29 @@ static int ai_crash(MAP *map, MECH *m, LOC *l) {
   return 0;
 }
 
-static void LOCInit(LOC *l, MECH *m) {
-  l->fx = MechFX(m);
-  l->fy = MechFY(m);
-  l->e = MechElevation(m);
-  l->h = MechFacing(m);
-  l->dh = MechDesiredFacing(m);
-  l->s = MechSpeed(m);
-  l->t = MechRTerrain(m);
-  l->ds = MechDesiredSpeed(m);
-  l->x = MechX(m);
-  l->y = MechY(m);
-  l->lx = MechX(m);
-  l->ly = MechY(m);
+static void location_simulation_initialize(LocationSimulation *location,
+                                           MECH *mech) {
+  location->fx = MechFX(mech);
+  location->fy = MechFY(mech);
+  location->e = MechElevation(mech);
+  location->h = MechFacing(mech);
+  location->dh = MechDesiredFacing(mech);
+  location->s = MechSpeed(mech);
+  location->t = MechRTerrain(mech);
+  location->ds = MechDesiredSpeed(mech);
+  location->x = MechX(mech);
+  location->y = MechY(mech);
+  location->lx = MechX(mech);
+  location->ly = MechY(mech);
 }
 
-static LOC enemy_l[MAX_MECHS_PER_MAP];
-static MECH *enemy_m[MAX_MECHS_PER_MAP]; /* Hopefully no more mechs on map */
-static int
-    enemy_o[MAX_MECHS_PER_MAP]; /* 'out' = not moving anymore (crashed?) */
-static int enemy_i[MAX_MECHS_PER_MAP]; /* dbref */
-static int enemy_c = 0;                /* Number of enemies */
-
-static LOC friend_l[MAX_MECHS_PER_MAP];
-static MECH *friend_m[MAX_MECHS_PER_MAP]; /* Hopefully no more mechs on map */
-static int
-    friend_o[MAX_MECHS_PER_MAP]; /* 'out' = not moving anymore (crashed?) */
-static int friend_i[MAX_MECHS_PER_MAP]; /* dbref */
-static int friend_c = 0;                /* Number of enemies */
-
-int getEnemies(MECH *mech, MAP *map, int reset) {
+static void ai_path_collect_enemies(AiPathContext *path, MECH *mech, MAP *map) {
   MECH *tempMech;
   int i;
 
-  if (reset) {
-    for (i = 0; i < enemy_c; i++) {
-      LOCInit(&enemy_l[i], enemy_m[i]); /* Just reset location */
-      enemy_o[i] = 0;
-    }
-    return 0;
-  }
-  enemy_c = 0;
+  path->enemy_count = 0;
   for (i = 0; i < map->first_free; i++) {
-    tempMech = FindObjectsData(map->mechsOnMap[i]);
+    tempMech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
     if (!tempMech)
       continue;
     if (Destroyed(tempMech))
@@ -321,28 +317,22 @@ int getEnemies(MECH *mech, MAP *map, int reset) {
       continue;
     if (FlMechRange(map, mech, tempMech) > 50.0)
       continue; /* Inconsequential */
-    /* Something that is _possibly_ unnerving */
-    LOCInit(&enemy_l[enemy_c], tempMech); /* Location */
-    enemy_m[enemy_c] = tempMech;          /* Mech data */
-    enemy_i[enemy_c++] = i;
+    if (path->enemy_count >= MAX_MECHS_PER_MAP)
+      break;
+    AiPathUnitSimulation *enemy = &path->enemies[path->enemy_count++];
+    location_simulation_initialize(&enemy->location, tempMech);
+    enemy->mech = tempMech;
+    enemy->out = false;
   }
-  return enemy_c;
 }
 
-int getFriends(MECH *mech, MAP *map, int reset) {
+static void ai_path_collect_friends(AiPathContext *path, MECH *mech, MAP *map) {
   MECH *tempMech;
   int i;
 
-  if (reset) {
-    for (i = 0; i < friend_c; i++) {
-      LOCInit(&friend_l[i], friend_m[i]); /* Just reset location */
-      friend_o[i] = 0;
-    }
-    return 0;
-  }
-  friend_c = 0;
+  path->friend_count = 0;
   for (i = 0; i < map->first_free; i++) {
-    tempMech = FindObjectsData(map->mechsOnMap[i]);
+    tempMech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
     if (!tempMech)
       continue;
     if (Destroyed(tempMech))
@@ -352,12 +342,14 @@ int getFriends(MECH *mech, MAP *map, int reset) {
     if (MechType(tempMech) != CLASS_MECH)
       continue;
     if (FlMechRange(map, mech, tempMech) > 50.0)
-      continue;                             /* Inconsequential */
-    LOCInit(&friend_l[friend_c], tempMech); /* Location */
-    friend_m[friend_c] = tempMech;          /* Mech data */
-    friend_i[friend_c++] = i;
+      continue; /* Inconsequential */
+    if (path->friend_count >= MAX_MECHS_PER_MAP)
+      break;
+    AiPathUnitSimulation *friend = &path->friends[path->friend_count++];
+    location_simulation_initialize(&friend->location, tempMech);
+    friend->mech = tempMech;
+    friend->out = false;
   }
-  return friend_c;
 }
 
 /* This has been made .. slightly more complicated.
@@ -376,12 +368,13 @@ int getFriends(MECH *mech, MAP *map, int reset) {
   a = b
 #define FU(a, b, c, s) ((b) == (c) ? 0 : (s) * ((a) - (b)) / ((c) - (b)))
 
-void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
-                   int gotenemy, float dx, float dy, float delx, float dely,
-                   int *rl, int *bd, int *bscore) {
+static void ai_path_score(AiPathContext *path, MECH *m, MAP *map, AUTO *a,
+                          const int opts[][2], int num_o, bool gotenemy,
+                          float dx, float dy, float delx, float dely, int *rl,
+                          int *bd, int *bscore) {
   int i, j, k, l, bearing;
   int sd, sc;
-  LOC lo[MAX_SIM_PATHS];
+  LocationSimulation lo[MAX_SIM_PATHS];
   int dan[MAX_SIM_PATHS], tdan[MAX_SIM_PATHS], msc[MAX_SIM_PATHS],
       bsc[MAX_SIM_PATHS];
   int out[MAX_SIM_PATHS], stack[MAX_SIM_PATHS], br[MAX_SIM_PATHS];
@@ -394,7 +387,7 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
     out[i] = 0;
     stack[i] = 0;
     br[i] = 9999;
-    LOCInit(&lo[i], m);
+    location_simulation_initialize(&lo[i], m);
     lo[i].dh = AcceptableDegree(lo[i].dh + opts[i][0]);
     sd = sp_opt[opts[i][1]];
     if (sd) {
@@ -448,11 +441,11 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
     }
     if (MechType(m) == CLASS_MECH) {
       /* Simulate friends */
-      for (j = 0; j < friend_c; j++) {
-        if (friend_o[j])
+      for (j = 0; j < path->friend_count; j++) {
+        if (path->friends[j].out)
           continue;
-        if (ai_crash(map, friend_m[j], &friend_l[j]))
-          friend_o[j] = 1;
+        if (ai_crash(map, path->friends[j].mech, &path->friends[j].location))
+          path->friends[j].out = true;
       }
       for (k = 0; k < num_o; k++) {
         int stack_count = 0;
@@ -460,19 +453,23 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
         if (out[k] || stack[k])
           continue;
         /* Meaning of stack: Someone moves _into_ the hex */
-        for (j = 0; j < friend_c; j++)
-          if (!friend_o[j])
-            if (lo[k].x == friend_l[j].x && lo[k].y == friend_l[j].y)
+        for (j = 0; j < path->friend_count; j++)
+          if (!path->friends[j].out)
+            if (lo[k].x == path->friends[j].location.x &&
+                lo[k].y == path->friends[j].location.y)
               stack_count++;
         if (stack_count > 1) { /* Possible stackage */
           int osc = stack_count;
 
-          for (j = 0; j < friend_c; j++)
-            if (!friend_o[j])
-              if (lo[k].x == friend_l[j].x && lo[k].y == friend_l[j].y)
+          for (j = 0; j < path->friend_count; j++)
+            if (!path->friends[j].out)
+              if (lo[k].x == path->friends[j].location.x &&
+                  lo[k].y == path->friends[j].location.y)
                 if ((lo[k].lx != lo[k].x || lo[k].ly != lo[k].y) ||
-                    (friend_l[j].lx != friend_l[j].x ||
-                     friend_l[j].ly != friend_l[j].y))
+                    (path->friends[j].location.lx !=
+                         path->friends[j].location.x ||
+                     path->friends[j].location.ly !=
+                         path->friends[j].location.y))
                   osc--;
           if (osc != stack_count)
             stack[k] = i + 1;
@@ -483,16 +480,16 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
     }
     if (gotenemy) {
       /* Update enemy locations as well */
-      for (j = 0; j < enemy_c; j++) {
-        if (enemy_o[j])
+      for (j = 0; j < path->enemy_count; j++) {
+        if (path->enemies[j].out)
           continue;
-        if (ai_crash(map, enemy_m[j], &enemy_l[j]))
-          enemy_o[j] = 1;
+        if (ai_crash(map, path->enemies[j].mech, &path->enemies[j].location))
+          path->enemies[j].out = true;
         for (k = 0; k < num_o; k++) {
           if (out[k])
             continue;
-          if ((l = MyHexDist(lo[k].x, lo[k].y, enemy_l[j].x, enemy_l[j].y,
-                             0)) >= 100)
+          if ((l = MyHexDist(lo[k].x, lo[k].y, path->enemies[j].location.x,
+                             path->enemies[j].location.y, 0)) >= 100)
             continue;
           switch (a->auto_cmode) {
           case 0: /* Withdraw */
@@ -520,7 +517,8 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
           /* Arcs can be .. dangerous */
           if (MechType(m) == CLASS_MECH) {
             bearing =
-                FindBearing(lo[k].fx, lo[k].fy, enemy_l[j].fx, enemy_l[j].fy);
+                FindBearing(lo[k].fx, lo[k].fy, path->enemies[j].location.fx,
+                            path->enemies[j].location.fy);
             bearing = lo[k].h - bearing;
             if (bearing < 0)
               bearing += 360;
@@ -534,7 +532,8 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
             }
           } else if (MechType(m) == CLASS_VEH_GROUND) {
             bearing =
-                FindBearing(lo[k].fx, lo[k].fy, enemy_l[j].fx, enemy_l[j].fy);
+                FindBearing(lo[k].fx, lo[k].fy, path->enemies[j].location.fx,
+                            path->enemies[j].location.fy);
             bearing = lo[k].h - bearing;
             if (bearing < 0)
               bearing += 360;
@@ -571,8 +570,8 @@ void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
           l = FindXYRange(lo[k].fx, lo[k].fy, dx, dy);
           if (gotenemy && (delx != 0.0 || dely != 0.0))
             tdan[k] += MIN(100, l * l);
-          if (enemy_c)
-            tdan[k] = tdan[k] / enemy_c;
+          if (path->enemy_count)
+            tdan[k] = tdan[k] / path->enemy_count;
           /* It's inherently dangerous to move slowly: */
           if (lo[k].s <= MP2)
             tdan[k] += 400;
@@ -719,19 +718,20 @@ void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
   ai_set_heading(m, a, MechDesiredFacing(m) + hmod);
   switch (smod) {
   default:
-    SendAI("%s state: %s (hmod:%d) sc:%d", AI_Info(m, a), text, hmod, b_score);
+    SendAI(a->xcode.context, "%s state: %s (hmod:%d) sc:%d", ai_info(m, a).text,
+           text, hmod, b_score);
     break;
   case SP_OPT_FASTER:
-    SendAI("%s state: %s+accelerating (hmod:%d) sc:%d", AI_Info(m, a), text,
-           hmod, b_score);
+    SendAI(a->xcode.context, "%s state: %s+accelerating (hmod:%d) sc:%d",
+           ai_info(m, a).text, text, hmod, b_score);
     ai_set_speed(
         m, a,
         (float)((MechDesiredSpeed(m) < MP1 ? MP1 : MechDesiredSpeed(m)) * 4.0 /
                 3.0));
     break;
   case SP_OPT_SLOWER:
-    SendAI("%s state: %s+decelerating (hmod:%d) sc:%d", AI_Info(m, a), text,
-           hmod, b_score);
+    SendAI(a->xcode.context, "%s state: %s+decelerating (hmod:%d) sc:%d",
+           ai_info(m, a).text, text, hmod, b_score);
     ai_set_speed(m, a, (int)(MechDesiredSpeed(m) * 2.0 / 3.0));
     break;
   }
@@ -741,12 +741,13 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
                   float dely) {
   int o;
   int b_len, bl, b, b_score;
-  MAP *map = getMap(m->mapindex);
+  AiPathContext path = {0};
+  MAP *map = btech_context_get_map(m->xcode.context, m->mapindex);
 
   o = ai_opponents(a, m);
-  if (a->last_upd > btech_context_active()->clock->now ||
-      (btech_context_active()->clock->now - a->last_upd) > AUTO_GOET) {
-    if ((btech_context_active()->events->tick - a->last_upd) > AUTO_GOTT) {
+  if (a->last_upd > m->xcode.context->clock->now ||
+      (m->xcode.context->clock->now - a->last_upd) > AUTO_GOET) {
+    if ((m->xcode.context->events->tick - a->last_upd) > AUTO_GOTT) {
       a->b_msc = MAGIC_NUM;
       a->w_msc = MAGIC_NUM;
       a->b_bsc = MAGIC_NUM;
@@ -760,26 +761,26 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
       UNREF(a->w_dan, a->b_dan, 8);
       a->b_dan = MAX(a->b_dan, (40 + 20 * 29 + 100) * 30); /* To stay focused */
     }
-    a->last_upd = btech_context_active()->clock->now;
+    a->last_upd = m->xcode.context->clock->now;
   }
   /* Got either opponents (nasty) or [possibly] blocked path (slightly nasty),
    * i.e. 12sec */
   if (MechType(m) == CLASS_MECH)
-    getFriends(m, map, 0);
+    ai_path_collect_friends(&path, m, map);
   if (o) {
-    getEnemies(m, map, 0);
-    if (!((btech_context_active()->events->tick / AUTOPILOT_GOTO_TICK) %
+    ai_path_collect_enemies(&path, m, map);
+    if (!((m->xcode.context->events->tick / AUTOPILOT_GOTO_TICK) %
           4)) { /* Just every fourth tick, i.e. 12sec */
       /* Thorough check */
-      ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 1, dx, dy, delx,
-                    dely, &bl, &b, &b_score);
+      ai_path_score(&path, m, map, a, move_norm_opt, MNORM_COUNT, true, dx, dy,
+                    delx, dely, &bl, &b, &b_score);
       b_len = b_score / SAFE_SCORE;
       if (b_len >= MIN_SAFE)
         ai_adjust_move(a, m, "combat(/twitchy)", move_norm_opt[b][0],
                        move_norm_opt[b][1], b_score);
     } else {
-      ai_path_score(m, map, a, combat_fast_opt, CFAST_COUNT, 1, dx, dy, delx,
-                    dely, &bl, &b, &b_score);
+      ai_path_score(&path, m, map, a, combat_fast_opt, CFAST_COUNT, true, dx,
+                    dy, delx, dely, &bl, &b, &b_score);
       b_len = b_score / SAFE_SCORE;
       if (b_len >= MIN_SAFE)
         ai_adjust_move(a, m, "[f]combat(/twitchy)", combat_fast_opt[b][0],
@@ -787,18 +788,18 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
     }
     return 1; /* We want to keep fighting near foes */
   }
-  if (!((btech_context_active()->events->tick / AUTOPILOT_GOTO_TICK) %
+  if (!((m->xcode.context->events->tick / AUTOPILOT_GOTO_TICK) %
         4)) { /* Just every fourth tick, i.e. 12sec */
     /* Thorough check */
-    ai_path_score(m, map, a, move_norm_opt, MNORM_COUNT, 0, dx, dy, delx, dely,
-                  &bl, &b, &b_score);
+    ai_path_score(&path, m, map, a, move_norm_opt, MNORM_COUNT, false, dx, dy,
+                  delx, dely, &bl, &b, &b_score);
     b_len = b_score / SAFE_SCORE;
     if (b_len >= MIN_SAFE)
       ai_adjust_move(a, m, "moving", move_norm_opt[b][0], move_norm_opt[b][1],
                      b_score);
   } else {
-    ai_path_score(m, map, a, combat_fast_opt, CFAST_COUNT, 0, dx, dy, delx,
-                  dely, &bl, &b, &b_score);
+    ai_path_score(&path, m, map, a, combat_fast_opt, CFAST_COUNT, false, dx, dy,
+                  delx, dely, &bl, &b, &b_score);
     b_len = b_score / SAFE_SCORE;
     if (b_len >= MIN_SAFE)
       ai_adjust_move(a, m, "[f]moving", combat_fast_opt[b][0],
@@ -810,7 +811,7 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
 
   /* Slow down + stop - no sense in dying needlessly */
   ai_stop(m, a);
-  SendAI("%s state: panic", AI_Info(m, a));
+  SendAI(a->xcode.context, "%s state: panic", ai_info(m, a).text);
   sendAIM(a, m, "PANIC! Unable to comply with order.");
   return 0;
 }
@@ -828,18 +829,18 @@ void ai_init(AUTO *a, MECH *m) {
   a->target = -1;
 }
 
-static MECH *target_mech;
-
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 
-static int mech_snipe_func(MECH *mech, DbRef player, int index, int high) {
+static int mech_snipe_func(MECH *mech, DbRef player, int index, int high,
+                           void *context) {
   /* Simulate mech movements until flight_time <= now */
   int now = 0, crashed = 0;
   int flt_time;
-  LOC t;
-  MAP *map = getMap(mech->mapindex);
+  LocationSimulation t;
+  MECH *target_mech = context;
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
-  LOCInit(&t, target_mech);
+  location_simulation_initialize(&t, target_mech);
   while ((flt_time = artillery_round_flight_time(MechFX(mech), MechFY(mech),
                                                  t.fx, t.fy)) > now) {
     if (!crashed)
@@ -857,15 +858,19 @@ static int mech_snipe_func(MECH *mech, DbRef player, int index, int high) {
 void mech_snipe(DbRef player, MECH *mech, char *buffer) {
   char *args[3];
   DbRef d;
+  MECH *target_mech;
 
-  DOCHECK(!is_wizard(btech_context_active()->database, player),
-          "Permission denied.");
-  DOCHECK(mech_parseattributes(buffer, args, 3) != 2,
-          "Please supply target ID _and_ weapon(s) to use");
-  DOCHECK((d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
-          "Invalid target!");
-  target_mech = getMech(d);
-  multi_weap_sel(mech, player, args[1], 1, mech_snipe_func);
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !is_wizard(mech->xcode.context->database, player),
+                  "Permission denied.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 3) != 2,
+                  "Please supply target ID _and_ weapon(s) to use");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
+                  "Invalid target!");
+  target_mech = btech_context_get_mech(mech->xcode.context, d);
+  multi_weap_sel(mech, player, args[1], 1, mech_snipe_func, target_mech);
 }
 
 /* Experimental (highly) path finding system based on the A* 'a-star'
@@ -908,7 +913,8 @@ int astar_compare(int a, int b, void *arg) { return a - b; }
 void astar_release(void *key, void *data) { free(data); }
 int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
                              short end_y) {
-  MAP *map = getMap(autopilot->mapindex);
+  MAP *map =
+      btech_context_get_map(autopilot->xcode.context, autopilot->mapindex);
   int found_path = 0;
 
   /* Our bit arrays */

@@ -15,7 +15,6 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.sensor.h"
-#include "mt19937ar.h"
 #include "mux/database/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
@@ -65,20 +64,20 @@ void explode_unit(MECH *wounded, MECH *attacker) {
 
   from = wounded->mynum;
 
-  SAFE_DOLIST(btech_context_active()->database, i, tmpnext,
-              game_object_contents(btech_context_active()->database, from)) {
-    if (is_good_obj(btech_context_active()->database, i) &&
-        is_hardcode(btech_context_active()->database, i)) {
-      if ((target = getMech(i))) {
+  SAFE_DOLIST(wounded->xcode.context->database, i, tmpnext,
+              game_object_contents(wounded->xcode.context->database, from)) {
+    if (is_good_obj(wounded->xcode.context->database, i) &&
+        is_hardcode(wounded->xcode.context->database, i)) {
+      if ((target = btech_context_get_mech(wounded->xcode.context, i))) {
         if (MechType(target) == CLASS_BSUIT) {
-          KillMechContentsIfIC(target->mynum);
+          KillMechContentsIfIC(target);
           discard_mw(target);
         }
       }
     }
   }
 
-  KillMechContentsIfIC(wounded->mynum);
+  KillMechContentsIfIC(wounded);
   for (j = 0; j < NUM_SECTIONS; j++) {
     if (GetSectOInt(wounded, j) && !SectIsDestroyed(wounded, j))
       DestroySection(wounded, attacker, wounded == attacker ? 0 : 1, j);
@@ -331,7 +330,7 @@ int handleWeaponCrit(MECH *attacker, MECH *wounded, int hitloc, int critHit,
                      int critType, int LOS) {
   int wMaxCrits, wFirstCrit, wWeapDestroyed = 0;
   int wAmmoSection, wAmmoCritSlot;
-  int damage, loop;
+  int damage;
   char locname[30];
   char msgbuf[MBUF_SIZE] = {0};
 
@@ -382,7 +381,8 @@ int handleWeaponCrit(MECH *attacker, MECH *wounded, int hitloc, int critHit,
       /* Rule Reference: MaxTech Revised, Page 46 (Reduce by 1 because of pain
        * resistance) */
 
-      if (HasBoolAdvantage(MechPilot(wounded), "pain_resistance"))
+      if (HasBoolAdvantage(wounded->xcode.context, MechPilot(wounded),
+                           "pain_resistance"))
         headhitmwdamage(wounded, wounded, 1);
       else
         headhitmwdamage(wounded, wounded, 2);
@@ -403,12 +403,10 @@ int handleWeaponCrit(MECH *attacker, MECH *wounded, int hitloc, int critHit,
       damage = MechWeapons[Weapon2I(critType)].damage;
 
       if (IsMissile(Weapon2I(critType)) || IsArtillery(Weapon2I(critType))) {
-        for (loop = 0; MissileHitTable[loop].key != -1; loop++) {
-          if (MissileHitTable[loop].key == Weapon2I(critType)) {
-            damage *= MissileHitTable[loop].num_missiles[10];
-            break;
-          }
-        }
+        const MissileHitEntry *entry = missile_hit_registry_find_weapon(
+            &wounded->xcode.context->missile_hits, Weapon2I(critType));
+        if (entry != nullptr)
+          damage *= entry->num_missiles[10];
       }
 
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
@@ -496,7 +494,7 @@ void JamMainWeapon(MECH *mech) {
       for (ii = 0; ii < count; ii++) {
         if (!PartIsBroken(mech, loop, critical[ii])) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
-          tempcrit = (int)genrand_int31();
+          tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
@@ -547,7 +545,8 @@ void pickRandomWeapon(MECH *objMech, int wLoc, int *critNum, int wIgnoreJams) {
    * Now randomly pick one
    */
 
-  *critNum = awCrits[Number(0, wcWeaps - 1)];
+  *critNum =
+      awCrits[btech_random_range(objMech->xcode.context, 0, wcWeaps - 1)];
 }
 
 /*
@@ -691,7 +690,8 @@ void DoWeaponJamCrit(MECH *objMech, int wLoc) {
     }
 
     SetPartTempNuke(objMech, wLoc, wCritNum, wCritType);
-    SetRecyclePart(objMech, wLoc, wCritNum, Number(60, 120));
+    SetRecyclePart(objMech, wLoc, wCritNum,
+                   btech_random_range(objMech->xcode.context, 60, 120));
   }
 }
 
@@ -775,7 +775,8 @@ void DoAmmunitionCrit(MECH *objMech, MECH *objAttacker, int wLoc, int LOS) {
 
       if (IsAmmo(wPartType) && GetPartData(objMech, wSecIter, wSlotIter) &&
           (!(MechWeapons[wWeapIdx].special & GAUSS))) {
-        wTempDamage = (FindMaxAmmoDamage(Ammo2WeaponI(wPartType)) *
+        wTempDamage = (FindMaxAmmoDamage(objMech->xcode.context,
+                                         Ammo2WeaponI(wPartType)) *
                        GetPartData(objMech, wSecIter, wSlotIter));
         wTotalAmmoDamage += wTempDamage;
 
@@ -941,7 +942,7 @@ void DoVehicleCrewKilledCrit(MECH *objMech, MECH *objAttacker) {
               "%ch%crThe shot ricochets around the crew compartment, instantly "
               "killing everyone!%cn");
   DestroyMech(objMech, objAttacker, 0, KILL_TYPE_PILOT);
-  KillMechContentsIfIC(objMech->mynum);
+  KillMechContentsIfIC(objMech);
 
   if (MechSpeed(objMech) != 0.0)
     MechLOSBroadcast(objMech, "careens out of control and starts to slow!");
@@ -1061,7 +1062,7 @@ void StartVTOLCrash(MECH *objMech) {
 
 void HandleAdvFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS,
                               int hitloc, int num) {
-  int wRoll = Roll();
+  int wRoll = btech_random_roll(wounded->xcode.context);
 
   if (MechMove(wounded) == MOVE_NONE)
     return;
@@ -1331,7 +1332,7 @@ void HandleAdvFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS,
 void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
                     int num) {
   mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
-  switch (Number(0, 5)) {
+  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew killed */
     mech_notify(wounded, MECHALL, "Your cockpit is destroyed!");
@@ -1340,7 +1341,7 @@ void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       MechLOSBroadcast(wounded, "falls down from the sky!");
     }
     DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
-    KillMechContentsIfIC(wounded->mynum);
+    KillMechContentsIfIC(wounded);
     break;
   case 1:
     /* Weapon jams, set them recylcling maybe */
@@ -1381,7 +1382,7 @@ void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
 
     DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
 
-    KillMechContentsIfIC(wounded->mynum);
+    KillMechContentsIfIC(wounded);
     break;
   case 4:
     /* Fuel Tank Explodes */
@@ -1433,7 +1434,7 @@ void DestroyMainWeapon(MECH *mech) {
       for (ii = 0; ii < count; ii++) {
         if (!PartIsBroken(mech, loop, critical[ii])) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
-          tempcrit = (int)genrand_int31();
+          tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
@@ -1459,7 +1460,7 @@ void HandleFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     return;
 
   mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
-  switch (Number(0, 5)) {
+  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
     headhitmwdamage(wounded, attacker, 1);
@@ -1480,7 +1481,7 @@ void HandleFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     mech_notify(wounded, MECHALL,
                 "Your armor is pierced and you are killed instantly!");
     DestroyMech(wounded, attacker, 0, KILL_TYPE_PILOT);
-    KillMechContentsIfIC(wounded->mynum);
+    KillMechContentsIfIC(wounded);
     break;
   case 4:
     /* Fuel Tank Explodes */
@@ -1509,7 +1510,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   if (MechMove(wounded) == MOVE_NONE)
     return;
   if (hitloc == TURRET) {
-    if (Number(1, 3) == 2) {
+    if (btech_random_range(wounded->xcode.context, 1, 3) == 2) {
       if (!(MechTankCritStatus(wounded) & TURRET_LOCKED)) {
         mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
         MechTankCritStatus(wounded) |= TURRET_LOCKED;
@@ -1519,7 +1520,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       return;
     }
   } else
-    switch (Number(1, 10)) {
+    switch (btech_random_range(wounded->xcode.context, 1, 10)) {
     case 1:
     case 2:
     case 3:
@@ -1578,7 +1579,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       break;
     }
   mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
-  switch (Number(0, 5)) {
+  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
     headhitmwdamage(wounded, attacker, 1);
@@ -1599,7 +1600,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     mech_notify(wounded, MECHALL,
                 "Your armor is pierced and you are killed instantly!");
     DestroyMech(wounded, attacker, 0, KILL_TYPE_PILOT);
-    KillMechContentsIfIC(wounded->mynum);
+    KillMechContentsIfIC(wounded);
     break;
   case 4:
     /* Fuel Tank Explodes */
@@ -1623,7 +1624,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
 int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
                    int critHit, int critType, int critData) {
   MECH *mech = wounded;
-  int weapindx, damage, loop, destroycrit, weapon_slot, wFirstCrit;
+  int weapindx, damage, destroycrit, weapon_slot, wFirstCrit;
   int temp;
   char locname[30];
   char msgbuf[MBUF_SIZE];
@@ -1633,7 +1634,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   char partBuf[100];
 
   int fCrit;
-  MAP *map = FindObjectsData(wounded->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, wounded->mapindex);
 
   ArmorStringFromIndex(hitloc, locname, MechType(wounded), MechMove(wounded));
   mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!!%c");
@@ -1644,9 +1645,10 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     weapindx = Ammo2WeaponI(critType);
     damage = critData * MechWeapons[weapindx].damage;
     if (IsMissile(weapindx) || IsArtillery(weapindx)) {
-      for (loop = 0; MissileHitTable[loop].key != -1; loop++)
-        if (MissileHitTable[loop].key == weapindx)
-          damage *= MissileHitTable[loop].num_missiles[10];
+      const MissileHitEntry *entry = missile_hit_registry_find_weapon(
+          &wounded->xcode.context->missile_hits, weapindx);
+      if (entry != nullptr)
+        damage *= entry->num_missiles[10];
     }
     if (MechWeapons[weapindx].special & (GAUSS | NOBOOM)) {
       if (MechWeapons[weapindx].special & GAUSS)
@@ -1824,7 +1826,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       MechLOSBroadcast(wounded,
                        "spasms for a second then remains oddly still.");
       MechPilot(wounded) = -1;
-      KillMechContentsIfIC(wounded->mynum);
+      KillMechContentsIfIC(wounded);
       break;
     case SENSORS:
       if (!(MechCritStatus(wounded) & SENSORS_DAMAGED)) {
@@ -2210,7 +2212,8 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     case ARTEMIS_IV:
       weapon_slot = GetPartData(wounded, hitloc, critHit);
       if (weapon_slot > NUM_CRITICALS) {
-        SendError(tprintf("Artemis IV error on mech %ld", wounded->mynum));
+        SendError(mech->xcode.context,
+                  tprintf("Artemis IV error on mech %ld", wounded->mynum));
         break;
       }
       GetPartAmmoMode(wounded, hitloc, weapon_slot) &= ~ARTEMIS_MODE;
@@ -2270,23 +2273,24 @@ void HandleCritical(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     return;
   if (MechSpecials(wounded) & CRITPROOF_TECH)
     return;
-  if (MechType(wounded) == CLASS_MW && Number(1, 2) == 1)
+  if (MechType(wounded) == CLASS_MW &&
+      btech_random_range(wounded->xcode.context, 1, 2) == 1)
     return;
   if (MechType(wounded) != CLASS_MECH &&
-      !btech_context_active()->configuration->btech_vcrit)
+      !wounded->xcode.context->configuration->btech_vcrit)
     return;
   if (MechType(wounded) == CLASS_VEH_GROUND ||
       MechType(wounded) == CLASS_VEH_NAVAL) {
-    if (btech_context_active()->configuration->btech_fasaadvvhlcrit) {
+    if (wounded->xcode.context->configuration->btech_fasaadvvhlcrit) {
       for (i = 0; i < num; i++)
         HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
 
       return;
-    } else if (!btech_context_active()->configuration->btech_fasacrit) {
+    } else if (!wounded->xcode.context->configuration->btech_fasacrit) {
       for (i = 0; i < num; i++)
         HandleVehicleCrit(wounded, attacker, LOS, hitloc, num);
       return;
-    } else if (btech_context_active()->configuration->btech_fasacrit) {
+    } else if (wounded->xcode.context->configuration->btech_fasacrit) {
       for (i = 0; i < num; i++)
         HandleFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
       return;
@@ -2295,7 +2299,7 @@ void HandleCritical(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   if (IsDS(wounded))
     return;
   if (MechType(wounded) == CLASS_VTOL) {
-    if (btech_context_active()->configuration->btech_fasaadvvtolcrit) {
+    if (wounded->xcode.context->configuration->btech_fasaadvvtolcrit) {
       for (i = 0; i < num; i++)
         HandleAdvFasaVehicleCrit(wounded, attacker, LOS, hitloc, num);
 
@@ -2330,7 +2334,7 @@ void HandleCritical(MECH *wounded, MECH *attacker, int LOS, int hitloc,
         return;
     }
 
-    index = Number(0, count - 1);
+    index = btech_random_range(wounded->xcode.context, 0, count - 1);
     critHit = critList[index]; /* This one should be linear */
 
     critType = GetPartType(wounded, hitloc, critHit);

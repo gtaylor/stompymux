@@ -34,8 +34,6 @@
 #include "p.mech.utils.h"
 #include "p.mine.h"
 
-extern int arc_override;
-
 int fiery_death(MECH *mech) {
   if (MechTerrain(mech) == FIRE) {
     if (is_aero(mech))
@@ -77,10 +75,9 @@ void bridge_set_elevation(MECH *mech) {
 }
 
 int DSOkToNotify(MECH *mech) {
-  if (DSLastMsg(mech) > btech_context_active()->events->tick ||
-      (btech_context_active()->events->tick - DSLastMsg(mech)) >=
-          DS_SPAM_TIME) {
-    DSLastMsg(mech) = btech_context_active()->events->tick;
+  if (DSLastMsg(mech) > mech->xcode.context->events->tick ||
+      (mech->xcode.context->events->tick - DSLastMsg(mech)) >= DS_SPAM_TIME) {
+    DSLastMsg(mech) = mech->xcode.context->events->tick;
     return 1;
   }
   return 0;
@@ -90,7 +87,7 @@ enum { JUMP, WALK_WALL, WALK_DROP, HIT_UNDER_BRIDGE, WALK_BACK };
 
 int collision_check(MECH *mech, int mode, int le, int lt) {
   int e;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (Overwater(mech) && le < 0)
     le = 0;
@@ -163,10 +160,10 @@ void move_mech(MECH *mech) {
   char message_buffer[MBUF_SIZE];
 
   oz = MechZ(mech);
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!mech_map && MechPilot(mech) >= 0)
-    mech_map = ValidMap(MechPilot(mech), mech->mapindex);
+    mech_map = ValidMap(mech->xcode.context, MechPilot(mech), mech->mapindex);
 
   /* Unit is not on a map so don't need to move it - instead
    * reset its values and shut it down */
@@ -183,7 +180,7 @@ void move_mech(MECH *mech) {
     snprintf(message_buffer, MBUF_SIZE,
              "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
              mech->mapindex);
-    SendError(message_buffer);
+    SendError(mech->xcode.context, message_buffer);
     mech->mapindex = -1;
     return;
   }
@@ -206,14 +203,14 @@ void move_mech(MECH *mech) {
     snprintf(message_buffer, MBUF_SIZE,
              "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
              mech->mapindex);
-    SendError(message_buffer);
+    SendError(mech->xcode.context, message_buffer);
 
     mech->mapindex = -1;
     return;
   }
 
   /* Is the unit charging - and if so have they been charging to long */
-  if (btech_context_active()->configuration->btech_newcharge &&
+  if (mech->xcode.context->configuration->btech_newcharge &&
       MechChargeTarget(mech) > 0) {
     if (MechChargeTimer(mech)++ > CHARGE_TIMER_LIMIT) {
       mech_notify(mech, MECHALL, "Charge timed out, charge reset.");
@@ -281,7 +278,7 @@ void move_mech(MECH *mech) {
       snprintf(message_buffer, MBUF_SIZE, "#%d: %d, %d, %d (%d, %d, %d)",
                mech->mynum, MechX(mech), MechY(mech), MechZ(mech),
                (int)MechFX(mech), (int)MechFY(mech), (int)MechFZ(mech));
-      SendDebug(message_buffer);
+      SendDebug(mech->xcode.context, message_buffer);
 #endif
 
       /* The famous jumping on bridge collision code */
@@ -344,7 +341,7 @@ void move_mech(MECH *mech) {
 
       /* If we're charging record distance traveled */
       if (MechChargeTarget(mech) > 0 &&
-          btech_context_active()->configuration->btech_newcharge) {
+          mech->xcode.context->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -381,7 +378,7 @@ void move_mech(MECH *mech) {
 
       /* If we're charging record the distance traveled */
       if (MechChargeTarget(mech) > 0 &&
-          btech_context_active()->configuration->btech_newcharge) {
+          mech->xcode.context->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -414,7 +411,7 @@ void move_mech(MECH *mech) {
 
       /* Record the charge distance */
       if (MechChargeTarget(mech) > 0 &&
-          btech_context_active()->configuration->btech_newcharge) {
+          mech->xcode.context->configuration->btech_newcharge) {
         xscale = 1.0 / SCALEMAP;
         xscale = xscale * xscale;
         xy_charge_dist = sqrt(xscale * newx * newx + YSCALE2 * newy * newy);
@@ -563,7 +560,7 @@ void move_mech(MECH *mech) {
 
   /* Did our mapindex change? - like did we run out a hangar? */
   if (mech->mapindex != oi)
-    mech_map = getMap(mech->mapindex);
+    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   /* We left a hangar and/or moved to a new hex */
   if (oi != mech->mapindex || MechLastX(mech) != MechX(mech) ||
@@ -577,7 +574,7 @@ void move_mech(MECH *mech) {
                (!mech       ? "mech"
                 : !mech_map ? "mech_map"
                             : "weird...."));
-      SendError(message_buffer);
+      SendError(mech->xcode.context, message_buffer);
 
       if (mech) {
 
@@ -593,7 +590,7 @@ void move_mech(MECH *mech) {
         snprintf(message_buffer, MBUF_SIZE,
                  "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
                  mech->mapindex);
-        SendError(message_buffer);
+        SendError(mech->xcode.context, message_buffer);
         mech->mapindex = -1;
       }
       return;
@@ -649,7 +646,7 @@ void move_mech(MECH *mech) {
       steppable_base_check(mech, x, y);
 
       /* Pilot XP */
-      if (is_in_character(btech_context_active()->database, mech->mynum)) {
+      if (is_in_character(mech->xcode.context->database, mech->mynum)) {
         MechHexes(mech)++;
         if (!((int)MechHexes(mech) % PIL_XP_EVERY_N_STEPS))
           if (RGotPilot(mech))
@@ -673,7 +670,8 @@ void move_mech(MECH *mech) {
   if (MechChargeTarget(mech) != -1) {
 
     /* Valid target? */
-    target = getMech(MechChargeTarget(mech));
+    target =
+        btech_context_get_mech(mech->xcode.context, MechChargeTarget(mech));
     if (target) {
 
       if (FaMechRange(mech, target) < CHARGE_DIST_TRIGGER) {
@@ -693,7 +691,7 @@ void move_mech(MECH *mech) {
 
   /* If we're towing something update its position with us */
   if (MechCarrying(mech) > 0) {
-    target = getMech(MechCarrying(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
     if (target && target->mapindex == mech->mapindex) {
       MirrorPosition(mech, target, 0);
       SetRFacing(target, MechRFacing(mech));
@@ -742,7 +740,8 @@ void CheckNavalHeight(MECH *mech, int oz) {
   if (MechZ(mech) <= (MechLowerElevation(mech))) {
     MechZ(mech) = MIN(0, MechLowerElevation(mech) + 1);
     if (MechElevation(mech) > 0)
-      SendError(tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
+      SendError(mech->xcode.context,
+                tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
                         mech->mynum, MechTerrain(mech), MechElev(mech)));
     MechFZ(mech) = ((5.0 * MechZ(mech) - 4) * ZSCALE) / 5.0;
     if (MechMove(mech) == MOVE_SUB) {
@@ -819,7 +818,7 @@ void UpdateHeading(MECH *mech) {
     mw_mod = 60;
   else if (MechIsQuad(mech))
     mw_mod = 2;
-  if (btech_context_active()->configuration->btech_fasaturn) {
+  if (mech->xcode.context->configuration->btech_fasaturn) {
 #define FASA_TURN_MOD 3 / 2
     if (Jumping(mech))
       offset = 2 * SHO2FSIM(1) * 2 * 360 * FASA_TURN_MOD / 60;
@@ -839,7 +838,7 @@ void UpdateHeading(MECH *mech) {
     }
   } else {
     if (Jumping(mech)) {
-      mech_map = FindObjectsData(mech->mapindex);
+      mech_map = btech_context_find_object(mech->xcode.context, mech->mapindex);
       offset = SHO2FSIM(1) * 6 * JumpSpeedMP(mech, mech_map) * mw_mod;
     } else if (fabs(MechSpeed(mech)) < 1.0)
       offset = SHO2FSIM(1) * 3 * maxspeed * MP_PER_KPH * mw_mod;
@@ -857,11 +856,13 @@ void UpdateHeading(MECH *mech) {
   /*   offset = offset * 2 * MOVE_MOD; - Twice as fast as this;dunno why - */
   offset = offset * MOVE_MOD;
 #ifdef BT_MOVEMENT_MODES
-  if (GetTurnMode(mech) && HasBoolAdvantage(MechPilot(mech), "maneuvering_ace"))
+  if (GetTurnMode(mech) &&
+      HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "maneuvering_ace"))
     offset = (offset * 3) / 2;
   if (MechStatus2(mech) & (SPRINTING | EVADING) &&
-      !HasBoolAdvantage(MechPilot(mech), "maneuvering_ace")) {
-    if (HasBoolAdvantage(MechPilot(mech), "speed_demon"))
+      !HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                        "maneuvering_ace")) {
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "speed_demon"))
       offset = (offset * 2) / 3;
     else
       offset = (offset / 2);
@@ -1002,7 +1003,7 @@ void UpdateSpeed(MECH *mech) {
     tempspeed = terrain_speed(mech, tempspeed, maxspeed, MechRTerrain(mech),
                               MechElevation(mech));
   if (MechCritStatus(mech) & CHEAD) {
-    if (btech_context_active()->configuration->btech_slowdown == 2) {
+    if (mech->xcode.context->configuration->btech_slowdown == 2) {
       /* _New_ slowdown based on facing vs desired difference */
       int dif = MechFacing(mech) - MechDesiredFacing(mech);
 
@@ -1020,7 +1021,7 @@ void UpdateSpeed(MECH *mech) {
         else
           tempspeed = tempspeed * (10 - dif) / 10; /* Lower 20-80% */
       }
-    } else if (btech_context_active()->configuration->btech_slowdown == 1) {
+    } else if (mech->xcode.context->configuration->btech_slowdown == 1) {
       if (MechFacing(mech) != MechDesiredFacing(mech))
         tempspeed = tempspeed * 2.0 / 3.0;
       else
@@ -1028,8 +1029,10 @@ void UpdateSpeed(MECH *mech) {
     }
 #ifdef BT_MOVEMENT_MODES
     if ((Sprinting(mech) || Evading(mech)) &&
-        !(HasBoolAdvantage(MechPilot(mech), "speed_demon") ||
-          HasBoolAdvantage(MechPilot(mech), "maneuvering_ace")))
+        !(HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                           "speed_demon") ||
+          HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                           "maneuvering_ace")))
       tempspeed = (tempspeed * 2) / 3;
 #endif
     MechCritStatus(mech) &= ~CHEAD;
@@ -1038,7 +1041,8 @@ void UpdateSpeed(MECH *mech) {
     DECREASE_OLD(MP1); /* In truth 1 MP */
 #ifdef BT_MOVEMENT_MODES
   else if (MechLateral(mech)) {
-    if (HasBoolAdvantage(MechPilot(mech), "maneuvering_ace"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                         "maneuvering_ace"))
       DECREASE_OLD(MP2);
     else
       DECREASE_OLD(MP3);
@@ -1063,7 +1067,7 @@ void UpdateSpeed(MECH *mech) {
       acc = maxspeed / 10.;
     else
       acc = maxspeed / 20.;
-    if (HasBoolAdvantage(MechPilot(mech), "speed_demon"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "speed_demon"))
       acc *= 1.25;
 
     if (tempspeed < MechSpeed(mech)) {
@@ -1079,7 +1083,7 @@ void UpdateSpeed(MECH *mech) {
     }
   }
   if (MechCarrying(mech) > 0) {
-    target = getMech(MechCarrying(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
     if (target)
       MechSpeed(target) = MechSpeed(mech);
   }
@@ -1123,7 +1127,7 @@ void ammo_explosion(MECH *attacker, MECH *mech, int ammoloc, int ammocritnum,
     return;
   if (GetPartAmmoMode(mech, ammoloc, ammocritnum) & INFERNO_MODE) {
     Inferno_Hit(mech, mech, damage / 4, 0);
-    if (btech_context_active()->configuration->btech_inferno_penalty)
+    if (mech->xcode.context->configuration->btech_inferno_penalty)
       MechWeapHeat(mech) += 30.0;
     damage = damage / 2;
   }
@@ -1144,7 +1148,8 @@ void ammo_explosion(MECH *attacker, MECH *mech, int ammoloc, int ammocritnum,
     /* Rule Reference: MaxTech Revised, Page 46 (Reduce by 1 because of pain
      * resistance) */
 
-    if (HasBoolAdvantage(MechPilot(mech), "pain_resistance"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                         "pain_resistance"))
       headhitmwdamage(mech, mech, 1);
     else
       headhitmwdamage(mech, mech, 2);
@@ -1159,47 +1164,47 @@ void HandleOverheat(MECH *mech) {
   if (MechHeat(mech) < 10.)
     return;
   /* Has it been a TURN already ? */
-  if ((MechHeatLast(mech) + TURN) > btech_context_active()->events->tick)
+  if ((MechHeatLast(mech) + TURN) > mech->xcode.context->events->tick)
     return;
-  MechHeatLast(mech) = btech_context_active()->events->tick;
+  MechHeatLast(mech) = mech->xcode.context->events->tick;
 
   /* Ammo - done first so infernobooms shut you down */
   if (MechHeat(mech) >= 10.) {
-    if (btech_context_active()->configuration->btech_inferno_penalty)
+    if (mech->xcode.context->configuration->btech_inferno_penalty)
       hasinferno = FindInfernoAmmo(mech, &ammoloc, &ammocritnum);
     if (MechHeat(mech) >= 28.) {
       /* Ammo explosion (Avoid 8+, infernos 12+) */
       if (hasinferno) {
-        if (Roll() >= 12)
+        if (btech_random_roll(mech->xcode.context) >= 12)
           avoided = 1;
       } else {
-        if (Roll() >= 8)
+        if (btech_random_roll(mech->xcode.context) >= 8)
           avoided = 1;
       }
     } else if (MechHeat(mech) >= 23.) {
       /* Ammo explosion (Avoid 6+, infernos 10+) */
       if (hasinferno) {
-        if (Roll() >= 10)
+        if (btech_random_roll(mech->xcode.context) >= 10)
           avoided = 1;
       } else {
-        if (Roll() >= 6)
+        if (btech_random_roll(mech->xcode.context) >= 6)
           avoided = 1;
       }
     } else if (MechHeat(mech) >= 19.) {
       /* Ammo explosion (Avoid 4+, infernos 8+) */
       if (hasinferno) {
-        if (Roll() >= 8)
+        if (btech_random_roll(mech->xcode.context) >= 8)
           avoided = 1;
       } else {
-        if (Roll() >= 4)
+        if (btech_random_roll(mech->xcode.context) >= 4)
           avoided = 1;
       }
 
     } else if ((MechHeat(mech) >= 14.) && (hasinferno)) {
-      if (Roll() >= 6)
+      if (btech_random_roll(mech->xcode.context) >= 6)
         avoided = 1;
     } else if ((MechHeat(mech) >= 10.) && (hasinferno)) {
-      if (Roll() >= 4)
+      if (btech_random_roll(mech->xcode.context) >= 4)
         avoided = 1;
     } else if ((MechHeat(mech) < 19.) && (!hasinferno)) {
       avoided = 1;
@@ -1221,25 +1226,25 @@ void HandleOverheat(MECH *mech) {
 
   avoided = 0;
 #ifdef BT_EXILE_MW3STATS
-  if (!is_player(btech_context_active()->database, MechPilot(mech))) {
+  if (!is_player(mech->xcode.context->database, MechPilot(mech))) {
 #endif
     if (MechHeat(mech) >= 30.) {
       /* Shutdown */
     } else if (MechHeat(mech) >= 26.) {
       /* Shutdown avoid on 10+ */
-      if (Roll() >= 10)
+      if (btech_random_roll(mech->xcode.context) >= 10)
         avoided = 1;
     } else if (MechHeat(mech) >= 22.) {
       /* Shutdown avoid on 8+ */
-      if (Roll() >= 8)
+      if (btech_random_roll(mech->xcode.context) >= 8)
         avoided = 1;
     } else if (MechHeat(mech) >= 18.) {
       /* Shutdown avoid on 6+ */
-      if (Roll() >= 6)
+      if (btech_random_roll(mech->xcode.context) >= 6)
         avoided = 1;
     } else if (MechHeat(mech) >= 14.) {
       /* Shutdown avoid on 4+ */
-      if (Roll() >= 4)
+      if (btech_random_roll(mech->xcode.context) >= 4)
         avoided = 1;
     }
 #ifdef BT_EXILE_MW3STATS
@@ -1248,13 +1253,14 @@ void HandleOverheat(MECH *mech) {
     if (MechHeat(mech) >= 14.) {
       mech_notify(mech, MECHALL,
                   "You frantically attempt to override the shutdown process!");
-      avoided = char_getskillsuccess(MechPilot(mech), "computer",
-                                     (MechHeat(mech) >= 30.   ? 8
-                                      : MechHeat(mech) >= 26. ? 6
-                                      : MechHeat(mech) >= 22. ? 4
-                                      : MechHeat(mech) >= 18. ? 2
-                                                              : 0),
-                                     1);
+      avoided =
+          char_getskillsuccess(mech->xcode.context, MechPilot(mech), "computer",
+                               (MechHeat(mech) >= 30.   ? 8
+                                : MechHeat(mech) >= 26. ? 6
+                                : MechHeat(mech) >= 22. ? 4
+                                : MechHeat(mech) >= 18. ? 2
+                                                        : 0),
+                               1);
       if (avoided)
         AccumulateComputerXP(MechPilot(mech), mech, 1);
     }
@@ -1271,7 +1277,7 @@ void HandleOverheat(MECH *mech) {
     if (Jumping(mech) || OODing(mech) || (is_aero(mech) && !Landed(mech))) {
       mech_notify(mech, MECHALL, "%chYou fall from the sky!%c");
       MechLOSBroadcast(mech, "falls from the sky!");
-      mech_map = getMap(mech->mapindex);
+      mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
       MechFalls(mech, JumpSpeedMP(mech, mech_map), 0);
       domino_space(mech, 2);
     } else {
@@ -1412,7 +1418,7 @@ void UpdateHeat(MECH *mech) {
   }
 
   if (InSpecial(mech))
-    if ((map = FindObjectsData(mech->mapindex)))
+    if ((map = btech_context_find_object(mech->xcode.context, mech->mapindex)))
       if (MapUnderSpecialRules(map))
         if (MapTemperature(map) < -30 || MapTemperature(map) > 50) {
           if (MapTemperature(map) < -30)
@@ -1453,9 +1459,10 @@ void UpdateHeat(MECH *mech) {
    * Bruise, w/o Lifesupport) */
   /* Custom Rule: Give bruise if heat > 30 and Random 0 or 1 */
 
-  if ((btech_context_active()->events->tick % TURN) == 0)
+  if ((mech->xcode.context->events->tick % TURN) == 0)
     if (MechCritStatus(mech) & LIFE_SUPPORT_DESTROYED ||
-        (MechHeat(mech) > 30. && Number(0, 1) == 0)) {
+        (MechHeat(mech) > 30. &&
+         btech_random_range(mech->xcode.context, 0, 1) == 0)) {
       if (MechHeat(mech) > 25.) {
         mech_notify(mech, MECHPILOT, "You take personal injury from heat!");
         headhitmwdamage(mech, mech,
@@ -1500,20 +1507,20 @@ int recycle_weaponry(MECH *mech) {
   unsigned char weapdata[MAX_WEAPS_SECTION];
   char location[20];
 
-  int diff = (btech_context_active()->events->tick - MechLWRT(mech));
+  int diff = (mech->xcode.context->events->tick - MechLWRT(mech));
   int lowest = 0;
 
   if (diff < 1) {
     if (diff < 0)
-      MechLWRT(mech) = btech_context_active()->events->tick;
+      MechLWRT(mech) = mech->xcode.context->events->tick;
     return 1;
   }
-  MechLWRT(mech) = btech_context_active()->events->tick;
+  MechLWRT(mech) = mech->xcode.context->events->tick;
 
   if (!Started(mech) || Destroyed(mech))
     return 0;
 
-  arc_override = 1;
+  mech->xcode.context->combat_overrides.arcs = 1;
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     count = FindWeapons(mech, loop, weaptype, weapdata, crit);
     for (i = 0; i < count; i++) {
@@ -1580,7 +1587,7 @@ int recycle_weaponry(MECH *mech) {
       }
     }
   }
-  arc_override = 0;
+  mech->xcode.context->combat_overrides.arcs = 0;
   return lowest;
 }
 
@@ -1696,10 +1703,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!btech_context_active()->configuration->btech_skidcliff &&
+          (!mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (btech_context_active()->configuration->btech_skidcliff &&
+          (mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -1711,7 +1718,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         mech_notify(mech, MECHALL,
                     "You run headlong into the cliff and fall down!");
         MechLOSBroadcast(mech, "runs headlong into a cliff and falls down!");
-        if (!btech_context_active()->configuration->btech_skidcliff)
+        if (!mech->xcode.context->configuration->btech_skidcliff)
           MechFalls(mech, (int)(1 + (MechSpeed(mech)) * MP_PER_KPH) / 4, 0);
         else
           MechFalls(mech, 1, 0);
@@ -1725,7 +1732,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = btech_context_active()->configuration->btech_skidcliff
+      avoidbth = mech->xcode.context->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -1750,7 +1757,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+    } else if (mech->xcode.context->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
@@ -1891,10 +1898,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!btech_context_active()->configuration->btech_skidcliff &&
+          (!mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (btech_context_active()->configuration->btech_skidcliff &&
+          (mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -1903,7 +1910,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!btech_context_active()->configuration->btech_skidcliff) {
+        if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -1921,7 +1928,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = btech_context_active()->configuration->btech_skidcliff
+      avoidbth = mech->xcode.context->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
       if (MechPilot(mech) == -1 ||
@@ -1952,7 +1959,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+    } else if (mech->xcode.context->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
@@ -2011,7 +2018,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     /* New terrain restrictions */
-    if (btech_context_active()->configuration->btech_newterrain) {
+    if (mech->xcode.context->configuration->btech_newterrain) {
       tt = MechRTerrain(mech);
       if ((tt == HEAVY_FOREST) && fabs(MechSpeed(mech)) > MP1) {
 
@@ -2061,10 +2068,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You attempt to climb a hill too steep for you.");
 
       if (MechPilot(mech) == -1 ||
-          (!btech_context_active()->configuration->btech_skidcliff &&
+          (!mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (btech_context_active()->configuration->btech_skidcliff &&
+          (mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -2073,7 +2080,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!btech_context_active()->configuration->btech_skidcliff) {
+        if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "crashes to a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -2092,7 +2099,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     } else if (collision_check(mech, WALK_DROP, lastelevation, oldterrain)) {
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
-      avoidbth = btech_context_active()->configuration->btech_skidcliff
+      avoidbth = mech->xcode.context->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -2125,7 +2132,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+    } else if (mech->xcode.context->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
@@ -2184,7 +2191,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     /* New terrain restrictions */
-    if (btech_context_active()->configuration->btech_newterrain) {
+    if (mech->xcode.context->configuration->btech_newterrain) {
       tt = MechRTerrain(mech);
       if ((tt == HEAVY_FOREST || tt == LIGHT_FOREST) &&
           fabs(MechSpeed(mech)) > MP1) {
@@ -2284,10 +2291,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       mech_notify(mech, MECHALL,
                   "You attempt to climb a hill too steep for you.");
       if (MechPilot(mech) == -1 ||
-          (!btech_context_active()->configuration->btech_skidcliff &&
+          (!mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(
                mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) / 3, 1)) ||
-          (btech_context_active()->configuration->btech_skidcliff &&
+          (mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll_NoXP(mech, SkidMod(fabs(MechSpeed(mech)) / MP1),
                                    1))) {
 
@@ -2296,7 +2303,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       } else {
 
-        if (!btech_context_active()->configuration->btech_skidcliff) {
+        if (!mech->xcode.context->configuration->btech_skidcliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           MechLOSBroadcast(mech, "smashes into a cliff!");
           MechFalls(mech, (int)(MechSpeed(mech) * MP_PER_KPH / 4), 0);
@@ -2315,7 +2322,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
 
-      avoidbth = btech_context_active()->configuration->btech_skidcliff
+      avoidbth = mech->xcode.context->configuration->btech_skidcliff
                      ? SkidMod(fabs(MechSpeed(mech)) / MP1)
                      : ((fabs((MechSpeed(mech)) + MP1) / MP1) / 3);
 
@@ -2347,10 +2354,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
                   "You notice the underside of the bridge in front of you!");
 
       if (MechPilot(mech) == -1 ||
-          (!btech_context_active()->configuration->btech_skidcliff &&
+          (!mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll(mech, (int)(fabs((MechSpeed(mech)) + MP1) / MP1) /
                                         3)) ||
-          (btech_context_active()->configuration->btech_skidcliff &&
+          (mech->xcode.context->configuration->btech_skidcliff &&
            MadePilotSkillRoll(mech, SkidMod(fabs(MechSpeed(mech)) / MP1)))) {
 
         mech_notify(mech, MECHALL,
@@ -2369,7 +2376,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       MechSpeed(mech) = 0;
       return;
 
-    } else if (btech_context_active()->configuration->btech_roll_on_backwalk &&
+    } else if (mech->xcode.context->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain)) &&
                !isunder) {
@@ -2469,7 +2476,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       return;
 
     } else if (Landed(mech) &&
-               btech_context_active()->configuration->btech_roll_on_backwalk &&
+               mech->xcode.context->configuration->btech_roll_on_backwalk &&
                (MechSpeed(mech) < 0) &&
                (collision_check(mech, WALK_BACK, lastelevation, oldterrain))) {
 
@@ -2548,7 +2555,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
   if (!done) {
     possible_mine_poof(mech, MINE_STEP);
-    if (btech_context_active()->configuration->btech_fasaadvvhlfire &&
+    if (mech->xcode.context->configuration->btech_fasaadvvhlfire &&
         (MechType(mech) == CLASS_VEH_GROUND) && (MechTerrain(mech) == FIRE))
       checkVehicleInFire(mech, 1);
   }
@@ -2607,7 +2614,7 @@ void ClearAllStaggerDamage(MECH *mech) {
 // ago
 void ClearStaggerDamage(MECH *mech) {
   int oneTurn = 60;
-  time_t now = btech_context_active()->clock->now;
+  time_t now = mech->xcode.context->clock->now;
   struct damageNode *damage;
   struct damageNode *old;
 
@@ -2628,7 +2635,7 @@ void ClearStaggerDamage(MECH *mech) {
 
 int CurrentStaggerDamage(MECH *mech) {
   int sum = 0;
-  time_t now = btech_context_active()->clock->now;
+  time_t now = mech->xcode.context->clock->now;
   int oneTurn = 60;
   struct damageNode *damage;
 
@@ -2646,7 +2653,7 @@ int CurrentStaggerDamage(MECH *mech) {
 
 int CurrentCountedStaggerDamage(MECH *mech) {
   int sum = 0;
-  time_t now = btech_context_active()->clock->now;
+  time_t now = mech->xcode.context->clock->now;
   int oneTurn = 60;
   struct damageNode *damage;
 
@@ -2665,9 +2672,9 @@ int CurrentCountedStaggerDamage(MECH *mech) {
 void CheckDamage(MECH *wounded) {
   /* should be called from UpdatePilotSkillRolls */
   /* this is so that a roll will be made only when the mech takes damage */
-  int now = btech_context_active()->events->tick % TURN;
+  int now = wounded->xcode.context->events->tick % TURN;
 
-  if (!btech_context_active()->configuration->btech_newstagger) {
+  if (!wounded->xcode.context->configuration->btech_newstagger) {
     if (!IsDS(wounded) && MechTurnDamage(wounded) >= 20 &&
         (!MechStaggeredLastTurn(wounded) || MechStaggerStamp(wounded) == now)) {
 
@@ -2695,10 +2702,10 @@ void UpdatePilotSkillRolls(MECH *mech) {
   int makeroll = 0, grav = 0;
   float maxspeed;
 
-  int temp_tick = btech_context_active()->events->tick;
+  int temp_tick = mech->xcode.context->events->tick;
 
-  /* If for some reason, we get here and btech_context_active()->events->tick is
-   * odd all the time....
+  /* If for some reason, we get here and
+   * mech->xcode.context->events->tick is odd all the time....
    */
   if ((temp_tick & 1) != 0)
     temp_tick++;
@@ -2714,7 +2721,7 @@ void UpdatePilotSkillRolls(MECH *mech) {
 
     if ((MechHeat(mech) >= 9.) && (MechSpecials(mech) & TRIPLE_MYOMER_TECH))
       maxspeed = ceil((rint((MMaxSpeed(mech) / 1.5) / MP1) + 1) * 1.5) * MP1;
-      /* maxspeed += 1.5 * MP1; */
+    /* maxspeed += 1.5 * MP1; */
 #ifndef BT_MOVEMENT_MODES
     if (InSpecial(mech) && InGravity(mech))
 #else
@@ -2785,7 +2792,7 @@ void updateAutoturnTurret(MECH *mech) {
     return;
 
   if (MechTarget(mech) != -1) {
-    target = getMech(MechTarget(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
     fx = MechFX(target);
     fy = MechFY(target);
   } else {
@@ -2814,7 +2821,9 @@ void mech_update(DbRef key, void *data) {
   if (Started(mech) || MechPlusHeat(mech) > 0.1)
     UpdateHeat(mech);
   if (Started(mech))
-    MechVisMod(mech) = BOUNDED(0, MechVisMod(mech) + Number(-40, 40), 100);
+    MechVisMod(mech) = BOUNDED(
+        0, MechVisMod(mech) + btech_random_range(mech->xcode.context, -40, 40),
+        100);
   checkECM(mech);
   checkTAG(mech);
   end_lite_check(mech);

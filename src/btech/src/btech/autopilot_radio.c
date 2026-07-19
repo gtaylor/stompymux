@@ -407,7 +407,7 @@ void auto_radio_command_goto(AUTO *autopilot, MECH *mech, char **args, int argc,
     return;
   }
 
-  map = getMap(mech->mapindex);
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height) {
     snprintf(mesg, LBUF_SIZE, "!Bad hex to travel to");
@@ -685,11 +685,11 @@ void auto_radio_command_report(AUTO *autopilot, MECH *mech, char **args,
 
   /* Is the AI targeting something */
   if (MechTarget(mech) != -1) {
-    target = getMech(MechTarget(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
 
     if (target) {
       snprintf(buffer, MBUF_SIZE, ", targeting %s %s",
-               GetMechToMechID(mech, target),
+               mech_to_mech_display_id(mech, target).text,
                InLineOfSight(mech, target, MechX(target), MechY(target),
                              FaMechRange(mech, target))
                    ? ""
@@ -725,8 +725,8 @@ void auto_radio_command_sensor(AUTO *autopilot, MECH *mech, char **args,
   char buf[SBUF_SIZE];
 
   /* Make sure no sensor event running */
-  mux_event_remove_type_data(btech_context_active()->events, EVENT_AUTO_SENSOR,
-                             autopilot);
+  mux_event_remove_type_data(autopilot->xcode.context->events,
+                             EVENT_AUTO_SENSOR, autopilot);
 
   if ((argc - 1) == 2) {
 
@@ -1133,14 +1133,14 @@ void auto_reply_event(MuxEvent *muxevent) {
   MAP *map;
 
   /* Make sure its a mech */
-  if (!IsMech(mech->mynum)) {
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum)) {
     free(buf);
     return;
   }
 
   /* If valid object */
   if (mech)
-    if ((map = (getMap(mech->mapindex))))
+    if ((map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
       sendchannelstuff(mech, 0, buf);
 
   free(buf);
@@ -1162,9 +1162,9 @@ void auto_reply(MECH *mech, char *buf) {
     return;
 
   /* Make sure valid objects */
-  if (!(FindObjectsData(MechAuto(mech))) ||
-      !is_good_obj(btech_context_active()->database, MechAuto(mech)) ||
-      game_object_location(btech_context_active()->database, MechAuto(mech)) !=
+  if (!(btech_context_find_object(mech->xcode.context, MechAuto(mech))) ||
+      !is_good_obj(mech->xcode.context->database, MechAuto(mech)) ||
+      game_object_location(mech->xcode.context->database, MechAuto(mech)) !=
           mech->mynum) {
     MechAuto(mech) = -1;
     return;
@@ -1175,9 +1175,11 @@ void auto_reply(MECH *mech, char *buf) {
 
   if (reply) {
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-    MECHEVENT(mech, EVENT_AUTO_REPLY, auto_reply_event, Number(1, 2), reply);
+    MECHEVENT(mech, EVENT_AUTO_REPLY, auto_reply_event,
+              btech_random_range(mech->xcode.context, 1, 2), reply);
   } else {
-    SendAI("Interal AI Error: Attempting to radio reply but unable to copy "
+    SendAI(mech->xcode.context,
+           "Interal AI Error: Attempting to radio reply but unable to copy "
            "string");
   }
 }
@@ -1292,7 +1294,7 @@ void auto_parse_command(AUTO *autopilot, MECH *mech, int chn, char *buffer) {
       build_auto_reply(reply, "ERROR: ", message + 1, "!");
     } else {
 
-      switch (Number(0, 20)) {
+      switch (btech_random_range(mech->xcode.context, 0, 20)) {
       case 0:
       case 1:
       case 2:

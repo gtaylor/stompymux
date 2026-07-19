@@ -46,14 +46,15 @@
 #include "p.mech.partnames.h"
 #include "p.mech.stat.h"
 #include "p.mechfile.h"
+#include "p.mechrep.h"
 #include "persistence/btech_persistence.h"
 #include "turret.h"
 
 /* Special object parameters.  */
-SpecialObjectStruct SpecialObjects[] = {
+const SpecialObjectStruct SpecialObjects[] = {
     {"MECH", mechcommands, sizeof(MECH), newfreemech, HEAT_TICK, mech_update,
      POW_MECH},
-    {"DEBUG", debugcommands, 0, NULL, 0, NULL, POW_SECURITY},
+    {"DEBUG", debugcommands, sizeof(XCODE), NULL, 0, NULL, POW_SECURITY},
     {"MECHREP", mechrepcommands, sizeof(MECHREP), newfreemechrep, 0, NULL,
      POW_MECHREP},
     {"MAP", mapcommands, sizeof(MAP), newfreemap, LOS_TICK, map_update,
@@ -71,34 +72,27 @@ SpecialObjectStruct SpecialObjects[] = {
 /*************CALLABLE PROTOS*****************/
 
 /* Main entry point */
-int HandledCommand(DbRef player, DbRef loc, char *command);
+int HandledCommand(BtechContext *context, DbRef player, DbRef loc,
+                   char *command);
 
 /* called when user creates/removes hardcode flag */
-void CreateNewSpecialObject(DbRef player, DbRef key);
-void DisposeSpecialObject(DbRef player, DbRef key);
+void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key);
+void DisposeSpecialObject(BtechContext *context, DbRef player, DbRef key);
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 
 /*************PERSONAL PROTOS*****************/
-void *NewSpecialObject(long id, int type);
-void *FindObjectsData(DbRef key);
-static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
-                                int powerneeded, int objid, char *arg);
-void initialize_colorize();
+void *NewSpecialObject(BtechContext *context, long id, int type);
+void *btech_context_find_object(BtechContext *context, DbRef key);
+static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
+                                int id, int loc, int powerneeded, int objid,
+                                char *arg);
+void initialize_colorize(BtechContext *context);
+void destroy_colorize(BtechContext *context);
 
-#ifndef FAST_WHICHSPECIAL
-
-#define WhichSpecialS WhichSpecial
-int WhichSpecial(DbRef key);
-
-#else
-
-int WhichSpecial(DbRef key);
-static int WhichSpecialS(DbRef key);
-
-#endif
-
-RedBlackTree xcode_tree = NULL;
+int btech_context_which_special(BtechContext *context, DbRef key);
+static int btech_context_which_special_attribute(BtechContext *context,
+                                                 DbRef key);
 
 static int compare_dbrefs(void *key1, void *key2, void *token) {
   const DbRef key1_val = (DbRef)key1;
@@ -107,17 +101,15 @@ static int compare_dbrefs(void *key1, void *key2, void *token) {
   return key1_val - key2_val;
 }
 
-static void init_xcode_tree(void) {
-  xcode_tree = red_black_tree_init(compare_dbrefs, NULL);
-  if (!xcode_tree) {
+static void init_xcode_tree(BtechContext *context) {
+  context->special_objects = red_black_tree_init(compare_dbrefs, nullptr);
+  if (!context->special_objects) {
     /* TODO: We could handle this more gracefully... */
     exit(EXIT_FAILURE);
   }
 }
 
 /*********************************************/
-
-HashTable SpecialCommandHash[NUM_SPECIAL_OBJECTS];
 
 static int Can_Use_Command(MECH *mech, int cmdflag) {
 #define TYPE2FLAG(a)                                                           \
@@ -144,23 +136,33 @@ static int Can_Use_Command(MECH *mech, int cmdflag) {
   return 0;
 }
 
-int HandledCommand_sub(DbRef player, DbRef location, char *command) {
+static bool have_mech_power(BtechContext *context, DbRef object, int power) {
+  DbRef owner = game_object_owner(context->database, object);
+
+  return ((game_object_powers2(context->database, owner) & power) ||
+          is_wizard(context->database, owner)) &&
+         is_inherits(context->database, object);
+}
+
+int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
+                       char *command) {
   XCODE *xcode_obj = NULL;
 
-  struct SpecialObjectStruct *typeOfObject;
+  const SpecialObjectStruct *typeOfObject;
   int type;
   CommandsStruct *cmd;
   char *tmpc, *tmpchar;
   int ishelp;
 
-  type = WhichSpecial(location);
-  if (type < 0 ||
-      (SpecialObjects[type].datasize > 0 &&
-       !(xcode_obj = red_black_tree_find(xcode_tree, (void *)location)))) {
-    if (type >= 0 || !is_hardcode(btech_context_active()->database, location) ||
-        is_zombie(btech_context_active()->database, location))
+  type = btech_context_which_special(context, location);
+  if (type < 0 || (SpecialObjects[type].datasize > 0 &&
+                   !(xcode_obj = red_black_tree_find(context->special_objects,
+                                                     (void *)location)))) {
+    if (type >= 0 || !is_hardcode(context->database, location) ||
+        is_zombie(context->database, location))
       return 0;
-    if ((type = WhichSpecialS(location)) >= 0) {
+    if ((type = btech_context_which_special_attribute(context, location)) >=
+        0) {
       if (SpecialObjects[type].datasize > 0)
         return 0;
     } else
@@ -177,7 +179,8 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   ishelp = !strcmp(command, "HELP");
   for (tmpchar = command; *tmpchar; tmpchar++)
     *tmpchar = ToLower(*tmpchar);
-  cmd = (CommandsStruct *)hash_table_find(command, &SpecialCommandHash[type]);
+  cmd = (CommandsStruct *)hash_table_find(command,
+                                          &context->special_commands[type]);
   if (tmpc)
     *tmpc = ' ';
   if (cmd && (type != GTYPE_MECH ||
@@ -189,45 +192,48 @@ int HandledCommand_sub(DbRef player, DbRef location, char *command) {
   while (*a == ' ')                                                            \
   a++
     if (cmd->helpmsg[0] != '@' ||
-        Have_MechPower(
-            game_object_owner(btech_context_active()->database, player),
-            typeOfObject->power_needed)) {
+        have_mech_power(context, game_object_owner(context->database, player),
+                        typeOfObject->power_needed)) {
       SKIPSTUFF(command);
       ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
     } else
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(context), player,
              "Sorry, that command is restricted!");
     return 1;
   } else if (ishelp) {
     SKIPSTUFF(command);
-    DoSpecialObjectHelp(player, typeOfObject->type, type, location,
+    DoSpecialObjectHelp(context, player, typeOfObject->type, type, location,
                         typeOfObject->power_needed, location, command);
     return 1;
   }
   return 0;
 }
 
-#define OkayHcode(a)                                                           \
-  (a >= 0 && is_hardcode(btech_context_active()->database, a) &&               \
-   !is_zombie(btech_context_active()->database, a))
+static bool okay_hcode(BtechContext *context, DbRef object) {
+  return object >= 0 && is_hardcode(context->database, object) &&
+         !is_zombie(context->database, object);
+}
 
 /* Main entry point */
-int HandledCommand(DbRef player, DbRef loc, char *command) {
+int HandledCommand(BtechContext *context, DbRef player, DbRef loc,
+                   char *command) {
   DbRef curr, temp;
 
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
     return 0;
-  if (OkayHcode(player) && HandledCommand_sub(player, player, command))
+  if (okay_hcode(context, player) &&
+      HandledCommand_sub(context, player, player, command))
     return 1;
-  if (OkayHcode(loc) && HandledCommand_sub(player, loc, command))
+  if (okay_hcode(context, loc) &&
+      HandledCommand_sub(context, player, loc, command))
     return 1;
-  SAFE_DOLIST(btech_context_active()->database, curr, temp,
-              game_object_contents(btech_context_active()->database, player)) {
-    if (OkayHcode(curr))
-      if (HandledCommand_sub(player, curr, command))
+  SAFE_DOLIST(context->database, curr, temp,
+              game_object_contents(context->database, player)) {
+    if (okay_hcode(context, curr))
+      if (HandledCommand_sub(context, player, curr, command))
         return 1;
 #if 0 /* Recursion is evil ; let's not do that, this time */
-		if(has_contents(btech_context_active()->database, curr))
+		if(has_contents(context->database, curr))
 			if(HandledCommand_contents(player, curr, command))
 				return 1;
 #endif
@@ -235,10 +241,8 @@ int HandledCommand(DbRef player, DbRef loc, char *command) {
   return 0;
 }
 
-void InitSpecialHash(int which);
-void initialize_partname_tables();
-
-int global_specials = NUM_SPECIAL_OBJECTS;
+void InitSpecialHash(BtechContext *context, int which);
+const int global_specials = NUM_SPECIAL_OBJECTS;
 
 static int remove_from_all_maps_func(void *key, void *data, int depth,
                                      void *arg) {
@@ -249,7 +253,7 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
     MAP *map;
     int i;
 
-    if (!(map = getMap((DbRef)key)))
+    if (!(map = btech_context_get_map(mech->xcode.context, (DbRef)key)))
       return 1;
     for (i = 0; i < map->first_free; i++)
       if (map->mechsOnMap[i] == mech->mynum)
@@ -259,25 +263,29 @@ static int remove_from_all_maps_func(void *key, void *data, int depth,
 }
 
 void mech_remove_from_all_maps(MECH *mech) {
-  red_black_tree_walk(xcode_tree, WALK_INORDER, remove_from_all_maps_func,
-                      mech);
+  red_black_tree_walk(mech->xcode.context->special_objects, WALK_INORDER,
+                      remove_from_all_maps_func, mech);
 }
 
-static DbRef except_map = -1;
+typedef struct RemoveFromAllMapsContext {
+  MECH *mech;
+  DbRef except_map;
+} RemoveFromAllMapsContext;
 
 static int remove_from_all_maps_except_func(void *key, void *data, int depth,
                                             void *arg) {
   DbRef key_val = (DbRef)key;
   XCODE *const xcode_obj = data;
-  MECH *const mech = arg;
+  RemoveFromAllMapsContext *context = arg;
+  MECH *const mech = context->mech;
 
   if (xcode_obj->type == GTYPE_MAP) {
     int i;
     MAP *map;
 
-    if (key_val == except_map)
+    if (key_val == context->except_map)
       return 1;
-    if (!(map = getMap(key_val)))
+    if (!(map = btech_context_get_map(mech->xcode.context, key_val)))
       return 1;
     for (i = 0; i < map->first_free; i++)
       if (map->mechsOnMap[i] == mech->mynum)
@@ -287,11 +295,13 @@ static int remove_from_all_maps_except_func(void *key, void *data, int depth,
 }
 
 void mech_remove_from_all_maps_except(MECH *mech, int num) {
-  /* TODO: Put the mech and the except_map into a structure for arg.  */
-  except_map = num;
-  red_black_tree_walk(xcode_tree, WALK_INORDER,
-                      remove_from_all_maps_except_func, mech);
-  except_map = -1;
+  RemoveFromAllMapsContext context = {
+      .mech = mech,
+      .except_map = num,
+  };
+
+  red_black_tree_walk(mech->xcode.context->special_objects, WALK_INORDER,
+                      remove_from_all_maps_except_func, &context);
 }
 
 static int load_update2(void *key, void *data, int depth, void *arg) {
@@ -304,20 +314,20 @@ static int load_update2(void *key, void *data, int depth, void *arg) {
 
 static int load_update4(void *key, void *data, int depth, void *arg) {
   XCODE *const xcode_obj = data;
+  BtechContext *const context = arg;
 
   if (xcode_obj->type == GTYPE_MECH) {
     MECH *const mech = (MECH *)xcode_obj;
     MAP *map;
 
-    if (!(map = getMap(mech->mapindex))) {
+    if (!(map = btech_context_get_map(context, mech->mapindex))) {
       /* Ugly kludge */
-      if ((map = getMap(game_object_location(btech_context_active()->database,
-                                             mech->mynum))))
-        mech_Rsetmapindex(
-            GOD, mech,
-            tprintf("%ld", game_object_location(
-                               btech_context_active()->database, mech->mynum)));
-      if (!(map = getMap(mech->mapindex)))
+      if ((map = btech_context_get_map(
+               context, game_object_location(context->database, mech->mynum))))
+        mech_Rsetmapindex(GOD, mech,
+                          tprintf("%ld", game_object_location(context->database,
+                                                              mech->mynum)));
+      if (!(map = btech_context_get_map(context, mech->mapindex)))
         return 1;
     }
 
@@ -345,6 +355,7 @@ static int load_update3(void *key, void *data, int depth, void *arg) {
  */
 static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
   XCODE *const xcode_obj = data;
+  BtechContext *const context = arg;
 
   if (xcode_obj->type == GTYPE_AUTO) {
     AUTO *const autopilot = (AUTO *)xcode_obj;
@@ -357,8 +368,8 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
       autopilot->profile[i] = NULL;
     }
 
-    if (!autopilot->mymechnum ||
-        !(autopilot->mymech = getMech(autopilot->mymechnum))) {
+    if (!autopilot->mymechnum || !(autopilot->mymech = btech_context_get_mech(
+                                       context, autopilot->mymechnum))) {
       DoStopGun(autopilot);
     } else {
       /*
@@ -374,12 +385,11 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
        * the durable command list; it recreates goal-specific events itself.
        */
       if (MechAuto(autopilot->mymech) == autopilot->mynum &&
-          game_object_location(btech_context_active()->database,
-                               autopilot->mynum) == autopilot->mymechnum &&
+          game_object_location(context->database, autopilot->mynum) ==
+              autopilot->mymechnum &&
           autopilot->commands &&
           doubly_linked_list_size(autopilot->commands) > 0 &&
-          !mux_event_count_type_data(btech_context_active()->events,
-                                     EVENT_AUTOCOM, autopilot))
+          !mux_event_count_type_data(context->events, EVENT_AUTOCOM, autopilot))
         AUTO_COM(autopilot, AUTOPILOT_NC_DELAY);
       if (Gunning(autopilot))
         DoStartGun(autopilot);
@@ -389,72 +399,72 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
   return 1;
 }
 
-void heartbeat_init();
-
-void LoadSpecialObjects(void) {
+void LoadSpecialObjects(BtechContext *context) {
   DbRef i;
-  int id, brand;
   int type;
 
-  init_xcode_tree();
+  init_xcode_tree(context);
+  context->special_commands =
+      calloc(NUM_SPECIAL_OBJECTS, sizeof(*context->special_commands));
+  if (context->special_commands == nullptr)
+    exit(EXIT_FAILURE);
+  context->special_command_count = NUM_SPECIAL_OBJECTS;
 
-  mux_event_initialize(btech_context_active()->events);
-  mux_event_count_initialize();
-  init_stat();
-  initialize_partname_tables();
+  mux_event_initialize(context->events);
+  init_stat(context);
+  initialize_partname_tables(context);
   /* The SQLite startup path still needs ANSI parser state for BTech output. */
-  initialize_colorize();
-  for (i = 0; MissileHitTable[i].key != -1; i++) {
-    if (find_matching_vlong_part(MissileHitTable[i].name, NULL, &id, &brand))
-      MissileHitTable[i].key = Weapon2I(id);
-    else
-      MissileHitTable[i].key = -2;
-  }
+  initialize_colorize(context);
+  if (!btech_weapon_settings_initialize(&context->weapon_settings))
+    exit(EXIT_FAILURE);
+  if (!missile_hit_registry_initialize(&context->missile_hits, context))
+    exit(EXIT_FAILURE);
   /* Loop through the entire database, and if it has the special */
   /* object flag, add it to our linked list. */
-  DO_WHOLE_DB(btech_context_active()->database, i)
-  if (is_hardcode(btech_context_active()->database, i) &&
-      !is_going(btech_context_active()->database, i) &&
-      !is_halted(btech_context_active()->database, i)) {
-    type = WhichSpecialS(i);
+  DO_WHOLE_DB(context->database, i)
+  if (is_hardcode(context->database, i) && !is_going(context->database, i) &&
+      !is_halted(context->database, i)) {
+    type = btech_context_which_special_attribute(context, i);
     if (type >= 0) {
       if (SpecialObjects[type].datasize > 0)
-        NewSpecialObject(i, type);
+        NewSpecialObject(context, i, type);
     } else
-      c_hardcode(btech_context_active()->database, i); /* Reset the flag */
+      c_hardcode(context->database, i); /* Reset the flag */
   }
   for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
-    InitSpecialHash(i);
-    if (!SpecialObjects[i].updatefunc)
-      SpecialObjects[i].updateTime = 0;
+    InitSpecialHash(context, i);
   }
-  init_btechstats();
+  init_btechstats(context);
 #ifdef BTMUX_PERSISTENCE_TESTING
   /* The integration fixture creates its initial SQLite special-state rows. */
   if (getenv("BTMUX_TEST_BTECH_BOOTSTRAP")) {
-    heartbeat_init();
+    heartbeat_init(context);
     return;
   }
 #endif
   if (btech_persistence_load_special_state_path(
-          btech_context_active()->configuration->database.gamedb) < 0) {
+          context, context->configuration->database.gamedb) < 0) {
     exit(EXIT_FAILURE);
   }
-  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update2, NULL);
-  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update3, NULL);
-  red_black_tree_walk(xcode_tree, WALK_INORDER, load_update4, NULL);
-  red_black_tree_walk(xcode_tree, WALK_INORDER, load_autopilot_data, NULL);
-  heartbeat_init();
+  red_black_tree_walk(context->special_objects, WALK_INORDER, load_update2,
+                      context);
+  red_black_tree_walk(context->special_objects, WALK_INORDER, load_update3,
+                      context);
+  red_black_tree_walk(context->special_objects, WALK_INORDER, load_update4,
+                      context);
+  red_black_tree_walk(context->special_objects, WALK_INORDER,
+                      load_autopilot_data, context);
+  heartbeat_init(context);
 }
 
 static int UpdateSpecialObject_func(void *key, void *data, int depth,
                                     void *arg) {
   XCODE *const xcode_obj = data;
+  BtechContext *const context = arg;
 
   if (!SpecialObjects[xcode_obj->type].updateTime)
     return 1;
-  if ((btech_context_active()->clock->now %
-       SpecialObjects[xcode_obj->type].updateTime))
+  if ((context->clock->now % SpecialObjects[xcode_obj->type].updateTime))
     return 1;
   ((void (*)(DbRef, void *))SpecialObjects[xcode_obj->type].updatefunc)(
       (DbRef)key, xcode_obj);
@@ -466,29 +476,29 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
 /* Note the new handling for calls being done at <1second intervals,
    or possibly at >1second intervals */
 
-void UpdateSpecialObjects(void) {
-  static time_t lastrun = 0;
-
+void UpdateSpecialObjects(BtechContext *context) {
   const char *cmdsave;
   int i;
-  int times = lastrun ? (btech_context_active()->clock->now - lastrun) : 1;
+  int times = context->last_special_update
+                  ? (context->clock->now - context->last_special_update)
+                  : 1;
 
   if (times > 20)
     times = 20; /* Machine's hopelessly lagged,
                            we don't want to make it [much] worse */
-  cmdsave = btech_context_active()->command_context->debug_command;
+  cmdsave = btech_context_command(context)->debug_command;
   for (i = 0; i < times; i++) {
-    mux_event_run(btech_context_active()->events);
-    btech_context_active()->command_context->debug_command =
+    mux_event_run(context->events);
+    btech_context_command(context)->debug_command =
         (char *)"< Generic hcode update handler>";
-    red_black_tree_walk(xcode_tree, WALK_INORDER, UpdateSpecialObject_func,
-                        NULL);
+    red_black_tree_walk(context->special_objects, WALK_INORDER,
+                        UpdateSpecialObject_func, context);
   }
-  lastrun = btech_context_active()->clock->now;
-  btech_context_active()->command_context->debug_command = cmdsave;
+  context->last_special_update = context->clock->now;
+  btech_context_command(context)->debug_command = cmdsave;
 }
 
-void *NewSpecialObject(long id, int type) {
+void *NewSpecialObject(BtechContext *context, long id, int type) {
   XCODE *xcode_obj = NULL;
 
   if (SpecialObjects[type].datasize) {
@@ -499,178 +509,184 @@ void *NewSpecialObject(long id, int type) {
     }
     xcode_obj->type = type;
     xcode_obj->size = SpecialObjects[type].datasize;
+    xcode_obj->context = context;
 
     if (SpecialObjects[type].allocfreefunc)
       ((void (*)(DbRef, void **, int))SpecialObjects[type].allocfreefunc)(
           id, (void **)&xcode_obj, SPECIAL_ALLOC);
 
-    red_black_tree_insert(xcode_tree, (void *)id, xcode_obj);
+    red_black_tree_insert(context->special_objects, (void *)id, xcode_obj);
   }
 
   return xcode_obj;
 }
 
-void CreateNewSpecialObject(DbRef player, DbRef key) {
+void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   void *new;
-  struct SpecialObjectStruct *typeOfObject;
+  const SpecialObjectStruct *typeOfObject;
   int type;
   char *str;
 
-  str = silly_atr_get(key, A_XTYPE);
+  str = btech_attribute_read(context->database, key, A_XTYPE,
+                             (char[LBUF_SIZE]){0});
   if (!(str && *str)) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "You must first set the XTYPE using @xtype <object>=<type>");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
            "AUTOPILOT, TURRET.");
-    notify(BTECH_EVALUATION_CONTEXT, player, "Resetting hardcode flag.");
-    c_hardcode(btech_context_active()->database, key); /* Reset the flag */
+    notify(btech_context_evaluation(context), player,
+           "Resetting hardcode flag.");
+    c_hardcode(context->database, key); /* Reset the flag */
     return;
   }
 
   /* Find the special objects */
-  type = WhichSpecialS(key);
+  type = btech_context_which_special_attribute(context, key);
   if (type > -1) {
     /* We found the proper special object */
     typeOfObject = &SpecialObjects[type];
     if (typeOfObject->datasize) {
-      new = NewSpecialObject(key, type);
+      new = NewSpecialObject(context, key, type);
       if (!new)
-        notify(BTECH_EVALUATION_CONTEXT, player, "Memory allocation failure!");
+        notify(btech_context_evaluation(context), player,
+               "Memory allocation failure!");
     }
   } else {
-    notify(BTECH_EVALUATION_CONTEXT, player, "That is not a valid XTYPE!");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
+           "That is not a valid XTYPE!");
+    notify(btech_context_evaluation(context), player,
            "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
            "AUTOPILOT, TURRET.");
-    notify(BTECH_EVALUATION_CONTEXT, player, "Resetting HARDCODE flag.");
-    c_hardcode(btech_context_active()->database, key);
+    notify(btech_context_evaluation(context), player,
+           "Resetting HARDCODE flag.");
+    c_hardcode(context->database, key);
   }
 }
 
-void DisposeSpecialObject(DbRef player, DbRef key) {
+void DisposeSpecialObject(BtechContext *context, DbRef player, DbRef key) {
   XCODE *xcode_obj;
 
   int i;
-  struct SpecialObjectStruct *typeOfObject;
+  const SpecialObjectStruct *typeOfObject;
 
-  xcode_obj = red_black_tree_find(xcode_tree, (void *)key);
+  xcode_obj = red_black_tree_find(context->special_objects, (void *)key);
 
-  i = WhichSpecialS(key);
+  i = btech_context_which_special_attribute(context, key);
   if (i < 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "CRITICAL: Unable to free data, inconsistency somewhere. Please");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "contact a wizard about this _NOW_!");
     return;
   }
   typeOfObject = &SpecialObjects[i];
 
-  if (typeOfObject->datasize > 0 && WhichSpecial(key) != i) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+  if (typeOfObject->datasize > 0 &&
+      btech_context_which_special(context, key) != i) {
+    notify(btech_context_evaluation(context), player,
            "Semi-critical error has occured. For some reason the "
            "object's data differs\nfrom the data on the object. Please "
            "contact a wizard about this.");
-    i = WhichSpecial(key);
+    i = btech_context_which_special(context, key);
   }
   if (xcode_obj) {
     if (typeOfObject->allocfreefunc)
       ((void (*)(DbRef, void **, int))typeOfObject->allocfreefunc)(
           key, (void **)&xcode_obj, SPECIAL_FREE);
-    red_black_tree_delete(xcode_tree, (void *)key);
-    mux_event_remove_data(btech_context_active()->events, xcode_obj);
+    red_black_tree_delete(context->special_objects, (void *)key);
+    mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
   } else if (typeOfObject->datasize > 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "This object is not in the special object DBASE.");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
            "Please contact a wizard about this bug. ");
   }
 }
 
-void Dump_Mech(DbRef player, int type, char *typestr) {
-  notify(BTECH_EVALUATION_CONTEXT, player,
-         "Support discontinued. Bother a wiz if this bothers you.");
-#if 0
-	MECH *mech;
-	char buff[100];
-	int i, running = 0, count = 0;
-	Node *temp;
+static void destroy_special_object(void *key, void *data, void *arg) {
+  BtechContext *context = arg;
+  XCODE *xcode_obj = data;
+  const SpecialObjectStruct *type = &SpecialObjects[xcode_obj->type];
 
-	notify(BTECH_EVALUATION_CONTEXT, player, "ID    # STATUS      MAP #      PILOT #");
-	notify(BTECH_EVALUATION_CONTEXT, player, "----------------------------------------");
-	for(temp = TreeTop(xcode_tree); temp; temp = TreeNext(temp))
-		if(WhichSpecial((i = NodeKey(temp))) == type) {
-			mech = (MECH *) NodeData(temp);
-			sprintf(buff, "#%5d %-8s    #%5d    #%5d", mech->mynum,
-					!Started(mech) ? "SHUTDOWN" : "RUNNING", mech->mapindex,
-					MechPilot(mech));
-			notify(BTECH_EVALUATION_CONTEXT, player, buff);
-			if(MechStatus(mech) & STARTED)
-				running++;
-			count++;
-		}
-	sprintf(buff, "%d %ss running out of %d %ss allocated.", running,
-			typestr, count, typestr);
-	notify(BTECH_EVALUATION_CONTEXT, player, buff);
-	notify(BTECH_EVALUATION_CONTEXT, player, "Done listing");
-#endif
+  mux_event_remove_data(context->events, xcode_obj);
+  if (type->allocfreefunc)
+    ((void (*)(DbRef, void **, int))type->allocfreefunc)(
+        (DbRef)key, (void **)&xcode_obj, SPECIAL_FREE);
+  free(xcode_obj);
 }
 
-void DumpMechs(DbRef player) { Dump_Mech(player, GTYPE_MECH, "mech"); }
+void btech_context_destroy(BtechContext *context) {
+  if (context == nullptr)
+    return;
 
-void DumpMaps(DbRef player) {
-  notify(BTECH_EVALUATION_CONTEXT, player,
-         "Support discontinued. Bother a wiz if this bothers you.");
-#if 0
-	MAP *map;
-	char buff[100];
-	int j, count;
-	Node *temp;
-
-	notify(BTECH_EVALUATION_CONTEXT, player, "MAP #       NAME              X x Y   MECHS");
-	notify(BTECH_EVALUATION_CONTEXT, player, "-------------------------------------------");
-	for(temp = TreeTop(xcode_tree); temp; temp = TreeNext(temp))
-		if(WhichSpecial(NodeKey(temp)) == GTYPE_MAP) {
-			count = 0;
-			map = (MAP *) NodeData(temp);
-			for(j = 0; j < map->first_free; j++)
-				if(map->mechsOnMap[j] != -1)
-					count++;
-			sprintf(buff, "#%5d    %-17.17s %3d x%3d       %d", map->mynum,
-					map->mapname, map->map_width, map->map_height, count);
-			notify(BTECH_EVALUATION_CONTEXT, player, buff);
-		}
-	notify(BTECH_EVALUATION_CONTEXT, player, "Done listing");
+  if (context->special_objects != nullptr) {
+    red_black_tree_release(context->special_objects, destroy_special_object,
+                           context);
+    context->special_objects = nullptr;
+  }
+  for (size_t i = 0; i < context->special_command_count; i++)
+    hash_table_destroy(&context->special_commands[i]);
+  free(context->special_commands);
+  context->special_commands = nullptr;
+  context->special_command_count = 0;
+  btech_stats_destroy(context);
+  destroy_colorize(context);
+#ifdef BT_ADVANCED_ECON
+  btech_part_costs_destroy(context);
 #endif
+  destroy_partname_tables(context);
+  missile_hit_registry_destroy(&context->missile_hits);
+  btech_weapon_settings_destroy(&context->weapon_settings);
+  mech_template_registry_destroy(context);
+  mech_reference_cache_destroy(context);
+  *context = (BtechContext){0};
+}
+
+void Dump_Mech(BtechContext *context, DbRef player, int type, char *typestr) {
+  notify(btech_context_evaluation(context), player,
+         "Support discontinued. Bother a wiz if this bothers you.");
+}
+
+void DumpMechs(BtechContext *context, DbRef player) {
+  Dump_Mech(context, player, GTYPE_MECH, "mech");
+}
+
+void DumpMaps(BtechContext *context, DbRef player) {
+  notify(btech_context_evaluation(context), player,
+         "Support discontinued. Bother a wiz if this bothers you.");
 }
 
 /***************** INTERNAL ROUTINES *************/
 #ifdef FAST_WHICHSPECIAL
-int WhichSpecial(DbRef key) {
+int btech_context_which_special(BtechContext *context, DbRef key) {
   XCODE *xcode_obj;
 
-  if (!is_good_obj(btech_context_active()->database, key))
+  if (!is_good_obj(context->database, key))
     return -1;
-  if (!is_hardcode(btech_context_active()->database, key))
+  if (!is_hardcode(context->database, key))
     return -1;
-  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)key)))
+  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)key)))
     return -1;
   return xcode_obj->type;
 }
-
-static int WhichSpecialS(DbRef key)
 #else
-int WhichSpecial(DbRef key)
+int btech_context_which_special(BtechContext *context, DbRef key) {
+  return btech_context_which_special_attribute(context, key);
+}
 #endif
-{
+
+static int btech_context_which_special_attribute(BtechContext *context,
+                                                 DbRef key) {
   int i;
   int returnValue = -1;
   char *str;
 
-  if (!is_hardcode(btech_context_active()->database, key))
+  if (!is_hardcode(context->database, key))
     return -1;
-  str = silly_atr_get(key, A_XTYPE);
+  str = btech_attribute_read(context->database, key, A_XTYPE,
+                             (char[LBUF_SIZE]){0});
   if (str && *str) {
     for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
       if (!strcmp(SpecialObjects[i].type, str)) {
@@ -682,27 +698,34 @@ int WhichSpecial(DbRef key)
   return (returnValue);
 }
 
-int IsMech(DbRef num) { return WhichSpecial(num) == GTYPE_MECH; }
-
-int IsAuto(DbRef num) { return WhichSpecial(num) == GTYPE_AUTO; }
-
-int IsMap(DbRef num) { return WhichSpecial(num) == GTYPE_MAP; }
-
-/*** Support routines ***/
-void *FindObjectsData(DbRef key) {
-  return red_black_tree_find(xcode_tree, (void *)key);
+bool btech_context_is_mech(BtechContext *context, DbRef key) {
+  return btech_context_which_special(context, key) == GTYPE_MECH;
 }
 
-char *center_string(char *c, int len) {
-  static char buf[LBUF_SIZE];
-  int l = strlen(c);
-  int p, i;
+bool btech_context_is_auto(BtechContext *context, DbRef key) {
+  return btech_context_which_special(context, key) == GTYPE_AUTO;
+}
 
-  p = MAX(0, (len - l) / 2);
-  for (i = 0; i < p; i++)
-    buf[i] = ' ';
-  strcpy(buf + p, c);
-  return buf;
+bool btech_context_is_map(BtechContext *context, DbRef key) {
+  return btech_context_which_special(context, key) == GTYPE_MAP;
+}
+
+void *btech_context_find_object(BtechContext *context, DbRef key) {
+  return red_black_tree_find(context->special_objects, (void *)key);
+}
+
+void center_string(char *destination, size_t destination_size,
+                   const char *source, int width) {
+  if (destination == nullptr || destination_size == 0)
+    return;
+
+  size_t source_length = strlen(source);
+  size_t padding = 0;
+  if (width > 0 && (size_t)width > source_length)
+    padding = ((size_t)width - source_length) / 2;
+  padding = MIN(padding, destination_size - 1);
+  memset(destination, ' ', padding);
+  snprintf(destination + padding, destination_size - padding, "%s", source);
 }
 
 static void help_color_initialize(const char *from, char *to) {
@@ -842,8 +865,9 @@ static void cut_apart_helpmsgs(coolmenu **d, char *msg1, char *msg2, int len,
 #endif
 }
 
-static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
-                                int powerneeded, int objid, char *arg) {
+static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
+                                int id, int loc, int powerneeded, int objid,
+                                char *arg) {
   int i, j;
   MECH *mech = NULL;
   int pos[100][2];
@@ -854,14 +878,13 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
   int dc;
 
   if (id == GTYPE_MECH)
-    mech = getMech(loc);
+    mech = btech_context_get_mech(context, loc);
   bzero(pos, sizeof(pos));
   for (i = 0; SpecialObjects[id].commands[i].name; i++) {
     if (!SpecialObjects[id].commands[i].func &&
         (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
-         Have_MechPower(
-             game_object_owner(btech_context_active()->database, player),
-             powerneeded)))
+         have_mech_power(context, game_object_owner(context->database, player),
+                         powerneeded)))
       if (id != GTYPE_MECH ||
           Can_Use_Command(mech, SpecialObjects[id].commands[i].flag)) {
         if (count)
@@ -885,15 +908,16 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
        .helpmsg[SpecialObjects[id].commands[a].helpmsg[0] == '@']
     for (i = 0; i < count; i++) {
       if (count > 1) {
-        d = center_string(HELPMSG(pos[i][0]), 70);
+        center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
+        d = buf;
         sim(tprintf("%s%s%s", "%cg", d, "%c"), CM_ONE);
       } else
         sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
         if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-            Have_MechPower(
-                game_object_owner(btech_context_active()->database, player),
-                powerneeded))
+            have_mech_power(context,
+                            game_object_owner(context->database, player),
+                            powerneeded))
           if (id != GTYPE_MECH ||
               Can_Use_Command(mech, SpecialObjects[id].commands[j].flag)) {
             strcpy(buf, SpecialObjects[id].commands[j].name);
@@ -941,15 +965,16 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
     if (dc > -2) {
       for (i = 0; i < count; i++)
         if (dc == -1 || i == dc) {
-          if (count > 1)
-            vsi(tprintf("%s%s%s", "%cg", center_string(HELPMSG(pos[i][0]), 70),
-                        "%c"));
+          if (count > 1) {
+            center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
+            vsi(tprintf("%s%s%s", "%cg", buf, "%c"));
+          }
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
             if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-                Have_MechPower(
-                    game_object_owner(btech_context_active()->database, player),
-                    powerneeded))
+                have_mech_power(context,
+                                game_object_owner(context->database, player),
+                                powerneeded))
               if (id != GTYPE_MECH ||
                   Can_Use_Command(mech, SpecialObjects[id].commands[j].flag))
                 cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,
@@ -958,16 +983,16 @@ static void DoSpecialObjectHelp(DbRef player, char *type, int id, int loc,
     }
   }
   sim(NULL, CM_ONE | CM_LINE);
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
 
-void InitSpecialHash(int which) {
+void InitSpecialHash(BtechContext *context, int which) {
   char *tmp, *tmpc;
   int i;
   char buf[MBUF_SIZE];
 
-  hash_table_initialize(&SpecialCommandHash[which], 20 * HASH_FACTOR);
+  hash_table_initialize(&context->special_commands[which], 20 * HASH_FACTOR);
   for (i = 0; (tmp = SpecialObjects[which].commands[i].name); i++) {
     if (!SpecialObjects[which].commands[i].func)
       continue;
@@ -978,19 +1003,20 @@ void InitSpecialHash(int which) {
     if ((tmpc = strstr(buf, " ")))
       *tmpc = 0;
     hash_table_add(buf, (int *)&SpecialObjects[which].commands[i],
-                   &SpecialCommandHash[which]);
+                   &context->special_commands[which]);
   }
 }
 
-void handle_xcode(DbRef player, DbRef obj, int from, int to) {
+void handle_xcode(BtechContext *context, DbRef player, DbRef obj, int from,
+                  int to) {
   if (from == to)
     return;
   if (!to) {
-    s_hardcode(btech_context_active()->database, obj);
-    DisposeSpecialObject(player, obj);
-    c_hardcode(btech_context_active()->database, obj);
+    s_hardcode(context->database, obj);
+    DisposeSpecialObject(context, player, obj);
+    c_hardcode(context->database, obj);
   } else
-    CreateNewSpecialObject(player, obj);
+    CreateNewSpecialObject(context, player, obj);
 }
 
 #define DEFAULT 0 /* Normal */
@@ -999,43 +1025,66 @@ void handle_xcode(DbRef player, DbRef obj, int from, int to) {
 #define ANSI_END "m"
 #define ANSI_END_LEN 1
 
-struct color_entry {
+typedef struct ColorTableEntry {
   int bit;
   int negbit;
   char ltr;
   const char *string;
-  char *sstring;
-} color_table[] = {
-    {0x0008, 7, 'n', ANSI_NORMAL, NULL},  {0x0001, 0, 'h', ANSI_HILITE, NULL},
-    {0x0002, 0, 'i', ANSI_INVERSE, NULL}, {0x0004, 0, 'f', ANSI_BLINK, NULL},
-    {0x0010, 0, 'x', ANSI_BLACK, NULL},   {0x0010, 0x10, 'l', ANSI_BLACK, NULL},
-    {0x0020, 0, 'r', ANSI_RED, NULL},     {0x0040, 0, 'g', ANSI_GREEN, NULL},
-    {0x0080, 0, 'y', ANSI_YELLOW, NULL},  {0x0100, 0, 'b', ANSI_BLUE, NULL},
-    {0x0200, 0, 'm', ANSI_MAGENTA, NULL}, {0x0400, 0, 'c', ANSI_CYAN, NULL},
-    {0x0800, 0, 'w', ANSI_WHITE, NULL},   {0, 0, 0, NULL, NULL}};
+} ColorTableEntry;
+
+static const ColorTableEntry color_table[] = {
+    {0x0008, 7, 'n', ANSI_NORMAL},  {0x0001, 0, 'h', ANSI_HILITE},
+    {0x0002, 0, 'i', ANSI_INVERSE}, {0x0004, 0, 'f', ANSI_BLINK},
+    {0x0010, 0, 'x', ANSI_BLACK},   {0x0010, 0x10, 'l', ANSI_BLACK},
+    {0x0020, 0, 'r', ANSI_RED},     {0x0040, 0, 'g', ANSI_GREEN},
+    {0x0080, 0, 'y', ANSI_YELLOW},  {0x0100, 0, 'b', ANSI_BLUE},
+    {0x0200, 0, 'm', ANSI_MAGENTA}, {0x0400, 0, 'c', ANSI_CYAN},
+    {0x0800, 0, 'w', ANSI_WHITE},   {0, 0, 0, nullptr}};
 
 #define CHARS 256
+enum { COLOR_ENTRY_COUNT = 13 };
 
-char colorc_reverse[CHARS];
+struct BtechColorizeState {
+  int reverse[CHARS];
+  char *short_sequences[COLOR_ENTRY_COUNT];
+};
 
-void initialize_colorize() {
+void initialize_colorize(BtechContext *context) {
+  BtechColorizeState *state = calloc(1, sizeof(*state));
   int i;
   char buf[20];
   char *c;
 
+  if (state == nullptr)
+    exit(EXIT_FAILURE);
+  context->colorize = state;
   c = buf + ANSI_START_LEN;
   for (i = 0; i < CHARS; i++)
-    colorc_reverse[i] = DEFAULT;
+    state->reverse[i] = DEFAULT;
   for (i = 0; color_table[i].string; i++) {
-    colorc_reverse[(short)color_table[i].ltr] = i;
+    state->reverse[(unsigned char)color_table[i].ltr] = i;
     strcpy(buf, color_table[i].string);
     buf[strlen(buf) - ANSI_END_LEN] = 0;
-    color_table[i].sstring = strdup(c);
+    state->short_sequences[i] = strdup(c);
+    if (state->short_sequences[i] == nullptr)
+      exit(EXIT_FAILURE);
   }
 }
 
+void destroy_colorize(BtechContext *context) {
+  BtechColorizeState *state = context->colorize;
+
+  if (state == nullptr)
+    return;
+  for (size_t i = 0; i < COLOR_ENTRY_COUNT; i++)
+    free(state->short_sequences[i]);
+  free(state);
+  context->colorize = nullptr;
+}
+
 #undef notify
-char *colorize(DbRef player, char *from) {
+char *colorize(EvaluationContext *evaluation, DbRef player, char *from) {
+  const BtechColorizeState *state = evaluation->btech->colorize;
   char *to;
   char *p, *q;
   int color_wanted = 0;
@@ -1050,13 +1099,13 @@ char *colorize(DbRef player, char *from) {
       if (*p <= 0)
         i = DEFAULT;
       else
-        i = colorc_reverse[(short)*p];
+        i = state->reverse[(unsigned char)*p];
       if (i == DEFAULT && *p != 'n')
         p--;
       color_wanted &= ~color_table[i].negbit;
       color_wanted |= color_table[i].bit;
     } else {
-      if (color_wanted && is_ansi(btech_context_active()->database, player)) {
+      if (color_wanted && is_ansi(evaluation->world->database, player)) {
         *q = 0;
         /* Generate efficient color string */
         strcpy(q, ANSI_START);
@@ -1067,8 +1116,8 @@ char *colorize(DbRef player, char *from) {
               color_table[i].bit != color_table[i].negbit) {
             if (cnt)
               *q++ = ';';
-            strcpy(q, color_table[i].sstring);
-            q += strlen(color_table[i].sstring);
+            strcpy(q, state->short_sequences[i]);
+            q += strlen(state->short_sequences[i]);
             cnt++;
           }
         strcpy(q, ANSI_END);
@@ -1079,7 +1128,7 @@ char *colorize(DbRef player, char *from) {
     }
   }
   *q = 0;
-  if (color_wanted && is_ansi(btech_context_active()->database, player)) {
+  if (color_wanted && is_ansi(evaluation->world->database, player)) {
     /* Generate efficient color string */
     strcpy(q, ANSI_START);
     q += ANSI_START_LEN;
@@ -1089,8 +1138,8 @@ char *colorize(DbRef player, char *from) {
           color_table[i].bit != color_table[i].negbit) {
         if (cnt)
           *q++ = ';';
-        strcpy(q, color_table[i].sstring);
-        q += strlen(color_table[i].sstring);
+        strcpy(q, state->short_sequences[i]);
+        q += strlen(state->short_sequences[i]);
         cnt++;
       }
     strcpy(q, ANSI_END);
@@ -1103,53 +1152,54 @@ char *colorize(DbRef player, char *from) {
   return to;
 }
 
-void mecha_notify(DbRef player, char *msg) {
+void mecha_notify(EvaluationContext *evaluation, DbRef player, char *msg) {
   char *tmp;
 
-  tmp = colorize(player, msg);
-  raw_notify(BTECH_EVALUATION_CONTEXT, player, tmp);
+  tmp = colorize(evaluation, player, msg);
+  raw_notify(evaluation, player, tmp);
   free_lbuf(tmp);
 }
 
-void mecha_notify_except(DbRef loc, DbRef player, DbRef exception, char *msg) {
+void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
+                         DbRef exception, char *msg) {
   DbRef first;
 
   if (loc != exception)
-    notify_checked(BTECH_EVALUATION_CONTEXT, loc, player, msg,
+    notify_checked(evaluation, loc, player, msg,
                    (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A |
                     MSG_COLORIZE));
-  DOLIST(btech_context_active()->database, first,
-         game_object_contents(btech_context_active()->database, loc)) {
+  DOLIST(evaluation->world->database, first,
+         game_object_contents(evaluation->world->database, loc)) {
     if (first != exception) {
-      notify_checked(BTECH_EVALUATION_CONTEXT, first, player, msg,
+      notify_checked(evaluation, first, player, msg,
                      (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE | MSG_COLORIZE));
     }
   }
 }
 
-void ResetSpecialObjects() {
-  mux_event_run_by_type(btech_context_active()->events, EVENT_HIDE);
-  mux_event_run_by_type(btech_context_active()->events, EVENT_BLINDREC);
+void ResetSpecialObjects(BtechContext *context) {
+  mux_event_run_by_type(context->events, EVENT_HIDE);
+  mux_event_run_by_type(context->events, EVENT_BLINDREC);
 }
 
-MAP *getMap(DbRef d) {
+MAP *btech_context_get_map(BtechContext *context, DbRef d) {
   XCODE *xcode_obj;
 
-  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
+  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)d)))
     return NULL;
   if (xcode_obj->type != GTYPE_MAP)
     return NULL;
   return (MAP *)xcode_obj;
 }
 
-MECH *getMech(DbRef d) {
+MECH *btech_context_get_mech(BtechContext *context, DbRef d) {
   XCODE *xcode_obj;
 
-  if (!(is_good_obj(btech_context_active()->database, d)))
+  if (!(is_good_obj(context->database, d)))
     return NULL;
-  if (!(is_hardcode(btech_context_active()->database, d)))
+  if (!(is_hardcode(context->database, d)))
     return NULL;
-  if (!(xcode_obj = red_black_tree_find(xcode_tree, (void *)d)))
+  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)d)))
     return NULL;
   if (xcode_obj->type != GTYPE_MECH)
     return NULL;

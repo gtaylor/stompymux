@@ -15,15 +15,15 @@
 #include "p.mech.utils.h"
 #include <math.h>
 
-static char mech_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
-                                   {LARM, 3},   {RARM, 3},   {LLEG, 4},
-                                   {RLEG, 4},   {-1, 0}};
+static const char mech_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
+                                         {LARM, 3},   {RARM, 3},   {LLEG, 4},
+                                         {RLEG, 4},   {-1, 0}};
 
-static char quad_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
-                                   {LARM, 4},   {RARM, 4},   {LLEG, 4},
-                                   {RLEG, 4},   {-1, 0}};
+static const char quad_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
+                                         {LARM, 4},   {RARM, 4},   {LLEG, 4},
+                                         {RLEG, 4},   {-1, 0}};
 
-static char int_data[][5] = {
+static const char int_data[][5] = {
     {10, 4, 3, 1, 2},      {15, 5, 4, 2, 3},     {20, 6, 5, 3, 4},
     {25, 8, 6, 4, 6},      {30, 10, 7, 5, 7},    {35, 11, 8, 6, 8},
     {40, 12, 10, 6, 10},   {45, 14, 11, 7, 11},  {50, 16, 12, 8, 12},
@@ -32,107 +32,107 @@ static char int_data[][5] = {
     {85, 27, 18, 14, 18},  {90, 29, 19, 15, 19}, {95, 30, 20, 16, 20},
     {100, 31, 21, 17, 21}, {-1, 0, 0, 0, 0}};
 
-static short engine_data[][2] = {{0, 0},
-                                 {10, 1},
-                                 {15, 1},
-                                 {20, 1},
-                                 {25, 1},
-                                 {30, 2},
-                                 {35, 2},
-                                 {40, 2},
-                                 {45, 2},
-                                 {50, 3},
-                                 {55, 3},
-                                 {60, 3},
-                                 {65, 4},
-                                 {70, 4},
-                                 {75, 4},
-                                 {80, 5},
-                                 {85, 5},
-                                 {90, 6},
-                                 {95, 6},
-                                 {100, 6},
-                                 {105, 7},
-                                 {110, 7},
-                                 {115, 8},
-                                 {120, 8},
-                                 {125, 8},
-                                 {130, 9},
-                                 {135, 9},
-                                 {140, 10},
-                                 {145, 10},
-                                 {150, 11},
-                                 {155, 11},
-                                 {160, 12},
-                                 {165, 12},
-                                 {170, 12},
-                                 {175, 14},
-                                 {180, 14},
-                                 {185, 15},
-                                 {190, 15},
-                                 {195, 16},
-                                 {200, 17},
-                                 {205, 17},
-                                 {210, 18},
-                                 {215, 19},
-                                 {220, 20},
-                                 {225, 20},
-                                 {230, 21},
-                                 {235, 22},
-                                 {240, 23},
-                                 {245, 24},
-                                 {250, 25},
-                                 {255, 26},
-                                 {260, 27},
-                                 {265, 28},
-                                 {270, 29},
-                                 {275, 31},
-                                 {280, 32},
-                                 {285, 33},
-                                 {290, 35},
-                                 {295, 36},
-                                 {300, 38},
-                                 {305, 39},
-                                 {310, 41},
-                                 {315, 43},
-                                 {320, 45},
-                                 {325, 47},
-                                 {330, 49},
-                                 {335, 51},
-                                 {340, 54},
-                                 {345, 57},
-                                 {350, 59},
-                                 {355, 63},
-                                 {360, 66},
-                                 {365, 69},
-                                 {370, 73},
-                                 {375, 77},
-                                 {380, 82},
-                                 {385, 87},
-                                 {390, 92},
-                                 {395, 98},
-                                 {400, 105},
-                                 {405, 113},
-                                 {410, 122},
-                                 {415, 133},
-                                 {420, 145},
-                                 {425, 159},
-                                 {430, 87 * 2 + 1},
-                                 {435, 97 * 2},
-                                 {440, 107 * 2 + 1},
-                                 {445, 119 * 2 + 1},
-                                 {450, 133 * 2 + 1},
-                                 {455, 150 * 2},
-                                 {460, 168 * 2 + 1},
-                                 {465, 190 * 2},
-                                 {470, 214 * 2 + 1},
-                                 {475, 243 * 2},
-                                 {480, 275 * 2 + 1},
-                                 {485, 313 * 2},
-                                 {490, 356 * 2},
-                                 {495, 405 * 2 + 1},
-                                 {500, 462 * 2 + 1},
-                                 {-1, 0}};
+static const short engine_data[][2] = {{0, 0},
+                                       {10, 1},
+                                       {15, 1},
+                                       {20, 1},
+                                       {25, 1},
+                                       {30, 2},
+                                       {35, 2},
+                                       {40, 2},
+                                       {45, 2},
+                                       {50, 3},
+                                       {55, 3},
+                                       {60, 3},
+                                       {65, 4},
+                                       {70, 4},
+                                       {75, 4},
+                                       {80, 5},
+                                       {85, 5},
+                                       {90, 6},
+                                       {95, 6},
+                                       {100, 6},
+                                       {105, 7},
+                                       {110, 7},
+                                       {115, 8},
+                                       {120, 8},
+                                       {125, 8},
+                                       {130, 9},
+                                       {135, 9},
+                                       {140, 10},
+                                       {145, 10},
+                                       {150, 11},
+                                       {155, 11},
+                                       {160, 12},
+                                       {165, 12},
+                                       {170, 12},
+                                       {175, 14},
+                                       {180, 14},
+                                       {185, 15},
+                                       {190, 15},
+                                       {195, 16},
+                                       {200, 17},
+                                       {205, 17},
+                                       {210, 18},
+                                       {215, 19},
+                                       {220, 20},
+                                       {225, 20},
+                                       {230, 21},
+                                       {235, 22},
+                                       {240, 23},
+                                       {245, 24},
+                                       {250, 25},
+                                       {255, 26},
+                                       {260, 27},
+                                       {265, 28},
+                                       {270, 29},
+                                       {275, 31},
+                                       {280, 32},
+                                       {285, 33},
+                                       {290, 35},
+                                       {295, 36},
+                                       {300, 38},
+                                       {305, 39},
+                                       {310, 41},
+                                       {315, 43},
+                                       {320, 45},
+                                       {325, 47},
+                                       {330, 49},
+                                       {335, 51},
+                                       {340, 54},
+                                       {345, 57},
+                                       {350, 59},
+                                       {355, 63},
+                                       {360, 66},
+                                       {365, 69},
+                                       {370, 73},
+                                       {375, 77},
+                                       {380, 82},
+                                       {385, 87},
+                                       {390, 92},
+                                       {395, 98},
+                                       {400, 105},
+                                       {405, 113},
+                                       {410, 122},
+                                       {415, 133},
+                                       {420, 145},
+                                       {425, 159},
+                                       {430, 87 * 2 + 1},
+                                       {435, 97 * 2},
+                                       {440, 107 * 2 + 1},
+                                       {445, 119 * 2 + 1},
+                                       {450, 133 * 2 + 1},
+                                       {455, 150 * 2},
+                                       {460, 168 * 2 + 1},
+                                       {465, 190 * 2},
+                                       {470, 214 * 2 + 1},
+                                       {475, 243 * 2},
+                                       {480, 275 * 2 + 1},
+                                       {485, 313 * 2},
+                                       {490, 356 * 2},
+                                       {495, 405 * 2 + 1},
+                                       {500, 462 * 2 + 1},
+                                       {-1, 0}};
 
 int susp_factor(MECH *mech) {
   int t = MechTons(mech);
@@ -273,9 +273,10 @@ static int engine_weight(MECH *mech) {
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
   if (MechMove(mech) != MOVE_HOVER) {
-    SendError(tprintf(
-        "Error in #%ld (%s) : No engine found!", mech->mynum,
-        game_object_name(btech_context_active()->database, mech->mynum)));
+    SendError(
+        mech->xcode.context,
+        tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
+                game_object_name(mech->xcode.context->database, mech->mynum)));
   }
 
   return 0;
@@ -328,7 +329,7 @@ int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive) {
   bzero(pile, sizeof(pile));
   if (interactive > 0) {
     addline();
-    cent(tprintf("Weight totals for %s", GetMechID(mech)));
+    cent(tprintf("Weight totals for %s", mech_display_id(mech).text));
     addline();
   }
   calc_ints(mech, &ints_c, &ints_tot);
@@ -455,7 +456,8 @@ int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive) {
                    crit_weight(mech, i) * pile[i]);
       } else {
         if ((w = crit_weight(mech, i)))
-          ADDENTRY_C(get_parts_long_name(i, 0), pile[i], w * pile[i]);
+          ADDENTRY_C(get_parts_long_name(mech->xcode.context, i, 0), pile[i],
+                     w * pile[i]);
       }
     }
   if (CargoSpace(mech))
@@ -473,7 +475,7 @@ int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive) {
                 (float)(total) / 1024.0,
                 MechTons(mech) - (float)(total) / 1024.0));
     addline();
-    ShowCoolMenu(player, c);
+    ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }
   KillCoolMenu(c);
   if (interactive < 0)
@@ -507,7 +509,7 @@ int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive) {
   calc_ints(mech, &ints_c, &ints_tot);
   if (interactive > 0) {
     addline();
-    cent(tprintf("Weight totals for %s", GetMechID(mech)));
+    cent(tprintf("Weight totals for %s", mech_display_id(mech).text));
     addline();
   }
   for (i = 0; i < NUM_SECTIONS; i++) {
@@ -603,7 +605,8 @@ int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive) {
         ADDENTRY_C(MechWeapons[id].name, pile[i] / GetWeaponCrits(mech, id),
                    crit_weight(mech, i) * pile[i]);
       } else if ((w = crit_weight(mech, i)))
-        ADDENTRY_C(get_parts_long_name(i, 0), pile[i], w * pile[i]);
+        ADDENTRY_C(get_parts_long_name(mech->xcode.context, i, 0), pile[i],
+                   w * pile[i]);
     }
   if (CargoSpace(mech))
     ADDENTRY(tprintf("CargoSpace (%.2ft)", (float)CargoSpace(mech) / 100),
@@ -620,7 +623,7 @@ int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive) {
                 (float)(total) / 1024.0,
                 MechTons(mech) - (float)(total) / 1024.0));
     addline();
-    ShowCoolMenu(player, c);
+    ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   }
   KillCoolMenu(c);
   if (interactive < 0)
@@ -636,7 +639,8 @@ int mech_weight_sub(DbRef player, MECH *mech, int interactive) {
       MechType(mech) == CLASS_VEH_NAVAL)
     return mech_weight_sub_veh(player, mech, interactive);
   if (interactive > 0)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid vehicle type!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid vehicle type!");
   return 1;
 }
 
@@ -671,10 +675,12 @@ void vehicle_int_check(MECH *mech, int noisy) {
   for (i = 0; i < NUM_SECTIONS; i++)
     if (GetSectOInt(mech, i) && GetSectOInt(mech, i) != j) {
       if (noisy)
-        SendError(tprintf(
-            "Template %s / mech #%ld: Invalid internals in loc %d "
-            "(should be %d, are %d)",
-            MechType_Ref(mech), mech->mynum, i, j, GetSectOInt(mech, i)));
+        SendError(
+            mech->xcode.context,
+            tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
+                    "(should be %d, are %d)",
+                    MechType_Ref(mech), mech->mynum, i, j,
+                    GetSectOInt(mech, i)));
       SetSectOInt(mech, i, j);
       SetSectInt(mech, i, j);
     }
@@ -694,18 +700,20 @@ void mech_int_check(MECH *mech, int noisy) {
       break;
   if (int_data[i][0] < 0) {
     if (noisy)
-      SendError(tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
-                        MechTons(mech)));
+      SendError(mech->xcode.context, tprintf("VERY odd tonnage for #%ld: %d.",
+                                             mech->mynum, MechTons(mech)));
     return;
   }
   k = i;
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (GetSectOInt(mech, i) != (j = real_int(mech, i, k))) {
       if (noisy)
-        SendError(tprintf(
-            "Template %s / mech #%ld: Invalid internals in loc %d "
-            "(should be %d, are %d)",
-            MechType_Ref(mech), mech->mynum, i, j, GetSectOInt(mech, i)));
+        SendError(
+            mech->xcode.context,
+            tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
+                    "(should be %d, are %d)",
+                    MechType_Ref(mech), mech->mynum, i, j,
+                    GetSectOInt(mech, i)));
       SetSectOInt(mech, i, j);
       SetSectInt(mech, i, j);
     }

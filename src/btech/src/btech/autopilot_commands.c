@@ -38,7 +38,7 @@
  * that can be given to the AI.  These use a
  * large enum that is located in autopilot.h
  */
-ACOM acom[AUTO_NUM_COMMANDS + 1] = {
+const ACOM acom[AUTO_NUM_COMMANDS + 1] = {
     {"chasetarget", 1, GOAL_CHASETARGET,
      NULL}, /* Extension of follow, for chasetarget */
     {"dumbfollow", 1, GOAL_DUMBFOLLOW,
@@ -123,7 +123,7 @@ void gradually_load(MECH * mech, int loc, int percent)
 
 	/* XXX Fix this - was broken when CargoMaxSpeed interface changed */
 	bzero(pile, sizeof(pile));
-	t = silly_atr_get(loc, A_ECONPARTS);
+	t = btech_attribute_read(mech->xcode.context->database, loc, A_ECONPARTS, (char[LBUF_SIZE]){0});
 	while (*t) {
 		if(*t == '[')
 			if((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3) {
@@ -144,8 +144,8 @@ void gradually_load(MECH * mech, int loc, int percent)
 			break;
 		lastid = i;
 		lastbrand = j;
-		econ_change_items(loc, i, j, -1);
-		econ_change_items(mech->mynum, i, j, 1);
+		econ_change_items(mech->xcode.context, loc, i, j, -1);
+		econ_change_items(mech->xcode.context, mech->mynum, i, j, 1);
 		pile[j][i]--;
 		cnt--;
 		SetCargoWeight(mech);
@@ -154,18 +154,18 @@ void gradually_load(MECH * mech, int loc, int percent)
 	if(lastid >= 0) {
 		i = lastid;
 		j = lastbrand;
-		econ_change_items(loc, i, j, 1);
-		econ_change_items(mech->mynum, i, j, -1);
+		econ_change_items(mech->xcode.context, loc, i, j, 1);
+		econ_change_items(mech->xcode.context, mech->mynum, i, j, -1);
 	}
 	SetCargoWeight(mech);
 }
 
 void autopilot_load_cargo(DbRef player, MECH * mech, int percent)
 {
-	DOCHECK(fabs(MechSpeed(mech)) > MP1, "You're moving too fast!");
-	DOCHECK(game_object_location(btech_context_active()->database, mech->mynum) != mech->mapindex ||
-			is_in_character(btech_context_active()->database, game_object_location(btech_context_active()->database, mech->mynum)), "You aren't inside hangar!");
-	if(loading_bay_whine(player, game_object_location(btech_context_active()->database, mech->mynum), mech))
+	DOCHECK_CONTEXT(mech->xcode.context, fabs(MechSpeed(mech)) > MP1, "You're moving too fast!");
+	DOCHECK_CONTEXT(mech->xcode.context, game_object_location(mech->xcode.context->database, mech->mynum) != mech->mapindex ||
+			is_in_character(mech->xcode.context->database, game_object_location(mech->xcode.context->database, mech->mynum)), "You aren't inside hangar!");
+	if(loading_bay_whine(player, game_object_location(mech->xcode.context->database, mech->mynum), mech))
 		return;
 	gradually_load(mech, mech->mapindex, percent);
 	SetCargoWeight(mech);
@@ -174,26 +174,27 @@ void autopilot_load_cargo(DbRef player, MECH * mech, int percent)
 
 /* Recal the AI to the proper map */
 /*! \todo{Possibly move this to autopilot_core.c} */
-void auto_cal_mapindex(MECH *mech) {
+void auto_cal_mapindex(BtechContext *context, MECH *mech) {
 
   AUTO *autopilot;
   char error_buf[MBUF_SIZE];
 
   if (!mech) {
-    SendError("Null pointer catch in auto_cal_mapindex");
+    SendError(context, "Null pointer catch in auto_cal_mapindex");
     return;
   }
 
   if (MechAuto(mech) > 0) {
-    if (!(autopilot = FindObjectsData(MechAuto(mech))) ||
-        !is_good_obj(btech_context_active()->database, MechAuto(mech)) ||
-        game_object_location(btech_context_active()->database,
-                             MechAuto(mech)) != mech->mynum) {
+    if (!(autopilot =
+              btech_context_find_object(mech->xcode.context, MechAuto(mech))) ||
+        !is_good_obj(mech->xcode.context->database, MechAuto(mech)) ||
+        game_object_location(mech->xcode.context->database, MechAuto(mech)) !=
+            mech->mynum) {
       snprintf(error_buf, MBUF_SIZE,
                "Mech #%ld thinks it has the Autopilot #%d on it"
                " but FindObj breaks",
                mech->mynum, MechAuto(mech));
-      SendError(error_buf);
+      SendError(context, error_buf);
       MechAuto(mech) = -1;
     } else {
 
@@ -388,7 +389,7 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for autogun command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
     }
 
   } else if (argc == 2) {
@@ -404,7 +405,7 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument for autogun command",
                  autopilot->mynum);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         /* Free Args */
         for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
@@ -416,13 +417,14 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
       }
 
       /* Now see if its a mech */
-      if (!(target = getMech(target_dbref))) {
+      if (!(target = btech_context_get_mech(autopilot->xcode.context,
+                                            target_dbref))) {
 
         snprintf(error_buf, MBUF_SIZE,
                  "AI Error - AI #%ld given bad"
                  " target for autogun command",
                  autopilot->mynum);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         /* Free Args */
         for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
@@ -459,7 +461,7 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for autogun command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
     }
   }
 
@@ -503,24 +505,24 @@ void auto_command_pickup(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for pickup command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     return;
   }
   free(argument);
 
   /* Check the target */
-  if (!(tempmech = getMech(target))) {
+  if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld unable to pickup"
              " unit #%d",
              autopilot->mynum, target);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     return;
   }
 
   /* Now try and pick it up */
-  strcpy(buf, MechIDS(tempmech, 1));
+  strcpy(buf, mech_id(tempmech, true).text);
   mech_pickup(GOD, mech, buf);
 
   /*! \todo {Possibly add in something either here or in autopilot_radio.c
@@ -549,7 +551,7 @@ void auto_command_speed(AUTO *autopilot) {
              "AI Error - AI #%ld given bad"
              " argument for speed command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     return;
   }
@@ -562,7 +564,7 @@ void auto_command_speed(AUTO *autopilot) {
              "AI Error - AI #%ld given bad"
              " argument for speed command - out side of the range",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     return;
   }
 
@@ -592,23 +594,23 @@ void auto_command_embark(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for embark command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     return;
   }
   free(argument);
 
   /* Check the target */
-  if (!(tempmech = getMech(target))) {
+  if (!(tempmech = btech_context_get_mech(autopilot->xcode.context, target))) {
     snprintf(error_buf, MBUF_SIZE,
              "AI Error - AI #%ld unable to embark"
              " unit #%d",
              autopilot->mynum, target);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     return;
   }
 
-  strcpy(buf, MechIDS(tempmech, 1));
+  strcpy(buf, mech_id(tempmech, true).text);
   mech_embark(GOD, mech, buf);
 }
 
@@ -620,7 +622,8 @@ void auto_command_udisembark(MECH *mech) {
   DbRef pil = -1;
   char *buf;
 
-  buf = silly_atr_get(mech->mynum, A_PILOTNUM);
+  buf = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                             A_PILOTNUM, (char[LBUF_SIZE]){0});
   sscanf(buf, "#%ld", &pil);
   mech_udisembark(pil, mech, "");
 }
@@ -660,11 +663,12 @@ void auto_com_event(MuxEvent *muxevent) {
   AUTO *autopilot = (AUTO *)muxevent->data;
   MECH *mech = autopilot->mymech;
   /* No mech and/or no AI */
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Make sure the map exists */
-  if (!(FindObjectsData(mech->mapindex))) {
+  if (!(btech_context_find_object(autopilot->xcode.context, mech->mapindex))) {
     autopilot->mapindex = mech->mapindex;
     PilZombify(autopilot);
     /*
@@ -751,13 +755,13 @@ void auto_com_event(MuxEvent *muxevent) {
 #endif
 #if 0
 	case COMMAND_ATTACKLEG:
-		if(!(tempmech = getMech(GVAL(a, 1)))) {
-			SendAI(tprintf("AIAttacklegError #%d", GVAL(a, 1)));
+		if(!(tempmech = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
+			SendAI(autopilot->xcode.context, tprintf("AIAttacklegError #%d", GVAL(a, 1)));
 			//ADVANCE_PG(a);
 			auto_goto_next_command(a);
 			return;
 		}
-		strcpy(buf, MechIDS(tempmech, 1));
+		strcpy(buf, mech_id(tempmech, true).text);
 		autopilot_attackleg(mech, buf);
 		//ADVANCE_PG(a);
 		auto_goto_next_command(a);
@@ -870,13 +874,13 @@ void auto_com_event(MuxEvent *muxevent) {
 #endif
 #if 0
 	case COMMAND_SWARM:
-		if(!(tempmech = getMech(GVAL(a, 1)))) {
-			SendAI(tprintf("AISwarmError #%d", GVAL(a, 1)));
+		if(!(tempmech = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
+			SendAI(autopilot->xcode.context, tprintf("AISwarmError #%d", GVAL(a, 1)));
 			//ADVANCE_PG(a);
 			auto_goto_next_command(a);
 			return;
 		}
-		strcpy(buf, MechIDS(tempmech, 1));
+		strcpy(buf, mech_id(tempmech, true).text);
 		autopilot_swarm(mech, buf);
 		//ADVANCE_PG(a);
 		auto_goto_next_command(a);
@@ -922,7 +926,7 @@ static void speed_up_if_neccessary(AUTO *a, MECH *mech, int tx, int ty,
                                    int bearing) {
   MAP *map;
 
-  map = getMap(mech->mapindex);
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!map)
     return;
@@ -1000,7 +1004,8 @@ void auto_goto_event(MuxEvent *e) {
 
   char *argument;
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Basic Checks */
@@ -1064,7 +1069,7 @@ void auto_roam_event(MuxEvent * e)
 	MAP *map;
 	int bearing, i = 1, t;
 
-	if(!IsMech(mech->mynum) || !IsAuto(a->mynum))
+	if(!btech_context_is_mech(mech->xcode.context, mech->mynum) || !btech_context_is_auto(a->xcode.context, a->mynum))
 		return;
 
 	CCH(a);
@@ -1072,7 +1077,7 @@ void auto_roam_event(MuxEvent * e)
 	tx = GVAL(a, 1);
 	ty = GVAL(a, 2);
 
-	if(!mech || !(map = FindObjectsData(mech->mapindex))) {
+	if(!mech || !(map = btech_context_find_object(autopilot->xcode.context, mech->mapindex))) {
 		return;
 	}
 
@@ -1085,9 +1090,9 @@ void auto_roam_event(MuxEvent * e)
 												&& abs(MechSpeed(mech)) <
 												0.5)) {
 		while (i) {
-			tx = BOUNDED(1, Number(20, map->map_width - 21),
+			tx = BOUNDED(1, btech_random_range(map->xcode.context, 20, map->map_width - 21),
 						 map->map_width - 1);
-			ty = BOUNDED(1, Number(20, map->map_height - 21),
+			ty = BOUNDED(1, btech_random_range(map->xcode.context, 20, map->map_height - 21),
 						 map->map_height - 1);
 			MapCoordToRealCoord(tx, ty, &dx, &dy);
 			t = GetRTerrain(map, tx, ty);
@@ -1133,12 +1138,13 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   char *argument;
   char error_buf[MBUF_SIZE];
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1150,7 +1156,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -1158,7 +1165,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1202,7 +1209,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " first argument - going to next command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1215,7 +1222,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " first argument '%s' - going to next command",
              autopilot->mynum, argument);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1232,7 +1239,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " second argument - going to next command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1245,7 +1252,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " second argument '%s' - going to next command",
              autopilot->mynum, argument);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1294,12 +1301,13 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   char error_buf[MBUF_SIZE];
 
   /* Make sure the mech is a mech and the autopilot is an autopilot */
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1311,7 +1319,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -1319,7 +1328,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              " goto with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1366,7 +1375,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " first argument - going to next command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1379,7 +1388,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " first argument '%s' - going to next command",
                autopilot->mynum, argument);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
 
       free(argument);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1397,7 +1406,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " second argument - going to next command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1410,7 +1419,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to hex %d,%d but was"
                " unable to - bad second argument '%s' - going to next command",
                autopilot->mynum, tx, ty, argument);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
 
       free(argument);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1427,7 +1436,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to bad hex"
                " (%d, %d)",
                autopilot->mynum, tx, ty);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1441,7 +1450,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to hex %d,%d but was"
                " unable to",
                autopilot->mynum, tx, ty);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
 
       /*! \todo {add in some message the AI can give if it can't find a path} */
 
@@ -1458,7 +1467,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to follow"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1476,7 +1485,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1550,12 +1559,13 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   char error_buf[MBUF_SIZE];
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1574,7 +1584,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -1582,7 +1593,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " follow with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1626,7 +1637,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " to follow target but was unable to - bad argument - going"
              " to next command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1639,7 +1650,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " to follow target but was unable to - bad argument '%s' - going"
              " to next command",
              autopilot->mynum, argument);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1647,14 +1658,15 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   free(argument);
 
   /* Get the target */
-  if (!(target = getMech(target_dbref))) {
+  if (!(target =
+            btech_context_get_mech(autopilot->xcode.context, target_dbref))) {
 
     /* Bad Target */
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
              " follow unit #%ld with AI #%ld but its not a valid unit.",
              target_dbref, autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     ai_set_speed(mech, autopilot, 0);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1669,7 +1681,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " follow unit #%ld with AI #%ld but it is either dead or"
              " not on the same map.",
              target_dbref, autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     ai_set_speed(mech, autopilot, 0);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1749,7 +1761,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                  " generate an astar path for AI #%ld to hex %d,%d to follow"
                  " unit #%ld, but was unable to.",
                  autopilot->mynum, x, y, target_dbref);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         /*! \todo {add in some message the AI can give if it can't find a path}
          */
@@ -1775,7 +1787,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                  " generate an astar path for AI #%ld to hex %d,%d to follow"
                  " unit #%ld, but was unable to.",
                  autopilot->mynum, x, y, target_dbref);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         /*! \todo {add in some message the AI can give if it can't find a path}
          */
@@ -1800,7 +1812,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to follow"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     /* Destroy List */
     auto_destroy_astar_path(autopilot);
@@ -1820,7 +1832,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     /* Destroy List */
     auto_destroy_astar_path(autopilot);
@@ -1887,12 +1899,12 @@ void auto_follow_event(MuxEvent * e)
 	MECH *leader;
 	MECH *mech = a->mymech;
 
-	if(!IsMech(mech->mynum) || !IsAuto(a->mynum))
+	if(!btech_context_is_mech(mech->xcode.context, mech->mynum) || !btech_context_is_auto(a->xcode.context, a->mynum))
 		return;
 
 	CCH(a);
 	GSTART(a, mech);
-	if(!(leader = getMech(GVAL(a, 1)))) {
+	if(!(leader = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
 		/* For some reason, leader is missing(?) */
 		ADVANCE_PG(a);
 		return;
@@ -1928,12 +1940,13 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   char buffer[SBUF_SIZE];
 
   /* Making sure the mech is a mech and the autopilot is an autopilot */
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -1945,7 +1958,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -1953,7 +1967,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
              " follow [dumbly] with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1998,7 +2012,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
         " to follow target [dumbly] but was unable to - bad argument - going"
         " to next command",
         autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2013,7 +2027,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
              "- going"
              " to next command",
              autopilot->mynum, argument);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2021,7 +2035,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   free(argument);
 
   /* Make sure its a valid target */
-  if (!(leader = getMech(target)) || Destroyed(leader)) {
+  if (!(leader = btech_context_get_mech(autopilot->xcode.context, target)) ||
+      Destroyed(leader)) {
 
     /* For some reason, leader is missing(?) */
     snprintf(
@@ -2030,7 +2045,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
         " to follow target [dumbly] but was unable to - bad or dead target -"
         " going to next command",
         autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2091,12 +2106,13 @@ void auto_leave_event(MuxEvent *muxevent) {
   char *argument;
   char error_buf[MBUF_SIZE];
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2108,7 +2124,8 @@ void auto_leave_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -2116,7 +2133,7 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2165,7 +2182,7 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but was given bad argument"
              " defaulting to direction = 0",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     dir = 0;
 
@@ -2176,7 +2193,7 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but was given bad argument '%s'"
              " defaulting to direction = 0",
              autopilot->mynum, argument);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     dir = 0;
   }
@@ -2214,12 +2231,13 @@ void auto_enter_event(MuxEvent *muxevent) {
   char dir[2];
   char error_buf[MBUF_SIZE];
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2231,7 +2249,8 @@ void auto_enter_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -2239,7 +2258,7 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2261,7 +2280,7 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but there is nothing at %d, %d"
              " to enter",
              autopilot->mynum, MechX(mech), MechY(mech));
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2307,7 +2326,7 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but was given bad argument -"
              " going to next command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2396,7 +2415,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for roam command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
 
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     }
@@ -2413,7 +2432,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_hex_x) for roam command",
                  autopilot->mynum);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2432,7 +2451,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_hex_y) for roam command",
                  autopilot->mynum);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2452,7 +2471,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_distance) for roam command",
                  autopilot->mynum);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2468,7 +2487,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
       /* Make sure values are sane */
 
       /* Get the Map */
-      if (!(map = getMap(autopilot->mapindex))) {
+      if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                        autopilot->mapindex))) {
 
         /* Bad Map */
         snprintf(error_buf, MBUF_SIZE,
@@ -2476,7 +2496,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  " roam with AI #%ld but AI is not on a valid"
                  " Map (#%d).",
                  autopilot->mynum, autopilot->mapindex);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2500,7 +2520,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  " argument (bad anchor hex or bad anchor distance)"
                  " %d,%d : %d hexes for roam command",
                  autopilot->mynum, anchor_hex_x, anchor_hex_y, anchor_distance);
-        SendAI(error_buf);
+        SendAI(autopilot->xcode.context, error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2530,7 +2550,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for roam command",
                autopilot->mynum);
-      SendAI(error_buf);
+      SendAI(autopilot->xcode.context, error_buf);
 
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     }
@@ -2542,7 +2562,7 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for roam command",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
   }
@@ -2607,11 +2627,11 @@ void auto_roam_generate_target_hex(AUTO *autopilot, MECH *mech, MAP *map,
     if (max_range < 1) {
       range = 1.0;
     } else {
-      range = (float)Number(1, max_range);
+      range = (float)btech_random_range(map->xcode.context, 1, max_range);
     }
 
     /* Generate random bearing */
-    bearing = Number(0, 359);
+    bearing = btech_random_range(map->xcode.context, 0, 359);
 
     /* Map coord to Real */
     MapCoordToRealCoord(start_hex_x, start_hex_y, &x1, &y1);
@@ -2677,12 +2697,13 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   char error_buf[MBUF_SIZE];
 
   /* Make sure the mech is a mech and the autopilot is an autopilot */
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(btech_context_active()->database,
-                           autopilot->mynum) != autopilot->mymechnum)
+  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
+      autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
@@ -2694,7 +2715,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
     return;
 
   /* Get the Map */
-  if (!(map = getMap(autopilot->mapindex))) {
+  if (!(map = btech_context_get_map(autopilot->xcode.context,
+                                    autopilot->mapindex))) {
 
     /* Bad Map */
     snprintf(error_buf, MBUF_SIZE,
@@ -2702,7 +2724,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              " roam with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2786,7 +2808,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to roam"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -2806,7 +2828,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(error_buf);
+    SendAI(autopilot->xcode.context, error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);

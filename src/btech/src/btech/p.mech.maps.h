@@ -11,6 +11,8 @@
 
 #pragma once
 
+typedef struct MapText MapText;
+
 /* mech.maps.c */
 void mech_findcenter(DbRef player, void *data, char *buffer);
 const char *GetTerrainName_base(int t);
@@ -21,7 +23,9 @@ void mech_lrsmap(DbRef player, void *data, char *buffer);
 char *TerrainColor(char terrain, int elev);
 void TacMapTerr(MAP *mech_map, int x, int y, char *terr, char *elev,
                 int isdown);
-char **MakeMapText(DbRef player, MECH *mech, MAP *mech_map, int x, int y,
-                   int xw, int yw, int labels, int dohexlos);
+MapText *map_text_create(DbRef player, MECH *mech, MAP *mech_map, int x, int y,
+                         int xw, int yw, int labels, int dohexlos);
+char *const *map_text_lines(const MapText *text);
+void map_text_destroy(MapText *text);
 void mech_tacmap(DbRef player, void *data, char *buffer);
 void mech_enterbase(DbRef player, void *data, char *buffer);

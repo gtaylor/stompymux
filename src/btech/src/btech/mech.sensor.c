@@ -18,6 +18,7 @@
 #include "p.mech.ecm.h"
 #include "p.mech.lite.h"
 #include "p.mech.los.h"
+#include "p.mech.sensor.h"
 #include "p.mech.tag.h"
 #include "p.mech.utils.h"
 
@@ -28,7 +29,7 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
                       float range, int wAmmoMode) {
   int bth1, bth2;
   int wLightMod = (wAmmoMode & AC_INCENDIARY_MODE) ? 1 : 0;
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   maplight = maplight + wLightMod;
 
@@ -44,7 +45,7 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
     bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                    mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    SendDebug(tprintf("%d: BTH S+%d", mech->mynum, bth2));
+    SendDebug(mech->xcode.context, tprintf("%d: BTH S+%d", mech->mynum, bth2));
 #endif
     return bth2;
   }
@@ -53,7 +54,7 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
     bth1 = sensors[(int)MechSensor(mech)[0]].tohitbonus_func(mech, target, map,
                                                              flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    SendDebug(tprintf("%d: BTH P+%d", mech->mynum, bth1));
+    SendDebug(mech->xcode.context, tprintf("%d: BTH P+%d", mech->mynum, bth1));
 #endif
     return bth1;
   }
@@ -62,7 +63,8 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
   bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                  mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-  SendDebug(tprintf("%d: BTH +%d/+%d", mech->mynum, bth1, bth2));
+  SendDebug(mech->xcode.context,
+            tprintf("%d: BTH +%d/+%d", mech->mynum, bth1, bth2));
 #endif
   return MIN(bth1, bth2);
 }
@@ -70,7 +72,7 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
 int Sensor_CanSee(MECH *mech, MECH *target, int *flag, int arc, float range,
                   int mapvis, int maplight, int cloudbase) {
   int i, j = 0, sn;
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   /* Make sure we're okay */
   if (!map || !mech)
@@ -172,7 +174,7 @@ int Sensor_ArcBaseChance(int type, int arc) {
   return base;
 }
 
-extern int bth_modifier[];
+extern const int bth_modifier[];
 
 /* Slow, but sacrifices we make for sake of playability.. :-) */
 int Sensor_DriverBaseChance(MECH *mech) {
@@ -189,7 +191,7 @@ int Sensor_DriverBaseChance(MECH *mech) {
 
 int Sensor_Sees(MECH *mech, MECH *target, int f, int arc, float range, int snum,
                 int chance_divisor, int mapvis, int maplight) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int chance = (Sensor_ArcBaseChance(MechType(mech), arc) *
                 ((target && MechTeam(mech) != MechTeam(target))
                      ? Sensor_DriverBaseChance(mech)
@@ -216,12 +218,12 @@ int Sensor_Sees(MECH *mech, MECH *target, int f, int arc, float range, int snum,
       chance = chance / 4;
     }
   }
-  if (range < 3 || Number(1, 10000) < ((chance * ch2) / chance_divisor)) {
-    if (target &&
-        is_in_character(btech_context_active()->database, mech->mynum) &&
-        is_in_character(btech_context_active()->database, target->mynum) &&
+  if (range < 3 || btech_random_range(mech->xcode.context, 1, 10000) <
+                       ((chance * ch2) / chance_divisor)) {
+    if (target && is_in_character(mech->xcode.context->database, mech->mynum) &&
+        is_in_character(mech->xcode.context->database, target->mynum) &&
         MechTeam(mech) != MechTeam(target))
-      if (!Number(0, 5))
+      if (!btech_random_range(mech->xcode.context, 0, 5))
         MadePerceptionRoll(mech, -2);
     return 1;
   }
@@ -261,19 +263,20 @@ int Sensor_SeesNow(MECH *mech, MECH *target, int f, int arc, float range,
   return 3;
 }
 
-char *my_dump_flag(int i) {
+SensorFlagText sensor_flag_text(int flags) {
+  SensorFlagText text = {0};
+  char *buffer = text.text;
   int j;
-  static char buf[MBUF_SIZE];
 
-  strcpy(buf, "");
   for (j = 0; j < 32; j++)
-    if (i & (1 << j)) {
-      if (buf[0] == 0)
-        snprintf(buf, sizeof(buf), "%d", j);
+    if (flags & (1 << j)) {
+      if (buffer[0] == '\0')
+        snprintf(buffer, sizeof(text.text), "%d", j);
       else
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ",%d", j);
+        snprintf(buffer + strlen(buffer), sizeof(text.text) - strlen(buffer),
+                 ",%d", j);
     }
-  return buf;
+  return text;
 }
 
 #define AUTOCON_LONG 0x01
@@ -349,13 +352,14 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
           buf[0] = 0;
         if (st & AUTOCON_SHORT)
           snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                   "Lost: %s, %s arc.", GetMechToMechID_base(mech, target, wlf),
+                   "Lost: %s, %s arc.",
+                   mech_to_mech_display_id_base(mech, target, wlf).text,
                    GetArcID(mech, arc));
         else
           snprintf(buf, sizeof(buf),
                    "You have lost %s from your scanners. It was last in your "
                    "%s arc.",
-                   GetMechToMechID_base(mech, target, wlf),
+                   mech_to_mech_display_id_base(mech, target, wlf).text,
                    GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
           strcat(buf, "%cn");
@@ -370,8 +374,9 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
 #ifdef SENSOR_DEBUG
       snprintf(buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
                mech->mynum, target->mynum,
-               (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)), my_dump_flag(f));
-      SendSensor(buf);
+               (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
+               sensor_flag_text(f).text);
+      SendSensor(mech->xcode.context, buf);
 #endif
       MechPNumSeen(mech)++;
     }
@@ -406,13 +411,14 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
         else
           buf[0] = 0;
         if (st & AUTOCON_SHORT)
-          snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-                   "Seen: %s, %s arc.", GetMechToMechID(mech, target),
-                   GetArcID(mech, arc));
+          snprintf(
+              buf + strlen(buf), sizeof(buf) - strlen(buf), "Seen: %s, %s arc.",
+              mech_to_mech_display_id(mech, target).text, GetArcID(mech, arc));
         else
           snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
                    "You notice %s in your %s arc.",
-                   GetMechToMechID(mech, target), GetArcID(mech, arc));
+                   mech_to_mech_display_id(mech, target).text,
+                   GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
           strcat(buf, "%cn");
         mech_notify(mech, MECHALL, buf);
@@ -423,8 +429,8 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
       snprintf(buf, sizeof(buf),
                "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)", mech->mynum,
                target->mynum, (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
-               my_dump_flag(f), seeanew);
-      SendSensor(buf);
+               sensor_flag_text(f).text, seeanew);
+      SendSensor(mech->xcode.context, buf);
 #endif
     } else
       MechPNumSeen(mech)++;
@@ -442,14 +448,15 @@ void update_LOSinfo(DbRef obj, MAP *map) {
 
   /* First, for all moved mechs, calculate new LOS flags */
   for (i = 0; i < map->first_free; i++) {
-    mech = getMech(map->mechsOnMap[i]);
+    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
     if (!mech)
       continue;
     if (!Started(mech))
       continue;
     for (j = i + 1; j < map->first_free; j++)
       if (1) {
-        target = getMech(map->mechsOnMap[j]);
+        target =
+            btech_context_get_mech(mech->xcode.context, map->mechsOnMap[j]);
         if (!target)
           continue;
         range = FaMechRange(mech, target);
@@ -472,7 +479,7 @@ void update_LOSinfo(DbRef obj, MAP *map) {
         map->LOSinfo[i][j] = fl =
             CalculateLOSFlag(mech, target, map, MechX(target), MechY(target),
                              map->LOSinfo[i][j], (float)range);
-        /* Then, we update the SEES* */
+      /* Then, we update the SEES* */
 #ifdef ADVANCED_LOS
         Sensor_DoWeSeeNow(mech, &map->LOSinfo[i][j], range, -1, -1, target,
                           mapvis, maplight, map->cloudbase, 0, wlf);
@@ -480,14 +487,15 @@ void update_LOSinfo(DbRef obj, MAP *map) {
       }
   }
   for (i = 1; i < map->first_free; i++) {
-    mech = getMech(map->mechsOnMap[i]);
+    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
     if (!mech)
       continue;
     if (!Started(mech))
       continue;
     for (j = 0; j < i; j++)
       if (1) {
-        target = getMech(map->mechsOnMap[j]);
+        target =
+            btech_context_get_mech(mech->xcode.context, map->mechsOnMap[j]);
         if (!target)
           continue;
         range = FaMechRange(mech, target);
@@ -554,26 +562,34 @@ void add_sensor_info(char *buf, int size, MECH *mech, int sn, int verbose) {
   }
 }
 
-static char *sensor_mode_name(MECH *mech, int sn, int full, int verbose) {
-  static char buf[MBUF_SIZE];
+typedef struct SensorModeText {
+  char text[MBUF_SIZE];
+} SensorModeText;
 
-  if (sn < 0 || (size_t)sn >= NUM_SENSORS)
-    return "None";
+static SensorModeText sensor_mode_text(MECH *mech, int sn, int full,
+                                       int verbose) {
+  SensorModeText mode = {0};
+  char *buf = mode.text;
+
+  if (sn < 0 || (size_t)sn >= NUM_SENSORS) {
+    snprintf(buf, sizeof(mode.text), "None");
+    return mode;
+  }
 
   if (sensors[sn].fullvision) {
-    snprintf(buf, sizeof(buf), "%s ", sensors[sn].sensorname);
-    add_sensor_info(buf, sizeof(buf), mech, sn, verbose);
+    snprintf(buf, sizeof(mode.text), "%s ", sensors[sn].sensorname);
+    add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
   } else {
     if (full || Sees360(mech))
-      snprintf(buf, sizeof(buf), "%s in 360 degree scanning mode ",
+      snprintf(buf, sizeof(mode.text), "%s in 360 degree scanning mode ",
                sensors[sn].sensorname);
     else
-      snprintf(buf, sizeof(buf),
+      snprintf(buf, sizeof(mode.text),
                "%s in 120 degree scanning mode (Forward arc) ",
                sensors[sn].sensorname);
-    add_sensor_info(buf, sizeof(buf), mech, sn, verbose);
+    add_sensor_info(buf, sizeof(mode.text), mech, sn, verbose);
   }
-  return buf;
+  return mode;
 }
 
 static void sensor_mode(MECH *mech, char *msg, DbRef player, int p, int s,
@@ -585,43 +601,46 @@ static void sensor_mode(MECH *mech, char *msg, DbRef player, int p, int s,
     for (i = 0; i < strlen(msg); i++)
       buf[i] = '-';
     buf[strlen(msg)] = 0;
-    notify(BTECH_EVALUATION_CONTEXT, player, msg);
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Primary:   %s",
-                  sensor_mode_name(mech, p, 0, verbose));
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Secondary: %s",
-                  sensor_mode_name(mech, s, 0, verbose));
+    notify(btech_context_evaluation(mech->xcode.context), player, msg);
+    notify(btech_context_evaluation(mech->xcode.context), player, buf);
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                  "Primary:   %s", sensor_mode_text(mech, p, 0, verbose).text);
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                  "Secondary: %s", sensor_mode_text(mech, s, 0, verbose).text);
   } else
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s: %s", msg,
-                  sensor_mode_name(mech, p, 1, verbose));
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                  "%s: %s", msg, sensor_mode_text(mech, p, 1, verbose).text);
 }
 
-static int tmp_prim;
-static int tmp_sec;
-static int tmp_found;
+typedef struct SensorSelection SensorSelection;
+struct SensorSelection {
+  int primary;
+  int secondary;
+  bool found;
+};
 
-static void sensor_check(MuxEvent *e) {
-  long d = ((long)e->data2);
+static void sensor_selection_read(MuxEvent *event, void *data) {
+  SensorSelection *selection = data;
+  long encoded = (long)event->data2;
 
-  tmp_prim = d / NUM_SENSORS;
-  tmp_sec = d % NUM_SENSORS;
-  tmp_found = 1;
+  selection->primary = encoded / NUM_SENSORS;
+  selection->secondary = encoded % NUM_SENSORS;
+  selection->found = true;
 }
 
-static char SensorInf[] = "vliesrbVLIESRB";
+static const char SensorInf[] = "vliesrbVLIESRB";
 
-char *mechSensorInfo(int mode, MECH *mech, char *arg) {
-  static char buffer[5];
+char *mechSensorInfo(MECH *mech, char buffer[static LBUF_SIZE]) {
+  SensorSelection selection = {0};
 
-  tmp_found = 0;
   buffer[0] = SensorInf[(short)MechSensor(mech)[0]];
   buffer[1] = SensorInf[(short)MechSensor(mech)[1]];
   if (SensorChange(mech)) {
-    mux_event_gothru_type_data(btech_context_active()->events, EVENT_SCHANGE,
-                               (void *)mech, sensor_check);
-    if (tmp_found) {
-      buffer[2] = SensorInf[tmp_prim + NUM_SENSORS];
-      buffer[3] = SensorInf[tmp_sec + NUM_SENSORS];
+    mux_event_visit_type_data(mech->xcode.context->events, EVENT_SCHANGE, mech,
+                              sensor_selection_read, &selection);
+    if (selection.found) {
+      buffer[2] = SensorInf[selection.primary + NUM_SENSORS];
+      buffer[3] = SensorInf[selection.secondary + NUM_SENSORS];
       buffer[4] = '\0';
       return buffer;
     }
@@ -631,15 +650,16 @@ char *mechSensorInfo(int mode, MECH *mech, char *arg) {
 }
 
 static void show_sensor(DbRef player, MECH *mech, int verbose) {
+  SensorSelection selection = {0};
 
-  tmp_found = 0;
   sensor_mode(mech, "Sensors", player, MechSensor(mech)[0], MechSensor(mech)[1],
               verbose);
   if (SensorChange(mech)) {
-    mux_event_gothru_type_data(btech_context_active()->events, EVENT_SCHANGE,
-                               (void *)mech, sensor_check);
-    if (tmp_found)
-      sensor_mode(mech, "Wanted", player, tmp_prim, tmp_sec, 0);
+    mux_event_visit_type_data(mech->xcode.context->events, EVENT_SCHANGE, mech,
+                              sensor_selection_read, &selection);
+    if (selection.found)
+      sensor_mode(mech, "Wanted", player, selection.primary,
+                  selection.secondary, 0);
   }
 }
 
@@ -662,7 +682,7 @@ int CanChangeTo(MECH *mech, int s) {
   MAP *map;
   int i;
 
-  if (!(map = getMap(mech->mapindex))) {
+  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
     mech_notify(mech, MECHALL, "Where are you? ;-)");
     return 0;
   }
@@ -759,10 +779,12 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
 
   if (!mech)
     return;
-  DOCHECK(MechType(mech) == CLASS_MW,
-          "You're using your eyes, and nothing you can do changes that!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, MechType(mech) == CLASS_MW,
+      "You're using your eyes, and nothing you can do changes that!");
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc > 2, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc > 2,
+                  "Invalid number of arguments!");
   switch (argc) {
   case 0:
     show_sensor(player, mech, 0);
@@ -771,15 +793,17 @@ void mech_sensor(DbRef player, void *data, char *buffer) {
     show_sensor(player, mech, 1);
     break;
   case 2:
-    DOCHECK(set_sensor(mech, toupper(args[0][0]), toupper(args[1][0])) < 0,
-            "Invalid arguments!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    set_sensor(mech, toupper(args[0][0]), toupper(args[1][0])) <
+                        0,
+                    "Invalid arguments!");
     show_sensor(player, mech, 0);
     break;
   }
 }
 
 void possibly_see_mech(MECH *mech) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int i, j;
   MECH *seer;
   int mapvis;
@@ -796,10 +820,11 @@ void possibly_see_mech(MECH *mech) {
      effects, but just done once / move of the guy */
   for (i = 0; i < map->first_free; i++)
     if (i != num && (j = map->mechsOnMap[i]) >= 0) {
-      if (!(seer = getMech(j)))
+      if (!(seer = btech_context_get_mech(mech->xcode.context, j)))
         continue;
       if (seer->mapindex != map->mynum) {
-        SendError(tprintf("Mech #%ld was on map #%ld but with "
+        SendError(mech->xcode.context,
+                  tprintf("Mech #%ld was on map #%ld but with "
                           "incorrect mapindex (%ld)",
                           seer->mynum, map->mynum, seer->mapindex));
         map->mechsOnMap[i] = -1;
@@ -809,9 +834,9 @@ void possibly_see_mech(MECH *mech) {
       map->LOSinfo[i][num] =
           CalculateLOSFlag(seer, mech, map, MechX(mech), MechY(mech),
                            map->LOSinfo[i][num], (float)range);
-      /* Then, we update the SEES* */
-      /* seeanew used to be 2 ; I want them to know they notice
-         it first not to bug me 'bout it, though */
+    /* Then, we update the SEES* */
+    /* seeanew used to be 2 ; I want them to know they notice
+       it first not to bug me 'bout it, though */
 #ifdef ADVANCED_LOS
       Sensor_DoWeSeeNow(seer, &map->LOSinfo[i][num], range, -1, -1, mech,
                         mapvis, maplight, map->cloudbase, 2, 0);
@@ -829,14 +854,15 @@ static void mech_unblind_event(MuxEvent *e) {
 
 void ScrambleInfraAndLiteAmp(MECH *mech, int time, int chance, char *inframsg,
                              char *liteampmsg) {
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int i;
   MECH *tempMech;
 
   possibly_see_mech(mech);
   for (i = 0; i < mech_map->first_free; i++)
     if (mech_map->mechsOnMap[i] != -1 && mech_map->mechsOnMap[i] != mech->mynum)
-      if ((tempMech = getMech(mech_map->mechsOnMap[i])))
+      if ((tempMech = btech_context_get_mech(mech->xcode.context,
+                                             mech_map->mechsOnMap[i])))
         if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
                           FaMechRange(tempMech, mech))) {
           if (Blinded(tempMech) || Uncon(tempMech))
@@ -844,7 +870,7 @@ void ScrambleInfraAndLiteAmp(MECH *mech, int time, int chance, char *inframsg,
           if (sensors[(int)MechSensor(tempMech)[0]].matchletter[0] == 'I' ||
               sensors[(int)MechSensor(tempMech)[0]].matchletter[1] == 'I') {
             if (chance)
-              if (Number(1, 100) > chance)
+              if (btech_random_range(mech->xcode.context, 1, 100) > chance)
                 continue;
             /* Infra effect */
             mech_notify(tempMech, MECHALL, inframsg);
@@ -853,7 +879,7 @@ void ScrambleInfraAndLiteAmp(MECH *mech, int time, int chance, char *inframsg,
                      sensors[(int)MechSensor(tempMech)[0]].matchletter[1] ==
                          'L') {
             if (chance)
-              if (Number(1, 100) > chance)
+              if (btech_random_range(mech->xcode.context, 1, 100) > chance)
                 continue;
             /* Liteamp effect */
             mech_notify(tempMech, MECHALL, liteampmsg);

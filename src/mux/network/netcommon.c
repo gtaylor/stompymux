@@ -13,8 +13,10 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+#include "btech/btech_context.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
@@ -22,12 +24,13 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
+#include "mux/world/world_context.h"
 
 /*
  * ---------------------------------------------------------------------------
@@ -125,7 +128,7 @@ void raw_notify_raw(EvaluationContext *evaluation, DbRef player,
                     const char *msg, const char *append) {
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_player(evaluation->server->descriptors, player);
+      descriptor_iterator_player(evaluation->runtime->descriptors, player);
 
   if (!msg || !*msg)
     return;
@@ -156,7 +159,7 @@ void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...) {
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_player(evaluation->server->descriptors, player);
+      descriptor_iterator_player(evaluation->runtime->descriptors, player);
   char buffer[LBUF_SIZE];
   va_list ap;
   memset(buffer, 0, LBUF_SIZE);
@@ -177,7 +180,7 @@ void notify_printf(EvaluationContext *evaluation, DbRef player,
 void raw_notify_newline(EvaluationContext *evaluation, DbRef player) {
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_player(evaluation->server->descriptors, player);
+      descriptor_iterator_player(evaluation->runtime->descriptors, player);
 
   if (evaluation->is_piping && (player == evaluation->pipe_object)) {
     safe_str("\r\n", evaluation->pipe_next, &evaluation->pipe_cursor);
@@ -211,7 +214,7 @@ void raw_broadcast(DescriptorRegistry *descriptors, int inflags,
   buff[LBUF_SIZE - 1] = '\0';
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
-    if ((game_object_flags(&descriptor_server(d)->database, d->player) &
+    if ((game_object_flags(descriptor_runtime(d)->world->database, d->player) &
          inflags) == inflags) {
       descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
@@ -241,14 +244,14 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
   strncpy(new, s, LBUF_SIZE - 1);
   new[LBUF_SIZE - 1] = '\0';
 
-  if (!is_ansi(&descriptor_server(d)->database, d->player) &&
+  if (!is_ansi(descriptor_runtime(d)->world->database, d->player) &&
       index(s, ESC_CHAR))
     strip_ansi_r(new, s, strlen(s));
   descriptor_queue_write(d, new, (int)strlen(new));
 }
 
 void descriptor_welcome(Descriptor *d) {
-  FileCache *files = descriptor_server(d)->files;
+  FileCache *files = descriptor_runtime(d)->files;
   int connection_count = file_cache_connection_count(files);
 
   if (connection_count) {
@@ -259,7 +262,7 @@ void descriptor_welcome(Descriptor *d) {
 }
 
 void set_lastsite(Descriptor *d, char *lastsite) {
-  MuxServer *server = descriptor_server(d);
+  CommandRuntime *runtime = descriptor_runtime(d);
   long i, j;
   char buf[LBUF_SIZE];
 
@@ -268,10 +271,10 @@ void set_lastsite(Descriptor *d, char *lastsite) {
       strncpy(buf, lastsite, LBUF_SIZE - 1);
       buf[LBUF_SIZE - 1] = '\0';
     } else {
-      attribute_get_string(&server->database, buf, d->player, A_LASTSITE, &i,
-                           &j);
+      attribute_get_string(runtime->world->database, buf, d->player, A_LASTSITE,
+                           &i, &j);
     }
-    attribute_add_raw(&server->database, d->player, A_LASTSITE, buf);
+    attribute_add_raw(runtime->world->database, d->player, A_LASTSITE, buf);
   }
 }
 
@@ -313,9 +316,9 @@ static const char *time_format_2(time_t dt) {
 }
 
 void announce_connect(DbRef player, Descriptor *d) {
-  MuxServer *server = descriptor_server(d);
-  const ServerConfiguration *configuration = server->configuration;
-  CommandContext *command = &server->background_command;
+  CommandRuntime *runtime = descriptor_runtime(d);
+  const ServerConfiguration *configuration = runtime->world->configuration;
+  CommandContext *command = runtime->background_command;
   DbRef loc, aowner, temp;
   DbRef zone, obj;
 
@@ -328,15 +331,15 @@ void announce_connect(DbRef player, Descriptor *d) {
   descriptor_queue_string(d, "Connected.\n\n");
 
   count = 0;
-  iterator = descriptor_iterator_connected(server->descriptors);
+  iterator = descriptor_iterator_connected(runtime->descriptors);
   while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     count++;
 
-  if (server->record_players < count)
-    server->record_players = count;
+  if (*runtime->record_players < count)
+    *runtime->record_players = count;
 
-  buf = attribute_parent_get(&server->database, player, A_TIMEOUT, &aowner,
-                             &aflags);
+  buf = attribute_parent_get(runtime->world->database, player, A_TIMEOUT,
+                             &aowner, &aflags);
   if (buf) {
     d->timeout = clamped_atoi(buf);
     if (d->timeout <= 0)
@@ -344,79 +347,80 @@ void announce_connect(DbRef player, Descriptor *d) {
   }
   free_lbuf(buf);
 
-  loc = game_object_location(&server->database, player);
-  s_connected(&server->database, player);
+  loc = game_object_location(runtime->world->database, player);
+  s_connected(runtime->world->database, player);
 
-  if (is_wizard(&server->database, player)) {
+  if (is_wizard(runtime->world->database, player)) {
     if (!configuration->is_login_enabled) {
       raw_notify(&command->evaluation, player, "*** Logins are disabled.");
     }
   }
   buf = alloc_lbuf("announce_connect");
   num = 0;
-  iterator = descriptor_iterator_player(server->descriptors, player);
+  iterator = descriptor_iterator_player(runtime->descriptors, player);
   while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     num++;
 
   if (num < 2) {
     snprintf(buf, LBUF_SIZE, "%s has connected.",
-             game_object_name(&server->database, player));
+             game_object_name(runtime->world->database, player));
 
     if (configuration->have_comsys)
       do_comconnect(&command->evaluation, player, d);
 
-    if (is_dark(&server->database, player)) {
-      raw_broadcast(server->descriptors, MONITOR,
+    if (is_dark(runtime->world->database, player)) {
+      raw_broadcast(runtime->descriptors, MONITOR,
                     "GAME: %s has DARK-connected.",
-                    game_object_name(&server->database, player));
+                    game_object_name(runtime->world->database, player));
     } else {
-      raw_broadcast(server->descriptors, MONITOR, "GAME: %s has connected.",
-                    game_object_name(&server->database, player));
+      raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has connected.",
+                    game_object_name(runtime->world->database, player));
     }
   } else {
     snprintf(buf, LBUF_SIZE, "%s has reconnected.",
-             game_object_name(&server->database, player));
-    raw_broadcast(server->descriptors, MONITOR, "GAME: %s has reconnected.",
-                  game_object_name(&server->database, player));
+             game_object_name(runtime->world->database, player));
+    raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has reconnected.",
+                  game_object_name(runtime->world->database, player));
   }
 
   key = MSG_INV;
-  if ((loc != NOTHING) && !(is_dark(&server->database, player) &&
-                            is_wizard(&server->database, player)))
+  if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
+                            is_wizard(runtime->world->database, player)))
     key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
 
   temp = command->enactor;
   command->enactor = player;
   notify_checked(&command->evaluation, player, player, buf, key);
   free_lbuf(buf);
-  if (is_suspect(&server->database, player)) {
+  if (is_suspect(runtime->world->database, player)) {
     send_channel(&command->evaluation, "Suspect", "%s has connected.",
-                 game_object_name(&server->database, player));
+                 game_object_name(runtime->world->database, player));
   }
   if (d->host_info & H_SUSPECT)
     send_channel(&command->evaluation, "Suspect",
                  "[Suspect site: %s] %s has connected.", d->addr,
-                 game_object_name(&server->database, player));
-  buf = attribute_parent_get(&server->database, player, A_ACONNECT, &aowner,
-                             &aflags);
+                 game_object_name(runtime->world->database, player));
+  buf = attribute_parent_get(runtime->world->database, player, A_ACONNECT,
+                             &aowner, &aflags);
   if (buf)
-    wait_que(server->commands, player, player, 0, NOTHING, 0, buf,
+    wait_que(runtime->commands, player, player, 0, NOTHING, 0, buf,
              (char **)nullptr, 0, nullptr);
   free_lbuf(buf);
   if (configuration->master_room != NOTHING) {
-    buf = attribute_parent_get(&server->database, configuration->master_room,
-                               A_ACONNECT, &aowner, &aflags);
+    buf = attribute_parent_get(runtime->world->database,
+                               configuration->master_room, A_ACONNECT, &aowner,
+                               &aflags);
     if (buf)
-      wait_que(server->commands, configuration->master_room, player, 0, NOTHING,
-               0, buf, (char **)nullptr, 0, nullptr);
+      wait_que(runtime->commands, configuration->master_room, player, 0,
+               NOTHING, 0, buf, (char **)nullptr, 0, nullptr);
     free_lbuf(buf);
-    DOLIST(
-        &server->database, obj,
-        game_object_contents(&server->database, configuration->master_room)) {
-      buf = attribute_parent_get(&server->database, obj, A_ACONNECT, &aowner,
-                                 &aflags);
+    DOLIST(runtime->world->database, obj,
+           game_object_contents(runtime->world->database,
+                                configuration->master_room)) {
+      buf = attribute_parent_get(runtime->world->database, obj, A_ACONNECT,
+                                 &aowner, &aflags);
       if (buf) {
-        wait_que(server->commands, obj, player, 0, NOTHING, 0, buf,
+        wait_que(runtime->commands, obj, player, 0, NOTHING, 0, buf,
                  (char **)nullptr, 0, nullptr);
       }
       free_lbuf(buf);
@@ -426,13 +430,13 @@ void announce_connect(DbRef player, Descriptor *d) {
    * do the zone of the player's location's possible aconnect
    */
   if (configuration->have_zones &&
-      ((zone = game_object_zone(&server->database, loc)) != NOTHING)) {
-    switch (typeof_obj(&server->database, zone)) {
+      ((zone = game_object_zone(runtime->world->database, loc)) != NOTHING)) {
+    switch (typeof_obj(runtime->world->database, zone)) {
     case TYPE_THING:
-      buf = attribute_parent_get(&server->database, zone, A_ACONNECT, &aowner,
-                                 &aflags);
+      buf = attribute_parent_get(runtime->world->database, zone, A_ACONNECT,
+                                 &aowner, &aflags);
       if (buf) {
-        wait_que(server->commands, zone, player, 0, NOTHING, 0, buf,
+        wait_que(runtime->commands, zone, player, 0, NOTHING, 0, buf,
                  (char **)nullptr, 0, nullptr);
       }
       free_lbuf(buf);
@@ -442,12 +446,12 @@ void announce_connect(DbRef player, Descriptor *d) {
        * check every object in the room for a connect * * *
        * action
        */
-      DOLIST(&server->database, obj,
-             game_object_contents(&server->database, zone)) {
-        buf = attribute_parent_get(&server->database, obj, A_ACONNECT, &aowner,
-                                   &aflags);
+      DOLIST(runtime->world->database, obj,
+             game_object_contents(runtime->world->database, zone)) {
+        buf = attribute_parent_get(runtime->world->database, obj, A_ACONNECT,
+                                   &aowner, &aflags);
         if (buf) {
-          wait_que(server->commands, obj, player, 0, NOTHING, 0, buf,
+          wait_que(runtime->commands, obj, player, 0, NOTHING, 0, buf,
                    (char **)nullptr, 0, nullptr);
         }
         free_lbuf(buf);
@@ -455,42 +459,42 @@ void announce_connect(DbRef player, Descriptor *d) {
       break;
     default:
       log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
-                       game_object_name(&server->database, player), player,
-                       typeof_obj(&server->database, zone)));
+                       game_object_name(runtime->world->database, player),
+                       player, typeof_obj(runtime->world->database, zone)));
     }
   }
-  time_str = ctime(&server->clock.now);
+  time_str = ctime(&runtime->clock->now);
   time_str[strlen(time_str) - 1] = '\0';
   record_login(&command->evaluation, player, 1, time_str, d->addr, d->username);
-  look_in(&descriptor_server(d)->background_command.evaluation, player,
-          game_object_location(&server->database, player), LK_SHOWEXIT);
+  look_in(&descriptor_runtime(d)->background_command->evaluation, player,
+          game_object_location(runtime->world->database, player), LK_SHOWEXIT);
   command->enactor = temp;
 }
 
 void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                                     const char *reason) {
-  MuxServer *server = descriptor_server(d);
-  const ServerConfiguration *configuration = server->configuration;
-  CommandContext *command = &server->background_command;
+  CommandRuntime *runtime = descriptor_runtime(d);
+  const ServerConfiguration *configuration = runtime->world->configuration;
+  CommandContext *command = runtime->background_command;
   DbRef loc, aowner, temp, zone, obj;
   int num, key;
   long aflags;
   char *buf, *atr_temp;
   Descriptor *dtemp;
   DescriptorIterator iterator =
-      descriptor_iterator_player(server->descriptors, player);
+      descriptor_iterator_player(runtime->descriptors, player);
   char *argv[1];
 
-  if (is_suspect(&server->database, player)) {
+  if (is_suspect(runtime->world->database, player)) {
     send_channel(&command->evaluation, "Suspect", "%s has disconnected.",
-                 game_object_name(&server->database, player));
+                 game_object_name(runtime->world->database, player));
   }
   if (d->host_info & H_SUSPECT) {
     send_channel(&command->evaluation, "Suspect",
                  "[Suspect site: %s] %s has disconnected.", d->addr,
-                 game_object_name(&server->database, d->player));
+                 game_object_name(runtime->world->database, d->player));
   }
-  loc = game_object_location(&server->database, player);
+  loc = game_object_location(runtime->world->database, player);
   num = 0;
   while ((dtemp = descriptor_iterator_next(&iterator)) != nullptr)
     num++;
@@ -502,10 +506,10 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     buf = alloc_mbuf("descriptor_announce_disconnect.only");
 
     snprintf(buf, MBUF_SIZE, "%s has disconnected.",
-             game_object_name(&server->database, player));
+             game_object_name(runtime->world->database, player));
     key = MSG_INV;
-    if ((loc != NOTHING) && !(is_dark(&server->database, player) &&
-                              is_wizard(&server->database, player)))
+    if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
+                              is_wizard(runtime->world->database, player)))
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(&command->evaluation, player, player, buf, key);
     free_mbuf(buf);
@@ -513,8 +517,8 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     if (configuration->have_comsys)
       do_comdisconnect(&command->evaluation, player);
 
-    raw_broadcast(server->descriptors, MONITOR, "GAME: %s has disconnected.",
-                  game_object_name(&server->database, player));
+    raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has disconnected.",
+                  game_object_name(runtime->world->database, player));
 
     /* wait_que()'s argument array isn't const-correct; reason is only
        read as command-queue text here. */
@@ -522,29 +526,29 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
 #pragma clang diagnostic ignored "-Wcast-qual"
     argv[0] = (char *)reason;
 #pragma clang diagnostic pop
-    c_connected(&server->database, player);
+    c_connected(runtime->world->database, player);
 
-    atr_temp = attribute_parent_get(&server->database, player, A_ADISCONNECT,
-                                    &aowner, &aflags);
+    atr_temp = attribute_parent_get(runtime->world->database, player,
+                                    A_ADISCONNECT, &aowner, &aflags);
     if (atr_temp && *atr_temp)
-      wait_que(server->commands, player, player, 0, NOTHING, 0, atr_temp, argv,
+      wait_que(runtime->commands, player, player, 0, NOTHING, 0, atr_temp, argv,
                1, nullptr);
     free_lbuf(atr_temp);
     if (configuration->master_room != NOTHING) {
-      atr_temp =
-          attribute_parent_get(&server->database, configuration->master_room,
-                               A_ADISCONNECT, &aowner, &aflags);
+      atr_temp = attribute_parent_get(runtime->world->database,
+                                      configuration->master_room, A_ADISCONNECT,
+                                      &aowner, &aflags);
       if (atr_temp)
-        wait_que(server->commands, configuration->master_room, player, 0,
+        wait_que(runtime->commands, configuration->master_room, player, 0,
                  NOTHING, 0, atr_temp, (char **)nullptr, 0, nullptr);
       free_lbuf(atr_temp);
-      DOLIST(
-          &server->database, obj,
-          game_object_contents(&server->database, configuration->master_room)) {
-        atr_temp = attribute_parent_get(&server->database, obj, A_ADISCONNECT,
-                                        &aowner, &aflags);
+      DOLIST(runtime->world->database, obj,
+             game_object_contents(runtime->world->database,
+                                  configuration->master_room)) {
+        atr_temp = attribute_parent_get(runtime->world->database, obj,
+                                        A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
-          wait_que(server->commands, obj, player, 0, NOTHING, 0, atr_temp,
+          wait_que(runtime->commands, obj, player, 0, NOTHING, 0, atr_temp,
                    (char **)nullptr, 0, nullptr);
         }
         free_lbuf(atr_temp);
@@ -555,13 +559,13 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
      * adisconnect
      */
     if (configuration->have_zones &&
-        ((zone = game_object_zone(&server->database, loc)) != NOTHING)) {
-      switch (typeof_obj(&server->database, zone)) {
+        ((zone = game_object_zone(runtime->world->database, loc)) != NOTHING)) {
+      switch (typeof_obj(runtime->world->database, zone)) {
       case TYPE_THING:
-        atr_temp = attribute_parent_get(&server->database, zone, A_ADISCONNECT,
-                                        &aowner, &aflags);
+        atr_temp = attribute_parent_get(runtime->world->database, zone,
+                                        A_ADISCONNECT, &aowner, &aflags);
         if (atr_temp) {
-          wait_que(server->commands, zone, player, 0, NOTHING, 0, atr_temp,
+          wait_que(runtime->commands, zone, player, 0, NOTHING, 0, atr_temp,
                    (char **)nullptr, 0, nullptr);
         }
         free_lbuf(atr_temp);
@@ -571,12 +575,12 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
          * check every object in the room for a * * *
          * connect action
          */
-        DOLIST(&server->database, obj,
-               game_object_contents(&server->database, zone)) {
-          atr_temp = attribute_parent_get(&server->database, obj, A_ADISCONNECT,
-                                          &aowner, &aflags);
+        DOLIST(runtime->world->database, obj,
+               game_object_contents(runtime->world->database, zone)) {
+          atr_temp = attribute_parent_get(runtime->world->database, obj,
+                                          A_ADISCONNECT, &aowner, &aflags);
           if (atr_temp) {
-            wait_que(server->commands, obj, player, 0, NOTHING, 0, atr_temp,
+            wait_que(runtime->commands, obj, player, 0, NOTHING, 0, atr_temp,
                      (char **)nullptr, 0, nullptr);
           }
           free_lbuf(atr_temp);
@@ -584,29 +588,29 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
         break;
       default:
         log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
-                         game_object_name(&server->database, player), player,
-                         typeof_obj(&server->database, zone)));
+                         game_object_name(runtime->world->database, player),
+                         player, typeof_obj(runtime->world->database, zone)));
       }
     }
     if (d->is_autodark) {
-      game_object_set_flags(&server->database, d->player,
-                            game_object_flags(&server->database, d->player) &
-                                ~DARK);
+      game_object_set_flags(
+          runtime->world->database, d->player,
+          game_object_flags(runtime->world->database, d->player) & ~DARK);
       d->is_autodark = false;
     }
 
   } else {
     buf = alloc_mbuf("descriptor_announce_disconnect.partial");
     snprintf(buf, MBUF_SIZE, "%s has partially disconnected.",
-             game_object_name(&server->database, player));
+             game_object_name(runtime->world->database, player));
     key = MSG_INV;
-    if ((loc != NOTHING) && !(is_dark(&server->database, player) &&
-                              is_wizard(&server->database, player)))
+    if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
+                              is_wizard(runtime->world->database, player)))
       key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
     notify_checked(&command->evaluation, player, player, buf, key);
-    raw_broadcast(server->descriptors, MONITOR,
+    raw_broadcast(runtime->descriptors, MONITOR,
                   "GAME: %s has partially disconnected.",
-                  game_object_name(&server->database, player));
+                  game_object_name(runtime->world->database, player));
     free_mbuf(buf);
   }
 
@@ -642,7 +646,8 @@ int boot_by_port(DescriptorRegistry *descriptors, int port, int no_god,
     if (d->is_dead)
       continue;
     if ((d->descriptor == port) &&
-        (!no_god || !is_god(&descriptor_server(d)->database, d->player))) {
+        (!no_god ||
+         !is_god(descriptor_runtime(d)->world->database, d->player))) {
       if (message && *message) {
         descriptor_queue_string(d, message);
         descriptor_queue_string(d, "\r\n");
@@ -727,10 +732,10 @@ static char *trimmed_name(GameDatabase *database, DbRef player) {
 }
 
 static void dump_users(Descriptor *e, char *match) {
-  MuxServer *server = descriptor_server(e);
+  CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_connected(server->descriptors);
+      descriptor_iterator_connected(runtime->descriptors);
   int count;
   char *buf, *fp, *sp, flist[4], slist[4];
   DbRef room_it;
@@ -746,31 +751,33 @@ static void dump_users(Descriptor *e, char *match) {
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match &&
-        !(string_prefix(game_object_name(&server->database, d->player), match)))
+        !(string_prefix(game_object_name(runtime->world->database, d->player),
+                        match)))
       continue;
     count++;
 
     fp = flist;
     sp = slist;
-    if (is_hidden(&server->database, d->player)) {
+    if (is_hidden(runtime->world->database, d->player)) {
       if (d->is_autodark)
         *fp++ = 'd';
-      else if (is_dark(&server->database, d->player))
+      else if (is_dark(runtime->world->database, d->player))
         *fp++ = 'D';
     }
-    if (!is_findable(&server->database, d->player)) {
+    if (!is_findable(runtime->world->database, d->player)) {
       *fp++ = 'U';
     } else {
-      room_it = where_room(&server->database, server->configuration, d->player);
-      if (is_good_obj(&server->database, room_it)) {
-        if (is_hideout(&server->database, room_it))
+      room_it = where_room(runtime->world->database,
+                           runtime->world->configuration, d->player);
+      if (is_good_obj(runtime->world->database, room_it)) {
+        if (is_hideout(runtime->world->database, room_it))
           *fp++ = 'u';
       } else {
         *fp++ = 'u';
       }
     }
 
-    if (is_suspect(&server->database, d->player))
+    if (is_suspect(runtime->world->database, d->player))
       *fp++ = '+';
     if (d->host_info & H_FORBIDDEN)
       *sp++ = 'F';
@@ -780,10 +787,10 @@ static void dump_users(Descriptor *e, char *match) {
     *sp = '\0';
 
     snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
-             trimmed_name(&server->database, d->player),
-             time_format_1(server->clock.now - d->connected_at),
-             time_format_2(server->clock.now - d->last_time), flist,
-             game_object_location(&server->database, d->player),
+             trimmed_name(runtime->world->database, d->player),
+             time_format_1(runtime->clock->now - d->connected_at),
+             time_format_2(runtime->clock->now - d->last_time), flist,
+             game_object_location(runtime->world->database, d->player),
              d->command_count,
              (d->username[0] != '\0') ? tprintf("%s@%s", d->username, d->addr)
                                       : d->addr);
@@ -791,10 +798,10 @@ static void dump_users(Descriptor *e, char *match) {
   }
   snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
            count, (count == 1) ? " " : "s ",
-           descriptor_server(e)->record_players,
-           (server->configuration->max_players == -1)
+           *descriptor_runtime(e)->record_players,
+           (runtime->world->configuration->max_players == -1)
                ? "no"
-               : tprintf("%d", server->configuration->max_players));
+               : tprintf("%d", runtime->world->configuration->max_players));
 
   descriptor_queue_string(e, buf);
 
@@ -802,10 +809,10 @@ static void dump_users(Descriptor *e, char *match) {
 }
 
 static void dump_sessions(Descriptor *e, char *match) {
-  MuxServer *server = descriptor_server(e);
+  CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_connected(server->descriptors);
+      descriptor_iterator_connected(runtime->descriptors);
   int count;
   char *buf;
 
@@ -825,27 +832,29 @@ static void dump_sessions(Descriptor *e, char *match) {
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match &&
-        !string_prefix(game_object_name(&server->database, d->player), match))
+        !string_prefix(game_object_name(runtime->world->database, d->player),
+                       match))
       continue;
     count++;
 
-    snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
-             trimmed_name(&server->database, d->player),
-             time_format_1(server->clock.now - d->connected_at),
-             time_format_2((server->clock.now - d->last_time) > HIDDEN_IDLESECS
-                               ? (server->clock.now - d->last_time)
-                               : 0),
-             d->descriptor, d->input_size, d->input_lost, d->input_tot,
-             d->output_size, d->output_lost, d->output_tot);
+    snprintf(
+        buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
+        trimmed_name(runtime->world->database, d->player),
+        time_format_1(runtime->clock->now - d->connected_at),
+        time_format_2((runtime->clock->now - d->last_time) > HIDDEN_IDLESECS
+                          ? (runtime->clock->now - d->last_time)
+                          : 0),
+        d->descriptor, d->input_size, d->input_lost, d->input_tot,
+        d->output_size, d->output_lost, d->output_tot);
     descriptor_queue_string(e, buf);
   }
 
   snprintf(buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n",
            count, (count == 1) ? " " : "s ",
-           descriptor_server(e)->record_players,
-           (server->configuration->max_players == -1)
+           *descriptor_runtime(e)->record_players,
+           (runtime->world->configuration->max_players == -1)
                ? "no"
-               : tprintf("%d", server->configuration->max_players));
+               : tprintf("%d", runtime->world->configuration->max_players));
   descriptor_queue_string(e, buf);
   free_lbuf(buf);
 }
@@ -889,14 +898,13 @@ void do_quit(CommandInvocation *invocation) {
 }
 
 int descriptor_command(Descriptor *d, char *command) {
-  MuxServer *server = descriptor_server(d);
+  CommandRuntime *runtime = descriptor_runtime(d);
   CommandContext context;
-  CommandContext *previous_context = server->btech.command_context;
 
-  if (!command_context_initialize(&context, server, d->player, d->player, d,
+  if (!command_context_initialize(&context, runtime, descriptor_btech(d),
+                                  descriptor_log(d), d->player, d->player, d,
                                   true))
     return 0;
-  btech_context_set_command(&server->btech, &context);
   context.debug_command = "< descriptor_command >";
 
   /* The IDLE command is used to keep players behind badly configured NATs
@@ -905,15 +913,16 @@ int descriptor_command(Descriptor *d, char *command) {
   */
   if (!strcasecmp(command, "IDLE") && d->is_connected) {
     context.debug_command = "idle";
-    btech_context_set_command(&server->btech, previous_context);
     command_context_destroy(&context);
     return 1;
   }
 
-  d->last_time = server->clock.now;
+  d->last_time = runtime->clock->now;
   d->command_count++;
+  BtechCommandScope btech_scope;
+  btech_command_scope_enter(&btech_scope, context.btech, &context);
   process_command(&context, command, (char **)nullptr, 0);
-  btech_context_set_command(&server->btech, previous_context);
+  btech_command_scope_leave(&btech_scope);
   command_context_destroy(&context);
   return 1;
 }
@@ -1058,7 +1067,7 @@ DbRef find_connected_name(GameDatabase *database,
 }
 
 void descriptor_run_command(Descriptor *d, char *command) {
-  if (!is_wizard(&descriptor_server(d)->database, d->player)) {
+  if (!is_wizard(descriptor_runtime(d)->world->database, d->player)) {
     if (d->quota <= 0) {
       descriptor_queue_string(d, "quota exceed, dropping command.\n");
       dprintk("aborting execution of %s for #%ld.", command, d->player);

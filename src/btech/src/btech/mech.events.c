@@ -26,7 +26,7 @@
 
 void mech_heartbeat(MECH *mech) {
   UpdateRecycling(mech);
-  if (btech_context_active()->configuration->btech_newstagger >= 1 &&
+  if (mech->xcode.context->configuration->btech_newstagger >= 1 &&
       MechType(mech) == CLASS_MECH) {
     // no sense checking if a fallen mech will fall down again, and let's not
     // let jumping mechs stagger.
@@ -46,14 +46,14 @@ void mech_heartbeat(MECH *mech) {
 }
 
 void mech_staggercheck_heartbeat(MECH *mech) {
-  time_t now = btech_context_active()->clock->now;
+  time_t now = mech->xcode.context->clock->now;
   int curStaggerDamage = 0;
   int prevStaggerDamage = 0;
   int staggerLevel = 0;
 
   // if we've not checked stagger since last time... ruhroh!
   if (now - (mech)->rd.lastStaggerCheck >=
-      btech_context_active()->configuration->btech_newstaggertime) {
+      mech->xcode.context->configuration->btech_newstaggertime) {
     (mech)->rd.lastStaggerCheck = now;
 
     // curStagger is stuff we haven't rolled against
@@ -68,8 +68,8 @@ void mech_staggercheck_heartbeat(MECH *mech) {
 
       // Dont need to remove stagger anymore, it clears on fall,
       // unless we're using
-      // btech_context_active()->configuration->btech_newstagger = 2
-      if (btech_context_active()->configuration->btech_newstagger == 2)
+      // mech->xcode.context->configuration->btech_newstagger = 2
+      if (mech->xcode.context->configuration->btech_newstagger == 2)
         RemoveStaggerDamage(mech, staggerLevel);
       else {
         MarkStaggerDamage(mech, staggerLevel);
@@ -129,7 +129,7 @@ int calcNewStaggerBTHMod(MECH *mech, int staggerLevel) {
       tonnageMod = -2;
 
     // disable tonnage mods if so configured
-    if (btech_context_active()->configuration->btech_newstaggertons)
+    if (mech->xcode.context->configuration->btech_newstaggertons)
       bthMod += tonnageMod;
   }
 
@@ -186,14 +186,14 @@ void mech_lock_event(MuxEvent *e) {
   MECH *target;
 
   if (MechTarget(mech) >= 0) {
-    target = FindObjectsData(MechTarget(mech));
+    target = btech_context_find_object(mech->xcode.context, MechTarget(mech));
     if (!target)
       return;
     if (!InLineOfSight(mech, target, MechX(target), MechY(target),
                        FaMechRange(mech, target)))
       return;
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on %s.",
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
   } else if (MechTargX(mech) >= 0 && MechTargY(mech) >= 0)
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on (%d,%d).",
                 MechTargX(mech), MechTargY(mech));
@@ -218,7 +218,7 @@ void mech_jump_event(MuxEvent *e) {
     StopJump(mech);
 }
 
-extern int PilotStatusRollNeeded[];
+extern const int PilotStatusRollNeeded[];
 
 void mech_recovery_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
@@ -242,10 +242,10 @@ void ProlongUncon(MECH *mech, int len) {
     MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
     return;
   }
-  l = mux_event_last_type_data(btech_context_active()->events, EVENT_RECOVERY,
+  l = mux_event_last_type_data(mech->xcode.context->events, EVENT_RECOVERY,
                                (void *)mech) +
       len;
-  mux_event_remove_type_data(btech_context_active()->events, EVENT_RECOVERY,
+  mux_event_remove_type_data(mech->xcode.context->events, EVENT_RECOVERY,
                              (void *)mech);
   MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
@@ -265,13 +265,15 @@ void mech_sideslip_event(MuxEvent *e) {
   if (!mech || !Started(mech))
     return;
   mech_notify(mech, MECHALL, "You make a skill roll while sideslipping!");
-  if (!MadePilotSkillRoll(
-          mech,
-          HasBoolAdvantage(MechPilot(mech), "maneuvering_ace") ? -1 : 0)) {
+  if (!MadePilotSkillRoll(mech,
+                          HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                                           "maneuvering_ace")
+                              ? -1
+                              : 0)) {
     mech_notify(mech, MECHALL, "You fail and spin out!");
     MechLOSBroadcast(mech, "spins out while sideslipping!");
     MechSpeed(mech) = 0.0;
-    roll = Number(0, 5);
+    roll = btech_random_range(mech->xcode.context, 0, 5);
     AddFacing(mech, roll * 60);
     SetFacing(mech, AcceptableDegree(MechFacing(mech)));
     MechDesiredFacing(mech) = MechFacing(mech);
@@ -350,7 +352,7 @@ void mech_plos_event(MuxEvent *e) {
 
   if (!Started(mech))
     return;
-  if (!(map = getMap(mech->mapindex)))
+  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
   MECHEVENT(mech, EVENT_PLOS, mech_plos_event, PLOS_TICK, 0);
   if (!MechPNumSeen(mech) && !(MechSpecials(mech) & AA_TECH))
@@ -361,7 +363,8 @@ void mech_plos_event(MuxEvent *e) {
   for (i = 0; i < map->first_free; i++)
     if (map->mechsOnMap[i] > 0 && map->mechsOnMap[i] != mech->mynum)
       if (!(map->LOSinfo[mech->mapnumber][i] & MECHLOSFLAG_SEEN)) {
-        target = FindObjectsData(map->mechsOnMap[i]);
+        target =
+            btech_context_find_object(mech->xcode.context, map->mechsOnMap[i]);
         if (!target)
           continue;
         range = FlMechRange(map, mech, target);
@@ -391,7 +394,7 @@ void aero_move_event(MuxEvent *e) {
       MechStartFZ(mech) = MechStartFZ(mech) - 1;
     move_mech(mech);
     if (IsDS(mech) && MechZ(mech) <= (MechElevation(mech) + 5) &&
-        ((btech_context_active()->events->tick / WEAPON_TICK) % 10) == 0)
+        ((mech->xcode.context->events->tick / WEAPON_TICK) % 10) == 0)
       DS_BlastNearbyMechsAndTrees(
           mech, "You are hit by the DropShip's plasma exhaust!",
           "is hit directly by DropShip's exhaust!",
@@ -470,15 +473,16 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
                         &ammoLoc1, &ammoCrit1, 0)) {
     SetPartTempNuke(objMech, wSect, wSlot, 0);
 
-    mech_printf(objMech, MECHALL,
-                "You finish bouncing around and realize you no longer have "
-                "ammo for your %s!",
-                get_parts_long_name(I2Weapon(wWeapIdx), 0));
+    mech_printf(
+        objMech, MECHALL,
+        "You finish bouncing around and realize you no longer have "
+        "ammo for your %s!",
+        get_parts_long_name(objMech->xcode.context, I2Weapon(wWeapIdx), 0));
     return;
   }
 
   if (MechWeapons[wWeapStatus].special & RAC) {
-    wRoll = Roll();
+    wRoll = btech_random_roll(objMech->xcode.context);
     wRollNeeded = FindPilotGunnery(objMech, wWeapStatus) + 3;
 
     mech_notify(objMech, MECHPILOT, "You make a roll to unjam the weapon!");
@@ -501,8 +505,9 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
   }
 
   SetPartTempNuke(objMech, wSect, wSlot, 0);
-  mech_printf(objMech, MECHALL, "You manage to clear the jam on your %s!",
-              get_parts_long_name(I2Weapon(wWeapIdx), 0));
+  mech_printf(
+      objMech, MECHALL, "You manage to clear the jam on your %s!",
+      get_parts_long_name(objMech->xcode.context, I2Weapon(wWeapIdx), 0));
   MechLOSBroadcast(objMech, "ejects a mangled shell!");
 
   decrement_ammunition(objMech, wWeapNum, wSect, wSlot, ammoLoc, ammoCrit,
@@ -512,7 +517,8 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
 void check_stagger_event(MuxEvent *event) {
   MECH *mech = (MECH *)event->data; /* get the mech */
 
-  SendDebug(tprintf("Triggered stagger check for %ld.", mech->mynum));
+  SendDebug(mech->xcode.context,
+            tprintf("Triggered stagger check for %ld.", mech->mynum));
 
   if ((StaggerLevel(mech) < 1) || Fallen(mech) ||
       (MechType(mech) != CLASS_MECH)) {

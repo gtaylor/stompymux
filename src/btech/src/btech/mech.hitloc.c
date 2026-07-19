@@ -21,7 +21,7 @@
 
 int FindPunchLocation(MECH *target, int hitGroup) {
 
-  int roll = Number(1, 6);
+  int roll = btech_random_range(target->xcode.context, 1, 6);
 
   /* New tables from Total Warfare - pg 147 (and back of book)
    * - Dany 01/2007 */
@@ -156,7 +156,7 @@ int FindPunchLocation(MECH *target, int hitGroup) {
 
 int FindKickLocation(MECH *target, int hitGroup) {
 
-  int roll = Number(1, 6);
+  int roll = btech_random_range(target->xcode.context, 1, 6);
 
   /* New tables from Total Warfare for quads */
   if (MechIsQuad(target)) {
@@ -261,7 +261,7 @@ int ModifyHeadHit(int hitGroup, MECH *mech) {
   }
 
   if (newloc != HEAD &&
-      (btech_context_active()->configuration->btech_exile_stun_code ==
+      (mech->xcode.context->configuration->btech_exile_stun_code ==
        1)) { // set exile_stun_code >1 to disable 'stun' part
 
     mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
@@ -297,7 +297,7 @@ int get_bsuit_hitloc(MECH *mech) {
       table[last++] = i;
   if (!last)
     return -1;
-  return table[Number(0, last - 1)];
+  return table[btech_random_range(mech->xcode.context, 0, last - 1)];
 }
 
 int TransferTarget(MECH *mech, int hitloc) {
@@ -326,11 +326,12 @@ int TransferTarget(MECH *mech, int hitloc) {
   return -1;
 }
 
-int FindSwarmHitLocation(int *iscritical, int *isrear) {
+static int find_swarm_hit_location(BtechContext *context, int *iscritical,
+                                   int *isrear) {
   *isrear = 0;
   *iscritical = 1;
 
-  switch (Roll()) {
+  switch (btech_random_roll(context)) {
   case 2:
     return HEAD;
   case 3:
@@ -377,7 +378,7 @@ int crittable(MECH *mech, int loc, int tres) {
   if (!GetSectOArmor(mech, loc))
     return 1;
   if (MechType(mech) != CLASS_MECH &&
-      btech_context_active()->configuration->btech_vcrit <= 1)
+      mech->xcode.context->configuration->btech_vcrit <= 1)
     return 0;
 
   /* Calculate percentage of armor remaining */
@@ -386,19 +387,21 @@ int crittable(MECH *mech, int loc, int tres) {
   /* Are we below the threshold? Okay, then lets give it a 1 in 12 chance to TAC
    */
   if (d < tres) {
-    SendTAC(tprintf("%ld was below thresh (d: %d, tres: %d)", mech->mynum, d,
+    SendTAC(mech->xcode.context,
+            tprintf("%ld was below thresh (d: %d, tres: %d)", mech->mynum, d,
                     tres));
-    if (Number(1, 12) == 6) {
-      SendTAC(tprintf(
-          "%ld is pretty unlucky. Needed 6. Rolled: 6. You're getting tac'd!",
-          mech->mynum));
+    if (btech_random_range(mech->xcode.context, 1, 12) == 6) {
+      SendTAC(mech->xcode.context, tprintf("%ld is pretty unlucky. Needed 6. "
+                                           "Rolled: 6. You're getting tac'd!",
+                                           mech->mynum));
       return 1;
     }
   }
   /* Full Up Armor? Okay, 1 in 71 chance for that 'lucky' TAC */
   if (d == 100) {
-    if (Number(1, 71) == 23) {
+    if (btech_random_range(mech->xcode.context, 1, 71) == 23) {
       SendTAC(
+          mech->xcode.context,
           tprintf("%ld has full armor, but you suck. 1-71 and you got a 23? "
                   "Who the eff are you, MJ?",
                   mech->mynum));
@@ -410,7 +413,7 @@ int crittable(MECH *mech, int loc, int tres) {
    * Anything below 70% is a 1 in 11 chance? That's stupid. Lets just make the
    * TAC threshold, the TAC threshold and leave it at that */
   //	if(d < (100 - ((100 - tres) / 2)))
-  //		if(Number(1, 11) == 6)
+  //		if(btech_random_range(mech->xcode.context, 1, 11) == 6)
   //			return 1;
   return 0;
 } /* end crittable() */
@@ -421,20 +424,21 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
   int side;
 
   *iscritical = 0;
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
 
   if (MechStatus(mech) & COMBAT_SAFE)
     return 0;
 
-  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) && Number(1, 100) >= 42)
+  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) &&
+      btech_random_range(mech->xcode.context, 1, 100) >= 42)
     return TURRET;
 
-  rollstat.hitrolls[roll - 2]++;
-  rollstat.tothrolls++;
+  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
+  mech->xcode.context->random.statistics.total_hit_rolls++;
   switch (MechType(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
-      return Number(0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -442,9 +446,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        SendTAC(tprintf(
-            "%ld's luck sucks. It got TACed. We're in FindFasaHitLocation()",
-            mech->mynum));
+        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
+                                             "We're in FindFasaHitLocation()",
+                                             mech->mynum));
         *iscritical = 1;
         return LTORSO;
       case 3:
@@ -465,7 +469,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -473,9 +477,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        SendTAC(tprintf(
-            "%ld's luck sucks. It got TACed. We're in FindFasaHitLocation()",
-            mech->mynum));
+        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
+                                             "We're in FindFasaHitLocation()",
+                                             mech->mynum));
         *iscritical = 1;
         return RTORSO;
       case 3:
@@ -496,7 +500,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -505,9 +509,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case BACK:
       switch (roll) {
       case 2:
-        SendTAC(tprintf(
-            "%ld's luck sucks. It got TACed. We're in FindFasaHitLocation()",
-            mech->mynum));
+        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
+                                             "We're in FindFasaHitLocation()",
+                                             mech->mynum));
         *iscritical = 1;
         return CTORSO;
       case 3:
@@ -527,7 +531,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -543,7 +547,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return LSIDE;
       case 3:
-        if (btech_context_active()->configuration->btech_tankfriendly) {
+        if (mech->xcode.context->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -657,7 +661,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return RSIDE;
       case 3:
-        if (btech_context_active()->configuration->btech_tankfriendly) {
+        if (mech->xcode.context->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -782,8 +786,8 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         *iscritical = 1;
         return side;
       case 3:
-        if (btech_context_active()->configuration->btech_tankshield) {
-          if (btech_context_active()->configuration->btech_tankfriendly) {
+        if (mech->xcode.context->configuration->btech_tankshield) {
+          if (mech->xcode.context->configuration->btech_tankfriendly) {
             if (!Fallen(mech)) {
               mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
               switch (MechMove(mech)) {
@@ -844,7 +848,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         return side;
       case 4:
         /* MP -1 */
-        if (btech_context_active()->configuration->btech_tankshield) {
+        if (mech->xcode.context->configuration->btech_tankshield) {
           if (!Fallen(mech)) {
             mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
             switch (MechMove(mech)) {
@@ -900,7 +904,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 12:
         /* A Roll on Determining Critical Hits Table */
         if (crittable(mech, (GetSectInt(mech, TURRET)) ? TURRET : side,
-                      btech_context_active()->configuration->btech_critlevel))
+                      mech->xcode.context->configuration->btech_critlevel))
           *iscritical = 1;
         return (GetSectInt(mech, TURRET)) ? TURRET : side;
       }
@@ -1084,13 +1088,14 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         return DS_LWING;
       case 4:
       case 10:
-        return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
+        return (btech_random_range(mech->xcode.context, 1, 2)) == 1 ? DS_LWING
+                                                                    : DS_RWING;
       }
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
-      if (Number(1, 2) == 2)
+      if (btech_random_range(mech->xcode.context, 1, 2) == 2)
         SpheroidToRear(mech, side);
       switch (roll) {
       case 2:
@@ -1387,7 +1392,7 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
   const char MAX_LEN = 64;
   char strVhlTypeName[64];
 
-  wRoll = Roll() + wRollMod;
+  wRoll = btech_random_roll(mech->xcode.context) + wRollMod;
 
   switch (MechMove(mech)) {
   case MOVE_TRACK:
@@ -1478,16 +1483,17 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
   int side;
 
   *iscritical = 0;
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
 
   if (MechStatus(mech) & COMBAT_SAFE)
     return 0;
 
-  if (MechDugIn(mech) && GetSectInt(mech, TURRET) && Number(1, 100) >= 42)
+  if (MechDugIn(mech) && GetSectInt(mech, TURRET) &&
+      btech_random_range(mech->xcode.context, 1, 100) >= 42)
     return TURRET;
 
-  rollstat.hitrolls[roll - 2]++;
-  rollstat.tothrolls++;
+  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
+  mech->xcode.context->random.statistics.total_hit_rolls++;
 
   switch (MechType(mech)) {
   case CLASS_VEH_GROUND:
@@ -1504,7 +1510,7 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 3:
         hitloc = side;
         if (crittable(mech, hitloc,
-                      btech_context_active()->configuration->btech_critlevel))
+                      mech->xcode.context->configuration->btech_critlevel))
           DoMotiveSystemHit(mech, 0);
         break;
       case 4:
@@ -1545,7 +1551,7 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
         hitloc = side;
 
         if (crittable(mech, hitloc,
-                      btech_context_active()->configuration->btech_critlevel))
+                      mech->xcode.context->configuration->btech_critlevel))
           DoMotiveSystemHit(mech, 0);
         break;
       case 4:
@@ -1655,7 +1661,7 @@ int FindAdvFasaVehicleHitLocation(MECH *mech, int hitGroup, int *iscritical,
   }
 
   if (!crittable(mech, hitloc,
-                 btech_context_active()->configuration->btech_critlevel))
+                 mech->xcode.context->configuration->btech_critlevel))
     *iscritical = 0;
 
   return hitloc;
@@ -1668,7 +1674,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
   int roll, hitloc = 0;
   int side;
 
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
 
   /* Since we're crit proof set this to 0 */
   *iscritical = 0;
@@ -1676,15 +1682,16 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
   if (MechStatus(mech) & COMBAT_SAFE)
     return 0;
 
-  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) && Number(1, 100) >= 42)
+  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) &&
+      btech_random_range(mech->xcode.context, 1, 100) >= 42)
     return TURRET;
 
-  rollstat.hitrolls[roll - 2]++;
-  rollstat.tothrolls++;
+  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
+  mech->xcode.context->random.statistics.total_hit_rolls++;
   switch (MechType(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
-      return Number(0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -1711,7 +1718,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return RLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -1738,7 +1745,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -1765,7 +1772,7 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         return LARM;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -1929,13 +1936,14 @@ int FindHitLocation_CritProof(MECH *mech, int hitGroup, int *iscritical,
         return DS_LWING;
       case 4:
       case 10:
-        return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
+        return (btech_random_range(mech->xcode.context, 1, 2)) == 1 ? DS_LWING
+                                                                    : DS_RWING;
       }
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
-      if (Number(1, 2) == 2)
+      if (btech_random_range(mech->xcode.context, 1, 2) == 2)
         SpheroidToRear(mech, side);
       switch (roll) {
       case 2:
@@ -2173,7 +2181,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
   int roll, hitloc = 0;
   int side;
 
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
 
   /* We have a varying set of crit charts we can use, so let's see what's been
    * config'd */
@@ -2182,39 +2190,40 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
    * the others don't */
   switch (MechType(mech)) {
   case CLASS_VTOL:
-    if (btech_context_active()->configuration->btech_fasaadvvtolcrit)
+    if (mech->xcode.context->configuration->btech_fasaadvvtolcrit)
       return FindAdvFasaVehicleHitLocation(mech, hitGroup, iscritical, isrear);
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (btech_context_active()->configuration->btech_fasacrit)
+    else if (mech->xcode.context->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   case CLASS_VEH_GROUND:
-    if (btech_context_active()->configuration->btech_fasaadvvhlcrit)
+    if (mech->xcode.context->configuration->btech_fasaadvvhlcrit)
       return FindAdvFasaVehicleHitLocation(mech, hitGroup, iscritical, isrear);
     else if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (btech_context_active()->configuration->btech_fasacrit)
+    else if (mech->xcode.context->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   default:
     if (MechSpecials(mech) & CRITPROOF_TECH)
       return FindHitLocation_CritProof(mech, hitGroup, iscritical, isrear);
-    else if (btech_context_active()->configuration->btech_fasacrit)
+    else if (mech->xcode.context->configuration->btech_fasacrit)
       return FindFasaHitLocation(mech, hitGroup, iscritical, isrear);
     break;
   }
 
   if (MechStatus(mech) & COMBAT_SAFE)
     return 0;
-  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) && Number(1, 100) >= 42)
+  if (MechDugIn(mech) && GetSectOInt(mech, TURRET) &&
+      btech_random_range(mech->xcode.context, 1, 100) >= 42)
     return TURRET;
-  rollstat.hitrolls[roll - 2]++;
-  rollstat.tothrolls++;
+  mech->xcode.context->random.statistics.hit_rolls[roll - 2]++;
+  mech->xcode.context->random.statistics.total_hit_rolls++;
   switch (MechType(mech)) {
   case CLASS_BSUIT:
     if ((hitloc = get_bsuit_hitloc(mech)) < 0)
-      return Number(0, NUM_BSUIT_MEMBERS - 1);
+      return btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1);
     [[fallthrough]];
   case CLASS_MW:
   case CLASS_MECH:
@@ -2223,9 +2232,11 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, LTORSO, 60)) {
-          SendTAC(tprintf(
-              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-              mech->mynum));
+          SendTAC(
+              mech->xcode.context,
+              tprintf(
+                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+                  mech->mynum));
           *iscritical = 1;
         }
         return LTORSO;
@@ -2247,7 +2258,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return RLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2256,9 +2267,11 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, RTORSO, 60)) {
-          SendTAC(tprintf(
-              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-              mech->mynum));
+          SendTAC(
+              mech->xcode.context,
+              tprintf(
+                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+                  mech->mynum));
           *iscritical = 1;
         }
         return RTORSO;
@@ -2280,7 +2293,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return LLEG;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2290,9 +2303,11 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, CTORSO, 60)) {
-          SendTAC(tprintf(
-              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-              mech->mynum));
+          SendTAC(
+              mech->xcode.context,
+              tprintf(
+                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+                  mech->mynum));
           *iscritical = 1;
         }
         return CTORSO;
@@ -2313,7 +2328,7 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       case 11:
         return LARM;
       case 12:
-        if (btech_context_active()->configuration->btech_exile_stun_code)
+        if (mech->xcode.context->configuration->btech_exile_stun_code)
           return ModifyHeadHit(hitGroup, mech);
         return HEAD;
       }
@@ -2503,13 +2518,14 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
         return DS_LWING;
       case 4:
       case 10:
-        return (Number(1, 2)) == 1 ? DS_LWING : DS_RWING;
+        return (btech_random_range(mech->xcode.context, 1, 2)) == 1 ? DS_LWING
+                                                                    : DS_RWING;
       }
       break;
     case LEFTSIDE:
     case RIGHTSIDE:
       side = (hitGroup == LEFTSIDE) ? DS_LWING : DS_RWING;
-      if (Number(1, 2) == 2)
+      if (btech_random_range(mech->xcode.context, 1, 2) == 2)
         SpheroidToRear(mech, side);
       switch (roll) {
       case 2:
@@ -2874,7 +2890,7 @@ int FindAreaHitGroup(MECH *mech, MECH *target) {
    * The left side and right side are simply the leftovers, and are
    * determined by whether an arc is less than or greater than 180.
    */
-  switch (btech_context_active()->configuration->btech_hit_arcs) {
+  switch (mech->xcode.context->configuration->btech_hit_arcs) {
   case 0: /* TW rules */
   default:
     m_fs_hw = 90;
@@ -2969,7 +2985,7 @@ int FindTargetHitLoc(MECH *mech, MECH *target, int *isrear, int *iscritical) {
   if (MechType(target) == CLASS_MECH &&
       ((MechType(mech) == CLASS_BSUIT &&
         MechSwarmTarget(mech) == target->mynum))) {
-    return FindSwarmHitLocation(iscritical, isrear);
+    return find_swarm_hit_location(mech->xcode.context, iscritical, isrear);
   }
 
   return FindHitLocation(target, hitGroup, iscritical, isrear);
@@ -3005,7 +3021,8 @@ int FindTCHitLoc(MECH *mech, MECH *target, int *isrear, int *iscritical) {
   hitGroup = FindAreaHitGroup(mech, target);
   if (hitGroup == BACK)
     *isrear = 1;
-  if (MechAimType(mech) == MechType(target) && Number(1, 6) >= 3)
+  if (MechAimType(mech) == MechType(target) &&
+      btech_random_range(mech->xcode.context, 1, 6) >= 3)
     switch (MechType(target)) {
     case CLASS_MECH:
     case CLASS_MW:

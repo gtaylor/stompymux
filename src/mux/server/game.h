@@ -8,13 +8,14 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct CommandContext CommandContext;
 typedef struct CommandInvocation CommandInvocation;
 typedef struct MuxServer MuxServer;
+typedef struct ServerControl ServerControl;
 
 void do_shutdown(CommandInvocation *invocation);
-void server_shutdown(MuxServer *server, DbRef player, int key,
+void server_shutdown(ServerControl *control, DbRef player, int key,
                      const char *message);
-int dump_database_internal(MuxServer *server, int dump_type);
-void dump_database(MuxServer *server);
-void fork_and_dump(MuxServer *server, int key);
+int dump_database_internal(ServerControl *control, int dump_type);
+void dump_database(ServerControl *control);
+void fork_and_dump(ServerControl *control, int key);
 void notify_except(EvaluationContext *evaluation, DbRef location, DbRef player,
                    DbRef exception, const char *message);
 void notify_except2(EvaluationContext *evaluation, DbRef location, DbRef player,

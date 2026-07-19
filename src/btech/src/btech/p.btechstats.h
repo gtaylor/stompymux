@@ -14,47 +14,63 @@
 
 #pragma once
 
+typedef struct BtechContext BtechContext;
+typedef struct CommandInvocation CommandInvocation;
+
+typedef struct UptimeText {
+  char text[MBUF_SIZE];
+} UptimeText;
+
 /* btechstats.c */
-char *silly_get_uptime_to_string(int i);
-void list_charvaluestuff(DbRef player, int flag);
-int char_getvaluecode(char *name);
-int char_rollsaving(void);
-int char_rollunskilled(void);
-int char_rollskilled(void);
-int char_rolld6(int num);
-int char_getvalue(DbRef player, char *name);
-void char_setvalue(DbRef player, char *name, int value);
-int char_getskilltargetbycode(DbRef player, int code, int modifier);
-int char_getskilltarget(DbRef player, char *name, int modifier);
-int char_getxpbycode(DbRef player, int code);
-int char_gainxpbycode(DbRef player, int code, int amount, int override);
-int char_gainxp(DbRef player, char *skill, int amount);
-int char_getskillsuccess(DbRef player, char *name, int modifier, int loud);
-int char_getskillmargsucc(DbRef player, char *name, int modifier);
-int char_getopposedskill(DbRef first, char *skill1, DbRef second, char *skill2);
-int char_getattrsave(DbRef player, char *name);
-int char_getattrsavesucc(DbRef player, char *name);
+UptimeText uptime_text(int seconds);
+void list_charvaluestuff(EvaluationContext *evaluation, DbRef player, int flag);
+int char_getvaluecode(BtechContext *context, char *name);
+int char_rollsaving(BtechContext *context);
+int char_rollunskilled(BtechContext *context);
+int char_rollskilled(BtechContext *context);
+int char_rolld6(BtechContext *context, int num);
+int char_getvalue(BtechContext *context, DbRef player, char *name);
+void char_setvalue(BtechContext *context, DbRef player, char *name, int value);
+int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
+                              int modifier);
+int char_getskilltarget(BtechContext *context, DbRef player, char *name,
+                        int modifier);
+int char_getxpbycode(BtechContext *context, DbRef player, int code);
+int char_gainxpbycode(BtechContext *context, DbRef player, int code, int amount,
+                      int override);
+int char_gainxp(BtechContext *context, DbRef player, char *skill, int amount);
+int char_getskillsuccess(BtechContext *context, DbRef player, char *name,
+                         int modifier, int loud);
+int char_getskillmargsucc(BtechContext *context, DbRef player, char *name,
+                          int modifier);
+int char_getopposedskill(BtechContext *context, DbRef first, char *skill1,
+                         DbRef second, char *skill2);
+int char_getattrsave(BtechContext *context, DbRef player, char *name);
+int char_getattrsavesucc(BtechContext *context, DbRef player, char *name);
 void zap_unneccessary_stats(void);
-void init_btechstats(void);
-void do_charstatus(DbRef player, DbRef cause, int key, char *arg1);
-void do_charclear(DbRef player, DbRef cause, int key, char *arg1);
-DbRef char_lookupplayer(DbRef player, DbRef cause, int key, char *arg1);
+void init_btechstats(BtechContext *context);
+void btech_stats_destroy(BtechContext *context);
+void do_charclear(CommandInvocation *invocation);
+DbRef char_lookupplayer(BtechContext *context, DbRef player, DbRef cause,
+                        int key, char *arg1);
 void initialize_pc(DbRef player, MECH *mech);
 void fix_pilotdamage(MECH *mech, DbRef player);
 int mw_ic_bth(MECH *mech);
 int handlemwconc(MECH *mech, int initial);
 void headhitmwdamage(MECH *mech, MECH *attacker, int dam);
 void mwlethaldam(MECH *mech, MECH *attacker, int dam);
-void lower_xp(DbRef player, int promillage);
-void AccumulateTechXP(DbRef pilot, MECH *mech, int reason);
-void AccumulateTechWeaponsXP(DbRef pilot, MECH *mech, int reason);
+void lower_xp(BtechContext *context, DbRef player, int promillage);
+void AccumulateTechXP(BtechContext *context, DbRef pilot, MECH *mech,
+                      int reason);
+void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, MECH *mech,
+                             int reason);
 void AccumulateCommXP(DbRef pilot, MECH *mech);
 void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway);
 void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded);
 int MadePerceptionRoll(MECH *mech, int modifier);
 void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded);
 void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason);
-int HasBoolAdvantage(DbRef player, const char *name);
+int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name);
 void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded,
                      int numOccurences, float multiplier, int weapindx,
                      int bth);
@@ -72,7 +88,7 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
                     EvaluationContext *context);
 void debug_xptop(DbRef player, void *data, char *buffer);
 void debug_setxplevel(DbRef player, void *data, char *buffer);
-int btthreshold_func(char *skillname);
+int btthreshold_func(BtechContext *context, char *skillname);
 struct chargen_struct *retrieve_chargen_struct(DbRef player);
 int lowest_bit(int num);
 int recursive_add(int lev);

@@ -11,11 +11,17 @@
 
 #pragma once
 
+#include "mux/support/alloc.h"
+
+typedef struct GameDatabase GameDatabase;
+typedef struct EvaluationContext EvaluationContext;
+
 /* glue.hcode.c */
-char *silly_atr_get(int id, int flag);
-void silly_atr_set(int id, int flag, char *dat);
+char *btech_attribute_read(GameDatabase *database, int id, int flag,
+                           char buffer[static LBUF_SIZE]);
+void silly_atr_set_in(GameDatabase *database, int id, int flag, char *dat);
 void KillText(char **mapt);
-void ShowText(char **mapt, DbRef player);
+void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
 float FBOUNDED(float min, float val, float max);
 int BOUNDED(int min, int val, int max);
 int MAX(int v1, int v2);

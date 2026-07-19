@@ -56,9 +56,6 @@
 #include "p.pcombat.h"
 #include "p.template.h"
 
-extern int arc_override;
-extern DbRef pilot_override;
-
 /*
 Optional firing modes:
 Autocannons:
@@ -97,22 +94,29 @@ void mech_target(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
   argc = mech_parseattributes(buffer, args, 5);
-  DOCHECK(argc != 1, "Invalid number of arguments to function!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc != 1,
+                  "Invalid number of arguments to function!");
   if (!strcmp(args[0], "-")) {
     MechAim(mech) = NUM_SECTIONS;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Targetting disabled.");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Targetting disabled.");
     return;
   }
-  DOCHECK(MechTarget(mech) < 0 || !(target = FindObjectsData(MechTarget(mech))),
-          "Error: You need to be locked onto something to target its part!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      MechTarget(mech) < 0 || !(target = btech_context_find_object(
+                                    mech->xcode.context, MechTarget(mech))),
+      "Error: You need to be locked onto something to target its part!");
   type = MechType(target);
   move = MechMove(target);
-  DOCHECK((index = ArmorSectionFromString(type, move, args[0])) < 0,
-          "Invalid location!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (index = ArmorSectionFromString(type, move, args[0])) < 0,
+                  "Invalid location!");
   MechAim(mech) = index;
   MechAimType(mech) = type;
   ArmorStringFromIndex(index, section, type, move);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s targetted.", section);
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                "%s targetted.", section);
 }
 
 /* Varying messages based on the distance to foe, and size of your vehicle
@@ -123,17 +127,18 @@ void mech_target(DbRef player, void *data, char *buffer) {
 /*Distance: <9, <20, rest */
 
 /* Idea: Tonseverity + 3 * distseverity */
-char *ss_messages[] = {"You feel you'll have your hands full before too long..",
-                       "You have a bad feeling about this..",
-                       "You feel a homicidal maniac is about to pounce on you!",
+static char *const ss_messages[] = {
+    "You feel you'll have your hands full before too long..",
+    "You have a bad feeling about this..",
+    "You feel a homicidal maniac is about to pounce on you!",
 
-                       "You think something is amiss..",
-                       "You have a slightly bad feeling about this..",
-                       "You think someone thinks ill of you..",
+    "You think something is amiss..",
+    "You have a slightly bad feeling about this..",
+    "You think someone thinks ill of you..",
 
-                       "Something makes you somewhat feel uneasy..",
-                       "Something makes you definitely feel uneasy..",
-                       "Something makes you feel out of your element.."};
+    "Something makes you somewhat feel uneasy..",
+    "Something makes you definitely feel uneasy..",
+    "Something makes you feel out of your element.."};
 
 #define SSDistMod(r) ((r < 9) ? 0 : ((r < 20) ? 1 : 2))
 #define SSTonMod(d) ((d <= -20) ? 0 : (d >= 20) ? 2 : 1)
@@ -157,11 +162,12 @@ void sixth_sense_check(MECH *mech, MECH *target) {
     return;
   if (Destroyed(target))
     return;
-  if (Roll() > 8)
+  if (btech_random_roll(mech->xcode.context) > 8)
     return;
   r = FaMechRange(mech, target);
   d = (MechRTonsV(mech) - MechRTonsV(target)) / 1024;
-  MECHEVENT(target, EVENT_SS, mech_ss_event, Number(1, 3),
+  MECHEVENT(target, EVENT_SS, mech_ss_event,
+            btech_random_range(mech->xcode.context, 1, 3),
             (long)((3 * (SSDistMod(r))) + (SSTonMod(d))));
 }
 
@@ -181,7 +187,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
   argc = mech_parseattributes(buffer, args, 5);
   switch (argc) {
   case 1:
-    mech_map = getMap(mech->mapindex);
+    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
     if (args[0][0] == '-') {
       MechTarget(mech) = -1;
       MechTargX(mech) = -1;
@@ -195,14 +201,14 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetref = FindTargetDBREFFromMapNumber(mech, targetID);
-    target = getMech(targetref);
+    target = btech_context_get_mech(mech->xcode.context, targetref);
     if (target)
       LOS = InLineOfSight(mech, target, MechX(target), MechY(target),
                           FlMechRange(mech_map, mech, target));
     else
       targetref = -1;
-    DOCHECK(targetref == -1 || !LOS,
-            "That is not a valid targetID. Try again.");
+    DOCHECK_CONTEXT(mech->xcode.context, targetref == -1 || !LOS,
+                    "That is not a valid targetID. Try again.");
 
     if (MechSwarmTarget(mech) > 0) {
       if (MechSwarmTarget(mech) != target->mynum) {
@@ -214,13 +220,13 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     }
 
     mech_printf(mech, MECHALL, "Target set to %s.",
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
     StopLock(mech);
     MechTarget(mech) = targetref;
     MechStatus(mech) |= LOCK_TARGET;
     sixth_sense_check(mech, target);
 #if LOCK_TICK > 0
-    if (!arc_override)
+    if (!mech->xcode.context->combat_overrides.arcs)
       MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
@@ -233,7 +239,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    mech_map = getMap(mech->mapindex);
+    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
     newx = atoi(args[0]);
     newy = atoi(args[1]);
     ValidCoord(mech_map, newx, newy);
@@ -244,12 +250,12 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     if (MechSpotter(mech) == mech->mynum)
       ClearFireAdjustments(mech_map, mech->mynum);
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
     StopLock(mech);
     MechStatus(mech) |= LOCK_TARGET;
 #if LOCK_TICK > 0
-    if (!arc_override)
+    if (!mech->xcode.context->combat_overrides.arcs)
       MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
@@ -262,7 +268,8 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    DOCHECK(strlen(args[2]) > 1, "Invalid lock mode!");
+    DOCHECK_CONTEXT(mech->xcode.context, strlen(args[2]) > 1,
+                    "Invalid lock mode!");
     switch (toupper(args[2][0])) {
     case 'B':
       mode = LOCK_BUILDING;
@@ -277,10 +284,11 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       mode = LOCK_HEX;
       break;
     default:
-      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid mode selected!");
+      notify(btech_context_evaluation(mech->xcode.context), player,
+             "Invalid mode selected!");
       return;
     }
-    mech_map = getMap(mech->mapindex);
+    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
     newx = atoi(args[0]);
     newy = atoi(args[1]);
     ValidCoord(mech_map, newx, newy);
@@ -293,22 +301,22 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
     switch (mode) {
     case LOCK_HEX:
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Target coordinates set to hex at (X,Y) %d, %d", newx,
                     newy);
       break;
     case LOCK_HEX_CLR:
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Target coordinates set to clearing hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     case LOCK_HEX_IGN:
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Target coordinates set to igniting hex at (X,Y) %d, %d",
                     newx, newy);
       break;
     default:
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Target coordinates set to building at (X,Y) %d, %d", newx,
                     newy);
       break;
@@ -317,7 +325,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     StopLock(mech);
     MechStatus(mech) |= mode;
 #if LOCK_TICK > 0
-    if (!arc_override)
+    if (!mech->xcode.context->combat_overrides.arcs)
       MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
   }
@@ -333,12 +341,13 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
   int argc;
   int weapnum;
 
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   cch(MECH_USUALO);
-  DOCHECK(WeaponsHold(mech),
-          "Currently in weapons hold. Unable to fire weapons.");
+  DOCHECK_CONTEXT(mech->xcode.context, WeaponsHold(mech),
+                  "Currently in weapons hold. Unable to fire weapons.");
   argc = mech_parseattributes(buffer, args, 5);
-  DOCHECK(argc < 1, "Not enough arguments to the function");
+  DOCHECK_CONTEXT(mech->xcode.context, argc < 1,
+                  "Not enough arguments to the function");
   weapnum = atoi(args[0]);
   FireWeaponNumber(player, mech, mech_map, weapnum, argc, args, 0);
 }
@@ -347,11 +356,15 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
   if (AeroUnusableArcs(mech)) {                                                \
     int ar;                                                                    \
     ar = InWeaponArc(mech, ex, ey);                                            \
-    DOCHECK0((!arc_override && (AeroUnusableArcs(mech) & ar)) ||               \
-                 (arc_override && !(arc_override & ar)),                       \
-             "That arc's weapons aren't under your control!");                 \
+    DOCHECK0_CONTEXT(mech->xcode.context,                                      \
+                     (!mech->xcode.context->combat_overrides.arcs &&           \
+                      (AeroUnusableArcs(mech) & ar)) ||                        \
+                         (mech->xcode.context->combat_overrides.arcs &&        \
+                          !(mech->xcode.context->combat_overrides.arcs & ar)), \
+                     "That arc's weapons aren't under your control!");         \
   };                                                                           \
-  DOCHECK0(!IsInWeaponArc(mech, ex, ey, sec, crit), msg);
+  DOCHECK0_CONTEXT(mech->xcode.context,                                        \
+                   !IsInWeaponArc(mech, ex, ey, sec, crit), msg);
 
 /*
  * Main weapon firing routine
@@ -374,8 +387,10 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
   if (MechType(mech) == CLASS_BSUIT) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
-      DOCHECK1(!SectIsDestroyed(mech, i) && MechSections(mech)[i].recycle,
-               tprintf("Suit %d is still recovering from attack.", i + 1));
+      DOCHECK1_CONTEXT(
+          mech->xcode.context,
+          !SectIsDestroyed(mech, i) && MechSections(mech)[i].recycle,
+          tprintf("Suit %d is still recovering from attack.", i + 1));
     }
   }
 
@@ -393,35 +408,41 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
     StopHiding(mech);
   }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK0(MoveModeLock(mech),
-           "You cannot fire while using a special movement mode.");
+  DOCHECK0_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+                   "You cannot fire while using a special movement mode.");
 #endif
-  DOCHECK0(MechSpotter(mech) > 0 && MechSpotter(mech) == mech->mynum,
-           "You cannot fire while spotting.");
-  DOCHECK0(weapnum < 0, "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   MechSpotter(mech) > 0 && MechSpotter(mech) == mech->mynum,
+                   "You cannot fire while spotting.");
+  DOCHECK0_CONTEXT(mech->xcode.context, weapnum < 0,
+                   "The weapons system chirps: 'Illegal Weapon Number!'");
 
   weaptype = FindWeaponNumberOnMech_Advanced(mech, weapnum, &section, &critical,
                                              sight);
 
-  DOCHECK0(weaptype == -1,
-           "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK0_CONTEXT(mech->xcode.context, weaptype == -1,
+                   "The weapons system chirps: 'Illegal Weapon Number!'");
 
   mode = GetPartFireMode(mech, section, critical);
 
   if (!sight) {
 
     /* Exile Stun Code Check */
-    DOCHECK0((MechCritStatus(mech) & MECH_STUNNED),
-             "You cannot take actions while stunned! That includes finding the "
-             "trigger.");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context, (MechCritStatus(mech) & MECH_STUNNED),
+        "You cannot take actions while stunned! That includes finding the "
+        "trigger.");
 
-    DOCHECK0(PartTempNuke(mech, section, critical),
-             "The weapons system chirps: 'That weapon is still unusable - "
-             "please stand by.'");
-    DOCHECK0(weaptype == -3,
-             "The weapons system chirps: 'That weapon is still reloading!'");
-    DOCHECK0(weaptype == -4,
-             "The weapons system chirps: 'That weapon is still recharging!'");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context, PartTempNuke(mech, section, critical),
+        "The weapons system chirps: 'That weapon is still unusable - "
+        "please stand by.'");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context, weaptype == -3,
+        "The weapons system chirps: 'That weapon is still reloading!'");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context, weaptype == -4,
+        "The weapons system chirps: 'That weapon is still recharging!'");
 
     /* New fancy message for when they try and fire a weapon and the section
      * is busy */
@@ -429,70 +450,80 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
       /* Get the section name and print the message */
       ArmorStringFromIndex(section, location, MechType(mech), MechMove(mech));
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "%s%s is still recovering from a "
                     "previous action!",
                     MechType(mech) == CLASS_BSUIT ? "" : "Your ", location);
       return 0;
     }
 
-    DOCHECK0(MechSections(mech)[section].specials & CARRYING_CLUB,
-             "You're carrying a club in that arm.");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     MechSections(mech)[section].specials & CARRYING_CLUB,
+                     "You're carrying a club in that arm.");
 
     if (Fallen(mech) && MechType(mech) == CLASS_MECH) {
 
       /* if a quad has 3 of 4 legs dead, it can't fire at all while prone */
       wcDeadLegs = CountDestroyedLegs(mech);
       if (MechIsQuad(mech))
-        DOCHECK0(wcDeadLegs > 2,
-                 "Quads need at least 3 legs to fire while prone.");
+        DOCHECK0_CONTEXT(mech->xcode.context, wcDeadLegs > 2,
+                         "Quads need at least 3 legs to fire while prone.");
 
       /* quads with all 4 legs can fire all weapons while prone. They do not
        * need to prop. */
       if (!MechIsQuad(mech) || (MechIsQuad(mech) && wcDeadLegs > 0)) {
-        DOCHECK0(section == RLEG || section == LLEG,
-                 "You cannot fire leg mounted weapons when prone.");
+        DOCHECK0_CONTEXT(mech->xcode.context,
+                         section == RLEG || section == LLEG,
+                         "You cannot fire leg mounted weapons when prone.");
         switch (section) {
         case RARM:
-          DOCHECK0(
+          DOCHECK0_CONTEXT(
+              mech->xcode.context,
               SectHasBusyWeap(mech, LARM) || MechSections(mech)[LARM].recycle ||
                   SectIsDestroyed(mech, LARM),
               "You currently can't use your Left Arm to prop yourself up.");
           break;
         case LARM:
-          DOCHECK0(
+          DOCHECK0_CONTEXT(
+              mech->xcode.context,
               SectHasBusyWeap(mech, RARM) || MechSections(mech)[RARM].recycle ||
                   SectIsDestroyed(mech, RARM),
               "Your currently can't use your Right Arm to prop yourself up.");
           break;
         default:
-          DOCHECK0((SectHasBusyWeap(mech, RARM) ||
-                    MechSections(mech)[RARM].recycle ||
-                    SectIsDestroyed(mech, RARM)) &&
-                       (SectHasBusyWeap(mech, LARM) ||
-                        MechSections(mech)[LARM].recycle ||
-                        SectIsDestroyed(mech, LARM)),
-                   "You currently don't have any arms to spare to prop "
-                   "yourself up.");
+          DOCHECK0_CONTEXT(mech->xcode.context,
+                           (SectHasBusyWeap(mech, RARM) ||
+                            MechSections(mech)[RARM].recycle ||
+                            SectIsDestroyed(mech, RARM)) &&
+                               (SectHasBusyWeap(mech, LARM) ||
+                                MechSections(mech)[LARM].recycle ||
+                                SectIsDestroyed(mech, LARM)),
+                           "You currently don't have any arms to spare to prop "
+                           "yourself up.");
         }
       }
     }
   }
 
   if (IsMechMounted(mech)) {
-    DOCHECK0(
+    DOCHECK0_CONTEXT(
+        mech->xcode.context,
         ((section == CTORSO) || (section == RTORSO) || (section == LTORSO)),
         "You cannot fire torso-mounted weapons while you have battlesuits on "
         "you!");
   }
 
-  DOCHECK0((MechDugIn(mech)) && section != TURRET,
-           "Only turret weapons are available while in cover.");
-  DOCHECK0(weaptype == -2 ||
-               (PartTempNuke(mech, section, critical) == FAIL_DESTROYED),
-           "The weapons system chirps: 'That weapon has been destroyed!'");
-  DOCHECK0(IsAMS(weaptype), "That weapon is defensive only!");
-  DOCHECK0(argc > 3, "Invalid number of arguments!");
+  DOCHECK0_CONTEXT(mech->xcode.context, (MechDugIn(mech)) && section != TURRET,
+                   "Only turret weapons are available while in cover.");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context,
+      weaptype == -2 ||
+          (PartTempNuke(mech, section, critical) == FAIL_DESTROYED),
+      "The weapons system chirps: 'That weapon has been destroyed!'");
+  DOCHECK0_CONTEXT(mech->xcode.context, IsAMS(weaptype),
+                   "That weapon is defensive only!");
+  DOCHECK0_CONTEXT(mech->xcode.context, argc > 3,
+                   "Invalid number of arguments!");
 
   if ((MechWeapons[weaptype].special & IDF) && MechSpotter(mech) != -1 &&
       MechTarget(mech) == -1) {
@@ -503,9 +534,11 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
   /* We're set to look at a spotter, its a non-idf weapon. We should just not
    * fire */
-  DOCHECK0((MechSpotter(mech) != -1) && !(MechWeapons[weaptype].special & IDF),
-           "The weapon system chirps: 'Somone is spotting for you. Remove your "
-           "spotter to fire non-IDF weapons'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context,
+      (MechSpotter(mech) != -1) && !(MechWeapons[weaptype].special & IDF),
+      "The weapon system chirps: 'Somone is spotting for you. Remove your "
+      "spotter to fire non-IDF weapons'");
 
   switch (argc) {
 
@@ -518,7 +551,8 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
       /* Setting our mech as the target and the other parameters
        * as well */
       tempMech = mech;
-      DOCHECK0(!tempMech, "Error in FireWeaponNumber routine");
+      DOCHECK0_CONTEXT(mech->xcode.context, !tempMech,
+                       "Error in FireWeaponNumber routine");
       enemyX = MechFX(tempMech);
       enemyY = MechFY(tempMech);
       enemyZ = MechFZ(tempMech);
@@ -529,28 +563,35 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
     } else {
 
-      DOCHECK0(!FindTargetXY(mech, &enemyX, &enemyY, &enemyZ),
-               "You do not have a default target set!");
+      DOCHECK0_CONTEXT(mech->xcode.context,
+                       !FindTargetXY(mech, &enemyX, &enemyY, &enemyZ),
+                       "You do not have a default target set!");
 
       if (MechTarget(mech) != -1) {
 
-        tempMech = getMech(MechTarget(mech));
-        DOCHECK0(!tempMech, "Error in FireWeaponNumber routine");
+        tempMech =
+            btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+        DOCHECK0_CONTEXT(mech->xcode.context, !tempMech,
+                         "Error in FireWeaponNumber routine");
         mapx = MechX(tempMech);
         mapy = MechY(tempMech);
         range = FaMechRange(mech, tempMech);
         LOS = LOS_NB(mech, tempMech, mapx, mapy, range);
 
         if (!(MechWeapons[weaptype].special & IDF)) {
-          DOCHECK0(!LOS, "That target is not in your line of sight!");
+          DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                           "That target is not in your line of sight!");
         } else if (MapIsUnderground(mech_map)) {
-          DOCHECK0(!LOS, "That target is not in your direct line of sight, and "
-                         "you cannot fire your IDF weapons underground!");
+          DOCHECK0_CONTEXT(
+              mech->xcode.context, !LOS,
+              "That target is not in your direct line of sight, and "
+              "you cannot fire your IDF weapons underground!");
         }
-        if (btech_context_active()->configuration->btech_idf_requires_spotter &&
+        if (mech->xcode.context->configuration->btech_idf_requires_spotter &&
             (MechWeapons[weaptype].special & IDF) && (MechSpotter(mech) == -1))
-          DOCHECK0(!LOS, "That target is not in your direct line of sight"
-                         " and you do not have a spotter set!!");
+          DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                           "That target is not in your direct line of sight"
+                           " and you do not have a spotter set!!");
       } else {
 
         /* default target is a hex */
@@ -583,16 +624,20 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
         LOS = LOS_NB(mech, tempMech, mapx, mapy, range);
 
         /* Check for Spotter here */
-        if (btech_context_active()->configuration->btech_idf_requires_spotter &&
+        if (mech->xcode.context->configuration->btech_idf_requires_spotter &&
             (MechWeapons[weaptype].special & IDF) && (MechSpotter(mech) == -1))
-          DOCHECK0(!LOS, "That hex target is not in your direct line of sight"
-                         " and you do not have a spotter set!!");
+          DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                           "That hex target is not in your direct line of sight"
+                           " and you do not have a spotter set!!");
 
         if (!(IsArtillery(weaptype) || (MechWeapons[weaptype].special & IDF))) {
-          DOCHECK0(!LOS, "That hex target is not in your line of sight!");
+          DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                           "That hex target is not in your line of sight!");
         } else if (MapIsUnderground(mech_map)) {
-          DOCHECK0(!LOS, "That target is not in your direct line of sight, and "
-                         "you cannot fire your IDF weapons underground!");
+          DOCHECK0_CONTEXT(
+              mech->xcode.context, !LOS,
+              "That target is not in your direct line of sight, and "
+              "you cannot fire your IDF weapons underground!");
         }
       }
 
@@ -608,9 +653,11 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
     targetID[0] = args[1][0];
     targetID[1] = args[1][1];
     target = FindTargetDBREFFromMapNumber(mech, targetID);
-    DOCHECK0(target == -1, "That target is not in your line of sight!");
-    tempMech = getMech(target);
-    DOCHECK0(!tempMech, "Error in FireWeaponNumber routine!");
+    DOCHECK0_CONTEXT(mech->xcode.context, target == -1,
+                     "That target is not in your line of sight!");
+    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    DOCHECK0_CONTEXT(mech->xcode.context, !tempMech,
+                     "Error in FireWeaponNumber routine!");
     enemyX = MechFX(tempMech);
     enemyY = MechFY(tempMech);
     enemyZ = MechFZ(tempMech);
@@ -621,7 +668,8 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
                       enemyZ);
     LOS = LOS_NB(mech, tempMech, MechX(tempMech), MechY(tempMech), range);
 
-    DOCHECK0(!LOS, "That target is not in your line of sight!");
+    DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                     "That target is not in your line of sight!");
 
     if (MechType(mech) != CLASS_BSUIT) {
       ARCCHECK(mech, enemyX, enemyY, section, critical,
@@ -635,9 +683,10 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
     mapx = atoi(args[1]);
     mapy = atoi(args[2]);
     ishex = 1;
-    DOCHECK0(mapx < 0 || mapx >= mech_map->map_width || mapy < 0 ||
-                 mapy >= mech_map->map_height,
-             "Map coordinates out of range!");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     mapx < 0 || mapx >= mech_map->map_width || mapy < 0 ||
+                         mapy >= mech_map->map_height,
+                     "Map coordinates out of range!");
 
     if (!sight && !IsArtillery(weaptype))
 
@@ -665,7 +714,8 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
     LOS = LOS_NB(mech, tempMech, mapx, mapy, range);
 
     if (!IsArtillery(weaptype))
-      DOCHECK0(!LOS, "That hex target is not in your line of sight!");
+      DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+                       "That hex target is not in your line of sight!");
     break;
 
   default:
@@ -673,23 +723,32 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
   }
 
   if (tempMech) {
-    DOCHECK0(IsArtillery(weaptype),
-             "You can only target hexes with this kind of artillery.");
-    DOCHECK0(MechSwarmTarget(tempMech) == mech->mynum,
-             "You are unable to use your weapons against a 'swarmer!");
-    DOCHECK0(StealthArmorActive(tempMech) &&
-                 ((MechTarget(mech) != tempMech->mynum) || Locking(mech)),
-             "You need a stable lock to fire on that target!");
-    DOCHECK0(!IsCoolant(weaptype) && MechTeam(tempMech) == MechTeam(mech) &&
-                 MechNoFriendlyFire(mech),
-             "You can't fire on a teammate with FFSafeties on!");
-    DOCHECK0(!IsCoolant(weaptype) && MechTeam(tempMech) == MechTeam(mech) &&
-                 MapNoFriendlyFire(mech_map),
-             "Friendly Fire? I don't think so...");
-    DOCHECK0(MechType(tempMech) == CLASS_MW && MechType(mech) != CLASS_MW &&
-                 !MechPKiller(mech),
-             "That's a living, breathing person! Switch off the safety first, "
-             "if you really want to assassinate the target.");
+    DOCHECK0_CONTEXT(mech->xcode.context, IsArtillery(weaptype),
+                     "You can only target hexes with this kind of artillery.");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     MechSwarmTarget(tempMech) == mech->mynum,
+                     "You are unable to use your weapons against a 'swarmer!");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context,
+        StealthArmorActive(tempMech) &&
+            ((MechTarget(mech) != tempMech->mynum) || Locking(mech)),
+        "You need a stable lock to fire on that target!");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     !IsCoolant(weaptype) &&
+                         MechTeam(tempMech) == MechTeam(mech) &&
+                         MechNoFriendlyFire(mech),
+                     "You can't fire on a teammate with FFSafeties on!");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     !IsCoolant(weaptype) &&
+                         MechTeam(tempMech) == MechTeam(mech) &&
+                         MapNoFriendlyFire(mech_map),
+                     "Friendly Fire? I don't think so...");
+    DOCHECK0_CONTEXT(
+        mech->xcode.context,
+        MechType(tempMech) == CLASS_MW && MechType(mech) != CLASS_MW &&
+            !MechPKiller(mech),
+        "That's a living, breathing person! Switch off the safety first, "
+        "if you really want to assassinate the target.");
   }
 
   FireWeapon(mech, mech_map, tempMech, LOS, weaptype, weapnum, section,
@@ -725,7 +784,10 @@ int weapon_failure_stuff(MECH *mech, int *weapnum, int *weapindx, int *section,
 void sendC3TrackEmit(MECH *mech, DbRef c3Ref, MECH *c3Mech) {
   if (c3Mech && (c3Mech->mynum != mech->mynum)) {
     mech_printf(mech, MECHALL, "Using range data from %s [%s]",
-                silly_atr_get(c3Mech->mynum, A_MECHNAME), MechIDS(c3Mech, 1));
+                btech_attribute_read(c3Mech->xcode.context->database,
+                                     c3Mech->mynum, A_MECHNAME,
+                                     (char[LBUF_SIZE]){0}),
+                mech_id(c3Mech, true).text);
   }
 }
 
@@ -793,7 +855,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
    * and using 3 * damage in ammo.
    */
   if (GetPartFireMode(mech, section, critical) & GATTLING_MODE)
-    wGattlingShots = Number(1, 6);
+    wGattlingShots = btech_random_range(mech->xcode.context, 1, 6);
 
   /* Find and check Ammunition */
   if (!sight)
@@ -809,7 +871,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
                               range, target, indirectFire, &c3Ref);
 
     if (c3Ref) {
-      c3Mech = getMech(c3Ref);
+      c3Mech = btech_context_get_mech(mech->xcode.context, c3Ref);
 
       if (c3Mech &&
           ((MechTeam(c3Mech) != MechTeam(mech)) || (c3Ref == mech->mynum))) {
@@ -828,9 +890,9 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   if ((MechWeapons[weapindx].special & DFM) ||
       ((MechWeapons[weapindx].special & ELRM) &&
        range < MechWeapons[weapindx].min)) {
-    r1 = Number(1, 6);
-    r2 = Number(1, 6);
-    r3 = Number(1, 6);
+    r1 = btech_random_range(mech->xcode.context, 1, 6);
+    r2 = btech_random_range(mech->xcode.context, 1, 6);
+    r3 = btech_random_range(mech->xcode.context, 1, 6);
     /* Sort 'em to ascending order */
     if (r1 > r2)
       Swap(r1, r2);
@@ -839,9 +901,9 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
     roll = r1 + r2;
   } else {
     if (target)
-      roll = Roll();
+      roll = btech_random_roll(mech->xcode.context);
     else
-      roll = Roll();
+      roll = btech_random_roll(mech->xcode.context);
   }
   if (LOS)
     snprintf(buf, sizeof(buf), "Roll: %d ", roll);
@@ -864,26 +926,28 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
     }
 
     if (sight) {
-      DOCHECKMA(baseToHit >= 900, tprintf("You aim %s at %s%s - Out of range.",
-                                          &MechWeapons[weapindx].name[3],
-                                          GetMechToMechID(mech, target), buf2));
+      DOCHECKMA(baseToHit >= 900,
+                tprintf("You aim %s at %s%s - Out of range.",
+                        &MechWeapons[weapindx].name[3],
+                        mech_to_mech_display_id(mech, target).text, buf2));
 
       sendC3TrackEmit(mech, c3Ref, c3Mech);
 
       mech_printf(mech, MECHALL, "You aim %s at %s%s - BTH: %d %s",
-                  &MechWeapons[weapindx].name[3], GetMechToMechID(mech, target),
-                  buf2, baseToHit,
+                  &MechWeapons[weapindx].name[3],
+                  mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
                   MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
       return;
     }
     if (baseToHit > 12) {
-      DOCHECKMA(baseToHit >= 900, tprintf("Fire %s at %s%s - Out of range.",
-                                          &MechWeapons[weapindx].name[3],
-                                          GetMechToMechID(mech, target), buf2));
+      DOCHECKMA(baseToHit >= 900,
+                tprintf("Fire %s at %s%s - Out of range.",
+                        &MechWeapons[weapindx].name[3],
+                        mech_to_mech_display_id(mech, target).text, buf2));
       mech_printf(mech, MECHALL,
                   "Fire %s at %s%s - BTH: %d  Roll: Impossible! %s",
-                  &MechWeapons[weapindx].name[3], GetMechToMechID(mech, target),
-                  buf2, baseToHit,
+                  &MechWeapons[weapindx].name[3],
+                  mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
                   MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
       return;
     }
@@ -915,25 +979,28 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
     sendC3TrackEmit(mech, c3Ref, c3Mech);
 
     mech_printf(mech, MECHALL, "You fire %s at %s%s - BTH: %d  %s%s",
-                &MechWeapons[weapindx].name[3], GetMechToMechID(mech, target),
-                buf2, baseToHit, buf,
+                &MechWeapons[weapindx].name[3],
+                mech_to_mech_display_id(mech, target).text, buf2, baseToHit,
+                buf,
                 MechStatus(target) & PARTIAL_COVER ? "(Partial cover)" : "");
 
     /* Switching to Exile method of tracking xp, where we split
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
+    SendAttacks(mech->xcode.context,
+                tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
                         target->mynum, baseToHit, roll));
     /*
-            SendXP(tprintf("#%i attacks #%i (weapon) (%i/%i)", mech->mynum,
-                target->mynum, baseToHit, roll));
+            SendXP(mech->xcode.context, tprintf("#%i attacks #%i (weapon)
+       (%i/%i)", mech->mynum, target->mynum, baseToHit, roll));
     */
     /* If the target has the ATTACKEMIT_MECH flag on have it
      * output this info as well
      */
     if (MechStatus2(target) & ATTACKEMIT_MECH)
-      SendAttackEmits(tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
+      SendAttackEmits(mech->xcode.context,
+                      tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
                               target->mynum, baseToHit, roll));
 
   } else {
@@ -947,12 +1014,13 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum,
+    SendAttacks(mech->xcode.context,
+                tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum,
                         mapx, mapy, short_hextarget(mech), baseToHit, roll));
     /*
-            SendXP(tprintf("#%i attacks %d,%d (%s) (weapon) (%i/%i)",
-                mech->mynum, mapx, mapy, short_hextarget(mech),
-                baseToHit, roll));
+            SendXP(mech->xcode.context, tprintf("#%i attacks %d,%d (%s) (weapon)
+       (%i/%i)", mech->mynum, mapx, mapy, short_hextarget(mech), baseToHit,
+       roll));
     */
 
     /* Big Block of code here. Basicly it checks all the targets
@@ -967,14 +1035,16 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
 
         if (mech_map->mechsOnMap[foo] >= 0) {
 
-          if (!(tmpmech = getMech(mech_map->mechsOnMap[foo])))
+          if (!(tmpmech = btech_context_get_mech(mech->xcode.context,
+                                                 mech_map->mechsOnMap[foo])))
             continue;
           if (mech->mynum == tmpmech->mynum)
             continue;
           if (MechX(tmpmech) != mapx && MechY(tmpmech) != mapy)
             continue;
           if (MechStatus2(tmpmech) & ATTACKEMIT_MECH)
-            SendAttackEmits(tprintf("#%li attacks %d,%d (%s) (weapon)"
+            SendAttackEmits(mech->xcode.context,
+                            tprintf("#%li attacks %d,%d (%s) (weapon)"
                                     " (%i/%i)",
                                     mech->mynum, mapx, mapy,
                                     short_hextarget(mech), baseToHit, roll));
@@ -999,7 +1069,9 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
       mech_notify(mech, MECHALL, "The ECM confuses your streak homing system!");
     else if (roll < baseToHit) {
       SetRecyclePart(mech, section, critical,
-                     WEAPON_TICK * MechWeapons[weapindx].vrt);
+                     WEAPON_TICK *
+                         btech_weapon_settings_recycle_time(
+                             &mech->xcode.context->weapon_settings, weapindx));
       mech_notify(mech, MECHALL, "Your streak fails to lock on.");
       return;
     }
@@ -1025,7 +1097,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
       SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
       /* do 8+ explosion check. Per tac handbook, the launcher explodes on
        * failure*/
-      if (Roll() > 7) {
+      if (btech_random_roll(mech->xcode.context) > 7) {
         /* Rut roh shaggy. Time to cause some damage! */
         mech_printf(
             mech, MECHALL,
@@ -1171,25 +1243,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
    * We need to do a little handling here. The rest happens over it HitTarget
    */
   RbaseToHit = baseToHit;
-  if (btech_context_active()->configuration->btech_glancing_blows == 2)
+  if (mech->xcode.context->configuration->btech_glancing_blows == 2)
     RbaseToHit = baseToHit - 1; /* only time we modify it */
 
   if (!isarty) {
-    /*		if(is_in_character(btech_context_active()->database,
-       mech->mynum)) { if((roll < RbaseToHit) && (RbaseToHit < 13) &&
-       (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit - 2][0]++; if((roll ==
-       RbaseToHit) &&
-       (btech_context_active()->configuration->btech_glancing_blows) &&
-       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
-       2][2]++; if((roll >= RbaseToHit) &&
-       (!btech_context_active()->configuration->btech_glancing_blows) &&
-       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
-       2][1]++; if((roll > RbaseToHit) &&
-       (btech_context_active()->configuration->btech_glancing_blows) &&
-       (RbaseToHit < 13) && (RbaseToHit > 1)) rollstat.hitstats[RbaseToHit -
-       2][1]++;
-                    }
-    */
     MechFireBroadcast(mech, ishex ? NULL : target, mapx, mapy, mech_map,
                       &MechWeapons[weapindx].name[3],
                       (roll >= RbaseToHit) && range_ok);
@@ -1198,7 +1255,7 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   if (target) {
     if (InLineOfSight(target, mech, MechX(mech), MechY(mech), range))
       mech_printf(target, MECHALL, "%s has fired a %s at you!",
-                  GetMechToMechID(target, mech),
+                  mech_to_mech_display_id(target, mech).text,
                   &MechWeapons[weapindx].name[3]);
     else
       mech_printf(target, MECHALL,
@@ -1234,7 +1291,8 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
         if (target) {
           if ((MechType(target) == CLASS_BSUIT) &&
               (MechSwarmTarget(target) > -1) &&
-              (altTarget = getMech(MechSwarmTarget(target)))) {
+              (altTarget = btech_context_get_mech(mech->xcode.context,
+                                                  MechSwarmTarget(target)))) {
 
             baseToHit =
                 FindNormalBTH(mech, mech_map, section, critical, weapindx,
@@ -1273,7 +1331,9 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
 
   /* Recycle the weapon */
   SetRecyclePart(mech, section, critical,
-                 WEAPON_TICK * MechWeapons[weapindx].vrt);
+                 WEAPON_TICK *
+                     btech_weapon_settings_recycle_time(
+                         &mech->xcode.context->weapon_settings, weapindx));
 
   /****************************************
    * START: Set the heat after firing
@@ -1408,7 +1468,7 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
 
   /* Check to see if we have an energy weapon and we're modding the damage based
    * on range */
-  if (btech_context_active()->configuration->btech_moddamagewithrange &&
+  if (mech->xcode.context->configuration->btech_moddamagewithrange &&
       IsEnergy(weapindx)) {
     if (fRange <= 1.0)
       wWeapDamage++;
@@ -1428,14 +1488,14 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
   }
 
   /* Check to see if we're modding the damage based on woods cover */
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   /* If there was a damage type failure, mod the damage */
   if (type == DAMAGE)
     wWeapDamage -= modifier;
 
   if (hitMech && !isTempCalc) {
-    if (btech_context_active()->configuration->btech_moddamagewithwoods &&
+    if (mech->xcode.context->configuration->btech_moddamagewithwoods &&
         IsForestHex(mech_map, MechX(hitMech), MechY(hitMech)) &&
         ((MechZ(hitMech) - 2) <=
          Elevation(mech_map, MechX(hitMech), MechY(hitMech)))) {
@@ -1467,7 +1527,6 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
                int tIsSwarmAttack, int player_roll) {
   int isrear = 0, iscritical = 0;
   int hitloc = 0;
-  int loop;
   int roll;
   int aim_hit = 0;
   int wBaseWeapDamage = MechWeapons[weapindx].damage;
@@ -1479,8 +1538,8 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
   int tIsRAC = (wFireMode & RAC_MODES);
   int tIsLBX = (wAmmoMode & LBX_MODE);
   int tIsSwarm = ((wAmmoMode & SWARM_MODE) || (wAmmoMode & SWARM1_MODE));
-  char strMissileFakeName[30];
-  int tFoundRACFake = 0;
+  const char *missile_fake_name = nullptr;
+  const MissileHitEntry *missile_entry;
   int tUsingTC =
       ((wFireMode & ON_TC) && !IsArtillery(weapindx) && !IsMissile(weapindx) &&
        (!(MechCritStatus(mech) & TC_DESTROYED)) &&
@@ -1495,7 +1554,7 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
     if ((MechAim(mech) != NUM_SECTIONS) && hitMech && Immobile(hitMech) &&
         !tIsSwarmAttack) {
 
-      roll = Roll();
+      roll = btech_random_roll(mech->xcode.context);
 
       if (roll == 6 || roll == 7 || roll == 8)
         aim_hit = 1;
@@ -1508,7 +1567,7 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
         wGattlingShots, wBaseWeapDamage, wAmmoMode, type, modifier, 0);
 
     /* Check if it is a glancing blow, if so, make an emit */
-    if ((btech_context_active()->configuration->btech_glancing_blows) &&
+    if ((mech->xcode.context->configuration->btech_glancing_blows) &&
         (player_roll == bth) && hitMech) {
       /* Yes, even though we have two different glance modes, the above is
        * correct because we modified the bth in FireWeapon. Nothing to see here.
@@ -1595,34 +1654,25 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
 
   /*
    * Do special case for RACs since they don't have an entry in the
-   * MissileHitTable.
+   * missile cluster registry.
    *
    * We're gonna fake it by pretending we're either an SRM-2, SRM-4 or SRM-6,
    * depending upon the mode
    */
   if (tIsRAC) {
     if (GetPartFireMode(mech, wSection, wCritSlot) & RAC_TWOSHOT_MODE)
-      strcpy(strMissileFakeName, "IS.SRM-2");
+      missile_fake_name = "IS.SRM-2";
     else if (GetPartFireMode(mech, wSection, wCritSlot) & RAC_FOURSHOT_MODE)
-      strcpy(strMissileFakeName, "IS.SRM-4");
+      missile_fake_name = "IS.SRM-4";
     else if (GetPartFireMode(mech, wSection, wCritSlot) & RAC_SIXSHOT_MODE)
-      strcpy(strMissileFakeName, "IS.SRM-6");
-    for (loop = 0; MissileHitTable[loop].key != -1; loop++) {
-      if (!strcmp(MissileHitTable[loop].name, strMissileFakeName)) {
-        tFoundRACFake = 1;
-        break;
-      }
-    }
-
-    if (!tFoundRACFake)
-      return;
-  } else {
-    for (loop = 0; MissileHitTable[loop].key != -1; loop++)
-      if (MissileHitTable[loop].key == weapindx)
-        break;
-    if (!(MissileHitTable[loop].key == weapindx))
-      return;
-  }
+      missile_fake_name = "IS.SRM-6";
+    missile_entry = missile_hit_registry_find_name(
+        &mech->xcode.context->missile_hits, missile_fake_name);
+  } else
+    missile_entry = missile_hit_registry_find_weapon(
+        &mech->xcode.context->missile_hits, weapindx);
+  if (missile_entry == nullptr)
+    return;
 
   if (IsMissile(weapindx)) {
     if (player_roll < bth) {
@@ -1633,18 +1683,16 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
       SwarmHitTarget(mech, weapindx, wSection, wCritSlot, hitMech, LOS, bth,
                      reallyhit ? bth + 1 : bth - 1,
                      (type == CRAZY_MISSILES)
-                         ? MissileHitTable[loop].num_missiles[10] * modifier /
-                               100
-                         : MissileHitTable[loop].num_missiles[10],
+                         ? missile_entry->num_missiles[10] * modifier / 100
+                         : missile_entry->num_missiles[10],
                      (GetPartAmmoMode(mech, wSection, wCritSlot) & SWARM1_MODE),
                      tIsSwarmAttack, player_roll);
     else
       MissileHitTarget(mech, weapindx, wSection, wCritSlot, hitMech, hitX, hitY,
                        LOS ? 1 : 0, bth, reallyhit ? bth + 1 : bth - 1,
                        (type == CRAZY_MISSILES)
-                           ? MissileHitTable[loop].num_missiles[10] * modifier /
-                                 100
-                           : MissileHitTable[loop].num_missiles[10],
+                           ? missile_entry->num_missiles[10] * modifier / 100
+                           : missile_entry->num_missiles[10],
                        tIsSwarmAttack, player_roll);
 
     return;
@@ -1652,7 +1700,7 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
 
   missileindex = MissileHitIndex(
       mech, hitMech, weapindx, wSection, wCritSlot,
-      (btech_context_active()->configuration->btech_glancing_blows) &&
+      (mech->xcode.context->configuration->btech_glancing_blows) &&
               (player_roll == bth)
           ? 1
           : 0);
@@ -1661,7 +1709,7 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
   if (missileindex == -1)
     num_missiles_hit = 1;
   else
-    num_missiles_hit = MissileHitTable[loop].num_missiles[missileindex];
+    num_missiles_hit = missile_entry->num_missiles[missileindex];
 
   /*
    * Check for non-missile, multiple hit weapons, like LBXs, RACs, RFACs and
@@ -1799,7 +1847,7 @@ int canWeaponClear(int weapindx) {
 void possibly_ignite(MECH *mech, MAP *map, int weapindx, int ammoMode, int x,
                      int y, int intentional) {
   char terrain = GetTerrain(map, x, y);
-  int roll = Roll();
+  int roll = btech_random_roll(mech->xcode.context);
   int bth = 13;
 
   if (MechWeapons[weapindx].special & PCOMBAT)
@@ -1828,8 +1876,8 @@ void possibly_ignite(MECH *mech, MAP *map, int weapindx, int ammoMode, int x,
 void possibly_clear(MECH *mech, MAP *map, int weapindx, int ammoMode,
                     int damage, int x, int y, int intentional) {
   int igniteBTH = 5; /* This is for intentional clearing */
-  int igniteRoll = Roll();
-  int clearRoll = Roll();
+  int igniteRoll = btech_random_roll(mech->xcode.context);
+  int clearRoll = btech_random_roll(mech->xcode.context);
 
   if (MechWeapons[weapindx].special & PCOMBAT)
     return;
@@ -1856,7 +1904,7 @@ void possibly_ignite_or_clear(MECH *mech, int weapindx, int ammoMode,
                               int damage, int x, int y, int intentional) {
   MAP *map;
 
-  map = FindObjectsData(mech->mapindex);
+  map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   if (!map)
     return;

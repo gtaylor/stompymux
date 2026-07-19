@@ -289,7 +289,9 @@ static int commac_store_macros(sqlite3 *sqlite,
 }
 
 static int commac_persistence_store(sqlite3 *sqlite,
-                                    PersistenceContext *context) {
+                                    PersistenceContext *context,
+                                    void *extension_context) {
+  (void)extension_context;
   if (!context->configuration->have_comsys &&
       !context->configuration->have_macros)
     return 0;
@@ -718,8 +720,9 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
 }
 
 /* SQLite is now authoritative for all commac, comsys, and macro state. */
-static int commac_persistence_load(sqlite3 *sqlite,
-                                   PersistenceContext *context) {
+static int commac_persistence_load(sqlite3 *sqlite, PersistenceContext *context,
+                                   void *extension_context) {
+  (void)extension_context;
   if (!context->configuration->have_comsys &&
       !context->configuration->have_macros)
     return 0;
@@ -734,5 +737,6 @@ static int commac_persistence_load(sqlite3 *sqlite,
 
 int commac_persistence_register(PersistenceContext *context) {
   return persistence_register_sqlite_extension(
-      context, "commac", commac_persistence_load, commac_persistence_store);
+      context, "commac", commac_persistence_load, commac_persistence_store,
+      nullptr);
 }

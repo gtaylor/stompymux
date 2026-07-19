@@ -1,6 +1,8 @@
 /* help_index.c - Recursive indexing of markdown help articles. */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include <ctype.h>
 #include <dirent.h>
@@ -14,7 +16,6 @@
 #include "mux/help/help_types.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_config.h"
 
 struct HelpIndex {

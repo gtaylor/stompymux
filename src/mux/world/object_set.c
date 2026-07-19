@@ -6,7 +6,9 @@
 
 #include "p.glue.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/communication/comsys.h"
@@ -15,7 +17,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -117,7 +118,7 @@ void do_alias(CommandInvocation *invocation) {
 
       notify_quiet(evaluation, player, "That name is already in use.");
     } else if (!(badname_check(invocation->context->world, trimalias) &&
-                 ok_player_name(invocation->context->server->configuration,
+                 ok_player_name(invocation->context->world->configuration,
                                 trimalias))) {
       notify_quiet(evaluation, player, "That's a silly name for a player!");
     } else {
@@ -343,7 +344,7 @@ void object_attribute_set(EvaluationContext *evaluation,
                   game_object_owner(evaluation->world->database, player),
                   aflags);
     if (configuration->have_specials)
-      handle_xcode(player, thing, have_xcode,
+      handle_xcode(evaluation->btech, player, thing, have_xcode,
                    is_hardcode(evaluation->world->database, thing));
     if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
@@ -377,7 +378,7 @@ void do_power(CommandInvocation *invocation) {
     return;
 
   power_set(&invocation->context->evaluation,
-            &invocation->context->server->world_indexes, thing, player, flag,
+            invocation->context->runtime->world_indexes, thing, player, flag,
             invocation->key);
 }
 
@@ -395,8 +396,8 @@ void do_setattr(CommandInvocation *invocation) {
   if (thing == NOTHING)
     return;
   object_attribute_set(&invocation->context->evaluation,
-                       invocation->context->server->configuration, player,
-                       thing, attrnum, attrtext, 0);
+                       invocation->context->world->configuration, player, thing,
+                       attrnum, attrtext, 0);
 }
 
 /*
@@ -732,8 +733,8 @@ void do_edit(CommandInvocation *invocation) {
   if (!it || !*it ||
       !parse_attrib_wild(&invocation->context->match, player, it, &thing, 0, 0,
                          0, &attributes,
-                         invocation->context->server->configuration,
-                         &invocation->context->server->world_indexes)) {
+                         invocation->context->world->configuration,
+                         invocation->context->runtime->world_indexes)) {
     notify_quiet(evaluation, player, "No match.");
     object_list_destroy(&attributes);
     return;

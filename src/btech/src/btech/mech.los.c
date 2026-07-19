@@ -22,6 +22,7 @@
 #include "mech.h"
 #include "p.map.obj.h"
 #include "p.mech.los.h"
+#include "p.mech.lostracer.h"
 #include "p.mech.sensor.h"
 #include "p.mech.utils.h"
 
@@ -50,9 +51,6 @@ float ActualElevation(MAP *map, int x, int y, MECH *mech) {
   return (float)MechZ(mech) + 0.5;
 }
 
-extern int TraceLOS(MAP *map, int ax, int ay, int bx, int by,
-                    lostrace_info **result);
-
 /* from/mech: mech _mech_ seeing _target_ on map _map_, _ff_
    is the previous flag (or seeing _x_,_y_ if _target_ is NULL),
    hexRange is range in hexes */
@@ -68,7 +66,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
   int dopartials = 0;
   int underwater, bothworlds, t_underwater, t_bothworlds;
   int uwatercount = 0, coordcount;
-  lostrace_info *coords;
+  LosTrace trace;
 
 #ifndef BT_PARTIAL
   float partial_z, p_z_inc;
@@ -142,7 +140,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
     return new_flag;
 
   /* Special cases are out of the way, looks like we have to do actual work. */
-  coordcount = TraceLOS(map, pos_x, pos_y, x, y, &coords);
+  coordcount = trace_los(map, pos_x, pos_y, x, y, &trace);
   if (coordcount > 0) {
     z_inc = (float)(end_z - pos_z) / coordcount;
   } else {
@@ -160,14 +158,14 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
 #ifndef BT_PARTIAL
       partial_z += p_z_inc;
 #endif
-      if (coords[i].x < 0 || coords[i].x >= map->map_width || coords[i].y < 0 ||
-          coords[i].y >= map->map_height)
+      if (trace.points[i].x < 0 || trace.points[i].x >= map->map_width ||
+          trace.points[i].y < 0 || trace.points[i].y >= map->map_height)
         continue;
       /* Should be possible to see into water.. perhaps. But not
          on vislight */
-      terrain = GetRTerrain(map, coords[i].x, coords[i].y);
+      terrain = GetRTerrain(map, trace.points[i].x, trace.points[i].y);
       /* get the current height */
-      height = Elevation(map, coords[i].x, coords[i].y);
+      height = Elevation(map, trace.points[i].x, trace.points[i].y);
 
       /* If you, persoanlly, are underwater, the only way you can see someone
          if if they are underwater or in both worlds AND your LoS passes thru
@@ -194,7 +192,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
       } else { /* Viewer is not underwater */
         /* keep track of how many wooded hexes we cross */
         if (pos_z < (height + 2)) {
-          switch (GetTerrain(map, coords[i].x, coords[i].y)) {
+          switch (GetTerrain(map, trace.points[i].x, trace.points[i].y)) {
           case SMOKE:
             if (i < coordcount - 1)
               new_flag |= MECHLOSFLAG_SMOKE;
@@ -258,8 +256,8 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
   if (coordcount >= 2)
     if (dopartials) {
       if (MechZ(target) >= MechZ(mech) &&
-          (Elevation(map, coords[coordcount - 2].x, coords[coordcount - 2].y) ==
-           (MechZ(target) + 1)))
+          (Elevation(map, trace.points[coordcount - 2].x,
+                     trace.points[coordcount - 2].y) == (MechZ(target) + 1)))
         new_flag |= MECHLOSFLAG_PARTIAL;
       if (MechZ(target) == -1 && MechRTerrain(target) == WATER)
         new_flag |= MECHLOSFLAG_PARTIAL;
@@ -314,16 +312,18 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
   int arc;
   int losflag;
 
-  map = getMap(mech->mapindex);
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
-    SendError(tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
+    SendError(mech->xcode.context,
+              tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
                       mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return 0;
   }
   if (x < 0 || y < 0 || y >= map->map_height || x >= map->map_width) {
-    SendError(tprintf("x:%d y:%d out of bounds for #%ld (LOS check)", x, y,
+    SendError(mech->xcode.context,
+              tprintf("x:%d y:%d out of bounds for #%ld (LOS check)", x, y,
                       mech ? mech->mynum : -1));
   }
 
@@ -367,5 +367,6 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
 void mech_losemit(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSP);
   MechLOSBroadcast(mech, buffer);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Broadcast done.");
+  notify(btech_context_evaluation(mech->xcode.context), player,
+         "Broadcast done.");
 }

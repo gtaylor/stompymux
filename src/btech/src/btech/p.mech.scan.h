@@ -11,13 +11,17 @@
 
 #pragma once
 
+typedef struct EvaluationContext EvaluationContext;
+
 /* mech.scan.c */
 void mech_scan(DbRef player, void *data, char *buffer);
 void mech_report(DbRef player, void *data, char *buffer);
-void ShowTurretFacing(DbRef player, int spaces, MECH *mech);
-void PrintReport(DbRef player, MECH *mech, MECH *tempMech, float range);
-void PrintEnemyStatus(DbRef player, MECH *mymech, MECH *mech, float range,
-                      int opt);
+void ShowTurretFacing(EvaluationContext *evaluation, DbRef player, int spaces,
+                      MECH *mech);
+void PrintReport(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                 MECH *tempMech, float range);
+void PrintEnemyStatus(EvaluationContext *evaluation, DbRef player, MECH *mymech,
+                      MECH *mech, float range, int opt);
 void mech_bearing(DbRef player, void *data, char *buffer);
 void mech_range(DbRef player, void *data, char *buffer);
 void PrintEnemyWeaponStatus(MECH *mech, DbRef player);

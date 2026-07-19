@@ -67,10 +67,11 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK(
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
       !((MechIsQuad(mech) && (CountDestroyedLegs(mech) == 0)) ||
         ((MechType(mech) == CLASS_VTOL) || (MechType(mech) == MOVE_HOVER)) ||
-        ((HasBoolAdvantage(player, "maneuvering_ace") &&
+        ((HasBoolAdvantage(mech->xcode.context, player, "maneuvering_ace") &&
           (MechPilot(mech) == player)))),
       "You cannot alter your lateral movement!");
 
@@ -79,10 +80,11 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   for (i = 0; lateral_modes[i].name; i++)
     if (!strcasecmp(lateral_modes[i].name, buffer))
       break;
-  DOCHECK(!lateral_modes[i].name, "Invalid mode!");
+  DOCHECK_CONTEXT(mech->xcode.context, !lateral_modes[i].name, "Invalid mode!");
 
   if (lateral_modes[i].ofs == MechLateral(mech)) {
-    DOCHECK(!ChangingLateral(mech), "You are going that way already!");
+    DOCHECK_CONTEXT(mech->xcode.context, !ChangingLateral(mech),
+                    "You are going that way already!");
     mech_notify(mech, MECHALL, "Lateral mode change aborted.");
     StopLateral(mech);
     return;
@@ -99,11 +101,12 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   if (!GotPilot(mech) || MechPilot(mech) != player) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "You're not the pilot!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "You're not the pilot!");
     return;
   }
 
-  if (!HasBoolAdvantage(player, "maneuvering_ace")) {
+  if (!HasBoolAdvantage(mech->xcode.context, player, "maneuvering_ace")) {
     mech_notify(mech, MECHPILOT, "You're not skilled enough to do that.");
     return;
   }
@@ -138,14 +141,15 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Invalid number of arguments!");
-  DOCHECK(CountDestroyedLegs(mech) > 0,
-          "You can't perform a bootlegger with destroyed legs!");
-  DOCHECK(fMechSpeed < fMinSpeed,
-          tprintf("You are going too slow to perform a bootlegger! The "
-                  "required minimum speed is %4.1f KPH.",
-                  fMinSpeed));
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, CountDestroyedLegs(mech) > 0,
+                  "You can't perform a bootlegger with destroyed legs!");
+  DOCHECK_CONTEXT(mech->xcode.context, fMechSpeed < fMinSpeed,
+                  tprintf("You are going too slow to perform a bootlegger! The "
+                          "required minimum speed is %4.1f KPH.",
+                          fMinSpeed));
 
   switch (toupper(args[0][0])) {
   case 'R':
@@ -156,7 +160,8 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     break;
   }
 
-  DOCHECK(wHeadingChange == 0, "Invalid turn direction!");
+  DOCHECK_CONTEXT(mech->xcode.context, wHeadingChange == 0,
+                  "Invalid turn direction!");
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if ((i == LLEG) || (i == RLEG) ||
@@ -206,7 +211,8 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   skipws(buffer);
 
-  SendDebug(tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
+  SendDebug(mech->xcode.context,
+            tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
                     "Speed: %4.1f, BTHMod: %d",
                     mech->mynum, wMechTons, fMechSpeed, wBTHMod));
 
@@ -253,11 +259,13 @@ void mech_eta(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc == 1, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc == 1,
+                  "Invalid number of arguments!");
   switch (argc) {
   case 0:
-    DOCHECK(!(MechTargX(mech) >= 0 && MechTarget(mech) < 0),
-            "You have invalid default target for ETA!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !(MechTargX(mech) >= 0 && MechTarget(mech) < 0),
+                    "You have invalid default target for ETA!");
     eta_x = MechTargX(mech);
     eta_y = MechTargY(mech);
     break;
@@ -266,7 +274,8 @@ void mech_eta(DbRef player, void *data, char *buffer) {
     eta_y = atoi(args[1]);
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid arguments!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid arguments!");
     return;
   }
   MapCoordToRealCoord(eta_x, eta_y, &fx, &fy);
@@ -292,7 +301,7 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
   if (MechCarrying(mech) > 0) { /* Ug-lee! */
     MECH *t;
 
-    if ((t = getMech(MechCarrying(mech))))
+    if ((t = btech_context_get_mech(mech->xcode.context, MechCarrying(mech))))
       if (!(MechCritStatus(t) & OWEIGHT_OK))
         MechCritStatus(mech) &= ~LOAD_OK;
   }
@@ -315,7 +324,7 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
 			mspeed *= 4. / 3.;
 
 		if(InSpecial(mech) && InGravity(mech))
-			if((map = FindObjectsData(mech->mapindex)))
+			if((map = btech_context_find_object(mech->xcode.context, mech->mapindex)))
 				mspeed = mspeed * 100 / MAX(50, MapGravity(map));
 
 #else
@@ -329,7 +338,7 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
 
     if ((MechSpecials(mech) & TRIPLE_MYOMER_TECH) && (MechHeat(mech) >= 9.)) {
       if ((MechStatus2(mech) & SPRINTING)) {
-        if (btech_context_active()->configuration->btech_tsm_sprint_bonus)
+        if (mech->xcode.context->configuration->btech_tsm_sprint_bonus)
           mspeed = ceil((rint((mspeed / 1.5) / MP1) + 1) * 1.5) * MP1;
 
       } else {
@@ -339,11 +348,12 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
 
     /* if the player has speed demon give him his boost in speed */
     if (!MoveModeChange(mech) && MechStatus2(mech) & SPRINTING &&
-        HasBoolAdvantage(MechPilot(mech), "speed_demon"))
+        HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "speed_demon"))
       mspeed += MP1;
 
     if (InSpecial(mech) && InGravity(mech))
-      if ((map = FindObjectsData(mech->mapindex)))
+      if ((map =
+               btech_context_find_object(mech->xcode.context, mech->mapindex)))
         mspeed = mspeed * 100.0 / (float)MAX(50, MapGravity(map));
 
 #endif
@@ -354,13 +364,14 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
   /*! \todo {Check some of this math better} */
   if (!(MechCritStatus(mech) & LOAD_OK)) {
     if (MechCarrying(mech) > 0)
-      if ((c = getMech(MechCarrying(mech)))) {
+      if ((c = btech_context_get_mech(mech->xcode.context,
+                                      MechCarrying(mech)))) {
         lugged = get_weight(c) * 2;
         if (MechSpecials(mech) & SALVAGE_TECH)
           lugged = lugged / 2;
         if ((MechSpecials(mech) & TRIPLE_MYOMER_TECH) &&
             (MechHeat(mech) >= 9.) &&
-            btech_context_active()->configuration->btech_tsm_tow_bonus)
+            mech->xcode.context->configuration->btech_tsm_tow_bonus)
           lugged = lugged / 2;
 
         if (MechSpecials2(mech) & CARRIER_TECH)
@@ -418,12 +429,16 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   int tHasSwarmers = 0;
 
   cch(MECH_USUAL);
-  DOCHECK(MechType(mech) == CLASS_BSUIT, "No crawling!");
-  DOCHECK(MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
-          "You can't prone in this!");
-  DOCHECK(Fallen(mech), "You are already prone.");
-  DOCHECK(Jumping(mech) || OODing(mech), "You can't prone in the air!");
-  DOCHECK(Standing(mech), "You can't drop while trying to stand up!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_BSUIT,
+                  "No crawling!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
+                  "You can't prone in this!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech), "You are already prone.");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech) || OODing(mech),
+                  "You can't prone in the air!");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You can't drop while trying to stand up!");
 
   s1 = MMaxSpeed(mech) / 3.0;
 
@@ -457,7 +472,9 @@ void mech_drop(DbRef player, void *data, char *buffer) {
       MechLOSBroadcast(mech, "drops to the ground!");
 
       if (tHasSwarmers)
-        StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 0);
+        StopBSuitSwarmers(
+            btech_context_find_object(mech->xcode.context, mech->mapindex),
+            mech, 0);
 
     } else {
       mech_notify(mech, MECHALL, "You fall to the ground hard");
@@ -467,7 +484,9 @@ void mech_drop(DbRef player, void *data, char *buffer) {
         wDropLevels = 1;
 
       if (tHasSwarmers)
-        StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 0);
+        StopBSuitSwarmers(
+            btech_context_find_object(mech->xcode.context, mech->mapindex),
+            mech, 0);
 
       MechFalls(mech, wDropLevels, 1);
     }
@@ -483,7 +502,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   water_extinguish_inferno(mech);
 
   // as per ps, prone clears stagger
-  if (btech_context_active()->configuration->btech_newstagger)
+  if (mech->xcode.context->configuration->btech_newstagger)
     ClearAllStaggerDamage(mech);
 
   possible_mine_poof(mech, MINE_STEP);
@@ -499,34 +518,43 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUAL);
-  DOCHECK(MechType(mech) == CLASS_BSUIT, "You're standing already!");
-  DOCHECK(MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
-          "This vehicle cannot stand like a 'Mech.");
-  DOCHECK(Jumping(mech), "You're standing while jumping!");
-  DOCHECK(OODing(mech), "You're standing while flying!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_BSUIT,
+                  "You're standing already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
+                  "This vehicle cannot stand like a 'Mech.");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "You're standing while jumping!");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "You're standing while flying!");
 
   /* set the number of dead legs we have */
   wcDeadLegs = CountDestroyedLegs(mech);
 
-  DOCHECK(((MechIsQuad(mech) && (wcDeadLegs > 3)) ||
-           (!MechIsQuad(mech) && (wcDeadLegs > 1))),
-          "You have no legs to stand on!");
-  DOCHECK(wcDeadLegs > 2, "You'd be far too unstable!");
-  DOCHECK(MechCritStatus(mech) & GYRO_DESTROYED,
-          "You cannot stand with a destroyed gyro!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  ((MechIsQuad(mech) && (wcDeadLegs > 3)) ||
+                   (!MechIsQuad(mech) && (wcDeadLegs > 1))),
+                  "You have no legs to stand on!");
+  DOCHECK_CONTEXT(mech->xcode.context, wcDeadLegs > 2,
+                  "You'd be far too unstable!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & GYRO_DESTROYED,
+                  "You cannot stand with a destroyed gyro!");
 
-  DOCHECK(!Fallen(mech), "You're already standing!");
-  DOCHECK(Standrecovering(mech),
-          "You're still recovering from your last attempt!");
-  DOCHECK(IsHulldown(mech), "You can not stand while hulldown");
-  DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode");
+  DOCHECK_CONTEXT(mech->xcode.context, !Fallen(mech),
+                  "You're already standing!");
+  DOCHECK_CONTEXT(mech->xcode.context, Standrecovering(mech),
+                  "You're still recovering from your last attempt!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
+                  "You can not stand while hulldown");
+  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+                  "You are busy changing your hulldown mode");
 
   bth = MechPilotSkillRoll_BTH(mech, 0);
 
   /* Check to see if the user specified an argument for the command */
   if (proper_explodearguments(buffer, args, 2)) {
     if (strcmp(args[0], "check") == 0) {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Your BTH to stand would be: %d", bth);
       for (i = 0; i < 2; i++) {
         if (args[i])
@@ -536,12 +564,12 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     } else if (strcmp(args[0], "anyway") == 0) {
       standanyway = 1;
     } else if ((strcmp(args[0], "careful") == 0) &&
-               btech_context_active()->configuration->btech_standcareful) {
+               mech->xcode.context->configuration->btech_standcareful) {
       standcarefulmod = -2;
     } else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(mech->xcode.context), player,
                     "Unknown argument! use 'stand check'%s",
-                    btech_context_active()->configuration->btech_standcareful
+                    mech->xcode.context->configuration->btech_standcareful
                         ? ", 'stand careful' or 'stand anyway'"
                         : " or 'stand anyway'");
       for (i = 0; i < 2; i++) {
@@ -552,8 +580,9 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     }
   }
 
-  DOCHECK(!standanyway && bth > 12,
-          "You would fail; use 'stand anyway' if you really want to stand.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, !standanyway && bth > 12,
+      "You would fail; use 'stand anyway' if you really want to stand.");
 
   MakeMechStand(mech);
 
@@ -630,7 +659,8 @@ void mech_land(DbRef player, void *data, char *buffer) {
       MaybeMove(mech);
     }
   } else
-    notify(BTECH_EVALUATION_CONTEXT, player, "You're not jumping!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "You're not jumping!");
 }
 
 /* Facing related */
@@ -641,19 +671,26 @@ void mech_heading(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
   if (mech_parseattributes(buffer, args, 1) == 1) {
-    DOCHECK(MechMove(mech) == MOVE_NONE,
-            "This piece of equipment is stationary!");
-    DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
-    DOCHECK(WaterBeast(mech) && NotInWater(mech),
-            "You are regrettably unable to move at this time. We apologize for "
-            "the inconvenience.");
-    DOCHECK(is_aero(mech) && Spinning(mech) && !Landed(mech),
-            "You are unable to control your craft at the moment.");
-    DOCHECK(PerformingAction(mech), "You are too busy at the moment to turn.");
-    DOCHECK(MechDugIn(mech), "You are in a hole you dug, unable to move [use "
-                             "speed cmd to get out].");
-    DOCHECK(IsHulldown(mech), "You can not turn while hulldown");
-    DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode");
+    DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                    "This piece of equipment is stationary!");
+    DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                    "Your fortified state prevents you from moving.");
+    DOCHECK_CONTEXT(
+        mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+        "You are regrettably unable to move at this time. We apologize for "
+        "the inconvenience.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    is_aero(mech) && Spinning(mech) && !Landed(mech),
+                    "You are unable to control your craft at the moment.");
+    DOCHECK_CONTEXT(mech->xcode.context, PerformingAction(mech),
+                    "You are too busy at the moment to turn.");
+    DOCHECK_CONTEXT(mech->xcode.context, MechDugIn(mech),
+                    "You are in a hole you dug, unable to move [use "
+                    "speed cmd to get out].");
+    DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
+                    "You can not turn while hulldown");
+    DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+                    "You are busy changing your hulldown mode");
     if (Digging(mech)) {
       mech_notify(mech, MECHALL, "You cease your attempts at digging in.");
       StopDigging(mech);
@@ -663,7 +700,7 @@ void mech_heading(DbRef player, void *data, char *buffer) {
     mech_printf(mech, MECHALL, "Heading changed to %d.", newheading);
     MaybeMove(mech);
   } else {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Your current heading is %i.", MechFacing(mech));
   }
 }
@@ -674,21 +711,22 @@ void mech_turret(DbRef player, void *data, char *buffer) {
   int newheading;
 
   cch(MECH_USUALO);
-  DOCHECK(MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW ||
-              MechType(mech) == CLASS_BSUIT || is_aero(mech) ||
-              !GetSectInt(mech, TURRET),
-          "You don't have a turret.");
-  DOCHECK(MechTankCritStatus(mech) & TURRET_JAMMED,
-          "Your turret is jammed in position.");
-  DOCHECK(MechTankCritStatus(mech) & TURRET_LOCKED,
-          "Your turret is locked in position.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW ||
+                      MechType(mech) == CLASS_BSUIT || is_aero(mech) ||
+                      !GetSectInt(mech, TURRET),
+                  "You don't have a turret.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechTankCritStatus(mech) & TURRET_JAMMED,
+                  "Your turret is jammed in position.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechTankCritStatus(mech) & TURRET_LOCKED,
+                  "Your turret is locked in position.");
   if (mech_parseattributes(buffer, args, 1) == 1) {
     newheading = AcceptableDegree(atoi(args[0]) - MechFacing(mech));
     MechTurretFacing(mech) = newheading;
     mech_printf(mech, MECHALL, "Turret facing changed to %d.",
                 AcceptableDegree(MechTurretFacing(mech) + MechFacing(mech)));
   } else {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Your turret is currently facing %d.",
                   AcceptableDegree(MechTurretFacing(mech) + MechFacing(mech)));
   }
@@ -701,19 +739,22 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
   char *args[2];
 
   cch(MECH_USUALO);
-  DOCHECK(MechType(mech) == CLASS_BSUIT, "Huh?");
-  DOCHECK(MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
-          "You don't have a torso.");
-  DOCHECK(Fallen(mech),
-          "You're lying flat on your face, you can't rotate your torso.");
-  DOCHECK((MechType(mech) == CLASS_MECH) && (MechIsQuad(mech)),
-          "Quads can't rotate their torsos.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_BSUIT, "Huh?");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW,
+                  "You don't have a torso.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, Fallen(mech),
+      "You're lying flat on your face, you can't rotate your torso.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (MechType(mech) == CLASS_MECH) && (MechIsQuad(mech)),
+                  "Quads can't rotate their torsos.");
   if (mech_parseattributes(buffer, args, 2) == 1) {
     switch (args[0][0]) {
     case 'L':
     case 'l':
-      DOCHECK(MechStatus(mech) & TORSO_LEFT,
-              "You cannot rotate torso beyond 60 degrees!");
+      DOCHECK_CONTEXT(mech->xcode.context, MechStatus(mech) & TORSO_LEFT,
+                      "You cannot rotate torso beyond 60 degrees!");
       if (MechStatus(mech) & TORSO_RIGHT)
         MechStatus(mech) &= ~TORSO_RIGHT;
       else
@@ -722,8 +763,8 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
       break;
     case 'R':
     case 'r':
-      DOCHECK(MechStatus(mech) & TORSO_RIGHT,
-              "You cannot rotate torso beyond 60 degrees!");
+      DOCHECK_CONTEXT(mech->xcode.context, MechStatus(mech) & TORSO_RIGHT,
+                      "You cannot rotate torso beyond 60 degrees!");
       if (MechStatus(mech) & TORSO_LEFT)
         MechStatus(mech) &= ~TORSO_LEFT;
       else
@@ -736,12 +777,13 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You center your torso.");
       break;
     default:
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "Rotate must have LEFT RIGHT or CENTER.");
       break;
     }
   } else
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of arguments!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid number of arguments!");
   MarkForLOSUpdate(mech);
 }
 
@@ -758,36 +800,48 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUAL);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
   if (RollingT(mech)) {
-    DOCHECK(!Landed(mech), "Use thrust command instead!");
+    DOCHECK_CONTEXT(mech->xcode.context, !Landed(mech),
+                    "Use thrust command instead!");
   } else if (FlyingT(mech)) {
-    DOCHECK(MechType(mech) != CLASS_VTOL, "Use thrust command instead!");
+    DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_VTOL,
+                    "Use thrust command instead!");
   }
-  DOCHECK(MechMove(mech) == MOVE_NONE,
-          "This piece of equipment is stationary!");
-  DOCHECK(PerformingAction(mech), "You are too busy at the moment to turn.");
-  DOCHECK(Standing(mech), "You are currently standing up and cannot move.");
-  DOCHECK((Fallen(mech)) &&
-              (MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW),
-          "Your vehicle's movement system is destroyed.");
-  DOCHECK(Fallen(mech), "You are currently prone and cannot move.");
-  DOCHECK(WaterBeast(mech) && NotInWater(mech),
-          "You are regrettably unable to move at this time. We apologize for "
-          "the inconvenience.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                  "This piece of equipment is stationary!");
+  DOCHECK_CONTEXT(mech->xcode.context, PerformingAction(mech),
+                  "You are too busy at the moment to turn.");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You are currently standing up and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
+                                     MechType(mech) != CLASS_MW),
+                  "Your vehicle's movement system is destroyed.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You are currently prone and cannot move.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+      "You are regrettably unable to move at this time. We apologize for "
+      "the inconvenience.");
 
   if (MechType(mech) != CLASS_MECH)
-    DOCHECK(RemovingPods(mech), "You are too busy removing iNARC pods!");
-  DOCHECK(IsHulldown(mech), "You can not move while hulldown");
-  DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode");
+    DOCHECK_CONTEXT(mech->xcode.context, RemovingPods(mech),
+                    "You are too busy removing iNARC pods!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
+                  "You can not move while hulldown");
+  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+                  "You are busy changing your hulldown mode");
 
   if (mech_parseattributes(buffer, args, 1) != 1) {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Your current speed is %.2f.", MechSpeed(mech));
     return;
   }
-  DOCHECK(FlyingT(mech) && AeroFuel(mech) <= 0 && !AeroFreeFuel(mech),
-          "You're out of fuel!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  FlyingT(mech) && AeroFuel(mech) <= 0 && !AeroFreeFuel(mech),
+                  "You're out of fuel!");
   maxspeed = MMaxSpeed(mech);
 
   if (MechMove(mech) == MOVE_VTOL)
@@ -828,17 +882,19 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   if (newspeed < -walkspeed)
     newspeed = -walkspeed;
 
-  DOCHECK((newspeed < 0) && (MechCarrying(mech) > 0) &&
-              (!(MechSpecials(mech) & SALVAGE_TECH)),
-          "You can not backup while towing!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (newspeed < 0) && (MechCarrying(mech) > 0) &&
+                      (!(MechSpecials(mech) & SALVAGE_TECH)),
+                  "You can not backup while towing!");
 
-  DOCHECK((newspeed < 0) && Sprinting(mech),
-          "You can not backup while sprinting!");
+  DOCHECK_CONTEXT(mech->xcode.context, (newspeed < 0) && Sprinting(mech),
+                  "You can not backup while sprinting!");
 
   if (IsRunning(newspeed, maxspeed)) {
-    DOCHECK(Dumping(mech), "You can not run while dumping ammo!");
-    DOCHECK(UnJammingAmmo(mech),
-            "You can not run while unjamming your weapon!");
+    DOCHECK_CONTEXT(mech->xcode.context, Dumping(mech),
+                    "You can not run while dumping ammo!");
+    DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+                    "You can not run while unjamming your weapon!");
 
     /* Exile Stun Code Effect */
     if (MechCritStatus(mech) & MECH_STUNNED) {
@@ -848,29 +904,32 @@ void mech_speed(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    DOCHECK(CrewStunned(mech),
-            "Your cannot possibly control a vehicle going this fast in your "
-            "current mental state!");
-    DOCHECK(MechTankCritStatus(mech) & TAIL_ROTOR_DESTROYED,
-            "Your cannot possibly control a VTOL going this fast with a "
-            "destroyed tail rotor!");
-    DOCHECK(MechType(mech) == CLASS_MECH &&
-                ((MechZ(mech) < 0 && (MechRTerrain(mech) == WATER ||
-                                      MechRTerrain(mech) == BRIDGE ||
-                                      MechRTerrain(mech) == ICE)) ||
-                 MechRTerrain(mech) == HIGHWATER),
-            "You can't run through water!");
+    DOCHECK_CONTEXT(
+        mech->xcode.context, CrewStunned(mech),
+        "Your cannot possibly control a vehicle going this fast in your "
+        "current mental state!");
+    DOCHECK_CONTEXT(
+        mech->xcode.context, MechTankCritStatus(mech) & TAIL_ROTOR_DESTROYED,
+        "Your cannot possibly control a VTOL going this fast with a "
+        "destroyed tail rotor!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    MechType(mech) == CLASS_MECH &&
+                        ((MechZ(mech) < 0 && (MechRTerrain(mech) == WATER ||
+                                              MechRTerrain(mech) == BRIDGE ||
+                                              MechRTerrain(mech) == ICE)) ||
+                         MechRTerrain(mech) == HIGHWATER),
+                    "You can't run through water!");
   }
-  if (!is_wizard(btech_context_active()->database, player) &&
-      is_in_character(btech_context_active()->database, mech->mynum) &&
+  if (!is_wizard(mech->xcode.context->database, player) &&
+      is_in_character(mech->xcode.context->database, mech->mynum) &&
       MechPilot(mech) != player) {
     if (newspeed < 0.0) {
       notify(
-          BTECH_EVALUATION_CONTEXT, player,
+          btech_context_evaluation(mech->xcode.context), player,
           "Not being the Pilot of this beast, you cannot move it backwards.");
       return;
     } else if (newspeed > walkspeed) {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "Not being the Pilot of this beast, you cannot go faster "
              "than walking speed.");
       return;
@@ -899,17 +958,21 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   float newspeed, maxspeed;
 
   cch(MECH_USUAL);
-  DOCHECK(MechType(mech) != CLASS_VTOL && MechMove(mech) != MOVE_SUB,
-          "This command is for VTOLs only.");
-  DOCHECK(MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0 &&
-              !AeroFreeFuel(mech),
-          "You're out of fuel!");
-  DOCHECK(WaterBeast(mech) && NotInWater(mech),
-          "You are regrettably unable to move at this time. We apologize for "
-          "the inconvenience.");
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          tprintf("Current vertical speed is %.2f KPH.",
-                  (float)MechVerticalSpeed(mech)));
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_VTOL && MechMove(mech) != MOVE_SUB,
+                  "This command is for VTOLs only.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0 &&
+                      !AeroFreeFuel(mech),
+                  "You're out of fuel!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+      "You are regrettably unable to move at this time. We apologize for "
+      "the inconvenience.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  tprintf("Current vertical speed is %.2f KPH.",
+                          (float)MechVerticalSpeed(mech)));
   newspeed = atof(args[0]);
   maxspeed = MMaxSpeed(mech);
   maxspeed = sqrt((float)maxspeed * maxspeed -
@@ -917,11 +980,13 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   if ((newspeed > maxspeed) || (newspeed < -maxspeed)) {
     snprintf(buff, sizeof(buff), "Max vertical speed is + %d KPH and - %d KPH",
              (int)maxspeed, (int)maxspeed);
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(btech_context_evaluation(mech->xcode.context), player, buff);
   } else {
-    DOCHECK(Fallen(mech), "Your vehicle's movement system is destroyed.");
-    DOCHECK(MechType(mech) == CLASS_VTOL && Landed(mech),
-            "You need to take off first.");
+    DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                    "Your vehicle's movement system is destroyed.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    MechType(mech) == CLASS_VTOL && Landed(mech),
+                    "You need to take off first.");
     MechVerticalSpeed(mech) = newspeed;
     mech_printf(mech, MECHALL, "Vertical speed changed to %d KPH",
                 (int)newspeed);
@@ -944,7 +1009,7 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
 void mech_thrash(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   MECH *target;
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int terrain;
   int limbs = 4;
   int aLimbs[] = {RARM, LARM, LLEG, RLEG};
@@ -954,13 +1019,16 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   int damage, tempDamage;
 
   cch(MECH_USUALO);
-  DOCHECK(!Fallen(mech), "You need to be prone to thrash!");
-  DOCHECK(!map, "Invalid map! Contact a wizard!");
+  DOCHECK_CONTEXT(mech->xcode.context, !Fallen(mech),
+                  "You need to be prone to thrash!");
+  DOCHECK_CONTEXT(mech->xcode.context, !map, "Invalid map! Contact a wizard!");
 
   terrain = GetRTerrain(map, MechX(mech), MechY(mech));
 
-  DOCHECK(!((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE)),
-          "Thrashing only works in clear terrain or on roads or bridges.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      !((terrain == GRASSLAND) || (terrain == ROAD) || (terrain == BRIDGE)),
+      "Thrashing only works in clear terrain or on roads or bridges.");
 
   /* Check locations */
   for (i = 0; i < 4; i++) {
@@ -973,10 +1041,10 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
 
     ArmorStringFromIndex(tempLoc, locName, MechType(mech), MechMove(mech));
 
-    DOCHECK(SectHasBusyWeap(mech, tempLoc),
-            tprintf("You have weapons recycling on your %s.", locName));
-    DOCHECK(
-        MechSections(mech)[tempLoc].recycle,
+    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, tempLoc),
+                    tprintf("You have weapons recycling on your %s.", locName));
+    DOCHECK_CONTEXT(
+        mech->xcode.context, MechSections(mech)[tempLoc].recycle,
         tprintf("Your %s is still recovering from your last attack.", locName));
   }
 
@@ -1001,7 +1069,8 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   /* Let's see who we can smack around */
   for (i = 0; i < map->first_free; i++) {
     if (map->mechsOnMap[i] >= 0) {
-      target = (MECH *)FindObjectsData(map->mechsOnMap[i]);
+      target = (MECH *)btech_context_find_object(mech->xcode.context,
+                                                 map->mechsOnMap[i]);
 
       if (!target)
         continue;
@@ -1019,22 +1088,24 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
         continue;
 
       mech_printf(mech, MECHALL, "You manage to hit %s!",
-                  GetMechToMechID(mech, target));
+                  mech_to_mech_display_id(mech, target).text);
       mech_printf(target, MECHALL, "You get hit by %s's thrashing limbs!",
-                  GetMechToMechID(target, mech));
+                  mech_to_mech_display_id(target, mech).text);
 
       tempDamage = damage;
 
       while (tempDamage > 0) {
         if (tempDamage > 5) {
-          DamageMech(target, mech, 1, MechPilot(mech),
-                     Number(0, NUM_BSUIT_MEMBERS - 1), 0, 0, 5, 0, -1, 0, -1, 0,
-                     1);
+          DamageMech(
+              target, mech, 1, MechPilot(mech),
+              btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1),
+              0, 0, 5, 0, -1, 0, -1, 0, 1);
           tempDamage -= 5;
         } else {
-          DamageMech(target, mech, 1, MechPilot(mech),
-                     Number(0, NUM_BSUIT_MEMBERS - 1), 0, 0, tempDamage, 0, -1,
-                     0, -1, 0, 1);
+          DamageMech(
+              target, mech, 1, MechPilot(mech),
+              btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1),
+              0, 0, tempDamage, 0, -1, 0, -1, 0, 1);
           tempDamage = 0;
         }
       }
@@ -1075,37 +1146,53 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   float realx, realy;
   int sz, tz, jps;
 
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK(MoveModeLock(mech), "Movement modes disallow jumping.");
+  DOCHECK_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+                  "Movement modes disallow jumping.");
 #endif
-  DOCHECK(MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW &&
-              MechType(mech) != CLASS_BSUIT &&
-              MechType(mech) != CLASS_VEH_GROUND,
-          "This unit cannot jump.");
-  DOCHECK(MechCarrying(mech) > 0, "You can't jump while towing someone!");
-  DOCHECK((MechMaxSpeed(mech) - MMaxSpeed(mech)) > MP1,
-          "No, with this cargo you won't!");
-  DOCHECK(Fallen(mech), "You can't Jump from a FALLEN position");
-  DOCHECK(IsHulldown(mech), "You can't Jump while hulldown");
-  DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode");
-  DOCHECK(Jumping(mech), "You're already jumping!");
-  DOCHECK(Stabilizing(mech), "You haven't stabilized from your last jump yet.");
-  DOCHECK(Standing(mech), "You haven't finished standing up yet.");
-  DOCHECK(fabs(MechJumpSpeed(mech)) <= 0.0,
-          "This mech doesn't have jump jets!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW &&
+                      MechType(mech) != CLASS_BSUIT &&
+                      MechType(mech) != CLASS_VEH_GROUND,
+                  "This unit cannot jump.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) > 0,
+                  "You can't jump while towing someone!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (MechMaxSpeed(mech) - MMaxSpeed(mech)) > MP1,
+                  "No, with this cargo you won't!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You can't Jump from a FALLEN position");
+  DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
+                  "You can't Jump while hulldown");
+  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+                  "You are busy changing your hulldown mode");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "You're already jumping!");
+  DOCHECK_CONTEXT(mech->xcode.context, Stabilizing(mech),
+                  "You haven't stabilized from your last jump yet.");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You haven't finished standing up yet.");
+  DOCHECK_CONTEXT(mech->xcode.context, fabs(MechJumpSpeed(mech)) <= 0.0,
+                  "This mech doesn't have jump jets!");
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK(Dumping(mech), "You can not jump while dumping ammo!");
-  DOCHECK(UnJammingAmmo(mech), "You can not jump while unjamming your weapon!");
-  DOCHECK(RemovingPods(mech), "You are too busy removing iNARC pods!");
-  DOCHECK(MapIsUnderground(mech_map),
-          "Realize the ceiling in this grotto is a bit to low for that!");
-  DOCHECK(OODing(mech), "You can't jump while orbital dropping!");
+  DOCHECK_CONTEXT(mech->xcode.context, Dumping(mech),
+                  "You can not jump while dumping ammo!");
+  DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+                  "You can not jump while unjamming your weapon!");
+  DOCHECK_CONTEXT(mech->xcode.context, RemovingPods(mech),
+                  "You are too busy removing iNARC pods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, MapIsUnderground(mech_map),
+      "Realize the ceiling in this grotto is a bit to low for that!");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "You can't jump while orbital dropping!");
 
-  DOCHECK(MechSwarmTarget(mech) > 0,
-          "Perhaps you should dismount your ride first!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 0,
+                  "Perhaps you should dismount your ride first!");
 
   if (Staggering(mech)) {
     mech_notify(mech, MECHALL, "The damage inhibits your coordination...");
@@ -1123,45 +1210,50 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   if (doJettisonChecks(mech))
     return;
 
-  DOCHECK(argc > 2, "Too many arguments to JUMP function!");
-  DOCHECK(argc < 0, "Invalid number of arguments to JUMP function!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc > 2,
+                  "Too many arguments to JUMP function!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc < 0,
+                  "Invalid number of arguments to JUMP function!");
   MechStatus(mech) &= ~DFA_ATTACK; /* By default no DFA */
   switch (argc) {
   case 0:
     /* DFA current target... */
 
-    DOCHECK(MechType(mech) != CLASS_MECH,
-            "Only mechs can do Death From Above attacks!");
+    DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_MECH,
+                    "Only mechs can do Death From Above attacks!");
 
     target = MechTarget(mech);
-    tempMech = getMech(target);
-    DOCHECK(!tempMech, "Invalid Target!");
+    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    DOCHECK_CONTEXT(mech->xcode.context, !tempMech, "Invalid Target!");
     range = FaMechRange(mech, tempMech);
-    DOCHECK(
+    DOCHECK_CONTEXT(
+        mech->xcode.context,
         !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
         "Target is not in line of sight!");
-    DOCHECK(MechType(tempMech) == CLASS_MW,
-            "Even you can't aim your jump well enough to squish that!");
+    DOCHECK_CONTEXT(mech->xcode.context, MechType(tempMech) == CLASS_MW,
+                    "Even you can't aim your jump well enough to squish that!");
     mapx = MechX(tempMech);
     mapy = MechY(tempMech);
     MechDFATarget(mech) = MechTarget(mech);
     break;
   case 1:
     /* Jump Target */
-    DOCHECK(MechType(mech) != CLASS_MECH,
-            "Only mechs can do Death From Above attacks!");
+    DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_MECH,
+                    "Only mechs can do Death From Above attacks!");
 
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     target = FindTargetDBREFFromMapNumber(mech, targetID);
-    tempMech = getMech(target);
-    DOCHECK(!tempMech, "Target is not in line of sight!");
+    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    DOCHECK_CONTEXT(mech->xcode.context, !tempMech,
+                    "Target is not in line of sight!");
     range = FaMechRange(mech, tempMech);
-    DOCHECK(
+    DOCHECK_CONTEXT(
+        mech->xcode.context,
         !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
         "Target is not in line of sight!");
-    DOCHECK(MechType(tempMech) == CLASS_MW,
-            "Even you can't aim your jump well enough to squish that!");
+    DOCHECK_CONTEXT(mech->xcode.context, MechType(tempMech) == CLASS_MW,
+                    "Even you can't aim your jump well enough to squish that!");
     mapx = MechX(tempMech);
     mapy = MechY(tempMech);
     MechDFATarget(mech) = tempMech->mynum;
@@ -1176,18 +1268,21 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     RealCoordToMapCoord(&mapx, &mapy, realx, realy);
     break;
   }
-  DOCHECK(mapx >= mech_map->map_width || mapy >= mech_map->map_height ||
-              mapx < 0 || mapy < 0,
-          "That would take you off the map!");
-  DOCHECK(MechX(mech) == mapx && MechY(mech) == mapy,
-          "You're already in the target hex.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mapx >= mech_map->map_width || mapy >= mech_map->map_height ||
+                      mapx < 0 || mapy < 0,
+                  "That would take you off the map!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechX(mech) == mapx && MechY(mech) == mapy,
+                  "You're already in the target hex.");
   sz = MechZ(mech);
   if (GetRTerrain(mech_map, mapx, mapy) == ICE)
     tz = 0;
   else
     tz = Elevation(mech_map, mapx, mapy);
   jps = JumpSpeedMP(mech, mech_map);
-  DOCHECK(range > jps, "That target is out of range!");
+  DOCHECK_CONTEXT(mech->xcode.context, range > jps,
+                  "That target is out of range!");
   if (MechType(mech) != CLASS_BSUIT && tempMech)
     MechStatus(mech) |= DFA_ATTACK;
   /*   MechJumpTop(mech) = BOUNDED(3, (jps - range) + 2, jps - 1); */
@@ -1200,11 +1295,11 @@ void mech_jump(DbRef player, void *data, char *buffer) {
      value: 2 * 1 + 2 = 4
    */
   MechJumpTop(mech) = MIN(jps + 1 - range / 3, 2 * range + 2);
-  DOCHECK((tz - sz) > jps,
-          "That target's high for you to reach with a single jump!");
-  DOCHECK((sz - tz) > jps,
-          "That target's low for you to reach with a single jump!");
-  DOCHECK(sz < -1, "Glub glub glub.");
+  DOCHECK_CONTEXT(mech->xcode.context, (tz - sz) > jps,
+                  "That target's high for you to reach with a single jump!");
+  DOCHECK_CONTEXT(mech->xcode.context, (sz - tz) > jps,
+                  "That target's low for you to reach with a single jump!");
+  DOCHECK_CONTEXT(mech->xcode.context, sz < -1, "Glub glub glub.");
   MapCoordToRealCoord(mapx, mapy, &realx, &realy);
   bearing = FindBearing(MechFX(mech), MechFY(mech), realx, realy);
 
@@ -1259,36 +1354,50 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
-  DOCHECK(OODing(mech), "While falling out of the sky?");
-  DOCHECK(MechMove(mech) == MOVE_NONE,
-          "This piece of equipment is stationary!");
-  DOCHECK(MechCarrying(mech) > 0, "You cannot sprint while towing!");
-  DOCHECK(Standing(mech), "You are currently standing up and cannot move.");
-  DOCHECK(Jumping(mech), "You cannot do this while jumping.");
-  DOCHECK((Fallen(mech)) &&
-              (MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW),
-          "Your vehicle's movement system is destroyed.");
-  DOCHECK(Fallen(mech), "You are currently prone and cannot move.");
-  DOCHECK(InWater(mech) && !(WaterBeast(mech)) &&
-              !(MechStatus2(mech) & SPRINTING),
-          "You cannot start sprinting while in water!");
-  DOCHECK(WaterBeast(mech) && NotInWater(mech),
-          "You are regrettably unable to move at this time. We apologize for "
-          "the inconvenience.");
-  DOCHECK(MoveModeChange(mech), "You are already changing movement modes!");
-  DOCHECK(MechStatus2(mech) & (EVADING | DODGING),
-          "You cannot perform multiple movement modes!");
-  DOCHECK(MechSwarmTarget(mech) > 0, "You cannot sprint while mounted!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While falling out of the sky?");
+  DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                  "This piece of equipment is stationary!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) > 0,
+                  "You cannot sprint while towing!");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You are currently standing up and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "You cannot do this while jumping.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
+                                     MechType(mech) != CLASS_MW),
+                  "Your vehicle's movement system is destroyed.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You are currently prone and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  InWater(mech) && !(WaterBeast(mech)) &&
+                      !(MechStatus2(mech) & SPRINTING),
+                  "You cannot start sprinting while in water!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+      "You are regrettably unable to move at this time. We apologize for "
+      "the inconvenience.");
+  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+                  "You are already changing movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechStatus2(mech) & (EVADING | DODGING),
+                  "You cannot perform multiple movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 0,
+                  "You cannot sprint while mounted!");
   if (MechType(mech) == CLASS_MECH)
-    DOCHECK(SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG) ||
-                (MechMove(mech) != MOVE_QUAD ? 0
-                                             : SectIsDestroyed(mech, RLEG) ||
-                                                   SectIsDestroyed(mech, LLEG)),
-            "That's kind of hard while limping.");
+    DOCHECK_CONTEXT(
+        mech->xcode.context,
+        SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG) ||
+            (MechMove(mech) != MOVE_QUAD
+                 ? 0
+                 : SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG)),
+        "That's kind of hard while limping.");
 
-  DOCHECK(MechChargeTarget(mech) > 0,
-          "You are currently charging a target and unable to start sprinting!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, MechChargeTarget(mech) > 0,
+      "You are currently charging a target and unable to start sprinting!");
 
   d |= MODE_SPRINT | ((MechStatus2(mech) & SPRINTING) ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
@@ -1322,36 +1431,52 @@ void mech_evade(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
-  DOCHECK(OODing(mech), "While falling out of the sky?");
-  DOCHECK(MechMove(mech) == MOVE_NONE,
-          "This piece of equipment is stationary!");
-  DOCHECK(Standing(mech), "You are currently standing up and cannot move.");
-  DOCHECK(Jumping(mech), "You cannot do this while jumping.");
-  DOCHECK((Fallen(mech)) &&
-              (MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW),
-          "Your vehicle's movement system is destroyed.");
-  DOCHECK(MechCarrying(mech) > 0, "You can't do that while towing");
-  DOCHECK(Fallen(mech), "You are currently prone and cannot move.");
-  DOCHECK(!(MechStatus2(mech) & EVADING) && MechType(mech) == CLASS_MECH &&
-              (PartIsNonfunctional(mech, LLEG, 0) ||
-               PartIsNonfunctional(mech, RLEG, 0)),
-          "You need both hips functional to evade.");
-  DOCHECK(WaterBeast(mech) && NotInWater(mech),
-          "You are regrettably unable to move at this time. We apologize for "
-          "the inconvenience.");
-  DOCHECK(MoveModeChange(mech), "You are already changing movement modes!");
-  DOCHECK(MechStatus2(mech) & (SPRINTING | DODGING),
-          "You cannot perform multiple movement modes!");
-  DOCHECK(MechSwarmTarget(mech) > 0, "You cannot evade while mounted!");
-  DOCHECK(MechChargeTarget(mech) > 0, "You cannot evade while charging!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While falling out of the sky?");
+  DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                  "This piece of equipment is stationary!");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You are currently standing up and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "You cannot do this while jumping.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
+                                     MechType(mech) != CLASS_MW),
+                  "Your vehicle's movement system is destroyed.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) > 0,
+                  "You can't do that while towing");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You are currently prone and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(MechStatus2(mech) & EVADING) &&
+                      MechType(mech) == CLASS_MECH &&
+                      (PartIsNonfunctional(mech, LLEG, 0) ||
+                       PartIsNonfunctional(mech, RLEG, 0)),
+                  "You need both hips functional to evade.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+      "You are regrettably unable to move at this time. We apologize for "
+      "the inconvenience.");
+  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+                  "You are already changing movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechStatus2(mech) & (SPRINTING | DODGING),
+                  "You cannot perform multiple movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 0,
+                  "You cannot evade while mounted!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechChargeTarget(mech) > 0,
+                  "You cannot evade while charging!");
 
   if (MechType(mech) == CLASS_MECH)
-    DOCHECK(SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG) ||
-                (MechMove(mech) != MOVE_QUAD ? 0
-                                             : SectIsDestroyed(mech, RLEG) ||
-                                                   SectIsDestroyed(mech, LLEG)),
-            "That's kind of hard while limping.");
+    DOCHECK_CONTEXT(
+        mech->xcode.context,
+        SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG) ||
+            (MechMove(mech) != MOVE_QUAD
+                 ? 0
+                 : SectIsDestroyed(mech, RLEG) || SectIsDestroyed(mech, LLEG)),
+        "That's kind of hard while limping.");
 
   d |= MODE_EVADE | ((MechStatus2(mech) & EVADING) ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
@@ -1385,26 +1510,37 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
-  DOCHECK(OODing(mech), "While falling out of the sky?");
-  DOCHECK(MechMove(mech) == MOVE_NONE,
-          "This piece of equipment is stationary!");
-  DOCHECK(Standing(mech), "You are currently standing up and cannot move.");
-  DOCHECK((Fallen(mech)) &&
-              (MechType(mech) != CLASS_MECH && MechType(mech) != CLASS_MW),
-          "Your vehicle's movement system is destroyed.");
-  DOCHECK(Fallen(mech), "You are currently prone and cannot move.");
-  DOCHECK(WaterBeast(mech) && NotInWater(mech),
-          "You are regrettably unable to move at this time. We apologize for "
-          "the inconvenience.");
-  DOCHECK(MoveModeChange(mech), "You are already changing movement modes!");
-  DOCHECK(MechStatus2(mech) & (SPRINTING | EVADING),
-          "You cannot perform multiple movement modes!");
-  DOCHECK(!(HasBoolAdvantage(player, "dodge_maneuver")) ||
-              player != MechPilot(mech),
-          "You either are not the pilot of this mech, have no Dodge Maneuver "
-          "adavantage, or both.");
-  DOCHECK(MechChargeTarget(mech) > 0, "You cannot dodge while charging!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While falling out of the sky?");
+  DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                  "This piece of equipment is stationary!");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You are currently standing up and cannot move.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
+                                     MechType(mech) != CLASS_MW),
+                  "Your vehicle's movement system is destroyed.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You are currently prone and cannot move.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
+      "You are regrettably unable to move at this time. We apologize for "
+      "the inconvenience.");
+  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+                  "You are already changing movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechStatus2(mech) & (SPRINTING | EVADING),
+                  "You cannot perform multiple movement modes!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      !(HasBoolAdvantage(mech->xcode.context, player, "dodge_maneuver")) ||
+          player != MechPilot(mech),
+      "You either are not the pilot of this mech, have no Dodge Maneuver "
+      "adavantage, or both.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechChargeTarget(mech) > 0,
+                  "You cannot dodge while charging!");
 
   d |= MODE_DODGE | ((MechStatus2(mech) & DODGING) ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {
@@ -1431,14 +1567,22 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
   int argc;
 
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech), "Your fortified state prevents you from moving.");
-  DOCHECK(OODing(mech), "While falling out of the sky?");
-  DOCHECK(!MechIsQuad(mech), "Only QUADs can hulldown.");
-  DOCHECK(Fallen(mech), "You can't hulldown from a FALLEN position");
-  DOCHECK(Jumping(mech), "You can't hulldown while jumping!");
-  DOCHECK(MechSpeed(mech) > 0.5, "You can't hulldown while moving!");
-  DOCHECK(Stabilizing(mech), "You are still stabilizing from your last jump.");
-  DOCHECK(Standing(mech), "You haven't finished standing up yet.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "Your fortified state prevents you from moving.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While falling out of the sky?");
+  DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech),
+                  "Only QUADs can hulldown.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You can't hulldown from a FALLEN position");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "You can't hulldown while jumping!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechSpeed(mech) > 0.5,
+                  "You can't hulldown while moving!");
+  DOCHECK_CONTEXT(mech->xcode.context, Stabilizing(mech),
+                  "You are still stabilizing from your last jump.");
+  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+                  "You haven't finished standing up yet.");
 
   argc = mech_parseattributes(buffer, args, 1);
 
@@ -1469,8 +1613,10 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  DOCHECK(IsHulldown(mech), "You are already hulldown.");
-  DOCHECK(ChangingHulldown(mech), "You are busy changing your hulldown mode.");
+  DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
+                  "You are already hulldown.");
+  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+                  "You are busy changing your hulldown mode.");
 
   mech_notify(mech, MECHALL, "You start to lower yourself to the ground.");
   MechLOSBroadcast(mech, "begins to lower itself to the ground.");
@@ -1509,7 +1655,7 @@ void DropSetElevation(MECH *mech, int wantdrop) {
 
 void LandMech(MECH *mech) {
   MECH *target;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int dfa = 0;
   int done = 0;
 
@@ -1530,7 +1676,7 @@ void LandMech(MECH *mech) {
     /* Handle DFA attack */
     if (MechStatus(mech) & DFA_ATTACK) {
       /* is the target here? */
-      target = getMech(MechDFATarget(mech));
+      target = btech_context_get_mech(mech->xcode.context, MechDFATarget(mech));
       if (target) {
         if (MechX(target) == MechX(mech) && MechY(target) == MechY(mech))
           dfa = DeathFromAbove(mech, target);
@@ -1609,7 +1755,9 @@ void LandMech(MECH *mech) {
                 "The suits hanging off you make landing harder!");
 
     if (MadePilotSkillRoll(mech, 4)) {
-      StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 0);
+      StopBSuitSwarmers(
+          btech_context_find_object(mech->xcode.context, mech->mapindex), mech,
+          0);
     } else {
       mech_notify(mech, MECHALL,
                   "You fail to properly control your unbalanced landing!");
@@ -1645,7 +1793,7 @@ void LandMech(MECH *mech) {
   MechFloods(mech);
   water_extinguish_inferno(mech);
   // this is only for non-new-stagger
-  if (!btech_context_active()->configuration->btech_newstagger)
+  if (!mech->xcode.context->configuration->btech_newstagger)
     StopStaggerCheck(mech);
 }
 
@@ -1718,7 +1866,7 @@ void MechFloods(MECH *mech) {
         mech, "shudders, splashes in the water for a second, then goes limp "
               "and sinks to the bottom.");
 
-    KillMechContentsIfIC(mech->mynum);
+    KillMechContentsIfIC(mech);
     DestroyMech(mech, mech, 0, KILL_TYPE_FLOOD);
     return;
   }
@@ -1740,10 +1888,12 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
 
   /* get rid of our swarmers */
   if (CountSwarmers(mech))
-    StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 0);
+    StopBSuitSwarmers(
+        btech_context_find_object(mech->xcode.context, mech->mapindex), mech,
+        0);
 
   /* Clear stagger damage if we use new stagger*/
-  if (btech_context_active()->configuration->btech_newstagger)
+  if (mech->xcode.context->configuration->btech_newstagger)
     ClearAllStaggerDamage(mech);
 
   /* damage pilot */
@@ -1817,7 +1967,7 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
   DropSetElevation(mech, 1);
   MechFZ(mech) = MechZ(mech) * ZSCALE;
 
-  roll = Number(1, 6);
+  roll = btech_random_range(mech->xcode.context, 1, 6);
   switch (roll) {
   case 1:
     hitGroup = FRONT;
@@ -1860,7 +2010,7 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
     damage = (levels * (MechRealTons(mech) + 5)) / 20;
 #endif /* REALWEIGHT_DAMAGE */
   if (InSpecial(mech))
-    if ((map = FindObjectsData(mech->mapindex)))
+    if ((map = btech_context_find_object(mech->xcode.context, mech->mapindex)))
       if (MapUnderSpecialRules(map))
         damage = damage * MIN(100, MapGravity(map)) / 100;
 
@@ -1894,7 +2044,8 @@ int mechs_in_hex(MAP *map, int x, int y, int friendly, int team) {
   int i, cnt = 0;
 
   for (i = 0; i < map->first_free; i++)
-    if ((mech = FindObjectsData(map->mechsOnMap[i]))) {
+    if ((mech =
+             btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]))) {
       if (MechX(mech) != x || MechY(mech) != y)
         continue;
       if (Destroyed(mech))
@@ -1960,12 +2111,13 @@ void cause_damage(MECH *att, MECH *mech, int dam, int table) {
 
 int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
                         int mode, int cnt) {
-  int tar = Number(0, cnt - 1), i, head, td;
+  int tar = btech_random_range(me->xcode.context, 0, cnt - 1), i, head, td;
   MECH *mech = NULL;
   int team = MechTeam(me);
 
   for (i = 0; i < map->first_free; i++)
-    if ((mech = FindObjectsData(map->mechsOnMap[i]))) {
+    if ((mech =
+             btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]))) {
       if (MechX(mech) != x || MechY(mech) != y)
         continue;
       if (mech == me)
@@ -2020,10 +2172,12 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
   switch (mode) {
   case 1:
   case 2:
-    if (btech_context_active()->configuration->btech_stacking == 2) {
-      int factor = btech_context_active()->configuration->btech_stackdamage;
-      mech_printf(me, MECHALL, "You land on %s!", GetMechToMechID(me, mech));
-      mech_printf(mech, MECHALL, "%s lands on you!", GetMechToMechID(mech, me));
+    if (mech->xcode.context->configuration->btech_stacking == 2) {
+      int factor = mech->xcode.context->configuration->btech_stackdamage;
+      mech_printf(me, MECHALL, "You land on %s!",
+                  mech_to_mech_display_id(me, mech).text);
+      mech_printf(mech, MECHALL, "%s lands on you!",
+                  mech_to_mech_display_id(mech, me).text);
       MechLOSBroadcasti(me, mech, "lands on %s!");
       if (IsDS(mech)) {
         cause_damage(me, mech, MAX(1, td * factor / 500), PUNCH);
@@ -2034,19 +2188,21 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
       }
     } else {
       mech_printf(me, MECHALL, "You nearly land on %s!",
-                  GetMechToMechID(me, mech));
+                  mech_to_mech_display_id(me, mech).text);
       mech_printf(mech, MECHALL, "%s nearly lands on you!",
-                  GetMechToMechID(mech, me));
+                  mech_to_mech_display_id(mech, me).text);
       MechLOSBroadcasti(me, mech, "nearly lands on %s!");
       if (!MadePilotSkillRoll(me, cnt + JumpSpeedMP(me, map) / 2))
         MechFalls(me, 1, JumpSpeedMP(me, map) / 2);
     }
     return 1;
   }
-  if (btech_context_active()->configuration->btech_stacking == 2) {
-    int factor = btech_context_active()->configuration->btech_stackdamage;
-    mech_printf(me, MECHALL, "You bump into %s!", GetMechToMechID(me, mech));
-    mech_printf(mech, MECHALL, "%s bumps into you!", GetMechToMechID(mech, me));
+  if (mech->xcode.context->configuration->btech_stacking == 2) {
+    int factor = mech->xcode.context->configuration->btech_stackdamage;
+    mech_printf(me, MECHALL, "You bump into %s!",
+                mech_to_mech_display_id(me, mech).text);
+    mech_printf(mech, MECHALL, "%s bumps into you!",
+                mech_to_mech_display_id(mech, me).text);
     MechLOSBroadcasti(me, mech, "bumps into %s!");
     if (IsDS(mech)) {
       cause_damage(me, mech, MAX(1, td * factor / 500), NORMAL);
@@ -2057,9 +2213,9 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
     }
   } else {
     mech_printf(me, MECHALL, "You nearly bump into %s!",
-                GetMechToMechID(me, mech));
+                mech_to_mech_display_id(me, mech).text);
     mech_printf(mech, MECHALL, "%s nearly bumps into you!",
-                GetMechToMechID(mech, me));
+                mech_to_mech_display_id(mech, me).text);
     MechLOSBroadcasti(me, mech, "nearly bumps into %s!");
     if (!MadePilotSkillRoll(me, cnt))
       MechFalls(me, 1, 0);
@@ -2073,14 +2229,14 @@ int domino_space_in_hex(MAP *map, MECH *me, int x, int y, int friendly,
 }
 
 int domino_space(MECH *mech, int mode) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int cnt, fcnt;
 
   if (!map)
     return 0;
   if (MechType(mech) != CLASS_MECH)
     return 0;
-  if (btech_context_active()->configuration->btech_stacking == 0)
+  if (mech->xcode.context->configuration->btech_stacking == 0)
     return 0;
   cnt = mechs_in_hex(map, MechX(mech), MechY(mech), -1, 0);
   if (cnt <= 2)

@@ -110,9 +110,6 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
 #define last_muxevent_type (scheduler->last_type)
 /* The main add-to-lists event handling function */
 
-extern void prerun_event(MuxEvent *e);
-extern void postrun_event(MuxEvent *e);
-
 static void mux_event_delete(MuxEvent *);
 
 static void mux_event_main_list_add(MuxEventScheduler *scheduler, MuxEvent *e) {
@@ -180,9 +177,7 @@ static void mux_event_wakeup(MuxTimer *timer, void *arg) {
     mux_event_delete(e);
     return;
   }
-  prerun_event(e);
   e->function(e);
-  postrun_event(e);
   mux_event_delete(e);
 }
 
@@ -260,9 +255,7 @@ int mux_event_run_by_type(MuxEventScheduler *scheduler, int type) {
   if (type <= last_muxevent_type) {
     for (e = mux_event_first_in_type[type]; e; e = e->next_in_type) {
       if (!is_zombie(e)) {
-        prerun_event(e);
         e->function(e);
-        postrun_event(e);
         e->flags |= FLAG_ZOMBIE;
         ran++;
       }
@@ -394,6 +387,25 @@ void mux_event_gothru_type_data(MuxEventScheduler *scheduler, int type,
   if (type > last_muxevent_type)
     return;
   LoopType(type, e) if (e->data == data) func(e);
+}
+
+void mux_event_visit_type_data(MuxEventScheduler *scheduler, int type,
+                               void *data, void (*visitor)(MuxEvent *, void *),
+                               void *context) {
+  MuxEvent *event;
+
+  if (type > last_muxevent_type)
+    return;
+  LoopType(type, event) if (event->data == data) visitor(event, context);
+}
+
+void mux_event_visit_type(MuxEventScheduler *scheduler, int type,
+                          void (*visitor)(MuxEvent *, void *), void *context) {
+  MuxEvent *event;
+
+  if (type > last_muxevent_type)
+    return;
+  LoopType(type, event) visitor(event, context);
 }
 
 void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,

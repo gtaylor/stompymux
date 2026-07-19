@@ -2,7 +2,9 @@
  * log.c - logging routines
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include <assert.h>
 #include <sys/time.h>
@@ -13,7 +15,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -315,8 +316,7 @@ int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
 
   snprintf(message_buffer, 4096, "%s\n", message);
 
-  if (!log_cache_write(evaluation->server->log.cache, pathname,
-                       message_buffer)) {
+  if (!log_cache_write(evaluation->log->cache, pathname, message_buffer)) {
     notify(evaluation, thing, "Serious failure while trying to write to log.");
     return 0;
   }

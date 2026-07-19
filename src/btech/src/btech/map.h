@@ -219,8 +219,3 @@ typedef struct map_data {
 
 extern void newfreemap(DbRef key, void **data, int selector);
 extern void map_update(DbRef obj, void *data);
-
-#define set_buildflag(a, b) silly_atr_set((a), A_BUILDFLAG, tprintf("%d", (b)))
-#define get_buildflag(a) atoi(silly_atr_get((a), A_BUILDFLAG))
-#define set_buildcf(a, b)                                                      \
-  silly_atr_set((a), A_BUILDCF, tprintf("%d %d", (b), (b)))

@@ -24,27 +24,29 @@
 #include "p.econ_cmds.h"
 #include "p.mech.utils.h"
 
-BOMBINFO bombs[] = {{"10_Inferno", 10, 1, 30},     {"10_Cluster", 10, 2, 30},
-                    {"10_Standard", 10, 0, 130},   {"50_Inferno", 50, 1, 130},
-                    {"50_Cluster", 50, 2, 130},    {"50_Standard", 50, 0, 130},
-                    {"100_Inferno", 100, 1, 250},  {"100_Cluster", 100, 2, 250},
-                    {"100_Standard", 100, 0, 250}, {NULL, 0, 0, 0}};
+static const BOMBINFO bombs[] = {
+    {"10_Inferno", 10, 1, 30},     {"10_Cluster", 10, 2, 30},
+    {"10_Standard", 10, 0, 130},   {"50_Inferno", 50, 1, 130},
+    {"50_Cluster", 50, 2, 130},    {"50_Standard", 50, 0, 130},
+    {"100_Inferno", 100, 1, 250},  {"100_Cluster", 100, 2, 250},
+    {"100_Standard", 100, 0, 250}, {NULL, 0, 0, 0}};
 
 void DestroyBomb(MECH *mech, int loc) {}
 
 int BombWeight(int i) { return bombs[i].weight; }
 
-char *bomb_name(int i) { return bombs[i].name; }
+const char *bomb_name(int i) { return bombs[i].name; }
 
 void bomb_list(MECH *mech, int player) {
   int bc = 0, fb;
   int i, j, k;
   char location[20];
-  static char *types[] = {"Standard", "Inferno", "Cluster", NULL};
+  static const char *const types[] = {"Standard", "Inferno", "Cluster",
+                                      nullptr};
   coolmenu *c = NULL;
 
   addline();
-  cent(tprintf("Bomb payload for %s:", GetMechID(mech)));
+  cent(tprintf("Bomb payload for %s:", mech_display_id(mech).text));
   addline();
   for (i = 0; i < NUM_SECTIONS; i++) {
     fb = 1;
@@ -67,7 +69,7 @@ void bomb_list(MECH *mech, int player) {
   if (!bc)
     cent("No bombs installed.");
   addline();
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   KillCoolMenu(c);
 }
 
@@ -194,7 +196,8 @@ void bomb_drop(MECH *mech, int player, int bn) {
   bomb_shot *s;
   MAP *map;
 
-  DOCHECK(bn < 0, "Negative bomb number? Gimme a break.");
+  DOCHECK_CONTEXT(mech->xcode.context, bn < 0,
+                  "Negative bomb number? Gimme a break.");
   bn--;
   for (i = 0; i < NUM_SECTIONS; i++)
     for (j = 0; j < NUM_CRITICALS; j++)
@@ -206,10 +209,13 @@ void bomb_drop(MECH *mech, int player, int bn) {
         }
         bc++;
       }
-  DOCHECK(!bc, "No bombs installed.");
-  DOCHECK(!(map = getMap(mech->mapindex)), "You're on invalid map!");
-  DOCHECK(bn < 0 || bn >= bc,
-          "No bomb with such number installed! (See BOMB LIST)");
+  DOCHECK_CONTEXT(mech->xcode.context, !bc, "No bombs installed.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      !(map = btech_context_get_map(mech->xcode.context, mech->mapindex)),
+      "You're on invalid map!");
+  DOCHECK_CONTEXT(mech->xcode.context, bn < 0 || bn >= bc,
+                  "No bomb with such number installed! (See BOMB LIST)");
   MechLOSBroadcast(mech, "detaches a small object that starts falling down..");
   k = Bomb2I(GetPartType(mech, lloc, lpos));
   mech_notify(mech, MECHALL, "The ship trembles as you detach a bomb..");
@@ -223,8 +229,8 @@ void bomb_drop(MECH *mech, int player, int bn) {
     mech_notify(mech, MECHALL,
                 "The ship's lurches slightly, dropping the bomb off target!");
     ob = 6 * (1 + ob); /* Max distance missed  */
-    ob = MAX(1, (Number(1, ob)) / 2);
-    di = Number(0, 359);
+    ob = MAX(1, (btech_random_range(mech->xcode.context, 1, ob)) / 2);
+    di = btech_random_range(mech->xcode.context, 0, 359);
     dir = di * TWOPIOVER360;
     x = x + ob * cos(dir);
     y = y + ob * sin(dir);
@@ -239,7 +245,7 @@ void bomb_drop(MECH *mech, int player, int bn) {
   s->type = k;
   s->map = map;
   SetCargoWeight(mech);
-  mux_event_add(btech_context_active()->events, MAX(1, t), 0, EVENT_DHIT,
+  mux_event_add(mech->xcode.context->events, MAX(1, t), 0, EVENT_DHIT,
                 bomb_hit_event, (void *)s, NULL);
 }
 
@@ -250,20 +256,24 @@ void mech_bomb(DbRef player, void *data, char *buffer) {
   int bn;
 
   cch(MECH_USUALSO);
-  DOCHECK(!(argc = mech_parseattributes(buffer, args, 3)),
-          "(At least) one option required.");
-  DOCHECK(argc > 2, "Too many arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(argc = mech_parseattributes(buffer, args, 3)),
+                  "(At least) one option required.");
+  DOCHECK_CONTEXT(mech->xcode.context, argc > 2, "Too many arguments!");
   if (!strcasecmp(args[0], "list")) {
     bomb_list(mech, player);
     return;
   }
-  DOCHECK(Landed(mech), "The craft is landed!");
+  DOCHECK_CONTEXT(mech->xcode.context, Landed(mech), "The craft is landed!");
   if (!strcasecmp(args[0], "aim")) {
     bomb_aim(mech, player);
     return;
   }
-  DOCHECK(strcasecmp(args[0], "drop"), "Invalid argument to BOMB!");
-  DOCHECK(argc < 2, "The BOMB commands needs to know WHICH bomb to drop!");
-  DOCHECK(Readnum(bn, args[1]), "Invalid bomb number!");
+  DOCHECK_CONTEXT(mech->xcode.context, strcasecmp(args[0], "drop"),
+                  "Invalid argument to BOMB!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc < 2,
+                  "The BOMB commands needs to know WHICH bomb to drop!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(bn, args[1]),
+                  "Invalid bomb number!");
   bomb_drop(mech, player, bn);
 }

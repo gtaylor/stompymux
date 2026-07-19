@@ -8,8 +8,27 @@
 /* BQUE - Command queue */
 
 typedef struct bque BQUE;
+typedef struct BtechContext BtechContext;
 typedef struct CommandQueue CommandQueue;
-typedef struct MuxServer MuxServer;
+typedef struct CommandRuntime CommandRuntime;
+typedef struct CommandContext CommandContext;
+typedef struct PlayerCache PlayerCache;
+typedef struct RuntimeClock RuntimeClock;
+typedef struct ServerLifecycle ServerLifecycle;
+typedef struct ServerLog ServerLog;
+typedef struct WorldContext WorldContext;
+
+typedef struct CommandQueueDependencies CommandQueueDependencies;
+struct CommandQueueDependencies {
+  /* Every member is borrowed from MuxServer. */
+  CommandRuntime *command_runtime;
+  BtechContext *btech;
+  ServerLog *log;
+  WorldContext *world;
+  RuntimeClock *clock;
+  PlayerCache *players;
+  CommandContext *background_command;
+};
 struct bque {
   BQUE *next;
 
@@ -41,7 +60,10 @@ struct objqe {
   int queued;
 };
 
-CommandQueue *command_queue_create(MuxServer *server);
+CommandQueue *
+command_queue_create(const CommandQueueDependencies *dependencies);
+void command_queue_set_lifecycle(CommandQueue *queue,
+                                 ServerLifecycle *lifecycle);
 void command_queue_destroy(CommandQueue *queue);
 int cque_init(CommandQueue *queue);
 void do_second(CommandQueue *queue);

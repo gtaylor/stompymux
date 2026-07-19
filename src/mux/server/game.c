@@ -63,7 +63,7 @@ void do_dump(CommandInvocation *invocation) {
   if (key & DUMP_OPTIMIZE)
     do_dump_optimize(evaluation, player, invocation->cause, key);
   else
-    fork_and_dump(invocation->context->server, key);
+    fork_and_dump(invocation->context->runtime->server_control, key);
 }
 
 void do_dump_optimize(EvaluationContext *evaluation, DbRef player, DbRef cause,
@@ -75,22 +75,22 @@ void do_dump_optimize(EvaluationContext *evaluation, DbRef player, DbRef cause,
  * print out stuff into error file
  */
 void report(CommandContext *command) {
-  STARTLOG(&command->server->log, LOG_BUGS, "BUG", "INFO") {
+  STARTLOG(command->log, LOG_BUGS, "BUG", "INFO") {
     log_text("Command: '");
     log_text(command->debug_command);
     log_text("'");
-    ENDLOG(&command->server->log);
+    ENDLOG(command->log);
   }
   if (is_good_obj(command->world->database, command->player)) {
-    STARTLOG(&command->server->log, LOG_BUGS, "BUG", "INFO") {
+    STARTLOG(command->log, LOG_BUGS, "BUG", "INFO") {
       log_text("Player: ");
-      log_name_and_loc(&command->server->log, command->player);
+      log_name_and_loc(command->log, command->player);
       if ((command->enactor != command->player) &&
           is_good_obj(command->world->database, command->enactor)) {
         log_text(" Enactor: ");
-        log_name_and_loc(&command->server->log, command->enactor);
+        log_name_and_loc(command->log, command->enactor);
       }
-      ENDLOG(&command->server->log);
+      ENDLOG(command->log);
     }
   }
 }
@@ -248,7 +248,7 @@ static int attribute_match_one(EvaluationContext *evaluation, DbRef thing,
     if (((aflags & AF_REGEXP) && regexp_match(buff + 1, str, args, 10)) ||
         wild(buff + 1, str, args, 10)) {
       match = 1;
-      wait_que(evaluation->server->commands, thing, player, 0, NOTHING, 0, s,
+      wait_que(evaluation->runtime->commands, thing, player, 0, NOTHING, 0, s,
                args, 10, evaluation->registers);
       for (i = 0; i < 10; i++) {
         if (args[i])
@@ -383,8 +383,6 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
   return tbuff;
 }
 
-char *colorize(DbRef player, char *from);
-
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
   char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = nullptr;
@@ -468,7 +466,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   case TYPE_PLAYER:
     if (key & MSG_ME) {
       if (key & MSG_COLORIZE)
-        colbuf = colorize(target, msg_ns);
+        colbuf = colorize(evaluation, target, msg_ns);
       raw_notify(evaluation, target, colbuf ? colbuf : msg_ns);
     }
 
@@ -514,7 +512,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       safe_str("> ", tbuff, &tp);
       if (key & MSG_COLORIZE)
         colbuf = colorize(
-            game_object_owner(evaluation->world->database, target), msg_ns);
+            evaluation, game_object_owner(evaluation->world->database, target),
+            msg_ns);
       safe_str(colbuf ? colbuf : msg_ns, tbuff, &tp);
       *tp = '\0';
       raw_notify(evaluation,
@@ -813,36 +812,36 @@ void notify_except2(EvaluationContext *evaluation, DbRef loc, DbRef player,
 }
 
 void do_shutdown(CommandInvocation *invocation) {
-  server_shutdown(invocation->context->server, invocation->player,
-                  invocation->key, invocation->first);
+  server_shutdown(invocation->context->runtime->server_control,
+                  invocation->player, invocation->key, invocation->first);
 }
 
-void server_shutdown(MuxServer *server, DbRef player, int key,
+void server_shutdown(ServerControl *control, DbRef player, int key,
                      const char *message) {
-  ResetSpecialObjects();
+  ResetSpecialObjects(control->btech);
   if (player != NOTHING) {
     raw_broadcast(
-        server->descriptors, 0, "Game: Shutdown by %s",
-        game_object_name(&server->database,
-                         game_object_owner(&server->database, player)));
-    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
+        control->descriptors, 0, "Game: Shutdown by %s",
+        game_object_name(control->database,
+                         game_object_owner(control->database, player)));
+    STARTLOG(control->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Shutdown by ");
-      log_name(&server->log, player);
-      ENDLOG(&server->log);
+      log_name(control->log, player);
+      ENDLOG(control->log);
     }
   } else {
-    raw_broadcast(server->descriptors, 0, "Game: Fatal Error: %s", message);
-    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
+    raw_broadcast(control->descriptors, 0, "Game: Fatal Error: %s", message);
+    STARTLOG(control->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Fatal error: ");
       log_text(message);
-      ENDLOG(&server->log);
+      ENDLOG(control->log);
     }
   }
   if (player != NOTHING) {
-    STARTLOG(&server->log, LOG_ALWAYS, "WIZ", "SHTDN") {
+    STARTLOG(control->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Shutdown status: ");
       log_text(message);
-      ENDLOG(&server->log);
+      ENDLOG(control->log);
     }
   }
 
@@ -858,91 +857,91 @@ void server_shutdown(MuxServer *server, DbRef player, int key,
      * Close down the network interface
      */
 
-    server_lifecycle_close_connections(server->lifecycle, true,
+    server_lifecycle_close_connections(control->lifecycle, true,
                                        "Going down - Bye.\n");
 
     /*
      * Close the attribute text db and dump the header db
      */
 
-    pcache_sync(server->players);
-    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "PANIC") {
+    pcache_sync(control->players);
+    STARTLOG(control->log, LOG_ALWAYS, "DMP", "PANIC") {
       log_text("Panic dump: ");
-      log_text(server->configuration->database.gamedb);
-      ENDLOG(&server->log);
+      log_text(control->configuration->database.gamedb);
+      ENDLOG(control->log);
     }
-    dump_database_internal(server, DUMP_CRASHED);
+    dump_database_internal(control, DUMP_CRASHED);
 
-    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "DONE") {
+    STARTLOG(control->log, LOG_ALWAYS, "DMP", "DONE") {
       log_text("Panic dump complete: ");
-      log_text(server->configuration->database.gamedb);
-      ENDLOG(&server->log);
+      log_text(control->configuration->database.gamedb);
+      ENDLOG(control->log);
     }
   } else if (key & SHUTDN_KILLED) {
-    pcache_sync(server->players);
-    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "KILLED") {
+    pcache_sync(control->players);
+    STARTLOG(control->log, LOG_ALWAYS, "DMP", "KILLED") {
       log_text("Killed dump: ");
-      log_text(server->configuration->database.gamedb);
-      ENDLOG(&server->log);
+      log_text(control->configuration->database.gamedb);
+      ENDLOG(control->log);
     }
-    dump_database_internal(server, DUMP_KILLED);
-    STARTLOG(&server->log, LOG_ALWAYS, "DMP", "DONE") {
+    dump_database_internal(control, DUMP_KILLED);
+    STARTLOG(control->log, LOG_ALWAYS, "DMP", "DONE") {
       log_text("Killed dump complete: ");
-      log_text(server->configuration->database.gamedb);
-      ENDLOG(&server->log);
+      log_text(control->configuration->database.gamedb);
+      ENDLOG(control->log);
     }
   }
   /*
    * Set up for normal shutdown
    */
 
-  server_lifecycle_stop(server->lifecycle);
+  server_lifecycle_stop(control->lifecycle);
   return;
 }
 
-int dump_database_internal(MuxServer *server, int dump_type) {
-  return gamedb_dump(&server->persistence, dump_type);
+int dump_database_internal(ServerControl *control, int dump_type) {
+  return gamedb_dump(control->persistence, dump_type);
 }
 
-void dump_database(MuxServer *server) {
-  STARTLOG(&server->log, LOG_DBSAVES, "DMP", "DUMP") {
+void dump_database(ServerControl *control) {
+  STARTLOG(control->log, LOG_DBSAVES, "DMP", "DUMP") {
     log_text("Dumping: ");
-    log_text(server->configuration->database.gamedb);
-    ENDLOG(&server->log);
+    log_text(control->configuration->database.gamedb);
+    ENDLOG(control->log);
   }
-  pcache_sync(server->players);
+  pcache_sync(control->players);
 
-  dump_database_internal(server, DUMP_NORMAL);
-  STARTLOG(&server->log, LOG_DBSAVES, "DMP", "DONE") {
+  dump_database_internal(control, DUMP_NORMAL);
+  STARTLOG(control->log, LOG_DBSAVES, "DMP", "DONE") {
     log_text("Dump complete: ");
-    log_text(server->configuration->database.gamedb);
-    ENDLOG(&server->log);
+    log_text(control->configuration->database.gamedb);
+    ENDLOG(control->log);
   }
 }
 
-void fork_and_dump(MuxServer *server, int key) {
-  if (*server->configuration->dump_msg)
-    raw_broadcast(server->descriptors, 0, "%s",
-                  server->configuration->dump_msg);
+void fork_and_dump(ServerControl *control, int key) {
+  if (*control->configuration->dump_msg)
+    raw_broadcast(control->descriptors, 0, "%s",
+                  control->configuration->dump_msg);
 
-  log_error(&server->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
-            server->configuration->database.gamedb);
+  log_error(control->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
+            control->configuration->database.gamedb);
 
-  pcache_sync(server->players);
+  pcache_sync(control->players);
 
   if (!key || (key & DUMP_STRUCT)) {
-    if (server->configuration->fork_dump) {
+    if (control->configuration->fork_dump) {
       /* Fork and dump.  */
       switch (fork()) {
       case -1: /* fork() failed */
         /* FIXME: Make this error message conform.  */
-        log_perror(&server->log, "DMP", "FAIL", nullptr, "fork()");
+        log_perror(control->log, "DMP", "FAIL", nullptr, "fork()");
         return;
 
       case 0: /* child */
         dprintk("child database write process starting.");
-        server_lifecycle_unbind_signals(server->lifecycle);
-        dump_database_internal(server, DUMP_NORMAL);
+        server_lifecycle_unbind_signals(control->lifecycle);
+        dump_database_internal(control, DUMP_NORMAL);
         dprintk("child database write process finished.");
         /* You generally don't want to run atexit()
          * handlers and that sort of thing.  */
@@ -954,13 +953,13 @@ void fork_and_dump(MuxServer *server, int key) {
       }
     } else {
       /* Just dump.  */
-      dump_database_internal(server, DUMP_NORMAL);
+      dump_database_internal(control, DUMP_NORMAL);
     }
   }
 
-  if (*server->configuration->postdump_msg)
-    raw_broadcast(server->descriptors, 0, "%s",
-                  server->configuration->postdump_msg);
+  if (*control->configuration->postdump_msg)
+    raw_broadcast(control->descriptors, 0, "%s",
+                  control->configuration->postdump_msg);
 }
 
 static int load_game(MuxServer *server) {
@@ -981,7 +980,7 @@ static int load_game(MuxServer *server) {
 
   /* Load the mecha stuff.. */
   if (server->configuration->have_specials)
-    LoadSpecialObjects();
+    LoadSpecialObjects(&server->btech);
 
   STARTLOG(&server->log, LOG_STARTUP, "INI", "LOAD") {
     log_text("Load complete.");
@@ -1075,7 +1074,7 @@ int is_hearer(EvaluationContext *evaluation, DbRef thing) {
 
 void do_readcache(CommandInvocation *invocation) {
   fcache_load(&invocation->context->evaluation,
-              invocation->context->server->files, invocation->player);
+              invocation->context->runtime->files, invocation->player);
 }
 
 int main(int argc, char *argv[]) {
@@ -1113,7 +1112,7 @@ int main(int argc, char *argv[]) {
   server.process_start_time = server.start_time;
   server.btech.process_start_time = server.process_start_time;
   server.database.top = -1;
-  configuration_initialize(&server);
+  configuration_initialize(&server.configuration_context);
   init_rlimit(&server);
   init_cmdtab(&server.command_registry);
   init_mactab(&server.command_registry);
@@ -1129,7 +1128,7 @@ int main(int argc, char *argv[]) {
                                 25 * HASH_FACTOR);
   numeric_hash_table_initialize(&server.world_indexes.parent_commands,
                                 5 * HASH_FACTOR);
-  configuration_read(&server, config_file);
+  configuration_read(&server.configuration_context, config_file);
 
   if (!password_initialize()) {
     fprintf(stderr, "Unable to initialize password hashing.\n");
@@ -1142,7 +1141,7 @@ int main(int argc, char *argv[]) {
     exit(2);
   }
 
-  if (btech_persistence_register(&server.persistence) < 0) {
+  if (btech_persistence_register(&server.persistence, &server.btech) < 0) {
     fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
     exit(2);
   }
@@ -1211,7 +1210,7 @@ int main(int argc, char *argv[]) {
 
   server_lifecycle_close_connections(server.lifecycle, false,
                                      "Going down - Bye");
-  dump_database(&server);
+  dump_database(&server.server_control);
 
   mux_server_destroy(&server);
   exit(0);

@@ -1,4 +1,4 @@
-module github.com/gtaylor/btmux-khi/docs
+module github.com/gtaylor/stompymux/docs
 
 go 1.22.2
 

@@ -60,12 +60,6 @@
 
 #define PIL_XP_EVERY_N_STEPS 10
 
-/* Where dead pilots go */
-#define AFTERLIFE_DBREF btech_context_active()->configuration->afterlife_dbref
-
-/* Where used MW templates go to wait for reincarnation (<g>) */
-#define USED_MW_STORE btech_context_active()->configuration->btech_usedmechstore
-
 #define MINE_NEXT_MODIFIER 2 / 3
 #define MINE_MIN 5
 #define MINE_TABLE 2 /* 0 = General, 2 = KICK */
@@ -211,14 +205,6 @@
 #define LOCK_TICK 8
 
 #define ECM_RANGE 6
-
-/* From 160 sec to 3840 sec */
-/* #define FIRE_DURATION  ((Number(40,Number(60,960))) * 4) */
-#define FIRE_DURATION ((Number(60, 180)))
-
-/* From 90 sec to 1200 sec */
-/* #define SMOKE_DURATION ((Number(30,Number(60,400))) * 4) */
-#define SMOKE_DURATION ((Number(90, 150)))
 
 /* What kind of evil magic DFM's affect */
 #undef DFM_AFFECT_BTH

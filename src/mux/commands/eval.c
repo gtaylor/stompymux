@@ -2,14 +2,15 @@
  * eval.c - command evaluation and cracking
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/eval.h"
 #include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -222,16 +223,16 @@ char *parse_arglist(EvaluationContext *context, DbRef player, DbRef cause,
     fargs[arg] = nullptr;
   if (dstr == nullptr)
     return nullptr;
-  rstr = parse_to(context->server->configuration, &dstr, delim, 0);
+  rstr = parse_to(context->world->configuration, &dstr, delim, 0);
   arg = 0;
 
   peval = (int)(eval & ~EV_EVAL);
 
   while ((arg < nfargs) && rstr) {
     if (arg < (nfargs - 1))
-      tstr = parse_to(context->server->configuration, &rstr, ',', peval);
+      tstr = parse_to(context->world->configuration, &rstr, ',', peval);
     else
-      tstr = parse_to(context->server->configuration, &rstr, '\0', peval);
+      tstr = parse_to(context->world->configuration, &rstr, '\0', peval);
     if (eval & EV_EVAL) {
       bp = fargs[arg] = alloc_lbuf("parse_arglist");
       str = tstr;
@@ -280,7 +281,7 @@ static void tcache_add(EvaluationContext *context, char *orig, char *result) {
 
   if (strcmp(orig, result)) {
     context->trace_count++;
-    if (context->trace_count <= context->server->configuration->trace_limit) {
+    if (context->trace_count <= context->world->configuration->trace_limit) {
       xp = (TCENT *)alloc_sbuf("tcache_add.sbuf");
       tp = alloc_lbuf("tcache_add.lbuf");
       StringCopy(tp, result);
@@ -373,7 +374,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
        * *  * * previous char was not a space
        */
 
-      if (!(context->server->configuration->space_compress && at_space) ||
+      if (!(context->world->configuration->space_compress && at_space) ||
           (eval & EV_NO_COMPRESS)) {
         safe_chr(' ', buff, bufc);
         at_space = 1;
@@ -406,7 +407,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
         *dstr = tstr;
         break;
       }
-      tbuf = parse_to(context->server->configuration, dstr, ']', 0);
+      tbuf = parse_to(context->world->configuration, dstr, ']', 0);
       if (*dstr == nullptr) {
         safe_chr('[', buff, bufc);
         *dstr = tstr;
@@ -426,7 +427,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
 
       at_space = 0;
       tstr = (*dstr)++;
-      tbuf = parse_to(context->server->configuration, dstr, '}', 0);
+      tbuf = parse_to(context->world->configuration, dstr, '}', 0);
       if (*dstr == nullptr) {
         safe_chr('{', buff, bufc);
         *dstr = tstr;
@@ -741,7 +742,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
       tbufc = tbuf = alloc_sbuf("exec.tbuf");
       safe_sb_str(oldp, tbuf, &tbufc);
       *tbufc = '\0';
-      if (context->server->configuration->space_compress) {
+      if (context->world->configuration->space_compress) {
         while ((--tbufc >= tbuf) && isspace(*tbufc))
           ;
         tbufc++;
@@ -749,8 +750,8 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
       }
       for (tbufc = tbuf; *tbufc; tbufc++)
         *tbufc = ToLower(*tbufc);
-      fp = (FUN *)hash_table_find(tbuf,
-                                  &context->server->command_registry.functions);
+      fp = (FUN *)hash_table_find(
+          tbuf, &context->runtime->command_registry->functions);
 
       /*
        * If not a builtin func, check for global func
@@ -759,7 +760,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
       ufp = nullptr;
       if (fp == nullptr) {
         ufp = (UFUN *)hash_table_find(
-            tbuf, &context->server->command_registry.user_function_index);
+            tbuf, &context->runtime->command_registry->user_function_index);
       }
       /*
        * Do the right thing if it doesn't exist
@@ -833,7 +834,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
       if (ufp) {
         context->function_nesting++;
         if (!check_access(context->world->database,
-                          context->server->configuration, player, ufp->perms)) {
+                          context->world->configuration, player, ufp->perms)) {
           safe_str("#-1 PERMISSION DENIED", buff, &oldp);
           *bufc = oldp;
         } else {
@@ -912,18 +913,18 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
         context->function_nesting++;
         context->function_invocations++;
         if (context->function_nesting >=
-            context->server->configuration->func_nest_lim) {
+            context->world->configuration->func_nest_lim) {
           safe_str("#-1 FUNCTION RECURSION LIMIT EXCEEDED", buff, bufc);
         } else if (context->function_invocations ==
-                   context->server->configuration->func_invk_lim) {
+                   context->world->configuration->func_invk_lim) {
           safe_str("#-1 FUNCTION INVOCATION LIMIT EXCEEDED", buff, bufc);
         } else if (!check_access(context->world->database,
-                                 context->server->configuration, player,
+                                 context->world->configuration, player,
                                  fp->perms)) {
           safe_str("#-1 PERMISSION DENIED", buff, &oldp);
           *bufc = oldp;
         } else if (context->function_invocations <
-                   context->server->configuration->func_invk_lim) {
+                   context->world->configuration->func_invk_lim) {
           fp->fun(buff, &oldp, player, cause, fargs, nfargs, cargs, ncargs,
                   context);
           *bufc = oldp;
@@ -970,7 +971,7 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
    * buffer, too.
    */
 
-  if (context->server->configuration->space_compress && at_space &&
+  if (context->world->configuration->space_compress && at_space &&
       !(eval & EV_NO_COMPRESS) && (start != *bufc))
     (*bufc)--;
 
@@ -1003,9 +1004,9 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
   if (do_trace) {
     tcache_add(context, savestr, start);
     save_count =
-        context->trace_count - context->server->configuration->trace_limit;
+        context->trace_count - context->world->configuration->trace_limit;
     ;
-    if (is_top || !context->server->configuration->trace_topdown)
+    if (is_top || !context->world->configuration->trace_topdown)
       tcache_finish(context, player);
     if (is_top && (save_count > 0)) {
       tbuf = alloc_mbuf("exec.trace_diag");

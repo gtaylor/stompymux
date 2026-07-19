@@ -25,9 +25,8 @@
 #include "p.mech.status.h"
 #include "p.mech.tech.h"
 
-static coolmenu *c;
-
-static void describe_repairs(MuxEvent *e) {
+static void describe_repairs(MuxEvent *e, void *menu_context) {
+  coolmenu **menu = menu_context;
   int type = e->type;
   MECH *mech = (MECH *)e->data;
   long earg = ((long)e->data2) % PLAYERPOS;
@@ -36,27 +35,28 @@ static void describe_repairs(MuxEvent *e) {
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
   int fail = (e->function == very_fake_func);
+  BtechContext *context = mech->xcode.context;
 
   UNPACK_LOCPOS_E(earg, loc, pos, extra);
-  snprintf(buf, sizeof(buf), "%s%s",
-           ShortArmorSectionString(MechType(mech), MechMove(mech), loc % 8),
-           loc >= 8 ? "(R)" : "");
-  snprintf(buf2, sizeof(buf2), "%-5ld ", player);
   snprintf(
-      buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
-      game_lag_time((e->tick - btech_context_active()->events->tick) / 60));
+      buf, sizeof(buf), "%s%s",
+      armor_section_abbreviation(MechType(mech), MechMove(mech), loc % 8).text,
+      loc >= 8 ? "(R)" : "");
+  snprintf(buf2, sizeof(buf2), "%-5ld ", player);
+  snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
+           game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
   switch (type) {
   case EVENT_REPAIR_REPL:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Replacement of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPLG:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Replacement of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
@@ -69,7 +69,7 @@ static void describe_repairs(MuxEvent *e) {
   case EVENT_REPAIR_RELO:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d %sload of %s", buf, pos + 1, extra ? "Un" : "Re",
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
@@ -96,45 +96,45 @@ static void describe_repairs(MuxEvent *e) {
   case EVENT_REPAIR_SCRP:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Scrapping of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     break;
   case EVENT_REPAIR_SCRG:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Scrapping of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     break;
   case EVENT_REPAIR_REPAG:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPAP:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_REPENHCRIT:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Repair of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_MOB:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Mounting of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_UMOB:
     snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
              "%5s:%-2d Removing of %s", buf, pos + 1,
-             pos_part_name(mech, loc, pos));
+             pos_part_name(mech, loc, pos).text);
     if (fail)
       snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
     break;
@@ -153,31 +153,28 @@ static void describe_repairs(MuxEvent *e) {
     break;
   }
 
-  /*   snprintf(buf2+strlen(buf2), sizeof(buf2) - strlen(buf2), " - %s", */
-
-  /*        get_uptime_to_string(e->tick -
-   * btech_context_active()->events->tick)); */
-  vsi(buf2);
+  CreateMenuEntry_VSimple(menu, buf2);
 }
 
 void tech_repairs(DbRef player, MECH *mech, char *buffer) {
   int i, isds = IsDS(mech);
+  coolmenu *c = nullptr;
 
   TECHCOMMANDD;
 
-  DOCHECK(!figure_latest_tech_event(mech),
-          "This 'mech has no repairs pending!");
-  c = NULL;
+  DOCHECK_CONTEXT(mech->xcode.context, !figure_latest_tech_event(mech),
+                  "This 'mech has no repairs pending!");
   addline();
-  cent(tprintf("Repairs/Scrapping in progress (%s)", GetMechID(mech)));
+  cent(tprintf("Repairs/Scrapping in progress (%s)",
+               mech_display_id(mech).text));
   vsi(tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
   addline();
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
-    mux_event_gothru_type_data(btech_context_active()->events, i, (void *)mech,
-                               describe_repairs);
+    mux_event_visit_type_data(mech->xcode.context->events, i, mech,
+                              describe_repairs, &c);
   addline();
   vsi("Note: Time = Time remaining in minutes. Plr = Tech's dbref");
   addline();
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   KillCoolMenu(c);
 }

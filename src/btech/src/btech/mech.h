@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "mech.stat.h"
+#include "btech/missile_hit_registry.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/powers.h"
@@ -139,16 +139,17 @@
    : IsArtillery(a) ? (ARTILLERY_MAPSHEET_SIZE * MechWeapons[a].longrange)     \
                     : (MechWeapons[a].longrange))
 #define EGunRangeWithCheck(mech, sec, a)                                       \
-  ((SectionUnderwater(mech, sec) > 0) ? EGunWaterRange(a)                      \
-   : (btech_context_active()->configuration->btech_erange &&                   \
+  ((SectionUnderwater(mech, sec) > 0)                                          \
+       ? EGunWaterRange((mech)->xcode.context->configuration, a)               \
+   : ((mech)->xcode.context->configuration->btech_erange &&                    \
       (MechWeapons[a].medrange * 2) > GunRange(a))                             \
        ? (MechWeapons[a].medrange * 2)                                         \
        : GunRange(a))
 #define GunRange(a)                                                            \
   (IsArtillery(a) ? (ARTILLERY_MAPSHEET_SIZE * MechWeapons[a].longrange)       \
                   : (MechWeapons[a].longrange))
-#define EGunRange(a)                                                           \
-  ((btech_context_active()->configuration->btech_erange &&                     \
+#define EGunRange(configuration, a)                                            \
+  (((configuration)->btech_erange &&                                           \
     (MechWeapons[a].medrange * 2) > GunRange(a))                               \
        ? (MechWeapons[a].medrange * 2)                                         \
        : GunRange(a))
@@ -157,8 +158,8 @@
    : MechWeapons[a].medrange_water > 0   ? MechWeapons[a].medrange_water       \
    : MechWeapons[a].shortrange_water > 0 ? MechWeapons[a].shortrange_water     \
                                          : 0)
-#define EGunWaterRange(a)                                                      \
-  ((btech_context_active()->configuration->btech_erange &&                     \
+#define EGunWaterRange(configuration, a)                                       \
+  (((configuration)->btech_erange &&                                           \
     ((MechWeapons[a].medrange_water * 2) > GunWaterRange(a)) &&                \
     (MechWeapons[a].longrange_water > 0))                                      \
        ? (MechWeapons[a].medrange_water * 2)                                   \
@@ -561,13 +562,6 @@ struct weapon_struct {
 #define SNUBPPC 0x40000000 /* Snub-nosed PPC */
 
 #define PCOMBAT (PC_HEAT | PC_IMPA | PC_SHAR)
-
-#define MAX_ROLL 11
-struct missile_hit_table_struct {
-  char *name;
-  int key;
-  int num_missiles[MAX_ROLL];
-};
 
 /* Section #defs... */
 
@@ -1447,8 +1441,7 @@ struct repair_data {
   (MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED |              \
    MECH_PILOTONLY)
 
-extern struct weapon_struct MechWeapons[];
-extern struct missile_hit_table_struct MissileHitTable[];
+extern const struct weapon_struct MechWeapons[];
 
 #define TELE_ALL 1  /* Tele all, not just mortals */
 #define TELE_LOUD 4 /* Loudly teleport */
@@ -1459,19 +1452,11 @@ extern struct missile_hit_table_struct MissileHitTable[];
 #define MINE_FALL 3 /* Someone falls in the hex */
 #define MINE_DROP 4 /* Someone drops to ground in the hex */
 
-extern void *FindObjectsData(DbRef key);
 #ifndef ECMD
 #define ECMD(a) extern void a(DbRef player, void *data, char *buffer)
 #endif
 
-#define destroy_object(obj) destroy_thing(BTECH_EVALUATION_CONTEXT, obj)
-#define create_object(name)                                                    \
-  create_obj(BTECH_EVALUATION_CONTEXT, GOD, TYPE_THING, name)
-
 #define A_MECHREF A_MECHTYPE
-#define MECH_PATH btech_context_active()->configuration->database.mech_db
-#define MAP_PATH btech_context_active()->configuration->database.map_db
-
 #define WSDUMP_MASK_ER                                                         \
   "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d"
 #define WSDUMP_MASK_NOER                                                       \
@@ -1495,8 +1480,13 @@ extern void *FindObjectsData(DbRef key);
 #include "p.glue.h"
 #include "p.glue.hcode.h"
 
-/* For mech.lostracer.c's TraceLOS() */
-typedef struct {
+enum { LOS_TRACE_CAPACITY = 4000 };
+
+typedef struct LosTracePoint {
   int x;
   int y;
-} lostrace_info;
+} LosTracePoint;
+
+typedef struct LosTrace {
+  LosTracePoint points[LOS_TRACE_CAPACITY];
+} LosTrace;

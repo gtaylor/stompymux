@@ -8,6 +8,7 @@
  */
 
 #include "mech.h"
+#include "p.mech.utils.h"
 
 static struct {
   char *name;
@@ -43,7 +44,7 @@ int pc_to_dam_conversion(MECH *target, int weapindx, int dam) {
     return dam;
   i = dam / 100;
   dam = dam % 100;
-  if (Number(1, 100) <= dam)
+  if (btech_random_range(target->xcode.context, 1, 100) <= dam)
     i++;
   return i;
 }
@@ -57,7 +58,7 @@ int dam_to_pc_conversion(MECH *target, int weapindx, int dam) {
     return dam;
   /* Target is MW _and_ we have yet to convert damage */
   for (j = 0; j < dam; j++)
-    i += Number(80, 130);
+    i += btech_random_range(target->xcode.context, 80, 130);
   return i;
 }
 
@@ -80,7 +81,8 @@ int armor_effect(MECH *wounded, int cause, int hitloc, int intDamage, int id) {
   int noblock = 0;
 
   if (id != -2)
-    intDamage = (intDamage * Number(75, 125)) / 100;
+    intDamage =
+        (intDamage * btech_random_range(wounded->xcode.context, 75, 125)) / 100;
   if (MechType(wounded) != CLASS_MW)
     return intDamage;
   hitloc = pcombat_hitloc(hitloc);
@@ -90,12 +92,12 @@ int armor_effect(MECH *wounded, int cause, int hitloc, int intDamage, int id) {
     if (Armors[i].loc == hitloc &&
         Armors[i].loci == GetSectArmor(wounded, hitloc))
       break;
-  if (Number(1, 5) == 1) {
-    if (Number(1, 2) == 1)
+  if (btech_random_range(wounded->xcode.context, 1, 5) == 1) {
+    if (btech_random_range(wounded->xcode.context, 1, 2) == 1)
       intDamage = intDamage * 2;
     else
       noblock = 1;
-  } else if (Number(1, 10) == 2)
+  } else if (btech_random_range(wounded->xcode.context, 1, 10) == 2)
     intDamage = intDamage / 2;
   if (!Armors[i].name)
     return intDamage;
@@ -103,9 +105,9 @@ int armor_effect(MECH *wounded, int cause, int hitloc, int intDamage, int id) {
       !((Armors[i].deft) & (MechWeapons[cause].special & PCOMBAT)) &&
       (MechWeapons[cause].special & PCOMBAT))
     return intDamage;
-  block =
-      BOUNDED(Number(1, (Armors[i].defmin / 2)),
-              abs(intDamage * Armors[i].defpros / 100), Armors[i].defmax / 2);
+  block = BOUNDED(
+      btech_random_range(wounded->xcode.context, 1, (Armors[i].defmin / 2)),
+      abs(intDamage * Armors[i].defpros / 100), Armors[i].defmax / 2);
   if (noblock)
     block = 0;
   if (abs(intDamage) < block) {

@@ -18,7 +18,7 @@
 #include <string.h>
 
 void KillText(char **mapt);
-void ShowText(char **mapt, DbRef player);
+void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
 
 /*
    Simple menu system for cool menus ;-)
@@ -138,30 +138,31 @@ void display_toggle_end(char **c, int maxlen, coolmenu *m) {
 
 /* Turn value into equivalent with kilo, mega, giga, tera, peta, exa, zetta
    or yotta postfix. */
-char *stringified_value(int v) {
-  char foo[] = "KMGTPEZY";
+StringifiedValue stringified_value(int v) {
+  const char suffixes[] = "KMGTPEZY";
   int i = -1;
-  static char buf[5];
+  StringifiedValue result = {0};
 
   if (v > 999) {
     do {
       i++;
       v /= 1000;
-    } while (v > 999 && foo[i]);
+    } while (v > 999 && suffixes[i]);
 
-    if (!foo[i])
+    if (!suffixes[i])
       i--;
-    snprintf(buf, 5, "%d%c", BOUNDED(0, v, 999), foo[i]);
+    snprintf(result.text, sizeof(result.text), "%d%c", BOUNDED(0, v, 999),
+             suffixes[i]);
   } else
-    snprintf(buf, 5, "%d", BOUNDED(0, v, 999));
-  return buf;
+    snprintf(result.text, sizeof(result.text), "%d", BOUNDED(0, v, 999));
+  return result;
 }
 
 void display_number_end(char **c, int maxlen, coolmenu *m) {
   if (m->value >= 0) {
     snprintf(*c, maxlen, " %%cg%s%4s%%c",
              (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "%ch" : "",
-             stringified_value(m->value));
+             stringified_value(m->value).text);
   } else
     snprintf(*c, maxlen, " ____");
   *c += strlen(*c);
@@ -292,11 +293,11 @@ void KillCoolMenu(coolmenu *c) {
   }
 }
 
-void ShowCoolMenu(DbRef player, coolmenu *c) {
+void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, coolmenu *c) {
   char **ch;
 
   ch = MakeCoolMenuText(c);
-  ShowText(ch, player);
+  ShowText(evaluation, ch, player);
   KillText(ch);
 }
 
@@ -352,6 +353,34 @@ coolmenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   for (i = sick; i < last; i++)
     CreateMenuEntry_Normal(&c, fun(i), columns, i + 1 - sick, 0);
   CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
+  return c;
+}
+
+coolmenu *SelCol_FunStringMenuContextK(int columns, char *heading,
+                                       char *(*fun)(void *, int, char *buffer),
+                                       void *context, int last) {
+  coolmenu *c = nullptr;
+  int i;
+  char buf[LBUF_SIZE];
+  char entry[LBUF_SIZE];
+  int sick = 0;
+
+  strcpy(buf, heading);
+  buf[0] = toupper(buf[0]);
+  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
+  CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
+  if (fun(context, 0, entry)[0] == '%') {
+    CreateMenuEntry_Normal(&c, entry, columns, 1, 0);
+    sick = 1;
+  }
+  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
+  if (columns < 0)
+    columns = CoolMenu_FPWBit(last, 18);
+  for (i = sick; i < last; i++) {
+    fun(context, i, entry);
+    CreateMenuEntry_Normal(&c, entry, columns, i + 1 - sick, 0);
+  }
+  CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
   return c;
 }
 

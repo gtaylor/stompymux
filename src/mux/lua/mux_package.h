@@ -5,7 +5,7 @@
 #include <lua.h>
 
 typedef struct LuaMuxPackage LuaMuxPackage;
-typedef struct MuxServer MuxServer;
+typedef struct LuaServices LuaServices;
 
 typedef int (*LuaMuxPackageCheckingFn)(void *context);
 typedef int (*LuaMuxPackageFlowStartFn)(void *context, lua_State *state,
@@ -13,7 +13,8 @@ typedef int (*LuaMuxPackageFlowStartFn)(void *context, lua_State *state,
                                         const char *first_step);
 
 struct LuaMuxPackage {
-  MuxServer *server;
+  /* Services and callback context are borrowed from the owning LuaRuntime. */
+  const LuaServices *services;
   void *context;
   LuaMuxPackageCheckingFn is_checking;
   LuaMuxPackageFlowStartFn flow_start;

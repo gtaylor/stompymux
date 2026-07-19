@@ -32,9 +32,9 @@
 #include "p.mechrep.h"
 #include "p.pcombat.h"
 
-static char *MyColorStrings[] = {"", "%ch%cg", "%ch%cy", "%cr"};
-static char *MyMessageStrings[] = {"ERROR%c", "low.%c", "critical!%c",
-                                   "BREACHED!%c"};
+static char *const MyColorStrings[] = {"", "%ch%cg", "%ch%cy", "%cr"};
+static char *const MyMessageStrings[] = {"ERROR%c", "low.%c", "critical!%c",
+                                         "BREACHED!%c"};
 static inline char *MySeriousColorStr(MECH *mech, int index) {
   return MyColorStrings[index % 4];
 }
@@ -148,9 +148,9 @@ int cause_armordamage(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     tAPCritical = 1;
 
   if (iscritical || tAPCritical) {
-    r = Roll();
-    rollstat.critrolls[r - 2]++;
-    rollstat.totcrolls++;
+    r = btech_random_roll(wounded->xcode.context);
+    wounded->xcode.context->random.statistics.critical_rolls[r - 2]++;
+    wounded->xcode.context->random.statistics.total_critical_rolls++;
     /* Do the AP ammo thang */
     if (tAPCritical) {
       if (!strcmp(&MechWeapons[wWeapIndx].name[3], "AC/2"))
@@ -216,7 +216,8 @@ int cause_armordamage(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     mech_printf(
         wounded, MECHALL, "%sWARNING: %s%s Armor %s",
         MySeriousColorStr(wounded, seriousness),
-        ShortArmorSectionString(MechType(wounded), MechMove(wounded), hitloc),
+        armor_section_abbreviation(MechType(wounded), MechMove(wounded), hitloc)
+            .text,
         isrear ? " (Rear)" : "", MySeriousStr(wounded, seriousness));
 
   return intDamage > 0 ? intDamage : 0;
@@ -225,7 +226,7 @@ int cause_armordamage(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
 int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
                          int attackPilot, int isrear, int hitloc, int intDamage,
                          int weapindx, int *crits) {
-  int r = Roll();
+  int r = btech_random_roll(wounded->xcode.context);
   char locname[30];
   char msgbuf[MBUF_SIZE];
 
@@ -235,8 +236,8 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
   else if (MechSpecials(wounded) & COMPI_TECH)
     intDamage = intDamage * 2;
   /* Critical hits? */
-  rollstat.critrolls[r - 2]++;
-  rollstat.totcrolls++;
+  wounded->xcode.context->random.statistics.critical_rolls[r - 2]++;
+  wounded->xcode.context->random.statistics.total_critical_rolls++;
   if (!(*crits))
     switch (r) {
     case 8:
@@ -285,7 +286,7 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
   /* Hmm.. This should be interesting */
   if (MechType(wounded) == CLASS_MECH && intDamage && (hitloc == CTORSO) &&
       GetSectInt(wounded, hitloc) == GetSectOInt(wounded, hitloc))
-    MechBoomStart(wounded) = btech_context_active()->events->tick;
+    MechBoomStart(wounded) = wounded->xcode.context->events->tick;
 
   if (GetSectInt(wounded, hitloc) <= intDamage) {
     intDamage -= GetSectInt(wounded, hitloc);
@@ -301,7 +302,6 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
   return intDamage;
 }
 
-int global_physical_flag = 0;
 void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
                 int hitloc, int isrear, int iscritical, int damage,
                 int intDamage, int cause, int bth, int wWeapIndx, int wAmmoMode,
@@ -316,7 +316,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
   int crits = 0;
   int tBlowDumpingAmmo = 0;
   int wSwarmerHitChance = 0;
-  int wRoll = Roll();
+  int wRoll = btech_random_roll(wounded->xcode.context);
   MECH *mechSwarmer;
   int tSnapTowLines = 0;
   MECH *towTarget;
@@ -332,7 +332,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
      damage = n && intDamage = -1/-2
      - usual damage + transfer/+red enable */
   /* if damage>0 && !intDamage usual dam. */
-  map = getMap(attacker->mapindex);
+  map = btech_context_get_map(attacker->xcode.context, attacker->mapindex);
   if ((map && MapIsCS(map)) || (MechStatus(wounded) & COMBAT_SAFE)) {
     if (wounded != attacker)
       mech_notify(attacker, MECHALL, "Your efforts only scratch the paint!");
@@ -417,9 +417,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     /* If we're a VTOL and the hitloc is the rotor,
        we'll cut the damage by some value */
     if ((MechType(wounded) == CLASS_VTOL) && (hitloc == ROTOR)) {
-      if (btech_context_active()->configuration->btech_divrotordamage > 0)
+      if (wounded->xcode.context->configuration->btech_divrotordamage > 0)
         damage = damage /
-                 btech_context_active()->configuration->btech_divrotordamage;
+                 wounded->xcode.context->configuration->btech_divrotordamage;
       if (damage < 1)
         damage = 1;
     }
@@ -430,18 +430,21 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
       MechCritStatus(wounded) &= ~HIDDEN;
     }
 
-    if (!global_physical_flag)
+    if (wounded->xcode.context->combat_overrides.damage_experience ==
+        BTECH_DAMAGE_XP_GUNNERY)
       AccumulateGunXP(attackPilot, attacker, wounded, damage, 1, cause, bth);
-    else if (global_physical_flag == 1)
+    else if (wounded->xcode.context->combat_overrides.damage_experience ==
+             BTECH_DAMAGE_XP_PILOTING)
       if (!Destroyed(wounded) &&
-          is_in_character(btech_context_active()->database, wounded->mynum) &&
+          is_in_character(wounded->xcode.context->database, wounded->mynum) &&
           MechTeam(wounded) != MechTeam(attacker))
         if (MechType(wounded) != CLASS_MW || MechType(attacker) == CLASS_MW)
           AccumulatePilXP(attackPilot, attacker, damage / 3, 1);
     damage = dam_to_pc_conversion(wounded, cause, damage);
   }
   if (isrear) {
-    if (!(MechSpecials(wounded) & SALVAGE_TECH) && (Roll() <= 5) &&
+    if (!(MechSpecials(wounded) & SALVAGE_TECH) &&
+        (btech_random_roll(wounded->xcode.context) <= 5) &&
         (hitloc == CTORSO || hitloc == LTORSO || hitloc == RTORSO))
       tSnapTowLines = 1;
 
@@ -512,7 +515,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
       /* Nyah. Damage transferred to waste, shooting a dead mech? */
     }
   }
-  if (C_OODing(wounded) && Roll() > 8) {
+  if (C_OODing(wounded) && btech_random_roll(wounded->xcode.context) > 8) {
     mech_ood_damage(wounded, attacker,
                     damage + (intDamage < 0 ? 0 : intDamage));
     return;
@@ -556,7 +559,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
   if (damage > 0 && intDamage <= 0 && !was_transfer && !Fallen(wounded)) {
-    if (btech_context_active()->configuration->btech_newstagger &&
+    if (wounded->xcode.context->configuration->btech_newstagger &&
         MechType(wounded) == CLASS_MECH) {
 
       // So now that stagger isn't completely retarded, here's how it works
@@ -574,7 +577,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
         (wounded)->rd.staggerDamageList = malloc(sizeof(damageNode));
         (wounded)->rd.staggerDamageList->amount = damage;
         (wounded)->rd.staggerDamageList->occuredAt =
-            btech_context_active()->clock->now;
+            wounded->xcode.context->clock->now;
         (wounded)->rd.staggerDamageList->attackerNum = attacker->mynum;
         (wounded)->rd.staggerDamageList->counted = 0;
         (wounded)->rd.staggerDamageList->next = NULL;
@@ -586,7 +589,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
         // set the last node equal to our new damage pointer
         damagePointer->next = malloc(sizeof(damageNode));
         damagePointer->next->amount = damage;
-        damagePointer->next->occuredAt = btech_context_active()->clock->now;
+        damagePointer->next->occuredAt = wounded->xcode.context->clock->now;
         damagePointer->next->attackerNum = attacker->mynum;
         damagePointer->next->counted = 0;
         damagePointer->next->next = NULL;
@@ -627,8 +630,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
           !(MechCritStatus(wounded) & SLITE_DEST) &&
           (hitloc == LTORSO || hitloc == CTORSO || hitloc == RTORSO)) {
         /* Possibly destroy the light */
-        if (Roll() > 6) {
-          if ((MechStatus2(wounded) & SLITE_ON) || (Roll() > 5)) {
+        if (btech_random_roll(wounded->xcode.context) > 6) {
+          if ((MechStatus2(wounded) & SLITE_ON) ||
+              (btech_random_roll(wounded->xcode.context) > 5)) {
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
             MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
@@ -642,8 +646,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
       if (!isrear && (MechSpecials(wounded) & SLITE_TECH) &&
           !(MechCritStatus(wounded) & SLITE_DEST) && (hitloc == FSIDE)) {
         /* Possibly destroy the light */
-        if (Roll() > 6) {
-          if ((MechStatus2(wounded) & SLITE_ON) || (Roll() > 5)) {
+        if (btech_random_roll(wounded->xcode.context) > 6) {
+          if ((MechStatus2(wounded) & SLITE_ON) ||
+              (btech_random_roll(wounded->xcode.context) > 5)) {
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
             MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
@@ -675,11 +680,11 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
      * negative num. If its negative, (lower then -1 which will stay as
      * selfdamage) we'll check a 'Physical Weapons Table' and abs() the value
      * and pick the name out from there */
-    if (btech_context_active()->configuration->btech_statengine_obj > 0 &&
+    if (wounded->xcode.context->configuration->btech_statengine_obj > 0 &&
         wWeapIndx != -1)
       notify_with_cause(
-          BTECH_EVALUATION_CONTEXT,
-          btech_context_active()->configuration->btech_statengine_obj, GOD,
+          btech_context_evaluation(wounded->xcode.context),
+          wounded->xcode.context->configuration->btech_statengine_obj, GOD,
           tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
                   attacker->mapindex, MechPilot(attacker), MechPilot(wounded),
                   MechType_Ref(attacker), MechType_Ref(wounded),
@@ -747,7 +752,8 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
 
   /* Check to see if the tow lines should snap */
   if (tSnapTowLines && (MechCarrying(wounded) > 0)) {
-    if ((towTarget = getMech(MechCarrying(wounded)))) {
+    if ((towTarget = btech_context_get_mech(wounded->xcode.context,
+                                            MechCarrying(wounded)))) {
       mech_notify(wounded, MECHALL, "The hit causes your tow line to let go!");
       mech_notify(towTarget, MECHALL, "Your tow lines go suddenly slack!");
       MechLOSBroadcast(wounded,
@@ -851,7 +857,7 @@ void LoseWeapon(MECH *mech, int hitloc) {
 
   if (!i)
     return;
-  a = Number(1, i);
+  a = btech_random_range(mech->xcode.context, 1, i);
   b = FindWeaponTypeNumInLoc(mech, hitloc, a);
   if (b < 0)
     return;
@@ -899,7 +905,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(wounded, i) && GetSectInt(wounded, i))
         return;
-    if (mux_event_count_type_data(btech_context_active()->events,
+    if (mux_event_count_type_data(wounded->xcode.context->events,
                                   EVENT_NUKEMECH, (void *)wounded)) {
       fprintf(stderr, "And nuke event already existed.\n");
       return;
@@ -922,7 +928,8 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
    * arm */
   if ((hitloc == RARM || hitloc == LARM)) {
     if (MechCarrying(wounded) > 0) {
-      if ((ttarget = getMech(MechCarrying(wounded)))) {
+      if ((ttarget = btech_context_get_mech(wounded->xcode.context,
+                                            MechCarrying(wounded)))) {
         mech_notify(ttarget, MECHALL, "Your tow lines go suddenly slack!");
         mech_dropoff(GOD, wounded, "");
       }
@@ -958,7 +965,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
   }
 
   /* Ensure the template's timely demise */
-  if (is_in_character(btech_context_active()->database, wounded->mynum)) {
+  if (is_in_character(wounded->xcode.context->database, wounded->mynum)) {
     /* Clear the freqs on the unit... */
     for (j = 0; j < FREQS; j++) {
       wounded->freq[j] = 0;
@@ -967,11 +974,12 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
     }
 
     /* There's a 25% chance of bsuit pilots living through it */
-    if ((MechType(wounded) == CLASS_BSUIT) && (Number(1, 100) <= 25) &&
+    if ((MechType(wounded) == CLASS_BSUIT) &&
+        (btech_random_range(wounded->xcode.context, 1, 100) <= 25) &&
         wounded_pilot)
       autoeject(wounded_pilot, wounded, 1);
     else
-      KillMechContentsIfIC(wounded->mynum);
+      KillMechContentsIfIC(wounded);
     /* Schedule removal of the template */
     if (!IsDS(wounded))
       discard_mw(wounded);
@@ -1008,13 +1016,13 @@ skip_nuke:
       /* If it's the head or a MW's CT, kill the contents if IC */
       if (hitloc == HEAD ||
           ((MechType(wounded) == CLASS_MW) && (hitloc == CTORSO))) {
-        if (is_in_character(btech_context_active()->database, wounded->mynum)) {
+        if (is_in_character(wounded->xcode.context->database, wounded->mynum)) {
           for (j = 0; j < FREQS; j++) {
             wounded->freq[j] = 0;
             wounded->freqmodes[j] = 0;
             wounded->chantitle[j][0] = 0;
           }
-          KillMechContentsIfIC(wounded->mynum);
+          KillMechContentsIfIC(wounded);
         }
       }
 
@@ -1038,7 +1046,7 @@ skip_nuke:
         wounded->freqmodes[j] = 0;
         wounded->chantitle[j][0] = 0;
       }
-      KillMechContentsIfIC(wounded->mynum);
+      KillMechContentsIfIC(wounded);
     }
     return;
   }
@@ -1139,17 +1147,26 @@ void mech_damage(DbRef player, MECH *mech, char *buffer) {
   int damage, clustersize;
   int isrear, iscritical;
 
-  DOCHECK(mech_parseattributes(buffer, args, 5) != 4, "Invalid arguments!");
-  DOCHECK(Readnum(damage, args[0]), "Invalid damage!");
-  DOCHECK(Readnum(clustersize, args[1]), "Invalid cluster size!");
-  DOCHECK(Readnum(isrear, args[2]), "Invalid isrear flag!");
-  DOCHECK(Readnum(iscritical, args[3]), "Invalid iscritical flag!");
-  DOCHECK(damage <= 0 || damage > 1000, "Invalid damage!");
-  DOCHECK(clustersize <= 0, "Invalid cluster size!");
-  DOCHECK(
-      clustersize > damage,
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 5) != 4,
+                  "Invalid arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(damage, args[0]),
+                  "Invalid damage!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(clustersize, args[1]),
+                  "Invalid cluster size!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(isrear, args[2]),
+                  "Invalid isrear flag!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(iscritical, args[3]),
+                  "Invalid iscritical flag!");
+  DOCHECK_CONTEXT(mech->xcode.context, damage <= 0 || damage > 1000,
+                  "Invalid damage!");
+  DOCHECK_CONTEXT(mech->xcode.context, clustersize <= 0,
+                  "Invalid cluster size!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, clustersize > damage,
       "Invalid cluster size! (must be smaller than damage amount, but > 0)");
-  DOCHECK(MechType(mech) == CLASS_MW, "No MW killings!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
+                  "No MW killings!");
   Missile_Hit(mech, mech, -1, -1, isrear, iscritical, 0, -1, -1, clustersize,
               damage / clustersize, 1, 0, 0, 0);
 }
@@ -1160,8 +1177,9 @@ void mech_damage_section(DbRef player, MECH *mech, char *buffer) {
 
   /* ARGS: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL> */
 
-  DOCHECK(mech_parseattributes(buffer, args, 5) != 4,
-          "Invalid Arguments: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, mech_parseattributes(buffer, args, 5) != 4,
+      "Invalid Arguments: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>");
 
   section = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
@@ -1170,13 +1188,14 @@ void mech_damage_section(DbRef player, MECH *mech, char *buffer) {
     return;
   }
 
-  DOCHECK(Readnum(damage, args[1]),
-          "Invalid damage (Arg 2) amount! (Must be a number!)");
-  DOCHECK(Readnum(isrear, args[2]), "Isrear value (Arg 3) Invalid! (1 or 0)");
-  DOCHECK(Readnum(iscritical, args[3]),
-          "Iscritical value (Arg 4) Invalid! (1 or 0)");
-  DOCHECK(damage <= 0 || damage > 1000,
-          "Invalid damage (Arg 2 amount! (Must be >0 or <1000)");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(damage, args[1]),
+                  "Invalid damage (Arg 2) amount! (Must be a number!)");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(isrear, args[2]),
+                  "Isrear value (Arg 3) Invalid! (1 or 0)");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(iscritical, args[3]),
+                  "Iscritical value (Arg 4) Invalid! (1 or 0)");
+  DOCHECK_CONTEXT(mech->xcode.context, damage <= 0 || damage > 1000,
+                  "Invalid damage (Arg 2 amount! (Must be >0 or <1000)");
   DamageMech(mech, mech, 0, -1, section, isrear, iscritical, damage, 0, 0, 0,
              -1, 0, 1);
 }

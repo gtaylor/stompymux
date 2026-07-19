@@ -33,8 +33,8 @@
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
 
-extern int internalsweight[];
-extern int cargoweight[];
+extern const int internalsweight[];
+extern const int cargoweight[];
 #endif /* BT_PART_WEIGHTS */
 
 /* Also sets the fuel we have ; but I digress */
@@ -46,7 +46,8 @@ void SetCargoWeight(MECH *mech) {
   char *t;
   int i1, i2, i3;
 
-  t = silly_atr_get(mech->mynum, A_ECONPARTS);
+  t = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                           A_ECONPARTS, (char[LBUF_SIZE]){0});
   bzero(pile, sizeof(pile));
   while (*t) {
     if (*t == '[')
@@ -83,31 +84,30 @@ int loading_bay_whine(DbRef player, DbRef cargobay, MECH *mech) {
   char *c;
   int i1, i2, i3 = 0;
 
-  c = silly_atr_get(cargobay, A_MECHSKILLS);
+  c = btech_attribute_read(mech->xcode.context->database, cargobay,
+                           A_MECHSKILLS, (char[LBUF_SIZE]){0});
   if (c && *c)
     if (sscanf(c, "%d %d %d", &i1, &i2, &i3) >= 2)
       if (MechX(mech) != i1 || MechY(mech) != i2) {
-        notify(BTECH_EVALUATION_CONTEXT, player,
+        notify(btech_context_evaluation(mech->xcode.context), player,
                "You're not where the cargo is!");
         if (i3)
-          notify_printf(BTECH_EVALUATION_CONTEXT, player,
+          notify_printf(btech_context_evaluation(mech->xcode.context), player,
                         "Try looking around %d,%d instead.", i1, i2);
         return 1;
       }
   return 0;
 }
 
-void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
-  int loc = game_object_location(btech_context_active()->database, player);
+void econ_fix_stuff(BtechContext *context, DbRef player, DbRef loc) {
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   char *t;
   int ol, nl, items = 0, kinds = 0;
   int i1, i2, i3, id, brand;
 
-  if (!data)
-    loc = atoi(buffer);
   bzero(pile, sizeof(pile));
-  t = silly_atr_get(loc, A_ECONPARTS);
+  t = btech_attribute_read(context->database, loc, A_ECONPARTS,
+                           (char[LBUF_SIZE]){0});
   ol = strlen(t);
   while (*t) {
     if (*t == '[')
@@ -116,26 +116,38 @@ void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
           pile[i2][i1] += i3;
     t++;
   }
-  silly_atr_set(loc, A_ECONPARTS, "");
+  silly_atr_set_in(context->database, loc, A_ECONPARTS, "");
   for (id = 0; id < NUM_ITEMS; id++)
     for (brand = 0; brand <= BRANDCOUNT; brand++)
-      if (pile[brand][id] > 0 && get_parts_long_name(id, brand)) {
-        econ_change_items(loc, id, brand, pile[brand][id]);
+      if (pile[brand][id] > 0 && get_parts_long_name(context, id, brand)) {
+        econ_change_items(context, loc, id, brand, pile[brand][id]);
         kinds++;
         items += pile[brand][id];
       }
-  t = silly_atr_get(loc, A_ECONPARTS);
+  t = btech_attribute_read(context->database, loc, A_ECONPARTS,
+                           (char[LBUF_SIZE]){0});
   nl = strlen(t);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(context), player,
                 "Fixing done. Original length: %d. New length: %d.", ol, nl);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(context), player,
                 "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
 
-void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
+void mech_Rfixstuff(DbRef player, void *data, char *buffer) {
+  XCODE *object = data;
+  BtechContext *context = object->context;
+
+  econ_fix_stuff(context, player,
+                 game_object_location(context->database, player));
+}
+
+void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
+                   char *buf) {
+  GameDatabase *database = context->database;
   int pile[BRANDCOUNT + 1][NUM_ITEMS];
   int pile2[BRANDCOUNT + 1][NUM_ITEMS];
   char *t, *ch;
+  PartDisplayName display_name;
   int i1, i2, i3, id, brand;
   int x, i;
 
@@ -152,7 +164,7 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
   CreateMenuEntry_Simple(&c, header, CM_ONE | CM_CENTER);
   CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
   /* Then, we go on a mad rampage ;-) */
-  t = silly_atr_get(loc, A_ECONPARTS);
+  t = btech_attribute_read(database, loc, A_ECONPARTS, (char[LBUF_SIZE]){0});
   while (*t) {
     if (*t == '[')
       if ((sscanf(t, "[%d,%d,%d]", &i1, &i2, &i3)) == 3)
@@ -161,24 +173,28 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
   }
   i = 0;
   if (buf)
-    while (find_matching_long_part(buf, &i, &id, &brand))
+    while (find_matching_long_part(context, buf, &i, &id, &brand))
       pile2[brand][id] = pile[brand][id];
-  for (i = 0; i < object_count; i++) {
-    UNPACK_PART(short_sorted[i]->index, id, brand);
+  for (i = 0; i < (int)part_name_count(context); i++) {
+    const PN *part_name = part_name_at(context, (size_t)i);
+
+    UNPACK_PART(part_name->index, id, brand);
     if ((buf && (x = pile2[brand][id])) || ((!buf && (x = pile[brand][id])))) {
-#ifndef BT_PART_WEIGHTS
-      ch = part_name_long(id, brand);
-#else
-      sw = GetPartWeight(id);
-      snprintf(tmpstr, LBUF_SIZE, "%s (%.1ft)", part_name_long(id, brand),
-               (sw * x) / 1024.0);
-      ch = tmpstr;
-#endif /* BT_PART_WEIGHTS */
-      if (!ch) {
-        SendError(tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.",
+      display_name = part_name_long(context, id, brand);
+      if (!display_name.valid) {
+        SendError(context,
+                  tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.",
                           player, loc, pile[brand][id], id, brand));
         continue;
       }
+#ifndef BT_PART_WEIGHTS
+      ch = display_name.text;
+#else
+      sw = GetPartWeight(id);
+      snprintf(tmpstr, LBUF_SIZE, "%s (%.1ft)", display_name.text,
+               (sw * x) / 1024.0);
+      ch = tmpstr;
+#endif /* BT_PART_WEIGHTS */
       /* x = amount of things */
       CreateMenuEntry_Killer(&c, ch, CM_TWO | CM_NUMBER | CM_NOTOG, 0, x, x);
       found++;
@@ -187,58 +203,56 @@ void list_matching(DbRef player, char *header, DbRef loc, char *buf) {
   if (!found)
     CreateMenuEntry_Simple(&c, "None", CM_ONE);
   CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
 
-#define MY_DO_LIST(t)                                                          \
+#define MY_DO_LIST(context, t)                                                 \
   if (*buffer)                                                                 \
-    list_matching(                                                             \
-        player,                                                                \
-        tprintf("Part listing for %s matching %s",                             \
-                game_object_name(btech_context_active()->database, t),         \
-                buffer),                                                       \
-        t, buffer);                                                            \
+    list_matching(context, player,                                             \
+                  tprintf("Part listing for %s matching %s",                   \
+                          game_object_name((context)->database, t), buffer),   \
+                  t, buffer);                                                  \
   else                                                                         \
-    list_matching(                                                             \
-        player,                                                                \
-        tprintf("Part listing for %s",                                         \
-                game_object_name(btech_context_active()->database, t)),        \
-        t, NULL)
+    list_matching(context, player,                                             \
+                  tprintf("Part listing for %s",                               \
+                          game_object_name((context)->database, t)),           \
+                  t, nullptr)
 
 void mech_manifest(DbRef player, void *data, char *buffer) {
+  XCODE *object = data;
+  BtechContext *context = object->context;
+
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(game_object_location(btech_context_active()->database, player));
+  MY_DO_LIST(context, game_object_location(context->database, player));
 }
 
 void mech_stores(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  BtechContext *context = mech->xcode.context;
+  GameDatabase *database = context->database;
 
   cch(MECH_USUAL);
-  DOCHECK(
-      game_object_location(btech_context_active()->database, mech->mynum) !=
-              mech->mapindex ||
-          is_in_character(btech_context_active()->database,
-                          game_object_location(btech_context_active()->database,
-                                               mech->mynum)),
+  DOCHECK_CONTEXT(
+      context,
+      game_object_location(database, mech->mynum) != mech->mapindex ||
+          is_in_character(database,
+                          game_object_location(database, mech->mynum)),
       "You aren't inside a hangar!");
-  if (loading_bay_whine(
-          player,
-          game_object_location(btech_context_active()->database, mech->mynum),
-          mech))
+  if (loading_bay_whine(player, game_object_location(database, mech->mynum),
+                        mech))
     return;
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(
-      game_object_location(btech_context_active()->database, mech->mynum));
+  MY_DO_LIST(mech->xcode.context, game_object_location(database, mech->mynum));
 }
 
 #ifdef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
 #define silly_search(func)                                                     \
   if (!count) {                                                                \
     i = -1;                                                                    \
-    while (func(args[0], &i, &id, &brand))                                     \
+    while (func(context, args[0], &i, &id, &brand))                            \
       count++;                                                                 \
     if (count > 0)                                                             \
       sfun = func;                                                             \
@@ -247,9 +261,9 @@ void mech_stores(DbRef player, void *data, char *buffer) {
 #define silly_search(func)                                                     \
   if (!count) {                                                                \
     i = -1;                                                                    \
-    while (func(args[0], &i, &id, &brand))                                     \
+    while (func(context, args[0], &i, &id, &brand))                            \
       count++;                                                                 \
-    DOCHECK(count > 1, "Too many matches!");                                   \
+    DOCHECK_CONTEXT(context, count > 1, "Too many matches!");                  \
     if (count > 0)                                                             \
       sfun = func;                                                             \
   }
@@ -258,19 +272,20 @@ void mech_stores(DbRef player, void *data, char *buffer) {
 /* Handles adding or removing parts/commods from a map or unit's manifest.
  * btaddstores(), addstuff, and removestuff use this.
  */
-static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
-                             int mod, int mort) {
+static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
+                             DbRef loc1, DbRef loc2, int mod, int mort) {
   int i = -1, id, brand;
   int count = 0;
   int argc;
   char *args[2];
   char *c;
   int num;
-  int (*sfun)(char *, int *i, int *id, int *brand) = NULL;
+  int (*sfun)(BtechContext *, const char *, int *i, int *id, int *brand) =
+      nullptr;
   int foo = 0;
 
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc < 2, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(context, argc < 2, "Invalid number of arguments!");
 
   /*
    * If we hit the max amount of parts addable at once, set quantity
@@ -281,36 +296,38 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
     num = ADDSTORES_MAX;
   }
 
-  DOCHECK(num <= 0, "Invalid amount!");
+  DOCHECK_CONTEXT(context, num <= 0, "Invalid amount!");
   silly_search(find_matching_short_part);
   silly_search(find_matching_vlong_part);
   silly_search(find_matching_long_part);
-  DOCHECK(count == 0, tprintf("Nothing matches '%s'!", args[0]));
-  DOCHECK(!mort && count > 20 && player != GOD,
-          tprintf("Wizards can't add more than 20 different objtypes at a "
-                  "time. ('%s' matches: %d)",
-                  args[0], count));
+  DOCHECK_CONTEXT(context, count == 0,
+                  tprintf("Nothing matches '%s'!", args[0]));
+  DOCHECK_CONTEXT(
+      context, !mort && count > 20 && player != GOD,
+      tprintf("Wizards can't add more than 20 different objtypes at a "
+              "time. ('%s' matches: %d)",
+              args[0], count));
   if (mort) {
-    DOCHECK(game_object_location(btech_context_active()->database, player) !=
-                loc1,
-            "You ain't in your 'mech!");
-    DOCHECK(game_object_location(btech_context_active()->database, loc1) !=
-                loc2,
-            "You ain't in hangar!");
+    DOCHECK_CONTEXT(context,
+                    game_object_location(context->database, player) != loc1,
+                    "You ain't in your 'mech!");
+    DOCHECK_CONTEXT(context,
+                    game_object_location(context->database, loc1) != loc2,
+                    "You ain't in hangar!");
   }
   i = -1;
 #define MY_ECON_MODIFY(loc, num)                                               \
-  econ_change_items(loc, id, brand, num);                                      \
-  SendEcon(tprintf("#%ld %s %d %s %s #%ld.", player,                           \
-                   num > 0 ? "added" : "removed", abs(num),                    \
-                   (c = get_parts_long_name(id, brand)),                       \
-                   num > 0 ? "to" : "from", loc))
-  while (sfun(args[0], &i, &id, &brand)) {
+  econ_change_items(context, loc, id, brand, num);                             \
+  SendEcon(context, tprintf("#%ld %s %d %s %s #%ld.", player,                  \
+                            num > 0 ? "added" : "removed", abs(num),           \
+                            (c = get_parts_long_name(context, id, brand)),     \
+                            num > 0 ? "to" : "from", loc))
+  while (sfun(context, args[0], &i, &id, &brand)) {
     if (mort) {
       if (mod < 0)
-        count = MIN(num, econ_find_items(loc1, id, brand));
+        count = MIN(num, econ_find_items(context, loc1, id, brand));
       else
-        count = MIN(num, econ_find_items(loc2, id, brand));
+        count = MIN(num, econ_find_items(context, loc2, id, brand));
     } else
       count = num;
     foo += count;
@@ -320,70 +337,78 @@ static void stuff_change_sub(DbRef player, char *buffer, DbRef loc1, DbRef loc2,
     if (count)
       switch (mort) {
       case 0:
-        notify_printf(BTECH_EVALUATION_CONTEXT, player, "You %s %d %s%s.",
-                      mod > 0 ? "add" : "remove", count, c,
+        notify_printf(btech_context_evaluation(context), player,
+                      "You %s %d %s%s.", mod > 0 ? "add" : "remove", count, c,
                       count > 1 ? "s" : "");
         break;
       case 1:
         MY_ECON_MODIFY(loc2, (0 - mod) * count);
-        notify_printf(BTECH_EVALUATION_CONTEXT, player, "You %s %d %s%s.",
-                      mod > 0 ? "load" : "unload", count, c,
+        notify_printf(btech_context_evaluation(context), player,
+                      "You %s %d %s%s.", mod > 0 ? "load" : "unload", count, c,
                       count > 1 ? "s" : "");
         break;
       }
   }
-  DOCHECK(!foo, "Nothing matching that criteria was found!");
+  DOCHECK_CONTEXT(context, !foo, "Nothing matching that criteria was found!");
 }
 
 void mech_Raddstuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(
-      player, buffer,
-      game_object_location(btech_context_active()->database, player), -1, 1, 0);
+  XCODE *object = data;
+  BtechContext *context = object->context;
+
+  stuff_change_sub(context, player, buffer,
+                   game_object_location(context->database, player), -1, 1, 0);
 }
 
 void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
-  stuff_change_sub(
-      player, buffer,
-      game_object_location(btech_context_active()->database, player), -1, -1,
-      0);
+  XCODE *object = data;
+  BtechContext *context = object->context;
+
+  stuff_change_sub(context, player, buffer,
+                   game_object_location(context->database, player), -1, -1, 0);
 }
 
 void mech_loadcargo(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  BtechContext *context = mech->xcode.context;
 
   cch(MECH_USUALO);
-  DOCHECK(!(MechSpecials(mech) & CARGO_TECH), "This unit cannot haul cargo!");
-  DOCHECK(fabs(MechSpeed(mech)) > 0.0, "You're moving too fast!");
-  DOCHECK(
-      game_object_location(btech_context_active()->database, mech->mynum) !=
-              mech->mapindex ||
-          is_in_character(btech_context_active()->database,
-                          game_object_location(btech_context_active()->database,
-                                               mech->mynum)),
+  DOCHECK_CONTEXT(context, !(MechSpecials(mech) & CARGO_TECH),
+                  "This unit cannot haul cargo!");
+  DOCHECK_CONTEXT(context, fabs(MechSpeed(mech)) > 0.0,
+                  "You're moving too fast!");
+  DOCHECK_CONTEXT(
+      context,
+      game_object_location(context->database, mech->mynum) != mech->mapindex ||
+          is_in_character(context->database,
+                          game_object_location(context->database, mech->mynum)),
       "You aren't inside hangar!");
   if (loading_bay_whine(
-          player,
-          game_object_location(btech_context_active()->database, mech->mynum),
-          mech))
+          player, game_object_location(context->database, mech->mynum), mech))
     return;
-  stuff_change_sub(player, buffer, mech->mynum, mech->mapindex, 1, 1);
+  stuff_change_sub(context, player, buffer, mech->mynum, mech->mapindex, 1, 1);
   correct_speed(mech);
 }
 
 void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  BtechContext *context = mech->xcode.context;
 
   cch(MECH_USUALSO);
-  DOCHECK(!(MechSpecials(mech) & CARGO_TECH), "This unit cannot haul cargo!");
-  stuff_change_sub(player, buffer, mech->mynum, mech->mapindex, -1, 1);
+  DOCHECK_CONTEXT(context, !(MechSpecials(mech) & CARGO_TECH),
+                  "This unit cannot haul cargo!");
+  stuff_change_sub(context, player, buffer, mech->mynum, mech->mapindex, -1, 1);
   correct_speed(mech);
 }
 
 void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
-  notify(BTECH_EVALUATION_CONTEXT, player, "Inventory cleaned!");
-  silly_atr_set(game_object_location(btech_context_active()->database, player),
-                A_ECONPARTS, "");
-  SendEcon(
-      tprintf("#%ld reset #%ld's stuff.", player,
-              game_object_location(btech_context_active()->database, player)));
+  XCODE *object = data;
+  BtechContext *context = object->context;
+
+  notify(btech_context_evaluation(context), player, "Inventory cleaned!");
+  silly_atr_set_in(context->database,
+                   game_object_location(context->database, player), A_ECONPARTS,
+                   "");
+  SendEcon(context, tprintf("#%ld reset #%ld's stuff.", player,
+                            game_object_location(context->database, player)));
 }

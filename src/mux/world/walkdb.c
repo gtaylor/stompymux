@@ -2,7 +2,9 @@
  * walkdb.c -- Support for commands that walk the entire db
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
@@ -10,7 +12,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -35,8 +36,8 @@ static void bind_and_queue(EvaluationContext *evaluation, DbRef player,
 
   command = replace_string(BOUND_VAR, argstr, action),
   command2 = replace_string(LISTPLACE_VAR, tprintf("%d", number), command);
-  wait_que(evaluation->server->commands, player, cause, 0, NOTHING, 0, command2,
-           cargs, ncargs, evaluation->registers);
+  wait_que(evaluation->runtime->commands, player, cause, 0, NOTHING, 0,
+           command2, cargs, ncargs, evaluation->registers);
   free_lbuf(command);
   free_lbuf(command2);
 }

@@ -1,5 +1,5 @@
 {
-  "name": "btmux-khi-docsite",
+  "name": "stompymux-docsite",
   "private": true,
   "scripts": {
     "build": "hugo --source . --destination public --cleanDestinationDir",

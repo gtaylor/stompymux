@@ -2,12 +2,13 @@
  * vattr.c -- Manages the user-defined attributes.
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/database/attrs.h"
 #include "mux/database/vattr.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -57,8 +58,7 @@ void vattr_store_destroy(VattrStore *store) {
   for (VATTR *attribute = hash_table_first_entry(&store->names);
        attribute != nullptr; attribute = hash_table_next_entry(&store->names))
     free(attribute);
-  hash_table_flush(&store->names, 0);
-  red_black_tree_destroy(store->names.tree);
+  hash_table_destroy(&store->names);
   while (store->blocks != nullptr) {
     VattrStringBlock *next = store->blocks->next;
 
@@ -130,7 +130,7 @@ VATTR *vattr_define(VattrStore *store, char *name, int number, int flags) {
 }
 
 void do_dbclean(CommandInvocation *invocation) {
-  VattrStore *store = invocation->context->server->vattrs;
+  VattrStore *store = invocation->context->runtime->vattrs;
   VATTR *vp;
   DbRef i;
   int notfree;
@@ -140,7 +140,7 @@ void do_dbclean(CommandInvocation *invocation) {
        vp = (VATTR *)hash_table_next_entry(&store->names)) {
     notfree = 0;
 
-    DO_WHOLE_DB(&invocation->context->server->database, i) {
+    DO_WHOLE_DB(invocation->context->world->database, i) {
       if (attribute_get_raw(store->database, i, vp->number) != nullptr) {
         notfree = 1;
         break;

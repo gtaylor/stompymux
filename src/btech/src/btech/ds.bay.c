@@ -29,26 +29,32 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
   MECH *ds = (MECH *)data;
   MAP *map;
 
-  DOCHECK((argc = mech_parseattributes(buffer, args, NUM_BAYS + 1)) ==
-              (NUM_BAYS + 1),
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(ds->xcode.context,
+                  (argc = mech_parseattributes(buffer, args, NUM_BAYS + 1)) ==
+                      (NUM_BAYS + 1),
+                  "Invalid number of arguments!");
   for (i = 0; i < argc; i++) {
-    it = match_thing(BTECH_MATCH_CONTEXT, player, args[i]);
-    DOCHECK(it == NOTHING, tprintf("Argument %d is invalid.", i + 1));
-    DOCHECK(!IsMap(it), tprintf("Argument %d is not a map.", i + 1));
-    map = FindObjectsData(it);
+    it = match_thing(&btech_context_command(ds->xcode.context)->match, player,
+                     args[i]);
+    DOCHECK_CONTEXT(ds->xcode.context, it == NOTHING,
+                    tprintf("Argument %d is invalid.", i + 1));
+    DOCHECK_CONTEXT(ds->xcode.context,
+                    !btech_context_is_map(ds->xcode.context, it),
+                    tprintf("Argument %d is not a map.", i + 1));
+    map = btech_context_find_object(ds->xcode.context, it);
     AeroBay(ds, i) = it;
     map->onmap = ds->mynum;
   }
   for (i = argc; i < NUM_BAYS; i++)
     AeroBay(ds, i) = -1;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d bay(s) set up!", argc);
+  notify_printf(btech_context_evaluation(ds->xcode.context), player,
+                "%d bay(s) set up!", argc);
 }
 
-extern int dirs[6][2];
+extern const int dirs[6][2];
 
-static int dir2loc[6] = {DS_NOSE, DS_RWING,  DS_RRWING,
-                         DS_AFT,  DS_LRWING, DS_LWING};
+static const int dir2loc[6] = {DS_NOSE, DS_RWING,  DS_RRWING,
+                               DS_AFT,  DS_LRWING, DS_LWING};
 
 int Find_DS_Bay_Number(MECH *ds, int dir) {
   int bayn = 0;
@@ -97,7 +103,7 @@ int Find_DS_Bay_In_MechHex(MECH *seer, MECH *ds, long *bayn) {
 }
 
 static int Find_Single_DS_In_MechHex(MECH *mech, long *ref, long *bayn) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int loop;
   MECH *tempMech;
   int count = 0;
@@ -107,7 +113,8 @@ static int Find_Single_DS_In_MechHex(MECH *mech, long *ref, long *bayn) {
     return 0;
   for (loop = 0; loop < map->first_free; loop++)
     if (map->mechsOnMap[loop] >= 0) {
-      if (!(tempMech = getMech(map->mechsOnMap[loop])))
+      if (!(tempMech = btech_context_get_mech(mech->xcode.context,
+                                              map->mechsOnMap[loop])))
         continue;
       if (!IsDS(tempMech))
         continue;
@@ -138,33 +145,37 @@ static void mech_enterbay_event(MuxEvent *e) {
        fabs(MMaxSpeed(mech)) >= MP1) ||
       (MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0))
     return;
-  tmpmap = getMap(ref);
-  if (!(ds = getMech(tmpmap->onmap)))
+  tmpmap = btech_context_get_map(mech->xcode.context, ref);
+  if (!(ds = btech_context_get_mech(mech->xcode.context, tmpmap->onmap)))
     return;
   if (!Find_DS_Bay_In_MechHex(mech, ds, &bayn))
     return;
   /* whee */
   ref = AeroBay(ds, bayn);
-  StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 1);
+  StopBSuitSwarmers(
+      btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_notify(mech, MECHALL, "You enter the bay.");
-  MechLOSBroadcast(mech, tprintf("has entered %s at %d,%d.", GetMechID(ds),
-                                 MechX(mech), MechY(mech)));
+  MechLOSBroadcast(mech,
+                   tprintf("has entered %s at %d,%d.", mech_display_id(ds).text,
+                           MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
   if (MechType(mech) == CLASS_MW &&
-      !is_in_character(btech_context_active()->database, ref)) {
+      !is_in_character(mech->xcode.context->database, ref)) {
     enter_mw_bay(mech, ref);
     return;
   }
   if (MechCarrying(mech) > 0)
-    tmpm = getMech(MechCarrying(mech));
+    tmpm = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
   MechLOSBroadcast(mech, "has entered the bay.");
-  loud_teleport(mech->mynum, ref);
+  move_via_teleport(btech_context_evaluation(mech->xcode.context), mech->mynum,
+                    ref, 1, 0);
   if (tmpm) {
     mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", ref));
     mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
-    loud_teleport(tmpm->mynum, ref);
+    move_via_teleport(btech_context_evaluation(mech->xcode.context),
+                      tmpm->mynum, ref, 1, 0);
   }
 }
 
@@ -194,7 +205,7 @@ static int DS_Bay_Is_EnterOK(MECH *mech, MECH *ds, DbRef bayref) {
   for (i = 0; i < NUM_BAYS; i++)
     if (AeroBay(ds, i) > 0)
       if (AeroBay(ds, i) == bayref)
-        return mux_event_count_type_data2(btech_context_active()->events,
+        return mux_event_count_type_data2(ds->xcode.context->events,
                                           EVENT_ENTER_HANGAR,
                                           (void *)bayref) > 0
                    ? 0
@@ -212,59 +223,86 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   MAP *map;
 
   cch(MECH_USUAL);
-  DOCHECK(MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0,
-          "You lack fuel to maneuver in!");
-  DOCHECK(Jumping(mech), "While in mid-jump? No way.");
-  DOCHECK(MechType(mech) == CLASS_MECH && (Fallen(mech) || Standing(mech)),
-          "Crawl inside? I think not. Stand first.");
-  DOCHECK(OODing(mech), "While in mid-flight? No way.");
-  DOCHECK((argc = mech_parseattributes(buffer, args, 2)) == 2,
-          "Hmm, invalid number of arguments?");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0,
+                  "You lack fuel to maneuver in!");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "While in mid-jump? No way.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MECH &&
+                      (Fallen(mech) || Standing(mech)),
+                  "Crawl inside? I think not. Stand first.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While in mid-flight? No way.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (argc = mech_parseattributes(buffer, args, 2)) == 2,
+                  "Hmm, invalid number of arguments?");
   if (argc > 0)
-    DOCHECK((ref = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
-            "Invalid target!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    (ref = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
+                    "Invalid target!");
   if (ref < 0) {
-    DOCHECK(!Find_Single_DS_In_MechHex(mech, &ref, &bayn),
-            "No DS bay found in your hex!");
-    DOCHECK(ref < 0, "Multiple enterable things found ; use the id for "
-                     "specifying which you want.");
-    DOCHECK(!(ds = getMech(ref)), "You sense wrongness in fabric of space.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !Find_Single_DS_In_MechHex(mech, &ref, &bayn),
+                    "No DS bay found in your hex!");
+    DOCHECK_CONTEXT(mech->xcode.context, ref < 0,
+                    "Multiple enterable things found ; use the id for "
+                    "specifying which you want.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !(ds = btech_context_get_mech(mech->xcode.context, ref)),
+                    "You sense wrongness in fabric of space.");
   } else {
-    DOCHECK(!(ds = getMech(ref)), "You sense wrongness in fabric of space.");
-    DOCHECK(!Find_DS_Bay_In_MechHex(mech, ds, &bayn),
-            "You see no bays in your hex.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !(ds = btech_context_get_mech(mech->xcode.context, ref)),
+                    "You sense wrongness in fabric of space.");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !Find_DS_Bay_In_MechHex(mech, ds, &bayn),
+                    "You see no bays in your hex.");
   }
-  DOCHECK(IsDS(mech) && !(MechSpecials2(mech) & CARRIER_TECH),
-          "Your craft can't enter bays.");
-  DOCHECK(!DS_Bay_Is_Open(mech, ds, AeroBay(ds, bayn)),
-          "The door has been jammed!");
-  DOCHECK(IsDS(mech), "Your unit is a bit too large to fit in there.");
-  DOCHECK((fabs((float)(MechSpeed(mech) - MechSpeed(ds)))) > MP1,
-          "Speed difference's too large to enter!");
-  DOCHECK(MechZ(ds) != MechZ(mech),
-          "Get to same elevation before thinking about entering!");
-  DOCHECK(fabs(MechVerticalSpeed(mech) - MechVerticalSpeed(ds)) > 10,
-          "Vertical speed difference is too great to enter safely!");
-  DOCHECK(MechType(mech) == CLASS_MECH && !MechIsQuad(mech) &&
-              (IsMechLegLess(mech)),
-          "Without legs? Are you kidding?");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  IsDS(mech) && !(MechSpecials2(mech) & CARRIER_TECH),
+                  "Your craft can't enter bays.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !DS_Bay_Is_Open(mech, ds, AeroBay(ds, bayn)),
+                  "The door has been jammed!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsDS(mech),
+                  "Your unit is a bit too large to fit in there.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (fabs((float)(MechSpeed(mech) - MechSpeed(ds)))) > MP1,
+                  "Speed difference's too large to enter!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechZ(ds) != MechZ(mech),
+                  "Get to same elevation before thinking about entering!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  fabs(MechVerticalSpeed(mech) - MechVerticalSpeed(ds)) > 10,
+                  "Vertical speed difference is too great to enter safely!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MECH && !MechIsQuad(mech) &&
+                      (IsMechLegLess(mech)),
+                  "Without legs? Are you kidding?");
   ref = AeroBay(ds, bayn);
-  map = getMap(ref);
+  map = btech_context_get_map(mech->xcode.context, ref);
 
-  DOCHECK(!map, "You sense wrongness in fabric of space.");
+  DOCHECK_CONTEXT(mech->xcode.context, !map,
+                  "You sense wrongness in fabric of space.");
 
-  DOCHECK(EnteringHangar(mech), "You are already entering the hangar!");
-  if (!can_pass_lock(mech->mynum, ref, A_LENTER)) {
-    char *msg = silly_atr_get(ref, A_FAIL);
+  DOCHECK_CONTEXT(mech->xcode.context, EnteringHangar(mech),
+                  "You are already entering the hangar!");
+  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
+                               mech->mynum, ref, A_LENTER)) {
+    char *msg = btech_attribute_read(mech->xcode.context->database, ref, A_FAIL,
+                                     (char[LBUF_SIZE]){0});
     if (!msg || !*msg)
       msg = "You are unable to enter the bay!";
-    notify(BTECH_EVALUATION_CONTEXT, player, msg);
+    notify(btech_context_evaluation(mech->xcode.context), player, msg);
     return;
   }
-  DOCHECK(!DS_Bay_Is_EnterOK(mech, ds, AeroBay(ds, bayn)),
-          "Someone else is using the door at the moment.");
-  DOCHECK(!(map = getMap(mech->mapindex)),
-          "You sense a wrongness in fabric of space.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !DS_Bay_Is_EnterOK(mech, ds, AeroBay(ds, bayn)),
+                  "Someone else is using the door at the moment.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      !(map = btech_context_get_map(mech->xcode.context, mech->mapindex)),
+      "You sense a wrongness in fabric of space.");
   HexLOSBroadcast(map, MechX(mech), MechY(mech),
                   "The bay doors at $h start to open..");
   MECHEVENT(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
@@ -278,7 +316,8 @@ static void DS_Place(MECH *ds, MECH *mech, int frombay) {
   for (i = 0; i < NUM_BAYS; i++)
     if (AeroBay(ds, i) == frombay)
       break;
-  if (i == NUM_BAYS || !(mech_map = getMap(mech->mapindex))) {
+  if (i == NUM_BAYS || !(mech_map = btech_context_get_map(mech->xcode.context,
+                                                          mech->mapindex))) {
     /* i _should_ be set, otherwise things are deeply disturbing */
     mech_notify(mech, MECHALL, "Reality collapse imminent.");
     return;
@@ -303,28 +342,32 @@ static void DS_Place(MECH *ds, MECH *mech, int frombay) {
 static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   MECH *car = NULL;
 
-  StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 1);
+  StopBSuitSwarmers(
+      btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   MechLOSBroadcast(mech, "has left the bay.");
   /* We escape confines of the bay to open air/land! */
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%ld", ds->mapindex));
   if (MechCarrying(mech) > 0)
-    car = getMech(MechCarrying(mech));
+    car = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
   if (car)
     mech_Rsetmapindex(GOD, (void *)car, tprintf("%ld", ds->mapindex));
   DOCHECKMA0(mech->mapindex == map->mynum,
              "Fatal error: Unable to find the map 'ship is on.");
-  loud_teleport(mech->mynum, mech->mapindex);
+  move_via_teleport(btech_context_evaluation(mech->xcode.context), mech->mynum,
+                    mech->mapindex, 1, 0);
   if (car)
-    loud_teleport(car->mynum, mech->mapindex);
+    move_via_teleport(btech_context_evaluation(mech->xcode.context), car->mynum,
+                      mech->mapindex, 1, 0);
   mech_notify(mech, MECHALL, "You have left the bay.");
   DS_Place(ds, mech, frombay);
   if (car)
     MirrorPosition(mech, car, 0);
   MechLOSBroadcasti(mech, ds, "has left %s's bay.");
-  mech_notify(ds, MECHALL, tprintf("%s has left the bay.", GetMechID(mech)));
+  mech_notify(ds, MECHALL,
+              tprintf("%s has left the bay.", mech_display_id(mech).text));
   ContinueFlying(mech);
-  if (is_in_character(btech_context_active()->database, mech->mynum) &&
-      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+  if (is_in_character(mech->xcode.context->database, mech->mynum) &&
+      game_object_location(mech->xcode.context->database, MechPilot(mech)) !=
           mech->mynum) {
     mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
     mech_notify(mech, MECHALL,
@@ -337,11 +380,12 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
 int Leave_DS(MAP *map, MECH *mech) {
   MECH *car;
 
-  DOCHECKMA0(!(car = getMech(map->onmap)), "Invalid : No parent object?");
+  DOCHECKMA0(!(car = btech_context_get_mech(mech->xcode.context, map->onmap)),
+             "Invalid : No parent object?");
   DOCHECKMA0(!DS_Bay_Is_Open(mech, car, map->mynum),
              "The door has been jammed!");
   DOCHECKMA0(!Landed(car) && !FlyingT(mech), "The 'ship is still airborne!");
-  DOCHECKMA0(is_zombie(btech_context_active()->database, car->mynum),
+  DOCHECKMA0(is_zombie(car->xcode.context->database, car->mynum),
              "You don't feel leaving right now would be prudent..");
   return Leave_DS_Bay(map, car, mech, map->mynum);
 }

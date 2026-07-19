@@ -23,9 +23,10 @@
 #ifdef notify_except
 #undef notify_except
 #endif
-#define notify(BTECH_EVALUATION_CONTEXT, a, b) mecha_notify(a, b)
-#define notify_except(BTECH_EVALUATION_CONTEXT, a, b, c, d)                    \
-  mecha_notify_except(a, b, c, d)
+#define notify(evaluation, player, message)                                    \
+  mecha_notify(evaluation, player, message)
+#define notify_except(evaluation, location, player, exception, message)        \
+  mecha_notify_except(evaluation, location, player, exception, message)
 
 /* DOCHECK: Macros for the lazy
    DOCHEK(a,b) basically replaces if (a) { <somewaytopassmessage b>, return }
@@ -38,11 +39,26 @@
    everyone within the mech executing the command, MP = MECHPILOT,
    sends to pilot of the mech
    */
-#ifndef DOCHECK
-#define DOCHECK(a, b)                                                          \
+#ifndef DOCHECK_CONTEXT
+#define DOCHECK_CONTEXT(context, a, b)                                         \
   if (a) {                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
+    notify(btech_context_evaluation(context), player, b);                      \
     return;                                                                    \
+  }
+#define DOCHECK0_CONTEXT(context, a, b)                                        \
+  if (a) {                                                                     \
+    notify(btech_context_evaluation(context), player, b);                      \
+    return 0;                                                                  \
+  }
+#define DOCHECK1_CONTEXT(context, a, b)                                        \
+  if (a) {                                                                     \
+    notify(btech_context_evaluation(context), player, b);                      \
+    return -1;                                                                 \
+  }
+#define DOCHECKN_CONTEXT(context, a, b)                                        \
+  if (a) {                                                                     \
+    notify(btech_context_evaluation(context), player, b);                      \
+    return nullptr;                                                            \
   }
 #define DOCHECKMA(a, b)                                                        \
   if (a) {                                                                     \
@@ -69,31 +85,12 @@
     mech_notify(mech, MECHPILOT, b);                                           \
     return 1;                                                                  \
   }
-#define DOCHECK0(a, b)                                                         \
-  if (a) {                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
-    return 0;                                                                  \
-  }
-#define DOCHECK1(a, b)                                                         \
-  if (a) {                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
-    return -1;                                                                 \
-  }
-#define DOCHECKN(a, b)                                                         \
-  if (a) {                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
-    return NULL;                                                               \
-  }
 #define FUNCHECK(a, b)                                                         \
   if (a) {                                                                     \
     safe_tprintf_str(buff, bufc, b);                                           \
     return;                                                                    \
   }
 #endif
-
-/* Dice-rolling function used everywhere converted to a macro */
-/* And now converted back to a function.  */
-extern long int Number(long int, long int);
 
 #define skipws(name)                                                           \
   while (name && *name && isspace(*name))                                      \
@@ -121,55 +118,9 @@ extern long int Number(long int, long int);
       UnSetBit(val, bit);                                                      \
   } while (0)
 
-#define WizPo(p, fun)                                                          \
-  (fun(btech_context_active()->database,                                       \
-       game_object_owner(btech_context_active()->database, p)) &&              \
-   is_inherits(btech_context_active()->database, p))
+#define WizPo(database, p, fun)                                                \
+  (fun(database, game_object_owner(database, p)) && is_inherits(database, p))
 
-#define Wiz(p) WizPo(p, is_wizard)
-#define WizR(p) Wiz(p)
-#define WizP(p) WizPo(p, is_security)
-
-#define BTECH_WORLD_CONTEXT                                                    \
-  (&(WorldContext){.database = btech_context_active()->database,               \
-                   .configuration = btech_context_active()->configuration,     \
-                   .indexes = btech_context_active()->world_indexes,           \
-                   .access_control = btech_context_active()->access_control})
-#define BTECH_MATCH_CONTEXT (&btech_context_active()->command_context->match)
-#define BTECH_EVALUATION_CONTEXT                                               \
-  (&btech_context_active()->command_context->evaluation)
-#define hush_teleport(p, t)                                                    \
-  move_via_teleport(BTECH_EVALUATION_CONTEXT, p, t, 1, 7)
-#define loud_teleport(p, t)                                                    \
-  move_via_teleport(BTECH_EVALUATION_CONTEXT, p, t, 1, 0)
-
-#if 0
-/* Old cheater @luck code. Removed. If you got an issue with it's removal, you prolly had an issue to start with. */
-#define ValidLuckPlayer(mech)                                                  \
-  ((is_in_character(btech_context_active()->database, mech->mynum) &&          \
-    is_in_character(                                                           \
-        btech_context_active()->database,                                      \
-        game_object_location(btech_context_active()->database, mech->mynum)))  \
-       ? MechPilot(mech)                                                       \
-       : -1)
-#define NRoll(mech) luck_die_mod(ValidLuckPlayer(mech), -1)
-#define PRoll(mech) luck_die_mod(ValidLuckPlayer(mech), 1)
-
-#define NRoll2(mech, mech2)                                                    \
-  ((!mech2 || mech == mech2)                                                   \
-       ? NRoll(mech)                                                           \
-       : luck_die_mod_base(-1, player_luck(ValidLuckPlayer(mech)) -            \
-                                   player_luck(ValidLuckPlayer(mech2))))
-
-#define PRoll2(mech, mech2)                                                    \
-  ((!mech2 || mech == mech2)                                                   \
-       ? PRoll(mech)                                                           \
-       : luck_die_mod_base(1, player_luck(ValidLuckPlayer(mech)) -             \
-                                  player_luck(ValidLuckPlayer(mech2))))
-
-/* Negative, player-spesific */
-#define NPRoll(player) luck_die_mod_base(-1, player_luck(player))
-#endif
-
-#define can_pass_lock(guy, lockobj, lockname)                                  \
-  could_doit_with_context(BTECH_EVALUATION_CONTEXT, guy, lockobj, lockname)
+#define Wiz(database, p) WizPo(database, p, is_wizard)
+#define WizR(database, p) Wiz(database, p)
+#define WizP(database, p) WizPo(database, p, is_security)

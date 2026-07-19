@@ -28,7 +28,9 @@ typedef struct InputFlow InputFlow;
 /* Opaque libuv TCP handle owned by a descriptor. */
 typedef struct uv_tcp_s uv_tcp_t;
 typedef struct DescriptorRegistry DescriptorRegistry;
-typedef struct MuxServer MuxServer;
+typedef struct BtechContext BtechContext;
+typedef struct CommandRuntime CommandRuntime;
+typedef struct ServerLog ServerLog;
 
 /* Runtime state and resources for one client connection. */
 typedef struct Descriptor {
@@ -130,8 +132,12 @@ typedef struct DescriptorIterator {
   DbRef player;
 } DescriptorIterator;
 
-DescriptorRegistry *descriptor_registry_create(MuxServer *server);
-MuxServer *descriptor_server(Descriptor *descriptor);
+DescriptorRegistry *descriptor_registry_create(CommandRuntime *runtime,
+                                               BtechContext *btech,
+                                               ServerLog *log);
+CommandRuntime *descriptor_runtime(Descriptor *descriptor);
+BtechContext *descriptor_btech(Descriptor *descriptor);
+ServerLog *descriptor_log(Descriptor *descriptor);
 void descriptor_registry_destroy(DescriptorRegistry *registry);
 /* Add descriptor to the flat registry and retain its active reference. */
 bool descriptor_register(DescriptorRegistry *registry, Descriptor *descriptor);

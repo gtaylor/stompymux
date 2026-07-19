@@ -36,21 +36,18 @@
 
 extern char *strtok(char *s, const char *ct);
 
-/* EXTERNS THAT SHOULDN'T BE IN HERE! */
-extern void *FindObjectsData(DbRef key);
-
 #define MECHREP_COMMON(a)                                                      \
   struct mechrep_data *rep = (struct mechrep_data *)data;                      \
   MECH *mech;                                                                  \
-  DOCHECK(!is_template_power(btech_context_active()->database, player),        \
-          "I'm sorry Dave, can't do that.");                                   \
-  if (!CheckData(player, rep))                                                 \
-    return;                                                                    \
+  DOCHECK_CONTEXT(rep->xcode.context,                                          \
+                  !is_template_power(rep->xcode.context->database, player),    \
+                  "I'm sorry Dave, can't do that.");                           \
   if (a) {                                                                     \
-    DOCHECK(rep->current_target == -1, "You must set a target first!");        \
-    mech = getMech(rep->current_target);                                       \
-    if (!CheckData(player, mech))                                              \
-      return;                                                                  \
+    DOCHECK_CONTEXT(rep->xcode.context, rep->current_target == -1,             \
+                    "You must set a target first!");                           \
+    mech = btech_context_get_mech(rep->xcode.context, rep->current_target);    \
+    DOCHECK_CONTEXT(rep->xcode.context, mech == nullptr,                       \
+                    "The target's BTech data is not allocated.");              \
   }
 
 /*--------------------------------------------------------------------------*/
@@ -80,7 +77,8 @@ void mechrep_Rresetcrits(DbRef player, void *data, char *buffer) {
   int i;
 
   MECHREP_COMMON(1);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Default criticals set!");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Default criticals set!");
   for (i = 0; i < NUM_SECTIONS; i++)
     FillDefaultCriticals(mech, i);
 }
@@ -90,11 +88,13 @@ void mechrep_Rdisplaysection(DbRef player, void *data, char *buffer) {
   int index;
 
   MECHREP_COMMON(1);
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "You must specify a section to list the criticals for!");
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "You must specify a section to list the criticals for!");
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
-  DOCHECK(index == -1, "Invalid section!");
-  CriticalStatus(player, mech, index);
+  DOCHECK_CONTEXT(rep->xcode.context, index == -1, "Invalid section!");
+  CriticalStatus(btech_context_evaluation(rep->xcode.context), player, mech,
+                 index);
 }
 
 #define MechComputersRadioRange(mech)                                          \
@@ -107,24 +107,25 @@ void mechrep_Rsetradio(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   switch (mech_parseattributes(buffer, args, 2)) {
   case 0:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "This remains to be done [showing of stuff when no args]");
     return;
   case 2:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Too many args, unable to cope().");
     return;
   }
   i = BOUNDED(1, atoi(args[0]), 5);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Radio level set to %d.", i);
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "Radio level set to %d.", i);
   MechRadio(mech) = i;
   MechRadioType(mech) = generic_radio_type(MechRadio(mech), 0);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Number of freqs: %d  Extra stuff: %d",
                 MechRadioType(mech) % 16, (MechRadioType(mech) / 16) * 16);
   MechRadioRange(mech) = MechComputersRadioRange(mech);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Radio range set to %d.",
-                (int)MechRadioRange(mech));
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "Radio range set to %d.", (int)MechRadioRange(mech));
 }
 
 void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
@@ -134,16 +135,19 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(0);
   switch (mech_parseattributes(buffer, args, 2)) {
   case 1:
-    newmech = match_thing(BTECH_MATCH_CONTEXT, player, args[0]);
-    DOCHECK(!(is_good_obj(btech_context_active()->database, newmech) &&
-              is_hardcode(btech_context_active()->database, newmech)),
-            "That is not a BattleMech or Vehicle!");
+    newmech = match_thing(&btech_context_command(rep->xcode.context)->match,
+                          player, args[0]);
+    DOCHECK_CONTEXT(rep->xcode.context,
+                    !(is_good_obj(rep->xcode.context->database, newmech) &&
+                      is_hardcode(rep->xcode.context->database, newmech)),
+                    "That is not a BattleMech or Vehicle!");
     rep->current_target = newmech;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "Mech to repair changed to #%d", newmech);
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Too many arguments!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Too many arguments!");
   }
 }
 
@@ -151,54 +155,64 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   MECHREP_COMMON(1);
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Invalid number of arguments!");
   switch (toupper(args[0][0])) {
   case 'M':
     MechType(mech) = CLASS_MECH;
     MechMove(mech) = MOVE_BIPED;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to MECH");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to MECH");
     break;
   case 'Q':
     MechType(mech) = CLASS_MECH;
     MechMove(mech) = MOVE_QUAD;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to QUAD");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to QUAD");
     break;
   case 'G':
     MechType(mech) = CLASS_VEH_GROUND;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to VEHICLE");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to VEHICLE");
     break;
   case 'V':
     MechType(mech) = CLASS_VTOL;
     MechMove(mech) = MOVE_VTOL;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to VTOL");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to VTOL");
     break;
   case 'N':
     MechType(mech) = CLASS_VEH_NAVAL;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to NAVAL");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to NAVAL");
     break;
   case 'A':
     MechType(mech) = CLASS_AERO;
     MechMove(mech) = MOVE_FLY;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to AeroSpace");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to AeroSpace");
     break;
   case 'D':
     MechType(mech) = CLASS_DS;
     MechMove(mech) = MOVE_FLY;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to DropShip");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to DropShip");
     break;
   case 'S':
     MechType(mech) = CLASS_SPHEROID_DS;
     MechMove(mech) = MOVE_FLY;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to SpheroidDropship");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to SpheroidDropship");
     break;
   case 'B':
     MechType(mech) = CLASS_BSUIT;
     MechMove(mech) = MOVE_BIPED;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Type set to BattleSuit");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Type set to BattleSuit");
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Types are: MECH, GROUND, VTOL, NAVAL, AERO, DROPSHIP and "
            "SPHEROIDDROPSHIP");
     break;
@@ -210,11 +224,12 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
     char *args[1];                                                             \
     float f;                                                                   \
     MECHREP_COMMON(1);                                                         \
-    DOCHECK(mech_parseattributes(buffer, args, 1) != 1,                        \
-            tprintf("Invalid number of arguments to Set%s!", valstring));      \
+    DOCHECK_CONTEXT(                                                           \
+        rep->xcode.context, mech_parseattributes(buffer, args, 1) != 1,        \
+        tprintf("Invalid number of arguments to Set%s!", valstring));          \
     f = atof(args[0]);                                                         \
     valname = f * modifier;                                                    \
-    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+    notify(btech_context_evaluation(rep->xcode.context), player,               \
            tprintf("%s changed to %.2f.", valstring, valname));                \
   }
 
@@ -223,11 +238,12 @@ void mechrep_Rsettype(DbRef player, void *data, char *buffer) {
     char *args[1];                                                             \
     int f;                                                                     \
     MECHREP_COMMON(1);                                                         \
-    DOCHECK(mech_parseattributes(buffer, args, 1) != 1,                        \
-            tprintf("Invalid number of arguments to Set%s!", valstring));      \
+    DOCHECK_CONTEXT(                                                           \
+        rep->xcode.context, mech_parseattributes(buffer, args, 1) != 1,        \
+        tprintf("Invalid number of arguments to Set%s!", valstring));          \
     f = atoi(args[0]);                                                         \
     valname = f * modifier;                                                    \
-    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+    notify(btech_context_evaluation(rep->xcode.context), player,               \
            tprintf("%s changed to %d.", valstring, valname));                  \
   }
 
@@ -249,63 +265,75 @@ void mechrep_Rsetmove(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   MECHREP_COMMON(1);
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Invalid number of arguments!");
   switch (toupper(args[0][0])) {
   case 'T':
     MechMove(mech) = MOVE_TRACK;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to TRACKED");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to TRACKED");
     break;
   case 'W':
     MechMove(mech) = MOVE_WHEEL;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to WHEELED");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to WHEELED");
     break;
   case 'H':
     switch (toupper(args[0][1])) {
     case 'O':
       MechMove(mech) = MOVE_HOVER;
-      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to HOVER");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Movement set to HOVER");
       break;
     case 'U':
       MechMove(mech) = MOVE_HULL;
-      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to HULL");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Movement set to HULL");
       break;
     }
     break;
   case 'V':
     MechMove(mech) = MOVE_VTOL;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to VTOL");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to VTOL");
     break;
   case 'Q':
     MechMove(mech) = MOVE_QUAD;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to QUAD");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to QUAD");
     break;
   case 'B':
     MechMove(mech) = MOVE_BIPED;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to BIPED");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to BIPED");
     break;
   case 'S':
     MechMove(mech) = MOVE_SUB;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to SUB");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to SUB");
     break;
   case 'F':
     switch (toupper(args[0][1])) {
     case 'O':
       MechMove(mech) = MOVE_FOIL;
-      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to FOIL");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Movement set to FOIL");
       break;
     case 'L':
       MechMove(mech) = MOVE_FLY;
-      notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to FLY");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Movement set to FLY");
       break;
     }
     break;
   case 'N':
     MechMove(mech) = MOVE_NONE;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Movement set to NONE");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Movement set to NONE");
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Types are: TRACK, WHEEL, VTOL, QUAD, BIPED, HOVER, HULL, "
            "FLY, SUB, FOIL and NONE");
     break;
@@ -342,11 +370,13 @@ struct tmpldir {
   struct tmpldir *next;
 };
 
-struct tmpldirent *tmpl_list = NULL;
-int tmpl_pos = 0;
-int tmpl_len = 0;
-
-struct tmpldir *tmpldir_list = NULL;
+struct MechTemplateRegistry {
+  struct tmpldirent *templates;
+  struct tmpldir *directories;
+  size_t template_count;
+  size_t template_capacity;
+  char resolved_path[1024];
+};
 
 /*
  * The ordering function for the template name cache.  Used to sort and
@@ -362,7 +392,8 @@ static int tmplcmp(void const *v1, void const *v2) {
 /*
  * Add all the template names in a directory to the template cache.
  */
-static int scan_template_dir(char const *dirname, char const *parent) {
+static int scan_template_dir(MechTemplateRegistry *registry,
+                             char const *dirname, char const *parent) {
   char buf[1000] = {0};
   int dirnamelen = strlen(dirname);
   DIR *dir = opendir(dirname);
@@ -395,8 +426,8 @@ static int scan_template_dir(char const *dirname, char const *parent) {
       Create(link, struct tmpldir, 1);
 
       strcpy(link->name, ent->d_name);
-      link->next = tmpldir_list;
-      tmpldir_list = link;
+      link->next = registry->directories;
+      registry->directories = link;
       continue;
     }
 
@@ -404,20 +435,23 @@ static int scan_template_dir(char const *dirname, char const *parent) {
       continue;
     }
 
-    if (tmpl_pos == tmpl_len) {
-      if (tmpl_len == 0) {
-        tmpl_len = 4;
-        Create(tmpl_list, struct tmpldirent, tmpl_len);
+    if (registry->template_count == registry->template_capacity) {
+      if (registry->template_capacity == 0) {
+        registry->template_capacity = 4;
+        Create(registry->templates, struct tmpldirent,
+               registry->template_capacity);
       } else {
-        tmpl_len *= 2;
-        ReCreate(tmpl_list, struct tmpldirent, tmpl_len);
+        registry->template_capacity *= 2;
+        ReCreate(registry->templates, struct tmpldirent,
+                 registry->template_capacity);
       }
     }
 
-    snprintf(tmpl_list[tmpl_pos].name, sizeof(tmpl_list[tmpl_pos].name), "%s",
+    snprintf(registry->templates[registry->template_count].name,
+             sizeof(registry->templates[registry->template_count].name), "%s",
              ent->d_name);
-    tmpl_list[tmpl_pos].dir = parent;
-    tmpl_pos++;
+    registry->templates[registry->template_count].dir = parent;
+    registry->template_count++;
   }
 
   closedir(dir);
@@ -430,22 +464,23 @@ static int scan_template_dir(char const *dirname, char const *parent) {
  * It doesn't recursively look any further down the tree.
  */
 
-static int scan_templates(char const *dir) {
+static int scan_templates(MechTemplateRegistry *registry, char const *dir) {
   char buf[1000] = {0};
   struct tmpldir *p;
 
-  if (scan_template_dir(dir, NULL) == -1) {
+  if (scan_template_dir(registry, dir, nullptr) == -1) {
     return -1;
   }
 
-  p = tmpldir_list;
-  while (p != NULL) {
+  p = registry->directories;
+  while (p != nullptr) {
     snprintf(buf, sizeof(buf), "%s/%s", dir, p->name);
-    scan_template_dir(buf, p->name);
+    scan_template_dir(registry, buf, p->name);
     p = p->next;
   }
 
-  qsort(tmpl_list, tmpl_pos, sizeof tmpl_list[0], tmplcmp);
+  qsort(registry->templates, registry->template_count,
+        sizeof(registry->templates[0]), tmplcmp);
 
   return 0;
 }
@@ -454,31 +489,28 @@ static int scan_templates(char const *dir) {
  * Free all the memory used by the template cache.  Sets the cache to
  * the empty state.
  */
-static void free_template_list() {
+static void template_registry_clear(MechTemplateRegistry *registry) {
   struct tmpldir *p;
 
-  free(tmpl_list);
+  if (registry == nullptr)
+    return;
+  free(registry->templates);
 
-  p = tmpldir_list;
-  while (p != NULL) {
+  p = registry->directories;
+  while (p != nullptr) {
     struct tmpldir *np = p->next;
 
     free(p);
     p = np;
   }
 
-  tmpl_list = NULL;
-  tmpldir_list = NULL;
-  tmpl_pos = 0;
-  tmpl_len = 0;
-
-  return;
+  *registry = (MechTemplateRegistry){0};
 }
 
-char *subdirs[] = {"3025",    "3050",     "3055",   "3058",    "3060",
-                   "2750",    "Aero",     "MISC",   "Clan",    "ClanVehicles",
-                   "Clan2nd", "ClanAero", "Custom", "Solaris", "Vehicles",
-                   "MFNA",    "Infantry", NULL};
+static char *const subdirs[] = {
+    "3025",   "3050",    "3055",     "3058",         "3060",     "2750",
+    "Aero",   "MISC",    "Clan",     "ClanVehicles", "Clan2nd",  "ClanAero",
+    "Custom", "Solaris", "Vehicles", "MFNA",         "Infantry", NULL};
 
 void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
   char *args[1];
@@ -486,12 +518,14 @@ void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
   if (mech_parseattributes(buffer, args, 1) == 1)
     if (mech_loadnew(player, mech, args[0]) == 1) {
-      mux_event_remove_data(btech_context_active()->events, (void *)mech);
+      mux_event_remove_data(mech->xcode.context->events, mech);
       clear_mech_from_LOS(mech);
-      notify(BTECH_EVALUATION_CONTEXT, player, "Template loaded.");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Template loaded.");
       return;
     }
-  notify(BTECH_EVALUATION_CONTEXT, player, "Unable to read that template.");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Unable to read that template.");
 }
 
 void clear_mech(MECH *mech, int flag) {
@@ -528,69 +562,90 @@ void clear_mech(MECH *mech, int flag) {
   }
 }
 
-char *mechref_path(char *id) {
-  static char openfile[1024] = {0};
+char *mechref_path(BtechContext *context, const char *mech_path, char *id) {
+  MechTemplateRegistry *registry = context->templates;
   FILE *fp;
   int i = 0; /* this int has double use... ugly, but effective */
+
+  if (registry == nullptr) {
+    registry = calloc(1, sizeof(*registry));
+    if (registry == nullptr)
+      return nullptr;
+    context->templates = registry;
+  }
 
   /*
    * If the template name doesn't have slash search for it in the
    * template name cache.
    */
 redo:
-  if (strchr(id, '/') == NULL &&
-      (tmpl_list != NULL || scan_templates(MECH_PATH) != -1)) {
+  if (strchr(id, '/') == NULL && (registry->templates != nullptr ||
+                                  scan_templates(registry, mech_path) != -1)) {
     struct tmpldirent *ent;
     struct tmpldirent key;
 
     strncpy(key.name, id, CACHE_MAXNAME);
     key.name[CACHE_MAXNAME] = '\0';
 
-    ent = bsearch(&key, tmpl_list, tmpl_pos, sizeof tmpl_list[0], tmplcmp);
+    ent = bsearch(&key, registry->templates, registry->template_count,
+                  sizeof(registry->templates[0]), tmplcmp);
     if (ent == NULL) {
       return NULL;
     }
     if (ent->dir == NULL) {
-      snprintf(openfile, sizeof(openfile), "%s/%s", MECH_PATH, ent->name);
+      snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+               "%s/%s", mech_path, ent->name);
     } else {
-      snprintf(openfile, sizeof(openfile), "%s/%s/%s", MECH_PATH, ent->dir,
-               ent->name);
+      snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+               "%s/%s/%s", mech_path, ent->dir, ent->name);
     }
-    if (access(openfile, R_OK) != 0) {
+    if (access(registry->resolved_path, R_OK) != 0) {
       /* The file is missing (or unreadable)
          invalidate the cache and try again,
          if *that* fails, fall back to the old version. */
       if (!i) {
         i = 1;
-        free_template_list();
+        template_registry_clear(registry);
         goto redo;
       } else
         goto oldstyle;
     }
-    return openfile;
+    return registry->resolved_path;
   }
 oldstyle:
   /*
    * Look up a template name the old way...
    */
-  snprintf(openfile, sizeof(openfile), "%s/%s", MECH_PATH, id);
-  fp = fopen(openfile, "r");
+  snprintf(registry->resolved_path, sizeof(registry->resolved_path), "%s/%s",
+           mech_path, id);
+  fp = fopen(registry->resolved_path, "r");
   for (i = 0; !fp && subdirs[i]; i++) {
-    snprintf(openfile, sizeof(openfile), "%s/%s/%s", MECH_PATH, subdirs[i], id);
-    fp = fopen(openfile, "r");
+    snprintf(registry->resolved_path, sizeof(registry->resolved_path),
+             "%s/%s/%s", mech_path, subdirs[i], id);
+    fp = fopen(registry->resolved_path, "r");
   }
   if (fp) {
     fclose(fp);
-    return openfile;
+    return registry->resolved_path;
   }
-  return NULL;
+  return nullptr;
+}
+
+void mech_template_registry_destroy(BtechContext *context) {
+  if (context->templates == nullptr)
+    return;
+  template_registry_clear(context->templates);
+  free(context->templates);
+  context->templates = nullptr;
 }
 
 int load_mechdata2(DbRef player, MECH *mech, char *id) {
   FILE *fp = NULL;
   char *filename;
 
-  filename = mechref_path(id);
+  filename =
+      mechref_path(mech->xcode.context,
+                   mech->xcode.context->configuration->database.mech_db, id);
 
   if (!filename)
     return 0;
@@ -600,7 +655,7 @@ int load_mechdata2(DbRef player, MECH *mech, char *id) {
   return load_template(player, mech, filename) >= 0 ? 1 : 0;
 }
 
-extern int num_def_weapons;
+extern const int num_def_weapons;
 
 int unable_to_find_proper_type(int i) {
   if (!i)
@@ -625,7 +680,9 @@ int load_mechdata(MECH *mech, char *id) {
   int i1, i2, i3, i4, i5, i6;
   char *filename;
 
-  filename = mechref_path(id);
+  filename =
+      mechref_path(mech->xcode.context,
+                   mech->xcode.context->configuration->database.mech_db, id);
   TEMPLATE_GERR(filename == NULL, "No matching file for '%s'.", id);
   if (filename)
     fp = fopen(filename, "r");
@@ -746,10 +803,14 @@ void mechrep_Rrestore(DbRef player, void *data, char *buffer) {
   char *c;
 
   MECHREP_COMMON(1);
-  c = silly_atr_get(mech->mynum, A_MECHREF);
-  DOCHECK(!c || !*c, "Sorry, I don't know what type of mech this is");
-  DOCHECK(mech_loadnew(player, mech, c) == 1, "Restoration complete!");
-  notify(BTECH_EVALUATION_CONTEXT, player, "Unable to restore this mech!.");
+  c = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                           A_MECHREF, (char[LBUF_SIZE]){0});
+  DOCHECK_CONTEXT(rep->xcode.context, !c || !*c,
+                  "Sorry, I don't know what type of mech this is");
+  DOCHECK_CONTEXT(rep->xcode.context, mech_loadnew(player, mech, c) == 1,
+                  "Restoration complete!");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Unable to restore this mech!.");
 }
 
 void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
@@ -760,16 +821,20 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
 
-  free_template_list();
+  template_registry_clear(mech->xcode.context->templates);
 
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "You must specify a template name!");
-  DOCHECK(strstr(args[0], "/"), "Invalid file name!");
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s...", args[0]);
-  snprintf(openfile, sizeof(openfile), "%s/", MECH_PATH);
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "You must specify a template name!");
+  DOCHECK_CONTEXT(rep->xcode.context, strstr(args[0], "/"),
+                  "Invalid file name!");
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "Saving %s...", args[0]);
+  snprintf(openfile, sizeof(openfile), "%s/",
+           mech->xcode.context->configuration->database.mech_db);
   strcat(openfile, args[0]);
-  DOCHECK(!(fp = fopen(openfile, "w")),
-          "Unable to open/create mech file! Sorry.");
+  DOCHECK_CONTEXT(rep->xcode.context, !(fp = fopen(openfile, "w")),
+                  "Unable to open/create mech file! Sorry.");
   fprintf(fp, "%d %d %d %d %d %.2f %.2f %d\n", MechTons(mech),
           MechTacRange(mech), MechLRSRange(mech), MechScanRange(mech),
           MechRealNumsinks(mech), MechMaxSpeed(mech), MechJumpSpeed(mech),
@@ -786,7 +851,8 @@ void mechrep_Rsavetemp(DbRef player, void *data, char *buffer) {
   fprintf(fp, "%d %d\n", MechType(mech), MechMove(mech));
   fprintf(fp, "%d\n", MechRadioRange(mech));
   fclose(fp);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Saving complete!");
 }
 
 /*
@@ -798,37 +864,42 @@ void mechrep_Rsavetemp2(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
 
-  free_template_list();
+  template_registry_clear(mech->xcode.context->templates);
 
   // No template name given.
   if (mech_parseattributes(buffer, args, 1) != 1) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "You must specify a template name!");
     return;
   }
 
   // Anti-twink measure. Don't allow directory saving... yet
   if (strstr(args[0], "/")) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid file name!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Invalid file name!");
     return;
   }
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Saving %s", args[0]);
-  snprintf(openfile, sizeof(openfile), "%s/", MECH_PATH);
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "Saving %s", args[0]);
+  snprintf(openfile, sizeof(openfile), "%s/",
+           mech->xcode.context->configuration->database.mech_db);
   strcat(openfile, args[0]);
 
   // Just warn on overweight.
   if (mech_weight_sub(GOD, mech, -1) > (MechTons(mech) * 1024))
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Warning: Template Overweight, see @weight.");
 
   // I/O or Permissions error.
   if (save_template(player, mech, args[0], openfile) < 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Error saving the template file!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Error saving the template file!");
     return;
   }
 
-  notify(BTECH_EVALUATION_CONTEXT, player, "Saving complete!");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Saving complete!");
 } // end mechrep_Rsavetemp2
 
 /*
@@ -839,51 +910,53 @@ void invalid_section(DbRef player, MECH *mech) {
   int mechtype = MechType(mech);
   int movetype = MechMove(mech);
 
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "Not a legal armor location, must be one of:");
 
   switch (mechtype) {
   case CLASS_MW:
   case CLASS_MECH:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "HEAD (H), CTORSO (CT), LTORSO (LT), RTORSO (RT)");
 
     if (movetype == MOVE_QUAD)
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "LARM (LA), RARM (RA), LLEG (LL), RLEG (RL)");
     else
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "FLLEG (FLL), FRLEG (FRL), RLLEG (RLL), RRLEG (RRL)");
 
     break;
   case CLASS_VEH_NAVAL:
   case CLASS_VEH_GROUND:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), TURRET (TU)");
     break;
   case CLASS_VTOL:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "FSIDE (FS), RSIDE (RS), LSIDE (LS), ASIDE (AS), ROTOR (RO)");
     break;
   case CLASS_AERO:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "NOSE (N), LWING (LW), RWING (RW), ASIDE (AS)");
     break;
   case CLASS_DS:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "NOSE (N), LWING (LW), RWING (RW), LRWING (LR), RRWING "
            "(RR), ASIDE (AS)");
     break;
   case CLASS_SPHEROID_DS:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "NOSE (N), FRSIDE (FR), FLSIDE (FL), RLSIDE (RL), RRSIDE "
            "(RR), ASIDE (AS)");
     break;
   case CLASS_BSUIT:
-    notify(BTECH_EVALUATION_CONTEXT, player, "S1, S2, S3, S4, S5, S6, S7, S8");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "S1, S2, S3, S4, S5, S6, S7, S8");
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid or unknown unit type!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid or unknown unit type!");
   }
 }
 
@@ -898,7 +971,7 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(!argc, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(rep->xcode.context, !argc, "Invalid number of arguments!");
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
   if (index == -1) {
@@ -913,9 +986,10 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // One Argument Given.
     temp = atoi(args[1]);
     if (temp < 0)
-      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid armor value!");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Invalid armor value!");
     else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Front armor set to    : %d", temp);
       SetSectArmor(mech, index, temp);
       SetSectOArmor(mech, index, temp);
@@ -926,9 +1000,10 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     // Two Arguments Given.
     temp = atoi(args[2]);
     if (temp < 0)
-      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Internal armor value!");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Invalid Internal armor value!");
     else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Internal armor set to : %d", temp);
       SetSectInt(mech, index, temp);
       SetSectOInt(mech, index, temp);
@@ -940,15 +1015,16 @@ void mechrep_Rsetarmor(DbRef player, void *data, char *buffer) {
     temp = atoi(args[3]);
     if (index == CTORSO || index == RTORSO || index == LTORSO) {
       if (temp < 0)
-        notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Rear armor value!");
+        notify(btech_context_evaluation(rep->xcode.context), player,
+               "Invalid Rear armor value!");
       else {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+        notify_printf(btech_context_evaluation(rep->xcode.context), player,
                       "Rear armor set to     : %d", temp);
         SetSectRArmor(mech, index, temp);
         SetSectORArmor(mech, index, temp);
       }
     } else
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(rep->xcode.context), player,
              "Only the torso can have rear armor.");
   }
 }
@@ -974,7 +1050,7 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   MECHREP_COMMON(1);
 
   argc = mech_parseattributes(buffer, args, 20);
-  DOCHECK(argc < 3, "Invalid number of arguments!")
+  DOCHECK_CONTEXT(rep->xcode.context, argc < 3, "Invalid number of arguments!")
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
 
@@ -984,12 +1060,12 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  weapindex = WeaponIndexFromString(args[0]);
+  weapindex = WeaponIndexFromString(rep->xcode.context, args[0]);
 
   if (weapindex == -1) {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "That is not a valid weapon!");
-    DumpWeapons(player);
+    DumpWeapons(mech->xcode.context, player);
     return;
   }
 
@@ -1040,22 +1116,23 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
   /* Check to see if player gives enough crits and start adding if so. */
   if (argc < weapnumcrits && weapnumcrits < 9) {
     notify_printf(
-        BTECH_EVALUATION_CONTEXT, player,
+        btech_context_evaluation(rep->xcode.context), player,
         "Not enough critical slots specified! (Given: %i, Needed: %i)", argc,
         weapnumcrits);
   } else if (argc > weapnumcrits) {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "Too many critical slots specified! (Given: %i, Needed: %i)",
                   argc, weapnumcrits);
   } else {
     if (argc < weapnumcrits) // notify player of split crit
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Weapon will be split! %d additional crits needed.",
                     weapnumcrits - argc);
     for (loop = 0; loop < argc; loop++) {
       temp = atoi(args[2 + loop]);
       temp--; /* From 1 based to 0 based */
-      DOCHECK(temp < 0 || temp > NUM_CRITICALS, "Bad critical location!");
+      DOCHECK_CONTEXT(rep->xcode.context, temp < 0 || temp > NUM_CRITICALS,
+                      "Bad critical location!");
       MechSections(mech)[index].criticals[temp].type = (I2Weapon(weapindex));
       MechSections(mech)[index].criticals[temp].firemode = 0;
       MechSections(mech)[index].criticals[temp].ammomode = 0;
@@ -1078,7 +1155,8 @@ void mechrep_Raddweap(DbRef player, void *data, char *buffer) {
       else
         MechSpecials(mech) |= IS_ANTI_MISSILE_TECH;
     }
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Weapon added.");
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Weapon added.");
   }
 } /* end mechrep_Raddweap() */
 
@@ -1089,24 +1167,27 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc < 2, "MECHREP: Invalid Syntax. Try FireMode <Weapon#> <Mode>");
+  DOCHECK_CONTEXT(rep->xcode.context, argc < 2,
+                  "MECHREP: Invalid Syntax. Try FireMode <Weapon#> <Mode>");
 
   weaptype = FindWeaponNumberOnMech_Advanced(mech, atoi(args[0]), &section,
                                              &critical, 0);
 
   if (weaptype < 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid Weapon #!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Invalid Weapon #!");
     return;
   }
 
   if (MechWeapons[weaptype].ammoperton == 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "That weapon doesn't require ammo!");
     return;
   }
 
   if (MechSections(mech)[section].criticals[critical].firemode & OS_MODE) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Keeping One Shot Mode!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Keeping One Shot Mode!");
     MechSections(mech)[section].criticals[critical].ammomode = 0;
   } else if (!(MechSections(mech)[section].criticals[critical].firemode &
                HALFTON_MODE)) {
@@ -1197,7 +1278,8 @@ void mechrep_Rfiremode(DbRef player, void *data, char *buffer) {
     MechSections(mech)[section].criticals[critical].firemode = 0;
   }
 
-  notify(BTECH_EVALUATION_CONTEXT, player, "Firemode changed!");
+  notify(btech_context_evaluation(rep->xcode.context), player,
+         "Firemode changed!");
 }
 /*
  * Logic for the 'reload' mechrep command.
@@ -1211,12 +1293,14 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(argc <= 2, "Invalid number of arguments!");
-  weapindex = WeaponIndexFromString(args[0]);
+  DOCHECK_CONTEXT(rep->xcode.context, argc <= 2,
+                  "Invalid number of arguments!");
+  weapindex = WeaponIndexFromString(rep->xcode.context, args[0]);
 
   if (weapindex == -1) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "That is not a valid weapon!");
-    DumpWeapons(player);
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "That is not a valid weapon!");
+    DumpWeapons(mech->xcode.context, player);
     return;
   }
 
@@ -1230,10 +1314,11 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
   subsect = atoi(args[2]);
   subsect--; /* from 1 based to 0 based */
-  DOCHECK(subsect < 0 || subsect >= CritsInLoc(mech, index),
-          "Critslot out of range!");
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  subsect < 0 || subsect >= CritsInLoc(mech, index),
+                  "Critslot out of range!");
   if (MechWeapons[weapindex].ammoperton == 0)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "That weapon doesn't require ammo!");
   else {
     MechSections(mech)[index].criticals[subsect].type = I2Ammo(weapindex);
@@ -1331,7 +1416,8 @@ void mechrep_Rreload(DbRef player, void *data, char *buffer) {
 
     MechSections(mech)[index].criticals[subsect].data =
         FullAmmo(mech, index, subsect);
-    notify(BTECH_EVALUATION_CONTEXT, player, "Weapon loaded!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Weapon loaded!");
   }
 }
 
@@ -1346,7 +1432,7 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc < 2, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
@@ -1358,15 +1444,17 @@ void mechrep_Rrestock(DbRef player, void *data, char *buffer) {
 
   subsect = atoi(args[1]);
   subsect--; /* from 1 based to 0 based */
-  DOCHECK(subsect < 0 || subsect >= CritsInLoc(mech, index),
-          "Critslot out of range!");
+  DOCHECK_CONTEXT(rep->xcode.context,
+                  subsect < 0 || subsect >= CritsInLoc(mech, index),
+                  "Critslot out of range!");
   if (MechWeapons[Ammo2I(GetPartType(mech, index, subsect))].ammoperton == 0)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "That weapon doesn't require ammo!");
   else {
     MechSections(mech)[index].criticals[subsect].data =
         FullAmmo(mech, index, subsect);
-    notify(BTECH_EVALUATION_CONTEXT, player, "Weapon restocked!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Weapon restocked!");
   }
 }
 
@@ -1381,7 +1469,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(argc < 2, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(rep->xcode.context, argc < 2, "Invalid number of arguments!");
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
   if (index == -1) {
@@ -1391,7 +1479,7 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   }
   if (argc > 2) {
     temp = atoi(args[2]);
-    DOCHECK(temp < 0, "Illegal value for armor!");
+    DOCHECK_CONTEXT(rep->xcode.context, temp < 0, "Illegal value for armor!");
   }
 
   switch (args[1][0]) {
@@ -1399,13 +1487,15 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 'a':
     /* armor */
     SetSectArmor(mech, index, temp);
-    notify(BTECH_EVALUATION_CONTEXT, player, "Armor repaired!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Armor repaired!");
     break;
   case 'I':
   case 'i':
     /* internal */
     SetSectInt(mech, index, temp);
-    notify(BTECH_EVALUATION_CONTEXT, player, "Internal structure repaired!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Internal structure repaired!");
     break;
   case 'C':
   case 'c':
@@ -1413,9 +1503,10 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     temp--;
     if (temp >= 0 && temp < NUM_CRITICALS) {
       mech_RepairPart(mech, index, temp);
-      notify(BTECH_EVALUATION_CONTEXT, player, "Critical location repaired!");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Critical location repaired!");
     } else {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(rep->xcode.context), player,
              "Critical Location out of range!");
     }
     break;
@@ -1424,9 +1515,10 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
     /* rear */
     if (index == CTORSO || index == LTORSO || index == RTORSO) {
       SetSectRArmor(mech, index, temp);
-      notify(BTECH_EVALUATION_CONTEXT, player, "Rear armor repaired!");
+      notify(btech_context_evaluation(rep->xcode.context), player,
+             "Rear armor repaired!");
     } else {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(rep->xcode.context), player,
              "Only the center, rear and left torso have rear armor!");
     }
     break;
@@ -1434,10 +1526,11 @@ void mechrep_Rrepair(DbRef player, void *data, char *buffer) {
   case 's':
     /* reattach */
     mech_ReAttach(mech, index);
-    notify(BTECH_EVALUATION_CONTEXT, player, "Section reattached.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Section reattached.");
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Illegal Type-> must be ARMOR, INTERNAL, CRIT, REAR");
     return;
   }
@@ -1458,14 +1551,15 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(argc <= 2, "Invalid number of arguments!");
-  itemcode = FindSpecialItemCodeFromString(args[0]);
+  DOCHECK_CONTEXT(rep->xcode.context, argc <= 2,
+                  "Invalid number of arguments!");
+  itemcode = FindSpecialItemCodeFromString(rep->xcode.context, args[0]);
 
   if (itemcode == -1)
     if (strcasecmp(args[0], "empty")) {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(rep->xcode.context), player,
              "That is not a valid special object!");
-      DumpMechSpecialObjects(player);
+      DumpMechSpecialObjects(mech->xcode.context, player);
       return;
     }
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
@@ -1478,7 +1572,8 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   subsect = atoi(args[2]);
   subsect--;
   max = CritsInLoc(mech, index);
-  DOCHECK(subsect < 0 || subsect >= max, "Critslot out of range!");
+  DOCHECK_CONTEXT(rep->xcode.context, subsect < 0 || subsect >= max,
+                  "Critslot out of range!");
   if (argc == 4)
     newdata = atoi(args[3]);
   else
@@ -1490,70 +1585,75 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
   case CASE:
     MechSections(mech)[(MechType(mech) == CLASS_VEH_GROUND) ? BSIDE : index]
         .config |= CASE_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "CASE Technology added to section.");
     break;
   case TRIPLE_STRENGTH_MYOMER:
     MechSpecials(mech) |= TRIPLE_MYOMER_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Triple Strength Myomer Technology added to 'Mech.");
     break;
   case MASC:
     MechSpecials(mech) |= MASC_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Myomer Accelerator Signal Circuitry added to 'Mech.");
     break;
   case C3_MASTER:
     MechSpecials(mech) |= C3_MASTER_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Command Unit added to 'Mech.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "C3 Command Unit added to 'Mech.");
     break;
   case C3_SLAVE:
     MechSpecials(mech) |= C3_SLAVE_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Slave Unit added to 'Mech.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "C3 Slave Unit added to 'Mech.");
     break;
   case ARTEMIS_IV:
     MechSpecials(mech) |= ARTEMIS_IV_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Artemis IV Fire-Control System added to 'Mech.");
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "System will control the weapon which starts at slot %d.",
                   newdata);
     break;
   case ECM:
     MechSpecials(mech) |= ECM_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Guardian ECM Suite added to 'Mech.");
     break;
   case ANGELECM:
     MechSpecials2(mech) |= ANGEL_ECM_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Angel ECM Suite added to 'Mech.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Angel ECM Suite added to 'Mech.");
     break;
   case BEAGLE_PROBE:
     MechSpecials(mech) |= BEAGLE_PROBE_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Beagle Active Probe added to 'Mech.");
     break;
   case LIGHT_BAP:
     MechSpecials(mech) |= LIGHT_BAP_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Light Beagle Active Probe added to 'Mech.");
     break;
   case TAG:
     MechSpecials2(mech) |= TAG_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player, "TAG added to 'Mech.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "TAG added to 'Mech.");
     break;
   case C3I:
     MechSpecials2(mech) |= C3I_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player, "Improved C3 added to 'Mech.");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Improved C3 added to 'Mech.");
     break;
   case BLOODHOUND_PROBE:
     MechSpecials2(mech) |= BLOODHOUND_PROBE_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Bloodhound Active Probe added to 'Mech.");
     break;
   case TARGETING_COMPUTER:
     MechSpecials2(mech) |= TCOMP_TECH;
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Targeting Computer added to 'Mech.");
     break;
   case SPLIT_CRIT_LEFT:
@@ -1562,7 +1662,7 @@ void mechrep_Raddspecial(DbRef player, void *data, char *buffer) {
     break;
   }
   ArmorStringFromIndex(index, location, MechType(mech), MechMove(mech));
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "Critical slot %s (%d) filled.", location, subsect + 1);
 }
 
@@ -1572,8 +1672,9 @@ extern char *infantry_specials[];
 
 char *techstatus_func(MECH *mech) {
   return (MechSpecials(mech) || MechSpecials2(mech))
-             ? BuildBitStringwdelim2(specials, specials2, MechSpecials(mech),
-                                     MechSpecials2(mech))
+             ? build_bit_string_delimited2(
+                   specials, specials2, MechSpecials(mech), MechSpecials2(mech),
+                   (char[BTECH_TEXT_CAPACITY]){0})
              : "";
 }
 
@@ -1583,96 +1684,119 @@ void mechrep_Rshowtech(DbRef player, void *data, char *buffer) {
   char location[20];
 
   MECHREP_COMMON(1);
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "--------Advanced Technology--------");
   if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Triple Strength Myomer");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Triple Strength Myomer");
   if (MechSpecials(mech) & MASC_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Myomer Accelerator Signal Circuitry");
   for (i = 0; i < NUM_SECTIONS; i++)
     if (MechSections(mech)[i].config & CASE_TECH) {
       ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Cellular Ammunition Storage Equipment in %s", location);
     }
   if (MechSpecials(mech) & CLAN_TECH) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Mech is set to Clan Tech.  This means:");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "    Mech automatically has Double Heat Sink Tech");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "    Mech automatically has CASE in all sections");
   }
   if (MechSpecials(mech) & DOUBLE_HEAT_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Mech uses Double Heat Sinks");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Mech uses Double Heat Sinks");
   if (MechSpecials(mech) & CL_ANTI_MISSILE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Clan style Anti-Missile System");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Clan style Anti-Missile System");
   if (MechSpecials(mech) & IS_ANTI_MISSILE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Inner Sphere style Anti-Missile System");
   if (MechSpecials(mech) & FLIPABLE_ARMS)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "The arms may be flipped into the rear firing arc");
   if (MechSpecials(mech) & C3_MASTER_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Command Computer");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "C3 Command Computer");
   if (MechSpecials(mech) & C3_SLAVE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "C3 Slave Computer");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "C3 Slave Computer");
   if (MechSpecials(mech) & ARTEMIS_IV_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Artemis IV Fire-Control System");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Artemis IV Fire-Control System");
   if (MechSpecials(mech) & ECM_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Guardian ECM Suite");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Guardian ECM Suite");
   if (MechSpecials(mech) & LIGHT_BAP_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Light Beagle Active Probe");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Light Beagle Active Probe");
   if (MechSpecials2(mech) & ANGEL_ECM_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Angel ECM Suite");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Angel ECM Suite");
   if (MechSpecials(mech) & BEAGLE_PROBE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Beagle Active Probe");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Beagle Active Probe");
   if (MechSpecials2(mech) & TAG_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Target Aquisition Gear");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Target Aquisition Gear");
   if (MechSpecials2(mech) & C3I_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Improved C3");
+    notify(btech_context_evaluation(rep->xcode.context), player, "Improved C3");
   if (MechSpecials2(mech) & BLOODHOUND_PROBE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Bloodhound Active Probe");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Bloodhound Active Probe");
   if (MechSpecials(mech) & ICE_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "It has ICE engine");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "It has ICE engine");
 
   /* Infantry related stuff */
   if (MechInfantrySpecials(mech) & INF_SWARM_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Can swarm enemy units");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Can swarm enemy units");
   if (MechInfantrySpecials(mech) & INF_MOUNT_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Can mount friendly units");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Can mount friendly units");
   if (MechInfantrySpecials(mech) & INF_ANTILEG_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Can do anti-leg attacks");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Can do anti-leg attacks");
   if (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Has CS Purifier Stealth");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Has CS Purifier Stealth");
   if (MechInfantrySpecials(mech) & DC_KAGE_STEALTH_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Has DC Kage Stealth");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Has DC Kage Stealth");
   if (MechInfantrySpecials(mech) & FWL_ACHILEUS_STEALTH_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Has FWL Achileus Stealth");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Has FWL Achileus Stealth");
   if (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Has FC Infiltrator Stealth");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Has FC Infiltrator Stealth");
   if (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Has FC InfiltratorII Stealth");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Has FC InfiltratorII Stealth");
   if (MechInfantrySpecials(mech) & MUST_JETTISON_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Must jettison backpack before jumping/using specials");
   if (MechInfantrySpecials(mech) & CAN_JETTISON_TECH)
-    notify(BTECH_EVALUATION_CONTEXT, player, "Can jettison backpack");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Can jettison backpack");
 
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(rep->xcode.context), player,
          "Brief version (May have something previous hadn't):");
-  techstring = mechrep_gettechstring(mech);
+  char tech_buffer[BTECH_TEXT_CAPACITY];
+  mechrep_gettechstring(mech, tech_buffer);
+  techstring = tech_buffer;
   if (techstring && techstring[0])
-    notify(BTECH_EVALUATION_CONTEXT, player, techstring);
+    notify(btech_context_evaluation(rep->xcode.context), player, techstring);
   else
-    notify(BTECH_EVALUATION_CONTEXT, player, "-");
+    notify(btech_context_evaluation(rep->xcode.context), player, "-");
 }
 
-char *mechrep_gettechstring(MECH *mech) {
-  return BuildBitString3(specials, specials2, infantry_specials,
-                         MechSpecials(mech), MechSpecials2(mech),
-                         MechInfantrySpecials(mech));
+void mechrep_gettechstring(MECH *mech, char *buffer) {
+  build_bit_string3(specials, specials2, infantry_specials, MechSpecials(mech),
+                    MechSpecials2(mech), MechInfantrySpecials(mech), buffer);
 }
 
 void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
@@ -1688,15 +1812,18 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Make sure what they gave was valid */
   if (((nv < 0) && (nv2 < 0)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tech: Available techs:");
-    notify(BTECH_EVALUATION_CONTEXT, player, "\tAll");
-    notify(BTECH_EVALUATION_CONTEXT, player, "\tCase");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Invalid tech: Available techs:");
+    notify(btech_context_evaluation(rep->xcode.context), player, "\tAll");
+    notify(btech_context_evaluation(rep->xcode.context), player, "\tCase");
 
     for (nv = 0; specials[nv]; nv++)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials[nv]);
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                    "\t%s", specials[nv]);
 
     for (nv = 0; specials2[nv]; nv++)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials2[nv]);
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                    "\t%s", specials2[nv]);
 
     return;
   }
@@ -1704,7 +1831,8 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
   /* Check to see if user specified anything */
   if (((!nv) && (!nv2)) && (strcasecmp(buffer, "all") != 0) &&
       (strcasecmp(buffer, "Case") != 0)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing specified");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Nothing specified");
     return;
   }
 
@@ -1732,7 +1860,8 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
 
     MechSpecials(mech) = 0;
     MechSpecials2(mech) = 0;
-    notify(BTECH_EVALUATION_CONTEXT, player, "All Advanced Technology Removed");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "All Advanced Technology Removed");
     return;
   }
 
@@ -1749,7 +1878,8 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
         MechSections(mech)[i].config &= ~CASE_TECH;
       }
     }
-    notify(BTECH_EVALUATION_CONTEXT, player, "Case Technology Removed");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Case Technology Removed");
     return;
   }
 
@@ -1782,14 +1912,14 @@ void mechrep_Rdeltech(DbRef player, void *data, char *buffer) {
     }
 
     MechSpecials(mech) &= ~nv;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s Technology Removed",
-                  buffer);
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "%s Technology Removed", buffer);
 
   } else {
 
     MechSpecials2(mech) &= ~nv2;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%s Technology Removed",
-                  buffer);
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "%s Technology Removed", buffer);
   }
   return;
 }
@@ -1802,30 +1932,36 @@ void mechrep_Raddtech(DbRef player, void *data, char *buffer) {
   nv2 = BuildBitVector(specials2, buffer);
 
   if ((nv < 0) && (nv2 < 0)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tech: Available techs:");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Invalid tech: Available techs:");
 
     for (nv = 0; specials[nv]; nv++)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials[nv]);
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                    "\t%s", specials[nv]);
 
     for (nv = 0; specials2[nv]; nv++)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s", specials2[nv]);
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                    "\t%s", specials2[nv]);
 
     return;
   }
 
   if ((!nv) && (!nv2)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing set!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Nothing set!");
     return;
   }
 
   if (nv > 0) {
     MechSpecials(mech) |= nv;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
-                  BuildBitString(specials, nv));
+    notify_printf(
+        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
+        build_bit_string(specials, nv, (char[BTECH_TEXT_CAPACITY]){0}));
   } else {
     MechSpecials2(mech) |= nv2;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
-                  BuildBitString(specials2, nv2));
+    notify_printf(
+        btech_context_evaluation(rep->xcode.context), player, "Set: %s",
+        build_bit_string(specials2, nv2, (char[BTECH_TEXT_CAPACITY]){0}));
   }
 }
 
@@ -1833,7 +1969,7 @@ void mechrep_Rdelinftech(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   MechInfantrySpecials(mech) = 0;
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "Advanced Infantry Technology Deleted");
 }
 
@@ -1844,30 +1980,33 @@ void mechrep_Raddinftech(DbRef player, void *data, char *buffer) {
   nv = BuildBitVector(infantry_specials, buffer);
 
   if (MechType(mech) != CLASS_BSUIT) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "That is not a valid target for infantry technologies. Try a Suit!");
     return;
   }
 
   if (nv < 0) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(rep->xcode.context), player,
            "Invalid infantry tech: Available techs:");
 
     for (nv = 0; infantry_specials[nv]; nv++)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "\t%s",
-                    infantry_specials[nv]);
+      notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                    "\t%s", infantry_specials[nv]);
     return;
   }
 
   if (!nv) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Nothing set!");
+    notify(btech_context_evaluation(rep->xcode.context), player,
+           "Nothing set!");
     return;
   }
 
   if (nv > 0) {
     MechInfantrySpecials(mech) |= nv;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Set: %s",
-                  BuildBitString(infantry_specials, nv));
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Set: %s",
+                  build_bit_string(infantry_specials, nv,
+                                   (char[BTECH_TEXT_CAPACITY]){0}));
   }
 }
 
@@ -1879,32 +2018,56 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
 
   MECHREP_COMMON(1);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc != 2, "Invalid number of arguements!");
+  DOCHECK_CONTEXT(rep->xcode.context, argc != 2,
+                  "Invalid number of arguements!");
 
   cargo = (atoi(args[0]) * 50);
-  DOCHECK(cargo < 0 || cargo > 250000, "Doesn't that seem excessive?");
+  DOCHECK_CONTEXT(rep->xcode.context, cargo < 0 || cargo > 250000,
+                  "Doesn't that seem excessive?");
   CargoSpace(mech) = cargo;
 
   max = (atoi(args[1]));
   max = (BOUNDED(1, max, 100));
   CarMaxTon(mech) = (char)max;
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
                 "%3.2f cargospace and %d tons of maxton space set.",
                 (float)((float)cargo / 100), (int)max);
 }
 
-MECH *load_refmech(char *reference) {
-  static MECH cachemech;
-  static char cacheref[1024];
+struct MechReferenceCache {
+  MECH mech;
+  char reference[1024];
+};
 
-  if (!strcmp(cacheref, reference))
-    return &cachemech;
-  if (mech_loadnew(GOD, &cachemech, reference) < 1) {
-    cacheref[0] = '\0';
-    return NULL;
+MECH *load_refmech(BtechContext *context, const char *reference) {
+  MechReferenceCache *cache = context->reference_mech_cache;
+
+  if (cache == nullptr) {
+    cache = calloc(1, sizeof(*cache));
+    if (cache == nullptr)
+      return nullptr;
+    cache->mech.xcode = (XCODE){
+        .type = GTYPE_MECH,
+        .size = sizeof(cache->mech),
+        .context = context,
+    };
+    context->reference_mech_cache = cache;
   }
-  strncpy(cacheref, reference, 1023);
-  cacheref[1023] = '\0';
-  return &cachemech;
+
+  if (!strcmp(cache->reference, reference))
+    return &cache->mech;
+  if (mech_loadnew(GOD, &cache->mech, (char *)reference) < 1) {
+    cache->reference[0] = '\0';
+    return nullptr;
+  }
+  snprintf(cache->reference, sizeof(cache->reference), "%s", reference);
+  return &cache->mech;
+}
+
+void mech_reference_cache_destroy(BtechContext *context) {
+  if (context == nullptr)
+    return;
+  free(context->reference_mech_cache);
+  context->reference_mech_cache = nullptr;
 }

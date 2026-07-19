@@ -16,25 +16,16 @@
 
 #pragma once
 
-typedef struct {
+typedef struct PN {
   char *shorty;
   char *longy;
   char *vlongy;
   int index;
 } PN;
 
-extern PN **short_sorted;
-extern PN **long_sorted;
-extern PN **vlong_sorted;
-extern int object_count;
-
 #define PACKED_PART(id, brand) (NUM_ITEMS * brand + id)
 #define UNPACK_PART(from, id, brand)                                           \
   id = from % NUM_ITEMS;                                                       \
   brand = from / NUM_ITEMS
-
-char *get_parts_short_name(int, int);
-char *get_parts_long_name(int, int);
-char *get_parts_vlong_name(int, int);
 
 #include "p.mech.partnames.h"

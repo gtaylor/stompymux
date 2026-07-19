@@ -140,6 +140,7 @@ OK, enough of this.  Let's get on to the code.
 
 #include "mech.h"
 #include "btmacros.h"
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,8 +154,9 @@ typedef enum { N, NE, SE, S, SW, NW } hexdir;
 
 #define Store_Hex(store_x, store_y)                                            \
   do {                                                                         \
-    found_coords[found_count].x = store_x;                                     \
-    found_coords[found_count++].y = store_y;                                   \
+    assert(found_count < LOS_TRACE_CAPACITY);                                  \
+    trace->points[found_count].x = store_x;                                    \
+    trace->points[found_count++].y = store_y;                                  \
   } while (0)
 
 #define Store_BestOf(x1, y1, x2, y2)                                           \
@@ -209,7 +211,7 @@ static void GetAdjHex(int currx, int curry, int nexthex, int *x, int *y) {
   }
 }
 
-int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
+int trace_los(MAP *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
   int i;                    /* Generic counter */
   float acx, acy, bcx, bcy; /* endpoints CARTESIAN coords */
@@ -231,7 +233,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
   float nextdist;           /* distance along the line of potential hex */
   float bestdist;           /* "best" (not furthest) distance tried */
   float enddist;            /* distance along at end of line */
-  static lostrace_info found_coords[4000];
   int found_count = 0;
 
   /* Before doing anything, let's check for special circumstances, this */
@@ -245,7 +246,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
   /* THE base case */
   if ((ax == bx) && (ay == by)) {
     Store_Hex(bx, by);
-    *result = found_coords;
     return found_count;
   }
   /* Is it vertical? */
@@ -257,7 +257,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
       for (i = ay + 1; i < by; i++)
         Store_Hex(ax, i);
     Store_Hex(bx, by);
-    *result = found_coords;
     return found_count;
   }
 
@@ -279,7 +278,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
     }
 
     /* 	Store_Hex(bx,by); */
-    *result = found_coords;
     return found_count;
   }
 
@@ -327,7 +325,6 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
       Store_Hex(currx, curry);
     }
     Store_Hex(currx, curry);
-    *result = found_coords;
     return found_count;
   }
 
@@ -421,6 +418,5 @@ int TraceLOS(MAP *map, int ax, int ay, int bx, int by, lostrace_info **result) {
   /* **************************************************** */
   Store_Hex(currx, curry);
   /* ********************************************************* */
-  *result = found_coords;
   return found_count;
 }

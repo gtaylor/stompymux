@@ -6,14 +6,15 @@
 
 #include "p.glue.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -314,7 +315,7 @@ void do_link(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "Permission denied.");
     break;
   default:
-    log_error(&evaluation->server->log, LOG_BUGS, "BUG", "OTYPE",
+    log_error(evaluation->log, LOG_BUGS, "BUG", "OTYPE",
               "Strange object type: object #%ld = %d", thing,
               typeof_obj(evaluation->world->database, thing));
   }
@@ -376,8 +377,7 @@ void do_parent(CommandInvocation *invocation) {
      */
 
     ITER_PARENTS(evaluation->world->database,
-                 invocation->context->server->configuration, parent, curr,
-                 lev) {
+                 invocation->context->world->configuration, parent, curr, lev) {
       if (curr == thing) {
         notify_quiet(evaluation, player,
                      "You can't have yourself as a parent!");
@@ -543,7 +543,7 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   if ((arg2 && *arg2) &&
-      ok_name(invocation->context->server->configuration, arg2))
+      ok_name(invocation->context->world->configuration, arg2))
     clone = create_obj(evaluation, new_owner,
                        typeof_obj(evaluation->world->database, thing), arg2);
   else
@@ -568,7 +568,7 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   if ((arg2 && *arg2) &&
-      ok_name(invocation->context->server->configuration, arg2))
+      ok_name(invocation->context->world->configuration, arg2))
     object_name_set(invocation->context->world->database, clone, arg2);
   else
     object_name_set(
@@ -684,25 +684,24 @@ void do_pcreate(CommandInvocation *invocation) {
                          name, newplayer, pass));
 
     notify_quiet(evaluation, player, "Your robot has arrived.");
-    STARTLOG(&evaluation->server->log, LOG_PCREATES, "CRE", "ROBOT") {
-      log_name(&evaluation->server->log, newplayer);
+    STARTLOG(evaluation->log, LOG_PCREATES, "CRE", "ROBOT") {
+      log_name(evaluation->log, newplayer);
       log_text(" created by ");
-      log_name(&evaluation->server->log, player);
-      ENDLOG(&evaluation->server->log);
+      log_name(evaluation->log, player);
+      ENDLOG(evaluation->log);
     }
   } else {
     move_object(evaluation, newplayer,
-                invocation->context->server->configuration->start_room);
+                invocation->context->world->configuration->start_room);
     notify_quiet(evaluation, player,
                  tprintf("New player '%s' (#%ld) created with password '%s'",
                          name, newplayer, pass));
 
-    STARTLOG(&evaluation->server->log, LOG_PCREATES | LOG_WIZARD, "WIZ",
-             "PCREA") {
-      log_name(&evaluation->server->log, newplayer);
+    STARTLOG(evaluation->log, LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
+      log_name(evaluation->log, newplayer);
       log_text(" created by ");
-      log_name(&evaluation->server->log, player);
-      ENDLOG(&evaluation->server->log);
+      log_name(evaluation->log, player);
+      ENDLOG(evaluation->log);
     }
   }
 }
@@ -801,7 +800,7 @@ void do_destroy(CommandInvocation *invocation) {
    */
 
   if (!destroyable(evaluation->world->database,
-                   invocation->context->server->configuration, thing)) {
+                   invocation->context->world->configuration, thing)) {
     notify_quiet(evaluation, player, "You can't destroy that!");
     return;
   }
@@ -816,7 +815,7 @@ void do_destroy(CommandInvocation *invocation) {
         notify_quiet(evaluation, player, "No sense beating a dead exit.");
       } else {
         if (is_hardcode(evaluation->world->database, thing)) {
-          DisposeSpecialObject(player, thing);
+          DisposeSpecialObject(evaluation->btech, player, thing);
           c_hardcode(evaluation->world->database, thing);
         }
         if (0) {
@@ -853,7 +852,7 @@ void do_destroy(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "No sense beating a dead object.");
     } else {
       if (is_hardcode(evaluation->world->database, thing)) {
-        DisposeSpecialObject(player, thing);
+        DisposeSpecialObject(evaluation->btech, player, thing);
         c_hardcode(evaluation->world->database, thing);
       }
       if (0) {
@@ -890,7 +889,7 @@ void do_destroy(CommandInvocation *invocation) {
         notify_quiet(evaluation, player, "No sense beating a dead player.");
       } else {
         if (is_hardcode(evaluation->world->database, thing)) {
-          DisposeSpecialObject(player, thing);
+          DisposeSpecialObject(evaluation->btech, player, thing);
           c_hardcode(evaluation->world->database, thing);
         }
         if (0) {
@@ -952,7 +951,7 @@ void do_chzone(CommandInvocation *invocation) {
   DbRef thing;
   DbRef zone;
 
-  if (!invocation->context->server->configuration->have_zones) {
+  if (!invocation->context->world->configuration->have_zones) {
     notify(evaluation, player, "Zones disabled.");
     return;
   }
@@ -1058,13 +1057,13 @@ void do_name(CommandInvocation *invocation) {
   if (is_player(evaluation->world->database, thing)) {
 
     buff = trim_spaces((char *)newname);
-    if (!ok_player_name(invocation->context->server->configuration, buff) ||
+    if (!ok_player_name(invocation->context->world->configuration, buff) ||
         !badname_check(invocation->context->world, buff)) {
       notify_quiet(evaluation, player, "You can't use that name.");
       free_lbuf(buff);
       return;
     } else if (string_compare(
-                   invocation->context->server->configuration, buff,
+                   invocation->context->world->configuration, buff,
                    game_object_name(invocation->context->world->database,
                                     thing)) &&
                (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
@@ -1082,10 +1081,10 @@ void do_name(CommandInvocation *invocation) {
     /*
      * everything ok, notify
      */
-    STARTLOG(&evaluation->server->log, LOG_SECURITY, "SEC", "CNAME") {
-      log_name(&evaluation->server->log, thing), log_text(" renamed to ");
+    STARTLOG(evaluation->log, LOG_SECURITY, "SEC", "CNAME") {
+      log_name(evaluation->log, thing), log_text(" renamed to ");
       log_text(buff);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     if (is_suspect(evaluation->world->database, thing)) {
       send_channel(
@@ -1108,7 +1107,7 @@ void do_name(CommandInvocation *invocation) {
     free_lbuf(buff);
     return;
   } else {
-    if (!ok_name(invocation->context->server->configuration, newname)) {
+    if (!ok_name(invocation->context->world->configuration, newname)) {
       notify_quiet(evaluation, player, "That is not a reasonable name.");
       return;
     }
@@ -1185,7 +1184,7 @@ void do_chown(CommandInvocation *invocation) {
     if (atr != NOTHING) {
       if (!*newown) {
         owner = game_object_owner(evaluation->world->database, thing);
-      } else if (!(string_compare(invocation->context->server->configuration,
+      } else if (!(string_compare(invocation->context->world->configuration,
                                   newown, "me"))) {
         owner = game_object_owner(evaluation->world->database, player);
       } else {
@@ -1286,7 +1285,7 @@ void do_chown(CommandInvocation *invocation) {
     break;
   }
 
-  if (!*newown || !(string_compare(invocation->context->server->configuration,
+  if (!*newown || !(string_compare(invocation->context->world->configuration,
                                    newown, "me"))) {
     owner = game_object_owner(evaluation->world->database, player);
   } else {
@@ -1321,7 +1320,7 @@ void do_chown(CommandInvocation *invocation) {
             HALT);
     game_object_set_powers(evaluation->world->database, thing, 0);
     game_object_set_powers2(evaluation->world->database, thing, 0);
-    halt_que(invocation->context->server->commands, NOTHING, thing);
+    halt_que(invocation->context->runtime->commands, NOTHING, thing);
     if (!is_quiet(evaluation->world->database, player))
       notify_quiet(evaluation, player, "Owner changed.");
   }
@@ -1371,8 +1370,8 @@ void do_set(CommandInvocation *invocation) {
        * Make sure player specified a valid attribute flag
        */
 
-      flagvalue = name_table_search(&invocation->context->server->database,
-                                    invocation->context->server->configuration,
+      flagvalue = name_table_search(invocation->context->world->database,
+                                    invocation->context->world->configuration,
                                     player, indiv_attraccess_nametab, flag);
       if (flagvalue < 0) {
         notify_quiet(evaluation, player, "You can't set that!");
@@ -1411,15 +1410,15 @@ void do_set(CommandInvocation *invocation) {
        * Tell the player about it.
        */
 
-      if (invocation->context->server->configuration->have_specials)
-        handle_xcode(player, thing, have_xcode,
+      if (invocation->context->world->configuration->have_specials)
+        handle_xcode(invocation->context->btech, player, thing, have_xcode,
                      is_hardcode(evaluation->world->database, thing));
       if (!(key & SET_QUIET) &&
           !is_quiet(evaluation->world->database, player) &&
           !is_quiet(evaluation->world->database, thing)) {
         NameTable *nt;
-        nt = name_table_find_entry(&invocation->context->server->database,
-                                   invocation->context->server->configuration,
+        nt = name_table_find_entry(invocation->context->world->database,
+                                   invocation->context->world->configuration,
                                    player, indiv_attraccess_nametab, flag);
         notify_printf(
             evaluation, player, "%s/%s - %s %s",
@@ -1493,7 +1492,7 @@ void do_set(CommandInvocation *invocation) {
      * Go set it
      */
 
-    object_attribute_set(evaluation, invocation->context->server->configuration,
+    object_attribute_set(evaluation, invocation->context->world->configuration,
                          player, thing, atr, p, key);
     free_lbuf(buff);
     return;
@@ -1520,7 +1519,7 @@ void do_cpattr(CommandInvocation *invocation) {
 
   oldattr = oldpair;
   oldthing =
-      parse_to(invocation->context->server->configuration, &oldattr, '/', 1);
+      parse_to(invocation->context->world->configuration, &oldattr, '/', 1);
 
   for (i = 0; i < nargs; i++) {
     CommandInvocation set_invocation = *invocation;
@@ -1528,7 +1527,7 @@ void do_cpattr(CommandInvocation *invocation) {
     set_invocation.key = 0;
     newattr = newpair[i];
     newthing =
-        parse_to(invocation->context->server->configuration, &newattr, '/', 1);
+        parse_to(invocation->context->world->configuration, &newattr, '/', 1);
 
     if (!oldattr) {
       if (!newattr) {
@@ -1683,8 +1682,8 @@ void do_wipe(CommandInvocation *invocation) {
   if (!it || !*it ||
       !parse_attrib_wild(&invocation->context->match, player, it, &thing, 0, 0,
                          1, &attributes,
-                         invocation->context->server->configuration,
-                         &invocation->context->server->world_indexes)) {
+                         invocation->context->world->configuration,
+                         invocation->context->runtime->world_indexes)) {
     notify_quiet(evaluation, player, "No match.");
     object_list_destroy(&attributes);
     return;

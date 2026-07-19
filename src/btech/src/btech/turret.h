@@ -24,7 +24,7 @@ typedef struct {
   XCODE xcode; /* XCODE base class field */
   DbRef mynum;
 
-  int arcs;                    /* arc_override */
+  int arcs;
   unsigned long tic[NUM_TICS]; /* tics.. */
   DbRef parent;                /* ship whose stats we use for this */
   DbRef gunner;                /* who's da gunner? */

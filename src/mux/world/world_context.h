@@ -10,6 +10,7 @@ typedef struct WorldIndexes WorldIndexes;
 
 typedef struct WorldContext WorldContext;
 struct WorldContext {
+  /* Every member is borrowed from MuxServer. */
   GameDatabase *database;
   ServerConfiguration *configuration;
   WorldIndexes *indexes;
@@ -17,11 +18,12 @@ struct WorldContext {
   DescriptorRegistry *descriptors;
 };
 
-static inline void
-world_context_initialize(WorldContext *world, GameDatabase *database,
-                         ServerConfiguration *configuration,
-                         WorldIndexes *indexes, AccessControlStore *access_control,
-                         DescriptorRegistry *descriptors) {
+static inline void world_context_initialize(WorldContext *world,
+                                            GameDatabase *database,
+                                            ServerConfiguration *configuration,
+                                            WorldIndexes *indexes,
+                                            AccessControlStore *access_control,
+                                            DescriptorRegistry *descriptors) {
   *world = (WorldContext){
       .database = database,
       .configuration = configuration,

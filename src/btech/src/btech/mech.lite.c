@@ -22,7 +22,7 @@
  * range, the target is lit.
  */
 static int mech_lites_target(MECH *mech, MECH *target) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int losflag = MechToMech_LOSFlag(map, mech, target);
 
   if (!MechLites(mech))
@@ -48,7 +48,7 @@ void cause_lite(MECH *mech, MECH *tempMech) {
 }
 
 void end_lite_check(MECH *mech) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   MECH *t;
   int i;
 
@@ -59,7 +59,8 @@ void end_lite_check(MECH *mech) {
   for (i = 0; i < map->first_free; i++) {
     if (i == mech->mapnumber)
       continue;
-    if (!(t = FindObjectsData(map->mechsOnMap[i])))
+    if (!(t = btech_context_find_object(mech->xcode.context,
+                                        map->mechsOnMap[i])))
       continue;
     if (mech_lites_target(t, mech))
       return;

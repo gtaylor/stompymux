@@ -24,33 +24,27 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static MuxTimer *heartbeat_ev;
-static int heartbeat_running = 0;
-unsigned int global_tick = 0;
-extern RedBlackTree xcode_tree;
-
 static void heartbeat_run(MuxTimer *timer, void *arg);
 
-void heartbeat_init() {
-  if (heartbeat_running)
+void heartbeat_init(BtechContext *context) {
+  if (context->heartbeat_running)
     return;
   dprintk("hearbeat initialized, 1s timeout.");
-  heartbeat_ev =
-      mux_timer_create(server_lifecycle_loop(btech_context_active()->lifecycle),
-                       heartbeat_run, nullptr);
-  if (heartbeat_ev == nullptr)
+  context->heartbeat = mux_timer_create(
+      server_lifecycle_loop(context->lifecycle), heartbeat_run, context);
+  if (context->heartbeat == nullptr)
     return;
-  mux_timer_start(heartbeat_ev, 1000, 1000);
-  heartbeat_running = 1;
+  mux_timer_start(context->heartbeat, 1000, 1000);
+  context->heartbeat_running = true;
 }
 
-void heartbeat_stop() {
-  if (!heartbeat_running)
+void heartbeat_stop(BtechContext *context) {
+  if (!context->heartbeat_running)
     return;
-  mux_timer_destroy(heartbeat_ev);
-  heartbeat_ev = nullptr;
+  mux_timer_destroy(context->heartbeat);
+  context->heartbeat = nullptr;
   dprintk("heartbeat stopped.\n");
-  heartbeat_running = 0;
+  context->heartbeat_running = false;
 }
 
 void mech_heartbeat(MECH *);
@@ -76,6 +70,9 @@ static int heartbeat_dispatch(void *key, void *data, int depth, void *arg) {
 }
 
 static void heartbeat_run(MuxTimer *timer, void *arg) {
-  red_black_tree_walk(xcode_tree, WALK_INORDER, heartbeat_dispatch, NULL);
-  global_tick++;
+  BtechContext *context = arg;
+
+  red_black_tree_walk(context->special_objects, WALK_INORDER,
+                      heartbeat_dispatch, context);
+  context->tick++;
 }

@@ -11,31 +11,129 @@
  *
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/file.h>
 
 #include "mech.h"
+#include "p.mech.build.h"
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"
 #include "weapons.h"
 
 const int num_def_weapons = NUM_DEF_WEAPONS;
 
-int CheckData(DbRef player, void *data) {
-  int returnValue = 1;
-
-  if (data == NULL) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
-           "There is a problem with that item.");
-    notify(BTECH_EVALUATION_CONTEXT, player,
-           "The data is not properly allocated.");
-    notify(BTECH_EVALUATION_CONTEXT, player,
-           "Please notify a director of this.");
-    returnValue = 0;
+bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
+  *settings = (BtechWeaponSettings){0};
+  settings->values = calloc(num_def_weapons, sizeof(*settings->values));
+  if (settings->values == nullptr)
+    return false;
+  settings->count = num_def_weapons;
+  for (size_t index = 0; index < settings->count; index++) {
+    settings->values[index] = (BtechWeaponRuntimeValues){
+        .recycle_time = MechWeapons[index].vrt,
+        .battle_value = MechWeapons[index].battlevalue,
+    };
   }
-  return (returnValue);
+  return true;
+}
+
+void btech_weapon_settings_destroy(BtechWeaponSettings *settings) {
+  if (settings == nullptr)
+    return;
+  free(settings->values);
+  *settings = (BtechWeaponSettings){0};
+}
+
+static bool btech_weapon_settings_contains(const BtechWeaponSettings *settings,
+                                           int weapon_index) {
+  return settings != nullptr && weapon_index >= 0 &&
+         (size_t)weapon_index < settings->count;
+}
+
+int btech_weapon_settings_recycle_time(const BtechWeaponSettings *settings,
+                                       int weapon_index) {
+  assert(btech_weapon_settings_contains(settings, weapon_index));
+  return settings->values[weapon_index].recycle_time;
+}
+
+int btech_weapon_settings_battle_value(const BtechWeaponSettings *settings,
+                                       int weapon_index) {
+  assert(btech_weapon_settings_contains(settings, weapon_index));
+  return settings->values[weapon_index].battle_value;
+}
+
+bool btech_weapon_settings_set_recycle_time(BtechWeaponSettings *settings,
+                                            int weapon_index, int value) {
+  if (!btech_weapon_settings_contains(settings, weapon_index))
+    return false;
+  settings->values[weapon_index].recycle_time = value;
+  return true;
+}
+
+bool btech_weapon_settings_set_battle_value(BtechWeaponSettings *settings,
+                                            int weapon_index, int value) {
+  if (!btech_weapon_settings_contains(settings, weapon_index))
+    return false;
+  settings->values[weapon_index].battle_value = value;
+  return true;
+}
+
+bool missile_hit_registry_initialize(MissileHitRegistry *registry,
+                                     BtechContext *context) {
+  const size_t definition_count =
+      sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS) - 1;
+
+  *registry = (MissileHitRegistry){0};
+  registry->entries = calloc(definition_count, sizeof(*registry->entries));
+  if (registry->entries == nullptr)
+    return false;
+  registry->count = definition_count;
+
+  for (size_t index = 0; index < definition_count; index++) {
+    int id;
+    int brand;
+
+    registry->entries[index] = MISSILE_HIT_DEFINITIONS[index];
+    if (find_matching_vlong_part(context, registry->entries[index].name,
+                                 nullptr, &id, &brand))
+      registry->entries[index].weapon_index = Weapon2I(id);
+    else
+      registry->entries[index].weapon_index = -1;
+  }
+  return true;
+}
+
+void missile_hit_registry_destroy(MissileHitRegistry *registry) {
+  if (registry == nullptr)
+    return;
+  free(registry->entries);
+  *registry = (MissileHitRegistry){0};
+}
+
+const MissileHitEntry *
+missile_hit_registry_find_weapon(const MissileHitRegistry *registry,
+                                 int weapon_index) {
+  if (registry == nullptr)
+    return nullptr;
+  for (size_t index = 0; index < registry->count; index++)
+    if (registry->entries[index].weapon_index == weapon_index)
+      return &registry->entries[index];
+  return nullptr;
+}
+
+const MissileHitEntry *
+missile_hit_registry_find_name(const MissileHitRegistry *registry,
+                               const char *name) {
+  if (registry == nullptr || name == nullptr)
+    return nullptr;
+  for (size_t index = 0; index < registry->count; index++)
+    if (strcmp(registry->entries[index].name, name) == 0)
+      return &registry->entries[index];
+  return nullptr;
 }
 
 void FillDefaultCriticals(MECH *mech, int index) {
@@ -97,18 +195,19 @@ void FillDefaultCriticals(MECH *mech, int index) {
     }
 }
 
-char *ShortArmorSectionString(char type, char mtype, int loc) {
+ArmorSectionAbbreviation armor_section_abbreviation(char type, char mtype,
+                                                    int loc) {
   char **locs;
-  static char buf[4];
-  char *c = buf;
+  ArmorSectionAbbreviation abbreviation = {0};
+  char *cursor = abbreviation.text;
   int i;
 
   locs = ProperSectionStringFromType(type, mtype);
   for (i = 0; locs[loc][i]; i++)
     if (isupper(locs[loc][i]) || isdigit(locs[loc][i]))
-      *(c++) = locs[loc][i];
-  *c = 0;
-  return buf;
+      *(cursor++) = locs[loc][i];
+  *cursor = '\0';
+  return abbreviation;
 }
 
 int ArmorSectionFromString(char type, char mtype, char *string) {
@@ -151,19 +250,19 @@ int ArmorSectionFromString(char type, char mtype, char *string) {
   return -1;
 }
 
-int WeaponIndexFromString(char *string) {
+int WeaponIndexFromString(BtechContext *context, char *string) {
   int id, brand;
 
-  if (find_matching_vlong_part(string, NULL, &id, &brand))
+  if (find_matching_vlong_part(context, string, nullptr, &id, &brand))
     if (IsWeapon(id))
       return Weapon2I(id);
   return -1;
 }
 
-int FindSpecialItemCodeFromString(char *buffer) {
+int FindSpecialItemCodeFromString(BtechContext *context, char *buffer) {
   int id, brand;
 
-  if (find_matching_vlong_part(buffer, NULL, &id, &brand))
+  if (find_matching_vlong_part(context, buffer, nullptr, &id, &brand))
     if (IsSpecial(id))
       return Special2I(id);
   return -1;

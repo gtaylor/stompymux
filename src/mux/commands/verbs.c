@@ -2,13 +2,14 @@
 
 #include "mux/commands/verbs.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/database/attrs.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -89,8 +90,8 @@ void did_it(EvaluationContext *evaluation, DbRef player, DbRef thing, int what,
    */
 
   if (awhat > 0) {
-    if (lua_event_dispatch(evaluation->server->lua, player, thing, awhat, args,
-                           nargs))
+    if (lua_event_dispatch(evaluation->runtime->lua_owner->runtime, player,
+                           thing, awhat, args, nargs))
       return;
     if (*(act = attribute_parent_get(evaluation->world->database, thing, awhat,
                                      &aowner, &aflags))) {
@@ -117,7 +118,7 @@ void did_it(EvaluationContext *evaluation, DbRef player, DbRef thing, int what,
         }
       }
       free_lbuf(charges);
-      wait_que(evaluation->server->commands, thing, player, 0, NOTHING, 0, act,
+      wait_que(evaluation->runtime->commands, thing, player, 0, NOTHING, 0, act,
                args, nargs, evaluation->registers);
     }
     free_lbuf(act);

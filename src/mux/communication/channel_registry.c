@@ -23,7 +23,7 @@ void channel_registry_destroy(ChannelRegistry *registry) {
     }
     registry->commacs[bucket] = nullptr;
   }
-  hash_table_flush(&registry->channels, 0);
+  hash_table_destroy(&registry->channels);
   registry->count = 0;
 }
 

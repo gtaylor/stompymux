@@ -5,14 +5,15 @@
 #include "mux/server/libuv.h"
 
 #include "libtelnet.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/network/connect_flow.h"
+#include "mux/network/connection_runtime.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
@@ -34,7 +35,7 @@ struct TelnetListener {
 
 struct TelnetSockets {
   uv_loop_t *loop;
-  MuxServer *server;
+  ConnectionRuntime *runtime;
   TelnetListener listener4;
 #ifdef IPV6_SUPPORT
   TelnetListener listener6;
@@ -55,7 +56,7 @@ static void descriptor_write_complete(uv_write_t *request, int status) {
   descriptor->output_size -= (int)write->size;
   free(write);
   if (status < 0 && !descriptor->is_dead) {
-    log_error(&descriptor_server(descriptor)->log, LOG_PROBLEMS, "NET", "WRITE",
+    log_error(descriptor_log(descriptor), LOG_PROBLEMS, "NET", "WRITE",
               "Write failed on fd %d: %s", descriptor->descriptor,
               uv_strerror(status));
     descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
@@ -110,13 +111,14 @@ static void listener_closed(uv_handle_t *handle) {
   listener->initialized = false;
 }
 
-TelnetSockets *telnet_sockets_create(uv_loop_t *loop, MuxServer *server) {
+TelnetSockets *telnet_sockets_create(uv_loop_t *loop,
+                                     ConnectionRuntime *runtime) {
   TelnetSockets *sockets = calloc(1, sizeof(*sockets));
 
   if (sockets == nullptr)
     return nullptr;
   sockets->loop = loop;
-  sockets->server = server;
+  sockets->runtime = runtime;
   sockets->listener4.owner = sockets;
 #ifdef IPV6_SUPPORT
   sockets->listener6.owner = sockets;
@@ -144,7 +146,7 @@ void telnet_sockets_release(TelnetSockets *sockets) {
 int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
   Descriptor *descriptor;
   DescriptorIterator iterator =
-      descriptor_iterator_all(sockets->server->descriptors);
+      descriptor_iterator_all(sockets->runtime->descriptors);
 
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     if (fd == 0 || descriptor->descriptor == fd)
@@ -183,7 +185,7 @@ static bool listener_start(TelnetListener *listener, int port, bool ipv6) {
 fail_close:
   uv_close((uv_handle_t *)&listener->handle, listener_closed);
 fail:
-  log_error(&listener->owner->server->log, LOG_ALWAYS, "NET", "LISTEN",
+  log_error(listener->owner->runtime->log, LOG_ALWAYS, "NET", "LISTEN",
             "Unable to listen on port %d: %s", port, uv_strerror(status));
   return false;
 }
@@ -234,14 +236,15 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
   if (descriptor->is_autodark) {
     descriptor->is_autodark = false;
     game_object_set_flags(
-        &descriptor_server(descriptor)->database, descriptor->player,
-        game_object_flags(&descriptor_server(descriptor)->database,
+        descriptor_runtime(descriptor)->world->database, descriptor->player,
+        game_object_flags(descriptor_runtime(descriptor)->world->database,
                           descriptor->player) &
             ~DARK);
   }
   descriptor->input_tot += (int)read_size;
   descriptor_retain(descriptor);
-  if (is_wizard(&descriptor_server(descriptor)->database, descriptor->player) &&
+  if (is_wizard(descriptor_runtime(descriptor)->world->database,
+                descriptor->player) &&
       read_size >= 9 && strncmp("@segfault", buffer->base, 9) == 0) {
     descriptor_queue_string(descriptor,
                             "@segfault failed. (check logfile for reason.)\n");
@@ -254,7 +257,7 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
 
 static void accept_new_connection(uv_stream_t *server, int status) {
   TelnetListener *listener = server->data;
-  MuxServer *mux = listener->owner->server;
+  ConnectionRuntime *runtime = listener->owner->runtime;
   Descriptor *descriptor;
   struct sockaddr_storage address;
   int address_size = sizeof(address);
@@ -291,22 +294,23 @@ static void accept_new_connection(uv_stream_t *server, int status) {
               sizeof(address_port), NI_NUMERICHOST | NI_NUMERICSERV);
 
   if (site_data_check(&address, address_size,
-                      mux->access_control.access_sites) == H_FORBIDDEN) {
-    log_error(&mux->log, LOG_NET | LOG_SECURITY, "NET", "SiteData",
+                      runtime->access_control->access_sites) == H_FORBIDDEN) {
+    log_error(runtime->log, LOG_NET | LOG_SECURITY, "NET", "SiteData",
               "Connection refused from %s %s.", address_name, address_port);
-    fcache_rawdump(mux->files, descriptor->descriptor, FC_CONN_SITE);
+    fcache_rawdump(*runtime->files_owner, descriptor->descriptor, FC_CONN_SITE);
     discard_connection(descriptor);
     return;
   }
 
-  descriptor->connected_at = mux->clock.now;
-  descriptor->retries_left = mux->configuration->retry_limit;
-  descriptor->timeout = mux->configuration->idle_timeout;
-  descriptor->host_info = site_data_check(&address, address_size,
-                                          mux->access_control.access_sites) |
-                          site_data_check(&address, address_size,
-                                          mux->access_control.suspect_sites);
-  descriptor->quota = mux->configuration->cmd_quota_max;
+  descriptor->connected_at = runtime->clock->now;
+  descriptor->retries_left = runtime->configuration->retry_limit;
+  descriptor->timeout = runtime->configuration->idle_timeout;
+  descriptor->host_info =
+      site_data_check(&address, address_size,
+                      runtime->access_control->access_sites) |
+      site_data_check(&address, address_size,
+                      runtime->access_control->suspect_sites);
+  descriptor->quota = runtime->configuration->cmd_quota_max;
   snprintf(descriptor->addr, sizeof(descriptor->addr), "%s", address_name);
   uv_tcp_nodelay(descriptor->socket, 1);
   if (!descriptor_telnet_initialize(descriptor)) {
@@ -314,13 +318,13 @@ static void accept_new_connection(uv_stream_t *server, int status) {
     return;
   }
 
-  if (!descriptor_register(mux->descriptors, descriptor)) {
+  if (!descriptor_register(runtime->descriptors, descriptor)) {
     descriptor_telnet_destroy(descriptor);
     discard_connection(descriptor);
     return;
   }
-  log_error(&mux->log, LOG_NET, "NET", "CONN", "Connection opened from %s %s.",
-            address_name, address_port);
+  log_error(runtime->log, LOG_NET, "NET", "CONN",
+            "Connection opened from %s %s.", address_name, address_port);
   if (uv_read_start((uv_stream_t *)descriptor->socket, descriptor_read_alloc,
                     descriptor_read) < 0) {
     descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
@@ -334,7 +338,7 @@ void telnet_sockets_close(TelnetSockets *sockets, bool emergency,
                           const char *message) {
   Descriptor *descriptor;
   DescriptorIterator iterator =
-      descriptor_iterator_all(sockets->server->descriptors);
+      descriptor_iterator_all(sockets->runtime->descriptors);
 
   telnet_sockets_release(sockets);
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {

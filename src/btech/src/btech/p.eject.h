@@ -14,7 +14,7 @@
 #pragma once
 
 /* eject.c */
-int tele_contents(DbRef from, DbRef to, int flag);
+int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag);
 void discard_mw(MECH *mech);
 void enter_mw_bay(MECH *mech, DbRef bay);
 void pickup_mw(MECH *mech, MECH *target);

@@ -13,7 +13,7 @@
 #include "weapons.fasa.h"
 #endif
 
-struct weapon_struct MechWeapons[] = {
+const struct weapon_struct MechWeapons[] = {
 
     /* Clan Normal AC's. Couldn't find a reference for these anywhere. --
        02/13/07 Power_Shaper */
@@ -3141,14 +3141,11 @@ struct weapon_struct MechWeapons[] = {
 };
 
 /* Prep work for unifying cluster hit tables */
-#define CLUSTER_HIT_2                                                          \
-  { 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2 }
-#define CLUSTER_HIT_10                                                         \
-  { 3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10 }
-#define CLUSTER_HIT_30                                                         \
-  { 10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30 }
+#define CLUSTER_HIT_2 {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}
+#define CLUSTER_HIT_10 {3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10}
+#define CLUSTER_HIT_30 {10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30}
 
-struct missile_hit_table_struct MissileHitTable[] = {
+static const MissileHitEntry MISSILE_HIT_DEFINITIONS[] = {
     {"CL.LB10-XAC", 0, {3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10}},
     {"CL.LB20-XAC", 0, {6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20}},
     {"CL.LB2-XAC", 0, {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}},

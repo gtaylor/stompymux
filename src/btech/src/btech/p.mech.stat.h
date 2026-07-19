@@ -11,6 +11,8 @@
 
 #pragma once
 
+typedef struct CommandInvocation CommandInvocation;
+
 /* mech.stat.c */
-void init_stat(void);
-void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2);
+void init_stat(BtechContext *context);
+void do_show_stat(CommandInvocation *invocation);

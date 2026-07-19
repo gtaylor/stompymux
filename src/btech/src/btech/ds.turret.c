@@ -18,12 +18,9 @@
 #include "p.mech.status.h"
 #include "turret.h"
 
-int arc_override = 0;
-DbRef pilot_override = 0;
-
 #define LOCK_FUDGE(mech, tur)                                                  \
   if (tur->gunner > 0)                                                         \
-    pilot_override = tur->gunner;                                              \
+    mech->xcode.context->combat_overrides.pilot = tur->gunner;                 \
   stored_status = MechStatus(mech);                                            \
   stored_target = MechTarget(mech);                                            \
   stored_targx = MechTargX(mech);                                              \
@@ -31,14 +28,14 @@ DbRef pilot_override = 0;
   stored_targz = MechTargZ(mech);                                              \
   MechStatus(mech) &= ~LOCK_MODES;                                             \
   MechStatus(mech) |= tur->lockmode;                                           \
-  arc_override = tur->arcs;                                                    \
+  mech->xcode.context->combat_overrides.arcs = tur->arcs;                      \
   MechTarget(mech) = tur->target;                                              \
   MechTargX(mech) = tur->targx;                                                \
   MechTargY(mech) = tur->targy;                                                \
   MechTargZ(mech) = tur->targz
 
 #define LOCK_FUDGE_R(mech, tur)                                                \
-  pilot_override = 0;                                                          \
+  mech->xcode.context->combat_overrides.pilot = 0;                             \
   tur->target = MechTarget(mech);                                              \
   tur->targx = MechTargX(mech);                                                \
   tur->targy = MechTargY(mech);                                                \
@@ -49,7 +46,7 @@ DbRef pilot_override = 0;
   MechTargX(mech) = stored_targx;                                              \
   MechTargY(mech) = stored_targy;                                              \
   MechTargZ(mech) = stored_targz;                                              \
-  arc_override = 0;
+  mech->xcode.context->combat_overrides.arcs = 0;
 
 #define LOCK_FUDGE_VARS                                                        \
   short stored_targx, stored_targy, stored_targz;                              \
@@ -58,16 +55,20 @@ DbRef pilot_override = 0;
 
 #define TUR_BASE                                                               \
   TURRET_T *tur = (TURRET_T *)data;                                            \
-  [[maybe_unused]] MECH *mech = FindObjectsData(tur->parent);                  \
-  DOCHECK(!IsMech(tur->parent), "Error: Turret's parentage is unknown.");
+  [[maybe_unused]] MECH *mech =                                                \
+      btech_context_find_object(tur->xcode.context, tur->parent);              \
+  DOCHECK_CONTEXT(tur->xcode.context,                                          \
+                  !btech_context_is_mech(tur->xcode.context, tur->parent),     \
+                  "Error: Turret's parentage is unknown.");
 
 #define TUR_COMMON                                                             \
   TUR_BASE                                                                     \
-  DOCHECK(tur->gunner < 0, "The turret hasn't been initialized yet!");         \
-  DOCHECK(player != tur->gunner,                                               \
-          "You aren't the registered gunner! Go 'way!");                       \
-  DOCHECK(player == MechPilot(mech),                                           \
-          "You'll pilot and gun at once? Yah right :P");
+  DOCHECK_CONTEXT(tur->xcode.context, tur->gunner < 0,                         \
+                  "The turret hasn't been initialized yet!");                  \
+  DOCHECK_CONTEXT(tur->xcode.context, player != tur->gunner,                   \
+                  "You aren't the registered gunner! Go 'way!");               \
+  DOCHECK_CONTEXT(tur->xcode.context, player == MechPilot(mech),               \
+                  "You'll pilot and gun at once? Yah right :P");
 
 #define TUR_GCOMMON                                                            \
   LOCK_FUDGE_VARS                                                              \
@@ -224,27 +225,32 @@ void newturret(DbRef key, void **data, int selector) {
 
 void turret_initialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
-  DOCHECK(
+  DOCHECK_CONTEXT(
+      tur->xcode.context,
       player != tur->gunner &&
-          is_connected(btech_context_active()->database, tur->gunner) &&
-          game_object_location(btech_context_active()->database, tur->gunner) ==
-              game_object_location(btech_context_active()->database, player),
+          is_connected(tur->xcode.context->database, tur->gunner) &&
+          game_object_location(tur->xcode.context->database, tur->gunner) ==
+              game_object_location(tur->xcode.context->database, player),
       tprintf("You need %s to leave or disconnect first.",
-              game_object_name(btech_context_active()->database, tur->gunner)));
-  DOCHECK(player == tur->gunner, "You grap firmer hold on the joystick..");
+              game_object_name(tur->xcode.context->database, tur->gunner)));
+  DOCHECK_CONTEXT(tur->xcode.context, player == tur->gunner,
+                  "You grap firmer hold on the joystick..");
   notify_except(
-      BTECH_EVALUATION_CONTEXT, tur->mynum, NOTHING, tur->mynum,
+      btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
+      tur->mynum,
       tprintf("%s initialized as gunner.",
-              game_object_name(btech_context_active()->database, player)));
+              game_object_name(tur->xcode.context->database, player)));
   tur->gunner = player;
 }
 
 void turret_deinitialize(DbRef player, void *data, char *buffer) {
   TUR_BASE;
-  DOCHECK(player != tur->gunner, "You aren't gunner!");
+  DOCHECK_CONTEXT(tur->xcode.context, player != tur->gunner,
+                  "You aren't gunner!");
   notify_except(
-      BTECH_EVALUATION_CONTEXT, tur->mynum, NOTHING, tur->mynum,
+      btech_context_evaluation(tur->xcode.context), tur->mynum, NOTHING,
+      tur->mynum,
       tprintf("%s deinitialized as gunner.",
-              game_object_name(btech_context_active()->database, player)));
+              game_object_name(tur->xcode.context->database, player)));
   tur->gunner = -1;
 }

@@ -1,6 +1,8 @@
 /* db.c - In-memory game-object and attribute database operations. */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include <assert.h>
 #include <sys/file.h>
@@ -14,7 +16,6 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -568,7 +569,7 @@ void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
 extern NameTable attraccess_nametab[];
 
 void do_attribute(CommandInvocation *invocation) {
-  MuxServer *server = invocation->context->server;
+  CommandRuntime *runtime = invocation->context->runtime;
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef player = invocation->player;
   const int key = invocation->key;
@@ -588,7 +589,7 @@ void do_attribute(CommandInvocation *invocation) {
     *p = ToUpper(*q);
   *p = '\0';
 
-  va = (VATTR *)vattr_find(server->vattrs, buff);
+  va = (VATTR *)vattr_find(runtime->vattrs, buff);
   if (!va) {
     notify_printf(&invocation->context->evaluation, player,
                   "No such user-named attribute: %s", buff);
@@ -621,7 +622,8 @@ void do_attribute(CommandInvocation *invocation) {
        * Set or clear the appropriate bit
        */
 
-      f = name_table_search(&server->database, server->configuration, player,
+      f = name_table_search(runtime->world->database,
+                            runtime->world->configuration, player,
                             attraccess_nametab, sp);
       if (f > 0) {
         success = 1;
@@ -640,7 +642,7 @@ void do_attribute(CommandInvocation *invocation) {
 
       sp = strtok(nullptr, " ");
     }
-    if (success && !is_quiet(&server->database, player))
+    if (success && !is_quiet(runtime->world->database, player))
       notify_printf(&invocation->context->evaluation, player,
                     "Attribute access for %s changed to %s.", va->name, value);
     break;
@@ -657,7 +659,7 @@ void do_attribute(CommandInvocation *invocation) {
       free_sbuf(buff);
       return;
     }
-    if (vattr_rename(server->vattrs, va->name, value) == nullptr)
+    if (vattr_rename(runtime->vattrs, va->name, value) == nullptr)
       notify(evaluation, player, "Attribute rename failed.");
     else
       notify(evaluation, player, "Attribute renamed.");
@@ -669,7 +671,7 @@ void do_attribute(CommandInvocation *invocation) {
      * Remove the attribute
      */
 
-    vattr_delete(server->vattrs, buff);
+    vattr_delete(runtime->vattrs, buff);
     notify(evaluation, player, "Attribute deleted.");
     break;
   default:
@@ -750,10 +752,10 @@ void do_fixdb(CommandInvocation *invocation) {
         notify(evaluation, player, "That name is already in use.");
         return;
       }
-      STARTLOG(&evaluation->server->log, LOG_SECURITY, "SEC", "CNAME") {
-        log_name(&evaluation->server->log, thing), log_text(" renamed to ");
+      STARTLOG(evaluation->log, LOG_SECURITY, "SEC", "CNAME") {
+        log_name(evaluation->log, thing), log_text(" renamed to ");
         log_text(arg2);
-        ENDLOG(&evaluation->server->log);
+        ENDLOG(evaluation->log);
       }
       if (is_suspect(world->database, player)) {
         send_channel(evaluation, "Suspect", "%s renamed to %s",
@@ -2046,7 +2048,7 @@ int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
 void toast_player(EvaluationContext *evaluation, DbRef player) {
   comsys_clear_player(evaluation, player);
   do_channelnuke(evaluation, player);
-  del_commac(&evaluation->server->channels, player);
-  do_clear_macro(&evaluation->command->match, &evaluation->server->macros,
+  del_commac(evaluation->runtime->channels, player);
+  do_clear_macro(&evaluation->command->match, evaluation->runtime->macros,
                  player, nullptr);
 }

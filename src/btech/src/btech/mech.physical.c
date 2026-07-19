@@ -33,25 +33,29 @@
 
 // Only allows arm physical attacks for CLASS_MECH.
 #define ARM_PHYS_CHECK(a)                                                      \
-  DOCHECK(MechType(mech) == CLASS_MW || MechType(mech) == CLASS_BSUIT,         \
-          tprintf("You cannot %s without a 'mech!", a));                       \
-  DOCHECK(MechType(mech) != CLASS_MECH,                                        \
-          tprintf("You cannot %s with this vehicle!", a));
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  MechType(mech) == CLASS_MW || MechType(mech) == CLASS_BSUIT, \
+                  tprintf("You cannot %s without a 'mech!", a));               \
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_MECH,           \
+                  tprintf("You cannot %s with this vehicle!", a));
 
 // Checks a unit's legs for kicking.
 #define GENERIC_CHECK(a, wDeadLegs)                                            \
   ARM_PHYS_CHECK(a);                                                           \
-  DOCHECK(!MechIsQuad(mech) && (wDeadLegs > 1),                                \
-          "Without legs? Are you kidding?");                                   \
-  DOCHECK(!MechIsQuad(mech) && (wDeadLegs > 0),                                \
-          "With one leg? Are you kidding?");                                   \
-  DOCHECK(wDeadLegs > 1, "It'd unbalance you too much in your condition..");   \
-  DOCHECK(wDeadLegs > 2, "Exactly _what_ are you going to kick with?");
+  DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wDeadLegs > 1),   \
+                  "Without legs? Are you kidding?");                           \
+  DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wDeadLegs > 0),   \
+                  "With one leg? Are you kidding?");                           \
+  DOCHECK_CONTEXT(mech->xcode.context, wDeadLegs > 1,                          \
+                  "It'd unbalance you too much in your condition..");          \
+  DOCHECK_CONTEXT(mech->xcode.context, wDeadLegs > 2,                          \
+                  "Exactly _what_ are you going to kick with?");
 
 // If it's a quad, we can't play with sharp things (Swords, Axes, etc.)
 #define QUAD_CHECK(a)                                                          \
-  DOCHECK(MechType(mech) == CLASS_MECH && MechIsQuad(mech),                    \
-          tprintf("What are you going to %s with, your front right leg?", a))
+  DOCHECK_CONTEXT(                                                             \
+      mech->xcode.context, MechType(mech) == CLASS_MECH && MechIsQuad(mech),   \
+      tprintf("What are you going to %s with, your front right leg?", a))
 
 /**
  * Checks to see if all limbs have recycled from any previous physical attacks.
@@ -322,7 +326,7 @@ int punch_checkArm(MECH *mech, int arm) {
  */
 void mech_punch(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -339,7 +343,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -370,7 +374,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
  */
 void mech_club(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *args[5];
   int argc;
   int clubLoc = -1;
@@ -419,7 +423,7 @@ void mech_club(DbRef player, void *data, char *buffer) {
             "You have weapons recycling on your arms.");
 
   PhysicalAttack(mech, 5,
-                 (btech_context_active()->configuration->btech_phys_use_pskill
+                 (mech->xcode.context->configuration->btech_phys_use_pskill
                       ? FindPilotPiloting(mech) - 1
                       : 4),
                  PA_CLUB, argc, args, mech_map, RARM);
@@ -455,7 +459,7 @@ int axe_checkArm(MECH *mech, int arm) {
  */
 void mech_axe(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -472,7 +476,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -518,7 +522,7 @@ int saw_checkArm(MECH *mech, int arm) {
  */
 void mech_saw(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -535,7 +539,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -560,7 +564,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
  */
 void mech_claw(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -577,7 +581,7 @@ void mech_claw(DbRef player, void *data, char *buffer) {
 
   // If the directive is true, use the pilot's piloting skill. If not, we
   // use a constant BTH of 4.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     rtohit = ltohit = FindPilotPiloting(mech);
 
   // Manipulate punching var to contain only the arms we're punching with.
@@ -639,7 +643,7 @@ int mace_checkArm(MECH *mech, int arm) {
  */
 void mech_mace(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 4, rtohit = 4;
@@ -656,7 +660,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is on, use the player's piloting skill.
   // If not, assume a skill level of 4.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 1;
 
   // Figure out which arm to use.
@@ -709,7 +713,7 @@ int sword_checkArm(MECH *mech, int arm) {
  */
 void mech_sword(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc, ltohit = 3, rtohit = 3;
@@ -726,7 +730,7 @@ void mech_sword(DbRef player, void *data, char *buffer) {
 
   // If btech_phys_use_pskill is defined, use the pilot's piloting skill,
   // otherwise use a constant skill 3.
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     ltohit = rtohit = FindPilotPiloting(mech) - 2;
 
   // Which arm(s) have sword crits?
@@ -766,7 +770,7 @@ void mech_kick(DbRef player, void *data, char *buffer) {
  */
 void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
   MECH *mech = (MECH *)data;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char *argl[5];
   char **args = argl;
   int argc;
@@ -813,7 +817,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
   }
 
   PhysicalAttack(mech, 5,
-                 (btech_context_active()->configuration->btech_phys_use_pskill
+                 (mech->xcode.context->configuration->btech_phys_use_pskill
                       ? FindPilotPiloting(mech) - 2
                       : 3),
                  AttackType, argc, args, mech_map, leg);
@@ -824,7 +828,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer, int AttackType) {
  */
 void mech_charge(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data, *target;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int targetnum;
   char targetID[5];
   char *args[5];
@@ -835,42 +839,48 @@ void mech_charge(DbRef player, void *data, char *buffer) {
   cch(MECH_USUALO);
 
   // Mechwarriors can't chage.
-  DOCHECK(MechType(mech) == CLASS_MW || MechType(mech) == CLASS_BSUIT,
-          "You cannot charge without a 'mech!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MW || MechType(mech) == CLASS_BSUIT,
+                  "You cannot charge without a 'mech!");
 
   // Salvage vehicles can't charge.
-  DOCHECK(MechType(mech) != CLASS_MECH && (MechType(mech) != CLASS_VEH_GROUND ||
-                                           MechSpecials(mech) & SALVAGE_TECH),
-          "You cannot charge with this vehicle!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) != CLASS_MECH &&
+                      (MechType(mech) != CLASS_VEH_GROUND ||
+                       MechSpecials(mech) & SALVAGE_TECH),
+                  "You cannot charge with this vehicle!");
 
   // Figure out if we have enough legs to kick with.
   if (MechType(mech) == CLASS_MECH) {
     /* set the number of dead legs we have */
     wcDeadLegs = CountDestroyedLegs(mech);
 
-    DOCHECK(!MechIsQuad(mech) && (wcDeadLegs > 0),
-            "With one leg? Are you kidding?");
-    DOCHECK(!MechIsQuad(mech) && (wcDeadLegs > 1),
-            "Without legs? Are you kidding?");
-    DOCHECK(wcDeadLegs > 1, "It'd unbalance you too much in your condition..");
-    DOCHECK(wcDeadLegs > 2, "Exactly _what_ are you going to kick with?");
+    DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wcDeadLegs > 0),
+                    "With one leg? Are you kidding?");
+    DOCHECK_CONTEXT(mech->xcode.context, !MechIsQuad(mech) && (wcDeadLegs > 1),
+                    "Without legs? Are you kidding?");
+    DOCHECK_CONTEXT(mech->xcode.context, wcDeadLegs > 1,
+                    "It'd unbalance you too much in your condition..");
+    DOCHECK_CONTEXT(mech->xcode.context, wcDeadLegs > 2,
+                    "Exactly _what_ are you going to kick with?");
   } // end if() - Dead leg counting.
 
   argc = mech_parseattributes(buffer, args, 2);
 
-  DOCHECK(MoveModeChange(mech),
-          "You cannot charge while changing movement modes!");
+  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+                  "You cannot charge while changing movement modes!");
 
-  DOCHECK(Sprinting(mech) || Evading(mech),
-          "You cannot charge while in a special movement mode!");
-  DOCHECK(Dodging(mech), "You cannot charge while dodging!");
+  DOCHECK_CONTEXT(mech->xcode.context, Sprinting(mech) || Evading(mech),
+                  "You cannot charge while in a special movement mode!");
+  DOCHECK_CONTEXT(mech->xcode.context, Dodging(mech),
+                  "You cannot charge while dodging!");
 
   switch (argc) {
     // No arguments given with charge. Assume default target.
   case 0:
     DOCHECKMA(MechTarget(mech) == -1, "You do not have a default target set!");
 
-    target = getMech(MechTarget(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
 
     if (!target) {
       mech_notify(mech, MECHALL, "Invalid default target!");
@@ -910,7 +920,7 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
 
-    target = getMech(targetnum);
+    target = btech_context_get_mech(mech->xcode.context, targetnum);
     DOCHECKMA(!InLineOfSight_NB(mech, target, MechX(target), MechY(target),
                                 FaMechRange(mech, target)),
               "Target is not in line of sight!");
@@ -937,12 +947,13 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
     mech_printf(mech, MECHALL, "%s target set to %s.",
                 MechType(mech) == CLASS_MECH ? "Charge" : "Ram",
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
     break;
 
     // Something other than 0-1 arguments.
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of arguments!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid number of arguments!");
   }
 } // end mech_charge()
 
@@ -1042,7 +1053,7 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
     DOCHECKMA(MechTarget(mech) == -1, "You do not have a target set!");
 
     // Populate target variable with current lock.
-    target = getMech(MechTarget(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
     DOCHECKMA(!target, "Invalid default target!");
 
     break;
@@ -1054,7 +1065,7 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
-    target = getMech(targetnum);
+    target = btech_context_get_mech(mech->xcode.context, targetnum);
 
     DOCHECKMA(targetnum == -1, "Target is not in line of sight!");
     DOCHECKMA(!target, "Invalid default target!");
@@ -1267,9 +1278,10 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
    */
 
   // If we have melee_specialist advantage, knock -1 off the BTH.
-  baseToHit += HasBoolAdvantage(MechPilot(mech), "melee_specialist")
-                   ? MIN(0, AttackMovementMods(mech) - 1)
-                   : AttackMovementMods(mech);
+  baseToHit +=
+      HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "melee_specialist")
+          ? MIN(0, AttackMovementMods(mech) - 1)
+          : AttackMovementMods(mech);
 
   baseToHit += TargetMovementMods(mech, target, 0.0);
 
@@ -1322,18 +1334,20 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
     baseToHit += 1;
   }
 
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
 
   // Carry out the attack.
   mech_printf(mech, MECHALL, "You try to %s %s.  BTH:  %d,\tRoll:  %d",
-              phys_form(AttackType, 0), GetMechToMechID(mech, target),
-              baseToHit, roll);
+              phys_form(AttackType, 0),
+              mech_to_mech_display_id(mech, target).text, baseToHit, roll);
 
   mech_printf(target, MECHSTARTED, "%s tries to %s you!",
-              GetMechToMechID(target, mech), phys_form(AttackType, 0));
+              mech_to_mech_display_id(target, mech).text,
+              phys_form(AttackType, 0));
 
   // We send to MechAttacks channel
-  SendAttacks(tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
+  SendAttacks(mech->xcode.context,
+              tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
                       target->mynum, phys_form(AttackType, 0), baseToHit,
                       roll));
 
@@ -1355,12 +1369,12 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
     SetRecycleLimb(mech, LARM, PHYSICAL_RECYCLE_TIME);
 
   RbaseToHit = baseToHit;
-  if (btech_context_active()->configuration->btech_glancing_blows == 2)
+  if (mech->xcode.context->configuration->btech_glancing_blows == 2)
     RbaseToHit = baseToHit - 1;
   // We've successfully hit the target.
   if (roll >= RbaseToHit) {
     phys_succeed(mech, target, AttackType);
-    if (btech_context_active()->configuration->btech_glancing_blows &&
+    if (mech->xcode.context->configuration->btech_glancing_blows &&
         (roll == RbaseToHit)) {
       MechLOSBroadcast(target, "is nicked by a glancing blow!");
       mech_notify(target, MECHALL, "You are nicked by a glancing blow!");
@@ -1420,16 +1434,18 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
   } // end if() - Physical failure handling.
 } // end PhysicalAttack()
 
-extern int global_physical_flag;
-
 #define MyDamageMech(a, b, c, d, e, f, g, h, i)                                \
-  global_physical_flag = 1;                                                    \
+  (a)->xcode.context->combat_overrides.damage_experience =                     \
+      BTECH_DAMAGE_XP_PILOTING;                                                \
   DamageMech(a, b, c, d, e, f, g, h, i, -1, 0, -1, 0, 0);                      \
-  global_physical_flag = 0
+  (a)->xcode.context->combat_overrides.damage_experience =                     \
+      BTECH_DAMAGE_XP_GUNNERY
 #define MyDamageMech2(a, b, c, d, e, f, g, h, i)                               \
-  global_physical_flag = 2;                                                    \
+  (a)->xcode.context->combat_overrides.damage_experience =                     \
+      BTECH_DAMAGE_XP_NONE;                                                    \
   DamageMech(a, b, c, d, e, f, g, h, i, -1, 0, -1, 0, 0);                      \
-  global_physical_flag = 0
+  (a)->xcode.context->combat_overrides.damage_experience =                     \
+      BTECH_DAMAGE_XP_GUNNERY
 
 /*
  * Try to trip the victim.
@@ -1439,7 +1455,8 @@ void PhysicalTrip(MECH *mech, MECH *target) {
   if (!MadePilotSkillRoll(target, 0) && !Fallen(target)) {
 
     // Emit to Attacker
-    mech_printf(mech, MECHALL, "You trip %s!", GetMechToMechID(mech, target));
+    mech_printf(mech, MECHALL, "You trip %s!",
+                mech_to_mech_display_id(mech, target).text);
 
     // Emit to victim and LOS.
     mech_notify(target, MECHSTARTED, "You are tripped and fall to the ground!");
@@ -1487,7 +1504,8 @@ void PhysicalDamage(MECH *mech, MECH *target, int weightdmg, int AttackType,
   }
 
   /* If we have melee_specialist, add a point of damage. */
-  if (HasBoolAdvantage(MechPilot(mech), "melee_specialist")) {
+  if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                       "melee_specialist")) {
     damage++;
   }
 
@@ -1648,7 +1666,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
   int spread;
   int i, tmpi;
   char location[50];
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   /* Weapons recycling check on each major section */
   for (i = 0; i < DFA_SECTIONS; i++)
@@ -1684,10 +1702,11 @@ int DeathFromAbove(MECH *mech, MECH *target) {
 
   DOCHECKMA0((MechTeam(mech) == MechTeam(target)) && MapNoFriendlyFire(map),
              "Friendly DFA? I don't think so....");
-  if (btech_context_active()->configuration->btech_phys_use_pskill)
+  if (mech->xcode.context->configuration->btech_phys_use_pskill)
     baseToHit = FindPilotPiloting(mech);
 
-  baseToHit += (HasBoolAdvantage(MechPilot(mech), "melee_specialist")
+  baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                                 "melee_specialist")
                     ? MIN(0, AttackMovementMods(mech)) - 1
                     : AttackMovementMods(mech));
   baseToHit += TargetMovementMods(mech, target, 0.0);
@@ -1703,7 +1722,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
       tprintf("DFA: BTH %d\tYou choose not to attack and land from your jump.",
               baseToHit));
 
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
   mech_printf(mech, MECHALL, "DFA: BTH %d\tRoll: %d", baseToHit, roll);
 
   MechStatus(mech) &= ~JUMPING;
@@ -1713,7 +1732,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
     /* OUCH */
     mech_printf(target, MECHSTARTED,
                 "DEATH FROM ABOVE!!!\n%s lands on you from above!",
-                GetMechToMechID(target, mech));
+                mech_to_mech_display_id(target, mech).text);
     mech_notify(mech, MECHALL, "You land on your target legs first!");
     MechLOSBroadcasti(mech, target, "lands on %s!");
 
@@ -1726,7 +1745,8 @@ int DeathFromAbove(MECH *mech, MECH *target) {
     if (MechTons(mech) % 10)
       target_damage++;
 
-    if (HasBoolAdvantage(MechPilot(mech), "melee_specialist"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                         "melee_specialist"))
       target_damage++;
 
     spread = target_damage / 5;
@@ -2060,7 +2080,7 @@ void ChargeMech(MECH *mech, MECH *target) {
     MechStatus(mech) |= ts;
 
     /* Now to calculate how much damage the first unit will do */
-    if (btech_context_active()->configuration->btech_newcharge)
+    if (mech->xcode.context->configuration->btech_newcharge)
       target_damage =
           (((((float)MechChargeDistance(mech)) * MP1) -
             MechSpeed(target) *
@@ -2075,7 +2095,8 @@ void ChargeMech(MECH *mech, MECH *target) {
            MP_PER_KPH) *
           (MechRealTons(mech) + 5) / 10;
 
-    if (HasBoolAdvantage(MechPilot(mech), "melee_specialist"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                         "melee_specialist"))
       target_damage++;
 
     /* Not able to do any damage */
@@ -2089,7 +2110,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     /* Now see how much damage the second unit will do */
     mech_damage = (MechRealTons(target) + 5) / 10;
 
-    if (HasBoolAdvantage(MechPilot(target), "melee_specialist"))
+    if (HasBoolAdvantage(mech->xcode.context, MechPilot(target),
+                         "melee_specialist"))
       mech_damage++;
 
     /* Not able to do any damage */
@@ -2103,7 +2125,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     mech_baseToHit = 5;
     mech_baseToHit += FindPilotPiloting(mech) - FindPilotPiloting(target);
 
-    mech_baseToHit += (HasBoolAdvantage(MechPilot(mech), "melee_specialist")
+    mech_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                                        "melee_specialist")
                            ? MIN(0, AttackMovementMods(mech) - 1)
                            : AttackMovementMods(mech));
 
@@ -2118,7 +2141,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     targ_baseToHit = 5;
     targ_baseToHit += FindPilotPiloting(target) - FindPilotPiloting(mech);
 
-    targ_baseToHit += (HasBoolAdvantage(MechPilot(target), "melee_specialist")
+    targ_baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(target),
+                                        "melee_specialist")
                            ? MIN(0, AttackMovementMods(target) - 1)
                            : AttackMovementMods(target));
 
@@ -2156,8 +2180,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     }
 
     /* Roll */
-    mech_roll = Roll();
-    targ_roll = Roll();
+    mech_roll = btech_random_roll(mech->xcode.context);
+    targ_roll = btech_random_roll(mech->xcode.context);
 
     if (mech_charge)
       mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", mech_baseToHit,
@@ -2171,7 +2195,7 @@ void ChargeMech(MECH *mech, MECH *target) {
     if (mech_charge && mech_roll >= mech_baseToHit) {
       /* OUCH */
       mech_printf(target, MECHALL, "CRASH!!!\n%s charges into you!",
-                  GetMechToMechID(target, mech));
+                  mech_to_mech_display_id(target, mech).text);
       mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
       hitGroup = FindAreaHitGroup(mech, target);
       isrear = (hitGroup == BACK);
@@ -2197,8 +2221,8 @@ void ChargeMech(MECH *mech, MECH *target) {
 
       /* Ok now how much damage will the first unit take from
        * charging */
-      if (btech_context_active()->configuration->btech_newcharge &&
-          btech_context_active()->configuration->btech_tl3_charge)
+      if (mech->xcode.context->configuration->btech_newcharge &&
+          mech->xcode.context->configuration->btech_tl3_charge)
         target_damage =
             (((((float)MechChargeDistance(mech)) * MP1) -
               MechSpeed(target) * cos((MechFacing(mech) - MechFacing(target)) *
@@ -2233,7 +2257,7 @@ void ChargeMech(MECH *mech, MECH *target) {
                " %.2f DI: %i DR: %i",
                mech->mynum, target->mynum, mech_baseToHit, mech_roll,
                MechChargeDistance(mech), inflicted_damage, received_damage);
-      SendDebug(emit_buff);
+      SendDebug(mech->xcode.context, emit_buff);
 
       /* Make the first unit roll for doing the charge if it is a mech */
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
@@ -2253,7 +2277,7 @@ void ChargeMech(MECH *mech, MECH *target) {
     if (target_charge && targ_roll >= targ_baseToHit) {
       /* OUCH */
       mech_printf(mech, MECHALL, "CRASH!!!\n%s charges into you!",
-                  GetMechToMechID(mech, target));
+                  mech_to_mech_display_id(mech, target).text);
       mech_notify(target, MECHALL, "SMASH!!! You crash into your target!");
       hitGroup = FindAreaHitGroup(target, mech);
       isrear = (hitGroup == BACK);
@@ -2279,8 +2303,8 @@ void ChargeMech(MECH *mech, MECH *target) {
 
       /* Ok now how much damage will the second unit take from
        * charging */
-      if (btech_context_active()->configuration->btech_newcharge &&
-          btech_context_active()->configuration->btech_tl3_charge)
+      if (mech->xcode.context->configuration->btech_newcharge &&
+          mech->xcode.context->configuration->btech_tl3_charge)
         target_damage =
             (((((float)MechChargeDistance(target)) * MP1) -
               MechSpeed(mech) * cos((MechFacing(target) - MechFacing(mech)) *
@@ -2315,7 +2339,7 @@ void ChargeMech(MECH *mech, MECH *target) {
                " %.2f DI: %i DR: %i",
                target->mynum, mech->mynum, targ_baseToHit, targ_roll,
                MechChargeDistance(target), inflicted_damage, received_damage);
-      SendDebug(emit_buff);
+      SendDebug(mech->xcode.context, emit_buff);
 
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
@@ -2409,7 +2433,7 @@ void ChargeMech(MECH *mech, MECH *target) {
                                  "arc and you are unable to charge it.");
 
   /* Damage inflicted by the charge */
-  if (btech_context_active()->configuration->btech_newcharge)
+  if (mech->xcode.context->configuration->btech_newcharge)
     target_damage =
         (((((float)MechChargeDistance(mech)) * MP1) -
           MechSpeed(target) *
@@ -2426,7 +2450,8 @@ void ChargeMech(MECH *mech, MECH *target) {
             (MechRealTons(mech) + 5) / 10 +
         1;
 
-  if (HasBoolAdvantage(MechPilot(mech), "melee_specialist"))
+  if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                       "melee_specialist"))
     target_damage++;
 
   /* Not enough damage done so no charge */
@@ -2436,7 +2461,8 @@ void ChargeMech(MECH *mech, MECH *target) {
   /* BTH */
   baseToHit += FindPilotPiloting(mech) - FindSPilotPiloting(target);
 
-  baseToHit += (HasBoolAdvantage(MechPilot(mech), "melee_specialist")
+  baseToHit += (HasBoolAdvantage(mech->xcode.context, MechPilot(mech),
+                                 "melee_specialist")
                     ? MIN(0, AttackMovementMods(mech) - 1)
                     : AttackMovementMods(mech));
 
@@ -2451,7 +2477,7 @@ void ChargeMech(MECH *mech, MECH *target) {
             tprintf("Charge: BTH %d\tYou choose not to charge.", baseToHit));
 
   /* Roll */
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
   mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", baseToHit, roll);
 
   /* Did the charge work ? */
@@ -2461,7 +2487,7 @@ void ChargeMech(MECH *mech, MECH *target) {
         mech, target,
         tprintf("%ss %%s!", MechType(mech) == CLASS_MECH ? "charge" : "ram"));
     mech_printf(target, MECHSTARTED, "CRASH!!!\n%s %ss into you!",
-                GetMechToMechID(target, mech),
+                mech_to_mech_display_id(target, mech).text,
                 MechType(mech) == CLASS_MECH ? "charge" : "ram");
     mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
     hitGroup = FindAreaHitGroup(mech, target);
@@ -2491,8 +2517,8 @@ void ChargeMech(MECH *mech, MECH *target) {
     isrear = (hitGroup == BACK);
 
     /* Damage done to the attacker for the charge */
-    if (btech_context_active()->configuration->btech_newcharge &&
-        btech_context_active()->configuration->btech_tl3_charge)
+    if (mech->xcode.context->configuration->btech_newcharge &&
+        mech->xcode.context->configuration->btech_tl3_charge)
       mech_damage =
           (((((float)MechChargeDistance(mech)) * MP1) -
             MechSpeed(target) *
@@ -2541,7 +2567,7 @@ void ChargeMech(MECH *mech, MECH *target) {
              " %.2f DI: %i DR: %i",
              mech->mynum, target->mynum, baseToHit, roll,
              MechChargeDistance(mech), inflicted_damage, received_damage);
-    SendDebug(emit_buff);
+    SendDebug(mech->xcode.context, emit_buff);
   }
 
   /* Cycle the sections so they can't make another attack for a while */

@@ -23,7 +23,8 @@
 
 #define DEBUG_C3 0
 
-MECH *getMechInTempNetwork(int wIdx, DbRef *myNetwork, int networkSize) {
+MECH *getMechInTempNetwork(BtechContext *context, int wIdx, DbRef *myNetwork,
+                           int networkSize) {
   MECH *tempMech;
   DbRef refOtherMech;
 
@@ -33,7 +34,7 @@ MECH *getMechInTempNetwork(int wIdx, DbRef *myNetwork, int networkSize) {
   refOtherMech = myNetwork[wIdx];
 
   if (refOtherMech > 0) {
-    tempMech = getMech(refOtherMech);
+    tempMech = btech_context_get_mech(context, refOtherMech);
 
     if (!tempMech)
       return NULL;
@@ -62,7 +63,7 @@ MECH *getOtherMechInNetwork(MECH *mech, int wIdx, int tCheckECM,
       (tIsC3 ? MechC3NetworkElem(mech, wIdx) : MechC3iNetworkElem(mech, wIdx));
 
   if (refOtherMech > 0) {
-    tempMech = getMech(refOtherMech);
+    tempMech = btech_context_get_mech(mech->xcode.context, refOtherMech);
 
     if (!tempMech)
       return NULL;
@@ -139,7 +140,7 @@ void buildTempNetwork(MECH *mech, DbRef *myNetwork, int *networkSize,
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     myTempNetwork[tempNetworkSize] = otherMech->mynum;
@@ -169,7 +170,8 @@ void buildTempNetwork(MECH *mech, DbRef *myNetwork, int *networkSize,
 void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
   int i;
   MECH *otherMech;
-  const char *c = GetMechID(mech);
+  MechDisplayId display_id = mech_display_id(mech);
+  const char *c = display_id.text;
   char buf[LBUF_SIZE] = {0};
   int networkSize;
   DbRef myNetwork[C3_NETWORK_SIZE];
@@ -177,12 +179,13 @@ void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 1, tIsC3);
 
   for (i = 0; i < networkSize; i++) {
-    otherMech = getMechInTempNetwork(i, myNetwork, networkSize);
+    otherMech =
+        getMechInTempNetwork(mech->xcode.context, i, myNetwork, networkSize);
 
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     snprintf(buf, LBUF_SIZE, "%%ch%s/%s: %s%%cn", (tIsC3 ? "C3" : "C3i"), c,
@@ -195,7 +198,7 @@ void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
 }
 
 void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
-  MAP *objMap = getMap(mech->mapindex);
+  MAP *objMap = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int i, j, wTemp, bearing;
   MECH *otherMech;
   float realRange, c3Range;
@@ -223,19 +226,20 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
    * Send then a 'contacts' style report. This is different from the
    * normal contacts since it has a 'physical' range in it too.
    */
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "%s Contacts:", tIsC3 ? "C3" : "C3i");
 
   for (i = 0; i < objMap->first_free; i++) {
     if (!(objMap->mechsOnMap[i] != mech->mynum && objMap->mechsOnMap[i] != -1))
       continue;
 
-    otherMech = (MECH *)FindObjectsData(objMap->mechsOnMap[i]);
+    otherMech = (MECH *)btech_context_find_object(mech->xcode.context,
+                                                  objMap->mechsOnMap[i]);
 
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     tShowStatusInfo = 0;
@@ -275,7 +279,9 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
       mech_name = "something";
     } else {
       tShowStatusInfo = 1;
-      mech_name = silly_atr_get(otherMech->mynum, A_MECHNAME);
+      mech_name = btech_attribute_read(otherMech->xcode.context->database,
+                                       otherMech->mynum, A_MECHNAME,
+                                       (char[LBUF_SIZE]){0});
     }
 
     bearing = FindBearing(MechFX(mech), MechFY(mech), MechFX(otherMech),
@@ -302,24 +308,25 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
     }
 
     /* Now, build the string */
-    snprintf(buff, sizeof(buff),
-             "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
-             "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-             otherMech->mynum == MechTarget(mech)                     ? "%ch%cr"
-             : (tShowStatusInfo && !MechSeemsFriend(mech, otherMech)) ? "%ch%cy"
-                                                                      : "",
-             (losFlag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
-             (losFlag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc,
-             MechIDS(otherMech,
-                     MechSeemsFriend(mech, otherMech) || !tShowStatusInfo),
-             move_type[0], mech_name, MechX(otherMech), MechY(otherMech),
-             MechZ(otherMech), realRange, c3Range, bearing,
-             MechSpeed(otherMech), MechVFacing(otherMech), cStatus1, cStatus2,
-             cStatus3, cStatus4, cStatus5,
-             (otherMech->mynum == MechTarget(mech) ||
-              !MechSeemsFriend(mech, otherMech))
-                 ? "%c"
-                 : "");
+    snprintf(
+        buff, sizeof(buff),
+        "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
+        "s:%5.1f h:%3d S:%c%c%c%c%c%s",
+        otherMech->mynum == MechTarget(mech)                     ? "%ch%cr"
+        : (tShowStatusInfo && !MechSeemsFriend(mech, otherMech)) ? "%ch%cy"
+                                                                 : "",
+        (losFlag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
+        (losFlag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc,
+        mech_id(otherMech, MechSeemsFriend(mech, otherMech) || !tShowStatusInfo)
+            .text,
+        move_type[0], mech_name, MechX(otherMech), MechY(otherMech),
+        MechZ(otherMech), realRange, c3Range, bearing, MechSpeed(otherMech),
+        MechVFacing(otherMech), cStatus1, cStatus2, cStatus3, cStatus4,
+        cStatus5,
+        (otherMech->mynum == MechTarget(mech) ||
+         !MechSeemsFriend(mech, otherMech))
+            ? "%c"
+            : "");
 
     rangelist[buffindex] = realRange;
     rangelist[buffindex] += (MechStatus(otherMech) & DESTROYED) ? 10000 : 0;
@@ -340,10 +347,11 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
       }
 
   for (i = 0; i < buffindex; i++)
-    notify(BTECH_EVALUATION_CONTEXT, player, bufflist[sbuff[i]]);
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           bufflist[sbuff[i]]);
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "End %s Contact List",
-                tIsC3 ? "C3" : "C3i");
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                "End %s Contact List", tIsC3 ? "C3" : "C3i");
 }
 
 void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
@@ -356,18 +364,19 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
   int networkSize;
   DbRef myNetwork[C3_NETWORK_SIZE];
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "%s Network Status:", tIsC3 ? "C3" : "C3i");
 
   buildTempNetwork(mech, myNetwork, &networkSize, 1, 1, 0, tIsC3);
 
   for (i = 0; i < networkSize; i++) {
-    otherMech = getMechInTempNetwork(i, myNetwork, networkSize);
+    otherMech =
+        getMechInTempNetwork(mech->xcode.context, i, myNetwork, networkSize);
 
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     range = FlMechRange(objMap, mech, otherMech);
@@ -376,22 +385,24 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
 
     strcpy(move_type, GetMoveTypeID(MechMove(otherMech)));
 
-    mech_name = silly_atr_get(otherMech->mynum, A_MECHNAME);
+    mech_name = btech_attribute_read(otherMech->xcode.context->database,
+                                     otherMech->mynum, A_MECHNAME,
+                                     (char[LBUF_SIZE]){0});
 
     snprintf(buff, sizeof(buff),
              "%%ch%%cy[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d s:%5.1f "
              "h:%3d a: %3d i: %3d%%cn",
-             MechIDS(otherMech, 1), move_type[0], mech_name, MechX(otherMech),
-             MechY(otherMech), MechZ(otherMech), range, bearing,
-             MechSpeed(otherMech), MechVFacing(otherMech),
+             mech_id(otherMech, true).text, move_type[0], mech_name,
+             MechX(otherMech), MechY(otherMech), MechZ(otherMech), range,
+             bearing, MechSpeed(otherMech), MechVFacing(otherMech),
              getRemainingArmorPercent(otherMech),
              getRemainingInternalPercent(otherMech));
 
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(btech_context_evaluation(mech->xcode.context), player, buff);
   }
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "End %s Network Status",
-                tIsC3 ? "C3" : "C3i");
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                "End %s Network Status", tIsC3 ? "C3" : "C3i");
 }
 
 int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
@@ -408,12 +419,13 @@ int mechSeenByNetwork(MECH *mech, MECH *mechTarget, int tIsC3) {
     return TARG_LOS_NONE;
 
   for (i = 0; i < networkSize; i++) {
-    otherMech = getMechInTempNetwork(i, myNetwork, networkSize);
+    otherMech =
+        getMechInTempNetwork(mech->xcode.context, i, myNetwork, networkSize);
 
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     if (otherMech == mechTarget)
@@ -481,19 +493,21 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
     return realRange;
 
   for (i = 0; i < networkSize; i++) {
-    otherMech = getMechInTempNetwork(i, myNetwork, networkSize);
+    otherMech =
+        getMechInTempNetwork(mech->xcode.context, i, myNetwork, networkSize);
 
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(btech_context_active()->database, otherMech->mynum))
+    if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
     if (mechTarget) {
       if (otherMech == mechTarget)
         continue;
 
-      debugC3(tprintf("C3RANGE-NETWORK (mech): Finding range from %ld to %ld.",
+      debugC3(mech->xcode.context,
+              tprintf("C3RANGE-NETWORK (mech): Finding range from %ld to %ld.",
                       mech->mynum, mechTarget->mynum));
 
       c3Range = FaMechRange(otherMech, mechTarget);
@@ -502,9 +516,10 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
     } else if ((MechTargX(mech) > 0) && (MechTargY(mech) > 0)) {
       mapX = MechTargX(mech);
       mapY = MechTargY(mech);
-      map = getMap(mech->mapindex);
+      map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
-      debugC3(tprintf("C3RANGE-NETWORK (hex): Finding range from %ld to %d %d.",
+      debugC3(mech->xcode.context,
+              tprintf("C3RANGE-NETWORK (hex): Finding range from %ld to %d %d.",
                       mech->mynum, mapX, mapY));
 
       MechTargZ(mech) = Elevation(map, mapX, mapY);
@@ -527,7 +542,7 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
   return bestRange;
 }
 
-void debugC3(char *msg) {
+void debugC3(BtechContext *context, char *msg) {
   if (DEBUG_C3)
-    SendDebug(msg);
+    SendDebug(context, msg);
 }

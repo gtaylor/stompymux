@@ -5,6 +5,7 @@
 
 #include "mux/server/platform.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/network/descriptor.h"
@@ -14,7 +15,6 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -135,23 +135,22 @@ static void connect_flow_terminate(Descriptor *d, const char *logcode,
                                    DescriptorShutdownReason disconnect_reason,
                                    DbRef player, const char *user,
                                    int filecache, const char *message) {
-  STARTLOG(&descriptor_server(d)->log, LOG_LOGIN | LOG_SECURITY, logcode,
-           "RJCT") {
+  STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
     char *buff = alloc_mbuf("connect_flow_terminate.LOG");
     snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor, d->addr,
              logtype);
     log_text(buff);
     free_mbuf(buff);
     if (player != NOTHING)
-      log_name(&descriptor_server(d)->log, player);
+      log_name(descriptor_log(d), player);
     else
       log_text(user);
     log_text(" (");
     log_text(logreason);
     log_text(")");
-    ENDLOG(&descriptor_server(d)->log);
+    ENDLOG(descriptor_log(d));
   }
-  fcache_dump(descriptor_server(d)->files, d, filecache);
+  fcache_dump(descriptor_runtime(d)->files, d, filecache);
   if (message && *message) {
     descriptor_queue_string(d, message);
     descriptor_queue_write(d, "\r\n", 2);
@@ -171,36 +170,35 @@ static int connect_flow_count_connected(DescriptorRegistry *registry) {
 
 static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
                                                 char *password) {
-  MuxServer *server = descriptor_server(d);
-  ServerConfiguration *configuration = server->configuration;
+  CommandRuntime *runtime = descriptor_runtime(d);
+  ServerConfiguration *configuration = runtime->world->configuration;
   int nplayers;
   DbRef player;
   char *buff;
 
   nplayers = configuration->max_players < 0
                  ? configuration->max_players - 1
-                 : connect_flow_count_connected(server->descriptors);
+                 : connect_flow_count_connected(runtime->descriptors);
 
-  if (!login_throttle_allow(server->login_throttle, configuration, d->addr)) {
+  if (!login_throttle_allow(runtime->login_throttle, configuration, d->addr)) {
     connect_flow_terminate(d, "CON", "Connect", "Login throttled",
                            DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
                            connect_fail);
     return CONNECT_RESULT_TERMINATED;
   }
 
-  player = connect_player(&server->background_command.evaluation,
-                          &server->world, name, password, d->addr, d->username);
+  player = connect_player(&runtime->background_command->evaluation,
+                          runtime->world, name, password, d->addr, d->username);
   if (player == NOTHING) {
     descriptor_queue_string(d, connect_fail);
-    STARTLOG(&descriptor_server(d)->log, LOG_LOGIN | LOG_SECURITY, "CON",
-             "BAD") {
+    STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
       buff = alloc_lbuf("connect_flow_attempt_login.LOG.bad");
       snprintf(buff, LBUF_SIZE,
                "[%d/%s] Failed login attempt to player '%.3800s'",
                d->descriptor, d->addr, name);
       log_text(buff);
       free_lbuf(buff);
-      ENDLOG(&descriptor_server(d)->log);
+      ENDLOG(descriptor_log(d));
     }
     if (--(d->retries_left) <= 0) {
       descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_BADLOGIN);
@@ -211,16 +209,16 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
 
   if ((configuration->is_login_enabled &&
        nplayers < configuration->max_players) ||
-      is_wizard(&descriptor_server(d)->database, player) ||
-      is_god(&descriptor_server(d)->database, player)) {
-    STARTLOG(&descriptor_server(d)->log, LOG_LOGIN, "CON", "LOGIN") {
+      is_wizard(descriptor_runtime(d)->world->database, player) ||
+      is_god(descriptor_runtime(d)->world->database, player)) {
+    STARTLOG(descriptor_log(d), LOG_LOGIN, "CON", "LOGIN") {
       buff = alloc_mbuf("connect_flow_attempt_login.LOG.login");
       snprintf(buff, MBUF_SIZE, "[%d/%s] Connected to ", d->descriptor,
                d->addr);
       log_text(buff);
-      log_name_and_loc(&descriptor_server(d)->log, player);
+      log_name_and_loc(descriptor_log(d), player);
       free_mbuf(buff);
-      ENDLOG(&descriptor_server(d)->log);
+      ENDLOG(descriptor_log(d));
     }
     d->is_connected = true;
     d->connected_at = time(0);
@@ -245,8 +243,8 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
 
 static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
                                                  char *password) {
-  MuxServer *server = descriptor_server(d);
-  ServerConfiguration *configuration = server->configuration;
+  CommandRuntime *runtime = descriptor_runtime(d);
+  ServerConfiguration *configuration = runtime->world->configuration;
   int nplayers;
   DbRef player;
   char *buff;
@@ -260,7 +258,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
 
   nplayers = configuration->max_players < 0
                  ? configuration->max_players
-                 : connect_flow_count_connected(server->descriptors);
+                 : connect_flow_count_connected(runtime->descriptors);
   if (nplayers > configuration->max_players) {
     connect_flow_terminate(d, "CRE", "Create", "Game Full",
                            DESCRIPTOR_SHUTDOWN_GAMEFULL, NOTHING, name,
@@ -268,39 +266,37 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
     return CONNECT_RESULT_TERMINATED;
   }
 
-  if (!login_throttle_allow(server->login_throttle, configuration, d->addr)) {
+  if (!login_throttle_allow(runtime->login_throttle, configuration, d->addr)) {
     connect_flow_terminate(d, "CRE", "Create", "Login throttled",
                            DESCRIPTOR_SHUTDOWN_BADLOGIN, NOTHING, name, FC_CONN,
                            create_fail);
     return CONNECT_RESULT_TERMINATED;
   }
 
-  player = create_player(&server->background_command.evaluation, name, password,
-                         NOTHING, 0);
+  player = create_player(&runtime->background_command->evaluation, name,
+                         password, NOTHING, 0);
   if (player == NOTHING) {
     descriptor_queue_string(d, create_fail);
-    STARTLOG(&descriptor_server(d)->log, LOG_SECURITY | LOG_PCREATES, "CON",
-             "BAD") {
+    STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
       buff = alloc_mbuf("connect_flow_attempt_create.LOG.badcrea");
       snprintf(buff, MBUF_SIZE, "[%d/%s] Create of '%s' failed", d->descriptor,
                d->addr, name);
       log_text(buff);
       free_mbuf(buff);
-      ENDLOG(&descriptor_server(d)->log);
+      ENDLOG(descriptor_log(d));
     }
     return CONNECT_RESULT_RETRY;
   }
 
-  STARTLOG(&descriptor_server(d)->log, LOG_LOGIN | LOG_PCREATES, "CON",
-           "CREA") {
+  STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
     buff = alloc_mbuf("connect_flow_attempt_create.LOG.create");
     snprintf(buff, MBUF_SIZE, "[%d/%s] Created ", d->descriptor, d->addr);
     log_text(buff);
-    log_name(&descriptor_server(d)->log, player);
+    log_name(descriptor_log(d), player);
     free_mbuf(buff);
-    ENDLOG(&descriptor_server(d)->log);
+    ENDLOG(descriptor_log(d));
   }
-  move_object(&descriptor_server(d)->background_command.evaluation, player,
+  move_object(&descriptor_runtime(d)->background_command->evaluation, player,
               configuration->start_room);
 
   d->is_connected = true;
@@ -343,10 +339,10 @@ static FlowOutcome connect_flow_step_username(Descriptor *d, void *flow_data,
   }
   StringCopyTrunc(data->name, input, sizeof(data->name) - 1);
   outcome.action = FLOW_ACTION_GOTO;
-  if (lookup_player(&descriptor_server(d)->world, NOTHING, data->name, 0) !=
+  if (lookup_player(descriptor_runtime(d)->world, NOTHING, data->name, 0) !=
       NOTHING) {
     StringCopyTrunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
-  } else if (!ok_new_player_name(descriptor_server(d)->configuration,
+  } else if (!ok_new_player_name(descriptor_runtime(d)->world->configuration,
                                  data->name)) {
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "New usernames must start with a letter and be at least "
@@ -502,7 +498,7 @@ static FlowOutcome connect_flow_dispatch(Descriptor *d, void *flow_data,
   if (!strcmp(step, "create_confirm_password"))
     return connect_flow_step_create_confirm_password(d, flow_data, step, input);
 
-  log_error(&descriptor_server(d)->log, LOG_BUGS, "FLOW", "STEP",
+  log_error(descriptor_log(d), LOG_BUGS, "FLOW", "STEP",
             "Unknown connect flow step '%s'.", step);
   return (FlowOutcome){.action = FLOW_ACTION_CANCEL};
 }

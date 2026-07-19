@@ -29,7 +29,7 @@ static void swim_except(MAP *map, MECH *mech, int x, int y, char *msg,
     j = map->mechsOnMap[i];
     if (j < 0)
       continue;
-    t = getMech(j);
+    t = btech_context_get_mech(map->xcode.context, j);
     if (!t || t == mech)
       continue;
     if (MechX(t) != x || MechY(t) != y)
@@ -59,7 +59,7 @@ static void break_sub(MAP *map, MECH *mech, int x, int y, char *msg) {
 
 /* Up -> down */
 void drop_thru_ice(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   mech_notify(mech, MECHALL, "You break the ice!");
   MechLOSBroadcast(mech, "breaks the ice!");
@@ -83,7 +83,7 @@ void drop_thru_ice(MECH *mech) {
 
 /* Down -> up */
 void break_thru_ice(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   MarkForLOSUpdate(mech);
   mech_notify(mech, MECHALL, "You break through the ice!");
@@ -97,40 +97,46 @@ int possibly_drop_thru_ice(MECH *mech) {
   if ((MechMove(mech) == MOVE_HOVER) || (MechMove(mech) == MOVE_SUB) ||
       (MechType(mech) == CLASS_BSUIT))
     return 0;
-  if (Number(1, 6) != 1)
+  if (btech_random_range(mech->xcode.context, 1, 6) != 1)
     return 0;
   drop_thru_ice(mech);
   return 1;
 }
 
-static int watercount;
-
-static void growable_callback(MAP *map, int x, int y) {
+static void growable_callback(MAP *map, int x, int y, void *context) {
+  int *water_count = context;
   int terrain = GetRTerrain(map, x, y);
+
   if ((IsWater(terrain) && terrain != ICE) ||
       GetRTerrain(map, x, y) == TMP_TERR)
-    watercount++;
+    (*water_count)++;
 }
 
 int growable(MAP *map, int x, int y) {
-  watercount = 0;
-  visit_neighbor_hexes(map, x, y, growable_callback);
+  int water_count = 0;
 
-  if (watercount <= 4 && (watercount < 2 || (Number(1, 6) > watercount)))
+  visit_neighbor_hexes(map, x, y, growable_callback, &water_count);
+
+  if (water_count <= 4 &&
+      (water_count < 2 ||
+       (btech_random_range(map->xcode.context, 1, 6) > water_count)))
     return 1;
   return 0;
 }
 
-static void meltable_callback(MAP *map, int x, int y) {
+static void meltable_callback(MAP *map, int x, int y, void *context) {
+  int *water_count = context;
+
   if (GetRTerrain(map, x, y) == ICE)
-    watercount++;
+    (*water_count)++;
 }
 
 int meltable(MAP *map, int x, int y) {
-  watercount = 0;
-  visit_neighbor_hexes(map, x, y, meltable_callback);
+  int water_count = 0;
 
-  if (watercount > 4 && Number(1, 3) > 1)
+  visit_neighbor_hexes(map, x, y, meltable_callback, &water_count);
+
+  if (water_count > 4 && btech_random_range(map->xcode.context, 1, 3) > 1)
     return 0;
   return 1;
 }
@@ -142,7 +148,8 @@ void ice_growth(DbRef player, MAP *map, int num) {
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
       if (GetRTerrain(map, x, y) == WATER)
-        if (Number(1, 100) <= num && growable(map, x, y)) {
+        if (btech_random_range(map->xcode.context, 1, 100) <= num &&
+            growable(map, x, y)) {
           SetTerrain(map, x, y, TMP_TERR);
           count++;
         }
@@ -151,9 +158,11 @@ void ice_growth(DbRef player, MAP *map, int num) {
       if (GetRTerrain(map, x, y) == TMP_TERR)
         SetTerrain(map, x, y, ICE);
   if (count)
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d hexes 'iced'.", count);
+    notify_printf(btech_context_evaluation(map->xcode.context), player,
+                  "%d hexes 'iced'.", count);
   else
-    notify(BTECH_EVALUATION_CONTEXT, player, "No hexes 'iced'.");
+    notify(btech_context_evaluation(map->xcode.context), player,
+           "No hexes 'iced'.");
 }
 
 void ice_melt(DbRef player, MAP *map, int num) {
@@ -163,7 +172,8 @@ void ice_melt(DbRef player, MAP *map, int num) {
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
       if (GetRTerrain(map, x, y) == ICE)
-        if (Number(1, 100) <= num && meltable(map, x, y)) {
+        if (btech_random_range(map->xcode.context, 1, 100) <= num &&
+            meltable(map, x, y)) {
           break_sub(map, NULL, x, y, "goes swimming as ice breaks!");
           SetTerrain(map, x, y, TMP_TERR);
           count++;
@@ -173,17 +183,21 @@ void ice_melt(DbRef player, MAP *map, int num) {
       if (GetRTerrain(map, x, y) == TMP_TERR)
         SetTerrain(map, x, y, WATER);
   if (count)
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "%d hexes melted.", count);
+    notify_printf(btech_context_evaluation(map->xcode.context), player,
+                  "%d hexes melted.", count);
   else
-    notify(BTECH_EVALUATION_CONTEXT, player, "No hexes melted.");
+    notify(btech_context_evaluation(map->xcode.context), player,
+           "No hexes melted.");
 }
 
 void map_addice(DbRef player, MAP *map, char *buffer) {
   char *args[2];
   int num;
 
-  DOCHECK(mech_parseattributes(buffer, args, 2) != 1, "Invalid arguments!");
-  DOCHECK(Readnum(num, args[0]), "Invalid number!");
+  DOCHECK_CONTEXT(map->xcode.context,
+                  mech_parseattributes(buffer, args, 2) != 1,
+                  "Invalid arguments!");
+  DOCHECK_CONTEXT(map->xcode.context, Readnum(num, args[0]), "Invalid number!");
   ice_growth(player, map, num);
 }
 
@@ -191,30 +205,35 @@ void map_delice(DbRef player, MAP *map, char *buffer) {
   char *args[2];
   int num;
 
-  DOCHECK(mech_parseattributes(buffer, args, 2) != 1, "Invalid arguments!");
-  DOCHECK(Readnum(num, args[0]), "Invalid number!");
+  DOCHECK_CONTEXT(map->xcode.context,
+                  mech_parseattributes(buffer, args, 2) != 1,
+                  "Invalid arguments!");
+  DOCHECK_CONTEXT(map->xcode.context, Readnum(num, args[0]), "Invalid number!");
   ice_melt(player, map, num);
 }
 
 void possibly_blow_ice(MECH *mech, int weapindx, int x, int y) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   if (GetRTerrain(map, x, y) != ICE)
     return;
-  if (Number(1, 15) > MechWeapons[weapindx].damage)
+  if (btech_random_range(mech->xcode.context, 1, 15) >
+      MechWeapons[weapindx].damage)
     return;
   HexLOSBroadcast(map, x, y, "The ice breaks from the blast!");
   break_sub(map, NULL, x, y, "goes swimming as ice breaks!");
 }
 
 void possibly_blow_bridge(MECH *mech, int weapindx, int x, int y) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
   if (GetRTerrain(map, x, y) != BRIDGE)
     return;
   if (MapBridgesCS(map))
     return;
-  if (Number(1, 10 * (1 + GetElev(map, x, y))) > MechWeapons[weapindx].damage) {
+  if (btech_random_range(mech->xcode.context, 1,
+                         10 * (1 + GetElev(map, x, y))) >
+      MechWeapons[weapindx].damage) {
     HexLOSBroadcast(map, x, y, "The bridge at $H shudders from direct hit!");
     return;
   }

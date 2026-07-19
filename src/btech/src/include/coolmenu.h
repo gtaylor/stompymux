@@ -16,6 +16,12 @@
 
 #include "mux/server/platform.h"
 
+typedef struct EvaluationContext EvaluationContext;
+
+typedef struct StringifiedValue {
+  char text[5];
+} StringifiedValue;
+
 /* #define MAX_MENU_LENGTH 24 */
 #define MAX_MENU_LENGTH 400
 #define MAX_MENU_WIDTH 240
@@ -71,7 +77,7 @@ void CreateMenuEntry_Killer(coolmenu **c, char *text, int flag, int id,
                             int value, int maxvalue);
 
 void KillCoolMenu(coolmenu *c);
-void ShowCoolMenu(DbRef player, coolmenu *c);
+void ShowCoolMenu(EvaluationContext *evaluation, DbRef player, coolmenu *c);
 char **MakeCoolMenuText(coolmenu *c);
 int CoolMenu_FPWBit(int number, int maxlen);
 
@@ -82,6 +88,9 @@ coolmenu *SelCol_Menu(int columns, char *heading, char **strings, int type,
 /* last = how many entries we have */
 coolmenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
                                 int last);
+coolmenu *SelCol_FunStringMenuContextK(int columns, char *heading,
+                                       char *(*fun)(void *, int, char *buffer),
+                                       void *context, int last);
 
 /* Same, except we dunno how many entries we got */
 coolmenu *SelCol_FunStringMenu(int columns, char *heading, char *(*fun)(int));

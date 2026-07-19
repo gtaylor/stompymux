@@ -19,6 +19,8 @@
 
 #include "mux/server/platform.h"
 
+typedef struct BtechContext BtechContext;
+
 typedef struct artillery_shot_type {
   int from_x, from_y; /* hex this is shot from */
   int to_x, to_y;     /* hex this lands in */
@@ -27,8 +29,7 @@ typedef struct artillery_shot_type {
   int ishit;          /* did we hit target hex? */
   DbRef shooter;      /* nice to know type of information */
   DbRef map;          /* map we're on */
-  struct artillery_shot_type *next;
-  /* next in stack of unused things */
+  BtechContext *context;
 } artillery_shot;
 
 /* Weapon values for artillery guns */

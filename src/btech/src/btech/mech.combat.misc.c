@@ -140,9 +140,10 @@ void ammo_expedinture_check(MECH *mech, int weapindx, int ns) {
   /* Okay, we have case of warning here */
   if (Started(mech))
     if ((sev * 65536 + weapindx) % 65536)
-      mech_printf(mech, MECHALL, "%sWARNING: Ammo for %s is running low.%%c",
-                  sev ? "%ch%cr" : "%ch%cy",
-                  get_parts_long_name(I2Weapon(weapindx), 0));
+      mech_printf(
+          mech, MECHALL, "%sWARNING: Ammo for %s is running low.%%c",
+          sev ? "%ch%cr" : "%ch%cy",
+          get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
 }
 
 void heat_effect(MECH *mech, MECH *tempMech, int heatdam, int fromInferno) {
@@ -152,13 +153,13 @@ void heat_effect(MECH *mech, MECH *tempMech, int heatdam, int fromInferno) {
 
     if (((MechType(tempMech) == CLASS_VEH_GROUND) ||
          (MechType(tempMech) == CLASS_VTOL)) &&
-        btech_context_active()->configuration->btech_fasaadvvhlfire) {
+        tempMech->xcode.context->configuration->btech_fasaadvvhlfire) {
       if (fromInferno)
         vehicle_start_burn(tempMech, mech);
       else
         checkVehicleInFire(tempMech, 0);
     } else {
-      if (Roll() > 8) {
+      if (btech_random_roll(tempMech->xcode.context) > 8) {
         MechLOSBroadcast(tempMech, "explodes!");
         mech_notify(tempMech, MECHALL,
                     "The heat's too much for your vehicle! It blows up!");
@@ -202,25 +203,29 @@ void Plasma_Hit(MECH *mech, MECH *hitMech, int LOS) {
   float heatadd = 0;
 
   if (MechType(hitMech) == CLASS_MECH) {
-    heatadd = (float)(Number(1, 6));
+    heatadd = (float)btech_random_range(hitMech->xcode.context, 1, 6);
     MechWeapHeat(hitMech) += heatadd;
   }
 }
 
 // extern int global_kill_cheat;
-void KillMechContentsIfIC(DbRef aRef) {
+void KillMechContentsIfIC(MECH *mech) {
+  BtechContext *context = mech->xcode.context;
+
   // global_kill_cheat = 1;
-  if (!is_in_character(btech_context_active()->database, aRef))
+  if (!is_in_character(context->database, mech->mynum))
     return;
-  if (!btech_context_active()->configuration->btech_ic ||
-      btech_context_active()->configuration->btech_xploss >= 1000)
-    tele_contents(aRef, AFTERLIFE_DBREF, TELE_LOUD);
+  if (!context->configuration->btech_ic ||
+      context->configuration->btech_xploss >= 1000)
+    tele_contents(context, mech->mynum, context->configuration->afterlife_dbref,
+                  TELE_LOUD);
   else
-    tele_contents(aRef, AFTERLIFE_DBREF, TELE_XP | TELE_LOUD);
+    tele_contents(context, mech->mynum, context->configuration->afterlife_dbref,
+                  TELE_XP | TELE_LOUD);
 }
 
 #define BOOMLENGTH 24
-char BOOM[BOOMLENGTH][80] = {
+static char BOOM[BOOMLENGTH][80] = {
     "                              ________________",
     "                         ____/ (  (    )   )  \\___",
     "                        /( (  (  )   _    ))  )   )\\",
@@ -249,6 +254,7 @@ char BOOM[BOOMLENGTH][80] = {
 // clang-format on
 
 void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
+  BtechContext *context = target->xcode.context;
   int loop;
   MAP *mech_map;
   MECH *ttarget;
@@ -268,12 +274,12 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
   // global_kill_cheat = 1;
 
   // Destroy Contents Right Away
-  if (btech_context_active()->configuration->btech_transported_unit_death) {
-    SAFE_DOLIST(
-        btech_context_active()->database, a, b,
-        game_object_contents(btech_context_active()->database, target->mynum))
-    if (IsMech(a) && is_in_character(btech_context_active()->database, a)) {
-      ctarget = getMech(a);
+  if (context->configuration->btech_transported_unit_death) {
+    SAFE_DOLIST(context->database, a, b,
+                game_object_contents(context->database, target->mynum))
+    if (btech_context_is_mech(context, a) &&
+        is_in_character(context->database, a)) {
+      ctarget = btech_context_get_mech(mech->xcode.context, a);
       mech_notify(
           ctarget, MECHALL,
           "Due to your transport's destruction, your unit has been destroyed!");
@@ -307,17 +313,18 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
       break;
     }
     if (target->mapindex != -1) {
-      mech_map = getMap(target->mapindex);
-      if ((btech_context_active()->configuration->btech_vtol_ice_causes_fire) &&
+      mech_map = btech_context_get_map(mech->xcode.context, target->mapindex);
+      if ((context->configuration->btech_vtol_ice_causes_fire) &&
           (MechSpecials(target) & ICE_TECH) &&
           (MechType(target) == CLASS_VTOL)) {
         MechLOSBroadcast(target, "explodes in a ball of flames!");
         add_decoration(mech_map, MechX(target), MechY(target), TYPE_FIRE, FIRE,
-                       FIRE_DURATION);
+                       btech_random_range(context, 60, 180));
       }
     }
     if (MechCarrying(target) > 0) {
-      if ((ttarget = getMech(MechCarrying(target)))) {
+      if ((ttarget = btech_context_get_mech(mech->xcode.context,
+                                            MechCarrying(target)))) {
         mech_notify(ttarget, MECHALL, "Your tow lines go suddenly slack!");
         mech_dropoff(GOD, target, "");
       }
@@ -331,11 +338,12 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
     Destroy(target);
   }
   if (MechType(target) == CLASS_MW) {
-    if (is_in_character(btech_context_active()->database, target->mynum)) {
-      if (btech_context_active()->configuration->btech_xploss_for_mw) {
-        KillMechContentsIfIC(target->mynum);
+    if (is_in_character(context->database, target->mynum)) {
+      if (context->configuration->btech_xploss_for_mw) {
+        KillMechContentsIfIC(target);
       } else {
-        tele_contents(target->mynum, AFTERLIFE_DBREF, TELE_LOUD);
+        tele_contents(context, target->mynum,
+                      context->configuration->afterlife_dbref, TELE_LOUD);
       }
       discard_mw(target);
     }

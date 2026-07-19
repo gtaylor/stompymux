@@ -11,6 +11,8 @@
 
 #pragma once
 
+typedef struct BtechContext BtechContext;
+
 #include "mux/server/platform.h"
 
 #define MAX_SENSORS 2
@@ -28,17 +30,19 @@
 #define MAPLOSHEX_LIT 8
 #define MAPLOSHEX_SEE (MAPLOSHEX_SEETERRAIN | MAPLOSHEX_SEEELEV)
 
-#define LOSMap_GetFlag(losmap, x, y)                                           \
-  ((losmap)->map[LOSMap_Hex2Index(losmap, x, y)])
+#define LOS_MAP_GET_FLAG(los_map, x, y)                                        \
+  ((los_map)->map[los_map_hex_index(los_map, x, y)])
 
-typedef struct hexlosmap_info {
+typedef struct HexLosMap {
+  BtechContext *context;
   int startx;
   int starty;
   int xsize;
   int ysize;
   int flags;
   unsigned char map[MAPLOS_MAXX * MAPLOS_MAXY];
-} hexlosmap_info;
+} HexLosMap;
 
-hexlosmap_info *CalculateLOSMap(MAP *, MECH *, int, int, int, int);
-int LOSMap_Hex2Index(hexlosmap_info *, int, int);
+bool los_map_calculate(HexLosMap *los_map, MAP *map, MECH *mech, int start_x,
+                       int start_y, int x_size, int y_size);
+int los_map_hex_index(HexLosMap *los_map, int x, int y);

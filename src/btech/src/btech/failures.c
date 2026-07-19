@@ -23,8 +23,9 @@
 #include "mech.h"
 #include "p.mech.startup.h"
 #include "p.mech.update.h"
+#include "p.mech.utils.h"
 
-extern int num_def_weapons;
+extern const int num_def_weapons;
 
 int GetBrandIndex(int type) {
   if (type == -1)
@@ -108,8 +109,11 @@ static void mech_srec_event(MuxEvent *e) {
 
 void FailureRadioShort(MECH *mech, int weapnum, int weaptype, int section,
                        int critical, int roll, int *modifier, int *type) {
-  MECHEVENT(mech, EVENT_MRECOVERY, mech_rrec_event, Number(30, Number(40, 200)),
-            (long)MechRadioRange(mech));
+  MECHEVENT(
+      mech, EVENT_MRECOVERY, mech_rrec_event,
+      btech_random_range(mech->xcode.context, 30,
+                         btech_random_range(mech->xcode.context, 40, 200)),
+      (long)MechRadioRange(mech));
   MechRadioRange(mech) = 0;
 }
 
@@ -118,8 +122,11 @@ void FailureRadioRange(MECH *mech, int weapnum, int weaptype, int section,
   int mod = failures[GetBrandIndex(-2) + roll - 1].data;
 
   mod = MIN(MechRadioRange(mech) - 1, mod);
-  MECHEVENT(mech, EVENT_MRECOVERY, mech_rrec_event, Number(30, Number(40, 200)),
-            (long)mod);
+  MECHEVENT(
+      mech, EVENT_MRECOVERY, mech_rrec_event,
+      btech_random_range(mech->xcode.context, 30,
+                         btech_random_range(mech->xcode.context, 40, 200)),
+      (long)mod);
   MechRadioRange(mech) -= mod;
 }
 
@@ -135,27 +142,45 @@ void FailureComputerScanner(MECH *mech, int weapnum, int weaptype, int section,
 
   switch (tmp) {
   case 1:
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)MechTacRange(mech));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)MechTacRange(mech));
     MechTacRange(mech) = 0;
     break;
   case 2:
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)(MechLRSRange(mech) + 256));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)(MechLRSRange(mech) + 256));
     MechLRSRange(mech) = 0;
     break;
   case 4:
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)(MechScanRange(mech) + 512));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)(MechScanRange(mech) + 512));
     MechScanRange(mech) = 0;
     break;
   case 7:
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)MechTacRange(mech));
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)(MechLRSRange(mech) + 256));
-    MECHEVENT(mech, EVENT_MRECOVERY, mech_srec_event,
-              Number(30, Number(40, 200)), (long)(MechScanRange(mech) + 512));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)MechTacRange(mech));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)(MechLRSRange(mech) + 256));
+    MECHEVENT(
+        mech, EVENT_MRECOVERY, mech_srec_event,
+        btech_random_range(mech->xcode.context, 30,
+                           btech_random_range(mech->xcode.context, 40, 200)),
+        (long)(MechScanRange(mech) + 512));
     MechTacRange(mech) = 0;
     MechLRSRange(mech) = 0;
     MechScanRange(mech) = 0;
@@ -179,7 +204,9 @@ void FailureWeaponMissiles(MECH *mech, int weapnum, int weaptype, int section,
 void FailureWeaponDud(MECH *mech, int weapnum, int weaptype, int section,
                       int critical, int roll, int *modifier, int *type) {
   if (failures[Conv(mech, section, critical) + roll].type == FAIL_NONE) {
-    SetRecyclePart(mech, section, critical, MechWeapons[weaptype].vrt);
+    SetRecyclePart(mech, section, critical,
+                   btech_weapon_settings_recycle_time(
+                       &mech->xcode.context->weapon_settings, weaptype));
     return;
   }
   SetPartTempNuke(mech, section, critical,
@@ -188,7 +215,8 @@ void FailureWeaponDud(MECH *mech, int weapnum, int weaptype, int section,
   if (roll == 6) {
     SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
   }
-  SetRecyclePart(mech, section, critical, 30 + Number(1, 60));
+  SetRecyclePart(mech, section, critical,
+                 30 + btech_random_range(mech->xcode.context, 1, 60));
 }
 
 void FailureWeaponJammed(MECH *mech, int weapnum, int weaptype, int section,
@@ -196,7 +224,8 @@ void FailureWeaponJammed(MECH *mech, int weapnum, int weaptype, int section,
   SetPartTempNuke(mech, section, critical,
                   failures[Conv(mech, section, critical) + roll].type);
   *type = WEAPON_JAMMED;
-  SetRecyclePart(mech, section, critical, Number(20, 40));
+  SetRecyclePart(mech, section, critical,
+                 btech_random_range(mech->xcode.context, 20, 40));
 }
 
 void FailureWeaponRange(MECH *mech, int weapnum, int weaptype, int section,
@@ -231,7 +260,8 @@ void FailureWeaponSpike(MECH *mech, int weapnum, int weaptype, int section,
     SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
     return;
   }
-  SetRecyclePart(mech, section, critical, Number(20, 40));
+  SetRecyclePart(mech, section, critical,
+                 btech_random_range(mech->xcode.context, 20, 40));
 }
 
 void CheckGenericFail(MECH *mech, int type, int *result, int *mod) {
@@ -243,18 +273,19 @@ void CheckGenericFail(MECH *mech, int type, int *result, int *mod) {
     *result = FAIL_NONE;
   if (i < 0)
     return;
-  if (btech_context_active()->configuration->btech_parts) {
+  if (mech->xcode.context->configuration->btech_parts) {
     if (!l)
       l = 5;
   } else
     return;
-  if (Number(1, 5000) != 42)
+  if (btech_random_range(mech->xcode.context, 1, 5000) != 42)
     return; /* ~1/5000 chance */
-  if (Number(1, 100) <= brands[(i + l - 1) * 5 / 6].success)
+  if (btech_random_range(mech->xcode.context, 1, 100) <=
+      brands[(i + l - 1) * 5 / 6].success)
     return;
-  roll = Number(1, 6);
+  roll = btech_random_range(mech->xcode.context, 1, 6);
   if (roll == 6)
-    roll = Number(1, 6);
+    roll = btech_random_range(mech->xcode.context, 1, 6);
   in = i + roll - 1;
   switch (failures[in].flag) {
   case REQ_TARGET:
@@ -297,20 +328,21 @@ void CheckWeaponFailed(MECH *mech, int weapnum, int weaptype, int section,
   *type = FAIL_NONE;
   if (i < 0)
     return;
-  if (btech_context_active()->configuration->btech_parts) {
+  if (mech->xcode.context->configuration->btech_parts) {
     if (!l)
       l = 5;
     if (MechWeapons[Weapon2I(t)].special & PCOMBAT)
       return;
   } else
     return;
-  if (Number(1, 10) < 9)
+  if (btech_random_range(mech->xcode.context, 1, 10) < 9)
     return;
-  if (Number(1, 100) <= brands[(i + l - 1) * 5 / 6].success)
+  if (btech_random_range(mech->xcode.context, 1, 100) <=
+      brands[(i + l - 1) * 5 / 6].success)
     return;
-  roll = Number(1, 6);
+  roll = btech_random_range(mech->xcode.context, 1, 6);
   if (roll == 6)
-    roll = Number(1, 6);
+    roll = btech_random_range(mech->xcode.context, 1, 6);
   in = i + roll - 1;
   if (failures[in].flag & REQ_HEAT)
     if (!MechWeapons[weaptype].heat)

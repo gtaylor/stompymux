@@ -7,6 +7,7 @@
 #include "p.glue.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
@@ -357,7 +358,7 @@ static int fh_xcode_bit(EvaluationContext *evaluation, DbRef target,
   got_xcode = is_hardcode(evaluation->world->database, target);
   fh_wiz(evaluation, target, player, flag, fflags, reset);
   new_xcode = is_hardcode(evaluation->world->database, target);
-  handle_xcode(player, target, got_xcode, new_xcode);
+  handle_xcode(evaluation->btech, player, target, got_xcode, new_xcode);
 
   return 1;
 } /* end fh_xcode_bit(evaluation, ) */

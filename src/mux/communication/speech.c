@@ -2,7 +2,9 @@
  * speech.c -- Commands which involve speaking
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/functions.h"
@@ -12,7 +14,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -54,11 +55,11 @@ static void say_shout(EvaluationContext *evaluation, int target,
                       const char *prefix, int flags, DbRef player,
                       char *message) {
   if (flags & SAY_NOTAG)
-    raw_broadcast(evaluation->server->descriptors, target, "%s%s",
+    raw_broadcast(evaluation->runtime->descriptors, target, "%s%s",
                   game_object_name(evaluation->world->database, player),
                   message);
   else
-    raw_broadcast(evaluation->server->descriptors, target, "%s%s%s", prefix,
+    raw_broadcast(evaluation->runtime->descriptors, target, "%s%s%s", prefix,
                   game_object_name(evaluation->world->database, player),
                   message);
 }
@@ -214,13 +215,13 @@ void do_say(CommandInvocation *invocation) {
                 player, buf2);
       free_lbuf(buf2);
     }
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "SHOUT") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "SHOUT") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.shout");
       snprintf(buf2, LBUF_SIZE, " shouts: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
@@ -250,13 +251,13 @@ void do_say(CommandInvocation *invocation) {
                 say_flags, player, buf2);
       free_lbuf(buf2);
     }
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "BCAST") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wizshout");
       snprintf(buf2, LBUF_SIZE, " broadcasts: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
@@ -286,84 +287,85 @@ void do_say(CommandInvocation *invocation) {
                 player, buf2);
       free_lbuf(buf2);
     }
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "ASHOUT") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "ASHOUT") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.adminshout");
       snprintf(buf2, LBUF_SIZE, " yells: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
   case SAY_WALLPOSE:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->server->descriptors, 0, "%s %s",
+      raw_broadcast(invocation->context->runtime->descriptors, 0, "%s %s",
                     game_object_name(evaluation->world->database, player),
                     message);
     else
       raw_broadcast(
-          invocation->context->server->descriptors, 0, "Announcement: %s %s",
+          invocation->context->runtime->descriptors, 0, "Announcement: %s %s",
           game_object_name(evaluation->world->database, player), message);
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "SHOUT") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "SHOUT") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wallpose");
       snprintf(buf2, LBUF_SIZE, " WALLposes: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
   case SAY_WIZPOSE:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->server->descriptors, WIZARD, "%s %s",
+      raw_broadcast(invocation->context->runtime->descriptors, WIZARD, "%s %s",
                     game_object_name(evaluation->world->database, player),
                     message);
     else
       raw_broadcast(
-          invocation->context->server->descriptors, WIZARD, "Broadcast: %s %s",
+          invocation->context->runtime->descriptors, WIZARD, "Broadcast: %s %s",
           game_object_name(evaluation->world->database, player), message);
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "BCAST") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wizpose");
       snprintf(buf2, LBUF_SIZE, " WIZposes: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
   case SAY_WALLEMIT:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->server->descriptors, 0, "%s", message);
+      raw_broadcast(invocation->context->runtime->descriptors, 0, "%s",
+                    message);
     else
-      raw_broadcast(invocation->context->server->descriptors, 0,
+      raw_broadcast(invocation->context->runtime->descriptors, 0,
                     "Announcement: %s", message);
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "SHOUT") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "SHOUT") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wallemit");
       snprintf(buf2, LBUF_SIZE, " WALLemits: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
 
   case SAY_WIZEMIT:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->server->descriptors, WIZARD, "%s",
+      raw_broadcast(invocation->context->runtime->descriptors, WIZARD, "%s",
                     message);
     else
-      raw_broadcast(invocation->context->server->descriptors, WIZARD,
+      raw_broadcast(invocation->context->runtime->descriptors, WIZARD,
                     "Broadcast: %s", message);
-    STARTLOG(&evaluation->server->log, LOG_SHOUTS, "WIZ", "BCAST") {
-      log_name(&evaluation->server->log, player);
+    STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
+      log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wizemit");
       snprintf(buf2, LBUF_SIZE, " WIZemit: '%s'", message);
       log_text(buf2);
       free_lbuf(buf2);
-      ENDLOG(&evaluation->server->log);
+      ENDLOG(evaluation->log);
     }
     break;
   default:

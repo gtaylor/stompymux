@@ -22,9 +22,7 @@
  */
 
 #include "mech.h"
-
-extern char *silly_atr_get(int id, int flag);
-extern void silly_atr_set(int id, int flag, char *dat);
+#include "p.mech.partnames.h"
 
 /* entry = pointer to [ */
 static void remove_entry(char *alku, char *entry) {
@@ -60,19 +58,20 @@ static char *find_entry(char *s, int i, int b) {
   return strstr(s, buf);
 }
 
-extern char *get_parts_short_name(int, int);
-
-void econ_change_items(DbRef d, int id, int brand, int num) {
+void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
+                       int num) {
+  GameDatabase *database = context->database;
   char *t, *u;
   int base = 0, i1, i2, i3;
 
-  if (!is_good_obj(btech_context_active()->database, d))
+  if (!is_good_obj(database, d))
     return;
   if (brand)
-    if (get_parts_short_name(id, brand) == get_parts_short_name(id, 0))
+    if (get_parts_short_name(context, id, brand) ==
+        get_parts_short_name(context, id, 0))
       brand = 0;
   /* t is buf of LBUF_SIZE */
-  t = silly_atr_get(d, A_ECONPARTS);
+  t = btech_attribute_read(database, d, A_ECONPARTS, (char[LBUF_SIZE]){0});
   if ((u = find_entry(t, id, brand))) {
     if (sscanf(u, "[%d,%d,%d]", &i1, &i2, &i3) == 3)
       base += i3;
@@ -81,39 +80,42 @@ void econ_change_items(DbRef d, int id, int brand, int num) {
   base += num;
   if (base <= 0) {
     if (u)
-      silly_atr_set(d, A_ECONPARTS, t);
+      silly_atr_set_in(database, d, A_ECONPARTS, t);
     return;
   }
   if (!(IsActuator(id)))
     add_entry(t, LBUF_SIZE, tprintf("%d,%d,%d", id, brand, base));
-  silly_atr_set(d, A_ECONPARTS, t);
+  silly_atr_set_in(database, d, A_ECONPARTS, t);
   if (IsActuator(id))
-    econ_change_items(d, Cargo(S_ACTUATOR), brand, base);
+    econ_change_items(context, d, Cargo(S_ACTUATOR), brand, base);
   /* Successfully changed */
 }
 
-int econ_find_items(DbRef d, int id, int brand) {
+int econ_find_items(BtechContext *context, DbRef d, int id, int brand) {
+  GameDatabase *database = context->database;
   char *t, *u;
   int i1, i2, i3;
 
-  if (!is_good_obj(btech_context_active()->database, d))
+  if (!is_good_obj(database, d))
     return 0;
   if (brand)
-    if (get_parts_short_name(id, brand) == get_parts_short_name(id, 0))
+    if (get_parts_short_name(context, id, brand) ==
+        get_parts_short_name(context, id, 0))
       brand = 0;
-  t = silly_atr_get(d, A_ECONPARTS);
+  t = btech_attribute_read(database, d, A_ECONPARTS, (char[LBUF_SIZE]){0});
   if ((u = find_entry(t, id, brand)))
     if (sscanf(u, "[%d,%d,%d]", &i1, &i2, &i3) == 3)
       return i3;
   return 0;
 }
 
-void econ_set_items(DbRef d, int id, int brand, int num) {
+void econ_set_items(BtechContext *context, DbRef d, int id, int brand,
+                    int num) {
   int i;
 
-  if (!is_good_obj(btech_context_active()->database, d))
+  if (!is_good_obj(context->database, d))
     return;
-  i = econ_find_items(d, id, brand);
+  i = econ_find_items(context, d, id, brand);
   if (i != num)
-    econ_change_items(d, id, brand, num - i);
+    econ_change_items(context, d, id, brand, num - i);
 }

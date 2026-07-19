@@ -26,7 +26,7 @@
 #include "p.mech.utils.h"
 
 void mech_map_consistency_check(MECH *mech) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!map) {
     if (mech->mapindex > 0) {
@@ -59,8 +59,6 @@ void eliminate_empties(MAP *map) {
   int i;
   int j;
   int count, oldcount;
-  char tempbuf[SBUF_SIZE] = {0};
-
   if (!map)
     return;
   for (i = map->first_free - 1; i >= 0; i--)
@@ -81,8 +79,7 @@ void eliminate_empties(MAP *map) {
   ReCreate(map->mechflags, char, count);
 
   map->first_free = count;
-  snprintf(tempbuf, SBUF_SIZE, "%ld", map->mynum);
-  mech_Rfixstuff(GOD, NULL, tempbuf);
+  econ_fix_stuff(map->xcode.context, GOD, map->mynum);
 }
 
 void remove_mech_from_map(MAP *map, MECH *mech) {
@@ -92,7 +89,8 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   mech->mapindex = -1;
   if (map->first_free <= mech->mapnumber ||
       map->mechsOnMap[mech->mapnumber] != mech->mynum) {
-    SendError(tprintf("Map indexing error for mech #%ld: Map index %d contains "
+    SendError(map->xcode.context,
+              tprintf("Map indexing error for mech #%ld: Map index %d contains "
                       "data for #%ld instead.",
                       mech->mynum, mech->mapnumber,
                       map->mechsOnMap ? map->mechsOnMap[mech->mapnumber] : -1));
@@ -110,7 +108,8 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
 #if 0
 		for(i = 0; i < map->first_free; i++)
 			if(map->mechsOnMap[i] > 0 && i != loop)
-				if((t = getMech(map->mechsOnMap[i])))
+				if((t = btech_context_get_mech(map->xcode.context,
+				                               map->mechsOnMap[i])))
 					if(MechTeam(t) != MechTeam(mech) &&
 					   (map->LOSinfo[i][loop] & MECHLOSFLAG_SEEN)) {
 						MechNumSeen(t) = MAX(0, MechNumSeen(t) - 1);
@@ -127,7 +126,7 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
 
     for (i = 0; i < map->first_free; i++)
       /* Release from towing if tow-guy ain't on same map already */
-      if ((t = FindObjectsData(map->mechsOnMap[i])))
+      if ((t = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
         if (MechCarrying(t) == mech->mynum) {
           SetCarrying(t, -1);
           MechStatus(mech) &= ~TOWED; /* Reset the Towed flag */
@@ -136,7 +135,8 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   }
   MechNumSeen(mech) = 0;
   if (IsDS(mech))
-    SendDSInfo(tprintf("DS #%ld has left map #%ld", mech->mynum, map->mynum));
+    SendDSInfo(map->xcode.context,
+               tprintf("DS #%ld has left map #%ld", mech->mynum, map->mynum));
 }
 
 void add_mech_to_map(MAP *newmap, MECH *mech) {
@@ -174,7 +174,7 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   /* Is there an autopilot */
   if (MechAuto(mech) > 0) {
 
-    AUTO *a = FindObjectsData(MechAuto(mech));
+    AUTO *a = btech_context_find_object(mech->xcode.context, MechAuto(mech));
 
     /* Reset the AI's comtitle */
     if (a)
@@ -187,7 +187,8 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
 
     for (tow_index = 0; tow_index < newmap->first_free; tow_index++)
       /* Release from towing if tow-guy ain't on same map already */
-      if ((t = FindObjectsData(newmap->mechsOnMap[tow_index])))
+      if ((t = btech_context_get_mech(newmap->xcode.context,
+                                      newmap->mechsOnMap[tow_index])))
         if (MechCarrying(t) == mech->mynum)
           break;
     if (tow_index == newmap->first_free)
@@ -197,8 +198,8 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   UnZombifyMech(mech);
   UpdateConditions(mech, newmap);
   if (IsDS(mech))
-    SendDSInfo(
-        tprintf("DS #%ld has entered map #%ld", mech->mynum, newmap->mynum));
+    SendDSInfo(mech->xcode.context, tprintf("DS #%ld has entered map #%ld",
+                                            mech->mynum, newmap->mynum));
 }
 
 int mech_size(MAP *map) {

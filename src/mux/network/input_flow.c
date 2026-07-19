@@ -3,11 +3,12 @@
 
 #include "mux/network/input_flow.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/network/netcommon.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
@@ -62,7 +63,7 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
       if (outcome.prompt != nullptr)
         descriptor_queue_string(d, outcome.prompt);
       if (++iterations > FLOW_MAX_GOTO_CHAIN) {
-        log_error(&descriptor_server(d)->log, LOG_BUGS, "FLOW", "LOOP",
+        log_error(descriptor_log(d), LOG_BUGS, "FLOW", "LOOP",
                   "Interactive flow on descriptor %d exceeded %d GOTO steps "
                   "without input; cancelling.",
                   d->descriptor, FLOW_MAX_GOTO_CHAIN);

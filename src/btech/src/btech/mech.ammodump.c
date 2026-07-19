@@ -76,8 +76,9 @@ static void mech_dump_event(MuxEvent *ev) {
     if (e > 1)
       MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
     else {
-      mech_printf(mech, MECHALL, "Ammunition for %s dumped!",
-                  get_parts_long_name(I2Weapon(weapindx), 0));
+      mech_printf(
+          mech, MECHALL, "Ammunition for %s dumped!",
+          get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
       MechLOSBroadcast(mech,
                        "no longer has ammo dumping from hatches on its back.");
     }
@@ -115,7 +116,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc < 1, "Not enough arguments to the function");
+  DOCHECK_CONTEXT(mech->xcode.context, argc < 1,
+                  "Not enough arguments to the function");
   weapnum = atoi(args[0]);
 
   DOCHECKMA(Jumping(mech), "You can't dump ammo while jumping!");
@@ -148,7 +150,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     /* Try to find hitloc instead */
     DOCHECKMA(Dumping(mech), "You're already dumping some ammo!");
     loc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
-    DOCHECK(loc < 0, "Invalid location or weapon number!");
+    DOCHECK_CONTEXT(mech->xcode.context, loc < 0,
+                    "Invalid location or weapon number!");
     ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
     if (args[1]) {
       i = atoi(args[1]);
@@ -186,29 +189,34 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   }
   weapindx = FindWeaponIndex(mech, weapnum);
   if (weapnum < 0)
-    SendError(tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
+    SendError(mech->xcode.context,
+              tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
                       (int)player, weapnum));
   DOCHECKMA(Dumping(mech), "You're already dumping some ammo!");
-  DOCHECK(weapindx < 0, "Invalid weapon number!");
+  DOCHECK_CONTEXT(mech->xcode.context, weapindx < 0, "Invalid weapon number!");
   FindWeaponNumberOnMech(mech, weapnum, &section, &critical);
-  DOCHECK(MechWeapons[weapindx].type == TBEAM ||
-              MechWeapons[weapindx].type == THAND,
-          "That weapon doesn't use ammunition!");
-  DOCHECK(!FindAmmoForWeapon_sub(mech, -1, -1, weapindx, 0, &ammoLoc, &ammoCrit,
-                                 0, 0),
-          "You don't have any ammunition for that weapon stored on this mech!");
-  DOCHECK(GetPartData(mech, ammoLoc, ammoCrit) == 0,
-          "You are out of ammunition for that weapon already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechWeapons[weapindx].type == TBEAM ||
+                      MechWeapons[weapindx].type == THAND,
+                  "That weapon doesn't use ammunition!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      !FindAmmoForWeapon_sub(mech, -1, -1, weapindx, 0, &ammoLoc, &ammoCrit, 0,
+                             0),
+      "You don't have any ammunition for that weapon stored on this mech!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  GetPartData(mech, ammoLoc, ammoCrit) == 0,
+                  "You are out of ammunition for that weapon already!");
   type = 256 * (weapindx + 1);
   mech_printf(mech, MECHALL, "Starting dumping %s ammunition..",
-              get_parts_long_name(I2Weapon(weapindx), 0));
+              get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
   MechLOSBroadcast(mech, "starts dumping ammo from hatches on its back.");
   MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
 #if 0
 	while (FindAmmoForWeapon(mech, weapindx, 0, &ammoLoc, &ammoCrit))
 		GetPartData(mech, ammoLoc, ammoCrit) = 0;
 	mech_printf(mech, MECHALL, "Ammunition for %s dumped!",
-				get_parts_long_name(I2Weapon(weapindx), 0));
+				get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
 #endif
 }
 
@@ -228,7 +236,7 @@ int Dump_Decrease(MECH *mech, int loc, int pos, int *hm) {
       if ((c = GetPartData(mech, loc, pos))) {
         weapindx = Ammo2WeaponI(index);
         if (MechWeapons[weapindx].ammoperton < DUMP_SPEED) {
-          if ((btech_context_active()->events->tick %
+          if ((mech->xcode.context->events->tick %
                (DUMP_SPEED / MechWeapons[weapindx].ammoperton)))
             RUP(2);
           /* fine, we remove 1 */
@@ -280,7 +288,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
         if (IsAmmo(wPartType))
           if (GetPartData(mech, wSecIter, wSlotIter)) {
             aobjAmmoItems[wcAmmoItems].wDamage =
-                FindMaxAmmoDamage(Ammo2WeaponI(wPartType));
+                FindMaxAmmoDamage(mech->xcode.context, Ammo2WeaponI(wPartType));
             aobjAmmoItems[wcAmmoItems].wLocation = wSecIter;
             aobjAmmoItems[wcAmmoItems].wSlot = wSlotIter;
             aobjAmmoItems[wcAmmoItems].wWeapIdx = Ammo2WeaponI(wPartType);
@@ -298,7 +306,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
         if (!PartIsNonfunctional(mech, wLoc, wSlotIter) &&
             GetPartData(mech, wLoc, wSlotIter)) {
           aobjAmmoItems[wcAmmoItems].wDamage =
-              FindMaxAmmoDamage(Ammo2WeaponI(wPartType));
+              FindMaxAmmoDamage(mech->xcode.context, Ammo2WeaponI(wPartType));
           aobjAmmoItems[wcAmmoItems].wLocation = wLoc;
           aobjAmmoItems[wcAmmoItems].wSlot = wSlotIter;
           aobjAmmoItems[wcAmmoItems].wWeapIdx = Ammo2WeaponI(wPartType);
@@ -314,7 +322,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
         wPartType = GetPartType(mech, wSecIter, wSlotIter);
         if (IsAmmo(wPartType) && (Ammo2WeaponI(wPartType) == wWeapIdx)) {
           aobjAmmoItems[wcAmmoItems].wDamage =
-              FindMaxAmmoDamage(Ammo2WeaponI(wPartType));
+              FindMaxAmmoDamage(mech->xcode.context, Ammo2WeaponI(wPartType));
           aobjAmmoItems[wcAmmoItems].wLocation = wSecIter;
           aobjAmmoItems[wcAmmoItems].wSlot = wSlotIter;
           aobjAmmoItems[wcAmmoItems].wWeapIdx = Ammo2WeaponI(wPartType);
@@ -327,7 +335,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
     wSlotIter = ((wEventData >> 24) & 0xFF) - 1;
     wPartType = GetPartType(mech, wSecIter, wSlotIter);
     aobjAmmoItems[wcAmmoItems].wDamage =
-        FindMaxAmmoDamage(Ammo2WeaponI(wPartType));
+        FindMaxAmmoDamage(mech->xcode.context, Ammo2WeaponI(wPartType));
     aobjAmmoItems[wcAmmoItems].wLocation = wSecIter;
     aobjAmmoItems[wcAmmoItems].wSlot = wSlotIter;
     aobjAmmoItems[wcAmmoItems].wWeapIdx = Ammo2WeaponI(wPartType);
@@ -336,7 +344,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
   }
 
   if (wcAmmoItems > 0) {
-    wRndIdx = Number(0, wcAmmoItems - 1);
+    wRndIdx = btech_random_range(mech->xcode.context, 0, wcAmmoItems - 1);
     wBlowDamage = aobjAmmoItems[wRndIdx].wDamage;
     wSecIter = aobjAmmoItems[wRndIdx].wLocation;
     wSlotIter = aobjAmmoItems[wRndIdx].wSlot;
@@ -347,7 +355,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
       mech_printf(
           mech, MECHALL,
           "%%ch%%crSome of the %s ammo dumping out of your mech ignites!%%cn",
-          get_parts_long_name(I2Weapon(wWeapIdx), 0));
+          get_parts_long_name(mech->xcode.context, I2Weapon(wWeapIdx), 0));
       DamageMech(mech, attacker, 0, -1, wHitLoc, 1, 0, wBlowDamage, -1, -1, 0,
                  -1, 0, 1);
       /*
@@ -363,14 +371,14 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
   }
 }
 
-int FindMaxAmmoDamage(int wWeapIdx) {
+int FindMaxAmmoDamage(BtechContext *context, int wWeapIdx) {
   int wDamage = MechWeapons[wWeapIdx].damage;
-  int wIter = 0;
 
   if (IsMissile(wWeapIdx) || IsArtillery(wWeapIdx)) {
-    for (wIter = 0; MissileHitTable[wIter].key != -1; wIter++)
-      if (MissileHitTable[wIter].key == wWeapIdx)
-        wDamage *= MissileHitTable[wIter].num_missiles[10];
+    const MissileHitEntry *entry =
+        missile_hit_registry_find_weapon(&context->missile_hits, wWeapIdx);
+    if (entry != nullptr)
+      wDamage *= entry->num_missiles[10];
   }
 
   return wDamage;

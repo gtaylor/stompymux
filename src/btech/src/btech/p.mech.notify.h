@@ -11,6 +11,14 @@
 
 #pragma once
 
+#include "mux/server/platform.h"
+
+typedef struct EvaluationContext EvaluationContext;
+
+typedef struct MechDisplayId {
+  char text[SBUF_SIZE];
+} MechDisplayId;
+
 /* mech.notify.c */
 const char *GetAmmoDesc_Model_Mode(int model, int mode);
 char GetWeaponAmmoModeLetter_Model_Mode(int model, int mode);
@@ -18,23 +26,18 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode);
 char GetWeaponAmmoModeLetter(MECH *mech, int loop, int crit);
 char GetWeaponFireModeLetter(MECH *mech, int loop, int crit);
 const char *GetMoveTypeID(int movetype);
-void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level);
+void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                    int spaces, int level);
 const char *GetArcID(MECH *mech, int arc);
-const char *GetMechToMechID_base(MECH *see, MECH *mech, int i);
-const char *GetMechToMechID(MECH *see, MECH *mech);
-const char *GetMechID(MECH *mech);
+MechDisplayId mech_to_mech_display_id_base(MECH *see, MECH *mech, int inlos);
+MechDisplayId mech_to_mech_display_id(MECH *see, MECH *mech);
+MechDisplayId mech_display_id(MECH *mech);
 void mech_set_channelfreq(DbRef player, void *data, char *buffer);
 void mech_set_channeltitle(DbRef player, void *data, char *buffer);
 void mech_set_channelmode(DbRef player, void *data, char *buffer);
 void mech_list_freqs(DbRef player, void *data, char *buffer);
 void mech_sendchannel(DbRef player, void *data, char *buffer);
-void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
-                     char *handle, char *msg, int bth, int *isxp, int under_ecm,
-                     int digmode);
 int common_checks(DbRef player, MECH *mech, int flag);
-void recursive_commlink(int i, int dep);
-void nonrecursive_commlink(int i);
-int findCommLink(MAP *map, MECH *from, MECH *to, int freq);
 void sendchannelstuff(MECH *mech, int freq, char *msg);
 void mech_radio(DbRef player, void *data, char *buffer);
 void MechBroadcast(MECH *mech, MECH *target, MAP *mech_map, char *buffer);

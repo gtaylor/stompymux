@@ -7,16 +7,20 @@
 
 #include "btech/btech_context.h"
 #include "mux/commands/command_context.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys_context.h"
 #include "mux/database/db.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/network/connection_runtime.h"
 #include "mux/network/mux_event.h"
 #include "mux/persistence/gamedb.h"
+#include "mux/server/configuration_context.h"
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/runtime_clock.h"
+#include "mux/server/server_control.h"
 #include "mux/world/world_context.h"
 
 typedef struct CommandQueue CommandQueue;
@@ -59,8 +63,13 @@ struct MuxServer {
   AccessControlStore access_control;
   WorldContext world;
   CommandContext background_command;
+  ConfigurationContext configuration_context;
+  ConnectionRuntime connection_runtime;
+  ServerControl server_control;
   MaintenanceContext maintenance;
-  LuaRuntime *lua;
+  CommandRuntime command_runtime;
+  LuaServices lua_services;
+  LuaOwner lua;
 };
 
 bool mux_server_create(MuxServer *server);

@@ -67,34 +67,52 @@
 #define TECHCOMMANDH(a) void a(DbRef player, void *data, char *buffer)
 #define TECHCOMMANDB                                                           \
   MECH *mech = (MECH *)data;                                                   \
+  [[maybe_unused]] EvaluationContext *evaluation =                             \
+      btech_context_evaluation(mech->xcode.context);                           \
   [[maybe_unused]] int loc, part, t, full, now, from, to, change, mod = 2,     \
                                                                   isds = 0;    \
   [[maybe_unused]] char *c;
 
 #define TECHCOMMANDC                                                           \
-  DOCHECK(!(is_tech_power(btech_context_active()->database, player)),          \
-          "Insufficient clearance to access the command.");                    \
-  DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  !(is_tech_power(mech->xcode.context->database, player)),     \
+                  "Insufficient clearance to access the command.");            \
+  DOCHECK_CONTEXT(mech->xcode.context, !mech,                                  \
+                  "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \
-  DOCHECK(Starting(mech) && !Wiz(player),                                      \
-          "The mech's starting up! Please stop the sequence first.");          \
-  DOCHECK(Started(mech) && !Wiz(player),                                       \
-          "The mech's started up ; please shut it down first.");               \
-  DOCHECK(!isds && !MechStall(mech) && !Wiz(player),                           \
-          "The 'mech isn't in a repair stall!");
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  Starting(mech) &&                                            \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The mech's starting up! Please stop the sequence first.");  \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  Started(mech) &&                                             \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The mech's started up ; please shut it down first.");       \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  !isds && !MechStall(mech) &&                                 \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The 'mech isn't in a repair stall!");
 
 #define TECHCOMMANDD                                                           \
-  DOCHECK(!(is_tech_power(btech_context_active()->database, player)),          \
-          "Insufficient clearance to access the command.");                    \
-  DOCHECK(!mech, "Error has occured in techcommand ; please contact a wiz");   \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  !(is_tech_power(mech->xcode.context->database, player)),     \
+                  "Insufficient clearance to access the command.");            \
+  DOCHECK_CONTEXT(mech->xcode.context, !mech,                                  \
+                  "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \
-  DOCHECK(Starting(mech) && !Wiz(player),                                      \
-          "The mech's starting up! Please stop the sequence first.");          \
-  DOCHECK(Started(mech) && !Wiz(player),                                       \
-          "The mech's started up ; please shut it down first.");               \
-  DOCHECK(btech_context_active()->configuration->btech_limitedrepairs &&       \
-              !isds && !MechStall(mech) && !Wiz(player),                       \
-          "The 'mech isn't in a repair stall!");
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  Starting(mech) &&                                            \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The mech's starting up! Please stop the sequence first.");  \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  Started(mech) &&                                             \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The mech's started up ; please shut it down first.");       \
+  DOCHECK_CONTEXT(mech->xcode.context,                                         \
+                  mech->xcode.context->configuration->btech_limitedrepairs &&  \
+                      !isds && !MechStall(mech) &&                             \
+                      !Wiz(mech->xcode.context->database, player),             \
+                  "The 'mech isn't in a repair stall!");
 
 #define ETECHCOMMAND(a) void a(DbRef player, void *data, char *buffer)
 
@@ -110,30 +128,35 @@
 
 #define ETECHEVENT(a) extern void a(MuxEvent *e)
 
-#define START(a) notify(BTECH_EVALUATION_CONTEXT, player, a)
+#define START(a) notify(evaluation, player, a)
 #ifndef BT_FREETECHTIME
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  mux_event_add(btech_context_active()->events, MAX(1, time), 0, type, fu,     \
-                (void *)d1, (void *)((d2) + player * PLAYERPOS))
+  mux_event_add(((MECH *)(d1))->xcode.context->events, MAX(1, time), 0, type,  \
+                fu, (void *)d1, (void *)((d2) + player * PLAYERPOS))
 #else
 #define FIXEVENT(time, d1, d2, fu, type)                                       \
-  mux_event_add(btech_context_active()->events,                                \
-                (btech_context_active()->configuration->btech_freetechtime     \
-                     ? 2                                                       \
-                     : MAX(2, time)),                                          \
-                0, type, fu, (void *)d1, (void *)((d2) + player * PLAYERPOS))
+  mux_event_add(                                                               \
+      ((MECH *)(d1))->xcode.context->events,                                   \
+      (((MECH *)(d1))->xcode.context->configuration->btech_freetechtime        \
+           ? 2                                                                 \
+           : MAX(2, time)),                                                    \
+      0, type, fu, (void *)d1, (void *)((d2) + player * PLAYERPOS))
 #endif
 #define REPAIREVENT(time, d1, d2, fu, type)                                    \
   FIXEVENT((time) * TECH_TICK, d1, d2, fu, type)
 #define STARTREPAIR(time, d1, d2, fu, type)                                    \
-  FIXEVENT(tech_addtechtime(player, (time * mod) / 2), d1, d2, fu, type)
+  FIXEVENT(tech_addtechtime(((MECH *)(d1))->xcode.context, player,             \
+                            (time * mod) / 2),                                 \
+           d1, d2, fu, type)
 #define STARTIREPAIR(time, d1, d2, fu, type, amount)                           \
-  FIXEVENT((tech_addtechtime(player, (time * mod) / 2) -                       \
+  FIXEVENT((tech_addtechtime(((MECH *)(d1))->xcode.context, player,            \
+                             (time * mod) / 2) -                               \
             (amount > 0 ? TECH_TICK * (time * (amount - 1) / (amount)) : 0)),  \
            d1, d2, fu, type)
 #define FAKEREPAIR(time, type, d1, d2)                                         \
-  FIXEVENT(tech_addtechtime(player, (time * mod) / 2), d1, d2, very_fake_func, \
-           type)
+  FIXEVENT(tech_addtechtime(((MECH *)(d1))->xcode.context, player,             \
+                            (time * mod) / 2),                                 \
+           d1, d2, very_fake_func, type)
 
 /* replace gun/part, repair gun/part (loc/pos) */
 #define DOTECH_LOCPOS(diff, flunkfunc, succfunc, resourcefunc, time, d1, d2,   \
@@ -284,34 +307,38 @@ ECMD(tech_fix);
 #endif
 
 #define GrabPartsM(m, a, b, c)                                                 \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+  econ_change_items((m)->xcode.context,                                        \
+                    IsDS(m) ? AeroBay(m, 0)                                    \
                             : game_object_location(                            \
-                                  btech_context_active()->database, m->mynum), \
+                                  (m)->xcode.context->database, (m)->mynum),   \
                     a, b, 0 - c)
 #define PartAvailM(m, a, b, c)                                                 \
-  (econ_find_items(IsDS(m) ? AeroBay(m, 0)                                     \
+  (econ_find_items((m)->xcode.context,                                         \
+                   IsDS(m) ? AeroBay(m, 0)                                     \
                            : game_object_location(                             \
-                                 btech_context_active()->database, m->mynum),  \
+                                 (m)->xcode.context->database, (m)->mynum),    \
                    a, b) >= c)
 #ifndef BT_COMPLEXREPAIRS
 #define AddPartsM(m, a, b, c)                                                  \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+  econ_change_items((m)->xcode.context,                                        \
+                    IsDS(m) ? AeroBay(m, 0)                                    \
                             : game_object_location(                            \
-                                  btech_context_active()->database, m->mynum), \
+                                  (m)->xcode.context->database, (m)->mynum),   \
                     alias_part(m, a), b, c)
 #else
 #define AddPartsM(m, l, a, b, c)                                               \
-  econ_change_items(IsDS(m) ? AeroBay(m, 0)                                    \
+  econ_change_items((m)->xcode.context,                                        \
+                    IsDS(m) ? AeroBay(m, 0)                                    \
                             : game_object_location(                            \
-                                  btech_context_active()->database, m->mynum), \
+                                  (m)->xcode.context->database, (m)->mynum),   \
                     alias_part(m, a, l), b, c)
 #endif
 #define AVCHECKM(m, a, b, c)                                                   \
-  DOCHECK1(                                                                    \
-      !PartAvailM(m, a, b, c),                                                 \
+  DOCHECK1_CONTEXT(                                                            \
+      mech->xcode.context, !PartAvailM(m, a, b, c),                            \
       tprintf(                                                                 \
           "Not enough units of %s in store! You need to have at least %d.",    \
-          part_name(a, b), c));
+          part_name((m)->xcode.context, a, b).text, c));
 
 #ifndef BT_COMPLEXREPAIRS
 #define alias_part(m, t)                                                        \

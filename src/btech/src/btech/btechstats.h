@@ -203,8 +203,6 @@ struct char_value {
 
 #define NUM_CHARVALUES sizeof(char_values) / sizeof(struct char_value)
 
-char *char_values_short[NUM_CHARVALUES];
-
 /*************************************************************************/
 
 char *char_levels[] = {"Green", "Regular", "Veteran", "Elite", "Historical"};

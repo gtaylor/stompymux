@@ -170,7 +170,8 @@
 #define UnZombifyMech(mech)                                                    \
   do {                                                                         \
     AUTO *au;                                                                  \
-    if (MechAuto(mech) > 0 && (au = FindObjectsData(MechAuto(mech))))          \
+    if (MechAuto(mech) > 0 &&                                                  \
+        (au = btech_context_find_object(mech->xcode.context, MechAuto(mech)))) \
       UnZombifyAuto(au);                                                       \
   } while (0)
 
@@ -189,7 +190,7 @@
 
 /* Basic checks for the autopilot */
 #define AUTO_CHECKS(a)                                                         \
-  if (game_object_location(btech_context_active()->database, a->mynum) !=      \
+  if (game_object_location(a->xcode.context->database, a->mynum) !=            \
       a->mymechnum)                                                            \
     return;                                                                    \
   if (Destroyed(mech))                                                         \
@@ -434,7 +435,7 @@ int auto_get_command_enum(AUTO *autopilot, int command_number);
 void auto_newautopilot(DbRef key, void **data, int selector);
 
 /* From autopilot_commands.c */
-void auto_cal_mapindex(MECH *mech);
+void auto_cal_mapindex(BtechContext *context, MECH *mech);
 void auto_set_chasetarget_mode(AUTO *autopilot, int mode);
 void auto_command_startup(AUTO *autopilot, MECH *mech);
 void auto_command_shutdown(AUTO *autopilot, MECH *mech);

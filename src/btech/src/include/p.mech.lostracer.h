@@ -11,4 +11,4 @@
 
 #pragma once
 
-int *TraceLOS(MAP *map, int ax, int ay, int bx, int by, int *result);
+int trace_los(MAP *map, int ax, int ay, int bx, int by, LosTrace *trace);

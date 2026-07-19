@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "mux/commands/command_runtime.h"
 #include "mux/database/flags.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/netcommon.h"
@@ -16,7 +17,7 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/runtime_clock.h"
 #include "mux/server/server_config.h"
 
 /* Human-readable labels for DescriptorShutdownReason values. */
@@ -41,7 +42,9 @@ constexpr size_t DESCRIPTOR_REGISTRY_INITIAL_CAPACITY = 16;
 
 /* Flat storage for every descriptor owned by the server event loop. */
 struct DescriptorRegistry {
-  MuxServer *server;
+  CommandRuntime *runtime;
+  BtechContext *btech;
+  ServerLog *log;
   /* Stable slots containing descriptors or nullptr when unused. */
   Descriptor **slots;
   /* Number of slots allocated in slots. */
@@ -76,15 +79,28 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   return true;
 }
 
-DescriptorRegistry *descriptor_registry_create(MuxServer *server) {
+DescriptorRegistry *descriptor_registry_create(CommandRuntime *runtime,
+                                               BtechContext *btech,
+                                               ServerLog *log) {
   DescriptorRegistry *registry = calloc(1, sizeof(*registry));
-  if (registry != nullptr)
-    registry->server = server;
+  if (registry != nullptr) {
+    registry->runtime = runtime;
+    registry->btech = btech;
+    registry->log = log;
+  }
   return registry;
 }
 
-MuxServer *descriptor_server(Descriptor *descriptor) {
-  return descriptor->registry->server;
+CommandRuntime *descriptor_runtime(Descriptor *descriptor) {
+  return descriptor->registry->runtime;
+}
+
+BtechContext *descriptor_btech(Descriptor *descriptor) {
+  return descriptor->registry->btech;
+}
+
+ServerLog *descriptor_log(Descriptor *descriptor) {
+  return descriptor->registry->log;
 }
 
 void descriptor_registry_destroy(DescriptorRegistry *registry) {
@@ -245,35 +261,36 @@ Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int fd) {
 /* Disconnect descriptor and notify the game of its shutdown reason. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason) {
-  MuxServer *server = descriptor_server(descriptor);
+  CommandRuntime *runtime = descriptor_runtime(descriptor);
   if (descriptor->is_dead)
     return;
   descriptor->is_dead = true;
   uv_read_stop((uv_stream_t *)descriptor->socket);
   if (descriptor->is_connected) {
-    fcache_dump(server->files, descriptor, FC_QUIT);
-    log_error(&server->log, LOG_NET | LOG_LOGIN, "NET", "DISC",
+    fcache_dump(runtime->files, descriptor, FC_QUIT);
+    log_error(descriptor_log(descriptor), LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
               descriptor->descriptor, descriptor->addr,
-              game_object_name(&server->database, descriptor->player),
+              game_object_name(runtime->world->database, descriptor->player),
               descriptor->player, descriptor_disconnect_reasons[reason]);
 
-    log_error(&server->log, LOG_ACCOUNTING, "DIS", "ACCT",
-              "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player,
-              decode_flags(
-                  &descriptor_server(descriptor)->database, GOD,
-                  game_object_flags(&descriptor_server(descriptor)->database,
-                                    descriptor->player),
-                  game_object_flags2(&descriptor_server(descriptor)->database,
-                                     descriptor->player),
-                  game_object_flags3(&descriptor_server(descriptor)->database,
-                                     descriptor->player)),
-              descriptor->command_count,
-              server->clock.now - descriptor->connected_at,
-              game_object_location(&descriptor_server(descriptor)->database,
-                                   descriptor->player),
-              descriptor->addr, descriptor_disconnect_reasons[reason],
-              game_object_name(&server->database, descriptor->player));
+    log_error(
+        descriptor_log(descriptor), LOG_ACCOUNTING, "DIS", "ACCT",
+        "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player,
+        decode_flags(
+            descriptor_runtime(descriptor)->world->database, GOD,
+            game_object_flags(descriptor_runtime(descriptor)->world->database,
+                              descriptor->player),
+            game_object_flags2(descriptor_runtime(descriptor)->world->database,
+                               descriptor->player),
+            game_object_flags3(descriptor_runtime(descriptor)->world->database,
+                               descriptor->player)),
+        descriptor->command_count,
+        runtime->clock->now - descriptor->connected_at,
+        game_object_location(descriptor_runtime(descriptor)->world->database,
+                             descriptor->player),
+        descriptor->addr, descriptor_disconnect_reasons[reason],
+        game_object_name(runtime->world->database, descriptor->player));
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_disconnect_messages[reason]);

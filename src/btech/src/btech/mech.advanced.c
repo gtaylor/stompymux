@@ -19,7 +19,6 @@
 #include "mech.ecm.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mt19937ar.h"
 #include "p.artillery.h"
 #include "p.btechstats.h"
 #include "p.crit.h"
@@ -44,7 +43,7 @@
       MechStatus(mech) |= (setstatus);                                         \
     }                                                                          \
   } else                                                                       \
-    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
+    notify(btech_context_evaluation(mech->xcode.context), player, donthave)
 
 #define TOGGLE_SPECIALS_MACRO_CHECK(neededspecial, setstatus, offstatus,       \
                                     msgon, msgoff, donthave)                   \
@@ -58,7 +57,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
+    notify(btech_context_evaluation(mech->xcode.context), player, donthave)
 
 #define TOGGLE_SPECIALS_MACRO_CHECK2(neededspecial, setstatus, offstatus,      \
                                      msgon, msgoff, donthave)                  \
@@ -72,7 +71,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
+    notify(btech_context_evaluation(mech->xcode.context), player, donthave)
 
 #define TOGGLE_INFANTRY_MACRO_CHECK(neededspecial, setstatus, offstatus,       \
                                     msgon, msgoff, donthave)                   \
@@ -86,7 +85,7 @@
       MechStatus2(mech) &= ~(offstatus);                                       \
     }                                                                          \
   } else                                                                       \
-    notify(BTECH_EVALUATION_CONTEXT, player, donthave)
+    notify(btech_context_evaluation(mech->xcode.context), player, donthave)
 
 static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
@@ -96,8 +95,8 @@ static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
 /* Toggles ECM on / off */
 void mech_ecm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK(MechCritStatus(mech) & ECM_DESTROYED,
-          "Your Guardian ECM has been destroyed already!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & ECM_DESTROYED,
+                  "Your Guardian ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK(ECM_TECH, ECM_ENABLED, ECCM_ENABLED,
                               "You turn your ECM suite online (ECM mode).",
                               "You turn your ECM suite offline.",
@@ -107,8 +106,8 @@ void mech_ecm(DbRef player, MECH *mech, char *buffer) {
 
 void mech_eccm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK(MechCritStatus(mech) & ECM_DESTROYED,
-          "Your Guardian ECM has been destroyed already!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & ECM_DESTROYED,
+                  "Your Guardian ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK(ECM_TECH, ECCM_ENABLED, ECM_ENABLED,
                               "You turn your ECM suite online (ECCM mode).",
                               "You turn your ECM suite offline.",
@@ -138,8 +137,9 @@ void mech_pereccm(DbRef player, MECH *mech, char *buffer) {
 
 void mech_angelecm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK(MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
-          "Your Angel ECM has been destroyed already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
+                  "Your Angel ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK2(
       ANGEL_ECM_TECH, ANGEL_ECM_ENABLED, ANGEL_ECCM_ENABLED,
       "You turn your Angel ECM suite online (ECM mode).",
@@ -150,8 +150,9 @@ void mech_angelecm(DbRef player, MECH *mech, char *buffer) {
 
 void mech_angeleccm(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK(MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
-          "Your Angel ECM has been destroyed already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
+                  "Your Angel ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK2(
       ANGEL_ECM_TECH, ANGEL_ECCM_ENABLED, ANGEL_ECM_ENABLED,
       "You turn your Angel ECM suite online (ECCM mode).",
@@ -201,8 +202,8 @@ void mech_slite(DbRef player, MECH *mech, char *buffer) {
     return;
   }
 
-  DOCHECK(MechCritStatus(mech) & SLITE_DEST,
-          "Your searchlight has been destroyed already!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & SLITE_DEST,
+                  "Your searchlight has been destroyed already!");
 
   if (SearchlightChanging(mech)) {
     if (MechStatus2(mech) & SLITE_ON)
@@ -239,8 +240,9 @@ void mech_fliparms(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
-  DOCHECK(Fallen(mech), "You're using your arms to support yourself. Try "
-                        "flipping something else.");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You're using your arms to support yourself. Try "
+                  "flipping something else.");
   SILLY_TOGGLE_MACRO(FLIPABLE_ARMS, FLIPPED_ARMS,
                      "Arms have been flipped to BACKWARD position",
                      "Arms have been flipped to FORWARD position",
@@ -264,124 +266,141 @@ void mech_fliparms(DbRef player, void *data, char *buffer) {
    cant           = system lacks nspec
  */
 
-static int temp_nspecisspec, temp_nspec, temp_mode, temp_firemode;
-static char *temp_onmsg, *temp_offmsg, *temp_cant;
+typedef struct ToggleModeContext ToggleModeContext;
+struct ToggleModeContext {
+  int special_kind;
+  int special;
+  int mode;
+  int fire_mode;
+  char *on_message;
+  char *off_message;
+  char *cannot_message;
+};
 
-/*
- * temp_onmsg/temp_offmsg are always one of the string-literal arguments
- * passed in by mech_toggle_mode_sub()'s callers below; the literal-ness is
- * just lost through the static globals by the time they reach tprintf().
- */
+/* The mode messages are string-literal arguments supplied by the callers
+ * below; their literal-ness is lost when passed through the context. */
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
 static int mech_toggle_mode_sub_func(MECH *mech, DbRef player, int index,
-                                     int high) {
+                                     int high, void *context) {
   int section, critical, weaptype;
+  const ToggleModeContext *toggle = context;
 
   weaptype =
       FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 0);
 
-  DOCHECK0(weaptype == -1,
-           "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0(weaptype == -2,
-           "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK0(weaptype == -3,
-           "The weapon system chirps: 'That weapon is still reloading!'");
-  DOCHECK0(weaptype == -4,
-           "The weapon system chirps: 'That weapon is still recharging!'");
-  DOCHECK0(PartTempNuke(mech, section, critical) == FAIL_AMMOJAMMED,
-           "The ammo feed mechanism for that weapon is jammed! Unable to "
-           "change modes!");
-  DOCHECK0(GetPartFireMode(mech, section, critical) & OS_MODE,
-           "One-shot weapons' mode cannot be altered!");
-  DOCHECK0(isWeapAmmoFeedLocked(mech, section, critical),
-           "That weapon's ammo feed mechanism is damaged!");
+  DOCHECK0_CONTEXT(mech->xcode.context, weaptype == -1,
+                   "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, weaptype == -2,
+      "The weapons system chirps: 'That Weapon has been destroyed!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, weaptype == -3,
+      "The weapon system chirps: 'That weapon is still reloading!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, weaptype == -4,
+      "The weapon system chirps: 'That weapon is still recharging!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context,
+      PartTempNuke(mech, section, critical) == FAIL_AMMOJAMMED,
+      "The ammo feed mechanism for that weapon is jammed! Unable to "
+      "change modes!");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   GetPartFireMode(mech, section, critical) & OS_MODE,
+                   "One-shot weapons' mode cannot be altered!");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   isWeapAmmoFeedLocked(mech, section, critical),
+                   "That weapon's ammo feed mechanism is damaged!");
 
-  if (temp_nspecisspec == 6) {
-    DOCHECK0(!FindArtemisForWeapon(mech, section, critical),
-             "You do not have an Artemis system for that weapon.");
+  if (toggle->special_kind == 6) {
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     !FindArtemisForWeapon(mech, section, critical),
+                     "You do not have an Artemis system for that weapon.");
   }
 
   weaptype = Weapon2I(GetPartType(mech, section, critical));
 
-  DOCHECK0(MechWeapons[weaptype].special & ROCKET,
-           "Rocket launchers' mode cannot be altered!");
+  DOCHECK0_CONTEXT(mech->xcode.context, MechWeapons[weaptype].special & ROCKET,
+                   "Rocket launchers' mode cannot be altered!");
 
-  if ((temp_nspecisspec == 6 && (MechWeapons[weaptype].type == TMISSILE)) ||
-      (temp_nspecisspec == 5 && (MechWeapons[weaptype].type == TAMMO)
+  if ((toggle->special_kind == 6 && (MechWeapons[weaptype].type == TMISSILE)) ||
+      (toggle->special_kind == 5 && (MechWeapons[weaptype].type == TAMMO)
 
-       && !(MechWeapons[weaptype].special & temp_nspec)) ||
-      (temp_nspecisspec == 4 && (MechWeapons[weaptype].type == TMISSILE) &&
+       && !(MechWeapons[weaptype].special & toggle->special)) ||
+      (toggle->special_kind == 4 && (MechWeapons[weaptype].type == TMISSILE) &&
        !(MechWeapons[weaptype].type & (IDF | DAR))) ||
-      (temp_nspecisspec == 2 && (MechWeapons[weaptype].special & IDF) &&
+      (toggle->special_kind == 2 && (MechWeapons[weaptype].special & IDF) &&
        !(MechWeapons[weaptype].special & DAR)) ||
-      (temp_nspecisspec == 1 && temp_nspec &&
-       (MechWeapons[weaptype].special & temp_nspec)) ||
-      (temp_nspecisspec <= 0 && temp_nspec &&
-       (MechWeapons[weaptype].type == temp_nspec &&
+      (toggle->special_kind == 1 && toggle->special &&
+       (MechWeapons[weaptype].special & toggle->special)) ||
+      (toggle->special_kind <= 0 && toggle->special &&
+       (MechWeapons[weaptype].type == toggle->special &&
         !(MechWeapons[weaptype].special & NARC)))) {
 
-    if (temp_nspecisspec == 0 && (temp_nspec & TARTILLERY))
-      DOCHECK0((GetPartAmmoMode(mech, section, critical) & ARTILLERY_MODES) &&
-                   !(GetPartAmmoMode(mech, section, critical) & temp_mode),
-               "That weapon has already been set to fire special rounds!");
+    if (toggle->special_kind == 0 && (toggle->special & TARTILLERY))
+      DOCHECK0_CONTEXT(
+          mech->xcode.context,
+          (GetPartAmmoMode(mech, section, critical) & ARTILLERY_MODES) &&
+              !(GetPartAmmoMode(mech, section, critical) & toggle->mode),
+          "That weapon has already been set to fire special rounds!");
     /* Fitz - Group RAC/INARC select: Handle clearing RAC and INARC modes first
      */
-    if ((temp_nspec == RAC) && !temp_mode) {
+    if ((toggle->special == RAC) && !toggle->mode) {
       if (!(GetPartFireMode(mech, section, critical) & RAC_MODES)) {
-        mech_notify(mech, MECHALL, tprintf(temp_offmsg, index));
+        mech_notify(mech, MECHALL, tprintf(toggle->off_message, index));
       } else {
         GetPartFireMode(mech, section, critical) &= ~FIRE_MODES;
-        mech_notify(mech, MECHALL, tprintf(temp_onmsg, index));
+        mech_notify(mech, MECHALL, tprintf(toggle->on_message, index));
       }
       return 0;
-    } else if ((temp_nspec == INARC) && !temp_mode) {
+    } else if ((toggle->special == INARC) && !toggle->mode) {
       if (!(GetPartAmmoMode(mech, section, critical) & INARC_MODES)) {
-        mech_notify(mech, MECHALL, tprintf(temp_offmsg, index));
+        mech_notify(mech, MECHALL, tprintf(toggle->off_message, index));
       } else {
         GetPartAmmoMode(mech, section, critical) &= ~AMMO_MODES;
-        mech_notify(mech, MECHALL, tprintf(temp_onmsg, index));
+        mech_notify(mech, MECHALL, tprintf(toggle->on_message, index));
       }
       return 0;
     } else {
 
-      if (temp_firemode) {
-        if (GetPartFireMode(mech, section, critical) & temp_mode) {
-          if (temp_nspec != RAC) { /* Fitz - Keep RAC type weapons on new
+      if (toggle->fire_mode) {
+        if (GetPartFireMode(mech, section, critical) & toggle->mode) {
+          if (toggle->special != RAC) { /* Fitz - Keep RAC type weapons on new
                                       setting if already there */
-            GetPartFireMode(mech, section, critical) &= ~temp_mode;
+            GetPartFireMode(mech, section, critical) &= ~toggle->mode;
           }
-          mech_notify(mech, MECHALL, tprintf(temp_offmsg, index));
+          mech_notify(mech, MECHALL, tprintf(toggle->off_message, index));
           return 0;
         }
       } else {
-        if (GetPartAmmoMode(mech, section, critical) & temp_mode) {
-          if (temp_nspec != INARC) { /* Fitz - Keep INARC type weapons on new
-                                        setting if already there */
-            GetPartAmmoMode(mech, section, critical) &= ~temp_mode;
+        if (GetPartAmmoMode(mech, section, critical) & toggle->mode) {
+          if (toggle->special != INARC) { /* Fitz - Keep INARC type weapons on
+                                        new setting if already there */
+            GetPartAmmoMode(mech, section, critical) &= ~toggle->mode;
           }
-          mech_notify(mech, MECHALL, tprintf(temp_offmsg, index));
+          mech_notify(mech, MECHALL, tprintf(toggle->off_message, index));
           return 0;
         }
       }
 
-      if (temp_firemode) {
+      if (toggle->fire_mode) {
         GetPartFireMode(mech, section, critical) &= ~FIRE_MODES;
-        GetPartFireMode(mech, section, critical) |= temp_mode;
+        GetPartFireMode(mech, section, critical) |= toggle->mode;
       } else {
         GetPartAmmoMode(mech, section, critical) &= ~AMMO_MODES;
-        GetPartAmmoMode(mech, section, critical) |= temp_mode;
+        GetPartAmmoMode(mech, section, critical) |= toggle->mode;
       }
 
-      mech_notify(mech, MECHALL, tprintf(temp_onmsg, index));
+      mech_notify(mech, MECHALL, tprintf(toggle->on_message, index));
 
       return 0;
     }
   }
-  if (temp_nspec != RAC) /* Keep RAC type weapons on this setting */
-    notify(BTECH_EVALUATION_CONTEXT, player, temp_cant);
+  if (toggle->special != RAC) /* Keep RAC type weapons on this setting */
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           toggle->cannot_message);
   return 0;
 }
 #ifdef __clang__
@@ -393,17 +412,20 @@ static void mech_toggle_mode_sub(DbRef player, MECH *mech, char *buffer,
                                  int tFireMode, char *onmsg, char *offmsg,
                                  char *cant) {
   char *args[1];
+  ToggleModeContext toggle = {
+      .special_kind = nspecisspec,
+      .special = nspec,
+      .mode = mode,
+      .fire_mode = tFireMode,
+      .on_message = onmsg,
+      .off_message = offmsg,
+      .cannot_message = cant,
+  };
 
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Please specify a weapon number.");
-  temp_nspecisspec = nspecisspec;
-  temp_nspec = nspec;
-  temp_mode = mode;
-  temp_onmsg = onmsg;
-  temp_offmsg = offmsg;
-  temp_cant = cant;
-  temp_firemode = tFireMode;
-  multi_weap_sel(mech, player, args[0], 1, mech_toggle_mode_sub_func);
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Please specify a weapon number.");
+  multi_weap_sel(mech, player, args[0], 1, mech_toggle_mode_sub_func, &toggle);
 }
 
 void mech_flamerheat(DbRef player, void *data, char *buffer) {
@@ -615,21 +637,27 @@ void mech_rac(DbRef player, void *data, char *buffer) {
   }
 }
 
-static int mech_unjamammo_func(MECH *mech, DbRef player, int index, int high) {
+static int mech_unjamammo_func(MECH *mech, DbRef player, int index, int high,
+                               void *context) {
+  (void)context;
   int section, critical, weaptype;
   int i;
   char location[50];
 
   weaptype = FindWeaponNumberOnMech(mech, index, &section, &critical);
-  DOCHECK0(weaptype == -1,
-           "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0(weaptype == -2,
-           "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK0(PartTempNuke(mech, section, critical) != FAIL_AMMOJAMMED,
-           "The ammo feed mechanism for that weapon is not jammed.");
-  DOCHECK0(Jumping(mech), "You can't unjam the ammo feed while jumping!");
-  DOCHECK0(IsRunning(MechDesiredSpeed(mech), MMaxSpeed(mech)),
-           "You can't unjam the ammo feed while running!");
+  DOCHECK0_CONTEXT(mech->xcode.context, weaptype == -1,
+                   "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, weaptype == -2,
+      "The weapons system chirps: 'That Weapon has been destroyed!'");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   PartTempNuke(mech, section, critical) != FAIL_AMMOJAMMED,
+                   "The ammo feed mechanism for that weapon is not jammed.");
+  DOCHECK0_CONTEXT(mech->xcode.context, Jumping(mech),
+                   "You can't unjam the ammo feed while jumping!");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   IsRunning(MechDesiredSpeed(mech), MMaxSpeed(mech)),
+                   "You can't unjam the ammo feed while running!");
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (SectHasBusyWeap(mech, i)) {
@@ -640,7 +668,8 @@ static int mech_unjamammo_func(MECH *mech, DbRef player, int index, int high) {
     }
   }
 
-  DOCHECK0(UnJammingAmmo(mech), "You are already unjamming a weapon!");
+  DOCHECK0_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+                   "You are already unjamming a weapon!");
 
   MECHEVENT(mech, EVENT_UNJAM_AMMO, mech_unjam_ammo_event, 60, (long)index);
   mech_printf(mech, MECHALL,
@@ -652,9 +681,10 @@ void mech_unjamammo(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   cch(MECH_USUALMO);
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Please specify a weapon number.");
-  multi_weap_sel(mech, player, args[0], 1, mech_unjamammo_func);
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Please specify a weapon number.");
+  multi_weap_sel(mech, player, args[0], 1, mech_unjamammo_func, nullptr);
 }
 
 void mech_gattling(DbRef player, void *data, char *buffer) {
@@ -808,7 +838,7 @@ static void mech_masc_event(MuxEvent *e) {
                ((MechStatus2(mech) & SCHARGE_ENABLED) ? 1 : 0) +
                (MechStatus2(mech) & SPRINTING ? 2 : 0);
 #endif
-  int roll = Roll();
+  int roll = btech_random_roll(mech->xcode.context);
 
   if (!Started(mech))
     return;
@@ -817,9 +847,9 @@ static void mech_masc_event(MuxEvent *e) {
   if (MechStatus(mech) & SCHARGE_ENABLED)
     roll--;
   if (needed < 10 &&
-      is_good_obj(btech_context_active()->database, MechPilot(mech)) &&
-      WizP(MechPilot(mech)))
-    roll = Number(needed + 1, 12);
+      is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
+      WizP(mech->xcode.context->database, MechPilot(mech)))
+    roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
     MECHEVENT(mech, EVENT_MASC_FAIL, mech_masc_event, MASC_TICK, 0);
@@ -861,8 +891,8 @@ void mech_masc(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
-  DOCHECK(!(MechSpecials(mech) & MASC_TECH),
-          "Your toy ain't prepared for what you're askin' it!");
+  DOCHECK_CONTEXT(mech->xcode.context, !(MechSpecials(mech) & MASC_TECH),
+                  "Your toy ain't prepared for what you're askin' it!");
   if (MechStatus(mech) & MASC_ENABLED) {
     mech_notify(mech, MECHALL, "MASC has been turned off.");
     MechStatus(mech) &= ~MASC_ENABLED;
@@ -871,7 +901,8 @@ void mech_masc(DbRef player, void *data, char *buffer) {
     MECHEVENT(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
     return;
   }
-  DOCHECK(MMaxSpeed(mech) < MP1, "You can't move. How is MASC going to work?");
+  DOCHECK_CONTEXT(mech->xcode.context, MMaxSpeed(mech) < MP1,
+                  "You can't move. How is MASC going to work?");
   mech_notify(mech, MECHALL, "MASC has been turned on.");
   MechStatus(mech) |= MASC_ENABLED;
   StopMascR(mech);
@@ -897,7 +928,7 @@ static void mech_scharge_event(MuxEvent *e) {
                ((MechStatus(mech) & MASC_ENABLED) ? 1 : 0) +
                (MechStatus2(mech) & SPRINTING ? 2 : 0);
 #endif
-  int roll = Roll();
+  int roll = btech_random_roll(mech->xcode.context);
   int j, count = 0;
   int maxspeed, newmaxspeed = 0;
   int critType;
@@ -910,9 +941,9 @@ static void mech_scharge_event(MuxEvent *e) {
   if (MechStatus(mech) & MASC_ENABLED)
     roll = roll - 1;
   if (needed < 10 &&
-      is_good_obj(btech_context_active()->database, MechPilot(mech)) &&
-      WizP(MechPilot(mech)))
-    roll = Number(needed + 1, 12);
+      is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
+      WizP(mech->xcode.context->database, MechPilot(mech)))
+    roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);
   if (roll > needed) {
@@ -934,7 +965,7 @@ static void mech_scharge_event(MuxEvent *e) {
       }
     }
 
-    count = Number(1, 4);
+    count = btech_random_range(mech->xcode.context, 1, 4);
 
     for (j = 0; count && j < CritsInLoc(mech, CTORSO); j++) {
       critType = GetPartType(mech, CTORSO, j);
@@ -972,8 +1003,9 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALMO);
-  DOCHECK(!(MechSpecials2(mech) & SUPERCHARGER_TECH),
-          "Your toy ain't prepared for what you're askin' it!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(MechSpecials2(mech) & SUPERCHARGER_TECH),
+                  "Your toy ain't prepared for what you're askin' it!");
   if (MechStatus(mech) & SCHARGE_ENABLED) {
     mech_notify(mech, MECHALL, "Supercharger has been turned off.");
     MechStatus(mech) &= ~SCHARGE_ENABLED;
@@ -982,8 +1014,8 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
     MECHEVENT(mech, EVENT_SCHARGE_REGEN, mech_scharger_event, SCHARGE_TICK, 0);
     return;
   }
-  DOCHECK(MMaxSpeed(mech) < MP1,
-          "How much can you Supercharge if you can't move?");
+  DOCHECK_CONTEXT(mech->xcode.context, MMaxSpeed(mech) < MP1,
+                  "How much can you Supercharge if you can't move?");
   mech_notify(mech, MECHALL, "Supercharger has been turned on.");
   MechStatus(mech) |= SCHARGE_ENABLED;
   StopSChargeR(mech);
@@ -1007,7 +1039,7 @@ static void mech_explode_event(MuxEvent *e) {
                 extra % 256, extra > 1 ? "s" : "");
     MECHEVENT(mech, EVENT_EXPLODE, mech_explode_event, 1, extra);
   } else {
-    SendDebug(tprintf("#%ld explodes.", mech->mynum));
+    SendDebug(mech->xcode.context, tprintf("#%ld explodes.", mech->mynum));
     if (MechType(mech) == CLASS_BSUIT) {
       mech_notify(mech, MECHALL,
                   "Your batttle suit triggers it's self-destruction sequence.. "
@@ -1028,12 +1060,14 @@ static void mech_explode_event(MuxEvent *e) {
       MechZ(mech) += 6;
 
     } else if (extra >= 256) {
-      SendDebug(tprintf("#%ld explodes [ammo]", mech->mynum));
+      SendDebug(mech->xcode.context,
+                tprintf("#%ld explodes [ammo]", mech->mynum));
       mech_notify(mech, MECHALL, "All your ammo explodes!");
       while ((damage = FindDestructiveAmmo(mech, &i, &j)))
         ammo_explosion(mech, mech, i, j, damage);
     } else {
-      SendDebug(tprintf("#%ld explodes [reactor]", mech->mynum));
+      SendDebug(mech->xcode.context,
+                tprintf("#%ld explodes [reactor]", mech->mynum));
       MechLOSBroadcast(mech, "suddenly explodes!");
       mech_notify(mech, MECHALL,
                   "Suddenly you feel great heat overcoming your senses.. you "
@@ -1048,70 +1082,81 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   char *args[3];
   int i;
   int ammoloc, ammocritnum;
-  long time = (long)btech_context_active()->configuration->btech_explode_time;
+  long time = (long)mech->xcode.context->configuration->btech_explode_time;
   int ammo = 1;
   int argc;
   int override = 0;
 
   cch(MECH_USUALO);
   override = (strstr(buffer, "override") != NULL) &&
-             is_wizard(btech_context_active()->database, player);
+             is_wizard(mech->xcode.context->database, player);
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc < 1, "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc < 1,
+                  "Invalid number of arguments!");
 
   /* Can't do any of the explosion routine if we're recycling! */
   if (!override) {
     for (i = 0; i < NUM_SECTIONS; i++) {
       if (!SectIsDestroyed(mech, i))
-        DOCHECK(SectHasBusyWeap(mech, i), "You have weapons recycling!");
-      DOCHECK(MechSections(mech)[i].recycle,
-              "You are still recovering from your last attack.");
+        DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, i),
+                        "You have weapons recycling!");
+      DOCHECK_CONTEXT(mech->xcode.context, MechSections(mech)[i].recycle,
+                      "You are still recovering from your last attack.");
     }
   }
 
   if (!strcasecmp(buffer, "stop")) {
     if (!override) {
-      DOCHECK(!btech_context_active()->configuration->btech_explode_stop,
-              "It's too late to turn back now!");
+      DOCHECK_CONTEXT(mech->xcode.context,
+                      !mech->xcode.context->configuration->btech_explode_stop,
+                      "It's too late to turn back now!");
     }
-    DOCHECK(!Exploding(mech),
-            "Your mech isn't undergoing a self-destruct sequence!");
+    DOCHECK_CONTEXT(mech->xcode.context, !Exploding(mech),
+                    "Your mech isn't undergoing a self-destruct sequence!");
 
     StopExploding(mech);
     mech_notify(mech, MECHALL, "Self-destruction sequence aborted.");
-    SendDebug(tprintf("#%ld in #%ld stopped the self-destruction sequence.",
+    SendDebug(mech->xcode.context,
+              tprintf("#%ld in #%ld stopped the self-destruction sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "regains control over itself.");
     return;
   }
-  DOCHECK(Exploding(mech),
-          "Your mech is already undergoing a self-destruct sequence!");
+  DOCHECK_CONTEXT(mech->xcode.context, Exploding(mech),
+                  "Your mech is already undergoing a self-destruct sequence!");
   if (!strcasecmp(buffer, "ammo")) {
     /*
        Find SOME ammo to explode ; if possible, we engage the 'boom' process
      */
     if (!override) {
-      DOCHECK(!btech_context_active()->configuration->btech_explode_ammo,
-              "You can't bring yourself to do it!");
-      DOCHECK(MechStatus(mech) & EXPLODE_SAFE,
-              "That's not a possibility here.");
+      DOCHECK_CONTEXT(mech->xcode.context,
+                      !mech->xcode.context->configuration->btech_explode_ammo,
+                      "You can't bring yourself to do it!");
+      DOCHECK_CONTEXT(mech->xcode.context, MechStatus(mech) & EXPLODE_SAFE,
+                      "That's not a possibility here.");
     }
     i = FindDestructiveAmmo(mech, &ammoloc, &ammocritnum);
-    DOCHECK(!i, "There is no 'damaging' ammo on your 'mech!");
+    DOCHECK_CONTEXT(mech->xcode.context, !i,
+                    "There is no 'damaging' ammo on your 'mech!");
     /* Engage the boom-event */
-    SendDebug(tprintf("#%ld in #%ld initiates the ammo explosion sequence.",
+    SendDebug(mech->xcode.context,
+              tprintf("#%ld in #%ld initiates the ammo explosion sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "starts billowing smoke!");
     time = time / 2;
   } else {
     if (!override) {
-      DOCHECK(!btech_context_active()->configuration->btech_explode_reactor,
-              "You can't bring yourself to do it!");
-      DOCHECK(MechType(mech) != CLASS_MECH,
-              "Only mechs can do the 'big boom' effect.");
-      DOCHECK(MechSpecials(mech) & ICE_TECH, "You need a fusion reactor.");
+      DOCHECK_CONTEXT(
+          mech->xcode.context,
+          !mech->xcode.context->configuration->btech_explode_reactor,
+          "You can't bring yourself to do it!");
+      DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_MECH,
+                      "Only mechs can do the 'big boom' effect.");
+      DOCHECK_CONTEXT(mech->xcode.context, MechSpecials(mech) & ICE_TECH,
+                      "You need a fusion reactor.");
     }
-    SendDebug(tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
+    SendDebug(mech->xcode.context,
+              tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
                       player, mech->mynum));
     MechLOSBroadcast(mech, "loses reactions containment!");
     ammo = 0;
@@ -1147,18 +1192,28 @@ void mech_dig(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
-  DOCHECK(Fortified(mech),
-          "You are already fortified, there's no need to dig.");
-  DOCHECK(fabs(MechSpeed(mech)) > 0.0, "You are moving!");
-  DOCHECK(MechFacing(mech) != MechDesiredFacing(mech), "You are turning!");
-  DOCHECK(MechMove(mech) == MOVE_NONE, "You are stationary!");
-  DOCHECK(MechDugIn(mech), "You are already dug in!");
-  DOCHECK(Digging(mech), "You are already digging in!");
-  DOCHECK(OODing(mech), "While dropping? I think not.");
-  DOCHECK(MechRTerrain(mech) == ROAD || MechRTerrain(mech) == BRIDGE ||
-              MechRTerrain(mech) == BUILDING || MechRTerrain(mech) == WALL,
-          "The surface is slightly too hard for you to dig in.");
-  DOCHECK(MechRTerrain(mech) == WATER, "In water? Who are you kidding?");
+  DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
+                  "You are already fortified, there's no need to dig.");
+  DOCHECK_CONTEXT(mech->xcode.context, fabs(MechSpeed(mech)) > 0.0,
+                  "You are moving!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechFacing(mech) != MechDesiredFacing(mech),
+                  "You are turning!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
+                  "You are stationary!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechDugIn(mech),
+                  "You are already dug in!");
+  DOCHECK_CONTEXT(mech->xcode.context, Digging(mech),
+                  "You are already digging in!");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While dropping? I think not.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechRTerrain(mech) == ROAD || MechRTerrain(mech) == BRIDGE ||
+                      MechRTerrain(mech) == BUILDING ||
+                      MechRTerrain(mech) == WALL,
+                  "The surface is slightly too hard for you to dig in.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechRTerrain(mech) == WATER,
+                  "In water? Who are you kidding?");
 
   MechTankCritStatus(mech) |= DIGGING_IN;
   MECHEVENT(mech, EVENT_DIG, mech_dig_event, 20, 0);
@@ -1193,29 +1248,34 @@ void mech_fixturret(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
   cch(MECH_USUALO);
-  DOCHECK(MechTankCritStatus(mech) & TURRET_LOCKED,
-          "Your turret is locked! You need a repairbay to fix it!");
-  DOCHECK(!(MechTankCritStatus(mech) & TURRET_JAMMED),
-          "Your turret is not jammed!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechTankCritStatus(mech) & TURRET_LOCKED,
+                  "Your turret is locked! You need a repairbay to fix it!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(MechTankCritStatus(mech) & TURRET_JAMMED),
+                  "Your turret is not jammed!");
   MECHEVENT(mech, EVENT_UNJAM_TURRET, mech_unjam_turret_event, 60, 0);
   mech_notify(mech, MECHALL, "You start to repair your jammed turret.");
 }
 
-static int mech_disableweap_func(MECH *mech, DbRef player, int index,
-                                 int high) {
+static int mech_disableweap_func(MECH *mech, DbRef player, int index, int high,
+                                 void *context) {
+  (void)context;
   int section, critical, weaptype;
 
   weaptype =
       FindWeaponNumberOnMech_Advanced(mech, index, &section, &critical, 1);
-  DOCHECK0(weaptype == -1,
-           "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK0(weaptype == -2,
-           "The weapons system chirps: 'That Weapon has been destroyed!'");
+  DOCHECK0_CONTEXT(mech->xcode.context, weaptype == -1,
+                   "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, weaptype == -2,
+      "The weapons system chirps: 'That Weapon has been destroyed!'");
   weaptype = Weapon2I(GetPartType(mech, section, critical));
-  DOCHECK0(!(MechWeapons[weaptype].special & GAUSS),
-           "You can only disable Gauss weapons.");
-  DOCHECK0(WpnIsRecycling(mech, section, critical),
-           "The weapon system chirps: 'That weapon is still recharging!'");
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   !(MechWeapons[weaptype].special & GAUSS),
+                   "You can only disable Gauss weapons.");
+  DOCHECK0_CONTEXT(
+      mech->xcode.context, WpnIsRecycling(mech, section, critical),
+      "The weapon system chirps: 'That weapon is still recharging!'");
 
   SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
   mech_printf(mech, MECHALL, "You power down weapon %d.", index);
@@ -1227,10 +1287,11 @@ void mech_disableweap(DbRef player, void *data, char *buffer) {
   char *args[1];
 
   cch(MECH_USUALO);
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "Please specify a weapon number.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "Please specify a weapon number.");
 
-  multi_weap_sel(mech, player, args[0], 1, mech_disableweap_func);
+  multi_weap_sel(mech, player, args[0], 1, mech_disableweap_func, nullptr);
 }
 
 int FindMainWeapon(MECH *mech, int (*callback)(MECH *, int, int, int, int)) {
@@ -1254,7 +1315,7 @@ int FindMainWeapon(MECH *mech, int (*callback)(MECH *, int, int, int, int)) {
       for (ii = 0; ii < count; ii++) {
         if (!PartIsBroken(mech, loop, critical[ii])) {
           /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
-          tempcrit = (int)genrand_int31();
+          tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
           if (tempcrit > maxcrit) {
             critfound = 1;
             maxcrit = tempcrit;
@@ -1405,16 +1466,16 @@ void show_narc_pods(DbRef player, MECH *mech, char *buffer) {
         checkAllSections(mech, INARC_ECM_ATTACHED) ||
         checkAllSections(mech, INARC_NEMESIS_ATTACHED))) {
 
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(mech->xcode.context), player,
            "There are no NARC or iNARC pods attached to this unit.");
 
     return;
   }
 
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "=========================Attached NARC and iNARC "
          "Pods========================");
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
          "-||- iNemesis --");
 
@@ -1423,13 +1484,13 @@ void show_narc_pods(DbRef player, MECH *mech, char *buffer) {
       ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
 
       if (SectIsDestroyed(mech, i)) {
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+        notify_printf(btech_context_evaluation(mech->xcode.context), player,
                       " %-14.13s||********||***********||************||********"
                       "||************* ",
                       location);
       } else {
         notify_printf(
-            BTECH_EVALUATION_CONTEXT, player,
+            btech_context_evaluation(mech->xcode.context), player,
             " %-14.13s||....%s...||.....%s.....||......%s.....||....%s...||...."
             "..%s...... ",
             location,
@@ -1477,15 +1538,19 @@ void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK(MechIsQuad(mech), "Quads can not knock of iNARC pods!");
-  DOCHECK(mech_parseattributes(buffer, args, 2) != 2,
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechIsQuad(mech),
+                  "Quads can not knock of iNARC pods!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 2) != 2,
+                  "Invalid number of arguments!");
 
   wLoc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
-  DOCHECK(wLoc == -1, "Invalid section!");
-  DOCHECK(!GetSectOInt(mech, wLoc), "Invalid section!");
-  DOCHECK(!GetSectInt(mech, wLoc), "That section is destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, wLoc == -1, "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, wLoc),
+                  "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, wLoc),
+                  "That section is destroyed!");
 
   ArmorStringFromIndex(wLoc, strLocation, MechType(mech), MechMove(mech));
 
@@ -1507,31 +1572,37 @@ void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
     break;
   }
 
-  DOCHECK(!checkSectionForSpecial(mech, wPodType, wLoc),
-          tprintf("There are no iNarc %s pods attached to your %s!", strPodType,
-                  strLocation));
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !checkSectionForSpecial(mech, wPodType, wLoc),
+                  tprintf("There are no iNarc %s pods attached to your %s!",
+                          strPodType, strLocation));
 
-  DOCHECK(((!GetSectInt(mech, RARM)) && (!GetSectInt(mech, LARM))),
-          "You need at least one functioning arm to remove iNarc pods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      ((!GetSectInt(mech, RARM)) && (!GetSectInt(mech, LARM))),
+      "You need at least one functioning arm to remove iNarc pods!");
 
   if (wLoc == RARM) {
-    DOCHECK(!GetSectInt(mech, LARM), "Your Left Arm needs to be intact to take "
-                                     "iNarc pods off your right arm!");
-    DOCHECK(SectHasBusyWeap(mech, LARM),
-            "You have weapons recycling on your Left Arm.");
-    DOCHECK(MechSections(mech)[LARM].recycle,
-            "Your Left Arm is still recovering from your last attack.");
+    DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, LARM),
+                    "Your Left Arm needs to be intact to take "
+                    "iNarc pods off your right arm!");
+    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, LARM),
+                    "You have weapons recycling on your Left Arm.");
+    DOCHECK_CONTEXT(mech->xcode.context, MechSections(mech)[LARM].recycle,
+                    "Your Left Arm is still recovering from your last attack.");
 
     wArmToUse = LARM;
   }
 
   if (wLoc == LARM) {
-    DOCHECK(!GetSectInt(mech, RARM), "Your Right Arm needs to be intact to "
-                                     "take iNarc pods off your Left Arm!");
-    DOCHECK(SectHasBusyWeap(mech, RARM),
-            "You have weapons recycling on your Right Arm.");
-    DOCHECK(MechSections(mech)[RARM].recycle,
-            "Your Right Arm is still recovering from your last attack.");
+    DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, RARM),
+                    "Your Right Arm needs to be intact to "
+                    "take iNarc pods off your Left Arm!");
+    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, RARM),
+                    "You have weapons recycling on your Right Arm.");
+    DOCHECK_CONTEXT(
+        mech->xcode.context, MechSections(mech)[RARM].recycle,
+        "Your Right Arm is still recovering from your last attack.");
 
     wArmToUse = RARM;
   }
@@ -1545,9 +1616,10 @@ void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
         (!GetSectInt(mech, LARM)))
       wLAAvail = 0;
 
-    DOCHECK(!(wLAAvail || wRAAvail),
-            "You need at least one arm that is not recycling and does not have "
-            "weapons recycling in it!");
+    DOCHECK_CONTEXT(
+        mech->xcode.context, !(wLAAvail || wRAAvail),
+        "You need at least one arm that is not recycling and does not have "
+        "weapons recycling in it!");
 
     if (!wLAAvail)
       wBTHModLARM = 1000;
@@ -1571,7 +1643,7 @@ void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
   }
 
   wBTH += FindPilotPiloting(mech) + 4;
-  wRoll = Roll();
+  wRoll = btech_random_roll(mech->xcode.context);
 
   ArmorStringFromIndex(wArmToUse, strPunchWith, MechType(mech), MechMove(mech));
 
@@ -1631,20 +1703,24 @@ void removeiNarcPodsTank(MuxEvent *e) {
 void remove_inarc_pods_tank(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSO);
 
-  DOCHECK((MechDesiredSpeed(mech) > 0),
-          "You can not be moving when attempting to remove iNarc pods!");
-  DOCHECK((MechSpeed(mech) > 0),
-          "You can not be moving when attempting to remove iNarc pods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, (MechDesiredSpeed(mech) > 0),
+      "You can not be moving when attempting to remove iNarc pods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, (MechSpeed(mech) > 0),
+      "You can not be moving when attempting to remove iNarc pods!");
 
   if (MechType(mech) == CLASS_VTOL)
-    DOCHECK(!Landed(mech),
-            "You must land before attempting to remove iNarc pods!");
+    DOCHECK_CONTEXT(mech->xcode.context, !Landed(mech),
+                    "You must land before attempting to remove iNarc pods!");
 
-  DOCHECK(CrewStunned(mech), "You're too stunned to remove iNarc pods!");
-  DOCHECK(UnjammingTurret(mech),
-          "You're too busy unjamming your turret to remove iNarc pods!");
-  DOCHECK(UnJammingAmmo(mech),
-          "You're too busy unjamming a weapon to remove iNarc pods!");
+  DOCHECK_CONTEXT(mech->xcode.context, CrewStunned(mech),
+                  "You're too stunned to remove iNarc pods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, UnjammingTurret(mech),
+      "You're too busy unjamming your turret to remove iNarc pods!");
+  DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+                  "You're too busy unjamming a weapon to remove iNarc pods!");
 
   if (!(checkAllSections(mech, INARC_HOMING_ATTACHED) ||
         checkAllSections(mech, INARC_HAYWIRE_ATTACHED) ||
@@ -1667,7 +1743,8 @@ void remove_inarc_pods_tank(DbRef player, MECH *mech, char *buffer) {
 void mech_auto_turret(DbRef player, MECH *mech, char *buffer) {
   cch(MECH_USUALSO);
 
-  DOCHECK(!GetSectInt(mech, TURRET), "You have no turret to autoturn!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, TURRET),
+                  "You have no turret to autoturn!");
 
   mech_printf(mech, MECHALL, "Automatic turret turning is now %s",
               (MechStatus2(mech) & AUTOTURN_TURRET) ? "OFF" : "ON");
@@ -1686,21 +1763,27 @@ void mech_usebin(DbRef player, MECH *mech, char *buffer) {
 
   cch(MECH_USUALSO);
 
-  DOCHECK(mech_parseattributes(buffer, args, 2) != 2,
-          "Invalid number of arguments!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 2) != 2,
+                  "Invalid number of arguments!");
 
-  DOCHECK(Readnum(wWeapNum, args[0]), tprintf("Invalid value: %s", args[0]));
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(wWeapNum, args[0]),
+                  tprintf("Invalid value: %s", args[0]));
   wWeapType = FindWeaponNumberOnMech(mech, wWeapNum, &wSection, &wCritSlot);
 
-  DOCHECK(wWeapType == -1,
-          "The weapons system chirps: 'Illegal Weapon Number!'");
-  DOCHECK(wWeapType == -2,
-          "The weapons system chirps: 'That Weapon has been destroyed!'");
-  DOCHECK(wWeapType == -3,
-          "The weapon system chirps: 'That weapon is still reloading!'");
-  DOCHECK(wWeapType == -4,
-          "The weapon system chirps: 'That weapon is still recharging!'");
-  DOCHECK(IsEnergy(wWeapType), "Energy weapons do not use ammo!");
+  DOCHECK_CONTEXT(mech->xcode.context, wWeapType == -1,
+                  "The weapons system chirps: 'Illegal Weapon Number!'");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, wWeapType == -2,
+      "The weapons system chirps: 'That Weapon has been destroyed!'");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, wWeapType == -3,
+      "The weapon system chirps: 'That weapon is still reloading!'");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, wWeapType == -4,
+      "The weapon system chirps: 'That weapon is still recharging!'");
+  DOCHECK_CONTEXT(mech->xcode.context, IsEnergy(wWeapType),
+                  "Energy weapons do not use ammo!");
 
   if (args[1][0] == '-') {
     mech_printf(mech, MECHALL, "Prefered ammo source reset for weapon #%d",
@@ -1711,16 +1794,19 @@ void mech_usebin(DbRef player, MECH *mech, char *buffer) {
 
   wLoc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[1]);
 
-  DOCHECK(wLoc == -1, "Invalid section!");
-  DOCHECK(!GetSectOInt(mech, wLoc), "Invalid section!");
-  DOCHECK(!GetSectInt(mech, wLoc), "That section is destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, wLoc == -1, "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, wLoc),
+                  "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, wLoc),
+                  "That section is destroyed!");
 
   ArmorStringFromIndex(wLoc, strLocation, MechType(mech), MechMove(mech));
   wCurLoc = GetPartDesiredAmmoLoc(mech, wSection, wCritSlot);
 
-  DOCHECK(wCurLoc == wLoc,
-          tprintf("Prefered ammo source already set to %s for weapon #%d",
-                  strLocation, wWeapNum));
+  DOCHECK_CONTEXT(
+      mech->xcode.context, wCurLoc == wLoc,
+      tprintf("Prefered ammo source already set to %s for weapon #%d",
+              strLocation, wWeapNum));
 
   mech_printf(mech, MECHALL, "Prefered ammo source set to %s for weapon #%d",
               strLocation, wWeapNum);
@@ -1730,7 +1816,8 @@ void mech_usebin(DbRef player, MECH *mech, char *buffer) {
 void mech_safety(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
-  DOCHECK(MechType(mech) == CLASS_MW, "Your weapons dont have safeties.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
+                  "Your weapons dont have safeties.");
   if (buffer && !strcasecmp(buffer, "on")) {
     UnSetMechPKiller(mech);
     mech_notify(mech, MECHALL, "Safeties flipped %ch%cgON%cn.");
@@ -1776,21 +1863,14 @@ static struct mechpref_info {
 #define NUM_MECHPREFERENCES                                                    \
   (sizeof(mech_preferences) / sizeof(struct mechpref_info))
 
-static MECH *target_mech;
-
-static char *display_mechpref(int i) {
-  static char buf[256];
+static char *display_mechpref(void *context, int i,
+                              char buffer[static LBUF_SIZE]) {
+  MECH *mech = context;
   struct mechpref_info info = mech_preferences[i];
   char *state;
 
-  if (!target_mech) {
-    SendError("Invalid target_mech in display_mechpref!");
-    return "Unknown error; contact a Wizard.";
-  }
-
-  if (((MechPrefs(target_mech) & info.bit) &&
-       (info.flags & MECHPREF_FLAG_INVERTED)) ||
-      (!(MechPrefs(target_mech) & info.bit) &&
+  if (((MechPrefs(mech) & info.bit) && (info.flags & MECHPREF_FLAG_INVERTED)) ||
+      (!(MechPrefs(mech) & info.bit) &&
        !(info.flags & MECHPREF_FLAG_INVERTED))) {
     if (info.flags & MECHPREF_FLAG_NEGATIVE)
       state = "%ch%cgOFF%cn";
@@ -1803,8 +1883,8 @@ static char *display_mechpref(int i) {
       state = "%ch%cgON%cn";
   }
 
-  snprintf(buf, sizeof(buf), "        %-40s%s", info.name, state);
-  return buf;
+  snprintf(buffer, LBUF_SIZE, "        %-40s%s", info.name, state);
+  return buffer;
 }
 
 void mech_mechprefs(DbRef player, void *data, char *buffer) {
@@ -1821,12 +1901,10 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
   if (!nargs) {
 
     /* Show mechprefs */
-    target_mech = mech;
-    c = SelCol_FunStringMenuK(1, "Mech Preferences", display_mechpref,
-                              NUM_MECHPREFERENCES);
-    ShowCoolMenu(player, c);
+    c = SelCol_FunStringMenuContextK(1, "Mech Preferences", display_mechpref,
+                                     mech, NUM_MECHPREFERENCES);
+    ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
     KillCoolMenu(c);
-    target_mech = NULL;
 
   } else {
 
@@ -1842,7 +1920,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
     }
     if (i == NUM_MECHPREFERENCES) {
       snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(btech_context_evaluation(mech->xcode.context), player, buf);
       return;
     }
 
@@ -1857,7 +1935,7 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
           (strcasecmp(args[1], "OFF") != 0)) {
 
         /* Insert notify here */
-        notify(BTECH_EVALUATION_CONTEXT, player,
+        notify(btech_context_evaluation(mech->xcode.context), player,
                "Only accept ON or OFF as valid extra "
                "parameter for mechprefs pref");
         return;
@@ -1915,6 +1993,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     /* Tell them the preference has been changed */
     snprintf(buf, LBUF_SIZE, "%s %s", info.msg, newstate);
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(btech_context_evaluation(mech->xcode.context), player, buf);
   }
 }

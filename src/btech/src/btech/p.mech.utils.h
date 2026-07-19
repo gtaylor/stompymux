@@ -2,11 +2,19 @@
 
 #pragma once
 
+#include <stdbool.h>
+
+#include "mux/server/platform.h"
+
+typedef struct MechId {
+  char text[3];
+} MechId;
+
 /* mech.utils.c */
 /* Misc Functions */
 const char *mechtypename(MECH *foo);
 int MNumber(MECH *mech, int low, int high);
-char *MechIDS(MECH *mech, int islower);
+MechId mech_id(MECH *mech, bool lowercase);
 char *MyToUpper(char *string);
 void MarkForLOSUpdate(MECH *mech);
 
@@ -42,7 +50,7 @@ int round_to_quarterton(int weight);
 
 void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason);
 
-MAP *ValidMap(DbRef player, DbRef map);
+MAP *ValidMap(BtechContext *context, DbRef player, DbRef map);
 DbRef FindMechOnMap(MAP *map, char *mechid);
 MECH *find_mech_in_hex(MECH *mech, MAP *mech_map, int x, int y, int needlos);
 DbRef FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum);
@@ -57,8 +65,9 @@ float FindHexRange(float x0, float y0, float x1, float y1);
 void RealCoordToMapCoord(short *hex_x, short *hex_y, float cart_x,
                          float cart_y);
 void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y);
-void visit_neighbor_hexes(MAP *map, int x, int y,
-                          void (*callback)(MAP *, int, int));
+typedef void (*NeighborHexCallback)(MAP *map, int x, int y, void *context);
+void visit_neighbor_hexes(MAP *map, int x, int y, NeighborHexCallback callback,
+                          void *context);
 void FindComponents(float magnitude, int degrees, float *x, float *y);
 void CheckEdgeOfMap(MECH *mech);
 int FindZBearing(float x0, float y0, float z0, float x1, float y1, float z1);
@@ -81,11 +90,12 @@ char *FindTechSkillName(MECH *mech);
 int FindTechSkill(DbRef player, MECH *mech);
 
 /* Skill rolls */
+long btech_random_range(BtechContext *context, long low, long high);
 int MadePilotSkillRoll(MECH *mech, int mods);
 int MechPilotSkillRoll_BTH(MECH *mech, int mods);
 int MadePilotSkillRoll_Advanced(MECH *mech, int mods, int succeedWhenFallen);
 int MadePilotSkillRoll_NoXP(MECH *mech, int mods, int succeedWhenFallen);
-int Roll(void);
+int btech_random_roll(BtechContext *context);
 
 /* Section/Crit Functions */
 int CritsInLoc(MECH *mech, int index);
@@ -123,10 +133,12 @@ int WeaponIsNonfunctional(MECH *mech, int section, int crit, int numcrits);
 char **ProperSectionStringFromType(int type, int mtype);
 void ArmorStringFromIndex(int index, char *buffer, char type, char mtype);
 int GetWeaponCrits(MECH *mech, int weapindx);
-int listmatch(char **foo, char *mat);
+int listmatch(char *const *foo, char *mat);
 int GetPartWeight(int part);
+typedef int (*MultiWeaponSelectionCallback)(MECH *mech, DbRef player, int low,
+                                            int high, void *context);
 void multi_weap_sel(MECH *mech, DbRef player, char *buffer, int bitbybit,
-                    int (*foo)(MECH *, DbRef, int, int));
+                    MultiWeaponSelectionCallback callback, void *context);
 int MechNumHeatsinksInEngine(MECH *mech);
 
 /* Tech/Repair functions */
@@ -157,14 +169,30 @@ int FindAndCheckAmmo(MECH *mech, int weapindx, int section, int critical,
                      int *wGattlingShots);
 
 #ifdef BT_ADVANCED_ECON
-unsigned long long int GetPartCost(int p);
-void SetPartCost(int p, unsigned long long int cost);
+typedef struct BtechPartCostSet {
+  const unsigned long long *costs;
+  size_t count;
+  int first_part;
+} BtechPartCostSet;
+
+enum { BTECH_PART_COST_SET_COUNT = 5 };
+
+void btech_part_costs_initialize(BtechContext *context);
+void btech_part_costs_destroy(BtechContext *context);
+void btech_part_costs_reset(BtechContext *context);
+void btech_part_cost_sets(
+    const BtechContext *context,
+    BtechPartCostSet sets[static BTECH_PART_COST_SET_COUNT]);
+unsigned long long btech_part_cost_get(const BtechContext *context, int part);
+void btech_part_cost_set(BtechContext *context, int part,
+                         unsigned long long cost);
 void CalcFasaCost_DoLegMath(MECH *mech, int loc, float *total);
 void CalcFasaCost_DoArmMath(MECH *mech, int loc, float *total);
-void CalcFasaCost_AddPrice(float *total, char *desc, float value);
-void Calc_AddOffBV(float *offbv, char *desc, float value);
-void Calc_AddDefBV(float *defbv, char *desc, float value);
-void Calc_SubDefBV(float *defbv, char *desc, float value);
+void CalcFasaCost_AddPrice(const MECH *mech, float *total, char *desc,
+                           float value);
+void Calc_AddOffBV(const MECH *mech, float *offbv, char *desc, float value);
+void Calc_AddDefBV(const MECH *mech, float *defbv, char *desc, float value);
+void Calc_SubDefBV(const MECH *mech, float *defbv, char *desc, float value);
 unsigned long long int CalcFasaCost(MECH *mech);
 int mech_armorpoints(MECH *mech);
 int mech_intpoints(MECH *mech);
@@ -175,7 +203,7 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat);
 float Calculate_Defensive_BV(MECH *mech);
 float Calculate_Offensive_BV(MECH *mech);
 #endif
-char *UnitPartsList(MECH *mech, int mode);
+void unit_parts_list(MECH *mech, char buffer[static LBUF_SIZE]);
 int MechFullNoRecycle(MECH *mech, int num);
 #ifdef BT_COMPLEXREPAIRS
 int GetPartMod(MECH *mech, int t);

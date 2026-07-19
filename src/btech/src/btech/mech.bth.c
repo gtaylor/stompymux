@@ -53,10 +53,8 @@
       baseToHit += i;                                                          \
     }                                                                          \
   } while (0)
-#define BTHEND(m) SendBTHDebug(tprintf("%s.", buf))
+#define BTHEND(m) SendBTHDebug(mech->xcode.context, tprintf("%s.", buf))
 #endif
-
-extern int arc_override;
 
 int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
                   int weapindx, float range, MECH *target, int indirectFire,
@@ -86,7 +84,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   BTHBASE(mech, target, FindPilotGunnery(mech, weapindx));
 
   if (indirectFire < 1000) {
-    spotter = getMech(MechSpotter(mech));
+    spotter = btech_context_get_mech(mech->xcode.context, MechSpotter(mech));
 
     if (!spotter) {
       mech_notify(mech, MECHALL, "Error finding your spotter! (notify a wiz)");
@@ -116,7 +114,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
     BTHADD("InWater", 1);
 
   /* Add in the rangebase.. */
-  rangecheck = EGunRange(weapindx);
+  rangecheck = EGunRange(mech->xcode.context->configuration, weapindx);
   if (wAmmoMode & STINGER_MODE)
     rangecheck += 7;
   if (rangecheck < range) {
@@ -129,8 +127,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
          * get */
         rbth = (MechWeapons[weapindx].min - range + 1);
       } else {
-        if (btech_context_active()
-                ->configuration->btech_hotloadaddshalfbthmod) {
+        if (mech->xcode.context->configuration->btech_hotloadaddshalfbthmod) {
           rbth = ((MechWeapons[weapindx].min - range + 2) / 2);
         }
       }
@@ -271,7 +268,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
     BTHADD("LBX", (target && (MechType(target) == CLASS_VTOL) ? -3 : -1));
 
   /* Unstable lock */
-  if (!arc_override &&
+  if (!mech->xcode.context->combat_overrides.arcs &&
       (!spotter && target &&
        ((MechTarget(mech) != target->mynum) ||
         (Locking(mech) && MechTargComp(mech) != TARGCOMP_MULTI)))) {
@@ -313,10 +310,10 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   if (target) {
     /* Add the dig-in bonus */
     if (MechDugIn(target) &&
-        (!btech_context_active()->configuration->btech_dig_only_fs ||
+        (!mech->xcode.context->configuration->btech_dig_only_fs ||
          (FindAreaHitGroup(mech, target) == FRONT)) &&
         (MechZ(target) >= MechZ(mech)))
-      BTHADD("DugIn", btech_context_active()->configuration->btech_digbonus);
+      BTHADD("DugIn", mech->xcode.context->configuration->btech_digbonus);
 
     /* -3 if it's a DS... most people can hit the broadside of a barn */
     if (IsDS(target))
@@ -356,8 +353,10 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
     /* We ignore Movemod if the weapon is in sguided AND its tagged by a
      * friendly TAG AND movemod > 0 */
     if ((wAmmoMode & SGUIDED_MODE) && (TaggedBy(target) > 0)) {
-      if (getMech(TaggedBy(target)) != NULL) {
-        if ((MechTeam(getMech(TaggedBy(target))) == MechTeam(mech)) &&
+      if (btech_context_get_mech(mech->xcode.context, TaggedBy(target)) !=
+          NULL) {
+        if ((MechTeam(btech_context_get_mech(
+                 mech->xcode.context, TaggedBy(target))) == MechTeam(mech)) &&
             (TaggedBy(target) != mech->mynum)) {
           if (wTargMoveMod < 0) {
             BTHADD("TargetMove (SG Tag -MoveMod)", wTargMoveMod);
@@ -377,7 +376,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
         BTHADD("Terrain/is_light(Sensor)", j);
     }
 
-    if (btech_context_active()->configuration->btech_moddamagewithwoods &&
+    if (mech->xcode.context->configuration->btech_moddamagewithwoods &&
         IsForestHex(mech_map, MechX(target), MechY(target)) &&
         ((MechZ(target) - 2) <=
          Elevation(mech_map, MechX(target), MechY(target)))) {
@@ -391,23 +390,22 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
     if (MechStatus2(target) & (SPRINTING | EVADING)) {
       if (MechStatus2(target) & SPRINTING)
         BTHADD("SprintingTarget",
-               btech_context_active()->configuration->btech_sprint_bth);
+               mech->xcode.context->configuration->btech_sprint_bth);
       if (!Fallen(target) && MechStatus2(target) & EVADING)
         BTHADD("EvadingTarget", 1);
       // Lets not penalize the mech any further (or reward) while its changing
       // movement modes
       /*		BTHADD("EvadingTarget", (FindPilotPiloting(target) >= 6
          ? 1 : FindPilotPiloting(target) >= 4 ? 2 : FindPilotPiloting(target) >=
-         2 ? 3 : 4) + (HasBoolAdvantage(MechPilot(target), "speed_demon") ? 1 :
-         0)); } else if(MoveModeChange(target)) { int i = MoveModeData(target);
-                              if(i & MODE_SPRINT)
-                                      BTHADD("SprintingTargetChanging", -4);
-                              if(i & MODE_EVADE)
+         2 ? 3 : 4) + (HasBoolAdvantage(target->xcode.context,
+         MechPilot(target), "speed_demon") ? 1 : 0)); } else
+         if(MoveModeChange(target)) { int i = MoveModeData(target); if(i &
+         MODE_SPRINT) BTHADD("SprintingTargetChanging", -4); if(i & MODE_EVADE)
                                       BTHADD("EvadingTargetChanging", 1);
                       BTHADD("EvadingTarget", (FindPilotPiloting(target) >= 6 ?
          1 : FindPilotPiloting(target) >= 4 ? 2 : FindPilotPiloting(target) >= 2
-         ? 3 : 4) + (HasBoolAdvantage(MechPilot(target), "speed_demon") ? 1 :
-         0)); */
+         ? 3 : 4) + (HasBoolAdvantage(target->xcode.context, MechPilot(target),
+         "speed_demon") ? 1 : 0)); */
     }
 #endif
   }
@@ -415,8 +413,8 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   /* Check for damage */
   BTHADD("CritDamage", getCritAddedBTH(mech, section, critical, wRangeBracket));
   if (MechBTHDebug(mech))
-    notify_printf(BTECH_EVALUATION_CONTEXT, MechPilot(mech), "BTHDebug: %s",
-                  bthbuf);
+    notify_printf(btech_context_evaluation(mech->xcode.context),
+                  MechPilot(mech), "BTHDebug: %s", bthbuf);
 
   BTHEND(mech);
   return baseToHit;
@@ -430,12 +428,12 @@ int FindArtilleryBTH(MECH *mech, int section, int weapindx, int indirect,
   if (SectionUnderwater(mech, section))
     return 5000;
 
-  if (EGunRange(weapindx) < range)
+  if (EGunRange(mech->xcode.context->configuration, weapindx) < range)
     return 1000;
 
   baseToHit += (FindPilotArtyGun(mech) - 4);
   if (indirect) {
-    spotter = getMech(MechSpotter(mech));
+    spotter = btech_context_get_mech(mech->xcode.context, MechSpotter(mech));
     if (spotter && spotter != mech)
       baseToHit += (FindPilotSpotting(spotter) - 4) / 2;
     /* the usual +2, added by +1 make +3 */
@@ -467,7 +465,7 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
     }
 
     /* Out of range range */
-    if (range > EGunWaterRange(weapindx)) {
+    if (range > EGunWaterRange(mech->xcode.context->configuration, weapindx)) {
       *wBTH = 1000;
       return RANGE_TOFAR;
     }
@@ -511,8 +509,10 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
   }
 
   /* Beyond range */
-  if (range > ((ammomode & STINGER_MODE) ? (EGunRange(weapindx) + 7)
-                                         : (EGunRange(weapindx)))) {
+  if (range >
+      ((ammomode & STINGER_MODE)
+           ? (EGunRange(mech->xcode.context->configuration, weapindx) + 7)
+           : (EGunRange(mech->xcode.context->configuration, weapindx)))) {
     *wBTH = 1000;
     return RANGE_TOFAR;
   }
@@ -553,7 +553,7 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
       if (!HotLoading(weapindx, firemode)) {
         *wBTH = MechWeapons[weapindx].min - range;
       } else {
-        if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
+        if (mech->xcode.context->configuration->btech_hotloadaddshalfbthmod)
           *wBTH = ((MechWeapons[weapindx].min - range + 1) / 2);
         else
           *wBTH = 0;
@@ -564,7 +564,7 @@ int FindBTHByRange(MECH *mech, MECH *target, int section, int weapindx,
   }
 
   if (HotLoading(weapindx, firemode)) {
-    if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
+    if (mech->xcode.context->configuration->btech_hotloadaddshalfbthmod)
       *wBTH = ((MechWeapons[weapindx].min - range + 1) / 2);
     else
       *wBTH = 0;
@@ -658,7 +658,7 @@ int FindBTHByC3Range(MECH *mech, MECH *target, int section, int weapindx,
 
   /* We don't care about min range if we're Hotloading */
   if (!HotLoading(weapindx, mode)) {
-    if (btech_context_active()->configuration->btech_hotloadaddshalfbthmod)
+    if (mech->xcode.context->configuration->btech_hotloadaddshalfbthmod)
       *wBTH = ((MechWeapons[weapindx].min - realRange + 1) / 2);
     else
       *wBTH = 0;
@@ -703,7 +703,7 @@ int AttackMovementMods(MECH *mech) {
 
   speed = MechSpeed(mech);
 
-  if (btech_context_active()->configuration->btech_fasaturn)
+  if (mech->xcode.context->configuration->btech_fasaturn)
     if (MechFacing(mech) != MechDesiredFacing(mech))
       base++;
 
@@ -718,7 +718,7 @@ int TargetMovementMods(MECH *mech, MECH *target, float range) {
   float target_speed = 0.0;
   int returnValue = 0;
   float m = 1.0;
-  MAP *map = FindObjectsData(target->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, target->mapindex);
   MECH *swarmTarget;
 
   if (is_aero(target)) {
@@ -730,7 +730,8 @@ int TargetMovementMods(MECH *mech, MECH *target, float range) {
     if (Jumping(target)) {
       target_speed = JumpSpeed(target, map);
     } else if (MechSwarmTarget(target) > 0) {
-      if ((swarmTarget = getMech(MechSwarmTarget(target)))) {
+      if ((swarmTarget = btech_context_get_mech(mech->xcode.context,
+                                                MechSwarmTarget(target)))) {
         if (Jumping(swarmTarget))
           target_speed = JumpSpeed(swarmTarget, map);
         else
@@ -769,7 +770,7 @@ int TargetMovementMods(MECH *mech, MECH *target, float range) {
       returnValue = 3;
     } else {
       /* Moving more than 9 hexes */
-      if (btech_context_active()->configuration->btech_extendedmovemod)
+      if (mech->xcode.context->configuration->btech_extendedmovemod)
         returnValue = 4 + (target_speed - 10 * MP1) / MP4;
       else
         returnValue = 4;

@@ -28,7 +28,8 @@ void persistence_context_initialize(PersistenceContext *context,
 int persistence_register_sqlite_extension(PersistenceContext *context,
                                           const char *name,
                                           PersistenceSqliteLoad load,
-                                          PersistenceSqliteStore store) {
+                                          PersistenceSqliteStore store,
+                                          void *extension_context) {
   assert(context != nullptr);
 
   if (name == nullptr || *name == '\0' || load == nullptr || store == nullptr)
@@ -36,11 +37,17 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
   for (size_t index = 0; index < context->extension_count; index++) {
     PersistenceSqliteExtension *extension = &context->extensions[index];
     if (!strcmp(extension->name, name))
-      return extension->load == load && extension->store == store ? 0 : -1;
+      return extension->load == load && extension->store == store &&
+                     extension->context == extension_context
+                 ? 0
+                 : -1;
   }
   if (context->extension_count == PERSISTENCE_MAX_SQLITE_EXTENSIONS)
     return -1;
   context->extensions[context->extension_count++] =
-      (PersistenceSqliteExtension){.name = name, .load = load, .store = store};
+      (PersistenceSqliteExtension){.name = name,
+                                   .load = load,
+                                   .store = store,
+                                   .context = extension_context};
   return 0;
 }

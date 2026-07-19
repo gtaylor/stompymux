@@ -11,7 +11,7 @@
 
 typedef struct CommandContext CommandContext;
 typedef struct CommandRegistry CommandRegistry;
-typedef struct MuxServer MuxServer;
+typedef struct ConfigurationContext ConfigurationContext;
 typedef struct ServerConfiguration ServerConfiguration;
 
 int check_access(GameDatabase *database,
@@ -138,9 +138,9 @@ void do_log(CommandInvocation *invocation); /* Log to arbitrary logfile */
 #endif
 
 /* Mecha stuff */
-void do_show(DbRef, DbRef, int, char *, char *);
-void do_charclear(DbRef, DbRef, int, char *);
-void do_show_stat(DbRef, DbRef, int);
+void do_show(CommandInvocation *invocation);
+void do_charclear(CommandInvocation *invocation);
+void do_show_stat(CommandInvocation *invocation);
 
 /*
  * A command is either dispatched through the uniform typed invocation
@@ -163,13 +163,13 @@ struct cmdentry {
 
 void init_cmdtab(CommandRegistry *registry);
 int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-              MuxServer *server);
+              ConfigurationContext *context);
 int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server);
+                   ConfigurationContext *context);
 int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server);
+                   ConfigurationContext *context);
 int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                 MuxServer *server);
+                 ConfigurationContext *context);
 
 typedef struct addedentry ADDENT;
 struct addedentry {

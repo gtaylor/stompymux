@@ -11,14 +11,15 @@
 
 #pragma once
 
+#include "mux/server/platform.h"
+
+typedef struct AiInfo {
+  char text[MBUF_SIZE];
+} AiInfo;
+
 /* ai.c */
 void sendAIM(AUTO *a, MECH *m, char *msg);
-char *AI_Info(MECH *m, AUTO *a);
-int getEnemies(MECH *mech, MAP *map, int reset);
-int getFriends(MECH *mech, MAP *map, int reset);
-void ai_path_score(MECH *m, MAP *map, AUTO *a, int opts[][2], int num_o,
-                   int gotenemy, float dx, float dy, float delx, float dely,
-                   int *rl, int *bd, int *bscore);
+AiInfo ai_info(MECH *m, AUTO *a);
 int ai_max_speed(MECH *m, AUTO *a);
 int ai_opponents(AUTO *a, MECH *m);
 void ai_run_speed(MECH *mech, AUTO *a);

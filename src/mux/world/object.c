@@ -4,14 +4,15 @@
 
 #include "mux/world/object.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -38,11 +39,11 @@
 static void Log_pointer_err(EvaluationContext *evaluation, DbRef prior,
                             DbRef obj, DbRef loc, DbRef ref,
                             const char *reftype, const char *errtype) {
-  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(&evaluation->server->log, obj);
+  STARTLOG(evaluation->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(evaluation->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(&evaluation->server->log, loc);
+      log_type_and_name(evaluation->log, loc);
     }
     log_text(": ");
     if (prior == NOTHING) {
@@ -51,46 +52,46 @@ static void Log_pointer_err(EvaluationContext *evaluation, DbRef prior,
       log_text("Next pointer");
     }
     log_text(" ");
-    log_type_and_name(&evaluation->server->log, ref);
+    log_type_and_name(evaluation->log, ref);
     log_text(" ");
     log_text(errtype);
-    ENDLOG(&evaluation->server->log);
+    ENDLOG(evaluation->log);
   }
 }
 
 static void Log_header_err(EvaluationContext *evaluation, DbRef obj, DbRef loc,
                            DbRef val, int is_object, const char *valtype,
                            const char *errtype) {
-  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(&evaluation->server->log, obj);
+  STARTLOG(evaluation->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(evaluation->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(&evaluation->server->log, loc);
+      log_type_and_name(evaluation->log, loc);
     }
     log_text(": ");
     log_text(valtype);
     log_text(" ");
     if (is_object)
-      log_type_and_name(&evaluation->server->log, val);
+      log_type_and_name(evaluation->log, val);
     else
       log_number((int)val);
     log_text(" ");
     log_text(errtype);
-    ENDLOG(&evaluation->server->log);
+    ENDLOG(evaluation->log);
   }
 }
 
 static void log_simple_error(EvaluationContext *evaluation, DbRef obj,
                              DbRef loc, const char *errtype) {
-  STARTLOG(&evaluation->server->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
-    log_type_and_name(&evaluation->server->log, obj);
+  STARTLOG(evaluation->log, LOG_PROBLEMS, "OBJ", "DAMAG") {
+    log_type_and_name(evaluation->log, obj);
     if (loc != NOTHING) {
       log_text(" in ");
-      log_type_and_name(&evaluation->server->log, loc);
+      log_type_and_name(evaluation->log, loc);
     }
     log_text(": ");
     log_text(errtype);
-    ENDLOG(&evaluation->server->log);
+    ENDLOG(evaluation->log);
   }
 }
 
@@ -248,7 +249,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     free_lbuf(buff);
     break;
   default:
-    log_simple(&evaluation->server->log, LOG_BUGS, "BUG", "OTYPE",
+    log_simple(evaluation->log, LOG_BUGS, "BUG", "OTYPE",
                tprintf("Bad object type in create_obj: %d.", objtype));
     return NOTHING;
   }
@@ -283,7 +284,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
       evaluation->world->database->freelist =
           game_object_link(evaluation->world->database, obj);
     } else {
-      log_simple(&evaluation->server->log, LOG_PROBLEMS, "FRL", "DAMAG",
+      log_simple(evaluation->log, LOG_PROBLEMS, "FRL", "DAMAG",
                  tprintf("Freelist damaged, bad object #%ld.", obj));
       obj = NOTHING;
       evaluation->world->database->freelist = NOTHING;
@@ -373,13 +374,13 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
   /*
    * Halt any pending commands (waiting or semaphore)
    */
-  if (halt_que(evaluation->server->commands, NOTHING, obj) > 0) {
+  if (halt_que(evaluation->runtime->commands, NOTHING, obj) > 0) {
     if (good_owner && !is_quiet(evaluation->world->database, obj) &&
         !is_quiet(evaluation->world->database, owner)) {
       notify(evaluation, owner, "Halted.");
     }
   }
-  nfy_que(evaluation->server->commands, obj, 0, NFY_DRAIN, 0);
+  nfy_que(evaluation->runtime->commands, obj, 0, NFY_DRAIN, 0);
 
   if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
     if (good_owner &&
@@ -556,7 +557,7 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
       attribute_get_raw(evaluation->world->database, victim, A_DESTROYER));
   toast_player(evaluation, victim);
   boot_off(evaluation->world->descriptors, victim, "You have been destroyed!");
-  halt_que(evaluation->server->commands, victim, NOTHING);
+  halt_que(evaluation->runtime->commands, victim, NOTHING);
   count = chown_all(evaluation->world->database, victim, player);
 
   /*
@@ -892,14 +893,14 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
                      "is invalid.  Set to GOD.");
       owner = GOD;
       game_object_set_owner(evaluation->world->database, i, owner);
-      halt_que(evaluation->server->commands, NOTHING, i);
+      halt_que(evaluation->runtime->commands, NOTHING, i);
       s_halted(evaluation->world->database, i);
     } else if (full_check) {
       if (is_going(evaluation->world->database, owner)) {
         Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
                        "is set GOING.  Set to GOD.");
         game_object_set_owner(evaluation->world->database, i, owner);
-        halt_que(evaluation->server->commands, NOTHING, i);
+        halt_que(evaluation->runtime->commands, NOTHING, i);
         s_halted(evaluation->world->database, i);
       } else if (!is_owns_others(evaluation->world->database, owner)) {
         Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",

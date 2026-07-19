@@ -10,13 +10,6 @@
 
 #include "mux/server/platform.h"
 
-#ifndef DOCHECK
-#define DOCHECK(a, b)                                                          \
-  if (a) {                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, b);                               \
-    return;                                                                    \
-  }
-#endif
 void debug_allocfree(DbRef key, void **data, int selector);
 void debug_list(DbRef player, void *data, char *buffer);
 void debug_savedb(DbRef player, void *data, char *buffer);

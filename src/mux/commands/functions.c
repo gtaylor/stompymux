@@ -28,8 +28,6 @@
 
 extern NameTable indiv_attraccess_nametab[];
 
-extern int game_lag(void);
-
 /*
  * Function definitions from funceval.c
  */
@@ -554,7 +552,7 @@ static void fun_flags(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(&context->command->match, player, fargs[0]);
   if ((it != NOTHING) &&
-      (context->server->configuration->pub_flags ||
+      (context->world->configuration->pub_flags ||
        is_examinable(context, player, it) || (it == cause))) {
     buff2 = unparse_flags(context->world->database, player, it);
     safe_str(buff2, buff, bufc);
@@ -647,7 +645,7 @@ static void fun_time(char *buff, char **bufc, DbRef player, DbRef cause,
                      EvaluationContext *context) {
   char *temp;
 
-  temp = (char *)ctime(&context->server->clock.now);
+  temp = (char *)ctime(&context->runtime->clock->now);
   temp[strlen(temp) - 1] = '\0';
   safe_str(temp, buff, bufc);
 }
@@ -658,7 +656,7 @@ static void fun_time(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_secs(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
-  safe_tprintf_str(buff, bufc, "%ld", context->server->clock.now);
+  safe_tprintf_str(buff, bufc, "%ld", context->runtime->clock->now);
 }
 
 /**
@@ -834,8 +832,8 @@ static void fun_convtime(char *buff, char **bufc, DbRef player, DbRef cause,
                          EvaluationContext *context) {
   struct tm *ttm;
 
-  ttm = localtime(&context->server->clock.now);
-  if (do_convtime(context->server->configuration, fargs[0], ttm))
+  ttm = localtime(&context->runtime->clock->now);
+  if (do_convtime(context->world->configuration, fargs[0], ttm))
     safe_tprintf_str(buff, bufc, "%ld", mktime(ttm));
   else
     safe_str("-1", buff, bufc);
@@ -918,7 +916,7 @@ static void fun_starttime(char *buff, char **bufc, DbRef player, DbRef cause,
                           EvaluationContext *context) {
   char *temp;
 
-  temp = (char *)ctime(&context->server->start_time);
+  temp = (char *)ctime(context->runtime->start_time);
   temp[strlen(temp) - 1] = '\0';
   safe_str(temp, buff, bufc);
 }
@@ -929,7 +927,7 @@ static void fun_starttime(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_startsecs(char *buff, char **bufc, DbRef player, DbRef cause,
                           char *fargs[], int nfargs, char *cargs[], int ncargs,
                           EvaluationContext *context) {
-  safe_tprintf_str(buff, bufc, "%ld", context->server->start_time);
+  safe_tprintf_str(buff, bufc, "%ld", *context->runtime->start_time);
 }
 
 /**
@@ -938,7 +936,7 @@ static void fun_startsecs(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_connrecord(char *buff, char **bufc, DbRef player, DbRef cause,
                            char *fargs[], int nfargs, char *cargs[], int ncargs,
                            EvaluationContext *context) {
-  safe_tprintf_str(buff, bufc, "%d", context->server->record_players);
+  safe_tprintf_str(buff, bufc, "%d", *context->runtime->record_players);
 }
 
 /**
@@ -1046,7 +1044,7 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * if needed.
    */
 
-  if (check_read_perms(context, context->server->configuration, player, thing,
+  if (check_read_perms(context, context->world->configuration, player, thing,
                        attr, aowner, aflags, buff, bufc))
     safe_str(atr_gotten, buff, bufc);
   if (free_buffer)
@@ -1116,7 +1114,7 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * if needed.
    */
 
-  if (check_read_perms(context, context->server->configuration, player, thing,
+  if (check_read_perms(context, context->world->configuration, player, thing,
                        attr, aowner, aflags, buff, bufc))
     safe_str(atr_gotten, buff, bufc);
   if (free_buffer)
@@ -1176,7 +1174,7 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
     atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
                                       &aowner, &aflags);
   }
-  if (!check_read_perms(context, context->server->configuration, player, thing,
+  if (!check_read_perms(context, context->world->configuration, player, thing,
                         attr, aowner, aflags, buff, bufc)) {
     if (free_buffer)
       free_lbuf(atr_gotten);
@@ -1274,7 +1272,7 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
     atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
                                       &aowner, &aflags);
   }
-  if (!check_read_perms(context, context->server->configuration, player, thing,
+  if (!check_read_perms(context, context->world->configuration, player, thing,
                         attr, aowner, aflags, buff, bufc)) {
     if (free_buffer)
       free_lbuf(atr_gotten);
@@ -1347,7 +1345,7 @@ static void do_ufun(char *buff, char **bufc, DbRef player, DbRef cause,
     free_lbuf(atext);
     return;
   }
-  if (!check_read_perms(context, context->server->configuration, player, thing,
+  if (!check_read_perms(context, context->world->configuration, player, thing,
                         ap, aowner, aflags, buff, bufc)) {
     free_lbuf(atext);
     return;
@@ -1704,7 +1702,7 @@ static void fun_loc(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  if (locatable(context, context->server->configuration, player, it, cause))
+  if (locatable(context, context->world->configuration, player, it, cause))
     safe_tprintf_str(buff, bufc, "#%ld",
                      game_object_location(context->world->database, it));
   else
@@ -1723,7 +1721,7 @@ static void fun_where(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  if (locatable(context, context->server->configuration, player, it, cause))
+  if (locatable(context, context->world->configuration, player, it, cause))
     safe_tprintf_str(buff, bufc, "#%ld",
                      where_is(context->world->database, it));
   else
@@ -1743,11 +1741,11 @@ static void fun_rloc(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef it;
 
   levels = atoi(fargs[1]);
-  if (levels > context->server->configuration->ntfy_nest_lim)
-    levels = context->server->configuration->ntfy_nest_lim;
+  if (levels > context->world->configuration->ntfy_nest_lim)
+    levels = context->world->configuration->ntfy_nest_lim;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  if (locatable(context, context->server->configuration, player, it, cause)) {
+  if (locatable(context, context->world->configuration, player, it, cause)) {
     for (i = 0; i < levels; i++) {
       if (!is_good_obj(context->world->database, it) ||
           !has_location(context->world->database, it))
@@ -1772,8 +1770,8 @@ static void fun_room(char *buff, char **bufc, DbRef player, DbRef cause,
   int count;
 
   it = match_thing(&context->command->match, player, fargs[0]);
-  if (locatable(context, context->server->configuration, player, it, cause)) {
-    for (count = context->server->configuration->ntfy_nest_lim; count > 0;
+  if (locatable(context, context->world->configuration, player, it, cause)) {
+    for (count = context->world->configuration->ntfy_nest_lim; count > 0;
          count--) {
       it = game_object_location(context->world->database, it);
       if (!is_good_obj(context->world->database, it))
@@ -1857,7 +1855,7 @@ static void fun_fullname(char *buff, char **bufc, DbRef player, DbRef cause,
   if (it == NOTHING) {
     return;
   }
-  if (!context->server->configuration->read_rem_name) {
+  if (!context->world->configuration->read_rem_name) {
     if (!nearby_or_control(context, player, it) &&
         (!is_player(context->world->database, it))) {
       safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
@@ -1882,7 +1880,7 @@ static void fun_name(char *buff, char **bufc, DbRef player, DbRef cause,
   if (it == NOTHING) {
     return;
   }
-  if (!context->server->configuration->read_rem_name) {
+  if (!context->world->configuration->read_rem_name) {
     if (!nearby_or_control(context, player, it) &&
         !is_player(context->world->database, it) &&
         !is_long_fingers(context->world->database, player)) {
@@ -2121,7 +2119,7 @@ static void fun_cat(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_version(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
-  safe_str(context->server->version, buff, bufc);
+  safe_str(context->runtime->version, buff, bufc);
 }
 
 /*
@@ -2850,7 +2848,7 @@ static void fun_lexits(char *buff, char **bufc, DbRef player, DbRef cause,
    * Return info for all parent levels
    */
 
-  ITER_PARENTS(context->world->database, context->server->configuration, it,
+  ITER_PARENTS(context->world->database, context->world->configuration, it,
                parent, lev) {
 
     /*
@@ -3344,7 +3342,7 @@ static void fun_hasflag(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (context->server->configuration->pub_flags ||
+  if (context->world->configuration->pub_flags ||
       is_examinable(context, player, it) || (it == cause)) {
     if (has_flag(context->world, player, it, fargs[1]))
       safe_str("1", buff, bufc);
@@ -3365,7 +3363,7 @@ static void fun_haspower(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (context->server->configuration->pub_flags ||
+  if (context->world->configuration->pub_flags ||
       is_examinable(context, player, it) || (it == cause)) {
     if (has_power(context->world, player, it, fargs[1]))
       safe_str("1", buff, bufc);
@@ -3418,9 +3416,8 @@ static void fun_lock(char *buff, char **bufc, DbRef player, DbRef cause,
    * Parse the argument into obj + lock
    */
 
-  if (!get_obj_and_lock(&context->command->match,
-                        context->server->configuration, player, fargs[0], &it,
-                        &attr, buff, bufc))
+  if (!get_obj_and_lock(&context->command->match, context->world->configuration,
+                        player, fargs[0], &it, &attr, buff, bufc))
     return;
 
   /*
@@ -3454,9 +3451,8 @@ static void fun_elock(char *buff, char **bufc, DbRef player, DbRef cause,
    * Parse lock supplier into obj + lock
    */
 
-  if (!get_obj_and_lock(&context->command->match,
-                        context->server->configuration, player, fargs[0], &it,
-                        &attr, buff, bufc))
+  if (!get_obj_and_lock(&context->command->match, context->world->configuration,
+                        player, fargs[0], &it, &attr, buff, bufc))
     return;
 
   /*
@@ -3495,7 +3491,7 @@ static void fun_elock(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_lwho(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,
                      EvaluationContext *context) {
-  make_ulist(context->world->database, context->server->descriptors, player,
+  make_ulist(context->world->database, context->runtime->descriptors, player,
              buff, bufc);
 }
 
@@ -3572,7 +3568,7 @@ static void fun_aposs(char *buff, char **bufc, DbRef player, DbRef cause,
 static void fun_mudname(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
-  safe_str(context->server->configuration->mud_name, buff, bufc);
+  safe_str(context->world->configuration->mud_name, buff, bufc);
 }
 
 /*
@@ -3671,8 +3667,8 @@ static void fun_lattr(char *buff, char **bufc, DbRef player, DbRef cause,
   first = 1;
   object_list_initialize(&attributes);
   if (parse_attrib_wild(&context->command->match, player, fargs[0], &thing, 0,
-                        0, 1, &attributes, context->server->configuration,
-                        &context->server->world_indexes)) {
+                        0, 1, &attributes, context->world->configuration,
+                        context->runtime->world_indexes)) {
     for (ca = (int)object_list_first(&attributes); ca != NOTHING;
          ca = (int)object_list_next(&attributes)) {
       attr = attribute_by_number(context->world->database, ca);
@@ -4029,7 +4025,7 @@ static void fun_stats(char *buff, char **bufc, DbRef player, DbRef cause,
   DatabaseStatistics statinfo;
 
   if ((!fargs[0]) || !*fargs[0] ||
-      !string_compare(context->server->configuration, fargs[0], "all")) {
+      !string_compare(context->world->configuration, fargs[0], "all")) {
     who = NOTHING;
   } else {
     who = lookup_player(context->world, player, fargs[0], 1);
@@ -4878,8 +4874,8 @@ static void fun_idle(char *buff, char **bufc, DbRef player, DbRef cause,
       !is_wizard(context->world->database, player))
     target = NOTHING;
   safe_tprintf_str(buff, bufc, "%d",
-                   fetch_idle(context->server->descriptors,
-                              &context->server->clock, target));
+                   fetch_idle(context->runtime->descriptors,
+                              context->runtime->clock, target));
 }
 
 static void fun_conn(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -4893,8 +4889,8 @@ static void fun_conn(char *buff, char **bufc, DbRef player, DbRef cause,
       !is_wizard(context->world->database, player))
     target = NOTHING;
   safe_tprintf_str(buff, bufc, "%d",
-                   fetch_connect(context->server->descriptors,
-                                 &context->server->clock, target));
+                   fetch_connect(context->runtime->descriptors,
+                                 context->runtime->clock, target));
 }
 
 /*
@@ -5566,7 +5562,7 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * if needed.
    */
 
-  if (check_read_perms(context, context->server->configuration, player, thing,
+  if (check_read_perms(context, context->world->configuration, player, thing,
                        attr, aowner, aflags, buff, bufc)) {
 
     /* Scan through the attribute and count the various brackets */
@@ -5674,7 +5670,7 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
    * *  * * if needed.
    */
 
-  if (check_read_perms(context, context->server->configuration, player, thing,
+  if (check_read_perms(context, context->world->configuration, player, thing,
                        attr, aowner, aflags, buff, bufc)) {
 
     /* zero temporary string */
@@ -6100,7 +6096,7 @@ void do_function(CommandInvocation *invocation) {
   int key = invocation->key;
   char *fname = invocation->first;
   char *target = invocation->second;
-  CommandRegistry *registry = &invocation->context->server->command_registry;
+  CommandRegistry *registry = invocation->context->runtime->command_registry;
   UFUN *ufp, *ufp2;
   Attribute *ap;
   char *np, *bp;
@@ -6182,11 +6178,8 @@ void do_function(CommandInvocation *invocation) {
     ufp->name = strsave(np);
     /* Upcase the name in place right after allocating it, before anyone
        else can hold a reference to it. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    for (bp = (char *)ufp->name; *bp; bp++)
+    for (bp = ufp->name; *bp; bp++)
       *bp = ToUpper(*bp);
-#pragma clang diagnostic pop
     ufp->obj = obj;
     ufp->atr = atr;
     ufp->perms = CA_PUBLIC;
@@ -6264,7 +6257,7 @@ void list_functable(EvaluationContext *context,
  */
 
 int cf_func_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
+                   ConfigurationContext *context) {
   FUN *fp;
   UFUN *ufp;
   char *ap;
@@ -6275,17 +6268,17 @@ int cf_func_access(int *vp, char *str, long extra, DbRef player, char *cmd,
     *ap++ = '\0';
 
   for (fp = flist; fp->name; fp++) {
-    if (!string_compare(server->configuration, fp->name, str)) {
+    if (!string_compare(context->configuration, fp->name, str)) {
       return configuration_modify_bits(&fp->perms, ap, extra, player, cmd,
-                                       server);
+                                       context);
     }
   }
-  for (ufp = server->command_registry.user_functions; ufp; ufp = ufp->next) {
-    if (!string_compare(server->configuration, ufp->name, str)) {
+  for (ufp = context->command_registry->user_functions; ufp; ufp = ufp->next) {
+    if (!string_compare(context->configuration, ufp->name, str)) {
       return configuration_modify_bits(&ufp->perms, ap, extra, player, cmd,
-                                       server);
+                                       context);
     }
   }
-  configuration_log_not_found(server, player, cmd, "Function", str);
+  configuration_log_not_found(context, player, cmd, "Function", str);
   return -1;
 }

@@ -1,6 +1,8 @@
 /* help_command.c - `help` and `@helpreload` command handlers. */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include <string.h>
 
@@ -9,7 +11,6 @@
 #include "mux/help/help_index.h"
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -63,7 +64,7 @@ static void help_command_send_suggestions(EvaluationContext *evaluation,
 void do_help(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *message = invocation->first;
-  HelpIndex *help = invocation->context->server->help;
+  HelpIndex *help = invocation->context->runtime->help;
   bool viewer_is_wizard =
       is_wizard(invocation->context->world->database, player);
   const HelpArticle *article;
@@ -97,5 +98,5 @@ void do_help(CommandInvocation *invocation) {
 
 void do_helpreload(CommandInvocation *invocation) {
   help_index_reload(&invocation->context->evaluation,
-                    invocation->context->server->help, invocation->player);
+                    invocation->context->runtime->help, invocation->player);
 }

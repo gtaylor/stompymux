@@ -109,6 +109,11 @@ int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
 int mux_event_count_data(MuxEventScheduler *scheduler, int type, void *data);
 void mux_event_gothru_type_data(MuxEventScheduler *scheduler, int type,
                                 void *data, void (*func)(MuxEvent *));
+void mux_event_visit_type_data(MuxEventScheduler *scheduler, int type,
+                               void *data, void (*visitor)(MuxEvent *, void *),
+                               void *context);
+void mux_event_visit_type(MuxEventScheduler *scheduler, int type,
+                          void (*visitor)(MuxEvent *, void *), void *context);
 void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
                            void (*func)(MuxEvent *));
 int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,

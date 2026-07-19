@@ -31,9 +31,11 @@
 #include "p.mech.tech.commands.h"
 #include "p.mech.utils.h"
 
-/* 0 = type, 1 = loc, 2 = (pos/amnt), 3 = (val) */
-short damage_table[MAX_DAMAGES][3];
-int damage_last;
+typedef struct RepairDamageTable {
+  /* Each entry stores type, location, and position or amount. */
+  short entries[MAX_DAMAGES][3];
+  int count;
+} RepairDamageTable;
 
 static void append_damage(char *buffer, size_t size, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
@@ -50,7 +52,7 @@ static void append_damage(char *buffer, size_t size, const char *fmt, ...) {
   va_end(ap);
 }
 
-const char *repair_need_msgs[] = {
+static const char *const repair_need_msgs[] = {
     "Reattachment",
     "Repairs on %s",
     "Repairs on %s",
@@ -74,23 +76,23 @@ const char *repair_need_msgs[] = {
     "Replace suit",
 };
 
-#define CHECK(loc) check_for_damage(mech, loc)
+#define CHECK(loc) check_for_damage(damages, mech, loc)
 #define DAMAGE2(a, b)                                                          \
   do {                                                                         \
-    damage_table[damage_last][0] = a;                                          \
-    damage_table[damage_last++][1] = b;                                        \
+    damages->entries[damages->count][0] = a;                                   \
+    damages->entries[damages->count++][1] = b;                                 \
   } while (0)
 #define DAMAGE3(a, b, c)                                                       \
   do {                                                                         \
-    damage_table[damage_last][0] = a;                                          \
-    damage_table[damage_last][1] = b;                                          \
-    damage_table[damage_last++][2] = c;                                        \
+    damages->entries[damages->count][0] = a;                                   \
+    damages->entries[damages->count][1] = b;                                   \
+    damages->entries[damages->count++][2] = c;                                 \
   } while (0)
 
 #define ClanMod(num)                                                           \
   MAX(1, (((num) / ((MechSpecials(mech) & CLAN_TECH) ? 2 : 1))))
 
-static int check_for_damage(MECH *mech, int loc) {
+static int check_for_damage(RepairDamageTable *damages, MECH *mech, int loc) {
   int a, b, c, d;
 
   if (SectIsDestroyed(mech, loc)) {
@@ -158,7 +160,8 @@ static int check_for_damage(MECH *mech, int loc) {
   return 1;
 }
 
-static int check_for_scrappage(MECH *mech, int loc) {
+static int check_for_scrappage(RepairDamageTable *damages, MECH *mech,
+                               int loc) {
   int a, b;
   int ret = 1;
 
@@ -195,38 +198,38 @@ static int check_for_scrappage(MECH *mech, int loc) {
   return 0;
 }
 
-void make_scrap_table(MECH *mech) {
+static void make_scrap_table(RepairDamageTable *damages, MECH *mech) {
   int i = 4;
 
-  damage_last = 0;
+  damages->count = 0;
   if (MechType(mech) == CLASS_MECH) {
-    if (check_for_scrappage(mech, RARM))
-      i -= check_for_scrappage(mech, RTORSO);
-    if (check_for_scrappage(mech, LARM))
-      i -= check_for_scrappage(mech, LTORSO);
-    i -= check_for_scrappage(mech, RLEG);
-    i -= check_for_scrappage(mech, LLEG);
+    if (check_for_scrappage(damages, mech, RARM))
+      i -= check_for_scrappage(damages, mech, RTORSO);
+    if (check_for_scrappage(damages, mech, LARM))
+      i -= check_for_scrappage(damages, mech, LTORSO);
+    i -= check_for_scrappage(damages, mech, RLEG);
+    i -= check_for_scrappage(damages, mech, LLEG);
 
     if (!i)
-      check_for_scrappage(mech, CTORSO);
+      check_for_scrappage(damages, mech, CTORSO);
 
-    check_for_scrappage(mech, HEAD);
+    check_for_scrappage(damages, mech, HEAD);
   } else
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(mech, i))
-        check_for_scrappage(mech, i);
+        check_for_scrappage(damages, mech, i);
 }
 
-void make_damage_table(MECH *mech) {
+static void make_damage_table(RepairDamageTable *damages, MECH *mech) {
   int i;
 
-  damage_last = 0;
+  damages->count = 0;
   if (MechType(mech) == CLASS_MECH) {
-    if (check_for_damage(mech, CTORSO)) {
-      if (check_for_damage(mech, LTORSO)) {
+    if (check_for_damage(damages, mech, CTORSO)) {
+      if (check_for_damage(damages, mech, LTORSO)) {
         CHECK(LARM);
       }
-      if (check_for_damage(mech, RTORSO)) {
+      if (check_for_damage(damages, mech, RTORSO)) {
         CHECK(RARM);
       }
       CHECK(LLEG);
@@ -236,14 +239,15 @@ void make_damage_table(MECH *mech) {
   } else
     for (i = 0; i < NUM_SECTIONS; i++)
       if (GetSectOInt(mech, i))
-        check_for_damage(mech, i);
+        check_for_damage(damages, mech, i);
 }
 
-int is_under_repair(MECH *mech, int i) {
-  int v1 = damage_table[i][1];
-  int v2 = damage_table[i][2];
+static int is_under_repair(const RepairDamageTable *damages, MECH *mech,
+                           int i) {
+  int v1 = damages->entries[i][1];
+  int v2 = damages->entries[i][2];
 
-  switch (damage_table[i][0]) {
+  switch (damages->entries[i][0]) {
   case RELOAD:
   case REPAIRP:
   case REPAIRP_T:
@@ -277,30 +281,32 @@ int is_under_repair(MECH *mech, int i) {
   return 0;
 }
 
-char *damages_func(MECH *mech) {
-  /* Give this a 32k buffer instead of 16k. Temporary fix. Think of something
-   * more intelligent to make this work better */
-  static char buffer[LBUF_SIZE * 2] = {0};
+void mech_repair_jobs_format(MECH *mech, char *buffer, size_t buffer_size) {
+  RepairDamageTable damages_storage = {0};
+  RepairDamageTable *damages = &damages_storage;
   int i;
 
   if (unit_is_fixable(mech))
-    make_damage_table(mech);
+    make_damage_table(damages, mech);
   else
-    make_scrap_table(mech);
+    make_scrap_table(damages, mech);
 
+  if (buffer_size == 0)
+    return;
   buffer[0] = '\0';
-  if (!damage_last)
-    return "";
-  for (i = 0; i < damage_last; i++) {
+  if (!damages->count)
+    return;
+  for (i = 0; i < damages->count; i++) {
     /* Ok... i think we want: */
     /* repairnum|location|typenum|data|fixing? */
     if (i)
-      append_damage(buffer, sizeof(buffer), ",");
-    append_damage(buffer, sizeof(buffer), "%d|%s|%d|", i + 1,
-                  ShortArmorSectionString(MechType(mech), MechMove(mech),
-                                          damage_table[i][1]),
-                  (int)damage_table[i][0]);
-    switch (damage_table[i][0]) {
+      append_damage(buffer, buffer_size, ",");
+    append_damage(buffer, buffer_size, "%d|%s|%d|", i + 1,
+                  armor_section_abbreviation(MechType(mech), MechMove(mech),
+                                             damages->entries[i][1])
+                      .text,
+                  (int)damages->entries[i][0]);
+    switch (damages->entries[i][0]) {
     case REPAIRP:
     case REPAIRP_T:
     case REPAIRG:
@@ -314,36 +320,53 @@ char *damages_func(MECH *mech) {
     case SCRAPP:
     case SCRAPG:
       append_damage(
-          buffer, sizeof(buffer), "%s",
-          pos_part_name(mech, damage_table[i][1], damage_table[i][2]));
+          buffer, buffer_size, "%s",
+          pos_part_name(mech, damages->entries[i][1], damages->entries[i][2])
+              .text);
       break;
     case RELOAD:
       append_damage(
-          buffer, sizeof(buffer), "%s:%d",
-          pos_part_name(mech, damage_table[i][1], damage_table[i][2]),
-          FullAmmo(mech, damage_table[i][1], damage_table[i][2]) -
-              GetPartData(mech, damage_table[i][1], damage_table[i][2]));
+          buffer, buffer_size, "%s:%d",
+          pos_part_name(mech, damages->entries[i][1], damages->entries[i][2])
+              .text,
+          FullAmmo(mech, damages->entries[i][1], damages->entries[i][2]) -
+              GetPartData(mech, damages->entries[i][1],
+                          damages->entries[i][2]));
       break;
     case UNLOAD:
-      append_damage(buffer, sizeof(buffer), "%s:%d",
-                    pos_part_name(mech, damage_table[i][1], damage_table[i][2]),
-                    GetPartData(mech, damage_table[i][1], damage_table[i][2]));
+      append_damage(
+          buffer, buffer_size, "%s:%d",
+          pos_part_name(mech, damages->entries[i][1], damages->entries[i][2])
+              .text,
+          GetPartData(mech, damages->entries[i][1], damages->entries[i][2]));
       break;
     case FIXARMOR:
     case FIXARMOR_R:
     case FIXINTERNAL:
-      append_damage(buffer, sizeof(buffer), "%d", damage_table[i][2]);
+      append_damage(buffer, buffer_size, "%d", damages->entries[i][2]);
       break;
     default:
-      append_damage(buffer, sizeof(buffer), "-");
+      append_damage(buffer, buffer_size, "-");
     }
-    append_damage(buffer, sizeof(buffer), "|%d", is_under_repair(mech, i));
+    append_damage(buffer, buffer_size, "|%d",
+                  is_under_repair(damages, mech, i));
   }
-  return buffer;
+}
+
+size_t mech_repair_job_count(MECH *mech) {
+  RepairDamageTable damages = {0};
+
+  if (unit_is_fixable(mech))
+    make_damage_table(&damages, mech);
+  else
+    make_scrap_table(&damages, mech);
+  return (size_t)damages.count;
 }
 
 void show_mechs_damage(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
+  RepairDamageTable damages_storage = {0};
+  RepairDamageTable *damages = &damages_storage;
   coolmenu *c = NULL;
   int i, j, v1, v2;
   char buf[MBUF_SIZE] = {0};
@@ -356,37 +379,39 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
 
   TECHCOMMANDD;
   if (unit_is_fixable(mech))
-    make_damage_table(mech);
+    make_damage_table(damages, mech);
   else
-    make_scrap_table(mech);
-  DOCHECK(!damage_last && MechType(mech) == CLASS_MECH,
-          "The 'mech is in pristine condition!");
-  DOCHECK(!damage_last, "It's in pristine condition!");
+    make_scrap_table(damages, mech);
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !damages->count && MechType(mech) == CLASS_MECH,
+                  "The 'mech is in pristine condition!");
+  DOCHECK_CONTEXT(mech->xcode.context, !damages->count,
+                  "It's in pristine condition!");
   addline();
-  cent(tprintf("Damage for %s", GetMechID(mech)));
+  cent(tprintf("Damage for %s", mech_display_id(mech).text));
   addline();
   vsi("   Fix# Time  BTH Loc Description");
-  for (i = 0; i < damage_last; i++) {
-    v1 = damage_table[i][1];
-    v2 = damage_table[i][2];
-    switch (damage_table[i][0]) {
+  for (i = 0; i < damages->count; i++) {
+    v1 = damages->entries[i][1];
+    v2 = damages->entries[i][2];
+    switch (damages->entries[i][0]) {
     case REATTACH:
       fix_bth = FindTechSkill(player, mech) + REATTACH_DIFFICULTY;
       fix_time = REATTACH_TIME;
-      strcpy(buf, repair_need_msgs[(int)damage_table[i][0]]);
+      strcpy(buf, repair_need_msgs[(int)damages->entries[i][0]]);
       break;
     case DETACH:
       fix_bth = FindTechSkill(player, mech) + REMOVES_DIFFICULTY;
       fix_time = REMOVES_TIME;
-      strcpy(buf, repair_need_msgs[(int)damage_table[i][0]]);
+      strcpy(buf, repair_need_msgs[(int)damages->entries[i][0]]);
       break;
     case RESEAL:
       fix_bth = FindTechSkill(player, mech) + RESEAL_DIFFICULTY;
       fix_time = RESEAL_TIME;
-      strcpy(buf, repair_need_msgs[(int)damage_table[i][0]]);
+      strcpy(buf, repair_need_msgs[(int)damages->entries[i][0]]);
       break;
     case REPLACESUIT:
-      strcpy(buf, repair_need_msgs[(int)damage_table[i][0]]);
+      strcpy(buf, repair_need_msgs[(int)damages->entries[i][0]]);
       fix_time = REPLACESUIT_TIME;
       fix_bth = FindTechSkill(player, mech) + REPLACESUIT_DIFFICULTY;
       break;
@@ -394,25 +419,30 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       fix_bth = FindTechSkill(player, mech) + REPLACE_DIFFICULTY +
                 PARTTYPE_DIFFICULTY(GetPartType(mech, v1, v2));
       fix_time = REPLACEPART_TIME;
-      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s",
+               pos_part_name(mech, v1, v2).text);
       break;
     case REPAIRP_T:
       if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))) < 5)
         extra_hard = 0;
-      fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
+      fix_bth = char_getskilltarget(mech->xcode.context, player,
+                                    "technician-weapons", 0) +
                 REPLACE_DIFFICULTY +
                 WEAPTYPE_DIFFICULTY(GetPartType(mech, v1, v2)) + extra_hard;
       fix_time = REPAIRGUN_TIME;
-      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s",
+               pos_part_name(mech, v1, v2).text);
       break;
     case REPAIRG:
-      fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
+      fix_bth = char_getskilltarget(mech->xcode.context, player,
+                                    "technician-weapons", 0) +
                 REPLACE_DIFFICULTY +
                 WEAPTYPE_DIFFICULTY(GetPartType(mech, v1, v2));
       fix_time =
           REPLACEGUN_TIME *
           ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
-      snprintf(buf, sizeof(buf), "Repairs on %s", pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Repairs on %s",
+               pos_part_name(mech, v1, v2).text);
       break;
     case ENHCRIT_MISC:
     case ENHCRIT_FOCUS:
@@ -421,34 +451,35 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case ENHCRIT_AMMOB:
     case ENHCRIT_RANGING:
     case ENHCRIT_AMMOM:
-      fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
+      fix_bth = char_getskilltarget(mech->xcode.context, player,
+                                    "technician-weapons", 0) +
                 ENHCRIT_DIFFICULTY;
       fix_time = REPAIRENHCRIT_TIME;
-      switch (damage_table[i][0]) {
+      switch (damages->entries[i][0]) {
       case ENHCRIT_MISC:
         snprintf(buf, sizeof(buf), "Repairs on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       case ENHCRIT_FOCUS:
         snprintf(buf, sizeof(buf), "Realign focus on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       case ENHCRIT_CRYSTAL:
         snprintf(buf, sizeof(buf), "Charging crystal repairs on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       case ENHCRIT_BARREL:
         snprintf(buf, sizeof(buf), "Barrel repairs on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       case ENHCRIT_AMMOB:
       case ENHCRIT_AMMOM:
         snprintf(buf, sizeof(buf), "Ammo feed repairs on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       case ENHCRIT_RANGING:
         snprintf(buf, sizeof(buf), "Ranging system repairs on %s",
-                 pos_part_name(mech, v1, v2));
+                 pos_part_name(mech, v1, v2).text);
         break;
       default:
         break;
@@ -457,20 +488,23 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case SCRAPP:
       fix_bth = FindTechSkill(player, mech) + REMOVEP_DIFFICULTY;
       fix_time = REMOVEP_TIME;
-      snprintf(buf, sizeof(buf), "Removal of %s", pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Removal of %s",
+               pos_part_name(mech, v1, v2).text);
       break;
     case SCRAPG:
-      fix_bth = char_getskilltarget(player, "technician-weapons", 0) +
+      fix_bth = char_getskilltarget(mech->xcode.context, player,
+                                    "technician-weapons", 0) +
                 REMOVEG_DIFFICULTY;
       fix_time =
           REMOVEG_TIME *
           ClanMod(GetWeaponCrits(mech, Weapon2I(GetPartType(mech, v1, v2))));
-      snprintf(buf, sizeof(buf), "Removal of %s", pos_part_name(mech, v1, v2));
+      snprintf(buf, sizeof(buf), "Removal of %s",
+               pos_part_name(mech, v1, v2).text);
       break;
     case RELOAD:
       snprintf(
           buf, sizeof(buf), "Reload of %s%s (%d rounds)",
-          pos_part_name(mech, v1, v2),
+          pos_part_name(mech, v1, v2).text,
           GetPartAmmoMode(mech, v1, v2)
               ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
                                        GetPartAmmoMode(mech, v1, v2))
@@ -482,7 +516,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case UNLOAD:
       snprintf(
           buf, sizeof(buf), "Unload of %s%s(%d rounds)",
-          pos_part_name(mech, v1, v2),
+          pos_part_name(mech, v1, v2).text,
           GetPartAmmoMode(mech, v1, v2)
               ? GetAmmoDesc_Model_Mode(Ammo2WeaponI(GetPartType(mech, v1, v2)),
                                        GetPartAmmoMode(mech, v1, v2))
@@ -495,7 +529,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case FIXARMOR_R:
     case FIXINTERNAL:
       const char *armor_material =
-          damage_table[i][0] == FIXINTERNAL
+          damages->entries[i][0] == FIXINTERNAL
               ? ((MechSpecials(mech) & ES_TECH)       ? " Endosteel"
                  : (MechSpecials(mech) & REINFI_TECH) ? " Reinforced"
                  : (MechSpecials(mech) & COMPI_TECH)  ? " Composite"
@@ -510,34 +544,35 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
                  : (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
                      ? " Purifier Stealth"
                      : "");
-      if (damage_table[i][0] == FIXINTERNAL) {
+      if (damages->entries[i][0] == FIXINTERNAL) {
         snprintf(buf, sizeof(buf), "Repairs on%s internals (%d points)",
-                 armor_material, damage_table[i][2]);
-      } else if (damage_table[i][0] == FIXARMOR_R) {
+                 armor_material, damages->entries[i][2]);
+      } else if (damages->entries[i][0] == FIXARMOR_R) {
         snprintf(buf, sizeof(buf), "Repairs on rear%s armor (%d points)",
-                 armor_material, damage_table[i][2]);
+                 armor_material, damages->entries[i][2]);
       } else {
         snprintf(buf, sizeof(buf), "Repairs on%s armor (%d points)",
-                 armor_material, damage_table[i][2]);
+                 armor_material, damages->entries[i][2]);
       }
-      fix_bth = FindTechSkill(player, mech) + (damage_table[i][0] == FIXINTERNAL
-                                                   ? FIXINTERNAL_DIFFICULTY
-                                                   : FIXARMOR_DIFFICULTY);
-      fix_time = damage_table[i][0] == FIXINTERNAL
-                     ? FIXINTERNAL_TIME * damage_table[i][2]
-                     : FIXARMOR_TIME * damage_table[i][2];
+      fix_bth = FindTechSkill(player, mech) +
+                (damages->entries[i][0] == FIXINTERNAL ? FIXINTERNAL_DIFFICULTY
+                                                       : FIXARMOR_DIFFICULTY);
+      fix_time = damages->entries[i][0] == FIXINTERNAL
+                     ? FIXINTERNAL_TIME * damages->entries[i][2]
+                     : FIXARMOR_TIME * damages->entries[i][2];
       break;
     }
-    j = is_under_repair(mech, i);
+    j = is_under_repair(damages, mech, i);
     if (j) {
       snprintf(buf3, sizeof(buf3), "%4s %4s", "N/A", "N/A");
     } else {
       snprintf(buf3, sizeof(buf3), "%4d %4d", fix_time, fix_bth);
     }
-    snprintf(buf2, sizeof(buf2), "%%ch%s%3s %3d %9s %3s %s%%cn%s",
-             j ? "%cg" : "%cy", j ? "(*)" : "", i + 1, buf3,
-             ShortArmorSectionString(MechType(mech), MechMove(mech), v1), buf,
-             j ? " (*)" : "");
+    snprintf(
+        buf2, sizeof(buf2), "%%ch%s%3s %3d %9s %3s %s%%cn%s", j ? "%cg" : "%cy",
+        j ? "(*)" : "", i + 1, buf3,
+        armor_section_abbreviation(MechType(mech), MechMove(mech), v1).text,
+        buf, j ? " (*)" : "");
     vsi(buf2);
   }
   addline();
@@ -545,21 +580,23 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   vsi("Time = Normal Time (in minutes) to complete fix. BTH = Your BTH to "
       "fix.");
   addline();
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
   KillCoolMenu(c);
 }
 
-static void fix_entry(DbRef player, MECH *mech, int n) {
+static void fix_entry(const RepairDamageTable *damages, DbRef player,
+                      MECH *mech, int n) {
   char buf[MBUF_SIZE] = {0};
   char *c;
 
   /* whee */
   n--;
-  c = ShortArmorSectionString(MechType(mech), MechMove(mech),
-                              damage_table[n][1]);
-  switch (damage_table[n][0]) {
+  ArmorSectionAbbreviation abbreviation = armor_section_abbreviation(
+      MechType(mech), MechMove(mech), damages->entries[n][1]);
+  c = abbreviation.text;
+  switch (damages->entries[n][0]) {
   case REPAIRP_T:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_repairgun(player, mech, buf);
     break;
   case ENHCRIT_MISC:
@@ -569,19 +606,19 @@ static void fix_entry(DbRef player, MECH *mech, int n) {
   case ENHCRIT_AMMOB:
   case ENHCRIT_RANGING:
   case ENHCRIT_AMMOM:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_fixenhcrit(player, mech, buf);
     break;
   case REPAIRG:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_replacegun(player, mech, buf);
     break;
   case REPAIRP:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_replacepart(player, mech, buf);
     break;
   case RELOAD:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_reload(player, mech, buf);
     break;
   case REATTACH:
@@ -609,15 +646,15 @@ static void fix_entry(DbRef player, MECH *mech, int n) {
     tech_removesection(player, mech, buf);
     break;
   case SCRAPP:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_removepart(player, mech, buf);
     break;
   case SCRAPG:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_removegun(player, mech, buf);
     break;
   case UNLOAD:
-    snprintf(buf, sizeof(buf), "%s %d", c, damage_table[n][2] + 1);
+    snprintf(buf, sizeof(buf), "%s %d", c, damages->entries[n][2] + 1);
     tech_unload(player, mech, buf);
     break;
   case REPLACESUIT:
@@ -629,6 +666,8 @@ static void fix_entry(DbRef player, MECH *mech, int n) {
 
 void tech_fix(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
+  RepairDamageTable damages_storage = {0};
+  RepairDamageTable *damages = &damages_storage;
   int n = atoi(buffer);
   int low, high;
   int isds;
@@ -636,19 +675,24 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   skipws(buffer);
   TECHCOMMANDC;
   if (unit_is_fixable(mech))
-    make_damage_table(mech);
+    make_damage_table(damages, mech);
   else
-    make_scrap_table(mech);
-  DOCHECK(!damage_last && MechType(mech) == CLASS_MECH,
-          "The 'mech is in pristine condition!");
-  DOCHECK(!damage_last, "It's in pristine condition!");
+    make_scrap_table(damages, mech);
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !damages->count && MechType(mech) == CLASS_MECH,
+                  "The 'mech is in pristine condition!");
+  DOCHECK_CONTEXT(mech->xcode.context, !damages->count,
+                  "It's in pristine condition!");
   if (sscanf(buffer, "%d-%d", &low, &high) == 2) {
-    DOCHECK(low < 1 || low > damage_last, "Invalid low #!");
-    DOCHECK(high < 1 || high > damage_last, "Invalid high #!");
+    DOCHECK_CONTEXT(mech->xcode.context, low < 1 || low > damages->count,
+                    "Invalid low #!");
+    DOCHECK_CONTEXT(mech->xcode.context, high < 1 || high > damages->count,
+                    "Invalid high #!");
     for (n = low; n <= high; n++)
-      fix_entry(player, mech, n);
+      fix_entry(damages, player, mech, n);
     return;
   }
-  DOCHECK(n < 1 || n > damage_last, "Invalid #!");
-  fix_entry(player, mech, n);
+  DOCHECK_CONTEXT(mech->xcode.context, n < 1 || n > damages->count,
+                  "Invalid #!");
+  fix_entry(damages, player, mech, n);
 }

@@ -1,4 +1,5 @@
-/* command_invocation.h - Typed boundary between parsing and command handlers. */
+/* command_invocation.h - Typed boundary between parsing and command handlers.
+ */
 
 #pragma once
 
@@ -8,6 +9,7 @@ typedef struct CommandContext CommandContext;
 typedef struct CommandInvocation CommandInvocation;
 
 struct CommandInvocation {
+  /* Parsed fields and their command context are borrowed for one dispatch. */
   CommandContext *context;
   DbRef player;
   DbRef cause;
@@ -56,17 +58,15 @@ void command_invocation_call_two_arguments_vector(
 void command_invocation_call_two_vectors(CommandTwoVectorsHandler handler,
                                          CommandInvocation *invocation);
 
-#define DEFINE_COMMAND_ADAPTER(function)                                      \
-  static void function##_command_adapter(CommandInvocation *invocation) {     \
-    _Generic((function),                                                      \
-        CommandNoArgumentsHandler: command_invocation_call_no_arguments,      \
-        CommandUnparsedHandler: command_invocation_call_unparsed,             \
-        CommandOneArgumentHandler: command_invocation_call_one_argument,      \
-        CommandVectorHandler: command_invocation_call_vector,                 \
-        CommandTwoArgumentsHandler: command_invocation_call_two_arguments,    \
-        CommandTwoArgumentsVectorHandler:                                     \
-            command_invocation_call_two_arguments_vector,                     \
-        CommandTwoVectorsHandler:                                             \
-            command_invocation_call_two_vectors)(function, invocation);       \
+#define DEFINE_COMMAND_ADAPTER(function)                                                \
+  static void function##_command_adapter(CommandInvocation *invocation) {               \
+    _Generic((function),                                                                \
+        CommandNoArgumentsHandler: command_invocation_call_no_arguments,                \
+        CommandUnparsedHandler: command_invocation_call_unparsed,                       \
+        CommandOneArgumentHandler: command_invocation_call_one_argument,                \
+        CommandVectorHandler: command_invocation_call_vector,                           \
+        CommandTwoArgumentsHandler: command_invocation_call_two_arguments,              \
+        CommandTwoArgumentsVectorHandler: command_invocation_call_two_arguments_vector, \
+        CommandTwoVectorsHandler: command_invocation_call_two_vectors)(                 \
+        function, invocation);                                                          \
   }
-

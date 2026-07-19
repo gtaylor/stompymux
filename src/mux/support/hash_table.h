@@ -8,10 +8,10 @@
 #include "mux/support/name_table.h"
 #include "mux/support/red_black_tree.h"
 
-typedef struct MuxServer MuxServer;
+typedef struct ConfigurationContext ConfigurationContext;
 
 int cf_ntab_access(void *value, char *string, long extra, DbRef player,
-                   char *command, MuxServer *server);
+                   char *command, ConfigurationContext *context);
 
 struct HashTable {
   long long checks, scans, max_scan, hits, entries, deletes, nulls;
@@ -21,6 +21,7 @@ struct HashTable {
 typedef struct HashTable HashTable;
 
 void hash_table_initialize(HashTable *, int);
+void hash_table_destroy(HashTable *);
 
 void hash_table_reset(HashTable *);
 
@@ -52,6 +53,7 @@ char *hash_table_first_key(HashTable *htab);
 char *hash_table_next_key(HashTable *htab);
 
 void numeric_hash_table_initialize(HashTable *, int);
+void numeric_hash_table_destroy(HashTable *);
 void numeric_hash_table_reset(HashTable *);
 void *numeric_hash_table_next_entry(HashTable *htab);
 void *numeric_hash_table_first_entry(HashTable *htab);

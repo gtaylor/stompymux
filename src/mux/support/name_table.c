@@ -2,12 +2,14 @@
  * htab.c - table hashing routines
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/database/db.h"
 #include "mux/server/configuration.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/configuration_context.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
@@ -173,7 +175,7 @@ void name_table_list_set(EvaluationContext *evaluation,
 }
 
 int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
+                   ConfigurationContext *context) {
   NameTable *np;
   char *ap;
 
@@ -186,9 +188,9 @@ int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
   for (np = (NameTable *)vp; np->name; np++) {
     if (minmatch(str, np->name, np->minlen)) {
       return configuration_modify_bits(&(np->perm), ap, extra, player, cmd,
-                                       server);
+                                       context);
     }
   }
-  configuration_log_not_found(server, player, cmd, "Entry", str);
+  configuration_log_not_found(context, player, cmd, "Entry", str);
   return -1;
 }

@@ -2,12 +2,13 @@
  * file_cache.c -- File cache management
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 #include <dirent.h>
 
 #include "mux/commands/command.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -52,17 +53,17 @@ void do_list_file(CommandInvocation *invocation) {
   int flagvalue;
 
   flagvalue =
-      name_table_search(&invocation->context->server->database,
-                        invocation->context->server->configuration,
+      name_table_search(invocation->context->world->database,
+                        invocation->context->world->configuration,
                         invocation->player, list_files, invocation->first);
   if (flagvalue < 0) {
     name_table_display(&invocation->context->evaluation,
-                       invocation->context->server->configuration,
+                       invocation->context->world->configuration,
                        invocation->player, list_files,
                        "Unknown file.  Use one of:", 1);
     return;
   }
-  fcache_send(invocation->context->server->files, invocation->player,
+  fcache_send(invocation->context->runtime->files, invocation->player,
               flagvalue);
 }
 
@@ -113,7 +114,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
      * Failure: log the event
      */
 
-    log_error(&evaluation->server->log, LOG_PROBLEMS, "FIL", "OPEN",
+    log_error(evaluation->log, LOG_PROBLEMS, "FIL", "OPEN",
               "Couldn't open file '%s'.", filename);
 
     return -1;

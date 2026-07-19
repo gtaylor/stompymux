@@ -46,16 +46,8 @@ typedef struct EvaluationContext EvaluationContext;
 
 #include "glue_types.h"
 
-void heartbeat_stop(void);
-
-#define Have_MechPower(a, b)                                                   \
-  (((game_object_powers2(                                                      \
-         btech_context_active()->database,                                     \
-         (game_object_owner(btech_context_active()->database, a))) &           \
-     (b)) ||                                                                   \
-    is_wizard(btech_context_active()->database,                                \
-              game_object_owner(btech_context_active()->database, a))) &&      \
-   is_inherits(btech_context_active()->database, (a)))
+void heartbeat_init(BtechContext *context);
+void heartbeat_stop(BtechContext *context);
 
 typedef struct CommandsStruct {
   int flag;
@@ -183,8 +175,7 @@ ECMD(f_say);
    - TICs
    */
 
-#define SHEADER(a, b)                                                          \
-  { a, b, b, NULL }
+#define SHEADER(a, b) {a, b, b, NULL}
 #define HEADER(a) SHEADER(0, a)
 
 CommandsStruct mechcommands[] = {

@@ -9,9 +9,10 @@
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct TelnetSockets TelnetSockets;
-typedef struct MuxServer MuxServer;
+typedef struct ConnectionRuntime ConnectionRuntime;
 
-TelnetSockets *telnet_sockets_create(uv_loop_t *loop, MuxServer *server);
+TelnetSockets *telnet_sockets_create(uv_loop_t *loop,
+                                     ConnectionRuntime *runtime);
 void telnet_sockets_destroy(TelnetSockets *sockets);
 void telnet_sockets_release(TelnetSockets *sockets);
 bool telnet_sockets_listen(TelnetSockets *sockets, int port);

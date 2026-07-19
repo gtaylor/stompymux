@@ -11,11 +11,22 @@
 
 #pragma once
 
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+
+typedef struct MuxEventScheduler MuxEventScheduler;
+typedef struct GameDatabase GameDatabase;
+typedef struct BtechContext BtechContext;
+
+typedef struct StructureName {
+  char text[MBUF_SIZE];
+} StructureName;
+
 /* map.obj.c */
 mapobj *next_mapobj(mapobj *m);
 mapobj *first_mapobj(MAP *map, int type);
 int find_entrance(MAP *map, char dir, int *x, int *y);
-char *structure_name(mapobj *mapo);
+StructureName structure_name(GameDatabase *database, mapobj *mapo);
 mapobj *find_entrance_by_target(MAP *map, DbRef target);
 mapobj *find_entrance_by_xy(MAP *map, int x, int y);
 mapobj *find_mapobj(MAP *map, int x, int y, int type);
@@ -40,13 +51,10 @@ void map_setlinked(DbRef player, void *data, char *buffer);
 int mapobj_del(MAP *map, int x, int y, int tt);
 void map_delobj(DbRef player, void *data, char *buffer);
 int parse_coord(MAP *map, int dir, char *data, int *x, int *y);
-void add_entrances(DbRef loc, MAP *map, char *data);
-void add_links(DbRef loc, MAP *map, char *data);
-void recursively_updatelinks(DbRef from, DbRef loc);
+void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc);
 void map_updatelinks(DbRef player, void *data, char *buffer);
-int map_linked(DbRef mapobj);
-int get_cf(DbRef d);
-void possibly_start_building_regen(DbRef obj);
+int map_linked(BtechContext *context, DbRef mapobj);
+void possibly_start_building_regen(BtechContext *context, DbRef obj);
 void hit_building(MECH *mech, int x, int y, int weapindx, int damage);
 void fire_hex(MECH *mech, int x, int y, int meant);
 void steppable_base_check(MECH *mech, int x, int y);

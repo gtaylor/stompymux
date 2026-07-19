@@ -38,3 +38,14 @@ When writing C code, use the following naming conventions:
 * Make sure that updates to behaviors are reflected in `game/help/`, and `docs/`.
 * Check the various `game/*.conf` and `game/*.config` files when making changes to mudconfs, configs, and settings.
 * If making DB schema changes, offer to update the game's database at `game/data/stompymux.db.sqlite`. If a `stompymux` process is running, direct me to shutdown the game before making changes or instability could occur.
+
+## Available clang tools
+
+I've installed `clang-20`. There are a number of other tools installed, but they all have the version `-20` suffix:
+
+* clang-tidy-20
+* clang-format-20
+* clang-apply-replacements-20
+* clang-query-20
+
+See `ls /usr/bin/clang*` for a full list.

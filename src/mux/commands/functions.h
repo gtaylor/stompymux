@@ -8,6 +8,9 @@
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 
+typedef struct ConfigurationContext ConfigurationContext;
+typedef struct MuxServer MuxServer;
+
 typedef struct fun {
   const char *name; /* function name */
   void (*fun)(char *, char **, DbRef, DbRef, char **, int, char **, int,
@@ -18,7 +21,7 @@ typedef struct fun {
 } FUN;
 
 typedef struct ufun {
-  const char *name;  /* function name */
+  char *name;        /* owned function name */
   DbRef obj;         /* Object ID */
   int atr;           /* Attribute ID */
   int flags;         /* Function flags */
@@ -148,4 +151,4 @@ extern void list_functable(EvaluationContext *evaluation,
 extern DbRef match_thing(MatchContext *match, DbRef player, char *name);
 void do_function(CommandInvocation *invocation);
 int cf_func_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server);
+                   ConfigurationContext *context);

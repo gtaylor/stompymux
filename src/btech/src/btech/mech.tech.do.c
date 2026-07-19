@@ -26,10 +26,14 @@
 
 #ifndef BT_COMPLEXREPAIRS
 #define PARTCHECK(m, a, b, c)                                                  \
-  { PARTCHECK_SUB(m, alias_part(m, a), b, c); }
+  {                                                                            \
+    PARTCHECK_SUB(m, alias_part(m, a), b, c);                                  \
+  }
 #else
 #define PARTCHECK(m, a, b, c)                                                  \
-  { PARTCHECK_SUB(m, alias_part(m, a, loc), b, c); }
+  {                                                                            \
+    PARTCHECK_SUB(m, alias_part(m, a, loc), b, c);                             \
+  }
 #endif
 
 #define PARTCHECKTWO(m, a, b, c, d, e, f)                                      \
@@ -321,7 +325,7 @@ TFUNC_LOC(reattach_econ) {
   PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
                Cargo(S_ELECTRONIC), 0, GetSectOInt(mech, loc));
 #else
-  if (btech_context_active()->configuration->btech_complexrepair) {
+  if (mech->xcode.context->configuration->btech_complexrepair) {
     if (MechType(mech) == CLASS_MECH) {
       PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
                    ProperMyomer(mech), 0, 1);
@@ -386,12 +390,12 @@ TFUNC_LOCPOS(replaceg_fail) {
   int w = (IsWeapon(GetPartType(mech, loc, part)));
 
   if (tech_roll(player, mech, REPLACE_DIFFICULTY) < 0) {
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "You muck around, wasting the %s in the progress.",
                   w ? "weapon" : "part");
     return -1;
   }
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "Despite messing the repair, you manage not to waste the %s.",
                 w ? "weapon" : "part");
 #ifndef BT_COMPLEXREPAIRS
@@ -410,24 +414,24 @@ TFUNC_LOCPOS(repairg_fail) {
      * the following check *should not* be necessary. Nevertheless... */
     if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, loc, part))) > 4) {
       DestroyPart(mech, loc, part + 1);
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "You muck around, trashing the gun in the process.");
       return -1;
     }
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "Your repair fails.. all the parts are wasted for good.");
   return -1;
 }
 
 TFUNC_LOCPOS(repairenhcrit_fail) {
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "You don't manage to repair the damage.");
   return -1;
 }
 
 /* Replacepart = Replacegun, for now */
 TFUNC_LOCPOS(replacep_fail) {
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "Your repair fails.. all the parts are wasted for good.");
   return -1;
 }
@@ -437,7 +441,7 @@ TFUNC_LOCPOS(repairp_fail) { return repairg_fail(player, mech, loc, part); }
 
 /* Reload fail = ammo is wasted and some time, but no averse effects (yet) */
 TFUNC_LOCPOS_VAL(reload_fail) {
-  notify(BTECH_EVALUATION_CONTEXT, player,
+  notify(btech_context_evaluation(mech->xcode.context), player,
          "You fumble around, wasting the ammo in the progress.");
   return -1;
 }
@@ -450,13 +454,13 @@ TFUNC_LOC_VAL(fixarmor_fail) {
 
   if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
     tot += 50;
-  tot += Number(5, 44);
+  tot += btech_random_range(mech->xcode.context, 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
   if (tot == should)
     tot = should - 1;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "Your armor patching isn't exactly perfect.. "
                 "You managed to fix %d out of %d.",
                 tot, should);
@@ -470,13 +474,13 @@ TFUNC_LOC_VAL(fixinternal_fail) {
 
   if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
     tot += 50;
-  tot += Number(5, 44);
+  tot += btech_random_range(mech->xcode.context, 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
   if (tot == should)
     tot = should - 1;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "Your internal patching isn't exactly perfect.. You managed to "
                 "fix %d out of %d.",
                 tot, should);
@@ -493,9 +497,9 @@ TFUNC_LOC(reattach_fail) {
 
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
-  tot = Number(5, 94);
+  tot = btech_random_range(mech->xcode.context, 5, 94);
   notify_printf(
-      BTECH_EVALUATION_CONTEXT, player,
+      btech_context_evaluation(mech->xcode.context), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
       tot);
   tot = (tot * GetSectOInt(mech, loc)) / 100;
@@ -509,7 +513,7 @@ TFUNC_LOC(reattach_fail) {
 #else
   AddPartsM(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
   AddPartsM(mech, loc, ProperInternal(mech), 0, tot);
-  if (btech_context_active()->configuration->btech_complexrepair &&
+  if (mech->xcode.context->configuration->btech_complexrepair &&
       MechType(mech) == CLASS_MECH)
     AddPartsM(mech, loc, ProperMyomer(mech), 0, 1);
 #endif
@@ -522,9 +526,9 @@ TFUNC_LOC(replacesuit_fail) {
   if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
     return 0;
 
-  wRand = Number(5, 94);
+  wRand = btech_random_range(mech->xcode.context, 5, 94);
   notify_printf(
-      BTECH_EVALUATION_CONTEXT, player,
+      btech_context_evaluation(mech->xcode.context), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
       wRand);
 #ifndef BT_COMPLEXREPAIRS
@@ -559,8 +563,8 @@ TFUNC_LOC_RESEAL(reseal_fail) {
 
   if (tech_roll(player, mech, RESEAL_DIFFICULTY) >= 0)
     return 0;
-  tot = Number(5, 94);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  tot = btech_random_range(mech->xcode.context, 5, 94);
+  notify_printf(btech_context_evaluation(mech->xcode.context), player,
                 "You don't manage to get all the water out and seal the "
                 "section, though you recover %d%% of the materials.",
                 tot);

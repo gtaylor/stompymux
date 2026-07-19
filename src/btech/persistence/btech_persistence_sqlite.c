@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "btech/btech_context.h"
 #include "glue.h"
 #include "map.h"
 #include "mech.events.h"
@@ -23,11 +24,11 @@
 #include "mux/support/red_black_tree.h"
 #include "p.mech.events.h"
 #include "p.mech.utils.h"
+#include "p.template.h"
 #include "persistence/btech_persistence.h"
 #include "turret.h"
 
-extern RedBlackTree xcode_tree;
-extern ACOM acom[AUTO_NUM_COMMANDS + 1];
+extern const ACOM acom[AUTO_NUM_COMMANDS + 1];
 
 /* Increment when a SQLite-only reader would need a compatibility change. */
 #define BTECH_PERSISTENCE_SCHEMA_VERSION 1
@@ -498,11 +499,11 @@ static int btech_special_column_ushort(sqlite3_stmt *statement, int column,
   return 0;
 }
 
-static int btech_special_column_dbref(sqlite3_stmt *statement, int column,
+static int btech_special_column_dbref(GameDatabase *database,
+                                      sqlite3_stmt *statement, int column,
                                       DbRef *value) {
   if (btech_special_column_long(statement, column, value) < 0 ||
-      (*value != NOTHING &&
-       !is_good_obj(btech_context_active()->database, *value)))
+      (*value != NOTHING && !is_good_obj(database, *value)))
     return -1;
   return 0;
 }
@@ -704,7 +705,8 @@ static int btech_special_allocate_map_dynamic(MAP *map) {
 }
 
 /* Restore map parent rows before any child row uses their dimensions. */
-static int btech_special_load_map_parents(sqlite3 *sqlite) {
+static int btech_special_load_map_parents(sqlite3 *sqlite,
+                                          BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   char map_name[MAP_NAME_SIZE + 1];
@@ -746,7 +748,7 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &map_dbref) < 0 ||
-        !(map = getMap(map_dbref)) ||
+        !(map = btech_context_get_map(context, map_dbref)) ||
         btech_special_column_text(statement, 1, map_name, sizeof(map_name)) <
             0 ||
         btech_special_column_int(statement, 2, &width) < 0 ||
@@ -818,7 +820,8 @@ static int btech_special_load_map_parents(sqlite3 *sqlite) {
 
 /* Restore every base-grid byte in order, rejecting incomplete or sparse maps.
  */
-static int btech_special_load_map_hexes(sqlite3 *sqlite) {
+static int btech_special_load_map_hexes(sqlite3 *sqlite,
+                                        BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   DbRef current_map;
@@ -858,7 +861,7 @@ static int btech_special_load_map_hexes(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      map = getMap(map_dbref);
+      map = btech_context_get_map(context, map_dbref);
       if (!map) {
         result = -1;
         break;
@@ -886,7 +889,8 @@ static int btech_special_load_map_hexes(sqlite3 *sqlite) {
 }
 
 /* Restore occupancy rows into the dimensions allocated from each map parent. */
-static int btech_special_load_map_slots(sqlite3 *sqlite) {
+static int btech_special_load_map_slots(sqlite3 *sqlite,
+                                        BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   DbRef current_map;
@@ -923,7 +927,7 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      map = getMap(map_dbref);
+      map = btech_context_get_map(context, map_dbref);
       if (!map) {
         result = -1;
         break;
@@ -932,7 +936,8 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
       expected_slot = 0;
     }
     if (slot != expected_slot || slot >= map->first_free ||
-        (mech_dbref != NOTHING && !getMech(mech_dbref))) {
+        (mech_dbref != NOTHING &&
+         !btech_context_get_mech(context, mech_dbref))) {
       result = -1;
       break;
     }
@@ -949,7 +954,7 @@ static int btech_special_load_map_slots(sqlite3 *sqlite) {
 }
 
 /* Restore the complete square LOS matrix in its stable source/target order. */
-static int btech_special_load_map_los(sqlite3 *sqlite) {
+static int btech_special_load_map_los(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   DbRef current_map;
@@ -990,7 +995,7 @@ static int btech_special_load_map_los(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      map = getMap(map_dbref);
+      map = btech_context_get_map(context, map_dbref);
       if (!map) {
         result = -1;
         break;
@@ -1048,7 +1053,8 @@ static int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
 }
 
 /* Restore ordered map objects through the normal map-object allocator. */
-static int btech_special_load_map_objects(sqlite3 *sqlite) {
+static int btech_special_load_map_objects(sqlite3 *sqlite,
+                                          BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   DbRef current_map;
@@ -1103,7 +1109,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
       break;
     }
     if (map_dbref != current_map || object_type != current_object_type) {
-      map = getMap(map_dbref);
+      map = btech_context_get_map(context, map_dbref);
       if (!map) {
         result = -1;
         break;
@@ -1117,7 +1123,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
     if (ordinal != expected_ordinal || x < 0 || x >= map->map_width || y < 0 ||
         y >= map->map_height ||
         (object_dbref != NOTHING &&
-         !is_good_obj(btech_context_active()->database, object_dbref))) {
+         !is_good_obj(context->database, object_dbref))) {
       result = -1;
       break;
     }
@@ -1137,7 +1143,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
     tail = &stored->next;
     expected_ordinal++;
     if (object_type == TYPE_BUILD)
-      possibly_start_building_regen(source.obj);
+      possibly_start_building_regen(context, source.obj);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -1146,7 +1152,7 @@ static int btech_special_load_map_objects(sqlite3 *sqlite) {
 }
 
 /* Rebuild the TYPE_BITS allocation without ever serializing its pointer. */
-static int btech_special_load_map_bits(sqlite3 *sqlite) {
+static int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   MAP *map;
   DbRef current_map;
@@ -1190,7 +1196,7 @@ static int btech_special_load_map_bits(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      map = getMap(map_dbref);
+      map = btech_context_get_map(context, map_dbref);
       if (!map || map->mapobj[TYPE_BITS]) {
         result = -1;
         break;
@@ -1285,7 +1291,8 @@ static void (*btech_special_repair_function(int type))(MuxEvent *) {
 
 /* Requeue repair work with its original remaining ticks and fake-event state.
  */
-static int btech_special_load_repair_events(sqlite3 *sqlite) {
+static int btech_special_load_repair_events(sqlite3 *sqlite,
+                                            BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef mech_dbref;
@@ -1308,7 +1315,7 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = getMech(mech_dbref)) ||
+        !(mech = btech_context_get_mech(context, mech_dbref)) ||
         btech_special_column_int(statement, 1, &event_type) < 0 ||
         btech_special_column_int(statement, 2, &remaining_ticks) < 0 ||
         btech_special_column_long(statement, 3, &event_data) < 0 ||
@@ -1324,8 +1331,8 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
       result = -1;
       break;
     }
-    mux_event_add(btech_context_active()->events, remaining_ticks, 0,
-                  event_type, function, mech, (void *)event_data);
+    mux_event_add(context->events, remaining_ticks, 0, event_type, function,
+                  mech, (void *)event_data);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
@@ -1334,7 +1341,8 @@ static int btech_special_load_repair_events(sqlite3 *sqlite) {
 }
 
 /* Restore MECH identity and unit-definition fields before child tables. */
-static int btech_special_load_mech_parents(sqlite3 *sqlite) {
+static int btech_special_load_mech_parents(sqlite3 *sqlite,
+                                           BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   char mech_name[sizeof(mech->ud.mech_name)];
@@ -1391,7 +1399,7 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = getMech(mech_dbref)) ||
+        !(mech = btech_context_get_mech(context, mech_dbref)) ||
         btech_special_column_int(statement, 1, &id_0) < 0 ||
         btech_special_column_int(statement, 2, &id_1) < 0 ||
         btech_special_column_int(statement, 3, &brief) < 0 ||
@@ -1446,7 +1454,7 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
         radio_range > SHRT_MAX || targeting_computer < CHAR_MIN ||
         targeting_computer > CHAR_MAX || carrier_max_tons < CHAR_MIN ||
         carrier_max_tons > CHAR_MAX ||
-        (map_dbref != NOTHING && !getMap(map_dbref))) {
+        (map_dbref != NOTHING && !btech_context_get_map(context, map_dbref))) {
       result = -1;
       break;
     }
@@ -1491,7 +1499,8 @@ static int btech_special_load_mech_parents(sqlite3 *sqlite) {
 }
 
 /* Restore every section row in stable section-index order. */
-static int btech_special_load_mech_sections(sqlite3 *sqlite) {
+static int btech_special_load_mech_sections(sqlite3 *sqlite,
+                                            BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -1555,7 +1564,7 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -1589,7 +1598,8 @@ static int btech_special_load_mech_sections(sqlite3 *sqlite) {
 }
 
 /* Restore all twelve critical slots per section without restoring pointers. */
-static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
+static int btech_special_load_mech_criticals(sqlite3 *sqlite,
+                                             BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -1647,7 +1657,7 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -1690,7 +1700,8 @@ static int btech_special_load_mech_criticals(sqlite3 *sqlite) {
 }
 
 /* Restore the non-pointer MECH position record. */
-static int btech_special_load_mech_positions(sqlite3 *sqlite) {
+static int btech_special_load_mech_positions(sqlite3 *sqlite,
+                                             BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef mech_dbref;
@@ -1726,7 +1737,7 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = getMech(mech_dbref)) ||
+        !(mech = btech_context_get_mech(context, mech_dbref)) ||
         btech_special_column_int(statement, 1, &pilot_status) < 0 ||
         btech_special_column_int(statement, 2, &terrain) < 0 ||
         btech_special_column_int(statement, 3, &elevation) < 0 ||
@@ -1750,8 +1761,7 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
         x < SHRT_MIN || x > SHRT_MAX || y < SHRT_MIN || y > SHRT_MAX ||
         z < SHRT_MIN || z > SHRT_MAX || last_x < SHRT_MIN ||
         last_x > SHRT_MAX || last_y < SHRT_MIN || last_y > SHRT_MAX ||
-        (pilot != NOTHING &&
-         !is_good_obj(btech_context_active()->database, pilot))) {
+        (pilot != NOTHING && !is_good_obj(context->database, pilot))) {
       result = -1;
       break;
     }
@@ -1780,7 +1790,8 @@ static int btech_special_load_mech_positions(sqlite3 *sqlite) {
 }
 
 /* Restore all bay dbref links in their fixed four-slot order. */
-static int btech_special_load_mech_bays(sqlite3 *sqlite) {
+static int btech_special_load_mech_bays(sqlite3 *sqlite,
+                                        BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -1807,8 +1818,7 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
         mech_dbref == NOTHING ||
         btech_special_column_int(statement, 1, &bay_index) < 0 ||
         btech_special_column_long(statement, 2, &bay_dbref) < 0 ||
-        (bay_dbref != NOTHING &&
-         !is_good_obj(btech_context_active()->database, bay_dbref))) {
+        (bay_dbref != NOTHING && !is_good_obj(context->database, bay_dbref))) {
       result = -1;
       break;
     }
@@ -1817,7 +1827,7 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -1842,7 +1852,8 @@ static int btech_special_load_mech_bays(sqlite3 *sqlite) {
 
 /* Restore all independent turret dbref links in their fixed three-slot order.
  */
-static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
+static int btech_special_load_mech_turrets(sqlite3 *sqlite,
+                                           BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -1870,7 +1881,7 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
         btech_special_column_int(statement, 1, &turret_index) < 0 ||
         btech_special_column_long(statement, 2, &turret_dbref) < 0 ||
         (turret_dbref != NOTHING &&
-         !is_good_obj(btech_context_active()->database, turret_dbref))) {
+         !is_good_obj(context->database, turret_dbref))) {
       result = -1;
       break;
     }
@@ -1879,7 +1890,7 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -1903,7 +1914,7 @@ static int btech_special_load_mech_turrets(sqlite3 *sqlite) {
 }
 
 /* Restore C3/C3i parent fields before their fixed indexed network rows. */
-static int btech_special_load_mech_c3(sqlite3 *sqlite) {
+static int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   char channel_title[sizeof(mech->sd.C3ChanTitle)];
@@ -1930,7 +1941,7 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = getMech(mech_dbref)) ||
+        !(mech = btech_context_get_mech(context, mech_dbref)) ||
         btech_special_column_text(statement, 1, channel_title,
                                   sizeof(channel_title)) < 0 ||
         btech_special_column_int(statement, 2, &c3i_size) < 0 ||
@@ -1945,9 +1956,8 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
         total_masters > C3_NETWORK_SIZE || working_masters < -1 ||
         working_masters > C3_NETWORK_SIZE ||
         (tag_target != NOTHING &&
-         !is_good_obj(btech_context_active()->database, tag_target)) ||
-        (tagged_by != NOTHING &&
-         !is_good_obj(btech_context_active()->database, tagged_by))) {
+         !is_good_obj(context->database, tag_target)) ||
+        (tagged_by != NOTHING && !is_good_obj(context->database, tagged_by))) {
       result = -1;
       break;
     }
@@ -1967,7 +1977,8 @@ static int btech_special_load_mech_c3(sqlite3 *sqlite) {
 }
 
 /* Restore every C3i and C3 array element, including empty slots. */
-static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
+static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite,
+                                            BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -1999,7 +2010,8 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
         btech_special_column_int(statement, 1, &network_type) < 0 ||
         btech_special_column_int(statement, 2, &node_index) < 0 ||
         btech_special_column_long(statement, 3, &node_dbref) < 0 ||
-        (node_dbref != NOTHING && node_dbref != 0 && !getMech(node_dbref))) {
+        (node_dbref != NOTHING && node_dbref != 0 &&
+         !btech_context_get_mech(context, node_dbref))) {
       result = -1;
       break;
     }
@@ -2008,7 +2020,7 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -2043,7 +2055,8 @@ static int btech_special_load_mech_c3_nodes(sqlite3 *sqlite) {
 }
 
 /* Restore the complete NUM_TICS by TICLONGS bitmap matrix. */
-static int btech_special_load_mech_tics(sqlite3 *sqlite) {
+static int btech_special_load_mech_tics(sqlite3 *sqlite,
+                                        BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -2082,7 +2095,7 @@ static int btech_special_load_mech_tics(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -2111,7 +2124,8 @@ static int btech_special_load_mech_tics(sqlite3 *sqlite) {
 }
 
 /* Restore all radio slots with their mode and fixed-size title buffer. */
-static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
+static int btech_special_load_mech_frequencies(sqlite3 *sqlite,
+                                               BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   char title[CHTITLELEN + 1];
@@ -2151,7 +2165,7 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -2177,7 +2191,8 @@ static int btech_special_load_mech_frequencies(sqlite3 *sqlite) {
 }
 
 /* Restore the complete pointer-free mech_rd record from its named columns. */
-static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
+static int btech_special_load_mech_runtime(sqlite3 *sqlite,
+                                           BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef mech_dbref;
@@ -2192,7 +2207,7 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        !(mech = getMech(mech_dbref))) {
+        !(mech = btech_context_get_mech(context, mech_dbref))) {
       result = -1;
       break;
     }
@@ -2205,7 +2220,8 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
 #define RUNTIME_REAL(column, field)                                            \
   btech_special_column_real(statement, column, &mech->rd.field)
 #define RUNTIME_DBREF(column, field)                                           \
-  btech_special_column_dbref(statement, column, &mech->rd.field)
+  btech_special_column_dbref(context->database, statement, column,             \
+                             &mech->rd.field)
     if (RUNTIME_CHAR(1, jumptop) < 0 || RUNTIME_CHAR(2, aim) < 0 ||
         RUNTIME_CHAR(3, basetohit) < 0 || RUNTIME_CHAR(4, pilotskillbase) < 0 ||
         RUNTIME_CHAR(5, engineheat) < 0 || RUNTIME_CHAR(6, masc_value) < 0 ||
@@ -2280,7 +2296,8 @@ static int btech_special_load_mech_runtime(sqlite3 *sqlite) {
 }
 
 /* Restore reserved unit fields so a future release does not lose them. */
-static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
+static int btech_special_load_mech_unit_aux(sqlite3 *sqlite,
+                                            BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -2327,7 +2344,7 @@ static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
         if (result < 0)
           break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -2377,7 +2394,8 @@ static int btech_special_load_mech_unit_aux(sqlite3 *sqlite) {
 }
 
 /* Restore every reserved mech_rd integer in its fixed five-slot order. */
-static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite) {
+static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
+                                                  BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   DbRef current_mech;
@@ -2412,7 +2430,7 @@ static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech) {
         result = -1;
         break;
@@ -2436,7 +2454,8 @@ static int btech_special_load_mech_runtime_unused(sqlite3 *sqlite) {
 }
 
 /* Rebuild stagger history in list order without loading the saved pointer. */
-static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
+static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
+                                                  BtechContext *context) {
   sqlite3_stmt *statement;
   MECH *mech;
   damageNode *node;
@@ -2471,14 +2490,15 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
         btech_special_column_int(statement, 1, &position) < 0 ||
         btech_special_column_int(statement, 2, &amount) < 0 ||
         btech_special_column_time(statement, 3, &occurred_at) < 0 ||
-        btech_special_column_dbref(statement, 4, &attacker) < 0 ||
+        btech_special_column_dbref(context->database, statement, 4, &attacker) <
+            0 ||
         btech_special_column_int(statement, 5, &counted) < 0 || counted < 0 ||
         counted > 1) {
       result = -1;
       break;
     }
     if (mech_dbref != current_mech) {
-      mech = getMech(mech_dbref);
+      mech = btech_context_get_mech(context, mech_dbref);
       if (!mech || mech->rd.staggerDamageList) {
         result = -1;
         break;
@@ -2514,15 +2534,16 @@ static int btech_special_load_mech_stagger_damage(sqlite3 *sqlite) {
 }
 
 /* Resolve a preallocated special object and reject a row of the wrong type. */
-static void *btech_special_object(DbRef object, GlueType type) {
-  if (!is_good_obj(btech_context_active()->database, object) ||
-      WhichSpecial(object) != (int)type)
+static void *btech_special_object(BtechContext *context, DbRef object,
+                                  GlueType type) {
+  if (!is_good_obj(context->database, object) ||
+      btech_context_which_special(context, object) != (int)type)
     return NULL;
-  return FindObjectsData(object);
+  return btech_context_find_object(context, object);
 }
 
 /* Restore repair-console target rows. */
-static int btech_special_load_mechrep(sqlite3 *sqlite) {
+static int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   MECHREP *mechrep;
   DbRef object;
@@ -2539,8 +2560,9 @@ static int btech_special_load_mechrep(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(mechrep = btech_special_object(object, GTYPE_MECHREP)) ||
-        btech_special_column_dbref(statement, 1, &target) < 0)
+        !(mechrep = btech_special_object(context, object, GTYPE_MECHREP)) ||
+        btech_special_column_dbref(context->database, statement, 1, &target) <
+            0)
       result = -1;
     else
       mechrep->current_target = target;
@@ -2552,7 +2574,7 @@ static int btech_special_load_mechrep(sqlite3 *sqlite) {
 }
 
 /* Restore a turret parent and every independent timing slot. */
-static int btech_special_load_turrets(sqlite3 *sqlite) {
+static int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
   sqlite3_stmt *statement;
   TURRET_T *turret;
   DbRef object;
@@ -2578,11 +2600,14 @@ static int btech_special_load_turrets(sqlite3 *sqlite) {
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(turret = btech_special_object(object, GTYPE_TURRET)) ||
+        !(turret = btech_special_object(context, object, GTYPE_TURRET)) ||
         btech_special_column_int(statement, 1, &arcs) < 0 ||
-        btech_special_column_dbref(statement, 2, &parent) < 0 ||
-        btech_special_column_dbref(statement, 3, &gunner) < 0 ||
-        btech_special_column_dbref(statement, 4, &target) < 0 ||
+        btech_special_column_dbref(context->database, statement, 2, &parent) <
+            0 ||
+        btech_special_column_dbref(context->database, statement, 3, &gunner) <
+            0 ||
+        btech_special_column_dbref(context->database, statement, 4, &target) <
+            0 ||
         btech_special_column_int(statement, 5, &target_x) < 0 ||
         btech_special_column_int(statement, 6, &target_y) < 0 ||
         btech_special_column_int(statement, 7, &target_z) < 0 ||
@@ -2606,7 +2631,8 @@ static int btech_special_load_turrets(sqlite3 *sqlite) {
 }
 
 /* Restore all NUM_TICS turret timing values in fixed index order. */
-static int btech_special_load_turret_tics(sqlite3 *sqlite) {
+static int btech_special_load_turret_tics(sqlite3 *sqlite,
+                                          BtechContext *context) {
   sqlite3_stmt *statement;
   TURRET_T *turret;
   DbRef current_turret;
@@ -2641,7 +2667,7 @@ static int btech_special_load_turret_tics(sqlite3 *sqlite) {
         result = -1;
         break;
       }
-      turret = btech_special_object(turret_dbref, GTYPE_TURRET);
+      turret = btech_special_object(context, turret_dbref, GTYPE_TURRET);
       if (!turret) {
         result = -1;
         break;
@@ -2666,7 +2692,8 @@ static int btech_special_load_turret_tics(sqlite3 *sqlite) {
 
 /* Restore AUTOPILOT scalar state; command and path lists are loaded separately.
  */
-static int btech_special_load_autopilots(sqlite3 *sqlite) {
+static int btech_special_load_autopilots(sqlite3 *sqlite,
+                                         BtechContext *context) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
   DbRef object;
@@ -2684,22 +2711,25 @@ static int btech_special_load_autopilots(sqlite3 *sqlite) {
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &object) < 0 ||
-        !(autopilot = btech_special_object(object, GTYPE_AUTO)) ||
-        btech_special_column_dbref(statement, 1, &mech_dbref) < 0 ||
-        btech_special_column_dbref(statement, 2, &map_dbref) < 0 ||
+        !(autopilot = btech_special_object(context, object, GTYPE_AUTO)) ||
+        btech_special_column_dbref(context->database, statement, 1,
+                                   &mech_dbref) < 0 ||
+        btech_special_column_dbref(context->database, statement, 2,
+                                   &map_dbref) < 0 ||
         btech_special_column_ushort(statement, 3, &autopilot->speed) < 0 ||
         btech_special_column_int(statement, 4, &autopilot->ofsx) < 0 ||
         btech_special_column_int(statement, 5, &autopilot->ofsy) < 0 ||
         btech_special_column_uchar(statement, 6, &autopilot->verbose_level) <
             0 ||
-        btech_special_column_dbref(statement, 7, &target) < 0 ||
+        btech_special_column_dbref(context->database, statement, 7, &target) <
+            0 ||
         btech_special_column_int(statement, 8, &autopilot->target_score) < 0 ||
         btech_special_column_int(statement, 9, &autopilot->target_threshold) <
             0 ||
         btech_special_column_int(statement, 10,
                                  &autopilot->target_update_tick) < 0 ||
-        btech_special_column_dbref(statement, 11, &autopilot->chase_target) <
-            0 ||
+        btech_special_column_dbref(context->database, statement, 11,
+                                   &autopilot->chase_target) < 0 ||
         btech_special_column_int(statement, 12,
                                  &autopilot->chasetarg_update_tick) < 0 ||
         btech_special_column_int(statement, 13,
@@ -2734,8 +2764,9 @@ static int btech_special_load_autopilots(sqlite3 *sqlite) {
         btech_special_column_int(statement, 33, &autopilot->b_dan) < 0 ||
         btech_special_column_int(statement, 34, &autopilot->w_dan) < 0 ||
         btech_special_column_int(statement, 35, &autopilot->last_upd) < 0 ||
-        (mech_dbref != 0 && !getMech(mech_dbref)) ||
-        (map_dbref != NOTHING && map_dbref != 0 && !getMap(map_dbref))) {
+        (mech_dbref != 0 && !btech_context_get_mech(context, mech_dbref)) ||
+        (map_dbref != NOTHING && map_dbref != 0 &&
+         !btech_context_get_map(context, map_dbref))) {
       result = -1;
       break;
     }
@@ -2750,7 +2781,7 @@ static int btech_special_load_autopilots(sqlite3 *sqlite) {
 }
 
 /* Resolve the live command callback from the durable command enum. */
-static ACOM *btech_special_autopilot_command(int command_enum) {
+static const ACOM *btech_special_autopilot_command(int command_enum) {
   int index;
 
   for (index = 0; index < AUTO_NUM_COMMANDS && acom[index].name; index++)
@@ -2764,7 +2795,7 @@ static int btech_special_load_autopilot_command_args(
     sqlite3 *sqlite, AUTO *autopilot, DbRef autopilot_dbref, int position,
     int command_enum, int argument_count) {
   sqlite3_stmt *statement;
-  ACOM *definition;
+  const ACOM *definition;
   command_node *command;
   DoublyLinkedListNode *list_node;
   const unsigned char *value;
@@ -2831,7 +2862,8 @@ static int btech_special_load_autopilot_command_args(
 }
 
 /* Restore the command queue in stable execution order. */
-static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
+static int btech_special_load_autopilot_commands(sqlite3 *sqlite,
+                                                 BtechContext *context) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
   DbRef current_autopilot;
@@ -2865,7 +2897,7 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
       break;
     }
     if (autopilot_dbref != current_autopilot) {
-      autopilot = btech_special_object(autopilot_dbref, GTYPE_AUTO);
+      autopilot = btech_special_object(context, autopilot_dbref, GTYPE_AUTO);
       if (!autopilot || !autopilot->commands ||
           doubly_linked_list_size(autopilot->commands)) {
         result = -1;
@@ -2890,7 +2922,8 @@ static int btech_special_load_autopilot_commands(sqlite3 *sqlite) {
 }
 
 /* Restore an A* path as ordered nodes, never as saved list pointers. */
-static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
+static int btech_special_load_autopilot_path(sqlite3 *sqlite,
+                                             BtechContext *context) {
   sqlite3_stmt *statement;
   AUTO *autopilot;
   astar_node *path_node;
@@ -2942,7 +2975,7 @@ static int btech_special_load_autopilot_path(sqlite3 *sqlite) {
       break;
     }
     if (autopilot_dbref != current_autopilot) {
-      autopilot = btech_special_object(autopilot_dbref, GTYPE_AUTO);
+      autopilot = btech_special_object(context, autopilot_dbref, GTYPE_AUTO);
       if (!autopilot || autopilot->astar_path) {
         result = -1;
         break;
@@ -3622,40 +3655,42 @@ static int btech_store_map(void *key, void *data, int depth, void *argument) {
 }
 
 /* Capture one queued repair event in its durable SQLite representation. */
-static sqlite3_stmt *btech_repair_statement;
-static int btech_repair_type;
-static int btech_repair_result;
+typedef struct BtechRepairStoreContext {
+  sqlite3_stmt *statement;
+  int type;
+  int result;
+} BtechRepairStoreContext;
 
-static void btech_store_repair_event(MuxEvent *event) {
+static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
+  BtechRepairStoreContext *context = context_argument;
   MECH *mech = event->data;
-  long remaining = event->tick - btech_context_active()->events->tick;
+  long remaining = event->tick - event->scheduler->tick;
 
-  if (btech_repair_result < 0 || !mech)
+  if (context->result < 0 || !mech)
     return;
   if (remaining < 1)
     remaining = 1;
   if (event->function == very_fake_func)
     remaining = -remaining;
-  if (btech_special_bind_int(btech_repair_statement, 1, mech->mynum) < 0 ||
-      btech_special_bind_int(btech_repair_statement, 2, btech_repair_type) <
-          0 ||
-      btech_special_bind_int(btech_repair_statement, 3,
+  if (btech_special_bind_int(context->statement, 1, mech->mynum) < 0 ||
+      btech_special_bind_int(context->statement, 2, context->type) < 0 ||
+      btech_special_bind_int(context->statement, 3,
                              remaining < 0 ? -remaining : remaining) < 0 ||
-      btech_special_bind_int(btech_repair_statement, 4, (long)event->data2) <
-          0 ||
-      btech_special_bind_int(btech_repair_statement, 5, remaining < 0) < 0 ||
-      btech_special_step(btech_repair_statement) < 0)
-    btech_repair_result = -1;
+      btech_special_bind_int(context->statement, 4, (long)event->data2) < 0 ||
+      btech_special_bind_int(context->statement, 5, remaining < 0) < 0 ||
+      btech_special_step(context->statement) < 0)
+    context->result = -1;
 }
 
 /* Mirror map dynamic state and repair queues without changing legacy reads. */
-static int
-btech_persistence_store_special_state(sqlite3 *sqlite,
-                                      PersistenceContext *persistence) {
+static int btech_persistence_store_special_state(
+    sqlite3 *sqlite, PersistenceContext *persistence, void *extension_context) {
+  BtechContext *btech = extension_context;
   (void)persistence;
   BTECH_MAP_STORE_CONTEXT maps = {NULL, NULL, NULL, NULL, NULL, NULL, -1};
   BTECH_OBJECT_STORE_CONTEXT objects;
   sqlite3_stmt *repairs = NULL;
+  BtechRepairStoreContext repair_context;
   int type;
   int result;
 
@@ -3666,7 +3701,7 @@ btech_persistence_store_special_state(sqlite3 *sqlite,
     return -1;
   if (btech_special_store_metadata(sqlite) < 0)
     return -1;
-  if (!xcode_tree)
+  if (!btech->special_objects)
     return 0;
   if (sqlite3_prepare_v2(sqlite,
                          "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, "
@@ -3794,20 +3829,24 @@ btech_persistence_store_special_state(sqlite3 *sqlite,
     return -1;
   }
   maps.result = 0;
-  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_store_map, &maps);
+  red_black_tree_walk(btech->special_objects, WALK_INORDER, btech_store_map,
+                      &maps);
   objects.result = 0;
-  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_store_simple_object,
-                      &objects);
-  btech_repair_statement = repairs;
-  btech_repair_result = 0;
+  red_black_tree_walk(btech->special_objects, WALK_INORDER,
+                      btech_store_simple_object, &objects);
+  repair_context = (BtechRepairStoreContext){
+      .statement = repairs,
+      .result = 0,
+  };
   for (type = FIRST_TECH_EVENT;
-       type <= LAST_TECH_EVENT && btech_repair_result == 0; type++) {
-    btech_repair_type = type;
-    mux_event_gothru_type(btech_context_active()->events, type,
-                          btech_store_repair_event);
+       type <= LAST_TECH_EVENT && repair_context.result == 0; type++) {
+    repair_context.type = type;
+    mux_event_visit_type(btech->events, type, btech_store_repair_event,
+                         &repair_context);
   }
-  result =
-      maps.result < 0 || objects.result < 0 || btech_repair_result < 0 ? -1 : 0;
+  result = maps.result < 0 || objects.result < 0 || repair_context.result < 0
+               ? -1
+               : 0;
   sqlite3_finalize(maps.map);
   sqlite3_finalize(maps.hex);
   sqlite3_finalize(maps.slot);
@@ -3820,10 +3859,10 @@ btech_persistence_store_special_state(sqlite3 *sqlite,
 }
 
 /* Reads remain on the legacy files during this first BTech dual-write slice. */
-static int
-btech_persistence_preload_special_state(sqlite3 *sqlite,
-                                        PersistenceContext *persistence) {
+static int btech_persistence_preload_special_state(
+    sqlite3 *sqlite, PersistenceContext *persistence, void *extension_context) {
   (void)persistence;
+  (void)extension_context;
   (void)sqlite;
   return 0;
 }
@@ -3889,13 +3928,14 @@ static int btech_special_table_count(sqlite3 *sqlite, const char *table,
 }
 
 /* Require one parent and every fixed child row for each preallocated object. */
-static int btech_special_validate_required_rows(sqlite3 *sqlite) {
+static int btech_special_validate_required_rows(sqlite3 *sqlite,
+                                                BtechContext *context) {
   BTECH_SPECIAL_OBJECT_COUNTS counts = {0, 0, 0, 0, 0};
   int expected;
   int actual;
 
-  red_black_tree_walk(xcode_tree, WALK_INORDER, btech_special_count_objects,
-                      &counts);
+  red_black_tree_walk(context->special_objects, WALK_INORDER,
+                      btech_special_count_objects, &counts);
 #define REQUIRE_ROWS(table, rows)                                              \
   do {                                                                         \
     expected = (rows);                                                         \
@@ -3934,62 +3974,75 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite) {
 
 /* Load every BTech table only after the normal special-object allocators run.
  */
-static int btech_special_load_all(sqlite3 *sqlite) {
+static int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
 #define BTECH_LOAD(stage, function)                                            \
   do {                                                                         \
     if ((function)(sqlite) < 0) {                                              \
-      log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",        \
+      log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",                       \
+                "SQLite BTech validation failed at %s.", (char *)stage);       \
+      return -1;                                                               \
+    }                                                                          \
+  } while (0)
+#define BTECH_LOAD_CONTEXT(stage, function)                                    \
+  do {                                                                         \
+    if ((function)(sqlite, context) < 0) {                                     \
+      log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",                       \
                 "SQLite BTech validation failed at %s.", (char *)stage);       \
       return -1;                                                               \
     }                                                                          \
   } while (0)
   BTECH_LOAD("metadata", btech_special_validate_metadata);
-  BTECH_LOAD("required rows", btech_special_validate_required_rows);
-  BTECH_LOAD("map parents", btech_special_load_map_parents);
-  BTECH_LOAD("map hexes", btech_special_load_map_hexes);
-  BTECH_LOAD("map slots", btech_special_load_map_slots);
-  BTECH_LOAD("map LOS", btech_special_load_map_los);
+  BTECH_LOAD_CONTEXT("required rows", btech_special_validate_required_rows);
+  BTECH_LOAD_CONTEXT("map parents", btech_special_load_map_parents);
+  BTECH_LOAD_CONTEXT("map hexes", btech_special_load_map_hexes);
+  BTECH_LOAD_CONTEXT("map slots", btech_special_load_map_slots);
+  BTECH_LOAD_CONTEXT("map LOS", btech_special_load_map_los);
   BTECH_LOAD("map child counts", btech_special_validate_map_child_counts);
-  BTECH_LOAD("map objects", btech_special_load_map_objects);
-  BTECH_LOAD("map bits", btech_special_load_map_bits);
-  BTECH_LOAD("mech parents", btech_special_load_mech_parents);
-  BTECH_LOAD("mech sections", btech_special_load_mech_sections);
-  BTECH_LOAD("mech criticals", btech_special_load_mech_criticals);
-  BTECH_LOAD("mech positions", btech_special_load_mech_positions);
-  BTECH_LOAD("mech bays", btech_special_load_mech_bays);
-  BTECH_LOAD("mech turrets", btech_special_load_mech_turrets);
-  BTECH_LOAD("mech C3", btech_special_load_mech_c3);
-  BTECH_LOAD("mech C3 nodes", btech_special_load_mech_c3_nodes);
-  BTECH_LOAD("mech tics", btech_special_load_mech_tics);
-  BTECH_LOAD("mech frequencies", btech_special_load_mech_frequencies);
-  BTECH_LOAD("mech runtime", btech_special_load_mech_runtime);
-  BTECH_LOAD("mech unit auxiliary", btech_special_load_mech_unit_aux);
-  BTECH_LOAD("mech runtime auxiliary", btech_special_load_mech_runtime_unused);
-  BTECH_LOAD("mech stagger damage", btech_special_load_mech_stagger_damage);
-  BTECH_LOAD("mech repair consoles", btech_special_load_mechrep);
-  BTECH_LOAD("turrets", btech_special_load_turrets);
-  BTECH_LOAD("turret tics", btech_special_load_turret_tics);
-  BTECH_LOAD("autopilots", btech_special_load_autopilots);
-  BTECH_LOAD("autopilot commands", btech_special_load_autopilot_commands);
-  BTECH_LOAD("autopilot paths", btech_special_load_autopilot_path);
-  BTECH_LOAD("repair events", btech_special_load_repair_events);
+  BTECH_LOAD_CONTEXT("map objects", btech_special_load_map_objects);
+  BTECH_LOAD_CONTEXT("map bits", btech_special_load_map_bits);
+  BTECH_LOAD_CONTEXT("mech parents", btech_special_load_mech_parents);
+  BTECH_LOAD_CONTEXT("mech sections", btech_special_load_mech_sections);
+  BTECH_LOAD_CONTEXT("mech criticals", btech_special_load_mech_criticals);
+  BTECH_LOAD_CONTEXT("mech positions", btech_special_load_mech_positions);
+  BTECH_LOAD_CONTEXT("mech bays", btech_special_load_mech_bays);
+  BTECH_LOAD_CONTEXT("mech turrets", btech_special_load_mech_turrets);
+  BTECH_LOAD_CONTEXT("mech C3", btech_special_load_mech_c3);
+  BTECH_LOAD_CONTEXT("mech C3 nodes", btech_special_load_mech_c3_nodes);
+  BTECH_LOAD_CONTEXT("mech tics", btech_special_load_mech_tics);
+  BTECH_LOAD_CONTEXT("mech frequencies", btech_special_load_mech_frequencies);
+  BTECH_LOAD_CONTEXT("mech runtime", btech_special_load_mech_runtime);
+  BTECH_LOAD_CONTEXT("mech unit auxiliary", btech_special_load_mech_unit_aux);
+  BTECH_LOAD_CONTEXT("mech runtime auxiliary",
+                     btech_special_load_mech_runtime_unused);
+  BTECH_LOAD_CONTEXT("mech stagger damage",
+                     btech_special_load_mech_stagger_damage);
+  BTECH_LOAD_CONTEXT("mech repair consoles", btech_special_load_mechrep);
+  BTECH_LOAD_CONTEXT("turrets", btech_special_load_turrets);
+  BTECH_LOAD_CONTEXT("turret tics", btech_special_load_turret_tics);
+  BTECH_LOAD_CONTEXT("autopilots", btech_special_load_autopilots);
+  BTECH_LOAD_CONTEXT("autopilot commands",
+                     btech_special_load_autopilot_commands);
+  BTECH_LOAD_CONTEXT("autopilot paths", btech_special_load_autopilot_path);
+  BTECH_LOAD_CONTEXT("repair events", btech_special_load_repair_events);
+#undef BTECH_LOAD_CONTEXT
 #undef BTECH_LOAD
   return 0;
 }
 
 /* Open the completed core snapshot for the post-core BTech restoration step. */
-int btech_persistence_load_special_state_path(const char *path) {
+int btech_persistence_load_special_state_path(BtechContext *context,
+                                              const char *path) {
   sqlite3 *sqlite;
   int result;
 
   sqlite = NULL;
   result = -1;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-    log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",
+    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
               "Cannot open SQLite BTech state from %s: %s", (char *)path,
               sqlite ? sqlite3_errmsg(sqlite) : strerror(errno));
-  } else if (btech_special_load_all(sqlite) < 0) {
-    log_error(btech_context_active()->log, LOG_ALWAYS, "BTP", "FAIL",
+  } else if (btech_special_load_all(sqlite, context) < 0) {
+    log_error(context->log, LOG_ALWAYS, "BTP", "FAIL",
               "Invalid or incomplete SQLite BTech state in %s: %s",
               (char *)path, sqlite3_errmsg(sqlite));
   } else {
@@ -4001,31 +4054,6 @@ int btech_persistence_load_special_state_path(const char *path) {
 }
 
 #ifdef BT_ADVANCED_ECON
-
-/* One in-memory price array and the first part ID it represents. */
-typedef struct btech_economy_cost_set BTECH_ECONOMY_COST_SET;
-struct btech_economy_cost_set {
-  unsigned long long *costs;
-  size_t count;
-  int first_part;
-};
-
-extern unsigned long long int specialcost[SPECIALCOST_SIZE];
-extern unsigned long long int ammocost[AMMOCOST_SIZE];
-extern unsigned long long int weapcost[WEAPCOST_SIZE];
-extern unsigned long long int cargocost[CARGOCOST_SIZE];
-extern unsigned long long int bombcost[BOMBCOST_SIZE];
-extern char *part_figure_out_name(int part);
-extern int temp_brand_flag;
-
-/* Each array corresponds to one contiguous range of canonical part IDs. */
-static BTECH_ECONOMY_COST_SET economy_cost_sets[] = {
-    {specialcost, SPECIALCOST_SIZE, SPECIAL_BASE_INDEX},
-    {ammocost, AMMOCOST_SIZE, AMMO_BASE_INDEX},
-    {weapcost, WEAPCOST_SIZE, WEAPON_BASE_INDEX},
-    {cargocost, CARGOCOST_SIZE, CARGO_BASE_INDEX},
-    {bombcost, BOMBCOST_SIZE, BOMB_BASE_INDEX},
-};
 
 /* Execute a statement that does not return rows. */
 static int btech_sqlite_exec(sqlite3 *sqlite, const char *sql) {
@@ -4113,32 +4141,30 @@ static int btech_parse_cost(const unsigned char *text,
 }
 
 /* Return an unbranded canonical name without needing runtime name hashes. */
-static const char *btech_part_name(int part) {
-  const char *item_name;
-  int saved_brand_flag;
-
-  saved_brand_flag = temp_brand_flag;
-  temp_brand_flag = 0;
-  item_name = part_figure_out_name(part);
-  temp_brand_flag = saved_brand_flag;
-  return item_name;
+static const char *btech_part_name(const ServerConfiguration *configuration,
+                                   int part,
+                                   char buffer[static BTECH_TEXT_CAPACITY]) {
+  return part_figure_out_name(configuration, part, 0, buffer);
 }
 
 /* Resolve an unbranded canonical name without needing runtime name hashes. */
-static int btech_part_from_name(const char *item_name, int *part) {
-  BTECH_ECONOMY_COST_SET *cost_set;
+static int btech_part_from_name(BtechContext *btech, const char *item_name,
+                                int *part) {
+  BtechPartCostSet cost_sets[BTECH_PART_COST_SET_COUNT];
+  BtechPartCostSet *cost_set;
   const char *candidate;
   size_t index;
   size_t item_index;
   int candidate_part;
+  char candidate_name[BTECH_TEXT_CAPACITY];
 
-  for (index = 0;
-       index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
-       index++) {
-    cost_set = &economy_cost_sets[index];
+  btech_part_cost_sets(btech, cost_sets);
+  for (index = 0; index < BTECH_PART_COST_SET_COUNT; index++) {
+    cost_set = &cost_sets[index];
     for (item_index = 0; item_index < cost_set->count; item_index++) {
       candidate_part = cost_set->first_part + item_index;
-      candidate = btech_part_name(candidate_part);
+      candidate =
+          btech_part_name(btech->configuration, candidate_part, candidate_name);
       if (candidate && !strcmp(item_name, candidate)) {
         *part = candidate_part;
         return 1;
@@ -4149,7 +4175,7 @@ static int btech_part_from_name(const char *item_name, int *part) {
 }
 
 /* Restore sparse named prices, leaving omitted parts at the zero default. */
-static int btech_load_costs(sqlite3 *sqlite) {
+static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   sqlite3_stmt *statement;
   const unsigned char *part_name;
   unsigned long long cost;
@@ -4167,13 +4193,14 @@ static int btech_load_costs(sqlite3 *sqlite) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       part_name = sqlite3_column_text(statement, 0);
-      if (!part_name || !btech_part_from_name((const char *)part_name, &part)) {
+      if (!part_name ||
+          !btech_part_from_name(btech, (const char *)part_name, &part)) {
         skipped++;
       } else if (btech_parse_cost(sqlite3_column_text(statement, 1), &cost) <
                  0) {
         result = -1;
       } else {
-        SetPartCost(part, cost);
+        btech_part_cost_set(btech, part, cost);
       }
     }
     if (result == 0 && step != SQLITE_DONE)
@@ -4181,7 +4208,7 @@ static int btech_load_costs(sqlite3 *sqlite) {
   }
   sqlite3_finalize(statement);
   if (skipped)
-    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "INFO",
+    log_error(btech->log, LOG_ALWAYS, "ECO", "INFO",
               "Ignored %d SQLite economy rows for parts unavailable in this "
               "build.",
               skipped);
@@ -4190,24 +4217,20 @@ static int btech_load_costs(sqlite3 *sqlite) {
 
 /* Restore economy prices from the SQLite game database. */
 static int btech_persistence_load_economy(sqlite3 *sqlite,
-                                          PersistenceContext *persistence) {
+                                          PersistenceContext *persistence,
+                                          void *extension_context) {
+  BtechContext *btech = extension_context;
   (void)persistence;
-  size_t index;
   int exists;
   int has_item_name;
 
-  for (index = 0;
-       index < sizeof(economy_cost_sets) / sizeof(economy_cost_sets[0]);
-       index++)
-    memset(economy_cost_sets[index].costs, 0,
-           economy_cost_sets[index].count *
-               sizeof(*economy_cost_sets[index].costs));
+  btech_part_costs_reset(btech);
 
   exists = 0;
   if (btech_economy_table_exists(sqlite, &exists) < 0)
     return -1;
   if (!exists) {
-    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "FAIL",
+    log_error(btech->log, LOG_ALWAYS, "ECO", "FAIL",
               "SQLite game database lacks required btech_economy_costs data.");
     return -1;
   }
@@ -4216,26 +4239,30 @@ static int btech_persistence_load_economy(sqlite3 *sqlite,
   if (btech_economy_table_has_item_name(sqlite, &has_item_name) < 0)
     return -1;
   if (!has_item_name) {
-    log_error(btech_context_active()->log, LOG_ALWAYS, "ECO", "FAIL",
+    log_error(btech->log, LOG_ALWAYS, "ECO", "FAIL",
               "SQLite economy data lacks required item_name schema.");
     return -1;
   }
 
-  return btech_load_costs(sqlite);
+  return btech_load_costs(sqlite, btech);
 }
 
 /* Write non-default advanced-economy prices in the core snapshot transaction.
  */
 static int btech_persistence_store_economy(sqlite3 *sqlite,
-                                           PersistenceContext *persistence) {
+                                           PersistenceContext *persistence,
+                                           void *extension_context) {
   (void)persistence;
-  BTECH_ECONOMY_COST_SET *cost_set;
+  BtechContext *btech = extension_context;
+  BtechPartCostSet cost_sets[BTECH_PART_COST_SET_COUNT];
+  BtechPartCostSet *cost_set;
   sqlite3_stmt *statement;
   const char *part_name;
   int part;
   size_t index;
   size_t item_index;
   char cost[32];
+  char generated_name[BTECH_TEXT_CAPACITY];
   int length;
   int result;
 
@@ -4251,15 +4278,14 @@ static int btech_persistence_store_economy(sqlite3 *sqlite,
     return -1;
 
   result = 0;
-  for (index = 0; result == 0 && index < sizeof(economy_cost_sets) /
-                                             sizeof(economy_cost_sets[0]);
-       index++) {
-    cost_set = &economy_cost_sets[index];
+  btech_part_cost_sets(btech, cost_sets);
+  for (index = 0; result == 0 && index < BTECH_PART_COST_SET_COUNT; index++) {
+    cost_set = &cost_sets[index];
     for (item_index = 0; item_index < cost_set->count; item_index++) {
       if (!cost_set->costs[item_index])
         continue;
       part = cost_set->first_part + item_index;
-      part_name = btech_part_name(part);
+      part_name = btech_part_name(btech->configuration, part, generated_name);
       length =
           snprintf(cost, sizeof(cost), "%llu", cost_set->costs[item_index]);
       if (!part_name || length < 0 || (size_t)length >= sizeof(cost) ||
@@ -4279,16 +4305,18 @@ static int btech_persistence_store_economy(sqlite3 *sqlite,
 #endif
 
 /* Register BTech's data tables without making core MUX depend on BTech data. */
-int btech_persistence_register(PersistenceContext *context) {
+int btech_persistence_register(PersistenceContext *context,
+                               BtechContext *btech) {
   if (persistence_register_sqlite_extension(
           context, "btech_special_state",
           btech_persistence_preload_special_state,
-          btech_persistence_store_special_state) < 0)
+          btech_persistence_store_special_state, btech) < 0)
     return -1;
 #ifdef BT_ADVANCED_ECON
-  return persistence_register_sqlite_extension(context, "btech_economy",
-                                               btech_persistence_load_economy,
-                                               btech_persistence_store_economy);
+  btech_part_costs_initialize(btech);
+  return persistence_register_sqlite_extension(
+      context, "btech_economy", btech_persistence_load_economy,
+      btech_persistence_store_economy, btech);
 #else
   return 0;
 #endif

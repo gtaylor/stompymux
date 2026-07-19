@@ -4,20 +4,25 @@
 
 #include <string.h>
 
+#include "mux/commands/command_runtime.h"
 #include "mux/database/db.h"
-#include "mux/server/mux_server.h"
 #include "mux/support/alloc.h"
 
-bool command_context_initialize(CommandContext *context, MuxServer *server,
-                                DbRef player, DbRef enactor,
+bool command_context_initialize(CommandContext *context,
+                                CommandRuntime *runtime, BtechContext *btech,
+                                ServerLog *log, DbRef player, DbRef enactor,
                                 Descriptor *descriptor, bool interactive) {
   memset(context, 0, sizeof(*context));
-  context->server = server;
-  context->world = &server->world;
-  context->evaluation.world = &server->world;
+  context->runtime = runtime;
+  context->btech = btech;
+  context->log = log;
+  context->world = runtime->world;
+  context->evaluation.log = log;
+  context->evaluation.world = runtime->world;
   context->evaluation.command = context;
   context->match.evaluation = &context->evaluation;
-  context->evaluation.server = server;
+  context->evaluation.runtime = runtime;
+  context->evaluation.btech = btech;
   context->player = player;
   context->enactor = enactor;
   context->descriptor = descriptor;

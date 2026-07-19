@@ -55,14 +55,15 @@ SEEFUNC(blood_see, 101);
 extern float ActualElevation(MAP *map, int x, int y, MECH *mech);
 
 /* Visual methods are hampered by excess woods / water */
-CSEEFUNC(vislight_csee, !(map->sensorflags & (1 << SENSOR_VIS)) &&
-                            !(f & (MECHLOSFLAG_BLOCK | MECHLOSFLAG_FIRE |
-                                   MECHLOSFLAG_SMOKE)) &&
-                            MechLOSFlag_WoodCount(f) < 3 &&
-                            (!t || MechZ(t) >= 0 ||
-                             ActualElevation(getMap(t->mapindex), MechX(t),
-                                             MechY(t), t) >= 0.0 ||
-                             MechLOSFlag_WaterCount(f) < 6));
+CSEEFUNC(
+    vislight_csee,
+    !(map->sensorflags & (1 << SENSOR_VIS)) &&
+        !(f & (MECHLOSFLAG_BLOCK | MECHLOSFLAG_FIRE | MECHLOSFLAG_SMOKE)) &&
+        MechLOSFlag_WoodCount(f) < 3 &&
+        (!t || MechZ(t) >= 0 ||
+         ActualElevation(btech_context_get_map(t->xcode.context, t->mapindex),
+                         MechX(t), MechY(t), t) >= 0.0 ||
+         MechLOSFlag_WaterCount(f) < 6));
 
 /* Liteamp doesn't see into water, thanks to reflections etc */
 CSEEFUNC(liteamp_csee, !(map->sensorflags & (1 << SENSOR_LA)) &&
@@ -91,7 +92,7 @@ CSEEFUNC(electrom_csee, !(map->sensorflags & (1 << SENSOR_EM)) &&
    ground. Period. */
 CSEEFUNC(seismic_csee,
          !(map->sensorflags & (1 << SENSOR_SE)) && t && (!Jumping(m)) &&
-             (btech_context_active()->configuration->btech_seismic_see_stopped
+             (m->xcode.context->configuration->btech_seismic_see_stopped
                   ? 1
                   : (fabsf(MechSpeed(t)) > MP1)) &&
              (((MechMove(m) != MOVE_VTOL) ||

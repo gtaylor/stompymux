@@ -62,8 +62,8 @@ void mech_ood_event(MuxEvent *e) {
   /* Time to hit da ground */
   mech_notify(mech, MECHALL, "Your unit touches down!");
 
-  did_it(BTECH_EVALUATION_CONTEXT, mech->mynum, mech->mynum, 0, NULL, 0, NULL,
-         A_AOODLAND, (char **)NULL, 0);
+  did_it(btech_context_evaluation(mech->xcode.context), mech->mynum,
+         mech->mynum, 0, NULL, 0, NULL, A_AOODLAND, (char **)NULL, 0);
 
   if (MechStatus(mech) & COMBAT_SAFE) {
     /* If we're combat safe, we land regardless, since we're not gonna take any
@@ -79,7 +79,7 @@ void mech_ood_event(MuxEvent *e) {
     mof = -10;
   if (Uncon(mech) || !Started(mech) || Blinded(mech))
     mof = -20;
-  roll = Roll();
+  roll = btech_random_roll(mech->xcode.context);
   roll_needed = MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW
                     ? FindPilotPiloting(mech) - 1
                     : FindSPilotPiloting(mech) + MechPilotSkillBase(mech);
@@ -103,8 +103,8 @@ void mech_ood_event(MuxEvent *e) {
 
   MechCocoon(mech) = 0;
 
-  if (is_in_character(btech_context_active()->database, mech->mynum) &&
-      game_object_location(btech_context_active()->database, MechPilot(mech)) !=
+  if (is_in_character(mech->xcode.context->database, mech->mynum) &&
+      game_object_location(mech->xcode.context->database, MechPilot(mech)) !=
           mech->mynum)
     roll_needed += 99;
 
@@ -160,7 +160,7 @@ void mech_ood_event(MuxEvent *e) {
 
           for (ii = mof; ii < 0; ii++)
 
-            dam += Number(1, 4);
+            dam += btech_random_range(mech->xcode.context, 1, 4);
 
           DamageMech(mech, mech, 0, -1, i, 0, 0, dam, -1, -1, 0, 0, 0, 0);
 
@@ -230,21 +230,30 @@ void initiate_ood(DbRef player, MECH *mech, char *buffer) {
   char *args[4];
   int x, y, z = ORBIT_Z, argc;
 
-  DOCHECK((argc = mech_parseattributes(buffer, args, 3)) < 2,
-          "Invalid attributes!");
-  DOCHECK(Readnum(x, args[0]), "Invalid number! (x)");
-  DOCHECK(Readnum(y, args[1]), "Invalid number! (y)");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (argc = mech_parseattributes(buffer, args, 3)) < 2,
+                  "Invalid attributes!");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(x, args[0]),
+                  "Invalid number! (x)");
+  DOCHECK_CONTEXT(mech->xcode.context, Readnum(y, args[1]),
+                  "Invalid number! (y)");
   if (argc == 3)
-    DOCHECK(Readnum(z, args[2]), "Invalid number! (z)");
-  DOCHECK(OODing(mech), "OOD already in progress!");
+    DOCHECK_CONTEXT(mech->xcode.context, Readnum(z, args[2]),
+                    "Invalid number! (z)");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "OOD already in progress!");
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  DOCHECK(MechX(mech) != x || MechY(mech) != y, "Invalid co-ordinates!");
-  DOCHECK(Fallen(mech), "You'll have to get up first.");
-  DOCHECK(Digging(mech), "You're too busy digging in.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechX(mech) != x || MechY(mech) != y,
+                  "Invalid co-ordinates!");
+  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech),
+                  "You'll have to get up first.");
+  DOCHECK_CONTEXT(mech->xcode.context, Digging(mech),
+                  "You're too busy digging in.");
   MechZ(mech) = z;
   MechFZ(mech) = ZSCALE * MechZ(mech);
   MarkForLOSUpdate(mech);
-  notify(BTECH_EVALUATION_CONTEXT, player, "OOD initiated.");
+  notify(btech_context_evaluation(mech->xcode.context), player,
+         "OOD initiated.");
   if (Evading(mech)) {
     MechStatus2(mech) &= ~EVADING;
   }

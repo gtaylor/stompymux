@@ -131,13 +131,14 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
     mapobj_del(map, o->x, o->y, TYPE_MINE);
     break;
   case MINE_TRIGGER:
-    SendTrigger(tprintf("#%ld %s activated trigger at %d,%d.", mech->mynum,
-                        GetMechID(mech), o->x, o->y));
+    SendTrigger(mech->xcode.context,
+                tprintf("#%ld %s activated trigger at %d,%d.", mech->mynum,
+                        mech_display_id(mech).text, o->x, o->y));
 
     // Trigger the unit's AMECHDEST attribute.
     if (mech->mynum > 0)
-      did_it(BTECH_EVALUATION_CONTEXT, mech->mynum, mech->mynum, 0, NULL, 0,
-             NULL, A_AMINETRIGGER, (char **)NULL, 0);
+      did_it(btech_context_evaluation(mech->xcode.context), mech->mynum,
+             mech->mynum, 0, NULL, 0, NULL, A_AMINETRIGGER, (char **)NULL, 0);
 
     return;
   case MINE_VIBRA:
@@ -229,7 +230,7 @@ static void possible_mine_explosion(MECH *mech, MAP *map, int x, int y,
 }
 
 void possible_mine_poof(MECH *mech, int reason) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int x = MechX(mech);
   int y = MechY(mech);
 
@@ -243,7 +244,7 @@ void possible_mine_poof(MECH *mech, int reason) {
 }
 
 void possibly_remove_mines(MECH *mech, int x, int y) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!map)
     return;
@@ -256,7 +257,7 @@ void possibly_remove_mines(MECH *mech, int x, int y) {
      all traces of mines in the hex */
   /* For now, we are commenting this out. We need a better way to handle mines
    * Well, just trigger mines really. Frontiers uses them for Map triggers */
-  /*	if(Roll() <= 4) {
+  /*	if(btech_random_roll(mech->xcode.context) <= 4) {
                   if(mapobj_del(map, x, y, TYPE_MINE)) {
                           recalculate_minefields(map);
                   }
@@ -329,10 +330,12 @@ void map_add_mine(DbRef player, void *data, char *buffer) {
   if (!map)
     return;
 
-#define READINT(from, to) DOCHECK(Readnum(to, from), "Invalid number!")
+#define READINT(from, to)                                                      \
+  DOCHECK_CONTEXT(map->xcode.context, Readnum(to, from), "Invalid number!")
 
   argc = mech_parseattributes(buffer, args, 6);
-  DOCHECK(argc < 4 || argc > 5, "Invalid arguments!");
+  DOCHECK_CONTEXT(map->xcode.context, argc < 4 || argc > 5,
+                  "Invalid arguments!");
   READINT(args[0], x);
   READINT(args[1], y);
   READINT(args[3], str);
@@ -340,9 +343,11 @@ void map_add_mine(DbRef player, void *data, char *buffer) {
   if (argc == 5)
     READINT(args[4], extra);
 
-  DOCHECK((type = compare_array(mine_type_names, args[2])) < 0,
-          "Invalid mine type!");
-  DOCHECK(
+  DOCHECK_CONTEXT(map->xcode.context,
+                  (type = compare_array(mine_type_names, args[2])) < 0,
+                  "Invalid mine type!");
+  DOCHECK_CONTEXT(
+      map->xcode.context,
       !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
       "X,Y out of range!");
 
@@ -355,14 +360,14 @@ void map_add_mine(DbRef player, void *data, char *buffer) {
   foo.obj = player;
   add_mapobj(map, &map->mapobj[TYPE_MINE], &foo, 1);
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "%s mine added to (%d,%d) (strength: %d / extra: %d)",
                 mine_type_names[type], x, y, str, extra);
   recalculate_minefields(map);
 }
 
 void explode_mines(MECH *mech, int chn) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   mapobj *o, *o2;
   int count = 0;
 
@@ -381,21 +386,23 @@ void explode_mines(MECH *mech, int chn) {
 }
 
 void show_mines_in_hex(DbRef player, MECH *mech, float range, int x, int y) {
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   mapobj *o;
 
-  DOCHECK(!is_mine_hex(map, x, y),
-          "You see nothing else of interest in the hex, either.");
+  DOCHECK_CONTEXT(mech->xcode.context, !is_mine_hex(map, x, y),
+                  "You see nothing else of interest in the hex, either.");
 
   for (o = map->mapobj[TYPE_MINE]; o; o = o->next)
     if (o->x == x && o->y == y)
       break;
 
-  DOCHECK(!o, "You see nothing else of interest in the hex, either.");
-  DOCHECK(Number(2, 9) < ((int)range),
-          "You see nothing else of interest in the hex, either.");
-  DOCHECK(!MadePerceptionRoll(mech, 0),
-          "You see nothing else of interest in the hex, either.");
+  DOCHECK_CONTEXT(mech->xcode.context, !o,
+                  "You see nothing else of interest in the hex, either.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  btech_random_range(mech->xcode.context, 2, 9) < ((int)range),
+                  "You see nothing else of interest in the hex, either.");
+  DOCHECK_CONTEXT(mech->xcode.context, !MadePerceptionRoll(mech, 0),
+                  "You see nothing else of interest in the hex, either.");
   mech_notify(mech, MECHALL,
               "Small bomblets litter the hex, interesting... You vaguely "
               "recall them from some class or other.");

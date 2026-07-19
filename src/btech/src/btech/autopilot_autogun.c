@@ -64,7 +64,8 @@ int SearchLightInRange(MECH *mech, MAP *map) {
   for (i = 0; i < map->first_free; i++) {
 
     /* No units on the map */
-    if (!(target = FindObjectsData(map->mechsOnMap[i])))
+    if (!(target = btech_context_find_object(mech->xcode.context,
+                                             map->mechsOnMap[i])))
       continue;
 
     /* The unit doesn't have slite on */
@@ -148,11 +149,11 @@ void auto_sensor_event(AUTO *autopilot) {
   float trng;
   int set = 0;
 
-  if (!is_good_obj(btech_context_active()->database, autopilot->mymechnum)) {
+  if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {
     dprintk("mymechnum is bad!");
     return;
   }
-  if (!is_good_obj(btech_context_active()->database, autopilot->mynum)) {
+  if (!is_good_obj(autopilot->xcode.context->database, autopilot->mynum)) {
     dprintk("mynum is bad!");
     return;
   }
@@ -171,7 +172,8 @@ void auto_sensor_event(AUTO *autopilot) {
     return;
   }
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Mech is dead so stop trying to shoot things */
@@ -192,7 +194,7 @@ void auto_sensor_event(AUTO *autopilot) {
     return;
 
   /* Get the map */
-  if (!(map = getMap(mech->mapindex))) {
+  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
 
     /* Bad Map */
     Zombify(autopilot);
@@ -201,7 +203,7 @@ void auto_sensor_event(AUTO *autopilot) {
 
   /* Get the target if there is one */
   if (MechTarget(mech) > 0)
-    target = getMech(MechTarget(mech));
+    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
 
   /* Checks to see if there is slite, and what types of vis
    * and which visual sensor (V or L) to use */
@@ -410,7 +412,8 @@ static int auto_generic_compare(void *a, void *b, void *token) {
 /*
  * How we score a given weapon based on range, heat and damage
  */
-int auto_calc_weapon_score(int weapon_db_number, int range) {
+static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
+                                  int range) {
 
   int weapon_score;
   int range_score;
@@ -420,8 +423,6 @@ int auto_calc_weapon_score(int weapon_db_number, int range) {
 
   int weapon_damage;
   int weapon_heat;
-
-  int i;
 
   /* Simple Calc */
 
@@ -467,6 +468,8 @@ int auto_calc_weapon_score(int weapon_db_number, int range) {
 
   /* Get the damage for the weapon */
   if (IsMissile(weapon_db_number)) {
+    const MissileHitEntry *entry = missile_hit_registry_find_weapon(
+        &context->missile_hits, weapon_db_number);
 
     /* Its a missile weapon so lookup in the Missile table get the max
      * number of missiles it can hit with, and multiply by the damage
@@ -474,13 +477,9 @@ int auto_calc_weapon_score(int weapon_db_number, int range) {
     /* To make it more fair going to use the avg # of missile hits
      * which is when they would roll a 7, which becomes slot #
      * 5 */
-    for (i = 0; MissileHitTable[i].key != -1; i++) {
-      if (MissileHitTable[i].key == weapon_db_number) {
-        weapon_damage = MissileHitTable[i].num_missiles[5] *
-                        MechWeapons[weapon_db_number].damage;
-        break;
-      }
-    }
+    if (entry != nullptr)
+      weapon_damage =
+          entry->num_missiles[5] * MechWeapons[weapon_db_number].damage;
 
   } else {
     weapon_damage = MechWeapons[weapon_db_number].damage;
@@ -528,7 +527,7 @@ void auto_update_profile_event(AUTO *autopilot) {
   /* Basic checks */
   /* some accounting checks. try to prevent some race stuff */
 
-  if (!is_good_obj(btech_context_active()->database, autopilot->mymechnum)) {
+  if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {
     /* most commonly, the mech is a bad memory space.
      * lets not try to access it
      */
@@ -545,7 +544,8 @@ void auto_update_profile_event(AUTO *autopilot) {
     dprintk("ai is bad!");
     return;
   }
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Ok our mech is dead we're done */
@@ -657,8 +657,8 @@ void auto_update_profile_event(AUTO *autopilot) {
       }
 
       /* Score the weapon */
-      temp_weapon_node->range_scores[range] =
-          auto_calc_weapon_score(temp_weapon_node->weapon_db_number, range);
+      temp_weapon_node->range_scores[range] = auto_calc_weapon_score(
+          autopilot->xcode.context, temp_weapon_node->weapon_db_number, range);
 
       /* If RedBlackTree for this range doesn't exist, create it */
       if (autopilot->profile[range] == NULL) {
@@ -909,7 +909,8 @@ void auto_gun_event(AUTO *autopilot) {
   if (!mech || !autopilot)
     return;
 
-  if (!IsMech(mech->mynum) || !IsAuto(autopilot->mynum))
+  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+      !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Ok our mech is dead we're done */
@@ -925,7 +926,7 @@ void auto_gun_event(AUTO *autopilot) {
   }
 
   /* Not on map - so lets calm down */
-  if (!(map = getMap(mech->mapindex))) {
+  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
     Zombify(autopilot);
     return;
   }
@@ -949,7 +950,8 @@ void auto_gun_event(AUTO *autopilot) {
   /* First check to make sure we have a valid current target */
   if (autopilot->target > -1) {
 
-    if (!(target = getMech(autopilot->target))) {
+    if (!(target =
+              btech_context_get_mech(mech->xcode.context, autopilot->target))) {
 
       /* ok its not a valid target reset */
       autopilot->target = -1;
@@ -1011,7 +1013,7 @@ void auto_gun_event(AUTO *autopilot) {
       if (i != mech->mapnumber && (j = map->mechsOnMap[i]) > 0) {
 
         /* Is it a valid unit ? */
-        if (!(target = getMech(j)))
+        if (!(target = btech_context_get_mech(mech->xcode.context, j)))
           continue;
 
         /* Score the target */
@@ -1145,7 +1147,8 @@ void auto_gun_event(AUTO *autopilot) {
                     autopilot->target, autopilot->target_score);
 
   /* Setup the current target */
-  if (!(target = getMech(autopilot->target))) {
+  if (!(target =
+            btech_context_get_mech(mech->xcode.context, autopilot->target))) {
 
     /* There were no valid targets so
      * rerun autogun */
@@ -1214,7 +1217,7 @@ void auto_gun_event(AUTO *autopilot) {
       if (i != mech->mapnumber && (j = map->mechsOnMap[i]) > 0) {
 
         /* Is it a valid unit ? */
-        if (!(target = getMech(j)))
+        if (!(target = btech_context_get_mech(mech->xcode.context, j)))
           continue;
 
         if (Destroyed(target))
@@ -1547,7 +1550,8 @@ void auto_gun_event(AUTO *autopilot) {
   /* Get our current target */
   /* Check to make sure we didn't kill it with physical attack
    * or something */
-  if (!(target = getMech(autopilot->target))) {
+  if (!(target =
+            btech_context_get_mech(mech->xcode.context, autopilot->target))) {
 
     /* There were no valid targets so
      * rerun autogun */
@@ -2025,7 +2029,8 @@ void auto_gun_event(AUTO *autopilot) {
         /* Check to see if we need to turn to face the guy by
          * generating our target hex and seeing if we are in that
          * hex then face the bad guy */
-        if ((target = getMech(autopilot->target)) &&
+        if ((target = btech_context_get_mech(mech->xcode.context,
+                                             autopilot->target)) &&
             (!Destroyed(target) && (target->mapindex == mech->mapindex))) {
 
           /* Generate the target hex */

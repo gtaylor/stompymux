@@ -2,10 +2,11 @@
 
 #include "mux/commands/command.h"
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/database/attrs.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -29,7 +30,7 @@ void do_switch(CommandInvocation *invocation) {
     return;
 
   if (key == SWITCH_DEFAULT) {
-    if (invocation->context->server->configuration->switch_df_all)
+    if (invocation->context->world->configuration->switch_df_all)
       key = SWITCH_ANY;
     else
       key = SWITCH_ONE;
@@ -47,8 +48,8 @@ void do_switch(CommandInvocation *invocation) {
          &str, cargs, ncargs);
     *bp = '\0';
     if (wild_match(buff, expr)) {
-      wait_que(invocation->context->server->commands, player, cause, 0, NOTHING,
-               0, args[a + 1], cargs, ncargs,
+      wait_que(invocation->context->runtime->commands, player, cause, 0,
+               NOTHING, 0, args[a + 1], cargs, ncargs,
                invocation->context->evaluation.registers);
       if (key == SWITCH_ONE) {
         free_lbuf(buff);
@@ -59,7 +60,7 @@ void do_switch(CommandInvocation *invocation) {
   }
   free_lbuf(buff);
   if ((a < nargs) && !any && args[a])
-    wait_que(invocation->context->server->commands, player, cause, 0, NOTHING,
+    wait_que(invocation->context->runtime->commands, player, cause, 0, NOTHING,
              0, args[a], cargs, ncargs,
              invocation->context->evaluation.registers);
 }
@@ -69,7 +70,7 @@ void do_addcommand(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *name = invocation->first;
   char *command = invocation->second;
-  CommandRegistry *registry = &invocation->context->server->command_registry;
+  CommandRegistry *registry = invocation->context->runtime->command_registry;
   CMDENT *old, *cmd;
   ADDENT *add, *nextp;
 
@@ -159,7 +160,7 @@ void do_listcommands(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *name = invocation->first;
-  CommandRegistry *registry = &invocation->context->server->command_registry;
+  CommandRegistry *registry = invocation->context->runtime->command_registry;
   CMDENT *old;
   ADDENT *nextp;
   int didit = 0;
@@ -223,7 +224,7 @@ void do_delcommand(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *name = invocation->first;
   char *command = invocation->second;
-  CommandRegistry *registry = &invocation->context->server->command_registry;
+  CommandRegistry *registry = invocation->context->runtime->command_registry;
   CMDENT *old, *cmd;
   ADDENT *prev = nullptr, *nextp;
 

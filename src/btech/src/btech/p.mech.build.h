@@ -11,10 +11,16 @@
 
 #pragma once
 
+typedef struct BtechContext BtechContext;
+
+typedef struct ArmorSectionAbbreviation {
+  char text[4];
+} ArmorSectionAbbreviation;
+
 /* mech.build.c */
-int CheckData(DbRef player, void *data);
 void FillDefaultCriticals(MECH *mech, int index);
-char *ShortArmorSectionString(char type, char mtype, int loc);
+ArmorSectionAbbreviation armor_section_abbreviation(char type, char mtype,
+                                                    int loc);
 int ArmorSectionFromString(char type, char mtype, char *string);
-int WeaponIndexFromString(char *string);
-int FindSpecialItemCodeFromString(char *buffer);
+int WeaponIndexFromString(BtechContext *context, char *string);
+int FindSpecialItemCodeFromString(BtechContext *context, char *buffer);

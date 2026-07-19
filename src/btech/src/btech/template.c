@@ -45,6 +45,7 @@
 #include "p.mech.partnames.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
+#include "p.template.h"
 
 #define MODE_UNKNOWN 0
 #define MODE_NORMAL 1
@@ -137,7 +138,7 @@ char *internals[] = {"ShoulderOrHip",
                      NULL};
 
 #ifdef BT_PART_WEIGHTS
-int internalsweight[] = {
+const int internalsweight[] = {
     102,  /* ShoulderOrHip */
     102,  /* UpperActuator */
     102,  /* LowerActuator */
@@ -628,7 +629,7 @@ char *cargo[] = {"Ammo_LBX2",
                  NULL};
 
 #ifdef BT_PART_WEIGHTS
-int cargoweight[] = {
+const int cargoweight[] = {
     1024, /* Ammo_LBX2 */
     1024, /* Ammo_LBX5_LBX */
     1024, /* Ammo_LBX10_LBX */
@@ -1068,14 +1069,6 @@ int cargoweight[] = {
 };
 #endif /* BT_PART_WEIGHTS */
 
-#ifdef BT_ADVANCED_ECON
-unsigned long long int specialcost[SPECIALCOST_SIZE] = {0};
-unsigned long long int ammocost[AMMOCOST_SIZE] = {0};
-unsigned long long int weapcost[WEAPCOST_SIZE] = {0};
-unsigned long long int cargocost[CARGOCOST_SIZE] = {0};
-unsigned long long int bombcost[BOMBCOST_SIZE] = {0};
-#endif
-
 int count_special_items() {
   int i = 0;
 
@@ -1213,20 +1206,18 @@ int compare_array(char *list[], char *command) {
 }
 
 char *one_arg(char *argument, char *first_arg) {
-  if (isspace(*argument))
-    for (argument++; isspace(*argument); argument++)
-      ;
+  while (*argument && isspace((unsigned char)*argument))
+    argument++;
 
-  while (*argument && !isspace(*argument))
+  while (*argument && !isspace((unsigned char)*argument))
     *(first_arg++) = *(argument++);
   *first_arg = '\0';
   return argument;
 }
 
 char *one_arg_delim(char *argument, char *first_arg) {
-  if (isspace(*argument) || (*argument == '|'))
-    for (argument++; (isspace(*argument) || (*argument == '|')); argument++)
-      ;
+  while (*argument && (isspace((unsigned char)*argument) || *argument == '|'))
+    argument++;
 
   while (*argument && (!(*argument == '|')))
     *(first_arg++) = *(argument++);
@@ -1235,122 +1226,118 @@ char *one_arg_delim(char *argument, char *first_arg) {
   return argument;
 }
 
-char *BuildBitString(char *bitdescs[], int data) {
-  static char crit[MAX_STRING_LENGTH];
+char *build_bit_string(char *bitdescs[], int data, char *buffer) {
   int bv;
   int x;
 
-  crit[0] = 0;
+  buffer[0] = 0;
   for (x = 0; bitdescs[x]; x++) {
     bv = 1U << x;
     if (data & bv) {
-      strcat(crit, bitdescs[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs[x]);
+      strcat(buffer, " ");
     }
   }
-  if ((x = strlen(crit)) > 0 && crit[x - 1] == ' ')
-    crit[x - 1] = '\0';
-  return crit;
+  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ')
+    buffer[x - 1] = '\0';
+  return buffer;
 }
 
-char *BuildBitString2(char *bitdescs[], char *bitdescs2[], int data,
-                      int data2) {
-  static char crit[MAX_STRING_LENGTH];
+char *build_bit_string2(char *bitdescs[], char *bitdescs2[], int data,
+                        int data2, char *buffer) {
   int bv;
   int x;
 
-  crit[0] = 0;
+  buffer[0] = 0;
 
   for (x = 0; bitdescs[x]; x++) {
     bv = 1U << x;
     if (data & bv) {
-      strcat(crit, bitdescs[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs[x]);
+      strcat(buffer, " ");
     }
   }
 
   for (x = 0; bitdescs2[x]; x++) {
     bv = 1U << x;
     if (data2 & bv) {
-      strcat(crit, bitdescs2[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs2[x]);
+      strcat(buffer, " ");
     }
   }
 
-  if ((x = strlen(crit)) > 0 && crit[x - 1] == ' ') {
-    crit[x - 1] = '\0';
+  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ') {
+    buffer[x - 1] = '\0';
   }
 
-  return crit;
+  return buffer;
 }
 
-char *BuildBitStringwdelim2(char *bitdescs[], char *bitdescs2[], int data,
-                            int data2) {
-  static char crit[MAX_STRING_LENGTH];
+char *build_bit_string_delimited2(char *bitdescs[], char *bitdescs2[], int data,
+                                  int data2, char *buffer) {
   int bv;
   int x;
 
-  crit[0] = 0;
+  buffer[0] = 0;
 
   for (x = 0; bitdescs[x]; x++) {
     bv = 1U << x;
     if (data & bv) {
-      strcat(crit, bitdescs[x]);
-      strcat(crit, "|");
+      strcat(buffer, bitdescs[x]);
+      strcat(buffer, "|");
     }
   }
 
   for (x = 0; bitdescs2[x]; x++) {
     bv = 1U << x;
     if (data2 & bv) {
-      strcat(crit, bitdescs2[x]);
-      strcat(crit, "|");
+      strcat(buffer, bitdescs2[x]);
+      strcat(buffer, "|");
     }
   }
 
-  if ((x = strlen(crit)) > 0 && crit[x - 1] == '|') {
-    crit[x - 1] = '\0';
+  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == '|') {
+    buffer[x - 1] = '\0';
   }
 
-  return crit;
+  return buffer;
 }
 
-char *BuildBitString3(char *bitdescs[], char *bitdescs2[], char *bitdescs3[],
-                      int data, int data2, int data3) {
-  static char crit[MAX_STRING_LENGTH];
+char *build_bit_string3(char *bitdescs[], char *bitdescs2[], char *bitdescs3[],
+                        int data, int data2, int data3, char *buffer) {
   int bv;
   int x;
 
-  crit[0] = 0;
+  buffer[0] = 0;
 
   for (x = 0; bitdescs[x]; x++) {
     bv = 1U << x;
     if (data & bv) {
-      strcat(crit, bitdescs[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs[x]);
+      strcat(buffer, " ");
     }
   }
 
   for (x = 0; bitdescs2[x]; x++) {
     bv = 1U << x;
     if (data2 & bv) {
-      strcat(crit, bitdescs2[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs2[x]);
+      strcat(buffer, " ");
     }
   }
 
   for (x = 0; bitdescs3[x]; x++) {
     bv = 1U << x;
     if (data3 & bv) {
-      strcat(crit, bitdescs3[x]);
-      strcat(crit, " ");
+      strcat(buffer, bitdescs3[x]);
+      strcat(buffer, " ");
     }
   }
 
-  if ((x = strlen(crit)) > 0 && crit[x - 1] == ' ')
-    crit[x - 1] = '\0';
+  if ((x = strlen(buffer)) > 0 && buffer[x - 1] == ' ')
+    buffer[x - 1] = '\0';
 
-  return crit;
+  return buffer;
 }
 
 #define QDM(a)                                                                 \
@@ -1372,9 +1359,9 @@ static int InvalidVehicleItem(MECH *mech, int x, int y) {
   return 0;
 }
 
-extern int num_def_weapons;
-int internal_count = sizeof(internals) / sizeof(char *) - 1;
-int cargo_count = sizeof(cargo) / sizeof(char *) - 1;
+extern const int num_def_weapons;
+static const int internal_count = sizeof(internals) / sizeof(char *) - 1;
+static const int cargo_count = sizeof(cargo) / sizeof(char *) - 1;
 
 #ifndef CLAN_SUPPORT
 #define CLCH(a)                                                                \
@@ -1385,9 +1372,8 @@ int cargo_count = sizeof(cargo) / sizeof(char *) - 1;
 #else
 #define CLCH(a)                                                                \
   do {                                                                         \
-    if (temp_brand_flag) {                                                     \
-      if ((!btech_context_active()->configuration->btech_parts) ||             \
-          (MechWeapons[a].special & CLAT))                                     \
+    if (brand) {                                                               \
+      if ((!configuration->btech_parts) || (MechWeapons[a].special & CLAT))    \
         return NULL;                                                           \
       else if (MechWeapons[a].special & CLAT)                                  \
         isclan = 1;                                                            \
@@ -1395,55 +1381,64 @@ int cargo_count = sizeof(cargo) / sizeof(char *) - 1;
   } while (0)
 #endif
 
-extern int temp_brand_flag;
-
-static char *part_figure_out_name_sub(int i, int j) {
-  static char buf[MBUF_SIZE] = {0};
+static char *part_figure_out_name_sub(const ServerConfiguration *configuration,
+                                      int i, int j, int brand,
+                                      char buffer[static BTECH_TEXT_CAPACITY]) {
   int isclan = 0;
+  const char *source;
 
   if (!i)
-    return NULL;
+    return nullptr;
   if (IsWeapon(i) && i < I2Weapon(num_def_weapons)) {
     CLCH(Weapon2I(i));
-    return &MechWeapons[Weapon2I(i)].name[(j && !isclan) ? 3 : 0];
+    source = &MechWeapons[Weapon2I(i)].name[(j && !isclan) ? 3 : 0];
+    snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
+    return buffer;
   } else if (IsAmmo(i) && i < I2Ammo(num_def_weapons)) {
     CLCH(Ammo2WeaponI(i));
     if (MechWeapons[Ammo2WeaponI(i)].type != TBEAM &&
         MechWeapons[Ammo2WeaponI(i)].type != THAND &&
         !(MechWeapons[Ammo2WeaponI(i)].special & PCOMBAT)) {
-      snprintf(buf, sizeof(buf), "Ammo_%s",
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "Ammo_%s",
                &MechWeapons[Ammo2WeaponI(i)].name[(j && !isclan) ? 3 : 0]);
-      return buf;
+      return buffer;
     }
-  } else if (!temp_brand_flag) {
+  } else if (!brand) {
     if (IsBomb(i)) {
-      snprintf(buf, sizeof(buf), "Bomb_%s", bomb_name(Bomb2I(i)));
-      return buf;
-    } else if (IsSpecial(i) && i < I2Special(internal_count))
-      return internals[Special2I(i)];
-    else if (IsCargo(i) && i < I2Cargo(cargo_count))
-      return cargo[Cargo2I(i)];
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "Bomb_%s", bomb_name(Bomb2I(i)));
+      return buffer;
+    } else if (IsSpecial(i) && i < I2Special(internal_count)) {
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", internals[Special2I(i)]);
+      return buffer;
+    } else if (IsCargo(i) && i < I2Cargo(cargo_count)) {
+      snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", cargo[Cargo2I(i)]);
+      return buffer;
+    }
   }
-  return NULL;
+  return nullptr;
 }
 
-char *my_shortform(char *buf) {
-  static char buf2[MBUF_SIZE];
-  char *c, *d;
+char *my_shortform(const char *source,
+                   char buffer[static BTECH_TEXT_CAPACITY]) {
+  const char *cursor;
+  char *destination = buffer;
+  char *end = buffer + BTECH_TEXT_CAPACITY - 1;
 
-  if (!buf)
-    return NULL;
-  if (strlen(buf) <= 4 && !strchr(buf, '/'))
-    strcpy(buf2, buf);
+  if (!source)
+    return nullptr;
+  if (strlen(source) <= 4 && !strchr(source, '/'))
+    snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
   else {
-    for (c = buf, d = buf2; *c; c++)
-      if (isdigit(*c) || isupper(*c) || *c == '_')
-        *d++ = *c;
-    *d = 0;
-    if (strlen(buf2) == 1)
-      strcat(d, tprintf("%c", buf[1]));
+    for (cursor = source; *cursor && destination < end; cursor++)
+      if (isdigit(*cursor) || isupper(*cursor) || *cursor == '_')
+        *destination++ = *cursor;
+    *destination = '\0';
+    if (destination == buffer + 1 && source[1] && destination < end) {
+      *destination++ = source[1];
+      *destination = '\0';
+    }
   }
-  return buf2;
+  return buffer;
 }
 
 #undef CLCH
@@ -1453,31 +1448,38 @@ char *my_shortform(char *buf) {
 #define CLCH(a) 3
 #endif
 
-char *part_figure_out_shname(int i) {
-  char buf[MBUF_SIZE] = {0};
+char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]) {
+  char name[BTECH_TEXT_CAPACITY] = {0};
 
   if (!i)
-    return NULL;
-  buf[0] = 0;
+    return nullptr;
   if (IsWeapon(i) && i < I2Weapon(num_def_weapons)) {
-    strcpy(buf, &MechWeapons[Weapon2I(i)].name[CLCH(Weapon2I(i))]);
+    snprintf(name, sizeof(name), "%s",
+             &MechWeapons[Weapon2I(i)].name[CLCH(Weapon2I(i))]);
   } else if (IsAmmo(i) && i < I2Ammo(num_def_weapons)) {
-    snprintf(buf, sizeof(buf), "Ammo_%s",
+    snprintf(name, sizeof(name), "Ammo_%s",
              &MechWeapons[Ammo2WeaponI(i)].name[CLCH(Ammo2WeaponI(i))]);
   } else if (IsBomb(i))
-    snprintf(buf, sizeof(buf), "Bomb_%s", bomb_name(Bomb2I(i)));
+    snprintf(name, sizeof(name), "Bomb_%s", bomb_name(Bomb2I(i)));
   else if (IsSpecial(i) && i < I2Special(internal_count))
-    strcpy(buf, internals[Special2I(i)]);
+    snprintf(name, sizeof(name), "%s", internals[Special2I(i)]);
   if (IsCargo(i) && i < I2Cargo(cargo_count))
-    strcpy(buf, cargo[Cargo2I(i)]);
-  if (!buf[0])
-    return NULL;
-  return my_shortform(buf);
+    snprintf(name, sizeof(name), "%s", cargo[Cargo2I(i)]);
+  if (!name[0])
+    return nullptr;
+  return my_shortform(name, buffer);
 }
 
-char *part_figure_out_name(int i) { return part_figure_out_name_sub(i, 0); }
+char *part_figure_out_name(const ServerConfiguration *configuration, int i,
+                           int brand, char buffer[static BTECH_TEXT_CAPACITY]) {
+  return part_figure_out_name_sub(configuration, i, 0, brand, buffer);
+}
 
-char *part_figure_out_sname(int i) { return part_figure_out_name_sub(i, 1); }
+char *part_figure_out_sname(const ServerConfiguration *configuration, int i,
+                            int brand,
+                            char buffer[static BTECH_TEXT_CAPACITY]) {
+  return part_figure_out_name_sub(configuration, i, 1, brand, buffer);
+}
 
 #define TCAble(t)                                                              \
   ((MechWeapons[Weapon2I(t)].type == TBEAM ||                                  \
@@ -1508,7 +1510,7 @@ static int dump_item(FILE *fp, MECH *mech, int x, int y) {
       break;
     if (GetPartAmmoMode(mech, x, y1) != GetPartAmmoMode(mech, x, y))
       break;
-    if (btech_context_active()->configuration->btech_parts)
+    if (mech->xcode.context->configuration->btech_parts)
       if (GetPartBrand(mech, x, y1) != GetPartBrand(mech, x, y))
         break;
   }
@@ -1531,36 +1533,42 @@ static int dump_item(FILE *fp, MECH *mech, int x, int y) {
   wAmmoModes = GetPartAmmoMode(mech, x, y);
 
   if (IsWeapon(GetPartType(mech, x, y)))
-    fprintf(fp, "    %s		  { %s - %s %s}\n", crit,
-            get_parts_vlong_name(GetPartType(mech, x, y), 0),
-            (wFireModes || wAmmoModes)
-                ? BuildBitStringwdelim2(crit_fire_modes, crit_ammo_modes,
-                                        wFireModes, wAmmoModes)
-                : "-",
-            !btech_context_active()->configuration->btech_parts
-                ? ""
-                : tprintf("%d ", GetPartBrand(mech, x, y)));
+    fprintf(
+        fp, "    %s		  { %s - %s %s}\n", crit,
+        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
+        (wFireModes || wAmmoModes)
+            ? build_bit_string_delimited2(crit_fire_modes, crit_ammo_modes,
+                                          wFireModes, wAmmoModes,
+                                          (char[BTECH_TEXT_CAPACITY]){0})
+            : "-",
+        !mech->xcode.context->configuration->btech_parts
+            ? ""
+            : tprintf("%d ", GetPartBrand(mech, x, y)));
   else if (IsAmmo(MechSections(mech)[x].criticals[y].type))
     fprintf(
         fp, "    %s		  { %s %d %s - }\n", crit,
-        get_parts_vlong_name(GetPartType(mech, x, y), 0), FullAmmo(mech, x, y),
+        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
+        FullAmmo(mech, x, y),
         (MechSections(mech)[x].criticals[y].firemode ||
          MechSections(mech)[x].criticals[y].ammomode)
-            ? BuildBitStringwdelim2(crit_fire_modes, crit_ammo_modes,
-                                    MechSections(mech)[x].criticals[y].firemode,
-                                    MechSections(mech)[x].criticals[y].ammomode)
+            ? build_bit_string_delimited2(
+                  crit_fire_modes, crit_ammo_modes,
+                  MechSections(mech)[x].criticals[y].firemode,
+                  MechSections(mech)[x].criticals[y].ammomode,
+                  (char[BTECH_TEXT_CAPACITY]){0})
             : "-");
   else if (IsBomb(MechSections(mech)[x].criticals[y].type))
-    fprintf(fp, "    %s		  { %s - - - }\n", crit,
-            get_parts_vlong_name(GetPartType(mech, x, y), 0));
+    fprintf(
+        fp, "    %s		  { %s - - - }\n", crit,
+        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0));
   else {
-    fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
-            get_parts_vlong_name(GetPartType(mech, x, y), 0),
-            GetPartData(mech, x, y) ? tprintf("%d", GetPartData(mech, x, y))
-                                    : "-",
-            !btech_context_active()->configuration->btech_parts
-                ? ""
-                : tprintf("%d ", GetPartBrand(mech, x, y)));
+    fprintf(
+        fp, "    %s		  { %s %s - %s}\n", crit,
+        get_parts_vlong_name(mech->xcode.context, GetPartType(mech, x, y), 0),
+        GetPartData(mech, x, y) ? tprintf("%d", GetPartData(mech, x, y)) : "-",
+        !mech->xcode.context->configuration->btech_parts
+            ? ""
+            : tprintf("%d ", GetPartBrand(mech, x, y)));
   }
   return (y1 - y + 1);
 }
@@ -1591,8 +1599,9 @@ void dump_locations(FILE *fp, MECH *mech, const char *locdesc[]) {
     y = MechSections(mech)[x].config;
     y &= ~CASE_TECH;
     if (y)
-      fprintf(fp, "  Config           { %s }\n",
-              BuildBitString(section_configs, y));
+      fprintf(
+          fp, "  Config           { %s }\n",
+          build_bit_string(section_configs, y, (char[BTECH_TEXT_CAPACITY]){0}));
     l = CritsInLoc(mech, x);
     for (y = 0; y < l;)
       y += dump_item(fp, mech, x, y);
@@ -1704,7 +1713,7 @@ int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
   FILE *fp;
   int x, x2, inf_x;
   char **locs;
-  char *d, *c = ctime(&btech_context_active()->clock->now);
+  char *d, *c = ctime(&mech->xcode.context->clock->now);
 
   if (!MechComputer(mech))
     computer_conversion(mech);
@@ -1724,8 +1733,7 @@ int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
   if ((d = strrchr(c, '\n')))
     *d = 0;
   fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
-          game_object_name(btech_context_active()->database, player), player,
-          c);
+          game_object_name(mech->xcode.context->database, player), player, c);
 #define SILLY_UTTERANCE(ran, cran, dran, name)                                 \
   if ((!MechComputer(mech) && ran != dran) ||                                  \
       (MechComputer(mech) && ran != cran))                                     \
@@ -1782,13 +1790,15 @@ int save_template(DbRef player, MECH *mech, char *reference, char *filename) {
 
   if (x || x2)
     fprintf(fp, "Specials         { %s }\n",
-            BuildBitString2(specials, specials2, x, x2));
+            build_bit_string2(specials, specials2, x, x2,
+                              (char[BTECH_TEXT_CAPACITY]){0}));
 
   inf_x = MechInfantrySpecials(mech);
 
   if (inf_x)
     fprintf(fp, "InfantrySpecials { %s }\n",
-            BuildBitString(infantry_specials, inf_x));
+            build_bit_string(infantry_specials, inf_x,
+                             (char[BTECH_TEXT_CAPACITY]){0}));
 
   if ((locs = (char **)ProperSectionStringFromType(MechType(mech),
                                                    MechMove(mech)))) {
@@ -1809,11 +1819,10 @@ static void skip_template_whitespace(FILE *fp) {
     ungetc(c, fp);
 }
 
-char *read_desc(FILE *fp, char *data) {
+char *read_desc(FILE *fp, char *data, char *buffer) {
   char keep[MAX_STRING_LENGTH + 500];
   char *t, *tmp;
   char *point;
-  static char buf[MAX_STRING_LENGTH];
 
   keep[0] = '\0';
   if (data && (tmp = strchr(data, '{'))) {
@@ -1824,8 +1833,8 @@ char *read_desc(FILE *fp, char *data) {
       while (isspace(*(t--)))
         ;
       *(t++) = '\0';
-      strcpy(buf, tmp);
-      return buf;
+      strcpy(buffer, tmp);
+      return buffer;
     } else {
       strcpy(keep, tmp);
       strcat(keep, "\r\n");
@@ -1846,8 +1855,8 @@ char *read_desc(FILE *fp, char *data) {
       }
     }
   }
-  strcpy(buf, keep);
-  return buf;
+  strcpy(buffer, keep);
+  return buffer;
 }
 
 int find_section(char *cmd, int type, int mtype) {
@@ -2110,6 +2119,7 @@ void update_specials(MECH *mech) {
   if ((MechSpecials(mech) & (XXL_TECH | XL_TECH | LE_TECH)) &&
       (MechSpecials(mech) & CE_TECH))
     SendError(
+        mech->xcode.context,
         tprintf("#%ld apparently is very weird: Compact engine AND XL/XXL?",
                 mech->mynum));
   if (tc_count) {
@@ -2142,25 +2152,30 @@ void update_specials(MECH *mech) {
   if (MechType(mech) == CLASS_MECH) {
     /* Be 'noisy' about some crits/techs */
     if ((ff_count > 0) && (ff_count < (cl ? 7 : 14)))
-      SendError(tprintf("%s (#%ld) is missing FF Crits %d/%d!",
+      SendError(mech->xcode.context,
+                tprintf("%s (#%ld) is missing FF Crits %d/%d!",
                         MechType_Ref(mech), mech->mynum, ff_count,
                         (cl ? 7 : 14)));
 
     if ((es_count > 0) && (es_count < (cl ? 7 : 14)))
-      SendError(tprintf("%s (#%ld) is missing ES Crits %d/%d!",
+      SendError(mech->xcode.context,
+                tprintf("%s (#%ld) is missing ES Crits %d/%d!",
                         MechType_Ref(mech), mech->mynum, es_count,
                         (cl ? 7 : 14)));
 
     if ((tsm_count > 0) && (tsm_count < 6))
-      SendError(tprintf("%s (#%ld) is missing TSM Crits %d/6!",
+      SendError(mech->xcode.context,
+                tprintf("%s (#%ld) is missing TSM Crits %d/6!",
                         MechType_Ref(mech), mech->mynum, tsm_count));
 
     if ((wcHvyFF > 0) && (wcHvyFF < 21))
-      SendError(tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
+      SendError(mech->xcode.context,
+                tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
                         MechType_Ref(mech), mech->mynum, wcHvyFF));
 
     if ((wcLtFF > 0) && (wcLtFF < 7))
-      SendError(tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
+      SendError(mech->xcode.context,
+                tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
                         MechType_Ref(mech), mech->mynum, wcLtFF));
   }
 
@@ -2259,7 +2274,7 @@ int update_oweight(MECH *mech, int value) {
   MechCritStatus(mech) |= OWEIGHT_OK;
 
   /* Check to prevent silliness */
-  if (!btech_context_active()->configuration->btech_dynspeed ||
+  if (!mech->xcode.context->configuration->btech_dynspeed ||
       (value == 1 && !Destroyed(mech)))
     value = MechTons(mech) * 1024;
   MechRTonsV(mech) = value;
@@ -2299,7 +2314,8 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   strncpy(MechType_Ref(mech), ptr, 25);
   MechType_Ref(mech)[24] = '\0';
 
-  silly_atr_set(mech->mynum, A_MECHREF, MechType_Ref(mech));
+  silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
+                   MechType_Ref(mech));
   MechRadioType(mech) = 0;
   while (fgets(line, 512, fp)) {
     line[strlen(line) - 1] = '\0';
@@ -2341,54 +2357,62 @@ int load_template(DbRef player, MECH *mech, char *filename) {
     ok_count++;
     switch (selection) {
     case 0: /* Reference */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strcmp(tmpc, MechType_Ref(mech))) {
         SendError(
+            mech->xcode.context,
             tprintf("Template %s has Reference <-> Filename mismatch : %s <-> "
                     "%s - It is automatically fixed by saving again.",
                     filename, tmpc, MechType_Ref(mech)));
         tmpc = MechType_Ref(mech);
       }
-      silly_atr_set(mech->mynum, A_MECHREF, tmpc);
+      silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHREF,
+                       tmpc);
       strcpy(MechType_Ref(mech), tmpc);
       break;
     case 1: /* Type */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       MechType(mech) = compare_array(mech_types, tmpc);
       TEMPLATE_GERR(MechType(mech) == -1,
                     "Error while loading: Type %s not found.", tmpc);
       AeroFuel(mech) = AeroFuelOrig(mech) = DefaultFuelByType(mech);
       break;
     case 2: /* Movement Type */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       MechMove(mech) = compare_array(move_types, tmpc);
       TEMPLATE_GERR(MechMove(mech) == -1,
                     "Error while loading: Type %s not found.", tmpc);
       break;
     case 3: /* Tons */
-      MechTons(mech) = atoi(read_desc(fp, ptr));
+      MechTons(mech) = atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 4: /* Tac_Range */
-      MechTacRange(mech) = atoi(read_desc(fp, ptr));
+      MechTacRange(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 5: /* LRS_Range */
-      MechLRSRange(mech) = atoi(read_desc(fp, ptr));
+      MechLRSRange(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 6: /* Radio Range */
-      MechRadioRange(mech) = atoi(read_desc(fp, ptr));
+      MechRadioRange(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 7: /* Scan Range */
-      MechScanRange(mech) = atoi(read_desc(fp, ptr));
+      MechScanRange(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 8: /* Heat Sinks */
-      MechRealNumsinks(mech) = atoi(read_desc(fp, ptr));
+      MechRealNumsinks(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 9: /* Max Speed */
-      SetMaxSpeed(mech, atof(read_desc(fp, ptr)));
+      SetMaxSpeed(mech,
+                  atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       TemplateMaxSpeed(mech) = MechMaxSpeed(mech);
       break;
     case 10: /* Specials */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
       if (CheckSpecialsList(specials, specials2, tmpc)) {
         MechSpecials(mech) |= BuildBitVectorNoErr(specials, tmpc);
@@ -2398,19 +2422,22 @@ int load_template(DbRef player, MECH *mech, char *filename) {
                       "Error while loading: Invalid specials - %s.", tmpc);
       break;
     case 11: /* Armor */
-      SetSectOArmor(mech, section, atoi(read_desc(fp, ptr)));
+      SetSectOArmor(mech, section,
+                    atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       SetSectArmor(mech, section, GetSectOArmor(mech, section));
       break;
     case 12: /* Internals */
-      SetSectOInt(mech, section, atoi(read_desc(fp, ptr)));
+      SetSectOInt(mech, section,
+                  atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       SetSectInt(mech, section, GetSectOInt(mech, section));
       break;
     case 13: /* Rear */
-      SetSectORArmor(mech, section, atoi(read_desc(fp, ptr)));
+      SetSectORArmor(mech, section,
+                     atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       SetSectRArmor(mech, section, GetSectORArmor(mech, section));
       break;
     case 14: /* Config */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       MechSections(mech)[section].config =
           BuildBitVector(section_configs, tmpc) &
           ~(CASE_TECH | SECTION_DESTROYED);
@@ -2427,14 +2454,15 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       } else
         break;
       critical = lpos;
-      line2 = read_desc(fp, ptr);
+      line2 = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       line2 = one_arg(line2, buf);
       if (!strncasecmp(buf, "CL.", 3))
         isClan = 1;
-      TEMPLATE_GERR(!(find_matching_vlong_part(buf, NULL, &type, &brand)),
+      TEMPLATE_GERR(!(find_matching_vlong_part(mech->xcode.context, buf, NULL,
+                                               &type, &brand)),
                     "Unable to find %s", buf);
       SetPartType(mech, section, critical, type);
-      if (!btech_context_active()->configuration->btech_parts)
+      if (!mech->xcode.context->configuration->btech_parts)
         brand = 0;
       SetPartBrand(mech, section, critical, brand);
       SetPartDesiredAmmoLoc(mech, section, critical, -1);
@@ -2472,7 +2500,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         GetPartAmmoMode(mech, section, critical) = wAmmoModes;
 
         line2 = one_arg(line2, buf);
-        if (btech_context_active()->configuration->btech_parts)
+        if (mech->xcode.context->configuration->btech_parts)
           if (atoi(buf)) {
             SetPartBrand(mech, section, critical, atoi(buf));
           }
@@ -2512,7 +2540,8 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         if (GetPartData(mech, section, critical) !=
                 FullAmmo(mech, section, critical) &&
             MechType(mech) != CLASS_MW && MechType(mech) != CLASS_BSUIT) {
-          SendError(tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
+          SendError(mech->xcode.context,
+                    tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
                             MechWeapons[Ammo2I(type)].name, mech->mynum,
                             filename, GetPartData(mech, section, critical),
                             FullAmmo(mech, section, critical)));
@@ -2528,7 +2557,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         GetPartAmmoMode(mech, section, critical) = 0;
         if ((line2 = one_arg(line2, buf)))
           if ((line2 = one_arg(line2, buf))) {
-            if (btech_context_active()->configuration->btech_parts)
+            if (mech->xcode.context->configuration->btech_parts)
               if (atoi(buf)) {
                 SetPartBrand(mech, section, critical, atoi(buf));
               }
@@ -2543,39 +2572,48 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       }
       break;
     case 15: /* Mech's Computer level */
-      MechComputer(mech) = atoi(read_desc(fp, ptr));
+      MechComputer(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 16: /* Name of the mech */
-      strcpy(MechType_Name(mech), read_desc(fp, ptr));
+      strcpy(MechType_Name(mech),
+             read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 17: /* Jj's */
-      MechJumpSpeed(mech) = atof(read_desc(fp, ptr));
+      MechJumpSpeed(mech) =
+          atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 18: /* Radio */
-      MechRadio(mech) = atoi(read_desc(fp, ptr));
+      MechRadio(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 19: /* SI */
-      AeroSI(mech) = AeroSIOrig(mech) = atoi(read_desc(fp, ptr));
+      AeroSI(mech) = AeroSIOrig(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 20: /* Fuel */
-      AeroFuel(mech) = AeroFuelOrig(mech) = atoi(read_desc(fp, ptr));
+      AeroFuel(mech) = AeroFuelOrig(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 21: /* Comment */
       break;
     case 22: /* Radio_freqs */
-      MechRadioType(mech) = atoi(read_desc(fp, ptr));
+      MechRadioType(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 23: /* Mech battle value */
-      MechBV(mech) = atoi(read_desc(fp, ptr));
+      MechBV(mech) = atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 24: /* Cargospace */
-      CargoSpace(mech) = atoi(read_desc(fp, ptr));
+      CargoSpace(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 25: /* Maxsuits */
-      MechMaxSuits(mech) = atoi(read_desc(fp, ptr));
+      MechMaxSuits(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 26: /* Specials */
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
 
       if (CheckSpecialsList(infantry_specials, 0, tmpc))
         MechInfantrySpecials(mech) |=
@@ -2583,19 +2621,21 @@ int load_template(DbRef player, MECH *mech, char *filename) {
 
       break;
     case 27: /* Carmaxton */
-      CarMaxTon(mech) = atoi(read_desc(fp, ptr));
+      CarMaxTon(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 28:
-      MechHSEngOverRide(mech) = atoi(read_desc(fp, ptr));
+      MechHSEngOverRide(mech) =
+          atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 29:
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
         tmpc = "Undefined";
       strcpy(MechUnitEra(mech), tmpc);
       break;
     case 30:
-      tmpc = read_desc(fp, ptr);
+      tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strlen(tmpc) == 1) /* just the \0 */
         tmpc = "Undefined";
       strcpy(MechUnitTRO(mech), tmpc);
@@ -2629,7 +2669,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   else
     value = 6;
 
-  if (btech_context_active()->configuration->btech_parts)
+  if (mech->xcode.context->configuration->btech_parts)
     for (x = 0; x < value; x++)
       for (y = 0; y < CritsInLoc(mech, x); y++)
         if ((t = GetPartType(mech, x, y))) {
@@ -2680,11 +2720,13 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   /* While we're at it, lets report those that are overweight */
   if ((x - y) > 40)
     if (MechType(mech) != CLASS_BSUIT && MechMove(mech) != MOVE_NONE)
-      SendError(tprintf(
-          "Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
-          MechType_Ref(mech), x / 1024.0, y / 1024));
+      SendError(
+          mech->xcode.context,
+          tprintf(
+              "Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
+              MechType_Ref(mech), x / 1024.0, y / 1024));
   update_oweight(mech, x);
-  if ((map = FindObjectsData(mech->mapindex)))
+  if ((map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     UpdateConditions(mech, map);
   /* To prevent certain funny occurences.. */
   for (i = 0; i < NUM_SECTIONS; i++) {
@@ -2695,55 +2737,58 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   return 0;
 }
 
-void DumpMechSpecialObjects(DbRef player) {
+void DumpMechSpecialObjects(BtechContext *context, DbRef player) {
   coolmenu *c;
 
   c = AutoCol_StringMenu("MechSpecials available", internals);
-  ShowCoolMenu(player, c);
+  ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
 
-static char *dumpweapon_fun(int i) {
-  static char buf[256] = {0};
+static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
+  const BtechWeaponSettings *weapon_settings = data;
 
-  buf[0] = 0;
+  buffer[0] = 0;
   if (!i)
-    snprintf(buf, sizeof(buf), WDUMP_MASKS);
+    snprintf(buffer, LBUF_SIZE, WDUMP_MASKS);
   else {
     i--;
-    snprintf(buf, sizeof(buf), WDUMP_MASK, MechWeapons[i].name,
+    snprintf(buffer, LBUF_SIZE, WDUMP_MASK, MechWeapons[i].name,
              MechWeapons[i].heat, MechWeapons[i].damage, MechWeapons[i].min,
              MechWeapons[i].shortrange, MechWeapons[i].medrange, GunRange(i),
-             MechWeapons[i].vrt, MechWeapons[i].criticals,
-             MechWeapons[i].ammoperton);
+             btech_weapon_settings_recycle_time(weapon_settings, i),
+             MechWeapons[i].criticals, MechWeapons[i].ammoperton);
   }
-  return buf;
+  return buffer;
 }
 
-void DumpWeapons(DbRef player) {
+void DumpWeapons(BtechContext *context, DbRef player) {
   coolmenu *c;
 
-  c = SelCol_FunStringMenuK(1, "MechWeapons available", dumpweapon_fun,
-                            num_def_weapons + 1);
-  ShowCoolMenu(player, c);
+  c = SelCol_FunStringMenuContextK(1, "MechWeapons available", dumpweapon_fun,
+                                   &context->weapon_settings,
+                                   num_def_weapons + 1);
+  ShowCoolMenu(btech_context_evaluation(context), player, c);
   KillCoolMenu(c);
 }
 
-char *techlist_func(MECH *mech) {
-  static char buffer[MBUF_SIZE];
+char *techlist_func(MECH *mech, char *buffer) {
   char bufa[SBUF_SIZE], bufb[SBUF_SIZE], bufc[SBUF_SIZE];
   int i, ii, part = 0, axe = 0, mace = 0, sword = 0, saw = 0, claw = 0,
              hascase = 0;
 
   snprintf(bufa, SBUF_SIZE, "%s",
-           BuildBitString(specialsabrev, MechSpecials(mech)));
+           build_bit_string(specialsabrev, MechSpecials(mech),
+                            (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(bufb, SBUF_SIZE, "%s",
-           BuildBitString(specialsabrev2, MechSpecials2(mech)));
+           build_bit_string(specialsabrev2, MechSpecials2(mech),
+                            (char[BTECH_TEXT_CAPACITY]){0}));
   snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
 
   if (MechType(mech) == CLASS_BSUIT) {
     snprintf(bufc, SBUF_SIZE, "%s",
-             BuildBitString(infspecialsabrev, MechInfantrySpecials(mech)));
+             build_bit_string(infspecialsabrev, MechInfantrySpecials(mech),
+                              (char[BTECH_TEXT_CAPACITY]){0}));
     snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
   } else
     snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
@@ -2807,8 +2852,7 @@ char *techlist_func(MECH *mech) {
 /* Function to return the payload of a unit
  * Used by the btpayload_ref() scode function
  * Dany - 06/2005 */
-char *payloadlist_func(MECH *mech) {
-  static char buffer[MBUF_SIZE];
+char *payloadlist_func(MECH *mech, char *buffer) {
 
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -2915,7 +2959,7 @@ char *payloadlist_func(MECH *mech) {
                payload_items_count[put_loop]);
     } else {
       snprintf(payloadbuff, sizeof(payloadbuff), "%s:%d",
-               partname_func(payload_items[put_loop], 'V'),
+               partname_func(mech->xcode.context, payload_items[put_loop], 'V'),
                payload_items_count[put_loop]);
     }
 
@@ -2933,8 +2977,7 @@ char *payloadlist_func(MECH *mech) {
 }
 
 // Borrowed from payload_func
-char *partlist_func(MECH *mech) {
-  static char buffer[LBUF_SIZE];
+char *partlist_func(MECH *mech, char *buffer) {
 
   int temp_crit;
 
@@ -3066,9 +3109,10 @@ char *partlist_func(MECH *mech) {
       strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
       break;
     default:
-      snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-               partname_func(partlist_items[put_loop], 'V'),
-               partlist_count[put_loop]);
+      snprintf(
+          partlistbuff, sizeof(partlistbuff), "%s:%d",
+          partname_func(mech->xcode.context, partlist_items[put_loop], 'V'),
+          partlist_count[put_loop]);
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {

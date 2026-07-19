@@ -9,8 +9,9 @@
 #include "mux/commands/command_queue.h"
 #include "mux/database/attrs.h"
 #include "mux/database/flags.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -34,14 +35,14 @@ static int lua_mux_attr_get(lua_State *state) {
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.attr_get is unavailable during @luacheck");
-  if (!is_good_obj(&package->server->database, object))
+  if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
-  attribute = attribute_by_name(&package->server->database, name);
+  attribute = attribute_by_name(package->services->database, name);
   if (!attribute) {
     lua_pushnil(state);
     return 1;
   }
-  value = attribute_get(&package->server->database, object, attribute->number,
+  value = attribute_get(package->services->database, object, attribute->number,
                         &owner, &flags);
   if (!*value)
     lua_pushnil(state);
@@ -61,19 +62,19 @@ static int lua_mux_attr_set(lua_State *state) {
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.attr_set is unavailable during @luacheck");
-  if (!is_good_obj(&package->server->database, object))
+  if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
   snprintf(attribute_name, sizeof(attribute_name), "%s", name);
-  attribute = mkattr(&package->server->database, attribute_name);
+  attribute = mkattr(package->services->database, attribute_name);
   if (attribute < 0)
     return luaL_error(state, "invalid attribute");
   if (attribute == A_LUAPARENT)
     return luaL_error(state, "use @luaparent to change Luaparent");
-    /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
-       only read (copied) here, never mutated. */
+  /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
+     only read (copied) here, never mutated. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  attribute_add_raw(&package->server->database, object, attribute,
+  attribute_add_raw(package->services->database, object, attribute,
                     (char *)value);
 #pragma clang diagnostic pop
   return 0;
@@ -86,9 +87,9 @@ static int lua_mux_notify(lua_State *state) {
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.notify is unavailable during @luacheck");
-  if (!is_good_obj(&package->server->database, object))
+  if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
-  notify(&package->server->background_command.evaluation, object, message);
+  notify(&package->services->background_command->evaluation, object, message);
   return 0;
 }
 
@@ -98,11 +99,11 @@ static int lua_mux_command(lua_State *state) {
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.command is unavailable during @luacheck");
-    /* wait_que()'s command parameter isn't const-correct; command is only
-       read here, never mutated. */
+  /* wait_que()'s command parameter isn't const-correct; command is only
+     read here, never mutated. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  wait_que(package->server->commands, 1, 1, 0, NOTHING, 0, (char *)command,
+  wait_que(package->services->commands, 1, 1, 0, NOTHING, 0, (char *)command,
            (char **)nullptr, 0, nullptr);
 #pragma clang diagnostic pop
   return 0;
@@ -112,22 +113,22 @@ static int lua_mux_connected_players(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor;
   DescriptorIterator iterator =
-      descriptor_iterator_connected(package->server->descriptors);
+      descriptor_iterator_connected(package->services->descriptors);
   int index = 1;
 
   lua_newtable(state);
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
-    if (package->server->configuration->show_unfindable_who &&
-        is_hidden(&package->server->database, descriptor->player))
+    if (package->services->configuration->show_unfindable_who &&
+        is_hidden(package->services->database, descriptor->player))
       continue;
     lua_newtable(state);
-    lua_pushstring(state, game_object_name(&package->server->database,
+    lua_pushstring(state, game_object_name(package->services->database,
                                            descriptor->player));
     lua_setfield(state, -2, "name");
-    lua_pushinteger(state, (lua_Integer)(package->server->clock.now -
+    lua_pushinteger(state, (lua_Integer)(package->services->clock->now -
                                          descriptor->connected_at));
     lua_setfield(state, -2, "connected_for");
-    lua_pushinteger(state, (lua_Integer)(package->server->clock.now -
+    lua_pushinteger(state, (lua_Integer)(package->services->clock->now -
                                          descriptor->last_time));
     lua_setfield(state, -2, "idle_for");
     lua_rawseti(state, -2, index++);
@@ -139,23 +140,23 @@ static int lua_mux_who_summary(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor;
   DescriptorIterator iterator =
-      descriptor_iterator_connected(package->server->descriptors);
+      descriptor_iterator_connected(package->services->descriptors);
   int hidden = 0;
 
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
-    if (package->server->configuration->show_unfindable_who &&
-        is_hidden(&package->server->database, descriptor->player))
+    if (package->services->configuration->show_unfindable_who &&
+        is_hidden(package->services->database, descriptor->player))
       hidden++;
   }
   lua_newtable(state);
   lua_pushinteger(state, hidden);
   lua_setfield(state, -2, "hidden");
-  lua_pushinteger(state, package->server->record_players);
+  lua_pushinteger(state, *package->services->record_players);
   lua_setfield(state, -2, "record");
-  if (package->server->configuration->max_players == -1)
+  if (package->services->configuration->max_players == -1)
     lua_pushnil(state);
   else
-    lua_pushinteger(state, package->server->configuration->max_players);
+    lua_pushinteger(state, package->services->configuration->max_players);
   lua_setfield(state, -2, "maximum");
   return 1;
 }

@@ -22,19 +22,15 @@
 #include "mux/server/server_api.h"
 #include "p.glue.h"
 
-char *silly_atr_get(int id, int flag) {
+char *btech_attribute_read(GameDatabase *database, int id, int flag,
+                           char buffer[static LBUF_SIZE]) {
   long i, j;
-  static char buf[LBUF_SIZE];
 
-  attribute_get_string(btech_context_active()->database, buf, id, flag, &i, &j);
-  return buf;
-#if 0 /* This would waste memory, so.. :P */
-	return attribute_parent_get(btech_context_active()->database, id, flag, &i, &j);
-#endif
+  return attribute_get_string(database, buffer, id, flag, &i, &j);
 }
 
-void silly_atr_set(int id, int flag, char *dat) {
-  attribute_add_raw(btech_context_active()->database, id, flag, dat);
+void silly_atr_set_in(GameDatabase *database, int id, int flag, char *dat) {
+  attribute_add_raw(database, id, flag, dat);
 }
 
 void KillText(char **mapt) {
@@ -45,11 +41,11 @@ void KillText(char **mapt) {
   free(mapt);
 }
 
-void ShowText(char **mapt, DbRef player) {
+void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player) {
   int i;
 
   for (i = 0; mapt[i]; i++)
-    notify(BTECH_EVALUATION_CONTEXT, player, mapt[i]);
+    notify(evaluation, player, mapt[i]);
 }
 
 int BOUNDED(int min, int val, int max) {

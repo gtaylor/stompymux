@@ -2,7 +2,9 @@
  * timer.c -- Subroutines for (system-) timed events
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "p.glue.h"
 
@@ -16,7 +18,6 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/maintenance.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -78,17 +79,16 @@ static void check_idle(MaintenanceContext *maintenance) {
     if (d->is_connected) {
       idletime = maintenance->clock->now - d->last_time;
       if ((idletime > d->timeout) &&
-          !can_idle(&maintenance->server->database, d->player)) {
+          !can_idle(maintenance->database, d->player)) {
         descriptor_queue_string(d, "*** Inactivity Timeout ***\r\n");
         descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
       } else if (maintenance->configuration->idle_wiz_dark &&
                  (idletime > maintenance->configuration->idle_timeout) &&
-                 can_idle(&maintenance->server->database, d->player) &&
-                 !is_dark(&maintenance->server->database, d->player)) {
+                 can_idle(maintenance->database, d->player) &&
+                 !is_dark(maintenance->database, d->player)) {
         game_object_set_flags(
-            &maintenance->server->database, d->player,
-            game_object_flags(&maintenance->server->database, d->player) |
-                DARK);
+            maintenance->database, d->player,
+            game_object_flags(maintenance->database, d->player) | DARK);
         d->is_autodark = true;
       }
     } else {
@@ -110,17 +110,16 @@ static void check_events(MaintenanceContext *maintenance) {
   if ((ltime->tm_hour == maintenance->configuration->events_daily_hour) &&
       !(maintenance->clock->events_run & ET_DAILY)) {
     maintenance->clock->events_run = maintenance->clock->events_run | ET_DAILY;
-    DO_WHOLE_DB(&maintenance->server->database, thing) {
-      if (is_going(&maintenance->server->database, thing))
+    DO_WHOLE_DB(maintenance->database, thing) {
+      if (is_going(maintenance->database, thing))
         continue;
 
-      ITER_PARENTS(&maintenance->server->database, maintenance->configuration,
-                   thing, parent, lev) {
-        if (game_object_flags2(&maintenance->server->database, thing) &
-            HAS_DAILY) {
+      ITER_PARENTS(maintenance->database, maintenance->configuration, thing,
+                   parent, lev) {
+        if (game_object_flags2(maintenance->database, thing) & HAS_DAILY) {
           did_it(&maintenance->command->evaluation,
-                 game_object_owner(&maintenance->server->database, thing),
-                 thing, 0, nullptr, 0, nullptr, A_DAILY, (char **)nullptr, 0);
+                 game_object_owner(maintenance->database, thing), thing, 0,
+                 nullptr, 0, nullptr, A_DAILY, (char **)nullptr, 0);
 
           break;
         }
@@ -130,18 +129,16 @@ static void check_events(MaintenanceContext *maintenance) {
   if (ltime->tm_hour != maintenance->clock->events_last_hour) {
     if (maintenance->clock->events_last_hour >= 0) {
       /* Run hourly maintenance */
-      DO_WHOLE_DB(&maintenance->server->database, thing) {
-        if (is_going(&maintenance->server->database, thing))
+      DO_WHOLE_DB(maintenance->database, thing) {
+        if (is_going(maintenance->database, thing))
           continue;
 
-        ITER_PARENTS(&maintenance->server->database, maintenance->configuration,
-                     thing, parent, lev) {
-          if (game_object_flags2(&maintenance->server->database, thing) &
-              HAS_HOURLY) {
+        ITER_PARENTS(maintenance->database, maintenance->configuration, thing,
+                     parent, lev) {
+          if (game_object_flags2(maintenance->database, thing) & HAS_HOURLY) {
             did_it(&maintenance->command->evaluation,
-                   game_object_owner(&maintenance->server->database, thing),
-                   thing, 0, nullptr, 0, nullptr, A_HOURLY, (char **)nullptr,
-                   0);
+                   game_object_owner(maintenance->database, thing), thing, 0,
+                   nullptr, 0, nullptr, A_HOURLY, (char **)nullptr, 0);
 
             break;
           }
@@ -172,7 +169,7 @@ static void dispatch(MaintenanceContext *maintenance) {
   maintenance->clock->now = time(nullptr);
 
   do_second(maintenance->commands);
-  lua_schedule_tick(*maintenance->lua, maintenance->clock->now);
+  lua_schedule_tick(maintenance->lua->runtime, maintenance->clock->now);
 
   /*
    * Free list reconstruction
@@ -196,7 +193,7 @@ static void dispatch(MaintenanceContext *maintenance) {
         maintenance->configuration->database.dump_interval +
         maintenance->clock->now;
     maintenance->command->debug_command = "< dump >";
-    fork_and_dump(maintenance->server, 0);
+    fork_and_dump(maintenance->control, 0);
   }
   /*
      Mech stuff ; hopefully it means once ~per sec, although you
@@ -205,7 +202,7 @@ static void dispatch(MaintenanceContext *maintenance) {
    */
 
   if (maintenance->configuration->have_specials)
-    UpdateSpecialObjects();
+    UpdateSpecialObjects(maintenance->btech);
 
   /*
    * Idle user check
@@ -275,7 +272,7 @@ void server_timer_destroy(ServerTimer *timer) {
  */
 void do_timewarp(CommandInvocation *invocation) {
   int secs;
-  RuntimeClock *clock = &invocation->context->server->clock;
+  RuntimeClock *clock = invocation->context->runtime->clock;
 
   secs = clamped_atoi(invocation->first);
 

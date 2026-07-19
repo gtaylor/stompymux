@@ -62,7 +62,8 @@ void StartBSuitRecycle(MECH *mech, int time) {
 }
 
 void StopSwarming(MECH *mech, int intentional) {
-  MECH *target = getMech(MechSwarmTarget(mech));
+  MECH *target =
+      btech_context_get_mech(mech->xcode.context, MechSwarmTarget(mech));
 
   if (!target || MechSwarmTarget(mech) <= 0)
     return;
@@ -77,7 +78,7 @@ void StopSwarming(MECH *mech, int intentional) {
     mech_notify(mech, MECHALL,
                 "You let your hold loosen and you drop from the 'mech!");
     mech_printf(target, MECHALL, "%s lets go of you!",
-                GetMechToMechID(target, mech));
+                mech_to_mech_display_id(target, mech).text);
     MechLOSBroadcasti(mech, target, "lets go of %s!");
 
     StartBSuitRecycle(mech, RECYCLE_INT_STOPSWARM);
@@ -87,7 +88,7 @@ void StopSwarming(MECH *mech, int intentional) {
                   "The hold loosens and you drop from the 'mech!");
       MechLOSBroadcasti(mech, target, "jumps off of %s!");
       mech_printf(target, MECHALL, "%s jumps off!",
-                  GetMechToMechID(target, mech));
+                  mech_to_mech_display_id(target, mech).text);
 
       StartBSuitRecycle(mech, RECYCLE_UNINT_STOPSWARM);
     } else {
@@ -96,10 +97,12 @@ void StopSwarming(MECH *mech, int intentional) {
                   "rapidly approaching the ground!");
       MechLOSBroadcasti(mech, target, "falls off %s!");
       mech_printf(target, MECHALL, "%s falls off!",
-                  GetMechToMechID(target, mech));
+                  mech_to_mech_display_id(target, mech).text);
 
-      DamageMech(mech, mech, 1, -1, Number(0, NUM_BSUIT_MEMBERS - 1), 0, 0, 11,
-                 0, -1, 0, -1, 0, 1);
+      DamageMech(
+          mech, mech, 1, -1,
+          btech_random_range(mech->xcode.context, 0, NUM_BSUIT_MEMBERS - 1), 0,
+          0, 11, 0, -1, 0, -1, 0, 1);
 
       StartBSuitRecycle(mech, RECYCLE_FALL_STOPSWARM);
     }
@@ -112,7 +115,7 @@ void StopSwarming(MECH *mech, int intentional) {
 }
 
 int IsMechSwarmed(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int count = 0, i, j;
   MECH *t;
 
@@ -121,7 +124,7 @@ int IsMechSwarmed(MECH *mech) {
 
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
 
       if (MechSwarmTarget(t) != mech->mynum)
@@ -137,7 +140,7 @@ int IsMechSwarmed(MECH *mech) {
 }
 
 int IsMechMounted(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int count = 0, i, j;
   MECH *t;
 
@@ -146,7 +149,7 @@ int IsMechMounted(MECH *mech) {
 
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
 
       if (MechSwarmTarget(t) != mech->mynum)
@@ -162,7 +165,7 @@ int IsMechMounted(MECH *mech) {
 }
 
 int CountSwarmers(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int count = 0, i, j;
   MECH *t;
 
@@ -170,7 +173,7 @@ int CountSwarmers(MECH *mech) {
     return 0;
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
       if (MechSwarmTarget(t) != mech->mynum)
         continue;
@@ -180,7 +183,7 @@ int CountSwarmers(MECH *mech) {
 }
 
 MECH *findSwarmers(MECH *mech) {
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int i, j;
   MECH *t;
 
@@ -189,7 +192,7 @@ MECH *findSwarmers(MECH *mech) {
 
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
 
       if (MechSwarmTarget(t) == mech->mynum) {
@@ -208,7 +211,7 @@ void StopBSuitSwarmers(MAP *map, MECH *mech, int intentional) {
     return;
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
       if (MechSwarmTarget(t) != mech->mynum)
         continue;
@@ -222,7 +225,7 @@ void BSuitMirrorSwarmedTarget(MAP *map, MECH *mech) {
 
   for (i = 0; i < map->first_free; i++)
     if ((j = map->mechsOnMap[i]) > 0 && i != mech->mapnumber) {
-      if (!(t = FindObjectsData(j)))
+      if (!(t = btech_context_find_object(mech->xcode.context, j)))
         continue;
       if (MechSwarmTarget(t) != mech->mynum)
         continue;
@@ -233,17 +236,21 @@ void BSuitMirrorSwarmedTarget(MAP *map, MECH *mech) {
 int doBSuitCommonChecks(MECH *mech, DbRef player) {
   int i;
 
-  DOCHECK1(Jumping(mech), "Unavailable when jumping - sorry.");
-  DOCHECK1(MechSwarmTarget(mech) > 0,
-           "You are already busy with a special attack!");
+  DOCHECK1_CONTEXT(mech->xcode.context, Jumping(mech),
+                   "Unavailable when jumping - sorry.");
+  DOCHECK1_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 0,
+                   "You are already busy with a special attack!");
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK1(MoveModeLock(mech),
-           "Unavailable when performing movement modes - deal.");
+  DOCHECK1_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+                   "Unavailable when performing movement modes - deal.");
 #endif
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
-    DOCHECK1(!SectIsDestroyed(mech, i) && MechSections(mech)[i].recycle,
-             tprintf("Suit %d is still recovering from attack.", i + 1));
-    DOCHECK1(SectHasBusyWeap(mech, i), "You have weapons recycling!");
+    DOCHECK1_CONTEXT(
+        mech->xcode.context,
+        !SectIsDestroyed(mech, i) && MechSections(mech)[i].recycle,
+        tprintf("Suit %d is still recovering from attack.", i + 1));
+    DOCHECK1_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, i),
+                     "You have weapons recycling!");
   }
 
   return 0;
@@ -266,12 +273,14 @@ int FindBSuitTarget(DbRef player, MECH *mech, MECH **target, char *buffer) {
   int targetnum;
   MECH *t = NULL;
 
-  DOCHECK1((argc = mech_parseattributes(buffer, args, 3)) > 1,
-           "Invalid arguments!");
+  DOCHECK1_CONTEXT(mech->xcode.context,
+                   (argc = mech_parseattributes(buffer, args, 3)) > 1,
+                   "Invalid arguments!");
   switch (argc) {
   case 0:
-    DOCHECK1(MechTarget(mech) <= 0, "You do not have a default target set!");
-    t = getMech(MechTarget(mech));
+    DOCHECK1_CONTEXT(mech->xcode.context, MechTarget(mech) <= 0,
+                     "You do not have a default target set!");
+    t = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
     if (!(t)) {
       mech_notify(mech, MECHALL, "Invalid default target!");
       MechTarget(mech) = -1;
@@ -282,21 +291,26 @@ int FindBSuitTarget(DbRef player, MECH *mech, MECH **target, char *buffer) {
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     targetnum = FindTargetDBREFFromMapNumber(mech, targetID);
-    DOCHECK1(targetnum <= 0, "Target is not in line of sight!");
-    t = getMech(targetnum);
-    DOCHECK1(!(t), "Invalid default target!");
+    DOCHECK1_CONTEXT(mech->xcode.context, targetnum <= 0,
+                     "Target is not in line of sight!");
+    t = btech_context_get_mech(mech->xcode.context, targetnum);
+    DOCHECK1_CONTEXT(mech->xcode.context, !(t), "Invalid default target!");
     break;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid target!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid target!");
     return 1;
   }
   range = FaMechRange(mech, t);
-  DOCHECK1(!InLineOfSight_NB(mech, t, MechX(t), MechY(t), range),
-           "Target is not in line of sight!");
-  DOCHECK1(range >= 1.0, "Target out of range!");
-  DOCHECK1(Jumping(t), "That target's unreachable right now!");
-  DOCHECK1(MechType(t) != CLASS_MECH, "That target is of invalid type.");
-  DOCHECK1(Destroyed(t), "A dead 'mech? C'mon :P");
+  DOCHECK1_CONTEXT(mech->xcode.context,
+                   !InLineOfSight_NB(mech, t, MechX(t), MechY(t), range),
+                   "Target is not in line of sight!");
+  DOCHECK1_CONTEXT(mech->xcode.context, range >= 1.0, "Target out of range!");
+  DOCHECK1_CONTEXT(mech->xcode.context, Jumping(t),
+                   "That target's unreachable right now!");
+  DOCHECK1_CONTEXT(mech->xcode.context, MechType(t) != CLASS_MECH,
+                   "That target is of invalid type.");
+  DOCHECK1_CONTEXT(mech->xcode.context, Destroyed(t), "A dead 'mech? C'mon :P");
   *target = t;
   return 0;
 }
@@ -410,10 +424,11 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
 
   /* Well, we're here. Let's see if it works. */
   if (MadePilotSkillRoll(mech, baseToHit)) {
-    mech_printf(target, MECHALL, "%s %s you!", GetMechToMechID(target, mech),
+    mech_printf(target, MECHALL, "%s %s you!",
+                mech_to_mech_display_id(target, mech).text,
                 (tIsMount ? "mounts" : "swarms"));
     mech_printf(mech, MECHALL, "You %s %s!", (tIsMount ? "mount" : "swarm"),
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
 
     MechSwarmTarget(mech) = target->mynum;
     MechSwarmer(target) = mech->mynum;
@@ -434,11 +449,12 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     StopLock(mech);
   } else {
     mech_printf(target, MECHALL, "%s attempts to %s you!",
-                GetMechToMechID(target, mech), (tIsMount ? "mount" : "swarm"));
+                mech_to_mech_display_id(target, mech).text,
+                (tIsMount ? "mount" : "swarm"));
     mech_printf(mech, MECHALL,
                 "Nice try, but you don't succeed in your attempt at %s %s!",
                 (tIsMount ? "mounting" : "swarming"),
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
   }
 
   if (MechCritStatus(mech) & HIDDEN) {
@@ -477,9 +493,10 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   if (FindBSuitTarget(player, mech, &target, buffer))
     return;
 
-  DOCHECK(IsMechLegLess(mech), "That mech has no legs to grab!");
-  DOCHECK((MechTeam(mech) == MechTeam(target)),
-          "You can't attack the leg of a friendly mech!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsMechLegLess(mech),
+                  "That mech has no legs to grab!");
+  DOCHECK_CONTEXT(mech->xcode.context, (MechTeam(mech) == MechTeam(target)),
+                  "You can't attack the leg of a friendly mech!");
 
   switch (CountBSuitMembers(mech)) {
   case 1:
@@ -511,7 +528,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 
   if (MechIsQuad(target)) {
     do {
-      switch (Number(0, 3)) {
+      switch (btech_random_range(mech->xcode.context, 0, 3)) {
       case 0:
         wLegTemp = RLEG;
         break;
@@ -534,7 +551,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 
     } while (wLegID == -1);
   } else {
-    wLegTemp = (Number(0, 1)) ? RLEG : LLEG;
+    wLegTemp = (btech_random_range(mech->xcode.context, 0, 1)) ? RLEG : LLEG;
 
     if (GetSectInt(target, wLegTemp) == 0) {
       wLegID = (wLegTemp == RLEG) ? LLEG : RLEG;
@@ -548,18 +565,18 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 
   mech_printf(mech, MECHALL,
               "You go for %s's %s, placing explosives in the joints!",
-              GetMechToMechID(mech, target), strAttackLoc);
+              mech_to_mech_display_id(mech, target).text, strAttackLoc);
 
   if (MadePilotSkillRoll(mech, baseToHit)) {
     mech_printf(
         target, MECHALL,
         "%s swarms your %s putting small packets of explosives all over it!",
-        GetMechToMechID(target, mech), strAttackLoc);
+        mech_to_mech_display_id(target, mech).text, strAttackLoc);
 
     MechLOSBroadcasti(mech, target, "attacks %s's legs!");
 
     /* find out if we do a crit or damage */
-    wCritRoll = Roll();
+    wCritRoll = btech_random_roll(mech->xcode.context);
 
     if (wCritRoll >= 8) {
       mech_printf(target, MECHALL,
@@ -607,12 +624,12 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   } else {
     mech_printf(target, MECHALL,
                 "%s attempts to attacks your legs, but misses miserably.",
-                GetMechToMechID(target, mech));
+                mech_to_mech_display_id(target, mech).text);
 
     mech_printf(mech, MECHALL,
                 "You realize that this is harder than it looks and fail in "
                 "your attempt at hitting %s's legs!",
-                GetMechToMechID(mech, target));
+                mech_to_mech_display_id(mech, target).text);
 
     MechLOSBroadcasti(mech, target,
                       "attempts to climb %s's legs, but fails miserably!");
@@ -624,7 +641,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
 static void mech_hide_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   MECH *t;
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int fail = 0, i;
   long tic = (long)e->data2;
 
@@ -634,7 +651,7 @@ static void mech_hide_event(MuxEvent *e) {
   for (i = 0; i < map->first_free; i++) {
     if (map->mechsOnMap[i] <= 0)
       continue;
-    if (!(t = getMech(map->mechsOnMap[i])))
+    if (!(t = btech_context_get_mech(mech->xcode.context, map->mechsOnMap[i])))
       continue;
     if (MechCritStatus(t) & (CLAIRVOYANT | OBSERVATORIC | INVISIBLE))
       continue;
@@ -668,12 +685,13 @@ static void mech_hide_event(MuxEvent *e) {
 
 void bsuit_hide(DbRef player, void *data, char *buffer) {
   MECH *mech = data;
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   int terrain;
 
   cch(MECH_USUALO);
-  DOCHECK(
-      ((HasCamo(mech)) || (is_wizard(btech_context_active()->database, player)))
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      ((HasCamo(mech)) || (is_wizard(mech->xcode.context->database, player)))
           ? 0
           : MechType(mech) != CLASS_BSUIT && MechType(mech) != CLASS_MW,
       "You aren't capable of such curious things.");
@@ -683,12 +701,18 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  DOCHECK(Jumping(mech) || OODing(mech), "Hide where? Up here?");
-  DOCHECK((fabs(MechSpeed(mech)) > MP1), "Come to a complete stop first.");
-  DOCHECK(Hiding(mech), "You are looking for cover already!");
-  DOCHECK(MechMove(mech) == MOVE_VTOL && !Landed(mech), "You must be landed!");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech) || OODing(mech),
+                  "Hide where? Up here?");
+  DOCHECK_CONTEXT(mech->xcode.context, (fabs(MechSpeed(mech)) > MP1),
+                  "Come to a complete stop first.");
+  DOCHECK_CONTEXT(mech->xcode.context, Hiding(mech),
+                  "You are looking for cover already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechMove(mech) == MOVE_VTOL && !Landed(mech),
+                  "You must be landed!");
 
-  DOCHECK(MechSwarmTarget(mech) > 1, "Hide where? Not while on that!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 1,
+                  "Hide where? Not while on that!");
 
   terrain = GetRTerrain(map, MechX(mech), MechY(mech));
 
@@ -720,8 +744,9 @@ void JettisonPacks(DbRef player, void *data, char *buffer) {
   int i, j;
 
   cch(MECH_USUALO);
-  DOCHECK((!(MechInfantrySpecials(mech) & CAN_JETTISON_TECH)),
-          "You have no backpack that is capable of being jettisoned!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (!(MechInfantrySpecials(mech) & CAN_JETTISON_TECH)),
+                  "You have no backpack that is capable of being jettisoned!");
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
     for (j = 0; j < NUM_CRITICALS; j++) {

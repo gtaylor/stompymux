@@ -2,15 +2,17 @@
 
 #include "mux/server/configuration.h"
 
+#include "mux/server/configuration_context.h"
 #include "mux/server/configuration_toml.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
@@ -19,10 +21,19 @@
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/world/world_context.h"
 /* default (runtime-resettable) cache parameters */
 
 constexpr int CACHE_DEPTH = 10;
 constexpr int CACHE_WIDTH = 20;
+
+ServerConfiguration *server_configuration_create(void) {
+  return calloc(1, sizeof(ServerConfiguration));
+}
+
+void server_configuration_destroy(ServerConfiguration *configuration) {
+  free(configuration);
+}
 
 /*
  * ---------------------------------------------------------------------------
@@ -32,7 +43,7 @@ constexpr int CACHE_WIDTH = 20;
 typedef struct confparm CONF;
 typedef int (*ConfigurationInterpreter)(void *value, char *text, long extra,
                                         DbRef player, char *command,
-                                        MuxServer *server);
+                                        ConfigurationContext *context);
 struct confparm {
   const char *pname;                    /* parm name */
   ConfigurationInterpreter interpreter; /* routine to interp parameter */
@@ -43,41 +54,42 @@ struct confparm {
 
 typedef int (*ConfigurationIntInterpreter)(int *value, char *text, long extra,
                                            DbRef player, char *command,
-                                           MuxServer *server);
+                                           ConfigurationContext *context);
 typedef int (*ConfigurationListInterpreter)(long **value, char *text,
                                             long extra, DbRef player,
-                                            char *command, MuxServer *server);
+                                            char *command,
+                                            ConfigurationContext *context);
 
 static int configuration_call_int(ConfigurationIntInterpreter interpreter,
                                   void *value, char *text, long extra,
                                   DbRef player, char *command,
-                                  MuxServer *server) {
-  return interpreter(value, text, extra, player, command, server);
+                                  ConfigurationContext *context) {
+  return interpreter(value, text, extra, player, command, context);
 }
 
 static int configuration_call_list(ConfigurationListInterpreter interpreter,
                                    void *value, char *text, long extra,
                                    DbRef player, char *command,
-                                   MuxServer *server) {
-  return interpreter(value, text, extra, player, command, server);
+                                   ConfigurationContext *context) {
+  return interpreter(value, text, extra, player, command, context);
 }
 
 static int configuration_call_direct(ConfigurationInterpreter interpreter,
                                      void *value, char *text, long extra,
                                      DbRef player, char *command,
-                                     MuxServer *server) {
-  return interpreter(value, text, extra, player, command, server);
+                                     ConfigurationContext *context) {
+  return interpreter(value, text, extra, player, command, context);
 }
 
 #define DEFINE_CONFIGURATION_ADAPTER(function)                                 \
   static int function##_configuration_adapter(                                 \
       void *value, char *text, long extra, DbRef player, char *command,        \
-      MuxServer *server) {                                                     \
+      ConfigurationContext *context) {                                         \
     return _Generic((function),                                                \
         ConfigurationIntInterpreter: configuration_call_int,                   \
         ConfigurationListInterpreter: configuration_call_list,                 \
         ConfigurationInterpreter: configuration_call_direct)(                  \
-        function, value, text, extra, player, command, server);                \
+        function, value, text, extra, player, command, context);               \
   }
 
 #define CONFIG_LOC(member)                                                     \
@@ -93,26 +105,26 @@ static int configuration_call_direct(ConfigurationInterpreter interpreter,
                       sizeof(WorldIndexes) +                                   \
                       offsetof(AccessControlStore, member) + 1))
 
-static void *configuration_resolve_location(MuxServer *server,
+static void *configuration_resolve_location(ConfigurationContext *context,
                                             const CONF *entry) {
   uintptr_t location = (uintptr_t)entry->loc;
 
   if (location > 0 && location <= sizeof(ServerConfiguration))
-    return (char *)server->configuration + location - 1;
+    return (char *)context->configuration + location - 1;
   if (location > sizeof(ServerConfiguration) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry))
-    return (char *)&server->command_registry + location -
+    return (char *)context->command_registry + location -
            sizeof(ServerConfiguration) - 1;
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                       sizeof(WorldIndexes))
-    return (char *)&server->world_indexes + location -
+    return (char *)context->world_indexes + location -
            sizeof(ServerConfiguration) - sizeof(CommandRegistry) - 1;
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                      sizeof(WorldIndexes) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                       sizeof(WorldIndexes) + sizeof(AccessControlStore))
-    return (char *)&server->access_control + location -
+    return (char *)context->world->access_control + location -
            sizeof(ServerConfiguration) - sizeof(CommandRegistry) -
            sizeof(WorldIndexes) - 1;
   return entry->loc;
@@ -132,239 +144,239 @@ extern CONF conftable[];
 
 /*
  * ---------------------------------------------------------------------------
- * * configuration_initialize: Initialize server configuration defaults.
+ * * configuration_initialize: Initialize context configuration defaults.
  */
 
-void configuration_initialize(MuxServer *server) {
-  StringCopy(server->configuration->database.gamedb, "");
-  StringCopy(server->configuration->database.mech_db, "mechs");
-  StringCopy(server->configuration->database.map_db, "maps");
-  server->configuration->btech_explode_reactor = 1;
-  server->configuration->btech_explode_time = 120;
-  server->configuration->btech_explode_ammo = 1;
-  server->configuration->btech_explode_stop = 0;
-  server->configuration->btech_stackpole = 1;
-  server->configuration->btech_phys_use_pskill = 1;
-  server->configuration->btech_erange = 1;
-  server->configuration->btech_hit_arcs = 0;
-  server->configuration->btech_dig_only_fs = 0;
-  server->configuration->btech_digbonus = 3;
-  server->configuration->btech_vcrit = 2;
-  server->configuration->btech_dynspeed = 1;
-  server->configuration->btech_ic = 1;
-  server->configuration->btech_parts = 1;
-  server->configuration->btech_slowdown = 2;
-  server->configuration->btech_fasaturn = 1;
-  server->configuration->btech_fasacrit = 0;
-  server->configuration->btech_fasaadvvtolcrit = 0;
-  server->configuration->btech_fasaadvvhlcrit = 0;
-  server->configuration->btech_fasaadvvhlfire = 0;
-  server->configuration->btech_divrotordamage = 0;
-  server->configuration->btech_moddamagewithrange = 0;
-  server->configuration->btech_moddamagewithwoods = 0;
-  server->configuration->btech_hotloadaddshalfbthmod = 0;
-  server->configuration->btech_nofusionvtolfuel = 0;
-  server->configuration->btech_tankfriendly = 0;
-  server->configuration->btech_newterrain = 0;
-  server->configuration->btech_skidcliff = 0;
-  server->configuration->btech_xp_bthmod = 0;
-  server->configuration->btech_xp_missilemod = 100;
-  server->configuration->btech_xp_ammomod = 100;
-  server->configuration->btech_defaultweapdam = 5;
-  server->configuration->btech_xp_modifier = 100;
-  server->configuration->btech_defaultweapbv = 120;
-  server->configuration->btech_xp_usePilotBVMod = 1;
-  server->configuration->btech_oldxpsystem = 1;
-  server->configuration->btech_xp_vrtmod = 0;
-  server->configuration->btech_limitedrepairs = 0;
-  server->configuration->btech_newcharge = 0;
-  server->configuration->btech_tl3_charge = 0;
-  server->configuration->btech_xploss = 666;
-  server->configuration->btech_critlevel = 100;
-  server->configuration->btech_tankshield = 0;
-  server->configuration->btech_newstagger = 1;
-  server->configuration->btech_newstaggertons = 1;
-  server->configuration->btech_newstaggertime = 5;
-  server->configuration->btech_extendedmovemod = 1;
-  server->configuration->btech_stacking = 2;
-  server->configuration->btech_stackdamage = 100;
-  server->configuration->btech_mw_losmap = 1;
-  server->configuration->btech_seismic_see_stopped = 0;
-  server->configuration->btech_exile_stun_code = 0;
-  server->configuration->btech_roll_on_backwalk = 1;
-  server->configuration->btech_usedmechstore = 0;
-  server->configuration->btech_ooc_comsys = 0;
-  server->configuration->btech_idf_requires_spotter = 1;
-  server->configuration->btech_vtol_ice_causes_fire = 1;
-  server->configuration->btech_glancing_blows = 1;
-  server->configuration->btech_inferno_penalty = 0;
-  server->configuration->btech_perunit_xpmod = 1;
-  server->configuration->btech_tsm_tow_bonus = 1;
-  server->configuration->btech_tsm_sprint_bonus = 1;
-  server->configuration->btech_heatcutoff = 1;
-  server->configuration->btech_sprint_bth = -4;
-  server->configuration->btech_cost_debug = 0;
-  server->configuration->btech_noisy_xpgain = 0;
-  server->configuration->btech_xpgain_cap = 10;
-  server->configuration->btech_transported_unit_death = 1;
-  server->configuration->btech_mwpickup_action = 1;
-  server->configuration->btech_standcareful = 1;
-  server->configuration->btech_maxtechtime = 600;
-  server->configuration->btech_blzmapmode = 0;
-  server->configuration->btech_extended_piloting = 1;
-  server->configuration->btech_extended_gunnery = 1;
-  server->configuration->btech_xploss_for_mw = 1;
-  server->configuration->btech_variable_techtime = 0;
-  server->configuration->btech_techtime_mod = 0;
-  server->configuration->btech_statengine_obj = -1;
+void configuration_initialize(ConfigurationContext *context) {
+  StringCopy(context->configuration->database.gamedb, "");
+  StringCopy(context->configuration->database.mech_db, "mechs");
+  StringCopy(context->configuration->database.map_db, "maps");
+  context->configuration->btech_explode_reactor = 1;
+  context->configuration->btech_explode_time = 120;
+  context->configuration->btech_explode_ammo = 1;
+  context->configuration->btech_explode_stop = 0;
+  context->configuration->btech_stackpole = 1;
+  context->configuration->btech_phys_use_pskill = 1;
+  context->configuration->btech_erange = 1;
+  context->configuration->btech_hit_arcs = 0;
+  context->configuration->btech_dig_only_fs = 0;
+  context->configuration->btech_digbonus = 3;
+  context->configuration->btech_vcrit = 2;
+  context->configuration->btech_dynspeed = 1;
+  context->configuration->btech_ic = 1;
+  context->configuration->btech_parts = 1;
+  context->configuration->btech_slowdown = 2;
+  context->configuration->btech_fasaturn = 1;
+  context->configuration->btech_fasacrit = 0;
+  context->configuration->btech_fasaadvvtolcrit = 0;
+  context->configuration->btech_fasaadvvhlcrit = 0;
+  context->configuration->btech_fasaadvvhlfire = 0;
+  context->configuration->btech_divrotordamage = 0;
+  context->configuration->btech_moddamagewithrange = 0;
+  context->configuration->btech_moddamagewithwoods = 0;
+  context->configuration->btech_hotloadaddshalfbthmod = 0;
+  context->configuration->btech_nofusionvtolfuel = 0;
+  context->configuration->btech_tankfriendly = 0;
+  context->configuration->btech_newterrain = 0;
+  context->configuration->btech_skidcliff = 0;
+  context->configuration->btech_xp_bthmod = 0;
+  context->configuration->btech_xp_missilemod = 100;
+  context->configuration->btech_xp_ammomod = 100;
+  context->configuration->btech_defaultweapdam = 5;
+  context->configuration->btech_xp_modifier = 100;
+  context->configuration->btech_defaultweapbv = 120;
+  context->configuration->btech_xp_usePilotBVMod = 1;
+  context->configuration->btech_oldxpsystem = 1;
+  context->configuration->btech_xp_vrtmod = 0;
+  context->configuration->btech_limitedrepairs = 0;
+  context->configuration->btech_newcharge = 0;
+  context->configuration->btech_tl3_charge = 0;
+  context->configuration->btech_xploss = 666;
+  context->configuration->btech_critlevel = 100;
+  context->configuration->btech_tankshield = 0;
+  context->configuration->btech_newstagger = 1;
+  context->configuration->btech_newstaggertons = 1;
+  context->configuration->btech_newstaggertime = 5;
+  context->configuration->btech_extendedmovemod = 1;
+  context->configuration->btech_stacking = 2;
+  context->configuration->btech_stackdamage = 100;
+  context->configuration->btech_mw_losmap = 1;
+  context->configuration->btech_seismic_see_stopped = 0;
+  context->configuration->btech_exile_stun_code = 0;
+  context->configuration->btech_roll_on_backwalk = 1;
+  context->configuration->btech_usedmechstore = 0;
+  context->configuration->btech_ooc_comsys = 0;
+  context->configuration->btech_idf_requires_spotter = 1;
+  context->configuration->btech_vtol_ice_causes_fire = 1;
+  context->configuration->btech_glancing_blows = 1;
+  context->configuration->btech_inferno_penalty = 0;
+  context->configuration->btech_perunit_xpmod = 1;
+  context->configuration->btech_tsm_tow_bonus = 1;
+  context->configuration->btech_tsm_sprint_bonus = 1;
+  context->configuration->btech_heatcutoff = 1;
+  context->configuration->btech_sprint_bth = -4;
+  context->configuration->btech_cost_debug = 0;
+  context->configuration->btech_noisy_xpgain = 0;
+  context->configuration->btech_xpgain_cap = 10;
+  context->configuration->btech_transported_unit_death = 1;
+  context->configuration->btech_mwpickup_action = 1;
+  context->configuration->btech_standcareful = 1;
+  context->configuration->btech_maxtechtime = 600;
+  context->configuration->btech_blzmapmode = 0;
+  context->configuration->btech_extended_piloting = 1;
+  context->configuration->btech_extended_gunnery = 1;
+  context->configuration->btech_xploss_for_mw = 1;
+  context->configuration->btech_variable_techtime = 0;
+  context->configuration->btech_techtime_mod = 0;
+  context->configuration->btech_statengine_obj = -1;
 #ifdef BT_FREETECHTIME
-  server->configuration->btech_freetechtime = 0;
+  context->configuration->btech_freetechtime = 0;
 #endif
 #ifdef BT_COMPLEXREPAIRS
-  server->configuration->btech_complexrepair = 1;
+  context->configuration->btech_complexrepair = 1;
 #endif
-  server->configuration->allow_chanlurking = 0;
-  server->configuration->afterlife_dbref = 220;
-  server->configuration->port = 6250;
-  server->configuration->conc_port = 6251;
-  server->configuration->init_size = 1000;
-  StringCopy(server->configuration->conn_file, "text/connect.txt");
-  StringCopy(server->configuration->conn_dir, "");
-  StringCopy(server->configuration->quit_file, "text/quit.txt");
-  StringCopy(server->configuration->down_file, "text/down.txt");
-  StringCopy(server->configuration->full_file, "text/full.txt");
-  StringCopy(server->configuration->site_file, "text/badsite.txt");
-  StringCopy(server->configuration->help_dir, "help");
-  StringCopy(server->configuration->down_msg, "");
-  StringCopy(server->configuration->full_msg, "");
-  StringCopy(server->configuration->dump_msg, "");
-  StringCopy(server->configuration->postdump_msg, "");
-  StringCopy(server->configuration->fixed_home_msg, "");
-  StringCopy(server->configuration->fixed_tel_msg, "");
-  StringCopy(server->configuration->public_channel, "Public");
-  server->configuration->indent_desc = 0;
-  server->configuration->name_spaces = 1;
-  server->configuration->fork_dump = 1;
-  server->configuration->fork_vfork = 0;
-  server->configuration->have_specials = 1;
-  server->configuration->have_comsys = 1;
-  server->configuration->have_macros = 1;
-  server->configuration->have_zones = 1;
-  server->configuration->paranoid_alloc = 0;
-  server->configuration->max_players = -1;
-  server->configuration->database.dump_interval = 3600;
-  server->configuration->check_interval = 600;
-  server->configuration->events_daily_hour = 7;
-  server->configuration->dump_offset = 0;
-  server->configuration->check_offset = 300;
-  server->configuration->idle_timeout = 3600;
-  server->configuration->conn_timeout = 120;
-  server->configuration->idle_interval = 60;
-  server->configuration->retry_limit = 3;
-  server->configuration->player_password_length_limit = 64;
-  server->configuration->password_hash_opslimit = 3;
-  server->configuration->password_hash_memlimit = 12 * 1024 * 1024;
-  server->configuration->login_attempt_burst = 3;
-  server->configuration->login_attempt_refill = 10;
-  server->configuration->login_hash_limit = 5;
-  server->configuration->output_limit = 16384;
-  server->configuration->use_http = 0;
-  server->configuration->queuemax = 100;
-  server->configuration->queue_chunk = 10;
-  server->configuration->active_q_chunk = 10;
-  server->configuration->ex_flags = 1;
-  server->configuration->robot_speak = 1;
-  server->configuration->pub_flags = 1;
-  server->configuration->quiet_look = 1;
-  server->configuration->exam_public = 1;
-  server->configuration->read_rem_desc = 0;
-  server->configuration->read_rem_name = 0;
-  server->configuration->sweep_dark = 0;
-  server->configuration->player_listen = 0;
-  server->configuration->dark_sleepers = 1;
-  server->configuration->see_own_dark = 1;
-  server->configuration->idle_wiz_dark = 0;
-  server->configuration->pemit_players = 0;
-  server->configuration->pemit_any = 0;
-  server->configuration->match_mine = 0;
-  server->configuration->match_mine_pl = 0;
-  server->configuration->switch_df_all = 1;
-  server->configuration->fascist_tport = 0;
-  server->configuration->trace_topdown = 1;
-  server->configuration->trace_limit = 200;
-  server->configuration->safe_unowned = 0;
+  context->configuration->allow_chanlurking = 0;
+  context->configuration->afterlife_dbref = 220;
+  context->configuration->port = 6250;
+  context->configuration->conc_port = 6251;
+  context->configuration->init_size = 1000;
+  StringCopy(context->configuration->conn_file, "text/connect.txt");
+  StringCopy(context->configuration->conn_dir, "");
+  StringCopy(context->configuration->quit_file, "text/quit.txt");
+  StringCopy(context->configuration->down_file, "text/down.txt");
+  StringCopy(context->configuration->full_file, "text/full.txt");
+  StringCopy(context->configuration->site_file, "text/badsite.txt");
+  StringCopy(context->configuration->help_dir, "help");
+  StringCopy(context->configuration->down_msg, "");
+  StringCopy(context->configuration->full_msg, "");
+  StringCopy(context->configuration->dump_msg, "");
+  StringCopy(context->configuration->postdump_msg, "");
+  StringCopy(context->configuration->fixed_home_msg, "");
+  StringCopy(context->configuration->fixed_tel_msg, "");
+  StringCopy(context->configuration->public_channel, "Public");
+  context->configuration->indent_desc = 0;
+  context->configuration->name_spaces = 1;
+  context->configuration->fork_dump = 1;
+  context->configuration->fork_vfork = 0;
+  context->configuration->have_specials = 1;
+  context->configuration->have_comsys = 1;
+  context->configuration->have_macros = 1;
+  context->configuration->have_zones = 1;
+  context->configuration->paranoid_alloc = 0;
+  context->configuration->max_players = -1;
+  context->configuration->database.dump_interval = 3600;
+  context->configuration->check_interval = 600;
+  context->configuration->events_daily_hour = 7;
+  context->configuration->dump_offset = 0;
+  context->configuration->check_offset = 300;
+  context->configuration->idle_timeout = 3600;
+  context->configuration->conn_timeout = 120;
+  context->configuration->idle_interval = 60;
+  context->configuration->retry_limit = 3;
+  context->configuration->player_password_length_limit = 64;
+  context->configuration->password_hash_opslimit = 3;
+  context->configuration->password_hash_memlimit = 12 * 1024 * 1024;
+  context->configuration->login_attempt_burst = 3;
+  context->configuration->login_attempt_refill = 10;
+  context->configuration->login_hash_limit = 5;
+  context->configuration->output_limit = 16384;
+  context->configuration->use_http = 0;
+  context->configuration->queuemax = 100;
+  context->configuration->queue_chunk = 10;
+  context->configuration->active_q_chunk = 10;
+  context->configuration->ex_flags = 1;
+  context->configuration->robot_speak = 1;
+  context->configuration->pub_flags = 1;
+  context->configuration->quiet_look = 1;
+  context->configuration->exam_public = 1;
+  context->configuration->read_rem_desc = 0;
+  context->configuration->read_rem_name = 0;
+  context->configuration->sweep_dark = 0;
+  context->configuration->player_listen = 0;
+  context->configuration->dark_sleepers = 1;
+  context->configuration->see_own_dark = 1;
+  context->configuration->idle_wiz_dark = 0;
+  context->configuration->pemit_players = 0;
+  context->configuration->pemit_any = 0;
+  context->configuration->match_mine = 0;
+  context->configuration->match_mine_pl = 0;
+  context->configuration->switch_df_all = 1;
+  context->configuration->fascist_tport = 0;
+  context->configuration->trace_topdown = 1;
+  context->configuration->trace_limit = 200;
+  context->configuration->safe_unowned = 0;
   /*
    * -- ??? Running SC on a non-SC DB may cause problems
    */
-  server->configuration->space_compress = 1;
-  server->configuration->start_room = 0;
-  server->configuration->start_home = -1;
-  server->configuration->default_home = -1;
-  server->configuration->master_room = -1;
-  server->configuration->player_flags.word1 = 0;
-  server->configuration->player_flags.word2 = 0;
-  server->configuration->room_flags.word1 = 0;
-  server->configuration->room_flags.word2 = 0;
-  server->configuration->exit_flags.word1 = 0;
-  server->configuration->exit_flags.word2 = 0;
-  server->configuration->thing_flags.word1 = 0;
-  server->configuration->thing_flags.word2 = 0;
-  server->configuration->robot_flags.word1 = ROBOT;
-  server->configuration->robot_flags.word2 = 0;
-  server->configuration->vattr_flags = AF_ODARK;
-  StringCopy(server->configuration->mud_name, "TinyMUX");
-  server->configuration->timeslice = 100;
-  server->configuration->cmd_quota_max = 100;
-  server->configuration->cmd_quota_incr = 5;
-  server->configuration->is_login_enabled = true;
-  server->configuration->is_interpreter_enabled = true;
-  server->configuration->is_checkpointing_enabled = true;
-  server->configuration->is_db_check_enabled = true;
-  server->configuration->is_idle_check_enabled = true;
-  server->configuration->is_dequeue_enabled = true;
-  server->configuration->is_event_check_enabled = true;
-  server->configuration->log_options =
+  context->configuration->space_compress = 1;
+  context->configuration->start_room = 0;
+  context->configuration->start_home = -1;
+  context->configuration->default_home = -1;
+  context->configuration->master_room = -1;
+  context->configuration->player_flags.word1 = 0;
+  context->configuration->player_flags.word2 = 0;
+  context->configuration->room_flags.word1 = 0;
+  context->configuration->room_flags.word2 = 0;
+  context->configuration->exit_flags.word1 = 0;
+  context->configuration->exit_flags.word2 = 0;
+  context->configuration->thing_flags.word1 = 0;
+  context->configuration->thing_flags.word2 = 0;
+  context->configuration->robot_flags.word1 = ROBOT;
+  context->configuration->robot_flags.word2 = 0;
+  context->configuration->vattr_flags = AF_ODARK;
+  StringCopy(context->configuration->mud_name, "TinyMUX");
+  context->configuration->timeslice = 100;
+  context->configuration->cmd_quota_max = 100;
+  context->configuration->cmd_quota_incr = 5;
+  context->configuration->is_login_enabled = true;
+  context->configuration->is_interpreter_enabled = true;
+  context->configuration->is_checkpointing_enabled = true;
+  context->configuration->is_db_check_enabled = true;
+  context->configuration->is_idle_check_enabled = true;
+  context->configuration->is_dequeue_enabled = true;
+  context->configuration->is_event_check_enabled = true;
+  context->configuration->log_options =
       LOG_ALWAYS | LOG_BUGS | LOG_SECURITY | LOG_NET | LOG_LOGIN | LOG_DBSAVES |
       LOG_CONFIGMODS | LOG_SHOUTS | LOG_STARTUP | LOG_WIZARD | LOG_PROBLEMS |
       LOG_PCREATES;
-  server->configuration->log_info = LOGOPT_TIMESTAMP | LOGOPT_LOC;
-  server->configuration->func_nest_lim = 50;
-  server->configuration->func_invk_lim = 2500;
-  server->configuration->ntfy_nest_lim = 20;
-  server->configuration->lock_nest_lim = 20;
-  server->configuration->parent_nest_lim = 10;
-  server->configuration->zone_nest_lim = 20;
-  server->configuration->stack_limit = 50;
-  server->configuration->cache_trim = 0;
-  server->configuration->cache_depth = CACHE_DEPTH;
-  server->configuration->cache_width = CACHE_WIDTH;
-  server->configuration->cache_names = 1;
-  StringCopy(server->configuration->lua.directory, "lua");
-  server->configuration->lua.instruction_limit = 100000;
-  server->configuration->lua.memory_limit = 64 * 1024 * 1024;
+  context->configuration->log_info = LOGOPT_TIMESTAMP | LOGOPT_LOC;
+  context->configuration->func_nest_lim = 50;
+  context->configuration->func_invk_lim = 2500;
+  context->configuration->ntfy_nest_lim = 20;
+  context->configuration->lock_nest_lim = 20;
+  context->configuration->parent_nest_lim = 10;
+  context->configuration->zone_nest_lim = 20;
+  context->configuration->stack_limit = 50;
+  context->configuration->cache_trim = 0;
+  context->configuration->cache_depth = CACHE_DEPTH;
+  context->configuration->cache_width = CACHE_WIDTH;
+  context->configuration->cache_names = 1;
+  StringCopy(context->configuration->lua.directory, "lua");
+  context->configuration->lua.instruction_limit = 100000;
+  context->configuration->lua.memory_limit = 64 * 1024 * 1024;
 
-  server->configuration->exit_parent = 0;
-  server->configuration->room_parent = 0;
-  server->configuration->player_parent = 0;
-  server->configuration->player_zone = 0;
+  context->configuration->exit_parent = 0;
+  context->configuration->room_parent = 0;
+  context->configuration->player_parent = 0;
+  context->configuration->player_zone = 0;
 }
 
 /*
  * ---------------------------------------------------------------------------
  * * configuration_log_not_found: Log a 'parameter not found' error.
  */
-void configuration_log_not_found(MuxServer *server, DbRef player,
+void configuration_log_not_found(ConfigurationContext *context, DbRef player,
                                  const char *cmd, const char *thingname,
                                  const char *thing) {
   char *buff;
 
-  if (server->configuration->is_initializing) {
-    log_error(&server->log, LOG_STARTUP, "CNF", "NFND", "%s: %s %s not found.",
+  if (context->configuration->is_initializing) {
+    log_error(context->log, LOG_STARTUP, "CNF", "NFND", "%s: %s %s not found.",
               cmd, thingname, thing);
   } else {
     buff = alloc_lbuf("configuration_log_not_found");
     snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
-    notify(&server->background_command.evaluation, player, buff);
+    notify(&context->command->evaluation, player, buff);
     free_lbuf(buff);
   }
 }
@@ -374,14 +386,14 @@ void configuration_log_not_found(MuxServer *server, DbRef player,
  * * configuration_log_syntax: Log a syntax error.
  */
 
-void configuration_log_syntax(MuxServer *server, DbRef player, const char *cmd,
-                              const char *template, const char *arg) {
-  if (server->configuration->is_initializing) {
-    log_error(&server->log, LOG_STARTUP, "CNF", "SYNTX", "%s: %s %s", cmd,
+void configuration_log_syntax(ConfigurationContext *context, DbRef player,
+                              const char *cmd, const char *template,
+                              const char *arg) {
+  if (context->configuration->is_initializing) {
+    log_error(context->log, LOG_STARTUP, "CNF", "SYNTX", "%s: %s %s", cmd,
               template, arg);
   } else {
-    notify_printf(&server->background_command.evaluation, player, "%s%s",
-                  template, arg);
+    notify_printf(&context->command->evaluation, player, "%s%s", template, arg);
   }
 }
 
@@ -391,7 +403,7 @@ void configuration_log_syntax(MuxServer *server, DbRef player, const char *cmd,
  */
 
 static int cf_status_from_succfail(DbRef player, char *cmd, int success,
-                                   int failure, MuxServer *server) {
+                                   int failure, ConfigurationContext *context) {
 
   /*
    * If any successes, return SUCCESS(0) if no failures or * * * * *
@@ -408,11 +420,11 @@ static int cf_status_from_succfail(DbRef player, char *cmd, int success,
    */
 
   if (failure == 0) {
-    if (server->configuration->is_initializing) {
-      log_error(&server->log, LOG_STARTUP, "CNF", "NDATA", "%s: Nothing to set",
+    if (context->configuration->is_initializing) {
+      log_error(context->log, LOG_STARTUP, "CNF", "NDATA", "%s: Nothing to set",
                 cmd);
     } else {
-      notify(&server->background_command.evaluation, player, "Nothing to set");
+      notify(&context->command->evaluation, player, "Nothing to set");
     }
   }
   return -1;
@@ -424,7 +436,7 @@ static int cf_status_from_succfail(DbRef player, char *cmd, int success,
  */
 
 static int cf_int(int *vp, char *str, long extra, DbRef player, char *cmd,
-                  MuxServer *server) {
+                  ConfigurationContext *context) {
   /*
    * Copy the numeric value to the parameter
    */
@@ -445,8 +457,8 @@ NameTable bool_names[] = {
 /* *INDENT-ON* */
 
 static int cf_bool(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
-  *vp = (int)name_table_search(&server->database, server->configuration, GOD,
+                   ConfigurationContext *context) {
+  *vp = (int)name_table_search(context->database, context->configuration, GOD,
                                bool_names, str);
   if (*vp < 0)
     *vp = (long)0;
@@ -459,7 +471,7 @@ static int cf_bool(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
-                     MuxServer *server) {
+                     ConfigurationContext *context) {
   int retval;
 
   /*
@@ -469,12 +481,11 @@ static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
   retval = 0;
   if (strlen(str) >= (size_t)extra) {
     str[extra - 1] = '\0';
-    if (server->configuration->is_initializing) {
-      log_error(&server->log, LOG_STARTUP, "CNF", "NFND",
+    if (context->configuration->is_initializing) {
+      log_error(context->log, LOG_STARTUP, "CNF", "NFND",
                 "%s: String truncated", cmd);
     } else {
-      notify(&server->background_command.evaluation, player,
-             "String truncated");
+      notify(&context->command->evaluation, player, "String truncated");
     }
     retval = 1;
   }
@@ -488,7 +499,7 @@ static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 static int cf_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                    MuxServer *server) {
+                    ConfigurationContext *context) {
   char *alias, *orig, *p;
   int *cp = nullptr;
 
@@ -503,7 +514,7 @@ static int cf_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
         *p = ToUpper(*p);
       cp = hash_table_find(orig, (HashTable *)vp);
       if (cp == nullptr) {
-        configuration_log_not_found(server, player, cmd, "Entry", orig);
+        configuration_log_not_found(context, player, cmd, "Entry", orig);
         return -1;
       }
     }
@@ -523,7 +534,7 @@ static int cf_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 static int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
-                        MuxServer *server) {
+                        ConfigurationContext *context) {
   char *alias, *orig;
   int *cp, success;
 
@@ -531,13 +542,13 @@ static int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
   alias = strtok(str, " \t=,");
   orig = strtok(nullptr, " \t=,");
 
-  cp = hash_table_find(orig, &server->world_indexes.flags);
+  cp = hash_table_find(orig, &context->world_indexes->flags);
   if (cp != nullptr) {
-    hash_table_add(alias, cp, &server->world_indexes.flags);
+    hash_table_add(alias, cp, &context->world_indexes->flags);
     success++;
   }
   if (!success)
-    configuration_log_not_found(server, player, cmd, "Flag", orig);
+    configuration_log_not_found(context, player, cmd, "Flag", orig);
   return ((success > 0) ? 0 : -1);
 }
 
@@ -547,7 +558,7 @@ static int cf_flagalias(int *vp, char *str, long extra, DbRef player, char *cmd,
  * namelist.
  */
 int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
-                              char *cmd, MuxServer *server) {
+                              char *cmd, ConfigurationContext *context) {
   char *sp;
   int f, negate, success, failure;
 
@@ -572,7 +583,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
      * Set or clear the appropriate bit
      */
 
-    f = name_table_search(&server->database, server->configuration, GOD,
+    f = name_table_search(context->database, context->configuration, GOD,
                           (NameTable *)extra, sp);
     if (f > 0) {
       if (negate)
@@ -581,7 +592,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
         *vp |= f;
       success++;
     } else {
-      configuration_log_not_found(server, player, cmd, "Entry", sp);
+      configuration_log_not_found(context, player, cmd, "Entry", sp);
       failure++;
     }
 
@@ -591,7 +602,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
 
     sp = strtok(nullptr, " \t");
   }
-  return cf_status_from_succfail(player, cmd, success, failure, server);
+  return cf_status_from_succfail(player, cmd, success, failure, context);
 }
 
 /*
@@ -600,7 +611,7 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
  */
 
 static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
-                        char *cmd, MuxServer *server) {
+                        char *cmd, ConfigurationContext *context) {
   char *sp;
   FLAGENT *fp;
   FLAGSET *fset;
@@ -621,7 +632,7 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
      * Set the appropriate bit
      */
 
-    fp = (FLAGENT *)hash_table_find(sp, &server->world_indexes.flags);
+    fp = (FLAGENT *)hash_table_find(sp, &context->world_indexes->flags);
     if (fp != nullptr) {
       if (success == 0) {
         (*fset).word1 = 0;
@@ -635,7 +646,7 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
         (*fset).word1 |= fp->flagvalue;
       success++;
     } else {
-      configuration_log_not_found(server, player, cmd, "Entry", sp);
+      configuration_log_not_found(context, player, cmd, "Entry", sp);
       failure++;
     }
 
@@ -661,11 +672,11 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
  */
 
 static int cf_badname(int *vp, char *str, long extra, DbRef player, char *cmd,
-                      MuxServer *server) {
+                      ConfigurationContext *context) {
   if (extra)
-    badname_remove(&server->world, str);
+    badname_remove(context->world, str);
   else
-    badname_add(&server->world, str);
+    badname_add(context->world, str);
   return 0;
 }
 
@@ -675,7 +686,7 @@ static int cf_badname(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
+                   ConfigurationContext *context) {
   SiteData *site, *last, *head;
   char *addr_txt, *mask_txt;
   struct in_addr addr_num, mask_num;
@@ -685,7 +696,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   if (addr_txt)
     mask_txt = strtok(nullptr, " \t=,");
   if (!addr_txt || !*addr_txt || !mask_txt || !*mask_txt) {
-    configuration_log_syntax(server, player, cmd,
+    configuration_log_syntax(context, player, cmd,
                              "Missing host address or mask.", "");
     return -1;
   }
@@ -694,7 +705,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   mask_num.s_addr = inet_addr(mask_txt);
 
   if (addr_num.s_addr == INADDR_NONE) {
-    configuration_log_syntax(server, player, cmd,
+    configuration_log_syntax(context, player, cmd,
                              "Bad host address: ", addr_txt);
     return -1;
   }
@@ -723,7 +734,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
    * are processed * * first.
    */
 
-  if (server->configuration->is_initializing) {
+  if (context->configuration->is_initializing) {
     if (head == nullptr) {
       *vp = (long *)site;
     } else {
@@ -744,7 +755,7 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                        MuxServer *server) {
+                        ConfigurationContext *context) {
   CONF *tp;
   char *ap;
 
@@ -756,10 +767,10 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
   for (tp = conftable; tp->pname; tp++) {
     if (!strcmp(tp->pname, str)) {
       return configuration_modify_bits(&tp->flags, ap, extra, player, cmd,
-                                       server);
+                                       context);
     }
   }
-  configuration_log_not_found(server, player, cmd, "Config directive", str);
+  configuration_log_not_found(context, player, cmd, "Config directive", str);
   return -1;
 }
 
@@ -1204,7 +1215,8 @@ CONF conftable[] = {
  * ---------------------------------------------------------------------------
  * * configuration_set: Set config parameter.
  */
-int configuration_set(MuxServer *server, char *cp, char *ap, DbRef player) {
+int configuration_set(ConfigurationContext *context, char *cp, char *ap,
+                      DbRef player) {
   CONF *tp;
   int i;
   char *buff = nullptr;
@@ -1216,21 +1228,20 @@ int configuration_set(MuxServer *server, char *cp, char *ap, DbRef player) {
 
   for (tp = conftable; tp->pname; tp++) {
     if (!strcmp(tp->pname, cp)) {
-      if (!server->configuration->is_initializing &&
-          !check_access(&server->database, server->configuration, player,
+      if (!context->configuration->is_initializing &&
+          !check_access(context->database, context->configuration, player,
                         tp->flags)) {
-        notify(&server->background_command.evaluation, player,
-               "Permission denied.");
+        notify(&context->command->evaluation, player, "Permission denied.");
         return (-1);
       }
       buff = alloc_lbuf("configuration_set");
       StringCopy(buff, ap);
-      i = tp->interpreter(configuration_resolve_location(server, tp), ap,
-                          tp->extra, player, cp, server);
-      if (!server->configuration->is_initializing) {
-        log_error(&server->log, LOG_CONFIGMODS, "CFG", "UPDAT",
+      i = tp->interpreter(configuration_resolve_location(context, tp), ap,
+                          tp->extra, player, cp, context);
+      if (!context->configuration->is_initializing) {
+        log_error(context->log, LOG_CONFIGMODS, "CFG", "UPDAT",
                   "%s entered config directive: %s with args '%s'. Status: %s",
-                  game_object_name(&server->database, player), cp, buff,
+                  game_object_name(context->database, player), cp, buff,
                   (i == 0 ? "Success"
                           : (i == 1 ? "Partial success"
                                     : (i == -1 ? "Failure" : "Strange"))));
@@ -1244,7 +1255,7 @@ int configuration_set(MuxServer *server, char *cp, char *ap, DbRef player) {
    * Config directive not found.  Complain about it.
    */
 
-  configuration_log_not_found(server, player, "Set", "Config directive", cp);
+  configuration_log_not_found(context, player, "Set", "Config directive", cp);
   return (-1);
 }
 
@@ -1255,10 +1266,11 @@ int configuration_set(MuxServer *server, char *cp, char *ap, DbRef player) {
 void do_admin(CommandInvocation *invocation) {
   int i;
 
-  i = configuration_set(invocation->context->server, invocation->first,
-                        invocation->second, invocation->player);
+  i = configuration_set(invocation->context->runtime->configuration_context,
+                        invocation->first, invocation->second,
+                        invocation->player);
   if ((i >= 0) &&
-      !is_quiet(&invocation->context->server->database, invocation->player))
+      !is_quiet(invocation->context->world->database, invocation->player))
     notify(&invocation->context->evaluation, invocation->player, "Set.");
 }
 
@@ -1269,12 +1281,12 @@ void do_admin(CommandInvocation *invocation) {
  */
 static int configuration_toml_dispatch_to_set(const char *pname,
                                               const char *args, void *ctx) {
-  MuxServer *server = ctx;
+  ConfigurationContext *context = ctx;
   /* configuration_set()'s (char *, char *) signature isn't const-correct;
      it only reads these strings. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  return configuration_set(server, (char *)pname, (char *)args, 0);
+  return configuration_set(context, (char *)pname, (char *)args, 0);
 #pragma clang diagnostic pop
 }
 
@@ -1282,15 +1294,15 @@ static int configuration_toml_dispatch_to_set(const char *pname,
  * ---------------------------------------------------------------------------
  * * configuration_read: Read in config parameters from named file
  */
-int configuration_read(MuxServer *server, char *fn) {
+int configuration_read(ConfigurationContext *context, char *fn) {
   char errbuf[256];
   bool ok;
 
-  StringCopy(server->configuration->config_file, fn);
-  server->configuration->is_initializing = true;
-  ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, server,
+  StringCopy(context->configuration->config_file, fn);
+  context->configuration->is_initializing = true;
+  ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, context,
                                errbuf, sizeof(errbuf));
-  server->configuration->is_initializing = false;
+  context->configuration->is_initializing = false;
   if (!ok) {
     fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
     return -1;
@@ -1302,26 +1314,25 @@ int configuration_read(MuxServer *server, char *fn) {
  * ---------------------------------------------------------------------------
  * * configuration_list_access: List access to config directives.
  */
-void configuration_list_access(MuxServer *server, DbRef player) {
+void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
   CONF *tp;
   char *buff;
 
   buff = alloc_mbuf("configuration_list_access");
   for (tp = conftable; tp->pname; tp++) {
-    if (is_god(&server->database, player) ||
-        check_access(&server->database, server->configuration, player,
-                     tp->flags)) {
+    if (is_god(evaluation->world->database, player) ||
+        check_access(evaluation->world->database,
+                     evaluation->world->configuration, player, tp->flags)) {
       snprintf(buff, MBUF_SIZE, "%s:", tp->pname);
-      name_table_list_set(&server->background_command.evaluation,
-                          server->configuration, player, access_nametab,
-                          tp->flags, buff, 1);
+      name_table_list_set(evaluation, evaluation->world->configuration, player,
+                          access_nametab, tp->flags, buff, 1);
     }
   }
   free_mbuf(buff);
 }
 
 /* ----------------------------------------------------------------------
- ** fun_config: returns a server configuration option
+ ** fun_config: returns a context configuration option
  */
 void fun_config(char *buff, char **bufc, DbRef player, DbRef cause,
                 char *fargs[], int nfargs, char *cargs[], int ncargs,
@@ -1339,8 +1350,9 @@ void fun_config(char *buff, char **bufc, DbRef player, DbRef cause,
         return;
       }
       if (cp->interpreter == cf_string_configuration_adapter) {
-        safe_str(configuration_resolve_location(context->server, cp), buff,
-                 bufc);
+        safe_str(configuration_resolve_location(
+                     context->runtime->configuration_context, cp),
+                 buff, bufc);
         return;
       }
 
@@ -1348,9 +1360,9 @@ void fun_config(char *buff, char **bufc, DbRef player, DbRef cause,
          decide how they want it */
       if (cp->interpreter == cf_int_configuration_adapter ||
           cp->interpreter == cf_bool_configuration_adapter) {
-        safe_tprintf_str(
-            buff, bufc, "%d",
-            *(int *)configuration_resolve_location(context->server, cp));
+        safe_tprintf_str(buff, bufc, "%d",
+                         *(int *)configuration_resolve_location(
+                             context->runtime->configuration_context, cp));
         return;
       }
 

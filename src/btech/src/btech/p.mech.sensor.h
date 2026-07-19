@@ -11,6 +11,12 @@
 
 #pragma once
 
+#include "mux/server/platform.h"
+
+typedef struct SensorFlagText {
+  char text[MBUF_SIZE];
+} SensorFlagText;
+
 /* mech.sensor.c */
 int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
                       float range, int wAmmoMode);
@@ -22,13 +28,13 @@ int Sensor_Sees(MECH *mech, MECH *target, int f, int arc, float range, int snum,
                 int chance_divisor, int mapvis, int maplight);
 int Sensor_SeesNow(MECH *mech, MECH *target, int f, int arc, float range,
                    int mapvis, int maplight);
-char *my_dump_flag(int i);
+SensorFlagText sensor_flag_text(int flags);
 void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
                        int y, MECH *target, int mapvis, int maplight,
                        int cloudbase, int seeanew, int wlf);
 void update_LOSinfo(DbRef obj, MAP *map);
-void add_sensor_info(char *buf, MECH *mech, int sn, int verbose);
-char *mechSensorInfo(int mode, MECH *mech, char *arg);
+void add_sensor_info(char *buf, int size, MECH *mech, int sn, int verbose);
+char *mechSensorInfo(MECH *mech, char buffer[static LBUF_SIZE]);
 int CanChangeTo(MECH *mech, int s);
 void sensor_light_availability_check(MECH *mech);
 void mech_sensor(DbRef player, void *data, char *buffer);

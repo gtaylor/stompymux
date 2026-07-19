@@ -16,7 +16,6 @@ int FindPunchLocation(MECH *target, int hitGroup);
 int FindKickLocation(MECH *target, int hitGroup);
 int get_bsuit_hitloc(MECH *mech);
 int TransferTarget(MECH *mech, int hitloc);
-int FindSwarmHitLocation(int *iscritical, int *isrear);
 int crittable(MECH *m, int loc, int tres);
 int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear);
 int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear);

@@ -14,7 +14,7 @@
 
 void do_version(CommandInvocation *invocation) {
   notify(&invocation->context->evaluation, invocation->player,
-         invocation->context->server->version);
+         invocation->context->runtime->version);
 }
 
 const char *mux_version = BTMUX_VERSION_STRING

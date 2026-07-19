@@ -11,14 +11,16 @@
 
 #pragma once
 
+typedef struct BtechContext BtechContext;
+
 /* mech.tech.c */
-int game_lag(void);
-int game_lag_time(int i);
-int player_techtime(DbRef player);
+int game_lag(BtechContext *context);
+int game_lag_time(BtechContext *context, int duration);
+int player_techtime(BtechContext *context, DbRef player);
 int tech_roll(DbRef player, MECH *mech, int diff);
 int tech_weapon_roll(DbRef player, MECH *mech, int diff);
-void tech_status(DbRef player, time_t dat);
-int tech_addtechtime(DbRef player, int time);
+void tech_status(BtechContext *context, DbRef player, time_t dat);
+int tech_addtechtime(BtechContext *context, DbRef player, int time);
 int tech_parsepart_advanced(MECH *mech, char *buffer, int *loc, int *pos,
                             int *extra, int allowrear);
 int tech_parsepart(MECH *mech, char *buffer, int *loc, int *pos, int *extra);

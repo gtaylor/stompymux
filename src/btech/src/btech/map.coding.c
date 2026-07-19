@@ -20,37 +20,28 @@
    this code becomes a bomb. */
 
 #include "map.coding.h"
-#include <string.h>
 
-static int first_free = 0;
+#include "btech/map_coding_registry.h"
 
-/* terr / height -> index mapping */
-static unsigned char data_to_id[LASTCHAR][ELEVATIONS];
-
-typedef struct hex_struct {
-  char terrain;
-  char elev;
-} HS;
-
-static HS id_to_data[ENTRIES];
-
-void init_map_coding() {
-  bzero(id_to_data, sizeof(id_to_data));
-  bzero(data_to_id, sizeof(data_to_id));
-}
-
-int Coding_GetIndex(char terrain, char elevation) {
+int map_coding_get_index(MapCodingRegistry *registry, char terrain,
+                         char elevation) {
   int i;
 
-  if ((i = data_to_id[(short)terrain][(short)elevation]))
+  if ((i = registry->data_to_id[(short)terrain][(short)elevation]))
     return i - 1;
-  id_to_data[first_free].terrain = terrain;
-  id_to_data[first_free].elev = elevation;
-  first_free++;
-  data_to_id[(short)terrain][(short)elevation] = first_free;
-  return first_free - 1;
+  registry->id_to_data[registry->next_id] = (MapCodingEntry){
+      .terrain = terrain,
+      .elevation = elevation,
+  };
+  registry->next_id++;
+  registry->data_to_id[(short)terrain][(short)elevation] = registry->next_id;
+  return registry->next_id - 1;
 }
 
-char Coding_GetElevation(int index) { return id_to_data[index].elev; }
+char map_coding_get_elevation(const MapCodingRegistry *registry, int index) {
+  return registry->id_to_data[index].elevation;
+}
 
-char Coding_GetTerrain(int index) { return id_to_data[index].terrain; }
+char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
+  return registry->id_to_data[index].terrain;
+}

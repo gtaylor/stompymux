@@ -12,100 +12,53 @@
 
 /* Make statistics 'bout what we do.. whatever it is we _do_ */
 
-#define MECH_STAT_C
 #include <assert.h>
 #include <time.h>
 
 #include "mech.h"
-#include "mech.stat.h"
+#include "mux/commands/command_invocation.h"
 #include "mux/database/db.h"
 #include "mux/server/server_api.h"
 #include "p.glue.h"
 
 #include "macros.h"
-#include "mt19937ar.h"
-
-stat_type rollstat;
-
-void init_stat() {
-  /* This is not necessary -- globals are always initialized empty */
-  /* bzero(&stat, sizeof(stat)); */
-
-  /* Seed random generator with current time.  */
-  init_genrand((unsigned long)time(NULL));
+void init_stat(BtechContext *context) {
+  btech_random_seed(&context->random, (unsigned long)time(nullptr));
 }
 
-static int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
+static const int chances[11] = {1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1};
 
-void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
+void do_show_stat(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  const BtechRollStatistics *statistics =
+      &invocation->context->btech->random.statistics;
+  DbRef player = invocation->player;
   int i, j, chancetotal;
   float f1, f2, chanceperc, optimalrolls;
 
-  if (!rollstat.totrolls) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
-           "No rolls to show statistics for!");
+  if (!statistics->total_rolls) {
+    notify(evaluation, player, "No rolls to show statistics for!");
     return;
   }
   for (i = 0; i < 11; i++) {
     if (i == 0) {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(evaluation, player,
              "#    Rolls %Current  Optimal Rolls %Optimal  %Hit Chance "
              " %Miss Chance");
     }
     f1 = (float)chances[i] * 100.0 / 36.0;
-    f2 = (float)rollstat.rolls[i] * 100.0 / rollstat.totrolls;
+    f2 = (float)statistics->rolls[i] * 100.0 / statistics->total_rolls;
     chancetotal = 0;
     for (j = i; j < 11; j++) {
       chancetotal = chancetotal + chances[j];
     }
     chanceperc = (float)chancetotal / 36.0 * 100;
-    optimalrolls = f1 / 100 * rollstat.totrolls;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                  "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f", i + 2,
-                  rollstat.rolls[i], f2, (int)optimalrolls, f1, chanceperc,
-                  100.0 - chanceperc);
+    optimalrolls = f1 / 100 * statistics->total_rolls;
+    notify_printf(evaluation, player, "%-3d %6d %8.3f %14d %8.3f %12.3f %13.3f",
+                  i + 2, statistics->rolls[i], f2, (int)optimalrolls, f1,
+                  chanceperc, 100.0 - chanceperc);
   }
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Total rolls: %d",
-                rollstat.totrolls);
-
-  /*	i = 0;
-
-          if(is_wizard(btech_context_active()->database, player)) {
-          for(i = 0; i < 11; i++) {
-                  if(i == 0) {
-                          notify(BTECH_EVALUATION_CONTEXT, player, "\nWeapon
-     Fire Stats\nBTH   #Misses #Hits           #Glances              Total");
-                  }
-                  hitavg = missavg = glanceavg = 0.0;
-                  hitstatstotal = rollstat.hitstats[i][0] +
-     rollstat.hitstats[i][1] + rollstat.hitstats[i][2]; totalhitrolls[3] +=
-     hitstatstotal; totalhitrolls[0] += rollstat.hitstats[i][0];
-                  totalhitrolls[1] += rollstat.hitstats[i][1];
-                  totalhitrolls[2] += rollstat.hitstats[i][2];
-                  if(hitstatstotal) {
-                          missavg   = ( (float) rollstat.hitstats[i][0] /
-     (float) hitstatstotal) * 100.0; hitavg    = ( (float)
-     rollstat.hitstats[i][1] / (float) hitstatstotal) * 100.0; glanceavg = (
-     (float) rollstat.hitstats[i][2] / (float) hitstatstotal) * 100.0;
-                  }
-                  notify_printf(BTECH_EVALUATION_CONTEXT, player,"%3d  %8d
-     (%5.1f%%)  %8d (%5.1f%%)  %8d
-     (%5.1f%%)  %8d", i+2,
-     rollstat.hitstats[i][0],missavg,rollstat.hitstats[i][1],hitavg,rollstat.hitstats[i][2],glanceavg,hitstatstotal);
-          }
-          hitavg = missavg = glanceavg = 0.0;
-          if(totalhitrolls[3]) {
-                  missavg   = ( (float) totalhitrolls[0] / (float)
-     totalhitrolls[3]) * 100.0; hitavg    = ( (float) totalhitrolls[1] / (float)
-     totalhitrolls[3]) * 100.0; glanceavg = ( (float) totalhitrolls[2] / (float)
-     totalhitrolls[3]) * 100.0;
-          }
-          notify_printf(BTECH_EVALUATION_CONTEXT, player,"ALL  %8d (%5.1f%%) %8d
-     (%5.1f%%)  %8d (%5.1f%%) %8d", totalhitrolls[0], missavg, totalhitrolls[1],
-     hitavg, totalhitrolls[2], glanceavg, totalhitrolls[3]);
-
-          }
-  */
+  notify_printf(evaluation, player, "Total rolls: %d", statistics->total_rolls);
 }
 
 /*
@@ -131,7 +84,7 @@ void do_show_stat(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
  * stuff really fast.  There's really no need to have the compiler inline it to
  * perform further optimization.
  */
-long int Number(long int low, long int high) {
+long btech_random_range(BtechContext *context, long low, long high) {
   const unsigned long int range = (unsigned long int)(high - low);
 
   unsigned long value;
@@ -156,7 +109,7 @@ long int Number(long int low, long int high) {
 
   /* Shifts >= bit width are undefined in C.  At least on x86, they
    * apparently do nothing, which causes the following do-while loop to
-   * run until genrand_int32() returns 0.  */
+   * run until the generator returns 0.  */
   if (nn == 32) {
     return 0;
   }
@@ -165,7 +118,7 @@ long int Number(long int low, long int high) {
 
   /* Repeatedly select random numbers until we get an acceptable one.  */
   do {
-    value = genrand_int32() >> nn;
+    value = btech_random_u32(&context->random) >> nn;
   } while (value > range);
 
   return low + value;

@@ -26,38 +26,37 @@
 #define my_parsepart(loc, part)                                                \
   switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \
   case -1:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid section!");              \
+    notify(evaluation, player, "Invalid section!");                            \
     return;                                                                    \
   case -2:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid part!");                 \
+    notify(evaluation, player, "Invalid part!");                               \
     return;                                                                    \
   }
 
 #define my_parsepart2(loc, part, brand)                                        \
   switch (tech_parsepart(mech, buffer, loc, part, brand)) {                    \
   case -1:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid section!");              \
+    notify(evaluation, player, "Invalid section!");                            \
     return;                                                                    \
   case -2:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid part!");                 \
+    notify(evaluation, player, "Invalid part!");                               \
     return;                                                                    \
   }
 
 #define my_parsegun(loc, part, brand)                                          \
   switch (tech_parsegun(mech, buffer, loc, part, brand)) {                     \
   case -1:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid gun #!");                \
+    notify(evaluation, player, "Invalid gun #!");                              \
     return;                                                                    \
   case -2:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
-           "Invalid object to replace with!");                                 \
+    notify(evaluation, player, "Invalid object to replace with!");             \
     return;                                                                    \
   case -3:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+    notify(evaluation, player,                                                 \
            "Invalid object type - not matching with original.");               \
     return;                                                                    \
   case -4:                                                                     \
-    notify(BTECH_EVALUATION_CONTEXT, player,                                   \
+    notify(evaluation, player,                                                 \
            "Invalid gun location - subscript out of range.");                  \
     return;                                                                    \
   }
@@ -65,51 +64,50 @@
 #define ClanMod(num)                                                           \
   MAX(1, (((num) / ((MechSpecials(mech) & CLAN_TECH) ? 2 : 1))))
 
-static int tmp_flag = 0;
-static int tmp_loc;
-static int tmp_part;
+typedef struct TechCheckContext {
+  int matches;
+  int location;
+  int part;
+} TechCheckContext;
 
-static void tech_check_locpart(MuxEvent *e) {
+static void tech_check_locpart(MuxEvent *e, void *data) {
+  TechCheckContext *context = data;
   int loc, pos;
   long l = (long)e->data2;
 
   UNPACK_LOCPOS(l, loc, pos);
-  if (loc == tmp_loc && pos == tmp_part)
-    tmp_flag++;
+  if (loc == context->location && pos == context->part)
+    context->matches++;
 }
 
-static void tech_check_loc(MuxEvent *e) {
+static void tech_check_loc(MuxEvent *e, void *data) {
+  TechCheckContext *context = data;
   long loc;
 
   loc = (((long)e->data2) % 16);
-  if (loc == tmp_loc)
-    tmp_flag++;
+  if (loc == context->location)
+    context->matches++;
 }
 
 #define CHECK(t, fun)                                                          \
-  tmp_flag = 0;                                                                \
-  tmp_loc = loc;                                                               \
-  tmp_part = part;                                                             \
-  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
-                             fun);                                             \
-  return tmp_flag
+  TechCheckContext check = {.location = loc, .part = part};                    \
+  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
+                            &check);                                           \
+  return check.matches
 
 #define CHECKL(t, fun)                                                         \
-  tmp_flag = 0;                                                                \
-  tmp_loc = loc;                                                               \
-  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
-                             fun);                                             \
-  return tmp_flag
+  TechCheckContext check = {.location = loc};                                  \
+  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
+                            &check);                                           \
+  return check.matches
 
 #define CHECK2(t, t2, fun)                                                     \
-  tmp_flag = 0;                                                                \
-  tmp_loc = loc;                                                               \
-  tmp_part = part;                                                             \
-  mux_event_gothru_type_data(btech_context_active()->events, t, (void *)mech,  \
-                             fun);                                             \
-  mux_event_gothru_type_data(btech_context_active()->events, t2, (void *)mech, \
-                             fun);                                             \
-  return tmp_flag
+  TechCheckContext check = {.location = loc, .part = part};                    \
+  mux_event_visit_type_data(mech->xcode.context->events, t, (void *)mech, fun, \
+                            &check);                                           \
+  mux_event_visit_type_data(mech->xcode.context->events, t2, (void *)mech,     \
+                            fun, &check);                                      \
+  return check.matches
 
 /* Replace/reload */
 int SomeoneRepairing_s(MECH *mech, int loc, int part, int t) {
@@ -179,13 +177,13 @@ int SomeoneScrappingPart(MECH *mech, int loc, int part) {
 #undef DAT
 
 int CanScrapLoc(MECH *mech, int loc) {
-  tmp_flag = 0;
-  tmp_loc = loc % 8;
-  mux_event_gothru_type_data(btech_context_active()->events, EVENT_REPAIR_REPL,
-                             (void *)mech, tech_check_loc);
-  mux_event_gothru_type_data(btech_context_active()->events, EVENT_REPAIR_RELO,
-                             (void *)mech, tech_check_loc);
-  return !tmp_flag && !SomeoneFixing(mech, loc);
+  TechCheckContext check = {.location = loc % 8};
+
+  mux_event_visit_type_data(mech->xcode.context->events, EVENT_REPAIR_REPL,
+                            (void *)mech, tech_check_loc, &check);
+  mux_event_visit_type_data(mech->xcode.context->events, EVENT_REPAIR_RELO,
+                            (void *)mech, tech_check_loc, &check);
+  return !check.matches && !SomeoneFixing(mech, loc);
 }
 
 int CanScrapPart(MECH *mech, int loc, int part) {
@@ -193,8 +191,6 @@ int CanScrapPart(MECH *mech, int loc, int part) {
 }
 
 #define tech_gun_is_ok(a, b, c) !PartIsNonfunctional(a, b, c)
-
-extern char *silly_get_uptime_to_string(int);
 
 int ValidGunPos(MECH *mech, int loc, int pos) {
   unsigned char weaparray_f[MAX_WEAPS_SECTION];
@@ -213,34 +209,40 @@ int ValidGunPos(MECH *mech, int loc, int pos) {
 
 void tech_checkstatus(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   int i = figure_latest_tech_event(mech);
-  char *ms;
+  UptimeText uptime;
 
-  DOCHECK(!i, "The mech's ready to rock!");
-  ms = silly_get_uptime_to_string(game_lag_time(i));
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                "The 'mech has approximately %s until done.", ms);
+  DOCHECK_CONTEXT(mech->xcode.context, !i, "The mech's ready to rock!");
+  uptime = uptime_text(game_lag_time(mech->xcode.context, i));
+  notify_printf(evaluation, player,
+                "The 'mech has approximately %s until done.", uptime.text);
 }
 
 TECHCOMMANDH(tech_removegun) {
   TECHCOMMANDB;
   TECHCOMMANDC;
   my_parsegun(&loc, &part, NULL);
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! You can assume the gun's gone too!");
-  DOCHECK(!IsWeapon(GetPartType(mech, loc, part)), "That's no gun!");
-  DOCHECK(PartIsDestroyed(mech, loc, part), "That gun's gone already!");
-  DOCHECK(!ValidGunPos(mech, loc, part), "You can't remove middle of a gun!");
-  DOCHECK(SomeoneScrappingPart(mech, loc, part),
-          "Someone's scrapping it already!");
-  DOCHECK(!CanScrapPart(mech, loc, part),
-          "Someone's tinkering with it already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no additional removals are "
-          "possible!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! You can assume the gun's gone too!");
+  DOCHECK_CONTEXT(mech->xcode.context, !IsWeapon(GetPartType(mech, loc, part)),
+                  "That's no gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDestroyed(mech, loc, part),
+                  "That gun's gone already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !ValidGunPos(mech, loc, part),
+                  "You can't remove middle of a gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneScrappingPart(mech, loc, part),
+                  "Someone's scrapping it already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !CanScrapPart(mech, loc, part),
+                  "Someone's tinkering with it already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no additional removals are "
+      "possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
   if (tech_weapon_roll(player, mech, REMOVEG_DIFFICULTY) < 0) {
@@ -267,27 +269,35 @@ TECHCOMMANDH(tech_removepart) {
   TECHCOMMANDB;
   TECHCOMMANDC;
   my_parsepart(&loc, &part);
-  DOCHECK((t = GetPartType(mech, loc, part)) == EMPTY,
-          "That location is empty!");
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! You can assume the part's gone too!");
-  DOCHECK(IsWeapon(t), "That's a gun - use removegun instead!");
-  DOCHECK(PartIsDestroyed(mech, loc, part), "That part's gone already!");
-  DOCHECK(IsCrap(GetPartType(mech, loc, part)), "That type isn't scrappable!");
-  DOCHECK(t == Special(ENDO_STEEL) || t == Special(FERRO_FIBROUS) ||
-              t == Special(STEALTH_ARMOR) || t == Special(HVY_FERRO_FIBROUS) ||
-              t == Special(LT_FERRO_FIBROUS),
-          "That type of item can't be removed!");
-  DOCHECK(SomeoneScrappingPart(mech, loc, part),
-          "Someone's scrapping it already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no additional removals are "
-          "possible!");
-  DOCHECK(!CanScrapPart(mech, loc, part),
-          "Someone's tinkering with it already!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (t = GetPartType(mech, loc, part)) == EMPTY,
+                  "That location is empty!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! You can assume the part's gone too!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsWeapon(t),
+                  "That's a gun - use removegun instead!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDestroyed(mech, loc, part),
+                  "That part's gone already!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsCrap(GetPartType(mech, loc, part)),
+                  "That type isn't scrappable!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  t == Special(ENDO_STEEL) || t == Special(FERRO_FIBROUS) ||
+                      t == Special(STEALTH_ARMOR) ||
+                      t == Special(HVY_FERRO_FIBROUS) ||
+                      t == Special(LT_FERRO_FIBROUS),
+                  "That type of item can't be removed!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneScrappingPart(mech, loc, part),
+                  "Someone's scrapping it already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no additional removals are "
+      "possible!");
+  DOCHECK_CONTEXT(mech->xcode.context, !CanScrapPart(mech, loc, part),
+                  "Someone's tinkering with it already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
   START("You start removing the part..");
@@ -341,14 +351,18 @@ TECHCOMMANDH(tech_removesection) {
   TECHCOMMANDB;
   TECHCOMMANDC;
   my_parsepart(&loc, NULL);
-  DOCHECK(SectIsDestroyed(mech, loc), "That section's gone already!");
-  DOCHECK(Invalid_Scrap_Path(mech, loc),
-          "You need to remove the outer sections first!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc), "Someone's scrapping it already!");
-  DOCHECK(!CanScrapLoc(mech, loc), "Someone's tinkering with it already!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That section's gone already!");
+  DOCHECK_CONTEXT(mech->xcode.context, Invalid_Scrap_Path(mech, loc),
+                  "You need to remove the outer sections first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+                  "Someone's scrapping it already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !CanScrapLoc(mech, loc),
+                  "Someone's tinkering with it already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   /* Ok.. Everything's valid (we hope). */
   if (tech_roll(player, mech, REMOVES_DIFFICULTY) < 0)
@@ -366,20 +380,25 @@ TECHCOMMANDH(tech_replacegun) {
   TECHCOMMANDB;
   TECHCOMMANDC;
   my_parsegun(&loc, &part, &brand);
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's repairing that part already!");
-  DOCHECK(!IsWeapon(GetPartType(mech, loc, part)), "That's no gun!");
-  DOCHECK(!ValidGunPos(mech, loc, part), "You can't replace middle of a gun!");
-  DOCHECK(!PartIsNonfunctional(mech, loc, part), "That gun isn't hurtin'!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's repairing that part already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !IsWeapon(GetPartType(mech, loc, part)),
+                  "That's no gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, !ValidGunPos(mech, loc, part),
+                  "You can't replace middle of a gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, !PartIsNonfunctional(mech, loc, part),
+                  "That gun isn't hurtin'!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   if (brand) {
     ob = GetPartBrand(mech, loc, part);
@@ -399,19 +418,22 @@ TECHCOMMANDH(tech_replacegun) {
   */
   parttype = oparttype = GetPartType(mech, loc, part);
 
-  DOCHECK(IsAmmo(GetPartType(mech, loc, part))
-              ? 0
-              : econ_find_items(
-                    IsDS(mech)
-                        ? AeroBay(mech, 0)
-                        : game_object_location(btech_context_active()->database,
-                                               mech->mynum),
-                    parttype, GetPartBrand(mech, loc, part)) < 1,
-          tprintf("Not enough units of %s in store.",
-                  part_name(parttype, GetPartBrand(mech, loc, part))));
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      IsAmmo(GetPartType(mech, loc, part))
+          ? 0
+          : econ_find_items(
+                mech->xcode.context,
+                IsDS(mech) ? AeroBay(mech, 0)
+                           : game_object_location(mech->xcode.context->database,
+                                                  mech->mynum),
+                parttype, GetPartBrand(mech, loc, part)) < 1,
+      tprintf("Not enough units of %s in store.",
+              part_name(mech->xcode.context, parttype,
+                        GetPartBrand(mech, loc, part))
+                  .text));
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                "You start replacing the gun...");
+  notify_printf(evaluation, player, "You start replacing the gun...");
   rollmod =
       REPLACE_DIFFICULTY + WEAPTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_weapon_roll(player, mech, rollmod);
@@ -422,31 +444,31 @@ TECHCOMMANDH(tech_replacegun) {
 
   if (roll < 0) {
     notify_printf(
-        BTECH_EVALUATION_CONTEXT, player,
+        evaluation, player,
         "Your attempt is unsuccessful, but you try to save the gun...");
     rollmod = REPLACE_DIFFICULTY;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(evaluation, player,
                     "You muck around, wasting the gun for good...");
       /* part goes , 1.5 * techtime*/
       if (!(IsAmmo(GetPartType(mech, loc, part))))
-        econ_change_items(
-            IsDS(mech) ? AeroBay(mech, 0)
-                       : game_object_location(btech_context_active()->database,
-                                              mech->mynum),
-            parttype, GetPartBrand(mech, loc, part), -1);
-      tech_addtechtime(player, fixtime);
+        econ_change_items(mech->xcode.context,
+                          IsDS(mech)
+                              ? AeroBay(mech, 0)
+                              : game_object_location(
+                                    mech->xcode.context->database, mech->mynum),
+                          parttype, GetPartBrand(mech, loc, part), -1);
+      tech_addtechtime(mech->xcode.context, player, fixtime);
       mux_event_add(
-          btech_context_active()->events,
-          MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
-          very_fake_func, (void *)mech,
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REPLG, very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
 
     } else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "You manage to save the gun...");
+      notify_printf(evaluation, player, "You manage to save the gun...");
       /* part doesn't go. 1.5 * techtime, but lets mod the fix time if
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
@@ -455,25 +477,22 @@ TECHCOMMANDH(tech_replacegun) {
         fixtime = fail_fixtime;
       else
         fixtime =
-            btech_context_active()->configuration->btech_variable_techtime
+            mech->xcode.context->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
-                      (1000 /
-                       (100 -
-                        (roll ? btech_context_active()
-                                        ->configuration->btech_techtime_mod *
-                                    roll
-                              : 0)))
+                      (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                     ->btech_techtime_mod *
+                                                 roll
+                                           : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                      "Your skill manages to save %d minute%s",
-                      fail_fixtime - fixtime,
-                      fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(player, fixtime);
+        notify_printf(
+            evaluation, player, "Your skill manages to save %d minute%s",
+            fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
+      tech_addtechtime(mech->xcode.context, player, fixtime);
       mux_event_add(
-          btech_context_active()->events,
-          MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
-          very_fake_func, (void *)mech,
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REPLG, very_fake_func, (void *)mech,
           (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
     }
 
@@ -482,31 +501,29 @@ TECHCOMMANDH(tech_replacegun) {
       fixtime = base_fixtime;
     else
       fixtime =
-          btech_context_active()->configuration->btech_variable_techtime
+          mech->xcode.context->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
-                    (1000 /
-                     (100 - (roll
-                                 ? btech_context_active()
-                                           ->configuration->btech_techtime_mod *
-                                       roll
-                                 : 0)))
+                    (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                   ->btech_techtime_mod *
+                                               roll
+                                         : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "Your skill manages to save %d minute%s",
-                    base_fixtime - fixtime,
-                    base_fixtime - fixtime == 1 ? "!" : "s!");
+      notify_printf(
+          evaluation, player, "Your skill manages to save %d minute%s",
+          base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
     if (!(IsAmmo(GetPartType(mech, loc, part))))
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          parttype, GetPartBrand(mech, loc, part), -1);
-    tech_addtechtime(player, fixtime);
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        parttype, GetPartBrand(mech, loc, part), -1);
+    tech_addtechtime(mech->xcode.context, player, fixtime);
     mux_event_add(
-        btech_context_active()->events,
-        MAX(1, player_techtime(player) * TECH_TICK), 0, EVENT_REPAIR_REPLG,
-        mux_event_tickmech_replacegun, (void *)mech,
+        mech->xcode.context->events,
+        MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+        EVENT_REPAIR_REPLG, mux_event_tickmech_replacegun, (void *)mech,
         (void *)(PACK_LOCPOS_E(loc, part, brand) + player * PLAYERPOS));
   }
 
@@ -532,35 +549,40 @@ TECHCOMMANDH(tech_repairgun) {
   TECHCOMMANDC;
   /* Find the gun for us */
   my_parsegun(&loc, &part, NULL);
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's repairing that part already!");
-  DOCHECK(!IsWeapon(GetPartType(mech, loc, part)), "That's no gun!");
-  DOCHECK(!ValidGunPos(mech, loc, part), "You can't repair middle of a gun!");
-  DOCHECK(SomeoneScrappingPart(mech, loc, part),
-          "Someone's scrapping it already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(PartIsDisabled(mech, loc, part), "That gun can't be fixed yet!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's repairing that part already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !IsWeapon(GetPartType(mech, loc, part)),
+                  "That's no gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, !ValidGunPos(mech, loc, part),
+                  "You can't repair middle of a gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneScrappingPart(mech, loc, part),
+                  "Someone's scrapping it already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDisabled(mech, loc, part),
+                  "That gun can't be fixed yet!");
 
   if (PartIsDestroyed(mech, loc, part)) {
     if (GetWeaponCrits(mech, Weapon2I(GetPartType(mech, loc, part))) < 5 ||
         PartIsDestroyed(mech, loc, part + 1)) {
-      notify(BTECH_EVALUATION_CONTEXT, player, "That gun is gone for good!");
+      notify(evaluation, player, "That gun is gone for good!");
       return;
     }
     extra_hard = 1;
   } else if (!PartTempNuke(mech, loc, part)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "That gun isn't hurtin'!");
+    notify(evaluation, player, "That gun isn't hurtin'!");
     return;
   }
 
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOCPOS(REPAIR_DIFFICULTY +
                     WEAPTYPE_DIFFICULTY(GetPartType(mech, loc, part)) +
@@ -575,27 +597,31 @@ TECHCOMMANDH(tech_fixenhcrit) {
   TECHCOMMANDC;
   /* Find the gun for us */
   my_parsegun(&loc, &part, NULL);
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's repairing that part already!");
-  DOCHECK(!IsWeapon(GetPartType(mech, loc, part)), "That's no gun!");
-  DOCHECK(SomeoneScrappingPart(mech, loc, part),
-          "Someone's scrapping it already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(PartIsDisabled(mech, loc, part), "That gun can't be fixed yet!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's repairing that part already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !IsWeapon(GetPartType(mech, loc, part)),
+                  "That's no gun!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneScrappingPart(mech, loc, part),
+                  "Someone's scrapping it already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDisabled(mech, loc, part),
+                  "That gun can't be fixed yet!");
 
   if (!PartIsDamaged(mech, loc, part)) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "That gun isn't damaged!");
+    notify(evaluation, player, "That gun isn't damaged!");
     return;
   }
 
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOCPOS(ENHCRIT_DIFFICULTY, repairenhcrit_fail, repairenhcrit_succ,
                 repairenhcrit_econ, REPAIRENHCRIT_TIME, mech,
@@ -612,22 +638,28 @@ TECHCOMMANDH(tech_replacepart) {
   int roll, rollmod, fixtime, base_fixtime, parttype, oparttype, fail_fixtime;
 
   my_parsepart(&loc, &part);
-  DOCHECK((t = GetPartType(mech, loc, part)) == EMPTY,
-          "That location is empty!");
-  DOCHECK(!PartIsNonfunctional(mech, loc, part), "That part looks ok to me..");
-  DOCHECK(IsCrap(GetPartType(mech, loc, part)), "That part isn't hurtin'!");
-  DOCHECK(IsWeapon(t), "That's a weapon! Use replacegun instead.");
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's repairing that part already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (t = GetPartType(mech, loc, part)) == EMPTY,
+                  "That location is empty!");
+  DOCHECK_CONTEXT(mech->xcode.context, !PartIsNonfunctional(mech, loc, part),
+                  "That part looks ok to me..");
+  DOCHECK_CONTEXT(mech->xcode.context, IsCrap(GetPartType(mech, loc, part)),
+                  "That part isn't hurtin'!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsWeapon(t),
+                  "That's a weapon! Use replacegun instead.");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's repairing that part already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   /* little cheating here to get the proper part, since we aren't doing complex
    * repairs */
@@ -646,19 +678,22 @@ TECHCOMMANDH(tech_replacepart) {
                          ? Cargo(DOUBLE_HEAT_SINK)
                          : oparttype)));
 
-  DOCHECK(IsAmmo(GetPartType(mech, loc, part))
-              ? 0
-              : econ_find_items(
-                    IsDS(mech)
-                        ? AeroBay(mech, 0)
-                        : game_object_location(btech_context_active()->database,
-                                               mech->mynum),
-                    parttype, GetPartBrand(mech, loc, part)) < 1,
-          tprintf("Not enough units of %s in store.",
-                  part_name(parttype, GetPartBrand(mech, loc, part))));
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      IsAmmo(GetPartType(mech, loc, part))
+          ? 0
+          : econ_find_items(
+                mech->xcode.context,
+                IsDS(mech) ? AeroBay(mech, 0)
+                           : game_object_location(mech->xcode.context->database,
+                                                  mech->mynum),
+                parttype, GetPartBrand(mech, loc, part)) < 1,
+      tprintf("Not enough units of %s in store.",
+              part_name(mech->xcode.context, parttype,
+                        GetPartBrand(mech, loc, part))
+                  .text));
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                "You start replacing the part...");
+  notify_printf(evaluation, player, "You start replacing the part...");
   rollmod =
       REPLACE_DIFFICULTY + PARTTYPE_DIFFICULTY(GetPartType(mech, loc, part));
   roll = tech_roll(player, mech, rollmod);
@@ -667,29 +702,30 @@ TECHCOMMANDH(tech_replacepart) {
 
   if (roll < 0) {
     notify_printf(
-        BTECH_EVALUATION_CONTEXT, player,
+        evaluation, player,
         "Your attempt is unsuccessful, but you try to save the part...");
     rollmod = rollmod + 1;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(evaluation, player,
                     "You muck around, wasting the part for good...");
       /* part goes , 1.5 * techtime*/
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          parttype, GetPartBrand(mech, loc, part), -1);
-      tech_addtechtime(player, fixtime);
-      mux_event_add(btech_context_active()->events,
-                    MAX(1, player_techtime(player) * TECH_TICK), 0,
-                    EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
-                    (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        parttype, GetPartBrand(mech, loc, part), -1);
+      tech_addtechtime(mech->xcode.context, player, fixtime);
+      mux_event_add(
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
+          (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
 
     } else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "You manage to save the part...");
+      notify_printf(evaluation, player, "You manage to save the part...");
       /* part doesn't go. 1.5 * techtime, but lets mod the fix time if
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
@@ -698,25 +734,23 @@ TECHCOMMANDH(tech_replacepart) {
         fixtime = fail_fixtime;
       else
         fixtime =
-            btech_context_active()->configuration->btech_variable_techtime
+            mech->xcode.context->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
-                      (1000 /
-                       (100 -
-                        (roll ? btech_context_active()
-                                        ->configuration->btech_techtime_mod *
-                                    roll
-                              : 0)))
+                      (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                     ->btech_techtime_mod *
+                                                 roll
+                                           : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                      "Your skill manages to save %d minute%s",
-                      fail_fixtime - fixtime,
-                      fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(player, fixtime);
-      mux_event_add(btech_context_active()->events,
-                    MAX(1, player_techtime(player) * TECH_TICK), 0,
-                    EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
-                    (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+        notify_printf(
+            evaluation, player, "Your skill manages to save %d minute%s",
+            fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
+      tech_addtechtime(mech->xcode.context, player, fixtime);
+      mux_event_add(
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REPL, very_fake_func, (void *)mech,
+          (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
     }
 
   } else {
@@ -724,32 +758,30 @@ TECHCOMMANDH(tech_replacepart) {
       fixtime = base_fixtime;
     else
       fixtime =
-          btech_context_active()->configuration->btech_variable_techtime
+          mech->xcode.context->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
-                    (1000 /
-                     (100 - (roll
-                                 ? btech_context_active()
-                                           ->configuration->btech_techtime_mod *
-                                       roll
-                                 : 0)))
+                    (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                   ->btech_techtime_mod *
+                                               roll
+                                         : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "Your skill manages to save %d minute%s",
-                    base_fixtime - fixtime,
-                    base_fixtime - fixtime == 1 ? "!" : "s!");
+      notify_printf(
+          evaluation, player, "Your skill manages to save %d minute%s",
+          base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
 
-    econ_change_items(IsDS(mech)
-                          ? AeroBay(mech, 0)
-                          : game_object_location(
-                                btech_context_active()->database, mech->mynum),
-                      parttype, GetPartBrand(mech, loc, part), -1);
-    tech_addtechtime(player, fixtime);
-    mux_event_add(btech_context_active()->events,
-                  MAX(1, player_techtime(player) * TECH_TICK), 0,
-                  EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
-                  (void *)mech,
-                  (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
+    econ_change_items(
+        mech->xcode.context,
+        IsDS(mech)
+            ? AeroBay(mech, 0)
+            : game_object_location(mech->xcode.context->database, mech->mynum),
+        parttype, GetPartBrand(mech, loc, part), -1);
+    tech_addtechtime(mech->xcode.context, player, fixtime);
+    mux_event_add(
+        mech->xcode.context->events,
+        MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+        EVENT_REPAIR_REPL, mux_event_tickmech_repairpart, (void *)mech,
+        (void *)(PACK_LOCPOS(loc, part) + player * PLAYERPOS));
   }
   /*
           DOTECH_LOCPOS(REPLACE_DIFFICULTY +
@@ -765,24 +797,32 @@ TECHCOMMANDH(tech_repairpart) {
 
   TECHCOMMANDC;
   my_parsepart(&loc, &part);
-  DOCHECK((t = GetPartType(mech, loc, part)) == EMPTY,
-          "That location is empty!");
-  DOCHECK(PartIsDestroyed(mech, loc, part), "That part is gone for good!");
-  DOCHECK(PartIsDisabled(mech, loc, part), "That part can't be repaired yet!");
-  DOCHECK(!PartTempNuke(mech, loc, part), "That part isn't hurtin'!");
-  DOCHECK(IsCrap(GetPartType(mech, loc, part)), "That part isn't hurtin'!");
-  DOCHECK(IsWeapon(t), "That's a weapon! Use repairgun instead.");
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's repairing that part already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (t = GetPartType(mech, loc, part)) == EMPTY,
+                  "That location is empty!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDestroyed(mech, loc, part),
+                  "That part is gone for good!");
+  DOCHECK_CONTEXT(mech->xcode.context, PartIsDisabled(mech, loc, part),
+                  "That part can't be repaired yet!");
+  DOCHECK_CONTEXT(mech->xcode.context, !PartTempNuke(mech, loc, part),
+                  "That part isn't hurtin'!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsCrap(GetPartType(mech, loc, part)),
+                  "That part isn't hurtin'!");
+  DOCHECK_CONTEXT(mech->xcode.context, IsWeapon(t),
+                  "That's a weapon! Use repairgun instead.");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's repairing that part already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOCPOS(REPAIR_DIFFICULTY +
                     PARTTYPE_DIFFICULTY(GetPartType(mech, loc, part)),
@@ -796,17 +836,24 @@ TECHCOMMANDH(tech_toggletype) {
 
   TECHCOMMANDB;
 
-  DOCHECK((!is_wizard(btech_context_active()->database, player)) &&
-              is_in_character(btech_context_active()->database, mech->mynum),
-          "This command only works in simpods!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      (!is_wizard(mech->xcode.context->database, player)) &&
+          is_in_character(mech->xcode.context->database, mech->mynum),
+      "This command only works in simpods!");
   my_parsepart2(&loc, &part, &atype);
-  DOCHECK(!IsAmmo((t = GetPartType(mech, loc, part))), "That's no ammo!");
-  DOCHECK(PartIsNonfunctional(mech, loc, part) ||
-              PartIsDisabled(mech, loc, part),
-          "The ammo compartment is nonfunctional!");
-  DOCHECK(!atype, "You need to give a type to toggle to (use - for normal)");
-  DOCHECK((t = (valid_ammo_mode(mech, loc, part, atype))) < 0,
-          "That is invalid ammo type for this weapon!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !IsAmmo((t = GetPartType(mech, loc, part))),
+                  "That's no ammo!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  PartIsNonfunctional(mech, loc, part) ||
+                      PartIsDisabled(mech, loc, part),
+                  "The ammo compartment is nonfunctional!");
+  DOCHECK_CONTEXT(mech->xcode.context, !atype,
+                  "You need to give a type to toggle to (use - for normal)");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (t = (valid_ammo_mode(mech, loc, part, atype))) < 0,
+                  "That is invalid ammo type for this weapon!");
   GetPartAmmoMode(mech, loc, part) &= ~(AMMO_MODES);
   GetPartAmmoMode(mech, loc, part) |= t;
   SetPartData(mech, loc, part, FullAmmo(mech, loc, part));
@@ -819,34 +866,42 @@ TECHCOMMANDH(tech_reload) {
   TECHCOMMANDB;
   TECHCOMMANDD;
   my_parsepart2(&loc, &part, &atype);
-  DOCHECK(!IsAmmo((t = GetPartType(mech, loc, part))), "That's no ammo!");
-  DOCHECK(PartIsNonfunctional(mech, loc, part),
-          "The ammo compartment is destroyed ; repair/replacepart it first.");
-  DOCHECK(PartIsDisabled(mech, loc, part),
-          "The ammo compartment is disabled ; repair/replacepart it first.");
-  DOCHECK((now = GetPartData(mech, loc, part)) ==
-              (full = FullAmmo(mech, loc, part)),
-          "That particular ammo compartment doesn't need reloading.");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's playing with that part already!");
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !IsAmmo((t = GetPartType(mech, loc, part))),
+                  "That's no ammo!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, PartIsNonfunctional(mech, loc, part),
+      "The ammo compartment is destroyed ; repair/replacepart it first.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, PartIsDisabled(mech, loc, part),
+      "The ammo compartment is disabled ; repair/replacepart it first.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (now = GetPartData(mech, loc, part)) ==
+                      (full = FullAmmo(mech, loc, part)),
+                  "That particular ammo compartment doesn't need reloading.");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's playing with that part already!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
   if (atype) {
-    DOCHECK((t = (valid_ammo_mode(mech, loc, part, atype))) < 0,
-            "That is invalid ammo type for this weapon!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    (t = (valid_ammo_mode(mech, loc, part, atype))) < 0,
+                    "That is invalid ammo type for this weapon!");
     SetPartData(mech, loc, part, 0);
     GetPartAmmoMode(mech, loc, part) &= ~(AMMO_MODES);
     GetPartAmmoMode(mech, loc, part) |= t;
   }
   change = 0;
 
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOCPOS_VAL(RELOAD_DIFFICULTY, reload_fail, reload_succ, reload_econ,
                     &change, RELOAD_TIME, mech,
@@ -860,28 +915,34 @@ TECHCOMMANDH(tech_unload) {
 
   TECHCOMMANDD;
   my_parsepart(&loc, &part);
-  DOCHECK(!IsAmmo((t = GetPartType(mech, loc, part))), "That's no ammo!");
-  DOCHECK(PartIsNonfunctional(mech, loc, part),
-          "The ammo compartment is destroyed ; repair/replacepart it first.");
-  DOCHECK(PartIsDisabled(mech, loc, part),
-          "The ammo compartment is disabled ; repair/replacepart it first.");
-  DOCHECK(!(now = GetPartData(mech, loc, part)),
-          "That particular ammo compartment is empty already.");
-  DOCHECK(SomeoneRepairing(mech, loc, part),
-          "Someone's playing with that part already!");
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !IsAmmo((t = GetPartType(mech, loc, part))),
+                  "That's no ammo!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, PartIsNonfunctional(mech, loc, part),
+      "The ammo compartment is destroyed ; repair/replacepart it first.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, PartIsDisabled(mech, loc, part),
+      "The ammo compartment is disabled ; repair/replacepart it first.");
+  DOCHECK_CONTEXT(mech->xcode.context, !(now = GetPartData(mech, loc, part)),
+                  "That particular ammo compartment is empty already.");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneRepairing(mech, loc, part),
+                  "Someone's playing with that part already!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
   if ((full = FullAmmo(mech, loc, part)) == now)
     change = 2;
   else
     change = 1;
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   if (tech_roll(player, mech, REMOVES_DIFFICULTY) < 0)
     mod = 3;
@@ -896,8 +957,10 @@ TECHCOMMANDH(tech_fixarmor) {
   TECHCOMMANDB;
 
   TECHCOMMANDD;
-  DOCHECK(tech_parsepart_advanced(mech, buffer, &loc, NULL, NULL, 1) < 0,
-          "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  tech_parsepart_advanced(mech, buffer, &loc, NULL, NULL, 1) <
+                      0,
+                  "Invalid section!");
   if (loc >= 8) {
     from = GetSectRArmor(mech, loc % 8);
     to = GetSectORArmor(mech, loc % 8);
@@ -905,23 +968,28 @@ TECHCOMMANDH(tech_fixarmor) {
     from = GetSectArmor(mech, loc);
     to = GetSectOArmor(mech, loc);
   }
-  DOCHECK(SectIsDestroyed(mech, loc % 8),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc % 8),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneFixingA(mech, loc) || SomeoneFixingI(mech, loc % 8),
-          "Someone's repairing that section already!");
-  DOCHECK(GetSectInt(mech, loc % 8) != GetSectOInt(mech, loc % 8),
-          "The internals need to be fixed first!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc % 8),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc % 8),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  SomeoneFixingA(mech, loc) || SomeoneFixingI(mech, loc % 8),
+                  "Someone's repairing that section already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  GetSectInt(mech, loc % 8) != GetSectOInt(mech, loc % 8),
+                  "The internals need to be fixed first!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
   from = MIN(to, from);
-  DOCHECK(from == to, "The location doesn't need armor repair!");
+  DOCHECK_CONTEXT(mech->xcode.context, from == to,
+                  "The location doesn't need armor repair!");
   change = to - from;
   ochange = change;
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
   DOTECH_LOC_VAL_S(FIXARMOR_DIFFICULTY, fixarmor_fail, fixarmor_succ,
                    fixarmor_econ, &change, FIXARMOR_TIME * ochange, loc,
                    EVENT_REPAIR_FIX, mech, "You start fixing the armor..");
@@ -936,20 +1004,23 @@ TECHCOMMANDH(tech_fixinternal) {
   my_parsepart(&loc, NULL);
   from = GetSectInt(mech, loc);
   to = GetSectOInt(mech, loc);
-  DOCHECK(from == to, "The location doesn't need internals' repair!");
+  DOCHECK_CONTEXT(mech->xcode.context, from == to,
+                  "The location doesn't need internals' repair!");
   change = to - from;
-  DOCHECK(SectIsDestroyed(mech, loc),
-          "That part's blown off! Use reattach first!");
-  DOCHECK(SectIsFlooded(mech, loc),
-          "That location has been flooded! Use reseal first!");
-  DOCHECK(SomeoneFixing(mech, loc),
-          "Someone's repairing that section already!");
-  DOCHECK(SomeoneScrappingLoc(mech, loc),
-          "Someone's scrapping that section - no repairs are possible!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That part's blown off! Use reattach first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsFlooded(mech, loc),
+                  "That location has been flooded! Use reseal first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneFixing(mech, loc),
+                  "Someone's repairing that section already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, SomeoneScrappingLoc(mech, loc),
+      "Someone's scrapping that section - no repairs are possible!");
   ochange = change;
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOC_VAL_S(FIXINTERNAL_DIFFICULTY, fixinternal_fail, fixinternal_succ,
                    fixinternal_econ, &change, FIXINTERNAL_TIME * ochange, loc,
@@ -1010,40 +1081,44 @@ TECHCOMMANDH(tech_reattach) {
   int roll, rollmod, fixtime, base_fixtime, fail_fixtime;
 
   my_parsepart(&loc, NULL);
-  DOCHECK(MechType(mech) == CLASS_BSUIT,
-          "You can't reattach a Battlesuit! Use 'replacesuit'!");
-  DOCHECK(!SectIsDestroyed(mech, loc), "That section isn't destroyed!");
-  DOCHECK(Invalid_Repair_Path(mech, loc),
-          "You need to reattach adjacent locations first!");
-  DOCHECK(SomeoneAttaching(mech, loc),
-          "Someone's attaching that section already!");
-  DOCHECK(!unit_is_fixable(mech),
-          "You see nothing to reattach it to (read:unit is cored).");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_BSUIT,
+                  "You can't reattach a Battlesuit! Use 'replacesuit'!");
+  DOCHECK_CONTEXT(mech->xcode.context, !SectIsDestroyed(mech, loc),
+                  "That section isn't destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, Invalid_Repair_Path(mech, loc),
+                  "You need to reattach adjacent locations first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneAttaching(mech, loc),
+                  "Someone's attaching that section already!");
+  DOCHECK_CONTEXT(mech->xcode.context, !unit_is_fixable(mech),
+                  "You see nothing to reattach it to (read:unit is cored).");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   internal_stock = econ_find_items(
+      mech->xcode.context,
       IsDS(mech)
           ? AeroBay(mech, 0)
-          : game_object_location(btech_context_active()->database, mech->mynum),
+          : game_object_location(mech->xcode.context->database, mech->mynum),
       ProperInternal(mech), 0);
   electric_stock = econ_find_items(
+      mech->xcode.context,
       IsDS(mech)
           ? AeroBay(mech, 0)
-          : game_object_location(btech_context_active()->database, mech->mynum),
+          : game_object_location(mech->xcode.context->database, mech->mynum),
       Cargo(S_ELECTRONIC), 0);
 
-  DOCHECK(internal_stock < GetSectOInt(mech, loc),
-          tprintf("Not enough %ss in stock. You need %d more.",
-                  part_name(ProperInternal(mech), 0),
-                  GetSectOInt(mech, loc) - internal_stock));
-  DOCHECK(electric_stock < GetSectOInt(mech, loc),
-          tprintf("Not enough Electrics in stock. You need %d more.",
-                  GetSectOInt(mech, loc) - electric_stock));
+  DOCHECK_CONTEXT(
+      mech->xcode.context, internal_stock < GetSectOInt(mech, loc),
+      tprintf("Not enough %ss in stock. You need %d more.",
+              part_name(mech->xcode.context, ProperInternal(mech), 0).text,
+              GetSectOInt(mech, loc) - internal_stock));
+  DOCHECK_CONTEXT(mech->xcode.context, electric_stock < GetSectOInt(mech, loc),
+                  tprintf("Not enough Electrics in stock. You need %d more.",
+                          GetSectOInt(mech, loc) - electric_stock));
 
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                "You start replacing the section...");
+  notify_printf(evaluation, player, "You start replacing the section...");
   rollmod = REATTACH_DIFFICULTY;
   roll = tech_roll(player, mech, rollmod);
   base_fixtime = REATTACH_TIME;
@@ -1051,103 +1126,105 @@ TECHCOMMANDH(tech_reattach) {
 
   if (roll < 0) {
     notify_printf(
-        BTECH_EVALUATION_CONTEXT, player,
+        evaluation, player,
         "Your attempt is unsuccessful, but you try to save the section...");
     rollmod = REATTACH_DIFFICULTY;
     roll = tech_roll(player, mech, rollmod);
     if (roll < 0) {
       fixtime = fail_fixtime;
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(evaluation, player,
                     "You muck around, wasting the section for good...");
       /* TODO: maybe save X% of materials like before? */
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-      tech_addtechtime(player, fixtime);
-      mux_event_add(btech_context_active()->events,
-                    MAX(1, player_techtime(player) * TECH_TICK), 0,
-                    EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
-                    (void *)(loc + player * PLAYERPOS));
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
+      tech_addtechtime(mech->xcode.context, player, fixtime);
+      mux_event_add(
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REAT, very_fake_func, (void *)mech,
+          (void *)(loc + player * PLAYERPOS));
 
     } else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "You manage to replace the section...");
+      notify_printf(evaluation, player, "You manage to replace the section...");
       /* it's a saving roll, so it is what it is */
       if (roll == 0)
         fixtime = fail_fixtime;
       else
         fixtime =
-            btech_context_active()->configuration->btech_variable_techtime
+            mech->xcode.context->configuration->btech_variable_techtime
                 ? (fail_fixtime * 10) /
-                      (1000 /
-                       (100 -
-                        (roll ? btech_context_active()
-                                        ->configuration->btech_techtime_mod *
-                                    roll
-                              : 0)))
+                      (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                     ->btech_techtime_mod *
+                                                 roll
+                                           : 0)))
                 : fail_fixtime;
       if (fail_fixtime - fixtime)
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                      "Your skill manages to save %d minute%s",
-                      fail_fixtime - fixtime,
-                      fail_fixtime - fixtime == 1 ? "!" : "s!");
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-      econ_change_items(
-          IsDS(mech) ? AeroBay(mech, 0)
-                     : game_object_location(btech_context_active()->database,
-                                            mech->mynum),
-          Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-      tech_addtechtime(player, fixtime);
-      mux_event_add(btech_context_active()->events,
-                    MAX(1, player_techtime(player) * TECH_TICK), 0,
-                    EVENT_REPAIR_REAT, mux_event_tickmech_reattach,
-                    (void *)mech, (void *)(loc + player * PLAYERPOS));
+        notify_printf(
+            evaluation, player, "Your skill manages to save %d minute%s",
+            fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
+      econ_change_items(mech->xcode.context,
+                        IsDS(mech)
+                            ? AeroBay(mech, 0)
+                            : game_object_location(
+                                  mech->xcode.context->database, mech->mynum),
+                        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
+      tech_addtechtime(mech->xcode.context, player, fixtime);
+      mux_event_add(
+          mech->xcode.context->events,
+          MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+          EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
+          (void *)(loc + player * PLAYERPOS));
     }
   } else {
     if (roll == 0)
       fixtime = base_fixtime;
     else
       fixtime =
-          btech_context_active()->configuration->btech_variable_techtime
+          mech->xcode.context->configuration->btech_variable_techtime
               ? (base_fixtime * 10) /
-                    (1000 /
-                     (100 - (roll
-                                 ? btech_context_active()
-                                           ->configuration->btech_techtime_mod *
-                                       roll
-                                 : 0)))
+                    (1000 / (100 - (roll ? mech->xcode.context->configuration
+                                                   ->btech_techtime_mod *
+                                               roll
+                                         : 0)))
               : base_fixtime;
     if (base_fixtime - fixtime)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "Your skill manages to save %d minute%s",
-                    base_fixtime - fixtime,
-                    base_fixtime - fixtime == 1 ? "!" : "s!");
-    econ_change_items(IsDS(mech)
-                          ? AeroBay(mech, 0)
-                          : game_object_location(
-                                btech_context_active()->database, mech->mynum),
-                      ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
-    econ_change_items(IsDS(mech)
-                          ? AeroBay(mech, 0)
-                          : game_object_location(
-                                btech_context_active()->database, mech->mynum),
-                      Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
-    tech_addtechtime(player, fixtime);
-    mux_event_add(btech_context_active()->events,
-                  MAX(1, player_techtime(player) * TECH_TICK), 0,
-                  EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
-                  (void *)(loc + player * PLAYERPOS));
+      notify_printf(
+          evaluation, player, "Your skill manages to save %d minute%s",
+          base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
+    econ_change_items(
+        mech->xcode.context,
+        IsDS(mech)
+            ? AeroBay(mech, 0)
+            : game_object_location(mech->xcode.context->database, mech->mynum),
+        ProperInternal(mech), 0, 0 - (GetSectOInt(mech, loc)));
+    econ_change_items(
+        mech->xcode.context,
+        IsDS(mech)
+            ? AeroBay(mech, 0)
+            : game_object_location(mech->xcode.context->database, mech->mynum),
+        Cargo(S_ELECTRONIC), 0, 0 - (GetSectOInt(mech, loc)));
+    tech_addtechtime(mech->xcode.context, player, fixtime);
+    mux_event_add(
+        mech->xcode.context->events,
+        MAX(1, player_techtime(mech->xcode.context, player) * TECH_TICK), 0,
+        EVENT_REPAIR_REAT, mux_event_tickmech_reattach, (void *)mech,
+        (void *)(loc + player * PLAYERPOS));
   }
 
   //	DOTECH_LOC(REATTACH_DIFFICULTY, reattach_fail, reattach_succ,
@@ -1163,28 +1240,32 @@ TECHCOMMANDH(tech_replacesuit) {
 
   TECHCOMMANDC;
   my_parsepart(&loc, NULL);
-  DOCHECK(MechType(mech) != CLASS_BSUIT,
-          "You can only use 'replacesuit' on a battlesuit unit!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) != CLASS_BSUIT,
+                  "You can only use 'replacesuit' on a battlesuit unit!");
 
   wSuits = CountBSuitMembers(mech);
 
-  DOCHECK(MechMaxSuits(mech) <= wSuits,
-          tprintf("This %s is already full! This %s only consists of %d suits!",
-                  GetLCaseBSuitName(mech), GetLCaseBSuitName(mech),
-                  MechMaxSuits(mech)));
-  DOCHECK((loc >= MechMaxSuits(mech)) || (loc < 0),
-          tprintf("Invalid suit! This %s only consists of %d suits!",
-                  GetLCaseBSuitName(mech), MechMaxSuits(mech)));
+  DOCHECK_CONTEXT(
+      mech->xcode.context, MechMaxSuits(mech) <= wSuits,
+      tprintf("This %s is already full! This %s only consists of %d suits!",
+              GetLCaseBSuitName(mech), GetLCaseBSuitName(mech),
+              MechMaxSuits(mech)));
+  DOCHECK_CONTEXT(mech->xcode.context, (loc >= MechMaxSuits(mech)) || (loc < 0),
+                  tprintf("Invalid suit! This %s only consists of %d suits!",
+                          GetLCaseBSuitName(mech), MechMaxSuits(mech)));
 
-  DOCHECK(!SectIsDestroyed(mech, loc), "That suit isn't destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, !SectIsDestroyed(mech, loc),
+                  "That suit isn't destroyed!");
 
-  DOCHECK(SomeoneReplacingSuit(mech, loc),
-          "Someone's already rebuilding that suit!");
-  DOCHECK(wSuits <= 0, "You are unable to replace the suits here! None of the "
-                       "buggers are still alive!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneReplacingSuit(mech, loc),
+                  "Someone's already rebuilding that suit!");
+  DOCHECK_CONTEXT(mech->xcode.context, wSuits <= 0,
+                  "You are unable to replace the suits here! None of the "
+                  "buggers are still alive!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOC(REPLACESUIT_DIFFICULTY, replacesuit_fail, replacesuit_succ,
              replacesuit_econ, REPLACESUIT_TIME, mech, loc,
@@ -1203,15 +1284,18 @@ TECHCOMMANDH(tech_reseal) {
 
   TECHCOMMANDC;
   my_parsepart(&loc, NULL);
-  DOCHECK(SectIsDestroyed(mech, loc), "That section is destroyed!");
-  DOCHECK(!SectIsFlooded(mech, loc), "That has not been flooded!");
-  DOCHECK(Invalid_Repair_Path(mech, loc),
-          "You need to reattach adjacent locations first!");
-  DOCHECK(SomeoneResealing(mech, loc),
-          "Someone's sealing that section already!");
-  DOCHECK(player_techtime(player) >=
-              btech_context_active()->configuration->btech_maxtechtime,
-          "You're too tired to do that!");
+  DOCHECK_CONTEXT(mech->xcode.context, SectIsDestroyed(mech, loc),
+                  "That section is destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, !SectIsFlooded(mech, loc),
+                  "That has not been flooded!");
+  DOCHECK_CONTEXT(mech->xcode.context, Invalid_Repair_Path(mech, loc),
+                  "You need to reattach adjacent locations first!");
+  DOCHECK_CONTEXT(mech->xcode.context, SomeoneResealing(mech, loc),
+                  "Someone's sealing that section already!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  player_techtime(mech->xcode.context, player) >=
+                      mech->xcode.context->configuration->btech_maxtechtime,
+                  "You're too tired to do that!");
 
   DOTECH_LOC(RESEAL_DIFFICULTY, reseal_fail, reseal_succ, reseal_econ,
              RESEAL_TIME, mech, loc, mux_event_tickmech_reseal,
@@ -1222,8 +1306,7 @@ TECHCOMMANDH(tech_fixextra) {
   TECHCOMMANDB;
 
   TECHCOMMANDC;
-  notify(BTECH_EVALUATION_CONTEXT, player,
-         "Fixed extra stuff - reseals, ammo feeds, etc.");
+  notify(evaluation, player, "Fixed extra stuff - reseals, ammo feeds, etc.");
   do_fixextra(mech);
 }
 
@@ -1231,8 +1314,8 @@ TECHCOMMANDH(tech_magic) {
   TECHCOMMANDB;
 
   TECHCOMMANDC;
-  notify(BTECH_EVALUATION_CONTEXT, player, "Doing the magic..");
+  notify(evaluation, player, "Doing the magic..");
   do_magic(mech);
   mech_int_check(mech, 1);
-  notify(BTECH_EVALUATION_CONTEXT, player, "Done!");
+  notify(evaluation, player, "Done!");
 }

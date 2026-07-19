@@ -184,68 +184,55 @@ char GetWeaponFireModeLetter(MECH *mech, int loop, int crit) {
 }
 
 const char *GetMoveTypeID(int movetype) {
-  static char buf[20];
-
   switch (movetype) {
   case MOVE_QUAD:
-    strcpy(buf, "QUAD");
-    break;
+    return "QUAD";
   case MOVE_BIPED:
-    strcpy(buf, "BIPED");
-    break;
+    return "BIPED";
   case MOVE_TRACK:
-    strcpy(buf, "TRACKED");
-    break;
+    return "TRACKED";
   case MOVE_WHEEL:
-    strcpy(buf, "WHEELED");
-    break;
+    return "WHEELED";
   case MOVE_HOVER:
-    strcpy(buf, "HOVER");
-    break;
+    return "HOVER";
   case MOVE_VTOL:
-    strcpy(buf, "VTOL");
-    break;
+    return "VTOL";
   case MOVE_FLY:
-    strcpy(buf, "FLY");
-    break;
+    return "FLY";
   case MOVE_HULL:
-    strcpy(buf, "HULL");
-    break;
+    return "HULL";
   case MOVE_SUB:
-    strcpy(buf, "SUBMARINE");
-    break;
+    return "SUBMARINE";
   case MOVE_FOIL:
-    strcpy(buf, "HYDROFOIL");
-    break;
+    return "HYDROFOIL";
   default:
-    strcpy(buf, "Unknown");
-    break;
+    return "Unknown";
   }
-  return buf;
 }
 
-struct {
-  char *onmsg;
-  char *offmsg;
+static const struct {
+  const char *onmsg;
+  const char *offmsg;
   int flag;
   int infolvl;
 } temp_flag_info_struct[] = {
-    {"DESTROYED", NULL, DESTROYED, 1},
-    {NULL, "SHUTDOWN", STARTED, 1},
-    {"Torso is 60 degrees right", NULL, TORSO_RIGHT, 0},
-    {"Torso is 60 degrees left", NULL, TORSO_LEFT, 0},
-    {NULL, NULL, 0, 0}};
+    {"DESTROYED", nullptr, DESTROYED, 1},
+    {nullptr, "SHUTDOWN", STARTED, 1},
+    {"Torso is 60 degrees right", nullptr, TORSO_RIGHT, 0},
+    {"Torso is 60 degrees left", nullptr, TORSO_LEFT, 0},
+    {nullptr, nullptr, 0, 0}};
 
-struct {
+static const struct {
   int team;
-  char *ccode;
+  const char *ccode;
 } obs_team_color[] = {
     {1, "%cw"},     {2, "%cc"},     {3, "%cm"},     {4, "%cb"},
     {5, "%cy"},     {6, "%cg"},     {7, "%cr"},     {8, "%ch%cx"},
     {9, "%ch%cw"},  {10, "%ch%cc"}, {11, "%ch%cm"}, {12, "%ch%cb"},
     {13, "%ch%cy"}, {14, "%ch%cg"}, {15, "%ch%cr"}, {0, "%ch%cw"}};
 
-void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
+void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                    int spaces, int level) {
   char buf[MBUF_SIZE];
   int i;
 
@@ -255,15 +242,15 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
 
   if (MechStatus(mech) & COMBAT_SAFE) {
     strcpy(buf + spaces, "%cb%chCOMBAT SAFE%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (Fortified(mech)) {
     strcpy(buf + spaces, "%ch%cgFORTIFIED%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (WeaponsHold(mech)) {
     strcpy(buf + spaces, "%ch%crWEAPONS HOLD%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (Fallen(mech)) {
     switch (MechMove(mech)) {
@@ -298,148 +285,149 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
       strcpy(buf + spaces, "%cr%chFOIL DESTROYED%cn");
       break;
     }
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (IsHulldown(mech)) {
     strcpy(buf + spaces, "%cg%chHULLDOWN%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechDugIn(mech)) {
     strcpy(buf + spaces, "%cg%chDUG IN%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (Digging(mech)) {
     strcpy(buf + spaces, "%cgDIGGING IN%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (Staggering(mech)) {
     strcpy(buf + spaces, "%cr%chSTAGGERING%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechCritStatus(mech) & SLITE_DEST) {
     strcpy(buf + spaces, "%cr%chSEARCHLIGHT DESTROYED%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechLites(mech)) {
     strcpy(buf + spaces, "%cg%chSEARCHLIGHT ON%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   } else if (MechLit(mech)) {
     strcpy(buf + spaces, "%cg%chILLUMINATED%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (Burning(mech) || Jellied(mech)) {
     strcpy(buf + spaces, "%cr%chON FIRE%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechCritStatus(mech) & HIDDEN) {
     strcpy(buf + spaces, tprintf("%%ch%%cgHIDDEN%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (IsMechSwarmed(mech)) {
     strcpy(buf + spaces, "%cr%chSWARMED BY ENEMY SUITS%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (IsMechMounted(mech)) {
     strcpy(buf + spaces, "%cr%chMOUNTED BY FRIENDLY SUITS%cn");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechSwarmTarget(mech) > 0) {
-    if (getMech(MechSwarmTarget(mech))) {
-      if (MechTeam(getMech(MechSwarmTarget(mech))) == MechTeam(mech))
+    if (btech_context_get_mech(mech->xcode.context, MechSwarmTarget(mech))) {
+      if (MechTeam(btech_context_get_mech(
+              mech->xcode.context, MechSwarmTarget(mech))) == MechTeam(mech))
         strcpy(buf + spaces, "%cg%chMOUNTED ON FRIENDLY UNIT%cn");
       else
         strcpy(buf + spaces, "%cg%chSWARMING ENEMY UNIT%cn");
 
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
   }
 #ifdef BT_MOVEMENT_MODES
   if (MechStatus2(mech) & DODGING) {
     strcpy(buf + spaces, tprintf("%%ch%%crDODGING%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechStatus2(mech) & EVADING) {
     strcpy(buf + spaces, tprintf("%%ch%%crEVADING%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechStatus2(mech) & SPRINTING) {
     strcpy(buf + spaces, tprintf("%%ch%%crSPRINTING%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MoveModeChange(mech)) {
     strcpy(buf + spaces, tprintf("%%ch%%cyCHANGING MOVEMENT MODE%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (SideSlipping(mech)) {
     strcpy(buf + spaces, tprintf("%%ch%%cySIDESLIPPING%%c"));
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
   if (MechTankCritStatus(mech) & CREW_STUNNED ||
       MechCritStatus(mech) & MECH_STUNNED) {
     strcpy(buf + spaces, "%ch%crSTUNNED%c");
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(evaluation, player, buf);
   }
 #endif
   if (level == 0) { /* our own 'status' */
     if (ECMProtected(mech)) {
       strcpy(buf + spaces, "%cg%chPROTECTED BY ECM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (AngelECMProtected(mech)) {
       strcpy(buf + spaces, "%cg%chPROTECTED BY ANGEL ECM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (ECMDisturbed(mech)) {
       strcpy(buf + spaces, "%cy%chAFFECTED BY ECM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (AngelECMDisturbed(mech)) {
       strcpy(buf + spaces, "%cy%chAFFECTED BY ANGEL ECM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (ECMCountered(mech)) {
       strcpy(buf + spaces, "%cy%chCOUNTERED BY ECCM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (StealthArmorActive(mech)) {
       strcpy(buf + spaces, "%cg%chSTEALTH ARMOR ACTIVE%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (NullSigSysActive(mech)) {
       strcpy(buf + spaces, "%cg%chNULL SIGNATURE SYSTEM ACTIVE%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, NARC_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chNARC POD ATTACHED%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HOMING_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC HOMING POD ATTACHED%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HAYWIRE_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC HAYWIRE POD ATTACHED%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_ECM_ATTACHED)) {
       strcpy(buf + spaces, "%cy%chINARC ECM POD ATTACHED%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (Extinguishing(mech)) {
       strcpy(buf + spaces, "%cy%chEXTINGUISHING FIRE%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (MechStatus2(mech) & AUTOTURN_TURRET) {
       strcpy(buf + spaces, "%cg%chTURRET AUTO-TURN ENGAGED%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (MechSections(mech)[RARM].specials & CARRYING_CLUB) {
       strcpy(buf + spaces, "%cg%chCARRYING CLUB - RIGHT ARM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
     if (MechSections(mech)[LARM].specials & CARRYING_CLUB) {
       strcpy(buf + spaces, "%cg%chCARRYING CLUB - LEFT ARM%cn");
-      notify(BTECH_EVALUATION_CONTEXT, player, buf);
+      notify(evaluation, player, buf);
     }
   }
   for (i = 0; temp_flag_info_struct[i].flag; i++)
@@ -447,123 +435,124 @@ void Mech_ShowFlags(DbRef player, MECH *mech, int spaces, int level) {
       if (MechStatus(mech) & temp_flag_info_struct[i].flag) {
         if (temp_flag_info_struct[i].onmsg) {
           strcpy(buf + spaces, temp_flag_info_struct[i].onmsg);
-          notify(BTECH_EVALUATION_CONTEXT, player, buf);
+          notify(evaluation, player, buf);
         }
       } else {
         if (temp_flag_info_struct[i].offmsg) {
           strcpy(buf + spaces, temp_flag_info_struct[i].offmsg);
-          notify(BTECH_EVALUATION_CONTEXT, player, buf);
+          notify(evaluation, player, buf);
         }
       }
     }
 }
 
 const char *GetArcID(MECH *mech, int arc) {
-  static char buf[20];
   int mechlike = (MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW ||
                   MechType(mech) == CLASS_BSUIT);
 
   if (arc & FORWARDARC)
-    strcpy(buf, "Forward");
-  else if (arc & RSIDEARC)
-    strcpy(buf, mechlike ? "Right Arm" : "Right Side");
-  else if (arc & LSIDEARC)
-    strcpy(buf, mechlike ? "Left Arm" : "Left Side");
-  else if (arc & REARARC)
-    strcpy(buf, "Rear");
-  else
-    strcpy(buf, "NO");
-
-  return buf;
+    return "Forward";
+  if (arc & RSIDEARC)
+    return mechlike ? "Right Arm" : "Right Side";
+  if (arc & LSIDEARC)
+    return mechlike ? "Left Arm" : "Left Side";
+  if (arc & REARARC)
+    return "Rear";
+  return "NO";
 }
 
-const char *GetMechToMechID_base(MECH *see, MECH *mech, int inlos) {
+MechDisplayId mech_to_mech_display_id_base(MECH *see, MECH *mech, int inlos) {
   char *mname;
-  static char ids[SBUF_SIZE];
+  MechDisplayId id = {0};
 
-  if (!is_good_obj(btech_context_active()->database, mech->mynum))
-    return "";
+  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+    return id;
 
   if (!inlos)
     mname = "something";
   else
-    mname = silly_atr_get(mech->mynum, A_MECHNAME);
+    mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                 A_MECHNAME, (char[LBUF_SIZE]){0});
 
-  snprintf(ids, SBUF_SIZE, "%s [%s]", mname,
-           MechIDS(mech, inlos && MechTeam(see) == MechTeam(mech)));
-  ids[SBUF_SIZE - 1] = '\0';
-  return ids;
+  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
+           mech_id(mech, inlos && MechTeam(see) == MechTeam(mech)).text);
+  return id;
 }
 
-const char *GetMechToMechID(MECH *see, MECH *mech) {
+MechDisplayId mech_to_mech_display_id(MECH *see, MECH *mech) {
   char *mname;
   int team;
-  static char ids[SBUF_SIZE];
+  MechDisplayId id = {0};
 
   if (!mech) {
     dprintk("bad mech");
-    return "";
+    return id;
   }
   if (!see) {
     dprintk("bad see");
-    return "";
+    return id;
   }
-  if (!is_good_obj(btech_context_active()->database, mech->mynum))
-    return "";
+  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+    return id;
 
   if (!InLineOfSight_NB(see, mech, 0, 0, 0)) {
     mname = "something";
     team = 0;
   } else {
-    mname = silly_atr_get(mech->mynum, A_MECHNAME);
+    mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                 A_MECHNAME, (char[LBUF_SIZE]){0});
     team = (MechTeam(see) == MechTeam(mech));
   }
 
-  snprintf(ids, SBUF_SIZE, "%s [%s]", mname, MechIDS(mech, team));
-  ids[SBUF_SIZE - 1] = '\0';
-  return ids;
+  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
+           mech_id(mech, team).text);
+  return id;
 }
 
-const char *GetMechID(MECH *mech) {
+MechDisplayId mech_display_id(MECH *mech) {
   char *mname;
-  static char ids[SBUF_SIZE];
+  MechDisplayId id = {0};
 
-  if (!is_good_obj(btech_context_active()->database, mech->mynum))
-    return "";
+  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+    return id;
 
-  mname = silly_atr_get(mech->mynum, A_MECHNAME);
-  snprintf(ids, SBUF_SIZE, "%s [%s]", mname, MechIDS(mech, 0));
-  ids[SBUF_SIZE - 1] = '\0';
-  return ids;
+  mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                               A_MECHNAME, (char[LBUF_SIZE]){0});
+  snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
+           mech_id(mech, false).text);
+  return id;
 }
 
 void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   int chn = -1;
   int freq;
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   MECH *t;
   // map pointer is NULL if in a carrier. Careful.
-  MAP *map = getMap(mech->mapindex);
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   int i, j;
 
   /* UH, this is code that _pretends_ it works :-) */
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
   chn = toupper(*buffer) - 'A';
-  DOCHECK(chn < 0 || chn >= MFreqs(mech), "Invalid channel-letter!");
+  DOCHECK_CONTEXT(mech->xcode.context, chn < 0 || chn >= MFreqs(mech),
+                  "Invalid channel-letter!");
   buffer++;
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
-  DOCHECK(*buffer != '=', "Missing =!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, *buffer != '=', "Missing =!");
   buffer++;
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
   freq = atoi(buffer);
-  DOCHECK(!freq && strcmp(buffer, "0"), "Invalid frequency!");
-  DOCHECK(freq < 0, "Are you trying to kid me?");
-  DOCHECK(freq > 999999, "Invalid frequency - range is from 0 to 999999.");
-  notify_printf(BTECH_EVALUATION_CONTEXT, player, "Channel %c set to %d.",
-                'A' + chn, freq);
+  DOCHECK_CONTEXT(mech->xcode.context, !freq && strcmp(buffer, "0"),
+                  "Invalid frequency!");
+  DOCHECK_CONTEXT(mech->xcode.context, freq < 0, "Are you trying to kid me?");
+  DOCHECK_CONTEXT(mech->xcode.context, freq > 999999,
+                  "Invalid frequency - range is from 0 to 999999.");
+  notify_printf(evaluation, player, "Channel %c set to %d.", 'A' + chn, freq);
   mech->freq[chn] = freq;
 
   /* Code added from Exile to check for possible cheat freq acquring.
@@ -573,7 +562,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
    */
   if (freq > 0 && map) {
     for (i = 0; i < map->first_free; i++) {
-      if (!(t = FindObjectsData(map->mechsOnMap[i])))
+      if (!(t = btech_context_find_object(mech->xcode.context,
+                                          map->mechsOnMap[i])))
         continue;
       if (t == mech)
         continue;
@@ -581,7 +571,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
         continue;
       for (j = 0; j < MFreqs(t); j++) {
         if (t->freq[j] == freq && !(t->freqmodes[j] & FREQ_SCAN))
-          SendFreqs(tprintf("ALERT: Possible abuse by #%ld (Team %d)"
+          SendFreqs(mech->xcode.context,
+                    tprintf("ALERT: Possible abuse by #%ld (Team %d)"
                             " setting freq %d matching #%ld (Team %d)!",
                             mech->mynum, MechTeam(mech), freq, t->mynum,
                             MechTeam(t)));
@@ -593,91 +584,93 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
 void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
   int chn = -1;
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
   chn = toupper(*buffer) - 'A';
-  DOCHECK(chn < 0 || chn >= MFreqs(mech), "Invalid channel-letter!");
+  DOCHECK_CONTEXT(mech->xcode.context, chn < 0 || chn >= MFreqs(mech),
+                  "Invalid channel-letter!");
   buffer++;
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
-  DOCHECK(*buffer != '=', "Missing =!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, *buffer != '=', "Missing =!");
   buffer++;
   skipws(buffer);
   if (!*buffer) {
     mech->chantitle[chn][0] = 0;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Channel %c title cleared.",
-                  'A' + chn);
+    notify_printf(evaluation, player, "Channel %c title cleared.", 'A' + chn);
     return;
   }
   strncpy(mech->chantitle[chn], buffer, CHTITLELEN);
   mech->chantitle[chn][CHTITLELEN] = 0;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                "Channel %c title set to set to %s.", 'A' + chn, buffer);
+  notify_printf(evaluation, player, "Channel %c title set to set to %s.",
+                'A' + chn, buffer);
 }
 
 /*                    1234567890123456 */
 const char radio_colorstr[] = "xrgybmcwXRGYBMCW";
 
-static char *ccode(MECH *m, int i, int obs, int team) {
+static void radio_color_code(char buffer[static 8], MECH *m, int i, int obs,
+                             int team) {
   int t = m->freqmodes[i] / FREQ_REST;
-  static char buf[8];
   int ii;
 
+  buffer[0] = '\0';
   if (!obs) {
-    if (!t) {
-      strcpy(buf, "");
-      return buf;
-    };
+    if (!t)
+      return;
     if (t < 9) {
-      snprintf(buf, sizeof(buf), "%%c%c", radio_colorstr[t - 1]);
-      return buf;
+      snprintf(buffer, 8, "%%c%c", radio_colorstr[t - 1]);
+      return;
     }
-    snprintf(buf, sizeof(buf), "%%ch%%c%c", ToLower(radio_colorstr[t - 1]));
+    snprintf(buffer, 8, "%%ch%%c%c", ToLower(radio_colorstr[t - 1]));
   } else {
     if (team > 15)
       team = team % 15;
     for (ii = 0; ii < 15; ii++) {
       if (team == obs_team_color[ii].team)
-        snprintf(buf, sizeof(buf), "%s", obs_team_color[ii].ccode);
+        snprintf(buffer, 8, "%s", obs_team_color[ii].ccode);
     }
   }
-  return buf;
 }
 
 void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   int chn = -1, nm = 0, i;
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   char buf[SBUF_SIZE] = {0};
 
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
   chn = toupper(*buffer) - 'A';
-  DOCHECK(chn < 0 || chn >= MFreqs(mech), "Invalid channel-letter!");
+  DOCHECK_CONTEXT(mech->xcode.context, chn < 0 || chn >= MFreqs(mech),
+                  "Invalid channel-letter!");
   buffer++;
   skipws(buffer);
-  DOCHECK(!*buffer, "Invalid input!");
-  DOCHECK(*buffer != '=', "Missing =!");
+  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Invalid input!");
+  DOCHECK_CONTEXT(mech->xcode.context, *buffer != '=', "Missing =!");
   buffer++;
   skipws(buffer);
   if (!buffer || !*buffer) {
     mech->freqmodes[chn] = 0;
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                  "Channel %c <send> mode set to analog.", 'A' + chn);
+    notify_printf(evaluation, player, "Channel %c <send> mode set to analog.",
+                  'A' + chn);
     return;
   }
   while (buffer && *buffer) {
     switch (*buffer) {
     case 'D':
     case 'd':
-      DOCHECK(MechRadioInfo(mech) & RADIO_NODIGITAL,
-              "Your radio can't handle digital frequencies!");
+      DOCHECK_CONTEXT(mech->xcode.context,
+                      MechRadioInfo(mech) & RADIO_NODIGITAL,
+                      "Your radio can't handle digital frequencies!");
       nm |= FREQ_DIGITAL;
       break;
     case 'I':
     case 'i':
-      DOCHECK(!(MechRadioInfo(mech) & RADIO_INFO),
-              "This unit is unable to use info functionality.");
+      DOCHECK_CONTEXT(mech->xcode.context, !(MechRadioInfo(mech) & RADIO_INFO),
+                      "This unit is unable to use info functionality.");
       nm |= FREQ_INFO;
       break;
     case 'U':
@@ -686,14 +679,14 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
       break;
     case 'E':
     case 'e':
-      DOCHECK(!(MechRadioInfo(mech) & RADIO_RELAY),
-              "This unit is unable to relay.");
+      DOCHECK_CONTEXT(mech->xcode.context, !(MechRadioInfo(mech) & RADIO_RELAY),
+                      "This unit is unable to relay.");
       nm |= FREQ_RELAY;
       break;
     case 'S':
     case 's':
-      DOCHECK(!(MechRadioInfo(mech) & RADIO_SCAN),
-              "This unit is unable to scan.");
+      DOCHECK_CONTEXT(mech->xcode.context, !(MechRadioInfo(mech) & RADIO_SCAN),
+                      "This unit is unable to scan.");
       nm |= FREQ_SCAN;
       break;
     default:
@@ -709,10 +702,11 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     if (buffer)
       buffer++;
   }
-  DOCHECK(!(nm & FREQ_DIGITAL) && (nm & FREQ_RELAY),
-          "Error: Need digital transfer for relay to work.");
-  DOCHECK(!(nm & FREQ_DIGITAL) && (nm & FREQ_INFO),
-          "Error: Need digital transfer for transfer info to work.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(nm & FREQ_DIGITAL) && (nm & FREQ_RELAY),
+                  "Error: Need digital transfer for relay to work.");
+  DOCHECK_CONTEXT(mech->xcode.context, !(nm & FREQ_DIGITAL) && (nm & FREQ_INFO),
+                  "Error: Need digital transfer for transfer info to work.");
   mech->freqmodes[chn] = nm;
   i = 0;
 
@@ -732,7 +726,7 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     i = strlen(buf);
   }
   buf[i] = 0;
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(evaluation, player,
                 "Channel %c <send> mode set to %s (flags:%s).", 'A' + chn,
                 nm & FREQ_DIGITAL ? "digital" : "analog", buf);
 }
@@ -740,13 +734,12 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
 void mech_list_freqs(DbRef player, void *data, char *buffer) {
   int i;
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
   /* UH, this is code that _pretends_ it works :-) */
-  notify(BTECH_EVALUATION_CONTEXT, player,
-         "# -- Mode -- Frequency -- Comtitle");
+  notify(evaluation, player, "# -- Mode -- Frequency -- Comtitle");
   for (i = 0; i < MFreqs(mech); i++)
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                  "%c    %c%c%c%c    %-9d    %s", 'A' + i,
+    notify_printf(evaluation, player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,
                   mech->freqmodes[i] & FREQ_DIGITAL ? 'D' : 'A',
                   mech->freqmodes[i] & FREQ_RELAY ? 'R' : '-',
                   mech->freqmodes[i] & FREQ_MUTE ? 'M' : '-',
@@ -761,6 +754,7 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
 void mech_sendchannel(DbRef player, void *data, char *buffer) {
   /* Basically, this is sorta routine 'sendchannel <letter>=message' code */
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   int fail = 0;
   int argc;
   int chn = 0;
@@ -768,9 +762,10 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   int i;
 
   cch(MECH_USUALS);
-  DOCHECK(Destroyed(mech) || !MechRadioRange(mech),
-          "Your communication gear is inoperative.");
-  DOCHECK(CrewStunned(mech), "You are too stunned to use the radio!");
+  DOCHECK_CONTEXT(mech->xcode.context, Destroyed(mech) || !MechRadioRange(mech),
+                  "Your communication gear is inoperative.");
+  DOCHECK_CONTEXT(mech->xcode.context, CrewStunned(mech),
+                  "You are too stunned to use the radio!");
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
   if (!fail && strlen(args[0]) > 1)
@@ -784,7 +779,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   if (!fail)
     for (i = 0; args[2][i]; i++) {
       if ((BOUNDED(32, args[2][i], 255)) != args[2][i]) {
-        notify(BTECH_EVALUATION_CONTEXT, player,
+        notify(evaluation, player,
                "Invalid: No control characters in radio messages, please.");
         for (i = 0; i < 3; i++) {
           if (args[i])
@@ -795,7 +790,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
     }
 
   if (fail) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(evaluation, player,
            "Invalid format! Usage: sendchannel <letter>=<string>");
     for (i = 0; i < 3; i++) {
       if (args[i])
@@ -805,12 +800,12 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   }
 
   if (mech->freq[chn] == 0 &&
-      is_in_character(btech_context_active()->database, mech->mapindex)) {
-    send_channel(BTECH_EVALUATION_CONTEXT, "ZeroFrequencies",
+      is_in_character(mech->xcode.context->database, mech->mapindex)) {
+    send_channel(evaluation, "ZeroFrequencies",
                  "Player #%d (%s) in mech #%d (channel %c) "
                  "on map #%d 0-freqs \"%s\"",
                  player,
-                 game_object_name(btech_context_active()->database, player),
+                 game_object_name(mech->xcode.context->database, player),
                  mech->mynum, chn + 'A', mech->mapindex, args[2]);
   }
 
@@ -822,15 +817,16 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   explode_mines(mech, mech->freq[chn]);
 }
 
-static void do_scramble(char *buffo, int ch, int bth) {
+static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
   int i;
 
   for (i = 0; buffo[i]; i++) {
-    if (Number(1, 100) > ch && Roll() < (bth + 5)) {
-      if (Number(1, 2) == 1)
-        buffo[i] -= Number(1, 10);
+    if (btech_random_range(context, 1, 100) > ch &&
+        btech_random_roll(context) < (bth + 5)) {
+      if (btech_random_range(context, 1, 2) == 1)
+        buffo[i] -= btech_random_range(context, 1, 10);
       else
-        buffo[i] += Number(1, 10);
+        buffo[i] += btech_random_range(context, 1, 10);
     }
     buffo[i] = (unsigned char)BOUNDED(33, buffo[i], 255);
   }
@@ -838,17 +834,23 @@ static void do_scramble(char *buffo, int ch, int bth) {
 
 #define my_modify(n, fact) (100 - (100 - (n)) / (fact))
 
-static int comm_num_to_conn;
-static int comm_is[MAX_MECHS_PER_MAP][MAX_MECHS_PER_MAP];
-static int comm_done[MAX_MECHS_PER_MAP];
-static MECH *comm_mech[MAX_MECHS_PER_MAP];
-static int comm_best;
-static int comm_best_path[MAX_MECHS_PER_MAP];
-static int comm_path[MAX_MECHS_PER_MAP];
+typedef struct CommRelayContext CommRelayContext;
+struct CommRelayContext {
+  bool connected[MAX_MECHS_PER_MAP][MAX_MECHS_PER_MAP];
+  bool visited[MAX_MECHS_PER_MAP];
+  MECH *mechs[MAX_MECHS_PER_MAP];
+  int best_path[MAX_MECHS_PER_MAP];
+  int path[MAX_MECHS_PER_MAP];
+  int node_count;
+  int best_depth;
+  int recursion_iterations;
+};
 
-void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
-                     char *handle, char *msg, int bth, int *isxp, int under_ecm,
-                     int digmode) {
+static void scramble_message(const CommRelayContext *relay,
+                             BtechContext *context, char *buffo, int range,
+                             int sendrange, int recvrrange, char *handle,
+                             char *msg, int bth, int *isxp, int under_ecm,
+                             int digmode) {
 
   int mr, i;
   char *header = NULL;
@@ -856,20 +858,20 @@ void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
 
   *isxp = 0;
 
-  if (digmode > 1 && comm_best > 1) {
+  if (digmode > 1 && relay != nullptr && relay->best_depth > 1) {
     int bearing;
 
     strncpy(buf, "{R-path:", LBUF_SIZE);
-    for (i = 1; i < comm_best; i++) {
+    for (i = 1; i < relay->best_depth; i++) {
       if (i > 1)
         strcat(buf, "/");
-      bearing = FindBearing(MechFX(comm_mech[comm_best_path[i]]),
-                            MechFY(comm_mech[comm_best_path[i]]),
-                            MechFX(comm_mech[comm_best_path[i - 1]]),
-                            MechFY(comm_mech[comm_best_path[i - 1]]));
+      bearing = FindBearing(MechFX(relay->mechs[relay->best_path[i]]),
+                            MechFY(relay->mechs[relay->best_path[i]]),
+                            MechFX(relay->mechs[relay->best_path[i - 1]]),
+                            MechFY(relay->mechs[relay->best_path[i - 1]]));
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "[%c%c]-h:%.3d",
-               MechID(comm_mech[comm_best_path[i]])[0],
-               MechID(comm_mech[comm_best_path[i]])[1], bearing);
+               MechID(relay->mechs[relay->best_path[i]])[0],
+               MechID(relay->mechs[relay->best_path[i]])[1], bearing);
     }
     strcat(buf, "} ");
     header = buf;
@@ -886,18 +888,19 @@ void ScrambleMessage(char *buffo, int range, int sendrange, int recvrrange,
 
       mr = MAX(recvrrange, (sendrange + recvrrange) / 2);
       if (sendrange < range) {
-        do_scramble(buffo, (100 * sendrange) / MAX(1, range), bth);
+        do_scramble(context, buffo, (100 * sendrange) / MAX(1, range), bth);
         *isxp = 1;
       }
 
       if (mr < range) {
-        do_scramble(buffo, my_modify((100 * mr) / MAX(1, range), 2), bth);
+        do_scramble(context, buffo, my_modify((100 * mr) / MAX(1, range), 2),
+                    bth);
         *isxp = 1;
       }
     }
 
     if (under_ecm && range >= 1) {
-      do_scramble(buffo, Number(30, 50), bth);
+      do_scramble(context, buffo, btech_random_range(context, 30, 50), bth);
       *isxp = 1;
     }
   }
@@ -908,11 +911,9 @@ int common_checks(DbRef player, MECH *mech, int flag) {
 
   if (!mech)
     return 0;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
-  if ((flag & MECH_CONSISTENT) && !CheckData(player, mech))
-    return 0;
-
-  if (!is_wizard(btech_context_active()->database, player)) {
+  if (!is_wizard(mech->xcode.context->database, player)) {
     /* ----------------------------- */
     /* INSERT UNSUPPORTED TYPES HERE */
     /* ----------------------------- */
@@ -926,37 +927,43 @@ int common_checks(DbRef player, MECH *mech, int flag) {
 
   /*
       if (MechAuto(mech) > 0)
-          if (is_player(btech_context_active()->database, MechPilot(mech)))
-              MechAuto(mech) = -1;
+          if (is_player(mech->xcode.context->database,
+     MechPilot(mech))) MechAuto(mech) = -1;
   */
   MechLastUse(mech) = 0;
 
   if (flag & MECH_STARTED) {
-    DOCHECK0(Destroyed(mech), "You are destroyed!");
-    DOCHECK0(!(MechStatus(mech) & STARTED), "Reactor is not online!");
+    DOCHECK0_CONTEXT(mech->xcode.context, Destroyed(mech),
+                     "You are destroyed!");
+    DOCHECK0_CONTEXT(mech->xcode.context, !(MechStatus(mech) & STARTED),
+                     "Reactor is not online!");
   }
 
   if (flag & MECH_PILOT) {
-    DOCHECK0(Blinded(mech), "You are momentarily blinded!");
+    DOCHECK0_CONTEXT(mech->xcode.context, Blinded(mech),
+                     "You are momentarily blinded!");
   }
 
   if (flag & MECH_PILOT_CON)
-    DOCHECK0(Uncon(mech) && (!Started(mech) || player == MechPilot(mech)),
-             "You are unconscious....zzzzzzz");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     Uncon(mech) &&
+                         (!Started(mech) || player == MechPilot(mech)),
+                     "You are unconscious....zzzzzzz");
 
   if (flag & MECH_PILOTONLY)
-    DOCHECK0(
-        !is_wizard(btech_context_active()->database, player) &&
-            is_in_character(btech_context_active()->database, mech->mynum) &&
+    DOCHECK0_CONTEXT(
+        mech->xcode.context,
+        !is_wizard(mech->xcode.context->database, player) &&
+            is_in_character(mech->xcode.context->database, mech->mynum) &&
             MechPilot(mech) != player,
         "Now now, only the pilot can push that button.");
 
   if (flag & MECH_MAP) {
-    DOCHECK0(mech->mapindex < 0, "You are on no map!");
-    mech_map = getMap(mech->mapindex);
+    DOCHECK0_CONTEXT(mech->xcode.context, mech->mapindex < 0,
+                     "You are on no map!");
+    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
     if (!mech_map) {
-      notify(BTECH_EVALUATION_CONTEXT, player,
-             "You are on an invalid map! Map index reset!");
+      notify(evaluation, player, "You are on an invalid map! Map index reset!");
       mech_shutdown(player, (void *)mech, "");
       mech->mapindex = -1;
       return 0;
@@ -965,33 +972,31 @@ int common_checks(DbRef player, MECH *mech, int flag) {
   return 1;
 }
 
-static int iter_prevent;
-
-void recursive_commlink(int i, int dep) {
+static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
   int j;
 
-  if (iter_prevent++ >= 10000)
+  if (relay->recursion_iterations++ >= 10000)
     return;
-  if (dep >= comm_best)
+  if (dep >= relay->best_depth)
     return;
-  comm_path[dep] = i;
-  for (j = 1; j < comm_num_to_conn; j++)
-    if (comm_is[i][j] && !comm_done[j]) {
-      if (j == (comm_num_to_conn - 1)) {
+  relay->path[dep] = i;
+  for (j = 1; j < relay->node_count; j++)
+    if (relay->connected[i][j] && !relay->visited[j]) {
+      if (j == (relay->node_count - 1)) {
         int k;
 
-        comm_best = dep;
-        for (k = 0; k < comm_best; k++)
-          comm_best_path[k] = comm_path[k];
+        relay->best_depth = dep;
+        for (k = 0; k < relay->best_depth; k++)
+          relay->best_path[k] = relay->path[k];
       } else {
-        comm_done[j] = 1;
-        recursive_commlink(j, dep + 1);
-        comm_done[j] = 0;
+        relay->visited[j] = true;
+        recursive_commlink(relay, j, dep + 1);
+        relay->visited[j] = false;
       }
     }
 }
 
-void nonrecursive_commlink(int i) {
+static void nonrecursive_commlink(CommRelayContext *relay, int i) {
   int dep = 0, j;
   int comm_loop[MAX_MECHS_PER_MAP];
   int iter_c = 0;
@@ -999,62 +1004,65 @@ void nonrecursive_commlink(int i) {
 
   /* May _still_ contain fatal bug ; Ghod knows (I don't) */
   comm_loop[0] = 1;
-  comm_path[0] = i;
+  relay->path[0] = i;
 
   while (dep >= 0) {
-    i = comm_path[dep];
-    for (j = comm_loop[dep]; j < comm_num_to_conn; j++)
-      if (comm_is[i][j] && !comm_done[j]) {
-        if (j == (comm_num_to_conn - 1)) {
+    i = relay->path[dep];
+    for (j = comm_loop[dep]; j < relay->node_count; j++)
+      if (relay->connected[i][j] && !relay->visited[j]) {
+        if (j == (relay->node_count - 1)) {
           int k;
 
-          comm_best = dep + 1;
-          for (k = 0; k < comm_best; k++)
-            comm_best_path[k] = comm_path[k];
-          j = comm_num_to_conn;
+          relay->best_depth = dep + 1;
+          for (k = 0; k < relay->best_depth; k++)
+            relay->best_path[k] = relay->path[k];
+          j = relay->node_count;
           break;
-        } else if ((dep + 1) < comm_best) {
-          comm_done[j] = 1;
+        } else if ((dep + 1) < relay->best_depth) {
+          relay->visited[j] = true;
           comm_loop[dep++] = j + 1;
           comm_loop[dep] = 1;
-          comm_path[dep] = j;
+          relay->path[dep] = j;
           if (dep > maxdepth)
             maxdepth = dep;
           break;
         }
       }
-    if (j == comm_num_to_conn) {
+    if (j == relay->node_count) {
       if (dep > 0)
-        comm_done[comm_loop[--dep] - 1] = 0;
+        relay->visited[comm_loop[--dep] - 1] = false;
       else
         dep--; /* We're finished! */
     }
     if (iter_c++ == 100000) {
       /* Lets not spam MechErrors with this.. */
       /*
-                              SendError(tprintf
+                              SendError(mech->xcode.context, tprintf
                                                 ("#%d: Infinite loop in relay
          code (?) ; using backup recursive code (num_mechs:%d, maxdepth:%d,
-         nowdepth:%d)", comm_mech[0]->mynum, comm_num_to_conn, maxdepth, dep));
+         nowdepth:%d)", relay->mechs[0]->mynum, relay->node_count, maxdepth,
+         dep));
       */
-      comm_best = 9999;
-      for (i = 0; i < comm_num_to_conn; i++)
-        comm_done[i] = 0;
-      iter_prevent = 0;
-      recursive_commlink(0, 0);
+      relay->best_depth = 9999;
+      for (i = 0; i < relay->node_count; i++)
+        relay->visited[i] = false;
+      relay->recursion_iterations = 0;
+      recursive_commlink(relay, 0, 0);
       return;
     }
   }
 }
 
-int findCommLink(MAP *map, MECH *from, MECH *to, int freq) {
+static bool find_comm_link(CommRelayContext *relay, MAP *map, MECH *from,
+                           MECH *to, int freq) {
   int i, j;
   MECH *t;
 
-  comm_num_to_conn = 0;
-  comm_mech[comm_num_to_conn++] = from;
+  relay->node_count = 0;
+  relay->mechs[relay->node_count++] = from;
   for (i = 0; i < map->first_free; i++) {
-    if (!(t = FindObjectsData(map->mechsOnMap[i])))
+    if (!(t = btech_context_find_object(from->xcode.context,
+                                        map->mechsOnMap[i])))
       continue;
     if (t == from || t == to)
       continue;
@@ -1068,27 +1076,27 @@ int findCommLink(MAP *map, MECH *from, MECH *to, int freq) {
     for (j = 0; j < MFreqs(t); j++)
       if (t->freq[j] == freq)
         if (t->freqmodes[j] & FREQ_RELAY) {
-          comm_mech[comm_num_to_conn++] = t;
+          if (relay->node_count < MAX_MECHS_PER_MAP - 1)
+            relay->mechs[relay->node_count++] = t;
           continue;
         }
   }
-  comm_mech[comm_num_to_conn++] = to;
-  if (comm_num_to_conn == 2)
-    return 0; /* Quickie kludge for the 'standard' case */
-  for (i = 0; i < comm_num_to_conn; i++) {
-    comm_done[i] = 0;
-    comm_is[i][i] = 0;
-    for (j = i + 1; j < comm_num_to_conn; j++) {
-      float range = FlMechRange(map, comm_mech[i], comm_mech[j]);
+  relay->mechs[relay->node_count++] = to;
+  if (relay->node_count == 2)
+    return false; /* Quickie kludge for the 'standard' case */
+  for (i = 0; i < relay->node_count; i++) {
+    relay->visited[i] = false;
+    relay->connected[i][i] = false;
+    for (j = i + 1; j < relay->node_count; j++) {
+      float range = FlMechRange(map, relay->mechs[i], relay->mechs[j]);
 
-      comm_is[i][j] = (range <= MechRadioRange(comm_mech[i]));
-      comm_is[j][i] = (range <= MechRadioRange(comm_mech[j]));
+      relay->connected[i][j] = (range <= MechRadioRange(relay->mechs[i]));
+      relay->connected[j][i] = (range <= MechRadioRange(relay->mechs[j]));
     }
   }
-  comm_best = 9999;
-  /*  recursive_commlink(0, 0);  */
-  nonrecursive_commlink(0); /* better _pray_ this works */
-  return comm_best != 9999;
+  relay->best_depth = 9999;
+  nonrecursive_commlink(relay, 0); /* better _pray_ this works */
+  return relay->best_depth != 9999;
 }
 
 /* The code that does the actual sending of radio messages whenever
@@ -1146,11 +1154,13 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
   /* The _smart_ code :-) */
   int loop, range, bearing, i, isxp;
   MECH *tempMech;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char buf[LBUF_SIZE];
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
+  char color_code[8];
   int obs = 0;
+  CommRelayContext *relay;
 
   char ai_buf[LBUF_SIZE];
 
@@ -1159,6 +1169,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
    */
   if (!MechRadioRange(mech))
     return;
+  relay = calloc(1, sizeof(*relay));
 
   /* Loop through all the units on the map */
   for (loop = 0; loop < mech_map->first_free; loop++) {
@@ -1166,7 +1177,8 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       // XXX: The test below is indicative of very bad bookkeeping. Suggesting
       // that a dbref may be indicated as "on the map" without being on the map.
       // I believe this to be a serious problem.
-      if (!(tempMech = (MECH *)FindObjectsData(mech_map->mechsOnMap[loop])))
+      if (!(tempMech = (MECH *)btech_context_find_object(
+                mech->xcode.context, mech_map->mechsOnMap[loop])))
         continue;
       if (Destroyed(tempMech))
         continue;
@@ -1198,7 +1210,8 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
                 /* Possible skill check here? Nah. */
 
                 /* Chance of detection: 1 in MIN(80,l) out of 100 */
-                if (Number(1, 100) > MIN(80, l))
+                if (btech_random_range(mech->xcode.context, 1, 100) >
+                    MIN(80, l))
                   continue;
 
                 if (!tnc++)
@@ -1213,7 +1226,9 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
                   mod = -1;
                 }
 
-                t = MAX(1, Number(1, MIN(99, l)) * diff / 100);
+                t = MAX(1,
+                        btech_random_range(mech->xcode.context, 1, MIN(99, l)) *
+                            diff / 100);
                 pr = t * 100 / diff;
                 mech_printf(tempMech, MECHALL,
                             "Your systems "
@@ -1231,6 +1246,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       }
 
       snprintf(buf2, LBUF_SIZE, "%s", msg);
+      radio_color_code(color_code, tempMech, i, obs, MechTeam(mech));
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking
        * elsewhere. We'll compose the message and send it now since
@@ -1239,14 +1255,18 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       if (obs) {
         if (mech->freqmodes[freq] & FREQ_DIGITAL) {
           build_observer_channel_message(
-              buf, ccode(tempMech, i, obs, MechTeam(mech)), '[', ']',
-              (char)('A' + i), bearing, silly_atr_get(mech->mynum, A_FACTION),
-              MechIDS(mech, 0), mech->freq[freq], mech->chantitle[freq], buf2);
+              buf, color_code, '[', ']', (char)('A' + i), bearing,
+              btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                   A_FACTION, (char[LBUF_SIZE]){0}),
+              mech_id(mech, false).text, mech->freq[freq],
+              mech->chantitle[freq], buf2);
         } else {
           build_observer_channel_message(
-              buf, ccode(tempMech, i, obs, MechTeam(mech)), '(', ')',
-              (char)('A' + i), bearing, silly_atr_get(mech->mynum, A_FACTION),
-              MechIDS(mech, 0), mech->freq[freq], mech->chantitle[freq], buf2);
+              buf, color_code, '(', ')', (char)('A' + i), bearing,
+              btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                   A_FACTION, (char[LBUF_SIZE]){0}),
+              mech_id(mech, false).text, mech->freq[freq],
+              mech->chantitle[freq], buf2);
         }
         mech_notify(tempMech, MECHALL, buf);
       }
@@ -1254,13 +1274,14 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       /* This is where we check to see if the mech has an AI and
        * then we give the radio commands to the AI */
       if (MechAuto(tempMech) > 0 && tempMech->freq[i]) {
-        AUTO *a = (AUTO *)FindObjectsData(MechAuto(tempMech));
+        AUTO *a = (AUTO *)btech_context_find_object(mech->xcode.context,
+                                                    MechAuto(tempMech));
 
         /* First check to make sure the AI is still there */
         if (!a) {
           /* No AI there so reset the AI value on the mech */
           MechAuto(tempMech) = -1;
-        } else if (a && game_object_location(btech_context_active()->database,
+        } else if (a && game_object_location(mech->xcode.context->database,
                                              a->mynum) != tempMech->mynum) {
           /* Check to see if the AI is still in the same mech */
           snprintf(
@@ -1268,9 +1289,9 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
               "Autopilot #%ld (Location: #%ld) "
               "reported on Mech #%ld but not in the proper location",
               a->mynum,
-              game_object_location(btech_context_active()->database, a->mynum),
+              game_object_location(mech->xcode.context->database, a->mynum),
               tempMech->mynum);
-          SendAI(ai_buf);
+          SendAI(mech->xcode.context, ai_buf);
         } else if (a && !ECMDisturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
           snprintf(buf3, LBUF_SIZE, "%s", msg);
@@ -1283,11 +1304,13 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
       if (!MechRadioRange(tempMech))
         continue;
       if (mech->freqmodes[freq] & FREQ_DIGITAL) {
+        if (relay != nullptr)
+          relay->best_depth = 1;
         if (range > MechRadioRange(mech)) {
-          if (!findCommLink(mech_map, mech, tempMech, mech->freq[freq]))
+          if (relay == nullptr || !find_comm_link(relay, mech_map, mech,
+                                                  tempMech, mech->freq[freq]))
             continue;
-        } else
-          comm_best = 1;
+        }
 
         if (tempMech != mech) {
           if (AnyECMDisturbed(mech))
@@ -1296,48 +1319,49 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
             continue;
         }
 
-        ScrambleMessage(buf3, range, MechRadioRange(mech), MechRadioRange(mech),
-                        mech->chantitle[freq], buf2, MechComm(tempMech), &isxp,
-                        0, (tempMech->freqmodes[i] & FREQ_INFO) ? 2 : 1);
+        scramble_message(relay, mech->xcode.context, buf3, range,
+                         MechRadioRange(mech), MechRadioRange(mech),
+                         mech->chantitle[freq], buf2, MechComm(tempMech), &isxp,
+                         0, (tempMech->freqmodes[i] & FREQ_INFO) ? 2 : 1);
 
-        if (comm_best >= 2)
-          bearing =
-              FindBearing(MechFX(tempMech), MechFY(tempMech),
-                          MechFX(comm_mech[comm_best_path[comm_best - 1]]),
-                          MechFY(comm_mech[comm_best_path[comm_best - 1]]));
+        if (relay != nullptr && relay->best_depth >= 2)
+          bearing = FindBearing(
+              MechFX(tempMech), MechFY(tempMech),
+              MechFX(relay->mechs[relay->best_path[relay->best_depth - 1]]),
+              MechFY(relay->mechs[relay->best_path[relay->best_depth - 1]]));
         if (!obs)
-          build_channel_message(buf, ccode(tempMech, i, obs, MechTeam(mech)),
-                                '[', ']', (char)('A' + i), bearing, buf3);
+          build_channel_message(buf, color_code, '[', ']', (char)('A' + i),
+                                bearing, buf3);
 
       } else {
 
-        ScrambleMessage(buf3, range, MechRadioRange(mech),
-                        MechRadioRange(tempMech), mech->chantitle[freq], buf2,
-                        MechComm(tempMech), &isxp,
-                        (AnyECMDisturbed(mech) || AnyECMDisturbed(tempMech)
-                         /*
-                            || sfail_type == FAIL_STATIC ||
-                            rfail_type == FAIL_STATIC
-                          */
-                         ) &&
-                            mech != tempMech,
-                        0);
+        scramble_message(relay, mech->xcode.context, buf3, range,
+                         MechRadioRange(mech), MechRadioRange(tempMech),
+                         mech->chantitle[freq], buf2, MechComm(tempMech), &isxp,
+                         (AnyECMDisturbed(mech) || AnyECMDisturbed(tempMech)
+                          /*
+                             || sfail_type == FAIL_STATIC ||
+                             rfail_type == FAIL_STATIC
+                           */
+                          ) &&
+                             mech != tempMech,
+                         0);
         if (!obs)
-          build_channel_message(buf, ccode(tempMech, i, obs, MechTeam(mech)),
-                                '(', ')', (char)('A' + i), bearing, buf3);
+          build_channel_message(buf, color_code, '(', ')', (char)('A' + i),
+                                bearing, buf3);
       }
 
       if (!obs)
         mech_notify(tempMech, MECHALL, buf);
       if (isxp &&
-          is_in_character(btech_context_active()->database, tempMech->mynum))
-        if ((MechCommLast(tempMech) + 60) <
-            btech_context_active()->events->tick) {
+          is_in_character(mech->xcode.context->database, tempMech->mynum))
+        if ((MechCommLast(tempMech) + 60) < mech->xcode.context->events->tick) {
           AccumulateCommXP(MechPilot(tempMech), tempMech);
-          MechCommLast(tempMech) = btech_context_active()->events->tick;
+          MechCommLast(tempMech) = mech->xcode.context->events->tick;
         }
     }
   } /* End of looping through all the units on the map */
+  free(relay);
 }
 
 void mech_radio(DbRef player, void *data, char *buffer) {
@@ -1354,7 +1378,8 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   /* This is silly, but who cares. */
   cch(MECH_USUAL);
 
-  DOCHECK(MechIsObservator(mech), "You can't radio anyone.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechIsObservator(mech),
+                  "You can't radio anyone.");
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
   if (!fail && (!args[1] || args[1][0] != '=' || args[1][1] != 0))
@@ -1364,19 +1389,23 @@ void mech_radio(DbRef player, void *data, char *buffer) {
     fail = 1;
   if (!fail) {
     target = FindTargetDBREFFromMapNumber(mech, args[0]);
-    tempMech = getMech(target);
-    DOCHECK(!tempMech ||
-                !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
-                               FlMechRange(map, mech, tempMech)),
-            "Target is not in line of sight!");
+    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !tempMech ||
+                        !InLineOfSight(mech, tempMech, MechX(tempMech),
+                                       MechY(tempMech),
+                                       FlMechRange(map, mech, tempMech)),
+                    "Target is not in line of sight!");
     mech_printf(mech, MECHSTARTED, "You radio %s with, '%s'",
-                GetMechToMechID(mech, tempMech), args[2]);
+                mech_to_mech_display_id(mech, tempMech).text, args[2]);
     mech_printf(tempMech, MECHSTARTED, "%s radios you with, '%s'",
-                GetMechToMechID(tempMech, mech), args[2]);
-    auto_reply(tempMech, tprintf("%s radio'ed me '%s'",
-                                 GetMechToMechID(tempMech, mech), args[2]));
+                mech_to_mech_display_id(tempMech, mech).text, args[2]);
+    auto_reply(tempMech,
+               tprintf("%s radio'ed me '%s'",
+                       mech_to_mech_display_id(tempMech, mech).text, args[2]));
   }
-  DOCHECK(fail, "Invalid format! Usage: radio <letter><letter>=<message>");
+  DOCHECK_CONTEXT(mech->xcode.context, fail,
+                  "Invalid format! Usage: radio <letter><letter>=<message>");
   for (i = 0; i < 3; i++) {
     if (args[i])
       free(args[i]);
@@ -1391,7 +1420,7 @@ int MapLimitedBroadcast2d(MAP *map, float x, float y, float range,
   for (loop = 0; loop < map->first_free; loop++) {
     if (map->mechsOnMap[loop] < 0)
       continue;
-    mech = getMech(map->mechsOnMap[loop]);
+    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[loop]);
 
     if (mech && FindXYRange(x, y, MechFX(mech), MechFY(mech)) <= range) {
       mech_notify(mech, MECHSTARTED, message);
@@ -1409,7 +1438,7 @@ int MapLimitedBroadcast3d(MAP *map, float x, float y, float z, float range,
   for (loop = 0; loop < map->first_free; loop++) {
     if (map->mechsOnMap[loop] == -1)
       continue;
-    mech = getMech(map->mechsOnMap[loop]);
+    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[loop]);
     if (mech &&
         FindRange(x, y, z, MechFX(mech), MechFY(mech), MechFZ(mech)) <= range) {
       count++;
@@ -1428,7 +1457,8 @@ void MechBroadcast(MECH *mech, MECH *target, MAP *mech_map, char *buffer) {
       if (mech_map->mechsOnMap[loop] != mech->mynum &&
           mech_map->mechsOnMap[loop] != -1 &&
           mech_map->mechsOnMap[loop] != target->mynum) {
-        tempMech = (MECH *)FindObjectsData(mech_map->mechsOnMap[loop]);
+        tempMech = (MECH *)btech_context_find_object(
+            mech->xcode.context, mech_map->mechsOnMap[loop]);
         if (tempMech)
           mech_notify(tempMech, MECHSTARTED, buffer);
       }
@@ -1437,7 +1467,8 @@ void MechBroadcast(MECH *mech, MECH *target, MAP *mech_map, char *buffer) {
     for (loop = 0; loop < mech_map->first_free; loop++) {
       if (mech_map->mechsOnMap[loop] != mech->mynum &&
           mech_map->mechsOnMap[loop] != -1) {
-        tempMech = (MECH *)FindObjectsData(mech_map->mechsOnMap[loop]);
+        tempMech = (MECH *)btech_context_find_object(
+            mech->xcode.context, mech_map->mechsOnMap[loop]);
         if (tempMech)
           mech_notify(tempMech, MECHSTARTED, buffer);
       }
@@ -1449,7 +1480,7 @@ void MechLOSBroadcast(MECH *mech, char *message) {
   /* Sends msg to everyone except the mech */
   int i;
   MECH *tempMech;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   char buf[LBUF_SIZE];
 
   possibly_see_mech(mech);
@@ -1457,10 +1488,12 @@ void MechLOSBroadcast(MECH *mech, char *message) {
     return;
   for (i = 0; i < mech_map->first_free; i++)
     if (mech_map->mechsOnMap[i] != -1 && mech_map->mechsOnMap[i] != mech->mynum)
-      if ((tempMech = getMech(mech_map->mechsOnMap[i])))
+      if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
+                                             mech_map->mechsOnMap[i])))
         if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
                           FlMechRange(mech_map, tempMech, mech))) {
-          snprintf(buf, sizeof(buf), "%s%s%s", GetMechToMechID(tempMech, mech),
+          snprintf(buf, sizeof(buf), "%s%s%s",
+                   mech_to_mech_display_id(tempMech, mech).text,
                    *message != '\'' ? " " : "", message);
           mech_notify(tempMech, MECHSTARTED, buf);
         }
@@ -1493,7 +1526,8 @@ void HexLOSBroadcast(MAP *mech_map, int x, int y, char *message) {
   MapCoordToRealCoord(x, y, &fx, &fy);
   for (i = 0; i < mech_map->first_free; i++)
     if (mech_map->mechsOnMap[i] != -1)
-      if ((tempMech = getMech(mech_map->mechsOnMap[i])))
+      if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
+                                             mech_map->mechsOnMap[i])))
         if (MechSeesHexF(tempMech, mech_map, fx, fy, x, y)) {
           char tbuf[LBUF_SIZE];
           char *c, *d = tbuf;
@@ -1554,7 +1588,7 @@ void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message) {
   char oddbuff[LBUF_SIZE];
   char oddbuff2[LBUF_SIZE];
   MECH *tempMech;
-  MAP *mech_map = getMap(mech->mapindex);
+  MAP *mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   if (!mech_map)
     return;
@@ -1564,7 +1598,8 @@ void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message) {
     if (mech_map->mechsOnMap[i] != -1 &&
         mech_map->mechsOnMap[i] != mech->mynum &&
         mech_map->mechsOnMap[i] != target->mynum)
-      if ((tempMech = getMech(mech_map->mechsOnMap[i]))) {
+      if ((tempMech = btech_context_get_mech(mech->xcode.context,
+                                             mech_map->mechsOnMap[i]))) {
         a = InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
                           FlMechRange(mech_map, tempMech, mech));
         b = InLineOfSight(tempMech, target, MechX(target), MechY(target),
@@ -1572,10 +1607,11 @@ void MechLOSBroadcasti(MECH *mech, MECH *target, const char *message) {
         if (a || b) {
           char *obp = oddbuff2;
 
-          format_mech_los_message(oddbuff, sizeof(oddbuff), message,
-                                  b ? GetMechToMechID(tempMech, target)
-                                    : "someone");
-          safe_str((char *)(a ? GetMechToMechID(tempMech, mech) : "Someone"),
+          format_mech_los_message(
+              oddbuff, sizeof(oddbuff), message,
+              b ? mech_to_mech_display_id(tempMech, target).text : "someone");
+          safe_str((char *)(a ? mech_to_mech_display_id(tempMech, mech).text
+                              : "Someone"),
                    oddbuff2, &obp);
           if (*oddbuff != '\'')
             safe_chr(' ', oddbuff2, &obp);
@@ -1593,7 +1629,8 @@ void MapBroadcast(MAP *map, char *message) {
 
   for (i = 0; i < map->first_free; i++)
     if (map->mechsOnMap[i] != -1)
-      if ((tempMech = getMech(map->mechsOnMap[i])))
+      if ((tempMech =
+               btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
         mech_notify(tempMech, MECHSTARTED, message);
 }
 
@@ -1627,7 +1664,8 @@ void MechFireBroadcast(MECH *mech, MECH *target, int x, int y, MAP *mech_map,
           mech_map->mechsOnMap[loop] != target->mynum) {
         attacker = 0;
         defender = 0;
-        tempMech = (MECH *)FindObjectsData(mech_map->mechsOnMap[loop]);
+        tempMech = (MECH *)btech_context_find_object(
+            mech->xcode.context, mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
         if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
@@ -1645,15 +1683,16 @@ void MechFireBroadcast(MECH *mech, MECH *target, int x, int y, MAP *mech_map,
         if (!attacker && !defender)
           continue;
         if (defender)
-          snprintf(buff, sizeof(buff), "%s", GetMechToMechID(tempMech, target));
+          snprintf(buff, sizeof(buff), "%s",
+                   mech_to_mech_display_id(tempMech, target).text);
         if (attacker) {
           if (defender)
             mech_printf(tempMech, MECHSTARTED, "%s %s %s with a %s",
-                        GetMechToMechID(tempMech, mech),
+                        mech_to_mech_display_id(tempMech, mech).text,
                         IsHit ? "hits" : "misses", buff, weapname);
           else
             mech_printf(tempMech, MECHSTARTED, "%s fires a %s at something!",
-                        GetMechToMechID(tempMech, mech), weapname);
+                        mech_to_mech_display_id(tempMech, mech).text, weapname);
         } else
           mech_printf(tempMech, MECHSTARTED, "Something %s %s with a %s",
                       IsHit ? "hits" : "misses", buff, weapname);
@@ -1669,7 +1708,8 @@ void MechFireBroadcast(MECH *mech, MECH *target, int x, int y, MAP *mech_map,
           mech_map->mechsOnMap[loop] != -1) {
         attacker = 0;
         defender = 0;
-        tempMech = (MECH *)FindObjectsData(mech_map->mechsOnMap[loop]);
+        tempMech = (MECH *)btech_context_find_object(
+            mech->xcode.context, mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
         if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
@@ -1688,18 +1728,17 @@ void MechFireBroadcast(MECH *mech, MECH *target, int x, int y, MAP *mech_map,
         if (attacker) {
           if (defender) /* att + def */
             mech_printf(tempMech, MECHSTARTED, "%s fires a %s at %s",
-                        GetMechToMechID(tempMech, mech), weapname, buff);
+                        mech_to_mech_display_id(tempMech, mech).text, weapname,
+                        buff);
           else /* att */
             mech_printf(tempMech, MECHSTARTED, "%s fires a %s at something!",
-                        GetMechToMechID(tempMech, mech), weapname);
+                        mech_to_mech_display_id(tempMech, mech).text, weapname);
         } else /* def */
           mech_printf(tempMech, MECHSTARTED, "Something fires a %s at %s",
                       weapname, buff);
       }
   }
 }
-
-extern int arc_override;
 
 void mech_notify(MECH *mech, int type, char *buffer) {
   int i;
@@ -1710,21 +1749,21 @@ void mech_notify(MECH *mech, int type, char *buffer) {
     return;
   if (mech->mynum < 0)
     return;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   /* Let's do colorization too, just in case. */
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))
-      notify(BTECH_EVALUATION_CONTEXT, MechPilot(mech), buffer);
+      notify(evaluation, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(BTECH_EVALUATION_CONTEXT, mech->mynum, NOTHING, mech->mynum,
-                  buffer);
-    if (arc_override)
+    notify_except(evaluation, mech->mynum, NOTHING, mech->mynum, buffer);
+    if (mech->xcode.context->combat_overrides.arcs)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(BTECH_EVALUATION_CONTEXT, AeroTurret(mech, i), NOTHING,
+          notify_except(evaluation, AeroTurret(mech, i), NOTHING,
                         AeroTurret(mech, i), buffer);
   }
 }
@@ -1740,6 +1779,7 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
     return;
   if (mech->mynum < 0)
     return;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   /* Let's do colorization too, just in case. */
 
   va_start(ap, format);
@@ -1748,17 +1788,16 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
 
   if (type == MECHPILOT) {
     if (GotPilot(mech))
-      notify(BTECH_EVALUATION_CONTEXT, MechPilot(mech), buffer);
+      notify(evaluation, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
   } else if ((type == MECHALL && !Destroyed(mech)) ||
              (type == MECHSTARTED && Started(mech))) {
-    notify_except(BTECH_EVALUATION_CONTEXT, mech->mynum, NOTHING, mech->mynum,
-                  buffer);
-    if (arc_override)
+    notify_except(evaluation, mech->mynum, NOTHING, mech->mynum, buffer);
+    if (mech->xcode.context->combat_overrides.arcs)
       for (i = 0; i < NUM_TURRETS; i++)
         if (AeroTurret(mech, i) > 0)
-          notify_except(BTECH_EVALUATION_CONTEXT, AeroTurret(mech, i), NOTHING,
+          notify_except(evaluation, AeroTurret(mech, i), NOTHING,
                         AeroTurret(mech, i), buffer);
   }
 }

@@ -14,7 +14,7 @@
 /* aero.bomb.c */
 void DestroyBomb(MECH *mech, int loc);
 int BombWeight(int i);
-char *bomb_name(int i);
+const char *bomb_name(int i);
 void bomb_list(MECH *mech, int player);
 float calc_dest(MECH *mech, short *x, short *y);
 void bomb_aim(MECH *mech, DbRef player);

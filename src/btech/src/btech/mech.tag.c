@@ -29,7 +29,7 @@ static void tag_recycle_event(MuxEvent *e) {
     return;
   }
 
-  target = getMech(TAGTarget(mech));
+  target = btech_context_get_mech(mech->xcode.context, TAGTarget(mech));
 
   if (!target)
     return;
@@ -50,17 +50,22 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK(!HasTAG(mech), "This unit is not equipped with TAG!");
-  DOCHECK(isTAGDestroyed(mech), "Your TAG system is destroyed!");
-  DOCHECK(TagRecycling(mech), "Your TAG system is recycling!");
-  DOCHECK(mech_parseattributes(buffer, args, 2) != 1,
-          "Invalid number of arguments to function!");
+  DOCHECK_CONTEXT(mech->xcode.context, !HasTAG(mech),
+                  "This unit is not equipped with TAG!");
+  DOCHECK_CONTEXT(mech->xcode.context, isTAGDestroyed(mech),
+                  "Your TAG system is destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, TagRecycling(mech),
+                  "Your TAG system is recycling!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 2) != 1,
+                  "Invalid number of arguments to function!");
 
   /* Clear our TAG */
   if (!strcmp(args[0], "-")) {
     refTarget = TAGTarget(mech);
 
-    DOCHECK(refTarget <= 0, "You are not currently tagging anything!");
+    DOCHECK_CONTEXT(mech->xcode.context, refTarget <= 0,
+                    "You are not currently tagging anything!");
 
     stopTAG(mech);
 
@@ -69,7 +74,7 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   /* TAG something... anything :) */
   refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
-  target = getMech(refTarget);
+  target = btech_context_get_mech(mech->xcode.context, refTarget);
 
   if (target) {
     range = FaMechRange(mech, target);
@@ -78,12 +83,15 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   } else
     refTarget = 0;
 
-  DOCHECK(refTarget < 1 || !LOS,
-          "That is not a valid TAG targetID. Try again.");
-  DOCHECK(MechTeam(mech) == MechTeam(target), "You can't TAG friendly units!");
-  DOCHECK(mech == target, "You can't TAG yourself!");
-  DOCHECK(range > TAG_LONG, tprintf("Out of range! TAG ranges are %d/%d/%d",
-                                    TAG_SHORT, TAG_MED, TAG_LONG));
+  DOCHECK_CONTEXT(mech->xcode.context, refTarget < 1 || !LOS,
+                  "That is not a valid TAG targetID. Try again.");
+  DOCHECK_CONTEXT(mech->xcode.context, MechTeam(mech) == MechTeam(target),
+                  "You can't TAG friendly units!");
+  DOCHECK_CONTEXT(mech->xcode.context, mech == target,
+                  "You can't TAG yourself!");
+  DOCHECK_CONTEXT(mech->xcode.context, range > TAG_LONG,
+                  tprintf("Out of range! TAG ranges are %d/%d/%d", TAG_SHORT,
+                          TAG_MED, TAG_LONG));
 
   /*
    * This should actually make a roll...
@@ -95,7 +103,7 @@ void mech_tag(DbRef player, void *data, char *buffer) {
    */
 
   mech_printf(mech, MECHALL, "You light up %s with your TAG.",
-              GetMechToMechID(mech, target));
+              mech_to_mech_display_id(mech, target).text);
 
   TaggedBy(target) = mech->mynum;
   TAGTarget(mech) = target->mynum;
@@ -117,7 +125,7 @@ int isTAGDestroyed(MECH *mech) {
 void stopTAG(MECH *mech) {
   MECH *target;
 
-  target = getMech(TAGTarget(mech));
+  target = btech_context_get_mech(mech->xcode.context, TAGTarget(mech));
 
   if (target)
     if (TaggedBy(target) == mech->mynum)
@@ -143,7 +151,7 @@ void checkTAG(MECH *mech) {
   if (refTarget <= 0)
     return;
 
-  target = getMech(refTarget);
+  target = btech_context_get_mech(mech->xcode.context, refTarget);
 
   if (!target) {
     stopTAG(mech);
@@ -155,7 +163,8 @@ void checkTAG(MECH *mech) {
     return;
   }
 
-  range = FlMechRange(getMap(mech->mapindex), mech, target);
+  range = FlMechRange(
+      btech_context_get_map(mech->xcode.context, mech->mapindex), mech, target);
   LOS = InLineOfSight_NB(mech, target, MechX(target), MechY(target), range);
 
   if (!LOS || (range > TAG_LONG)) {

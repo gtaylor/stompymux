@@ -17,6 +17,8 @@
 
 #include <stddef.h>
 
+typedef struct BtechContext BtechContext;
+
 typedef enum {
   GTYPE_MECH,
   GTYPE_DEBUG,
@@ -32,6 +34,7 @@ typedef enum {
  * field of this type, called 'xcode' by convention.
  */
 typedef struct {
-  GlueType type; /* XCODE object type */
-  size_t size;   /* object size */
+  GlueType type;         /* XCODE object type */
+  size_t size;           /* object size */
+  BtechContext *context; /* borrowed runtime owner */
 } XCODE;

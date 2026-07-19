@@ -22,17 +22,18 @@
 #include "btechstats_global.h"
 #include "coolmenu.h"
 #include "mech.h"
+#include "mux/commands/command_invocation.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/world/world_context.h"
 #include "mycool.h"
 #include "p.glue.scode.h"
 #include "p.mech.utils.h"
 
-extern HashTable playervaluehash;
-extern HashTable playervaluehash2;
-
-#define IsHCO(ref) WizP(ref)
-
-void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
+void do_show(CommandInvocation *invocation) {
+  CommandContext *command = invocation->context;
+  GameDatabase *database = command->world->database;
+  DbRef player = invocation->player;
+  char *arg1 = invocation->first;
   int i;
   enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
   char *cmds[] = {"allvalues",  "values",      "skills", "advantages",
@@ -46,39 +47,42 @@ void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2) {
                        NULL};
   char buf[MBUF_SIZE] = {0};
 
-  DOCHECK(!IsHCO(player), "You aren't cleared to know this stuff yet!");
+  if (!WizP(database, player)) {
+    notify(&command->evaluation, player,
+           "You aren't cleared to know this stuff yet!");
+    return;
+  }
 
   if (!arg1 || !*arg1) {
     strcpy(buf, "Valid arguments:");
     for (i = 0; cmds_help[i]; i++)
       snprintf(buf + strlen(buf), MBUF_SIZE - strlen(buf), "%c %s",
                i > 0 ? ',' : ' ', cmds_help[i]);
-    notify(BTECH_EVALUATION_CONTEXT, player, buf);
+    notify(&command->evaluation, player, buf);
     return;
   }
   i = listmatch(cmds, arg1);
   /* Do da cmd */
   switch (i) {
   case MECHVALUES:
-    list_xcodevalues(player);
+    list_xcodevalues(&command->evaluation, player);
     return;
   case CHAVA:
-    list_charvaluestuff(player, -1);
+    list_charvaluestuff(&command->evaluation, player, -1);
     return;
   case CHVAL:
-    list_charvaluestuff(player, CHAR_VALUE);
+    list_charvaluestuff(&command->evaluation, player, CHAR_VALUE);
     return;
   case CHSKI:
-    list_charvaluestuff(player, CHAR_SKILL);
+    list_charvaluestuff(&command->evaluation, player, CHAR_SKILL);
     return;
   case CHADV:
-    list_charvaluestuff(player, CHAR_ADVANTAGE);
+    list_charvaluestuff(&command->evaluation, player, CHAR_ADVANTAGE);
     return;
   case CHATT:
-    list_charvaluestuff(player, CHAR_ATTRIBUTE);
+    list_charvaluestuff(&command->evaluation, player, CHAR_ATTRIBUTE);
     return;
   }
-  notify(BTECH_EVALUATION_CONTEXT, player,
-         "Invalid arguments to +show command!");
+  notify(&command->evaluation, player, "Invalid arguments to +show command!");
   return;
 }

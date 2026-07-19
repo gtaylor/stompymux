@@ -13,6 +13,8 @@
 
 #include "mux/server/platform.h"
 
+typedef struct CommandInvocation CommandInvocation;
+
 /* btech.c */
 void list_fhashstats(DbRef player);
-void do_show(DbRef player, DbRef cause, int key, char *arg1, char *arg2);
+void do_show(CommandInvocation *invocation);

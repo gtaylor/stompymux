@@ -8,6 +8,7 @@ typedef struct ServerConfiguration ServerConfiguration;
 
 typedef struct ComsysContext ComsysContext;
 struct ComsysContext {
+  /* Every member is borrowed from MuxServer. */
   const ServerConfiguration *configuration;
   RuntimeClock *clock;
   ChannelRegistry *channels;
@@ -15,5 +16,4 @@ struct ComsysContext {
 
 void comsys_context_initialize(ComsysContext *context,
                                const ServerConfiguration *configuration,
-                               RuntimeClock *clock,
-                               ChannelRegistry *channels);
+                               RuntimeClock *clock, ChannelRegistry *channels);

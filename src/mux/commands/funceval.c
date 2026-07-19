@@ -2,7 +2,9 @@
  * funceval.c - MUX function handlers
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include <limits.h>
 #include <math.h>
@@ -19,7 +21,6 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/network/netcommon.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -66,11 +67,11 @@ void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               EvaluationContext *context) {
   struct channel *ch;
 
-  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
+  if (!(ch = select_channel(context->runtime->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!context->server->configuration->have_comsys ||
+  if (!context->world->configuration->have_comsys ||
       (!is_comm_all(context->world->database, player) &&
        (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -92,11 +93,11 @@ void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   size_t len = 0;
   static char smbuf[SBUF_SIZE];
 
-  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
+  if (!(ch = select_channel(context->runtime->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!context->server->configuration->have_comsys ||
+  if (!context->world->configuration->have_comsys ||
       (!is_comm_all(context->world->database, player) &&
        (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -128,11 +129,11 @@ void fun_clist(char *buff, char **bufc, DbRef player, DbRef cause,
                EvaluationContext *context) {
   struct channel *ch;
 
-  if (!(ch = select_channel(&context->server->channels, fargs[0]))) {
+  if (!(ch = select_channel(context->runtime->channels, fargs[0]))) {
     safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
     return;
   }
-  if (!context->server->configuration->have_comsys ||
+  if (!context->world->configuration->have_comsys ||
       (!is_comm_all(context->world->database, player) &&
        (player != ch->charge_who))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
@@ -140,9 +141,9 @@ void fun_clist(char *buff, char **bufc, DbRef player, DbRef cause,
   }
 
   for (ch = (struct channel *)hash_table_first_entry(
-           &context->server->channels.channels);
+           &context->runtime->channels->channels);
        ch; ch = (struct channel *)hash_table_next_entry(
-               &context->server->channels.channels)) {
+               &context->runtime->channels->channels)) {
     safe_tprintf_str(buff, bufc, "%s ", ch->name);
   }
 }
@@ -281,7 +282,7 @@ void fun_zone(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
               EvaluationContext *context) {
   DbRef it;
 
-  if (!context->server->configuration->have_zones) {
+  if (!context->world->configuration->have_zones) {
     return;
   }
   it = match_thing(&context->command->match, player, fargs[0]);
@@ -320,7 +321,7 @@ void fun_tel(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 void fun_pemit(char *buff, char **bufc, DbRef player, DbRef cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs,
                EvaluationContext *context) {
-  do_pemit_list(context, context->server->configuration, player, fargs[0],
+  do_pemit_list(context, context->world->configuration, player, fargs[0],
                 fargs[1]);
 }
 
@@ -362,8 +363,8 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
 
   switch (sep) {
   case 'r':
-    if (check_command(context->world->database, context->server->configuration,
-                      &context->server->command_registry, player, "@dig", buff,
+    if (check_command(context->world->database, context->world->configuration,
+                      context->runtime->command_registry, player, "@dig", buff,
                       bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
@@ -371,8 +372,8 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
     thing = create_obj(context, player, TYPE_ROOM, name);
     break;
   case 'e':
-    if (check_command(context->world->database, context->server->configuration,
-                      &context->server->command_registry, player, "@open", buff,
+    if (check_command(context->world->database, context->world->configuration,
+                      context->runtime->command_registry, player, "@open", buff,
                       bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
@@ -386,8 +387,8 @@ void fun_create(char *buff, char **bufc, DbRef player, DbRef cause,
     }
     break;
   default:
-    if (check_command(context->world->database, context->server->configuration,
-                      &context->server->command_registry, player, "@create",
+    if (check_command(context->world->database, context->world->configuration,
+                      context->runtime->command_registry, player, "@create",
                       buff, bufc)) {
       safe_str("#-1 PERMISSION DENIED", buff, bufc);
       return;
@@ -474,7 +475,7 @@ void fun_set(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
        */
 
       flagvalue = name_table_search(context->world->database,
-                                    context->server->configuration, player,
+                                    context->world->configuration, player,
                                     indiv_attraccess_nametab, fargs[1]);
       if (flagvalue < 0) {
         safe_str("#-1 CAN NOT SET", buff, bufc);
@@ -663,13 +664,13 @@ void fun_zwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       (!is_controls(context, player, it) &&
        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_PLAYER) {
       if (game_object_zone(context->world->database, i) == it) {
         if (len) {
@@ -697,13 +698,13 @@ void fun_zrooms(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       (!is_controls(context, player, it) &&
        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_ROOM) {
       if (game_object_zone(context->world->database, i) == it) {
         if (len) {
@@ -731,13 +732,13 @@ void fun_zexits(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       (!is_controls(context, player, it) &&
        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_EXIT) {
       if (game_object_zone(context->world->database, i) == it) {
         if (len) {
@@ -765,13 +766,13 @@ void fun_zobjects(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       (!is_controls(context, player, it) &&
        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_THING) {
       if (game_object_zone(context->world->database, i) == it) {
         if (len) {
@@ -799,13 +800,13 @@ void fun_zplayers(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       (!is_controls(context, player, it) &&
        !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_PLAYER)
       if (game_object_zone(context->world->database, i) == it) {
         if (!(is_connected(context->world->database, i)))
@@ -837,13 +838,13 @@ void fun_inzone(char *buff, char **bufc, DbRef player, DbRef cause,
   DbRef i;
   size_t len = 0;
 
-  if (!context->server->configuration->have_zones ||
+  if (!context->world->configuration->have_zones ||
       !(is_controls(context, player, it) ||
         !is_wizard(context->world->database, player))) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (typeof_obj(context->world->database, i) == TYPE_ROOM)
       if (game_object_zone(context->world->database, i) == it) {
         if (len) {
@@ -878,7 +879,7 @@ void fun_children(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
-  for (i = 0; i < context->server->database.top; i++)
+  for (i = 0; i < context->world->database->top; i++)
     if (game_object_parent(context->world->database, i) == it) {
       if (len) {
         static char smbuf[SBUF_SIZE];
@@ -980,7 +981,7 @@ void fun_zfun(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 
   DbRef zone = game_object_zone(context->world->database, player);
 
-  if (!context->server->configuration->have_zones) {
+  if (!context->world->configuration->have_zones) {
     safe_str("#-1 ZONES DISABLED", buff, bufc);
     return;
   }
@@ -1501,7 +1502,7 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
         atr_gotten = attribute_parent_get(context->world->database, thing,
                                           attrib, &aowner, &aflags);
         if (*atr_gotten &&
-            check_read_perms(context, context->server->configuration, player,
+            check_read_perms(context, context->world->configuration, player,
                              thing, attr, aowner, aflags, buff, bufc)) {
           safe_str(atr_gotten, buff, bufc);
           free_lbuf(atr_gotten);
@@ -1554,7 +1555,7 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
         atr_gotten = attribute_parent_get(context->world->database, thing,
                                           attrib, &aowner, &aflags);
         if (*atr_gotten &&
-            check_read_perms(context, context->server->configuration, player,
+            check_read_perms(context, context->world->configuration, player,
                              thing, attr, aowner, aflags, buff, bufc)) {
           str = atr_gotten;
           exec(context, buff, bufc, 0, thing, player, EV_FIGNORE | EV_EVAL,
@@ -1621,7 +1622,7 @@ void fun_udefault(char *buff, char **bufc, DbRef player, DbRef cause,
                                    &aowner, &aflags);
       if (atext) {
         if (*atext &&
-            check_read_perms(context, context->server->configuration, player,
+            check_read_perms(context, context->world->configuration, player,
                              thing, ap, aowner, aflags, buff, bufc)) {
           str = atext;
           exec(context, buff, bufc, 0, thing, cause, EV_FCHECK | EV_EVAL, &str,
@@ -1667,7 +1668,7 @@ void fun_findable(char *buff, char **bufc, DbRef player, DbRef cause,
   else
     safe_tprintf_str(
         buff, bufc, "%d",
-        locatable(context, context->server->configuration, obj, victim, obj));
+        locatable(context, context->world->configuration, obj, victim, obj));
 }
 
 /*
@@ -1935,9 +1936,9 @@ static int u_comp(const void *s1, const void *s2, void *arg) {
   int n;
 
   if ((sort_context->evaluation->function_invocations >
-       sort_context->evaluation->server->configuration->func_invk_lim) ||
+       sort_context->evaluation->world->configuration->func_invk_lim) ||
       (sort_context->evaluation->function_nesting >
-       sort_context->evaluation->server->configuration->func_nest_lim))
+       sort_context->evaluation->world->configuration->func_nest_lim))
     return 0;
 
   tbuf = alloc_lbuf("u_comp");
@@ -2201,7 +2202,7 @@ void fun_ports(char *buff, char **bufc, DbRef player, DbRef cause,
       !is_connected(context->world->database, target)) {
     return;
   }
-  make_portlist(context->server->descriptors, player, target, buff, bufc);
+  make_portlist(context->runtime->descriptors, player, target, buff, bufc);
 }
 
 /*
@@ -2840,8 +2841,8 @@ static char *grep_util(EvaluationContext *context, DbRef player, DbRef thing,
   safe_tprintf_str(buf, &bufc, "#%ld/%s", thing, pattern);
   object_list_initialize(&attributes);
   if (parse_attrib_wild(&context->command->match, player, buf, &thing, 0, 0, 1,
-                        &attributes, context->server->configuration,
-                        &context->server->world_indexes)) {
+                        &attributes, context->world->configuration,
+                        context->runtime->world_indexes)) {
     for (ca = (int)object_list_first(&attributes); ca != NOTHING;
          ca = (int)object_list_next(&attributes)) {
       attrib =
@@ -3013,7 +3014,7 @@ void fun_valid(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("0", buff, bufc);
   else if (!strcasecmp(fargs[0], "name"))
     safe_tprintf_str(buff, bufc, "%d",
-                     ok_name(context->server->configuration, fargs[1]));
+                     ok_name(context->world->configuration, fargs[1]));
   else
     safe_str("#-1", buff, bufc);
 }
@@ -3324,7 +3325,7 @@ void fun_push(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   if (stacksize(context->world->database, doer) >=
-      context->server->configuration->stack_limit) {
+      context->world->configuration->stack_limit) {
     safe_str("#-1 STACK SIZE EXCEEDED", buff, bufc);
     return;
   }
@@ -3457,7 +3458,7 @@ void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
 
   if (*fargs[0]) {
     switchkey = name_table_search(context->world->database,
-                                  context->server->configuration, player,
+                                  context->world->configuration, player,
                                   &lock_sw, fargs[0]);
     if (switchkey < 0) {
       safe_str("#-1 SWITCH ERROR", buff, bufc);

@@ -41,11 +41,12 @@
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 
-static int doweird = 0;
-static char weirdbuf[LBUF_SIZE];
-
 static void append_status(char *buffer, size_t size, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
+static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
+                                DbRef player, bool compact,
+                                char *compact_buffer,
+                                size_t compact_buffer_size);
 
 static void append_status(char *buffer, size_t size, const char *fmt, ...) {
   size_t len = strlen(buffer);
@@ -65,7 +66,7 @@ static void append_status(char *buffer, size_t size, const char *fmt, ...) {
 #define PHY_SAW 4
 #define PHY_CLAW 5
 
-void DisplayTarget(DbRef player, MECH *mech) {
+void DisplayTarget(EvaluationContext *evaluation, DbRef player, MECH *mech) {
   int arc;
   MECH *tempMech = NULL;
   char location[50] = {0};
@@ -73,16 +74,17 @@ void DisplayTarget(DbRef player, MECH *mech) {
   char buff1[100] = {0};
 
   if (MechTarget(mech) != -1) {
-    tempMech = getMech(MechTarget(mech));
+    tempMech = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
     if (tempMech) {
       if (InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                         FaMechRange(mech, tempMech))) {
         snprintf(buff, sizeof(buff),
                  "Target: %s\t   Range: %.1f hexes   Bearing: %d deg\n",
-                 GetMechToMechID(mech, tempMech), FaMechRange(mech, tempMech),
+                 mech_to_mech_display_id(mech, tempMech).text,
+                 FaMechRange(mech, tempMech),
                  FindBearing(MechFX(mech), MechFY(mech), MechFX(tempMech),
                              MechFY(tempMech)));
-        notify(BTECH_EVALUATION_CONTEXT, player, buff);
+        notify(evaluation, player, buff);
         arc = InWeaponArc(mech, MechFX(tempMech), MechFY(tempMech));
         strcpy(buff,
                tprintf("Target in %s Weapons Arc",
@@ -99,37 +101,37 @@ void DisplayTarget(DbRef player, MECH *mech) {
       } else
         snprintf(buff, sizeof(buff), "Target: NOT in line of sight!\n");
     }
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
   } else if (MechTargX(mech) != -1 && MechTargY(mech) != -1) {
     if (MechStatus(mech) & LOCK_BUILDING)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "Target: Building at %d %d\n", MechTargX(mech),
-                    MechTargY(mech));
+      notify_printf(evaluation, player, "Target: Building at %d %d\n",
+                    MechTargX(mech), MechTargY(mech));
     else if (MechStatus(mech) & LOCK_HEX)
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "Target: Hex %d %d\n",
-                    MechTargX(mech), MechTargY(mech));
+      notify_printf(evaluation, player, "Target: Hex %d %d\n", MechTargX(mech),
+                    MechTargY(mech));
     else
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "Target: %d %d\n",
-                    MechTargX(mech), MechTargY(mech));
+      notify_printf(evaluation, player, "Target: %d %d\n", MechTargX(mech),
+                    MechTargY(mech));
   }
   if (MechPKiller(mech))
-    notify(BTECH_EVALUATION_CONTEXT, player,
-           "Weapon Safeties are %ch%crOFF%cn.\n");
-  if (GotPilot(mech) && HasBoolAdvantage(MechPilot(mech), "maneuvering_ace"))
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "Turn Mode: %s",
+    notify(evaluation, player, "Weapon Safeties are %ch%crOFF%cn.\n");
+  if (GotPilot(mech) &&
+      HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "maneuvering_ace"))
+    notify_printf(evaluation, player, "Turn Mode: %s",
                   GetTurnMode(mech) ? "TIGHT" : "NORMAL");
   if (MechChargeTarget(mech) > 0 &&
-      btech_context_active()->configuration->btech_newcharge) {
-    tempMech = getMech(MechChargeTarget(mech));
+      mech->xcode.context->configuration->btech_newcharge) {
+    tempMech =
+        btech_context_get_mech(mech->xcode.context, MechChargeTarget(mech));
     if (!tempMech)
       return;
     if (InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                       FaMechRange(mech, tempMech))) {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "ChargeTarget: %s\t  ChargeTimer: %d\n",
-                    GetMechToMechID(mech, tempMech), MechChargeTimer(mech) / 2);
+      notify_printf(evaluation, player, "ChargeTarget: %s\t  ChargeTimer: %d\n",
+                    mech_to_mech_display_id(mech, tempMech).text,
+                    MechChargeTimer(mech) / 2);
     } else {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(evaluation, player,
                     "ChargeTarget: NOT in line of sight!\t Timer: %d\n",
                     MechChargeTimer(mech) / 2);
     }
@@ -137,112 +139,118 @@ void DisplayTarget(DbRef player, MECH *mech) {
 }
 
 void show_miscbrands(MECH *mech, DbRef player) {
-  /*   notify(BTECH_EVALUATION_CONTEXT, player, tprintf("Radio: %s (%3d range)
-   * Computer: %s (%d Scan / %d LRS / %d Tac)", brands[BOUNDED(1,
-   * MechRadio(mech), 5)+RADIO_INDEX].name, (int) MechRadioRange(mech),
-   * brands[BOUNDED(1, MechComputer(mech), 5)+COMPUTER_INDEX].name, (int)
-   * MechScanRange(mech), (int) MechLRSRange(mech), (int) MechTacRange(mech)));
+  /*   notify(evaluation, player,
+   * tprintf("Radio: %s (%3d range) Computer: %s (%d Scan / %d LRS / %d Tac)",
+   * brands[BOUNDED(1, MechRadio(mech), 5)+RADIO_INDEX].name, (int)
+   * MechRadioRange(mech), brands[BOUNDED(1, MechComputer(mech),
+   * 5)+COMPUTER_INDEX].name, (int) MechScanRange(mech), (int)
+   * MechLRSRange(mech), (int) MechTacRange(mech)));
    */
 }
 
-void PrintGenericStatus(DbRef player, MECH *mech, int own, int usex) {
+void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                        int own, int usex) {
   MECH *tempMech = NULL;
-  MAP *map = FindObjectsData(mech->mapindex);
+  MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
   char buff[SBUF_SIZE];
   char mech_name[100] = {0};
   char mech_ref[100] = {0};
   char move_type[50] = {0};
 
   strcpy(mech_name,
-         usex ? MechType_Name(mech) : silly_atr_get(mech->mynum, A_MECHNAME));
+         usex ? MechType_Name(mech)
+              : btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                     A_MECHNAME, (char[LBUF_SIZE]){0}));
   strcpy(mech_ref,
-         usex ? MechType_Ref(mech) : silly_atr_get(mech->mynum, A_MECHREF));
+         usex ? MechType_Ref(mech)
+              : btech_attribute_read(mech->xcode.context->database, mech->mynum,
+                                     A_MECHREF, (char[LBUF_SIZE]){0}));
 
   switch (MechType(mech)) {
   case CLASS_MW:
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                  "MechWarrior: %-18.18s ID:[%s]",
-                  game_object_name(btech_context_active()->database, player),
-                  MechIDS(mech, 0));
-    notify_printf(BTECH_EVALUATION_CONTEXT, player, "MaxSpeed: %3d",
-                  (int)MMaxSpeed(mech));
+    notify_printf(evaluation, player, "MechWarrior: %-18.18s ID:[%s]",
+                  game_object_name(mech->xcode.context->database, player),
+                  mech_id(mech, false).text);
+    notify_printf(evaluation, player, "MaxSpeed: %3d", (int)MMaxSpeed(mech));
     break;
   case CLASS_BSUIT:
     snprintf(buff, sizeof(buff),
              "%s Name: %-18.18s  ID:[%s]   %s Reference: %s",
-             GetBSuitName(mech), mech_name, MechIDS(mech, 0),
+             GetBSuitName(mech), mech_name, mech_id(mech, false).text,
              GetBSuitName(mech), mech_ref);
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify(evaluation, player, buff);
+    notify_printf(evaluation, player,
                   "MaxSpeed: %3d                  JumpRange: %d",
                   (int)MMaxSpeed(mech), JumpSpeedMP(mech, map));
     show_miscbrands(mech, player);
     if (MechPilot(mech) == -1)
-      notify(BTECH_EVALUATION_CONTEXT, player, "Leader: NONE");
+      notify(evaluation, player, "Leader: NONE");
     else {
-      snprintf(
-          buff, sizeof(buff), "%s Leader Name: %-16.16s %s Leader injury: %d",
-          GetBSuitName(mech),
-          game_object_name(btech_context_active()->database, MechPilot(mech)),
-          GetBSuitName(mech), MechPilotStatus(mech));
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      snprintf(buff, sizeof(buff),
+               "%s Leader Name: %-16.16s %s Leader injury: %d",
+               GetBSuitName(mech),
+               game_object_name(mech->xcode.context->database, MechPilot(mech)),
+               GetBSuitName(mech), MechPilotStatus(mech));
+      notify(evaluation, player, buff);
     }
 
     snprintf(buff, sizeof(buff), "Max Suits: %d", MechMaxSuits(mech));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
 
-    Mech_ShowFlags(player, mech, 0, 0);
+    Mech_ShowFlags(evaluation, player, mech, 0, 0);
 
     if (Jumping(mech)) {
       snprintf(buff, sizeof(buff), "JUMPING --> %3d,%3d", MechGoingX(mech),
                MechGoingY(mech));
       if ((MechStatus(mech) & DFA_ATTACK) && MechDFATarget(mech) != -1) {
-        tempMech = getMech(MechDFATarget(mech));
+        tempMech =
+            btech_context_get_mech(mech->xcode.context, MechDFATarget(mech));
         snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff),
                  "  Death From Above Target: %s",
-                 GetMechToMechID(mech, tempMech));
+                 mech_to_mech_display_id(mech, tempMech).text);
       }
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
     }
     break;
   case CLASS_MECH:
     snprintf(buff, sizeof(buff),
              "Mech Name: %-18.18s  ID:[%s]   Mech Reference: %s", mech_name,
-             MechIDS(mech, 0), mech_ref);
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+             mech_id(mech, false).text, mech_ref);
+    notify(evaluation, player, buff);
+    notify_printf(evaluation, player,
                   "Tonnage:   %3d     MaxSpeed: %3d       JumpRange: %d",
                   MechTons(mech), (int)MMaxSpeed(mech), JumpSpeedMP(mech, map));
     show_miscbrands(mech, player);
     if (MechPilot(mech) == -1)
-      notify(BTECH_EVALUATION_CONTEXT, player, "Pilot: NONE");
+      notify(evaluation, player, "Pilot: NONE");
     else {
-      snprintf(
-          buff, sizeof(buff), "Pilot Name: %-28.28s Pilot Injury: %d",
-          game_object_name(btech_context_active()->database, MechPilot(mech)),
-          MechPilotStatus(mech));
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      snprintf(buff, sizeof(buff), "Pilot Name: %-28.28s Pilot Injury: %d",
+               game_object_name(mech->xcode.context->database, MechPilot(mech)),
+               MechPilotStatus(mech));
+      notify(evaluation, player, buff);
     }
-    Mech_ShowFlags(player, mech, 0, 0);
+    Mech_ShowFlags(evaluation, player, mech, 0, 0);
     if (!Jumping(mech) && !Fallen(mech) && Started(mech) &&
         (MechChargeTarget(mech) != -1)) {
-      tempMech = getMech(MechChargeTarget(mech));
+      tempMech =
+          btech_context_get_mech(mech->xcode.context, MechChargeTarget(mech));
       if (tempMech) {
         snprintf(buff, sizeof(buff), "CHARGING --> %s",
-                 GetMechToMechID(mech, tempMech));
-        notify(BTECH_EVALUATION_CONTEXT, player, buff);
+                 mech_to_mech_display_id(mech, tempMech).text);
+        notify(evaluation, player, buff);
       }
     }
     if (Jumping(mech)) {
       snprintf(buff, sizeof(buff), "JUMPING --> %3d,%3d", MechGoingX(mech),
                MechGoingY(mech));
       if ((MechStatus(mech) & DFA_ATTACK) && MechDFATarget(mech) != -1) {
-        tempMech = getMech(MechDFATarget(mech));
+        tempMech =
+            btech_context_get_mech(mech->xcode.context, MechDFATarget(mech));
         snprintf(buff + strlen(buff), sizeof(buff) - strlen(buff),
                  "  Death From Above Target: %s",
-                 GetMechToMechID(mech, tempMech));
+                 mech_to_mech_display_id(mech, tempMech).text);
       }
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
     }
     break;
   case CLASS_VTOL:
@@ -283,42 +291,42 @@ void PrintGenericStatus(DbRef player, MECH *mech, int own, int usex) {
     if (MechMove(mech) != MOVE_NONE) {
       snprintf(buff, sizeof(buff),
                "Vehicle Name: %-15.15s  ID:[%s]   Vehicle Reference: %s",
-               mech_name, MechIDS(mech, 0), mech_ref);
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+               mech_name, mech_id(mech, false).text, mech_ref);
+      notify(evaluation, player, buff);
       snprintf(buff, sizeof(buff),
                "Tonnage:   %3d      %s: %3d       Movement Type: %s",
                MechTons(mech), is_aero(mech) ? "Max thrust" : "FlankSpeed",
                (int)MMaxSpeed(mech), move_type);
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
       show_miscbrands(mech, player);
       if (MechPilot(mech) == -1)
-        notify(BTECH_EVALUATION_CONTEXT, player, "Pilot: NONE");
+        notify(evaluation, player, "Pilot: NONE");
       else {
         snprintf(
             buff, sizeof(buff), "Pilot Name: %-28.28s Pilot Injury: %d",
-            game_object_name(btech_context_active()->database, MechPilot(mech)),
+            game_object_name(mech->xcode.context->database, MechPilot(mech)),
             MechPilotStatus(mech));
-        notify(BTECH_EVALUATION_CONTEXT, player, buff);
+        notify(evaluation, player, buff);
       }
     } else {
       snprintf(buff, sizeof(buff), "Name: %-15.15s  ID:[%s]   Reference: %s",
-               mech_name, MechIDS(mech, 0), mech_ref);
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+               mech_name, mech_id(mech, false).text, mech_ref);
+      notify(evaluation, player, buff);
     }
     if (MechType(mech) != CLASS_VTOL && !is_aero(mech))
       if (GetSectInt(mech, TURRET)) {
         if (MechTankCritStatus(mech) & TURRET_JAMMED)
-          notify(BTECH_EVALUATION_CONTEXT, player, "     TURRET JAMMED");
+          notify(evaluation, player, "     TURRET JAMMED");
         else if (MechTankCritStatus(mech) & TURRET_LOCKED)
-          notify(BTECH_EVALUATION_CONTEXT, player, "     TURRET LOCKED");
+          notify(evaluation, player, "     TURRET LOCKED");
       }
     if (FlyingT(mech) && Landed(mech))
-      notify(BTECH_EVALUATION_CONTEXT, player, "LANDED");
-    Mech_ShowFlags(player, mech, 0, 0);
+      notify(evaluation, player, "LANDED");
+    Mech_ShowFlags(evaluation, player, mech, 0, 0);
   }
 }
 
-void PrintShortInfo(DbRef player, MECH *mech) {
+void PrintShortInfo(EvaluationContext *evaluation, DbRef player, MECH *mech) {
   char buff[MBUF_SIZE] = {0};
   char typespecific[50] = {0};
 
@@ -363,9 +371,9 @@ void PrintShortInfo(DbRef player, MECH *mech) {
            "LOC: %3d,%3d,%3d  HD: %3d/%3d  SP: %3.1f/%3.1f %s ST:%s",
            MechX(mech), MechY(mech), MechZ(mech), MechFacing(mech),
            MechDesiredFacing(mech), MechSpeed(mech), MechDesiredSpeed(mech),
-           typespecific, getStatusString(mech, 2));
-  notify(BTECH_EVALUATION_CONTEXT, player, buff);
-  DisplayTarget(player, mech);
+           typespecific, mech_status_string(mech, 2).text);
+  notify(evaluation, player, buff);
+  DisplayTarget(evaluation, player, mech);
 }
 
 #define HEAT_LEVEL_LGREEN 0
@@ -465,17 +473,18 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   return heatstr;
 }
 
-void PrintHeatBar(DbRef player, MECH *mech) {
+void PrintHeatBar(EvaluationContext *evaluation, DbRef player, MECH *mech) {
   char subbuff[256];
   char buff[sizeof(subbuff) + sizeof("Temp:")];
   char heatstr[9] = ".:::::::";
 
   MakeHeatScaleInfo(mech, heatstr, subbuff, 256);
   snprintf(buff, sizeof(buff), "Temp:%s", subbuff);
-  notify(BTECH_EVALUATION_CONTEXT, player, buff);
+  notify(evaluation, player, buff);
 }
 
-void PrintInfoStatus(DbRef player, MECH *mech, int own) {
+void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                     int own) {
   char buff[256];
   MECH *tempMech;
   int f;
@@ -487,23 +496,23 @@ void PrintInfoStatus(DbRef player, MECH *mech, int own) {
              "%3d deg C.",
              MechX(mech), MechY(mech), MechZ(mech), (int)(10. * MechHeat(mech)),
              (int)(10. * MechPlusHeat(mech)));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
     snprintf(buff, 256,
              "Speed:      %%ch%%cg%3d%%cn KPH  Heading:      %%ch%%cg%3d%%cn "
              "deg     Heat Sinks:       %3d",
              (int)(MechSpeed(mech)), MechFacing(mech),
              MechActiveNumsinks(mech));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
     snprintf(buff, sizeof(buff),
              "Des. Speed: %3d KPH  Des. Heading: %3d deg     Heat Dissipation: "
              "%3d deg C.",
              (int)MechDesiredSpeed(mech), MechDesiredFacing(mech),
              (int)(10. * MechMinusHeat(mech)));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
 
     if (MechLateral(mech))
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
-                    "You are moving laterally %s", LateralDesc(mech));
+      notify_printf(evaluation, player, "You are moving laterally %s",
+                    LateralDesc(mech));
     break;
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:
@@ -519,14 +528,14 @@ void PrintInfoStatus(DbRef player, MECH *mech, int own) {
                            MechDesiredAngle(mech) >= 0 ? "Climbing" : "Diving",
                            abs(MechDesiredAngle(mech)))
                  : "");
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
     if (FlyingT(mech) || MechMove(mech) == MOVE_SUB) {
       snprintf(buff, sizeof(buff),
                "Speed:      %%ch%%cg%3d%%cn KPH  Vertical Speed:      "
                "%%ch%%cg%3d%%cn KPH   Des. Speed %3d KPH",
                (int)(MechSpeed(mech)), (int)(MechVerticalSpeed(mech)),
                (int)(MechDesiredSpeed(mech)));
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
       f = MAX(0, AeroFuel(mech));
       if (MechMove(mech) == MOVE_SUB) {
         snprintf(buff, sizeof(buff), "Heading: %3d KPH  Des. Heading: %3d deg",
@@ -544,20 +553,20 @@ void PrintInfoStatus(DbRef player, MECH *mech, int own) {
                  100.0 * f / AeroFuelOrig(mech));
       }
 
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
     } else if (MechMove(mech) != MOVE_NONE) {
       snprintf(
           buff, sizeof(buff),
           "Speed:      %%ch%%cg%3d%%cn KPH  Heading:      %%ch%%cg%3d%%cn deg",
           (int)(MechSpeed(mech)), MechFacing(mech));
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
       snprintf(buff, sizeof(buff), "Des. Speed: %3d KPH  Des. Heading: %3d deg",
                (int)MechDesiredSpeed(mech), MechDesiredFacing(mech));
-      notify(BTECH_EVALUATION_CONTEXT, player, buff);
+      notify(evaluation, player, buff);
     }
-    ShowTurretFacing(player, 0, mech);
+    ShowTurretFacing(evaluation, player, 0, mech);
     if (MechHasHeat(mech)) {
-      notify_printf(BTECH_EVALUATION_CONTEXT, player,
+      notify_printf(evaluation, player,
                     "Excess Heat:%3d deg  Heat Production:     %3d deg   Heat "
                     "Dissipation: %3d deg",
                     (int)(10. * MechHeat(mech)),
@@ -572,40 +581,44 @@ void PrintInfoStatus(DbRef player, MECH *mech, int own) {
              "   %%ch%%cg%3d%%cn deg",
              MechX(mech), MechY(mech), MechZ(mech), (int)(MechSpeed(mech)),
              MechFacing(mech));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
     snprintf(buff, sizeof(buff),
              "                     Des. Speed: %3d KPH  Des. Heading: %3d deg",
              (int)MechDesiredSpeed(mech), MechDesiredFacing(mech));
-    notify(BTECH_EVALUATION_CONTEXT, player, buff);
+    notify(evaluation, player, buff);
     break;
   }
 
   if (MechHasHeat(mech)) {
-    PrintHeatBar(player, mech);
+    PrintHeatBar(evaluation, player, mech);
 
     // Little extra space to preserve formatting.
     //		if(MechTarget(mech) == -1 && MechTargX(mech) == -1)
-    //			notify(BTECH_EVALUATION_CONTEXT, player, "  ");
+    //			notify(evaluation,
+    // player, "  ");
   }
-  notify(BTECH_EVALUATION_CONTEXT, player, "  ");
+  notify(evaluation, player, "  ");
   // Show our locked target info (hex or unit).
-  DisplayTarget(player, mech);
+  DisplayTarget(evaluation, player, mech);
 
   if (MechCarrying(mech) > 0)
-    if ((tempMech = getMech(MechCarrying(mech))))
-      notify_printf(BTECH_EVALUATION_CONTEXT, player, "Towing %s.",
-                    GetMechToMechID(mech, tempMech));
+    if ((tempMech =
+             btech_context_get_mech(mech->xcode.context, MechCarrying(mech))))
+      notify_printf(evaluation, player, "Towing %s.",
+                    mech_to_mech_display_id(mech, tempMech).text);
 }
 
 /* Status commands! */
 void mech_status(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   int doweap = 0, doinfo = 0, doarmor = 0, doshort = 0, doheat = 0, loop;
   int i;
   int usex = 0;
+  bool weird = false;
   char buf[LBUF_SIZE] = {0};
+  char weird_buffer[LBUF_SIZE] = {0};
 
-  doweird = 0;
   cch(MECH_USUALSM);
   if (!buffer || !strlen(buffer))
     // No arguments, we'll go with our default 'status' output.
@@ -640,7 +653,7 @@ void mech_status(DbRef player, void *data, char *buffer) {
         break;
       case 'N':
         // Really weird status display.
-        doweird = 1;
+        weird = true;
         break;
       case 'S':
         // Very short one-line status.
@@ -656,27 +669,27 @@ void mech_status(DbRef player, void *data, char *buffer) {
 
   // Very short one-line status.
   if (doshort) {
-    PrintShortInfo(player, mech);
+    PrintShortInfo(evaluation, player, mech);
     return;
   }
 
   // Really weird status display.
-  if (doweird) {
+  if (weird) {
     snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ", MechType_Ref(mech),
              MechType_Name(mech), MechTons(mech),
              (int)(MechMaxSpeed(mech) / MP1) * 2 / 3,
              (int)(MechMaxSpeed(mech) / MP1), (int)(MechJumpSpeed(mech) / MP1),
              MechActiveNumsinks(mech));
-    memcpy(weirdbuf, buf, sizeof(weirdbuf));
+    memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
   } else if (!doheat || (doarmor | doinfo | doweap))
-    PrintGenericStatus(player, mech, 1, usex);
+    PrintGenericStatus(evaluation, player, mech, 1, usex);
 
   // Show our armor diagram.
   if (doarmor) {
-    if (!doweird) {
-      PrintArmorStatus(player, mech, 1);
-      notify(BTECH_EVALUATION_CONTEXT, player, " ");
+    if (!weird) {
+      PrintArmorStatus(evaluation, player, mech, 1);
+      notify(evaluation, player, " ");
     } else {
       for (i = 0; i < NUM_SECTIONS; i++)
         if (GetSectOArmor(mech, i)) {
@@ -692,125 +705,117 @@ void mech_status(DbRef player, void *data, char *buffer) {
   }
 
   // Standard heat/heading/dive/etc.
-  if (doinfo && !doweird) {
-    PrintInfoStatus(player, mech, 1);
-    // notify(BTECH_EVALUATION_CONTEXT, player, " ");
+  if (doinfo && !weird) {
+    PrintInfoStatus(evaluation, player, mech, 1);
+    // notify(evaluation, player, " ");
   }
 
   // Show our heat bar by itself.
   if (!doinfo && doheat && MechHasHeat(mech)) {
-    PrintHeatBar(player, mech);
+    PrintHeatBar(evaluation, player, mech);
   }
 
   // Weapons readout.
   if (doweap)
-    PrintWeaponStatus(mech, player);
+    print_weapon_status(evaluation, mech, player, weird, weird_buffer,
+                        sizeof(weird_buffer));
 
   // Really strange, short status info.
-  if (doweird)
-    notify(BTECH_EVALUATION_CONTEXT, player, weirdbuf);
+  if (weird)
+    notify(evaluation, player, weird_buffer);
 }
 
 void mech_critstatus(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   char *args[1];
   int index;
 
   cch(MECH_USUALSM);
-  if (!CheckData(player, mech))
-    return;
-  DOCHECK(MechType(mech) == CLASS_MW, "Huh?");
-  DOCHECK(mech_parseattributes(buffer, args, 1) != 1,
-          "You must specify a section to list the criticals for!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW, "Huh?");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_parseattributes(buffer, args, 1) != 1,
+                  "You must specify a section to list the criticals for!");
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
-  DOCHECK(index == -1, "Invalid section!");
-  DOCHECK(!GetSectOInt(mech, index), "Invalid section!");
-  CriticalStatus(player, mech, index);
+  DOCHECK_CONTEXT(mech->xcode.context, index == -1, "Invalid section!");
+  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, index),
+                  "Invalid section!");
+  CriticalStatus(evaluation, player, mech, index);
 }
 
-static int wspec_weaps[MAX_WEAPONS_PER_MECH];
-static int wspec_weapcount;
+typedef struct WeaponSpecsMenuContext WeaponSpecsMenuContext;
+struct WeaponSpecsMenuContext {
+  const ServerConfiguration *configuration;
+  const BtechWeaponSettings *weapon_settings;
+  int weapons[MAX_WEAPONS_PER_MECH];
+  int weapon_count;
+};
 
-char *part_name(int type, int brand) {
-  char *c;
-  static char buffer[SBUF_SIZE];
+static PartDisplayName part_display_name(const char *source) {
+  PartDisplayName name = {0};
+  char *separator;
 
+  if (!source)
+    return name;
+
+  name.valid = true;
+  snprintf(name.text, sizeof(name.text), "%s", source);
+  if (!strcmp(source, "LifeSupport"))
+    snprintf(name.text, sizeof(name.text), "Life Support");
+  else if (!strcmp(source, "TripleStrengthMyomer"))
+    snprintf(name.text, sizeof(name.text), "Triple Strength Myomer");
+  if ((separator = strstr(name.text, "Actuator")))
+    if (separator != name.text)
+      snprintf(separator, sizeof(name.text) - (size_t)(separator - name.text),
+               " Actuator");
+  while ((separator = strchr(name.text, '_')))
+    *separator = ' ';
+  while ((separator = strchr(name.text, '.')))
+    *separator = ' ';
+  return name;
+}
+
+PartDisplayName part_name(BtechContext *context, int type, int brand) {
   if (type == EMPTY)
-    return "Empty";
-  c = get_parts_long_name(type, brand);
-  if (!c)
-    return NULL;
-  strcpy(buffer, c);
-  if (!strcmp(c, "LifeSupport"))
-    strcpy(buffer, "Life Support");
-  else if (!strcmp(c, "TripleStrengthMyomer"))
-    strcpy(buffer, "Triple Strength Myomer");
-  else
-    strcpy(buffer, c);
-  if ((c = strstr(buffer, "Actuator")))
-    if (c != buffer)
-      strcpy(c, " Actuator");
-  while ((c = strchr(buffer, '_')))
-    *c = ' ';
-  while ((c = strchr(buffer, '.')))
-    *c = ' ';
-  return buffer;
+    return part_display_name("Empty");
+  return part_display_name(get_parts_long_name(context, type, brand));
 }
 
-char *part_name_long(int type, int brand) {
-  char *c;
-  static char buffer[SBUF_SIZE];
-
+PartDisplayName part_name_long(BtechContext *context, int type, int brand) {
   if (type == EMPTY)
-    return "Empty";
-  c = get_parts_vlong_name(type, brand);
-  if (!c)
-    return NULL;
-  strcpy(buffer, c);
-  if (!strcmp(c, "LifeSupport"))
-    strcpy(buffer, "Life Support");
-  else if (!strcmp(c, "TripleStrengthMyomer"))
-    strcpy(buffer, "Triple Strength Myomer");
-  else
-    strcpy(buffer, c);
-  if ((c = strstr(buffer, "Actuator")))
-    if (c != buffer)
-      strcpy(c, " Actuator");
-  while ((c = strchr(buffer, '_')))
-    *c = ' ';
-  while ((c = strchr(buffer, '.')))
-    *c = ' ';
-  return buffer;
+    return part_display_name("Empty");
+  return part_display_name(get_parts_vlong_name(context, type, brand));
 }
 
-char *pos_part_name(MECH *mech, int index, int loop) {
+PartDisplayName pos_part_name(MECH *mech, int index, int loop) {
   int t, b;
-  char *c;
   int newloop, newindex;
+  PartDisplayName name;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
-    SendError(tprintf("INVALID: For mech #%ld, %d/%d was requested.",
+    SendError(mech->xcode.context,
+              tprintf("INVALID: For mech #%ld, %d/%d was requested.",
                       mech->mynum, index, loop));
-    return "--?LocationBug?--";
+    return part_display_name("--?LocationBug?--");
   }
   t = GetPartType(mech, index, loop);
   b = GetPartBrand(mech, index, loop);
   if (t == Special(HAND_OR_FOOT_ACTUATOR)) {
     if (index == LLEG || index == RLEG || MechIsQuad(mech))
-      return "Foot Actuator";
-    return "Hand Actuator";
+      return part_display_name("Foot Actuator");
+    return part_display_name("Hand Actuator");
   }
   if (t == Special(SHOULDER_OR_HIP)) {
     if (index == LLEG || index == RLEG || MechIsQuad(mech))
-      return "Hip";
-    return "Shoulder";
+      return part_display_name("Hip");
+    return part_display_name("Shoulder");
   }
 
   if (t == Special(HEAT_SINK)) {
-    return ((MechSpecials(mech) & DOUBLE_HEAT_TECH ||
-             MechSpecials(mech) & CLAN_TECH)
-                ? "Double Heatsink"
-                : "Heatsink");
+    return part_display_name((MechSpecials(mech) & DOUBLE_HEAT_TECH ||
+                              MechSpecials(mech) & CLAN_TECH)
+                                 ? "Double Heatsink"
+                                 : "Heatsink");
   }
 
   if (t == Special(SPLIT_CRIT_RIGHT) || t == Special(SPLIT_CRIT_LEFT)) {
@@ -822,60 +827,62 @@ char *pos_part_name(MECH *mech, int index, int loop) {
     }
   }
 
-  /* LETS CHECK IF ITS A SPECIAL ENGINE */
   if (t == Special(ENGINE)) {
-    return (MechSpecials(mech) & LE_TECH    ? "Engine (Light)"
-            : MechSpecials(mech) & CE_TECH  ? "Engine (Compact)"
-            : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
-            : MechSpecials(mech) & XL_TECH  ? "Engine (XL)"
-                                            : "Engine");
+    return part_display_name(MechSpecials(mech) & LE_TECH   ? "Engine (Light)"
+                             : MechSpecials(mech) & CE_TECH ? "Engine (Compact)"
+                             : MechSpecials(mech) & XXL_TECH ? "Engine (XXL)"
+                             : MechSpecials(mech) & XL_TECH  ? "Engine (XL)"
+                                                             : "Engine");
   }
 
   if (t == Special(JUMP_JET)) {
-    return (MechSpecials2(mech) & IMPROVED_JJ_TECH ? "JumpJet (Improved)"
-                                                   : "Jumpjet");
+    return part_display_name(MechSpecials2(mech) & IMPROVED_JJ_TECH
+                                 ? "JumpJet (Improved)"
+                                 : "Jumpjet");
   }
 
   if (t == Special(COCKPIT)) {
-    return (MechSpecials2(mech) & SMALLCOCKPIT_TECH ? "Small Cockpit"
-                                                    : "Cockpit");
+    return part_display_name(
+        MechSpecials2(mech) & SMALLCOCKPIT_TECH ? "Small Cockpit" : "Cockpit");
   }
 
-  if (!(c = part_name(t, b)))
-    return "--?ErrorInTemplate?--";
-
-  return c;
+  name = part_name(mech->xcode.context, t, b);
+  if (!name.valid)
+    return part_display_name("--?ErrorInTemplate?--");
+  return name;
 }
 
-static char *wspec_fun(int i) {
-  static char buf[MBUF_SIZE];
+static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
+  WeaponSpecsMenuContext *menu = data;
   int j;
 
-  buf[0] = '\0';
+  buffer[0] = '\0';
   if (!i)
-    if (btech_context_active()->configuration->btech_erange)
-      snprintf(buf, sizeof(buf), WSDUMP_MASKS_ER);
+    if (menu->configuration->btech_erange)
+      snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_ER);
     else
-      snprintf(buf, sizeof(buf), WSDUMP_MASKS_NOER);
+      snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_NOER);
   else {
     i--;
-    j = wspec_weaps[i];
-    if (btech_context_active()->configuration->btech_erange)
-      snprintf(buf, sizeof(buf), WSDUMP_MASK_ER, MechWeapons[j].name,
+    j = menu->weapons[i];
+    if (menu->configuration->btech_erange)
+      snprintf(buffer, LBUF_SIZE, WSDUMP_MASK_ER, MechWeapons[j].name,
                MechWeapons[j].heat, MechWeapons[j].damage, MechWeapons[j].min,
                MechWeapons[j].shortrange, MechWeapons[j].medrange, GunRange(j),
-               EGunRange(j), MechWeapons[j].vrt);
+               EGunRange(menu->configuration, j),
+               btech_weapon_settings_recycle_time(menu->weapon_settings, j));
     else
-      snprintf(buf, sizeof(buf), WSDUMP_MASK_NOER, MechWeapons[j].name,
+      snprintf(buffer, LBUF_SIZE, WSDUMP_MASK_NOER, MechWeapons[j].name,
                MechWeapons[j].heat, MechWeapons[j].damage, MechWeapons[j].min,
                MechWeapons[j].shortrange, MechWeapons[j].medrange, GunRange(j),
-               MechWeapons[j].vrt);
+               btech_weapon_settings_recycle_time(menu->weapon_settings, j));
   }
-  return buf;
+  return buffer;
 }
 
 void mech_weaponspecs(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   int loop;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -886,87 +893,94 @@ void mech_weaponspecs(DbRef player, void *data, char *buffer) {
   int index;
   int duplicate, ii;
   coolmenu *c;
+  WeaponSpecsMenuContext menu = {
+      .configuration = mech->xcode.context->configuration,
+      .weapon_settings = &mech->xcode.context->weapon_settings,
+  };
 
-  wspec_weapcount = 0;
-  if (!CheckData(player, mech))
-    return;
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
     num_weaps = FindWeapons(mech, loop, weaparray, weapdata, critical);
     for (index = 0; index < num_weaps; index++) {
       duplicate = 0;
-      for (ii = 0; ii < wspec_weapcount; ii++)
-        if (weaparray[index] == wspec_weaps[ii])
+      for (ii = 0; ii < menu.weapon_count; ii++)
+        if (weaparray[index] == menu.weapons[ii])
           duplicate = 1;
-      if (!duplicate && wspec_weapcount < MAX_WEAPONS_PER_MECH)
-        wspec_weaps[wspec_weapcount++] = weaparray[index];
+      if (!duplicate && menu.weapon_count < MAX_WEAPONS_PER_MECH)
+        menu.weapons[menu.weapon_count++] = weaparray[index];
     }
   }
-  DOCHECK(!wspec_weapcount, "You have no weapons!");
+  DOCHECK_CONTEXT(mech->xcode.context, !menu.weapon_count,
+                  "You have no weapons!");
   if (strcmp(MechType_Name(mech), MechType_Ref(mech)))
-    c = SelCol_FunStringMenuK(1,
-                              tprintf("Weapons statistics for %s: %s",
-                                      MechType_Name(mech), MechType_Ref(mech)),
-                              wspec_fun, wspec_weapcount + 1);
+    c = SelCol_FunStringMenuContextK(1,
+                                     tprintf("Weapons statistics for %s: %s",
+                                             MechType_Name(mech),
+                                             MechType_Ref(mech)),
+                                     wspec_fun, &menu, menu.weapon_count + 1);
   else
-    c = SelCol_FunStringMenuK(
+    c = SelCol_FunStringMenuContextK(
         1, tprintf("Weapons statistics for %s", MechType_Ref(mech)), wspec_fun,
-        wspec_weapcount + 1);
-  ShowCoolMenu(player, c);
+        &menu, menu.weapon_count + 1);
+  ShowCoolMenu(evaluation, player, c);
   KillCoolMenu(c);
 }
 
-char *sectstatus_func(MECH *mech, char *arg) {
+static char *status_text(char buffer[static MBUF_SIZE], const char *text) {
+  snprintf(buffer, MBUF_SIZE, "%s", text);
+  return buffer;
+}
+
+char *sectstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]) {
   /* Show if Section is destroyed or not
    * -1 = Section Flooded
    * 1 = Section Exists
    * 0 = Section Destroyed
    */
-  static char buffer[MBUF_SIZE] = {0};
   int index;
 
   if (!arg || !*arg)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
   if (index == -1)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
-  snprintf(buffer, sizeof(buffer), "%d",
+  snprintf(buffer, MBUF_SIZE, "%d",
            SectIsFlooded(mech, index) ? -1 : !(SectIsDestroyed(mech, index)));
 
   return buffer;
 }
 
-char *critstatus_func(MECH *mech, char *arg) {
-  static char buffer[MBUF_SIZE] = {0};
+char *critstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]) {
   char *tmp;
   int index, i, max_crits;
   int type;
 
   if (!arg || !*arg)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
   if (index == -1 || !GetSectOInt(mech, index))
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
   max_crits = CritsInLoc(mech, index);
   for (i = 0; i < max_crits; i++) {
     if (buffer[0])
-      append_status(buffer, sizeof(buffer), ",");
-    append_status(buffer, sizeof(buffer), "%d|", i + 1);
+      append_status(buffer, MBUF_SIZE, ",");
+    append_status(buffer, MBUF_SIZE, "%d|", i + 1);
     type = GetPartType(mech, index, i);
     if (IsAmmo(type))
       type = FindAmmoType(mech, index, i);
-    tmp = get_parts_long_name(type, GetPartBrand(mech, index, i));
-    append_status(buffer, sizeof(buffer), "|%s", tmp ? tmp : "Empty");
-    append_status(buffer, sizeof(buffer), "|%d",
+    tmp = get_parts_long_name(mech->xcode.context, type,
+                              GetPartBrand(mech, index, i));
+    append_status(buffer, MBUF_SIZE, "|%s", tmp ? tmp : "Empty");
+    append_status(buffer, MBUF_SIZE, "|%d",
                   (PartIsNonfunctional(mech, index, i) && type != EMPTY &&
                    (!IsCrap(type) || SectIsDestroyed(mech, index)))
                       ? -1
                       : PartTempNuke(mech, index, i));
-    append_status(buffer, sizeof(buffer), "|%d",
+    append_status(buffer, MBUF_SIZE, "|%d",
                   IsWeapon(type)                    ? 1
                   : IsAmmo(type)                    ? 2
                   : IsActuator(type)                ? 3
@@ -977,14 +991,13 @@ char *critstatus_func(MECH *mech, char *arg) {
   return buffer;
 }
 
-char *armorstatus_func(MECH *mech, char *arg) {
-  static char buffer[MBUF_SIZE];
+char *armorstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]) {
   char **locs;
   int index;
   int iter, curarm, curint, totarm, totint;
 
   if (!arg || !*arg)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   if (strcmp(arg, "all") == 0) {
     locs = ProperSectionStringFromType(MechType(mech), MechMove(mech));
@@ -1002,7 +1015,7 @@ char *armorstatus_func(MECH *mech, char *arg) {
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), arg);
   if (index == -1 || !GetSectOInt(mech, index))
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
   snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d", GetSectArmor(mech, index),
@@ -1033,8 +1046,7 @@ char *armorstatus_func(MECH *mech, char *arg) {
         2 - weapon destroyed/flooded
 */
 
-char *weaponstatus_func(MECH *mech, char *arg) {
-  static char buffer[MBUF_SIZE] = {0};
+char *weaponstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]) {
   int count, sect, loopsect, i, type, totalcount = 0;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -1043,11 +1055,11 @@ char *weaponstatus_func(MECH *mech, char *arg) {
   if (!arg)
     sect = -1;
   else if (!*arg)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
   else if ((sect = ArmorSectionFromString(MechType(mech), MechMove(mech),
                                           arg)) == -1 ||
            !GetSectOInt(mech, sect))
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
 
   buffer[0] = '\0';
   for ((sect == -1) ? (loopsect = 0) : (loopsect = sect);
@@ -1056,14 +1068,16 @@ char *weaponstatus_func(MECH *mech, char *arg) {
     count = FindWeapons(mech, loopsect, weaparray, weapdata, criticals);
     for (i = 0; i < count; i++, totalcount++) {
       if (buffer[0])
-        append_status(buffer, sizeof(buffer), ",");
+        append_status(buffer, MBUF_SIZE, ",");
       type = Weapon2I(GetPartType(mech, loopsect, criticals[i]));
       append_status(
-          buffer, sizeof(buffer), "%d|%s|%d|%d|%d|%d|%d|%d", totalcount,
-          get_parts_long_name(I2Weapon(type),
+          buffer, MBUF_SIZE, "%d|%s|%d|%d|%d|%d|%d|%d", totalcount,
+          get_parts_long_name(mech->xcode.context, I2Weapon(type),
                               GetPartBrand(mech, loopsect, criticals[i])),
           GetWeaponCrits(mech, type),
-          GetPartBrand(mech, loopsect, criticals[i]), MechWeapons[type].vrt,
+          GetPartBrand(mech, loopsect, criticals[i]),
+          btech_weapon_settings_recycle_time(
+              &mech->xcode.context->weapon_settings, type),
           weapdata[i], MechWeapons[type].type,
           PartIsNonfunctional(mech, loopsect, criticals[i]) ? 2
           : PartTempNuke(mech, loopsect, criticals[i])      ? 1
@@ -1074,18 +1088,17 @@ char *weaponstatus_func(MECH *mech, char *arg) {
 }
 
 char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
-                    char *buf_flag) {
+                    char *buf_flag, char buffer[static MBUF_SIZE]) {
   int index, crit, flag, type;
-  static char buffer[MBUF_SIZE];
 
   index = ArmorSectionFromString(MechType(mech), MechMove(mech), buf_section);
   if (index == -1)
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
   if (!GetSectOInt(mech, index))
-    return "#-1 INVALID SECTION";
+    return status_text(buffer, "#-1 INVALID SECTION");
   crit = atoi(buf_critnum);
   if (crit < 1 || crit > CritsInLoc(mech, index))
-    return "#-1 INVALID CRITICAL";
+    return status_text(buffer, "#-1 INVALID CRITICAL");
   crit--;
   if (!buf_flag)
     flag = 0;
@@ -1110,26 +1123,26 @@ char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
 
   if (flag == 1) {
     if (PartIsDisabled(mech, index, crit))
-      return "Disabled";
+      return status_text(buffer, "Disabled");
     if (PartIsDestroyed(mech, index, crit))
-      return "Destroyed";
-    return "Operational";
+      return status_text(buffer, "Destroyed");
+    return status_text(buffer, "Operational");
   } else if (flag == 2) {
     snprintf(buffer, MBUF_SIZE, "%d", GetPartData(mech, index, crit));
     return buffer;
   } else if (flag == 3) {
     if (!IsAmmo(type))
-      return "#-1 NOT AMMO";
+      return status_text(buffer, "#-1 NOT AMMO");
     snprintf(buffer, MBUF_SIZE, "%d", FullAmmo(mech, index, crit));
     return buffer;
   } else if (flag == 4) {
     if (!IsAmmo(type))
-      return "#-1 NOT AMMO";
+      return status_text(buffer, "#-1 NOT AMMO");
     type = FindAmmoType(mech, index, crit);
   } else if (flag == 5) {
     int weapindex;
     if (!IsWeapon(type))
-      return "#-1 NOT AMMO OR WEAPON";
+      return status_text(buffer, "#-1 NOT AMMO OR WEAPON");
     else {
       weapindex = Weapon2I(type);
       snprintf(buffer, MBUF_SIZE, "%c%c",
@@ -1141,14 +1154,14 @@ char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
     }
   } else if (flag == 6) {
     if (!IsAmmo(type))
-      return "#-1 NOT AMMO";
+      return status_text(buffer, "#-1 NOT AMMO");
     snprintf(buffer, MBUF_SIZE, "%d",
              GetPartFireMode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
     return buffer;
   }
 
   if (type == EMPTY || IsCrap(type))
-    return "Empty";
+    return status_text(buffer, "Empty");
   if (flag == 0)
 #ifndef BT_COMPLEXREPAIRS
     type = alias_part(mech, type);
@@ -1156,11 +1169,13 @@ char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
     type = alias_part(mech, type, index);
 #endif
   snprintf(buffer, MBUF_SIZE, "%s",
-           get_parts_vlong_name(type, GetPartBrand(mech, index, crit)));
+           get_parts_vlong_name(mech->xcode.context, type,
+                                GetPartBrand(mech, index, crit)));
   return buffer;
 }
 
-void CriticalStatus(DbRef player, MECH *mech, int index) {
+void CriticalStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                    int index) {
   int loop, i;
   char buffer[LBUF_SIZE] = {0};
   int type, data, wFireMode;
@@ -1194,7 +1209,7 @@ void CriticalStatus(DbRef player, MECH *mech, int index) {
     } else {
       if (IsWeapon(type) && (wFireMode & OS_MODE))
         strcat(buffer, "OS ");
-      strcat(buffer, pos_part_name(mech, index, loop));
+      strcat(buffer, pos_part_name(mech, index, loop).text);
       if (IsWeapon(type) && (((wFireMode & OS_MODE) && (wFireMode & OS_USED)) ||
                              (wFireMode & ROCKET_FIRED)))
         strcat(buffer, " (Empty)");
@@ -1229,7 +1244,7 @@ void CriticalStatus(DbRef player, MECH *mech, int index) {
   ArmorStringFromIndex(index, buffer, MechType(mech), MechMove(mech));
   strcat(buffer, " Criticals");
   cm = SelCol_StringMenu(2, buffer, foo);
-  ShowCoolMenu(player, cm);
+  ShowCoolMenu(evaluation, player, cm);
   KillCoolMenu(cm);
   KillText(foo);
 }
@@ -1244,7 +1259,10 @@ char *evaluate_ammo_amount(int now, int max) {
   return "%ch%cr";
 }
 
-void PrintWeaponStatus(MECH *mech, DbRef player) {
+static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
+                                DbRef player, bool compact,
+                                char *compact_buffer,
+                                size_t compact_buffer_size) {
   unsigned char weaparray[MAX_WEAPS_SECTION] = {0};
   unsigned char weapdata[MAX_WEAPS_SECTION] = {0};
   int critical[MAX_WEAPS_SECTION] = {0};
@@ -1362,15 +1380,20 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
                ((MechHeat(mech) >= 9.0) ? "%ch%cgOn%cn" : "%cgOff%cn"));
 
     if (HasTAG(mech)) {
-      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "TAG(%s)  ",
-               isTAGDestroyed(mech) ? "%cr%chXX%cn"
-               : ((getMech(TAGTarget(mech)) == NULL) ||
-                  (TaggedBy(getMech(TAGTarget(mech))) != mech->mynum))
-                   ? (TagRecycling(mech) ? "%cy%chNot Rdy%cn" : "%cgRdy%cn")
-                   : tprintf("%s%s%%cn",
-                             (TagRecycling(mech) ? "%cy%ch" : "%ch"),
-                             GetMechToMechID(mech, getMech(TAGTarget(mech)))));
+      snprintf(
+          tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
+          "TAG(%s)  ",
+          isTAGDestroyed(mech) ? "%cr%chXX%cn"
+          : ((btech_context_get_mech(mech->xcode.context, TAGTarget(mech)) ==
+              NULL) ||
+             (TaggedBy(btech_context_get_mech(mech->xcode.context,
+                                              TAGTarget(mech))) != mech->mynum))
+              ? (TagRecycling(mech) ? "%cy%chNot Rdy%cn" : "%cgRdy%cn")
+              : tprintf("%s%s%%cn", (TagRecycling(mech) ? "%cy%ch" : "%ch"),
+                        mech_to_mech_display_id(
+                            mech, btech_context_get_mech(mech->xcode.context,
+                                                         TAGTarget(mech)))
+                            .text));
     }
 
     if (MechSpecials2(mech) & SUPERCHARGER_TECH)
@@ -1391,7 +1414,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
                MechMASCCounter(mech),
                MechStatus(mech) & MASC_ENABLED ? "On" : "Off");
 
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -1401,7 +1424,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
     snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
              "%d tons free, %d tons max unit size", (CargoSpace(mech) / 100),
              CarMaxTon(mech));
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -1429,7 +1452,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
     //			snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) -
     // strleng(tempbuff), " LightBAP");
 
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -1461,7 +1484,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " InfiltratorIIStealth");
 
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
@@ -1488,14 +1511,14 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BackPackJettison");
 
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
   if (MechInfantrySpecials(mech) & MUST_JETTISON_TECH) {
     strcpy(tempbuff, "Requirements: Must jettison backpack before using "
                      "special abilities or jumping");
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 #define SHOWSECTSTAT(a)                                                        \
@@ -1506,7 +1529,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
        : "%cgReady%c")
 
   UpdateRecycling(mech);
-  if (MechType(mech) == CLASS_MECH && !doweird) {
+  if (MechType(mech) == CLASS_MECH && !compact) {
     tempbuff[0] = 0;
 
 #define SHOWPHYSTATUS(a, b)                                                    \
@@ -1555,24 +1578,24 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
     if (hasPhysical(mech, RARM, PHY_SAW))
       SHOW("Saw[RA]", SHOWPHYSTATUS(RARM, PHY_SAW));
 
-    notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+    notify(evaluation, player, tempbuff);
 
     if (MechStatus(mech) & FLIPPED_ARMS)
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(evaluation, player,
              "*** Mech arms are flipped into the rear arc ***");
-  } else if (MechType(mech) == CLASS_BSUIT && !doweird) {
+  } else if (MechType(mech) == CLASS_BSUIT && !compact) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
       if (GetSectInt(mech, i))
         break;
     if (i < NUM_BSUIT_MEMBERS) {
       snprintf(tempbuff, sizeof(tempbuff), "Team status (special attacks): %s",
                SHOWSECTSTAT(i));
-      notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+      notify(evaluation, player, tempbuff);
     }
 
   } else if (((MechType(mech) == CLASS_VEH_GROUND) ||
               (MechType(mech) == CLASS_VTOL)) &&
-             !doweird) {
+             !compact) {
 
     *tempbuff = 0;
 
@@ -1582,20 +1605,20 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
     }
 
     if (*tempbuff)
-      notify(BTECH_EVALUATION_CONTEXT, player, tempbuff);
+      notify(evaluation, player, tempbuff);
   }
 
   ammoweapcount = FindAmmunition(mech, ammoweap, ammo, ammomax, modearray, 0);
-  if (!doweird) {
-    notify(BTECH_EVALUATION_CONTEXT, player,
+  if (!compact) {
+    notify(evaluation, player,
            "==================WEAPON "
            "SYSTEMS===========================AMMUNITION========");
     if (MechType(mech) == CLASS_BSUIT)
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(evaluation, player,
              "------ Weapon --------- [##] Holder ------ Status ||--- "
              "Ammo Type ---- Rounds");
     else
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(evaluation, player,
              "------ Weapon --------- [##] Location ---- Status ||--- "
              "Ammo Type ---- Rounds");
   }
@@ -1605,7 +1628,7 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
       continue;
     ArmorStringFromIndex(loop, tempbuff, MechType(mech), MechMove(mech));
     snprintf(location, sizeof(location), "%-14.14s", tempbuff);
-    if (doweird) {
+    if (compact) {
       strcpy(location, tempbuff);
       if ((tmpc = strchr(location, ' ')))
         *tmpc = '_';
@@ -1645,10 +1668,9 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
                 : ' ',
             running_sum + ii);
       }
-      if (doweird)
-        snprintf(weirdbuf + strlen(weirdbuf),
-                 sizeof(weirdbuf) - strlen(weirdbuf), "%s|%s",
-                 &MechWeapons[weaparray[ii]].name[3], location);
+      if (compact)
+        append_status(compact_buffer, compact_buffer_size, "%s|%s",
+                      &MechWeapons[weaparray[ii]].name[3], location);
       strcat(weapbuff, location);
 
       if (PartIsBroken(mech, loop, critical[ii]) ||
@@ -1695,26 +1717,24 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
                                       ammomax[ii + running_sum]),
                  ammo[ii + running_sum], "%cn");
         strcat(weapname, tempbuff);
-        if (doweird) {
+        if (compact) {
           if (ammo_mode && ammo_mode != ' ')
-            snprintf(weirdbuf + strlen(weirdbuf),
-                     sizeof(weirdbuf) - strlen(weirdbuf), "|%s|%d|%c ",
-                     &MechWeapons[ammoweap[ii + running_sum]].name[3],
-                     ammo[ii + running_sum], ammo_mode);
+            append_status(compact_buffer, compact_buffer_size, "|%s|%d|%c ",
+                          &MechWeapons[ammoweap[ii + running_sum]].name[3],
+                          ammo[ii + running_sum], ammo_mode);
           else
-            snprintf(weirdbuf + strlen(weirdbuf),
-                     sizeof(weirdbuf) - strlen(weirdbuf), "|%s|%d ",
-                     &MechWeapons[ammoweap[ii + running_sum]].name[3],
-                     ammo[ii + running_sum]);
+            append_status(compact_buffer, compact_buffer_size, "|%s|%d ",
+                          &MechWeapons[ammoweap[ii + running_sum]].name[3],
+                          ammo[ii + running_sum]);
         }
       } else {
-        if (doweird)
-          strcat(weirdbuf, " ");
+        if (compact)
+          append_status(compact_buffer, compact_buffer_size, " ");
         snprintf(weapname, sizeof(weapname), "   ");
       }
       strcat(weapbuff, weapname);
-      if (!doweird)
-        notify(BTECH_EVALUATION_CONTEXT, player, weapbuff);
+      if (!compact)
+        notify(evaluation, player, weapbuff);
     }
     running_sum += count;
   }
@@ -1733,15 +1753,16 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
       strcat(astrAmmoSpacer, weapname);
       strcat(astrAmmoSpacer, tempbuff);
 
-      notify(BTECH_EVALUATION_CONTEXT, player, astrAmmoSpacer);
+      notify(evaluation, player, astrAmmoSpacer);
 
       /*
-         if (doweird) {
+         if (compact) {
          if (ammo_mode && ammo_mode != ' ')
-         snprintf(weirdbuf + strlen(weirdbuf), sizeof(wierdbuf) -
+         snprintf(compact_buffer + strlen(compact_buffer), sizeof(wierdbuf) -
          strlen(wierdbuf), "|%s|%d|%c ",
          &MechWeapons[ammoweap[running_sum]].name[3], ammo[running_sum],
-         ammo_mode); else snprintf(weirdbuf + strlen(weirdbuf), sizeof(wierdbuf)
+         ammo_mode); else snprintf(compact_buffer + strlen(compact_buffer),
+         sizeof(wierdbuf)
          - strlen(wierdbuf), "|%s|%d ",
          &MechWeapons[ammoweap[running_sum]].name[3], ammo[running_sum]);
          }
@@ -1749,6 +1770,11 @@ void PrintWeaponStatus(MECH *mech, DbRef player) {
       running_sum++;
     }
   }
+}
+
+void PrintWeaponStatus(EvaluationContext *evaluation, MECH *mech,
+                       DbRef player) {
+  print_weapon_status(evaluation, mech, player, false, nullptr, 0);
 }
 
 /* Don't indent the entire next section -- it contains ASCII graphics */
@@ -2319,11 +2345,21 @@ static const char armordamltrstr[] = "OoxX*?";
  * should autoconf-ize this with portability wrappers.  They're pretty common
  * these days, though.
  */
-static char *PrintArmorDamageString(const int armor_level, int armor_value,
-                                    const int flag, const int width) {
-  /* This array has to be at least as large as the maximum possible
-   * width (+ 1), which is defined in show_armor().  */
-  static char armor_string[23 + 1];
+typedef struct ArmorDamageText {
+  char text[23 + 1];
+} ArmorDamageText;
+
+typedef struct ArmorKeyText {
+  char text[6 + 3 + 2 + 1];
+} ArmorKeyText;
+
+typedef struct ArmorFieldText {
+  char text[6 + 23 + 2 + 1];
+} ArmorFieldText;
+
+static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
+                                         const int flag, const int width) {
+  ArmorDamageText result = {0};
   char *asp;
 
   char armor_buf[23 + 1];
@@ -2345,7 +2381,7 @@ static char *PrintArmorDamageString(const int armor_level, int armor_value,
 
     /* Fixed width.  Some snprintf()s have a $*d extension that we
      * aren't going to use.  */
-    asp = armor_string;
+    asp = result.text;
 
     if (armor_len < width) {
       /* Right justify.  */
@@ -2361,12 +2397,12 @@ static char *PrintArmorDamageString(const int armor_level, int armor_value,
     }
   } else {
     /* Use adversarial (scan) fill characters.  */
-    memset(armor_string, armordamltrstr[armor_level], width);
+    memset(result.text, armordamltrstr[armor_level], width);
   }
 
-  armor_string[width] = '\0';
+  result.text[width] = '\0';
 
-  return armor_string;
+  return result;
 }
 
 /*
@@ -2374,26 +2410,27 @@ static char *PrintArmorDamageString(const int armor_level, int armor_value,
  * width to match the actual width on the status display, too; right now, it's
  * always two characters, regardless of width.
  */
-static char *ArmorKeyInfo(DbRef player, int line_key, int owner) {
-  static char str[6 + 3 + 2 + 1];
+static ArmorKeyText armor_key_text(int line_key, int owner) {
+  ArmorKeyText result = {0};
 
   if (owner) {
     /* Only show key on scans.  */
-    str[0] = '\0';
+    result.text[0] = '\0';
   } else if (line_key == 1) {
     /* Line 1 = "Key".  */
-    strcpy(str, "Key");
+    strcpy(result.text, "Key");
   } else if (line_key > 6) {
     /* Line >6 = empty.  */
-    strcpy(str, "   ");
+    strcpy(result.text, "   ");
   } else {
     /* Line 2-6 = armor level symbols.  */
     /* XXX: Probably safe from buffer overflows.  */
-    snprintf(str, sizeof(str), "%s%c%c %%c", armordamcolorstr[6 - line_key],
-             armordamltrstr[6 - line_key], armordamltrstr[6 - line_key]);
+    snprintf(result.text, sizeof(result.text), "%s%c%c %%c",
+             armordamcolorstr[6 - line_key], armordamltrstr[6 - line_key],
+             armordamltrstr[6 - line_key]);
   }
 
-  return str;
+  return result;
 }
 
 /*
@@ -2401,18 +2438,15 @@ static char *ArmorKeyInfo(DbRef player, int line_key, int owner) {
  * should autoconf-ize this with portability wrappers.  They're pretty common
  * these days, though.
  */
-static char *show_armor(MECH *mech, const int loc, const int flag, int width) {
-  /* XXX: color_string must be 6 chars or less.  */
-  static char fieldbuf[6 + 23 + 2 + 1];
-
-  const char *color_string;
-  const char *armor_string;
+static ArmorFieldText armor_field_text(MECH *mech, const int loc,
+                                       const int flag, int width) {
+  ArmorFieldText result = {0};
 
   int armor_level, armor_value;
 
   /* Sanity check arguments.  */
-  if (width > (int)(sizeof(fieldbuf) - 6 - 2 - 1)) {
-    width = (int)(sizeof(fieldbuf) - 6 - 2 - 1);
+  if (width > (int)(sizeof(result.text) - 6 - 2 - 1)) {
+    width = (int)(sizeof(result.text) - 6 - 2 - 1);
   }
 
   /* Get armor status.  */
@@ -2421,26 +2455,27 @@ static char *show_armor(MECH *mech, const int loc, const int flag, int width) {
   /* Get strings.  */
   if (!(flag & ARMOR_FLAG_SHOW_DEST) && !GetSectInt(mech, loc)) {
     /* Blank field. (Destroyed section.) */
-    memset(fieldbuf, ' ', width);
-    fieldbuf[width] = '\0';
-    return fieldbuf;
-  } else {
-    color_string = armordamcolorstr[armor_level];
-    armor_string =
-        PrintArmorDamageString(armor_level, armor_value, flag, width);
+    memset(result.text, ' ', width);
+    result.text[width] = '\0';
+    return result;
   }
 
-  /* XXX: snprintf() should be safe here.  Emphasis on "should".  */
-  snprintf(fieldbuf, sizeof(fieldbuf), "%s%s%%c", color_string, armor_string);
+  ArmorDamageText damage =
+      armor_damage_text(armor_level, armor_value, flag, width);
+  snprintf(result.text, sizeof(result.text), "%s%s%%c",
+           armordamcolorstr[armor_level], damage.text);
 
-  return fieldbuf;
+  return result;
 }
 
 /* See if the 'mech has a 'custom' template (@mechstatus attr)
  * if so, exec() it to evaluate color/newlines.
  */
-static int get_statustemplate_attr(DbRef player, MECH *mech, char *result) {
-  char *resultc, *statattr = silly_atr_get(mech->mynum, A_MECHSTATUS);
+static int get_statustemplate_attr(EvaluationContext *evaluation, DbRef player,
+                                   MECH *mech, char *result) {
+  char *resultc, *statattr = btech_attribute_read(mech->xcode.context->database,
+                                                  mech->mynum, A_MECHSTATUS,
+                                                  (char[LBUF_SIZE]){0});
 
   if (!statattr || !*statattr)
     return 0;
@@ -2448,8 +2483,7 @@ static int get_statustemplate_attr(DbRef player, MECH *mech, char *result) {
   /* this is safe because tmpbuf is larger than LBUF_SIZE */
   resultc = result;
 
-  exec(&btech_context_active()->command_context->evaluation, result, &resultc,
-       0, player, mech->mynum,
+  exec(evaluation, result, &resultc, 0, player, mech->mynum,
        EV_STRIP_AROUND | EV_NO_COMPRESS | EV_NO_LOCATION | EV_NOFCHECK |
            EV_NOTRACE | EV_FIGNORE,
        &statattr, nullptr, 0);
@@ -2468,7 +2502,8 @@ typedef enum {
   BTS_CONDITIONAL_2     /* binary conditional */
 } BTS_State;
 
-void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
+void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                      int owner) {
   const char *srcbuf, *sbp, *saved_sbp;
 
   char destbuf[LBUF_SIZE], *dbp;
@@ -2497,7 +2532,7 @@ void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
     break;
   }
 
-  if (get_statustemplate_attr(player, mech, tmpbuf)) {
+  if (get_statustemplate_attr(evaluation, player, mech, tmpbuf)) {
     /* Use custom template.  */
     srcbuf = tmpbuf;
   } else {
@@ -2616,7 +2651,7 @@ void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
         COMMIT_SAVED_SBP();
         saved_sbp = sbp + 1;
 
-        safe_str(ArmorKeyInfo(player, ASCII_ATOI(*sbp), owner), destbuf, &dbp);
+        safe_str(armor_key_text(ASCII_ATOI(*sbp), owner).text, destbuf, &dbp);
       }
 
       next_state = BTS_NORMAL;
@@ -2717,8 +2752,9 @@ void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
         }
 
         /* FIXME: Ponder semantics of gflag.  */
-        safe_str(show_armor(mech, ASCII_ATOI(*sbp), tmp_flag, tmp_value1),
-                 destbuf, &dbp);
+        safe_str(
+            armor_field_text(mech, ASCII_ATOI(*sbp), tmp_flag, tmp_value1).text,
+            destbuf, &dbp);
 
         saved_sbp = sbp + 1;
         next_state = BTS_NORMAL;
@@ -2824,7 +2860,7 @@ void PrintArmorStatus(DbRef player, MECH *mech, int owner) {
   /* Send formatted status.  */
   *dbp = '\0';
 
-  notify(BTECH_EVALUATION_CONTEXT, player, destbuf);
+  notify(evaluation, player, destbuf);
 }
 
 /*

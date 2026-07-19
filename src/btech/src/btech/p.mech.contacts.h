@@ -11,10 +11,14 @@
 
 #pragma once
 
+typedef struct MechStatusString {
+  char text[24];
+} MechStatusString;
+
 /* mech.contacts.c */
 void show_brief_flags(DbRef player, MECH *mech);
 void mech_brief(DbRef player, void *data, char *buffer);
 void mech_contacts(DbRef player, void *data, char *buffer);
 char getWeaponArc(MECH *mech, int arc);
-char *getStatusString(MECH *target, int enemy);
+MechStatusString mech_status_string(MECH *target, int enemy);
 char getStatusChar(MECH *mech, MECH *mechTarget, int wCharNum);

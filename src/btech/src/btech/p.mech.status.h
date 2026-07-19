@@ -13,6 +13,14 @@
 
 #pragma once
 
+typedef struct BtechContext BtechContext;
+typedef struct EvaluationContext EvaluationContext;
+
+typedef struct PartDisplayName {
+  char text[SBUF_SIZE];
+  bool valid;
+} PartDisplayName;
+
 /*
  * Armor status flags for ArmorEvaluateSerious().
  *
@@ -38,28 +46,32 @@
 #define ARMOR_LEVEL_REPAIRING 5
 
 /* mech.status.c */
-void DisplayTarget(DbRef player, MECH *mech);
+void DisplayTarget(EvaluationContext *evaluation, DbRef player, MECH *mech);
 void show_miscbrands(MECH *mech, DbRef player);
-void PrintGenericStatus(DbRef player, MECH *mech, int own, int usex);
-void PrintHeatBar(DbRef player, MECH *mech);
-void PrintInfoStatus(DbRef player, MECH *mech, int own);
-void PrintShortInfo(DbRef player, MECH *mech);
+void PrintGenericStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                        int own, int usex);
+void PrintHeatBar(EvaluationContext *evaluation, DbRef player, MECH *mech);
+void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                     int own);
+void PrintShortInfo(EvaluationContext *evaluation, DbRef player, MECH *mech);
 void mech_status(DbRef player, void *data, char *buffer);
 void mech_critstatus(DbRef player, void *data, char *buffer);
-char *part_name(int type, int brand);
-char *part_name_long(int type, int brand);
-char *pos_part_name(MECH *mech, int index, int loop);
+PartDisplayName part_name(BtechContext *context, int type, int brand);
+PartDisplayName part_name_long(BtechContext *context, int type, int brand);
+PartDisplayName pos_part_name(MECH *mech, int index, int loop);
 void mech_weaponspecs(DbRef player, void *data, char *buffer);
-char *critstatus_func(MECH *mech, char *arg);
-char *sectstatus_func(MECH *mech, char *arg);
-char *armorstatus_func(MECH *mech, char *arg);
-char *weaponstatus_func(MECH *mech, char *arg);
+char *critstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]);
+char *sectstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]);
+char *armorstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]);
+char *weaponstatus_func(MECH *mech, char *arg, char buffer[static MBUF_SIZE]);
 char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
-                    char *buf_flag);
-void CriticalStatus(DbRef player, MECH *mech, int index);
+                    char *buf_flag, char buffer[static MBUF_SIZE]);
+void CriticalStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                    int index);
 char *evaluate_ammo_amount(int now, int max);
-void PrintWeaponStatus(MECH *mech, DbRef player);
+void PrintWeaponStatus(EvaluationContext *evaluation, MECH *mech, DbRef player);
 int ArmorEvaluateSerious(MECH *mech, int loc, int flag, int *opt);
-void PrintArmorStatus(DbRef player, MECH *mech, int owner);
+void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
+                      int owner);
 int hasPhysical(MECH *objMech, int wLoc, int wPhysType);
 int canUsePhysical(MECH *objMech, int wLoc, int wPhysType);

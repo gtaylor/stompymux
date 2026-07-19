@@ -1,6 +1,8 @@
 /* boolexp.c - Lock expression parsing, evaluation, and serialization. */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command_context.h"
 #include "mux/database/attrs.h"
@@ -8,7 +10,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
@@ -79,27 +80,26 @@ int boolean_expression_evaluate(EvaluationContext *context, DbRef player,
      */
 
     context->lock_nesting++;
-    if (context->lock_nesting >=
-        context->server->configuration->lock_nest_lim) {
-      //            log_error(&context->server->log, LOG_BUGS, "BUG", "LOCK", "
-      STARTLOG(&context->server->log, LOG_BUGS, "BUG", "LOCK") {
-        log_name_and_loc(&context->server->log, player);
+    if (context->lock_nesting >= context->world->configuration->lock_nest_lim) {
+      //            log_error(context->log, LOG_BUGS, "BUG", "LOCK", "
+      STARTLOG(context->log, LOG_BUGS, "BUG", "LOCK") {
+        log_name_and_loc(context->log, player);
         log_text(": Lock exceeded recursion limit.");
-        ENDLOG(&context->server->log);
+        ENDLOG(context->log);
       }
       notify(context, player, "Sorry, broken lock!");
       context->lock_nesting--;
       return (0);
     }
     if ((b->sub1->type != BOOLEXP_CONST) || (b->sub1->thing < 0)) {
-      STARTLOG(&context->server->log, LOG_BUGS, "BUG", "LOCK") {
-        log_name_and_loc(&context->server->log, player);
+      STARTLOG(context->log, LOG_BUGS, "BUG", "LOCK") {
+        log_name_and_loc(context->log, player);
         buff = alloc_mbuf("boolean_expression_evaluate.LOG.indir");
         snprintf(buff, MBUF_SIZE, ": Lock had bad indirection (%c, type %d)",
                  INDIR_TOKEN, b->sub1->type);
         log_text(buff);
         free_mbuf(buff);
-        ENDLOG(&context->server->log);
+        ENDLOG(context->log);
       }
       notify(context, player, "Sorry, broken lock!");
       context->lock_nesting--;
@@ -161,7 +161,7 @@ int boolean_expression_evaluate(EvaluationContext *context, DbRef player,
       exec(context, buff2, &bp, 0, source, player,
            EV_FIGNORE | EV_EVAL | EV_TOP, &str, (char **)nullptr, 0);
       *bp = '\0';
-      checkit = !string_compare(context->server->configuration, buff2,
+      checkit = !string_compare(context->world->configuration, buff2,
                                 (char *)b->sub1);
       free_lbuf(buff2);
     }

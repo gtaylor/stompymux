@@ -121,11 +121,13 @@ void checkECM(MECH *objMech) {
   int wIter = 0;
   int tMark = 0;
 
-  if (!(objMapmap = FindObjectsData(objMech->mapindex))) /* get our map */
+  if (!(objMapmap = btech_context_find_object(
+            objMech->xcode.context, objMech->mapindex))) /* get our map */
     return;
 
   for (wIter = 0; wIter < objMapmap->first_free; wIter++) {
-    if (!(objOtherMech = FindObjectsData(objMapmap->mechsOnMap[wIter])))
+    if (!(objOtherMech = btech_context_find_object(
+              objMech->xcode.context, objMapmap->mechsOnMap[wIter])))
       continue;
 
     if ((range = FaMechRange(objOtherMech, objMech)) > ECM_RANGE)
@@ -189,8 +191,8 @@ void checkECM(MECH *objMech) {
   tCheckECCM = ((wFriendlyECCM != 0) || (wFriendlyAngelECCM != 0) ||
                 (wUnFriendlyECM != 0) || (wUnFriendlyAngelECM != 0));
 
-  /* SendDebug(tprintf("Checking unit %d. ECMDelta: %d. ECCMDelta: %d. CheckECM:
-   * %d. CheckECCM:
+  /* SendDebug(mech->xcode.context, tprintf("Checking unit %d. ECMDelta: %d.
+   * ECCMDelta: %d. CheckECM: %d. CheckECCM:
    * %d",objMech->mynum,wFriendlyECMDelta,wFriendlyECCMDelta,tCheckECM,tCheckECCM));
    */
 

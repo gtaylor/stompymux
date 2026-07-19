@@ -9,16 +9,17 @@
 
 #include "libtelnet.h"
 #include "mux/commands/command.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 
-static int telnet_connected_count(MuxServer *server);
+static int telnet_connected_count(CommandRuntime *runtime);
 static int telnet_charset_is_ascii(const char *buffer, size_t size);
 static void telnet_process_data(Descriptor *d, const char *buffer, size_t size);
 static void telnet_handle_charset(Descriptor *d, const char *buffer,
@@ -56,7 +57,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
   d->telnet =
       telnet_init(telnet_options, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
   if (d->telnet == nullptr) {
-    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "ERROR",
+    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR",
               "Unable to allocate Telnet state for descriptor %d.",
               d->descriptor);
     return 0;
@@ -90,10 +91,10 @@ void descriptor_telnet_set_echo(Descriptor *d, int echo) {
                    TELNET_TELOPT_ECHO);
 }
 
-static int telnet_connected_count(MuxServer *server) {
+static int telnet_connected_count(CommandRuntime *runtime) {
   Descriptor *d;
   DescriptorIterator iterator =
-      descriptor_iterator_connected(server->descriptors);
+      descriptor_iterator_connected(runtime->descriptors);
   int count = 0;
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
@@ -192,7 +193,7 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
   if (buffer[0] == telnet_charset_accepted) {
     d->is_charset_request_pending = false;
     if (!telnet_charset_is_ascii(buffer + 1, size - 1)) {
-      log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "CHARSET",
+      log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "CHARSET",
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
     }
     return;
@@ -253,18 +254,19 @@ static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
 }
 
 static void telnet_send_mssp(Descriptor *descriptor) {
-  MuxServer *server = descriptor_server(descriptor);
+  CommandRuntime *runtime = descriptor_runtime(descriptor);
   telnet_t *telnet = descriptor->telnet;
   char players[32];
   char uptime[32];
   char port[32];
 
-  snprintf(players, sizeof(players), "%d", telnet_connected_count(server));
-  snprintf(uptime, sizeof(uptime), "%lld", (long long)server->start_time);
-  snprintf(port, sizeof(port), "%d", server->configuration->port);
+  snprintf(players, sizeof(players), "%d", telnet_connected_count(runtime));
+  snprintf(uptime, sizeof(uptime), "%lld", (long long)*runtime->start_time);
+  snprintf(port, sizeof(port), "%d", runtime->world->configuration->port);
 
   telnet_begin_sb(telnet, TELNET_TELOPT_MSSP);
-  telnet_send_mssp_pair(telnet, "NAME", server->configuration->mud_name);
+  telnet_send_mssp_pair(telnet, "NAME",
+                        runtime->world->configuration->mud_name);
   telnet_send_mssp_pair(telnet, "PLAYERS", players);
   telnet_send_mssp_pair(telnet, "UPTIME", uptime);
   telnet_send_mssp_pair(telnet, "CODEBASE", "BattleTechMUX");
@@ -335,11 +337,11 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     }
     break;
   case TELNET_EV_WARNING:
-    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "WARN", "%s",
+    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "WARN", "%s",
               event->error.msg);
     break;
   case TELNET_EV_ERROR:
-    log_error(&descriptor_server(d)->log, LOG_PROBLEMS, "TELNET", "ERROR", "%s",
+    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR", "%s",
               event->error.msg);
     descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_SOCKDIED);
     break;

@@ -32,7 +32,6 @@
 #include "p.mech.utils.h"
 #include "p.mine.h"
 
-struct artillery_shot_type *free_shot_list = NULL;
 static void artillery_hit(artillery_shot *s);
 
 static const char *artillery_type(artillery_shot *s) {
@@ -79,7 +78,6 @@ static void artillery_hit_event(MuxEvent *e) {
   artillery_shot *s = (artillery_shot *)e->data;
 
   artillery_hit(s);
-  ADD_TO_LIST_HEAD(free_shot_list, next, s);
 }
 
 void artillery_shoot(MECH *mech, int targx, int targy, int windex, int wmode,
@@ -87,11 +85,7 @@ void artillery_shoot(MECH *mech, int targx, int targy, int windex, int wmode,
   struct artillery_shot_type *s;
   float fx, fy, tx, ty;
 
-  if (free_shot_list) {
-    s = free_shot_list;
-    free_shot_list = free_shot_list->next;
-  } else
-    Create(s, artillery_shot, 1);
+  Create(s, artillery_shot, 1);
   s->from_x = MechX(mech);
   s->from_y = MechY(mech);
   s->to_x = targx;
@@ -101,13 +95,14 @@ void artillery_shoot(MECH *mech, int targx, int targy, int windex, int wmode,
   s->ishit = ishit;
   s->shooter = mech->mynum;
   s->map = mech->mapindex;
+  s->context = mech->xcode.context;
   MechLOSBroadcast(mech, tprintf("shoots %s towards the %s!", artillery_type(s),
                                  artillery_direction(s)));
   MapCoordToRealCoord(s->from_x, s->from_y, &fx, &fy);
   MapCoordToRealCoord(s->to_x, s->to_y, &tx, &ty);
-  mux_event_add(btech_context_active()->events,
-                artillery_round_flight_time(fx, fy, tx, ty), 0, EVENT_DHIT,
-                artillery_hit_event, (void *)s, NULL);
+  mux_event_add(mech->xcode.context->events,
+                artillery_round_flight_time(fx, fy, tx, ty), FLAG_FREE_DATA,
+                EVENT_DHIT, artillery_hit_event, s, nullptr);
 }
 
 static int blast_arcf(float fx, float fy, MECH *mech) {
@@ -154,7 +149,8 @@ void blast_hit_hexf(MAP *map, int dam, int singlehitsize, int heatdam, float fx,
 
   for (loop = 0; loop < map->first_free; loop++)
     if (map->mechsOnMap[loop] >= 0) {
-      tempMech = (MECH *)FindObjectsData(map->mechsOnMap[loop]);
+      tempMech =
+          btech_context_get_mech(map->xcode.context, map->mechsOnMap[loop]);
       if (!tempMech)
         continue;
       if (MechX(tempMech) != tx || MechY(tempMech) != ty)
@@ -269,7 +265,8 @@ void blast_hit_hexesf(MAP *map, int dam, int singlehitsize, int heatdam,
       case LIGHT_FOREST:
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
-          add_decoration(map, x1, y1, TYPE_FIRE, FIRE, FIRE_DURATION);
+          add_decoration(map, x1, y1, TYPE_FIRE, FIRE,
+                         btech_random_range(map->xcode.context, 60, 180));
         }
 
         break;
@@ -300,7 +297,8 @@ static void artillery_hit_hex(MAP *map, artillery_shot *s, int type, int mode,
 
   if ((mode & SMOKE_MODE)) {
     /* Add smoke */
-    add_decoration(map, tx, ty, TYPE_SMOKE, SMOKE, SMOKE_DURATION);
+    add_decoration(map, tx, ty, TYPE_SMOKE, SMOKE,
+                   btech_random_range(map->xcode.context, 90, 150));
     return;
   }
   if (mode & MINE_MODE) {
@@ -330,23 +328,31 @@ static void artillery_hit_hex(MAP *map, artillery_shot *s, int type, int mode,
                 4, 0);
 }
 
-static artillery_shot *hit_neighbors_s;
-static int hit_neighbors_type;
-static int hit_neighbors_mode;
-static int hit_neighbors_dam;
+typedef struct ArtilleryNeighborHit ArtilleryNeighborHit;
+struct ArtilleryNeighborHit {
+  artillery_shot *shot;
+  int type;
+  int mode;
+  int damage;
+};
 
-static void artillery_hit_neighbors_callback(MAP *map, int x, int y) {
-  artillery_hit_hex(map, hit_neighbors_s, hit_neighbors_type,
-                    hit_neighbors_mode, hit_neighbors_dam, x, y, 0);
+static void artillery_hit_neighbors_callback(MAP *map, int x, int y,
+                                             void *context) {
+  const ArtilleryNeighborHit *hit = context;
+
+  artillery_hit_hex(map, hit->shot, hit->type, hit->mode, hit->damage, x, y, 0);
 }
 
 static void artillery_hit_neighbors(MAP *map, artillery_shot *s, int type,
                                     int mode, int dam, int tx, int ty) {
-  hit_neighbors_s = s;
-  hit_neighbors_type = type;
-  hit_neighbors_mode = mode;
-  hit_neighbors_dam = dam;
-  visit_neighbor_hexes(map, tx, ty, artillery_hit_neighbors_callback);
+  ArtilleryNeighborHit hit = {
+      .shot = s,
+      .type = type,
+      .mode = mode,
+      .damage = dam,
+  };
+
+  visit_neighbor_hexes(map, tx, ty, artillery_hit_neighbors_callback, &hit);
 }
 
 static void artillery_cluster_hit(MAP *map, artillery_shot *s, int type,
@@ -362,8 +368,10 @@ static void artillery_cluster_hit(MAP *map, artillery_shot *s, int type,
   bzero(targets, sizeof(targets));
   for (i = 0; i < dam; i++) {
     do {
-      xd = Number(-2, 0) + Number(0, 2);
-      yd = Number(-2, 0) + Number(0, 2);
+      xd = btech_random_range(map->xcode.context, -2, 0) +
+           btech_random_range(map->xcode.context, 0, 2);
+      yd = btech_random_range(map->xcode.context, -2, 0) +
+           btech_random_range(map->xcode.context, 0, 2);
       x = tx + xd;
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
@@ -382,10 +390,10 @@ void artillery_FriendlyAdjustment(DbRef mechnum, MAP *map, int x, int y) {
   MECH *spotter;
   MECH *tempMech = NULL;
 
-  if (!(mech = getMech(mechnum)))
+  if (!(mech = btech_context_get_mech(map->xcode.context, mechnum)))
     return;
   /* Ok.. we've a valid guy */
-  spotter = getMech(MechSpotter(mech));
+  spotter = btech_context_get_mech(map->xcode.context, MechSpotter(mech));
   if (!((MechTargX(mech) == x && MechTargY(mech) == y) ||
         (spotter && (MechTargX(spotter) == x && MechTargY(spotter) == y))))
     return;
@@ -403,10 +411,10 @@ void artillery_FriendlyAdjustment(DbRef mechnum, MAP *map, int x, int y) {
   if (spotter) {
     mech_printf(mech, MECHSTARTED,
                 "%s sent you some trajectory-correction data.",
-                GetMechToMechID(mech, tempMech));
+                mech_to_mech_display_id(mech, tempMech).text);
     mech_printf(tempMech, MECHSTARTED,
                 "You provide %s with information about the miss.",
-                GetMechToMechID(tempMech, mech));
+                mech_to_mech_display_id(tempMech, mech).text);
   }
   MechFireAdjustment(mech)++;
 }
@@ -418,7 +426,7 @@ static void artillery_hit(artillery_shot *s) {
   int di;
   int dist;
   int weight;
-  MAP *map = getMap(s->map);
+  MAP *map = btech_context_get_map(s->context, s->map);
   int original_x = 0, original_y = 0;
   int dam = MechWeapons[s->type].damage;
 
@@ -427,9 +435,9 @@ static void artillery_hit(artillery_shot *s) {
   if (!s->ishit) {
     /* Shit! We missed target ;-) */
     /* Time to calculate a new target hex */
-    di = Number(0, 359);
+    di = btech_random_range(map->xcode.context, 0, 359);
     dir = di * TWOPIOVER360;
-    dist = Number(2, 7);
+    dist = btech_random_range(map->xcode.context, 2, 7);
     weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
     di = (di * weight + map->winddir * (100 - weight)) / 100;
     dist = (dist * weight + (map->windspeed / 6) * (100 - weight)) / 100;

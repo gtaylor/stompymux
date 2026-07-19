@@ -36,7 +36,7 @@
 
 #define BOOTCOUNT 6
 
-char *bsuit_bootmsgs[BOOTCOUNT] = {
+static char *const bsuit_bootmsgs[BOOTCOUNT] = {
     "%%cg->         Initializing powerpack       <-%%c",
     "%%cg->          Powerpack operational       <-%%c",
     "%%cg->             Suit sealed              <-%%c",
@@ -44,7 +44,7 @@ char *bsuit_bootmsgs[BOOTCOUNT] = {
     "%%cg->         Air pressure steady          <-%%c",
     "       %%cg- %%cr-=>%%ch%%cw All systems go!%%c %%cr<= %%cg-%%c"};
 
-char *aero_bootmsgs[BOOTCOUNT] = {
+static char *const aero_bootmsgs[BOOTCOUNT] = {
     "%%cg->       Main reactor is now online    <-%%c",
     "%%cg->            Thrusters online         <-%%c",
     "%%cg->  Main computer system is now online <-%%c",
@@ -52,7 +52,7 @@ char *aero_bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "       %%cg- %%cr-=>%%ch%%cw All systems go!%%c %%cr<= %%cg-%%c"};
 
-char *bootmsgs[BOOTCOUNT] = {
+static char *const bootmsgs[BOOTCOUNT] = {
     "%%cg->       Main reactor is now online    <-%%c",
     "%%cg->         Gyros are now stable        <-%%c",
     "%%cg->  Main computer system is now online <-%%c",
@@ -60,7 +60,7 @@ char *bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
 
-char *hover_bootmsgs[BOOTCOUNT] = {
+static char *const hover_bootmsgs[BOOTCOUNT] = {
     "%%cg->  Powerplant initialized and online  <-%%c",
     "%%cg->   Checking plenum chamber status    <-%%c",
     "%%cg->         Verifying fan status        <-%%c",
@@ -68,7 +68,7 @@ char *hover_bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
 
-char *track_bootmsgs[BOOTCOUNT] = {
+static char *const track_bootmsgs[BOOTCOUNT] = {
     "%%cg->  Powerplant initialized and online  <-%%c",
     "%%cg->      Auto-aligning drive wheels     <-%%c",
     "%%cg->       Adjusting track tension       <-%%c",
@@ -76,7 +76,7 @@ char *track_bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
 
-char *wheel_bootmsgs[BOOTCOUNT] = {
+static char *const wheel_bootmsgs[BOOTCOUNT] = {
     "%%cg->  Powerplant initialized and online  <-%%c",
     "%%cg->  Performing steering system checks  <-%%c",
     "%%cg->        Checking wheel status        <-%%c",
@@ -84,7 +84,7 @@ char *wheel_bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
 
-char *vtol_bootmsgs[BOOTCOUNT] = {
+static char *const vtol_bootmsgs[BOOTCOUNT] = {
     "%%cg->     Initializing main powerplant    <-%%c",
     "%%cg-> Main turbine online and operational <-%%c",
     "%%cg->      Rotor transmission engaged     <-%%c",
@@ -92,7 +92,7 @@ char *vtol_bootmsgs[BOOTCOUNT] = {
     "%%cg-> Targeting system is now operational <-%%c",
     "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
 
-char *naval_bootmsgs[BOOTCOUNT] = {
+static char *const naval_bootmsgs[BOOTCOUNT] = {
     "%%cg->       Main reactor is now online    <-%%c",
     "%%cg->  Main computer system is now online <-%%c",
     "%%cg->   Hull integrity monitoring online  <-%%c",
@@ -181,7 +181,7 @@ static void mech_startup_event(MuxEvent *e) {
     MECHEVENT(mech, EVENT_STARTUP, mech_startup_event, SSLEN, timer);
     return;
   }
-  if ((mech_map = getMap(mech->mapindex)))
+  if ((mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     for (i = 0; i < mech_map->first_free; i++)
       mech_map->LOSinfo[mech->mapnumber][i] = 0;
   initialize_pc(MechPilot(mech), mech);
@@ -191,27 +191,29 @@ static void mech_startup_event(MuxEvent *e) {
   UnSetMechPKiller(mech);
   MechLOSBroadcast(mech, "powers up!");
   MechVerticalSpeed(mech) = 0;
-  EvalBit(MechSpecials(mech), SS_ABILITY,
-          ((MechPilot(mech) > 0 &&
-            is_player(btech_context_active()->database, MechPilot(mech)))
-               ? char_getvalue(MechPilot(mech), "Sixth_Sense")
-               : 0));
+  EvalBit(
+      MechSpecials(mech), SS_ABILITY,
+      ((MechPilot(mech) > 0 &&
+        is_player(mech->xcode.context->database, MechPilot(mech)))
+           ? char_getvalue(mech->xcode.context, MechPilot(mech), "Sixth_Sense")
+           : 0));
   if (FlyingT(mech)) {
     if (MechZ(mech) <= MechElevation(mech))
       MechStatus(mech) |= LANDED;
   }
   MechComm(mech) = DEFAULT_COMM;
-  if (is_player(btech_context_active()->database, MechPilot(mech)) &&
-      !is_quiet(btech_context_active()->database, mech->mynum)) {
-    MechComm(mech) =
-        char_getskilltarget(MechPilot(mech), "Comm-Conventional", 0);
-    MechPer(mech) = char_getskilltarget(MechPilot(mech), "Perception", 0);
+  if (is_player(mech->xcode.context->database, MechPilot(mech)) &&
+      !is_quiet(mech->xcode.context->database, mech->mynum)) {
+    MechComm(mech) = char_getskilltarget(mech->xcode.context, MechPilot(mech),
+                                         "Comm-Conventional", 0);
+    MechPer(mech) = char_getskilltarget(mech->xcode.context, MechPilot(mech),
+                                        "Perception", 0);
   } else {
     MechComm(mech) = 6;
     MechPer(mech) = 6;
   }
   MechCommLast(mech) = 0;
-  MechLastStartup(mech) = btech_context_active()->clock->now;
+  MechLastStartup(mech) = mech->xcode.context->clock->now;
   if (is_aero(mech) && !Landed(mech)) {
     MechDesiredAngle(mech) = -90;
     MechStartFX(mech) = 0.0;
@@ -229,38 +231,54 @@ void mech_startup(DbRef player, void *data, char *buffer) {
 
   cch(MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON);
   skipws(buffer);
-  DOCHECK(!(is_good_obj(btech_context_active()->database, player) &&
-            (is_alive(btech_context_active()->database, player) ||
-             is_robot(btech_context_active()->database, player) ||
-             is_hardcode(btech_context_active()->database, player))),
-          "That is not a valid player!");
-  DOCHECK(MechType(mech) == CLASS_MW && Started(mech),
-          "You're up and about already!");
-  DOCHECK(Towed(mech),
-          "You're being towed! Wait for drop-off before starting again!");
-  DOCHECK(mech->mapindex < 0, "You are not on any map!");
-  DOCHECK(Destroyed(mech), "This 'Mech is destroyed!");
-  DOCHECK(Started(mech), "This 'Mech is already started!");
-  DOCHECK(Starting(mech), "This 'Mech is already starting!");
-  DOCHECK(Extinguishing(mech), "You're way too busy putting out fires!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(is_good_obj(mech->xcode.context->database, player) &&
+                    (is_alive(mech->xcode.context->database, player) ||
+                     is_robot(mech->xcode.context->database, player) ||
+                     is_hardcode(mech->xcode.context->database, player))),
+                  "That is not a valid player!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MW && Started(mech),
+                  "You're up and about already!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, Towed(mech),
+      "You're being towed! Wait for drop-off before starting again!");
+  DOCHECK_CONTEXT(mech->xcode.context, mech->mapindex < 0,
+                  "You are not on any map!");
+  DOCHECK_CONTEXT(mech->xcode.context, Destroyed(mech),
+                  "This 'Mech is destroyed!");
+  DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
+                  "This 'Mech is already started!");
+  DOCHECK_CONTEXT(mech->xcode.context, Starting(mech),
+                  "This 'Mech is already starting!");
+  DOCHECK_CONTEXT(mech->xcode.context, Extinguishing(mech),
+                  "You're way too busy putting out fires!");
   n = figure_latest_tech_event(mech);
-  DOCHECK(n,
-          "This 'Mech is still under repairs (see checkstatus for more info)");
-  DOCHECK(MechHeat(mech) > 30., "This 'Mech is too hot to start back up!");
-  DOCHECK(
-      is_in_character(btech_context_active()->database, mech->mynum) &&
-          !Wiz(player) &&
-          (char_lookupplayer(GOD, GOD, 0,
-                             silly_atr_get(mech->mynum, A_PILOTNUM)) != player),
+  DOCHECK_CONTEXT(
+      mech->xcode.context, n,
+      "This 'Mech is still under repairs (see checkstatus for more info)");
+  DOCHECK_CONTEXT(mech->xcode.context, MechHeat(mech) > 30.,
+                  "This 'Mech is too hot to start back up!");
+  DOCHECK_CONTEXT(
+      mech->xcode.context,
+      is_in_character(mech->xcode.context->database, mech->mynum) &&
+          !Wiz(mech->xcode.context->database, player) &&
+          (char_lookupplayer(mech->xcode.context, GOD, GOD, 0,
+                             btech_attribute_read(
+                                 mech->xcode.context->database, mech->mynum,
+                                 A_PILOTNUM, (char[LBUF_SIZE]){0})) != player),
       "This isn't your mech!");
   n = 0;
   if (*buffer && !strncasecmp(buffer, "override", strlen(buffer))) {
-    DOCHECK(!WizP(player), "Insufficient access!");
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    !WizP(mech->xcode.context->database, player),
+                    "Insufficient access!");
     n = BOOTCOUNT - 1;
   }
   MechPilot(mech) = player;
 
-  /*   if (is_in_character(btech_context_active()->database, mech->mynum)) */
+  /*   if (is_in_character(mech->xcode.context->database,
+   * mech->mynum)) */
   /* Initialize the PilotDamage from the new pilot */
   fix_pilotdamage(mech, player);
   mech_notify(mech, MECHALL, "Startup Cycle commencing...");
@@ -278,14 +296,14 @@ void mech_startup(DbRef player, void *data, char *buffer) {
 void mech_shutdown(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
-  if (!CheckData(player, mech))
-    return;
-  DOCHECK((!Started(mech) && !Starting(mech)),
-          "The 'mech hasn't been started yet!");
-  DOCHECK(MechType(mech) == CLASS_MW,
-          "You snore for a while.. and then _start_ yourself back up.");
-  DOCHECK(IsDS(mech) && !Landed(mech) && !Wiz(player),
-          "No shutdowns in mid-air! Are you suicidal?");
+  DOCHECK_CONTEXT(mech->xcode.context, (!Started(mech) && !Starting(mech)),
+                  "The 'mech hasn't been started yet!");
+  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
+                  "You snore for a while.. and then _start_ yourself back up.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  IsDS(mech) && !Landed(mech) &&
+                      !Wiz(mech->xcode.context->database, player),
+                  "No shutdowns in mid-air! Are you suicidal?");
   if (MechPilot(mech) == -1)
     return;
   if (Starting(mech)) {

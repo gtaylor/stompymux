@@ -33,7 +33,8 @@ void alter_conditions(MAP *map) {
   MECH *mech;
 
   for (i = 0; i < map->first_free; i++)
-    if ((mech = FindObjectsData(map->mechsOnMap[i]))) {
+    if ((mech =
+             btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]))) {
       UpdateConditions(mech, map);
 #if 0
 			mech_notify(mech, MECHALL,
@@ -47,29 +48,33 @@ void map_setconditions(DbRef player, MAP *map, char *buffer) {
   int vacuum = -1, underground = -1, grav, temp, argc;
   int fl;
 
-  DOCHECK((argc = mech_parseattributes(buffer, args, 4)) < 2,
-          "(At least) 2 options required (gravity + temperature)");
-  DOCHECK(argc > 4, "Too many options! Command accepts only 4 at max (gravity "
-                    "+ temperature + vacuum-flag + underground-flag)");
-  DOCHECK(Readnum(grav, args[0]),
-          "Invalid gravity (must be integer in range of 0 to 255)");
-  DOCHECK(grav < 0 || grav > 255,
-          "Invalid gravity (must be integer in range of 0 to 255)");
-  DOCHECK(Readnum(temp, args[1]),
-          "Invalid temperature (must be integer in range of -128 to 127");
-  DOCHECK(temp < -128 || temp > 127,
-          "Invalid temperature (must be integer in range of -128 to 127");
+  DOCHECK_CONTEXT(map->xcode.context,
+                  (argc = mech_parseattributes(buffer, args, 4)) < 2,
+                  "(At least) 2 options required (gravity + temperature)");
+  DOCHECK_CONTEXT(map->xcode.context, argc > 4,
+                  "Too many options! Command accepts only 4 at max (gravity "
+                  "+ temperature + vacuum-flag + underground-flag)");
+  DOCHECK_CONTEXT(map->xcode.context, Readnum(grav, args[0]),
+                  "Invalid gravity (must be integer in range of 0 to 255)");
+  DOCHECK_CONTEXT(map->xcode.context, grav < 0 || grav > 255,
+                  "Invalid gravity (must be integer in range of 0 to 255)");
+  DOCHECK_CONTEXT(
+      map->xcode.context, Readnum(temp, args[1]),
+      "Invalid temperature (must be integer in range of -128 to 127");
+  DOCHECK_CONTEXT(
+      map->xcode.context, temp < -128 || temp > 127,
+      "Invalid temperature (must be integer in range of -128 to 127");
   if (argc > 2) {
-    DOCHECK(Readnum(vacuum, args[2]),
-            "Invalid vacuum flag (must be integer, 0 or 1)");
-    DOCHECK(vacuum < 0 || vacuum > 1,
-            "Invalid vacuum flag (must be integer, 0 or 1)");
+    DOCHECK_CONTEXT(map->xcode.context, Readnum(vacuum, args[2]),
+                    "Invalid vacuum flag (must be integer, 0 or 1)");
+    DOCHECK_CONTEXT(map->xcode.context, vacuum < 0 || vacuum > 1,
+                    "Invalid vacuum flag (must be integer, 0 or 1)");
   }
   if (argc > 3) {
-    DOCHECK(Readnum(underground, args[3]),
-            "Invalid underground flag (must be integer, 0 or 1)");
-    DOCHECK(underground < 0 || underground > 1,
-            "Invalid underground flag (must be integer, 0 or 1)");
+    DOCHECK_CONTEXT(map->xcode.context, Readnum(underground, args[3]),
+                    "Invalid underground flag (must be integer, 0 or 1)");
+    DOCHECK_CONTEXT(map->xcode.context, underground < 0 || underground > 1,
+                    "Invalid underground flag (must be integer, 0 or 1)");
   }
   fl = (map->flags & (~(MAPFLAG_SPEC | MAPFLAG_VACUUM)));
   if (vacuum > 0)
@@ -83,7 +88,8 @@ void map_setconditions(DbRef player, MAP *map, char *buffer) {
   map->temp = temp;
   map->grav = grav;
   map->flags = fl;
-  notify(BTECH_EVALUATION_CONTEXT, player, "Conditions set!");
+  notify(btech_context_evaluation(map->xcode.context), player,
+         "Conditions set!");
   alter_conditions(map);
 }
 
@@ -106,7 +112,7 @@ void UpdateConditions(MECH *mech, MAP *map) {
 
 void reactor_explosion(MECH *wounded, MECH *attacker) {
   int z = MechZ(wounded);
-  MAP *map = getMap(wounded->mapindex);
+  MAP *map = btech_context_get_map(wounded->xcode.context, wounded->mapindex);
   DbRef wounded_pilot = MechPilot(wounded);
   int dam;
 
@@ -135,7 +141,7 @@ void reactor_explosion(MECH *wounded, MECH *attacker) {
       "is hit badly by the blast!",
       "%ch%cyYou receive some damage from the blast!%cn",
       "is hit by the blast!",
-      btech_context_active()->configuration->btech_explode_reactor > 1, 3, 5, 1,
+      wounded->xcode.context->configuration->btech_explode_reactor > 1, 3, 5, 1,
       2);
   MechZ(wounded) = z;
   headhitmwdamage(wounded, attacker, 4);
@@ -225,13 +231,15 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
             }
             // check_stackpole(wounded, attacker);
 
-            if (btech_context_active()->configuration->btech_stackpole &&
+            if (wounded->xcode.context->configuration->btech_stackpole &&
                 (MechBoomStart(wounded) + MAX_BOOM_TIME) >=
-                    btech_context_active()->events->tick &&
-                Roll() >= BOOM_BTH && (Started(wounded) || Starting(wounded))) {
+                    wounded->xcode.context->events->tick &&
+                btech_random_roll(wounded->xcode.context) >= BOOM_BTH &&
+                (Started(wounded) || Starting(wounded))) {
 
-              HexLOSBroadcast(getMap(wounded->mapindex), MechX(wounded),
-                              MechY(wounded),
+              HexLOSBroadcast(btech_context_get_map(wounded->xcode.context,
+                                                    wounded->mapindex),
+                              MechX(wounded), MechY(wounded),
                               "%ch%crThe hit destroys the last safety systems, "
                               "releasing the fusion reaction!%cn");
 
@@ -282,7 +290,7 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
       else
         mech_notify(wounded, MECHALL, "Water floods into your cockpit!");
 
-      KillMechContentsIfIC(wounded->mynum);
+      KillMechContentsIfIC(wounded);
       DestroyMech(wounded, attacker, 0, KILL_TYPE_FLOOD);
       return;
     }
@@ -330,7 +338,7 @@ int BreachLoc(MECH *attacker, MECH *mech, int hitloc) {
 int PossiblyBreach(MECH *attacker, MECH *mech, int hitloc) {
   if (!InSpecial(mech))
     return 0;
-  if (Roll() < 10)
+  if (btech_random_roll(mech->xcode.context) < 10)
     return 0;
   return BreachLoc(attacker, mech, hitloc);
 }

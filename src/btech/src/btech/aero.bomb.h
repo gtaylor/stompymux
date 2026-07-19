@@ -19,7 +19,7 @@
 #include "mux/server/platform.h"
 
 typedef struct {
-  char *name;
+  const char *name;
   int aff;
   int type; /* 0 = standard, 1 = inferno, 2 = cluster */
   int weight;

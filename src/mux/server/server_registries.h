@@ -37,5 +37,8 @@ struct AccessControlStore {
 };
 
 void command_registry_initialize(CommandRegistry *registry);
+void command_registry_destroy(CommandRegistry *registry);
 void world_indexes_initialize(WorldIndexes *indexes);
+void world_indexes_destroy(WorldIndexes *indexes);
 void access_control_store_initialize(AccessControlStore *store);
+void access_control_store_destroy(AccessControlStore *store);

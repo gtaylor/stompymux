@@ -14,8 +14,4 @@
 
 #pragma once
 
-#define LASTCHAR 128
-#define ELEVATIONS 10
-#define ENTRIES 256
-
 #include "p.map.coding.h"

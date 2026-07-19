@@ -128,11 +128,3 @@
       s->values[LIVES_NUMBER] += value - s->values[code];                      \
     s->values[code] = value;                                                   \
   }
-#define char_getvaluebycode(player, code)                                      \
-  char_getstatvaluebycode(retrieve_stats(player, VALUES_ALL), code)
-#define char_setvaluebycode(player, code, value)                               \
-  {                                                                            \
-    PSTATS *hm = retrieve_stats(player, VALUES_ALL);                           \
-    char_setstatvaluebycode(hm, code, value);                                  \
-    store_stats(player, hm, VALUES_ALL);                                       \
-  }

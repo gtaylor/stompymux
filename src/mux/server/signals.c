@@ -7,8 +7,8 @@
 #include "mux/database/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
+#include "mux/server/server_control.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/signals.h"
 
@@ -30,7 +30,9 @@ struct SignalHandlers {
   uv_signal_t signal_usr2;
   ServerLifecycle *lifecycle;
   DescriptorRegistry *descriptors;
-  MuxServer *server;
+  ServerLog *log;
+  CommandContext *command;
+  ServerControl *control;
   bool initialized;
   int closing_count;
 };
@@ -38,15 +40,18 @@ struct SignalHandlers {
 constexpr size_t ALT_STACK_SIZE = 0x40000;
 constexpr size_t ALT_STACK_ALIGN = 0x1000;
 
-SignalHandlers *signal_handlers_create(uv_loop_t *loop, MuxServer *server) {
+SignalHandlers *signal_handlers_create(uv_loop_t *loop,
+                                       ServerControl *control) {
   SignalHandlers *handlers = calloc(1, sizeof(*handlers));
   int error_code;
 
   if (handlers == nullptr)
     return nullptr;
-  handlers->server = server;
-  handlers->lifecycle = server->lifecycle;
-  handlers->descriptors = server->descriptors;
+  handlers->control = control;
+  handlers->lifecycle = control->lifecycle;
+  handlers->descriptors = control->descriptors;
+  handlers->log = control->log;
+  handlers->command = control->command;
   active_signal_handlers = handlers;
   handlers->segv_action = (struct sigaction){
       .sa_sigaction = signal_SEGV,
@@ -75,10 +80,10 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop, MuxServer *server) {
   } else {
     dprintk("posix_memalign failed with %s", strerror(error_code));
     log_error(
-        &handlers->server->log, LOG_PROBLEMS, "SIG", "ERR",
+        handlers->log, LOG_PROBLEMS, "SIG", "ERR",
         "posix_memalign() failed with error %s, alternate stack not used.",
         strerror(error_code));
-    log_error(&handlers->server->log, LOG_PROBLEMS, "SIG", "ERR",
+    log_error(handlers->log, LOG_PROBLEMS, "SIG", "ERR",
               "running signal_handlers without sigaltstack() will corrupt your "
               "coredumps!");
     handlers->alternate_stack.ss_sp = nullptr;
@@ -154,14 +159,14 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
   SignalHandlers *handlers = uv_handle_get_data((uv_handle_t *)handle);
   if (signo == SIGINT) {
     dprintk("caught SIGINT");
-    server_shutdown(handlers->server, NOTHING, SHUTDN_EXIT,
+    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT,
                     "received SIGINT from kernel.");
   } else if (signo == SIGTERM) {
     dprintk("caught SIGTERM");
-    server_shutdown(handlers->server, NOTHING, SHUTDN_EXIT,
+    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT,
                     "received SIGTERM from kernel.");
   } else
-    server_shutdown(handlers->server, NOTHING, SHUTDN_EXIT | SHUTDN_KILLED,
+    server_shutdown(handlers->control, NOTHING, SHUTDN_EXIT | SHUTDN_KILLED,
                     "received SIGUSR2 from kernel.");
 }
 
@@ -191,8 +196,8 @@ static void signal_SEGV(int signo, siginfo_t *siginfo, void *ucontext) {
                   siginfo->si_addr);
     break;
   }
-  dump_database_internal(handlers->server, DUMP_CRASHED);
-  report(&handlers->server->background_command);
+  dump_database_internal(handlers->control, DUMP_CRASHED);
+  report(handlers->command);
 }
 
 static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext) {
@@ -227,6 +232,6 @@ static void signal_BUS(int signo, siginfo_t *siginfo, void *ucontext) {
                   siginfo->si_addr);
     break;
   }
-  dump_database_internal(handlers->server, DUMP_CRASHED);
-  report(&handlers->server->background_command);
+  dump_database_internal(handlers->control, DUMP_CRASHED);
+  report(handlers->command);
 }

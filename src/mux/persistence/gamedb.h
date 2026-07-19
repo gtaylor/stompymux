@@ -21,20 +21,25 @@ typedef struct PersistenceContext PersistenceContext;
  * SQLite transaction and database file as the core MUX game state.
  */
 typedef int (*PersistenceSqliteLoad)(sqlite3 *sqlite,
-                                     PersistenceContext *context);
+                                     PersistenceContext *context,
+                                     void *extension_context);
 typedef int (*PersistenceSqliteStore)(sqlite3 *sqlite,
-                                      PersistenceContext *context);
+                                      PersistenceContext *context,
+                                      void *extension_context);
 
 constexpr int PERSISTENCE_MAX_SQLITE_EXTENSIONS = 8;
 
 typedef struct PersistenceSqliteExtension PersistenceSqliteExtension;
 struct PersistenceSqliteExtension {
+  /* Registration metadata and callback context are borrowed. */
   const char *name;
   PersistenceSqliteLoad load;
   PersistenceSqliteStore store;
+  void *context;
 };
 
 struct PersistenceContext {
+  /* Runtime service pointers are borrowed from MuxServer. */
   const ServerConfiguration *configuration;
   GameDatabase *database;
   VattrStore *vattrs;
@@ -44,6 +49,8 @@ struct PersistenceContext {
   int *record_players;
   WorldContext *world;
   ServerLog *log;
+
+  /* The persistence context owns its bounded extension registry. */
   PersistenceSqliteExtension extensions[PERSISTENCE_MAX_SQLITE_EXTENSIONS];
   size_t extension_count;
 };
@@ -65,7 +72,8 @@ void persistence_context_initialize(PersistenceContext *context,
 int persistence_register_sqlite_extension(PersistenceContext *context,
                                           const char *name,
                                           PersistenceSqliteLoad load,
-                                          PersistenceSqliteStore store);
+                                          PersistenceSqliteStore store,
+                                          void *extension_context);
 
 /*
  * Persist the complete current game state to the configured SQLite database.

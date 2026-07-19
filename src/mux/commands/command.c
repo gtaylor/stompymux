@@ -2,7 +2,9 @@
  * command.c - command parser and support routines
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "p.glue.h"
 
@@ -17,7 +19,7 @@
 #include "mux/database/vattr.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/configuration.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/configuration_context.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -240,12 +242,9 @@ NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
  */
 void do_comment(DbRef player, DbRef cause, int key) {}
 
-DEFINE_COMMAND_ADAPTER(do_charclear)
 DEFINE_COMMAND_ADAPTER(do_comment)
 #ifdef ARBITRARY_LOGFILES
 #endif
-DEFINE_COMMAND_ADAPTER(do_show)
-DEFINE_COMMAND_ADAPTER(do_show_stat)
 
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
@@ -759,24 +758,9 @@ CMDENT command_table[] = {
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_use}},
     {"version", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_version}},
-    {"+show",
-     nullptr,
-     CA_NO_IC,
-     0,
-     CS_TWO_ARG,
-     {.invoke = do_show_command_adapter}},
-    {"+rolls",
-     nullptr,
-     0,
-     0,
-     CS_NO_ARGS,
-     {.invoke = do_show_stat_command_adapter}},
-    {"+charclear",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG,
-     {.invoke = do_charclear_command_adapter}},
+    {"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_show}},
+    {"+rolls", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_show_stat}},
+    {"+charclear", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_charclear}},
     {"\\",
      nullptr,
      CA_LOCATION | CF_DARK,
@@ -1030,7 +1014,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
    */
 
   if (is_protected(cmdp, CA_GBL_INTERP) &&
-      !context->server->configuration->is_interpreter_enabled) {
+      !context->world->configuration->is_interpreter_enabled) {
     notify(&context->evaluation, player,
            "Sorry, queueing and triggering are not allowed now.");
     return;
@@ -1048,7 +1032,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
    */
 
   /* Asumption: base command permission required for all sub-commands */
-  if (!check_access(context->world->database, context->server->configuration,
+  if (!check_access(context->world->database, context->world->configuration,
                     player, cmdp->perms)) {
     notify(&context->evaluation, player, "Permission denied.");
     return;
@@ -1068,7 +1052,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       if (buf1)
         *buf1++ = '\0';
       xkey = name_table_search(context->world->database,
-                               context->server->configuration, player,
+                               context->world->configuration, player,
                                cmdp->switches, switchp);
       if (xkey == -1) {
         notify_printf(&context->evaluation, player,
@@ -1142,7 +1126,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       buf1[length] = '\0';
     } else
       buf1 =
-          parse_to(context->server->configuration, &arg, '\0', interp | EV_TOP);
+          parse_to(context->world->configuration, &arg, '\0', interp | EV_TOP);
 
     /*
      * Call the correct handler
@@ -1196,7 +1180,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
           }
 
           if (wild(buff + 1, new, aargs, 10)) {
-            wait_que(context->server->commands, add->thing, player, 0, NOTHING,
+            wait_que(context->runtime->commands, add->thing, player, 0, NOTHING,
                      0, s, aargs, 10, context->evaluation.registers);
             for (i = 0; i < 10; i++) {
               if (aargs[i])
@@ -1227,7 +1211,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
      * Interpret ARG1
      */
 
-    buf2 = parse_to(context->server->configuration, &arg, '=', EV_STRIP_TS);
+    buf2 = parse_to(context->world->configuration, &arg, '=', EV_STRIP_TS);
 
     /*
      * Handle when no '=' was specified
@@ -1290,10 +1274,10 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
         length = strnlen(buf2, LBUF_SIZE - 1);
         buf2[length] = '\0';
       } else if (cmdp->callseq & CS_UNPARSE) {
-        buf2 = parse_to(context->server->configuration, &arg, '\0',
+        buf2 = parse_to(context->world->configuration, &arg, '\0',
                         interp | EV_TOP | EV_NO_COMPRESS);
       } else {
-        buf2 = parse_to(context->server->configuration, &arg, '\0',
+        buf2 = parse_to(context->world->configuration, &arg, '\0',
                         interp | EV_STRIP_LS | EV_STRIP_TS | EV_TOP);
       }
 
@@ -1336,9 +1320,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
 
 void process_command(CommandContext *context, char *command, char *args[],
                      int nargs) {
-  MuxServer *server = context->server;
-  ServerConfiguration *configuration = server->configuration;
-  CommandRegistry *registry = &server->command_registry;
+  CommandRuntime *runtime = context->runtime;
+  ServerConfiguration *configuration = runtime->world->configuration;
+  CommandRegistry *registry = runtime->command_registry;
   const DbRef player = context->player;
   const DbRef cause = context->enactor;
   const bool interactive = context->interactive;
@@ -1365,7 +1349,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   }
 
   if (!is_good_obj(context->world->database, player)) {
-    log_error(&context->server->log, LOG_BUGS, "CMD", "PLYR",
+    log_error(context->log, LOG_BUGS, "CMD", "PLYR",
               "Bad player in process_command: %ld", player);
     context->debug_command = cmdsave;
     goto exit;
@@ -1387,27 +1371,26 @@ void process_command(CommandContext *context, char *command, char *args[],
   }
 
   if (is_suspect(context->world->database, player)) {
-    STARTLOG(&context->server->log, LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD",
-             "SUS") {
-      log_name_and_loc(&context->server->log, player);
+    STARTLOG(context->log, LOG_SUSPECTCMDS | LOG_ALLCOMMANDS, "CMD", "SUS") {
+      log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG(&context->server->log);
+      ENDLOG(context->log);
     }
     send_channel(
         &context->evaluation, "SuspectsLog", "%s (#%ld) (in #%ld) entered: %s",
         game_object_name(context->world->database, player), player,
         game_object_location(context->world->database, player), command);
   } else {
-    STARTLOG(&context->server->log, LOG_ALLCOMMANDS, "CMD", "ALL") {
-      log_name_and_loc(&context->server->log, player);
+    STARTLOG(context->log, LOG_ALLCOMMANDS, "CMD", "ALL") {
+      log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG(&context->server->log);
+      ENDLOG(context->log);
     }
   }
 
@@ -1460,8 +1443,8 @@ void process_command(CommandContext *context, char *command, char *args[],
     goto exit;
   }
   if (configuration->have_macros && (command[0] == '.') && interactive) {
-    macerr = do_macro(&context->match, &context->server->command_registry,
-                      &context->server->macros, player, command, &macroout);
+    macerr = do_macro(&context->match, context->runtime->command_registry,
+                      context->runtime->macros, player, command, &macroout);
     if (!macerr)
       goto exit;
     if (macerr == 1) {
@@ -1476,7 +1459,7 @@ void process_command(CommandContext *context, char *command, char *args[],
 
   /* Handle mecha stuff.. */
   if (configuration->have_specials)
-    if (HandledCommand(player,
+    if (HandledCommand(context->btech, player,
                        game_object_location(context->world->database, player),
                        command))
       goto exit;
@@ -1655,11 +1638,12 @@ void process_command(CommandContext *context, char *command, char *args[],
       !is_no_command(context->world->database, player) &&
       ((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
        configuration->match_mine_pl))
-    lua_succ += lua_command_match(server->lua, context->descriptor, player,
-                                  player, cause, command);
+    lua_succ +=
+        lua_command_match(runtime->lua_owner->runtime, context->descriptor,
+                          player, player, cause, command);
   if (has_location(context->world->database, player)) {
     lua_succ += lua_list_command_match(
-        server->lua, context->descriptor,
+        runtime->lua_owner->runtime, context->descriptor,
         game_object_contents(
             context->world->database,
             game_object_location(context->world->database, player)),
@@ -1667,13 +1651,13 @@ void process_command(CommandContext *context, char *command, char *args[],
     if (!is_no_command(context->world->database,
                        game_object_location(context->world->database, player)))
       lua_succ += lua_command_match(
-          server->lua, context->descriptor,
+          runtime->lua_owner->runtime, context->descriptor,
           game_object_location(context->world->database, player), player, cause,
           command);
   }
   if (has_contents(context->world->database, player))
     lua_succ += lua_list_command_match(
-        server->lua, context->descriptor,
+        runtime->lua_owner->runtime, context->descriptor,
         game_object_contents(context->world->database, player), player, cause,
         command);
   if (!lua_succ && configuration->have_zones &&
@@ -1688,7 +1672,7 @@ void process_command(CommandContext *context, char *command, char *args[],
       if (game_object_location(context->world->database, player) !=
           game_object_zone(context->world->database, player))
         lua_succ += lua_list_command_match(
-            server->lua, context->descriptor,
+            runtime->lua_owner->runtime, context->descriptor,
             game_object_contents(
                 context->world->database,
                 game_object_zone(
@@ -1701,7 +1685,7 @@ void process_command(CommandContext *context, char *command, char *args[],
                                     game_object_location(
                                         context->world->database, player)))) {
       lua_succ += lua_command_match(
-          server->lua, context->descriptor,
+          runtime->lua_owner->runtime, context->descriptor,
           game_object_zone(
               context->world->database,
               game_object_location(context->world->database, player)),
@@ -1717,7 +1701,7 @@ void process_command(CommandContext *context, char *command, char *args[],
            game_object_location(context->world->database, player)) !=
        game_object_zone(context->world->database, player)))
     lua_succ +=
-        lua_command_match(server->lua, context->descriptor,
+        lua_command_match(runtime->lua_owner->runtime, context->descriptor,
                           game_object_zone(context->world->database, player),
                           player, cause, command);
   if (lua_succ)
@@ -1856,8 +1840,9 @@ void process_command(CommandContext *context, char *command, char *args[],
    * the command. Master-room exits remain part of normal exit matching.
    */
   if (!lua_succ && !succ)
-    succ += lua_global_command_match(server->lua, context->descriptor, player,
-                                     cause, command);
+    succ +=
+        lua_global_command_match(runtime->lua_owner->runtime,
+                                 context->descriptor, player, cause, command);
   free_lbuf(lcbuf);
 
   /*
@@ -1866,13 +1851,13 @@ void process_command(CommandContext *context, char *command, char *args[],
 
   if (!succ) {
     notify(&context->evaluation, player, "Huh?  (Type \"help\" for help.)");
-    STARTLOG(&context->server->log, LOG_BADCOMMANDS, "CMD", "BAD") {
-      log_name_and_loc(&context->server->log, player);
+    STARTLOG(context->log, LOG_BADCOMMANDS, "CMD", "BAD") {
+      log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");
       snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
       free_lbuf(lcbuf);
-      ENDLOG(&context->server->log);
+      ENDLOG(context->log);
     }
   }
   context->debug_command = cmdsave;
@@ -2081,7 +2066,7 @@ static void list_attraccess(EvaluationContext *evaluation,
  */
 
 int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-              MuxServer *server) {
+              ConfigurationContext *context) {
   CMDENT *cmdp;
   char *ap;
   int set_switch;
@@ -2099,16 +2084,16 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
       ap++;
   }
 
-  cmdp = (CMDENT *)hash_table_find(str, &server->command_registry.commands);
+  cmdp = (CMDENT *)hash_table_find(str, &context->command_registry->commands);
   if (cmdp != nullptr) {
     if (set_switch)
       return cf_ntab_access((int *)cmdp->switches, ap, extra, player, cmd,
-                            server);
+                            context);
     else
       return configuration_modify_bits(&(cmdp->perms), ap, extra, player, cmd,
-                                       server);
+                                       context);
   } else {
-    configuration_log_not_found(server, player, cmd, "Command", str);
+    configuration_log_not_found(context, player, cmd, "Command", str);
     return -1;
   }
 }
@@ -2119,7 +2104,7 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
+                   ConfigurationContext *context) {
   CMDENT *cmdp;
   Attribute *ap;
   char *buff, *p;
@@ -2133,11 +2118,12 @@ int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
     for (q = ap->name; *q; p++, q++)
       *p = ToLower(*q);
     *p = '\0';
-    cmdp = (CMDENT *)hash_table_find(buff, &server->command_registry.commands);
+    cmdp =
+        (CMDENT *)hash_table_find(buff, &context->command_registry->commands);
     if (cmdp != nullptr) {
       save = cmdp->perms;
       failure = configuration_modify_bits(&(cmdp->perms), str, extra, player,
-                                          cmd, server);
+                                          cmd, context);
       if (failure != 0) {
         cmdp->perms = save;
         free_sbuf(buff);
@@ -2155,7 +2141,7 @@ int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   MuxServer *server) {
+                   ConfigurationContext *context) {
   Attribute *ap;
   char *sp;
 
@@ -2166,12 +2152,12 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
   while (*sp && isspace(*sp))
     sp++;
 
-  ap = attribute_by_name(&server->database, str);
+  ap = attribute_by_name(context->database, str);
   if (ap != nullptr)
     return configuration_modify_bits(&(ap->flags), sp, extra, player, cmd,
-                                     server);
+                                     context);
   else {
-    configuration_log_not_found(server, player, cmd, "Attribute", str);
+    configuration_log_not_found(context, player, cmd, "Attribute", str);
     return -1;
   }
 }
@@ -2182,7 +2168,7 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                 MuxServer *server) {
+                 ConfigurationContext *context) {
   char *alias, *orig, *ap;
   CMDENT *cmdp, *cmd2;
   NameTable *nt;
@@ -2214,17 +2200,17 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
 
     cmdp = (CMDENT *)hash_table_find(orig, (HashTable *)vp);
     if (cmdp == nullptr) {
-      configuration_log_not_found(server, player, cmd, "Command", orig);
+      configuration_log_not_found(context, player, cmd, "Command", orig);
       return -1;
     }
     /*
      * Look up the switch
      */
 
-    nt = name_table_find_entry(&server->database, server->configuration, player,
-                               (NameTable *)cmdp->switches, ap);
+    nt = name_table_find_entry(context->database, context->configuration,
+                               player, (NameTable *)cmdp->switches, ap);
     if (!nt) {
-      configuration_log_not_found(server, player, cmd, "Switch", ap);
+      configuration_log_not_found(context, player, cmd, "Switch", ap);
       return -1;
     }
     /*
@@ -2257,7 +2243,7 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
 
     hp = hash_table_find(orig, (HashTable *)vp);
     if (hp == nullptr) {
-      configuration_log_not_found(server, player, cmd, "Entry", orig);
+      configuration_log_not_found(context, player, cmd, "Entry", orig);
       return -1;
     }
     hash_table_add(alias, hp, (HashTable *)vp);
@@ -2311,16 +2297,16 @@ static void list_df_flags(EvaluationContext *evaluation,
 
 /*
  * ---------------------------------------------------------------------------
- * * list_options: List more game options from the server configuration.
+ * * list_options: List more game options from the context configuration.
  */
 
 static const char *switchd[] = {"/first", "/all"};
 static const char *examd[] = {"/brief", "/full"};
 static const char *ed[] = {"Disabled", "Enabled"};
 
-static void list_options(EvaluationContext *evaluation, MuxServer *server,
+static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
                          DbRef player) {
-  const ServerConfiguration *configuration = server->configuration;
+  const ServerConfiguration *configuration = runtime->world->configuration;
   char *buff;
   time_t now;
 
@@ -2445,7 +2431,7 @@ static void list_options(EvaluationContext *evaluation, MuxServer *server,
                        configuration->max_players));
   raw_notify(evaluation, player,
              tprintf("The head of the object freelist is #%ld.",
-                     server->database.freelist));
+                     runtime->world->database->freelist));
 
   snprintf(buff, MBUF_SIZE, "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
            configuration->database.dump_interval, configuration->check_interval,
@@ -2453,9 +2439,9 @@ static void list_options(EvaluationContext *evaluation, MuxServer *server,
   raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Timers: Dump...%ld  Clean...%ld  Idlecheck...%ld",
-           (long)server->clock.dump_deadline - now,
-           (long)server->clock.check_deadline - now,
-           (long)server->clock.idle_deadline - now);
+           (long)runtime->clock->dump_deadline - now,
+           (long)runtime->clock->check_deadline - now,
+           (long)runtime->clock->idle_deadline - now);
   raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Timeouts: Idle...%d  Connect...%d  Tries...%d",
@@ -2612,13 +2598,13 @@ extern NameTable logoptions_nametab[];
 extern NameTable logdata_nametab[];
 
 void do_list(CommandInvocation *invocation) {
-  MuxServer *server = invocation->context->server;
-  ServerConfiguration *configuration = server->configuration;
+  CommandRuntime *runtime = invocation->context->runtime;
+  ServerConfiguration *configuration = runtime->world->configuration;
   const DbRef player = invocation->player;
   char *arg = invocation->first;
   int flagvalue;
 
-  flagvalue = name_table_search(&server->database, configuration, player,
+  flagvalue = name_table_search(runtime->world->database, configuration, player,
                                 list_names, arg);
   switch (flagvalue) {
   case LIST_ATTRIBUTES:
@@ -2631,7 +2617,7 @@ void do_list(CommandInvocation *invocation) {
     list_cmdswitches(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_OPTIONS:
-    list_options(&invocation->context->evaluation, server, player);
+    list_options(&invocation->context->evaluation, runtime, player);
     break;
   case LIST_SITEINFO:
     list_siteinfo(&invocation->context->evaluation,
@@ -2642,7 +2628,7 @@ void do_list(CommandInvocation *invocation) {
     break;
   case LIST_FUNCTIONS:
     list_functable(&invocation->context->evaluation, configuration,
-                   &server->command_registry, player);
+                   runtime->command_registry, player);
     break;
   case LIST_GLOBALS:
     list_global_controls(&invocation->context->evaluation, configuration,
@@ -2653,10 +2639,10 @@ void do_list(CommandInvocation *invocation) {
     break;
   case LIST_PERMS:
     list_cmdaccess(&invocation->context->evaluation, configuration,
-                   &server->command_registry, player);
+                   runtime->command_registry, player);
     break;
   case LIST_CONF_PERMS:
-    configuration_list_access(server, player);
+    configuration_list_access(&invocation->context->evaluation, player);
     break;
   case LIST_POWERS:
     display_powertab(&invocation->context->evaluation, player);
@@ -2676,16 +2662,16 @@ void do_list(CommandInvocation *invocation) {
     list_db_stats(&invocation->context->evaluation, player);
     break;
   case LIST_PROCESS:
-    list_process(&invocation->context->evaluation, &server->clock, player);
+    list_process(&invocation->context->evaluation, runtime->clock, player);
     break;
   case LIST_BADNAMES:
-    badname_list(&invocation->context->evaluation, &server->world, player,
-                 "Disallowed names:");
+    badname_list(&invocation->context->evaluation, invocation->context->world,
+                 player, "Disallowed names:");
     break;
 #ifdef ARBITRARY_LOGFILES
   case LIST_LOGFILES:
     log_cache_list(&invocation->context->evaluation,
-                   invocation->context->server->log.cache, player);
+                   invocation->context->log->cache, player);
     break;
 #endif
   default:

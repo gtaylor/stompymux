@@ -18,6 +18,13 @@ void numeric_hash_table_initialize(HashTable *htab, int size) {
   htab->last = nullptr;
 }
 
+void numeric_hash_table_destroy(HashTable *htab) {
+  if (htab == nullptr || htab->tree == nullptr)
+    return;
+  red_black_tree_destroy(htab->tree);
+  memset(htab, 0, sizeof(*htab));
+}
+
 void numeric_hash_table_reset(HashTable *htab) {
   htab->checks = 0;
   htab->scans = 0;

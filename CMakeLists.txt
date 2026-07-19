@@ -196,7 +196,6 @@ set(BTECH_SOURCES
   ${BTECH_SOURCE_DIR}/src/btech/bsuit.c
   ${BTECH_SOURCE_DIR}/src/btech/btech.c
   ${BTECH_SOURCE_DIR}/src/btech/btechstats.c
-  ${BTECH_SOURCE_DIR}/src/btech/btspath.c
   ${BTECH_SOURCE_DIR}/src/btech/crit.c
   ${BTECH_SOURCE_DIR}/src/btech/ds.bay.c
   ${BTECH_SOURCE_DIR}/src/btech/ds.turret.c

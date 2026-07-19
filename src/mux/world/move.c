@@ -2,14 +2,15 @@
  * move.c -- Routines for moving about
  */
 
+#include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/powers.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"

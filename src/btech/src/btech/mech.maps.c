@@ -10,6 +10,7 @@
 
 #include "mux/server/platform.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,10 +38,11 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
   int x, y;
 
   cch(MECH_USUAL);
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
   x = MechX(mech);
   y = MechY(mech);
   MapCoordToRealCoord(x, y, &fx, &fy);
-  notify_printf(BTECH_EVALUATION_CONTEXT, player,
+  notify_printf(evaluation, player,
                 "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
                 "Bearing to center: %d",
                 x, y, MechZ(mech),
@@ -59,20 +61,24 @@ static int parse_tacargs(DbRef player, MECH *mech, char **args, int argc,
   case 2:
     bearing = atoi(args[0]);
     range = atof(args[1]);
-    DOCHECK0(!MechIsObservator(mech) && abs((int)range) > maxrange,
-             "Those coordinates are out of sensor range!");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     !MechIsObservator(mech) && abs((int)range) > maxrange,
+                     "Those coordinates are out of sensor range!");
     FindXY(MechFX(mech), MechFY(mech), bearing, range, &fx, &fy);
     RealCoordToMapCoord(x, y, fx, fy);
     return 1;
   case 1:
-    map = getMap(mech->mapindex);
-    tempMech = getMech(FindMechOnMap(map, args[0]));
-    DOCHECK0(!tempMech, "No such target.");
+    map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+    tempMech = btech_context_get_mech(mech->xcode.context,
+                                      FindMechOnMap(map, args[0]));
+    DOCHECK0_CONTEXT(mech->xcode.context, !tempMech, "No such target.");
     range = FlMechRange(mech_map, mech, tempMech);
-    DOCHECK0(
+    DOCHECK0_CONTEXT(
+        mech->xcode.context,
         !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
         "No such target.");
-    DOCHECK0(abs((int)range) > maxrange, "Target is out of scanner range.");
+    DOCHECK0_CONTEXT(mech->xcode.context, abs((int)range) > maxrange,
+                     "Target is out of scanner range.");
     *x = MechX(tempMech);
     *y = MechY(tempMech);
     return 1;
@@ -81,7 +87,8 @@ static int parse_tacargs(DbRef player, MECH *mech, char **args, int argc,
     *y = MechY(mech);
     return 1;
   default:
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid number of parameters!");
+    notify(btech_context_evaluation(mech->xcode.context), player,
+           "Invalid number of parameters!");
     return 0;
   }
 }
@@ -159,17 +166,21 @@ enum {
 #define DEFAULT_COLOR_STRING "BbWXYyRWWWXGgbRhYRnGR"
 #define DEFAULT_COLOR_SCHEME "BbWXYyRWWWXGgbRHYR\0GR"
 
-static char custom_color_str[NUM_COLOR_IDX + 1] = DEFAULT_COLOR_SCHEME;
+typedef struct MapColorScheme {
+  char values[NUM_COLOR_IDX + 1];
+} MapColorScheme;
 
-static void set_colorscheme(DbRef player) {
-  char *str = silly_atr_get(player, A_MAPCOLOR);
+static void map_color_scheme_load(MapColorScheme *colors, BtechContext *context,
+                                  DbRef player) {
+  char *str = btech_attribute_read(context->database, player, A_MAPCOLOR,
+                                   (char[LBUF_SIZE]){0});
   int i;
 
   if (*str && strlen(str) <= NUM_COLOR_IDX) {
-    memcpy(custom_color_str, DEFAULT_COLOR_STRING, NUM_COLOR_IDX);
-    memcpy(custom_color_str, str, strlen(str));
+    memcpy(colors->values, DEFAULT_COLOR_STRING, NUM_COLOR_IDX);
+    memcpy(colors->values, str, strlen(str));
     for (i = 0; i < NUM_COLOR_IDX; i++) {
-      switch (custom_color_str[i]) {
+      switch (colors->values[i]) {
       case 'f':
       case 'F':
       case 'I':
@@ -193,56 +204,65 @@ static void set_colorscheme(DbRef player) {
       case 'W':
         break;
       case 'h':
-        custom_color_str[i] = 'H';
+        colors->values[i] = 'H';
         break;
       case 'n':
-        custom_color_str[i] = '\0';
+        colors->values[i] = '\0';
         break;
       default:
-        notify_printf(BTECH_EVALUATION_CONTEXT, player,
+        notify_printf(btech_context_evaluation(context), player,
                       "Invalid character '%c' in MAPCOLOR "
                       "attribute!",
-                      custom_color_str[i]);
-        notify(BTECH_EVALUATION_CONTEXT, player,
+                      colors->values[i]);
+        notify(btech_context_evaluation(context), player,
                "Using default: " DEFAULT_COLOR_STRING);
-        memcpy(custom_color_str, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
+        memcpy(colors->values, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
         return;
       }
     }
     return;
   } else if (*str) {
-    notify(BTECH_EVALUATION_CONTEXT, player, "Invalid MAPCOLOR attribute!");
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(btech_context_evaluation(context), player,
+           "Invalid MAPCOLOR attribute!");
+    notify(btech_context_evaluation(context), player,
            "Using default: " DEFAULT_COLOR_STRING);
   }
-  memcpy(custom_color_str, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
+  memcpy(colors->values, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
 }
 
 void mech_navigate(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
   char mybuff[NAVIGATE_LINES][MBUF_SIZE];
   MAP *mech_map;
-  char **maptext, *args[3];
+  char *const *maptext;
+  MapText *map_text;
+  char *args[3];
   int i, dolos, argc;
   short x, y;
 
   cch(MECH_USUAL);
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   dolos = MapIsDark(mech_map) ||
           (MechType(mech) == CLASS_MW &&
-           btech_context_active()->configuration->btech_mw_losmap);
+           mech->xcode.context->configuration->btech_mw_losmap);
 
-  DOCHECK(mech_map->map_width <= 0 || mech_map->map_height <= 0,
-          "Nothing to see on this map, move along.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_map->map_width <= 0 || mech_map->map_height <= 0,
+                  "Nothing to see on this map, move along.");
 
   argc = mech_parseattributes(buffer, args, 3);
   if (!parse_tacargs(player, mech, args, argc, MechTacRange(mech), &x, &y))
     return;
 
-  set_colorscheme(player);
-  maptext = MakeMapText(player, mech, mech_map, x, y, 5, 5, 4, dolos);
+  map_text = map_text_create(player, mech, mech_map, x, y, 5, 5, 4, dolos);
+  if (map_text == nullptr) {
+    notify(evaluation, player, "Unable to render the tactical map.");
+    return;
+  }
+  maptext = map_text_lines(map_text);
 
   snprintf(mybuff[0], MBUF_SIZE,
            "              0                                          %.150s",
@@ -279,10 +299,11 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
            maptext[10]);
   snprintf(mybuff[11], MBUF_SIZE, "                      ");
   snprintf(mybuff[12], MBUF_SIZE, "             180");
+  map_text_destroy(map_text);
 
   navigate_sketch_mechs(mech, mech_map, x, y, mybuff);
   for (i = 0; i < NAVIGATE_LINES; i++)
-    notify(BTECH_EVALUATION_CONTEXT, player, mybuff[i]);
+    notify(evaluation, player, mybuff[i]);
 }
 
 /* INDENT OFF */
@@ -348,117 +369,122 @@ char GetLRSMechChar(MECH *mech, MECH *other) {
   return c;
 }
 
-static inline char TerrainColorChar(char terrain, int elev) {
+static inline char TerrainColorChar(const MapColorScheme *colors, char terrain,
+                                    int elev) {
   switch (terrain) {
   case HIGHWATER:
-    return custom_color_str[DWATER_IDX];
+    return colors->values[DWATER_IDX];
   case WATER:
     if (elev < 2 || elev == '0' || elev == '1' || elev == '~')
-      return custom_color_str[SWATER_IDX];
-    return custom_color_str[DWATER_IDX];
+      return colors->values[SWATER_IDX];
+    return colors->values[DWATER_IDX];
   case BUILDING:
-    return custom_color_str[BUILDING_IDX];
+    return colors->values[BUILDING_IDX];
   case ROAD:
-    return custom_color_str[ROAD_IDX];
+    return colors->values[ROAD_IDX];
   case DESERT:
   case ROUGH:
-    return custom_color_str[ROUGH_IDX];
+    return colors->values[ROUGH_IDX];
   case MOUNTAINS:
-    return custom_color_str[MOUNTAIN_IDX];
+    return colors->values[MOUNTAIN_IDX];
   case FIRE:
-    return custom_color_str[FIRE_IDX];
+    return colors->values[FIRE_IDX];
   case ICE:
-    return custom_color_str[ICE_IDX];
+    return colors->values[ICE_IDX];
   case WALL:
-    return custom_color_str[WALL_IDX];
+    return colors->values[WALL_IDX];
   case SNOW:
-    return custom_color_str[SNOW_IDX];
+    return colors->values[SNOW_IDX];
   case SMOKE:
-    return custom_color_str[SMOKE_IDX];
+    return colors->values[SMOKE_IDX];
   case LIGHT_FOREST:
-    return custom_color_str[LWOOD_IDX];
+    return colors->values[LWOOD_IDX];
   case HEAVY_FOREST:
-    return custom_color_str[HWOOD_IDX];
+    return colors->values[HWOOD_IDX];
   case UNKNOWN_TERRAIN:
-    return custom_color_str[UNKNOWN_IDX];
+    return colors->values[UNKNOWN_IDX];
   }
   return '\0';
 }
 
-static char *add_color(char newc, char *prevc, char c) {
-  static char buf[10] = {0}; /* won't be filled with more than 7 characters */
+typedef struct MapCellText {
+  char text[10]; /* No color transition is longer than seven characters. */
+} MapCellText;
+
+static MapCellText map_cell_text(char newc, char *prevc, char c) {
+  MapCellText result = {0};
 
   if (newc == *prevc) {
-    buf[0] = c;
-    buf[1] = '\0';
-    return buf;
+    result.text[0] = c;
+    return result;
   }
 
   if (!newc || ((isupper(*prevc)) && !isupper(newc)) || (newc == 'H' && *prevc))
-    strcpy(buf, "%cn");
+    strcpy(result.text, "%cn");
   else if (isupper(newc) && !isupper(*prevc))
-    strcpy(buf, "%ch");
+    strcpy(result.text, "%ch");
 
   if (!newc)
-    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%c", c);
+    snprintf(result.text + strlen(result.text),
+             sizeof(result.text) - strlen(result.text), "%c", c);
   else
-    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%%c%c%c",
+    snprintf(result.text + strlen(result.text),
+             sizeof(result.text) - strlen(result.text), "%%c%c%c",
              tolower(newc), c);
   *prevc = newc;
-  return buf;
+  return result;
 }
 
-static char *GetLRSMech(MECH *mech, MECH *other, int docolor, char *prevc) {
-  static char buf[2] = {0}; /* Won't be filled with more than 1 character */
+static MapCellText lrs_mech_text(const MapColorScheme *colors, MECH *mech,
+                                 MECH *other, int docolor, char *prevc) {
   char c = GetLRSMechChar(mech, other);
   char newc;
 
   if (!docolor) {
-    snprintf(buf, sizeof(buf), "%c", c);
-    return buf;
+    MapCellText result = {0};
+    result.text[0] = c;
+    return result;
   }
 
   if (mech == other)
-    newc = custom_color_str[SELF_IDX];
+    newc = colors->values[SELF_IDX];
   else if (!MechSeemsFriend(mech, other))
-    newc = custom_color_str[ENEMY_IDX];
+    newc = colors->values[ENEMY_IDX];
   else
-    newc = custom_color_str[FRIEND_IDX];
+    newc = colors->values[FRIEND_IDX];
 
-  return add_color(newc, prevc, c);
+  return map_cell_text(newc, prevc, c);
 }
 
-static char *LRSTerrain(MAP *map, int x, int y, int docolor, char *prevc) {
-  static char buf[2]; /* Won't be filled with more than 1 character */
-
+static MapCellText lrs_terrain_text(const MapColorScheme *colors, MAP *map,
+                                    int x, int y, int docolor, char *prevc) {
   char c = GetTerrain(map, x, y);
   char newc;
 
   if (!c || !docolor || c == ' ') {
-    buf[0] = c;
-    buf[1] = '\0';
-    return buf;
+    MapCellText result = {0};
+    result.text[0] = c;
+    return result;
   } else
-    newc = TerrainColorChar(c, GetElev(map, x, y));
+    newc = TerrainColorChar(colors, c, GetElev(map, x, y));
 
-  return add_color(newc, prevc, c);
+  return map_cell_text(newc, prevc, c);
 }
 
-static char *LRSElevation(MAP *map, int x, int y, int docolor, char *prevc) {
-  static char buf[2]; /* Won't be filled with more than 1 character */
-
+static MapCellText lrs_elevation_text(const MapColorScheme *colors, MAP *map,
+                                      int x, int y, int docolor, char *prevc) {
   int e = GetElev(map, x, y);
   char c = (e || docolor) ? '0' + e : ' ';
   char newc;
 
   if (!docolor) {
-    buf[0] = c;
-    buf[1] = '\0';
-    return buf;
+    MapCellText result = {0};
+    result.text[0] = c;
+    return result;
   } else
-    newc = TerrainColorChar(GetTerrain(map, x, y), e);
+    newc = TerrainColorChar(colors, GetTerrain(map, x, y), e);
 
-  return add_color(newc, prevc, c);
+  return map_cell_text(newc, prevc, c);
 }
 
 #define LRS_TERRAINMODE 1
@@ -468,9 +494,9 @@ static char *LRSElevation(MAP *map, int x, int y, int docolor, char *prevc) {
 #define LRS_COLORMODE 16
 #define LRS_ELEVCOLORMODE 32
 
-static char *get_lrshexstr(MECH *mech, MAP *map, int x, int y, char *prevc,
-                           int mode, MECH **mechs, int lm,
-                           hexlosmap_info *losmap) {
+static MapCellText lrs_hex_text(const MapColorScheme *colors, MECH *mech,
+                                MAP *map, int x, int y, char *prevc, int mode,
+                                MECH **mechs, int lm, HexLosMap *losmap) {
   int losflag = MAPLOSHEX_SEE | MAPLOSHEX_SEEN;
 
   if (mode & LRS_MECHMODE) {
@@ -479,34 +505,38 @@ static char *get_lrshexstr(MECH *mech, MAP *map, int x, int y, char *prevc,
     while (mechs[lm] && MechY(mechs[lm]) == y && MechX(mechs[lm]) < x)
       lm++;
     if (mechs[lm] && MechY(mechs[lm]) == y && MechX(mechs[lm]) == x)
-      return GetLRSMech(mech, mechs[lm], mode & LRS_COLORMODE, prevc);
+      return lrs_mech_text(colors, mech, mechs[lm], mode & LRS_COLORMODE,
+                           prevc);
   }
 
   if (losmap)
-    losflag = LOSMap_GetFlag(losmap, x, y);
+    losflag = LOS_MAP_GET_FLAG(losmap, x, y);
 
   /* If the losmap doesn't contain this hex, we return X in bold red
    * in both terrain and elevation mode.
    */
   if (!(losflag & MAPLOSHEX_SEEN))
-    return add_color('R', prevc, 'X');
+    return map_cell_text('R', prevc, 'X');
 
   if (((mode & LRS_TERRAINMODE) && !(losflag & MAPLOSHEX_SEETERRAIN)) ||
       ((mode & LRS_ELEVMODE) && !(losflag & MAPLOSHEX_SEEELEV)))
-    return add_color(TerrainColorChar(UNKNOWN_TERRAIN, 0), prevc, '?');
+    return map_cell_text(TerrainColorChar(colors, UNKNOWN_TERRAIN, 0), prevc,
+                         '?');
 
   if (mode & LRS_ELEVMODE)
-    return LRSElevation(map, x, y, mode & LRS_ELEVCOLORMODE, prevc);
+    return lrs_elevation_text(colors, map, x, y, mode & LRS_ELEVCOLORMODE,
+                              prevc);
   if (mode & LRS_TERRAINMODE)
-    return LRSTerrain(map, x, y, mode & LRS_COLORMODE, prevc);
+    return lrs_terrain_text(colors, map, x, y, mode & LRS_COLORMODE, prevc);
 
   SendError(
+      mech->xcode.context,
       tprintf("Unknown LRS mode, mech #%ld mode 0x%x.", mech->mynum, mode));
-  return add_color('R', prevc, 'Y');
+  return map_cell_text('R', prevc, 'Y');
 }
 
-static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
-                         int displayHeight, int mode) {
+static void show_lrs_map(const MapColorScheme *colors, DbRef player, MECH *mech,
+                         MAP *map, int x, int y, int displayHeight, int mode) {
   int loop, b_width, e_width, b_height, e_height, i;
   MECH *oMech;
 
@@ -528,7 +558,8 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
   MECH *mechs[MAX_MECHS_PER_MAP];
   int last_mech = 0;
   char prevct = 0, prevcb = 0;
-  hexlosmap_info *losmap = NULL;
+  HexLosMap los_map_storage;
+  HexLosMap *losmap = nullptr;
 
   /* x and y hold the viewing center of the map */
   b_width = x - LRS_DISPLAY_WIDTH / 2;
@@ -562,13 +593,14 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff), "%c",
              trash1[2]);
   }
-  notify(BTECH_EVALUATION_CONTEXT, player, topbuff);
-  notify(BTECH_EVALUATION_CONTEXT, player, midbuff);
-  notify(BTECH_EVALUATION_CONTEXT, player, botbuff);
+  notify(btech_context_evaluation(mech->xcode.context), player, topbuff);
+  notify(btech_context_evaluation(mech->xcode.context), player, midbuff);
+  notify(btech_context_evaluation(mech->xcode.context), player, botbuff);
 
   if (mode & LRS_MECHMODE) {
     for (i = 0; i < map->first_free; i++) {
-      if ((oMech = getMech(map->mechsOnMap[i]))) {
+      if ((oMech = btech_context_get_mech(mech->xcode.context,
+                                          map->mechsOnMap[i]))) {
         if ((mech == oMech) ||
             (MechY(oMech) >= b_height && MechY(oMech) <= e_height &&
              MechX(oMech) >= b_width && MechX(oMech) <= e_width &&
@@ -595,9 +627,10 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     last_mech = 0;
   }
 
-  if (mode & LRS_LOSMODE)
-    losmap = CalculateLOSMap(map, mech, b_width, b_height, e_width - b_width,
-                             e_height - b_height);
+  if ((mode & LRS_LOSMODE) &&
+      los_map_calculate(&los_map_storage, map, mech, b_width, b_height,
+                        e_width - b_width, e_height - b_height))
+    losmap = &los_map_storage;
 
   for (loop = b_height; loop < e_height; loop++) {
     snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
@@ -609,24 +642,28 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     for (i = b_width; i < e_width; i += 2) {
       snprintf(topbuff + strlen(topbuff), sizeof(topbuff) - strlen(topbuff),
                oddcol ? "%s " : " %s",
-               get_lrshexstr(mech, map, i + !oddcol, loop, &prevct, mode, mechs,
-                             last_mech, losmap));
+               lrs_hex_text(colors, mech, map, i + !oddcol, loop, &prevct, mode,
+                            mechs, last_mech, losmap)
+                   .text);
 
       snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
                oddcol ? " %s" : "%s ",
-               get_lrshexstr(mech, map, i + oddcol, loop, &prevcb, mode, mechs,
-                             last_mech, losmap));
+               lrs_hex_text(colors, mech, map, i + oddcol, loop, &prevcb, mode,
+                            mechs, last_mech, losmap)
+                   .text);
     }
     if (i == e_width && !oddcol) {
       snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
                "%s",
-               get_lrshexstr(mech, map, i, loop, &prevcb, mode, mechs,
-                             last_mech, losmap));
+               lrs_hex_text(colors, mech, map, i, loop, &prevcb, mode, mechs,
+                            last_mech, losmap)
+                   .text);
     } else if (i == e_width) {
       snprintf(topbuff + strlen(topbuff), sizeof(topbuff) - strlen(topbuff),
                "%s",
-               get_lrshexstr(mech, map, i, loop, &prevct, mode, mechs,
-                             last_mech, losmap));
+               lrs_hex_text(colors, mech, map, i, loop, &prevct, mode, mechs,
+                            last_mech, losmap)
+                   .text);
       strcat(botbuff, " ");
     }
 
@@ -642,13 +679,14 @@ static void show_lrs_map(DbRef player, MECH *mech, MAP *map, int x, int y,
     }
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
              " %-3d", loop);
-    notify(BTECH_EVALUATION_CONTEXT, player, topbuff);
-    notify(BTECH_EVALUATION_CONTEXT, player, botbuff);
+    notify(btech_context_evaluation(mech->xcode.context), player, topbuff);
+    notify(btech_context_evaluation(mech->xcode.context), player, botbuff);
   }
 }
 
 void mech_lrsmap(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
+  MapColorScheme colors;
   MAP *map;
   int argc, mode = 0;
   short x, y;
@@ -657,13 +695,14 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
 
-  if (is_ansimap(btech_context_active()->database, player))
+  if (is_ansimap(mech->xcode.context->database, player))
     mode |= LRS_COLORMODE;
 
-  map = getMap(mech->mapindex);
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(!MechLRSRange(mech), "Your system seems to be inoperational.");
+  DOCHECK_CONTEXT(mech->xcode.context, !MechLRSRange(mech),
+                  "Your system seems to be inoperational.");
   if (!parse_tacargs(player, mech, &args[1], argc - 1, MechLRSRange(mech), &x,
                      &y))
     return;
@@ -697,21 +736,21 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     mode |= LRS_LOSMODE | LRS_MECHMODE | LRS_TERRAINMODE;
     break;
   default:
-    notify_printf(BTECH_EVALUATION_CONTEXT, player,
+    notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Unknown LRS sensor type '%s'!", args[0]);
     return;
   }
 
-  if (MapIsDark(map) ||
-      (MechType(mech) == CLASS_MW &&
-       btech_context_active()->configuration->btech_mw_losmap))
+  if (MapIsDark(map) || (MechType(mech) == CLASS_MW &&
+                         mech->xcode.context->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
-  str = silly_atr_get(player, A_LRSHEIGHT);
+  str = btech_attribute_read(mech->xcode.context->database, player, A_LRSHEIGHT,
+                             (char[LBUF_SIZE]){0});
   if (*str) {
     displayHeight = atoi(str);
     if (displayHeight < 10 || displayHeight > 40) {
-      notify(BTECH_EVALUATION_CONTEXT, player,
+      notify(btech_context_evaluation(mech->xcode.context), player,
              "Illegal LRSHeight attribute.  Must be between 10 and 40");
       displayHeight = LRS_DISPLAY_HEIGHT;
     }
@@ -723,9 +762,9 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   if (!(displayHeight % 2))
     displayHeight++;
 
-  set_colorscheme(player);
+  map_color_scheme_load(&colors, mech->xcode.context, player);
 
-  show_lrs_map(player, mech, map, x, y, displayHeight, mode);
+  show_lrs_map(&colors, player, mech, map, x, y, displayHeight, mode);
 }
 
 static inline int is_oddcol(int col) {
@@ -787,7 +826,8 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
   int oddcol1 = is_oddcol(sx); /* One iff first hex col is odd */
   char *pos;
   int mapcols = tac_dispcols(wx);
-  hexlosmap_info *losmap = NULL;
+  HexLosMap los_map_storage;
+  HexLosMap *losmap = nullptr;
 
   /*
    * First create a blank hex map.
@@ -813,8 +853,9 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
   wx = MIN(wx, map->map_width - sx);
   wy = MIN(wy, map->map_height - sy);
 
-  if (dohexlos)
-    losmap = CalculateLOSMap(map, mech, MAX(0, sx), MAX(0, sy), wx, wy);
+  if (dohexlos && los_map_calculate(&los_map_storage, map, mech, MAX(0, sx),
+                                    MAX(0, sy), wx, wy))
+    losmap = &los_map_storage;
 
   for (y = MAX(0, -sy); y < wy; y++) {
     for (x = MAX(0, -sx); x < wx; x++) {
@@ -823,7 +864,7 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
       char topchar, botchar;
 
       if (losmap)
-        losflag = LOSMap_GetFlag(losmap, sx + x, sy + y);
+        losflag = LOS_MAP_GET_FLAG(losmap, sx + x, sy + y);
 
       if (!(losflag & MAPLOSHEX_SEEN)) {
         terr = 'X';
@@ -925,7 +966,7 @@ static void sketch_tac_ds(char *base, int dispcols, char terr) {
   }
 }
 
-extern int dirs[6][2];
+extern const int dirs[6][2];
 
 static void sketch_tac_ownmech(char *buf, MAP *map, MECH *mech, int sx, int sy,
                                int wx, int wy, int dispcols, int top_offset,
@@ -965,7 +1006,7 @@ static void sketch_tac_mechs(char *buf, MAP *map, MECH *player_mech, int sx,
       continue;
     }
 
-    mech = getMech(map->mechsOnMap[i]);
+    mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
     if (mech == NULL) {
       continue;
     }
@@ -1041,9 +1082,9 @@ static void sketch_tac_mechs(char *buf, MAP *map, MECH *player_mech, int sx,
         base[0] = '*';
         base[1] = '*';
       } else {
-        char *id = MechIDS(mech, MechSeemsFriend(player_mech, mech));
-        base[0] = id[0];
-        base[1] = id[1];
+        MechId id = mech_id(mech, MechSeemsFriend(player_mech, mech));
+        base[0] = id.text[0];
+        base[1] = id.text[1];
       }
 
     } else if (mech == player_mech) {
@@ -1052,9 +1093,9 @@ static void sketch_tac_mechs(char *buf, MAP *map, MECH *player_mech, int sx,
       base[0] = '*';
       base[1] = '*';
     } else {
-      char *id = MechIDS(mech, MechSeemsFriend(player_mech, mech));
-      base[0] = id[0];
-      base[1] = id[1];
+      MechId id = mech_id(mech, MechSeemsFriend(player_mech, mech));
+      base[0] = id.text[0];
+      base[1] = id.text[1];
     }
   }
 }
@@ -1200,31 +1241,51 @@ static void sketch_tac_mines(char *buf, MAP *map, MECH *mech, int sx, int sy,
   }
 }
 
-/*
- * Colourize a sketch tac map.  Uses dynmaically allocated buffers
- * which are overwritten on each call.
- */
-static char **colourize_tac_map(char const *sketch, int dispcols,
-                                int disprows) {
-  static char *buf = NULL;
-  static int buf_len = 5000;
-  static char **lines = NULL;
-  static int lines_len = 100;
-  int pos = 0;
+struct MapText {
+  char *buffer;
+  char **lines;
+  size_t buffer_capacity;
+  size_t line_capacity;
+};
+
+static MapText *map_text_allocate(size_t buffer_capacity,
+                                  size_t line_capacity) {
+  MapText *text = calloc(1, sizeof(*text));
+  if (text == nullptr)
+    return nullptr;
+  text->buffer = calloc(buffer_capacity, sizeof(*text->buffer));
+  text->lines = calloc(line_capacity, sizeof(*text->lines));
+  if (text->buffer == nullptr || text->lines == nullptr) {
+    map_text_destroy(text);
+    return nullptr;
+  }
+  text->buffer_capacity = buffer_capacity;
+  text->line_capacity = line_capacity;
+  return text;
+}
+
+char *const *map_text_lines(const MapText *text) {
+  return text != nullptr ? text->lines : nullptr;
+}
+
+void map_text_destroy(MapText *text) {
+  if (text == nullptr)
+    return;
+  free(text->buffer);
+  free(text->lines);
+  free(text);
+}
+
+static bool colourize_tac_map(MapText *text, const MapColorScheme *colors,
+                              const char *sketch, int dispcols, int disprows) {
+  size_t pos = 0;
   int line = 0;
   unsigned char cur_colour = '\0';
   const char *line_start;
   char const *src = sketch;
 
-  if (buf == NULL) {
-    Create(buf, char, buf_len);
-  }
-  if (lines == NULL) {
-    Create(lines, char *, lines_len);
-  }
-
   line_start = (char *)src;
-  lines[0] = buf;
+  text->lines[0] = text->buffer;
   while (line < disprows) {
     unsigned char new_colour;
     unsigned char c = *src++;
@@ -1234,123 +1295,109 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
        * End of line.
        */
       if (cur_colour != '\0') {
-        buf[pos++] = '%';
-        buf[pos++] = 'c';
-        buf[pos++] = 'n';
+        text->buffer[pos++] = '%';
+        text->buffer[pos++] = 'c';
+        text->buffer[pos++] = 'n';
       }
-      buf[pos++] = '\0';
+      text->buffer[pos++] = '\0';
       line++;
       if (line >= disprows) {
         break; /* Done */
       }
-      if (line + 1 >= lines_len) {
-        lines_len *= 2;
-        ReCreate(lines, char *, lines_len);
-      }
       line_start += dispcols;
       src = line_start;
-      lines[line] = buf + pos;
+      text->lines[line] = text->buffer + pos;
       continue;
     }
 
     switch (c) {
     case (unsigned char)'\242': /* Colour Hack: Deep Water */
       c = '~';
-      new_colour = custom_color_str[DWATER_IDX];
+      new_colour = colors->values[DWATER_IDX];
       break;
 
     case (unsigned char)'\241': /* Colour Hack: improper LZ */
       c = 'X';
-      new_colour = custom_color_str[BADLZ_IDX];
+      new_colour = colors->values[BADLZ_IDX];
       break;
     case (unsigned char)'\240': /* Colour Hack: proper LZ */
       c = 'O';
-      new_colour = custom_color_str[GOODLZ_IDX];
+      new_colour = colors->values[GOODLZ_IDX];
       break;
     case '?':
       c = '?';
-      new_colour = custom_color_str[UNKNOWN_IDX];
+      new_colour = colors->values[UNKNOWN_IDX];
       break;
 
     case '$': /* Colour Hack: Drop Ship */
       c = 'X';
-      new_colour = custom_color_str[DS_IDX];
+      new_colour = colors->values[DS_IDX];
       break;
 
     case '!': /* Cliff hex edge */
       c = '/';
-      new_colour = custom_color_str[CLIFF_IDX];
+      new_colour = colors->values[CLIFF_IDX];
       break;
 
     case '|': /* Cliff hex edge */
       c = '\\';
-      new_colour = custom_color_str[CLIFF_IDX];
+      new_colour = colors->values[CLIFF_IDX];
       break;
 
     case ',': /* Cliff hex edge */
       c = '_';
-      new_colour = custom_color_str[CLIFF_IDX];
+      new_colour = colors->values[CLIFF_IDX];
       break;
     case '*': /* mech itself. */
-      new_colour = custom_color_str[SELF_IDX];
+      new_colour = colors->values[SELF_IDX];
       break;
 
     default:
       if (islower(c)) { /* Friendly con */
-        new_colour = custom_color_str[FRIEND_IDX];
+        new_colour = colors->values[FRIEND_IDX];
       } else if (isupper(c)) { /* Enemy con */
-        new_colour = custom_color_str[ENEMY_IDX];
+        new_colour = colors->values[ENEMY_IDX];
       } else if (isdigit(c)) { /* Elevation */
         new_colour = cur_colour;
       } else {
-        new_colour = TerrainColorChar(c, 0);
+        new_colour = TerrainColorChar(colors, c, 0);
       }
       break;
     }
 
     if (isupper(new_colour) != isupper(cur_colour)) {
       if (isupper(new_colour)) {
-        buf[pos++] = '%';
-        buf[pos++] = 'c';
-        buf[pos++] = 'h';
+        text->buffer[pos++] = '%';
+        text->buffer[pos++] = 'c';
+        text->buffer[pos++] = 'h';
       } else {
-        buf[pos++] = '%';
-        buf[pos++] = 'c';
-        buf[pos++] = 'n';
+        text->buffer[pos++] = '%';
+        text->buffer[pos++] = 'c';
+        text->buffer[pos++] = 'n';
         cur_colour = '\0';
       }
     }
     if (tolower(new_colour) != tolower(cur_colour)) {
-      buf[pos++] = '%';
-      buf[pos++] = 'c';
+      text->buffer[pos++] = '%';
+      text->buffer[pos++] = 'c';
       if (new_colour == '\0') {
-        buf[pos++] = 'n';
+        text->buffer[pos++] = 'n';
       } else if (new_colour == 'H') {
-        buf[pos++] = 'n';
-        buf[pos++] = '%';
-        buf[pos++] = 'c';
-        buf[pos++] = tolower(new_colour);
+        text->buffer[pos++] = 'n';
+        text->buffer[pos++] = '%';
+        text->buffer[pos++] = 'c';
+        text->buffer[pos++] = tolower(new_colour);
       } else {
-        buf[pos++] = tolower(new_colour);
+        text->buffer[pos++] = tolower(new_colour);
       }
       cur_colour = new_colour;
     }
-    buf[pos++] = c;
-    if (pos + 11 > buf_len) {
-      /*
-       * If we somehow run out of room then we don't
-       * bother to reallocate 'buf' and potentially have
-       * a bunch of invalid pointers in 'lines' to fix up.
-       * We just restart from scratch with a bigger 'buf'.
-       */
-      buf_len *= 2;
-      free(buf);
-      buf = NULL;
-      return colourize_tac_map(sketch, dispcols, disprows);
-    }
+    text->buffer[pos++] = c;
+    assert(pos + 11 <= text->buffer_capacity);
   }
-  lines[line] = NULL;
-  return lines;
+  assert((size_t)line < text->line_capacity);
+  text->lines[line] = nullptr;
+  return true;
 }
 
 /*
@@ -1384,9 +1431,10 @@ static char **colourize_tac_map(char const *sketch, int dispcols,
  *
  */
 
-char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
-                   int wy, int labels, int dohexlos) {
-  int docolour = is_ansimap(btech_context_active()->database, player);
+MapText *map_text_create(DbRef player, MECH *mech, MAP *map, int cx, int cy,
+                         int wx, int wy, int labels, int dohexlos) {
+  MapColorScheme colors;
+  int docolour = is_ansimap(map->xcode.context->database, player);
   int dounderlying = labels & 64;
   int dispcols;
   int disprows;
@@ -1397,19 +1445,21 @@ char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
   int sx, sy;
   int i;
   char *base;
+  char *sketch_buf;
   int oddcol1;
   enum {
     MAX_WIDTH = 40,
     MAX_HEIGHT = 24,
     TOP_LABEL = 3,
     LEFT_LABEL = 4,
-    RIGHT_LABEL = 3
+    RIGHT_LABEL = 3,
+    MAP_SKETCH_CAPACITY = ((LEFT_LABEL + 1 + MAX_WIDTH * 3 + RIGHT_LABEL + 1) *
+                               (TOP_LABEL + 1 + MAX_HEIGHT * 2) +
+                           2) *
+                          5,
   };
-  static char sketch_buf[((LEFT_LABEL + 1 + MAX_WIDTH * 3 + RIGHT_LABEL + 1) *
-                              (TOP_LABEL + 1 + MAX_HEIGHT * 2) +
-                          2) *
-                         5];
-  static char *lines[(TOP_LABEL + 1 + MAX_HEIGHT * 2 + 1) * 5];
+
+  map_color_scheme_load(&colors, map->xcode.context, player);
 
   if (labels & 4) {
     navigate = 1;
@@ -1462,6 +1512,10 @@ char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
     }
   }
 
+  sketch_buf = calloc(MAP_SKETCH_CAPACITY, sizeof(*sketch_buf));
+  if (sketch_buf == nullptr)
+    return nullptr;
+
   /*
    * Create a sketch tac map including terrain and elevation.
    */
@@ -1504,10 +1558,10 @@ char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
         continue;
       }
 
-      snprintf(base, sizeof(sketch_buf) - row_offset, "%3d", label);
+      snprintf(base, MAP_SKETCH_CAPACITY - row_offset, "%3d", label);
       base[3] = ' ';
       snprintf(sketch_buf + right_label_offset,
-               sizeof(sketch_buf) - right_label_offset, "%3d", label);
+               MAP_SKETCH_CAPACITY - right_label_offset, "%3d", label);
     }
   }
 
@@ -1585,22 +1639,32 @@ char **MakeMapText(DbRef player, MECH *mech, MAP *map, int cx, int cy, int wx,
     sketch_buf[left_offset + n * 3 + 3] = '\0';
   }
 
+  size_t line_capacity = (size_t)disprows + 1;
+  size_t buffer_capacity = docolour ? (size_t)dispcols * (size_t)disprows * 8 +
+                                          (size_t)disprows * 4 + 11
+                                    : MAP_SKETCH_CAPACITY;
+  MapText *text = map_text_allocate(buffer_capacity, line_capacity);
+  if (text == nullptr) {
+    free(sketch_buf);
+    return nullptr;
+  }
+
   if (docolour) {
-    /*
-     * If using colour then colourize the sketch map and
-     * return the result.
-     */
-    return colourize_tac_map(sketch_buf, dispcols, disprows);
+    colourize_tac_map(text, &colors, sketch_buf, dispcols, disprows);
+    free(sketch_buf);
+    return text;
   }
 
   /*
    * If not using colour, the sketch map can be used as is.
    */
+  memcpy(text->buffer, sketch_buf, MAP_SKETCH_CAPACITY);
+  free(sketch_buf);
   for (i = 0; i < disprows; i++) {
-    lines[i] = sketch_buf + dispcols * i;
+    text->lines[i] = text->buffer + dispcols * i;
   }
-  lines[i] = NULL;
-  return lines;
+  text->lines[i] = nullptr;
+  return text;
 }
 
 /* Draws the map for the player when they use the
@@ -1615,22 +1679,25 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   MAP *mech_map;
   int displayHeight = MAP_DISPLAY_HEIGHT, displayWidth = MAP_DISPLAY_WIDTH;
   char *str;
-  char **maptext;
+  char *const *maptext;
+  MapText *map_text;
   int flags = 3, dohexlos = 0;
 
   /* Basic checks for pilot and mech */
   cch(MECH_USUAL);
+  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
   /* Get the map info */
-  mech_map = getMap(mech->mapindex);
+  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
 
   /* Various checks for conditions and system of mech */
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK(!MechTacRange(mech), "Your system seems to be inoperational.");
+  DOCHECK_CONTEXT(mech->xcode.context, !MechTacRange(mech),
+                  "Your system seems to be inoperational.");
 
   if (MapIsDark(mech_map) ||
       (MechType(mech) == CLASS_MW &&
-       btech_context_active()->configuration->btech_mw_losmap))
+       mech->xcode.context->configuration->btech_mw_losmap))
     dohexlos = 1;
 
   /* Check to see which type of tactical to display
@@ -1663,7 +1730,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       break;
 
     default:
-      notify(BTECH_EVALUATION_CONTEXT, player, "Invalid tactical map flag.");
+      notify(evaluation, player, "Invalid tactical map flag.");
       return;
     }
 
@@ -1671,7 +1738,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     argc--;
   }
 
-  DOCHECK(dohexlos && (flags & (8 | 16 | 32)), "You can't see that much here!");
+  DOCHECK_CONTEXT(mech->xcode.context, dohexlos && (flags & (8 | 16 | 32)),
+                  "You can't see that much here!");
 
   if (!parse_tacargs(player, mech, args, argc, MechTacRange(mech), &x, &y))
     return;
@@ -1680,7 +1748,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
    * the player, if doesn't exist set the height and width to
    * default params. If it does exist, check the values and
    * make sure they are legit. */
-  str = silly_atr_get(player, A_TACSIZE);
+  str = btech_attribute_read(mech->xcode.context->database, player, A_TACSIZE,
+                             (char[LBUF_SIZE]){0});
   if (!*str) {
     displayHeight = MAP_DISPLAY_HEIGHT;
     displayWidth = MAP_DISPLAY_WIDTH;
@@ -1688,7 +1757,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
              displayHeight > 24 || displayHeight < 5 || displayWidth > 40 ||
              displayWidth < 5) {
 
-    notify(BTECH_EVALUATION_CONTEXT, player,
+    notify(evaluation, player,
            "Illegal Tacsize attribute. Must be in format "
            "'Height Width' . Height : 5-24 Width : 5-40");
     displayHeight = MAP_DISPLAY_HEIGHT;
@@ -1710,22 +1779,27 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   displayWidth = (displayWidth <= mech_map->map_width) ? displayWidth
                                                        : mech_map->map_width;
 
-  set_colorscheme(player);
-
   /* Get the data to draw the map */
-  maptext = MakeMapText(player, mech, mech_map, x, y, displayWidth,
-                        displayHeight, flags, dohexlos);
+  map_text = map_text_create(player, mech, mech_map, x, y, displayWidth,
+                             displayHeight, flags, dohexlos);
+  if (map_text == nullptr) {
+    notify(evaluation, player, "Unable to render the tactical map.");
+    return;
+  }
+  maptext = map_text_lines(map_text);
 
   /* Draw the map for the player */
   for (i = 0; maptext[i]; i++)
-    notify(BTECH_EVALUATION_CONTEXT, player, maptext[i]);
+    notify(evaluation, player, maptext[i]);
+  map_text_destroy(map_text);
 }
 
 /* XXX Fix 'enterbase <dir>' */
 static void mech_enter_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data, *tmpm = NULL;
   mapobj *mapo;
-  MAP *map = getMap(mech->mapindex), *newmap;
+  MAP *map = btech_context_get_map(mech->xcode.context, mech->mapindex),
+      *newmap;
   long target = (long)e->data2;
   int x, y;
   int obj_x, obj_y;
@@ -1739,49 +1813,61 @@ static void mech_enter_event(MuxEvent *e) {
        fabs(MMaxSpeed(mech)) >= MP1) ||
       (MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0))
     return;
-  if (!(newmap = getMap(mapo->obj)))
+  if (!(newmap = btech_context_get_map(mech->xcode.context, mapo->obj)))
     return;
   if (!find_entrance(newmap, target, &x, &y))
     return;
 
-  if (!can_pass_lock(mech->mynum, newmap->mynum, A_LENTER) &&
+  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
+                               mech->mynum, newmap->mynum, A_LENTER) &&
       (BuildIsSafe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
-    char *msg = silly_atr_get(newmap->mynum, A_FAIL);
+    char *msg =
+        btech_attribute_read(newmap->xcode.context->database, newmap->mynum,
+                             A_FAIL, (char[LBUF_SIZE]){0});
     if (!msg || !*msg)
       msg = "The hangar is locked.";
     mech_notify(mech, MECHALL, msg);
     return;
   }
 
-  StopBSuitSwarmers(FindObjectsData(mech->mapindex), mech, 1);
-  mech_printf(mech, MECHALL, "You enter %s.", structure_name(mapo));
-  MechLOSBroadcast(mech,
-                   tprintf("has entered %s at %d,%d.", structure_name(mapo),
-                           MechX(mech), MechY(mech)));
+  StopBSuitSwarmers(
+      btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
+  mech_printf(mech, MECHALL, "You enter %s.",
+              structure_name(mech->xcode.context->database, mapo).text);
+  MechLOSBroadcast(
+      mech, tprintf("has entered %s at %d,%d.",
+                    structure_name(mech->xcode.context->database, mapo).text,
+                    MechX(mech), MechY(mech)));
   MarkForLOSUpdate(mech);
   if (MechType(mech) == CLASS_MW &&
-      !is_in_character(btech_context_active()->database, mapo->obj)) {
+      !is_in_character(mech->xcode.context->database, mapo->obj)) {
     enter_mw_bay(mech, mapo->obj);
     return;
   }
   if (MechCarrying(mech) > 0)
-    tmpm = getMech(MechCarrying(mech));
+    tmpm = btech_context_get_mech(mech->xcode.context, MechCarrying(mech));
   obj_x = MechX(mech);
   obj_y = MechY(mech);
   mech_Rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)mapo->obj));
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  MechLOSBroadcast(mech, tprintf("has entered %s at %d,%d.",
-                                 structure_name(mapo), obj_x, obj_y));
+  MechLOSBroadcast(
+      mech, tprintf("has entered %s at %d,%d.",
+                    structure_name(mech->xcode.context->database, mapo).text,
+                    obj_x, obj_y));
   if (tmpm)
-    MechLOSBroadcast(tmpm, tprintf("has entered %s at %d,%d.",
-                                   structure_name(mapo), obj_x, obj_y));
-  loud_teleport(mech->mynum, mapo->obj);
+    MechLOSBroadcast(
+        tmpm, tprintf("has entered %s at %d,%d.",
+                      structure_name(mech->xcode.context->database, mapo).text,
+                      obj_x, obj_y));
+  move_via_teleport(btech_context_evaluation(mech->xcode.context), mech->mynum,
+                    mapo->obj, 1, 0);
   if (tmpm) {
     mech_Rsetmapindex(GOD, (void *)tmpm, tprintf("%d", (int)mapo->obj));
     mech_Rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
-    loud_teleport(tmpm->mynum, mapo->obj);
+    move_via_teleport(btech_context_evaluation(mech->xcode.context),
+                      tmpm->mynum, mapo->obj, 1, 0);
   }
-  auto_cal_mapindex(mech);
+  auto_cal_mapindex(mech->xcode.context, mech);
 }
 
 void mech_enterbase(DbRef player, void *data, char *buffer) {
@@ -1796,60 +1882,74 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   char fail_mesg[SBUF_SIZE];
 
   argc = mech_parseattributes(buffer, args, 2);
-  DOCHECK(argc > 1, "Invalid arguments to command!");
+  DOCHECK_CONTEXT(mech->xcode.context, argc > 1,
+                  "Invalid arguments to command!");
   tmpc = args[0];
   if (argc > 0 && *tmpc && !(*(tmpc + 1)))
     target = tolower(*tmpc);
   else
     target = 0;
   cch(MECH_USUAL);
-  map = getMap(mech->mapindex);
+  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   /* For now, no dir checks */
-  DOCHECK(Jumping(mech), "While in mid-jump? No way.");
-  DOCHECK(MechType(mech) == CLASS_MECH && (Fallen(mech) || Standing(mech)),
-          "Crawl inside? I think not. Stand first.");
-  DOCHECK(OODing(mech), "While in mid-flight? No way.");
-  DOCHECK(MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0,
-          "You lack fuel to maneuver in!");
-  DOCHECK(FlyingT(mech) && !Landed(mech),
-          "You need to land before you can enter the hangar.");
-  DOCHECK(IsDS(mech),
-          "Heh, you're trying to be funny, right, a DropShip entering hangar?");
-  DOCHECK(fabs(MechSpeed(mech)) * 5 >= MMaxSpeed(mech) &&
-              fabs(MMaxSpeed(mech)) >= MP1,
-          "You are moving too fast to enter the hangar!");
-  DOCHECK(!(mapo = find_entrance_by_xy(map, MechX(mech), MechY(mech))),
-          "You see nothing to enter here!");
+  DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
+                  "While in mid-jump? No way.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_MECH &&
+                      (Fallen(mech) || Standing(mech)),
+                  "Crawl inside? I think not. Stand first.");
+  DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
+                  "While in mid-flight? No way.");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0,
+                  "You lack fuel to maneuver in!");
+  DOCHECK_CONTEXT(mech->xcode.context, FlyingT(mech) && !Landed(mech),
+                  "You need to land before you can enter the hangar.");
+  DOCHECK_CONTEXT(
+      mech->xcode.context, IsDS(mech),
+      "Heh, you're trying to be funny, right, a DropShip entering hangar?");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  fabs(MechSpeed(mech)) * 5 >= MMaxSpeed(mech) &&
+                      fabs(MMaxSpeed(mech)) >= MP1,
+                  "You are moving too fast to enter the hangar!");
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !(mapo = find_entrance_by_xy(map, MechX(mech), MechY(mech))),
+                  "You see nothing to enter here!");
   /* Wow, *gasp*, we got something to enter */
-  if (!(newmap = FindObjectsData(mapo->obj))) {
+  if (!(newmap = btech_context_find_object(mech->xcode.context, mapo->obj))) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     SendError(
+        mech->xcode.context,
         tprintf("Error: No map existing for mapindex #%d (@ %d,%d of #%ld)",
                 (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
     return;
   }
   if (!find_entrance(newmap, target, &x, &y)) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
-    SendError(tprintf(
-        "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
-        (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
+    SendError(
+        mech->xcode.context,
+        tprintf(
+            "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
+            (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
     return;
   }
 
-  if (!can_pass_lock(mech->mynum, newmap->mynum, A_LENTER) &&
+  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
+                               mech->mynum, newmap->mynum, A_LENTER) &&
       (BuildIsSafe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
 
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     snprintf(fail_mesg, SBUF_SIZE, "The hangar is locked.");
 
-    did_it(BTECH_EVALUATION_CONTEXT, player, newmap->mynum, A_FAIL, fail_mesg,
-           0, NULL, A_AFAIL, (char **)NULL, 0);
+    did_it(btech_context_evaluation(mech->xcode.context), player, newmap->mynum,
+           A_FAIL, fail_mesg, 0, NULL, A_AFAIL, (char **)NULL, 0);
 
     return;
   }
 
-  DOCHECK(EnteringHangar(mech), "You are already entering the hangar!");
+  DOCHECK_CONTEXT(mech->xcode.context, EnteringHangar(mech),
+                  "You are already entering the hangar!");
   /* XXX Check for other mechs in the hex possibly doing this as well (ick) */
   HexLOSBroadcast(map, MechX(mech), MechY(mech),
                   "The doors at $h start to open..");
