@@ -2047,7 +2047,6 @@ int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
 
 void toast_player(EvaluationContext *evaluation, DbRef player) {
   comsys_clear_player(evaluation, player);
-  do_channelnuke(evaluation, player);
   del_commac(evaluation->runtime->channels, player);
   do_clear_macro(&evaluation->command->match, evaluation->runtime->macros,
                  player, nullptr);

@@ -30,9 +30,7 @@ static const char commac_schema_sql[] =
     " channel_name TEXT NOT NULL, PRIMARY KEY (who, position)"
     ") WITHOUT ROWID;"
     "CREATE TABLE comsys_channels ("
-    " name TEXT PRIMARY KEY, type INTEGER NOT NULL, temp1 INTEGER NOT NULL,"
-    " temp2 INTEGER NOT NULL, charge INTEGER NOT NULL,"
-    " charge_who INTEGER NOT NULL, amount_col INTEGER NOT NULL,"
+    " name TEXT PRIMARY KEY, type INTEGER NOT NULL,"
     " num_messages INTEGER NOT NULL, chan_obj INTEGER NOT NULL"
     ") WITHOUT ROWID;"
     "CREATE TABLE comsys_channel_users ("
@@ -177,8 +175,7 @@ static int commac_store_comsys(sqlite3 *sqlite,
   if (sqlite3_prepare_v2(
           sqlite,
           "INSERT INTO comsys_channels "
-          "(name, type, temp1, temp2, charge, charge_who, amount_col, "
-          "num_messages, chan_obj) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+          "(name, type, num_messages, chan_obj) VALUES (?, ?, ?, ?);",
           -1, &channel, nullptr) == SQLITE_OK &&
       sqlite3_prepare_v2(sqlite,
                          "INSERT INTO comsys_channel_users "
@@ -198,13 +195,8 @@ static int commac_store_comsys(sqlite3 *sqlite,
              &context->channels->channels)) {
       if (commac_sqlite_bind_text(channel, 1, current->name) < 0 ||
           commac_sqlite_bind_int(channel, 2, current->type) < 0 ||
-          commac_sqlite_bind_int(channel, 3, current->temp1) < 0 ||
-          commac_sqlite_bind_int(channel, 4, current->temp2) < 0 ||
-          commac_sqlite_bind_int(channel, 5, current->charge) < 0 ||
-          commac_sqlite_bind_int(channel, 6, current->charge_who) < 0 ||
-          commac_sqlite_bind_int(channel, 7, current->amount_col) < 0 ||
-          commac_sqlite_bind_int(channel, 8, current->num_messages) < 0 ||
-          commac_sqlite_bind_int(channel, 9, current->chan_obj) < 0 ||
+          commac_sqlite_bind_int(channel, 3, current->num_messages) < 0 ||
+          commac_sqlite_bind_int(channel, 4, current->chan_obj) < 0 ||
           commac_sqlite_step(channel) < 0) {
         result = -1;
         break;
@@ -446,8 +438,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
 
   context->channels->count = 0;
   if (sqlite3_prepare_v2(sqlite,
-                         "SELECT name, type, temp1, temp2, charge, charge_who, "
-                         "amount_col, num_messages, chan_obj "
+                         "SELECT name, type, num_messages, chan_obj "
                          "FROM comsys_channels ORDER BY name;",
                          -1, &statement, nullptr) == SQLITE_OK) {
     result = 0;
@@ -465,28 +456,8 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
       if (commac_column_int(statement, 2, &value) < 0)
         result = -1;
       else
-        channel->temp1 = (int)value;
-      if (commac_column_int(statement, 3, &value) < 0)
-        result = -1;
-      else
-        channel->temp2 = (int)value;
-      if (commac_column_int(statement, 4, &value) < 0)
-        result = -1;
-      else
-        channel->charge = (int)value;
-      if (commac_column_int(statement, 5, &value) < 0)
-        result = -1;
-      else
-        channel->charge_who = (int)value;
-      if (commac_column_int(statement, 6, &value) < 0)
-        result = -1;
-      else
-        channel->amount_col = (int)value;
-      if (commac_column_int(statement, 7, &value) < 0)
-        result = -1;
-      else
         channel->num_messages = (int)value;
-      if (commac_column_int(statement, 8, &value) < 0)
+      if (commac_column_int(statement, 3, &value) < 0)
         result = -1;
       else
         channel->chan_obj = (int)value;

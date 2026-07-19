@@ -44,6 +44,11 @@ static int help_index_test_find_by_path(const HelpIndex *index,
 }
 
 int main(int argc, char *argv[]) {
+  static const char *const chan_keywords[] = {
+      "@chan/boot",  "@chan/create", "@chan/destroy", "@chan/emit",
+      "@chan/list",  "@chan/object", "@chan/oflags",  "@chan/pflags",
+      "@chan/flags", "@chan/status", "@chan/who",
+  };
   const HelpArticle *article;
   const HelpArticle *wizards_article;
   const HelpArticle *default_article;
@@ -75,13 +80,13 @@ int main(int argc, char *argv[]) {
   article = help_index_find_exact(index, "wizards", false);
   if (article) {
     fprintf(stderr,
-           "expected 'wizards' keyword to be hidden from a non-wizard\n");
+            "expected 'wizards' keyword to be hidden from a non-wizard\n");
     return 4;
   }
   article = help_index_find_exact(index, "wizards", true);
   if (!article || strcmp(article->relative_path, "wizards.md")) {
     fprintf(stderr, "expected 'wizards' keyword to resolve to wizards.md "
-                   "for a wizard\n");
+                    "for a wizard\n");
     return 4;
   }
 
@@ -95,35 +100,69 @@ int main(int argc, char *argv[]) {
     return 6;
   }
 
+  article = help_index_find_exact(index, "@chan", false);
+  if (article) {
+    fprintf(stderr, "expected '@chan' help to be hidden from a non-wizard\n");
+    return 7;
+  }
+  article = help_index_find_exact(index, "@chan", true);
+  if (!article || strcmp(article->relative_path, "wizard_commands/chan.md") ||
+      article->show_index_for_article_tags.count != 1 ||
+      strcmp(article->show_index_for_article_tags.items[0], "chan_switches")) {
+    fprintf(stderr, "expected '@chan' to resolve to its switch index\n");
+    return 7;
+  }
+
+  for (size_t i = 0; i < sizeof(chan_keywords) / sizeof(chan_keywords[0]);
+       i++) {
+    article = help_index_find_exact(index, chan_keywords[i], false);
+    if (article) {
+      fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
+              chan_keywords[i]);
+      return 8;
+    }
+    article = help_index_find_exact(index, chan_keywords[i], true);
+    if (!article || !article->wizard_only || article->article_tags.count != 1 ||
+        strcmp(article->article_tags.items[0], "chan_switches")) {
+      fprintf(stderr, "expected '%s' to resolve to a @chan switch article\n",
+              chan_keywords[i]);
+      return 8;
+    }
+  }
+  if (help_index_find_exact(index, "@chan/chown", true)) {
+    fprintf(stderr, "expected removed '@chan/chown' help to be absent\n");
+    return 8;
+  }
+
   /* Nested article, reachable via its own keyword. */
   article = help_index_find_exact(index, "another", false);
   if (!article || strcmp(article->relative_path, "subdir/another_article.md")) {
     fprintf(stderr, "expected 'another' keyword to resolve to "
-                   "subdir/another_article.md\n");
-    return 7;
+                    "subdir/another_article.md\n");
+    return 9;
   }
   if (article->article_tags.count != 1 ||
       strcmp(article->article_tags.items[0], "subdir")) {
     fprintf(stderr, "expected subdir/another_article.md to be tagged "
-                   "'subdir'\n");
-    return 8;
+                    "'subdir'\n");
+    return 10;
   }
 
   /* index.md is the default article. */
   default_article = help_index_default_article(index);
   if (!default_article || strcmp(default_article->relative_path, "index.md")) {
     fprintf(stderr, "expected index.md to be the default article\n");
-    return 9;
+    return 11;
   }
 
   second_index = help_index_create(nullptr, nullptr, argv[1], NOTHING);
   if (second_index == nullptr)
-    return 10;
+    return 12;
   help_index_destroy(index);
   article = help_index_find_exact(second_index, "about", false);
   if (!article || strcmp(article->relative_path, "about.md")) {
     fprintf(stderr, "destroying one help index changed another instance\n");
-    return 10;
+    return 12;
   }
   help_index_destroy(second_index);
   return 0;

@@ -72,8 +72,7 @@ void fun_cobj(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   if (!context->world->configuration->have_comsys ||
-      (!is_comm_all(context->world->database, player) &&
-       (player != ch->charge_who))) {
+      !is_comm_all(context->world->database, player)) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -98,8 +97,7 @@ void fun_cwho(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
     return;
   }
   if (!context->world->configuration->have_comsys ||
-      (!is_comm_all(context->world->database, player) &&
-       (player != ch->charge_who))) {
+      !is_comm_all(context->world->database, player)) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }
@@ -134,8 +132,7 @@ void fun_clist(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   if (!context->world->configuration->have_comsys ||
-      (!is_comm_all(context->world->database, player) &&
-       (player != ch->charge_who))) {
+      !is_comm_all(context->world->database, player)) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }

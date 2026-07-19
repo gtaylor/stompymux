@@ -336,6 +336,11 @@ static int check_snapshot(const char *path) {
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info("
                 "'comsys_channel_users') WHERE name = 'title';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'comsys_channels') WHERE name IN "
+                "('temp1', 'temp2', 'charge', 'charge_who', 'amount_col');",
                 0) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
@@ -431,7 +436,7 @@ static int seed_commac_snapshot(const char *path) {
                    sqlite,
                    "INSERT INTO commac_entries VALUES (1, 0, 0, -1, -1, -1, -1);"
                    "INSERT INTO commac_aliases VALUES (1, 0, 'test', 'Public');"
-                   "INSERT INTO comsys_channels VALUES ('Public', 0, 0, 0, 0, 0, 0, 0, 0);"
+                   "INSERT INTO comsys_channels VALUES ('Public', 0, 0, 0);"
                    "INSERT INTO comsys_channel_users VALUES ('Public', 0, 1, 1);"
                    "INSERT INTO comsys_channel_messages VALUES ('Public', 0, 123, 'test message');"
                    "INSERT INTO macro_sets VALUES (0, 1, 0, 'Test macros');"

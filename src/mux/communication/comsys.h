@@ -15,6 +15,26 @@
 
 typedef struct CommandInvocation CommandInvocation;
 
+typedef enum {
+  CHAN_BOOT = 1 << 0,
+  CHAN_OBJECT = 1 << 1,
+  CHAN_CREATE = 1 << 2,
+  CHAN_DESTROY = 1 << 3,
+  CHAN_EMIT = 1 << 4,
+  CHAN_LIST = 1 << 5,
+  CHAN_OFLAGS = 1 << 6,
+  CHAN_PFLAGS = 1 << 7,
+  CHAN_FLAGS = 1 << 8,
+  CHAN_STATUS = 1 << 9,
+  CHAN_WHO = 1 << 10,
+  CHAN_FULL = 1 << 11,
+  CHAN_NOHEADER = 1 << 12,
+} ChannelCommandKey;
+
+constexpr int CHAN_OPERATION_MASK =
+    CHAN_BOOT | CHAN_OBJECT | CHAN_CREATE | CHAN_DESTROY | CHAN_EMIT |
+    CHAN_LIST | CHAN_OFLAGS | CHAN_PFLAGS | CHAN_FLAGS | CHAN_STATUS | CHAN_WHO;
+
 typedef struct chanentry CHANENT;
 struct chanentry {
   char *channame;
@@ -31,11 +51,6 @@ struct comuser {
 struct channel {
   char name[CHAN_NAME_LEN];
   int type;
-  int temp1;
-  int temp2;
-  int charge;
-  int charge_who;
-  int amount_col;
   int num_users;
   int max_users;
   int chan_obj;
@@ -63,20 +78,21 @@ void do_addcom(CommandInvocation *invocation);
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *alias,
                       char *channel);
 void do_delcom(CommandInvocation *invocation);
+void do_chan(CommandInvocation *invocation);
 void do_createchannel(CommandInvocation *invocation);
 void do_destroychannel(CommandInvocation *invocation);
 void do_comlist(CommandInvocation *invocation);
-void do_channelnuke(EvaluationContext *evaluation, DbRef player);
 void do_clearcom(CommandInvocation *invocation);
 void comsys_clear_player(EvaluationContext *evaluation, DbRef player);
 void do_allcom(CommandInvocation *invocation);
 void do_channelwho(CommandInvocation *invocation);
 void do_comdisconnect(EvaluationContext *evaluation, DbRef player);
 void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d);
-void do_editchannel(CommandInvocation *invocation);
+void do_channel_membership_flags(CommandInvocation *invocation);
+void do_channel_object(CommandInvocation *invocation);
+void do_channel_flags(CommandInvocation *invocation);
 int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd);
 void do_cemit(CommandInvocation *invocation);
-void do_chopen(CommandInvocation *invocation);
 void do_chboot(CommandInvocation *invocation);
 void do_chanstatus(CommandInvocation *invocation);
 void do_chanlist(CommandInvocation *invocation);

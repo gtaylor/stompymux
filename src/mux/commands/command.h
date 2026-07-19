@@ -21,23 +21,15 @@ void set_prefix_cmds(CommandRegistry *registry);
 
 /* from comsys.c */
 
-void do_cemit(CommandInvocation *invocation);          /* channel emit */
-void do_chboot(CommandInvocation *invocation);         /* channel boot */
-void do_editchannel(CommandInvocation *invocation);    /* edit a channel */
-void do_checkchannel(DbRef, DbRef, int, char *);       /* check a channel */
-void do_createchannel(CommandInvocation *invocation);  /* create a channel */
-void do_destroychannel(CommandInvocation *invocation); /* destroy a channel */
-void do_edituser(DbRef, DbRef, int, char *, char *);   /* edit a channel user */
-void do_chanlist(CommandInvocation *invocation);       /* channel listing */
-void do_chanstatus(CommandInvocation *invocation);     /* channel status */
-void do_chopen(CommandInvocation *invocation);         /* opens a channel */
-void do_channelwho(CommandInvocation *invocation);     /* who's on a channel */
-void do_addcom(CommandInvocation *invocation);         /* adds a comalias */
-void do_allcom(CommandInvocation *invocation);         /* operates on aliases */
-void do_comlist(CommandInvocation *invocation);    /* channel who by alias */
-void do_clearcom(CommandInvocation *invocation);   /* clears aliases */
-void do_delcom(CommandInvocation *invocation);     /* deletes a comalias */
-void do_tapcom(DbRef, DbRef, int, char *, char *); /* taps a channel */
+void do_chan(CommandInvocation *invocation);         /* administer channels */
+void do_checkchannel(DbRef, DbRef, int, char *);     /* check a channel */
+void do_edituser(DbRef, DbRef, int, char *, char *); /* edit a channel user */
+void do_addcom(CommandInvocation *invocation);       /* adds a comalias */
+void do_allcom(CommandInvocation *invocation);       /* operates on aliases */
+void do_comlist(CommandInvocation *invocation);      /* channel who by alias */
+void do_clearcom(CommandInvocation *invocation);     /* clears aliases */
+void do_delcom(CommandInvocation *invocation);       /* deletes a comalias */
+void do_tapcom(DbRef, DbRef, int, char *, char *);   /* taps a channel */
 
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
 void do_alias(CommandInvocation *invocation);
