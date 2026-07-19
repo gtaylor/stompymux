@@ -17,10 +17,10 @@ RUN case "$(uname -m)" in \
     *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
     esac \
     && CMAKE_ARCHIVE="cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" \
-    && curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
+    && curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
     "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${CMAKE_ARCHIVE}" \
     --output "/tmp/${CMAKE_ARCHIVE}" \
-    && curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
+    && curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
     "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-SHA-256.txt" \
     --output /tmp/cmake-SHA-256.txt \
     && grep " ${CMAKE_ARCHIVE}$" /tmp/cmake-SHA-256.txt > /tmp/cmake-archive.sha256 \
