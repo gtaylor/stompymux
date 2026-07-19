@@ -1,9 +1,16 @@
-# Battletech License Information
+# StompyMUX License
 
-WizKids LLC has sole ownership of the names, logo, characters, artwork, 
-marks, photographs, sounds, audio, video and/or any proprietary 
-material used in connection with the game BattleTech. WizKids, LLC has 
-granted permission to StompyMUX to use such names, logos, characters, 
+StompyMUX is derived from BattletechMUX and 3030MUX before it.
+While StompyMUX has diverged significantly from its roots, we've built
+on top of decades of contributions by many generous authors. We also
+carry forward the license from 3030MUX, which you'll find below.
+
+## Battletech License Information
+
+Catalyst Game Labs has sole ownership of the names, logo, characters, 
+artwork, marks, photographs, sounds, audio, video and/or any proprietary 
+material used in connection with the game BattleTech. Catalyst Game Labs
+has granted permission to StompyMUX to use such names, logos, characters, 
 artwork, marks and/or any written materials for promotional and 
 informational purposes but does not endorse, and is not affiliated with, 
 StompyMUX in any official capacity whatsoever.

@@ -1,4 +1,4 @@
 ---
 title: Introduction
-description: Redirects to the BattleTechMUX introduction.
+description: Redirects to the StompyMUX introduction.
 ---
