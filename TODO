@@ -2,6 +2,7 @@
 
 ## MUX Todos in the /src/ dir
 
+* Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua
 * Make integration tests not conflict with running games
