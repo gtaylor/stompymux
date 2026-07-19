@@ -34,7 +34,7 @@ static int lua_mux_attr_get(lua_State *state) {
   long flags;
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.attr_get is unavailable during @luacheck");
+    return luaL_error(state, "mux.attr_get is unavailable during @lua/check");
   if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
   attribute = attribute_by_name(package->services->database, name);
@@ -61,7 +61,7 @@ static int lua_mux_attr_set(lua_State *state) {
   int attribute;
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.attr_set is unavailable during @luacheck");
+    return luaL_error(state, "mux.attr_set is unavailable during @lua/check");
   if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
   snprintf(attribute_name, sizeof(attribute_name), "%s", name);
@@ -69,7 +69,7 @@ static int lua_mux_attr_set(lua_State *state) {
   if (attribute < 0)
     return luaL_error(state, "invalid attribute");
   if (attribute == A_LUAPARENT)
-    return luaL_error(state, "use @luaparent to change Luaparent");
+    return luaL_error(state, "use @lua/parent to change Luaparent");
   /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
      only read (copied) here, never mutated. */
 #pragma clang diagnostic push
@@ -86,7 +86,7 @@ static int lua_mux_notify(lua_State *state) {
   const char *message = luaL_checkstring(state, 2);
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.notify is unavailable during @luacheck");
+    return luaL_error(state, "mux.notify is unavailable during @lua/check");
   if (!is_good_obj(package->services->database, object))
     return luaL_error(state, "invalid object");
   notify(&package->services->background_command->evaluation, object, message);
@@ -98,7 +98,7 @@ static int lua_mux_command(lua_State *state) {
   const char *command = luaL_checkstring(state, 1);
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.command is unavailable during @luacheck");
+    return luaL_error(state, "mux.command is unavailable during @lua/check");
   /* wait_que()'s command parameter isn't const-correct; command is only
      read here, never mutated. */
 #pragma clang diagnostic push
@@ -168,7 +168,7 @@ static int lua_mux_flow_start(lua_State *state) {
   const char *first_step = luaL_checkstring(state, 3);
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.flow_start is unavailable during @luacheck");
+    return luaL_error(state, "mux.flow_start is unavailable during @lua/check");
   if (!package->flow_start)
     return luaL_error(state, "mux.flow_start is unavailable");
   return package->flow_start(package->context, state, descriptor_id, module,

@@ -609,7 +609,7 @@ static void do_delcomchannel(EvaluationContext *evaluation, DbRef player,
 }
 
 static void chan_show_switches(EvaluationContext *evaluation, DbRef player) {
-  raw_notify(evaluation, player, "@chan switches:");
+  raw_notify(evaluation, player, "@chan command switches:");
   raw_notify(evaluation, player, "  /boot     Remove a member from a channel.");
   raw_notify(evaluation, player, "  /create   Create a channel.");
   raw_notify(evaluation, player, "  /destroy  Destroy a channel.");

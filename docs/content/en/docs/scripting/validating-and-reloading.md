@@ -12,10 +12,10 @@ You can validate and reload your game's Lua files from within the game without a
 To check your Lua scripts for validity, run the following from in-game with a Wizard character:
 
 ```text
-@luacheck
+@lua/check
 ```
 
-`@luacheck` recursively verifies every `.lua` file below
+`@lua/check` recursively verifies every `.lua` file below
 `game/lua/object_logic`, `game/lua/global_logic`, and
 `game/lua/packages`. It checks module syntax, top-level imports, and the
 module return contract, including cron schedules. Global logic modules must
@@ -31,12 +31,12 @@ move any `mux` calls into a handler or event function before checking it.
 
 ## Reloading Lua at runtime
 
-Use `@luareload` after a successful check to atomically put changed attached
+Use `@lua/reload` after a successful check to atomically put changed attached
 and global logic modules into service.
 
 ## Inspecting schedules
 
-Wizards can use `@luaschedule` to list scheduled object modules with their
+Wizards can use `@lua/schedule` to list scheduled object modules with their
 effective-object counts and scheduled global logic modules. Pass an object to
 show its effective Lua parent, a relative `object_logic` path to show its
 schedules and inheriting objects, or `global_logic/<path>.lua` to inspect one

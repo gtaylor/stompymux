@@ -1,4 +1,4 @@
-/* help_command.c - `help` and `@helpreload` command handlers. */
+/* help_command.c - `help` and `@help` command handlers. */
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
@@ -96,7 +96,26 @@ void do_help(CommandInvocation *invocation) {
                                 message, viewer_is_wizard);
 }
 
-void do_helpreload(CommandInvocation *invocation) {
+static void do_help_reload(CommandInvocation *invocation) {
   help_index_reload(&invocation->context->evaluation,
                     invocation->context->runtime->help, invocation->player);
+}
+
+void do_help_admin(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+
+  switch (invocation->key) {
+  case 0:
+    raw_notify(evaluation, invocation->player, "@help command switches:");
+    raw_notify(evaluation, invocation->player,
+               "  /reload  Rebuild the help index.");
+    return;
+  case HELP_COMMAND_RELOAD:
+    do_help_reload(invocation);
+    return;
+  default:
+    raw_notify(evaluation, invocation->player,
+               "Invalid @help switch combination.");
+    return;
+  }
 }

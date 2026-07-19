@@ -14,6 +14,13 @@ typedef struct CommandRegistry CommandRegistry;
 typedef struct ConfigurationContext ConfigurationContext;
 typedef struct ServerConfiguration ServerConfiguration;
 
+typedef enum {
+  LUA_COMMAND_CHECK = 1 << 0,
+  LUA_COMMAND_PARENT = 1 << 1,
+  LUA_COMMAND_RELOAD = 1 << 2,
+  LUA_COMMAND_SCHEDULE = 1 << 3,
+} LuaCommandKey;
+
 int check_access(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef player,
                  int mask);
@@ -65,17 +72,14 @@ void list_global_controls(EvaluationContext *evaluation,
                           ServerConfiguration *configuration, DbRef player);
 void do_halt(CommandInvocation *invocation); /* Remove commands from queue */
 void do_help(CommandInvocation *invocation); /* Print info from help files */
-void do_helpreload(CommandInvocation *invocation); /* Reindex help articles */
+void do_help_admin(CommandInvocation *invocation); /* Administer help index */
 void do_history(DbRef, DbRef, int, char *); /* View various history info */
 void do_multis(DbRef, DbRef, int);
 void do_inventory(CommandInvocation *invocation); /* Print carried objects. */
 void do_last(CommandInvocation *invocation);      /* Get recent login info */
 void do_leave(CommandInvocation *invocation);     /* Leave the current object */
 void do_link(CommandInvocation *invocation);
-void do_luaparent(CommandInvocation *invocation);
-void do_luacheck(CommandInvocation *invocation);
-void do_luareload(CommandInvocation *invocation);
-void do_luaschedule(CommandInvocation *invocation);
+void do_lua(CommandInvocation *invocation);
 void do_list(CommandInvocation *invocation); /* List internal tables. */
 void do_list_file(CommandInvocation *invocation);
 void do_lock(CommandInvocation *invocation); /* Set a lock on an object */

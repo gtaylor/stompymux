@@ -7,11 +7,11 @@ weight: 20
 
 Global Lua logic modules live under `game/lua/global_logic`. Every
 `.lua` file in that tree is discovered recursively during startup and
-`@luareload`. Files are loaded in lexical relative-path order, so use
+`@lua/reload`. Files are loaded in lexical relative-path order, so use
 domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
 `wizard/maintenance.lua`. Use numeric prefixes only when deliberate
 cross-domain priority is necessary.
-Use [`@luacheck`](validating-and-reloading/) to validate every Lua module before reloading.
+Use [`@lua/check`](validating-and-reloading/) to validate every Lua module before reloading.
 
 Each global module returns a table containing `commands`:
 

@@ -115,7 +115,7 @@ Only string and number values round-trip; anything else assigned to
 `ctx.flow` (a table, a function, a boolean) is dropped with a logged warning.
 This is a deliberate trade-off: `ctx.flow` is backed by a small store of plain
 values on the descriptor, not a reference into the Lua state, specifically so
-a flow survives `@luareload` rebuilding the entire state out from under it. A
+a flow survives `@lua/reload` rebuilding the entire state out from under it. A
 step that no longer exists after a reload still fails the same way any other
 removed API would.
 

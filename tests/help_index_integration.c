@@ -49,6 +49,18 @@ int main(int argc, char *argv[]) {
       "@chan/list",  "@chan/object", "@chan/oflags",  "@chan/pflags",
       "@chan/flags", "@chan/status", "@chan/who",
   };
+  static const char *const lua_keywords[] = {
+      "@lua/check",
+      "@lua/parent",
+      "@lua/reload",
+      "@lua/schedule",
+  };
+  static const char *const removed_lua_keywords[] = {
+      "@luacheck",
+      "@luaparent",
+      "@luareload",
+      "@luaschedule",
+  };
   const HelpArticle *article;
   const HelpArticle *wizards_article;
   const HelpArticle *default_article;
@@ -132,6 +144,72 @@ int main(int argc, char *argv[]) {
   if (help_index_find_exact(index, "@chan/chown", true)) {
     fprintf(stderr, "expected removed '@chan/chown' help to be absent\n");
     return 8;
+  }
+
+  article = help_index_find_exact(index, "@help", false);
+  if (article) {
+    fprintf(stderr, "expected '@help' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@help", true);
+  if (!article || strcmp(article->relative_path, "wizard_commands/help.md") ||
+      article->show_index_for_article_tags.count != 1 ||
+      strcmp(article->show_index_for_article_tags.items[0], "help_switches")) {
+    fprintf(stderr, "expected '@help' to resolve to its switch index\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@help/reload", false);
+  if (article) {
+    fprintf(stderr,
+            "expected '@help/reload' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@help/reload", true);
+  if (!article || !article->wizard_only || article->article_tags.count != 1 ||
+      strcmp(article->article_tags.items[0], "help_switches")) {
+    fprintf(stderr, "expected '@help/reload' to resolve to a switch article\n");
+    return 8;
+  }
+  if (help_index_find_exact(index, "@helpreload", true)) {
+    fprintf(stderr, "expected removed '@helpreload' help to be absent\n");
+    return 8;
+  }
+
+  article = help_index_find_exact(index, "@lua", false);
+  if (article) {
+    fprintf(stderr, "expected '@lua' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@lua", true);
+  if (!article || strcmp(article->relative_path, "wizard_commands/lua.md") ||
+      article->show_index_for_article_tags.count != 1 ||
+      strcmp(article->show_index_for_article_tags.items[0], "lua_switches")) {
+    fprintf(stderr, "expected '@lua' to resolve to its switch index\n");
+    return 8;
+  }
+  for (size_t i = 0; i < sizeof(lua_keywords) / sizeof(lua_keywords[0]); i++) {
+    article = help_index_find_exact(index, lua_keywords[i], false);
+    if (article) {
+      fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
+              lua_keywords[i]);
+      return 8;
+    }
+    article = help_index_find_exact(index, lua_keywords[i], true);
+    if (!article || !article->wizard_only || article->article_tags.count != 1 ||
+        strcmp(article->article_tags.items[0], "lua_switches")) {
+      fprintf(stderr, "expected '%s' to resolve to a @lua switch article\n",
+              lua_keywords[i]);
+      return 8;
+    }
+  }
+  for (size_t i = 0;
+       i < sizeof(removed_lua_keywords) / sizeof(removed_lua_keywords[0]);
+       i++) {
+    if (help_index_find_exact(index, removed_lua_keywords[i], true)) {
+      fprintf(stderr, "expected removed '%s' help to be absent\n",
+              removed_lua_keywords[i]);
+      return 8;
+    }
   }
 
   /* Nested article, reachable via its own keyword. */

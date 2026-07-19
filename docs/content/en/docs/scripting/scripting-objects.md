@@ -9,27 +9,27 @@ Object Lua modules live under `game/lua/object_logic`. Attach one to an
 object with the wizard-only command:
 
 ```text
-@luaparent <object>=<path>.lua
+@lua/parent <object>=<path>.lua
 ```
 
 The path is relative to `object_logic`; for example,
-`@luaparent #123=hello.lua` selects
+`@lua/parent #123=hello.lua` selects
 `game/lua/object_logic/hello.lua`. Paths must be relative `.lua` files and
 cannot escape into `global_logic` or `packages`. Omit the path to clear an
 attachment.
 
 The closest `Luaparent` in an object's normal MUX parent chain supplies the
 active module. Reload all attached modules and their dependencies atomically
-with `@luareload`; a failed reload leaves the current Lua state running.
-Use [`@luacheck`](validating-and-reloading/) to validate every Lua module
+with `@lua/reload`; a failed reload leaves the current Lua state running.
+Use [`@lua/check`](validating-and-reloading/) to validate every Lua module
 before reloading.
 
 If an attached file is deleted or otherwise cannot load, startup logs the
 object, configured path, and load error but continues. The attachment remains
 in place; command matching and action events for that object log the load error
 and are treated as handled, so legacy softcode does not run unexpectedly.
-Restore the file or update `Luaparent`, then use `@luareload` to activate the
-repair. `@luareload` itself remains atomic and rejects a missing attachment.
+Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
+repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
 ## Module contract
 
@@ -140,5 +140,5 @@ schedules = {
 ```
 
 A shared `Luaparent` runs each matching schedule once for every object that
-inherits it. Use the wizard-only `@luaschedule` command to inspect active
+inherits it. Use the wizard-only `@lua/schedule` command to inspect active
 schedules and their effective objects.

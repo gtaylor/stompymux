@@ -70,13 +70,13 @@ minimal plain-text format, not a general Markdown-to-ANSI renderer.
 
 ## Reindexing
 
-`@helpreload` (Wizard-only) rebuilds the entire index from scratch - this is
+`@help/reload` (Wizard-only) rebuilds the entire index from scratch - this is
 also what happens once at server startup. Both paths log errors and a
-summary to the server log; `@helpreload` also reports them to the invoking
+summary to the server log; `@help/reload` also reports them to the invoking
 player. Frontmatter is parsed with a vendored `tomlc17`.
 
 ## Configuration
 
 The `help_directory` mudconf directive (God-settable) points at the article
 root, relative to the server's working directory. Changing it does not
-reindex automatically - run `@helpreload` afterward.
+reindex automatically - run `@help/reload` afterward.

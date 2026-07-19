@@ -33,7 +33,7 @@ mux.attr_set(ctx.object, "LuaCount", "42")
 ```
 
 `object` must be a valid dbref. Lua cannot use this function to set
-`Luaparent`; use the wizard-only `@luaparent` command instead.
+`Luaparent`; use the wizard-only `@lua/parent` command instead.
 
 ## `mux.notify(object, message)`
 

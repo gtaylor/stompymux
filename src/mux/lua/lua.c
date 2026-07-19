@@ -1549,7 +1549,7 @@ static void lua_flow_data_free(void *flow_data) {
 
 /* Decode the flat, C-owned scratch store into a fresh ctx.flow table. This
  * (rather than a Lua registry reference) is what lets a flow survive
- * @luareload rebuilding the whole lua_State out from under it. */
+ * @lua/reload rebuilding the whole lua_State out from under it. */
 static void lua_flow_decode(lua_State *state, LuaFlowData *data) {
   int index;
 
@@ -1757,7 +1757,7 @@ static int lua_runtime_flow_start(void *context, lua_State *state,
   return 0;
 }
 
-void do_luaparent(CommandInvocation *invocation) {
+static void do_luaparent(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *target = invocation->first;
   char *path = invocation->second;
@@ -1792,7 +1792,7 @@ void do_luaparent(CommandInvocation *invocation) {
   notify_quiet(&invocation->context->evaluation, player, "Lua parent set.");
 }
 
-void do_luacheck(CommandInvocation *invocation) {
+static void do_luacheck(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
   char error[LBUF_SIZE];
@@ -1882,7 +1882,7 @@ static void lua_schedule_show_module(EvaluationContext *evaluation,
   }
 }
 
-void do_luaschedule(CommandInvocation *invocation) {
+static void do_luaschedule(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *argument = invocation->first;
   LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
@@ -1995,7 +1995,7 @@ done:
   lua_runtime_destroy(inspection);
 }
 
-void do_luareload(CommandInvocation *invocation) {
+static void do_luareload(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char error[LBUF_SIZE];
 
@@ -2006,4 +2006,38 @@ void do_luareload(CommandInvocation *invocation) {
     return;
   }
   notify_quiet(&invocation->context->evaluation, player, "Lua reloaded.");
+}
+
+void do_lua(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+
+  switch (invocation->key) {
+  case 0:
+    raw_notify(evaluation, invocation->player, "@lua command switches:");
+    raw_notify(evaluation, invocation->player,
+               "  /check     Validate all Lua modules.");
+    raw_notify(evaluation, invocation->player,
+               "  /parent    Attach or clear an object's Lua parent.");
+    raw_notify(evaluation, invocation->player,
+               "  /reload    Reload Lua modules atomically.");
+    raw_notify(evaluation, invocation->player,
+               "  /schedule  Inspect active Lua schedules.");
+    return;
+  case LUA_COMMAND_CHECK:
+    do_luacheck(invocation);
+    return;
+  case LUA_COMMAND_PARENT:
+    do_luaparent(invocation);
+    return;
+  case LUA_COMMAND_RELOAD:
+    do_luareload(invocation);
+    return;
+  case LUA_COMMAND_SCHEDULE:
+    do_luaschedule(invocation);
+    return;
+  default:
+    raw_notify(evaluation, invocation->player,
+               "Invalid @lua switch combination.");
+    return;
+  }
 }

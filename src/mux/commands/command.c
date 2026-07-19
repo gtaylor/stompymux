@@ -17,6 +17,7 @@
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
 #include "mux/database/vattr.h"
+#include "mux/help/help_command.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
@@ -69,6 +70,19 @@ NameTable chan_sw[] = {
     {"who", 3, CA_PUBLIC, CHAN_WHO | SW_MULTIPLE},
     {"full", 4, CA_PUBLIC, CHAN_FULL | SW_MULTIPLE},
     {"noheader", 8, CA_PUBLIC, CHAN_NOHEADER | SW_MULTIPLE},
+    {nullptr, 0, 0, 0},
+};
+
+NameTable lua_sw[] = {
+    {"check", 5, CA_PUBLIC, LUA_COMMAND_CHECK},
+    {"parent", 6, CA_PUBLIC, LUA_COMMAND_PARENT},
+    {"reload", 6, CA_PUBLIC, LUA_COMMAND_RELOAD},
+    {"schedule", 8, CA_PUBLIC, LUA_COMMAND_SCHEDULE},
+    {nullptr, 0, 0, 0},
+};
+
+NameTable help_sw[] = {
+    {"reload", 6, CA_PUBLIC, HELP_COMMAND_RELOAD},
     {nullptr, 0, 0, 0},
 };
 
@@ -447,6 +461,7 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_halt}},
+    {"@help", help_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
     {"@kick",
      nullptr,
      CA_WIZARD,
@@ -465,15 +480,7 @@ CMDENT command_table[] = {
      0,
      CS_TWO_ARG | CS_INTERP,
      {.invoke = do_link}},
-    {"@luaparent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_luaparent}},
-    {"@luacheck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_luacheck}},
-    {"@luareload", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_luareload}},
-    {"@luaschedule",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG,
-     {.invoke = do_luaschedule}},
+    {"@lua", lua_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
     {"@list",
      nullptr,
      CA_WIZARD,
@@ -565,12 +572,6 @@ CMDENT command_table[] = {
     {"@power", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_power}},
     {"@ps", ps_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP, {.invoke = do_ps}},
     {"@readcache", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_readcache}},
-    {"@helpreload",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_NO_ARGS,
-     {.invoke = do_helpreload}},
     {"@robot",
      nullptr,
      CA_WIZARD | CA_PLAYER,

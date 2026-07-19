@@ -9,14 +9,14 @@ LuaJIT modules live under `game/lua` in three separate roots:
 
 ```text
 lua/
-  object_logic/      # @luaparent modules and their private helpers
+  object_logic/      # @lua/parent modules and their private helpers
   global_logic/      # globally matched command and scheduled modules
   packages/          # shared require-only helpers
 ```
 
 ## Object and global logic
 
-Attach a module to an object with the wizard-only `@luaparent
+Attach a module to an object with the wizard-only `@lua/parent
 <object>=<path>.lua`; the path is relative to `object_logic`, and omitting it
 clears the attachment. The closest attachment in the object's ordinary MUX
 parent chain is active. See [Object scripting](scripting-objects/) for the
@@ -49,7 +49,7 @@ five-field UTC cron expressions. Object schedules run once for every object
 that effectively inherits the Lua parent; global schedules run once per
 matching module entry. Scheduled jobs receive deterministic jitter and do not
 replay missed minutes. Inspect active schedules with the wizard-only
-`@luaschedule` command.
+`@lua/schedule` command.
 
 ## Imports
 
@@ -75,8 +75,8 @@ callback has an instruction cap.
 
 ## Validating and reloading
 
-Use the wizard-only `@luacheck` to verify every module before putting
-changes into service, then `@luareload` to atomically rebuild the Lua state
+Use the wizard-only `@lua/check` to verify every module before putting
+changes into service, then `@lua/reload` to atomically rebuild the Lua state
 from every attached module, every global logic module, and their
 dependencies. If a file or dependency fails to load, the current state
 remains active. See [Validating and reloading](validating-and-reloading/).
@@ -88,8 +88,8 @@ it to an object, then enter `hello` while that object is in the normal
 command-match scope:
 
 ```text
-@luaparent #123=example.lua
-@luareload
+@lua/parent #123=example.lua
+@lua/reload
 ```
 
 `game/lua/object_logic/counter.lua` demonstrates durable state. Its `count`
@@ -100,8 +100,8 @@ survives Lua reloads and server restarts.
 replacement:
 
 ```text
-@luaparent #456=events/enter_notice.lua
-@luareload
+@lua/parent #456=events/enter_notice.lua
+@lua/reload
 ```
 
 Its `aenter` function runs whenever the existing action-attribute path would
