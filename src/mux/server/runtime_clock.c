@@ -11,4 +11,3 @@ void runtime_clock_initialize(RuntimeClock *clock) {
   clock->now = time(nullptr);
   clock->events_last_hour = -1;
 }
-

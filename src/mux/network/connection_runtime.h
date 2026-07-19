@@ -22,9 +22,8 @@ struct ConnectionRuntime {
 };
 
 static inline void connection_runtime_initialize(
-    ConnectionRuntime *runtime,
-    const ServerConfiguration *configuration, RuntimeClock *clock,
-    DescriptorRegistry *descriptors, ServerLog *log,
+    ConnectionRuntime *runtime, const ServerConfiguration *configuration,
+    RuntimeClock *clock, DescriptorRegistry *descriptors, ServerLog *log,
     AccessControlStore *access_control, FileCache **files_owner) {
   *runtime = (ConnectionRuntime){
       .configuration = configuration,

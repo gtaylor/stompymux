@@ -43,4 +43,3 @@ void command_invocation_call_two_vectors(CommandTwoVectorsHandler handler,
           invocation->first, invocation->vector, invocation->vector_count,
           invocation->command_arguments, invocation->command_argument_count);
 }
-

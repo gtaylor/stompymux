@@ -18,9 +18,7 @@ static void mux_timer_run(uv_timer_t *handle) {
   timer->callback(timer, timer->data);
 }
 
-static void mux_timer_free(uv_handle_t *handle) {
-  free(handle->data);
-}
+static void mux_timer_free(uv_handle_t *handle) { free(handle->data); }
 
 MuxTimer *mux_timer_create(uv_loop_t *loop, MuxTimerCallback callback,
                            void *data) {
@@ -38,8 +36,7 @@ MuxTimer *mux_timer_create(uv_loop_t *loop, MuxTimerCallback callback,
   return timer;
 }
 
-bool mux_timer_start(MuxTimer *timer, uint64_t timeout_ms,
-                     uint64_t repeat_ms) {
+bool mux_timer_start(MuxTimer *timer, uint64_t timeout_ms, uint64_t repeat_ms) {
   return uv_timer_start(&timer->handle, mux_timer_run, timeout_ms, repeat_ms) ==
          0;
 }
@@ -55,8 +52,7 @@ bool mux_timer_is_active(const MuxTimer *timer) {
 }
 
 uint64_t mux_timer_due_in(const MuxTimer *timer) {
-  if (timer == nullptr ||
-      uv_is_closing((const uv_handle_t *)&timer->handle))
+  if (timer == nullptr || uv_is_closing((const uv_handle_t *)&timer->handle))
     return 0;
   return uv_timer_get_due_in(&timer->handle);
 }

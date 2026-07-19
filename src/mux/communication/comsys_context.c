@@ -4,9 +4,7 @@
 
 void comsys_context_initialize(ComsysContext *context,
                                const ServerConfiguration *configuration,
-                               RuntimeClock *clock,
-                               ChannelRegistry *channels) {
-  *context = (ComsysContext){.configuration = configuration,
-                            .clock = clock,
-                            .channels = channels};
+                               RuntimeClock *clock, ChannelRegistry *channels) {
+  *context = (ComsysContext){
+      .configuration = configuration, .clock = clock, .channels = channels};
 }

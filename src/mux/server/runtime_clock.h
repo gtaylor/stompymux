@@ -24,4 +24,3 @@ struct RuntimeClock {
 };
 
 void runtime_clock_initialize(RuntimeClock *clock);
-
