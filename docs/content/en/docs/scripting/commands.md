@@ -22,6 +22,9 @@ return {
 }
 ```
 
+Programmable commands must be defined in Lua. Attribute values beginning with
+`$` are ordinary attribute text and are not matched as commands.
+
 ## Pattern matching
 
 Patterns use Lua's `string.match` syntax, not MUX wildcards or regular
@@ -61,13 +64,12 @@ A handler returns `true` to handle the command. Returning `false` or `nil`
 leaves it unhandled.
 
 For object modules, all matching entries run in declaration order. If no object
-handler handles the command, the normal local and zone legacy `$` command
-matching continues. A Lua pattern or handler error is logged and counts as
-handled, preventing duplicate legacy side effects.
+handler handles the command, matching continues through the remaining local and
+zone Lua scopes. A Lua pattern or handler error is logged and counts as handled.
 
-Global command modules run only after local and zone Lua and legacy matching
-decline the command. Their modules are checked in lexical path order and stop
-at the first handler that returns `true`.
+Global command modules run only after local and zone Lua matching declines the
+command. Their modules are checked in lexical path order and stop at the first
+handler that returns `true`.
 
 ## Command context
 

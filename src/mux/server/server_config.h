@@ -256,8 +256,8 @@ struct ServerConfiguration {
   int idle_wiz_dark;    /* Do idling wizards get set dark? */
   int pemit_players;    /* Can you @pemit to faraway players? */
   int pemit_any;        /* Can you @pemit to ANY remote object? */
-  int match_mine;       /* Should you check yourself for $-commands? */
-  int match_mine_pl;    /* Should players check selves for $-cmds? */
+  int match_mine;       /* Should objects check themselves for Lua commands? */
+  int match_mine_pl;    /* Should players check themselves for Lua commands? */
   int switch_df_all;    /* Should @switch match all by default? */
   int fascist_tport;    /* Source of teleport must be controlled */
   int trace_topdown;    /* Is TRACE output top-down or bottom-up? */

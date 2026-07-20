@@ -165,43 +165,31 @@ constexpr int DUMP_OPTIMIZE = 3;  /* Reorganize the gdbm file */
 constexpr int EXAM_BRIEF = 1;     /* Omit the ordinary attribute list */
 constexpr int EXAM_DEBUG = 4;   /* Display more info for finding db problems */
 constexpr int EXAM_PARENT = 8;  /* Get attr from parent when exam obj/attr */
-constexpr int FIXDB_OWNER = 1;  /* Fix OWNER field */
-constexpr int FIXDB_LOC = 2;    /* Fix LOCATION field */
-constexpr int FIXDB_CON = 4;    /* Fix CONTENTS field */
-constexpr int FIXDB_EXITS = 8;  /* Fix EXITS field */
-constexpr int FIXDB_NEXT = 16;  /* Fix NEXT field */
-constexpr int FIXDB_ZONE = 64;  /* Fix ZONE field */
-constexpr int FIXDB_LINK = 128; /* Fix LINK field */
-constexpr int FIXDB_PARENT = 256; /* Fix PARENT field */
-constexpr int FIXDB_DEL_PN =
-    512; /* Remove player name from player name index */
-constexpr int FIXDB_ADD_PN = 1024; /* Add player name to player name index */
-constexpr int FIXDB_NAME = 2048;   /* Set NAME attribute */
-constexpr int FRC_PREFIX = 0;      /* #num command */
-constexpr int FRC_COMMAND = 1;     /* what=command */
-constexpr int GET_QUIET = 1;       /* Suppress other text and success event */
-constexpr int GIVE_QUIET = 64;     /* Inhibit give messages */
-constexpr int GLOB_ENABLE = 1;     /* key to enable */
-constexpr int GLOB_DISABLE = 2;    /* key to disable */
-constexpr int GLOB_LIST = 3;       /* key to list */
-constexpr int HALT_ALL = 1;        /* halt everything */
-constexpr int LOOK_LOOK = 1;       /* list desc (and succ/fail if room) */
-constexpr int LOOK_EXAM = 2;       /* full listing of object */
-constexpr int LOOK_DEXAM = 3;      /* debug listing of object */
-constexpr int LOOK_INVENTORY = 4;  /* list inventory of object */
-constexpr int LOOK_SCORE = 5;      /* list score (# coins) */
-constexpr int LOOK_OUTSIDE = 8;    /* look for object in container of player */
-constexpr int MOVE_QUIET = 1;      /* Suppress other text and Lua events */
-constexpr int NFY_NFY = 0;         /* Notify first waiting command */
-constexpr int NFY_NFYALL = 1;      /* Notify all waiting commands */
-constexpr int NFY_DRAIN = 2;       /* Delete waiting commands */
-constexpr int OPEN_LOCATION = 0;   /* Open exit in my location */
-constexpr int OPEN_INVENTORY = 1;  /* Open exit in me */
-constexpr int PASS_ANY = 1;        /* name=newpass */
-constexpr int PASS_MINE = 2;       /* oldpass=newpass */
-constexpr int PCRE_PLAYER = 1;     /* create new player */
-constexpr int PCRE_ROBOT = 2;      /* create robot player */
-constexpr int PEMIT_PEMIT = 1;     /* emit to named player */
+constexpr int FRC_PREFIX = 0;   /* #num command */
+constexpr int FRC_COMMAND = 1;  /* what=command */
+constexpr int GET_QUIET = 1;    /* Suppress other text and success event */
+constexpr int GIVE_QUIET = 64;  /* Inhibit give messages */
+constexpr int GLOB_ENABLE = 1;  /* key to enable */
+constexpr int GLOB_DISABLE = 2; /* key to disable */
+constexpr int GLOB_LIST = 3;    /* key to list */
+constexpr int HALT_ALL = 1;     /* halt everything */
+constexpr int LOOK_LOOK = 1;    /* list desc (and succ/fail if room) */
+constexpr int LOOK_EXAM = 2;    /* full listing of object */
+constexpr int LOOK_DEXAM = 3;   /* debug listing of object */
+constexpr int LOOK_INVENTORY = 4; /* list inventory of object */
+constexpr int LOOK_SCORE = 5;     /* list score (# coins) */
+constexpr int LOOK_OUTSIDE = 8;   /* look for object in container of player */
+constexpr int MOVE_QUIET = 1;     /* Suppress other text and Lua events */
+constexpr int NFY_NFY = 0;        /* Notify first waiting command */
+constexpr int NFY_NFYALL = 1;     /* Notify all waiting commands */
+constexpr int NFY_DRAIN = 2;      /* Delete waiting commands */
+constexpr int OPEN_LOCATION = 0;  /* Open exit in my location */
+constexpr int OPEN_INVENTORY = 1; /* Open exit in me */
+constexpr int PASS_ANY = 1;       /* name=newpass */
+constexpr int PASS_MINE = 2;      /* oldpass=newpass */
+constexpr int PCRE_PLAYER = 1;    /* create new player */
+constexpr int PCRE_ROBOT = 2;     /* create robot player */
+constexpr int PEMIT_PEMIT = 1;    /* emit to named player */
 constexpr int PEMIT_OEMIT = 2;    /* emit to all in current room except named */
 constexpr int PEMIT_FSAY = 3;     /* force controlled obj to say */
 constexpr int PEMIT_FEMIT = 4;    /* force controlled obj to emit */
@@ -251,12 +239,12 @@ constexpr int SWITCH_ANY = 1;     /* Execute all cases that match */
 constexpr int SWITCH_ONE = 2;     /* Execute only first case that matches */
 constexpr int SWEEP_ME = 1;       /* Check my inventory */
 constexpr int SWEEP_HERE = 2;     /* Check my location */
-constexpr int SWEEP_COMMANDS = 4; /* Check for $-commands */
-constexpr int SWEEP_LISTEN = 8;   /* Check for @listen-ers */
-constexpr int SWEEP_PLAYER = 16;  /* Check for players and puppets */
-constexpr int SWEEP_CONNECT = 32; /* Search for connected players/puppets */
-constexpr int SWEEP_EXITS = 64;   /* Search the exits for audible flags */
-constexpr int SWEEP_SCAN = 128;   /* Scan for pattern matching */
+/* 4 is reserved for the removed softcode-command sweep. */
+constexpr int SWEEP_LISTEN = 8;     /* Check for @listen-ers */
+constexpr int SWEEP_PLAYER = 16;    /* Check for players and puppets */
+constexpr int SWEEP_CONNECT = 32;   /* Search for connected players/puppets */
+constexpr int SWEEP_EXITS = 64;     /* Search the exits for audible flags */
+constexpr int SWEEP_SCAN = 128;     /* Scan for pattern matching */
 constexpr int SWEEP_VERBOSE = 256;  /* Display what pattern matches */
 constexpr int TELEPORT_DEFAULT = 1; /* Emit all messages */
 constexpr int TELEPORT_QUIET = 2;   /* Teleport in quietly */

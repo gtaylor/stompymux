@@ -62,7 +62,6 @@ void do_enter(CommandInvocation *invocation);     /* Enter an object */
 void do_entrances(CommandInvocation *invocation); /* List links to location. */
 void do_examine(CommandInvocation *invocation);   /* @examine an object. */
 void do_find(CommandInvocation *invocation);      /* Search the database. */
-void do_fixdb(CommandInvocation *invocation); /* Database repair functions */
 void do_force(CommandInvocation *invocation);
 void do_force_prefixed(CommandInvocation *invocation); /* #num cmd FORCE */
 void do_function(CommandInvocation *invocation); /* Define global function */
@@ -122,9 +121,6 @@ void do_wipe(CommandInvocation *invocation);
 void do_session(CommandInvocation *invocation); /* Wizard session listing */
 void do_who(CommandInvocation *invocation);     /* Wizard WHO listing */
 void do_dbclean(CommandInvocation *invocation); /* Remove stale vattr entries */
-void do_addcommand(CommandInvocation *invocation);
-void do_delcommand(CommandInvocation *invocation);
-void do_listcommands(CommandInvocation *invocation);
 /* from log.c */
 #ifdef ARBITRARY_LOGFILES
 void do_log(CommandInvocation *invocation); /* Log to arbitrary logfile */
@@ -136,12 +132,10 @@ void do_charclear(CommandInvocation *invocation);
 void do_show_stat(CommandInvocation *invocation);
 
 /*
- * A command is either dispatched through the uniform typed invocation
- * boundary or, for softcode-added commands, through an ADDENT chain.
+ * Commands are dispatched through the uniform typed invocation boundary.
  */
 typedef union cmdentry_handler {
   CommandInvocationHandler invoke;
-  struct addedentry *added;
 } CmdHandler;
 
 typedef struct cmdentry CMDENT;
@@ -164,14 +158,6 @@ int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
 int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
                  ConfigurationContext *context);
 
-typedef struct addedentry ADDENT;
-struct addedentry {
-  DbRef thing;
-  int atr;
-  char *name;
-  struct addedentry *next;
-};
-
 /* Command handler call conventions */
 
 constexpr int CS_NO_ARGS = 0x0000;   /* No arguments */
@@ -186,8 +172,8 @@ constexpr int CS_UNPARSE = 0x0080; /* Pass unparsed cmd to old-style handler */
 constexpr int CS_CMDARG = 0x0100;  /* Pass in given command args */
 constexpr int CS_STRIP = 0x0200;   /* Strip braces even when not interpreting */
 constexpr int CS_STRIP_AROUND =
-    0x0400;                         /* Strip braces around entire string only */
-constexpr int CS_ADDED = 0X0800;    /* Command has been added by @addcommand */
+    0x0400; /* Strip braces around entire string only */
+/* 0x0800 is reserved for the removed softcode-added command convention. */
 constexpr int CS_NO_MACRO = 0x1000; /* Command can't be used inside macro */
 constexpr int CS_LEADIN = 0x2000;   /* Command is a single-letter lead-in */
 

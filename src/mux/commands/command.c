@@ -134,17 +134,6 @@ NameTable femit_sw[] = {{"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
                         {"room", 1, CA_PUBLIC, PEMIT_ROOM | SW_MULTIPLE},
                         {nullptr, 0, 0, 0}};
 
-NameTable fixdb_sw[] = {
-    /* {"add_pname",1,  CA_GOD,     FIXDB_ADD_PN}, */
-    {"contents", 1, CA_GOD, FIXDB_CON},
-    {"exits", 1, CA_GOD, FIXDB_EXITS},
-    {"location", 1, CA_GOD, FIXDB_LOC},
-    {"next", 1, CA_GOD, FIXDB_NEXT},
-    {"owner", 1, CA_GOD, FIXDB_OWNER},
-    {"rename", 1, CA_GOD, FIXDB_NAME},
-    /* {"rm_pname", 1,  CA_GOD,     FIXDB_DEL_PN}, */
-    {nullptr, 0, 0, 0}};
-
 NameTable fpose_sw[] = {{"default", 1, CA_PUBLIC, 0},
                         {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                         {nullptr, 0, 0, 0}};
@@ -200,7 +189,6 @@ NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
                         {nullptr, 0, 0, 0}};
 
 NameTable sweep_sw[] = {
-    {"commands", 3, CA_PUBLIC, SWEEP_COMMANDS | SW_MULTIPLE},
     {"connected", 3, CA_PUBLIC, SWEEP_CONNECT | SW_MULTIPLE},
     {"exits", 1, CA_PUBLIC, SWEEP_EXITS | SW_MULTIPLE},
     {"here", 1, CA_PUBLIC, SWEEP_HERE | SW_MULTIPLE},
@@ -251,12 +239,6 @@ CMDENT command_table[] = {
      0,
      CS_NO_ARGS,
      {.invoke = do_comment_command_adapter}},
-    {"@addcommand",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG,
-     {.invoke = do_addcommand}},
     {"@admin",
      nullptr,
      CA_WIZARD,
@@ -326,12 +308,6 @@ CMDENT command_table[] = {
      {.invoke = do_cut}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
     {"@dbclean", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbclean}},
-    {"@delcommand",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG,
-     {.invoke = do_delcommand}},
     {"@destroy",
      destroy_sw,
      CA_WIZARD,
@@ -401,12 +377,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_find}},
-    {"@fixdb",
-     fixdb_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_fixdb}},
     /*{"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, {.invoke =
        do_fnd_command_adapter}}, */
     {"@force",
@@ -465,12 +435,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_list}},
-    {"@listcommands",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG,
-     {.invoke = do_listcommands}},
     {"@list_file",
      nullptr,
      CA_WIZARD,
@@ -905,18 +869,12 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                            char *arg, char *unp_command, char *cargs[],
                            int ncargs) {
   char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00', *bp = nullptr,
-       *str = nullptr, *buff = nullptr, *s = nullptr, *j = nullptr,
-       *new = nullptr;
+       *str = nullptr;
   char *args[MAX_ARG];
   int nargs = 0, i = 0, fail = 0, interp = 0, key = 0, xkey = 0;
-  long aflags = 0;
   size_t length = 0;
-  DbRef aowner = 0;
-  char *aargs[10];
-  ADDENT *add = nullptr;
 
   memset(args, 0, sizeof(char *) * MAX_ARG);
-  memset(aargs, 0, sizeof(char *) * 10);
 
   /*
    * Perform object type checks.
@@ -1003,7 +961,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       key |= xkey;
       switchp = buf1;
     } while (buf1);
-  } else if (switchp && !(cmdp->callseq & CS_ADDED)) {
+  } else if (switchp) {
     notify_printf(&context->evaluation, player,
                   "Command %s does not take switches.", cmdp->cmdname);
     return;
@@ -1043,9 +1001,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                      nullptr, nullptr, 0, nullptr, 0);
       break;
     }
-    /* Interpret if necessary, but not twice for CS_ADDED */
+    /* Interpret if necessary. */
 
-    if ((interp & EV_EVAL) && !(cmdp->callseq & CS_ADDED)) {
+    if (interp & EV_EVAL) {
       buf1 = bp = alloc_lbuf("process_cmdent");
       str = arg;
       exec(&context->evaluation, buf1, &bp, 0, player, cause,
@@ -1063,65 +1021,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
     if (cmdp->callseq & CS_CMDARG) {
       command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
                      nullptr, cargs, ncargs, nullptr, 0);
-    } else {
-      if (cmdp->callseq & CS_ADDED) {
-        for (add = cmdp->handler.added; add != nullptr; add = add->next) {
-          buff = attribute_get(context->world->database, add->thing, add->atr,
-                               &aowner, &aflags);
-          /* Skip the '$' character, and the next */
-          for (s = buff + 2; *s && (*s != ':'); s++)
-            ;
-          if (!*s)
-            break;
-          *s++ = '\0';
-          if (!(cmdp->callseq & CS_LEADIN))
-            for (j = unp_command; *j && (*j != ' '); j++)
-              ;
-          else
-            for (j = unp_command; *j; j++)
-              ;
-
-          new = alloc_lbuf("process_cmdent.soft");
-          bp = new;
-          if (!*j) {
-            /* No args */
-            if (!(cmdp->callseq & CS_LEADIN)) {
-              safe_str(cmdp->cmdname, new, &bp);
-            } else {
-              safe_str(unp_command, new, &bp);
-            }
-            if (switchp) {
-              safe_chr('/', new, &bp);
-              safe_str(switchp, new, &bp);
-            }
-            *bp = '\0';
-          } else {
-            j++;
-            safe_str(cmdp->cmdname, new, &bp);
-            if (switchp) {
-              safe_chr('/', new, &bp);
-              safe_str(switchp, new, &bp);
-            }
-            safe_chr(' ', new, &bp);
-            safe_str(j, new, &bp);
-            *bp = '\0';
-          }
-
-          if (wild(buff + 1, new, aargs, 10)) {
-            wait_que(context->runtime->commands, add->thing, player, 0, NOTHING,
-                     0, s, aargs, 10, context->evaluation.registers);
-            for (i = 0; i < 10; i++) {
-              if (aargs[i])
-                free_lbuf(aargs[i]);
-            }
-          }
-          free_lbuf(new);
-          free_lbuf(buff);
-        }
-      } else
-        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                       nullptr, nullptr, 0, nullptr, 0);
-    }
+    } else
+      command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                     nullptr, nullptr, 0, nullptr, 0);
 
     /*
      * Free the buffer if one was allocated
@@ -1495,13 +1397,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     context->debug_command = cmdsave;
     goto exit;
   }
-  /*
-   * Check for enter and leave aliases, user-defined commands on the *
-   * * * * * * player, other objects where the player is, on objects in
-   * * the  * *  * *  * player's inventory, and on the room that holds *
-   * the * player. * We * *  * evaluate the command line here to allow *
-   * chains  * of * $-commands to * * * work.
-   */
+  /* Evaluate the command line for enter and leave alias matching. */
 
   bp = lcbuf;
   str = command;
@@ -1557,11 +1453,7 @@ void process_command(CommandContext *context, char *command, char *args[],
       free_lbuf(p);
     }
   }
-  /*
-   * Lua is the first programmable-command stage.  It observes the original
-   * unmatched command; local and zone legacy matching remains available when
-   * no Lua handler accepts it.
-   */
+  /* Lua handlers observe the original unmatched command. */
   if (configuration->match_mine &&
       !is_no_command(context->world->database, player) &&
       ((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
@@ -1632,145 +1524,31 @@ void process_command(CommandContext *context, char *command, char *args[],
         lua_command_match(runtime->lua_owner->runtime, context->descriptor,
                           game_object_zone(context->world->database, player),
                           player, cause, command);
-  if (lua_succ)
-    succ = lua_succ;
-  /*
-   * Check for $-command matches on me
-   */
-
-  if (!lua_succ && configuration->match_mine &&
-      (!(is_no_command(context->world->database, player)))) {
-    if (((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
-         configuration->match_mine_pl) &&
-        (attribute_match(&context->evaluation, player, player, AMATCH_CMD,
-                         lcbuf, 1) > 0)) {
-      succ++;
-    }
-  }
-  /*
-   * Check for $-command matches on nearby things and on my room
-   */
-
-  if (!lua_succ && has_location(context->world->database, player)) {
-    succ +=
-        list_check(&context->evaluation,
-                   game_object_contents(
-                       context->world->database,
-                       game_object_location(context->world->database, player)),
-                   player, AMATCH_CMD, lcbuf, 1);
-
-    if (!(is_no_command(
-            context->world->database,
-            game_object_location(context->world->database, player))))
-      if (attribute_match(
-              &context->evaluation,
-              game_object_location(context->world->database, player), player,
-              AMATCH_CMD, lcbuf, 1) > 0) {
-        succ++;
-      }
-  }
-
-  /*
-   * Check for $-command matches in my inventory
-   */
-
-  if (!lua_succ && has_contents(context->world->database, player))
-    succ += list_check(&context->evaluation,
-                       game_object_contents(context->world->database, player),
-                       player, AMATCH_CMD, lcbuf, 1);
-
-  /*
-   * now do check on zones
-   */
-
-  if (!lua_succ && (!succ) && configuration->have_zones &&
+  if (!lua_succ && configuration->have_zones &&
       (game_object_zone(context->world->database,
                         game_object_location(context->world->database,
-                                             player)) != NOTHING)) {
-    if (typeof_obj(context->world->database,
-                   game_object_zone(context->world->database,
-                                    game_object_location(
-                                        context->world->database, player))) ==
-        TYPE_ROOM) {
-
-      /*
-       * zone of player's location is a parent room
-       */
-      if (game_object_location(context->world->database, player) !=
-          game_object_zone(context->world->database, player)) {
-
-        /*
-         * check parent room exits
-         */
-        init_match_check_keys(&context->match, player, command, TYPE_EXIT);
-        match_zone_exit(&context->match);
-        exit = last_match_result(&context->match);
-        if (exit != NOTHING) {
-          move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
-          context->debug_command = cmdsave;
-          goto exit;
-        }
-        succ += list_check(
-            &context->evaluation,
-            game_object_contents(
-                context->world->database,
-                game_object_zone(
-                    context->world->database,
-                    game_object_location(context->world->database, player))),
-            player, AMATCH_CMD, lcbuf, 1);
-      } /*
-         * * end of parent room checks
-         */
-    } else
-      /*
-       * try matching commands on area zone object
-       */
-
-      if ((!succ) && configuration->have_zones &&
-          (game_object_zone(context->world->database,
-                            game_object_location(context->world->database,
-                                                 player)) != NOTHING) &&
-          (!(is_no_command(
-              context->world->database,
-              game_object_zone(
-                  context->world->database,
-                  game_object_location(context->world->database, player))))))
-        succ += attribute_match(
-            &context->evaluation,
-            game_object_zone(
-                context->world->database,
-                game_object_location(context->world->database, player)),
-            player, AMATCH_CMD, lcbuf, 1);
-  }
-  /*
-   * * end of matching on zone of player's * *
-   * * * * * location
-   */
-  /*
-   * if nothing matched with parent room/zone object, try matching
-   * zone commands on the player's personal zone
-   */
-  if (!lua_succ && (!succ) && configuration->have_zones &&
-      (game_object_zone(context->world->database, player) != NOTHING) &&
-      (!(is_no_command(context->world->database,
-                       game_object_zone(context->world->database, player)))) &&
-      (game_object_zone(
-           context->world->database,
-           game_object_location(context->world->database, player)) !=
+                                             player)) != NOTHING) &&
+      (typeof_obj(context->world->database,
+                  game_object_zone(context->world->database,
+                                   game_object_location(
+                                       context->world->database, player))) ==
+       TYPE_ROOM) &&
+      (game_object_location(context->world->database, player) !=
        game_object_zone(context->world->database, player))) {
-    succ += attribute_match(&context->evaluation,
-                            game_object_zone(context->world->database, player),
-                            player, AMATCH_CMD, lcbuf, 1);
+    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+    match_zone_exit(&context->match);
+    exit = last_match_result(&context->match);
+    if (exit != NOTHING) {
+      move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
+      context->debug_command = cmdsave;
+      goto exit;
+    }
   }
-  /*
-   * Global Lua commands replace the master-room programmable-command stage.
-   * They run only after every local and zone Lua or softcode command declined
-   * the command. Master-room exits remain part of normal exit matching.
-   */
-  if (!lua_succ && !succ)
-    succ +=
+  if (!lua_succ)
+    lua_succ +=
         lua_global_command_match(runtime->lua_owner->runtime,
                                  context->descriptor, player, cause, command);
+  succ = lua_succ;
   free_lbuf(lcbuf);
 
   /*
@@ -2300,11 +2078,11 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (configuration->match_mine) {
     if (configuration->match_mine_pl)
       raw_notify(evaluation, player,
-                 "All objects search themselves for $-commands.");
+                 "All objects search themselves for Lua commands.");
     else
       raw_notify(
           evaluation, player,
-          "Objects other than players search themselves for $-commands.");
+          "Objects other than players search themselves for Lua commands.");
   }
   if (!is_wizard(evaluation->world->database, player))
     return;

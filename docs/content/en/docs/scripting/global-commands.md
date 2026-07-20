@@ -29,11 +29,10 @@ return {
 }
 ```
 
-Global handlers run after local and zone Lua and legacy `$` command matching
-decline the command. They replace the master-room programmable-command stage;
-master-room exits and other non-command behavior are unchanged. Matching stops
-at the first global handler that returns `true`; `false` or `nil` allows the
-next handler to try.
+Global handlers run after local and zone Lua command matching declines the
+command. Master-room exits and other non-command behavior are unchanged.
+Matching stops at the first global handler that returns `true`; `false` or
+`nil` allows the next handler to try.
 
 Global contexts include `ctx.scope == "global"`, `ctx.enactor`, `ctx.cause`,
 and `ctx.command`; `ctx.object` is `nil`. Global modules receive command

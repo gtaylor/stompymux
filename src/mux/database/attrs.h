@@ -13,7 +13,7 @@ constexpr int AF_INTERNAL = 0x0010; /* Don't show even to #1 */
 constexpr int AF_NOCMD = 0x0020;    /* Don't create a @ command for it */
 /* 0x0040 is reserved for the removed AF_LOCK flag. */
 constexpr int AF_DELETED = 0x0080; /* Attribute should be ignored */
-constexpr int AF_NOPROG = 0x0100;  /* Don't process $-commands from this attr */
+constexpr int AF_NOPROG = 0x0100;  /* Don't process programmable matches */
 constexpr int AF_GOD = 0x0200;     /* Only #1 can change it */
 /* 0x0400 is reserved for the removed AF_IS_LOCK flag. */
 constexpr int AF_VISUAL = 0x0800;  /* Anyone can see */

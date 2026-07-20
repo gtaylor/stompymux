@@ -82,7 +82,6 @@ constexpr char IS_TOKEN = '=';
 constexpr char OWNER_TOKEN = '$';
 
 /* matching attribute tokens */
-constexpr char AMATCH_CMD = '$';
 constexpr char AMATCH_LISTEN = '^';
 
 /* delimiters for various things */

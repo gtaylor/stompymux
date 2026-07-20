@@ -1045,10 +1045,9 @@ void do_entrances(CommandInvocation *invocation) {
 static void sweep_check(EvaluationContext *evaluation, DbRef player, DbRef what,
                         int key, int is_loc) {
   WorldContext *world = evaluation->world;
-  DbRef aowner, parent;
-  int canhear, cancom, isplayer, ispuppet, isconnected, attr;
+  DbRef aowner;
+  int canhear, isplayer, ispuppet, isconnected, attr;
   long aflags;
-  int is_parent, lev;
   char *buf, *buf2, *bp, *as, *buff, *s;
   Attribute *ap;
 
@@ -1057,11 +1056,9 @@ static void sweep_check(EvaluationContext *evaluation, DbRef player, DbRef what,
       !world->configuration->sweep_dark)
     return;
   canhear = 0;
-  cancom = 0;
   isplayer = 0;
   ispuppet = 0;
   isconnected = 0;
-  is_parent = 0;
 
   if ((key & SWEEP_LISTEN) &&
       (((typeof_obj(evaluation->world->database, what) == TYPE_EXIT) ||
@@ -1110,23 +1107,6 @@ static void sweep_check(EvaluationContext *evaluation, DbRef player, DbRef what,
     if (buff)
       free_lbuf(buff);
   }
-  if ((key & SWEEP_COMMANDS) &&
-      (typeof_obj(evaluation->world->database, what) != TYPE_EXIT)) {
-
-    /*
-     * Look for commands on the object and parents too
-     */
-
-    ITER_PARENTS(world->database, world->configuration, what, parent, lev) {
-      if (has_commands(evaluation->world->database, parent)) {
-        cancom = 1;
-        if (lev) {
-          is_parent = 1;
-          break;
-        }
-      }
-    }
-  }
   if (key & SWEEP_CONNECT) {
     if (is_connected(evaluation->world->database, what) ||
         (is_puppet(evaluation->world->database, what) &&
@@ -1145,12 +1125,10 @@ static void sweep_check(EvaluationContext *evaluation, DbRef player, DbRef what,
     if (is_puppet(evaluation->world->database, what))
       ispuppet = 1;
   }
-  if (canhear || cancom || isplayer || ispuppet || isconnected) {
+  if (canhear || isplayer || ispuppet || isconnected) {
     buf = alloc_lbuf("sweep_check.types");
     bp = buf;
 
-    if (cancom)
-      safe_str("commands ", buf, &bp);
     if (canhear)
       safe_str("messages ", buf, &bp);
     if (isplayer)
@@ -1165,8 +1143,6 @@ static void sweep_check(EvaluationContext *evaluation, DbRef player, DbRef what,
     }
     if (isconnected)
       safe_str("connected ", buf, &bp);
-    if (is_parent)
-      safe_str("parent ", buf, &bp);
     bp[-1] = '\0';
     if (typeof_obj(evaluation->world->database, what) != TYPE_EXIT) {
       notify_printf(evaluation, player, "  %s is listening. [%s]",
@@ -1194,8 +1170,7 @@ void do_sweep(CommandInvocation *invocation) {
   int where_key, what_key;
 
   where_key = key & (SWEEP_ME | SWEEP_HERE | SWEEP_EXITS);
-  what_key =
-      key & (SWEEP_COMMANDS | SWEEP_LISTEN | SWEEP_PLAYER | SWEEP_CONNECT);
+  what_key = key & (SWEEP_LISTEN | SWEEP_PLAYER | SWEEP_CONNECT);
 
   if (where && *where) {
     sweeploc = match_controlled(&invocation->context->match, player, where);
@@ -1209,8 +1184,6 @@ void do_sweep(CommandInvocation *invocation) {
     where_key = -1;
   if (!what_key)
     what_key = -1;
-  else if (what_key == SWEEP_VERBOSE)
-    what_key = SWEEP_VERBOSE | SWEEP_COMMANDS;
 
   /*
    * Check my location.  If I have none or it is dark, check just me.

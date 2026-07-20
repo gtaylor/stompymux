@@ -26,8 +26,7 @@ handled.
 Global logic files are discovered recursively below `global_logic` and
 loaded in lexical relative-path order; use domain-oriented paths such as
 `player/help.lua` and `world/travel.lua`. Global command handlers run only
-after every local or zone Lua and legacy `$` command has declined the
-command, replacing the old master-room programmable-command stage. See
+after every local or zone Lua command has declined the command. See
 [Global logic](global-commands/) for details.
 
 ## Module contract

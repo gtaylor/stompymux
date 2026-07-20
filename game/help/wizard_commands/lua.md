@@ -14,3 +14,6 @@ index_style = "list_with_description"
 `@lua` groups the Wizard-only Lua administration commands under one command.
 Type `@lua` by itself to see a short list of switches, or use one of the forms
 indexed below.
+
+Lua modules are the supported way to define programmable commands. Attribute
+values beginning with `$` are not matched as commands.

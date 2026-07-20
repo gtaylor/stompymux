@@ -257,7 +257,6 @@ extern void init_attrtab(GameDatabase *database);
 extern void db_grow(GameDatabase *database, DbRef newtop);
 extern void db_free(GameDatabase *database);
 extern void db_make_minimal(EvaluationContext *evaluation);
-int has_commands(GameDatabase *database, DbRef thing);
 void object_password_set(GameDatabase *database, DbRef thing,
                          const char *password);
 void object_name_set(GameDatabase *database, DbRef thing, char *name);

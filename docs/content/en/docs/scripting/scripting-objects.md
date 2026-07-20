@@ -58,10 +58,11 @@ return {
 }
 ```
 
-Returning `true` handles the command; `false` or `nil` allows the local or zone
-legacy `$` command search to continue. Object event functions use the native
-Lua event names listed below. Event names are validated by `@lua/check`; an
-unknown name or non-function value is an error.
+Returning `true` handles the command; `false` or `nil` allows matching to
+continue through the remaining local and zone Lua scopes, then global Lua.
+Object event functions use the native Lua event names listed below. Event names
+are validated by `@lua/check`; an unknown name or non-function value is an
+error.
 
 ## Object locks
 

@@ -1301,21 +1301,6 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
       if (full_check) {
 
         /*
-         * Check for wizard command-handlers inside *
-         *
-         * *  * *  * * nonwiz. Just warn if we find
-         * one.
-         */
-
-        if (is_wizard(evaluation->world->database, obj) &&
-            !is_wizard(evaluation->world->database, loc)) {
-          if (has_commands(evaluation->world->database, obj)) {
-            log_simple_error(
-                evaluation, obj, loc,
-                "Wizard command handling object inside nonwizard.");
-          }
-        }
-        /*
          * Check for nonwizard objects inside wizard
          * * * * * objects.
          */
