@@ -35,6 +35,73 @@
 
 constexpr char LUA_MODULES_KEY[] = "btmux.lua.modules";
 
+static const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
+    [LUA_EVENT_NONE] = nullptr,
+    [LUA_EVENT_SUCCESS] = "on_success",
+    [LUA_EVENT_FAIL] = "on_fail",
+    [LUA_EVENT_DROP] = "on_drop",
+    [LUA_EVENT_GIVE_FAIL] = "on_give_fail",
+    [LUA_EVENT_GIVE_RECEIVE_FAIL] = "on_give_receive_fail",
+    [LUA_EVENT_DROP_FAIL] = "on_drop_fail",
+    [LUA_EVENT_USE] = "on_use",
+    [LUA_EVENT_USE_FAIL] = "on_use_fail",
+    [LUA_EVENT_DESCRIBE] = "on_describe",
+    [LUA_EVENT_ENTER] = "on_enter",
+    [LUA_EVENT_LEAVE] = "on_leave",
+    [LUA_EVENT_MOVE] = "on_move",
+    [LUA_EVENT_ENTER_FAIL] = "on_enter_fail",
+    [LUA_EVENT_LEAVE_FAIL] = "on_leave_fail",
+    [LUA_EVENT_TELEPORT] = "on_teleport",
+    [LUA_EVENT_TELEPORT_DESTINATION_FAIL] = "on_teleport_destination_fail",
+    [LUA_EVENT_TELEPORT_OUT_FAIL] = "on_teleport_out_fail",
+    [LUA_EVENT_MATCH_HEARD] = "on_match_heard",
+    [LUA_EVENT_MATCH_HEARD_OTHER] = "on_match_heard_other",
+    [LUA_EVENT_MATCH_HEARD_SELF] = "on_match_heard_self",
+    [LUA_EVENT_CLONE] = "on_clone",
+    [LUA_EVENT_SERVER_STARTUP] = "on_server_startup",
+    [LUA_EVENT_CONNECT] = "on_connect",
+    [LUA_EVENT_DISCONNECT] = "on_disconnect",
+    [LUA_EVENT_MECH_DESTROYED] = "on_mech_destroyed",
+    [LUA_EVENT_MECH_MINE_TRIGGER] = "on_mech_mine_trigger",
+    [LUA_EVENT_AERO_LAND] = "on_aero_land",
+    [LUA_EVENT_OOD_LAND] = "on_ood_land",
+};
+
+static const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT] = {
+    [LUA_LOCK_DEFAULT] = "default",   [LUA_LOCK_DROP] = "drop",
+    [LUA_LOCK_ENTER] = "enter",       [LUA_LOCK_GIVE] = "give",
+    [LUA_LOCK_LEAVE] = "leave",       [LUA_LOCK_LINK] = "link",
+    [LUA_LOCK_RECEIVE] = "receive",   [LUA_LOCK_SPEECH] = "speech",
+    [LUA_LOCK_TELEPORT] = "teleport", [LUA_LOCK_TELEPORT_OUT] = "teleport_out",
+    [LUA_LOCK_USE] = "use",
+};
+
+static const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT] = {
+    [LUA_LOCK_OPERATION_MATCH] = "match",
+    [LUA_LOCK_OPERATION_TRAVERSE] = "traverse",
+    [LUA_LOCK_OPERATION_TAKE] = "take",
+    [LUA_LOCK_OPERATION_LOOK] = "look",
+    [LUA_LOCK_OPERATION_COMMAND_MATCH] = "command_match",
+    [LUA_LOCK_OPERATION_LISTEN] = "listen",
+    [LUA_LOCK_OPERATION_USE] = "use",
+    [LUA_LOCK_OPERATION_DROP] = "drop",
+    [LUA_LOCK_OPERATION_GIVE] = "give",
+    [LUA_LOCK_OPERATION_RECEIVE] = "receive",
+    [LUA_LOCK_OPERATION_ENTER] = "enter",
+    [LUA_LOCK_OPERATION_LEAVE] = "leave",
+    [LUA_LOCK_OPERATION_TELEPORT] = "teleport",
+    [LUA_LOCK_OPERATION_TELEPORT_OUT] = "teleport_out",
+    [LUA_LOCK_OPERATION_LINK] = "link",
+    [LUA_LOCK_OPERATION_SET_HOME] = "set_home",
+    [LUA_LOCK_OPERATION_SPEAK] = "speak",
+    [LUA_LOCK_OPERATION_ZONE_CONTROL] = "zone_control",
+    [LUA_LOCK_OPERATION_CHANNEL_JOIN] = "channel_join",
+    [LUA_LOCK_OPERATION_CHANNEL_TRANSMIT] = "channel_transmit",
+    [LUA_LOCK_OPERATION_CHANNEL_RECEIVE] = "channel_receive",
+    [LUA_LOCK_OPERATION_BTECH_ENTER] = "btech_enter",
+    [LUA_LOCK_OPERATION_BTECH_CONTACT] = "btech_contact",
+};
+
 typedef enum lua_module_root_e {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,
@@ -75,6 +142,48 @@ static int lua_runtime_is_checking(void *context);
 static int lua_runtime_flow_start(void *context, lua_State *state,
                                   int descriptor_id, const char *module,
                                   const char *first_step);
+
+const char *lua_event_name(LuaEventType event) {
+  if ((unsigned int)event >= LUA_EVENT_COUNT)
+    return nullptr;
+  return LUA_EVENT_NAMES[event];
+}
+
+static bool lua_event_name_is_known(const char *name) {
+  LuaEventType event;
+
+  if (!name)
+    return false;
+  for (event = LUA_EVENT_SUCCESS; event < LUA_EVENT_COUNT; event++) {
+    if (!strcmp(name, LUA_EVENT_NAMES[event]))
+      return true;
+  }
+  return false;
+}
+
+const char *lua_lock_name(LuaLockType lock) {
+  if ((unsigned int)lock >= LUA_LOCK_COUNT)
+    return nullptr;
+  return LUA_LOCK_NAMES[lock];
+}
+
+const char *lua_lock_operation_name(LuaLockOperation operation) {
+  if ((unsigned int)operation >= LUA_LOCK_OPERATION_COUNT)
+    return nullptr;
+  return LUA_LOCK_OPERATION_NAMES[operation];
+}
+
+static bool lua_lock_name_is_known(const char *name) {
+  LuaLockType lock;
+
+  if (!name)
+    return false;
+  for (lock = LUA_LOCK_DEFAULT; lock < LUA_LOCK_COUNT; lock++) {
+    if (!strcmp(name, LUA_LOCK_NAMES[lock]))
+      return true;
+  }
+  return false;
+}
 
 static void lua_set_error(char *error, size_t error_size, const char *format,
                           ...) __attribute__((format(printf, 3, 4)));
@@ -712,6 +821,43 @@ invalid:
   return 0;
 }
 
+static int lua_verify_events(lua_State *state, int events, const char *path,
+                             char *error, size_t error_size) {
+  lua_pushnil(state);
+  while (lua_next(state, events) != 0) {
+    const char *name = lua_tostring(state, -2);
+
+    if (lua_type(state, -2) != LUA_TSTRING || !lua_event_name_is_known(name) ||
+        !lua_isfunction(state, -1)) {
+      lua_set_error(error, error_size,
+                    "events in %s must map known event names to functions",
+                    path);
+      lua_pop(state, 2);
+      return 0;
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
+static int lua_verify_locks(lua_State *state, int locks, const char *path,
+                            char *error, size_t error_size) {
+  lua_pushnil(state);
+  while (lua_next(state, locks) != 0) {
+    const char *name = lua_tostring(state, -2);
+
+    if (lua_type(state, -2) != LUA_TSTRING || !lua_lock_name_is_known(name) ||
+        !lua_isfunction(state, -1)) {
+      lua_set_error(error, error_size,
+                    "locks in %s must map known lock names to functions", path);
+      lua_pop(state, 2);
+      return 0;
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
 static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                              const char *path, char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
@@ -733,6 +879,46 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
         return 0;
       }
       has_commands = lua_objlen(runtime->state, -1) > 0;
+    }
+    lua_pop(runtime->state, 1);
+    lua_getfield(runtime->state, -1, "events");
+    if (!lua_isnil(runtime->state, -1)) {
+      if (root != LUA_ROOT_OBJECT_LOGIC) {
+        lua_set_error(error, error_size,
+                      "events in %s are only valid in object modules", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_istable(runtime->state, -1)) {
+        lua_set_error(error, error_size, "events in %s must be a table", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_verify_events(runtime->state, lua_gettop(runtime->state), path,
+                             error, error_size)) {
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+    }
+    lua_pop(runtime->state, 1);
+    lua_getfield(runtime->state, -1, "locks");
+    if (!lua_isnil(runtime->state, -1)) {
+      if (root != LUA_ROOT_OBJECT_LOGIC) {
+        lua_set_error(error, error_size,
+                      "locks in %s are only valid in object modules", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_istable(runtime->state, -1)) {
+        lua_set_error(error, error_size, "locks in %s must be a table", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_verify_locks(runtime->state, lua_gettop(runtime->state), path,
+                            error, error_size)) {
+        lua_settop(runtime->state, top);
+        return 0;
+      }
     }
     lua_pop(runtime->state, 1);
     lua_getfield(runtime->state, -1, "schedules");
@@ -1461,46 +1647,100 @@ int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
   return handled;
 }
 
-int lua_event_dispatch(LuaRuntime *runtime, DbRef player, DbRef thing,
-                       int attribute, char *args[], int nargs) {
+bool lua_event_defined(LuaRuntime *runtime, DbRef object, LuaEventType event) {
   lua_State *state;
-  Attribute *definition;
   char path[PATH_MAX];
-  char event[SBUF_SIZE];
   char error[LBUF_SIZE];
   int top;
-  int index;
-  int status;
+  bool defined;
 
-  if (!runtime ||
-      !lua_effective_path(runtime, thing, path, sizeof(path), nullptr))
-    return 0;
-  definition = attribute_by_number(runtime->services->database, attribute);
-  if (!definition)
-    return 1;
-  snprintf(event, sizeof(event), "%s", definition->name);
-  for (index = 0; event[index]; index++)
-    event[index] = ToLower(event[index]);
+  if (!runtime || !lua_event_name(event) ||
+      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+    return false;
   state = runtime->state;
   top = lua_gettop(state);
   if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
                        sizeof(error))) {
-    lua_log_load_error(runtime, thing, path, error);
+    lua_log_load_error(runtime, object, path, error);
     lua_settop(state, top);
-    return 1;
+    return true;
+  }
+  lua_getfield(state, -1, "events");
+  if (lua_istable(state, -1))
+    lua_getfield(state, -1, lua_event_name(event));
+  defined = lua_isfunction(state, -1);
+  lua_settop(state, top);
+  return defined;
+}
+
+bool lua_lock_defined(LuaRuntime *runtime, DbRef object, LuaLockType lock) {
+  lua_State *state;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  bool defined;
+
+  if (!runtime || !lua_lock_name(lock) ||
+      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+    return false;
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, object, path, error);
+    lua_settop(state, top);
+    return true;
+  }
+  lua_getfield(state, -1, "locks");
+  if (lua_istable(state, -1))
+    lua_getfield(state, -1, lua_lock_name(lock));
+  defined = lua_isfunction(state, -1);
+  lua_settop(state, top);
+  return defined;
+}
+
+bool lua_event_dispatch(LuaRuntime *runtime,
+                        const LuaEventInvocation *invocation) {
+  lua_State *state;
+  const char *event;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  int status;
+
+  if (!runtime || !invocation || !(event = lua_event_name(invocation->type)) ||
+      !lua_effective_path(runtime, invocation->object, path, sizeof(path),
+                          nullptr))
+    return false;
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, invocation->object, path, error);
+    lua_settop(state, top);
+    return true;
   }
   lua_getfield(state, -1, "events");
   if (!lua_istable(state, -1)) {
     lua_settop(state, top);
-    return 1;
+    return false;
   }
   lua_getfield(state, -1, event);
   if (!lua_isfunction(state, -1)) {
     lua_settop(state, top);
-    return 1;
+    return false;
   }
-  lua_push_context(runtime->services->database, nullptr, state, thing, player,
-                   player, nullptr, event, nullptr, args, nargs);
+  lua_push_context(runtime->services->database, invocation->descriptor, state,
+                   invocation->object, invocation->enactor, invocation->cause,
+                   nullptr, event, nullptr, invocation->arguments,
+                   invocation->argument_count);
+  if (invocation->type == LUA_EVENT_CONNECT) {
+    lua_pushboolean(state, invocation->reconnect);
+    lua_setfield(state, -2, "reconnect");
+  } else if (invocation->type == LUA_EVENT_DISCONNECT && invocation->reason) {
+    lua_pushstring(state, invocation->reason);
+    lua_setfield(state, -2, "reason");
+  }
   {
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
@@ -1509,9 +1749,147 @@ int lua_event_dispatch(LuaRuntime *runtime, DbRef player, DbRef thing,
     runtime->current_root = previous_root;
   }
   if (status)
-    lua_log_error(runtime, thing, "EVENT", lua_tostring(state, -1));
+    lua_log_error(runtime, invocation->object, "EVENT",
+                  lua_tostring(state, -1));
   lua_settop(state, top);
-  return 1;
+  return true;
+}
+
+static bool lua_lock_copy_message(lua_State *state, int table,
+                                  const char *field, bool *present,
+                                  char destination[LBUF_SIZE]) {
+  size_t length;
+  const char *message;
+
+  lua_getfield(state, table, field);
+  if (lua_isnil(state, -1)) {
+    lua_pop(state, 1);
+    return true;
+  }
+  if (lua_type(state, -1) != LUA_TSTRING) {
+    lua_pop(state, 1);
+    return false;
+  }
+  message = lua_tolstring(state, -1, &length);
+  if (length >= LBUF_SIZE) {
+    lua_pop(state, 1);
+    return false;
+  }
+  memcpy(destination, message, length);
+  destination[length] = '\0';
+  *present = true;
+  lua_pop(state, 1);
+  return true;
+}
+
+static bool lua_lock_parse_result(lua_State *state, LuaLockResult *result) {
+  int table;
+
+  if (lua_isboolean(state, -1)) {
+    result->passes = lua_toboolean(state, -1);
+    return true;
+  }
+  if (!lua_istable(state, -1))
+    return false;
+  table = lua_gettop(state);
+  lua_pushnil(state);
+  while (lua_next(state, table) != 0) {
+    const char *key = lua_tostring(state, -2);
+    bool valid = lua_type(state, -2) == LUA_TSTRING && key &&
+                 (!strcmp(key, "passes") || !strcmp(key, "enactor_message") ||
+                  !strcmp(key, "other_message"));
+
+    lua_pop(state, 1);
+    if (!valid) {
+      lua_pop(state, 1);
+      return false;
+    }
+  }
+  lua_getfield(state, table, "passes");
+  if (!lua_isboolean(state, -1)) {
+    lua_pop(state, 1);
+    return false;
+  }
+  result->passes = lua_toboolean(state, -1);
+  lua_pop(state, 1);
+  return lua_lock_copy_message(state, table, "enactor_message",
+                               &result->has_enactor_message,
+                               result->enactor_message) &&
+         lua_lock_copy_message(state, table, "other_message",
+                               &result->has_other_message,
+                               result->other_message);
+}
+
+void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
+                       LuaLockResult *result) {
+  lua_State *state;
+  const char *lock;
+  const char *operation;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  int status;
+
+  memset(result, 0, sizeof(*result));
+  result->passes = false;
+  if (!runtime || !invocation || !(lock = lua_lock_name(invocation->type)) ||
+      !(operation = lua_lock_operation_name(invocation->operation)))
+    return;
+  if (!lua_effective_path(runtime, invocation->object, path, sizeof(path),
+                          nullptr)) {
+    result->passes = true;
+    return;
+  }
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    result->defined = true;
+    lua_log_load_error(runtime, invocation->object, path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, "locks");
+  if (!lua_istable(state, -1)) {
+    result->passes = true;
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, lock);
+  if (!lua_isfunction(state, -1)) {
+    result->passes = true;
+    lua_settop(state, top);
+    return;
+  }
+  result->defined = true;
+  lua_push_context(runtime->services->database, invocation->descriptor, state,
+                   invocation->object, invocation->enactor, invocation->cause,
+                   nullptr, nullptr, nullptr, nullptr, 0);
+  lua_pushinteger(state, invocation->subject);
+  lua_setfield(state, -2, "subject");
+  lua_pushstring(state, lock);
+  lua_setfield(state, -2, "lock");
+  lua_pushstring(state, operation);
+  lua_setfield(state, -2, "operation");
+  lua_pushboolean(state, invocation->silent);
+  lua_setfield(state, -2, "silent");
+  {
+    LUA_MODULE_ROOT previous_root = runtime->current_root;
+
+    runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
+    status = lua_pcall_limited(runtime, 1, 1);
+    runtime->current_root = previous_root;
+  }
+  if (status) {
+    lua_log_error(runtime, invocation->object, "LOCK", lua_tostring(state, -1));
+  } else if (!lua_lock_parse_result(state, result)) {
+    lua_log_error(runtime, invocation->object, "LOCK",
+                  "lock handler must return a boolean or a valid result table");
+    result->passes = false;
+    result->has_enactor_message = false;
+    result->has_other_message = false;
+  }
+  lua_settop(state, top);
 }
 
 constexpr int LUA_FLOW_MAX_FIELDS = 16;

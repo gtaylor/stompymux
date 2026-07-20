@@ -72,6 +72,8 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
 static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
                       char *direction, char *linkto) {
   DbRef exit;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   if (!is_good_obj(evaluation->world->database, loc))
     return;
@@ -117,8 +119,10 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
      * Make sure the player passes the link lock
      */
 
-    if (!could_doit_with_context(evaluation, player, loc, A_LLINK)) {
-      notify_quiet(evaluation, player, "You can't link to there.");
+    if (!lock_test(evaluation, player, player, player, loc, LUA_LOCK_LINK,
+                   LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
+      notify_lock_failure(evaluation, &lock, &result,
+                          "You can't link to there.", nullptr, LUA_EVENT_NONE);
       return;
     }
     game_object_set_location(evaluation->world->database, exit, loc);
@@ -173,16 +177,24 @@ void do_open(CommandInvocation *invocation) {
 
 static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                       DbRef dest) {
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   /*
    * Make sure we can link there
    */
 
-  if ((dest != HOME) &&
-      (!is_controls(evaluation, player, dest) ||
-       !could_doit_with_context(evaluation, player, dest, A_LLINK))) {
-    notify_quiet(evaluation, player, "Permission denied.");
-    return;
+  if (dest != HOME) {
+    if (!is_controls(evaluation, player, dest)) {
+      notify_quiet(evaluation, player, "Permission denied.");
+      return;
+    }
+    if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
+                   LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
+      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
+                          nullptr, LUA_EVENT_NONE);
+      return;
+    }
   }
   /*
    * Exit must be unlinked or controlled by you
@@ -219,6 +231,8 @@ void do_link(CommandInvocation *invocation) {
   char *what = invocation->first;
   char *where = invocation->second;
   DbRef thing, room;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   /*
    * Find the thing to link
@@ -273,9 +287,13 @@ void do_link(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "Can't link to an exit.");
       break;
     }
-    if (!can_set_home(evaluation, player, thing, room) ||
-        !could_doit_with_context(evaluation, player, room, A_LLINK)) {
+    if (!can_set_home(evaluation, player, thing, room)) {
       notify_quiet(evaluation, player, "Permission denied.");
+    } else if (!lock_test(evaluation, player, invocation->cause, player, room,
+                          LUA_LOCK_LINK, LUA_LOCK_OPERATION_SET_HOME, false,
+                          &lock, &result)) {
+      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
+                          nullptr, LUA_EVENT_NONE);
     } else if (room == HOME) {
       notify_quiet(evaluation, player, "Can't set home to home.");
     } else {
@@ -301,10 +319,14 @@ void do_link(CommandInvocation *invocation) {
 
     if ((room != HOME) && !is_room(evaluation->world->database, room)) {
       notify_quiet(evaluation, player, "That is not a room!");
-    } else if ((room != HOME) &&
-               (!is_controls(evaluation, player, room) ||
-                !could_doit_with_context(evaluation, player, room, A_LLINK))) {
+    } else if ((room != HOME) && !is_controls(evaluation, player, room)) {
       notify_quiet(evaluation, player, "Permission denied.");
+    } else if ((room != HOME) &&
+               !lock_test(evaluation, player, invocation->cause, player, room,
+                          LUA_LOCK_LINK, LUA_LOCK_OPERATION_LINK, false, &lock,
+                          &result)) {
+      notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
+                          nullptr, LUA_EVENT_NONE);
     } else {
       game_object_set_location(evaluation->world->database, thing, room);
       if (!is_quiet(evaluation->world->database, player))
@@ -645,8 +667,8 @@ void do_clone(CommandInvocation *invocation) {
       game_object_set_parent(
           evaluation->world->database, clone,
           game_object_parent(evaluation->world->database, thing));
-    did_it(evaluation, player, clone, 0, nullptr, 0, nullptr, A_ACLONE,
-           (char **)nullptr, 0);
+    notify_action(evaluation, player, clone, 0, nullptr, 0, nullptr,
+                  LUA_EVENT_CLONE, (char **)nullptr, 0);
   } else {
     if (!(key & CLONE_PARENT) && is_controls(evaluation, player, thing))
       game_object_set_parent(
@@ -1226,7 +1248,7 @@ void do_chown(CommandInvocation *invocation) {
          * *  * * !locked
          */
 
-        if (!is_controls(evaluation, player, thing) || (aflags & AF_LOCK)) {
+        if (!is_controls(evaluation, player, thing)) {
           notify_quiet(evaluation, player, "Permission denied.");
         } else {
           do_it = 1;
@@ -1240,9 +1262,7 @@ void do_chown(CommandInvocation *invocation) {
          * *  * * and !locked
          */
 
-        if ((game_object_owner(evaluation->world->database, player) !=
-             aowner) ||
-            (aflags & AF_LOCK)) {
+        if (game_object_owner(evaluation->world->database, player) != aowner) {
           notify_quiet(evaluation, player, "Permission denied.");
         } else {
           do_it = 1;

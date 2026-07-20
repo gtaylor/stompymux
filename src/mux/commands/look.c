@@ -7,7 +7,6 @@
 #include "mux/commands/command.h"
 #include "mux/commands/look.h"
 #include "mux/database/attrs.h"
-#include "mux/database/boolexp.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
@@ -179,17 +178,6 @@ static void view_atr(EvaluationContext *evaluation, DbRef player, DbRef thing,
                      int skip_tag) {
   char xbuf[6];
   char *xbufp;
-  BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
-
-  if (ap->flags & AF_IS_LOCK) {
-    boolexp = boolean_expression_parse(evaluation->world->database, nullptr,
-                                       player, text, 1);
-    boolean_expression_unparse(evaluation->world->database, evaluation,
-                               lock_text, player, boolexp);
-    text = lock_text;
-    boolean_expression_free(boolexp);
-  }
   /*
    * If we don't control the object or own the attribute, hide the * *
    * * * attr owner and flag info.
@@ -208,8 +196,6 @@ static void view_atr(EvaluationContext *evaluation, DbRef player, DbRef thing,
    */
 
   xbufp = xbuf;
-  if (aflags & AF_LOCK)
-    *xbufp++ = '+';
   if (aflags & AF_NOPROG)
     *xbufp++ = '$';
   if (aflags & AF_PRIVATE)
@@ -251,7 +237,7 @@ static void look_atrs1(EvaluationContext *evaluation, DbRef player, DbRef thing,
   cattr = malloc(sizeof(Attribute));
   for (ca = attribute_list_first(evaluation->world->database, thing, &as); ca;
        ca = attribute_list_next(&as)) {
-    if ((ca == A_DESC) || (ca == A_LOCK))
+    if (ca == A_DESC)
       continue;
     attr = attribute_by_number(evaluation->world->database, ca);
     if (!attr)
@@ -334,8 +320,8 @@ static void look_simple(EvaluationContext *evaluation, DbRef player,
     free_lbuf(buff);
   }
   pattr = A_DESC;
-  did_it(evaluation, player, thing, pattr, "You see nothing special.", A_ODESC,
-         nullptr, A_ADESC, (char **)nullptr, 0);
+  notify_action(evaluation, player, thing, pattr, "You see nothing special.",
+                A_ODESC, nullptr, LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
 
   if (!world->configuration->quiet_look) {
     look_atrs(evaluation, player, thing, 0);
@@ -353,8 +339,8 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
 
   if (indent)
     raw_notify_newline(evaluation, player);
-  did_it(evaluation, player, loc, A_DESC, nullptr, A_ODESC, nullptr, A_ADESC,
-         (char **)nullptr, 0);
+  notify_action(evaluation, player, loc, A_DESC, nullptr, A_ODESC, nullptr,
+                LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
   if (indent)
     raw_notify_newline(evaluation, player);
 }
@@ -369,8 +355,8 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
       use_idesc) {
     if (*(got = attribute_parent_get(evaluation->world->database, loc, A_IDESC,
                                      &aowner, &aflags)))
-      did_it(evaluation, player, loc, A_IDESC, nullptr, A_ODESC, nullptr,
-             A_ADESC, (char **)nullptr, 0);
+      notify_action(evaluation, player, loc, A_IDESC, nullptr, A_ODESC, nullptr,
+                    LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
     else
       show_a_desc(evaluation, player, loc);
     free_lbuf(got);
@@ -381,8 +367,9 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
 void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
   WorldContext *world = evaluation->world;
-  int pattr, oattr, aattr;
   char *buff;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   /*
    * Only makes sense for things that can hear
@@ -419,17 +406,13 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
    */
 
   if (typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) {
-    if (could_doit_with_context(evaluation, player, loc, A_LOCK)) {
-      pattr = A_SUCC;
-      oattr = A_OSUCC;
-      aattr = A_ASUCC;
-    } else {
-      pattr = A_FAIL;
-      oattr = A_OFAIL;
-      aattr = A_AFAIL;
-    }
-    did_it(evaluation, player, loc, pattr, nullptr, oattr, nullptr, aattr,
-           (char **)nullptr, 0);
+    if (lock_test(evaluation, player, player, player, loc, LUA_LOCK_DEFAULT,
+                  LUA_LOCK_OPERATION_LOOK, false, &lock, &result))
+      notify_action(evaluation, player, loc, A_SUCC, nullptr, A_OSUCC, nullptr,
+                    LUA_EVENT_SUCCESS, (char **)nullptr, 0);
+    else
+      notify_lock_failure(evaluation, &lock, &result, nullptr, nullptr,
+                          LUA_EVENT_FAIL);
   }
   /*
    * tell him the attributes, contents and exits
@@ -535,10 +518,8 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
   char *buf;
   long aflags;
   int ca;
-  BooleanExpression *boolexp;
   Attribute *attr;
   char *as, *cp;
-  char lock_text[LBUF_SIZE];
 
   notify_printf(evaluation, player, "Number  = %ld", thing);
   if (!is_good_obj(evaluation->world->database, thing))
@@ -566,16 +547,6 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
   buf = power_description(evaluation->world->database, player, thing);
   notify_printf(evaluation, player, "Powers  = %s", buf);
   free_mbuf(buf);
-  buf = attribute_get(evaluation->world->database, thing, A_LOCK, &aowner,
-                      &aflags);
-  boolexp = boolean_expression_parse(evaluation->world->database, nullptr,
-                                     player, buf, 1);
-  free_lbuf(buf);
-  boolean_expression_unparse(evaluation->world->database, evaluation, lock_text,
-                             player, boolexp);
-  notify_printf(evaluation, player, "Lock    = %s", lock_text);
-  boolean_expression_free(boolexp);
-
   buf = alloc_lbuf("debug_dexamine");
   cp = buf;
   safe_str("Attr list: ", buf, &cp);
@@ -702,10 +673,8 @@ void do_examine(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef thing, content, exit, aowner, loc;
   char *temp, *buf2;
-  BooleanExpression *boolexp;
   int control, do_parent;
   long aflags;
-  char lock_text[LBUF_SIZE];
   ObjectList attributes;
 
   /*
@@ -814,22 +783,10 @@ void do_examine(CommandInvocation *invocation) {
 
   if (control) {
 
-    /*
-     * print owner, key, and value
-     */
-
-    buf2 = attribute_get(evaluation->world->database, thing, A_LOCK, &aowner,
-                         &aflags);
-    boolexp = boolean_expression_parse(evaluation->world->database, nullptr,
-                                       player, buf2, 1);
-    boolean_expression_unparse(evaluation->world->database, evaluation,
-                               lock_text, player, boolexp);
-    boolean_expression_free(boolexp);
-    StringCopy(buf2, game_object_name(evaluation->world->database,
-                                      game_object_owner(
-                                          evaluation->world->database, thing)));
-    notify_printf(evaluation, player, "Owner: %s  Key: %s", buf2, lock_text);
-    free_lbuf(buf2);
+    notify_printf(evaluation, player, "Owner: %s",
+                  game_object_name(
+                      evaluation->world->database,
+                      game_object_owner(evaluation->world->database, thing)));
 
     if (world->configuration->have_zones) {
       buf2 = unparse_object(

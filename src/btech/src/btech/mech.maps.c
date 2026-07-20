@@ -1803,6 +1803,8 @@ static void mech_enter_event(MuxEvent *e) {
   long target = (long)e->data2;
   int x, y;
   int obj_x, obj_y;
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   if (!(mapo = find_entrance_by_xy(map, MechX(mech), MechY(mech))))
     return;
@@ -1818,14 +1820,12 @@ static void mech_enter_event(MuxEvent *e) {
   if (!find_entrance(newmap, target, &x, &y))
     return;
 
-  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
-                               mech->mynum, newmap->mynum, A_LENTER) &&
+  if (!lock_test(btech_context_evaluation(mech->xcode.context), mech->mynum,
+                 mech->mynum, mech->mynum, newmap->mynum, LUA_LOCK_ENTER,
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result) &&
       (BuildIsSafe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
-    char *msg =
-        btech_attribute_read(newmap->xcode.context->database, newmap->mynum,
-                             A_FAIL, (char[LBUF_SIZE]){0});
-    if (!msg || !*msg)
-      msg = "The hangar is locked.";
+    char *msg = lock_result.has_enactor_message ? lock_result.enactor_message
+                                                : "The hangar is locked.";
     mech_notify(mech, MECHALL, msg);
     return;
   }
@@ -1880,6 +1880,8 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   int argc;
 
   char fail_mesg[SBUF_SIZE];
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   argc = mech_parseattributes(buffer, args, 2);
   DOCHECK_CONTEXT(mech->xcode.context, argc > 1,
@@ -1934,16 +1936,17 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
-                               mech->mynum, newmap->mynum, A_LENTER) &&
+  if (!lock_test(btech_context_evaluation(mech->xcode.context), player, player,
+                 mech->mynum, newmap->mynum, LUA_LOCK_ENTER,
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result) &&
       (BuildIsSafe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
 
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     snprintf(fail_mesg, SBUF_SIZE, "The hangar is locked.");
 
-    did_it(btech_context_evaluation(mech->xcode.context), player, newmap->mynum,
-           A_FAIL, fail_mesg, 0, NULL, A_AFAIL, (char **)NULL, 0);
+    notify_lock_failure(btech_context_evaluation(mech->xcode.context), &lock,
+                        &lock_result, fail_mesg, NULL, LUA_EVENT_FAIL);
 
     return;
   }

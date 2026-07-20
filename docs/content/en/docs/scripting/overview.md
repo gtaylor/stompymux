@@ -20,7 +20,7 @@ Attach a module to an object with the wizard-only `@lua/parent
 <object>=<path>.lua`; the path is relative to `object_logic`, and omitting it
 clears the attachment. The closest attachment in the object's ordinary MUX
 parent chain is active. See [Object scripting](scripting-objects/) for the
-full module contract, the action-event mapping, and how load errors are
+full module contract, the native event catalog, and how load errors are
 handled.
 
 Global logic files are discovered recursively below `global_logic` and
@@ -32,11 +32,11 @@ command, replacing the old master-room programmable-command stage. See
 
 ## Module contract
 
-Each module returns a table with optional `commands`, `events`, `schedules`,
-and `flows` entries. A command entry pairs a native Lua `pattern` with a
-`handler(ctx, ...)`; returning `true` handles the command, `false` or `nil`
-lets other matching continue. See [Commands](commands/) for pattern syntax
-and the handler context table.
+Each module returns a table with optional `commands`, `schedules`, and `flows`
+entries; object modules may also provide `events`. A command entry pairs a
+native Lua `pattern` with a `handler(ctx, ...)`; returning `true` handles the
+command, `false` or `nil` lets other matching continue. See
+[Commands](commands/) for pattern syntax and the handler context table.
 
 A module's `flows` table holds named step functions that
 [`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
@@ -96,17 +96,15 @@ command-match scope:
 command increments the attached object's `LuaCount` attribute, so the value
 survives Lua reloads and server restarts.
 
-`game/lua/object_logic/events/enter_notice.lua` demonstrates an `aenter`
-replacement:
+`game/lua/object_logic/events/enter_notice.lua` demonstrates an `on_enter`
+handler:
 
 ```text
 @lua/parent #456=events/enter_notice.lua
 @lua/reload
 ```
 
-Its `aenter` function runs whenever the existing action-attribute path would
-have run for that room. Attaching the module suppresses the room's legacy
-`Aenter`, so migrate the existing behavior before attaching.
+Its `on_enter` function runs whenever the room receives the native enter event.
 
 `game/lua/global_logic/example.lua` defines the working `global-hello`
 global command.

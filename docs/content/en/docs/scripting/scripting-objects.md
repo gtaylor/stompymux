@@ -26,14 +26,15 @@ before reloading.
 
 If an attached file is deleted or otherwise cannot load, startup logs the
 object, configured path, and load error but continues. The attachment remains
-in place; command matching and action events for that object log the load error
-and are treated as handled, so legacy softcode does not run unexpectedly.
+in place; command matching and native events for that object log the load error
+and are treated as handled.
 Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
 repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
 ## Module contract
 
-An object module returns a table with optional `commands` and `events` tables.
+An object module returns a table with optional `commands`, `events`, `locks`,
+and `schedules` tables.
 Command entries use native Lua patterns and a handler:
 
 ```lua
@@ -52,61 +53,96 @@ return {
 ```
 
 Returning `true` handles the command; `false` or `nil` allows the local or zone
-legacy `$` command search to continue. Object event functions are keyed by the
-lowercase action-attribute name, such as `aenter`, `aleave`, `ahear`, and
-`daily`. Attaching a module suppresses that object's matching legacy action
-attribute, even if the module does not implement the event.
+legacy `$` command search to continue. Object event functions use the native
+Lua event names listed below. Event names are validated by `@lua/check`; an
+unknown name or non-function value is an error.
 
-## Action and other-message events
+## Object locks
 
-The Lua event bridge is invoked for every action attribute supplied to
-`did_it()`. The event key is the lowercased attribute name: for example,
-`@asuccess` stores `Asucc`, which calls `events.asucc`.
+Define locks as functions in the module's `locks` table. The supported keys
+are `default`, `drop`, `enter`, `give`, `leave`, `link`, `receive`, `speech`,
+`teleport`, `teleport_out`, and `use`.
 
-The paired `@O` attributes are **other-message** attributes, not action
-events. They continue to produce their existing evaluated messages while Lua
-handles the paired `@A` action. They are included here as a migration
-reference.
+```lua
+locks = {
+  enter = function(ctx)
+    if ctx.subject == 1 then
+      return true
+    end
+    return {
+      passes = false,
+      enactor_message = "You cannot enter here.",
+      other_message = "tries to enter, but cannot.",
+    }
+  end,
+}
+```
 
-| Legacy action | Lua event | Trigger | Paired other message |
-| --- | --- | --- | --- |
-| `@asuccess` | `asucc` | A successful take, exit traversal, or lock-checked look. | `@osuccess` |
-| `@afail` | `afail` | A failed take, exit traversal, or lock-checked look. | `@ofail` |
-| `@adrop` | `adrop` | An object is dropped. | `@odrop` |
-| `@agfail` | `agfail` | Giving an object fails its give lock. | `@ogfail` |
-| `@arfail` | `arfail` | Giving to a recipient fails its receive lock. | `@orfail` |
-| `@adfail` | `adfail` | Dropping an object fails. | `@odfail` |
-| `@ause` | `ause` | An object is used. | `@ouse` |
-| `@aufail` | `aufail` | Using an object fails its use lock. | `@oufail` |
-| `@adescribe` | `adesc` | A description or inside description is displayed. | `@odescribe` |
-| `@aenter` | `aenter` | An object or room is entered. | `@oenter` |
-| `@aleave` | `aleave` | An object or room is left. | `@oleave` |
-| `@amove` | `amove` | A player or thing completes a move. | `@omove` |
-| `@aefail` | `aefail` | Entering an object fails its enter lock. | `@oefail` |
-| `@alfail` | `alfail` | Leaving an object fails its leave lock. | `@olfail` |
-| `@atport` | `atport` | A player or thing teleports successfully. | `@otport` |
-| `@atfail` | `atfail` | Teleporting to a destination fails. | `@otfail` |
-| `@atofail` | `atofail` | Teleporting out of an origin fails. | `@otofail` |
-| `@aahear` | `aahear` | A matching `@listen` message is heard, including the speaker. | — |
-| `@ahear` | `ahear` | A matching `@listen` message is heard from someone else. | — |
-| `@amhear` | `amhear` | A matching `@listen` message is spoken by the object itself. | — |
-| `@aclone` | `aclone` | An object is cloned. | — |
-| `@startup` | `startup` | The server starts. | — |
-| `@daily` | `daily` | The daily timer runs. | — |
-| `HHourly` | `hhourly` | The hourly timer runs. | — |
-| `@amechdest` | `amechdest` | A BattleTech mech is destroyed. | — |
-| `@aminetrigger` | `aminetrigger` | A BattleTech mine is triggered. | — |
-| `@aaeroland` | `aaeroland` | A BattleTech aerospace unit lands. | — |
-| `@aoodland` | `aoodland` | A BattleTech out-of-danger landing completes. | — |
+A lock may return a boolean or a table. A table must contain boolean `passes`
+and may contain string `enactor_message` and `other_message`. Omitted messages
+use the native default for the attempted action; an empty string suppresses
+that message. On failure, messages are delivered first and the corresponding
+`on_*_fail` event then runs on the object whose lock failed.
 
-`@oxenter`, `@oxleave`, and `@oxtport` are the other-message notifications
-for the location being left; they have no paired action attribute. All other
-`@O` attributes are listed in the table above.
+The context includes the normal `object`, `enactor`, `cause`, and `descriptor`
+fields, plus `subject` (the object being tested), `lock`, `operation`, and
+`silent`. `operation` distinguishes uses of the same semantic lock. Its values
+are `match`, `traverse`, `take`, `look`, `command_match`, `listen`, `use`,
+`drop`, `give`, `receive`, `enter`, `leave`, `teleport`, `teleport_out`,
+`link`, `set_home`, `speak`, `zone_control`, `channel_join`,
+`channel_transmit`, `channel_receive`, `btech_enter`, and `btech_contact`.
+Lock handlers have access to the full [`mux`](packages/mux/) API.
 
-`@aconnect`, `@adisconnect`, and `@runout` remain legacy action attributes,
-but do not currently pass through `did_it()` and therefore do not yet invoke a
-Lua event. Connection and charge-exhaustion hooks should be migrated
-separately.
+An absent lock handler passes. An attached module that cannot load, a runtime
+error, or a malformed lock result fails closed and is logged. Native
+`Pass_Locks` and other built-in authorization bypasses still apply.
+
+## Object events
+
+Native game behavior invokes Lua events directly. Existing success and
+other-message attributes still produce their evaluated messages before the
+Lua handler runs. Lock failure messages come from the structured lock result
+or the native defaults.
+
+| Lua event | Trigger | Message before event |
+| --- | --- | --- |
+| `on_success` | A successful take, exit traversal, or lock-checked look. | `@osuccess` |
+| `on_fail` | A failed take, exit traversal, or lock-checked look. | Lock result |
+| `on_drop` | An object is dropped. | `@odrop` |
+| `on_give_fail` | Giving an object fails its give lock. | Lock result |
+| `on_give_receive_fail` | Giving to a recipient fails its receive lock. | Lock result |
+| `on_drop_fail` | Dropping an object fails. | Lock result |
+| `on_use` | An object is used. | `@ouse` |
+| `on_use_fail` | Using an object fails its use lock. | Lock result |
+| `on_describe` | A description or inside description is displayed. | `@odescribe` |
+| `on_enter` | An object or room is entered. | `@oenter` |
+| `on_leave` | An object or room is left. | `@oleave` |
+| `on_move` | A player or thing completes a move. | `@omove` |
+| `on_enter_fail` | Entering an object fails its enter lock. | Lock result |
+| `on_leave_fail` | Leaving an object fails its leave lock. | Lock result |
+| `on_teleport` | A player or thing teleports successfully. | `@otport` |
+| `on_teleport_destination_fail` | Teleporting to a destination fails. | Lock result |
+| `on_teleport_out_fail` | Teleporting out of an origin fails. | Lock result |
+| `on_match_heard` | A matching `@listen` message is heard, including the speaker. | — |
+| `on_match_heard_other` | A matching `@listen` message is heard from someone else. | — |
+| `on_match_heard_self` | A matching `@listen` message is spoken by the object itself. | — |
+| `on_clone` | An object is cloned. | — |
+| `on_server_startup` | The server starts. | — |
+| `on_connect` | A player connects or reconnects. | — |
+| `on_disconnect` | A player's final descriptor disconnects. | — |
+| `on_mech_destroyed` | A BattleTech mech is destroyed. | — |
+| `on_mech_mine_trigger` | A BattleTech mine is triggered. | — |
+| `on_aero_land` | A BattleTech aerospace unit lands. | — |
+| `on_ood_land` | A BattleTech out-of-danger landing completes. | — |
+
+`@oxenter`, `@oxleave`, and `@oxtport` remain other-message notifications for
+the location being left.
+
+Connection events run for the player's effective module, the master room and
+its contents, and the applicable zone object or zone-room contents. Both
+receive `ctx.descriptor`. `on_connect` also receives boolean `ctx.reconnect`;
+`on_disconnect` receives string `ctx.reason` and runs only for the final active
+descriptor.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.

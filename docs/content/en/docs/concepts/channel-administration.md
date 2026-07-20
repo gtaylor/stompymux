@@ -100,25 +100,40 @@ still grant it.
 ## Attach an object for descriptions and locks
 
 A channel object supplies the description displayed by normal list and status
-output and can grant channel capabilities through locks. Create and describe a
-dedicated object, set its locks, and attach it:
+output and can grant channel capabilities through Lua locks. Create and
+describe a dedicated object, attach an object module, and assign it to the
+channel:
 
 ```text
 @create Staff Channel Object
 @desc #123=Coordination channel for game staff.
-@lock/defaultlock #123=<join lock expression>
-@lock/uselock #123=<transmit lock expression>
-@lock/enterlock #123=<receive lock expression>
+@lua/parent #123=channels/staff.lua
 @chan/object Staff=#123
+```
+
+For example, `game/lua/object_logic/channels/staff.lua` can define:
+
+```lua
+local function is_staff(player)
+  return mux.attr_get(player, "Staff") == "1"
+end
+
+return {
+  locks = {
+    default = function(ctx) return is_staff(ctx.subject) end,
+    use = function(ctx) return is_staff(ctx.subject) end,
+    enter = function(ctx) return is_staff(ctx.subject) end,
+  },
+}
 ```
 
 The lock mapping is:
 
 | Channel capability | Channel-object lock |
 | --- | --- |
-| Join | Default lock |
-| Transmit | Use lock |
-| Receive | Enter lock |
+| Join | `default` |
+| Transmit | `use` |
+| Receive | `enter` |
 
 Capability flags are permissive grants and take precedence over the need to
 pass a lock. For example, if the player join flag is enabled, every player can

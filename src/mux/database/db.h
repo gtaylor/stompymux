@@ -65,28 +65,6 @@ extern void anum_extend(GameDatabase *database, int newtop);
 
 constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 
-/* Boolean expressions, for locks */
-constexpr int BOOLEXP_AND = 0;
-constexpr int BOOLEXP_OR = 1;
-constexpr int BOOLEXP_NOT = 2;
-constexpr int BOOLEXP_CONST = 3;
-constexpr int BOOLEXP_ATR = 4;
-constexpr int BOOLEXP_INDIR = 5;
-constexpr int BOOLEXP_CARRY = 6;
-constexpr int BOOLEXP_IS = 7;
-constexpr int BOOLEXP_OWNER = 8;
-constexpr int BOOLEXP_EVAL = 9;
-
-typedef struct BooleanExpression BooleanExpression;
-struct BooleanExpression {
-  boolexp_type type;
-  struct BooleanExpression *sub1;
-  struct BooleanExpression *sub2;
-  DbRef thing; /* thing refers to an object */
-};
-
-constexpr BooleanExpression *TRUE_BOOLEXP = (BooleanExpression *)0;
-
 /* special dbref's */
 constexpr DbRef NOTHING = -1;   /* null dbref */
 constexpr DbRef AMBIGUOUS = -2; /* multiple possibilities, for matchers */
@@ -269,8 +247,6 @@ static inline void game_object_set_stack(GameDatabase *database, DbRef object,
   game_database_object(database, object)->stackhead = value;
 }
 
-extern BooleanExpression *boolean_expression_duplicate(BooleanExpression *);
-extern void boolean_expression_free(BooleanExpression *);
 extern DbRef parse_dbref(const char *);
 extern int mkattr(GameDatabase *database, char *name);
 extern void al_add(DbRef, int);

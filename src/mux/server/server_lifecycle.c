@@ -68,13 +68,11 @@ static void server_lifecycle_signal_test_ready(void) {
 }
 #endif
 
-/* Run startup attributes and restore each object's forward list after load. */
+/* Run Lua startup events and restore each object's forward list after load. */
 static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
   DbRef thing;
-  DbRef parent;
   DbRef aowner;
   long aflags;
-  int level;
   char *text;
   FWDLIST *forward_list;
 
@@ -84,18 +82,17 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
     if (is_going(lifecycle->maintenance->database, thing))
       continue;
 
+    LuaEventInvocation invocation = {
+        .type = LUA_EVENT_SERVER_STARTUP,
+        .object = thing,
+        .enactor = game_object_owner(lifecycle->maintenance->database, thing),
+        .cause = game_object_owner(lifecycle->maintenance->database, thing),
+    };
+
     do_top(lifecycle->maintenance->commands, 10);
-    ITER_PARENTS(lifecycle->maintenance->database,
-                 lifecycle->maintenance->configuration, thing, parent, level) {
-      if (game_object_flags(lifecycle->maintenance->database, thing) &
-          HAS_STARTUP) {
-        did_it(&lifecycle->maintenance->command->evaluation,
-               game_object_owner(lifecycle->maintenance->database, thing),
-               thing, 0, nullptr, 0, nullptr, A_STARTUP, nullptr, 0);
-        do_second(lifecycle->maintenance->commands);
-        do_top(lifecycle->maintenance->commands, 10);
-        break;
-      }
+    if (lua_event_dispatch(lifecycle->maintenance->lua->runtime, &invocation)) {
+      do_second(lifecycle->maintenance->commands);
+      do_top(lifecycle->maintenance->commands, 10);
     }
 
     if (has_fwdlist(lifecycle->maintenance->database, thing)) {

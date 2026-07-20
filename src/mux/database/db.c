@@ -88,59 +88,21 @@ constexpr int PLSTAT_MODE = AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL;
  * list of attributes
  */
 Attribute attr_table[] = {
-    {"Aahear", A_AAHEAR, AF_ODARK, nullptr},
-    {"Aclone", A_ACLONE, AF_ODARK, nullptr},
-    {"Aconnect", A_ACONNECT, AF_ODARK, nullptr},
-    {"Adesc", A_ADESC, AF_ODARK, nullptr},
-    {"Adfail", A_ADFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Adisconnect", A_ADISCONNECT, AF_ODARK, nullptr},
-    {"Adrop", A_ADROP, AF_ODARK, nullptr},
-    {"Aefail", A_AEFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Aenter", A_AENTER, AF_ODARK, nullptr},
-    {"Afail", A_AFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Agfail", A_AGFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Ahear", A_AHEAR, AF_ODARK, nullptr},
-    {"Aleave", A_ALEAVE, AF_ODARK, nullptr},
-    {"Alfail", A_ALFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Alias", A_ALIAS, AF_NOPROG | AF_NOCMD | AF_GOD, nullptr},
-    {"Amhear", A_AMHEAR, AF_ODARK, nullptr},
-    {"Amove", A_AMOVE, AF_ODARK, nullptr},
-    {"Arfail", A_ARFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Asucc", A_ASUCC, AF_ODARK, nullptr},
-    {"Atfail", A_ATFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Atport", A_ATPORT, AF_ODARK | AF_NOPROG, nullptr},
-    {"Atofail", A_ATOFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Aufail", A_AUFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Ause", A_AUSE, AF_ODARK, nullptr},
     {"Away", A_AWAY, AF_ODARK | AF_NOPROG, nullptr},
     {"Buildcoord", A_BUILDCOORD, AF_MDARK | AF_WIZARD, nullptr},
     {"Buildentrance", A_BUILDENTRANCE, AF_MDARK | AF_WIZARD, nullptr},
     {"Buildlinks", A_BUILDLINKS, AF_MDARK | AF_WIZARD, nullptr},
-    {"Charges", A_CHARGES, AF_ODARK | AF_NOPROG, nullptr},
     {"Comment", A_COMMENT, AF_MDARK | AF_WIZARD, nullptr},
     {"Contactoptions", A_CONTACTOPT, AF_ODARK, nullptr},
-    {"Daily", A_DAILY, AF_ODARK, nullptr},
-    {"HHourly", A_HOURLY, AF_MDARK, nullptr},
     {"Desc", A_DESC, AF_NOPROG, nullptr},
-    {"DefaultLock", A_LOCK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Destroyer", A_DESTROYER, AF_MDARK | AF_WIZARD | AF_NOPROG, nullptr},
-    {"Dfail", A_DFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Drop", A_DROP, AF_ODARK | AF_NOPROG, nullptr},
-    {"DropLock", A_LDROP, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Ealias", A_EALIAS, AF_ODARK | AF_NOPROG, nullptr},
-    {"Efail", A_EFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Enter", A_ENTER, AF_ODARK, nullptr},
-    {"EnterLock", A_LENTER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Faction", A_FACTION, AF_MDARK | AF_WIZARD, nullptr},
-    {"Fail", A_FAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Filter", A_FILTER, AF_ODARK | AF_NOPROG, nullptr},
     {"Forwardlist", A_FORWARDLIST, AF_ODARK | AF_NOPROG, fwdlist_ck},
-    {"Gfail", A_GFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"GiveLock", A_LGIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Idesc", A_IDESC, AF_ODARK | AF_NOPROG, nullptr},
     {"Idle", A_IDLE, AF_ODARK | AF_NOPROG, nullptr},
     {"Infilter", A_INFILTER, AF_ODARK | AF_NOPROG, nullptr},
@@ -149,17 +111,12 @@ Attribute attr_table[] = {
     {"Lalias", A_LALIAS, AF_ODARK | AF_NOPROG, nullptr},
     {"Last", A_LAST, AF_WIZARD | AF_NOCMD | AF_NOPROG, nullptr},
     {"Lastname", A_LASTNAME, AF_WIZARD | AF_NOPROG | AF_MDARK, nullptr},
-    {"Luaparent", A_LUAPARENT,
-     AF_WIZARD | AF_MDARK | AF_NOCMD | AF_NOPROG | AF_LOCK, nullptr},
+    {"Luaparent", A_LUAPARENT, AF_WIZARD | AF_MDARK | AF_NOCMD | AF_NOPROG,
+     nullptr},
     {"Lastpage", A_LASTPAGE,
      AF_INTERNAL | AF_NOCMD | AF_NOPROG | AF_GOD | AF_PRIVATE, nullptr},
     {"Lastsite", A_LASTSITE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_GOD, nullptr},
     {"Leave", A_LEAVE, AF_ODARK, nullptr},
-    {"LeaveLock", A_LLEAVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
-    {"Lfail", A_LFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"LinkLock", A_LLINK, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Listen", A_LISTEN, AF_ODARK, nullptr},
 
     {"Logindata", A_LOGINDATA, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL,
@@ -178,63 +135,31 @@ Attribute attr_table[] = {
     {"Move", A_MOVE, AF_ODARK, nullptr},
     {"Name", A_NAME, AF_DARK | AF_NOPROG | AF_NOCMD | AF_INTERNAL, nullptr},
     {"Odesc", A_ODESC, AF_ODARK | AF_NOPROG, nullptr},
-    {"Odfail", A_ODFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Odrop", A_ODROP, AF_ODARK | AF_NOPROG, nullptr},
-    {"Oefail", A_OEFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Oenter", A_OENTER, AF_ODARK, nullptr},
-    {"Ofail", A_OFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Ogfail", A_OGFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Amechdest", A_AMECHDEST, AF_MDARK, nullptr},
-    {"Aaeroland", A_AAEROLAND, AF_MDARK, nullptr},
-    {"Aoodland", A_AOODLAND, AF_MDARK, nullptr},
-    {"Aminetrigger", A_AMINETRIGGER, AF_MDARK, nullptr},
     {"Oleave", A_OLEAVE, AF_ODARK, nullptr},
-    {"Olfail", A_OLFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Omove", A_OMOVE, AF_ODARK, nullptr},
-    {"Orfail", A_ORFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Osucc", A_OSUCC, AF_ODARK | AF_NOPROG, nullptr},
-    {"Otfail", A_OTFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Otport", A_OTPORT, AF_ODARK | AF_NOPROG, nullptr},
-    {"Otofail", A_OTOFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Oufail", A_OUFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Ouse", A_OUSE, AF_ODARK, nullptr},
     {"Oxenter", A_OXENTER, AF_ODARK, nullptr},
     {"Oxleave", A_OXLEAVE, AF_ODARK, nullptr},
     {"Oxtport", A_OXTPORT, AF_ODARK | AF_NOPROG, nullptr},
-    {"ParentLock", A_LPARENT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"PCequip", A_PCEQUIP, AF_MDARK, nullptr},
     {"Pilot", A_PILOTNUM, AF_MDARK, nullptr},
     {"Prefix", A_PREFIX, AF_ODARK | AF_NOPROG, nullptr},
     {"QueueMax", A_QUEUEMAX, AF_MDARK | AF_WIZARD | AF_NOPROG, nullptr},
     {"Ranknum", A_RANKNUM, AF_MDARK | AF_WIZARD, nullptr},
-    {"ReceiveLock", A_LRECEIVE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"Reject", A_REJECT, AF_ODARK | AF_NOPROG, nullptr},
-    {"Rfail", A_RFAIL, AF_ODARK | AF_NOPROG, nullptr},
-    {"Runout", A_RUNOUT, AF_ODARK, nullptr},
 
     {"Semaphore", A_SEMAPHORE, AF_ODARK | AF_NOPROG | AF_WIZARD | AF_NOCMD,
      nullptr},
-    {"SpeechLock", A_LSPEECH, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
-    {"Startup", A_STARTUP, AF_ODARK, nullptr},
     {"Succ", A_SUCC, AF_ODARK | AF_NOPROG, nullptr},
     {"Tacsize", A_TACSIZE, AF_ODARK, nullptr},
-    {"TeloutLock", A_LTELOUT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
-    {"Tfail", A_TFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Timeout", A_TIMEOUT, AF_MDARK | AF_NOPROG | AF_WIZARD, nullptr},
     {"Tport", A_TPORT, AF_ODARK | AF_NOPROG, nullptr},
-    {"TportLock", A_LTPORT, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
-    {"Tofail", A_TOFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Tz", A_TZ, AF_NOPROG, nullptr},
-    {"Ufail", A_UFAIL, AF_ODARK | AF_NOPROG, nullptr},
     {"Use", A_USE, AF_ODARK, nullptr},
-    {"UseLock", A_LUSE, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK, nullptr},
-    {"UserLock", A_LUSER, AF_ODARK | AF_NOPROG | AF_NOCMD | AF_IS_LOCK,
-     nullptr},
     {"VA", A_VA, AF_ODARK, nullptr},
     {"VB", A_VA + 1, AF_ODARK, nullptr},
     {"VC", A_VA + 2, AF_ODARK, nullptr},
@@ -1173,18 +1098,6 @@ void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
   }
 
   switch (atr) {
-  case A_STARTUP:
-    game_object_set_flags(database, thing,
-                          game_object_flags(database, thing) & ~HAS_STARTUP);
-    break;
-  case A_DAILY:
-    game_object_set_flags2(database, thing,
-                           game_object_flags2(database, thing) & ~HAS_DAILY);
-    break;
-  case A_HOURLY:
-    game_object_set_flags2(database, thing,
-                           game_object_flags2(database, thing) & ~HAS_HOURLY);
-    break;
   case A_FORWARDLIST:
     game_object_set_flags2(database, thing,
                            game_object_flags2(database, thing) & ~HAS_FWDLIST);
@@ -1296,18 +1209,6 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
   }
 
   switch (atr) {
-  case A_STARTUP:
-    game_object_set_flags(database, thing,
-                          game_object_flags(database, thing) | HAS_STARTUP);
-    break;
-  case A_DAILY:
-    game_object_set_flags2(database, thing,
-                           game_object_flags2(database, thing) | HAS_DAILY);
-    break;
-  case A_HOURLY:
-    game_object_set_flags2(database, thing,
-                           game_object_flags2(database, thing) | HAS_HOURLY);
-    break;
   case A_FORWARDLIST:
     game_object_set_flags2(database, thing,
                            game_object_flags2(database, thing) | HAS_FWDLIST);
@@ -1540,10 +1441,7 @@ void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef dest,
        attr; attr = attribute_list_next(&as)) {
     buf = attribute_get(evaluation->world->database, source, attr, &aowner,
                         &aflags);
-    if (!(aflags & AF_LOCK))
-      aowner = owner; /*
-                       * chg owner
-                       */
+    aowner = owner;
     at = attribute_by_number(evaluation->world->database, attr);
     if (attr && at) {
       if (write_attr(evaluation, owner, dest, at, aflags))
@@ -1576,7 +1474,7 @@ void attribute_change_owner(GameDatabase *database, DbRef obj) {
   for (attr = attribute_list_first(database, obj, &as); attr;
        attr = attribute_list_next(&as)) {
     buf = attribute_get(database, obj, attr, &aowner, &aflags);
-    if ((aowner != owner) && !(aflags & AF_LOCK))
+    if (aowner != owner)
       attribute_add(database, obj, attr, buf, owner, aflags);
     free_lbuf(buf);
   }
@@ -1927,79 +1825,14 @@ DbRef parse_dbref(const char *s) {
   return ((x >= 0) ? x : NOTHING);
 }
 
-void boolean_expression_free(BooleanExpression *b) {
-  if (b == TRUE_BOOLEXP)
-    return;
-
-  switch (b->type) {
-  case BOOLEXP_AND:
-  case BOOLEXP_OR:
-    boolean_expression_free(b->sub1);
-    boolean_expression_free(b->sub2);
-    free_bool(b);
-    break;
-  case BOOLEXP_NOT:
-  case BOOLEXP_CARRY:
-  case BOOLEXP_IS:
-  case BOOLEXP_OWNER:
-  case BOOLEXP_INDIR:
-    boolean_expression_free(b->sub1);
-    free_bool(b);
-    break;
-  case BOOLEXP_CONST:
-    free_bool(b);
-    break;
-  case BOOLEXP_ATR:
-  case BOOLEXP_EVAL:
-    free((char *)b->sub1);
-    free_bool(b);
-    break;
-  default:
-    break;
-  }
-}
-
-BooleanExpression *boolean_expression_duplicate(BooleanExpression *b) {
-  BooleanExpression *r;
-
-  if (b == TRUE_BOOLEXP)
-    return (TRUE_BOOLEXP);
-
-  r = alloc_bool("boolean_expression_duplicate");
-  switch (r->type = b->type) {
-  case BOOLEXP_AND:
-  case BOOLEXP_OR:
-    r->sub2 = boolean_expression_duplicate(b->sub2);
-    [[fallthrough]];
-  case BOOLEXP_NOT:
-  case BOOLEXP_CARRY:
-  case BOOLEXP_IS:
-  case BOOLEXP_OWNER:
-  case BOOLEXP_INDIR:
-    r->sub1 = boolean_expression_duplicate(b->sub1);
-    [[fallthrough]];
-  case BOOLEXP_CONST:
-    r->thing = b->thing;
-    break;
-  case BOOLEXP_EVAL:
-  case BOOLEXP_ATR:
-    r->thing = b->thing;
-    r->sub1 = (BooleanExpression *)(void *)strsave((char *)b->sub1);
-    break;
-  default:
-    fprintf(stderr, "bad bool type!!\n");
-    free_bool(r);
-    return (TRUE_BOOLEXP);
-  }
-  return (r);
-}
-
 /*
  * check_zone - checks back through a zone tree for control
  */
 static int check_zone_at_depth(EvaluationContext *evaluation, DbRef player,
                                DbRef thing, int depth) {
   GameDatabase *database = evaluation->world->database;
+  LuaLockInvocation lock;
+  LuaLockResult result;
   if (!database->configuration->have_zones ||
       (game_object_zone(database, thing) == NOTHING) ||
       (depth == database->configuration->zone_nest_lim) ||
@@ -2008,13 +1841,13 @@ static int check_zone_at_depth(EvaluationContext *evaluation, DbRef player,
   }
 
   /*
-   * If the zone doesn't have an enterlock, DON'T allow control.
+   * If the zone doesn't define an enter lock, DON'T allow control.
    */
 
-  if (attribute_get_raw(database, game_object_zone(database, thing),
-                        A_LENTER) &&
-      could_doit_with_context(evaluation, player,
-                              game_object_zone(database, thing), A_LENTER)) {
+  if (lock_test(evaluation, player, player, player,
+                game_object_zone(database, thing), LUA_LOCK_ENTER,
+                LUA_LOCK_OPERATION_ZONE_CONTROL, true, &lock, &result) &&
+      result.defined) {
     return 1;
   }
   return check_zone_at_depth(evaluation, player,
@@ -2028,6 +1861,8 @@ int check_zone(EvaluationContext *evaluation, DbRef player, DbRef thing) {
 int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
                           DbRef thing) {
   GameDatabase *database = evaluation->world->database;
+  LuaLockInvocation lock;
+  LuaLockResult result;
   if (!database->configuration->have_zones ||
       (game_object_zone(database, thing) == NOTHING) ||
       database->configuration->zone_nest_lim == 1 ||
@@ -2035,10 +1870,10 @@ int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
     return 0;
   }
 
-  if (attribute_get_raw(database, game_object_zone(database, thing),
-                        A_LENTER) &&
-      could_doit_with_context(evaluation, player,
-                              game_object_zone(database, thing), A_LENTER)) {
+  if (lock_test(evaluation, player, player, player,
+                game_object_zone(database, thing), LUA_LOCK_ENTER,
+                LUA_LOCK_OPERATION_ZONE_CONTROL, true, &lock, &result) &&
+      result.defined) {
     return 1;
   }
   return check_zone_at_depth(evaluation, player,

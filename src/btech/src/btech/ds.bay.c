@@ -221,6 +221,8 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   DbRef ref = -1, bayn = -1;
   MECH *mech = data, *ds;
   MAP *map;
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   cch(MECH_USUAL);
   DOCHECK_CONTEXT(mech->xcode.context,
@@ -287,12 +289,12 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
 
   DOCHECK_CONTEXT(mech->xcode.context, EnteringHangar(mech),
                   "You are already entering the hangar!");
-  if (!could_doit_with_context(btech_context_evaluation(mech->xcode.context),
-                               mech->mynum, ref, A_LENTER)) {
-    char *msg = btech_attribute_read(mech->xcode.context->database, ref, A_FAIL,
-                                     (char[LBUF_SIZE]){0});
-    if (!msg || !*msg)
-      msg = "You are unable to enter the bay!";
+  if (!lock_test(btech_context_evaluation(mech->xcode.context), player, player,
+                 mech->mynum, ref, LUA_LOCK_ENTER,
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result)) {
+    char *msg = lock_result.has_enactor_message
+                    ? lock_result.enactor_message
+                    : "You are unable to enter the bay!";
     notify(btech_context_evaluation(mech->xcode.context), player, msg);
     return;
   }

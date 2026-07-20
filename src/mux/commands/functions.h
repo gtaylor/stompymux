@@ -92,7 +92,6 @@ FunProto fun_push;
 FunProto fun_regmatch;
 FunProto fun_scramble;
 FunProto fun_set;
-FunProto fun_setlock;
 FunProto fun_shl;
 FunProto fun_shr;
 FunProto fun_shuffle;

@@ -31,6 +31,8 @@ void do_teleport(CommandInvocation *invocation) {
   DbRef victim, destination, loc, exitloc;
   char *to;
   int hush = 0;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   if (((is_fixed(evaluation->world->database, player)) ||
        (is_fixed(evaluation->world->database,
@@ -130,9 +132,26 @@ void do_teleport(CommandInvocation *invocation) {
      * You must control the destination and pass its TELEPORT lock.
      */
 
-    if ((!is_controls(evaluation, player, destination) &&
-         !is_wizard(evaluation->world->database, player)) ||
-        !could_doit_with_context(evaluation, player, destination, A_LTPORT)) {
+    bool permitted = is_controls(evaluation, player, destination) ||
+                     is_wizard(evaluation->world->database, player);
+
+    if (permitted)
+      permitted = lock_test(evaluation, victim, player, player, destination,
+                            LUA_LOCK_TELEPORT, LUA_LOCK_OPERATION_TELEPORT,
+                            false, &lock, &result);
+    else {
+      lock = (LuaLockInvocation){
+          .type = LUA_LOCK_TELEPORT,
+          .operation = LUA_LOCK_OPERATION_TELEPORT,
+          .descriptor = invocation->context->descriptor,
+          .object = destination,
+          .enactor = victim,
+          .cause = player,
+          .subject = player,
+      };
+      result = (LuaLockResult){0};
+    }
+    if (!permitted) {
 
       /*
        * Nope, report failure
@@ -140,9 +159,9 @@ void do_teleport(CommandInvocation *invocation) {
 
       if (player != victim)
         notify_quiet(evaluation, player, "Permission denied.");
-      did_it(evaluation, victim, destination, A_TFAIL,
-             "You can't teleport there!", A_OTFAIL, 0, A_ATFAIL,
-             (char **)nullptr, 0);
+      notify_lock_failure(evaluation, &lock, &result,
+                          "You can't teleport there!", nullptr,
+                          LUA_EVENT_TELEPORT_DESTINATION_FAIL);
       return;
     }
     /*
@@ -391,7 +410,6 @@ typedef enum GlobalControl {
   GLOBAL_CONTROL_IDLE_CHECKING,
   GLOBAL_CONTROL_INTERPRET,
   GLOBAL_CONTROL_LOGINS,
-  GLOBAL_CONTROL_EVENT_CHECKING,
 } GlobalControl;
 
 static const NameTable enable_names[] = {
@@ -401,7 +419,6 @@ static const NameTable enable_names[] = {
     {"idlechecking", 2, CA_PUBLIC, GLOBAL_CONTROL_IDLE_CHECKING},
     {"interpret", 2, CA_PUBLIC, GLOBAL_CONTROL_INTERPRET},
     {"logins", 3, CA_PUBLIC, GLOBAL_CONTROL_LOGINS},
-    {"eventchecking", 2, CA_PUBLIC, GLOBAL_CONTROL_EVENT_CHECKING},
     {nullptr, 0, 0, 0}};
 
 static bool *global_control_value(ServerConfiguration *configuration,
@@ -419,8 +436,6 @@ static bool *global_control_value(ServerConfiguration *configuration,
     return &configuration->is_interpreter_enabled;
   case GLOBAL_CONTROL_LOGINS:
     return &configuration->is_login_enabled;
-  case GLOBAL_CONTROL_EVENT_CHECKING:
-    return &configuration->is_event_check_enabled;
   default:
     return nullptr;
   }

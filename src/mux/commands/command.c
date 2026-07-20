@@ -164,21 +164,6 @@ NameTable halt_sw[] = {{"all", 1, CA_PUBLIC, HALT_ALL}, {nullptr, 0, 0, 0}};
 NameTable leave_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
                         {nullptr, 0, 0, 0}};
 
-NameTable lock_sw[] = {{"defaultlock", 1, CA_PUBLIC, A_LOCK},
-                       {"droplock", 1, CA_PUBLIC, A_LDROP},
-                       {"enterlock", 1, CA_PUBLIC, A_LENTER},
-                       {"givelock", 1, CA_PUBLIC, A_LGIVE},
-                       {"leavelock", 2, CA_PUBLIC, A_LLEAVE},
-                       {"linklock", 2, CA_PUBLIC, A_LLINK},
-                       {"parentlock", 3, CA_PUBLIC, A_LPARENT},
-                       {"receivelock", 1, CA_PUBLIC, A_LRECEIVE},
-                       {"teloutlock", 2, CA_PUBLIC, A_LTELOUT},
-                       {"tportlock", 2, CA_PUBLIC, A_LTPORT},
-                       {"uselock", 1, CA_PUBLIC, A_LUSE},
-                       {"userlock", 4, CA_PUBLIC, A_LUSER},
-                       {"speechlock", 1, CA_PUBLIC, A_LSPEECH},
-                       {nullptr, 0, 0, 0}};
-
 NameTable look_sw[] = {{"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
                        {nullptr, 0, 0, 0}};
 
@@ -246,7 +231,6 @@ NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
                        {"dump", 1, CA_WIZARD, TWARP_DUMP | SW_MULTIPLE},
                        {"idle", 1, CA_WIZARD, TWARP_IDLE | SW_MULTIPLE},
                        {"queue", 1, CA_WIZARD, TWARP_QUEUE | SW_MULTIPLE},
-                       {"events", 1, CA_WIZARD, TWARP_EVENTS | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
 /*
@@ -499,12 +483,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_list_file}},
-    {"@lock",
-     lock_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_lock}},
 #ifdef ARBITRARY_LOGFILES
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
 #endif
@@ -623,18 +601,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_unlink}},
-    {"@unlock",
-     lock_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_unlock}},
-    {"@verb",
-     nullptr,
-     CA_WIZARD | CA_GBL_INTERP,
-     0,
-     CS_TWO_ARG | CS_ARGV | CS_INTERP | CS_STRIP_AROUND,
-     {.invoke = do_verb}},
     {"@wait",
      nullptr,
      CA_WIZARD | CA_GBL_INTERP,
@@ -1996,8 +1962,6 @@ NameTable attraccess_nametab[] = {{"dark", 2, CA_WIZARD, AF_DARK},
                                   {"hidden", 1, CA_WIZARD, AF_MDARK},
                                   {"ignore", 2, CA_WIZARD, AF_NOCMD},
                                   {"internal", 2, CA_WIZARD, AF_INTERNAL},
-                                  {"is_lock", 4, CA_PUBLIC, AF_IS_LOCK},
-                                  {"locked", 1, CA_PUBLIC, AF_LOCK},
                                   {"no_command", 4, CA_PUBLIC, AF_NOPROG},
                                   {"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
                                   {"private", 1, CA_PUBLIC, AF_ODARK},

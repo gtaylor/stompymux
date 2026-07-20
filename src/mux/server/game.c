@@ -174,6 +174,8 @@ static int attribute_match_one(EvaluationContext *evaluation, DbRef thing,
   char buff[LBUF_SIZE], *s, *as;
   char *args[10];
   Attribute *ap;
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   memset(args, 0, sizeof(args));
 
@@ -181,7 +183,8 @@ static int attribute_match_one(EvaluationContext *evaluation, DbRef thing,
    * See if we can do it.  Silently fail if we can't.
    */
 
-  if (!could_doit_with_context(evaluation, player, parent, A_LUSE))
+  if (!lock_test(evaluation, player, player, player, parent, LUA_LOCK_USE,
+                 LUA_LOCK_OPERATION_COMMAND_MATCH, true, &lock, &lock_result))
     return -1;
 
   match = 0;
@@ -392,6 +395,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   long aflags;
   int check_listens, pass_uselock, target_audible;
   FWDLIST *fp;
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   /*
    * If speaker is invalid or message is empty, just exit
@@ -551,7 +556,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
     if ((key & MSG_ME) && check_listens &&
         (pass_listen || is_monitor(evaluation->world->database, target)))
       pass_uselock =
-          could_doit_with_context(evaluation, sender, target, A_LUSE);
+          lock_test(evaluation, sender, sender, sender, target, LUA_LOCK_USE,
+                    LUA_LOCK_OPERATION_LISTEN, true, &lock, &lock_result);
 
     /*
      * Process AxHEAR if we pass LISTEN, USElock and it's for me
@@ -559,13 +565,13 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if ((key & MSG_ME) && pass_listen && pass_uselock) {
       if (sender != target)
-        did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AHEAR,
-               args, nargs);
+        notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
+                      LUA_EVENT_MATCH_HEARD_OTHER, args, nargs);
       else
-        did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AMHEAR,
-               args, nargs);
-      did_it(evaluation, sender, target, 0, nullptr, 0, nullptr, A_AAHEAR, args,
-             nargs);
+        notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
+                      LUA_EVENT_MATCH_HEARD_SELF, args, nargs);
+      notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
+                    LUA_EVENT_MATCH_HEARD, args, nargs);
     }
     /*
      * Get rid of match arguments. We don't need them anymore

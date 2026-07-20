@@ -315,13 +315,72 @@ static const char *time_format_2(time_t dt) {
   return buf;
 }
 
+static void dispatch_connection_event(CommandRuntime *runtime, Descriptor *d,
+                                      DbRef player, DbRef object,
+                                      LuaEventType type, bool reconnect,
+                                      const char *reason) {
+  LuaEventInvocation invocation = {
+      .type = type,
+      .descriptor = d,
+      .object = object,
+      .enactor = player,
+      .cause = player,
+      .reconnect = reconnect,
+      .reason = reason,
+  };
+
+  lua_event_dispatch(runtime->lua_owner->runtime, &invocation);
+}
+
+static void dispatch_connection_event_scope(CommandRuntime *runtime,
+                                            Descriptor *d, DbRef player,
+                                            DbRef location, LuaEventType type,
+                                            bool reconnect,
+                                            const char *reason) {
+  const ServerConfiguration *configuration = runtime->world->configuration;
+  DbRef object;
+  DbRef zone;
+
+  dispatch_connection_event(runtime, d, player, player, type, reconnect,
+                            reason);
+  if (configuration->master_room != NOTHING) {
+    dispatch_connection_event(runtime, d, player, configuration->master_room,
+                              type, reconnect, reason);
+    DOLIST(runtime->world->database, object,
+           game_object_contents(runtime->world->database,
+                                configuration->master_room)) {
+      dispatch_connection_event(runtime, d, player, object, type, reconnect,
+                                reason);
+    }
+  }
+  if (!configuration->have_zones ||
+      (zone = game_object_zone(runtime->world->database, location)) == NOTHING)
+    return;
+  switch (typeof_obj(runtime->world->database, zone)) {
+  case TYPE_THING:
+    dispatch_connection_event(runtime, d, player, zone, type, reconnect,
+                              reason);
+    break;
+  case TYPE_ROOM:
+    DOLIST(runtime->world->database, object,
+           game_object_contents(runtime->world->database, zone)) {
+      dispatch_connection_event(runtime, d, player, object, type, reconnect,
+                                reason);
+    }
+    break;
+  default:
+    log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
+                     game_object_name(runtime->world->database, player), player,
+                     typeof_obj(runtime->world->database, zone)));
+    break;
+  }
+}
+
 void announce_connect(DbRef player, Descriptor *d) {
   CommandRuntime *runtime = descriptor_runtime(d);
   const ServerConfiguration *configuration = runtime->world->configuration;
   CommandContext *command = runtime->background_command;
   DbRef loc, aowner, temp;
-  DbRef zone, obj;
-
   long aflags;
   int num, key, count;
   char *buf, *time_str;
@@ -400,69 +459,8 @@ void announce_connect(DbRef player, Descriptor *d) {
     send_channel(&command->evaluation, "Suspect",
                  "[Suspect site: %s] %s has connected.", d->addr,
                  game_object_name(runtime->world->database, player));
-  buf = attribute_parent_get(runtime->world->database, player, A_ACONNECT,
-                             &aowner, &aflags);
-  if (buf)
-    wait_que(runtime->commands, player, player, 0, NOTHING, 0, buf,
-             (char **)nullptr, 0, nullptr);
-  free_lbuf(buf);
-  if (configuration->master_room != NOTHING) {
-    buf = attribute_parent_get(runtime->world->database,
-                               configuration->master_room, A_ACONNECT, &aowner,
-                               &aflags);
-    if (buf)
-      wait_que(runtime->commands, configuration->master_room, player, 0,
-               NOTHING, 0, buf, (char **)nullptr, 0, nullptr);
-    free_lbuf(buf);
-    DOLIST(runtime->world->database, obj,
-           game_object_contents(runtime->world->database,
-                                configuration->master_room)) {
-      buf = attribute_parent_get(runtime->world->database, obj, A_ACONNECT,
-                                 &aowner, &aflags);
-      if (buf) {
-        wait_que(runtime->commands, obj, player, 0, NOTHING, 0, buf,
-                 (char **)nullptr, 0, nullptr);
-      }
-      free_lbuf(buf);
-    }
-  }
-  /*
-   * do the zone of the player's location's possible aconnect
-   */
-  if (configuration->have_zones &&
-      ((zone = game_object_zone(runtime->world->database, loc)) != NOTHING)) {
-    switch (typeof_obj(runtime->world->database, zone)) {
-    case TYPE_THING:
-      buf = attribute_parent_get(runtime->world->database, zone, A_ACONNECT,
-                                 &aowner, &aflags);
-      if (buf) {
-        wait_que(runtime->commands, zone, player, 0, NOTHING, 0, buf,
-                 (char **)nullptr, 0, nullptr);
-      }
-      free_lbuf(buf);
-      break;
-    case TYPE_ROOM:
-      /*
-       * check every object in the room for a connect * * *
-       * action
-       */
-      DOLIST(runtime->world->database, obj,
-             game_object_contents(runtime->world->database, zone)) {
-        buf = attribute_parent_get(runtime->world->database, obj, A_ACONNECT,
-                                   &aowner, &aflags);
-        if (buf) {
-          wait_que(runtime->commands, obj, player, 0, NOTHING, 0, buf,
-                   (char **)nullptr, 0, nullptr);
-        }
-        free_lbuf(buf);
-      }
-      break;
-    default:
-      log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
-                       game_object_name(runtime->world->database, player),
-                       player, typeof_obj(runtime->world->database, zone)));
-    }
-  }
+  dispatch_connection_event_scope(runtime, d, player, loc, LUA_EVENT_CONNECT,
+                                  num >= 2, nullptr);
   time_str = ctime(&runtime->clock->now);
   time_str[strlen(time_str) - 1] = '\0';
   record_login(&command->evaluation, player, 1, time_str, d->addr, d->username);
@@ -476,14 +474,12 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   CommandRuntime *runtime = descriptor_runtime(d);
   const ServerConfiguration *configuration = runtime->world->configuration;
   CommandContext *command = runtime->background_command;
-  DbRef loc, aowner, temp, zone, obj;
+  DbRef loc, temp;
   int num, key;
-  long aflags;
-  char *buf, *atr_temp;
+  char *buf;
   Descriptor *dtemp;
   DescriptorIterator iterator =
       descriptor_iterator_player(runtime->descriptors, player);
-  char *argv[1];
 
   if (is_suspect(runtime->world->database, player)) {
     send_channel(&command->evaluation, "Suspect", "%s has disconnected.",
@@ -520,78 +516,9 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has disconnected.",
                   game_object_name(runtime->world->database, player));
 
-    /* wait_que()'s argument array isn't const-correct; reason is only
-       read as command-queue text here. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    argv[0] = (char *)reason;
-#pragma clang diagnostic pop
     c_connected(runtime->world->database, player);
-
-    atr_temp = attribute_parent_get(runtime->world->database, player,
-                                    A_ADISCONNECT, &aowner, &aflags);
-    if (atr_temp && *atr_temp)
-      wait_que(runtime->commands, player, player, 0, NOTHING, 0, atr_temp, argv,
-               1, nullptr);
-    free_lbuf(atr_temp);
-    if (configuration->master_room != NOTHING) {
-      atr_temp = attribute_parent_get(runtime->world->database,
-                                      configuration->master_room, A_ADISCONNECT,
-                                      &aowner, &aflags);
-      if (atr_temp)
-        wait_que(runtime->commands, configuration->master_room, player, 0,
-                 NOTHING, 0, atr_temp, (char **)nullptr, 0, nullptr);
-      free_lbuf(atr_temp);
-      DOLIST(runtime->world->database, obj,
-             game_object_contents(runtime->world->database,
-                                  configuration->master_room)) {
-        atr_temp = attribute_parent_get(runtime->world->database, obj,
-                                        A_ADISCONNECT, &aowner, &aflags);
-        if (atr_temp) {
-          wait_que(runtime->commands, obj, player, 0, NOTHING, 0, atr_temp,
-                   (char **)nullptr, 0, nullptr);
-        }
-        free_lbuf(atr_temp);
-      }
-    }
-    /*
-     * do the zone of the player's location's possible * * *
-     * adisconnect
-     */
-    if (configuration->have_zones &&
-        ((zone = game_object_zone(runtime->world->database, loc)) != NOTHING)) {
-      switch (typeof_obj(runtime->world->database, zone)) {
-      case TYPE_THING:
-        atr_temp = attribute_parent_get(runtime->world->database, zone,
-                                        A_ADISCONNECT, &aowner, &aflags);
-        if (atr_temp) {
-          wait_que(runtime->commands, zone, player, 0, NOTHING, 0, atr_temp,
-                   (char **)nullptr, 0, nullptr);
-        }
-        free_lbuf(atr_temp);
-        break;
-      case TYPE_ROOM:
-        /*
-         * check every object in the room for a * * *
-         * connect action
-         */
-        DOLIST(runtime->world->database, obj,
-               game_object_contents(runtime->world->database, zone)) {
-          atr_temp = attribute_parent_get(runtime->world->database, obj,
-                                          A_ADISCONNECT, &aowner, &aflags);
-          if (atr_temp) {
-            wait_que(runtime->commands, obj, player, 0, NOTHING, 0, atr_temp,
-                     (char **)nullptr, 0, nullptr);
-          }
-          free_lbuf(atr_temp);
-        }
-        break;
-      default:
-        log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
-                         game_object_name(runtime->world->database, player),
-                         player, typeof_obj(runtime->world->database, zone)));
-      }
-    }
+    dispatch_connection_event_scope(runtime, d, player, loc,
+                                    LUA_EVENT_DISCONNECT, false, reason);
     if (d->is_autodark) {
       game_object_set_flags(
           runtime->world->database, d->player,

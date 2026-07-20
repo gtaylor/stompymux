@@ -12,9 +12,6 @@ struct RuntimeClock {
   time_t check_deadline;
   time_t idle_deadline;
   time_t metrics_deadline;
-  time_t events_deadline;
-  int events_run;
-  int events_last_hour;
   bool tick_pending;
   int shared_memory[2];
   int private_memory[2];

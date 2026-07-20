@@ -181,7 +181,7 @@ constexpr int FIXDB_ADD_PN = 1024; /* Add player name to player name index */
 constexpr int FIXDB_NAME = 2048;   /* Set NAME attribute */
 constexpr int FRC_PREFIX = 0;      /* #num command */
 constexpr int FRC_COMMAND = 1;     /* what=command */
-constexpr int GET_QUIET = 1;       /* Don't do osucc/asucc if control */
+constexpr int GET_QUIET = 1;       /* Suppress other text and success event */
 constexpr int GIVE_QUIET = 64;     /* Inhibit give messages */
 constexpr int GLOB_ENABLE = 1;     /* key to enable */
 constexpr int GLOB_DISABLE = 2;    /* key to disable */
@@ -193,7 +193,7 @@ constexpr int LOOK_DEXAM = 3;      /* debug listing of object */
 constexpr int LOOK_INVENTORY = 4;  /* list inventory of object */
 constexpr int LOOK_SCORE = 5;      /* list score (# coins) */
 constexpr int LOOK_OUTSIDE = 8;    /* look for object in container of player */
-constexpr int MOVE_QUIET = 1;      /* Dont do osucc/ofail/asucc/afail if ctrl */
+constexpr int MOVE_QUIET = 1;      /* Suppress other text and Lua events */
 constexpr int NFY_NFY = 0;         /* Notify first waiting command */
 constexpr int NFY_NFYALL = 1;      /* Notify all waiting commands */
 constexpr int NFY_DRAIN = 2;       /* Delete waiting commands */
@@ -269,9 +269,6 @@ constexpr int TWARP_QUEUE = 1;      /* Warp the wait and sem queues */
 constexpr int TWARP_DUMP = 2;       /* Warp the dump interval */
 constexpr int TWARP_CLEAN = 4;      /* Warp the cleaning interval */
 constexpr int TWARP_IDLE = 8;       /* Warp the idle check interval */
-
-/* emprty		16 */
-constexpr int TWARP_EVENTS = 32; /* Warp the events checking interval */
 
 /* Hush codes for movement messages */
 

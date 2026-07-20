@@ -5,38 +5,49 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/attrs.h"
-#include "mux/database/boolexp.h"
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/database/powers.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/formatting.h"
 #include "mux/world/world_context.h"
 
-int could_doit_with_context(EvaluationContext *context, DbRef player,
-                            DbRef thing, int locknum) {
-  char *key;
-  DbRef aowner;
-  long aflags;
-  int doit;
+#include <string.h>
 
-  /*
-   * no if nonplayer trys to get key
-   */
-
-  if (!is_player(context->world->database, player) &&
-      has_key_flag(context->world->database, thing)) {
-    return 0;
+bool lock_evaluate(EvaluationContext *context,
+                   const LuaLockInvocation *invocation, LuaLockResult *result) {
+  memset(result, 0, sizeof(*result));
+  if (!is_player(context->world->database, invocation->subject) &&
+      has_key_flag(context->world->database, invocation->object))
+    return false;
+  if (is_pass_locks(context->world->database, invocation->subject)) {
+    result->defined = lua_lock_defined(context->runtime->lua_owner->runtime,
+                                       invocation->object, invocation->type);
+    result->passes = true;
+    return true;
   }
-  if (is_pass_locks(context->world->database, player))
-    return 1;
+  lua_lock_evaluate(context->runtime->lua_owner->runtime, invocation, result);
+  return result->passes;
+}
 
-  key =
-      attribute_get(context->world->database, thing, locknum, &aowner, &aflags);
-  doit = eval_boolexp_atr(context, player, thing, thing, key);
-  free_lbuf(key);
-  return doit;
+bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
+               DbRef subject, DbRef object, LuaLockType type,
+               LuaLockOperation operation, bool silent,
+               LuaLockInvocation *invocation, LuaLockResult *result) {
+  *invocation = (LuaLockInvocation){
+      .type = type,
+      .operation = operation,
+      .descriptor = context->command ? context->command->descriptor : nullptr,
+      .object = object,
+      .enactor = enactor,
+      .cause = cause,
+      .subject = subject,
+      .silent = silent,
+  };
+  return lock_evaluate(context, invocation, result);
 }
 
 int can_see(EvaluationContext *evaluation,

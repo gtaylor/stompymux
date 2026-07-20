@@ -283,6 +283,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   int isvb;
   int inlos;
   char new[LBUF_SIZE];
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 1);
@@ -490,9 +492,10 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         continue;
       if (BuildIsInvis(tmp_map))
         continue;
-      if ((j = !could_doit_with_context(
-               btech_context_evaluation(mech->xcode.context), mech->mynum,
-               tmp_map->mynum, A_LENTER)) &&
+      if ((j = !lock_test(btech_context_evaluation(mech->xcode.context), player,
+                          player, mech->mynum, tmp_map->mynum, LUA_LOCK_ENTER,
+                          LUA_LOCK_OPERATION_BTECH_CONTACT, true, &lock,
+                          &lock_result)) &&
           BuildIsHidden(tmp_map))
         continue;
       bearing = FindBearing(MechFX(mech), MechFY(mech), fx, fy);

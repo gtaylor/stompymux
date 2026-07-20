@@ -24,10 +24,6 @@ static inline void free_sbuf(void *b) {
     free(b);
 }
 
-// Defined in boolexp.c, where struct BooleanExpression is fully declared.
-struct BooleanExpression *alloc_bool(const char *s);
-void free_bool(struct BooleanExpression *b);
-
 // Defined in command_queue.c, where BQUE is fully declared.
 struct bque *alloc_qentry(const char *s);
 void free_qentry(struct bque *b);

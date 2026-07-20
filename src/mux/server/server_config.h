@@ -226,7 +226,6 @@ struct ServerConfiguration {
   int paranoid_alloc;      /* Rigorous buffer integrity checks */
   int max_players;         /* Max # of connected players */
   int check_interval;      /* interval between db check/cleans in secs */
-  int events_daily_hour;   /* At what hour should @daily be executed? */
   int dump_offset;         /* when to take first checkpoint dump */
   int check_offset;        /* when to perform first check and clean */
   int idle_timeout;        /* Boot off players idle this long in secs */
@@ -288,14 +287,12 @@ struct ServerConfiguration {
   bool is_db_check_enabled;      /* Periodically check and clean the DB */
   bool is_idle_check_enabled;    /* Periodically check for idle users */
   bool is_dequeue_enabled;       /* Remove entries from the command queue */
-  bool is_event_check_enabled;   /* Allow event checking */
 
   int log_options;     /* What gets logged */
   int log_info;        /* Info that goes into log entries */
   int func_nest_lim;   /* Max nesting of functions */
   int func_invk_lim;   /* Max funcs invoked by a command */
   int ntfy_nest_lim;   /* Max nesting of notifys */
-  int lock_nest_lim;   /* Max nesting of lock evals */
   int parent_nest_lim; /* Max levels of parents */
   int zone_nest_lim;   /* Max nesting of zones */
   int room_parent;
@@ -330,10 +327,6 @@ struct forward_list {
 
 constexpr int H_FORBIDDEN = 0x0002; /* Reject all connects */
 constexpr int H_SUSPECT = 0x0004;   /* Notify wizards of connects/disconnects */
-
-/* Event flags, for noting when an event has taken place */
-
-constexpr int ET_DAILY = 0x00000001; /* Daily taken place? */
 
 /* Logging options */
 

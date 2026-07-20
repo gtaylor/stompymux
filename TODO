@@ -2,6 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Do we still need master rooms?
+* verbs.c and verbs.h can probably be crunched elsewhere
 * Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua

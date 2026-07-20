@@ -22,6 +22,9 @@
 
 static int sp_ok(EvaluationContext *evaluation,
                  const ServerConfiguration *configuration, DbRef player) {
+  LuaLockInvocation lock;
+  LuaLockResult result;
+
   if (is_gagged(evaluation->world->database, player) &&
       (!(is_wizard(evaluation->world->database, player)))) {
     notify(evaluation, player, "Sorry. Gagged players cannot speak.");
@@ -40,11 +43,13 @@ static int sp_ok(EvaluationContext *evaluation,
   if (is_auditorium(
           evaluation->world->database,
           game_object_location(evaluation->world->database, player))) {
-    if (!could_doit_with_context(
-            evaluation, player,
-            game_object_location(evaluation->world->database, player),
-            A_LSPEECH)) {
-      notify(evaluation, player, "Sorry, you may not speak in this place.");
+    if (!lock_test(evaluation, player, player, player,
+                   game_object_location(evaluation->world->database, player),
+                   LUA_LOCK_SPEECH, LUA_LOCK_OPERATION_SPEAK, false, &lock,
+                   &result)) {
+      notify_lock_failure(evaluation, &lock, &result,
+                          "Sorry, you may not speak in this place.", nullptr,
+                          LUA_EVENT_NONE);
       return 0;
     }
   }

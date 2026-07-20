@@ -40,7 +40,6 @@ struct EvaluationContext {
   int function_nesting;
   int function_invocations;
   int notification_nesting;
-  int lock_nesting;
   void *trace_head;
   int trace_count;
   bool trace_top;

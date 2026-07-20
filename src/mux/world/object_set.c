@@ -13,7 +13,6 @@
 #include "mux/commands/command.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
-#include "mux/database/boolexp.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
@@ -160,166 +159,6 @@ void do_alias(CommandInvocation *invocation) {
       if (!is_quiet(evaluation->world->database, player))
         notify_quiet(evaluation, player, "Set.");
     }
-  }
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * do_lock: Set a lock on an object or attribute.
- */
-
-void do_lock(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  int key = invocation->key;
-  char *name = invocation->first;
-  char *keytext = invocation->second;
-  MatchContext *match = &invocation->context->match;
-  DbRef thing, aowner;
-  int atr;
-  long aflags;
-  Attribute *ap;
-  struct BooleanExpression *okey;
-  char lock_text[LBUF_SIZE];
-
-  if (parse_attrib(match, player, name, &thing, &atr)) {
-    if (atr != NOTHING) {
-      if (!attribute_get_info(evaluation->world->database, thing, atr, &aowner,
-                              &aflags)) {
-        notify_quiet(evaluation, player, "Attribute not present on object.");
-        return;
-      }
-      ap = attribute_by_number(invocation->context->world->database, atr);
-
-      /*
-       * You may lock an attribute if: * you could write *
-       * * * the attribute if it were stored on * yourself
-       * * * * * --and-- * you own the attribute or are a *
-       * wizard as  *  * * long as * you are not #1 and are
-       *
-       * * trying to do * * something to #1.
-       */
-
-      if (ap && (is_god(evaluation->world->database, player) ||
-                 (!is_god(evaluation->world->database, thing) &&
-                  (set_attr(evaluation, player, player, ap, 0) &&
-                   (is_wizard(evaluation->world->database, player) ||
-                    aowner == game_object_owner(evaluation->world->database,
-                                                player)))))) {
-        aflags |= AF_LOCK;
-        attribute_set_flags(evaluation->world->database, thing, atr, aflags);
-        if (!is_quiet(evaluation->world->database, player) &&
-            !is_quiet(evaluation->world->database, thing))
-          notify_quiet(evaluation, player, "Attribute locked.");
-      } else {
-        notify_quiet(evaluation, player, "Permission denied.");
-      }
-      return;
-    }
-  }
-  init_match(match, player, name, NOTYPE);
-  match_everything(match, MAT_EXIT_PARENTS);
-  thing = match_result(match);
-
-  switch (thing) {
-  case NOTHING:
-    notify_quiet(evaluation, player, "I don't see what you want to lock!");
-    return;
-  case AMBIGUOUS:
-    notify_quiet(evaluation, player,
-                 "I don't know which one you want to lock!");
-    return;
-  default:
-    if (!is_controls(evaluation, player, thing)) {
-      notify_quiet(evaluation, player, "You can't lock that!");
-      return;
-    }
-  }
-
-  okey = boolean_expression_parse(invocation->context->world->database,
-                                  &invocation->context->evaluation, player,
-                                  keytext, 0);
-  if (okey == TRUE_BOOLEXP) {
-    notify_quiet(evaluation, player, "I don't understand that key.");
-  } else {
-
-    /*
-     * everything ok, do it
-     */
-
-    if (!key)
-      key = A_LOCK;
-    boolean_expression_unparse_quiet(invocation->context->world->database,
-                                     evaluation, lock_text, player, okey);
-    attribute_add_raw(evaluation->world->database, thing, key, lock_text);
-    if (!is_quiet(evaluation->world->database, player) &&
-        !is_quiet(evaluation->world->database, thing))
-      notify_quiet(evaluation, player, "Locked.");
-  }
-  boolean_expression_free(okey);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * Remove a lock from an object of attribute.
- */
-
-void do_unlock(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  int key = invocation->key;
-  char *name = invocation->first;
-  MatchContext *match = &invocation->context->match;
-  DbRef thing, aowner;
-  int atr;
-  long aflags;
-  Attribute *ap;
-
-  if (parse_attrib(match, player, name, &thing, &atr)) {
-    if (atr != NOTHING) {
-      if (!attribute_get_info(evaluation->world->database, thing, atr, &aowner,
-                              &aflags)) {
-        notify_quiet(evaluation, player, "Attribute not present on object.");
-        return;
-      }
-      ap = attribute_by_number(invocation->context->world->database, atr);
-
-      /*
-       * You may unlock an attribute if: * you could write
-       * * * * the attribute if it were stored on *
-       * yourself * * * * --and-- * you own the attribute
-       * or are a * wizard * as  * long as * you are not #1
-       * and are * trying to * do * something to #1.
-       */
-
-      if (ap && (is_god(evaluation->world->database, player) ||
-                 ((!is_god(evaluation->world->database, thing)) &&
-                  (set_attr(evaluation, player, player, ap, 0) &&
-                   (is_wizard(evaluation->world->database, player) ||
-                    aowner == game_object_owner(evaluation->world->database,
-                                                player)))))) {
-        aflags &= ~AF_LOCK;
-        attribute_set_flags(evaluation->world->database, thing, atr, aflags);
-        if (game_object_owner(
-                evaluation->world->database,
-                player !=
-                    game_object_owner(evaluation->world->database, thing)))
-          if (!is_quiet(evaluation->world->database, player) &&
-              !is_quiet(evaluation->world->database, thing))
-            notify_quiet(evaluation, player, "Attribute unlocked.");
-      } else {
-        notify_quiet(evaluation, player, "Permission denied.");
-      }
-      return;
-    }
-  }
-  if (!key)
-    key = A_LOCK;
-  if ((thing = match_controlled(match, player, name)) != NOTHING) {
-    attribute_clear(evaluation->world->database, thing, key);
-    if (!is_quiet(evaluation->world->database, player) &&
-        !is_quiet(evaluation->world->database, thing))
-      notify_quiet(evaluation, player, "Unlocked.");
   }
 }
 
@@ -817,6 +656,7 @@ void do_trigger(CommandInvocation *invocation) {
   long attrFlags;
   char objectName[MBUF_SIZE];
   char attributeName[MBUF_SIZE];
+  char *action;
   Attribute *attribute;
 
   memset(objectName, 0, MBUF_SIZE);
@@ -845,8 +685,12 @@ void do_trigger(CommandInvocation *invocation) {
     strncpy(attributeName, attribute->name, MBUF_SIZE - 1);
   }
 
-  did_it(&invocation->context->evaluation, player, thing, 0, nullptr, 0,
-         nullptr, attrib, argv, nargs);
+  action = attribute_parent_get(evaluation->world->database, thing, attrib,
+                                &attrOwner, &attrFlags);
+  if (*action)
+    wait_que(evaluation->runtime->commands, thing, player, 0, NOTHING, 0,
+             action, argv, nargs, evaluation->registers);
+  free_lbuf(action);
 
   /*
    * XXX be more descriptive as to what was triggered?
@@ -864,6 +708,8 @@ void do_use(CommandInvocation *invocation) {
   DbRef thing, aowner;
   long aflags;
   int doit;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   init_match(&invocation->context->match, player, object, NOTYPE);
   match_neighbor(&invocation->context->match);
@@ -882,11 +728,11 @@ void do_use(CommandInvocation *invocation) {
    * Make sure player can use it
    */
 
-  if (!could_doit_with_context(&invocation->context->evaluation, player, thing,
-                               A_LUSE)) {
-    did_it(&invocation->context->evaluation, player, thing, A_UFAIL,
-           "You can't figure out how to use that.", A_OUFAIL, nullptr, A_AUFAIL,
-           (char **)nullptr, 0);
+  if (!lock_test(evaluation, player, invocation->cause, player, thing,
+                 LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, &result)) {
+    notify_lock_failure(evaluation, &lock, &result,
+                        "You can't figure out how to use that.", nullptr,
+                        LUA_EVENT_USE_FAIL);
     return;
   }
   temp = alloc_lbuf("do_use");
@@ -895,8 +741,8 @@ void do_use(CommandInvocation *invocation) {
                                    A_USE, &aowner, &aflags) ||
       *attribute_parent_get_string(evaluation->world->database, temp, thing,
                                    A_OUSE, &aowner, &aflags) ||
-      *attribute_parent_get_string(evaluation->world->database, temp, thing,
-                                   A_AUSE, &aowner, &aflags))
+      lua_event_defined(evaluation->runtime->lua_owner->runtime, thing,
+                        LUA_EVENT_USE))
     doit = 1;
   free_lbuf(temp);
 
@@ -907,8 +753,8 @@ void do_use(CommandInvocation *invocation) {
              game_object_name(evaluation->world->database, thing));
     snprintf(df_ouse, LBUF_SIZE, "uses %s",
              game_object_name(evaluation->world->database, thing));
-    did_it(&invocation->context->evaluation, player, thing, A_USE, df_use,
-           A_OUSE, df_ouse, A_AUSE, (char **)nullptr, 0);
+    notify_action(&invocation->context->evaluation, player, thing, A_USE,
+                  df_use, A_OUSE, df_ouse, LUA_EVENT_USE, (char **)nullptr, 0);
     free_lbuf(df_use);
     free_lbuf(df_ouse);
   } else {

@@ -47,9 +47,6 @@ mud_name = "Big Stompy Robot Game"
 function_recursion_limit = 2000
 # Max # of times a command may make function calls.
 function_invocation_limit = 400000
-# The hour of the day to trigger @daily.
-events_daily_hour = 3
-
 # -----------------------------------------------
 #  Define local aliases/parameters/whatnot here.
 # -----------------------------------------------
@@ -225,8 +222,6 @@ tan = "wizard"
 # Limit commands access.
 [access.commands]
 "@name" = "wizard"
-"@lock" = "wizard"
-"@unlock" = "wizard"
 "@npemit" = "wizard"
 "@dig" = "wizard"
 "@chown" = "wizard"

@@ -61,5 +61,4 @@ void command_context_reset_limits(CommandContext *context) {
   context->evaluation.function_nesting = 0;
   context->evaluation.function_invocations = 0;
   context->evaluation.notification_nesting = 0;
-  context->evaluation.lock_nesting = 0;
 }

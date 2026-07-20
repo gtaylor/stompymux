@@ -39,13 +39,13 @@ constexpr int PUPPET = 0x00020000;  /* Relays ALL messages to owner */
 constexpr int ENTER_OK = 0x00080000; /* Object may be ENTERed */
 /* 0x00100000 is reserved for the removed VISUAL flag. */
 /* 0x00200000 is reserved for the removed IMMORTAL flag. */
-constexpr int HAS_STARTUP = 0x00400000; /* Load some attrs at startup */
-constexpr int OPAQUE = 0x00800000;      /* Can't see inside */
-constexpr int VERBOSE = 0x01000000;     /* Tells owner everything it does. */
-constexpr int INHERIT = 0x02000000;     /* Gets owner's privs. (i.e. Wiz) */
-constexpr int NOSPOOF = 0x04000000;     /* Report originator of all actions. */
-constexpr int ROBOT = 0x08000000;       /* Player is a ROBOT */
-constexpr int SAFE = 0x10000000;        /* Need /override to @destroy */
+/* 0x00400000 is reserved for the removed HAS_STARTUP flag. */
+constexpr int OPAQUE = 0x00800000;  /* Can't see inside */
+constexpr int VERBOSE = 0x01000000; /* Tells owner everything it does. */
+constexpr int INHERIT = 0x02000000; /* Gets owner's privs. (i.e. Wiz) */
+constexpr int NOSPOOF = 0x04000000; /* Report originator of all actions. */
+constexpr int ROBOT = 0x08000000;   /* Player is a ROBOT */
+constexpr int SAFE = 0x10000000;    /* Need /override to @destroy */
 /* 0x20000000 is reserved for the removed ROYALTY flag. */
 constexpr int HEARTHRU = 0x40000000; /* Can hear out of this obj or exit */
 /* 0x80000000 is reserved for the removed TERSE flag. */
@@ -59,7 +59,7 @@ constexpr int UNFINDABLE = 0x00000008; /* Cant loc() from afar */
 constexpr int LIGHT = 0x00000020;       /* Visible in dark places */
 constexpr int HAS_LISTEN = 0x00000040;  /* Internal: LISTEN attr set */
 constexpr int HAS_FWDLIST = 0x00000080; /* Internal: FORWARDLIST attr set */
-constexpr int AUDITORIUM = 0x00000100;  /* Should we check the SpeechLock? */
+constexpr int AUDITORIUM = 0x00000100;  /* Should we check the speech lock? */
 constexpr int ANSI = 0x00000200;
 /* 0x00000400 is reserved for the removed REGISTERED flag. */
 constexpr int FIXED = 0x00000800;
@@ -68,12 +68,12 @@ constexpr int NO_COMMAND = 0x00002000;
 
 constexpr int NOBLEED = 0x00008000;
 /* 0x00010000 is reserved for the removed STAFF flag. */
-constexpr int HAS_DAILY = 0x00020000;
+/* 0x00020000 is reserved for the removed HAS_DAILY flag. */
 constexpr int GAGGED = 0x00040000;
 constexpr int HARDCODE = 0x00080000;
 constexpr int IN_CHARACTER = 0x00100000;
 constexpr int ANSIMAP = 0x00200000; /* Player uses ANSI maps */
-constexpr int HAS_HOURLY = 0x00400000;
+/* 0x00400000 is reserved for the removed HAS_HOURLY flag. */
 /* 0x00800000 is reserved for the removed MULTIOK flag. */
 
 /* 0x01000000 is reserved for the removed VACATION flag. */

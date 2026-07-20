@@ -1,5 +1,5 @@
--- Attach with: @luaparent <object>=example.lua
--- Reload changed modules with: @luareload
+-- Attach with: @lua/parent <object>=example.lua
+-- Reload changed modules with: @lua/reload
 
 -- ## Command definitions ## --
 
@@ -22,7 +22,19 @@ return {
     },
   },
   events = {
-    aenter = at_enter,
+    on_enter = at_enter,
+  },
+  locks = {
+    use = function(ctx)
+      if ctx.subject == ctx.enactor then
+        return true
+      end
+      return {
+        passes = false,
+        enactor_message = "You cannot use that.",
+        other_message = "tries to use it, but cannot.",
+      }
+    end,
   },
   schedules = {
     {

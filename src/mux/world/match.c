@@ -41,6 +41,8 @@
 
 static void promote_match(MatchContext *match_context, DbRef what,
                           int confidence) {
+  LuaLockInvocation lock;
+  LuaLockResult result;
   /*
    * Check for type and locks, if requested
    */
@@ -55,7 +57,9 @@ static void promote_match(MatchContext *match_context, DbRef what,
 
     save_match_state(match_context, &save_md);
     if (is_good_obj(md.evaluation->world->database, what) &&
-        could_doit_with_context(md.evaluation, md.player, what, A_LOCK))
+        lock_test(md.evaluation, md.player, md.player, md.player, what,
+                  LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_MATCH, true, &lock,
+                  &result))
       confidence |= CON_LOCK;
     restore_match_state(match_context, &save_md);
   }

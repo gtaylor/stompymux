@@ -11,7 +11,6 @@
 #include "mux/commands/functions.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
-#include "mux/database/boolexp.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
@@ -128,7 +127,6 @@ extern FunProto fun_tel;
 extern FunProto fun_pemit;
 extern FunProto fun_create;
 extern FunProto fun_set;
-extern FunProto fun_setlock;
 extern FunProto fun_last;
 extern FunProto fun_matchall;
 extern FunProto fun_ports;
@@ -995,8 +993,6 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten;
-  struct BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
 
   if (!parse_attrib(&context->command->match, player, fargs[0], &thing,
                     &attrib)) {
@@ -1014,29 +1010,8 @@ static void fun_get(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
 
   /*
    * Perform access checks.  c_r_p fills buff with an error message * *
@@ -1060,9 +1035,7 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten;
-  struct BooleanExpression *boolexp;
   char buffer[MBUF_SIZE];
-  char lock_text[LBUF_SIZE];
 
   if (!*fargs[0] || !*fargs[1])
     return;
@@ -1084,29 +1057,8 @@ static void fun_xget(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
 
   /*
    * Perform access checks.  c_r_p fills buff with an error message * *
@@ -1130,8 +1082,6 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten, *str;
-  struct BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
 
   if (!parse_attrib(&context->command->match, player, fargs[0], &thing,
                     &attrib)) {
@@ -1150,30 +1100,8 @@ static void fun_get_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-    eval_it = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
   if (!check_read_perms(context, context->world->configuration, player, thing,
                         attr, aowner, aflags, buff, bufc)) {
     if (free_buffer)
@@ -1216,9 +1144,7 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten, *str;
-  struct BooleanExpression *boolexp;
   char buffer[MBUF_SIZE];
-  char lock_text[LBUF_SIZE];
 
   if ((nfargs != 1) && (nfargs != 2)) {
     safe_str("#-1 FUNCTION (EVAL) EXPECTS 1 OR 2 ARGUMENTS", buff, bufc);
@@ -1248,30 +1174,8 @@ static void fun_eval(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-    eval_it = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
   if (!check_read_perms(context, context->world->configuration, player, thing,
                         attr, aowner, aflags, buff, bufc)) {
     if (free_buffer)
@@ -3402,87 +3306,6 @@ static void fun_delete(char *buff, char **bufc, DbRef player, DbRef cause,
   free_lbuf(temp);
 }
 
-static void fun_lock(char *buff, char **bufc, DbRef player, DbRef cause,
-                     char *fargs[], int nfargs, char *cargs[], int ncargs,
-                     EvaluationContext *context) {
-  DbRef it, aowner;
-  long aflags;
-  char *tbuf;
-  Attribute *attr;
-  struct BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
-
-  /*
-   * Parse the argument into obj + lock
-   */
-
-  if (!get_obj_and_lock(&context->command->match, context->world->configuration,
-                        player, fargs[0], &it, &attr, buff, bufc))
-    return;
-
-  /*
-   * Get the attribute and decode it if we can read it
-   */
-
-  tbuf = attribute_get(context->world->database, it, attr->number, &aowner,
-                       &aflags);
-  if (read_attr(context, player, it, attr, aowner, aflags)) {
-    boolexp = boolean_expression_parse(context->world->database, context,
-                                       player, tbuf, 1);
-    free_lbuf(tbuf);
-    boolean_expression_unparse_function(context->world->database, context,
-                                        lock_text, player, boolexp);
-    boolean_expression_free(boolexp);
-    safe_str(lock_text, buff, bufc);
-  } else
-    free_lbuf(tbuf);
-}
-
-static void fun_elock(char *buff, char **bufc, DbRef player, DbRef cause,
-                      char *fargs[], int nfargs, char *cargs[], int ncargs,
-                      EvaluationContext *context) {
-  DbRef it, victim, aowner;
-  long aflags;
-  char *tbuf;
-  Attribute *attr;
-  struct BooleanExpression *boolexp;
-
-  /*
-   * Parse lock supplier into obj + lock
-   */
-
-  if (!get_obj_and_lock(&context->command->match, context->world->configuration,
-                        player, fargs[0], &it, &attr, buff, bufc))
-    return;
-
-  /*
-   * Get the victim and ensure we can do it
-   */
-
-  victim = match_thing(&context->command->match, player, fargs[1]);
-  if (!is_good_obj(context->world->database, victim)) {
-    safe_str("#-1 NOT FOUND", buff, bufc);
-  } else if (!nearby_or_control(context, player, victim) &&
-             !nearby_or_control(context, player, it)) {
-    safe_str("#-1 TOO FAR AWAY", buff, bufc);
-  } else {
-    tbuf = attribute_get(context->world->database, it, attr->number, &aowner,
-                         &aflags);
-    if ((attr->number == A_LOCK) ||
-        read_attr(context, player, it, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, tbuf, 1);
-      safe_tprintf_str(
-          buff, bufc, "%d",
-          boolean_expression_evaluate(context, victim, it, it, boolexp));
-      boolean_expression_free(boolexp);
-    } else {
-      safe_str("0", buff, bufc);
-    }
-    free_lbuf(tbuf);
-  }
-}
-
 /*
  * ---------------------------------------------------------------------------
  * * fun_lwho: Return list of connected users.
@@ -5509,8 +5332,6 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten;
-  struct BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
 
   char *tmp_char;
   int right_brace = 0, left_brace = 0, right_square_bracket = 0,
@@ -5532,29 +5353,8 @@ static void fun_pairs(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
 
   /*
    * Perform access checks.  c_r_p fills buff with an error message * *
@@ -5617,8 +5417,6 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
   long aflags;
   Attribute *attr;
   char *atr_gotten;
-  struct BooleanExpression *boolexp;
-  char lock_text[LBUF_SIZE];
 
   char *tmp_char;
   char *tmp_bp;
@@ -5640,29 +5438,8 @@ static void fun_colorpairs(char *buff, char **bufc, DbRef player, DbRef cause,
   if (!attr) {
     return;
   }
-  if (attr->flags & AF_IS_LOCK) {
-    atr_gotten = attribute_get(context->world->database, thing, attrib, &aowner,
-                               &aflags);
-    if (read_attr(context, player, thing, attr, aowner, aflags)) {
-      boolexp = boolean_expression_parse(context->world->database, context,
-                                         player, atr_gotten, 1);
-      free_lbuf(atr_gotten);
-      boolean_expression_unparse(context->world->database, context, lock_text,
-                                 player, boolexp);
-      atr_gotten = lock_text;
-      boolean_expression_free(boolexp);
-    } else {
-      free_lbuf(atr_gotten);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      atr_gotten = (char *)"#-1 PERMISSION DENIED";
-#pragma clang diagnostic pop
-    }
-    free_buffer = 0;
-  } else {
-    atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
-                                      &aowner, &aflags);
-  }
+  atr_gotten = attribute_parent_get(context->world->database, thing, attrib,
+                                    &aowner, &aflags);
 
   /*
    * Perform access checks.  c_r_p fills buff with an error message * *
@@ -5871,7 +5648,6 @@ FUN flist[] = {
     {"EDEFAULT", fun_edefault, 2, FN_NO_EVAL, CA_PUBLIC},
     {"EDIT", fun_edit, 3, 0, CA_PUBLIC},
     {"ELEMENTS", fun_elements, 0, FN_VARARGS, CA_PUBLIC},
-    {"ELOCK", fun_elock, 2, 0, CA_PUBLIC},
     {"EMPTY", fun_empty, 0, FN_VARARGS, CA_PUBLIC},
     {"ENCRYPT", fun_encrypt, 2, 0, CA_PUBLIC},
     {"EQ", fun_eq, 2, 0, CA_PUBLIC},
@@ -5930,7 +5706,6 @@ FUN flist[] = {
     {"LNUM", fun_lnum, 0, FN_VARARGS, CA_PUBLIC},
     {"LOC", fun_loc, 1, 0, CA_WIZARD},
     {"LOCATE", fun_locate, 3, 0, CA_WIZARD},
-    {"LOCK", fun_lock, 1, 0, CA_PUBLIC},
     {"LOG", fun_log, 1, 0, CA_PUBLIC},
 #ifdef ARBITRARY_LOGFILES
     {"LOGF", fun_logf, 2, 0, CA_WIZARD},
@@ -6000,7 +5775,6 @@ FUN flist[] = {
     {"SET", fun_set, 2, 0, CA_PUBLIC},
     {"SETDIFF", fun_setdiff, 0, FN_VARARGS, CA_PUBLIC},
     {"SETINTER", fun_setinter, 0, FN_VARARGS, CA_PUBLIC},
-    {"SETLOCK", fun_setlock, 3, 0, CA_WIZARD},
     {"SETQ", fun_setq, 2, 0, CA_PUBLIC},
     {"SETR", fun_setr, 2, 0, CA_PUBLIC},
     {"SETUNION", fun_setunion, 0, FN_VARARGS, CA_PUBLIC},

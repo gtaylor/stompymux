@@ -25,6 +25,8 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
   MatchContext *match = &evaluation->command->match;
   DbRef thing;
   char *str, *sp;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   init_match(match, giver, what, TYPE_THING);
   match_possession(match);
@@ -53,19 +55,21 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     notify(evaluation, giver, "Permission denied.");
     return;
   }
-  if (!could_doit_with_context(evaluation, giver, thing, A_LGIVE)) {
+  if (!lock_test(evaluation, giver, giver, giver, thing, LUA_LOCK_GIVE,
+                 LUA_LOCK_OPERATION_GIVE, false, &lock, &result)) {
     sp = str = alloc_lbuf("do_give.gfail");
     safe_str("You can't give ", str, &sp);
     safe_str(game_object_name(evaluation->world->database, thing), str, &sp);
     safe_str(" away.", str, &sp);
     *sp = '\0';
 
-    did_it(evaluation, giver, thing, A_GFAIL, str, A_OGFAIL, nullptr, A_AGFAIL,
-           (char **)nullptr, 0);
+    notify_lock_failure(evaluation, &lock, &result, str, nullptr,
+                        LUA_EVENT_GIVE_FAIL);
     free_lbuf(str);
     return;
   }
-  if (!could_doit_with_context(evaluation, thing, recipient, A_LRECEIVE)) {
+  if (!lock_test(evaluation, giver, giver, thing, recipient, LUA_LOCK_RECEIVE,
+                 LUA_LOCK_OPERATION_RECEIVE, false, &lock, &result)) {
     sp = str = alloc_lbuf("do_give.rfail");
     safe_str(game_object_name(evaluation->world->database, recipient), str,
              &sp);
@@ -74,8 +78,8 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     safe_chr('.', str, &sp);
     *sp = '\0';
 
-    did_it(evaluation, giver, recipient, A_RFAIL, str, A_ORFAIL, nullptr,
-           A_ARFAIL, (char **)nullptr, 0);
+    notify_lock_failure(evaluation, &lock, &result, str, nullptr,
+                        LUA_EVENT_GIVE_RECEIVE_FAIL);
     free_lbuf(str);
     return;
   }
@@ -95,10 +99,10 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
                 game_object_name(evaluation->world->database, recipient)));
     free_lbuf(str);
   }
-  did_it(evaluation, giver, thing, A_DROP, nullptr, A_ODROP, nullptr, A_ADROP,
-         (char **)nullptr, 0);
-  did_it(evaluation, recipient, thing, A_SUCC, nullptr, A_OSUCC, nullptr,
-         A_ASUCC, (char **)nullptr, 0);
+  notify_action(evaluation, giver, thing, A_DROP, nullptr, A_ODROP, nullptr,
+                LUA_EVENT_DROP, (char **)nullptr, 0);
+  notify_action(evaluation, recipient, thing, A_SUCC, nullptr, A_OSUCC, nullptr,
+                LUA_EVENT_SUCCESS, (char **)nullptr, 0);
 }
 
 void do_give(CommandInvocation *invocation) {

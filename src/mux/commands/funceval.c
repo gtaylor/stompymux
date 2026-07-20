@@ -16,7 +16,6 @@
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/database/attrs.h"
-#include "mux/database/boolexp.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
@@ -1495,7 +1494,7 @@ void fun_default(char *buff, char **bufc, DbRef player, DbRef cause,
                      &attrib) &&
         (attrib != NOTHING)) {
       attr = attribute_by_number(context->world->database, attrib);
-      if (attr && !(attr->flags & AF_IS_LOCK)) {
+      if (attr) {
         atr_gotten = attribute_parent_get(context->world->database, thing,
                                           attrib, &aowner, &aflags);
         if (*atr_gotten &&
@@ -1548,7 +1547,7 @@ void fun_edefault(char *buff, char **bufc, DbRef player, DbRef cause,
                      &attrib) &&
         (attrib != NOTHING)) {
       attr = attribute_by_number(context->world->database, attrib);
-      if (attr && !(attr->flags & AF_IS_LOCK)) {
+      if (attr) {
         atr_gotten = attribute_parent_get(context->world->database, thing,
                                           attrib, &aowner, &aflags);
         if (*atr_gotten &&
@@ -3433,111 +3432,4 @@ void fun_translate(char *buff, char **bufc, DbRef player, DbRef cause,
 
     safe_str(translate_string(fargs[0], type), buff, bufc);
   }
-}
-
-/*
- * ---------------------------------------------------------------------------
- * fun_setlock: Set lock from a function (like @lock)
- */
-
-extern NameTable lock_sw;
-
-void fun_setlock(char *buff, char **bufc, DbRef player, DbRef cause,
-                 char *fargs[], int nfargs, char *cargs[], int ncargs,
-                 EvaluationContext *context) {
-  int switchkey = 0;
-  DbRef thing, aowner;
-  int atr;
-  long aflags;
-  Attribute *ap;
-  struct BooleanExpression *okey;
-  char lock_text[LBUF_SIZE];
-
-  if (*fargs[0]) {
-    switchkey = name_table_search(context->world->database,
-                                  context->world->configuration, player,
-                                  &lock_sw, fargs[0]);
-    if (switchkey < 0) {
-      safe_str("#-1 SWITCH ERROR", buff, bufc);
-      return;
-    }
-  }
-
-  if (parse_attrib(&context->command->match, player, fargs[1], &thing, &atr)) {
-    if (atr != NOTHING) {
-      if (!attribute_get_info(context->world->database, thing, atr, &aowner,
-                              &aflags)) {
-        safe_str("#-1 ATTR NOT FOUND", buff, bufc);
-        return;
-      }
-      ap = attribute_by_number(context->world->database, atr);
-
-      /*
-       * You may lock an attribute iff: you could write the
-       * attribute if it were stored on yourself --and-- you own
-       * the attribute or are a wizard as long as you are not #1
-       * and are trying to do something to #1.
-       */
-
-      if (ap && (is_god(context->world->database, player) ||
-                 (!is_god(context->world->database, thing) &&
-                  (set_attr(context, player, player, ap, 0) &&
-                   (is_wizard(context->world->database, player) ||
-                    aowner == game_object_owner(context->world->database,
-                                                player)))))) {
-        if (*fargs[2])
-          aflags |= AF_LOCK;
-        else
-          aflags &= ~AF_LOCK;
-        attribute_set_flags(context->world->database, thing, atr, aflags);
-        safe_str("1", buff, bufc);
-      } else {
-        safe_str("#-1 PERMISSION DENIED", buff, bufc);
-      }
-      return;
-    }
-  }
-  init_match(&context->command->match, player, fargs[1], NOTYPE);
-  match_everything(&context->command->match, MAT_EXIT_PARENTS);
-  thing = match_result(&context->command->match);
-
-  switch (thing) {
-  case NOTHING:
-    safe_str("#-1 NOT FOUND", buff, bufc);
-    return;
-  case AMBIGUOUS:
-    safe_str("#-1 AMBIGUOUS MATCH", buff, bufc);
-    return;
-  default:
-    if (!is_controls(context, player, thing)) {
-      safe_str("#-1 PERMISSION DENIED", buff, bufc);
-      return;
-    }
-  }
-
-  if (!switchkey)
-    switchkey = A_LOCK;
-
-  if (!*fargs[2]) {
-    attribute_clear(context->world->database, thing, switchkey);
-    safe_str("1", buff, bufc);
-    return;
-  }
-
-  okey = boolean_expression_parse(context->world->database, context, player,
-                                  fargs[2], 0);
-  if (okey == TRUE_BOOLEXP) {
-    safe_str("#-1 KEY ERROR", buff, bufc);
-  } else {
-
-    /*
-     * everything ok, do it
-     */
-
-    boolean_expression_unparse_quiet(context->world->database, context,
-                                     lock_text, player, okey);
-    attribute_add_raw(context->world->database, thing, switchkey, lock_text);
-    safe_str("1", buff, bufc);
-  }
-  boolean_expression_free(okey);
 }

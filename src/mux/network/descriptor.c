@@ -32,7 +32,7 @@ static const char *descriptor_disconnect_reasons[] = {
     "Logins Disabled",
     "Too Many Connected Players"};
 
-/* A_ADISCONNECT reason strings for DescriptorShutdownReason values. */
+/* Lua on_disconnect reason strings for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_messages[] = {
     "unknown",  "quit",     "timeout",  "boot",    "netdeath",
     "shutdown", "badlogin", "nologins", "gamefull"};

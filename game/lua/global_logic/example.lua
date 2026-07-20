@@ -1,4 +1,4 @@
--- Globally available after @luareload.
+-- Globally available after @lua/reload.
 -- This command intentionally uses a distinct name to avoid object-local hello
 -- examples: type "global-hello" from anywhere in the game.
 return {

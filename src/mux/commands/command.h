@@ -82,7 +82,6 @@ void do_link(CommandInvocation *invocation);
 void do_lua(CommandInvocation *invocation);
 void do_list(CommandInvocation *invocation); /* List internal tables. */
 void do_list_file(CommandInvocation *invocation);
-void do_lock(CommandInvocation *invocation); /* Set a lock on an object */
 void do_look(CommandInvocation *invocation); /* Look here or at something. */
 void do_move(CommandInvocation *invocation); /* Move about using exits */
 void do_mvattr(CommandInvocation *invocation);
@@ -115,12 +114,10 @@ void do_teleport(CommandInvocation *invocation);
 void do_think(CommandInvocation *invocation);    /* Think command. */
 void do_timewarp(CommandInvocation *invocation); /* Warp various timers */
 void do_trigger(CommandInvocation *invocation);  /* Trigger an attribute */
-void do_unlock(CommandInvocation *invocation);   /* Remove an object lock */
 void do_unlink(CommandInvocation *invocation);
 void do_use(CommandInvocation *invocation);     /* Use object. */
 void do_version(CommandInvocation *invocation); /* List MUX version number */
-void do_verb(CommandInvocation *invocation); /* Execute a user-created verb */
-void do_wait(CommandInvocation *invocation); /* Perform command after wait */
+void do_wait(CommandInvocation *invocation);    /* Perform command after wait */
 void do_wipe(CommandInvocation *invocation);
 void do_session(CommandInvocation *invocation); /* Wizard session listing */
 void do_who(CommandInvocation *invocation);     /* Wizard WHO listing */

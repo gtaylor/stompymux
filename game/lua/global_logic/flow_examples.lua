@@ -1,4 +1,4 @@
--- Globally available after @luareload.
+-- Globally available after @lua/reload.
 -- Demonstrates the three shapes an interactive flow can take: a single-step
 -- yes/no confirmation, a numbered menu with a goto, and a multi-step form
 -- that carries data across steps via ctx.flow. Type "flow-demo confirm",

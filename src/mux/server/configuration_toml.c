@@ -58,8 +58,6 @@ static const ConfigTomlMapping config_toml_map[] = {
      CFG_KIND_SCALAR},
     {"server.function_invocation_limit", "function_invocation_limit",
      CFG_KIND_SCALAR},
-    {"server.events_daily_hour", "events_daily_hour", CFG_KIND_SCALAR},
-
     /* battletech */
     {"battletech.explode_reactor", "btech_explode_reactor", CFG_KIND_SCALAR},
     {"battletech.explode_time", "btech_explode_time", CFG_KIND_SCALAR},
@@ -198,7 +196,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.idle_timeout", "idle_timeout", CFG_KIND_SCALAR},
     {"mux.indent_desc", "indent_desc", CFG_KIND_SCALAR},
     {"mux.initial_size", "initial_size", CFG_KIND_SCALAR},
-    {"mux.lock_recursion_limit", "lock_recursion_limit", CFG_KIND_SCALAR},
     {"mux.master_room", "master_room", CFG_KIND_SCALAR},
     {"mux.match_own_commands", "match_own_commands", CFG_KIND_SCALAR},
     {"mux.max_players", "max_players", CFG_KIND_SCALAR},

@@ -342,8 +342,8 @@ static void do_leavechannel(EvaluationContext *evaluation, DbRef player,
   for (i = ch->num_users - 1; i > 0; i--) {
     if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
         TYPE_THING)
-      did_it(evaluation, player, ch->users[i]->who, 0, nullptr, 0, nullptr,
-             A_ALEAVE, (char **)nullptr, 0);
+      notify_action(evaluation, player, ch->users[i]->who, 0, nullptr, 0,
+                    nullptr, LUA_EVENT_LEAVE, (char **)nullptr, 0);
   }
 
   notify_printf(evaluation, player, "You have left channel %s.", ch->name);
@@ -581,8 +581,8 @@ static void do_delcomchannel(EvaluationContext *evaluation, DbRef player,
     for (i = ch->num_users - 1; i > 0; i--) {
       if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
           TYPE_THING)
-        did_it(evaluation, player, ch->users[i]->who, 0, nullptr, 0, nullptr,
-               A_ALEAVE, (char **)nullptr, 0);
+        notify_action(evaluation, player, ch->users[i]->who, 0, nullptr, 0,
+                      nullptr, LUA_EVENT_LEAVE, (char **)nullptr, 0);
     }
 
     for (i = 0; i < ch->num_users; i++) {
@@ -1220,15 +1220,17 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
 static int do_test_access(EvaluationContext *evaluation, DbRef player,
                           long access, struct channel *chan) {
   long flag_value = access;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   if (is_comm_all(evaluation->world->database, player))
     return (1);
 
   /*
    * Channel objects allow custom locks for channels.  The normal
-   * lock is used to see if they can join that channel.  The
-   * enterlock is checked to see if they can receive messages on
-   * it. The Uselock is checked to see if they can transmit on
+   * lock is used to see if they can join that channel. The enter lock is
+   * checked to see if they can receive messages on
+   * it. The use lock is checked to see if they can transmit on
    * it. Note: These checks do not supercede the normal channel
    * flags. If a channel is set JOIN for players, ALL players can
    * join the channel, whether or not they pass the lock.  Same for
@@ -1237,17 +1239,23 @@ static int do_test_access(EvaluationContext *evaluation, DbRef player,
 
   if ((flag_value & CHANNEL_JOIN) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LOCK))
+    if (lock_test(evaluation, player, player, player, chan->chan_obj,
+                  LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_CHANNEL_JOIN, true,
+                  &lock, &result))
       return (1);
   }
   if ((flag_value & CHANNEL_TRANSMIT) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LUSE))
+    if (lock_test(evaluation, player, player, player, chan->chan_obj,
+                  LUA_LOCK_USE, LUA_LOCK_OPERATION_CHANNEL_TRANSMIT, true,
+                  &lock, &result))
       return (1);
   }
   if ((flag_value & CHANNEL_RECIEVE) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
-    if (could_doit_with_context(evaluation, player, chan->chan_obj, A_LENTER))
+    if (lock_test(evaluation, player, player, player, chan->chan_obj,
+                  LUA_LOCK_ENTER, LUA_LOCK_OPERATION_CHANNEL_RECEIVE, true,
+                  &lock, &result))
       return (1);
   }
   if (typeof_obj(evaluation->world->database, player) == TYPE_PLAYER)

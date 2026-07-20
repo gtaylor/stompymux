@@ -48,11 +48,6 @@ extern void parse_range(GameDatabase *database,
                         DbRef *low_bound, DbRef *high_bound);
 extern int parse_thing_slash(MatchContext *, DbRef player, char *thing,
                              char **after, DbRef *object);
-extern int get_obj_and_lock(MatchContext *,
-                            const ServerConfiguration *configuration,
-                            DbRef player, char *what, DbRef *object,
-                            Attribute **attribute, char *error_message,
-                            char **buffer_pointer);
 
 #define NOMATCH_MESSAGE "I don't see that here."
 #define AMBIGUOUS_MESSAGE "I don't know which one you mean!"

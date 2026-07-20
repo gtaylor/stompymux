@@ -17,7 +17,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/communication/comsys_context.c
   ${MUX_MODULE_DIR}/communication/comsys.c
   ${MUX_MODULE_DIR}/communication/speech.c
-  ${MUX_MODULE_DIR}/database/boolexp.c
   ${MUX_MODULE_DIR}/database/db.c
   ${MUX_MODULE_DIR}/database/flags.c
   ${MUX_MODULE_DIR}/database/powers.c

@@ -59,8 +59,9 @@ static void mech_discard_event(MuxEvent *e) {
 
   /* We'll silently move the mech off, but lets trigger the aleave/oleave/leave
    * of the loc as well before we do anything fancy */
-  did_it(evaluation, i, game_object_location(mech->xcode.context->database, i),
-         A_LEAVE, NULL, A_OLEAVE, NULL, A_ALEAVE, (char **)NULL, 0);
+  notify_action(evaluation, i,
+                game_object_location(mech->xcode.context->database, i), A_LEAVE,
+                NULL, A_OLEAVE, NULL, LUA_EVENT_LEAVE, (char **)NULL, 0);
   c_hardcode(mech->xcode.context->database, i);
   handle_xcode(mech->xcode.context, GOD, i, 1, 0);
   s_going(mech->xcode.context->database, i);
@@ -419,7 +420,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, !mymap,
                   "Major map error possible. Prolly should contact a wizard.");
 
-  /* Teleporting loudly in order to trigger @aenter's and whatnot. */
+  /* Teleport loudly so native enter events and other messages run. */
   move_via_teleport(evaluation, mech->mynum, mech->mapindex, 1, 0);
 
   /* If we make it safely, start the invoker's unit up once it's on the map. */
@@ -529,8 +530,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   int argc;
   char *args[4];
   char fail_mesg[SBUF_SIZE];
-  char enter_lock[LBUF_SIZE];
-  long i, j;
+  LuaLockInvocation lock;
+  LuaLockResult lock_result;
 
   if (player != GOD)
     cch(MECH_USUAL);
@@ -569,24 +570,21 @@ void mech_embark(DbRef player, void *data, char *buffer) {
             !unit_is_fixable(target),
         "You can't find and entrance amid the mass of twisted metal.");
 
-    if (!could_doit_with_context(evaluation, mech->mynum, target->mynum,
-                                 A_LENTER)) {
+    if (!lock_test(evaluation, player, player, mech->mynum, target->mynum,
+                   LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
+                   &lock_result)) {
 
       /* Trigger FAIL & AFAIL */
       memset(fail_mesg, 0, sizeof(fail_mesg));
       snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
-      did_it(evaluation, player, target->mynum, A_FAIL, fail_mesg, 0, NULL,
-             A_AFAIL, (char **)NULL, 0);
+      notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, NULL,
+                          LUA_EVENT_FAIL);
 
       return;
     }
 
-    /* They passed the lock but does that mean there was no lock? */
-    memset(enter_lock, 0, sizeof(enter_lock));
-    attribute_get_string(mech->xcode.context->database, enter_lock,
-                         target->mynum, A_LENTER, &i, &j);
-    if (*enter_lock == '\0') {
+    if (!lock_result.defined) {
 
       /* Check their teams */
       DOCHECK_CONTEXT(mech->xcode.context, MechTeam(mech) != MechTeam(target),
@@ -661,24 +659,21 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                   MechX(mech) != MechX(target) || MechY(mech) != MechY(target),
                   "You need to be in the same hex!");
 
-  if (!could_doit_with_context(evaluation, mech->mynum, target->mynum,
-                               A_LENTER)) {
+  if (!lock_test(evaluation, player, player, mech->mynum, target->mynum,
+                 LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
+                 &lock_result)) {
 
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
-    did_it(evaluation, player, target->mynum, A_FAIL, fail_mesg, 0, NULL,
-           A_AFAIL, (char **)NULL, 0);
+    notify_lock_failure(evaluation, &lock, &lock_result, fail_mesg, NULL,
+                        LUA_EVENT_FAIL);
 
     return;
   }
 
-  /* They passed the lock but does that mean there was no lock? */
-  memset(enter_lock, 0, sizeof(enter_lock));
-  attribute_get_string(mech->xcode.context->database, enter_lock, target->mynum,
-                       A_LENTER, &i, &j);
-  if (*enter_lock == '\0') {
+  if (!lock_result.defined) {
 
     /* Check their teams */
     DOCHECK_CONTEXT(mech->xcode.context, MechTeam(mech) != MechTeam(target),

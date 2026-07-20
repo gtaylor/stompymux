@@ -137,8 +137,9 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
 
     // Trigger the unit's AMECHDEST attribute.
     if (mech->mynum > 0)
-      did_it(btech_context_evaluation(mech->xcode.context), mech->mynum,
-             mech->mynum, 0, NULL, 0, NULL, A_AMINETRIGGER, (char **)NULL, 0);
+      notify_action(btech_context_evaluation(mech->xcode.context), mech->mynum,
+                    mech->mynum, 0, NULL, 0, NULL, LUA_EVENT_MECH_MINE_TRIGGER,
+                    (char **)NULL, 0);
 
     return;
   case MINE_VIBRA:

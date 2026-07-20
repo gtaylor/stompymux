@@ -9,5 +9,4 @@ void runtime_clock_initialize(RuntimeClock *clock) {
   assert(clock != nullptr);
   memset(clock, 0, sizeof(*clock));
   clock->now = time(nullptr);
-  clock->events_last_hour = -1;
 }

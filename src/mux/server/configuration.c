@@ -266,7 +266,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->max_players = -1;
   context->configuration->database.dump_interval = 3600;
   context->configuration->check_interval = 600;
-  context->configuration->events_daily_hour = 7;
   context->configuration->dump_offset = 0;
   context->configuration->check_offset = 300;
   context->configuration->idle_timeout = 3600;
@@ -334,7 +333,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->is_db_check_enabled = true;
   context->configuration->is_idle_check_enabled = true;
   context->configuration->is_dequeue_enabled = true;
-  context->configuration->is_event_check_enabled = true;
   context->configuration->log_options =
       LOG_ALWAYS | LOG_BUGS | LOG_SECURITY | LOG_NET | LOG_LOGIN | LOG_DBSAVES |
       LOG_CONFIGMODS | LOG_SHOUTS | LOG_STARTUP | LOG_WIZARD | LOG_PROBLEMS |
@@ -343,7 +341,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->func_nest_lim = 50;
   context->configuration->func_invk_lim = 2500;
   context->configuration->ntfy_nest_lim = 20;
-  context->configuration->lock_nest_lim = 20;
   context->configuration->parent_nest_lim = 10;
   context->configuration->zone_nest_lim = 20;
   context->configuration->stack_limit = 50;
@@ -1024,8 +1021,6 @@ CONF conftable[] = {
      CONFIG_LOC(exam_public), 0},
     {"exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(exit_flags), 0},
-    {"events_daily_hour", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(events_daily_hour), 0},
     {"fascist_teleport", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(fascist_tport), 0},
     {"fixed_home_message", cf_string_configuration_adapter, CA_DISABLED,
@@ -1079,8 +1074,6 @@ CONF conftable[] = {
      CONFIG_LOC(init_size), 0},
     {"list_access", cf_ntab_access_configuration_adapter, CA_GOD,
      (int *)list_names, (long)access_nametab},
-    {"lock_recursion_limit", cf_int_configuration_adapter, CA_WIZARD,
-     CONFIG_LOC(lock_nest_lim), 0},
     {"lua_directory", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},

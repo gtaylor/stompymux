@@ -1,5 +1,5 @@
 -- Persistent object state using normal MUX attributes.
--- Attach with: @luaparent <object>=counter.lua
+-- Attach with: @lua/parent <object>=counter.lua
 return {
   commands = {
     {

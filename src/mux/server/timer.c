@@ -28,8 +28,6 @@
 
 extern void pool_reset(void);
 extern unsigned int alarm(unsigned int seconds);
-static void check_events(MaintenanceContext *maintenance);
-
 static void timer_callback(MuxTimer *timer, void *arg);
 
 struct ServerTimer {
@@ -58,7 +56,6 @@ ServerTimer *server_timer_create(uv_loop_t *loop,
   maintenance->clock->idle_deadline =
       maintenance->configuration->idle_interval + maintenance->clock->now;
   maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
-  maintenance->clock->events_deadline = 900 + maintenance->clock->now;
   timer->event = mux_timer_create(loop, timer_callback, timer);
   if (timer->event == nullptr || !mux_timer_start(timer->event, 100, 100)) {
     server_timer_destroy(timer);
@@ -98,59 +95,6 @@ static void check_idle(MaintenanceContext *maintenance) {
         descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
       }
     }
-  }
-}
-
-static void check_events(MaintenanceContext *maintenance) {
-  struct tm *ltime;
-  DbRef thing, parent;
-  int lev;
-
-  ltime = localtime(&maintenance->clock->now);
-  if ((ltime->tm_hour == maintenance->configuration->events_daily_hour) &&
-      !(maintenance->clock->events_run & ET_DAILY)) {
-    maintenance->clock->events_run = maintenance->clock->events_run | ET_DAILY;
-    DO_WHOLE_DB(maintenance->database, thing) {
-      if (is_going(maintenance->database, thing))
-        continue;
-
-      ITER_PARENTS(maintenance->database, maintenance->configuration, thing,
-                   parent, lev) {
-        if (game_object_flags2(maintenance->database, thing) & HAS_DAILY) {
-          did_it(&maintenance->command->evaluation,
-                 game_object_owner(maintenance->database, thing), thing, 0,
-                 nullptr, 0, nullptr, A_DAILY, (char **)nullptr, 0);
-
-          break;
-        }
-      }
-    }
-  }
-  if (ltime->tm_hour != maintenance->clock->events_last_hour) {
-    if (maintenance->clock->events_last_hour >= 0) {
-      /* Run hourly maintenance */
-      DO_WHOLE_DB(maintenance->database, thing) {
-        if (is_going(maintenance->database, thing))
-          continue;
-
-        ITER_PARENTS(maintenance->database, maintenance->configuration, thing,
-                     parent, lev) {
-          if (game_object_flags2(maintenance->database, thing) & HAS_HOURLY) {
-            did_it(&maintenance->command->evaluation,
-                   game_object_owner(maintenance->database, thing), thing, 0,
-                   nullptr, 0, nullptr, A_HOURLY, (char **)nullptr, 0);
-
-            break;
-          }
-        }
-      }
-    }
-    maintenance->clock->events_last_hour = ltime->tm_hour;
-  }
-  if (ltime->tm_hour == 23) { /*
-                               * Nightly resetting
-                               */
-    maintenance->clock->events_run = 0;
   }
 }
 
@@ -216,16 +160,6 @@ static void dispatch(MaintenanceContext *maintenance) {
     check_idle(maintenance);
   }
   /*
-   * Check for execution of attribute events
-   */
-
-  if (maintenance->configuration->is_event_check_enabled &&
-      maintenance->clock->events_deadline <= maintenance->clock->now) {
-    maintenance->clock->events_deadline = 900 + maintenance->clock->now;
-    maintenance->command->debug_command = "< eventcheck >";
-    check_events(maintenance);
-  }
-  /*
    * Memory use stats
    */
 
@@ -288,6 +222,4 @@ void do_timewarp(CommandInvocation *invocation) {
     clock->check_deadline -= secs;
   if (invocation->key & TWARP_IDLE)
     clock->idle_deadline -= secs;
-  if (invocation->key & TWARP_EVENTS)
-    clock->events_deadline -= secs;
 }

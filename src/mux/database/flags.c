@@ -95,7 +95,7 @@ static bool has_priv_suffix(const char *name) {
 
 bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
               DbRef o, long f) {
-  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+  return !(a->flags & AF_INTERNAL) &&
          ((is_god(evaluation->world->database, p) || (f & AF_VISUAL) ||
            (((game_object_owner(evaluation->world->database, p) == o) ||
              is_examinable(evaluation, p, x)) &&
@@ -108,16 +108,16 @@ bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
 }
 bool see_attr_explicit(GameDatabase *database, DbRef p, DbRef x, Attribute *a,
                        DbRef o, long f) {
-  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+  return !(a->flags & AF_INTERNAL) &&
          ((f & AF_VISUAL) ||
           ((game_object_owner(database, p) == o) &&
            !(a->flags & (AF_DARK | AF_MDARK)) && !has_priv_suffix(a->name)));
 }
 bool set_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
               long f) {
-  return !(a->flags & (AF_INTERNAL | AF_IS_LOCK)) &&
+  return !(a->flags & AF_INTERNAL) &&
          (is_god(evaluation->world->database, p) ||
-          (!is_god(evaluation->world->database, x) && !(f & AF_LOCK) &&
+          (!is_god(evaluation->world->database, x) &&
            ((is_controls(evaluation, p, x) &&
              !(a->flags & (AF_WIZARD | AF_GOD)) &&
              !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
@@ -141,7 +141,7 @@ bool write_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
                 long f) {
   return !(a->flags & AF_INTERNAL) &&
          (is_god(evaluation->world->database, p) ||
-          (!is_god(evaluation->world->database, x) && !(f & AF_LOCK) &&
+          (!is_god(evaluation->world->database, x) &&
            ((is_controls(evaluation, p, x) &&
              !(a->flags & (AF_WIZARD | AF_GOD)) &&
              !(f & (AF_WIZARD | AF_GOD)) && !has_priv_suffix(a->name)) ||
@@ -385,11 +385,8 @@ FLAGENT gen_flags[] = {
     {"GAGGED", GAGGED, 'j', FLAG_WORD2, 0, fh_wiz},
     {"GOING", GOING, 'G', 0, 0, fh_going_bit},
     {"HALTED", HALT, 'h', 0, 0, fh_any},
-    {"HAS_DAILY", HAS_DAILY, '*', FLAG_WORD2, CA_GOD, fh_god},
     {"HAS_FORWARDLIST", HAS_FWDLIST, '&', FLAG_WORD2, CA_GOD, fh_god},
-    {"HAS_HOURLY", HAS_HOURLY, '*', FLAG_WORD2, CA_GOD, fh_god},
     {"HAS_LISTEN", HAS_LISTEN, '@', FLAG_WORD2, CA_GOD, fh_god},
-    {"HAS_STARTUP", HAS_STARTUP, '+', 0, CA_GOD, fh_god},
     {"BLIND", BLIND, '(', FLAG_WORD2, 0, fh_any},
     {"IN_CHARACTER", IN_CHARACTER, '#', FLAG_WORD2, 0, fh_wiz},
     {"INHERIT", INHERIT, 'I', 0, 0, fh_inherit},

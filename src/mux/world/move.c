@@ -26,7 +26,7 @@
 static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
                               DbRef dest, DbRef cause, int canhear, int hush) {
   DbRef loc;
-  int quiet, pattr, oattr, aattr;
+  int quiet, pattr, oattr;
 
   loc = game_object_location(evaluation->world->database, thing);
   if ((loc == NOTHING) || (loc == dest))
@@ -51,18 +51,17 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
                            is_dark(evaluation->world->database, thing))))) ||
           (hush & HUSH_LEAVE);
   oattr = quiet ? 0 : A_OLEAVE;
-  aattr = quiet ? 0 : A_ALEAVE;
   pattr = A_LEAVE;
-  did_it(evaluation, thing, loc, pattr, nullptr, oattr, nullptr, aattr,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, loc, pattr, nullptr, oattr, nullptr,
+                quiet ? LUA_EVENT_NONE : LUA_EVENT_LEAVE, (char **)nullptr, 0);
 
   /*
    * Do OXENTER for receiving room
    */
 
   if ((dest != NOTHING) && !quiet)
-    did_it(evaluation, thing, dest, 0, nullptr, A_OXENTER, nullptr, 0,
-           (char **)nullptr, 0);
+    notify_action(evaluation, thing, dest, 0, nullptr, A_OXENTER, nullptr,
+                  LUA_EVENT_NONE, (char **)nullptr, 0);
 
   /*
    * Display the 'has left' message if we meet any of the following * *
@@ -92,7 +91,7 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
 static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
                               DbRef src, DbRef cause, int canhear, int hush) {
   DbRef loc;
-  int quiet, pattr, oattr, aattr;
+  int quiet, pattr, oattr;
 
   loc = game_object_location(evaluation->world->database, thing);
   if ((loc == NOTHING) || (loc == src))
@@ -114,18 +113,17 @@ static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
                            is_dark(evaluation->world->database, thing))))) ||
           (hush & HUSH_ENTER);
   oattr = quiet ? 0 : A_OENTER;
-  aattr = quiet ? 0 : A_AENTER;
   pattr = A_ENTER;
-  did_it(evaluation, thing, loc, pattr, nullptr, oattr, nullptr, aattr,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, loc, pattr, nullptr, oattr, nullptr,
+                quiet ? LUA_EVENT_NONE : LUA_EVENT_ENTER, (char **)nullptr, 0);
 
   /*
    * Do OXLEAVE for sending room
    */
 
   if ((src != NOTHING) && !quiet)
-    did_it(evaluation, thing, src, 0, nullptr, A_OXLEAVE, nullptr, 0,
-           (char **)nullptr, 0);
+    notify_action(evaluation, thing, src, 0, nullptr, A_OXLEAVE, nullptr,
+                  LUA_EVENT_NONE, (char **)nullptr, 0);
 
   /*
    * Display the 'has arrived' message if we meet all of the following
@@ -309,8 +307,8 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
   canhear = is_hearer(evaluation, thing);
   process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
   move_object(evaluation, thing, dest);
-  did_it(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
+                LUA_EVENT_MOVE, (char **)nullptr, 0);
   process_enter_loc(evaluation, thing, src, cause, canhear, hush);
 }
 
@@ -322,7 +320,7 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
 void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                    DbRef cause, DbRef exit, int hush) {
   DbRef src;
-  int canhear, darkwiz, quiet, pattr, oattr, aattr;
+  int canhear, darkwiz, quiet, pattr, oattr;
 
   if (dest == HOME)
     dest = game_object_link(evaluation->world->database, thing);
@@ -338,10 +336,10 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
   quiet = darkwiz || (hush & HUSH_EXIT);
 
   oattr = quiet ? 0 : A_OSUCC;
-  aattr = quiet ? 0 : A_ASUCC;
   pattr = A_SUCC;
-  did_it(evaluation, thing, exit, pattr, nullptr, oattr, nullptr, aattr,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, exit, pattr, nullptr, oattr, nullptr,
+                quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS, (char **)nullptr,
+                0);
   process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
   move_object(evaluation, thing, dest);
 
@@ -350,13 +348,12 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
    */
 
   oattr = quiet ? 0 : A_ODROP;
-  aattr = quiet ? 0 : A_ADROP;
   pattr = A_DROP;
-  did_it(evaluation, thing, exit, pattr, nullptr, oattr, nullptr, aattr,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, exit, pattr, nullptr, oattr, nullptr,
+                quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP, (char **)nullptr, 0);
 
-  did_it(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
-         (char **)nullptr, 0);
+  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
+                LUA_EVENT_MOVE, (char **)nullptr, 0);
   process_enter_loc(evaluation, thing, src, cause, canhear, hush);
   process_sticky_dropto(evaluation, src, thing);
 }
@@ -372,21 +369,25 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
   DbRef src, curr;
   int canhear, count;
   const char *failmsg;
+  LuaLockInvocation lock;
+  LuaLockResult result;
   const ServerConfiguration *configuration = evaluation->world->configuration;
 
   src = game_object_location(evaluation->world->database, thing);
   if ((dest != HOME) && is_good_obj(evaluation->world->database, src)) {
     curr = src;
     for (count = configuration->ntfy_nest_lim; count > 0; count--) {
-      if (!could_doit_with_context(evaluation, thing, curr, A_LTELOUT)) {
+      if (!lock_test(evaluation, thing, cause, thing, curr,
+                     LUA_LOCK_TELEPORT_OUT, LUA_LOCK_OPERATION_TELEPORT_OUT,
+                     false, &lock, &result)) {
         if ((thing == cause) || (cause == NOTHING))
           failmsg = "You can't teleport out!";
         else {
           failmsg = "You can't be teleported out!";
           notify_quiet(evaluation, cause, "You can't teleport that out!");
         }
-        did_it(evaluation, thing, src, A_TOFAIL, failmsg, A_OTOFAIL, nullptr,
-               A_ATOFAIL, (char **)nullptr, 0);
+        notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
+                            LUA_EVENT_TELEPORT_OUT_FAIL);
         return 0;
       }
       if (is_room(evaluation->world->database, curr))
@@ -398,15 +399,15 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
     dest = game_object_link(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
   if (!(hush & HUSH_LEAVE))
-    did_it(evaluation, thing, thing, 0, nullptr, A_OXTPORT, nullptr, 0,
-           (char **)nullptr, 0);
+    notify_action(evaluation, thing, thing, 0, nullptr, A_OXTPORT, nullptr,
+                  LUA_EVENT_NONE, (char **)nullptr, 0);
   process_leave_loc(evaluation, thing, dest, NOTHING, canhear, hush);
   move_object(evaluation, thing, dest);
   if (!(hush & HUSH_ENTER))
-    did_it(evaluation, thing, thing, A_TPORT, nullptr, A_OTPORT, nullptr,
-           A_ATPORT, (char **)nullptr, 0);
-  did_it(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr, A_AMOVE,
-         (char **)nullptr, 0);
+    notify_action(evaluation, thing, thing, A_TPORT, nullptr, A_OTPORT, nullptr,
+                  LUA_EVENT_TELEPORT, (char **)nullptr, 0);
+  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
+                LUA_EVENT_MOVE, (char **)nullptr, 0);
   process_enter_loc(evaluation, thing, src, NOTHING, canhear, hush);
   divest_object(evaluation, thing);
   process_sticky_dropto(evaluation, src, thing);
@@ -421,13 +422,30 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
 void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                int divest, const char *failmsg, int hush) {
   DbRef loc;
-  int oattr, aattr;
+  bool silent;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, exit);
   if (loc == HOME)
     loc = game_object_link(evaluation->world->database, player);
+  silent = (is_wizard(evaluation->world->database, player) &&
+            is_dark(evaluation->world->database, player)) ||
+           (hush & HUSH_EXIT);
+  lock = (LuaLockInvocation){
+      .type = LUA_LOCK_DEFAULT,
+      .operation = LUA_LOCK_OPERATION_TRAVERSE,
+      .descriptor = evaluation->command->descriptor,
+      .object = exit,
+      .enactor = player,
+      .cause = player,
+      .subject = player,
+      .silent = silent,
+  };
+  result = (LuaLockResult){0};
   if (is_good_obj(evaluation->world->database, loc) &&
-      could_doit_with_context(evaluation, player, exit, A_LOCK)) {
+      lock_test(evaluation, player, player, player, exit, LUA_LOCK_DEFAULT,
+                LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, &result)) {
     switch (typeof_obj(evaluation->world->database, loc)) {
     case TYPE_ROOM:
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
@@ -450,17 +468,8 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       break;
     }
   } else {
-    if ((is_wizard(evaluation->world->database, player) &&
-         is_dark(evaluation->world->database, player)) ||
-        (hush & HUSH_EXIT)) {
-      oattr = 0;
-      aattr = 0;
-    } else {
-      oattr = A_OFAIL;
-      aattr = A_AFAIL;
-    }
-    did_it(evaluation, player, exit, A_FAIL, failmsg, oattr, nullptr, aattr,
-           (char **)nullptr, 0);
+    notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
+                        LUA_EVENT_FAIL);
   }
 }
 
@@ -554,7 +563,9 @@ void do_get(CommandInvocation *invocation) {
   char *what = invocation->first;
   DbRef thing, playerloc, thingloc;
   const char *failmsg;
-  int oattr, aattr, quiet;
+  int oattr, quiet;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   playerloc = game_object_location(evaluation->world->database, player);
   if (!is_good_obj(evaluation->world->database, playerloc))
@@ -617,7 +628,9 @@ void do_get(CommandInvocation *invocation) {
 
     if (thing == player) {
       notify(evaluation, player, "You cannot get yourself!");
-    } else if (could_doit_with_context(evaluation, player, thing, A_LOCK)) {
+    } else if (lock_test(evaluation, player, invocation->cause, player, thing,
+                         LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet,
+                         &lock, &result)) {
       if (thingloc !=
           game_object_location(evaluation->world->database, player)) {
         notify_printf(evaluation, thingloc, "%s was taken from you.",
@@ -626,18 +639,16 @@ void do_get(CommandInvocation *invocation) {
       move_via_generic(evaluation, thing, player, player, 0);
       notify(evaluation, thing, "Taken.");
       oattr = quiet ? 0 : A_OSUCC;
-      aattr = quiet ? 0 : A_ASUCC;
-      did_it(evaluation, player, thing, A_SUCC, "Taken.", oattr, nullptr, aattr,
-             (char **)nullptr, 0);
+      notify_action(evaluation, player, thing, A_SUCC, "Taken.", oattr, nullptr,
+                    quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS,
+                    (char **)nullptr, 0);
     } else {
-      oattr = quiet ? 0 : A_OFAIL;
-      aattr = quiet ? 0 : A_AFAIL;
       if (thingloc != game_object_location(evaluation->world->database, player))
         failmsg = "You can't take that from there.";
       else
         failmsg = "You can't pick that up.";
-      did_it(evaluation, player, thing, A_FAIL, failmsg, oattr, nullptr, aattr,
-             (char **)nullptr, 0);
+      notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
+                          LUA_EVENT_FAIL);
     }
     break;
   case TYPE_EXIT:
@@ -696,7 +707,9 @@ void do_drop(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef loc, exitloc, thing;
   char *buf, *bp;
-  int quiet, oattr, aattr;
+  int quiet, oattr;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, player);
   if (!is_good_obj(evaluation->world->database, loc))
@@ -726,11 +739,16 @@ void do_drop(CommandInvocation *invocation) {
      * You have to be carrying it
      */
 
-    if (((game_object_location(evaluation->world->database, thing) != player) &&
-         !is_wizard(evaluation->world->database, player)) ||
-        (!could_doit_with_context(evaluation, player, thing, A_LDROP))) {
-      did_it(evaluation, player, thing, A_DFAIL, "You can't drop that.",
-             A_ODFAIL, nullptr, A_ADFAIL, (char **)nullptr, 0);
+    if ((game_object_location(evaluation->world->database, thing) != player) &&
+        !is_wizard(evaluation->world->database, player)) {
+      notify(evaluation, player, "You can't drop that.");
+      return;
+    }
+    if (!lock_test(evaluation, player, invocation->cause, player, thing,
+                   LUA_LOCK_DROP, LUA_LOCK_OPERATION_DROP, false, &lock,
+                   &result)) {
+      notify_lock_failure(evaluation, &lock, &result, "You can't drop that.",
+                          nullptr, LUA_EVENT_DROP_FAIL);
       return;
     }
     /*
@@ -744,13 +762,12 @@ void do_drop(CommandInvocation *invocation) {
     quiet = 0;
     if ((key & DROP_QUIET) && is_controls(evaluation, player, thing))
       quiet = 1;
-    bp = buf = alloc_lbuf("do_drop.did_it");
+    bp = buf = alloc_lbuf("do_drop.notify_action");
     safe_tprintf_str(buf, &bp, "dropped %s.",
                      game_object_name(evaluation->world->database, thing));
     oattr = quiet ? 0 : A_ODROP;
-    aattr = quiet ? 0 : A_ADROP;
-    did_it(evaluation, player, thing, A_DROP, "Dropped.", oattr, buf, aattr,
-           (char **)nullptr, 0);
+    notify_action(evaluation, player, thing, A_DROP, "Dropped.", oattr, buf,
+                  quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP, (char **)nullptr, 0);
     free_lbuf(buf);
 
     /*
@@ -808,27 +825,28 @@ void do_drop(CommandInvocation *invocation) {
 void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
                        int quiet) {
   DbRef loc = game_object_location(evaluation->world->database, player);
-  int oattr, aattr;
+  int oattr;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   if (!is_enter_ok(evaluation->world->database, thing) &&
       !is_controls(evaluation, player, thing)) {
-    oattr = quiet ? 0 : A_OEFAIL;
-    aattr = quiet ? 0 : A_AEFAIL;
-    did_it(evaluation, player, thing, A_EFAIL, "Permission denied.", oattr,
-           nullptr, aattr, (char **)nullptr, 0);
+    if (!quiet)
+      notify(evaluation, player, "Permission denied.");
   } else if (player == thing) {
     notify(evaluation, player, "You can't enter yourself!");
-  } else if (could_doit_with_context(evaluation, player, thing, A_LENTER) &&
-             could_doit_with_context(evaluation, player, loc, A_LLEAVE)) {
+  } else if (lock_test(evaluation, player, player, player, thing,
+                       LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet, &lock,
+                       &result) &&
+             lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
+                       LUA_LOCK_OPERATION_ENTER, quiet, &lock, &result)) {
     oattr = quiet ? HUSH_ENTER : 0;
     move_via_generic(evaluation, player, thing, NOTHING, oattr);
     divest_object(evaluation, player);
     process_sticky_dropto(evaluation, loc, player);
   } else {
-    oattr = quiet ? 0 : A_OEFAIL;
-    aattr = quiet ? 0 : A_AEFAIL;
-    did_it(evaluation, player, thing, A_EFAIL, "You can't enter that.", oattr,
-           nullptr, aattr, (char **)nullptr, 0);
+    notify_lock_failure(evaluation, &lock, &result, "You can't enter that.",
+                        nullptr, LUA_EVENT_ENTER_FAIL);
   }
 }
 
@@ -870,7 +888,9 @@ void do_leave(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   DbRef loc;
-  int quiet, oattr, aattr;
+  int quiet;
+  LuaLockInvocation lock;
+  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, player);
 
@@ -883,17 +903,18 @@ void do_leave(CommandInvocation *invocation) {
   quiet = 0;
   if ((key & MOVE_QUIET) && is_controls(evaluation, player, loc))
     quiet = HUSH_LEAVE;
-  if (could_doit_with_context(evaluation, player, loc, A_LLEAVE) &&
-      could_doit_with_context(
-          evaluation, player,
-          game_object_location(evaluation->world->database, loc), A_LENTER)) {
+  if (lock_test(evaluation, player, invocation->cause, player, loc,
+                LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,
+                &result) &&
+      lock_test(evaluation, player, invocation->cause, player,
+                game_object_location(evaluation->world->database, loc),
+                LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,
+                &result)) {
     move_via_generic(evaluation, player,
                      game_object_location(evaluation->world->database, loc),
                      NOTHING, quiet);
   } else {
-    oattr = quiet ? 0 : A_OLFAIL;
-    aattr = quiet ? 0 : A_ALFAIL;
-    did_it(evaluation, player, loc, A_LFAIL, "You can't leave.", oattr, nullptr,
-           aattr, (char **)nullptr, 0);
+    notify_lock_failure(evaluation, &lock, &result, "You can't leave.", nullptr,
+                        LUA_EVENT_LEAVE_FAIL);
   }
 }
