@@ -2664,9 +2664,9 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
       }
     }
 
-    notify_action(btech_context_evaluation(attacker->xcode.context),
-                  attacker->mynum, mech->mynum, 0, NULL, 0, NULL,
-                  LUA_EVENT_MECH_DESTROYED, args, nargs);
+    notify_event(btech_context_evaluation(attacker->xcode.context), NULL,
+                 attacker->mynum, attacker->mynum, mech->mynum,
+                 LUA_EVENT_MECH_DESTROYED, args, nargs);
 
     if (reason_copy) {
       free_lbuf(reason_copy);

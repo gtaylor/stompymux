@@ -50,16 +50,11 @@ int main(int argc, char *argv[]) {
       "@chan/flags", "@chan/status", "@chan/who",
   };
   static const char *const lua_keywords[] = {
-      "@lua/check",
-      "@lua/parent",
-      "@lua/reload",
-      "@lua/schedule",
+      "@lua/check",    "@lua/parent",     "@lua/reload",
+      "@lua/schedule", "@lua/viewparent",
   };
   static const char *const removed_lua_keywords[] = {
-      "@luacheck",
-      "@luaparent",
-      "@luareload",
-      "@luaschedule",
+      "@luacheck", "@luaparent", "@luareload", "@luaschedule", "@luaviewparent",
   };
   const HelpArticle *article;
   const HelpArticle *wizards_article;
@@ -172,6 +167,19 @@ int main(int argc, char *argv[]) {
   }
   if (help_index_find_exact(index, "@helpreload", true)) {
     fprintf(stderr, "expected removed '@helpreload' help to be absent\n");
+    return 8;
+  }
+
+  article = help_index_find_exact(index, "@examine", false);
+  if (article) {
+    fprintf(stderr,
+            "expected '@examine' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@examine", true);
+  if (!article || !article->wizard_only ||
+      strcmp(article->relative_path, "wizard_commands/examine.md")) {
+    fprintf(stderr, "expected Wizard-only '@examine' help\n");
     return 8;
   }
 

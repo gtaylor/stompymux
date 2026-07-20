@@ -177,7 +177,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.postdump_message", "postdump_message", CFG_KIND_SCALAR},
     {"mux.dump_offset", "dump_offset", CFG_KIND_SCALAR},
     {"mux.examine_flags", "examine_flags", CFG_KIND_SCALAR},
-    {"mux.examine_public_attrs", "examine_public_attrs", CFG_KIND_SCALAR},
     {"mux.fascist_teleport", "fascist_teleport", CFG_KIND_SCALAR},
     {"mux.fixed_home_message", "fixed_home_message", CFG_KIND_SCALAR},
     {"mux.fixed_tel_message", "fixed_tel_message", CFG_KIND_SCALAR},

@@ -23,7 +23,6 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/timer.h"
-#include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 
 extern void pool_reset(void);
@@ -199,27 +198,4 @@ void server_timer_destroy(ServerTimer *timer) {
   if (timer->event != nullptr)
     mux_timer_destroy(timer->event);
   free(timer);
-}
-
-/**
- * Adjust various internal timers.
- */
-void do_timewarp(CommandInvocation *invocation) {
-  int secs;
-  RuntimeClock *clock = invocation->context->runtime->clock;
-
-  secs = clamped_atoi(invocation->first);
-
-  if ((invocation->key == 0) || (invocation->key & TWARP_QUEUE)) {
-    CommandInvocation queue_invocation = *invocation;
-
-    queue_invocation.key = QUEUE_WARP;
-    do_queue(&queue_invocation);
-  }
-  if (invocation->key & TWARP_DUMP)
-    clock->dump_deadline -= secs;
-  if (invocation->key & TWARP_CLEAN)
-    clock->check_deadline -= secs;
-  if (invocation->key & TWARP_IDLE)
-    clock->idle_deadline -= secs;
 }

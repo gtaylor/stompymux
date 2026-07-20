@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -102,6 +103,37 @@ static const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT] = {
     [LUA_LOCK_OPERATION_BTECH_CONTACT] = "btech_contact",
 };
 
+static const char *const LUA_MESSAGE_NAMES[LUA_MESSAGE_COUNT] = {
+    [LUA_MESSAGE_NONE] = nullptr,
+    [LUA_MESSAGE_SUCCESS] = "success",
+    [LUA_MESSAGE_DROP] = "drop",
+    [LUA_MESSAGE_DESCRIBE] = "describe",
+    [LUA_MESSAGE_USE] = "use",
+    [LUA_MESSAGE_LEAVE] = "leave",
+    [LUA_MESSAGE_ENTER] = "enter",
+    [LUA_MESSAGE_MOVE] = "move",
+    [LUA_MESSAGE_TELEPORT] = "teleport",
+    [LUA_MESSAGE_ENTER_SOURCE] = "enter_source",
+    [LUA_MESSAGE_LEAVE_DESTINATION] = "leave_destination",
+    [LUA_MESSAGE_TELEPORT_SOURCE] = "teleport_source",
+};
+
+static const char
+    *const LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT] = {
+        [LUA_MESSAGE_OPERATION_NONE] = "none",
+        [LUA_MESSAGE_OPERATION_LOOK] = "look",
+        [LUA_MESSAGE_OPERATION_TAKE] = "take",
+        [LUA_MESSAGE_OPERATION_TRAVERSE] = "traverse",
+        [LUA_MESSAGE_OPERATION_RECEIVE] = "receive",
+        [LUA_MESSAGE_OPERATION_DROP] = "drop",
+        [LUA_MESSAGE_OPERATION_GIVE] = "give",
+        [LUA_MESSAGE_OPERATION_DESCRIBE] = "describe",
+        [LUA_MESSAGE_OPERATION_INSIDE_DESCRIBE] = "inside_describe",
+        [LUA_MESSAGE_OPERATION_USE] = "use",
+        [LUA_MESSAGE_OPERATION_MOVE] = "move",
+        [LUA_MESSAGE_OPERATION_TELEPORT] = "teleport",
+};
+
 typedef enum lua_module_root_e {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,
@@ -180,6 +212,30 @@ static bool lua_lock_name_is_known(const char *name) {
     return false;
   for (lock = LUA_LOCK_DEFAULT; lock < LUA_LOCK_COUNT; lock++) {
     if (!strcmp(name, LUA_LOCK_NAMES[lock]))
+      return true;
+  }
+  return false;
+}
+
+const char *lua_message_name(LuaMessageType message) {
+  if ((unsigned int)message >= LUA_MESSAGE_COUNT)
+    return nullptr;
+  return LUA_MESSAGE_NAMES[message];
+}
+
+const char *lua_message_operation_name(LuaMessageOperation operation) {
+  if ((unsigned int)operation >= LUA_MESSAGE_OPERATION_COUNT)
+    return nullptr;
+  return LUA_MESSAGE_OPERATION_NAMES[operation];
+}
+
+static bool lua_message_name_is_known(const char *name) {
+  LuaMessageType message;
+
+  if (!name)
+    return false;
+  for (message = LUA_MESSAGE_SUCCESS; message < LUA_MESSAGE_COUNT; message++) {
+    if (!strcmp(name, LUA_MESSAGE_NAMES[message]))
       return true;
   }
   return false;
@@ -858,6 +914,25 @@ static int lua_verify_locks(lua_State *state, int locks, const char *path,
   return 1;
 }
 
+static int lua_verify_messages(lua_State *state, int messages, const char *path,
+                               char *error, size_t error_size) {
+  lua_pushnil(state);
+  while (lua_next(state, messages) != 0) {
+    const char *name = lua_tostring(state, -2);
+
+    if (lua_type(state, -2) != LUA_TSTRING ||
+        !lua_message_name_is_known(name) || !lua_isfunction(state, -1)) {
+      lua_set_error(error, error_size,
+                    "messages in %s must map known message names to functions",
+                    path);
+      lua_pop(state, 2);
+      return 0;
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
 static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                              const char *path, char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
@@ -916,6 +991,27 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
       }
       if (!lua_verify_locks(runtime->state, lua_gettop(runtime->state), path,
                             error, error_size)) {
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+    }
+    lua_pop(runtime->state, 1);
+    lua_getfield(runtime->state, -1, "messages");
+    if (!lua_isnil(runtime->state, -1)) {
+      if (root != LUA_ROOT_OBJECT_LOGIC) {
+        lua_set_error(error, error_size,
+                      "messages in %s are only valid in object modules", path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_istable(runtime->state, -1)) {
+        lua_set_error(error, error_size, "messages in %s must be a table",
+                      path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      if (!lua_verify_messages(runtime->state, lua_gettop(runtime->state), path,
+                               error, error_size)) {
         lua_settop(runtime->state, top);
         return 0;
       }
@@ -1254,6 +1350,101 @@ static int lua_effective_path(LuaRuntime *runtime, DbRef object, char *path,
     free_lbuf(value);
   }
   return 0;
+}
+
+static void lua_examine_array(LuaRuntime *runtime,
+                              EvaluationContext *evaluation, DbRef player,
+                              int module, const char *table_name,
+                              const char *label, const char *name_field) {
+  lua_State *state = runtime->state;
+  int index;
+  int count;
+
+  notify_printf(evaluation, player, "%s:", label);
+  lua_getfield(state, module, table_name);
+  count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
+  if (!count)
+    notify_quiet(evaluation, player, "  (none)");
+  for (index = 1; index <= count; index++) {
+    const char *name;
+
+    lua_rawgeti(state, -1, index);
+    if (!lua_istable(state, -1)) {
+      notify_quiet(evaluation, player, "  <invalid>");
+      lua_pop(state, 1);
+      continue;
+    }
+    lua_getfield(state, -1, name_field);
+    name = lua_tostring(state, -1);
+    notify_printf(evaluation, player, "  %s", name ? name : "<invalid>");
+    lua_pop(state, 2);
+  }
+  lua_pop(state, 1);
+}
+
+static void
+lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
+                            DbRef player, int module, const char *table_name,
+                            const char *label, const char *const names[],
+                            int first, int count) {
+  lua_State *state = runtime->state;
+  bool found = false;
+  int index;
+
+  notify_printf(evaluation, player, "%s:", label);
+  lua_getfield(state, module, table_name);
+  if (lua_istable(state, -1)) {
+    for (index = first; index < count; index++) {
+      lua_getfield(state, -1, names[index]);
+      if (lua_isfunction(state, -1)) {
+        notify_printf(evaluation, player, "  %s", names[index]);
+        found = true;
+      }
+      lua_pop(state, 1);
+    }
+  }
+  if (!found)
+    notify_quiet(evaluation, player, "  (none)");
+  lua_pop(state, 1);
+}
+
+void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
+                        DbRef player, DbRef object) {
+  lua_State *state;
+  DbRef source;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  int module;
+
+  if (!runtime ||
+      !lua_effective_path(runtime, object, path, sizeof(path), &source))
+    return;
+  notify_printf(evaluation, player,
+                "Lua parent: object_logic/%s (attached on #%ld)", path, source);
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    notify_printf(evaluation, player, "Lua behaviors unavailable: %s", error);
+    lua_settop(state, top);
+    return;
+  }
+  module = lua_gettop(state);
+  lua_examine_array(runtime, evaluation, player, module, "commands",
+                    "Lua commands", "pattern");
+  lua_examine_named_functions(runtime, evaluation, player, module, "events",
+                              "Lua events", LUA_EVENT_NAMES, LUA_EVENT_SUCCESS,
+                              LUA_EVENT_COUNT);
+  lua_examine_array(runtime, evaluation, player, module, "schedules",
+                    "Lua schedules", "name");
+  lua_examine_named_functions(runtime, evaluation, player, module, "messages",
+                              "Lua messages", LUA_MESSAGE_NAMES,
+                              LUA_MESSAGE_SUCCESS, LUA_MESSAGE_COUNT);
+  lua_examine_named_functions(runtime, evaluation, player, module, "locks",
+                              "Lua locks", LUA_LOCK_NAMES, LUA_LOCK_DEFAULT,
+                              LUA_LOCK_COUNT);
+  lua_settop(state, top);
 }
 
 static void lua_push_context(GameDatabase *database, Descriptor *descriptor,
@@ -1699,6 +1890,33 @@ bool lua_lock_defined(LuaRuntime *runtime, DbRef object, LuaLockType lock) {
   return defined;
 }
 
+bool lua_message_defined(LuaRuntime *runtime, DbRef object,
+                         LuaMessageType message) {
+  lua_State *state;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  bool defined;
+
+  if (!runtime || !lua_message_name(message) ||
+      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+    return false;
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, object, path, error);
+    lua_settop(state, top);
+    return true;
+  }
+  lua_getfield(state, -1, "messages");
+  if (lua_istable(state, -1))
+    lua_getfield(state, -1, lua_message_name(message));
+  defined = lua_isfunction(state, -1);
+  lua_settop(state, top);
+  return defined;
+}
+
 bool lua_event_dispatch(LuaRuntime *runtime,
                         const LuaEventInvocation *invocation) {
   lua_State *state;
@@ -1755,9 +1973,9 @@ bool lua_event_dispatch(LuaRuntime *runtime,
   return true;
 }
 
-static bool lua_lock_copy_message(lua_State *state, int table,
-                                  const char *field, bool *present,
-                                  char destination[LBUF_SIZE]) {
+static bool lua_result_copy_message(lua_State *state, int table,
+                                    const char *field, bool *present,
+                                    char destination[LBUF_SIZE]) {
   size_t length;
   const char *message;
 
@@ -1812,12 +2030,12 @@ static bool lua_lock_parse_result(lua_State *state, LuaLockResult *result) {
   }
   result->passes = lua_toboolean(state, -1);
   lua_pop(state, 1);
-  return lua_lock_copy_message(state, table, "enactor_message",
-                               &result->has_enactor_message,
-                               result->enactor_message) &&
-         lua_lock_copy_message(state, table, "other_message",
-                               &result->has_other_message,
-                               result->other_message);
+  return lua_result_copy_message(state, table, "enactor_message",
+                                 &result->has_enactor_message,
+                                 result->enactor_message) &&
+         lua_result_copy_message(state, table, "other_message",
+                                 &result->has_other_message,
+                                 result->other_message);
 }
 
 void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
@@ -1886,6 +2104,114 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
     lua_log_error(runtime, invocation->object, "LOCK",
                   "lock handler must return a boolean or a valid result table");
     result->passes = false;
+    result->has_enactor_message = false;
+    result->has_other_message = false;
+  }
+  lua_settop(state, top);
+}
+
+static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
+                                     LuaMessageResult *result) {
+  const bool allow_enactor = type != LUA_MESSAGE_DESCRIBE &&
+                             type != LUA_MESSAGE_ENTER_SOURCE &&
+                             type != LUA_MESSAGE_LEAVE_DESTINATION &&
+                             type != LUA_MESSAGE_TELEPORT_SOURCE;
+  int table;
+
+  if (!lua_istable(state, -1))
+    return false;
+  table = lua_gettop(state);
+  lua_pushnil(state);
+  while (lua_next(state, table) != 0) {
+    const char *key = lua_tostring(state, -2);
+    const bool valid = lua_type(state, -2) == LUA_TSTRING && key &&
+                       ((!strcmp(key, "enactor_message") && allow_enactor) ||
+                        !strcmp(key, "other_message"));
+
+    lua_pop(state, 1);
+    if (!valid) {
+      lua_pop(state, 1);
+      return false;
+    }
+  }
+  return (!allow_enactor ||
+          lua_result_copy_message(state, table, "enactor_message",
+                                  &result->has_enactor_message,
+                                  result->enactor_message)) &&
+         lua_result_copy_message(state, table, "other_message",
+                                 &result->has_other_message,
+                                 result->other_message);
+}
+
+void lua_message_evaluate(LuaRuntime *runtime,
+                          const LuaMessageInvocation *invocation,
+                          LuaMessageResult *result) {
+  lua_State *state;
+  const char *message;
+  const char *operation;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  int top;
+  int status;
+
+  memset(result, 0, sizeof(*result));
+  if (!runtime || !invocation ||
+      !(message = lua_message_name(invocation->type)) ||
+      !(operation = lua_message_operation_name(invocation->operation)) ||
+      !lua_effective_path(runtime, invocation->object, path, sizeof(path),
+                          nullptr))
+    return;
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, invocation->object, path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, "messages");
+  if (!lua_istable(state, -1)) {
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, message);
+  if (!lua_isfunction(state, -1)) {
+    lua_settop(state, top);
+    return;
+  }
+  result->defined = true;
+  lua_push_context(runtime->services->database, invocation->descriptor, state,
+                   invocation->object, invocation->enactor, invocation->cause,
+                   nullptr, nullptr, nullptr, nullptr, 0);
+  lua_pushstring(state, message);
+  lua_setfield(state, -2, "message");
+  lua_pushstring(state, operation);
+  lua_setfield(state, -2, "operation");
+  lua_pushboolean(state, invocation->silent);
+  lua_setfield(state, -2, "silent");
+  if (invocation->source == NOTHING)
+    lua_pushnil(state);
+  else
+    lua_pushinteger(state, invocation->source);
+  lua_setfield(state, -2, "source");
+  if (invocation->destination == NOTHING)
+    lua_pushnil(state);
+  else
+    lua_pushinteger(state, invocation->destination);
+  lua_setfield(state, -2, "destination");
+  {
+    LUA_MODULE_ROOT previous_root = runtime->current_root;
+
+    runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
+    status = lua_pcall_limited(runtime, 1, 1);
+    runtime->current_root = previous_root;
+  }
+  if (status) {
+    lua_log_error(runtime, invocation->object, "MESSAGE",
+                  lua_tostring(state, -1));
+  } else if (!lua_message_parse_result(state, invocation->type, result)) {
+    lua_log_error(runtime, invocation->object, "MESSAGE",
+                  "message provider must return a valid result table");
     result->has_enactor_message = false;
     result->has_other_message = false;
   }
@@ -2170,6 +2496,86 @@ static void do_luaparent(CommandInvocation *invocation) {
   notify_quiet(&invocation->context->evaluation, player, "Lua parent set.");
 }
 
+static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
+                                   LuaRuntime *runtime, const char *path,
+                                   DbRef source) {
+  char resolved[PATH_MAX];
+  char error[LBUF_SIZE];
+  char *line = nullptr;
+  size_t capacity = 0;
+  ssize_t length;
+  FILE *stream;
+
+  if (!lua_resolve_path(runtime, LUA_ROOT_OBJECT_LOGIC, path, resolved,
+                        sizeof(resolved), error, sizeof(error))) {
+    notify_printf(evaluation, player, "Lua parent unavailable: %s", error);
+    return;
+  }
+  stream = fopen(resolved, "rb");
+  if (!stream) {
+    notify_printf(evaluation, player, "Lua parent unavailable: %s",
+                  strerror(errno));
+    return;
+  }
+  if (source == NOTHING)
+    notify_printf(evaluation, player, "Lua parent object_logic/%s:", path);
+  else
+    notify_printf(evaluation, player,
+                  "Lua parent object_logic/%s (attached on #%ld):", path,
+                  source);
+  while ((length = getline(&line, &capacity, stream)) >= 0) {
+    while (length > 0 && (line[length - 1] == '\n' || line[length - 1] == '\r'))
+      line[--length] = '\0';
+    raw_notify(evaluation, player, line);
+  }
+  if (ferror(stream))
+    notify_printf(evaluation, player, "Lua parent read failed: %s",
+                  strerror(errno));
+  free(line);
+  fclose(stream);
+  notify_quiet(evaluation, player, "-- End Lua parent --");
+}
+
+static void do_luaviewparent(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *argument = invocation->first;
+  LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
+  DbRef source = NOTHING;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+
+  if (!runtime) {
+    notify_quiet(evaluation, player, "Lua is not initialized.");
+    return;
+  }
+  if (!argument || !*argument) {
+    notify_quiet(evaluation, player, "View which Lua parent?");
+    return;
+  }
+  if (argument[0] == '#') {
+    DbRef object;
+
+    init_match(&invocation->context->match, player, argument, NOTYPE);
+    match_everything(&invocation->context->match, 0);
+    object = noisy_match_result(&invocation->context->match);
+    if (object == NOTHING)
+      return;
+    if (!lua_effective_path(runtime, object, path, sizeof(path), &source)) {
+      notify_quiet(evaluation, player,
+                   "That object has no effective Lua parent.");
+      return;
+    }
+  } else {
+    if (!lua_validate_path(runtime, argument, error, sizeof(error))) {
+      notify_printf(evaluation, player, "Lua parent unavailable: %s", error);
+      return;
+    }
+    snprintf(path, sizeof(path), "%s", argument);
+  }
+  lua_view_parent_source(evaluation, player, runtime, path, source);
+}
+
 static void do_luacheck(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
@@ -2400,6 +2806,8 @@ void do_lua(CommandInvocation *invocation) {
                "  /reload    Reload Lua modules atomically.");
     raw_notify(evaluation, invocation->player,
                "  /schedule  Inspect active Lua schedules.");
+    raw_notify(evaluation, invocation->player,
+               "  /viewparent Display an object Lua parent's source.");
     return;
   case LUA_COMMAND_CHECK:
     do_luacheck(invocation);
@@ -2412,6 +2820,9 @@ void do_lua(CommandInvocation *invocation) {
     return;
   case LUA_COMMAND_SCHEDULE:
     do_luaschedule(invocation);
+    return;
+  case LUA_COMMAND_VIEWPARENT:
+    do_luaviewparent(invocation);
     return;
   default:
     raw_notify(evaluation, invocation->player,

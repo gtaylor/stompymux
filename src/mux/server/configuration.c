@@ -287,7 +287,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->robot_speak = 1;
   context->configuration->pub_flags = 1;
   context->configuration->quiet_look = 1;
-  context->configuration->exam_public = 1;
   context->configuration->read_rem_desc = 0;
   context->configuration->read_rem_name = 0;
   context->configuration->sweep_dark = 0;
@@ -1017,8 +1016,6 @@ CONF conftable[] = {
      CONFIG_LOC(dump_offset), 0},
     {"examine_flags", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(ex_flags), 0},
-    {"examine_public_attrs", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(exam_public), 0},
     {"exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(exit_flags), 0},
     {"fascist_teleport", cf_bool_configuration_adapter, CA_GOD,

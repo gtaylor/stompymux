@@ -62,9 +62,8 @@ void mech_ood_event(MuxEvent *e) {
   /* Time to hit da ground */
   mech_notify(mech, MECHALL, "Your unit touches down!");
 
-  notify_action(btech_context_evaluation(mech->xcode.context), mech->mynum,
-                mech->mynum, 0, NULL, 0, NULL, LUA_EVENT_OOD_LAND,
-                (char **)NULL, 0);
+  notify_event(btech_context_evaluation(mech->xcode.context), NULL, mech->mynum,
+               mech->mynum, mech->mynum, LUA_EVENT_OOD_LAND, (char **)NULL, 0);
 
   if (MechStatus(mech) & COMBAT_SAFE) {
     /* If we're combat safe, we land regardless, since we're not gonna take any

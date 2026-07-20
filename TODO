@@ -2,7 +2,11 @@
 
 ## MUX Todos in the /src/ dir
 
+* Make `examine` an alias for `look` for non-Wizards
 * Do we still need master rooms?
+* Remove $-command checking
+* Do we still need object ownership?
+* Remove attribute flags?
 * verbs.c and verbs.h can probably be crunched elsewhere
 * Offer a non-privileged way to change your own password.
 * Add bad names list

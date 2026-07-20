@@ -7,10 +7,21 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
-void notify_action(EvaluationContext *evaluation, DbRef player, DbRef thing,
-                   int player_attribute, const char *player_default,
-                   int others_attribute, const char *others_default,
-                   LuaEventType event, char *arguments[], int argument_count);
+typedef struct ActionMessageInvocation {
+  LuaMessageInvocation message;
+  int content_attribute;
+  const char *enactor_default;
+  const char *other_default;
+  LuaEventType event;
+  char **arguments;
+  int argument_count;
+} ActionMessageInvocation;
+
+void notify_action(EvaluationContext *evaluation,
+                   const ActionMessageInvocation *invocation);
+void notify_event(EvaluationContext *evaluation, Descriptor *descriptor,
+                  DbRef enactor, DbRef cause, DbRef object, LuaEventType event,
+                  char **arguments, int argument_count);
 void notify_lock_failure(EvaluationContext *evaluation,
                          const LuaLockInvocation *invocation,
                          const LuaLockResult *result,

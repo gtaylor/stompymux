@@ -565,13 +565,13 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if ((key & MSG_ME) && pass_listen && pass_uselock) {
       if (sender != target)
-        notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
-                      LUA_EVENT_MATCH_HEARD_OTHER, args, nargs);
+        notify_event(evaluation, nullptr, sender, sender, target,
+                     LUA_EVENT_MATCH_HEARD_OTHER, args, nargs);
       else
-        notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
-                      LUA_EVENT_MATCH_HEARD_SELF, args, nargs);
-      notify_action(evaluation, sender, target, 0, nullptr, 0, nullptr,
-                    LUA_EVENT_MATCH_HEARD, args, nargs);
+        notify_event(evaluation, nullptr, sender, sender, target,
+                     LUA_EVENT_MATCH_HEARD_SELF, args, nargs);
+      notify_event(evaluation, nullptr, sender, sender, target,
+                   LUA_EVENT_MATCH_HEARD, args, nargs);
     }
     /*
      * Get rid of match arguments. We don't need them anymore

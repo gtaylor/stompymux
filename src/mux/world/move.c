@@ -26,7 +26,7 @@
 static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
                               DbRef dest, DbRef cause, int canhear, int hush) {
   DbRef loc;
-  int quiet, pattr, oattr;
+  int quiet;
 
   loc = game_object_location(evaluation->world->database, thing);
   if ((loc == NOTHING) || (loc == dest))
@@ -50,18 +50,32 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
              (canhear && !(is_wizard(evaluation->world->database, thing) &&
                            is_dark(evaluation->world->database, thing))))) ||
           (hush & HUSH_LEAVE);
-  oattr = quiet ? 0 : A_OLEAVE;
-  pattr = A_LEAVE;
-  notify_action(evaluation, thing, loc, pattr, nullptr, oattr, nullptr,
-                quiet ? LUA_EVENT_NONE : LUA_EVENT_LEAVE, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_LEAVE,
+                                .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                .object = loc,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = loc,
+                                .destination = dest,
+                                .silent = quiet},
+                    .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_LEAVE});
 
   /*
    * Do OXENTER for receiving room
    */
 
   if ((dest != NOTHING) && !quiet)
-    notify_action(evaluation, thing, dest, 0, nullptr, A_OXENTER, nullptr,
-                  LUA_EVENT_NONE, (char **)nullptr, 0);
+    notify_action(evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_ENTER_SOURCE,
+                                  .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                  .object = dest,
+                                  .enactor = thing,
+                                  .cause = cause,
+                                  .source = loc,
+                                  .destination = dest}});
 
   /*
    * Display the 'has left' message if we meet any of the following * *
@@ -91,7 +105,7 @@ static void process_leave_loc(EvaluationContext *evaluation, DbRef thing,
 static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
                               DbRef src, DbRef cause, int canhear, int hush) {
   DbRef loc;
-  int quiet, pattr, oattr;
+  int quiet;
 
   loc = game_object_location(evaluation->world->database, thing);
   if ((loc == NOTHING) || (loc == src))
@@ -112,18 +126,32 @@ static void process_enter_loc(EvaluationContext *evaluation, DbRef thing,
              (canhear && !(is_wizard(evaluation->world->database, thing) &&
                            is_dark(evaluation->world->database, thing))))) ||
           (hush & HUSH_ENTER);
-  oattr = quiet ? 0 : A_OENTER;
-  pattr = A_ENTER;
-  notify_action(evaluation, thing, loc, pattr, nullptr, oattr, nullptr,
-                quiet ? LUA_EVENT_NONE : LUA_EVENT_ENTER, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_ENTER,
+                                .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                .object = loc,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = loc,
+                                .silent = quiet},
+                    .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_ENTER});
 
   /*
    * Do OXLEAVE for sending room
    */
 
   if ((src != NOTHING) && !quiet)
-    notify_action(evaluation, thing, src, 0, nullptr, A_OXLEAVE, nullptr,
-                  LUA_EVENT_NONE, (char **)nullptr, 0);
+    notify_action(evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_LEAVE_DESTINATION,
+                                  .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                  .object = src,
+                                  .enactor = thing,
+                                  .cause = cause,
+                                  .source = src,
+                                  .destination = loc}});
 
   /*
    * Display the 'has arrived' message if we meet all of the following
@@ -307,8 +335,16 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
   canhear = is_hearer(evaluation, thing);
   process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
   move_object(evaluation, thing, dest);
-  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
-                LUA_EVENT_MOVE, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_MOVE,
+                                .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                .object = thing,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = dest},
+                    .event = LUA_EVENT_MOVE});
   process_enter_loc(evaluation, thing, src, cause, canhear, hush);
 }
 
@@ -320,7 +356,7 @@ void move_via_generic(EvaluationContext *evaluation, DbRef thing, DbRef dest,
 void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                    DbRef cause, DbRef exit, int hush) {
   DbRef src;
-  int canhear, darkwiz, quiet, pattr, oattr;
+  int canhear, darkwiz, quiet;
 
   if (dest == HOME)
     dest = game_object_link(evaluation->world->database, thing);
@@ -335,11 +371,17 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
              is_dark(evaluation->world->database, thing));
   quiet = darkwiz || (hush & HUSH_EXIT);
 
-  oattr = quiet ? 0 : A_OSUCC;
-  pattr = A_SUCC;
-  notify_action(evaluation, thing, exit, pattr, nullptr, oattr, nullptr,
-                quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS, (char **)nullptr,
-                0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_SUCCESS,
+                                .operation = LUA_MESSAGE_OPERATION_TRAVERSE,
+                                .object = exit,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = dest,
+                                .silent = quiet},
+                    .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
   process_leave_loc(evaluation, thing, dest, cause, canhear, hush);
   move_object(evaluation, thing, dest);
 
@@ -347,13 +389,28 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
    * Dark wizards don't trigger ODROP/ADROP
    */
 
-  oattr = quiet ? 0 : A_ODROP;
-  pattr = A_DROP;
-  notify_action(evaluation, thing, exit, pattr, nullptr, oattr, nullptr,
-                quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_DROP,
+                                .operation = LUA_MESSAGE_OPERATION_TRAVERSE,
+                                .object = exit,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = dest,
+                                .silent = quiet},
+                    .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP});
 
-  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
-                LUA_EVENT_MOVE, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_MOVE,
+                                .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                .object = thing,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = dest},
+                    .event = LUA_EVENT_MOVE});
   process_enter_loc(evaluation, thing, src, cause, canhear, hush);
   process_sticky_dropto(evaluation, src, thing);
 }
@@ -399,15 +456,38 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
     dest = game_object_link(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
   if (!(hush & HUSH_LEAVE))
-    notify_action(evaluation, thing, thing, 0, nullptr, A_OXTPORT, nullptr,
-                  LUA_EVENT_NONE, (char **)nullptr, 0);
+    notify_action(evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_TELEPORT_SOURCE,
+                                  .operation = LUA_MESSAGE_OPERATION_TELEPORT,
+                                  .object = thing,
+                                  .enactor = thing,
+                                  .cause = cause,
+                                  .source = src,
+                                  .destination = dest}});
   process_leave_loc(evaluation, thing, dest, NOTHING, canhear, hush);
   move_object(evaluation, thing, dest);
   if (!(hush & HUSH_ENTER))
-    notify_action(evaluation, thing, thing, A_TPORT, nullptr, A_OTPORT, nullptr,
-                  LUA_EVENT_TELEPORT, (char **)nullptr, 0);
-  notify_action(evaluation, thing, thing, A_MOVE, nullptr, A_OMOVE, nullptr,
-                LUA_EVENT_MOVE, (char **)nullptr, 0);
+    notify_action(evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_TELEPORT,
+                                  .operation = LUA_MESSAGE_OPERATION_TELEPORT,
+                                  .object = thing,
+                                  .enactor = thing,
+                                  .cause = cause,
+                                  .source = src,
+                                  .destination = dest},
+                      .event = LUA_EVENT_TELEPORT});
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_MOVE,
+                                .operation = LUA_MESSAGE_OPERATION_TELEPORT,
+                                .object = thing,
+                                .enactor = thing,
+                                .cause = cause,
+                                .source = src,
+                                .destination = dest},
+                    .event = LUA_EVENT_MOVE});
   process_enter_loc(evaluation, thing, src, NOTHING, canhear, hush);
   divest_object(evaluation, thing);
   process_sticky_dropto(evaluation, src, thing);
@@ -563,7 +643,7 @@ void do_get(CommandInvocation *invocation) {
   char *what = invocation->first;
   DbRef thing, playerloc, thingloc;
   const char *failmsg;
-  int oattr, quiet;
+  int quiet;
   LuaLockInvocation lock;
   LuaLockResult result;
 
@@ -638,10 +718,20 @@ void do_get(CommandInvocation *invocation) {
       }
       move_via_generic(evaluation, thing, player, player, 0);
       notify(evaluation, thing, "Taken.");
-      oattr = quiet ? 0 : A_OSUCC;
-      notify_action(evaluation, player, thing, A_SUCC, "Taken.", oattr, nullptr,
-                    quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS,
-                    (char **)nullptr, 0);
+      notify_action(
+          evaluation,
+          &(ActionMessageInvocation){
+              .message = {.type = LUA_MESSAGE_SUCCESS,
+                          .operation = LUA_MESSAGE_OPERATION_TAKE,
+                          .descriptor = invocation->context->descriptor,
+                          .object = thing,
+                          .enactor = player,
+                          .cause = invocation->cause,
+                          .source = thingloc,
+                          .destination = player,
+                          .silent = quiet},
+              .enactor_default = "Taken.",
+              .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
     } else {
       if (thingloc != game_object_location(evaluation->world->database, player))
         failmsg = "You can't take that from there.";
@@ -707,7 +797,7 @@ void do_drop(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef loc, exitloc, thing;
   char *buf, *bp;
-  int quiet, oattr;
+  int quiet;
   LuaLockInvocation lock;
   LuaLockResult result;
 
@@ -765,9 +855,20 @@ void do_drop(CommandInvocation *invocation) {
     bp = buf = alloc_lbuf("do_drop.notify_action");
     safe_tprintf_str(buf, &bp, "dropped %s.",
                      game_object_name(evaluation->world->database, thing));
-    oattr = quiet ? 0 : A_ODROP;
-    notify_action(evaluation, player, thing, A_DROP, "Dropped.", oattr, buf,
-                  quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP, (char **)nullptr, 0);
+    notify_action(evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_DROP,
+                                  .operation = LUA_MESSAGE_OPERATION_DROP,
+                                  .descriptor = invocation->context->descriptor,
+                                  .object = thing,
+                                  .enactor = player,
+                                  .cause = invocation->cause,
+                                  .source = player,
+                                  .destination = loc,
+                                  .silent = quiet},
+                      .enactor_default = "Dropped.",
+                      .other_default = buf,
+                      .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP});
     free_lbuf(buf);
 
     /*

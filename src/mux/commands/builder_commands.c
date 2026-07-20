@@ -667,8 +667,9 @@ void do_clone(CommandInvocation *invocation) {
       game_object_set_parent(
           evaluation->world->database, clone,
           game_object_parent(evaluation->world->database, thing));
-    notify_action(evaluation, player, clone, 0, nullptr, 0, nullptr,
-                  LUA_EVENT_CLONE, (char **)nullptr, 0);
+    notify_event(evaluation, invocation->context->descriptor, player,
+                 invocation->cause, clone, LUA_EVENT_CLONE, (char **)nullptr,
+                 0);
   } else {
     if (!(key & CLONE_PARENT) && is_controls(evaluation, player, thing))
       game_object_set_parent(

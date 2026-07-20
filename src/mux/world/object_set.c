@@ -704,9 +704,8 @@ void do_use(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef player = invocation->player;
   char *object = invocation->first;
-  char *df_use, *df_ouse, *temp;
-  DbRef thing, aowner;
-  long aflags;
+  char *df_use, *df_ouse;
+  DbRef thing;
   int doit;
   LuaLockInvocation lock;
   LuaLockResult result;
@@ -735,17 +734,12 @@ void do_use(CommandInvocation *invocation) {
                         LUA_EVENT_USE_FAIL);
     return;
   }
-  temp = alloc_lbuf("do_use");
   doit = 0;
-  if (*attribute_parent_get_string(evaluation->world->database, temp, thing,
-                                   A_USE, &aowner, &aflags) ||
-      *attribute_parent_get_string(evaluation->world->database, temp, thing,
-                                   A_OUSE, &aowner, &aflags) ||
+  if (lua_message_defined(evaluation->runtime->lua_owner->runtime, thing,
+                          LUA_MESSAGE_USE) ||
       lua_event_defined(evaluation->runtime->lua_owner->runtime, thing,
                         LUA_EVENT_USE))
     doit = 1;
-  free_lbuf(temp);
-
   if (doit) {
     df_use = alloc_lbuf("do_use.use");
     df_ouse = alloc_lbuf("do_use.ouse");
@@ -753,8 +747,19 @@ void do_use(CommandInvocation *invocation) {
              game_object_name(evaluation->world->database, thing));
     snprintf(df_ouse, LBUF_SIZE, "uses %s",
              game_object_name(evaluation->world->database, thing));
-    notify_action(&invocation->context->evaluation, player, thing, A_USE,
-                  df_use, A_OUSE, df_ouse, LUA_EVENT_USE, (char **)nullptr, 0);
+    notify_action(&invocation->context->evaluation,
+                  &(ActionMessageInvocation){
+                      .message = {.type = LUA_MESSAGE_USE,
+                                  .operation = LUA_MESSAGE_OPERATION_USE,
+                                  .descriptor = invocation->context->descriptor,
+                                  .object = thing,
+                                  .enactor = player,
+                                  .cause = invocation->cause,
+                                  .source = NOTHING,
+                                  .destination = NOTHING},
+                      .enactor_default = df_use,
+                      .other_default = df_ouse,
+                      .event = LUA_EVENT_USE});
     free_lbuf(df_use);
     free_lbuf(df_ouse);
   } else {

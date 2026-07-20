@@ -5,11 +5,13 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_runtime.h"
 #include "mux/commands/look.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -126,7 +128,6 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
 #define CONTENTS_LOCAL 0
 #define CONTENTS_NESTED 1
-#define CONTENTS_REMOTE 2
 
 static void look_contents(EvaluationContext *evaluation, DbRef player,
                           DbRef loc, const char *contents_name, int style) {
@@ -226,7 +227,8 @@ static void view_atr(EvaluationContext *evaluation, DbRef player, DbRef thing,
 }
 
 static void look_atrs1(EvaluationContext *evaluation, DbRef player, DbRef thing,
-                       DbRef othing, int check_exclude, int hash_insert) {
+                       DbRef othing, int check_exclude, int hash_insert,
+                       int skip_attribute) {
   WorldContext *world = evaluation->world;
   DbRef aowner;
   int ca;
@@ -237,7 +239,7 @@ static void look_atrs1(EvaluationContext *evaluation, DbRef player, DbRef thing,
   cattr = malloc(sizeof(Attribute));
   for (ca = attribute_list_first(evaluation->world->database, thing, &as); ca;
        ca = attribute_list_next(&as)) {
-    if (ca == A_DESC)
+    if (ca == A_DESC || ca == skip_attribute)
       continue;
     attr = attribute_by_number(evaluation->world->database, ca);
     if (!attr)
@@ -275,13 +277,13 @@ static void look_atrs1(EvaluationContext *evaluation, DbRef player, DbRef thing,
 }
 
 static void look_atrs(EvaluationContext *evaluation, DbRef player, DbRef thing,
-                      int check_parents) {
+                      int check_parents, int skip_attribute) {
   WorldContext *world = evaluation->world;
   DbRef parent;
   int lev, check_exclude, hash_insert;
 
   if (!check_parents) {
-    look_atrs1(evaluation, player, thing, thing, 0, 0);
+    look_atrs1(evaluation, player, thing, thing, 0, 0, skip_attribute);
   } else {
     hash_insert = 1;
     check_exclude = 0;
@@ -290,7 +292,8 @@ static void look_atrs(EvaluationContext *evaluation, DbRef player, DbRef thing,
       if (!is_good_obj(evaluation->world->database,
                        game_object_parent(evaluation->world->database, parent)))
         hash_insert = 0;
-      look_atrs1(evaluation, player, parent, thing, check_exclude, hash_insert);
+      look_atrs1(evaluation, player, parent, thing, check_exclude, hash_insert,
+                 skip_attribute);
       check_exclude = 1;
     }
   }
@@ -320,11 +323,21 @@ static void look_simple(EvaluationContext *evaluation, DbRef player,
     free_lbuf(buff);
   }
   pattr = A_DESC;
-  notify_action(evaluation, player, thing, pattr, "You see nothing special.",
-                A_ODESC, nullptr, LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_DESCRIBE,
+                                .operation = LUA_MESSAGE_OPERATION_DESCRIBE,
+                                .object = thing,
+                                .enactor = player,
+                                .cause = player,
+                                .source = NOTHING,
+                                .destination = NOTHING},
+                    .content_attribute = pattr,
+                    .enactor_default = "You see nothing special.",
+                    .event = LUA_EVENT_DESCRIBE});
 
   if (!world->configuration->quiet_look) {
-    look_atrs(evaluation, player, thing, 0);
+    look_atrs(evaluation, player, thing, 0, 0);
   }
 }
 
@@ -339,8 +352,17 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
 
   if (indent)
     raw_notify_newline(evaluation, player);
-  notify_action(evaluation, player, loc, A_DESC, nullptr, A_ODESC, nullptr,
-                LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_DESCRIBE,
+                                .operation = LUA_MESSAGE_OPERATION_DESCRIBE,
+                                .object = loc,
+                                .enactor = player,
+                                .cause = player,
+                                .source = NOTHING,
+                                .destination = NOTHING},
+                    .content_attribute = A_DESC,
+                    .event = LUA_EVENT_DESCRIBE});
   if (indent)
     raw_notify_newline(evaluation, player);
 }
@@ -355,8 +377,18 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
       use_idesc) {
     if (*(got = attribute_parent_get(evaluation->world->database, loc, A_IDESC,
                                      &aowner, &aflags)))
-      notify_action(evaluation, player, loc, A_IDESC, nullptr, A_ODESC, nullptr,
-                    LUA_EVENT_DESCRIBE, (char **)nullptr, 0);
+      notify_action(
+          evaluation,
+          &(ActionMessageInvocation){
+              .message = {.type = LUA_MESSAGE_DESCRIBE,
+                          .operation = LUA_MESSAGE_OPERATION_INSIDE_DESCRIBE,
+                          .object = loc,
+                          .enactor = player,
+                          .cause = player,
+                          .source = NOTHING,
+                          .destination = NOTHING},
+              .content_attribute = A_IDESC,
+              .event = LUA_EVENT_DESCRIBE});
     else
       show_a_desc(evaluation, player, loc);
     free_lbuf(got);
@@ -408,8 +440,16 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
   if (typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) {
     if (lock_test(evaluation, player, player, player, loc, LUA_LOCK_DEFAULT,
                   LUA_LOCK_OPERATION_LOOK, false, &lock, &result))
-      notify_action(evaluation, player, loc, A_SUCC, nullptr, A_OSUCC, nullptr,
-                    LUA_EVENT_SUCCESS, (char **)nullptr, 0);
+      notify_action(evaluation,
+                    &(ActionMessageInvocation){
+                        .message = {.type = LUA_MESSAGE_SUCCESS,
+                                    .operation = LUA_MESSAGE_OPERATION_LOOK,
+                                    .object = loc,
+                                    .enactor = player,
+                                    .cause = player,
+                                    .source = NOTHING,
+                                    .destination = NOTHING},
+                        .event = LUA_EVENT_SUCCESS});
     else
       notify_lock_failure(evaluation, &lock, &result, nullptr, nullptr,
                           LUA_EVENT_FAIL);
@@ -419,7 +459,7 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
    */
 
   if ((key & LK_SHOWATTR) && !world->configuration->quiet_look)
-    look_atrs(evaluation, player, loc, 0);
+    look_atrs(evaluation, player, loc, 0, 0);
   look_contents(evaluation, player, loc, "Contents:", CONTENTS_LOCAL);
   if (key & LK_SHOWEXIT)
     look_exits(evaluation, player, loc, "Obvious exits:");
@@ -590,7 +630,6 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
 
 static void exam_wildattrs(EvaluationContext *evaluation, DbRef player,
                            DbRef thing, int do_parent, ObjectList *attributes) {
-  WorldContext *world = evaluation->world;
   int atr, got_any;
   long aflags;
   char *buf;
@@ -611,53 +650,9 @@ static void exam_wildattrs(EvaluationContext *evaluation, DbRef player,
       buf = attribute_get(evaluation->world->database, thing, atr, &aowner,
                           &aflags);
 
-    /*
-     * Decide if the player should see the attr: * If obj is * *
-     * * Examinable and has rights to see, yes. * If a player and
-     * *  *  * * has rights to see, yes... *   except if faraway,
-     * * * * attr=DESC, and *   remote DESC-reading is not turned
-     * on. *  *  * *  * * If I own the attrib and have rights to
-     * see, yes... * * * * except if faraway, attr=DESC, and *
-     * remote * DESC-reading * * is not turned on.
-     */
-
-    if (is_examinable(evaluation, player, thing) &&
-        read_attr(evaluation, player, thing, ap, aowner, aflags)) {
+    if (read_attr(evaluation, player, thing, ap, aowner, aflags)) {
       got_any = 1;
       view_atr(evaluation, player, thing, ap, buf, aowner, aflags, 0);
-    } else if ((typeof_obj(evaluation->world->database, thing) ==
-                TYPE_PLAYER) &&
-               read_attr(evaluation, player, thing, ap, aowner, aflags)) {
-      got_any = 1;
-      if (aowner == game_object_owner(evaluation->world->database, player) ||
-          atr != A_DESC) {
-        view_atr(evaluation, player, thing, ap, buf, aowner, aflags, 0);
-      } else if (world->configuration->read_rem_desc ||
-                 nearby(evaluation->world->database, player, thing)) {
-        show_desc(evaluation, player, thing, 0);
-      } else {
-        notify(evaluation, player, "<Too far away to get a good look>");
-      }
-    } else if (read_attr(evaluation, player, thing, ap, aowner, aflags)) {
-      got_any = 1;
-      // The view_atr() branches below aren't a safe merge: when atr ==
-      // A_DESC and nearby(evaluation->world->database, ) is true, the
-      // show_desc() branch above must win, so the last branch's
-      // nearby(evaluation->world->database, ) check has to stay
-      // order-dependent.
-      if (aowner ==
-          game_object_owner(evaluation->world->database,
-                            player)) { // NOLINT(bugprone-branch-clone)
-        view_atr(evaluation, player, thing, ap, buf, aowner, aflags, 0);
-      } else if ((atr == A_DESC) &&
-                 (world->configuration->read_rem_desc ||
-                  nearby(evaluation->world->database, player, thing))) {
-        show_desc(evaluation, player, thing, 0);
-      } else if (nearby(evaluation->world->database, player, thing)) {
-        view_atr(evaluation, player, thing, ap, buf, aowner, aflags, 0);
-      } else {
-        notify(evaluation, player, "<Too far away to get a good look>");
-      }
     }
     free_lbuf(buf);
   }
@@ -673,7 +668,7 @@ void do_examine(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef thing, content, exit, aowner, loc;
   char *temp, *buf2;
-  int control, do_parent;
+  int do_parent;
   long aflags;
   ObjectList attributes;
 
@@ -719,256 +714,186 @@ void do_examine(CommandInvocation *invocation) {
    */
 
   if (key == EXAM_DEBUG) {
-    if (!is_examinable(evaluation, player, thing)) {
-      notify_quiet(evaluation, player, "Permission denied.");
-    } else {
-      debug_examine(evaluation, player, thing);
-    }
+    debug_examine(evaluation, player, thing);
     return;
   }
-  control = (is_examinable(evaluation, player, thing) ||
-             can_link_exit(evaluation, player, thing));
 
-  if (control) {
-    buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                          thing, 0);
-    notify(evaluation, player, buf2);
-    free_lbuf(buf2);
-    if (world->configuration->ex_flags) {
-      buf2 = flag_description(evaluation->world->database, player, thing);
-      notify(evaluation, player, buf2);
-      free_mbuf(buf2);
-    }
-  } else {
-    if ((key == EXAM_DEFAULT) && !world->configuration->exam_public) {
-      if (world->configuration->read_rem_name) {
-        buf2 = alloc_lbuf("do_examine.pub_name");
-        StringCopy(buf2, game_object_name(evaluation->world->database, thing));
-        notify_printf(
-            evaluation, player, "%s is owned by %s", buf2,
-            game_object_name(
-                evaluation->world->database,
-                game_object_owner(evaluation->world->database, thing)));
-        free_lbuf(buf2);
-      } else {
-        notify_printf(
-            evaluation, player, "Owned by %s",
-            game_object_name(
-                evaluation->world->database,
-                game_object_owner(evaluation->world->database, thing)));
-      }
-      return;
-    }
-  }
-
-  temp = alloc_lbuf("do_examine.info");
-
-  if (control || world->configuration->read_rem_desc ||
-      nearby(evaluation->world->database, player, thing)) {
-    temp = attribute_get_string(evaluation->world->database, temp, thing,
-                                A_DESC, &aowner, &aflags);
-    if (*temp) {
-      if (is_examinable(evaluation, player, thing) ||
-          (aowner == game_object_owner(evaluation->world->database, player))) {
-        view_atr(evaluation, player, thing,
-                 attribute_by_number(evaluation->world->database, A_DESC), temp,
-                 aowner, aflags, 1);
-      } else {
-        show_desc(&invocation->context->evaluation, player, thing, 0);
-      }
-    }
-  } else {
-    notify(evaluation, player, "<Too far away to get a good look>");
-  }
-
-  if (control) {
-
-    notify_printf(evaluation, player, "Owner: %s",
-                  game_object_name(
-                      evaluation->world->database,
-                      game_object_owner(evaluation->world->database, thing)));
-
-    if (world->configuration->have_zones) {
-      buf2 = unparse_object(
-          evaluation->world->database, evaluation, player,
-          game_object_zone(evaluation->world->database, thing), 0);
-      notify_printf(evaluation, player, "Zone: %s", buf2);
-      free_lbuf(buf2);
-    }
-    /*
-     * print parent
-     */
-
-    loc = game_object_parent(evaluation->world->database, thing);
-    if (loc != NOTHING) {
-      buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                            loc, 0);
-      notify_printf(evaluation, player, "Parent: %s", buf2);
-      free_lbuf(buf2);
-    }
-    buf2 = power_description(evaluation->world->database, player, thing);
+  buf2 =
+      unparse_object(evaluation->world->database, evaluation, player, thing, 0);
+  notify(evaluation, player, buf2);
+  free_lbuf(buf2);
+  if (world->configuration->ex_flags) {
+    buf2 = flag_description(evaluation->world->database, player, thing);
     notify(evaluation, player, buf2);
     free_mbuf(buf2);
   }
+
+  temp = alloc_lbuf("do_examine.info");
+  temp = attribute_get_string(evaluation->world->database, temp, thing, A_DESC,
+                              &aowner, &aflags);
+  if (*temp) {
+    view_atr(evaluation, player, thing,
+             attribute_by_number(evaluation->world->database, A_DESC), temp,
+             aowner, aflags, 1);
+  }
+
+  notify_printf(
+      evaluation, player, "Owner: %s",
+      game_object_name(evaluation->world->database,
+                       game_object_owner(evaluation->world->database, thing)));
+
+  if (world->configuration->have_zones) {
+    buf2 =
+        unparse_object(evaluation->world->database, evaluation, player,
+                       game_object_zone(evaluation->world->database, thing), 0);
+    notify_printf(evaluation, player, "Zone: %s", buf2);
+    free_lbuf(buf2);
+  }
+  /*
+   * print parent
+   */
+
+  loc = game_object_parent(evaluation->world->database, thing);
+  if (loc != NOTHING) {
+    buf2 =
+        unparse_object(evaluation->world->database, evaluation, player, loc, 0);
+    notify_printf(evaluation, player, "Parent: %s", buf2);
+    free_lbuf(buf2);
+  }
+  lua_examine_object(invocation->context->runtime->lua_owner->runtime,
+                     evaluation, player, thing);
+  buf2 = power_description(evaluation->world->database, player, thing);
+  notify(evaluation, player, buf2);
+  free_mbuf(buf2);
   if (key != EXAM_BRIEF)
-    look_atrs(evaluation, player, thing, do_parent);
+    look_atrs(evaluation, player, thing, do_parent, A_LUAPARENT);
 
   /*
    * show him interesting stuff
    */
 
-  if (control) {
+  /*
+   * Contents
+   */
+
+  if (game_object_contents(evaluation->world->database, thing) != NOTHING) {
+    notify(evaluation, player, "Contents:");
+    DOLIST(evaluation->world->database, content,
+           game_object_contents(evaluation->world->database, thing)) {
+      buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                            content, 0);
+      notify(evaluation, player, buf2);
+      free_lbuf(buf2);
+    }
+  }
+  /*
+   * Show stuff that depends on the object type
+   */
+
+  switch (typeof_obj(evaluation->world->database, thing)) {
+  case TYPE_ROOM:
 
     /*
-     * Contents
+     * tell him about exits
      */
 
-    if (game_object_contents(evaluation->world->database, thing) != NOTHING) {
-      notify(evaluation, player, "Contents:");
-      DOLIST(evaluation->world->database, content,
-             game_object_contents(evaluation->world->database, thing)) {
+    if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
+      notify(evaluation, player, "Exits:");
+      DOLIST(evaluation->world->database, exit,
+             game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                              content, 0);
+                              exit, 0);
         notify(evaluation, player, buf2);
         free_lbuf(buf2);
       }
+    } else {
+      notify(evaluation, player, "No exits.");
     }
+
     /*
-     * Show stuff that depends on the object type
+     * print dropto if present
      */
 
-    switch (typeof_obj(evaluation->world->database, thing)) {
-    case TYPE_ROOM:
-
-      /*
-       * tell him about exits
-       */
-
-      if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
-        notify(evaluation, player, "Exits:");
-        DOLIST(evaluation->world->database, exit,
-               game_object_exits(evaluation->world->database, thing)) {
-          buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                                exit, 0);
-          notify(evaluation, player, buf2);
-          free_lbuf(buf2);
-        }
-      } else {
-        notify(evaluation, player, "No exits.");
-      }
-
-      /*
-       * print dropto if present
-       */
-
-      if (game_object_location(evaluation->world->database, thing) != NOTHING) {
-        buf2 = unparse_object(
-            evaluation->world->database, evaluation, player,
-            game_object_location(evaluation->world->database, thing), 0);
-        notify_printf(evaluation, player, "Dropped objects go to: %s", buf2);
-        free_lbuf(buf2);
-      }
-      break;
-    case TYPE_THING:
-    case TYPE_PLAYER:
-
-      /*
-       * tell him about exits
-       */
-
-      if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
-        notify(evaluation, player, "Exits:");
-        DOLIST(evaluation->world->database, exit,
-               game_object_exits(evaluation->world->database, thing)) {
-          buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                                exit, 0);
-          notify(evaluation, player, buf2);
-          free_lbuf(buf2);
-        }
-      } else {
-        notify(evaluation, player, "No exits.");
-      }
-
-      /*
-       * print home
-       */
-
-      loc = game_object_link(evaluation->world->database, thing);
-      buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                            loc, 0);
-      notify_printf(evaluation, player, "Home: %s", buf2);
-      free_lbuf(buf2);
-
-      /*
-       * print location if player can link to it
-       */
-
-      loc = game_object_location(evaluation->world->database, thing);
-      if ((game_object_location(evaluation->world->database, thing) !=
-           NOTHING) &&
-          (is_examinable(evaluation, player, loc) ||
-           is_examinable(evaluation, player, thing) ||
-           is_linkable(evaluation, player, loc))) {
-        buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                              loc, 0);
-        notify_printf(evaluation, player, "Location: %s", buf2);
-        free_lbuf(buf2);
-      }
-      break;
-    case TYPE_EXIT:
+    if (game_object_location(evaluation->world->database, thing) != NOTHING) {
       buf2 = unparse_object(
           evaluation->world->database, evaluation, player,
-          game_object_exits(evaluation->world->database, thing), 0);
-      notify_printf(evaluation, player, "Source: %s", buf2);
+          game_object_location(evaluation->world->database, thing), 0);
+      notify_printf(evaluation, player, "Dropped objects go to: %s", buf2);
       free_lbuf(buf2);
+    }
+    break;
+  case TYPE_THING:
+  case TYPE_PLAYER:
 
-      /*
-       * print destination
-       */
+    /*
+     * tell him about exits
+     */
 
-      switch (game_object_location(evaluation->world->database, thing)) {
-      case NOTHING:
-        break;
-      case HOME:
-        notify(evaluation, player, "Destination: *HOME*");
-        break;
-      default:
-        buf2 = unparse_object(
-            evaluation->world->database, evaluation, player,
-            game_object_location(evaluation->world->database, thing), 0);
-        notify_printf(evaluation, player, "Destination: %s", buf2);
+    if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
+      notify(evaluation, player, "Exits:");
+      DOLIST(evaluation->world->database, exit,
+             game_object_exits(evaluation->world->database, thing)) {
+        buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                              exit, 0);
+        notify(evaluation, player, buf2);
         free_lbuf(buf2);
-        break;
       }
+    } else {
+      notify(evaluation, player, "No exits.");
+    }
+
+    /*
+     * print home
+     */
+
+    loc = game_object_link(evaluation->world->database, thing);
+    buf2 =
+        unparse_object(evaluation->world->database, evaluation, player, loc, 0);
+    notify_printf(evaluation, player, "Home: %s", buf2);
+    free_lbuf(buf2);
+
+    /*
+     * print location if player can link to it
+     */
+
+    loc = game_object_location(evaluation->world->database, thing);
+    if (loc != NOTHING) {
+      buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                            loc, 0);
+      notify_printf(evaluation, player, "Location: %s", buf2);
+      free_lbuf(buf2);
+    }
+    break;
+  case TYPE_EXIT:
+    buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                          game_object_exits(evaluation->world->database, thing),
+                          0);
+    notify_printf(evaluation, player, "Source: %s", buf2);
+    free_lbuf(buf2);
+
+    /*
+     * print destination
+     */
+
+    switch (game_object_location(evaluation->world->database, thing)) {
+    case NOTHING:
+      break;
+    case HOME:
+      notify(evaluation, player, "Destination: *HOME*");
       break;
     default:
+      buf2 = unparse_object(
+          evaluation->world->database, evaluation, player,
+          game_object_location(evaluation->world->database, thing), 0);
+      notify_printf(evaluation, player, "Destination: %s", buf2);
+      free_lbuf(buf2);
       break;
     }
-  } else if (!is_opaque(evaluation->world->database, thing) &&
-             nearby(evaluation->world->database, player, thing)) {
-    if (has_contents(evaluation->world->database, thing))
-      look_contents(evaluation, player, thing, "Contents:", CONTENTS_REMOTE);
-    if (typeof_obj(evaluation->world->database, thing) != TYPE_EXIT)
-      look_exits(evaluation, player, thing, "Obvious exits:");
+    break;
+  default:
+    break;
   }
   free_lbuf(temp);
-
-  if (!control) {
-    if (world->configuration->read_rem_name) {
-      buf2 = alloc_lbuf("do_examine.pub_name");
-      StringCopy(buf2, game_object_name(evaluation->world->database, thing));
-      notify_printf(evaluation, player, "%s is owned by %s", buf2,
-                    game_object_name(
-                        evaluation->world->database,
-                        game_object_owner(evaluation->world->database, thing)));
-      free_lbuf(buf2);
-    } else {
-      notify_printf(evaluation, player, "Owned by %s",
-                    game_object_name(
-                        evaluation->world->database,
-                        game_object_owner(evaluation->world->database, thing)));
-    }
-  }
 }
 
 void do_inventory(CommandInvocation *invocation) {

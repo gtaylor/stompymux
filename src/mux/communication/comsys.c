@@ -342,8 +342,8 @@ static void do_leavechannel(EvaluationContext *evaluation, DbRef player,
   for (i = ch->num_users - 1; i > 0; i--) {
     if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
         TYPE_THING)
-      notify_action(evaluation, player, ch->users[i]->who, 0, nullptr, 0,
-                    nullptr, LUA_EVENT_LEAVE, (char **)nullptr, 0);
+      notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
+                   LUA_EVENT_LEAVE, (char **)nullptr, 0);
   }
 
   notify_printf(evaluation, player, "You have left channel %s.", ch->name);
@@ -581,8 +581,8 @@ static void do_delcomchannel(EvaluationContext *evaluation, DbRef player,
     for (i = ch->num_users - 1; i > 0; i--) {
       if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
           TYPE_THING)
-        notify_action(evaluation, player, ch->users[i]->who, 0, nullptr, 0,
-                      nullptr, LUA_EVENT_LEAVE, (char **)nullptr, 0);
+        notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
+                     LUA_EVENT_LEAVE, (char **)nullptr, 0);
     }
 
     for (i = 0; i < ch->num_users; i++) {

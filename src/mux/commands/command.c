@@ -78,6 +78,7 @@ NameTable lua_sw[] = {
     {"parent", 6, CA_PUBLIC, LUA_COMMAND_PARENT},
     {"reload", 6, CA_PUBLIC, LUA_COMMAND_RELOAD},
     {"schedule", 8, CA_PUBLIC, LUA_COMMAND_SCHEDULE},
+    {"viewparent", 10, CA_PUBLIC, LUA_COMMAND_VIEWPARENT},
     {nullptr, 0, 0, 0},
 };
 
@@ -126,7 +127,6 @@ NameTable enter_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
 
 NameTable examine_sw[] = {{"brief", 1, CA_PUBLIC, EXAM_BRIEF},
                           {"debug", 1, CA_WIZARD, EXAM_DEBUG},
-                          {"full", 1, CA_PUBLIC, EXAM_LONG},
                           {"parent", 1, CA_PUBLIC, EXAM_PARENT},
                           {nullptr, 0, 0, 0}};
 
@@ -225,12 +225,6 @@ NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
                        {"pose", 1, CA_WIZARD, SAY_WALLPOSE},
                        {"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
                        {"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
-                       {nullptr, 0, 0, 0}};
-
-NameTable warp_sw[] = {{"check", 1, CA_WIZARD, TWARP_CLEAN | SW_MULTIPLE},
-                       {"dump", 1, CA_WIZARD, TWARP_DUMP | SW_MULTIPLE},
-                       {"idle", 1, CA_WIZARD, TWARP_IDLE | SW_MULTIPLE},
-                       {"queue", 1, CA_WIZARD, TWARP_QUEUE | SW_MULTIPLE},
                        {nullptr, 0, 0, 0}};
 
 /*
@@ -449,9 +443,9 @@ CMDENT command_table[] = {
     {"@kick",
      nullptr,
      CA_WIZARD,
-     QUEUE_KICK,
+     0,
      CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_queue}},
+     {.invoke = do_kick}},
     {"@last",
      nullptr,
      CA_WIZARD,
@@ -583,12 +577,6 @@ CMDENT command_table[] = {
      TELEPORT_DEFAULT,
      CS_TWO_ARG | CS_INTERP,
      {.invoke = do_teleport}},
-    {"@timewarp",
-     warp_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_timewarp}},
     {"@trigger",
      trig_sw,
      CA_WIZARD | CA_GBL_INTERP,
@@ -638,9 +626,9 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_enter}},
-    {"examine",
+    {"@examine",
      examine_sw,
-     0,
+     CA_WIZARD,
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_examine}},
@@ -2239,7 +2227,6 @@ static void list_df_flags(EvaluationContext *evaluation,
  */
 
 static const char *switchd[] = {"/first", "/all"};
-static const char *examd[] = {"/brief", "/full"};
 static const char *ed[] = {"Disabled", "Enabled"};
 
 static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
@@ -2262,7 +2249,7 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (configuration->ex_flags)
     raw_notify(
         evaluation, player,
-        "The 'examine' command lists the flag names for the object's flags.");
+        "The '@examine' command lists the flag names for the object's flags.");
   if (!configuration->quiet_look)
     raw_notify(evaluation, player,
                "The 'look' command shows visible attributes in "
@@ -2301,9 +2288,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   raw_notify(evaluation, player,
              tprintf("The default switch for the '@switch' command is %s.",
                      switchd[configuration->switch_df_all]));
-  raw_notify(evaluation, player,
-             tprintf("The default switch for the 'examine' command is %s.",
-                     examd[configuration->exam_public]));
   if (configuration->sweep_dark)
     raw_notify(evaluation, player, "Players may @sweep dark locations.");
   if (configuration->fascist_tport)

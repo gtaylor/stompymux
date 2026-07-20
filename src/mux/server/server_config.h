@@ -247,7 +247,6 @@ struct ServerConfiguration {
   int robot_speak;      /* TRUE = allow robots to speak */
   int pub_flags;        /* TRUE = flags() works on anything */
   int quiet_look;       /* TRUE = don't see attribs when looking */
-  int exam_public;      /* Does EXAM show public attrs by default? */
   int read_rem_desc;    /* Can the DESCs of nonlocal objs be read? */
   int read_rem_name;    /* Can the NAMEs of nonlocal objs be read? */
   int sweep_dark;       /* Can you sweep dark places? */

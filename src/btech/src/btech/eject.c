@@ -59,9 +59,18 @@ static void mech_discard_event(MuxEvent *e) {
 
   /* We'll silently move the mech off, but lets trigger the aleave/oleave/leave
    * of the loc as well before we do anything fancy */
-  notify_action(evaluation, i,
-                game_object_location(mech->xcode.context->database, i), A_LEAVE,
-                NULL, A_OLEAVE, NULL, LUA_EVENT_LEAVE, (char **)NULL, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_LEAVE,
+                                .operation = LUA_MESSAGE_OPERATION_MOVE,
+                                .object = game_object_location(
+                                    mech->xcode.context->database, i),
+                                .enactor = i,
+                                .cause = i,
+                                .source = game_object_location(
+                                    mech->xcode.context->database, i),
+                                .destination = NOTHING},
+                    .event = LUA_EVENT_LEAVE});
   c_hardcode(mech->xcode.context->database, i);
   handle_xcode(mech->xcode.context, GOD, i, 1, 0);
   s_going(mech->xcode.context->database, i);

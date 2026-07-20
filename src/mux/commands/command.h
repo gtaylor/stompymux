@@ -19,6 +19,7 @@ typedef enum {
   LUA_COMMAND_PARENT = 1 << 1,
   LUA_COMMAND_RELOAD = 1 << 2,
   LUA_COMMAND_SCHEDULE = 1 << 3,
+  LUA_COMMAND_VIEWPARENT = 1 << 4,
 } LuaCommandKey;
 
 int check_access(GameDatabase *database,
@@ -59,7 +60,7 @@ void do_dump(CommandInvocation *invocation);   /* Dump the database */
 void do_edit(CommandInvocation *invocation);
 void do_enter(CommandInvocation *invocation);     /* Enter an object */
 void do_entrances(CommandInvocation *invocation); /* List links to location. */
-void do_examine(CommandInvocation *invocation);   /* Examine an object. */
+void do_examine(CommandInvocation *invocation);   /* @examine an object. */
 void do_find(CommandInvocation *invocation);      /* Search the database. */
 void do_fixdb(CommandInvocation *invocation); /* Database repair functions */
 void do_force(CommandInvocation *invocation);
@@ -98,7 +99,7 @@ void do_pcreate(CommandInvocation *invocation);
 void do_pemit(CommandInvocation *invocation); /* Message a specific object. */
 void do_power(CommandInvocation *invocation); /* Sets powers */
 void do_ps(CommandInvocation *invocation);    /* List contents of queue */
-void do_queue(CommandInvocation *invocation); /* Force queue processing */
+void do_kick(CommandInvocation *invocation);  /* Force queue processing */
 void do_quit(CommandInvocation *invocation);  /* Disconnect this session */
 void do_readcache(CommandInvocation *invocation); /* Reread text file cache */
 void do_say(CommandInvocation *invocation);       /* Messages to all. */
@@ -111,9 +112,8 @@ void do_stats(CommandInvocation *invocation);  /* Display object statistics. */
 void do_sweep(CommandInvocation *invocation);  /* Check for listeners. */
 void do_switch(CommandInvocation *invocation); /* Execute cmd based on match */
 void do_teleport(CommandInvocation *invocation);
-void do_think(CommandInvocation *invocation);    /* Think command. */
-void do_timewarp(CommandInvocation *invocation); /* Warp various timers */
-void do_trigger(CommandInvocation *invocation);  /* Trigger an attribute */
+void do_think(CommandInvocation *invocation);   /* Think command. */
+void do_trigger(CommandInvocation *invocation); /* Trigger an attribute */
 void do_unlink(CommandInvocation *invocation);
 void do_use(CommandInvocation *invocation);     /* Use object. */
 void do_version(CommandInvocation *invocation); /* List MUX version number */

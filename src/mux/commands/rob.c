@@ -99,10 +99,26 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
                 game_object_name(evaluation->world->database, recipient)));
     free_lbuf(str);
   }
-  notify_action(evaluation, giver, thing, A_DROP, nullptr, A_ODROP, nullptr,
-                LUA_EVENT_DROP, (char **)nullptr, 0);
-  notify_action(evaluation, recipient, thing, A_SUCC, nullptr, A_OSUCC, nullptr,
-                LUA_EVENT_SUCCESS, (char **)nullptr, 0);
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_DROP,
+                                .operation = LUA_MESSAGE_OPERATION_GIVE,
+                                .object = thing,
+                                .enactor = giver,
+                                .cause = giver,
+                                .source = NOTHING,
+                                .destination = NOTHING},
+                    .event = LUA_EVENT_DROP});
+  notify_action(evaluation,
+                &(ActionMessageInvocation){
+                    .message = {.type = LUA_MESSAGE_SUCCESS,
+                                .operation = LUA_MESSAGE_OPERATION_RECEIVE,
+                                .object = thing,
+                                .enactor = recipient,
+                                .cause = giver,
+                                .source = NOTHING,
+                                .destination = NOTHING},
+                    .event = LUA_EVENT_SUCCESS});
 }
 
 void do_give(CommandInvocation *invocation) {

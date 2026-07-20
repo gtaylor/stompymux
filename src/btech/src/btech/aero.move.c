@@ -390,9 +390,8 @@ void aero_land(DbRef player, void *data, char *buffer) {
   MechStartFX(mech) = 0.0;
   MechStartFY(mech) = 0.0;
   MechStartFZ(mech) = 0.0;
-  notify_action(btech_context_evaluation(mech->xcode.context), mech->mynum,
-                mech->mynum, 0, NULL, 0, NULL, LUA_EVENT_AERO_LAND,
-                (char **)NULL, 0);
+  notify_event(btech_context_evaluation(mech->xcode.context), NULL, mech->mynum,
+               mech->mynum, mech->mynum, LUA_EVENT_AERO_LAND, (char **)NULL, 0);
   possible_mine_poof(mech, MINE_LAND);
 }
 

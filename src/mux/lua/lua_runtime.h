@@ -128,6 +128,58 @@ typedef struct LuaLockResult {
   char other_message[LBUF_SIZE];
 } LuaLockResult;
 
+typedef enum LuaMessageType {
+  LUA_MESSAGE_NONE,
+  LUA_MESSAGE_SUCCESS,
+  LUA_MESSAGE_DROP,
+  LUA_MESSAGE_DESCRIBE,
+  LUA_MESSAGE_USE,
+  LUA_MESSAGE_LEAVE,
+  LUA_MESSAGE_ENTER,
+  LUA_MESSAGE_MOVE,
+  LUA_MESSAGE_TELEPORT,
+  LUA_MESSAGE_ENTER_SOURCE,
+  LUA_MESSAGE_LEAVE_DESTINATION,
+  LUA_MESSAGE_TELEPORT_SOURCE,
+  LUA_MESSAGE_COUNT,
+} LuaMessageType;
+
+typedef enum LuaMessageOperation {
+  LUA_MESSAGE_OPERATION_NONE,
+  LUA_MESSAGE_OPERATION_LOOK,
+  LUA_MESSAGE_OPERATION_TAKE,
+  LUA_MESSAGE_OPERATION_TRAVERSE,
+  LUA_MESSAGE_OPERATION_RECEIVE,
+  LUA_MESSAGE_OPERATION_DROP,
+  LUA_MESSAGE_OPERATION_GIVE,
+  LUA_MESSAGE_OPERATION_DESCRIBE,
+  LUA_MESSAGE_OPERATION_INSIDE_DESCRIBE,
+  LUA_MESSAGE_OPERATION_USE,
+  LUA_MESSAGE_OPERATION_MOVE,
+  LUA_MESSAGE_OPERATION_TELEPORT,
+  LUA_MESSAGE_OPERATION_COUNT,
+} LuaMessageOperation;
+
+typedef struct LuaMessageInvocation {
+  LuaMessageType type;
+  LuaMessageOperation operation;
+  Descriptor *descriptor;
+  DbRef object;
+  DbRef enactor;
+  DbRef cause;
+  DbRef source;
+  DbRef destination;
+  bool silent;
+} LuaMessageInvocation;
+
+typedef struct LuaMessageResult {
+  bool defined;
+  bool has_enactor_message;
+  bool has_other_message;
+  char enactor_message[LBUF_SIZE];
+  char other_message[LBUF_SIZE];
+} LuaMessageResult;
+
 struct LuaServices {
   /* Every member is borrowed from MuxServer. */
   const ServerConfiguration *configuration;
@@ -169,6 +221,8 @@ int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
               char *error, size_t error_size);
 int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
                       size_t error_size);
+void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
+                        DbRef player, DbRef object);
 int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                       DbRef player, DbRef cause, const char *command);
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
@@ -185,4 +239,11 @@ const char *lua_lock_operation_name(LuaLockOperation operation);
 bool lua_lock_defined(LuaRuntime *runtime, DbRef object, LuaLockType lock);
 void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
                        LuaLockResult *result);
+const char *lua_message_name(LuaMessageType message);
+const char *lua_message_operation_name(LuaMessageOperation operation);
+bool lua_message_defined(LuaRuntime *runtime, DbRef object,
+                         LuaMessageType message);
+void lua_message_evaluate(LuaRuntime *runtime,
+                          const LuaMessageInvocation *invocation,
+                          LuaMessageResult *result);
 void lua_schedule_tick(LuaRuntime *runtime, time_t now);

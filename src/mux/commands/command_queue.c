@@ -1144,63 +1144,28 @@ void do_ps(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_queue: Queue management
+ * * do_kick: Queue management
  */
 
-void do_queue(CommandInvocation *invocation) {
+void do_kick(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  int key = invocation->key;
   char *arg = invocation->first;
   CommandQueue *queue = invocation->context->runtime->commands;
-  BQUE *point;
   int i, ncmds;
   bool was_disabled;
 
   dprintk("WTF?");
   was_disabled = false;
-  if (key == QUEUE_KICK) {
-    i = atoi(arg);
-    if (!queue->world->configuration->is_dequeue_enabled) {
-      was_disabled = true;
-      queue->world->configuration->is_dequeue_enabled = true;
-      notify(evaluation, player, "Warning: automatic dequeueing is disabled.");
-    }
-    ncmds = do_top(queue, i);
-    if (was_disabled)
-      queue->world->configuration->is_dequeue_enabled = false;
-    if (!is_quiet(queue->world->database, player))
-      notify_printf(evaluation, player, "%d commands processed.", ncmds);
-  } else if (key == QUEUE_WARP) {
-    i = atoi(arg);
-    if (!queue->world->configuration->is_dequeue_enabled) {
-      was_disabled = true;
-      queue->world->configuration->is_dequeue_enabled = true;
-      notify(evaluation, player, "Warning: automatic dequeueing is disabled.");
-    }
-
-    /*
-     * Handle the semaphore queue
-     */
-
-    for (point = queue->semaphore_first; point; point = point->next) {
-      if (point->waittime > 0) {
-        point->waittime -= i;
-        if (point->waittime <= 0)
-          point->waittime = -1;
-      }
-    }
-
-    do_second(queue);
-    if (was_disabled)
-      queue->world->configuration->is_dequeue_enabled = false;
-    if (is_quiet(queue->world->database, player))
-      return;
-    if (i > 0)
-      notify_printf(evaluation, player, "WaitQ timer advanced %d seconds.", i);
-    else if (i < 0)
-      notify_printf(evaluation, player, "WaitQ timer set back %d seconds.", i);
-    else
-      notify(evaluation, player, "Object queue appended to player queue.");
+  i = atoi(arg);
+  if (!queue->world->configuration->is_dequeue_enabled) {
+    was_disabled = true;
+    queue->world->configuration->is_dequeue_enabled = true;
+    notify(evaluation, player, "Warning: automatic dequeueing is disabled.");
   }
+  ncmds = do_top(queue, i);
+  if (was_disabled)
+    queue->world->configuration->is_dequeue_enabled = false;
+  if (!is_quiet(queue->world->database, player))
+    notify_printf(evaluation, player, "%d commands processed.", ncmds);
 }

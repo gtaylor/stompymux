@@ -31,10 +31,16 @@ and are treated as handled.
 Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
 repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
+When a Wizard uses `@examine` on an object, the output identifies its effective
+Lua parent and attachment object, then lists its command patterns, events,
+schedule names, message providers, and locks. Use `@lua/viewparent <dbref>` to
+display that module's raw source, or `@lua/viewparent <path>.lua` to inspect an
+object-logic module directly by path.
+
 ## Module contract
 
 An object module returns a table with optional `commands`, `events`, `locks`,
-and `schedules` tables.
+`messages`, and `schedules` tables.
 Command entries use native Lua patterns and a handler:
 
 ```lua
@@ -97,30 +103,71 @@ An absent lock handler passes. An attached module that cannot load, a runtime
 error, or a malformed lock result fails closed and is logged. Native
 `Pass_Locks` and other built-in authorization bypasses still apply.
 
+Lock result messages are used only when a lock fails. Successful actions use
+the message providers described below.
+
+## Action messages
+
+Define successful-action messages as functions in the module's `messages`
+table. The supported keys are `success`, `drop`, `describe`, `use`, `leave`,
+`enter`, `move`, `teleport`, `enter_source`, `leave_destination`, and
+`teleport_source`.
+
+```lua
+messages = {
+  use = function(ctx)
+    return {
+      enactor_message = "You activate the console.",
+      other_message = "activates the console.",
+    }
+  end,
+}
+```
+
+A provider returns a table with optional string `enactor_message` and
+`other_message` fields. An omitted provider or field uses the native default;
+an empty string suppresses that message. `describe`, `enter_source`,
+`leave_destination`, and `teleport_source` accept only `other_message` because
+they replace legacy messages that never notified the enactor. A load error,
+runtime error, or malformed result is logged and also uses the native default;
+the action continues.
+
+The context includes the normal object fields, plus `message`, `operation`,
+`silent`, `source`, and `destination`. `source` or `destination` is `nil` when
+it does not apply. Operation values are `none`, `look`, `take`, `traverse`,
+`receive`, `drop`, `give`, `describe`, `inside_describe`, `use`, `move`, and
+`teleport`.
+
+The cross-location providers preserve the old movement notification scopes:
+`enter_source` belongs to the destination and speaks in the source before a
+move, `leave_destination` belongs to the source and speaks in the destination
+after a move, and `teleport_source` belongs to the moving object and speaks in
+its source before a teleport. The native "has left" and "has arrived"
+announcements are separate and remain unchanged.
+
 ## Object events
 
-Native game behavior invokes Lua events directly. Existing success and
-other-message attributes still produce their evaluated messages before the
-Lua handler runs. Lock failure messages come from the structured lock result
-or the native defaults.
+Native game behavior invokes Lua events directly. Action message providers run
+and deliver their messages before the corresponding Lua handler. Lock failure
+messages come from the structured lock result or the native defaults.
 
 | Lua event | Trigger | Message before event |
 | --- | --- | --- |
-| `on_success` | A successful take, exit traversal, or lock-checked look. | `@osuccess` |
+| `on_success` | A successful take, exit traversal, or lock-checked look. | `messages.success` |
 | `on_fail` | A failed take, exit traversal, or lock-checked look. | Lock result |
-| `on_drop` | An object is dropped. | `@odrop` |
+| `on_drop` | An object is dropped. | `messages.drop` |
 | `on_give_fail` | Giving an object fails its give lock. | Lock result |
 | `on_give_receive_fail` | Giving to a recipient fails its receive lock. | Lock result |
 | `on_drop_fail` | Dropping an object fails. | Lock result |
-| `on_use` | An object is used. | `@ouse` |
+| `on_use` | An object is used. | `messages.use` |
 | `on_use_fail` | Using an object fails its use lock. | Lock result |
-| `on_describe` | A description or inside description is displayed. | `@odescribe` |
-| `on_enter` | An object or room is entered. | `@oenter` |
-| `on_leave` | An object or room is left. | `@oleave` |
-| `on_move` | A player or thing completes a move. | `@omove` |
+| `on_describe` | A description or inside description is displayed. | `messages.describe` |
+| `on_enter` | An object or room is entered. | `messages.enter` |
+| `on_leave` | An object or room is left. | `messages.leave` |
+| `on_move` | A player or thing completes a move. | `messages.move` |
 | `on_enter_fail` | Entering an object fails its enter lock. | Lock result |
 | `on_leave_fail` | Leaving an object fails its leave lock. | Lock result |
-| `on_teleport` | A player or thing teleports successfully. | `@otport` |
+| `on_teleport` | A player or thing teleports successfully. | `messages.teleport` |
 | `on_teleport_destination_fail` | Teleporting to a destination fails. | Lock result |
 | `on_teleport_out_fail` | Teleporting out of an origin fails. | Lock result |
 | `on_match_heard` | A matching `@listen` message is heard, including the speaker. | — |
@@ -135,8 +182,8 @@ or the native defaults.
 | `on_aero_land` | A BattleTech aerospace unit lands. | — |
 | `on_ood_land` | A BattleTech out-of-danger landing completes. | — |
 
-`@oxenter`, `@oxleave`, and `@oxtport` remain other-message notifications for
-the location being left.
+Movement also invokes the applicable cross-location message providers, which
+do not have corresponding events.
 
 Connection events run for the player's effective module, the master room and
 its contents, and the applicable zone object or zone-room contents. Both

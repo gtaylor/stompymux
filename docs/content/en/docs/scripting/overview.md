@@ -33,10 +33,11 @@ command, replacing the old master-room programmable-command stage. See
 ## Module contract
 
 Each module returns a table with optional `commands`, `schedules`, and `flows`
-entries; object modules may also provide `events`. A command entry pairs a
-native Lua `pattern` with a `handler(ctx, ...)`; returning `true` handles the
-command, `false` or `nil` lets other matching continue. See
-[Commands](commands/) for pattern syntax and the handler context table.
+entries; object modules may also provide `events`, `locks`, and successful
+action `messages`. A command entry pairs a native Lua `pattern` with a
+`handler(ctx, ...)`; returning `true` handles the command, `false` or `nil`
+lets other matching continue. See [Commands](commands/) for pattern syntax
+and the handler context table.
 
 A module's `flows` table holds named step functions that
 [`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)

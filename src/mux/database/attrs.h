@@ -21,14 +21,11 @@ constexpr int AF_PRIVATE = 0x1000; /* Not inherited by children */
 constexpr int AF_DIRTY = 0x2000;   /* This attribute has been compiled. */
 constexpr int AF_REGEXP = 0x8000;  /* Do a regexp rather than wildcard match */
 
-constexpr int A_OSUCC = 1; /* Others success message */
-/* 2 and 3 are reserved for removed lock failure attributes. */
-constexpr int A_SUCC = 4; /* Invoker success message */
+/* 1 through 4 are reserved for removed action and lock-failure attributes. */
 constexpr int A_PASS = 5; /* Password (only meaningful for players) */
 constexpr int A_DESC = 6; /* Description */
 /* 7 is reserved for the removed Sex attribute. */
-constexpr int A_ODROP = 8; /* Others drop message */
-constexpr int A_DROP = 9;  /* Invoker drop message */
+/* 8 and 9 are reserved for removed action-message attributes. */
 /* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
 /* 12 through 20 are reserved for removed action attributes. */
 /* 21 through 25 are reserved for removed payment and money attributes. */
@@ -37,28 +34,22 @@ constexpr int A_LISTEN = 26; /* (Wildcarded) string to listen for */
 constexpr int A_LAST = 30;     /* Date/time of last login (players only) */
 constexpr int A_QUEUEMAX = 31; /* Max. # of entries obj has in the queue */
 constexpr int A_IDESC = 32;    /* Inside description (ENTER to get inside) */
-constexpr int A_ENTER = 33;    /* Invoker enter message */
-constexpr int A_OXENTER = 34;  /* Others enter message in dest */
+/* 33 and 34 are reserved for removed action-message attributes. */
 /* 35 and 36 are reserved for removed action attributes. */
-constexpr int A_ODESC = 37; /* Others describe message */
+/* 37 is reserved for the removed Odesc attribute. */
 /* 38 is reserved for the removed building quota attribute. */
 /* 39 and 40 are reserved for removed connection action attributes. */
 /* 41 is reserved for the removed money allowance attribute. */
 /* 42 is reserved for the removed DefaultLock attribute. */
-constexpr int A_NAME = 43;      /* Object name */
-constexpr int A_COMMENT = 44;   /* Wizard-accessable comments */
-constexpr int A_USE = 45;       /* Invoker use message */
-constexpr int A_OUSE = 46;      /* Others use message */
+constexpr int A_NAME = 43;    /* Object name */
+constexpr int A_COMMENT = 44; /* Wizard-accessable comments */
+/* 45 and 46 are reserved for removed action-message attributes. */
 constexpr int A_SEMAPHORE = 47; /* Semaphore control info */
 constexpr int A_TIMEOUT = 48;   /* Per-user disconnect timeout */
 /* 49 is reserved for the removed building quota attribute. */
-constexpr int A_LEAVE = 50;  /* Invoker leave message */
-constexpr int A_OLEAVE = 51; /* Others leave message in src */
+/* 50 and 51 are reserved for removed action-message attributes. */
 /* 52 is reserved for the removed Aleave attribute. */
-constexpr int A_OENTER = 53;  /* Others enter message in src */
-constexpr int A_OXLEAVE = 54; /* Others leave message in dest */
-constexpr int A_MOVE = 55;    /* Invoker move message */
-constexpr int A_OMOVE = 56;   /* Others move message */
+/* 53 through 56 are reserved for removed action-message attributes. */
 /* 57 is reserved for the removed Amove attribute. */
 constexpr int A_ALIAS = 58; /* Alias for player names */
 /* 59 and 60 are reserved for removed lock attributes. */
@@ -75,10 +66,8 @@ constexpr int A_AWAY = 73;   /* Not_connected page return message */
 constexpr int A_IDLE = 74;   /* Success page return message */
 /* 75 and 76 are reserved for removed lock failure attributes. */
 /* 77 is reserved for the removed Aufail attribute. */
-constexpr int A_PFAIL = 78;   /* Invoker page fail message */
-constexpr int A_TPORT = 79;   /* Invoker teleport message */
-constexpr int A_OTPORT = 80;  /* Others teleport message in src */
-constexpr int A_OXTPORT = 81; /* Others teleport message in dst */
+constexpr int A_PFAIL = 78; /* Invoker page fail message */
+/* 79 through 81 are reserved for removed action-message attributes. */
 /* 82 is reserved for the removed Atport attribute. */
 constexpr int A_PRIVS = 83;     /* Individual permissions */
 constexpr int A_LOGINDATA = 84; /* Recent login information */

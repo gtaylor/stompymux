@@ -444,11 +444,26 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   return result;
 }
 
-static bool gamedb_is_retired_lock_attribute(int number) {
+static bool gamedb_is_retired_attribute(int number) {
   switch (number) {
+  case 1:
   case 2:
   case 3:
+  case 4:
+  case 8:
+  case 9:
+  case 33:
+  case 34:
+  case 37:
   case 42:
+  case 45:
+  case 46:
+  case 50:
+  case 51:
+  case 53:
+  case 54:
+  case 55:
+  case 56:
   case 59:
   case 60:
   case 62:
@@ -459,6 +474,9 @@ static bool gamedb_is_retired_lock_attribute(int number) {
   case 70:
   case 75:
   case 76:
+  case 79:
+  case 80:
+  case 81:
   case 85:
   case 86:
   case 87:
@@ -513,7 +531,7 @@ static int gamedb_load_attributes(PersistenceContext *context, sqlite3 *sqlite,
         attribute <= 0 ||
         gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0)
       result = -1;
-    else if (gamedb_is_retired_lock_attribute(attribute)) {
+    else if (gamedb_is_retired_attribute(attribute)) {
       discarded_attributes++;
     } else {
       /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
@@ -541,7 +559,8 @@ static int gamedb_load_attributes(PersistenceContext *context, sqlite3 *sqlite,
   sqlite3_finalize(statement);
   if (result == 0 && discarded_attributes > 0)
     log_error(context->log, LOG_ALWAYS, "GDB", "LOCK",
-              "Discarded %d legacy lock and lock-failure attributes",
+              "Discarded %d legacy lock, lock-failure, and action-message "
+              "attributes",
               discarded_attributes);
   if (result == 0 && scrubbed_attribute_flags > 0)
     log_error(context->log, LOG_ALWAYS, "GDB", "LOCK",

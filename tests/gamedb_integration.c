@@ -330,8 +330,9 @@ static int check_snapshot(const char *path) {
        (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
        query_int(sqlite,
-                 "SELECT count(*) FROM attributes WHERE number IN (2, 3, 25, "
-                 "42, 43, 59, 62, 209);",
+                 "SELECT count(*) FROM attributes WHERE number IN (1, 2, 3, "
+                 "4, 8, 9, 25, 33, 34, 37, 42, 43, 45, 46, 50, 51, 53, 54, "
+                 "55, 56, 59, 62, 79, 80, 81, 209);",
                  0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM vattrs WHERE (flags & 1088) != 0;",
@@ -511,8 +512,8 @@ static int check_commac_snapshot(const char *path) {
 }
 
 /* Turn a current snapshot into the previous schema and seed data that must be
- * discarded or scrubbed during the hard cutover to Lua locks. */
-static int seed_legacy_locks(const char *path) {
+ * discarded or scrubbed during the hard cutover to Lua behavior. */
+static int seed_legacy_attributes(const char *path) {
   sqlite3 *sqlite;
   int result;
 
@@ -527,8 +528,18 @@ static int seed_legacy_locks(const char *path) {
                        "storage_version = 3 WHERE id = 1;"
                        "INSERT INTO vattrs VALUES (300, 'LegacyFlags', 1088);"
                        "INSERT OR REPLACE INTO attributes VALUES "
-                       "(1, 2, 'legacy other failure'), "
-                       "(1, 42, '#1'), (1, 59, '#1'), (1, 209, '#1'), "
+                       "(1, 1, 'legacy osucc'), "
+                       "(1, 2, 'legacy other failure'), (1, 4, 'legacy succ'), "
+                       "(1, 8, 'legacy odrop'), (1, 9, 'legacy drop'), "
+                       "(1, 33, 'legacy enter'), (1, 34, 'legacy oxenter'), "
+                       "(1, 37, 'legacy odesc'), (1, 42, '#1'), "
+                       "(1, 45, 'legacy use'), (1, 46, 'legacy ouse'), "
+                       "(1, 50, 'legacy leave'), (1, 51, 'legacy oleave'), "
+                       "(1, 53, 'legacy oenter'), (1, 54, 'legacy oxleave'), "
+                       "(1, 55, 'legacy move'), (1, 56, 'legacy omove'), "
+                       "(1, 59, '#1'), (1, 79, 'legacy tport'), "
+                       "(1, 80, 'legacy otport'), (1, 81, 'legacy oxtport'), "
+                       "(1, 209, '#1'), "
                        "(1, 300, char(1) || '1:1088:legacy value');",
                        NULL, NULL, NULL) == SQLITE_OK
                ? 0
@@ -963,7 +974,7 @@ int main(int argc, char *argv[]) {
 
   if (result == 0 && seed_commac_snapshot(database) < 0)
     result = 1;
-  if (result == 0 && seed_legacy_locks(database) < 0)
+  if (result == 0 && seed_legacy_attributes(database) < 0)
     result = 1;
   if (result == 0 && seed_btech_special_objects(database) < 0)
     result = 1;

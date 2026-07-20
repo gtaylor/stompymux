@@ -36,6 +36,14 @@ return {
       }
     end,
   },
+  messages = {
+    use = function(ctx)
+      return {
+        enactor_message = "You activate the example.",
+        other_message = "activates the example.",
+      }
+    end,
+  },
   schedules = {
     {
       name = "hourly_notice",

@@ -162,9 +162,7 @@ constexpr int DROP_QUIET = 1;     /* Don't do odrop/adrop if control */
 constexpr int DUMP_STRUCT = 1;    /* Dump flat structure file */
 constexpr int DUMP_TEXT = 2;      /* Dump text (gdbm) file */
 constexpr int DUMP_OPTIMIZE = 3;  /* Reorganize the gdbm file */
-constexpr int EXAM_DEFAULT = 0;   /* Default */
-constexpr int EXAM_BRIEF = 1;     /* Nonowner sees just owner */
-constexpr int EXAM_LONG = 2;      /* Nonowner sees public attrs too */
+constexpr int EXAM_BRIEF = 1;     /* Omit the ordinary attribute list */
 constexpr int EXAM_DEBUG = 4;   /* Display more info for finding db problems */
 constexpr int EXAM_PARENT = 8;  /* Get attr from parent when exam obj/attr */
 constexpr int FIXDB_OWNER = 1;  /* Fix OWNER field */
@@ -217,8 +215,6 @@ constexpr int PS_BRIEF = 0;       /* Short PS report */
 constexpr int PS_LONG = 1;        /* Long PS report */
 constexpr int PS_SUMM = 2;        /* Queue counts only */
 constexpr int PS_ALL = 4;         /* List entire queue */
-constexpr int QUEUE_KICK = 1;     /* Process commands from queue */
-constexpr int QUEUE_WARP = 2;     /* Advance or set back wait queue clock */
 constexpr int SAY_SAY = 1;        /* say in current room */
 constexpr int SAY_NOSPACE = 1;    /* OR with xx_EMIT to get nospace form */
 constexpr int SAY_POSE = 2;       /* pose in current room */
@@ -265,11 +261,6 @@ constexpr int SWEEP_VERBOSE = 256;  /* Display what pattern matches */
 constexpr int TELEPORT_DEFAULT = 1; /* Emit all messages */
 constexpr int TELEPORT_QUIET = 2;   /* Teleport in quietly */
 constexpr int TRIG_QUIET = 1;       /* Don't display 'Triggered.' message. */
-constexpr int TWARP_QUEUE = 1;      /* Warp the wait and sem queues */
-constexpr int TWARP_DUMP = 2;       /* Warp the dump interval */
-constexpr int TWARP_CLEAN = 4;      /* Warp the cleaning interval */
-constexpr int TWARP_IDLE = 8;       /* Warp the idle check interval */
-
 /* Hush codes for movement messages */
 
 constexpr int HUSH_ENTER = 1; /* xENTER/xEFAIL */
