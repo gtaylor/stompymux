@@ -175,12 +175,6 @@ NameTable pose_sw[] = {{"default", 1, CA_PUBLIC, 0},
                        {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                        {nullptr, 0, 0, 0}};
 
-NameTable ps_sw[] = {{"all", 1, CA_PUBLIC, PS_ALL | SW_MULTIPLE},
-                     {"brief", 1, CA_PUBLIC, PS_BRIEF},
-                     {"long", 1, CA_PUBLIC, PS_LONG},
-                     {"summary", 1, CA_PUBLIC, PS_SUMM},
-                     {nullptr, 0, 0, 0}};
-
 NameTable set_sw[] = {{"quiet", 1, CA_PUBLIC, SET_QUIET}, {nullptr, 0, 0, 0}};
 
 NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
@@ -506,7 +500,6 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_UNPARSE,
      {.invoke = do_pemit}},
     {"@power", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_power}},
-    {"@ps", ps_sw, CA_WIZARD, 0, CS_ONE_ARG | CS_INTERP, {.invoke = do_ps}},
     {"@readcache", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_readcache}},
     {"@robot",
      nullptr,

@@ -97,7 +97,6 @@ void do_password(CommandInvocation *invocation); /* Change my password */
 void do_pcreate(CommandInvocation *invocation);
 void do_pemit(CommandInvocation *invocation); /* Message a specific object. */
 void do_power(CommandInvocation *invocation); /* Sets powers */
-void do_ps(CommandInvocation *invocation);    /* List contents of queue */
 void do_kick(CommandInvocation *invocation);  /* Force queue processing */
 void do_quit(CommandInvocation *invocation);  /* Disconnect this session */
 void do_readcache(CommandInvocation *invocation); /* Reread text file cache */
