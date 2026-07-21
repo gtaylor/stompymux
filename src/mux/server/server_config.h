@@ -221,7 +221,6 @@ struct ServerConfiguration {
   int name_spaces;         /* allow player names to have spaces */
   int show_unfindable_who; /* should players set UNFINDABLE appear on who? */
   int fork_dump;           /* perform dump in a forked process */
-  int fork_vfork;          /* use vfork to fork */
   int paranoid_alloc;      /* Rigorous buffer integrity checks */
   int max_players;         /* Max # of connected players */
   int check_interval;      /* interval between db check/cleans in secs */

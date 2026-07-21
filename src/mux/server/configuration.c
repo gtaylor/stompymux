@@ -253,7 +253,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->indent_desc = 0;
   context->configuration->name_spaces = 1;
   context->configuration->fork_dump = 1;
-  context->configuration->fork_vfork = 0;
   context->configuration->have_specials = 1;
   context->configuration->have_comsys = 1;
   context->configuration->have_macros = 1;
@@ -1013,8 +1012,6 @@ CONF conftable[] = {
      ACCESS_LOC(access_sites), H_FORBIDDEN},
     {"fork_dump", cf_bool_configuration_adapter, CA_GOD, CONFIG_LOC(fork_dump),
      0},
-    {"fork_vfork", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(fork_vfork), 0},
     {"full_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(full_file), 32},
     {"full_message", cf_string_configuration_adapter, CA_GOD,

@@ -1887,9 +1887,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (configuration->fork_dump) {
     raw_notify(evaluation, player,
                "Database dumps are performed by a fork()ed process.");
-    if (configuration->fork_vfork)
-      raw_notify(evaluation, player,
-                 "The 'vfork()' call is used to perform the fork.");
   }
   if (configuration->max_players >= 0)
     raw_notify(evaluation, player,

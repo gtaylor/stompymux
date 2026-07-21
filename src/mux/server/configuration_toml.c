@@ -187,7 +187,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.fixed_home_message", "fixed_home_message", CFG_KIND_SCALAR},
     {"mux.fixed_tel_message", "fixed_tel_message", CFG_KIND_SCALAR},
     {"mux.fork_dump", "fork_dump", CFG_KIND_SCALAR},
-    {"mux.fork_vfork", "fork_vfork", CFG_KIND_SCALAR},
     {"mux.full_file", "full_file", CFG_KIND_SCALAR},
     {"mux.full_message", "full_message", CFG_KIND_SCALAR},
     {"mux.have_specials", "have_specials", CFG_KIND_SCALAR},
