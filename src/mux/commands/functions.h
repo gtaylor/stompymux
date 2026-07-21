@@ -127,10 +127,6 @@ int countwords(char *str, char sep);
 int do_convtime(const ServerConfiguration *configuration, char *str,
                 struct tm *ttm);
 char *get_uptime_to_string(int uptime);
-int check_read_perms(EvaluationContext *context,
-                     const ServerConfiguration *configuration, DbRef player,
-                     DbRef thing, Attribute *attr, DbRef aowner, long aflags,
-                     char *buff, char **bufc);
 int xlate(char *arg);
 extern void list_functable(EvaluationContext *evaluation,
                            const ServerConfiguration *configuration,

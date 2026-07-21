@@ -22,8 +22,8 @@ anything pulled in through `include`.
 | `[lua]` | Lua module directory plus callback instruction and memory limits. |
 | `[server]` | Port, MUD name, and function recursion/invocation limits. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
-| `[mux]` | Base MUX server behavior not covered by a more specific section. |
-| `[flags]` | Flags set on new players/exits/rooms/robots/things (`player`, `exit`, `room`, `robot`, `thing` arrays). |
+| `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
+| `[flags]` | Flags set on newly created robots (`robot` array). |
 | `[security]` | Password hashing and login rate limiting (see below). |
 | `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
 | `[access.*]` | Per-command/function permission tables (`commands`, `functions`, `lists`, and `config`). |
@@ -34,9 +34,11 @@ anything pulled in through `include`.
 Most directives are plain scalars (`port = 5555`, `fork_dump = true`). A few
 directives take other shapes:
 
-- **Flag/bitmask directives** (`[flags]` and `[logging]`) are TOML
-  arrays of strings. `logging.log` is negatable: prefix an entry with `!` to
-  clear a bit that's on by default (e.g. `log = ["!accounting", "bugs"]`).
+- **Flag/bitmask directives** (`mux.default_player_flags`,
+  `mux.default_exit_flags`, `mux.default_room_flags`,
+  `mux.default_thing_flags`, `flags.robot`, and `[logging]`) are TOML arrays of
+  strings. `logging.log` is negatable: prefix an entry with `!` to clear a bit
+  that's on by default (e.g. `log = ["!accounting", "bugs"]`).
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@ch" = "@chown"`.
 - **Access directives** (`[access.*]`) are tables

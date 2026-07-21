@@ -924,54 +924,6 @@ static void fun_connrecord(char *buff, char **bufc, DbRef player, DbRef cause,
   safe_tprintf_str(buff, bufc, "%d", *context->runtime->record_players);
 }
 
-/**
- * Get attribute from object.
- */
-int check_read_perms(EvaluationContext *context,
-                     const ServerConfiguration *configuration, DbRef player,
-                     DbRef thing, Attribute *attr, DbRef aowner, long aflags,
-                     char *buff, char **bufc) {
-  int see_it;
-
-  /*
-   * If we have explicit read permission to the attr, return it
-   */
-
-  if (see_attr_explicit(context->world->database, player, thing, attr, aowner,
-                        aflags))
-    return 1;
-
-  /*
-   * If we are nearby or have examine privs to the attr and it is * * *
-   *
-   * * visible to us, return it.
-   */
-
-  see_it = see_attr(context, player, thing, attr, aowner, aflags);
-  if ((is_examinable(context, player, thing) ||
-       nearby(context->world->database, player, thing) ||
-       is_wizard(context->world->database, player)) &&
-      see_it)
-    return 1;
-
-  /*
-   * For any object, we can read its visible attributes, EXCEPT * for *
-   *
-   * *  * * descs, which are only visible if read_rem_desc is on.
-   */
-
-  if (see_it) {
-    if (!configuration->read_rem_desc && (attr->number == A_DESC)) {
-      safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
-      return 0;
-    } else {
-      return 1;
-    }
-  }
-  safe_str("#-1 PERMISSION DENIED", buff, bufc);
-  return 0;
-}
-
 static void fun_subeval(char *buff, char **bufc, DbRef player, DbRef cause,
                         char *fargs[], int nfargs, char *cargs[], int ncargs,
                         EvaluationContext *context) {
@@ -1385,12 +1337,10 @@ static void fun_fullname(char *buff, char **bufc, DbRef player, DbRef cause,
   if (it == NOTHING) {
     return;
   }
-  if (!context->world->configuration->read_rem_name) {
-    if (!nearby_or_control(context, player, it) &&
-        (!is_player(context->world->database, it))) {
-      safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
-      return;
-    }
+  if (!nearby_or_control(context, player, it) &&
+      !is_player(context->world->database, it)) {
+    safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
+    return;
   }
   safe_str(game_object_name(context->world->database, it), buff, bufc);
 }
@@ -1410,13 +1360,11 @@ static void fun_name(char *buff, char **bufc, DbRef player, DbRef cause,
   if (it == NOTHING) {
     return;
   }
-  if (!context->world->configuration->read_rem_name) {
-    if (!nearby_or_control(context, player, it) &&
-        !is_player(context->world->database, it) &&
-        !is_long_fingers(context->world->database, player)) {
-      safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
-      return;
-    }
+  if (!nearby_or_control(context, player, it) &&
+      !is_player(context->world->database, it) &&
+      !is_long_fingers(context->world->database, player)) {
+    safe_str("#-1 TOO FAR AWAY TO SEE", buff, bufc);
+    return;
   }
   temp = *bufc;
   safe_str(game_object_name(context->world->database, it), buff, bufc);

@@ -73,24 +73,13 @@ int can_see(EvaluationContext *evaluation,
   if ((player == thing) || is_exit(evaluation->world->database, thing)) {
     return 0;
   }
-  /*
-   * If loc is not dark, you see it if it's not dark or you control it.
-   * * * * * If loc is dark, you see it if you control it.  Seeing your
-   * * own * * * dark objects is controlled by see_own_dark. *
-   * In * dark *  * locations, you also see things that are LIGHT and
-   * !DARK.
-   */
+  /* In visible locations, DARK objects remain hidden. In DARK locations,
+   * only LIGHT objects that are not themselves DARK are visible. */
 
-  if (can_see_loc) {
-    return (!is_dark(evaluation->world->database, thing) ||
-            (configuration->see_own_dark &&
-             is_myopic_exam(evaluation, player, thing)));
-  } else {
-    return ((is_light(evaluation->world->database, thing) &&
-             !is_dark(evaluation->world->database, thing)) ||
-            (configuration->see_own_dark &&
-             is_myopic_exam(evaluation, player, thing)));
-  }
+  if (can_see_loc)
+    return !is_dark(evaluation->world->database, thing);
+  return is_light(evaluation->world->database, thing) &&
+         !is_dark(evaluation->world->database, thing);
 }
 void handle_ears(EvaluationContext *evaluation, DbRef thing, int could_hear,
                  int can_hear) {

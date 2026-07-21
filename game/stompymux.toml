@@ -124,6 +124,14 @@ default_thing_lua_parent = "default_thing.lua"
 default_room_lua_parent = "default_room.lua"
 default_exit_lua_parent = "default_exit.lua"
 default_player_lua_parent = "default_player.lua"
+# Flags that are set on players after creation.
+default_player_flags = ["ansi", "ansimap", "fixed", "in_character"]
+# Flags that are set on exits after creation.
+default_exit_flags = ["inherit", "no_command"]
+# Flags that are set on rooms after creation.
+default_room_flags = ["inherit", "no_command"]
+# Flags that are set on things after creation.
+default_thing_flags = []
 # Command quota per player.
 command_quota_increment = 1000
 # The interval at which players' command quotas are increased.
@@ -141,31 +149,10 @@ idle_timeout = 99999999
 # Messages to show during and after DB dumps (spammy).
 # dump_message = "BattletechMUX : Saving Database. Game will pause."
 # postdump_message = "BattletechMUX : Database Saved."
-# Are the descriptions of remote objects available to players?
-read_remote_desc = false
-# Are the names of remote objects available to players?
-read_remote_name = false
 # The number of commands to be run from queue when there is net traffic.
 queue_active_chunk = 100
 # Number of commands to be run from queue when there is no net traffic.
 queue_idle_chunk = 200
-# Should players check themselves for commands?
-player_match_own_commands = true
-match_own_commands = true
-# We don't want to see our own dark objects.
-see_owned_dark = false
-
-# -----------------------------------------------
-#  Flags set on new objects
-# -----------------------------------------------
-
-[flags]
-# Flags that are set on players after creation.
-player = ["ansi", "ansimap", "fixed", "in_character"]
-# Flags that are set on exits after creation.
-exit = ["no_command", "inherit"]
-# Flags that are set on rooms after creation.
-room = ["inherit", "no_command"]
 
 # -----------------------------------------------
 #  Password and Login Security

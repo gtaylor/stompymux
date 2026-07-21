@@ -221,21 +221,21 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
 
   switch (objtype) {
   case TYPE_ROOM:
-    f1 = evaluation->world->configuration->room_flags.word1;
-    f2 = evaluation->world->configuration->room_flags.word2;
-    f3 = evaluation->world->configuration->room_flags.word3;
+    f1 = evaluation->world->configuration->default_room_flags.word1;
+    f2 = evaluation->world->configuration->default_room_flags.word2;
+    f3 = evaluation->world->configuration->default_room_flags.word3;
     okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_THING:
-    f1 = evaluation->world->configuration->thing_flags.word1;
-    f2 = evaluation->world->configuration->thing_flags.word2;
-    f3 = evaluation->world->configuration->thing_flags.word3;
+    f1 = evaluation->world->configuration->default_thing_flags.word1;
+    f2 = evaluation->world->configuration->default_thing_flags.word2;
+    f3 = evaluation->world->configuration->default_thing_flags.word3;
     okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_EXIT:
-    f1 = evaluation->world->configuration->exit_flags.word1;
-    f2 = evaluation->world->configuration->exit_flags.word2;
-    f3 = evaluation->world->configuration->exit_flags.word3;
+    f1 = evaluation->world->configuration->default_exit_flags.word1;
+    f2 = evaluation->world->configuration->default_exit_flags.word2;
+    f3 = evaluation->world->configuration->default_exit_flags.word3;
     okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_PLAYER:
@@ -245,9 +245,9 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
       f3 = evaluation->world->configuration->robot_flags.word3;
       require_inherit = 1;
     } else {
-      f1 = evaluation->world->configuration->player_flags.word1;
-      f2 = evaluation->world->configuration->player_flags.word2;
-      f3 = evaluation->world->configuration->player_flags.word3;
+      f1 = evaluation->world->configuration->default_player_flags.word1;
+      f2 = evaluation->world->configuration->default_player_flags.word2;
+      f3 = evaluation->world->configuration->default_player_flags.word3;
       self_owned = 1;
     }
     buff = munge_space(name);

@@ -243,13 +243,8 @@ struct ServerConfiguration {
   int active_q_chunk; /* # cmds to run from queue when active */
   int ex_flags;       /* TRUE = show flags on examine */
   int robot_speak;    /* TRUE = allow robots to speak */
-  int read_rem_desc;  /* Can the DESCs of nonlocal objs be read? */
-  int read_rem_name;  /* Can the NAMEs of nonlocal objs be read? */
   int dark_sleepers;  /* Are sleeping players 'dark'? */
-  int see_own_dark;   /* Do you see your own dark stuff? */
   int idle_wiz_dark;  /* Do idling wizards get set dark? */
-  int match_mine;     /* Should objects check themselves for Lua commands? */
-  int match_mine_pl;  /* Should players check themselves for Lua commands? */
   int switch_df_all;  /* Should @switch match all by default? */
   int fascist_tport;  /* Source of teleport must be controlled */
   int trace_topdown;  /* Is TRACE output top-down or bottom-up? */
@@ -264,10 +259,10 @@ struct ServerConfiguration {
   char default_room_lua_parent[128];   /* Lua parent for new rooms */
   char default_exit_lua_parent[128];   /* Lua parent for new exits */
   char default_player_lua_parent[128]; /* Lua parent for new players */
-  FLAGSET player_flags;                /* Flags players start with */
-  FLAGSET room_flags;                  /* Flags rooms start with */
-  FLAGSET exit_flags;                  /* Flags exits start with */
-  FLAGSET thing_flags;                 /* Flags things start with */
+  FLAGSET default_player_flags;        /* Flags players start with */
+  FLAGSET default_room_flags;          /* Flags rooms start with */
+  FLAGSET default_exit_flags;          /* Flags exits start with */
+  FLAGSET default_thing_flags;         /* Flags things start with */
   FLAGSET robot_flags;                 /* Flags robots start with */
   char mud_name[32];                   /* Name of the mud */
   int timeslice;      /* How often do we bump people's cmd quotas? */

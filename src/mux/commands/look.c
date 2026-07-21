@@ -109,7 +109,6 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
 static void look_contents(EvaluationContext *evaluation, DbRef player,
                           DbRef loc, const char *contents_name, int style) {
-  WorldContext *world = evaluation->world;
   DbRef thing;
   int can_see_loc;
   char *buff;
@@ -118,9 +117,7 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
    * check to see if he can see the location
    */
 
-  can_see_loc = (!is_dark(evaluation->world->database, loc) ||
-                 (world->configuration->see_own_dark &&
-                  is_examinable(evaluation, player, loc)));
+  can_see_loc = !is_dark(evaluation->world->database, loc);
 
   /*
    * check to see if there is anything there
@@ -128,7 +125,8 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
 
   DOLIST(evaluation->world->database, thing,
          game_object_contents(evaluation->world->database, loc)) {
-    if (can_see(evaluation, world->configuration, player, thing, can_see_loc)) {
+    if (can_see(evaluation, evaluation->world->configuration, player, thing,
+                can_see_loc)) {
 
       /*
        * something exists!  show him everything
@@ -137,7 +135,7 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
       notify(evaluation, player, contents_name);
       DOLIST(evaluation->world->database, thing,
              game_object_contents(evaluation->world->database, loc)) {
-        if (can_see(evaluation, world->configuration, player, thing,
+        if (can_see(evaluation, evaluation->world->configuration, player, thing,
                     can_see_loc)) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing, 1);

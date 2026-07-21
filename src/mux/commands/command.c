@@ -1377,10 +1377,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     }
   }
   /* Lua handlers observe the original unmatched command. */
-  if (configuration->match_mine &&
-      !is_no_command(context->world->database, player) &&
-      ((typeof_obj(context->world->database, player) != TYPE_PLAYER) ||
-       configuration->match_mine_pl))
+  if (!is_no_command(context->world->database, player))
     lua_succ +=
         lua_command_match(runtime->lua_owner->runtime, context->descriptor,
                           player, player, cause, command);
@@ -1728,22 +1725,23 @@ static void list_df_flags(EvaluationContext *evaluation,
                           DbRef player) {
   char *playerb, *roomb, *thingb, *exitb, *robotb, *buff;
 
-  playerb = decode_flags(evaluation->world->database, player,
-                         (configuration->player_flags.word1 | TYPE_PLAYER),
-                         configuration->player_flags.word2,
-                         configuration->player_flags.word3);
+  playerb =
+      decode_flags(evaluation->world->database, player,
+                   (configuration->default_player_flags.word1 | TYPE_PLAYER),
+                   configuration->default_player_flags.word2,
+                   configuration->default_player_flags.word3);
   roomb = decode_flags(evaluation->world->database, player,
-                       (configuration->room_flags.word1 | TYPE_ROOM),
-                       configuration->room_flags.word2,
-                       configuration->room_flags.word3);
+                       (configuration->default_room_flags.word1 | TYPE_ROOM),
+                       configuration->default_room_flags.word2,
+                       configuration->default_room_flags.word3);
   exitb = decode_flags(evaluation->world->database, player,
-                       (configuration->exit_flags.word1 | TYPE_EXIT),
-                       configuration->exit_flags.word2,
-                       configuration->exit_flags.word3);
+                       (configuration->default_exit_flags.word1 | TYPE_EXIT),
+                       configuration->default_exit_flags.word2,
+                       configuration->default_exit_flags.word3);
   thingb = decode_flags(evaluation->world->database, player,
-                        (configuration->thing_flags.word1 | TYPE_THING),
-                        configuration->thing_flags.word2,
-                        configuration->thing_flags.word3);
+                        (configuration->default_thing_flags.word1 | TYPE_THING),
+                        configuration->default_thing_flags.word2,
+                        configuration->default_thing_flags.word3);
   robotb = decode_flags(evaluation->world->database, player,
                         (configuration->robot_flags.word1 | TYPE_PLAYER),
                         configuration->robot_flags.word2,
@@ -1788,9 +1786,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(
         evaluation, player,
         "The '@examine' command lists the flag names for the object's flags.");
-  if (configuration->see_own_dark)
-    raw_notify(evaluation, player,
-               "The 'look' command lists DARK objects owned by you.");
   if (!configuration->dark_sleepers)
     raw_notify(evaluation, player,
                "The 'look' command shows disconnected players.");
@@ -1805,14 +1800,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(evaluation, player,
                "Trace output is presented bottom-up (subexpressions first).");
   }
-  if (configuration->read_rem_desc)
-    raw_notify(
-        evaluation, player,
-        "The 'get()' function will return the description of faraway objects,");
-  if (configuration->read_rem_name)
-    raw_notify(
-        evaluation, player,
-        "The 'name()' function will return the name of faraway objects.");
   raw_notify(evaluation, player,
              tprintf("The default switch for the '@switch' command is %s.",
                      switchd[configuration->switch_df_all]));
@@ -1823,15 +1810,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
       evaluation, player,
       tprintf("Players may have at most %d commands in the queue at one time.",
               configuration->queuemax));
-  if (configuration->match_mine) {
-    if (configuration->match_mine_pl)
-      raw_notify(evaluation, player,
-                 "All objects search themselves for Lua commands.");
-    else
-      raw_notify(
-          evaluation, player,
-          "Objects other than players search themselves for Lua commands.");
-  }
   if (!is_wizard(evaluation->world->database, player))
     return;
   buff = alloc_mbuf("list_options");

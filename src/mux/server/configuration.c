@@ -280,13 +280,8 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->active_q_chunk = 10;
   context->configuration->ex_flags = 1;
   context->configuration->robot_speak = 1;
-  context->configuration->read_rem_desc = 0;
-  context->configuration->read_rem_name = 0;
   context->configuration->dark_sleepers = 1;
-  context->configuration->see_own_dark = 1;
   context->configuration->idle_wiz_dark = 0;
-  context->configuration->match_mine = 0;
-  context->configuration->match_mine_pl = 0;
   context->configuration->switch_df_all = 1;
   context->configuration->fascist_tport = 0;
   context->configuration->trace_topdown = 1;
@@ -303,14 +298,14 @@ void configuration_initialize(ConfigurationContext *context) {
   StringCopy(context->configuration->default_room_lua_parent, "");
   StringCopy(context->configuration->default_exit_lua_parent, "");
   StringCopy(context->configuration->default_player_lua_parent, "");
-  context->configuration->player_flags.word1 = 0;
-  context->configuration->player_flags.word2 = 0;
-  context->configuration->room_flags.word1 = 0;
-  context->configuration->room_flags.word2 = 0;
-  context->configuration->exit_flags.word1 = 0;
-  context->configuration->exit_flags.word2 = 0;
-  context->configuration->thing_flags.word1 = 0;
-  context->configuration->thing_flags.word2 = 0;
+  context->configuration->default_player_flags.word1 = 0;
+  context->configuration->default_player_flags.word2 = 0;
+  context->configuration->default_room_flags.word1 = 0;
+  context->configuration->default_room_flags.word2 = 0;
+  context->configuration->default_exit_flags.word1 = 0;
+  context->configuration->default_exit_flags.word2 = 0;
+  context->configuration->default_thing_flags.word1 = 0;
+  context->configuration->default_thing_flags.word2 = 0;
   context->configuration->robot_flags.word1 = ROBOT;
   context->configuration->robot_flags.word2 = 0;
   StringCopy(context->configuration->mud_name, "TinyMUX");
@@ -995,8 +990,8 @@ CONF conftable[] = {
      CONFIG_LOC(dump_offset), 0},
     {"examine_flags", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(ex_flags), 0},
-    {"exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(exit_flags), 0},
+    {"default_exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
+     (int *)CONFIG_LOC(default_exit_flags), 0},
     {"fascist_teleport", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(fascist_tport), 0},
     {"fixed_home_message", cf_string_configuration_adapter, CA_DISABLED,
@@ -1074,8 +1069,6 @@ CONF conftable[] = {
     {"default_player_lua_parent", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(default_player_lua_parent),
      sizeof(((ServerConfiguration *)nullptr)->default_player_lua_parent)},
-    {"match_own_commands", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(match_mine), 0},
     {"max_players", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(max_players), 0},
     {"mech_database", cf_string_configuration_adapter, CA_GOD,
@@ -1095,10 +1088,8 @@ CONF conftable[] = {
      CONFIG_LOC(password_hash_opslimit), 0},
     {"permit_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), 0},
-    {"player_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(player_flags), 0},
-    {"player_match_own_commands", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(match_mine_pl), 0},
+    {"default_player_flags", cf_set_flags_configuration_adapter, CA_GOD,
+     (int *)CONFIG_LOC(default_player_flags), 0},
     {"player_password_length_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(player_password_length_limit), 0},
     {"player_name_spaces", cf_bool_configuration_adapter, CA_GOD,
@@ -1118,10 +1109,6 @@ CONF conftable[] = {
      CONFIG_LOC(queue_chunk), 0},
     {"quit_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(quit_file), 32},
-    {"read_remote_desc", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(read_rem_desc), 0},
-    {"read_remote_name", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(read_rem_name), 0},
     {"retry_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(retry_limit), 0},
     {"login_attempt_burst", cf_int_configuration_adapter, CA_GOD,
@@ -1134,10 +1121,8 @@ CONF conftable[] = {
      (int *)CONFIG_LOC(robot_flags), 0},
     {"robot_speech", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(robot_speak), 0},
-    {"room_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(room_flags), 0},
-    {"see_owned_dark", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(see_own_dark), 0},
+    {"default_room_flags", cf_set_flags_configuration_adapter, CA_GOD,
+     (int *)CONFIG_LOC(default_room_flags), 0},
     {"show_unfindable_who", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(show_unfindable_who), 1},
     {"space_compress", cf_bool_configuration_adapter, CA_GOD,
@@ -1148,8 +1133,8 @@ CONF conftable[] = {
      ACCESS_LOC(suspect_sites), H_SUSPECT},
     {"switch_default_all", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(switch_df_all), 0},
-    {"thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(thing_flags), 0},
+    {"default_thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
+     (int *)CONFIG_LOC(default_thing_flags), 0},
     {"timeslice", cf_int_configuration_adapter, CA_GOD, CONFIG_LOC(timeslice),
      0},
     {"trace_output_limit", cf_int_configuration_adapter, CA_GOD,
