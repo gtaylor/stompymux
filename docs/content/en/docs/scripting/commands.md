@@ -42,10 +42,10 @@ Common Lua pattern elements include:
 | `*` | Zero or more repetitions |
 | `(...)` | Captures a value for the handler |
 
-The pattern is matched against the otherwise-unmatched command text without
-softcode evaluation. Each capture becomes an argument after `ctx`, in capture
-order. When a pattern has no explicit captures, Lua passes the complete match
-as the argument after `ctx`.
+The pattern is matched against the otherwise-unmatched command text. Each
+capture becomes an argument after `ctx`, in capture order. When a pattern has
+no explicit captures, Lua passes the complete match as the argument after
+`ctx`.
 
 ```lua
 {

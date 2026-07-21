@@ -102,17 +102,6 @@ mux.notify(ctx.enactor, "The counter advances.")
 
 `object` must be a valid dbref and `message` must be a string.
 
-## `mux.command(command)`
-
-Queues a MUX command to run after the current Lua callback completes.
-
-```lua
-mux.command("@emit A queued command from Lua.")
-```
-
-Queued commands execute as `#1`. They are asynchronous: the function does not
-return a command result to Lua.
-
 ## `mux.connected_players()`
 
 Returns an array of player connections visible to the normal `who` command.

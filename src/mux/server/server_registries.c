@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/commands/functions.h"
 #include "mux/server/server_config.h"
 
 void command_registry_initialize(CommandRegistry *registry) {
@@ -17,17 +16,8 @@ void command_registry_initialize(CommandRegistry *registry) {
 void command_registry_destroy(CommandRegistry *registry) {
   if (registry == nullptr)
     return;
-  UFUN *function = registry->user_functions;
-  while (function != nullptr) {
-    UFUN *next = function->next;
-    free(function->name);
-    free(function);
-    function = next;
-  }
   hash_table_destroy(&registry->commands);
   hash_table_destroy(&registry->macros);
-  hash_table_destroy(&registry->functions);
-  hash_table_destroy(&registry->user_function_index);
   memset(registry, 0, sizeof(*registry));
 }
 

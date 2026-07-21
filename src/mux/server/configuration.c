@@ -13,7 +13,6 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
@@ -281,10 +280,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->ex_flags = 1;
   context->configuration->dark_sleepers = 1;
   context->configuration->idle_wiz_dark = 0;
-  context->configuration->switch_df_all = 1;
   context->configuration->fascist_tport = 0;
-  context->configuration->trace_topdown = 1;
-  context->configuration->trace_limit = 200;
   context->configuration->safe_unowned = 0;
   /*
    * -- ??? Running SC on a non-SC DB may cause problems
@@ -310,7 +306,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cmd_quota_max = 100;
   context->configuration->cmd_quota_incr = 5;
   context->configuration->is_login_enabled = true;
-  context->configuration->is_interpreter_enabled = true;
+  context->configuration->is_command_queue_enabled = true;
   context->configuration->is_checkpointing_enabled = true;
   context->configuration->is_db_check_enabled = true;
   context->configuration->is_idle_check_enabled = true;
@@ -320,8 +316,6 @@ void configuration_initialize(ConfigurationContext *context) {
       LOG_CONFIGMODS | LOG_SHOUTS | LOG_STARTUP | LOG_WIZARD | LOG_PROBLEMS |
       LOG_PCREATES;
   context->configuration->log_info = LOGOPT_TIMESTAMP | LOGOPT_LOC;
-  context->configuration->func_nest_lim = 50;
-  context->configuration->func_invk_lim = 2500;
   context->configuration->ntfy_nest_lim = 20;
   context->configuration->zone_nest_lim = 20;
   context->configuration->stack_limit = 50;
@@ -466,41 +460,6 @@ static int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
   }
   StringCopy((char *)vp, str);
   return retval;
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * cf_alias: define a generic hash table alias.
- */
-
-static int cf_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
-                    ConfigurationContext *context) {
-  char *alias, *orig, *p;
-  int *cp = nullptr;
-
-  alias = strtok(str, " \t=,");
-  orig = strtok(nullptr, " \t=,");
-  if (orig) {
-    for (p = orig; *p; p++)
-      *p = ToLower(*p);
-    cp = hash_table_find(orig, (HashTable *)vp);
-    if (cp == nullptr) {
-      for (p = orig; *p; p++)
-        *p = ToUpper(*p);
-      cp = hash_table_find(orig, (HashTable *)vp);
-      if (cp == nullptr) {
-        configuration_log_not_found(context, player, cmd, "Entry", orig);
-        return -1;
-      }
-    }
-  }
-
-  if (cp == nullptr) {
-    return -1;
-  }
-
-  hash_table_add(alias, cp, (HashTable *)vp);
-  return 0;
 }
 
 /*
@@ -754,13 +713,11 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 DEFINE_CONFIGURATION_ADAPTER(cf_access)
-DEFINE_CONFIGURATION_ADAPTER(cf_alias)
 DEFINE_CONFIGURATION_ADAPTER(cf_badname)
 DEFINE_CONFIGURATION_ADAPTER(cf_bool)
 DEFINE_CONFIGURATION_ADAPTER(cf_cf_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_cmd_alias)
 DEFINE_CONFIGURATION_ADAPTER(cf_flagalias)
-DEFINE_CONFIGURATION_ADAPTER(cf_func_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_int)
 DEFINE_CONFIGURATION_ADAPTER(cf_ntab_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_set_flags)
@@ -1004,14 +961,6 @@ CONF conftable[] = {
      CONFIG_LOC(full_file), 32},
     {"full_message", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(full_msg), 4096},
-    {"function_access", cf_func_access_configuration_adapter, CA_GOD, nullptr,
-     (long)access_nametab},
-    {"function_alias", cf_alias_configuration_adapter, CA_GOD,
-     COMMAND_LOC(functions), 0},
-    {"function_invocation_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(func_invk_lim), 0},
-    {"function_recursion_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(func_nest_lim), 0},
     {"game_database", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(database.gamedb),
      sizeof(((ServerConfiguration *)nullptr)->database.gamedb)},
@@ -1124,16 +1073,10 @@ CONF conftable[] = {
      CONFIG_LOC(stack_limit), 0},
     {"suspect_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), H_SUSPECT},
-    {"switch_default_all", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(switch_df_all), 0},
     {"default_thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(default_thing_flags), 0},
     {"timeslice", cf_int_configuration_adapter, CA_GOD, CONFIG_LOC(timeslice),
      0},
-    {"trace_output_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(trace_limit), 0},
-    {"trace_topdown", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(trace_topdown), 0},
     {"trust_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), 0},
     {"unowned_safe", cf_bool_configuration_adapter, CA_GOD,
@@ -1262,47 +1205,4 @@ void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
     }
   }
   free_mbuf(buff);
-}
-
-/* ----------------------------------------------------------------------
- ** fun_config: returns a context configuration option
- */
-void fun_config(char *buff, char **bufc, DbRef player, DbRef cause,
-                char *fargs[], int nfargs, char *cargs[], int ncargs,
-                EvaluationContext *context) {
-  CONF *cp;
-
-  for (cp = conftable; cp->pname; ++cp) {
-    if (!strcmp(cp->pname, fargs[0])) {
-      /* ::FIX:: [cad] little hack. I don't think it's necessairy to need god
-       *privs
-       ** to read options so check_access doesn't work
-       */
-      if (cp->flags == CA_DISABLED) {
-        safe_str("#-1 PERMISSION DENIED", buff, bufc);
-        return;
-      }
-      if (cp->interpreter == cf_string_configuration_adapter) {
-        safe_str(configuration_resolve_location(
-                     context->runtime->configuration_context, cp),
-                 buff, bufc);
-        return;
-      }
-
-      /* [cad] bool can be returned as 0|1 or true|false softcoders should
-         decide how they want it */
-      if (cp->interpreter == cf_int_configuration_adapter ||
-          cp->interpreter == cf_bool_configuration_adapter) {
-        safe_tprintf_str(buff, bufc, "%d",
-                         *(int *)configuration_resolve_location(
-                             context->runtime->configuration_context, cp));
-        return;
-      }
-
-      /* [cad] no other idea what to do with the hashtables and stuff */
-      safe_str("#-1 UNCONVERTABLE CONF TYPE", buff, bufc);
-      return;
-    }
-  }
-  safe_str("#-1", buff, bufc);
 }

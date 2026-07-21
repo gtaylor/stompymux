@@ -40,9 +40,6 @@ typedef enum LuaEventType {
   LUA_EVENT_TELEPORT,
   LUA_EVENT_TELEPORT_DESTINATION_FAIL,
   LUA_EVENT_TELEPORT_OUT_FAIL,
-  LUA_EVENT_MATCH_HEARD,
-  LUA_EVENT_MATCH_HEARD_OTHER,
-  LUA_EVENT_MATCH_HEARD_SELF,
   LUA_EVENT_CLONE,
   LUA_EVENT_SERVER_STARTUP,
   LUA_EVENT_CONNECT,
@@ -84,6 +81,18 @@ typedef struct LuaAppearanceResult {
   char rendered[LBUF_SIZE];
 } LuaAppearanceResult;
 
+typedef struct LuaMechStatusInvocation {
+  Descriptor *descriptor;
+  DbRef object;
+  DbRef enactor;
+  DbRef cause;
+} LuaMechStatusInvocation;
+
+typedef struct LuaMechStatusResult {
+  bool defined;
+  char rendered[LBUF_SIZE];
+} LuaMechStatusResult;
+
 typedef enum LuaLockType {
   LUA_LOCK_DEFAULT,
   LUA_LOCK_DROP,
@@ -105,7 +114,6 @@ typedef enum LuaLockOperation {
   LUA_LOCK_OPERATION_TAKE,
   LUA_LOCK_OPERATION_LOOK,
   LUA_LOCK_OPERATION_COMMAND_MATCH,
-  LUA_LOCK_OPERATION_LISTEN,
   LUA_LOCK_OPERATION_USE,
   LUA_LOCK_OPERATION_DROP,
   LUA_LOCK_OPERATION_GIVE,
@@ -246,6 +254,9 @@ int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
 void lua_appearance_evaluate(LuaRuntime *runtime,
                              const LuaAppearanceInvocation *invocation,
                              LuaAppearanceResult *result);
+void lua_mech_status_evaluate(LuaRuntime *runtime,
+                              const LuaMechStatusInvocation *invocation,
+                              LuaMechStatusResult *result);
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                            DbRef first, DbRef player, DbRef cause,
                            const char *command);

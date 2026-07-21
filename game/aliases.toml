@@ -1,4 +1,4 @@
-# aliases.toml - stock command/flag/function/attribute abbreviations.
+# aliases.toml - stock command and flag abbreviations.
 # -----------------------------------------------------------------------------
 # If any of these are changed, players will be confused because examples in
 # the manual may not work, and existing MUX programs may stop working. Do not
@@ -22,9 +22,6 @@
 "@dest" = "@destroy"
 "@destr" = "@destroy"
 "@destro" = "@destroy"
-"@dol" = "@dolist"
-"@doli" = "@dolist"
-"@dolis" = "@dolist"
 "@dr" = "@drain"
 "@dra" = "@drain"
 "@drai" = "@drain"
@@ -93,9 +90,6 @@
 "@st" = "@stats"
 "@sta" = "@stats"
 "@stat" = "@stats"
-"@swi" = "@switch"
-"@swit" = "@switch"
-"@switc" = "@switch"
 "@te" = "@teleport"
 "@tel" = "@teleport"
 "@tele" = "@teleport"
@@ -176,10 +170,6 @@
 "@rem" = "@pemit/contents"
 "@remi" = "@pemit/contents"
 "@remit" = "@pemit/contents"
-"@sel" = "@switch/first"
-"@sele" = "@switch/first"
-"@selec" = "@switch/first"
-"@select" = "@switch/first"
 "@walle" = "@wall/emit"
 "@wallem" = "@wall/emit"
 "@wallemi" = "@wall/emit"
@@ -296,7 +286,6 @@ sus = "suspect"
 susp = "suspect"
 suspe = "suspect"
 suspec = "suspect"
-trac = "trace"
 tran = "transparent"
 trans = "transparent"
 transp = "transparent"
@@ -331,16 +320,6 @@ liste = "monitor"
 listen = "monitor"
 listene = "monitor"
 listener = "monitor"
-
-[aliases.functions]
-connsecs = "conn"
-flip = "reverse"
-idiv = "div"
-idlesecs = "idle"
-lsearch = "search"
-secs2time = "convsecs"
-time2secs = "convtime"
-who = "lwho"
 
 [names]
 bad = ["a", "an", "announcement", "broadcast", "from", "here", "home", "in",

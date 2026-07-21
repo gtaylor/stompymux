@@ -346,7 +346,7 @@ void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
 
 /*
  * Return canonical long part names from one category, separated by pipes.
- * Requiring the category keeps this softcode result within one LBUF.
+ * Requiring the category keeps the result within one LBUF.
  */
 void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
                      char *fargs[], int nfargs, char *cargs[], int ncargs,

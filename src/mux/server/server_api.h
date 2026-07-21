@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include "mux/commands/command_parser.h"
 #include "mux/commands/command_queue.h"
-#include "mux/commands/eval.h"
 #include "mux/commands/look.h"
 #include "mux/commands/verbs.h"
 #include "mux/database/db.h"
@@ -244,25 +244,6 @@ constexpr int TRIG_QUIET = 1;       /* Don't display 'Triggered.' message. */
 constexpr int HUSH_ENTER = 1; /* xENTER/xEFAIL */
 constexpr int HUSH_LEAVE = 2; /* xLEAVE/xLFAIL */
 constexpr int HUSH_EXIT = 4;  /* xSUCC/xDROP/xFAIL from exits */
-
-/* Evaluation directives */
-
-constexpr int EV_FMASK = 0x00000300;     /* Mask for function type check */
-constexpr int EV_FIGNORE = 0x00000000;   /* Don't look for func if () found */
-constexpr int EV_FMAND = 0x00000100;     /* Text before () must be func name */
-constexpr int EV_FCHECK = 0x00000200;    /* Check text before () for function */
-constexpr int EV_STRIP = 0x00000400;     /* Strip one level of brackets */
-constexpr int EV_EVAL = 0x00000800;      /* Evaluate results before returning */
-constexpr int EV_STRIP_TS = 0x00001000;  /* Strip trailing spaces */
-constexpr int EV_STRIP_LS = 0x00002000;  /* Strip leading spaces */
-constexpr int EV_STRIP_ESC = 0x00004000; /* Strip one level of \ characters */
-constexpr int EV_STRIP_AROUND =
-    0x00008000;                        /* Strip {} only at ends of string */
-constexpr int EV_TOP = 0x00010000;     /* This is a toplevel call to eval() */
-constexpr int EV_NOTRACE = 0x00020000; /* Don't trace this call to eval */
-constexpr int EV_NO_COMPRESS = 0x00040000; /* Don't compress spaces. */
-constexpr int EV_NO_LOCATION = 0x00080000; /* Supresses %l */
-constexpr int EV_NOFCHECK = 0x00100000;    /* Do not evaluate functions! */
 
 /* Termination directives */
 

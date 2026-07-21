@@ -3,13 +3,11 @@ set(MUX_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command.c
   ${MUX_MODULE_DIR}/commands/command_context.c
+  ${MUX_MODULE_DIR}/commands/command_helpers.c
   ${MUX_MODULE_DIR}/commands/command_invocation.c
   ${MUX_MODULE_DIR}/commands/command_queue.c
   ${MUX_MODULE_DIR}/commands/builder_commands.c
-  ${MUX_MODULE_DIR}/commands/custom_commands.c
-  ${MUX_MODULE_DIR}/commands/eval.c
-  ${MUX_MODULE_DIR}/commands/funceval.c
-  ${MUX_MODULE_DIR}/commands/functions.c
+  ${MUX_MODULE_DIR}/commands/command_parser.c
   ${MUX_MODULE_DIR}/commands/macro.c
   ${MUX_MODULE_DIR}/commands/verbs.c
   ${MUX_MODULE_DIR}/communication/commac.c
@@ -25,6 +23,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/help/help_index.c
   ${MUX_MODULE_DIR}/help/help_render.c
   ${MUX_MODULE_DIR}/lua/lua.c
+  ${MUX_MODULE_DIR}/lua/btech_package.c
   ${MUX_MODULE_DIR}/lua/mux_package.c
   ${MUX_MODULE_DIR}/network/connect_flow.c
   ${MUX_MODULE_DIR}/network/descriptor.c

@@ -6,7 +6,7 @@
 # please see docs/content/en/docs/configuration/stompymux-toml.md.
 # ----------------------------------------------------------------------------
 
-# Include the stock command/flag/function/attribute aliases. Add local
+# Include the stock command and flag aliases. Add local
 # aliases in the [aliases.*] tables below instead of editing aliases.toml -
 # this file's own keys always win over anything pulled in via `include`.
 include = ["aliases.toml"]
@@ -43,10 +43,6 @@ memory_limit = 67108864
 port = 5555
 # The name returned by mudname().
 mud_name = "Big Stompy Robot Game"
-# Max # of nested function calls before a func is aborted.
-function_recursion_limit = 2000
-# Max # of times a command may make function calls.
-function_invocation_limit = 400000
 # -----------------------------------------------
 #  Define local aliases/parameters/whatnot here.
 # -----------------------------------------------
@@ -178,28 +174,8 @@ login_hash_limit = 5
 # forbid = [ { address = "216.184.159.82", mask = "255.255.255.255" } ]
 
 # -----------------------------------------------
-#  Function/Command Security
+#  Command Security
 # -----------------------------------------------
-
-# Limit functions access
-[access.functions]
-encrypt = "wizard"
-decrypt = "wizard"
-vadd = "wizard"
-vdim = "wizard"
-vsub = "wizard"
-vmag = "wizard"
-vmul = "wizard"
-vunit = "wizard"
-acos = "wizard"
-asin = "wizard"
-atan = "wizard"
-cos = "wizard"
-dist2d = "wizard"
-dist3d = "wizard"
-pi = "wizard"
-sin = "wizard"
-tan = "wizard"
 
 # Limit commands access.
 [access.commands]
@@ -212,7 +188,6 @@ tan = "wizard"
 "@emit" = "wizard"
 "@open" = "wizard"
 "@remit" = "wizard"
-"@dolist" = "wizard"
 
 # -----------------------------------------------
 #  Logging Options

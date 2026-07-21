@@ -8,7 +8,6 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
-#include "mux/commands/functions.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
@@ -20,71 +19,6 @@
 #include "mux/world/search.h"
 #include "mux/world/walkdb.h"
 #include "mux/world/world_context.h"
-
-/**
- * Bind occurances of the universal var in ACTION to ARG, then run ACTION.
- * Cmds run in low-prio Q after a 1 sec delay for the first one.
- */
-static void bind_and_queue(EvaluationContext *evaluation, DbRef player,
-                           DbRef cause, char *action, char *argstr,
-                           char *cargs[], int ncargs, int number) {
-  char *command,
-      *command2; /*
-
-                                          * allocated by replace_string
-                                          */
-
-  command = replace_string(BOUND_VAR, argstr, action),
-  command2 = replace_string(LISTPLACE_VAR, tprintf("%d", number), command);
-  wait_que(evaluation->runtime->commands, player, cause, 0, NOTHING, 0,
-           command2, cargs, ncargs, evaluation->registers);
-  free_lbuf(command);
-  free_lbuf(command2);
-}
-
-/**
- * Iterates through a delimited string. Used in @dolist.
- */
-void do_dolist(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  DbRef cause = invocation->cause;
-  int key = invocation->key;
-  char *list = invocation->first;
-  char *command = invocation->second;
-  char **cargs = invocation->command_arguments;
-  int ncargs = invocation->command_argument_count;
-  const ServerConfiguration *configuration = evaluation->world->configuration;
-  char *curr, *objstring, delimiter = ' ';
-  int number = 0;
-
-  if (!list || *list == '\0') {
-    notify(evaluation, player,
-           "That's terrific, but what should I do with the list?");
-    return;
-  }
-  curr = list;
-
-  if (key == DOLIST_DELIMIT) {
-    char *tempstr;
-
-    if (strlen((tempstr = parse_to(configuration, &curr, ' ', EV_STRIP))) > 1) {
-      notify(evaluation, player, "The delimiter must be a single character!");
-      return;
-    }
-    delimiter = *tempstr;
-  }
-  while (curr && *curr) {
-    while (*curr == delimiter)
-      curr++;
-    if (*curr) {
-      number++;
-      objstring = parse_to(configuration, &curr, delimiter, EV_STRIP);
-      bind_and_queue(evaluation, player, cause, command, objstring, cargs,
-                     ncargs, number);
-    }
-  }
-}
 
 /**
  * Regular @find command
@@ -302,7 +236,8 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
      literal defaults need an explicit cast. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  pname = parse_to(context->world->configuration, &searchfor, '=', EV_STRIP_TS);
+  pname = parse_to(context->world->configuration, &searchfor, '=',
+                   COMMAND_PARSE_STRIP_TRAILING);
   if (!pname || !*pname) {
     pname = (char *)"me";
   } else
@@ -373,7 +308,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
 
   err = 0;
   parm->s_rst_name = nullptr;
-  parm->s_rst_eval = nullptr;
   parm->s_rst_type = NOTYPE;
   parm->s_zone = NOTHING;
   parm->s_fset.word1 = 0;
@@ -391,21 +325,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     if (string_prefix("exits", searchtype)) {
       parm->s_rst_name = searchfor;
       parm->s_rst_type = TYPE_EXIT;
-    } else if (string_prefix("evaluate", searchtype)) {
-      parm->s_rst_eval = searchfor;
-    } else if (string_prefix("eplayer", searchtype)) {
-      parm->s_rst_type = TYPE_PLAYER;
-      parm->s_rst_eval = searchfor;
-    } else if (string_prefix("eroom", searchtype)) {
-      parm->s_rst_type = TYPE_ROOM;
-      parm->s_rst_eval = searchfor;
-    } else if (string_prefix("eobject", searchtype) ||
-               string_prefix("ething", searchtype)) {
-      parm->s_rst_type = TYPE_THING;
-      parm->s_rst_eval = searchfor;
-    } else if (string_prefix("eexit", searchtype)) {
-      parm->s_rst_type = TYPE_EXIT;
-      parm->s_rst_eval = searchfor;
     } else {
       err = 1;
     }
@@ -528,15 +447,9 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
   Flag thing1flags, thing2flags, thing3flags;
   Power thing1powers, thing2powers;
   DbRef thing;
-  char *buff, *buff2, *result, *bp, *str;
-  int save_invk_ctr;
-
-  buff = alloc_sbuf("search_criteria_perform.num");
-  save_invk_ctr = context->function_invocations;
+  (void)cause;
 
   for (thing = parm->low_bound; thing <= parm->high_bound; thing++) {
-    context->function_invocations = save_invk_ctr;
-
     /*
      * Check for matching type
      */
@@ -598,34 +511,11 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
         continue;
     }
     /*
-     * Check for successful evaluation
-     */
-
-    if (parm->s_rst_eval != nullptr) {
-      if (typeof_obj(context->world->database, thing) == TYPE_GARBAGE)
-        continue;
-      snprintf(buff, SBUF_SIZE, "#%ld", thing);
-      buff2 = replace_string(BOUND_VAR, buff, parm->s_rst_eval);
-      result = bp = alloc_lbuf("search_criteria_perform");
-      str = buff2;
-      exec(context, result, &bp, 0, player, cause,
-           EV_FCHECK | EV_EVAL | EV_NOTRACE, &str, (char **)nullptr, 0);
-      *bp = '\0';
-      free_lbuf(buff2);
-      if (!*result || !xlate(result)) {
-        free_lbuf(result);
-        continue;
-      }
-      free_lbuf(result);
-    }
-    /*
      * It passed everything.  Amazing.
      */
 
     object_list_add(results, thing);
   }
-  free_sbuf(buff);
-  context->function_invocations = save_invk_ctr;
 }
 
 void do_search(CommandInvocation *invocation) {

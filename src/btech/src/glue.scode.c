@@ -26,8 +26,8 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.partnames.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/commands/functions.h"
 #include "mycool.h"
 #include "p.btechstats.h"
 #include "p.econ.h"
@@ -1817,7 +1817,7 @@ void fun_btcritslot(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
 
-  if (!fn_range_check("BTCRITSLOT", nfargs, 3, 4, buff, bufc))
+  if (!argument_count_in_range("BTCRITSLOT", nfargs, 3, 4, buff, bufc))
     return;
 
   it = match_thing(&context->command->match, player, fargs[0]);
@@ -1845,7 +1845,7 @@ void fun_btcritslot_ref(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
 
-  if (!fn_range_check("BTCRITSLOT_REF", nfargs, 3, 4, buff, bufc))
+  if (!argument_count_in_range("BTCRITSLOT_REF", nfargs, 3, 4, buff, bufc))
     return;
   FUNCHECK((mech = load_refmech(context->btech, fargs[0])) == NULL,
            "#-1 NO SUCH MECH");
@@ -1869,7 +1869,7 @@ void fun_btgetrange(char *buff, char **bufc, DbRef player, DbRef cause,
 
   FUNCHECK(!WizR(context->world->database, player), "#=1 PERMISSION DENIED");
 
-  if (!fn_range_check("BTGETRANGE", nfargs, 3, 7, buff, bufc))
+  if (!argument_count_in_range("BTGETRANGE", nfargs, 3, 7, buff, bufc))
     return;
 
   mapdb = match_thing(&context->command->match, player, fargs[0]);

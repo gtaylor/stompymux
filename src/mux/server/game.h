@@ -23,8 +23,6 @@ void notify_except2(EvaluationContext *evaluation, DbRef location, DbRef player,
 void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...)
     __attribute__((format(printf, 3, 4)));
-int check_filter(EvaluationContext *evaluation, DbRef object, DbRef player,
-                 int filter, const char *message);
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *message, int key);
 int is_hearer(EvaluationContext *evaluation, DbRef object);

@@ -21,7 +21,6 @@ struct SearchCriteria {
   POWERSET s_pset;
   DbRef s_zone;
   char *s_rst_name;
-  char *s_rst_eval;
   long low_bound;
   long high_bound;
 };

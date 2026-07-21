@@ -8,7 +8,6 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_queue.h"
-#include "mux/commands/functions.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
@@ -96,27 +95,11 @@ void report(CommandContext *command) {
  * Notifies the object #target of the message msg, and
  * optionally notify the contents, neighbors, and location also.
  */
-int check_filter(EvaluationContext *evaluation, DbRef object, DbRef player,
-                 int filter, const char *msg) {
-  (void)evaluation;
-  (void)object;
-  (void)player;
-  (void)filter;
-  (void)msg;
-  return 1;
-}
-
-static char *add_prefix(EvaluationContext *evaluation, DbRef object,
-                        DbRef player, int prefix, const char *msg,
-                        const char *dflt) {
-  (void)evaluation;
-  (void)object;
-  (void)player;
-  (void)prefix;
-  char *plain = alloc_lbuf("add_prefix");
+static char *format_forwarded_message(const char *msg, const char *prefix) {
+  char *plain = alloc_lbuf("format_forwarded_message");
   char *cursor = plain;
-  if (dflt && *dflt) {
-    safe_str(dflt, plain, &cursor);
+  if (prefix && *prefix) {
+    safe_str(prefix, plain, &cursor);
     safe_chr(' ', plain, &cursor);
   }
   safe_str(msg, plain, &cursor);
@@ -228,17 +211,6 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   case TYPE_THING:
   case TYPE_ROOM:
 
-    /* If we're in a pipe, objects can receive raw_notify
-     * if they're not a player and connected (if we didn't
-     * do this, they'd be notified twice! */
-
-    if (evaluation->is_piping &&
-        (!is_player(evaluation->world->database, target) ||
-         (is_player(evaluation->world->database, target) &&
-          !is_connected(evaluation->world->database, target)))) {
-      raw_notify(evaluation, target, msg_ns);
-    }
-
     /*
      * Forward puppet message if it is for me
      */
@@ -280,11 +252,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       DOLIST(evaluation->world->database, obj,
              game_object_exits(evaluation->world->database, target)) {
         recip = game_object_location(evaluation->world->database, obj);
-        if (is_audible(evaluation->world->database, obj) &&
-            ((recip != target) &&
-             check_filter(evaluation, obj, sender, A_FILTER, msg))) {
-          buff = add_prefix(evaluation, obj, target, A_PREFIX, msg,
-                            "From a distance,");
+        if (is_audible(evaluation->world->database, obj) && recip != target) {
+          buff = format_forwarded_message(msg, "From a distance,");
           notify_checked(evaluation, recip, sender, buff,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
           free_lbuf(buff);
@@ -306,11 +275,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
+        buff = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         * branch above where it holds an allocated formatted message.
          */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -325,10 +294,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         recip = game_object_location(evaluation->world->database, obj);
         if (is_good_obj(evaluation->world->database, recip) &&
             is_audible(evaluation->world->database, obj) &&
-            (recip != targetloc) && (recip != target) &&
-            check_filter(evaluation, obj, sender, A_FILTER, msg)) {
-          tbuff = add_prefix(evaluation, obj, target, A_PREFIX, buff,
-                             "From a distance,");
+            (recip != targetloc) && (recip != target)) {
+          tbuff = format_forwarded_message(buff, "From a distance,");
           notify_checked(evaluation, recip, sender, tbuff,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
           free_lbuf(tbuff);
@@ -342,8 +309,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
      * Deliver message to contents
      */
 
-    if ((key & MSG_INV) &&
-        (check_filter(evaluation, target, sender, A_INFILTER, msg))) {
+    if (key & MSG_INV) {
 
       /*
        * Don't prefix the message if we were given the * *
@@ -351,10 +317,10 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
        */
 
       if (key & MSG_S_OUTSIDE) {
-        buff = add_prefix(evaluation, target, sender, A_INPREFIX, msg, "");
+        buff = format_forwarded_message(msg, "");
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         * branch above where it holds an allocated formatted message.
          */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -376,16 +342,14 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
      */
 
     if (has_neighbors &&
-        ((key & MSG_NBR) ||
-         ((key & MSG_NBR_A) && target_audible &&
-          check_filter(evaluation, target, sender, A_FILTER, msg)))) {
+        ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible))) {
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, "");
+        buff = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         * branch above where it holds an allocated formatted message.
          */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -409,16 +373,14 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
      */
 
     if (has_neighbors &&
-        ((key & MSG_LOC) ||
-         ((key & MSG_LOC_A) && target_audible &&
-          check_filter(evaluation, target, sender, A_FILTER, msg)))) {
+        ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible))) {
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
+        buff = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       } else {
         /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an add_prefix(evaluation, ) allocation.
+         * branch above where it holds an allocated formatted message.
          */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -653,8 +615,7 @@ static int load_game(MuxServer *server) {
 }
 
 int is_hearer(EvaluationContext *evaluation, DbRef thing) {
-  return (evaluation->is_piping && thing == evaluation->pipe_object) ||
-         is_connected(evaluation->world->database, thing) ||
+  return is_connected(evaluation->world->database, thing) ||
          is_puppet(evaluation->world->database, thing);
 }
 
@@ -705,7 +666,6 @@ int main(int argc, char *argv[]) {
   init_chantab(&server.channels);
   init_flagtab(&server.world_indexes);
   init_powertab(&server.world_indexes);
-  init_functab(&server);
   init_version(&server);
 
   hash_table_initialize(&server.world_indexes.players, 250 * HASH_FACTOR);
@@ -765,7 +725,6 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&server.command_registry.commands);
   hash_table_reset(&server.command_registry.macros);
   channel_registry_reset_statistics(&server.channels);
-  hash_table_reset(&server.command_registry.functions);
   hash_table_reset(&server.world_indexes.flags);
   hash_table_reset(&server.world_indexes.players);
 

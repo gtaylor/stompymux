@@ -358,7 +358,7 @@ static int check_snapshot(const char *path) {
            "'btech_object_state', 'attributes');",
            6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 6) == 0 &&
+                 7) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
@@ -385,6 +385,10 @@ static int check_snapshot(const char *path) {
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                  "name = 'parent';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info("
+                 "'btech_object_state') WHERE name = 'mech_status';",
                  0) == 0 &&
        query_int(
            sqlite,

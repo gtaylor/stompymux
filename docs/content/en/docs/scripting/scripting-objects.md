@@ -91,6 +91,15 @@ The context has the usual `object`, `enactor`, `cause`, and optional
 types, embedded NUL bytes, and oversized strings are logged and fall back to
 the native appearance.
 
+## BattleTech status override
+
+`mech_status(ctx)` may return the status template used by the native armor
+status renderer for a BattleTech object. Returning `nil` or no value uses the
+native template for that unit type. The context identifies the mech as
+`object`, the viewer as `enactor`, and includes `cause` and `descriptor` in the
+same form as appearance hooks. Invalid or oversized results are logged and
+fall back to the native template.
+
 ## Object locks
 
 Define locks as functions in the module's `locks` table. The supported keys
@@ -121,7 +130,7 @@ that message. On failure, messages are delivered first and the corresponding
 The context includes the normal `object`, `enactor`, `cause`, and `descriptor`
 fields, plus `subject` (the object being tested), `lock`, `operation`, and
 `silent`. `operation` distinguishes uses of the same semantic lock. Its values
-are `match`, `traverse`, `take`, `look`, `command_match`, `listen`, `use`,
+are `match`, `traverse`, `take`, `look`, `command_match`, `use`,
 `drop`, `give`, `receive`, `enter`, `leave`, `teleport`, `teleport_out`,
 `link`, `set_home`, `speak`, `zone_control`, `channel_join`,
 `channel_transmit`, `channel_receive`, `btech_enter`, and `btech_contact`.
@@ -198,9 +207,6 @@ messages come from the structured lock result or the native defaults.
 | `on_teleport` | A player or thing teleports successfully. | `messages.teleport` |
 | `on_teleport_destination_fail` | Teleporting to a destination fails. | Lock result |
 | `on_teleport_out_fail` | Teleporting out of an origin fails. | Lock result |
-| `on_match_heard` | A matching `@listen` message is heard, including the speaker. | — |
-| `on_match_heard_other` | A matching `@listen` message is heard from someone else. | — |
-| `on_match_heard_self` | A matching `@listen` message is spoken by the object itself. | — |
 | `on_clone` | An object is cloned. | — |
 | `on_server_startup` | The server starts. | — |
 | `on_connect` | A player connects or reconnects. | — |

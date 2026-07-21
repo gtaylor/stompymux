@@ -14,7 +14,7 @@
 
 #include "mech.events.h"
 #include "mech.h"
-#include "mux/commands/functions.h"
+#include "mux/commands/command_helpers.h"
 #include "p.bsuit.h"
 #include "p.eject.h"
 #include "p.mech.restrict.h"

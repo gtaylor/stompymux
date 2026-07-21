@@ -9,7 +9,6 @@
 #include "p.glue.h"
 
 #include "mux/commands/command.h"
-#include "mux/commands/functions.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/comsys.h"
 #include "mux/database/attrs.h"
@@ -95,15 +94,6 @@ NameTable destroy_sw[] = {{"override", 8, CA_PUBLIC, DEST_OVERRIDE},
 NameTable dig_sw[] = {{"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
                       {nullptr, 0, 0, 0}};
 
-NameTable dolist_sw[] = {{"delimit", 1, CA_PUBLIC, DOLIST_DELIMIT},
-                         {"space", 1, CA_PUBLIC, DOLIST_SPACE},
-                         {
-                             nullptr,
-                             0,
-                             0,
-                             0,
-                         }};
-
 NameTable drop_sw[] = {{"quiet", 1, CA_PUBLIC, DROP_QUIET}, {nullptr, 0, 0, 0}};
 
 NameTable dump_sw[] = {{"structure", 1, CA_WIZARD, DUMP_STRUCT | SW_MULTIPLE},
@@ -129,10 +119,6 @@ NameTable femit_sw[] = {{"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
 NameTable fpose_sw[] = {{"default", 1, CA_PUBLIC, 0},
                         {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
                         {nullptr, 0, 0, 0}};
-
-NameTable function_sw[] = {{"privileged", 3, CA_WIZARD, FN_PRIV},
-                           {"preserve", 3, CA_WIZARD, FN_PRES},
-                           {nullptr, 0, 0, 0}};
 
 NameTable get_sw[] = {{"quiet", 1, CA_PUBLIC, GET_QUIET}, {nullptr, 0, 0, 0}};
 
@@ -174,16 +160,9 @@ NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
                         {"player", 1, CA_PUBLIC, STAT_PLAYER},
                         {nullptr, 0, 0, 0}};
 
-NameTable switch_sw[] = {{"all", 1, CA_PUBLIC, SWITCH_ANY},
-                         {"default", 1, CA_PUBLIC, SWITCH_DEFAULT},
-                         {"first", 1, CA_PUBLIC, SWITCH_ONE},
-                         {nullptr, 0, 0, 0}};
-
 NameTable teleport_sw[] = {{"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
                            {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
                            {nullptr, 0, 0, 0}};
-
-NameTable trig_sw[] = {{"quiet", 1, CA_PUBLIC, TRIG_QUIET}, {nullptr, 0, 0, 0}};
 
 NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
                        {"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
@@ -216,48 +195,23 @@ CMDENT command_table[] = {
      0,
      CS_NO_ARGS,
      {.invoke = do_comment_command_adapter}},
-    {"@admin",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_admin}},
+    {"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_admin}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
-    {"@boot",
-     boot_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_boot}},
-    {"@chan",
-     chan_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_chan}},
-    {"@chown",
-     nullptr,
-     CA_WIZARD,
-     CHOWN_ONE,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_chown}},
+    {"@boot", boot_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
+    {"@chan", chan_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
+    {"@chown", nullptr, CA_WIZARD, CHOWN_ONE, CS_TWO_ARG, {.invoke = do_chown}},
     {"@chownall",
      nullptr,
      CA_WIZARD,
      CHOWN_ALL,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_chownall}},
-    {"@chzone",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_chzone}},
+    {"@chzone", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chzone}},
     {"@clone",
      clone_sw,
      CA_WIZARD | CA_CONTENTS,
      0,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_clone}},
     {"@cpattr",
      nullptr,
@@ -269,46 +223,35 @@ CMDENT command_table[] = {
      nullptr,
      CA_WIZARD | CA_CONTENTS,
      0,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_create}},
     {"@cut",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      0,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_cut}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
     {"@destroy",
      destroy_sw,
      CA_WIZARD,
      DEST_ONE,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_destroy}},
     {"@desc", nullptr, CA_WIZARD, A_DESC, CS_TWO_ARG, {.invoke = do_setattr}},
     {"@idesc", nullptr, CA_WIZARD, A_IDESC, CS_TWO_ARG, {.invoke = do_setattr}},
     /*{"@destroyall", NULL, CA_WIZARD,
        DEST_ALL, CS_ONE_ARG, {.invoke = do_destroy}}, */
-    {"@dig",
-     dig_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_ARGV | CS_INTERP,
-     {.invoke = do_dig}},
+    {"@dig", dig_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_dig}},
     {"@disable",
      nullptr,
      CA_WIZARD,
      GLOB_DISABLE,
      CS_ONE_ARG,
      {.invoke = do_global}},
-    {"@dolist",
-     dolist_sw,
-     CA_WIZARD | CA_GBL_INTERP,
-     0,
-     CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
-     {.invoke = do_dolist}},
     {"@drain",
      nullptr,
-     CA_WIZARD | CA_GBL_INTERP,
+     CA_WIZARD,
      NFY_DRAIN,
      CS_TWO_ARG,
      {.invoke = do_notify}},
@@ -323,7 +266,7 @@ CMDENT command_table[] = {
      emit_sw,
      CA_WIZARD | CA_LOCATION,
      SAY_EMIT,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_say}},
     {"@enable",
      nullptr,
@@ -331,88 +274,42 @@ CMDENT command_table[] = {
      GLOB_ENABLE,
      CS_ONE_ARG,
      {.invoke = do_global}},
-    {"@entrances",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_entrances}},
+    {"@entrances", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_entrances}},
     {"@femit",
      femit_sw,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FEMIT,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_pemit}},
-    {"@find",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_find}},
+    {"@find", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_find}},
     /*{"@fnd", NULL, 0, 0, CS_ONE_ARG|CS_UNPARSE, {.invoke =
        do_fnd_command_adapter}}, */
     {"@force",
      nullptr,
-     CA_WIZARD | CA_GBL_INTERP,
+     CA_WIZARD | CA_QUEUE,
      FRC_COMMAND,
-     CS_TWO_ARG | CS_INTERP | CS_CMDARG | CS_NO_MACRO,
+     CS_TWO_ARG | CS_NO_MACRO,
      {.invoke = do_force}},
     {"@fpose",
      fpose_sw,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FPOSE,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_pemit}},
     {"@fsay",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FSAY,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_pemit}},
-    {"@function",
-     function_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_function}},
-    {"@halt",
-     halt_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_halt}},
+    {"@halt", halt_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_halt}},
     {"@help", help_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
-    {"@kick",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_kick}},
-    {"@last",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_last}},
-    {"@link",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_link}},
+    {"@kick", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_kick}},
+    {"@last", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_last}},
+    {"@link", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_link}},
     {"@lua", lua_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
-    {"@list",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_list}},
-    {"@list_file",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_list_file}},
+    {"@list", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list}},
+    {"@list_file", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list_file}},
 #ifdef ARBITRARY_LOGFILES
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
 #endif
@@ -422,36 +319,21 @@ CMDENT command_table[] = {
      0,
      CS_TWO_ARG | CS_ARGV,
      {.invoke = do_mvattr}},
-    {"@name",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_name}},
+    {"@name", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_name}},
     {"@newpassword",
      nullptr,
      CA_WIZARD,
      PASS_ANY,
      CS_TWO_ARG,
      {.invoke = do_newpassword}},
-    {"@notify",
-     notify_sw,
-     CA_WIZARD | CA_GBL_INTERP,
-     0,
-     CS_TWO_ARG,
-     {.invoke = do_notify}},
+    {"@notify", notify_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_notify}},
     {"@oemit",
      nullptr,
      CA_WIZARD | CA_LOCATION,
      PEMIT_OEMIT,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_pemit}},
-    {"@open",
-     open_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_ARGV | CS_INTERP,
-     {.invoke = do_open}},
+    {"@open", open_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_open}},
     {"@password",
      nullptr,
      CA_WIZARD,
@@ -468,7 +350,7 @@ CMDENT command_table[] = {
      pemit_sw,
      CA_WIZARD,
      PEMIT_PEMIT,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_pemit}},
     {"@npemit",
      pemit_sw,
@@ -482,52 +364,26 @@ CMDENT command_table[] = {
      nullptr,
      CA_WIZARD,
      SRCH_SEARCH,
-     CS_ONE_ARG | CS_NOINTERP,
+     CS_ONE_ARG,
      {.invoke = do_search}},
     {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_set}},
     {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
-    {"@stats",
-     stats_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_stats}},
-    {"@switch",
-     switch_sw,
-     CA_WIZARD | CA_GBL_INTERP,
-     0,
-     CS_TWO_ARG | CS_ARGV | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND,
-     {.invoke = do_switch}},
+    {"@stats", stats_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_stats}},
     {"@teleport",
      teleport_sw,
      CA_WIZARD,
      TELEPORT_DEFAULT,
-     CS_TWO_ARG | CS_INTERP,
+     CS_TWO_ARG,
      {.invoke = do_teleport}},
-    {"@unlink",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_unlink}},
+    {"@unlink", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_unlink}},
     {"@wait",
      nullptr,
-     CA_WIZARD | CA_GBL_INTERP,
+     CA_WIZARD | CA_QUEUE,
      0,
-     CS_TWO_ARG | CS_CMDARG | CS_NOINTERP | CS_STRIP_AROUND | CS_NO_MACRO,
+     CS_TWO_ARG | CS_STRIP_AROUND | CS_NO_MACRO,
      {.invoke = do_wait}},
-    {"@wall",
-     wall_sw,
-     CA_WIZARD,
-     SAY_SHOUT,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_say}},
-    {"@wipe",
-     wall_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_wipe}},
+    {"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG, {.invoke = do_say}},
+    {"@wipe", wall_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_wipe}},
     {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_session}},
     {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_who}},
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_addcom}},
@@ -539,33 +395,13 @@ CMDENT command_table[] = {
      drop_sw,
      CA_CONTENTS | CA_LOCATION,
      0,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_drop}},
-    {"enter",
-     enter_sw,
-     CA_LOCATION,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_enter}},
-    {"@examine",
-     examine_sw,
-     CA_WIZARD,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_examine}},
-    {"get", get_sw, CA_LOCATION, 0, CS_ONE_ARG | CS_INTERP, {.invoke = do_get}},
-    {"give",
-     give_sw,
-     CA_LOCATION,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_give}},
-    {"goto",
-     goto_sw,
-     CA_LOCATION,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_move}},
+    {"enter", enter_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_enter}},
+    {"@examine", examine_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_examine}},
+    {"get", get_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_get}},
+    {"give", give_sw, CA_LOCATION, 0, CS_TWO_ARG, {.invoke = do_give}},
+    {"goto", goto_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_move}},
     {"help", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_help}},
     {"inventory",
      nullptr,
@@ -573,39 +409,13 @@ CMDENT command_table[] = {
      LOOK_INVENTORY,
      CS_NO_ARGS,
      {.invoke = do_inventory}},
-    {"leave",
-     leave_sw,
-     CA_LOCATION,
-     0,
-     CS_NO_ARGS | CS_INTERP,
-     {.invoke = do_leave}},
-    {"look",
-     look_sw,
-     CA_LOCATION,
-     LOOK_LOOK,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_look}},
-    {"page", nullptr, 0, 0, CS_TWO_ARG | CS_INTERP, {.invoke = do_page}},
-    {"pose",
-     pose_sw,
-     CA_LOCATION,
-     SAY_POSE,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_say}},
+    {"leave", leave_sw, CA_LOCATION, 0, CS_NO_ARGS, {.invoke = do_leave}},
+    {"look", look_sw, CA_LOCATION, LOOK_LOOK, CS_ONE_ARG, {.invoke = do_look}},
+    {"page", nullptr, 0, 0, CS_TWO_ARG, {.invoke = do_page}},
+    {"pose", pose_sw, CA_LOCATION, SAY_POSE, CS_ONE_ARG, {.invoke = do_say}},
     {"quit", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_quit}},
-    {"say",
-     nullptr,
-     CA_LOCATION,
-     SAY_SAY,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_say}},
-    {"think", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_think}},
-    {"use",
-     nullptr,
-     CA_GBL_INTERP,
-     0,
-     CS_ONE_ARG | CS_INTERP,
-     {.invoke = do_use}},
+    {"say", nullptr, CA_LOCATION, SAY_SAY, CS_ONE_ARG, {.invoke = do_say}},
+    {"use", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_use}},
     {"version", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_version}},
     {"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_show}},
     {"+rolls", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_show_stat}},
@@ -614,31 +424,31 @@ CMDENT command_table[] = {
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP,
+     CS_ONE_ARG,
      {.invoke = do_say}},
     {"#",
      nullptr,
-     CA_GBL_INTERP | CF_DARK,
+     CA_QUEUE | CF_DARK,
      0,
-     CS_ONE_ARG | CS_INTERP | CS_CMDARG,
+     CS_ONE_ARG,
      {.invoke = do_force_prefixed}},
     {":",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     CS_ONE_ARG | CS_LEADIN,
      {.invoke = do_say}},
     {";",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     CS_ONE_ARG | CS_LEADIN,
      {.invoke = do_say}},
     {"\"",
      nullptr,
      CA_LOCATION | CF_DARK,
      SAY_PREFIX,
-     CS_ONE_ARG | CS_INTERP | CS_LEADIN,
+     CS_ONE_ARG | CS_LEADIN,
      {.invoke = do_say}},
     {"&",
      nullptr,
@@ -789,11 +599,13 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                            DbRef player, DbRef cause, int interactive,
                            char *arg, char *unp_command, char *cargs[],
                            int ncargs) {
-  char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00', *bp = nullptr,
-       *str = nullptr;
+  char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00';
   char *args[MAX_ARG];
-  int nargs = 0, i = 0, fail = 0, interp = 0, key = 0, xkey = 0;
-  size_t length = 0;
+  int nargs = 0, i = 0, fail = 0, parse_flags = 0, key = 0, xkey = 0;
+
+  (void)interactive;
+  (void)cargs;
+  (void)ncargs;
 
   memset(args, 0, sizeof(char *) * MAX_ARG);
 
@@ -820,8 +632,8 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
    * Check global flags
    */
 
-  if (is_protected(cmdp, CA_GBL_INTERP) &&
-      !context->world->configuration->is_interpreter_enabled) {
+  if (is_protected(cmdp, CA_QUEUE) &&
+      !context->world->configuration->is_command_queue_enabled) {
     notify(&context->evaluation, player,
            "Sorry, queueing and triggering are not allowed now.");
     return;
@@ -892,15 +704,11 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
    * the appropriate calling sequence and arguments.
    */
 
-  if ((cmdp->callseq & CS_INTERP) ||
-      !(interactive || (cmdp->callseq & CS_NOINTERP)))
-    interp = EV_EVAL | EV_STRIP;
-  else if (cmdp->callseq & CS_STRIP)
-    interp = EV_STRIP;
-  else if (cmdp->callseq & CS_STRIP_AROUND)
-    interp = EV_STRIP_AROUND;
-  else
-    interp = 0;
+  parse_flags = COMMAND_PARSE_STRIP_LEADING | COMMAND_PARSE_STRIP_TRAILING;
+  if (cmdp->callseq & CS_STRIP_AROUND)
+    parse_flags |= COMMAND_PARSE_STRIP_AROUND;
+  else if (!(cmdp->callseq & CS_UNPARSE))
+    parse_flags |= COMMAND_PARSE_STRIP;
 
   switch (cmdp->callseq & CS_NARG_MASK) {
   case CS_NO_ARGS: /*
@@ -922,36 +730,14 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                      nullptr, nullptr, 0, nullptr, 0);
       break;
     }
-    /* Interpret if necessary. */
-
-    if (interp & EV_EVAL) {
-      buf1 = bp = alloc_lbuf("process_cmdent");
-      str = arg;
-      exec(&context->evaluation, buf1, &bp, 0, player, cause,
-           interp | EV_FCHECK | EV_TOP, &str, cargs, ncargs);
-      length = strnlen(buf1, LBUF_SIZE - 1);
-      buf1[length] = '\0';
-    } else
-      buf1 =
-          parse_to(context->world->configuration, &arg, '\0', interp | EV_TOP);
+    buf1 = parse_to(context->world->configuration, &arg, '\0', parse_flags);
 
     /*
      * Call the correct handler
      */
 
-    if (cmdp->callseq & CS_CMDARG) {
-      command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                     nullptr, cargs, ncargs, nullptr, 0);
-    } else
-      command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                     nullptr, nullptr, 0, nullptr, 0);
-
-    /*
-     * Free the buffer if one was allocated
-     */
-
-    if (interp & EV_EVAL)
-      free_lbuf(buf1);
+    command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                   nullptr, nullptr, 0, nullptr, 0);
 
     break;
   case CS_TWO_ARG: /*
@@ -962,7 +748,8 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
      * Interpret ARG1
      */
 
-    buf2 = parse_to(context->world->configuration, &arg, '=', EV_STRIP_TS);
+    buf1 = parse_to(context->world->configuration, &arg, '=',
+                    COMMAND_PARSE_STRIP | COMMAND_PARSE_STRIP_TRAILING);
 
     /*
      * Handle when no '=' was specified
@@ -972,22 +759,14 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       arg = &tchar;
       *arg = '\0';
     }
-    buf1 = bp = alloc_lbuf("process_cmdent.2");
-    str = buf2;
-    exec(&context->evaluation, buf1, &bp, 0, player, cause,
-         EV_STRIP | EV_FCHECK | EV_EVAL | EV_TOP, &str, cargs, ncargs);
-    length = strnlen(buf1, LBUF_SIZE - 1);
-    buf1[length] = '\0';
-
     if (cmdp->callseq & CS_ARGV) {
 
       /*
        * Arg2 is ARGV style.  Go get the args
        */
 
-      parse_arglist(&context->evaluation, player, cause, arg, '\0',
-                    interp | EV_STRIP_LS | EV_STRIP_TS, args, MAX_ARG, cargs,
-                    ncargs);
+      parse_arglist(context->world->configuration, arg, '\0', parse_flags, args,
+                    MAX_ARG);
       for (nargs = 0; (nargs < MAX_ARG) && args[nargs]; nargs++)
         ;
 
@@ -995,13 +774,8 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
        * Call the correct command handler
        */
 
-      if (cmdp->callseq & CS_CMDARG) {
-        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                       nullptr, args, nargs, cargs, ncargs);
-      } else {
-        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                       nullptr, args, nargs, nullptr, 0);
-      }
+      command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
+                     nullptr, args, nargs, nullptr, 0);
 
       /*
        * Free the argument buffers
@@ -1013,50 +787,20 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
 
     } else {
 
-      /*
-       * Arg2 is normal style.  Interpret if needed
-       */
-
-      if (interp & EV_EVAL) {
-        buf2 = bp = alloc_lbuf("process_cmdent.3");
-        str = arg;
-        exec(&context->evaluation, buf2, &bp, 0, player, cause,
-             interp | EV_FCHECK | EV_TOP, &str, cargs, ncargs);
-        length = strnlen(buf2, LBUF_SIZE - 1);
-        buf2[length] = '\0';
-      } else if (cmdp->callseq & CS_UNPARSE) {
+      if (cmdp->callseq & CS_UNPARSE) {
         buf2 = parse_to(context->world->configuration, &arg, '\0',
-                        interp | EV_TOP | EV_NO_COMPRESS);
+                        COMMAND_PARSE_NO_COMPRESS);
       } else {
-        buf2 = parse_to(context->world->configuration, &arg, '\0',
-                        interp | EV_STRIP_LS | EV_STRIP_TS | EV_TOP);
+        buf2 = parse_to(context->world->configuration, &arg, '\0', parse_flags);
       }
 
       /*
        * Call the correct command handler
        */
 
-      if (cmdp->callseq & CS_CMDARG) {
-        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                       buf2, cargs, ncargs, nullptr, 0);
-      } else {
-        command_invoke(cmdp, context, player, cause, key, unp_command, buf1,
-                       buf2, nullptr, 0, nullptr, 0);
-      }
-
-      /*
-       * Free the buffer, if needed
-       */
-
-      if (interp & EV_EVAL)
-        free_lbuf(buf2);
+      command_invoke(cmdp, context, player, cause, key, unp_command, buf1, buf2,
+                     nullptr, 0, nullptr, 0);
     }
-
-    /*
-     * Free the buffer obtained by evaluating Arg1
-     */
-
-    free_lbuf(buf1);
     break;
   default:
     break;
@@ -1078,7 +822,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   const DbRef cause = context->enactor;
   const bool interactive = context->interactive;
   char *p = nullptr, *q = nullptr, *arg = nullptr, *lcbuf = nullptr,
-       *slashp = nullptr, *bp = nullptr, *str = nullptr;
+       *slashp = nullptr;
   const char *cmdsave = nullptr;
   long aflags = 0;
   int succ = 0, lua_succ = 0, i = 0;
@@ -1086,7 +830,6 @@ void process_command(CommandContext *context, char *command, char *args[],
   CMDENT *cmdp = nullptr;
   char *macroout = nullptr;
   int macerr = 0;
-  size_t length = 0;
 
   /*
    * Robustify player
@@ -1306,14 +1049,9 @@ void process_command(CommandContext *context, char *command, char *args[],
     context->debug_command = cmdsave;
     goto exit;
   }
-  /* Evaluate the command line for enter and leave alias matching. */
+  /* Match enter and leave aliases against the literal command line. */
 
-  bp = lcbuf;
-  str = command;
-  exec(&context->evaluation, lcbuf, &bp, 0, player, cause,
-       EV_EVAL | EV_FCHECK | EV_STRIP | EV_TOP, &str, args, nargs);
-  length = strnlen(lcbuf, LBUF_SIZE - 1);
-  lcbuf[length] = '\0';
+  StringCopy(lcbuf, command);
   succ = 0;
 
   /*
@@ -1517,7 +1255,7 @@ static void list_cmdtable(EvaluationContext *evaluation,
 NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
                               {"wizard", 3, CA_WIZARD, CA_WIZARD},
                               {"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
-                              {"global_interp", 8, CA_PUBLIC, CA_GBL_INTERP},
+                              {"queue_enabled", 6, CA_PUBLIC, CA_QUEUE},
                               {"disabled", 4, CA_GOD, CA_DISABLED},
                               {"need_location", 6, CA_PUBLIC, CA_LOCATION},
                               {"need_contents", 6, CA_PUBLIC, CA_CONTENTS},
@@ -1742,7 +1480,6 @@ static void list_df_flags(EvaluationContext *evaluation,
  * * list_options: List more game options from the context configuration.
  */
 
-static const char *switchd[] = {"/first", "/all"};
 static const char *ed[] = {"Disabled", "Enabled"};
 
 static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
@@ -1763,20 +1500,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (!configuration->dark_sleepers)
     raw_notify(evaluation, player,
                "The 'look' command shows disconnected players.");
-  if (configuration->trace_topdown) {
-    raw_notify(evaluation, player,
-               "Trace output is presented top-down (whole expression "
-               "first, then sub-exprs).");
-    raw_notify(evaluation, player,
-               tprintf("Only %d lines of trace output are displayed.",
-                       configuration->trace_limit));
-  } else {
-    raw_notify(evaluation, player,
-               "Trace output is presented bottom-up (subexpressions first).");
-  }
-  raw_notify(evaluation, player,
-             tprintf("The default switch for the '@switch' command is %s.",
-                     switchd[configuration->switch_df_all]));
   if (configuration->fascist_tport)
     raw_notify(evaluation, player,
                "You may only @teleport out of locations you control.");
@@ -1949,7 +1672,6 @@ static void list_process(EvaluationContext *evaluation,
 
 constexpr int LIST_COMMANDS = 2;
 constexpr int LIST_FLAGS = 4;
-constexpr int LIST_FUNCTIONS = 5;
 constexpr int LIST_GLOBALS = 6;
 constexpr int LIST_LOGGING = 8;
 constexpr int LIST_DF_FLAGS = 9;
@@ -1970,7 +1692,6 @@ NameTable list_names[] = {{"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
                           {"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
                           {"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
                           {"flags", 2, CA_PUBLIC, LIST_FLAGS},
-                          {"functions", 2, CA_PUBLIC, LIST_FUNCTIONS},
                           {"globals", 1, CA_WIZARD, LIST_GLOBALS},
                           {"logging", 4, CA_GOD, LIST_LOGGING},
                           {"options", 1, CA_PUBLIC, LIST_OPTIONS},
@@ -2012,10 +1733,6 @@ void do_list(CommandInvocation *invocation) {
     break;
   case LIST_FLAGS:
     display_flagtab(&invocation->context->evaluation, player);
-    break;
-  case LIST_FUNCTIONS:
-    list_functable(&invocation->context->evaluation, configuration,
-                   runtime->command_registry, player);
     break;
   case LIST_GLOBALS:
     list_global_controls(&invocation->context->evaluation, configuration,

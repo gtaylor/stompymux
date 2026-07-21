@@ -23,6 +23,8 @@
 #include "mech.h"
 #include "mech.partnames.h"
 #include "mech.tech.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mycool.h"
 #include "p.bsuit.h"
@@ -2468,27 +2470,23 @@ static ArmorFieldText armor_field_text(MECH *mech, const int loc,
   return result;
 }
 
-/* See if the 'mech has a 'custom' template (@mechstatus attr)
- * if so, exec() it to evaluate color/newlines.
- */
-static int get_statustemplate_attr(EvaluationContext *evaluation, DbRef player,
-                                   MECH *mech, char *result) {
-  char *resultc, *statattr = btech_attribute_read(mech->xcode.context->database,
-                                                  mech->mynum, A_MECHSTATUS,
-                                                  (char[LBUF_SIZE]){0});
-
-  if (!statattr || !*statattr)
-    return 0;
-
-  /* this is safe because tmpbuf is larger than LBUF_SIZE */
-  resultc = result;
-
-  exec(evaluation, result, &resultc, 0, player, mech->mynum,
-       EV_STRIP_AROUND | EV_NO_COMPRESS | EV_NO_LOCATION | EV_NOFCHECK |
-           EV_NOTRACE | EV_FIGNORE,
-       &statattr, nullptr, 0);
-
-  return 1;
+static bool get_lua_status_template(EvaluationContext *evaluation, DbRef player,
+                                    MECH *mech, char *result) {
+  LuaMechStatusResult status;
+  lua_mech_status_evaluate(
+      evaluation->runtime->lua_owner->runtime,
+      &(LuaMechStatusInvocation){
+          .descriptor =
+              evaluation->command ? evaluation->command->descriptor : nullptr,
+          .object = mech->mynum,
+          .enactor = player,
+          .cause = mech->mynum,
+      },
+      &status);
+  if (!status.defined)
+    return false;
+  StringCopy(result, status.rendered);
+  return true;
 }
 
 /* BTS = BattleTech status. */
@@ -2532,7 +2530,7 @@ void PrintArmorStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
     break;
   }
 
-  if (get_statustemplate_attr(evaluation, player, mech, tmpbuf)) {
+  if (get_lua_status_template(evaluation, player, mech, tmpbuf)) {
     /* Use custom template.  */
     srcbuf = tmpbuf;
   } else {

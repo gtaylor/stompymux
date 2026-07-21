@@ -28,9 +28,9 @@ constexpr int DARK = 0x00000040; /* Don't show contents or presence */
 constexpr int STICKY = 0x00000100; /* Object goes home when dropped */
 /* 0x00000200 is reserved for the removed DESTROY_OK flag. */
 /* 0x00000400 is reserved for the removed HAVEN flag. */
-constexpr int QUIET = 0x00000800;   /* Prevent 'feelgood' messages */
-constexpr int HALT = 0x00001000;    /* object cannot perform actions */
-constexpr int TRACE = 0x00002000;   /* Generate evaluation trace output */
+constexpr int QUIET = 0x00000800; /* Prevent 'feelgood' messages */
+constexpr int HALT = 0x00001000;  /* object cannot perform actions */
+/* 0x00002000 is reserved after removal of expression tracing. */
 constexpr int GOING = 0x00004000;   /* object is available for recycling */
 constexpr int MONITOR = 0x00008000; /* Process ^x:action listens on obj? */
 constexpr int MYOPIC = 0x00010000;  /* See things as nonowner/nonwizard */
@@ -154,7 +154,6 @@ constexpr DbRef GOD = 1;
  */
 /* is_verbose(database, X)        - Should owner receive all commands executed?
  */
-/* is_trace(database, X)          - Should owner receive eval trace output? */
 /* is_halted(database, X)         - Is X halted (not allowed to run commands)?
  */
 /* is_suspect(database, X)        - Is X someone the wizzes should keep an eye
@@ -258,9 +257,6 @@ static inline bool is_quiet(GameDatabase *database, DbRef x) {
 }
 static inline bool is_halted(GameDatabase *database, DbRef x) {
   return (game_object_flags(database, x) & HALT) != 0;
-}
-static inline bool is_trace(GameDatabase *database, DbRef x) {
-  return (game_object_flags(database, x) & TRACE) != 0;
 }
 static inline bool is_going(GameDatabase *database, DbRef x) {
   return (game_object_flags(database, x) & GOING) != 0;

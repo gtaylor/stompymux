@@ -6,7 +6,6 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -167,9 +166,9 @@ void parse_range(GameDatabase *database,
 
   buff1 = *name;
   if (buff1 && *buff1)
-    *name = parse_to(configuration, &buff1, ',', EV_STRIP_TS);
+    *name = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
   if (buff1 && *buff1) {
-    buff2 = parse_to(configuration, &buff1, ',', EV_STRIP_TS);
+    buff2 = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
     if (buff1 && *buff1) {
       while (*buff1 && isspace(*buff1))
         buff1++;

@@ -53,9 +53,7 @@ typedef void (*GenericFnPtr)(void);
 /* Compile time options */
 
 constexpr int PLAYER_NAME_LIMIT = 22; /* Max length for player names */
-constexpr int NUM_ENV_VARS = 10;      /* Number of env vars (%0 et al) */
 constexpr int MAX_ARG = 100;          /* max # args from command processor */
-constexpr int MAX_GLOBAL_REGS = 10;   /* r() registers */
 
 constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 

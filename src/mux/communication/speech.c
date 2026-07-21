@@ -7,7 +7,7 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
-#include "mux/commands/functions.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/database/attrs.h"
@@ -63,23 +63,6 @@ static void say_shout(EvaluationContext *evaluation, int target,
 static const char *announce_msg = "Announcement: ";
 static const char *broadcast_msg = "Broadcast: ";
 static const char *admin_msg = "Admin: ";
-
-void do_think(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  const DbRef player = invocation->player;
-  const DbRef cause = invocation->cause;
-  char *message = invocation->first;
-  char *str, buf[LBUF_SIZE], *bp;
-  int output_length;
-
-  bp = buf;
-  str = message;
-  exec(&invocation->context->evaluation, buf, &bp, 0, player, cause,
-       EV_FCHECK | EV_EVAL | EV_TOP, &str, (char **)nullptr, 0);
-  output_length = (int)strnlen(buf, LBUF_SIZE - 1);
-  buf[output_length] = '\0';
-  notify(evaluation, player, buf);
-}
 
 void do_say(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;

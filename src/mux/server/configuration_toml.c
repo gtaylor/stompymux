@@ -54,10 +54,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     /* server */
     {"server.port", "port", CFG_KIND_SCALAR},
     {"server.mud_name", "mud_name", CFG_KIND_SCALAR},
-    {"server.function_recursion_limit", "function_recursion_limit",
-     CFG_KIND_SCALAR},
-    {"server.function_invocation_limit", "function_invocation_limit",
-     CFG_KIND_SCALAR},
     /* battletech */
     {"battletech.explode_reactor", "btech_explode_reactor", CFG_KIND_SCALAR},
     {"battletech.explode_time", "btech_explode_time", CFG_KIND_SCALAR},
@@ -220,10 +216,7 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.show_unfindable_who", "show_unfindable_who", CFG_KIND_SCALAR},
     {"mux.space_compress", "space_compress", CFG_KIND_SCALAR},
     {"mux.stack_limit", "stack_limit", CFG_KIND_SCALAR},
-    {"mux.switch_default_all", "switch_default_all", CFG_KIND_SCALAR},
     {"mux.timeslice", "timeslice", CFG_KIND_SCALAR},
-    {"mux.trace_output_limit", "trace_output_limit", CFG_KIND_SCALAR},
-    {"mux.trace_topdown", "trace_topdown", CFG_KIND_SCALAR},
     {"mux.unowned_safe", "unowned_safe", CFG_KIND_SCALAR},
     {"mux.zone_recursion_limit", "zone_recursion_limit", CFG_KIND_SCALAR},
     {"mux.player_zone", "player_zone", CFG_KIND_SCALAR},
@@ -245,14 +238,12 @@ static const ConfigTomlMapping config_toml_map[] = {
 
     /* access */
     {"access.commands", "access", CFG_KIND_ACCESS_MAP},
-    {"access.functions", "function_access", CFG_KIND_ACCESS_MAP},
     {"access.lists", "list_access", CFG_KIND_ACCESS_MAP},
     {"access.config", "config_access", CFG_KIND_ACCESS_MAP},
 
     /* aliases */
     {"aliases.commands", "alias", CFG_KIND_ALIAS_MAP},
     {"aliases.flags", "flag_alias", CFG_KIND_ALIAS_MAP},
-    {"aliases.functions", "function_alias", CFG_KIND_ALIAS_MAP},
 
     /* names */
     {"names.bad", "bad_name", CFG_KIND_STRING_LIST},

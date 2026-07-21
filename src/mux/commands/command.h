@@ -53,9 +53,8 @@ void do_cut(CommandInvocation *invocation);
 void do_dbck(CommandInvocation *invocation); /* Consistency check */
 void do_destroy(CommandInvocation *invocation);
 void do_dig(CommandInvocation *invocation);
-void do_dolist(CommandInvocation *invocation); /* Iterate over a list. */
-void do_drop(CommandInvocation *invocation);   /* Drop an object */
-void do_dump(CommandInvocation *invocation);   /* Dump the database */
+void do_drop(CommandInvocation *invocation); /* Drop an object */
+void do_dump(CommandInvocation *invocation); /* Dump the database */
 void do_edit(CommandInvocation *invocation);
 void do_enter(CommandInvocation *invocation);     /* Enter an object */
 void do_entrances(CommandInvocation *invocation); /* List links to location. */
@@ -63,9 +62,8 @@ void do_examine(CommandInvocation *invocation);   /* @examine an object. */
 void do_find(CommandInvocation *invocation);      /* Search the database. */
 void do_force(CommandInvocation *invocation);
 void do_force_prefixed(CommandInvocation *invocation); /* #num cmd FORCE */
-void do_function(CommandInvocation *invocation); /* Define global function */
-void do_get(CommandInvocation *invocation);      /* Get an object */
-void do_give(CommandInvocation *invocation);     /* Give something away. */
+void do_get(CommandInvocation *invocation);            /* Get an object */
+void do_give(CommandInvocation *invocation); /* Give something away. */
 void do_global(CommandInvocation *invocation);
 void list_global_controls(EvaluationContext *evaluation,
                           ServerConfiguration *configuration, DbRef player);
@@ -104,10 +102,8 @@ void do_set(CommandInvocation *invocation);
 void do_setattr(CommandInvocation *invocation); /* Set object attribute */
 void do_setvattr(CommandInvocation *invocation);
 void do_shutdown(CommandInvocation *invocation); /* Stop the game */
-void do_stats(CommandInvocation *invocation);  /* Display object statistics. */
-void do_switch(CommandInvocation *invocation); /* Execute cmd based on match */
+void do_stats(CommandInvocation *invocation); /* Display object statistics. */
 void do_teleport(CommandInvocation *invocation);
-void do_think(CommandInvocation *invocation); /* Think command. */
 void do_unlink(CommandInvocation *invocation);
 void do_use(CommandInvocation *invocation);     /* Use object. */
 void do_version(CommandInvocation *invocation); /* List MUX version number */
@@ -155,12 +151,10 @@ constexpr int CS_ONE_ARG = 0x0001;   /* One argument */
 constexpr int CS_TWO_ARG = 0x0002;   /* Two arguments */
 constexpr int CS_NARG_MASK = 0x0003; /* Argument count mask */
 constexpr int CS_ARGV = 0x0004;      /* ARG2 is in ARGV form */
-constexpr int CS_INTERP = 0x0010;    /* Interpret ARG2 if 2 args, ARG1 if 1 */
-constexpr int CS_NOINTERP = 0x0020;  /* Never interp ARG2 if 2 or ARG1 if 1 */
-constexpr int CS_CAUSE = 0x0040;     /* Pass cause to old command handler */
+/* 0x0010 and 0x0020 are reserved after removal of command evaluation. */
+constexpr int CS_CAUSE = 0x0040;   /* Pass cause to old command handler */
 constexpr int CS_UNPARSE = 0x0080; /* Pass unparsed cmd to old-style handler */
-constexpr int CS_CMDARG = 0x0100;  /* Pass in given command args */
-constexpr int CS_STRIP = 0x0200;   /* Strip braces even when not interpreting */
+/* 0x0100 and 0x0200 are reserved after removal of evaluator arguments. */
 constexpr int CS_STRIP_AROUND =
     0x0400; /* Strip braces around entire string only */
 /* 0x0800 is reserved for the removed softcode-added command convention. */
@@ -184,11 +178,11 @@ constexpr int CA_NO_SUSPECT = 0x00008000; /* Not by SUSPECT players */
 constexpr int CA_NO_IC = 0x00020000;      /* Not by IC players */
 
 /* 0x01000000 is reserved for the removed global building restriction. */
-constexpr int CA_GBL_INTERP = 0x02000000; /* Requires the global INTERP flag */
-constexpr int CA_DISABLED = 0x04000000;   /* Command completely disabled */
-constexpr int CA_LOCATION = 0x10000000;   /* Invoker must have location */
-constexpr int CA_CONTENTS = 0x20000000;   /* Invoker must have contents */
-constexpr int CA_PLAYER = 0x40000000;     /* Invoker must be a player */
+constexpr int CA_QUEUE = 0x02000000;    /* Requires command queueing */
+constexpr int CA_DISABLED = 0x04000000; /* Command completely disabled */
+constexpr int CA_LOCATION = 0x10000000; /* Invoker must have location */
+constexpr int CA_CONTENTS = 0x20000000; /* Invoker must have contents */
+constexpr int CA_PLAYER = 0x40000000;   /* Invoker must be a player */
 // Stored as int (not unsigned) so it ORs cleanly into CMDENT.perms without
 // signedness conversions; C23 guarantees the top-bit pattern converts to
 // INT_MIN deterministically.

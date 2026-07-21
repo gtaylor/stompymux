@@ -8,8 +8,8 @@ weight: 20
 into sections (`[server]`, `[battletech]`, `[security]`, and so on).
 Configuration changes can be made through the appropriate wizard
 configuration commands (`@admin`) or by editing the file before starting the
-server. `stompymux.toml` includes `game/aliases.toml` (the stock command, flag,
-function, and attribute abbreviations) via a top-level `include` array; add
+server. `stompymux.toml` includes `game/aliases.toml` (the stock command and
+flag abbreviations) via a top-level `include` array; add
 local aliases to `stompymux.toml`'s own `[aliases.*]` tables rather than editing
 `aliases.toml` directly, since an including file's keys always win over
 anything pulled in through `include`.
@@ -20,13 +20,13 @@ anything pulled in through `include`.
 | --- | --- |
 | `[database]` | SQLite game database path, checkpoint dump interval, and mech/map database paths. |
 | `[lua]` | Lua module directory plus callback instruction and memory limits. |
-| `[server]` | Port, MUD name, and function recursion/invocation limits. |
+| `[server]` | Port and MUD name. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
 | `[security]` | Password hashing and login rate limiting (see below). |
 | `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
-| `[access.*]` | Per-command/function permission tables (`commands`, `functions`, `lists`, and `config`). |
-| `[aliases.*]` | Command, flag, and function alias tables (`commands`, `flags`, and `functions`). |
+| `[access.*]` | Permission tables for commands, lists, and configuration directives. |
+| `[aliases.*]` | Command and flag alias tables. |
 | `[names]` | `bad`/`good` player-name lists. |
 | `[logging]` | `log` and `log_options` bitmask arrays. |
 
@@ -41,8 +41,8 @@ directives take other shapes:
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@ch" = "@chown"`.
 - **Access directives** (`[access.*]`) are tables
-  mapping a command or function name to one or more permissions, e.g.
-  `encrypt = "wizard"` or `"@dig" = ["wizard", "need_location"]`.
+  mapping a command or list name to one or more permissions, e.g.
+  `"@dig" = ["wizard", "need_location"]`.
 - Building commands are restricted to Wizards. There is no global building
   toggle or `global_build` command-access permission.
 - **Site directives** (`[sites]`) are arrays of `{ address = "...", mask =

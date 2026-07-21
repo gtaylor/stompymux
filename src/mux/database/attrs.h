@@ -12,8 +12,7 @@ constexpr int A_DESC = 6; /* Description */
 /* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
 /* 12 through 20 are reserved for removed action attributes. */
 /* 21 through 25 are reserved for removed payment and money attributes. */
-constexpr int A_LISTEN = 26; /* (Wildcarded) string to listen for */
-/* 27 through 29 are reserved for removed listen action attributes. */
+/* 26 through 29 are reserved for removed listen attributes and actions. */
 constexpr int A_LAST = 30;     /* Date/time of last login (players only) */
 constexpr int A_QUEUEMAX = 31; /* Max. # of entries obj has in the queue */
 constexpr int A_IDESC = 32;    /* Inside description (ENTER to get inside) */
@@ -56,10 +55,7 @@ constexpr int A_PRIVS = 83;     /* Individual permissions */
 constexpr int A_LOGINDATA = 84; /* Recent login information */
 /* 85 through 87 are reserved for removed lock attributes. */
 constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
-constexpr int A_INPREFIX = 89; /* Prefix on incoming messages into objects */
-constexpr int A_PREFIX = 90;   /* Prefix used by exits/objects when audible */
-constexpr int A_INFILTER = 91; /* Filter to zap incoming text into objects */
-constexpr int A_FILTER = 92;   /* Filter to zap text forwarded by audible. */
+/* 89 through 92 are reserved for removed message prefix/filter attributes. */
 /* 93 and 94 are reserved for removed lock attributes. */
 /* 95 is reserved for the removed forwarding-list attribute. */
 /* 97 and 98 are reserved for removed lock attributes. */
@@ -94,7 +90,7 @@ constexpr int A_CONTACTOPT = 218; /* Contact options */
 constexpr int A_MECHNAME = 219;   /* Mech name */
 constexpr int A_MECHTYPE = 220;   /* Mech type */
 constexpr int A_MECHDESC = 221;   /* Mech extra desc (for view) */
-constexpr int A_MECHSTATUS = 222; /* Mech status string. Not to be tampered. */
+/* Attribute number 222 is reserved after removal of softcoded mech status. */
 constexpr int A_MWTEMPLATE = 229; /* MW template to use (if any) */
 constexpr int A_FACTION = 230;    /* Faction */
 constexpr int A_JOB = 231;        /* Job field */

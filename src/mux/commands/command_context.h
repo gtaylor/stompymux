@@ -37,18 +37,7 @@ struct EvaluationContext {
   ServerLog *log;
   WorldContext *world;
   CommandContext *command;
-  int function_nesting;
-  int function_invocations;
   int notification_nesting;
-  void *trace_head;
-  int trace_count;
-  bool trace_top;
-  char *registers[MAX_GLOBAL_REGS];
-  bool is_piping;
-  char *pipe_output;
-  char *pipe_next;
-  char *pipe_cursor;
-  DbRef pipe_object;
 };
 
 struct CommandContext {

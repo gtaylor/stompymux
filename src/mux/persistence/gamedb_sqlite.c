@@ -19,7 +19,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 6;
+constexpr int GAMEDB_SCHEMA_VERSION = 7;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -78,7 +78,7 @@ static const char schema_sql[] =
     " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
     " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
     " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
-    " mech_description TEXT, mech_status TEXT, mw_template TEXT,"
+    " mech_description TEXT, mw_template TEXT,"
     " faction TEXT, job TEXT, rank_number INTEGER, health TEXT,"
     " character_attributes TEXT, build_links TEXT, build_entrances TEXT,"
     " build_coordinates TEXT, advantages TEXT, pilot_dbref INTEGER,"
@@ -129,7 +129,6 @@ static const NativeColumn native_columns[] = {
     {A_MECHNAME, "btech_object_state", "mech_name"},
     {A_MECHTYPE, "btech_object_state", "mech_type"},
     {A_MECHDESC, "btech_object_state", "mech_description"},
-    {A_MECHSTATUS, "btech_object_state", "mech_status"},
     {A_MWTEMPLATE, "btech_object_state", "mw_template"},
     {A_FACTION, "btech_object_state", "faction"},
     {A_JOB, "btech_object_state", "job"},

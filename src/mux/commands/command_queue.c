@@ -8,9 +8,9 @@
 
 #include "btech/btech_context.h"
 #include "mux/commands/command.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/commands/functions.h"
 #include "mux/database/attrs.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
@@ -581,12 +581,10 @@ void do_notify(CommandInvocation *invocation) {
  */
 
 static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
-                       char *command, char *args[], int nargs, char *sargs[]) {
+                       char *command) {
   EvaluationContext *evaluation = &queue->background_command->evaluation;
-  int a;
-  size_t tlen;
+  int maximum;
   BQUE *tmp;
-  char *tptr;
 
   /*
    * Can we run commands at all?
@@ -600,10 +598,11 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
    * * * * * * * limited to QUEUE_QUOTA. -mnp
    */
 
-  a = queue_maximum(queue->players,
-                    game_object_owner(queue->world->database, player));
+  maximum = queue_maximum(queue->players,
+                          game_object_owner(queue->world->database, player));
   if (queue_adjust(queue->players,
-                   game_object_owner(queue->world->database, player), 1) > a) {
+                   game_object_owner(queue->world->database, player),
+                   1) > maximum) {
     notify(evaluation, game_object_owner(queue->world->database, player),
            "Run away objects: too many commands queued.  Halted.");
     halt_que(queue, game_object_owner(queue->world->database, player), NOTHING);
@@ -622,57 +621,14 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
    * Calculate the length of the save string
    */
 
-  tlen = 0;
-  if (command)
-    tlen = strlen(command) + 1;
-  if (nargs > NUM_ENV_VARS)
-    nargs = NUM_ENV_VARS;
-  for (a = 0; a < nargs; a++) {
-    if (args[a])
-      tlen += (strlen(args[a]) + 1);
-  }
-  if (sargs) {
-    for (a = 0; a < NUM_ENV_VARS; a++) {
-      if (sargs[a])
-        tlen += (strlen(sargs[a]) + 1);
-    }
-  }
   /*
    * Create the qeue entry and load the save string
    */
 
   tmp = malloc(sizeof(BQUE));
   memset(tmp, 0, sizeof(BQUE));
-  tmp->comm = nullptr;
-  for (a = 0; a < NUM_ENV_VARS; a++) {
-    tmp->env[a] = nullptr;
-  }
-  for (a = 0; a < MAX_GLOBAL_REGS; a++) {
-    tmp->scr[a] = nullptr;
-  }
-
-  tptr = tmp->text = malloc(tlen);
-  if (command) {
-    StringCopy(tptr, command);
-    tmp->comm = tptr;
-    tptr += (strlen(command) + 1);
-  }
-  for (a = 0; a < nargs; a++) {
-    if (args[a]) {
-      StringCopy(tptr, args[a]);
-      tmp->env[a] = tptr;
-      tptr += (strlen(args[a]) + 1);
-    }
-  }
-  if (sargs) {
-    for (a = 0; a < MAX_GLOBAL_REGS; a++) {
-      if (sargs[a]) {
-        StringCopy(tptr, sargs[a]);
-        tmp->scr[a] = tptr;
-        tptr += (strlen(sargs[a]) + 1);
-      }
-    }
-  }
+  tmp->text = strdup(command ? command : "");
+  tmp->comm = tmp->text;
   /*
    * Load the rest of the queue block
    */
@@ -691,7 +647,6 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
   tmp->sem = NOTHING;
   tmp->attr = 0;
   tmp->cause = cause;
-  tmp->nargs = nargs;
   tmp->queue = queue;
   return tmp;
 }
@@ -702,11 +657,10 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
  */
 
 void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
-              DbRef sem, int attr, char *command, char *args[], int nargs,
-              char *sargs[]) {
+              DbRef sem, int attr, char *command) {
   BQUE *cmd;
-  if (queue->world->configuration->is_interpreter_enabled)
-    cmd = setup_que(queue, player, cause, command, args, nargs, sargs);
+  if (queue->world->configuration->is_command_queue_enabled)
+    cmd = setup_que(queue, player, cause, command);
   else
     cmd = nullptr;
 
@@ -737,8 +691,6 @@ void do_wait(CommandInvocation *invocation) {
   DbRef cause = invocation->cause;
   char *event = invocation->first;
   char *cmd = invocation->second;
-  char **cargs = invocation->vector;
-  int ncargs = invocation->vector_count;
   CommandQueue *queue = invocation->context->runtime->commands;
   DbRef thing, aowner;
   int howlong, num, attr;
@@ -752,8 +704,7 @@ void do_wait(CommandInvocation *invocation) {
 
   if (is_number(event)) {
     howlong = atoi(event);
-    wait_que(queue, player, cause, howlong, NOTHING, 0, cmd, cargs, ncargs,
-             invocation->context->evaluation.registers);
+    wait_que(queue, player, cause, howlong, NOTHING, 0, cmd);
     return;
   }
   /*
@@ -814,8 +765,7 @@ void do_wait(CommandInvocation *invocation) {
       thing = NOTHING;
       howlong = 0;
     }
-    wait_que(queue, player, cause, howlong, thing, attr, cmd, cargs, ncargs,
-             invocation->context->evaluation.registers);
+    wait_que(queue, player, cause, howlong, thing, attr, cmd);
   }
 }
 
@@ -886,7 +836,7 @@ void do_second(CommandQueue *queue) {
 int do_top(CommandQueue *queue, int ncmds) {
   BQUE *tmp;
   DbRef object;
-  int count, i;
+  int count;
   char *command, *cp;
 
   if (!queue->world->configuration->is_dequeue_enabled)
@@ -936,44 +886,13 @@ int do_top(CommandQueue *queue, int ncmds) {
       queue_adjust(queue->players,
                    game_object_owner(queue->world->database, object), -1);
       if (!is_halted(queue->world->database, object)) {
-        for (i = 0; i < MAX_GLOBAL_REGS; i++) {
-          if (tmp->scr[i]) {
-            StringCopy(context.evaluation.registers[i], tmp->scr[i]);
-          } else {
-            *context.evaluation.registers[i] = '\0';
-          }
-        }
-
         command = tmp->comm;
 
         if (command) {
           while (command) {
             cp = parse_to(queue->world->configuration, &command, ';', 0);
             if (cp && *cp) {
-              while (command && (*command == '|')) {
-                command++;
-                context.evaluation.is_piping = true;
-                context.evaluation.pipe_next =
-                    alloc_lbuf("process_command.pipe");
-                context.evaluation.pipe_cursor = context.evaluation.pipe_next;
-                context.evaluation.pipe_object = object;
-                process_command(&context, cp, tmp->env, tmp->nargs);
-                if (context.evaluation.pipe_output) {
-                  free_lbuf(context.evaluation.pipe_output);
-                  context.evaluation.pipe_output = nullptr;
-                }
-
-                *context.evaluation.pipe_cursor = '\0';
-                context.evaluation.pipe_output = context.evaluation.pipe_next;
-                cp = parse_to(queue->world->configuration, &command, ';', 0);
-              }
-              context.evaluation.is_piping = false;
-              process_command(&context, cp, tmp->env, tmp->nargs);
-              if (context.evaluation.pipe_output) {
-                free_lbuf(context.evaluation.pipe_output);
-                context.evaluation.pipe_output = nullptr;
-                context.evaluation.pipe_next = nullptr;
-              }
+              process_command(&context, cp, nullptr, 0);
             }
           }
         }

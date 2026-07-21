@@ -7,7 +7,7 @@
 #include "mux/communication/commac.h"
 #include "mux/server/platform.h"
 
-#include "mux/commands/functions.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"

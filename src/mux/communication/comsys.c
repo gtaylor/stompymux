@@ -14,8 +14,8 @@
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
+#include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
-#include "mux/commands/functions.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/mux_event_alloc.h"
@@ -1582,24 +1582,4 @@ void do_chanstatus(CommandInvocation *invocation) {
   free_mbuf(temp);
   free_mbuf(buf);
   raw_notify(evaluation, player, "-- End of list of Channels --");
-}
-
-void fun_cemit(char *buff, char **bufc, DbRef player, DbRef cause,
-               char *fargs[], int nfargs, char *cargs[], int ncargs,
-               EvaluationContext *context) {
-  struct channel *ch;
-
-  if (!(ch = select_channel(context->runtime->channels, fargs[0]))) {
-    safe_str("#-1 CHANNEL NOT FOUND", buff, bufc);
-    return;
-  }
-
-  if (!context->world->configuration->have_comsys ||
-      !is_comm_all(context->world->database, player)) {
-    safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
-    return;
-  }
-
-  do_comprintf(context, ch, "[%s] %s", fargs[0], fargs[1]);
-  *buff = '\0';
 }

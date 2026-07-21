@@ -1,3 +1,5 @@
 [server]
 port = 2222
-function_recursion_limit = 100
+
+[database]
+dump_interval = 100

@@ -133,13 +133,6 @@ void raw_notify_raw(EvaluationContext *evaluation, DbRef player,
   if (!msg || !*msg)
     return;
 
-  if (evaluation->is_piping && (player == evaluation->pipe_object)) {
-    safe_str(msg, evaluation->pipe_next, &evaluation->pipe_cursor);
-    if (append != nullptr)
-      safe_str(append, evaluation->pipe_next, &evaluation->pipe_cursor);
-    return;
-  }
-
   if (!is_connected(evaluation->world->database, player))
     return;
 
@@ -182,10 +175,6 @@ void raw_notify_newline(EvaluationContext *evaluation, DbRef player) {
   DescriptorIterator iterator =
       descriptor_iterator_player(evaluation->runtime->descriptors, player);
 
-  if (evaluation->is_piping && (player == evaluation->pipe_object)) {
-    safe_str("\r\n", evaluation->pipe_next, &evaluation->pipe_cursor);
-    return;
-  }
   if (!is_connected(evaluation->world->database, player))
     return;
 

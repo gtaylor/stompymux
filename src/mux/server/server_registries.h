@@ -14,9 +14,6 @@ struct CommandRegistry {
   void *prefix_commands[256];
   void *goto_command;
   HashTable macros;
-  HashTable functions;
-  HashTable user_function_index;
-  void *user_functions;
 };
 
 typedef struct WorldIndexes WorldIndexes;

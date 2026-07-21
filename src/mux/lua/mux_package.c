@@ -6,7 +6,6 @@
 
 #include <lauxlib.h>
 
-#include "mux/commands/command_queue.h"
 #include "mux/database/attrs.h"
 #include "mux/database/flags.h"
 #include "mux/lua/lua_runtime.h"
@@ -239,22 +238,6 @@ static int lua_mux_notify(lua_State *state) {
   return 0;
 }
 
-static int lua_mux_command(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  const char *command = luaL_checkstring(state, 1);
-
-  if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.command is unavailable during @lua/check");
-  /* wait_que()'s command parameter isn't const-correct; command is only
-     read here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  wait_que(package->services->commands, 1, 1, 0, NOTHING, 0, (char *)command,
-           (char **)nullptr, 0, nullptr);
-#pragma clang diagnostic pop
-  return 0;
-}
-
 static int lua_mux_connected_players(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor;
@@ -353,9 +336,6 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_notify, 1);
   lua_setfield(state, -2, "notify");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_command, 1);
-  lua_setfield(state, -2, "command");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_connected_players, 1);
   lua_setfield(state, -2, "connected_players");

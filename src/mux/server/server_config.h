@@ -244,10 +244,7 @@ struct ServerConfiguration {
   int ex_flags;       /* TRUE = show flags on examine */
   int dark_sleepers;  /* Are sleeping players 'dark'? */
   int idle_wiz_dark;  /* Do idling wizards get set dark? */
-  int switch_df_all;  /* Should @switch match all by default? */
   int fascist_tport;  /* Source of teleport must be controlled */
-  int trace_topdown;  /* Is TRACE output top-down or bottom-up? */
-  int trace_limit;    /* Max lines of trace output if top-down */
   int stack_limit;    /* How big can stacks get? */
   int safe_unowned;   /* Are objects not owned by you safe? */
   int space_compress; /* Convert multiple spaces into one space */
@@ -268,7 +265,7 @@ struct ServerConfiguration {
   int cmd_quota_incr; /* Bump #cmds allowed by this each timeslice */
 
   bool is_login_enabled;         /* Allow nonwizard logins */
-  bool is_interpreter_enabled;   /* Allow object triggering */
+  bool is_command_queue_enabled; /* Allow commands to be queued */
   bool is_checkpointing_enabled; /* Perform automatic checkpoints */
   bool is_db_check_enabled;      /* Periodically check and clean the DB */
   bool is_idle_check_enabled;    /* Periodically check for idle users */
@@ -276,8 +273,6 @@ struct ServerConfiguration {
 
   int log_options;   /* What gets logged */
   int log_info;      /* Info that goes into log entries */
-  int func_nest_lim; /* Max nesting of functions */
-  int func_invk_lim; /* Max funcs invoked by a command */
   int ntfy_nest_lim; /* Max nesting of notifys */
   int zone_nest_lim; /* Max nesting of zones */
   int player_zone;

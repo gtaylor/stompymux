@@ -37,14 +37,11 @@ struct bque {
   DbRef sem;    /* blocking semaphore */
   int waittime; /* time to run command */
   int queuetime;
-  int attr;                /* blocking attribute */
-  char *text;              /* buffer for comm, env, and scr text */
-  char *comm;              /* command */
-  char *env[NUM_ENV_VARS]; /* environment vars */
-  char *scr[NUM_ENV_VARS]; /* temp vars */
-  int nargs;               /* How many args I have */
-  MuxTimer *timer;         /* timer for the wait queue */
-  CommandQueue *queue;     /* scheduler that owns this entry */
+  int attr;            /* blocking attribute */
+  char *text;          /* owned command storage */
+  char *comm;          /* command */
+  MuxTimer *timer;     /* timer for the wait queue */
+  CommandQueue *queue; /* scheduler that owns this entry */
 };
 
 /* Per object run queues */
@@ -70,8 +67,7 @@ void do_second(CommandQueue *queue);
 int nfy_que(CommandQueue *queue, DbRef player, int key, int wait, int attr);
 int halt_que(CommandQueue *queue, DbRef player, DbRef cause);
 void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
-              DbRef sem, int attr, char *command, char *arguments[],
-              int argument_count, char *commands[]);
+              DbRef sem, int attr, char *command);
 int que_next(CommandQueue *queue);
 int do_top(CommandQueue *queue, int command_count);
 void recover_queue_deposits(CommandQueue *queue);

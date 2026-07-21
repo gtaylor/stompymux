@@ -21,9 +21,9 @@
 #include "btechstats.h"
 #include "btmacros.h"
 #include "glue.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/commands/functions.h"
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
@@ -1655,7 +1655,7 @@ void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
   };
   static char *cmds[] = {"skills", "advantages", "attributes", NULL};
 
-  if (!fn_range_check("BTCHARLIST", nfargs, 1, 2, buff, bufc))
+  if (!argument_count_in_range("BTCHARLIST", nfargs, 1, 2, buff, bufc))
     return;
 
   if (nfargs == 2) {

@@ -232,8 +232,6 @@ void do_force(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *what = invocation->first;
   char *command = invocation->second;
-  char **args = invocation->vector;
-  int nargs = invocation->vector_count;
   DbRef victim;
 
   if ((victim = match_controlled(&invocation->context->match, player, what)) ==
@@ -245,7 +243,7 @@ void do_force(CommandInvocation *invocation) {
    */
 
   wait_que(invocation->context->runtime->commands, victim, player, 0, NOTHING,
-           0, command, args, nargs, invocation->context->evaluation.registers);
+           0, command);
 }
 
 void do_newpassword(CommandInvocation *invocation) {
@@ -408,7 +406,7 @@ typedef enum GlobalControl {
   GLOBAL_CONTROL_CLEANING,
   GLOBAL_CONTROL_DEQUEUEING,
   GLOBAL_CONTROL_IDLE_CHECKING,
-  GLOBAL_CONTROL_INTERPRET,
+  GLOBAL_CONTROL_QUEUEING,
   GLOBAL_CONTROL_LOGINS,
 } GlobalControl;
 
@@ -417,7 +415,7 @@ static const NameTable enable_names[] = {
     {"cleaning", 2, CA_PUBLIC, GLOBAL_CONTROL_CLEANING},
     {"dequeueing", 1, CA_PUBLIC, GLOBAL_CONTROL_DEQUEUEING},
     {"idlechecking", 2, CA_PUBLIC, GLOBAL_CONTROL_IDLE_CHECKING},
-    {"interpret", 2, CA_PUBLIC, GLOBAL_CONTROL_INTERPRET},
+    {"queueing", 2, CA_PUBLIC, GLOBAL_CONTROL_QUEUEING},
     {"logins", 3, CA_PUBLIC, GLOBAL_CONTROL_LOGINS},
     {nullptr, 0, 0, 0}};
 
@@ -432,8 +430,8 @@ static bool *global_control_value(ServerConfiguration *configuration,
     return &configuration->is_dequeue_enabled;
   case GLOBAL_CONTROL_IDLE_CHECKING:
     return &configuration->is_idle_check_enabled;
-  case GLOBAL_CONTROL_INTERPRET:
-    return &configuration->is_interpreter_enabled;
+  case GLOBAL_CONTROL_QUEUEING:
+    return &configuration->is_command_queue_enabled;
   case GLOBAL_CONTROL_LOGINS:
     return &configuration->is_login_enabled;
   default:

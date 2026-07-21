@@ -19,7 +19,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mechrep.h"
-#include "mux/commands/functions.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/server/server_api.h"
 #include "p.mech.build.h"

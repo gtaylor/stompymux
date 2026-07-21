@@ -2,6 +2,7 @@
 
 #include "mux/server/platform.h"
 
+#include "mux/lua/btech_package.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/mux_package.h"
 
@@ -55,9 +56,6 @@ static const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
     [LUA_EVENT_TELEPORT] = "on_teleport",
     [LUA_EVENT_TELEPORT_DESTINATION_FAIL] = "on_teleport_destination_fail",
     [LUA_EVENT_TELEPORT_OUT_FAIL] = "on_teleport_out_fail",
-    [LUA_EVENT_MATCH_HEARD] = "on_match_heard",
-    [LUA_EVENT_MATCH_HEARD_OTHER] = "on_match_heard_other",
-    [LUA_EVENT_MATCH_HEARD_SELF] = "on_match_heard_self",
     [LUA_EVENT_CLONE] = "on_clone",
     [LUA_EVENT_SERVER_STARTUP] = "on_server_startup",
     [LUA_EVENT_CONNECT] = "on_connect",
@@ -83,7 +81,6 @@ static const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT] = {
     [LUA_LOCK_OPERATION_TAKE] = "take",
     [LUA_LOCK_OPERATION_LOOK] = "look",
     [LUA_LOCK_OPERATION_COMMAND_MATCH] = "command_match",
-    [LUA_LOCK_OPERATION_LISTEN] = "listen",
     [LUA_LOCK_OPERATION_USE] = "use",
     [LUA_LOCK_OPERATION_DROP] = "drop",
     [LUA_LOCK_OPERATION_GIVE] = "give",
@@ -168,6 +165,7 @@ struct LuaRuntime {
   size_t schedule_job_count;
   time_t schedule_high_water;
   LuaMuxPackage mux_package;
+  LuaBtechPackage btech_package;
 };
 
 static int lua_runtime_is_checking(void *context);
@@ -396,6 +394,10 @@ static void lua_install_sandbox(LuaRuntime *runtime) {
   runtime->mux_package.is_checking = lua_runtime_is_checking;
   runtime->mux_package.flow_start = lua_runtime_flow_start;
   lua_mux_package_install(runtime->state, &runtime->mux_package);
+  runtime->btech_package.context = runtime;
+  runtime->btech_package.services = runtime->services;
+  runtime->btech_package.is_checking = lua_runtime_is_checking;
+  lua_btech_package_install(runtime->state, &runtime->btech_package);
   lua_pushlightuserdata(runtime->state, runtime);
   lua_pushcclosure(runtime->state, lua_require_module, 1);
   lua_setglobal(runtime->state, "require");
@@ -481,6 +483,11 @@ static int lua_require_module(lua_State *state) {
   char resolved[PATH_MAX];
   size_t index;
   char error[LBUF_SIZE];
+
+  if (!strcmp(name, "btech")) {
+    lua_getglobal(state, "btech");
+    return 1;
+  }
 
   if (!*name || name[0] == '.' || name[strlen(name) - 1] == '.')
     return luaL_error(state, "invalid module name");
@@ -945,8 +952,8 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     return 0;
   }
   if (root != LUA_ROOT_PACKAGES) {
-    static const char *appearance_names[] = {"internal_appearance",
-                                             "external_appearance"};
+    static const char *appearance_names[] = {
+        "internal_appearance", "external_appearance", "mech_status"};
     for (size_t index = 0;
          index < sizeof(appearance_names) / sizeof(*appearance_names);
          index++) {
@@ -1444,7 +1451,8 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
   notify_quiet(evaluation, player, "Lua appearances:");
   {
     bool found = false;
-    static const char *names[] = {"internal_appearance", "external_appearance"};
+    static const char *names[] = {"internal_appearance", "external_appearance",
+                                  "mech_status"};
 
     for (size_t index = 0; index < sizeof(names) / sizeof(*names); index++) {
       lua_getfield(state, module, names[index]);
@@ -1576,6 +1584,66 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
       } else if (memchr(rendered, '\0', length)) {
         lua_log_error(runtime, invocation->object, "APPEARANCE",
                       "appearance string contains an embedded NUL");
+      } else {
+        memcpy(result->rendered, rendered, length);
+        result->rendered[length] = '\0';
+        result->defined = true;
+      }
+    }
+  }
+  lua_settop(state, top);
+}
+
+void lua_mech_status_evaluate(LuaRuntime *runtime,
+                              const LuaMechStatusInvocation *invocation,
+                              LuaMechStatusResult *result) {
+  memset(result, 0, sizeof(*result));
+  if (!runtime || !invocation)
+    return;
+
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  if (!lua_attached_path(runtime, invocation->object, path, sizeof(path),
+                         nullptr))
+    return;
+
+  lua_State *state = runtime->state;
+  int top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, invocation->object, path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, "mech_status");
+  if (!lua_isfunction(state, -1)) {
+    lua_settop(state, top);
+    return;
+  }
+
+  lua_push_context(runtime->services->database, invocation->descriptor, state,
+                   invocation->object, invocation->enactor, invocation->cause,
+                   nullptr, nullptr, nullptr, nullptr, 0);
+  LUA_MODULE_ROOT previous_root = runtime->current_root;
+  runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
+  int status = lua_pcall_limited(runtime, 1, 1);
+  runtime->current_root = previous_root;
+  if (status) {
+    lua_log_error(runtime, invocation->object, "MECH_STATUS",
+                  lua_tostring(state, -1));
+  } else if (!lua_isnil(state, -1)) {
+    if (lua_type(state, -1) != LUA_TSTRING) {
+      lua_log_error(runtime, invocation->object, "MECH_STATUS",
+                    "mech_status must return a string or nil");
+    } else {
+      size_t length;
+      const char *rendered = lua_tolstring(state, -1, &length);
+      if (length >= sizeof(result->rendered)) {
+        lua_log_error(runtime, invocation->object, "MECH_STATUS",
+                      "mech_status exceeds the MUX buffer limit");
+      } else if (memchr(rendered, '\0', length)) {
+        lua_log_error(runtime, invocation->object, "MECH_STATUS",
+                      "mech_status contains an embedded NUL");
       } else {
         memcpy(result->rendered, rendered, length);
         result->rendered[length] = '\0';

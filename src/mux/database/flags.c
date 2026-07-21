@@ -372,7 +372,6 @@ FLAGENT gen_flags[] = {
     {"SAFE", SAFE, 's', 0, 0, fh_any},
     {"STICKY", STICKY, 'S', 0, 0, fh_wiz},
     {"SUSPECT", SUSPECT, 'u', FLAG_WORD2, CA_WIZARD, fh_wiz},
-    {"TRACE", TRACE, 'T', 0, 0, fh_any},
     {"TRANSPARENT", SEETHRU, 't', 0, 0, fh_any},
     {"UNFINDABLE", UNFINDABLE, 'U', FLAG_WORD2, 0, fh_any},
     {"VERBOSE", VERBOSE, 'v', 0, 0, fh_any},

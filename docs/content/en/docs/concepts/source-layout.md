@@ -12,7 +12,7 @@ The MUX server is organized by responsibility beneath `src/mux`.
 - `support` contains reusable containers, buffer helpers, and string utilities.
 - `database` owns game objects, exact-name Lua storage, flags, and powers.
 - `world` owns player, object, matching, movement, and presentation behavior.
-- `commands` owns command dispatch, queues, evaluation, and macros.
+- `commands` owns native command dispatch, queues, literal parsing, and macros.
 - `communication` owns channels and speech.
 - `network` owns client descriptors, Telnet, sockets, and event scheduling.
 - `persistence` owns SQLite-backed MUX data.
@@ -42,8 +42,8 @@ long-lived resources in dependency order:
 | `GameDatabase` | Object array, cached names, native subsystem state, exact-name Lua storage, allocation bounds, freelist, and mark buffer | Database, persistence, world, and command code |
 | `PersistenceContext` | Borrowed configuration, database, channels, macros, snapshot counters, and an owned bounded SQLite extension registry | Snapshot loading and writing |
 | `MacroRegistry` | Player macro sets and their capacity | Macro commands and commac persistence |
-| `ChannelRegistry` | Channel-name index and channel count | Comsys commands, functions, and commac persistence |
-| `CommandRegistry` | Built-in commands, prefixes, macros, functions, and user-function ordering | Command dispatch, evaluation, and configuration aliases |
+| `ChannelRegistry` | Channel-name index and channel count | Comsys commands and commac persistence |
+| `CommandRegistry` | Built-in commands, prefixes, and player macros | Command dispatch and configuration aliases |
 | `WorldIndexes` | Flag, power, and player indexes | Database, world, and command modules |
 | `AccessControlStore` | Allowed, forbidden, and suspect sites plus disallowed player names | Configuration, connection, and player creation paths |
 | `WorldContext` | Borrowed database, configuration, world indexes, access-control store, and descriptor registry | Object, matching, lock, and world-facing command operations |
@@ -60,8 +60,8 @@ long-lived resources in dependency order:
 | `CommandQueue` | Per-object, wait, and semaphore queues plus a narrow borrowed `CommandQueueDependencies` service view | Lifecycle ticks and command producers |
 | `CommandContext` | Player, enactor, descriptor, matching state, borrowed world/log/BTech services, and one `EvaluationContext` | Interactive and queued command dispatch |
 | `CommandRuntime` | Borrowed command-facing services, configuration and server-control capabilities, reloadable Lua owner slot, and process status values | `CommandContext` and `EvaluationContext` without exposing `MuxServer` |
-| `CommandInvocation` | Parsed command identity, arguments, vectors, and current `CommandContext` | Uniform typed command handlers and legacy adapters |
-| `EvaluationContext` | Function limits, registers, pipes, trace entries, and borrowed world/log/BTech services | Evaluator recursion and function handlers |
+| `CommandInvocation` | Parsed command identity, arguments, vectors, and current `CommandContext` | Uniform typed command handlers |
+| `EvaluationContext` | Notification depth and borrowed world/log/BTech services | Native commands and notifications |
 | `LuaServices` | Borrowed configuration, database, descriptors, command queue, clock, background notification context, log, and process counters | `LuaRuntime` without exposing `CommandRuntime` or `MuxServer` |
 | `LuaRuntime` | Lua state, loaded modules, schedules, sandbox package, and one borrowed `LuaServices` view | Lua commands, events, flows, and maintenance ticks |
 | `ServerLog` | Logging configuration, recursion depth, timestamp scratch space, and arbitrary-file cache | Process-wide logging entry points |
