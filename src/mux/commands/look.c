@@ -379,7 +379,6 @@ void do_look(CommandInvocation *invocation) {
   }
   match_here(&invocation->context->match);
   match_me(&invocation->context->match);
-  match_master_exit(&invocation->context->match);
   thing = match_result(&invocation->context->match);
 
   /*

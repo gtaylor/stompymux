@@ -657,8 +657,7 @@ static int destroyable(GameDatabase *database,
                        const ServerConfiguration *configuration, DbRef victim) {
   if ((victim == configuration->default_home) ||
       (victim == configuration->start_home) ||
-      (victim == configuration->start_room) ||
-      (victim == configuration->master_room) || (victim == (DbRef)0) ||
+      (victim == configuration->start_room) || (victim == (DbRef)0) ||
       is_god(database, victim))
     return 0;
   return 1;

@@ -343,16 +343,6 @@ static void dispatch_connection_event_scope(CommandRuntime *runtime,
 
   dispatch_connection_event(runtime, d, player, player, type, reconnect,
                             reason);
-  if (configuration->master_room != NOTHING) {
-    dispatch_connection_event(runtime, d, player, configuration->master_room,
-                              type, reconnect, reason);
-    DOLIST(runtime->world->database, object,
-           game_object_contents(runtime->world->database,
-                                configuration->master_room)) {
-      dispatch_connection_event(runtime, d, player, object, type, reconnect,
-                                reason);
-    }
-  }
   if (!configuration->have_zones ||
       (zone = game_object_zone(runtime->world->database, location)) == NOTHING)
     return;

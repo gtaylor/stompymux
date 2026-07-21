@@ -1267,18 +1267,6 @@ void process_command(CommandContext *context, char *command, char *args[],
       context->debug_command = cmdsave;
       goto exit;
     }
-    /*
-     * Check for an exit in the master room
-     */
-
-    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
-    match_master_exit(&context->match);
-    exit = last_match_result(&context->match);
-    if (exit != NOTHING) {
-      move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
-      context->debug_command = cmdsave;
-      goto exit;
-    }
   }
   /*
    * Set up a lowercase command and an arg pointer for the hashed
@@ -1927,11 +1915,8 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
            configuration->default_home);
   raw_notify(evaluation, player, buff);
 
-  snprintf(
-      buff, MBUF_SIZE,
-      "Misc: IdleQueueChunk...%d  ActiveQueueChunk...%d  Master_room...#%d",
-      configuration->queue_chunk, configuration->active_q_chunk,
-      configuration->master_room);
+  snprintf(buff, MBUF_SIZE, "Queue: IdleChunk...%d  ActiveChunk...%d",
+           configuration->queue_chunk, configuration->active_q_chunk);
   raw_notify(evaluation, player, buff);
 
   free_mbuf(buff);

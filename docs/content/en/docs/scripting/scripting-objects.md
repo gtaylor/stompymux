@@ -214,11 +214,10 @@ messages come from the structured lock result or the native defaults.
 Movement also invokes the applicable cross-location message providers, which
 do not have corresponding events.
 
-Connection events run for the player's attached module, the master room and
-its contents, and the applicable zone object or zone-room contents. Both
-receive `ctx.descriptor`. `on_connect` also receives boolean `ctx.reconnect`;
-`on_disconnect` receives string `ctx.reason` and runs only for the final active
-descriptor.
+Connection events run for the player's attached module and the applicable zone
+object or zone-room contents. Both receive `ctx.descriptor`. `on_connect` also
+receives boolean `ctx.reconnect`; `on_disconnect` receives string `ctx.reason`
+and runs only for the final active descriptor.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.

@@ -346,16 +346,6 @@ void match_carried_exit(MatchContext *match_context) {
     (void)match_exit_internal(match_context, md.player, md.player, CON_LOCAL);
 }
 
-void match_master_exit(MatchContext *match_context) {
-  if (md.confidence >= CON_DBREF)
-    return;
-  if (is_good_obj(md.evaluation->world->database, md.player) &&
-      has_exits(md.evaluation->world->database, md.player))
-    (void)match_exit_internal(
-        match_context, md.evaluation->world->configuration->master_room,
-        md.evaluation->world->configuration->master_room, 0);
-}
-
 void match_zone_exit(MatchContext *match_context) {
   if (md.confidence >= CON_DBREF)
     return;

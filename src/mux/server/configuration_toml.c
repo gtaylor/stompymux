@@ -200,7 +200,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.idle_timeout", "idle_timeout", CFG_KIND_SCALAR},
     {"mux.indent_desc", "indent_desc", CFG_KIND_SCALAR},
     {"mux.initial_size", "initial_size", CFG_KIND_SCALAR},
-    {"mux.master_room", "master_room", CFG_KIND_SCALAR},
     {"mux.match_own_commands", "match_own_commands", CFG_KIND_SCALAR},
     {"mux.max_players", "max_players", CFG_KIND_SCALAR},
     {"mux.notify_recursion_limit", "notify_recursion_limit", CFG_KIND_SCALAR},

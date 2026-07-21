@@ -29,7 +29,6 @@ extern void match_possession(MatchContext *);
 extern void match_neighbor(MatchContext *);
 extern void match_exit(MatchContext *);
 extern void match_carried_exit(MatchContext *);
-extern void match_master_exit(MatchContext *);
 extern void match_everything(MatchContext *, int);
 extern DbRef match_result(MatchContext *);
 extern DbRef last_match_result(MatchContext *);

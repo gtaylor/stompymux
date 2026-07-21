@@ -302,7 +302,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->start_room = 0;
   context->configuration->start_home = -1;
   context->configuration->default_home = -1;
-  context->configuration->master_room = -1;
   StringCopy(context->configuration->default_thing_lua_parent, "");
   StringCopy(context->configuration->default_room_lua_parent, "");
   StringCopy(context->configuration->default_exit_lua_parent, "");
@@ -1066,8 +1065,6 @@ CONF conftable[] = {
     {"map_database", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(database.map_db),
      sizeof(((ServerConfiguration *)nullptr)->database.map_db)},
-    {"master_room", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(master_room), 0},
     {"default_thing_lua_parent", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(default_thing_lua_parent),
      sizeof(((ServerConfiguration *)nullptr)->default_thing_lua_parent)},

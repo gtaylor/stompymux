@@ -130,8 +130,6 @@ command_quota_increment = 1000
 timeslice = 50
 # Fork off a new process for db dumps.
 fork_dump = true
-# DBRef of the master room.
-master_room = 9
 # Room where players start after creation.
 player_starting_room = 95
 # Default home for new players.

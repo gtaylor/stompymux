@@ -263,7 +263,6 @@ struct ServerConfiguration {
   int start_room;     /* initial location and home for players */
   int start_home;     /* initial HOME for players */
   int default_home;   /* HOME when home is inaccessable */
-  int master_room;    /* Room containing default cmds/exits/etc */
   char default_thing_lua_parent[128];  /* Lua parent for new things */
   char default_room_lua_parent[128];   /* Lua parent for new rooms */
   char default_exit_lua_parent[128];   /* Lua parent for new exits */
