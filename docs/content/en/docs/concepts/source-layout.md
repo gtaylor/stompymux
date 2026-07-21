@@ -10,11 +10,10 @@ The MUX server is organized by responsibility beneath `src/mux`.
 - `server` contains platform definitions, configuration parsing, server state,
   lifecycle, logging, timers, signals, and file caches.
 - `support` contains reusable containers, buffer helpers, and string utilities.
-- `database` owns game objects, attributes, flags, powers, locks, and virtual
-  attributes.
+- `database` owns game objects, exact-name Lua storage, flags, and powers.
 - `world` owns player, object, matching, movement, and presentation behavior.
 - `commands` owns command dispatch, queues, evaluation, and macros.
-- `communication` owns channels, communications attributes, and speech.
+- `communication` owns channels and speech.
 - `network` owns client descriptors, Telnet, sockets, and event scheduling.
 - `persistence` owns SQLite-backed MUX data.
 - `lua` owns the Lua runtime integration.
@@ -40,12 +39,12 @@ long-lived resources in dependency order:
 | Owner | Contains or depends on | Passed to |
 | --- | --- | --- |
 | `MuxServer` | Configuration, `BtechContext`, and all owners below | Startup and shutdown |
-| `GameDatabase` | Object array, cached names, attribute-number index, allocation bounds, freelist, and mark buffer | Database, persistence, world, and command code |
-| `PersistenceContext` | Borrowed configuration, database, vattrs, channels, macros, snapshot counters, and an owned bounded SQLite extension registry | Snapshot loading and writing |
+| `GameDatabase` | Object array, cached names, native subsystem state, exact-name Lua storage, allocation bounds, freelist, and mark buffer | Database, persistence, world, and command code |
+| `PersistenceContext` | Borrowed configuration, database, channels, macros, snapshot counters, and an owned bounded SQLite extension registry | Snapshot loading and writing |
 | `MacroRegistry` | Player macro sets and their capacity | Macro commands and commac persistence |
 | `ChannelRegistry` | Channel-name index and channel count | Comsys commands, functions, and commac persistence |
 | `CommandRegistry` | Built-in commands, prefixes, macros, functions, and user-function ordering | Command dispatch, evaluation, and configuration aliases |
-| `WorldIndexes` | Attribute, flag, power, player, forward-list, and parent-command indexes | Database, world, and command modules |
+| `WorldIndexes` | Flag, power, and player indexes | Database, world, and command modules |
 | `AccessControlStore` | Allowed, forbidden, and suspect sites plus disallowed player names | Configuration, connection, and player creation paths |
 | `WorldContext` | Borrowed database, configuration, world indexes, access-control store, and descriptor registry | Object, matching, lock, and world-facing command operations |
 | `ObjectList` | Results for one search or wildcard-attribute operation | Created and destroyed by the calling operation |
@@ -70,7 +69,6 @@ long-lived resources in dependency order:
 | `PlayerCache` | Per-player queue accounting | Queue and player operations |
 | `FileCache` | Connect, reject, quit, and rotating connection text | Network and file-list commands |
 | `HelpIndex` | Parsed article metadata rooted at one help directory | Help rendering and commands |
-| `VattrStore` | Dynamic attribute definitions and their string pool | Database persistence and attribute commands |
 
 Core MUX and BTech source files no longer access the old `mudstate` or
 `mudconf` aliases. Context headers mark non-owning members as borrowed;

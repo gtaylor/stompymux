@@ -351,6 +351,10 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/game/lua/object_logic/example.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/object_logic/counter.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/object_logic/events/enter_notice.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/default_thing.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/default_room.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/default_exit.lua"
+      "${CMAKE_SOURCE_DIR}/game/lua/object_logic/default_player.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/global_logic/example.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/global_logic/who.lua")
 

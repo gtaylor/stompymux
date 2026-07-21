@@ -1,7 +1,7 @@
 +++
 title = "@examine"
 description = "Inspect an object's complete internal state"
-keywords = ["@examine", "@examine/brief", "@examine/debug", "@examine/parent"]
+keywords = ["@examine", "@examine/brief", "@examine/debug"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -14,11 +14,11 @@ Inspect an object as a Wizard:
 @examine [<object>]
 @examine/brief [<object>]
 @examine/debug <object>
-@examine/parent <object>[/<attribute pattern>]
+@examine <object>[/<attribute pattern>]
 ```
 
-The normal view includes ownership, flags, powers, attributes, contents,
-locations and links, plus the effective Lua parent's commands, events,
-schedules, messages, and locks. `/brief` omits the ordinary attribute list,
-`/debug` displays raw database fields, and `/parent` includes inherited
-attributes when examining an attribute pattern.
+The normal view includes ownership, flags, powers, Lua storage entries, contents,
+locations and links, plus the direct Lua parent's appearances, commands,
+events, schedules, messages, and locks. `/brief` omits the ordinary attribute list,
+and `/debug` displays raw database fields. Storage names and patterns are
+case-sensitive. Entries have no flags, owners, or parent inheritance.

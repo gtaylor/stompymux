@@ -19,4 +19,4 @@ List scheduled modules, or inspect the schedules for an object or module:
 ```
 
 Object-logic paths are relative to `game/lua/object_logic`. Inspecting one also
-lists the objects that currently inherit it.
+lists the objects directly attached to it.

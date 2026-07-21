@@ -16,7 +16,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/database/vattr.h"
 #include "mux/help/help_command.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/configuration.h"
@@ -46,11 +45,6 @@ constexpr int SW_GOT_UNIQUE = 0x40000000;
 /*
  * (typically via a switch alias)
  */
-
-NameTable attrib_sw[] = {{"access", 1, CA_GOD, ATTRIB_ACCESS},
-                         {"delete", 1, CA_GOD, ATTRIB_DELETE},
-                         {"rename", 1, CA_GOD, ATTRIB_RENAME},
-                         {nullptr, 0, 0, 0}};
 
 NameTable boot_sw[] = {{"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
                        {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
@@ -91,7 +85,6 @@ NameTable clone_sw[] = {
     {"inherit", 3, CA_PUBLIC, CLONE_INHERIT | SW_MULTIPLE},
     {"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
     {"location", 1, CA_PUBLIC, CLONE_LOCATION},
-    {"parent", 2, CA_PUBLIC, CLONE_PARENT | SW_MULTIPLE},
     {"preserve", 2, CA_WIZARD, CLONE_PRESERVE | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
@@ -127,7 +120,6 @@ NameTable enter_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
 
 NameTable examine_sw[] = {{"brief", 1, CA_PUBLIC, EXAM_BRIEF},
                           {"debug", 1, CA_WIZARD, EXAM_DEBUG},
-                          {"parent", 1, CA_PUBLIC, EXAM_PARENT},
                           {nullptr, 0, 0, 0}};
 
 NameTable femit_sw[] = {{"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
@@ -182,15 +174,6 @@ NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
                         {"player", 1, CA_PUBLIC, STAT_PLAYER},
                         {nullptr, 0, 0, 0}};
 
-NameTable sweep_sw[] = {
-    {"connected", 3, CA_PUBLIC, SWEEP_CONNECT | SW_MULTIPLE},
-    {"exits", 1, CA_PUBLIC, SWEEP_EXITS | SW_MULTIPLE},
-    {"here", 1, CA_PUBLIC, SWEEP_HERE | SW_MULTIPLE},
-    {"inventory", 1, CA_PUBLIC, SWEEP_ME | SW_MULTIPLE},
-    {"listeners", 1, CA_PUBLIC, SWEEP_LISTEN | SW_MULTIPLE},
-    {"players", 1, CA_PUBLIC, SWEEP_PLAYER | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
-
 NameTable switch_sw[] = {{"all", 1, CA_PUBLIC, SWITCH_ANY},
                          {"default", 1, CA_PUBLIC, SWITCH_DEFAULT},
                          {"first", 1, CA_PUBLIC, SWITCH_ONE},
@@ -240,12 +223,6 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_INTERP,
      {.invoke = do_admin}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
-    {"@attribute",
-     attrib_sw,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_INTERP,
-     {.invoke = do_attribute}},
     {"@boot",
      boot_sw,
      CA_WIZARD,
@@ -301,13 +278,14 @@ CMDENT command_table[] = {
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_cut}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
-    {"@dbclean", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbclean}},
     {"@destroy",
      destroy_sw,
      CA_WIZARD,
      DEST_ONE,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_destroy}},
+    {"@desc", nullptr, CA_WIZARD, A_DESC, CS_TWO_ARG, {.invoke = do_setattr}},
+    {"@idesc", nullptr, CA_WIZARD, A_IDESC, CS_TWO_ARG, {.invoke = do_setattr}},
     /*{"@destroyall", NULL, CA_WIZARD,
        DEST_ALL, CS_ONE_ARG, {.invoke = do_destroy}}, */
     {"@dig",
@@ -474,7 +452,6 @@ CMDENT command_table[] = {
      0,
      CS_TWO_ARG | CS_ARGV | CS_INTERP,
      {.invoke = do_open}},
-    {"@parent", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_parent}},
     {"@password",
      nullptr,
      CA_WIZARD,
@@ -521,7 +498,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG | CS_INTERP,
      {.invoke = do_stats}},
-    {"@sweep", sweep_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_sweep}},
     {"@switch",
      switch_sw,
      CA_WIZARD | CA_GBL_INTERP,
@@ -534,12 +510,6 @@ CMDENT command_table[] = {
      TELEPORT_DEFAULT,
      CS_TWO_ARG | CS_INTERP,
      {.invoke = do_teleport}},
-    {"@trigger",
-     trig_sw,
-     CA_WIZARD | CA_GBL_INTERP,
-     0,
-     CS_TWO_ARG | CS_ARGV,
-     {.invoke = do_trigger}},
     {"@unlink",
      nullptr,
      CA_WIZARD,
@@ -676,44 +646,17 @@ CMDENT command_table[] = {
      SAY_PREFIX,
      CS_ONE_ARG | CS_INTERP | CS_LEADIN,
      {.invoke = do_say}},
-    {"&", nullptr, CF_DARK, 0, CS_TWO_ARG | CS_LEADIN, {.invoke = do_setvattr}},
+    {"&",
+     nullptr,
+     CA_WIZARD | CF_DARK,
+     0,
+     CS_TWO_ARG | CS_LEADIN,
+     {.invoke = do_setvattr}},
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
 void init_cmdtab(CommandRegistry *registry) {
   CMDENT *cp;
-  Attribute *ap;
-  char *p;
-  const char *q;
-  char *cbuff;
-
   hash_table_initialize(&registry->commands, 250 * HASH_FACTOR);
-
-  /*
-   * Load attribute-setting commands
-   */
-
-  cbuff = alloc_sbuf("init_cmdtab");
-  for (ap = attr_table; ap->name; ap++) {
-    if ((ap->flags & AF_NOCMD) == 0) {
-      p = cbuff;
-      *p++ = '@';
-      for (q = ap->name; *q; p++, q++)
-        *p = ToLower(*q);
-      *p = '\0';
-      cp = malloc(sizeof(CMDENT));
-      cp->cmdname = (char *)strsave(cbuff);
-      cp->perms = 0;
-      cp->switches = nullptr;
-      if (ap->flags & (AF_WIZARD | AF_MDARK)) {
-        cp->perms |= CA_WIZARD;
-      }
-      cp->extra = ap->number;
-      cp->callseq = CS_TWO_ARG;
-      cp->handler.invoke = do_setattr;
-      hash_table_add(cp->cmdname, (int *)cp, &registry->commands);
-    }
-  }
-  free_sbuf(cbuff);
 
   /*
    * Load the builtin commands
@@ -1316,7 +1259,7 @@ void process_command(CommandContext *context, char *command, char *args[],
      * Check for an exit name
      */
     init_match_check_keys(&context->match, player, command, TYPE_EXIT);
-    match_exit_with_parents(&context->match);
+    match_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
       move_exit(&context->evaluation, player, exit, 0, "You can't go that way.",
@@ -1409,10 +1352,9 @@ void process_command(CommandContext *context, char *command, char *args[],
                   game_object_location(context->world->database, player))) {
 
     /* Check for a leave alias */
-    p = attribute_parent_get(
-        context->world->database,
-        game_object_location(context->world->database, player), A_LALIAS,
-        &aowner, &aflags);
+    p = attribute_get(context->world->database,
+                      game_object_location(context->world->database, player),
+                      A_LALIAS, &aowner, &aflags);
     if (p && *p) {
       if (matches_exit_from_list(lcbuf, p)) {
         free_lbuf(lcbuf);
@@ -1433,8 +1375,8 @@ void process_command(CommandContext *context, char *command, char *args[],
            game_object_contents(
                context->world->database,
                game_object_location(context->world->database, player))) {
-      p = attribute_parent_get(context->world->database, exit, A_EALIAS,
-                               &aowner, &aflags);
+      p = attribute_get(context->world->database, exit, A_EALIAS, &aowner,
+                        &aflags);
       if (p && *p) {
         if (matches_exit_from_list(lcbuf, p)) {
           free_lbuf(lcbuf);
@@ -1599,32 +1541,6 @@ static void list_cmdtable(EvaluationContext *evaluation,
 
 /*
  * ---------------------------------------------------------------------------
- * * list_attrtable: List available attributes.
- */
-
-static void list_attrtable(EvaluationContext *evaluation, DbRef player) {
-  Attribute *ap;
-  char *buf, *bp;
-  const char *cp;
-
-  buf = alloc_lbuf("list_attrtable");
-  bp = buf;
-  for (cp = "Attributes:"; *cp; cp++)
-    *bp++ = *cp;
-  for (ap = attr_table; ap->name; ap++) {
-    if (see_attr(evaluation, player, player, ap, player, 0)) {
-      *bp++ = ' ';
-      for (cp = ap->name; *cp; cp++)
-        *bp++ = *cp;
-    }
-  }
-  *bp = '\0';
-  raw_notify(evaluation, player, buf);
-  free_lbuf(buf);
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * list_cmdaccess: List access commands.
  */
 
@@ -1644,10 +1560,8 @@ NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
 static void list_cmdaccess(EvaluationContext *evaluation,
                            const ServerConfiguration *configuration,
                            CommandRegistry *registry, DbRef player) {
-  char *buff, *p;
-  const char *q;
+  char *buff;
   CMDENT *cmdp;
-  Attribute *ap;
 
   buff = alloc_sbuf("list_cmdaccess");
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
@@ -1658,26 +1572,6 @@ static void list_cmdaccess(EvaluationContext *evaluation,
         name_table_list_set(evaluation, configuration, player, access_nametab,
                             cmdp->perms, buff, 1);
       }
-    }
-  }
-  for (ap = attr_table; ap->name; ap++) {
-    p = buff;
-    *p++ = '@';
-    for (q = ap->name; *q; p++, q++)
-      *p = ToLower(*q);
-    if (ap->flags & AF_NOCMD)
-      continue;
-    *p = '\0';
-    cmdp = (CMDENT *)hash_table_find(buff, &registry->commands);
-    if (cmdp == nullptr)
-      continue;
-    if (!check_access(evaluation->world->database, configuration, player,
-                      cmdp->perms))
-      continue;
-    if (!(cmdp->perms & CF_DARK)) {
-      snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
-      name_table_list_set(evaluation, configuration, player, access_nametab,
-                          cmdp->perms, buff, 1);
     }
   }
   free_sbuf(buff);
@@ -1709,54 +1603,6 @@ static void list_cmdswitches(EvaluationContext *evaluation,
   }
   free_sbuf(buff);
 }
-/* *INDENT-OFF* */
-
-/* ---------------------------------------------------------------------------
- * list_attraccess: List access to attributes.
- */
-
-NameTable attraccess_nametab[] = {{"dark", 2, CA_WIZARD, AF_DARK},
-                                  {"deleted", 2, CA_WIZARD, AF_DELETED},
-                                  {"god", 1, CA_PUBLIC, AF_GOD},
-                                  {"hidden", 1, CA_WIZARD, AF_MDARK},
-                                  {"ignore", 2, CA_WIZARD, AF_NOCMD},
-                                  {"internal", 2, CA_WIZARD, AF_INTERNAL},
-                                  {"no_command", 4, CA_PUBLIC, AF_NOPROG},
-                                  {"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
-                                  {"private", 1, CA_PUBLIC, AF_ODARK},
-                                  {"regexp", 1, CA_PUBLIC, AF_REGEXP},
-                                  {"visual", 1, CA_PUBLIC, AF_VISUAL},
-                                  {"wizard", 1, CA_PUBLIC, AF_WIZARD},
-                                  {nullptr, 0, 0, 0}};
-
-NameTable indiv_attraccess_nametab[] = {
-    {"hidden", 1, CA_WIZARD, AF_MDARK},
-    {"wizard", 1, CA_WIZARD, AF_WIZARD},
-    {"no_command", 4, CA_PUBLIC, AF_NOPROG},
-    {"no_inherit", 4, CA_PUBLIC, AF_PRIVATE},
-    {"visual", 1, CA_PUBLIC, AF_VISUAL},
-    {"regexp", 1, CA_PUBLIC, AF_REGEXP},
-    {nullptr, 0, 0, 0}};
-
-/* *INDENT-ON* */
-
-static void list_attraccess(EvaluationContext *evaluation,
-                            const ServerConfiguration *configuration,
-                            DbRef player) {
-  char *buff;
-  Attribute *ap;
-
-  buff = alloc_sbuf("list_attraccess");
-  for (ap = attr_table; ap->name; ap++) {
-    if (read_attr(evaluation, player, player, ap, player, 0)) {
-      snprintf(buff, SBUF_SIZE, "%s:", ap->name);
-      name_table_list_set(evaluation, configuration, player, attraccess_nametab,
-                          ap->flags, buff, 1);
-    }
-  }
-  free_sbuf(buff);
-}
-
 /*
  * ---------------------------------------------------------------------------
  * * cf_access: Change command or switch permissions.
@@ -1791,70 +1637,6 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
                                        context);
   } else {
     configuration_log_not_found(context, player, cmd, "Command", str);
-    return -1;
-  }
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * cf_acmd_access: Chante command permissions for all attr-setting cmds.
- */
-
-int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context) {
-  CMDENT *cmdp;
-  Attribute *ap;
-  char *buff, *p;
-  const char *q;
-  int failure, save;
-
-  buff = alloc_sbuf("cf_acmd_access");
-  for (ap = attr_table; ap->name; ap++) {
-    p = buff;
-    *p++ = '@';
-    for (q = ap->name; *q; p++, q++)
-      *p = ToLower(*q);
-    *p = '\0';
-    cmdp =
-        (CMDENT *)hash_table_find(buff, &context->command_registry->commands);
-    if (cmdp != nullptr) {
-      save = cmdp->perms;
-      failure = configuration_modify_bits(&(cmdp->perms), str, extra, player,
-                                          cmd, context);
-      if (failure != 0) {
-        cmdp->perms = save;
-        free_sbuf(buff);
-        return -1;
-      }
-    }
-  }
-  free_sbuf(buff);
-  return 0;
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * cf_attr_access: Change access on an attribute.
- */
-
-int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context) {
-  Attribute *ap;
-  char *sp;
-
-  for (sp = str; *sp && !isspace(*sp); sp++)
-    ;
-  if (*sp)
-    *sp++ = '\0';
-  while (*sp && isspace(*sp))
-    sp++;
-
-  ap = attribute_by_name(context->database, str);
-  if (ap != nullptr)
-    return configuration_modify_bits(&(ap->flags), sp, extra, player, cmd,
-                                     context);
-  else {
-    configuration_log_not_found(context, player, cmd, "Attribute", str);
     return -1;
   }
 }
@@ -2014,17 +1796,10 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (!configuration->robot_speak)
     raw_notify(evaluation, player,
                "Robots are not allowed to speak in public areas.");
-  if (configuration->player_listen)
-    raw_notify(evaluation, player,
-               "The @Listen/@Ahear attribute set works on player objects.");
   if (configuration->ex_flags)
     raw_notify(
         evaluation, player,
         "The '@examine' command lists the flag names for the object's flags.");
-  if (!configuration->quiet_look)
-    raw_notify(evaluation, player,
-               "The 'look' command shows visible attributes in "
-               "addition to the description.");
   if (configuration->see_own_dark)
     raw_notify(evaluation, player,
                "The 'look' command lists DARK objects owned by you.");
@@ -2059,8 +1834,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   raw_notify(evaluation, player,
              tprintf("The default switch for the '@switch' command is %s.",
                      switchd[configuration->switch_df_all]));
-  if (configuration->sweep_dark)
-    raw_notify(evaluation, player, "Players may @sweep dark locations.");
   if (configuration->fascist_tport)
     raw_notify(evaluation, player,
                "You may only @teleport out of locations you control.");
@@ -2246,7 +2019,6 @@ static void list_process(EvaluationContext *evaluation,
  * * do_list: List information stored in internal structures.
  */
 
-constexpr int LIST_ATTRIBUTES = 1;
 constexpr int LIST_COMMANDS = 2;
 constexpr int LIST_FLAGS = 4;
 constexpr int LIST_FUNCTIONS = 5;
@@ -2254,7 +2026,6 @@ constexpr int LIST_GLOBALS = 6;
 constexpr int LIST_LOGGING = 8;
 constexpr int LIST_DF_FLAGS = 9;
 constexpr int LIST_PERMS = 10;
-constexpr int LIST_ATTRPERMS = 11;
 constexpr int LIST_OPTIONS = 12;
 constexpr int LIST_CONF_PERMS = 15;
 constexpr int LIST_SITEINFO = 16;
@@ -2265,9 +2036,7 @@ constexpr int LIST_PROCESS = 21;
 constexpr int LIST_BADNAMES = 22;
 constexpr int LIST_LOGFILES = 23;
 
-NameTable list_names[] = {{"attr_permissions", 5, CA_WIZARD, LIST_ATTRPERMS},
-                          {"attributes", 2, CA_PUBLIC, LIST_ATTRIBUTES},
-                          {"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
+NameTable list_names[] = {{"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
                           {"commands", 3, CA_PUBLIC, LIST_COMMANDS},
                           {"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
                           {"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
@@ -2300,9 +2069,6 @@ void do_list(CommandInvocation *invocation) {
   flagvalue = name_table_search(runtime->world->database, configuration, player,
                                 list_names, arg);
   switch (flagvalue) {
-  case LIST_ATTRIBUTES:
-    list_attrtable(&invocation->context->evaluation, player);
-    break;
   case LIST_COMMANDS:
     list_cmdtable(&invocation->context->evaluation, configuration, player);
     break;
@@ -2339,9 +2105,6 @@ void do_list(CommandInvocation *invocation) {
     break;
   case LIST_POWERS:
     display_powertab(&invocation->context->evaluation, player);
-    break;
-  case LIST_ATTRPERMS:
-    list_attraccess(&invocation->context->evaluation, configuration, player);
     break;
   case LIST_LOGGING:
     name_table_interpret(&invocation->context->evaluation, configuration,

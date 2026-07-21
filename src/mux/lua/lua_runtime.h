@@ -66,6 +66,24 @@ typedef struct LuaEventInvocation {
   const char *reason;
 } LuaEventInvocation;
 
+typedef enum LuaAppearanceType {
+  LUA_APPEARANCE_INTERNAL,
+  LUA_APPEARANCE_EXTERNAL,
+} LuaAppearanceType;
+
+typedef struct LuaAppearanceInvocation {
+  LuaAppearanceType type;
+  Descriptor *descriptor;
+  DbRef object;
+  DbRef enactor;
+  DbRef cause;
+} LuaAppearanceInvocation;
+
+typedef struct LuaAppearanceResult {
+  bool defined;
+  char rendered[LBUF_SIZE];
+} LuaAppearanceResult;
+
 typedef enum LuaLockType {
   LUA_LOCK_DEFAULT,
   LUA_LOCK_DROP,
@@ -225,6 +243,9 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
                         DbRef player, DbRef object);
 int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                       DbRef player, DbRef cause, const char *command);
+void lua_appearance_evaluate(LuaRuntime *runtime,
+                             const LuaAppearanceInvocation *invocation,
+                             LuaAppearanceResult *result);
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                            DbRef first, DbRef player, DbRef cause,
                            const char *command);

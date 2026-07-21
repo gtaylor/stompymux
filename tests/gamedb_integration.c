@@ -201,6 +201,41 @@ static int query_int(sqlite3 *sqlite, const char *sql, sqlite3_int64 expected) {
   return ok ? 0 : -1;
 }
 
+static int query_text(sqlite3 *sqlite, const char *sql, const char *expected) {
+  sqlite3_stmt *statement;
+  const unsigned char *actual;
+  int ok;
+
+  statement = NULL;
+  ok = sqlite3_prepare_v2(sqlite, sql, -1, &statement, NULL) == SQLITE_OK &&
+       sqlite3_step(statement) == SQLITE_ROW;
+  actual = ok ? sqlite3_column_text(statement, 0) : NULL;
+  ok = ok && actual != NULL && !strcmp((const char *)actual, expected);
+  sqlite3_finalize(statement);
+  return ok ? 0 : -1;
+}
+
+static int check_minimal_lua_parents(const char *path) {
+  sqlite3 *sqlite;
+  int result;
+
+  sqlite = NULL;
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  result = query_text(sqlite,
+                      "SELECT lua_parent FROM object_state "
+                      "WHERE object_dbref = 0;",
+                      "room.lua") == 0 &&
+                   query_text(sqlite,
+                              "SELECT lua_parent FROM object_state "
+                              "WHERE object_dbref = 1;",
+                              "player.lua") == 0
+               ? 0
+               : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
 /* Identify the first non-default BTech value that failed to round-trip. */
 static int check_btech_value(sqlite3 *sqlite, const char *label,
                              const char *sql, sqlite3_int64 expected) {
@@ -319,31 +354,37 @@ static int check_snapshot(const char *path) {
   ok = query_int(
            sqlite,
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-           "IN ('snapshot', 'vattrs', 'objects', 'attributes');",
-           4) == 0 &&
+           "IN ('snapshot', 'objects', 'object_state', 'player_state', "
+           "'btech_object_state', 'attributes');",
+           6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 4) == 0 &&
+                 6) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
            0 &&
        (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
+       (query_int(sqlite, "SELECT count(*) FROM attributes;", 0) == 0 ||
+        query_int(sqlite, "SELECT count(*) FROM attributes;", 2) == 0) &&
        query_int(sqlite,
-                 "SELECT count(*) FROM attributes WHERE number IN (1, 2, 3, "
-                 "4, 8, 9, 25, 33, 34, 37, 42, 43, 45, 46, 50, 51, 53, 54, "
-                 "55, 56, 59, 62, 79, 80, 81, 209);",
+                 "SELECT count(*) FROM pragma_table_info('attributes') "
+                 "WHERE name IN ('number', 'flags', 'owner');",
                  0) == 0 &&
        query_int(sqlite,
-                 "SELECT count(*) FROM vattrs WHERE (flags & 1088) != 0;",
+                 "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
                  0) == 0 &&
        query_int(sqlite,
-                 "SELECT count(*) FROM attributes WHERE number = 300 AND "
-                 "value != 'legacy value';",
+                 "SELECT count(*) FROM pragma_table_info('snapshot') WHERE "
+                 "name = 'attr_next';",
                  0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                  "name = 'lock_expr';",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'parent';",
                  0) == 0 &&
        query_int(
            sqlite,
@@ -513,40 +554,6 @@ static int check_commac_snapshot(const char *path) {
 
 /* Turn a current snapshot into the previous schema and seed data that must be
  * discarded or scrubbed during the hard cutover to Lua behavior. */
-static int seed_legacy_attributes(const char *path) {
-  sqlite3 *sqlite;
-  int result;
-
-  sqlite = NULL;
-  result = sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
-                       SQLITE_OK &&
-                   sqlite3_exec(
-                       sqlite,
-                       "ALTER TABLE objects ADD COLUMN lock_expr TEXT NOT NULL "
-                       "DEFAULT '*';"
-                       "UPDATE snapshot SET schema_version = 3, "
-                       "storage_version = 3 WHERE id = 1;"
-                       "INSERT INTO vattrs VALUES (300, 'LegacyFlags', 1088);"
-                       "INSERT OR REPLACE INTO attributes VALUES "
-                       "(1, 1, 'legacy osucc'), "
-                       "(1, 2, 'legacy other failure'), (1, 4, 'legacy succ'), "
-                       "(1, 8, 'legacy odrop'), (1, 9, 'legacy drop'), "
-                       "(1, 33, 'legacy enter'), (1, 34, 'legacy oxenter'), "
-                       "(1, 37, 'legacy odesc'), (1, 42, '#1'), "
-                       "(1, 45, 'legacy use'), (1, 46, 'legacy ouse'), "
-                       "(1, 50, 'legacy leave'), (1, 51, 'legacy oleave'), "
-                       "(1, 53, 'legacy oenter'), (1, 54, 'legacy oxleave'), "
-                       "(1, 55, 'legacy move'), (1, 56, 'legacy omove'), "
-                       "(1, 59, '#1'), (1, 79, 'legacy tport'), "
-                       "(1, 80, 'legacy otport'), (1, 81, 'legacy oxtport'), "
-                       "(1, 209, '#1'), "
-                       "(1, 300, char(1) || '1:1088:legacy value');",
-                       NULL, NULL, NULL) == SQLITE_OK
-               ? 0
-               : -1;
-  sqlite3_close(sqlite);
-  return result;
-}
 
 /* Seed one core object for every BTech persisted special-object type. */
 static int seed_btech_special_objects(const char *path) {
@@ -563,19 +570,26 @@ static int seed_btech_special_objects(const char *path) {
                   sqlite,
                   "UPDATE snapshot SET db_top = 7 WHERE id = 1;"
                   "INSERT INTO objects VALUES "
-                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, -1, 1, 524288, "
-                  "0, 0, 0, '*'),"
-                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, -1, 1, 524288, "
-                  "0, 0, 0, '*'),"
-                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, -1, 1, "
-                  "524288, 0, 0, 0, '*'),"
-                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, -1, 1, "
-                  "524288, 0, 0, 0, '*'),"
-                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, -1, 1, "
-                  "524288, 0, 0, 0, '*');"
+                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 1, 524288, "
+                  "0, 0, 0),"
+                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 1, 524288, "
+                  "0, 0, 0),"
+                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "524288, 0, 0, 0),"
+                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "524288, 0, 0, 0),"
+                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "524288, 0, 0, 0);"
+                  "INSERT INTO object_state (object_dbref) VALUES "
+                  "(2),(3),(4),(5),(6);"
+                  "INSERT INTO player_state (object_dbref) VALUES "
+                  "(2),(3),(4),(5),(6);"
+                  "INSERT INTO btech_object_state (object_dbref, object_type) "
+                  "VALUES "
+                  "(2, 'MAP'), (3, 'MECH'), (4, 'MECHREP'),"
+                  "(5, 'AUTOPILOT'), (6, 'TURRET');"
                   "INSERT INTO attributes VALUES "
-                  "(2, 215, 'MAP'), (3, 215, 'MECH'), (4, 215, 'MECHREP'),"
-                  "(5, 215, 'AUTOPILOT'), (6, 215, 'TURRET');"
+                  "(2, 'CaseKey', 'upper'), (2, 'casekey', 'lower');"
                   "UPDATE objects SET contents = 2 WHERE dbref = 1;"
                   "UPDATE objects SET location = 1, next = 3 WHERE dbref = 2;"
                   "UPDATE objects SET location = 1, next = 4 WHERE dbref = 3;"
@@ -593,7 +607,7 @@ static int seed_btech_special_objects(const char *path) {
   return result;
 }
 
-/* Verify representative parent and fixed-size child rows after a dual dump. */
+/* Verify representative top-level and fixed-size child rows after a dump. */
 static int check_btech_special_snapshot(const char *path) {
   sqlite3 *sqlite;
   int result;
@@ -610,6 +624,11 @@ static int check_btech_special_snapshot(const char *path) {
                   0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_turrets;", 1) ==
                   0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM attributes WHERE object_dbref=2 "
+                        "AND ((name='CaseKey' AND value='upper') OR "
+                        "(name='casekey' AND value='lower'));",
+                        2) == 0 &&
               query_int(
                   sqlite,
                   "SELECT count(*) = (SELECT width * height FROM btech_maps "
@@ -960,12 +979,15 @@ int main(int argc, char *argv[]) {
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
   fprintf(file, "[mux]\nhave_specials = 0\n");
+  fprintf(file, "default_room_lua_parent = \"room.lua\"\n");
+  fprintf(file, "default_player_lua_parent = \"player.lua\"\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
 
   result = run_server(argv[1], config, 1, &status) == 0 && WIFEXITED(status) &&
-                   WEXITSTATUS(status) == 0 && check_snapshot(database) == 0
+                   WEXITSTATUS(status) == 0 && check_snapshot(database) == 0 &&
+                   check_minimal_lua_parents(database) == 0
 #ifdef BTMUX_TEST_ADVANCED_ECON
                    && check_zero_economy(database) == 0
 #endif
@@ -973,8 +995,6 @@ int main(int argc, char *argv[]) {
                : 1;
 
   if (result == 0 && seed_commac_snapshot(database) < 0)
-    result = 1;
-  if (result == 0 && seed_legacy_attributes(database) < 0)
     result = 1;
   if (result == 0 && seed_btech_special_objects(database) < 0)
     result = 1;

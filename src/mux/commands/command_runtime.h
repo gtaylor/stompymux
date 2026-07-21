@@ -21,7 +21,6 @@ typedef struct PlayerCache PlayerCache;
 typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerControl ServerControl;
 typedef struct ServerLifecycle ServerLifecycle;
-typedef struct VattrStore VattrStore;
 typedef struct WorldIndexes WorldIndexes;
 
 typedef struct CommandRuntime CommandRuntime;
@@ -41,7 +40,6 @@ struct CommandRuntime {
   WorldContext *world;
   FileCache *files;
   HelpIndex *help;
-  VattrStore *vattrs;
   ServerLifecycle *lifecycle;
   CommandContext *background_command;
   /* Borrowed stable owner for a reloadable runtime. */

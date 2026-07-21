@@ -221,7 +221,7 @@ int parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
    */
 
   init_match(match_context, player, thing, NOTYPE);
-  match_everything(match_context, MAT_EXIT_PARENTS);
+  match_everything(match_context, 0);
   *it = match_result(match_context);
 
   /*

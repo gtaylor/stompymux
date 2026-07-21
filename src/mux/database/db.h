@@ -8,11 +8,6 @@
 
 #include <sys/file.h>
 
-#define ITER_PARENTS(database, configuration, t, p, l)                         \
-  for ((l) = 0, (p) = (t); (is_good_obj((database), (p)) &&                    \
-                            ((l) < (configuration)->parent_nest_lim));         \
-       (p) = game_object_parent((database), (p)), (l)++)
-
 typedef struct Attribute Attribute;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct GameDatabase GameDatabase;
@@ -21,20 +16,25 @@ typedef struct ServerLog ServerLog;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
-typedef struct VattrStore VattrStore;
 int get_atr(GameDatabase *database, char *name);
 struct Attribute {
-  const char *name; /* This has to be first.  braindeath. */
-  int number;       /* attr number */
-  int flags;
-  int (*check)(EvaluationContext *, int, DbRef, DbRef, int, char *);
+  const char *name;
+  int number;
 };
 
 typedef struct AttributeList AttributeList;
 struct AttributeList {
+  char *name; /* Exact, case-sensitive dynamic storage key. */
   char *data; /* Attribute text. */
   int size;   /* Length of attribute */
-  int number; /* Attribute number. */
+};
+
+/* Native state is not part of the dynamic attribute namespace.  The slots are
+ * addressed only by the hardcoded C field selectors in attrs.h and are
+ * persisted into explicit subsystem columns. */
+typedef struct NativeObjectState NativeObjectState;
+struct NativeObjectState {
+  char *values[256];
 };
 
 typedef struct AttributeStack AttributeStack;
@@ -43,25 +43,10 @@ struct AttributeStack {
   AttributeStack *next;
 };
 
-typedef struct forward_list FWDLIST;
-
 extern Attribute *attribute_by_number(GameDatabase *database, int anum);
 extern Attribute *attribute_by_name(GameDatabase *database, const char *s);
 
 extern Attribute attr_table[];
-
-Attribute *game_database_anum_get(GameDatabase *database, int number);
-void game_database_anum_set(GameDatabase *database, int number,
-                            Attribute *attribute);
-
-static inline Attribute *anum_get(GameDatabase *database, int number) {
-  return game_database_anum_get(database, number);
-}
-static inline void anum_set(GameDatabase *database, int number,
-                            Attribute *attribute) {
-  game_database_anum_set(database, number, attribute);
-}
-extern void anum_extend(GameDatabase *database, int newtop);
 
 constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 
@@ -85,8 +70,7 @@ struct GameObject {
   /* ROOM: unused */
   DbRef link; /* PLAYER, THING: home location */
   /* ROOM, EXIT: unused */
-  DbRef parent; /* ALL: defaults for attrs, exits, $cmds, */
-  DbRef owner;  /* PLAYER: domain number + class + moreflags */
+  DbRef owner; /* PLAYER: domain number + class + moreflags */
   /* THING, ROOM, EXIT: owning player number */
 
   DbRef zone; /* Whatever the object is zoned to. */
@@ -102,6 +86,7 @@ struct GameObject {
 
   AttributeList *ahead; /* The head of the attribute list. */
   int at_count;         /* How many attributes do we have? */
+  NativeObjectState native;
 };
 
 typedef char *NAME;
@@ -116,8 +101,6 @@ struct GameDatabase {
   NAME *pure_names;
   char name_buffer[MBUF_SIZE];
   char pure_name_buffer[LBUF_SIZE];
-  Attribute **attributes_by_number;
-  int attribute_capacity;
   int top;
   int size;
   int minimum_size;
@@ -128,7 +111,6 @@ struct GameDatabase {
   WorldIndexes *indexes;
   DescriptorRegistry *descriptors;
   PlayerCache *players;
-  VattrStore *vattrs;
   ServerLog *log;
 };
 
@@ -137,8 +119,7 @@ void game_database_bind_services(GameDatabase *database,
                                  ServerConfiguration *configuration,
                                  WorldIndexes *indexes,
                                  DescriptorRegistry *descriptors,
-                                 PlayerCache *players, VattrStore *vattrs,
-                                 ServerLog *log);
+                                 PlayerCache *players, ServerLog *log);
 void game_database_destroy(GameDatabase *database);
 
 static inline GameObject *game_database_object(GameDatabase *database,
@@ -166,9 +147,6 @@ static inline DbRef game_object_link(GameDatabase *database, DbRef object) {
 }
 static inline DbRef game_object_owner(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->owner;
-}
-static inline DbRef game_object_parent(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->parent;
 }
 static inline Flag game_object_flags(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->flags;
@@ -218,10 +196,6 @@ static inline void game_object_set_owner(GameDatabase *database, DbRef object,
                                          DbRef value) {
   game_database_object(database, object)->owner = value;
 }
-static inline void game_object_set_parent(GameDatabase *database, DbRef object,
-                                          DbRef value) {
-  game_database_object(database, object)->parent = value;
-}
 static inline void game_object_set_flags(GameDatabase *database, DbRef object,
                                          Flag value) {
   game_database_object(database, object)->flags = value;
@@ -253,7 +227,6 @@ extern void al_add(DbRef, int);
 extern void al_delete(DbRef, int);
 extern void al_destroy(DbRef);
 extern void al_store(void);
-extern void init_attrtab(GameDatabase *database);
 extern void db_grow(GameDatabase *database, DbRef newtop);
 extern void db_free(GameDatabase *database);
 extern void db_make_minimal(EvaluationContext *evaluation);
@@ -262,46 +235,32 @@ void object_password_set(GameDatabase *database, DbRef thing,
 void object_name_set(GameDatabase *database, DbRef thing, char *name);
 char *game_object_name(GameDatabase *database, DbRef thing);
 char *game_object_pure_name(GameDatabase *database, DbRef thing);
-int fwdlist_load(EvaluationContext *evaluation, FWDLIST *list, DbRef player,
-                 char *string);
-void fwdlist_set(GameDatabase *database, DbRef player, FWDLIST *list);
-void fwdlist_clr(GameDatabase *database, DbRef player);
-int fwdlist_rewrite(GameDatabase *database, FWDLIST *list, char *string);
-FWDLIST *fwdlist_get(GameDatabase *database, DbRef player);
 void init_min_db(void);
 void attribute_stack_push(void);
 void attribute_stack_pop(void);
-int attribute_list_first(GameDatabase *database, DbRef player, char **state);
-int attribute_list_next(char **state);
 int init_gdbm_db(char *path);
 void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef source,
                     DbRef destination);
-void attribute_change_owner(GameDatabase *database, DbRef thing);
 void attribute_clear(GameDatabase *database, DbRef thing, int attribute_number);
 void attribute_add_raw(GameDatabase *database, DbRef thing,
                        int attribute_number, char *value);
 void attribute_add(GameDatabase *database, DbRef thing, int attribute_number,
                    char *value, DbRef owner, long flags);
-void attribute_set_owner(GameDatabase *database, DbRef thing,
-                         int attribute_number, DbRef owner);
-void attribute_set_flags(GameDatabase *database, DbRef thing,
-                         int attribute_number, long flags);
 char *attribute_get_raw(GameDatabase *database, DbRef thing,
                         int attribute_number);
 char *attribute_get(GameDatabase *database, DbRef thing, int attribute_number,
                     DbRef *owner, long *flags);
-char *attribute_parent_get(GameDatabase *database, DbRef thing,
-                           int attribute_number, DbRef *owner, long *flags);
 char *attribute_get_string(GameDatabase *database, char *buffer, DbRef thing,
                            int attribute_number, DbRef *owner, long *flags);
-char *attribute_parent_get_string(GameDatabase *database, char *buffer,
-                                  DbRef thing, int attribute_number,
-                                  DbRef *owner, long *flags);
 int attribute_get_info(GameDatabase *database, DbRef thing,
                        int attribute_number, DbRef *owner, long *flags);
-int attribute_parent_get_info(GameDatabase *database, DbRef thing,
-                              int attribute_number, DbRef *owner, long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
+const char *dynamic_attribute_get(GameDatabase *database, DbRef thing,
+                                  const char *name);
+bool dynamic_attribute_set(GameDatabase *database, DbRef thing,
+                           const char *name, const char *value);
+bool dynamic_attribute_delete(GameDatabase *database, DbRef thing,
+                              const char *name);
 int check_zone(EvaluationContext *evaluation, DbRef player, DbRef thing);
 int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
                           DbRef thing);

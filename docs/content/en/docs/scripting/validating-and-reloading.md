@@ -37,7 +37,7 @@ and global logic modules into service.
 ## Inspecting schedules
 
 Wizards can use `@lua/schedule` to list scheduled object modules with their
-effective-object counts and scheduled global logic modules. Pass an object to
-show its effective Lua parent, a relative `object_logic` path to show its
-schedules and inheriting objects, or `global_logic/<path>.lua` to inspect one
+directly attached object counts and scheduled global logic modules. Pass an object to
+show its direct Lua parent, a relative `object_logic` path to show its
+schedules and attached objects, or `global_logic/<path>.lua` to inspect one
 global module.

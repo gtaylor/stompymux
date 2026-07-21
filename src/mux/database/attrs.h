@@ -4,23 +4,6 @@
 
 #pragma once
 
-/* Attribute flags */
-constexpr int AF_ODARK = 0x0001;  /* players other than owner can't see it */
-constexpr int AF_DARK = 0x0002;   /* No one can see it */
-constexpr int AF_WIZARD = 0x0004; /* only wizards can change it */
-constexpr int AF_MDARK = 0x0008;  /* Only wizards can see it. Dark to mortals */
-constexpr int AF_INTERNAL = 0x0010; /* Don't show even to #1 */
-constexpr int AF_NOCMD = 0x0020;    /* Don't create a @ command for it */
-/* 0x0040 is reserved for the removed AF_LOCK flag. */
-constexpr int AF_DELETED = 0x0080; /* Attribute should be ignored */
-constexpr int AF_NOPROG = 0x0100;  /* Don't process programmable matches */
-constexpr int AF_GOD = 0x0200;     /* Only #1 can change it */
-/* 0x0400 is reserved for the removed AF_IS_LOCK flag. */
-constexpr int AF_VISUAL = 0x0800;  /* Anyone can see */
-constexpr int AF_PRIVATE = 0x1000; /* Not inherited by children */
-constexpr int AF_DIRTY = 0x2000;   /* This attribute has been compiled. */
-constexpr int AF_REGEXP = 0x8000;  /* Do a regexp rather than wildcard match */
-
 /* 1 through 4 are reserved for removed action and lock-failure attributes. */
 constexpr int A_PASS = 5; /* Password (only meaningful for players) */
 constexpr int A_DESC = 6; /* Description */
@@ -78,9 +61,8 @@ constexpr int A_PREFIX = 90;   /* Prefix used by exits/objects when audible */
 constexpr int A_INFILTER = 91; /* Filter to zap incoming text into objects */
 constexpr int A_FILTER = 92;   /* Filter to zap text forwarded by audible. */
 /* 93 and 94 are reserved for removed lock attributes. */
-constexpr int A_FORWARDLIST = 95; /* Recipients of AUDIBLE output */
+/* 95 is reserved for the removed forwarding-list attribute. */
 /* 97 and 98 are reserved for removed lock attributes. */
-constexpr int A_VA = 100; /* VA attribute (VB-VZ follow) */
 
 /* 129 and 130 are reserved for removed lock failure attributes. */
 /* 131 is reserved for the removed Agfail attribute. */

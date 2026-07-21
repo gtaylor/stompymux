@@ -311,7 +311,7 @@ static int match_exit_internal(MatchContext *match_context, DbRef loc,
       if (is_dark(md.evaluation->world->database, loc))
         key |= VE_LOC_DARK;
       if (is_dark(md.evaluation->world->database, baseloc))
-        key |= VE_BASE_DARK;
+        key |= VE_LOC_DARK;
       if (exit_visible(match_context->evaluation, exit, md.player, key)) {
         promote_match(match_context, exit, CON_DBREF | local);
         return 1;
@@ -338,46 +338,12 @@ void match_exit(MatchContext *match_context) {
     (void)match_exit_internal(match_context, loc, loc, CON_LOCAL);
 }
 
-void match_exit_with_parents(MatchContext *match_context) {
-  DbRef loc, parent;
-  int lev;
-
-  if (md.confidence >= CON_DBREF)
-    return;
-  if (is_good_obj(md.evaluation->world->database, md.player) &&
-      has_location(md.evaluation->world->database, md.player)) {
-    loc = game_object_location(md.evaluation->world->database, md.player);
-    ITER_PARENTS(md.evaluation->world->database,
-                 md.evaluation->world->configuration, loc, parent, lev) {
-      if (match_exit_internal(match_context, parent, loc, CON_LOCAL))
-        break;
-    }
-  }
-}
-
 void match_carried_exit(MatchContext *match_context) {
   if (md.confidence >= CON_DBREF)
     return;
   if (is_good_obj(md.evaluation->world->database, md.player) &&
       has_exits(md.evaluation->world->database, md.player))
     (void)match_exit_internal(match_context, md.player, md.player, CON_LOCAL);
-}
-
-void match_carried_exit_with_parents(MatchContext *match_context) {
-  DbRef parent;
-  int lev;
-
-  if (md.confidence >= CON_DBREF)
-    return;
-  if (is_good_obj(md.evaluation->world->database, md.player) &&
-      (has_exits(md.evaluation->world->database, md.player) ||
-       is_room(md.evaluation->world->database, md.player))) {
-    ITER_PARENTS(md.evaluation->world->database,
-                 md.evaluation->world->configuration, md.player, parent, lev) {
-      if (match_exit_internal(match_context, parent, md.player, CON_LOCAL))
-        break;
-    }
-  }
 }
 
 void match_master_exit(MatchContext *match_context) {
@@ -420,13 +386,8 @@ void match_everything(MatchContext *match_context, int key) {
     return;
 
   if (!(key & MAT_NO_EXITS)) {
-    if (key & MAT_EXIT_PARENTS) {
-      match_carried_exit_with_parents(match_context);
-      match_exit_with_parents(match_context);
-    } else {
-      match_carried_exit(match_context);
-      match_exit(match_context);
-    }
+    match_carried_exit(match_context);
+    match_exit(match_context);
   }
   match_neighbor(match_context);
   match_possession(match_context);

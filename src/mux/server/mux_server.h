@@ -32,7 +32,6 @@ typedef struct LogCache LogCache;
 typedef struct PlayerCache PlayerCache;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
-typedef struct VattrStore VattrStore;
 
 typedef struct MuxServer MuxServer;
 struct MuxServer {
@@ -50,7 +49,6 @@ struct MuxServer {
   FileCache *files;
   HelpIndex *help;
   ServerLog log;
-  VattrStore *vattrs;
   RuntimeClock clock;
   ChannelRegistry channels;
   ComsysContext comsys;

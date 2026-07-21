@@ -118,8 +118,12 @@ modifier = 100
 # -----------------------------------------------
 
 [mux]
-# Default object new rooms are parented to at creation.
-room_parent = 10
+# Lua parents assigned to newly created objects. Paths are relative to
+# game/lua/object_logic.
+default_thing_lua_parent = "default_thing.lua"
+default_room_lua_parent = "default_room.lua"
+default_exit_lua_parent = "default_exit.lua"
+default_player_lua_parent = "default_player.lua"
 # Command quota per player.
 command_quota_increment = 1000
 # The interval at which players' command quotas are increased.
@@ -156,7 +160,7 @@ queue_idle_chunk = 200
 # Should players check themselves for commands?
 player_match_own_commands = true
 match_own_commands = true
-# We don't want to see our own dark objects. Messes room parent up.
+# We don't want to see our own dark objects.
 see_owned_dark = false
 
 # -----------------------------------------------
@@ -169,7 +173,7 @@ player = ["ansi", "ansimap", "fixed", "in_character"]
 # Flags that are set on exits after creation.
 exit = ["no_command", "inherit"]
 # Flags that are set on rooms after creation.
-room = ["inherit", "dark", "no_command"]
+room = ["inherit", "no_command"]
 
 # -----------------------------------------------
 #  Password and Login Security
@@ -202,7 +206,6 @@ login_hash_limit = 5
 [access.functions]
 encrypt = "wizard"
 decrypt = "wizard"
-set = "wizard"
 vadd = "wizard"
 vdim = "wizard"
 vsub = "wizard"

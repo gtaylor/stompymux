@@ -41,7 +41,6 @@ void do_tapcom(DbRef, DbRef, int, char *, char *);   /* taps a channel */
 
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
 void do_alias(CommandInvocation *invocation);
-void do_attribute(CommandInvocation *invocation); /* Manage user attributes. */
 void do_boot(CommandInvocation *invocation);
 void do_chown(CommandInvocation *invocation);
 void do_chownall(CommandInvocation *invocation);
@@ -91,8 +90,7 @@ void do_name(CommandInvocation *invocation);
 void do_newpassword(CommandInvocation *invocation);
 void do_notify(CommandInvocation *invocation); /* Notify or drain semaphore */
 void do_open(CommandInvocation *invocation);
-void do_page(CommandInvocation *invocation); /* Message a faraway player. */
-void do_parent(CommandInvocation *invocation);
+void do_page(CommandInvocation *invocation);     /* Message a faraway player. */
 void do_password(CommandInvocation *invocation); /* Change my password */
 void do_pcreate(CommandInvocation *invocation);
 void do_pemit(CommandInvocation *invocation); /* Message a specific object. */
@@ -107,11 +105,9 @@ void do_setattr(CommandInvocation *invocation); /* Set object attribute */
 void do_setvattr(CommandInvocation *invocation);
 void do_shutdown(CommandInvocation *invocation); /* Stop the game */
 void do_stats(CommandInvocation *invocation);  /* Display object statistics. */
-void do_sweep(CommandInvocation *invocation);  /* Check for listeners. */
 void do_switch(CommandInvocation *invocation); /* Execute cmd based on match */
 void do_teleport(CommandInvocation *invocation);
-void do_think(CommandInvocation *invocation);   /* Think command. */
-void do_trigger(CommandInvocation *invocation); /* Trigger an attribute */
+void do_think(CommandInvocation *invocation); /* Think command. */
 void do_unlink(CommandInvocation *invocation);
 void do_use(CommandInvocation *invocation);     /* Use object. */
 void do_version(CommandInvocation *invocation); /* List MUX version number */
@@ -119,7 +115,6 @@ void do_wait(CommandInvocation *invocation);    /* Perform command after wait */
 void do_wipe(CommandInvocation *invocation);
 void do_session(CommandInvocation *invocation); /* Wizard session listing */
 void do_who(CommandInvocation *invocation);     /* Wizard WHO listing */
-void do_dbclean(CommandInvocation *invocation); /* Remove stale vattr entries */
 /* from log.c */
 #ifdef ARBITRARY_LOGFILES
 void do_log(CommandInvocation *invocation); /* Log to arbitrary logfile */
@@ -150,10 +145,6 @@ struct cmdentry {
 void init_cmdtab(CommandRegistry *registry);
 int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
               ConfigurationContext *context);
-int cf_acmd_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context);
-int cf_attr_access(int *vp, char *str, long extra, DbRef player, char *cmd,
-                   ConfigurationContext *context);
 int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
                  ConfigurationContext *context);
 

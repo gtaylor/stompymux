@@ -18,8 +18,16 @@ The path is relative to `object_logic`; for example,
 cannot escape into `global_logic` or `packages`. Omit the path to clear an
 attachment.
 
-The closest `Luaparent` in an object's normal MUX parent chain supplies the
-active module. Reload all attached modules and their dependencies atomically
+The `[mux]` settings `default_thing_lua_parent`, `default_room_lua_parent`,
+`default_exit_lua_parent`, and `default_player_lua_parent` assign direct Lua
+parents to newly created objects of each type. Paths use the same
+`object_logic`-relative format as `@lua/parent`; robots use the player default.
+Changing a default does not update existing objects. Clones preserve the
+source object's Lua parent (or its lack of one) rather than receiving the type
+default.
+
+An object uses only the `Luaparent` attached directly to it. Lua modules are
+not inherited through other objects. Reload all attached modules and their dependencies atomically
 with `@lua/reload`; a failed reload leaves the current Lua state running.
 Use [`@lua/check`](validating-and-reloading/) to validate every Lua module
 before reloading.
@@ -31,8 +39,8 @@ and are treated as handled.
 Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
 repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
-When a Wizard uses `@examine` on an object, the output identifies its effective
-Lua parent and attachment object, then lists its command patterns, events,
+When a Wizard uses `@examine` on an object, the output identifies its direct
+Lua parent, then lists its appearance functions, command patterns, events,
 schedule names, message providers, and locks. Use `@lua/viewparent <dbref>` to
 display that module's raw source, or `@lua/viewparent <path>.lua` to inspect an
 object-logic module directly by path.
@@ -40,7 +48,8 @@ object-logic module directly by path.
 ## Module contract
 
 An object module returns a table with optional `commands`, `events`, `locks`,
-`messages`, and `schedules` tables.
+`messages`, and `schedules` tables, plus optional `internal_appearance` and
+`external_appearance` functions.
 Command entries use native Lua patterns and a handler:
 
 ```lua
@@ -63,6 +72,25 @@ continue through the remaining local and zone Lua scopes, then global Lua.
 Object event functions use the native Lua event names listed below. Event names
 are validated by `@lua/check`; an unknown name or non-function value is an
 error.
+
+## Custom appearances
+
+`internal_appearance(ctx)` and `external_appearance(ctx)` may return a string
+to replace all native `look` output for the object. Returning `nil` or no value
+uses the native name, description, contents, and exits. An empty string is a
+valid override that displays nothing.
+
+Rooms always use `internal_appearance`, including a Wizard looking at a room
+remotely. Other objects use the internal function when the viewer is physically
+inside the object and the external function otherwise. A successful override
+suppresses the native name, description, contents, exits, and transparent-exit
+continuation. The normal room look lock and `on_describe` event still run.
+
+The context has the usual `object`, `enactor`, `cause`, and optional
+`descriptor` fields, plus `appearance`, whose value is
+`internal_appearance` or `external_appearance`. Runtime errors, invalid return
+types, embedded NUL bytes, and oversized strings are logged and fall back to
+the native appearance.
 
 ## Object locks
 
@@ -186,7 +214,7 @@ messages come from the structured lock result or the native defaults.
 Movement also invokes the applicable cross-location message providers, which
 do not have corresponding events.
 
-Connection events run for the player's effective module, the master room and
+Connection events run for the player's attached module, the master room and
 its contents, and the applicable zone object or zone-room contents. Both
 receive `ctx.descriptor`. `on_connect` also receives boolean `ctx.reconnect`;
 `on_disconnect` receives string `ctx.reason` and runs only for the final active
@@ -217,12 +245,12 @@ schedules = {
     name = "hourly_notice",
     cron = "0 * * * *",
     handler = function(ctx)
-      -- ctx.scope == "object" and ctx.object is the effective object.
+      -- ctx.scope == "object" and ctx.object is the attached object.
     end,
   },
 }
 ```
 
-A shared `Luaparent` runs each matching schedule once for every object that
-inherits it. Use the wizard-only `@lua/schedule` command to inspect active
-schedules and their effective objects.
+A shared module path runs each matching schedule once for every object directly
+attached to it. Use the wizard-only `@lua/schedule` command to inspect active
+schedules and their attached objects.

@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "mux/commands/command_queue.h"
-#include "mux/database/vattr.h"
 #include "mux/help/help_index.h"
 #include "mux/network/connect_flow.h"
 #include "mux/network/descriptor.h"
@@ -45,7 +44,6 @@ bool mux_server_create(MuxServer *server) {
   server->login_throttle = login_throttle_create();
   server->players =
       player_cache_create(server->configuration, &server->database);
-  server->vattrs = vattr_store_create(&server->database);
   const CommandQueueDependencies queue_dependencies = {
       .command_runtime = &server->command_runtime,
       .btech = &server->btech,
@@ -57,12 +55,11 @@ bool mux_server_create(MuxServer *server) {
   };
   server->commands = command_queue_create(&queue_dependencies);
   if (server->descriptors == nullptr || server->commands == nullptr ||
-      server->login_throttle == nullptr || server->players == nullptr ||
-      server->vattrs == nullptr)
+      server->login_throttle == nullptr || server->players == nullptr)
     goto fail;
   game_database_bind_services(&server->database, server->configuration,
                               &server->world_indexes, server->descriptors,
-                              server->players, server->vattrs, &server->log);
+                              server->players, &server->log);
 
   /* Wire non-owning runtime views after every dependency they borrow has a
      stable address. */
@@ -91,7 +88,6 @@ bool mux_server_create(MuxServer *server) {
       .login_throttle = server->login_throttle,
       .world_indexes = &server->world_indexes,
       .world = &server->world,
-      .vattrs = server->vattrs,
       .background_command = &server->background_command,
       .lua_owner = &server->lua,
       .version = server->version,
@@ -105,7 +101,7 @@ bool mux_server_create(MuxServer *server) {
     goto fail;
   persistence_context_initialize(
       &server->persistence, server->configuration, &server->database,
-      server->vattrs, &server->channels, &server->macros, &server->clock.now,
+      &server->channels, &server->macros, &server->clock.now,
       &server->record_players, &server->world, &server->log);
   lua_services_initialize(
       &server->lua_services, server->configuration, &server->database,
@@ -189,8 +185,6 @@ void mux_server_destroy(MuxServer *server) {
   server->login_throttle = nullptr;
   player_cache_destroy(server->players);
   server->players = nullptr;
-  vattr_store_destroy(server->vattrs);
-  server->vattrs = nullptr;
   /* Per-command buffers borrow the world and database, so release them before
      destroying either service. */
   command_context_destroy(&server->background_command);

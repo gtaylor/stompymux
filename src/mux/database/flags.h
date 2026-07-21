@@ -56,10 +56,8 @@ constexpr int KEY = 0x00000001; /* No puppets */
 constexpr int FLOATING = 0x00000004;   /* Inhibit Floating room.. msgs */
 constexpr int UNFINDABLE = 0x00000008; /* Cant loc() from afar */
 /* 0x00000010 is reserved for the removed PARENT_OK flag. */
-constexpr int LIGHT = 0x00000020;       /* Visible in dark places */
-constexpr int HAS_LISTEN = 0x00000040;  /* Internal: LISTEN attr set */
-constexpr int HAS_FWDLIST = 0x00000080; /* Internal: FORWARDLIST attr set */
-constexpr int AUDITORIUM = 0x00000100;  /* Should we check the speech lock? */
+constexpr int LIGHT = 0x00000020;      /* Visible in dark places */
+constexpr int AUDITORIUM = 0x00000100; /* Should we check the speech lock? */
 constexpr int ANSI = 0x00000200;
 /* 0x00000400 is reserved for the removed REGISTERED flag. */
 constexpr int FIXED = 0x00000800;
@@ -322,12 +320,6 @@ static inline bool is_zombie(GameDatabase *database, DbRef x) {
 static inline bool is_in_character(GameDatabase *database, DbRef x) {
   return (game_object_flags2(database, x) & IN_CHARACTER) != 0;
 }
-static inline bool has_fwdlist(GameDatabase *database, DbRef x) {
-  return (game_object_flags2(database, x) & HAS_FWDLIST) != 0;
-}
-static inline bool has_listen(GameDatabase *database, DbRef x) {
-  return (game_object_flags2(database, x) & HAS_LISTEN) != 0;
-}
 
 static inline bool is_robot_player(GameDatabase *database, DbRef x) {
   return is_player(database, x) && is_robot(database, x);
@@ -385,11 +377,6 @@ bool is_examinable(EvaluationContext *evaluation, DbRef p, DbRef x);
 bool is_myopic_exam(EvaluationContext *evaluation, DbRef p, DbRef x);
 bool is_controls(EvaluationContext *evaluation, DbRef p, DbRef x);
 
-static inline bool is_parentable(EvaluationContext *evaluation, DbRef p,
-                                 DbRef x) {
-  return is_controls(evaluation, p, x);
-}
-
 // Defined in flags.c, where database and configuration types are visible.
 void mark(GameDatabase *database, DbRef x);
 void unmark(GameDatabase *database, DbRef x);
@@ -399,7 +386,7 @@ void unmark_all(GameDatabase *database);
 bool can_link_exit(EvaluationContext *evaluation, DbRef p, DbRef x);
 bool is_linkable(EvaluationContext *evaluation, DbRef p, DbRef x);
 
-// Defined in flags.c, where attrs.h's AF_* flags are visible.
+// Native and dynamic storage are Wizard-only.
 bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
               DbRef o, long f);
 bool see_attr_explicit(GameDatabase *database, DbRef p, DbRef x, Attribute *a,

@@ -873,8 +873,7 @@ static void comlist_description(GameDatabase *database, struct channel *ch,
     return;
   }
 
-  description =
-      attribute_parent_get(database, ch->chan_obj, A_DESC, &owner, &flags);
+  description = attribute_get(database, ch->chan_obj, A_DESC, &owner, &flags);
   if (!*description) {
     strlcpy(buffer, "No description.", buffer_size);
   } else {
@@ -1490,8 +1489,8 @@ void do_chanlist(CommandInvocation *invocation) {
         (ch->type & CHANNEL_PUBLIC) ||
         (do_test_access(evaluation, player, CHANNEL_JOIN, ch))) {
 
-      atrstr = attribute_parent_get(evaluation->world->database, ch->chan_obj,
-                                    A_DESC, &owner, &flags);
+      atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
+                             &owner, &flags);
       if ((ch->chan_obj == NOTHING) || !*atrstr)
         snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
@@ -1567,8 +1566,8 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/status: Unknown channel.");
     return;
   }
-  atrstr = attribute_parent_get(evaluation->world->database, ch->chan_obj,
-                                A_DESC, &owner, &flags);
+  atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
+                         &owner, &flags);
   if ((ch->chan_obj == NOTHING) || !*atrstr)
     snprintf(buf, MBUF_SIZE, "%s", "No description.");
   else

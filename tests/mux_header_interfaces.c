@@ -12,7 +12,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/database/vattr.h"
 #include "mux/help/help_command.h"
 #include "mux/help/help_frontmatter.h"
 #include "mux/help/help_index.h"

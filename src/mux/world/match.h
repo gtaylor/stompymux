@@ -28,9 +28,7 @@ extern void match_home(MatchContext *);
 extern void match_possession(MatchContext *);
 extern void match_neighbor(MatchContext *);
 extern void match_exit(MatchContext *);
-extern void match_exit_with_parents(MatchContext *);
 extern void match_carried_exit(MatchContext *);
-extern void match_carried_exit_with_parents(MatchContext *);
 extern void match_master_exit(MatchContext *);
 extern void match_everything(MatchContext *, int);
 extern DbRef match_result(MatchContext *);
@@ -54,8 +52,7 @@ extern int parse_thing_slash(MatchContext *, DbRef player, char *thing,
 #define NOPERM_MESSAGE "Permission denied."
 
 enum : int {
-  MAT_NO_EXITS = 1,     /* Don't check for exits */
-  MAT_EXIT_PARENTS = 2, /* Check for exits in parents */
-  MAT_NUMERIC = 4,      /* Check for un-#ified dbrefs */
-  MAT_HOME = 8,         /* Check for 'home' */
+  MAT_NO_EXITS = 1, /* Don't check for exits */
+  MAT_NUMERIC = 4,  /* Check for un-#ified dbrefs */
+  MAT_HOME = 8,     /* Check for 'home' */
 };

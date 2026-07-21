@@ -375,7 +375,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   parm->s_rst_name = nullptr;
   parm->s_rst_eval = nullptr;
   parm->s_rst_type = NOTYPE;
-  parm->s_parent = NOTHING;
   parm->s_zone = NOTHING;
   parm->s_fset.word1 = 0;
   parm->s_fset.word2 = 0;
@@ -445,13 +444,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     if (string_prefix("players", searchtype)) {
       parm->s_rst_name = searchfor;
       parm->s_rst_type = TYPE_PLAYER;
-      if (!*pname)
-        parm->s_rst_owner = ANY_OWNER;
-    } else if (string_prefix("parent", searchtype)) {
-      parm->s_parent =
-          match_controlled(&context->command->match, player, searchfor);
-      if (!is_good_obj(context->world->database, parm->s_parent))
-        return 0;
       if (!*pname)
         parm->s_rst_owner = ANY_OWNER;
     } else if (string_prefix("power", searchtype)) {
@@ -560,14 +552,6 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
     if ((parm->s_rst_owner != ANY_OWNER) &&
         (parm->s_rst_owner !=
          game_object_owner(context->world->database, thing)))
-      continue;
-
-    /*
-     * Check for matching parent
-     */
-
-    if ((parm->s_parent != NOTHING) &&
-        (parm->s_parent != game_object_parent(context->world->database, thing)))
       continue;
 
     /*

@@ -20,7 +20,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/database/db.c
   ${MUX_MODULE_DIR}/database/flags.c
   ${MUX_MODULE_DIR}/database/powers.c
-  ${MUX_MODULE_DIR}/database/vattr.c
   ${MUX_MODULE_DIR}/help/help_command.c
   ${MUX_MODULE_DIR}/help/help_frontmatter.c
   ${MUX_MODULE_DIR}/help/help_index.c

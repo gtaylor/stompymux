@@ -21,6 +21,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
+#include "mux/support/validation.h"
 #include "mux/world/match.h"
 #include "mux/world/walkdb.h"
 
@@ -28,7 +29,7 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   DbRef mat;
 
   init_match(match, player, name, NOTYPE);
-  match_everything(match, MAT_EXIT_PARENTS);
+  match_everything(match, 0);
   mat = noisy_match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
       !is_controls(match->evaluation, player, mat)) {
@@ -43,7 +44,7 @@ DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
   DbRef mat;
 
   init_match(match, player, name, NOTYPE);
-  match_everything(match, MAT_EXIT_PARENTS);
+  match_everything(match, 0);
   mat = match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
       !is_controls(match->evaluation, player, mat)) {
@@ -83,8 +84,8 @@ void do_alias(CommandInvocation *invocation) {
      * Fetch the old alias
      */
 
-    oldalias = attribute_parent_get(evaluation->world->database, thing, A_ALIAS,
-                                    &aowner, &aflags);
+    oldalias = attribute_get(evaluation->world->database, thing, A_ALIAS,
+                             &aowner, &aflags);
     trimalias = trim_spaces(alias);
 
     if (!is_controls(evaluation, player, thing)) {
@@ -143,8 +144,8 @@ void do_alias(CommandInvocation *invocation) {
     free_lbuf(trimalias);
     free_lbuf(oldalias);
   } else {
-    attribute_parent_get_info(evaluation->world->database, thing, A_ALIAS,
-                              &aowner, &aflags);
+    attribute_get_info(evaluation->world->database, thing, A_ALIAS, &aowner,
+                       &aflags);
 
     /*
      * Make sure we have rights to do it
@@ -168,16 +169,13 @@ void object_attribute_set(EvaluationContext *evaluation,
                           char *attrtext, int key) {
   DbRef aowner;
   long aflags;
-  int could_hear, have_xcode;
+  int have_xcode;
   Attribute *attr;
 
   attr = attribute_by_number(evaluation->world->database, attrnum);
-  attribute_parent_get_info(evaluation->world->database, thing, attrnum,
-                            &aowner, &aflags);
+  attribute_get_info(evaluation->world->database, thing, attrnum, &aowner,
+                     &aflags);
   if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
-    if ((attr->check != nullptr) &&
-        (!(*attr->check)(evaluation, 0, player, thing, attrnum, attrtext)))
-      return;
     have_xcode = is_hardcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   game_object_owner(evaluation->world->database, player),
@@ -190,8 +188,6 @@ void object_attribute_set(EvaluationContext *evaluation,
       notify_printf(evaluation, player, "%s/%s - %s",
                     game_object_name(evaluation->world->database, thing),
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");
-    could_hear = is_hearer(evaluation, thing);
-    handle_ears(evaluation, thing, could_hear, is_hearer(evaluation, thing));
   } else {
     notify_quiet(evaluation, player, "Permission denied.");
   }
@@ -229,7 +225,7 @@ void do_setattr(CommandInvocation *invocation) {
   DbRef thing;
 
   init_match(&invocation->context->match, player, name, NOTYPE);
-  match_everything(&invocation->context->match, MAT_EXIT_PARENTS);
+  match_everything(&invocation->context->match, 0);
   thing = noisy_match_result(&invocation->context->match);
 
   if (thing == NOTHING)
@@ -241,7 +237,7 @@ void do_setattr(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * parse_attrib, parse_attrib_wild: parse <obj>/<attr> tokens.
+ * * parse_attrib: parse a hardcoded native <obj>/<field> token.
  */
 
 int parse_attrib(MatchContext *match, DbRef player, char *str, DbRef *thing,
@@ -273,155 +269,14 @@ int parse_attrib(MatchContext *match, DbRef player, char *str, DbRef *thing,
   if (!attr) {
     *atr = NOTHING;
   } else {
-    attribute_parent_get_info(match->evaluation->world->database, *thing,
-                              attr->number, &aowner, &aflags);
+    attribute_get_info(match->evaluation->world->database, *thing, attr->number,
+                       &aowner, &aflags);
     if (!see_attr(match->evaluation, player, *thing, attr, aowner, aflags)) {
       *atr = NOTHING;
     } else {
       *atr = attr->number;
     }
   }
-  return 1;
-}
-
-static void find_wild_attrs(EvaluationContext *evaluation, DbRef player,
-                            DbRef thing, char *str, int check_exclude,
-                            int hash_insert, int get_locks,
-                            ObjectList *attributes,
-                            const ServerConfiguration *configuration,
-                            WorldIndexes *indexes) {
-  Attribute *attr;
-  char *as;
-  DbRef aowner;
-  int ca, ok;
-  long aflags;
-
-  /*
-   * Walk the attribute list of the object
-   */
-
-  for (ca = attribute_list_first(evaluation->world->database, thing, &as); ca;
-       ca = attribute_list_next(&as)) {
-    attr = attribute_by_number(evaluation->world->database, ca);
-
-    /*
-     * Discard bad attributes and ones we've seen before.
-     */
-
-    if (!attr)
-      continue;
-
-    if (check_exclude &&
-        ((attr->flags & AF_PRIVATE) ||
-         numeric_hash_table_find(ca, &indexes->parent_commands)))
-      continue;
-
-    /*
-     * If we aren't the top level remember this attr so we * * *
-     * exclude * it in any parents.
-     */
-
-    attribute_get_info(evaluation->world->database, thing, ca, &aowner,
-                       &aflags);
-    if (check_exclude && (aflags & AF_PRIVATE))
-      continue;
-
-    if (get_locks)
-      ok = read_attr(evaluation, player, thing, attr, aowner, aflags);
-    else
-      ok = see_attr(evaluation, player, thing, attr, aowner, aflags);
-
-    /*
-     * Enforce locality restriction on descriptions
-     */
-
-    if (ok && (attr->number == A_DESC) && !configuration->read_rem_desc &&
-        !is_examinable(evaluation, player, thing) &&
-        !nearby(evaluation->world->database, player, thing))
-      ok = 0;
-
-    if (ok && quick_wild(str, attr->name)) {
-      object_list_add(attributes, ca);
-      if (hash_insert) {
-        numeric_hash_table_add(ca, (int *)attr, &indexes->parent_commands);
-      }
-    }
-  }
-}
-
-int parse_attrib_wild(MatchContext *match, DbRef player, char *str,
-                      DbRef *thing, int check_parents, int get_locks,
-                      int df_star, ObjectList *attributes,
-                      const ServerConfiguration *configuration,
-                      WorldIndexes *indexes) {
-  char *buff;
-  DbRef parent;
-  int check_exclude, hash_insert, lev;
-
-  if (!str)
-    return 0;
-
-  buff = alloc_lbuf("parse_attrib_wild");
-  StringCopy(buff, str);
-
-  /*
-   * Separate name and attr portions at the first /
-   */
-
-  if (!parse_thing_slash(match, player, buff, &str, thing)) {
-
-    /*
-     * Not in obj/attr format, return if not defaulting to *
-     */
-
-    if (!df_star) {
-      free_lbuf(buff);
-      return 0;
-    }
-    /*
-     * Look for the object, return failure if not found
-     */
-
-    init_match(match, player, buff, NOTYPE);
-    match_everything(match, MAT_EXIT_PARENTS);
-    *thing = match_result(match);
-
-    if (!is_good_obj(match->evaluation->world->database, *thing)) {
-      free_lbuf(buff);
-      return 0;
-    }
-    /* str's declared type isn't const-correct (it's a cursor reassigned
-       by parse_thing_slash(&invocation->context->match, ) above); "*" is only
-       read from here on. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    str = (char *)"*";
-#pragma clang diagnostic pop
-  }
-  /*
-   * Check the object (and optionally all parents) for attributes
-   */
-
-  if (check_parents) {
-    check_exclude = 0;
-    hash_insert = check_parents;
-    numeric_hash_table_flush(&indexes->parent_commands, 0);
-    ITER_PARENTS(match->evaluation->world->database, configuration, *thing,
-                 parent, lev) {
-      if (!is_good_obj(
-              match->evaluation->world->database,
-              game_object_parent(match->evaluation->world->database, parent)))
-        hash_insert = 0;
-      find_wild_attrs(match->evaluation, player, parent, str, check_exclude,
-                      hash_insert, get_locks, attributes, configuration,
-                      indexes);
-      check_exclude = 1;
-    }
-  } else {
-    find_wild_attrs(match->evaluation, player, *thing, str, 0, 0, get_locks,
-                    attributes, configuration, indexes);
-  }
-  free_lbuf(buff);
   return 1;
 }
 
@@ -545,159 +400,40 @@ void do_edit(CommandInvocation *invocation) {
   char *it = invocation->first;
   char **args = invocation->vector;
   int nargs = invocation->vector_count;
-  DbRef thing, aowner;
-  int attr, got_one, doit;
-  long aflags;
-  char *from, *result, *returnstr, *atext;
-  const char *to;
-  Attribute *ap;
-  ObjectList attributes;
-
-  /*
-   * Make sure we have something to do.
-   */
-
-  if ((nargs < 1) || !*args[0]) {
+  if (nargs < 1 || !args[0] || !*args[0]) {
     notify_quiet(evaluation, player, "Nothing to do.");
     return;
   }
-  from = args[0];
-  to = (nargs >= 2) ? args[1] : "";
-
-  /*
-   * Look for the object and get the attribute (possibly wildcarded)
-   */
-
-  object_list_initialize(&attributes);
-  if (!it || !*it ||
-      !parse_attrib_wild(&invocation->context->match, player, it, &thing, 0, 0,
-                         0, &attributes,
-                         invocation->context->world->configuration,
-                         invocation->context->runtime->world_indexes)) {
-    notify_quiet(evaluation, player, "No match.");
-    object_list_destroy(&attributes);
+  char *pattern = strchr(it, '/');
+  if (!pattern) {
+    notify_quiet(evaluation, player, "Use @edit object/pattern=from,to.");
     return;
   }
-  /*
-   * Iterate through matching attributes, performing edit
-   */
-
-  got_one = 0;
-  atext = alloc_lbuf("do_edit.atext");
-
-  for (attr = (int)object_list_first(&attributes); attr != NOTHING;
-       attr = (int)object_list_next(&attributes)) {
-    ap = attribute_by_number(invocation->context->world->database, attr);
-    if (ap) {
-
-      /*
-       * Get the attr and make sure we can modify it.
-       */
-
-      attribute_get_string(evaluation->world->database, atext, thing,
-                           ap->number, &aowner, &aflags);
-      if (set_attr(evaluation, player, thing, ap, aflags)) {
-
-        /*
-         * Do the edit and save the result
-         */
-
-        got_one = 1;
-        edit_string_ansi(atext, &result, &returnstr, from, to);
-        if (ap->check != nullptr) {
-          doit = (*ap->check)(&invocation->context->evaluation, 0, player,
-                              thing, ap->number, result);
-        } else {
-          doit = 1;
-        }
-        if (doit) {
-          attribute_add(evaluation->world->database, thing, ap->number, result,
-                        game_object_owner(evaluation->world->database, player),
-                        aflags);
-          if (!is_quiet(evaluation->world->database, player))
-            notify_quiet(evaluation, player,
-                         tprintf("Set - %s: %s", ap->name, returnstr));
-        }
-        free_lbuf(result);
-        free_lbuf(returnstr);
-      } else {
-
-        /*
-         * No rights to change the attr
-         */
-
-        notify_quiet(evaluation, player,
-                     tprintf("%s: Permission denied.", ap->name));
-      }
-    }
-  }
-
-  /*
-   * Clean up
-   */
-
-  free_lbuf(atext);
-  object_list_destroy(&attributes);
-
-  if (!got_one) {
-    notify_quiet(evaluation, player, "No matching attributes.");
-  }
-}
-
-void do_trigger(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  int key = invocation->key;
-  char *object = invocation->first;
-  char **argv = invocation->vector;
-  int nargs = invocation->vector_count;
-  DbRef thing, attrOwner;
-  int attrib;
-  long attrFlags;
-  char objectName[MBUF_SIZE];
-  char attributeName[MBUF_SIZE];
-  char *action;
-  Attribute *attribute;
-
-  memset(objectName, 0, MBUF_SIZE);
-  memset(attributeName, 0, MBUF_SIZE);
-
-  if (!parse_attrib(&invocation->context->match, player, object, &thing,
-                    &attrib) ||
-      (attrib == NOTHING)) {
-    notify_quiet(evaluation, player, "No match.");
+  *pattern++ = '\0';
+  DbRef dynamic_thing =
+      match_controlled(&invocation->context->match, player, it);
+  if (dynamic_thing == NOTHING)
     return;
+  GameObject *object =
+      game_database_object(evaluation->world->database, dynamic_thing);
+  const char *replacement = nargs >= 2 ? args[1] : "";
+  int edited = 0;
+  for (int index = 0; index < object->at_count; index++) {
+    if (!quick_wild(pattern, object->ahead[index].name))
+      continue;
+    char *result;
+    char *display;
+    edit_string_ansi(object->ahead[index].data, &result, &display, args[0],
+                     replacement);
+    dynamic_attribute_set(evaluation->world->database, dynamic_thing,
+                          object->ahead[index].name, result);
+    free_lbuf(result);
+    free_lbuf(display);
+    edited++;
   }
-  if (!is_controls(evaluation, player, thing)) {
-    notify_quiet(evaluation, player, "Permission denied.");
-    return;
-  }
-
-  attribute_get_string(evaluation->world->database, objectName, thing, A_NAME,
-                       &attrOwner, &attrFlags);
-
-  attribute = attribute_by_number(invocation->context->world->database, attrib);
-
-  if (!attribute) {
-    dprintk("braindamage, missing ATTR structure for dbref #%ld, attr %d.",
-            thing, attrib);
-  } else {
-    strncpy(attributeName, attribute->name, MBUF_SIZE - 1);
-  }
-
-  action = attribute_parent_get(evaluation->world->database, thing, attrib,
-                                &attrOwner, &attrFlags);
-  if (*action)
-    wait_que(evaluation->runtime->commands, thing, player, 0, NOTHING, 0,
-             action, argv, nargs, evaluation->registers);
-  free_lbuf(action);
-
-  /*
-   * XXX be more descriptive as to what was triggered?
-   */
-  if (!(key & TRIG_QUIET) && !is_quiet(evaluation->world->database, player))
-    notify_printf(&invocation->context->evaluation, player,
-                  "%s/%s - Triggered.", objectName, attributeName);
+  notify_printf(evaluation, player, "%d attribute%s edited.", edited,
+                edited == 1 ? "" : "s");
+  return;
 }
 
 void do_use(CommandInvocation *invocation) {
@@ -778,7 +514,7 @@ void do_setvattr(CommandInvocation *invocation) {
   char *arg1 = invocation->first;
   char *arg2 = invocation->second;
   char *s;
-  int anum;
+  DbRef thing;
 
   arg1++; /*
            * skip the '&'
@@ -792,18 +528,21 @@ void do_setvattr(CommandInvocation *invocation) {
                   * split it
                   */
 
-  anum = mkattr(invocation->context->world->database,
-                arg1); /*
-                        * Get or make attribute
-                        */
-  if (anum <= 0) {
+  if (!ok_attr_name(arg1) || strlen(arg1) >= SBUF_SIZE) {
     notify_quiet(evaluation, player,
                  "That's not a good name for an attribute.");
     return;
   }
-  CommandInvocation set = *invocation;
-  set.key = anum;
-  set.first = s;
-  set.second = arg2;
-  do_setattr(&set);
+  thing = match_controlled(&invocation->context->match, player, s);
+  if (thing == NOTHING)
+    return;
+  if (!dynamic_attribute_set(invocation->context->world->database, thing, arg1,
+                             arg2)) {
+    notify_quiet(evaluation, player, "Attribute update failed.");
+    return;
+  }
+  if (!is_quiet(evaluation->world->database, player))
+    notify_printf(evaluation, player, "%s/%s - %s.",
+                  game_object_name(evaluation->world->database, thing), arg1,
+                  arg2 && *arg2 ? "Set" : "Cleared");
 }

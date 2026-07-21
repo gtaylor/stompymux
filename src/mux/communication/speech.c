@@ -384,48 +384,6 @@ void do_say(CommandInvocation *invocation) {
  * * Page-pose code from shadow@prelude.cc.purdue.
  */
 
-static void page_return(EvaluationContext *evaluation,
-                        const ServerConfiguration *configuration, DbRef player,
-                        DbRef target, const char *tag, int anum,
-                        const char *dflt) {
-  DbRef aowner;
-  long aflags;
-  char *str, *str2, *buf, *bp;
-  struct tm *tp;
-  time_t t;
-
-  str = attribute_parent_get(evaluation->world->database, target, anum, &aowner,
-                             &aflags);
-  if (*str) {
-    str2 = bp = alloc_lbuf("page_return");
-    buf = str;
-    exec(evaluation, str2, &bp, 0, target, player,
-         EV_FCHECK | EV_EVAL | EV_TOP | EV_NO_LOCATION, &buf, (char **)nullptr,
-         0);
-    *bp = '\0';
-    if (*str2) {
-      t = time(nullptr);
-      tp = localtime(&t);
-      if (is_wizard(evaluation->world->database, target) ||
-          !is_in_character_location(evaluation->world->database, configuration,
-                                    target))
-        notify_with_cause(
-            evaluation, player, target,
-            tprintf("%s message from %s: %s", tag,
-                    game_object_name(evaluation->world->database, target),
-                    str2));
-      notify_with_cause(
-          evaluation, target, player,
-          tprintf("[%d:%02d] %s message sent to %s.", tp->tm_hour, tp->tm_min,
-                  tag, game_object_name(evaluation->world->database, player)));
-    }
-    free_lbuf(str2);
-  } else if (dflt && *dflt) {
-    notify_with_cause(evaluation, player, target, dflt);
-  }
-  free_lbuf(str);
-}
-
 static int page_check(EvaluationContext *evaluation,
                       const ServerConfiguration *configuration, DbRef player,
                       DbRef target) {
@@ -437,26 +395,20 @@ static int page_check(EvaluationContext *evaluation,
     return 0;
   }
   if (!is_connected(evaluation->world->database, target)) {
-    page_return(evaluation, configuration, player, target, "Away", A_AWAY,
-                tprintf("Sorry, %s is not connected.",
-                        game_object_name(evaluation->world->database, target)));
+    notify_with_cause(
+        evaluation, player, target,
+        tprintf("Sorry, %s is not connected.",
+                game_object_name(evaluation->world->database, target)));
     return 0;
   }
   if (!is_wizard(evaluation->world->database, player) &&
       is_in_character_location(evaluation->world->database, configuration,
                                target) &&
       !is_wizard(evaluation->world->database, target)) {
-    if (is_wizard(evaluation->world->database, target) &&
-        is_dark(evaluation->world->database, target))
-      page_return(
-          evaluation, configuration, player, target, "Away", A_AWAY,
-          tprintf("Sorry, %s is not connected.",
-                  game_object_name(evaluation->world->database, target)));
-    else
-      page_return(
-          evaluation, configuration, player, target, "Reject", A_REJECT,
-          tprintf("Sorry, %s is not accepting pages.",
-                  game_object_name(evaluation->world->database, target)));
+    notify_with_cause(
+        evaluation, player, target,
+        tprintf("Sorry, %s is not accepting pages.",
+                game_object_name(evaluation->world->database, target)));
     return 0;
   }
   return 1;
@@ -610,9 +562,6 @@ void do_page(CommandInvocation *invocation) {
                       game_object_name(evaluation->world->database, player),
                       aladd, message));
         }
-        page_return(evaluation, configuration, player, target, "Idle", A_IDLE,
-                    nullptr);
-
         safe_str(tprintf("%ld ", target), buf2, &bp2);
         count++;
       }
@@ -652,9 +601,6 @@ void do_page(CommandInvocation *invocation) {
                     game_object_name(evaluation->world->database, player),
                     aladd, message));
       }
-      page_return(evaluation, configuration, player, target, "Idle", A_IDLE,
-                  nullptr);
-
       safe_str(tprintf("%ld ", target), buf2, &bp2);
       safe_str(tprintf("%s, ",
                        game_object_name(evaluation->world->database, target)),

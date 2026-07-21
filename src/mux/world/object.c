@@ -178,6 +178,33 @@ static void make_freelist(GameDatabase *database) {
   }
 }
 
+/** Apply the configured Lua parent for a newly created object. */
+void object_apply_default_lua_parent(EvaluationContext *evaluation,
+                                     DbRef object, int object_type) {
+  ServerConfiguration *configuration = evaluation->world->configuration;
+  char *path;
+
+  switch (object_type) {
+  case TYPE_THING:
+    path = configuration->default_thing_lua_parent;
+    break;
+  case TYPE_ROOM:
+    path = configuration->default_room_lua_parent;
+    break;
+  case TYPE_EXIT:
+    path = configuration->default_exit_lua_parent;
+    break;
+  case TYPE_PLAYER:
+    path = configuration->default_player_lua_parent;
+    break;
+  default:
+    return;
+  }
+
+  if (*path)
+    attribute_add_raw(evaluation->world->database, object, A_LUAPARENT, path);
+}
+
 /**
  * Create an object of the indicated type.
  */
@@ -306,20 +333,6 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
 
-  if (objtype == TYPE_ROOM && evaluation->world->configuration->room_parent > 0)
-    game_object_set_parent(evaluation->world->database, obj,
-                           evaluation->world->configuration->room_parent);
-  else if (objtype == TYPE_EXIT &&
-           evaluation->world->configuration->exit_parent > 0)
-    game_object_set_parent(evaluation->world->database, obj,
-                           evaluation->world->configuration->exit_parent);
-  else if (objtype == TYPE_PLAYER &&
-           evaluation->world->configuration->player_parent > 0)
-    game_object_set_parent(evaluation->world->database, obj,
-                           evaluation->world->configuration->player_parent);
-  else
-    game_object_set_parent(evaluation->world->database, obj, NOTHING);
-
   if (objtype == TYPE_PLAYER &&
       evaluation->world->configuration->player_zone > 0)
     game_object_set_zone(evaluation->world->database, obj,
@@ -347,6 +360,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     add_player_name(evaluation->world, obj,
                     game_object_name(evaluation->world->database, obj));
   }
+  object_apply_default_lua_parent(evaluation, obj, objtype);
   make_freelist(evaluation->world->database);
   return obj;
 }
@@ -419,7 +433,6 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
   game_object_set_owner(evaluation->world->database, obj, GOD);
-  game_object_set_parent(evaluation->world->database, obj, NOTHING);
   game_object_set_zone(evaluation->world->database, obj, NOTHING);
 
   /*
@@ -566,8 +579,8 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
 
   delete_player_name(evaluation->world, victim,
                      game_object_name(evaluation->world->database, victim));
-  buf = attribute_parent_get(evaluation->world->database, victim, A_ALIAS,
-                             &aowner, &aflags);
+  buf = attribute_get(evaluation->world->database, victim, A_ALIAS, &aowner,
+                      &aflags);
   delete_player_name(evaluation->world, victim, buf);
   free_lbuf(buf);
 
@@ -625,37 +638,9 @@ static void purge_going(EvaluationContext *evaluation, bool full_check) {
  * Look for references to GOING or illegal objects.
  */
 static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
-  DbRef targ, owner, i, j;
-  long aflags;
-  int dirty;
-  char *str;
-  FWDLIST *fp;
+  DbRef targ, owner, i;
 
   DO_WHOLE_DB(evaluation->world->database, i) {
-
-    /*
-     * Check the parent
-     */
-
-    targ = game_object_parent(evaluation->world->database, i);
-    if (is_good_obj(evaluation->world->database, targ)) {
-      if (is_going(evaluation->world->database, targ)) {
-        game_object_set_parent(evaluation->world->database, i, NOTHING);
-        owner = game_object_owner(evaluation->world->database, i);
-
-        if (is_good_owner(evaluation->world->database, owner) &&
-            !is_quiet(evaluation->world->database, i) &&
-            !is_quiet(evaluation->world->database, owner)) {
-          notify_printf(evaluation, owner, "Parent cleared on %s(#%ld)",
-                        game_object_name(evaluation->world->database, i), i);
-        }
-      }
-    } else if (targ != NOTHING) {
-      Log_header_err(evaluation, i,
-                     game_object_location(evaluation->world->database, i), targ,
-                     1, "Parent", "is invalid.  Cleared.");
-      game_object_set_parent(evaluation->world->database, i, NOTHING);
-    }
     /*
      * Check the zone
      */
@@ -856,33 +841,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       destroy_obj(evaluation, NOTHING, i);
     }
 
-    /*
-     * Check forwardlist
-     */
-
-    dirty = 0;
-    fp = fwdlist_get(evaluation->world->database, i);
-    if (fp) {
-      for (j = 0; j < fp->count; j++) {
-        targ = fp->data[j];
-        if ((is_good_obj(evaluation->world->database, targ) &&
-             is_going(evaluation->world->database, targ)) ||
-            (!is_good_obj(evaluation->world->database, targ) &&
-             (targ != NOTHING))) {
-          fp->data[j] = NOTHING;
-          dirty = 1;
-        }
-      }
-    }
-    if (dirty) {
-      str = alloc_lbuf("purge_going");
-      (void)fwdlist_rewrite(evaluation->world->database, fp, str);
-      attribute_get_info(evaluation->world->database, i, A_FORWARDLIST, &owner,
-                         &aflags);
-      attribute_add(evaluation->world->database, i, A_FORWARDLIST, str, owner,
-                    aflags);
-      free_lbuf(str);
-    }
     /*
      * Check owner
      */

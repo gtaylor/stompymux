@@ -945,6 +945,23 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
     return 0;
   }
   if (root != LUA_ROOT_PACKAGES) {
+    static const char *appearance_names[] = {"internal_appearance",
+                                             "external_appearance"};
+    for (size_t index = 0;
+         index < sizeof(appearance_names) / sizeof(*appearance_names);
+         index++) {
+      lua_getfield(runtime->state, -1, appearance_names[index]);
+      if (!lua_isnil(runtime->state, -1) &&
+          (root != LUA_ROOT_OBJECT_LOGIC ||
+           !lua_isfunction(runtime->state, -1))) {
+        lua_set_error(error, error_size,
+                      "%s in %s must be a function in an object module",
+                      appearance_names[index], path);
+        lua_settop(runtime->state, top);
+        return 0;
+      }
+      lua_pop(runtime->state, 1);
+    }
     lua_getfield(runtime->state, -1, "commands");
     if (!lua_isnil(runtime->state, -1)) {
       if (!lua_istable(runtime->state, -1)) {
@@ -1293,7 +1310,8 @@ int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
       result = 0;
       goto done;
     }
-    qsort(modules, module_count, sizeof(*modules), lua_compare_module_paths);
+    if (module_count > 1)
+      qsort(modules, module_count, sizeof(*modules), lua_compare_module_paths);
     for (index = 0; index < module_count; index++) {
       if (!lua_check_one_module(runtime, root, modules[index], error,
                                 error_size)) {
@@ -1327,28 +1345,22 @@ int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
                           sizeof(resolved), error, error_size);
 }
 
-static int lua_effective_path(LuaRuntime *runtime, DbRef object, char *path,
-                              size_t path_size, DbRef *source) {
-  DbRef parent;
-  int level;
+static int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
+                             size_t path_size, DbRef *source) {
+  char *value;
+  DbRef owner;
+  long flags;
 
-  ITER_PARENTS(runtime->services->database, runtime->services->configuration,
-               object, parent, level) {
-    char *value;
-    DbRef owner;
-    long flags;
-
-    value = attribute_get(runtime->services->database, parent, A_LUAPARENT,
-                          &owner, &flags);
-    if (*value) {
-      snprintf(path, path_size, "%s", value);
-      if (source)
-        *source = parent;
-      free_lbuf(value);
-      return 1;
-    }
+  value = attribute_get(runtime->services->database, object, A_LUAPARENT,
+                        &owner, &flags);
+  if (*value) {
+    snprintf(path, path_size, "%s", value);
+    if (source)
+      *source = object;
     free_lbuf(value);
+    return 1;
   }
+  free_lbuf(value);
   return 0;
 }
 
@@ -1411,17 +1423,15 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
 void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
                         DbRef player, DbRef object) {
   lua_State *state;
-  DbRef source;
   char path[PATH_MAX];
   char error[LBUF_SIZE];
   int top;
   int module;
 
   if (!runtime ||
-      !lua_effective_path(runtime, object, path, sizeof(path), &source))
+      !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
     return;
-  notify_printf(evaluation, player,
-                "Lua parent: object_logic/%s (attached on #%ld)", path, source);
+  notify_printf(evaluation, player, "Lua parent: object_logic/%s", path);
   state = runtime->state;
   top = lua_gettop(state);
   if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
@@ -1431,6 +1441,22 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
     return;
   }
   module = lua_gettop(state);
+  notify_quiet(evaluation, player, "Lua appearances:");
+  {
+    bool found = false;
+    static const char *names[] = {"internal_appearance", "external_appearance"};
+
+    for (size_t index = 0; index < sizeof(names) / sizeof(*names); index++) {
+      lua_getfield(state, module, names[index]);
+      if (lua_isfunction(state, -1)) {
+        notify_printf(evaluation, player, "  %s", names[index]);
+        found = true;
+      }
+      lua_pop(state, 1);
+    }
+    if (!found)
+      notify_quiet(evaluation, player, "  (none)");
+  }
   lua_examine_array(runtime, evaluation, player, module, "commands",
                     "Lua commands", "pattern");
   lua_examine_named_functions(runtime, evaluation, player, module, "events",
@@ -1487,6 +1513,77 @@ static void lua_push_context(GameDatabase *database, Descriptor *descriptor,
     }
   }
   lua_setfield(state, -2, "args");
+}
+
+void lua_appearance_evaluate(LuaRuntime *runtime,
+                             const LuaAppearanceInvocation *invocation,
+                             LuaAppearanceResult *result) {
+  lua_State *state;
+  const char *function;
+  const char *rendered;
+  char path[PATH_MAX];
+  char error[LBUF_SIZE];
+  size_t length;
+  int status;
+  int top;
+
+  memset(result, 0, sizeof(*result));
+  if (!runtime || !invocation)
+    return;
+  function = invocation->type == LUA_APPEARANCE_INTERNAL
+                 ? "internal_appearance"
+                 : "external_appearance";
+  if (!lua_attached_path(runtime, invocation->object, path, sizeof(path),
+                         nullptr))
+    return;
+  state = runtime->state;
+  top = lua_gettop(state);
+  if (!lua_load_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
+                       sizeof(error))) {
+    lua_log_load_error(runtime, invocation->object, path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, function);
+  if (!lua_isfunction(state, -1)) {
+    lua_settop(state, top);
+    return;
+  }
+  lua_push_context(runtime->services->database, invocation->descriptor, state,
+                   invocation->object, invocation->enactor, invocation->cause,
+                   nullptr, nullptr, nullptr, nullptr, 0);
+  lua_pushstring(state, function);
+  lua_setfield(state, -2, "appearance");
+  {
+    LUA_MODULE_ROOT previous_root = runtime->current_root;
+
+    runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
+    status = lua_pcall_limited(runtime, 1, 1);
+    runtime->current_root = previous_root;
+  }
+  if (status) {
+    lua_log_error(runtime, invocation->object, "APPEARANCE",
+                  lua_tostring(state, -1));
+  } else if (!lua_isnil(state, -1)) {
+    if (lua_type(state, -1) != LUA_TSTRING) {
+      lua_log_error(runtime, invocation->object, "APPEARANCE",
+                    "appearance function must return a string or nil");
+    } else {
+      rendered = lua_tolstring(state, -1, &length);
+      if (length >= sizeof(result->rendered)) {
+        lua_log_error(runtime, invocation->object, "APPEARANCE",
+                      "appearance string exceeds the MUX buffer limit");
+      } else if (memchr(rendered, '\0', length)) {
+        lua_log_error(runtime, invocation->object, "APPEARANCE",
+                      "appearance string contains an embedded NUL");
+      } else {
+        memcpy(result->rendered, rendered, length);
+        result->rendered[length] = '\0';
+        result->defined = true;
+      }
+    }
+  }
+  lua_settop(state, top);
 }
 
 static unsigned long lua_schedule_hash(const char *path, const char *name,
@@ -1680,7 +1777,7 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
 
       if (!is_good_obj(runtime->services->database, object) ||
           is_going(runtime->services->database, object) ||
-          !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+          !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       lua_schedule_collect_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
                                   minute);
@@ -1804,7 +1901,7 @@ int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
   char path[PATH_MAX];
 
   if (!runtime || is_halted(runtime->services->database, thing) ||
-      !lua_effective_path(runtime, thing, path, sizeof(path), nullptr))
+      !lua_attached_path(runtime, thing, path, sizeof(path), nullptr))
     return 0;
   return lua_module_command_match(runtime, descriptor, LUA_ROOT_OBJECT_LOGIC,
                                   path, thing, player, cause, command, 0);
@@ -1846,7 +1943,7 @@ bool lua_event_defined(LuaRuntime *runtime, DbRef object, LuaEventType event) {
   bool defined;
 
   if (!runtime || !lua_event_name(event) ||
-      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+      !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
     return false;
   state = runtime->state;
   top = lua_gettop(state);
@@ -1872,7 +1969,7 @@ bool lua_lock_defined(LuaRuntime *runtime, DbRef object, LuaLockType lock) {
   bool defined;
 
   if (!runtime || !lua_lock_name(lock) ||
-      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+      !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
     return false;
   state = runtime->state;
   top = lua_gettop(state);
@@ -1899,7 +1996,7 @@ bool lua_message_defined(LuaRuntime *runtime, DbRef object,
   bool defined;
 
   if (!runtime || !lua_message_name(message) ||
-      !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+      !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
     return false;
   state = runtime->state;
   top = lua_gettop(state);
@@ -1927,8 +2024,8 @@ bool lua_event_dispatch(LuaRuntime *runtime,
   int status;
 
   if (!runtime || !invocation || !(event = lua_event_name(invocation->type)) ||
-      !lua_effective_path(runtime, invocation->object, path, sizeof(path),
-                          nullptr))
+      !lua_attached_path(runtime, invocation->object, path, sizeof(path),
+                         nullptr))
     return false;
   state = runtime->state;
   top = lua_gettop(state);
@@ -2053,8 +2150,8 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
   if (!runtime || !invocation || !(lock = lua_lock_name(invocation->type)) ||
       !(operation = lua_lock_operation_name(invocation->operation)))
     return;
-  if (!lua_effective_path(runtime, invocation->object, path, sizeof(path),
-                          nullptr)) {
+  if (!lua_attached_path(runtime, invocation->object, path, sizeof(path),
+                         nullptr)) {
     result->passes = true;
     return;
   }
@@ -2158,8 +2255,8 @@ void lua_message_evaluate(LuaRuntime *runtime,
   if (!runtime || !invocation ||
       !(message = lua_message_name(invocation->type)) ||
       !(operation = lua_message_operation_name(invocation->operation)) ||
-      !lua_effective_path(runtime, invocation->object, path, sizeof(path),
-                          nullptr))
+      !lua_attached_path(runtime, invocation->object, path, sizeof(path),
+                         nullptr))
     return;
   state = runtime->state;
   top = lua_gettop(state);
@@ -2561,9 +2658,8 @@ static void do_luaviewparent(CommandInvocation *invocation) {
     object = noisy_match_result(&invocation->context->match);
     if (object == NOTHING)
       return;
-    if (!lua_effective_path(runtime, object, path, sizeof(path), &source)) {
-      notify_quiet(evaluation, player,
-                   "That object has no effective Lua parent.");
+    if (!lua_attached_path(runtime, object, path, sizeof(path), &source)) {
+      notify_quiet(evaluation, player, "That object has no Lua parent.");
       return;
     }
   } else {
@@ -2651,17 +2747,15 @@ static void lua_schedule_show_module(EvaluationContext *evaluation,
 
     notify_quiet(evaluation, player, "Objects:");
     for (object = 0; object < runtime->services->database->top; object++) {
-      char effective[PATH_MAX];
-
-      DbRef source;
+      char attached[PATH_MAX];
 
       if (is_good_obj(runtime->services->database, object) &&
-          lua_effective_path(runtime, object, effective, sizeof(effective),
-                             &source) &&
-          !strcmp(effective, path))
-        notify_printf(evaluation, player, "  %s (#%ld, attached on #%ld)",
+          lua_attached_path(runtime, object, attached, sizeof(attached),
+                            nullptr) &&
+          !strcmp(attached, path))
+        notify_printf(evaluation, player, "  %s (#%ld)",
                       game_object_name(runtime->services->database, object),
-                      object, source);
+                      object);
     }
   }
 }
@@ -2706,9 +2800,9 @@ static void do_luaschedule(CommandInvocation *invocation) {
 
       if (object == NOTHING)
         goto done;
-      if (!lua_effective_path(runtime, object, path, sizeof(path), nullptr)) {
+      if (!lua_attached_path(runtime, object, path, sizeof(path), nullptr)) {
         notify_quiet(&invocation->context->evaluation, player,
-                     "That object has no effective Luaparent.");
+                     "That object has no Luaparent.");
         goto done;
       }
       lua_schedule_show_module(&invocation->context->evaluation, player,
@@ -2738,7 +2832,7 @@ static void do_luaschedule(CommandInvocation *invocation) {
       char path[PATH_MAX];
 
       if (!is_good_obj(runtime->services->database, object) ||
-          !lua_effective_path(runtime, object, path, sizeof(path), nullptr))
+          !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
         continue;
       for (index = 0; index < path_count; index++) {
         if (!strcmp(paths[index], path)) {

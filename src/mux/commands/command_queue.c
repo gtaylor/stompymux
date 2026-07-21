@@ -548,8 +548,8 @@ void do_notify(CommandInvocation *invocation) {
       attr = A_SEMAPHORE;
     } else {
       /* Do they have permission to set this attribute? */
-      attribute_parent_get_info(queue->world->database, thing, ap->number,
-                                &aowner, &aflags);
+      attribute_get_info(queue->world->database, thing, ap->number, &aowner,
+                         &aflags);
       if (set_attr(evaluation, player, thing, ap, aflags)) {
         attr = ap->number;
       } else {
@@ -793,8 +793,8 @@ void do_wait(CommandInvocation *invocation) {
         }
         ap = attribute_by_number(invocation->context->world->database, attr);
       }
-      attribute_parent_get_info(queue->world->database, thing, ap->number,
-                                &aowner, &aflags);
+      attribute_get_info(queue->world->database, thing, ap->number, &aowner,
+                         &aflags);
       if (attr && set_attr(evaluation, player, thing, ap, aflags)) {
         attr = ap->number;
         howlong = 0;

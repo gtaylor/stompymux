@@ -13,16 +13,13 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/database/vattr.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 4;
-constexpr int LEGACY_AF_LOCK = 0x0040;
-constexpr int LEGACY_AF_IS_LOCK = 0x0400;
+constexpr int GAMEDB_SCHEMA_VERSION = 6;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -46,13 +43,7 @@ static const char schema_sql[] =
     " dump_time INTEGER NOT NULL,"
     " db_top INTEGER NOT NULL,"
     " min_size INTEGER NOT NULL,"
-    " attr_next INTEGER NOT NULL,"
     " record_players INTEGER NOT NULL"
-    ");"
-    "CREATE TABLE vattrs ("
-    " number INTEGER PRIMARY KEY,"
-    " name TEXT NOT NULL,"
-    " flags INTEGER NOT NULL"
     ");"
     "CREATE TABLE objects ("
     " dbref INTEGER PRIMARY KEY,"
@@ -64,19 +55,98 @@ static const char schema_sql[] =
     " link INTEGER NOT NULL,"
     " next INTEGER NOT NULL,"
     " owner INTEGER NOT NULL,"
-    " parent INTEGER NOT NULL,"
     " flags INTEGER NOT NULL,"
     " flags2 INTEGER NOT NULL,"
     " flags3 INTEGER NOT NULL,"
     " powers INTEGER NOT NULL,"
     " powers2 INTEGER NOT NULL"
     ");"
+    "CREATE TABLE object_state ("
+    " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
+    " description TEXT, inside_description TEXT, admin_comment TEXT,"
+    " enter_alias TEXT, leave_alias TEXT, lua_parent TEXT, destroyer INTEGER,"
+    " semaphore_count INTEGER"
+    ");"
+    "CREATE TABLE player_state ("
+    " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
+    " password_hash TEXT, alias TEXT, last_login TEXT, last_name_change TEXT,"
+    " login_data TEXT, last_site TEXT, last_page TEXT, timeout INTEGER,"
+    " queue_limit INTEGER, privileges TEXT, timezone TEXT"
+    ");"
+    "CREATE TABLE btech_object_state ("
+    " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
+    " mech_preferred_id TEXT, map_color TEXT, mech_skills TEXT,"
+    " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
+    " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
+    " mech_description TEXT, mech_status TEXT, mw_template TEXT,"
+    " faction TEXT, job TEXT, rank_number INTEGER, health TEXT,"
+    " character_attributes TEXT, build_links TEXT, build_entrances TEXT,"
+    " build_coordinates TEXT, advantages TEXT, pilot_dbref INTEGER,"
+    " map_visibility TEXT, tech_complete_at INTEGER, economy_parts TEXT,"
+    " skills TEXT, personal_combat_equipment TEXT"
+    ");"
     "CREATE TABLE attributes ("
     " object_dbref INTEGER NOT NULL REFERENCES objects(dbref),"
-    " number INTEGER NOT NULL,"
+    " name TEXT NOT NULL,"
     " value TEXT NOT NULL,"
-    " PRIMARY KEY (object_dbref, number)"
+    " PRIMARY KEY (object_dbref, name)"
     ") WITHOUT ROWID;";
+
+typedef struct NativeColumn NativeColumn;
+struct NativeColumn {
+  int field;
+  const char *table;
+  const char *column;
+};
+
+static const NativeColumn native_columns[] = {
+    {A_DESC, "object_state", "description"},
+    {A_IDESC, "object_state", "inside_description"},
+    {A_COMMENT, "object_state", "admin_comment"},
+    {A_EALIAS, "object_state", "enter_alias"},
+    {A_LALIAS, "object_state", "leave_alias"},
+    {A_LUAPARENT, "object_state", "lua_parent"},
+    {A_DESTROYER, "object_state", "destroyer"},
+    {A_SEMAPHORE, "object_state", "semaphore_count"},
+    {A_PASS, "player_state", "password_hash"},
+    {A_ALIAS, "player_state", "alias"},
+    {A_LAST, "player_state", "last_login"},
+    {A_LASTNAME, "player_state", "last_name_change"},
+    {A_LOGINDATA, "player_state", "login_data"},
+    {A_LASTSITE, "player_state", "last_site"},
+    {A_LASTPAGE, "player_state", "last_page"},
+    {A_TIMEOUT, "player_state", "timeout"},
+    {A_QUEUEMAX, "player_state", "queue_limit"},
+    {A_PRIVS, "player_state", "privileges"},
+    {A_TZ, "player_state", "timezone"},
+    {A_MECHPREFID, "btech_object_state", "mech_preferred_id"},
+    {A_MAPCOLOR, "btech_object_state", "map_color"},
+    {A_MECHSKILLS, "btech_object_state", "mech_skills"},
+    {A_XTYPE, "btech_object_state", "object_type"},
+    {A_TACSIZE, "btech_object_state", "tactical_size"},
+    {A_LRSHEIGHT, "btech_object_state", "lrs_height"},
+    {A_CONTACTOPT, "btech_object_state", "contact_options"},
+    {A_MECHNAME, "btech_object_state", "mech_name"},
+    {A_MECHTYPE, "btech_object_state", "mech_type"},
+    {A_MECHDESC, "btech_object_state", "mech_description"},
+    {A_MECHSTATUS, "btech_object_state", "mech_status"},
+    {A_MWTEMPLATE, "btech_object_state", "mw_template"},
+    {A_FACTION, "btech_object_state", "faction"},
+    {A_JOB, "btech_object_state", "job"},
+    {A_RANKNUM, "btech_object_state", "rank_number"},
+    {A_HEALTH, "btech_object_state", "health"},
+    {A_ATTRS, "btech_object_state", "character_attributes"},
+    {A_BUILDLINKS, "btech_object_state", "build_links"},
+    {A_BUILDENTRANCE, "btech_object_state", "build_entrances"},
+    {A_BUILDCOORD, "btech_object_state", "build_coordinates"},
+    {A_ADVS, "btech_object_state", "advantages"},
+    {A_PILOTNUM, "btech_object_state", "pilot_dbref"},
+    {A_MAPVIS, "btech_object_state", "map_visibility"},
+    {A_TECHTIME, "btech_object_state", "tech_complete_at"},
+    {A_ECONPARTS, "btech_object_state", "economy_parts"},
+    {A_SKILLS, "btech_object_state", "skills"},
+    {A_PCEQUIP, "btech_object_state", "personal_combat_equipment"},
+};
 
 /* Log either the SQLite error or the current operating-system error. */
 static void gamedb_log_failure(ServerLog *log, const char *stage,
@@ -279,7 +349,6 @@ static int gamedb_column_text(sqlite3_stmt *statement, int column,
 static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
                                 int *db_top, int *loaded_schema_version) {
   sqlite3_stmt *statement;
-  int attr_next;
   int min_size;
   int record_players;
   int schema_version;
@@ -288,19 +357,17 @@ static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
   statement = nullptr;
   result = -1;
   if (gamedb_prepare(sqlite, &statement,
-                     "SELECT schema_version, db_top, min_size, attr_next, "
+                     "SELECT schema_version, db_top, min_size, "
                      "record_players FROM snapshot WHERE id = 1;") == 0 &&
       sqlite3_step(statement) == SQLITE_ROW &&
       gamedb_column_int(statement, 0, &schema_version) == 0 &&
       gamedb_column_int(statement, 1, db_top) == 0 &&
       gamedb_column_int(statement, 2, &min_size) == 0 &&
-      gamedb_column_int(statement, 3, &attr_next) == 0 &&
-      gamedb_column_int(statement, 4, &record_players) == 0 &&
-      sqlite3_step(statement) == SQLITE_DONE && schema_version >= 1 &&
-      schema_version <= GAMEDB_SCHEMA_VERSION && *db_top > 0 && min_size >= 0 &&
-      attr_next >= 0 && record_players >= 0) {
+      gamedb_column_int(statement, 3, &record_players) == 0 &&
+      sqlite3_step(statement) == SQLITE_DONE &&
+      schema_version == GAMEDB_SCHEMA_VERSION && *db_top > 0 && min_size >= 0 &&
+      record_players >= 0) {
     context->database->minimum_size = min_size;
-    vattr_store_set_next_number(context->vattrs, attr_next);
     *context->record_players = record_players;
     *loaded_schema_version = schema_version;
     result = 0;
@@ -309,47 +376,10 @@ static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
   return result;
 }
 
-/* Restore user-defined attribute declarations before loading their values. */
-static int gamedb_load_vattrs(PersistenceContext *context, sqlite3 *sqlite) {
-  sqlite3_stmt *statement;
-  const char *name;
-  char vattr_name[VNAME_SIZE + 1];
-  int flags;
-  int number;
-  int result;
-  int step;
-
-  statement = nullptr;
-  result = -1;
-  if (gamedb_prepare(
-          sqlite, &statement,
-          "SELECT number, name, flags FROM vattrs ORDER BY number;") == 0) {
-    result = 0;
-    while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-      if (gamedb_column_int(statement, 0, &number) < 0 ||
-          gamedb_column_text(statement, 1, &name, sizeof(vattr_name)) < 0 ||
-          gamedb_column_int(statement, 2, &flags) < 0) {
-        result = -1;
-      } else {
-        StringCopy(vattr_name, name);
-        flags &= ~(LEGACY_AF_LOCK | LEGACY_AF_IS_LOCK);
-        if (!vattr_define(context->vattrs, vattr_name, number, flags))
-          result = -1;
-      }
-    }
-    if (result == 0 && step != SQLITE_DONE)
-      result = -1;
-  }
-  sqlite3_finalize(statement);
-  return result;
-}
-
-/* Restore object headers. Schema versions through 3 also contain discarded
- * legacy lock expressions. */
+/* Restore object headers. */
 static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
                                int db_top, int schema_version) {
   sqlite3_stmt *statement;
-  const char *lock_text;
   const char *name;
   DbRef object;
   DbRef contents;
@@ -361,32 +391,25 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef location;
   DbRef next;
   DbRef owner;
-  DbRef parent;
   int powers;
   int powers2;
   int result;
   int step;
   DbRef zone;
-  int discarded_locks;
 
   statement = nullptr;
   result = -1;
   const char *query =
-      schema_version <= 3
-          ? "SELECT dbref, name, location, zone, contents, exits, link, next, "
-            "owner, parent, flags, flags2, flags3, powers, powers2, lock_expr "
-            "FROM objects ORDER BY dbref;"
-          : "SELECT dbref, name, location, zone, contents, exits, link, next, "
-            "owner, parent, flags, flags2, flags3, powers, powers2 FROM "
-            "objects "
-            "ORDER BY dbref;";
+      "SELECT dbref, name, location, zone, contents, exits, link, next, "
+      "owner, flags, flags2, flags3, powers, powers2 FROM objects "
+      "ORDER BY dbref;";
+  (void)schema_version;
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
     sqlite3_finalize(statement);
     return -1;
   }
 
   result = 0;
-  discarded_locks = 0;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (gamedb_column_long(statement, 0, &object) < 0 || object < 0 ||
         object >= db_top ||
@@ -398,14 +421,11 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_long(statement, 6, &link) < 0 ||
         gamedb_column_long(statement, 7, &next) < 0 ||
         gamedb_column_long(statement, 8, &owner) < 0 ||
-        gamedb_column_long(statement, 9, &parent) < 0 ||
-        gamedb_column_long(statement, 10, &flags) < 0 ||
-        gamedb_column_long(statement, 11, &flags2) < 0 ||
-        gamedb_column_long(statement, 12, &flags3) < 0 ||
-        gamedb_column_int(statement, 13, &powers) < 0 ||
-        gamedb_column_int(statement, 14, &powers2) < 0 ||
-        (schema_version <= 3 &&
-         gamedb_column_text(statement, 15, &lock_text, LBUF_SIZE) < 0)) {
+        gamedb_column_long(statement, 9, &flags) < 0 ||
+        gamedb_column_long(statement, 10, &flags2) < 0 ||
+        gamedb_column_long(statement, 11, &flags3) < 0 ||
+        gamedb_column_int(statement, 12, &powers) < 0 ||
+        gamedb_column_int(statement, 13, &powers2) < 0) {
       result = -1;
     } else {
       /* object_name_set()'s parameter isn't const-correct; name is only
@@ -421,14 +441,11 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       game_object_set_link(context->database, object, link);
       game_object_set_next(context->database, object, next);
       game_object_set_owner(context->database, object, owner);
-      game_object_set_parent(context->database, object, parent);
       game_object_set_flags(context->database, object, flags);
       game_object_set_flags2(context->database, object, flags2);
       game_object_set_flags3(context->database, object, flags3);
       game_object_set_powers(context->database, object, powers);
       game_object_set_powers2(context->database, object, powers2);
-      if (schema_version <= 3 && lock_text[0] != '\0')
-        discarded_locks++;
       if (typeof_obj(context->database, object) == TYPE_PLAYER)
         c_connected(context->database, object);
     }
@@ -436,137 +453,73 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
   sqlite3_finalize(statement);
-  if (result == 0 && discarded_locks > 0)
-    log_error(context->log, LOG_ALWAYS, "GDB", "LOCK",
-              "Discarded %d legacy object lock expressions while loading "
-              "schema version %d",
-              discarded_locks, schema_version);
   return result;
 }
 
-static bool gamedb_is_retired_attribute(int number) {
-  switch (number) {
-  case 1:
-  case 2:
-  case 3:
-  case 4:
-  case 8:
-  case 9:
-  case 33:
-  case 34:
-  case 37:
-  case 42:
-  case 45:
-  case 46:
-  case 50:
-  case 51:
-  case 53:
-  case 54:
-  case 55:
-  case 56:
-  case 59:
-  case 60:
-  case 62:
-  case 63:
-  case 66:
-  case 67:
-  case 69:
-  case 70:
-  case 75:
-  case 76:
-  case 79:
-  case 80:
-  case 81:
-  case 85:
-  case 86:
-  case 87:
-  case 93:
-  case 94:
-  case 97:
-  case 98:
-  case 129:
-  case 130:
-  case 132:
-  case 133:
-  case 135:
-  case 136:
-  case 138:
-  case 139:
-  case 141:
-  case 142:
-  case 209:
-    return true;
-  default:
-    return false;
-  }
-}
+static int gamedb_load_native_state(PersistenceContext *context,
+                                    sqlite3 *sqlite) {
+  char query[256];
 
-/* Restore ordinary attribute values after all object rows exist. */
-static int gamedb_load_attributes(PersistenceContext *context, sqlite3 *sqlite,
-                                  int db_top) {
-  sqlite3_stmt *statement;
-  const char *value;
-  DbRef object;
-  int attribute;
-  int result;
-  int step;
-  int discarded_attributes;
-  int scrubbed_attribute_flags;
+  for (size_t index = 0;
+       index < sizeof(native_columns) / sizeof(*native_columns); index++) {
+    const NativeColumn *column = &native_columns[index];
+    sqlite3_stmt *statement = nullptr;
+    int step;
 
-  statement = nullptr;
-  result = -1;
-  if (gamedb_prepare(sqlite, &statement,
-                     "SELECT object_dbref, number, value FROM attributes "
-                     "ORDER BY object_dbref, number;") < 0) {
-    sqlite3_finalize(statement);
-    return -1;
-  }
+    snprintf(
+        query, sizeof(query),
+        "SELECT object_dbref, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
+        column->column, column->table, column->column);
+    if (gamedb_prepare(sqlite, &statement, query) < 0)
+      return -1;
+    while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+      const char *value;
+      DbRef object;
 
-  result = 0;
-  discarded_attributes = 0;
-  scrubbed_attribute_flags = 0;
-  while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (gamedb_column_long(statement, 0, &object) < 0 || object < 0 ||
-        object >= db_top || gamedb_column_int(statement, 1, &attribute) < 0 ||
-        attribute <= 0 ||
-        gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0)
-      result = -1;
-    else if (gamedb_is_retired_attribute(attribute)) {
-      discarded_attributes++;
-    } else {
-      /* attribute_add_raw()'s buffer parameter isn't const-correct; value is
-         only read (copied) here, never mutated. */
+      if (gamedb_column_long(statement, 0, &object) < 0 ||
+          !is_good_obj(context->database, object) ||
+          gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0) {
+        sqlite3_finalize(statement);
+        return -1;
+      }
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-      attribute_add_raw(context->database, object, attribute, (char *)value);
+      attribute_add_raw(context->database, object, column->field,
+                        (char *)value);
 #pragma clang diagnostic pop
-      {
-        DbRef owner;
-        long flags;
+    }
+    sqlite3_finalize(statement);
+    if (step != SQLITE_DONE)
+      return -1;
+  }
+  return 0;
+}
 
-        if (attribute_get_info(context->database, object, attribute, &owner,
-                               &flags) &&
-            (flags & (LEGACY_AF_LOCK | LEGACY_AF_IS_LOCK))) {
-          attribute_set_flags(context->database, object, attribute,
-                              flags & ~(LEGACY_AF_LOCK | LEGACY_AF_IS_LOCK));
-          scrubbed_attribute_flags++;
-        }
-      }
+static int gamedb_load_attributes(PersistenceContext *context,
+                                  sqlite3 *sqlite) {
+  sqlite3_stmt *statement = nullptr;
+  int step;
+
+  if (gamedb_prepare(sqlite, &statement,
+                     "SELECT object_dbref, name, value FROM attributes "
+                     "ORDER BY object_dbref, name;") < 0)
+    return -1;
+  while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
+    const char *name;
+    const char *value;
+    DbRef object;
+
+    if (gamedb_column_long(statement, 0, &object) < 0 ||
+        !is_good_obj(context->database, object) ||
+        gamedb_column_text(statement, 1, &name, SBUF_SIZE) < 0 ||
+        gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0 ||
+        !dynamic_attribute_set(context->database, object, name, value)) {
+      sqlite3_finalize(statement);
+      return -1;
     }
   }
-  if (result == 0 && step != SQLITE_DONE)
-    result = -1;
   sqlite3_finalize(statement);
-  if (result == 0 && discarded_attributes > 0)
-    log_error(context->log, LOG_ALWAYS, "GDB", "LOCK",
-              "Discarded %d legacy lock, lock-failure, and action-message "
-              "attributes",
-              discarded_attributes);
-  if (result == 0 && scrubbed_attribute_flags > 0)
-    log_error(context->log, LOG_ALWAYS, "GDB", "LOCK",
-              "Removed legacy lock flags from %d attributes",
-              scrubbed_attribute_flags);
-  return result;
+  return step == SQLITE_DONE ? 0 : -1;
 }
 
 /* Open, validate, and load one SQLite snapshot into the global database. */
@@ -588,9 +541,9 @@ int gamedb_load(PersistenceContext *context, const char *path) {
   } else {
     db_free(context->database);
     db_grow(context->database, db_top);
-    if (gamedb_load_vattrs(context, sqlite) < 0 ||
-        gamedb_load_objects(context, sqlite, db_top, schema_version) < 0 ||
-        gamedb_load_attributes(context, sqlite, db_top) < 0) {
+    if (gamedb_load_objects(context, sqlite, db_top, schema_version) < 0 ||
+        gamedb_load_native_state(context, sqlite) < 0 ||
+        gamedb_load_attributes(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);
     } else if (gamedb_load_extensions(context, sqlite, path) < 0) {
       /* The extension has already emitted a subsystem-specific error. */
@@ -610,15 +563,56 @@ int gamedb_load(PersistenceContext *context, const char *path) {
  * failed write rolls the transaction back before returning an error.
  */
 static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
-                                  sqlite3_stmt *vattrs, sqlite3_stmt *objects,
+                                  sqlite3_stmt *objects,
                                   sqlite3_stmt *attributes, int success) {
   if (!success)
     gamedb_exec(sqlite, "ROLLBACK;");
   sqlite3_finalize(snapshot);
-  sqlite3_finalize(vattrs);
   sqlite3_finalize(objects);
   sqlite3_finalize(attributes);
   return success ? 0 : -1;
+}
+
+static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
+                                     DbRef object) {
+  sqlite3_stmt *statement = nullptr;
+  char query[256];
+
+  const char *tables[] = {"object_state", "player_state", "btech_object_state"};
+  for (size_t index = 0; index < sizeof(tables) / sizeof(*tables); index++) {
+    snprintf(query, sizeof(query), "INSERT INTO %s (object_dbref) VALUES (?);",
+             tables[index]);
+    if (gamedb_prepare(sqlite, &statement, query) < 0 ||
+        gamedb_bind_int(statement, 1, object) < 0 ||
+        gamedb_step(statement) < 0) {
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    sqlite3_finalize(statement);
+    statement = nullptr;
+  }
+  for (size_t index = 0;
+       index < sizeof(native_columns) / sizeof(*native_columns); index++) {
+    const NativeColumn *column = &native_columns[index];
+    const char *value = attribute_get_raw(database, object, column->field);
+
+    if (!value)
+      continue;
+    snprintf(query, sizeof(query),
+             "UPDATE %s SET %s = ? WHERE object_dbref = ?;", column->table,
+             column->column);
+    if (gamedb_prepare(sqlite, &statement, query) < 0 ||
+        sqlite3_bind_text(statement, 1, value, -1, SQLITE_TRANSIENT) !=
+            SQLITE_OK ||
+        gamedb_bind_int(statement, 2, object) < 0 ||
+        gamedb_step(statement) < 0) {
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    sqlite3_finalize(statement);
+    statement = nullptr;
+  }
+  return 0;
 }
 
 /*
@@ -628,18 +622,11 @@ static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
 static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                                  int dump_type) {
   sqlite3_stmt *snapshot;
-  sqlite3_stmt *vattrs;
   sqlite3_stmt *objects;
   sqlite3_stmt *attributes;
-  VATTR *vattr;
-  Attribute *attribute;
-  char *attr_cursor;
-  char *attr_text;
   DbRef object;
-  DbRef attr_number;
 
   snapshot = nullptr;
-  vattrs = nullptr;
   objects = nullptr;
   attributes = nullptr;
 
@@ -650,29 +637,24 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_exec(sqlite, schema_sql) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                  0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
 
   if (gamedb_prepare(
           sqlite, &snapshot,
           "INSERT INTO snapshot "
           "(id, schema_version, storage_format, storage_version, dump_type, "
-          "dump_time, db_top, min_size, attr_next, record_players) "
-          "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
-      gamedb_prepare(sqlite, &vattrs,
-                     "INSERT INTO vattrs (number, name, flags) VALUES (?, ?, "
-                     "?);") < 0 ||
+          "dump_time, db_top, min_size, record_players) "
+          "VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(
           sqlite, &objects,
           "INSERT INTO objects "
           "(dbref, name, location, zone, contents, exits, link, next, owner, "
-          "parent, flags, flags2, flags3, powers, powers2) "
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "flags, flags2, flags3, powers, powers2) "
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
-                     "INSERT INTO attributes (object_dbref, number, value) "
+                     "INSERT INTO attributes (object_dbref, name, value) "
                      "VALUES (?, ?, ?);") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                  0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
 
   if (gamedb_bind_int(snapshot, 1, GAMEDB_SCHEMA_VERSION) < 0 ||
       gamedb_bind_int(snapshot, 2, GAMEDB_SOURCE_FORMAT_SQLITE) < 0 ||
@@ -681,24 +663,9 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_bind_int(snapshot, 5, *context->now) < 0 ||
       gamedb_bind_int(snapshot, 6, context->database->top) < 0 ||
       gamedb_bind_int(snapshot, 7, context->database->minimum_size) < 0 ||
-      gamedb_bind_int(snapshot, 8, vattr_store_next_number(context->vattrs)) <
-          0 ||
-      gamedb_bind_int(snapshot, 9, *context->record_players) < 0 ||
+      gamedb_bind_int(snapshot, 8, *context->record_players) < 0 ||
       gamedb_step(snapshot) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                  0);
-
-  for (vattr = vattr_first(context->vattrs); vattr;
-       vattr = vattr_next(context->vattrs, vattr)) {
-    if (vattr->flags & AF_DELETED)
-      continue;
-    if (gamedb_bind_int(vattrs, 1, vattr->number) < 0 ||
-        sqlite3_bind_text(vattrs, 2, vattr->name, -1, SQLITE_TRANSIENT) !=
-            SQLITE_OK ||
-        gamedb_bind_int(vattrs, 3, vattr->flags) < 0 || gamedb_step(vattrs) < 0)
-      return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                    attributes, 0);
-  }
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
 
   DO_WHOLE_DB(context->database, object) {
     if (is_going(context->database, object))
@@ -723,61 +690,40 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_bind_int(objects, 9,
                         game_object_owner(context->database, object)) < 0 ||
         gamedb_bind_int(objects, 10,
-                        game_object_parent(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 11,
                         game_object_flags(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 12,
+        gamedb_bind_int(objects, 11,
                         game_object_flags2(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 13,
+        gamedb_bind_int(objects, 12,
                         game_object_flags3(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 14,
+        gamedb_bind_int(objects, 13,
                         game_object_powers(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 15,
+        gamedb_bind_int(objects, 14,
                         game_object_powers2(context->database, object)) < 0 ||
         gamedb_step(objects) < 0) {
-      return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                    attributes, 0);
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
     }
 
-    for (attr_number =
-             attribute_list_first(context->database, object, &attr_cursor);
-         attr_number; attr_number = attribute_list_next(&attr_cursor)) {
-      attribute = attribute_by_number(context->database, (int)attr_number);
-      if (!attribute)
-        continue;
-      switch (attribute->number) {
-      case A_NAME:
-      case A_LIST:
-        continue;
-      default:
-        break;
-      }
-      attr_text =
-          attribute_get_raw(context->database, object, attribute->number);
-      if (!attr_text || gamedb_bind_int(attributes, 1, object) < 0 ||
-          gamedb_bind_int(attributes, 2, attribute->number) < 0 ||
-          sqlite3_bind_text(attributes, 3, attr_text, -1, SQLITE_TRANSIENT) !=
+    if (gamedb_store_native_state(context->database, sqlite, object) < 0)
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    GameObject *game_object = game_database_object(context->database, object);
+    for (int index = 0; index < game_object->at_count; index++) {
+      AttributeList *entry = &game_object->ahead[index];
+      if (gamedb_bind_int(attributes, 1, object) < 0 ||
+          sqlite3_bind_text(attributes, 2, entry->name, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||
-          gamedb_step(attributes) < 0) {
-        if (attr_cursor)
-          free(attr_cursor);
-        return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects,
-                                      attributes, 0);
-      }
+          sqlite3_bind_text(attributes, 3, entry->data, -1, SQLITE_TRANSIENT) !=
+              SQLITE_OK ||
+          gamedb_step(attributes) < 0)
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
     }
-    if (attr_cursor)
-      free(attr_cursor);
   }
 
   if (gamedb_store_extensions(context, sqlite) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                  0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
 
   if (gamedb_exec(sqlite, "COMMIT;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                  0);
-  return gamedb_finish_snapshot(sqlite, snapshot, vattrs, objects, attributes,
-                                1);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+  return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 1);
 }
 
 /*

@@ -397,8 +397,8 @@ void announce_connect(DbRef player, Descriptor *d) {
   if (*runtime->record_players < count)
     *runtime->record_players = count;
 
-  buf = attribute_parent_get(runtime->world->database, player, A_TIMEOUT,
-                             &aowner, &aflags);
+  buf = attribute_get(runtime->world->database, player, A_TIMEOUT, &aowner,
+                      &aflags);
   if (buf) {
     d->timeout = clamped_atoi(buf);
     if (d->timeout <= 0)
@@ -445,7 +445,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   key = MSG_INV;
   if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                             is_wizard(runtime->world->database, player)))
-    key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
+    key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
 
   temp = command->enactor;
   command->enactor = player;
@@ -506,7 +506,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     key = MSG_INV;
     if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                               is_wizard(runtime->world->database, player)))
-      key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
+      key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
     notify_checked(&command->evaluation, player, player, buf, key);
     free_mbuf(buf);
 
@@ -533,7 +533,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     key = MSG_INV;
     if ((loc != NOTHING) && !(is_dark(runtime->world->database, player) &&
                               is_wizard(runtime->world->database, player)))
-      key |= (MSG_NBR | MSG_NBR_EXITS | MSG_LOC | MSG_FWDLIST);
+      key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
     notify_checked(&command->evaluation, player, player, buf, key);
     raw_broadcast(runtime->descriptors, MONITOR,
                   "GAME: %s has partially disconnected.",
@@ -602,7 +602,7 @@ void descriptor_reload(GameDatabase *database,
   Flag aflags;
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
-    buf = attribute_parent_get(database, player, A_TIMEOUT, &aowner, &aflags);
+    buf = attribute_get(database, player, A_TIMEOUT, &aowner, &aflags);
     if (buf) {
       d->timeout = clamped_atoi(buf);
       if (d->timeout <= 0)

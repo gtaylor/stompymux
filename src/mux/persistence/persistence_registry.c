@@ -5,18 +5,14 @@
 #include <assert.h>
 #include <string.h>
 
-void persistence_context_initialize(PersistenceContext *context,
-                                    const ServerConfiguration *configuration,
-                                    GameDatabase *database, VattrStore *vattrs,
-                                    ChannelRegistry *channels,
-                                    MacroRegistry *macros, time_t *now,
-                                    int *record_players, WorldContext *world,
-                                    ServerLog *log) {
+void persistence_context_initialize(
+    PersistenceContext *context, const ServerConfiguration *configuration,
+    GameDatabase *database, ChannelRegistry *channels, MacroRegistry *macros,
+    time_t *now, int *record_players, WorldContext *world, ServerLog *log) {
   assert(context != nullptr);
   memset(context, 0, sizeof(*context));
   context->configuration = configuration;
   context->database = database;
-  context->vattrs = vattrs;
   context->channels = channels;
   context->macros = macros;
   context->now = now;

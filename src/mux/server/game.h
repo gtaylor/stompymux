@@ -29,7 +29,3 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *message, int key);
 int is_hearer(EvaluationContext *evaluation, DbRef object);
 void report(CommandContext *command);
-int attribute_match(EvaluationContext *evaluation, DbRef thing, DbRef player,
-                    char type, const char *string, int check_parent);
-int list_check(EvaluationContext *evaluation, DbRef player, DbRef thing,
-               char type, char *string, int check_parent);

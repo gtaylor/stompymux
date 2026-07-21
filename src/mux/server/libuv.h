@@ -3,7 +3,3 @@
 #pragma once
 
 #include <uv.h>
-
-#ifdef CLONE_PARENT
-#undef CLONE_PARENT
-#endif

@@ -1,4 +1,4 @@
-/* object.h - Low-level object creation, deletion, and parent operations. */
+/* object.h - Low-level object creation and deletion operations. */
 
 #pragma once
 
@@ -15,6 +15,8 @@ DbRef clone_home(EvaluationContext *evaluation, DbRef player, DbRef thing);
 
 DbRef create_obj(EvaluationContext *evaluation, DbRef player, int object_type,
                  char *name);
+void object_apply_default_lua_parent(EvaluationContext *evaluation,
+                                     DbRef object, int object_type);
 void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef object);
 void database_check(EvaluationContext *evaluation, DbRef player, int key);
 void divest_object(EvaluationContext *evaluation, DbRef object);

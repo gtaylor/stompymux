@@ -345,83 +345,6 @@ void do_link(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_parent: Set an object's parent field.
- */
-
-void do_parent(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *tname = invocation->first;
-  char *pname = invocation->second;
-  DbRef thing, parent, curr;
-  int lev;
-
-  /*
-   * get victim
-   */
-
-  init_match(&invocation->context->match, player, tname, NOTYPE);
-  match_everything(&invocation->context->match, 0);
-  thing = noisy_match_result(&invocation->context->match);
-  if (thing == NOTHING)
-    return;
-
-  /*
-   * Make sure we can do it
-   */
-
-  if (!is_controls(evaluation, player, thing)) {
-    notify_quiet(evaluation, player, "Permission denied.");
-    return;
-  }
-  /*
-   * Find out what the new parent is
-   */
-
-  if (*pname) {
-    init_match(&invocation->context->match, player, pname,
-               typeof_obj(evaluation->world->database, thing));
-    match_everything(&invocation->context->match, 0);
-    parent = noisy_match_result(&invocation->context->match);
-    if (parent == NOTHING)
-      return;
-
-    /*
-     * Make sure we have rights to set parent
-     */
-
-    if (!is_parentable(evaluation, player, parent)) {
-      notify_quiet(evaluation, player, "Permission denied.");
-      return;
-    }
-    /*
-     * Verify no recursive reference
-     */
-
-    ITER_PARENTS(evaluation->world->database,
-                 invocation->context->world->configuration, parent, curr, lev) {
-      if (curr == thing) {
-        notify_quiet(evaluation, player,
-                     "You can't have yourself as a parent!");
-        return;
-      }
-    }
-  } else {
-    parent = NOTHING;
-  }
-
-  game_object_set_parent(evaluation->world->database, thing, parent);
-  if (!is_quiet(evaluation->world->database, thing) &&
-      !is_quiet(evaluation->world->database, player)) {
-    if (parent == NOTHING)
-      notify_quiet(evaluation, player, "Parent cleared.");
-    else
-      notify_quiet(evaluation, player, "Parent set.");
-  }
-}
-
-/*
- * ---------------------------------------------------------------------------
  * * do_dig: Create a new room.
  */
 
@@ -540,17 +463,6 @@ void do_clone(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "You cannot clone players!");
     return;
   }
-  /*
-   * You can only make a parent link to what you control
-   */
-
-  if (!is_controls(evaluation, player, thing) && (key & CLONE_PARENT)) {
-    notify_quiet(
-        evaluation, player,
-        tprintf("You don't control %s, ignoring /parent.",
-                game_object_name(invocation->context->world->database, thing)));
-    key &= ~CLONE_PARENT;
-  }
   new_owner = (key & CLONE_PRESERVE)
                   ? game_object_owner(evaluation->world->database, thing)
                   : game_object_owner(evaluation->world->database, player);
@@ -580,10 +492,7 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   attribute_free(evaluation->world->database, clone);
-  if (key & CLONE_PARENT)
-    game_object_set_parent(evaluation->world->database, clone, thing);
-  else
-    attribute_copy(evaluation, player, clone, thing);
+  attribute_copy(evaluation, player, clone, thing);
 
   /*
    * Reset the name, since we cleared the attributes
@@ -657,24 +566,13 @@ void do_clone(CommandInvocation *invocation) {
     break;
   }
 
-  /*
-   * If same owner run ACLONE, else halt it.  Also copy parent * if we
-   * * * * * * can
-   */
+  /* If same owner run ACLONE, otherwise halt the clone. */
 
   if (new_owner == game_object_owner(evaluation->world->database, thing)) {
-    if (!(key & CLONE_PARENT))
-      game_object_set_parent(
-          evaluation->world->database, clone,
-          game_object_parent(evaluation->world->database, thing));
     notify_event(evaluation, invocation->context->descriptor, player,
                  invocation->cause, clone, LUA_EVENT_CLONE, (char **)nullptr,
                  0);
   } else {
-    if (!(key & CLONE_PARENT) && is_controls(evaluation, player, thing))
-      game_object_set_parent(
-          evaluation->world->database, clone,
-          game_object_parent(evaluation->world->database, thing));
     s_halted(evaluation->world->database, clone);
   }
 }
@@ -1024,7 +922,7 @@ void do_chzone(CommandInvocation *invocation) {
   if ((zone != NOTHING) &&
       (typeof_obj(evaluation->world->database, zone) == TYPE_ROOM) &&
       typeof_obj(evaluation->world->database, thing) != TYPE_ROOM) {
-    notify(evaluation, player, "Only rooms may have parent rooms.");
+    notify(evaluation, player, "Only rooms may be zoned to rooms.");
     return;
   }
   /*
@@ -1190,7 +1088,7 @@ void do_unlink(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_chown: Change ownership of an object or attribute.
+ * * do_chown: Change ownership of an object.
  */
 
 void do_chown(CommandInvocation *invocation) {
@@ -1198,94 +1096,8 @@ void do_chown(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *name = invocation->first;
   char *newown = invocation->second;
-  DbRef thing, owner, aowner;
-  int atr, do_it;
-  long aflags;
-  Attribute *ap;
+  DbRef thing, owner;
 
-  if (parse_attrib(&invocation->context->match, player, name, &thing, &atr)) {
-    if (atr != NOTHING) {
-      if (!*newown) {
-        owner = game_object_owner(evaluation->world->database, thing);
-      } else if (!(string_compare(invocation->context->world->configuration,
-                                  newown, "me"))) {
-        owner = game_object_owner(evaluation->world->database, player);
-      } else {
-        owner = lookup_player(invocation->context->world, player, newown, 1);
-      }
-
-      /*
-       * You may chown an attr to yourself if you own the *
-       *
-       * *  * *  * * object and the attr is not locked. *
-       * You * may * chown  * an attr to the owner of the
-       * object * if * * you own * the attribute. * To do
-       * anything * else you  * must be a  * wizard. * Only
-       * #1 can * chown * attributes on #1.
-       */
-
-      if (!attribute_get_info(evaluation->world->database, thing, atr, &aowner,
-                              &aflags)) {
-        notify_quiet(evaluation, player, "Attribute not present on object.");
-        return;
-      }
-      do_it = 0;
-      if (owner == NOTHING) {
-        notify_quiet(evaluation, player, "I couldn't find that player.");
-        // Same message as the final else below, but this is a distinct
-        // god-protection check, not the general fallback.
-      } else if (is_god(evaluation->world->database, thing) &&
-                 !is_god(evaluation->world->database,
-                         player)) { // NOLINT(bugprone-branch-clone)
-        notify_quiet(evaluation, player, "Permission denied.");
-      } else if (is_wizard(evaluation->world->database, player)) {
-        do_it = 1;
-      } else if (owner ==
-                 game_object_owner(evaluation->world->database, player)) {
-
-        /*
-         * chown to me: only if I own the obj and * *
-         *
-         * *  * * !locked
-         */
-
-        if (!is_controls(evaluation, player, thing)) {
-          notify_quiet(evaluation, player, "Permission denied.");
-        } else {
-          do_it = 1;
-        }
-      } else if (owner ==
-                 game_object_owner(evaluation->world->database, thing)) {
-
-        /*
-         * chown to obj owner: only if I own attr * *
-         *
-         * *  * * and !locked
-         */
-
-        if (game_object_owner(evaluation->world->database, player) != aowner) {
-          notify_quiet(evaluation, player, "Permission denied.");
-        } else {
-          do_it = 1;
-        }
-      } else {
-        notify_quiet(evaluation, player, "Permission denied.");
-      }
-
-      if (!do_it)
-        return;
-
-      ap = attribute_by_number(invocation->context->world->database, atr);
-      if (!ap || !set_attr(evaluation, player, player, ap, aflags)) {
-        notify_quiet(evaluation, player, "Permission denied.");
-        return;
-      }
-      attribute_set_owner(evaluation->world->database, thing, atr, owner);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Attribute owner changed.");
-      return;
-    }
-  }
   init_match(&invocation->context->match, player, name, TYPE_THING);
   match_possession(&invocation->context->match);
   match_here(&invocation->context->match);
@@ -1334,7 +1146,6 @@ void do_chown(CommandInvocation *invocation) {
           evaluation->world->database, thing,
           game_object_owner(evaluation->world->database, owner));
     }
-    attribute_change_owner(evaluation->world->database, thing);
     game_object_set_flags(
         evaluation->world->database, thing,
         (game_object_flags(evaluation->world->database, thing) & ~INHERIT) |
@@ -1356,224 +1167,69 @@ void do_set(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   char *flag = invocation->second;
-  DbRef thing, thing2, aowner;
-  char *p, *buff;
-  int atr, atr2, clear, flagvalue, could_hear, have_xcode;
-  long aflags;
-  Attribute *attr, *attr2;
+  char *separator;
+  DbRef dynamic_thing;
 
-  /*
-   * See if we have the <obj>/<attr> form, which is how you set * * *
-   * attribute * flags.
-   */
-
-  if (parse_attrib(&invocation->context->match, player, name, &thing, &atr)) {
-    if (atr != NOTHING) {
-
-      /*
-       * You must specify a flag name
-       */
-
-      if (!flag || !*flag) {
-        notify_quiet(evaluation, player, "I don't know what you want to set!");
-        return;
-      }
-      /*
-       * Check for clearing
-       */
-
-      clear = 0;
-      if (*flag == NOT_TOKEN) {
-        flag++;
-        clear = 1;
-      }
-      /*
-       * Make sure player specified a valid attribute flag
-       */
-
-      flagvalue = name_table_search(invocation->context->world->database,
-                                    invocation->context->world->configuration,
-                                    player, indiv_attraccess_nametab, flag);
-      if (flagvalue < 0) {
-        notify_quiet(evaluation, player, "You can't set that!");
-        return;
-      }
-      /*
-       * Make sure the object has the attribute present
-       */
-
-      if (!attribute_get_info(evaluation->world->database, thing, atr, &aowner,
-                              &aflags)) {
-        notify_quiet(evaluation, player, "Attribute not present on object.");
-        return;
-      }
-      /*
-       * Make sure we can write to the attribute
-       */
-
-      attr = attribute_by_number(invocation->context->world->database, atr);
-      if (!attr || !set_attr(evaluation, player, thing, attr, aflags)) {
-        notify_quiet(evaluation, player, "Permission denied.");
-        return;
-      }
-      /*
-       * Go do it
-       */
-
-      if (clear)
-        aflags &= ~flagvalue;
-      else
-        aflags |= flagvalue;
-      have_xcode = is_hardcode(evaluation->world->database, thing);
-      attribute_set_flags(evaluation->world->database, thing, atr, aflags);
-
-      /*
-       * Tell the player about it.
-       */
-
-      if (invocation->context->world->configuration->have_specials)
-        handle_xcode(invocation->context->btech, player, thing, have_xcode,
-                     is_hardcode(evaluation->world->database, thing));
-      if (!(key & SET_QUIET) &&
-          !is_quiet(evaluation->world->database, player) &&
-          !is_quiet(evaluation->world->database, thing)) {
-        NameTable *nt;
-        nt = name_table_find_entry(invocation->context->world->database,
-                                   invocation->context->world->configuration,
-                                   player, indiv_attraccess_nametab, flag);
-        notify_printf(
-            evaluation, player, "%s/%s - %s %s",
-            game_object_name(invocation->context->world->database, thing),
-            attr->name, nt->name, clear ? "cleared." : "set.");
-      }
-      could_hear = is_hearer(evaluation, thing);
-      handle_ears(evaluation, thing, could_hear, is_hearer(evaluation, thing));
+  separator = strchr(name, '/');
+  if (separator) {
+    *separator++ = '\0';
+    dynamic_thing = match_controlled(&invocation->context->match, player, name);
+    if (dynamic_thing == NOTHING)
       return;
-    }
-  }
-  /*
-   * find thing
-   */
-
-  if ((thing = match_controlled(&invocation->context->match, player, name)) ==
-      NOTHING)
-    return;
-
-  /*
-   * check for attribute set first
-   */
-  for (p = flag; *p && (*p != ':'); p++)
-    ;
-
-  if (*p) {
-    *p++ = 0;
-    atr = mkattr(invocation->context->world->database, flag);
-    if (atr <= 0) {
-      notify_quiet(evaluation, player, "Couldn't create attribute.");
-      return;
-    }
-    attr = attribute_by_number(invocation->context->world->database, atr);
-    if (!attr) {
-      notify_quiet(evaluation, player, "Permission denied.");
-      return;
-    }
-    attribute_get_info(evaluation->world->database, thing, atr, &aowner,
-                       &aflags);
-    if (!set_attr(evaluation, player, thing, attr, aflags)) {
-      notify_quiet(evaluation, player, "Permission denied.");
-      return;
-    }
-    buff = alloc_lbuf("do_set");
-
-    /*
-     * check for _
-     */
-    if (*p == '_') {
-      StringCopy(buff, p + 1);
-      if (!parse_attrib(&invocation->context->match, player, p + 1, &thing2,
-                        &atr2) ||
-          (atr2 == NOTHING)) {
-        notify_quiet(evaluation, player, "No match.");
-        free_lbuf(buff);
-        return;
-      }
-      attr2 = attribute_by_number(invocation->context->world->database, atr2);
-      p = buff;
-      attribute_parent_get_string(evaluation->world->database, buff, thing2,
-                                  atr2, &aowner, &aflags);
-
-      if (!attr2 ||
-          !see_attr(evaluation, player, thing2, attr2, aowner, aflags)) {
-        notify_quiet(evaluation, player, "Permission denied.");
-        free_lbuf(buff);
-        return;
-      }
-    }
-    /*
-     * Go set it
-     */
-
-    object_attribute_set(evaluation, invocation->context->world->configuration,
-                         player, thing, atr, p, key);
-    free_lbuf(buff);
+    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing,
+                               separator, flag))
+      notify_quiet(evaluation, player, "Attribute update failed.");
     return;
   }
-  /*
-   * Set or clear a flag
-   */
-
-  flag_set(evaluation, invocation->context->world->indexes, thing, player, flag,
-           key);
+  separator = flag ? strchr(flag, ':') : nullptr;
+  if (separator) {
+    *separator++ = '\0';
+    dynamic_thing = match_controlled(&invocation->context->match, player, name);
+    if (dynamic_thing == NOTHING)
+      return;
+    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing, flag,
+                               separator))
+      notify_quiet(evaluation, player, "Attribute update failed.");
+    return;
+  }
+  dynamic_thing = match_controlled(&invocation->context->match, player, name);
+  if (dynamic_thing != NOTHING)
+    flag_set(evaluation, invocation->context->world->indexes, dynamic_thing,
+             player, flag, key);
+  return;
 }
 void do_cpattr(CommandInvocation *invocation) {
   char *oldpair = invocation->first;
   char **newpair = invocation->vector;
   int nargs = invocation->vector_count;
-  int i;
-  char *oldthing, *oldattr, *newthing, *newattr;
+  char *source_name = oldpair;
+  char *source_attribute = strchr(source_name, '/');
 
-  if (!*oldpair || !**newpair || !oldpair || !*newpair)
+  if (!source_attribute || nargs < 1)
     return;
-
-  if (nargs < 1)
+  *source_attribute++ = '\0';
+  DbRef source = match_controlled(&invocation->context->match,
+                                  invocation->player, source_name);
+  if (source == NOTHING)
     return;
-
-  oldattr = oldpair;
-  oldthing =
-      parse_to(invocation->context->world->configuration, &oldattr, '/', 1);
-
-  for (i = 0; i < nargs; i++) {
-    CommandInvocation set_invocation = *invocation;
-
-    set_invocation.key = 0;
-    newattr = newpair[i];
-    newthing =
-        parse_to(invocation->context->world->configuration, &newattr, '/', 1);
-
-    if (!oldattr) {
-      if (!newattr) {
-        set_invocation.first = newthing;
-        set_invocation.second = tprintf("%s:_%s/%s", oldthing, "me", oldthing);
-        do_set(&set_invocation);
-      } else {
-        set_invocation.first = newthing;
-        set_invocation.second = tprintf("%s:_%s/%s", newattr, "me", oldthing);
-        do_set(&set_invocation);
-      }
-    } else {
-      if (!newattr) {
-        set_invocation.first = newthing;
-        set_invocation.second =
-            tprintf("%s:_%s/%s", oldattr, oldthing, oldattr);
-        do_set(&set_invocation);
-      } else {
-        set_invocation.first = newthing;
-        set_invocation.second =
-            tprintf("%s:_%s/%s", newattr, oldthing, oldattr);
-        do_set(&set_invocation);
-      }
-    }
+  const char *value = dynamic_attribute_get(
+      invocation->context->world->database, source, source_attribute);
+  if (!value)
+    value = "";
+  for (int index = 0; index < nargs; index++) {
+    char *destination_name = newpair[index];
+    char *destination_attribute = strchr(destination_name, '/');
+    if (destination_attribute)
+      *destination_attribute++ = '\0';
+    else
+      destination_attribute = source_attribute;
+    DbRef destination = match_controlled(&invocation->context->match,
+                                         invocation->player, destination_name);
+    if (destination != NOTHING)
+      dynamic_attribute_set(invocation->context->world->database, destination,
+                            destination_attribute, value);
   }
+  return;
 }
 
 void do_mvattr(CommandInvocation *invocation) {
@@ -1582,170 +1238,55 @@ void do_mvattr(CommandInvocation *invocation) {
   char *what = invocation->first;
   char **args = invocation->vector;
   int nargs = invocation->vector_count;
-  DbRef thing, aowner, axowner;
-  Attribute *in_attr, *out_attr;
-  int i, anum, in_anum, no_delete;
-  long aflags, axflags;
-  char *astr;
-
-  aflags = 0;
-
-  /*
-   * Make sure we have something to do.
-   */
-
-  if (nargs < 2) {
-    notify_quiet(evaluation, player, "Nothing to do.");
+  if (nargs < 2)
     return;
-  }
-  /*
-   * FInd and make sure we control the target object.
-   */
-
-  thing = match_controlled(&invocation->context->match, player, what);
-  if (thing == NOTHING)
+  DbRef dynamic_thing =
+      match_controlled(&invocation->context->match, player, what);
+  if (dynamic_thing == NOTHING)
     return;
-
-  /*
-   * Look up the source attribute.  If it either doesn't exist or isn't
-   * * * * * readable, use an empty string.
-   */
-
-  in_anum = -1;
-  astr = alloc_lbuf("do_mvattr");
-  in_attr = attribute_by_name(invocation->context->world->database, args[0]);
-  if (in_attr == nullptr) {
-    *astr = '\0';
-  } else {
-    attribute_get_string(evaluation->world->database, astr, thing,
-                         in_attr->number, &aowner, &aflags);
-    if (!see_attr(evaluation, player, thing, in_attr, aowner, aflags)) {
-      *astr = '\0';
-    } else {
-      in_anum = in_attr->number;
-    }
+  const char *dynamic_value = dynamic_attribute_get(evaluation->world->database,
+                                                    dynamic_thing, args[0]);
+  if (!dynamic_value)
+    dynamic_value = "";
+  bool retain_source = false;
+  for (int index = 1; index < nargs; index++) {
+    if (strcmp(args[index], args[0]) == 0)
+      retain_source = true;
+    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing,
+                               args[index], dynamic_value))
+      notify_printf(evaluation, player, "%s: invalid attribute name.",
+                    args[index]);
   }
-
-  /*
-   * Copy the attribute to each target in turn.
-   */
-
-  no_delete = 0;
-  for (i = 1; i < nargs; i++) {
-    anum = mkattr(invocation->context->world->database, args[i]);
-    if (anum <= 0) {
-      notify_quiet(
-          evaluation, player,
-          tprintf("%s: That's not a good name for an attribute.", args[i]));
-      continue;
-    }
-    out_attr = attribute_by_number(invocation->context->world->database, anum);
-    if (!out_attr) {
-      notify_quiet(evaluation, player,
-                   tprintf("%s: Permission denied.", args[i]));
-    } else if (out_attr->number == in_anum) {
-      no_delete = 1;
-    } else {
-      attribute_get_info(evaluation->world->database, thing, out_attr->number,
-                         &axowner, &axflags);
-      if (!set_attr(evaluation, player, thing, out_attr, axflags)) {
-        notify_quiet(evaluation, player,
-                     tprintf("%s: Permission denied.", args[i]));
-      } else {
-        attribute_add(
-            evaluation->world->database, thing, out_attr->number, astr,
-            game_object_owner(evaluation->world->database, player), aflags);
-        if (!is_quiet(evaluation->world->database, player))
-          notify_printf(
-              evaluation, player, "%s/%s - Set.",
-              game_object_name(invocation->context->world->database, thing),
-              out_attr->name);
-      }
-    }
-  }
-
-  /*
-   * Remove the source attribute if we can.
-   */
-
-  if ((in_anum > 0) && !no_delete) {
-    in_attr =
-        attribute_by_number(invocation->context->world->database, in_anum);
-    if (in_attr && set_attr(evaluation, player, thing, in_attr, aflags)) {
-      attribute_clear(evaluation->world->database, thing, in_attr->number);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_printf(
-            evaluation, player, "%s/%s - Cleared.",
-            game_object_name(invocation->context->world->database, thing),
-            in_attr->name);
-    } else {
-      if (in_attr)
-        notify_quiet(
-            evaluation, player,
-            tprintf("%s: Could not remove old attribute.  Permission denied.",
-                    in_attr->name));
-    }
-  }
-  free_lbuf(astr);
+  if (!retain_source)
+    dynamic_attribute_delete(evaluation->world->database, dynamic_thing,
+                             args[0]);
+  return;
 }
 void do_wipe(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *it = invocation->first;
-  DbRef thing, aowner;
-  int attr, got_one;
-  long aflags;
-  Attribute *ap;
-  char *atext;
-  ObjectList attributes;
-
-  object_list_initialize(&attributes);
-  if (!it || !*it ||
-      !parse_attrib_wild(&invocation->context->match, player, it, &thing, 0, 0,
-                         1, &attributes,
-                         invocation->context->world->configuration,
-                         invocation->context->runtime->world_indexes)) {
-    notify_quiet(evaluation, player, "No match.");
-    object_list_destroy(&attributes);
+  char *pattern = strchr(it, '/');
+  if (!pattern) {
+    notify_quiet(evaluation, player, "Use @wipe object/pattern.");
     return;
   }
-  /*
-   * Iterate through matching attributes, zapping the writable ones
-   */
-
-  got_one = 0;
-  atext = alloc_lbuf("do_wipe.atext");
-  for (attr = (int)object_list_first(&attributes); attr != NOTHING;
-       attr = (int)object_list_next(&attributes)) {
-    ap = attribute_by_number(invocation->context->world->database, attr);
-    if (ap) {
-
-      /*
-       * Get the attr and make sure we can modify it.
-       */
-
-      attribute_get_string(evaluation->world->database, atext, thing,
-                           ap->number, &aowner, &aflags);
-      if (set_attr(evaluation, player, thing, ap, aflags)) {
-        attribute_clear(evaluation->world->database, thing, ap->number);
-        got_one++;
-      }
+  *pattern++ = '\0';
+  DbRef dynamic_thing =
+      match_controlled(&invocation->context->match, player, it);
+  if (dynamic_thing == NOTHING)
+    return;
+  GameObject *object =
+      game_database_object(evaluation->world->database, dynamic_thing);
+  int removed = 0;
+  for (int index = object->at_count - 1; index >= 0; index--) {
+    if (quick_wild(pattern, object->ahead[index].name)) {
+      dynamic_attribute_delete(evaluation->world->database, dynamic_thing,
+                               object->ahead[index].name);
+      removed++;
     }
   }
-  /*
-   * Clean up
-   */
-
-  if (!got_one) {
-    notify_quiet(evaluation, player, "No matching attributes.");
-  } else {
-    if (!is_quiet(evaluation->world->database, player))
-      notify_printf(
-          evaluation, player, "%s - %d attribute(s) wiped.",
-          game_object_name(invocation->context->world->database, thing),
-          got_one);
-  }
-
-  free_lbuf(atext);
-  object_list_destroy(&attributes);
+  notify_printf(evaluation, player, "%d attribute%s cleared.", removed,
+                removed == 1 ? "" : "s");
+  return;
 }

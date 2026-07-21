@@ -134,7 +134,7 @@ int exit_visible(EvaluationContext *evaluation, DbRef exit, DbRef player,
     return 1;
   if (is_light(evaluation->world->database, exit)) // Exit is light
     return 1;
-  if (key & (VE_LOC_DARK | VE_BASE_DARK))
+  if (key & VE_LOC_DARK)
     return 0;                                     // Dark loc or base
   if (is_dark(evaluation->world->database, exit)) // Dark exit
     return 0;
@@ -150,7 +150,7 @@ int exit_displayable(GameDatabase *database, DbRef exit, DbRef player,
     return 0;
   if (is_light(database, exit)) // Light exit
     return 1;
-  if (key & (VE_LOC_DARK | VE_BASE_DARK))
+  if (key & VE_LOC_DARK)
     return 0; // Dark loc or base
   return 1;   // Default
 }

@@ -637,8 +637,8 @@ void exec(EvaluationContext *context, char *buff, char **bufc, int tflags,
         if ((ch < 'A') || (ch > 'Z'))
           break;
         i = 100 + ch - 'A';
-        atr_gotten = attribute_parent_get(context->world->database, player, i,
-                                          &aowner, &aflags);
+        atr_gotten = attribute_get(context->world->database, player, i, &aowner,
+                                   &aflags);
         safe_str(atr_gotten, buff, bufc);
         free_lbuf(atr_gotten);
         break;

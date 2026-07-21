@@ -77,9 +77,6 @@
 "@oemi" = "@oemit"
 "@op" = "@open"
 "@ope" = "@open"
-"@par" = "@parent"
-"@pare" = "@parent"
-"@paren" = "@parent"
 "@pass" = "@password"
 "@pcre" = "@pcreate"
 "@pe" = "@pemit"
@@ -96,8 +93,6 @@
 "@st" = "@stats"
 "@sta" = "@stats"
 "@stat" = "@stats"
-"@swe" = "@sweep"
-"@swee" = "@sweep"
 "@swi" = "@switch"
 "@swit" = "@switch"
 "@switc" = "@switch"
@@ -107,11 +102,6 @@
 "@telep" = "@teleport"
 "@telepo" = "@teleport"
 "@telepor" = "@teleport"
-"@tr" = "@trigger"
-"@tri" = "@trigger"
-"@trig" = "@trigger"
-"@trigg" = "@trigger"
-"@trigge" = "@trigger"
 "@unli" = "@unlink"
 "@unlin" = "@unlink"
 "@wai" = "@wait"
@@ -354,12 +344,6 @@ lsearch = "search"
 secs2time = "convsecs"
 time2secs = "convtime"
 who = "lwho"
-ufun = "u"
-
-[aliases.attrs]
-describe = "desc"
-idescribe = "idesc"
-forward = "forwardlist"
 
 [names]
 bad = ["a", "an", "announcement", "broadcast", "from", "here", "home", "in",

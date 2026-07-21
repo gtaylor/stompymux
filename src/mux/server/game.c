@@ -16,7 +16,6 @@
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
 #include "mux/database/powers.h"
-#include "mux/database/vattr.h"
 #include "mux/help/help_index.h"
 #include "mux/network/connect_flow.h"
 #include "mux/persistence/commac_persistence.h"
@@ -35,8 +34,6 @@
 #include "persistence/btech_persistence.h"
 #ifndef NEXT
 #endif
-
-#define NSUBEXP 10
 
 extern void init_cmdtab(CommandRegistry *registry);
 
@@ -95,280 +92,36 @@ void report(CommandContext *command) {
   }
 }
 
-/*
- * Load a regular expression match and insert it into
- * registers.
- */
-static int regexp_match(const char *pattern, const char *str, char *args[],
-                        int nargs) {
-  regex_t re;
-  int got_match;
-  regmatch_t pmatch[NSUBEXP];
-  int i, len;
-
-  /*
-   * Load the regexp pattern. This allocates memory which must be
-   * later freed. A free() of the regexp does free all structures
-   * under it.
-   */
-
-  if (regcomp(&re, pattern, REG_EXTENDED) != 0) {
-    /*
-     * This is a matching error. We have an error message in
-     * regexp_errbuf that we can ignore, since we're doing
-     * command-matching.
-     */
-    return 0;
-  }
-
-  /*
-   * Now we try to match the pattern. The relevant fields will
-   * automatically be filled in by this.
-   */
-  got_match = (regexec(&re, str, NSUBEXP, pmatch, 0) == 0);
-  if (!got_match) {
-    regfree(&re);
-    return 0;
-  }
-
-  /*
-   * Now we fill in our args vector. Note that in regexp matching,
-   * 0 is the entire string matched, and the parenthesized strings
-   * go from 1 to 9. We DO PRESERVE THIS PARADIGM, for consistency
-   * with other languages.
-   */
-
-  for (i = 0; i < nargs; i++) {
-    args[i] = nullptr;
-  }
-
-  /* Convenient: nargs and NSUBEXP are the same.
-   * We are also guaranteed that our buffer is going to be LBUF_SIZE
-   * so we can copy without fear.
-   */
-
-  for (i = 0;
-       (i < NSUBEXP) && (pmatch[i].rm_so != -1) && (pmatch[i].rm_eo != -1);
-       i++) {
-    len = pmatch[i].rm_eo - pmatch[i].rm_so;
-    args[i] = alloc_lbuf("regexp_match");
-    memset(args[i], 0, LBUF_SIZE);
-    strncpy(args[i], str + pmatch[i].rm_so, (size_t)len);
-    args[i][len] = '\0'; /* strncpy() does not null-terminate */
-  }
-
-  regfree(&re);
-  return 1;
-}
-
-/**
- * Check attribute list for wild card matches and queue them.
- */
-static int attribute_match_one(EvaluationContext *evaluation, DbRef thing,
-                               DbRef parent, DbRef player, char type,
-                               const char *str, int check_exclude,
-                               int hash_insert) {
-  DbRef aowner;
-  int match, attr, i;
-  long aflags;
-  char buff[LBUF_SIZE], *s, *as;
-  char *args[10];
-  Attribute *ap;
-  LuaLockInvocation lock;
-  LuaLockResult lock_result;
-
-  memset(args, 0, sizeof(args));
-
-  /*
-   * See if we can do it.  Silently fail if we can't.
-   */
-
-  if (!lock_test(evaluation, player, player, player, parent, LUA_LOCK_USE,
-                 LUA_LOCK_OPERATION_COMMAND_MATCH, true, &lock, &lock_result))
-    return -1;
-
-  match = 0;
-  for (attr = attribute_list_first(evaluation->world->database, parent, &as);
-       attr; attr = attribute_list_next(&as)) {
-    ap = attribute_by_number(evaluation->world->database, attr);
-
-    /*
-     * Never check NOPROG attributes.
-     */
-
-    if (!ap || (ap->flags & AF_NOPROG))
-      continue;
-
-    /*
-     * If we aren't the bottom level check if we saw this attr *
-     * * * * before.  Also exclude it if the attribute type is *
-     * * PRIVATE.
-     */
-
-    if (check_exclude &&
-        ((ap->flags & AF_PRIVATE) ||
-         numeric_hash_table_find(
-             ap->number, &evaluation->world->indexes->parent_commands))) {
-      continue;
-    }
-    attribute_get_string(evaluation->world->database, buff, parent, attr,
-                         &aowner, &aflags);
-
-    /*
-     * Skip if private and on a parent
-     */
-
-    if (check_exclude && (aflags & AF_PRIVATE)) {
-      continue;
-    }
-    /*
-     * If we aren't the top level remember this attr so we * * *
-     * exclude * it from now on.
-     */
-
-    if (hash_insert)
-      numeric_hash_table_add(ap->number, (int *)&attr,
-                             &evaluation->world->indexes->parent_commands);
-
-    /*
-     * Check for the leadin character after excluding the attrib
-     * * * * * This lets non-command attribs on the child block *
-     * *  * commands * on the parent.
-     */
-
-    if ((buff[0] != type) || (aflags & AF_NOPROG))
-      continue;
-
-    /*
-     * decode it: search for first un escaped :
-     */
-
-    for (s = buff + 1; *s && (*s != ':'); s++)
-      ;
-    if (!*s)
-      continue;
-    *s++ = 0;
-    if (((aflags & AF_REGEXP) && regexp_match(buff + 1, str, args, 10)) ||
-        wild(buff + 1, str, args, 10)) {
-      match = 1;
-      wait_que(evaluation->runtime->commands, thing, player, 0, NOTHING, 0, s,
-               args, 10, evaluation->registers);
-      for (i = 0; i < 10; i++) {
-        if (args[i])
-          free_lbuf(args[i]);
-      }
-    }
-  }
-  return (match);
-}
-
-int attribute_match(EvaluationContext *evaluation, DbRef thing, DbRef player,
-                    char type, const char *str, int check_parents) {
-  int match, lev, result, exclude, insert;
-  DbRef parent;
-
-  /*
-   * If thing is halted, don't check anything
-   */
-
-  if (is_halted(evaluation->world->database, thing))
-    return 0;
-
-  /*
-   * If not checking parents, just check the thing
-   */
-
-  match = 0;
-  if (!check_parents)
-    return attribute_match_one(evaluation, thing, thing, player, type, str, 0,
-                               0);
-
-  /*
-   * Check parents, ignoring halted objects
-   */
-
-  exclude = 0;
-  insert = 1;
-  numeric_hash_table_flush(&evaluation->world->indexes->parent_commands, 0);
-  ITER_PARENTS(evaluation->world->database, evaluation->world->configuration,
-               thing, parent, lev) {
-    if (!is_good_obj(evaluation->world->database,
-                     game_object_parent(evaluation->world->database, parent)))
-      insert = 0;
-    result = attribute_match_one(evaluation, thing, parent, player, type, str,
-                                 exclude, insert);
-    if (result > 0) {
-      match = 1;
-    } else if (result < 0) {
-      return match;
-    }
-    exclude = 1;
-  }
-
-  return match;
-}
-
 /**
  * Notifies the object #target of the message msg, and
  * optionally notify the contents, neighbors, and location also.
  */
 int check_filter(EvaluationContext *evaluation, DbRef object, DbRef player,
                  int filter, const char *msg) {
-  long aflags;
-  DbRef aowner;
-  char *buf, *nbuf, *cp, *dp, *str;
-
-  buf = attribute_parent_get(evaluation->world->database, object, filter,
-                             &aowner, &aflags);
-  if (!*buf) {
-    free_lbuf(buf);
-    return (1);
-  }
-  nbuf = dp = alloc_lbuf("check_filter");
-  str = buf;
-  exec(evaluation, nbuf, &dp, 0, object, player, EV_FIGNORE | EV_EVAL | EV_TOP,
-       &str, (char **)nullptr, 0);
-  *dp = '\0';
-  dp = nbuf;
-  free_lbuf(buf);
-  do {
-    cp = parse_to(evaluation->world->configuration, &dp, ',', EV_STRIP);
-    if (quick_wild(cp, msg)) {
-      free_lbuf(nbuf);
-      return (0);
-    }
-  } while (dp != nullptr);
-  free_lbuf(nbuf);
-  return (1);
+  (void)evaluation;
+  (void)object;
+  (void)player;
+  (void)filter;
+  (void)msg;
+  return 1;
 }
 
 static char *add_prefix(EvaluationContext *evaluation, DbRef object,
                         DbRef player, int prefix, const char *msg,
                         const char *dflt) {
-  long aflags;
-  DbRef aowner;
-  char *buf, *nbuf, *cp, *bp, *str;
-
-  buf = attribute_parent_get(evaluation->world->database, object, prefix,
-                             &aowner, &aflags);
-  if (!*buf) {
-    cp = buf;
-    safe_str(dflt, buf, &cp);
-  } else {
-    nbuf = bp = alloc_lbuf("add_prefix");
-    str = buf;
-    exec(evaluation, nbuf, &bp, 0, object, player,
-         EV_FIGNORE | EV_EVAL | EV_TOP, &str, (char **)nullptr, 0);
-    *bp = '\0';
-    free_lbuf(buf);
-    buf = nbuf;
-    cp = &buf[strlen(buf)];
+  (void)evaluation;
+  (void)object;
+  (void)player;
+  (void)prefix;
+  char *plain = alloc_lbuf("add_prefix");
+  char *cursor = plain;
+  if (dflt && *dflt) {
+    safe_str(dflt, plain, &cursor);
+    safe_chr(' ', plain, &cursor);
   }
-  if (cp != buf)
-    safe_str(" ", buf, &cp);
-  safe_str(msg, buf, &cp);
-  *cp = '\0';
-  return (buf);
+  safe_str(msg, plain, &cursor);
+  *cursor = '\0';
+  return plain;
 }
 
 static char *dflt_from_msg(GameDatabase *database, DbRef sender,
@@ -389,14 +142,9 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
   char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = nullptr;
-  char *args[10];
-  DbRef aowner, targetloc, recip, obj;
-  int i, nargs, has_neighbors, pass_listen;
-  long aflags;
-  int check_listens, pass_uselock, target_audible;
-  FWDLIST *fp;
-  LuaLockInvocation lock;
-  LuaLockResult lock_result;
+  DbRef targetloc, recip, obj;
+  int has_neighbors;
+  int target_audible;
 
   /*
    * If speaker is invalid or message is empty, just exit
@@ -466,7 +214,6 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
    * msg contains the raw message, msg_ns contains the NOSPOOFed msg
    */
 
-  check_listens = is_halted(evaluation->world->database, target) ? 0 : 1;
   switch (typeof_obj(evaluation->world->database, target)) {
   case TYPE_PLAYER:
     if (key & MSG_ME) {
@@ -477,8 +224,6 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if (colbuf)
       free_lbuf(colbuf);
-    if (!evaluation->world->configuration->player_listen)
-      check_listens = 0;
     [[fallthrough]];
   case TYPE_THING:
   case TYPE_ROOM:
@@ -526,97 +271,6 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       if (colbuf)
         free_lbuf(colbuf);
       free_lbuf(tbuff);
-    }
-    /*
-     * Check for @Listen match if it will be useful
-     */
-
-    pass_listen = 0;
-    nargs = 0;
-    if (check_listens && (key & (MSG_ME | MSG_INV_L)) &&
-        has_listen(evaluation->world->database, target)) {
-      tp = attribute_get(evaluation->world->database, target, A_LISTEN, &aowner,
-                         &aflags);
-      if (*tp && wild(tp, msg, args, 10)) {
-        for (nargs = 10; nargs && (!args[nargs - 1] || !(*args[nargs - 1]));
-             nargs--)
-          ;
-        pass_listen = 1;
-      }
-      free_lbuf(tp);
-    }
-    /*
-     * If we matched the @listen or are monitoring, check the * *
-     * USE lock
-     */
-
-    if (sender < 0)
-      sender = GOD;
-    pass_uselock = 0;
-    if ((key & MSG_ME) && check_listens &&
-        (pass_listen || is_monitor(evaluation->world->database, target)))
-      pass_uselock =
-          lock_test(evaluation, sender, sender, sender, target, LUA_LOCK_USE,
-                    LUA_LOCK_OPERATION_LISTEN, true, &lock, &lock_result);
-
-    /*
-     * Process AxHEAR if we pass LISTEN, USElock and it's for me
-     */
-
-    if ((key & MSG_ME) && pass_listen && pass_uselock) {
-      if (sender != target)
-        notify_event(evaluation, nullptr, sender, sender, target,
-                     LUA_EVENT_MATCH_HEARD_OTHER, args, nargs);
-      else
-        notify_event(evaluation, nullptr, sender, sender, target,
-                     LUA_EVENT_MATCH_HEARD_SELF, args, nargs);
-      notify_event(evaluation, nullptr, sender, sender, target,
-                   LUA_EVENT_MATCH_HEARD, args, nargs);
-    }
-    /*
-     * Get rid of match arguments. We don't need them anymore
-     */
-
-    if (pass_listen) {
-      for (i = 0; i < 10; i++)
-        if (args[i] != nullptr)
-          free_lbuf(args[i]);
-    }
-    /*
-     * Process ^-listens if for me, MONITOR, and we pass USElock
-     */
-    /*
-     * \todo Eventually come up with a cleaner method for making sure
-     * the sender isn't the same as the target.
-     */
-    if ((key & MSG_ME) &&
-        (sender != target || is_wizard(evaluation->world->database, target)) &&
-        pass_uselock && is_monitor(evaluation->world->database, target)) {
-      (void)attribute_match(evaluation, target, sender, AMATCH_LISTEN, msg, 0);
-    }
-    /*
-     * Deliver message to forwardlist members
-     */
-
-    if ((key & MSG_FWDLIST) &&
-        is_audible(evaluation->world->database, target) &&
-        check_filter(evaluation, target, sender, A_FILTER, msg)) {
-      tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-      buff = add_prefix(evaluation, target, sender, A_PREFIX, msg, tbuff);
-      free_lbuf(tbuff);
-
-      fp = fwdlist_get(evaluation->world->database, target);
-      if (fp) {
-        for (i = 0; i < fp->count; i++) {
-          recip = fp->data[i];
-          if (!is_good_obj(evaluation->world->database, recip) ||
-              (recip == target))
-            continue;
-          notify_checked(evaluation, recip, sender, buff,
-                         (MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE));
-        }
-      }
-      free_lbuf(buff);
     }
     /*
      * Deliver message through audible exits
@@ -688,7 +342,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
      * Deliver message to contents
      */
 
-    if (((key & MSG_INV) || ((key & MSG_INV_L) && pass_listen)) &&
+    if ((key & MSG_INV) &&
         (check_filter(evaluation, target, sender, A_INFILTER, msg))) {
 
       /*
@@ -998,84 +652,10 @@ static int load_game(MuxServer *server) {
   return (0);
 }
 
-/**
- * match a list of things, using the no_command flag
- */
-int list_check(EvaluationContext *evaluation, DbRef thing, DbRef player,
-               char type, char *str, int check_parent) {
-  int match, limit;
-
-  match = 0;
-  limit = evaluation->world->database->top;
-  while (thing != NOTHING) {
-    if ((thing != player) &&
-        (!(is_no_command(evaluation->world->database, thing)))) {
-      if (attribute_match(evaluation, thing, player, type, str, check_parent) >
-          0)
-        match = 1;
-    }
-    thing = game_object_next(evaluation->world->database, thing);
-    if (--limit < 0)
-      return match;
-  }
-  return match;
-}
-
 int is_hearer(EvaluationContext *evaluation, DbRef thing) {
-  char *as, *buff, *s;
-  DbRef aowner;
-  int attr;
-  long aflags;
-  Attribute *ap;
-
-  if (evaluation->is_piping && (thing == evaluation->pipe_object))
-    return 1;
-
-  if (is_connected(evaluation->world->database, thing) ||
-      is_puppet(evaluation->world->database, thing))
-    return 1;
-
-  if (is_monitor(evaluation->world->database, thing))
-    buff = alloc_lbuf("Hearer");
-  else
-    buff = nullptr;
-  for (attr = attribute_list_first(evaluation->world->database, thing, &as);
-       attr; attr = attribute_list_next(&as)) {
-    if (attr == A_LISTEN) {
-      if (buff)
-        free_lbuf(buff);
-      return 1;
-    }
-    if (buff && is_monitor(evaluation->world->database, thing)) {
-      ap = attribute_by_number(evaluation->world->database, attr);
-      if (!ap || (ap->flags & AF_NOPROG))
-        continue;
-
-      attribute_get_string(evaluation->world->database, buff, thing, attr,
-                           &aowner, &aflags);
-
-      /*
-       * Make sure we can execute it
-       */
-
-      if ((buff[0] != AMATCH_LISTEN) || (aflags & AF_NOPROG))
-        continue;
-
-      /*
-       * Make sure there's a : in it
-       */
-
-      for (s = buff + 1; *s && (*s != ':'); s++)
-        ;
-      if (s) {
-        free_lbuf(buff);
-        return 1;
-      }
-    }
-  }
-  if (buff)
-    free_lbuf(buff);
-  return 0;
+  return (evaluation->is_piping && thing == evaluation->pipe_object) ||
+         is_connected(evaluation->world->database, thing) ||
+         is_puppet(evaluation->world->database, thing);
 }
 
 void do_readcache(CommandInvocation *invocation) {
@@ -1126,14 +706,9 @@ int main(int argc, char *argv[]) {
   init_flagtab(&server.world_indexes);
   init_powertab(&server.world_indexes);
   init_functab(&server);
-  init_attrtab(&server.database);
   init_version(&server);
 
   hash_table_initialize(&server.world_indexes.players, 250 * HASH_FACTOR);
-  numeric_hash_table_initialize(&server.world_indexes.forward_lists,
-                                25 * HASH_FACTOR);
-  numeric_hash_table_initialize(&server.world_indexes.parent_commands,
-                                5 * HASH_FACTOR);
   configuration_read(&server.configuration_context, config_file);
 
   if (!password_initialize()) {
@@ -1192,9 +767,7 @@ int main(int argc, char *argv[]) {
   channel_registry_reset_statistics(&server.channels);
   hash_table_reset(&server.command_registry.functions);
   hash_table_reset(&server.world_indexes.flags);
-  hash_table_reset(&server.world_indexes.attributes);
   hash_table_reset(&server.world_indexes.players);
-  numeric_hash_table_reset(&server.world_indexes.forward_lists);
 
   if (!server_lifecycle_boot(server.lifecycle, mindb)) {
     exit(2);

@@ -26,7 +26,9 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     lua_getfield(state, -1, "commands");
-    if (!lua_istable(state, -1)) {
+    if (!lua_isnil(state, -1) && !lua_istable(state, -1)) {
+      fprintf(stderr, "Lua module %s commands field is not a table\n",
+              argv[index]);
       lua_close(state);
       return 1;
     }

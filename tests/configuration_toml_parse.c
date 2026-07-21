@@ -53,7 +53,11 @@ static int test_scalar_dispatch(void) {
                             "memory_limit = 33554432\n"
                             "[mux]\n"
                             "fork_dump = true\n"
-                            "public_flags = false\n";
+                            "public_flags = false\n"
+                            "default_thing_lua_parent = \"thing.lua\"\n"
+                            "default_room_lua_parent = \"room.lua\"\n"
+                            "default_exit_lua_parent = \"exit.lua\"\n"
+                            "default_player_lua_parent = \"player.lua\"\n";
   toml_result_t result;
   CallLog log = {0};
   int ok;
@@ -62,14 +66,18 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 8 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 12 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
        call_log_find(&log, "dump_interval", "900") &&
        call_log_find(&log, "lua_directory", "scripts") &&
        call_log_find(&log, "lua_instruction_limit", "50000") &&
        call_log_find(&log, "lua_memory_limit", "33554432") &&
        call_log_find(&log, "fork_dump", "true") &&
-       call_log_find(&log, "public_flags", "false");
+       call_log_find(&log, "public_flags", "false") &&
+       call_log_find(&log, "default_thing_lua_parent", "thing.lua") &&
+       call_log_find(&log, "default_room_lua_parent", "room.lua") &&
+       call_log_find(&log, "default_exit_lua_parent", "exit.lua") &&
+       call_log_find(&log, "default_player_lua_parent", "player.lua");
   toml_free(result);
   return ok;
 }

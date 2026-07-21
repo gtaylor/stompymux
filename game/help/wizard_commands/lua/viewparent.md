@@ -17,6 +17,6 @@ or a Lua parent path relative to `game/lua/object_logic`:
 @lua/viewparent hello.lua
 ```
 
-The dbref form follows the object's normal parent chain and displays its
-effective Lua parent, including where that parent was attached. The path form
-must use the same safe relative `.lua` path accepted by `@lua/parent`.
+The dbref form displays the Lua parent attached directly to that object. The
+path form must use the same safe relative `.lua` path accepted by
+`@lua/parent`.

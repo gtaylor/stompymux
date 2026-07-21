@@ -171,6 +171,12 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.connect_reg_file", "connect_reg_file", CFG_KIND_SCALAR},
     {"mux.dark_sleepers", "dark_sleepers", CFG_KIND_SCALAR},
     {"mux.default_home", "default_home", CFG_KIND_SCALAR},
+    {"mux.default_thing_lua_parent", "default_thing_lua_parent",
+     CFG_KIND_SCALAR},
+    {"mux.default_room_lua_parent", "default_room_lua_parent", CFG_KIND_SCALAR},
+    {"mux.default_exit_lua_parent", "default_exit_lua_parent", CFG_KIND_SCALAR},
+    {"mux.default_player_lua_parent", "default_player_lua_parent",
+     CFG_KIND_SCALAR},
     {"mux.down_file", "down_file", CFG_KIND_SCALAR},
     {"mux.down_message", "down_message", CFG_KIND_SCALAR},
     {"mux.dump_message", "dump_message", CFG_KIND_SCALAR},
@@ -201,10 +207,8 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.notify_recursion_limit", "notify_recursion_limit", CFG_KIND_SCALAR},
     {"mux.output_limit", "output_limit", CFG_KIND_SCALAR},
     {"mux.paranoid_allocate", "paranoid_allocate", CFG_KIND_SCALAR},
-    {"mux.parent_recursion_limit", "parent_recursion_limit", CFG_KIND_SCALAR},
     {"mux.pemit_far_players", "pemit_far_players", CFG_KIND_SCALAR},
     {"mux.pemit_any_object", "pemit_any_object", CFG_KIND_SCALAR},
-    {"mux.player_listen", "player_listen", CFG_KIND_SCALAR},
     {"mux.player_match_own_commands", "player_match_own_commands",
      CFG_KIND_SCALAR},
     {"mux.player_name_spaces", "player_name_spaces", CFG_KIND_SCALAR},
@@ -215,7 +219,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.public_flags", "public_flags", CFG_KIND_SCALAR},
     {"mux.queue_active_chunk", "queue_active_chunk", CFG_KIND_SCALAR},
     {"mux.queue_idle_chunk", "queue_idle_chunk", CFG_KIND_SCALAR},
-    {"mux.quiet_look", "quiet_look", CFG_KIND_SCALAR},
     {"mux.quit_file", "quit_file", CFG_KIND_SCALAR},
     {"mux.read_remote_desc", "read_remote_desc", CFG_KIND_SCALAR},
     {"mux.read_remote_name", "read_remote_name", CFG_KIND_SCALAR},
@@ -225,16 +228,12 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.show_unfindable_who", "show_unfindable_who", CFG_KIND_SCALAR},
     {"mux.space_compress", "space_compress", CFG_KIND_SCALAR},
     {"mux.stack_limit", "stack_limit", CFG_KIND_SCALAR},
-    {"mux.sweep_dark", "sweep_dark", CFG_KIND_SCALAR},
     {"mux.switch_default_all", "switch_default_all", CFG_KIND_SCALAR},
     {"mux.timeslice", "timeslice", CFG_KIND_SCALAR},
     {"mux.trace_output_limit", "trace_output_limit", CFG_KIND_SCALAR},
     {"mux.trace_topdown", "trace_topdown", CFG_KIND_SCALAR},
     {"mux.unowned_safe", "unowned_safe", CFG_KIND_SCALAR},
     {"mux.zone_recursion_limit", "zone_recursion_limit", CFG_KIND_SCALAR},
-    {"mux.exit_parent", "exit_parent", CFG_KIND_SCALAR},
-    {"mux.room_parent", "room_parent", CFG_KIND_SCALAR},
-    {"mux.player_parent", "player_parent", CFG_KIND_SCALAR},
     {"mux.player_zone", "player_zone", CFG_KIND_SCALAR},
 
     /* security */
@@ -262,19 +261,13 @@ static const ConfigTomlMapping config_toml_map[] = {
     /* access */
     {"access.commands", "access", CFG_KIND_ACCESS_MAP},
     {"access.functions", "function_access", CFG_KIND_ACCESS_MAP},
-    {"access.attrs", "attr_access", CFG_KIND_ACCESS_MAP},
-    {"access.attr_commands", "attr_cmd_access", CFG_KIND_ACCESS_MAP},
     {"access.lists", "list_access", CFG_KIND_ACCESS_MAP},
     {"access.config", "config_access", CFG_KIND_ACCESS_MAP},
-    /* user_attr_access is a negatable bitmask, not a per-key access map,
-       despite living in the same [access] section. */
-    {"access.user_attrs", "user_attr_access", CFG_KIND_FLAG_LIST},
 
     /* aliases */
     {"aliases.commands", "alias", CFG_KIND_ALIAS_MAP},
     {"aliases.flags", "flag_alias", CFG_KIND_ALIAS_MAP},
     {"aliases.functions", "function_alias", CFG_KIND_ALIAS_MAP},
-    {"aliases.attrs", "attr_alias", CFG_KIND_ALIAS_MAP},
 
     /* names */
     {"names.bad", "bad_name", CFG_KIND_STRING_LIST},

@@ -19,7 +19,7 @@ void notify_action(EvaluationContext *evaluation,
   LuaMessageResult result;
   const char *enactor_message;
   const char *other_message;
-  char *d, *buff, *bp, *str;
+  char *d;
   DbRef location, attribute_owner;
   long attribute_flags;
 
@@ -37,18 +37,11 @@ void notify_action(EvaluationContext *evaluation,
    */
 
   if (invocation->content_attribute > 0) {
-    d = attribute_parent_get(evaluation->world->database, message.object,
-                             invocation->content_attribute, &attribute_owner,
-                             &attribute_flags);
+    d = attribute_get(evaluation->world->database, message.object,
+                      invocation->content_attribute, &attribute_owner,
+                      &attribute_flags);
     if (*d) {
-      buff = bp = alloc_lbuf("notify_action.1");
-      str = d;
-      exec(evaluation, buff, &bp, 0, message.object, message.enactor,
-           EV_EVAL | EV_FIGNORE | EV_TOP, &str, invocation->arguments,
-           invocation->argument_count);
-      *bp = '\0';
-      notify(evaluation, message.enactor, buff);
-      free_lbuf(buff);
+      notify(evaluation, message.enactor, d);
     } else if (enactor_message) {
       notify(evaluation, message.enactor, enactor_message);
     }

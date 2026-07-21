@@ -19,7 +19,6 @@ struct SearchCriteria {
   long s_rst_type;
   FLAGSET s_fset;
   POWERSET s_pset;
-  DbRef s_parent;
   DbRef s_zone;
   char *s_rst_name;
   char *s_rst_eval;

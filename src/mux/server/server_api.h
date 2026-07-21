@@ -63,13 +63,13 @@ constexpr int MSG_NBR_EXITS = 64;    /* Also forward to neighbor exits */
 constexpr int MSG_NBR_EXITS_A = 128; /* ... only if I am audible */
 constexpr int MSG_LOC = 256;         /* Send to my location */
 constexpr int MSG_LOC_A = 512;       /* ... only if I am audible */
-constexpr int MSG_FWDLIST = 1024;    /* Forward to my fwdlist members if aud */
-constexpr int MSG_ME = 2048;         /* Send to me */
-constexpr int MSG_S_INSIDE = 4096;   /* Originator is inside target */
-constexpr int MSG_S_OUTSIDE = 8192;  /* Originator is outside target */
-constexpr int MSG_COLORIZE = 16384;  /* Message needs to be given color */
+/* 1024 is reserved for removed forwarding-list delivery. */
+constexpr int MSG_ME = 2048;        /* Send to me */
+constexpr int MSG_S_INSIDE = 4096;  /* Originator is inside target */
+constexpr int MSG_S_OUTSIDE = 8192; /* Originator is outside target */
+constexpr int MSG_COLORIZE = 16384; /* Message needs to be given color */
 /* #define FREE		32768	*/
-constexpr int MSG_ME_ALL = MSG_ME | MSG_INV_EXITS | MSG_FWDLIST;
+constexpr int MSG_ME_ALL = MSG_ME | MSG_INV_EXITS;
 constexpr int MSG_F_CONTENTS = MSG_INV;
 constexpr int MSG_F_UP = MSG_NBR_A | MSG_LOC_A;
 constexpr int MSG_F_DOWN = MSG_INV_L;
@@ -118,9 +118,6 @@ static inline void notify_all_from_outside(EvaluationContext *evaluation,
                      MSG_S_OUTSIDE);
 }
 /* Command handler keys */
-constexpr int ATTRIB_ACCESS = 1;   /* Change access to attribute */
-constexpr int ATTRIB_RENAME = 2;   /* Rename attribute */
-constexpr int ATTRIB_DELETE = 4;   /* Delete attribute */
 constexpr int BOOT_QUIET = 1;      /* Inhibit boot message to victim */
 constexpr int BOOT_PORT = 2;       /* Boot by port number */
 constexpr int CEMIT_NOHEADER = 1;  /* Channel emit without header */
@@ -134,18 +131,17 @@ constexpr int CLONE_PRESERVE = 2;  /* Preserve the owner of the object */
 constexpr int CLONE_INVENTORY = 4; /* Create cloned object in my inventory */
 constexpr int CLONE_SET_LOC = 16;  /* ARG2 is location of cloned object */
 constexpr int CLONE_SET_NAME = 32; /* ARG2 is alternate name of cloned object */
-constexpr int CLONE_PARENT = 64; /* Set parent on obj instd of cloning attrs */
-constexpr int CRE_INVENTORY = 0; /* Create object in my inventory */
-constexpr int CRE_LOCATION = 1;  /* Create object in my location */
-constexpr int CRE_SET_LOC = 2;   /* ARG2 is location of new object */
-constexpr int DBCK_DEFAULT = 1;  /* Get default tests too */
-constexpr int DBCK_REPORT = 2;   /* Report info to invoker */
-constexpr int DBCK_FULL = 4;     /* Do all tests */
-constexpr int DBCK_FLOATING = 8; /* Look for floating rooms */
-constexpr int DBCK_PURGE = 16;   /* Purge the db of refs to going objects */
-constexpr int DBCK_LINKS = 32;   /* Validate exit and object chains */
-constexpr int DBCK_WEALTH = 64;  /* Validate object value/wealth */
-constexpr int DBCK_OWNER = 128;  /* Do more extensive owner checking */
+constexpr int CRE_INVENTORY = 0;   /* Create object in my inventory */
+constexpr int CRE_LOCATION = 1;    /* Create object in my location */
+constexpr int CRE_SET_LOC = 2;     /* ARG2 is location of new object */
+constexpr int DBCK_DEFAULT = 1;    /* Get default tests too */
+constexpr int DBCK_REPORT = 2;     /* Report info to invoker */
+constexpr int DBCK_FULL = 4;       /* Do all tests */
+constexpr int DBCK_FLOATING = 8;   /* Look for floating rooms */
+constexpr int DBCK_PURGE = 16;     /* Purge the db of refs to going objects */
+constexpr int DBCK_LINKS = 32;     /* Validate exit and object chains */
+constexpr int DBCK_WEALTH = 64;    /* Validate object value/wealth */
+constexpr int DBCK_OWNER = 128;    /* Do more extensive owner checking */
 constexpr int DBCK_OWN_EXIT = 256; /* Check exit owner owns src or dest */
 constexpr int DBCK_WIZARD = 512;   /* Check for wizards/wiz objects */
 constexpr int DBCK_TYPES = 1024;   /* Check for valid & appropriate types */
@@ -164,7 +160,6 @@ constexpr int DUMP_TEXT = 2;      /* Dump text (gdbm) file */
 constexpr int DUMP_OPTIMIZE = 3;  /* Reorganize the gdbm file */
 constexpr int EXAM_BRIEF = 1;     /* Omit the ordinary attribute list */
 constexpr int EXAM_DEBUG = 4;   /* Display more info for finding db problems */
-constexpr int EXAM_PARENT = 8;  /* Get attr from parent when exam obj/attr */
 constexpr int FRC_PREFIX = 0;   /* #num command */
 constexpr int FRC_COMMAND = 1;  /* what=command */
 constexpr int GET_QUIET = 1;    /* Suppress other text and success event */
@@ -293,9 +288,6 @@ constexpr int LK_SHOWEXIT = 0x0008;
 constexpr int VE_LOC_XAM = 0x01;   /* Location is examinable */
 constexpr int VE_LOC_DARK = 0x02;  /* Location is dark */
 constexpr int VE_LOC_LIGHT = 0x04; /* Location is light */
-constexpr int VE_BASE_XAM = 0x08; /* Base location (pre-parent) is examinable */
-constexpr int VE_BASE_DARK = 0x10;  /* Base location (pre-parent) is dark */
-constexpr int VE_BASE_LIGHT = 0x20; /* Base location (pre-parent) is light */
 
 /* Signal handling directives */
 

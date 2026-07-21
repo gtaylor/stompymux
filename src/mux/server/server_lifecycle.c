@@ -68,16 +68,9 @@ static void server_lifecycle_signal_test_ready(void) {
 }
 #endif
 
-/* Run Lua startup events and restore each object's forward list after load. */
+/* Run Lua startup events after load. */
 static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
   DbRef thing;
-  DbRef aowner;
-  long aflags;
-  char *text;
-  FWDLIST *forward_list;
-
-  forward_list = (FWDLIST *)alloc_lbuf("process_preload.fwdlist");
-  text = alloc_lbuf("process_preload.string");
   DO_WHOLE_DB(lifecycle->maintenance->database, thing) {
     if (is_going(lifecycle->maintenance->database, thing))
       continue;
@@ -94,20 +87,7 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
       do_second(lifecycle->maintenance->commands);
       do_top(lifecycle->maintenance->commands, 10);
     }
-
-    if (has_fwdlist(lifecycle->maintenance->database, thing)) {
-      (void)attribute_get_string(lifecycle->maintenance->database, text, thing,
-                                 A_FORWARDLIST, &aowner, &aflags);
-      if (*text) {
-        fwdlist_load(&lifecycle->maintenance->command->evaluation, forward_list,
-                     GOD, text);
-        if (forward_list->count > 0)
-          fwdlist_set(lifecycle->maintenance->database, thing, forward_list);
-      }
-    }
   }
-  free_lbuf(forward_list);
-  free_lbuf(text);
 }
 
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */

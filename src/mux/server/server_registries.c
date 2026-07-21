@@ -9,11 +9,6 @@
 #include "mux/commands/functions.h"
 #include "mux/server/server_config.h"
 
-static int free_numeric_hash_data(void *, void *data, int, void *) {
-  free(data);
-  return 1;
-}
-
 void command_registry_initialize(CommandRegistry *registry) {
   assert(registry != nullptr);
   memset(registry, 0, sizeof(*registry));
@@ -44,14 +39,9 @@ void world_indexes_initialize(WorldIndexes *indexes) {
 void world_indexes_destroy(WorldIndexes *indexes) {
   if (indexes == nullptr)
     return;
-  red_black_tree_walk(indexes->forward_lists.tree, WALK_POSTORDER,
-                      free_numeric_hash_data, nullptr);
   hash_table_destroy(&indexes->powers);
   hash_table_destroy(&indexes->flags);
-  hash_table_destroy(&indexes->attributes);
   hash_table_destroy(&indexes->players);
-  numeric_hash_table_destroy(&indexes->forward_lists);
-  numeric_hash_table_destroy(&indexes->parent_commands);
   memset(indexes, 0, sizeof(*indexes));
 }
 

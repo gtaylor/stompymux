@@ -26,21 +26,21 @@ anything pulled in through `include`.
 | `[flags]` | Flags set on new players/exits/rooms/robots/things (`player`, `exit`, `room`, `robot`, `thing` arrays). |
 | `[security]` | Password hashing and login rate limiting (see below). |
 | `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
-| `[access.*]` | Per-command/function/attribute permission tables (`commands`, `functions`, `attrs`, `attr_commands`, `lists`, `config`, plus the `user_attrs` array). |
-| `[aliases.*]` | Command/flag/function/attribute alias tables (`commands`, `flags`, `functions`, `attrs`). |
+| `[access.*]` | Per-command/function permission tables (`commands`, `functions`, `lists`, and `config`). |
+| `[aliases.*]` | Command, flag, and function alias tables (`commands`, `flags`, and `functions`). |
 | `[names]` | `bad`/`good` player-name lists. |
 | `[logging]` | `log` and `log_options` bitmask arrays. |
 
 Most directives are plain scalars (`port = 5555`, `fork_dump = true`). A few
 directives take other shapes:
 
-- **Flag/bitmask directives** (`[flags]`, `[logging]`, `user_attrs`) are TOML
+- **Flag/bitmask directives** (`[flags]` and `[logging]`) are TOML
   arrays of strings. `logging.log` is negatable: prefix an entry with `!` to
   clear a bit that's on by default (e.g. `log = ["!accounting", "bugs"]`).
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@ch" = "@chown"`.
-- **Access directives** (`[access.*]`, excluding `user_attrs`) are tables
-  mapping a command/function/attribute name to one or more permissions, e.g.
+- **Access directives** (`[access.*]`) are tables
+  mapping a command or function name to one or more permissions, e.g.
   `encrypt = "wizard"` or `"@dig" = ["wizard", "need_location"]`.
 - Building commands are restricted to Wizards. There is no global building
   toggle or `global_build` command-access permission.
@@ -49,6 +49,24 @@ directives take other shapes:
 
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
+
+## Default Lua parents
+
+The `[mux]` section can assign an object-logic module to each newly created
+object type:
+
+| Parameter | Shipped value | Applies to |
+| --- | --- | --- |
+| `default_thing_lua_parent` | `default_thing.lua` | Things |
+| `default_room_lua_parent` | `default_room.lua` | Rooms |
+| `default_exit_lua_parent` | `default_exit.lua` | Exits |
+| `default_player_lua_parent` | `default_player.lua` | Players and robots |
+
+Paths are relative to `game/lua/object_logic`. Empty values disable automatic
+assignment for that type. Configuration changes apply only to objects created
+afterward and never backfill the database. `@clone` preserves the source
+object's Lua parent, including an empty one, instead of using the configured
+type default.
 
 ## Password and login security
 

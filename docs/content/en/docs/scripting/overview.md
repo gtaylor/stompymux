@@ -18,8 +18,8 @@ lua/
 
 Attach a module to an object with the wizard-only `@lua/parent
 <object>=<path>.lua`; the path is relative to `object_logic`, and omitting it
-clears the attachment. The closest attachment in the object's ordinary MUX
-parent chain is active. See [Object scripting](scripting-objects/) for the
+clears the attachment. Each object uses only its own direct attachment. See
+[Object scripting](scripting-objects/) for the
 full module contract, the native event catalog, and how load errors are
 handled.
 
@@ -32,8 +32,8 @@ after every local or zone Lua command has declined the command. See
 ## Module contract
 
 Each module returns a table with optional `commands`, `schedules`, and `flows`
-entries; object modules may also provide `events`, `locks`, and successful
-action `messages`. A command entry pairs a native Lua `pattern` with a
+entries; object modules may also provide `events`, `locks`, successful action
+`messages`, and appearance functions. A command entry pairs a native Lua `pattern` with a
 `handler(ctx, ...)`; returning `true` handles the command, `false` or `nil`
 lets other matching continue. See [Commands](commands/) for pattern syntax
 and the handler context table.
@@ -45,8 +45,8 @@ descriptor - the interactive counterpart to `commands` for menus, prompts,
 and confirmations. See [Interactive flows](flows/).
 
 Object and global modules can also declare `schedules`: named entries with
-five-field UTC cron expressions. Object schedules run once for every object
-that effectively inherits the Lua parent; global schedules run once per
+five-field UTC cron expressions. Object schedules run once for every directly
+attached object; global schedules run once per
 matching module entry. Scheduled jobs receive deterministic jitter and do not
 replay missed minutes. Inspect active schedules with the wizard-only
 `@lua/schedule` command.
@@ -64,8 +64,9 @@ exposed.
 ## The `mux` API
 
 The `mux` table is the only server interface exposed to Lua modules:
-`attr_get`, `attr_set`, `notify`, `command`, `connected_players`,
-`who_summary`, and `flow_start`. Queued commands execute as `#1` after the
+`attr_get`, `attr_set`, `contents`, `contents_visible`, `exits`,
+`exits_visible`, `object_description`, `object_name`, `object_type`, `notify`, `command`,
+`connected_players`, `who_summary`, and `flow_start`. Queued commands execute as `#1` after the
 current handler completes. See the
 [`mux` package reference](packages/mux/) for the full API.
 

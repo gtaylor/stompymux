@@ -23,10 +23,7 @@ typedef struct WorldIndexes WorldIndexes;
 struct WorldIndexes {
   HashTable powers;
   HashTable flags;
-  HashTable attributes;
   HashTable players;
-  HashTable forward_lists;
-  HashTable parent_commands;
 };
 
 typedef struct AccessControlStore AccessControlStore;

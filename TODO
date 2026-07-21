@@ -2,11 +2,9 @@
 
 ## MUX Todos in the /src/ dir
 
-* Make `examine` an alias for `look` for non-Wizards
 * Do we still need master rooms?
-* Remove $-command checking
 * Do we still need object ownership?
-* Remove attribute flags?
+* Remove attribute flags and vattrs? vattr.c
 * verbs.c and verbs.h can probably be crunched elsewhere
 * Offer a non-privileged way to change your own password.
 * Add bad names list
@@ -15,6 +13,14 @@
 * utf8 support
 * Maybe: Figure out external RPC
 * Maybe: Figure out external event streaming. Websockets?
+
+## DB schema stuff
+
+* objects
+  * expand powers fields into bools
+  * expand flags fields into bools
+  * drop parent
+  * add luaparent and move from attribute
 
 ## Lua Todos
 

@@ -14,26 +14,83 @@ callback context to identify the object and enactor that triggered them.
 
 ## `mux.attr_get(object, name)`
 
-Returns the string value of an attribute, or `nil` when the attribute is absent
-or has an empty value.
+Returns the string value of a dynamic storage entry, or `nil` when it is
+absent. Names are exact and case-sensitive, so `Title` and `title` are distinct.
 
 ```lua
 local title = mux.attr_get(ctx.object, "Title") or "Untitled"
 ```
 
-`object` must be a valid dbref and `name` must name an existing attribute.
-Passing an invalid object raises a Lua error.
+`object` must be a valid dbref. Passing an invalid object raises a Lua error.
 
 ## `mux.attr_set(object, name, value)`
 
-Sets an attribute to a string value. The attribute is created when necessary.
+Sets a dynamic storage entry to a string value. The entry is created when
+necessary; an empty value deletes it. Names must begin with a letter, may use
+the server's printable attribute-name characters, and are limited to 255 bytes.
 
 ```lua
 mux.attr_set(ctx.object, "LuaCount", "42")
 ```
 
-`object` must be a valid dbref. Lua cannot use this function to set
-`Luaparent`; use the wizard-only `@lua/parent` command instead.
+`object` must be a valid dbref. Dynamic entries have no flags, owners,
+inheritance, reserved names, or native server behavior.
+
+## `mux.contents(object)`
+
+Returns an array of dbrefs directly contained by a room, thing, or player in
+native database order. The result is deliberately unfiltered.
+
+```lua
+for _, member in ipairs(mux.contents(ctx.object)) do
+  if mux.contents_visible(ctx.object, ctx.enactor, member) then
+    mux.notify(ctx.enactor, mux.object_name(member))
+  end
+end
+```
+
+## `mux.contents_visible(container, viewer, member)`
+
+Returns whether native `look` would display `member` in `container` to
+`viewer`, including location darkness, object darkness, disconnected-player,
+self, and examinability rules. `member` must be directly contained by
+`container`.
+
+## `mux.exits(object)`
+
+Returns an unfiltered array of exits directly attached to a room, thing, or
+player in native database order. Legacy MUX parent exits are not inherited.
+
+```lua
+for _, exit in ipairs(mux.exits(ctx.object)) do
+  if mux.exits_visible(ctx.object, ctx.enactor, exit) then
+    mux.notify(ctx.enactor, mux.object_name(exit))
+  end
+end
+```
+
+## `mux.exits_visible(location, viewer, exit)`
+
+Returns whether native `look` would display a directly attached exit to the
+viewer. The exit must belong directly to `location`.
+
+## `mux.object_name(object)`
+
+Returns the object's stored name. Exit names include their semicolon-separated
+aliases.
+
+## `mux.object_description(object)`
+
+Returns the object's native MUX `description` value, or `nil` when it is not
+set. This is separate from the exact-name dynamic storage read by
+`mux.attr_get`.
+
+## `mux.object_type(object)`
+
+Returns `room`, `thing`, `exit`, or `player`.
+
+All object arguments must be valid, non-garbage dbrefs. Passing a container of
+the wrong type or a member that is not directly attached raises a Lua error.
 
 ## `mux.notify(object, message)`
 
@@ -95,7 +152,9 @@ running, or `module` has no `first_step` in its `flows` table.
 
 ## Availability and limits
 
-The `mux` table is the only server interface exposed to Lua modules. The Lua
+The `mux` table is the only server interface exposed to Lua modules. Runtime
+database functions, including object enumeration and identity, are unavailable
+during `@lua/check`. The Lua
 sandbox does not expose filesystem, operating-system, debugger, FFI, coroutine,
 or dynamic code-loading APIs. Handler instruction and state-memory limits still
 apply while using these functions.

@@ -97,9 +97,6 @@ static int configuration_call_direct(ConfigurationInterpreter interpreter,
 #define COMMAND_LOC(member)                                                    \
   ((int *)(uintptr_t)(sizeof(ServerConfiguration) +                            \
                       offsetof(CommandRegistry, member) + 1))
-#define WORLD_LOC(member)                                                      \
-  ((int *)(uintptr_t)(sizeof(ServerConfiguration) + sizeof(CommandRegistry) +  \
-                      offsetof(WorldIndexes, member) + 1))
 #define ACCESS_LOC(member)                                                     \
   ((int *)(uintptr_t)(sizeof(ServerConfiguration) + sizeof(CommandRegistry) +  \
                       sizeof(WorldIndexes) +                                   \
@@ -138,7 +135,6 @@ static void *configuration_resolve_location(ConfigurationContext *context,
 extern NameTable logdata_nametab[];
 extern NameTable logoptions_nametab[];
 extern NameTable access_nametab[];
-extern NameTable attraccess_nametab[];
 extern NameTable list_names[];
 extern CONF conftable[];
 
@@ -286,11 +282,8 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->ex_flags = 1;
   context->configuration->robot_speak = 1;
   context->configuration->pub_flags = 1;
-  context->configuration->quiet_look = 1;
   context->configuration->read_rem_desc = 0;
   context->configuration->read_rem_name = 0;
-  context->configuration->sweep_dark = 0;
-  context->configuration->player_listen = 0;
   context->configuration->dark_sleepers = 1;
   context->configuration->see_own_dark = 1;
   context->configuration->idle_wiz_dark = 0;
@@ -311,6 +304,10 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->start_home = -1;
   context->configuration->default_home = -1;
   context->configuration->master_room = -1;
+  StringCopy(context->configuration->default_thing_lua_parent, "");
+  StringCopy(context->configuration->default_room_lua_parent, "");
+  StringCopy(context->configuration->default_exit_lua_parent, "");
+  StringCopy(context->configuration->default_player_lua_parent, "");
   context->configuration->player_flags.word1 = 0;
   context->configuration->player_flags.word2 = 0;
   context->configuration->room_flags.word1 = 0;
@@ -321,7 +318,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->thing_flags.word2 = 0;
   context->configuration->robot_flags.word1 = ROBOT;
   context->configuration->robot_flags.word2 = 0;
-  context->configuration->vattr_flags = AF_ODARK;
   StringCopy(context->configuration->mud_name, "TinyMUX");
   context->configuration->timeslice = 100;
   context->configuration->cmd_quota_max = 100;
@@ -340,7 +336,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->func_nest_lim = 50;
   context->configuration->func_invk_lim = 2500;
   context->configuration->ntfy_nest_lim = 20;
-  context->configuration->parent_nest_lim = 10;
   context->configuration->zone_nest_lim = 20;
   context->configuration->stack_limit = 50;
   context->configuration->cache_trim = 0;
@@ -351,9 +346,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->lua.instruction_limit = 100000;
   context->configuration->lua.memory_limit = 64 * 1024 * 1024;
 
-  context->configuration->exit_parent = 0;
-  context->configuration->room_parent = 0;
-  context->configuration->player_parent = 0;
   context->configuration->player_zone = 0;
 }
 
@@ -775,9 +767,7 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
  */
 
 DEFINE_CONFIGURATION_ADAPTER(cf_access)
-DEFINE_CONFIGURATION_ADAPTER(cf_acmd_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_alias)
-DEFINE_CONFIGURATION_ADAPTER(cf_attr_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_badname)
 DEFINE_CONFIGURATION_ADAPTER(cf_bool)
 DEFINE_CONFIGURATION_ADAPTER(cf_cf_access)
@@ -796,12 +786,6 @@ CONF conftable[] = {
      (long)access_nametab},
     {"alias", cf_cmd_alias_configuration_adapter, CA_GOD, COMMAND_LOC(commands),
      0},
-    {"attr_access", cf_attr_access_configuration_adapter, CA_GOD, nullptr,
-     (long)attraccess_nametab},
-    {"attr_alias", cf_alias_configuration_adapter, CA_GOD,
-     WORLD_LOC(attributes), 0},
-    {"attr_cmd_access", cf_acmd_access_configuration_adapter, CA_GOD, nullptr,
-     (long)access_nametab},
     {"bad_name", cf_badname_configuration_adapter, CA_GOD, nullptr, 0},
     {"badsite_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(site_file), 32},
@@ -1087,6 +1071,18 @@ CONF conftable[] = {
      sizeof(((ServerConfiguration *)nullptr)->database.map_db)},
     {"master_room", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(master_room), 0},
+    {"default_thing_lua_parent", cf_string_configuration_adapter, CA_GOD,
+     CONFIG_LOC(default_thing_lua_parent),
+     sizeof(((ServerConfiguration *)nullptr)->default_thing_lua_parent)},
+    {"default_room_lua_parent", cf_string_configuration_adapter, CA_GOD,
+     CONFIG_LOC(default_room_lua_parent),
+     sizeof(((ServerConfiguration *)nullptr)->default_room_lua_parent)},
+    {"default_exit_lua_parent", cf_string_configuration_adapter, CA_GOD,
+     CONFIG_LOC(default_exit_lua_parent),
+     sizeof(((ServerConfiguration *)nullptr)->default_exit_lua_parent)},
+    {"default_player_lua_parent", cf_string_configuration_adapter, CA_GOD,
+     CONFIG_LOC(default_player_lua_parent),
+     sizeof(((ServerConfiguration *)nullptr)->default_player_lua_parent)},
     {"match_own_commands", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(match_mine), 0},
     {"max_players", cf_int_configuration_adapter, CA_GOD,
@@ -1102,8 +1098,6 @@ CONF conftable[] = {
      CONFIG_LOC(output_limit), 0},
     {"paranoid_allocate", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(paranoid_alloc), 0},
-    {"parent_recursion_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(parent_nest_lim), 0},
     {"pemit_far_players", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(pemit_players), 0},
     {"password_hash_memlimit", cf_int_configuration_adapter, CA_GOD,
@@ -1116,8 +1110,6 @@ CONF conftable[] = {
      ACCESS_LOC(access_sites), 0},
     {"player_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(player_flags), 0},
-    {"player_listen", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(player_listen), 0},
     {"player_match_own_commands", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(match_mine_pl), 0},
     {"player_password_length_limit", cf_int_configuration_adapter, CA_GOD,
@@ -1139,8 +1131,6 @@ CONF conftable[] = {
      CONFIG_LOC(active_q_chunk), 0},
     {"queue_idle_chunk", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(queue_chunk), 0},
-    {"quiet_look", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(quiet_look), 0},
     {"quit_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(quit_file), 32},
     {"read_remote_desc", cf_bool_configuration_adapter, CA_GOD,
@@ -1171,8 +1161,6 @@ CONF conftable[] = {
      CONFIG_LOC(stack_limit), 0},
     {"suspect_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), H_SUSPECT},
-    {"sweep_dark", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(sweep_dark), 0},
     {"switch_default_all", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(switch_df_all), 0},
     {"thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
@@ -1187,16 +1175,8 @@ CONF conftable[] = {
      ACCESS_LOC(suspect_sites), 0},
     {"unowned_safe", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(safe_unowned), 0},
-    {"user_attr_access", configuration_modify_bits_configuration_adapter,
-     CA_GOD, CONFIG_LOC(vattr_flags), (long)attraccess_nametab},
     {"zone_recursion_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(zone_nest_lim), 0},
-    {"exit_parent", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(exit_parent), 0},
-    {"room_parent", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(room_parent), 0},
-    {"player_parent", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(player_parent), 0},
     {"player_zone", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(player_zone), 0},
     {nullptr, nullptr, 0, nullptr, 0}};

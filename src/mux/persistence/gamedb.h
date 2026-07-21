@@ -11,7 +11,6 @@ typedef struct GameDatabase GameDatabase;
 typedef struct MacroRegistry MacroRegistry;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
-typedef struct VattrStore VattrStore;
 typedef struct WorldContext WorldContext;
 
 typedef struct PersistenceContext PersistenceContext;
@@ -42,7 +41,6 @@ struct PersistenceContext {
   /* Runtime service pointers are borrowed from MuxServer. */
   const ServerConfiguration *configuration;
   GameDatabase *database;
-  VattrStore *vattrs;
   ChannelRegistry *channels;
   MacroRegistry *macros;
   time_t *now;
@@ -55,13 +53,10 @@ struct PersistenceContext {
   size_t extension_count;
 };
 
-void persistence_context_initialize(PersistenceContext *context,
-                                    const ServerConfiguration *configuration,
-                                    GameDatabase *database, VattrStore *vattrs,
-                                    ChannelRegistry *channels,
-                                    MacroRegistry *macros, time_t *now,
-                                    int *record_players, WorldContext *world,
-                                    ServerLog *log);
+void persistence_context_initialize(
+    PersistenceContext *context, const ServerConfiguration *configuration,
+    GameDatabase *database, ChannelRegistry *channels, MacroRegistry *macros,
+    time_t *now, int *record_players, WorldContext *world, ServerLog *log);
 
 /*
  * Register a named SQLite extension before gamedb_load() or gamedb_dump().

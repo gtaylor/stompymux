@@ -508,8 +508,8 @@ void load_player_names(WorldContext *world) {
   alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == TYPE_PLAYER) {
-      alias = attribute_parent_get_string(world->database, alias, i, A_ALIAS,
-                                          &aowner, &aflags);
+      alias = attribute_get_string(world->database, alias, i, A_ALIAS, &aowner,
+                                   &aflags);
       if (*alias)
         add_player_name(world, i, alias);
     }
