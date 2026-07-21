@@ -243,7 +243,6 @@ struct ServerConfiguration {
   int active_q_chunk; /* # cmds to run from queue when active */
   int ex_flags;       /* TRUE = show flags on examine */
   int robot_speak;    /* TRUE = allow robots to speak */
-  int pub_flags;      /* TRUE = flags() works on anything */
   int read_rem_desc;  /* Can the DESCs of nonlocal objs be read? */
   int read_rem_name;  /* Can the NAMEs of nonlocal objs be read? */
   int dark_sleepers;  /* Are sleeping players 'dark'? */

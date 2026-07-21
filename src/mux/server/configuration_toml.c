@@ -214,7 +214,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.player_starting_home", "player_starting_home", CFG_KIND_SCALAR},
     {"mux.player_starting_room", "player_starting_room", CFG_KIND_SCALAR},
     {"mux.public_channel", "public_channel", CFG_KIND_SCALAR},
-    {"mux.public_flags", "public_flags", CFG_KIND_SCALAR},
     {"mux.queue_active_chunk", "queue_active_chunk", CFG_KIND_SCALAR},
     {"mux.queue_idle_chunk", "queue_idle_chunk", CFG_KIND_SCALAR},
     {"mux.quit_file", "quit_file", CFG_KIND_SCALAR},

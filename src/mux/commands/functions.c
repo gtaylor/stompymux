@@ -538,8 +538,7 @@ static void fun_flags(char *buff, char **bufc, DbRef player, DbRef cause,
 
   it = match_thing(&context->command->match, player, fargs[0]);
   if ((it != NOTHING) &&
-      (context->world->configuration->pub_flags ||
-       is_examinable(context, player, it) || (it == cause))) {
+      (is_examinable(context, player, it) || (it == cause))) {
     buff2 = unparse_flags(context->world->database, player, it);
     safe_str(buff2, buff, bufc);
     free_sbuf(buff2);
@@ -2857,8 +2856,7 @@ static void fun_hasflag(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (context->world->configuration->pub_flags ||
-      is_examinable(context, player, it) || (it == cause)) {
+  if (is_examinable(context, player, it) || (it == cause)) {
     if (has_flag(context->world, player, it, fargs[1]))
       safe_str("1", buff, bufc);
     else
@@ -2878,8 +2876,7 @@ static void fun_haspower(char *buff, char **bufc, DbRef player, DbRef cause,
     safe_str("#-1 NOT FOUND", buff, bufc);
     return;
   }
-  if (context->world->configuration->pub_flags ||
-      is_examinable(context, player, it) || (it == cause)) {
+  if (is_examinable(context, player, it) || (it == cause)) {
     if (has_power(context->world, player, it, fargs[1]))
       safe_str("1", buff, bufc);
     else

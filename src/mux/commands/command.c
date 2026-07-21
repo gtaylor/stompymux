@@ -1808,9 +1808,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   if (configuration->pemit_players)
     raw_notify(evaluation, player,
                "The '@pemit' command may be used to emit to faraway players.");
-  if (configuration->pub_flags)
-    raw_notify(evaluation, player,
-               "The 'flags()' function will return the flags of any object.");
   if (configuration->read_rem_desc)
     raw_notify(
         evaluation, player,

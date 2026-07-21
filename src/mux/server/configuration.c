@@ -280,7 +280,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->active_q_chunk = 10;
   context->configuration->ex_flags = 1;
   context->configuration->robot_speak = 1;
-  context->configuration->pub_flags = 1;
   context->configuration->read_rem_desc = 0;
   context->configuration->read_rem_name = 0;
   context->configuration->dark_sleepers = 1;
@@ -1119,8 +1118,6 @@ CONF conftable[] = {
     {"public_channel", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(public_channel), 32},
     {"port", cf_int_configuration_adapter, CA_DISABLED, CONFIG_LOC(port), 0},
-    {"public_flags", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(pub_flags), 0},
     {"queue_active_chunk", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(active_q_chunk), 0},
     {"queue_idle_chunk", cf_int_configuration_adapter, CA_GOD,

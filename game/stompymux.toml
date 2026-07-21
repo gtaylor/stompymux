@@ -134,8 +134,6 @@ fork_dump = true
 player_starting_room = 95
 # Default home for new players.
 player_starting_home = 95
-# Allow players to see the flags on everything using flags()
-public_flags = false
 # Can players use @pemit to send messages to other players?
 pemit_far_players = false
 # Can players use @pemit to send messages to any object?
