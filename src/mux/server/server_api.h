@@ -181,7 +181,6 @@ constexpr int NFY_DRAIN = 2;      /* Delete waiting commands */
 constexpr int OPEN_LOCATION = 0;  /* Open exit in my location */
 constexpr int OPEN_INVENTORY = 1; /* Open exit in me */
 constexpr int PASS_ANY = 1;       /* name=newpass */
-constexpr int PASS_MINE = 2;      /* oldpass=newpass */
 constexpr int PCRE_PLAYER = 1;    /* create new player */
 constexpr int PEMIT_PEMIT = 1;    /* emit to named player */
 constexpr int PEMIT_OEMIT = 2;    /* emit to all in current room except named */

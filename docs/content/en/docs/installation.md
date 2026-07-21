@@ -45,7 +45,7 @@ If all goes well, you'll see a StompyMUX log stream.
 Use your preferred MUD client (or `telnet`) to connec to `localhost` port `5555`.
 There are two Wizard (admin) characters, `#1` (God) and `#2` (Wizard). They both
 have the same default password of `btmuxr0x`. Change these as soon as possible
-with the `@password` command.
+with the `@newpassword` command.
 
 ## Compile options
 

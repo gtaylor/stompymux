@@ -88,8 +88,7 @@ void do_name(CommandInvocation *invocation);
 void do_newpassword(CommandInvocation *invocation);
 void do_notify(CommandInvocation *invocation); /* Notify or drain semaphore */
 void do_open(CommandInvocation *invocation);
-void do_page(CommandInvocation *invocation);     /* Message a faraway player. */
-void do_password(CommandInvocation *invocation); /* Change my password */
+void do_page(CommandInvocation *invocation); /* Message a faraway player. */
 void do_pcreate(CommandInvocation *invocation);
 void do_pemit(CommandInvocation *invocation); /* Message a specific object. */
 void do_power(CommandInvocation *invocation); /* Sets powers */

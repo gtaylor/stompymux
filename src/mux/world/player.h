@@ -23,5 +23,4 @@ void badname_remove(WorldContext *world, char *name);
 int badname_check(WorldContext *world, char *name);
 void badname_list(EvaluationContext *evaluation, WorldContext *world,
                   DbRef player, const char *name);
-void do_password(CommandInvocation *invocation);
 void do_last(CommandInvocation *invocation);

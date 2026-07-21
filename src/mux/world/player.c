@@ -287,35 +287,6 @@ DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
 }
 
 /**
- * Change the password for a player
- */
-void do_password(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *oldpass = invocation->first;
-  char *newpass = invocation->second;
-  WorldContext *world = invocation->context->world;
-  DbRef aowner;
-  long aflags;
-  char hashed_password[crypto_pwhash_STRBYTES];
-  char *target;
-
-  target = attribute_get(world->database, player, A_PASS, &aowner, &aflags);
-  if (!*target || !check_pass(world, player, oldpass)) {
-    notify(evaluation, player, "Sorry.");
-  } else if (!ok_password(world->configuration, newpass)) {
-    notify(evaluation, player, "Bad new password.");
-  } else if (!password_hash(world->configuration, newpass, hashed_password)) {
-    notify(evaluation, player, "Unable to change password.");
-  } else {
-    attribute_add_raw(world->database, player, A_PASS, hashed_password);
-    sodium_memzero(hashed_password, sizeof(hashed_password));
-    notify(evaluation, player, "Password changed.");
-  }
-  free_lbuf(target);
-}
-
-/**
  * Display login history data.
  */
 static void disp_from_on(EvaluationContext *evaluation, DbRef player,
