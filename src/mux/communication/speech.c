@@ -662,9 +662,8 @@ void do_page(CommandInvocation *invocation) {
   free_lbuf(buf2);
 }
 
-void do_pemit_list(EvaluationContext *evaluation,
-                   const ServerConfiguration *configuration, DbRef player,
-                   char *list, const char *message) {
+void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
+                   const char *message) {
   /*
    * Send a message to a list of dbrefs. To avoid repeated generation *
    * of the NOSPOOF string, we set it up the first time we
@@ -692,12 +691,6 @@ void do_pemit_list(EvaluationContext *evaluation,
                       is_controls(evaluation, player, who))) {
       ok_to_do = 1;
     }
-    if (!ok_to_do && (is_player(evaluation->world->database, who)) &&
-        configuration->pemit_players) {
-      if (!page_check(evaluation, configuration, player, who))
-        return;
-      ok_to_do = 1;
-    }
     switch (who) {
     case NOTHING:
       notify(evaluation, player, "Emit to whom?");
@@ -718,8 +711,6 @@ void do_pemit_list(EvaluationContext *evaluation,
 
 void do_pemit(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  const ServerConfiguration *configuration =
-      invocation->context->world->configuration;
   const DbRef player = invocation->player;
   int key = invocation->key;
   char *recipient = invocation->first;
@@ -728,7 +719,7 @@ void do_pemit(CommandInvocation *invocation) {
   int do_contents, ok_to_do, depth, pemit_flags;
 
   if (key & PEMIT_LIST) {
-    do_pemit_list(evaluation, configuration, player, recipient, message);
+    do_pemit_list(evaluation, player, recipient, message);
     return;
   }
   if (key & PEMIT_CONTENTS) {
@@ -783,19 +774,11 @@ void do_pemit(CommandInvocation *invocation) {
                       is_controls(evaluation, player, target))) {
       ok_to_do = 1;
     }
-    if (!ok_to_do && (key == PEMIT_PEMIT) &&
-        (typeof_obj(evaluation->world->database, target) == TYPE_PLAYER) &&
-        configuration->pemit_players) {
-      if (!page_check(evaluation, configuration, player, target))
-        return;
-      ok_to_do = 1;
-    }
-    if (!ok_to_do && (!configuration->pemit_any || (key != PEMIT_PEMIT))) {
+    if (!ok_to_do) {
       notify(evaluation, player, "You are too far away to do that.");
       return;
     }
-    if (do_contents && !is_controls(evaluation, player, target) &&
-        !configuration->pemit_any) {
+    if (do_contents && !is_controls(evaluation, player, target)) {
       notify(evaluation, player, "Permission denied.");
       return;
     }

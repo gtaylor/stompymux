@@ -285,8 +285,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->dark_sleepers = 1;
   context->configuration->see_own_dark = 1;
   context->configuration->idle_wiz_dark = 0;
-  context->configuration->pemit_players = 0;
-  context->configuration->pemit_any = 0;
   context->configuration->match_mine = 0;
   context->configuration->match_mine_pl = 0;
   context->configuration->switch_df_all = 1;
@@ -1091,14 +1089,10 @@ CONF conftable[] = {
      CONFIG_LOC(output_limit), 0},
     {"paranoid_allocate", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(paranoid_alloc), 0},
-    {"pemit_far_players", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(pemit_players), 0},
     {"password_hash_memlimit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(password_hash_memlimit), 0},
     {"password_hash_opslimit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(password_hash_opslimit), 0},
-    {"pemit_any_object", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(pemit_any), 0},
     {"permit_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), 0},
     {"player_flags", cf_set_flags_configuration_adapter, CA_GOD,

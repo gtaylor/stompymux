@@ -205,8 +205,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.notify_recursion_limit", "notify_recursion_limit", CFG_KIND_SCALAR},
     {"mux.output_limit", "output_limit", CFG_KIND_SCALAR},
     {"mux.paranoid_allocate", "paranoid_allocate", CFG_KIND_SCALAR},
-    {"mux.pemit_far_players", "pemit_far_players", CFG_KIND_SCALAR},
-    {"mux.pemit_any_object", "pemit_any_object", CFG_KIND_SCALAR},
     {"mux.player_match_own_commands", "player_match_own_commands",
      CFG_KIND_SCALAR},
     {"mux.player_name_spaces", "player_name_spaces", CFG_KIND_SCALAR},

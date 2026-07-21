@@ -134,10 +134,6 @@ fork_dump = true
 player_starting_room = 95
 # Default home for new players.
 player_starting_home = 95
-# Can players use @pemit to send messages to other players?
-pemit_far_players = false
-# Can players use @pemit to send messages to any object?
-pemit_any_object = false
 # Interval for checking idle players.
 idle_interval = 99999
 # Amount of time a player must be idle before being idlekicked.

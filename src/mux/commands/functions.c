@@ -4890,7 +4890,7 @@ FUN flist[] = {
     {"OWNER", fun_owner, 1, 0, CA_PUBLIC},
     {"PARSE", fun_parse, 0, FN_VARARGS | FN_NO_EVAL, CA_PUBLIC},
     {"PEEK", fun_peek, 0, FN_VARARGS, CA_PUBLIC},
-    {"PEMIT", fun_pemit, 2, 0, CA_PUBLIC},
+    {"PEMIT", fun_pemit, 2, 0, CA_WIZARD},
     {"PI", fun_pi, 0, 0, CA_PUBLIC},
     {"PLAYMEM", fun_playmem, 1, 0, CA_PUBLIC},
     {"PMATCH", fun_pmatch, 1, 0, CA_PUBLIC},

@@ -317,8 +317,7 @@ void fun_tel(char *buff, char **bufc, DbRef player, DbRef cause, char *fargs[],
 void fun_pemit(char *buff, char **bufc, DbRef player, DbRef cause,
                char *fargs[], int nfargs, char *cargs[], int ncargs,
                EvaluationContext *context) {
-  do_pemit_list(context, context->world->configuration, player, fargs[0],
-                fargs[1]);
+  do_pemit_list(context, player, fargs[0], fargs[1]);
 }
 
 /*------------------------------------------------------------------------
