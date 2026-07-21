@@ -242,7 +242,6 @@ struct ServerConfiguration {
   int queue_chunk;    /* # cmds to run from queue when idle */
   int active_q_chunk; /* # cmds to run from queue when active */
   int ex_flags;       /* TRUE = show flags on examine */
-  int robot_speak;    /* TRUE = allow robots to speak */
   int dark_sleepers;  /* Are sleeping players 'dark'? */
   int idle_wiz_dark;  /* Do idling wizards get set dark? */
   int switch_df_all;  /* Should @switch match all by default? */
@@ -263,7 +262,6 @@ struct ServerConfiguration {
   FLAGSET default_room_flags;          /* Flags rooms start with */
   FLAGSET default_exit_flags;          /* Flags exits start with */
   FLAGSET default_thing_flags;         /* Flags things start with */
-  FLAGSET robot_flags;                 /* Flags robots start with */
   char mud_name[32];                   /* Name of the mud */
   int timeslice;      /* How often do we bump people's cmd quotas? */
   int cmd_quota_max;  /* Max commands at one time */

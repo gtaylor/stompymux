@@ -31,15 +31,6 @@ static int sp_ok(EvaluationContext *evaluation,
     return 0;
   }
 
-  if (!configuration->robot_speak) {
-    if (is_robot_player(evaluation->world->database, player) &&
-        !is_controls(
-            evaluation, player,
-            game_object_location(evaluation->world->database, player))) {
-      notify(evaluation, player, "Sorry robots may not speak in public.");
-      return 0;
-    }
-  }
   if (is_auditorium(
           evaluation->world->database,
           game_object_location(evaluation->world->database, player))) {

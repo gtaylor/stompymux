@@ -44,8 +44,8 @@ constexpr int OPAQUE = 0x00800000;  /* Can't see inside */
 constexpr int VERBOSE = 0x01000000; /* Tells owner everything it does. */
 constexpr int INHERIT = 0x02000000; /* Gets owner's privs. (i.e. Wiz) */
 constexpr int NOSPOOF = 0x04000000; /* Report originator of all actions. */
-constexpr int ROBOT = 0x08000000;   /* Player is a ROBOT */
-constexpr int SAFE = 0x10000000;    /* Need /override to @destroy */
+/* 0x08000000 is reserved for the removed ROBOT flag. */
+constexpr int SAFE = 0x10000000; /* Need /override to @destroy */
 /* 0x20000000 is reserved for the removed ROYALTY flag. */
 constexpr int HEARTHRU = 0x40000000; /* Can hear out of this obj or exit */
 /* 0x80000000 is reserved for the removed TERSE flag. */
@@ -145,7 +145,6 @@ constexpr DbRef GOD = 1;
 /* is_flag_set(database, X,T,F) - Is X of type T and have flag F set? */
 /* typeof(X)         - What object type is X */
 /* is_god(database, X)            - Is X player #1 */
-/* is_robot_player(database, X)          - Is X a robot player */
 /* is_wizard(database, X)         - Does X have wizard privs */
 /* is_alive(database, X)          - Is X a player or a puppet */
 /* is_dark(database, X)           - Is X dark */
@@ -201,9 +200,6 @@ static inline bool is_flag_set(GameDatabase *database, DbRef thing, int type,
          (game_object_flags(database, thing) & flag);
 }
 static inline bool is_god(GameDatabase *database, DbRef x) { return x == GOD; }
-static inline bool is_robot(GameDatabase *database, DbRef x) {
-  return (game_object_flags(database, x) & ROBOT) != 0;
-}
 static inline bool is_player(GameDatabase *database, DbRef x) {
   return typeof_obj(database, x) == TYPE_PLAYER;
 }
@@ -321,9 +317,6 @@ static inline bool is_in_character(GameDatabase *database, DbRef x) {
   return (game_object_flags2(database, x) & IN_CHARACTER) != 0;
 }
 
-static inline bool is_robot_player(GameDatabase *database, DbRef x) {
-  return is_player(database, x) && is_robot(database, x);
-}
 static inline bool is_good_owner(GameDatabase *database, DbRef x) {
   return is_good_obj(database, x) && is_owns_others(database, x);
 }

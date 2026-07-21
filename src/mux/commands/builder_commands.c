@@ -579,51 +579,32 @@ void do_clone(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_pcreate: Create new players and robots.
+ * * do_pcreate: Create new players.
  */
 
 void do_pcreate(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  int key = invocation->key;
   char *name = invocation->first;
   char *pass = invocation->second;
-  int isrobot;
   DbRef newplayer;
 
-  isrobot = (key == PCRE_ROBOT) ? 1 : 0;
-  newplayer = create_player(evaluation, name, pass, player, isrobot);
+  newplayer = create_player(evaluation, name, pass);
   if (newplayer == NOTHING) {
     notify_quiet(evaluation, player, tprintf("Failure creating '%s'", name));
     return;
   }
-  if (isrobot) {
-    move_object(evaluation, newplayer,
-                game_object_location(evaluation->world->database, player));
-    notify_quiet(evaluation, player,
-                 tprintf("New robot '%s' (#%ld) created with password '%s'",
-                         name, newplayer, pass));
+  move_object(evaluation, newplayer,
+              invocation->context->world->configuration->start_room);
+  notify_quiet(evaluation, player,
+               tprintf("New player '%s' (#%ld) created with password '%s'",
+                       name, newplayer, pass));
 
-    notify_quiet(evaluation, player, "Your robot has arrived.");
-    STARTLOG(evaluation->log, LOG_PCREATES, "CRE", "ROBOT") {
-      log_name(evaluation->log, newplayer);
-      log_text(" created by ");
-      log_name(evaluation->log, player);
-      ENDLOG(evaluation->log);
-    }
-  } else {
-    move_object(evaluation, newplayer,
-                invocation->context->world->configuration->start_room);
-    notify_quiet(evaluation, player,
-                 tprintf("New player '%s' (#%ld) created with password '%s'",
-                         name, newplayer, pass));
-
-    STARTLOG(evaluation->log, LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
-      log_name(evaluation->log, newplayer);
-      log_text(" created by ");
-      log_name(evaluation->log, player);
-      ENDLOG(evaluation->log);
-    }
+  STARTLOG(evaluation->log, LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
+    log_name(evaluation->log, newplayer);
+    log_text(" created by ");
+    log_name(evaluation->log, player);
+    ENDLOG(evaluation->log);
   }
 }
 

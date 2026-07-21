@@ -211,13 +211,12 @@ void object_apply_default_lua_parent(EvaluationContext *evaluation,
 DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  char *name) {
   DbRef obj, owner;
-  int okname = 0, self_owned, require_inherit;
+  int okname = 0, self_owned;
   Flag f1, f2, f3;
   time_t tt;
   char *buff;
 
   self_owned = 0;
-  require_inherit = 0;
 
   switch (objtype) {
   case TYPE_ROOM:
@@ -239,17 +238,10 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     okname = ok_name(evaluation->world->configuration, name);
     break;
   case TYPE_PLAYER:
-    if (player != NOTHING) {
-      f1 = evaluation->world->configuration->robot_flags.word1;
-      f2 = evaluation->world->configuration->robot_flags.word2;
-      f3 = evaluation->world->configuration->robot_flags.word3;
-      require_inherit = 1;
-    } else {
-      f1 = evaluation->world->configuration->default_player_flags.word1;
-      f2 = evaluation->world->configuration->default_player_flags.word2;
-      f3 = evaluation->world->configuration->default_player_flags.word3;
-      self_owned = 1;
-    }
+    f1 = evaluation->world->configuration->default_player_flags.word1;
+    f2 = evaluation->world->configuration->default_player_flags.word2;
+    f3 = evaluation->world->configuration->default_player_flags.word3;
+    self_owned = 1;
     buff = munge_space(name);
     if (!badname_check(evaluation->world, buff)) {
       notify(evaluation, player, "That name is not allowed.");
@@ -291,12 +283,6 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     owner = NOTHING;
   }
 
-  if (require_inherit) {
-    if (!is_inherits(evaluation->world->database, player)) {
-      notify(evaluation, player, "Permission denied.");
-      return NOTHING;
-    }
-  }
   /*
    * Get the first object from the freelist. If the object is not
    * clean, discard the remainder of the freelist and go get a

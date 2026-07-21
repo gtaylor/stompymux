@@ -174,11 +174,11 @@ constexpr int CA_GOD = 0x00000001;    /* GOD only... */
 constexpr int CA_WIZARD = 0x00000002; /* Wizards only */
 /* 0x00000004 is reserved for the removed builder power restriction. */
 /* 0x00000008 is reserved for the removed immortal restriction. */
-constexpr int CA_ROBOT = 0x00000010; /* Robots only */
+/* 0x00000010 is reserved for the removed robot-only restriction. */
 /* 0x00000020 is reserved for the removed announce power restriction. */
 constexpr int CA_ADMIN = 0x00000800; /* Wizard */
 /* 0x00001000 is reserved for the removed no_haven restriction. */
-constexpr int CA_NO_ROBOT = 0x00002000; /* Not by ROBOT players */
+/* 0x00002000 is reserved for the removed no-robot restriction. */
 /* 0x00004000 is reserved for the removed no_slave restriction. */
 constexpr int CA_NO_SUSPECT = 0x00008000; /* Not by SUSPECT players */
 constexpr int CA_NO_IC = 0x00020000;      /* Not by IC players */

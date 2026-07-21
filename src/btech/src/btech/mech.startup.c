@@ -234,7 +234,6 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context,
                   !(is_good_obj(mech->xcode.context->database, player) &&
                     (is_alive(mech->xcode.context->database, player) ||
-                     is_robot(mech->xcode.context->database, player) ||
                      is_hardcode(mech->xcode.context->database, player))),
                   "That is not a valid player!");
   DOCHECK_CONTEXT(mech->xcode.context,

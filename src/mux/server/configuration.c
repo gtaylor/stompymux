@@ -279,7 +279,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->queue_chunk = 10;
   context->configuration->active_q_chunk = 10;
   context->configuration->ex_flags = 1;
-  context->configuration->robot_speak = 1;
   context->configuration->dark_sleepers = 1;
   context->configuration->idle_wiz_dark = 0;
   context->configuration->switch_df_all = 1;
@@ -306,8 +305,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->default_exit_flags.word2 = 0;
   context->configuration->default_thing_flags.word1 = 0;
   context->configuration->default_thing_flags.word2 = 0;
-  context->configuration->robot_flags.word1 = ROBOT;
-  context->configuration->robot_flags.word2 = 0;
   StringCopy(context->configuration->mud_name, "TinyMUX");
   context->configuration->timeslice = 100;
   context->configuration->cmd_quota_max = 100;
@@ -1117,10 +1114,6 @@ CONF conftable[] = {
      CONFIG_LOC(login_attempt_refill), 0},
     {"login_hash_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(login_hash_limit), 0},
-    {"robot_flags", cf_set_flags_configuration_adapter, CA_GOD,
-     (int *)CONFIG_LOC(robot_flags), 0},
-    {"robot_speech", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(robot_speak), 0},
     {"default_room_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(default_room_flags), 0},
     {"show_unfindable_who", cf_bool_configuration_adapter, CA_GOD,

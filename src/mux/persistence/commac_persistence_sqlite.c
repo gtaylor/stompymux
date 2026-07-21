@@ -204,8 +204,7 @@ static int commac_store_comsys(sqlite3 *sqlite,
       position = 0;
       for (index = 0; result == 0 && index < current->num_users; index++) {
         user = current->users[index];
-        if (!is_player(context->database, user->who) &&
-            !is_robot(context->database, user->who))
+        if (!is_player(context->database, user->who))
           continue;
         if (commac_sqlite_bind_text(user_statement, 1, current->name) < 0 ||
             commac_sqlite_bind_int(user_statement, 2, position++) < 0 ||
@@ -476,7 +475,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
   return result;
 }
 
-/* Restore the persisted player/robot channel memberships. */
+/* Restore the persisted player channel memberships. */
 static int commac_load_users(sqlite3 *sqlite,
                              const PersistenceContext *context) {
   sqlite3_stmt *statement = nullptr;

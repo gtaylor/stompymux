@@ -369,7 +369,6 @@ FLAGENT gen_flags[] = {
     {"OPAQUE", OPAQUE, 'O', 0, 0, fh_any},
     {"PUPPET", PUPPET, 'p', 0, 0, fh_hear_bit},
     {"QUIET", QUIET, 'Q', 0, 0, fh_any},
-    {"ROBOT", ROBOT, 'r', 0, 0, fh_any},
     {"SAFE", SAFE, 's', 0, 0, fh_any},
     {"STICKY", STICKY, 'S', 0, 0, fh_wiz},
     {"SUSPECT", SUSPECT, 'u', FLAG_WORD2, CA_WIZARD, fh_wiz},

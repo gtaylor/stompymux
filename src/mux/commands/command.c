@@ -478,12 +478,6 @@ CMDENT command_table[] = {
      {.invoke = do_pemit}},
     {"@power", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_power}},
     {"@readcache", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_readcache}},
-    {"@robot",
-     nullptr,
-     CA_WIZARD | CA_PLAYER,
-     PCRE_ROBOT,
-     CS_TWO_ARG,
-     {.invoke = do_pcreate}},
     {"@search",
      nullptr,
      CA_WIZARD,
@@ -688,8 +682,6 @@ void set_prefix_cmds(CommandRegistry *registry) {
   registry->prefix_commands['\\'] = hash_table_find("\\", &registry->commands);
   registry->prefix_commands['#'] = hash_table_find("#", &registry->commands);
   registry->prefix_commands['&'] = hash_table_find("&", &registry->commands);
-  registry->prefix_commands['-'] = hash_table_find("-", &registry->commands);
-  registry->prefix_commands['~'] = hash_table_find("~", &registry->commands);
 }
 
 /*
@@ -747,12 +739,6 @@ int check_access(GameDatabase *database,
     else
       fail++;
   }
-  if ((succ == 0) && (mask & CA_ROBOT)) {
-    if (is_robot_player(database, player))
-      succ++;
-    else
-      fail++;
-  }
   if (succ > 0)
     fail = 0;
   if (fail > 0)
@@ -763,8 +749,7 @@ int check_access(GameDatabase *database,
    */
 
   if (!is_wizard(database, player) &&
-      (((mask & CA_NO_ROBOT) && is_robot_player(database, player)) ||
-       ((mask & CA_NO_SUSPECT) && is_suspect(database, player)) ||
+      (((mask & CA_NO_SUSPECT) && is_suspect(database, player)) ||
        (!configuration->btech_ooc_comsys && (mask & CA_NO_IC) &&
         is_in_character_location(database, configuration, player)) ||
        ((mask & CA_NO_IC) && is_gagged(database, player))))
@@ -1531,8 +1516,6 @@ static void list_cmdtable(EvaluationContext *evaluation,
 
 NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
                               {"wizard", 3, CA_WIZARD, CA_WIZARD},
-                              {"robot", 2, CA_WIZARD, CA_ROBOT},
-                              {"no_robot", 4, CA_WIZARD, CA_NO_ROBOT},
                               {"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
                               {"global_interp", 8, CA_PUBLIC, CA_GBL_INTERP},
                               {"disabled", 4, CA_GOD, CA_DISABLED},
@@ -1723,7 +1706,7 @@ int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,
 static void list_df_flags(EvaluationContext *evaluation,
                           const ServerConfiguration *configuration,
                           DbRef player) {
-  char *playerb, *roomb, *thingb, *exitb, *robotb, *buff;
+  char *playerb, *roomb, *thingb, *exitb, *buff;
 
   playerb =
       decode_flags(evaluation->world->database, player,
@@ -1742,22 +1725,16 @@ static void list_df_flags(EvaluationContext *evaluation,
                         (configuration->default_thing_flags.word1 | TYPE_THING),
                         configuration->default_thing_flags.word2,
                         configuration->default_thing_flags.word3);
-  robotb = decode_flags(evaluation->world->database, player,
-                        (configuration->robot_flags.word1 | TYPE_PLAYER),
-                        configuration->robot_flags.word2,
-                        configuration->robot_flags.word3);
   buff = alloc_lbuf("list_df_flags");
   snprintf(buff, LBUF_SIZE,
-           "Default flags: Players...%s Rooms...%s Exits...%s Things...%s "
-           "Robots...%s",
-           playerb, roomb, exitb, thingb, robotb);
+           "Default flags: Players...%s Rooms...%s Exits...%s Things...%s",
+           playerb, roomb, exitb, thingb);
   raw_notify(evaluation, player, buff);
   free_lbuf(buff);
   free_sbuf(playerb);
   free_sbuf(roomb);
   free_sbuf(exitb);
   free_sbuf(thingb);
-  free_sbuf(robotb);
 }
 
 /*
@@ -1779,9 +1756,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(evaluation, player, "Player names may contain spaces.");
   else
     raw_notify(evaluation, player, "Player names may not contain spaces.");
-  if (!configuration->robot_speak)
-    raw_notify(evaluation, player,
-               "Robots are not allowed to speak in public areas.");
   if (configuration->ex_flags)
     raw_notify(
         evaluation, player,

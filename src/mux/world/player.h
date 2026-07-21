@@ -13,8 +13,7 @@ void record_login(EvaluationContext *evaluation, DbRef player, int is_new,
 int check_pass(WorldContext *world, DbRef player, const char *password);
 DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
                      char *name, char *password, char *host, char *username);
-DbRef create_player(EvaluationContext *evaluation, char *name, char *password,
-                    DbRef creator, int key);
+DbRef create_player(EvaluationContext *evaluation, char *name, char *password);
 int add_player_name(WorldContext *world, DbRef player, char *name);
 int delete_player_name(WorldContext *world, DbRef player, char *name);
 DbRef lookup_player(WorldContext *world, DbRef player, char *name, int check);

@@ -183,7 +183,6 @@ constexpr int OPEN_INVENTORY = 1; /* Open exit in me */
 constexpr int PASS_ANY = 1;       /* name=newpass */
 constexpr int PASS_MINE = 2;      /* oldpass=newpass */
 constexpr int PCRE_PLAYER = 1;    /* create new player */
-constexpr int PCRE_ROBOT = 2;     /* create robot player */
 constexpr int PEMIT_PEMIT = 1;    /* emit to named player */
 constexpr int PEMIT_OEMIT = 2;    /* emit to all in current room except named */
 constexpr int PEMIT_FSAY = 3;     /* force controlled obj to say */

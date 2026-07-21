@@ -86,8 +86,7 @@ static int test_flag_list_dispatch(void) {
       "[mux]\ndefault_player_flags = []\n"
       "default_exit_flags = [\"no_command\"]\n"
       "default_room_flags = [\"inherit\"]\n"
-      "default_thing_flags = [\"safe\"]\n"
-      "[flags]\nrobot = [\"robot\"]\n";
+      "default_thing_flags = [\"safe\"]\n";
   toml_result_t result;
   CallLog log = {0};
   int ok;
@@ -96,12 +95,11 @@ static int test_flag_list_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 6 && call_log_find(&log, "log", "!accounting bugs") &&
+  ok = log.count == 5 && call_log_find(&log, "log", "!accounting bugs") &&
        call_log_find(&log, "default_player_flags", "") &&
        call_log_find(&log, "default_exit_flags", "no_command") &&
        call_log_find(&log, "default_room_flags", "inherit") &&
-       call_log_find(&log, "default_thing_flags", "safe") &&
-       call_log_find(&log, "robot_flags", "robot");
+       call_log_find(&log, "default_thing_flags", "safe");
   toml_free(result);
   return ok;
 }

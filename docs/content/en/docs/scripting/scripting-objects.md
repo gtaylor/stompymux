@@ -21,10 +21,9 @@ attachment.
 The `[mux]` settings `default_thing_lua_parent`, `default_room_lua_parent`,
 `default_exit_lua_parent`, and `default_player_lua_parent` assign direct Lua
 parents to newly created objects of each type. Paths use the same
-`object_logic`-relative format as `@lua/parent`; robots use the player default.
-Changing a default does not update existing objects. Clones preserve the
-source object's Lua parent (or its lack of one) rather than receiving the type
-default.
+`object_logic`-relative format as `@lua/parent`. Changing a default does not
+update existing objects. Clones preserve the source object's Lua parent (or
+its lack of one) rather than receiving the type default.
 
 An object uses only the `Luaparent` attached directly to it. Lua modules are
 not inherited through other objects. Reload all attached modules and their dependencies atomically

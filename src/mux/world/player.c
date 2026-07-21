@@ -232,8 +232,7 @@ DbRef connect_player(EvaluationContext *evaluation, WorldContext *world,
 /**
  * Create a new player.
  */
-DbRef create_player(EvaluationContext *evaluation, char *name, char *password,
-                    DbRef creator, int isrobot) {
+DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
   WorldContext *world = evaluation->world;
   DbRef player;
   char hashed_password[crypto_pwhash_STRBYTES];
@@ -259,7 +258,7 @@ DbRef create_player(EvaluationContext *evaluation, char *name, char *password,
    * If so, go create him
    */
 
-  player = create_obj(evaluation, creator, TYPE_PLAYER, name);
+  player = create_obj(evaluation, NOTHING, TYPE_PLAYER, name);
   if (player == NOTHING) {
     sodium_memzero(hashed_password, sizeof(hashed_password));
     free_lbuf(pbuf);

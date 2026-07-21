@@ -773,8 +773,7 @@ void db_make_minimal(EvaluationContext *evaluation) {
      only read here. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  obj = create_player(evaluation, (char *)"Wizard", (char *)"potrzebie",
-                      NOTHING, 0);
+  obj = create_player(evaluation, (char *)"Wizard", (char *)"potrzebie");
 #pragma clang diagnostic pop
   game_object_set_flags(database, obj,
                         game_object_flags(database, obj) | WIZARD);

@@ -273,8 +273,8 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
     return CONNECT_RESULT_TERMINATED;
   }
 
-  player = create_player(&runtime->background_command->evaluation, name,
-                         password, NOTHING, 0);
+  player =
+      create_player(&runtime->background_command->evaluation, name, password);
   if (player == NOTHING) {
     descriptor_queue_string(d, create_fail);
     STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {

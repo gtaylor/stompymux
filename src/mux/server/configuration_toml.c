@@ -217,7 +217,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"mux.queue_idle_chunk", "queue_idle_chunk", CFG_KIND_SCALAR},
     {"mux.quit_file", "quit_file", CFG_KIND_SCALAR},
     {"mux.retry_limit", "retry_limit", CFG_KIND_SCALAR},
-    {"mux.robot_speech", "robot_speech", CFG_KIND_SCALAR},
     {"mux.show_unfindable_who", "show_unfindable_who", CFG_KIND_SCALAR},
     {"mux.space_compress", "space_compress", CFG_KIND_SCALAR},
     {"mux.stack_limit", "stack_limit", CFG_KIND_SCALAR},
@@ -239,9 +238,6 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"security.login_attempt_burst", "login_attempt_burst", CFG_KIND_SCALAR},
     {"security.login_attempt_refill", "login_attempt_refill", CFG_KIND_SCALAR},
     {"security.login_hash_limit", "login_hash_limit", CFG_KIND_SCALAR},
-
-    /* robot flags (FLAGSET replace-whole-set directive) */
-    {"flags.robot", "robot_flags", CFG_KIND_FLAG_LIST},
 
     /* logging (negatable-bitmask directives) */
     {"logging.log", "log", CFG_KIND_FLAG_LIST},

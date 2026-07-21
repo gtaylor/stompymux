@@ -23,7 +23,6 @@ anything pulled in through `include`.
 | `[server]` | Port, MUD name, and function recursion/invocation limits. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
-| `[flags]` | Flags set on newly created robots (`robot` array). |
 | `[security]` | Password hashing and login rate limiting (see below). |
 | `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
 | `[access.*]` | Per-command/function permission tables (`commands`, `functions`, `lists`, and `config`). |
@@ -36,9 +35,9 @@ directives take other shapes:
 
 - **Flag/bitmask directives** (`mux.default_player_flags`,
   `mux.default_exit_flags`, `mux.default_room_flags`,
-  `mux.default_thing_flags`, `flags.robot`, and `[logging]`) are TOML arrays of
-  strings. `logging.log` is negatable: prefix an entry with `!` to clear a bit
-  that's on by default (e.g. `log = ["!accounting", "bugs"]`).
+  `mux.default_thing_flags`, and `[logging]`) are TOML arrays of strings.
+  `logging.log` is negatable: prefix an entry with `!` to clear a bit that's on
+  by default (e.g. `log = ["!accounting", "bugs"]`).
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@ch" = "@chown"`.
 - **Access directives** (`[access.*]`) are tables
@@ -62,7 +61,7 @@ object type:
 | `default_thing_lua_parent` | `default_thing.lua` | Things |
 | `default_room_lua_parent` | `default_room.lua` | Rooms |
 | `default_exit_lua_parent` | `default_exit.lua` | Exits |
-| `default_player_lua_parent` | `default_player.lua` | Players and robots |
+| `default_player_lua_parent` | `default_player.lua` | Players |
 
 Paths are relative to `game/lua/object_logic`. Empty values disable automatic
 assignment for that type. Configuration changes apply only to objects created
