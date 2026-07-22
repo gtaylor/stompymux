@@ -23,8 +23,8 @@ constexpr int A_IDESC = 32;    /* Inside description (ENTER to get inside) */
 /* 39 and 40 are reserved for removed connection action attributes. */
 /* 41 is reserved for the removed money allowance attribute. */
 /* 42 is reserved for the removed DefaultLock attribute. */
-constexpr int A_NAME = 43;    /* Object name */
-constexpr int A_COMMENT = 44; /* Wizard-accessable comments */
+constexpr int A_NAME = 43; /* Object name */
+/* 44 is reserved for the removed Comment attribute. */
 /* 45 and 46 are reserved for removed action-message attributes. */
 /* 47 is reserved. */
 constexpr int A_TIMEOUT = 48; /* Per-user disconnect timeout */
@@ -37,8 +37,7 @@ constexpr int A_ALIAS = 58; /* Alias for player names */
 /* 59 and 60 are reserved for removed lock attributes. */
 /* 61 is reserved for the removed PAGE lock. */
 /* 62 and 63 are reserved for removed lock attributes. */
-constexpr int A_EALIAS = 64; /* Alternate names for ENTER */
-constexpr int A_LALIAS = 65; /* Alternate names for LEAVE */
+/* 64 and 65 are reserved for the removed enter and leave aliases. */
 /* 66 and 67 are reserved for removed lock failure attributes. */
 /* 68 is reserved for the removed Aefail attribute. */
 /* 69 and 70 are reserved for removed lock failure attributes. */

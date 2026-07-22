@@ -19,7 +19,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 14;
+constexpr int GAMEDB_SCHEMA_VERSION = 17;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -56,6 +56,8 @@ static const char schema_objects_sql[] =
     " next INTEGER NOT NULL,"
     " type INTEGER NOT NULL CHECK (type IN (0, 1, 2, 3, 5)),"
     " lua_parent TEXT NOT NULL DEFAULT '',"
+    " description TEXT, inside_description TEXT,"
+    " destroyer INTEGER,"
     " has_ansi_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansi_flag IN (0, 1)),"
     " has_ansimap_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansimap_flag IN "
     "(0, 1)),"
@@ -121,11 +123,6 @@ static const char schema_objects_sql[] =
     ");";
 
 static const char schema_state_sql[] =
-    "CREATE TABLE object_state ("
-    " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
-    " description TEXT, inside_description TEXT, admin_comment TEXT,"
-    " enter_alias TEXT, leave_alias TEXT, destroyer INTEGER"
-    ");"
     "CREATE TABLE player_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " password_hash TEXT, alias TEXT, last_login TEXT, last_name_change TEXT,"
@@ -155,53 +152,52 @@ typedef struct NativeColumn NativeColumn;
 struct NativeColumn {
   int field;
   const char *table;
+  const char *key_column;
   const char *column;
 };
 
 static const NativeColumn native_columns[] = {
-    {A_DESC, "object_state", "description"},
-    {A_IDESC, "object_state", "inside_description"},
-    {A_COMMENT, "object_state", "admin_comment"},
-    {A_EALIAS, "object_state", "enter_alias"},
-    {A_LALIAS, "object_state", "leave_alias"},
-    {A_DESTROYER, "object_state", "destroyer"},
-    {A_PASS, "player_state", "password_hash"},
-    {A_ALIAS, "player_state", "alias"},
-    {A_LAST, "player_state", "last_login"},
-    {A_LASTNAME, "player_state", "last_name_change"},
-    {A_LOGINDATA, "player_state", "login_data"},
-    {A_LASTSITE, "player_state", "last_site"},
-    {A_LASTPAGE, "player_state", "last_page"},
-    {A_TIMEOUT, "player_state", "timeout"},
-    {A_QUEUEMAX, "player_state", "queue_limit"},
-    {A_PRIVS, "player_state", "privileges"},
-    {A_TZ, "player_state", "timezone"},
-    {A_MECHPREFID, "btech_object_state", "mech_preferred_id"},
-    {A_MAPCOLOR, "btech_object_state", "map_color"},
-    {A_MECHSKILLS, "btech_object_state", "mech_skills"},
-    {A_XTYPE, "btech_object_state", "object_type"},
-    {A_TACSIZE, "btech_object_state", "tactical_size"},
-    {A_LRSHEIGHT, "btech_object_state", "lrs_height"},
-    {A_CONTACTOPT, "btech_object_state", "contact_options"},
-    {A_MECHNAME, "btech_object_state", "mech_name"},
-    {A_MECHTYPE, "btech_object_state", "mech_type"},
-    {A_MECHDESC, "btech_object_state", "mech_description"},
-    {A_MWTEMPLATE, "btech_object_state", "mw_template"},
-    {A_FACTION, "btech_object_state", "faction"},
-    {A_JOB, "btech_object_state", "job"},
-    {A_RANKNUM, "btech_object_state", "rank_number"},
-    {A_HEALTH, "btech_object_state", "health"},
-    {A_ATTRS, "btech_object_state", "character_attributes"},
-    {A_BUILDLINKS, "btech_object_state", "build_links"},
-    {A_BUILDENTRANCE, "btech_object_state", "build_entrances"},
-    {A_BUILDCOORD, "btech_object_state", "build_coordinates"},
-    {A_ADVS, "btech_object_state", "advantages"},
-    {A_PILOTNUM, "btech_object_state", "pilot_dbref"},
-    {A_MAPVIS, "btech_object_state", "map_visibility"},
-    {A_TECHTIME, "btech_object_state", "tech_complete_at"},
-    {A_ECONPARTS, "btech_object_state", "economy_parts"},
-    {A_SKILLS, "btech_object_state", "skills"},
-    {A_PCEQUIP, "btech_object_state", "personal_combat_equipment"},
+    {A_DESC, "objects", "dbref", "description"},
+    {A_IDESC, "objects", "dbref", "inside_description"},
+    {A_DESTROYER, "objects", "dbref", "destroyer"},
+    {A_PASS, "player_state", "object_dbref", "password_hash"},
+    {A_ALIAS, "player_state", "object_dbref", "alias"},
+    {A_LAST, "player_state", "object_dbref", "last_login"},
+    {A_LASTNAME, "player_state", "object_dbref", "last_name_change"},
+    {A_LOGINDATA, "player_state", "object_dbref", "login_data"},
+    {A_LASTSITE, "player_state", "object_dbref", "last_site"},
+    {A_LASTPAGE, "player_state", "object_dbref", "last_page"},
+    {A_TIMEOUT, "player_state", "object_dbref", "timeout"},
+    {A_QUEUEMAX, "player_state", "object_dbref", "queue_limit"},
+    {A_PRIVS, "player_state", "object_dbref", "privileges"},
+    {A_TZ, "player_state", "object_dbref", "timezone"},
+    {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
+    {A_MAPCOLOR, "btech_object_state", "object_dbref", "map_color"},
+    {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},
+    {A_XTYPE, "btech_object_state", "object_dbref", "object_type"},
+    {A_TACSIZE, "btech_object_state", "object_dbref", "tactical_size"},
+    {A_LRSHEIGHT, "btech_object_state", "object_dbref", "lrs_height"},
+    {A_CONTACTOPT, "btech_object_state", "object_dbref", "contact_options"},
+    {A_MECHNAME, "btech_object_state", "object_dbref", "mech_name"},
+    {A_MECHTYPE, "btech_object_state", "object_dbref", "mech_type"},
+    {A_MECHDESC, "btech_object_state", "object_dbref", "mech_description"},
+    {A_MWTEMPLATE, "btech_object_state", "object_dbref", "mw_template"},
+    {A_FACTION, "btech_object_state", "object_dbref", "faction"},
+    {A_JOB, "btech_object_state", "object_dbref", "job"},
+    {A_RANKNUM, "btech_object_state", "object_dbref", "rank_number"},
+    {A_HEALTH, "btech_object_state", "object_dbref", "health"},
+    {A_ATTRS, "btech_object_state", "object_dbref", "character_attributes"},
+    {A_BUILDLINKS, "btech_object_state", "object_dbref", "build_links"},
+    {A_BUILDENTRANCE, "btech_object_state", "object_dbref", "build_entrances"},
+    {A_BUILDCOORD, "btech_object_state", "object_dbref", "build_coordinates"},
+    {A_ADVS, "btech_object_state", "object_dbref", "advantages"},
+    {A_PILOTNUM, "btech_object_state", "object_dbref", "pilot_dbref"},
+    {A_MAPVIS, "btech_object_state", "object_dbref", "map_visibility"},
+    {A_TECHTIME, "btech_object_state", "object_dbref", "tech_complete_at"},
+    {A_ECONPARTS, "btech_object_state", "object_dbref", "economy_parts"},
+    {A_SKILLS, "btech_object_state", "object_dbref", "skills"},
+    {A_PCEQUIP, "btech_object_state", "object_dbref",
+     "personal_combat_equipment"},
 };
 
 /* Log either the SQLite error or the current operating-system error. */
@@ -555,10 +551,9 @@ static int gamedb_load_native_state(PersistenceContext *context,
     sqlite3_stmt *statement = nullptr;
     int step;
 
-    snprintf(
-        query, sizeof(query),
-        "SELECT object_dbref, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
-        column->column, column->table, column->column);
+    snprintf(query, sizeof(query),
+             "SELECT %s, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
+             column->key_column, column->column, column->table, column->column);
     if (gamedb_prepare(sqlite, &statement, query) < 0)
       return -1;
     while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -667,7 +662,7 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
   sqlite3_stmt *statement = nullptr;
   char query[256];
 
-  const char *tables[] = {"object_state", "player_state", "btech_object_state"};
+  const char *tables[] = {"player_state", "btech_object_state"};
   for (size_t index = 0; index < sizeof(tables) / sizeof(*tables); index++) {
     snprintf(query, sizeof(query), "INSERT INTO %s (object_dbref) VALUES (?);",
              tables[index]);
@@ -687,9 +682,8 @@ static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
 
     if (!value)
       continue;
-    snprintf(query, sizeof(query),
-             "UPDATE %s SET %s = ? WHERE object_dbref = ?;", column->table,
-             column->column);
+    snprintf(query, sizeof(query), "UPDATE %s SET %s = ? WHERE %s = ?;",
+             column->table, column->column, column->key_column);
     if (gamedb_prepare(sqlite, &statement, query) < 0 ||
         sqlite3_bind_text(statement, 1, value, -1, SQLITE_TRANSIENT) !=
             SQLITE_OK ||

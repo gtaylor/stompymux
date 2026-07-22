@@ -767,7 +767,6 @@ void process_command(CommandContext *context, char *command, char *args[],
   char *p = nullptr, *q = nullptr, *arg = nullptr, *lcbuf = nullptr,
        *slashp = nullptr;
   const char *cmdsave = nullptr;
-  long aflags = 0;
   int succ = 0, lua_succ = 0, i = 0;
   DbRef exit = 0;
   CMDENT *cmdp = nullptr;
@@ -978,55 +977,6 @@ void process_command(CommandContext *context, char *command, char *args[],
     free_lbuf(lcbuf);
     context->debug_command = cmdsave;
     goto exit;
-  }
-  /* Match enter and leave aliases against the literal command line. */
-
-  StringCopy(lcbuf, command);
-  succ = 0;
-
-  /*
-   * Idea for enter/leave aliases from R'nice@TinyTIM
-   */
-
-  if (has_location(context->world->database, player) &&
-      is_good_obj(context->world->database,
-                  game_object_location(context->world->database, player))) {
-
-    /* Check for a leave alias */
-    p = attribute_get(context->world->database,
-                      game_object_location(context->world->database, player),
-                      A_LALIAS, &aflags);
-    if (p && *p) {
-      if (matches_exit_from_list(lcbuf, p)) {
-        free_lbuf(lcbuf);
-        free_lbuf(p);
-        CommandInvocation invocation = {
-            .context = context, .player = player, .cause = player};
-        do_leave(&invocation);
-        goto exit;
-      }
-    }
-    free_lbuf(p);
-
-    /*
-     * Check for enter aliases
-     */
-
-    DOLIST(context->world->database, exit,
-           game_object_contents(
-               context->world->database,
-               game_object_location(context->world->database, player))) {
-      p = attribute_get(context->world->database, exit, A_EALIAS, &aflags);
-      if (p && *p) {
-        if (matches_exit_from_list(lcbuf, p)) {
-          free_lbuf(lcbuf);
-          free_lbuf(p);
-          do_enter_internal(&context->evaluation, player, exit, 0);
-          goto exit;
-        }
-      }
-      free_lbuf(p);
-    }
   }
   /* Lua handlers observe the original unmatched command. */
   if (!is_no_command(context->world->database, player))

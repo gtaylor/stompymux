@@ -348,116 +348,125 @@ static int check_snapshot(const char *path) {
   sqlite = NULL;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
-  ok = query_int(
-           sqlite,
-           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-           "IN ('snapshot', 'objects', 'object_state', 'player_state', "
-           "'btech_object_state', 'attributes');",
-           6) == 0 &&
-       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 14) == 0 &&
-       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
-                 1) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('object_state') "
-                 "WHERE name = 'semaphore_count';",
-                 0) == 0 &&
-       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
-           0 &&
-       (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
-        query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
-       (query_int(sqlite, "SELECT count(*) FROM attributes;", 0) == 0 ||
-        query_int(sqlite, "SELECT count(*) FROM attributes;", 2) == 0) &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('attributes') "
-                 "WHERE name IN ('number', 'flags', 'owner');",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') "
-                 "WHERE name = 'owner';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name IN ('has_idle_power', 'has_long_fingers_power', "
-                 "'has_comm_all_power', "
-                 "'has_see_hidden_power', 'has_no_destroy_power', "
-                 "'has_mech_power', 'has_security_power', 'has_mechrep_power', "
-                 "'has_map_power', "
-                 "'has_template_power', 'has_tech_power');",
-                 11) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name IN ('powers', 'powers2');",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name = 'has_pass_locks_power';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name IN ('flags', 'flags2', 'flags3');",
-                 0) == 0 &&
-       query_int(
-           sqlite,
-           "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-           "name IN ('type', 'lua_parent', 'has_ansi_flag', 'has_ansimap_flag', "
-           "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
-           "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
-           "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
-           "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
-           "'has_no_command_flag', 'has_quiet_flag', "
-           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
-           "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-           24) == 0 &&
-       query_int(
-           sqlite,
-           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1) "
-           "OR has_long_fingers_power NOT IN (0, 1) OR has_comm_all_power NOT "
-           "IN "
-           "(0, 1) OR has_see_hidden_power NOT IN (0, 1) OR "
-           "has_no_destroy_power "
-           "NOT IN (0, 1) OR has_mech_power "
-           "NOT IN (0, 1) OR has_security_power NOT IN (0, 1) OR "
-           "has_mechrep_power "
-           "NOT IN (0, 1) OR has_map_power NOT IN (0, 1) OR has_template_power "
-           "NOT "
-           "IN (0, 1) OR has_tech_power NOT IN (0, 1);",
-           0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('snapshot') WHERE "
-                 "name = 'attr_next';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name = 'lock_expr';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                 "name = 'parent';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info("
-                 "'btech_object_state') WHERE name = 'mech_status';",
-                 0) == 0 &&
-       query_int(
-           sqlite,
-           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
-           "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
-           "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
-           "'macro_entries');",
-           7) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info("
-                 "'comsys_channel_users') WHERE name = 'title';",
-                 0) == 0 &&
-       query_int(sqlite,
-                 "SELECT count(*) FROM pragma_table_info("
-                 "'comsys_channels') WHERE name IN "
-                 "('temp1', 'temp2', 'charge', 'charge_who', 'amount_col');",
-                 0) == 0;
+  ok =
+      query_int(
+          sqlite,
+          "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
+          "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
+          "'attributes');",
+          5) == 0 &&
+      query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
+                17) == 0 &&
+      query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
+                1) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
+                "AND name = 'object_state';",
+                0) == 0 &&
+      query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
+          0 &&
+      (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
+       query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
+      (query_int(sqlite, "SELECT count(*) FROM attributes;", 0) == 0 ||
+       query_int(sqlite, "SELECT count(*) FROM attributes;", 2) == 0) &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('attributes') "
+                "WHERE name IN ('number', 'flags', 'owner');",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') "
+                "WHERE name = 'owner';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name IN ('has_idle_power', 'has_long_fingers_power', "
+                "'has_comm_all_power', "
+                "'has_see_hidden_power', 'has_no_destroy_power', "
+                "'has_mech_power', 'has_security_power', 'has_mechrep_power', "
+                "'has_map_power', "
+                "'has_template_power', 'has_tech_power');",
+                11) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name IN ('powers', 'powers2');",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name = 'has_pass_locks_power';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name = 'admin_comment';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name IN ('enter_alias', 'leave_alias');",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name IN ('flags', 'flags2', 'flags3');",
+                0) == 0 &&
+      query_int(
+          sqlite,
+          "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+          "name IN ('type', 'lua_parent', 'has_ansi_flag', 'has_ansimap_flag', "
+          "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
+          "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
+          "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
+          "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
+          "'has_no_command_flag', 'has_quiet_flag', "
+          "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
+          "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
+          24) == 0 &&
+      query_int(
+          sqlite,
+          "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1) "
+          "OR has_long_fingers_power NOT IN (0, 1) OR has_comm_all_power NOT "
+          "IN "
+          "(0, 1) OR has_see_hidden_power NOT IN (0, 1) OR "
+          "has_no_destroy_power "
+          "NOT IN (0, 1) OR has_mech_power "
+          "NOT IN (0, 1) OR has_security_power NOT IN (0, 1) OR "
+          "has_mechrep_power "
+          "NOT IN (0, 1) OR has_map_power NOT IN (0, 1) OR has_template_power "
+          "NOT "
+          "IN (0, 1) OR has_tech_power NOT IN (0, 1);",
+          0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('snapshot') WHERE "
+                "name = 'attr_next';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name = 'lock_expr';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name = 'parent';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'btech_object_state') WHERE name = 'mech_status';",
+                0) == 0 &&
+      query_int(
+          sqlite,
+          "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND "
+          "name IN ('commac_entries', 'commac_aliases', 'comsys_channels', "
+          "'comsys_channel_users', 'comsys_channel_messages', 'macro_sets', "
+          "'macro_entries');",
+          7) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'comsys_channel_users') WHERE name = 'title';",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'comsys_channels') WHERE name IN "
+                "('temp1', 'temp2', 'charge', 'charge_who', 'amount_col');",
+                0) == 0;
   ok = ok &&
        query_int(
            sqlite,
@@ -633,8 +642,6 @@ static int seed_btech_special_objects(const char *path) {
                   "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1),"
                   "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1);"
-                  "INSERT INTO object_state (object_dbref) VALUES "
-                  "(2),(3),(4),(5),(6);"
                   "INSERT INTO player_state (object_dbref) VALUES "
                   "(2),(3),(4),(5),(6);"
                   "INSERT INTO btech_object_state (object_dbref, object_type) "
