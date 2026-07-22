@@ -1,5 +1,5 @@
 #include "mux/server/event_timer.h"
-#include "mux/server/libuv.h"
+#include <uv.h>
 
 static int callback_count;
 

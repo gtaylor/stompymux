@@ -1,8 +1,8 @@
 /* signals.c - Process signal registration and server shutdown handlers. */
 
-#include "mux/server/libuv.h"
 #include "mux/server/platform.h"
 #include <signal.h>
+#include <uv.h>
 
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"

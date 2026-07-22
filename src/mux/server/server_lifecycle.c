@@ -6,13 +6,13 @@
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
-#include "mux/server/libuv.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <uv.h>
 
 #include "glue.h"
 #include "mux/commands/command_queue.h"

@@ -4,10 +4,10 @@
 
 #include "mux/network/descriptor.h"
 
-#include "mux/server/libuv.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <uv.h>
 
 #include "mux/commands/command_runtime.h"
 #include "mux/network/input_flow.h"

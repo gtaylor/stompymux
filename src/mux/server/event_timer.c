@@ -2,7 +2,7 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/server/libuv.h"
+#include <uv.h>
 
 #include "mux/server/event_timer.h"
 
