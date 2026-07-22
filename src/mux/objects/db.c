@@ -75,7 +75,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Lalias", A_LALIAS},
                           {"Last", A_LAST},
                           {"Lastname", A_LASTNAME},
-                          {"Luaparent", A_LUAPARENT},
                           {"Lastpage", A_LASTPAGE},
                           {"Lastsite", A_LASTSITE},
                           {"Logindata", A_LOGINDATA},
@@ -155,6 +154,26 @@ INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
 
   attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
   return database->name_buffer;
+}
+
+const char *game_object_lua_parent(GameDatabase *database, DbRef object) {
+  const char *path = game_database_object(database, object)->lua_parent;
+
+  return path ? path : "";
+}
+
+bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
+                                const char *path) {
+  char *copy = nullptr;
+
+  if (path && *path) {
+    copy = strdup(path);
+    if (!copy)
+      return false;
+  }
+  free(game_database_object(database, object)->lua_parent);
+  game_database_object(database, object)->lua_parent = copy;
+  return true;
 }
 
 INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
@@ -349,6 +368,8 @@ int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
  */
 
 void attribute_free(GameDatabase *database, DbRef thing) {
+  free(database->objects[thing].lua_parent);
+  database->objects[thing].lua_parent = nullptr;
   for (int index = 0; index < database->objects[thing].at_count; index++) {
     free(database->objects[thing].ahead[index].name);
     free(database->objects[thing].ahead[index].data);
@@ -489,6 +510,8 @@ void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef dest,
     dynamic_attribute_set(evaluation->world->database, dest,
                           source_object->ahead[index].name,
                           source_object->ahead[index].data);
+  game_object_lua_parent_set(evaluation->world->database, dest,
+                             source_object->lua_parent);
   return;
 }
 

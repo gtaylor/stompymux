@@ -1107,24 +1107,19 @@ static int lua_load_attached_modules(LuaRuntime *runtime, char *error,
   DbRef object;
 
   for (object = 0; object < runtime->services->database->top; object++) {
-    char *path;
-    long flags;
+    const char *path;
 
     if (!is_good_obj(runtime->services->database, object))
       continue;
-    path =
-        attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
+    path = game_object_lua_parent(runtime->services->database, object);
     if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
                                     error_size)) {
       if (ignore_errors) {
         lua_log_load_error(runtime, object, path, error);
-        free_lbuf(path);
         continue;
       }
-      free_lbuf(path);
       return 0;
     }
-    free_lbuf(path);
   }
   return 1;
 }
@@ -1238,18 +1233,14 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
 
   *has_errors = 0;
   for (object = 0; object < runtime->services->database->top; object++) {
-    char *path;
-    long flags;
+    const char *path;
     char detail[LBUF_SIZE];
 
     if (!is_good_obj(runtime->services->database, object))
       continue;
-    path =
-        attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
-    if (!*path) {
-      free_lbuf(path);
+    path = game_object_lua_parent(runtime->services->database, object);
+    if (!*path)
       continue;
-    }
     for (index = 0; index < check_count; index++) {
       if (!strcmp(checks[index].path, path)) {
         checks[index].object_count++;
@@ -1261,11 +1252,9 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
                          sizeof(detail)) &&
         !lua_add_parent_check(&checks, &check_count, path, detail, error,
                               error_size)) {
-      free_lbuf(path);
       lua_free_parent_checks(checks, check_count);
       return 0;
     }
-    free_lbuf(path);
   }
   for (index = 0; index < check_count; index++) {
     notify_printf(evaluation, player, "%zu %s are unable to read %s: %s",
@@ -1351,19 +1340,14 @@ int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
 
 static int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
                              size_t path_size, DbRef *source) {
-  char *value;
-  long flags;
-
-  value =
-      attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
+  const char *value =
+      game_object_lua_parent(runtime->services->database, object);
   if (*value) {
     snprintf(path, path_size, "%s", value);
     if (source)
       *source = object;
-    free_lbuf(value);
     return 1;
   }
-  free_lbuf(value);
   return 0;
 }
 
@@ -2629,13 +2613,7 @@ static void do_luaparent(CommandInvocation *invocation) {
   if (thing == NOTHING)
     return;
   if (!*path) {
-    /* attribute_add_raw()'s buffer parameter isn't const-correct; "" is
-       only read here. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    attribute_add_raw(invocation->context->world->database, thing, A_LUAPARENT,
-                      (char *)"");
-#pragma clang diagnostic pop
+    game_object_lua_parent_set(invocation->context->world->database, thing, "");
     notify_quiet(&invocation->context->evaluation, player,
                  "Lua parent cleared.");
     return;
@@ -2646,8 +2624,12 @@ static void do_luaparent(CommandInvocation *invocation) {
                   "Lua parent not set: %s", error);
     return;
   }
-  attribute_add_raw(invocation->context->world->database, thing, A_LUAPARENT,
-                    path);
+  if (!game_object_lua_parent_set(invocation->context->world->database, thing,
+                                  path)) {
+    notify_quiet(&invocation->context->evaluation, player,
+                 "Lua parent not set: out of memory.");
+    return;
+  }
   notify_quiet(&invocation->context->evaluation, player, "Lua parent set.");
 }
 

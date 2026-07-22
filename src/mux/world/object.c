@@ -194,7 +194,7 @@ void object_apply_default_lua_parent(EvaluationContext *evaluation,
   }
 
   if (*path)
-    attribute_add_raw(evaluation->world->database, object, A_LUAPARENT, path);
+    game_object_lua_parent_set(evaluation->world->database, object, path);
 }
 
 /**

@@ -222,13 +222,10 @@ static int check_minimal_lua_parents(const char *path) {
   sqlite = NULL;
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
-  result = query_text(sqlite,
-                      "SELECT lua_parent FROM object_state "
-                      "WHERE object_dbref = 0;",
+  result = query_text(sqlite, "SELECT lua_parent FROM objects WHERE dbref = 0;",
                       "room.lua") == 0 &&
                    query_text(sqlite,
-                              "SELECT lua_parent FROM object_state "
-                              "WHERE object_dbref = 1;",
+                              "SELECT lua_parent FROM objects WHERE dbref = 1;",
                               "player.lua") == 0
                ? 0
                : -1;
@@ -358,7 +355,7 @@ static int check_snapshot(const char *path) {
            "'btech_object_state', 'attributes');",
            6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 13) == 0 &&
+                 14) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite,
@@ -403,7 +400,7 @@ static int check_snapshot(const char *path) {
        query_int(
            sqlite,
            "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-           "name IN ('type', 'has_ansi_flag', 'has_ansimap_flag', "
+           "name IN ('type', 'lua_parent', 'has_ansi_flag', 'has_ansimap_flag', "
            "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
            "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
            "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
@@ -411,7 +408,7 @@ static int check_snapshot(const char *path) {
            "'has_no_command_flag', 'has_quiet_flag', "
            "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
            "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-           23) == 0 &&
+           24) == 0 &&
        query_int(
            sqlite,
            "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1) "

@@ -82,6 +82,8 @@ struct GameObject {
   /* ROOM, EXIT: unused */
   DbRef zone; /* Whatever the object is zoned to. */
 
+  char *lua_parent; /* Relative object_logic module path. */
+
   ObjectType type;
 
   bool has_ansi_flag;
@@ -238,6 +240,9 @@ void object_password_set(GameDatabase *database, DbRef thing,
 void object_name_set(GameDatabase *database, DbRef thing, char *name);
 char *game_object_name(GameDatabase *database, DbRef thing);
 char *game_object_pure_name(GameDatabase *database, DbRef thing);
+const char *game_object_lua_parent(GameDatabase *database, DbRef object);
+bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
+                                const char *path);
 void init_min_db(void);
 void attribute_stack_push(void);
 void attribute_stack_pop(void);
