@@ -17,8 +17,10 @@ Inspect an object as a Wizard:
 @examine <object>[/<attribute pattern>]
 ```
 
-The normal view includes ownership, flags, powers, Lua storage entries, contents,
-locations and links, plus the direct Lua parent's appearances, commands,
+The normal view includes flags, powers, Lua storage entries, contents, locations
+and links, plus the direct Lua parent's appearances, commands,
 events, schedules, messages, and locks. `/brief` omits the ordinary attribute list,
 and `/debug` displays raw database fields. Storage names and patterns are
-case-sensitive. Entries have no flags, owners, or parent inheritance.
+case-sensitive. Entries have no flags or parent inheritance.
+
+Only Wizards can use `@examine`. Wizards may examine any object.

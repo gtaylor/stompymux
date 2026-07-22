@@ -42,14 +42,10 @@ void do_tapcom(DbRef, DbRef, int, char *, char *);   /* taps a channel */
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
 void do_alias(CommandInvocation *invocation);
 void do_boot(CommandInvocation *invocation);
-void do_chown(CommandInvocation *invocation);
-void do_chownall(CommandInvocation *invocation);
 void do_chzone(CommandInvocation *invocation);
 void do_clone(CommandInvocation *invocation);
-void do_comment(DbRef, DbRef, int); /* Ignore argument and do nothing */
 void do_cpattr(CommandInvocation *invocation); /* Copy attributes */
 void do_create(CommandInvocation *invocation);
-void do_cut(CommandInvocation *invocation);
 void do_dbck(CommandInvocation *invocation); /* Consistency check */
 void do_destroy(CommandInvocation *invocation);
 void do_dig(CommandInvocation *invocation);
@@ -78,7 +74,6 @@ void do_leave(CommandInvocation *invocation);     /* Leave the current object */
 void do_link(CommandInvocation *invocation);
 void do_lua(CommandInvocation *invocation);
 void do_list(CommandInvocation *invocation); /* List internal tables. */
-void do_list_file(CommandInvocation *invocation);
 void do_look(CommandInvocation *invocation); /* Look here or at something. */
 void do_move(CommandInvocation *invocation); /* Move about using exits */
 void do_mvattr(CommandInvocation *invocation);
@@ -86,13 +81,11 @@ void do_mudwho(DbRef, DbRef, int, char *,
                char *); /* WHO for inter-mud page/who suppt */
 void do_name(CommandInvocation *invocation);
 void do_newpassword(CommandInvocation *invocation);
-void do_notify(CommandInvocation *invocation); /* Notify or drain semaphore */
 void do_open(CommandInvocation *invocation);
 void do_page(CommandInvocation *invocation); /* Message a faraway player. */
 void do_pcreate(CommandInvocation *invocation);
 void do_pemit(CommandInvocation *invocation); /* Message a specific object. */
 void do_power(CommandInvocation *invocation); /* Sets powers */
-void do_kick(CommandInvocation *invocation);  /* Force queue processing */
 void do_quit(CommandInvocation *invocation);  /* Disconnect this session */
 void do_readcache(CommandInvocation *invocation); /* Reread text file cache */
 void do_say(CommandInvocation *invocation);       /* Messages to all. */

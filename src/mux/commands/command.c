@@ -80,12 +80,9 @@ NameTable help_sw[] = {
     {nullptr, 0, 0, 0},
 };
 
-NameTable clone_sw[] = {
-    {"inherit", 3, CA_PUBLIC, CLONE_INHERIT | SW_MULTIPLE},
-    {"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
-    {"location", 1, CA_PUBLIC, CLONE_LOCATION},
-    {"preserve", 2, CA_WIZARD, CLONE_PRESERVE | SW_MULTIPLE},
-    {nullptr, 0, 0, 0}};
+NameTable clone_sw[] = {{"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
+                        {"location", 1, CA_PUBLIC, CLONE_LOCATION},
+                        {nullptr, 0, 0, 0}};
 
 NameTable destroy_sw[] = {{"override", 8, CA_PUBLIC, DEST_OVERRIDE},
                           {"recursive", 9, CA_WIZARD, DEST_RECURSIVE},
@@ -134,10 +131,6 @@ NameTable leave_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
 NameTable look_sw[] = {{"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
                        {nullptr, 0, 0, 0}};
 
-NameTable notify_sw[] = {{"all", 1, CA_PUBLIC, NFY_NFYALL},
-                         {"first", 1, CA_PUBLIC, NFY_NFY},
-                         {nullptr, 0, 0, 0}};
-
 NameTable open_sw[] = {{"inventory", 1, CA_PUBLIC, OPEN_INVENTORY},
                        {"location", 1, CA_PUBLIC, OPEN_LOCATION},
                        {nullptr, 0, 0, 0}};
@@ -155,11 +148,6 @@ NameTable pose_sw[] = {{"default", 1, CA_PUBLIC, 0},
 
 NameTable set_sw[] = {{"quiet", 1, CA_PUBLIC, SET_QUIET}, {nullptr, 0, 0, 0}};
 
-NameTable stats_sw[] = {{"all", 1, CA_PUBLIC, STAT_ALL},
-                        {"me", 1, CA_PUBLIC, STAT_ME},
-                        {"player", 1, CA_PUBLIC, STAT_PLAYER},
-                        {nullptr, 0, 0, 0}};
-
 NameTable teleport_sw[] = {{"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
                            {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
                            {nullptr, 0, 0, 0}};
@@ -171,15 +159,6 @@ NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
                        {"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
                        {nullptr, 0, 0, 0}};
 
-/*
- * Implement the @@ (comment) command. Very cpu-intensive :-)
- */
-void do_comment(DbRef player, DbRef cause, int key) {}
-
-DEFINE_COMMAND_ADAPTER(do_comment)
-#ifdef ARBITRARY_LOGFILES
-#endif
-
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
  * hash table.
@@ -189,23 +168,10 @@ DEFINE_COMMAND_ADAPTER(do_comment)
  */
 
 CMDENT command_table[] = {
-    {"@@",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_NO_ARGS,
-     {.invoke = do_comment_command_adapter}},
     {"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_admin}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
     {"@boot", boot_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
     {"@chan", chan_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
-    {"@chown", nullptr, CA_WIZARD, CHOWN_ONE, CS_TWO_ARG, {.invoke = do_chown}},
-    {"@chownall",
-     nullptr,
-     CA_WIZARD,
-     CHOWN_ALL,
-     CS_TWO_ARG,
-     {.invoke = do_chownall}},
     {"@chzone", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chzone}},
     {"@clone",
      clone_sw,
@@ -225,12 +191,6 @@ CMDENT command_table[] = {
      0,
      CS_ONE_ARG,
      {.invoke = do_create}},
-    {"@cut",
-     nullptr,
-     CA_WIZARD | CA_LOCATION,
-     0,
-     CS_ONE_ARG,
-     {.invoke = do_cut}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
     {"@destroy",
      destroy_sw,
@@ -240,8 +200,6 @@ CMDENT command_table[] = {
      {.invoke = do_destroy}},
     {"@desc", nullptr, CA_WIZARD, A_DESC, CS_TWO_ARG, {.invoke = do_setattr}},
     {"@idesc", nullptr, CA_WIZARD, A_IDESC, CS_TWO_ARG, {.invoke = do_setattr}},
-    /*{"@destroyall", NULL, CA_WIZARD,
-       DEST_ALL, CS_ONE_ARG, {.invoke = do_destroy}}, */
     {"@dig", dig_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_dig}},
     {"@disable",
      nullptr,
@@ -249,12 +207,6 @@ CMDENT command_table[] = {
      GLOB_DISABLE,
      CS_ONE_ARG,
      {.invoke = do_global}},
-    {"@drain",
-     nullptr,
-     CA_WIZARD,
-     NFY_DRAIN,
-     CS_TWO_ARG,
-     {.invoke = do_notify}},
     {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dump}},
     {"@edit",
      nullptr,
@@ -304,12 +256,10 @@ CMDENT command_table[] = {
      {.invoke = do_pemit}},
     {"@halt", halt_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_halt}},
     {"@help", help_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
-    {"@kick", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_kick}},
     {"@last", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_last}},
     {"@link", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_link}},
     {"@lua", lua_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
     {"@list", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list}},
-    {"@list_file", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list_file}},
 #ifdef ARBITRARY_LOGFILES
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
 #endif
@@ -326,7 +276,6 @@ CMDENT command_table[] = {
      PASS_ANY,
      CS_TWO_ARG,
      {.invoke = do_newpassword}},
-    {"@notify", notify_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_notify}},
     {"@oemit",
      nullptr,
      CA_WIZARD | CA_LOCATION,
@@ -362,7 +311,7 @@ CMDENT command_table[] = {
      {.invoke = do_search}},
     {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_set}},
     {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
-    {"@stats", stats_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_stats}},
+    {"@stats", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_stats}},
     {"@teleport",
      teleport_sw,
      CA_WIZARD,
@@ -820,7 +769,7 @@ void process_command(CommandContext *context, char *command, char *args[],
   const char *cmdsave = nullptr;
   long aflags = 0;
   int succ = 0, lua_succ = 0, i = 0;
-  DbRef exit = 0, aowner = 0;
+  DbRef exit = 0;
   CMDENT *cmdp = nullptr;
   char *macroout = nullptr;
   int macerr = 0;
@@ -851,8 +800,7 @@ void process_command(CommandContext *context, char *command, char *args[],
       (is_halted(context->world->database, player) &&
        !((typeof_obj(context->world->database, player) == TYPE_PLAYER) &&
          interactive))) {
-    notify_printf(&context->evaluation,
-                  game_object_owner(context->world->database, player),
+    notify_printf(&context->evaluation, player,
                   "Attempt to execute command by halted object #%ld", player);
     context->debug_command = cmdsave;
     goto exit;
@@ -886,11 +834,6 @@ void process_command(CommandContext *context, char *command, char *args[],
    * Reset recursion limits
    */
   command_context_reset_limits(context);
-
-  if (is_verbose(context->world->database, player))
-    notify_printf(&context->evaluation,
-                  game_object_owner(context->world->database, player), "%s] %s",
-                  game_object_name(context->world->database, player), command);
 
   /*
    * Eat leading whitespace, and space-compress if configured
@@ -956,13 +899,6 @@ void process_command(CommandContext *context, char *command, char *args[],
    */
 
   if (string_compare(configuration, command, "home") == 0) {
-    if (((is_fixed(context->world->database, player)) ||
-         (is_fixed(context->world->database,
-                   game_object_owner(context->world->database, player)))) &&
-        !(is_wizard(context->world->database, player))) {
-      notify(&context->evaluation, player, configuration->fixed_home_msg);
-      goto exit;
-    }
     /* do_move()'s parameter isn't const-correct; "home" is only read. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -984,7 +920,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     match_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      move_exit(&context->evaluation, player, exit, 0, "You can't go that way.",
+      move_exit(&context->evaluation, player, exit, "You can't go that way.",
                 0);
       context->debug_command = cmdsave;
       goto exit;
@@ -1059,7 +995,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     /* Check for a leave alias */
     p = attribute_get(context->world->database,
                       game_object_location(context->world->database, player),
-                      A_LALIAS, &aowner, &aflags);
+                      A_LALIAS, &aflags);
     if (p && *p) {
       if (matches_exit_from_list(lcbuf, p)) {
         free_lbuf(lcbuf);
@@ -1080,8 +1016,7 @@ void process_command(CommandContext *context, char *command, char *args[],
            game_object_contents(
                context->world->database,
                game_object_location(context->world->database, player))) {
-      p = attribute_get(context->world->database, exit, A_EALIAS, &aowner,
-                        &aflags);
+      p = attribute_get(context->world->database, exit, A_EALIAS, &aflags);
       if (p && *p) {
         if (matches_exit_from_list(lcbuf, p)) {
           free_lbuf(lcbuf);
@@ -1176,7 +1111,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     match_zone_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      move_exit(&context->evaluation, player, exit, 1, nullptr, 0);
+      move_exit(&context->evaluation, player, exit, nullptr, 0);
       context->debug_command = cmdsave;
       goto exit;
     }
@@ -1518,9 +1453,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(evaluation, player,
                "Wizards idle for longer than the default timeout are "
                "automatically set DARK.");
-  if (configuration->safe_unowned)
-    raw_notify(evaluation, player,
-               "Objects not owned by you are automatically considered SAFE.");
   if (configuration->paranoid_alloc)
     raw_notify(evaluation, player,
                "The buffer pools are checked for consistency on each "
@@ -1583,14 +1515,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   raw_notify(evaluation, player, buff);
 
   free_mbuf(buff);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * list_db_stats: Get useful info from the DB layer about hash stats, etc.
- */
-static void list_db_stats(EvaluationContext *evaluation, DbRef player) {
-  raw_notify(evaluation, player, "Database is memory based.");
 }
 
 /*
@@ -1675,7 +1599,6 @@ constexpr int LIST_CONF_PERMS = 15;
 constexpr int LIST_SITEINFO = 16;
 constexpr int LIST_POWERS = 17;
 constexpr int LIST_SWITCHES = 18;
-constexpr int LIST_DB_STATS = 20;
 constexpr int LIST_PROCESS = 21;
 constexpr int LIST_BADNAMES = 22;
 constexpr int LIST_LOGFILES = 23;
@@ -1683,7 +1606,6 @@ constexpr int LIST_LOGFILES = 23;
 NameTable list_names[] = {{"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
                           {"commands", 3, CA_PUBLIC, LIST_COMMANDS},
                           {"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
-                          {"db_stats", 2, CA_WIZARD, LIST_DB_STATS},
                           {"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
                           {"flags", 2, CA_PUBLIC, LIST_FLAGS},
                           {"globals", 1, CA_WIZARD, LIST_GLOBALS},
@@ -1752,9 +1674,6 @@ void do_list(CommandInvocation *invocation) {
     name_table_interpret(&invocation->context->evaluation, configuration,
                          player, logdata_nametab, configuration->log_info,
                          "Information Logged:", "yes", "no");
-    break;
-  case LIST_DB_STATS:
-    list_db_stats(&invocation->context->evaluation, player);
     break;
   case LIST_PROCESS:
     list_process(&invocation->context->evaluation, runtime->clock, player);

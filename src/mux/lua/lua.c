@@ -92,7 +92,6 @@ static const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT] = {
     [LUA_LOCK_OPERATION_LINK] = "link",
     [LUA_LOCK_OPERATION_SET_HOME] = "set_home",
     [LUA_LOCK_OPERATION_SPEAK] = "speak",
-    [LUA_LOCK_OPERATION_ZONE_CONTROL] = "zone_control",
     [LUA_LOCK_OPERATION_CHANNEL_JOIN] = "channel_join",
     [LUA_LOCK_OPERATION_CHANNEL_TRANSMIT] = "channel_transmit",
     [LUA_LOCK_OPERATION_CHANNEL_RECEIVE] = "channel_receive",
@@ -1109,13 +1108,12 @@ static int lua_load_attached_modules(LuaRuntime *runtime, char *error,
 
   for (object = 0; object < runtime->services->database->top; object++) {
     char *path;
-    DbRef owner;
     long flags;
 
     if (!is_good_obj(runtime->services->database, object))
       continue;
-    path = attribute_get(runtime->services->database, object, A_LUAPARENT,
-                         &owner, &flags);
+    path =
+        attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
     if (*path && !lua_verify_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, error,
                                     error_size)) {
       if (ignore_errors) {
@@ -1241,14 +1239,13 @@ static int lua_check_luaparents(EvaluationContext *evaluation,
   *has_errors = 0;
   for (object = 0; object < runtime->services->database->top; object++) {
     char *path;
-    DbRef owner;
     long flags;
     char detail[LBUF_SIZE];
 
     if (!is_good_obj(runtime->services->database, object))
       continue;
-    path = attribute_get(runtime->services->database, object, A_LUAPARENT,
-                         &owner, &flags);
+    path =
+        attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
     if (!*path) {
       free_lbuf(path);
       continue;
@@ -1355,11 +1352,10 @@ int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
 static int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
                              size_t path_size, DbRef *source) {
   char *value;
-  DbRef owner;
   long flags;
 
-  value = attribute_get(runtime->services->database, object, A_LUAPARENT,
-                        &owner, &flags);
+  value =
+      attribute_get(runtime->services->database, object, A_LUAPARENT, &flags);
   if (*value) {
     snprintf(path, path_size, "%s", value);
     if (source)
@@ -1781,16 +1777,10 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
       LUA_MODULE_ROOT previous_root = runtime->current_root;
       int status;
 
-      lua_push_context(
-          runtime->services->database, nullptr, state, job->object,
-          job->root == LUA_ROOT_OBJECT_LOGIC
-              ? game_object_owner(runtime->services->database, job->object)
-              : NOTHING,
-          job->root == LUA_ROOT_OBJECT_LOGIC
-              ? game_object_owner(runtime->services->database, job->object)
-              : NOTHING,
-          nullptr, "schedule",
-          job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global", nullptr, 0);
+      lua_push_context(runtime->services->database, nullptr, state, job->object,
+                       GOD, GOD, nullptr, "schedule",
+                       job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global",
+                       nullptr, 0);
       lua_pushstring(state, job->name);
       lua_setfield(state, -2, "schedule");
       lua_pushstring(state, job->cron);

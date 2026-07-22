@@ -216,7 +216,7 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
 
 /*
  * ---------------------------------------------------------------------------
- * * send_dropto, process_sticky_dropto, process_dropped_dropto,
+ * * send_dropto, process_dropped_dropto,
  * * process_sacrifice_dropto: Check for and process droptos.
  */
 
@@ -226,68 +226,12 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
 
 static void send_dropto(EvaluationContext *evaluation, DbRef thing,
                         DbRef player) {
-  if (!is_sticky(evaluation->world->database, thing))
-    move_via_generic(
-        evaluation, thing,
-        game_object_location(
-            evaluation->world->database,
-            game_object_location(evaluation->world->database, thing)),
-        player, 0);
-  else
-    move_via_generic(evaluation, thing, HOME, player, 0);
-  divest_object(evaluation, thing);
-}
-
-/*
- * process_sticky_dropto: Call when an object leaves the room to see if
- * * we should empty the room
- */
-
-static void process_sticky_dropto(EvaluationContext *evaluation, DbRef loc,
-                                  DbRef player) {
-  DbRef dropto, thing, next;
-
-  /*
-   * Do nothing if checking anything but a sticky room
-   */
-
-  if (!is_good_obj(evaluation->world->database, loc) ||
-      !has_dropto(evaluation->world->database, loc) ||
-      !is_sticky(evaluation->world->database, loc))
-    return;
-
-  /*
-   * Make sure dropto loc is valid
-   */
-
-  dropto = game_object_location(evaluation->world->database, loc);
-  if ((dropto == NOTHING) || (dropto == loc))
-    return;
-
-  /*
-   * Make sure no players hanging out
-   */
-
-  DOLIST(evaluation->world->database, thing,
-         game_object_contents(evaluation->world->database, loc)) {
-    if (is_connected(evaluation->world->database,
-                     game_object_owner(evaluation->world->database, thing)) &&
-        is_hearer(evaluation, thing))
-      return;
-  }
-
-  /*
-   * Send everything through the dropto
-   */
-
-  game_object_set_contents(
-      evaluation->world->database, loc,
-      reverse_list(evaluation->world->database,
-                   game_object_contents(evaluation->world->database, loc)));
-  SAFE_DOLIST(evaluation->world->database, thing, next,
-              game_object_contents(evaluation->world->database, loc)) {
-    send_dropto(evaluation, thing, player);
-  }
+  move_via_generic(
+      evaluation, thing,
+      game_object_location(
+          evaluation->world->database,
+          game_object_location(evaluation->world->database, thing)),
+      player, 0);
 }
 
 /*
@@ -298,23 +242,11 @@ static void process_dropped_dropto(EvaluationContext *evaluation, DbRef thing,
                                    DbRef player) {
   DbRef loc;
 
-  /*
-   * If STICKY, send home
-   */
-
-  if (is_sticky(evaluation->world->database, thing)) {
-    move_via_generic(evaluation, thing, HOME, player, 0);
-    divest_object(evaluation, thing);
-    return;
-  }
-  /*
-   * Process the dropto if location is a room and is not STICKY
-   */
+  /* Process the dropto if the location is a room with a destination. */
 
   loc = game_object_location(evaluation->world->database, thing);
   if (has_dropto(evaluation->world->database, loc) &&
-      (game_object_location(evaluation->world->database, loc) != NOTHING) &&
-      !is_sticky(evaluation->world->database, loc))
+      (game_object_location(evaluation->world->database, loc) != NOTHING))
     send_dropto(evaluation, thing, player);
 }
 
@@ -412,7 +344,6 @@ void move_via_exit(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .destination = dest},
                     .event = LUA_EVENT_MOVE});
   process_enter_loc(evaluation, thing, src, cause, canhear, hush);
-  process_sticky_dropto(evaluation, src, thing);
 }
 
 /*
@@ -489,8 +420,6 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
                                 .destination = dest},
                     .event = LUA_EVENT_MOVE});
   process_enter_loc(evaluation, thing, src, NOTHING, canhear, hush);
-  divest_object(evaluation, thing);
-  process_sticky_dropto(evaluation, src, thing);
   return 1;
 }
 
@@ -500,7 +429,7 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
  */
 
 void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
-               int divest, const char *failmsg, int hush) {
+               const char *failmsg, int hush) {
   DbRef loc;
   bool silent;
   LuaLockInvocation lock;
@@ -529,8 +458,6 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
     switch (typeof_obj(evaluation->world->database, loc)) {
     case TYPE_ROOM:
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
-      if (divest)
-        divest_object(evaluation, player);
       break;
     case TYPE_PLAYER:
     case TYPE_THING:
@@ -539,7 +466,6 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
         return;
       }
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
-      divest_object(evaluation, player);
       break;
     case TYPE_EXIT:
       notify(evaluation, player, "You can't go that way.");
@@ -568,13 +494,6 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
   if (!string_compare(configuration, direction, "home")) { /*
                                                             * go home w/o stuff
                                                             */
-    if ((is_fixed(evaluation->world->database, player) ||
-         is_fixed(evaluation->world->database,
-                  game_object_owner(evaluation->world->database, player))) &&
-        !(is_wizard(evaluation->world->database, player))) {
-      notify(evaluation, player, configuration->fixed_home_msg);
-      return;
-    }
 
     if ((loc = game_object_location(evaluation->world->database, player)) !=
             NOTHING &&
@@ -597,8 +516,6 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
     for (i = 0; i < 3; i++)
       notify(evaluation, player, "There's no place like home...");
     move_via_generic(evaluation, player, HOME, NOTHING, 0);
-    divest_object(evaluation, player);
-    process_sticky_dropto(evaluation, loc, player);
     return;
   }
   /*
@@ -619,9 +536,10 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
     break;
   default:
     quiet = 0;
-    if ((key & MOVE_QUIET) && is_controls(evaluation, player, exit))
+    if ((key & MOVE_QUIET) &&
+        is_controls(evaluation->world->database, player, exit))
       quiet = HUSH_EXIT;
-    move_exit(evaluation, player, exit, 0, "You can't go that way.", quiet);
+    move_exit(evaluation, player, exit, "You can't go that way.", quiet);
   }
 }
 
@@ -652,16 +570,6 @@ void do_get(CommandInvocation *invocation) {
     return;
 
   /*
-   * You can only pick up things in rooms and ENTER_OK objects/players
-   */
-
-  if (!is_room(evaluation->world->database, playerloc) &&
-      !is_enter_ok(evaluation->world->database, playerloc) &&
-      !is_controls(evaluation, player, playerloc)) {
-    notify(evaluation, player, "Permission denied.");
-    return;
-  }
-  /*
    * Look for the thing locally
    */
 
@@ -680,9 +588,8 @@ void do_get(CommandInvocation *invocation) {
    */
 
   if (!is_good_obj(evaluation->world->database, thing))
-    thing =
-        match_status(evaluation, player,
-                     match_possessed(match, player, player, what, thing, 1));
+    thing = match_status(evaluation, player,
+                         match_possessed(match, player, player, what, thing));
   if (!is_good_obj(evaluation->world->database, thing))
     return;
 
@@ -703,7 +610,8 @@ void do_get(CommandInvocation *invocation) {
       notify(evaluation, player, "You already have that!");
       break;
     }
-    if ((key & GET_QUIET) && is_controls(evaluation, player, thing))
+    if ((key & GET_QUIET) &&
+        is_controls(evaluation->world->database, player, thing))
       quiet = 1;
 
     if (thing == player) {
@@ -756,8 +664,8 @@ void do_get(CommandInvocation *invocation) {
      */
 
     playerloc = game_object_location(evaluation->world->database, player);
-    if (!is_controls(evaluation, player, thing) &&
-        !is_controls(evaluation, player, playerloc)) {
+    if (!is_controls(evaluation->world->database, player, thing) &&
+        !is_controls(evaluation->world->database, player, playerloc)) {
       notify(evaluation, player, "Permission denied.");
       break;
     }
@@ -850,7 +758,8 @@ void do_drop(CommandInvocation *invocation) {
                      player, 0);
     notify(evaluation, thing, "Dropped.");
     quiet = 0;
-    if ((key & DROP_QUIET) && is_controls(evaluation, player, thing))
+    if ((key & DROP_QUIET) &&
+        is_controls(evaluation->world->database, player, thing))
       quiet = 1;
     bp = buf = alloc_lbuf("do_drop.notify_action");
     safe_tprintf_str(buf, &bp, "dropped %s.",
@@ -889,7 +798,7 @@ void do_drop(CommandInvocation *invocation) {
       notify(evaluation, player, "You can't drop that.");
       return;
     }
-    if (!is_controls(evaluation, player, loc)) {
+    if (!is_controls(evaluation->world->database, player, loc)) {
       notify(evaluation, player, "Permission denied.");
       return;
     }
@@ -930,11 +839,7 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  if (!is_enter_ok(evaluation->world->database, thing) &&
-      !is_controls(evaluation, player, thing)) {
-    if (!quiet)
-      notify(evaluation, player, "Permission denied.");
-  } else if (player == thing) {
+  if (player == thing) {
     notify(evaluation, player, "You can't enter yourself!");
   } else if (lock_test(evaluation, player, player, player, thing,
                        LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet, &lock,
@@ -943,8 +848,6 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
                        LUA_LOCK_OPERATION_ENTER, quiet, &lock, &result)) {
     oattr = quiet ? HUSH_ENTER : 0;
     move_via_generic(evaluation, player, thing, NOTHING, oattr);
-    divest_object(evaluation, player);
-    process_sticky_dropto(evaluation, loc, player);
   } else {
     notify_lock_failure(evaluation, &lock, &result, "You can't enter that.",
                         nullptr, LUA_EVENT_ENTER_FAIL);
@@ -974,7 +877,8 @@ void do_enter(CommandInvocation *invocation) {
   case TYPE_PLAYER:
   case TYPE_THING:
     quiet = 0;
-    if ((key & MOVE_QUIET) && is_controls(evaluation, player, thing))
+    if ((key & MOVE_QUIET) &&
+        is_controls(evaluation->world->database, player, thing))
       quiet = 1;
     do_enter_internal(evaluation, player, thing, quiet);
     break;
@@ -1002,7 +906,8 @@ void do_leave(CommandInvocation *invocation) {
     return;
   }
   quiet = 0;
-  if ((key & MOVE_QUIET) && is_controls(evaluation, player, loc))
+  if ((key & MOVE_QUIET) &&
+      is_controls(evaluation->world->database, player, loc))
     quiet = HUSH_LEAVE;
   if (lock_test(evaluation, player, invocation->cause, player, loc,
                 LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,

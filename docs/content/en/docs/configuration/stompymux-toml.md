@@ -39,7 +39,7 @@ directives take other shapes:
   `logging.log` is negatable: prefix an entry with `!` to clear a bit that's on
   by default (e.g. `log = ["!accounting", "bugs"]`).
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
-  target, e.g. `"@ch" = "@chown"`.
+  target, e.g. `"@cr" = "@create"`.
 - **Access directives** (`[access.*]`) are tables
   mapping a command or list name to one or more permissions, e.g.
   `"@dig" = ["wizard", "need_location"]`.

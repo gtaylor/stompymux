@@ -14,8 +14,6 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct SearchCriteria SearchCriteria;
 struct SearchCriteria {
   int s_wizard;
-  DbRef s_owner;
-  DbRef s_rst_owner;
   long s_rst_type;
   FLAGSET s_fset;
   POWERSET s_pset;
@@ -42,5 +40,4 @@ extern int search_criteria_setup(EvaluationContext *context, DbRef player,
 extern void search_criteria_perform(EvaluationContext *context, DbRef player,
                                     DbRef cause, SearchCriteria *criteria,
                                     ObjectList *results);
-extern int database_statistics_get(EvaluationContext *, DbRef, DbRef,
-                                   DatabaseStatistics *);
+extern void database_statistics_get(GameDatabase *, DatabaseStatistics *);

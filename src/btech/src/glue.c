@@ -137,11 +137,8 @@ static int Can_Use_Command(MECH *mech, int cmdflag) {
 }
 
 static bool have_mech_power(BtechContext *context, DbRef object, int power) {
-  DbRef owner = game_object_owner(context->database, object);
-
-  return ((game_object_powers2(context->database, owner) & power) ||
-          is_wizard(context->database, owner)) &&
-         is_inherits(context->database, object);
+  return (game_object_powers2(context->database, object) & power) ||
+         is_wizard(context->database, object);
 }
 
 int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
@@ -192,8 +189,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   while (*a == ' ')                                                            \
   a++
     if (cmd->helpmsg[0] != '@' ||
-        have_mech_power(context, game_object_owner(context->database, player),
-                        typeOfObject->power_needed)) {
+        have_mech_power(context, player, typeOfObject->power_needed)) {
       SKIPSTUFF(command);
       ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
     } else
@@ -883,8 +879,7 @@ static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
   for (i = 0; SpecialObjects[id].commands[i].name; i++) {
     if (!SpecialObjects[id].commands[i].func &&
         (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
-         have_mech_power(context, game_object_owner(context->database, player),
-                         powerneeded)))
+         have_mech_power(context, player, powerneeded)))
       if (id != GTYPE_MECH ||
           Can_Use_Command(mech, SpecialObjects[id].commands[i].flag)) {
         if (count)
@@ -915,9 +910,7 @@ static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
         sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
         if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-            have_mech_power(context,
-                            game_object_owner(context->database, player),
-                            powerneeded))
+            have_mech_power(context, player, powerneeded))
           if (id != GTYPE_MECH ||
               Can_Use_Command(mech, SpecialObjects[id].commands[j].flag)) {
             strcpy(buf, SpecialObjects[id].commands[j].name);
@@ -972,9 +965,7 @@ static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
             if (SpecialObjects[id].commands[j].helpmsg[0] != '@' ||
-                have_mech_power(context,
-                                game_object_owner(context->database, player),
-                                powerneeded))
+                have_mech_power(context, player, powerneeded))
               if (id != GTYPE_MECH ||
                   Can_Use_Command(mech, SpecialObjects[id].commands[j].flag))
                 cut_apart_helpmsgs(&c, SpecialObjects[id].commands[j].name,

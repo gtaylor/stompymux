@@ -54,55 +54,10 @@ DbRef where_room(GameDatabase *database,
 int locatable(EvaluationContext *evaluation,
               const ServerConfiguration *configuration, DbRef player, DbRef it,
               DbRef cause) {
-  DbRef loc_it, room_it;
-  int findable_room;
-
-  /*
-   * No sense if trying to locate a bad object
-   */
-
-  if (!is_good_obj(evaluation->world->database, it))
-    return 0;
-
-  loc_it = where_is(evaluation->world->database, it);
-
-  /*
-   * Succeed if we can examine the target, if we are the target, * if *
-   *
-   * *  * * we can examine the location, if a wizard caused the lookup,
-   * * or  * *  * if the target caused the lookup.
-   */
-
-  if (is_examinable(evaluation, player, it) ||
-      is_find_unfindable(evaluation->world->database, player) ||
-      (loc_it == player) ||
-      ((loc_it != NOTHING) &&
-       (is_examinable(evaluation, player, loc_it) ||
-        loc_it == where_is(evaluation->world->database, player))) ||
-      is_wizard(evaluation->world->database, cause) || (it == cause))
-    return 1;
-
-  room_it = where_room(evaluation->world->database, configuration, it);
-  if (is_good_obj(evaluation->world->database, room_it))
-    findable_room = !is_hideout(evaluation->world->database, room_it);
-  else
-    findable_room = 1;
-
-  /*
-   * Succeed if we control the containing room or if the target is * *
-   * * * findable and the containing room is not unfindable.
-   */
-
-  if (((room_it != NOTHING) && is_examinable(evaluation, player, room_it)) ||
-      is_find_unfindable(evaluation->world->database, player) ||
-      (is_findable(evaluation->world->database, it) && findable_room))
-    return 1;
-
-  /*
-   * We can't do it.
-   */
-
-  return 0;
+  (void)configuration;
+  (void)player;
+  (void)cause;
+  return is_good_obj(evaluation->world->database, it);
 }
 
 /**
@@ -130,7 +85,7 @@ int exit_visible(EvaluationContext *evaluation, DbRef exit, DbRef player,
                  int key) {
   if (key & VE_LOC_XAM) // Exam exit's loc
     return 1;
-  if (is_examinable(evaluation, player, exit)) // Exam exit
+  if (is_examinable(evaluation->world->database, player, exit)) // Exam exit
     return 1;
   if (is_light(evaluation->world->database, exit)) // Exit is light
     return 1;

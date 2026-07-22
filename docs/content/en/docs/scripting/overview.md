@@ -74,6 +74,12 @@ Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
 APIs. The configured memory cap applies to the complete state, and each
 callback has an instruction cap.
 
+Native control is role-only: God controls everything; Wizards control every
+non-Wizard object and player but cannot control themselves, God, or another
+Wizard; mortals control nothing, including themselves. Zones do not affect
+control. Lua is trusted and uses the `mux` API, including commands queued as
+`#1`, to manipulate any object.
+
 ## Validating and reloading
 
 Use the wizard-only `@lua/check` to verify every module before putting

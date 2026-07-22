@@ -121,11 +121,11 @@ default_room_lua_parent = "default_room.lua"
 default_exit_lua_parent = "default_exit.lua"
 default_player_lua_parent = "default_player.lua"
 # Flags that are set on players after creation.
-default_player_flags = ["ansi", "ansimap", "fixed", "in_character"]
+default_player_flags = ["ansi", "ansimap", "in_character"]
 # Flags that are set on exits after creation.
-default_exit_flags = ["inherit", "no_command"]
+default_exit_flags = ["no_command"]
 # Flags that are set on rooms after creation.
-default_room_flags = ["inherit", "no_command"]
+default_room_flags = ["no_command"]
 # Flags that are set on things after creation.
 default_thing_flags = []
 # Command quota per player.
@@ -182,7 +182,6 @@ login_hash_limit = 5
 "@name" = "wizard"
 "@npemit" = "wizard"
 "@dig" = "wizard"
-"@chown" = "wizard"
 "@clone" = "wizard"
 "@oemit" = "wizard"
 "@emit" = "wizard"
@@ -194,7 +193,7 @@ login_hash_limit = 5
 # -----------------------------------------------
 
 [logging]
-log_options = ["flags", "location", "owner", "timestamp"]
+log_options = ["flags", "location", "timestamp"]
 log = ["!accounting", "!all_commands", "!bad_commands", "!buffer_alloc",
        "!checkpoints", "bugs", "!config_changes", "!create", "!logins",
        "!network", "problems", "security", "!shouts", "!startup",

@@ -247,9 +247,6 @@ static int lua_mux_connected_players(lua_State *state) {
 
   lua_newtable(state);
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
-    if (package->services->configuration->show_unfindable_who &&
-        is_hidden(package->services->database, descriptor->player))
-      continue;
     lua_newtable(state);
     lua_pushstring(state, game_object_name(package->services->database,
                                            descriptor->player));
@@ -267,18 +264,9 @@ static int lua_mux_connected_players(lua_State *state) {
 
 static int lua_mux_who_summary(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
-  Descriptor *descriptor;
-  DescriptorIterator iterator =
-      descriptor_iterator_connected(package->services->descriptors);
-  int hidden = 0;
 
-  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
-    if (package->services->configuration->show_unfindable_who &&
-        is_hidden(package->services->database, descriptor->player))
-      hidden++;
-  }
   lua_newtable(state);
-  lua_pushinteger(state, hidden);
+  lua_pushinteger(state, 0);
   lua_setfield(state, -2, "hidden");
   lua_pushinteger(state, *package->services->record_players);
   lua_setfield(state, -2, "record");

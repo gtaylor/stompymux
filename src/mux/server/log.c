@@ -25,7 +25,6 @@
 
 NameTable logdata_nametab[] = {{"flags", 1, 0, LOGOPT_FLAGS},
                                {"location", 1, 0, LOGOPT_LOC},
-                               {"owner", 1, 0, LOGOPT_OWNER},
                                {"timestamp", 1, 0, LOGOPT_TIMESTAMP},
                                {nullptr, 0, 0, 0}};
 
@@ -214,32 +213,18 @@ void log_number(int num) { fprintf(stderr, "%d", num); }
 
 /**
  * Writes the name, db number, and flags of an object to the log.
- * If the object does not own itself, append the name, db number, and flags
- * of the owner.
  */
 void log_name(ServerLog *log, DbRef target) {
   char *tp;
   char new[LBUF_SIZE];
 
   if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
-    tp = unparse_object(log->database, nullptr, (DbRef)GOD, target, 0);
+    tp = unparse_object(log->database, nullptr, (DbRef)GOD, target);
   else
     tp = unparse_object_numonly(log->database, target);
   strncpy(new, tp, LBUF_SIZE - 1);
   fprintf(stderr, "%s", strip_ansi_r(new, tp, strlen(tp)));
   free_lbuf(tp);
-  if (((log->configuration->log_info & LOGOPT_OWNER) != 0) &&
-      (target != game_object_owner(log->database, target))) {
-    if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
-      tp = unparse_object(log->database, nullptr, (DbRef)GOD,
-                          game_object_owner(log->database, target), 0);
-    else
-      tp = unparse_object_numonly(log->database,
-                                  game_object_owner(log->database, target));
-    strncpy(new, tp, LBUF_SIZE - 1);
-    fprintf(stderr, "[%s]", strip_ansi_r(new, tp, strlen(tp)));
-    free_lbuf(tp);
-  }
   return;
 }
 

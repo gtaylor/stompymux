@@ -40,32 +40,7 @@ struct FileCache {
   DescriptorRegistry *descriptors;
 };
 
-NameTable list_files[] = {{"badsite_connect", 1, CA_WIZARD, FC_CONN_SITE},
-                          {"connect", 2, CA_WIZARD, FC_CONN},
-                          {"down", 1, CA_WIZARD, FC_CONN_DOWN},
-                          {"full", 1, CA_WIZARD, FC_CONN_FULL},
-                          {"quit", 1, CA_WIZARD, FC_QUIT},
-                          {nullptr, 0, 0, 0}};
-
 constexpr int MAX_CONN = 100;
-
-void do_list_file(CommandInvocation *invocation) {
-  int flagvalue;
-
-  flagvalue =
-      name_table_search(invocation->context->world->database,
-                        invocation->context->world->configuration,
-                        invocation->player, list_files, invocation->first);
-  if (flagvalue < 0) {
-    name_table_display(&invocation->context->evaluation,
-                       invocation->context->world->configuration,
-                       invocation->player, list_files,
-                       "Unknown file.  Use one of:", 1);
-    return;
-  }
-  fcache_send(invocation->context->runtime->files, invocation->player,
-              flagvalue);
-}
 
 static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
   FBLOCK *tfp;

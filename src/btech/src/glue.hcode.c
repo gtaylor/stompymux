@@ -24,9 +24,9 @@
 
 char *btech_attribute_read(GameDatabase *database, int id, int flag,
                            char buffer[static LBUF_SIZE]) {
-  long i, j;
+  long flags;
 
-  return attribute_get_string(database, buffer, id, flag, &i, &j);
+  return attribute_get_string(database, buffer, id, flag, &flags);
 }
 
 void silly_atr_set_in(GameDatabase *database, int id, int flag, char *dat) {

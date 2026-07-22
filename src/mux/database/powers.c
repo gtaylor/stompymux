@@ -50,8 +50,7 @@ static int ph_wiz(EvaluationContext *evaluation, DbRef target, DbRef player,
   return (ph_any(evaluation, target, player, power, fpowers, reset));
 }
 
-POWERENT gen_powers[] = {{"find_unfindable", POW_FIND_UNFIND, 0, 0, ph_wiz},
-                         {"idle", POW_IDLE, 0, 0, ph_wiz},
+POWERENT gen_powers[] = {{"idle", POW_IDLE, 0, 0, ph_wiz},
                          {"long_fingers", POW_LONGFINGERS, 0, 0, ph_wiz},
                          {"comm_all", POW_COMM_ALL, 0, 0, ph_wiz},
                          {"see_hidden", POW_SEE_HIDDEN, 0, 0, ph_wiz},

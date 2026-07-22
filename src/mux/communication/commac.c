@@ -29,19 +29,9 @@ void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
         continue;
       }
 
-      /*
-       * if ((typeof_obj(database, d->who) != TYPE_PLAYER) &&
-       * (is_god(game_object_owner(evaluation->world->database, d->who)))
-       * &&
-       * * (is_going(database, d->who)))
-       */
       if (typeof_obj(database, d->who) == TYPE_PLAYER)
         continue;
-      if (is_god(database, game_object_owner(database, d->who)) &&
-          is_going(database, d->who)) {
-        del_commac(registry, d->who);
-        continue;
-      }
+      del_commac(registry, d->who);
     }
   }
 }

@@ -48,10 +48,8 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     notify(evaluation, giver, "You can't give yourself away!");
     return;
   }
-  if (((typeof_obj(evaluation->world->database, thing) != TYPE_THING) &&
-       (typeof_obj(evaluation->world->database, thing) != TYPE_PLAYER)) ||
-      !(is_enter_ok(evaluation->world->database, recipient) ||
-        is_controls(evaluation, giver, recipient))) {
+  if ((typeof_obj(evaluation->world->database, thing) != TYPE_THING) &&
+      (typeof_obj(evaluation->world->database, thing) != TYPE_PLAYER)) {
     notify(evaluation, giver, "Permission denied.");
     return;
   }
@@ -84,7 +82,6 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     return;
   }
   move_via_generic(evaluation, thing, recipient, giver, 0);
-  divest_object(evaluation, thing);
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
     StringCopy(str, game_object_name(evaluation->world->database, giver));

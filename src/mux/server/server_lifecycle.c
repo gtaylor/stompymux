@@ -78,13 +78,12 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
     LuaEventInvocation invocation = {
         .type = LUA_EVENT_SERVER_STARTUP,
         .object = thing,
-        .enactor = game_object_owner(lifecycle->maintenance->database, thing),
-        .cause = game_object_owner(lifecycle->maintenance->database, thing),
+        .enactor = GOD,
+        .cause = GOD,
     };
 
     do_top(lifecycle->maintenance->commands, 10);
     if (lua_event_dispatch(lifecycle->maintenance->lua->runtime, &invocation)) {
-      do_second(lifecycle->maintenance->commands);
       do_top(lifecycle->maintenance->commands, 10);
     }
   }

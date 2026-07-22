@@ -20,7 +20,7 @@ void notify_action(EvaluationContext *evaluation,
   const char *enactor_message;
   const char *other_message;
   char *d;
-  DbRef location, attribute_owner;
+  DbRef location;
   long attribute_flags;
 
   if (!message.descriptor && evaluation->command)
@@ -38,8 +38,7 @@ void notify_action(EvaluationContext *evaluation,
 
   if (invocation->content_attribute > 0) {
     d = attribute_get(evaluation->world->database, message.object,
-                      invocation->content_attribute, &attribute_owner,
-                      &attribute_flags);
+                      invocation->content_attribute, &attribute_flags);
     if (*d) {
       notify(evaluation, message.enactor, d);
     } else if (enactor_message) {

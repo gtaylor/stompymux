@@ -113,11 +113,9 @@ constexpr int CHANNEL_PUBLIC = 0x200;
 constexpr int CHANNEL_TRANSPARENT = 0x400;
 
 static inline bool is_undead(GameDatabase *database, DbRef x) {
-  return (!is_god(database, game_object_owner(database, x)) ||
-          !is_going(database, x)) &&
-         (typeof_obj(database, x) != TYPE_PLAYER || is_connected(database, x));
+  return (!is_god(database, x) || !is_going(database, x)) &&
+         (!is_player(database, x) || is_connected(database, x));
 }
 
-/* explanation of logic... If it's not owned by god, and it's either not a
-player, or a connected player, it's good... If it is owned by god, then if
-it's going, assume it's already gone, no matter what it is. :) */
+/* Going objects are ignored only when they are God. Disconnected players are
+ * not active channel recipients. */

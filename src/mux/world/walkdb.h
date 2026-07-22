@@ -1,5 +1,4 @@
-/* walkdb.h - Database-wide search, statistics, and ownership helper interface.
- */
+/* walkdb.h - Database-wide search and statistics helper interface. */
 
 #pragma once
 
@@ -20,7 +19,6 @@ struct ObjectList {
   int cursor_index;
 };
 
-int chown_all(GameDatabase *database, DbRef from_player, DbRef to_player);
 void object_list_initialize(ObjectList *list);
 void object_list_destroy(ObjectList *list);
 void object_list_add(ObjectList *list, DbRef object);

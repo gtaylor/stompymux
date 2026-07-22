@@ -56,7 +56,7 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
     notify_quiet(evaluation, player, "That's not a valid object.");
     return NOTHING;
   } else if (!has_contents(evaluation->world->database, room) ||
-             !is_linkable(evaluation, player, room)) {
+             !is_linkable(evaluation->world->database, player, room)) {
     notify_quiet(evaluation, player, "You can't link to that.");
     return NOTHING;
   } else {
@@ -81,7 +81,7 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
   if (!direction || !*direction) {
     notify_quiet(evaluation, player, "Open where?");
     return;
-  } else if (!is_controls(evaluation, player, loc)) {
+  } else if (!is_controls(evaluation->world->database, player, loc)) {
     notify_quiet(evaluation, player, "Permission denied.");
     return;
   }
@@ -185,7 +185,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
    */
 
   if (dest != HOME) {
-    if (!is_controls(evaluation, player, dest)) {
+    if (!is_controls(evaluation->world->database, player, dest)) {
       notify_quiet(evaluation, player, "Permission denied.");
       return;
     }
@@ -201,20 +201,9 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
    */
 
   if ((game_object_location(evaluation->world->database, exit) != NOTHING) &&
-      !is_controls(evaluation, player, exit)) {
+      !is_controls(evaluation->world->database, player, exit)) {
     notify_quiet(evaluation, player, "Permission denied.");
     return;
-  }
-  if (game_object_owner(evaluation->world->database, exit) !=
-      game_object_owner(evaluation->world->database, player)) {
-    game_object_set_owner(
-        evaluation->world->database, exit,
-        game_object_owner(evaluation->world->database, player));
-    game_object_set_flags(
-        evaluation->world->database, exit,
-        (game_object_flags(evaluation->world->database, exit) &
-         ~(INHERIT | WIZARD)) |
-            HALT);
   }
   /*
    * link has been validated and paid for, do it and tell the player
@@ -274,7 +263,7 @@ void do_link(CommandInvocation *invocation) {
      * Set home
      */
 
-    if (!is_controls(evaluation, player, thing)) {
+    if (!is_controls(evaluation->world->database, player, thing)) {
       notify_quiet(evaluation, player, "Permission denied.");
       break;
     }
@@ -308,7 +297,7 @@ void do_link(CommandInvocation *invocation) {
      * Set dropto
      */
 
-    if (!is_controls(evaluation, player, thing)) {
+    if (!is_controls(evaluation->world->database, player, thing)) {
       notify_quiet(evaluation, player, "Permission denied.");
       break;
     }
@@ -319,7 +308,8 @@ void do_link(CommandInvocation *invocation) {
 
     if ((room != HOME) && !is_room(evaluation->world->database, room)) {
       notify_quiet(evaluation, player, "That is not a room!");
-    } else if ((room != HOME) && !is_controls(evaluation, player, room)) {
+    } else if ((room != HOME) &&
+               !is_controls(evaluation->world->database, player, room)) {
       notify_quiet(evaluation, player, "Permission denied.");
     } else if ((room != HOME) &&
                !lock_test(evaluation, player, invocation->cause, player, room,
@@ -435,7 +425,7 @@ void do_clone(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   char *arg2 = invocation->second;
-  DbRef clone, thing, new_owner, loc;
+  DbRef clone, thing, loc;
   Flag rmv_flags;
 
   if ((key & CLONE_INVENTORY) ||
@@ -455,7 +445,7 @@ void do_clone(CommandInvocation *invocation) {
 
   /* Cloning requires examination permission. */
 
-  if (!is_examinable(evaluation, player, thing)) {
+  if (!is_examinable(evaluation->world->database, player, thing)) {
     notify_quiet(evaluation, player, "Permission denied.");
     return;
   }
@@ -463,11 +453,8 @@ void do_clone(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "You cannot clone players!");
     return;
   }
-  new_owner = (key & CLONE_PRESERVE)
-                  ? game_object_owner(evaluation->world->database, thing)
-                  : game_object_owner(evaluation->world->database, player);
   if ((typeof_obj(evaluation->world->database, thing) == TYPE_EXIT) &&
-      !is_controls(evaluation, player, loc)) {
+      !is_controls(evaluation->world->database, player, loc)) {
     notify_quiet(evaluation, player, "Permission denied.");
     return;
   }
@@ -478,11 +465,11 @@ void do_clone(CommandInvocation *invocation) {
 
   if ((arg2 && *arg2) &&
       ok_name(invocation->context->world->configuration, arg2))
-    clone = create_obj(evaluation, new_owner,
+    clone = create_obj(evaluation, player,
                        typeof_obj(evaluation->world->database, thing), arg2);
   else
     clone = create_obj(
-        evaluation, new_owner, typeof_obj(evaluation->world->database, thing),
+        evaluation, player, typeof_obj(evaluation->world->database, thing),
         game_object_name(invocation->context->world->database, thing));
   if (clone == NOTHING)
     return;
@@ -511,9 +498,6 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   rmv_flags = WIZARD;
-  if (!(key & CLONE_INHERIT) ||
-      (!is_inherits(evaluation->world->database, player)))
-    rmv_flags |= INHERIT;
   game_object_set_flags(evaluation->world->database, clone,
                         game_object_flags(evaluation->world->database, thing) &
                             ~rmv_flags);
@@ -566,15 +550,8 @@ void do_clone(CommandInvocation *invocation) {
     break;
   }
 
-  /* If same owner run ACLONE, otherwise halt the clone. */
-
-  if (new_owner == game_object_owner(evaluation->world->database, thing)) {
-    notify_event(evaluation, invocation->context->descriptor, player,
-                 invocation->cause, clone, LUA_EVENT_CLONE, (char **)nullptr,
-                 0);
-  } else {
-    s_halted(evaluation->world->database, clone);
-  }
+  notify_event(evaluation, invocation->context->descriptor, player,
+               invocation->cause, clone, LUA_EVENT_CLONE, (char **)nullptr, 0);
 }
 
 /*
@@ -675,7 +652,7 @@ void do_destroy(CommandInvocation *invocation) {
    */
 
   if ((thing == NOTHING) &&
-      is_controls(evaluation, player,
+      is_controls(evaluation->world->database, player,
                   game_object_location(evaluation->world->database, player))) {
     init_match(&invocation->context->match, player, what, TYPE_EXIT);
     match_exit(&invocation->context->match);
@@ -723,26 +700,6 @@ void do_destroy(CommandInvocation *invocation) {
           destroy_exit(evaluation, thing);
         } else {
           notify(evaluation, player, "The exit shakes and begins to crumble.");
-          if (!is_quiet(evaluation->world->database, thing) &&
-              !is_quiet(evaluation->world->database,
-                        game_object_owner(evaluation->world->database, thing)))
-            notify_quiet(
-                evaluation,
-                game_object_owner(evaluation->world->database, thing),
-                tprintf("You will be rewarded shortly for %s(#%ld).",
-                        game_object_name(invocation->context->world->database,
-                                         thing),
-                        thing));
-          if ((game_object_owner(evaluation->world->database, thing) !=
-               player) &&
-              !is_quiet(evaluation->world->database, player))
-            notify_quiet(
-                evaluation, player,
-                tprintf("Destroyed. #%ld's %s(#%ld)",
-                        game_object_owner(evaluation->world->database, thing),
-                        game_object_name(invocation->context->world->database,
-                                         thing),
-                        thing));
           s_going(evaluation->world->database, thing);
         }
       }
@@ -760,26 +717,6 @@ void do_destroy(CommandInvocation *invocation) {
         destroy_thing(evaluation, thing);
       } else {
         notify(evaluation, player, "The object shakes and begins to crumble.");
-        if (!is_quiet(evaluation->world->database, thing) &&
-            !is_quiet(evaluation->world->database,
-                      game_object_owner(evaluation->world->database, thing)))
-          notify_quiet(evaluation,
-                       game_object_owner(evaluation->world->database, thing),
-                       tprintf("You will be rewarded shortly for %s(#%ld).",
-                               game_object_name(
-                                   invocation->context->world->database, thing),
-                               thing));
-        if ((game_object_owner(evaluation->world->database, thing) != player) &&
-            !is_quiet(evaluation->world->database, player))
-          notify_quiet(
-              evaluation, player,
-              tprintf(
-                  "Destroyed. %s's %s(#%ld)",
-                  game_object_name(
-                      invocation->context->world->database,
-                      game_object_owner(evaluation->world->database, thing)),
-                  game_object_name(invocation->context->world->database, thing),
-                  thing));
         s_going(evaluation->world->database, thing);
       }
     }
@@ -817,26 +754,6 @@ void do_destroy(CommandInvocation *invocation) {
       } else {
         notify_all(evaluation, thing, player,
                    "The room shakes and begins to crumble.");
-        if (!is_quiet(evaluation->world->database, thing) &&
-            !is_quiet(evaluation->world->database,
-                      game_object_owner(evaluation->world->database, thing)))
-          notify_quiet(evaluation,
-                       game_object_owner(evaluation->world->database, thing),
-                       tprintf("You will be rewarded shortly for %s(#%ld).",
-                               game_object_name(
-                                   invocation->context->world->database, thing),
-                               thing));
-        if ((game_object_owner(evaluation->world->database, thing) != player) &&
-            !is_quiet(evaluation->world->database, player))
-          notify_quiet(
-              evaluation, player,
-              tprintf(
-                  "Destroyed. %s's %s(#%ld)",
-                  game_object_name(
-                      invocation->context->world->database,
-                      game_object_owner(evaluation->world->database, thing)),
-                  game_object_name(invocation->context->world->database, thing),
-                  thing));
         s_going(evaluation->world->database, thing);
       }
     }
@@ -876,23 +793,13 @@ void do_chzone(CommandInvocation *invocation) {
     }
   }
 
-  if (!is_wizard(evaluation->world->database, player) &&
-      !(is_controls(evaluation, player, thing)) &&
-      !(check_zone_for_player(evaluation, player, thing)) &&
-      !(game_object_owner(invocation->context->world->database, player) ==
-        game_object_owner(invocation->context->world->database, thing))) {
+  if (!is_controls(evaluation->world->database, player, thing)) {
     notify(evaluation, player, "You don't have the power to shift reality.");
     return;
   }
-  /*
-   * a player may change an object's zone to NOTHING or to an object he
-   *
-   * *  * *  * * owns
-   */
-  if ((zone != NOTHING) && !is_wizard(evaluation->world->database, player) &&
-      !(is_controls(evaluation, player, zone)) &&
-      !(game_object_owner(invocation->context->world->database, player) ==
-        game_object_owner(invocation->context->world->database, zone))) {
+  /* The target zone must also be controllable by the actor. */
+  if ((zone != NOTHING) &&
+      !is_controls(evaluation->world->database, player, zone)) {
     notify(evaluation, player, "You cannot move that object to that zone.");
     return;
   }
@@ -918,9 +825,6 @@ void do_chzone(CommandInvocation *invocation) {
     game_object_set_flags(
         evaluation->world->database, thing,
         game_object_flags(evaluation->world->database, thing) & ~WIZARD);
-    game_object_set_flags(
-        evaluation->world->database, thing,
-        game_object_flags(evaluation->world->database, thing) & ~INHERIT);
 #ifdef USE_POWERS
     game_object_set_powers(evaluation->world->database, thing,
                            0); /*
@@ -1044,7 +948,7 @@ void do_unlink(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "I don't know which one you mean!");
     break;
   default:
-    if (!is_controls(evaluation, player, exit)) {
+    if (!is_controls(evaluation->world->database, player, exit)) {
       notify_quiet(evaluation, player, "Permission denied.");
     } else {
       switch (typeof_obj(evaluation->world->database, exit)) {
@@ -1066,77 +970,6 @@ void do_unlink(CommandInvocation *invocation) {
   }
 }
 
-/*
- * ---------------------------------------------------------------------------
- * * do_chown: Change ownership of an object.
- */
-
-void do_chown(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *name = invocation->first;
-  char *newown = invocation->second;
-  DbRef thing, owner;
-
-  init_match(&invocation->context->match, player, name, TYPE_THING);
-  match_possession(&invocation->context->match);
-  match_here(&invocation->context->match);
-  match_exit(&invocation->context->match);
-  match_me(&invocation->context->match);
-  if (is_wizard(evaluation->world->database, player)) {
-    match_player(&invocation->context->match);
-    match_absolute(&invocation->context->match);
-  }
-  switch (thing = match_result(&invocation->context->match)) {
-  case NOTHING:
-    notify_quiet(evaluation, player, "You don't have that!");
-    return;
-  case AMBIGUOUS:
-    notify_quiet(evaluation, player, "I don't know which you mean!");
-    return;
-  default:
-    break;
-  }
-
-  if (!*newown || !(string_compare(invocation->context->world->configuration,
-                                   newown, "me"))) {
-    owner = game_object_owner(evaluation->world->database, player);
-  } else {
-    owner = lookup_player(invocation->context->world, player, newown, 1);
-  }
-
-  if (owner == NOTHING) {
-    notify_quiet(evaluation, player, "I couldn't find that player.");
-  } else if (is_player(evaluation->world->database, thing) &&
-             !is_god(evaluation->world->database, player)) {
-    notify_quiet(evaluation, player, "Players always own themselves.");
-  } else if (((!is_controls(evaluation, player, thing) &&
-               !is_wizard(evaluation->world->database, player)) ||
-              (is_thing(evaluation->world->database, thing) &&
-               (game_object_location(evaluation->world->database, thing) !=
-                player) &&
-               !is_wizard(evaluation->world->database, player))) ||
-             (!is_controls(evaluation, player, owner))) {
-    notify_quiet(evaluation, player, "Permission denied.");
-  } else {
-    if (is_god(evaluation->world->database, player)) {
-      game_object_set_owner(evaluation->world->database, thing, owner);
-    } else {
-      game_object_set_owner(
-          evaluation->world->database, thing,
-          game_object_owner(evaluation->world->database, owner));
-    }
-    game_object_set_flags(
-        evaluation->world->database, thing,
-        (game_object_flags(evaluation->world->database, thing) & ~INHERIT) |
-            HALT);
-    game_object_set_powers(evaluation->world->database, thing, 0);
-    game_object_set_powers2(evaluation->world->database, thing, 0);
-    halt_que(invocation->context->runtime->commands, NOTHING, thing);
-    if (!is_quiet(evaluation->world->database, player))
-      notify_quiet(evaluation, player, "Owner changed.");
-  }
-}
 /*
  * ---------------------------------------------------------------------------
  * * do_set: Set flags or attributes on objects, or flags on attributes.

@@ -124,7 +124,7 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
-  char *msg_ns, *mp, *tbuff, *tp, *buff, *colbuf = nullptr;
+  char *msg_copy, *tbuff, *buff, *colbuf = nullptr;
   DbRef targetloc, recip, obj;
   int has_neighbors;
   int target_audible;
@@ -146,63 +146,19 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
     evaluation->notification_nesting--;
     return;
   }
-  /*
-   * If we want NOSPOOF output, generate it.  It is only needed if
-   * we are sending the message to the target object
-   */
-
   if (key & MSG_ME) {
-    mp = msg_ns = alloc_lbuf("notify_checked");
-    if (is_nospoof(evaluation->world->database, target) && (target != sender) &&
-        (target != evaluation->command->enactor) &&
-        (target != evaluation->command->player &&
-         is_good_obj(evaluation->world->database, sender))) {
-
-      /*
-       * I'd really like to use tprintf here but I can't
-       * because the caller may have.
-       * notify(target, tprintf(...)) is quite common
-       * in the code.
-       */
-
-      tbuff = alloc_sbuf("notify_checked.nospoof");
-      safe_chr('[', msg_ns, &mp);
-      safe_str(game_object_name(evaluation->world->database, sender), msg_ns,
-               &mp);
-      snprintf(tbuff, SBUF_SIZE, "(#%ld)", sender);
-      safe_str(tbuff, msg_ns, &mp);
-
-      if (sender != game_object_owner(evaluation->world->database, sender)) {
-        safe_chr('{', msg_ns, &mp);
-        safe_str(game_object_name(
-                     evaluation->world->database,
-                     game_object_owner(evaluation->world->database, sender)),
-                 msg_ns, &mp);
-        safe_chr('}', msg_ns, &mp);
-      }
-      if (sender != evaluation->command->enactor) {
-        snprintf(tbuff, SBUF_SIZE, "<-(#%ld)", evaluation->command->enactor);
-        safe_str(tbuff, msg_ns, &mp);
-      }
-      safe_str("] ", msg_ns, &mp);
-      free_sbuf(tbuff);
-    }
-    safe_str(msg, msg_ns, &mp);
-    *mp = '\0';
+    msg_copy = alloc_lbuf("notify_checked");
+    StringCopy(msg_copy, msg);
   } else {
-    msg_ns = nullptr;
+    msg_copy = nullptr;
   }
-
-  /*
-   * msg contains the raw message, msg_ns contains the NOSPOOFed msg
-   */
 
   switch (typeof_obj(evaluation->world->database, target)) {
   case TYPE_PLAYER:
     if (key & MSG_ME) {
       if (key & MSG_COLORIZE)
-        colbuf = colorize(evaluation, target, msg_ns);
-      raw_notify(evaluation, target, colbuf ? colbuf : msg_ns);
+        colbuf = colorize(evaluation, target, msg_copy);
+      raw_notify(evaluation, target, colbuf ? colbuf : msg_copy);
     }
 
     if (colbuf)
@@ -211,39 +167,10 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   case TYPE_THING:
   case TYPE_ROOM:
 
-    /*
-     * Forward puppet message if it is for me
-     */
-
     has_neighbors = has_location(evaluation->world->database, target);
     targetloc = where_is(evaluation->world->database, target);
     target_audible = is_audible(evaluation->world->database, target);
 
-    if ((key & MSG_ME) && is_puppet(evaluation->world->database, target) &&
-        (target != game_object_owner(evaluation->world->database, target)) &&
-        ((key & MSG_PUP_ALWAYS) ||
-         ((targetloc !=
-           game_object_location(
-               evaluation->world->database,
-               game_object_owner(evaluation->world->database, target))) &&
-          (targetloc !=
-           game_object_owner(evaluation->world->database, target))))) {
-      tp = tbuff = alloc_lbuf("notify_checked.puppet");
-      safe_str(game_object_name(evaluation->world->database, target), tbuff,
-               &tp);
-      safe_str("> ", tbuff, &tp);
-      if (key & MSG_COLORIZE)
-        colbuf = colorize(
-            evaluation, game_object_owner(evaluation->world->database, target),
-            msg_ns);
-      safe_str(colbuf ? colbuf : msg_ns, tbuff, &tp);
-      *tp = '\0';
-      raw_notify(evaluation,
-                 game_object_owner(evaluation->world->database, target), tbuff);
-      if (colbuf)
-        free_lbuf(colbuf);
-      free_lbuf(tbuff);
-    }
     /*
      * Deliver message through audible exits
      */
@@ -397,8 +324,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   default:
     break;
   }
-  if (msg_ns)
-    free_lbuf(msg_ns);
+  if (msg_copy)
+    free_lbuf(msg_copy);
   evaluation->notification_nesting--;
 }
 
@@ -442,10 +369,8 @@ void server_shutdown(ServerControl *control, DbRef player, int key,
                      const char *message) {
   ResetSpecialObjects(control->btech);
   if (player != NOTHING) {
-    raw_broadcast(
-        control->descriptors, 0, "Game: Shutdown by %s",
-        game_object_name(control->database,
-                         game_object_owner(control->database, player)));
+    raw_broadcast(control->descriptors, 0, "Game: Shutdown by %s",
+                  game_object_name(control->database, player));
     STARTLOG(control->log, LOG_ALWAYS, "WIZ", "SHTDN") {
       log_text("Shutdown by ");
       log_name(control->log, player);
@@ -615,8 +540,7 @@ static int load_game(MuxServer *server) {
 }
 
 int is_hearer(EvaluationContext *evaluation, DbRef thing) {
-  return is_connected(evaluation->world->database, thing) ||
-         is_puppet(evaluation->world->database, thing);
+  return is_connected(evaluation->world->database, thing);
 }
 
 void do_readcache(CommandInvocation *invocation) {

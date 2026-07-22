@@ -317,6 +317,13 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME mux_header_interfaces COMMAND mux_header_interfaces_test)
 
+  add_executable(flag_privileges_test tests/flag_privileges.c)
+  target_link_libraries(flag_privileges_test PRIVATE btmux_options)
+  target_include_directories(flag_privileges_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME flag_privileges COMMAND flag_privileges_test)
+
   add_executable(password_hash_test tests/password_hash.c
     ${MUX_SOURCE_DIR}/support/password.c)
   target_link_libraries(password_hash_test PRIVATE btmux_options libsodium)

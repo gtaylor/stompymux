@@ -26,8 +26,8 @@ constexpr int A_IDESC = 32;    /* Inside description (ENTER to get inside) */
 constexpr int A_NAME = 43;    /* Object name */
 constexpr int A_COMMENT = 44; /* Wizard-accessable comments */
 /* 45 and 46 are reserved for removed action-message attributes. */
-constexpr int A_SEMAPHORE = 47; /* Semaphore control info */
-constexpr int A_TIMEOUT = 48;   /* Per-user disconnect timeout */
+/* 47 is reserved. */
+constexpr int A_TIMEOUT = 48; /* Per-user disconnect timeout */
 /* 49 is reserved for the removed building quota attribute. */
 /* 50 and 51 are reserved for removed action-message attributes. */
 /* 52 is reserved for the removed Aleave attribute. */

@@ -32,7 +32,7 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   match_everything(match, 0);
   mat = noisy_match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
-      !is_controls(match->evaluation, player, mat)) {
+      !is_controls(match->evaluation->world->database, player, mat)) {
     notify_quiet(match->evaluation, player, "Permission denied.");
     return NOTHING;
   } else {
@@ -47,7 +47,7 @@ DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
   match_everything(match, 0);
   mat = match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
-      !is_controls(match->evaluation, player, mat)) {
+      !is_controls(match->evaluation->world->database, player, mat)) {
     return NOTHING;
   } else {
     return (mat);
@@ -56,7 +56,7 @@ DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_alias: Make an alias for a player or object.
+ * * do_alias: Make an alias for a player.
  */
 
 void do_alias(CommandInvocation *invocation) {
@@ -64,9 +64,8 @@ void do_alias(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *name = invocation->first;
   char *alias = invocation->second;
-  DbRef thing, aowner;
+  DbRef thing;
   long aflags;
-  Attribute *ap;
   char *oldalias, *trimalias;
 
   if ((thing = match_controlled(&invocation->context->match, player, name)) ==
@@ -77,18 +76,17 @@ void do_alias(CommandInvocation *invocation) {
    * check for renaming a player
    */
 
-  ap = attribute_by_number(invocation->context->world->database, A_ALIAS);
   if (is_player(evaluation->world->database, thing)) {
 
     /*
      * Fetch the old alias
      */
 
-    oldalias = attribute_get(evaluation->world->database, thing, A_ALIAS,
-                             &aowner, &aflags);
+    oldalias =
+        attribute_get(evaluation->world->database, thing, A_ALIAS, &aflags);
     trimalias = trim_spaces(alias);
 
-    if (!is_controls(evaluation, player, thing)) {
+    if (!is_controls(evaluation->world->database, player, thing)) {
 
       /*
        * Make sure we have rights to do it.  We can't do *
@@ -129,7 +127,6 @@ void do_alias(CommandInvocation *invocation) {
 
       delete_player_name(invocation->context->world, thing, oldalias);
       attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias,
-                    game_object_owner(evaluation->world->database, player),
                     aflags);
       if (add_player_name(invocation->context->world, thing, trimalias)) {
         if (!is_quiet(evaluation->world->database, player))
@@ -144,22 +141,7 @@ void do_alias(CommandInvocation *invocation) {
     free_lbuf(trimalias);
     free_lbuf(oldalias);
   } else {
-    attribute_get_info(evaluation->world->database, thing, A_ALIAS, &aowner,
-                       &aflags);
-
-    /*
-     * Make sure we have rights to do it
-     */
-
-    if (!set_attr(evaluation, player, thing, ap, aflags)) {
-      notify_quiet(evaluation, player, "Permission denied.");
-    } else {
-      attribute_add(evaluation->world->database, thing, A_ALIAS, alias,
-                    game_object_owner(evaluation->world->database, player),
-                    aflags);
-      if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Set.");
-    }
+    notify_quiet(evaluation, player, "Only players may have aliases.");
   }
 }
 
@@ -167,18 +149,15 @@ void object_attribute_set(EvaluationContext *evaluation,
                           const ServerConfiguration *configuration,
                           DbRef player, DbRef thing, int attrnum,
                           char *attrtext, int key) {
-  DbRef aowner;
   long aflags;
   int have_xcode;
   Attribute *attr;
 
   attr = attribute_by_number(evaluation->world->database, attrnum);
-  attribute_get_info(evaluation->world->database, thing, attrnum, &aowner,
-                     &aflags);
+  attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
   if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
     have_xcode = is_hardcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
-                  game_object_owner(evaluation->world->database, player),
                   aflags);
     if (configuration->have_specials)
       handle_xcode(evaluation->btech, player, thing, have_xcode,
@@ -244,7 +223,6 @@ int parse_attrib(MatchContext *match, DbRef player, char *str, DbRef *thing,
                  int *atr) {
   Attribute *attr;
   char *buff;
-  DbRef aowner;
   long aflags;
 
   if (!str)
@@ -270,8 +248,8 @@ int parse_attrib(MatchContext *match, DbRef player, char *str, DbRef *thing,
     *atr = NOTHING;
   } else {
     attribute_get_info(match->evaluation->world->database, *thing, attr->number,
-                       &aowner, &aflags);
-    if (!see_attr(match->evaluation, player, *thing, attr, aowner, aflags)) {
+                       &aflags);
+    if (!see_attr(match->evaluation, player, *thing, attr, aflags)) {
       *atr = NOTHING;
     } else {
       *atr = attr->number;

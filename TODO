@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Do we still need object ownership?
 * verbs.c and verbs.h can probably be crunched elsewhere
 * Offer a non-privileged way to change your own password.
 * Add bad names list

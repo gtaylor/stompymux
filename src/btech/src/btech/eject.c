@@ -260,7 +260,6 @@ static void char_disembark(DbRef player, MECH *mech) {
               game_object_name(mech->xcode.context->database, player)));
   silly_atr_set_in(mech->xcode.context->database, suit, A_XTYPE, "MECH");
   s_hardcode(mech->xcode.context->database, suit);
-  s_opaque(mech->xcode.context->database, suit);
   handle_xcode(mech->xcode.context, GOD, suit, 0, 1);
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});

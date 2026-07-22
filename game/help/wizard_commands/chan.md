@@ -15,6 +15,5 @@ index_style = "list_with_description"
 command. Type `@chan` by itself to see a short list of switches, or use one of
 the forms indexed below.
 
-Only Wizards can use `@chan`; channels do not have individual owners. Games
-that want mortals to manage some channel settings must provide their own Lua
-commands with the desired policy.
+Only Wizards can use `@chan`. Games that want mortals to manage some channel
+settings must provide their own Lua commands with the desired policy.

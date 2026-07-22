@@ -34,10 +34,8 @@ struct bque {
 
   DbRef player; /* player who will do command */
   DbRef cause;  /* player causing command (for %N) */
-  DbRef sem;    /* blocking semaphore */
   int waittime; /* time to run command */
   int queuetime;
-  int attr;            /* blocking attribute */
   char *text;          /* owned command storage */
   char *comm;          /* command */
   MuxTimer *timer;     /* timer for the wait queue */
@@ -63,11 +61,9 @@ void command_queue_set_lifecycle(CommandQueue *queue,
                                  ServerLifecycle *lifecycle);
 void command_queue_destroy(CommandQueue *queue);
 int cque_init(CommandQueue *queue);
-void do_second(CommandQueue *queue);
-int nfy_que(CommandQueue *queue, DbRef player, int key, int wait, int attr);
 int halt_que(CommandQueue *queue, DbRef player, DbRef cause);
 void wait_que(CommandQueue *queue, DbRef player, DbRef cause, int wait,
-              DbRef sem, int attr, char *command);
+              char *command);
 int que_next(CommandQueue *queue);
 int do_top(CommandQueue *queue, int command_count);
 void recover_queue_deposits(CommandQueue *queue);

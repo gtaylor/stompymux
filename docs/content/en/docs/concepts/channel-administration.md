@@ -6,8 +6,10 @@ weight: 30
 ---
 
 Wizards administer communication channels with `@chan`. Running it without a
-switch prints the available operations. Channels do not have individual
-owners, and mortals cannot invoke `@chan`. A game that wants to offer mortal
+self-management must provide Lua commands that enforce its desired policy and
+switch prints the available operations. Mortals cannot invoke `@chan`. A game
+that wants to offer mortal self-management must provide Lua commands that
+enforce its desired policy and
 self-management must provide Lua commands that enforce its desired policy and
 call the appropriate channel functionality.
 

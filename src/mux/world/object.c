@@ -23,8 +23,7 @@
    (game_object_location(database, i) == NOTHING) &&                           \
    (game_object_contents(database, i) == NOTHING) &&                           \
    (game_object_exits(database, i) == NOTHING) &&                              \
-   (game_object_next(database, i) == NOTHING) &&                               \
-   (game_object_owner(database, i) == GOD))
+   (game_object_next(database, i) == NOTHING))
 
 #define ZAP_LOC(database, i)                                                   \
   {                                                                            \
@@ -125,7 +124,7 @@ int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
   case TYPE_THING:
     if (is_going(evaluation->world->database, home))
       return 0;
-    if (is_controls(evaluation, player, home))
+    if (is_controls(evaluation->world->database, player, home))
       return 1;
   default:
     break;
@@ -138,16 +137,10 @@ DbRef new_home(EvaluationContext *evaluation, DbRef player) {
   DbRef loc;
 
   loc = game_object_location(evaluation->world->database, player);
-  if (can_set_home(evaluation,
-                   game_object_owner(evaluation->world->database, player),
-                   player, loc))
+  if (can_set_home(evaluation, player, player, loc))
     return loc;
-  loc =
-      game_object_link(evaluation->world->database,
-                       game_object_owner(evaluation->world->database, player));
-  if (can_set_home(evaluation,
-                   game_object_owner(evaluation->world->database, player),
-                   player, loc))
+  loc = game_object_link(evaluation->world->database, player);
+  if (can_set_home(evaluation, player, player, loc))
     return loc;
   return default_home(world);
 }
@@ -156,9 +149,7 @@ DbRef clone_home(EvaluationContext *evaluation, DbRef player, DbRef thing) {
   DbRef loc;
 
   loc = game_object_link(evaluation->world->database, thing);
-  if (can_set_home(evaluation,
-                   game_object_owner(evaluation->world->database, player),
-                   player, loc))
+  if (can_set_home(evaluation, player, player, loc))
     return loc;
   return new_home(evaluation, player);
 }
@@ -210,13 +201,11 @@ void object_apply_default_lua_parent(EvaluationContext *evaluation,
  */
 DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  char *name) {
-  DbRef obj, owner;
-  int okname = 0, self_owned;
+  DbRef obj;
+  int okname = 0;
   Flag f1, f2, f3;
   time_t tt;
   char *buff;
-
-  self_owned = 0;
 
   switch (objtype) {
   case TYPE_ROOM:
@@ -241,7 +230,6 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     f1 = evaluation->world->configuration->default_player_flags.word1;
     f2 = evaluation->world->configuration->default_player_flags.word2;
     f3 = evaluation->world->configuration->default_player_flags.word3;
-    self_owned = 1;
     buff = munge_space(name);
     if (!badname_check(evaluation->world, buff)) {
       notify(evaluation, player, "That name is not allowed.");
@@ -273,15 +261,9 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     return NOTHING;
   }
 
-  if (!self_owned) {
-    if (!is_good_obj(evaluation->world->database, player))
-      return NOTHING;
-    owner = game_object_owner(evaluation->world->database, player);
-    if (!is_good_obj(evaluation->world->database, owner))
-      return NOTHING;
-  } else {
-    owner = NOTHING;
-  }
+  if (objtype != TYPE_PLAYER &&
+      !is_good_obj(evaluation->world->database, player))
+    return NOTHING;
 
   /*
    * Get the first object from the freelist. If the object is not
@@ -319,19 +301,19 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
 
-  if (objtype == TYPE_PLAYER &&
-      evaluation->world->configuration->player_zone > 0)
-    game_object_set_zone(evaluation->world->database, obj,
-                         evaluation->world->configuration->player_zone);
-  else
+  if (objtype == TYPE_PLAYER) {
+    DbRef zone = evaluation->world->configuration->player_zone > 0
+                     ? evaluation->world->configuration->player_zone
+                     : NOTHING;
+    game_object_set_zone(evaluation->world->database, obj, zone);
+  } else {
     game_object_set_zone(evaluation->world->database, obj,
                          game_object_zone(evaluation->world->database, player));
+  }
 
   game_object_set_flags(evaluation->world->database, obj, objtype | f1);
   game_object_set_flags2(evaluation->world->database, obj, f2);
   game_object_set_flags3(evaluation->world->database, obj, f3);
-  game_object_set_owner(evaluation->world->database, obj,
-                        (self_owned ? obj : owner));
   unmark(evaluation->world->database, obj);
   buff = munge_space((char *)name);
   object_name_set(evaluation->world->database, obj, buff);
@@ -356,48 +338,17 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
  * all lists and has no contents or exits.
  */
 void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
-  DbRef owner;
-  int good_owner;
   AttributeStack *sp, *next;
-  char *tname;
 
   if (!is_good_obj(evaluation->world->database, obj))
     return;
 
-  /*
-   * Validate the owner
-   */
-
-  owner = game_object_owner(evaluation->world->database, obj);
-  good_owner = is_good_owner(evaluation->world->database, owner);
-
-  /*
-   * Halt any pending commands (waiting or semaphore)
-   */
-  if (halt_que(evaluation->runtime->commands, NOTHING, obj) > 0) {
-    if (good_owner && !is_quiet(evaluation->world->database, obj) &&
-        !is_quiet(evaluation->world->database, owner)) {
-      notify(evaluation, owner, "Halted.");
-    }
-  }
-  nfy_que(evaluation->runtime->commands, obj, 0, NFY_DRAIN, 0);
+  /* Halt any pending commands. */
+  halt_que(evaluation->runtime->commands, NOTHING, obj);
 
   if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
-    if (good_owner &&
-        game_object_owner(evaluation->world->database, player) != owner) {
-      if (owner == obj) {
-        notify_printf(evaluation, player, "Destroyed. %s(#%ld)",
-                      game_object_name(evaluation->world->database, obj), obj);
-      } else {
-        tname = alloc_sbuf("destroy_obj");
-        StringCopy(tname, game_object_name(evaluation->world->database, owner));
-        notify_printf(evaluation, player, "Destroyed. %s's %s(#%ld)", tname,
-                      game_object_name(evaluation->world->database, obj), obj);
-        free_sbuf(tname);
-      }
-    } else if (!is_quiet(evaluation->world->database, obj)) {
+    if (!is_quiet(evaluation->world->database, obj))
       notify(evaluation, player, "Destroyed.");
-    }
   }
 
   attribute_free(evaluation->world->database, obj);
@@ -418,7 +369,6 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
   game_object_set_exits(evaluation->world->database, obj, NOTHING);
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
-  game_object_set_owner(evaluation->world->database, obj, GOD);
   game_object_set_zone(evaluation->world->database, obj, NOTHING);
 
   /*
@@ -438,22 +388,6 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
 
   make_freelist(evaluation->world->database);
   return;
-}
-
-/**
- * Get rid of KEY contents of object.
- */
-void divest_object(EvaluationContext *evaluation, DbRef thing) {
-  DbRef curr, temp;
-
-  SAFE_DOLIST(evaluation->world->database, curr, temp,
-              game_object_contents(evaluation->world->database, thing)) {
-    if (!is_controls(evaluation, thing, curr) &&
-        has_location(evaluation->world->database, curr) &&
-        has_key_flag(evaluation->world->database, curr)) {
-      move_via_generic(evaluation, curr, HOME, NOTHING, 0);
-    }
-  }
 }
 
 /**
@@ -487,7 +421,6 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
                              new_home(evaluation, targ));
       }
       move_via_generic(evaluation, targ, HOME, NOTHING, 0);
-      divest_object(evaluation, targ);
     }
   }
 
@@ -534,8 +467,7 @@ void destroy_exit(EvaluationContext *evaluation, DbRef exit) {
  * Destroys a thing.
  */
 void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
-  move_via_generic(evaluation, thing, NOTHING,
-                   game_object_owner(evaluation->world->database, thing), 0);
+  move_via_generic(evaluation, thing, NOTHING, NOTHING, 0);
   empty_obj(evaluation, thing);
   destroy_obj(evaluation, NOTHING, thing);
 }
@@ -544,8 +476,7 @@ void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
  * Destroys a player.
  */
 void destroy_player(EvaluationContext *evaluation, DbRef victim) {
-  DbRef aowner, player;
-  int count;
+  DbRef player;
   long aflags;
   char *buf;
 
@@ -557,7 +488,6 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   toast_player(evaluation, victim);
   boot_off(evaluation->world->descriptors, victim, "You have been destroyed!");
   halt_que(evaluation->runtime->commands, victim, NOTHING);
-  count = chown_all(evaluation->world->database, victim, player);
 
   /*
    * Remove the name from the name hash table
@@ -565,15 +495,12 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
 
   delete_player_name(evaluation->world, victim,
                      game_object_name(evaluation->world->database, victim));
-  buf = attribute_get(evaluation->world->database, victim, A_ALIAS, &aowner,
-                      &aflags);
+  buf = attribute_get(evaluation->world->database, victim, A_ALIAS, &aflags);
   delete_player_name(evaluation->world, victim, buf);
   free_lbuf(buf);
 
   move_via_generic(evaluation, victim, NOTHING, player, 0);
   destroy_obj(evaluation, NOTHING, victim);
-  notify_quiet(evaluation, player,
-               tprintf("(%d objects @chowned to you)", count));
 }
 
 /**
@@ -624,7 +551,7 @@ static void purge_going(EvaluationContext *evaluation, bool full_check) {
  * Look for references to GOING or illegal objects.
  */
 static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
-  DbRef targ, owner, i;
+  DbRef targ, i;
 
   DO_WHOLE_DB(evaluation->world->database, i) {
     /*
@@ -635,13 +562,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
     if (is_good_obj(evaluation->world->database, targ)) {
       if (is_going(evaluation->world->database, targ)) {
         game_object_set_zone(evaluation->world->database, i, NOTHING);
-        owner = game_object_owner(evaluation->world->database, i);
-        if (is_good_owner(evaluation->world->database, owner) &&
-            !is_quiet(evaluation->world->database, i) &&
-            !is_quiet(evaluation->world->database, owner)) {
-          notify_printf(evaluation, owner, "Zone cleared on %s(#%ld)",
-                        game_object_name(evaluation->world->database, i), i);
-        }
       }
     } else if (targ != NOTHING) {
       Log_header_err(evaluation, i,
@@ -665,13 +585,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (is_going(evaluation->world->database, targ)) {
           game_object_set_link(evaluation->world->database, i,
                                new_home(evaluation, i));
-          owner = game_object_owner(evaluation->world->database, i);
-          if (is_good_owner(evaluation->world->database, owner) &&
-              !is_quiet(evaluation->world->database, i) &&
-              !is_quiet(evaluation->world->database, owner)) {
-            notify_printf(evaluation, owner, "Home reset on %s(#%ld)",
-                          game_object_name(evaluation->world->database, i), i);
-          }
         }
       } else if (targ != NOTHING) {
         Log_header_err(evaluation, i,
@@ -712,13 +625,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       if (is_good_obj(evaluation->world->database, targ)) {
         if (is_going(evaluation->world->database, targ)) {
           game_object_set_location(evaluation->world->database, i, NOTHING);
-          owner = game_object_owner(evaluation->world->database, i);
-          if (is_good_owner(evaluation->world->database, owner) &&
-              !is_quiet(evaluation->world->database, i) &&
-              !is_quiet(evaluation->world->database, owner)) {
-            notify_printf(evaluation, owner, "Dropto removed from %s(#%ld)",
-                          game_object_name(evaluation->world->database, i), i);
-          }
         }
       } else if ((targ != NOTHING) && (targ != HOME)) {
         Log_header_err(evaluation, i, NOTHING, targ, 1, "Dropto",
@@ -827,33 +733,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       destroy_obj(evaluation, NOTHING, i);
     }
 
-    /*
-     * Check owner
-     */
-
-    owner = game_object_owner(evaluation->world->database, i);
-    if (!is_good_obj(evaluation->world->database, owner)) {
-      Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
-                     "is invalid.  Set to GOD.");
-      owner = GOD;
-      game_object_set_owner(evaluation->world->database, i, owner);
-      halt_que(evaluation->runtime->commands, NOTHING, i);
-      s_halted(evaluation->world->database, i);
-    } else if (full_check) {
-      if (is_going(evaluation->world->database, owner)) {
-        Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
-                       "is set GOING.  Set to GOD.");
-        game_object_set_owner(evaluation->world->database, i, owner);
-        halt_que(evaluation->runtime->commands, NOTHING, i);
-        s_halted(evaluation->world->database, i);
-      } else if (!is_owns_others(evaluation->world->database, owner)) {
-        Log_header_err(evaluation, i, NOTHING, owner, 1, "Owner",
-                       "is not a valid owner type.");
-      } else if (is_player(evaluation->world->database, i) && (owner != i)) {
-        Log_header_err(evaluation, i, NOTHING, owner, 1, "Player",
-                       "is the owner instead of the player.");
-      }
-    }
     if (full_check) {
 
       /*
@@ -863,12 +742,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       if (is_wizard(evaluation->world->database, i)) {
         if (is_player(evaluation->world->database, i)) {
           log_simple_error(evaluation, i, NOTHING, "Player is a WIZARD.");
-        }
-        if (!is_wizard(evaluation->world->database,
-                       game_object_owner(evaluation->world->database, i))) {
-          Log_header_err(evaluation, i, NOTHING,
-                         game_object_owner(evaluation->world->database, i), 1,
-                         "Owner", "of a WIZARD object is not a wizard");
         }
       }
     }
@@ -1038,24 +911,6 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
        * All OK (or all was made OK)
        */
 
-      if (full_check) {
-
-        /*
-         * Make sure exit owner owns at least one of
-         * * * * * the source or destination.  Just *
-         * warn * if * * he doesn't.
-         */
-
-        temp = game_object_owner(evaluation->world->database, exit);
-        if ((temp != game_object_owner(evaluation->world->database, loc)) &&
-            (temp !=
-             game_object_owner(
-                 evaluation->world->database,
-                 game_object_location(evaluation->world->database, exit)))) {
-          Log_header_err(evaluation, exit, loc, temp, 1, "Owner",
-                         "does not own either the source or destination.");
-        }
-      }
       mark(evaluation->world->database, exit);
       back = exit;
       exit = game_object_next(evaluation->world->database, exit);
@@ -1250,9 +1105,7 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
          */
 
         if (is_wizard(evaluation->world->database, loc) &&
-            !is_wizard(evaluation->world->database, obj) &&
-            !is_wizard(evaluation->world->database,
-                       game_object_owner(evaluation->world->database, obj))) {
+            !is_wizard(evaluation->world->database, obj)) {
           log_simple_error(evaluation, obj, loc,
                            "Nonwizard object inside wizard.");
         }
@@ -1312,7 +1165,7 @@ static void mark_place(GameDatabase *database, DbRef loc) {
 }
 
 static void check_floating(EvaluationContext *evaluation) {
-  DbRef owner, i;
+  DbRef i;
 
   /*
    * Mark everyplace you can get to via exits from the starting room
@@ -1331,11 +1184,7 @@ static void check_floating(EvaluationContext *evaluation) {
         !is_floating(evaluation->world->database, i) &&
         !is_going(evaluation->world->database, i) &&
         !is_marked(evaluation->world->database, i)) {
-      owner = game_object_owner(evaluation->world->database, i);
-      if (is_good_owner(evaluation->world->database, owner)) {
-        notify_printf(evaluation, owner, "You own a floating room: %s(#%ld)",
-                      game_object_name(evaluation->world->database, i), i);
-      }
+      log_simple_error(evaluation, i, NOTHING, "Floating room.");
     }
   }
 }

@@ -70,9 +70,6 @@ struct GameObject {
   /* ROOM: unused */
   DbRef link; /* PLAYER, THING: home location */
   /* ROOM, EXIT: unused */
-  DbRef owner; /* PLAYER: domain number + class + moreflags */
-  /* THING, ROOM, EXIT: owning player number */
-
   DbRef zone; /* Whatever the object is zoned to. */
 
   Flag flags;  /* ALL: Flags set on the object */
@@ -145,9 +142,6 @@ static inline DbRef game_object_next(GameDatabase *database, DbRef object) {
 static inline DbRef game_object_link(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->link;
 }
-static inline DbRef game_object_owner(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->owner;
-}
 static inline Flag game_object_flags(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->flags;
 }
@@ -191,10 +185,6 @@ static inline void game_object_set_next(GameDatabase *database, DbRef object,
 static inline void game_object_set_link(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->link = value;
-}
-static inline void game_object_set_owner(GameDatabase *database, DbRef object,
-                                         DbRef value) {
-  game_database_object(database, object)->owner = value;
 }
 static inline void game_object_set_flags(GameDatabase *database, DbRef object,
                                          Flag value) {
@@ -245,15 +235,15 @@ void attribute_clear(GameDatabase *database, DbRef thing, int attribute_number);
 void attribute_add_raw(GameDatabase *database, DbRef thing,
                        int attribute_number, char *value);
 void attribute_add(GameDatabase *database, DbRef thing, int attribute_number,
-                   char *value, DbRef owner, long flags);
+                   char *value, long flags);
 char *attribute_get_raw(GameDatabase *database, DbRef thing,
                         int attribute_number);
 char *attribute_get(GameDatabase *database, DbRef thing, int attribute_number,
-                    DbRef *owner, long *flags);
+                    long *flags);
 char *attribute_get_string(GameDatabase *database, char *buffer, DbRef thing,
-                           int attribute_number, DbRef *owner, long *flags);
+                           int attribute_number, long *flags);
 int attribute_get_info(GameDatabase *database, DbRef thing,
-                       int attribute_number, DbRef *owner, long *flags);
+                       int attribute_number, long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
 const char *dynamic_attribute_get(GameDatabase *database, DbRef thing,
                                   const char *name);
@@ -261,9 +251,6 @@ bool dynamic_attribute_set(GameDatabase *database, DbRef thing,
                            const char *name, const char *value);
 bool dynamic_attribute_delete(GameDatabase *database, DbRef thing,
                               const char *name);
-int check_zone(EvaluationContext *evaluation, DbRef player, DbRef thing);
-int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
-                          DbRef thing);
 void toast_player(EvaluationContext *evaluation, DbRef player);
 
 #define DOLIST(database, thing, list)                                          \

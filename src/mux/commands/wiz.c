@@ -34,13 +34,6 @@ void do_teleport(CommandInvocation *invocation) {
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  if (((is_fixed(evaluation->world->database, player)) ||
-       (is_fixed(evaluation->world->database,
-                 game_object_owner(evaluation->world->database, player)))) &&
-      !is_wizard(evaluation->world->database, player)) {
-    notify(evaluation, player, configuration->fixed_tel_msg);
-    return;
-  }
   /*
    * get victim
    */
@@ -71,8 +64,8 @@ void do_teleport(CommandInvocation *invocation) {
    * Fail if we don't control the victim or the victim's location
    */
 
-  if (!is_controls(evaluation, player, victim) &&
-      !is_controls(evaluation, player,
+  if (!is_controls(evaluation->world->database, player, victim) &&
+      !is_controls(evaluation->world->database, player,
                    game_object_location(evaluation->world->database, victim)) &&
       !is_wizard(evaluation->world->database, player)) {
     notify_quiet(evaluation, player, "Permission denied.");
@@ -120,7 +113,7 @@ void do_teleport(CommandInvocation *invocation) {
     loc = where_room(evaluation->world->database, configuration, victim);
     if (!is_good_obj(evaluation->world->database, loc) ||
         !is_room(evaluation->world->database, loc) ||
-        (!is_controls(evaluation, player, loc) &&
+        (!is_controls(evaluation->world->database, player, loc) &&
          !is_wizard(evaluation->world->database, player))) {
       notify_quiet(evaluation, player, "Permission denied.");
       return;
@@ -132,8 +125,9 @@ void do_teleport(CommandInvocation *invocation) {
      * You must control the destination and pass its TELEPORT lock.
      */
 
-    bool permitted = is_controls(evaluation, player, destination) ||
-                     is_wizard(evaluation->world->database, player);
+    bool permitted =
+        is_controls(evaluation->world->database, player, destination) ||
+        is_wizard(evaluation->world->database, player);
 
     if (permitted)
       permitted = lock_test(evaluation, victim, player, player, destination,
@@ -196,8 +190,7 @@ void do_teleport(CommandInvocation *invocation) {
   } else if (is_exit(evaluation->world->database, destination)) {
     if (game_object_exits(evaluation->world->database, destination) ==
         game_object_location(evaluation->world->database, victim)) {
-      move_exit(evaluation, victim, destination, 0, "You can't go that way.",
-                0);
+      move_exit(evaluation, victim, destination, "You can't go that way.", 0);
     } else {
       notify_quiet(evaluation, player, "I can't find that exit.");
     }
@@ -242,8 +235,7 @@ void do_force(CommandInvocation *invocation) {
    * force victim to do command
    */
 
-  wait_que(invocation->context->runtime->commands, victim, player, 0, NOTHING,
-           0, command);
+  wait_que(invocation->context->runtime->commands, victim, player, 0, command);
 }
 
 void do_newpassword(CommandInvocation *invocation) {
@@ -375,36 +367,9 @@ void do_boot(CommandInvocation *invocation) {
     free_lbuf(buf);
 }
 
-/**
- * Reduce the wealth of anyone over a specified amount.
- */
-/**
- * Chop off a contents or exits chain after the named item.
- */
-void do_cut(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *thing = invocation->first;
-  DbRef object;
-
-  object = match_controlled(&invocation->context->match, player, thing);
-  switch (object) {
-  case NOTHING:
-    notify_quiet(evaluation, player, "No match.");
-    break;
-  case AMBIGUOUS:
-    notify_quiet(evaluation, player, "I don't know which one");
-    break;
-  default:
-    game_object_set_next(evaluation->world->database, object, NOTHING);
-    notify_quiet(evaluation, player, "Cut.");
-  }
-}
-
 typedef enum GlobalControl {
   GLOBAL_CONTROL_CHECKPOINTING,
   GLOBAL_CONTROL_CLEANING,
-  GLOBAL_CONTROL_DEQUEUEING,
   GLOBAL_CONTROL_IDLE_CHECKING,
   GLOBAL_CONTROL_QUEUEING,
   GLOBAL_CONTROL_LOGINS,
@@ -413,7 +378,6 @@ typedef enum GlobalControl {
 static const NameTable enable_names[] = {
     {"checkpointing", 2, CA_PUBLIC, GLOBAL_CONTROL_CHECKPOINTING},
     {"cleaning", 2, CA_PUBLIC, GLOBAL_CONTROL_CLEANING},
-    {"dequeueing", 1, CA_PUBLIC, GLOBAL_CONTROL_DEQUEUEING},
     {"idlechecking", 2, CA_PUBLIC, GLOBAL_CONTROL_IDLE_CHECKING},
     {"queueing", 2, CA_PUBLIC, GLOBAL_CONTROL_QUEUEING},
     {"logins", 3, CA_PUBLIC, GLOBAL_CONTROL_LOGINS},
@@ -426,8 +390,6 @@ static bool *global_control_value(ServerConfiguration *configuration,
     return &configuration->is_checkpointing_enabled;
   case GLOBAL_CONTROL_CLEANING:
     return &configuration->is_db_check_enabled;
-  case GLOBAL_CONTROL_DEQUEUEING:
-    return &configuration->is_dequeue_enabled;
   case GLOBAL_CONTROL_IDLE_CHECKING:
     return &configuration->is_idle_check_enabled;
   case GLOBAL_CONTROL_QUEUEING:

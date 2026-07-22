@@ -252,7 +252,7 @@ void descriptor_welcome(Descriptor *d) {
 
 void set_lastsite(Descriptor *d, char *lastsite) {
   CommandRuntime *runtime = descriptor_runtime(d);
-  long i, j;
+  long flags;
   char buf[LBUF_SIZE];
 
   if (d->player) {
@@ -261,7 +261,7 @@ void set_lastsite(Descriptor *d, char *lastsite) {
       buf[LBUF_SIZE - 1] = '\0';
     } else {
       attribute_get_string(runtime->world->database, buf, d->player, A_LASTSITE,
-                           &i, &j);
+                           &flags);
     }
     attribute_add_raw(runtime->world->database, d->player, A_LASTSITE, buf);
   }
@@ -359,7 +359,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   CommandRuntime *runtime = descriptor_runtime(d);
   const ServerConfiguration *configuration = runtime->world->configuration;
   CommandContext *command = runtime->background_command;
-  DbRef loc, aowner, temp;
+  DbRef loc, temp;
   long aflags;
   int num, key, count;
   char *buf, *time_str;
@@ -376,8 +376,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   if (*runtime->record_players < count)
     *runtime->record_players = count;
 
-  buf = attribute_get(runtime->world->database, player, A_TIMEOUT, &aowner,
-                      &aflags);
+  buf = attribute_get(runtime->world->database, player, A_TIMEOUT, &aflags);
   if (buf) {
     d->timeout = clamped_atoi(buf);
     if (d->timeout <= 0)
@@ -577,11 +576,10 @@ void descriptor_reload(GameDatabase *database,
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_player(descriptors, player);
   char *buf;
-  DbRef aowner;
   Flag aflags;
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
-    buf = attribute_get(database, player, A_TIMEOUT, &aowner, &aflags);
+    buf = attribute_get(database, player, A_TIMEOUT, &aflags);
     if (buf) {
       d->timeout = clamped_atoi(buf);
       if (d->timeout <= 0)
@@ -644,7 +642,6 @@ static void dump_users(Descriptor *e, char *match) {
       descriptor_iterator_connected(runtime->descriptors);
   int count;
   char *buf, *fp, *sp, flist[4], slist[4];
-  DbRef room_it;
 
   while (match && *match && isspace(*match))
     match++;
@@ -670,19 +667,6 @@ static void dump_users(Descriptor *e, char *match) {
       else if (is_dark(runtime->world->database, d->player))
         *fp++ = 'D';
     }
-    if (!is_findable(runtime->world->database, d->player)) {
-      *fp++ = 'U';
-    } else {
-      room_it = where_room(runtime->world->database,
-                           runtime->world->configuration, d->player);
-      if (is_good_obj(runtime->world->database, room_it)) {
-        if (is_hideout(runtime->world->database, room_it))
-          *fp++ = 'u';
-      } else {
-        *fp++ = 'u';
-      }
-    }
-
     if (is_suspect(runtime->world->database, d->player))
       *fp++ = '+';
     if (d->host_info & H_FORBIDDEN)

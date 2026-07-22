@@ -13,7 +13,7 @@ constexpr int POWER_EXT = 0x1; /* Lives in extended powers word */
 /* First word of powers */
 /* 0x00000001 is reserved for the removed quota power. */
 /* 0x00000002 through 0x00000080 are reserved for removed powers. */
-constexpr int POW_FIND_UNFIND = 0x00000100; /* Can find unfindable players */
+/* 0x00000100 is reserved. */
 /* 0x00000200 is reserved for the removed free_money power. */
 /* 0x00000400 is reserved for the removed free_quota power. */
 /* 0x00000800 is reserved for the removed hide power. */
@@ -79,9 +79,6 @@ extern int has_power(WorldContext *, DbRef, DbRef, char *);
 extern int decode_power(EvaluationContext *, WorldIndexes *, DbRef, char *,
                         POWERSET *);
 
-static inline bool is_find_unfindable(GameDatabase *database, DbRef c) {
-  return (game_object_powers(database, c) & POW_FIND_UNFIND) != 0;
-}
 static inline bool can_idle(GameDatabase *database, DbRef c) {
   return (game_object_powers(database, c) & POW_IDLE) != 0 ||
          is_wizard(database, c);

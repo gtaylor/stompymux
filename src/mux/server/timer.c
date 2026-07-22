@@ -111,7 +111,6 @@ static void dispatch(MaintenanceContext *maintenance) {
   maintenance->clock->tick_pending = false;
   maintenance->clock->now = time(nullptr);
 
-  do_second(maintenance->commands);
   lua_schedule_tick(maintenance->lua->runtime, maintenance->clock->now);
 
   /*

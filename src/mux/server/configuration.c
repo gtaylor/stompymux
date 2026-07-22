@@ -246,8 +246,6 @@ void configuration_initialize(ConfigurationContext *context) {
   StringCopy(context->configuration->full_msg, "");
   StringCopy(context->configuration->dump_msg, "");
   StringCopy(context->configuration->postdump_msg, "");
-  StringCopy(context->configuration->fixed_home_msg, "");
-  StringCopy(context->configuration->fixed_tel_msg, "");
   StringCopy(context->configuration->public_channel, "Public");
   context->configuration->indent_desc = 0;
   context->configuration->name_spaces = 1;
@@ -281,7 +279,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->dark_sleepers = 1;
   context->configuration->idle_wiz_dark = 0;
   context->configuration->fascist_tport = 0;
-  context->configuration->safe_unowned = 0;
   /*
    * -- ??? Running SC on a non-SC DB may cause problems
    */
@@ -310,7 +307,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->is_checkpointing_enabled = true;
   context->configuration->is_db_check_enabled = true;
   context->configuration->is_idle_check_enabled = true;
-  context->configuration->is_dequeue_enabled = true;
   context->configuration->log_options =
       LOG_ALWAYS | LOG_BUGS | LOG_SECURITY | LOG_NET | LOG_LOGIN | LOG_DBSAVES |
       LOG_CONFIGMODS | LOG_SHOUTS | LOG_STARTUP | LOG_WIZARD | LOG_PROBLEMS |
@@ -948,10 +944,6 @@ CONF conftable[] = {
      (int *)CONFIG_LOC(default_exit_flags), 0},
     {"fascist_teleport", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(fascist_tport), 0},
-    {"fixed_home_message", cf_string_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(fixed_home_msg), 128},
-    {"fixed_tel_message", cf_string_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(fixed_tel_msg), 128},
     {"flag_alias", cf_flagalias_configuration_adapter, CA_GOD, nullptr, 0},
     {"forbid_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), H_FORBIDDEN},
@@ -1065,8 +1057,6 @@ CONF conftable[] = {
      CONFIG_LOC(login_hash_limit), 0},
     {"default_room_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(default_room_flags), 0},
-    {"show_unfindable_who", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(show_unfindable_who), 1},
     {"space_compress", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(space_compress), 0},
     {"stack_limit", cf_int_configuration_adapter, CA_GOD,
@@ -1079,8 +1069,6 @@ CONF conftable[] = {
      0},
     {"trust_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), 0},
-    {"unowned_safe", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(safe_unowned), 0},
     {"zone_recursion_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(zone_nest_lim), 0},
     {"player_zone", cf_int_configuration_adapter, CA_GOD,

@@ -53,7 +53,7 @@ static inline int safe_atoi(const char *s) {
 
 /* Message forwarding directives */
 
-constexpr int MSG_PUP_ALWAYS = 1;    /* Always forward msg to puppet own */
+/* 1 is reserved. */
 constexpr int MSG_INV = 2;           /* Forward msg to contents */
 constexpr int MSG_INV_L = 4;         /* ... only if msg passes my @listen */
 constexpr int MSG_INV_EXITS = 8;     /* Forward through my audible exits */
@@ -78,26 +78,18 @@ constexpr int MSG_F_DOWN = MSG_INV_L;
  * here. */
 static inline void notify(EvaluationContext *evaluation, DbRef p,
                           const char *m) {
-  notify_checked(evaluation, p, p, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
+  notify_checked(evaluation, p, p, m, MSG_ME_ALL | MSG_F_DOWN);
 }
 static inline void notify_quiet(EvaluationContext *evaluation, DbRef p,
                                 const char *m) {
-  notify_checked(evaluation, p, p, m, MSG_PUP_ALWAYS | MSG_ME);
+  notify_checked(evaluation, p, p, m, MSG_ME);
 }
 static inline void notify_with_cause(EvaluationContext *evaluation, DbRef p,
                                      DbRef c, const char *m) {
-  notify_checked(evaluation, p, c, m, MSG_PUP_ALWAYS | MSG_ME_ALL | MSG_F_DOWN);
+  notify_checked(evaluation, p, c, m, MSG_ME_ALL | MSG_F_DOWN);
 }
 static inline void notify_quiet_with_cause(EvaluationContext *evaluation,
                                            DbRef p, DbRef c, const char *m) {
-  notify_checked(evaluation, p, c, m, MSG_PUP_ALWAYS | MSG_ME);
-}
-static inline void notify_puppet(EvaluationContext *evaluation, DbRef p,
-                                 DbRef c, const char *m) {
-  notify_checked(evaluation, p, c, m, MSG_ME_ALL | MSG_F_DOWN);
-}
-static inline void notify_quiet_puppet(EvaluationContext *evaluation, DbRef p,
-                                       DbRef c, const char *m) {
   notify_checked(evaluation, p, c, m, MSG_ME);
 }
 static inline void notify_all(EvaluationContext *evaluation, DbRef p, DbRef c,
@@ -121,13 +113,9 @@ static inline void notify_all_from_outside(EvaluationContext *evaluation,
 constexpr int BOOT_QUIET = 1;      /* Inhibit boot message to victim */
 constexpr int BOOT_PORT = 2;       /* Boot by port number */
 constexpr int CEMIT_NOHEADER = 1;  /* Channel emit without header */
-constexpr int CHOWN_ONE = 1;       /* item = new_owner */
-constexpr int CHOWN_ALL = 2;       /* old_owner = new_owner */
 constexpr int CLIST_FULL = 1;      /* Full listing of channels */
 constexpr int CSTATUS_FULL = 1;    /* Full listing of channel */
 constexpr int CLONE_LOCATION = 0;  /* Create cloned object in my location */
-constexpr int CLONE_INHERIT = 1;   /* Keep INHERIT bit if set */
-constexpr int CLONE_PRESERVE = 2;  /* Preserve the owner of the object */
 constexpr int CLONE_INVENTORY = 4; /* Create cloned object in my inventory */
 constexpr int CLONE_SET_LOC = 16;  /* ARG2 is location of cloned object */
 constexpr int CLONE_SET_NAME = 32; /* ARG2 is alternate name of cloned object */
@@ -141,14 +129,11 @@ constexpr int DBCK_FLOATING = 8;   /* Look for floating rooms */
 constexpr int DBCK_PURGE = 16;     /* Purge the db of refs to going objects */
 constexpr int DBCK_LINKS = 32;     /* Validate exit and object chains */
 constexpr int DBCK_WEALTH = 64;    /* Validate object value/wealth */
-constexpr int DBCK_OWNER = 128;    /* Do more extensive owner checking */
-constexpr int DBCK_OWN_EXIT = 256; /* Check exit owner owns src or dest */
 constexpr int DBCK_WIZARD = 512;   /* Check for wizards/wiz objects */
 constexpr int DBCK_TYPES = 1024;   /* Check for valid & appropriate types */
 constexpr int DBCK_SPARE = 2048; /* Make sure spare header fields are NOTHING */
 constexpr int DBCK_HOMES = 4096; /* Make sure homes and droptos are valid */
 constexpr int DEST_ONE = 1;      /* object */
-constexpr int DEST_ALL = 2;      /* owner */
 constexpr int DEST_OVERRIDE = 4; /* override is_safe() */
 constexpr int DEST_RECURSIVE = 8;
 constexpr int DIG_TELEPORT = 1;   /* teleport to room after @digging */
@@ -175,9 +160,6 @@ constexpr int LOOK_INVENTORY = 4; /* list inventory of object */
 constexpr int LOOK_SCORE = 5;     /* list score (# coins) */
 constexpr int LOOK_OUTSIDE = 8;   /* look for object in container of player */
 constexpr int MOVE_QUIET = 1;     /* Suppress other text and Lua events */
-constexpr int NFY_NFY = 0;        /* Notify first waiting command */
-constexpr int NFY_NFYALL = 1;     /* Notify all waiting commands */
-constexpr int NFY_DRAIN = 2;      /* Delete waiting commands */
 constexpr int OPEN_LOCATION = 0;  /* Open exit in my location */
 constexpr int OPEN_INVENTORY = 1; /* Open exit in me */
 constexpr int PASS_ANY = 1;       /* name=newpass */
@@ -220,9 +202,6 @@ constexpr int SHUTDN_KILLED =
 constexpr int SRCH_SEARCH = 1;    /* Do a normal search */
 constexpr int SRCH_MARK = 2;      /* Set mark bit for matches */
 constexpr int SRCH_UNMARK = 3;    /* Clear mark bit for matches */
-constexpr int STAT_PLAYER = 0;    /* Display stats for one player or tot objs */
-constexpr int STAT_ALL = 1;       /* Display global stats */
-constexpr int STAT_ME = 2;        /* Display stats for me */
 constexpr int SWITCH_DEFAULT = 0; /* Use the configured default for switch */
 constexpr int SWITCH_ANY = 1;     /* Execute all cases that match */
 constexpr int SWITCH_ONE = 2;     /* Execute only first case that matches */

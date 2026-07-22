@@ -38,11 +38,11 @@ and are treated as handled.
 Restore the file or update `Luaparent`, then use `@lua/reload` to activate the
 repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
-When a Wizard uses `@examine` on an object, the output identifies its direct
-Lua parent, then lists its appearance functions, command patterns, events,
-schedule names, message providers, and locks. Use `@lua/viewparent <dbref>` to
-display that module's raw source, or `@lua/viewparent <path>.lua` to inspect an
-object-logic module directly by path.
+`@examine` is Wizard-only, and Wizards may examine any object. Its output
+identifies the object's direct Lua parent, then lists its appearance functions,
+command patterns, events, schedule names, message providers, and locks. Use
+`@lua/viewparent <dbref>` to display that module's raw source, or
+`@lua/viewparent <path>.lua` to inspect an object-logic module directly by path.
 
 ## Module contract
 
@@ -84,6 +84,8 @@ remotely. Other objects use the internal function when the viewer is physically
 inside the object and the external function otherwise. A successful override
 suppresses the native name, description, contents, exits, and transparent-exit
 continuation. The normal room look lock and `on_describe` event still run.
+There is no native opacity flag; use `external_appearance` to decide what an
+outside viewer sees.
 
 The context has the usual `object`, `enactor`, `cause`, and optional
 `descriptor` fields, plus `appearance`, whose value is
@@ -105,6 +107,11 @@ fall back to the native template.
 Define locks as functions in the module's `locks` table. The supported keys
 are `default`, `drop`, `enter`, `give`, `leave`, `link`, `receive`, `speech`,
 `teleport`, `teleport_out`, and `use`.
+
+The destination object's `enter` lock is the sole entry authorization check.
+If no enter lock is defined, entry is allowed. Giving an object to another
+object likewise uses the destination's `receive` lock without a native flag
+gate.
 
 ```lua
 locks = {
@@ -132,7 +139,7 @@ fields, plus `subject` (the object being tested), `lock`, `operation`, and
 `silent`. `operation` distinguishes uses of the same semantic lock. Its values
 are `match`, `traverse`, `take`, `look`, `command_match`, `use`,
 `drop`, `give`, `receive`, `enter`, `leave`, `teleport`, `teleport_out`,
-`link`, `set_home`, `speak`, `zone_control`, `channel_join`,
+`link`, `set_home`, `speak`, `channel_join`,
 `channel_transmit`, `channel_receive`, `btech_enter`, and `btech_contact`.
 Lock handlers have access to the full [`mux`](packages/mux/) API.
 

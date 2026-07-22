@@ -7,6 +7,7 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/database/db.h"
 #include "mux/database/flags.h"
@@ -35,12 +36,11 @@ void do_find(CommandInvocation *invocation) {
               &high_bound);
   for (i = low_bound; i <= high_bound; i++) {
     if ((typeof_obj(evaluation->world->database, i) != TYPE_EXIT) &&
-        is_controls(evaluation, player, i) &&
+        is_controls(evaluation->world->database, player, i) &&
         (!*name ||
          string_match(game_object_pure_name(evaluation->world->database, i),
                       name))) {
-      buff =
-          unparse_object(evaluation->world->database, evaluation, player, i, 0);
+      buff = unparse_object(evaluation->world->database, evaluation, player, i);
       notify(evaluation, player, buff);
       free_lbuf(buff);
     }
@@ -51,8 +51,7 @@ void do_find(CommandInvocation *invocation) {
 /**
  * Get counts of items in the db.
  */
-int database_statistics_get(EvaluationContext *evaluation, DbRef player,
-                            DbRef who, DatabaseStatistics *info) {
+void database_statistics_get(GameDatabase *database, DatabaseStatistics *info) {
   DbRef i;
 
   info->s_total = 0;
@@ -62,44 +61,29 @@ int database_statistics_get(EvaluationContext *evaluation, DbRef player,
   info->s_players = 0;
   info->s_garbage = 0;
 
-  /*
-   * Do we have permission?
-   */
-
-  if (is_good_obj(evaluation->world->database, who) &&
-      !is_controls(evaluation, player, who) &&
-      !is_wizard(evaluation->world->database, player)) {
-    notify(evaluation, player, "Permission denied.");
-    return 0;
-  }
-  DO_WHOLE_DB(evaluation->world->database, i) {
-    if ((who == NOTHING) ||
-        (who == game_object_owner(evaluation->world->database, i))) {
-      info->s_total++;
-      if (is_going(evaluation->world->database, i) &&
-          (typeof_obj(evaluation->world->database, i) != TYPE_ROOM)) {
-        info->s_garbage++;
-        continue;
-      }
-      switch (typeof_obj(evaluation->world->database, i)) {
-      case TYPE_ROOM:
-        info->s_rooms++;
-        break;
-      case TYPE_EXIT:
-        info->s_exits++;
-        break;
-      case TYPE_THING:
-        info->s_things++;
-        break;
-      case TYPE_PLAYER:
-        info->s_players++;
-        break;
-      default:
-        info->s_garbage++;
-      }
+  DO_WHOLE_DB(database, i) {
+    info->s_total++;
+    if (is_going(database, i) && typeof_obj(database, i) != TYPE_ROOM) {
+      info->s_garbage++;
+      continue;
+    }
+    switch (typeof_obj(database, i)) {
+    case TYPE_ROOM:
+      info->s_rooms++;
+      break;
+    case TYPE_EXIT:
+      info->s_exits++;
+      break;
+    case TYPE_THING:
+      info->s_things++;
+      break;
+    case TYPE_PLAYER:
+      info->s_players++;
+      break;
+    default:
+      info->s_garbage++;
     }
   }
-  return 1;
 }
 
 /*
@@ -108,38 +92,9 @@ int database_statistics_get(EvaluationContext *evaluation, DbRef player,
 void do_stats(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
-  int key = invocation->key;
-  char *name = invocation->first;
-  WorldContext *world = invocation->context->world;
-  DbRef owner;
   DatabaseStatistics statinfo;
 
-  switch (key) {
-  case STAT_ALL:
-    owner = NOTHING;
-    break;
-  case STAT_ME:
-    owner = game_object_owner(evaluation->world->database, player);
-    break;
-  case STAT_PLAYER:
-    if (!(name && *name)) {
-      notify_printf(&invocation->context->evaluation, player,
-                    "The universe contains %d objects.", world->database->top);
-      return;
-    }
-    owner = lookup_player(world, player, name, 1);
-    if (owner == NOTHING) {
-      notify(evaluation, player, "Not found.");
-      return;
-    }
-    break;
-  default:
-    notify(evaluation, player, "Illegal combination of switches.");
-    return;
-  }
-
-  if (!database_statistics_get(evaluation, player, owner, &statinfo))
-    return;
+  database_statistics_get(evaluation->world->database, &statinfo);
   notify_printf(
       &invocation->context->evaluation, player,
       "%d objects = %d rooms, %d exits, %d things, %d players. (%d garbage)",
@@ -148,128 +103,28 @@ void do_stats(CommandInvocation *invocation) {
 }
 
 /**
- * Transfers ownership of all a player's objects to another player.
- */
-int chown_all(GameDatabase *database, DbRef from_player, DbRef to_player) {
-  int i, count;
-
-  if (typeof_obj(database, from_player) != TYPE_PLAYER)
-    from_player = game_object_owner(database, from_player);
-  if (typeof_obj(database, to_player) != TYPE_PLAYER)
-    to_player = game_object_owner(database, to_player);
-  count = 0;
-  DO_WHOLE_DB(database, i) {
-    if ((game_object_owner(database, i) == from_player) &&
-        (game_object_owner(database, i) != i)) {
-      switch (typeof_obj(database, i)) {
-      case TYPE_PLAYER:
-        game_object_set_owner(database, i, i);
-        break;
-      case TYPE_THING:
-      case TYPE_ROOM:
-      case TYPE_EXIT:
-      default:
-        game_object_set_owner(database, i, to_player);
-      }
-      game_object_set_flags(database, i,
-                            (game_object_flags(database, i) & ~INHERIT) | HALT);
-      count++;
-    }
-  }
-  return count;
-}
-
-/**
- * Transfers ownership of all a player's objects to another player.
- * Used in @chownall
- */
-void do_chownall(CommandInvocation *invocation) {
-  DbRef player = invocation->player;
-  char *from = invocation->first;
-  char *to = invocation->second;
-  int count;
-  DbRef victim, recipient;
-
-  MatchContext *match = &invocation->context->match;
-  init_match(match, player, from, TYPE_PLAYER);
-  match_neighbor(match);
-  match_absolute(match);
-  match_player(match);
-  if ((victim = noisy_match_result(match)) == NOTHING)
-    return;
-
-  if ((to != nullptr) && *to) {
-    init_match(match, player, to, TYPE_PLAYER);
-    match_neighbor(match);
-    match_absolute(match);
-    match_player(match);
-    if ((recipient = noisy_match_result(match)) == NOTHING)
-      return;
-  } else {
-    recipient = player;
-  }
-
-  count = chown_all(invocation->context->world->database, victim, recipient);
-  if (!is_quiet(invocation->context->world->database, player)) {
-    notify_printf(&invocation->context->evaluation, player,
-                  "%d objects @chowned.", count);
-  }
-}
-
-#define ANY_OWNER -2
-
-/**
  * Walk the db reporting various things (or setting/clearing
  * mark bits)
  */
 int search_criteria_setup(EvaluationContext *context, DbRef player,
                           char *searchfor, SearchCriteria *parm) {
-  char *pname, *searchtype, *t;
+  char *searchtype, *t;
   int err;
 
-  /*
-   * Crack arg into <pname> <type>=<targ>,<low>,<high>
-   */
-
-  /* pname/searchtype are mutated in place elsewhere in this function
-     (lowercased, split, null-terminated); they can't be const, so these
-     literal defaults need an explicit cast. */
+  /* Split <type>=<target>,<low>,<high>. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-  pname = parse_to(context->world->configuration, &searchfor, '=',
-                   COMMAND_PARSE_STRIP_TRAILING);
-  if (!pname || !*pname) {
-    pname = (char *)"me";
-  } else
-    for (t = pname; *t; t++) {
-      if (isupper(*t))
-        *t = (char)tolower(*t);
-    }
-
-  if (searchfor && *searchfor) {
-    searchtype = (char *)rindex(pname, ' ');
-    if (searchtype) {
-      *searchtype++ = '\0';
-    } else {
-      searchtype = pname;
-      pname = (char *)"";
-    }
-  } else {
+  searchtype = parse_to(context->world->configuration, &searchfor, '=',
+                        COMMAND_PARSE_STRIP_TRAILING);
+  if (!searchtype)
     searchtype = (char *)"";
+  if (!searchfor)
+    searchfor = (char *)"";
+  for (t = searchtype; *t; t++) {
+    if (isupper(*t))
+      *t = (char)tolower(*t);
   }
 #pragma clang diagnostic pop
-
-  /*
-   * If the player name is quoted, strip the quotes
-   */
-
-  if (*pname == '\"') {
-    err = (int)strlen(pname) - 1;
-    if (pname[err] == '"') {
-      pname[err] = '\0';
-      pname++;
-    }
-  }
   /*
    * Strip any range arguments
    */
@@ -277,31 +132,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   parse_range(context->world->database, context->world->configuration,
               &searchfor, &parm->low_bound, &parm->high_bound);
 
-  /*
-   * set limits on who we search
-   */
-
-  parm->s_owner = game_object_owner(context->world->database, player);
   parm->s_wizard = is_wizard(context->world->database, player);
-  parm->s_rst_owner = NOTHING;
-  if (!*pname) {
-    parm->s_rst_owner = parm->s_wizard ? ANY_OWNER : player;
-  } else if (pname[0] == '#') {
-    parm->s_rst_owner = clamped_atol(&pname[1]);
-    if (!is_good_obj(context->world->database, parm->s_rst_owner) ||
-        typeof_obj(context->world->database, parm->s_rst_owner) != TYPE_PLAYER)
-      parm->s_rst_owner = NOTHING;
-
-  } else if (strcmp(pname, "me") == 0) {
-    parm->s_rst_owner = player;
-  } else {
-    parm->s_rst_owner = lookup_player(context->world, player, pname, 1);
-  }
-
-  if (parm->s_rst_owner == NOTHING) {
-    notify_printf(context, player, "%s: No such player", pname);
-    return 0;
-  }
   /*
    * set limits on what we search for
    */
@@ -363,8 +194,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     if (string_prefix("players", searchtype)) {
       parm->s_rst_name = searchfor;
       parm->s_rst_type = TYPE_PLAYER;
-      if (!*pname)
-        parm->s_rst_owner = ANY_OWNER;
     } else if (string_prefix("power", searchtype)) {
       if (!decode_power(context, context->world->indexes, player, searchfor,
                         &parm->s_pset))
@@ -394,11 +223,9 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
         parm->s_rst_type = TYPE_THING;
       else if (string_prefix("garbage", searchfor))
         parm->s_rst_type = TYPE_GARBAGE;
-      else if (string_prefix("players", searchfor)) {
+      else if (string_prefix("players", searchfor))
         parm->s_rst_type = TYPE_PLAYER;
-        if (!*pname)
-          parm->s_rst_owner = ANY_OWNER;
-      } else {
+      else {
         notify_printf(context, player, "%s: unknown type", searchfor);
         return 0;
       }
@@ -411,12 +238,9 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     break;
   case 'z':
     if (string_prefix("zone", searchtype)) {
-      parm->s_zone =
-          match_controlled(&context->command->match, player, searchfor);
+      parm->s_zone = match_thing(&context->command->match, player, searchfor);
       if (!is_good_obj(context->world->database, parm->s_zone))
         return 0;
-      if (!*pname)
-        parm->s_rst_owner = ANY_OWNER;
     } else {
       err = 1;
     }
@@ -427,15 +251,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
 
   if (err) {
     notify_printf(context, player, "%s: unknown class", searchtype);
-    return 0;
-  }
-  /*
-   * Make sure player is authorized to do the search
-   */
-
-  if (!parm->s_wizard && (parm->s_rst_type != TYPE_PLAYER) &&
-      (parm->s_rst_owner != player) && (parm->s_rst_owner != ANY_OWNER)) {
-    notify(context, player, "You need a search warrant to do that!");
     return 0;
   }
   return 1;
@@ -456,15 +271,6 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
 
     if ((parm->s_rst_type != NOTYPE) &&
         (parm->s_rst_type != typeof_obj(context->world->database, thing)))
-      continue;
-
-    /*
-     * Check for matching owner
-     */
-
-    if ((parm->s_rst_owner != ANY_OWNER) &&
-        (parm->s_rst_owner !=
-         game_object_owner(context->world->database, thing)))
       continue;
 
     /*
@@ -555,7 +361,7 @@ void do_search(CommandInvocation *invocation) {
         notify(evaluation, player, "\nROOMS:");
       }
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 0);
+                            thing);
       notify(evaluation, player, buff);
       free_lbuf(buff);
       rcount++;
@@ -580,19 +386,19 @@ void do_search(CommandInvocation *invocation) {
 
       bp = outbuf;
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 0);
+                            thing);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
 
       safe_str(" [from ", outbuf, &bp);
-      buff = unparse_object(evaluation->world->database, evaluation, player,
-                            from, 0);
+      buff =
+          unparse_object(evaluation->world->database, evaluation, player, from);
       safe_str(((from == NOTHING) ? "NOWHERE" : buff), outbuf, &bp);
       free_lbuf(buff);
 
       safe_str(" to ", outbuf, &bp);
-      buff = unparse_object(evaluation->world->database, evaluation, player, to,
-                            0);
+      buff =
+          unparse_object(evaluation->world->database, evaluation, player, to);
       safe_str(((to == NOTHING) ? "NOWHERE" : buff), outbuf, &bp);
       free_lbuf(buff);
 
@@ -616,22 +422,10 @@ void do_search(CommandInvocation *invocation) {
         destitute = 0;
         notify(evaluation, player, "\nOBJECTS:");
       }
-      bp = outbuf;
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 0);
-      safe_str(buff, outbuf, &bp);
+                            thing);
+      notify(evaluation, player, buff);
       free_lbuf(buff);
-
-      safe_str(" [owner: ", outbuf, &bp);
-      buff = unparse_object(
-          evaluation->world->database, evaluation, player,
-          game_object_owner(evaluation->world->database, thing), 0);
-      safe_str(buff, outbuf, &bp);
-      free_lbuf(buff);
-
-      safe_chr(']', outbuf, &bp);
-      *bp = '\0';
-      notify(evaluation, player, outbuf);
       tcount++;
     }
   }
@@ -650,22 +444,10 @@ void do_search(CommandInvocation *invocation) {
         destitute = 0;
         notify(evaluation, player, "\nGARBAGE:");
       }
-      bp = outbuf;
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 0);
-      safe_str(buff, outbuf, &bp);
+                            thing);
+      notify(evaluation, player, buff);
       free_lbuf(buff);
-
-      safe_str(" [owner: ", outbuf, &bp);
-      buff = unparse_object(
-          evaluation->world->database, evaluation, player,
-          game_object_owner(evaluation->world->database, thing), 0);
-      safe_str(buff, outbuf, &bp);
-      free_lbuf(buff);
-
-      safe_chr(']', outbuf, &bp);
-      *bp = '\0';
-      notify(evaluation, player, outbuf);
       gcount++;
     }
   }
@@ -685,14 +467,14 @@ void do_search(CommandInvocation *invocation) {
       }
       bp = outbuf;
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 0);
+                            thing);
       safe_str(buff, outbuf, &bp);
       free_lbuf(buff);
       if (searchparm.s_wizard) {
         safe_str(" [location: ", outbuf, &bp);
         buff = unparse_object(
             evaluation->world->database, evaluation, player,
-            game_object_location(evaluation->world->database, thing), 0);
+            game_object_location(evaluation->world->database, thing));
         safe_str(buff, outbuf, &bp);
         free_lbuf(buff);
         safe_chr(']', outbuf, &bp);

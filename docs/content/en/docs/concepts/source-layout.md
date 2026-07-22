@@ -57,7 +57,7 @@ long-lived resources in dependency order:
 | `MaintenanceContext` | Borrowed server control, connection runtime, configuration, clock, descriptors, queues, player cache, background command, Lua services, and Lua owner slot | `ServerLifecycle` and `ServerTimer` |
 | `ServerLifecycle` | libuv loop, service timers, signals, sockets, and one borrowed `MaintenanceContext` | Timers, sockets, and event producers |
 | `DescriptorRegistry` | Active client descriptors | Network, Lua, cache delivery, and connection commands |
-| `CommandQueue` | Per-object, wait, and semaphore queues plus a narrow borrowed `CommandQueueDependencies` service view | Lifecycle ticks and command producers |
+| `CommandQueue` | Per-object and timed-wait queues plus a narrow borrowed `CommandQueueDependencies` service view | Lifecycle ticks and command producers |
 | `CommandContext` | Player, enactor, descriptor, matching state, borrowed world/log/BTech services, and one `EvaluationContext` | Interactive and queued command dispatch |
 | `CommandRuntime` | Borrowed command-facing services, configuration and server-control capabilities, reloadable Lua owner slot, and process status values | `CommandContext` and `EvaluationContext` without exposing `MuxServer` |
 | `CommandInvocation` | Parsed command identity, arguments, vectors, and current `CommandContext` | Uniform typed command handlers |

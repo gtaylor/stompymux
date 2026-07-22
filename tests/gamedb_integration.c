@@ -358,9 +358,13 @@ static int check_snapshot(const char *path) {
            "'btech_object_state', 'attributes');",
            6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 7) == 0 &&
+                 9) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('object_state') "
+                 "WHERE name = 'semaphore_count';",
+                 0) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
            0 &&
        (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
@@ -370,6 +374,10 @@ static int check_snapshot(const char *path) {
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('attributes') "
                  "WHERE name IN ('number', 'flags', 'owner');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') "
+                 "WHERE name = 'owner';",
                  0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
@@ -574,15 +582,15 @@ static int seed_btech_special_objects(const char *path) {
                   sqlite,
                   "UPDATE snapshot SET db_top = 7 WHERE id = 1;"
                   "INSERT INTO objects VALUES "
-                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 1, 524288, "
+                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 524288, "
                   "0, 0, 0),"
-                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 1, 524288, "
+                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 524288, "
                   "0, 0, 0),"
-                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, "
                   "524288, 0, 0, 0),"
-                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, "
                   "524288, 0, 0, 0),"
-                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1, "
+                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, "
                   "524288, 0, 0, 0);"
                   "INSERT INTO object_state (object_dbref) VALUES "
                   "(2),(3),(4),(5),(6);"

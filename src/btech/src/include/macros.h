@@ -118,9 +118,6 @@
       UnSetBit(val, bit);                                                      \
   } while (0)
 
-#define WizPo(database, p, fun)                                                \
-  (fun(database, game_object_owner(database, p)) && is_inherits(database, p))
-
-#define Wiz(database, p) WizPo(database, p, is_wizard)
+#define Wiz(database, p) is_wizard(database, p)
 #define WizR(database, p) Wiz(database, p)
-#define WizP(database, p) WizPo(database, p, is_security)
+#define WizP(database, p) is_security(database, p)

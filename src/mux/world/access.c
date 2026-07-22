@@ -20,9 +20,6 @@
 bool lock_evaluate(EvaluationContext *context,
                    const LuaLockInvocation *invocation, LuaLockResult *result) {
   memset(result, 0, sizeof(*result));
-  if (!is_player(context->world->database, invocation->subject) &&
-      has_key_flag(context->world->database, invocation->object))
-    return false;
   if (is_pass_locks(context->world->database, invocation->subject)) {
     result->defined = lua_lock_defined(context->runtime->lua_owner->runtime,
                                        invocation->object, invocation->type);
@@ -57,13 +54,12 @@ int can_see(EvaluationContext *evaluation,
    * Don't show if all the following apply: * Sleeping players should *
    *
    * *  * * not be seen. * The thing is a disconnected player. * The
-   * player * is  *  * * not a puppet.
+   * viewer cannot see the disconnected player.
    */
 
   if (configuration->dark_sleepers &&
       is_player(evaluation->world->database, thing) &&
-      !is_connected(evaluation->world->database, thing) &&
-      !is_puppet(evaluation->world->database, thing)) {
+      !is_connected(evaluation->world->database, thing)) {
     return 0;
   }
   /*

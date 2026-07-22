@@ -33,8 +33,8 @@ the server's printable attribute-name characters, and are limited to 255 bytes.
 mux.attr_set(ctx.object, "LuaCount", "42")
 ```
 
-`object` must be a valid dbref. Dynamic entries have no flags, owners,
-inheritance, reserved names, or native server behavior.
+`object` must be a valid dbref. Dynamic entries have no flags, inheritance,
+reserved names, or native server behavior.
 
 ## `mux.contents(object)`
 

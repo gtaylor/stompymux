@@ -138,7 +138,7 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
         if (can_see(evaluation, evaluation->world->configuration, player, thing,
                     can_see_loc)) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
-                                thing, 1);
+                                thing);
           notify(evaluation, player, buff);
           free_lbuf(buff);
         }
@@ -199,9 +199,9 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
    * Get the name and db-number if we can examine it.
    */
 
-  if (is_examinable(evaluation, player, thing)) {
-    buff = unparse_object(evaluation->world->database, evaluation, player,
-                          thing, 1);
+  if (is_examinable(evaluation->world->database, player, thing)) {
+    buff =
+        unparse_object(evaluation->world->database, evaluation, player, thing);
     notify(evaluation, player, buff);
     free_lbuf(buff);
   }
@@ -250,13 +250,12 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
 static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                       int use_idesc) {
   char *got;
-  DbRef aowner;
   long aflags;
 
   if ((typeof_obj(evaluation->world->database, loc) != TYPE_ROOM) &&
       use_idesc) {
     if (*(got = attribute_get(evaluation->world->database, loc, A_IDESC,
-                              &aowner, &aflags)))
+                              &aflags)))
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -295,8 +294,7 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
 
   custom = look_custom_appearance(evaluation, player, loc);
   if (!custom) {
-    buff =
-        unparse_object(evaluation->world->database, evaluation, player, loc, 1);
+    buff = unparse_object(evaluation->world->database, evaluation, player, loc);
     notify(evaluation, player, buff);
     free_lbuf(buff);
 
@@ -351,8 +349,7 @@ void do_look(CommandInvocation *invocation) {
     thing = loc;
     if (is_good_obj(evaluation->world->database, thing)) {
       if (key & LOOK_OUTSIDE) {
-        if ((typeof_obj(evaluation->world->database, thing) == TYPE_ROOM) ||
-            is_opaque(evaluation->world->database, thing)) {
+        if (typeof_obj(evaluation->world->database, thing) == TYPE_ROOM) {
           notify_quiet(evaluation, player, "You can't look outside.");
           return;
         }
@@ -387,7 +384,7 @@ void do_look(CommandInvocation *invocation) {
     thing = match_status(evaluation, player,
                          match_possessed(&invocation->context->match, player,
                                          ((key & LOOK_OUTSIDE) ? loc : player),
-                                         (char *)name, thing, 0));
+                                         (char *)name, thing));
   }
   /*
    * If we found something, go handle it
@@ -400,8 +397,7 @@ void do_look(CommandInvocation *invocation) {
       break;
     case TYPE_THING:
     case TYPE_PLAYER:
-      if (!look_simple(evaluation, player, thing) &&
-          !is_opaque(evaluation->world->database, thing)) {
+      if (!look_simple(evaluation, player, thing)) {
         look_contents(evaluation, player, thing, "Carrying:", CONTENTS_NESTED);
       }
       break;
@@ -443,8 +439,6 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
                 game_object_link(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Next    = %ld",
                 game_object_next(evaluation->world->database, thing));
-  notify_printf(evaluation, player, "Owner   = %ld",
-                game_object_owner(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Zone    = %ld",
                 game_object_zone(evaluation->world->database, thing));
   buf = flag_description(evaluation->world->database, player, thing);
@@ -477,7 +471,7 @@ void do_examine(CommandInvocation *invocation) {
   const DbRef player = invocation->player;
   const int key = invocation->key;
   char *name = invocation->first;
-  DbRef thing, content, exit, aowner, loc;
+  DbRef thing, content, exit, loc;
   char *temp, *buf2;
   long aflags;
 
@@ -535,8 +529,7 @@ void do_examine(CommandInvocation *invocation) {
     return;
   }
 
-  buf2 =
-      unparse_object(evaluation->world->database, evaluation, player, thing, 0);
+  buf2 = unparse_object(evaluation->world->database, evaluation, player, thing);
   notify(evaluation, player, buf2);
   free_lbuf(buf2);
   if (world->configuration->ex_flags) {
@@ -547,20 +540,14 @@ void do_examine(CommandInvocation *invocation) {
 
   temp = alloc_lbuf("do_examine.info");
   temp = attribute_get_string(evaluation->world->database, temp, thing, A_DESC,
-                              &aowner, &aflags);
+                              &aflags);
   if (*temp) {
     notify_printf(evaluation, player, "Desc: %s", temp);
   }
 
-  notify_printf(
-      evaluation, player, "Owner: %s",
-      game_object_name(evaluation->world->database,
-                       game_object_owner(evaluation->world->database, thing)));
-
   if (world->configuration->have_zones) {
-    buf2 =
-        unparse_object(evaluation->world->database, evaluation, player,
-                       game_object_zone(evaluation->world->database, thing), 0);
+    buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                          game_object_zone(evaluation->world->database, thing));
     notify_printf(evaluation, player, "Zone: %s", buf2);
     free_lbuf(buf2);
   }
@@ -590,7 +577,7 @@ void do_examine(CommandInvocation *invocation) {
     DOLIST(evaluation->world->database, content,
            game_object_contents(evaluation->world->database, thing)) {
       buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                            content, 0);
+                            content);
       notify(evaluation, player, buf2);
       free_lbuf(buf2);
     }
@@ -611,7 +598,7 @@ void do_examine(CommandInvocation *invocation) {
       DOLIST(evaluation->world->database, exit,
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                              exit, 0);
+                              exit);
         notify(evaluation, player, buf2);
         free_lbuf(buf2);
       }
@@ -626,7 +613,7 @@ void do_examine(CommandInvocation *invocation) {
     if (game_object_location(evaluation->world->database, thing) != NOTHING) {
       buf2 = unparse_object(
           evaluation->world->database, evaluation, player,
-          game_object_location(evaluation->world->database, thing), 0);
+          game_object_location(evaluation->world->database, thing));
       notify_printf(evaluation, player, "Dropped objects go to: %s", buf2);
       free_lbuf(buf2);
     }
@@ -643,7 +630,7 @@ void do_examine(CommandInvocation *invocation) {
       DOLIST(evaluation->world->database, exit,
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                              exit, 0);
+                              exit);
         notify(evaluation, player, buf2);
         free_lbuf(buf2);
       }
@@ -656,8 +643,7 @@ void do_examine(CommandInvocation *invocation) {
      */
 
     loc = game_object_link(evaluation->world->database, thing);
-    buf2 =
-        unparse_object(evaluation->world->database, evaluation, player, loc, 0);
+    buf2 = unparse_object(evaluation->world->database, evaluation, player, loc);
     notify_printf(evaluation, player, "Home: %s", buf2);
     free_lbuf(buf2);
 
@@ -667,16 +653,16 @@ void do_examine(CommandInvocation *invocation) {
 
     loc = game_object_location(evaluation->world->database, thing);
     if (loc != NOTHING) {
-      buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                            loc, 0);
+      buf2 =
+          unparse_object(evaluation->world->database, evaluation, player, loc);
       notify_printf(evaluation, player, "Location: %s", buf2);
       free_lbuf(buf2);
     }
     break;
   case TYPE_EXIT:
-    buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                          game_object_exits(evaluation->world->database, thing),
-                          0);
+    buf2 =
+        unparse_object(evaluation->world->database, evaluation, player,
+                       game_object_exits(evaluation->world->database, thing));
     notify_printf(evaluation, player, "Source: %s", buf2);
     free_lbuf(buf2);
 
@@ -693,7 +679,7 @@ void do_examine(CommandInvocation *invocation) {
     default:
       buf2 = unparse_object(
           evaluation->world->database, evaluation, player,
-          game_object_location(evaluation->world->database, thing), 0);
+          game_object_location(evaluation->world->database, thing));
       notify_printf(evaluation, player, "Destination: %s", buf2);
       free_lbuf(buf2);
       break;
@@ -718,7 +704,7 @@ void do_inventory(CommandInvocation *invocation) {
     notify(evaluation, player, "You are carrying:");
     DOLIST(evaluation->world->database, thing, thing) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            thing, 1);
+                            thing);
       notify(evaluation, player, buff);
       free_lbuf(buff);
     }
@@ -771,16 +757,17 @@ void do_entrances(CommandInvocation *invocation) {
   }
 
   message = alloc_lbuf("do_entrances");
-  control_thing = is_examinable(evaluation, player, thing);
+  control_thing = is_examinable(evaluation->world->database, player, thing);
   count = 0;
   for (i = low_bound; i <= high_bound; i++) {
-    if (control_thing || is_examinable(evaluation, player, i)) {
+    if (control_thing ||
+        is_examinable(evaluation->world->database, player, i)) {
       switch (typeof_obj(evaluation->world->database, i)) {
       case TYPE_EXIT:
         if (game_object_location(evaluation->world->database, i) == thing) {
-          exit = unparse_object(
-              evaluation->world->database, evaluation, player,
-              game_object_exits(evaluation->world->database, i), 0);
+          exit =
+              unparse_object(evaluation->world->database, evaluation, player,
+                             game_object_exits(evaluation->world->database, i));
           notify_printf(evaluation, player, "%s (%s)", exit,
                         game_object_name(evaluation->world->database, i));
           free_lbuf(exit);
@@ -790,7 +777,7 @@ void do_entrances(CommandInvocation *invocation) {
       case TYPE_ROOM:
         if (game_object_location(evaluation->world->database, i) == thing) {
           exit = unparse_object(evaluation->world->database, evaluation, player,
-                                i, 0);
+                                i);
           notify_printf(evaluation, player, "%s [dropto]", exit);
           free_lbuf(exit);
           count++;
@@ -800,7 +787,7 @@ void do_entrances(CommandInvocation *invocation) {
       case TYPE_PLAYER:
         if (game_object_link(evaluation->world->database, i) == thing) {
           exit = unparse_object(evaluation->world->database, evaluation, player,
-                                i, 0);
+                                i);
           notify_printf(evaluation, player, "%s [home]", exit);
           free_lbuf(exit);
           count++;

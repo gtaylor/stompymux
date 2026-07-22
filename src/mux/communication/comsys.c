@@ -381,7 +381,7 @@ static void do_comwho(EvaluationContext *evaluation, DbRef player,
                          evaluation->runtime->clock, user->who);
 
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            user->who, 0);
+                            user->who);
       if (i > 30) {
         char *c = get_uptime_to_string(i);
 
@@ -396,12 +396,10 @@ static void do_comwho(EvaluationContext *evaluation, DbRef player,
   raw_notify(evaluation, player, "-- Objects --");
   for (user = ch->on_users; user; user = user->on_next) {
     if (typeof_obj(evaluation->world->database, user->who) != TYPE_PLAYER &&
-        user->on &&
-        !(is_going(evaluation->world->database, user->who) &&
-          is_god(evaluation->world->database,
-                 game_object_owner(evaluation->world->database, user->who)))) {
+        user->on && user->on &&
+        !is_going(evaluation->world->database, user->who)) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
-                            user->who, 0);
+                            user->who);
       notify_printf(evaluation, player, "%s", buff);
       free_lbuf(buff);
     }
@@ -860,7 +858,6 @@ void do_comlist(CommandInvocation *invocation) {
 
 static void comlist_description(GameDatabase *database, struct channel *ch,
                                 char *buffer, size_t buffer_size) {
-  DbRef owner;
   long flags;
   char *description;
   char *source;
@@ -873,7 +870,7 @@ static void comlist_description(GameDatabase *database, struct channel *ch,
     return;
   }
 
-  description = attribute_get(database, ch->chan_obj, A_DESC, &owner, &flags);
+  description = attribute_get(database, ch->chan_obj, A_DESC, &flags);
   if (!*description) {
     strlcpy(buffer, "No description.", buffer_size);
   } else {
@@ -991,7 +988,7 @@ void do_channelwho(CommandInvocation *invocation) {
           !is_dark(evaluation->world->database, user->who)) ||
          is_wizard(evaluation->world->database, player))) {
       cp = unparse_object(evaluation->world->database, evaluation, player,
-                          user->who, 0);
+                          user->who);
       strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
       notify_printf(
           evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
@@ -1447,8 +1444,7 @@ void do_channel_object(CommandInvocation *invocation) {
     return;
   }
   ch->chan_obj = (int)thing;
-  buff =
-      unparse_object(evaluation->world->database, evaluation, player, thing, 0);
+  buff = unparse_object(evaluation->world->database, evaluation, player, thing);
   notify_printf(evaluation, player,
                 "Channel %s is now using %s as channel object.", ch->name,
                 buff);
@@ -1459,7 +1455,6 @@ void do_chanlist(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
-  DbRef owner;
   struct channel *ch;
   long flags;
   char *temp;
@@ -1490,7 +1485,7 @@ void do_chanlist(CommandInvocation *invocation) {
         (do_test_access(evaluation, player, CHANNEL_JOIN, ch))) {
 
       atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
-                             &owner, &flags);
+                             &flags);
       if ((ch->chan_obj == NOTHING) || !*atrstr)
         snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
@@ -1514,7 +1509,6 @@ void do_chanstatus(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   char *chan = invocation->first;
-  DbRef owner;
   struct channel *ch;
   long flags;
   char *temp;
@@ -1566,8 +1560,8 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/status: Unknown channel.");
     return;
   }
-  atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
-                         &owner, &flags);
+  atrstr =
+      attribute_get(evaluation->world->database, ch->chan_obj, A_DESC, &flags);
   if ((ch->chan_obj == NOTHING) || !*atrstr)
     snprintf(buf, MBUF_SIZE, "%s", "No description.");
   else

@@ -137,12 +137,11 @@ void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
                   char *ldate, char *lhost, char *lusername) {
   LDATA login_info;
   char *atrbuf;
-  DbRef aowner;
   long aflags;
   int i;
 
-  atrbuf = attribute_get(evaluation->world->database, player, A_LOGINDATA,
-                         &aowner, &aflags);
+  atrbuf =
+      attribute_get(evaluation->world->database, player, A_LOGINDATA, &aflags);
   decrypt_logindata(atrbuf, &login_info);
   if (isgood) {
     if (login_info.new_bad > 0) {
@@ -188,7 +187,6 @@ void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
  * Test a password to see if it is correct.
  */
 int check_pass(WorldContext *world, DbRef player, const char *password) {
-  DbRef aowner;
   long aflags;
   char *target;
   int matches;
@@ -196,7 +194,7 @@ int check_pass(WorldContext *world, DbRef player, const char *password) {
   if (strlen(password) >
       (size_t)world->configuration->player_password_length_limit)
     return 0;
-  target = attribute_get(world->database, player, A_PASS, &aowner, &aflags);
+  target = attribute_get(world->database, player, A_PASS, &aflags);
   matches = *target && password_verify(password, target);
   free_lbuf(target);
   return matches;
@@ -280,7 +278,6 @@ DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
                        world->configuration->start_home != NOTHING
                            ? world->configuration->start_home
                            : world->configuration->start_room);
-  s_fixed(world->database, player);
   sodium_memzero(hashed_password, sizeof(hashed_password));
   free_lbuf(pbuf);
   return player;
@@ -302,25 +299,22 @@ void do_last(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *who = invocation->first;
   WorldContext *world = invocation->context->world;
-  DbRef target, aowner;
+  DbRef target;
   LDATA login_info;
   char *atrbuf;
   int i;
   long aflags;
 
   if (!who || !*who || !(string_compare(world->configuration, who, "me"))) {
-    target = game_object_owner(world->database, player);
+    target = player;
   } else {
     target = lookup_player(world, player, who, 1);
   }
 
   if (target == NOTHING) {
     notify(evaluation, player, "I couldn't find that player.");
-  } else if (!is_controls(evaluation, player, target)) {
-    notify(evaluation, player, "Permission denied.");
   } else {
-    atrbuf =
-        attribute_get(world->database, target, A_LOGINDATA, &aowner, &aflags);
+    atrbuf = attribute_get(world->database, target, A_LOGINDATA, &aflags);
     decrypt_logindata(atrbuf, &login_info);
 
     notify_printf(&invocation->context->evaluation, player,
@@ -466,7 +460,7 @@ DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
 }
 
 void load_player_names(WorldContext *world) {
-  DbRef i, aowner;
+  DbRef i;
   long aflags;
   char *alias;
 
@@ -478,8 +472,7 @@ void load_player_names(WorldContext *world) {
   alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == TYPE_PLAYER) {
-      alias = attribute_get_string(world->database, alias, i, A_ALIAS, &aowner,
-                                   &aflags);
+      alias = attribute_get_string(world->database, alias, i, A_ALIAS, &aflags);
       if (*alias)
         add_player_name(world, i, alias);
     }

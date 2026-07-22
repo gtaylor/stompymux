@@ -124,7 +124,7 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         notified = 1;
       }
       unparse = unparse_object(match->evaluation->world->database,
-                               match->evaluation, player, m->player, 0);
+                               match->evaluation, player, m->player);
       notify_printf(match->evaluation, player, "%-4d %-35.35s %-24.24s  %c%c%c",
                     i, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
                     m->status & MACRO_R ? 'R' : '-',
@@ -362,7 +362,7 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       else {
         m = registry->sets[c->macros[i]];
         unparse = unparse_object(match->evaluation->world->database,
-                                 match->evaluation, player, m->player, 0);
+                                 match->evaluation, player, m->player);
         notify_printf(
             match->evaluation, player, "%d: %-4d %-35.35s %-24.24s  %c%c%c", i,
             c->macros[i], m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
@@ -424,7 +424,7 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   m->player = (int)thing;
   unparse = unparse_object(match->evaluation->world->database,
-                           match->evaluation, player, thing, 0);
+                           match->evaluation, player, thing);
   notify_printf(match->evaluation, player, "MACRO: Macro %s chowned to %s.",
                 m->desc, unparse);
   free_lbuf(unparse);

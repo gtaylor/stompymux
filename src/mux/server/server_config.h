@@ -77,8 +77,6 @@ struct ServerConfiguration {
   char full_msg[4096];       /* Message displayed when the game is full */
   char dump_msg[128];        /* Message displayed when @dump-ing */
   char postdump_msg[128];    /* Message displayed after @dump-ing */
-  char fixed_home_msg[128];  /* Message displayed when going home and FIXED */
-  char fixed_tel_msg[128];   /* Message displayed when teleporting and FIXED */
   char public_channel[32];   /* Name of public channel */
   int btech_explode_reactor; /* Allow or disallow explode reactor */
   int btech_explode_ammo;    /* Allow or disallow explode ammo */
@@ -217,19 +215,18 @@ struct ServerConfiguration {
   int btech_complexrepair;
 #endif
   int afterlife_dbref;
-  int indent_desc;         /* Newlines before and after descs? */
-  int name_spaces;         /* allow player names to have spaces */
-  int show_unfindable_who; /* should players set UNFINDABLE appear on who? */
-  int fork_dump;           /* perform dump in a forked process */
-  int paranoid_alloc;      /* Rigorous buffer integrity checks */
-  int max_players;         /* Max # of connected players */
-  int check_interval;      /* interval between db check/cleans in secs */
-  int dump_offset;         /* when to take first checkpoint dump */
-  int check_offset;        /* when to perform first check and clean */
-  int idle_timeout;        /* Boot off players idle this long in secs */
-  int conn_timeout;        /* Allow this long to connect before booting */
-  int idle_interval;       /* when to check for idle users */
-  int retry_limit;         /* close conn after this many bad logins */
+  int indent_desc;    /* Newlines before and after descs? */
+  int name_spaces;    /* allow player names to have spaces */
+  int fork_dump;      /* perform dump in a forked process */
+  int paranoid_alloc; /* Rigorous buffer integrity checks */
+  int max_players;    /* Max # of connected players */
+  int check_interval; /* interval between db check/cleans in secs */
+  int dump_offset;    /* when to take first checkpoint dump */
+  int check_offset;   /* when to perform first check and clean */
+  int idle_timeout;   /* Boot off players idle this long in secs */
+  int conn_timeout;   /* Allow this long to connect before booting */
+  int idle_interval;  /* when to check for idle users */
+  int retry_limit;    /* close conn after this many bad logins */
   int player_password_length_limit; /* Maximum length of a player password */
   int password_hash_opslimit;       /* Argon2id CPU cost */
   int password_hash_memlimit;       /* Argon2id memory cost in bytes */
@@ -246,7 +243,6 @@ struct ServerConfiguration {
   int idle_wiz_dark;  /* Do idling wizards get set dark? */
   int fascist_tport;  /* Source of teleport must be controlled */
   int stack_limit;    /* How big can stacks get? */
-  int safe_unowned;   /* Are objects not owned by you safe? */
   int space_compress; /* Convert multiple spaces into one space */
   int start_room;     /* initial location and home for players */
   int start_home;     /* initial HOME for players */
@@ -269,7 +265,6 @@ struct ServerConfiguration {
   bool is_checkpointing_enabled; /* Perform automatic checkpoints */
   bool is_db_check_enabled;      /* Periodically check and clean the DB */
   bool is_idle_check_enabled;    /* Periodically check for idle users */
-  bool is_dequeue_enabled;       /* Remove entries from the command queue */
 
   int log_options;   /* What gets logged */
   int log_info;      /* Info that goes into log entries */
@@ -326,7 +321,6 @@ constexpr int LOG_ALWAYS = (int)0x80000000U; /* Always log it */
 
 constexpr int LOGOPT_FLAGS = 0x01;     /* Report flags on object */
 constexpr int LOGOPT_LOC = 0x02;       /* Report loc of obj when requested */
-constexpr int LOGOPT_OWNER = 0x04;     /* Report owner of obj if not obj */
 constexpr int LOGOPT_TIMESTAMP = 0x08; /* Timestamp log entries */
 
 constexpr int HIDDEN_IDLESECS = 600; /* Show people idle for less as 0s idle */

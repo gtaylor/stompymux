@@ -30,7 +30,7 @@ static DbRef promote_dflt(DbRef old, DbRef new) {
 }
 
 DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
-                      char *target, DbRef dflt, int check_enter) {
+                      char *target, DbRef dflt) {
   DbRef result, result1;
   int control;
   char *buff, *start, *place, *s1, *d1, *temp;
@@ -123,21 +123,11 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      * * * * skip past.
      */
 
-    control = is_controls(match_context->evaluation, player, result1);
-    if ((is_dark(match_context->evaluation->world->database, result1) ||
-         is_opaque(match_context->evaluation->world->database, result1)) &&
+    control = is_controls(match_context->evaluation->world->database, player,
+                          result1);
+    if (is_dark(match_context->evaluation->world->database, result1) &&
         !control) {
       dflt = promote_dflt(dflt, NOTHING);
-      continue;
-    }
-    /*
-     * Validate object has the ENTER bit set, if requested
-     */
-
-    if ((check_enter) &&
-        !is_enter_ok(match_context->evaluation->world->database, result1) &&
-        !control) {
-      dflt = promote_dflt(dflt, NOPERM);
       continue;
     }
     /*
@@ -147,8 +137,7 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
     init_match(match_context, result1, target, NOTYPE);
     match_possession(match_context);
     result = match_result(match_context);
-    result = match_possessed(match_context, player, result1, target, result,
-                             check_enter);
+    result = match_possessed(match_context, player, result1, target, result);
     if (is_good_obj(match_context->evaluation->world->database, result))
       return result;
     dflt = promote_dflt(dflt, result);

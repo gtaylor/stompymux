@@ -22,48 +22,20 @@ bool is_good_obj(GameDatabase *database, DbRef x) {
 
 bool is_safe(GameDatabase *database, const ServerConfiguration *configuration,
              DbRef x, DbRef p) {
-  return is_owns_others(database, x) ||
-         (game_object_flags(database, x) & SAFE) ||
-         (configuration->safe_unowned &&
-          (game_object_owner(database, x) != game_object_owner(database, p)));
+  (void)configuration;
+  (void)p;
+  return is_player(database, x) || (game_object_flags(database, x) & SAFE);
 }
 
-bool is_examinable(EvaluationContext *evaluation, DbRef p, DbRef x) {
-  GameDatabase *database = evaluation->world->database;
-  return is_wizard(database, p) ||
-         (game_object_owner(database, p) == game_object_owner(database, x)) ||
-         is_on_enter_lock(evaluation, p, x);
+bool can_link_exit(GameDatabase *database, DbRef player, DbRef target) {
+  return typeof_obj(database, target) == TYPE_EXIT &&
+         (game_object_location(database, target) == NOTHING ||
+          is_controls(database, player, target));
 }
 
-bool is_myopic_exam(EvaluationContext *evaluation, DbRef p, DbRef x) {
-  GameDatabase *database = evaluation->world->database;
-  return !is_myopic(database, p) &&
-         (is_wizard(database, p) ||
-          (game_object_owner(database, p) == game_object_owner(database, x)) ||
-          is_on_enter_lock(evaluation, p, x));
-}
-
-bool is_controls(EvaluationContext *evaluation, DbRef p, DbRef x) {
-  GameDatabase *database = evaluation->world->database;
-  return is_good_obj(database, x) &&
-         !(is_god(database, x) && !is_god(database, p)) &&
-         (is_wizard(database, p) ||
-          ((game_object_owner(database, p) == game_object_owner(database, x)) &&
-           (is_inherits(database, p) || !is_inherits(database, x))) ||
-          is_on_enter_lock(evaluation, p, x));
-}
-
-bool can_link_exit(EvaluationContext *evaluation, DbRef p, DbRef x) {
-  GameDatabase *database = evaluation->world->database;
-  return typeof_obj(database, x) == TYPE_EXIT &&
-         (game_object_location(database, x) == NOTHING ||
-          is_controls(evaluation, p, x));
-}
-
-bool is_linkable(EvaluationContext *evaluation, DbRef p, DbRef x) {
-  GameDatabase *database = evaluation->world->database;
-  return is_good_obj(database, x) && has_contents(database, x) &&
-         is_controls(evaluation, p, x);
+bool is_linkable(GameDatabase *database, DbRef player, DbRef target) {
+  return is_good_obj(database, target) && has_contents(database, target) &&
+         is_controls(database, player, target);
 }
 
 void mark(GameDatabase *database, DbRef x) {
@@ -89,18 +61,16 @@ void unmark_all(GameDatabase *database) {
 }
 
 bool see_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-              DbRef o, long f) {
+              long f) {
   (void)x;
   (void)a;
-  (void)o;
   (void)f;
   return is_wizard(evaluation->world->database, p);
 }
 bool see_attr_explicit(GameDatabase *database, DbRef p, DbRef x, Attribute *a,
-                       DbRef o, long f) {
+                       long f) {
   (void)x;
   (void)a;
-  (void)o;
   (void)f;
   return is_wizard(database, p);
 }
@@ -112,8 +82,8 @@ bool set_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
   return is_wizard(evaluation->world->database, p);
 }
 bool read_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
-               DbRef o, long f) {
-  return see_attr(evaluation, p, x, a, o, f);
+               long f) {
+  return see_attr(evaluation, p, x, a, f);
 }
 bool write_attr(EvaluationContext *evaluation, DbRef p, DbRef x, Attribute *a,
                 long f) {
@@ -193,40 +163,6 @@ static int fh_wiz(EvaluationContext *evaluation, DbRef target, DbRef player,
 
   return (fh_any(evaluation, target, player, flag, fflags, reset));
 } /* end fh_wiz(evaluation, ) */
-
-/**
- * Only allows the bit to be set on players by WIZARDS.
- * @param target Target object for setting/unsetting
- * @param player The object that is setting/unsetting
- * @param flag The flag to be manipulated
- * @param fflags ??
- * @param reset If 1, we're resetting the flag
- */
-static int fh_fixed(EvaluationContext *evaluation, DbRef target, DbRef player,
-                    Flag flag, int fflags, int reset) {
-  if (is_player(evaluation->world->database, target))
-    if (!is_wizard(evaluation->world->database, player) &&
-        !is_god(evaluation->world->database, player))
-      return 0;
-
-  return (fh_any(evaluation, target, player, flag, fflags, reset));
-} /* end fh_fixed(evaluation, ) */
-
-/**
- * Only allows players to set or clear this bit.
- * @param target Target object for setting/unsetting
- * @param player The object that is setting/unsetting
- * @param flag The flag to be manipulated
- * @param fflags ??
- * @param reset If 1, we're resetting the flag
- */
-static int fh_inherit(EvaluationContext *evaluation, DbRef target, DbRef player,
-                      Flag flag, int fflags, int reset) {
-  if (!is_inherits(evaluation->world->database, player))
-    return 0;
-
-  return (fh_any(evaluation, target, player, flag, fflags, reset));
-} /* end fh_inherit(evaluation, ) */
 
 /**
  * Only allows GOD to set/clear this bit. Used for WIZARD flag.
@@ -350,31 +286,20 @@ FLAGENT gen_flags[] = {
     {"AUDITORIUM", AUDITORIUM, 'b', FLAG_WORD2, 0, fh_any},
     {"CONNECTED", CONNECTED, 'c', FLAG_WORD2, 0, fh_god},
     {"DARK", DARK, 'D', 0, 0, fh_dark_bit},
-    {"ENTER_OK", ENTER_OK, 'e', 0, 0, fh_any},
-    {"FIXED", FIXED, 'f', FLAG_WORD2, 0, fh_fixed},
     {"FLOATING", FLOATING, 'F', FLAG_WORD2, 0, fh_any},
     {"GAGGED", GAGGED, 'j', FLAG_WORD2, 0, fh_wiz},
     {"GOING", GOING, 'G', 0, 0, fh_going_bit},
     {"HALTED", HALT, 'h', 0, 0, fh_any},
     {"BLIND", BLIND, '(', FLAG_WORD2, 0, fh_any},
     {"IN_CHARACTER", IN_CHARACTER, '#', FLAG_WORD2, 0, fh_wiz},
-    {"INHERIT", INHERIT, 'I', 0, 0, fh_inherit},
-    {"KEY", KEY, 'K', FLAG_WORD2, 0, fh_any},
     {"LIGHT", LIGHT, 'l', FLAG_WORD2, 0, fh_any},
     {"MONITOR", MONITOR, 'M', 0, 0, fh_hear_bit},
-    {"MYOPIC", MYOPIC, 'm', 0, 0, fh_any},
     {"NOBLEED", NOBLEED, '-', FLAG_WORD2, 0, fh_any},
     {"NO_COMMAND", NO_COMMAND, 'n', FLAG_WORD2, 0, fh_any},
-    {"NOSPOOF", NOSPOOF, 'N', 0, 0, fh_any},
-    {"OPAQUE", OPAQUE, 'O', 0, 0, fh_any},
-    {"PUPPET", PUPPET, 'p', 0, 0, fh_hear_bit},
     {"QUIET", QUIET, 'Q', 0, 0, fh_any},
     {"SAFE", SAFE, 's', 0, 0, fh_any},
-    {"STICKY", STICKY, 'S', 0, 0, fh_wiz},
     {"SUSPECT", SUSPECT, 'u', FLAG_WORD2, CA_WIZARD, fh_wiz},
     {"TRANSPARENT", SEETHRU, 't', 0, 0, fh_any},
-    {"UNFINDABLE", UNFINDABLE, 'U', FLAG_WORD2, 0, fh_any},
-    {"VERBOSE", VERBOSE, 'v', 0, 0, fh_any},
     {"WIZARD", WIZARD, 'W', 0, 0, fh_wiz_bit},
     {"XCODE", HARDCODE, 'X', FLAG_WORD2, 0, fh_xcode_bit},
     {"ZOMBIE", ZOMBIE, 'z', FLAG_WORD2, CA_WIZARD, fh_wiz},
@@ -389,7 +314,7 @@ OBJENT object_types[8] = {
      OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_SIBLINGS},
     {"EXIT", 'E', CA_PUBLIC, OF_SIBLINGS},
     {"PLAYER", 'P', CA_PUBLIC,
-     OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_OWNER | OF_SIBLINGS},
+     OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_SIBLINGS},
     {"TYPE5", '+', CA_GOD, 0},
     {"GARBAGE", '-', CA_PUBLIC,
      OF_CONTENTS | OF_LOCATION | OF_EXITS | OF_HOME | OF_SIBLINGS},
@@ -697,9 +622,10 @@ char *unparse_object_numonly(GameDatabase *database, DbRef target) {
  * Returns an lbuf pointing to the object name and possibly the db# and flags.
  */
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
-                     DbRef player, DbRef target, int obey_myopic) {
+                     DbRef player, DbRef target) {
   char *buf, *fp;
-  int exam;
+
+  (void)evaluation;
 
   buf = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
@@ -709,11 +635,7 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
   } else if (!is_good_obj(database, target)) {
     snprintf(buf, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else {
-    if (obey_myopic)
-      exam = is_myopic_exam(evaluation, player, target);
-    else
-      exam = is_examinable(evaluation, player, target);
-    if (exam) {
+    if (is_examinable(database, player, target)) {
 
       /*
        * show everything

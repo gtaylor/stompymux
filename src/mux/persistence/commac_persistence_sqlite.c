@@ -86,7 +86,7 @@ static int commac_sqlite_bind_text(sqlite3_stmt *statement, int index,
              : -1;
 }
 
-/* Save all per-object aliases and selected macro-set slots. */
+/* Save all per-player aliases and selected macro-set slots. */
 static int commac_store_entries(ChannelRegistry *registry,
                                 GameDatabase *database, sqlite3 *sqlite) {
   sqlite3_stmt *entry = nullptr;
@@ -373,7 +373,7 @@ static int commac_load_entries(sqlite3 *sqlite,
     while (result == 0 && (step = sqlite3_step(entries)) == SQLITE_ROW) {
       commac = create_new_commac();
       if (commac_column_int(entries, 0, &who) < 0 || who < 0 ||
-          who >= context->database->top ||
+          who >= context->database->top || !is_player(context->database, who) ||
           commac_column_int(entries, 1, &value) < 0) {
         destroy_commac(commac);
         result = -1;

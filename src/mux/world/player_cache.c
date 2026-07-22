@@ -71,7 +71,7 @@ PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
   PCACHE *pp;
 
   if (!is_good_obj(cache->database, player) ||
-      !is_owns_others(cache->database, player))
+      !is_player(cache->database, player))
     return nullptr;
 
   pp = (PCACHE *)red_black_tree_find(cache->tree, (void *)player);
@@ -151,7 +151,7 @@ void pcache_sync(PlayerCache *cache) {
 int queue_adjust(PlayerCache *cache, DbRef player, int adj) {
   PCACHE *pp;
 
-  if (is_owns_others(cache->database, player)) {
+  if (is_player(cache->database, player)) {
     pp = pcache_find(cache, player);
     if (pp)
       pp->queue += adj;
@@ -163,7 +163,7 @@ int queue_adjust(PlayerCache *cache, DbRef player, int adj) {
 void queue_set(PlayerCache *cache, DbRef player, int val) {
   PCACHE *pp;
 
-  if (is_owns_others(cache->database, player)) {
+  if (is_player(cache->database, player)) {
     pp = pcache_find(cache, player);
     if (pp)
       pp->queue = val;
@@ -175,7 +175,7 @@ int queue_maximum(PlayerCache *cache, DbRef player) {
   int m;
 
   m = 0;
-  if (is_owns_others(cache->database, player)) {
+  if (is_player(cache->database, player)) {
     pp = pcache_find(cache, player);
     if (pp) {
       if (pp->qmax >= 0) {

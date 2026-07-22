@@ -306,7 +306,8 @@ static int match_exit_internal(MatchContext *match_context, DbRef loc,
          game_object_exits(md.evaluation->world->database, loc)) {
     if (exit == md.absolute_form) {
       key = 0;
-      if (is_examinable(match_context->evaluation, md.player, loc))
+      if (is_examinable(match_context->evaluation->world->database, md.player,
+                        loc))
         key |= VE_LOC_XAM;
       if (is_dark(md.evaluation->world->database, loc))
         key |= VE_LOC_DARK;
@@ -417,8 +418,7 @@ DbRef match_status(EvaluationContext *evaluation, DbRef player, DbRef match) {
   if (is_good_obj(evaluation->world->database, match) &&
       is_dark(evaluation->world->database, match) &&
       is_good_obj(evaluation->world->database, player) &&
-      !is_wizard(evaluation->world->database,
-                 game_object_owner(evaluation->world->database, player)))
+      !is_wizard(evaluation->world->database, player))
     return match_status(evaluation, player, NOTHING);
   return match;
 }

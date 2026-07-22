@@ -423,7 +423,7 @@ void do_page(CommandInvocation *invocation) {
   const DbRef player = invocation->player;
   char *tname = invocation->first;
   char *message = invocation->second;
-  DbRef target, aowner;
+  DbRef target;
   char *p, *buf1, *bp, *buf2, *bp2, *mp, *str;
   char targetname[LBUF_SIZE];
   char alias[LBUF_SIZE];
@@ -448,7 +448,7 @@ void do_page(CommandInvocation *invocation) {
 
   if (!*message) {
     attribute_get_string(evaluation->world->database, targetname, player,
-                         A_LASTPAGE, &aowner, &aflags);
+                         A_LASTPAGE, &aflags);
     if (!*tname) {
       if (!*targetname)
         notify(evaluation, player, "You have not paged anyone.");
@@ -470,7 +470,7 @@ void do_page(CommandInvocation *invocation) {
   }
 
   attribute_get_string(evaluation->world->database, alias, player, A_ALIAS,
-                       &aowner, &aflags);
+                       &aflags);
   if (*alias) {
     char *ap = aladd;
 
@@ -594,8 +594,7 @@ void do_page(CommandInvocation *invocation) {
     return;
   }
   *(bp2 - 1) = '\0';
-  attribute_add(evaluation->world->database, player, A_LASTPAGE, buf2,
-                game_object_owner(evaluation->world->database, player), aflags);
+  attribute_add(evaluation->world->database, player, A_LASTPAGE, buf2, aflags);
 
   if (count == 1) {
     if (*buf1) {
@@ -638,13 +637,6 @@ void do_page(CommandInvocation *invocation) {
 
 void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
                    const char *message) {
-  /*
-   * Send a message to a list of dbrefs. To avoid repeated generation *
-   * of the NOSPOOF string, we set it up the first time we
-   * encounter something Nospoof, and then check for it
-   * thereafter. The list is destructively modified.
-   */
-
   char *p;
   DbRef who;
   int ok_to_do;
@@ -662,7 +654,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
 
     if (!ok_to_do && (is_long_fingers(evaluation->world->database, player) ||
                       nearby(evaluation->world->database, player, who) ||
-                      is_controls(evaluation, player, who))) {
+                      is_controls(evaluation->world->database, player, who))) {
       ok_to_do = 1;
     }
     switch (who) {
@@ -743,16 +735,18 @@ void do_pemit(CommandInvocation *invocation) {
      * Enforce locality constraints
      */
 
-    if (!ok_to_do && (nearby(evaluation->world->database, player, target) ||
-                      is_long_fingers(evaluation->world->database, player) ||
-                      is_controls(evaluation, player, target))) {
+    if (!ok_to_do &&
+        (nearby(evaluation->world->database, player, target) ||
+         is_long_fingers(evaluation->world->database, player) ||
+         is_controls(evaluation->world->database, player, target))) {
       ok_to_do = 1;
     }
     if (!ok_to_do) {
       notify(evaluation, player, "You are too far away to do that.");
       return;
     }
-    if (do_contents && !is_controls(evaluation, player, target)) {
+    if (do_contents &&
+        !is_controls(evaluation->world->database, player, target)) {
       notify(evaluation, player, "Permission denied.");
       return;
     }

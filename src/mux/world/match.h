@@ -38,8 +38,7 @@ extern void save_match_state(MatchContext *, MSTATE *);
 extern void restore_match_state(MatchContext *, MSTATE *);
 extern void match_zone_exit(MatchContext *);
 extern DbRef match_possessed(MatchContext *, DbRef player, DbRef thing,
-                             char *target, DbRef default_match,
-                             int check_enter);
+                             char *target, DbRef default_match);
 extern void parse_range(GameDatabase *database,
                         const ServerConfiguration *configuration, char **name,
                         DbRef *low_bound, DbRef *high_bound);

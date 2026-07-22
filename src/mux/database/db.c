@@ -100,7 +100,6 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {"Pilot", A_PILOTNUM},
                           {"QueueMax", A_QUEUEMAX},
                           {"Ranknum", A_RANKNUM},
-                          {"Semaphore", A_SEMAPHORE},
                           {"Tacsize", A_TACSIZE},
                           {"Timeout", A_TIMEOUT},
                           {"Tz", A_TZ},
@@ -143,7 +142,6 @@ static char *set_string(char **ptr, char *new) {
  * * Name, s_Name: Get or set an object's name.
  */
 INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
-  DbRef aowner;
   long aflags;
   char *buff;
   char buffer[MBUF_SIZE];
@@ -156,20 +154,18 @@ INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
 #pragma clang diagnostic pop
     }
     if (!database->pure_names[thing]) {
-      buff = attribute_get(database, thing, A_NAME, &aowner, &aflags);
+      buff = attribute_get(database, thing, A_NAME, &aflags);
       strip_ansi_r(buffer, buff, MBUF_SIZE);
       set_string(&database->pure_names[thing], buffer);
       free_lbuf(buff);
     }
   }
 
-  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aowner,
-                       &aflags);
+  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
   return database->name_buffer;
 }
 
 INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
-  DbRef aowner;
   long aflags;
   char *buff;
 
@@ -183,7 +179,7 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
     if (!database->pure_names[thing]) {
       char new[LBUF_SIZE];
 
-      buff = attribute_get(database, thing, A_NAME, &aowner, &aflags);
+      buff = attribute_get(database, thing, A_NAME, &aflags);
       set_string(&database->pure_names[thing],
                  strip_ansi_r(new, buff, strlen(buff)));
       free_lbuf(buff);
@@ -191,8 +187,7 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
     return database->pure_names[thing];
   }
 
-  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aowner,
-                       &aflags);
+  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
   return strip_ansi_r(database->pure_name_buffer, database->name_buffer,
                       strlen(database->name_buffer));
 }
@@ -298,8 +293,7 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
 }
 
 void attribute_add(GameDatabase *database, DbRef thing, int atr, char *buff,
-                   DbRef owner, long flags) {
-  (void)owner;
+                   long flags) {
   (void)flags;
   attribute_add_raw(database, thing, atr, buff);
 }
@@ -327,12 +321,10 @@ char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
 }
 
 char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
-                           int atr, DbRef *owner, long *flags) {
+                           int atr, long *flags) {
   char *buff;
 
   buff = attribute_get_raw(database, thing, atr);
-  if (owner)
-    *owner = game_object_owner(database, thing);
   if (flags)
     *flags = 0;
   if (!buff) {
@@ -343,20 +335,18 @@ char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
   return s;
 }
 
-char *attribute_get(GameDatabase *database, DbRef thing, int atr, DbRef *owner,
-                    long *flags) {
+char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags) {
   char *buff;
 
   buff = alloc_lbuf("attribute_get");
-  return attribute_get_string(database, buff, thing, atr, owner, flags);
+  return attribute_get_string(database, buff, thing, atr, flags);
 }
 
 int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
-                       DbRef *owner, long *flags) {
+                       long *flags) {
   char *buff;
 
   buff = attribute_get_raw(database, thing, atr);
-  *owner = game_object_owner(database, thing);
   *flags = 0;
   return buff != nullptr;
 }
@@ -524,7 +514,6 @@ static void initialize_objects(GameDatabase *database, DbRef first,
 
   for (thing = first; thing < last; thing++) {
     memset(game_database_object(database, thing), 0, sizeof(GameObject));
-    game_object_set_owner(database, thing, GOD);
     game_object_set_flags(database, thing, (TYPE_GARBAGE | GOING));
     game_object_set_flags2(database, thing, 0);
     game_object_set_flags3(database, thing, 0);
@@ -677,7 +666,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
     database->objects = newdb;
     for (i = 0; i < SIZE_HACK; i++) {
-      game_object_set_owner(database, i, GOD);
       game_object_set_flags(database, i, (TYPE_GARBAGE | GOING));
       game_object_set_powers(database, i, 0);
       game_object_set_powers2(database, i, 0);
@@ -760,7 +748,6 @@ void db_make_minimal(EvaluationContext *evaluation) {
   game_object_set_exits(database, 0, NOTHING);
   game_object_set_link(database, 0, NOTHING);
   game_object_set_zone(database, 0, NOTHING);
-  game_object_set_owner(database, 0, 1);
   database->objects[0].ahead = nullptr;
   database->objects[0].at_count = 0;
   object_apply_default_lua_parent(evaluation, 0, TYPE_ROOM);
@@ -803,61 +790,6 @@ DbRef parse_dbref(const char *s) {
 
   x = clamped_atol(s);
   return ((x >= 0) ? x : NOTHING);
-}
-
-/*
- * check_zone - checks back through a zone tree for control
- */
-static int check_zone_at_depth(EvaluationContext *evaluation, DbRef player,
-                               DbRef thing, int depth) {
-  GameDatabase *database = evaluation->world->database;
-  LuaLockInvocation lock;
-  LuaLockResult result;
-  if (!database->configuration->have_zones ||
-      (game_object_zone(database, thing) == NOTHING) ||
-      (depth == database->configuration->zone_nest_lim) ||
-      is_player(database, thing)) {
-    return 0;
-  }
-
-  /*
-   * If the zone doesn't define an enter lock, DON'T allow control.
-   */
-
-  if (lock_test(evaluation, player, player, player,
-                game_object_zone(database, thing), LUA_LOCK_ENTER,
-                LUA_LOCK_OPERATION_ZONE_CONTROL, true, &lock, &result) &&
-      result.defined) {
-    return 1;
-  }
-  return check_zone_at_depth(evaluation, player,
-                             game_object_zone(database, thing), depth + 1);
-}
-
-int check_zone(EvaluationContext *evaluation, DbRef player, DbRef thing) {
-  return check_zone_at_depth(evaluation, player, thing, 1);
-}
-
-int check_zone_for_player(EvaluationContext *evaluation, DbRef player,
-                          DbRef thing) {
-  GameDatabase *database = evaluation->world->database;
-  LuaLockInvocation lock;
-  LuaLockResult result;
-  if (!database->configuration->have_zones ||
-      (game_object_zone(database, thing) == NOTHING) ||
-      database->configuration->zone_nest_lim == 1 ||
-      !is_player(database, thing)) {
-    return 0;
-  }
-
-  if (lock_test(evaluation, player, player, player,
-                game_object_zone(database, thing), LUA_LOCK_ENTER,
-                LUA_LOCK_OPERATION_ZONE_CONTROL, true, &lock, &result) &&
-      result.defined) {
-    return 1;
-  }
-  return check_zone_at_depth(evaluation, player,
-                             game_object_zone(database, thing), 2);
 }
 
 void toast_player(EvaluationContext *evaluation, DbRef player) {

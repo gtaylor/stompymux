@@ -85,7 +85,7 @@ static int test_flag_list_dispatch(void) {
   static const char toml[] = "[logging]\nlog = [\"!accounting\", \"bugs\"]\n"
                              "[mux]\ndefault_player_flags = []\n"
                              "default_exit_flags = [\"no_command\"]\n"
-                             "default_room_flags = [\"inherit\"]\n"
+                             "default_room_flags = [\"floating\"]\n"
                              "default_thing_flags = [\"safe\"]\n";
   toml_result_t result;
   CallLog log = {0};
@@ -98,14 +98,14 @@ static int test_flag_list_dispatch(void) {
   ok = log.count == 5 && call_log_find(&log, "log", "!accounting bugs") &&
        call_log_find(&log, "default_player_flags", "") &&
        call_log_find(&log, "default_exit_flags", "no_command") &&
-       call_log_find(&log, "default_room_flags", "inherit") &&
+       call_log_find(&log, "default_room_flags", "floating") &&
        call_log_find(&log, "default_thing_flags", "safe");
   toml_free(result);
   return ok;
 }
 
 static int test_alias_map_dispatch(void) {
-  static const char toml[] = "[aliases.commands]\n\"@ch\" = \"@chown\"\n";
+  static const char toml[] = "[aliases.commands]\n\"@cr\" = \"@create\"\n";
   toml_result_t result;
   CallLog log = {0};
   int ok;
@@ -114,7 +114,7 @@ static int test_alias_map_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 1 && call_log_find(&log, "alias", "@ch @chown");
+  ok = log.count == 1 && call_log_find(&log, "alias", "@cr @create");
   toml_free(result);
   return ok;
 }

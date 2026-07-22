@@ -19,7 +19,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 7;
+constexpr int GAMEDB_SCHEMA_VERSION = 9;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -54,7 +54,6 @@ static const char schema_sql[] =
     " exits INTEGER NOT NULL,"
     " link INTEGER NOT NULL,"
     " next INTEGER NOT NULL,"
-    " owner INTEGER NOT NULL,"
     " flags INTEGER NOT NULL,"
     " flags2 INTEGER NOT NULL,"
     " flags3 INTEGER NOT NULL,"
@@ -64,8 +63,7 @@ static const char schema_sql[] =
     "CREATE TABLE object_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " description TEXT, inside_description TEXT, admin_comment TEXT,"
-    " enter_alias TEXT, leave_alias TEXT, lua_parent TEXT, destroyer INTEGER,"
-    " semaphore_count INTEGER"
+    " enter_alias TEXT, leave_alias TEXT, lua_parent TEXT, destroyer INTEGER"
     ");"
     "CREATE TABLE player_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
@@ -107,7 +105,6 @@ static const NativeColumn native_columns[] = {
     {A_LALIAS, "object_state", "leave_alias"},
     {A_LUAPARENT, "object_state", "lua_parent"},
     {A_DESTROYER, "object_state", "destroyer"},
-    {A_SEMAPHORE, "object_state", "semaphore_count"},
     {A_PASS, "player_state", "password_hash"},
     {A_ALIAS, "player_state", "alias"},
     {A_LAST, "player_state", "last_login"},
@@ -389,7 +386,6 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef link;
   DbRef location;
   DbRef next;
-  DbRef owner;
   int powers;
   int powers2;
   int result;
@@ -400,7 +396,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   result = -1;
   const char *query =
       "SELECT dbref, name, location, zone, contents, exits, link, next, "
-      "owner, flags, flags2, flags3, powers, powers2 FROM objects "
+      "flags, flags2, flags3, powers, powers2 FROM objects "
       "ORDER BY dbref;";
   (void)schema_version;
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
@@ -419,12 +415,11 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_long(statement, 5, &exits) < 0 ||
         gamedb_column_long(statement, 6, &link) < 0 ||
         gamedb_column_long(statement, 7, &next) < 0 ||
-        gamedb_column_long(statement, 8, &owner) < 0 ||
-        gamedb_column_long(statement, 9, &flags) < 0 ||
-        gamedb_column_long(statement, 10, &flags2) < 0 ||
-        gamedb_column_long(statement, 11, &flags3) < 0 ||
-        gamedb_column_int(statement, 12, &powers) < 0 ||
-        gamedb_column_int(statement, 13, &powers2) < 0) {
+        gamedb_column_long(statement, 8, &flags) < 0 ||
+        gamedb_column_long(statement, 9, &flags2) < 0 ||
+        gamedb_column_long(statement, 10, &flags3) < 0 ||
+        gamedb_column_int(statement, 11, &powers) < 0 ||
+        gamedb_column_int(statement, 12, &powers2) < 0) {
       result = -1;
     } else {
       /* object_name_set()'s parameter isn't const-correct; name is only
@@ -439,7 +434,6 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       game_object_set_exits(context->database, object, exits);
       game_object_set_link(context->database, object, link);
       game_object_set_next(context->database, object, next);
-      game_object_set_owner(context->database, object, owner);
       game_object_set_flags(context->database, object, flags);
       game_object_set_flags2(context->database, object, flags2);
       game_object_set_flags3(context->database, object, flags3);
@@ -647,9 +641,9 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_prepare(
           sqlite, &objects,
           "INSERT INTO objects "
-          "(dbref, name, location, zone, contents, exits, link, next, owner, "
-          "flags, flags2, flags3, powers, powers2) "
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "(dbref, name, location, zone, contents, exits, link, next, flags, "
+          "flags2, flags3, powers, powers2) "
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, name, value) "
                      "VALUES (?, ?, ?);") < 0)
@@ -687,16 +681,14 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_bind_int(objects, 8,
                         game_object_next(context->database, object)) < 0 ||
         gamedb_bind_int(objects, 9,
-                        game_object_owner(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 10,
                         game_object_flags(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 11,
+        gamedb_bind_int(objects, 10,
                         game_object_flags2(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 12,
+        gamedb_bind_int(objects, 11,
                         game_object_flags3(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 13,
+        gamedb_bind_int(objects, 12,
                         game_object_powers(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 14,
+        gamedb_bind_int(objects, 13,
                         game_object_powers2(context->database, object)) < 0 ||
         gamedb_step(objects) < 0) {
       return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
