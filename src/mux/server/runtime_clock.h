@@ -19,5 +19,3 @@ struct RuntimeClock {
   int sample_time[2];
   int current_sample;
 };
-
-void runtime_clock_initialize(RuntimeClock *clock);

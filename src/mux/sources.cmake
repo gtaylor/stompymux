@@ -44,7 +44,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/server/log.c
   ${MUX_MODULE_DIR}/server/maintenance.c
   ${MUX_MODULE_DIR}/server/mux_server.c
-  ${MUX_MODULE_DIR}/server/runtime_clock.c
   ${MUX_MODULE_DIR}/server/server_lifecycle.c
   ${MUX_MODULE_DIR}/server/event_timer.c
   ${MUX_MODULE_DIR}/server/server_registries.c

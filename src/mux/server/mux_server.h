@@ -73,3 +73,4 @@ struct MuxServer {
 bool mux_server_create(MuxServer *server);
 bool mux_server_load_content(MuxServer *server);
 void mux_server_destroy(MuxServer *server);
+void runtime_clock_initialize(RuntimeClock *clock);

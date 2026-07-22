@@ -2,6 +2,7 @@
 
 #include "mux/server/mux_server.h"
 
+#include <assert.h>
 #include <string.h>
 
 #include "mux/commands/command_queue.h"
@@ -14,6 +15,12 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/world/player_cache.h"
+
+void runtime_clock_initialize(RuntimeClock *clock) {
+  assert(clock != nullptr);
+  memset(clock, 0, sizeof(*clock));
+  clock->now = time(nullptr);
+}
 
 bool mux_server_create(MuxServer *server) {
   memset(server, 0, sizeof(*server));
