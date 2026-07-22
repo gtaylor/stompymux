@@ -58,14 +58,6 @@ void game_database_destroy(GameDatabase *database) {
 }
 
 /*
- * #define GNU_MALLOC_TEST 1
- */
-
-#ifdef GNU_MALLOC_TEST
-extern unsigned int malloc_sbrk_used; /* Amount of data space used now */
-#endif
-
-/*
  * Hardcoded native fields. Dynamic Lua attributes are not registered here.
  */
 Attribute attr_table[] = {{"Alias", A_ALIAS},
