@@ -15,7 +15,6 @@ typedef enum PowerId {
   POWER_COMM_ALL,
   POWER_SEE_HIDDEN,
   POWER_NO_DESTROY,
-  POWER_PASS_LOCKS,
   POWER_MECH,
   POWER_SECURITY,
   POWER_MECHREP,
@@ -62,10 +61,6 @@ static inline bool is_comm_all(GameDatabase *database, DbRef c) {
   return game_object_has_power(database, c, POWER_COMM_ALL) ||
          is_wizard(database, c);
 }
-static inline bool is_pass_locks(GameDatabase *database, DbRef c) {
-  return game_object_has_power(database, c, POWER_PASS_LOCKS);
-}
-
 /* Mecha */
 static inline bool is_security(GameDatabase *database, DbRef c) {
   return game_object_has_power(database, c, POWER_SECURITY) ||

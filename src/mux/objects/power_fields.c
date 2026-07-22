@@ -19,8 +19,6 @@ bool game_object_has_power(GameDatabase *database, DbRef object, PowerId id) {
     return game_object->has_see_hidden_power;
   case POWER_NO_DESTROY:
     return game_object->has_no_destroy_power;
-  case POWER_PASS_LOCKS:
-    return game_object->has_pass_locks_power;
   case POWER_MECH:
     return game_object->has_mech_power;
   case POWER_SECURITY:
@@ -59,9 +57,6 @@ void game_object_set_power(GameDatabase *database, DbRef object, PowerId id,
   case POWER_NO_DESTROY:
     game_object->has_no_destroy_power = value;
     break;
-  case POWER_PASS_LOCKS:
-    game_object->has_pass_locks_power = value;
-    break;
   case POWER_MECH:
     game_object->has_mech_power = value;
     break;
@@ -93,7 +88,6 @@ void game_object_clear_powers(GameDatabase *database, DbRef object) {
   game_object->has_comm_all_power = false;
   game_object->has_see_hidden_power = false;
   game_object->has_no_destroy_power = false;
-  game_object->has_pass_locks_power = false;
   game_object->has_mech_power = false;
   game_object->has_security_power = false;
   game_object->has_mechrep_power = false;

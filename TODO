@@ -18,9 +18,6 @@
 ## DB schema stuff
 
 * objects
-  * expand powers fields into bools
-  * expand flags fields into bools
-  * drop parent
   * add luaparent and move from attribute
 
 ## Lua Todos

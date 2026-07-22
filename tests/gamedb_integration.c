@@ -358,7 +358,7 @@ static int check_snapshot(const char *path) {
            "'btech_object_state', 'attributes');",
            6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 12) == 0 &&
+                 13) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite,
@@ -384,14 +384,17 @@ static int check_snapshot(const char *path) {
                  "name IN ('has_idle_power', 'has_long_fingers_power', "
                  "'has_comm_all_power', "
                  "'has_see_hidden_power', 'has_no_destroy_power', "
-                 "'has_pass_locks_power', "
                  "'has_mech_power', 'has_security_power', 'has_mechrep_power', "
                  "'has_map_power', "
                  "'has_template_power', 'has_tech_power');",
-                 12) == 0 &&
+                 11) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                  "name IN ('powers', 'powers2');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name = 'has_pass_locks_power';",
                  0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM pragma_table_info('objects') WHERE "
@@ -416,8 +419,7 @@ static int check_snapshot(const char *path) {
            "IN "
            "(0, 1) OR has_see_hidden_power NOT IN (0, 1) OR "
            "has_no_destroy_power "
-           "NOT IN (0, 1) OR has_pass_locks_power NOT IN (0, 1) OR "
-           "has_mech_power "
+           "NOT IN (0, 1) OR has_mech_power "
            "NOT IN (0, 1) OR has_security_power NOT IN (0, 1) OR "
            "has_mechrep_power "
            "NOT IN (0, 1) OR has_map_power NOT IN (0, 1) OR has_template_power "
@@ -770,8 +772,7 @@ static int seed_btech_nondefault_state(const char *path) {
                   "UPDATE objects SET has_idle_power = 1, "
                   "has_long_fingers_power = 0, "
                   "has_comm_all_power = 1, has_see_hidden_power = 0, "
-                  "has_no_destroy_power = 1, "
-                  "has_pass_locks_power = 0, has_mech_power = 1, "
+                  "has_no_destroy_power = 1, has_mech_power = 1, "
                   "has_security_power = 0, "
                   "has_mechrep_power = 1, has_map_power = 0, "
                   "has_template_power = 1, "
@@ -855,8 +856,7 @@ static int check_btech_nondefault_state(const char *path) {
                   "has_idle_power = 1 AND has_long_fingers_power = 0 AND "
                   "has_comm_all_power = 1 "
                   "AND has_see_hidden_power = 0 AND has_no_destroy_power = 1 "
-                  "AND "
-                  "has_pass_locks_power = 0 AND has_mech_power = 1 AND "
+                  "AND has_mech_power = 1 AND "
                   "has_security_power = 0 "
                   "AND has_mechrep_power = 1 AND has_map_power = 0 AND "
                   "has_template_power = 1 "

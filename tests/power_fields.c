@@ -11,8 +11,8 @@ int main(void) {
   };
   const PowerId powers[] = {
       POWER_IDLE,       POWER_LONG_FINGERS, POWER_COMM_ALL, POWER_SEE_HIDDEN,
-      POWER_NO_DESTROY, POWER_PASS_LOCKS,   POWER_MECH,     POWER_SECURITY,
-      POWER_MECHREP,    POWER_MAP,          POWER_TEMPLATE, POWER_TECH,
+      POWER_NO_DESTROY, POWER_MECH,         POWER_SECURITY, POWER_MECHREP,
+      POWER_MAP,        POWER_TEMPLATE,     POWER_TECH,
   };
 
   for (size_t index = 0; index < sizeof(powers) / sizeof(powers[0]); index++) {
@@ -25,10 +25,10 @@ int main(void) {
 
   if (!objects[0].has_idle_power || !objects[0].has_long_fingers_power ||
       !objects[0].has_comm_all_power || !objects[0].has_see_hidden_power ||
-      !objects[0].has_no_destroy_power || !objects[0].has_pass_locks_power ||
-      !objects[0].has_mech_power || !objects[0].has_security_power ||
-      !objects[0].has_mechrep_power || !objects[0].has_map_power ||
-      !objects[0].has_template_power || !objects[0].has_tech_power)
+      !objects[0].has_no_destroy_power || !objects[0].has_mech_power ||
+      !objects[0].has_security_power || !objects[0].has_mechrep_power ||
+      !objects[0].has_map_power || !objects[0].has_template_power ||
+      !objects[0].has_tech_power)
     return 1;
 
   game_object_clear_powers(&database, 0);

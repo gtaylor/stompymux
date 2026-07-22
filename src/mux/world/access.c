@@ -20,12 +20,6 @@
 bool lock_evaluate(EvaluationContext *context,
                    const LuaLockInvocation *invocation, LuaLockResult *result) {
   memset(result, 0, sizeof(*result));
-  if (is_pass_locks(context->world->database, invocation->subject)) {
-    result->defined = lua_lock_defined(context->runtime->lua_owner->runtime,
-                                       invocation->object, invocation->type);
-    result->passes = true;
-    return true;
-  }
   lua_lock_evaluate(context->runtime->lua_owner->runtime, invocation, result);
   return result->passes;
 }
