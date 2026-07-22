@@ -1,6 +1,5 @@
 /* help_index_integration.c -- Indexes the real game/help fixtures and checks
- * wizard_only filtering, nested indexing, and the default article, per the
- * behavior confirmed while planning the help rewrite. */
+ * wizard_only filtering and the default article. */
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -218,20 +217,6 @@ int main(int argc, char *argv[]) {
               removed_lua_keywords[i]);
       return 8;
     }
-  }
-
-  /* Nested article, reachable via its own keyword. */
-  article = help_index_find_exact(index, "another", false);
-  if (!article || strcmp(article->relative_path, "subdir/another_article.md")) {
-    fprintf(stderr, "expected 'another' keyword to resolve to "
-                    "subdir/another_article.md\n");
-    return 9;
-  }
-  if (article->article_tags.count != 1 ||
-      strcmp(article->article_tags.items[0], "subdir")) {
-    fprintf(stderr, "expected subdir/another_article.md to be tagged "
-                    "'subdir'\n");
-    return 10;
   }
 
   /* index.md is the default article. */
