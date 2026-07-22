@@ -13,10 +13,10 @@
 #pragma once
 
 #include "btech/missile_hit_registry.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
 #include "mux/network/mux_event.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 
 #include "btconfig.h"

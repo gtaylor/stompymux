@@ -6,12 +6,12 @@
 
 #include "libtelnet.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
 #include "mux/network/connect_flow.h"
 #include "mux/network/connection_runtime.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/server_api.h"
@@ -235,11 +235,8 @@ static void descriptor_read(uv_stream_t *stream, ssize_t read_size,
   }
   if (descriptor->is_autodark) {
     descriptor->is_autodark = false;
-    game_object_set_flags(
-        descriptor_runtime(descriptor)->world->database, descriptor->player,
-        game_object_flags(descriptor_runtime(descriptor)->world->database,
-                          descriptor->player) &
-            ~DARK);
+    game_object_set_flag(descriptor_runtime(descriptor)->world->database,
+                         descriptor->player, OBJECT_FLAG_DARK, false);
   }
   descriptor->input_tot += (int)read_size;
   descriptor_retain(descriptor);

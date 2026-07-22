@@ -13,10 +13,10 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
@@ -290,14 +290,10 @@ void configuration_initialize(ConfigurationContext *context) {
   StringCopy(context->configuration->default_room_lua_parent, "");
   StringCopy(context->configuration->default_exit_lua_parent, "");
   StringCopy(context->configuration->default_player_lua_parent, "");
-  context->configuration->default_player_flags.word1 = 0;
-  context->configuration->default_player_flags.word2 = 0;
-  context->configuration->default_room_flags.word1 = 0;
-  context->configuration->default_room_flags.word2 = 0;
-  context->configuration->default_exit_flags.word1 = 0;
-  context->configuration->default_exit_flags.word2 = 0;
-  context->configuration->default_thing_flags.word1 = 0;
-  context->configuration->default_thing_flags.word2 = 0;
+  context->configuration->default_player_flags = (ObjectFlagSet){0};
+  context->configuration->default_room_flags = (ObjectFlagSet){0};
+  context->configuration->default_exit_flags = (ObjectFlagSet){0};
+  context->configuration->default_thing_flags = (ObjectFlagSet){0};
   StringCopy(context->configuration->mud_name, "TinyMUX");
   context->configuration->timeslice = 100;
   context->configuration->cmd_quota_max = 100;
@@ -543,8 +539,8 @@ int configuration_modify_bits(int *vp, char *str, long extra, DbRef player,
 static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
                         char *cmd, ConfigurationContext *context) {
   char *sp;
-  FLAGENT *fp;
-  FLAGSET *fset;
+  FlagEntry *fp;
+  ObjectFlagSet *fset;
 
   int success, failure;
 
@@ -554,7 +550,7 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
 
   success = failure = 0;
   sp = strtok(str, " \t");
-  fset = (FLAGSET *)vp;
+  fset = (ObjectFlagSet *)vp;
 
   while (sp != nullptr) {
 
@@ -562,18 +558,11 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
      * Set the appropriate bit
      */
 
-    fp = (FLAGENT *)hash_table_find(sp, &context->world_indexes->flags);
+    fp = (FlagEntry *)hash_table_find(sp, &context->world_indexes->flags);
     if (fp != nullptr) {
-      if (success == 0) {
-        (*fset).word1 = 0;
-        (*fset).word2 = 0;
-      }
-      if (fp->flagflag & FLAG_WORD3)
-        (*fset).word3 |= fp->flagvalue;
-      else if (fp->flagflag & FLAG_WORD2)
-        (*fset).word2 |= fp->flagvalue;
-      else
-        (*fset).word1 |= fp->flagvalue;
+      if (success == 0)
+        *fset = (ObjectFlagSet){0};
+      object_flag_set_set(fset, fp->id, true);
       success++;
     } else {
       configuration_log_not_found(context, player, cmd, "Entry", sp);
@@ -587,8 +576,7 @@ static int cf_set_flags(void *vp, char *str, long extra, DbRef player,
     sp = strtok(nullptr, " \t");
   }
   if ((success == 0) && (failure == 0)) {
-    (*fset).word1 = 0;
-    (*fset).word2 = 0;
+    *fset = (ObjectFlagSet){0};
     return 0;
   }
   if (success > 0)

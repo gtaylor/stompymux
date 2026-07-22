@@ -8,9 +8,9 @@
 #include "mux/commands/command_context.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
 #include "mux/network/descriptor.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/support/fifo.h"
 
 typedef struct CommandInvocation CommandInvocation;

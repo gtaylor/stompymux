@@ -553,7 +553,7 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
     return;
   }
   for (i = 0; i < context->btech->database->top; i++)
-    if (typeof_obj(context->btech->database, i) == TYPE_THING) {
+    if (typeof_obj(context->btech->database, i) == OBJECT_TYPE_THING) {
       if (game_object_zone(context->btech->database, i) == it) {
         if ((btech_context_which_special(context->btech, i) == GTYPE_MECH) &&
             is_good_obj(context->btech->database, i)) {

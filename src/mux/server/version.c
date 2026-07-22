@@ -5,7 +5,7 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"

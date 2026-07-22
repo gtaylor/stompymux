@@ -11,10 +11,10 @@
 #include "mux/commands/command.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -514,11 +514,10 @@ static void initialize_objects(GameDatabase *database, DbRef first,
 
   for (thing = first; thing < last; thing++) {
     memset(game_database_object(database, thing), 0, sizeof(GameObject));
-    game_object_set_flags(database, thing, (TYPE_GARBAGE | GOING));
-    game_object_set_flags2(database, thing, 0);
-    game_object_set_flags3(database, thing, 0);
-    game_object_set_powers(database, thing, 0);
-    game_object_set_powers2(database, thing, 0);
+    game_object_set_type(database, thing, OBJECT_TYPE_GARBAGE);
+    game_object_clear_flags(database, thing);
+    s_going(database, thing);
+    game_object_clear_powers(database, thing);
     game_object_set_location(database, thing, NOTHING);
     game_object_set_contents(database, thing, NOTHING);
     game_object_set_exits(database, thing, NOTHING);
@@ -666,9 +665,10 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
     database->objects = newdb;
     for (i = 0; i < SIZE_HACK; i++) {
-      game_object_set_flags(database, i, (TYPE_GARBAGE | GOING));
-      game_object_set_powers(database, i, 0);
-      game_object_set_powers2(database, i, 0);
+      game_object_set_type(database, i, OBJECT_TYPE_GARBAGE);
+      game_object_clear_flags(database, i);
+      s_going(database, i);
+      game_object_clear_powers(database, i);
       game_object_set_location(database, i, NOTHING);
       game_object_set_contents(database, i, NOTHING);
       game_object_set_exits(database, i, NOTHING);
@@ -741,16 +741,16 @@ void db_make_minimal(EvaluationContext *evaluation) {
 #pragma clang diagnostic ignored "-Wcast-qual"
   object_name_set(database, 0, (char *)"Limbo");
 #pragma clang diagnostic pop
-  game_object_set_flags(database, 0, TYPE_ROOM);
-  game_object_set_powers(database, 0, 0);
-  game_object_set_powers2(database, 0, 0);
+  game_object_set_type(database, 0, OBJECT_TYPE_ROOM);
+  game_object_clear_flags(database, 0);
+  game_object_clear_powers(database, 0);
   game_object_set_location(database, 0, NOTHING);
   game_object_set_exits(database, 0, NOTHING);
   game_object_set_link(database, 0, NOTHING);
   game_object_set_zone(database, 0, NOTHING);
   database->objects[0].ahead = nullptr;
   database->objects[0].at_count = 0;
-  object_apply_default_lua_parent(evaluation, 0, TYPE_ROOM);
+  object_apply_default_lua_parent(evaluation, 0, OBJECT_TYPE_ROOM);
   /*
    * should be #1
    */
@@ -761,10 +761,8 @@ void db_make_minimal(EvaluationContext *evaluation) {
 #pragma clang diagnostic ignored "-Wcast-qual"
   obj = create_player(evaluation, (char *)"Wizard", (char *)"potrzebie");
 #pragma clang diagnostic pop
-  game_object_set_flags(database, obj,
-                        game_object_flags(database, obj) | WIZARD);
-  game_object_set_powers(database, obj, 0);
-  game_object_set_powers2(database, obj, 0);
+  game_object_set_flag(database, obj, OBJECT_FLAG_WIZARD, true);
+  game_object_clear_powers(database, obj);
 
   /*
    * Manually link to Limbo, just in case

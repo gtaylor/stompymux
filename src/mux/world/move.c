@@ -8,9 +8,9 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
@@ -456,18 +456,18 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       lock_test(evaluation, player, player, player, exit, LUA_LOCK_DEFAULT,
                 LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, &result)) {
     switch (typeof_obj(evaluation->world->database, loc)) {
-    case TYPE_ROOM:
+    case OBJECT_TYPE_ROOM:
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
       break;
-    case TYPE_PLAYER:
-    case TYPE_THING:
+    case OBJECT_TYPE_PLAYER:
+    case OBJECT_TYPE_THING:
       if (is_going(evaluation->world->database, loc)) {
         notify(evaluation, player, "You can't go that way.");
         return;
       }
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
       break;
-    case TYPE_EXIT:
+    case OBJECT_TYPE_EXIT:
       notify(evaluation, player, "You can't go that way.");
       return;
     default:
@@ -522,7 +522,7 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
    * find the exit
    */
 
-  init_match_check_keys(match, player, direction, TYPE_EXIT);
+  init_match_check_keys(match, player, direction, OBJECT_TYPE_EXIT);
   match_exit(match);
   exit = match_result(match);
   switch (exit) {
@@ -574,7 +574,7 @@ void do_get(CommandInvocation *invocation) {
    */
 
   MatchContext *match = &invocation->context->match;
-  init_match_check_keys(match, player, what, TYPE_THING);
+  init_match_check_keys(match, player, what, OBJECT_TYPE_THING);
   match_neighbor(match);
   match_exit(match);
   if (is_long_fingers(evaluation->world->database, player))
@@ -599,8 +599,8 @@ void do_get(CommandInvocation *invocation) {
 
   quiet = 0;
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_PLAYER:
-  case TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
     /*
      * You can't take what you already have
      */
@@ -649,7 +649,7 @@ void do_get(CommandInvocation *invocation) {
                           LUA_EVENT_FAIL);
     }
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     /*
      * You can't take what you already have
      */
@@ -714,7 +714,7 @@ void do_drop(CommandInvocation *invocation) {
     return;
 
   MatchContext *match = &invocation->context->match;
-  init_match(match, player, name, TYPE_THING);
+  init_match(match, player, name, OBJECT_TYPE_THING);
   match_possession(match);
   match_carried_exit(match);
 
@@ -730,8 +730,8 @@ void do_drop(CommandInvocation *invocation) {
   }
 
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_THING:
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
 
     /*
      * You have to be carrying it
@@ -787,7 +787,7 @@ void do_drop(CommandInvocation *invocation) {
     process_dropped_dropto(evaluation, thing, player);
 
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
 
     /*
      * You have to be carrying it
@@ -863,7 +863,7 @@ void do_enter(CommandInvocation *invocation) {
   int quiet;
 
   MatchContext *match = &invocation->context->match;
-  init_match(match, player, what, TYPE_THING);
+  init_match(match, player, what, OBJECT_TYPE_THING);
   match_neighbor(match);
   if (is_long_fingers(evaluation->world->database, player))
     match_absolute(match); /*
@@ -874,8 +874,8 @@ void do_enter(CommandInvocation *invocation) {
     return;
 
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_PLAYER:
-  case TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
     quiet = 0;
     if ((key & MOVE_QUIET) &&
         is_controls(evaluation->world->database, player, thing))

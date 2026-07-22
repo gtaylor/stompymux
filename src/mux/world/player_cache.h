@@ -4,7 +4,7 @@
 
 #pragma once
 #include "mux/commands/command_queue.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/support/red_black_tree.h"
 
 typedef struct player_cache {

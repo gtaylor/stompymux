@@ -6,10 +6,10 @@
 
 #include <lauxlib.h>
 
-#include "mux/database/attrs.h"
-#include "mux/database/flags.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -173,16 +173,16 @@ static int lua_mux_object_type(lua_State *state) {
   lua_mux_require_runtime(package, state, "object_type");
   object = lua_mux_require_object(package, state, 1);
   switch (typeof_obj(package->services->database, object)) {
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     type = "room";
     break;
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     type = "thing";
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     type = "exit";
     break;
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_PLAYER:
     type = "player";
     break;
   default:

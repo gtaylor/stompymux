@@ -12,10 +12,10 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_queue.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
@@ -82,9 +82,8 @@ static void check_idle(MaintenanceContext *maintenance) {
                  (idletime > maintenance->configuration->idle_timeout) &&
                  can_idle(maintenance->database, d->player) &&
                  !is_dark(maintenance->database, d->player)) {
-        game_object_set_flags(
-            maintenance->database, d->player,
-            game_object_flags(maintenance->database, d->player) | DARK);
+        game_object_set_flag(maintenance->database, d->player, OBJECT_FLAG_DARK,
+                             true);
         d->is_autodark = true;
       }
     } else {

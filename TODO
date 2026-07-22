@@ -2,7 +2,11 @@
 
 ## MUX Todos in the /src/ dir
 
+* get rid of the pass_locks power
+* consolidate the btech-related powers to assume wizard
+* db.h GameObject: unfurl trees into arrays?
 * verbs.c and verbs.h can probably be crunched elsewhere
+* Crunch runtime_clock.c into somewhere
 * Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua

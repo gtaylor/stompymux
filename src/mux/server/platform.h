@@ -26,7 +26,6 @@
 
 typedef long DbRef;
 typedef long Flag;
-typedef int Power;
 typedef char IBUF[16];
 typedef struct map_data MAP;
 typedef struct mech_data MECH;

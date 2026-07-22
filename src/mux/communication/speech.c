@@ -10,10 +10,10 @@
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -151,19 +151,20 @@ void do_say(CommandInvocation *invocation) {
       notify_all_from_inside(evaluation, loc, player, message);
     }
     if (say_flags & SAY_ROOM) {
-      if ((typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) &&
+      if ((typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) &&
           (say_flags & SAY_HERE)) {
         return;
       }
       depth = 0;
-      while ((typeof_obj(evaluation->world->database, loc) != TYPE_ROOM) &&
-             (depth++ < 20)) {
+      while (
+          (typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
+          (depth++ < 20)) {
         loc = game_object_location(evaluation->world->database, loc);
         if ((loc == NOTHING) ||
             (loc == game_object_location(evaluation->world->database, loc)))
           return;
       }
-      if (typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) {
+      if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
         notify_all_from_inside(evaluation, loc, player, message);
       }
     }
@@ -208,13 +209,13 @@ void do_say(CommandInvocation *invocation) {
     switch (*message) {
     case ':':
       message[0] = ' ';
-      say_shout(&invocation->context->evaluation, WIZARD, broadcast_msg,
-                say_flags, player, message);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
+                broadcast_msg, say_flags, player, message);
       break;
     case ';':
       message++;
-      say_shout(&invocation->context->evaluation, WIZARD, broadcast_msg,
-                say_flags, player, message);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
+                broadcast_msg, say_flags, player, message);
       break;
     case '"':
       message++;
@@ -226,8 +227,8 @@ void do_say(CommandInvocation *invocation) {
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
-      say_shout(&invocation->context->evaluation, WIZARD, broadcast_msg,
-                say_flags, player, buf2);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD,
+                broadcast_msg, say_flags, player, buf2);
       free_lbuf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
@@ -244,13 +245,13 @@ void do_say(CommandInvocation *invocation) {
     switch (*message) {
     case ':':
       message[0] = ' ';
-      say_shout(&invocation->context->evaluation, WIZARD, admin_msg, say_flags,
-                player, message);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
+                say_flags, player, message);
       break;
     case ';':
       message++;
-      say_shout(&invocation->context->evaluation, WIZARD, admin_msg, say_flags,
-                player, message);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
+                say_flags, player, message);
       break;
     case '"':
       message++;
@@ -262,8 +263,8 @@ void do_say(CommandInvocation *invocation) {
       safe_str(message, buf2, &bp);
       safe_chr('"', buf2, &bp);
       *bp = '\0';
-      say_shout(&invocation->context->evaluation, WIZARD, admin_msg, say_flags,
-                player, buf2);
+      say_shout(&invocation->context->evaluation, OBJECT_FLAG_WIZARD, admin_msg,
+                say_flags, player, buf2);
       free_lbuf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "ASHOUT") {
@@ -297,13 +298,15 @@ void do_say(CommandInvocation *invocation) {
 
   case SAY_WIZPOSE:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->runtime->descriptors, WIZARD, "%s %s",
+      raw_broadcast(invocation->context->runtime->descriptors,
+                    OBJECT_FLAG_WIZARD, "%s %s",
                     game_object_name(evaluation->world->database, player),
                     message);
     else
-      raw_broadcast(
-          invocation->context->runtime->descriptors, WIZARD, "Broadcast: %s %s",
-          game_object_name(evaluation->world->database, player), message);
+      raw_broadcast(invocation->context->runtime->descriptors,
+                    OBJECT_FLAG_WIZARD, "Broadcast: %s %s",
+                    game_object_name(evaluation->world->database, player),
+                    message);
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
       log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wizpose");
@@ -333,11 +336,11 @@ void do_say(CommandInvocation *invocation) {
 
   case SAY_WIZEMIT:
     if (say_flags & SAY_NOTAG)
-      raw_broadcast(invocation->context->runtime->descriptors, WIZARD, "%s",
-                    message);
+      raw_broadcast(invocation->context->runtime->descriptors,
+                    OBJECT_FLAG_WIZARD, "%s", message);
     else
-      raw_broadcast(invocation->context->runtime->descriptors, WIZARD,
-                    "Broadcast: %s", message);
+      raw_broadcast(invocation->context->runtime->descriptors,
+                    OBJECT_FLAG_WIZARD, "Broadcast: %s", message);
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
       log_name(evaluation->log, player);
       buf2 = alloc_lbuf("do_say.LOG.wizemit");
@@ -648,7 +651,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
        p = (char *)strtok(nullptr, " ")) {
 
     ok_to_do = 0;
-    init_match(&evaluation->command->match, player, p, TYPE_PLAYER);
+    init_match(&evaluation->command->match, player, p, OBJECT_TYPE_PLAYER);
     match_everything(&evaluation->command->match, 0);
     who = match_result(&evaluation->command->match);
 
@@ -709,7 +712,8 @@ void do_pemit(CommandInvocation *invocation) {
     ok_to_do = 1;
     break;
   default:
-    init_match(&evaluation->command->match, player, recipient, TYPE_PLAYER);
+    init_match(&evaluation->command->match, player, recipient,
+               OBJECT_TYPE_PLAYER);
     match_everything(&evaluation->command->match, 0);
     target = match_result(&evaluation->command->match);
   }
@@ -794,19 +798,21 @@ void do_pemit(CommandInvocation *invocation) {
       if ((pemit_flags & PEMIT_HERE) || !pemit_flags)
         notify_all_from_inside(evaluation, loc, player, message);
       if (pemit_flags & PEMIT_ROOM) {
-        if ((typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) &&
+        if ((typeof_obj(evaluation->world->database, loc) ==
+             OBJECT_TYPE_ROOM) &&
             (pemit_flags & PEMIT_HERE)) {
           return;
         }
         depth = 0;
-        while ((typeof_obj(evaluation->world->database, loc) != TYPE_ROOM) &&
+        while ((typeof_obj(evaluation->world->database, loc) !=
+                OBJECT_TYPE_ROOM) &&
                (depth++ < 20)) {
           loc = game_object_location(evaluation->world->database, loc);
           if ((loc == NOTHING) ||
               (loc == game_object_location(evaluation->world->database, loc)))
             return;
         }
-        if (typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) {
+        if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
           notify_all_from_inside(evaluation, loc, player, message);
         }
       }

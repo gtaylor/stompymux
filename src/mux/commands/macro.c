@@ -8,9 +8,9 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command_helpers.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"

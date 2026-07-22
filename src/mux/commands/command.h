@@ -6,7 +6,7 @@
 
 #include "mux/commands/command_invocation.h"
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/support/name_table.h"
 
 typedef struct CommandContext CommandContext;

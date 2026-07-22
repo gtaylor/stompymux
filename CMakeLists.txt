@@ -324,6 +324,14 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME flag_privileges COMMAND flag_privileges_test)
 
+  add_executable(power_fields_test tests/power_fields.c
+    ${MUX_SOURCE_DIR}/objects/power_fields.c)
+  target_link_libraries(power_fields_test PRIVATE btmux_options)
+  target_include_directories(power_fields_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME power_fields COMMAND power_fields_test)
+
   add_executable(password_hash_test tests/password_hash.c
     ${MUX_SOURCE_DIR}/support/password.c)
   target_link_libraries(password_hash_test PRIVATE btmux_options libsodium)

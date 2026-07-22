@@ -11,10 +11,10 @@
 #include "mux/world/world_context.h"
 
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -37,7 +37,7 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
                                  char *room_name) {
   DbRef room;
 
-  init_match(match, player, room_name, NOTYPE);
+  init_match(match, player, room_name, OBJECT_TYPE_NOTYPE);
   match_everything(match, MAT_NO_EXITS | MAT_NUMERIC | MAT_HOME);
   room = match_result(match);
 
@@ -85,7 +85,7 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
     notify_quiet(evaluation, player, "Permission denied.");
     return;
   }
-  exit = create_obj(evaluation, player, TYPE_EXIT, direction);
+  exit = create_obj(evaluation, player, OBJECT_TYPE_EXIT, direction);
   if (exit == NOTHING)
     return;
 
@@ -227,7 +227,7 @@ void do_link(CommandInvocation *invocation) {
    * Find the thing to link
    */
 
-  init_match(&invocation->context->match, player, what, TYPE_EXIT);
+  init_match(&invocation->context->match, player, what, OBJECT_TYPE_EXIT);
   match_everything(&invocation->context->match, 0);
   thing = noisy_match_result(&invocation->context->match);
   if (thing == NOTHING)
@@ -245,7 +245,7 @@ void do_link(CommandInvocation *invocation) {
     return;
   }
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
 
     /*
      * Set destination
@@ -256,8 +256,8 @@ void do_link(CommandInvocation *invocation) {
     if (room != NOTHING)
       link_exit(evaluation, player, thing, room);
     break;
-  case TYPE_PLAYER:
-  case TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
 
     /*
      * Set home
@@ -267,7 +267,7 @@ void do_link(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "Permission denied.");
       break;
     }
-    init_match(&invocation->context->match, player, where, NOTYPE);
+    init_match(&invocation->context->match, player, where, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, MAT_NO_EXITS);
     room = noisy_match_result(&invocation->context->match);
     if (!is_good_obj(evaluation->world->database, room))
@@ -291,7 +291,7 @@ void do_link(CommandInvocation *invocation) {
         notify_quiet(evaluation, player, "Home set.");
     }
     break;
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
 
     /*
      * Set dropto
@@ -323,7 +323,7 @@ void do_link(CommandInvocation *invocation) {
         notify_quiet(evaluation, player, "Dropto set.");
     }
     break;
-  case TYPE_GARBAGE:
+  case OBJECT_TYPE_GARBAGE:
     notify_quiet(evaluation, player, "Permission denied.");
     break;
   default:
@@ -357,7 +357,7 @@ void do_dig(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "Dig what?");
     return;
   }
-  room = create_obj(evaluation, player, TYPE_ROOM, name);
+  room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, name);
   if (room == NOTHING)
     return;
 
@@ -400,7 +400,7 @@ void do_create(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "Create what?");
     return;
   }
-  thing = create_obj(evaluation, player, TYPE_THING, name);
+  thing = create_obj(evaluation, player, OBJECT_TYPE_THING, name);
   if (thing == NOTHING)
     return;
 
@@ -437,7 +437,7 @@ void do_clone(CommandInvocation *invocation) {
   if (!is_good_obj(evaluation->world->database, loc))
     return;
 
-  init_match(&invocation->context->match, player, name, NOTYPE);
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   thing = noisy_match_result(&invocation->context->match);
   if ((thing == NOTHING) || (thing == AMBIGUOUS))
@@ -453,7 +453,7 @@ void do_clone(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "You cannot clone players!");
     return;
   }
-  if ((typeof_obj(evaluation->world->database, thing) == TYPE_EXIT) &&
+  if ((typeof_obj(evaluation->world->database, thing) == OBJECT_TYPE_EXIT) &&
       !is_controls(evaluation->world->database, player, loc)) {
     notify_quiet(evaluation, player, "Permission denied.");
     return;
@@ -497,10 +497,9 @@ void do_clone(CommandInvocation *invocation) {
    * Clear out problem flags from the original
    */
 
-  rmv_flags = WIZARD;
-  game_object_set_flags(evaluation->world->database, clone,
-                        game_object_flags(evaluation->world->database, thing) &
-                            ~rmv_flags);
+  (void)rmv_flags;
+  game_object_set_flag(evaluation->world->database, clone, OBJECT_FLAG_WIZARD,
+                       false);
 
   /*
    * Tell creator about it
@@ -523,18 +522,18 @@ void do_clone(CommandInvocation *invocation) {
    */
 
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     game_object_set_link(evaluation->world->database, clone,
                          clone_home(evaluation, player, thing));
     move_via_generic(evaluation, clone, loc, player, 0);
     break;
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     game_object_set_location(evaluation->world->database, clone, NOTHING);
     if (game_object_location(evaluation->world->database, thing) != NOTHING)
       link_exit(evaluation, player, clone,
                 game_object_location(evaluation->world->database, thing));
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     game_object_set_exits(
         evaluation->world->database, loc,
         insert_first(evaluation->world->database,
@@ -654,7 +653,7 @@ void do_destroy(CommandInvocation *invocation) {
   if ((thing == NOTHING) &&
       is_controls(evaluation->world->database, player,
                   game_object_location(evaluation->world->database, player))) {
-    init_match(&invocation->context->match, player, what, TYPE_EXIT);
+    init_match(&invocation->context->match, player, what, OBJECT_TYPE_EXIT);
     match_exit(&invocation->context->match);
     thing = last_match_result(&invocation->context->match);
   }
@@ -687,14 +686,14 @@ void do_destroy(CommandInvocation *invocation) {
    */
 
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     if (can_destroy_exit(evaluation, player, thing)) {
       if (is_going(evaluation->world->database, thing)) {
         notify_quiet(evaluation, player, "No sense beating a dead exit.");
       } else {
-        if (is_hardcode(evaluation->world->database, thing)) {
+        if (is_xcode(evaluation->world->database, thing)) {
           DisposeSpecialObject(evaluation->btech, player, thing);
-          c_hardcode(evaluation->world->database, thing);
+          c_xcode(evaluation->world->database, thing);
         }
         if (0) {
           destroy_exit(evaluation, thing);
@@ -705,13 +704,13 @@ void do_destroy(CommandInvocation *invocation) {
       }
     }
     break;
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     if (is_going(evaluation->world->database, thing)) {
       notify_quiet(evaluation, player, "No sense beating a dead object.");
     } else {
-      if (is_hardcode(evaluation->world->database, thing)) {
+      if (is_xcode(evaluation->world->database, thing)) {
         DisposeSpecialObject(evaluation->btech, player, thing);
-        c_hardcode(evaluation->world->database, thing);
+        c_xcode(evaluation->world->database, thing);
       }
       if (0) {
         destroy_thing(evaluation, thing);
@@ -721,14 +720,14 @@ void do_destroy(CommandInvocation *invocation) {
       }
     }
     break;
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_PLAYER:
     if (can_destroy_player(evaluation, player, thing)) {
       if (is_going(evaluation->world->database, thing)) {
         notify_quiet(evaluation, player, "No sense beating a dead player.");
       } else {
-        if (is_hardcode(evaluation->world->database, thing)) {
+        if (is_xcode(evaluation->world->database, thing)) {
           DisposeSpecialObject(evaluation->btech, player, thing);
-          c_hardcode(evaluation->world->database, thing);
+          c_xcode(evaluation->world->database, thing);
         }
         if (0) {
           attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
@@ -744,7 +743,7 @@ void do_destroy(CommandInvocation *invocation) {
       }
     }
     break;
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     if (is_going(evaluation->world->database, thing)) {
       notify_quiet(evaluation, player, "No sense beating a dead room.");
     } else {
@@ -773,7 +772,7 @@ void do_chzone(CommandInvocation *invocation) {
     notify(evaluation, player, "Zones disabled.");
     return;
   }
-  init_match(&invocation->context->match, player, name, NOTYPE);
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   if ((thing = noisy_match_result(&invocation->context->match)) == NOTHING)
     return;
@@ -781,13 +780,13 @@ void do_chzone(CommandInvocation *invocation) {
   if (!strcasecmp(newobj, "none"))
     zone = NOTHING;
   else {
-    init_match(&invocation->context->match, player, newobj, NOTYPE);
+    init_match(&invocation->context->match, player, newobj, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     if ((zone = noisy_match_result(&invocation->context->match)) == NOTHING)
       return;
 
-    if ((typeof_obj(evaluation->world->database, zone) != TYPE_THING) &&
-        (typeof_obj(evaluation->world->database, zone) != TYPE_ROOM)) {
+    if ((typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_THING) &&
+        (typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_ROOM)) {
       notify(evaluation, player, "Invalid zone object type.");
       return;
     }
@@ -807,8 +806,8 @@ void do_chzone(CommandInvocation *invocation) {
    * only rooms may be zoned to other rooms
    */
   if ((zone != NOTHING) &&
-      (typeof_obj(evaluation->world->database, zone) == TYPE_ROOM) &&
-      typeof_obj(evaluation->world->database, thing) != TYPE_ROOM) {
+      (typeof_obj(evaluation->world->database, zone) == OBJECT_TYPE_ROOM) &&
+      typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_ROOM) {
     notify(evaluation, player, "Only rooms may be zoned to rooms.");
     return;
   }
@@ -816,21 +815,15 @@ void do_chzone(CommandInvocation *invocation) {
    * everything is okay, do the change
    */
   game_object_set_zone(invocation->context->world->database, thing, zone);
-  if (typeof_obj(evaluation->world->database, thing) != TYPE_PLAYER) {
+  if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_PLAYER) {
     /*
      * if the object is a player, resetting these flags is rather
      * * * * * inconvenient -- although this may pose a bit of a *
      * *  * security * risk. Be careful when @chzone'ing wizard players.
      */
-    game_object_set_flags(
-        evaluation->world->database, thing,
-        game_object_flags(evaluation->world->database, thing) & ~WIZARD);
-#ifdef USE_POWERS
-    game_object_set_powers(evaluation->world->database, thing,
-                           0); /*
-                                * wipe out all powers
-                                */
-#endif
+    game_object_set_flag(evaluation->world->database, thing, OBJECT_FLAG_WIZARD,
+                         false);
+    game_object_clear_powers(evaluation->world->database, thing);
   }
   notify(evaluation, player, "Zone changed.");
 }
@@ -936,7 +929,7 @@ void do_unlink(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef exit;
 
-  init_match(&invocation->context->match, player, name, TYPE_EXIT);
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_EXIT);
   match_everything(&invocation->context->match, 0);
   exit = match_result(&invocation->context->match);
 
@@ -952,12 +945,12 @@ void do_unlink(CommandInvocation *invocation) {
       notify_quiet(evaluation, player, "Permission denied.");
     } else {
       switch (typeof_obj(evaluation->world->database, exit)) {
-      case TYPE_EXIT:
+      case OBJECT_TYPE_EXIT:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
         if (!is_quiet(evaluation->world->database, player))
           notify_quiet(evaluation, player, "Unlinked.");
         break;
-      case TYPE_ROOM:
+      case OBJECT_TYPE_ROOM:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
         if (!is_quiet(evaluation->world->database, player))
           notify_quiet(evaluation, player, "Dropto removed.");

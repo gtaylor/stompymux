@@ -15,7 +15,7 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"

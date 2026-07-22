@@ -12,10 +12,10 @@
 
 #include "mux/commands/command.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -28,7 +28,7 @@
 DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   DbRef mat;
 
-  init_match(match, player, name, NOTYPE);
+  init_match(match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(match, 0);
   mat = noisy_match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
@@ -43,7 +43,7 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
 DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
   DbRef mat;
 
-  init_match(match, player, name, NOTYPE);
+  init_match(match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(match, 0);
   mat = match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
@@ -156,12 +156,12 @@ void object_attribute_set(EvaluationContext *evaluation,
   attr = attribute_by_number(evaluation->world->database, attrnum);
   attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
   if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
-    have_xcode = is_hardcode(evaluation->world->database, thing);
+    have_xcode = is_xcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   aflags);
     if (configuration->have_specials)
       handle_xcode(evaluation->btech, player, thing, have_xcode,
-                   is_hardcode(evaluation->world->database, thing));
+                   is_xcode(evaluation->world->database, thing));
     if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
       notify_printf(evaluation, player, "%s/%s - %s",
@@ -203,7 +203,7 @@ void do_setattr(CommandInvocation *invocation) {
   char *attrtext = invocation->second;
   DbRef thing;
 
-  init_match(&invocation->context->match, player, name, NOTYPE);
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   thing = noisy_match_result(&invocation->context->match);
 
@@ -424,7 +424,7 @@ void do_use(CommandInvocation *invocation) {
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  init_match(&invocation->context->match, player, object, NOTYPE);
+  init_match(&invocation->context->match, player, object, OBJECT_TYPE_NOTYPE);
   match_neighbor(&invocation->context->match);
   match_possession(&invocation->context->match);
   if (is_wizard(evaluation->world->database, player)) {

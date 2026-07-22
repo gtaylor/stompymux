@@ -17,7 +17,7 @@
 #pragma once
 
 #include "mech.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 #define MECHPILOT 0
 #define MECHSTARTED 1

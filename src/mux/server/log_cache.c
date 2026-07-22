@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 #include "mux/commands/command.h"
-#include "mux/database/attrs.h"
-#include "mux/database/flags.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/log_cache.h"

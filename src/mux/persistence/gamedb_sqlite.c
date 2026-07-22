@@ -9,17 +9,17 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 9;
+constexpr int GAMEDB_SCHEMA_VERSION = 12;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -33,7 +33,7 @@ constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
  * attribute definitions are normalized so a future incremental store can use
  * the same schema without changing the on-disk representation.
  */
-static const char schema_sql[] =
+static const char schema_objects_sql[] =
     "CREATE TABLE snapshot ("
     " id INTEGER PRIMARY KEY CHECK (id = 1),"
     " schema_version INTEGER NOT NULL,"
@@ -54,12 +54,74 @@ static const char schema_sql[] =
     " exits INTEGER NOT NULL,"
     " link INTEGER NOT NULL,"
     " next INTEGER NOT NULL,"
-    " flags INTEGER NOT NULL,"
-    " flags2 INTEGER NOT NULL,"
-    " flags3 INTEGER NOT NULL,"
-    " powers INTEGER NOT NULL,"
-    " powers2 INTEGER NOT NULL"
-    ");"
+    " type INTEGER NOT NULL CHECK (type IN (0, 1, 2, 3, 5)),"
+    " has_ansi_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansi_flag IN (0, 1)),"
+    " has_ansimap_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansimap_flag IN "
+    "(0, 1)),"
+    " has_audible_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_audible_flag IN "
+    "(0, 1)),"
+    " has_auditorium_flag INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_auditorium_flag IN (0, 1)),"
+    " has_blind_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_blind_flag IN (0, "
+    "1)),"
+    " has_connected_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_connected_flag "
+    "IN (0, 1)),"
+    " has_dark_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_dark_flag IN (0, 1)),"
+    " has_floating_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_floating_flag IN "
+    "(0, 1)),"
+    " has_gagged_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_gagged_flag IN (0, "
+    "1)),"
+    " has_going_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_going_flag IN (0, "
+    "1)),"
+    " has_halted_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_halted_flag IN (0, "
+    "1)),"
+    " has_in_character_flag INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_in_character_flag IN (0, 1)),"
+    " has_light_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_light_flag IN (0, "
+    "1)),"
+    " has_monitor_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_monitor_flag IN "
+    "(0, 1)),"
+    " has_no_command_flag INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_no_command_flag IN (0, 1)),"
+    " has_quiet_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_quiet_flag IN (0, "
+    "1)),"
+    " has_safe_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_safe_flag IN (0, 1)),"
+    " has_suspect_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_suspect_flag IN "
+    "(0, 1)),"
+    " has_transparent_flag INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_transparent_flag IN (0, 1)),"
+    " has_wizard_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_wizard_flag IN (0, "
+    "1)),"
+    " has_xcode_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_xcode_flag IN (0, "
+    "1)),"
+    " has_zombie_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_zombie_flag IN (0, "
+    "1)),"
+    " has_idle_power INTEGER NOT NULL DEFAULT 0 CHECK (has_idle_power IN (0, "
+    "1)),"
+    " has_long_fingers_power INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_long_fingers_power IN (0, 1)),"
+    " has_comm_all_power INTEGER NOT NULL DEFAULT 0 CHECK (has_comm_all_power "
+    "IN (0, 1)),"
+    " has_see_hidden_power INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_see_hidden_power IN (0, 1)),"
+    " has_no_destroy_power INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_no_destroy_power IN (0, 1)),"
+    " has_pass_locks_power INTEGER NOT NULL DEFAULT 0 CHECK "
+    "(has_pass_locks_power IN (0, 1)),"
+    " has_mech_power INTEGER NOT NULL DEFAULT 0 CHECK (has_mech_power IN (0, "
+    "1)),"
+    " has_security_power INTEGER NOT NULL DEFAULT 0 CHECK (has_security_power "
+    "IN (0, 1)),"
+    " has_mechrep_power INTEGER NOT NULL DEFAULT 0 CHECK (has_mechrep_power IN "
+    "(0, 1)),"
+    " has_map_power INTEGER NOT NULL DEFAULT 0 CHECK (has_map_power IN (0, 1)),"
+    " has_template_power INTEGER NOT NULL DEFAULT 0 CHECK (has_template_power "
+    "IN (0, 1)),"
+    " has_tech_power INTEGER NOT NULL DEFAULT 0 CHECK (has_tech_power IN (0, "
+    "1))"
+    ");";
+
+static const char schema_state_sql[] =
     "CREATE TABLE object_state ("
     " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
     " description TEXT, inside_description TEXT, admin_comment TEXT,"
@@ -310,6 +372,17 @@ static int gamedb_column_int(sqlite3_stmt *statement, int column, int *value) {
   return 0;
 }
 
+static int gamedb_column_bool(sqlite3_stmt *statement, int column,
+                              bool *value) {
+  int number;
+
+  if (gamedb_column_int(statement, column, &number) < 0 ||
+      (number != 0 && number != 1))
+    return -1;
+  *value = number != 0;
+  return 0;
+}
+
 /* Read an SQLite integer only when it fits the destination long exactly. */
 static int gamedb_column_long(sqlite3_stmt *statement, int column,
                               long *value) {
@@ -380,14 +453,12 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef object;
   DbRef contents;
   DbRef exits;
-  Flag flags;
-  Flag flags2;
-  Flag flags3;
+  int type;
+  bool object_flags[OBJECT_FLAG_COUNT];
   DbRef link;
   DbRef location;
   DbRef next;
-  int powers;
-  int powers2;
+  bool powers[POWER_TECH + 1];
   int result;
   int step;
   DbRef zone;
@@ -396,7 +467,19 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   result = -1;
   const char *query =
       "SELECT dbref, name, location, zone, contents, exits, link, next, "
-      "flags, flags2, flags3, powers, powers2 FROM objects "
+      "type, has_ansi_flag, has_ansimap_flag, has_audible_flag, "
+      "has_auditorium_flag, has_blind_flag, has_connected_flag, has_dark_flag, "
+      "has_floating_flag, has_gagged_flag, has_going_flag, has_halted_flag, "
+      "has_in_character_flag, has_light_flag, has_monitor_flag, "
+      "has_no_command_flag, has_quiet_flag, has_safe_flag, "
+      "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
+      "has_xcode_flag, has_zombie_flag, has_idle_power, "
+      "has_long_fingers_power, has_comm_all_power, "
+      "has_see_hidden_power, has_no_destroy_power, has_pass_locks_power, "
+      "has_mech_power, "
+      "has_security_power, has_mechrep_power, has_map_power, "
+      "has_template_power, has_tech_power "
+      "FROM objects "
       "ORDER BY dbref;";
   (void)schema_version;
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
@@ -415,13 +498,23 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_long(statement, 5, &exits) < 0 ||
         gamedb_column_long(statement, 6, &link) < 0 ||
         gamedb_column_long(statement, 7, &next) < 0 ||
-        gamedb_column_long(statement, 8, &flags) < 0 ||
-        gamedb_column_long(statement, 9, &flags2) < 0 ||
-        gamedb_column_long(statement, 10, &flags3) < 0 ||
-        gamedb_column_int(statement, 11, &powers) < 0 ||
-        gamedb_column_int(statement, 12, &powers2) < 0) {
+        gamedb_column_int(statement, 8, &type) < 0 ||
+        (type != OBJECT_TYPE_ROOM && type != OBJECT_TYPE_THING &&
+         type != OBJECT_TYPE_EXIT && type != OBJECT_TYPE_PLAYER &&
+         type != OBJECT_TYPE_GARBAGE)) {
       result = -1;
     } else {
+      for (ObjectFlag flag = OBJECT_FLAG_ANSI;
+           result == 0 && flag < OBJECT_FLAG_COUNT; flag++)
+        if (gamedb_column_bool(statement, 8 + (int)flag, &object_flags[flag]) <
+            0)
+          result = -1;
+      for (PowerId power = POWER_IDLE; result == 0 && power <= POWER_TECH;
+           power++)
+        if (gamedb_column_bool(statement, 30 + (int)power, &powers[power]) < 0)
+          result = -1;
+      if (result != 0)
+        continue;
       /* object_name_set()'s parameter isn't const-correct; name is only
          read (copied) here, never mutated. */
 #pragma clang diagnostic push
@@ -434,12 +527,14 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       game_object_set_exits(context->database, object, exits);
       game_object_set_link(context->database, object, link);
       game_object_set_next(context->database, object, next);
-      game_object_set_flags(context->database, object, flags);
-      game_object_set_flags2(context->database, object, flags2);
-      game_object_set_flags3(context->database, object, flags3);
-      game_object_set_powers(context->database, object, powers);
-      game_object_set_powers2(context->database, object, powers2);
-      if (typeof_obj(context->database, object) == TYPE_PLAYER)
+      game_object_set_type(context->database, object, (ObjectType)type);
+      game_object_clear_flags(context->database, object);
+      for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+        game_object_set_flag(context->database, object, flag,
+                             object_flags[flag]);
+      for (PowerId power = POWER_IDLE; power <= POWER_TECH; power++)
+        game_object_set_power(context->database, object, power, powers[power]);
+      if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER)
         c_connected(context->database, object);
     }
   }
@@ -627,7 +722,8 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                   "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; "
                   "PRAGMA foreign_keys = ON;") < 0 ||
       gamedb_exec(sqlite, "BEGIN IMMEDIATE;") < 0 ||
-      gamedb_exec(sqlite, schema_sql) < 0 ||
+      gamedb_exec(sqlite, schema_objects_sql) < 0 ||
+      gamedb_exec(sqlite, schema_state_sql) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
     return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
@@ -641,9 +737,24 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_prepare(
           sqlite, &objects,
           "INSERT INTO objects "
-          "(dbref, name, location, zone, contents, exits, link, next, flags, "
-          "flags2, flags3, powers, powers2) "
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "(dbref, name, location, zone, contents, exits, link, next, type, "
+          "has_ansi_flag, has_ansimap_flag, has_audible_flag, "
+          "has_auditorium_flag, has_blind_flag, has_connected_flag, "
+          "has_dark_flag, has_floating_flag, has_gagged_flag, has_going_flag, "
+          "has_halted_flag, has_in_character_flag, has_light_flag, "
+          "has_monitor_flag, has_no_command_flag, "
+          "has_quiet_flag, has_safe_flag, has_suspect_flag, "
+          "has_transparent_flag, has_wizard_flag, has_xcode_flag, "
+          "has_zombie_flag, "
+          "has_idle_power, has_long_fingers_power, has_comm_all_power, "
+          "has_see_hidden_power, has_no_destroy_power, has_pass_locks_power, "
+          "has_mech_power, "
+          "has_security_power, has_mechrep_power, has_map_power, "
+          "has_template_power, has_tech_power) "
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, name, value) "
                      "VALUES (?, ?, ?);") < 0)
@@ -663,7 +774,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
   DO_WHOLE_DB(context->database, object) {
     if (is_going(context->database, object))
       continue;
-
+    GameObject *game_object = game_database_object(context->database, object);
     if (gamedb_bind_int(objects, 1, object) < 0 ||
         sqlite3_bind_text(objects, 2,
                           game_object_name(context->database, object), -1,
@@ -680,23 +791,27 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                         game_object_link(context->database, object)) < 0 ||
         gamedb_bind_int(objects, 8,
                         game_object_next(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 9,
-                        game_object_flags(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 10,
-                        game_object_flags2(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 11,
-                        game_object_flags3(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 12,
-                        game_object_powers(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 13,
-                        game_object_powers2(context->database, object)) < 0 ||
-        gamedb_step(objects) < 0) {
+        gamedb_bind_int(objects, 9, typeof_obj(context->database, object)) <
+            0) {
       return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
     }
+    for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
+      if (gamedb_bind_int(
+              objects, 9 + (int)flag,
+              game_object_has_flag(context->database, object, flag)) < 0)
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    }
+    for (PowerId power = POWER_IDLE; power <= POWER_TECH; power++) {
+      if (gamedb_bind_int(
+              objects, 31 + (int)power,
+              game_object_has_power(context->database, object, power)) < 0)
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    }
+    if (gamedb_step(objects) < 0)
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
 
     if (gamedb_store_native_state(context->database, sqlite, object) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
-    GameObject *game_object = game_database_object(context->database, object);
     for (int index = 0; index < game_object->at_count; index++) {
       AttributeList *entry = &game_object->ahead[index];
       if (gamedb_bind_int(attributes, 1, object) < 0 ||

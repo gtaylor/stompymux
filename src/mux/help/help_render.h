@@ -5,8 +5,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "mux/database/db.h"
 #include "mux/help/help_types.h"
+#include "mux/objects/db.h"
 
 typedef struct HelpIndex HelpIndex;
 

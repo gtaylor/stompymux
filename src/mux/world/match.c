@@ -4,9 +4,9 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
@@ -47,7 +47,7 @@ static void promote_match(MatchContext *match_context, DbRef what,
    * Check for type and locks, if requested
    */
 
-  if (md.pref_type != NOTYPE) {
+  if (md.pref_type != OBJECT_TYPE_NOTYPE) {
     if (is_good_obj(md.evaluation->world->database, what) &&
         (typeof_obj(md.evaluation->world->database, what) == md.pref_type))
       confidence |= CON_TYPE;

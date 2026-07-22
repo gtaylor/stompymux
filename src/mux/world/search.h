@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 
 typedef struct ObjectList ObjectList;
 typedef struct EvaluationContext EvaluationContext;
@@ -15,8 +15,8 @@ typedef struct SearchCriteria SearchCriteria;
 struct SearchCriteria {
   int s_wizard;
   long s_rst_type;
-  FLAGSET s_fset;
-  POWERSET s_pset;
+  ObjectFlagSet s_fset;
+  PowerId s_power;
   DbRef s_zone;
   char *s_rst_name;
   long low_bound;

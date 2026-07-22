@@ -358,7 +358,7 @@ static int check_snapshot(const char *path) {
            "'btech_object_state', 'attributes');",
            6) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 9) == 0 &&
+                 12) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite,
@@ -379,6 +379,51 @@ static int check_snapshot(const char *path) {
                  "SELECT count(*) FROM pragma_table_info('objects') "
                  "WHERE name = 'owner';",
                  0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('has_idle_power', 'has_long_fingers_power', "
+                 "'has_comm_all_power', "
+                 "'has_see_hidden_power', 'has_no_destroy_power', "
+                 "'has_pass_locks_power', "
+                 "'has_mech_power', 'has_security_power', 'has_mechrep_power', "
+                 "'has_map_power', "
+                 "'has_template_power', 'has_tech_power');",
+                 12) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('powers', 'powers2');",
+                 0) == 0 &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                 "name IN ('flags', 'flags2', 'flags3');",
+                 0) == 0 &&
+       query_int(
+           sqlite,
+           "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+           "name IN ('type', 'has_ansi_flag', 'has_ansimap_flag', "
+           "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
+           "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
+           "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
+           "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
+           "'has_no_command_flag', 'has_quiet_flag', "
+           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
+           "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
+           23) == 0 &&
+       query_int(
+           sqlite,
+           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1) "
+           "OR has_long_fingers_power NOT IN (0, 1) OR has_comm_all_power NOT "
+           "IN "
+           "(0, 1) OR has_see_hidden_power NOT IN (0, 1) OR "
+           "has_no_destroy_power "
+           "NOT IN (0, 1) OR has_pass_locks_power NOT IN (0, 1) OR "
+           "has_mech_power "
+           "NOT IN (0, 1) OR has_security_power NOT IN (0, 1) OR "
+           "has_mechrep_power "
+           "NOT IN (0, 1) OR has_map_power NOT IN (0, 1) OR has_template_power "
+           "NOT "
+           "IN (0, 1) OR has_tech_power NOT IN (0, 1);",
+           0) == 0 &&
        query_int(sqlite,
                  "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
                  0) == 0 &&
@@ -581,17 +626,14 @@ static int seed_btech_special_objects(const char *path) {
               sqlite3_exec(
                   sqlite,
                   "UPDATE snapshot SET db_top = 7 WHERE id = 1;"
-                  "INSERT INTO objects VALUES "
-                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 524288, "
-                  "0, 0, 0),"
-                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 524288, "
-                  "0, 0, 0),"
-                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, "
-                  "524288, 0, 0, 0),"
-                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, "
-                  "524288, 0, 0, 0),"
-                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, "
-                  "524288, 0, 0, 0);"
+                  "INSERT INTO objects "
+                  "(dbref, name, location, contents, exits, next, link, zone, "
+                  "type, has_xcode_flag) VALUES "
+                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 1),"
+                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 1),"
+                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1),"
+                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1),"
+                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1);"
                   "INSERT INTO object_state (object_dbref) VALUES "
                   "(2),(3),(4),(5),(6);"
                   "INSERT INTO player_state (object_dbref) VALUES "
@@ -680,6 +722,28 @@ static int remove_btech_runtime_row(const char *path) {
   return result;
 }
 
+/* Bypass the column constraint to exercise the strict boolean loader. */
+static int set_invalid_power_value(const char *path, int value) {
+  sqlite3 *sqlite;
+  char statement[160];
+  int result;
+
+  sqlite = NULL;
+  if (snprintf(statement, sizeof(statement),
+               "PRAGMA ignore_check_constraints = ON;"
+               "UPDATE objects SET has_idle_power = %d WHERE dbref = 2;",
+               value) < 0)
+    return -1;
+  result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
 /* Make selected persisted fields non-default before the SQLite reload. */
 static int seed_btech_nondefault_state(const char *path) {
   sqlite3 *sqlite;
@@ -703,6 +767,15 @@ static int seed_btech_nondefault_state(const char *path) {
                   "WHERE mech_dbref = 3;"
                   "UPDATE btech_mech_runtime SET heat = 12.5, status = 8, "
                   "last_used = 77, autopilot_num = 5 WHERE mech_dbref = 3;"
+                  "UPDATE objects SET has_idle_power = 1, "
+                  "has_long_fingers_power = 0, "
+                  "has_comm_all_power = 1, has_see_hidden_power = 0, "
+                  "has_no_destroy_power = 1, "
+                  "has_pass_locks_power = 0, has_mech_power = 1, "
+                  "has_security_power = 0, "
+                  "has_mechrep_power = 1, has_map_power = 0, "
+                  "has_template_power = 1, "
+                  "has_tech_power = 0 WHERE dbref = 2;"
                   "UPDATE objects SET contents = 5 WHERE dbref = 3;"
                   "UPDATE objects SET next = 6 WHERE dbref = 4;"
                   "UPDATE objects SET location = 3, next = -1 WHERE dbref = 5;"
@@ -776,6 +849,19 @@ static int check_btech_nondefault_state(const char *path) {
       check_btech_value(sqlite, "map temperature",
                         "SELECT temperature FROM btech_maps WHERE dbref = 2;",
                         17) == 0 &&
+              check_btech_value(
+                  sqlite, "individual object powers",
+                  "SELECT count(*) FROM objects WHERE dbref = 2 AND "
+                  "has_idle_power = 1 AND has_long_fingers_power = 0 AND "
+                  "has_comm_all_power = 1 "
+                  "AND has_see_hidden_power = 0 AND has_no_destroy_power = 1 "
+                  "AND "
+                  "has_pass_locks_power = 0 AND has_mech_power = 1 AND "
+                  "has_security_power = 0 "
+                  "AND has_mechrep_power = 1 AND has_map_power = 0 AND "
+                  "has_template_power = 1 "
+                  "AND has_tech_power = 0;",
+                  1) == 0 &&
               check_btech_value(
                   sqlite, "map regeneration",
                   "SELECT regen_factor FROM btech_maps WHERE dbref = 2;",
@@ -1113,6 +1199,15 @@ int main(int argc, char *argv[]) {
     }
     if (result != 0)
       return 1;
+  }
+  if (result == 0 && (set_invalid_power_value(database, 2) < 0 ||
+                      run_server_in_directory(argv[1], sqlite_read_config,
+                                              directory, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+                      set_invalid_power_value(database, 1) < 0)) {
+    fprintf(stderr, "Invalid object power fixture unexpectedly started: %s\n",
+            directory);
+    return 1;
   }
   if (result == 0) {
     dump_failure = stat(database, &snapshot_before) < 0 ||

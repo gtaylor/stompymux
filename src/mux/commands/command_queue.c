@@ -11,10 +11,10 @@
 #include "mux/commands/command_helpers.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h"
@@ -355,7 +355,7 @@ void do_halt(CommandInvocation *invocation) {
       notify(evaluation, player, "Can't specify a target and /all");
       return;
     }
-    if (typeof_obj(queue->world->database, obj_targ) == TYPE_PLAYER) {
+    if (typeof_obj(queue->world->database, obj_targ) == OBJECT_TYPE_PLAYER) {
       player_targ = obj_targ;
       obj_targ = NOTHING;
     } else {

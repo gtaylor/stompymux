@@ -37,7 +37,7 @@
 #include "mech.h"
 #include "mech.tech.h"
 #include "mechrep.h"
-#include "mux/database/powers.h"
+#include "mux/objects/powers.h"
 #include "mux/support/ansi.h"
 #include "mux/support/red_black_tree.h"
 #include "mycool.h"
@@ -53,16 +53,16 @@
 /* Special object parameters.  */
 const SpecialObjectStruct SpecialObjects[] = {
     {"MECH", mechcommands, sizeof(MECH), newfreemech, HEAT_TICK, mech_update,
-     POW_MECH},
-    {"DEBUG", debugcommands, sizeof(XCODE), NULL, 0, NULL, POW_SECURITY},
+     POWER_MECH},
+    {"DEBUG", debugcommands, sizeof(XCODE), NULL, 0, NULL, POWER_SECURITY},
     {"MECHREP", mechrepcommands, sizeof(MECHREP), newfreemechrep, 0, NULL,
-     POW_MECHREP},
+     POWER_MECHREP},
     {"MAP", mapcommands, sizeof(MAP), newfreemap, LOS_TICK, map_update,
-     POW_MAP},
+     POWER_MAP},
     {"AUTOPILOT", autopilotcommands, sizeof(AUTO), auto_newautopilot, 0, NULL,
-     POW_SECURITY},
+     POWER_SECURITY},
     {"TURRET", turretcommands, sizeof(TURRET_T), newturret, 0, NULL,
-     POW_SECURITY}};
+     POWER_SECURITY}};
 
 #define NUM_SPECIAL_OBJECTS                                                    \
   (sizeof(SpecialObjects) / sizeof(SpecialObjectStruct))
@@ -75,7 +75,7 @@ const SpecialObjectStruct SpecialObjects[] = {
 int HandledCommand(BtechContext *context, DbRef player, DbRef loc,
                    char *command);
 
-/* called when user creates/removes hardcode flag */
+/* Called when a user creates or removes the XCODE flag. */
 void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key);
 void DisposeSpecialObject(BtechContext *context, DbRef player, DbRef key);
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
@@ -85,7 +85,7 @@ void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 void *NewSpecialObject(BtechContext *context, long id, int type);
 void *btech_context_find_object(BtechContext *context, DbRef key);
 static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
-                                int id, int loc, int powerneeded, int objid,
+                                int id, int loc, PowerId powerneeded, int objid,
                                 char *arg);
 void initialize_colorize(BtechContext *context);
 void destroy_colorize(BtechContext *context);
@@ -136,8 +136,9 @@ static int Can_Use_Command(MECH *mech, int cmdflag) {
   return 0;
 }
 
-static bool have_mech_power(BtechContext *context, DbRef object, int power) {
-  return (game_object_powers2(context->database, object) & power) ||
+static bool have_mech_power(BtechContext *context, DbRef object,
+                            PowerId power) {
+  return game_object_has_power(context->database, object, power) ||
          is_wizard(context->database, object);
 }
 
@@ -155,7 +156,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
   if (type < 0 || (SpecialObjects[type].datasize > 0 &&
                    !(xcode_obj = red_black_tree_find(context->special_objects,
                                                      (void *)location)))) {
-    if (type >= 0 || !is_hardcode(context->database, location) ||
+    if (type >= 0 || !is_xcode(context->database, location) ||
         is_zombie(context->database, location))
       return 0;
     if ((type = btech_context_which_special_attribute(context, location)) >=
@@ -206,7 +207,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
 }
 
 static bool okay_hcode(BtechContext *context, DbRef object) {
-  return object >= 0 && is_hardcode(context->database, object) &&
+  return object >= 0 && is_xcode(context->database, object) &&
          !is_zombie(context->database, object);
 }
 
@@ -418,14 +419,14 @@ void LoadSpecialObjects(BtechContext *context) {
   /* Loop through the entire database, and if it has the special */
   /* object flag, add it to our linked list. */
   DO_WHOLE_DB(context->database, i)
-  if (is_hardcode(context->database, i) && !is_going(context->database, i) &&
+  if (is_xcode(context->database, i) && !is_going(context->database, i) &&
       !is_halted(context->database, i)) {
     type = btech_context_which_special_attribute(context, i);
     if (type >= 0) {
       if (SpecialObjects[type].datasize > 0)
         NewSpecialObject(context, i, type);
     } else
-      c_hardcode(context->database, i); /* Reset the flag */
+      c_xcode(context->database, i); /* Reset the flag */
   }
   for (i = 0; i < (int)(NUM_SPECIAL_OBJECTS); i++) {
     InitSpecialHash(context, i);
@@ -531,9 +532,8 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
     notify(btech_context_evaluation(context), player,
            "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
            "AUTOPILOT, TURRET.");
-    notify(btech_context_evaluation(context), player,
-           "Resetting hardcode flag.");
-    c_hardcode(context->database, key); /* Reset the flag */
+    notify(btech_context_evaluation(context), player, "Resetting XCODE flag.");
+    c_xcode(context->database, key); /* Reset the flag */
     return;
   }
 
@@ -554,9 +554,8 @@ void CreateNewSpecialObject(BtechContext *context, DbRef player, DbRef key) {
     notify(btech_context_evaluation(context), player,
            "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
            "AUTOPILOT, TURRET.");
-    notify(btech_context_evaluation(context), player,
-           "Resetting HARDCODE flag.");
-    c_hardcode(context->database, key);
+    notify(btech_context_evaluation(context), player, "Resetting XCODE flag.");
+    c_xcode(context->database, key);
   }
 }
 
@@ -661,7 +660,7 @@ int btech_context_which_special(BtechContext *context, DbRef key) {
 
   if (!is_good_obj(context->database, key))
     return -1;
-  if (!is_hardcode(context->database, key))
+  if (!is_xcode(context->database, key))
     return -1;
   if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)key)))
     return -1;
@@ -679,7 +678,7 @@ static int btech_context_which_special_attribute(BtechContext *context,
   int returnValue = -1;
   char *str;
 
-  if (!is_hardcode(context->database, key))
+  if (!is_xcode(context->database, key))
     return -1;
   str = btech_attribute_read(context->database, key, A_XTYPE,
                              (char[LBUF_SIZE]){0});
@@ -862,7 +861,7 @@ static void cut_apart_helpmsgs(coolmenu **d, char *msg1, char *msg2, int len,
 }
 
 static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
-                                int id, int loc, int powerneeded, int objid,
+                                int id, int loc, PowerId powerneeded, int objid,
                                 char *arg) {
   int i, j;
   MECH *mech = NULL;
@@ -1003,9 +1002,9 @@ void handle_xcode(BtechContext *context, DbRef player, DbRef obj, int from,
   if (from == to)
     return;
   if (!to) {
-    s_hardcode(context->database, obj);
+    s_xcode(context->database, obj);
     DisposeSpecialObject(context, player, obj);
-    c_hardcode(context->database, obj);
+    c_xcode(context->database, obj);
   } else
     CreateNewSpecialObject(context, player, obj);
 }
@@ -1188,7 +1187,7 @@ MECH *btech_context_get_mech(BtechContext *context, DbRef d) {
 
   if (!(is_good_obj(context->database, d)))
     return NULL;
-  if (!(is_hardcode(context->database, d)))
+  if (!(is_xcode(context->database, d)))
     return NULL;
   if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)d)))
     return NULL;

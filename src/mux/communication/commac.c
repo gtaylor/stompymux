@@ -2,7 +2,7 @@
 
 #include "mux/communication/commac.h"
 #include "mux/communication/channel_registry.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 
@@ -29,7 +29,7 @@ void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
         continue;
       }
 
-      if (typeof_obj(database, d->who) == TYPE_PLAYER)
+      if (typeof_obj(database, d->who) == OBJECT_TYPE_PLAYER)
         continue;
       del_commac(registry, d->who);
     }

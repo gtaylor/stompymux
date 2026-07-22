@@ -12,8 +12,8 @@
 #include <time.h>
 
 #include "mux/commands/command.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/log.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -249,15 +249,15 @@ const char *object_type_name(GameDatabase *database, DbRef thing) {
     return "??OUT-OF-RANGE??";
   }
   switch (typeof_obj(database, thing)) {
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_PLAYER:
     return "PLAYER";
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     return "THING";
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     return "ROOM";
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     return "EXIT";
-  case TYPE_GARBAGE:
+  case OBJECT_TYPE_GARBAGE:
     return "GARBAGE";
   default:
     return "??ILLEGAL??";

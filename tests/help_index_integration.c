@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mux/database/db.h"
 #include "mux/help/help_index.h"
 #include "mux/help/help_types.h"
+#include "mux/objects/db.h"
 #include "mux/server/log.h"
 
 void log_error(ServerLog *log, int key, const char *primary,

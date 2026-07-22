@@ -11,7 +11,7 @@
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_config.h"

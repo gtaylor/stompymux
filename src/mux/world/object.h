@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 typedef struct WorldContext WorldContext;
 

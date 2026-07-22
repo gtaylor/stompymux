@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <time.h>
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/support/alloc.h"
 
 /* Reasons passed to descriptor_shutdown(). */

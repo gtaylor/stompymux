@@ -139,7 +139,7 @@ void mechrep_Rsettarget(DbRef player, void *data, char *buffer) {
                           player, args[0]);
     DOCHECK_CONTEXT(rep->xcode.context,
                     !(is_good_obj(rep->xcode.context->database, newmech) &&
-                      is_hardcode(rep->xcode.context->database, newmech)),
+                      is_xcode(rep->xcode.context->database, newmech)),
                     "That is not a BattleMech or Vehicle!");
     rep->current_target = newmech;
     notify_printf(btech_context_evaluation(rep->xcode.context), player,

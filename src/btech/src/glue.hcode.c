@@ -18,7 +18,7 @@
 
 #include "macros.h"
 #include "mech.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/server_api.h"
 #include "p.glue.h"
 

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "mux/commands/command_runtime.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 bool command_context_initialize(CommandContext *context,
                                 CommandRuntime *runtime, BtechContext *btech,

@@ -56,6 +56,16 @@ constexpr DbRef AMBIGUOUS = -2; /* multiple possibilities, for matchers */
 constexpr DbRef HOME = -3;      /* virtual room, represents mover's home */
 constexpr DbRef NOPERM = -4;    /* Error status, no permission */
 
+typedef enum ObjectType {
+  OBJECT_TYPE_ROOM,
+  OBJECT_TYPE_THING,
+  OBJECT_TYPE_EXIT,
+  OBJECT_TYPE_PLAYER,
+  OBJECT_TYPE_INVALID = 4,
+  OBJECT_TYPE_GARBAGE,
+  OBJECT_TYPE_NOTYPE = 7,
+} ObjectType;
+
 typedef struct GameObject GameObject;
 struct GameObject {
   DbRef location; /* PLAYER, THING: where it is */
@@ -72,12 +82,43 @@ struct GameObject {
   /* ROOM, EXIT: unused */
   DbRef zone; /* Whatever the object is zoned to. */
 
-  Flag flags;  /* ALL: Flags set on the object */
-  Flag flags2; /* ALL: even more flags */
-  Flag flags3; /* ALL: yet _more_ flags */
+  ObjectType type;
 
-  Power powers;  /* ALL: Powers on object */
-  Power powers2; /* ALL: even more powers */
+  bool has_ansi_flag;
+  bool has_ansimap_flag;
+  bool has_audible_flag;
+  bool has_auditorium_flag;
+  bool has_blind_flag;
+  bool has_connected_flag;
+  bool has_dark_flag;
+  bool has_floating_flag;
+  bool has_gagged_flag;
+  bool has_going_flag;
+  bool has_halted_flag;
+  bool has_in_character_flag;
+  bool has_light_flag;
+  bool has_monitor_flag;
+  bool has_no_command_flag;
+  bool has_quiet_flag;
+  bool has_safe_flag;
+  bool has_suspect_flag;
+  bool has_transparent_flag;
+  bool has_wizard_flag;
+  bool has_xcode_flag;
+  bool has_zombie_flag;
+
+  bool has_idle_power;
+  bool has_long_fingers_power;
+  bool has_comm_all_power;
+  bool has_see_hidden_power;
+  bool has_no_destroy_power;
+  bool has_pass_locks_power;
+  bool has_mech_power;
+  bool has_security_power;
+  bool has_mechrep_power;
+  bool has_map_power;
+  bool has_template_power;
+  bool has_tech_power;
 
   AttributeStack *stackhead; /* Every object has a stack. */
 
@@ -142,20 +183,9 @@ static inline DbRef game_object_next(GameDatabase *database, DbRef object) {
 static inline DbRef game_object_link(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->link;
 }
-static inline Flag game_object_flags(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->flags;
-}
-static inline Flag game_object_flags2(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->flags2;
-}
-static inline Flag game_object_flags3(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->flags3;
-}
-static inline Power game_object_powers(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->powers;
-}
-static inline Power game_object_powers2(GameDatabase *database, DbRef object) {
-  return game_database_object(database, object)->powers2;
+static inline ObjectType game_object_type(GameDatabase *database,
+                                          DbRef object) {
+  return game_database_object(database, object)->type;
 }
 static inline AttributeStack *game_object_stack(GameDatabase *database,
                                                 DbRef object) {
@@ -186,25 +216,9 @@ static inline void game_object_set_link(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->link = value;
 }
-static inline void game_object_set_flags(GameDatabase *database, DbRef object,
-                                         Flag value) {
-  game_database_object(database, object)->flags = value;
-}
-static inline void game_object_set_flags2(GameDatabase *database, DbRef object,
-                                          Flag value) {
-  game_database_object(database, object)->flags2 = value;
-}
-static inline void game_object_set_flags3(GameDatabase *database, DbRef object,
-                                          Flag value) {
-  game_database_object(database, object)->flags3 = value;
-}
-static inline void game_object_set_powers(GameDatabase *database, DbRef object,
-                                          Power value) {
-  game_database_object(database, object)->powers = value;
-}
-static inline void game_object_set_powers2(GameDatabase *database, DbRef object,
-                                           Power value) {
-  game_database_object(database, object)->powers2 = value;
+static inline void game_object_set_type(GameDatabase *database, DbRef object,
+                                        ObjectType value) {
+  game_database_object(database, object)->type = value;
 }
 static inline void game_object_set_stack(GameDatabase *database, DbRef object,
                                          AttributeStack *value) {

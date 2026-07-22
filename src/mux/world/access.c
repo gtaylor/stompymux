@@ -7,8 +7,8 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/database/powers.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
@@ -69,8 +69,9 @@ int can_see(EvaluationContext *evaluation,
   if ((player == thing) || is_exit(evaluation->world->database, thing)) {
     return 0;
   }
-  /* In visible locations, DARK objects remain hidden. In DARK locations,
-   * only LIGHT objects that are not themselves DARK are visible. */
+  /* In visible locations, OBJECT_FLAG_DARK objects remain hidden. In
+   * OBJECT_FLAG_DARK locations, only LIGHT objects that are not themselves
+   * OBJECT_FLAG_DARK are visible. */
 
   if (can_see_loc)
     return !is_dark(evaluation->world->database, thing);

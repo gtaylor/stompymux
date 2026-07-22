@@ -10,7 +10,7 @@ The MUX server is organized by responsibility beneath `src/mux`.
 - `server` contains platform definitions, configuration parsing, server state,
   lifecycle, logging, timers, signals, and file caches.
 - `support` contains reusable containers, buffer helpers, and string utilities.
-- `database` owns game objects, exact-name Lua storage, flags, and powers.
+- `objects` owns game objects, exact-name Lua storage, flags, and powers.
 - `world` owns player, object, matching, movement, and presentation behavior.
 - `commands` owns native command dispatch, queues, literal parsing, and macros.
 - `communication` owns channels and speech.
@@ -25,6 +25,11 @@ not depend on the include-directory search order. Types exposed by MUX use
 descriptive PascalCase names. Functions use snake_case, and implementation
 details remain private to their owning module unless another translation unit
 needs them.
+
+Object flags and powers are represented by individual boolean fields in memory
+and matching SQLite columns. Flags use `has_*_flag` names and powers use
+`has_*_power` names; command names omit those storage-oriented affixes (for
+example, `idle` maps to `has_idle_power`).
 
 Mutable resources should be owned by a named subsystem or by the operation
 that uses them. For example, each help article index is an independently
@@ -44,7 +49,7 @@ long-lived resources in dependency order:
 | `MacroRegistry` | Player macro sets and their capacity | Macro commands and commac persistence |
 | `ChannelRegistry` | Channel-name index and channel count | Comsys commands and commac persistence |
 | `CommandRegistry` | Built-in commands, prefixes, and player macros | Command dispatch and configuration aliases |
-| `WorldIndexes` | Flag, power, and player indexes | Database, world, and command modules |
+| `WorldIndexes` | Flag, power, and player indexes | Object, world, and command modules |
 | `AccessControlStore` | Allowed, forbidden, and suspect sites plus disallowed player names | Configuration, connection, and player creation paths |
 | `WorldContext` | Borrowed database, configuration, world indexes, access-control store, and descriptor registry | Object, matching, lock, and world-facing command operations |
 | `ObjectList` | Results for one search or wildcard-attribute operation | Created and destroyed by the calling operation |

@@ -4,8 +4,8 @@
 
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_queue.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_registries.h"
@@ -251,10 +251,10 @@ struct ServerConfiguration {
   char default_room_lua_parent[128];   /* Lua parent for new rooms */
   char default_exit_lua_parent[128];   /* Lua parent for new exits */
   char default_player_lua_parent[128]; /* Lua parent for new players */
-  FLAGSET default_player_flags;        /* Flags players start with */
-  FLAGSET default_room_flags;          /* Flags rooms start with */
-  FLAGSET default_exit_flags;          /* Flags exits start with */
-  FLAGSET default_thing_flags;         /* Flags things start with */
+  ObjectFlagSet default_player_flags;  /* Flags players start with */
+  ObjectFlagSet default_room_flags;    /* Flags rooms start with */
+  ObjectFlagSet default_exit_flags;    /* Flags exits start with */
+  ObjectFlagSet default_thing_flags;   /* Flags things start with */
   char mud_name[32];                   /* Name of the mud */
   int timeslice;      /* How often do we bump people's cmd quotas? */
   int cmd_quota_max;  /* Max commands at one time */

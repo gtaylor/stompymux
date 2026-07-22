@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct EvaluationContext EvaluationContext;

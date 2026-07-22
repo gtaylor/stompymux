@@ -1,6 +1,6 @@
 /* flag_privileges.c -- role-only object control unit test */
 
-#include "mux/database/flags.h"
+#include "mux/objects/flags.h"
 
 int main(void) {
   GameObject objects[5] = {0};
@@ -10,15 +10,15 @@ int main(void) {
       .size = 5,
   };
 
-  objects[GOD].flags = TYPE_PLAYER | WIZARD;
-  objects[2].flags = TYPE_PLAYER | WIZARD;
-  objects[3].flags = TYPE_PLAYER;
-  objects[4].flags = TYPE_THING;
+  objects[GOD].type = OBJECT_TYPE_PLAYER;
+  objects[GOD].has_wizard_flag = true;
+  objects[2].type = OBJECT_TYPE_PLAYER;
+  objects[2].has_wizard_flag = true;
+  objects[3].type = OBJECT_TYPE_PLAYER;
+  objects[4].type = OBJECT_TYPE_THING;
 
-  if (!is_controls(&database, GOD, GOD) ||
-      !is_controls(&database, GOD, 2) ||
-      !is_controls(&database, GOD, 3) ||
-      !is_controls(&database, GOD, 4))
+  if (!is_controls(&database, GOD, GOD) || !is_controls(&database, GOD, 2) ||
+      !is_controls(&database, GOD, 3) || !is_controls(&database, GOD, 4))
     return 1;
 
   if (is_controls(&database, 2, GOD) || is_controls(&database, 2, 2) ||

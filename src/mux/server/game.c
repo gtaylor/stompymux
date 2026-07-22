@@ -11,12 +11,12 @@
 #include "mux/commands/macro.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
 #include "mux/help/help_index.h"
 #include "mux/network/connect_flow.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/file_cache.h"
@@ -154,7 +154,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   }
 
   switch (typeof_obj(evaluation->world->database, target)) {
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_PLAYER:
     if (key & MSG_ME) {
       if (key & MSG_COLORIZE)
         colbuf = colorize(evaluation, target, msg_copy);
@@ -164,8 +164,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
     if (colbuf)
       free_lbuf(colbuf);
     [[fallthrough]];
-  case TYPE_THING:
-  case TYPE_ROOM:
+  case OBJECT_TYPE_THING:
+  case OBJECT_TYPE_ROOM:
 
     has_neighbors = has_location(evaluation->world->database, target);
     targetloc = where_is(evaluation->world->database, target);

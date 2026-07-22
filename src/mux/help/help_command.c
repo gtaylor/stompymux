@@ -6,11 +6,11 @@
 
 #include <string.h>
 
-#include "mux/database/flags.h"
 #include "mux/help/help_command.h"
 #include "mux/help/help_index.h"
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
+#include "mux/objects/flags.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"

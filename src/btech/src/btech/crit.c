@@ -15,7 +15,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.sensor.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "p.bsuit.h"
@@ -67,7 +67,7 @@ void explode_unit(MECH *wounded, MECH *attacker) {
   SAFE_DOLIST(wounded->xcode.context->database, i, tmpnext,
               game_object_contents(wounded->xcode.context->database, from)) {
     if (is_good_obj(wounded->xcode.context->database, i) &&
-        is_hardcode(wounded->xcode.context->database, i)) {
+        is_xcode(wounded->xcode.context->database, i)) {
       if ((target = btech_context_get_mech(wounded->xcode.context, i))) {
         if (MechType(target) == CLASS_BSUIT) {
           KillMechContentsIfIC(target);

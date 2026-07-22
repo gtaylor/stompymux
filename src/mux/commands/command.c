@@ -11,12 +11,12 @@
 #include "mux/commands/command.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
 #include "mux/help/help_command.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/platform.h"
@@ -564,7 +564,7 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       !has_contents(context->world->database, player))
     fail++;
   if (is_protected(cmdp, CA_PLAYER) &&
-      (typeof_obj(context->world->database, player) != TYPE_PLAYER))
+      (typeof_obj(context->world->database, player) != OBJECT_TYPE_PLAYER))
     fail++;
   if (fail > 0) {
     notify(&context->evaluation, player,
@@ -798,7 +798,7 @@ void process_command(CommandContext *context, char *command, char *args[],
 
   if (is_going(context->world->database, player) ||
       (is_halted(context->world->database, player) &&
-       !((typeof_obj(context->world->database, player) == TYPE_PLAYER) &&
+       !((typeof_obj(context->world->database, player) == OBJECT_TYPE_PLAYER) &&
          interactive))) {
     notify_printf(&context->evaluation, player,
                   "Attempt to execute command by halted object #%ld", player);
@@ -916,7 +916,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     /*
      * Check for an exit name
      */
-    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+    init_match_check_keys(&context->match, player, command, OBJECT_TYPE_EXIT);
     match_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
@@ -1060,7 +1060,7 @@ void process_command(CommandContext *context, char *command, char *args[],
                    game_object_zone(context->world->database,
                                     game_object_location(
                                         context->world->database, player))) ==
-        TYPE_ROOM) {
+        OBJECT_TYPE_ROOM) {
       if (game_object_location(context->world->database, player) !=
           game_object_zone(context->world->database, player))
         lua_succ += lua_list_command_match(
@@ -1104,10 +1104,10 @@ void process_command(CommandContext *context, char *command, char *args[],
                   game_object_zone(context->world->database,
                                    game_object_location(
                                        context->world->database, player))) ==
-       TYPE_ROOM) &&
+       OBJECT_TYPE_ROOM) &&
       (game_object_location(context->world->database, player) !=
        game_object_zone(context->world->database, player))) {
-    init_match_check_keys(&context->match, player, command, TYPE_EXIT);
+    init_match_check_keys(&context->match, player, command, OBJECT_TYPE_EXIT);
     match_zone_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
@@ -1376,22 +1376,14 @@ static void list_df_flags(EvaluationContext *evaluation,
   char *playerb, *roomb, *thingb, *exitb, *buff;
 
   playerb =
-      decode_flags(evaluation->world->database, player,
-                   (configuration->default_player_flags.word1 | TYPE_PLAYER),
-                   configuration->default_player_flags.word2,
-                   configuration->default_player_flags.word3);
-  roomb = decode_flags(evaluation->world->database, player,
-                       (configuration->default_room_flags.word1 | TYPE_ROOM),
-                       configuration->default_room_flags.word2,
-                       configuration->default_room_flags.word3);
-  exitb = decode_flags(evaluation->world->database, player,
-                       (configuration->default_exit_flags.word1 | TYPE_EXIT),
-                       configuration->default_exit_flags.word2,
-                       configuration->default_exit_flags.word3);
-  thingb = decode_flags(evaluation->world->database, player,
-                        (configuration->default_thing_flags.word1 | TYPE_THING),
-                        configuration->default_thing_flags.word2,
-                        configuration->default_thing_flags.word3);
+      decode_flags(evaluation->world->database, player, OBJECT_TYPE_PLAYER,
+                   &configuration->default_player_flags);
+  roomb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_ROOM,
+                       &configuration->default_room_flags);
+  exitb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_EXIT,
+                       &configuration->default_exit_flags);
+  thingb = decode_flags(evaluation->world->database, player, OBJECT_TYPE_THING,
+                        &configuration->default_thing_flags);
   buff = alloc_lbuf("list_df_flags");
   snprintf(buff, LBUF_SIZE,
            "Default flags: Players...%s Rooms...%s Exits...%s Things...%s",

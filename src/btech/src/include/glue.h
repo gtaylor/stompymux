@@ -18,6 +18,7 @@
   Based on the original by MUSE folks
 */
 
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 
 /* Parameter to the save/load function */
@@ -61,9 +62,9 @@ typedef struct SpecialObjectStruct {
   CommandsStruct *commands; // Commands array
   long datasize;            // Size of private buffer
   void *allocfreefunc;
-  int updateTime;   // Amount of time between updates (secs)
-  void *updatefunc; // called for every object at every update
-  int power_needed; // What power is needed to restricted commands
+  int updateTime;       // Amount of time between updates (secs)
+  void *updatefunc;     // called for every object at every update
+  PowerId power_needed; // What power is needed to restricted commands
 } SpecialObjectStruct;
 
 #ifdef _GLUE_C

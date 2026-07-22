@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 #include <stdbool.h>
 #include <stddef.h>

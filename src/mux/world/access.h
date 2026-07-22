@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "mux/database/db.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
 
 typedef struct ServerConfiguration ServerConfiguration;
 

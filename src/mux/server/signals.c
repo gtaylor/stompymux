@@ -4,7 +4,7 @@
 #include "mux/server/platform.h"
 #include <signal.h>
 
-#include "mux/database/flags.h"
+#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
 #include "mux/server/server_api.h"

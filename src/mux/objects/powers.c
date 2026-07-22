@@ -5,65 +5,26 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/world_context.h"
 
-/**
- * set or clear indicated bit, no security checking
- */
-static int ph_any(EvaluationContext *evaluation, DbRef target, DbRef player,
-                  Power power, int fpowers, int reset) {
-  if (fpowers & POWER_EXT) {
-    if (reset)
-      game_object_set_powers2(
-          evaluation->world->database, target,
-          game_object_powers2(evaluation->world->database, target) & ~power);
-    else
-      game_object_set_powers2(
-          evaluation->world->database, target,
-          game_object_powers2(evaluation->world->database, target) | power);
-  } else {
-    if (reset)
-      game_object_set_powers(
-          evaluation->world->database, target,
-          game_object_powers(evaluation->world->database, target) & ~power);
-    else
-      game_object_set_powers(
-          evaluation->world->database, target,
-          game_object_powers(evaluation->world->database, target) | power);
-  }
-  return 1;
-}
-
-/**
- * Only WIZARDS (or GOD) may set or clear the bit
- */
-static int ph_wiz(EvaluationContext *evaluation, DbRef target, DbRef player,
-                  Power power, int fpowers, int reset) {
-  if (!is_wizard(evaluation->world->database, player) &&
-      !is_god(evaluation->world->database, player))
-    return 0;
-  return (ph_any(evaluation, target, player, power, fpowers, reset));
-}
-
-POWERENT gen_powers[] = {{"idle", POW_IDLE, 0, 0, ph_wiz},
-                         {"long_fingers", POW_LONGFINGERS, 0, 0, ph_wiz},
-                         {"comm_all", POW_COMM_ALL, 0, 0, ph_wiz},
-                         {"see_hidden", POW_SEE_HIDDEN, 0, 0, ph_wiz},
-                         {"no_destroy", POW_NO_DESTROY, 0, 0, ph_wiz},
-                         {"pass_locks", POW_PASS_LOCKS, 0, 0, ph_wiz},
-                         /* BattletechMUX Powers */
-                         {"mech", POW_MECH, POWER_EXT, 0, ph_wiz},
-                         {"security", POW_SECURITY, POWER_EXT, 0, ph_wiz},
-                         {"mechrep", POW_MECHREP, POWER_EXT, 0, ph_wiz},
-                         {"map", POW_MAP, POWER_EXT, 0, ph_wiz},
-                         {"tech", POW_TECH, POWER_EXT, 0, ph_wiz},
-                         {"template", POW_TEMPLATE, POWER_EXT, 0, ph_wiz},
-                         {nullptr, 0, 0, 0, 0}};
+POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0},
+                         {"long_fingers", POWER_LONG_FINGERS, 0},
+                         {"comm_all", POWER_COMM_ALL, 0},
+                         {"see_hidden", POWER_SEE_HIDDEN, 0},
+                         {"no_destroy", POWER_NO_DESTROY, 0},
+                         {"pass_locks", POWER_PASS_LOCKS, 0},
+                         {"mech", POWER_MECH, 0},
+                         {"security", POWER_SECURITY, 0},
+                         {"mechrep", POWER_MECHREP, 0},
+                         {"map", POWER_MAP, 0},
+                         {"tech", POWER_TECH, 0},
+                         {"template", POWER_TEMPLATE, 0},
+                         {nullptr, POWER_NONE, 0}};
 
 /**
  * Initialize power hash tables.
@@ -110,6 +71,8 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
 POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
   char *cp;
 
+  (void)thing;
+
   /*
    * Make sure the power name is valid
    */
@@ -119,24 +82,20 @@ POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
   return (POWERENT *)hash_table_find(powername, &indexes->powers);
 }
 
-int decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
-                 DbRef player, char *powername, POWERSET *pset) {
+bool decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
+                  DbRef player, char *powername, PowerId *id) {
   POWERENT *pent;
 
-  pset->word1 = 0;
-  pset->word2 = 0;
+  *id = POWER_NONE;
 
   pent = (POWERENT *)hash_table_find(powername, &indexes->powers);
   if (!pent) {
     notify_printf(evaluation, player, "%s: Power not found.", powername);
-    return 0;
+    return false;
   }
-  if (pent->powerpower & POWER_EXT)
-    pset->word2 = pent->powervalue;
-  else
-    pset->word1 = pent->powervalue;
+  *id = pent->id;
 
-  return 1;
+  return true;
 }
 
 /*
@@ -145,17 +104,17 @@ int decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
 void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                DbRef target, DbRef player, char *power, int key) {
   POWERENT *fp;
-  int negate, result;
+  bool negate;
 
   /*
    * Trim spaces, and handle the negation character
    */
 
-  negate = 0;
+  negate = false;
   while (*power && isspace(*power))
     power++;
   if (*power == '!') {
-    negate = 1;
+    negate = true;
     power++;
   }
   while (*power && isspace(*power))
@@ -181,11 +140,14 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
    * Invoke the power handler, and print feedback
    */
 
-  result = fp->handler(evaluation, target, player, fp->powervalue,
-                       fp->powerpower, negate);
-  if (!result)
+  if (!is_wizard(evaluation->world->database, player) &&
+      !is_god(evaluation->world->database, player)) {
     notify(evaluation, player, "Permission denied.");
-  else if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))
+    return;
+  }
+
+  game_object_set_power(evaluation->world->database, target, fp->id, !negate);
+  if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),
                   fp->powername, negate ? "removed." : "granted.");
@@ -195,27 +157,21 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
 /**
  * Does object have power visible to player?
  */
-int has_power(WorldContext *world, DbRef player, DbRef it, char *powername) {
+bool has_power(WorldContext *world, DbRef player, DbRef it, char *powername) {
   POWERENT *fp;
-  Power fv;
 
   fp = find_power(world->indexes, it, powername);
   if (fp == nullptr)
-    return 0;
+    return false;
 
-  if (fp->powerpower & POWER_EXT)
-    fv = game_object_powers2(world->database, it);
-  else
-    fv = game_object_powers(world->database, it);
-
-  if (fv & fp->powervalue) {
+  if (game_object_has_power(world->database, it, fp->id)) {
     if ((fp->listperm & CA_WIZARD) && !is_wizard(world->database, player))
-      return 0;
+      return false;
     if ((fp->listperm & CA_GOD) && !is_god(world->database, player))
-      return 0;
-    return 1;
+      return false;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 /**
@@ -224,7 +180,6 @@ int has_power(WorldContext *world, DbRef player, DbRef it, char *powername) {
 char *power_description(GameDatabase *database, DbRef player, DbRef target) {
   char *buff, *bp;
   POWERENT *fp;
-  Power fv;
 
   /*
    * Allocate the return buffer
@@ -239,11 +194,7 @@ char *power_description(GameDatabase *database, DbRef player, DbRef target) {
   safe_mb_str("Powers:", buff, &bp);
 
   for (fp = gen_powers; fp->powername; fp++) {
-    if (fp->powerpower & POWER_EXT)
-      fv = game_object_powers2(database, target);
-    else
-      fv = game_object_powers(database, target);
-    if (fv & fp->powervalue) {
+    if (game_object_has_power(database, target, fp->id)) {
       if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))
         continue;
       if ((fp->listperm & CA_GOD) && !is_god(database, player))

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/support/hash_table.h"
 
 typedef struct SiteData SiteData;

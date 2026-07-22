@@ -5,9 +5,9 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -28,7 +28,7 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  init_match(match, giver, what, TYPE_THING);
+  init_match(match, giver, what, OBJECT_TYPE_THING);
   match_possession(match);
   match_me(match);
   thing = match_result(match);
@@ -48,8 +48,8 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
     notify(evaluation, giver, "You can't give yourself away!");
     return;
   }
-  if ((typeof_obj(evaluation->world->database, thing) != TYPE_THING) &&
-      (typeof_obj(evaluation->world->database, thing) != TYPE_PLAYER)) {
+  if ((typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_THING) &&
+      (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_PLAYER)) {
     notify(evaluation, giver, "Permission denied.");
     return;
   }
@@ -131,7 +131,7 @@ void do_give(CommandInvocation *invocation) {
    * check recipient
    */
 
-  init_match(match, player, who, TYPE_PLAYER);
+  init_match(match, player, who, OBJECT_TYPE_PLAYER);
   match_neighbor(match);
   match_possession(match);
   match_me(match);

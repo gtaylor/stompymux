@@ -4,10 +4,10 @@
 #include <sys/types.h>
 
 #include "mux/commands/command_runtime.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
@@ -224,7 +224,8 @@ static void do_comsend(EvaluationContext *evaluation, struct channel *ch,
          !is_in_character_location(evaluation->world->database,
                                    evaluation->world->configuration,
                                    user->who))) {
-      if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+      if (typeof_obj(evaluation->world->database, user->who) ==
+              OBJECT_TYPE_PLAYER &&
           is_connected(evaluation->world->database, user->who))
         raw_notify(evaluation, user->who, mess);
       else
@@ -265,7 +266,8 @@ static void do_comprintf(EvaluationContext *evaluation, struct channel *ch,
          !is_in_character_location(evaluation->world->database,
                                    evaluation->world->configuration,
                                    user->who))) {
-      if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+      if (typeof_obj(evaluation->world->database, user->who) ==
+              OBJECT_TYPE_PLAYER &&
           is_connected(evaluation->world->database, user->who))
         raw_notify(evaluation, user->who, buffer);
       else
@@ -341,7 +343,7 @@ static void do_leavechannel(EvaluationContext *evaluation, DbRef player,
   /* Trigger ALEAVE of any channel objects on the channel */
   for (i = ch->num_users - 1; i > 0; i--) {
     if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
-        TYPE_THING)
+        OBJECT_TYPE_THING)
       notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
                    LUA_EVENT_LEAVE, (char **)nullptr, 0);
   }
@@ -366,7 +368,8 @@ static void do_comwho(EvaluationContext *evaluation, DbRef player,
 
   raw_notify(evaluation, player, "-- Players --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER &&
+    if (typeof_obj(evaluation->world->database, user->who) ==
+            OBJECT_TYPE_PLAYER &&
         user->on && is_connected(evaluation->world->database, user->who) &&
         (!is_hidden(evaluation->world->database, user->who) ||
          ((ch->type & CHANNEL_TRANSPARENT) &&
@@ -395,7 +398,8 @@ static void do_comwho(EvaluationContext *evaluation, DbRef player,
 
   raw_notify(evaluation, player, "-- Objects --");
   for (user = ch->on_users; user; user = user->on_next) {
-    if (typeof_obj(evaluation->world->database, user->who) != TYPE_PLAYER &&
+    if (typeof_obj(evaluation->world->database, user->who) !=
+            OBJECT_TYPE_PLAYER &&
         user->on && user->on &&
         !is_going(evaluation->world->database, user->who)) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
@@ -578,7 +582,7 @@ static void do_delcomchannel(EvaluationContext *evaluation, DbRef player,
     /* Trigger ALEAVE of any channel objects on the channel */
     for (i = ch->num_users - 1; i > 0; i--) {
       if (typeof_obj(evaluation->world->database, ch->users[i]->who) ==
-          TYPE_THING)
+          OBJECT_TYPE_THING)
         notify_event(evaluation, nullptr, player, player, ch->users[i]->who,
                      LUA_EVENT_LEAVE, (char **)nullptr, 0);
     }
@@ -990,12 +994,12 @@ void do_channelwho(CommandInvocation *invocation) {
       cp = unparse_object(evaluation->world->database, evaluation, player,
                           user->who);
       strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
-      notify_printf(
-          evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
-          ((user->on) ? "on " : "off"),
-          (typeof_obj(evaluation->world->database, user->who) == TYPE_PLAYER)
-              ? "yes"
-              : "no ");
+      notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
+                    ((user->on) ? "on " : "off"),
+                    (typeof_obj(evaluation->world->database, user->who) ==
+                     OBJECT_TYPE_PLAYER)
+                        ? "yes"
+                        : "no ");
       free_lbuf(cp);
     }
   }
@@ -1254,7 +1258,7 @@ static int do_test_access(EvaluationContext *evaluation, DbRef player,
                   &lock, &result))
       return (1);
   }
-  if (typeof_obj(evaluation->world->database, player) == TYPE_PLAYER)
+  if (typeof_obj(evaluation->world->database, player) == OBJECT_TYPE_PLAYER)
     flag_value *= CHANNEL_PL_MULT;
   else
     flag_value *= CHANNEL_OBJ_MULT;
@@ -1426,7 +1430,7 @@ void do_channel_object(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "Comsys disabled.");
     return;
   }
-  init_match(&evaluation->command->match, player, object, NOTYPE);
+  init_match(&evaluation->command->match, player, object, OBJECT_TYPE_NOTYPE);
   match_everything(&evaluation->command->match, 0);
   thing = match_result(&evaluation->command->match);
 

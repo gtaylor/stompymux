@@ -5,7 +5,7 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/database/powers.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/world/world_context.h"
@@ -17,11 +17,11 @@ DbRef where_is(GameDatabase *database, DbRef what) {
     return NOTHING;
 
   switch (typeof_obj(database, what)) {
-  case TYPE_PLAYER:
-  case TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
     loc = game_object_location(database, what);
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     loc = game_object_exits(database, what);
     break;
   default:

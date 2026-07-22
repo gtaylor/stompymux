@@ -16,7 +16,7 @@ include = ["aliases.toml"]
 # -----------------------------------------------
 
 [database]
-game_database = "data/stompymux.db.sqlite"
+game_database = "data/stompymux.db"
 mech_database = "mechs"
 map_database = "maps"
 # Interval at which to save the database.

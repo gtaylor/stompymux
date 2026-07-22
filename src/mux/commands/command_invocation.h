@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 typedef struct CommandContext CommandContext;
 typedef struct CommandInvocation CommandInvocation;

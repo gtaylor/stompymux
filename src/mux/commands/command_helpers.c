@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/database/flags.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -39,7 +39,7 @@ char *next_token(char *string, char separator) {
 }
 
 DbRef match_thing(MatchContext *match, DbRef player, char *name) {
-  init_match(match, player, name, NOTYPE);
+  init_match(match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(match, 0);
   return noisy_match_result(match);
 }

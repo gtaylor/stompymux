@@ -6,7 +6,7 @@
 
 #include "mux/server/platform.h"
 
-#include "mux/database/attrs.h"
+#include "mux/objects/attrs.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 
@@ -104,7 +104,7 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      * * * * past if we can't find it.
      */
 
-    init_match(match_context, thing, buff, NOTYPE);
+    init_match(match_context, thing, buff, OBJECT_TYPE_NOTYPE);
     if (player == thing) {
       match_neighbor(match_context);
       match_possession(match_context);
@@ -134,7 +134,7 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
      * Look for the object in the container
      */
 
-    init_match(match_context, result1, target, NOTYPE);
+    init_match(match_context, result1, target, OBJECT_TYPE_NOTYPE);
     match_possession(match_context);
     result = match_result(match_context);
     result = match_possessed(match_context, player, result1, target, result);
@@ -208,7 +208,7 @@ int parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
    * Look for the object
    */
 
-  init_match(match_context, player, thing, NOTYPE);
+  init_match(match_context, player, thing, OBJECT_TYPE_NOTYPE);
   match_everything(match_context, 0);
   *it = match_result(match_context);
 

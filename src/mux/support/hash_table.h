@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/name_table.h"
 #include "mux/support/red_black_tree.h"

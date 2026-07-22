@@ -3,7 +3,7 @@
 #pragma once
 
 #include "mux/commands/command_context.h"
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 typedef MatchContext MSTATE;
 typedef struct ServerConfiguration ServerConfiguration;

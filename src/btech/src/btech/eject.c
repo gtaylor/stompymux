@@ -71,7 +71,7 @@ static void mech_discard_event(MuxEvent *e) {
                                     mech->xcode.context->database, i),
                                 .destination = NOTHING},
                     .event = LUA_EVENT_LEAVE});
-  c_hardcode(mech->xcode.context->database, i);
+  c_xcode(mech->xcode.context->database, i);
   handle_xcode(mech->xcode.context, GOD, i, 1, 0);
   s_going(mech->xcode.context->database, i);
   s_dark(mech->xcode.context->database, i);
@@ -131,11 +131,11 @@ static void char_eject(DbRef player, MECH *mech) {
   EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
   suit = create_obj(
-      evaluation, GOD, TYPE_THING,
+      evaluation, GOD, OBJECT_TYPE_THING,
       tprintf("MechWarrior - %s",
               game_object_name(mech->xcode.context->database, player)));
   silly_atr_set_in(mech->xcode.context->database, suit, A_XTYPE, "MECH");
-  s_hardcode(mech->xcode.context->database, suit);
+  s_xcode(mech->xcode.context->database, suit);
   handle_xcode(mech->xcode.context, GOD, suit, 0, 1);
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
@@ -255,11 +255,11 @@ static void char_disembark(DbRef player, MECH *mech) {
   EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
 
   suit = create_obj(
-      evaluation, GOD, TYPE_THING,
+      evaluation, GOD, OBJECT_TYPE_THING,
       tprintf("MechWarrior - %s",
               game_object_name(mech->xcode.context->database, player)));
   silly_atr_set_in(mech->xcode.context->database, suit, A_XTYPE, "MECH");
-  s_hardcode(mech->xcode.context->database, suit);
+  s_xcode(mech->xcode.context->database, suit);
   handle_xcode(mech->xcode.context, GOD, suit, 0, 1);
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
@@ -398,7 +398,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   newmech = game_object_location(mech->xcode.context->database, mech->mynum);
   DOCHECK_CONTEXT(mech->xcode.context,
                   !(is_good_obj(mech->xcode.context->database, newmech) &&
-                    is_hardcode(mech->xcode.context->database, newmech)),
+                    is_xcode(mech->xcode.context->database, newmech)),
                   "You're not being carried!");
   DOCHECK_CONTEXT(
       mech->xcode.context,
@@ -793,11 +793,11 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
 
   /* Create the MW object */
   suit = create_obj(
-      evaluation, GOD, TYPE_THING,
+      evaluation, GOD, OBJECT_TYPE_THING,
       tprintf("MechWarrior - %s",
               game_object_name(mech->xcode.context->database, player)));
   silly_atr_set_in(mech->xcode.context->database, suit, A_XTYPE, "MECH");
-  s_hardcode(mech->xcode.context->database, suit);
+  s_xcode(mech->xcode.context->database, suit);
   handle_xcode(mech->xcode.context, GOD, suit, 0, 1);
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});

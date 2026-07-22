@@ -12,7 +12,7 @@
  *
  */
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 #include "mux/support/alloc.h"
 #include <stdio.h>
 #include <string.h>
@@ -24,8 +24,8 @@ void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
    Simple menu system for cool menus ;-)
    */
 #include "coolmenu.h"
-#include "mux/database/db.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/objects/db.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

@@ -9,17 +9,18 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/world_context.h"
 
 #define IS_CLEAN(database, i)                                                  \
-  (is_flag_set((database), (i), TYPE_GARBAGE, GOING) &&                        \
+  (typeof_obj((database), (i)) == OBJECT_TYPE_GARBAGE &&                       \
+   is_going((database), (i)) &&                                                \
    (game_object_location(database, i) == NOTHING) &&                           \
    (game_object_contents(database, i) == NOTHING) &&                           \
    (game_object_exits(database, i) == NOTHING) &&                              \
@@ -119,9 +120,9 @@ int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
     return 0;
 
   switch (typeof_obj(evaluation->world->database, home)) {
-  case TYPE_PLAYER:
-  case TYPE_ROOM:
-  case TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
+  case OBJECT_TYPE_ROOM:
+  case OBJECT_TYPE_THING:
     if (is_going(evaluation->world->database, home))
       return 0;
     if (is_controls(evaluation->world->database, player, home))
@@ -176,16 +177,16 @@ void object_apply_default_lua_parent(EvaluationContext *evaluation,
   char *path;
 
   switch (object_type) {
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     path = configuration->default_thing_lua_parent;
     break;
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     path = configuration->default_room_lua_parent;
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     path = configuration->default_exit_lua_parent;
     break;
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_PLAYER:
     path = configuration->default_player_lua_parent;
     break;
   default:
@@ -203,33 +204,25 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  char *name) {
   DbRef obj;
   int okname = 0;
-  Flag f1, f2, f3;
+  const ObjectFlagSet *default_flags;
   time_t tt;
   char *buff;
 
   switch (objtype) {
-  case TYPE_ROOM:
-    f1 = evaluation->world->configuration->default_room_flags.word1;
-    f2 = evaluation->world->configuration->default_room_flags.word2;
-    f3 = evaluation->world->configuration->default_room_flags.word3;
+  case OBJECT_TYPE_ROOM:
+    default_flags = &evaluation->world->configuration->default_room_flags;
     okname = ok_name(evaluation->world->configuration, name);
     break;
-  case TYPE_THING:
-    f1 = evaluation->world->configuration->default_thing_flags.word1;
-    f2 = evaluation->world->configuration->default_thing_flags.word2;
-    f3 = evaluation->world->configuration->default_thing_flags.word3;
+  case OBJECT_TYPE_THING:
+    default_flags = &evaluation->world->configuration->default_thing_flags;
     okname = ok_name(evaluation->world->configuration, name);
     break;
-  case TYPE_EXIT:
-    f1 = evaluation->world->configuration->default_exit_flags.word1;
-    f2 = evaluation->world->configuration->default_exit_flags.word2;
-    f3 = evaluation->world->configuration->default_exit_flags.word3;
+  case OBJECT_TYPE_EXIT:
+    default_flags = &evaluation->world->configuration->default_exit_flags;
     okname = ok_name(evaluation->world->configuration, name);
     break;
-  case TYPE_PLAYER:
-    f1 = evaluation->world->configuration->default_player_flags.word1;
-    f2 = evaluation->world->configuration->default_player_flags.word2;
-    f3 = evaluation->world->configuration->default_player_flags.word3;
+  case OBJECT_TYPE_PLAYER:
+    default_flags = &evaluation->world->configuration->default_player_flags;
     buff = munge_space(name);
     if (!badname_check(evaluation->world, buff)) {
       notify(evaluation, player, "That name is not allowed.");
@@ -261,7 +254,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     return NOTHING;
   }
 
-  if (objtype != TYPE_PLAYER &&
+  if (objtype != OBJECT_TYPE_PLAYER &&
       !is_good_obj(evaluation->world->database, player))
     return NOTHING;
 
@@ -301,7 +294,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
 
-  if (objtype == TYPE_PLAYER) {
+  if (objtype == OBJECT_TYPE_PLAYER) {
     DbRef zone = evaluation->world->configuration->player_zone > 0
                      ? evaluation->world->configuration->player_zone
                      : NOTHING;
@@ -311,15 +304,17 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                          game_object_zone(evaluation->world->database, player));
   }
 
-  game_object_set_flags(evaluation->world->database, obj, objtype | f1);
-  game_object_set_flags2(evaluation->world->database, obj, f2);
-  game_object_set_flags3(evaluation->world->database, obj, f3);
+  game_object_set_type(evaluation->world->database, obj, (ObjectType)objtype);
+  game_object_clear_flags(evaluation->world->database, obj);
+  for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+    game_object_set_flag(evaluation->world->database, obj, flag,
+                         object_flag_set_has(default_flags, flag));
   unmark(evaluation->world->database, obj);
   buff = munge_space((char *)name);
   object_name_set(evaluation->world->database, obj, buff);
   free_lbuf(buff);
 
-  if (objtype == TYPE_PLAYER) {
+  if (objtype == OBJECT_TYPE_PLAYER) {
     time(&tt);
     buff = (char *)ctime(&tt);
     buff[strlen(buff) - 1] = '\0';
@@ -358,12 +353,10 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
 #pragma clang diagnostic ignored "-Wcast-qual"
   object_name_set(evaluation->world->database, obj, (char *)"Garbage");
 #pragma clang diagnostic pop
-  game_object_set_flags(evaluation->world->database, obj,
-                        (TYPE_GARBAGE | GOING));
-  game_object_set_flags2(evaluation->world->database, obj, 0);
-  game_object_set_flags3(evaluation->world->database, obj, 0);
-  game_object_set_powers(evaluation->world->database, obj, 0);
-  game_object_set_powers2(evaluation->world->database, obj, 0);
+  game_object_set_type(evaluation->world->database, obj, OBJECT_TYPE_GARBAGE);
+  game_object_clear_flags(evaluation->world->database, obj);
+  s_going(evaluation->world->database, obj);
+  game_object_clear_powers(evaluation->world->database, obj);
   game_object_set_location(evaluation->world->database, obj, NOTHING);
   game_object_set_contents(evaluation->world->database, obj, NOTHING);
   game_object_set_exits(evaluation->world->database, obj, NOTHING);
@@ -391,7 +384,7 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
 }
 
 /**
- * Empties the contents of a GOING object.
+ * Empties the contents of a OBJECT_FLAG_GOING object.
  */
 void empty_obj(EvaluationContext *evaluation, DbRef obj) {
   DbRef targ, next;
@@ -504,7 +497,7 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
 }
 
 /**
- * Purges a GOING object.
+ * Purges a OBJECT_FLAG_GOING object.
  */
 static void purge_going(EvaluationContext *evaluation, bool full_check) {
   DbRef i;
@@ -514,10 +507,10 @@ static void purge_going(EvaluationContext *evaluation, bool full_check) {
       continue;
 
     switch (typeof_obj(evaluation->world->database, i)) {
-    case TYPE_PLAYER:
+    case OBJECT_TYPE_PLAYER:
       destroy_player(evaluation, i);
       break;
-    case TYPE_ROOM:
+    case OBJECT_TYPE_ROOM:
 
       /*
        * Room scheduled for destruction... do it
@@ -526,13 +519,13 @@ static void purge_going(EvaluationContext *evaluation, bool full_check) {
       empty_obj(evaluation, i);
       destroy_obj(evaluation, NOTHING, i);
       break;
-    case TYPE_THING:
+    case OBJECT_TYPE_THING:
       destroy_thing(evaluation, i);
       break;
-    case TYPE_EXIT:
+    case OBJECT_TYPE_EXIT:
       destroy_exit(evaluation, i);
       break;
-    case TYPE_GARBAGE:
+    case OBJECT_TYPE_GARBAGE:
       break;
     default:
 
@@ -548,7 +541,7 @@ static void purge_going(EvaluationContext *evaluation, bool full_check) {
 }
 
 /**
- * Look for references to GOING or illegal objects.
+ * Look for references to OBJECT_FLAG_GOING or illegal objects.
  */
 static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
   DbRef targ, i;
@@ -570,8 +563,8 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       game_object_set_zone(evaluation->world->database, i, NOTHING);
     }
     switch (typeof_obj(evaluation->world->database, i)) {
-    case TYPE_PLAYER:
-    case TYPE_THING:
+    case OBJECT_TYPE_PLAYER:
+    case OBJECT_TYPE_THING:
 
       if (is_going(evaluation->world->database, i))
         break;
@@ -615,7 +608,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         game_object_set_next(evaluation->world->database, i, NOTHING);
       }
       break;
-    case TYPE_ROOM:
+    case OBJECT_TYPE_ROOM:
 
       /*
        * Check the dropto
@@ -655,10 +648,10 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         }
       }
       break;
-    case TYPE_EXIT:
+    case OBJECT_TYPE_EXIT:
 
       /*
-       * If it points to something GOING, set it going
+       * If it points to something OBJECT_FLAG_GOING, set it going
        */
 
       targ = game_object_location(evaluation->world->database, i);
@@ -720,7 +713,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         }
       }
       break;
-    case TYPE_GARBAGE:
+    case OBJECT_TYPE_GARBAGE:
       break;
     default:
 
@@ -753,13 +746,13 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
  * of objects and attempt to correct problems. The following errors are
  * found and corrected:
  *       Location not in database                        - skip it.
- *       Location GOING                                  - skip it.
+ *       Location OBJECT_FLAG_GOING                                  - skip it.
  *       Location not a PLAYER, ROOM, or THING           - skip it.
  *       Location already visited                        - skip it.
  *       Exit/next pointer not in database               - NULL it.
  *       Member is not an EXIT                           - terminate chain.
- *       Member is GOING                                 - destroy exit.
- *       Member already checked (is in another list)     - terminate chain.
+ *       Member is OBJECT_FLAG_GOING                                 - destroy
+ * exit. Member already checked (is in another list)     - terminate chain.
  *       Member in another chain (recursive check)       - terminate chain.
  *       Location of member is not specified location    - reset it.
  */
@@ -771,7 +764,7 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
     return;
 
   /*
-   * Only check players, rooms, and things that aren't GOING
+   * Only check players, rooms, and things that aren't OBJECT_FLAG_GOING
    */
 
   if (is_exit(evaluation->world->database, loc) ||
@@ -940,13 +933,13 @@ static void check_exit_chains(EvaluationContext *evaluation, bool full_check) {
  * the contents chains of objects and attempt to correct problems.  The
  * following errors are found and corrected:
  *       Location not in database                        - skip it.
- *       Location GOING                                  - skip it.
+ *       Location OBJECT_FLAG_GOING                                  - skip it.
  *       Location not a PLAYER, ROOM, or THING           - skip it.
  *       Location already visited                        - skip it.
  *       Contents/next pointer not in database           - NULL it.
  *       Member is not an PLAYER or THING                - terminate chain.
- *       Member is GOING                                 - destroy exit.
- *       Member already checked (is in another list)     - terminate chain.
+ *       Member is OBJECT_FLAG_GOING                                 - destroy
+ * exit. Member already checked (is in another list)     - terminate chain.
  *       Member in another chain (recursive check)       - terminate chain.
  *       Location of member is not specified location    - reset it.
  */
@@ -1006,7 +999,7 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
     return;
 
   /*
-   * Only check players, rooms, and things that aren't GOING
+   * Only check players, rooms, and things that aren't OBJECT_FLAG_GOING
    */
 
   if (is_exit(evaluation->world->database, loc) ||
@@ -1049,7 +1042,8 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
       }
       obj = NOTHING;
     } else if (is_going(evaluation->world->database, obj) &&
-               (typeof_obj(evaluation->world->database, obj) == TYPE_GARBAGE)) {
+               (typeof_obj(evaluation->world->database, obj) ==
+                OBJECT_TYPE_GARBAGE)) {
 
       /*
        * Going - silently filter out

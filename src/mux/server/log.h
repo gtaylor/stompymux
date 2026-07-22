@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 
-#include "mux/database/db.h"
+#include "mux/objects/db.h"
 
 typedef struct LogCache LogCache;
 typedef struct ServerConfiguration ServerConfiguration;

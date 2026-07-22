@@ -58,7 +58,7 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
   notify_printf(btech_context_evaluation(m->xcode.context), player,
                 "Checking %d entries..", m->first_free);
   DOLIST(database, k, game_object_contents(database, m->mynum)) {
-    if (is_hardcode(database, k)) {
+    if (is_xcode(database, k)) {
       if (btech_context_which_special(m->xcode.context, k) == GTYPE_MECH) {
         MECH *map_mech;
 

@@ -8,9 +8,9 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -256,7 +256,7 @@ DbRef create_player(EvaluationContext *evaluation, char *name, char *password) {
    * If so, go create him
    */
 
-  player = create_obj(evaluation, NOTHING, TYPE_PLAYER, name);
+  player = create_obj(evaluation, NOTHING, OBJECT_TYPE_PLAYER, name);
   if (player == NOTHING) {
     sodium_memzero(hashed_password, sizeof(hashed_password));
     free_lbuf(pbuf);
@@ -367,7 +367,7 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
       return 0;
     }
     if (is_good_obj(world->database, *p) &&
-        (typeof_obj(world->database, *p) == TYPE_PLAYER)) {
+        (typeof_obj(world->database, *p) == OBJECT_TYPE_PLAYER)) {
       free_lbuf(temp);
       if (*p == player) {
         return 1;
@@ -431,7 +431,7 @@ DbRef lookup_player(WorldContext *world, DbRef doer, char *name,
     thing = clamped_atol(name);
     if (!is_good_obj(world->database, thing))
       return NOTHING;
-    if (!((typeof_obj(world->database, thing) == TYPE_PLAYER) ||
+    if (!((typeof_obj(world->database, thing) == OBJECT_TYPE_PLAYER) ||
           is_god(world->database, doer)))
       thing = NOTHING;
     return thing;
@@ -465,13 +465,13 @@ void load_player_names(WorldContext *world) {
   char *alias;
 
   DO_WHOLE_DB(world->database, i) {
-    if (typeof_obj(world->database, i) == TYPE_PLAYER) {
+    if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
       add_player_name(world, i, game_object_name(world->database, i));
     }
   }
   alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(world->database, i) {
-    if (typeof_obj(world->database, i) == TYPE_PLAYER) {
+    if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
       alias = attribute_get_string(world->database, alias, i, A_ALIAS, &aflags);
       if (*alias)
         add_player_name(world, i, alias);

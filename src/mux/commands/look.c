@@ -8,11 +8,11 @@
 #include "mux/commands/command_runtime.h"
 #include "mux/commands/look.h"
 #include "mux/commands/verbs.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -252,7 +252,7 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
   char *got;
   long aflags;
 
-  if ((typeof_obj(evaluation->world->database, loc) != TYPE_ROOM) &&
+  if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
     if (*(got = attribute_get(evaluation->world->database, loc, A_IDESC,
                               &aflags)))
@@ -306,7 +306,7 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
    * tell him the appropriate messages if he has the key
    */
 
-  if (typeof_obj(evaluation->world->database, loc) == TYPE_ROOM) {
+  if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
     if (lock_test(evaluation, player, player, player, loc, LUA_LOCK_DEFAULT,
                   LUA_LOCK_OPERATION_LOOK, false, &lock, &result))
       notify_action(evaluation,
@@ -349,7 +349,8 @@ void do_look(CommandInvocation *invocation) {
     thing = loc;
     if (is_good_obj(evaluation->world->database, thing)) {
       if (key & LOOK_OUTSIDE) {
-        if (typeof_obj(evaluation->world->database, thing) == TYPE_ROOM) {
+        if (typeof_obj(evaluation->world->database, thing) ==
+            OBJECT_TYPE_ROOM) {
           notify_quiet(evaluation, player, "You can't look outside.");
           return;
         }
@@ -364,7 +365,7 @@ void do_look(CommandInvocation *invocation) {
    */
 
   thing = (key & LOOK_OUTSIDE) ? loc : player;
-  init_match(&invocation->context->match, thing, name, NOTYPE);
+  init_match(&invocation->context->match, thing, name, OBJECT_TYPE_NOTYPE);
   match_exit(&invocation->context->match);
   match_neighbor(&invocation->context->match);
   match_possession(&invocation->context->match);
@@ -392,16 +393,16 @@ void do_look(CommandInvocation *invocation) {
 
   if (is_good_obj(evaluation->world->database, thing)) {
     switch (typeof_obj(evaluation->world->database, thing)) {
-    case TYPE_ROOM:
+    case OBJECT_TYPE_ROOM:
       look_in(evaluation, player, thing, look_key);
       break;
-    case TYPE_THING:
-    case TYPE_PLAYER:
+    case OBJECT_TYPE_THING:
+    case OBJECT_TYPE_PLAYER:
       if (!look_simple(evaluation, player, thing)) {
         look_contents(evaluation, player, thing, "Carrying:", CONTENTS_NESTED);
       }
       break;
-    case TYPE_EXIT:
+    case OBJECT_TYPE_EXIT:
       if (!look_simple(evaluation, player, thing) &&
           is_transparent(evaluation->world->database, thing) &&
           (game_object_location(evaluation->world->database, thing) !=
@@ -513,7 +514,7 @@ void do_examine(CommandInvocation *invocation) {
 
     /* Look it up */
 
-    init_match(&invocation->context->match, player, name, NOTYPE);
+    init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     thing = noisy_match_result(&invocation->context->match);
     if (!is_good_obj(evaluation->world->database, thing))
@@ -587,7 +588,7 @@ void do_examine(CommandInvocation *invocation) {
    */
 
   switch (typeof_obj(evaluation->world->database, thing)) {
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
 
     /*
      * tell him about exits
@@ -618,8 +619,8 @@ void do_examine(CommandInvocation *invocation) {
       free_lbuf(buf2);
     }
     break;
-  case TYPE_THING:
-  case TYPE_PLAYER:
+  case OBJECT_TYPE_THING:
+  case OBJECT_TYPE_PLAYER:
 
     /*
      * tell him about exits
@@ -659,7 +660,7 @@ void do_examine(CommandInvocation *invocation) {
       free_lbuf(buf2);
     }
     break;
-  case TYPE_EXIT:
+  case OBJECT_TYPE_EXIT:
     buf2 =
         unparse_object(evaluation->world->database, evaluation, player,
                        game_object_exits(evaluation->world->database, thing));
@@ -749,7 +750,7 @@ void do_entrances(CommandInvocation *invocation) {
     if (!is_good_obj(evaluation->world->database, thing))
       return;
   } else {
-    init_match(&invocation->context->match, player, name, NOTYPE);
+    init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     thing = noisy_match_result(&invocation->context->match);
     if (!is_good_obj(evaluation->world->database, thing))
@@ -763,7 +764,7 @@ void do_entrances(CommandInvocation *invocation) {
     if (control_thing ||
         is_examinable(evaluation->world->database, player, i)) {
       switch (typeof_obj(evaluation->world->database, i)) {
-      case TYPE_EXIT:
+      case OBJECT_TYPE_EXIT:
         if (game_object_location(evaluation->world->database, i) == thing) {
           exit =
               unparse_object(evaluation->world->database, evaluation, player,
@@ -774,7 +775,7 @@ void do_entrances(CommandInvocation *invocation) {
           count++;
         }
         break;
-      case TYPE_ROOM:
+      case OBJECT_TYPE_ROOM:
         if (game_object_location(evaluation->world->database, i) == thing) {
           exit = unparse_object(evaluation->world->database, evaluation, player,
                                 i);
@@ -783,8 +784,8 @@ void do_entrances(CommandInvocation *invocation) {
           count++;
         }
         break;
-      case TYPE_THING:
-      case TYPE_PLAYER:
+      case OBJECT_TYPE_THING:
+      case OBJECT_TYPE_PLAYER:
         if (game_object_link(evaluation->world->database, i) == thing) {
           exit = unparse_object(evaluation->world->database, evaluation, player,
                                 i);

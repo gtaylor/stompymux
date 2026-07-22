@@ -18,10 +18,10 @@
 #include "mux/commands/command_invocation.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/communication/comsys.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/runtime_clock.h"
@@ -203,8 +203,9 @@ void raw_broadcast(DescriptorRegistry *descriptors, int inflags,
   buff[LBUF_SIZE - 1] = '\0';
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
-    if ((game_object_flags(descriptor_runtime(d)->world->database, d->player) &
-         inflags) == inflags) {
+    if (inflags == OBJECT_FLAG_NONE ||
+        game_object_has_flag(descriptor_runtime(d)->world->database, d->player,
+                             (ObjectFlag)inflags)) {
       descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
       descriptor_queue_write(d, "\r\n", 2);
     }
@@ -336,11 +337,11 @@ static void dispatch_connection_event_scope(CommandRuntime *runtime,
       (zone = game_object_zone(runtime->world->database, location)) == NOTHING)
     return;
   switch (typeof_obj(runtime->world->database, zone)) {
-  case TYPE_THING:
+  case OBJECT_TYPE_THING:
     dispatch_connection_event(runtime, d, player, zone, type, reconnect,
                               reason);
     break;
-  case TYPE_ROOM:
+  case OBJECT_TYPE_ROOM:
     DOLIST(runtime->world->database, object,
            game_object_contents(runtime->world->database, zone)) {
       dispatch_connection_event(runtime, d, player, object, type, reconnect,
@@ -406,17 +407,19 @@ void announce_connect(DbRef player, Descriptor *d) {
       do_comconnect(&command->evaluation, player, d);
 
     if (is_dark(runtime->world->database, player)) {
-      raw_broadcast(runtime->descriptors, MONITOR,
+      raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
                     "GAME: %s has DARK-connected.",
                     game_object_name(runtime->world->database, player));
     } else {
-      raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has connected.",
+      raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
+                    "GAME: %s has connected.",
                     game_object_name(runtime->world->database, player));
     }
   } else {
     snprintf(buf, LBUF_SIZE, "%s has reconnected.",
              game_object_name(runtime->world->database, player));
-    raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has reconnected.",
+    raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
+                  "GAME: %s has reconnected.",
                   game_object_name(runtime->world->database, player));
   }
 
@@ -491,16 +494,16 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     if (configuration->have_comsys)
       do_comdisconnect(&command->evaluation, player);
 
-    raw_broadcast(runtime->descriptors, MONITOR, "GAME: %s has disconnected.",
+    raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
+                  "GAME: %s has disconnected.",
                   game_object_name(runtime->world->database, player));
 
     c_connected(runtime->world->database, player);
     dispatch_connection_event_scope(runtime, d, player, loc,
                                     LUA_EVENT_DISCONNECT, false, reason);
     if (d->is_autodark) {
-      game_object_set_flags(
-          runtime->world->database, d->player,
-          game_object_flags(runtime->world->database, d->player) & ~DARK);
+      game_object_set_flag(runtime->world->database, d->player,
+                           OBJECT_FLAG_DARK, false);
       d->is_autodark = false;
     }
 
@@ -513,7 +516,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                               is_wizard(runtime->world->database, player)))
       key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
     notify_checked(&command->evaluation, player, player, buf, key);
-    raw_broadcast(runtime->descriptors, MONITOR,
+    raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
                   "GAME: %s has partially disconnected.",
                   game_object_name(runtime->world->database, player));
     free_mbuf(buf);

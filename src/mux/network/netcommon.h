@@ -6,8 +6,8 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 
-#include "mux/database/db.h"
 #include "mux/network/descriptor.h"
+#include "mux/objects/db.h"
 
 typedef struct SiteData SiteData;
 typedef struct AccessControlStore AccessControlStore;

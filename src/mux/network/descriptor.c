@@ -10,10 +10,10 @@
 #include <unistd.h>
 
 #include "mux/commands/command_runtime.h"
-#include "mux/database/flags.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_handler.h"
+#include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
@@ -277,14 +277,8 @@ void descriptor_shutdown(Descriptor *descriptor,
     log_error(
         descriptor_log(descriptor), LOG_ACCOUNTING, "DIS", "ACCT",
         "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player,
-        decode_flags(
-            descriptor_runtime(descriptor)->world->database, GOD,
-            game_object_flags(descriptor_runtime(descriptor)->world->database,
-                              descriptor->player),
-            game_object_flags2(descriptor_runtime(descriptor)->world->database,
-                               descriptor->player),
-            game_object_flags3(descriptor_runtime(descriptor)->world->database,
-                               descriptor->player)),
+        unparse_flags(descriptor_runtime(descriptor)->world->database, GOD,
+                      descriptor->player),
         descriptor->command_count,
         runtime->clock->now - descriptor->connected_at,
         game_object_location(descriptor_runtime(descriptor)->world->database,

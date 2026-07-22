@@ -7,9 +7,9 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
-#include "mux/database/attrs.h"
-#include "mux/database/db.h"
-#include "mux/database/powers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/powers.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
@@ -42,7 +42,7 @@ void do_teleport(CommandInvocation *invocation) {
     victim = player;
     to = arg1;
   } else {
-    init_match(&invocation->context->match, player, arg1, NOTYPE);
+    init_match(&invocation->context->match, player, arg1, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     victim = noisy_match_result(&invocation->context->match);
 
@@ -56,7 +56,7 @@ void do_teleport(CommandInvocation *invocation) {
    */
 
   if (!has_location(evaluation->world->database, victim) &&
-      typeof_obj(evaluation->world->database, victim) != TYPE_EXIT) {
+      typeof_obj(evaluation->world->database, victim) != OBJECT_TYPE_EXIT) {
     notify_quiet(evaluation, player, "You can't teleport that.");
     return;
   }
@@ -77,7 +77,7 @@ void do_teleport(CommandInvocation *invocation) {
    */
 
   if (!string_compare(configuration, to, "home") &&
-      typeof_obj(evaluation->world->database, victim) != TYPE_EXIT) {
+      typeof_obj(evaluation->world->database, victim) != OBJECT_TYPE_EXIT) {
     (void)move_via_teleport(evaluation, victim, HOME, cause, 0);
     return;
   }
@@ -85,7 +85,7 @@ void do_teleport(CommandInvocation *invocation) {
    * Find out where to send the victim
    */
 
-  init_match(&invocation->context->match, player, to, NOTYPE);
+  init_match(&invocation->context->match, player, to, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   destination = match_result(&invocation->context->match);
 
@@ -165,7 +165,7 @@ void do_teleport(CommandInvocation *invocation) {
     if ((key & TELEPORT_QUIET) || is_dark(evaluation->world->database, victim))
       hush = HUSH_ENTER | HUSH_LEAVE;
 
-    if (typeof_obj(evaluation->world->database, victim) == TYPE_EXIT) {
+    if (typeof_obj(evaluation->world->database, victim) == OBJECT_TYPE_EXIT) {
       exitloc = game_object_exits(evaluation->world->database, victim);
       game_object_set_exits(
           evaluation->world->database, exitloc,
@@ -317,7 +317,7 @@ void do_boot(CommandInvocation *invocation) {
       ENDLOG(evaluation->log);
     }
   } else {
-    init_match(&invocation->context->match, player, name, TYPE_PLAYER);
+    init_match(&invocation->context->match, player, name, OBJECT_TYPE_PLAYER);
     match_neighbor(&invocation->context->match);
     match_absolute(&invocation->context->match);
     match_player(&invocation->context->match);

@@ -15,9 +15,10 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/communication/comsys_context.c
   ${MUX_MODULE_DIR}/communication/comsys.c
   ${MUX_MODULE_DIR}/communication/speech.c
-  ${MUX_MODULE_DIR}/database/db.c
-  ${MUX_MODULE_DIR}/database/flags.c
-  ${MUX_MODULE_DIR}/database/powers.c
+  ${MUX_MODULE_DIR}/objects/db.c
+  ${MUX_MODULE_DIR}/objects/flags.c
+  ${MUX_MODULE_DIR}/objects/power_fields.c
+  ${MUX_MODULE_DIR}/objects/powers.c
   ${MUX_MODULE_DIR}/help/help_command.c
   ${MUX_MODULE_DIR}/help/help_frontmatter.c
   ${MUX_MODULE_DIR}/help/help_index.c

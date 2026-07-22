@@ -7,8 +7,8 @@
 #include <lauxlib.h>
 
 #include "mux/commands/command_context.h"
-#include "mux/database/flags.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
 
 typedef void BtechLuaHandler(char *, char **, DbRef, DbRef, char **, int,

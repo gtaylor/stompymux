@@ -9,9 +9,9 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
-#include "mux/database/db.h"
-#include "mux/database/flags.h"
-#include "mux/database/powers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
@@ -35,7 +35,7 @@ void do_find(CommandInvocation *invocation) {
   parse_range(world->database, world->configuration, &name, &low_bound,
               &high_bound);
   for (i = low_bound; i <= high_bound; i++) {
-    if ((typeof_obj(evaluation->world->database, i) != TYPE_EXIT) &&
+    if ((typeof_obj(evaluation->world->database, i) != OBJECT_TYPE_EXIT) &&
         is_controls(evaluation->world->database, player, i) &&
         (!*name ||
          string_match(game_object_pure_name(evaluation->world->database, i),
@@ -63,21 +63,21 @@ void database_statistics_get(GameDatabase *database, DatabaseStatistics *info) {
 
   DO_WHOLE_DB(database, i) {
     info->s_total++;
-    if (is_going(database, i) && typeof_obj(database, i) != TYPE_ROOM) {
+    if (is_going(database, i) && typeof_obj(database, i) != OBJECT_TYPE_ROOM) {
       info->s_garbage++;
       continue;
     }
     switch (typeof_obj(database, i)) {
-    case TYPE_ROOM:
+    case OBJECT_TYPE_ROOM:
       info->s_rooms++;
       break;
-    case TYPE_EXIT:
+    case OBJECT_TYPE_EXIT:
       info->s_exits++;
       break;
-    case TYPE_THING:
+    case OBJECT_TYPE_THING:
       info->s_things++;
       break;
-    case TYPE_PLAYER:
+    case OBJECT_TYPE_PLAYER:
       info->s_players++;
       break;
     default:
@@ -139,13 +139,10 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
 
   err = 0;
   parm->s_rst_name = nullptr;
-  parm->s_rst_type = NOTYPE;
+  parm->s_rst_type = OBJECT_TYPE_NOTYPE;
   parm->s_zone = NOTHING;
-  parm->s_fset.word1 = 0;
-  parm->s_fset.word2 = 0;
-  parm->s_fset.word3 = 0;
-  parm->s_pset.word1 = 0;
-  parm->s_pset.word2 = 0;
+  parm->s_fset = (ObjectFlagSet){0};
+  parm->s_power = POWER_NONE;
 
   switch (searchtype[0]) {
   case '\0': /*
@@ -155,7 +152,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   case 'e':
     if (string_prefix("exits", searchtype)) {
       parm->s_rst_name = searchfor;
-      parm->s_rst_type = TYPE_EXIT;
+      parm->s_rst_type = OBJECT_TYPE_EXIT;
     } else {
       err = 1;
     }
@@ -185,7 +182,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   case 'o':
     if (string_prefix("objects", searchtype)) {
       parm->s_rst_name = searchfor;
-      parm->s_rst_type = TYPE_THING;
+      parm->s_rst_type = OBJECT_TYPE_THING;
     } else {
       err = 1;
     }
@@ -193,10 +190,10 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   case 'p':
     if (string_prefix("players", searchtype)) {
       parm->s_rst_name = searchfor;
-      parm->s_rst_type = TYPE_PLAYER;
+      parm->s_rst_type = OBJECT_TYPE_PLAYER;
     } else if (string_prefix("power", searchtype)) {
       if (!decode_power(context, context->world->indexes, player, searchfor,
-                        &parm->s_pset))
+                        &parm->s_power))
         return 0;
     } else {
       err = 1;
@@ -205,7 +202,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   case 'r':
     if (string_prefix("rooms", searchtype)) {
       parm->s_rst_name = searchfor;
-      parm->s_rst_type = TYPE_ROOM;
+      parm->s_rst_type = OBJECT_TYPE_ROOM;
     } else {
       err = 1;
     }
@@ -215,23 +212,23 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
       if (searchfor[0] == '\0')
         break;
       if (string_prefix("rooms", searchfor))
-        parm->s_rst_type = TYPE_ROOM;
+        parm->s_rst_type = OBJECT_TYPE_ROOM;
       else if (string_prefix("exits", searchfor))
-        parm->s_rst_type = TYPE_EXIT;
+        parm->s_rst_type = OBJECT_TYPE_EXIT;
       else if (string_prefix("objects", searchfor) ||
                string_prefix("things", searchfor))
-        parm->s_rst_type = TYPE_THING;
+        parm->s_rst_type = OBJECT_TYPE_THING;
       else if (string_prefix("garbage", searchfor))
-        parm->s_rst_type = TYPE_GARBAGE;
+        parm->s_rst_type = OBJECT_TYPE_GARBAGE;
       else if (string_prefix("players", searchfor))
-        parm->s_rst_type = TYPE_PLAYER;
+        parm->s_rst_type = OBJECT_TYPE_PLAYER;
       else {
         notify_printf(context, player, "%s: unknown type", searchfor);
         return 0;
       }
     } else if (string_prefix("things", searchtype)) {
       parm->s_rst_name = searchfor;
-      parm->s_rst_type = TYPE_THING;
+      parm->s_rst_type = OBJECT_TYPE_THING;
     } else {
       err = 1;
     }
@@ -259,8 +256,6 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
 void search_criteria_perform(EvaluationContext *context, DbRef player,
                              DbRef cause, SearchCriteria *parm,
                              ObjectList *results) {
-  Flag thing1flags, thing2flags, thing3flags;
-  Power thing1powers, thing2powers;
   DbRef thing;
   (void)cause;
 
@@ -269,7 +264,7 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
      * Check for matching type
      */
 
-    if ((parm->s_rst_type != NOTYPE) &&
+    if ((parm->s_rst_type != OBJECT_TYPE_NOTYPE) &&
         (parm->s_rst_type != typeof_obj(context->world->database, thing)))
       continue;
 
@@ -285,25 +280,17 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
      * Check for matching flags
      */
 
-    thing3flags = game_object_flags3(context->world->database, thing);
-    thing2flags = game_object_flags2(context->world->database, thing);
-    thing1flags = game_object_flags(context->world->database, thing);
-    if ((thing1flags & parm->s_fset.word1) != parm->s_fset.word1)
-      continue;
-    if ((thing2flags & parm->s_fset.word2) != parm->s_fset.word2)
-      continue;
-    if ((thing3flags & parm->s_fset.word3) != parm->s_fset.word3)
-      continue;
+    for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+      if (object_flag_set_has(&parm->s_fset, flag) &&
+          !game_object_has_flag(context->world->database, thing, flag))
+        goto next_object;
 
     /*
      * Check for matching power
      */
 
-    thing1powers = game_object_powers(context->world->database, thing);
-    thing2powers = game_object_powers2(context->world->database, thing);
-    if ((thing1powers & parm->s_pset.word1) != parm->s_pset.word1)
-      continue;
-    if ((thing2powers & parm->s_pset.word2) != parm->s_pset.word2)
+    if (parm->s_power != POWER_NONE &&
+        !game_object_has_power(context->world->database, thing, parm->s_power))
       continue;
 
     /*
@@ -321,6 +308,7 @@ void search_criteria_perform(EvaluationContext *context, DbRef player,
      */
 
     object_list_add(results, thing);
+  next_object:;
   }
 }
 
@@ -349,11 +337,12 @@ void do_search(CommandInvocation *invocation) {
   /*
    * room search
    */
-  if (searchparm.s_rst_type == TYPE_ROOM || searchparm.s_rst_type == NOTYPE) {
+  if (searchparm.s_rst_type == OBJECT_TYPE_ROOM ||
+      searchparm.s_rst_type == OBJECT_TYPE_NOTYPE) {
     flag = 1;
     for (thing = object_list_first(&results); thing != NOTHING;
          thing = object_list_next(&results)) {
-      if (typeof_obj(evaluation->world->database, thing) != TYPE_ROOM)
+      if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_ROOM)
         continue;
       if (flag) {
         flag = 0;
@@ -370,11 +359,12 @@ void do_search(CommandInvocation *invocation) {
   /*
    * exit search
    */
-  if (searchparm.s_rst_type == TYPE_EXIT || searchparm.s_rst_type == NOTYPE) {
+  if (searchparm.s_rst_type == OBJECT_TYPE_EXIT ||
+      searchparm.s_rst_type == OBJECT_TYPE_NOTYPE) {
     flag = 1;
     for (thing = object_list_first(&results); thing != NOTHING;
          thing = object_list_next(&results)) {
-      if (typeof_obj(evaluation->world->database, thing) != TYPE_EXIT)
+      if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_EXIT)
         continue;
       if (flag) {
         flag = 0;
@@ -411,11 +401,12 @@ void do_search(CommandInvocation *invocation) {
   /*
    * object search
    */
-  if (searchparm.s_rst_type == TYPE_THING || searchparm.s_rst_type == NOTYPE) {
+  if (searchparm.s_rst_type == OBJECT_TYPE_THING ||
+      searchparm.s_rst_type == OBJECT_TYPE_NOTYPE) {
     flag = 1;
     for (thing = object_list_first(&results); thing != NOTHING;
          thing = object_list_next(&results)) {
-      if (typeof_obj(evaluation->world->database, thing) != TYPE_THING)
+      if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_THING)
         continue;
       if (flag) {
         flag = 0;
@@ -432,12 +423,12 @@ void do_search(CommandInvocation *invocation) {
   /*
    * garbage search
    */
-  if (searchparm.s_rst_type == TYPE_GARBAGE ||
-      searchparm.s_rst_type == NOTYPE) {
+  if (searchparm.s_rst_type == OBJECT_TYPE_GARBAGE ||
+      searchparm.s_rst_type == OBJECT_TYPE_NOTYPE) {
     flag = 1;
     for (thing = object_list_first(&results); thing != NOTHING;
          thing = object_list_next(&results)) {
-      if (typeof_obj(evaluation->world->database, thing) != TYPE_GARBAGE)
+      if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_GARBAGE)
         continue;
       if (flag) {
         flag = 0;
@@ -454,11 +445,12 @@ void do_search(CommandInvocation *invocation) {
   /*
    * player search
    */
-  if (searchparm.s_rst_type == TYPE_PLAYER || searchparm.s_rst_type == NOTYPE) {
+  if (searchparm.s_rst_type == OBJECT_TYPE_PLAYER ||
+      searchparm.s_rst_type == OBJECT_TYPE_NOTYPE) {
     flag = 1;
     for (thing = object_list_first(&results); thing != NOTHING;
          thing = object_list_next(&results)) {
-      if (typeof_obj(evaluation->world->database, thing) != TYPE_PLAYER)
+      if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_PLAYER)
         continue;
       if (flag) {
         flag = 0;

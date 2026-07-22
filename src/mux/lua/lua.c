@@ -23,10 +23,10 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
-#include "mux/database/attrs.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/netcommon.h"
+#include "mux/objects/attrs.h"
 #include "mux/server/log.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
@@ -2623,7 +2623,7 @@ static void do_luaparent(CommandInvocation *invocation) {
   DbRef thing;
   char error[LBUF_SIZE];
 
-  init_match(&invocation->context->match, player, target, NOTYPE);
+  init_match(&invocation->context->match, player, target, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   thing = noisy_match_result(&invocation->context->match);
   if (thing == NOTHING)
@@ -2711,7 +2711,8 @@ static void do_luaviewparent(CommandInvocation *invocation) {
   if (argument[0] == '#') {
     DbRef object;
 
-    init_match(&invocation->context->match, player, argument, NOTYPE);
+    init_match(&invocation->context->match, player, argument,
+               OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     object = noisy_match_result(&invocation->context->match);
     if (object == NOTHING)
@@ -2850,7 +2851,8 @@ static void do_luaschedule(CommandInvocation *invocation) {
                                inspection, LUA_ROOT_OBJECT_LOGIC, argument, 1);
       goto done;
     }
-    init_match(&invocation->context->match, player, argument, NOTYPE);
+    init_match(&invocation->context->match, player, argument,
+               OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     {
       DbRef object = noisy_match_result(&invocation->context->match);
