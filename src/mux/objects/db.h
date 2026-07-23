@@ -114,7 +114,6 @@ struct GameObject {
   bool has_comm_all_power;
   bool has_see_hidden_power;
   bool has_no_destroy_power;
-  bool has_mech_power;
   bool has_security_power;
   bool has_mechrep_power;
   bool has_map_power;

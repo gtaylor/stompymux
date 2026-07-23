@@ -19,7 +19,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 17;
+constexpr int GAMEDB_SCHEMA_VERSION = 18;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -109,8 +109,6 @@ static const char schema_objects_sql[] =
     "(has_see_hidden_power IN (0, 1)),"
     " has_no_destroy_power INTEGER NOT NULL DEFAULT 0 CHECK "
     "(has_no_destroy_power IN (0, 1)),"
-    " has_mech_power INTEGER NOT NULL DEFAULT 0 CHECK (has_mech_power IN (0, "
-    "1)),"
     " has_security_power INTEGER NOT NULL DEFAULT 0 CHECK (has_security_power "
     "IN (0, 1)),"
     " has_mechrep_power INTEGER NOT NULL DEFAULT 0 CHECK (has_mechrep_power IN "
@@ -470,7 +468,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
       "has_xcode_flag, has_zombie_flag, has_idle_power, "
       "has_long_fingers_power, has_comm_all_power, "
-      "has_see_hidden_power, has_no_destroy_power, has_mech_power, "
+      "has_see_hidden_power, has_no_destroy_power, "
       "has_security_power, has_mechrep_power, has_map_power, "
       "has_template_power, has_tech_power "
       "FROM objects "
@@ -743,11 +741,11 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_transparent_flag, has_wizard_flag, has_xcode_flag, "
           "has_zombie_flag, "
           "has_idle_power, has_long_fingers_power, has_comm_all_power, "
-          "has_see_hidden_power, has_no_destroy_power, has_mech_power, "
+          "has_see_hidden_power, has_no_destroy_power, "
           "has_security_power, has_mechrep_power, has_map_power, "
           "has_template_power, has_tech_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, name, value) "
