@@ -1,6 +1,6 @@
-/* verbs.c - Action messaging and native Lua event dispatch. */
+/* action_messages.c - Action messaging and native Lua event dispatch. */
 
-#include "mux/commands/verbs.h"
+#include "mux/commands/action_messages.h"
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"

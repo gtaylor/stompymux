@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_parser.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/look.h"
-#include "mux/commands/verbs.h"
 #include "mux/network/netcommon.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/db.h"

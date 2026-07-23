@@ -4,10 +4,10 @@
 
 #include "mux/server/platform.h"
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/commands/look.h"
-#include "mux/commands/verbs.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"

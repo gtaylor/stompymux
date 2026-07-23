@@ -1,4 +1,4 @@
-/* verbs.h - Action messaging and native Lua event dispatch interface. */
+/* action_messages.h - Action messaging and native Lua event dispatch. */
 
 #pragma once
 

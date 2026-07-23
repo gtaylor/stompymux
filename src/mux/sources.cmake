@@ -9,7 +9,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/builder_commands.c
   ${MUX_MODULE_DIR}/commands/command_parser.c
   ${MUX_MODULE_DIR}/commands/macro.c
-  ${MUX_MODULE_DIR}/commands/verbs.c
+  ${MUX_MODULE_DIR}/commands/action_messages.c
   ${MUX_MODULE_DIR}/communication/commac.c
   ${MUX_MODULE_DIR}/communication/channel_registry.c
   ${MUX_MODULE_DIR}/communication/comsys_context.c
