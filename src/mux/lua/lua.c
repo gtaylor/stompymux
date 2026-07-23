@@ -3,6 +3,7 @@
 #include "mux/server/platform.h"
 
 #include "mux/lua/btech_package.h"
+#include "mux/lua/command_access.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/mux_package.h"
 
@@ -939,6 +940,27 @@ static int lua_verify_messages(lua_State *state, int messages, const char *path,
   return 1;
 }
 
+static int lua_verify_commands(lua_State *state, int commands, const char *path,
+                               char *error, size_t error_size) {
+  int count = (int)lua_objlen(state, commands);
+
+  for (int index = 1; index <= count; index++) {
+    LuaCommandAccess access;
+
+    lua_rawgeti(state, commands, index);
+    if (lua_istable(state, -1) &&
+        !lua_command_access_read(state, lua_gettop(state), &access)) {
+      lua_pop(state, 1);
+      lua_set_error(error, error_size,
+                    "command access in %s must be public, wizard, or god",
+                    path);
+      return 0;
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
 static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
                              const char *path, char *error, size_t error_size) {
   int top = lua_gettop(runtime->state);
@@ -977,6 +999,11 @@ static int lua_verify_module(LuaRuntime *runtime, LUA_MODULE_ROOT root,
         return 0;
       }
       has_commands = lua_objlen(runtime->state, -1) > 0;
+      if (!lua_verify_commands(runtime->state, lua_gettop(runtime->state), path,
+                               error, error_size)) {
+        lua_settop(runtime->state, top);
+        return 0;
+      }
     }
     lua_pop(runtime->state, 1);
     lua_getfield(runtime->state, -1, "events");
@@ -1883,17 +1910,9 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
     lua_settop(state, commands);
     lua_rawgeti(state, commands, index);
     entry = lua_gettop(state);
-    if (!lua_istable(state, entry))
+    if (!lua_command_entry_read(state, entry, runtime->services->database,
+                                player, &pattern))
       continue;
-    lua_getfield(state, entry, "pattern");
-    pattern = lua_tostring(state, -1);
-    lua_pop(state, 1);
-    lua_getfield(state, entry, "handler");
-    if (!pattern || !lua_isfunction(state, -1)) {
-      lua_pop(state, 1);
-      continue;
-    }
-    lua_pop(state, 1);
     lua_getglobal(state, "string");
     lua_getfield(state, -1, "match");
     lua_remove(state, -2);
@@ -1938,6 +1957,45 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
   return handled;
 }
 
+static size_t lua_visit_module_commands(LuaRuntime *runtime,
+                                        LUA_MODULE_ROOT root, const char *path,
+                                        DbRef object, DbRef player,
+                                        LuaCommandVisitor visitor,
+                                        void *context) {
+  lua_State *state = runtime->state;
+  char error[LBUF_SIZE];
+  int top = lua_gettop(state);
+  int commands;
+  size_t count = 0;
+
+  if (!lua_load_module(runtime, root, path, error, sizeof(error))) {
+    lua_log_load_error(runtime, object, path, error);
+    lua_settop(state, top);
+    return 0;
+  }
+  lua_getfield(state, -1, "commands");
+  commands = lua_gettop(state);
+  if (!lua_istable(state, commands)) {
+    lua_settop(state, top);
+    return 0;
+  }
+  for (int index = 1; index <= (int)lua_objlen(state, commands); index++) {
+    const char *pattern;
+    int entry;
+
+    lua_settop(state, commands);
+    lua_rawgeti(state, commands, index);
+    entry = lua_gettop(state);
+    if (lua_command_entry_read(state, entry, runtime->services->database,
+                               player, &pattern)) {
+      visitor(context, path, object, pattern);
+      count++;
+    }
+  }
+  lua_settop(state, top);
+  return count;
+}
+
 int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                       DbRef player, DbRef cause, const char *command) {
   char path[PATH_MAX];
@@ -1962,6 +2020,31 @@ int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
       return 1;
   }
   return 0;
+}
+
+size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
+                                 LuaCommandVisitor visitor, void *context) {
+  size_t count = 0;
+
+  if (!runtime || !visitor)
+    return 0;
+  for (size_t index = 0; index < runtime->global_module_count; index++)
+    count += lua_visit_module_commands(runtime, LUA_ROOT_GLOBAL_LOGIC,
+                                       runtime->global_modules[index], NOTHING,
+                                       player, visitor, context);
+  return count;
+}
+
+size_t lua_visit_object_commands(LuaRuntime *runtime, DbRef object,
+                                 DbRef player, LuaCommandVisitor visitor,
+                                 void *context) {
+  char path[PATH_MAX];
+
+  if (!runtime || !visitor || is_halted(runtime->services->database, object) ||
+      !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
+    return 0;
+  return lua_visit_module_commands(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
+                                   player, visitor, context);
 }
 
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,

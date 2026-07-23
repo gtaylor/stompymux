@@ -21,6 +21,9 @@ typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
 
+typedef void (*LuaCommandVisitor)(void *context, const char *source,
+                                  DbRef object, const char *pattern);
+
 typedef enum LuaEventType {
   LUA_EVENT_NONE,
   LUA_EVENT_SUCCESS,
@@ -261,6 +264,11 @@ int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                            const char *command);
 int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                              DbRef player, DbRef cause, const char *command);
+size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
+                                 LuaCommandVisitor visitor, void *context);
+size_t lua_visit_object_commands(LuaRuntime *runtime, DbRef object,
+                                 DbRef player, LuaCommandVisitor visitor,
+                                 void *context);
 const char *lua_event_name(LuaEventType event);
 bool lua_event_defined(LuaRuntime *runtime, DbRef object, LuaEventType event);
 bool lua_event_dispatch(LuaRuntime *runtime,

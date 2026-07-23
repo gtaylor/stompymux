@@ -6,13 +6,14 @@ weight: 15
 ---
 
 Lua command modules return a `commands` array. Each entry has a native Lua
-`pattern` and a `handler` function:
+`pattern`, a `handler` function, and an optional `access` level:
 
 ```lua
 return {
   commands = {
     {
       pattern = "^say%s+(.+)$",
+      access = "wizard",
       handler = function(ctx, message)
         mux.notify(ctx.enactor, "You said: " .. message)
         return true
@@ -21,6 +22,13 @@ return {
   },
 }
 ```
+
+Omit `access`, or set it to `"public"`, to allow everyone. Set it to
+`"wizard"` to allow Wizards and God, or `"god"` to allow only God. Values are
+case-sensitive. Invalid values cause module validation and reload to fail.
+
+An entry the invoker cannot access is skipped silently before its pattern or
+handler runs. Matching continues with later entries and command scopes.
 
 Programmable commands must be defined in Lua. Attribute values beginning with
 `$` are ordinary attribute text and are not matched as commands.
@@ -91,3 +99,16 @@ Global handlers must not assume an object is present. Use `ctx.descriptor`
 with [`mux.flow_start`](packages/mux/#muxflow_startdescriptor-module-first_step)
 to start an [interactive flow](flows/) on the connection that issued the
 command.
+
+## Discovering commands
+
+Wizards can use `@list commands` to see three separate command groups:
+built-in commands, global Lua commands, and object Lua commands. Each Lua entry
+shows its pattern and source. Global entries use the module path as their
+source; object entries use the object's name and dbref.
+
+The list applies the invoking player's Lua command access level. Object entries
+are further limited to command sources reachable from the player's current
+location, including the player, inventory, room, room contents, and applicable
+zones. Halted objects and objects blocked from the relevant command scope are
+omitted. Listing does not evaluate patterns or run handlers.

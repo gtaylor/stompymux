@@ -373,6 +373,15 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/game/lua/global_logic/example.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/global_logic/who.lua")
 
+  add_executable(lua_command_access_test tests/lua_command_access.c
+    ${MUX_SOURCE_DIR}/lua/command_access.c)
+  target_link_libraries(lua_command_access_test PRIVATE btmux_options luajit m)
+  target_include_directories(lua_command_access_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src"
+    "${LUAJIT_SOURCE_DIR}/src")
+  add_test(NAME lua_command_access COMMAND lua_command_access_test)
+
   add_executable(libtelnet_integration_test tests/libtelnet_integration.c)
   target_link_libraries(libtelnet_integration_test
     PRIVATE btmux_options libtelnet)

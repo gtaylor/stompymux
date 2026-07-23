@@ -1099,16 +1099,121 @@ exit:
  * * list_cmdtable: List internal commands.
  */
 
+typedef struct LuaCommandListContext {
+  EvaluationContext *evaluation;
+  GameDatabase *database;
+  DbRef player;
+} LuaCommandListContext;
+
+static void list_global_lua_command(void *data, const char *source,
+                                    DbRef object, const char *pattern) {
+  LuaCommandListContext *context = data;
+
+  notify_printf(context->evaluation, context->player, "  %s: %s", source,
+                pattern);
+}
+
+static void list_object_lua_command(void *data, const char *source,
+                                    DbRef object, const char *pattern) {
+  LuaCommandListContext *context = data;
+
+  notify_printf(context->evaluation, context->player, "  %s (#%ld): %s",
+                game_object_name(context->database, object), object, pattern);
+}
+
+static size_t list_object_lua_command_source(LuaRuntime *lua,
+                                             LuaCommandListContext *context,
+                                             DbRef object, bool visited[]) {
+  if (!is_good_obj(context->database, object) || visited[object])
+    return 0;
+  visited[object] = true;
+  return lua_visit_object_commands(lua, object, context->player,
+                                   list_object_lua_command, context);
+}
+
+static size_t list_object_lua_command_sources(LuaRuntime *lua,
+                                              LuaCommandListContext *context,
+                                              DbRef first, bool visited[]) {
+  DbRef object;
+  size_t count = 0;
+
+  DOLIST(context->database, object, first) {
+    count += list_object_lua_command_source(lua, context, object, visited);
+  }
+  return count;
+}
+
+static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
+                                                 EvaluationContext *evaluation,
+                                                 DbRef player) {
+  GameDatabase *database = runtime->world->database;
+  const ServerConfiguration *configuration = runtime->world->configuration;
+  LuaRuntime *lua = runtime->lua_owner->runtime;
+  LuaCommandListContext context = {
+      .evaluation = evaluation,
+      .database = database,
+      .player = player,
+  };
+  bool *visited = calloc((size_t)database->top, sizeof(*visited));
+  size_t count = 0;
+
+  if (!visited)
+    return 0;
+  if (!is_no_command(database, player))
+    count += list_object_lua_command_source(lua, &context, player, visited);
+  if (has_location(database, player)) {
+    DbRef location = game_object_location(database, player);
+
+    count += list_object_lua_command_sources(
+        lua, &context, game_object_contents(database, location), visited);
+    if (!is_no_command(database, location))
+      count += list_object_lua_command_source(lua, &context, location, visited);
+  }
+  if (has_contents(database, player))
+    count += list_object_lua_command_sources(
+        lua, &context, game_object_contents(database, player), visited);
+
+  if (configuration->have_zones && has_location(database, player)) {
+    DbRef location = game_object_location(database, player);
+    DbRef location_zone = game_object_zone(database, location);
+    DbRef player_zone = game_object_zone(database, player);
+
+    if (location_zone != NOTHING) {
+      if (typeof_obj(database, location_zone) == OBJECT_TYPE_ROOM) {
+        if (location != player_zone)
+          count += list_object_lua_command_sources(
+              lua, &context, game_object_contents(database, location_zone),
+              visited);
+      } else if (!is_no_command(database, location_zone)) {
+        count += list_object_lua_command_source(lua, &context, location_zone,
+                                                visited);
+      }
+    }
+    if (player_zone != NOTHING && !is_no_command(database, player_zone) &&
+        location_zone != player_zone)
+      count +=
+          list_object_lua_command_source(lua, &context, player_zone, visited);
+  }
+  free(visited);
+  return count;
+}
+
 static void list_cmdtable(EvaluationContext *evaluation,
-                          const ServerConfiguration *configuration,
-                          DbRef player) {
+                          CommandRuntime *runtime, DbRef player) {
+  const ServerConfiguration *configuration = runtime->world->configuration;
+  LuaCommandListContext context = {
+      .evaluation = evaluation,
+      .database = runtime->world->database,
+      .player = player,
+  };
   CMDENT *cmdp;
   char *buf, *bp;
   const char *cp;
+  size_t count;
 
   buf = alloc_lbuf("list_cmdtable");
   bp = buf;
-  for (cp = "Commands:"; *cp; cp++)
+  for (cp = "Built-in commands:"; *cp; cp++)
     *bp++ = *cp;
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (check_access(evaluation->world->database, configuration, player,
@@ -1124,6 +1229,17 @@ static void list_cmdtable(EvaluationContext *evaluation,
 
   notify(evaluation, player, buf);
   free_lbuf(buf);
+
+  notify_quiet(evaluation, player, "Global commands:");
+  count = lua_visit_global_commands(runtime->lua_owner->runtime, player,
+                                    list_global_lua_command, &context);
+  if (!count)
+    notify_quiet(evaluation, player, "  (none)");
+
+  notify_quiet(evaluation, player, "Object commands:");
+  count = list_reachable_object_lua_commands(runtime, evaluation, player);
+  if (!count)
+    notify_quiet(evaluation, player, "  (none)");
 }
 
 /*
@@ -1577,7 +1693,7 @@ void do_list(CommandInvocation *invocation) {
                                 list_names, arg);
   switch (flagvalue) {
   case LIST_COMMANDS:
-    list_cmdtable(&invocation->context->evaluation, configuration, player);
+    list_cmdtable(&invocation->context->evaluation, runtime, player);
     break;
   case LIST_SWITCHES:
     list_cmdswitches(&invocation->context->evaluation, configuration, player);
