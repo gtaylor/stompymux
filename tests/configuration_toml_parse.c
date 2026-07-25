@@ -85,8 +85,26 @@ static int test_scalar_dispatch(void) {
   return ok;
 }
 
-static int test_flag_list_dispatch(void) {
-  static const char toml[] = "[logging]\nlog = [\"!accounting\", \"bugs\"]\n"
+static int test_flag_list_and_logging_topics_dispatch(void) {
+  static const char toml[] = "[logging]\n"
+                             "log_options = [\"flags\", \"location\"]\n"
+                             "[logging.topics]\n"
+                             "accounting = false\n"
+                             "all_commands = false\n"
+                             "suspect_commands = false\n"
+                             "bad_commands = false\n"
+                             "buffer_alloc = false\n"
+                             "bugs = true\n"
+                             "checkpoints = false\n"
+                             "config_changes = false\n"
+                             "create = false\n"
+                             "logins = false\n"
+                             "network = false\n"
+                             "problems = true\n"
+                             "security = true\n"
+                             "shouts = false\n"
+                             "startup = false\n"
+                             "wizard = false\n"
                              "[mux]\ndefault_player_flags = []\n"
                              "default_exit_flags = [\"no_command\"]\n"
                              "default_room_flags = [\"floating\"]\n"
@@ -99,7 +117,24 @@ static int test_flag_list_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 5 && call_log_find(&log, "log", "!accounting bugs") &&
+  ok = log.count == 21 &&
+       call_log_find(&log, "log_options", "flags location") &&
+       call_log_find(&log, "accounting", "false") &&
+       call_log_find(&log, "all_commands", "false") &&
+       call_log_find(&log, "suspect_commands", "false") &&
+       call_log_find(&log, "bad_commands", "false") &&
+       call_log_find(&log, "buffer_alloc", "false") &&
+       call_log_find(&log, "bugs", "true") &&
+       call_log_find(&log, "checkpoints", "false") &&
+       call_log_find(&log, "config_changes", "false") &&
+       call_log_find(&log, "create", "false") &&
+       call_log_find(&log, "logins", "false") &&
+       call_log_find(&log, "network", "false") &&
+       call_log_find(&log, "problems", "true") &&
+       call_log_find(&log, "security", "true") &&
+       call_log_find(&log, "shouts", "false") &&
+       call_log_find(&log, "startup", "false") &&
+       call_log_find(&log, "wizard", "false") &&
        call_log_find(&log, "default_player_flags", "") &&
        call_log_find(&log, "default_exit_flags", "no_command") &&
        call_log_find(&log, "default_room_flags", "floating") &&
@@ -279,7 +314,7 @@ int main(int argc, char *argv[]) {
 
   if (!test_scalar_dispatch())
     return 2;
-  if (!test_flag_list_dispatch())
+  if (!test_flag_list_and_logging_topics_dispatch())
     return 3;
   if (!test_alias_map_dispatch())
     return 4;

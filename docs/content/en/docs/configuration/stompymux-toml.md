@@ -28,7 +28,7 @@ anything pulled in through `include`.
 | `[access.*]` | Permission tables for commands, lists, and configuration directives. |
 | `[aliases.*]` | Command and flag alias tables. |
 | `[names]` | `bad`/`good` player-name lists. |
-| `[logging]` | `log` and `log_options` bitmask arrays. |
+| `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
 
 Most directives are plain scalars (`port = 5555`, or, under `[database]`,
 `fork_dump = true`). A few
@@ -36,9 +36,9 @@ directives take other shapes:
 
 - **Flag/bitmask directives** (`mux.default_player_flags`,
   `mux.default_exit_flags`, `mux.default_room_flags`,
-  `mux.default_thing_flags`, and `[logging]`) are TOML arrays of strings.
-  `logging.log` is negatable: prefix an entry with `!` to clear a bit that's on
-  by default (e.g. `log = ["!accounting", "bugs"]`).
+  `mux.default_thing_flags`, and `logging.log_options`) are TOML arrays of
+  strings. Logging event categories instead use individual booleans such as
+  `[logging.topics] security = true` and `all_commands = false`.
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
   target, e.g. `"@cr" = "@create"`.
 - **Access directives** (`[access.*]`) are tables

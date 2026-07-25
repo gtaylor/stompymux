@@ -16,15 +16,19 @@ include = ["aliases.toml"]
 # -----------------------------------------------
 
 [database]
+# SQLite database file holding persistent game state.
 game_database = "data/stompymux.db"
+# Directory containing BattleTech unit template files.
 mech_database = "mechs"
+# Directory containing map template files.
 map_database = "maps"
-# Interval at which to save the database.
+# Seconds between automatic database dumps.
 dump_interval = 1200
-# Fork off a new process for database dumps.
+# Whether to use a child process when writing database dumps.
 fork_dump = true
-# Messages to show during and after database dumps.
+# Message displayed to players when a database dump begins.
 # dump_message = "BattletechMUX : Saving Database. Game will pause."
+# Message displayed to players after a database dump finishes.
 # postdump_message = "BattletechMUX : Database Saved."
 
 # -----------------------------------------------
@@ -53,47 +57,55 @@ mud_name = "Big Stompy Robot Game"
 # -----------------------------------------------
 
 [battletech]
-# As armor/ammo is expended, allow units to exceed their max speed.
+# Allow units that lose armor or ammunition to exceed their normal maximum speed.
 dynspeed = 0
+# To-hit penalty applied when firing at a dug-in unit.
 digbonus = 2
+# Apply the dug-in to-hit penalty only when attacking a target's front side.
 dig_only_fs = 1
-# TACs will not occur until units fall below this armor percentage.
+# Armor percentage below which through-armor criticals may occur.
 critlevel = 66
-# Nonzero value for tank crit blocking
+# Enable vehicle critical-hit handling; zero disables it.
 vcrit = 101
-# -1 Maxtech, 0 Semi-FASA, 1 FASA'y
+# Critical-hit rules: -1 for MaxTech, 0 for Semi-FASA, 1 for FASA.
 fasacrit = -1
-# Allow players to explode their reactors (via explode reactor).
+# Allow players to self-destruct a unit by exploding its reactor.
 explode_reactor = 1
-# Allow players to explode their ammo (via explode ammo).
+# Allow players to self-destruct a unit by exploding its ammunition.
 explode_ammo = 1
-# Allow playres to abort their self-destruction sequences.
+# Allow players to abort a self-destruction sequence after starting it.
 explode_stop = 0
-# Time it takes for a self destruction. Ammo explode takes 1/2 the time.
+# Seconds for reactor self-destruction; ammunition self-destruction takes half as long.
 explode_time = 120
+# Enable extended weapon ranges, up to twice a weapon's medium range.
 erange = 0
-# Hit arcs.  0 = TW (default), 1 = BTMUX (all 90 degrees), 2 = BMR.
+# Hit-arc rules: 0 for Total Warfare, 1 for classic BTMUX, 2 for BattleMech Manual.
 hit_arcs = 0
-# If 1, allow MW embark/disembark and XP loss, if 0, don't.
+# Enable MechWarrior embark/disembark behavior and experience loss.
 ic = 0
-# Roll on players' piloting skill for physical attacks.
+# Use the pilot's piloting skill for physical-attack to-hit rolls.
 phys_use_pskill = 1
+# Speed-reduction rules while turning: 0 disables them, 1 is legacy, 2 is facing-based.
 slowdown = 2
+# Apply FASA turning rules and their associated to-hit modifier.
 fasaturn = 0
+# Enable additional terrain movement restrictions and checks.
 newterrain = 0
+# Use the newer charge movement, damage, and distance rules.
 newcharge = 1
-# Give -#MP instead of a flat speed 0 in most tank crits
+# Reduce vehicle movement points rather than setting speed to zero for most vehicle crits.
 tankfriendly = 0
-# Save tanks from crash damage
+# Prevent vehicles from taking crash damage.
 tankshield = 0
+# Use skid-based piloting checks when colliding with cliffs or drops.
 skidcliff = 1
-# Units must be stalled to do serious repairs if true.
+# Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
-# Object to store mechs after destruction in.
+# Database object that stores destroyed units.
 usedmechstore = 3
-# Mushroom on triple engine deaths.
+# Enable catastrophic explosions after a third engine critical hit.
 stackpole = 1
-# Place to move players to upon death.
+# Database object to which players are moved after death.
 afterlife_dbref = 167
 
 # -----------------------------------------------
@@ -101,17 +113,21 @@ afterlife_dbref = 167
 # -----------------------------------------------
 
 [battletech.xp]
-# 0 for new system, 1 for old XP system.
+# Select the XP system: 0 for the current system, 1 for the legacy system.
 oldxpsystem = 0
+# Apply the to-hit-number modifier in the current weapon XP calculation.
 bthmod = 200
+# Apply a recycle-time modifier in the current weapon XP calculation.
 vrtmod = 1
-# XP multiplier for Missile weapons.
+# XP multiplier for missile weapons.
 missilemod = 69
-# XP multiplier for Ammo/Ballistic weapons.
+# XP multiplier for ammunition and ballistic weapons.
 ammomod = 42
+# Damage divisor used by the current weapon XP formula.
 defaultweapdam = 3
+# Reference weapon Battle Value used by the current weapon XP formula.
 defaultweapbv = 70
-# Overall XP modifier
+# Overall XP multiplier; 100 represents the standard rate.
 modifier = 100
 
 # -----------------------------------------------
@@ -157,12 +173,15 @@ command_quota_interval = 50
 [security]
 # Maximum permitted player password length.
 player_password_length_limit = 64
-# Argon2id work factors. Memory is measured in bytes.
+# Argon2id CPU work factor used when hashing passwords.
 password_hash_opslimit = 3
+# Argon2id memory work factor in bytes used when hashing passwords.
 password_hash_memlimit = 12582912
-# Per-source login burst, seconds per restored attempt, and global hash rate.
+# Password attempts a source address may make before it is throttled.
 login_attempt_burst = 3
+# Seconds required for a throttled source address to regain one attempt.
 login_attempt_refill = 10
+# Maximum password hash operations accepted across the server per second.
 login_hash_limit = 5
 
 # -----------------------------------------------
@@ -194,8 +213,39 @@ login_hash_limit = 5
 # -----------------------------------------------
 
 [logging]
+# Controls extra data written with each log entry: flags, location, timestamp.
 log_options = ["flags", "location", "timestamp"]
-log = ["!accounting", "!all_commands", "!bad_commands", "!buffer_alloc",
-       "!checkpoints", "bugs", "!config_changes", "!create", "!logins",
-       "!network", "problems", "security", "!shouts", "!startup",
-       "!wizard", "!allwizbit", "!suspect_commands"]
+
+[logging.topics]
+# Write account usage information when a player logs out.
+accounting = false
+# Write every command entered by any player.
+all_commands = false
+# Write commands entered by players marked SUSPECT.
+suspect_commands = false
+# Write commands the server does not recognize.
+bad_commands = false
+# Write buffer-pool allocation and release activity.
+buffer_alloc = false
+# Write internal server bugs and crash reports.
+bugs = true
+# Write normal database checkpoint activity.
+checkpoints = false
+# Write runtime changes to configuration directives.
+config_changes = false
+# Write player-character creation events.
+create = false
+# Write successful logins and logouts.
+logins = false
+# Write network connections and disconnections.
+network = false
+# Write detected runtime inconsistencies and other operational problems.
+problems = true
+# Write security-related events, including failed authentication attempts.
+security = true
+# Write shouts, broadcasts, and other global speech.
+shouts = false
+# Write nonfatal errors and progress during server startup.
+startup = false
+# Write sensitive or dangerous wizard actions.
+wizard = false

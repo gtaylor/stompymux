@@ -218,8 +218,24 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"security.login_attempt_refill", "login_attempt_refill", CFG_KIND_SCALAR},
     {"security.login_hash_limit", "login_hash_limit", CFG_KIND_SCALAR},
 
-    /* logging (negatable-bitmask directives) */
-    {"logging.log", "log", CFG_KIND_FLAG_LIST},
+    /* logging topics */
+    {"logging.topics.accounting", "accounting", CFG_KIND_SCALAR},
+    {"logging.topics.all_commands", "all_commands", CFG_KIND_SCALAR},
+    {"logging.topics.suspect_commands", "suspect_commands", CFG_KIND_SCALAR},
+    {"logging.topics.bad_commands", "bad_commands", CFG_KIND_SCALAR},
+    {"logging.topics.buffer_alloc", "buffer_alloc", CFG_KIND_SCALAR},
+    {"logging.topics.bugs", "bugs", CFG_KIND_SCALAR},
+    {"logging.topics.checkpoints", "checkpoints", CFG_KIND_SCALAR},
+    {"logging.topics.config_changes", "config_changes", CFG_KIND_SCALAR},
+    {"logging.topics.create", "create", CFG_KIND_SCALAR},
+    {"logging.topics.logins", "logins", CFG_KIND_SCALAR},
+    {"logging.topics.network", "network", CFG_KIND_SCALAR},
+    {"logging.topics.problems", "problems", CFG_KIND_SCALAR},
+    {"logging.topics.security", "security", CFG_KIND_SCALAR},
+    {"logging.topics.shouts", "shouts", CFG_KIND_SCALAR},
+    {"logging.topics.startup", "startup", CFG_KIND_SCALAR},
+    {"logging.topics.wizard", "wizard", CFG_KIND_SCALAR},
+    /* logging entry formatting */
     {"logging.log_options", "log_options", CFG_KIND_FLAG_LIST},
 
     /* access */

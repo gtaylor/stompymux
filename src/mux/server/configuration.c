@@ -415,6 +415,25 @@ static int cf_bool(int *vp, char *str, long extra, DbRef player, char *cmd,
 
 /*
  * ---------------------------------------------------------------------------
+ * cf_bool_bit: Set or clear one bit in a configuration bitmask from a boolean
+ * parameter.
+ */
+
+static int cf_bool_bit(int *vp, char *str, long extra, DbRef player, char *cmd,
+                       ConfigurationContext *context) {
+  int value;
+
+  value = (int)name_table_search(context->database, context->configuration, GOD,
+                                 bool_names, str);
+  if (value > 0)
+    *vp |= (int)extra;
+  else
+    *vp &= ~(int)extra;
+  return 0;
+}
+
+/*
+ * ---------------------------------------------------------------------------
  * * cf_string: Set string parameter.
  */
 
@@ -686,6 +705,7 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
 DEFINE_CONFIGURATION_ADAPTER(cf_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_badname)
 DEFINE_CONFIGURATION_ADAPTER(cf_bool)
+DEFINE_CONFIGURATION_ADAPTER(cf_bool_bit)
 DEFINE_CONFIGURATION_ADAPTER(cf_cf_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_cmd_alias)
 DEFINE_CONFIGURATION_ADAPTER(cf_flagalias)
@@ -941,8 +961,38 @@ CONF conftable[] = {
      CONFIG_LOC(lua.instruction_limit), 0},
     {"lua_memory_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.memory_limit), 0},
-    {"log", configuration_modify_bits_configuration_adapter, CA_GOD,
-     CONFIG_LOC(log_options), (long)logoptions_nametab},
+    {"accounting", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_ACCOUNTING},
+    {"all_commands", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_ALLCOMMANDS},
+    {"suspect_commands", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_SUSPECTCMDS},
+    {"bad_commands", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_BADCOMMANDS},
+    {"buffer_alloc", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_ALLOCATE},
+    {"bugs", cf_bool_bit_configuration_adapter, CA_GOD, CONFIG_LOC(log_options),
+     LOG_BUGS},
+    {"checkpoints", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_DBSAVES},
+    {"config_changes", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_CONFIGMODS},
+    {"create", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_PCREATES},
+    {"logins", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_LOGIN},
+    {"network", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_NET},
+    {"problems", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_PROBLEMS},
+    {"security", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_SECURITY},
+    {"shouts", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_SHOUTS},
+    {"startup", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_STARTUP},
+    {"wizard", cf_bool_bit_configuration_adapter, CA_GOD,
+     CONFIG_LOC(log_options), LOG_WIZARD},
     {"log_options", configuration_modify_bits_configuration_adapter, CA_GOD,
      CONFIG_LOC(log_info), (long)logdata_nametab},
     {"map_database", cf_string_configuration_adapter, CA_GOD,
