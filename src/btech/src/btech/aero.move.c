@@ -161,7 +161,7 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
 
   if ((j = atoi(buffer)))
     DOCHECK_CONTEXT(mech->xcode.context,
-                    !WizP(mech->xcode.context->database, player),
+                    !Wiz(mech->xcode.context->database, player),
                     "Insufficient access!");
 
   DOCHECK_CONTEXT(mech->xcode.context, TakingOff(mech),

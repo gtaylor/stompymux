@@ -6,15 +6,13 @@
 
 typedef struct ObjectList ObjectList;
 typedef struct MatchContext MatchContext;
-typedef struct ServerConfiguration ServerConfiguration;
 typedef struct WorldIndexes WorldIndexes;
 
 DbRef match_controlled(MatchContext *match, DbRef player, char *name);
 DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name);
 
-void object_attribute_set(EvaluationContext *evaluation,
-                          const ServerConfiguration *configuration,
-                          DbRef player, DbRef thing, int attribute_number,
+void object_attribute_set(EvaluationContext *evaluation, DbRef player,
+                          DbRef thing, int attribute_number,
                           char *attribute_text, int key);
 int parse_attrib(MatchContext *match, DbRef player, char *string, DbRef *thing,
                  int *attribute);

@@ -97,7 +97,7 @@ struct timeval msec_add(struct timeval t, int x) {
 
 /*
  * ---------------------------------------------------------------------------
- * * update_quotas: Update timeslice quotas
+ * * update_quotas: Refill command quotas
  */
 
 struct timeval update_quotas(const ServerConfiguration *configuration,
@@ -107,19 +107,21 @@ struct timeval update_quotas(const ServerConfiguration *configuration,
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_all(descriptors);
 
-  nslices = msec_diff(current, last) /
-            (configuration->timeslice > 0 ? configuration->timeslice : 1);
+  nslices =
+      msec_diff(current, last) / (configuration->command_quota_interval > 0
+                                      ? configuration->command_quota_interval
+                                      : 1);
 
   if (nslices > 0) {
     while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
       if (d->is_dead)
         continue;
-      d->quota += configuration->cmd_quota_incr * nslices;
-      if (d->quota > configuration->cmd_quota_max)
-        d->quota = configuration->cmd_quota_max;
+      d->quota += configuration->command_quota_increment * nslices;
+      if (d->quota > configuration->command_quota_max)
+        d->quota = configuration->command_quota_max;
     }
   }
-  return msec_add(last, nslices * configuration->timeslice);
+  return msec_add(last, nslices * configuration->command_quota_interval);
 }
 
 /* raw_notify_raw: write a message to a player without the newline */
@@ -327,14 +329,12 @@ static void dispatch_connection_event_scope(CommandRuntime *runtime,
                                             DbRef location, LuaEventType type,
                                             bool reconnect,
                                             const char *reason) {
-  const ServerConfiguration *configuration = runtime->world->configuration;
   DbRef object;
   DbRef zone;
 
   dispatch_connection_event(runtime, d, player, player, type, reconnect,
                             reason);
-  if (!configuration->have_zones ||
-      (zone = game_object_zone(runtime->world->database, location)) == NOTHING)
+  if ((zone = game_object_zone(runtime->world->database, location)) == NOTHING)
     return;
   switch (typeof_obj(runtime->world->database, zone)) {
   case OBJECT_TYPE_THING:
@@ -403,8 +403,7 @@ void announce_connect(DbRef player, Descriptor *d) {
     snprintf(buf, LBUF_SIZE, "%s has connected.",
              game_object_name(runtime->world->database, player));
 
-    if (configuration->have_comsys)
-      do_comconnect(&command->evaluation, player, d);
+    do_comconnect(&command->evaluation, player, d);
 
     if (is_dark(runtime->world->database, player)) {
       raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
@@ -453,7 +452,6 @@ void announce_connect(DbRef player, Descriptor *d) {
 void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                                     const char *reason) {
   CommandRuntime *runtime = descriptor_runtime(d);
-  const ServerConfiguration *configuration = runtime->world->configuration;
   CommandContext *command = runtime->background_command;
   DbRef loc, temp;
   int num, key;
@@ -491,8 +489,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     notify_checked(&command->evaluation, player, player, buf, key);
     free_mbuf(buf);
 
-    if (configuration->have_comsys)
-      do_comdisconnect(&command->evaluation, player);
+    do_comdisconnect(&command->evaluation, player);
 
     raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
                   "GAME: %s has disconnected.",

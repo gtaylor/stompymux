@@ -105,9 +105,9 @@ static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
     dprintk("unexpected child %d exited with exit status %d.", child,
             WEXITSTATUS(status));
   }
-  if (lifecycle->maintenance->configuration->queue_chunk)
+  if (lifecycle->maintenance->configuration->command_queue_idle_chunk)
     do_top(lifecycle->maintenance->commands,
-           lifecycle->maintenance->configuration->queue_chunk);
+           lifecycle->maintenance->configuration->command_queue_idle_chunk);
 }
 
 static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
@@ -211,8 +211,10 @@ void server_lifecycle_run(ServerLifecycle *lifecycle, int port) {
   if (lifecycle->queue_timer == nullptr ||
       !mux_timer_start(
           lifecycle->queue_timer,
-          (uint64_t)lifecycle->maintenance->configuration->timeslice,
-          (uint64_t)lifecycle->maintenance->configuration->timeslice)) {
+          (uint64_t)
+              lifecycle->maintenance->configuration->command_quota_interval,
+          (uint64_t)
+              lifecycle->maintenance->configuration->command_quota_interval)) {
     log_error(lifecycle->maintenance->log, LOG_ALWAYS, "INI", "EVENT",
               "Unable to create queue timer.");
     return;

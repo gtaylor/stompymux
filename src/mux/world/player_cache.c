@@ -62,7 +62,7 @@ static void pcache_reload1(PlayerCache *cache, DbRef player, PCACHE *pp) {
   if (cp && *cp)
     pp->qmax = atoi(cp);
   else if (!is_wizard(cache->database, player))
-    pp->qmax = cache->configuration->queuemax;
+    pp->qmax = cache->configuration->command_queue_limit;
   else
     pp->qmax = -1;
 }
@@ -182,8 +182,8 @@ int queue_maximum(PlayerCache *cache, DbRef player) {
         m = pp->qmax;
       } else {
         m = cache->database->top + 1;
-        if (m < cache->configuration->queuemax)
-          m = cache->configuration->queuemax;
+        if (m < cache->configuration->command_queue_limit)
+          m = cache->configuration->command_queue_limit;
       }
     }
   }

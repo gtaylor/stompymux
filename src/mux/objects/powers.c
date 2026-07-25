@@ -12,17 +12,7 @@
 #include "mux/support/alloc.h"
 #include "mux/world/world_context.h"
 
-POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0},
-                         {"long_fingers", POWER_LONG_FINGERS, 0},
-                         {"comm_all", POWER_COMM_ALL, 0},
-                         {"see_hidden", POWER_SEE_HIDDEN, 0},
-                         {"no_destroy", POWER_NO_DESTROY, 0},
-                         {"security", POWER_SECURITY, 0},
-                         {"mechrep", POWER_MECHREP, 0},
-                         {"map", POWER_MAP, 0},
-                         {"tech", POWER_TECH, 0},
-                         {"template", POWER_TEMPLATE, 0},
-                         {nullptr, POWER_NONE, 0}};
+POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0}, {nullptr, POWER_NONE, 0}};
 
 /**
  * Initialize power hash tables.

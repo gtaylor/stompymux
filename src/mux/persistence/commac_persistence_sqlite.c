@@ -283,9 +283,6 @@ static int commac_persistence_store(sqlite3 *sqlite,
                                     PersistenceContext *context,
                                     void *extension_context) {
   (void)extension_context;
-  if (!context->configuration->have_comsys &&
-      !context->configuration->have_macros)
-    return 0;
   return commac_sqlite_exec(sqlite, commac_schema_sql) < 0 ||
                  commac_store_entries(context->channels, context->database,
                                       sqlite) < 0 ||
@@ -693,9 +690,6 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
 static int commac_persistence_load(sqlite3 *sqlite, PersistenceContext *context,
                                    void *extension_context) {
   (void)extension_context;
-  if (!context->configuration->have_comsys &&
-      !context->configuration->have_macros)
-    return 0;
   return commac_load_entries(sqlite, context) < 0 ||
                  commac_load_channels(sqlite, context) < 0 ||
                  commac_load_users(sqlite, context) < 0 ||

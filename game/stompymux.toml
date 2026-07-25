@@ -21,6 +21,11 @@ mech_database = "mechs"
 map_database = "maps"
 # Interval at which to save the database.
 dump_interval = 1200
+# Fork off a new process for database dumps.
+fork_dump = true
+# Messages to show during and after database dumps.
+# dump_message = "BattletechMUX : Saving Database. Game will pause."
+# postdump_message = "BattletechMUX : Database Saved."
 
 # -----------------------------------------------
 #  Lua runtime
@@ -114,6 +119,10 @@ modifier = 100
 # -----------------------------------------------
 
 [mux]
+idle_interval = 99999
+# Amount of time a player must be idle before being idlekicked.
+idle_timeout = 99999999
+# The number of commands to be run from queue when there is net traffic.
 # Lua parents assigned to newly created objects. Paths are relative to
 # game/lua/object_logic.
 default_thing_lua_parent = "default_thing.lua"
@@ -128,27 +137,18 @@ default_exit_flags = ["no_command"]
 default_room_flags = ["no_command"]
 # Flags that are set on things after creation.
 default_thing_flags = []
-# Command quota per player.
-command_quota_increment = 1000
-# The interval at which players' command quotas are increased.
-timeslice = 50
-# Fork off a new process for db dumps.
-fork_dump = true
 # Room where players start after creation.
 player_starting_room = 95
 # Default home for new players.
 player_starting_home = 95
 # Interval for checking idle players.
-idle_interval = 99999
-# Amount of time a player must be idle before being idlekicked.
-idle_timeout = 99999999
-# Messages to show during and after DB dumps (spammy).
-# dump_message = "BattletechMUX : Saving Database. Game will pause."
-# postdump_message = "BattletechMUX : Database Saved."
-# The number of commands to be run from queue when there is net traffic.
-queue_active_chunk = 100
+command_queue_active_chunk = 100
 # Number of commands to be run from queue when there is no net traffic.
-queue_idle_chunk = 200
+command_queue_idle_chunk = 200
+# Command quota per player.
+command_quota_increment = 1000
+# Milliseconds between command-quota refills.
+command_quota_interval = 50
 
 # -----------------------------------------------
 #  Password and Login Security
@@ -166,6 +166,14 @@ login_attempt_refill = 10
 login_hash_limit = 5
 
 # -----------------------------------------------
+#  Player Names
+# -----------------------------------------------
+
+[names]
+# Disallow player names matching wildcard patterns. For example:
+# bad = ["Admin*", "*wizard*"]
+
+# -----------------------------------------------
 #  Site Permissions
 # -----------------------------------------------
 
@@ -179,14 +187,7 @@ login_hash_limit = 5
 
 # Limit commands access.
 [access.commands]
-"@name" = "wizard"
-"@npemit" = "wizard"
-"@dig" = "wizard"
-"@clone" = "wizard"
-"@oemit" = "wizard"
-"@emit" = "wizard"
-"@open" = "wizard"
-"@remit" = "wizard"
+#"some_command" = "wizard"
 
 # -----------------------------------------------
 #  Logging Options

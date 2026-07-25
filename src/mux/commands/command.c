@@ -360,8 +360,8 @@ CMDENT command_table[] = {
     {"say", nullptr, CA_LOCATION, SAY_SAY, CS_ONE_ARG, {.invoke = do_say}},
     {"use", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_use}},
     {"version", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_version}},
-    {"+show", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_show}},
-    {"+rolls", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_show_stat}},
+    {"+show", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_show}},
+    {"+rolls", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_show_stat}},
     {"+charclear", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_charclear}},
     {"\\",
      nullptr,
@@ -872,7 +872,7 @@ void process_command(CommandContext *context, char *command, char *args[],
     context->debug_command = cmdsave;
     goto exit;
   }
-  if (configuration->have_macros && (command[0] == '.') && interactive) {
+  if ((command[0] == '.') && interactive) {
     macerr = do_macro(&context->match, context->runtime->command_registry,
                       context->runtime->macros, player, command, &macroout);
     if (!macerr)
@@ -883,16 +883,14 @@ void process_command(CommandContext *context, char *command, char *args[],
     }
   } else
     macerr = 0;
-  if (configuration->have_comsys)
-    if (!do_comsystem(&context->evaluation, player, command))
-      goto exit;
+  if (!do_comsystem(&context->evaluation, player, command))
+    goto exit;
 
   /* Handle mecha stuff.. */
-  if (configuration->have_specials)
-    if (HandledCommand(context->btech, player,
-                       game_object_location(context->world->database, player),
-                       command))
-      goto exit;
+  if (HandledCommand(context->btech, player,
+                     game_object_location(context->world->database, player),
+                     command))
+    goto exit;
   /*
    * Check for the HOME command
    */
@@ -1002,7 +1000,7 @@ void process_command(CommandContext *context, char *command, char *args[],
         runtime->lua_owner->runtime, context->descriptor,
         game_object_contents(context->world->database, player), player, cause,
         command);
-  if (!lua_succ && configuration->have_zones &&
+  if (!lua_succ &&
       (game_object_zone(context->world->database,
                         game_object_location(context->world->database,
                                              player)) != NOTHING)) {
@@ -1034,7 +1032,7 @@ void process_command(CommandContext *context, char *command, char *args[],
           player, cause, command);
     }
   }
-  if (!lua_succ && configuration->have_zones &&
+  if (!lua_succ &&
       (game_object_zone(context->world->database, player) != NOTHING) &&
       !is_no_command(context->world->database,
                      game_object_zone(context->world->database, player)) &&
@@ -1046,7 +1044,7 @@ void process_command(CommandContext *context, char *command, char *args[],
         lua_command_match(runtime->lua_owner->runtime, context->descriptor,
                           game_object_zone(context->world->database, player),
                           player, cause, command);
-  if (!lua_succ && configuration->have_zones &&
+  if (!lua_succ &&
       (game_object_zone(context->world->database,
                         game_object_location(context->world->database,
                                              player)) != NOTHING) &&
@@ -1147,7 +1145,6 @@ static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
                                                  EvaluationContext *evaluation,
                                                  DbRef player) {
   GameDatabase *database = runtime->world->database;
-  const ServerConfiguration *configuration = runtime->world->configuration;
   LuaRuntime *lua = runtime->lua_owner->runtime;
   LuaCommandListContext context = {
       .evaluation = evaluation,
@@ -1173,7 +1170,7 @@ static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
     count += list_object_lua_command_sources(
         lua, &context, game_object_contents(database, player), visited);
 
-  if (configuration->have_zones && has_location(database, player)) {
+  if (has_location(database, player)) {
     DbRef location = game_object_location(database, player);
     DbRef location_zone = game_object_zone(database, location);
     DbRef player_zone = game_object_zone(database, player);
@@ -1480,20 +1477,13 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(evaluation, player, "Player names may contain spaces.");
   else
     raw_notify(evaluation, player, "Player names may not contain spaces.");
-  if (configuration->ex_flags)
-    raw_notify(
-        evaluation, player,
-        "The '@examine' command lists the flag names for the object's flags.");
-  if (!configuration->dark_sleepers)
-    raw_notify(evaluation, player,
-               "The 'look' command shows disconnected players.");
-  if (configuration->fascist_tport)
-    raw_notify(evaluation, player,
-               "You may only @teleport out of locations you control.");
+  raw_notify(evaluation, player,
+             "The '@examine' command lists the flag names for the object's "
+             "flags.");
   raw_notify(
       evaluation, player,
       tprintf("Players may have at most %d commands in the queue at one time.",
-              configuration->queuemax));
+              configuration->command_queue_limit));
   if (!is_wizard(evaluation->world->database, player))
     return;
   buff = alloc_mbuf("list_options");
@@ -1502,19 +1492,11 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
       evaluation, player,
       tprintf(
           "%d commands are run from the queue when there is no net activity.",
-          configuration->queue_chunk));
+          configuration->command_queue_idle_chunk));
   raw_notify(
       evaluation, player,
       tprintf("%d commands are run from the queue when there is net activity.",
-              configuration->active_q_chunk));
-  if (configuration->idle_wiz_dark)
-    raw_notify(evaluation, player,
-               "Wizards idle for longer than the default timeout are "
-               "automatically set DARK.");
-  if (configuration->paranoid_alloc)
-    raw_notify(evaluation, player,
-               "The buffer pools are checked for consistency on each "
-               "allocate or free.");
+              configuration->command_queue_active_chunk));
   raw_notify(evaluation, player,
              tprintf("The %s cache is %d entries wide by %d entries deep.",
                      CACHING, configuration->cache_width,
@@ -1525,7 +1507,7 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(
         evaluation, player,
         "The cache depth is periodically trimmed back to its initial value.");
-  if (configuration->fork_dump) {
+  if (configuration->database.fork_dump) {
     raw_notify(evaluation, player,
                "Database dumps are performed by a fork()ed process.");
   }
@@ -1555,8 +1537,9 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
 
   snprintf(buff, MBUF_SIZE,
            "Scheduling: Timeslice...%d  Max_Quota...%d  Increment...%d",
-           configuration->timeslice, configuration->cmd_quota_max,
-           configuration->cmd_quota_incr);
+           configuration->command_quota_interval,
+           configuration->command_quota_max,
+           configuration->command_quota_increment);
   raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Spaces...%s", ed[configuration->space_compress]);
@@ -1569,7 +1552,8 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   raw_notify(evaluation, player, buff);
 
   snprintf(buff, MBUF_SIZE, "Queue: IdleChunk...%d  ActiveChunk...%d",
-           configuration->queue_chunk, configuration->active_q_chunk);
+           configuration->command_queue_idle_chunk,
+           configuration->command_queue_active_chunk);
   raw_notify(evaluation, player, buff);
 
   free_mbuf(buff);

@@ -5,8 +5,6 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
 
-typedef struct ServerConfiguration ServerConfiguration;
-
 typedef struct EvaluationContext EvaluationContext;
 
 bool lock_evaluate(EvaluationContext *context,
@@ -15,8 +13,7 @@ bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
                DbRef subject, DbRef object, LuaLockType type,
                LuaLockOperation operation, bool silent,
                LuaLockInvocation *invocation, LuaLockResult *result);
-int can_see(EvaluationContext *evaluation,
-            const ServerConfiguration *configuration, DbRef player, DbRef thing,
+int can_see(EvaluationContext *evaluation, DbRef player, DbRef thing,
             int can_see_location);
 void handle_ears(EvaluationContext *evaluation, DbRef thing, int could_hear,
                  int can_hear);

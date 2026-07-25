@@ -546,9 +546,8 @@ void fun_zmechs(char *buff, char **bufc, DbRef player, DbRef cause,
   int len = 0;
   char reference[SBUF_SIZE];
 
-  if (!context->btech->configuration->have_zones ||
-      (!is_controls(context->world->database, player, it) &&
-       !is_wizard(context->btech->database, player))) {
+  if (!is_controls(context->world->database, player, it) &&
+      !is_wizard(context->btech->database, player)) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return;
   }

@@ -90,8 +90,7 @@ static int lua_mux_contents_visible(lua_State *state) {
     return luaL_argerror(state, 3, "object is not directly contained");
   evaluation = &package->services->background_command->evaluation;
   can_see_location = !is_dark(package->services->database, container);
-  lua_pushboolean(state, can_see(evaluation, package->services->configuration,
-                                 viewer, member, can_see_location));
+  lua_pushboolean(state, can_see(evaluation, viewer, member, can_see_location));
   return 1;
 }
 

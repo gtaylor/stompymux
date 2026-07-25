@@ -135,10 +135,6 @@ void do_give(CommandInvocation *invocation) {
   match_neighbor(match);
   match_possession(match);
   match_me(match);
-  if (is_long_fingers(evaluation->world->database, player)) {
-    match_player(match);
-    match_absolute(match);
-  }
   recipient = match_result(match);
   switch (recipient) {
   case NOTHING:

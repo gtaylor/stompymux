@@ -848,7 +848,7 @@ static void mech_masc_event(MuxEvent *e) {
     roll--;
   if (needed < 10 &&
       is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
-      WizP(mech->xcode.context->database, MechPilot(mech)))
+      Wiz(mech->xcode.context->database, MechPilot(mech)))
     roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
@@ -942,7 +942,7 @@ static void mech_scharge_event(MuxEvent *e) {
     roll = roll - 1;
   if (needed < 10 &&
       is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
-      WizP(mech->xcode.context->database, MechPilot(mech)))
+      Wiz(mech->xcode.context->database, MechPilot(mech)))
     roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);

@@ -54,15 +54,15 @@
 const SpecialObjectStruct SpecialObjects[] = {
     {"MECH", mechcommands, sizeof(MECH), newfreemech, HEAT_TICK, mech_update,
      POWER_NONE},
-    {"DEBUG", debugcommands, sizeof(XCODE), NULL, 0, NULL, POWER_SECURITY},
+    {"DEBUG", debugcommands, sizeof(XCODE), NULL, 0, NULL, POWER_NONE},
     {"MECHREP", mechrepcommands, sizeof(MECHREP), newfreemechrep, 0, NULL,
-     POWER_MECHREP},
+     POWER_NONE},
     {"MAP", mapcommands, sizeof(MAP), newfreemap, LOS_TICK, map_update,
-     POWER_MAP},
+     POWER_NONE},
     {"AUTOPILOT", autopilotcommands, sizeof(AUTO), auto_newautopilot, 0, NULL,
-     POWER_SECURITY},
+     POWER_NONE},
     {"TURRET", turretcommands, sizeof(TURRET_T), newturret, 0, NULL,
-     POWER_SECURITY}};
+     POWER_NONE}};
 
 #define NUM_SPECIAL_OBJECTS                                                    \
   (sizeof(SpecialObjects) / sizeof(SpecialObjectStruct))

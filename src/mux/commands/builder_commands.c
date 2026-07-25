@@ -768,10 +768,6 @@ void do_chzone(CommandInvocation *invocation) {
   DbRef thing;
   DbRef zone;
 
-  if (!invocation->context->world->configuration->have_zones) {
-    notify(evaluation, player, "Zones disabled.");
-    return;
-  }
   init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
   if ((thing = noisy_match_result(&invocation->context->match)) == NOTHING)

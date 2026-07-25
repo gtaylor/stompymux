@@ -233,7 +233,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->allow_chanlurking = 0;
   context->configuration->afterlife_dbref = 220;
   context->configuration->port = 6250;
-  context->configuration->conc_port = 6251;
   context->configuration->init_size = 1000;
   StringCopy(context->configuration->conn_file, "text/connect.txt");
   StringCopy(context->configuration->conn_dir, "");
@@ -244,17 +243,11 @@ void configuration_initialize(ConfigurationContext *context) {
   StringCopy(context->configuration->help_dir, "help");
   StringCopy(context->configuration->down_msg, "");
   StringCopy(context->configuration->full_msg, "");
-  StringCopy(context->configuration->dump_msg, "");
-  StringCopy(context->configuration->postdump_msg, "");
+  StringCopy(context->configuration->database.dump_msg, "");
+  StringCopy(context->configuration->database.postdump_msg, "");
   StringCopy(context->configuration->public_channel, "Public");
-  context->configuration->indent_desc = 0;
   context->configuration->name_spaces = 1;
-  context->configuration->fork_dump = 1;
-  context->configuration->have_specials = 1;
-  context->configuration->have_comsys = 1;
-  context->configuration->have_macros = 1;
-  context->configuration->have_zones = 1;
-  context->configuration->paranoid_alloc = 0;
+  context->configuration->database.fork_dump = 1;
   context->configuration->max_players = -1;
   context->configuration->database.dump_interval = 3600;
   context->configuration->check_interval = 600;
@@ -271,14 +264,9 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->login_attempt_refill = 10;
   context->configuration->login_hash_limit = 5;
   context->configuration->output_limit = 16384;
-  context->configuration->use_http = 0;
-  context->configuration->queuemax = 100;
-  context->configuration->queue_chunk = 10;
-  context->configuration->active_q_chunk = 10;
-  context->configuration->ex_flags = 1;
-  context->configuration->dark_sleepers = 1;
-  context->configuration->idle_wiz_dark = 0;
-  context->configuration->fascist_tport = 0;
+  context->configuration->command_queue_limit = 100;
+  context->configuration->command_queue_idle_chunk = 10;
+  context->configuration->command_queue_active_chunk = 10;
   /*
    * -- ??? Running SC on a non-SC DB may cause problems
    */
@@ -295,9 +283,9 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->default_exit_flags = (ObjectFlagSet){0};
   context->configuration->default_thing_flags = (ObjectFlagSet){0};
   StringCopy(context->configuration->mud_name, "TinyMUX");
-  context->configuration->timeslice = 100;
-  context->configuration->cmd_quota_max = 100;
-  context->configuration->cmd_quota_incr = 5;
+  context->configuration->command_quota_interval = 100;
+  context->configuration->command_quota_max = 100;
+  context->configuration->command_quota_increment = 5;
   context->configuration->is_login_enabled = true;
   context->configuration->is_command_queue_enabled = true;
   context->configuration->is_checkpointing_enabled = true;
@@ -309,7 +297,6 @@ void configuration_initialize(ConfigurationContext *context) {
       LOG_PCREATES;
   context->configuration->log_info = LOGOPT_TIMESTAMP | LOGOPT_LOC;
   context->configuration->ntfy_nest_lim = 20;
-  context->configuration->zone_nest_lim = 20;
   context->configuration->stack_limit = 50;
   context->configuration->cache_trim = 0;
   context->configuration->cache_depth = CACHE_DEPTH;
@@ -897,11 +884,9 @@ CONF conftable[] = {
     {"check_offset", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(check_offset), 0},
     {"command_quota_increment", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(cmd_quota_incr), 0},
+     CONFIG_LOC(command_quota_increment), 0},
     {"command_quota_max", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(cmd_quota_max), 0},
-    {"concentrator_port", cf_int_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(conc_port), 0},
+     CONFIG_LOC(command_quota_max), 0},
     {"config_access", cf_cf_access_configuration_adapter, CA_GOD, nullptr,
      (long)access_nametab},
     {"conn_timeout", cf_int_configuration_adapter, CA_GOD,
@@ -910,8 +895,6 @@ CONF conftable[] = {
      CONFIG_LOC(conn_dir), 32},
     {"connect_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(conn_file), 32},
-    {"dark_sleepers", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(dark_sleepers), 0},
     {"default_home", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(default_home), 0},
     {"down_file", cf_string_configuration_adapter, CA_DISABLED,
@@ -921,22 +904,18 @@ CONF conftable[] = {
     {"dump_interval", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(database.dump_interval), 0},
     {"dump_message", cf_string_configuration_adapter, CA_GOD,
-     CONFIG_LOC(dump_msg), 128},
+     CONFIG_LOC(database.dump_msg), 128},
     {"postdump_message", cf_string_configuration_adapter, CA_GOD,
-     CONFIG_LOC(postdump_msg), 128},
+     CONFIG_LOC(database.postdump_msg), 128},
     {"dump_offset", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(dump_offset), 0},
-    {"examine_flags", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(ex_flags), 0},
     {"default_exit_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(default_exit_flags), 0},
-    {"fascist_teleport", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(fascist_tport), 0},
     {"flag_alias", cf_flagalias_configuration_adapter, CA_GOD, nullptr, 0},
     {"forbid_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(access_sites), H_FORBIDDEN},
-    {"fork_dump", cf_bool_configuration_adapter, CA_GOD, CONFIG_LOC(fork_dump),
-     0},
+    {"fork_dump", cf_bool_configuration_adapter, CA_GOD,
+     CONFIG_LOC(database.fork_dump), 0},
     {"full_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(full_file), 32},
     {"full_message", cf_string_configuration_adapter, CA_GOD,
@@ -945,26 +924,12 @@ CONF conftable[] = {
      CONFIG_LOC(database.gamedb),
      sizeof(((ServerConfiguration *)nullptr)->database.gamedb)},
     {"good_name", cf_badname_configuration_adapter, CA_GOD, nullptr, 1},
-    {"have_specials", cf_bool_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(have_specials), 0},
-    {"have_comsys", cf_bool_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(have_comsys), 0},
-    {"have_macros", cf_bool_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(have_macros), 0},
-    {"have_zones", cf_bool_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(have_zones), 0},
     {"help_directory", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(help_dir), sizeof(((ServerConfiguration *)nullptr)->help_dir)},
-    {"use_http", cf_bool_configuration_adapter, CA_DISABLED,
-     CONFIG_LOC(use_http), 0},
-    {"idle_wiz_dark", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(idle_wiz_dark), 0},
     {"idle_interval", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(idle_interval), 0},
     {"idle_timeout", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(idle_timeout), 0},
-    {"indent_desc", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(indent_desc), 0},
     {"initial_size", cf_int_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(init_size), 0},
     {"list_access", cf_ntab_access_configuration_adapter, CA_GOD,
@@ -1006,8 +971,6 @@ CONF conftable[] = {
      CONFIG_LOC(ntfy_nest_lim), 0},
     {"output_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(output_limit), 0},
-    {"paranoid_allocate", cf_bool_configuration_adapter, CA_GOD,
-     CONFIG_LOC(paranoid_alloc), 0},
     {"password_hash_memlimit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(password_hash_memlimit), 0},
     {"password_hash_opslimit", cf_int_configuration_adapter, CA_GOD,
@@ -1020,8 +983,8 @@ CONF conftable[] = {
      CONFIG_LOC(player_password_length_limit), 0},
     {"player_name_spaces", cf_bool_configuration_adapter, CA_GOD,
      CONFIG_LOC(name_spaces), 0},
-    {"player_queue_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(queuemax), 0},
+    {"command_queue_limit", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(command_queue_limit), 0},
     {"player_starting_home", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(start_home), 0},
     {"player_starting_room", cf_int_configuration_adapter, CA_GOD,
@@ -1029,10 +992,10 @@ CONF conftable[] = {
     {"public_channel", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(public_channel), 32},
     {"port", cf_int_configuration_adapter, CA_DISABLED, CONFIG_LOC(port), 0},
-    {"queue_active_chunk", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(active_q_chunk), 0},
-    {"queue_idle_chunk", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(queue_chunk), 0},
+    {"command_queue_active_chunk", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(command_queue_active_chunk), 0},
+    {"command_queue_idle_chunk", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(command_queue_idle_chunk), 0},
     {"quit_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(quit_file), 32},
     {"retry_limit", cf_int_configuration_adapter, CA_GOD,
@@ -1053,12 +1016,10 @@ CONF conftable[] = {
      ACCESS_LOC(suspect_sites), H_SUSPECT},
     {"default_thing_flags", cf_set_flags_configuration_adapter, CA_GOD,
      (int *)CONFIG_LOC(default_thing_flags), 0},
-    {"timeslice", cf_int_configuration_adapter, CA_GOD, CONFIG_LOC(timeslice),
-     0},
+    {"command_quota_interval", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(command_quota_interval), 0},
     {"trust_site", cf_site_configuration_adapter, CA_GOD,
      ACCESS_LOC(suspect_sites), 0},
-    {"zone_recursion_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(zone_nest_lim), 0},
     {"player_zone", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(player_zone), 0},
     {nullptr, nullptr, 0, nullptr, 0}};

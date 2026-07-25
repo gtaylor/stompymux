@@ -125,8 +125,7 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
 
   DOLIST(evaluation->world->database, thing,
          game_object_contents(evaluation->world->database, loc)) {
-    if (can_see(evaluation, evaluation->world->configuration, player, thing,
-                can_see_loc)) {
+    if (can_see(evaluation, player, thing, can_see_loc)) {
 
       /*
        * something exists!  show him everything
@@ -135,8 +134,7 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
       notify(evaluation, player, contents_name);
       DOLIST(evaluation->world->database, thing,
              game_object_contents(evaluation->world->database, loc)) {
-        if (can_see(evaluation, evaluation->world->configuration, player, thing,
-                    can_see_loc)) {
+        if (can_see(evaluation, player, thing, can_see_loc)) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing);
           notify(evaluation, player, buff);
@@ -223,15 +221,6 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
 
 static void show_a_desc(EvaluationContext *evaluation, DbRef player,
                         DbRef loc) {
-  WorldContext *world = evaluation->world;
-  int indent = 0;
-
-  indent = (is_room(evaluation->world->database, loc) &&
-            world->configuration->indent_desc &&
-            attribute_get_raw(evaluation->world->database, loc, A_DESC));
-
-  if (indent)
-    raw_notify_newline(evaluation, player);
   notify_action(evaluation,
                 &(ActionMessageInvocation){
                     .message = {.type = LUA_MESSAGE_DESCRIBE,
@@ -243,8 +232,6 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
                                 .destination = NOTHING},
                     .content_attribute = A_DESC,
                     .event = LUA_EVENT_DESCRIBE});
-  if (indent)
-    raw_notify_newline(evaluation, player);
 }
 
 static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
@@ -369,10 +356,6 @@ void do_look(CommandInvocation *invocation) {
   match_exit(&invocation->context->match);
   match_neighbor(&invocation->context->match);
   match_possession(&invocation->context->match);
-  if (is_long_fingers(evaluation->world->database, player)) {
-    match_absolute(&invocation->context->match);
-    match_player(&invocation->context->match);
-  }
   match_here(&invocation->context->match);
   match_me(&invocation->context->match);
   thing = match_result(&invocation->context->match);
@@ -467,7 +450,6 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
 }
 
 void do_examine(CommandInvocation *invocation) {
-  WorldContext *world = invocation->context->world;
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef player = invocation->player;
   const int key = invocation->key;
@@ -533,11 +515,9 @@ void do_examine(CommandInvocation *invocation) {
   buf2 = unparse_object(evaluation->world->database, evaluation, player, thing);
   notify(evaluation, player, buf2);
   free_lbuf(buf2);
-  if (world->configuration->ex_flags) {
-    buf2 = flag_description(evaluation->world->database, player, thing);
-    notify(evaluation, player, buf2);
-    free_mbuf(buf2);
-  }
+  buf2 = flag_description(evaluation->world->database, player, thing);
+  notify(evaluation, player, buf2);
+  free_mbuf(buf2);
 
   temp = alloc_lbuf("do_examine.info");
   temp = attribute_get_string(evaluation->world->database, temp, thing, A_DESC,
@@ -546,12 +526,10 @@ void do_examine(CommandInvocation *invocation) {
     notify_printf(evaluation, player, "Desc: %s", temp);
   }
 
-  if (world->configuration->have_zones) {
-    buf2 = unparse_object(evaluation->world->database, evaluation, player,
-                          game_object_zone(evaluation->world->database, thing));
-    notify_printf(evaluation, player, "Zone: %s", buf2);
-    free_lbuf(buf2);
-  }
+  buf2 = unparse_object(evaluation->world->database, evaluation, player,
+                        game_object_zone(evaluation->world->database, thing));
+  notify_printf(evaluation, player, "Zone: %s", buf2);
+  free_lbuf(buf2);
   lua_examine_object(invocation->context->runtime->lua_owner->runtime,
                      evaluation, player, thing);
   buf2 = power_description(evaluation->world->database, player, thing);

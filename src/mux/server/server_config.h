@@ -35,10 +35,13 @@ typedef unsigned char Uchar;
 
 typedef struct DatabaseConfiguration DatabaseConfiguration;
 struct DatabaseConfiguration {
-  char gamedb[128];  /* SQLite game database */
-  char mech_db[128]; /* Mecha templates */
-  char map_db[128];  /* Map templates */
-  int dump_interval; /* Interval between checkpoint dumps in seconds */
+  char gamedb[128];       /* SQLite game database */
+  char mech_db[128];      /* Mecha templates */
+  char map_db[128];       /* Map templates */
+  int dump_interval;      /* Interval between checkpoint dumps in seconds */
+  int fork_dump;          /* Perform dumps in a forked process */
+  char dump_msg[128];     /* Message displayed while dumping */
+  char postdump_msg[128]; /* Message displayed after dumping */
 };
 
 typedef struct LuaConfiguration LuaConfiguration;
@@ -59,12 +62,7 @@ struct ServerConfiguration {
   DatabaseConfiguration database; /* Database configuration */
   LuaConfiguration lua;           /* Lua runtime configuration */
   char config_file[128];          /* name of configuration file */
-  int have_specials;              /* Should the special hcode be active? */
-  int have_comsys;                /* Should the comsystem be active? */
-  int have_macros;                /* Should the macro system be active? */
-  int have_zones;                 /* Should zones be active? */
   int port;                       /* user port */
-  int conc_port;                  /* concentrator port */
   int init_size;                  /* initial db size */
   char conn_file[32];             /* display on connect */
   char conn_dir[32];              /* display on connect */
@@ -75,8 +73,6 @@ struct ServerConfiguration {
   char help_dir[128];        /* Help article root, relative to game directory */
   char down_msg[4096];       /* Message displayed when logins are disabled */
   char full_msg[4096];       /* Message displayed when the game is full */
-  char dump_msg[128];        /* Message displayed when @dump-ing */
-  char postdump_msg[128];    /* Message displayed after @dump-ing */
   char public_channel[32];   /* Name of public channel */
   int btech_explode_reactor; /* Allow or disallow explode reactor */
   int btech_explode_ammo;    /* Allow or disallow explode ammo */
@@ -215,10 +211,7 @@ struct ServerConfiguration {
   int btech_complexrepair;
 #endif
   int afterlife_dbref;
-  int indent_desc;    /* Newlines before and after descs? */
   int name_spaces;    /* allow player names to have spaces */
-  int fork_dump;      /* perform dump in a forked process */
-  int paranoid_alloc; /* Rigorous buffer integrity checks */
   int max_players;    /* Max # of connected players */
   int check_interval; /* interval between db check/cleans in secs */
   int dump_offset;    /* when to take first checkpoint dump */
@@ -234,19 +227,11 @@ struct ServerConfiguration {
   int login_attempt_refill;         /* Seconds to refill one login attempt */
   int login_hash_limit;             /* Password checks permitted per second */
   int output_limit;                 /* Max # chars queued for output */
-  int use_http;                     /* Should we allow http access? */
-  int queuemax;       /* max commands a player may have in queue */
-  int queue_chunk;    /* # cmds to run from queue when idle */
-  int active_q_chunk; /* # cmds to run from queue when active */
-  int ex_flags;       /* TRUE = show flags on examine */
-  int dark_sleepers;  /* Are sleeping players 'dark'? */
-  int idle_wiz_dark;  /* Do idling wizards get set dark? */
-  int fascist_tport;  /* Source of teleport must be controlled */
-  int stack_limit;    /* How big can stacks get? */
-  int space_compress; /* Convert multiple spaces into one space */
-  int start_room;     /* initial location and home for players */
-  int start_home;     /* initial HOME for players */
-  int default_home;   /* HOME when home is inaccessable */
+  int stack_limit;                  /* How big can stacks get? */
+  int space_compress;               /* Convert multiple spaces into one space */
+  int start_room;                   /* initial location and home for players */
+  int start_home;                   /* initial HOME for players */
+  int default_home;                 /* HOME when home is inaccessable */
   char default_thing_lua_parent[128];  /* Lua parent for new things */
   char default_room_lua_parent[128];   /* Lua parent for new rooms */
   char default_exit_lua_parent[128];   /* Lua parent for new exits */
@@ -256,9 +241,12 @@ struct ServerConfiguration {
   ObjectFlagSet default_exit_flags;    /* Flags exits start with */
   ObjectFlagSet default_thing_flags;   /* Flags things start with */
   char mud_name[32];                   /* Name of the mud */
-  int timeslice;      /* How often do we bump people's cmd quotas? */
-  int cmd_quota_max;  /* Max commands at one time */
-  int cmd_quota_incr; /* Bump #cmds allowed by this each timeslice */
+  int command_quota_interval;          /* Milliseconds between quota refills */
+  int command_quota_max;               /* Maximum commands available at once */
+  int command_quota_increment;         /* Commands added at each refill */
+  int command_queue_limit;        /* Max commands a player may have queued */
+  int command_queue_idle_chunk;   /* Commands run from queue when idle */
+  int command_queue_active_chunk; /* Commands run from queue when active */
 
   bool is_login_enabled;         /* Allow nonwizard logins */
   bool is_command_queue_enabled; /* Allow commands to be queued */
@@ -269,7 +257,6 @@ struct ServerConfiguration {
   int log_options;   /* What gets logged */
   int log_info;      /* Info that goes into log entries */
   int ntfy_nest_lim; /* Max nesting of notifys */
-  int zone_nest_lim; /* Max nesting of zones */
   int player_zone;
 };
 

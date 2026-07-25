@@ -270,7 +270,7 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   n = 0;
   if (*buffer && !strncasecmp(buffer, "override", strlen(buffer))) {
     DOCHECK_CONTEXT(mech->xcode.context,
-                    !WizP(mech->xcode.context->database, player),
+                    !Wiz(mech->xcode.context->database, player),
                     "Insufficient access!");
     n = BOOTCOUNT - 1;
   }

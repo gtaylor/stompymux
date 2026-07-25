@@ -10,9 +10,7 @@ int main(void) {
       .size = 2,
   };
   const PowerId powers[] = {
-      POWER_IDLE,       POWER_LONG_FINGERS, POWER_COMM_ALL, POWER_SEE_HIDDEN,
-      POWER_NO_DESTROY, POWER_SECURITY,     POWER_MECHREP,  POWER_MAP,
-      POWER_TEMPLATE,   POWER_TECH,
+      POWER_IDLE,
   };
 
   for (size_t index = 0; index < sizeof(powers) / sizeof(powers[0]); index++) {
@@ -23,11 +21,7 @@ int main(void) {
       return 1;
   }
 
-  if (!objects[0].has_idle_power || !objects[0].has_long_fingers_power ||
-      !objects[0].has_comm_all_power || !objects[0].has_see_hidden_power ||
-      !objects[0].has_no_destroy_power || !objects[0].has_security_power ||
-      !objects[0].has_mechrep_power || !objects[0].has_map_power ||
-      !objects[0].has_template_power || !objects[0].has_tech_power)
+  if (!objects[0].has_idle_power)
     return 1;
 
   game_object_clear_powers(&database, 0);
@@ -37,7 +31,9 @@ int main(void) {
   }
 
   game_object_set_power(&database, 0, POWER_NONE, true);
-  if (game_object_has_power(&database, 0, POWER_NONE))
+  game_object_set_power(&database, 0, POWER_COUNT, true);
+  if (game_object_has_power(&database, 0, POWER_NONE) ||
+      game_object_has_power(&database, 0, POWER_COUNT))
     return 1;
 
   return 0;

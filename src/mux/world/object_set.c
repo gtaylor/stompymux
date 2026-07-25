@@ -18,7 +18,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/validation.h"
@@ -145,10 +144,8 @@ void do_alias(CommandInvocation *invocation) {
   }
 }
 
-void object_attribute_set(EvaluationContext *evaluation,
-                          const ServerConfiguration *configuration,
-                          DbRef player, DbRef thing, int attrnum,
-                          char *attrtext, int key) {
+void object_attribute_set(EvaluationContext *evaluation, DbRef player,
+                          DbRef thing, int attrnum, char *attrtext, int key) {
   long aflags;
   int have_xcode;
   Attribute *attr;
@@ -159,9 +156,8 @@ void object_attribute_set(EvaluationContext *evaluation,
     have_xcode = is_xcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   aflags);
-    if (configuration->have_specials)
-      handle_xcode(evaluation->btech, player, thing, have_xcode,
-                   is_xcode(evaluation->world->database, thing));
+    handle_xcode(evaluation->btech, player, thing, have_xcode,
+                 is_xcode(evaluation->world->database, thing));
     if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
       notify_printf(evaluation, player, "%s/%s - %s",
@@ -209,9 +205,8 @@ void do_setattr(CommandInvocation *invocation) {
 
   if (thing == NOTHING)
     return;
-  object_attribute_set(&invocation->context->evaluation,
-                       invocation->context->world->configuration, player, thing,
-                       attrnum, attrtext, 0);
+  object_attribute_set(&invocation->context->evaluation, player, thing, attrnum,
+                       attrtext, 0);
 }
 
 /*

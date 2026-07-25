@@ -19,7 +19,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 18;
+constexpr int GAMEDB_SCHEMA_VERSION = 23;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -100,23 +100,6 @@ static const char schema_objects_sql[] =
     " has_zombie_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_zombie_flag IN (0, "
     "1)),"
     " has_idle_power INTEGER NOT NULL DEFAULT 0 CHECK (has_idle_power IN (0, "
-    "1)),"
-    " has_long_fingers_power INTEGER NOT NULL DEFAULT 0 CHECK "
-    "(has_long_fingers_power IN (0, 1)),"
-    " has_comm_all_power INTEGER NOT NULL DEFAULT 0 CHECK (has_comm_all_power "
-    "IN (0, 1)),"
-    " has_see_hidden_power INTEGER NOT NULL DEFAULT 0 CHECK "
-    "(has_see_hidden_power IN (0, 1)),"
-    " has_no_destroy_power INTEGER NOT NULL DEFAULT 0 CHECK "
-    "(has_no_destroy_power IN (0, 1)),"
-    " has_security_power INTEGER NOT NULL DEFAULT 0 CHECK (has_security_power "
-    "IN (0, 1)),"
-    " has_mechrep_power INTEGER NOT NULL DEFAULT 0 CHECK (has_mechrep_power IN "
-    "(0, 1)),"
-    " has_map_power INTEGER NOT NULL DEFAULT 0 CHECK (has_map_power IN (0, 1)),"
-    " has_template_power INTEGER NOT NULL DEFAULT 0 CHECK (has_template_power "
-    "IN (0, 1)),"
-    " has_tech_power INTEGER NOT NULL DEFAULT 0 CHECK (has_tech_power IN (0, "
     "1))"
     ");";
 
@@ -451,7 +434,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef link;
   DbRef location;
   DbRef next;
-  bool powers[POWER_TECH + 1];
+  bool powers[POWER_COUNT];
   int result;
   int step;
   DbRef zone;
@@ -466,11 +449,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       "has_in_character_flag, has_light_flag, has_monitor_flag, "
       "has_no_command_flag, has_quiet_flag, has_safe_flag, "
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
-      "has_xcode_flag, has_zombie_flag, has_idle_power, "
-      "has_long_fingers_power, has_comm_all_power, "
-      "has_see_hidden_power, has_no_destroy_power, "
-      "has_security_power, has_mechrep_power, has_map_power, "
-      "has_template_power, has_tech_power "
+      "has_xcode_flag, has_zombie_flag, has_idle_power "
       "FROM objects "
       "ORDER BY dbref;";
   (void)schema_version;
@@ -502,7 +481,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         if (gamedb_column_bool(statement, 9 + (int)flag, &object_flags[flag]) <
             0)
           result = -1;
-      for (PowerId power = POWER_IDLE; result == 0 && power <= POWER_TECH;
+      for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++)
         if (gamedb_column_bool(statement, 31 + (int)power, &powers[power]) < 0)
           result = -1;
@@ -527,7 +506,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
         game_object_set_flag(context->database, object, flag,
                              object_flags[flag]);
-      for (PowerId power = POWER_IDLE; power <= POWER_TECH; power++)
+      for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++)
         game_object_set_power(context->database, object, power, powers[power]);
       if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER)
         c_connected(context->database, object);
@@ -740,13 +719,9 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_quiet_flag, has_safe_flag, has_suspect_flag, "
           "has_transparent_flag, has_wizard_flag, has_xcode_flag, "
           "has_zombie_flag, "
-          "has_idle_power, has_long_fingers_power, has_comm_all_power, "
-          "has_see_hidden_power, has_no_destroy_power, "
-          "has_security_power, has_mechrep_power, has_map_power, "
-          "has_template_power, has_tech_power) "
+          "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?);") < 0 ||
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &attributes,
                      "INSERT INTO attributes (object_dbref, name, value) "
                      "VALUES (?, ?, ?);") < 0)
@@ -796,7 +771,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
               game_object_has_flag(context->database, object, flag)) < 0)
         return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
     }
-    for (PowerId power = POWER_IDLE; power <= POWER_TECH; power++) {
+    for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
       if (gamedb_bind_int(
               objects, 32 + (int)power,
               game_object_has_power(context->database, object, power)) < 0)

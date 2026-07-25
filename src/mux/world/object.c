@@ -376,8 +376,7 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
 
   game_object_set_stack(evaluation->world->database, obj, nullptr);
 
-  if (evaluation->world->configuration->have_comsys)
-    toast_player(evaluation, obj);
+  toast_player(evaluation, obj);
 
   make_freelist(evaluation->world->database);
   return;

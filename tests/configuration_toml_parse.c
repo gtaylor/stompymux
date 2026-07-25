@@ -48,12 +48,14 @@ static int test_scalar_dispatch(void) {
                              "mud_name = \"Test\"\n"
                              "[database]\n"
                              "dump_interval = 900\n"
+                             "fork_dump = true\n"
+                             "dump_message = \"Saving\"\n"
+                             "postdump_message = \"Saved\"\n"
                              "[lua]\n"
                              "directory = \"scripts\"\n"
                              "instruction_limit = 50000\n"
                              "memory_limit = 33554432\n"
                              "[mux]\n"
-                             "fork_dump = true\n"
                              "default_thing_lua_parent = \"thing.lua\"\n"
                              "default_room_lua_parent = \"room.lua\"\n"
                              "default_exit_lua_parent = \"exit.lua\"\n"
@@ -66,13 +68,15 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 11 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 13 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
        call_log_find(&log, "dump_interval", "900") &&
        call_log_find(&log, "lua_directory", "scripts") &&
        call_log_find(&log, "lua_instruction_limit", "50000") &&
        call_log_find(&log, "lua_memory_limit", "33554432") &&
        call_log_find(&log, "fork_dump", "true") &&
+       call_log_find(&log, "dump_message", "Saving") &&
+       call_log_find(&log, "postdump_message", "Saved") &&
        call_log_find(&log, "default_thing_lua_parent", "thing.lua") &&
        call_log_find(&log, "default_room_lua_parent", "room.lua") &&
        call_log_find(&log, "default_exit_lua_parent", "exit.lua") &&

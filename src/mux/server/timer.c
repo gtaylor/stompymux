@@ -78,13 +78,6 @@ static void check_idle(MaintenanceContext *maintenance) {
           !can_idle(maintenance->database, d->player)) {
         descriptor_queue_string(d, "*** Inactivity Timeout ***\r\n");
         descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_TIMEOUT);
-      } else if (maintenance->configuration->idle_wiz_dark &&
-                 (idletime > maintenance->configuration->idle_timeout) &&
-                 can_idle(maintenance->database, d->player) &&
-                 !is_dark(maintenance->database, d->player)) {
-        game_object_set_flag(maintenance->database, d->player, OBJECT_FLAG_DARK,
-                             true);
-        d->is_autodark = true;
       }
     } else {
       idletime = maintenance->clock->now - d->connected_at;
@@ -142,8 +135,7 @@ static void dispatch(MaintenanceContext *maintenance) {
      needed (see UpdateSpecialObjects for details)
    */
 
-  if (maintenance->configuration->have_specials)
-    UpdateSpecialObjects(maintenance->btech);
+  UpdateSpecialObjects(maintenance->btech);
 
   /*
    * Idle user check

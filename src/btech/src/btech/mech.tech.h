@@ -74,9 +74,6 @@
   [[maybe_unused]] char *c;
 
 #define TECHCOMMANDC                                                           \
-  DOCHECK_CONTEXT(mech->xcode.context,                                         \
-                  !(is_tech_power(mech->xcode.context->database, player)),     \
-                  "Insufficient clearance to access the command.");            \
   DOCHECK_CONTEXT(mech->xcode.context, !mech,                                  \
                   "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \
@@ -94,9 +91,6 @@
                   "The 'mech isn't in a repair stall!");
 
 #define TECHCOMMANDD                                                           \
-  DOCHECK_CONTEXT(mech->xcode.context,                                         \
-                  !(is_tech_power(mech->xcode.context->database, player)),     \
-                  "Insufficient clearance to access the command.");            \
   DOCHECK_CONTEXT(mech->xcode.context, !mech,                                  \
                   "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \

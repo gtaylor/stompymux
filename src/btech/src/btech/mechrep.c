@@ -40,7 +40,8 @@ extern char *strtok(char *s, const char *ct);
   struct mechrep_data *rep = (struct mechrep_data *)data;                      \
   MECH *mech;                                                                  \
   DOCHECK_CONTEXT(rep->xcode.context,                                          \
-                  !is_template_power(rep->xcode.context->database, player),    \
+                  !is_god(rep->xcode.context->database, player) &&             \
+                      !is_wizard(rep->xcode.context->database, player),        \
                   "I'm sorry Dave, can't do that.");                           \
   if (a) {                                                                     \
     DOCHECK_CONTEXT(rep->xcode.context, rep->current_target == -1,             \

@@ -356,7 +356,7 @@ static int check_snapshot(const char *path) {
           "'attributes');",
           5) == 0 &&
       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                18) == 0 &&
+                23) == 0 &&
       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                 1) == 0 &&
       query_int(sqlite,
@@ -379,15 +379,18 @@ static int check_snapshot(const char *path) {
                 0) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name IN ('has_idle_power', 'has_long_fingers_power', "
-                "'has_comm_all_power', "
-                "'has_see_hidden_power', 'has_no_destroy_power', "
-                "'has_security_power', 'has_mechrep_power', 'has_map_power', "
-                "'has_template_power', 'has_tech_power');",
-                10) == 0 &&
+                "name = 'has_idle_power';",
+                1) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-                "name = 'has_mech_power';",
+                "name IN ('has_long_fingers_power', 'has_comm_all_power', "
+                "'has_see_hidden_power', 'has_no_destroy_power');",
+                0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('objects') WHERE "
+                "name IN ('has_mech_power', 'has_mechrep_power', "
+                "'has_map_power', 'has_template_power', 'has_tech_power', "
+                "'has_security_power');",
                 0) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
@@ -423,16 +426,7 @@ static int check_snapshot(const char *path) {
           24) == 0 &&
       query_int(
           sqlite,
-          "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1) "
-          "OR has_long_fingers_power NOT IN (0, 1) OR has_comm_all_power NOT "
-          "IN "
-          "(0, 1) OR has_see_hidden_power NOT IN (0, 1) OR "
-          "has_no_destroy_power "
-          "NOT IN (0, 1) OR has_security_power NOT IN (0, 1) OR "
-          "has_mechrep_power "
-          "NOT IN (0, 1) OR has_map_power NOT IN (0, 1) OR has_template_power "
-          "NOT "
-          "IN (0, 1) OR has_tech_power NOT IN (0, 1);",
+          "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",
           0) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM sqlite_master WHERE name = 'vattrs';",
@@ -775,13 +769,8 @@ static int seed_btech_nondefault_state(const char *path) {
                   "WHERE mech_dbref = 3;"
                   "UPDATE btech_mech_runtime SET heat = 12.5, status = 8, "
                   "last_used = 77, autopilot_num = 5 WHERE mech_dbref = 3;"
-                  "UPDATE objects SET has_idle_power = 1, "
-                  "has_long_fingers_power = 0, "
-                  "has_comm_all_power = 1, has_see_hidden_power = 0, "
-                  "has_no_destroy_power = 1, has_security_power = 0, "
-                  "has_mechrep_power = 1, has_map_power = 0, "
-                  "has_template_power = 1, "
-                  "has_tech_power = 0 WHERE dbref = 2;"
+                  "UPDATE objects SET has_idle_power = 1 "
+                  "WHERE dbref = 2;"
                   "UPDATE objects SET contents = 5 WHERE dbref = 3;"
                   "UPDATE objects SET next = 6 WHERE dbref = 4;"
                   "UPDATE objects SET location = 3, next = -1 WHERE dbref = 5;"
@@ -858,13 +847,7 @@ static int check_btech_nondefault_state(const char *path) {
               check_btech_value(
                   sqlite, "individual object powers",
                   "SELECT count(*) FROM objects WHERE dbref = 2 AND "
-                  "has_idle_power = 1 AND has_long_fingers_power = 0 AND "
-                  "has_comm_all_power = 1 "
-                  "AND has_see_hidden_power = 0 AND has_no_destroy_power = 1 "
-                  "AND has_security_power = 0 "
-                  "AND has_mechrep_power = 1 AND has_map_power = 0 AND "
-                  "has_template_power = 1 "
-                  "AND has_tech_power = 0;",
+                  "has_idle_power = 1;",
                   1) == 0 &&
               check_btech_value(
                   sqlite, "map regeneration",
@@ -1080,7 +1063,7 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
-  fprintf(file, "[mux]\nhave_specials = 0\n");
+  fprintf(file, "[mux]\n");
   fprintf(file, "default_room_lua_parent = \"room.lua\"\n");
   fprintf(file, "default_player_lua_parent = \"player.lua\"\n");
   fprintf(file, "[server]\nport = 0\n");
@@ -1105,7 +1088,7 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
-  fprintf(file, "[mux]\nhave_specials = 1\n");
+  fprintf(file, "[mux]\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -1131,7 +1114,7 @@ int main(int argc, char *argv[]) {
   if (!file)
     return 2;
   fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
-  fprintf(file, "[mux]\nhave_specials = 1\n");
+  fprintf(file, "[mux]\n");
   fprintf(file, "[server]\nport = 0\n");
   if (fclose(file) != 0)
     return 2;
@@ -1235,15 +1218,6 @@ int main(int argc, char *argv[]) {
       return 1;
     }
   }
-  if (result == 0 && (remove_btech_runtime_row(database) < 0 ||
-                      run_server_in_directory(argv[1], sqlite_read_config,
-                                              directory, 0, &status) < 0 ||
-                      !WIFEXITED(status) || WEXITSTATUS(status) == 0)) {
-    fprintf(stderr, "Corrupt SQLite BTech fixture unexpectedly started: %s\n",
-            directory);
-    return 1;
-  }
-
 #ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 &&
       (run_server(argv[1], config, 0, &status) < 0 || !WIFEXITED(status) ||
@@ -1276,6 +1250,15 @@ int main(int argc, char *argv[]) {
                       !WIFEXITED(status) || WEXITSTATUS(status) != 2))
     result = 1;
 #endif
+
+  if (result == 0 && (remove_btech_runtime_row(database) < 0 ||
+                      run_server_in_directory(argv[1], sqlite_read_config,
+                                              directory, 0, &status) < 0 ||
+                      !WIFEXITED(status) || WEXITSTATUS(status) == 0)) {
+    fprintf(stderr, "Corrupt SQLite BTech fixture unexpectedly started: %s\n",
+            directory);
+    return 1;
+  }
 
   file = fopen(missing_config, "w");
   if (!file)

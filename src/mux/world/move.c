@@ -577,10 +577,6 @@ void do_get(CommandInvocation *invocation) {
   init_match_check_keys(match, player, what, OBJECT_TYPE_THING);
   match_neighbor(match);
   match_exit(match);
-  if (is_long_fingers(evaluation->world->database, player))
-    match_absolute(match); /*
-                            * long fingers
-                            */
   thing = match_result(match);
 
   /*
@@ -865,10 +861,6 @@ void do_enter(CommandInvocation *invocation) {
   MatchContext *match = &invocation->context->match;
   init_match(match, player, what, OBJECT_TYPE_THING);
   match_neighbor(match);
-  if (is_long_fingers(evaluation->world->database, player))
-    match_absolute(match); /*
-                            * the wizard has long fingers
-                            */
 
   if ((thing = noisy_match_result(match)) == NOTHING)
     return;

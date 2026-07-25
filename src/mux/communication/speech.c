@@ -655,8 +655,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
     match_everything(&evaluation->command->match, 0);
     who = match_result(&evaluation->command->match);
 
-    if (!ok_to_do && (is_long_fingers(evaluation->world->database, player) ||
-                      nearby(evaluation->world->database, player, who) ||
+    if (!ok_to_do && (nearby(evaluation->world->database, player, who) ||
                       is_controls(evaluation->world->database, player, who))) {
       ok_to_do = 1;
     }
@@ -741,7 +740,6 @@ void do_pemit(CommandInvocation *invocation) {
 
     if (!ok_to_do &&
         (nearby(evaluation->world->database, player, target) ||
-         is_long_fingers(evaluation->world->database, player) ||
          is_controls(evaluation->world->database, player, target))) {
       ok_to_do = 1;
     }

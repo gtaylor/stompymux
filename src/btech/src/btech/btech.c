@@ -47,7 +47,7 @@ void do_show(CommandInvocation *invocation) {
                        NULL};
   char buf[MBUF_SIZE] = {0};
 
-  if (!WizP(database, player)) {
+  if (!Wiz(database, player)) {
     notify(&command->evaluation, player,
            "You aren't cleared to know this stuff yet!");
     return;

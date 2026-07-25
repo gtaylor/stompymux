@@ -752,10 +752,10 @@ CommandsStruct mechrepcommands[] = {
     {0, "RELOAD <NAME> <LOC> <SUBSECT> [L|A|N(|C|M|S)]",
      "@Reloads weapon in location and critical subsection.", mechrep_Rreload},
     {0, "RESTOCK <LOC> <SUBSECT>",
-     "Simply restocks an ammo bin that's already present with the type of ammo "
-     "it already had.",
+     "@Simply restocks an ammo bin that's already present with the type of "
+     "ammo it already had.",
      mechrep_Rrestock},
-    {0, "FIREMODE <WEAP#> <MODE>", "Changes firemode of weapon",
+    {0, "FIREMODE <WEAP#> <MODE>", "@Changes firemode of weapon",
      mechrep_Rfiremode},
     {0, "ADDSP <ITEM> <LOC> <SUBSECT> [<DATA>]",
      "@Adds a special item in location & critical subsection.",
@@ -798,8 +798,8 @@ CommandsStruct mechrepcommands[] = {
      mechrep_Rsetradio},
     {0, "SETRADIORANGE <NUM>", "@Sets the radio range of the mech.",
      mechrep_Rsetradiorange},
-    {0, "SETCARGOSPACE <VAL> <MAXTON>", "Sets cargospace and max cargo tonnage",
-     mechrep_setcargospace},
+    {0, "SETCARGOSPACE <VAL> <MAXTON>",
+     "@Sets cargospace and max cargo tonnage", mechrep_setcargospace},
     {0, NULL, NULL, NULL}};
 
 CommandsStruct autopilotcommands[] = {

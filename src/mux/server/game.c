@@ -467,9 +467,9 @@ void dump_database(ServerControl *control) {
 }
 
 void fork_and_dump(ServerControl *control, int key) {
-  if (*control->configuration->dump_msg)
+  if (*control->configuration->database.dump_msg)
     raw_broadcast(control->descriptors, 0, "%s",
-                  control->configuration->dump_msg);
+                  control->configuration->database.dump_msg);
 
   log_error(control->log, LOG_DBSAVES, "DMP", "CHKPT", "Saving database: %s",
             control->configuration->database.gamedb);
@@ -477,7 +477,7 @@ void fork_and_dump(ServerControl *control, int key) {
   pcache_sync(control->players);
 
   if (!key || (key & DUMP_STRUCT)) {
-    if (control->configuration->fork_dump) {
+    if (control->configuration->database.fork_dump) {
       /* Fork and dump.  */
       switch (fork()) {
       case -1: /* fork() failed */
@@ -504,9 +504,9 @@ void fork_and_dump(ServerControl *control, int key) {
     }
   }
 
-  if (*control->configuration->postdump_msg)
+  if (*control->configuration->database.postdump_msg)
     raw_broadcast(control->descriptors, 0, "%s",
-                  control->configuration->postdump_msg);
+                  control->configuration->database.postdump_msg);
 }
 
 static int load_game(MuxServer *server) {
@@ -526,8 +526,7 @@ static int load_game(MuxServer *server) {
   }
 
   /* Load the mecha stuff.. */
-  if (server->configuration->have_specials)
-    LoadSpecialObjects(&server->btech);
+  LoadSpecialObjects(&server->btech);
 
   STARTLOG(&server->log, LOG_STARTUP, "INI", "LOAD") {
     log_text("Load complete.");

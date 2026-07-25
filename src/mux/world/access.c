@@ -41,8 +41,7 @@ bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
   return lock_evaluate(context, invocation, result);
 }
 
-int can_see(EvaluationContext *evaluation,
-            const ServerConfiguration *configuration, DbRef player, DbRef thing,
+int can_see(EvaluationContext *evaluation, DbRef player, DbRef thing,
             int can_see_loc) {
   /*
    * Don't show if all the following apply: * Sleeping players should *
@@ -51,8 +50,7 @@ int can_see(EvaluationContext *evaluation,
    * viewer cannot see the disconnected player.
    */
 
-  if (configuration->dark_sleepers &&
-      is_player(evaluation->world->database, thing) &&
+  if (is_player(evaluation->world->database, thing) &&
       !is_connected(evaluation->world->database, thing)) {
     return 0;
   }

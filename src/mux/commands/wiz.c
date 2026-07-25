@@ -28,7 +28,7 @@ void do_teleport(CommandInvocation *invocation) {
   char *arg2 = invocation->second;
   ServerConfiguration *configuration =
       invocation->context->world->configuration;
-  DbRef victim, destination, loc, exitloc;
+  DbRef victim, destination, exitloc;
   char *to;
   int hush = 0;
   LuaLockInvocation lock;
@@ -104,21 +104,6 @@ void do_teleport(CommandInvocation *invocation) {
     }
   }
 
-  /*
-   * If fascist teleport is on, you must control the victim's ultimate
-   * location (after LEAVEing any objects).
-   */
-
-  if (configuration->fascist_tport) {
-    loc = where_room(evaluation->world->database, configuration, victim);
-    if (!is_good_obj(evaluation->world->database, loc) ||
-        !is_room(evaluation->world->database, loc) ||
-        (!is_controls(evaluation->world->database, player, loc) &&
-         !is_wizard(evaluation->world->database, player))) {
-      notify_quiet(evaluation, player, "Permission denied.");
-      return;
-    }
-  }
   if (has_contents(evaluation->world->database, destination)) {
 
     /*

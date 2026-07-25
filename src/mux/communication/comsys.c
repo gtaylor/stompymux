@@ -455,10 +455,6 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
   int where;
   struct commac *c;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!*arg1) {
     raw_notify(evaluation, player, "You need to specify an alias.");
     return;
@@ -540,10 +536,6 @@ void do_delcom(CommandInvocation *invocation) {
   int i;
   struct commac *c;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!arg1) {
     raw_notify(evaluation, player, "Need an alias to delete.");
     return;
@@ -721,10 +713,6 @@ void do_createchannel(CommandInvocation *invocation) {
   char *channel = invocation->first;
   struct channel *newchannel;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (select_channel(evaluation->runtime->channels, channel)) {
     notify_printf(evaluation, player, "Channel %s already exists.", channel);
     return;
@@ -733,7 +721,7 @@ void do_createchannel(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "You must specify a channel to create.");
     return;
   }
-  if (!(is_comm_all(evaluation->world->database, player))) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
@@ -765,17 +753,13 @@ void do_destroychannel(CommandInvocation *invocation) {
   struct channel *ch;
   int j;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   ch = (struct channel *)hash_table_find(
       channel, &evaluation->runtime->channels->channels);
 
   if (!ch) {
     raw_notify(evaluation, player, "@chan/destroy: Unknown channel.");
     return;
-  } else if (!is_comm_all(evaluation->world->database, player)) {
+  } else if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "You do not have permission to do that. ");
     return;
   }
@@ -828,10 +812,6 @@ void do_comlist(CommandInvocation *invocation) {
   int terminal_width;
   int i;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   c = get_commac(evaluation->runtime->channels, player);
   descriptor = evaluation->command->descriptor;
   terminal_width = 79;
@@ -897,10 +877,6 @@ void comsys_clear_player(EvaluationContext *evaluation, DbRef player) {
   int i;
   struct commac *c;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   c = get_commac(evaluation->runtime->channels, player);
 
   for (i = (c->numchannels) - 1; i > -1; --i) {
@@ -922,10 +898,6 @@ void do_allcom(CommandInvocation *invocation) {
   int i;
   struct commac *c;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   c = get_commac(evaluation->runtime->channels, player);
 
   if ((strcasecmp(arg1, "who") != 0) && (strcasecmp(arg1, "on") != 0) &&
@@ -953,10 +925,6 @@ void do_channelwho(CommandInvocation *invocation) {
   int i;
   char ansibuffer[LBUF_SIZE];
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   cp = strchr(arg1, '/');
   if (!cp) {
     strncpy(channel, arg1, 100);
@@ -977,7 +945,7 @@ void do_channelwho(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/who: Unknown channel.");
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
@@ -1129,10 +1097,6 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   struct channel *ch;
   int add_remove = 1;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!(ch = select_channel(evaluation->runtime->channels, arg1))) {
     switch (flag) {
     case 3:
@@ -1147,7 +1111,7 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
     }
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "Permission denied.");
     return;
   }
@@ -1223,7 +1187,7 @@ static int do_test_access(EvaluationContext *evaluation, DbRef player,
   LuaLockInvocation lock;
   LuaLockResult result;
 
-  if (is_comm_all(evaluation->world->database, player))
+  if (is_wizard(evaluation->world->database, player))
     return (1);
 
   /*
@@ -1304,15 +1268,11 @@ void do_cemit(CommandInvocation *invocation) {
   char *text = invocation->second;
   struct channel *ch;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!(ch = select_channel(evaluation->runtime->channels, chan))) {
     raw_notify(evaluation, player, "@chan/emit: Unknown channel.");
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "Permission denied.");
     return;
   }
@@ -1331,15 +1291,11 @@ void do_channel_flags(CommandInvocation *invocation) {
   int flag_value;
   bool enable = true;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
     raw_notify(evaluation, player, "@chan/flags: Unknown channel.");
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "@chan/flags: Permission denied.");
     return;
   }
@@ -1382,10 +1338,6 @@ void do_chboot(CommandInvocation *invocation) {
    * *  * *  * *  * * long.
    */
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   if (!(ch = select_channel(evaluation->runtime->channels, channel))) {
     raw_notify(evaluation, player, "@chan/boot: Unknown channel.");
     return;
@@ -1394,7 +1346,7 @@ void do_chboot(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/boot: You are not on that channel.");
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "Permission denied.");
     return;
   }
@@ -1426,10 +1378,6 @@ void do_channel_object(CommandInvocation *invocation) {
   DbRef thing;
   char *buff;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   init_match(&evaluation->command->match, player, object, OBJECT_TYPE_NOTYPE);
   match_everything(&evaluation->command->match, 0);
   thing = match_result(&evaluation->command->match);
@@ -1443,7 +1391,7 @@ void do_channel_object(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/object: Set.");
     return;
   }
-  if (!is_comm_all(evaluation->world->database, player)) {
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "@chan/object: Permission denied.");
     return;
   }
@@ -1465,10 +1413,6 @@ void do_chanlist(CommandInvocation *invocation) {
   char *buf;
   char *atrstr;
 
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
   flags = 0;
 
   if (key & CLIST_FULL) {
@@ -1484,7 +1428,7 @@ void do_chanlist(CommandInvocation *invocation) {
            &evaluation->runtime->channels->channels);
        ch; ch = (struct channel *)hash_table_next_entry(
                &evaluation->runtime->channels->channels)) {
-    if (is_comm_all(evaluation->world->database, player) ||
+    if (is_wizard(evaluation->world->database, player) ||
         (ch->type & CHANNEL_PUBLIC) ||
         (do_test_access(evaluation, player, CHANNEL_JOIN, ch))) {
 
@@ -1518,11 +1462,6 @@ void do_chanstatus(CommandInvocation *invocation) {
   char *temp;
   char *buf;
   char *atrstr;
-
-  if (!evaluation->world->configuration->have_comsys) {
-    raw_notify(evaluation, player, "Comsys disabled.");
-    return;
-  }
 
   if (key & CSTATUS_FULL) {
     struct channel *selected_channel;

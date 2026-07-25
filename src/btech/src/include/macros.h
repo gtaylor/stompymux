@@ -120,4 +120,3 @@
 
 #define Wiz(database, p) is_wizard(database, p)
 #define WizR(database, p) Wiz(database, p)
-#define WizP(database, p) is_security(database, p)

@@ -2,10 +2,17 @@
 
 ## MUX Todos in the /src/ dir
 
-* consolidate the btech-related powers to assume wizard
-* db.h GameObject: unfurl trees into arrays?
-* verbs.c and verbs.h can probably be crunched elsewhere
+* continue paring down powers
+  * document powers
+* Lua attribute niceties?
+  * attribute trees - see MUX docs for inspiration
+* Figure out an ANSI color story
+  * Telnet negotiation
+  * How to render
 * Crunch runtime_clock.c into somewhere
+* Clickable links
+* GMCP lua function
+* GMCP + sound support
 * Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua
@@ -15,9 +22,6 @@
 * Maybe: Figure out external event streaming. Websockets?
 
 ## DB schema stuff
-
-* objects
-  * add luaparent and move from attribute
 
 ## Lua Todos
 

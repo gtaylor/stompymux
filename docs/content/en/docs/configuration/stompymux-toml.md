@@ -18,7 +18,7 @@ anything pulled in through `include`.
 
 | Section | Contents |
 | --- | --- |
-| `[database]` | SQLite game database path, checkpoint dump interval, and mech/map database paths. |
+| `[database]` | SQLite game database path, checkpoint dump timing, messages, and fork behavior, and mech/map database paths. |
 | `[lua]` | Lua module directory plus callback instruction and memory limits. |
 | `[server]` | Port and MUD name. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
@@ -30,7 +30,8 @@ anything pulled in through `include`.
 | `[names]` | `bad`/`good` player-name lists. |
 | `[logging]` | `log` and `log_options` bitmask arrays. |
 
-Most directives are plain scalars (`port = 5555`, `fork_dump = true`). A few
+Most directives are plain scalars (`port = 5555`, or, under `[database]`,
+`fork_dump = true`). A few
 directives take other shapes:
 
 - **Flag/bitmask directives** (`mux.default_player_flags`,
