@@ -3004,8 +3004,11 @@ static void do_luareload(CommandInvocation *invocation) {
 
   if (!lua_reload(invocation->context->runtime->lua_owner, error,
                   sizeof(error))) {
-    notify_printf(&invocation->context->evaluation, player,
-                  "Lua reload failed: %s", error);
+    log_error(invocation->context->runtime->lua_owner->runtime->services->log,
+              LOG_PROBLEMS, "LUA", "RELOAD", "%s", error);
+    raw_notify_raw(&invocation->context->evaluation, player,
+                   "Lua reload failed: ", nullptr);
+    raw_notify(&invocation->context->evaluation, player, error);
     return;
   }
   notify_quiet(&invocation->context->evaluation, player, "Lua reloaded.");

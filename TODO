@@ -2,8 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* continue paring down powers
-  * document powers
 * Lua attribute niceties?
   * attribute trees - see MUX docs for inspiration
 * Figure out an ANSI color story
