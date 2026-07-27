@@ -11,6 +11,7 @@
 * Clickable links
 * GMCP lua function
 * GMCP + sound support
+* See if there's anything interesting in here to expose: https://mudstandards.org/category/gmcp
 * Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua
