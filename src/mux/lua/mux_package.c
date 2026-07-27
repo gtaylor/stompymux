@@ -139,6 +139,23 @@ static int lua_mux_exits_visible(lua_State *state) {
   return 1;
 }
 
+static int lua_mux_exit_enter_lock_passes(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  DbRef exit;
+  DbRef enactor;
+
+  lua_mux_require_runtime(package, state, "exit_enter_lock_passes");
+  exit = lua_mux_require_object(package, state, 1);
+  enactor = lua_mux_require_object(package, state, 2);
+  if (!is_exit(package->services->database, exit))
+    return luaL_argerror(state, 1, "object is not an exit");
+  if (!package->exit_enter_lock_passes)
+    return luaL_error(state, "mux.exit_enter_lock_passes is unavailable");
+  lua_pushboolean(
+      state, package->exit_enter_lock_passes(package->context, exit, enactor));
+  return 1;
+}
+
 static int lua_mux_object_name(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
@@ -305,6 +322,9 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_exits_visible, 1);
   lua_setfield(state, -2, "exits_visible");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_exit_enter_lock_passes, 1);
+  lua_setfield(state, -2, "exit_enter_lock_passes");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_description, 1);
   lua_setfield(state, -2, "object_description");

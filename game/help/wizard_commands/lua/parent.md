@@ -31,6 +31,11 @@ An object module may export `internal_appearance(ctx)` and
 `external_appearance(ctx)`. Returning a string replaces the complete native
 `look` appearance; returning `nil` uses the native appearance. Rooms always use
 the internal function. Use `mux.contents`, `mux.contents_visible`, `mux.exits`,
-`mux.exits_visible`, `mux.object_name`, `mux.object_description`, and
-`mux.object_type` when assembling custom output. There is no native opacity
-flag; use `external_appearance` to control what an outside viewer sees.
+`mux.exits_visible`, `mux.exit_enter_lock_passes`, `mux.object_name`,
+`mux.object_description`, and `mux.object_type` when assembling custom output.
+There is no native opacity flag; use `external_appearance` to control what an
+outside viewer sees.
+
+The bundled default room parent lists visible players other than the viewer in
+a left column beside visible exits, then lists non-player contents below. If no
+other players are visible, the exits column remains right-aligned.

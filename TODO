@@ -2,6 +2,7 @@
 
 ## MUX Todos in the /src/ dir
 
+* Figure out how to restore colors in object names and descriptions
 * Lua attribute niceties?
   * attribute trees - see MUX docs for inspiration
 * Figure out an ANSI color story
@@ -12,6 +13,7 @@
 * GMCP lua function
 * GMCP + sound support
 * See if there's anything interesting in here to expose: https://mudstandards.org/category/gmcp
+* Look into OSC8 support for hyperlinks: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol
 * Offer a non-privileged way to change your own password.
 * Add bad names list
 * Unit and integration test strategy for Lua

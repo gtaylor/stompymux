@@ -74,6 +74,12 @@ end
 Returns whether native `look` would display a directly attached exit to the
 viewer. The exit must belong directly to `location`.
 
+## `mux.exit_enter_lock_passes(exit, enactor)`
+
+Returns whether `enactor` passes an exit's default traversal lock. The result
+uses the same lock and enactor identity as moving through that exit, but does
+not send lock messages or move the enactor.
+
 ## `mux.object_name(object)`
 
 Returns the object's stored name. Exit names include their semicolon-separated

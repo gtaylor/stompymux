@@ -172,6 +172,8 @@ static int lua_runtime_is_checking(void *context);
 static int lua_runtime_flow_start(void *context, lua_State *state,
                                   int descriptor_id, const char *module,
                                   const char *first_step);
+static int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
+                                              DbRef enactor);
 
 const char *lua_event_name(LuaEventType event) {
   if ((unsigned int)event >= LUA_EVENT_COUNT)
@@ -393,6 +395,8 @@ static void lua_install_sandbox(LuaRuntime *runtime) {
   runtime->mux_package.services = runtime->services;
   runtime->mux_package.is_checking = lua_runtime_is_checking;
   runtime->mux_package.flow_start = lua_runtime_flow_start;
+  runtime->mux_package.exit_enter_lock_passes =
+      lua_runtime_exit_enter_lock_passes;
   lua_mux_package_install(runtime->state, &runtime->mux_package);
   runtime->btech_package.context = runtime;
   runtime->btech_package.services = runtime->services;
@@ -2681,6 +2685,25 @@ static int lua_runtime_flow_start(void *context, lua_State *state,
 
   descriptor_flow_start(d, first_step, lua_flow_step, data, lua_flow_data_free);
   return 0;
+}
+
+static int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
+                                              DbRef enactor) {
+  LuaRuntime *runtime = context;
+  LuaLockResult result;
+
+  lua_lock_evaluate(runtime,
+                    &(LuaLockInvocation){
+                        .type = LUA_LOCK_DEFAULT,
+                        .operation = LUA_LOCK_OPERATION_TRAVERSE,
+                        .object = exit,
+                        .enactor = enactor,
+                        .cause = enactor,
+                        .subject = enactor,
+                        .silent = true,
+                    },
+                    &result);
+  return result.passes;
 }
 
 static void do_luaparent(CommandInvocation *invocation) {

@@ -87,6 +87,11 @@ continuation. The normal room look lock and `on_describe` event still run.
 There is no native opacity flag; use `external_appearance` to decide what an
 outside viewer sees.
 
+The bundled `default_room.lua` parent renders visible players other than the
+viewer alongside visible exits, then renders non-player contents below those
+columns. When no other players are visible, the exits column remains in its
+right-hand position.
+
 The context has the usual `object`, `enactor`, `cause`, and optional
 `descriptor` fields, plus `appearance`, whose value is
 `internal_appearance` or `external_appearance`. Runtime errors, invalid return

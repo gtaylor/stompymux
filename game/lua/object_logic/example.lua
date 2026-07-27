@@ -17,7 +17,7 @@ end
 
 
 return {
-  internal_appearance = ObjectAppearances.render_appearance,
+  internal_appearance = ObjectAppearances.render_internal_appearance,
   commands = {
     {
       pattern = "^hello%s*(.*)$",
