@@ -38,8 +38,6 @@ fork_dump = true
 [lua]
 # Directory containing global and object Lua modules.
 directory = "lua"
-# Maximum Lua VM instructions permitted for a single callback.
-instruction_limit = 100000
 # Maximum memory, in bytes, permitted for the Lua VM.
 memory_limit = 67108864
 

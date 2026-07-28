@@ -19,7 +19,7 @@ anything pulled in through `include`.
 | Section | Contents |
 | --- | --- |
 | `[database]` | SQLite game database path, checkpoint dump timing, messages, and fork behavior, and mech/map database paths. |
-| `[lua]` | Lua module directory plus callback instruction and memory limits. |
+| `[lua]` | Lua module directory and VM memory limit. LuaJIT compilation is enabled. |
 | `[server]` | Port and MUD name. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
@@ -29,6 +29,9 @@ anything pulled in through `include`.
 | `[aliases.*]` | Command and flag alias tables. |
 | `[names]` | `bad`/`good` player-name lists. |
 | `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
+
+Lua callbacks run with LuaJIT compilation enabled. Consequently, `[lua]` has no
+per-callback instruction limit: use bounded loops in trusted Lua modules.
 
 Most directives are plain scalars (`port = 5555`, or, under `[database]`,
 `fork_dump = true`). A few

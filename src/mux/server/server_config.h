@@ -46,9 +46,8 @@ struct DatabaseConfiguration {
 
 typedef struct LuaConfiguration LuaConfiguration;
 struct LuaConfiguration {
-  char directory[128];   /* Lua module root, relative to game directory */
-  int instruction_limit; /* Lua VM instructions per callback */
-  int memory_limit;      /* Lua VM memory cap in bytes */
+  char directory[128]; /* Lua module root, relative to game directory */
+  int memory_limit;    /* Lua VM memory cap in bytes */
 };
 
 typedef struct ServerConfiguration ServerConfiguration;

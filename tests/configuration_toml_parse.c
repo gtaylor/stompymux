@@ -53,7 +53,6 @@ static int test_scalar_dispatch(void) {
                              "postdump_message = \"Saved\"\n"
                              "[lua]\n"
                              "directory = \"scripts\"\n"
-                             "instruction_limit = 50000\n"
                              "memory_limit = 33554432\n"
                              "[mux]\n"
                              "default_thing_lua_parent = \"thing.lua\"\n"
@@ -68,11 +67,10 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 13 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 12 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
        call_log_find(&log, "dump_interval", "900") &&
        call_log_find(&log, "lua_directory", "scripts") &&
-       call_log_find(&log, "lua_instruction_limit", "50000") &&
        call_log_find(&log, "lua_memory_limit", "33554432") &&
        call_log_find(&log, "fork_dump", "true") &&
        call_log_find(&log, "dump_message", "Saving") &&

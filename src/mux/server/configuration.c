@@ -303,7 +303,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cache_width = CACHE_WIDTH;
   context->configuration->cache_names = 1;
   StringCopy(context->configuration->lua.directory, "lua");
-  context->configuration->lua.instruction_limit = 100000;
   context->configuration->lua.memory_limit = 64 * 1024 * 1024;
 
   context->configuration->player_zone = 0;
@@ -957,8 +956,6 @@ CONF conftable[] = {
     {"lua_directory", cf_string_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
-    {"lua_instruction_limit", cf_int_configuration_adapter, CA_GOD,
-     CONFIG_LOC(lua.instruction_limit), 0},
     {"lua_memory_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.memory_limit), 0},
     {"accounting", cf_bool_bit_configuration_adapter, CA_GOD,
