@@ -2,7 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Figure out how to restore colors in object names and descriptions
 * Lua attribute niceties?
   * attribute trees - see MUX docs for inspiration
 * Figure out an ANSI color story
