@@ -30,6 +30,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/world_context.h"
 
 /*
@@ -231,15 +232,17 @@ void descriptor_queue_write(Descriptor *d, const char *b, int n) {
 }
 
 void descriptor_queue_string(Descriptor *d, const char *s) {
-  char new[LBUF_SIZE];
+  char rendered[LBUF_SIZE];
+  TerminalColorDepth depth = TERMINAL_COLOR_NONE;
 
-  strncpy(new, s, LBUF_SIZE - 1);
-  new[LBUF_SIZE - 1] = '\0';
-
-  if (!is_ansi(descriptor_runtime(d)->world->database, d->player) &&
-      index(s, ESC_CHAR))
-    strip_ansi_r(new, s, strlen(s));
-  descriptor_queue_write(d, new, (int)strlen(new));
+  if (is_ansi(descriptor_runtime(d)->world->database, d->player)) {
+    if (d->has_color_override)
+      depth = d->color_override;
+    else if (!d->is_screen_reader)
+      depth = d->terminal_color_depth;
+  }
+  styled_text_render(s, depth, rendered, sizeof(rendered));
+  descriptor_queue_write(d, rendered, (int)strlen(rendered));
 }
 
 void descriptor_welcome(Descriptor *d) {
@@ -627,10 +630,11 @@ int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,
 
 static char *trimmed_name(GameDatabase *database, DbRef player) {
   static char cbuff[18];
+  char *name = game_object_pure_name(database, player);
 
-  if (strlen(game_object_name(database, player)) <= 16)
-    return game_object_name(database, player);
-  StringCopyTrunc(cbuff, game_object_name(database, player), 16);
+  if (strlen(name) <= 16)
+    return name;
+  StringCopyTrunc(cbuff, name, 16);
   cbuff[16] = '\0';
   return cbuff;
 }
@@ -654,8 +658,8 @@ static void dump_users(Descriptor *e, char *match) {
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match &&
-        !(string_prefix(game_object_name(runtime->world->database, d->player),
-                        match)))
+        !(string_prefix(
+            game_object_pure_name(runtime->world->database, d->player), match)))
       continue;
     count++;
 
@@ -722,8 +726,8 @@ static void dump_sessions(Descriptor *e, char *match) {
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (match &&
-        !string_prefix(game_object_name(runtime->world->database, d->player),
-                       match))
+        !string_prefix(
+            game_object_pure_name(runtime->world->database, d->player), match))
       continue;
     count++;
 
@@ -760,6 +764,67 @@ void do_who(CommandInvocation *invocation) {
     return;
   }
   dump_users(descriptor, match);
+}
+
+static const char *terminal_color_depth_name(TerminalColorDepth depth) {
+  switch (depth) {
+  case TERMINAL_COLOR_NONE:
+    return "off";
+  case TERMINAL_COLOR_ANSI_16:
+    return "16";
+  case TERMINAL_COLOR_ANSI_256:
+    return "256";
+  case TERMINAL_COLOR_TRUECOLOR:
+    return "truecolor";
+  }
+  return "unknown";
+}
+
+void do_color(CommandInvocation *invocation) {
+  Descriptor *descriptor = invocation->context->descriptor;
+  const char *mode = invocation->first;
+  TerminalColorDepth requested;
+
+  if (descriptor == nullptr || descriptor->player != invocation->player) {
+    notify(&invocation->context->evaluation, invocation->player,
+           "color is only available from an active connection.");
+    return;
+  }
+  if (!mode || !*mode) {
+    notify_printf(&invocation->context->evaluation, invocation->player,
+                  "Color mode: %s%s. Client capability: %s%s.",
+                  descriptor->has_color_override
+                      ? terminal_color_depth_name(descriptor->color_override)
+                      : "auto",
+                  descriptor->has_color_override ? " (override)" : "",
+                  terminal_color_depth_name(descriptor->terminal_color_depth),
+                  descriptor->is_screen_reader ? ", screen reader" : "");
+    return;
+  }
+  if (!strcasecmp(mode, "auto")) {
+    descriptor->has_color_override = false;
+  } else {
+    if (!strcasecmp(mode, "off"))
+      requested = TERMINAL_COLOR_NONE;
+    else if (!strcmp(mode, "16"))
+      requested = TERMINAL_COLOR_ANSI_16;
+    else if (!strcmp(mode, "256"))
+      requested = TERMINAL_COLOR_ANSI_256;
+    else if (!strcasecmp(mode, "truecolor"))
+      requested = TERMINAL_COLOR_TRUECOLOR;
+    else {
+      notify(&invocation->context->evaluation, invocation->player,
+             "Use color auto, off, 16, 256, or truecolor.");
+      return;
+    }
+    descriptor->has_color_override = true;
+    descriptor->color_override = requested;
+  }
+  notify_printf(&invocation->context->evaluation, invocation->player,
+                "Color mode set to %s.",
+                descriptor->has_color_override
+                    ? terminal_color_depth_name(descriptor->color_override)
+                    : "auto");
 }
 
 void do_session(CommandInvocation *invocation) {
@@ -947,7 +1012,7 @@ DbRef find_connected_name(GameDatabase *database,
     if (is_good_obj(database, player) && !is_wizard(database, player) &&
         is_hidden(database, d->player))
       continue;
-    if (!string_prefix(game_object_name(database, d->player), name))
+    if (!string_prefix(game_object_pure_name(database, d->player), name))
       continue;
     if ((found != NOTHING) && (found != d->player))
       return NOTHING;

@@ -21,6 +21,7 @@
 
 static int telnet_connected_count(CommandRuntime *runtime);
 static int telnet_charset_is_ascii(const char *buffer, size_t size);
+static void telnet_handle_terminal_type(Descriptor *d, const char *name);
 static void telnet_process_data(Descriptor *d, const char *buffer, size_t size);
 static void telnet_handle_charset(Descriptor *d, const char *buffer,
                                   size_t size);
@@ -64,6 +65,12 @@ int descriptor_telnet_initialize(Descriptor *d) {
   }
 
   snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
+  d->terminal_client[0] = '\0';
+  d->terminal_type_responses = 0;
+  d->terminal_color_depth = TERMINAL_COLOR_ANSI_16;
+  d->is_screen_reader = false;
+  d->has_color_override = false;
+  d->color_override = TERMINAL_COLOR_NONE;
   d->terminal_width = 80;
   d->terminal_height = 25;
   d->is_charset_ascii = true;
@@ -108,6 +115,16 @@ static int telnet_charset_is_ascii(const char *buffer, size_t size) {
 
   return size == sizeof(ascii) - 1 &&
          strncasecmp(buffer, ascii, sizeof(ascii) - 1) == 0;
+}
+
+static void telnet_handle_terminal_type(Descriptor *d, const char *name) {
+  if (terminal_mtts_parse(name, &d->terminal_color_depth, &d->is_screen_reader))
+    return;
+
+  if (d->terminal_type_responses == 0)
+    snprintf(d->terminal_client, sizeof(d->terminal_client), "%s", name);
+  snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", name);
+  d->terminal_color_depth = terminal_color_depth_from_type(name);
 }
 
 static void telnet_process_data(Descriptor *d, const char *buffer,
@@ -320,8 +337,10 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     break;
   case TELNET_EV_TTYPE:
     if (event->ttype.cmd == TELNET_TTYPE_IS && event->ttype.name != nullptr) {
-      snprintf(d->terminal_type, sizeof(d->terminal_type), "%s",
-               event->ttype.name);
+      telnet_handle_terminal_type(d, event->ttype.name);
+      d->terminal_type_responses++;
+      if (d->terminal_type_responses < 3)
+        telnet_ttype_send(telnet);
     }
     break;
   case TELNET_EV_SUBNEGOTIATION:

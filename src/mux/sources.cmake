@@ -60,6 +60,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/support/red_black_tree.c
   ${MUX_MODULE_DIR}/support/password.c
   ${MUX_MODULE_DIR}/support/stringutil.c
+  ${MUX_MODULE_DIR}/support/styled_text.c
   ${MUX_MODULE_DIR}/support/validation.c
   ${MUX_MODULE_DIR}/support/wild.c
   ${MUX_MODULE_DIR}/commands/look.c

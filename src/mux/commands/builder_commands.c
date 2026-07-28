@@ -20,12 +20,27 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/match.h"
 #include "mux/world/object.h"
 #include "mux/world/object_set.h"
 #include "mux/world/walkdb.h"
 
 extern NameTable indiv_attraccess_nametab[];
+
+static char *compile_object_name(EvaluationContext *evaluation, DbRef player,
+                                 const char *name) {
+  char *compiled = alloc_lbuf("compile_object_name");
+  char error[256];
+
+  if (styled_text_compile(name, compiled, LBUF_SIZE, error, sizeof(error))) {
+    StringCopy(compiled, name);
+    return compiled;
+  }
+  notify_printf(evaluation, player, "Invalid color markup: %s.", error);
+  free_lbuf(compiled);
+  return nullptr;
+}
 
 /*
  * ---------------------------------------------------------------------------
@@ -74,6 +89,7 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
   DbRef exit;
   LuaLockInvocation lock;
   LuaLockResult result;
+  char *compiled_direction;
 
   if (!is_good_obj(evaluation->world->database, loc))
     return;
@@ -85,7 +101,11 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
     notify_quiet(evaluation, player, "Permission denied.");
     return;
   }
-  exit = create_obj(evaluation, player, OBJECT_TYPE_EXIT, direction);
+  compiled_direction = compile_object_name(evaluation, player, direction);
+  if (!compiled_direction)
+    return;
+  exit = create_obj(evaluation, player, OBJECT_TYPE_EXIT, compiled_direction);
+  free_lbuf(compiled_direction);
   if (exit == NOTHING)
     return;
 
@@ -348,6 +368,7 @@ void do_dig(CommandInvocation *invocation) {
   int nargs = invocation->vector_count;
   DbRef room;
   char *buff;
+  char *compiled_name;
 
   /*
    * we don't need to know player's location!  hooray!
@@ -357,12 +378,16 @@ void do_dig(CommandInvocation *invocation) {
     notify_quiet(evaluation, player, "Dig what?");
     return;
   }
-  room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, name);
+  compiled_name = compile_object_name(evaluation, player, name);
+  if (!compiled_name)
+    return;
+  room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, compiled_name);
+  free_lbuf(compiled_name);
   if (room == NOTHING)
     return;
 
-  notify_printf(evaluation, player, "%s created with room number %ld.", name,
-                room);
+  notify_printf(evaluation, player, "%s created with room number %ld.",
+                game_object_name(evaluation->world->database, room), room);
 
   buff = alloc_sbuf("do_dig");
   if ((nargs >= 1) && args[0] && *args[0]) {
@@ -393,14 +418,20 @@ void do_create(CommandInvocation *invocation) {
   char *coststr = invocation->second;
   DbRef thing;
   char clearbuffer[MBUF_SIZE];
+  char *compiled_name;
 
   (void)coststr;
-  strip_ansi_r(clearbuffer, name, MBUF_SIZE);
+  compiled_name = compile_object_name(evaluation, player, name);
+  if (!compiled_name)
+    return;
+  styled_text_strip(compiled_name, clearbuffer, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
     notify_quiet(evaluation, player, "Create what?");
+    free_lbuf(compiled_name);
     return;
   }
-  thing = create_obj(evaluation, player, OBJECT_TYPE_THING, name);
+  thing = create_obj(evaluation, player, OBJECT_TYPE_THING, compiled_name);
+  free_lbuf(compiled_name);
   if (thing == NOTHING)
     return;
 
@@ -425,6 +456,8 @@ void do_clone(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   char *arg2 = invocation->second;
+  char *clone_name = nullptr;
+  char pure_name[LBUF_SIZE];
   DbRef clone, thing, loc;
   Flag rmv_flags;
 
@@ -463,16 +496,29 @@ void do_clone(CommandInvocation *invocation) {
    * Go make the clone object
    */
 
-  if ((arg2 && *arg2) &&
-      ok_name(invocation->context->world->configuration, arg2))
-    clone = create_obj(evaluation, player,
-                       typeof_obj(evaluation->world->database, thing), arg2);
+  if (arg2 && *arg2) {
+    clone_name = compile_object_name(evaluation, player, arg2);
+    if (!clone_name)
+      return;
+    styled_text_strip(clone_name, pure_name, sizeof(pure_name));
+    if (!ok_name(invocation->context->world->configuration, pure_name)) {
+      notify_quiet(evaluation, player, "That is not a reasonable name.");
+      free_lbuf(clone_name);
+      return;
+    }
+  }
+  if (clone_name)
+    clone =
+        create_obj(evaluation, player,
+                   typeof_obj(evaluation->world->database, thing), clone_name);
   else
     clone = create_obj(
         evaluation, player, typeof_obj(evaluation->world->database, thing),
         game_object_name(invocation->context->world->database, thing));
-  if (clone == NOTHING)
+  if (clone == NOTHING) {
+    free_lbuf(clone_name);
     return;
+  }
 
   /*
    * Wipe out any old attributes and copy in the new data
@@ -485,13 +531,13 @@ void do_clone(CommandInvocation *invocation) {
    * Reset the name, since we cleared the attributes
    */
 
-  if ((arg2 && *arg2) &&
-      ok_name(invocation->context->world->configuration, arg2))
-    object_name_set(invocation->context->world->database, clone, arg2);
+  if (clone_name)
+    object_name_set(invocation->context->world->database, clone, clone_name);
   else
     object_name_set(
         invocation->context->world->database, clone,
         game_object_name(invocation->context->world->database, thing));
+  free_lbuf(clone_name);
 
   /*
    * Clear out problem flags from the original
@@ -831,18 +877,23 @@ void do_name(CommandInvocation *invocation) {
   DbRef thing;
   char *buff;
   char new[LBUF_SIZE];
+  char *compiled_name;
 
   if ((thing = match_controlled(&invocation->context->match, player, name)) ==
       NOTHING)
     return;
+  compiled_name = compile_object_name(evaluation, player, newname);
+  if (!compiled_name)
+    return;
+  newname = compiled_name;
 
   /*
    * check for bad name
    */
-  strncpy(new, newname, LBUF_SIZE - 1);
-  if ((*newname == '\0') ||
-      (strlen(strip_ansi_r(new, newname, strlen(newname))) == 0)) {
+  styled_text_strip(newname, new, sizeof(new));
+  if (*newname == '\0' || strlen(new) == 0) {
     notify_quiet(evaluation, player, "Give it what new name?");
+    free_lbuf(compiled_name);
     return;
   }
   /*
@@ -850,16 +901,18 @@ void do_name(CommandInvocation *invocation) {
    */
   if (is_player(evaluation->world->database, thing)) {
 
-    buff = trim_spaces((char *)newname);
+    styled_text_strip(newname, new, sizeof(new));
+    buff = trim_spaces(new);
     if (!ok_player_name(invocation->context->world->configuration, buff) ||
         !badname_check(invocation->context->world, buff)) {
       notify_quiet(evaluation, player, "You can't use that name.");
       free_lbuf(buff);
+      free_lbuf(compiled_name);
       return;
     } else if (string_compare(
                    invocation->context->world->configuration, buff,
-                   game_object_name(invocation->context->world->database,
-                                    thing)) &&
+                   game_object_pure_name(invocation->context->world->database,
+                                         thing)) &&
                (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
                 NOTHING)) {
 
@@ -869,6 +922,7 @@ void do_name(CommandInvocation *invocation) {
 
       notify_quiet(evaluation, player, "That name is already in use.");
       free_lbuf(buff);
+      free_lbuf(compiled_name);
       return;
     }
 
@@ -889,20 +943,23 @@ void do_name(CommandInvocation *invocation) {
     }
     delete_player_name(
         invocation->context->world, thing,
-        game_object_name(invocation->context->world->database, thing));
+        game_object_pure_name(invocation->context->world->database, thing));
 
-    object_name_set(invocation->context->world->database, thing, buff);
+    object_name_set(invocation->context->world->database, thing, newname);
     add_player_name(
         invocation->context->world, thing,
-        game_object_name(invocation->context->world->database, thing));
+        game_object_pure_name(invocation->context->world->database, thing));
     if (!is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
       notify_quiet(evaluation, player, "Name set.");
     free_lbuf(buff);
+    free_lbuf(compiled_name);
     return;
   } else {
-    if (!ok_name(invocation->context->world->configuration, newname)) {
+    styled_text_strip(newname, new, sizeof(new));
+    if (!ok_name(invocation->context->world->configuration, new)) {
       notify_quiet(evaluation, player, "That is not a reasonable name.");
+      free_lbuf(compiled_name);
       return;
     }
     /*
@@ -913,6 +970,7 @@ void do_name(CommandInvocation *invocation) {
         !is_quiet(evaluation->world->database, thing))
       notify_quiet(evaluation, player, "Name set.");
   }
+  free_lbuf(compiled_name);
 }
 /*
  * ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/support/styled_text.h"
 
 /* Static functions */
 static void do_show_com(void *, void *);
@@ -197,17 +198,23 @@ static void do_processcom(EvaluationContext *evaluation, DbRef player,
                "That channel type cannot be transmitted on.");
     return;
   } else {
+    char plain_message[LBUF_SIZE];
+    const char *message = (*arg2 == ':' || *arg2 == ';') ? arg2 + 1 : arg2;
+
+    styled_text_strip(message, plain_message, sizeof(plain_message));
+
     if ((*arg2) == ':')
       do_comprintf(evaluation, ch, "[%s] %s %s", arg1,
                    game_object_name(evaluation->world->database, player),
-                   arg2 + 1);
+                   plain_message);
     else if ((*arg2) == ';')
       do_comprintf(evaluation, ch, "[%s] %s%s", arg1,
                    game_object_name(evaluation->world->database, player),
-                   arg2 + 1);
+                   plain_message);
     else
       do_comprintf(evaluation, ch, "[%s] %s: %s", arg1,
-                   game_object_name(evaluation->world->database, player), arg2);
+                   game_object_name(evaluation->world->database, player),
+                   plain_message);
   }
 }
 

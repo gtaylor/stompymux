@@ -8,6 +8,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/support/alloc.h"
+#include "mux/support/styled_text.h"
 
 /* Reasons passed to descriptor_shutdown(). */
 typedef enum DescriptorShutdownReason {
@@ -79,7 +80,19 @@ typedef struct Descriptor {
   /* libtelnet state for protocol negotiation. */
   telnet_t *telnet;
   /* Terminal type reported by the client. */
-  char terminal_type[16];
+  char terminal_type[64];
+  /* MUD client name reported by the first MTTS TTYPE response. */
+  char terminal_client[64];
+  /* Number of TTYPE responses received during MTTS discovery. */
+  int terminal_type_responses;
+  /* Maximum color depth advertised by this connection. */
+  TerminalColorDepth terminal_color_depth;
+  /* Whether MTTS reports that the client is a screen reader. */
+  bool is_screen_reader;
+  /* Whether this connection overrides automatic color-depth selection. */
+  bool has_color_override;
+  /* Color depth explicitly selected for this connection. */
+  TerminalColorDepth color_override;
   /* Client terminal width in character cells. */
   int terminal_width;
   /* Client terminal height in character cells. */

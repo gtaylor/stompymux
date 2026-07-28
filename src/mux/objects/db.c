@@ -20,6 +20,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/styled_text.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
 #include "mux/world/object.h"
@@ -143,7 +144,7 @@ INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
     }
     if (!database->pure_names[thing]) {
       buff = attribute_get(database, thing, A_NAME, &aflags);
-      strip_ansi_r(buffer, buff, MBUF_SIZE);
+      styled_text_strip(buff, buffer, MBUF_SIZE);
       set_string(&database->pure_names[thing], buffer);
       free_lbuf(buff);
     }
@@ -188,16 +189,17 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
       char new[LBUF_SIZE];
 
       buff = attribute_get(database, thing, A_NAME, &aflags);
-      set_string(&database->pure_names[thing],
-                 strip_ansi_r(new, buff, strlen(buff)));
+      styled_text_strip(buff, new, sizeof(new));
+      set_string(&database->pure_names[thing], new);
       free_lbuf(buff);
     }
     return database->pure_names[thing];
   }
 
   attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
-  return strip_ansi_r(database->pure_name_buffer, database->name_buffer,
-                      strlen(database->name_buffer));
+  styled_text_strip(database->name_buffer, database->pure_name_buffer,
+                    sizeof(database->pure_name_buffer));
+  return database->pure_name_buffer;
 }
 
 INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
@@ -211,7 +213,8 @@ INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
   attribute_add_raw(database, thing, A_NAME, (char *)s);
 
   if (database->configuration->cache_names) {
-    set_string(&database->pure_names[thing], strip_ansi_r(new, s, strlen(s)));
+    styled_text_strip(s, new, sizeof(new));
+    set_string(&database->pure_names[thing], new);
   }
 }
 

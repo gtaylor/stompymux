@@ -1,26 +1,21 @@
-local Color = require("color")
-
 local ROOM_COLUMN_WIDTH = 38
 local ROOM_HEADER_COLUMN_WIDTH = ROOM_COLUMN_WIDTH
 local ROOM_PLAYER_NAME_WIDTH = 23
 local ROOM_EXIT_NAME_WIDTH = 32
 
 local function truncate(value, width)
-  if #value > width then
-    return value:sub(1, width)
-  end
-  return value
+  return mux.truncate_text(value, width)
 end
 
 local function pad_right(value, width)
-  return value .. string.rep(" ", math.max(0, width - #value))
+  return value .. string.rep(" ", math.max(0, width - mux.text_width(value)))
 end
 
 local function render_content_name(object)
   local name = mux.object_name(object)
 
   if mux.object_type(object) == "player" then
-    name = Color.ANSI_BRIGHT_WHITE .. name .. Color.ANSI_NORMAL
+    name = mux.style(name, { foreground = "bright-white" })
   end
   return name
 end
@@ -84,9 +79,9 @@ local function render_room_exits(ctx)
 
       rendered[#rendered + 1] = {
         alias = first_alias and "{" .. first_alias .. "}" or "",
-        alias_color = passes_enter_lock and Color.ANSI_DARK_GREEN or Color.ANSI_DARK_RED,
+        alias_color = passes_enter_lock and "green" or "red",
         name = name,
-        name_color = passes_enter_lock and Color.ANSI_BRIGHT_GREEN or Color.ANSI_BRIGHT_RED,
+        name_color = passes_enter_lock and "bright-green" or "bright-red",
       }
     end
   end
@@ -101,10 +96,10 @@ local function render_room_columns(players, exits)
   local rendered_exit_header = exit_header
 
   if player_header ~= "" then
-    rendered_player_header = Color.ANSI_BRIGHT_YELLOW .. player_header .. Color.ANSI_NORMAL
+    rendered_player_header = mux.style(player_header, { foreground = "bright-yellow" })
   end
   if exit_header ~= "" then
-    rendered_exit_header = Color.ANSI_BRIGHT_YELLOW .. exit_header .. Color.ANSI_NORMAL
+    rendered_exit_header = mux.style(exit_header, { foreground = "bright-yellow" })
   end
   lines[#lines + 1] = rendered_player_header
     .. string.rep(" ", ROOM_HEADER_COLUMN_WIDTH - #player_header)
@@ -117,30 +112,22 @@ local function render_room_columns(players, exits)
 
     if player then
       local name = truncate(player, ROOM_PLAYER_NAME_WIDTH)
-      player_column = " " .. Color.ANSI_BRIGHT_WHITE .. name .. Color.ANSI_NORMAL
-      player_column = player_column .. string.rep(" ", ROOM_COLUMN_WIDTH - #name - 1)
+      player_column = " " .. mux.style(name, { foreground = "bright-white" })
+      player_column = player_column .. string.rep(" ", ROOM_COLUMN_WIDTH - mux.text_width(name) - 1)
     end
     if exit then
       local alias = ""
       local name = truncate(exit.name, ROOM_EXIT_NAME_WIDTH)
 
       if exit.alias ~= "" then
-        alias = Color.ANSI_WHITE
-          .. "{"
-          .. Color.ANSI_NORMAL
-          .. exit.alias_color
-          .. exit.alias:sub(2, -2)
-          .. Color.ANSI_NORMAL
-          .. Color.ANSI_WHITE
-          .. "}"
-          .. Color.ANSI_NORMAL
+        alias = mux.style("{", { foreground = "white" })
+          .. mux.style(exit.alias:sub(2, -2), { foreground = exit.alias_color })
+          .. mux.style("}", { foreground = "white" })
       end
       exit_column = alias
         .. string.rep(" ", math.max(0, 4 - #exit.alias))
         .. " "
-        .. exit.name_color
-        .. name
-        .. Color.ANSI_NORMAL
+        .. mux.style(name, { foreground = exit.name_color })
     end
     lines[#lines + 1] = pad_right(player_column, ROOM_COLUMN_WIDTH) .. exit_column
   end
@@ -167,7 +154,7 @@ local function render_internal_appearance(ctx)
     if #players > 0 or #exits > 0 then
       lines[#lines + 1] = ""
     end
-    lines[#lines + 1] = " " .. Color.ANSI_BRIGHT_YELLOW .. "Contents:" .. Color.ANSI_NORMAL
+    lines[#lines + 1] = " " .. mux.style("Contents:", { foreground = "bright-yellow" })
     for _, content in ipairs(contents) do
       lines[#lines + 1] = " " .. content
     end

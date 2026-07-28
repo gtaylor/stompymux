@@ -43,6 +43,7 @@ void do_admin(CommandInvocation *invocation); /* Change config parameters */
 void do_alias(CommandInvocation *invocation);
 void do_boot(CommandInvocation *invocation);
 void do_chzone(CommandInvocation *invocation);
+void do_color(CommandInvocation *invocation);
 void do_clone(CommandInvocation *invocation);
 void do_cpattr(CommandInvocation *invocation); /* Copy attributes */
 void do_create(CommandInvocation *invocation);

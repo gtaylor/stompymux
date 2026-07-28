@@ -17,4 +17,5 @@ Send text directly to every active listener:
 ```
 
 The normal form adds the channel name in brackets. `/noheader` sends exactly
-the supplied text.
+the supplied text. Unlike ordinary player channel messages, emitted text may
+contain color markup.

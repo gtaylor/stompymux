@@ -333,6 +333,7 @@ CMDENT command_table[] = {
     {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_allcom}},
     {"comlist", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {.invoke = do_comlist}},
     {"clearcom", nullptr, CA_NO_IC, 0, CS_NO_ARGS, {.invoke = do_clearcom}},
+    {"color", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_color}},
     {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_delcom}},
     {"drop",
      drop_sw,

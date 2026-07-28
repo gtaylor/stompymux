@@ -17,12 +17,26 @@
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/match.h"
 #include "mux/world/object_set.h"
 #include "mux/world/walkdb.h"
 #include "mux/world/world_context.h"
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
+
+static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
+                                  const char *label, const char *styled) {
+  char *markup = alloc_lbuf("examine_notify_markup");
+
+  if (!styled_text_escape(styled, markup, LBUF_SIZE))
+    styled_text_strip(styled, markup, LBUF_SIZE);
+  if (label)
+    notify_printf(evaluation, player, "%s: %s", label, markup);
+  else
+    notify(evaluation, player, markup);
+  free_lbuf(markup);
+}
 
 static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
                        const char *exit_name) {
@@ -513,7 +527,7 @@ void do_examine(CommandInvocation *invocation) {
   }
 
   buf2 = unparse_object(evaluation->world->database, evaluation, player, thing);
-  notify(evaluation, player, buf2);
+  examine_notify_markup(evaluation, player, nullptr, buf2);
   free_lbuf(buf2);
   buf2 = flag_description(evaluation->world->database, player, thing);
   notify(evaluation, player, buf2);
@@ -522,9 +536,12 @@ void do_examine(CommandInvocation *invocation) {
   temp = alloc_lbuf("do_examine.info");
   temp = attribute_get_string(evaluation->world->database, temp, thing, A_DESC,
                               &aflags);
-  if (*temp) {
-    notify_printf(evaluation, player, "Desc: %s", temp);
-  }
+  if (*temp)
+    examine_notify_markup(evaluation, player, "Desc", temp);
+  temp = attribute_get_string(evaluation->world->database, temp, thing, A_IDESC,
+                              &aflags);
+  if (*temp)
+    examine_notify_markup(evaluation, player, "Idesc", temp);
 
   buf2 = unparse_object(evaluation->world->database, evaluation, player,
                         game_object_zone(evaluation->world->database, thing));

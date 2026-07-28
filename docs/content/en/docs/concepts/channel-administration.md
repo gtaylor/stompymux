@@ -167,6 +167,10 @@ Use the `@chan/emit` command to send a message to every channel member:
 @chan/emit Staff=The meeting starts in five minutes.
 ```
 
+Ordinary player channel speech has color markup and raw terminal formatting
+removed before delivery. Because `@chan/emit` is Wizard-only, its message may
+contain color markup.
+
 To send a message without the channel's name prefixed before the message, use
 the `/noheader` emit switch:
 

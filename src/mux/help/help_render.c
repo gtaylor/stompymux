@@ -45,6 +45,15 @@ static void help_text_buffer_append_str(HelpTextBuffer *buffer,
   help_text_buffer_append(buffer, text, strlen(text));
 }
 
+static void help_text_buffer_append_code(HelpTextBuffer *buffer,
+                                         const char *text) {
+  for (const char *cursor = text; *cursor; cursor++) {
+    if (*cursor == '[')
+      help_text_buffer_append_str(buffer, "[");
+    help_text_buffer_append(buffer, cursor, 1);
+  }
+}
+
 static void help_render_ensure_blank_line(HelpTextBuffer *buffer) {
   if (buffer->length == 0)
     return;
@@ -182,7 +191,7 @@ void help_render_markdown(const char *markdown, size_t length,
     case CMARK_NODE_CODE_BLOCK:
       if (event == CMARK_EVENT_ENTER) {
         help_render_ensure_blank_line(out);
-        help_text_buffer_append_str(out, cmark_node_get_literal(node));
+        help_text_buffer_append_code(out, cmark_node_get_literal(node));
       }
       break;
     case CMARK_NODE_LIST:
@@ -196,8 +205,10 @@ void help_render_markdown(const char *markdown, size_t length,
       }
       break;
     case CMARK_NODE_TEXT:
-    case CMARK_NODE_CODE:
       help_text_buffer_append_str(out, cmark_node_get_literal(node));
+      break;
+    case CMARK_NODE_CODE:
+      help_text_buffer_append_code(out, cmark_node_get_literal(node));
       break;
     case CMARK_NODE_SOFTBREAK:
       help_text_buffer_append_str(out, " ");

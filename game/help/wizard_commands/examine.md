@@ -23,4 +23,8 @@ events, schedules, messages, and locks. `/brief` omits the ordinary attribute li
 and `/debug` displays raw database fields. Storage names and patterns are
 case-sensitive. Entries have no flags or parent inheritance.
 
+The examined object's name, `Desc`, and `Idesc` are shown using editable styled
+text markup instead of terminal color escape sequences. `Idesc` is omitted when
+it is empty. This output can be copied into `@name`, `@desc`, or `@idesc`.
+
 Only Wizards can use `@examine`. Wizards may examine any object.

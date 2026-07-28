@@ -17,6 +17,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/match.h"
 #include "mux/world/world_context.h"
 
@@ -69,6 +70,7 @@ void do_say(CommandInvocation *invocation) {
   const DbRef player = invocation->player;
   int key = invocation->key;
   char *message = invocation->first;
+  char plain_message[LBUF_SIZE];
   DbRef loc;
   char *buf2, *bp;
   int say_flags, depth;
@@ -125,6 +127,9 @@ void do_say(CommandInvocation *invocation) {
   /*
    * Send the message on its way
    */
+
+  styled_text_strip(message, plain_message, sizeof(plain_message));
+  message = plain_message;
 
   switch (key) {
   case SAY_SAY:
@@ -426,6 +431,7 @@ void do_page(CommandInvocation *invocation) {
   const DbRef player = invocation->player;
   char *tname = invocation->first;
   char *message = invocation->second;
+  char plain_message[LBUF_SIZE];
   DbRef target;
   char *p, *buf1, *bp, *buf2, *bp2, *mp, *str;
   char targetname[LBUF_SIZE];
@@ -446,8 +452,6 @@ void do_page(CommandInvocation *invocation) {
   if ((tname[0] == ':') || (tname[0] == ';') || (message[0] == ':') ||
       (message[0] == ';'))
     ispose = 1;
-
-  mp = message;
 
   if (!*message) {
     attribute_get_string(evaluation->world->database, targetname, player,
@@ -471,6 +475,10 @@ void do_page(CommandInvocation *invocation) {
     StringCopy(tname, targetname);
     ismessage = 1;
   }
+
+  styled_text_strip(message, plain_message, sizeof(plain_message));
+  message = plain_message;
+  mp = message;
 
   attribute_get_string(evaluation->world->database, alias, player, A_ALIAS,
                        &aflags);

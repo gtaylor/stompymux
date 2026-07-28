@@ -16,6 +16,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/world_context.h"
 
 #define IS_CLEAN(database, i)                                                  \
@@ -207,23 +208,26 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   const ObjectFlagSet *default_flags;
   time_t tt;
   char *buff;
+  char pure_name[LBUF_SIZE];
+
+  styled_text_strip(name, pure_name, sizeof(pure_name));
 
   switch (objtype) {
   case OBJECT_TYPE_ROOM:
     default_flags = &evaluation->world->configuration->default_room_flags;
-    okname = ok_name(evaluation->world->configuration, name);
+    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_THING:
     default_flags = &evaluation->world->configuration->default_thing_flags;
-    okname = ok_name(evaluation->world->configuration, name);
+    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_EXIT:
     default_flags = &evaluation->world->configuration->default_exit_flags;
-    okname = ok_name(evaluation->world->configuration, name);
+    okname = ok_name(evaluation->world->configuration, pure_name);
     break;
   case OBJECT_TYPE_PLAYER:
     default_flags = &evaluation->world->configuration->default_player_flags;
-    buff = munge_space(name);
+    buff = munge_space(pure_name);
     if (!badname_check(evaluation->world, buff)) {
       notify(evaluation, player, "That name is not allowed.");
       free_lbuf(buff);
@@ -321,7 +325,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     attribute_add_raw(evaluation->world->database, obj, A_LAST, buff);
 
     add_player_name(evaluation->world, obj,
-                    game_object_name(evaluation->world->database, obj));
+                    game_object_pure_name(evaluation->world->database, obj));
   }
   object_apply_default_lua_parent(evaluation, obj, objtype);
   make_freelist(evaluation->world->database);

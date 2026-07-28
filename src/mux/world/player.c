@@ -466,7 +466,7 @@ void load_player_names(WorldContext *world) {
 
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
-      add_player_name(world, i, game_object_name(world->database, i));
+      add_player_name(world, i, game_object_pure_name(world->database, i));
     }
   }
   alias = alloc_lbuf("load_player_names");

@@ -63,5 +63,15 @@ int main(void) {
     return 3;
   if (!help_render_test_expect("- one\n- two\n", "- one\n- two"))
     return 4;
+  if (!help_render_test_expect(
+          "Rendered [fg=red]red[/], but `[fg=blue]blue[/]` is code.",
+          "Rendered [fg=red]red[/], but [[fg=blue]blue[[/] is code."))
+    return 5;
+  if (!help_render_test_expect(
+          "```text\n"
+          "@name drone=[fg=bright-cyan]Aegis[/]\n"
+          "```\n",
+          "@name drone=[[fg=bright-cyan]Aegis[[/]\n"))
+    return 6;
   return 0;
 }

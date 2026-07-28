@@ -8,4 +8,7 @@ article_tags = ["flags"]
 # ANSI (`X`)
 
 Enables ANSI color and formatting for a player. Without this flag, ANSI escape
-sequences are stripped from output sent to that player.
+sequences and object color markup are rendered as plain text. When enabled,
+the server uses MTTS terminal negotiation to select truecolor, 256-color, or
+16-color output for each connection. Clients reporting screen-reader mode
+receive plain text.

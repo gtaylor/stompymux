@@ -305,7 +305,8 @@ if(BUILD_TESTING)
   add_test(NAME event_timer COMMAND event_timer_test)
 
   add_executable(libuv_tcp_integration_test tests/libuv_tcp_integration.c)
-  target_link_libraries(libuv_tcp_integration_test PRIVATE btmux_options)
+  target_link_libraries(libuv_tcp_integration_test
+    PRIVATE btmux_options SQLite3::SQLite3)
   add_test(NAME libuv_tcp_integration
     COMMAND libuv_tcp_integration_test
       $<TARGET_FILE:stompymux> "${CMAKE_SOURCE_DIR}/game")
@@ -347,6 +348,14 @@ if(BUILD_TESTING)
     "${CMAKE_BINARY_DIR}"
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME validation COMMAND validation_test)
+
+  add_executable(styled_text_test tests/styled_text.c
+    ${MUX_SOURCE_DIR}/support/styled_text.c)
+  target_link_libraries(styled_text_test PRIVATE btmux_options)
+  target_include_directories(styled_text_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME styled_text COMMAND styled_text_test)
 
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)

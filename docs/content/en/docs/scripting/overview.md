@@ -66,9 +66,11 @@ exposed.
 
 The `mux` table is the only server interface exposed to Lua modules:
 `attr_get`, `attr_set`, `contents`, `contents_visible`, `exits`,
-`exits_visible`, `object_description`, `object_name`, `object_type`, `notify`, `command`,
-`connected_players`, `who_summary`, and `flow_start`. Queued commands execute as `#1` after the
-current handler completes. See the
+`exits_visible`, `object_description`, `object_inside_description`,
+`object_name`, `object_type`, `markup`, `style`, `strip_style`, `text_width`,
+`truncate_text`, `notify`, `command`, `connected_players`, `who_summary`, and
+`flow_start`. Queued commands execute as `#1` after the current handler
+completes. See the
 [`mux` package reference](packages/mux/) for the full API.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading

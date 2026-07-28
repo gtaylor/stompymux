@@ -20,6 +20,7 @@
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/ansi.h"
+#include "mux/support/styled_text.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
 #include "mux/world/walkdb.h"
@@ -149,10 +150,21 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
   long aflags;
   int have_xcode;
   Attribute *attr;
+  char *compiled = nullptr;
+  char error[256];
 
   attr = attribute_by_number(evaluation->world->database, attrnum);
   attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
   if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
+    if (attrnum == A_DESC || attrnum == A_IDESC) {
+      compiled = alloc_lbuf("object_attribute_set.style");
+      if (!styled_text_compile(attrtext, compiled, LBUF_SIZE, error,
+                               sizeof(error))) {
+        notify_printf(evaluation, player, "Invalid color markup: %s.", error);
+        free_lbuf(compiled);
+        return;
+      }
+    }
     have_xcode = is_xcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   aflags);
@@ -163,6 +175,7 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
       notify_printf(evaluation, player, "%s/%s - %s",
                     game_object_name(evaluation->world->database, thing),
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");
+    free_lbuf(compiled);
   } else {
     notify_quiet(evaluation, player, "Permission denied.");
   }

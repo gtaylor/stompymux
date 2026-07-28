@@ -663,6 +663,51 @@ static int seed_btech_special_objects(const char *path) {
   return result;
 }
 
+static int seed_styled_object_text(const char *path) {
+  sqlite3 *sqlite = NULL;
+  char *error = NULL;
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+              sqlite3_exec(
+                  sqlite,
+                  "UPDATE objects SET "
+                  "name = '[fg=#112233]Styled[/]',"
+                  "description = '[fg=red]Description[/]',"
+                  "inside_description = '[bg=blue]Inside[/]' WHERE dbref = 2;",
+                  NULL, NULL, &error) == SQLITE_OK
+          ? 0
+          : -1;
+
+  if (result < 0)
+    fprintf(stderr, "Styled object fixture seed failed: %s\n",
+            error ? error : sqlite3_errmsg(sqlite));
+  sqlite3_free(error);
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_styled_object_text(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result;
+
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  result =
+      query_text(sqlite, "SELECT name FROM objects WHERE dbref = 2;",
+                 "[fg=#112233]Styled[/]") == 0 &&
+              query_text(sqlite,
+                         "SELECT description FROM objects WHERE dbref = 2;",
+                         "[fg=red]Description[/]") == 0 &&
+              query_text(
+                  sqlite,
+                  "SELECT inside_description FROM objects WHERE dbref = 2;",
+                  "[bg=blue]Inside[/]") == 0
+          ? 0
+          : -1;
+  sqlite3_close(sqlite);
+  return result;
+}
+
 /* Verify representative top-level and fixed-size child rows after a dump. */
 static int check_btech_special_snapshot(const char *path) {
   sqlite3 *sqlite;
@@ -1110,6 +1155,8 @@ int main(int argc, char *argv[]) {
   }
   if (result == 0 && seed_btech_nondefault_state(database) < 0)
     return 1;
+  if (result == 0 && seed_styled_object_text(database) < 0)
+    return 1;
   file = fopen(sqlite_read_config, "w");
   if (!file)
     return 2;
@@ -1124,7 +1171,8 @@ int main(int argc, char *argv[]) {
        !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
        check_snapshot_dump_type(database, 0) < 0 ||
        check_btech_special_snapshot(database) < 0 ||
-       check_btech_queued_command_state(database) < 0)) {
+       check_btech_queued_command_state(database) < 0 ||
+       check_styled_object_text(database) < 0)) {
     fprintf(stderr, "SQLite reload fixture failed: %s (status=%d)\n", directory,
             status);
     return 1;

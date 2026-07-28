@@ -91,12 +91,47 @@ Returns the object's native MUX `description` value, or `nil` when it is not
 set. This is separate from the exact-name dynamic storage read by
 `mux.attr_get`.
 
+## `mux.object_inside_description(object)`
+
+Returns the native inside-description value, or `nil` when it is not set.
+Native look falls back to the normal description in that case.
+
 ## `mux.object_type(object)`
 
 Returns `room`, `thing`, `exit`, or `player`.
 
 All object arguments must be valid, non-garbage dbrefs. Passing a container of
 the wrong type or a member that is not directly attached raises a Lua error.
+
+## Styled text
+
+`mux.markup(value)` validates and returns the same color markup accepted by
+`@name`, `@desc`, and `@idesc`.
+
+```lua
+local heading = mux.markup("[fg=#ff7000][bold]Warning[/][/]")
+```
+
+`mux.style(value, options)` applies styles without constructing markup.
+`foreground` and `background` accept predefined names or `#RRGGBB`; `bold`,
+`underline`, and `inverse` are booleans.
+
+```lua
+local heading = mux.style("Warning", {
+  foreground = "#ff7000",
+  bold = true,
+})
+```
+
+`mux.strip_style(value)` removes markup and ANSI styling.
+`mux.text_width(value)` returns the visible byte width without counting either
+representation.
+`mux.truncate_text(value, width)` truncates to a visible width while retaining
+and safely resetting active styles. These helpers are intended for appearance
+layouts containing styled object names.
+
+Styled Lua output is adapted to each recipient's negotiated terminal color
+depth when sent with `mux.notify` or returned from an appearance hook.
 
 ## `mux.notify(object, message)`
 
