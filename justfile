@@ -2,10 +2,10 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
 build_dir := "build"
 build_type := env_var_or_default("CMAKE_BUILD_TYPE", "RelWithDebInfo")
-# clang-tidy must understand C23 `constexpr`, which landed in Clang 19.
 clang_tidy := env_var_or_default("CLANG_TIDY", "clang-tidy-20")
 run_clang_tidy := env_var_or_default("RUN_CLANG_TIDY", "run-clang-tidy-20")
 clang_format := env_var_or_default("CLANG_FORMAT", "clang-format-20")
+stylua := env_var_or_default("STYLUA", "stylua")
 
 default: fmt build test install
 
@@ -15,9 +15,11 @@ agent-checks: ci
 
 fmt:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
+    {{stylua}} --glob '**/*.lua' -- game/lua
 
 fmt-check:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
+    {{stylua}} --check --glob '**/*.lua' -- game/lua
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'

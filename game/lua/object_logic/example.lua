@@ -15,7 +15,6 @@ local function at_enter(ctx)
   mux.notify(ctx.enactor, "You trigger the Lua enter event.")
 end
 
-
 return {
   internal_appearance = ObjectAppearances.render_internal_appearance,
   commands = {

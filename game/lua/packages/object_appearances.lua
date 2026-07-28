@@ -84,11 +84,9 @@ local function render_room_exits(ctx)
 
       rendered[#rendered + 1] = {
         alias = first_alias and "{" .. first_alias .. "}" or "",
-        alias_color = passes_enter_lock and Color.ANSI_DARK_GREEN
-            or Color.ANSI_DARK_RED,
+        alias_color = passes_enter_lock and Color.ANSI_DARK_GREEN or Color.ANSI_DARK_RED,
         name = name,
-        name_color = passes_enter_lock and Color.ANSI_BRIGHT_GREEN
-            or Color.ANSI_BRIGHT_RED,
+        name_color = passes_enter_lock and Color.ANSI_BRIGHT_GREEN or Color.ANSI_BRIGHT_RED,
       }
     end
   end
@@ -103,16 +101,14 @@ local function render_room_columns(players, exits)
   local rendered_exit_header = exit_header
 
   if player_header ~= "" then
-    rendered_player_header = Color.ANSI_BRIGHT_YELLOW .. player_header
-        .. Color.ANSI_NORMAL
+    rendered_player_header = Color.ANSI_BRIGHT_YELLOW .. player_header .. Color.ANSI_NORMAL
   end
   if exit_header ~= "" then
-    rendered_exit_header = Color.ANSI_BRIGHT_YELLOW .. exit_header
-        .. Color.ANSI_NORMAL
+    rendered_exit_header = Color.ANSI_BRIGHT_YELLOW .. exit_header .. Color.ANSI_NORMAL
   end
   lines[#lines + 1] = rendered_player_header
-      .. string.rep(" ", ROOM_HEADER_COLUMN_WIDTH - #player_header)
-      .. rendered_exit_header
+    .. string.rep(" ", ROOM_HEADER_COLUMN_WIDTH - #player_header)
+    .. rendered_exit_header
   for index = 1, math.max(#players, #exits) do
     local player = players[index]
     local exit = exits[index]
@@ -122,23 +118,31 @@ local function render_room_columns(players, exits)
     if player then
       local name = truncate(player, ROOM_PLAYER_NAME_WIDTH)
       player_column = " " .. Color.ANSI_BRIGHT_WHITE .. name .. Color.ANSI_NORMAL
-      player_column = player_column
-          .. string.rep(" ", ROOM_COLUMN_WIDTH - #name - 1)
+      player_column = player_column .. string.rep(" ", ROOM_COLUMN_WIDTH - #name - 1)
     end
     if exit then
       local alias = ""
       local name = truncate(exit.name, ROOM_EXIT_NAME_WIDTH)
 
       if exit.alias ~= "" then
-        alias = Color.ANSI_WHITE .. "{" .. Color.ANSI_NORMAL
-            .. exit.alias_color .. exit.alias:sub(2, -2) .. Color.ANSI_NORMAL
-            .. Color.ANSI_WHITE .. "}" .. Color.ANSI_NORMAL
+        alias = Color.ANSI_WHITE
+          .. "{"
+          .. Color.ANSI_NORMAL
+          .. exit.alias_color
+          .. exit.alias:sub(2, -2)
+          .. Color.ANSI_NORMAL
+          .. Color.ANSI_WHITE
+          .. "}"
+          .. Color.ANSI_NORMAL
       end
-      exit_column = alias .. string.rep(" ", math.max(0, 4 - #exit.alias))
-          .. " " .. exit.name_color .. name .. Color.ANSI_NORMAL
+      exit_column = alias
+        .. string.rep(" ", math.max(0, 4 - #exit.alias))
+        .. " "
+        .. exit.name_color
+        .. name
+        .. Color.ANSI_NORMAL
     end
-    lines[#lines + 1] = pad_right(player_column, ROOM_COLUMN_WIDTH)
-        .. exit_column
+    lines[#lines + 1] = pad_right(player_column, ROOM_COLUMN_WIDTH) .. exit_column
   end
   return lines
 end
@@ -163,8 +167,7 @@ local function render_internal_appearance(ctx)
     if #players > 0 or #exits > 0 then
       lines[#lines + 1] = ""
     end
-    lines[#lines + 1] = " " .. Color.ANSI_BRIGHT_YELLOW .. "Contents:"
-        .. Color.ANSI_NORMAL
+    lines[#lines + 1] = " " .. Color.ANSI_BRIGHT_YELLOW .. "Contents:" .. Color.ANSI_NORMAL
     for _, content in ipairs(contents) do
       lines[#lines + 1] = " " .. content
     end
@@ -173,7 +176,7 @@ local function render_internal_appearance(ctx)
 end
 
 return {
-    render_contents=render_contents,
-    render_exits=render_exits,
-    render_internal_appearance=render_internal_appearance,
+  render_contents = render_contents,
+  render_exits = render_exits,
+  render_internal_appearance = render_internal_appearance,
 }

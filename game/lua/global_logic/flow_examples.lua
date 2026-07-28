@@ -35,8 +35,7 @@ return {
 
     menu = function(ctx)
       if ctx.input == nil then
-        return { action = "repeat", prompt =
-          "1) Say hello\r\n2) Say goodbye\r\n3) Cancel\r\nChoice: " }
+        return { action = "repeat", prompt = "1) Say hello\r\n2) Say goodbye\r\n3) Cancel\r\nChoice: " }
       end
       if ctx.input == "1" then
         return { action = "goto", step = "menu_hello" }
@@ -63,8 +62,7 @@ return {
     end,
     signup_faction = function(ctx)
       if ctx.input == nil then
-        return { action = "repeat", prompt =
-          "Faction -- (1) Inner Sphere or (2) Clan? " }
+        return { action = "repeat", prompt = "Faction -- (1) Inner Sphere or (2) Clan? " }
       end
       if ctx.input ~= "1" and ctx.input ~= "2" then
         return { action = "repeat", prompt = "Enter 1 or 2: " }
@@ -74,12 +72,16 @@ return {
     end,
     signup_confirm = function(ctx)
       if ctx.input == nil then
-        return { action = "repeat", prompt = string.format(
-          "%s, %s -- confirm? (y/n) ", ctx.flow.name, ctx.flow.faction) }
+        return {
+          action = "repeat",
+          prompt = string.format("%s, %s -- confirm? (y/n) ", ctx.flow.name, ctx.flow.faction),
+        }
       end
       if ctx.input:match("^[Yy]") then
-        return { action = "done", message = string.format(
-          "Recorded %s (%s).", ctx.flow.name, ctx.flow.faction) }
+        return {
+          action = "done",
+          message = string.format("Recorded %s (%s).", ctx.flow.name, ctx.flow.faction),
+        }
       end
       return { action = "goto", step = "signup_name" }
     end,
