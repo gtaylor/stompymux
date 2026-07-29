@@ -14,20 +14,24 @@ color escapes without restoring softcode evaluation.
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
 @desc drone=A shell of [fg=#d78700]burnished amber[/] metal.
-@idesc dropship=[fg=#8090ff]Cool blue light[/] fills the cabin.
+@idesc dropship=[fg=#8090ff bold]Cool blue light[/] fills the cabin.
 ```
 
 ## Syntax
 
 `[fg=COLOR]` changes the foreground and `[bg=COLOR]` changes the background.
-`[bold]`, `[underline]`, and `[inverse]` enable formatting. `[/]` restores the
-style active before the matching open tag, while `[reset]` restores terminal
-defaults and closes all open styles. Use `[[` for a literal opening bracket.
+`[bold]`, `[underline]`, and `[inverse]` enable formatting. Multiple directives
+can share one tag when separated by whitespace, for example
+`[fg=blue bg=white bold]`. A grouped tag creates one style scope, so one `[/]`
+restores every setting that it changed. `[reset]` restores terminal defaults
+and closes all open styles. Use `[[` for a literal opening bracket.
 
 The named palette contains the eight ANSI names `black`, `red`, `green`,
 `yellow`, `blue`, `magenta`, `cyan`, and `white`, plus their `bright-`
 variants. `gray` and `grey` alias `bright-black`. Arbitrary RGB colors use
-`#RRGGBB`.
+`#RRGGBB`. Game administrators can override these names or add new
+case-insensitive names in the `[colors]` table of `stompymux.toml`; configured
+colors are specified as `[RED, GREEN, BLUE]` arrays.
 
 Markup is validated when a builder sets the value. Malformed tags and literal
 terminal escape sequences are rejected. The validated markup itself is stored

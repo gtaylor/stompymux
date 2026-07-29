@@ -113,8 +113,8 @@ local heading = mux.markup("[fg=#ff7000][bold]Warning[/][/]")
 ```
 
 `mux.style(value, options)` applies styles without constructing markup.
-`foreground` and `background` accept predefined names or `#RRGGBB`; `bold`,
-`underline`, and `inverse` are booleans.
+`foreground` and `background` accept built-in or configured color names, or
+`#RRGGBB`; `bold`, `underline`, and `inverse` are booleans.
 
 ```lua
 local heading = mux.style("Warning", {

@@ -201,7 +201,8 @@ static void do_processcom(EvaluationContext *evaluation, DbRef player,
     char plain_message[LBUF_SIZE];
     const char *message = (*arg2 == ':' || *arg2 == ';') ? arg2 + 1 : arg2;
 
-    styled_text_strip(message, plain_message, sizeof(plain_message));
+    styled_text_strip(evaluation->world->styled_text_palette, message,
+                      plain_message, sizeof(plain_message));
 
     if ((*arg2) == ':')
       do_comprintf(evaluation, ch, "[%s] %s %s", arg1,

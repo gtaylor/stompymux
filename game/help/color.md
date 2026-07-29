@@ -11,12 +11,13 @@ Object names, descriptions, and inside descriptions accept color markup. Color
 markup changes presentation only; it does not evaluate softcode or Lua.
 
 Use `[fg=COLOR]` for foreground color and `[bg=COLOR]` for background color.
-Close the most recent style with `[/]`.
+Separate multiple changes with spaces to apply them as one style. Close the
+most recent style with `[/]`.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
 @desc drone=A shell of [fg=#d78700]burnished amber[/] metal.
-@idesc dropship=[bg=#101830][fg=bright-white]Cool light fills the cabin.[/][/]
+@idesc dropship=[bg=#101830 fg=bright-white]Cool light fills the cabin.[/]
 ```
 
 The predefined colors are `black`, `red`, `green`, `yellow`, `blue`,
@@ -24,8 +25,13 @@ The predefined colors are `black`, `red`, `green`, `yellow`, `blue`,
 `gray` and `grey` are aliases for `bright-black`. Hexadecimal colors use
 exactly six digits in `#RRGGBB` form.
 
-Formatting tags are `[bold]`, `[underline]`, and `[inverse]`. `[reset]` closes
-all active styles. Write `[[` to display a literal `[` character.
+The game configuration may override these colors or provide additional named
+colors. Custom names work anywhere a predefined color is accepted.
+
+Formatting tags are `[bold]`, `[underline]`, and `[inverse]`. They can share a
+tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes everything
+opened by that tag. `[reset]` closes all active styles. Write `[[` to display a
+literal `[` character.
 
 Markup must be correctly nested. Unknown colors, unknown tags, raw terminal
 escape sequences, unmatched `[/]`, and unclosed styles are rejected.

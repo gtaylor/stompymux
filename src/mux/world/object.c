@@ -210,7 +210,8 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   char *buff;
   char pure_name[LBUF_SIZE];
 
-  styled_text_strip(name, pure_name, sizeof(pure_name));
+  styled_text_strip(evaluation->world->styled_text_palette, name, pure_name,
+                    sizeof(pure_name));
 
   switch (objtype) {
   case OBJECT_TYPE_ROOM:

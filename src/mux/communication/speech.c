@@ -128,7 +128,8 @@ void do_say(CommandInvocation *invocation) {
    * Send the message on its way
    */
 
-  styled_text_strip(message, plain_message, sizeof(plain_message));
+  styled_text_strip(evaluation->world->styled_text_palette, message,
+                    plain_message, sizeof(plain_message));
   message = plain_message;
 
   switch (key) {
@@ -476,7 +477,8 @@ void do_page(CommandInvocation *invocation) {
     ismessage = 1;
   }
 
-  styled_text_strip(message, plain_message, sizeof(plain_message));
+  styled_text_strip(evaluation->world->styled_text_palette, message,
+                    plain_message, sizeof(plain_message));
   message = plain_message;
   mp = message;
 

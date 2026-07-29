@@ -44,12 +44,14 @@ void game_database_bind_services(GameDatabase *database,
                                  ServerConfiguration *configuration,
                                  WorldIndexes *indexes,
                                  DescriptorRegistry *descriptors,
-                                 PlayerCache *players, ServerLog *log) {
+                                 PlayerCache *players, ServerLog *log,
+                                 StyledTextPalette *palette) {
   database->configuration = configuration;
   database->indexes = indexes;
   database->descriptors = descriptors;
   database->players = players;
   database->log = log;
+  database->styled_text_palette = palette;
 }
 
 void game_database_destroy(GameDatabase *database) {
@@ -144,7 +146,7 @@ INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
     }
     if (!database->pure_names[thing]) {
       buff = attribute_get(database, thing, A_NAME, &aflags);
-      styled_text_strip(buff, buffer, MBUF_SIZE);
+      styled_text_strip(database->styled_text_palette, buff, buffer, MBUF_SIZE);
       set_string(&database->pure_names[thing], buffer);
       free_lbuf(buff);
     }
@@ -189,7 +191,7 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
       char new[LBUF_SIZE];
 
       buff = attribute_get(database, thing, A_NAME, &aflags);
-      styled_text_strip(buff, new, sizeof(new));
+      styled_text_strip(database->styled_text_palette, buff, new, sizeof(new));
       set_string(&database->pure_names[thing], new);
       free_lbuf(buff);
     }
@@ -197,7 +199,8 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   }
 
   attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
-  styled_text_strip(database->name_buffer, database->pure_name_buffer,
+  styled_text_strip(database->styled_text_palette, database->name_buffer,
+                    database->pure_name_buffer,
                     sizeof(database->pure_name_buffer));
   return database->pure_name_buffer;
 }
@@ -213,7 +216,7 @@ INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
   attribute_add_raw(database, thing, A_NAME, (char *)s);
 
   if (database->configuration->cache_names) {
-    styled_text_strip(s, new, sizeof(new));
+    styled_text_strip(database->styled_text_palette, s, new, sizeof(new));
     set_string(&database->pure_names[thing], new);
   }
 }

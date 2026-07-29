@@ -20,6 +20,7 @@ typedef struct GameDatabase GameDatabase;
 typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
+typedef struct StyledTextPalette StyledTextPalette;
 
 typedef void (*LuaCommandVisitor)(void *context, const char *source,
                                   DbRef object, const char *pattern);
@@ -218,17 +219,20 @@ struct LuaServices {
   CommandContext *background_command;
   ServerLog *log;
   int *record_players;
+  StyledTextPalette *styled_text_palette;
 };
 
 struct LuaOwner {
   LuaRuntime *runtime;
 };
 
-static inline void lua_services_initialize(
-    LuaServices *services, const ServerConfiguration *configuration,
-    GameDatabase *database, DescriptorRegistry *descriptors,
-    CommandQueue *commands, RuntimeClock *clock,
-    CommandContext *background_command, ServerLog *log, int *record_players) {
+static inline void
+lua_services_initialize(LuaServices *services,
+                        const ServerConfiguration *configuration,
+                        GameDatabase *database, DescriptorRegistry *descriptors,
+                        CommandQueue *commands, RuntimeClock *clock,
+                        CommandContext *background_command, ServerLog *log,
+                        int *record_players, StyledTextPalette *palette) {
   *services = (LuaServices){
       .configuration = configuration,
       .database = database,
@@ -238,6 +242,7 @@ static inline void lua_services_initialize(
       .background_command = background_command,
       .log = log,
       .record_players = record_players,
+      .styled_text_palette = palette,
   };
 }
 

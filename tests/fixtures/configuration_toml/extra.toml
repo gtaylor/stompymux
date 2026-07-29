@@ -3,3 +3,6 @@ port = 2222
 
 [database]
 dump_interval = 100
+
+[colors]
+brand = [40, 50, 60]

@@ -32,6 +32,7 @@ typedef struct LogCache LogCache;
 typedef struct PlayerCache PlayerCache;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
+typedef struct StyledTextPalette StyledTextPalette;
 
 typedef struct MuxServer MuxServer;
 struct MuxServer {
@@ -40,6 +41,7 @@ struct MuxServer {
   time_t process_start_time;
   int record_players;
   ServerConfiguration *configuration;
+  StyledTextPalette *styled_text_palette;
   BtechContext btech;
   DescriptorRegistry *descriptors;
   CommandQueue *commands;

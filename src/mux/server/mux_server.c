@@ -14,6 +14,7 @@
 #include "mux/server/log_cache.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/player_cache.h"
 
 void runtime_clock_initialize(RuntimeClock *clock) {
@@ -25,8 +26,15 @@ void runtime_clock_initialize(RuntimeClock *clock) {
 bool mux_server_create(MuxServer *server) {
   memset(server, 0, sizeof(*server));
   server->configuration = server_configuration_create();
-  if (server->configuration == nullptr)
+  server->styled_text_palette = styled_text_palette_create();
+  if (server->configuration == nullptr ||
+      server->styled_text_palette == nullptr) {
+    styled_text_palette_destroy(server->styled_text_palette);
+    server_configuration_destroy(server->configuration);
+    server->styled_text_palette = nullptr;
+    server->configuration = nullptr;
     return false;
+  }
 
   /* Initialize embedded owners before publishing borrowed views of them. */
   game_database_initialize(&server->database);
@@ -47,7 +55,8 @@ bool mux_server_create(MuxServer *server) {
       &server->command_runtime, &server->btech, &server->log);
   world_context_initialize(&server->world, &server->database,
                            server->configuration, &server->world_indexes,
-                           &server->access_control, server->descriptors);
+                           &server->access_control, server->descriptors,
+                           server->styled_text_palette);
   server->login_throttle = login_throttle_create();
   server->players =
       player_cache_create(server->configuration, &server->database);
@@ -66,7 +75,8 @@ bool mux_server_create(MuxServer *server) {
     goto fail;
   game_database_bind_services(&server->database, server->configuration,
                               &server->world_indexes, server->descriptors,
-                              server->players, &server->log);
+                              server->players, &server->log,
+                              server->styled_text_palette);
 
   /* Wire non-owning runtime views after every dependency they borrow has a
      stable address. */
@@ -110,10 +120,11 @@ bool mux_server_create(MuxServer *server) {
       &server->persistence, server->configuration, &server->database,
       &server->channels, &server->macros, &server->clock.now,
       &server->record_players, &server->world, &server->log);
-  lua_services_initialize(
-      &server->lua_services, server->configuration, &server->database,
-      server->descriptors, server->commands, &server->clock,
-      &server->background_command, &server->log, &server->record_players);
+  lua_services_initialize(&server->lua_services, server->configuration,
+                          &server->database, server->descriptors,
+                          server->commands, &server->clock,
+                          &server->background_command, &server->log,
+                          &server->record_players, server->styled_text_palette);
   maintenance_context_initialize(
       &server->maintenance, &server->server_control,
       &server->connection_runtime, server->configuration, &server->database,
@@ -199,6 +210,8 @@ void mux_server_destroy(MuxServer *server) {
   world_indexes_destroy(&server->world_indexes);
   command_registry_destroy(&server->command_registry);
   access_control_store_destroy(&server->access_control);
+  styled_text_palette_destroy(server->styled_text_palette);
+  server->styled_text_palette = nullptr;
   server_configuration_destroy(server->configuration);
   server->configuration = nullptr;
 }

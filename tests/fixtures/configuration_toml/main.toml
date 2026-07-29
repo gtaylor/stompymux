@@ -3,3 +3,6 @@ include = ["extra.toml"]
 [server]
 port = 1111
 mud_name = "Main"
+
+[colors]
+brand = [10, 20, 30]

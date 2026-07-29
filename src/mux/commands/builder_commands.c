@@ -33,7 +33,8 @@ static char *compile_object_name(EvaluationContext *evaluation, DbRef player,
   char *compiled = alloc_lbuf("compile_object_name");
   char error[256];
 
-  if (styled_text_compile(name, compiled, LBUF_SIZE, error, sizeof(error))) {
+  if (styled_text_compile(evaluation->world->styled_text_palette, name,
+                          compiled, LBUF_SIZE, error, sizeof(error))) {
     StringCopy(compiled, name);
     return compiled;
   }
@@ -424,7 +425,8 @@ void do_create(CommandInvocation *invocation) {
   compiled_name = compile_object_name(evaluation, player, name);
   if (!compiled_name)
     return;
-  styled_text_strip(compiled_name, clearbuffer, MBUF_SIZE);
+  styled_text_strip(evaluation->world->styled_text_palette, compiled_name,
+                    clearbuffer, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
     notify_quiet(evaluation, player, "Create what?");
     free_lbuf(compiled_name);
@@ -500,7 +502,8 @@ void do_clone(CommandInvocation *invocation) {
     clone_name = compile_object_name(evaluation, player, arg2);
     if (!clone_name)
       return;
-    styled_text_strip(clone_name, pure_name, sizeof(pure_name));
+    styled_text_strip(evaluation->world->styled_text_palette, clone_name,
+                      pure_name, sizeof(pure_name));
     if (!ok_name(invocation->context->world->configuration, pure_name)) {
       notify_quiet(evaluation, player, "That is not a reasonable name.");
       free_lbuf(clone_name);
@@ -890,7 +893,8 @@ void do_name(CommandInvocation *invocation) {
   /*
    * check for bad name
    */
-  styled_text_strip(newname, new, sizeof(new));
+  styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                    sizeof(new));
   if (*newname == '\0' || strlen(new) == 0) {
     notify_quiet(evaluation, player, "Give it what new name?");
     free_lbuf(compiled_name);
@@ -901,7 +905,8 @@ void do_name(CommandInvocation *invocation) {
    */
   if (is_player(evaluation->world->database, thing)) {
 
-    styled_text_strip(newname, new, sizeof(new));
+    styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                      sizeof(new));
     buff = trim_spaces(new);
     if (!ok_player_name(invocation->context->world->configuration, buff) ||
         !badname_check(invocation->context->world, buff)) {
@@ -956,7 +961,8 @@ void do_name(CommandInvocation *invocation) {
     free_lbuf(compiled_name);
     return;
   } else {
-    styled_text_strip(newname, new, sizeof(new));
+    styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                      sizeof(new));
     if (!ok_name(invocation->context->world->configuration, new)) {
       notify_quiet(evaluation, player, "That is not a reasonable name.");
       free_lbuf(compiled_name);

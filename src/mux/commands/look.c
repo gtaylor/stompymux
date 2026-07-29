@@ -30,7 +30,8 @@ static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
   char *markup = alloc_lbuf("examine_notify_markup");
 
   if (!styled_text_escape(styled, markup, LBUF_SIZE))
-    styled_text_strip(styled, markup, LBUF_SIZE);
+    styled_text_strip(evaluation->world->styled_text_palette, styled, markup,
+                      LBUF_SIZE);
   if (label)
     notify_printf(evaluation, player, "%s: %s", label, markup);
   else

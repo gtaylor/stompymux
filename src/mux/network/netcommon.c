@@ -241,7 +241,8 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
     else if (!d->is_screen_reader)
       depth = d->terminal_color_depth;
   }
-  styled_text_render(s, depth, rendered, sizeof(rendered));
+  styled_text_render(descriptor_runtime(d)->world->styled_text_palette, s,
+                     depth, rendered, sizeof(rendered));
   descriptor_queue_write(d, rendered, (int)strlen(rendered));
 }
 

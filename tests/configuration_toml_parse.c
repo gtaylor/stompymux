@@ -156,6 +156,27 @@ static int test_alias_map_dispatch(void) {
   return ok;
 }
 
+static int test_rgb_map_dispatch(void) {
+  static const char toml[] = "[colors]\n"
+                             "red = [205, 0, 0]\n"
+                             "brand_blue = [32, 96, 192]\n"
+                             "bad_length = [1, 2]\n"
+                             "bad_type = [1, \"2\", 3]\n"
+                             "bad_range = [1, 2, 256]\n";
+  toml_result_t result;
+  CallLog log = {0};
+  int ok;
+
+  result = toml_parse(toml, sizeof(toml) - 1);
+  if (!result.ok)
+    return 0;
+  configuration_toml_walk(result.toptab, recording_set_fn, &log);
+  ok = log.count == 2 && call_log_find(&log, "named_color", "red 205 0 0") &&
+       call_log_find(&log, "named_color", "brand_blue 32 96 192");
+  toml_free(result);
+  return ok;
+}
+
 static int test_access_map_dispatch(void) {
   static const char toml[] = "[access.commands]\n"
                              "\"@dig\" = \"wizard\"\n"
@@ -250,6 +271,7 @@ static int test_include_override_and_merge(const char *fixture_dir) {
   int i;
   const char *port_args = nullptr;
   int saw_dump_interval = 0;
+  const char *color_args = nullptr;
 
   snprintf(path, sizeof(path), "%s/main.toml", fixture_dir);
   ok = configuration_toml_load(path, recording_set_fn, &log, errbuf,
@@ -261,11 +283,14 @@ static int test_include_override_and_merge(const char *fixture_dir) {
       port_args = log.calls[i].args;
     if (!strcmp(log.calls[i].pname, "dump_interval"))
       saw_dump_interval = 1;
+    if (!strcmp(log.calls[i].pname, "named_color"))
+      color_args = log.calls[i].args;
   }
   /* main.toml's own port (1111) must win over extra.toml's (2222); a key
    * only present in extra.toml must still come through. */
   return port_args != nullptr && !strcmp(port_args, "1111") &&
-         saw_dump_interval;
+         saw_dump_interval && color_args != nullptr &&
+         !strcmp(color_args, "brand 10 20 30");
 }
 
 static int test_malformed_toml_fails(const char *fixture_dir) {
@@ -316,23 +341,25 @@ int main(int argc, char *argv[]) {
     return 3;
   if (!test_alias_map_dispatch())
     return 4;
-  if (!test_access_map_dispatch())
+  if (!test_rgb_map_dispatch())
     return 5;
-  if (!test_site_list_dispatch())
+  if (!test_access_map_dispatch())
     return 6;
-  if (!test_string_list_dispatch())
+  if (!test_site_list_dispatch())
     return 7;
-  if (!test_nested_container_recursion())
+  if (!test_string_list_dispatch())
     return 8;
-  if (!test_unmapped_key_skipped())
+  if (!test_nested_container_recursion())
     return 9;
-  if (!test_include_override_and_merge(argv[1]))
+  if (!test_unmapped_key_skipped())
     return 10;
-  if (!test_malformed_toml_fails(argv[1]))
+  if (!test_include_override_and_merge(argv[1]))
     return 11;
-  if (!test_missing_include_fails(argv[1]))
+  if (!test_malformed_toml_fails(argv[1]))
     return 12;
-  if (!test_include_cycle_fails(argv[1]))
+  if (!test_missing_include_fails(argv[1]))
     return 13;
+  if (!test_include_cycle_fails(argv[1]))
+    return 14;
   return 0;
 }

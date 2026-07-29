@@ -21,6 +21,7 @@ anything pulled in through `include`.
 | `[database]` | SQLite game database path, checkpoint dump timing, messages, and fork behavior, and mech/map database paths. |
 | `[lua]` | Lua module directory and VM memory limit. LuaJIT compilation is enabled. |
 | `[server]` | Port and MUD name. |
+| `[colors]` | Case-insensitive named RGB colors used by styled-text markup. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
 | `[security]` | Password hashing and login rate limiting (see below). |
@@ -51,9 +52,34 @@ directives take other shapes:
   toggle or `global_build` command-access permission.
 - **Site directives** (`[sites]`) are arrays of `{ address = "...", mask =
   "..." }` tables, applied in file order.
+- **Named colors** (`[colors]`) map a color name to an array of three integer
+  RGB channels. Each channel must be from `0` through `255`.
 
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
+
+## Named colors
+
+The `[colors]` table defines names accepted by `[fg=NAME]` and `[bg=NAME]`
+styled-text markup:
+
+```toml
+[colors]
+red = [205, 0, 0]
+"brand-blue" = [32, 96, 192]
+```
+
+Names are case-insensitive and may contain letters, digits, hyphens, and
+underscores. A name may be at most 60 characters. Defining one of the built-in
+names overrides it; any built-in omitted from the table remains available with
+its compiled-in ANSI behavior. The shipped configuration defines the standard
+palette with RGB values matching the compiled-in palette.
+
+RGB colors are emitted directly for truecolor clients and mapped to the nearest
+xterm-256 or ANSI-16 color for less capable clients. Invalid entries are logged
+and skipped. When configuration files are included, normal table merge rules
+apply, so a color in the including file overrides a color with the same TOML
+key in an included file.
 
 ## Default Lua parents
 

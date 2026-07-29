@@ -20,6 +20,7 @@
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/styled_text.h"
 #include "mux/world/world_context.h"
 /* default (runtime-resettable) cache parameters */
 
@@ -672,6 +673,31 @@ static int cf_site(long **vp, char *str, long extra, DbRef player, char *cmd,
   return 0;
 }
 
+static int cf_named_color(void *vp, char *str, long extra, DbRef player,
+                          char *cmd, ConfigurationContext *context) {
+  char name[61];
+  char trailing;
+  char error[128];
+  int red;
+  int green;
+  int blue;
+
+  (void)vp;
+  (void)extra;
+  if (sscanf(str, "%60s %d %d %d %c", name, &red, &green, &blue, &trailing) !=
+      4) {
+    configuration_log_syntax(context, player, cmd,
+                             "Expected NAME RED GREEN BLUE: ", str);
+    return -1;
+  }
+  if (!styled_text_palette_set_rgb(context->world->styled_text_palette, name,
+                                   red, green, blue, error, sizeof(error))) {
+    configuration_log_syntax(context, player, cmd, error, "");
+    return -1;
+  }
+  return 0;
+}
+
 /*
  * ---------------------------------------------------------------------------
  * * cf_cf_access: Set access on config directives
@@ -710,6 +736,7 @@ DEFINE_CONFIGURATION_ADAPTER(cf_cmd_alias)
 DEFINE_CONFIGURATION_ADAPTER(cf_flagalias)
 DEFINE_CONFIGURATION_ADAPTER(cf_int)
 DEFINE_CONFIGURATION_ADAPTER(cf_ntab_access)
+DEFINE_CONFIGURATION_ADAPTER(cf_named_color)
 DEFINE_CONFIGURATION_ADAPTER(cf_set_flags)
 DEFINE_CONFIGURATION_ADAPTER(cf_site)
 DEFINE_CONFIGURATION_ADAPTER(cf_string)
@@ -723,6 +750,8 @@ CONF conftable[] = {
     {"bad_name", cf_badname_configuration_adapter, CA_GOD, nullptr, 0},
     {"badsite_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(site_file), 32},
+    {"named_color", cf_named_color_configuration_adapter, CA_DISABLED, nullptr,
+     0},
     {"btech_explode_reactor", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(btech_explode_reactor), 0},
     {"btech_explode_time", cf_int_configuration_adapter, CA_GOD,

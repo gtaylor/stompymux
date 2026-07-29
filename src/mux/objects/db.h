@@ -13,6 +13,7 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
+typedef struct StyledTextPalette StyledTextPalette;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
@@ -141,6 +142,7 @@ struct GameDatabase {
   DescriptorRegistry *descriptors;
   PlayerCache *players;
   ServerLog *log;
+  StyledTextPalette *styled_text_palette;
 };
 
 void game_database_initialize(GameDatabase *database);
@@ -148,7 +150,8 @@ void game_database_bind_services(GameDatabase *database,
                                  ServerConfiguration *configuration,
                                  WorldIndexes *indexes,
                                  DescriptorRegistry *descriptors,
-                                 PlayerCache *players, ServerLog *log);
+                                 PlayerCache *players, ServerLog *log,
+                                 StyledTextPalette *palette);
 void game_database_destroy(GameDatabase *database);
 
 static inline GameObject *game_database_object(GameDatabase *database,

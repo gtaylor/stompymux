@@ -20,6 +20,8 @@ typedef enum {
                             "key value" */
   CFG_KIND_ACCESS_MAP,  /* table string->(string|array) -> one dispatch per
                             key, "key perm..." */
+  CFG_KIND_RGB_MAP,     /* table string->[r,g,b] -> one dispatch per key,
+                            "key r g b" */
   CFG_KIND_SITE_LIST,   /* array of {address=,mask=} tables -> one dispatch
                             per element, in order, "address mask" */
   CFG_KIND_STRING_LIST, /* array of strings -> one dispatch per element */
@@ -246,6 +248,9 @@ static const ConfigTomlMapping config_toml_map[] = {
     {"aliases.commands", "alias", CFG_KIND_ALIAS_MAP},
     {"aliases.flags", "flag_alias", CFG_KIND_ALIAS_MAP},
 
+    /* named styled-text colors */
+    {"colors", "named_color", CFG_KIND_RGB_MAP},
+
     /* names */
     {"names.bad", "bad_name", CFG_KIND_STRING_LIST},
     {"names.good", "good_name", CFG_KIND_STRING_LIST},
@@ -406,6 +411,46 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       set_fn(m->pname, args, ctx);
       free(args);
       free(owned);
+    }
+    return;
+
+  case CFG_KIND_RGB_MAP:
+    if (value.type != TOML_TABLE) {
+      fprintf(stderr, "configuration_toml: '%s' expected a table\n", path);
+      return;
+    }
+    for (i = 0; i < value.u.tab.size; i++) {
+      toml_datum_t rgb = value.u.tab.value[i];
+      size_t len;
+
+      if (rgb.type != TOML_ARRAY || rgb.u.arr.size != 3 ||
+          rgb.u.arr.elem[0].type != TOML_INT64 ||
+          rgb.u.arr.elem[1].type != TOML_INT64 ||
+          rgb.u.arr.elem[2].type != TOML_INT64) {
+        fprintf(stderr,
+                "configuration_toml: '%s.%s' expected three RGB integers\n",
+                path, value.u.tab.key[i]);
+        continue;
+      }
+      if (rgb.u.arr.elem[0].u.int64 < 0 || rgb.u.arr.elem[0].u.int64 > 255 ||
+          rgb.u.arr.elem[1].u.int64 < 0 || rgb.u.arr.elem[1].u.int64 > 255 ||
+          rgb.u.arr.elem[2].u.int64 < 0 || rgb.u.arr.elem[2].u.int64 > 255) {
+        fprintf(stderr,
+                "configuration_toml: '%s.%s' RGB values must be from 0 "
+                "through 255\n",
+                path, value.u.tab.key[i]);
+        continue;
+      }
+      len = strlen(value.u.tab.key[i]) + 96;
+      args = malloc(len);
+      if (!args)
+        continue;
+      snprintf(args, len, "%s %lld %lld %lld", value.u.tab.key[i],
+               (long long)rgb.u.arr.elem[0].u.int64,
+               (long long)rgb.u.arr.elem[1].u.int64,
+               (long long)rgb.u.arr.elem[2].u.int64);
+      set_fn(m->pname, args, ctx);
+      free(args);
     }
     return;
 

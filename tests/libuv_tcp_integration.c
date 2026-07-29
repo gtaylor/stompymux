@@ -129,14 +129,14 @@ static int write_lua_fixture(const char *directory) {
         "      pattern = \"^luacolor$\",\n"
         "      handler = function(ctx)\n"
         "        local styled = mux.style(\"LuaHex\", { foreground = "
-        "\"#123456\" })\n"
+        "\"stompy-orange\" })\n"
         "        assert(mux.text_width(styled) == 6)\n"
         "        assert(mux.strip_style(styled) == \"LuaHex\")\n"
         "        assert(mux.strip_style(mux.truncate_text(styled, 3)) == "
         "\"Lua\")\n"
         "        assert(mux.object_inside_description(ctx.enactor) == nil)\n"
         "        mux.notify(ctx.enactor, "
-        "mux.markup(\"[fg=#123456]LuaMarkup[/]\"))\n"
+        "mux.markup(\"[fg=stompy-orange]LuaMarkup[/]\"))\n"
         "        return true\n"
         "      end,\n"
         "    },\n"
@@ -262,6 +262,7 @@ static int expect_text(int socket_fd, const char *expected) {
     if (received_size == sizeof(received) - 1)
       return -1;
   }
+  fprintf(stderr, "expected '%s', received '%s'\n", expected, received);
   return -1;
 }
 
@@ -282,13 +283,17 @@ static int expect_text_without(int socket_fd, const char *expected,
       return -1;
     received_size += (size_t)size;
     received[received_size] = '\0';
-    if (strstr(received, forbidden))
+    if (strstr(received, forbidden)) {
+      fprintf(stderr, "received forbidden '%s' while expecting '%s': '%s'\n",
+              forbidden, expected, received);
       return -1;
+    }
     if (strstr(received, expected))
       return 0;
     if (received_size == sizeof(received) - 1)
       return -1;
   }
+  fprintf(stderr, "expected '%s', received '%s'\n", expected, received);
   return -1;
 }
 
@@ -326,27 +331,29 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "color truecolor\r\n") < 0 ||
       expect_text(socket_fd, "Color mode set to truecolor.") < 0 ||
       send_command(socket_fd, "help color\r\n") < 0 ||
-      expect_text(socket_fd,
-                  "@name drone=[fg=bright-cyan]Aegis[/]") < 0 ||
+      expect_text(
+          socket_fd,
+          "Custom names work anywhere a predefined color is accepted.") < 0 ||
+      send_command(socket_fd, "color\r\n") < 0 ||
+      expect_text(socket_fd, "Color mode: truecolor (override).") < 0 ||
       send_command(socket_fd, "say [fg=red]PublicPlain[/]\r\n") < 0 ||
-      expect_text_without(socket_fd, "You say \"PublicPlain\"", "\033[31m") <
-          0 ||
+      expect_text_without(socket_fd, "You say \"PublicPlain\"", "\033[") < 0 ||
       send_command(socket_fd, "page GOD=[fg=red]PrivatePlain[/]\r\n") < 0 ||
-      expect_text_without(socket_fd, "PrivatePlain", "\033[31m") < 0 ||
+      expect_text_without(socket_fd, "PrivatePlain", "\033[") < 0 ||
       send_command(socket_fd, "@chan/create StyledTest\r\n") < 0 ||
       expect_text(socket_fd, "Channel StyledTest created.") < 0 ||
       send_command(socket_fd, "addcom st=StyledTest\r\n") < 0 ||
       expect_text(socket_fd, "Channel StyledTest added with alias st.") < 0 ||
       send_command(socket_fd, "st [fg=red]ChannelPlain[/]\r\n") < 0 ||
-      expect_text_without(socket_fd, "ChannelPlain", "\033[31m") < 0 ||
+      expect_text_without(socket_fd, "ChannelPlain", "\033[") < 0 ||
       send_command(socket_fd, "st :[fg=red]ChannelPosePlain[/]\r\n") < 0 ||
-      expect_text_without(socket_fd, "ChannelPosePlain", "\033[31m") < 0 ||
-      send_command(
-          socket_fd,
-          "@chan/emit StyledTest=[fg=red]AdministrativeStyled[/]\r\n") < 0 ||
-      expect_text(socket_fd, "\033[31mAdministrativeStyled") < 0 ||
+      expect_text_without(socket_fd, "ChannelPosePlain", "\033[") < 0 ||
+      send_command(socket_fd, "@chan/emit StyledTest=[fg=red "
+                              "bg=white]AdministrativeStyled[/]\r\n") < 0 ||
+      expect_text(socket_fd, "\033[38;2;205;0;0m\033[48;2;229;229;229m"
+                             "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
-      expect_text(socket_fd, "\033[38;2;18;52;86mLuaMarkup") < 0 ||
+      expect_text(socket_fd, "\033[38;2;255;112;0mLuaMarkup") < 0 ||
       send_command(socket_fd, "look\r\n") < 0 ||
       expect_text(socket_fd, "Staff Nexus") < 0) {
     fprintf(stderr, "styled-object login failed\n");

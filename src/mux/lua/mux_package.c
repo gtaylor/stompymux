@@ -198,11 +198,13 @@ static int lua_mux_object_inside_description(lua_State *state) {
 }
 
 static int lua_mux_markup(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
   const char *markup = luaL_checkstring(state, 1);
   char *output = alloc_lbuf("lua_mux_markup");
   char error[256];
 
-  if (!styled_text_compile(markup, output, LBUF_SIZE, error, sizeof(error))) {
+  if (!styled_text_compile(package->services->styled_text_palette, markup,
+                           output, LBUF_SIZE, error, sizeof(error))) {
     free_lbuf(output);
     return luaL_error(state, "invalid color markup: %s", error);
   }
@@ -267,6 +269,7 @@ static bool lua_mux_style_open_bool(lua_State *state, int table,
 }
 
 static int lua_mux_style(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
   size_t text_length;
   const char *value = luaL_checklstring(state, 1, &text_length);
   char *markup;
@@ -300,8 +303,8 @@ static int lua_mux_style(lua_State *state) {
   *cursor = '\0';
 
   validated = alloc_lbuf("lua_mux_style.validated");
-  if (!styled_text_compile(markup, validated, LBUF_SIZE, error,
-                           sizeof(error))) {
+  if (!styled_text_compile(package->services->styled_text_palette, markup,
+                           validated, LBUF_SIZE, error, sizeof(error))) {
     free_lbuf(markup);
     free_lbuf(validated);
     return luaL_error(state, "invalid style: %s", error);
@@ -313,22 +316,28 @@ static int lua_mux_style(lua_State *state) {
 }
 
 static int lua_mux_strip_style(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
   const char *value = luaL_checkstring(state, 1);
   char *output = alloc_lbuf("lua_mux_strip_style");
 
-  styled_text_strip(value, output, LBUF_SIZE);
+  styled_text_strip(package->services->styled_text_palette, value, output,
+                    LBUF_SIZE);
   lua_pushstring(state, output);
   free_lbuf(output);
   return 1;
 }
 
 static int lua_mux_text_width(lua_State *state) {
-  lua_pushinteger(state,
-                  (lua_Integer)styled_text_width(luaL_checkstring(state, 1)));
+  LuaMuxPackage *package = lua_mux_package_get(state);
+
+  lua_pushinteger(state, (lua_Integer)styled_text_width(
+                             package->services->styled_text_palette,
+                             luaL_checkstring(state, 1)));
   return 1;
 }
 
 static int lua_mux_truncate_text(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
   const char *value = luaL_checkstring(state, 1);
   lua_Integer width = luaL_checkinteger(state, 2);
   char *output;
@@ -336,7 +345,8 @@ static int lua_mux_truncate_text(lua_State *state) {
   if (width < 0)
     return luaL_argerror(state, 2, "width must not be negative");
   output = alloc_lbuf("lua_mux_truncate_text");
-  styled_text_truncate(value, (size_t)width, output, LBUF_SIZE);
+  styled_text_truncate(package->services->styled_text_palette, value,
+                       (size_t)width, output, LBUF_SIZE);
   lua_pushstring(state, output);
   free_lbuf(output);
   return 1;
@@ -498,15 +508,20 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_type, 1);
   lua_setfield(state, -2, "object_type");
-  lua_pushcfunction(state, lua_mux_markup);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_markup, 1);
   lua_setfield(state, -2, "markup");
-  lua_pushcfunction(state, lua_mux_style);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_style, 1);
   lua_setfield(state, -2, "style");
-  lua_pushcfunction(state, lua_mux_strip_style);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_strip_style, 1);
   lua_setfield(state, -2, "strip_style");
-  lua_pushcfunction(state, lua_mux_text_width);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_text_width, 1);
   lua_setfield(state, -2, "text_width");
-  lua_pushcfunction(state, lua_mux_truncate_text);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_truncate_text, 1);
   lua_setfield(state, -2, "truncate_text");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_attr_get, 1);
