@@ -24,7 +24,6 @@ typedef struct MechTemplateRegistry MechTemplateRegistry;
 typedef struct MechReferenceCache MechReferenceCache;
 typedef struct PersistenceContext PersistenceContext;
 typedef struct BtechPartCosts BtechPartCosts;
-typedef struct BtechColorizeState BtechColorizeState;
 typedef struct PartNameRegistry PartNameRegistry;
 typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerConfiguration ServerConfiguration;
@@ -81,7 +80,6 @@ struct BtechContext {
   int cached_skill;
   int cached_skill_result;
   BtechCombatOverrides combat_overrides;
-  BtechColorizeState *colorize;
   MapCodingRegistry map_coding;
   MissileHitRegistry missile_hits;
   BtechRandom random;

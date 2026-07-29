@@ -599,7 +599,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
         case RLEG:
         case LLEG:
           /* Limb blown off */
-          mech_notify(target, MECHALL, "%ch%cyCRITICAL HIT!!%c");
+          mech_notify(target, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
           MechLOSBroadcast(
               target,

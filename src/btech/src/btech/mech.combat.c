@@ -1080,9 +1080,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   /* Hotload LRM jams on 2 or 3 */
   if (GetPartFireMode(mech, section, critical) & HOTLOAD_MODE) {
     if (roll == 2 || roll == 3) {
-      mech_printf(mech, MECHALL,
-                  "%%ch%%crThe ammo loading mechanism jams on your %s!%%cn",
-                  &(MechWeapons[weapindx].name[3]));
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]The ammo loading mechanism jams on your %s![reset]",
+          &(MechWeapons[weapindx].name[3]));
       SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
       return;
     }
@@ -1091,18 +1092,19 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   /* Caseless jams on a 2. Next internal roll of 8+ explodes */
   if (GetPartAmmoMode(mech, section, critical) & AC_CASELESS_MODE) {
     if (roll == 2 || roll == 3) {
-      mech_printf(mech, MECHALL,
-                  "%%ch%%crThe ammo loading mechanism jams on your %s!%%cn",
-                  &(MechWeapons[weapindx].name[3]));
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]The ammo loading mechanism jams on your %s![reset]",
+          &(MechWeapons[weapindx].name[3]));
       SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
       /* do 8+ explosion check. Per tac handbook, the launcher explodes on
        * failure*/
       if (btech_random_roll(mech->xcode.context) > 7) {
         /* Rut roh shaggy. Time to cause some damage! */
-        mech_printf(
-            mech, MECHALL,
-            "%%ch%%crPropellant from your %s ignites and destroys it!%%cn",
-            &(MechWeapons[weapindx].name[3]));
+        mech_printf(mech, MECHALL,
+                    "[fg=red bold]Propellant from your %s ignites and "
+                    "destroys it![reset]",
+                    &(MechWeapons[weapindx].name[3]));
         firstCrit =
             FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                 GetWeaponCrits(mech, weapindx));
@@ -1125,10 +1127,11 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   /* Check for RFAC explosion/jams */
   if (GetPartFireMode(mech, section, critical) & RFAC_MODE) {
     if (roll == 2) {
-      mech_printf(mech, MECHALL,
-                  "%%ch%%crA catastrophic misload on your %s destroys it and "
-                  "causes an internal explosion!%%cn",
-                  &(MechWeapons[weapindx].name[3]));
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]A catastrophic misload on your %s destroys it and "
+          "causes an internal explosion![reset]",
+          &(MechWeapons[weapindx].name[3]));
       firstCrit = FindFirstWeaponCrit(mech, section, -1, 0, I2Weapon(weapindx),
                                       GetWeaponCrits(mech, weapindx));
       DestroyWeapon(mech, section, I2Weapon(weapindx), firstCrit,
@@ -1141,9 +1144,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
                            ammoLoc1, ammoCrit1, wGattlingShots);
       return;
     } else if (roll < 5) {
-      mech_printf(mech, MECHALL,
-                  "%%ch%%crThe ammo loader mechanism jams on your %s!%%cn",
-                  &(MechWeapons[weapindx].name[3]));
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
+          &(MechWeapons[weapindx].name[3]));
       SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
       return;
     }
@@ -1157,9 +1161,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
          (roll <= 3)) ||
         ((GetPartFireMode(mech, section, critical) & RAC_SIXSHOT_MODE) &&
          (roll <= 4))) {
-      mech_printf(mech, MECHALL,
-                  "%%ch%%crThe ammo loader mechanism jams on your %s!%%cn",
-                  &(MechWeapons[weapindx].name[3]));
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
+          &(MechWeapons[weapindx].name[3]));
       SetPartTempNuke(mech, section, critical, FAIL_AMMOJAMMED);
       return;
     }
@@ -1182,14 +1187,14 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   /* See if the sucker will explode from damage taken */
   if (canWeapExplodeFromDamage(mech, section, critical, roll)) {
     if (IsEnergy(weapindx)) {
-      mech_printf(
-          mech, MECHALL,
-          "%%ch%%crThe damaged charging crystal on your %s overloads!%%cn",
-          &(MechWeapons[weapindx].name[3]));
+      mech_printf(mech, MECHALL,
+                  "[fg=red bold]The damaged charging crystal on your %s "
+                  "overloads![reset]",
+                  &(MechWeapons[weapindx].name[3]));
     } else {
       mech_printf(mech, MECHALL,
-                  "%%ch%%crThe damaged ammo feed on your %s triggers an "
-                  "internal explosion!%%cn",
+                  "[fg=red bold]The damaged ammo feed on your %s triggers an "
+                  "internal explosion![reset]",
                   &(MechWeapons[weapindx].name[3]));
       decrement_ammunition(mech, weapindx, section, critical, ammoLoc, ammoCrit,
                            ammoLoc1, ammoCrit1, wGattlingShots);
@@ -1209,9 +1214,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
 
   /* See if the sucker will jam from damage taken */
   if (canWeapJamFromDamage(mech, section, critical, roll)) {
-    mech_printf(mech, MECHALL,
-                "%%ch%%crThe ammo loader mechanism jams on your %s!%%cn",
-                &(MechWeapons[weapindx].name[3]));
+    mech_printf(
+        mech, MECHALL,
+        "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",
+        &(MechWeapons[weapindx].name[3]));
     SetPartTempNuke(mech, section, critical, FAIL_AMMOCRITJAMMED);
 
     return;
@@ -1593,10 +1599,12 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
       /* Flamers - if in heat mode don't do damage */
       if ((IsFlamer(weapindx)) && (wFireMode & HEAT_MODE)) {
 
-        mech_notify(hitMech, MECHALL,
-                    "%cy%chThe flaming plasma sprays all over you!%cn");
-        mech_notify(mech, MECHALL,
-                    "%cgYou cover your target in flaming plasma!%cn");
+        mech_notify(
+            hitMech, MECHALL,
+            "[fg=yellow bold]The flaming plasma sprays all over you![reset]");
+        mech_notify(
+            mech, MECHALL,
+            "[fg=green]You cover your target in flaming plasma![reset]");
         MechWeapHeat(hitMech) += (float)wBaseWeapDamage;
         return;
 
@@ -1609,16 +1617,17 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
         if (wFireMode & HEAT_MODE) {
 
           /* Hit our own unit with the coolant gun */
-          mech_notify(mech, MECHALL, "%ccCoolant washes over your systems!!%c");
+          mech_notify(mech, MECHALL,
+                      "[fg=cyan]Coolant washes over your systems!![reset]");
           MechWeapHeat(mech) -= (float)wBaseWeapDamage;
 
         } else {
 
           /* Hit the target with the coolant gun */
           mech_notify(mech, MECHALL,
-                      "%ccYou hit with the stream of coolant!!%c");
+                      "[fg=cyan]You hit with the stream of coolant!![reset]");
           mech_notify(hitMech, MECHALL,
-                      "%ccCoolant washes over your systems!!%c");
+                      "[fg=cyan]Coolant washes over your systems!![reset]");
           MechWeapHeat(hitMech) -= (float)wBaseWeapDamage;
         }
 
@@ -1716,7 +1725,8 @@ void HitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
    * Ultras
    */
   if (LOS)
-    mech_printf(mech, MECHALL, "%%cgYou hit with %d %s%s!%%c", num_missiles_hit,
+    mech_printf(mech, MECHALL, "[fg=green]You hit with %d %s%s![reset]",
+                num_missiles_hit,
                 (tIsUltra || tIsRAC ? "slug"
                  : tIsLBX           ? "pellet"
                                     : "missile"),

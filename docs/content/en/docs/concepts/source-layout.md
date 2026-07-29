@@ -95,8 +95,8 @@ dependency header.
 callback objects. In addition to borrowing core MUX services, this context owns
 the BTech special-object registry, special command indexes, map-coding cache,
 part-name registry, lazily populated template filename registry, combat
-overrides, advanced-economy part costs, ANSI colorization indexes, heartbeat
-timer state, random-generator state and roll statistics, startup-resolved
+overrides, advanced-economy part costs, heartbeat timer state, random-generator
+state and roll statistics, startup-resolved
 missile cluster indexes, wizard-adjustable weapon recycle/BV settings, and
 update timestamps. Those resources are released explicitly before the event
 scheduler during server teardown. Canonical weapon definitions remain
@@ -126,9 +126,9 @@ function-local static result buffers: formatters either return small values or
 write into storage owned by the enclosing operation. This includes xcode value
 callbacks, status renderers, menu callbacks, generated part names, attribute
 reads, mech identifiers, and unit-parts summaries. Random-generator state and
-its roll statistics, startup-resolved missile cluster indexes, map coding, ANSI
-colorization, and generated part-name indexes are explicit `BtechContext`
-owners, while artillery and map-object recycler lists have been replaced by
+its roll statistics, startup-resolved missile cluster indexes, map coding, and
+generated part-name indexes are explicit `BtechContext` owners, while artillery
+and map-object recycler lists have been replaced by
 direct scheduler or allocation ownership. Player map colors are caller-owned
 render state, and the LOS tracer writes into an operation-owned `LosTrace`
 instead of sharing a process-static coordinate array. Template filename and

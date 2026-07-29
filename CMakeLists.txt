@@ -373,7 +373,6 @@ if(BUILD_TESTING)
   add_test(NAME lua_module_smoke
     COMMAND lua_module_smoke_test
       "${CMAKE_SOURCE_DIR}/game/lua/packages"
-      "${CMAKE_SOURCE_DIR}/game/lua/packages/color.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/packages/object_appearances.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/object_logic/example.lua"
       "${CMAKE_SOURCE_DIR}/game/lua/object_logic/counter.lua"

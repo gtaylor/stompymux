@@ -38,7 +38,6 @@
 #include "mux/server/signals.h"
 #include "mux/server/timer.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/fifo.h"
 #include "mux/support/formatting.h"

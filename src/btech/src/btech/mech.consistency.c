@@ -470,8 +470,8 @@ int mech_weight_sub_mech(DbRef player, MECH *mech, int interactive) {
 
   if (interactive > 0) {
     addline();
-    vsi(tprintf("%%cgTotal: %s%.1f tons (offset: %.1f)%%cn",
-                (total / 1024) > MechTons(mech) ? "%ch%cr" : "",
+    vsi(tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                (total / 1024) > MechTons(mech) ? "[fg=red bold]" : "",
                 (float)(total) / 1024.0,
                 MechTons(mech) - (float)(total) / 1024.0));
     addline();
@@ -618,8 +618,8 @@ int mech_weight_sub_veh(DbRef player, MECH *mech, int interactive) {
 
   if (interactive > 0) {
     addline();
-    vsi(tprintf("%%cgTotal: %s%.1f tons (offset: %.1f)%%cn",
-                (total / 1024) > MechTons(mech) ? "%ch%cr" : "",
+    vsi(tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                (total / 1024) > MechTons(mech) ? "[fg=red bold]" : "",
                 (float)(total) / 1024.0,
                 MechTons(mech) - (float)(total) / 1024.0));
     addline();

@@ -1828,10 +1828,11 @@ void MechFloodsLoc(MECH *mech, int loc, int lev) {
 
   /* Woo, valid target. */
   ArmorStringFromIndex(loc, locbuff, MechType(mech), MechMove(mech));
-  mech_printf(mech, MECHALL,
-              "%%ch%%crWater floods into your %s disabling everything that was "
-              "there!%%c",
-              locbuff);
+  mech_printf(
+      mech, MECHALL,
+      "[fg=red bold]Water floods into your %s disabling everything that was "
+      "there![reset]",
+      locbuff);
   MechLOSBroadcast(
       mech, tprintf("has a gaping hole in %s, and water pours in!", locbuff));
 

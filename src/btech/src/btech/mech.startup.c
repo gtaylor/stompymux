@@ -37,68 +37,76 @@
 #define BOOTCOUNT 6
 
 static char *const bsuit_bootmsgs[BOOTCOUNT] = {
-    "%%cg->         Initializing powerpack       <-%%c",
-    "%%cg->          Powerpack operational       <-%%c",
-    "%%cg->             Suit sealed              <-%%c",
-    "%%cg->  Computer system is now operational  <-%%c",
-    "%%cg->         Air pressure steady          <-%%c",
-    "       %%cg- %%cr-=>%%ch%%cw All systems go!%%c %%cr<= %%cg-%%c"};
+    "[fg=green]->         Initializing powerpack       <-[reset]",
+    "[fg=green]->          Powerpack operational       <-[reset]",
+    "[fg=green]->             Suit sealed              <-[reset]",
+    "[fg=green]->  Computer system is now operational  <-[reset]",
+    "[fg=green]->         Air pressure steady          <-[reset]",
+    ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
+     "[fg=red]<= [fg=green]-[reset]")};
 
 static char *const aero_bootmsgs[BOOTCOUNT] = {
-    "%%cg->       Main reactor is now online    <-%%c",
-    "%%cg->            Thrusters online         <-%%c",
-    "%%cg->  Main computer system is now online <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "       %%cg- %%cr-=>%%ch%%cw All systems go!%%c %%cr<= %%cg-%%c"};
+    "[fg=green]->       Main reactor is now online    <-[reset]",
+    "[fg=green]->            Thrusters online         <-[reset]",
+    "[fg=green]->  Main computer system is now online <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("       [fg=green]- [fg=red]-=>[fg=white bold] All systems go![reset] "
+     "[fg=red]<= [fg=green]-[reset]")};
 
 static char *const bootmsgs[BOOTCOUNT] = {
-    "%%cg->       Main reactor is now online    <-%%c",
-    "%%cg->         Gyros are now stable        <-%%c",
-    "%%cg->  Main computer system is now online <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->       Main reactor is now online    <-[reset]",
+    "[fg=green]->         Gyros are now stable        <-[reset]",
+    "[fg=green]->  Main computer system is now online <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 static char *const hover_bootmsgs[BOOTCOUNT] = {
-    "%%cg->  Powerplant initialized and online  <-%%c",
-    "%%cg->   Checking plenum chamber status    <-%%c",
-    "%%cg->         Verifying fan status        <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->  Powerplant initialized and online  <-[reset]",
+    "[fg=green]->   Checking plenum chamber status    <-[reset]",
+    "[fg=green]->         Verifying fan status        <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 static char *const track_bootmsgs[BOOTCOUNT] = {
-    "%%cg->  Powerplant initialized and online  <-%%c",
-    "%%cg->      Auto-aligning drive wheels     <-%%c",
-    "%%cg->       Adjusting track tension       <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->  Powerplant initialized and online  <-[reset]",
+    "[fg=green]->      Auto-aligning drive wheels     <-[reset]",
+    "[fg=green]->       Adjusting track tension       <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 static char *const wheel_bootmsgs[BOOTCOUNT] = {
-    "%%cg->  Powerplant initialized and online  <-%%c",
-    "%%cg->  Performing steering system checks  <-%%c",
-    "%%cg->        Checking wheel status        <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->  Powerplant initialized and online  <-[reset]",
+    "[fg=green]->  Performing steering system checks  <-[reset]",
+    "[fg=green]->        Checking wheel status        <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 static char *const vtol_bootmsgs[BOOTCOUNT] = {
-    "%%cg->     Initializing main powerplant    <-%%c",
-    "%%cg-> Main turbine online and operational <-%%c",
-    "%%cg->      Rotor transmission engaged     <-%%c",
-    "%%cg->     Scanners are now operational    <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->     Initializing main powerplant    <-[reset]",
+    "[fg=green]-> Main turbine online and operational <-[reset]",
+    "[fg=green]->      Rotor transmission engaged     <-[reset]",
+    "[fg=green]->     Scanners are now operational    <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 static char *const naval_bootmsgs[BOOTCOUNT] = {
-    "%%cg->       Main reactor is now online    <-%%c",
-    "%%cg->  Main computer system is now online <-%%c",
-    "%%cg->   Hull integrity monitoring online  <-%%c",
-    "%%cg-> Ballast and propulsion are nominal  <-%%c",
-    "%%cg-> Targeting system is now operational <-%%c",
-    "   %%cg- %%cr-=>%%ch%%cw All systems operational!%%c %%cr<=- %%cg-%%c"};
+    "[fg=green]->       Main reactor is now online    <-[reset]",
+    "[fg=green]->  Main computer system is now online <-[reset]",
+    "[fg=green]->   Hull integrity monitoring online  <-[reset]",
+    "[fg=green]-> Ballast and propulsion are nominal  <-[reset]",
+    "[fg=green]-> Targeting system is now operational <-[reset]",
+    ("   [fg=green]- [fg=red]-=>[fg=white bold] All systems "
+     "operational![reset] [fg=red]<=- [fg=green]-[reset]")};
 
 #define SSLEN MechType(mech) == CLASS_BSUIT ? 1 : (STARTUP_TIME / BOOTCOUNT)
 
@@ -110,8 +118,8 @@ static void mech_startup_event(MuxEvent *e) {
 
   /*
    * Each *_bootmsgs[] array is a fixed set of string-literal boot messages
-   * indexed by timer; none of them contain real printf conversions (the
-   * %%c sequences are escaped MUX color markup), just non-literal to clang.
+   * indexed by timer; none of them contain printf conversions, just
+   * non-literal styled text.
    */
 #ifdef __clang__
 #pragma clang diagnostic push

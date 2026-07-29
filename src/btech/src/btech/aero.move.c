@@ -239,7 +239,7 @@ void DS_BlastNearbyMechsAndTrees(MECH *mech, char *hitmsg, char *hitmsg1,
         if (!find_decorations(map, x1, y1)) {
           HexLOSBroadcast(
               map, x1, y1,
-              tprintf("%%ch%%crThe trees in $h %s%%cn", treehitmsg));
+              tprintf("[fg=red bold]The trees in $h %s[reset]", treehitmsg));
           if ((damage / d) > 100) {
             SetTerrain(map, x1, y1, ROUGH);
           } else {
@@ -691,9 +691,9 @@ void aero_dive(DbRef player, MECH *mech, char *arg) {
 
 static char *colorstr(int serious) {
   if (serious == 1)
-    return "%ch%cr";
+    return "[fg=red bold]";
   if (serious == 0)
-    return "%ch%cy";
+    return "[fg=yellow bold]";
   return "";
 }
 
@@ -703,7 +703,7 @@ void DS_LandWarning(MECH *mech, int serious) {
   if (!ilz)
     return;
   ilz--;
-  mech_printf(mech, MECHALL, "%sWARNING: %s - %s%%cn", colorstr(serious),
+  mech_printf(mech, MECHALL, "%sWARNING: %s - %s[reset]", colorstr(serious),
               reasons[ilz],
               serious == 1   ? "CLIMB UP NOW!!!"
               : serious == 0 ? "No further descent is advisable."

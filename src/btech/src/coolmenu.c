@@ -14,6 +14,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/support/alloc.h"
+#include "mux/support/styled_text.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -63,38 +64,26 @@ void display_line(char **c, int *len, coolmenu *m) {
 
   (void)m;
 
-  snprintf(ch, *len, "%%cb");
+  snprintf(ch, *len, "[fg=blue]");
   ch += strlen(ch);
   for (i = 0; i < *len; i++)
     *(ch++) = '-';
-  snprintf(ch, *len, "%%c");
+  snprintf(ch, *len, "[reset]");
   ch += strlen(ch);
   *len = 0;
   *c = ch;
 }
 
-static int compute_length(char *s) {
-  int l = strlen(s);
-  char *c;
-
-  for (c = s; *c; c++) {
-    if (*c == '%')
-      if (*(c + 1) == 'c') {
-        if (isalpha(*(c + 2))) {
-          c += 2;
-          l -= 3;
-        } else {
-          c += 1;
-          l -= 2;
-        }
-      }
-  }
-  return l;
+static int compute_length(const char *text) {
+  return (int)styled_text_width(nullptr, text);
 }
 
 void display_string(char **c, int *len, coolmenu *m) {
-  int l = strlen(m->text), lo;
-  int p, e;
+  char truncated[LBUF_SIZE];
+  int visible = compute_length(m->text);
+  int available = MAX(*len - 1, 0);
+  int copied_width = MIN(visible, available);
+  int p;
   int i;
 
   if (m->flags & CM_NOCUT) {
@@ -103,34 +92,32 @@ void display_string(char **c, int *len, coolmenu *m) {
     *c += strlen(*c);
     return;
   }
+  styled_text_truncate(nullptr, m->text, (size_t)copied_width, truncated,
+                       sizeof(truncated));
   if (m->flags & CM_CENTER) {
-    p = MAX(*len / 2 - l / 2, 0);
-    e = MIN(*len - 1, p + l);
+    p = MAX((*len - copied_width) / 2, 0);
     for (i = 0; i < p; i++)
       (*c)[i] = ' ';
     *c += p;
-    snprintf(*c, *len, "%%ch%%cb");
+    strcpy(*c, "[fg=blue bold]");
     *c += strlen(*c);
-    strncpy(*c, m->text, (e - p) + 1);
-    *c += (e - p);
-    snprintf(*c, *len, "%%c");
+    strcpy(*c, truncated);
+    *c += strlen(*c);
+    strcpy(*c, "[reset]");
     *c += strlen(*c);
     **c = 0;
-    *len -= e;
+    *len -= p + copied_width;
   } else {
-    lo = l - compute_length(m->text);
-    l = MIN(*len - 1 + lo, l);
-    strncpy(*c, m->text, l);
-    (*c)[l] = 0;
-    *len -= l - lo;
-    *c = &((*c)[l]);
+    strcpy(*c, truncated);
+    *c += strlen(*c);
+    *len -= copied_width;
   }
 }
 
 void display_toggle_end(char **c, int maxlen, coolmenu *m) {
   if (m->value)
-    snprintf(*c, maxlen, " %s<%%cbX%%c%%ch>%%c",
-             !(m->flags & CM_NO_HILITE) ? "%ch" : "");
+    snprintf(*c, maxlen, " %s<[fg=blue]X[reset][bold]>[reset]",
+             !(m->flags & CM_NO_HILITE) ? "[bold]" : "");
   else
     snprintf(*c, maxlen, " < >");
   *c += strlen(*c);
@@ -160,8 +147,8 @@ StringifiedValue stringified_value(int v) {
 
 void display_number_end(char **c, int maxlen, coolmenu *m) {
   if (m->value >= 0) {
-    snprintf(*c, maxlen, " %%cg%s%4s%%c",
-             (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "%ch" : "",
+    snprintf(*c, maxlen, " [fg=green]%s%4s[reset]",
+             (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "[bold]" : "",
              stringified_value(m->value).text);
   } else
     snprintf(*c, maxlen, " ____");
@@ -180,8 +167,8 @@ char *display_entry(char *ch, int maxlen, coolmenu *c) {
       maxlen -= 4;
     t = ((c->flags & (CM_TOGGLE | CM_NUMBER)) && c->value);
     snprintf(ch, maxlen, "%s[%c]%s ",
-             (t && !(c->flags & CM_NO_HILITE)) ? "%ch%cr" : "%cr",
-             t ? (c->letter + 'A' - 'a') : c->letter, "%c");
+             (t && !(c->flags & CM_NO_HILITE)) ? "[fg=red bold]" : "[fg=red]",
+             t ? (c->letter + 'A' - 'a') : c->letter, "[reset]");
     ch += strlen(ch);
   }
   if (c->flags & (RIGHTEDGES) && !(c->flags & CM_NORIGHT)) {
@@ -192,7 +179,7 @@ char *display_entry(char *ch, int maxlen, coolmenu *c) {
     j = 1;
   }
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, maxlen, "%%ch");
+    snprintf(ch, maxlen, "[bold]");
     ch += strlen(ch);
   }
   if (c->flags & CM_LINE)
@@ -200,7 +187,7 @@ char *display_entry(char *ch, int maxlen, coolmenu *c) {
   else
     display_string(&ch, &maxlen, c);
   if (t && !(c->flags & (CM_NO_HILITE))) {
-    snprintf(ch, maxlen, "%%c");
+    snprintf(ch, maxlen, "[reset]");
     ch += strlen(ch);
   }
   if (maxlen > 0 && !(c->flags & CM_NOCUT)) {
@@ -343,7 +330,7 @@ coolmenu *SelCol_FunStringMenuK(int columns, char *heading, char *(*fun)(int),
   buf[0] = toupper(buf[0]);
   CreateMenuEntry_Simple(&c, NULL, CM_ONE | CM_LINE);
   CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
-  if (fun(0)[0] == '%') {
+  if (fun(0)[0] == '[') {
     CreateMenuEntry_Normal(&c, fun(0), columns, 1, 0);
     sick = 1;
   }
@@ -369,7 +356,7 @@ coolmenu *SelCol_FunStringMenuContextK(int columns, char *heading,
   buf[0] = toupper(buf[0]);
   CreateMenuEntry_Simple(&c, nullptr, CM_ONE | CM_LINE);
   CreateMenuEntry_Simple(&c, buf, CM_ONE | CM_CENTER);
-  if (fun(context, 0, entry)[0] == '%') {
+  if (entry[0] == '[') {
     CreateMenuEntry_Normal(&c, entry, columns, 1, 0);
     sick = 1;
   }

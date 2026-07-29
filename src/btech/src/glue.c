@@ -38,7 +38,6 @@
 #include "mech.tech.h"
 #include "mechrep.h"
 #include "mux/objects/powers.h"
-#include "mux/support/ansi.h"
 #include "mux/support/red_black_tree.h"
 #include "mycool.h"
 #include "p.bsuit.h"
@@ -87,8 +86,6 @@ void *btech_context_find_object(BtechContext *context, DbRef key);
 static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
                                 int id, int loc, PowerId powerneeded, int objid,
                                 char *arg);
-void initialize_colorize(BtechContext *context);
-void destroy_colorize(BtechContext *context);
 
 int btech_context_which_special(BtechContext *context, DbRef key);
 static int btech_context_which_special_attribute(BtechContext *context,
@@ -413,8 +410,6 @@ void LoadSpecialObjects(BtechContext *context) {
   mux_event_initialize(context->events);
   init_stat(context);
   initialize_partname_tables(context);
-  /* The SQLite startup path still needs ANSI parser state for BTech output. */
-  initialize_colorize(context);
   if (!btech_weapon_settings_initialize(&context->weapon_settings))
     exit(EXIT_FAILURE);
   if (!missile_hit_registry_initialize(&context->missile_hits, context))
@@ -630,7 +625,6 @@ void btech_context_destroy(BtechContext *context) {
   context->special_commands = nullptr;
   context->special_command_count = 0;
   btech_stats_destroy(context);
-  destroy_colorize(context);
 #ifdef BT_ADVANCED_ECON
   btech_part_costs_destroy(context);
 #endif
@@ -738,16 +732,16 @@ static void help_color_initialize(const char *from, char *to) {
     /*      from[i]=0; */
     strncpy(buf, from, i);
     buf[i] = 0;
-    safe_str("%ch%cb", to, &tp);
+    safe_str("[fg=blue bold]", to, &tp);
     safe_str(buf, to, &tp);
-    safe_str("%cn ", to, &tp);
+    safe_str("[reset] ", to, &tp);
     safe_str((char *)&from[i + 1], to, &tp);
 
     /*      from[i]=' '; */
   } else {
-    safe_str("%cc", to, &tp);
+    safe_str("[fg=cyan]", to, &tp);
     safe_str((char *)from, to, &tp);
-    safe_str("%cn", to, &tp);
+    safe_str("[reset]", to, &tp);
   }
   *tp = '\0';
 }
@@ -907,7 +901,7 @@ static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
       if (count > 1) {
         center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
         d = buf;
-        sim(tprintf("%s%s%s", "%cg", d, "%c"), CM_ONE);
+        sim(tprintf("%s%s%s", "[fg=green]", d, "[reset]"), CM_ONE);
       } else
         sim(tprintf("%s command listing: ", type), CM_ONE | CM_CENTER);
       for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1]; j++)
@@ -962,7 +956,7 @@ static void DoSpecialObjectHelp(BtechContext *context, DbRef player, char *type,
         if (dc == -1 || i == dc) {
           if (count > 1) {
             center_string(buf, sizeof(buf), HELPMSG(pos[i][0]), 70);
-            vsi(tprintf("%s%s%s", "%cg", buf, "%c"));
+            vsi(tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
           }
           for (j = pos[i][0] + (count == 1 ? 0 : 1); j < pos[i][0] + pos[i][1];
                j++)
@@ -1012,145 +1006,9 @@ void handle_xcode(BtechContext *context, DbRef player, DbRef obj, int from,
     CreateNewSpecialObject(context, player, obj);
 }
 
-#define DEFAULT 0 /* Normal */
-#define ANSI_START "\033["
-#define ANSI_START_LEN 2
-#define ANSI_END "m"
-#define ANSI_END_LEN 1
-
-typedef struct ColorTableEntry {
-  int bit;
-  int negbit;
-  char ltr;
-  const char *string;
-} ColorTableEntry;
-
-static const ColorTableEntry color_table[] = {
-    {0x0008, 7, 'n', ANSI_NORMAL},  {0x0001, 0, 'h', ANSI_HILITE},
-    {0x0002, 0, 'i', ANSI_INVERSE}, {0x0004, 0, 'f', ANSI_BLINK},
-    {0x0010, 0, 'x', ANSI_BLACK},   {0x0010, 0x10, 'l', ANSI_BLACK},
-    {0x0020, 0, 'r', ANSI_RED},     {0x0040, 0, 'g', ANSI_GREEN},
-    {0x0080, 0, 'y', ANSI_YELLOW},  {0x0100, 0, 'b', ANSI_BLUE},
-    {0x0200, 0, 'm', ANSI_MAGENTA}, {0x0400, 0, 'c', ANSI_CYAN},
-    {0x0800, 0, 'w', ANSI_WHITE},   {0, 0, 0, nullptr}};
-
-#define CHARS 256
-enum { COLOR_ENTRY_COUNT = 13 };
-
-struct BtechColorizeState {
-  int reverse[CHARS];
-  char *short_sequences[COLOR_ENTRY_COUNT];
-};
-
-void initialize_colorize(BtechContext *context) {
-  BtechColorizeState *state = calloc(1, sizeof(*state));
-  int i;
-  char buf[20];
-  char *c;
-
-  if (state == nullptr)
-    exit(EXIT_FAILURE);
-  context->colorize = state;
-  c = buf + ANSI_START_LEN;
-  for (i = 0; i < CHARS; i++)
-    state->reverse[i] = DEFAULT;
-  for (i = 0; color_table[i].string; i++) {
-    state->reverse[(unsigned char)color_table[i].ltr] = i;
-    strcpy(buf, color_table[i].string);
-    buf[strlen(buf) - ANSI_END_LEN] = 0;
-    state->short_sequences[i] = strdup(c);
-    if (state->short_sequences[i] == nullptr)
-      exit(EXIT_FAILURE);
-  }
-}
-
-void destroy_colorize(BtechContext *context) {
-  BtechColorizeState *state = context->colorize;
-
-  if (state == nullptr)
-    return;
-  for (size_t i = 0; i < COLOR_ENTRY_COUNT; i++)
-    free(state->short_sequences[i]);
-  free(state);
-  context->colorize = nullptr;
-}
-
 #undef notify
-char *colorize(EvaluationContext *evaluation, DbRef player, char *from) {
-  const BtechColorizeState *state = evaluation->btech->colorize;
-  char *to;
-  char *p, *q;
-  int color_wanted = 0;
-  int i;
-  int cnt;
-
-  q = to = alloc_lbuf("colorize");
-#if 1
-  for (p = from; *p; p++) {
-    if (*p == '%' && *(p + 1) == 'c') {
-      p += 2;
-      if (*p <= 0)
-        i = DEFAULT;
-      else
-        i = state->reverse[(unsigned char)*p];
-      if (i == DEFAULT && *p != 'n')
-        p--;
-      color_wanted &= ~color_table[i].negbit;
-      color_wanted |= color_table[i].bit;
-    } else {
-      if (color_wanted && is_ansi(evaluation->world->database, player)) {
-        *q = 0;
-        /* Generate efficient color string */
-        strcpy(q, ANSI_START);
-        q += ANSI_START_LEN;
-        cnt = 0;
-        for (i = 0; color_table[i].string; i++)
-          if (color_wanted & color_table[i].bit &&
-              color_table[i].bit != color_table[i].negbit) {
-            if (cnt)
-              *q++ = ';';
-            strcpy(q, state->short_sequences[i]);
-            q += strlen(state->short_sequences[i]);
-            cnt++;
-          }
-        strcpy(q, ANSI_END);
-        q += ANSI_END_LEN;
-        color_wanted = 0;
-      }
-      *q++ = *p;
-    }
-  }
-  *q = 0;
-  if (color_wanted && is_ansi(evaluation->world->database, player)) {
-    /* Generate efficient color string */
-    strcpy(q, ANSI_START);
-    q += ANSI_START_LEN;
-    cnt = 0;
-    for (i = 0; color_table[i].string; i++)
-      if (color_wanted & color_table[i].bit &&
-          color_table[i].bit != color_table[i].negbit) {
-        if (cnt)
-          *q++ = ';';
-        strcpy(q, state->short_sequences[i]);
-        q += strlen(state->short_sequences[i]);
-        cnt++;
-      }
-    strcpy(q, ANSI_END);
-    q += ANSI_END_LEN;
-    color_wanted = 0;
-  }
-#else
-  strcpy(to, p);
-#endif
-  return to;
-}
-
 void mecha_notify(EvaluationContext *evaluation, DbRef player, char *msg) {
-  char *tmp;
-
-  tmp = colorize(evaluation, player, msg);
-  raw_notify(evaluation, player, tmp);
-  free_lbuf(tmp);
+  raw_notify(evaluation, player, msg);
 }
 
 void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
@@ -1159,13 +1017,12 @@ void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
 
   if (loc != exception)
     notify_checked(evaluation, loc, player, msg,
-                   (MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A |
-                    MSG_COLORIZE));
+                   MSG_ME_ALL | MSG_F_UP | MSG_S_INSIDE | MSG_NBR_EXITS_A);
   DOLIST(evaluation->world->database, first,
          game_object_contents(evaluation->world->database, loc)) {
     if (first != exception) {
       notify_checked(evaluation, first, player, msg,
-                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE | MSG_COLORIZE));
+                     (MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE));
     }
   }
 }

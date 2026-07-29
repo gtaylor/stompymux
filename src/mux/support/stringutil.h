@@ -18,7 +18,6 @@ char *strsave(const char *s);
 int safe_copy_str(const char *src, char *buff, char **bufp, int max);
 int safe_copy_chr(char src, char *buff, char **bufp, int max);
 int matches_exit_from_list(char *str, char *pattern);
-char *translate_string(const char *str, int type);
 char *upcasestr(char *s);
 int clamped_atoi(const char *str);
 long clamped_atol(const char *str);

@@ -26,6 +26,7 @@ typedef struct StyledState {
   StyledColor foreground;
   StyledColor background;
   bool bold;
+  bool blink;
   bool underline;
   bool inverse;
 } StyledState;
@@ -286,6 +287,8 @@ static bool emit_state(const StyledState *state, char *output,
     return false;
   if (state->bold && !append_string(output, output_size, used, "\033[1m"))
     return false;
+  if (state->blink && !append_string(output, output_size, used, "\033[5m"))
+    return false;
   if (state->underline && !append_string(output, output_size, used, "\033[4m"))
     return false;
   if (state->inverse && !append_string(output, output_size, used, "\033[7m"))
@@ -326,6 +329,8 @@ static bool apply_style_directive(const StyledTextPalette *palette,
 
   if (!strcasecmp(directive, "bold")) {
     state->bold = true;
+  } else if (!strcasecmp(directive, "blink")) {
+    state->blink = true;
   } else if (!strcasecmp(directive, "underline")) {
     state->underline = true;
   } else if (!strcasecmp(directive, "inverse")) {

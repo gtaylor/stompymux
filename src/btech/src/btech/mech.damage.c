@@ -32,9 +32,10 @@
 #include "p.mechrep.h"
 #include "p.pcombat.h"
 
-static char *const MyColorStrings[] = {"", "%ch%cg", "%ch%cy", "%cr"};
-static char *const MyMessageStrings[] = {"ERROR%c", "low.%c", "critical!%c",
-                                         "BREACHED!%c"};
+static char *const MyColorStrings[] = {"", "[fg=green bold]",
+                                       "[fg=yellow bold]", "[fg=red]"};
+static char *const MyMessageStrings[] = {
+    "ERROR[reset]", "low.[reset]", "critical![reset]", "BREACHED![reset]"};
 static inline char *MySeriousColorStr(MECH *mech, int index) {
   return MyColorStrings[index % 4];
 }
@@ -258,7 +259,8 @@ int cause_internaldamage(MECH *wounded, MECH *attacker, int LOS,
         case LLEG:
         case HEAD:
           /* Limb blown off */
-          mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!!%c");
+          mech_notify(wounded, MECHALL,
+                      "[fg=yellow bold]CRITICAL HIT!![reset]");
           if (!Destroyed(wounded)) {
             snprintf(msgbuf, sizeof(msgbuf),
                      "'s %s is blown off in a shower of sparks and smoke!",
@@ -546,16 +548,17 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
   /*  if (LOS && attackPilot != -1) */
   if (LOS) {
     if (!was_transfer)
-      mech_printf(attacker, MECHALL, "%%cgYou hit %s%%c", notificationBuff);
+      mech_printf(attacker, MECHALL, "[fg=green]You hit %s[reset]",
+                  notificationBuff);
     else
-      mech_printf(attacker, MECHALL, "%%cgDamage transfer.. %s%%c",
+      mech_printf(attacker, MECHALL, "[fg=green]Damage transfer.. %s[reset]",
                   notificationBuff);
   }
   if (MechType(wounded) == CLASS_MW && !was_transfer)
     if (damage > 0)
       if (!(damage = armor_effect(wounded, cause, hitloc, damage, intDamage)))
         return;
-  mech_printf(wounded, MECHALL, "%%ch%%cyYou have been hit %s%s%%c",
+  mech_printf(wounded, MECHALL, "[fg=yellow bold]You have been hit %s%s[reset]",
               notificationBuff, was_transfer ? "(transfer)" : "");
   /* Always a good policy :-> */
   if (damage > 0 && intDamage <= 0 && !was_transfer && !Fallen(wounded)) {
@@ -636,8 +639,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
             MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
-            mech_notify(wounded, MECHALL,
-                        "%ch%cyYour searchlight is destroyed!%cn");
+            mech_notify(
+                wounded, MECHALL,
+                "[fg=yellow bold]Your searchlight is destroyed![reset]");
           }
         }
       }
@@ -652,8 +656,9 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
             MechCritStatus(wounded) |= SLITE_DEST;
             MechStatus2(wounded) &= ~SLITE_ON;
             MechLOSBroadcast(wounded, "'s searchlight is blown apart!");
-            mech_notify(wounded, MECHALL,
-                        "%ch%cyYour searchlight is destroyed!%cn");
+            mech_notify(
+                wounded, MECHALL,
+                "[fg=yellow bold]Your searchlight is destroyed![reset]");
           }
         }
       }
@@ -867,7 +872,7 @@ void LoseWeapon(MECH *mech, int hitloc) {
 
   DestroyWeapon(mech, hitloc, I2Weapon(b), firstCrit, 1,
                 GetWeaponCrits(mech, b));
-  mech_printf(mech, MECHALL, "%%ch%%crYour %s is destroyed!%%c",
+  mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
               &MechWeapons[b].name[3]);
 }
 

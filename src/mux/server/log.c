@@ -18,7 +18,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
+#include "mux/support/styled_text.h"
 #ifdef ARBITRARY_LOGFILES
 #include "mux/server/log_cache.h"
 #endif
@@ -56,26 +56,6 @@ void server_log_initialize(ServerLog *log, GameDatabase *database,
 
 bool server_log_is_enabled(const ServerLog *log, int key) {
   return (key & log->configuration->log_options) != 0;
-}
-
-char *strip_ansi_r(char *dest, const char *raw, size_t n) {
-  const char *p = raw;
-  char *q = dest;
-
-  while (p && *p && ((size_t)(q - dest) < n)) {
-    if (*p == ESC_CHAR) {
-      /*
-       * Start of ANSI code. Skip to end.
-       */
-      while (*p && !isalpha(*p))
-        p++;
-      if (*p)
-        p++;
-    } else
-      *q++ = *p++;
-  }
-  *q = '\0';
-  return dest;
 }
 
 /**
@@ -159,8 +139,8 @@ void log_perror(ServerLog *log, const char *primary, const char *secondary,
  */
 void log_text(const char *text) {
   char new[LBUF_SIZE];
-  strncpy(new, text, LBUF_SIZE - 1);
-  fprintf(stderr, "%s", strip_ansi_r(new, text, strlen(text)));
+  styled_text_strip(nullptr, text, new, sizeof(new));
+  fprintf(stderr, "%s", new);
 }
 
 void log_simple(ServerLog *log, int key, const char *primary,
@@ -202,7 +182,8 @@ void log_error(ServerLog *log, int key, const char *primary,
   vsnprintf(buffer, LBUF_SIZE, format, ap);
   va_end(ap);
 
-  strip_ansi_r(stripped_buffer, buffer, LBUF_SIZE);
+  styled_text_strip(log->database->styled_text_palette, buffer, stripped_buffer,
+                    sizeof(stripped_buffer));
   fprintf(stderr, "%s\n", stripped_buffer);
 }
 
@@ -222,8 +203,8 @@ void log_name(ServerLog *log, DbRef target) {
     tp = unparse_object(log->database, nullptr, (DbRef)GOD, target);
   else
     tp = unparse_object_numonly(log->database, target);
-  strncpy(new, tp, LBUF_SIZE - 1);
-  fprintf(stderr, "%s", strip_ansi_r(new, tp, strlen(tp)));
+  styled_text_strip(log->database->styled_text_palette, tp, new, sizeof(new));
+  fprintf(stderr, "%s", new);
   free_lbuf(tp);
   return;
 }

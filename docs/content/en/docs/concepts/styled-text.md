@@ -20,8 +20,8 @@ color escapes without restoring softcode evaluation.
 ## Syntax
 
 `[fg=COLOR]` changes the foreground and `[bg=COLOR]` changes the background.
-`[bold]`, `[underline]`, and `[inverse]` enable formatting. Multiple directives
-can share one tag when separated by whitespace, for example
+`[bold]`, `[blink]`, `[underline]`, and `[inverse]` enable formatting. Multiple
+directives can share one tag when separated by whitespace, for example
 `[fg=blue bg=white bold]`. A grouped tag creates one style scope, so one `[/]`
 restores every setting that it changed. `[reset]` restores terminal defaults
 and closes all open styles. Use `[[` for a literal opening bracket.
@@ -32,6 +32,9 @@ variants. `gray` and `grey` alias `bright-black`. Arbitrary RGB colors use
 `#RRGGBB`. Game administrators can override these names or add new
 case-insensitive names in the `[colors]` table of `stompymux.toml`; configured
 colors are specified as `[RED, GREEN, BLUE]` arrays.
+
+BattleTech maps, status displays, menus, and notifications use this markup and
+the same named palette rather than maintaining a separate terminal-color path.
 
 Markup is validated when a builder sets the value. Malformed tags and literal
 terminal escape sequences are rejected. The validated markup itself is stored

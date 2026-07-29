@@ -1462,16 +1462,19 @@ extern const struct weapon_struct MechWeapons[];
 #define WSDUMP_MASK_NOER                                                       \
   "%-24s %2d     %2d           %2d    %2d     %2d  %3d   %2d"
 #define WSDUMP_MASKS_ER                                                        \
-  "%%cgWeapon Name             Heat  Damage  Range: Min Short Med Long Ext "   \
+  "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long " \
+  "Ext "                                                                       \
   "VRT"
 #define WSDUMP_MASKS_NOER                                                      \
-  "%%cgWeapon Name             Heat  Damage  Range: Min  Short  Med  Long  "   \
+  "[fg=green]Weapon Name             Heat  Damage  Range: Min  Short  Med  "   \
+  "Long  "                                                                     \
   "VRT"
 
 #define WDUMP_MASK                                                             \
   "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %2d  %2d %d"
 #define WDUMP_MASKS                                                            \
-  "%%cgWeapon Name             Heat  Damage  Range: Min Short Med Long VRT C " \
+  "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long " \
+  "VRT C "                                                                     \
   " ApT"
 #include "btmacros.h"
 #include "map.coding.h"

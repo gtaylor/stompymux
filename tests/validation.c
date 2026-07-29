@@ -5,12 +5,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/validation.h"
 
-char *strip_ansi_r(char *destination, const char *source, size_t size) {
-  memcpy(destination, source, size);
-  destination[size] = '\0';
-  return destination;
-}
-
 int string_compare(const ServerConfiguration *configuration, const char *first,
                    const char *second) {
   (void)configuration;
@@ -25,7 +19,8 @@ int main(void) {
     return 1;
   if (ok_new_player_name(&configuration, "A") ||
       ok_new_player_name(&configuration, "1a") ||
-      ok_new_player_name(&configuration, "_a"))
+      ok_new_player_name(&configuration, "_a") ||
+      ok_new_player_name(&configuration, "A\033[31m"))
     return 1;
   return 0;
 }

@@ -78,20 +78,23 @@ void mech_staggercheck_heartbeat(MECH *mech) {
       switch (staggerLevel) {
       case 1:
         mech_notify(mech, MECHALL,
-                    "%cy%chThe damage causes you to stagger a little.%cn");
+                    "[fg=yellow bold]The damage causes you to stagger a "
+                    "little.[reset]");
         MechLOSBroadcast(mech, "stumbles slightly!");
         break;
 
       case 2:
-        mech_notify(mech, MECHALL,
-                    "%crThe damage causes you to stagger even more!%cn");
+        mech_notify(
+            mech, MECHALL,
+            "[fg=red]The damage causes you to stagger even more![reset]");
         MechLOSBroadcast(mech, "starts to stagger from the damage!");
         break;
 
       default:
-        mech_notify(mech, MECHALL,
-                    "%cr%chThe damage causes you to stagger violently while "
-                    "attempting to keep your footing!%cn");
+        mech_notify(
+            mech, MECHALL,
+            "[fg=red bold]The damage causes you to stagger violently while "
+            "attempting to keep your footing![reset]");
         MechLOSBroadcast(
             mech, "staggers back and forth attempting to keep its footing!");
         break;
@@ -148,7 +151,8 @@ void mech_standfail_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   mech_notify(mech, MECHALL,
-              "%cgYou have finally recovered from your attempt to stand.%c");
+              "[fg=green]You have finally recovered from your attempt to "
+              "stand.[reset]");
 }
 
 void mech_fall_event(MuxEvent *e) {
@@ -206,7 +210,7 @@ void mech_stabilizing_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
   mech_notify(mech, MECHSTARTED,
-              "%cgYou have finally stabilized after your jump.%c");
+              "[fg=green]You have finally stabilized after your jump.[reset]");
 }
 
 void mech_jump_event(MuxEvent *e) {
@@ -428,11 +432,13 @@ void mech_crewstun_event(MuxEvent *e) {
     return;
   }
   if (MechType(mech) != CLASS_MECH)
-    mech_notify(mech, MECHALL,
-                "%ch%cgThe crew recovers from their bewilderment!%cn");
+    mech_notify(
+        mech, MECHALL,
+        "[fg=green bold]The crew recovers from their bewilderment![reset]");
   else
-    mech_notify(mech, MECHALL,
-                "%ch%cgYou recover from your stunning experience!%cn");
+    mech_notify(
+        mech, MECHALL,
+        "[fg=green bold]You recover from your stunning experience![reset]");
 
   if (MechCritStatus(mech) & MECH_STUNNED)
     MechCritStatus(mech) &= ~MECH_STUNNED;

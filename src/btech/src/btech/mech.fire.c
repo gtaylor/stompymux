@@ -58,7 +58,8 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
     return;
 
   mech_printf(objMech, MECHALL,
-              "%%cr%%chYour %s takes damage from the fire!%%cn", strLocName);
+              "[fg=red bold]Your %s takes damage from the fire![reset]",
+              strLocName);
   DamageMech(objMech, objMech, 0, -1, wLoc, 0, 0, wDamRoll, 0, 0, 0, -1, 0, 1);
 
   /*
@@ -178,10 +179,12 @@ void checkVehicleInFire(MECH *objMech, int fromHexFire) {
     return;
 
   if (fromHexFire)
-    mech_notify(objMech, MECHALL,
-                "%cr%chYou drive through a wall of searing flames!%cn");
+    mech_notify(
+        objMech, MECHALL,
+        "[fg=red bold]You drive through a wall of searing flames![reset]");
   else
-    mech_notify(objMech, MECHALL, "%cr%chThe fires surround your vehicle!%cn");
+    mech_notify(objMech, MECHALL,
+                "[fg=red bold]The fires surround your vehicle![reset]");
 
   switch (wRoll) {
   case 8: /* roll once on the motive system chart */
@@ -192,7 +195,7 @@ void checkVehicleInFire(MECH *objMech, int fromHexFire) {
        */
     } else {
       mech_notify(objMech, MECHALL,
-                  "%cr%chThe fire damages your motive system!%cn");
+                  "[fg=red bold]The fire damages your motive system![reset]");
       DoMotiveSystemHit(objMech, 0);
     }
     break;
@@ -202,8 +205,9 @@ void checkVehicleInFire(MECH *objMech, int fromHexFire) {
     /*
      * Do 1d6 damage to each loc
      */
-    mech_notify(objMech, MECHALL,
-                "%cr%chThe fire sweeps across your unit damaging it!%cn");
+    mech_notify(
+        objMech, MECHALL,
+        "[fg=red bold]The fire sweeps across your unit damaging it![reset]");
 
     for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
       wDamage = btech_random_range(objMech->xcode.context, 1, 6);

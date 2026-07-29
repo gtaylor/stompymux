@@ -354,7 +354,8 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
                        "'s rear armor lights up as ammo being dumped ignites!");
       mech_printf(
           mech, MECHALL,
-          "%%ch%%crSome of the %s ammo dumping out of your mech ignites!%%cn",
+          "[fg=red bold]Some of the %s ammo dumping out of your mech "
+          "ignites![reset]",
           get_parts_long_name(mech->xcode.context, I2Weapon(wWeapIdx), 0));
       DamageMech(mech, attacker, 0, -1, wHitLoc, 1, 0, wBlowDamage, -1, -1, 0,
                  -1, 0, 1);
@@ -364,8 +365,9 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
       wPartData = GetPartData(mech, wSecIter, wSlotIter);
       if (wPartData > 0)
         SetPartData(mech, wSecIter, wSlotIter, wPartData - 1);
-      mech_notify(mech, MECHALL,
-                  "%ch%crAll ammo dumping operations have stopped!%cn");
+      mech_notify(
+          mech, MECHALL,
+          "[fg=red bold]All ammo dumping operations have stopped![reset]");
       StopDump(mech);
     }
   }

@@ -11,7 +11,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/formatting.h"
 #include "mux/world/world_context.h"
 

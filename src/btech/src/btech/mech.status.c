@@ -116,7 +116,8 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, MECH *mech) {
                     MechTargY(mech));
   }
   if (MechPKiller(mech))
-    notify(evaluation, player, "Weapon Safeties are %ch%crOFF%cn.\n");
+    notify(evaluation, player,
+           "Weapon Safeties are [fg=red bold]OFF[reset].\n");
   if (GotPilot(mech) &&
       HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "maneuvering_ace"))
     notify_printf(evaluation, player, "Turn Mode: %s",
@@ -396,7 +397,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
 
   memset(heatstr, 0, sizeof(char) * length);
 
-  strcat(heatstr, "%cx%ch");
+  strcat(heatstr, "[fg=black bold]");
 
   if (minheat > HEAT_LEVEL_NONE)
     start = minheat - HEAT_LEVEL_NONE;
@@ -408,9 +409,9 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
     heat -= start;
 
   if (start)
-    strcat(heatstr, "<%cx%ch");
+    strcat(heatstr, "<[fg=black bold]");
   else
-    strcat(heatstr, " %cx%ch");
+    strcat(heatstr, " [fg=black bold]");
 
   for (counter = start; counter < minheat; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
@@ -420,7 +421,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%cg%ch|%c%cg");
+  strcat(heatstr, "[fg=green bold]|[reset][fg=green]");
   for (; counter < minheat + HEAT_LEVEL_BGREEN; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
@@ -429,7 +430,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%ch");
+  strcat(heatstr, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LYELLOW; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
@@ -438,7 +439,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%c%cy%ch|%c%cy");
+  strcat(heatstr, "[reset][fg=yellow bold]|[reset][fg=yellow]");
   for (; counter < minheat + HEAT_LEVEL_BYELLOW; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
@@ -447,7 +448,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%ch");
+  strcat(heatstr, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_LRED; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
@@ -456,7 +457,7 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%c%cr%ch|%c%cr");
+  strcat(heatstr, "[reset][fg=red bold]|[reset][fg=red]");
   for (; counter < minheat + HEAT_LEVEL_BRED; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
@@ -465,13 +466,13 @@ static char *MakeHeatScaleInfo(MECH *mech, char *fillchar, char *heatstr,
   if (state)
     state++;
 
-  strcat(heatstr, "%ch");
+  strcat(heatstr, "[bold]");
   for (; counter < minheat + HEAT_LEVEL_TOP; counter++) {
     strncat(heatstr, &fillchar[(short)state], 1);
     if (heat && !--heat)
       state = 0;
   }
-  strcat(heatstr, "%cw%ch|%c");
+  strcat(heatstr, "[fg=white bold]|[reset]");
   return heatstr;
 }
 
@@ -500,7 +501,8 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
              (int)(10. * MechPlusHeat(mech)));
     notify(evaluation, player, buff);
     snprintf(buff, 256,
-             "Speed:      %%ch%%cg%3d%%cn KPH  Heading:      %%ch%%cg%3d%%cn "
+             "Speed:      [fg=green bold]%3d[reset] KPH  Heading:      "
+             "[fg=green bold]%3d[reset] "
              "deg     Heat Sinks:       %3d",
              (int)(MechSpeed(mech)), MechFacing(mech),
              MechActiveNumsinks(mech));
@@ -526,17 +528,18 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
              "X, Y, Z:%3d,%3d,%3d  Heat Sinks:          %3d       %s",
              MechX(mech), MechY(mech), MechZ(mech), MechActiveNumsinks(mech),
              is_aero(mech)
-                 ? tprintf("%s angle: %%ch%%cg%d%%cn",
+                 ? tprintf("%s angle: [fg=green bold]%d[reset]",
                            MechDesiredAngle(mech) >= 0 ? "Climbing" : "Diving",
                            abs(MechDesiredAngle(mech)))
                  : "");
     notify(evaluation, player, buff);
     if (FlyingT(mech) || MechMove(mech) == MOVE_SUB) {
-      snprintf(buff, sizeof(buff),
-               "Speed:      %%ch%%cg%3d%%cn KPH  Vertical Speed:      "
-               "%%ch%%cg%3d%%cn KPH   Des. Speed %3d KPH",
-               (int)(MechSpeed(mech)), (int)(MechVerticalSpeed(mech)),
-               (int)(MechDesiredSpeed(mech)));
+      snprintf(
+          buff, sizeof(buff),
+          "Speed:      [fg=green bold]%3d[reset] KPH  Vertical Speed:      "
+          "[fg=green bold]%3d[reset] KPH   Des. Speed %3d KPH",
+          (int)(MechSpeed(mech)), (int)(MechVerticalSpeed(mech)),
+          (int)(MechDesiredSpeed(mech)));
       notify(evaluation, player, buff);
       f = MAX(0, AeroFuel(mech));
       if (MechMove(mech) == MOVE_SUB) {
@@ -544,12 +547,14 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
                  (int)MechFacing(mech), MechDesiredFacing(mech));
       } else if (AeroFreeFuel(mech)) {
         snprintf(buff, sizeof(buff),
-                 "Heading:    %%ch%%cg%3d%%cn deg  Des. Heading:        %3d "
+                 "Heading:    [fg=green bold]%3d[reset] deg  Des. Heading:    "
+                 "    %3d "
                  "deg   Fuel: Unlimited",
                  MechFacing(mech), MechDesiredFacing(mech));
       } else {
         snprintf(buff, sizeof(buff),
-                 "Heading:    %%ch%%cg%3d%%cn deg  Des. Heading:        %3d "
+                 "Heading:    [fg=green bold]%3d[reset] deg  Des. Heading:    "
+                 "    %3d "
                  "deg   Fuel: %d (%.2f %%)",
                  MechFacing(mech), MechDesiredFacing(mech), f,
                  100.0 * f / AeroFuelOrig(mech));
@@ -557,10 +562,10 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
 
       notify(evaluation, player, buff);
     } else if (MechMove(mech) != MOVE_NONE) {
-      snprintf(
-          buff, sizeof(buff),
-          "Speed:      %%ch%%cg%3d%%cn KPH  Heading:      %%ch%%cg%3d%%cn deg",
-          (int)(MechSpeed(mech)), MechFacing(mech));
+      snprintf(buff, sizeof(buff),
+               "Speed:      [fg=green bold]%3d[reset] KPH  Heading:      "
+               "[fg=green bold]%3d[reset] deg",
+               (int)(MechSpeed(mech)), MechFacing(mech));
       notify(evaluation, player, buff);
       snprintf(buff, sizeof(buff), "Des. Speed: %3d KPH  Des. Heading: %3d deg",
                (int)MechDesiredSpeed(mech), MechDesiredFacing(mech));
@@ -579,8 +584,9 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
   case CLASS_MW:
   case CLASS_BSUIT:
     snprintf(buff, sizeof(buff),
-             "X, Y, Z:%3d,%3d,%3d  Speed:      %%ch%%cg%3d%%cn KPH  Heading:   "
-             "   %%ch%%cg%3d%%cn deg",
+             "X, Y, Z:%3d,%3d,%3d  Speed:      [fg=green bold]%3d[reset] KPH  "
+             "Heading:   "
+             "   [fg=green bold]%3d[reset] deg",
              MechX(mech), MechY(mech), MechZ(mech), (int)(MechSpeed(mech)),
              MechFacing(mech));
     notify(evaluation, player, buff);
@@ -1255,10 +1261,10 @@ char *evaluate_ammo_amount(int now, int max) {
   int f = (now * 100) / max;
 
   if (f >= 50)
-    return "%ch%cg";
+    return "[fg=green bold]";
   if (f >= 25)
-    return "%ch%cy";
-  return "%ch%cr";
+    return "[fg=yellow bold]";
+  return "[fg=red bold]";
 }
 
 static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
@@ -1276,10 +1282,10 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
   int count, ammoweapcount;
   int loop;
   int ii, i = 0;
-  char weapname[80] = {0};
+  char weapname[LBUF_SIZE] = {0};
   char *tmpc;
-  char weapbuff[120] = {0};
-  char tempbuff[160] = {0};
+  char weapbuff[LBUF_SIZE] = {0};
+  char tempbuff[LBUF_SIZE] = {0};
   char location[80] = {0};
   char astrAmmoSpacer[MBUF_SIZE] = {0}; /* mem is cheap. over allocate */
   int running_sum = 0;
@@ -1299,99 +1305,105 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
     if (MechSpecials(mech) & ECM_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "ECM(%s)  ",
-               (MechCritStatus(mech) & ECM_DESTROYED) ? "%ch%crXX%cn"
+               (MechCritStatus(mech) & ECM_DESTROYED) ? "[fg=red bold]XX[reset]"
                : ECMEnabled(mech)
-                   ? (ECMActive(mech) ? "%ch%cgECM%cn" : "%ch%crECM%cn")
-               : ECCMEnabled(mech)  ? "%ch%cgECCM%cn"
-               : ECMCountered(mech) ? "%crOff%cn"
-                                    : "%cgOff%cn");
+                   ? (ECMActive(mech) ? "[fg=green bold]ECM[reset]"
+                                      : "[fg=red bold]ECM[reset]")
+               : ECCMEnabled(mech)  ? "[fg=green bold]ECCM[reset]"
+               : ECMCountered(mech) ? "[fg=red]Off[reset]"
+                                    : "[fg=green]Off[reset]");
     }
 
     if (MechSpecials2(mech) & ANGEL_ECM_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "AngelECM(%s)  ",
-               (!HasWorkingAngelECMSuite(mech)) ? "%ch%crXX%cn"
+               (!HasWorkingAngelECMSuite(mech)) ? "[fg=red bold]XX[reset]"
                : AngelECMEnabled(mech)
-                   ? (AngelECMActive(mech) ? "%ch%cgECM%cn" : "%ch%crECM%cn")
-               : AngelECCMEnabled(mech) ? "%ch%cgECCM%cn"
-               : ECMCountered(mech)     ? "%crOff%cn"
-                                        : "%cgOff%cn");
+                   ? (AngelECMActive(mech) ? "[fg=green bold]ECM[reset]"
+                                           : "[fg=red bold]ECM[reset]")
+               : AngelECCMEnabled(mech) ? "[fg=green bold]ECCM[reset]"
+               : ECMCountered(mech)     ? "[fg=red]Off[reset]"
+                                        : "[fg=green]Off[reset]");
     }
 
     if (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "PersonalECM(%s)  ",
                PerECMEnabled(mech)
-                   ? (PerECMActive(mech) ? "%ch%cgECM%cn" : "%ch%crECM%cn")
-               : PerECCMEnabled(mech) ? "%ch%cgECCM%cn"
-               : ECMCountered(mech)   ? "%crOff%cn"
-                                      : "%cgOff%cn");
+                   ? (PerECMActive(mech) ? "[fg=green bold]ECM[reset]"
+                                         : "[fg=red bold]ECM[reset]")
+               : PerECCMEnabled(mech) ? "[fg=green bold]ECCM[reset]"
+               : ECMCountered(mech)   ? "[fg=red]Off[reset]"
+                                      : "[fg=green]Off[reset]");
     }
 
     if (MechSpecials2(mech) & STEALTH_ARMOR_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "SthArmor(%s)  ",
-               (MechCritStatus(mech) & ECM_DESTROYED) ? "%ch%crXX%cn"
-               : StealthArmorActive(mech)             ? "%ch%cgOn%cn"
-                                                      : "%cgRdy%cn");
+               (MechCritStatus(mech) & ECM_DESTROYED) ? "[fg=red bold]XX[reset]"
+               : StealthArmorActive(mech) ? "[fg=green bold]On[reset]"
+                                          : "[fg=green]Rdy[reset]");
     }
 
     if (MechSpecials2(mech) & NULLSIGSYS_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "NullSigSys(%s)  ",
-               NullSigSysDest(mech)     ? "%ch%crXX%cn"
-               : NullSigSysActive(mech) ? "%ch%cgOn%cn"
-                                        : "%cgRdy%cn");
+               NullSigSysDest(mech)     ? "[fg=red bold]XX[reset]"
+               : NullSigSysActive(mech) ? "[fg=green bold]On[reset]"
+                                        : "[fg=green]Rdy[reset]");
     }
 
     if (MechSpecials(mech) & SLITE_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "SLITE(%s)  ",
-               (MechCritStatus(mech) & SLITE_DEST) ? "%cr%chXX%cn"
-               : (MechStatus2(mech) & SLITE_ON)    ? "%ch%cgOn%cn"
-                                                   : "%cgOff%cn");
+               (MechCritStatus(mech) & SLITE_DEST) ? "[fg=red bold]XX[reset]"
+               : (MechStatus2(mech) & SLITE_ON)    ? "[fg=green bold]On[reset]"
+                                                   : "[fg=green]Off[reset]");
     }
 
     if (HasC3m(mech))
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3M%%cn  ",
-               C3Destroyed(mech)             ? "%cr"
-               : AnyECMDisturbed(mech)       ? "%cy"
-               : MechC3NetworkSize(mech) > 0 ? "%cg%ch"
-                                             : "%cg");
+               "%sC3M[reset]  ",
+               C3Destroyed(mech)             ? "[fg=red]"
+               : AnyECMDisturbed(mech)       ? "[fg=yellow]"
+               : MechC3NetworkSize(mech) > 0 ? "[fg=green bold]"
+                                             : "[fg=green]");
 
     if (HasC3s(mech))
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3S%%cn  ",
-               C3Destroyed(mech)             ? "%cr"
-               : AnyECMDisturbed(mech)       ? "%cy"
-               : MechC3NetworkSize(mech) > 0 ? "%cg%ch"
-                                             : "%cg");
+               "%sC3S[reset]  ",
+               C3Destroyed(mech)             ? "[fg=red]"
+               : AnyECMDisturbed(mech)       ? "[fg=yellow]"
+               : MechC3NetworkSize(mech) > 0 ? "[fg=green bold]"
+                                             : "[fg=green]");
 
     if (HasC3i(mech))
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "%sC3i%%cn  ",
-               C3iDestroyed(mech)             ? "%cr"
-               : AnyECMDisturbed(mech)        ? "%cy"
-               : MechC3iNetworkSize(mech) > 0 ? "%cg%ch"
-                                              : "%cg");
+               "%sC3i[reset]  ",
+               C3iDestroyed(mech)             ? "[fg=red]"
+               : AnyECMDisturbed(mech)        ? "[fg=yellow]"
+               : MechC3iNetworkSize(mech) > 0 ? "[fg=green bold]"
+                                              : "[fg=green]");
 
     if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "TSM(%s)  ",
-               ((MechHeat(mech) >= 9.0) ? "%ch%cgOn%cn" : "%cgOff%cn"));
+               ((MechHeat(mech) >= 9.0) ? "[fg=green bold]On[reset]"
+                                        : "[fg=green]Off[reset]"));
 
     if (HasTAG(mech)) {
       snprintf(
           tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
           "TAG(%s)  ",
-          isTAGDestroyed(mech) ? "%cr%chXX%cn"
+          isTAGDestroyed(mech) ? "[fg=red bold]XX[reset]"
           : ((btech_context_get_mech(mech->xcode.context, TAGTarget(mech)) ==
               NULL) ||
              (TaggedBy(btech_context_get_mech(mech->xcode.context,
                                               TAGTarget(mech))) != mech->mynum))
-              ? (TagRecycling(mech) ? "%cy%chNot Rdy%cn" : "%cgRdy%cn")
-              : tprintf("%s%s%%cn", (TagRecycling(mech) ? "%cy%ch" : "%ch"),
+              ? (TagRecycling(mech) ? "[fg=yellow bold]Not Rdy[reset]"
+                                    : "[fg=green]Rdy[reset]")
+              : tprintf("%s%s[reset]",
+                        (TagRecycling(mech) ? "[fg=yellow bold]" : "[bold]"),
                         mech_to_mech_display_id(
                             mech, btech_context_get_mech(mech->xcode.context,
                                                          TAGTarget(mech)))
@@ -1400,19 +1412,19 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
 
     if (MechSpecials2(mech) & SUPERCHARGER_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "SCHARGE: %s%d%%cn (%s)",
-               MechSChargeCounter(mech) > 3   ? "%ch%cr"
-               : MechSChargeCounter(mech) > 0 ? "%ch%cy"
-                                              : "%cg",
+               "SCHARGE: %s%d[reset] (%s)",
+               MechSChargeCounter(mech) > 3   ? "[fg=red bold]"
+               : MechSChargeCounter(mech) > 0 ? "[fg=yellow bold]"
+                                              : "[fg=green]",
                MechSChargeCounter(mech),
                MechStatus(mech) & SCHARGE_ENABLED ? "On" : "Off");
 
     if (MechSpecials(mech) & MASC_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "MASC: %s%d%%cn (%s)",
-               MechMASCCounter(mech) > 3   ? "%ch%cr"
-               : MechMASCCounter(mech) > 0 ? "%ch%cy"
-                                           : "%cg",
+               "MASC: %s%d[reset] (%s)",
+               MechMASCCounter(mech) > 3   ? "[fg=red bold]"
+               : MechMASCCounter(mech) > 0 ? "[fg=yellow bold]"
+                                           : "[fg=green]",
                MechMASCCounter(mech),
                MechStatus(mech) & MASC_ENABLED ? "On" : "Off");
 
@@ -1524,22 +1536,22 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
     tempbuff[0] = 0;
   }
 #define SHOWSECTSTAT(a)                                                        \
-  (SectIsDestroyed(mech, a) ? "%ch%cx*****%c"                                  \
+  (SectIsDestroyed(mech, a) ? "[fg=black bold]*****[reset]"                    \
    : (MechSections(mech)[(a)].recycle > 0)                                     \
        ? tprintf("%-5d", (MechSections(mech)[(a)].recycle / WEAPON_TICK) +     \
                              (MechSections(mech)[(a)].recycle % WEAPON_TICK))  \
-       : "%cgReady%c")
+       : "[fg=green]Ready[reset]")
 
   UpdateRecycling(mech);
   if (MechType(mech) == CLASS_MECH && !compact) {
     tempbuff[0] = 0;
 
 #define SHOWPHYSTATUS(a, b)                                                    \
-  (!canUsePhysical(mech, a, b) ? "%ch%crXX%c"                                  \
+  (!canUsePhysical(mech, a, b) ? "[fg=red bold]XX[reset]"                      \
    : (MechSections(mech)[(a)].recycle > 0)                                     \
        ? tprintf("%-3d", (MechSections(mech)[(a)].recycle / WEAPON_TICK) +     \
                              +(MechSections(mech)[(a)].recycle % WEAPON_TICK)) \
-       : "%cgRdy%c")
+       : "[fg=green]Rdy[reset]")
 
 #define SHOW(part, loc)                                                        \
   snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),   \
@@ -1677,37 +1689,37 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
 
       if (PartIsBroken(mech, loop, critical[ii]) ||
           PartTempNuke(mech, loop, critical[ii]) == FAIL_DESTROYED)
-        strcat(weapbuff, "%ch%cx*****%c  || ");
+        strcat(weapbuff, "[fg=black bold]*****[reset]  || ");
       else if (PartIsDisabled(mech, loop, critical[ii]))
-        strcat(weapbuff, "%crDISABLE%c|| ");
+        strcat(weapbuff, "[fg=red]DISABLE[reset]|| ");
       else if (PartTempNuke(mech, loop, critical[ii])) {
         switch (PartTempNuke(mech, loop, critical[ii])) {
         case FAIL_JAMMED:
-          strcat(weapbuff, "%crJAMMED%c || ");
+          strcat(weapbuff, "[fg=red]JAMMED[reset] || ");
           break;
         case FAIL_SHORTED:
-          strcat(weapbuff, "%crSHORTED%c|| ");
+          strcat(weapbuff, "[fg=red]SHORTED[reset]|| ");
           break;
         case FAIL_EMPTY:
-          strcat(weapbuff, " %crEMPTY%c || ");
+          strcat(weapbuff, " [fg=red]EMPTY[reset] || ");
           break;
         case FAIL_DUD:
-          strcat(weapbuff, "%crDUD%c    || ");
+          strcat(weapbuff, "[fg=red]DUD[reset]    || ");
           break;
         case FAIL_AMMOJAMMED:
-          strcat(weapbuff, "%crAMMOJAM%c|| ");
+          strcat(weapbuff, "[fg=red]AMMOJAM[reset]|| ");
           break;
         }
       } else if (GetPartFireMode(mech, loop, critical[ii]) & ROCKET_FIRED)
-        strcat(weapbuff, "%ch%cxEmpty%c  || ");
+        strcat(weapbuff, "[fg=black bold]Empty[reset]  || ");
       else if (weapdata[ii])
         strcat(weapbuff, tprintf(" %2d    || ",
                                  weapdata[ii] / WEAPON_TICK +
                                      (weapdata[ii] % WEAPON_TICK ? 1 : 0)));
       else if (countDamagedSlotsFromCrit(mech, loop, critical[ii]))
-        strcat(weapbuff, "%crDAMAGED%c|| ");
+        strcat(weapbuff, "[fg=red]DAMAGED[reset]|| ");
       else
-        strcat(weapbuff, "%cgReady%c  || ");
+        strcat(weapbuff, "[fg=green]Ready[reset]  || ");
 
       if ((ii + running_sum) < ammoweapcount) {
         ammo_mode = GetWeaponAmmoModeLetter_Model_Mode(
@@ -1717,7 +1729,7 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
         snprintf(tempbuff, sizeof(tempbuff), "  %s%3d%s",
                  evaluate_ammo_amount(ammo[ii + running_sum],
                                       ammomax[ii + running_sum]),
-                 ammo[ii + running_sum], "%cn");
+                 ammo[ii + running_sum], "[reset]");
         strcat(weapname, tempbuff);
         if (compact) {
           if (ammo_mode && ammo_mode != ' ')
@@ -1751,7 +1763,7 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
                &MechWeapons[ammoweap[running_sum]].name[3], ammo_mode);
       snprintf(tempbuff, sizeof(tempbuff), "  %s%3d%s",
                evaluate_ammo_amount(ammo[running_sum], ammomax[running_sum]),
-               ammo[running_sum], "%cn");
+               ammo[running_sum], "[reset]");
       strcat(astrAmmoSpacer, weapname);
       strcat(astrAmmoSpacer, tempbuff);
 
@@ -2336,8 +2348,9 @@ int ArmorEvaluateSerious(MECH *mech, int loc, int flag, int *ret_armor_value) {
 }
 
 /* bright green, dark green, bright yellow, dark red, black */
-static const char *const armordamcolorstr[] = {"%ch%cg", "%cg",    "%ch%cy",
-                                               "%cr",    "%ch%cx", "%ch%cb"};
+static const char *const armordamcolorstr[] = {
+    "[fg=green bold]", "[fg=green]",      "[fg=yellow bold]",
+    "[fg=red]",        "[fg=black bold]", "[fg=blue bold]"};
 
 /* Armor location character (enemy scan). Last one is for armor under repair. */
 static const char armordamltrstr[] = "OoxX*?";
@@ -2352,11 +2365,11 @@ typedef struct ArmorDamageText {
 } ArmorDamageText;
 
 typedef struct ArmorKeyText {
-  char text[6 + 3 + 2 + 1];
+  char text[64];
 } ArmorKeyText;
 
 typedef struct ArmorFieldText {
-  char text[6 + 23 + 2 + 1];
+  char text[64];
 } ArmorFieldText;
 
 static ArmorDamageText armor_damage_text(const int armor_level, int armor_value,
@@ -2427,7 +2440,7 @@ static ArmorKeyText armor_key_text(int line_key, int owner) {
   } else {
     /* Line 2-6 = armor level symbols.  */
     /* XXX: Probably safe from buffer overflows.  */
-    snprintf(result.text, sizeof(result.text), "%s%c%c %%c",
+    snprintf(result.text, sizeof(result.text), "%s%c%c [reset]",
              armordamcolorstr[6 - line_key], armordamltrstr[6 - line_key],
              armordamltrstr[6 - line_key]);
   }
@@ -2447,9 +2460,8 @@ static ArmorFieldText armor_field_text(MECH *mech, const int loc,
   int armor_level, armor_value;
 
   /* Sanity check arguments.  */
-  if (width > (int)(sizeof(result.text) - 6 - 2 - 1)) {
-    width = (int)(sizeof(result.text) - 6 - 2 - 1);
-  }
+  if (width > 23)
+    width = 23;
 
   /* Get armor status.  */
   armor_level = ArmorEvaluateSerious(mech, loc, flag, &armor_value);
@@ -2464,7 +2476,7 @@ static ArmorFieldText armor_field_text(MECH *mech, const int loc,
 
   ArmorDamageText damage =
       armor_damage_text(armor_level, armor_value, flag, width);
-  snprintf(result.text, sizeof(result.text), "%s%s%%c",
+  snprintf(result.text, sizeof(result.text), "%s%s[reset]",
            armordamcolorstr[armor_level], damage.text);
 
   return result;

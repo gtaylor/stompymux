@@ -141,8 +141,8 @@ void ammo_expedinture_check(MECH *mech, int weapindx, int ns) {
   if (Started(mech))
     if ((sev * 65536 + weapindx) % 65536)
       mech_printf(
-          mech, MECHALL, "%sWARNING: Ammo for %s is running low.%%c",
-          sev ? "%ch%cr" : "%ch%cy",
+          mech, MECHALL, "%sWARNING: Ammo for %s is running low.[reset]",
+          sev ? "[fg=red bold]" : "[fg=yellow bold]",
           get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
 }
 
@@ -182,11 +182,11 @@ void Inferno_Hit(MECH *mech, MECH *hitMech, int missiles, int LOS) {
   if (Jellied(hitMech) || Burning(hitMech)) {
     MechLOSBroadcast(hitMech, "burns a bit more brightly.");
     mech_notify(hitMech, MECHALL,
-                "%ch%crMore burning jelly joins the flames!%cn");
+                "[fg=red bold]More burning jelly joins the flames![reset]");
   } else {
     MechLOSBroadcast(hitMech, "suddenly bursts into flames!");
     mech_notify(hitMech, MECHALL,
-                "%ch%crYou are sprayed with burning jelly!%cn");
+                "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
   heat_effect(mech, hitMech, hmod * 30, 1); /* 3min for _each_ missile */
   water_extinguish_inferno(

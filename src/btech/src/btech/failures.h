@@ -118,99 +118,108 @@ struct failure_data failures[] = {
 #define ENERGY_INDEX 0
     /* Energy Weapons - 0 */
 
-    {"%ch%crYour weapon fails to charge properly!%cn", 15, FailureWeaponDamage,
-     FAIL_NONE, 0},
-    {"%ch%crYour weapon fails to charge properly!%cn", 30, FailureWeaponDamage,
-     FAIL_NONE, 0},
-    {"%ch%crYour weapon fails to charge properly!%cn", 45, FailureWeaponDamage,
-     FAIL_NONE, 0},
-    {"%ch%crFailure in the weapon's cooling system ; too much heat "
-     "produced!%cn",
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 15,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 30,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 45,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Failure in the weapon's cooling system ; too much heat "
+     "produced![reset]",
      30, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
-    {"%ch%crOdd energy reading from the weapon ; It seems to have gone "
-     "offline!%cn",
+    {"[fg=red bold]Odd energy reading from the weapon ; It seems to have gone "
+     "offline![reset]",
      0, FailureWeaponSpike, FAIL_SHORTED, 0},
-    {"%ch%crWeapon melts down!%cn", 0, FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Weapon melts down![reset]", 0, FailureWeaponSpike,
+     FAIL_SHORTED, 0},
 
 /* Autocannons - 6 */
 #define AC_INDEX 6
 
-    {"%ch%crRound misfires! .. and spirals off!%cn", 0, FailureWeaponDud,
-     FAIL_NONE, 0},
-    {"%ch%crRound not fired!  Dud!%cn", 0, FailureWeaponDud, FAIL_DUD, 0},
-    {"%ch%crWeapon JAMS... clearing!%cn", 0, FailureWeaponJammed, FAIL_JAMMED,
-     0},
-    {"%ch%crFailure in the weapon's cooling system, too much heat produced!%cn",
-     20, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
-    {"%ch%crFailure in the weapon's cooling system, too much heat produced!%cn",
-     40, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
-    {"%ch%crRound not fired!  STUCK in chamber!%cn", 0, FailureWeaponDud,
+    {"[fg=red bold]Round misfires! .. and spirals off![reset]", 0,
+     FailureWeaponDud, FAIL_NONE, 0},
+    {"[fg=red bold]Round not fired!  Dud![reset]", 0, FailureWeaponDud,
      FAIL_DUD, 0},
+    {"[fg=red bold]Weapon JAMS... clearing![reset]", 0, FailureWeaponJammed,
+     FAIL_JAMMED, 0},
+    {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
+     "produced![reset]",
+     20, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+    {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
+     "produced![reset]",
+     40, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+    {"[fg=red bold]Round not fired!  STUCK in chamber![reset]", 0,
+     FailureWeaponDud, FAIL_DUD, 0},
 
 /* Missiles - 12 */
 #define MISSILE_INDEX 12
 
-    {"%ch%crRack jams, attemping to clear!%cn", 0, FailureWeaponJammed,
-     FAIL_JAMMED, 0},
-    {"%ch%crSome of your missiles veer off course!%cn", 20,
+    {"[fg=red bold]Rack jams, attemping to clear![reset]", 0,
+     FailureWeaponJammed, FAIL_JAMMED, 0},
+    {"[fg=red bold]Some of your missiles veer off course![reset]", 20,
      FailureWeaponMissiles, FAIL_NONE, 0},
-    {"%ch%crSome of your missiles veer off course!%cn", 40,
+    {"[fg=red bold]Some of your missiles veer off course![reset]", 40,
      FailureWeaponMissiles, FAIL_NONE, 0},
-    {"%ch%crGuidance Failure!  All missile veer off course!%cn", 100,
+    {"[fg=red bold]Guidance Failure!  All missile veer off course![reset]", 100,
      FailureWeaponMissiles, FAIL_NONE, 0},
-    {"%ch%crWeapon power spikes.. attempting to restart!%cn", 0,
+    {"[fg=red bold]Weapon power spikes.. attempting to restart![reset]", 0,
      FailureWeaponSpike, FAIL_SHORTED, 0},
-    {"%ch%crWeapon power spikes.. Electronics fused!!%cn", 0,
+    {"[fg=red bold]Weapon power spikes.. Electronics fused!![reset]", 0,
      FailureWeaponSpike, FAIL_SHORTED, 0},
 
 /* Flamer - 18 */
 #define FLAMMER_INDEX 18
 
-    {"%ch%crGel line clogs, sending pressure through it now!%cn", 0,
+    {"[fg=red bold]Gel line clogs, sending pressure through it now![reset]", 0,
      FailureWeaponJammed, FAIL_JAMMED, 0},
-    {"%ch%crElectric ignition shorts out! Restarting!%cn", 0,
+    {"[fg=red bold]Electric ignition shorts out! Restarting![reset]", 0,
      FailureWeaponSpike, FAIL_SHORTED, 0},
-    {"%ch%crFuel leaks on the chassis and ignites!%cn", 100, FailureWeaponHeat,
-     FAIL_NONE, 0},
+    {"[fg=red bold]Fuel leaks on the chassis and ignites![reset]", 100,
+     FailureWeaponHeat, FAIL_NONE, 0},
 
-    {"%ch%crFuel at critical point!! Shutting down weapon to vent heat!%cn", 0,
-     FailureWeaponSpike, FAIL_SHORTED, 0},
-    {"%ch%crEjection nozzle gums up!  Please wait while pressure is "
-     "applied!%cn",
+    {"[fg=red bold]Fuel at critical point!! Shutting down weapon to vent "
+     "heat![reset]",
+     0, FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Ejection nozzle gums up!  Please wait while pressure is "
+     "applied![reset]",
      0, FailureWeaponJammed, FAIL_JAMMED, 0},
-    {"%ch%crFuel canisters explode!  No fuel left to burn!%cn", 0,
+    {"[fg=red bold]Fuel canisters explode!  No fuel left to burn![reset]", 0,
      FailureWeaponSpike, FAIL_EMPTY, 0},
 
 /* Computer - 24 */
 #define COMPUTER_INDEX 24
 
-    {"%ch%crComputer Glitch!  Target lost, please reacquire!%cn", 0,
+    {"[fg=red bold]Computer Glitch!  Target lost, please reacquire![reset]", 0,
      FailureComputerTarget, FAIL_NONE, REQ_TARGET},
-    {"%ch%crTactical shorts out! Fixing .. Please stand by.%cn", 1,
+    {"[fg=red bold]Tactical shorts out! Fixing .. Please stand by.[reset]", 1,
      FailureComputerScanner, FAIL_NONE, REQ_TAC},
-    {"%ch%crLong Range Sensors short out! .. Fixing .. Please stand by.%cn", 2,
-     FailureComputerScanner, FAIL_NONE, REQ_LRS},
-    {"%ch%crScanners short out! Fixing .. Please stand by.%cn", 4,
+    {"[fg=red bold]Long Range Sensors short out! .. Fixing .. Please stand "
+     "by.[reset]",
+     2, FailureComputerScanner, FAIL_NONE, REQ_LRS},
+    {"[fg=red bold]Scanners short out! Fixing .. Please stand by.[reset]", 4,
      FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
-    {"%ch%crA sudden *SNAP* echos in your cockpit then all your displays "
-     "die!%cn",
+    {"[fg=red bold]A sudden *SNAP* echos in your cockpit then all your "
+     "displays "
+     "die![reset]",
      7, FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
-    {"%ch%crYou hear a loud *SNAP* *CRACKLE* and then everything powers "
-     "down!%cn",
+    {"[fg=red bold]You hear a loud *SNAP* *CRACKLE* and then everything "
+     "powers "
+     "down![reset]",
      0, FailureComputerShutdown, FAIL_NONE, REQ_COMPUTER},
 
 /* Radio - 30 */
 #define RADIO_INDEX 30
     {"none", 50, FailureRadioStatic, FAIL_NONE, 0},
     {"none", 70, FailureRadioStatic, FAIL_NONE, 0},
-    {"%ch%crYour readouts register a power loss in your radio!%cn", 15,
-     FailureRadioRange, FAIL_NONE, REQ_RADIO},
-    {"%ch%crYour readouts register a power loss in your radio!%cn", 30,
-     FailureRadioRange, FAIL_NONE, REQ_RADIO},
-    {"%ch%crYour radio suddenly shorts out! Please wait for backup to come "
-     "online!%cn",
+    {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
+     15, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+    {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
+     30, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+    {"[fg=red bold]Your radio suddenly shorts out! Please wait for backup to "
+     "come "
+     "online![reset]",
      0, FailureRadioShort, FAIL_NONE, REQ_RADIO},
-    {"%ch%crYour entire radio system suddenly shorts out!%cn", 0,
+    {"[fg=red bold]Your entire radio system suddenly shorts out![reset]", 0,
      FailureRadioShort, FAIL_NONE, REQ_RADIO}};
 
 #endif

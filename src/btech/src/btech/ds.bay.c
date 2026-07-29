@@ -371,9 +371,12 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   if (is_in_character(mech->xcode.context->database, mech->mynum) &&
       game_object_location(mech->xcode.context->database, MechPilot(mech)) !=
           mech->mynum) {
-    mech_notify(mech, MECHALL, "%ch%cr%cf%ciINTRUDER ALERT! INTRUDER ALERT!%c");
+    mech_notify(
+        mech, MECHALL,
+        "[fg=red bold blink inverse]INTRUDER ALERT! INTRUDER ALERT![reset]");
     mech_notify(mech, MECHALL,
-                "%ch%cr%cfAutomatic self-destruct sequence initiated.%c");
+                "[fg=red bold blink]Automatic self-destruct sequence "
+                "initiated.[reset]");
     mech_shutdown(GOD, (void *)mech, "");
   }
   return 1;

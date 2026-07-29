@@ -188,12 +188,13 @@ void sendNetworkMessage(DbRef player, MECH *mech, char *msg, int tIsC3) {
     if (!is_good_obj(otherMech->xcode.context->database, otherMech->mynum))
       continue;
 
-    snprintf(buf, LBUF_SIZE, "%%ch%s/%s: %s%%cn", (tIsC3 ? "C3" : "C3i"), c,
-             msg);
+    snprintf(buf, LBUF_SIZE, "[bold]%s/%s: %s[reset]", (tIsC3 ? "C3" : "C3i"),
+             c, msg);
     mech_notify(otherMech, MECHALL, buf);
   }
 
-  snprintf(buf, LBUF_SIZE, "%%ch%s/You: %s%%cn", (tIsC3 ? "C3" : "C3i"), msg);
+  snprintf(buf, LBUF_SIZE, "[bold]%s/You: %s[reset]", (tIsC3 ? "C3" : "C3i"),
+           msg);
   mech_notify(mech, MECHALL, buf);
 }
 
@@ -202,7 +203,7 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
   int i, j, wTemp, bearing;
   MECH *otherMech;
   float realRange, c3Range;
-  char buff[100];
+  char buff[LBUF_SIZE];
   char *mech_name;
   char move_type[30];
   char cStatus1, cStatus2, cStatus3, cStatus4, cStatus5;
@@ -312,9 +313,10 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
         buff, sizeof(buff),
         "%s%c%c%c[%s]%c %-11.11s x:%3d y:%3d z:%3d r:%4.1f c:%4.1f b:%3d "
         "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-        otherMech->mynum == MechTarget(mech)                     ? "%ch%cr"
-        : (tShowStatusInfo && !MechSeemsFriend(mech, otherMech)) ? "%ch%cy"
-                                                                 : "",
+        otherMech->mynum == MechTarget(mech) ? "[fg=red bold]"
+        : (tShowStatusInfo && !MechSeemsFriend(mech, otherMech))
+            ? "[fg=yellow bold]"
+            : "",
         (losFlag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
         (losFlag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc,
         mech_id(otherMech, MechSeemsFriend(mech, otherMech) || !tShowStatusInfo)
@@ -325,7 +327,7 @@ void showNetworkTargets(DbRef player, MECH *mech, int tIsC3) {
         cStatus5,
         (otherMech->mynum == MechTarget(mech) ||
          !MechSeemsFriend(mech, otherMech))
-            ? "%c"
+            ? "[reset]"
             : "");
 
     rangelist[buffindex] = realRange;
@@ -358,7 +360,7 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
   int i, bearing;
   MECH *otherMech;
   float range;
-  char buff[100];
+  char buff[LBUF_SIZE];
   char *mech_name;
   char move_type[30];
   int networkSize;
@@ -390,8 +392,10 @@ void showNetworkData(DbRef player, MECH *mech, int tIsC3) {
                                      (char[LBUF_SIZE]){0});
 
     snprintf(buff, sizeof(buff),
-             "%%ch%%cy[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d s:%5.1f "
-             "h:%3d a: %3d i: %3d%%cn",
+             "[fg=yellow bold][%s][reset]%c %-12.12s x:%3d y:%3d z:%3d "
+             "r:%4.1f "
+             "b:%3d s:%5.1f "
+             "h:%3d a: %3d i: %3d[reset]",
              mech_id(otherMech, true).text, move_type[0], mech_name,
              MechX(otherMech), MechY(otherMech), MechZ(otherMech), range,
              bearing, MechSpeed(otherMech), MechVFacing(otherMech),

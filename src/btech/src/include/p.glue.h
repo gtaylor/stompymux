@@ -41,9 +41,6 @@ void center_string(char *destination, size_t destination_size,
 void InitSpecialHash(BtechContext *context, int which);
 void handle_xcode(BtechContext *context, DbRef player, DbRef obj, int from,
                   int to);
-void initialize_colorize(BtechContext *context);
-void destroy_colorize(BtechContext *context);
-char *colorize(EvaluationContext *evaluation, DbRef player, char *from);
 void mecha_notify(EvaluationContext *evaluation, DbRef player, char *msg);
 void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
                          DbRef exception, char *msg);

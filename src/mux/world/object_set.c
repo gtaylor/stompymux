@@ -19,7 +19,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/styled_text.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
@@ -268,7 +267,7 @@ int parse_attrib(MatchContext *match, DbRef player, char *str, DbRef *thing,
 
 /*
  * ---------------------------------------------------------------------------
- * * edit_string, edit_string_ansi, do_edit: Modify attributes.
+ * * edit_string, do_edit: Modify attributes.
  */
 
 void edit_string(char *src, char **dst, const char *from, const char *to) {
@@ -311,75 +310,6 @@ void edit_string(char *src, char **dst, const char *from, const char *to) {
   }
 }
 
-static void edit_string_ansi(char *src, char **dst, char **returnstr,
-                             const char *from, const char *to) {
-  char *cp, *rp;
-
-  /*
-   * Do the substitution.  Idea for prefix/suffix from R'nice@TinyTIM
-   */
-
-  if (!strcmp(from, "^")) {
-    /*
-     * Prepend 'to' to string
-     */
-
-    *dst = alloc_lbuf("edit_string.^");
-    cp = *dst;
-    safe_str(to, *dst, &cp);
-    safe_str(src, *dst, &cp);
-    *cp = '\0';
-
-    /*
-     * Do the ansi string used to notify
-     */
-    *returnstr = alloc_lbuf("edit_string_ansi.^");
-    rp = *returnstr;
-    safe_str(ANSI_HILITE, *returnstr, &rp);
-    safe_str(to, *returnstr, &rp);
-    safe_str(ANSI_NORMAL, *returnstr, &rp);
-    safe_str(src, *returnstr, &rp);
-    *rp = '\0';
-
-  } else if (!strcmp(from, "$")) {
-    /*
-     * Append 'to' to string
-     */
-
-    *dst = alloc_lbuf("edit_string.$");
-    cp = *dst;
-    safe_str(src, *dst, &cp);
-    safe_str(to, *dst, &cp);
-    *cp = '\0';
-
-    /*
-     * Do the ansi string used to notify
-     */
-
-    *returnstr = alloc_lbuf("edit_string_ansi.$");
-    rp = *returnstr;
-    safe_str(src, *returnstr, &rp);
-    safe_str(ANSI_HILITE, *returnstr, &rp);
-    safe_str(to, *returnstr, &rp);
-    safe_str(ANSI_NORMAL, *returnstr, &rp);
-    *rp = '\0';
-
-  } else {
-    /*
-     * replace all occurances of 'from' with 'to'.  Handle the *
-     * * * * special cases of from = \$ and \^.
-     */
-
-    if (((from[0] == '\\') || (from[0] == '%')) &&
-        ((from[1] == '$') || (from[1] == '^')) && (from[2] == '\0'))
-      from++;
-
-    *dst = replace_string(from, to, src);
-    *returnstr = replace_string(
-        from, tprintf("%s%s%s", ANSI_HILITE, to, ANSI_NORMAL), src);
-  }
-}
-
 void do_edit(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
@@ -408,13 +338,10 @@ void do_edit(CommandInvocation *invocation) {
     if (!quick_wild(pattern, object->ahead[index].name))
       continue;
     char *result;
-    char *display;
-    edit_string_ansi(object->ahead[index].data, &result, &display, args[0],
-                     replacement);
+    edit_string(object->ahead[index].data, &result, args[0], replacement);
     dynamic_attribute_set(evaluation->world->database, dynamic_thing,
                           object->ahead[index].name, result);
     free_lbuf(result);
-    free_lbuf(display);
     edited++;
   }
   notify_printf(evaluation, player, "%d attribute%s edited.", edited,

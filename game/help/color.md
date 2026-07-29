@@ -27,11 +27,13 @@ exactly six digits in `#RRGGBB` form.
 
 The game configuration may override these colors or provide additional named
 colors. Custom names work anywhere a predefined color is accepted.
+BattleTech maps, status displays, menus, and notifications use the same named
+palette, so overrides also apply to their output.
 
-Formatting tags are `[bold]`, `[underline]`, and `[inverse]`. They can share a
-tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes everything
-opened by that tag. `[reset]` closes all active styles. Write `[[` to display a
-literal `[` character.
+Formatting tags are `[bold]`, `[blink]`, `[underline]`, and `[inverse]`. They
+can share a tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes
+everything opened by that tag. `[reset]` closes all active styles. Write `[[`
+to display a literal `[` character.
 
 Markup must be correctly nested. Unknown colors, unknown tags, raw terminal
 escape sequences, unmatched `[/]`, and unclosed styles are rejected.

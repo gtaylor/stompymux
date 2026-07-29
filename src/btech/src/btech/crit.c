@@ -412,10 +412,11 @@ int handleWeaponCrit(MECH *attacker, MECH *wounded, int hitloc, int critHit,
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
                   &MechWeapons[Weapon2I(critType)].name[3]);
 
-      mech_printf(wounded, MECHALL,
-                  "%%ch%%crYour hotloaded launcher explodes for %d points of "
-                  "damage!%%cn",
-                  damage);
+      mech_printf(
+          wounded, MECHALL,
+          "[fg=red bold]Your hotloaded launcher explodes for %d points of "
+          "damage![reset]",
+          damage);
 
       if (!Destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
@@ -446,10 +447,11 @@ int handleWeaponCrit(MECH *attacker, MECH *wounded, int hitloc, int critHit,
       mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
                   &MechWeapons[Weapon2I(critType)].name[3]);
 
-      mech_printf(wounded, MECHALL,
-                  "%%ch%%crThe incendiary ammunition in your launcher ignites "
-                  "for %d points of damage!%%cn",
-                  MechWeapons[Weapon2I(critType)].damage);
+      mech_printf(
+          wounded, MECHALL,
+          "[fg=red bold]The incendiary ammunition in your launcher ignites "
+          "for %d points of damage![reset]",
+          MechWeapons[Weapon2I(critType)].damage);
 
       if (!Destroyed(wounded)) {
         snprintf(msgbuf, MBUF_SIZE,
@@ -509,7 +511,7 @@ void JamMainWeapon(MECH *mech) {
 
   if (critfound) {
     SetPartTempNuke(mech, maxloc, critnum, FAIL_DESTROYED);
-    mech_printf(mech, MECHALL, "%%ch%%crYour %s is jammed!%%c",
+    mech_printf(mech, MECHALL, "[fg=red bold]Your %s is jammed![reset]",
                 &MechWeapons[maxtype].name[3]);
   }
 }
@@ -605,8 +607,9 @@ void DoTurretLockCrit(MECH *objMech) {
     MechTankCritStatus(objMech) &= ~TURRET_JAMMED;
 
   MechTankCritStatus(objMech) |= TURRET_LOCKED;
-  mech_notify(objMech, MECHALL,
-              "%ch%crThe shot destroys your turret rotation mechanism!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]The shot destroys your turret rotation mechanism![reset]");
 }
 
 void DoTurretJamCrit(MECH *objMech) {
@@ -629,8 +632,9 @@ void DoTurretJamCrit(MECH *objMech) {
   }
 
   MechTankCritStatus(objMech) |= TURRET_JAMMED;
-  mech_notify(objMech, MECHALL,
-              "%ch%crYour turret gets jammed on its current facing!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]Your turret gets jammed on its current facing![reset]");
 }
 
 void DoWeaponJamCrit(MECH *objMech, int wLoc) {
@@ -669,23 +673,23 @@ void DoWeaponJamCrit(MECH *objMech, int wLoc) {
     case TMISSILE:
     case TARTILLERY:
       wCritType = FAIL_SHORTED;
-      mech_printf(
-          objMech, MECHALL,
-          "%%ch%%crThe shot causes your %s to temporarily short out!%%c",
-          &MechWeapons[wWeapIdx].name[3]);
+      mech_printf(objMech, MECHALL,
+                  "[fg=red bold]The shot causes your %s to temporarily short "
+                  "out![reset]",
+                  &MechWeapons[wWeapIdx].name[3]);
       break;
     case TAMMO:
       wCritType = FAIL_JAMMED;
       mech_printf(objMech, MECHALL,
-                  "%%ch%%crThe shot temporarily jams your %s!%%c",
+                  "[fg=red bold]The shot temporarily jams your %s![reset]",
                   &MechWeapons[wWeapIdx].name[3]);
       break;
     default:
       wCritType = FAIL_SHORTED;
-      mech_printf(
-          objMech, MECHALL,
-          "%%ch%%crThe shot causes your %s to temporarily short out!%%c",
-          &MechWeapons[wWeapIdx].name[3]);
+      mech_printf(objMech, MECHALL,
+                  "[fg=red bold]The shot causes your %s to temporarily short "
+                  "out![reset]",
+                  &MechWeapons[wWeapIdx].name[3]);
       break;
     }
 
@@ -728,7 +732,7 @@ void DoWeaponDestroyedCrit(MECH *objAttacker, MECH *objMech, int wLoc,
     firstCrit = FindFirstWeaponCrit(objMech, wLoc, -1, 0, wCritType, 1);
 
     DestroyWeapon(objMech, wLoc, wCritType, firstCrit, 1, 1);
-    mech_printf(objMech, MECHALL, "%%ch%%crYour %s is destroyed!%%c",
+    mech_printf(objMech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 &MechWeapons[wWeapIdx].name[3]);
   }
 }
@@ -741,8 +745,9 @@ void DoTurretBlownOffCrit(MECH *objMech, MECH *objAttacker, int LOS) {
   if (SectIsDestroyed(objMech, TURRET))
     return;
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crThe shot pops your turret clear off its housing!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]The shot pops your turret clear off its housing![reset]");
   MechLOSBroadcast(objMech, "'s turret flies off!");
   DestroySection(objMech, objAttacker, LOS, TURRET);
 }
@@ -790,9 +795,10 @@ void DoAmmunitionCrit(MECH *objMech, MECH *objAttacker, int wLoc, int LOS) {
     return;
   }
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crOne of your ammo bins is struck causing a cascading "
-              "explosion!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]One of your ammo bins is struck causing a cascading "
+      "explosion![reset]");
   MechLOSBroadcast(objMech, "has an internal ammo explosion!");
 
   DamageMech(objMech, objAttacker, 0, -1, wLoc, 0, 0, 0, wTotalAmmoDamage, 0, 0,
@@ -829,7 +835,8 @@ void DoVehicleEngineHit(MECH *objMech, MECH *objAttacker) {
     return;
   }
 
-  mech_notify(objMech, MECHALL, "%ch%crYour engine takes a direct hit!%cn");
+  mech_notify(objMech, MECHALL,
+              "[fg=red bold]Your engine takes a direct hit![reset]");
 
   if (MechType(objMech) == CLASS_VTOL) {
     if (!Landed(objMech)) {
@@ -871,7 +878,7 @@ void DoVehicleFuelTankCrit(MECH *objMech, MECH *objAttacker) {
   }
 
   mech_notify(objMech, MECHALL,
-              "%ch%crYour fuel tank explodes in a ball of fire!%cn");
+              "[fg=red bold]Your fuel tank explodes in a ball of fire![reset]");
 
   if (objMech != objAttacker)
     MechLOSBroadcast(objMech, "explodes in a ball of fire!");
@@ -890,9 +897,10 @@ void DoVehicleCrewStunnedCrit(MECH *objMech) {
    * speed and not fire weapons/ram/use radio/etc, just turn.
    */
   MechTankCritStatus(objMech) |= CREW_STUNNED;
-  mech_notify(objMech, MECHALL,
-              "%ch%crThe shot resonates throughout the crew compartment, "
-              "temporarily stunning you!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]The shot resonates throughout the crew compartment, "
+      "temporarily stunning you![reset]");
 
   StunCrew(objMech);
   limitSpeedToCruise(objMech);
@@ -903,9 +911,10 @@ void DoVehicleDriverCrit(MECH *objMech) {
    * Driver is hit, apply a +2 to all driving skills
    */
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crYour vehicle's driver takes a piece of shrapnel, making "
-              "it harder to control the vehicle!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]Your vehicle's driver takes a piece of shrapnel, making "
+      "it harder to control the vehicle![reset]");
   MechPilotSkillBase(objMech) += 2;
 }
 
@@ -914,7 +923,8 @@ void DoVehicleSensorCrit(MECH *objMech) {
    * Add +1 to BTH for each sensor crit.
    */
 
-  mech_notify(objMech, MECHALL, "%ch%crYour sensor suite takes a hit!%cn");
+  mech_notify(objMech, MECHALL,
+              "[fg=red bold]Your sensor suite takes a hit![reset]");
   MechBTH(objMech) += 1;
 }
 
@@ -925,7 +935,8 @@ void DoVehicleCommanderHit(MECH *objMech) {
    */
 
   mech_notify(objMech, MECHALL,
-              "%ch%crYour vehicle's commander takes a piece of shrapnel!%cn");
+              "[fg=red bold]Your vehicle's commander takes a piece of "
+              "shrapnel![reset]");
   MechPilotSkillBase(objMech) += 1;
   MechBTH(objMech) += 1;
 
@@ -938,9 +949,10 @@ void DoVehicleCrewKilledCrit(MECH *objMech, MECH *objAttacker) {
    * leaving the tank 'destroyed' but fixable.
    */
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crThe shot ricochets around the crew compartment, instantly "
-              "killing everyone!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]The shot ricochets around the crew compartment, instantly "
+      "killing everyone![reset]");
   DestroyMech(objMech, objAttacker, 0, KILL_TYPE_PILOT);
   KillMechContentsIfIC(objMech);
 
@@ -955,9 +967,10 @@ void DoVTOLCoPilotCrit(MECH *objMech) {
    * +1 BTH for weapons fire
    */
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crYour VTOL's pilot takes a piece of shrapnel, making it "
-              "harder to aim your weapons!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]Your VTOL's pilot takes a piece of shrapnel, making it "
+      "harder to aim your weapons![reset]");
   MechBTH(objMech) += 1;
 }
 
@@ -968,9 +981,10 @@ void DoVTOLPilotHit(MECH *objMech) {
    * or fall 1 elevation.
    */
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crYour VTOL's copilot takes a piece of shrapnel, making it "
-              "harder to control the VTOL!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]Your VTOL's copilot takes a piece of shrapnel, making it "
+      "harder to control the VTOL![reset]");
   MechPilotSkillBase(objMech) += 2;
 
   /* TODO: make vtol drop a level if it fails a pskill roll */
@@ -985,8 +999,9 @@ void DoVTOLRotorDestroyedCrit(MECH *objMech, MECH *objAttacker, int LOS) {
   if (SectIsDestroyed(objMech, ROTOR))
     return;
 
-  mech_notify(objMech, MECHALL,
-              "%ch%crThe shot hits your fragile rotor mechanism!%cn");
+  mech_notify(
+      objMech, MECHALL,
+      "[fg=red bold]The shot hits your fragile rotor mechanism![reset]");
   MechLOSBroadcast(objMech, "'s rotor snaps into several parts!");
   DestroySection(objMech, objAttacker, LOS, ROTOR);
 
@@ -1028,8 +1043,9 @@ void DoVTOLTailRotorDamagedCrit(MECH *objMech) {
                 "Your damaged tail rotor suffers more damage!");
   else {
     MechTankCritStatus(objMech) |= TAIL_ROTOR_DESTROYED;
-    mech_notify(objMech, MECHALL,
-                "%ch%crYour tail rotor is damaged, slowing you down!%cn");
+    mech_notify(
+        objMech, MECHALL,
+        "[fg=red bold]Your tail rotor is damaged, slowing you down![reset]");
 
     limitSpeedToCruise(objMech);
   }
@@ -1070,7 +1086,7 @@ void HandleAdvFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS,
   if (wRoll < 6)
     return;
 
-  mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
 
   switch (MechType(wounded)) {
   case CLASS_VEH_GROUND:
@@ -1331,7 +1347,7 @@ void HandleAdvFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS,
 
 void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
                     int num) {
-  mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
   switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew killed */
@@ -1449,7 +1465,7 @@ void DestroyMainWeapon(MECH *mech) {
     firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0, I2Weapon(maxtype), 1);
     DestroyWeapon(mech, maxloc, I2Weapon(maxtype), 1, firstCrit,
                   GetWeaponCrits(mech, maxtype));
-    mech_printf(mech, MECHALL, "%%ch%%crYour %s is destroyed!%%c",
+    mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
                 &MechWeapons[maxtype].name[3]);
   }
 }
@@ -1459,7 +1475,7 @@ void HandleFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   if (MechMove(wounded) == MOVE_NONE)
     return;
 
-  mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
   switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
@@ -1512,7 +1528,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   if (hitloc == TURRET) {
     if (btech_random_range(wounded->xcode.context, 1, 3) == 2) {
       if (!(MechTankCritStatus(wounded) & TURRET_LOCKED)) {
-        mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
         MechTankCritStatus(wounded) |= TURRET_LOCKED;
         mech_notify(wounded, MECHALL,
                     "Your turret takes a direct hit and locks up!");
@@ -1526,7 +1542,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     case 3:
     case 4:
       if (!Fallen(wounded)) {
-        mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
         switch (MechMove(wounded)) {
         case MOVE_TRACK:
           mech_notify(wounded, MECHALL, "One of your tracks is damaged!");
@@ -1549,7 +1565,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       break;
     case 5:
       if (!Fallen(wounded)) {
-        mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
         switch (MechMove(wounded)) {
         case MOVE_TRACK:
           mech_notify(
@@ -1578,7 +1594,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       return;
       break;
     }
-  mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!%c");
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
   switch (btech_random_range(wounded->xcode.context, 0, 5)) {
   case 0:
     /* Crew stunned for one turn...treat like a head hit */
@@ -1637,7 +1653,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
   MAP *map = btech_context_find_object(mech->xcode.context, wounded->mapindex);
 
   ArmorStringFromIndex(hitloc, locname, MechType(wounded), MechMove(wounded));
-  mech_notify(wounded, MECHALL, "%ch%cyCRITICAL HIT!!%c");
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
   if (IsAmmo(critType)) {
     /* BOOM! */
@@ -1814,7 +1830,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
       /* Destroy Mech for now, but later kill pilot as well */
       mech_notify(wounded, MECHALL,
                   "Your cockpit is destroyed, your blood boils, and your body "
-                  "is fried! %cyYou're dead!%cn");
+                  "is fried! [fg=yellow]You're dead![reset]");
       if (!Destroyed(wounded)) {
         DestroyMech(wounded, attacker, 0, KILL_TYPE_COCKPIT);
       }

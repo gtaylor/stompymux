@@ -22,7 +22,6 @@ void server_log_initialize(ServerLog *log, GameDatabase *database,
                            const ServerConfiguration *configuration);
 bool server_log_is_enabled(const ServerLog *log, int key);
 
-char *strip_ansi_r(char *destination, const char *source, size_t size);
 int start_log(ServerLog *log, const char *primary, const char *secondary);
 void end_log(ServerLog *log);
 void log_perror(ServerLog *log, const char *primary, const char *secondary,

@@ -347,7 +347,7 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
           (Started(target) || SeeWhenShutdown(target) || MechAutoconSD(mech)) &&
           (st = valid_to_notice(mech, target, wlf)) && seeanew < 3) {
         if (st & AUTOCON_WARN)
-          strcpy(buf, "%cy");
+          strcpy(buf, "[fg=yellow]");
         else
           buf[0] = 0;
         if (st & AUTOCON_SHORT)
@@ -362,7 +362,7 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
                    mech_to_mech_display_id_base(mech, target, wlf).text,
                    GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
-          strcat(buf, "%cn");
+          strcat(buf, "[reset]");
         mech_notify(mech, MECHALL, buf);
       }
       if ((MechStatus(mech) & LOCK_TARGET) &&
@@ -407,7 +407,7 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
           (Started(target) || SeeWhenShutdown(target) || MechAutoconSD(mech)) &&
           (st = valid_to_notice(mech, target, -1)) && seeanew < 2) {
         if (st & AUTOCON_WARN)
-          strcpy(buf, "%cr");
+          strcpy(buf, "[fg=red]");
         else
           buf[0] = 0;
         if (st & AUTOCON_SHORT)
@@ -420,7 +420,7 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
                    mech_to_mech_display_id(mech, target).text,
                    GetArcID(mech, arc));
         if (st & AUTOCON_WARN)
-          strcat(buf, "%cn");
+          strcat(buf, "[reset]");
         mech_notify(mech, MECHALL, buf);
       }
       if (MechTeam(mech) != MechTeam(target))

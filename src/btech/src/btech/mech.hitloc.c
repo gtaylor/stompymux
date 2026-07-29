@@ -264,7 +264,7 @@ int ModifyHeadHit(int hitGroup, MECH *mech) {
       (mech->xcode.context->configuration->btech_exile_stun_code ==
        1)) { // set exile_stun_code >1 to disable 'stun' part
 
-    mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+    mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
     mech_notify(mech, MECHALL,
                 "The cockpit violently shakes from a grazing blow! "
                 "You are momentarily stunned!");
@@ -549,7 +549,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 3:
         if (mech->xcode.context->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (MechMove(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
@@ -577,7 +577,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         }
         /* Cripple tank */
         if (!Fallen(mech)) {
-          mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+          mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (MechMove(mech)) {
           case MOVE_TRACK:
             mech_notify(
@@ -609,7 +609,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 5:
         /* MP -1 */
         if (!Fallen(mech)) {
-          mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+          mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (MechMove(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
@@ -641,7 +641,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         if (GetSectInt(mech, TURRET)) {
           if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             MechTankCritStatus(mech) |= TURRET_LOCKED;
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
@@ -663,7 +663,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 3:
         if (mech->xcode.context->configuration->btech_tankfriendly) {
           if (!Fallen(mech)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (MechMove(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
@@ -691,7 +691,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         }
         /* Cripple Tank */
         if (!Fallen(mech)) {
-          mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+          mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (MechMove(mech)) {
           case MOVE_TRACK:
             mech_notify(
@@ -723,7 +723,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 5:
         /* MP -1 */
         if (!Fallen(mech)) {
-          mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+          mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
           switch (MechMove(mech)) {
           case MOVE_TRACK:
             mech_notify(mech, MECHALL, "One of your tracks is damaged!");
@@ -751,7 +751,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         /* MP -1 if hover */
         if (!Fallen(mech)) {
           if (MechMove(mech) == MOVE_HOVER) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
             LowerMaxSpeed(mech, MP1);
           }
@@ -762,7 +762,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
       case 11:
         if (GetSectInt(mech, TURRET)) {
           if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             MechTankCritStatus(mech) |= TURRET_LOCKED;
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
@@ -789,7 +789,8 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         if (mech->xcode.context->configuration->btech_tankshield) {
           if (mech->xcode.context->configuration->btech_tankfriendly) {
             if (!Fallen(mech)) {
-              mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+              mech_notify(mech, MECHALL,
+                          "[fg=yellow bold]CRITICAL HIT![reset]");
               switch (MechMove(mech)) {
               case MOVE_TRACK:
                 mech_notify(mech, MECHALL,
@@ -817,7 +818,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           }
           /* Cripple tank */
           if (!Fallen(mech)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (MechMove(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL,
@@ -850,7 +851,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         /* MP -1 */
         if (mech->xcode.context->configuration->btech_tankshield) {
           if (!Fallen(mech)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             switch (MechMove(mech)) {
             case MOVE_TRACK:
               mech_notify(mech, MECHALL, "One of your tracks is damaged!");
@@ -875,7 +876,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         /* MP -1 if Hovercraft */
         if (!Fallen(mech)) {
           if (MechMove(mech) == MOVE_HOVER) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
             LowerMaxSpeed(mech, MP1);
           }
@@ -893,7 +894,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
         /* Lock turret into place */
         if (GetSectInt(mech, TURRET)) {
           if (!(MechTankCritStatus(mech) & TURRET_LOCKED)) {
-            mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+            mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             MechTankCritStatus(mech) |= TURRET_LOCKED;
             mech_notify(mech, MECHALL,
                         "Your turret takes a direct hit and locks up!");
@@ -1425,19 +1426,21 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
   if (wRoll < 8) /* no effect */
     return;
 
-  mech_notify(mech, MECHALL, "%ch%cyCRITICAL HIT!%c");
+  mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
 
   if (wRoll < 10) { /* minor effect */
     MechPilotSkillBase(mech) += 1;
 
     if (Fallen(mech))
       mech_notify(mech, MECHALL,
-                  "%cr%chYour destroyed motive system takes another hit!%cn");
+                  "[fg=red bold]Your destroyed motive system takes another "
+                  "hit![reset]");
     else
-      mech_printf(mech, MECHALL,
-                  "%%cr%%chYour motive system takes a minor hit, making it "
-                  "harder to control your %s!%%cn",
-                  strVhlTypeName);
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]Your motive system takes a minor hit, making it "
+          "harder to control your %s![reset]",
+          strVhlTypeName);
 
     if (MechSpeed(mech) != 0.0)
       MechLOSBroadcast(mech, "wobbles slightly.");
@@ -1446,12 +1449,14 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
 
     if (Fallen(mech))
       mech_notify(mech, MECHALL,
-                  "%cr%chYour destroyed motive system takes another hit!%cn");
+                  "[fg=red bold]Your destroyed motive system takes another "
+                  "hit![reset]");
     else
-      mech_printf(mech, MECHALL,
-                  "%%cr%%chYour motive system takes a moderate hit, slowing "
-                  "you down and making it harder to control your %s!%%cn",
-                  strVhlTypeName);
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]Your motive system takes a moderate hit, slowing "
+          "you down and making it harder to control your %s![reset]",
+          strVhlTypeName);
 
     if (MechSpeed(mech) != 0.0)
       MechLOSBroadcast(mech, "wobbles violently.");
@@ -1461,12 +1466,14 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
   } else {
     if (Fallen(mech))
       mech_notify(mech, MECHALL,
-                  "%cr%chYour destroyed motive system takes another hit!%cn");
+                  "[fg=red bold]Your destroyed motive system takes another "
+                  "hit![reset]");
     else
-      mech_printf(mech, MECHALL,
-                  "%%cr%%chYour motive system is destroyed! Your %s can no "
-                  "longer move!%%cn",
-                  strVhlTypeName);
+      mech_printf(
+          mech, MECHALL,
+          "[fg=red bold]Your motive system is destroyed! Your %s can no "
+          "longer move![reset]",
+          strVhlTypeName);
 
     if (MechSpeed(mech) > 0)
       MechLOSBroadcast(mech, "shakes violently then begins to slow down.");

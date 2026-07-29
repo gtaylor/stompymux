@@ -569,14 +569,15 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
       snprintf(buf3, sizeof(buf3), "%4d %4d", fix_time, fix_bth);
     }
     snprintf(
-        buf2, sizeof(buf2), "%%ch%s%3s %3d %9s %3s %s%%cn%s", j ? "%cg" : "%cy",
-        j ? "(*)" : "", i + 1, buf3,
+        buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
+        j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1, buf3,
         armor_section_abbreviation(MechType(mech), MechMove(mech), v1).text,
         buf, j ? " (*)" : "");
     vsi(buf2);
   }
   addline();
-  vsi("(*) / %ch%cgGreen%cn = Job already done. %ch%cyYellow%cn = To be done.");
+  vsi("(*) / [fg=green bold]Green[reset] = Job already done. "
+      "[fg=yellow bold]Yellow[reset] = To be done.");
   vsi("Time = Normal Time (in minutes) to complete fix. BTH = Your BTH to "
       "fix.");
   addline();

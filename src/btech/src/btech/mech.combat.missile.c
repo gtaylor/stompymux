@@ -298,7 +298,7 @@ int MissileHitTarget(MECH *mech, int weapindx, int wSection, int wCritSlot,
     hit = MIN(incoming, missile_entry->num_missiles[missileindex]);
 
   if (LOS) {
-    mech_printf(mech, MECHALL, "%%cg%s with %d missile%s!%%c",
+    mech_printf(mech, MECHALL, "[fg=green]%s with %d missile%s![reset]",
                 LOS == 1 ? "You hit" : "The swarm hits", hit,
                 hit > 1 ? "s" : "");
   }

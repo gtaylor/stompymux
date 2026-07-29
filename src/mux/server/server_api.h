@@ -67,7 +67,6 @@ constexpr int MSG_LOC_A = 512;       /* ... only if I am audible */
 constexpr int MSG_ME = 2048;        /* Send to me */
 constexpr int MSG_S_INSIDE = 4096;  /* Originator is inside target */
 constexpr int MSG_S_OUTSIDE = 8192; /* Originator is outside target */
-constexpr int MSG_COLORIZE = 16384; /* Message needs to be given color */
 /* #define FREE		32768	*/
 constexpr int MSG_ME_ALL = MSG_ME | MSG_INV_EXITS;
 constexpr int MSG_F_CONTENTS = MSG_INV;

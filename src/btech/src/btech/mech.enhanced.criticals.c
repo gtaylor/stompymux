@@ -413,9 +413,9 @@ void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
   unsigned char weaparray[MAX_WEAPS_SECTION] = {0};
   unsigned char weapdata[MAX_WEAPS_SECTION] = {0};
   int critical[MAX_WEAPS_SECTION] = {0};
-  char tempbuff[160] = {0};
+  char tempbuff[LBUF_SIZE] = {0};
   char strLocation[80] = {0};
-  char weapbuff[120] = {0};
+  char weapbuff[LBUF_SIZE] = {0};
 
   cch(MECH_USUALSP);
 
@@ -444,7 +444,7 @@ void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
 
       if (PartIsBroken(mech, secIter, critical[weapIter]) ||
           PartTempNuke(mech, secIter, critical[weapIter]) == FAIL_DESTROYED)
-        strcat(weapbuff, "|| %ch%crDESTROYED%c");
+        strcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]");
       else {
 
         if (MechType(mech) == CLASS_MECH)
@@ -452,29 +452,29 @@ void mech_weaponstatus(DbRef player, MECH *mech, char *buffer) {
               countDamagedSlotsFromCrit(mech, secIter, critical[weapIter]);
 
         if (PartIsDisabled(mech, secIter, critical[weapIter]))
-          strcat(weapbuff, "|| %cr%chDISABLED%c");
+          strcat(weapbuff, "|| [fg=red bold]DISABLED[reset]");
         else if (PartTempNuke(mech, secIter, critical[weapIter])) {
           switch (PartTempNuke(mech, secIter, critical[weapIter])) {
           case FAIL_JAMMED:
-            strcat(weapbuff, "|| %cyJAMMED%c");
+            strcat(weapbuff, "|| [fg=yellow]JAMMED[reset]");
             break;
           case FAIL_SHORTED:
-            strcat(weapbuff, "|| %cbSHORTED%c");
+            strcat(weapbuff, "|| [fg=blue]SHORTED[reset]");
             break;
           case FAIL_EMPTY:
-            strcat(weapbuff, "|| %ccEMPTY%c");
+            strcat(weapbuff, "|| [fg=cyan]EMPTY[reset]");
             break;
           case FAIL_DUD:
-            strcat(weapbuff, "|| %cyDUD%c");
+            strcat(weapbuff, "|| [fg=yellow]DUD[reset]");
             break;
           case FAIL_AMMOJAMMED:
-            strcat(weapbuff, "|| %cyAMMOJAM%c");
+            strcat(weapbuff, "|| [fg=yellow]AMMOJAM[reset]");
             break;
           }
         } else if (wDamagedSlots > 0)
-          strcat(weapbuff, "|| %cy%chDAMAGED%c");
+          strcat(weapbuff, "|| [fg=yellow bold]DAMAGED[reset]");
         else
-          strcat(weapbuff, "|| %cg%chOPERATIONAL%cn");
+          strcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]");
       }
 
       notify(btech_context_evaluation(mech->xcode.context), player, weapbuff);
@@ -565,7 +565,7 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
       if (awDamage[2] > 0) {
         notify_printf(btech_context_evaluation(mech->xcode.context), player,
                       "      Charging crystal damage (%d hit%s): +%d heat. "
-                      "Explodes on %d or less.%%c",
+                      "Explodes on %d or less.[reset]",
                       awDamage[2], awDamage[2] > 1 ? "s" : "", awDamage[2],
                       awDamage[2] + 1);
       }
@@ -586,10 +586,10 @@ void showWeaponDamageAndInfo(DbRef player, MECH *mech, int section,
       }
     } else if (IsBallistic(wWeapIndex) || IsArtillery(wWeapIndex)) {
       if (awDamage[1] > 0) {
-        notify_printf(
-            btech_context_evaluation(mech->xcode.context), player,
-            "      %%cr%%chBarrel damage (%d hit%s): Jams on a %d or less.%%c",
-            awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1] + 1);
+        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+                      "      [fg=red bold]Barrel damage (%d hit%s): Jams on a "
+                      "%d or less.[reset]",
+                      awDamage[1], awDamage[1] > 1 ? "s" : "", awDamage[1] + 1);
       }
 
       if (awDamage[2] > 0) {

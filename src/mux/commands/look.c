@@ -16,7 +16,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/styled_text.h"
 #include "mux/world/match.h"
 #include "mux/world/object_set.h"

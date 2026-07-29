@@ -1820,17 +1820,17 @@ void mech_safety(DbRef player, void *data, char *buffer) {
                   "Your weapons dont have safeties.");
   if (buffer && !strcasecmp(buffer, "on")) {
     UnSetMechPKiller(mech);
-    mech_notify(mech, MECHALL, "Safeties flipped %ch%cgON%cn.");
+    mech_notify(mech, MECHALL, "Safeties flipped [fg=green bold]ON[reset].");
     return;
   }
   if (buffer && !strcasecmp(buffer, "off")) {
     SetMechPKiller(mech);
-    mech_notify(mech, MECHALL, "Safeties flipped %ch%crOFF%cn.");
+    mech_notify(mech, MECHALL, "Safeties flipped [fg=red bold]OFF[reset].");
     return;
   }
 
-  mech_printf(mech, MECHPILOT, "Weapon safeties are %%ch%s%%cn",
-              MechPKiller(mech) ? "%crOFF" : "%cgON");
+  mech_printf(mech, MECHPILOT, "Weapon safeties are [bold]%s[reset]",
+              MechPKiller(mech) ? "[fg=red]OFF" : "[fg=green]ON");
   return;
 }
 
@@ -1873,14 +1873,14 @@ static char *display_mechpref(void *context, int i,
       (!(MechPrefs(mech) & info.bit) &&
        !(info.flags & MECHPREF_FLAG_INVERTED))) {
     if (info.flags & MECHPREF_FLAG_NEGATIVE)
-      state = "%ch%cgOFF%cn";
+      state = "[fg=green bold]OFF[reset]";
     else
-      state = "%ch%crOFF%cn";
+      state = "[fg=red bold]OFF[reset]";
   } else {
     if (info.flags & MECHPREF_FLAG_NEGATIVE)
-      state = "%ch%crON%cn";
+      state = "[fg=red bold]ON[reset]";
     else
-      state = "%ch%cgON%cn";
+      state = "[fg=green bold]ON[reset]";
   }
 
   snprintf(buffer, LBUF_SIZE, "        %-40s%s", info.name, state);
@@ -1979,16 +1979,16 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
          !(info.flags & MECHPREF_FLAG_INVERTED))) {
 
       if (info.flags & MECHPREF_FLAG_NEGATIVE)
-        newstate = "%ch%cgOFF%cn";
+        newstate = "[fg=green bold]OFF[reset]";
       else
-        newstate = "%ch%crOFF%cn";
+        newstate = "[fg=red bold]OFF[reset]";
 
     } else {
 
       if (info.flags & MECHPREF_FLAG_NEGATIVE)
-        newstate = "%ch%crON%cn";
+        newstate = "[fg=red bold]ON[reset]";
       else
-        newstate = "%ch%cgON%cn";
+        newstate = "[fg=green bold]ON[reset]";
     }
 
     /* Tell them the preference has been changed */

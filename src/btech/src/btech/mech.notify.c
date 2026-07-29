@@ -226,14 +226,16 @@ static const struct {
   int team;
   const char *ccode;
 } obs_team_color[] = {
-    {1, "%cw"},     {2, "%cc"},     {3, "%cm"},     {4, "%cb"},
-    {5, "%cy"},     {6, "%cg"},     {7, "%cr"},     {8, "%ch%cx"},
-    {9, "%ch%cw"},  {10, "%ch%cc"}, {11, "%ch%cm"}, {12, "%ch%cb"},
-    {13, "%ch%cy"}, {14, "%ch%cg"}, {15, "%ch%cr"}, {0, "%ch%cw"}};
+    {1, "[fg=white]"},        {2, "[fg=cyan]"},          {3, "[fg=magenta]"},
+    {4, "[fg=blue]"},         {5, "[fg=yellow]"},        {6, "[fg=green]"},
+    {7, "[fg=red]"},          {8, "[fg=black bold]"},    {9, "[fg=white bold]"},
+    {10, "[fg=cyan bold]"},   {11, "[fg=magenta bold]"}, {12, "[fg=blue bold]"},
+    {13, "[fg=yellow bold]"}, {14, "[fg=green bold]"},   {15, "[fg=red bold]"},
+    {0, "[fg=white bold]"}};
 
 void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
                     int spaces, int level) {
-  char buf[MBUF_SIZE];
+  char buf[LBUF_SIZE];
   int i;
 
   for (i = 0; i < spaces; i++)
@@ -241,192 +243,194 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
   buf[spaces] = 0;
 
   if (MechStatus(mech) & COMBAT_SAFE) {
-    strcpy(buf + spaces, "%cb%chCOMBAT SAFE%cn");
+    strcpy(buf + spaces, "[fg=blue bold]COMBAT SAFE[reset]");
     notify(evaluation, player, buf);
   }
   if (Fortified(mech)) {
-    strcpy(buf + spaces, "%ch%cgFORTIFIED%cn");
+    strcpy(buf + spaces, "[fg=green bold]FORTIFIED[reset]");
     notify(evaluation, player, buf);
   }
   if (WeaponsHold(mech)) {
-    strcpy(buf + spaces, "%ch%crWEAPONS HOLD%cn");
+    strcpy(buf + spaces, "[fg=red bold]WEAPONS HOLD[reset]");
     notify(evaluation, player, buf);
   }
   if (Fallen(mech)) {
     switch (MechMove(mech)) {
     case MOVE_BIPED:
-      strcpy(buf + spaces, "%cr%chFALLEN%cn");
+      strcpy(buf + spaces, "[fg=red bold]FALLEN[reset]");
       break;
     case MOVE_QUAD:
-      strcpy(buf + spaces, "%cr%chFALLEN%cn");
+      strcpy(buf + spaces, "[fg=red bold]FALLEN[reset]");
       break;
     case MOVE_TRACK:
-      strcpy(buf + spaces, "%cr%chTRACK DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]TRACK DESTROYED[reset]");
       break;
     case MOVE_WHEEL:
-      strcpy(buf + spaces, "%cr%chAXLE DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]AXLE DESTROYED[reset]");
       break;
     case MOVE_HOVER:
-      strcpy(buf + spaces, "%cr%chLIFT FAN DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]LIFT FAN DESTROYED[reset]");
       break;
     case MOVE_VTOL:
-      strcpy(buf + spaces, "%cr%chROTOR DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]ROTOR DESTROYED[reset]");
       break;
     case MOVE_FLY:
-      strcpy(buf + spaces, "%cr%chENGINE DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]ENGINE DESTROYED[reset]");
       break;
     case MOVE_HULL:
-      strcpy(buf + spaces, "%cr%chENGINE ROOM DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]ENGINE ROOM DESTROYED[reset]");
       break;
     case MOVE_SUB:
-      strcpy(buf + spaces, "%cr%chENGINE ROOM DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]ENGINE ROOM DESTROYED[reset]");
       break;
     case MOVE_FOIL:
-      strcpy(buf + spaces, "%cr%chFOIL DESTROYED%cn");
+      strcpy(buf + spaces, "[fg=red bold]FOIL DESTROYED[reset]");
       break;
     }
     notify(evaluation, player, buf);
   }
   if (IsHulldown(mech)) {
-    strcpy(buf + spaces, "%cg%chHULLDOWN%cn");
+    strcpy(buf + spaces, "[fg=green bold]HULLDOWN[reset]");
     notify(evaluation, player, buf);
   }
   if (MechDugIn(mech)) {
-    strcpy(buf + spaces, "%cg%chDUG IN%cn");
+    strcpy(buf + spaces, "[fg=green bold]DUG IN[reset]");
     notify(evaluation, player, buf);
   }
   if (Digging(mech)) {
-    strcpy(buf + spaces, "%cgDIGGING IN%cn");
+    strcpy(buf + spaces, "[fg=green]DIGGING IN[reset]");
     notify(evaluation, player, buf);
   }
   if (Staggering(mech)) {
-    strcpy(buf + spaces, "%cr%chSTAGGERING%cn");
+    strcpy(buf + spaces, "[fg=red bold]STAGGERING[reset]");
     notify(evaluation, player, buf);
   }
   if (MechCritStatus(mech) & SLITE_DEST) {
-    strcpy(buf + spaces, "%cr%chSEARCHLIGHT DESTROYED%cn");
+    strcpy(buf + spaces, "[fg=red bold]SEARCHLIGHT DESTROYED[reset]");
     notify(evaluation, player, buf);
   }
   if (MechLites(mech)) {
-    strcpy(buf + spaces, "%cg%chSEARCHLIGHT ON%cn");
+    strcpy(buf + spaces, "[fg=green bold]SEARCHLIGHT ON[reset]");
     notify(evaluation, player, buf);
   } else if (MechLit(mech)) {
-    strcpy(buf + spaces, "%cg%chILLUMINATED%cn");
+    strcpy(buf + spaces, "[fg=green bold]ILLUMINATED[reset]");
     notify(evaluation, player, buf);
   }
   if (Burning(mech) || Jellied(mech)) {
-    strcpy(buf + spaces, "%cr%chON FIRE%cn");
+    strcpy(buf + spaces, "[fg=red bold]ON FIRE[reset]");
     notify(evaluation, player, buf);
   }
   if (MechCritStatus(mech) & HIDDEN) {
-    strcpy(buf + spaces, tprintf("%%ch%%cgHIDDEN%%c"));
+    strcpy(buf + spaces, tprintf("[fg=green bold]HIDDEN[reset]"));
     notify(evaluation, player, buf);
   }
   if (IsMechSwarmed(mech)) {
-    strcpy(buf + spaces, "%cr%chSWARMED BY ENEMY SUITS%cn");
+    strcpy(buf + spaces, "[fg=red bold]SWARMED BY ENEMY SUITS[reset]");
     notify(evaluation, player, buf);
   }
   if (IsMechMounted(mech)) {
-    strcpy(buf + spaces, "%cr%chMOUNTED BY FRIENDLY SUITS%cn");
+    strcpy(buf + spaces, "[fg=red bold]MOUNTED BY FRIENDLY SUITS[reset]");
     notify(evaluation, player, buf);
   }
   if (MechSwarmTarget(mech) > 0) {
     if (btech_context_get_mech(mech->xcode.context, MechSwarmTarget(mech))) {
       if (MechTeam(btech_context_get_mech(
               mech->xcode.context, MechSwarmTarget(mech))) == MechTeam(mech))
-        strcpy(buf + spaces, "%cg%chMOUNTED ON FRIENDLY UNIT%cn");
+        strcpy(buf + spaces, "[fg=green bold]MOUNTED ON FRIENDLY UNIT[reset]");
       else
-        strcpy(buf + spaces, "%cg%chSWARMING ENEMY UNIT%cn");
+        strcpy(buf + spaces, "[fg=green bold]SWARMING ENEMY UNIT[reset]");
 
       notify(evaluation, player, buf);
     }
   }
 #ifdef BT_MOVEMENT_MODES
   if (MechStatus2(mech) & DODGING) {
-    strcpy(buf + spaces, tprintf("%%ch%%crDODGING%%c"));
+    strcpy(buf + spaces, tprintf("[fg=red bold]DODGING[reset]"));
     notify(evaluation, player, buf);
   }
   if (MechStatus2(mech) & EVADING) {
-    strcpy(buf + spaces, tprintf("%%ch%%crEVADING%%c"));
+    strcpy(buf + spaces, tprintf("[fg=red bold]EVADING[reset]"));
     notify(evaluation, player, buf);
   }
   if (MechStatus2(mech) & SPRINTING) {
-    strcpy(buf + spaces, tprintf("%%ch%%crSPRINTING%%c"));
+    strcpy(buf + spaces, tprintf("[fg=red bold]SPRINTING[reset]"));
     notify(evaluation, player, buf);
   }
   if (MoveModeChange(mech)) {
-    strcpy(buf + spaces, tprintf("%%ch%%cyCHANGING MOVEMENT MODE%%c"));
+    strcpy(buf + spaces,
+           tprintf("[fg=yellow bold]CHANGING MOVEMENT MODE[reset]"));
     notify(evaluation, player, buf);
   }
   if (SideSlipping(mech)) {
-    strcpy(buf + spaces, tprintf("%%ch%%cySIDESLIPPING%%c"));
+    strcpy(buf + spaces, tprintf("[fg=yellow bold]SIDESLIPPING[reset]"));
     notify(evaluation, player, buf);
   }
   if (MechTankCritStatus(mech) & CREW_STUNNED ||
       MechCritStatus(mech) & MECH_STUNNED) {
-    strcpy(buf + spaces, "%ch%crSTUNNED%c");
+    strcpy(buf + spaces, "[fg=red bold]STUNNED[reset]");
     notify(evaluation, player, buf);
   }
 #endif
   if (level == 0) { /* our own 'status' */
     if (ECMProtected(mech)) {
-      strcpy(buf + spaces, "%cg%chPROTECTED BY ECM%cn");
+      strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ECM[reset]");
       notify(evaluation, player, buf);
     }
     if (AngelECMProtected(mech)) {
-      strcpy(buf + spaces, "%cg%chPROTECTED BY ANGEL ECM%cn");
+      strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ANGEL ECM[reset]");
       notify(evaluation, player, buf);
     }
     if (ECMDisturbed(mech)) {
-      strcpy(buf + spaces, "%cy%chAFFECTED BY ECM%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ECM[reset]");
       notify(evaluation, player, buf);
     }
     if (AngelECMDisturbed(mech)) {
-      strcpy(buf + spaces, "%cy%chAFFECTED BY ANGEL ECM%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ANGEL ECM[reset]");
       notify(evaluation, player, buf);
     }
     if (ECMCountered(mech)) {
-      strcpy(buf + spaces, "%cy%chCOUNTERED BY ECCM%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]COUNTERED BY ECCM[reset]");
       notify(evaluation, player, buf);
     }
     if (StealthArmorActive(mech)) {
-      strcpy(buf + spaces, "%cg%chSTEALTH ARMOR ACTIVE%cn");
+      strcpy(buf + spaces, "[fg=green bold]STEALTH ARMOR ACTIVE[reset]");
       notify(evaluation, player, buf);
     }
     if (NullSigSysActive(mech)) {
-      strcpy(buf + spaces, "%cg%chNULL SIGNATURE SYSTEM ACTIVE%cn");
+      strcpy(buf + spaces,
+             "[fg=green bold]NULL SIGNATURE SYSTEM ACTIVE[reset]");
       notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, NARC_ATTACHED)) {
-      strcpy(buf + spaces, "%cy%chNARC POD ATTACHED%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]NARC POD ATTACHED[reset]");
       notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HOMING_ATTACHED)) {
-      strcpy(buf + spaces, "%cy%chINARC HOMING POD ATTACHED%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]INARC HOMING POD ATTACHED[reset]");
       notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_HAYWIRE_ATTACHED)) {
-      strcpy(buf + spaces, "%cy%chINARC HAYWIRE POD ATTACHED%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]INARC HAYWIRE POD ATTACHED[reset]");
       notify(evaluation, player, buf);
     }
     if (checkAllSections(mech, INARC_ECM_ATTACHED)) {
-      strcpy(buf + spaces, "%cy%chINARC ECM POD ATTACHED%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]INARC ECM POD ATTACHED[reset]");
       notify(evaluation, player, buf);
     }
     if (Extinguishing(mech)) {
-      strcpy(buf + spaces, "%cy%chEXTINGUISHING FIRE%cn");
+      strcpy(buf + spaces, "[fg=yellow bold]EXTINGUISHING FIRE[reset]");
       notify(evaluation, player, buf);
     }
     if (MechStatus2(mech) & AUTOTURN_TURRET) {
-      strcpy(buf + spaces, "%cg%chTURRET AUTO-TURN ENGAGED%cn");
+      strcpy(buf + spaces, "[fg=green bold]TURRET AUTO-TURN ENGAGED[reset]");
       notify(evaluation, player, buf);
     }
     if (MechSections(mech)[RARM].specials & CARRYING_CLUB) {
-      strcpy(buf + spaces, "%cg%chCARRYING CLUB - RIGHT ARM%cn");
+      strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - RIGHT ARM[reset]");
       notify(evaluation, player, buf);
     }
     if (MechSections(mech)[LARM].specials & CARRYING_CLUB) {
-      strcpy(buf + spaces, "%cg%chCARRYING CLUB - LEFT ARM%cn");
+      strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - LEFT ARM[reset]");
       notify(evaluation, player, buf);
     }
   }
@@ -611,7 +615,16 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
 /*                    1234567890123456 */
 const char radio_colorstr[] = "xrgybmcwXRGYBMCW";
 
-static void radio_color_code(char buffer[static 8], MECH *m, int i, int obs,
+static const char *const radio_color_styles[] = {
+    "[fg=black]",      "[fg=red]",          "[fg=green]",
+    "[fg=yellow]",     "[fg=blue]",         "[fg=magenta]",
+    "[fg=cyan]",       "[fg=white]",        "[fg=black bold]",
+    "[fg=red bold]",   "[fg=green bold]",   "[fg=yellow bold]",
+    "[fg=blue bold]",  "[fg=magenta bold]", "[fg=cyan bold]",
+    "[fg=white bold]",
+};
+
+static void radio_color_code(char buffer[static 32], MECH *m, int i, int obs,
                              int team) {
   int t = m->freqmodes[i] / FREQ_REST;
   int ii;
@@ -620,17 +633,13 @@ static void radio_color_code(char buffer[static 8], MECH *m, int i, int obs,
   if (!obs) {
     if (!t)
       return;
-    if (t < 9) {
-      snprintf(buffer, 8, "%%c%c", radio_colorstr[t - 1]);
-      return;
-    }
-    snprintf(buffer, 8, "%%ch%%c%c", ToLower(radio_colorstr[t - 1]));
+    snprintf(buffer, 32, "%s", radio_color_styles[t - 1]);
   } else {
     if (team > 15)
       team = team % 15;
     for (ii = 0; ii < 15; ii++) {
       if (team == obs_team_color[ii].team)
-        snprintf(buffer, 8, "%s", obs_team_color[ii].ccode);
+        snprintf(buffer, 32, "%s", obs_team_color[ii].ccode);
     }
   }
 }
@@ -1126,7 +1135,7 @@ static void build_observer_channel_message(
   safe_str((char *)title, buf, &bp);
   safe_str("> ", buf, &bp);
   safe_str((char *)message, buf, &bp);
-  safe_str("%c", buf, &bp);
+  safe_str("[reset]", buf, &bp);
   *bp = '\0';
 }
 
@@ -1146,7 +1155,7 @@ static void build_channel_message(char *buf, const char *color,
   safe_chr(close_bracket, buf, &bp);
   safe_chr(' ', buf, &bp);
   safe_str((char *)message, buf, &bp);
-  safe_str("%c", buf, &bp);
+  safe_str("[reset]", buf, &bp);
   *bp = '\0';
 }
 
@@ -1158,7 +1167,7 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
   char buf[LBUF_SIZE];
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
-  char color_code[8];
+  char color_code[32];
   int obs = 0;
   CommRelayContext *relay;
 
@@ -1548,10 +1557,10 @@ void HexLOSBroadcast(MAP *mech_map, int x, int y, char *message) {
                 } else {
                   /* Dangerous */
                   if (x == MechX(tempMech) && y == MechY(tempMech))
-                    strcpy(d, "%ch%crYOUR HEX%cn");
+                    strcpy(d, "[fg=red bold]YOUR HEX[reset]");
                   else
-                    snprintf(d, sizeof(tbuf) - (tbuf - d), "%%ch%%cy%d,%d%%cn",
-                             x, y);
+                    snprintf(d, sizeof(tbuf) - (tbuf - d),
+                             "[fg=yellow bold]%d,%d[reset]", x, y);
                   while (*d)
                     d++;
                 }

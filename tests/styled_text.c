@@ -56,6 +56,7 @@ int main(void) {
       "\033[0m\033[31mred \033[0m\033[1m\033[31mbold\033[0m\033[31m"
       " red\033[0m";
   const char grouped[] = "\033[0m\033[1m\033[34m\033[47mBlue\033[0m";
+  const char blinking[] = "\033[0m\033[1m\033[5m\033[31mAlert\033[0m";
   const char truecolor[] = "\033[38;2;255;0;0mR";
   TerminalColorDepth depth;
   bool screen_reader;
@@ -69,6 +70,7 @@ int main(void) {
   if (!expect_compile("[fg=red]Red[/]", red) ||
       !expect_compile("[fg=red]red [bold]bold[/] red[/]", nested) ||
       !expect_compile("[fg=blue bg=white bold]Blue[/]", grouped) ||
+      !expect_compile("[fg=red bold blink]Alert[/]", blinking) ||
       !expect_compile("[[literal]", "[literal]") ||
       !expect_invalid("[fg=unknown]x[/]") ||
       !expect_invalid("[fg=#abcd]x[/]") || !expect_invalid("[bold]x") ||
@@ -103,6 +105,8 @@ int main(void) {
                       "\033[0m\033[38;5;9mR\033[0m\033[0m") ||
        !expect_render("[fg=#ff0000]R[/]", TERMINAL_COLOR_TRUECOLOR,
                       "\033[0m\033[38;2;255;0;0mR\033[0m\033[0m") ||
+       !expect_render("[blink]Alert[/]", TERMINAL_COLOR_ANSI_16,
+                      "\033[0m\033[5mAlert\033[0m\033[0m") ||
        !styled_text_escape("[fg=red]literal", escaped, sizeof(escaped)) ||
        strcmp(escaped, "[[fg=red]literal") != 0))
     result = 1;

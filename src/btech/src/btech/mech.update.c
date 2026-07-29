@@ -1268,14 +1268,15 @@ void HandleOverheat(MECH *mech) {
 #endif
   if (!(avoided) && Started(mech)) {
     if (MechStatus(mech) & STARTED)
-      mech_notify(mech, MECHALL, "%ci%crReactor shutting down...%c");
+      mech_notify(mech, MECHALL,
+                  "[fg=red inverse]Reactor shutting down...[reset]");
     if (MechStatus2(mech) & SLITE_ON) {
       mech_notify(mech, MECHALL, "Your searchlight shuts off.");
       MechStatus2(mech) &= ~SLITE_ON;
       MechCritStatus(mech) &= ~SLITE_LIT;
     }
     if (Jumping(mech) || OODing(mech) || (is_aero(mech) && !Landed(mech))) {
-      mech_notify(mech, MECHALL, "%chYou fall from the sky!%c");
+      mech_notify(mech, MECHALL, "[bold]You fall from the sky![reset]");
       MechLOSBroadcast(mech, "falls from the sky!");
       mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
       MechFalls(mech, JumpSpeedMP(mech, mech_map), 0);
@@ -1306,8 +1307,9 @@ static int EnableSomeHS(MECH *mech, int numsinks) {
                                                                       such after
                                       enabling them, only the next tic. */
 #ifdef HEATCUTOFF_DEBUG
-  mech_printf(mech, MECHALL, "%%cg%d heatsink%s kick%s into action.%%c",
-              numsinks, numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
+  mech_printf(mech, MECHALL,
+              "[fg=green]%d heatsink%s kick%s into action.[reset]", numsinks,
+              numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
 #endif
 
   return numsinks;
@@ -1327,8 +1329,9 @@ static int DisableSomeHS(MECH *mech, int numsinks) {
       numsinks; /* Submerged heatsinks silently
                                                    still dissipate some heat */
 #ifdef HEATCUTOFF_DEBUG
-  mech_printf(mech, MECHALL, "%%cy%d heatsink%s hum%s into silence.%%c",
-              numsinks, numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
+  mech_printf(mech, MECHALL,
+              "[fg=yellow]%d heatsink%s hum%s into silence.[reset]", numsinks,
+              numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
 #endif
 
   return numsinks;
@@ -1476,23 +1479,23 @@ void UpdateHeat(MECH *mech) {
   if (MechHeat(mech) >= 19.) {
     if (inheat < 19.) {
       mech_notify(mech, MECHALL,
-                  "%ch%cr=====================================\n"
+                  "[fg=red bold]=====================================\n"
                   "Your Excess Heat indicator turns RED!\n"
-                  "=====================================%c");
+                  "=====================================[reset]");
     }
   } else if (MechHeat(mech) >= 14.) {
     if (inheat >= 19. || inheat < 14.) {
       mech_notify(mech, MECHALL,
-                  "%ch%cy=======================================\n"
+                  "[fg=yellow bold]=======================================\n"
                   "Your Excess Heat indicator turns YELLOW\n"
-                  "=======================================%c");
+                  "=======================================[reset]");
     }
   } else {
     if (inheat >= 14.) {
       mech_notify(mech, MECHALL,
-                  "%cg======================================\n"
+                  "[fg=green]======================================\n"
                   "Your Excess Heat indicator turns GREEN\n"
-                  "======================================%c");
+                  "======================================[reset]");
     }
   }
   HandleOverheat(mech);
@@ -1539,15 +1542,16 @@ int recycle_weaponry(MECH *mech) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-zero-length"
 #endif
-          mech_printf(mech, MECHSTARTED,
-                      MechType(mech) == CLASS_MW
-                          ? "%%cgYou are ready to attack again with %s.%%c"
-                      : PartTempNuke(mech, loop, crit[i]) != 0
-                          ? "%%cg%s is operational again.%%c"
-                      : (GetPartFireMode(mech, loop, crit[i]) & ROCKET_FIRED)
-                          ? ""
-                          : "%%cg%s finished recycling.%%c",
-                      &MechWeapons[weaptype[i]].name[3]);
+          mech_printf(
+              mech, MECHSTARTED,
+              MechType(mech) == CLASS_MW
+                  ? "[fg=green]You are ready to attack again with %s.[reset]"
+              : PartTempNuke(mech, loop, crit[i]) != 0
+                  ? "[fg=green]%s is operational again.[reset]"
+              : (GetPartFireMode(mech, loop, crit[i]) & ROCKET_FIRED)
+                  ? ""
+                  : "[fg=green]%s finished recycling.[reset]",
+              &MechWeapons[weaptype[i]].name[3]);
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -1576,7 +1580,7 @@ int recycle_weaponry(MECH *mech) {
         ArmorStringFromIndex(loop, location, MechType(mech), MechMove(mech));
 
         mech_printf(mech, MECHSTARTED,
-                    "%%cg%s%s has finished its previous action.%%c",
+                    "[fg=green]%s%s has finished its previous action.[reset]",
                     MechType(mech) == CLASS_BSUIT ? "" : "Your ", location);
 
       } else {
@@ -1672,20 +1676,20 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         ed = MAX(1, 1 + MechZ(mech) -
                         Elevation(mech_map, MechX(mech), MechY(mech)));
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
-        mech_notify(
-            mech, MECHALL,
-            "%chYou attempt to jump over elevation that is too high!%c");
+        mech_notify(mech, MECHALL,
+                    "[bold]You attempt to jump over elevation that is too "
+                    "high![reset]");
         if (RGotPilot(mech) &&
             MadePilotSkillRoll(mech, (int)(MechFZ(mech)) / ZSCALE / 3)) {
 
-          mech_notify(mech, MECHALL, "%chYou land safely.%c");
+          mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
           LandMech(mech);
 
         } else {
 
-          mech_notify(
-              mech, MECHALL,
-              "%chYou crash into the obstacle and fall from the sky!%c");
+          mech_notify(mech, MECHALL,
+                      "[bold]You crash into the obstacle and fall from the "
+                      "sky![reset]");
           MechLOSBroadcast(mech,
                            "crashes into an obstacle and falls from the sky!");
           MechFalls(mech, ed, 0);

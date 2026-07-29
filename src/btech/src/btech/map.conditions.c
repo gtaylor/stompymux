@@ -137,9 +137,9 @@ void reactor_explosion(MECH *wounded, MECH *attacker) {
   blast_hit_hexesf(
       map, dam, 3, MAX(MechTons(wounded) / 10, MechEngineSize(wounded) / 25),
       MechFX(wounded), MechFY(wounded), MechFX(wounded), MechFY(wounded),
-      "%ch%crYou bear full brunt of the blast!%cn",
+      "[fg=red bold]You bear full brunt of the blast![reset]",
       "is hit badly by the blast!",
-      "%ch%cyYou receive some damage from the blast!%cn",
+      "[fg=yellow bold]You receive some damage from the blast![reset]",
       "is hit by the blast!",
       wounded->xcode.context->configuration->btech_explode_reactor > 1, 3, 5, 1,
       2);
@@ -237,11 +237,12 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
                 btech_random_roll(wounded->xcode.context) >= BOOM_BTH &&
                 (Started(wounded) || Starting(wounded))) {
 
-              HexLOSBroadcast(btech_context_get_map(wounded->xcode.context,
-                                                    wounded->mapindex),
-                              MechX(wounded), MechY(wounded),
-                              "%ch%crThe hit destroys the last safety systems, "
-                              "releasing the fusion reaction!%cn");
+              HexLOSBroadcast(
+                  btech_context_get_map(wounded->xcode.context,
+                                        wounded->mapindex),
+                  MechX(wounded), MechY(wounded),
+                  "[fg=red bold]The hit destroys the last safety systems, "
+                  "releasing the fusion reaction![reset]");
 
               reactor_explosion(wounded, attacker);
             }

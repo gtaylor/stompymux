@@ -7,7 +7,6 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/stringutil.h"
 
 int is_integer(char *str) {
@@ -88,14 +87,7 @@ int is_number(char *str) {
 
 int ok_name(const ServerConfiguration *configuration, const char *name) {
   const char *cp;
-  char new[LBUF_SIZE];
-
   (void)configuration;
-
-  /* Disallow pure ANSI names */
-  strncpy(new, name, LBUF_SIZE - 1);
-  if (strlen(strip_ansi_r(new, name, strlen(name))) == 0)
-    return 0;
 
   /* Disallow leading spaces */
 
@@ -107,7 +99,7 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
    */
 
   for (cp = name; cp && *cp; cp++) {
-    if ((!isprint(*cp)) && (*cp != ESC_CHAR))
+    if (!isprint((unsigned char)*cp))
       return 0;
   }
 
@@ -159,7 +151,7 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
   for (cp = name; cp && *cp; cp++) {
     if (isalnum(*cp))
       continue;
-    if ((!index(good_chars, *cp)) || (*cp == ESC_CHAR))
+    if (!index(good_chars, *cp))
       return 0;
   }
   return 1;

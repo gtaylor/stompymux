@@ -124,7 +124,7 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
-  char *msg_copy, *tbuff, *buff, *colbuf = nullptr;
+  char *msg_copy, *tbuff, *buff;
   DbRef targetloc, recip, obj;
   int has_neighbors;
   int target_audible;
@@ -156,13 +156,8 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   switch (typeof_obj(evaluation->world->database, target)) {
   case OBJECT_TYPE_PLAYER:
     if (key & MSG_ME) {
-      if (key & MSG_COLORIZE)
-        colbuf = colorize(evaluation, target, msg_copy);
-      raw_notify(evaluation, target, colbuf ? colbuf : msg_copy);
+      raw_notify(evaluation, target, msg_copy);
     }
-
-    if (colbuf)
-      free_lbuf(colbuf);
     [[fallthrough]];
   case OBJECT_TYPE_THING:
   case OBJECT_TYPE_ROOM:
@@ -287,8 +282,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
              game_object_contents(evaluation->world->database, targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
           notify_checked(evaluation, obj, sender, buff,
-                         MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE |
-                             (key & MSG_COLORIZE));
+                         MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
       if (key & MSG_S_INSIDE) {

@@ -854,7 +854,7 @@ void PrintEnemyWeaponStatus(MECH *mech, DbRef player) {
   int count;
   int loop;
   int ii;
-  char weapbuff[70] = {0};
+  char weapbuff[LBUF_SIZE] = {0};
   char tempbuff[50] = {0};
   char location[20] = {0};
   int running_sum = 0;
@@ -881,12 +881,12 @@ void PrintEnemyWeaponStatus(MECH *mech, DbRef player) {
         strcat(weapbuff, location);
 
         if (PartIsNonfunctional(mech, loop, critical[ii])) {
-          strcat(weapbuff, "%ch%cx*****%c");
+          strcat(weapbuff, "[fg=black bold]*****[reset]");
         } else {
           if (weapdata[ii]) {
             strcat(weapbuff, "-----");
           } else {
-            strcat(weapbuff, "%cgReady%c");
+            strcat(weapbuff, "[fg=green]Ready[reset]");
           }
         }
         notify(evaluation, player, weapbuff);

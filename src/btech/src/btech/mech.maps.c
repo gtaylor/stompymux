@@ -408,8 +408,39 @@ static inline char TerrainColorChar(const MapColorScheme *colors, char terrain,
 }
 
 typedef struct MapCellText {
-  char text[10]; /* No color transition is longer than seven characters. */
+  char text[32];
 } MapCellText;
+
+static const char *map_color_markup(char color) {
+  bool bold = isupper((unsigned char)color);
+
+  switch (tolower((unsigned char)color)) {
+  case 'x':
+    return bold ? "[fg=black bold]" : "[fg=black]";
+  case 'r':
+    return bold ? "[fg=red bold]" : "[fg=red]";
+  case 'g':
+    return bold ? "[fg=green bold]" : "[fg=green]";
+  case 'y':
+    return bold ? "[fg=yellow bold]" : "[fg=yellow]";
+  case 'b':
+    return bold ? "[fg=blue bold]" : "[fg=blue]";
+  case 'm':
+    return bold ? "[fg=magenta bold]" : "[fg=magenta]";
+  case 'c':
+    return bold ? "[fg=cyan bold]" : "[fg=cyan]";
+  case 'w':
+    return bold ? "[fg=white bold]" : "[fg=white]";
+  case 'f':
+    return bold ? "[blink bold]" : "[blink]";
+  case 'i':
+    return bold ? "[inverse bold]" : "[inverse]";
+  case 'h':
+    return "[bold]";
+  default:
+    return "";
+  }
+}
 
 static MapCellText map_cell_text(char newc, char *prevc, char c) {
   MapCellText result = {0};
@@ -419,18 +450,8 @@ static MapCellText map_cell_text(char newc, char *prevc, char c) {
     return result;
   }
 
-  if (!newc || ((isupper(*prevc)) && !isupper(newc)) || (newc == 'H' && *prevc))
-    strcpy(result.text, "%cn");
-  else if (isupper(newc) && !isupper(*prevc))
-    strcpy(result.text, "%ch");
-
-  if (!newc)
-    snprintf(result.text + strlen(result.text),
-             sizeof(result.text) - strlen(result.text), "%c", c);
-  else
-    snprintf(result.text + strlen(result.text),
-             sizeof(result.text) - strlen(result.text), "%%c%c%c",
-             tolower(newc), c);
+  snprintf(result.text, sizeof(result.text), "[reset]%s%c",
+           map_color_markup(newc), c);
   *prevc = newc;
   return result;
 }
@@ -540,19 +561,10 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, MECH *mech,
   int loop, b_width, e_width, b_height, e_height, i;
   MECH *oMech;
 
-  /* topbuff and botbuff must be capable of holding enough
-   * characters to colorize all hexes in the most inefficient
-   * way. This means 15 characters per 2 hexes, or 8 per
-   * hex. topbuff and botbuff both hold half the hexes on the row,
-   * so that ends up 4 * LRS_DISPLAY_WIDTH (plus some padding thrown
-   * in for good measure.)
-   *
-   * midbuff is only used for the lables, and only needs a few
-   * characters more than the display width.
-   */
-  char topbuff[4 * LRS_DISPLAY_WIDTH + 30] = "    ";
-  char botbuff[4 * LRS_DISPLAY_WIDTH + 30] = "    ";
-  char midbuff[8 + LRS_DISPLAY_WIDTH] = "    ";
+  /* These buffers hold styled map cells and their coordinate labels. */
+  char topbuff[LBUF_SIZE] = "    ";
+  char botbuff[LBUF_SIZE] = "    ";
+  char midbuff[LBUF_SIZE] = "    ";
   char trash1[16]; /* temp var to hold the map coordinate label */
   short oddcol = 0;
   MECH *mechs[MAX_MECHS_PER_MAP];
@@ -669,11 +681,11 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, MECH *mech,
 
     if (mode & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
       if (prevct) {
-        strcat(topbuff, "%cn");
+        strcat(topbuff, "[reset]");
         prevct = 0;
       }
       if (prevcb) {
-        strcat(botbuff, "%cn");
+        strcat(botbuff, "[reset]");
         prevcb = 0;
       }
     }
@@ -887,7 +899,7 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
       case WATER:
         /*
          * Colour hack:  Draw deep water with '\242'
-         * if using colour so colourize_tac_map()
+         * if using colour so style_tac_map()
          * knows to use dark blue rather than light
          * blue
          */
@@ -1068,7 +1080,7 @@ static void sketch_tac_mechs(char *buf, MAP *map, MECH *player_mech, int sx,
       if (docolour) {
         /*
          * Colour hack: 'X' would be confused with
-         * any enemy con by colourize_tac_map()
+         * any enemy contact by style_tac_map()
          */
         sketch_tac_ds(base, dispcols, '$');
       } else {
@@ -1276,8 +1288,8 @@ void map_text_destroy(MapText *text) {
   free(text);
 }
 
-static bool colourize_tac_map(MapText *text, const MapColorScheme *colors,
-                              const char *sketch, int dispcols, int disprows) {
+static bool style_tac_map(MapText *text, const MapColorScheme *colors,
+                          const char *sketch, int dispcols, int disprows) {
   size_t pos = 0;
   int line = 0;
   unsigned char cur_colour = '\0';
@@ -1295,9 +1307,8 @@ static bool colourize_tac_map(MapText *text, const MapColorScheme *colors,
        * End of line.
        */
       if (cur_colour != '\0') {
-        text->buffer[pos++] = '%';
-        text->buffer[pos++] = 'c';
-        text->buffer[pos++] = 'n';
+        memcpy(text->buffer + pos, "[reset]", 7);
+        pos += 7;
       }
       text->buffer[pos++] = '\0';
       line++;
@@ -1365,35 +1376,16 @@ static bool colourize_tac_map(MapText *text, const MapColorScheme *colors,
       break;
     }
 
-    if (isupper(new_colour) != isupper(cur_colour)) {
-      if (isupper(new_colour)) {
-        text->buffer[pos++] = '%';
-        text->buffer[pos++] = 'c';
-        text->buffer[pos++] = 'h';
-      } else {
-        text->buffer[pos++] = '%';
-        text->buffer[pos++] = 'c';
-        text->buffer[pos++] = 'n';
-        cur_colour = '\0';
-      }
-    }
-    if (tolower(new_colour) != tolower(cur_colour)) {
-      text->buffer[pos++] = '%';
-      text->buffer[pos++] = 'c';
-      if (new_colour == '\0') {
-        text->buffer[pos++] = 'n';
-      } else if (new_colour == 'H') {
-        text->buffer[pos++] = 'n';
-        text->buffer[pos++] = '%';
-        text->buffer[pos++] = 'c';
-        text->buffer[pos++] = tolower(new_colour);
-      } else {
-        text->buffer[pos++] = tolower(new_colour);
-      }
+    if (new_colour != cur_colour) {
+      const char *markup = map_color_markup(new_colour);
+      memcpy(text->buffer + pos, "[reset]", 7);
+      pos += 7;
+      memcpy(text->buffer + pos, markup, strlen(markup));
+      pos += strlen(markup);
       cur_colour = new_colour;
     }
     text->buffer[pos++] = c;
-    assert(pos + 11 <= text->buffer_capacity);
+    assert(pos + 32 <= text->buffer_capacity);
   }
   assert((size_t)line < text->line_capacity);
   text->lines[line] = nullptr;
@@ -1640,8 +1632,8 @@ MapText *map_text_create(DbRef player, MECH *mech, MAP *map, int cx, int cy,
   }
 
   size_t line_capacity = (size_t)disprows + 1;
-  size_t buffer_capacity = docolour ? (size_t)dispcols * (size_t)disprows * 8 +
-                                          (size_t)disprows * 4 + 11
+  size_t buffer_capacity = docolour ? (size_t)dispcols * (size_t)disprows * 32 +
+                                          (size_t)disprows * 8 + 32
                                     : MAP_SKETCH_CAPACITY;
   MapText *text = map_text_allocate(buffer_capacity, line_capacity);
   if (text == nullptr) {
@@ -1650,7 +1642,7 @@ MapText *map_text_create(DbRef player, MECH *mech, MAP *map, int cx, int cy,
   }
 
   if (docolour) {
-    colourize_tac_map(text, &colors, sketch_buf, dispcols, disprows);
+    style_tac_map(text, &colors, sketch_buf, dispcols, disprows);
     free(sketch_buf);
     return text;
   }

@@ -25,7 +25,8 @@ static void tag_recycle_event(MuxEvent *e) {
     return;
 
   if (data == 0) {
-    mech_notify(mech, MECHALL, "%cgYour TAG system has finished recycling.%cn");
+    mech_notify(mech, MECHALL,
+                "[fg=green]Your TAG system has finished recycling.[reset]");
     return;
   }
 
@@ -38,7 +39,7 @@ static void tag_recycle_event(MuxEvent *e) {
     return;
 
   mech_notify(mech, MECHALL,
-              "%cgYour TAG system has achieved a stable lock.%cn");
+              "[fg=green]Your TAG system has achieved a stable lock.[reset]");
 }
 
 void mech_tag(DbRef player, void *data, char *buffer) {

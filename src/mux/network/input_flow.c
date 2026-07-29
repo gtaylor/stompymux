@@ -11,7 +11,6 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/ansi.h"
 #include "mux/support/formatting.h"
 
 constexpr int FLOW_MAX_GOTO_CHAIN = 32;
@@ -25,8 +24,7 @@ struct InputFlow {
 };
 
 static void flow_send_prompt(Descriptor *d, const char *prompt) {
-  descriptor_queue_string(
-      d, tprintf("%s%s%s", ANSI_HILITE, prompt ? prompt : "", ANSI_NORMAL));
+  descriptor_queue_string(d, tprintf("[bold]%s[reset]", prompt ? prompt : ""));
 }
 
 void descriptor_flow_destroy(Descriptor *d) {

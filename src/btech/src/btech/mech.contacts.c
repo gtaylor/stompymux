@@ -15,6 +15,7 @@
 #include "map.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mux/support/styled_text.h"
 #include "p.mech.contacts.h"
 #include "p.mech.los.h"
 #include "p.mech.utils.h"
@@ -419,8 +420,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       snprintf(buff, sizeof(buff),
                "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
                "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-               tempMech->mynum == MechTarget(mech) ? "%ch%cr"
-               : !MechSeemsFriend(mech, tempMech)  ? "%ch%cy"
+               tempMech->mynum == MechTarget(mech) ? "[fg=red bold]"
+               : !MechSeemsFriend(mech, tempMech)  ? "[fg=yellow bold]"
                                                    : "",
                (losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
                (losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc,
@@ -431,7 +432,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                cStatus5,
                (tempMech->mynum == MechTarget(mech) ||
                 !MechSeemsFriend(mech, tempMech))
-                   ? "%c"
+                   ? "[reset]"
                    : "");
 
       rangelist[buffindex] = range;
@@ -508,16 +509,18 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         strncpy(new,
                 game_object_name(mech->xcode.context->database, building->obj),
                 LBUF_SIZE - 1);
-        mech_name = strip_ansi_r(
-            new, game_object_name(mech->xcode.context->database, building->obj),
-            strlen(game_object_name(mech->xcode.context->database,
-                                    building->obj)));
+        styled_text_strip(
+            mech->xcode.context->database->styled_text_palette,
+            game_object_name(mech->xcode.context->database, building->obj), new,
+            sizeof(new));
+        mech_name = new;
       }
 
       snprintf(buff, sizeof(buff),
                "%s%c%c%c %-23.23s x:%3d y:%3d z:%2d r:%4.1f b:%3d CF:%4d /%4d "
                "S:%c%c%s",
-               j ? "%ch%cy" : "", (losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
+               j ? "[fg=yellow bold]" : "",
+               (losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
                (losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc, mech_name,
                building->x, building->y, i, range, bearing, tmp_map->cf,
                tmp_map->cfmax,
@@ -525,7 +528,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                : j                                                 ? 'x'
                : BuildIsCS(tmp_map)                                ? 'C'
                                                                    : ' ',
-               BuildIsHidden(tmp_map) ? 'H' : ' ', j ? "%c" : "");
+               BuildIsHidden(tmp_map) ? 'H' : ' ', j ? "[reset]" : "");
       rangelist[buffindex] = range + 20000;
       strcpy(bufflist[buffindex++], buff);
     }

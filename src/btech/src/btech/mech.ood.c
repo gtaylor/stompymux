@@ -20,9 +20,11 @@
 
 void mech_ood_damage(MECH *wounded, MECH *attacker, int damage) {
   mech_printf(attacker, MECHALL,
-              "%%cgYou hit the cocoon for %d points of damage!%%cn", damage);
+              "[fg=green]You hit the cocoon for %d points of damage![reset]",
+              damage);
   mech_printf(wounded, MECHALL,
-              "%%ch%%cyYour cocoon has been hit for %d points of damage!%%cn",
+              "[fg=yellow bold]Your cocoon has been hit for %d points of "
+              "damage![reset]",
               damage);
   MechCocoon(wounded) = MAX(0, MechCocoon(wounded) - damage);
   if (MechCocoon(wounded))

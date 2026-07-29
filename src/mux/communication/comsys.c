@@ -969,7 +969,8 @@ void do_channelwho(CommandInvocation *invocation) {
          is_wizard(evaluation->world->database, player))) {
       cp = unparse_object(evaluation->world->database, evaluation, player,
                           user->who);
-      strip_ansi_r(ansibuffer, cp, LBUF_SIZE);
+      styled_text_strip(evaluation->world->styled_text_palette, cp, ansibuffer,
+                        LBUF_SIZE);
       notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
                     ((user->on) ? "on " : "off"),
                     (typeof_obj(evaluation->world->database, user->who) ==
