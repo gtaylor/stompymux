@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu24.04
 
-ARG CMAKE_VERSION=4.4.0
+ARG CMAKE_VERSION=4.4.1
 ARG JUST_VERSION=1.57.0
 ARG STYLUA_VERSION=2.5.2
 
