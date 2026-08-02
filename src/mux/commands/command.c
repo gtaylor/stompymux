@@ -320,6 +320,7 @@ CMDENT command_table[] = {
      {.invoke = do_wait}},
     {"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG, {.invoke = do_say}},
     {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_session}},
+    {"@telnet", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_telnet}},
     {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_who}},
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_addcom}},
     {"allcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_allcom}},

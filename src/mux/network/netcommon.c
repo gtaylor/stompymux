@@ -19,6 +19,7 @@
 #include "mux/commands/command_runtime.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/netcommon.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
@@ -30,6 +31,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text.h"
+#include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
 /*
@@ -778,6 +780,162 @@ static const char *terminal_color_depth_name(TerminalColorDepth depth) {
     return "truecolor";
   }
   return "unknown";
+}
+
+static int telnet_environment_view_compare(const void *left,
+                                           const void *right) {
+  const TelnetEnvironmentEntryView *left_entry = left;
+  const TelnetEnvironmentEntryView *right_entry = right;
+  size_t shared_size;
+  int comparison;
+
+  if (left_entry->kind != right_entry->kind)
+    return left_entry->kind < right_entry->kind ? -1 : 1;
+  shared_size = left_entry->name_size < right_entry->name_size
+                    ? left_entry->name_size
+                    : right_entry->name_size;
+  comparison = memcmp(left_entry->name, right_entry->name, shared_size);
+  if (comparison != 0)
+    return comparison;
+  if (left_entry->name_size == right_entry->name_size)
+    return 0;
+  return left_entry->name_size < right_entry->name_size ? -1 : 1;
+}
+
+static void telnet_append_escaped(char *buffer, char **position,
+                                  const unsigned char *value, size_t size) {
+  for (size_t index = 0; index < size; index++) {
+    unsigned char byte = value[index];
+
+    if (byte == '\\')
+      safe_str("\\\\", buffer, position);
+    else if (byte == '"')
+      safe_str("\\\"", buffer, position);
+    else if (byte >= 0x20 && byte <= 0x7e)
+      safe_chr((char)byte, buffer, position);
+    else
+      safe_str(tprintf("\\x%02X", byte), buffer, position);
+  }
+}
+
+static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
+                                    const Descriptor *descriptor) {
+  constexpr size_t DISPLAY_CHUNK_SIZE = 3500;
+  TelnetEnvironmentEntryView entries[64];
+  size_t count = descriptor_telnet_environment_count(descriptor);
+  char *buffer = alloc_lbuf("dump_telnet_environment");
+
+  if (count == 0) {
+    notify(evaluation, viewer, "  Environment: (none)");
+    free_lbuf(buffer);
+    return;
+  }
+  if (count > sizeof(entries) / sizeof(entries[0]))
+    count = sizeof(entries) / sizeof(entries[0]);
+  for (size_t index = 0; index < count; index++)
+    descriptor_telnet_environment_entry(descriptor, index, &entries[index]);
+  qsort(entries, count, sizeof(entries[0]), telnet_environment_view_compare);
+  notify(evaluation, viewer, "  Environment:");
+  for (size_t index = 0; index < count; index++) {
+    TelnetEnvironmentEntryView *entry = &entries[index];
+    size_t value_position = 0;
+    bool first_chunk = true;
+
+    do {
+      size_t remaining = entry->value_size - value_position;
+      size_t chunk_size =
+          remaining < DISPLAY_CHUNK_SIZE ? remaining : DISPLAY_CHUNK_SIZE;
+      char *position = buffer;
+
+      if (first_chunk) {
+        safe_str(entry->kind == TELNET_ENVIRONMENT_VAR ? "    VAR \""
+                                                       : "    USERVAR \"",
+                 buffer, &position);
+        telnet_append_escaped(buffer, &position, entry->name, entry->name_size);
+        safe_str("\" = \"", buffer, &position);
+      } else {
+        safe_str("      value += \"", buffer, &position);
+      }
+      telnet_append_escaped(buffer, &position, entry->value + value_position,
+                            chunk_size);
+      safe_chr('"', buffer, &position);
+      *position = '\0';
+      notify(evaluation, viewer, buffer);
+      value_position += chunk_size;
+      first_chunk = false;
+    } while (value_position < entry->value_size);
+  }
+  free_lbuf(buffer);
+}
+
+static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
+                                   const Descriptor *descriptor) {
+  char *client = alloc_lbuf("dump_telnet_client");
+  char *client_position = client;
+  char *terminal = alloc_lbuf("dump_telnet_terminal");
+  char *terminal_position = terminal;
+
+  telnet_append_escaped(client, &client_position,
+                        (const unsigned char *)descriptor->terminal_client,
+                        strlen(descriptor->terminal_client));
+  *client_position = '\0';
+  telnet_append_escaped(terminal, &terminal_position,
+                        (const unsigned char *)descriptor->terminal_type,
+                        strlen(descriptor->terminal_type));
+  *terminal_position = '\0';
+  notify_printf(
+      evaluation, viewer, "Telnet state for %s(#%ld), descriptor %d:",
+      game_object_name(evaluation->world->database, descriptor->player),
+      descriptor->player, descriptor->descriptor);
+  notify_printf(evaluation, viewer,
+                "  Options: TTYPE=%s NAWS=%s NEW-ENVIRON=%s CHARSET=%s GMCP=%s "
+                "MSSP=%s MCCP2=%s ECHO=%s",
+                descriptor->is_ttype_enabled ? "yes" : "no",
+                descriptor->is_naws_enabled ? "yes" : "no",
+                descriptor->is_new_environ_enabled ? "yes" : "no",
+                descriptor->is_charset_enabled ? "yes" : "no",
+                descriptor->is_gmcp_enabled ? "yes" : "no",
+                descriptor->is_mssp_enabled ? "yes" : "no",
+                descriptor->is_mccp_enabled ? "active" : "no",
+                descriptor->is_echo_suppressed ? "suppressed" : "client");
+  notify_printf(evaluation, viewer,
+                "  Terminal: client=\"%s\" type=\"%s\" size=%dx%d "
+                "color=%s%s charset=%s",
+                client, terminal, descriptor->terminal_width,
+                descriptor->terminal_height,
+                terminal_color_depth_name(descriptor->terminal_color_depth),
+                descriptor->is_screen_reader ? " screen-reader" : "",
+                descriptor->is_charset_utf8 ? "UTF-8" : "unsupported");
+  dump_telnet_environment(evaluation, viewer, descriptor);
+  free_lbuf(terminal);
+  free_lbuf(client);
+}
+
+void do_telnet(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef target;
+  Descriptor *descriptor;
+  DescriptorIterator iterator;
+  int count = 0;
+
+  if (invocation->first == nullptr || invocation->first[0] == '\0') {
+    notify(evaluation, invocation->player, "Usage: @telnet <player>");
+    return;
+  }
+  target = lookup_player(invocation->context->world, invocation->player,
+                         invocation->first, 0);
+  if (target == NOTHING) {
+    notify(evaluation, invocation->player, "No such player.");
+    return;
+  }
+  iterator =
+      descriptor_iterator_player(evaluation->runtime->descriptors, target);
+  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
+    dump_telnet_descriptor(evaluation, invocation->player, descriptor);
+    count++;
+  }
+  if (count == 0)
+    notify(evaluation, invocation->player, "That player is not connected.");
 }
 
 void do_color(CommandInvocation *invocation) {

@@ -171,6 +171,26 @@ local summary = mux.who_summary()
 local maximum = summary.maximum or "no"
 ```
 
+## Telnet environment
+
+`mux.telnet_environment_has(descriptor, kind, name)` reports whether an RFC
+1572 NEW-ENVIRON variable is defined on a live connection.
+`mux.telnet_environment_get(descriptor, kind, name)` returns its string value,
+or `nil` when it is absent. A defined empty value returns `""`.
+
+`descriptor` is normally `ctx.descriptor`. `kind` must be `"var"` or
+`"uservar"`; the two namespaces are distinct. Names and values are binary-safe
+Lua strings, and all received data is untrusted client input.
+
+```lua
+if mux.telnet_environment_has(ctx.descriptor, "var", "USER") then
+  local user = mux.telnet_environment_get(ctx.descriptor, "var", "USER")
+end
+```
+
+Both functions raise an error for an invalid descriptor or kind and are
+unavailable during `@lua/check`.
+
 ## `mux.flow_start(descriptor, module, first_step)`
 
 Attaches an [interactive flow](../flows/) to a descriptor and shows its

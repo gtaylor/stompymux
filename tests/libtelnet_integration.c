@@ -19,6 +19,7 @@ struct test_context {
   char sent[128];
   size_t sent_size;
   char terminal_type[16];
+  char environment_user[16];
   int terminal_width;
   int terminal_height;
   int gmcp_enabled;
@@ -30,6 +31,7 @@ struct test_context {
 static const telnet_telopt_t test_options[] = {
     {TELNET_TELOPT_TTYPE, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_NAWS, TELNET_WONT, TELNET_DO},
+    {TELNET_TELOPT_NEW_ENVIRON, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_MSSP, TELNET_WILL, TELNET_DONT},
     {TELNET_TELOPT_COMPRESS2, TELNET_WILL, TELNET_DONT},
     {telnet_charset_option, TELNET_WILL, TELNET_DONT},
@@ -165,6 +167,10 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
   case TELNET_EV_WILL:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE)
       telnet_ttype_send(telnet);
+    else if (event->neg.telopt == TELNET_TELOPT_NEW_ENVIRON) {
+      telnet_begin_newenviron(telnet, TELNET_ENVIRON_SEND);
+      telnet_finish_newenviron(telnet);
+    }
     break;
   case TELNET_EV_DO:
     if (event->neg.telopt == TELNET_TELOPT_MSSP)
@@ -190,6 +196,18 @@ static void test_event_handler(telnet_t *telnet, telnet_event_t *event,
     if (event->ttype.cmd == TELNET_TTYPE_IS && event->ttype.name != NULL)
       snprintf(context->terminal_type, sizeof(context->terminal_type), "%s",
                event->ttype.name);
+    break;
+  case TELNET_EV_ENVIRON:
+    if (event->environ.cmd == TELNET_ENVIRON_IS) {
+      for (size_t index = 0; index < event->environ.size; index++) {
+        const struct telnet_environ_t *value = &event->environ.values[index];
+
+        if (value->type == TELNET_ENVIRON_VAR &&
+            strcmp(value->var, "USER") == 0)
+          snprintf(context->environment_user, sizeof(context->environment_user),
+                   "%s", value->value);
+      }
+    }
     break;
   case TELNET_EV_SUBNEGOTIATION:
     if (event->sub.telopt == telnet_charset_option) {
@@ -220,9 +238,8 @@ static int expect_bytes(const char *actual, size_t actual_size,
 
 static int expect_mccp_data(const char *actual, size_t actual_size,
                             const char *expected, size_t expected_size) {
-  static const char marker[] = {TELNET_IAC, TELNET_SB,
-                                TELNET_TELOPT_COMPRESS2, TELNET_IAC,
-                                TELNET_SE};
+  static const char marker[] = {TELNET_IAC, TELNET_SB, TELNET_TELOPT_COMPRESS2,
+                                TELNET_IAC, TELNET_SE};
   char output[128];
   z_stream stream = {0};
   int result;
@@ -255,12 +272,35 @@ int main(void) {
   static const char do_options[] = {
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_TTYPE,
       TELNET_IAC, TELNET_DO,   TELNET_TELOPT_NAWS,
+      TELNET_IAC, TELNET_DO,   TELNET_TELOPT_NEW_ENVIRON,
       TELNET_IAC, TELNET_WILL, TELNET_TELOPT_MSSP,
       TELNET_IAC, TELNET_WILL, TELNET_TELOPT_COMPRESS2,
       TELNET_IAC, TELNET_WILL, telnet_charset_option,
       TELNET_IAC, TELNET_WILL, telnet_gmcp_option};
   static const char ttype_will[] = {TELNET_IAC, TELNET_WILL,
                                     TELNET_TELOPT_TTYPE};
+  static const char new_environ_will[] = {TELNET_IAC, TELNET_WILL,
+                                          TELNET_TELOPT_NEW_ENVIRON};
+  static const char new_environ_request[] = {
+      TELNET_IAC,          TELNET_SB,  TELNET_TELOPT_NEW_ENVIRON,
+      TELNET_ENVIRON_SEND, TELNET_IAC, TELNET_SE};
+  static const char new_environ_is[] = {TELNET_IAC,
+                                        TELNET_SB,
+                                        TELNET_TELOPT_NEW_ENVIRON,
+                                        TELNET_ENVIRON_IS,
+                                        TELNET_ENVIRON_VAR,
+                                        'U',
+                                        'S',
+                                        'E',
+                                        'R',
+                                        TELNET_ENVIRON_VALUE,
+                                        'a',
+                                        'l',
+                                        'i',
+                                        'c',
+                                        'e',
+                                        TELNET_IAC,
+                                        TELNET_SE};
   static const char ttype_send[] = {TELNET_IAC,          TELNET_SB,
                                     TELNET_TELOPT_TTYPE, TELNET_TTYPE_SEND,
                                     TELNET_IAC,          TELNET_SE};
@@ -321,10 +361,18 @@ int main(void) {
                                                      'I',
                                                      TELNET_IAC,
                                                      TELNET_SE};
-  static const char charset_utf8_request[] = {
-      TELNET_IAC, TELNET_SB, telnet_charset_option, telnet_charset_request,
-      ';',        'U',       'T',                   'F',
-      '-',        '8',       TELNET_IAC,            TELNET_SE};
+  static const char charset_utf8_request[] = {TELNET_IAC,
+                                              TELNET_SB,
+                                              telnet_charset_option,
+                                              telnet_charset_request,
+                                              ';',
+                                              'U',
+                                              'T',
+                                              'F',
+                                              '-',
+                                              '8',
+                                              TELNET_IAC,
+                                              TELNET_SE};
   static const char charset_rejected_wire[] = {
       TELNET_IAC, TELNET_SB, telnet_charset_option, telnet_charset_rejected,
       TELNET_IAC, TELNET_SE};
@@ -375,6 +423,7 @@ int main(void) {
 
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_NAWS);
+  telnet_negotiate(telnet, TELNET_DO, TELNET_TELOPT_NEW_ENVIRON);
   telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
   telnet_negotiate(telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(telnet, TELNET_WILL, telnet_charset_option);
@@ -387,6 +436,13 @@ int main(void) {
   telnet_recv(telnet, ttype_will + 1, sizeof(ttype_will) - 1);
   result &= expect_bytes(context.sent, context.sent_size, ttype_send,
                          sizeof(ttype_send), "terminal type request");
+
+  context.sent_size = 0;
+  telnet_recv(telnet, new_environ_will, sizeof(new_environ_will));
+  result &= expect_bytes(context.sent, context.sent_size, new_environ_request,
+                         sizeof(new_environ_request), "NEW-ENVIRON request");
+  telnet_recv(telnet, new_environ_is, sizeof(new_environ_is));
+  result &= strcmp(context.environment_user, "alice") == 0;
 
   context.sent_size = 0;
   telnet_recv(telnet, mssp_do, sizeof(mssp_do));
@@ -435,8 +491,9 @@ int main(void) {
   telnet_recv(telnet, mccp_do, sizeof(mccp_do));
   telnet_send(telnet, "compressed output", sizeof("compressed output") - 1);
   result &= context.mccp_enabled;
-  result &= expect_mccp_data(context.sent, context.sent_size, "compressed output",
-                             sizeof("compressed output") - 1);
+  result &=
+      expect_mccp_data(context.sent, context.sent_size, "compressed output",
+                       sizeof("compressed output") - 1);
   telnet_free(telnet);
 
   if (!result)

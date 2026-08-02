@@ -12,6 +12,7 @@
 
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
@@ -825,6 +826,60 @@ static int lua_mux_who_summary(lua_State *state) {
   return 1;
 }
 
+static Descriptor *lua_mux_require_descriptor(LuaMuxPackage *package,
+                                              lua_State *state, int argument) {
+  int descriptor_id = (int)luaL_checkinteger(state, argument);
+  Descriptor *descriptor;
+
+  lua_mux_require_runtime(package, state, "telnet_environment");
+  descriptor =
+      descriptor_find_by_fd(package->services->descriptors, descriptor_id);
+  if (descriptor == nullptr)
+    luaL_argerror(state, argument, "no such descriptor");
+  return descriptor;
+}
+
+static TelnetEnvironmentKind lua_mux_telnet_environment_kind(lua_State *state,
+                                                             int argument) {
+  const char *kind = luaL_checkstring(state, argument);
+
+  if (!strcmp(kind, "var"))
+    return TELNET_ENVIRONMENT_VAR;
+  if (!strcmp(kind, "uservar"))
+    return TELNET_ENVIRONMENT_USERVAR;
+  luaL_argerror(state, argument, "kind must be 'var' or 'uservar'");
+  return TELNET_ENVIRONMENT_VAR;
+}
+
+static int lua_mux_telnet_environment_has(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  Descriptor *descriptor = lua_mux_require_descriptor(package, state, 1);
+  TelnetEnvironmentKind kind = lua_mux_telnet_environment_kind(state, 2);
+  size_t name_size;
+  const char *name = luaL_checklstring(state, 3, &name_size);
+
+  lua_pushboolean(state, descriptor_telnet_environment_has(descriptor, kind,
+                                                           name, name_size));
+  return 1;
+}
+
+static int lua_mux_telnet_environment_get(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  Descriptor *descriptor = lua_mux_require_descriptor(package, state, 1);
+  TelnetEnvironmentKind kind = lua_mux_telnet_environment_kind(state, 2);
+  size_t name_size;
+  const char *name = luaL_checklstring(state, 3, &name_size);
+  const void *value;
+  size_t value_size;
+
+  if (descriptor_telnet_environment_get(descriptor, kind, name, name_size,
+                                        &value, &value_size))
+    lua_pushlstring(state, value, value_size);
+  else
+    lua_pushnil(state);
+  return 1;
+}
+
 static int lua_mux_flow_start(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   int descriptor_id = (int)luaL_checkinteger(state, 1);
@@ -921,6 +976,12 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_who_summary, 1);
   lua_setfield(state, -2, "who_summary");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_telnet_environment_has, 1);
+  lua_setfield(state, -2, "telnet_environment_has");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_telnet_environment_get, 1);
+  lua_setfield(state, -2, "telnet_environment_get");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_flow_start, 1);
   lua_setfield(state, -2, "flow_start");

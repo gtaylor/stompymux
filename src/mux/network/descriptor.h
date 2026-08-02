@@ -24,6 +24,7 @@ typedef enum DescriptorShutdownReason {
 
 /* Opaque libtelnet protocol state owned by a descriptor. */
 typedef struct telnet_t telnet_t;
+typedef struct TelnetEnvironment TelnetEnvironment;
 /* Opaque interactive input-flow state owned by a descriptor. */
 typedef struct InputFlow InputFlow;
 /* Opaque libuv TCP handle owned by a descriptor. */
@@ -79,6 +80,8 @@ typedef struct Descriptor {
   int input_tail;
   /* libtelnet state for protocol negotiation. */
   telnet_t *telnet;
+  /* Environment variables reported through RFC 1572 NEW-ENVIRON. */
+  TelnetEnvironment *telnet_environment;
   /* Terminal type reported by the client. */
   char terminal_type[64];
   /* MUD client name reported by the first MTTS TTYPE response. */
@@ -97,14 +100,26 @@ typedef struct Descriptor {
   int terminal_width;
   /* Client terminal height in character cells. */
   int terminal_height;
+  /* Whether the client agreed to terminal-type negotiation. */
+  bool is_ttype_enabled;
+  /* Whether the client agreed to window-size negotiation. */
+  bool is_naws_enabled;
+  /* Whether the client agreed to NEW-ENVIRON negotiation. */
+  bool is_new_environ_enabled;
+  /* Whether the client requested the server-status response. */
+  bool is_mssp_enabled;
   /* Whether the client enabled the GMCP telnet option. */
   bool is_gmcp_enabled;
   /* Whether MCCP output compression is active. */
   bool is_mccp_enabled;
   /* Whether the client accepted UTF-8 character-set negotiation. */
   bool is_charset_utf8;
+  /* Whether the client agreed to character-set negotiation. */
+  bool is_charset_enabled;
   /* Whether a character-set negotiation request awaits a response. */
   bool is_charset_request_pending;
+  /* Whether the server is suppressing client-side echo for this connection. */
+  bool is_echo_suppressed;
   /* Time when this socket connection was accepted. */
   time_t connected_at;
   /* Time when the server last received a command from the client. */

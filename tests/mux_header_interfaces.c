@@ -18,6 +18,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/network/netcommon.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"

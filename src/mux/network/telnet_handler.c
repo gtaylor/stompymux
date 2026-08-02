@@ -11,6 +11,7 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/network/input_flow.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
@@ -34,6 +35,7 @@ static void telnet_send_gmcp(telnet_t *telnet, const char *package);
 static void telnet_send_mssp(Descriptor *descriptor);
 static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
                                   const char *value);
+static void telnet_send_new_environ_request(telnet_t *telnet);
 static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                                  void *user_data);
 
@@ -48,6 +50,7 @@ enum {
 static const telnet_telopt_t telnet_options[] = {
     {TELNET_TELOPT_TTYPE, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_NAWS, TELNET_WONT, TELNET_DO},
+    {TELNET_TELOPT_NEW_ENVIRON, TELNET_WONT, TELNET_DO},
     {TELNET_TELOPT_MSSP, TELNET_WILL, TELNET_DONT},
     {TELNET_TELOPT_COMPRESS2, TELNET_WILL, TELNET_DONT},
     {telnet_charset_option, TELNET_WILL, TELNET_DONT},
@@ -56,12 +59,21 @@ static const telnet_telopt_t telnet_options[] = {
 };
 
 int descriptor_telnet_initialize(Descriptor *d) {
+  d->telnet_environment = telnet_environment_create();
+  if (d->telnet_environment == nullptr) {
+    log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR",
+              "Unable to allocate Telnet environment for descriptor %d.",
+              d->descriptor);
+    return 0;
+  }
   d->telnet =
       telnet_init(telnet_options, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
   if (d->telnet == nullptr) {
     log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ERROR",
               "Unable to allocate Telnet state for descriptor %d.",
               d->descriptor);
+    telnet_environment_destroy(d->telnet_environment);
+    d->telnet_environment = nullptr;
     return 0;
   }
 
@@ -77,6 +89,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
   d->is_charset_utf8 = true;
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_NAWS);
+  telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_NEW_ENVIRON);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(d->telnet, TELNET_WILL, telnet_charset_option);
@@ -88,6 +101,8 @@ void descriptor_telnet_destroy(Descriptor *d) {
   if (d->telnet != nullptr)
     telnet_free(d->telnet);
   d->telnet = nullptr;
+  telnet_environment_destroy(d->telnet_environment);
+  d->telnet_environment = nullptr;
 }
 
 void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size) {
@@ -95,6 +110,7 @@ void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size) {
 }
 
 void descriptor_telnet_set_echo(Descriptor *d, int echo) {
+  d->is_echo_suppressed = !echo;
   telnet_negotiate(d->telnet, echo ? TELNET_WONT : TELNET_WILL,
                    TELNET_TELOPT_ECHO);
 }
@@ -305,6 +321,11 @@ static void telnet_send_mssp(Descriptor *descriptor) {
   telnet_finish_sb(telnet);
 }
 
+static void telnet_send_new_environ_request(telnet_t *telnet) {
+  telnet_begin_newenviron(telnet, TELNET_ENVIRON_SEND);
+  telnet_finish_newenviron(telnet);
+}
+
 static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                                  void *user_data) {
   Descriptor *d = user_data;
@@ -318,24 +339,37 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     descriptor_write_raw(d, event->data.buffer, event->data.size);
     break;
   case TELNET_EV_WILL:
-    if (event->neg.telopt == TELNET_TELOPT_TTYPE)
+    if (event->neg.telopt == TELNET_TELOPT_TTYPE) {
+      d->is_ttype_enabled = true;
       telnet_ttype_send(telnet);
+    } else if (event->neg.telopt == TELNET_TELOPT_NAWS) {
+      d->is_naws_enabled = true;
+    } else if (event->neg.telopt == TELNET_TELOPT_NEW_ENVIRON) {
+      d->is_new_environ_enabled = true;
+      telnet_environment_clear(d->telnet_environment);
+      telnet_send_new_environ_request(telnet);
+    }
     break;
   case TELNET_EV_DO:
-    if (event->neg.telopt == TELNET_TELOPT_MSSP)
+    if (event->neg.telopt == TELNET_TELOPT_MSSP) {
+      d->is_mssp_enabled = true;
       telnet_send_mssp(d);
-    else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
-             !d->is_mccp_enabled)
+    } else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
+               !d->is_mccp_enabled)
       telnet_begin_compress2(telnet);
-    else if (event->neg.telopt == telnet_charset_option)
+    else if (event->neg.telopt == telnet_charset_option) {
+      d->is_charset_enabled = true;
       telnet_send_charset_request(d);
-    else if (event->neg.telopt == telnet_gmcp_option)
+    } else if (event->neg.telopt == telnet_gmcp_option)
       d->is_gmcp_enabled = true;
     break;
   case TELNET_EV_DONT:
-    if (event->neg.telopt == telnet_charset_option)
+    if (event->neg.telopt == TELNET_TELOPT_MSSP)
+      d->is_mssp_enabled = false;
+    else if (event->neg.telopt == telnet_charset_option) {
+      d->is_charset_enabled = false;
       d->is_charset_request_pending = false;
-    else if (event->neg.telopt == telnet_gmcp_option)
+    } else if (event->neg.telopt == telnet_gmcp_option)
       d->is_gmcp_enabled = false;
     break;
   case TELNET_EV_COMPRESS:
@@ -343,10 +377,15 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
     break;
   case TELNET_EV_WONT:
     if (event->neg.telopt == TELNET_TELOPT_TTYPE) {
+      d->is_ttype_enabled = false;
       snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
     } else if (event->neg.telopt == TELNET_TELOPT_NAWS) {
+      d->is_naws_enabled = false;
       d->terminal_width = 80;
       d->terminal_height = 25;
+    } else if (event->neg.telopt == TELNET_TELOPT_NEW_ENVIRON) {
+      d->is_new_environ_enabled = false;
+      telnet_environment_clear(d->telnet_environment);
     }
     break;
   case TELNET_EV_TTYPE:
@@ -367,6 +406,16 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
       buffer = (const unsigned char *)event->sub.buffer;
       d->terminal_width = (buffer[0] << 8) | buffer[1];
       d->terminal_height = (buffer[2] << 8) | buffer[3];
+    } else if (event->sub.telopt == TELNET_TELOPT_NEW_ENVIRON &&
+               d->is_new_environ_enabled && event->sub.size > 0 &&
+               (event->sub.buffer[0] == TELNET_ENVIRON_IS ||
+                event->sub.buffer[0] == TELNET_ENVIRON_INFO)) {
+      if (!telnet_environment_receive(d->telnet_environment, event->sub.buffer,
+                                      event->sub.size))
+        log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "ENVIRON",
+                  "Descriptor %d sent an invalid or oversized NEW-ENVIRON "
+                  "update.",
+                  d->descriptor);
     }
     break;
   case TELNET_EV_WARNING:

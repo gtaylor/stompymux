@@ -255,6 +255,17 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "expected removed '@examine/state' help to be absent\n");
     return 8;
   }
+  article = help_index_find_exact(index, "@telnet", false);
+  if (article) {
+    fprintf(stderr, "expected '@telnet' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@telnet", true);
+  if (!article || !article->wizard_only ||
+      strcmp(article->relative_path, "wizard_commands/telnet.md")) {
+    fprintf(stderr, "expected '@telnet' to resolve to wizard help\n");
+    return 8;
+  }
 
   /* index.md is the default article. */
   default_article = help_index_default_article(index);

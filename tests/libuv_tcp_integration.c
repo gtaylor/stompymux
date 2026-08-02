@@ -28,6 +28,13 @@ constexpr unsigned char TELNET_DO = 253;
 constexpr unsigned char TELNET_TTYPE = 24;
 constexpr unsigned char TELNET_TTYPE_IS = 0;
 constexpr unsigned char TELNET_TTYPE_SEND = 1;
+constexpr unsigned char TELNET_NEW_ENVIRON = 39;
+constexpr unsigned char TELNET_ENVIRON_IS = 0;
+constexpr unsigned char TELNET_ENVIRON_SEND = 1;
+constexpr unsigned char TELNET_ENVIRON_VAR = 0;
+constexpr unsigned char TELNET_ENVIRON_VALUE = 1;
+constexpr unsigned char TELNET_ENVIRON_ESC = 2;
+constexpr unsigned char TELNET_ENVIRON_USERVAR = 3;
 
 /* Wait for child to exit successfully, killing it after the timeout. */
 static int wait_child(pid_t child) {
@@ -135,6 +142,22 @@ static int write_lua_fixture(const char *directory) {
       "        assert(not mux.is_printable_ascii(\"caf\\195\\169\"))\n"
       "        assert(not mux.is_printable_ascii(\"a\\0b\"))\n"
       "        assert(not pcall(mux.is_printable_ascii, 123))\n"
+      "        assert(mux.telnet_environment_has(ctx.descriptor, \"var\", "
+      "\"USER\"))\n"
+      "        assert(mux.telnet_environment_get(ctx.descriptor, \"var\", "
+      "\"USER\") == \"alice\")\n"
+      "        assert(not mux.telnet_environment_has(ctx.descriptor, \"var\", "
+      "\"EMPTY\"))\n"
+      "        assert(mux.telnet_environment_has(ctx.descriptor, \"uservar\", "
+      "\"EMPTY\"))\n"
+      "        assert(mux.telnet_environment_get(ctx.descriptor, \"uservar\", "
+      "\"EMPTY\") == \"\")\n"
+      "        assert(mux.telnet_environment_get(ctx.descriptor, \"uservar\", "
+      "\"BINARY\") == \"x\\1y\")\n"
+      "        assert(mux.telnet_environment_get(ctx.descriptor, \"var\", "
+      "\"MISSING\") == nil)\n"
+      "        assert(not pcall(mux.telnet_environment_has, ctx.descriptor, "
+      "\"bad\", \"USER\"))\n"
       "        local styled = mux.style(\"LuaHex\", { foreground = "
       "\"stompy-orange\" })\n"
       "        assert(mux.text_width(styled) == 6)\n"
@@ -243,12 +266,12 @@ static int expect_ttype_request(int socket_fd) {
 
 static int negotiate_utf8(int socket_fd) {
   static const unsigned char enable[] = {TELNET_IAC, TELNET_DO, 42};
-  static const unsigned char request[] = {TELNET_IAC, TELNET_SB, 42, 1, ';',
+  static const unsigned char request[] = {TELNET_IAC, TELNET_SB, 42,  1,   ';',
                                           'U',        'T',       'F', '-', '8',
                                           TELNET_IAC, TELNET_SE};
-  static const unsigned char accepted[] = {TELNET_IAC, TELNET_SB, 42, 2,
-                                           'U',        'T',       'F', '-',
-                                           '8',        TELNET_IAC, TELNET_SE};
+  static const unsigned char accepted[] = {
+      TELNET_IAC, TELNET_SB, 42,  2,          'U',      'T',
+      'F',        '-',       '8', TELNET_IAC, TELNET_SE};
   unsigned char received[4096];
   size_t received_size = 0;
   struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
@@ -267,6 +290,74 @@ static int negotiate_utf8(int socket_fd) {
     received_size += (size_t)size;
     if (memmem(received, received_size, request, sizeof(request)) != nullptr)
       return send_bytes(socket_fd, accepted, sizeof(accepted));
+    if (received_size == sizeof(received))
+      return -1;
+  }
+  return -1;
+}
+
+static int negotiate_new_environ(int socket_fd) {
+  static const unsigned char enable[] = {TELNET_IAC, TELNET_WILL,
+                                         TELNET_NEW_ENVIRON};
+  static const unsigned char request[] = {
+      TELNET_IAC,          TELNET_SB,  TELNET_NEW_ENVIRON,
+      TELNET_ENVIRON_SEND, TELNET_IAC, TELNET_SE};
+  static const unsigned char response[] = {
+      TELNET_IAC,
+      TELNET_SB,
+      TELNET_NEW_ENVIRON,
+      TELNET_ENVIRON_IS,
+      TELNET_ENVIRON_VAR,
+      'U',
+      'S',
+      'E',
+      'R',
+      TELNET_ENVIRON_VALUE,
+      'a',
+      'l',
+      'i',
+      'c',
+      'e',
+      TELNET_ENVIRON_USERVAR,
+      'E',
+      'M',
+      'P',
+      'T',
+      'Y',
+      TELNET_ENVIRON_VALUE,
+      TELNET_ENVIRON_USERVAR,
+      'B',
+      'I',
+      'N',
+      'A',
+      'R',
+      'Y',
+      TELNET_ENVIRON_VALUE,
+      'x',
+      TELNET_ENVIRON_ESC,
+      TELNET_ENVIRON_VALUE,
+      'y',
+      TELNET_IAC,
+      TELNET_SE,
+  };
+  unsigned char received[4096];
+  size_t received_size = 0;
+  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+
+  if (send_bytes(socket_fd, enable, sizeof(enable)) < 0)
+    return -1;
+  for (int attempt = 0; attempt < 10; attempt++) {
+    ssize_t size;
+
+    if (poll(&readable, 1, 500) != 1)
+      continue;
+    size = read(socket_fd, received + received_size,
+                sizeof(received) - received_size);
+    if (size <= 0)
+      return -1;
+    received_size += (size_t)size;
+    if (memmem(received, received_size, request, sizeof(request)) != nullptr)
+      return send_bytes(socket_fd, response, sizeof(response));
     if (received_size == sizeof(received))
       return -1;
   }
@@ -396,10 +487,10 @@ static int expect_three_texts(int socket_fd, const char *first,
 }
 
 static int exercise_utf8(int socket_fd) {
-  return send_command(socket_fd,
-                      "say UTF caf\xc3\xa9 \xf0\x9f\x98\x80\r\n") < 0 ||
-                 expect_text(socket_fd,
-                             "UTF caf\xc3\xa9 \xf0\x9f\x98\x80") < 0 ||
+  return send_command(socket_fd, "say UTF caf\xc3\xa9 \xf0\x9f\x98\x80\r\n") <
+                     0 ||
+                 expect_text(socket_fd, "UTF caf\xc3\xa9 \xf0\x9f\x98\x80") <
+                     0 ||
                  send_command(socket_fd, "say split caf\xc3") < 0 ||
                  send_command(socket_fd, "\xa9\r\n") < 0 ||
                  expect_text(socket_fd, "split caf\xc3\xa9") < 0 ||
@@ -409,8 +500,8 @@ static int exercise_utf8(int socket_fd) {
                  expect_text(socket_fd,
                              "Input must be printable, valid UTF-8.") < 0 ||
                  send_command(socket_fd, "@create UTF Caf\xc3\xa9\r\n") < 0 ||
-                 expect_text(socket_fd,
-                             "UTF Caf\xc3\xa9 created as object") < 0 ||
+                 expect_text(socket_fd, "UTF Caf\xc3\xa9 created as object") <
+                     0 ||
                  send_command(socket_fd, "@open Porte;caf\xc3\xa9\r\n") < 0 ||
                  expect_text(socket_fd, "Opened.") < 0 ||
                  send_command(socket_fd, "caf\xc3\xa9\r\n") < 0 ||
@@ -418,10 +509,9 @@ static int exercise_utf8(int socket_fd) {
                  send_command(socket_fd, "@name me=Jos\xc3\xa9\r\n") < 0 ||
                  expect_text(socket_fd, "You can't use that name.") < 0 ||
                  send_command(socket_fd, "@alias me=Jos\xc3\xa9\r\n") < 0 ||
-                 expect_text(socket_fd,
-                             "That's a silly name for a player!") < 0 ||
-                 send_command(socket_fd, "@chan/create Caf\xc3\xa9\r\n") <
+                 expect_text(socket_fd, "That's a silly name for a player!") <
                      0 ||
+                 send_command(socket_fd, "@chan/create Caf\xc3\xa9\r\n") < 0 ||
                  expect_text(
                      socket_fd,
                      "Channel names must be printable ASCII without spaces.") <
@@ -431,15 +521,15 @@ static int exercise_utf8(int socket_fd) {
                              "Channel aliases must be 1-5 printable ASCII") <
                      0 ||
                  send_command(socket_fd, ".create UTF macros\r\n") < 0 ||
-                 expect_text(socket_fd,
-                             "created with description UTF macros") < 0 ||
+                 expect_text(socket_fd, "created with description UTF macros") <
+                     0 ||
                  send_command(socket_fd, ".def \xc3\xa9=x\r\n") < 0 ||
                  expect_text(
                      socket_fd,
                      "Aliases must contain only printable ASCII characters.") <
                      0 ||
-                 send_command(socket_fd,
-                              ".def go=say macro caf\xc3\xa9\r\n") < 0 ||
+                 send_command(socket_fd, ".def go=say macro caf\xc3\xa9\r\n") <
+                     0 ||
                  expect_text(socket_fd,
                              "Macro go:say macro caf\xc3\xa9 defined.") < 0 ||
                  send_command(socket_fd, ".go\r\n") < 0 ||
@@ -479,6 +569,11 @@ static int create_styled_object(int socket_fd) {
                              "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
       expect_text(socket_fd, "\033[38;2;255;112;0mLuaMarkup") < 0 ||
+      send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
+      expect_three_texts(socket_fd, "NEW-ENVIRON=yes",
+                         "VAR \"USER\" = "
+                         "\"alice\"",
+                         "USERVAR \"BINARY\" = \"x\\x01y\"") < 0 ||
       send_command(socket_fd, "luastate\r\n") < 0 ||
       expect_text(socket_fd, "LuaState 1") < 0 ||
       send_command(socket_fd, "luafail\r\nluastate\r\n") < 0 ||
@@ -689,6 +784,10 @@ int main(int argc, char **argv) {
     }
     if (index == 0 && negotiate_utf8(socket_fds[index]) < 0) {
       fprintf(stderr, "UTF-8 negotiation failed\n");
+      goto done;
+    }
+    if (index == 0 && negotiate_new_environ(socket_fds[index]) < 0) {
+      fprintf(stderr, "NEW-ENVIRON negotiation failed\n");
       goto done;
     }
     if (index == 0 && negotiate_mtts(socket_fds[index]) < 0) {

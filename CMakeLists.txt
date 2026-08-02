@@ -416,6 +416,15 @@ if(BUILD_TESTING)
     PRIVATE btmux_options libtelnet)
   add_test(NAME libtelnet_integration COMMAND libtelnet_integration_test)
 
+  add_executable(telnet_environment_test tests/telnet_environment.c
+    ${MUX_SOURCE_DIR}/network/telnet_environment.c)
+  target_link_libraries(telnet_environment_test
+    PRIVATE btmux_options libtelnet)
+  target_include_directories(telnet_environment_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME telnet_environment COMMAND telnet_environment_test)
+
   add_executable(help_frontmatter_parse_test tests/help_frontmatter_parse.c
     ${MUX_SOURCE_DIR}/help/help_frontmatter.c)
   target_link_libraries(help_frontmatter_parse_test PRIVATE btmux_options tomlc17)
