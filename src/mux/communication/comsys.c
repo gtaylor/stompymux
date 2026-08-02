@@ -21,6 +21,7 @@
 #include "mux/communication/comsys.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/styled_text.h"
+#include "mux/support/utf8.h"
 
 /* Static functions */
 static void do_show_com(void *, void *);
@@ -468,6 +469,13 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     raw_notify(evaluation, player, "You need to specify an alias.");
     return;
   }
+  if (strlen(arg1) > 5 || !utf8_is_printable_ascii(arg1, strlen(arg1)) ||
+      strchr(arg1, ' ')) {
+    raw_notify(evaluation, player,
+               "Channel aliases must be 1-5 printable ASCII characters "
+               "without spaces.");
+    return;
+  }
   if (!*arg2) {
     raw_notify(evaluation, player, "You need to specify a channel.");
     return;
@@ -728,6 +736,13 @@ void do_createchannel(CommandInvocation *invocation) {
   }
   if (!*channel) {
     raw_notify(evaluation, player, "You must specify a channel to create.");
+    return;
+  }
+  if (strlen(channel) >= CHAN_NAME_LEN ||
+      !utf8_is_printable_ascii(channel, strlen(channel)) ||
+      strchr(channel, ' ')) {
+    raw_notify(evaluation, player,
+               "Channel names must be printable ASCII without spaces.");
     return;
   }
   if (!is_wizard(evaluation->world->database, player)) {

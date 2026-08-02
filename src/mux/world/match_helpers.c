@@ -159,7 +159,7 @@ void parse_range(GameDatabase *database,
   if (buff1 && *buff1) {
     buff2 = parse_to(configuration, &buff1, ',', COMMAND_PARSE_STRIP_TRAILING);
     if (buff1 && *buff1) {
-      while (*buff1 && isspace(*buff1))
+      while (*buff1 && isspace((unsigned char)*buff1))
         buff1++;
       if (*buff1 == NUMBER_TOKEN)
         buff1++;
@@ -169,7 +169,7 @@ void parse_range(GameDatabase *database,
     } else {
       *high_bound = database->top - 1;
     }
-    while (*buff2 && isspace(*buff2))
+    while (*buff2 && isspace((unsigned char)*buff2))
       buff2++;
     if (*buff2 == NUMBER_TOKEN)
       buff2++;

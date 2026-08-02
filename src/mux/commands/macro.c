@@ -15,6 +15,7 @@
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/utf8.h"
 #include "mux/world/world_context.h"
 
 void macro_registry_initialize(MacroRegistry *registry,
@@ -546,9 +547,13 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify(match->evaluation, player,
            "MACRO: You must specify a string to substitute for.");
     return;
-  } else if (strlen(alias) > 4) {
+  } else if (!*alias || strlen(alias) > 4) {
     notify(match->evaluation, player,
-           "MACRO: Please limit aliases to 4 chars or less.");
+           "MACRO: Please use an alias from 1 to 4 characters long.");
+    return;
+  } else if (!utf8_is_printable_ascii(alias, strlen(alias))) {
+    notify(match->evaluation, player,
+           "MACRO: Aliases must contain only printable ASCII characters.");
     return;
   }
   for (j = 0; j < m->macro_count && (strcasecmp(alias, m->alias + j * 5) > 0);

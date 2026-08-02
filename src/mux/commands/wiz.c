@@ -192,7 +192,7 @@ void do_force_prefixed(CommandInvocation *invocation) {
   cp = parse_to(invocation->context->world->configuration, &command, ' ', 0);
   if (!command)
     return;
-  while (*command && isspace(*command))
+  while (*command && isspace((unsigned char)*command))
     command++;
   if (*command) {
     CommandInvocation force_invocation = *invocation;

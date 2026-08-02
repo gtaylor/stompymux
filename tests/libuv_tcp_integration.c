@@ -24,6 +24,7 @@ constexpr unsigned char TELNET_IAC = 255;
 constexpr unsigned char TELNET_SB = 250;
 constexpr unsigned char TELNET_SE = 240;
 constexpr unsigned char TELNET_WILL = 251;
+constexpr unsigned char TELNET_DO = 253;
 constexpr unsigned char TELNET_TTYPE = 24;
 constexpr unsigned char TELNET_TTYPE_IS = 0;
 constexpr unsigned char TELNET_TTYPE_SEND = 1;
@@ -129,6 +130,11 @@ static int write_lua_fixture(const char *directory) {
       "    {\n"
       "      pattern = \"^luacolor$\",\n"
       "      handler = function(ctx)\n"
+      "        assert(mux.is_printable_ascii(\"\"))\n"
+      "        assert(mux.is_printable_ascii(\"A B!~\"))\n"
+      "        assert(not mux.is_printable_ascii(\"caf\\195\\169\"))\n"
+      "        assert(not mux.is_printable_ascii(\"a\\0b\"))\n"
+      "        assert(not pcall(mux.is_printable_ascii, 123))\n"
       "        local styled = mux.style(\"LuaHex\", { foreground = "
       "\"stompy-orange\" })\n"
       "        assert(mux.text_width(styled) == 6)\n"
@@ -231,6 +237,38 @@ static int expect_ttype_request(int socket_fd) {
       return -1;
     if (memmem(received, (size_t)size, request, sizeof(request)) != nullptr)
       return 0;
+  }
+  return -1;
+}
+
+static int negotiate_utf8(int socket_fd) {
+  static const unsigned char enable[] = {TELNET_IAC, TELNET_DO, 42};
+  static const unsigned char request[] = {TELNET_IAC, TELNET_SB, 42, 1, ';',
+                                          'U',        'T',       'F', '-', '8',
+                                          TELNET_IAC, TELNET_SE};
+  static const unsigned char accepted[] = {TELNET_IAC, TELNET_SB, 42, 2,
+                                           'U',        'T',       'F', '-',
+                                           '8',        TELNET_IAC, TELNET_SE};
+  unsigned char received[4096];
+  size_t received_size = 0;
+  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+
+  if (send_bytes(socket_fd, enable, sizeof(enable)) < 0)
+    return -1;
+  for (int attempt = 0; attempt < 10; attempt++) {
+    ssize_t size;
+
+    if (poll(&readable, 1, 500) != 1)
+      continue;
+    size = read(socket_fd, received + received_size,
+                sizeof(received) - received_size);
+    if (size <= 0)
+      return -1;
+    received_size += (size_t)size;
+    if (memmem(received, received_size, request, sizeof(request)) != nullptr)
+      return send_bytes(socket_fd, accepted, sizeof(accepted));
+    if (received_size == sizeof(received))
+      return -1;
   }
   return -1;
 }
@@ -357,6 +395,59 @@ static int expect_three_texts(int socket_fd, const char *first,
   return -1;
 }
 
+static int exercise_utf8(int socket_fd) {
+  return send_command(socket_fd,
+                      "say UTF caf\xc3\xa9 \xf0\x9f\x98\x80\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "UTF caf\xc3\xa9 \xf0\x9f\x98\x80") < 0 ||
+                 send_command(socket_fd, "say split caf\xc3") < 0 ||
+                 send_command(socket_fd, "\xa9\r\n") < 0 ||
+                 expect_text(socket_fd, "split caf\xc3\xa9") < 0 ||
+                 send_command(socket_fd, "say caf\xc3\xa9\b!\r\n") < 0 ||
+                 expect_text(socket_fd, "caf!") < 0 ||
+                 send_command(socket_fd, "say bad\xc0\xaf\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "Input must be printable, valid UTF-8.") < 0 ||
+                 send_command(socket_fd, "@create UTF Caf\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "UTF Caf\xc3\xa9 created as object") < 0 ||
+                 send_command(socket_fd, "@open Porte;caf\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd, "Opened.") < 0 ||
+                 send_command(socket_fd, "caf\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd, "You can't go that way.") < 0 ||
+                 send_command(socket_fd, "@name me=Jos\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd, "You can't use that name.") < 0 ||
+                 send_command(socket_fd, "@alias me=Jos\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "That's a silly name for a player!") < 0 ||
+                 send_command(socket_fd, "@chan/create Caf\xc3\xa9\r\n") <
+                     0 ||
+                 expect_text(
+                     socket_fd,
+                     "Channel names must be printable ASCII without spaces.") <
+                     0 ||
+                 send_command(socket_fd, "addcom \xc3\xa9=Public\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "Channel aliases must be 1-5 printable ASCII") <
+                     0 ||
+                 send_command(socket_fd, ".create UTF macros\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "created with description UTF macros") < 0 ||
+                 send_command(socket_fd, ".def \xc3\xa9=x\r\n") < 0 ||
+                 expect_text(
+                     socket_fd,
+                     "Aliases must contain only printable ASCII characters.") <
+                     0 ||
+                 send_command(socket_fd,
+                              ".def go=say macro caf\xc3\xa9\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "Macro go:say macro caf\xc3\xa9 defined.") < 0 ||
+                 send_command(socket_fd, ".go\r\n") < 0 ||
+                 expect_text(socket_fd, "macro caf\xc3\xa9") < 0
+             ? -1
+             : 0;
+}
+
 static int create_styled_object(int socket_fd) {
   if (send_command(socket_fd, "GOD\r\n") < 0 ||
       expect_text(socket_fd, "Password:") < 0 ||
@@ -468,6 +559,10 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "styled-object login failed\n");
     return -1;
   }
+  if (exercise_utf8(socket_fd) < 0) {
+    fprintf(stderr, "UTF-8 behavior failed\n");
+    return -1;
+  }
   if (send_command(socket_fd, "@create [fg=#112233]StyledWidget[/]\r\n") < 0 ||
       expect_text(socket_fd, "\033[38;2;17;34;51mStyledWidget") < 0) {
     fprintf(stderr, "styled-object creation failed\n");
@@ -517,7 +612,9 @@ static int check_styled_object(const char *directory) {
           "SELECT name, description, inside_description,"
           " (SELECT value FROM object_state WHERE object_dbref = 1"
           "  AND namespace = 'integration' AND key = 'balance'"
-          "  AND value_type = 3)"
+          "  AND value_type = 3),"
+          " (SELECT count(*) FROM objects WHERE name = 'UTF Caf\xc3\xa9'),"
+          " (SELECT count(*) FROM objects WHERE name = 'Porte;caf\xc3\xa9')"
           " FROM objects WHERE name LIKE '%RenamedWidget%';",
           -1, &statement, nullptr) != SQLITE_OK ||
       sqlite3_step(statement) != SQLITE_ROW)
@@ -528,7 +625,9 @@ static int check_styled_object(const char *directory) {
               "[fg=red]Description[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 2),
               "[bg=blue]Inside[/]") &&
-      sqlite3_column_int64(statement, 3) == 2)
+      sqlite3_column_int64(statement, 3) == 2 &&
+      sqlite3_column_int(statement, 4) == 1 &&
+      sqlite3_column_int(statement, 5) == 1)
     result = 0;
 
 done:
@@ -586,6 +685,10 @@ int main(int argc, char **argv) {
     if (poll(&readable, 1, 5000) != 1 ||
         read(socket_fds[index], received, sizeof(received)) <= 0) {
       fprintf(stderr, "connection %zu welcome failed\n", index);
+      goto done;
+    }
+    if (index == 0 && negotiate_utf8(socket_fds[index]) < 0) {
+      fprintf(stderr, "UTF-8 negotiation failed\n");
       goto done;
     }
     if (index == 0 && negotiate_mtts(socket_fds[index]) < 0) {

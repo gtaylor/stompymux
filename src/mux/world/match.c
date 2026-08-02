@@ -112,14 +112,14 @@ static char *munge_space_for_match(MatchContext *match_context, char *name) {
 
   p = name;
   q = md.normalized;
-  while (isspace(*p))
+  while (isspace((unsigned char)*p))
     p++; /*
           * remove inital spaces
           */
   while (*p) {
-    while (*p && !isspace(*p))
+    while (*p && !isspace((unsigned char)*p))
       *q++ = *p++;
-    while (*p && isspace(*++p))
+    while (*p && isspace((unsigned char)*++p))
       ;
     if (*p)
       *q++ = ' ';
@@ -145,7 +145,7 @@ void match_player(MatchContext *match_context) {
     return;
   }
   if (*md.string == LOOKUP_TOKEN) {
-    for (p = md.string + 1; isspace(*p); p++)
+    for (p = md.string + 1; isspace((unsigned char)*p); p++)
       ;
     match = lookup_player(md.evaluation->world, NOTHING, p, 1);
     if (is_good_obj(md.evaluation->world->database, match)) {

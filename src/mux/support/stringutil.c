@@ -68,14 +68,14 @@ char *munge_space(char *string) {
   buffer = alloc_lbuf("munge_space");
   p = string;
   q = buffer;
-  while (p && *p && isspace(*p))
+  while (p && *p && isspace((unsigned char)*p))
     p++; /*
           * remove inital spaces
           */
   while (p && *p) {
-    while (*p && !isspace(*p))
+    while (*p && !isspace((unsigned char)*p))
       *q++ = *p++;
-    while (*p && isspace(*++p))
+    while (*p && isspace((unsigned char)*++p))
       ;
     if (*p)
       *q++ = ' ';
@@ -97,18 +97,18 @@ char *trim_spaces(char *string) {
   buffer = alloc_lbuf("trim_spaces");
   p = string;
   q = buffer;
-  while (p && *p && isspace(*p)) /*
-                                  * remove inital spaces
-                                  */
+  while (p && *p && isspace((unsigned char)*p)) /*
+                                                 * remove inital spaces
+                                                 */
     p++;
   while (p && *p) {
-    while (*p && !isspace(*p)) /*
-                                * copy nonspace chars
-                                */
+    while (*p && !isspace((unsigned char)*p)) /*
+                                               * copy nonspace chars
+                                               */
       *q++ = *p++;
-    while (*p && isspace(*p)) /*
-                               * compress spaces
-                               */
+    while (*p && isspace((unsigned char)*p)) /*
+                                              * compress spaces
+                                              */
       p++;
     if (*p)
       *q++ = ' '; /*
@@ -148,20 +148,22 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
 
     return (ToLower(*s1) - ToLower(*s2));
   } else {
-    while (isspace(*s1))
+    while (isspace((unsigned char)*s1))
       s1++;
-    while (isspace(*s2))
+    while (isspace((unsigned char)*s2))
       s2++;
     while (*s1 && *s2 &&
-           ((ToLower(*s1) == ToLower(*s2)) || (isspace(*s1) && isspace(*s2)))) {
-      if (isspace(*s1) && isspace(*s2)) { /*
-                                           * skip all
-                                           * other
-                                           * spaces
-                                           */
-        while (isspace(*s1))
+           ((ToLower(*s1) == ToLower(*s2)) ||
+            (isspace((unsigned char)*s1) && isspace((unsigned char)*s2)))) {
+      if (isspace((unsigned char)*s1) &&
+          isspace((unsigned char)*s2)) { /*
+                                          * skip all
+                                          * other
+                                          * spaces
+                                          */
+        while (isspace((unsigned char)*s1))
           s1++;
-        while (isspace(*s2))
+        while (isspace((unsigned char)*s2))
           s2++;
       } else {
         s1++;
@@ -170,13 +172,13 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
     }
     if ((*s1) && (*s2))
       return (1);
-    if (isspace(*s1)) {
-      while (isspace(*s1))
+    if (isspace((unsigned char)*s1)) {
+      while (isspace((unsigned char)*s1))
         s1++;
       return (*s1);
     }
-    if (isspace(*s2)) {
-      while (isspace(*s2))
+    if (isspace((unsigned char)*s2)) {
+      while (isspace((unsigned char)*s2))
         s2++;
       return (*s2);
     }
@@ -210,9 +212,9 @@ const char *string_match(const char *src, const char *sub) {
       /*
        * else scan to beginning of next word
        */
-      while (*src && isalnum(*src))
+      while (*src && isalnum((unsigned char)*src))
         src++;
-      while (*src && !isalnum(*src))
+      while (*src && !isalnum((unsigned char)*src))
         src++;
     }
   }
@@ -342,7 +344,7 @@ int matches_exit_from_list(char *str, char *pattern) {
        * Make sure nothing afterwards
        */
 
-      while (*pattern && isspace(*pattern))
+      while (*pattern && isspace((unsigned char)*pattern))
         pattern++;
 
       /*
@@ -358,7 +360,7 @@ int matches_exit_from_list(char *str, char *pattern) {
 
     while (*pattern && *pattern++ != EXIT_DELIMITER)
       ;
-    while (isspace(*pattern))
+    while (isspace((unsigned char)*pattern))
       pattern++;
   }
   return 0;

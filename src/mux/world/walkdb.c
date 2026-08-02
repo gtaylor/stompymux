@@ -121,8 +121,8 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
   if (!searchfor)
     searchfor = (char *)"";
   for (t = searchtype; *t; t++) {
-    if (isupper(*t))
-      *t = (char)tolower(*t);
+    if (isupper((unsigned char)*t))
+      *t = (char)tolower((unsigned char)*t);
   }
 #pragma clang diagnostic pop
   /*

@@ -155,6 +155,14 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
   attr = attribute_by_number(evaluation->world->database, attrnum);
   attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
   if (attr && set_attr(evaluation, player, thing, attr, aflags)) {
+    if (attrnum == A_ALIAS &&
+        (!is_player(evaluation->world->database, thing) ||
+         (*attrtext &&
+          !ok_player_name(evaluation->world->configuration, attrtext)))) {
+      notify_quiet(evaluation, player,
+                   "Player aliases must use valid printable ASCII names.");
+      return;
+    }
     if (attrnum == A_DESC || attrnum == A_IDESC) {
       compiled = alloc_lbuf("object_attribute_set.style");
       if (!styled_text_compile(evaluation->world->styled_text_palette, attrtext,

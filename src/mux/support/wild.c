@@ -422,13 +422,13 @@ int wild_match(const char *tstr, const char *dstr) {
   switch (*tstr) {
   case '>':
     tstr++;
-    if (isdigit(*tstr) || (*tstr == '-'))
+    if (isdigit((unsigned char)*tstr) || (*tstr == '-'))
       return (atoi(tstr) < atoi(dstr));
     else
       return (strcmp(tstr, dstr) < 0);
   case '<':
     tstr++;
-    if (isdigit(*tstr) || (*tstr == '-'))
+    if (isdigit((unsigned char)*tstr) || (*tstr == '-'))
       return (atoi(tstr) > atoi(dstr));
     else
       return (strcmp(tstr, dstr) > 0);

@@ -101,8 +101,8 @@ typedef struct Descriptor {
   bool is_gmcp_enabled;
   /* Whether MCCP output compression is active. */
   bool is_mccp_enabled;
-  /* Whether the negotiated client character set is US-ASCII. */
-  bool is_charset_ascii;
+  /* Whether the client accepted UTF-8 character-set negotiation. */
+  bool is_charset_utf8;
   /* Whether a character-set negotiation request awaits a response. */
   bool is_charset_request_pending;
   /* Time when this socket connection was accepted. */

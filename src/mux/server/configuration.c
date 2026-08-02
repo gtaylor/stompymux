@@ -711,7 +711,7 @@ static int cf_cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
   CONF *tp;
   char *ap;
 
-  for (ap = str; *ap && !isspace(*ap); ap++)
+  for (ap = str; *ap && !isspace((unsigned char)*ap); ap++)
     ;
   if (*ap)
     *ap++ = '\0';

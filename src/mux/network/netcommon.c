@@ -208,7 +208,7 @@ void raw_broadcast(DescriptorRegistry *descriptors, int inflags,
     if (inflags == OBJECT_FLAG_NONE ||
         game_object_has_flag(descriptor_runtime(d)->world->database, d->player,
                              (ObjectFlag)inflags)) {
-      descriptor_queue_write(d, buff, (int)strnlen(buff, LBUF_SIZE - 1));
+      descriptor_queue_string(d, buff);
       descriptor_queue_write(d, "\r\n", 2);
     }
   }
@@ -647,7 +647,7 @@ static void dump_users(Descriptor *e, char *match) {
   int count;
   char *buf, *fp, *sp, flist[4], slist[4];
 
-  while (match && *match && isspace(*match))
+  while (match && *match && isspace((unsigned char)*match))
     match++;
   if (!match || !*match)
     match = nullptr;
@@ -710,7 +710,7 @@ static void dump_sessions(Descriptor *e, char *match) {
   int count;
   char *buf;
 
-  while (match && *match && isspace(*match))
+  while (match && *match && isspace((unsigned char)*match))
     match++;
   if (!match || !*match)
     match = nullptr;

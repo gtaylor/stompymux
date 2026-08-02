@@ -15,6 +15,7 @@
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_config.h"
+#include "mux/support/utf8.h"
 
 /* The legacy file is read during this phase; SQLite is an atomic dump mirror.
  */
@@ -309,7 +310,11 @@ static int commac_column_text(sqlite3_stmt *statement, int column,
     return -1;
   *value = (const char *)sqlite3_column_text(statement, column);
   length = sqlite3_column_bytes(statement, column);
-  return *value && length >= 0 && (size_t)length <= maximum ? 0 : -1;
+  return *value && length >= 0 && (size_t)length <= maximum &&
+                 strlen(*value) == (size_t)length &&
+                 utf8_validate(*value, (size_t)length)
+             ? 0
+             : -1;
 }
 
 /* Add one persisted alias while retaining commac's sorted runtime layout. */
@@ -317,7 +322,8 @@ static int commac_load_alias(struct commac *commac, const char *alias,
                              const char *channel) {
   int capacity;
 
-  if (strlen(alias) > 5)
+  if (!*alias || strlen(alias) > 5 ||
+      !utf8_is_printable_ascii(alias, strlen(alias)) || strchr(alias, ' '))
     return -1;
   if (commac->numchannels == commac->maxchannels) {
     capacity = commac->maxchannels + 10;
@@ -442,7 +448,8 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
       channel = calloc(1, sizeof(*channel));
       if (!channel ||
           commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
-          commac_column_int(statement, 1, &value) < 0) {
+          !*name || !utf8_is_printable_ascii(name, strlen(name)) ||
+          strchr(name, ' ') || commac_column_int(statement, 1, &value) < 0) {
         free(channel);
         result = -1;
         break;
@@ -650,7 +657,8 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
       macro = context->macros->sets[value];
       if (commac_column_int(entries, 1, &value) < 0 ||
           value != expected_entry++ ||
-          commac_column_text(entries, 2, &alias, 4) < 0 ||
+          commac_column_text(entries, 2, &alias, 4) < 0 || !*alias ||
+          !utf8_is_printable_ascii(alias, strlen(alias)) ||
           commac_column_text(entries, 3, &expansion, LBUF_SIZE - 1) < 0) {
         result = -1;
         break;

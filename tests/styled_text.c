@@ -61,6 +61,7 @@ int main(void) {
   TerminalColorDepth depth;
   bool screen_reader;
   char error[256];
+  char small[4];
   int result = 0;
 
   palette = styled_text_palette_create();
@@ -69,6 +70,8 @@ int main(void) {
 
   if (!expect_compile("[fg=red]Red[/]", red) ||
       !expect_compile("[fg=red]red [bold]bold[/] red[/]", nested) ||
+      !expect_compile("[fg=red]caf\xc3\xa9[/]",
+                      "\033[0m\033[31mcaf\xc3\xa9\033[0m") ||
       !expect_compile("[fg=blue bg=white bold]Blue[/]", grouped) ||
       !expect_compile("[fg=red bold blink]Alert[/]", blinking) ||
       !expect_compile("[[literal]", "[literal]") ||
@@ -76,6 +79,7 @@ int main(void) {
       !expect_invalid("[fg=#abcd]x[/]") || !expect_invalid("[bold]x") ||
       !expect_invalid("[fg=red unknown]x[/]") ||
       !expect_invalid("[fg=red /]x[/]") || !expect_invalid("[/]") ||
+      !expect_invalid("bad\xc0\xaf") ||
       !expect_invalid("\033[31mraw"))
     result = 1;
 
@@ -91,11 +95,20 @@ int main(void) {
 
   if (!result &&
       (!expect_render(truecolor, TERMINAL_COLOR_NONE, "R") ||
+       !expect_render("caf\xc3\xa9 \xf0\x9f\x98\x80", TERMINAL_COLOR_NONE,
+                      "caf\xc3\xa9 \xf0\x9f\x98\x80") ||
+       !expect_render("bad\xc0\xaf", TERMINAL_COLOR_NONE,
+                      "bad\xef\xbf\xbd\xef\xbf\xbd") ||
        !expect_render(truecolor, TERMINAL_COLOR_ANSI_16, "\033[91mR\033[0m") ||
        !expect_render(truecolor, TERMINAL_COLOR_ANSI_256,
                       "\033[38;5;9mR\033[0m") ||
        !expect_render(truecolor, TERMINAL_COLOR_TRUECOLOR,
                       "\033[38;2;255;0;0mR\033[0m")))
+    result = 1;
+
+  styled_text_render(palette, "ab\xc3\xa9", TERMINAL_COLOR_NONE, small,
+                     sizeof(small));
+  if (!result && strcmp(small, "ab") != 0)
     result = 1;
 
   if (!result &&
@@ -117,6 +130,14 @@ int main(void) {
   if (!result && (strcmp(stripped, "Red") != 0 ||
                   strcmp(truncated, "[fg=red bg=white]Red[/]") != 0 ||
                   styled_text_width(palette, "[fg=red]Red[/]") != 3))
+    result = 1;
+  styled_text_truncate(palette, "caf\xc3\xa9!", 4, truncated,
+                       sizeof(truncated));
+  if (!result && strcmp(truncated, "caf") != 0)
+    result = 1;
+  styled_text_truncate(palette, "caf\xc3\xa9!", 5, truncated,
+                       sizeof(truncated));
+  if (!result && strcmp(truncated, "caf\xc3\xa9") != 0)
     result = 1;
 
   if (!result &&

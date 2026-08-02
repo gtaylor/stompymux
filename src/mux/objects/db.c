@@ -22,6 +22,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text.h"
+#include "mux/support/utf8.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
 #include "mux/world/object.h"
@@ -207,17 +208,14 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
 }
 
 INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
+  char stored[MBUF_SIZE];
   char new[MBUF_SIZE];
-  /* Truncate the name if we have to */
 
-  strncpy(new, s, MBUF_SIZE - 1);
-  if (s && (strlen(s) > MBUF_SIZE))
-    s[MBUF_SIZE] = '\0';
-
-  attribute_add_raw(database, thing, A_NAME, (char *)s);
+  utf8_copy_truncated(stored, sizeof(stored), s);
+  attribute_add_raw(database, thing, A_NAME, stored);
 
   if (database->configuration->cache_names) {
-    styled_text_strip(database->styled_text_palette, s, new, sizeof(new));
+    styled_text_strip(database->styled_text_palette, stored, new, sizeof(new));
     set_string(&database->pure_names[thing], new);
   }
 }
@@ -274,6 +272,7 @@ void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
 
 void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
                        char *buff) {
+  char truncated[LBUF_SIZE];
   char *text;
   if (thing < 0 || atr < 0 || atr >= 256)
     return;
@@ -281,10 +280,8 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
     attribute_clear(database, thing, atr);
     return;
   }
-  if (strlen(buff) >= LBUF_SIZE) {
-    buff[LBUF_SIZE - 1] = '\0';
-  }
-  if ((text = strdup(buff)) == nullptr) {
+  utf8_copy_truncated(truncated, sizeof(truncated), buff);
+  if ((text = strdup(truncated)) == nullptr) {
     return;
   }
   free(database->objects[thing].native.values[atr]);
@@ -659,7 +656,7 @@ DbRef parse_dbref(const char *s) {
    */
 
   for (p = s; *p; p++) {
-    if (!isdigit(*p))
+    if (!isdigit((unsigned char)*p))
       return NOTHING;
   }
 

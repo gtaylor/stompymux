@@ -111,7 +111,7 @@ are never recoverable, and legacy `crypt(3)` password hashes are not accepted.
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
-| `player_password_length_limit` | `64` | Maximum password length in characters. Password creation and password changes reject longer values; login attempts longer than this limit are rejected before password hashing. |
+| `player_password_length_limit` | `64` | Maximum password length in UTF-8 bytes. Password creation and password changes reject longer values; login attempts longer than this limit are rejected before password hashing. |
 | `password_hash_opslimit` | `3` | Argon2id CPU work factor. Increase only after measuring login latency on the game host. Values below `1` disable password hashing and prevent password changes and new player creation. |
 | `password_hash_memlimit` | `12582912` | Argon2id memory work factor in bytes (12 MiB). Values below 1 MiB are rejected. A higher value makes offline password guessing harder but consumes more memory per password operation. |
 | `login_attempt_burst` | `3` | Number of password operations a source address may make immediately. |

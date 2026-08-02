@@ -18,6 +18,8 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/utf8.h"
+#include "mux/support/validation.h"
 
 // Increment whenever the schema written by this module changes.
 constexpr int GAMEDB_SCHEMA_VERSION = 24;
@@ -385,7 +387,8 @@ static int gamedb_column_text(sqlite3_stmt *statement, int column,
   text = sqlite3_column_text(statement, column);
   length = sqlite3_column_bytes(statement, column);
   if (!text || length < 0 || length >= maximum_size ||
-      (int)strlen((const char *)text) != length)
+      (int)strlen((const char *)text) != length ||
+      !utf8_validate((const char *)text, (size_t)length))
     return -1;
   *value = (const char *)text;
   return 0;
@@ -475,7 +478,10 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_text(statement, 9, &lua_parent, PATH_MAX) < 0 ||
         (type != OBJECT_TYPE_ROOM && type != OBJECT_TYPE_THING &&
          type != OBJECT_TYPE_EXIT && type != OBJECT_TYPE_PLAYER &&
-         type != OBJECT_TYPE_GARBAGE)) {
+         type != OBJECT_TYPE_GARBAGE) ||
+        !utf8_validate(name, strlen(name)) ||
+        (type == OBJECT_TYPE_PLAYER &&
+         !ok_player_name(context->configuration, name))) {
       result = -1;
     } else {
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
@@ -541,7 +547,9 @@ static int gamedb_load_native_state(PersistenceContext *context,
 
       if (gamedb_column_long(statement, 0, &object) < 0 ||
           !is_good_obj(context->database, object) ||
-          gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0) {
+          gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0 ||
+          (column->field == A_ALIAS &&
+           !ok_player_name(context->configuration, value))) {
         sqlite3_finalize(statement);
         return -1;
       }

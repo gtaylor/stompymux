@@ -179,11 +179,11 @@ int cf_ntab_access(void *vp, char *str, long extra, DbRef player, char *cmd,
   NameTable *np;
   char *ap;
 
-  for (ap = str; *ap && !isspace(*ap); ap++)
+  for (ap = str; *ap && !isspace((unsigned char)*ap); ap++)
     ;
   if (*ap)
     *ap++ = '\0';
-  while (*ap && isspace(*ap))
+  while (*ap && isspace((unsigned char)*ap))
     ap++;
   for (np = (NameTable *)vp; np->name; np++) {
     if (minmatch(str, np->name, np->minlen)) {

@@ -59,7 +59,7 @@ and clients reporting MTTS screen-reader mode receive text with formatting
 removed.
 
 Color depth is connection-specific, so separate sessions for one player may
-receive different encodings.
+receive different ANSI color sequences. Text encoding is always UTF-8.
 
 The `color` command displays or overrides the current connection's selection.
 Use `color auto` for negotiation, `color off` for plain text, or `color 16`,

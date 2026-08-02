@@ -22,6 +22,7 @@
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_api.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/utf8.h"
 #include "p.mech.events.h"
 #include "p.mech.utils.h"
 #include "p.template.h"
@@ -552,7 +553,8 @@ static int btech_special_column_text(sqlite3_stmt *statement, int column,
   text = sqlite3_column_text(statement, column);
   length = sqlite3_column_bytes(statement, column);
   if (!text || length < 0 || (size_t)length >= destination_size ||
-      (int)strlen((const char *)text) != length)
+      (int)strlen((const char *)text) != length ||
+      !utf8_validate((const char *)text, (size_t)length))
     return -1;
   memcpy(destination, text, (size_t)length + 1);
   return 0;
@@ -2830,7 +2832,8 @@ static int btech_special_load_autopilot_command_args(
     length = sqlite3_column_bytes(statement, 1);
     if (btech_special_column_int(statement, 0, &stored_index) < 0 ||
         stored_index != argument_index || !value || length < 0 ||
-        length >= LBUF_SIZE || (int)strlen((const char *)value) != length) {
+        length >= LBUF_SIZE || (int)strlen((const char *)value) != length ||
+        !utf8_validate((const char *)value, (size_t)length)) {
       result = -1;
       break;
     }
@@ -4194,6 +4197,8 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       part_name = sqlite3_column_text(statement, 0);
       if (!part_name ||
+          !utf8_validate((const char *)part_name,
+                         (size_t)sqlite3_column_bytes(statement, 0)) ||
           !btech_part_from_name(btech, (const char *)part_name, &part)) {
         skipped++;
       } else if (btech_parse_cost(sqlite3_column_text(statement, 1), &cost) <

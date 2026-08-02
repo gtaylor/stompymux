@@ -23,7 +23,7 @@ struct test_context {
   int terminal_height;
   int gmcp_enabled;
   int mccp_enabled;
-  int charset_ascii;
+  int charset_utf8;
   int charset_request_pending;
 };
 
@@ -64,11 +64,11 @@ static void test_send_mssp(telnet_t *telnet) {
   telnet_finish_sb(telnet);
 }
 
-static int test_charset_is_ascii(const char *buffer, size_t size) {
-  static const char ascii[] = "US-ASCII";
+static int test_charset_is_utf8(const char *buffer, size_t size) {
+  static const char utf8[] = "UTF-8";
 
-  return size == sizeof(ascii) - 1 &&
-         strncasecmp(buffer, ascii, sizeof(ascii) - 1) == 0;
+  return size == sizeof(utf8) - 1 &&
+         strncasecmp(buffer, utf8, sizeof(utf8) - 1) == 0;
 }
 
 static void test_send_charset_rejected(telnet_t *telnet) {
@@ -80,7 +80,7 @@ static void test_send_charset_rejected(telnet_t *telnet) {
 
 static void test_send_charset_accepted(telnet_t *telnet) {
   static const char accepted[] = {
-      telnet_charset_accepted, 'U', 'S', '-', 'A', 'S', 'C', 'I', 'I'};
+      telnet_charset_accepted, 'U', 'T', 'F', '-', '8'};
 
   telnet_subnegotiation(telnet, telnet_charset_option, accepted,
                         sizeof(accepted));
@@ -89,7 +89,7 @@ static void test_send_charset_accepted(telnet_t *telnet) {
 static void test_send_charset_request(telnet_t *telnet,
                                       struct test_context *context) {
   static const char request[] = {
-      telnet_charset_request, ';', 'U', 'S', '-', 'A', 'S', 'C', 'I', 'I'};
+      telnet_charset_request, ';', 'U', 'T', 'F', '-', '8'};
 
   if (context->charset_request_pending)
     return;
@@ -108,7 +108,7 @@ static void test_handle_charset(telnet_t *telnet, struct test_context *context,
     return;
   if (buffer[0] == telnet_charset_accepted) {
     context->charset_request_pending = 0;
-    context->charset_ascii = test_charset_is_ascii(buffer + 1, size - 1);
+    context->charset_utf8 = test_charset_is_utf8(buffer + 1, size - 1);
     return;
   }
   if (buffer[0] == telnet_charset_rejected) {
@@ -126,8 +126,8 @@ static void test_handle_charset(telnet_t *telnet, struct test_context *context,
   for (current = start; current <= size; current++) {
     if (current != size && buffer[current] != separator)
       continue;
-    if (test_charset_is_ascii(buffer + start, current - start)) {
-      context->charset_ascii = 1;
+    if (test_charset_is_utf8(buffer + start, current - start)) {
+      context->charset_utf8 = 1;
       test_send_charset_accepted(telnet);
       return;
     }
@@ -289,13 +289,10 @@ int main(void) {
                                               telnet_charset_request,
                                               ';',
                                               'U',
-                                              'S',
+                                              'T',
+                                              'F',
                                               '-',
-                                              'A',
-                                              'S',
-                                              'C',
-                                              'I',
-                                              'I',
+                                              '8',
                                               TELNET_IAC,
                                               TELNET_SE};
   static const char charset_accepted_wire[] = {TELNET_IAC,
@@ -303,13 +300,10 @@ int main(void) {
                                                telnet_charset_option,
                                                telnet_charset_accepted,
                                                'U',
-                                               'S',
+                                               'T',
+                                               'F',
                                                '-',
-                                               'A',
-                                               'S',
-                                               'C',
-                                               'I',
-                                               'I',
+                                               '8',
                                                TELNET_IAC,
                                                TELNET_SE};
   static const char charset_unsupported_request[] = {TELNET_IAC,
@@ -318,27 +312,19 @@ int main(void) {
                                                      telnet_charset_request,
                                                      ';',
                                                      'U',
-                                                     'T',
-                                                     'F',
+                                                     'S',
                                                      '-',
-                                                     '8',
+                                                     'A',
+                                                     'S',
+                                                     'C',
+                                                     'I',
+                                                     'I',
                                                      TELNET_IAC,
                                                      TELNET_SE};
-  static const char charset_ascii_request[] = {TELNET_IAC,
-                                               TELNET_SB,
-                                               telnet_charset_option,
-                                               telnet_charset_request,
-                                               ';',
-                                               'U',
-                                               'S',
-                                               '-',
-                                               'A',
-                                               'S',
-                                               'C',
-                                               'I',
-                                               'I',
-                                               TELNET_IAC,
-                                               TELNET_SE};
+  static const char charset_utf8_request[] = {
+      TELNET_IAC, TELNET_SB, telnet_charset_option, telnet_charset_request,
+      ';',        'U',       'T',                   'F',
+      '-',        '8',       TELNET_IAC,            TELNET_SE};
   static const char charset_rejected_wire[] = {
       TELNET_IAC, TELNET_SB, telnet_charset_option, telnet_charset_rejected,
       TELNET_IAC, TELNET_SE};
@@ -379,7 +365,7 @@ int main(void) {
   int result = 1;
 
   memset(&context, 0, sizeof(context));
-  context.charset_ascii = 1;
+  context.charset_utf8 = 1;
   telnet = telnet_init(test_options, test_event_handler, TELNET_FLAG_NVT_EOL,
                        &context);
   if (telnet == NULL) {
@@ -414,14 +400,14 @@ int main(void) {
 
   context.sent_size = 0;
   telnet_recv(telnet, charset_accepted_wire, sizeof(charset_accepted_wire));
-  result &= context.charset_ascii && !context.charset_request_pending;
+  result &= context.charset_utf8 && !context.charset_request_pending;
   telnet_recv(telnet, charset_unsupported_request,
               sizeof(charset_unsupported_request));
   result &= expect_bytes(context.sent, context.sent_size, charset_rejected_wire,
                          sizeof(charset_rejected_wire), "CHARSET rejection");
 
   context.sent_size = 0;
-  telnet_recv(telnet, charset_ascii_request, sizeof(charset_ascii_request));
+  telnet_recv(telnet, charset_utf8_request, sizeof(charset_utf8_request));
   result &= expect_bytes(context.sent, context.sent_size, charset_accepted_wire,
                          sizeof(charset_accepted_wire), "CHARSET acceptance");
 

@@ -342,15 +342,25 @@ if(BUILD_TESTING)
   add_test(NAME password_hash COMMAND password_hash_test)
 
   add_executable(validation_test tests/validation.c
-    ${MUX_SOURCE_DIR}/support/validation.c)
+    ${MUX_SOURCE_DIR}/support/validation.c
+    ${MUX_SOURCE_DIR}/support/utf8.c)
   target_link_libraries(validation_test PRIVATE btmux_options)
   target_include_directories(validation_test PRIVATE
     "${CMAKE_BINARY_DIR}"
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME validation COMMAND validation_test)
 
+  add_executable(utf8_test tests/utf8.c
+    ${MUX_SOURCE_DIR}/support/utf8.c)
+  target_link_libraries(utf8_test PRIVATE btmux_options)
+  target_include_directories(utf8_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME utf8 COMMAND utf8_test)
+
   add_executable(styled_text_test tests/styled_text.c
-    ${MUX_SOURCE_DIR}/support/styled_text.c)
+    ${MUX_SOURCE_DIR}/support/styled_text.c
+    ${MUX_SOURCE_DIR}/support/utf8.c)
   target_link_libraries(styled_text_test PRIVATE btmux_options)
   target_include_directories(styled_text_test PRIVATE
     "${CMAKE_BINARY_DIR}"

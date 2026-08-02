@@ -808,6 +808,39 @@ static int set_invalid_power_value(const char *path, int value) {
   return result;
 }
 
+static int set_invalid_utf8_name(const char *path, int invalid) {
+  sqlite3 *sqlite = NULL;
+  const char *statement = invalid
+                              ? "UPDATE objects SET name = CAST(X'80' AS TEXT) "
+                                "WHERE dbref = 0;"
+                              : "UPDATE objects SET name = 'Limbo' WHERE "
+                                "dbref = 0;";
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+              sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+
+  sqlite3_close(sqlite);
+  return result;
+}
+
+static int set_nonascii_player_alias(const char *path, int invalid) {
+  sqlite3 *sqlite = NULL;
+  const char *statement =
+      invalid ? "UPDATE player_state SET alias = 'Jos\xC3\xA9' WHERE "
+                "object_dbref = 1;"
+              : "UPDATE player_state SET alias = NULL WHERE object_dbref = 1;";
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) == SQLITE_OK &&
+              sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+
+  sqlite3_close(sqlite);
+  return result;
+}
+
 /* Make selected persisted fields non-default before the SQLite reload. */
 static int seed_btech_nondefault_state(const char *path) {
   sqlite3 *sqlite;
@@ -1258,6 +1291,26 @@ int main(int argc, char *argv[]) {
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
                       set_invalid_power_value(database, 1) < 0)) {
     fprintf(stderr, "Invalid object power fixture unexpectedly started: %s\n",
+            directory);
+    return 1;
+  }
+  if (result == 0 &&
+      (set_invalid_utf8_name(database, 1) < 0 ||
+       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
+                               &status) < 0 ||
+       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+       set_invalid_utf8_name(database, 0) < 0)) {
+    fprintf(stderr, "Invalid UTF-8 object name unexpectedly started: %s\n",
+            directory);
+    return 1;
+  }
+  if (result == 0 &&
+      (set_nonascii_player_alias(database, 1) < 0 ||
+       run_server_in_directory(argv[1], sqlite_read_config, directory, 0,
+                               &status) < 0 ||
+       !WIFEXITED(status) || WEXITSTATUS(status) == 0 ||
+       set_nonascii_player_alias(database, 0) < 0)) {
+    fprintf(stderr, "Non-ASCII player alias unexpectedly started: %s\n",
             directory);
     return 1;
   }

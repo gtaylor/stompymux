@@ -18,6 +18,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/support/utf8.h"
 
 typedef struct DescriptorWrite DescriptorWrite;
 typedef struct TelnetListener TelnetListener;
@@ -343,8 +344,10 @@ void telnet_sockets_close(TelnetSockets *sockets, bool emergency,
     uv_buf_t buffer;
 
     if (emergency) {
-      buffer = uv_buf_init((char *)(uintptr_t)message,
-                           (unsigned int)strlen(message));
+      char valid_message[LBUF_SIZE];
+      size_t valid_length = utf8_sanitize(valid_message, sizeof(valid_message),
+                                          message, strlen(message));
+      buffer = uv_buf_init(valid_message, (unsigned int)valid_length);
       uv_try_write((uv_stream_t *)descriptor->socket, &buffer, 1);
     } else {
       descriptor_queue_string(descriptor, message);

@@ -15,4 +15,5 @@ Create a channel:
 @chan/create <channel>
 ```
 
-Channel names must be unique. New channels are private.
+Channel names must be unique, contain only printable ASCII, and contain no
+spaces. New channels are private.

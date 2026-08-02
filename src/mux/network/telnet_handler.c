@@ -18,9 +18,10 @@
 #include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
+#include "mux/support/utf8.h"
 
 static int telnet_connected_count(CommandRuntime *runtime);
-static int telnet_charset_is_ascii(const char *buffer, size_t size);
+static bool telnet_charset_is_utf8(const char *buffer, size_t size);
 static void telnet_handle_terminal_type(Descriptor *d, const char *name);
 static void telnet_process_data(Descriptor *d, const char *buffer, size_t size);
 static void telnet_handle_charset(Descriptor *d, const char *buffer,
@@ -73,7 +74,7 @@ int descriptor_telnet_initialize(Descriptor *d) {
   d->color_override = TERMINAL_COLOR_NONE;
   d->terminal_width = 80;
   d->terminal_height = 25;
-  d->is_charset_ascii = true;
+  d->is_charset_utf8 = true;
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
   telnet_negotiate(d->telnet, TELNET_DO, TELNET_TELOPT_NAWS);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_MSSP);
@@ -110,11 +111,11 @@ static int telnet_connected_count(CommandRuntime *runtime) {
   return count;
 }
 
-static int telnet_charset_is_ascii(const char *buffer, size_t size) {
-  static const char ascii[] = "US-ASCII";
+static bool telnet_charset_is_utf8(const char *buffer, size_t size) {
+  static const char utf8[] = "UTF-8";
 
-  return size == sizeof(ascii) - 1 &&
-         strncasecmp(buffer, ascii, sizeof(ascii) - 1) == 0;
+  return size == sizeof(utf8) - 1 &&
+         strncasecmp(buffer, utf8, sizeof(utf8) - 1) == 0;
 }
 
 static void telnet_handle_terminal_type(Descriptor *d, const char *name) {
@@ -136,6 +137,12 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
     current = (unsigned char)buffer[iter];
     if (current == '\n') {
       d->input_size = 0;
+      if (!utf8_validate_printable(d->input, (size_t)d->input_tail)) {
+        descriptor_queue_string(d, "Input must be printable, valid UTF-8.\r\n");
+        memset(d->input, 0, sizeof(d->input));
+        d->input_tail = 0;
+        continue;
+      }
       if (d->flow != nullptr) {
         descriptor_flow_handle(d, d->input);
       } else if (d->is_connected) {
@@ -160,11 +167,14 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
       else
         descriptor_queue_string(d, " \b");
       if (d->input_tail > 0) {
-        d->input[--d->input_tail] = '\0';
-        d->input_size--;
+        size_t new_tail =
+            utf8_previous_codepoint_start(d->input, (size_t)d->input_tail);
+        memset(d->input + new_tail, 0, (size_t)d->input_tail - new_tail);
+        d->input_size -= d->input_tail - (int)new_tail;
+        d->input_tail = (int)new_tail;
       }
-    } else if (isascii(current) && isprint(current)) {
-      if ((size_t)d->input_tail >= sizeof(d->input))
+    } else if (current >= 0x20 && current != 0x7f) {
+      if ((size_t)d->input_tail >= sizeof(d->input) - 1)
         continue;
       d->input[d->input_tail++] = (char)current;
       d->input_size++;
@@ -174,7 +184,7 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
 
 static void telnet_send_charset_accepted(telnet_t *telnet) {
   static const char accepted[] = {
-      telnet_charset_accepted, 'U', 'S', '-', 'A', 'S', 'C', 'I', 'I'};
+      telnet_charset_accepted, 'U', 'T', 'F', '-', '8'};
 
   telnet_subnegotiation(telnet, telnet_charset_option, accepted,
                         sizeof(accepted));
@@ -189,7 +199,7 @@ static void telnet_send_charset_rejected(telnet_t *telnet) {
 
 static void telnet_send_charset_request(Descriptor *d) {
   static const char request[] = {
-      telnet_charset_request, ';', 'U', 'S', '-', 'A', 'S', 'C', 'I', 'I'};
+      telnet_charset_request, ';', 'U', 'T', 'F', '-', '8'};
 
   if (d->is_charset_request_pending)
     return;
@@ -209,7 +219,8 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
 
   if (buffer[0] == telnet_charset_accepted) {
     d->is_charset_request_pending = false;
-    if (!telnet_charset_is_ascii(buffer + 1, size - 1)) {
+    d->is_charset_utf8 = telnet_charset_is_utf8(buffer + 1, size - 1);
+    if (!d->is_charset_utf8) {
       log_error(descriptor_log(d), LOG_PROBLEMS, "TELNET", "CHARSET",
                 "Descriptor %d accepted unsupported charset.", d->descriptor);
     }
@@ -233,8 +244,8 @@ static void telnet_handle_charset(Descriptor *d, const char *buffer,
   for (current = start; current <= size; current++) {
     if (current != size && buffer[current] != separator)
       continue;
-    if (telnet_charset_is_ascii(buffer + start, current - start)) {
-      d->is_charset_ascii = true;
+    if (telnet_charset_is_utf8(buffer + start, current - start)) {
+      d->is_charset_utf8 = true;
       telnet_send_charset_accepted(d->telnet);
       return;
     }
@@ -263,11 +274,14 @@ static void telnet_send_mssp_pair(telnet_t *telnet, const char *name,
                                   const char *value) {
   const char variable = TELNET_MSSP_VAR;
   const char mssp_value = TELNET_MSSP_VAL;
+  char valid_value[LBUF_SIZE];
+  size_t valid_length =
+      utf8_sanitize(valid_value, sizeof(valid_value), value, strlen(value));
 
   telnet_send(telnet, &variable, sizeof(variable));
   telnet_send(telnet, name, strlen(name));
   telnet_send(telnet, &mssp_value, sizeof(mssp_value));
-  telnet_send(telnet, value, strlen(value));
+  telnet_send(telnet, valid_value, valid_length);
 }
 
 static void telnet_send_mssp(Descriptor *descriptor) {

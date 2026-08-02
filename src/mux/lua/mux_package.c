@@ -20,6 +20,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text.h"
+#include "mux/support/utf8.h"
 #include "mux/world/access.h"
 #include "mux/world/object_spatial.h"
 
@@ -267,6 +268,16 @@ static int lua_mux_markup(lua_State *state) {
   }
   lua_pushstring(state, markup);
   free_lbuf(output);
+  return 1;
+}
+
+static int lua_mux_is_printable_ascii(lua_State *state) {
+  size_t length;
+  const char *value;
+
+  luaL_checktype(state, 1, LUA_TSTRING);
+  value = lua_tolstring(state, 1, &length);
+  lua_pushboolean(state, utf8_is_printable_ascii(value, length));
   return 1;
 }
 
@@ -758,10 +769,15 @@ static int lua_mux_state_tostring(lua_State *state) {
 static int lua_mux_notify(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
-  const char *message = luaL_checkstring(state, 2);
+  size_t length;
+  const char *message = luaL_checklstring(state, 2, &length);
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.notify is unavailable during @lua/check");
+  if (strlen(message) != length)
+    return luaL_argerror(state, 2, "message contains an embedded NUL byte");
+  if (!utf8_validate(message, length))
+    return luaL_argerror(state, 2, "message is not valid UTF-8");
   object = lua_mux_require_object(package, state, 1);
   notify(&package->services->background_command->evaluation, object, message);
   return 0;
@@ -882,6 +898,8 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_markup, 1);
   lua_setfield(state, -2, "markup");
+  lua_pushcfunction(state, lua_mux_is_printable_ascii);
+  lua_setfield(state, -2, "is_printable_ascii");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_style, 1);
   lua_setfield(state, -2, "style");

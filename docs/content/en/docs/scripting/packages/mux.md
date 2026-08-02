@@ -99,6 +99,16 @@ before data leaves the Lua VM. Exceeding a limit raises a Lua error.
 
 ## Styled text
 
+`mux.is_printable_ascii(value)` returns `true` when every byte in the string is
+between space (`0x20`) and `~` (`0x7e`), inclusive. The empty string is valid;
+control bytes, embedded NUL bytes, DEL, and non-ASCII UTF-8 characters return
+`false`. This is useful when validating player-facing identifiers.
+
+```lua
+assert(mux.is_printable_ascii("Atlas-1"))
+assert(not mux.is_printable_ascii("caf\u00e9"))
+```
+
 `mux.markup(value)` validates and returns the same color markup accepted by
 `@name`, `@desc`, and `@idesc`.
 

@@ -99,13 +99,13 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
    */
 
   negate = false;
-  while (*power && isspace(*power))
+  while (*power && isspace((unsigned char)*power))
     power++;
   if (*power == '!') {
     negate = true;
     power++;
   }
-  while (*power && isspace(*power))
+  while (*power && isspace((unsigned char)*power))
     power++;
 
   /*

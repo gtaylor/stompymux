@@ -7,6 +7,7 @@
 
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text.h"
+#include "mux/support/utf8.h"
 
 typedef enum StyledColorKind {
   STYLED_COLOR_DEFAULT,
@@ -213,6 +214,22 @@ static bool append_bytes(char *output, size_t output_size, size_t *used,
 static bool append_string(char *output, size_t output_size, size_t *used,
                           const char *value) {
   return append_bytes(output, output_size, used, value, strlen(value));
+}
+
+static bool append_utf8_codepoint(char *output, size_t output_size,
+                                  size_t *used, const char *value,
+                                  size_t *consumed) {
+  static const char replacement[] = "\xef\xbf\xbd";
+  Utf8DecodeResult decoded;
+  size_t available = strnlen(value, 4);
+
+  if (utf8_decode(value, available, &decoded)) {
+    *consumed = decoded.length;
+    return append_bytes(output, output_size, used, value, decoded.length);
+  }
+  *consumed = 1;
+  return append_bytes(output, output_size, used, replacement,
+                      sizeof(replacement) - 1);
 }
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -443,9 +460,14 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
       return false;
     }
     if (*cursor != '[') {
-      if (!append_bytes(output, output_size, &used, cursor, 1))
+      Utf8DecodeResult decoded;
+      if (!utf8_decode(cursor, strnlen(cursor, 4), &decoded)) {
+        set_error(error, error_size, "text is not valid UTF-8");
+        return false;
+      }
+      if (!append_bytes(output, output_size, &used, cursor, decoded.length))
         goto too_long;
-      cursor++;
+      cursor += decoded.length;
       continue;
     }
     if (cursor[1] == '[') {
@@ -494,13 +516,17 @@ bool styled_text_escape(const char *text, char *output, size_t output_size) {
   if (!text || !output || output_size == 0)
     return false;
   output[0] = '\0';
-  for (const char *cursor = text; *cursor; cursor++) {
+  for (const char *cursor = text; *cursor;) {
+    Utf8DecodeResult decoded;
+
     if (*cursor == '\033')
       return false;
     if (*cursor == '[' && !append_bytes(output, output_size, &used, "[", 1))
       return false;
-    if (!append_bytes(output, output_size, &used, cursor, 1))
+    if (!utf8_decode(cursor, strnlen(cursor, 4), &decoded) ||
+        !append_bytes(output, output_size, &used, cursor, decoded.length))
       return false;
+    cursor += decoded.length;
   }
   return true;
 }
@@ -713,9 +739,10 @@ static void styled_text_render_ansi(const char *styled,
 
   for (const char *cursor = styled; *cursor;) {
     if (*cursor != '\033') {
-      if (!append_bytes(output, output_size, &used, cursor, 1))
+      size_t consumed;
+      if (!append_utf8_codepoint(output, output_size, &used, cursor, &consumed))
         break;
-      cursor++;
+      cursor += consumed;
       continue;
     }
     int parameters[SGR_PARAMETER_LIMIT];
@@ -745,9 +772,10 @@ static void compile_markup_permissive(const StyledTextPalette *palette,
   output[0] = '\0';
   for (const char *cursor = input; *cursor;) {
     if (*cursor != '[') {
-      if (!append_bytes(output, output_size, &used, cursor, 1))
+      size_t consumed;
+      if (!append_utf8_codepoint(output, output_size, &used, cursor, &consumed))
         return;
-      cursor++;
+      cursor += consumed;
       continue;
     }
     if (cursor[1] == '[') {
@@ -887,10 +915,13 @@ void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
         visible++;
       }
     } else {
-      if (!append_bytes(output, output_size, &used, cursor, 1))
+      Utf8DecodeResult decoded;
+      if (!utf8_decode(cursor, strnlen(cursor, 4), &decoded) ||
+          visible + decoded.length > width ||
+          !append_bytes(output, output_size, &used, cursor, decoded.length))
         break;
-      cursor++;
-      visible++;
+      cursor += decoded.length;
+      visible += decoded.length;
     }
   }
   while (stack_size > 0) {

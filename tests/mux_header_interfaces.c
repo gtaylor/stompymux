@@ -46,6 +46,7 @@
 #include "mux/support/password.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/utf8.h"
 #include "mux/support/validation.h"
 #include "mux/support/wild.h"
 #include "mux/world/access.h"

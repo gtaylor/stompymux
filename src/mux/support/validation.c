@@ -8,9 +8,18 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
+#include "mux/support/utf8.h"
+
+static bool ascii_is_alpha(unsigned char byte) {
+  return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z');
+}
+
+static bool ascii_is_alnum(unsigned char byte) {
+  return ascii_is_alpha(byte) || (byte >= '0' && byte <= '9');
+}
 
 int is_integer(char *str) {
-  while (*str && isspace(*str))
+  while (*str && isspace((unsigned char)*str))
     str++;           /*
                       * Leading spaces
                       */
@@ -23,15 +32,15 @@ int is_integer(char *str) {
                  * but not if just a minus
                  */
   }
-  if (!isdigit(*str)) /*
-                       * Need at least 1 integer
-                       */
+  if (!isdigit((unsigned char)*str)) /*
+                                      * Need at least 1 integer
+                                      */
     return 0;
-  while (*str && isdigit(*str))
+  while (*str && isdigit((unsigned char)*str))
     str++; /*
             * The number (int)
             */
-  while (*str && isspace(*str))
+  while (*str && isspace((unsigned char)*str))
     str++; /*
             * Trailing spaces
             */
@@ -44,7 +53,7 @@ int is_integer(char *str) {
 int is_number(char *str) {
   int got_one;
 
-  while (*str && isspace(*str))
+  while (*str && isspace((unsigned char)*str))
     str++;           /*
                       * Leading spaces
                       */
@@ -58,11 +67,11 @@ int is_number(char *str) {
                  */
   }
   got_one = 0;
-  if (isdigit(*str))
+  if (isdigit((unsigned char)*str))
     got_one = 1; /*
                   * Need at least one digit
                   */
-  while (*str && isdigit(*str))
+  while (*str && isdigit((unsigned char)*str))
     str++; /*
             * The number (int)
             */
@@ -70,15 +79,15 @@ int is_number(char *str) {
     str++; /*
             * decimal point
             */
-  if (isdigit(*str))
+  if (isdigit((unsigned char)*str))
     got_one = 1; /*
                   * Need at least one digit
                   */
-  while (*str && isdigit(*str))
+  while (*str && isdigit((unsigned char)*str))
     str++; /*
             * The number (fract)
             */
-  while (*str && isspace(*str))
+  while (*str && isspace((unsigned char)*str))
     str++; /*
             * Trailing spaces
             */
@@ -87,34 +96,34 @@ int is_number(char *str) {
 
 int ok_name(const ServerConfiguration *configuration, const char *name) {
   const char *cp;
-  (void)configuration;
+
+  if (name == nullptr || *name == '\0')
+    return 0;
 
   /* Disallow leading spaces */
 
-  if (isspace(*name))
+  if (*name == ' ')
     return 0;
 
   /*
    * Only printable characters
    */
 
-  for (cp = name; cp && *cp; cp++) {
-    if (!isprint((unsigned char)*cp))
-      return 0;
-  }
+  if (!utf8_validate_printable(name, strlen(name)))
+    return 0;
 
   /*
    * Disallow trailing spaces
    */
-  cp--;
-  if (isspace(*cp))
+  cp = name + strlen(name) - 1;
+  if (*cp == ' ')
     return 0;
 
   /*
    * Exclude names that start with or contain certain magic cookies
    */
 
-  return (name && *name && *name != LOOKUP_TOKEN && *name != NUMBER_TOKEN &&
+  return (*name != LOOKUP_TOKEN && *name != NUMBER_TOKEN &&
           *name != NOT_TOKEN && !index(name, ARG_DELIMITER) &&
           !index(name, AND_TOKEN) && !index(name, OR_TOKEN) &&
           string_compare(configuration, name, "me") &&
@@ -129,7 +138,8 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
    * No leading spaces
    */
 
-  if (isspace(*name))
+  if (name == nullptr || !utf8_is_printable_ascii(name, strlen(name)) ||
+      *name == ' ')
     return 0;
 
   /*
@@ -149,7 +159,7 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
    */
 
   for (cp = name; cp && *cp; cp++) {
-    if (isalnum(*cp))
+    if (ascii_is_alnum((unsigned char)*cp))
       continue;
     if (!index(good_chars, *cp))
       return 0;
@@ -159,22 +169,29 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
 
 int ok_new_player_name(const ServerConfiguration *configuration,
                        const char *name) {
-  return strlen(name) >= 2 && isalpha((unsigned char)*name) &&
+  return name != nullptr && strlen(name) >= 2 &&
+         ascii_is_alpha((unsigned char)*name) &&
          ok_player_name(configuration, name);
 }
 
 int ok_password(const ServerConfiguration *configuration,
                 const char *password) {
-  const char *scan;
+  Utf8DecodeResult decoded;
+  size_t length;
+  size_t offset = 0;
 
+  length = strlen(password);
   if (*password == '\0' ||
-      strlen(password) > (size_t)configuration->player_password_length_limit)
+      length > (size_t)configuration->player_password_length_limit ||
+      !utf8_validate_printable(password, length))
     return 0;
 
-  for (scan = password; *scan; scan++) {
-    if (!(isprint(*scan) && !isspace(*scan))) {
+  while (offset < length) {
+    if (!utf8_decode(password + offset, length - offset, &decoded) ||
+        decoded.codepoint == ' ') {
       return 0;
     }
+    offset += decoded.length;
   }
 
   /*

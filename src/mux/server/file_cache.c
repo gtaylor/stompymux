@@ -13,6 +13,7 @@
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/utf8.h"
 
 typedef struct filecache_hdr FCACHE;
 typedef struct filecache_block_hdr FBLKHDR;
@@ -66,6 +67,8 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
   int n, nmax, tchars, fd;
   char *buff;
   FBLOCK *fp, *tfp;
+  Utf8ValidatorState utf8;
+  bool valid_utf8 = true;
 
   /*
    * Free a prior buffer chain
@@ -105,6 +108,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
   fp->hdr.nchars = 0;
   *cp = fp;
   tchars = 0;
+  utf8_validator_initialize(&utf8);
 
   /*
    * Process the file, one lbuf at a time
@@ -113,7 +117,10 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
   nmax = (int)read(fd, buff, LBUF_SIZE);
   while (nmax > 0) {
 
-    for (n = 0; n < nmax; n++) {
+    if (valid_utf8 && !utf8_validator_feed(&utf8, buff, (size_t)nmax))
+      valid_utf8 = false;
+
+    for (n = 0; valid_utf8 && n < nmax; n++) {
       switch (buff[n]) {
       case '\n':
         fp = fcache_fill(fp, '\r');
@@ -131,6 +138,19 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
   }
   free_lbuf(buff);
   close(fd);
+
+  if (!valid_utf8 || !utf8_validator_is_complete(&utf8)) {
+    fp = *cp;
+    while (fp != nullptr) {
+      tfp = fp->hdr.nxt;
+      free_mbuf(fp);
+      fp = tfp;
+    }
+    *cp = nullptr;
+    log_error(evaluation->log, LOG_PROBLEMS, "FIL", "UTF8",
+              "File '%s' is not valid UTF-8.", filename);
+    return -1;
+  }
 
   /*
    * If we didn't read anything in, toss the initial buffer

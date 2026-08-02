@@ -354,13 +354,13 @@ FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
 void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
               DbRef target, DbRef player, char *name, int key) {
   bool clear = false;
-  while (*name && isspace(*name))
+  while (*name && isspace((unsigned char)*name))
     name++;
   if (*name == '!') {
     clear = true;
     name++;
   }
-  while (*name && isspace(*name))
+  while (*name && isspace((unsigned char)*name))
     name++;
   if (!*name) {
     notify(evaluation, player,

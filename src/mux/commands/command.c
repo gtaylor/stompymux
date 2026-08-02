@@ -824,7 +824,7 @@ void process_command(CommandContext *context, char *command, char *args[],
    * Eat leading whitespace, and space-compress if configured
    */
 
-  while (*command && isspace(*command))
+  while (*command && isspace((unsigned char)*command))
     command++;
   context->debug_command = command;
 
@@ -834,9 +834,9 @@ void process_command(CommandContext *context, char *command, char *args[],
   if (configuration->space_compress && strncmp(command, "@npemit", 7)) {
     p = q = command;
     while (*p) {
-      while (*p && !isspace(*p))
+      while (*p && !isspace((unsigned char)*p))
         *q++ = *p++;
-      while (*p && isspace(*p))
+      while (*p && isspace((unsigned char)*p))
         p++;
       if (*p)
         *q++ = ' ';
@@ -922,14 +922,14 @@ void process_command(CommandContext *context, char *command, char *args[],
    */
 
   lcbuf = alloc_lbuf("process_commands.LCbuf");
-  for (p = command, q = lcbuf; *p && !isspace(*p); p++, q++)
+  for (p = command, q = lcbuf; *p && !isspace((unsigned char)*p); p++, q++)
     *q = ToLower(*p); /*
                        * Make lowercase command
                        */
   *q++ = '\0';        /*
                        * Terminate command
                        */
-  while (*p && isspace(*p))
+  while (*p && isspace((unsigned char)*p))
     p++;   /*
             * Skip spaces before arg
             */
@@ -1298,7 +1298,7 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
   char *ap;
   int set_switch;
 
-  for (ap = str; *ap && !isspace(*ap) && (*ap != '/'); ap++)
+  for (ap = str; *ap && !isspace((unsigned char)*ap) && (*ap != '/'); ap++)
     ;
   if (*ap == '/') {
     set_switch = 1;
@@ -1307,7 +1307,7 @@ int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
     set_switch = 0;
     if (*ap)
       *ap++ = '\0';
-    while (*ap && isspace(*ap))
+    while (*ap && isspace((unsigned char)*ap))
       ap++;
   }
 
@@ -1463,6 +1463,9 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
     raw_notify(evaluation, player, "Player names may contain spaces.");
   else
     raw_notify(evaluation, player, "Player names may not contain spaces.");
+  raw_notify(evaluation, player,
+             "Player names and aliases use printable ASCII; other text uses "
+             "UTF-8.");
   raw_notify(evaluation, player,
              "The '@examine' command lists the flag names for the object's "
              "flags.");
