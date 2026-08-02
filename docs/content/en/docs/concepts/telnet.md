@@ -33,3 +33,4 @@ C code can query a descriptor with
 escaped protocol bytes and empty values are preserved. Lua code has equivalent
 functions in the built-in `mux` package. Wizards can inspect all negotiated
 state with `@telnet <player>`; non-printable bytes are escaped in its output.
+The diagnostic groups each value beneath the Telnet option that supplied it.

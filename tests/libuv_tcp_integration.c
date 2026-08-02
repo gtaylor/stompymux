@@ -408,12 +408,15 @@ static int expect_text(int socket_fd, const char *expected) {
   char received[16384];
   size_t received_size = 0;
   struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+  int idle_attempts = 0;
 
-  for (int attempt = 0; attempt < 20; attempt++) {
+  while (idle_attempts < 20) {
     ssize_t size;
 
-    if (poll(&readable, 1, 500) != 1)
+    if (poll(&readable, 1, 500) != 1) {
+      idle_attempts++;
       continue;
+    }
     size = read(socket_fd, received + received_size,
                 sizeof(received) - received_size - 1);
     if (size <= 0)
@@ -423,7 +426,7 @@ static int expect_text(int socket_fd, const char *expected) {
     if (strstr(received, expected))
       return 0;
     if (received_size == sizeof(received) - 1)
-      return -1;
+      break;
   }
   fprintf(stderr, "expected '%s', received '%s'\n", expected, received);
   return -1;
@@ -434,12 +437,15 @@ static int expect_text_without(int socket_fd, const char *expected,
   char received[16384];
   size_t received_size = 0;
   struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+  int idle_attempts = 0;
 
-  for (int attempt = 0; attempt < 20; attempt++) {
+  while (idle_attempts < 20) {
     ssize_t size;
 
-    if (poll(&readable, 1, 500) != 1)
+    if (poll(&readable, 1, 500) != 1) {
+      idle_attempts++;
       continue;
+    }
     size = read(socket_fd, received + received_size,
                 sizeof(received) - received_size - 1);
     if (size <= 0)
@@ -454,7 +460,7 @@ static int expect_text_without(int socket_fd, const char *expected,
     if (strstr(received, expected))
       return 0;
     if (received_size == sizeof(received) - 1)
-      return -1;
+      break;
   }
   fprintf(stderr, "expected '%s', received '%s'\n", expected, received);
   return -1;
@@ -465,12 +471,15 @@ static int expect_three_texts(int socket_fd, const char *first,
   char received[16384];
   size_t received_size = 0;
   struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+  int idle_attempts = 0;
 
-  for (int attempt = 0; attempt < 20; attempt++) {
+  while (idle_attempts < 20) {
     ssize_t size;
 
-    if (poll(&readable, 1, 500) != 1)
+    if (poll(&readable, 1, 500) != 1) {
+      idle_attempts++;
       continue;
+    }
     size = read(socket_fd, received + received_size,
                 sizeof(received) - received_size - 1);
     if (size <= 0)
@@ -481,8 +490,10 @@ static int expect_three_texts(int socket_fd, const char *first,
         strstr(received, third))
       return 0;
     if (received_size == sizeof(received) - 1)
-      return -1;
+      break;
   }
+  fprintf(stderr, "expected '%s', '%s', and '%s', received '%s'\n", first,
+          second, third, received);
   return -1;
 }
 
@@ -570,10 +581,10 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "luacolor\r\n") < 0 ||
       expect_text(socket_fd, "\033[38;2;255;112;0mLuaMarkup") < 0 ||
       send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
-      expect_three_texts(socket_fd, "NEW-ENVIRON=yes",
-                         "VAR \"USER\" = "
+      expect_three_texts(socket_fd, "  NEW-ENVIRON:",
+                         "      VAR \"USER\" = "
                          "\"alice\"",
-                         "USERVAR \"BINARY\" = \"x\\x01y\"") < 0 ||
+                         "      USERVAR \"BINARY\" = \"x\\x01y\"") < 0 ||
       send_command(socket_fd, "luastate\r\n") < 0 ||
       expect_text(socket_fd, "LuaState 1") < 0 ||
       send_command(socket_fd, "luafail\r\nluastate\r\n") < 0 ||

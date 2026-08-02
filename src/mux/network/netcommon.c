@@ -825,8 +825,11 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   size_t count = descriptor_telnet_environment_count(descriptor);
   char *buffer = alloc_lbuf("dump_telnet_environment");
 
+  notify(evaluation, viewer, "  NEW-ENVIRON:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_new_environ_enabled ? "yes" : "no");
   if (count == 0) {
-    notify(evaluation, viewer, "  Environment: (none)");
+    notify(evaluation, viewer, "    Variables: (none)");
     free_lbuf(buffer);
     return;
   }
@@ -835,7 +838,7 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   for (size_t index = 0; index < count; index++)
     descriptor_telnet_environment_entry(descriptor, index, &entries[index]);
   qsort(entries, count, sizeof(entries[0]), telnet_environment_view_compare);
-  notify(evaluation, viewer, "  Environment:");
+  notify(evaluation, viewer, "    Variables:");
   for (size_t index = 0; index < count; index++) {
     TelnetEnvironmentEntryView *entry = &entries[index];
     size_t value_position = 0;
@@ -848,13 +851,13 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
       char *position = buffer;
 
       if (first_chunk) {
-        safe_str(entry->kind == TELNET_ENVIRONMENT_VAR ? "    VAR \""
-                                                       : "    USERVAR \"",
+        safe_str(entry->kind == TELNET_ENVIRONMENT_VAR ? "      VAR \""
+                                                       : "      USERVAR \"",
                  buffer, &position);
         telnet_append_escaped(buffer, &position, entry->name, entry->name_size);
         safe_str("\" = \"", buffer, &position);
       } else {
-        safe_str("      value += \"", buffer, &position);
+        safe_str("        value += \"", buffer, &position);
       }
       telnet_append_escaped(buffer, &position, entry->value + value_position,
                             chunk_size);
@@ -887,26 +890,42 @@ static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
       evaluation, viewer, "Telnet state for %s(#%ld), descriptor %d:",
       game_object_name(evaluation->world->database, descriptor->player),
       descriptor->player, descriptor->descriptor);
-  notify_printf(evaluation, viewer,
-                "  Options: TTYPE=%s NAWS=%s NEW-ENVIRON=%s CHARSET=%s GMCP=%s "
-                "MSSP=%s MCCP2=%s ECHO=%s",
-                descriptor->is_ttype_enabled ? "yes" : "no",
-                descriptor->is_naws_enabled ? "yes" : "no",
-                descriptor->is_new_environ_enabled ? "yes" : "no",
-                descriptor->is_charset_enabled ? "yes" : "no",
-                descriptor->is_gmcp_enabled ? "yes" : "no",
-                descriptor->is_mssp_enabled ? "yes" : "no",
-                descriptor->is_mccp_enabled ? "active" : "no",
-                descriptor->is_echo_suppressed ? "suppressed" : "client");
-  notify_printf(evaluation, viewer,
-                "  Terminal: client=\"%s\" type=\"%s\" size=%dx%d "
-                "color=%s%s charset=%s",
-                client, terminal, descriptor->terminal_width,
-                descriptor->terminal_height,
-                terminal_color_depth_name(descriptor->terminal_color_depth),
-                descriptor->is_screen_reader ? " screen-reader" : "",
+  notify(evaluation, viewer, "  TTYPE / MTTS:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_ttype_enabled ? "yes" : "no");
+  notify_printf(evaluation, viewer, "    Client: \"%s\"", client);
+  notify_printf(evaluation, viewer, "    Terminal type: \"%s\"", terminal);
+  notify_printf(evaluation, viewer, "    Responses: %d",
+                descriptor->terminal_type_responses);
+  notify_printf(evaluation, viewer, "    Color depth: %s",
+                terminal_color_depth_name(descriptor->terminal_color_depth));
+  notify_printf(evaluation, viewer, "    Screen reader: %s",
+                descriptor->is_screen_reader ? "yes" : "no");
+  notify(evaluation, viewer, "  NAWS:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_naws_enabled ? "yes" : "no");
+  notify_printf(evaluation, viewer, "    Window size: %dx%d",
+                descriptor->terminal_width, descriptor->terminal_height);
+  notify(evaluation, viewer, "  CHARSET:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_charset_enabled ? "yes" : "no");
+  notify_printf(evaluation, viewer, "    Encoding: %s",
                 descriptor->is_charset_utf8 ? "UTF-8" : "unsupported");
+  notify_printf(evaluation, viewer, "    Request pending: %s",
+                descriptor->is_charset_request_pending ? "yes" : "no");
   dump_telnet_environment(evaluation, viewer, descriptor);
+  notify(evaluation, viewer, "  GMCP:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_gmcp_enabled ? "yes" : "no");
+  notify(evaluation, viewer, "  MSSP:");
+  notify_printf(evaluation, viewer, "    Negotiated: %s",
+                descriptor->is_mssp_enabled ? "yes" : "no");
+  notify(evaluation, viewer, "  MCCP2:");
+  notify_printf(evaluation, viewer, "    Compression: %s",
+                descriptor->is_mccp_enabled ? "active" : "inactive");
+  notify(evaluation, viewer, "  ECHO:");
+  notify_printf(evaluation, viewer, "    Client echo: %s",
+                descriptor->is_echo_suppressed ? "suppressed" : "enabled");
   free_lbuf(terminal);
   free_lbuf(client);
 }
