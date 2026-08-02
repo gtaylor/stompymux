@@ -24,10 +24,6 @@ static inline void free_sbuf(void *b) {
     free(b);
 }
 
-// Defined in command_queue.c, where BQUE is fully declared.
-struct bque *alloc_qentry(const char *s);
-void free_qentry(struct bque *b);
-
 static inline int safe_str(const char *s, char *b, char **p) {
   return safe_copy_str(s, b, p, LBUF_SIZE - 1);
 }

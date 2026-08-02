@@ -27,15 +27,6 @@
 #include "mux/world/player_cache.h"
 #include "mux/world/world_context.h"
 
-struct bque *alloc_qentry(const char *s) {
-  return (struct bque *)malloc(sizeof(struct bque));
-}
-
-void free_qentry(struct bque *b) {
-  if (b)
-    free(b);
-}
-
 struct CommandQueue {
   CommandRuntime *command_runtime;
   BtechContext *btech;
@@ -111,7 +102,7 @@ void command_queue_destroy(CommandQueue *queue) {
 static void cque_free_entry(BQUE *entry) {
   if (entry->timer != nullptr)
     mux_timer_destroy(entry->timer);
-  free_qentry(entry);
+  free(entry);
 }
 
 static int objqe_compare(DbRef left, DbRef right, void *arg) {
@@ -431,7 +422,7 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
                                 wakeup_wait_que, tmp);
   if (tmp->timer == nullptr) {
     free(tmp->text);
-    free_qentry(tmp);
+    free(tmp);
     return nullptr;
   }
 
