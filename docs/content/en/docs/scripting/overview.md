@@ -64,18 +64,16 @@ exposed.
 
 ## The `mux` API
 
-The `mux` table is the only server interface exposed to Lua modules:
-`attr_get`, `attr_set`, `contents`, `contents_visible`, `exits`,
-`exits_visible`, `object_description`, `object_inside_description`,
-`object_name`, `object_type`, `markup`, `style`, `strip_style`, `text_width`,
-`truncate_text`, `notify`, `command`, `connected_players`, `who_summary`, and
-`flow_start`. Queued commands execute as `#1` after the current handler
-completes. See the
+The `mux` table is the server interface exposed to Lua modules. Use
+`mux.object(dbref)` for object properties, containment, locks, and typed
+persistent state. Styled text, notifications, queued commands, connection
+summaries, and interactive flows remain top-level `mux` operations. Queued
+commands execute as `#1` after the current handler completes. See the
 [`mux` package reference](packages/mux/) for the full API.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
-APIs. The configured memory cap applies to the complete state, and each
-callback has an instruction cap.
+APIs. The configured memory cap applies to the complete Lua state. Persistent
+object state has separate per-value and per-object limits.
 
 Native control is role-only: God controls everything; Wizards control every
 non-Wizard object and player but cannot control themselves, God, or another
@@ -102,9 +100,9 @@ command-match scope:
 @lua/reload
 ```
 
-`game/lua/object_logic/counter.lua` demonstrates durable state. Its `count`
-command increments the attached object's `LuaCount` attribute, so the value
-survives Lua reloads and server restarts.
+`game/lua/object_logic/counter.lua` demonstrates typed durable state. Its
+`count` command increments the attached object's `counter/count` state value,
+which survives Lua reloads and server restarts.
 
 `game/lua/object_logic/events/enter_notice.lua` demonstrates an `on_enter`
 handler:

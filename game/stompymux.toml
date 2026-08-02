@@ -40,6 +40,12 @@ fork_dump = true
 directory = "lua"
 # Maximum memory, in bytes, permitted for the Lua VM.
 memory_limit = 67108864
+# Maximum bytes in one persistent Lua state string.
+state_value_limit = 65536
+# Maximum persistent Lua state entries on one object.
+state_entry_limit = 1024
+# Maximum total persistent Lua state bytes on one object.
+state_object_limit = 1048576
 
 # -----------------------------------------------
 #  Important Directives (Look these over!)

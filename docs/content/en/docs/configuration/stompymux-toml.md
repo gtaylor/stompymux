@@ -19,7 +19,7 @@ anything pulled in through `include`.
 | Section | Contents |
 | --- | --- |
 | `[database]` | SQLite game database path, checkpoint dump timing, messages, and fork behavior, and mech/map database paths. |
-| `[lua]` | Lua module directory and VM memory limit. LuaJIT compilation is enabled. |
+| `[lua]` | Lua module directory, VM memory limit, and persistent object-state limits. LuaJIT compilation is enabled. |
 | `[server]` | Port and MUD name. |
 | `[colors]` | Case-insensitive named RGB colors used by styled-text markup. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
@@ -33,6 +33,10 @@ anything pulled in through `include`.
 
 Lua callbacks run with LuaJIT compilation enabled. Consequently, `[lua]` has no
 per-callback instruction limit: use bounded loops in trusted Lua modules.
+`state_value_limit` caps one persistent string, `state_entry_limit` caps the
+number of state entries on an object, and `state_object_limit` caps the total
+bytes of keys and values on an object. Their defaults are 65536, 1024, and
+1048576 respectively.
 
 Most directives are plain scalars (`port = 5555`, or, under `[database]`,
 `fork_dump = true`). A few

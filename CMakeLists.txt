@@ -357,6 +357,14 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME styled_text COMMAND styled_text_test)
 
+  add_executable(object_state_test tests/object_state.c
+    ${MUX_SOURCE_DIR}/objects/object_state.c)
+  target_link_libraries(object_state_test PRIVATE btmux_options m)
+  target_include_directories(object_state_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME object_state COMMAND object_state_test)
+
   add_executable(gamedb_integration_test tests/gamedb_integration.c)
   target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
   if(BTECH_ADVANCED_ECON)

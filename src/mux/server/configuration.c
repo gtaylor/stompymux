@@ -305,6 +305,9 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cache_names = 1;
   StringCopy(context->configuration->lua.directory, "lua");
   context->configuration->lua.memory_limit = 64 * 1024 * 1024;
+  context->configuration->lua.state_value_limit = 64 * 1024;
+  context->configuration->lua.state_entry_limit = 1024;
+  context->configuration->lua.state_object_limit = 1024 * 1024;
 
   context->configuration->player_zone = 0;
 }
@@ -987,6 +990,12 @@ CONF conftable[] = {
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
     {"lua_memory_limit", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(lua.memory_limit), 0},
+    {"lua_state_value_limit", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(lua.state_value_limit), 0},
+    {"lua_state_entry_limit", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(lua.state_entry_limit), 0},
+    {"lua_state_object_limit", cf_int_configuration_adapter, CA_GOD,
+     CONFIG_LOC(lua.state_object_limit), 0},
     {"accounting", cf_bool_bit_configuration_adapter, CA_GOD,
      CONFIG_LOC(log_options), LOG_ACCOUNTING},
     {"all_commands", cf_bool_bit_configuration_adapter, CA_GOD,

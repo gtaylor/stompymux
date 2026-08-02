@@ -40,9 +40,31 @@ repair. `@lua/reload` itself remains atomic and rejects a missing attachment.
 
 `@examine` is Wizard-only, and Wizards may examine any object. Its output
 identifies the object's direct Lua parent, then lists its appearance functions,
-command patterns, events, schedule names, message providers, and locks. Use
-`@lua/viewparent <dbref>` to display that module's raw source, or
-`@lua/viewparent <path>.lua` to inspect an object-logic module directly by path.
+command patterns, events, schedule names, message providers, and locks. It also
+lists each persistent state namespace and its number of values without exposing
+keys or values; `@examine/brief` omits this summary. Use `@lua/viewparent
+<dbref>` to display that module's raw source, or `@lua/viewparent <path>.lua` to
+inspect an object-logic module directly by path.
+
+`@state/examine` shows the same namespace summary for the Wizard's current
+location, while `@state/examine <object>` targets another object. Use
+`@state/examine <object>/<namespace>` to list the keys, scalar types, and values
+in one namespace. This detailed state view is available only through the
+explicit `@state/examine` command.
+
+Wizards can administer individual values with the remaining `@state` switches:
+
+```text
+@state/set <object>/<namespace> <attribute_name>=<value>
+@state/copy <object>/<namespace> <attribute_name>=<namespace> <attribute_name>
+@state/move <object>/<namespace> <attribute_name>=<namespace> <attribute_name>
+@state/wipe <object>[/<namespace>]
+```
+
+For `/set`, an empty value deletes the attribute, while `""` stores an empty
+string. Booleans and numbers are stored with their scalar types; quoting forces
+a string. Copy and move retain the source type and operate only within the same
+object. Wipe removes either one namespace or all state on the object.
 
 ## Module contract
 

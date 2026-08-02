@@ -75,6 +75,15 @@ NameTable lua_sw[] = {
     {nullptr, 0, 0, 0},
 };
 
+NameTable state_sw[] = {
+    {"examine", 7, CA_PUBLIC, STATE_COMMAND_EXAMINE},
+    {"set", 3, CA_PUBLIC, STATE_COMMAND_SET},
+    {"wipe", 4, CA_PUBLIC, STATE_COMMAND_WIPE},
+    {"copy", 4, CA_PUBLIC, STATE_COMMAND_COPY},
+    {"move", 4, CA_PUBLIC, STATE_COMMAND_MOVE},
+    {nullptr, 0, 0, 0},
+};
+
 NameTable help_sw[] = {
     {"reload", 6, CA_PUBLIC, HELP_COMMAND_RELOAD},
     {nullptr, 0, 0, 0},
@@ -179,12 +188,6 @@ CMDENT command_table[] = {
      0,
      CS_TWO_ARG,
      {.invoke = do_clone}},
-    {"@cpattr",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_ARGV,
-     {.invoke = do_cpattr}},
     {"@create",
      nullptr,
      CA_WIZARD | CA_CONTENTS,
@@ -208,12 +211,6 @@ CMDENT command_table[] = {
      CS_ONE_ARG,
      {.invoke = do_global}},
     {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dump}},
-    {"@edit",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_ARGV | CS_STRIP_AROUND,
-     {.invoke = do_edit}},
     {"@emit",
      emit_sw,
      CA_WIZARD | CA_LOCATION,
@@ -263,12 +260,6 @@ CMDENT command_table[] = {
 #ifdef ARBITRARY_LOGFILES
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
 #endif
-    {"@mvattr",
-     nullptr,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG | CS_ARGV,
-     {.invoke = do_mvattr}},
     {"@name", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_name}},
     {"@newpassword",
      nullptr,
@@ -311,6 +302,7 @@ CMDENT command_table[] = {
      {.invoke = do_search}},
     {"@set", set_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_set}},
     {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
+    {"@state", state_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_state}},
     {"@stats", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_stats}},
     {"@teleport",
      teleport_sw,
@@ -326,7 +318,6 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_STRIP_AROUND | CS_NO_MACRO,
      {.invoke = do_wait}},
     {"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG, {.invoke = do_say}},
-    {"@wipe", wall_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_wipe}},
     {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_session}},
     {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_who}},
     {"addcom", nullptr, CA_NO_IC, 0, CS_TWO_ARG, {.invoke = do_addcom}},
@@ -394,12 +385,6 @@ CMDENT command_table[] = {
      SAY_PREFIX,
      CS_ONE_ARG | CS_LEADIN,
      {.invoke = do_say}},
-    {"&",
-     nullptr,
-     CA_WIZARD | CF_DARK,
-     0,
-     CS_TWO_ARG | CS_LEADIN,
-     {.invoke = do_setvattr}},
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
 void init_cmdtab(CommandRegistry *registry) {
@@ -419,8 +404,6 @@ void init_cmdtab(CommandRegistry *registry) {
 }
 
 void set_prefix_cmds(CommandRegistry *registry) {
-  int i;
-
   /*
    * Load the command prefix table.  Note - these commands can never *
    * * * * * * be typed in by a user because commands are lowercased *
@@ -428,14 +411,15 @@ void set_prefix_cmds(CommandRegistry *registry) {
    * abbreviated to * * * minimise * * name checking time.
    */
 
-  for (i = 0; i < A_USER_START; i++)
+  for (size_t i = 0; i < sizeof(registry->prefix_commands) /
+                             sizeof(*registry->prefix_commands);
+       i++)
     registry->prefix_commands[i] = nullptr;
   registry->prefix_commands['"'] = hash_table_find("\"", &registry->commands);
   registry->prefix_commands[':'] = hash_table_find(":", &registry->commands);
   registry->prefix_commands[';'] = hash_table_find(";", &registry->commands);
   registry->prefix_commands['\\'] = hash_table_find("\\", &registry->commands);
   registry->prefix_commands['#'] = hash_table_find("#", &registry->commands);
-  registry->prefix_commands['&'] = hash_table_find("&", &registry->commands);
 }
 
 /*

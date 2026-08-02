@@ -1,13 +1,14 @@
--- Persistent object state using normal MUX attributes.
+-- Typed persistent object state.
 -- Attach with: @lua/parent <object>=counter.lua
 return {
   commands = {
     {
       pattern = "^count$",
       handler = function(ctx)
-        local count = tonumber(mux.attr_get(ctx.object, "LuaCount") or "0") + 1
+        local state = mux.object(ctx.object):state("counter")
+        local count = state:get("count", 0) + 1
 
-        mux.attr_set(ctx.object, "LuaCount", tostring(count))
+        state:set("count", count)
         mux.notify(ctx.enactor, "This object has been used " .. count .. " times.")
         return true
       end,

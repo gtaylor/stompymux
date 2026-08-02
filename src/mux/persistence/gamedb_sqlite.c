@@ -12,6 +12,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/server_api.h"
@@ -19,7 +20,7 @@
 #include "mux/support/alloc.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 23;
+constexpr int GAMEDB_SCHEMA_VERSION = 24;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -29,9 +30,8 @@ constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
 #endif
 
 /*
- * Each file holds one complete game snapshot. Object attributes and dynamic
- * attribute definitions are normalized so a future incremental store can use
- * the same schema without changing the on-disk representation.
+ * Each file holds one complete game snapshot. Typed Lua object state is
+ * normalized so a future incremental store can use the same representation.
  */
 static const char schema_objects_sql[] =
     "CREATE TABLE snapshot ("
@@ -122,11 +122,13 @@ static const char schema_state_sql[] =
     " map_visibility TEXT, tech_complete_at INTEGER, economy_parts TEXT,"
     " skills TEXT, personal_combat_equipment TEXT"
     ");"
-    "CREATE TABLE attributes ("
+    "CREATE TABLE object_state ("
     " object_dbref INTEGER NOT NULL REFERENCES objects(dbref),"
-    " name TEXT NOT NULL,"
-    " value TEXT NOT NULL,"
-    " PRIMARY KEY (object_dbref, name)"
+    " namespace TEXT NOT NULL,"
+    " key TEXT NOT NULL,"
+    " value_type INTEGER NOT NULL CHECK (value_type BETWEEN 1 AND 4),"
+    " value BLOB NOT NULL,"
+    " PRIMARY KEY (object_dbref, namespace, key)"
     ") WITHOUT ROWID;";
 
 typedef struct NativeColumn NativeColumn;
@@ -556,28 +558,67 @@ static int gamedb_load_native_state(PersistenceContext *context,
   return 0;
 }
 
-static int gamedb_load_attributes(PersistenceContext *context,
-                                  sqlite3 *sqlite) {
+static int gamedb_load_object_state(PersistenceContext *context,
+                                    sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
   int step;
 
   if (gamedb_prepare(sqlite, &statement,
-                     "SELECT object_dbref, name, value FROM attributes "
-                     "ORDER BY object_dbref, name;") < 0)
+                     "SELECT object_dbref, namespace, key, value_type, value "
+                     "FROM object_state "
+                     "ORDER BY object_dbref, namespace, key;") < 0)
     return -1;
   while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
-    const char *name;
-    const char *value;
+    const char *name_space;
+    const char *key;
+    ObjectStateValue value;
     DbRef object;
+    int type = sqlite3_column_int(statement, 3);
+    char error[256];
 
     if (gamedb_column_long(statement, 0, &object) < 0 ||
         !is_good_obj(context->database, object) ||
-        gamedb_column_text(statement, 1, &name, SBUF_SIZE) < 0 ||
-        gamedb_column_text(statement, 2, &value, LBUF_SIZE) < 0 ||
-        !dynamic_attribute_set(context->database, object, name, value)) {
+        gamedb_column_text(statement, 1, &name_space, 128) < 0 ||
+        gamedb_column_text(statement, 2, &key, 256) < 0 ||
+        type < OBJECT_STATE_STRING || type > OBJECT_STATE_NUMBER) {
       sqlite3_finalize(statement);
       return -1;
     }
+    memset(&value, 0, sizeof(value));
+    value.type = (ObjectStateType)type;
+    switch (value.type) {
+    case OBJECT_STATE_STRING:
+      value.as.string.data = sqlite3_column_blob(statement, 4);
+      value.as.string.length = (size_t)sqlite3_column_bytes(statement, 4);
+      if (sqlite3_column_type(statement, 4) != SQLITE_BLOB)
+        goto invalid_state;
+      break;
+    case OBJECT_STATE_BOOLEAN:
+      if (sqlite3_column_type(statement, 4) != SQLITE_INTEGER ||
+          (sqlite3_column_int(statement, 4) != 0 &&
+           sqlite3_column_int(statement, 4) != 1))
+        goto invalid_state;
+      value.as.boolean = sqlite3_column_int(statement, 4) != 0;
+      break;
+    case OBJECT_STATE_INTEGER:
+      if (sqlite3_column_type(statement, 4) != SQLITE_INTEGER)
+        goto invalid_state;
+      value.as.integer = sqlite3_column_int64(statement, 4);
+      break;
+    case OBJECT_STATE_NUMBER:
+      if (sqlite3_column_type(statement, 4) != SQLITE_FLOAT)
+        goto invalid_state;
+      value.as.number = sqlite3_column_double(statement, 4);
+      break;
+    }
+    if (!object_state_set(context->database, object, name_space, key, &value,
+                          error, sizeof(error)))
+      goto invalid_state;
+    continue;
+
+  invalid_state:
+    sqlite3_finalize(statement);
+    return -1;
   }
   sqlite3_finalize(statement);
   return step == SQLITE_DONE ? 0 : -1;
@@ -604,7 +645,7 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     db_grow(context->database, db_top);
     if (gamedb_load_objects(context, sqlite, db_top, schema_version) < 0 ||
         gamedb_load_native_state(context, sqlite) < 0 ||
-        gamedb_load_attributes(context, sqlite) < 0) {
+        gamedb_load_object_state(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);
     } else if (gamedb_load_extensions(context, sqlite, path) < 0) {
       /* The extension has already emitted a subsystem-specific error. */
@@ -625,12 +666,12 @@ int gamedb_load(PersistenceContext *context, const char *path) {
  */
 static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
                                   sqlite3_stmt *objects,
-                                  sqlite3_stmt *attributes, int success) {
+                                  sqlite3_stmt *object_state, int success) {
   if (!success)
     gamedb_exec(sqlite, "ROLLBACK;");
   sqlite3_finalize(snapshot);
   sqlite3_finalize(objects);
-  sqlite3_finalize(attributes);
+  sqlite3_finalize(object_state);
   return success ? 0 : -1;
 }
 
@@ -683,12 +724,12 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                                  int dump_type) {
   sqlite3_stmt *snapshot;
   sqlite3_stmt *objects;
-  sqlite3_stmt *attributes;
+  sqlite3_stmt *object_state;
   DbRef object;
 
   snapshot = nullptr;
   objects = nullptr;
-  attributes = nullptr;
+  object_state = nullptr;
 
   if (gamedb_exec(sqlite,
                   "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; "
@@ -698,7 +739,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_exec(sqlite, schema_state_sql) < 0 ||
       gamedb_exec(sqlite, "PRAGMA application_id = "
                           "1112821080; PRAGMA user_version = 1;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
   if (gamedb_prepare(
           sqlite, &snapshot,
@@ -722,10 +763,11 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
-      gamedb_prepare(sqlite, &attributes,
-                     "INSERT INTO attributes (object_dbref, name, value) "
-                     "VALUES (?, ?, ?);") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+      gamedb_prepare(sqlite, &object_state,
+                     "INSERT INTO object_state "
+                     "(object_dbref, namespace, key, value_type, value) "
+                     "VALUES (?, ?, ?, ?, ?);") < 0)
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
   if (gamedb_bind_int(snapshot, 1, GAMEDB_SCHEMA_VERSION) < 0 ||
       gamedb_bind_int(snapshot, 2, GAMEDB_SOURCE_FORMAT_SQLITE) < 0 ||
@@ -736,12 +778,11 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_bind_int(snapshot, 7, context->database->minimum_size) < 0 ||
       gamedb_bind_int(snapshot, 8, *context->record_players) < 0 ||
       gamedb_step(snapshot) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
   DO_WHOLE_DB(context->database, object) {
     if (is_going(context->database, object))
       continue;
-    GameObject *game_object = game_database_object(context->database, object);
     if (gamedb_bind_int(objects, 1, object) < 0 ||
         sqlite3_bind_text(objects, 2,
                           game_object_name(context->database, object), -1,
@@ -763,43 +804,72 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
         sqlite3_bind_text(objects, 10,
                           game_object_lua_parent(context->database, object), -1,
                           SQLITE_TRANSIENT) != SQLITE_OK) {
-      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     }
     for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
       if (gamedb_bind_int(
               objects, 10 + (int)flag,
               game_object_has_flag(context->database, object, flag)) < 0)
-        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
+                                      0);
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
       if (gamedb_bind_int(
               objects, 32 + (int)power,
               game_object_has_power(context->database, object, power)) < 0)
-        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
+                                      0);
     }
     if (gamedb_step(objects) < 0)
-      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
     if (gamedb_store_native_state(context->database, sqlite, object) < 0)
-      return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
-    for (int index = 0; index < game_object->at_count; index++) {
-      AttributeList *entry = &game_object->ahead[index];
-      if (gamedb_bind_int(attributes, 1, object) < 0 ||
-          sqlite3_bind_text(attributes, 2, entry->name, -1, SQLITE_TRANSIENT) !=
+      return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
+    for (size_t index = 0;
+         index < object_state_count(context->database, object); index++) {
+      ObjectStateEntryView entry;
+      int bind_result = SQLITE_ERROR;
+
+      if (!object_state_entry(context->database, object, index, &entry) ||
+          gamedb_bind_int(object_state, 1, object) < 0 ||
+          sqlite3_bind_text(object_state, 2, entry.name_space, -1,
+                            SQLITE_TRANSIENT) != SQLITE_OK ||
+          sqlite3_bind_text(object_state, 3, entry.key, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||
-          sqlite3_bind_text(attributes, 3, entry->data, -1, SQLITE_TRANSIENT) !=
-              SQLITE_OK ||
-          gamedb_step(attributes) < 0)
-        return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+          gamedb_bind_int(object_state, 4, entry.value->type) < 0)
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
+                                      0);
+      switch (entry.value->type) {
+      case OBJECT_STATE_STRING:
+        bind_result = sqlite3_bind_blob(
+            object_state, 5, entry.value->as.string.data,
+            (int)entry.value->as.string.length, SQLITE_TRANSIENT);
+        break;
+      case OBJECT_STATE_BOOLEAN:
+        bind_result =
+            sqlite3_bind_int(object_state, 5, entry.value->as.boolean);
+        break;
+      case OBJECT_STATE_INTEGER:
+        bind_result = sqlite3_bind_int64(
+            object_state, 5, (sqlite3_int64)entry.value->as.integer);
+        break;
+      case OBJECT_STATE_NUMBER:
+        bind_result =
+            sqlite3_bind_double(object_state, 5, entry.value->as.number);
+        break;
+      }
+      if (bind_result != SQLITE_OK || gamedb_step(object_state) < 0)
+        return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
+                                      0);
     }
   }
 
   if (gamedb_store_extensions(context, sqlite) < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
 
   if (gamedb_exec(sqlite, "COMMIT;") < 0)
-    return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 0);
-  return gamedb_finish_snapshot(sqlite, snapshot, objects, attributes, 1);
+    return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
+  return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 1);
 }
 
 /*

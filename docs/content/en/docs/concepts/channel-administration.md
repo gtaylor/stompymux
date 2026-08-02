@@ -117,7 +117,7 @@ For example, `game/lua/object_logic/channels/staff.lua` can define:
 
 ```lua
 local function is_staff(player)
-  return mux.attr_get(player, "Staff") == "1"
+  return mux.object(player):state("channels.staff"):get("member", false)
 end
 
 return {

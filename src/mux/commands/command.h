@@ -22,6 +22,14 @@ typedef enum {
   LUA_COMMAND_VIEWPARENT = 1 << 4,
 } LuaCommandKey;
 
+typedef enum {
+  STATE_COMMAND_EXAMINE = 1 << 0,
+  STATE_COMMAND_SET = 1 << 1,
+  STATE_COMMAND_WIPE = 1 << 2,
+  STATE_COMMAND_COPY = 1 << 3,
+  STATE_COMMAND_MOVE = 1 << 4,
+} StateCommandKey;
+
 int check_access(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef player,
                  int mask);
@@ -45,14 +53,12 @@ void do_boot(CommandInvocation *invocation);
 void do_chzone(CommandInvocation *invocation);
 void do_color(CommandInvocation *invocation);
 void do_clone(CommandInvocation *invocation);
-void do_cpattr(CommandInvocation *invocation); /* Copy attributes */
 void do_create(CommandInvocation *invocation);
 void do_dbck(CommandInvocation *invocation); /* Consistency check */
 void do_destroy(CommandInvocation *invocation);
 void do_dig(CommandInvocation *invocation);
-void do_drop(CommandInvocation *invocation); /* Drop an object */
-void do_dump(CommandInvocation *invocation); /* Dump the database */
-void do_edit(CommandInvocation *invocation);
+void do_drop(CommandInvocation *invocation);      /* Drop an object */
+void do_dump(CommandInvocation *invocation);      /* Dump the database */
 void do_enter(CommandInvocation *invocation);     /* Enter an object */
 void do_entrances(CommandInvocation *invocation); /* List links to location. */
 void do_examine(CommandInvocation *invocation);   /* @examine an object. */
@@ -77,7 +83,6 @@ void do_lua(CommandInvocation *invocation);
 void do_list(CommandInvocation *invocation); /* List internal tables. */
 void do_look(CommandInvocation *invocation); /* Look here or at something. */
 void do_move(CommandInvocation *invocation); /* Move about using exits */
-void do_mvattr(CommandInvocation *invocation);
 void do_mudwho(DbRef, DbRef, int, char *,
                char *); /* WHO for inter-mud page/who suppt */
 void do_name(CommandInvocation *invocation);
@@ -92,8 +97,7 @@ void do_readcache(CommandInvocation *invocation); /* Reread text file cache */
 void do_say(CommandInvocation *invocation);       /* Messages to all. */
 void do_search(CommandInvocation *invocation);    /* Search matching objects. */
 void do_set(CommandInvocation *invocation);
-void do_setattr(CommandInvocation *invocation); /* Set object attribute */
-void do_setvattr(CommandInvocation *invocation);
+void do_setattr(CommandInvocation *invocation);  /* Set object attribute */
 void do_shutdown(CommandInvocation *invocation); /* Stop the game */
 void do_stats(CommandInvocation *invocation); /* Display object statistics. */
 void do_teleport(CommandInvocation *invocation);
@@ -101,9 +105,9 @@ void do_unlink(CommandInvocation *invocation);
 void do_use(CommandInvocation *invocation);     /* Use object. */
 void do_version(CommandInvocation *invocation); /* List MUX version number */
 void do_wait(CommandInvocation *invocation);    /* Perform command after wait */
-void do_wipe(CommandInvocation *invocation);
 void do_session(CommandInvocation *invocation); /* Wizard session listing */
-void do_who(CommandInvocation *invocation);     /* Wizard WHO listing */
+void do_state(CommandInvocation *invocation);
+void do_who(CommandInvocation *invocation); /* Wizard WHO listing */
 /* from log.c */
 #ifdef ARBITRARY_LOGFILES
 void do_log(CommandInvocation *invocation); /* Log to arbitrary logfile */

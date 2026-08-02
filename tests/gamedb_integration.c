@@ -353,26 +353,22 @@ static int check_snapshot(const char *path) {
           sqlite,
           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
           "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
-          "'attributes');",
+          "'object_state');",
           5) == 0 &&
       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                23) == 0 &&
+                24) == 0 &&
       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                 1) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
-                "AND name = 'object_state';",
-                0) == 0 &&
       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
           0 &&
       (query_int(sqlite, "SELECT count(*) FROM objects;", 2) == 0 ||
        query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
-      (query_int(sqlite, "SELECT count(*) FROM attributes;", 0) == 0 ||
-       query_int(sqlite, "SELECT count(*) FROM attributes;", 2) == 0) &&
+      (query_int(sqlite, "SELECT count(*) FROM object_state;", 0) == 0 ||
+       query_int(sqlite, "SELECT count(*) FROM object_state;", 6) == 0) &&
       query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('attributes') "
-                "WHERE name IN ('number', 'flags', 'owner');",
-                0) == 0 &&
+                "SELECT count(*) FROM pragma_table_info('object_state') "
+                "WHERE name IN ('namespace', 'key', 'value_type', 'value');",
+                4) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') "
                 "WHERE name = 'owner';",
@@ -644,8 +640,13 @@ static int seed_btech_special_objects(const char *path) {
                   "VALUES "
                   "(2, 'MAP'), (3, 'MECH'), (4, 'MECHREP'),"
                   "(5, 'AUTOPILOT'), (6, 'TURRET');"
-                  "INSERT INTO attributes VALUES "
-                  "(2, 'CaseKey', 'upper'), (2, 'casekey', 'lower');"
+                  "INSERT INTO object_state VALUES "
+                  "(2, 'test', 'CaseKey', 1, CAST('upper' AS BLOB)),"
+                  "(2, 'test', 'casekey', 1, CAST('lower' AS BLOB)),"
+                  "(2, 'test', 'enabled', 2, 1),"
+                  "(2, 'test', 'count', 3, 42),"
+                  "(2, 'test', 'rate', 4, 1.25),"
+                  "(2, 'test', 'empty', 1, X'');"
                   "UPDATE objects SET contents = 2 WHERE dbref = 1;"
                   "UPDATE objects SET location = 1, next = 3 WHERE dbref = 2;"
                   "UPDATE objects SET location = 1, next = 4 WHERE dbref = 3;"
@@ -726,10 +727,26 @@ static int check_btech_special_snapshot(const char *path) {
               query_int(sqlite, "SELECT count(*) FROM btech_turrets;", 1) ==
                   0 &&
               query_int(sqlite,
-                        "SELECT count(*) FROM attributes WHERE object_dbref=2 "
-                        "AND ((name='CaseKey' AND value='upper') OR "
-                        "(name='casekey' AND value='lower'));",
-                        2) == 0 &&
+                        "SELECT count(*) FROM object_state "
+                        "WHERE object_dbref=2 AND namespace='test';",
+                        6) == 0 &&
+              query_int(sqlite,
+                        "SELECT value FROM object_state WHERE object_dbref=2 "
+                        "AND namespace='test' AND key='count' "
+                        "AND value_type=3;",
+                        42) == 0 &&
+              query_int(sqlite,
+                        "SELECT value = 1.25 FROM object_state "
+                        "WHERE object_dbref=2 AND namespace='test' "
+                        "AND key='rate' AND value_type=4 "
+                        "AND typeof(value)='real';",
+                        1) == 0 &&
+              query_int(sqlite,
+                        "SELECT length(value) = 0 FROM object_state "
+                        "WHERE object_dbref=2 AND namespace='test' "
+                        "AND key='empty' AND value_type=1 "
+                        "AND typeof(value)='blob';",
+                        1) == 0 &&
               query_int(
                   sqlite,
                   "SELECT count(*) = (SELECT width * height FROM btech_maps "

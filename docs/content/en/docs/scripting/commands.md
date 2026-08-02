@@ -30,8 +30,8 @@ case-sensitive. Invalid values cause module validation and reload to fail.
 An entry the invoker cannot access is skipped silently before its pattern or
 handler runs. Matching continues with later entries and command scopes.
 
-Programmable commands must be defined in Lua. Attribute values beginning with
-`$` are ordinary attribute text and are not matched as commands.
+Programmable commands must be defined in Lua. Persistent object state is data
+only and is never matched as a command.
 
 ## Pattern matching
 

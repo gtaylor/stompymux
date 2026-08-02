@@ -269,6 +269,19 @@ static int lua_pcall_checked(LuaRuntime *runtime, int arguments, int results) {
   return status;
 }
 
+static int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments,
+                                      int results) {
+  int status;
+
+  if (!lua_mux_package_transaction_begin(&runtime->mux_package)) {
+    lua_pushliteral(runtime->state, "unable to start object state transaction");
+    return LUA_ERRRUN;
+  }
+  status = lua_pcall_checked(runtime, arguments, results);
+  lua_mux_package_transaction_finish(&runtime->mux_package, status == 0);
+  return status;
+}
+
 static void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
                           const char *error) {
   log_error(runtime->services->log, LOG_PROBLEMS, "LUA", kind,
@@ -531,6 +544,12 @@ static LuaRuntime *lua_runtime_create(LuaOwner *owner,
     lua_set_error(error, error_size, "lua_memory_limit must be positive");
     return nullptr;
   }
+  if (configuration->lua.state_value_limit <= 0 ||
+      configuration->lua.state_entry_limit <= 0 ||
+      configuration->lua.state_object_limit <= 0) {
+    lua_set_error(error, error_size, "Lua state limits must be positive");
+    return nullptr;
+  }
   runtime = calloc(1, sizeof(*runtime));
   if (!runtime) {
     lua_set_error(error, error_size, "out of memory");
@@ -586,6 +605,7 @@ static void lua_runtime_destroy(LuaRuntime *runtime) {
 
   if (!runtime)
     return;
+  lua_mux_package_destroy(&runtime->mux_package);
   if (runtime->state)
     lua_close(runtime->state);
   if (runtime->global_modules) {
@@ -1575,7 +1595,7 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
-    status = lua_pcall_checked(runtime, 1, 1);
+    status = lua_callback_pcall_checked(runtime, 1, 1);
     runtime->current_root = previous_root;
   }
   if (status) {
@@ -1635,7 +1655,7 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
                    nullptr, nullptr, nullptr, nullptr, 0);
   LUA_MODULE_ROOT previous_root = runtime->current_root;
   runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
-  int status = lua_pcall_checked(runtime, 1, 1);
+  int status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
     lua_log_error(runtime, invocation->object, "MECH_STATUS",
@@ -1806,7 +1826,7 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
       }
       previous_root = runtime->current_root;
       runtime->current_root = job->root;
-      status = lua_pcall_checked(runtime, 1, 0);
+      status = lua_callback_pcall_checked(runtime, 1, 0);
       runtime->current_root = previous_root;
       if (status) {
         if (job->root == LUA_ROOT_OBJECT_LOGIC)
@@ -1942,7 +1962,7 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
     lua_insert(state, entry + 2);
     previous_root = runtime->current_root;
     runtime->current_root = root;
-    status = lua_pcall_checked(runtime, results + 1, 1);
+    status = lua_callback_pcall_checked(runtime, results + 1, 1);
     runtime->current_root = previous_root;
     if (status) {
       lua_log_error(runtime, thing, "COMMAND", lua_tostring(state, -1));
@@ -2187,7 +2207,7 @@ bool lua_event_dispatch(LuaRuntime *runtime,
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
-    status = lua_pcall_checked(runtime, 1, 0);
+    status = lua_callback_pcall_checked(runtime, 1, 0);
     runtime->current_root = previous_root;
   }
   if (status)
@@ -2319,7 +2339,7 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
-    status = lua_pcall_checked(runtime, 1, 1);
+    status = lua_callback_pcall_checked(runtime, 1, 1);
     runtime->current_root = previous_root;
   }
   if (status) {
@@ -2427,7 +2447,7 @@ void lua_message_evaluate(LuaRuntime *runtime,
     LUA_MODULE_ROOT previous_root = runtime->current_root;
 
     runtime->current_root = LUA_ROOT_OBJECT_LOGIC;
-    status = lua_pcall_checked(runtime, 1, 1);
+    status = lua_callback_pcall_checked(runtime, 1, 1);
     runtime->current_root = previous_root;
   }
   if (status) {
@@ -2569,7 +2589,7 @@ static FlowOutcome lua_flow_step(Descriptor *d, void *flow_data,
   lua_insert(state, ctx_index - 1);
   previous_root = runtime->current_root;
   runtime->current_root = data->root;
-  status = lua_pcall_checked(runtime, 1, 1);
+  status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
     lua_log_error(runtime, d->player, "FLOW", lua_tostring(state, -1));

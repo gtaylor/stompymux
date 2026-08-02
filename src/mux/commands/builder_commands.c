@@ -1024,7 +1024,7 @@ void do_unlink(CommandInvocation *invocation) {
 
 /*
  * ---------------------------------------------------------------------------
- * * do_set: Set flags or attributes on objects, or flags on attributes.
+ * * do_set: Set flags on objects.
  */
 void do_set(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
@@ -1032,126 +1032,8 @@ void do_set(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   char *flag = invocation->second;
-  char *separator;
-  DbRef dynamic_thing;
-
-  separator = strchr(name, '/');
-  if (separator) {
-    *separator++ = '\0';
-    dynamic_thing = match_controlled(&invocation->context->match, player, name);
-    if (dynamic_thing == NOTHING)
-      return;
-    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing,
-                               separator, flag))
-      notify_quiet(evaluation, player, "Attribute update failed.");
-    return;
-  }
-  separator = flag ? strchr(flag, ':') : nullptr;
-  if (separator) {
-    *separator++ = '\0';
-    dynamic_thing = match_controlled(&invocation->context->match, player, name);
-    if (dynamic_thing == NOTHING)
-      return;
-    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing, flag,
-                               separator))
-      notify_quiet(evaluation, player, "Attribute update failed.");
-    return;
-  }
-  dynamic_thing = match_controlled(&invocation->context->match, player, name);
-  if (dynamic_thing != NOTHING)
-    flag_set(evaluation, invocation->context->world->indexes, dynamic_thing,
-             player, flag, key);
-  return;
-}
-void do_cpattr(CommandInvocation *invocation) {
-  char *oldpair = invocation->first;
-  char **newpair = invocation->vector;
-  int nargs = invocation->vector_count;
-  char *source_name = oldpair;
-  char *source_attribute = strchr(source_name, '/');
-
-  if (!source_attribute || nargs < 1)
-    return;
-  *source_attribute++ = '\0';
-  DbRef source = match_controlled(&invocation->context->match,
-                                  invocation->player, source_name);
-  if (source == NOTHING)
-    return;
-  const char *value = dynamic_attribute_get(
-      invocation->context->world->database, source, source_attribute);
-  if (!value)
-    value = "";
-  for (int index = 0; index < nargs; index++) {
-    char *destination_name = newpair[index];
-    char *destination_attribute = strchr(destination_name, '/');
-    if (destination_attribute)
-      *destination_attribute++ = '\0';
-    else
-      destination_attribute = source_attribute;
-    DbRef destination = match_controlled(&invocation->context->match,
-                                         invocation->player, destination_name);
-    if (destination != NOTHING)
-      dynamic_attribute_set(invocation->context->world->database, destination,
-                            destination_attribute, value);
-  }
-  return;
-}
-
-void do_mvattr(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *what = invocation->first;
-  char **args = invocation->vector;
-  int nargs = invocation->vector_count;
-  if (nargs < 2)
-    return;
-  DbRef dynamic_thing =
-      match_controlled(&invocation->context->match, player, what);
-  if (dynamic_thing == NOTHING)
-    return;
-  const char *dynamic_value = dynamic_attribute_get(evaluation->world->database,
-                                                    dynamic_thing, args[0]);
-  if (!dynamic_value)
-    dynamic_value = "";
-  bool retain_source = false;
-  for (int index = 1; index < nargs; index++) {
-    if (strcmp(args[index], args[0]) == 0)
-      retain_source = true;
-    if (!dynamic_attribute_set(evaluation->world->database, dynamic_thing,
-                               args[index], dynamic_value))
-      notify_printf(evaluation, player, "%s: invalid attribute name.",
-                    args[index]);
-  }
-  if (!retain_source)
-    dynamic_attribute_delete(evaluation->world->database, dynamic_thing,
-                             args[0]);
-  return;
-}
-void do_wipe(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  DbRef player = invocation->player;
-  char *it = invocation->first;
-  char *pattern = strchr(it, '/');
-  if (!pattern) {
-    notify_quiet(evaluation, player, "Use @wipe object/pattern.");
-    return;
-  }
-  *pattern++ = '\0';
-  DbRef dynamic_thing =
-      match_controlled(&invocation->context->match, player, it);
-  if (dynamic_thing == NOTHING)
-    return;
-  GameObject *object =
-      game_database_object(evaluation->world->database, dynamic_thing);
-  int removed = 0;
-  for (int index = object->at_count - 1; index >= 0; index--) {
-    if (quick_wild(pattern, object->ahead[index].name)) {
-      dynamic_attribute_delete(evaluation->world->database, dynamic_thing,
-                               object->ahead[index].name);
-      removed++;
-    }
-  }
-  notify_printf(evaluation, player, "%d attribute%s cleared.", removed,
-                removed == 1 ? "" : "s");
-  return;
+  DbRef thing = match_controlled(&invocation->context->match, player, name);
+  if (thing != NOTHING)
+    flag_set(evaluation, invocation->context->world->indexes, thing, player,
+             flag, key);
 }

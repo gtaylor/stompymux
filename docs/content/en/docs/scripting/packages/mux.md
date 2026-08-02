@@ -12,96 +12,90 @@ the game server rather than loaded with `require`. Lua callbacks and commands
 run with the server's `#1` authority model; scripts should still use the
 callback context to identify the object and enactor that triggered them.
 
-## `mux.attr_get(object, name)`
+## `mux.object(dbref)`
 
-Returns the string value of a dynamic storage entry, or `nil` when it is
-absent. Names are exact and case-sensitive, so `Title` and `title` are distinct.
+Returns an object handle. Handles validate the referenced dbref whenever they
+are used. Two handles for the same object compare equal; use the `dbref`
+property when passing an object to an API outside `mux`.
 
 ```lua
-local title = mux.attr_get(ctx.object, "Title") or "Untitled"
+local object = mux.object(ctx.object)
+
+mux.notify(ctx.enactor, object.name)
 ```
 
-`object` must be a valid dbref. Passing an invalid object raises a Lua error.
+An object handle has these read-only properties:
 
-## `mux.attr_set(object, name, value)`
+- `dbref`
+- `name`
+- `type`: `room`, `thing`, `exit`, or `player`
+- `description`: the native description or `nil`
+- `inside_description`: the native inside description or `nil`
 
-Sets a dynamic storage entry to a string value. The entry is created when
-necessary; an empty value deletes it. Names must begin with a letter, may use
-the server's printable attribute-name characters, and are limited to 255 bytes.
-
-```lua
-mux.attr_set(ctx.object, "LuaCount", "42")
-```
-
-`object` must be a valid dbref. Dynamic entries have no flags, inheritance,
-reserved names, or native server behavior.
-
-## `mux.contents(object)`
-
-Returns an array of dbrefs directly contained by a room, thing, or player in
-native database order. The result is deliberately unfiltered.
+`object:contents()` and `object:exits()` return unfiltered arrays of object
+handles in native database order. The corresponding
+`object:contents_visible(viewer, member)` and
+`object:exits_visible(viewer, exit)` methods apply native look visibility
+rules. A member or exit must be attached directly to the receiving object.
 
 ```lua
-for _, member in ipairs(mux.contents(ctx.object)) do
-  if mux.contents_visible(ctx.object, ctx.enactor, member) then
-    mux.notify(ctx.enactor, mux.object_name(member))
+local room = mux.object(ctx.object)
+
+for _, member in ipairs(room:contents()) do
+  if room:contents_visible(ctx.enactor, member) then
+    mux.notify(ctx.enactor, member.name)
   end
 end
 ```
 
-## `mux.contents_visible(container, viewer, member)`
+`exit:enter_lock_passes(enactor)` tests an exit's default traversal lock
+without sending lock messages or moving the enactor.
 
-Returns whether native `look` would display `member` in `container` to
-`viewer`, including location darkness, object darkness, disconnected-player,
-self, and examinability rules. `member` must be directly contained by
-`container`.
+Methods accepting objects permit either an object handle or a dbref. Passing
+an invalid or garbage object raises a Lua error.
 
-## `mux.exits(object)`
+## Typed persistent state
 
-Returns an unfiltered array of exits directly attached to a room, thing, or
-player in native database order. Legacy MUX parent exits are not inherited.
+`object:state(namespace)` returns persistent state belonging to one named
+subsystem on the object. Namespaces and keys are exact and case-sensitive.
+They begin with an ASCII letter and may contain letters, digits, `_`, `-`,
+`.`, and `/`.
 
 ```lua
-for _, exit in ipairs(mux.exits(ctx.object)) do
-  if mux.exits_visible(ctx.object, ctx.enactor, exit) then
-    mux.notify(ctx.enactor, mux.object_name(exit))
-  end
-end
+local state = mux.object(ctx.object):state("counter")
+local count = state:get("count", 0) + 1
+
+state:set("count", count)
 ```
 
-## `mux.exits_visible(location, viewer, exit)`
+Values retain their Lua scalar type across reloads and server restarts.
+Supported values are strings, booleans, integers, and finite numbers. Empty
+strings are values. `state:set(key, nil)` and `state:delete(key)` delete a
+value; `delete` reports whether the key existed.
 
-Returns whether native `look` would display a directly attached exit to the
-viewer. The exit must belong directly to `location`.
+The complete state API is:
 
-## `mux.exit_enter_lock_passes(exit, enactor)`
+- `state:get(key[, default])`
+- `state:has(key)`
+- `state:set(key, value)`
+- `state:delete(key)`
+- `state:keys()`
+- `state:entries()`, returning `{ key = ..., value = ... }` records
+- `state:get_many(keys)`, returning a key-to-value table for present keys
+- `state:set_many(values)`
 
-Returns whether `enactor` passes an exit's default traversal lock. The result
-uses the same lock and enactor identity as moving through that exit, but does
-not send lock messages or move the enactor.
+Enumeration is sorted by key. A bulk update is part of the same callback
+transaction as every other state write.
 
-## `mux.object_name(object)`
+Every Lua callback has an implicit transaction. Reads observe writes made
+earlier in that callback, including writes to multiple objects. A successful
+callback commits all of them together. A Lua error or memory-limit error
+discards all state writes made by the callback. Do not
+hold transactions across flow steps or other player input; persist an explicit
+reservation instead.
 
-Returns the object's stored name. Exit names include their semicolon-separated
-aliases.
-
-## `mux.object_description(object)`
-
-Returns the object's native MUX `description` value, or `nil` when it is not
-set. This is separate from the exact-name dynamic storage read by
-`mux.attr_get`.
-
-## `mux.object_inside_description(object)`
-
-Returns the native inside-description value, or `nil` when it is not set.
-Native look falls back to the normal description in that case.
-
-## `mux.object_type(object)`
-
-Returns `room`, `thing`, `exit`, or `player`.
-
-All object arguments must be valid, non-garbage dbrefs. Passing a container of
-the wrong type or a member that is not directly attached raises a Lua error.
+The configured per-value, per-object entry, and per-object byte limits apply
+before data leaves the Lua VM. Exceeding a limit raises a Lua error.
 
 ## Styled text
 
@@ -146,8 +140,8 @@ mux.notify(ctx.enactor, "The counter advances.")
 ## `mux.connected_players()`
 
 Returns an array of player connections visible to the normal `who` command.
-Each entry has `name`, `connected_for`, and `idle_for` fields. The duration
-fields are elapsed seconds.
+Each entry has `object`, `name`, `connected_for`, and `idle_for` fields.
+`object` is the player object handle; the duration fields are elapsed seconds.
 
 ```lua
 for _, player in ipairs(mux.connected_players()) do
@@ -186,5 +180,5 @@ The `mux` table is the only server interface exposed to Lua modules. Runtime
 database functions, including object enumeration and identity, are unavailable
 during `@lua/check`. The Lua
 sandbox does not expose filesystem, operating-system, debugger, FFI, coroutine,
-or dynamic code-loading APIs. Handler instruction and state-memory limits still
-apply while using these functions.
+or dynamic code-loading APIs. VM memory and persistent-state limits still apply
+while using these functions.

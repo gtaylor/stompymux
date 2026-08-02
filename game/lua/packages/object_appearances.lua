@@ -12,9 +12,9 @@ local function pad_right(value, width)
 end
 
 local function render_content_name(object)
-  local name = mux.object_name(object)
+  local name = object.name
 
-  if mux.object_type(object) == "player" then
+  if object.type == "player" then
     name = mux.style(name, { foreground = "bright-white" })
   end
   return name
@@ -22,9 +22,10 @@ end
 
 local function render_contents(ctx)
   local rendered = {}
+  local container = mux.object(ctx.object)
 
-  for _, object in ipairs(mux.contents(ctx.object)) do
-    if mux.contents_visible(ctx.object, ctx.enactor, object) then
+  for _, object in ipairs(container:contents()) do
+    if container:contents_visible(ctx.enactor, object) then
       rendered[#rendered + 1] = render_content_name(object)
     end
   end
@@ -33,10 +34,11 @@ end
 
 local function render_exits(ctx)
   local rendered = {}
+  local location = mux.object(ctx.object)
 
-  for _, exit in ipairs(mux.exits(ctx.object)) do
-    if mux.exits_visible(ctx.object, ctx.enactor, exit) then
-      local stored_name = mux.object_name(exit)
+  for _, exit in ipairs(location:exits()) do
+    if location:exits_visible(ctx.enactor, exit) then
+      local stored_name = exit.name
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
       if first_alias then
@@ -52,12 +54,13 @@ end
 local function render_room_contents_and_players(ctx)
   local contents = {}
   local players = {}
+  local container = mux.object(ctx.object)
 
-  for _, object in ipairs(mux.contents(ctx.object)) do
-    if mux.contents_visible(ctx.object, ctx.enactor, object) then
-      if mux.object_type(object) == "player" then
-        if object ~= ctx.enactor then
-          players[#players + 1] = mux.object_name(object)
+  for _, object in ipairs(container:contents()) do
+    if container:contents_visible(ctx.enactor, object) then
+      if object.type == "player" then
+        if object.dbref ~= ctx.enactor then
+          players[#players + 1] = object.name
         end
       else
         contents[#contents + 1] = render_content_name(object)
@@ -69,13 +72,14 @@ end
 
 local function render_room_exits(ctx)
   local rendered = {}
+  local location = mux.object(ctx.object)
 
-  for _, exit in ipairs(mux.exits(ctx.object)) do
-    if mux.exits_visible(ctx.object, ctx.enactor, exit) then
-      local stored_name = mux.object_name(exit)
+  for _, exit in ipairs(location:exits()) do
+    if location:exits_visible(ctx.enactor, exit) then
+      local stored_name = exit.name
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
-      local passes_enter_lock = mux.exit_enter_lock_passes(exit, ctx.enactor)
+      local passes_enter_lock = exit:enter_lock_passes(ctx.enactor)
 
       rendered[#rendered + 1] = {
         alias = first_alias and "{" .. first_alias .. "}" or "",
@@ -135,9 +139,10 @@ local function render_room_columns(players, exits)
 end
 
 local function render_internal_appearance(ctx)
+  local object = mux.object(ctx.object)
   local lines = {
-    mux.object_name(ctx.object),
-    mux.object_description(ctx.object) or "",
+    object.name,
+    object.description or "",
   }
   local contents, players = render_room_contents_and_players(ctx)
   local exits = render_room_exits(ctx)

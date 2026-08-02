@@ -14,23 +14,16 @@ typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
 typedef struct StyledTextPalette StyledTextPalette;
+typedef struct ObjectStateCollection ObjectStateCollection;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
-int get_atr(GameDatabase *database, char *name);
 struct Attribute {
   const char *name;
   int number;
 };
 
-typedef struct AttributeList AttributeList;
-struct AttributeList {
-  char *name; /* Exact, case-sensitive dynamic storage key. */
-  char *data; /* Attribute text. */
-  int size;   /* Length of attribute */
-};
-
-/* Native state is not part of the dynamic attribute namespace.  The slots are
+/* Native state is not part of Lua object state. The slots are
  * addressed only by the hardcoded C field selectors in attrs.h and are
  * persisted into explicit subsystem columns. */
 typedef struct NativeObjectState NativeObjectState;
@@ -69,7 +62,8 @@ typedef enum ObjectType {
 
 typedef struct GameObject GameObject;
 struct GameObject {
-  DbRef location; /* PLAYER, THING: where it is */
+  uint64_t generation; /* Changes whenever this dbref is initialized/reused. */
+  DbRef location;      /* PLAYER, THING: where it is */
   /* ROOM: dropto: */
   /* EXIT: where it goes to */
   DbRef contents; /* PLAYER, THING, ROOM: head of contentslist */
@@ -114,8 +108,7 @@ struct GameObject {
 
   AttributeStack *stackhead; /* Every object has a stack. */
 
-  AttributeList *ahead; /* The head of the attribute list. */
-  int at_count;         /* How many attributes do we have? */
+  ObjectStateCollection *state;
   NativeObjectState native;
 };
 
@@ -135,6 +128,7 @@ struct GameDatabase {
   int size;
   int minimum_size;
   int revision;
+  uint64_t generation_counter;
   DbRef freelist;
   DatabaseMarkBuffer *markbits;
   ServerConfiguration *configuration;
@@ -157,6 +151,17 @@ void game_database_destroy(GameDatabase *database);
 static inline GameObject *game_database_object(GameDatabase *database,
                                                DbRef object) {
   return &database->objects[object];
+}
+
+static inline uint64_t game_object_generation(GameDatabase *database,
+                                              DbRef object) {
+  return game_database_object(database, object)->generation;
+}
+
+static inline void game_object_renew_generation(GameDatabase *database,
+                                                DbRef object) {
+  game_database_object(database, object)->generation =
+      ++database->generation_counter;
 }
 
 static inline DbRef game_object_location(GameDatabase *database, DbRef object) {
@@ -220,7 +225,6 @@ static inline void game_object_set_stack(GameDatabase *database, DbRef object,
 }
 
 extern DbRef parse_dbref(const char *);
-extern int mkattr(GameDatabase *database, char *name);
 extern void al_add(DbRef, int);
 extern void al_delete(DbRef, int);
 extern void al_destroy(DbRef);
@@ -256,12 +260,6 @@ char *attribute_get_string(GameDatabase *database, char *buffer, DbRef thing,
 int attribute_get_info(GameDatabase *database, DbRef thing,
                        int attribute_number, long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
-const char *dynamic_attribute_get(GameDatabase *database, DbRef thing,
-                                  const char *name);
-bool dynamic_attribute_set(GameDatabase *database, DbRef thing,
-                           const char *name, const char *value);
-bool dynamic_attribute_delete(GameDatabase *database, DbRef thing,
-                              const char *name);
 void toast_player(EvaluationContext *evaluation, DbRef player);
 
 #define DOLIST(database, thing, list)                                          \

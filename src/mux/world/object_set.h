@@ -14,7 +14,5 @@ DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name);
 void object_attribute_set(EvaluationContext *evaluation, DbRef player,
                           DbRef thing, int attribute_number,
                           char *attribute_text, int key);
-int parse_attrib(MatchContext *match, DbRef player, char *string, DbRef *thing,
-                 int *attribute);
 void edit_string(char *source, char **destination, const char *from,
                  const char *to);

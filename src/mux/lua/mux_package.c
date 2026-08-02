@@ -4,12 +4,17 @@
 
 #include "mux/lua/mux_package.h"
 
+#include <math.h>
+#include <stdint.h>
+#include <string.h>
+
 #include <lauxlib.h>
 
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/object_state.h"
 #include "mux/server/runtime_clock.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
@@ -20,6 +25,37 @@
 
 static LuaMuxPackage *lua_mux_package_get(lua_State *state) {
   return lua_touserdata(state, lua_upvalueindex(1));
+}
+
+constexpr char LUA_MUX_OBJECT_METATABLE[] = "btmux.object";
+constexpr char LUA_MUX_STATE_METATABLE[] = "btmux.object_state";
+
+typedef struct LuaMuxObject LuaMuxObject;
+struct LuaMuxObject {
+  LuaMuxPackage *package;
+  DbRef object;
+  uint64_t generation;
+};
+
+typedef struct LuaMuxState LuaMuxState;
+struct LuaMuxState {
+  LuaMuxPackage *package;
+  DbRef object;
+  uint64_t generation;
+  char name_space[128];
+};
+
+bool lua_mux_package_transaction_begin(LuaMuxPackage *package) {
+  return object_state_transaction_begin(&package->state_transaction,
+                                        package->services->database);
+}
+
+void lua_mux_package_transaction_finish(LuaMuxPackage *package, bool commit) {
+  object_state_transaction_finish(&package->state_transaction, commit);
+}
+
+void lua_mux_package_destroy(LuaMuxPackage *package) {
+  object_state_transaction_destroy(&package->state_transaction);
 }
 
 static int lua_mux_package_is_checking(LuaMuxPackage *package) {
@@ -34,11 +70,72 @@ static void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
 
 static DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
                                     int argument) {
-  DbRef object = (DbRef)luaL_checkinteger(state, argument);
+  DbRef object;
+  LuaMuxObject *handle =
+      luaL_testudata(state, argument, LUA_MUX_OBJECT_METATABLE);
+
+  if (handle) {
+    if (handle->package != package)
+      luaL_argerror(state, argument, "object belongs to another Lua runtime");
+    if (!is_good_obj(package->services->database, handle->object) ||
+        game_object_generation(package->services->database, handle->object) !=
+            handle->generation)
+      luaL_argerror(state, argument, "object no longer exists");
+    object = handle->object;
+  } else {
+    object = (DbRef)luaL_checkinteger(state, argument);
+  }
 
   if (!is_good_obj(package->services->database, object))
     luaL_argerror(state, argument, "invalid object");
   return object;
+}
+
+static LuaMuxObject *lua_mux_push_object(lua_State *state,
+                                         LuaMuxPackage *package, DbRef object) {
+  LuaMuxObject *handle = lua_newuserdata(state, sizeof(*handle));
+
+  *handle = (LuaMuxObject){
+      .package = package,
+      .object = object,
+      .generation = game_object_generation(package->services->database, object),
+  };
+  luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);
+  lua_setmetatable(state, -2);
+  return handle;
+}
+
+static LuaMuxObject *lua_mux_check_object_handle(lua_State *state,
+                                                 int argument) {
+  LuaMuxObject *handle =
+      luaL_checkudata(state, argument, LUA_MUX_OBJECT_METATABLE);
+
+  if (!is_good_obj(handle->package->services->database, handle->object) ||
+      game_object_generation(handle->package->services->database,
+                             handle->object) != handle->generation)
+    luaL_argerror(state, argument, "object no longer exists");
+  return handle;
+}
+
+static LuaMuxState *lua_mux_check_state(lua_State *state, int argument) {
+  LuaMuxState *handle =
+      luaL_checkudata(state, argument, LUA_MUX_STATE_METATABLE);
+
+  if (!is_good_obj(handle->package->services->database, handle->object) ||
+      game_object_generation(handle->package->services->database,
+                             handle->object) != handle->generation)
+    luaL_argerror(state, argument, "object no longer exists");
+  return handle;
+}
+
+static int lua_mux_object(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  DbRef object;
+
+  lua_mux_require_runtime(package, state, "object");
+  object = lua_mux_require_object(package, state, 1);
+  lua_mux_push_object(state, package, object);
+  return 1;
 }
 
 static bool lua_mux_list_contains(GameDatabase *database, DbRef first,
@@ -65,7 +162,7 @@ static int lua_mux_contents(lua_State *state) {
   lua_newtable(state);
   DOLIST(package->services->database, member,
          game_object_contents(package->services->database, object)) {
-    lua_pushinteger(state, member);
+    lua_mux_push_object(state, package, member);
     lua_rawseti(state, -2, index++);
   }
   return 1;
@@ -108,7 +205,7 @@ static int lua_mux_exits(lua_State *state) {
   lua_newtable(state);
   DOLIST(package->services->database, exit,
          game_object_exits(package->services->database, object)) {
-    lua_pushinteger(state, exit);
+    lua_mux_push_object(state, package, exit);
     lua_rawseti(state, -2, index++);
   }
   return 1;
@@ -154,46 +251,6 @@ static int lua_mux_exit_enter_lock_passes(lua_State *state) {
     return luaL_error(state, "mux.exit_enter_lock_passes is unavailable");
   lua_pushboolean(
       state, package->exit_enter_lock_passes(package->context, exit, enactor));
-  return 1;
-}
-
-static int lua_mux_object_name(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object;
-
-  lua_mux_require_runtime(package, state, "object_name");
-  object = lua_mux_require_object(package, state, 1);
-  lua_pushstring(state, game_object_name(package->services->database, object));
-  return 1;
-}
-
-static int lua_mux_object_description(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object;
-  const char *description;
-
-  lua_mux_require_runtime(package, state, "object_description");
-  object = lua_mux_require_object(package, state, 1);
-  description = attribute_get_raw(package->services->database, object, A_DESC);
-  if (description)
-    lua_pushstring(state, description);
-  else
-    lua_pushnil(state);
-  return 1;
-}
-
-static int lua_mux_object_inside_description(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object;
-  const char *description;
-
-  lua_mux_require_runtime(package, state, "object_inside_description");
-  object = lua_mux_require_object(package, state, 1);
-  description = attribute_get_raw(package->services->database, object, A_IDESC);
-  if (description)
-    lua_pushstring(state, description);
-  else
-    lua_pushnil(state);
   return 1;
 }
 
@@ -352,75 +409,360 @@ static int lua_mux_truncate_text(lua_State *state) {
   return 1;
 }
 
-static int lua_mux_object_type(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object;
-  const char *type;
+static int lua_mux_object_index(lua_State *state) {
+  LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
+  LuaMuxPackage *package = handle->package;
+  const char *key = luaL_checkstring(state, 2);
+  GameDatabase *database = package->services->database;
 
-  lua_mux_require_runtime(package, state, "object_type");
-  object = lua_mux_require_object(package, state, 1);
-  switch (typeof_obj(package->services->database, object)) {
-  case OBJECT_TYPE_ROOM:
-    type = "room";
-    break;
-  case OBJECT_TYPE_THING:
-    type = "thing";
-    break;
-  case OBJECT_TYPE_EXIT:
-    type = "exit";
-    break;
-  case OBJECT_TYPE_PLAYER:
-    type = "player";
-    break;
-  default:
-    return luaL_error(state, "invalid object type");
+  if (!strcmp(key, "dbref")) {
+    lua_pushinteger(state, handle->object);
+    return 1;
   }
-  lua_pushstring(state, type);
+  if (!strcmp(key, "name")) {
+    lua_pushstring(state, game_object_name(database, handle->object));
+    return 1;
+  }
+  if (!strcmp(key, "type")) {
+    switch (typeof_obj(database, handle->object)) {
+    case OBJECT_TYPE_ROOM:
+      lua_pushliteral(state, "room");
+      break;
+    case OBJECT_TYPE_THING:
+      lua_pushliteral(state, "thing");
+      break;
+    case OBJECT_TYPE_EXIT:
+      lua_pushliteral(state, "exit");
+      break;
+    case OBJECT_TYPE_PLAYER:
+      lua_pushliteral(state, "player");
+      break;
+    default:
+      lua_pushnil(state);
+      break;
+    }
+    return 1;
+  }
+  if (!strcmp(key, "description") || !strcmp(key, "inside_description")) {
+    int attribute = !strcmp(key, "description") ? A_DESC : A_IDESC;
+    const char *description =
+        attribute_get_raw(database, handle->object, attribute);
+    if (description)
+      lua_pushstring(state, description);
+    else
+      lua_pushnil(state);
+    return 1;
+  }
+  luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);
+  lua_getfield(state, -1, key);
+  lua_remove(state, -2);
   return 1;
 }
 
-static int lua_mux_attr_get(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
-  const char *name = luaL_checkstring(state, 2);
-  const char *value;
+static int lua_mux_object_tostring(lua_State *state) {
+  LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
 
-  if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.attr_get is unavailable during @lua/check");
-  if (!is_good_obj(package->services->database, object))
-    return luaL_error(state, "invalid object");
-  value = dynamic_attribute_get(package->services->database, object, name);
-  if (!value)
-    lua_pushnil(state);
+  lua_pushfstring(state, "object(#%d)", (int)handle->object);
+  return 1;
+}
+
+static int lua_mux_object_equal(lua_State *state) {
+  LuaMuxObject *left = luaL_checkudata(state, 1, LUA_MUX_OBJECT_METATABLE);
+  LuaMuxObject *right = luaL_checkudata(state, 2, LUA_MUX_OBJECT_METATABLE);
+
+  lua_pushboolean(state, left->package == right->package &&
+                             left->object == right->object &&
+                             left->generation == right->generation);
+  return 1;
+}
+
+static int lua_mux_object_state(lua_State *state) {
+  LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
+  size_t length;
+  const char *name_space = luaL_checklstring(state, 2, &length);
+  LuaMuxState *handle;
+
+  lua_mux_require_runtime(object->package, state, "object:state");
+  if (length >= sizeof(handle->name_space) ||
+      memchr(name_space, '\0', length) ||
+      !object_state_name_is_valid(name_space))
+    return luaL_argerror(state, 2, "invalid state namespace");
+  handle = lua_newuserdata(state, sizeof(*handle));
+  *handle = (LuaMuxState){
+      .package = object->package,
+      .object = object->object,
+      .generation = object->generation,
+  };
+  memcpy(handle->name_space, name_space, length);
+  handle->name_space[length] = '\0';
+  luaL_getmetatable(state, LUA_MUX_STATE_METATABLE);
+  lua_setmetatable(state, -2);
+  return 1;
+}
+
+static void lua_mux_push_state_value(lua_State *state,
+                                     const ObjectStateValue *value) {
+  switch (value->type) {
+  case OBJECT_STATE_STRING:
+    lua_pushlstring(state, value->as.string.data, value->as.string.length);
+    break;
+  case OBJECT_STATE_BOOLEAN:
+    lua_pushboolean(state, value->as.boolean);
+    break;
+  case OBJECT_STATE_INTEGER:
+    lua_pushinteger(state, (lua_Integer)value->as.integer);
+    break;
+  case OBJECT_STATE_NUMBER:
+    lua_pushnumber(state, (lua_Number)value->as.number);
+    break;
+  }
+}
+
+static const char *lua_mux_state_key(lua_State *state, int argument) {
+  size_t length;
+  const char *key = luaL_checklstring(state, argument, &length);
+
+  if (length > 255 || memchr(key, '\0', length) ||
+      !object_state_name_is_valid(key))
+    luaL_argerror(state, argument, "invalid state key");
+  return key;
+}
+
+static bool lua_mux_read_state_value(lua_State *state, int argument,
+                                     ObjectStateValue *value) {
+  memset(value, 0, sizeof(*value));
+  switch (lua_type(state, argument)) {
+  case LUA_TSTRING:
+    value->type = OBJECT_STATE_STRING;
+    value->as.string.data =
+        lua_tolstring(state, argument, &value->as.string.length);
+    return true;
+  case LUA_TBOOLEAN:
+    value->type = OBJECT_STATE_BOOLEAN;
+    value->as.boolean = lua_toboolean(state, argument);
+    return true;
+  case LUA_TNUMBER: {
+    lua_Number number = lua_tonumber(state, argument);
+    lua_Integer integer = lua_tointeger(state, argument);
+
+    if (!isfinite((double)number))
+      return false;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfloat-equal"
+    if ((lua_Number)integer == number) {
+#pragma clang diagnostic pop
+      value->type = OBJECT_STATE_INTEGER;
+      value->as.integer = (int64_t)integer;
+    } else {
+      value->type = OBJECT_STATE_NUMBER;
+      value->as.number = (double)number;
+    }
+    return true;
+  }
+  default:
+    return false;
+  }
+}
+
+static int lua_mux_state_get(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  const char *key = lua_mux_state_key(state, 2);
+  ObjectStateTransaction *transaction = &handle->package->state_transaction;
+  const ObjectStateValue *value =
+      transaction->depth
+          ? object_state_transaction_get(transaction, handle->object,
+                                         handle->name_space, key)
+          : object_state_get(handle->package->services->database,
+                             handle->object, handle->name_space, key);
+
+  if (value)
+    lua_mux_push_state_value(state, value);
+  else if (lua_gettop(state) >= 3)
+    lua_pushvalue(state, 3);
   else
-    lua_pushstring(state, value);
+    lua_pushnil(state);
   return 1;
 }
 
-static int lua_mux_attr_set(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
-  const char *name = luaL_checkstring(state, 2);
-  const char *value = luaL_checkstring(state, 3);
+static int lua_mux_state_has(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  const char *key = lua_mux_state_key(state, 2);
+  ObjectStateTransaction *transaction = &handle->package->state_transaction;
 
-  if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.attr_set is unavailable during @lua/check");
-  if (!is_good_obj(package->services->database, object))
-    return luaL_error(state, "invalid object");
-  if (!dynamic_attribute_set(package->services->database, object, name, value))
-    return luaL_error(state, "invalid attribute");
+  lua_pushboolean(
+      state, (transaction->depth
+                  ? object_state_transaction_get(transaction, handle->object,
+                                                 handle->name_space, key)
+                  : object_state_get(handle->package->services->database,
+                                     handle->object, handle->name_space,
+                                     key)) != nullptr);
+  return 1;
+}
+
+static int lua_mux_state_set(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  const char *key = lua_mux_state_key(state, 2);
+  ObjectStateValue value;
+  char error[256];
+
+  if (lua_isnil(state, 3)) {
+    object_state_transaction_delete(&handle->package->state_transaction,
+                                    handle->object, handle->name_space, key);
+    return 0;
+  }
+  if (!lua_mux_read_state_value(state, 3, &value))
+    return luaL_argerror(
+        state, 3, "state values must be strings, booleans, or finite numbers");
+  if (!object_state_transaction_set(&handle->package->state_transaction,
+                                    handle->object, handle->name_space, key,
+                                    &value, error, sizeof(error)))
+    return luaL_error(state, "%s", error);
   return 0;
+}
+
+static int lua_mux_state_delete(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  const char *key = lua_mux_state_key(state, 2);
+  ObjectStateTransaction *transaction = &handle->package->state_transaction;
+  bool existed =
+      (transaction->depth
+           ? object_state_transaction_get(transaction, handle->object,
+                                          handle->name_space, key)
+           : object_state_get(handle->package->services->database,
+                              handle->object, handle->name_space, key)) !=
+      nullptr;
+
+  if (existed)
+    object_state_transaction_delete(&handle->package->state_transaction,
+                                    handle->object, handle->name_space, key);
+  lua_pushboolean(state, existed);
+  return 1;
+}
+
+static int lua_mux_state_keys(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  ObjectStateTransaction *transaction = &handle->package->state_transaction;
+  size_t count;
+
+  if (!transaction->depth)
+    return luaL_error(state, "state enumeration requires an active callback");
+  count = object_state_transaction_count(transaction, handle->object,
+                                         handle->name_space);
+
+  lua_createtable(state, (int)count, 0);
+  for (size_t index = 0; index < count; index++) {
+    ObjectStateEntryView entry;
+
+    if (!object_state_transaction_entry(transaction, handle->object,
+                                        handle->name_space, index, &entry))
+      return luaL_error(state, "state changed during enumeration");
+    lua_pushstring(state, entry.key);
+    lua_rawseti(state, -2, (int)index + 1);
+  }
+  return 1;
+}
+
+static int lua_mux_state_entries(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  ObjectStateTransaction *transaction = &handle->package->state_transaction;
+  size_t count;
+
+  if (!transaction->depth)
+    return luaL_error(state, "state enumeration requires an active callback");
+  count = object_state_transaction_count(transaction, handle->object,
+                                         handle->name_space);
+
+  lua_createtable(state, (int)count, 0);
+  for (size_t index = 0; index < count; index++) {
+    ObjectStateEntryView entry;
+
+    if (!object_state_transaction_entry(transaction, handle->object,
+                                        handle->name_space, index, &entry))
+      return luaL_error(state, "state changed during enumeration");
+    lua_createtable(state, 0, 2);
+    lua_pushstring(state, entry.key);
+    lua_setfield(state, -2, "key");
+    lua_mux_push_state_value(state, entry.value);
+    lua_setfield(state, -2, "value");
+    lua_rawseti(state, -2, (int)index + 1);
+  }
+  return 1;
+}
+
+static int lua_mux_state_get_many(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+  size_t count;
+
+  luaL_checktype(state, 2, LUA_TTABLE);
+  count = lua_objlen(state, 2);
+  lua_createtable(state, 0, (int)count);
+  for (size_t index = 1; index <= count; index++) {
+    const char *key;
+    const ObjectStateValue *value;
+
+    lua_rawgeti(state, 2, (int)index);
+    key = lua_mux_state_key(state, -1);
+    ObjectStateTransaction *transaction = &handle->package->state_transaction;
+    value = transaction->depth
+                ? object_state_transaction_get(transaction, handle->object,
+                                               handle->name_space, key)
+                : object_state_get(handle->package->services->database,
+                                   handle->object, handle->name_space, key);
+    if (value) {
+      lua_mux_push_state_value(state, value);
+      lua_setfield(state, -3, key);
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
+static int lua_mux_state_set_many(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+
+  luaL_checktype(state, 2, LUA_TTABLE);
+  lua_pushnil(state);
+  while (lua_next(state, 2) != 0) {
+    ObjectStateValue value;
+    const char *key;
+    char error[256];
+
+    if (lua_type(state, -2) != LUA_TSTRING)
+      return luaL_error(state, "state update keys must be strings");
+    key = lua_mux_state_key(state, -2);
+    if (lua_isnil(state, -1)) {
+      object_state_transaction_delete(&handle->package->state_transaction,
+                                      handle->object, handle->name_space, key);
+    } else {
+      if (!lua_mux_read_state_value(state, -1, &value))
+        return luaL_error(
+            state, "state values must be strings, booleans, or finite numbers");
+      if (!object_state_transaction_set(&handle->package->state_transaction,
+                                        handle->object, handle->name_space, key,
+                                        &value, error, sizeof(error)))
+        return luaL_error(state, "%s", error);
+    }
+    lua_pop(state, 1);
+  }
+  return 0;
+}
+
+static int lua_mux_state_tostring(lua_State *state) {
+  LuaMuxState *handle = lua_mux_check_state(state, 1);
+
+  lua_pushfstring(state, "state(#%d, %s)", (int)handle->object,
+                  handle->name_space);
+  return 1;
 }
 
 static int lua_mux_notify(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object = (DbRef)luaL_checkinteger(state, 1);
+  DbRef object;
   const char *message = luaL_checkstring(state, 2);
 
   if (lua_mux_package_is_checking(package))
     return luaL_error(state, "mux.notify is unavailable during @lua/check");
-  if (!is_good_obj(package->services->database, object))
-    return luaL_error(state, "invalid object");
+  object = lua_mux_require_object(package, state, 1);
   notify(&package->services->background_command->evaluation, object, message);
   return 0;
 }
@@ -435,6 +777,8 @@ static int lua_mux_connected_players(lua_State *state) {
   lua_newtable(state);
   while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr) {
     lua_newtable(state);
+    lua_mux_push_object(state, package, descriptor->player);
+    lua_setfield(state, -2, "object");
     lua_pushstring(state, game_object_name(package->services->database,
                                            descriptor->player));
     lua_setfield(state, -2, "name");
@@ -480,7 +824,17 @@ static int lua_mux_flow_start(lua_State *state) {
 }
 
 void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
-  lua_newtable(state);
+  object_state_transaction_initialize(&package->state_transaction);
+
+  luaL_newmetatable(state, LUA_MUX_OBJECT_METATABLE);
+  lua_pushcfunction(state, lua_mux_object_index);
+  lua_setfield(state, -2, "__index");
+  lua_pushcfunction(state, lua_mux_object_tostring);
+  lua_setfield(state, -2, "__tostring");
+  lua_pushcfunction(state, lua_mux_object_equal);
+  lua_setfield(state, -2, "__eq");
+  lua_pushcfunction(state, lua_mux_object_state);
+  lua_setfield(state, -2, "state");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_contents, 1);
   lua_setfield(state, -2, "contents");
@@ -495,19 +849,36 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_setfield(state, -2, "exits_visible");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_exit_enter_lock_passes, 1);
-  lua_setfield(state, -2, "exit_enter_lock_passes");
+  lua_setfield(state, -2, "enter_lock_passes");
+  lua_pop(state, 1);
+
+  luaL_newmetatable(state, LUA_MUX_STATE_METATABLE);
+  lua_pushvalue(state, -1);
+  lua_setfield(state, -2, "__index");
+  lua_pushcfunction(state, lua_mux_state_tostring);
+  lua_setfield(state, -2, "__tostring");
+  lua_pushcfunction(state, lua_mux_state_get);
+  lua_setfield(state, -2, "get");
+  lua_pushcfunction(state, lua_mux_state_has);
+  lua_setfield(state, -2, "has");
+  lua_pushcfunction(state, lua_mux_state_set);
+  lua_setfield(state, -2, "set");
+  lua_pushcfunction(state, lua_mux_state_delete);
+  lua_setfield(state, -2, "delete");
+  lua_pushcfunction(state, lua_mux_state_keys);
+  lua_setfield(state, -2, "keys");
+  lua_pushcfunction(state, lua_mux_state_entries);
+  lua_setfield(state, -2, "entries");
+  lua_pushcfunction(state, lua_mux_state_get_many);
+  lua_setfield(state, -2, "get_many");
+  lua_pushcfunction(state, lua_mux_state_set_many);
+  lua_setfield(state, -2, "set_many");
+  lua_pop(state, 1);
+
+  lua_newtable(state);
   lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_object_description, 1);
-  lua_setfield(state, -2, "object_description");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_object_inside_description, 1);
-  lua_setfield(state, -2, "object_inside_description");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_object_name, 1);
-  lua_setfield(state, -2, "object_name");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_object_type, 1);
-  lua_setfield(state, -2, "object_type");
+  lua_pushcclosure(state, lua_mux_object, 1);
+  lua_setfield(state, -2, "object");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_markup, 1);
   lua_setfield(state, -2, "markup");
@@ -523,12 +894,6 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_truncate_text, 1);
   lua_setfield(state, -2, "truncate_text");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_attr_get, 1);
-  lua_setfield(state, -2, "attr_get");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_attr_set, 1);
-  lua_setfield(state, -2, "attr_set");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_notify, 1);
   lua_setfield(state, -2, "notify");

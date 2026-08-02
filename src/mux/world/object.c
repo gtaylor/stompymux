@@ -288,6 +288,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     db_grow(evaluation->world->database, evaluation->world->database->top + 1);
   }
   attribute_free(evaluation->world->database, obj); // Just in case...
+  game_object_renew_generation(evaluation->world->database, obj);
 
   /*
    * Set things up according to the object type

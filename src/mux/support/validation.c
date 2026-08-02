@@ -163,20 +163,6 @@ int ok_new_player_name(const ServerConfiguration *configuration,
          ok_player_name(configuration, name);
 }
 
-int ok_attr_name(const char *attrname) {
-  const char *scan;
-
-  if (!isalpha(*attrname))
-    return 0;
-  for (scan = attrname; *scan; scan++) {
-    if (isalnum(*scan))
-      continue;
-    if (!(index("'?!`/-_.@#$^&~=+<>()%", *scan)))
-      return 0;
-  }
-  return 1;
-}
-
 int ok_password(const ServerConfiguration *configuration,
                 const char *password) {
   const char *scan;

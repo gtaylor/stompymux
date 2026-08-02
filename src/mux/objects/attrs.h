@@ -124,8 +124,3 @@ constexpr int A_VLIST = 252;
 constexpr int A_LIST = 253;
 constexpr int A_STRUCT = 254;
 constexpr int A_TEMP = 255;
-
-constexpr int A_USER_START = 256; /* Start of user-named attributes */
-constexpr int ATR_BUF_CHUNK =
-    100;                        /* Min size to allocate for attribute buffer */
-constexpr int ATR_BUF_INCR = 6; /* Max size of one attribute */

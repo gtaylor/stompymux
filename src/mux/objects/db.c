@@ -14,6 +14,7 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
@@ -251,22 +252,6 @@ Attribute *attribute_by_number(GameDatabase *database, int anum) {
 }
 
 /*
- * ---------------------------------------------------------------------------
- * * mkattr: Lookup attribute by name, creating if needed.
- */
-
-int mkattr(GameDatabase *database, char *buff) {
-  Attribute *ap;
-
-  if (!(ap = attribute_by_name(database, buff))) {
-    return -1;
-  }
-  if (!(ap->number))
-    return -1;
-  return ap->number;
-}
-
-/*
  * routines to handle object attribute lists
  */
 
@@ -318,16 +303,6 @@ void attribute_add(GameDatabase *database, DbRef thing, int atr, char *buff,
  * attribute from the database.
  */
 
-int get_atr(GameDatabase *database, char *name) {
-  Attribute *ap;
-
-  if (!(ap = attribute_by_name(database, name)))
-    return 0;
-  if (!(ap->number))
-    return -1;
-  return ap->number;
-}
-
 char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
   if (thing < 0 || atr < 0 || atr >= 256)
     return nullptr;
@@ -373,122 +348,11 @@ int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
 void attribute_free(GameDatabase *database, DbRef thing) {
   free(database->objects[thing].lua_parent);
   database->objects[thing].lua_parent = nullptr;
-  for (int index = 0; index < database->objects[thing].at_count; index++) {
-    free(database->objects[thing].ahead[index].name);
-    free(database->objects[thing].ahead[index].data);
-  }
-  free(database->objects[thing].ahead);
-  database->objects[thing].ahead = nullptr;
-  database->objects[thing].at_count = 0;
+  object_state_clear(database, thing);
   for (int index = 0; index < 256; index++) {
     free(database->objects[thing].native.values[index]);
     database->objects[thing].native.values[index] = nullptr;
   }
-}
-
-static int dynamic_attribute_find(const GameObject *object, const char *name,
-                                  bool *found) {
-  int low = 0;
-  int high = object->at_count - 1;
-
-  while (low <= high) {
-    const int middle = low + ((high - low) / 2);
-    const int comparison = strcmp(object->ahead[middle].name, name);
-    if (comparison == 0) {
-      *found = true;
-      return middle;
-    }
-    if (comparison < 0)
-      low = middle + 1;
-    else
-      high = middle - 1;
-  }
-  *found = false;
-  return low;
-}
-
-const char *dynamic_attribute_get(GameDatabase *database, DbRef thing,
-                                  const char *name) {
-  bool found;
-  int index;
-
-  if (!is_good_obj(database, thing) || !name || !*name)
-    return nullptr;
-  index = dynamic_attribute_find(&database->objects[thing], name, &found);
-  return found ? database->objects[thing].ahead[index].data : nullptr;
-}
-
-bool dynamic_attribute_delete(GameDatabase *database, DbRef thing,
-                              const char *name) {
-  GameObject *object;
-  bool found;
-  int index;
-
-  if (!is_good_obj(database, thing) || !name || !*name)
-    return false;
-  object = &database->objects[thing];
-  index = dynamic_attribute_find(object, name, &found);
-  if (!found)
-    return true;
-  free(object->ahead[index].name);
-  free(object->ahead[index].data);
-  object->at_count--;
-  if (index < object->at_count)
-    memmove(&object->ahead[index], &object->ahead[index + 1],
-            (size_t)(object->at_count - index) * sizeof(*object->ahead));
-  if (object->at_count == 0) {
-    free(object->ahead);
-    object->ahead = nullptr;
-  }
-  return true;
-}
-
-bool dynamic_attribute_set(GameDatabase *database, DbRef thing,
-                           const char *name, const char *value) {
-  GameObject *object;
-  AttributeList *entries;
-  char *name_copy;
-  char *value_copy;
-  bool found;
-  int index;
-
-  if (!is_good_obj(database, thing) || !name || !*name ||
-      strlen(name) >= SBUF_SIZE || !ok_attr_name(name))
-    return false;
-  if (!value || !*value)
-    return dynamic_attribute_delete(database, thing, name);
-  object = &database->objects[thing];
-  index = dynamic_attribute_find(object, name, &found);
-  value_copy = strdup(value);
-  if (!value_copy)
-    return false;
-  if (found) {
-    free(object->ahead[index].data);
-    object->ahead[index].data = value_copy;
-    object->ahead[index].size = (int)strlen(value_copy) + 1;
-    return true;
-  }
-  name_copy = strdup(name);
-  if (!name_copy) {
-    free(value_copy);
-    return false;
-  }
-  entries =
-      realloc(object->ahead, (size_t)(object->at_count + 1) * sizeof(*entries));
-  if (!entries) {
-    free(name_copy);
-    free(value_copy);
-    return false;
-  }
-  object->ahead = entries;
-  if (index < object->at_count)
-    memmove(&entries[index + 1], &entries[index],
-            (size_t)(object->at_count - index) * sizeof(*entries));
-  entries[index] = (AttributeList){.name = name_copy,
-                                   .data = value_copy,
-                                   .size = (int)strlen(value_copy) + 1};
-  object->at_count++;
-  return true;
 }
 
 /*
@@ -509,10 +373,7 @@ void attribute_copy(EvaluationContext *evaluation, DbRef player, DbRef dest,
       attribute_add_raw(evaluation->world->database, dest, field,
                         source_object->native.values[field]);
   }
-  for (int index = 0; index < source_object->at_count; index++)
-    dynamic_attribute_set(evaluation->world->database, dest,
-                          source_object->ahead[index].name,
-                          source_object->ahead[index].data);
+  object_state_copy(evaluation->world->database, dest, source);
   game_object_lua_parent_set(evaluation->world->database, dest,
                              source_object->lua_parent);
   return;
@@ -532,6 +393,7 @@ static void initialize_objects(GameDatabase *database, DbRef first,
 
   for (thing = first; thing < last; thing++) {
     memset(game_database_object(database, thing), 0, sizeof(GameObject));
+    game_object_renew_generation(database, thing);
     game_object_set_type(database, thing, OBJECT_TYPE_GARBAGE);
     game_object_clear_flags(database, thing);
     s_going(database, thing);
@@ -543,8 +405,7 @@ static void initialize_objects(GameDatabase *database, DbRef first,
     game_object_set_next(database, thing, NOTHING);
     game_object_set_zone(database, thing, NOTHING);
     game_object_set_stack(database, thing, nullptr);
-    game_database_object(database, thing)->ahead = nullptr;
-    game_database_object(database, thing)->at_count = 0;
+    game_database_object(database, thing)->state = nullptr;
   }
 }
 
@@ -694,8 +555,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
       game_object_set_next(database, i, NOTHING);
       game_object_set_zone(database, i, NOTHING);
       game_object_set_stack(database, i, nullptr);
-      game_database_object(database, i)->ahead = nullptr;
-      game_database_object(database, i)->at_count = 0;
+      game_database_object(database, i)->state = nullptr;
     }
   }
   database->objects = newdb + SIZE_HACK;
@@ -766,8 +626,7 @@ void db_make_minimal(EvaluationContext *evaluation) {
   game_object_set_exits(database, 0, NOTHING);
   game_object_set_link(database, 0, NOTHING);
   game_object_set_zone(database, 0, NOTHING);
-  database->objects[0].ahead = nullptr;
-  database->objects[0].at_count = 0;
+  database->objects[0].state = nullptr;
   object_apply_default_lua_parent(evaluation, 0, OBJECT_TYPE_ROOM);
   /*
    * should be #1

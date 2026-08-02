@@ -2,11 +2,6 @@
 
 ## MUX Todos in the /src/ dir
 
-* Lua attribute niceties?
-  * attribute trees - see MUX docs for inspiration
-* Figure out an ANSI color story
-  * Telnet negotiation
-  * How to render
 * Crunch runtime_clock.c into somewhere
 * Clickable links
 * GMCP lua function

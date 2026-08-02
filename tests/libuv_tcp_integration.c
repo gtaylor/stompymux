@@ -123,26 +123,60 @@ static int write_lua_fixture(const char *directory) {
   file = fopen(path, "w");
   if (!file)
     return -1;
-  fputs("return {\n"
-        "  commands = {\n"
-        "    {\n"
-        "      pattern = \"^luacolor$\",\n"
-        "      handler = function(ctx)\n"
-        "        local styled = mux.style(\"LuaHex\", { foreground = "
-        "\"stompy-orange\" })\n"
-        "        assert(mux.text_width(styled) == 6)\n"
-        "        assert(mux.strip_style(styled) == \"LuaHex\")\n"
-        "        assert(mux.strip_style(mux.truncate_text(styled, 3)) == "
-        "\"Lua\")\n"
-        "        assert(mux.object_inside_description(ctx.enactor) == nil)\n"
-        "        mux.notify(ctx.enactor, "
-        "mux.markup(\"[fg=stompy-orange]LuaMarkup[/]\"))\n"
-        "        return true\n"
-        "      end,\n"
-        "    },\n"
-        "  },\n"
-        "}\n",
-        file);
+  fputs(
+      "return {\n"
+      "  commands = {\n"
+      "    {\n"
+      "      pattern = \"^luacolor$\",\n"
+      "      handler = function(ctx)\n"
+      "        local styled = mux.style(\"LuaHex\", { foreground = "
+      "\"stompy-orange\" })\n"
+      "        assert(mux.text_width(styled) == 6)\n"
+      "        assert(mux.strip_style(styled) == \"LuaHex\")\n"
+      "        assert(mux.strip_style(mux.truncate_text(styled, 3)) == "
+      "\"Lua\")\n"
+      "        local player = mux.object(ctx.enactor)\n"
+      "        assert(player.dbref == ctx.enactor)\n"
+      "        assert(player.type == \"player\")\n"
+      "        assert(player.inside_description == nil)\n"
+      "        mux.notify(ctx.enactor, "
+      "mux.markup(\"[fg=stompy-orange]LuaMarkup[/]\"))\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n"
+      "    {\n"
+      "      pattern = \"^luastate$\",\n"
+      "      handler = function(ctx)\n"
+      "        local object = mux.object(ctx.enactor)\n"
+      "        local state = object:state(\"integration\")\n"
+      "        local balance = state:get(\"balance\", 0) + 1\n"
+      "        state:set_many({ balance = balance, enabled = true,\n"
+      "          memo = \"\", rate = 1.25 })\n"
+      "        object:state(\"audit\"):set(\"last_balance\", balance)\n"
+      "        local examined = mux.object(0)\n"
+      "        examined:state(\"integration\"):set_many({\n"
+      "          balance = balance, enabled = true, memo = \"\", rate = 1.25\n"
+      "        })\n"
+      "        examined:state(\"audit\"):set(\"last_balance\", balance)\n"
+      "        assert(state:has(\"memo\") and state:get(\"memo\") == \"\")\n"
+      "        assert(#state:keys() == 4 and #state:entries() == 4)\n"
+      "        local values = state:get_many({ \"balance\", \"enabled\" })\n"
+      "        assert(values.balance == balance and values.enabled)\n"
+      "        mux.notify(ctx.enactor, \"LuaState \" .. balance)\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n"
+      "    {\n"
+      "      pattern = \"^luafail$\",\n"
+      "      handler = function(ctx)\n"
+      "        mux.object(ctx.enactor):state(\"integration\")"
+      ":set(\"balance\", 99)\n"
+      "        error(\"expected rollback\")\n"
+      "      end,\n"
+      "    },\n"
+      "  },\n"
+      "}\n",
+      file);
   return fclose(file) == 0 ? 0 : -1;
 }
 
@@ -354,6 +388,81 @@ static int create_styled_object(int socket_fd) {
                              "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
       expect_text(socket_fd, "\033[38;2;255;112;0mLuaMarkup") < 0 ||
+      send_command(socket_fd, "luastate\r\n") < 0 ||
+      expect_text(socket_fd, "LuaState 1") < 0 ||
+      send_command(socket_fd, "luafail\r\nluastate\r\n") < 0 ||
+      expect_text(socket_fd, "LuaState 2") < 0 ||
+      send_command(socket_fd, "@examine me\r\n") < 0 ||
+      expect_text(socket_fd, "State namespaces:\r\n  audit: 1 value\r\n"
+                             "  integration: 4 values") < 0 ||
+      send_command(socket_fd, "@state\r\n") < 0 ||
+      expect_text(socket_fd,
+                  "@state command switches:\r\n"
+                  "  /examine  Inspect persistent object state.\r\n"
+                  "  /set      Set or clear a state value.\r\n"
+                  "  /wipe     Clear object state or one namespace.\r\n"
+                  "  /copy     Copy a state value on an object.\r\n"
+                  "  /move     Move a state value on an object.") < 0 ||
+      send_command(socket_fd, "@state/examine\r\n") < 0 ||
+      expect_text(socket_fd,
+                  "State namespaces:\r\n  audit: 1 value\r\n"
+                  "  integration: 4 values\r\n"
+                  "Type @state/examine <object>/<namespace> to list the values "
+                  "in a namespace.") < 0 ||
+      send_command(socket_fd, "@state/examine me\r\n") < 0 ||
+      expect_text(socket_fd,
+                  "State namespaces:\r\n  audit: 1 value\r\n"
+                  "  integration: 4 values\r\n"
+                  "Type @state/examine <object>/<namespace> to list the values "
+                  "in a namespace.") < 0 ||
+      send_command(socket_fd, "@state/examine me/integration\r\n") < 0 ||
+      expect_text(socket_fd, "State namespace integration:\r\n"
+                             "  balance (integer): 2\r\n"
+                             "  enabled (boolean): true\r\n"
+                             "  memo (string): \"\"\r\n"
+                             "  rate (number): 1.25") < 0 ||
+      send_command(socket_fd, "@state/set here/integration empty=\"\"\r\n") <
+          0 ||
+      expect_text(socket_fd, "State value set.") < 0 ||
+      send_command(socket_fd, "@state/set here/integration count=7\r\n") < 0 ||
+      expect_text(socket_fd, "State value set.") < 0 ||
+      send_command(socket_fd, "@state/set here/integration flag=false\r\n") <
+          0 ||
+      expect_text(socket_fd, "State value set.") < 0 ||
+      send_command(socket_fd, "@state/set here/integration label=hello\r\n") <
+          0 ||
+      expect_text(socket_fd, "State value set.") < 0 ||
+      send_command(socket_fd,
+                   "@state/set here/integration temporary=gone\r\n") < 0 ||
+      expect_text(socket_fd, "State value set.") < 0 ||
+      send_command(socket_fd, "@state/set here/integration temporary=\r\n") <
+          0 ||
+      expect_text(socket_fd, "State value cleared.") < 0 ||
+      send_command(socket_fd, "@state/copy here/integration balance=archive "
+                              "copied_balance\r\n") < 0 ||
+      expect_text(socket_fd, "State value copied.") < 0 ||
+      send_command(socket_fd, "@state/move here/integration enabled=archive "
+                              "moved_enabled\r\n") < 0 ||
+      expect_text(socket_fd, "State value moved.") < 0 ||
+      send_command(socket_fd, "@state/examine here/archive\r\n") < 0 ||
+      expect_text(socket_fd, "State namespace archive:\r\n"
+                             "  copied_balance (integer): 2\r\n"
+                             "  moved_enabled (boolean): true") < 0 ||
+      send_command(socket_fd, "@state/examine here/integration\r\n") < 0 ||
+      expect_text(socket_fd, "State namespace integration:\r\n"
+                             "  balance (integer): 2\r\n"
+                             "  count (integer): 7\r\n"
+                             "  empty (string): \"\"\r\n"
+                             "  flag (boolean): false\r\n"
+                             "  label (string): \"hello\"\r\n"
+                             "  memo (string): \"\"\r\n"
+                             "  rate (number): 1.25") < 0 ||
+      send_command(socket_fd, "@state/wipe here/archive\r\n") < 0 ||
+      expect_text(socket_fd, "2 state values wiped.") < 0 ||
+      send_command(socket_fd, "@state/wipe here/audit\r\n") < 0 ||
+      expect_text(socket_fd, "1 state value wiped.") < 0 ||
+      send_command(socket_fd, "@state/wipe here\r\n") < 0 ||
+      expect_text(socket_fd, "7 state values wiped.") < 0 ||
       send_command(socket_fd, "look\r\n") < 0 ||
       expect_text(socket_fd, "Staff Nexus") < 0) {
     fprintf(stderr, "styled-object login failed\n");
@@ -405,8 +514,11 @@ static int check_styled_object(const char *directory) {
                       nullptr) != SQLITE_OK ||
       sqlite3_prepare_v2(
           database,
-          "SELECT name, description, inside_description FROM objects "
-          "WHERE name LIKE '%RenamedWidget%';",
+          "SELECT name, description, inside_description,"
+          " (SELECT value FROM object_state WHERE object_dbref = 1"
+          "  AND namespace = 'integration' AND key = 'balance'"
+          "  AND value_type = 3)"
+          " FROM objects WHERE name LIKE '%RenamedWidget%';",
           -1, &statement, nullptr) != SQLITE_OK ||
       sqlite3_step(statement) != SQLITE_ROW)
     goto done;
@@ -415,7 +527,8 @@ static int check_styled_object(const char *directory) {
       !strcmp((const char *)sqlite3_column_text(statement, 1),
               "[fg=red]Description[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 2),
-              "[bg=blue]Inside[/]"))
+              "[bg=blue]Inside[/]") &&
+      sqlite3_column_int64(statement, 3) == 2)
     result = 0;
 
 done:

@@ -55,6 +55,10 @@ int main(int argc, char *argv[]) {
   static const char *const removed_lua_keywords[] = {
       "@luacheck", "@luaparent", "@luareload", "@luaschedule", "@luaviewparent",
   };
+  static const char *const state_keywords[] = {
+      "@state/examine", "@state/set",  "@state/wipe",
+      "@state/copy",    "@state/move",
+  };
   const HelpArticle *article;
   const HelpArticle *wizards_article;
   const HelpArticle *default_article;
@@ -217,6 +221,39 @@ int main(int argc, char *argv[]) {
               removed_lua_keywords[i]);
       return 8;
     }
+  }
+
+  article = help_index_find_exact(index, "@state", false);
+  if (article) {
+    fprintf(stderr, "expected '@state' help to be hidden from a non-wizard\n");
+    return 8;
+  }
+  article = help_index_find_exact(index, "@state", true);
+  if (!article || strcmp(article->relative_path, "wizard_commands/state.md") ||
+      article->show_index_for_article_tags.count != 1 ||
+      strcmp(article->show_index_for_article_tags.items[0], "state_switches")) {
+    fprintf(stderr, "expected '@state' to resolve to its switch index\n");
+    return 8;
+  }
+  for (size_t i = 0; i < sizeof(state_keywords) / sizeof(state_keywords[0]);
+       i++) {
+    article = help_index_find_exact(index, state_keywords[i], false);
+    if (article) {
+      fprintf(stderr, "expected '%s' help to be hidden from a non-wizard\n",
+              state_keywords[i]);
+      return 8;
+    }
+    article = help_index_find_exact(index, state_keywords[i], true);
+    if (!article || !article->wizard_only || article->article_tags.count != 1 ||
+        strcmp(article->article_tags.items[0], "state_switches")) {
+      fprintf(stderr, "expected '%s' to resolve to a @state switch article\n",
+              state_keywords[i]);
+      return 8;
+    }
+  }
+  if (help_index_find_exact(index, "@examine/state", true)) {
+    fprintf(stderr, "expected removed '@examine/state' help to be absent\n");
+    return 8;
   }
 
   /* index.md is the default article. */
