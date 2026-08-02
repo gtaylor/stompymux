@@ -15,7 +15,7 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/runtime_clock.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 

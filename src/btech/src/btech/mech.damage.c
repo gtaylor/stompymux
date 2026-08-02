@@ -12,6 +12,7 @@
 #include "mech.h"
 #include "btmacros.h"
 #include "mech.events.h"
+#include "mux/server/mux_server.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.crit.h"

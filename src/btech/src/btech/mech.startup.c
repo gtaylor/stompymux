@@ -16,6 +16,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "mux/server/mux_server.h"
 #include <sys/file.h>
 
 #include "autopilot.h"

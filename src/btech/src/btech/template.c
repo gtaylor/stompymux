@@ -17,6 +17,8 @@
 
 /* 09/16/96 Some?? ... ya right ;-) (nim)                  */
 
+#include "mux/server/mux_server.h"
+
 /* 09/17/96 Ok, ton of touches then :-P (Mark) */
 
 #include "mux/server/platform.h"

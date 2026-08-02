@@ -14,6 +14,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/mux_server.h"
 #include "object_spatial.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"

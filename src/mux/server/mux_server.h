@@ -19,7 +19,6 @@
 #include "mux/server/configuration_context.h"
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
-#include "mux/server/runtime_clock.h"
 #include "mux/server/server_control.h"
 #include "mux/world/world_context.h"
 
@@ -33,6 +32,21 @@ typedef struct PlayerCache PlayerCache;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
 typedef struct StyledTextPalette StyledTextPalette;
+
+typedef struct RuntimeClock RuntimeClock;
+struct RuntimeClock {
+  time_t now;
+  time_t dump_deadline;
+  time_t check_deadline;
+  time_t idle_deadline;
+  time_t metrics_deadline;
+  bool tick_pending;
+  int shared_memory[2];
+  int private_memory[2];
+  int stack_memory[2];
+  int sample_time[2];
+  int current_sample;
+};
 
 typedef struct MuxServer MuxServer;
 struct MuxServer {

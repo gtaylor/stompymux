@@ -18,6 +18,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.ice.h"
+#include "mux/server/mux_server.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.mech.combat.h"

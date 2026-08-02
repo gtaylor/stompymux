@@ -13,6 +13,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.notify.h"
+#include "mux/server/mux_server.h"
 #include "p.aero.move.h"
 #include "p.btechstats.h"
 #include "p.mech.combat.misc.h"

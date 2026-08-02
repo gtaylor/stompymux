@@ -3,6 +3,7 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 

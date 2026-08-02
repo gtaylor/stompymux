@@ -15,6 +15,7 @@
  *
  */
 
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 
 #include <math.h>

@@ -7,7 +7,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/server/runtime_clock.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"

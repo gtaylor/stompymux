@@ -14,6 +14,8 @@
  *
  */
 
+#include "mux/server/mux_server.h"
+
 /* Point of the excercise : move from point a,b to point c,d while
    eliminating opponents and stuff, avoiding enemies in rear/side arc
    and generally having fun */

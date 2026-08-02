@@ -24,7 +24,7 @@
 #include "mux/objects/db.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/runtime_clock.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"

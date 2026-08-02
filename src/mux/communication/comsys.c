@@ -8,6 +8,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_api.h"
 #include "mux/world/match.h"
