@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #include "mux/support/stringutil.h"
 
 constexpr int LBUF_SIZE = 16384;
