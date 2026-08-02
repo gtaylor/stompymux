@@ -77,6 +77,57 @@ int main(void) {
       TELNET_ENVIRON_ESC,
   };
   static const char empty[] = {TELNET_ENVIRON_IS};
+  static const char capability_values[] = {
+      TELNET_ENVIRON_IS,
+      TELNET_ENVIRON_USERVAR,
+      'E',
+      'X',
+      'A',
+      'C',
+      'T',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'Z',
+      'E',
+      'R',
+      'O',
+      TELNET_ENVIRON_VALUE,
+      '0',
+      TELNET_ENVIRON_USERVAR,
+      'E',
+      'X',
+      'T',
+      'R',
+      'A',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      ' ',
+      TELNET_ENVIRON_USERVAR,
+      'E',
+      'M',
+      'P',
+      'T',
+      'Y',
+      TELNET_ENVIRON_VALUE,
+      TELNET_ENVIRON_VAR,
+      'V',
+      'A',
+      'R',
+      TELNET_ENVIRON_VALUE,
+      '1',
+  };
+  static const char disable_exact[] = {
+      TELNET_ENVIRON_INFO,
+      TELNET_ENVIRON_USERVAR,
+      'E',
+      'X',
+      'A',
+      'C',
+      'T',
+      TELNET_ENVIRON_VALUE,
+      '0',
+  };
   Descriptor descriptor = {0};
   char *oversized;
   size_t oversized_size = 1 + 1 + 1 + 1 + 4097;
@@ -126,6 +177,27 @@ int main(void) {
   result &= telnet_environment_receive(descriptor.telnet_environment, empty,
                                        sizeof(empty));
   result &= descriptor_telnet_environment_count(&descriptor) == 0;
+  result &=
+      telnet_environment_receive(descriptor.telnet_environment,
+                                 capability_values, sizeof(capability_values));
+  result &= descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "EXACT");
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "ZERO");
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "EXTRA");
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "EMPTY");
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "MISSING");
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "VAR");
+  result &= descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_VAR, "VAR");
+  result &= telnet_environment_receive(descriptor.telnet_environment,
+                                       disable_exact, sizeof(disable_exact));
+  result &= !descriptor_telnet_environment_value_is_one(
+      &descriptor, TELNET_ENVIRONMENT_USERVAR, "EXACT");
 
   telnet_environment_destroy(descriptor.telnet_environment);
   if (!result)

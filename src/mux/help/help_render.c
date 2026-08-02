@@ -54,6 +54,50 @@ static void help_text_buffer_append_code(HelpTextBuffer *buffer,
   }
 }
 
+static bool help_url_is_external(const char *url) {
+  const char *body;
+  size_t length;
+
+  if (url == nullptr)
+    return false;
+  if (!strncasecmp(url, "http:", 5))
+    body = url + 5;
+  else if (!strncasecmp(url, "https:", 6))
+    body = url + 6;
+  else if (!strncasecmp(url, "ftp:", 4))
+    body = url + 4;
+  else
+    return false;
+  length = strlen(url);
+  if (*body == '\0' || length > 4096)
+    return false;
+  for (size_t index = 0; index < length; index++) {
+    unsigned char byte = (unsigned char)url[index];
+    bool unreserved =
+        (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+        (byte >= '0' && byte <= '9') || strchr("-._~", byte) != nullptr;
+
+    if (byte == '%' && index + 2 < length &&
+        isxdigit((unsigned char)url[index + 1]) &&
+        isxdigit((unsigned char)url[index + 2])) {
+      index += 2;
+      continue;
+    }
+    if (!unreserved && strchr(":/?#[]@!$&'()*+,;=", byte) == nullptr)
+      return false;
+  }
+  return true;
+}
+
+static void help_text_buffer_append_quoted(HelpTextBuffer *buffer,
+                                           const char *text) {
+  for (const char *cursor = text; *cursor; cursor++) {
+    if (*cursor == '\\' || *cursor == '"')
+      help_text_buffer_append_str(buffer, "\\");
+    help_text_buffer_append(buffer, cursor, 1);
+  }
+}
+
 static void help_render_ensure_blank_line(HelpTextBuffer *buffer) {
   if (buffer->length == 0)
     return;
@@ -216,6 +260,20 @@ void help_render_markdown(const char *markdown, size_t length,
     case CMARK_NODE_LINEBREAK:
       help_text_buffer_append_str(out, "\n");
       break;
+    case CMARK_NODE_LINK: {
+      const char *url = cmark_node_get_url(node);
+
+      if (help_url_is_external(url)) {
+        if (event == CMARK_EVENT_ENTER) {
+          help_text_buffer_append_str(out, "[link=\"");
+          help_text_buffer_append_quoted(out, url);
+          help_text_buffer_append_str(out, "\"]");
+        } else {
+          help_text_buffer_append_str(out, "[/]");
+        }
+      }
+      break;
+    }
     case CMARK_NODE_NONE:
     case CMARK_NODE_DOCUMENT:
     case CMARK_NODE_HTML_BLOCK:
@@ -224,7 +282,6 @@ void help_render_markdown(const char *markdown, size_t length,
     case CMARK_NODE_CUSTOM_INLINE:
     case CMARK_NODE_EMPH:
     case CMARK_NODE_STRONG:
-    case CMARK_NODE_LINK:
     case CMARK_NODE_IMAGE:
       break;
     }

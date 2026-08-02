@@ -170,6 +170,20 @@ static int write_lua_fixture(const char *directory) {
       "        assert(player.inside_description == nil)\n"
       "        mux.notify(ctx.enactor, "
       "mux.markup(\"[fg=stompy-orange]LuaMarkup[/]\"))\n"
+      "        mux.notify(ctx.enactor, mux.markup("
+      "\"[link=\\\"https://example.com\\\"]Web[/] \" .."
+      " \"[send=\\\"cast fireball\\\"]Cast[/] \" .."
+      " \"[prompt=\\\"look\\\"]Edit[/]\"))\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n"
+      "    {\n"
+      "      pattern = \"^osclinks$\",\n"
+      "      handler = function(ctx)\n"
+      "        mux.notify(ctx.enactor, mux.markup("
+      "\"[link=\\\"https://example.com\\\"]Web[/] \" .."
+      " \"[send=\\\"cast fireball\\\"]Cast[/] \" .."
+      " \"[prompt=\\\"look\\\"]Edit[/]\"))\n"
       "        return true\n"
       "      end,\n"
       "    },\n"
@@ -337,6 +351,70 @@ static int negotiate_new_environ(int socket_fd) {
       TELNET_ENVIRON_ESC,
       TELNET_ENVIRON_VALUE,
       'y',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'S',
+      'E',
+      'N',
+      'D',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'P',
+      'R',
+      'O',
+      'M',
+      'P',
+      'T',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      ' ',
       TELNET_IAC,
       TELNET_SE,
   };
@@ -579,7 +657,10 @@ static int create_styled_object(int socket_fd) {
       expect_text(socket_fd, "\033[38;2;205;0;0m\033[48;2;229;229;229m"
                              "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
-      expect_text(socket_fd, "\033[38;2;255;112;0mLuaMarkup") < 0 ||
+      expect_three_texts(
+          socket_fd, "\033[38;2;255;112;0mLuaMarkup",
+          "\033]8;;https://example.com\033\\Web\033]8;;\033\\",
+          "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\ Edit") < 0 ||
       send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "  NEW-ENVIRON:",
                          "      VAR \"USER\" = "
@@ -661,7 +742,8 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "@state/wipe here\r\n") < 0 ||
       expect_text(socket_fd, "7 state values wiped.") < 0 ||
       send_command(socket_fd, "look\r\n") < 0 ||
-      expect_text(socket_fd, "Staff Nexus") < 0) {
+      expect_three_texts(socket_fd, "Staff Nexus", "\033]8;;send:wh\033\\",
+                         "Wiz Hangars") < 0) {
     fprintf(stderr, "styled-object login failed\n");
     return -1;
   }
@@ -682,7 +764,8 @@ static int create_styled_object(int socket_fd) {
     return -1;
   }
   if (send_command(socket_fd,
-                   "@desc RenamedWidget=[fg=red]Description[/]\r\n") < 0 ||
+                   "@desc RenamedWidget=[send=\"look\"][fg=red]Description"
+                   "[/][/]\r\n") < 0 ||
       expect_text(socket_fd, "Desc - Set.") < 0) {
     fprintf(stderr, "styled-object description failed\n");
     return -1;
@@ -695,9 +778,22 @@ static int create_styled_object(int socket_fd) {
   }
   if (send_command(socket_fd, "@examine RenamedWidget\r\n") < 0 ||
       expect_three_texts(socket_fd, "[fg=bright-cyan]RenamedWidget[/](#",
-                         "Desc: [fg=red]Description[/]",
+                         "Desc: [send=\"look\"][fg=red]Description[/][/]",
                          "Idesc: [bg=blue]Inside[/]") < 0) {
     fprintf(stderr, "styled-object examine markup failed\n");
+    return -1;
+  }
+  return 0;
+}
+
+static int exercise_plain_osc_fallback(int socket_fd) {
+  if (send_command(socket_fd, "GOD\r\n") < 0 ||
+      expect_text(socket_fd, "Password:") < 0 ||
+      send_command(socket_fd, "btmuxr0x\r\n") < 0 ||
+      expect_text(socket_fd, "Connected.") < 0 ||
+      send_command(socket_fd, "osclinks\r\n") < 0 ||
+      expect_text_without(socket_fd, "Web Cast Edit", "\033]") < 0) {
+    fprintf(stderr, "OSC plain fallback failed\n");
     return -1;
   }
   return 0;
@@ -728,7 +824,7 @@ static int check_styled_object(const char *directory) {
   if (!strcmp((const char *)sqlite3_column_text(statement, 0),
               "[fg=bright-cyan]RenamedWidget[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 1),
-              "[fg=red]Description[/]") &&
+              "[send=\"look\"][fg=red]Description[/][/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 2),
               "[bg=blue]Inside[/]") &&
       sqlite3_column_int64(statement, 3) == 2 &&
@@ -805,9 +901,10 @@ int main(int argc, char **argv) {
       fprintf(stderr, "MTTS negotiation failed\n");
       goto done;
     }
-    if (index == 0 && create_styled_object(socket_fds[index]) < 0)
-      goto done;
   }
+  if (create_styled_object(socket_fds[0]) < 0 ||
+      exercise_plain_osc_fallback(socket_fds[1]) < 0)
+    goto done;
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
     goto done;
   child = -1;

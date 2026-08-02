@@ -64,9 +64,10 @@ else reports `Unable to render default help article`.
 
 Article bodies are parsed with a vendored `cmark` (CommonMark) and walked as
 an AST, not passed through any of cmark's built-in renderers - headers are
-emitted as literal `#`/`##` lines, links and images are reduced to their
-visible text, and emphasis/strong markers are stripped. This is a deliberate,
-minimal plain-text format, not a general Markdown-to-ANSI renderer.
+emitted as literal `#`/`##` lines, external `http:`, `https:`, and `ftp:` links
+become capability-aware OSC 8 styled-text links, images and other link schemes
+are reduced to visible text, and emphasis/strong markers are stripped. Clients
+without OSC 8 support receive the same visible text without escape sequences.
 
 ## Reindexing
 

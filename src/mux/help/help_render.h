@@ -20,10 +20,11 @@ void help_text_buffer_init(HelpTextBuffer *buffer);
 void help_text_buffer_free(HelpTextBuffer *buffer);
 
 /*
- * Renders CommonMark `markdown` (headers as literal '#' lines, links and
- * emphasis markers stripped down to their visible text) into `out`. Inline
- * and block code escapes styled-text markup so the output boundary displays
- * it literally. Does not touch the help index; used both by
+ * Renders CommonMark `markdown` (headers as literal '#' lines, external links
+ * as OSC-capable styled-text markup, and emphasis markers stripped down to
+ * their visible text) into `out`. Inline and block code escapes styled-text
+ * markup so the output boundary displays it literally. Does not touch the
+ * help index; used both by
  * help_article_render_body and directly by unit tests.
  */
 void help_render_markdown(const char *markdown, size_t length,

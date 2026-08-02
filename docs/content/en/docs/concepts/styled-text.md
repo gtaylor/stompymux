@@ -8,8 +8,9 @@ weight: 30
 # Styled object text
 
 Object names, descriptions, and inside descriptions support a small,
-non-executable markup language. It replaces the old dependency on softcode
-color escapes without restoring softcode evaluation.
+declarative markup language. It replaces the old dependency on softcode color
+escapes without restoring softcode evaluation; OSC link actions occur only
+when a user activates a rendered link.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
@@ -25,6 +26,19 @@ directives can share one tag when separated by whitespace, for example
 `[fg=blue bg=white bold]`. A grouped tag creates one style scope, so one `[/]`
 restores every setting that it changed. `[reset]` restores terminal defaults
 and closes all open styles. Use `[[` for a literal opening bracket.
+
+OSC 8 hyperlinks use the same scoped representation:
+
+```text
+[link="https://example.com"]Website[/]
+[send="look"]Look[/]
+[prompt="cast fireball"]Prepare a spell[/]
+```
+
+`[link]` accepts `http:`, `https:`, and `ftp:` URIs. Command targets are raw
+UTF-8 text and are percent-encoded when rendered. Targets are double quoted;
+escape a quote as `\"` and a backslash as `\\`. Formatting may be nested
+inside a link, but links may not be nested.
 
 The named palette contains the eight ANSI names `black`, `red`, `green`,
 `yellow`, `blue`, `magenta`, `cyan`, and `white`, plus their `bright-`
@@ -60,6 +74,12 @@ removed.
 
 Color depth is connection-specific, so separate sessions for one player may
 receive different ANSI color sequences. Text encoding is always UTF-8.
+
+OSC support is also connection-specific, but is independent of color and
+screen-reader selection. The server checks the `OSC_HYPERLINKS`,
+`OSC_HYPERLINKS_SEND`, and `OSC_HYPERLINKS_PROMPT` NEW-ENVIRON USERVARs for an
+exact `1` value. Unsupported link tags render as their visible contents without
+OSC escape sequences.
 
 The `color` command displays or overrides the current connection's selection.
 Use `color auto` for negotiation, `color off` for plain text, or `color 16`,

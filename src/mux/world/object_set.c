@@ -167,7 +167,8 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
       compiled = alloc_lbuf("object_attribute_set.style");
       if (!styled_text_compile(evaluation->world->styled_text_palette, attrtext,
                                compiled, LBUF_SIZE, error, sizeof(error))) {
-        notify_printf(evaluation, player, "Invalid color markup: %s.", error);
+        notify_printf(evaluation, player, "Invalid styled-text markup: %s.",
+                      error);
         free_lbuf(compiled);
         return;
       }

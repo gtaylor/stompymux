@@ -114,6 +114,18 @@ bool descriptor_telnet_environment_get(const Descriptor *descriptor,
   return true;
 }
 
+bool descriptor_telnet_environment_value_is_one(const Descriptor *descriptor,
+                                                TelnetEnvironmentKind kind,
+                                                const char *name) {
+  const void *value;
+  size_t value_size;
+
+  return name != nullptr &&
+         descriptor_telnet_environment_get(descriptor, kind, name, strlen(name),
+                                           &value, &value_size) &&
+         value_size == 1 && *(const unsigned char *)value == '1';
+}
+
 size_t descriptor_telnet_environment_count(const Descriptor *descriptor) {
   if (descriptor == nullptr || descriptor->telnet_environment == nullptr)
     return 0;

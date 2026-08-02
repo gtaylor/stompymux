@@ -1,4 +1,4 @@
-/* styled_text.h - Safe color markup and terminal-specific ANSI rendering. */
+/* styled_text.h - Safe markup and capability-aware terminal rendering. */
 
 #pragma once
 
@@ -14,6 +14,13 @@ typedef enum TerminalColorDepth {
 
 typedef struct StyledTextPalette StyledTextPalette;
 
+typedef struct StyledTextRenderOptions {
+  TerminalColorDepth color_depth;
+  bool osc_hyperlinks;
+  bool osc_hyperlinks_send;
+  bool osc_hyperlinks_prompt;
+} StyledTextRenderOptions;
+
 StyledTextPalette *styled_text_palette_create(void);
 void styled_text_palette_destroy(StyledTextPalette *palette);
 bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
@@ -27,6 +34,10 @@ bool styled_text_escape(const char *text, char *output, size_t output_size);
 void styled_text_render(const StyledTextPalette *palette, const char *styled,
                         TerminalColorDepth depth, char *output,
                         size_t output_size);
+void styled_text_render_with_options(const StyledTextPalette *palette,
+                                     const char *styled,
+                                     const StyledTextRenderOptions *options,
+                                     char *output, size_t output_size);
 size_t styled_text_width(const StyledTextPalette *palette, const char *styled);
 void styled_text_strip(const StyledTextPalette *palette, const char *styled,
                        char *output, size_t output_size);

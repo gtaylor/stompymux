@@ -37,7 +37,7 @@ static char *compile_object_name(EvaluationContext *evaluation, DbRef player,
     StringCopy(compiled, name);
     return compiled;
   }
-  notify_printf(evaluation, player, "Invalid color markup: %s.", error);
+  notify_printf(evaluation, player, "Invalid styled-text markup: %s.", error);
   free_lbuf(compiled);
   return nullptr;
 }

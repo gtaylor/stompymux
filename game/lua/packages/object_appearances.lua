@@ -11,6 +11,14 @@ local function pad_right(value, width)
   return value .. string.rep(" ", math.max(0, width - mux.text_width(value)))
 end
 
+local function quote_link_target(value)
+  return value:gsub("\\", "\\\\"):gsub('"', '\\"')
+end
+
+local function send_link(value, command)
+  return mux.markup('[send="' .. quote_link_target(command) .. '"]' .. value .. "[/]")
+end
+
 local function render_content_name(object)
   local name = object.name
 
@@ -41,10 +49,11 @@ local function render_exits(ctx)
       local stored_name = exit.name
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
+      local command = mux.strip_style(first_alias or name)
       if first_alias then
-        rendered[#rendered + 1] = "(" .. first_alias .. ") " .. name
+        rendered[#rendered + 1] = send_link("(" .. first_alias .. ") " .. name, command)
       else
-        rendered[#rendered + 1] = name
+        rendered[#rendered + 1] = send_link(name, command)
       end
     end
   end
@@ -86,6 +95,7 @@ local function render_room_exits(ctx)
         alias_color = passes_enter_lock and "green" or "red",
         name = name,
         name_color = passes_enter_lock and "bright-green" or "bright-red",
+        command = mux.strip_style(first_alias or name),
       }
     end
   end
@@ -127,11 +137,12 @@ local function render_room_columns(players, exits)
         alias = mux.style("{", { foreground = "white" })
           .. mux.style(exit.alias:sub(2, -2), { foreground = exit.alias_color })
           .. mux.style("}", { foreground = "white" })
+        alias = send_link(alias, exit.command)
       end
       exit_column = alias
         .. string.rep(" ", math.max(0, 4 - #exit.alias))
         .. " "
-        .. mux.style(name, { foreground = exit.name_color })
+        .. send_link(mux.style(name, { foreground = exit.name_color }), exit.command)
     end
     lines[#lines + 1] = pad_right(player_column, ROOM_COLUMN_WIDTH) .. exit_column
   end

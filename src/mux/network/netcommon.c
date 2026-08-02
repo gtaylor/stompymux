@@ -234,16 +234,23 @@ void descriptor_queue_write(Descriptor *d, const char *b, int n) {
 
 void descriptor_queue_string(Descriptor *d, const char *s) {
   char rendered[LBUF_SIZE];
-  TerminalColorDepth depth = TERMINAL_COLOR_NONE;
+  StyledTextRenderOptions options = {0};
 
   if (is_ansi(descriptor_runtime(d)->world->database, d->player)) {
     if (d->has_color_override)
-      depth = d->color_override;
+      options.color_depth = d->color_override;
     else if (!d->is_screen_reader)
-      depth = d->terminal_color_depth;
+      options.color_depth = d->terminal_color_depth;
   }
-  styled_text_render(descriptor_runtime(d)->world->styled_text_palette, s,
-                     depth, rendered, sizeof(rendered));
+  options.osc_hyperlinks = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS");
+  options.osc_hyperlinks_send = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_SEND");
+  options.osc_hyperlinks_prompt = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_PROMPT");
+  styled_text_render_with_options(
+      descriptor_runtime(d)->world->styled_text_palette, s, &options, rendered,
+      sizeof(rendered));
   descriptor_queue_write(d, rendered, (int)strlen(rendered));
 }
 

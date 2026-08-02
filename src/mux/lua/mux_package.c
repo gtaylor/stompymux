@@ -265,7 +265,7 @@ static int lua_mux_markup(lua_State *state) {
   if (!styled_text_compile(package->services->styled_text_palette, markup,
                            output, LBUF_SIZE, error, sizeof(error))) {
     free_lbuf(output);
-    return luaL_error(state, "invalid color markup: %s", error);
+    return luaL_error(state, "invalid styled-text markup: %s", error);
   }
   lua_pushstring(state, markup);
   free_lbuf(output);

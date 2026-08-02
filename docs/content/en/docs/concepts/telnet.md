@@ -34,3 +34,17 @@ escaped protocol bytes and empty values are preserved. Lua code has equivalent
 functions in the built-in `mux` package. Wizards can inspect all negotiated
 state with `@telnet <player>`; non-printable bytes are escaped in its output.
 The diagnostic groups each value beneath the Telnet option that supplied it.
+
+## OSC 8 capabilities
+
+OSC 8 is not a Telnet option and has no separate negotiation. At output time,
+the styled-text renderer checks three per-descriptor NEW-ENVIRON USERVARs:
+`OSC_HYPERLINKS` for `http:`, `https:`, and `ftp:` links,
+`OSC_HYPERLINKS_SEND` for `send:`, and `OSC_HYPERLINKS_PROMPT` for `prompt:`.
+Each feature is enabled independently only when its variable is present with
+the exact one-byte value `1`. An `INFO` update therefore affects subsequent
+output immediately.
+
+OSC capability checks are independent of the player ANSI flag, negotiated
+color depth, and MTTS screen-reader state. Connections without a corresponding
+capability receive the link's visible text as a plain fallback.

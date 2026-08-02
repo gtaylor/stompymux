@@ -1,4 +1,4 @@
-/* styled_text.c - Safe color markup and terminal-specific ANSI rendering. */
+/* styled_text.c - Safe markup and capability-aware terminal rendering. */
 
 #include "mux/server/platform.h"
 
@@ -30,6 +30,8 @@ typedef struct StyledState {
   bool blink;
   bool underline;
   bool inverse;
+  bool has_link;
+  bool link_emitted;
 } StyledState;
 
 typedef struct NamedColor {
@@ -75,7 +77,18 @@ static const NamedColor built_in_colors[] = {
     {nullptr, 0, 0, 0, 0},
 };
 
-enum { STYLE_STACK_LIMIT = 32, SGR_PARAMETER_LIMIT = 32 };
+enum {
+  STYLE_STACK_LIMIT = 32,
+  SGR_PARAMETER_LIMIT = 32,
+  OSC8_URI_LIMIT = 4096,
+  OSC8_CLOSE_SIZE = 7,
+};
+
+typedef enum StyledLinkKind {
+  STYLED_LINK_EXTERNAL,
+  STYLED_LINK_SEND,
+  STYLED_LINK_PROMPT,
+} StyledLinkKind;
 
 static const char *skip_escape(const char *cursor);
 static void set_error(char *error, size_t error_size, const char *message);
@@ -339,6 +352,215 @@ static bool emit_state(const StyledState *state, char *output,
   return true;
 }
 
+static size_t styled_output_size(const StyledState *state, size_t output_size) {
+  if (!state->link_emitted || output_size <= OSC8_CLOSE_SIZE)
+    return output_size;
+  return output_size - OSC8_CLOSE_SIZE;
+}
+
+static bool styled_format_equal(const StyledState *left,
+                                const StyledState *right) {
+  return left->foreground.kind == right->foreground.kind &&
+         left->foreground.value == right->foreground.value &&
+         left->foreground.red == right->foreground.red &&
+         left->foreground.green == right->foreground.green &&
+         left->foreground.blue == right->foreground.blue &&
+         left->background.kind == right->background.kind &&
+         left->background.value == right->background.value &&
+         left->background.red == right->background.red &&
+         left->background.green == right->background.green &&
+         left->background.blue == right->background.blue &&
+         left->bold == right->bold && left->blink == right->blink &&
+         left->underline == right->underline && left->inverse == right->inverse;
+}
+
+static const char *find_tag_close(const char *start) {
+  bool quoted = false;
+  bool escaped = false;
+
+  for (const char *cursor = start; *cursor; cursor++) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quoted && *cursor == '\\') {
+      escaped = true;
+      continue;
+    }
+    if (*cursor == '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && *cursor == ']')
+      return cursor;
+  }
+  return nullptr;
+}
+
+static bool uri_unreserved(unsigned char byte) {
+  return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+         (byte >= '0' && byte <= '9') || byte == '-' || byte == '.' ||
+         byte == '_' || byte == '~';
+}
+
+static bool uri_reserved(unsigned char byte) {
+  return strchr(":/?#[]@!$&'()*+,;=", byte) != nullptr;
+}
+
+static bool link_target_unquote(const char *start, const char *end,
+                                char *target, size_t target_size, char *error,
+                                size_t error_size) {
+  size_t used = 0;
+
+  if (start == end || *start != '"') {
+    set_error(error, error_size, "link target must be double quoted");
+    return false;
+  }
+  start++;
+  while (start < end && *start != '"') {
+    unsigned char byte = (unsigned char)*start++;
+
+    if (byte == '\\') {
+      if (start == end || (*start != '\\' && *start != '"')) {
+        set_error(error, error_size, "invalid escape in link target");
+        return false;
+      }
+      byte = (unsigned char)*start++;
+    }
+    if (byte < 0x20 || byte == 0x7f) {
+      set_error(error, error_size, "link target contains a control byte");
+      return false;
+    }
+    if (used + 1 >= target_size) {
+      set_error(error, error_size, "link target is too long");
+      return false;
+    }
+    target[used++] = (char)byte;
+  }
+  if (start == end || *start != '"') {
+    set_error(error, error_size, "unterminated quoted link target");
+    return false;
+  }
+  start++;
+  while (start < end && isspace((unsigned char)*start))
+    start++;
+  if (start != end) {
+    set_error(error, error_size, "unexpected text after link target");
+    return false;
+  }
+  target[used] = '\0';
+  if (used == 0) {
+    set_error(error, error_size, "link target must not be empty");
+    return false;
+  }
+  if (!utf8_validate_printable(target, used)) {
+    set_error(error, error_size, "link target must be printable, valid UTF-8");
+    return false;
+  }
+  return true;
+}
+
+static bool external_uri_valid(const char *uri, char *error,
+                               size_t error_size) {
+  size_t length = strlen(uri);
+  const char *body;
+
+  if (!strncasecmp(uri, "http:", 5))
+    body = uri + 5;
+  else if (!strncasecmp(uri, "https:", 6))
+    body = uri + 6;
+  else if (!strncasecmp(uri, "ftp:", 4))
+    body = uri + 4;
+  else {
+    set_error(error, error_size, "link URI scheme must be http, https, or ftp");
+    return false;
+  }
+  if (*body == '\0') {
+    set_error(error, error_size, "link URI must include a destination");
+    return false;
+  }
+  if (length > OSC8_URI_LIMIT) {
+    set_error(error, error_size, "link URI is too long");
+    return false;
+  }
+  for (size_t index = 0; index < length; index++) {
+    unsigned char byte = (unsigned char)uri[index];
+
+    if (byte == '%' && index + 2 < length &&
+        isxdigit((unsigned char)uri[index + 1]) &&
+        isxdigit((unsigned char)uri[index + 2])) {
+      index += 2;
+      continue;
+    }
+    if (byte >= 0x80 || (!uri_unreserved(byte) && !uri_reserved(byte))) {
+      set_error(error, error_size,
+                "link URI contains a byte that must be percent encoded");
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool command_uri_encode(StyledLinkKind kind, const char *command,
+                               char *uri, size_t uri_size, char *error,
+                               size_t error_size) {
+  const char *scheme = kind == STYLED_LINK_SEND ? "send:" : "prompt:";
+  size_t used = strlen(scheme);
+
+  memcpy(uri, scheme, used);
+  for (const unsigned char *cursor = (const unsigned char *)command; *cursor;
+       cursor++) {
+    if (uri_unreserved(*cursor)) {
+      if (used + 1 >= uri_size)
+        goto too_long;
+      uri[used++] = (char)*cursor;
+    } else {
+      if (used + 3 >= uri_size)
+        goto too_long;
+      snprintf(uri + used, uri_size - used, "%%%02X", *cursor);
+      used += 3;
+    }
+  }
+  uri[used] = '\0';
+  return true;
+
+too_long:
+  set_error(error, error_size, "encoded link URI is too long");
+  return false;
+}
+
+static bool link_enabled(StyledLinkKind kind,
+                         const StyledTextRenderOptions *options) {
+  if (options == nullptr)
+    return false;
+  switch (kind) {
+  case STYLED_LINK_EXTERNAL:
+    return options->osc_hyperlinks;
+  case STYLED_LINK_SEND:
+    return options->osc_hyperlinks_send;
+  case STYLED_LINK_PROMPT:
+    return options->osc_hyperlinks_prompt;
+  }
+  return false;
+}
+
+static bool emit_link_open(const char *uri, char *output, size_t output_size,
+                           size_t *used) {
+  constexpr char prefix[] = "\033]8;;";
+  constexpr char suffix[] = "\033\\";
+  size_t length = sizeof(prefix) - 1 + strlen(uri) + sizeof(suffix) - 1;
+
+  if (*used + length + OSC8_CLOSE_SIZE >= output_size)
+    return false;
+  return append_string(output, output_size, used, prefix) &&
+         append_string(output, output_size, used, uri) &&
+         append_string(output, output_size, used, suffix);
+}
+
+static bool emit_link_close(char *output, size_t output_size, size_t *used) {
+  return append_string(output, output_size, used, "\033]8;;\033\\");
+}
+
 static bool apply_style_directive(const StyledTextPalette *palette,
                                   const char *directive, StyledState *state,
                                   char *error, size_t error_size) {
@@ -375,10 +597,35 @@ static bool apply_style_directive(const StyledTextPalette *palette,
   return true;
 }
 
+static bool parse_link_tag(const char *start, const char *end,
+                           StyledLinkKind *kind, const char **target) {
+  static const struct {
+    const char *name;
+    StyledLinkKind kind;
+  } tags[] = {
+      {"link=", STYLED_LINK_EXTERNAL},
+      {"send=", STYLED_LINK_SEND},
+      {"prompt=", STYLED_LINK_PROMPT},
+  };
+
+  for (size_t index = 0; index < sizeof(tags) / sizeof(tags[0]); index++) {
+    size_t length = strlen(tags[index].name);
+
+    if ((size_t)(end - start) > length &&
+        !strncasecmp(start, tags[index].name, length)) {
+      *kind = tags[index].kind;
+      *target = start + length;
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool apply_tag(const StyledTextPalette *palette, const char *tag,
                       StyledState *state, StyledState *stack,
                       size_t *stack_size, char *output, size_t output_size,
-                      size_t *used, char *error, size_t error_size) {
+                      size_t *used, const StyledTextRenderOptions *options,
+                      char *error, size_t error_size) {
   const char *start = tag;
   const char *end;
   StyledState updated = *state;
@@ -391,14 +638,29 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     end--;
 
   if (end - start == 1 && *start == '/') {
+    StyledState restored;
+
     if (*stack_size == 0) {
       set_error(error, error_size, "style close tag has no matching open tag");
       return false;
     }
-    *state = stack[--*stack_size];
-    return emit_state(state, output, output_size, used);
+    restored = stack[--*stack_size];
+    bool closed_link = state->has_link && !restored.has_link;
+    if (state->link_emitted && !restored.link_emitted) {
+      if (!emit_link_close(output, output_size, used))
+        return false;
+    }
+    if (closed_link && styled_format_equal(state, &restored)) {
+      *state = restored;
+      return true;
+    }
+    *state = restored;
+    return emit_state(state, output, styled_output_size(state, output_size),
+                      used);
   }
   if (end - start == 5 && !strncasecmp(start, "reset", 5)) {
+    if (state->link_emitted && !emit_link_close(output, output_size, used))
+      return false;
     *state = (StyledState){0};
     *stack_size = 0;
     return emit_state(state, output, output_size, used);
@@ -406,6 +668,40 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
   if (*stack_size >= STYLE_STACK_LIMIT) {
     set_error(error, error_size, "style nesting is too deep");
     return false;
+  }
+
+  StyledLinkKind link_kind;
+  const char *target_start;
+  if (parse_link_tag(start, end, &link_kind, &target_start)) {
+    char target[OSC8_URI_LIMIT + 1];
+    char uri[OSC8_URI_LIMIT + 1];
+
+    if (state->has_link) {
+      set_error(error, error_size, "links cannot be nested");
+      return false;
+    }
+    if (!link_target_unquote(target_start, end, target, sizeof(target), error,
+                             error_size))
+      return false;
+    if (link_kind == STYLED_LINK_EXTERNAL) {
+      if (!external_uri_valid(target, error, error_size))
+        return false;
+      memcpy(uri, target, strlen(target) + 1);
+    } else if (!command_uri_encode(link_kind, target, uri, sizeof(uri), error,
+                                   error_size)) {
+      return false;
+    }
+    stack[(*stack_size)++] = *state;
+    state->has_link = true;
+    state->link_emitted = link_enabled(link_kind, options);
+    if (state->link_emitted &&
+        !emit_link_open(uri, output, output_size, used)) {
+      (*stack_size)--;
+      *state = stack[*stack_size];
+      set_error(error, error_size, "styled text is too long");
+      return false;
+    }
+    return true;
   }
 
   while (start < end) {
@@ -421,6 +717,10 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     while (directive_end < end && !isspace((unsigned char)*directive_end))
       directive_end++;
     directive_length = (size_t)(directive_end - start);
+    if (directive_length >= sizeof(directive)) {
+      set_error(error, error_size, "style directive is too long");
+      return false;
+    }
     memcpy(directive, start, directive_length);
     directive[directive_length] = '\0';
     if (!apply_style_directive(palette, directive, &updated, error, error_size))
@@ -435,12 +735,19 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
 
   stack[(*stack_size)++] = *state;
   *state = updated;
-  return emit_state(state, output, output_size, used);
+  return emit_state(state, output, styled_output_size(state, output_size),
+                    used);
 }
 
 bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
                          char *output, size_t output_size, char *error,
                          size_t error_size) {
+  static const StyledTextRenderOptions options = {
+      .color_depth = TERMINAL_COLOR_TRUECOLOR,
+      .osc_hyperlinks = true,
+      .osc_hyperlinks_send = true,
+      .osc_hyperlinks_prompt = true,
+  };
   StyledState state = {0};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
@@ -465,20 +772,22 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
         set_error(error, error_size, "text is not valid UTF-8");
         return false;
       }
-      if (!append_bytes(output, output_size, &used, cursor, decoded.length))
+      if (!append_bytes(output, styled_output_size(&state, output_size), &used,
+                        cursor, decoded.length))
         goto too_long;
       cursor += decoded.length;
       continue;
     }
     if (cursor[1] == '[') {
-      if (!append_bytes(output, output_size, &used, "[", 1))
+      if (!append_bytes(output, styled_output_size(&state, output_size), &used,
+                        "[", 1))
         goto too_long;
       cursor += 2;
       continue;
     }
 
-    const char *close = strchr(cursor + 1, ']');
-    char tag[64];
+    const char *close = find_tag_close(cursor + 1);
+    char tag[OSC8_URI_LIMIT + 32];
     size_t tag_length;
     if (!close) {
       set_error(error, error_size, "unterminated style tag");
@@ -492,7 +801,7 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
     memcpy(tag, cursor + 1, tag_length);
     tag[tag_length] = '\0';
     if (!apply_tag(palette, tag, &state, stack, &stack_size, output,
-                   output_size, &used, error, error_size)) {
+                   output_size, &used, &options, error, error_size)) {
       if (error && error[0] == '\0')
         goto too_long;
       return false;
@@ -725,11 +1034,25 @@ static const char *skip_escape(const char *cursor) {
   return *scan ? scan + 1 : scan;
 }
 
+static bool parse_osc8(const char *cursor, const char **end, bool *is_close) {
+  const char *terminator;
+
+  if (strncmp(cursor, "\033]8;;", 5) != 0)
+    return false;
+  terminator = strstr(cursor + 5, "\033\\");
+  if (terminator == nullptr)
+    return false;
+  *is_close = terminator == cursor + 5;
+  *end = terminator + 2;
+  return true;
+}
+
 static void styled_text_render_ansi(const char *styled,
                                     TerminalColorDepth depth, char *output,
                                     size_t output_size) {
   size_t used = 0;
   bool saw_sgr = false;
+  bool link_open = false;
 
   if (!output || output_size == 0)
     return;
@@ -740,7 +1063,10 @@ static void styled_text_render_ansi(const char *styled,
   for (const char *cursor = styled; *cursor;) {
     if (*cursor != '\033') {
       size_t consumed;
-      if (!append_utf8_codepoint(output, output_size, &used, cursor, &consumed))
+      size_t available = link_open && output_size > OSC8_CLOSE_SIZE
+                             ? output_size - OSC8_CLOSE_SIZE
+                             : output_size;
+      if (!append_utf8_codepoint(output, available, &used, cursor, &consumed))
         break;
       cursor += consumed;
       continue;
@@ -749,21 +1075,42 @@ static void styled_text_render_ansi(const char *styled,
     size_t parameter_count;
     const char *end;
     if (parse_sgr(cursor, &end, parameters, &parameter_count)) {
-      render_sgr(parameters, parameter_count, depth, output, output_size,
-                 &used);
+      size_t available = link_open && output_size > OSC8_CLOSE_SIZE
+                             ? output_size - OSC8_CLOSE_SIZE
+                             : output_size;
+      render_sgr(parameters, parameter_count, depth, output, available, &used);
       saw_sgr = true;
       cursor = end;
     } else {
+      bool is_close;
+
+      if (parse_osc8(cursor, &end, &is_close)) {
+        size_t length = (size_t)(end - cursor);
+        size_t available = is_close ? output_size
+                           : output_size > OSC8_CLOSE_SIZE
+                               ? output_size - OSC8_CLOSE_SIZE
+                               : output_size;
+
+        if (append_bytes(output, available, &used, cursor, length)) {
+          link_open = !is_close;
+          cursor = end;
+          continue;
+        }
+        break;
+      }
       cursor = skip_escape(cursor);
     }
   }
+  if (link_open)
+    emit_link_close(output, output_size, &used);
   if (saw_sgr && depth != TERMINAL_COLOR_NONE)
     append_string(output, output_size, &used, "\033[0m");
 }
 
 static void compile_markup_permissive(const StyledTextPalette *palette,
                                       const char *input, char *output,
-                                      size_t output_size) {
+                                      size_t output_size,
+                                      const StyledTextRenderOptions *options) {
   StyledState state = {0};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
@@ -771,38 +1118,58 @@ static void compile_markup_permissive(const StyledTextPalette *palette,
 
   output[0] = '\0';
   for (const char *cursor = input; *cursor;) {
+    if (*cursor == '\033') {
+      const char *end;
+      int parameters[SGR_PARAMETER_LIMIT];
+      size_t parameter_count;
+
+      if (parse_sgr(cursor, &end, parameters, &parameter_count)) {
+        if (!append_bytes(output, styled_output_size(&state, output_size),
+                          &used, cursor, (size_t)(end - cursor)))
+          return;
+        cursor = end;
+      } else {
+        cursor = skip_escape(cursor);
+      }
+      continue;
+    }
     if (*cursor != '[') {
       size_t consumed;
-      if (!append_utf8_codepoint(output, output_size, &used, cursor, &consumed))
+      if (!append_utf8_codepoint(output,
+                                 styled_output_size(&state, output_size), &used,
+                                 cursor, &consumed))
         return;
       cursor += consumed;
       continue;
     }
     if (cursor[1] == '[') {
-      if (!append_bytes(output, output_size, &used, "[", 1))
+      if (!append_bytes(output, styled_output_size(&state, output_size), &used,
+                        "[", 1))
         return;
       cursor += 2;
       continue;
     }
 
-    const char *close = strchr(cursor + 1, ']');
+    const char *close = find_tag_close(cursor + 1);
     size_t tag_length = close ? (size_t)(close - cursor - 1) : 0;
-    if (close && tag_length > 0 && tag_length < 64) {
+    if (close && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
       StyledState candidate_state = state;
       StyledState candidate_stack[STYLE_STACK_LIMIT];
       size_t candidate_stack_size = stack_size;
-      char rendered[512] = "";
+      char rendered[LBUF_SIZE] = "";
       size_t rendered_size = 0;
       char error[128] = "";
-      char tag[64];
+      char tag[OSC8_URI_LIMIT + 32];
 
       memcpy(tag, cursor + 1, tag_length);
       tag[tag_length] = '\0';
       memcpy(candidate_stack, stack, sizeof(stack));
       if (apply_tag(palette, tag, &candidate_state, candidate_stack,
                     &candidate_stack_size, rendered, sizeof(rendered),
-                    &rendered_size, error, sizeof(error))) {
-        if (!append_string(output, output_size, &used, rendered))
+                    &rendered_size, options, error, sizeof(error))) {
+        if (!append_string(output,
+                           styled_output_size(&candidate_state, output_size),
+                           &used, rendered))
           return;
         state = candidate_state;
         memcpy(stack, candidate_stack, sizeof(stack));
@@ -811,15 +1178,28 @@ static void compile_markup_permissive(const StyledTextPalette *palette,
         continue;
       }
     }
-    if (!append_bytes(output, output_size, &used, cursor, 1))
+    if (!append_bytes(output, styled_output_size(&state, output_size), &used,
+                      cursor, 1))
       return;
     cursor++;
   }
+  if (state.link_emitted)
+    emit_link_close(output, output_size, &used);
 }
 
 void styled_text_render(const StyledTextPalette *palette, const char *styled,
                         TerminalColorDepth depth, char *output,
                         size_t output_size) {
+  StyledTextRenderOptions options = {.color_depth = depth};
+
+  styled_text_render_with_options(palette, styled, &options, output,
+                                  output_size);
+}
+
+void styled_text_render_with_options(const StyledTextPalette *palette,
+                                     const char *styled,
+                                     const StyledTextRenderOptions *options,
+                                     char *output, size_t output_size) {
   char compiled[LBUF_SIZE];
 
   if (!output || output_size == 0)
@@ -827,8 +1207,11 @@ void styled_text_render(const StyledTextPalette *palette, const char *styled,
   output[0] = '\0';
   if (!styled)
     return;
-  compile_markup_permissive(palette, styled, compiled, sizeof(compiled));
-  styled_text_render_ansi(compiled, depth, output, output_size);
+  compile_markup_permissive(palette, styled, compiled, sizeof(compiled),
+                            options);
+  styled_text_render_ansi(compiled,
+                          options ? options->color_depth : TERMINAL_COLOR_NONE,
+                          output, output_size);
 }
 
 size_t styled_text_width(const StyledTextPalette *palette, const char *styled) {
@@ -848,6 +1231,7 @@ void styled_text_strip(const StyledTextPalette *palette, const char *styled,
 
 void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
                           size_t width, char *output, size_t output_size) {
+  static const StyledTextRenderOptions options = {0};
   StyledState state = {0};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
@@ -880,25 +1264,25 @@ void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
       cursor += 2;
       visible++;
     } else if (*cursor == '[') {
-      const char *close = strchr(cursor + 1, ']');
+      const char *close = find_tag_close(cursor + 1);
       size_t tag_length = close ? (size_t)(close - cursor - 1) : 0;
       bool applied = false;
 
-      if (close && tag_length > 0 && tag_length < 64) {
+      if (close && tag_length > 0 && tag_length < OSC8_URI_LIMIT + 32) {
         StyledState candidate_state = state;
         StyledState candidate_stack[STYLE_STACK_LIMIT];
         size_t candidate_stack_size = stack_size;
-        char rendered[512] = "";
+        char rendered[LBUF_SIZE] = "";
         size_t rendered_size = 0;
         char error[128] = "";
-        char tag[64];
+        char tag[OSC8_URI_LIMIT + 32];
 
         memcpy(tag, cursor + 1, tag_length);
         tag[tag_length] = '\0';
         memcpy(candidate_stack, stack, sizeof(stack));
         if (apply_tag(palette, tag, &candidate_state, candidate_stack,
                       &candidate_stack_size, rendered, sizeof(rendered),
-                      &rendered_size, error, sizeof(error)) &&
+                      &rendered_size, &options, error, sizeof(error)) &&
             append_bytes(output, output_size, &used, cursor,
                          (size_t)(close - cursor + 1))) {
           state = candidate_state;

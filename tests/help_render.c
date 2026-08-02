@@ -57,8 +57,12 @@ int main(void) {
   if (!help_render_test_expect("# Header 1\n\nContent here\n\n## Header 2\n",
                                "# Header 1\n\nContent here\n\n## Header 2"))
     return 1;
-  if (!help_render_test_expect("[text](http://example.com)", "text"))
+  if (!help_render_test_expect("[text](http://example.com)",
+                               "[link=\"http://example.com\"]text[/]"))
     return 2;
+  if (!help_render_test_expect("[local](../topic/) and [bad](file:///tmp/a)",
+                               "local and bad"))
+    return 7;
   if (!help_render_test_expect("*em* and **strong**", "em and strong"))
     return 3;
   if (!help_render_test_expect("- one\n- two\n", "- one\n- two"))
@@ -67,11 +71,10 @@ int main(void) {
           "Rendered [fg=red]red[/], but `[fg=blue]blue[/]` is code.",
           "Rendered [fg=red]red[/], but [[fg=blue]blue[[/] is code."))
     return 5;
-  if (!help_render_test_expect(
-          "```text\n"
-          "@name drone=[fg=bright-cyan]Aegis[/]\n"
-          "```\n",
-          "@name drone=[[fg=bright-cyan]Aegis[[/]\n"))
+  if (!help_render_test_expect("```text\n"
+                               "@name drone=[fg=bright-cyan]Aegis[/]\n"
+                               "```\n",
+                               "@name drone=[[fg=bright-cyan]Aegis[[/]\n"))
     return 6;
   return 0;
 }

@@ -37,6 +37,9 @@ bool descriptor_telnet_environment_get(const Descriptor *descriptor,
                                        TelnetEnvironmentKind kind,
                                        const void *name, size_t name_size,
                                        const void **value, size_t *value_size);
+bool descriptor_telnet_environment_value_is_one(const Descriptor *descriptor,
+                                                TelnetEnvironmentKind kind,
+                                                const char *name);
 size_t descriptor_telnet_environment_count(const Descriptor *descriptor);
 bool descriptor_telnet_environment_entry(const Descriptor *descriptor,
                                          size_t index,

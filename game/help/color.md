@@ -35,6 +35,9 @@ can share a tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes
 everything opened by that tag. `[reset]` closes all active styles. Write `[[`
 to display a literal `[` character.
 
+Styled text also supports capability-aware command and web links. See
+`help osc8` for `[send]`, `[prompt]`, and `[link]`.
+
 Markup must be correctly nested. Unknown colors, unknown tags, raw terminal
 escape sequences, unmatched `[/]`, and unclosed styles are rejected.
 

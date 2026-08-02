@@ -44,11 +44,58 @@ static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
   free_lbuf(markup);
 }
 
+static void look_append_quoted_target(const char *target, char *buffer,
+                                      char **cursor) {
+  for (const char *scan = target; *scan; scan++) {
+    if (*scan == '\\' || *scan == '"')
+      safe_chr('\\', buffer, cursor);
+    safe_chr(*scan, buffer, cursor);
+  }
+}
+
+static void look_exit_parts(const StyledTextPalette *palette,
+                            const char *stored_name, char *display,
+                            char *command) {
+  const char *primary_end = strchr(stored_name, ';');
+  const char *command_start = stored_name;
+  const char *command_end =
+      primary_end ? primary_end : stored_name + strlen(stored_name);
+  char raw_command[LBUF_SIZE];
+  size_t display_size = (size_t)(command_end - stored_name);
+
+  if (display_size >= LBUF_SIZE)
+    display_size = LBUF_SIZE - 1;
+  memcpy(display, stored_name, display_size);
+  display[display_size] = '\0';
+
+  if (primary_end && primary_end[1] != '\0' && primary_end[1] != ';') {
+    command_start = primary_end + 1;
+    command_end = strchr(command_start, ';');
+    if (!command_end)
+      command_end = command_start + strlen(command_start);
+  }
+  size_t command_size = (size_t)(command_end - command_start);
+  if (command_size >= sizeof(raw_command))
+    command_size = sizeof(raw_command) - 1;
+  memcpy(raw_command, command_start, command_size);
+  raw_command[command_size] = '\0';
+  styled_text_strip(palette, raw_command, command, LBUF_SIZE);
+}
+
+static void look_append_exit_link(const char *display, const char *command,
+                                  char *buffer, char **cursor) {
+  safe_str("[send=\"", buffer, cursor);
+  look_append_quoted_target(command, buffer, cursor);
+  safe_str("\"]", buffer, cursor);
+  safe_str(display, buffer, cursor);
+  safe_str("[/]", buffer, cursor);
+}
+
 static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
                        const char *exit_name) {
   WorldContext *world = evaluation->world;
   DbRef thing;
-  char *buff, *e, *s, *buff1, *e1;
+  char *buff, *e, *buff1, *command;
   int foundany, key;
 
   /*
@@ -83,14 +130,17 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
   notify(evaluation, player, exit_name);
   e = buff = alloc_lbuf("look_exits");
-  e1 = buff1 = alloc_lbuf("look_exits2");
+  buff1 = alloc_lbuf("look_exits2");
+  command = alloc_lbuf("look_exits.command");
   if (is_transparent(evaluation->world->database, loc)) {
     DOLIST(evaluation->world->database, thing,
            game_object_exits(evaluation->world->database, loc)) {
       if (exit_displayable(world->database, thing, player, key)) {
-        StringCopy(buff, game_object_name(evaluation->world->database, thing));
-        for (e = buff; *e && (*e != ';'); e++)
-          ;
+        e = buff;
+        look_exit_parts(evaluation->world->styled_text_palette,
+                        game_object_name(evaluation->world->database, thing),
+                        buff1, command);
+        look_append_exit_link(buff1, command, buff, &e);
         *e = '\0';
         notify_printf(
             evaluation, player, "%s leads to %s.", buff,
@@ -103,14 +153,12 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
     DOLIST(evaluation->world->database, thing,
            game_object_exits(evaluation->world->database, loc)) {
       if (exit_displayable(world->database, thing, player, key)) {
-        e1 = buff1;
         if (buff != e)
           safe_str("  ", buff, &e);
-        for (s = game_object_name(evaluation->world->database, thing);
-             *s && (*s != ';'); s++)
-          safe_chr(*s, buff1, &e1);
-        *e1 = 0;
-        safe_str(buff1, buff, &e);
+        look_exit_parts(evaluation->world->styled_text_palette,
+                        game_object_name(evaluation->world->database, thing),
+                        buff1, command);
+        look_append_exit_link(buff1, command, buff, &e);
       }
     }
   }
@@ -122,6 +170,7 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
   }
   free_lbuf(buff);
   free_lbuf(buff1);
+  free_lbuf(command);
 }
 
 #define CONTENTS_LOCAL 0

@@ -47,6 +47,21 @@ static int expect_render(const char *styled, TerminalColorDepth depth,
   return 1;
 }
 
+static int expect_render_options(const char *styled,
+                                 const StyledTextRenderOptions *options,
+                                 const char *expected) {
+  char output[8192];
+
+  styled_text_render_with_options(palette, styled, options, output,
+                                  sizeof(output));
+  if (strcmp(output, expected) != 0) {
+    fprintf(stderr, "unexpected OSC render result\nexpected: %s\nactual: %s\n",
+            expected, output);
+    return 0;
+  }
+  return 1;
+}
+
 int main(void) {
   char escaped[256];
   char stripped[256];
@@ -58,15 +73,36 @@ int main(void) {
   const char grouped[] = "\033[0m\033[1m\033[34m\033[47mBlue\033[0m";
   const char blinking[] = "\033[0m\033[1m\033[5m\033[31mAlert\033[0m";
   const char truecolor[] = "\033[38;2;255;0;0mR";
+  const char send_markup[] = "[send=\"cast fireball\"]Cast[/]";
+  const char send_osc[] =
+      "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\";
+  const StyledTextRenderOptions links = {
+      .color_depth = TERMINAL_COLOR_NONE,
+      .osc_hyperlinks = true,
+      .osc_hyperlinks_send = true,
+      .osc_hyperlinks_prompt = true,
+  };
+  const StyledTextRenderOptions send_only = {
+      .color_depth = TERMINAL_COLOR_NONE,
+      .osc_hyperlinks_send = true,
+  };
+  const StyledTextRenderOptions no_links = {0};
   TerminalColorDepth depth;
   bool screen_reader;
   char error[256];
   char small[4];
+  char small_link[32];
+  char oversized_link[4200];
   int result = 0;
 
   palette = styled_text_palette_create();
   if (!palette)
     return 1;
+
+  memcpy(oversized_link, "[link=\"https://", 15);
+  memset(oversized_link + 15, 'a', 4090);
+  memcpy(oversized_link + 4105, "\"]x[/]", 7);
+  oversized_link[4112] = '\0';
 
   if (!expect_compile("[fg=red]Red[/]", red) ||
       !expect_compile("[fg=red]red [bold]bold[/] red[/]", nested) ||
@@ -75,12 +111,24 @@ int main(void) {
       !expect_compile("[fg=blue bg=white bold]Blue[/]", grouped) ||
       !expect_compile("[fg=red bold blink]Alert[/]", blinking) ||
       !expect_compile("[[literal]", "[literal]") ||
+      !expect_compile(send_markup, send_osc) ||
+      !expect_compile("[prompt=\"say \\\"hi\\\" \\\\ ok\"]Edit[/]",
+                      "\033]8;;prompt:say%20%22hi%22%20%5C%20ok\033\\Edit"
+                      "\033]8;;\033\\") ||
+      !expect_compile("[link=\"https://example.com/a?x=1&y=%202\"]Web[/]",
+                      "\033]8;;https://example.com/a?x=1&y=%202\033\\Web"
+                      "\033]8;;\033\\") ||
       !expect_invalid("[fg=unknown]x[/]") ||
       !expect_invalid("[fg=#abcd]x[/]") || !expect_invalid("[bold]x") ||
       !expect_invalid("[fg=red unknown]x[/]") ||
       !expect_invalid("[fg=red /]x[/]") || !expect_invalid("[/]") ||
-      !expect_invalid("bad\xc0\xaf") ||
-      !expect_invalid("\033[31mraw"))
+      !expect_invalid("[send=look]x[/]") ||
+      !expect_invalid("[send=\"look\"][prompt=\"say\"]x[/][/]") ||
+      !expect_invalid("[link=\"file:///tmp/a\"]x[/]") ||
+      !expect_invalid("[link=\"https://example.com/%xx\"]x[/]") ||
+      !expect_invalid(oversized_link) ||
+      !expect_invalid("[send=\"line\nbreak\"]x[/]") ||
+      !expect_invalid("bad\xc0\xaf") || !expect_invalid("\033[31mraw"))
     result = 1;
 
   if (!result &&
@@ -95,6 +143,16 @@ int main(void) {
 
   if (!result &&
       (!expect_render(truecolor, TERMINAL_COLOR_NONE, "R") ||
+       !expect_render_options(send_markup, &no_links, "Cast") ||
+       !expect_render_options(send_markup, &send_only, send_osc) ||
+       !expect_render_options("[link=\"https://example.com\"]Web[/]",
+                              &send_only, "Web") ||
+       !expect_render_options("[link=\"https://example.com\"]Web[/]", &links,
+                              "\033]8;;https://example.com\033\\Web"
+                              "\033]8;;\033\\") ||
+       !expect_render_options("[prompt=\"look\"]Edit[/]", &send_only, "Edit") ||
+       !expect_render("\033]8;;https://example.com\033\\Raw\033]8;;\033\\",
+                      TERMINAL_COLOR_NONE, "Raw") ||
        !expect_render("caf\xc3\xa9 \xf0\x9f\x98\x80", TERMINAL_COLOR_NONE,
                       "caf\xc3\xa9 \xf0\x9f\x98\x80") ||
        !expect_render("bad\xc0\xaf", TERMINAL_COLOR_NONE,
@@ -109,6 +167,13 @@ int main(void) {
   styled_text_render(palette, "ab\xc3\xa9", TERMINAL_COLOR_NONE, small,
                      sizeof(small));
   if (!result && strcmp(small, "ab") != 0)
+    result = 1;
+  styled_text_render_with_options(palette,
+                                  "[send=\"x\"]abcdefghijklmnopqrstuvwxyz[/]",
+                                  &send_only, small_link, sizeof(small_link));
+  if (!result &&
+      (!strstr(small_link, "\033]8;;send:x\033\\") || strlen(small_link) < 7 ||
+       strcmp(small_link + strlen(small_link) - 7, "\033]8;;\033\\")))
     result = 1;
 
   if (!result &&
@@ -130,6 +195,12 @@ int main(void) {
   if (!result && (strcmp(stripped, "Red") != 0 ||
                   strcmp(truncated, "[fg=red bg=white]Red[/]") != 0 ||
                   styled_text_width(palette, "[fg=red]Red[/]") != 3))
+    result = 1;
+  styled_text_strip(palette, send_markup, stripped, sizeof(stripped));
+  styled_text_truncate(palette, send_markup, 2, truncated, sizeof(truncated));
+  if (!result && (strcmp(stripped, "Cast") != 0 ||
+                  strcmp(truncated, "[send=\"cast fireball\"]Ca[/]") != 0 ||
+                  styled_text_width(palette, send_markup) != 4))
     result = 1;
   styled_text_truncate(palette, "caf\xc3\xa9!", 4, truncated,
                        sizeof(truncated));

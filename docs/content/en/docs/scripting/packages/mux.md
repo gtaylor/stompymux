@@ -109,12 +109,25 @@ assert(mux.is_printable_ascii("Atlas-1"))
 assert(not mux.is_printable_ascii("caf\u00e9"))
 ```
 
-`mux.markup(value)` validates and returns the same color markup accepted by
+`mux.markup(value)` validates and returns the same styled-text markup accepted by
 `@name`, `@desc`, and `@idesc`.
 
 ```lua
 local heading = mux.markup("[fg=#ff7000][bold]Warning[/][/]")
 ```
+
+The same function validates OSC 8 link markup. Lua constructs links directly;
+there are no separate hyperlink functions.
+
+```lua
+local look = mux.markup('[send="look"]Look[/]')
+local website = mux.markup('[link="https://example.com"]Website[/]')
+```
+
+`[send]` and `[prompt]` accept raw commands and percent-encode them when
+rendered. `[link]` accepts `http:`, `https:`, and `ftp:` URIs. Escape quotes and
+backslashes in dynamic targets before interpolating them into the quoted tag.
+Unsupported clients receive only the visible contents.
 
 `mux.style(value, options)` applies styles without constructing markup.
 `foreground` and `background` accept built-in or configured color names, or

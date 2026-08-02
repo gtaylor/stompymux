@@ -2,31 +2,24 @@
 
 ## MUX Todos in the /src/ dir
 
-* Crunch runtime_clock.c into somewhere
-* Clickable links
+* Offer a non-privileged way to change your own password.
+* Make integration tests not conflict with running games
+* Maybe: Figure out external RPC
+* Maybe: Figure out external event streaming. Websockets?
+* Something we can crib? `Mudlet supports all standard color formats via Qt's QColor parser: Named colors (147+ CSS3/X11 names):`
+
+## GMCP
+
 * GMCP lua function
 * GMCP + sound support
 * See if there's anything interesting in here to expose: https://mudstandards.org/category/gmcp
-* Look into OSC8 support for hyperlinks: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol
-* Offer a non-privileged way to change your own password.
-* Add bad names list
-* Unit and integration test strategy for Lua
-* Make integration tests not conflict with running games
-* utf8 support
-* Maybe: Figure out external RPC
-* Maybe: Figure out external event streaming. Websockets?
 
 ## DB schema stuff
 
 ## Lua Todos
 
-* Add `@luastatus` for effective-module inspection,
-  inherited attachment visibility, and pre-attachment validation.
-* Expand the explicit Lua host API for object lookup, movement, emits, locks,
-  timers, and structured command output; avoid growing dependence on
-  `mux.command()` running as #1.
-* Improve Lua error and reload observability with handler, event/command,
-  object, enactor, source location, traceback, and audit-log context.
+* Unit and integration test strategy for Lua
+* See if we can disentangle Lua and #1. For ex, `mux.command()`.
 * Give a Lua-backed flow a chance to run cleanup code when it's cancelled by
   the engine (e.g. @boot) rather than by its own step returning "cancel".
 
@@ -34,3 +27,8 @@
 
 * Maybe: do we need btech/src/mt19937ar.c or is there something else that may suffice for RNG?
 * Remove prototype header files
+
+
+## OSC 8 
+
+* Figure out how to support linking between help files.
