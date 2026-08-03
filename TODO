@@ -2,11 +2,15 @@
 
 ## MUX Todos in the /src/ dir
 
+* Enable address sanitizer by default
+* Something we can crib? `Mudlet supports all standard color formats via Qt's QColor parser: Named colors (147+ CSS3/X11 names):`
+* Define primary/secondary/tertiary colors for use in UI elements.
+* Make help rendering more pretty.
 * Offer a non-privileged way to change your own password.
 * Make integration tests not conflict with running games
 * Maybe: Figure out external RPC
 * Maybe: Figure out external event streaming. Websockets?
-* Something we can crib? `Mudlet supports all standard color formats via Qt's QColor parser: Named colors (147+ CSS3/X11 names):`
+* See if we can reduce malloc usage
 
 ## GMCP
 
@@ -31,4 +35,5 @@
 
 ## OSC 8 
 
-* Figure out how to support linking between help files.
+* Make rgb/hex inputs match across ANSII and OSC8 in markup styling
+* Add Tier 3/tooltips
