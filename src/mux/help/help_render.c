@@ -98,6 +98,15 @@ static void help_text_buffer_append_quoted(HelpTextBuffer *buffer,
   }
 }
 
+static void help_text_buffer_append_help_link(HelpTextBuffer *buffer,
+                                              const char *topic) {
+  help_text_buffer_append_str(buffer, "[send=\"help ");
+  help_text_buffer_append_quoted(buffer, topic);
+  help_text_buffer_append_str(buffer, "\"]");
+  help_text_buffer_append_code(buffer, topic);
+  help_text_buffer_append_str(buffer, "[/]");
+}
+
 static void help_render_ensure_blank_line(HelpTextBuffer *buffer) {
   if (buffer->length == 0)
     return;
@@ -170,10 +179,12 @@ static void help_render_index_section(const HelpIndex *index,
   help_render_ensure_blank_line(out);
   if (index_article->index_style == HELP_INDEX_STYLE_COLUMNAR) {
     for (i = 0; i < count; i++) {
-      char column[32];
+      const char *topic = entries[i]->keywords.items[0];
+      size_t topic_length = strlen(topic);
 
-      snprintf(column, sizeof(column), "%-20s", entries[i]->keywords.items[0]);
-      help_text_buffer_append_str(out, column);
+      help_text_buffer_append_help_link(out, topic);
+      for (size_t padding = topic_length; padding < 20; padding++)
+        help_text_buffer_append_str(out, " ");
       if ((i + 1) % 3 == 0)
         help_text_buffer_append_str(out, "\n");
     }
@@ -187,11 +198,15 @@ static void help_render_index_section(const HelpIndex *index,
       help_text_buffer_append_str(out, header);
     }
     for (i = 0; i < count; i++) {
-      char line[256];
+      const char *topic = entries[i]->keywords.items[0];
+      size_t topic_length = strlen(topic);
 
-      snprintf(line, sizeof(line), "%-20s %s\n", entries[i]->keywords.items[0],
-               entries[i]->description);
-      help_text_buffer_append_str(out, line);
+      help_text_buffer_append_help_link(out, topic);
+      for (size_t padding = topic_length; padding < 20; padding++)
+        help_text_buffer_append_str(out, " ");
+      help_text_buffer_append_str(out, " ");
+      help_text_buffer_append_str(out, entries[i]->description);
+      help_text_buffer_append_str(out, "\n");
     }
   }
   free(entries);

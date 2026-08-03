@@ -1,5 +1,6 @@
 /* help_render.c -- Plain-text markdown rendering unit test */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "mux/help/help_index.h"
@@ -7,30 +8,30 @@
 #include "mux/help/help_types.h"
 #include "mux/server/game.h"
 
-/*
- * help_render_markdown() never calls these (the render test never invokes
- * help_article_render_body or help_render_send), but the object file
- * references them; stub them out so this test can link help_render.c
- * without pulling in help_index.c and its server-wide dependencies.
- */
+static const HelpArticle *test_articles;
+static size_t test_article_count;
+
 char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
                            size_t *out_length) {
   (void)index;
   (void)article;
-  (void)out_length;
-  return nullptr;
+  char *body = malloc(1);
+
+  body[0] = '\0';
+  if (out_length)
+    *out_length = 0;
+  return body;
 }
 
 size_t help_index_article_count(const HelpIndex *index) {
   (void)index;
-  return 0;
+  return test_article_count;
 }
 
 const HelpArticle *help_index_article_at(const HelpIndex *index,
                                          size_t article_index) {
   (void)index;
-  (void)article_index;
-  return nullptr;
+  return &test_articles[article_index];
 }
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
@@ -50,6 +51,47 @@ static int help_render_test_expect(const char *markdown, const char *expected) {
   help_render_markdown(markdown, strlen(markdown), &buffer);
   ok = buffer.data != nullptr && !strcmp(buffer.data, expected);
   help_text_buffer_free(&buffer);
+  return ok;
+}
+
+static int help_render_test_index_links(void) {
+  char *index_tags[] = {"index-entry"};
+  char *index_keywords[] = {"index"};
+  char *topic_tags[] = {"index-entry"};
+  char *topic_keywords[] = {"topic name"};
+  HelpArticle articles[] = {
+      {
+          .keywords = {.items = index_keywords, .count = 1},
+          .show_index_for_article_tags = {.items = index_tags, .count = 1},
+      },
+      {
+          .description = "A linked help topic.",
+          .keywords = {.items = topic_keywords, .count = 1},
+          .article_tags = {.items = topic_tags, .count = 1},
+      },
+  };
+  HelpTextBuffer buffer;
+  int ok;
+
+  test_articles = articles;
+  test_article_count = sizeof(articles) / sizeof(articles[0]);
+  help_text_buffer_init(&buffer);
+  help_article_render_body(nullptr, &articles[0], false, &buffer);
+  ok = buffer.data != nullptr &&
+       !strcmp(buffer.data,
+               "TOPIC                DESCRIPTION\n"
+               "[send=\"help topic name\"]topic name[/]           "
+               "A linked help topic.\n");
+  help_text_buffer_free(&buffer);
+  articles[0].index_style = HELP_INDEX_STYLE_COLUMNAR;
+  help_text_buffer_init(&buffer);
+  help_article_render_body(nullptr, &articles[0], false, &buffer);
+  ok = ok && buffer.data != nullptr &&
+       !strcmp(buffer.data,
+               "[send=\"help topic name\"]topic name[/]          \n");
+  help_text_buffer_free(&buffer);
+  test_articles = nullptr;
+  test_article_count = 0;
   return ok;
 }
 
@@ -76,5 +118,7 @@ int main(void) {
                                "```\n",
                                "@name drone=[[fg=bright-cyan]Aegis[[/]\n"))
     return 6;
+  if (!help_render_test_index_links())
+    return 8;
   return 0;
 }
