@@ -26,8 +26,7 @@ functions. Lua logic can invoke an appropriate native command with
 
 | Flag | Letter | Stored field and column | Native purpose |
 | --- | --- | --- | --- |
-| `ANSI` | `X` | `has_ansi_flag` | Enables ANSI color and formatting for a player. |
-| `ANSIMAP` | `P` | `has_ansimap_flag` | Enables color in BattleTech map displays. |
+| `ANSI` | `X` | `has_ansi_flag` | Enables ANSI color and formatting, including BattleTech map displays, for a player. |
 | `AUDIBLE` | `a` | `has_audible_flag` | Allows sound to propagate through the object or an audible exit. |
 | `AUDITORIUM` | `b` | `has_auditorium_flag` | Requires speakers in the location to pass its speech lock. |
 | `BLIND` | `(` | `has_blind_flag` | Stored marker with no native consumer; available for game policy. |
@@ -80,7 +79,7 @@ it does not describe queue state.
 
 ## BattleTech flags
 
-`ANSIMAP` is a player display preference. `IN_CHARACTER`, `XCODE`, and
+`ANSI` controls color in BattleTech map displays. `IN_CHARACTER`, `XCODE`, and
 `ZOMBIE` are consulted throughout the BattleTech subsystem. `IN_CHARACTER`
 gates combat, damage, movement, economy, and related behavior. `XCODE`
 identifies a native special object. `ZOMBIE` marks selected special objects as
@@ -106,5 +105,5 @@ handlers add these restrictions:
 
 Flags not listed in this table have no additional flag-specific restriction.
 Native control is still role-only: God controls everyone and everything, while
-Wizards control non-Wizards but cannot control God, another Wizard, or
-themselves.
+Wizards control themselves and non-Wizards but cannot control God or another
+Wizard.

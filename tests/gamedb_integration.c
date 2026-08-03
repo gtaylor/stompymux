@@ -356,7 +356,7 @@ static int check_snapshot(const char *path) {
           "'object_state');",
           5) == 0 &&
       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                24) == 0 &&
+                25) == 0 &&
       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                 1) == 0 &&
       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
@@ -411,7 +411,7 @@ static int check_snapshot(const char *path) {
       query_int(
           sqlite,
           "SELECT count(*) FROM pragma_table_info('objects') WHERE "
-          "name IN ('type', 'lua_parent', 'has_ansi_flag', 'has_ansimap_flag', "
+          "name IN ('type', 'lua_parent', 'has_ansi_flag', "
           "'has_audible_flag', 'has_auditorium_flag', 'has_blind_flag', "
           "'has_connected_flag', 'has_dark_flag', 'has_floating_flag', "
           "'has_gagged_flag', 'has_going_flag', 'has_halted_flag', "
@@ -419,7 +419,7 @@ static int check_snapshot(const char *path) {
           "'has_no_command_flag', 'has_quiet_flag', "
           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
           "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-          24) == 0 &&
+          23) == 0 &&
       query_int(
           sqlite,
           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",

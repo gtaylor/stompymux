@@ -22,7 +22,7 @@
 #include "mux/support/validation.h"
 
 // Increment whenever the schema written by this module changes.
-constexpr int GAMEDB_SCHEMA_VERSION = 24;
+constexpr int GAMEDB_SCHEMA_VERSION = 25;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 constexpr int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -61,8 +61,6 @@ static const char schema_objects_sql[] =
     " description TEXT, inside_description TEXT,"
     " destroyer INTEGER,"
     " has_ansi_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansi_flag IN (0, 1)),"
-    " has_ansimap_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansimap_flag IN "
-    "(0, 1)),"
     " has_audible_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_audible_flag IN "
     "(0, 1)),"
     " has_auditorium_flag INTEGER NOT NULL DEFAULT 0 CHECK "
@@ -396,7 +394,7 @@ static int gamedb_column_text(sqlite3_stmt *statement, int column,
 
 /* Validate singleton snapshot metadata and restore global allocation state. */
 static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
-                                int *db_top, int *loaded_schema_version) {
+                                int *db_top) {
   sqlite3_stmt *statement;
   int min_size;
   int record_players;
@@ -418,7 +416,6 @@ static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
       record_players >= 0) {
     context->database->minimum_size = min_size;
     *context->record_players = record_players;
-    *loaded_schema_version = schema_version;
     result = 0;
   }
   sqlite3_finalize(statement);
@@ -427,7 +424,7 @@ static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
 
 /* Restore object headers. */
 static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
-                               int db_top, int schema_version) {
+                               int db_top) {
   sqlite3_stmt *statement;
   const char *lua_parent;
   const char *name;
@@ -448,16 +445,17 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   result = -1;
   const char *query =
       "SELECT dbref, name, location, zone, contents, exits, link, next, "
-      "type, lua_parent, has_ansi_flag, has_ansimap_flag, has_audible_flag, "
-      "has_auditorium_flag, has_blind_flag, has_connected_flag, has_dark_flag, "
-      "has_floating_flag, has_gagged_flag, has_going_flag, has_halted_flag, "
+      "type, lua_parent, has_ansi_flag, has_audible_flag, "
+      "has_auditorium_flag, has_blind_flag, has_connected_flag, "
+      "has_dark_flag, "
+      "has_floating_flag, has_gagged_flag, has_going_flag, "
+      "has_halted_flag, "
       "has_in_character_flag, has_light_flag, has_monitor_flag, "
       "has_no_command_flag, has_quiet_flag, has_safe_flag, "
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
       "has_xcode_flag, has_zombie_flag, has_idle_power "
       "FROM objects "
       "ORDER BY dbref;";
-  (void)schema_version;
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
     sqlite3_finalize(statement);
     return -1;
@@ -491,7 +489,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
           result = -1;
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++)
-        if (gamedb_column_bool(statement, 31 + (int)power, &powers[power]) < 0)
+        if (gamedb_column_bool(statement, 30 + (int)power, &powers[power]) < 0)
           result = -1;
       if (result != 0)
         continue;
@@ -636,7 +634,6 @@ static int gamedb_load_object_state(PersistenceContext *context,
 int gamedb_load(PersistenceContext *context, const char *path) {
   sqlite3 *sqlite;
   int db_top;
-  int schema_version;
   int result;
 
   sqlite = nullptr;
@@ -644,14 +641,13 @@ int gamedb_load(PersistenceContext *context, const char *path) {
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, nullptr) !=
       SQLITE_OK) {
     gamedb_log_failure(context->log, "opening game database", path, sqlite);
-  } else if (gamedb_load_metadata(context, sqlite, &db_top, &schema_version) <
-             0) {
+  } else if (gamedb_load_metadata(context, sqlite, &db_top) < 0) {
     gamedb_log_failure(context->log, "validating snapshot metadata", path,
                        sqlite);
   } else {
     db_free(context->database);
     db_grow(context->database, db_top);
-    if (gamedb_load_objects(context, sqlite, db_top, schema_version) < 0 ||
+    if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
         gamedb_load_native_state(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {
       gamedb_log_failure(context->log, "loading snapshot data", path, sqlite);
@@ -760,7 +756,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "INSERT INTO objects "
           "(dbref, name, location, zone, contents, exits, link, next, type, "
           "lua_parent, "
-          "has_ansi_flag, has_ansimap_flag, has_audible_flag, "
+          "has_ansi_flag, has_audible_flag, "
           "has_auditorium_flag, has_blind_flag, has_connected_flag, "
           "has_dark_flag, has_floating_flag, has_gagged_flag, has_going_flag, "
           "has_halted_flag, has_in_character_flag, has_light_flag, "
@@ -770,7 +766,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_zombie_flag, "
           "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &object_state,
                      "INSERT INTO object_state "
                      "(object_dbref, namespace, key, value_type, value) "
@@ -823,7 +819,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
       if (gamedb_bind_int(
-              objects, 32 + (int)power,
+              objects, 31 + (int)power,
               game_object_has_power(context->database, object, power)) < 0)
         return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state,
                                       0);

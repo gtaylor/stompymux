@@ -21,7 +21,7 @@ int main(void) {
       !is_controls(&database, GOD, 3) || !is_controls(&database, GOD, 4))
     return 1;
 
-  if (is_controls(&database, 2, GOD) || is_controls(&database, 2, 2) ||
+  if (is_controls(&database, 2, GOD) || !is_controls(&database, 2, 2) ||
       !is_controls(&database, 2, 3) || !is_controls(&database, 2, 4))
     return 1;
 

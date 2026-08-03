@@ -75,10 +75,10 @@ Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading
 APIs. The configured memory cap applies to the complete Lua state. Persistent
 object state has separate per-value and per-object limits.
 
-Native control is role-only: God controls everything; Wizards control every
-non-Wizard object and player but cannot control themselves, God, or another
-Wizard; mortals control nothing, including themselves. Zones do not affect
-control. Lua is trusted and uses the `mux` API, including commands queued as
+Native control is role-only: God controls everything; Wizards control themselves
+and every non-Wizard object and player but cannot control God or another Wizard;
+mortals control nothing, including themselves. Zones do not affect control. Lua
+is trusted and uses the `mux` API, including commands queued as
 `#1`, to manipulate any object.
 
 ## Validating and reloading

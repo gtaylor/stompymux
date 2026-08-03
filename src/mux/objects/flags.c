@@ -17,8 +17,6 @@ bool game_object_has_flag(GameDatabase *database, DbRef object,
   switch (flag) {
   case OBJECT_FLAG_ANSI:
     return game_object->has_ansi_flag;
-  case OBJECT_FLAG_ANSIMAP:
-    return game_object->has_ansimap_flag;
   case OBJECT_FLAG_AUDIBLE:
     return game_object->has_audible_flag;
   case OBJECT_FLAG_AUDITORIUM:
@@ -73,9 +71,6 @@ void game_object_set_flag(GameDatabase *database, DbRef object, ObjectFlag flag,
   switch (flag) {
   case OBJECT_FLAG_ANSI:
     game_object->has_ansi_flag = value;
-    break;
-  case OBJECT_FLAG_ANSIMAP:
-    game_object->has_ansimap_flag = value;
     break;
   case OBJECT_FLAG_AUDIBLE:
     game_object->has_audible_flag = value;
@@ -282,7 +277,6 @@ static bool flag_xcode(EvaluationContext *evaluation, DbRef target,
 
 FlagEntry gen_flags[] = {
     {"ANSI", OBJECT_FLAG_ANSI, 'X', flag_wizard},
-    {"ANSIMAP", OBJECT_FLAG_ANSIMAP, 'P', flag_wizard},
     {"AUDIBLE", OBJECT_FLAG_AUDIBLE, 'a', flag_wizard},
     {"AUDITORIUM", OBJECT_FLAG_AUDITORIUM, 'b', flag_wizard},
     {"BLIND", OBJECT_FLAG_BLIND, '(', flag_wizard},

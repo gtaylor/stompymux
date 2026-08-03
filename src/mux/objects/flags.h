@@ -8,7 +8,6 @@
 typedef enum ObjectFlag {
   OBJECT_FLAG_NONE,
   OBJECT_FLAG_ANSI,
-  OBJECT_FLAG_ANSIMAP,
   OBJECT_FLAG_AUDIBLE,
   OBJECT_FLAG_AUDITORIUM,
   OBJECT_FLAG_BLIND,
@@ -133,7 +132,6 @@ bool is_good_obj(GameDatabase *database, DbRef x);
     return game_object_has_flag(database, x, id);                              \
   }
 OBJECT_FLAG_PREDICATE(ansi, OBJECT_FLAG_ANSI)
-OBJECT_FLAG_PREDICATE(ansimap, OBJECT_FLAG_ANSIMAP)
 OBJECT_FLAG_PREDICATE(no_command, OBJECT_FLAG_NO_COMMAND)
 OBJECT_FLAG_PREDICATE(transparent, OBJECT_FLAG_TRANSPARENT)
 OBJECT_FLAG_PREDICATE(quiet, OBJECT_FLAG_QUIET)
@@ -182,6 +180,8 @@ static inline bool is_controls(GameDatabase *database, DbRef player,
     return false;
   if (is_god(database, player))
     return true;
+  if (player == target)
+    return is_wizard(database, player);
   return is_wizard(database, player) && !is_wizard(database, target) &&
          !is_god(database, target);
 }

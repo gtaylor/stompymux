@@ -179,7 +179,7 @@ default_room_lua_parent = "default_room.lua"
 default_exit_lua_parent = "default_exit.lua"
 default_player_lua_parent = "default_player.lua"
 # Flags that are set on players after creation.
-default_player_flags = ["ansi", "ansimap", "in_character"]
+default_player_flags = ["ansi", "in_character"]
 # Flags that are set on exits after creation.
 default_exit_flags = ["no_command"]
 # Flags that are set on rooms after creation.

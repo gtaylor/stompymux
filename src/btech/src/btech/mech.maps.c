@@ -707,7 +707,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
 
-  if (is_ansimap(mech->xcode.context->database, player))
+  if (is_ansi(mech->xcode.context->database, player))
     mode |= LRS_COLORMODE;
 
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
@@ -1426,7 +1426,7 @@ static bool style_tac_map(MapText *text, const MapColorScheme *colors,
 MapText *map_text_create(DbRef player, MECH *mech, MAP *map, int cx, int cy,
                          int wx, int wy, int labels, int dohexlos) {
   MapColorScheme colors;
-  int docolour = is_ansimap(map->xcode.context->database, player);
+  int docolour = is_ansi(map->xcode.context->database, player);
   int dounderlying = labels & 64;
   int dispcols;
   int disprows;

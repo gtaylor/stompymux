@@ -82,7 +82,6 @@ struct GameObject {
   ObjectType type;
 
   bool has_ansi_flag;
-  bool has_ansimap_flag;
   bool has_audible_flag;
   bool has_auditorium_flag;
   bool has_blind_flag;

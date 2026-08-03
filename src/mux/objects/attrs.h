@@ -72,7 +72,7 @@ constexpr int A_LASTSITE = 88; /* Last site logged in from, in cleartext */
 constexpr int A_LASTNAME = 144; /* Last time you changed your name */
 /* 145 is reserved for the Lua parent field, which is stored on the object. */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
-constexpr int A_MAPCOLOR = 147;   /* ANSIMAP color scheme */
+constexpr int A_MAPCOLOR = 147;   /* Map color scheme */
 
 constexpr int A_LASTPAGE = 200; /* Player last paged */
 /* 204 is reserved for the removed Daily attribute. */
