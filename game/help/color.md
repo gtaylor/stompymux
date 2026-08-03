@@ -10,7 +10,8 @@ article_tags = ["show_in_index"]
 Object names, descriptions, and inside descriptions accept color markup. Color
 markup changes presentation only; it does not evaluate softcode or Lua.
 
-Use `[fg=COLOR]` for foreground color and `[bg=COLOR]` for background color.
+Use `[color=COLOR]` for foreground color and `[bg=COLOR]` for background
+color. The older `fg` name remains an alias.
 Separate multiple changes with spaces to apply them as one style. Close the
 most recent style with `[/]`.
 

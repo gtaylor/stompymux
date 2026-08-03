@@ -20,7 +20,8 @@ when a user activates a rendered link.
 
 ## Syntax
 
-`[fg=COLOR]` changes the foreground and `[bg=COLOR]` changes the background.
+`[color=COLOR]` changes the foreground; the existing `fg` name remains an
+alias. `[bg=COLOR]` changes the background.
 `[bold]`, `[blink]`, `[underline]`, and `[inverse]` enable formatting. Multiple
 directives can share one tag when separated by whitespace, for example
 `[fg=blue bg=white bold]`. A grouped tag creates one style scope, so one `[/]`
@@ -33,12 +34,25 @@ OSC 8 hyperlinks use the same scoped representation:
 [link="https://example.com"]Website[/]
 [send="look"]Look[/]
 [prompt="cast fireball"]Prepare a spell[/]
+[send="attack" color=red bold hover.color=yellow]Attack[/]
 ```
 
 `[link]` accepts `http:`, `https:`, and `ftp:` URIs. Command targets are raw
 UTF-8 text and are percent-encoded when rendered. Targets are double quoted;
 escape a quote as `\"` and a backslash as `\\`. Formatting may be nested
 inside a link, but links may not be nested.
+
+Link-local visual properties share the opening link tag. The base properties
+are `color`/`fg`, `bg`, `bold`, `italic`, `underline`, `overline`,
+`strikethrough`, and `text-decoration-color`. Boolean values may be bare or
+written as `=true`/`=false`; decorations also accept `wavy`, `dotted`, and
+`dashed`. Repeated properties use the last value.
+
+State-specific properties use dotted full names, such as
+`hover.color=yellow`, `active.bg=bright-red`, or `visited.bold=false`. The
+available states are `active`, `hover`, `focus-visible`, `focus`, `visited`,
+`selected`, `disabled`, `link`, and `any-link`. Only properties on the link's
+opening tag become OSC JSON. Separately nested style tags remain ANSI scopes.
 
 The named palette contains the eight ANSI names `black`, `red`, `green`,
 `yellow`, `blue`, `magenta`, `cyan`, and `white`, plus their `bright-`
@@ -80,6 +94,14 @@ screen-reader selection. The server checks the `OSC_HYPERLINKS`,
 `OSC_HYPERLINKS_SEND`, and `OSC_HYPERLINKS_PROMPT` NEW-ENVIRON USERVARs for an
 exact `1` value. Unsupported link tags render as their visible contents without
 OSC escape sequences.
+
+Tier 2 uses the exact-`1` USERVARs `OSC_HYPERLINKS_STYLE_BASIC` and
+`OSC_HYPERLINKS_STYLE_STATES`. The renderer sends percent-encoded JSON with
+full Mudlet property names for advertised features. Base styles otherwise use
+ANSI fallback where possible, decoration variants reduce to their plain form,
+and interactive states are omitted. OSC styling is capability-driven and
+remains independent of the player's ANSI preference; ANSI fallback continues
+to respect that preference and the negotiated color depth.
 
 The `color` command displays or overrides the current connection's selection.
 Use `color auto` for negotiation, `color off` for plain text, or `color 16`,

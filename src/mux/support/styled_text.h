@@ -19,6 +19,8 @@ typedef struct StyledTextRenderOptions {
   bool osc_hyperlinks;
   bool osc_hyperlinks_send;
   bool osc_hyperlinks_prompt;
+  bool osc_hyperlinks_style_basic;
+  bool osc_hyperlinks_style_states;
 } StyledTextRenderOptions;
 
 StyledTextPalette *styled_text_palette_create(void);

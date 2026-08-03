@@ -45,6 +45,12 @@ Each feature is enabled independently only when its variable is present with
 the exact one-byte value `1`. An `INFO` update therefore affects subsequent
 output immediately.
 
+Tier 2 visual styling checks `OSC_HYPERLINKS_STYLE_BASIC` for base colors,
+font styles, and decorations, and `OSC_HYPERLINKS_STYLE_STATES` for interactive
+state overrides. Each is enabled independently only for an exact `1`. The
+renderer uses full JSON property names and appends the percent-encoded object
+as the link URI's reserved `config` parameter.
+
 OSC capability checks are independent of the player ANSI flag, negotiated
 color depth, and MTTS screen-reader state. Connections without a corresponding
 capability receive the link's visible text as a plain fallback.

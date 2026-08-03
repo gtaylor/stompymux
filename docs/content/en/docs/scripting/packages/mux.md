@@ -122,6 +122,9 @@ there are no separate hyperlink functions.
 ```lua
 local look = mux.markup('[send="look"]Look[/]')
 local website = mux.markup('[link="https://example.com"]Website[/]')
+local attack = mux.markup(
+  '[send="attack" color=red bold hover.color=yellow]Attack[/]'
+)
 ```
 
 `[send]` and `[prompt]` accept raw commands and percent-encode them when

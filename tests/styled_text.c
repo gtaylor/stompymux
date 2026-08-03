@@ -35,6 +35,18 @@ static int expect_invalid(const char *markup) {
   return error[0] != '\0';
 }
 
+static int expect_valid(const char *markup) {
+  char output[8192];
+  char error[256];
+
+  if (!styled_text_compile(palette, markup, output, sizeof(output), error,
+                           sizeof(error))) {
+    fprintf(stderr, "compile failed for %s: %s\n", markup, error);
+    return 0;
+  }
+  return 1;
+}
+
 static int expect_render(const char *styled, TerminalColorDepth depth,
                          const char *expected) {
   char output[2048];
@@ -76,6 +88,9 @@ int main(void) {
   const char send_markup[] = "[send=\"cast fireball\"]Cast[/]";
   const char send_osc[] =
       "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\";
+  const char styled_send_markup[] =
+      "[send=\"attack\" color=red bg=black bold hover.color=yellow "
+      "active.bg=bright-red]Attack[/]";
   const StyledTextRenderOptions links = {
       .color_depth = TERMINAL_COLOR_NONE,
       .osc_hyperlinks = true,
@@ -86,7 +101,30 @@ int main(void) {
       .color_depth = TERMINAL_COLOR_NONE,
       .osc_hyperlinks_send = true,
   };
+  const StyledTextRenderOptions tier_one_ansi = {
+      .color_depth = TERMINAL_COLOR_ANSI_16,
+      .osc_hyperlinks_send = true,
+  };
+  const StyledTextRenderOptions tier_two_basic = {
+      .color_depth = TERMINAL_COLOR_ANSI_16,
+      .osc_hyperlinks_send = true,
+      .osc_hyperlinks_style_basic = true,
+  };
+  const StyledTextRenderOptions tier_two_states = {
+      .color_depth = TERMINAL_COLOR_ANSI_16,
+      .osc_hyperlinks_send = true,
+      .osc_hyperlinks_style_states = true,
+  };
+  const StyledTextRenderOptions tier_two_full = {
+      .color_depth = TERMINAL_COLOR_ANSI_16,
+      .osc_hyperlinks_send = true,
+      .osc_hyperlinks_style_basic = true,
+      .osc_hyperlinks_style_states = true,
+  };
   const StyledTextRenderOptions no_links = {0};
+  const StyledTextRenderOptions no_link_ansi = {
+      .color_depth = TERMINAL_COLOR_ANSI_16,
+  };
   TerminalColorDepth depth;
   bool screen_reader;
   char error[256];
@@ -109,7 +147,18 @@ int main(void) {
       !expect_compile("[fg=red]caf\xc3\xa9[/]",
                       "\033[0m\033[31mcaf\xc3\xa9\033[0m") ||
       !expect_compile("[fg=blue bg=white bold]Blue[/]", grouped) ||
+      !expect_compile("[color=red italic overline strikethrough]R[/]",
+                      "\033[0m\033[3m\033[53m\033[9m\033[31mR\033[0m") ||
+      !expect_compile("[bold][bold=false]x[/]y[/]",
+                      "\033[0m\033[1m\033[0mx\033[0m\033[1my\033[0m") ||
       !expect_compile("[fg=red bold blink]Alert[/]", blinking) ||
+      !expect_valid(
+          "[send=\"x\" color=red bg=black bold=false italic "
+          "underline=wavy overline=dotted strikethrough=dashed "
+          "text-decoration-color=green active.color=red hover.bg=blue "
+          "focus-visible.bold focus.italic visited.underline=false "
+          "selected.overline=true disabled.strikethrough=true "
+          "link.fg=yellow any-link.bg=black]x[/]") ||
       !expect_compile("[[literal]", "[literal]") ||
       !expect_compile(send_markup, send_osc) ||
       !expect_compile("[prompt=\"say \\\"hi\\\" \\\\ ok\"]Edit[/]",
@@ -121,6 +170,11 @@ int main(void) {
       !expect_invalid("[fg=unknown]x[/]") ||
       !expect_invalid("[fg=#abcd]x[/]") || !expect_invalid("[bold]x") ||
       !expect_invalid("[fg=red unknown]x[/]") ||
+      !expect_invalid("[send=\"x\" hover.unknown=red]x[/]") ||
+      !expect_invalid("[send=\"x\" unknown.color=red]x[/]") ||
+      !expect_invalid("[send=\"x\" hover.bold=maybe]x[/]") ||
+      !expect_invalid("[send=\"x\" underline=double]x[/]") ||
+      !expect_invalid("[send=\"x\" color]x[/]") ||
       !expect_invalid("[fg=red /]x[/]") || !expect_invalid("[/]") ||
       !expect_invalid("[send=look]x[/]") ||
       !expect_invalid("[send=\"look\"][prompt=\"say\"]x[/][/]") ||
@@ -144,6 +198,8 @@ int main(void) {
   if (!result &&
       (!expect_render(truecolor, TERMINAL_COLOR_NONE, "R") ||
        !expect_render_options(send_markup, &no_links, "Cast") ||
+       !expect_render_options("[send=\"x\" color=red bold]X[/]", &no_link_ansi,
+                              "\033[0m\033[1m\033[31mX\033[0m\033[0m") ||
        !expect_render_options(send_markup, &send_only, send_osc) ||
        !expect_render_options("[link=\"https://example.com\"]Web[/]",
                               &send_only, "Web") ||
@@ -151,6 +207,38 @@ int main(void) {
                               "\033]8;;https://example.com\033\\Web"
                               "\033]8;;\033\\") ||
        !expect_render_options("[prompt=\"look\"]Edit[/]", &send_only, "Edit") ||
+       !expect_render_options(
+           styled_send_markup, &tier_two_full,
+           "\033]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22"
+           "%23cd0000%22%2C%22bg%22%3A%22%23000000%22%2C%22bold%22%3Atrue%2C"
+           "%22active%22%3A%7B%22bg%22%3A%22%23ff0000%22%7D%2C%22hover%22%3A"
+           "%7B%22color%22%3A%22%23cdcd00%22%7D%7D%7D\033\\Attack"
+           "\033]8;;\033\\") ||
+       !expect_render_options(
+           "[send=\"attack\" color=red]Attack[/]", &tier_two_basic,
+           "\033]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22"
+           "%23cd0000%22%7D%7D\033\\Attack\033]8;;\033\\") ||
+       !expect_render_options(
+           "[send=\"attack\" color=red]Attack[/]", &tier_one_ansi,
+           "\033]8;;send:attack\033\\\033[0m\033[31mAttack\033]8;;\033\\"
+           "\033[0m\033[0m") ||
+       !expect_render_options(
+           "[send=\"attack\" color=red hover.color=yellow]Attack[/]",
+           &tier_two_states,
+           "\033]8;;send:attack?config=%7B%22style%22%3A%7B%22hover%22%3A%7B"
+           "%22color%22%3A%22%23cdcd00%22%7D%7D%7D\033\\\033[0m\033[31m"
+           "Attack\033]8;;\033\\\033[0m\033[0m") ||
+       !expect_render_options(
+           "[link=\"https://example.com/?config=old&a=1#part\" color=red]x[/]",
+           &(const StyledTextRenderOptions){.osc_hyperlinks = true,
+                                            .osc_hyperlinks_style_basic = true},
+           "\033]8;;https://example.com/?%63%6F%6E%66%69%67=old&a=1&config="
+           "%7B%22style%22%3A%7B%22color%22%3A%22%23cd0000%22%7D%7D#part"
+           "\033\\x\033]8;;\033\\") ||
+       !expect_render_options(
+           "[send=\"x\" fg=red color=blue]x[/]", &tier_two_basic,
+           "\033]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22"
+           "%230000ee%22%7D%7D\033\\x\033]8;;\033\\") ||
        !expect_render("\033]8;;https://example.com\033\\Raw\033]8;;\033\\",
                       TERMINAL_COLOR_NONE, "Raw") ||
        !expect_render("caf\xc3\xa9 \xf0\x9f\x98\x80", TERMINAL_COLOR_NONE,
@@ -218,6 +306,10 @@ int main(void) {
                        "\033[0m\033[38;2;32;96;192mB\033[0m") ||
        !expect_render("[bg=brand-blue]B[/]", TERMINAL_COLOR_TRUECOLOR,
                       "\033[0m\033[48;2;32;96;192mB\033[0m\033[0m") ||
+       !expect_render_options(
+           "[send=\"x\" color=brand-blue]B[/]", &tier_two_basic,
+           "\033]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22"
+           "%232060c0%22%7D%7D\033\\B\033]8;;\033\\") ||
        styled_text_width(palette, "[fg=brand-blue]Blue[/]") != 4))
     result = 1;
 

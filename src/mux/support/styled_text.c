@@ -27,12 +27,56 @@ typedef struct StyledState {
   StyledColor foreground;
   StyledColor background;
   bool bold;
+  bool italic;
   bool blink;
   bool underline;
+  bool overline;
+  bool strikethrough;
   bool inverse;
   bool has_link;
   bool link_emitted;
 } StyledState;
+
+typedef enum StyledDecoration {
+  STYLED_DECORATION_UNSET,
+  STYLED_DECORATION_FALSE,
+  STYLED_DECORATION_TRUE,
+  STYLED_DECORATION_WAVY,
+  STYLED_DECORATION_DOTTED,
+  STYLED_DECORATION_DASHED,
+} StyledDecoration;
+
+typedef enum StyledBoolean {
+  STYLED_BOOLEAN_UNSET,
+  STYLED_BOOLEAN_FALSE,
+  STYLED_BOOLEAN_TRUE,
+} StyledBoolean;
+
+typedef struct StyledLinkProperties {
+  StyledColor foreground;
+  StyledColor background;
+  StyledColor decoration_color;
+  bool has_foreground;
+  bool has_background;
+  bool has_decoration_color;
+  StyledBoolean bold;
+  StyledBoolean italic;
+  StyledDecoration underline;
+  StyledDecoration overline;
+  StyledDecoration strikethrough;
+} StyledLinkProperties;
+
+enum { STYLED_LINK_STATE_COUNT = 9 };
+
+typedef struct StyledLinkStyle {
+  StyledLinkProperties base;
+  StyledLinkProperties states[STYLED_LINK_STATE_COUNT];
+} StyledLinkStyle;
+
+static const char *const styled_link_state_names[STYLED_LINK_STATE_COUNT] = {
+    "active",   "hover",    "focus-visible", "focus",    "visited",
+    "selected", "disabled", "link",          "any-link",
+};
 
 typedef struct NamedColor {
   const char *name;
@@ -317,9 +361,16 @@ static bool emit_state(const StyledState *state, char *output,
     return false;
   if (state->bold && !append_string(output, output_size, used, "\033[1m"))
     return false;
+  if (state->italic && !append_string(output, output_size, used, "\033[3m"))
+    return false;
   if (state->blink && !append_string(output, output_size, used, "\033[5m"))
     return false;
   if (state->underline && !append_string(output, output_size, used, "\033[4m"))
+    return false;
+  if (state->overline && !append_string(output, output_size, used, "\033[53m"))
+    return false;
+  if (state->strikethrough &&
+      !append_string(output, output_size, used, "\033[9m"))
     return false;
   if (state->inverse && !append_string(output, output_size, used, "\033[7m"))
     return false;
@@ -370,8 +421,11 @@ static bool styled_format_equal(const StyledState *left,
          left->background.red == right->background.red &&
          left->background.green == right->background.green &&
          left->background.blue == right->background.blue &&
-         left->bold == right->bold && left->blink == right->blink &&
-         left->underline == right->underline && left->inverse == right->inverse;
+         left->bold == right->bold && left->italic == right->italic &&
+         left->blink == right->blink && left->underline == right->underline &&
+         left->overline == right->overline &&
+         left->strikethrough == right->strikethrough &&
+         left->inverse == right->inverse;
 }
 
 static const char *find_tag_close(const char *start) {
@@ -408,7 +462,8 @@ static bool uri_reserved(unsigned char byte) {
 }
 
 static bool link_target_unquote(const char *start, const char *end,
-                                char *target, size_t target_size, char *error,
+                                char *target, size_t target_size,
+                                const char **remainder, char *error,
                                 size_t error_size) {
   size_t used = 0;
 
@@ -444,10 +499,7 @@ static bool link_target_unquote(const char *start, const char *end,
   start++;
   while (start < end && isspace((unsigned char)*start))
     start++;
-  if (start != end) {
-    set_error(error, error_size, "unexpected text after link target");
-    return false;
-  }
+  *remainder = start;
   target[used] = '\0';
   if (used == 0) {
     set_error(error, error_size, "link target must not be empty");
@@ -561,31 +613,414 @@ static bool emit_link_close(char *output, size_t output_size, size_t *used) {
   return append_string(output, output_size, used, "\033]8;;\033\\");
 }
 
+static bool parse_styled_boolean(const char *value, StyledBoolean *result) {
+  if (value == nullptr || !strcasecmp(value, "true")) {
+    *result = STYLED_BOOLEAN_TRUE;
+    return true;
+  }
+  if (!strcasecmp(value, "false")) {
+    *result = STYLED_BOOLEAN_FALSE;
+    return true;
+  }
+  return false;
+}
+
+static bool parse_styled_decoration(const char *value,
+                                    StyledDecoration *result) {
+  if (value == nullptr || !strcasecmp(value, "true")) {
+    *result = STYLED_DECORATION_TRUE;
+    return true;
+  }
+  if (!strcasecmp(value, "false"))
+    *result = STYLED_DECORATION_FALSE;
+  else if (!strcasecmp(value, "wavy"))
+    *result = STYLED_DECORATION_WAVY;
+  else if (!strcasecmp(value, "dotted"))
+    *result = STYLED_DECORATION_DOTTED;
+  else if (!strcasecmp(value, "dashed"))
+    *result = STYLED_DECORATION_DASHED;
+  else
+    return false;
+  return true;
+}
+
+static bool apply_link_property(const StyledTextPalette *palette,
+                                const char *directive, StyledLinkStyle *style,
+                                char *error, size_t error_size) {
+  char property[64];
+  const char *value = strchr(directive, '=');
+  size_t property_length =
+      value ? (size_t)(value - directive) : strlen(directive);
+  StyledLinkProperties *properties = &style->base;
+  const char *dot;
+  StyledColor color;
+
+  if (property_length == 0 || property_length >= sizeof(property)) {
+    set_error(error, error_size, "invalid link style property");
+    return false;
+  }
+  memcpy(property, directive, property_length);
+  property[property_length] = '\0';
+  if (value)
+    value++;
+
+  dot = strchr(property, '.');
+  if (dot) {
+    size_t state_length = (size_t)(dot - property);
+    properties = nullptr;
+    for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
+      if (strlen(styled_link_state_names[index]) == state_length &&
+          !strncasecmp(property, styled_link_state_names[index],
+                       state_length)) {
+        properties = &style->states[index];
+        break;
+      }
+    }
+    if (properties == nullptr || dot[1] == '\0' || strchr(dot + 1, '.')) {
+      set_error(error, error_size, "unknown OSC 8 style state");
+      return false;
+    }
+    memmove(property, dot + 1, strlen(dot + 1) + 1);
+  }
+
+  if (!strcasecmp(property, "color") || !strcasecmp(property, "fg")) {
+    if (!value || !*value || !parse_color(palette, value, &color)) {
+      set_error(error, error_size, "unknown foreground color");
+      return false;
+    }
+    properties->foreground = color;
+    properties->has_foreground = true;
+  } else if (!strcasecmp(property, "bg")) {
+    if (!value || !*value || !parse_color(palette, value, &color)) {
+      set_error(error, error_size, "unknown background color");
+      return false;
+    }
+    properties->background = color;
+    properties->has_background = true;
+  } else if (!strcasecmp(property, "text-decoration-color")) {
+    if (!value || !*value || !parse_color(palette, value, &color)) {
+      set_error(error, error_size, "unknown text decoration color");
+      return false;
+    }
+    properties->decoration_color = color;
+    properties->has_decoration_color = true;
+  } else if (!strcasecmp(property, "bold")) {
+    if (!parse_styled_boolean(value, &properties->bold))
+      goto invalid_value;
+  } else if (!strcasecmp(property, "italic")) {
+    if (!parse_styled_boolean(value, &properties->italic))
+      goto invalid_value;
+  } else if (!strcasecmp(property, "underline")) {
+    if (!parse_styled_decoration(value, &properties->underline))
+      goto invalid_value;
+  } else if (!strcasecmp(property, "overline")) {
+    if (!parse_styled_decoration(value, &properties->overline))
+      goto invalid_value;
+  } else if (!strcasecmp(property, "strikethrough")) {
+    if (!parse_styled_decoration(value, &properties->strikethrough))
+      goto invalid_value;
+  } else {
+    set_error(error, error_size, "unknown OSC 8 style property");
+    return false;
+  }
+  return true;
+
+invalid_value:
+  set_error(error, error_size, "invalid OSC 8 style property value");
+  return false;
+}
+
+static void apply_link_fallback(const StyledLinkProperties *properties,
+                                StyledState *state) {
+  if (properties->has_foreground)
+    state->foreground = properties->foreground;
+  if (properties->has_background)
+    state->background = properties->background;
+  if (properties->bold != STYLED_BOOLEAN_UNSET)
+    state->bold = properties->bold == STYLED_BOOLEAN_TRUE;
+  if (properties->italic != STYLED_BOOLEAN_UNSET)
+    state->italic = properties->italic == STYLED_BOOLEAN_TRUE;
+  if (properties->underline != STYLED_DECORATION_UNSET)
+    state->underline = properties->underline != STYLED_DECORATION_FALSE;
+  if (properties->overline != STYLED_DECORATION_UNSET)
+    state->overline = properties->overline != STYLED_DECORATION_FALSE;
+  if (properties->strikethrough != STYLED_DECORATION_UNSET)
+    state->strikethrough = properties->strikethrough != STYLED_DECORATION_FALSE;
+}
+
+static bool link_properties_present(const StyledLinkProperties *properties) {
+  return properties->has_foreground || properties->has_background ||
+         properties->has_decoration_color ||
+         properties->bold != STYLED_BOOLEAN_UNSET ||
+         properties->italic != STYLED_BOOLEAN_UNSET ||
+         properties->underline != STYLED_DECORATION_UNSET ||
+         properties->overline != STYLED_DECORATION_UNSET ||
+         properties->strikethrough != STYLED_DECORATION_UNSET;
+}
+
+static bool append_json_separator(char *json, size_t json_size, size_t *used,
+                                  bool *first) {
+  if (*first) {
+    *first = false;
+    return true;
+  }
+  return append_string(json, json_size, used, ",");
+}
+
+static bool append_json_color(char *json, size_t json_size, size_t *used,
+                              bool *first, const char *name,
+                              const StyledColor *color) {
+  char property[96];
+  int length = snprintf(property, sizeof(property), "\"%s\":\"#%02x%02x%02x\"",
+                        name, color->red, color->green, color->blue);
+  return length > 0 && append_json_separator(json, json_size, used, first) &&
+         append_bytes(json, json_size, used, property, (size_t)length);
+}
+
+static bool append_json_boolean(char *json, size_t json_size, size_t *used,
+                                bool *first, const char *name,
+                                StyledBoolean value) {
+  char property[64];
+  int length = snprintf(property, sizeof(property), "\"%s\":%s", name,
+                        value == STYLED_BOOLEAN_TRUE ? "true" : "false");
+  return length > 0 && append_json_separator(json, json_size, used, first) &&
+         append_bytes(json, json_size, used, property, (size_t)length);
+}
+
+static const char *decoration_json_value(StyledDecoration decoration) {
+  switch (decoration) {
+  case STYLED_DECORATION_FALSE:
+    return "false";
+  case STYLED_DECORATION_TRUE:
+    return "true";
+  case STYLED_DECORATION_WAVY:
+    return "\"wavy\"";
+  case STYLED_DECORATION_DOTTED:
+    return "\"dotted\"";
+  case STYLED_DECORATION_DASHED:
+    return "\"dashed\"";
+  case STYLED_DECORATION_UNSET:
+    break;
+  }
+  return nullptr;
+}
+
+static bool append_json_decoration(char *json, size_t json_size, size_t *used,
+                                   bool *first, const char *name,
+                                   StyledDecoration decoration) {
+  char property[64];
+  const char *value = decoration_json_value(decoration);
+  int length;
+
+  if (!value)
+    return false;
+  length = snprintf(property, sizeof(property), "\"%s\":%s", name, value);
+  return length > 0 && append_json_separator(json, json_size, used, first) &&
+         append_bytes(json, json_size, used, property, (size_t)length);
+}
+
+static bool append_json_properties(char *json, size_t json_size, size_t *used,
+                                   const StyledLinkProperties *properties) {
+  bool first = true;
+
+  if (!append_string(json, json_size, used, "{"))
+    return false;
+  if (properties->has_foreground &&
+      !append_json_color(json, json_size, used, &first, "color",
+                         &properties->foreground))
+    return false;
+  if (properties->has_background &&
+      !append_json_color(json, json_size, used, &first, "bg",
+                         &properties->background))
+    return false;
+  if (properties->bold != STYLED_BOOLEAN_UNSET &&
+      !append_json_boolean(json, json_size, used, &first, "bold",
+                           properties->bold))
+    return false;
+  if (properties->italic != STYLED_BOOLEAN_UNSET &&
+      !append_json_boolean(json, json_size, used, &first, "italic",
+                           properties->italic))
+    return false;
+  if (properties->underline != STYLED_DECORATION_UNSET &&
+      !append_json_decoration(json, json_size, used, &first, "underline",
+                              properties->underline))
+    return false;
+  if (properties->overline != STYLED_DECORATION_UNSET &&
+      !append_json_decoration(json, json_size, used, &first, "overline",
+                              properties->overline))
+    return false;
+  if (properties->strikethrough != STYLED_DECORATION_UNSET &&
+      !append_json_decoration(json, json_size, used, &first, "strikethrough",
+                              properties->strikethrough))
+    return false;
+  if (properties->has_decoration_color &&
+      !append_json_color(json, json_size, used, &first, "text-decoration-color",
+                         &properties->decoration_color))
+    return false;
+  return append_string(json, json_size, used, "}");
+}
+
+static bool build_style_json(const StyledLinkStyle *style, bool include_base,
+                             bool include_states, char *json,
+                             size_t json_size) {
+  size_t used = 0;
+  bool first = true;
+
+  json[0] = '\0';
+  if (!append_string(json, json_size, &used, "{\"style\":{"))
+    return false;
+  if (include_base && link_properties_present(&style->base)) {
+    char properties[512];
+    size_t property_used = 0;
+    properties[0] = '\0';
+    if (!append_json_properties(properties, sizeof(properties), &property_used,
+                                &style->base))
+      return false;
+    if (!append_json_separator(json, json_size, &used, &first) ||
+        !append_bytes(json, json_size, &used, properties + 1,
+                      strlen(properties) - 2))
+      return false;
+  }
+  if (include_states) {
+    for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
+      if (!link_properties_present(&style->states[index]))
+        continue;
+      if (!append_json_separator(json, json_size, &used, &first))
+        return false;
+      char name[48];
+      int length = snprintf(name, sizeof(name),
+                            "\"%s\":", styled_link_state_names[index]);
+      if (length <= 0 ||
+          !append_bytes(json, json_size, &used, name, (size_t)length) ||
+          !append_json_properties(json, json_size, &used,
+                                  &style->states[index]))
+        return false;
+    }
+  }
+  return !first && append_string(json, json_size, &used, "}}");
+}
+
+static bool append_percent_encoded(const char *value, char *output,
+                                   size_t output_size, size_t *used) {
+  for (const unsigned char *cursor = (const unsigned char *)value; *cursor;
+       cursor++) {
+    if (uri_unreserved(*cursor)) {
+      if (!append_bytes(output, output_size, used, (const char *)cursor, 1))
+        return false;
+    } else {
+      char encoded[4];
+      snprintf(encoded, sizeof(encoded), "%%%02X", *cursor);
+      if (!append_bytes(output, output_size, used, encoded, 3))
+        return false;
+    }
+  }
+  return true;
+}
+
+static bool build_styled_uri(const char *uri, const StyledLinkStyle *style,
+                             bool include_base, bool include_states,
+                             char *output, size_t output_size) {
+  constexpr char encoded_config[] = "%63%6F%6E%66%69%67";
+  char json[4096];
+  const char *fragment = strchr(uri, '#');
+  const char *main_end = fragment ? fragment : uri + strlen(uri);
+  bool in_query = false;
+  bool at_parameter_name = false;
+  size_t used = 0;
+
+  output[0] = '\0';
+  if (!build_style_json(style, include_base, include_states, json,
+                        sizeof(json)))
+    return false;
+  for (const char *cursor = uri; cursor < main_end;) {
+    if (at_parameter_name && main_end - cursor >= 6 &&
+        !memcmp(cursor, "config", 6) &&
+        (cursor + 6 == main_end || cursor[6] == '=' || cursor[6] == '&')) {
+      if (!append_string(output, output_size, &used, encoded_config))
+        return false;
+      cursor += 6;
+      at_parameter_name = false;
+      continue;
+    }
+    char byte = *cursor++;
+    if (!append_bytes(output, output_size, &used, &byte, 1))
+      return false;
+    if (byte == '?') {
+      in_query = true;
+      at_parameter_name = true;
+    } else if (in_query && byte == '&') {
+      at_parameter_name = true;
+    } else if (at_parameter_name && byte != '&') {
+      at_parameter_name = false;
+    }
+  }
+  if (!append_string(output, output_size, &used,
+                     in_query ? "&config=" : "?config=") ||
+      !append_percent_encoded(json, output, output_size, &used) ||
+      (fragment && !append_string(output, output_size, &used, fragment)))
+    return false;
+  return used <= OSC8_URI_LIMIT;
+}
+
 static bool apply_style_directive(const StyledTextPalette *palette,
                                   const char *directive, StyledState *state,
                                   char *error, size_t error_size) {
   StyledColor color;
+  const char *value = strchr(directive, '=');
+  size_t name_length = value ? (size_t)(value - directive) : strlen(directive);
+  StyledBoolean boolean;
+  StyledDecoration decoration;
 
-  if (!strcasecmp(directive, "bold")) {
-    state->bold = true;
+  if (value)
+    value++;
+
+  if (name_length == 4 && !strncasecmp(directive, "bold", name_length)) {
+    if (!parse_styled_boolean(value, &boolean))
+      goto invalid_value;
+    state->bold = boolean == STYLED_BOOLEAN_TRUE;
+  } else if (name_length == 6 &&
+             !strncasecmp(directive, "italic", name_length)) {
+    if (!parse_styled_boolean(value, &boolean))
+      goto invalid_value;
+    state->italic = boolean == STYLED_BOOLEAN_TRUE;
   } else if (!strcasecmp(directive, "blink")) {
     state->blink = true;
-  } else if (!strcasecmp(directive, "underline")) {
-    state->underline = true;
+  } else if (name_length == 9 &&
+             !strncasecmp(directive, "underline", name_length)) {
+    if (!parse_styled_decoration(value, &decoration))
+      goto invalid_value;
+    state->underline = decoration != STYLED_DECORATION_FALSE;
+  } else if (name_length == 8 &&
+             !strncasecmp(directive, "overline", name_length)) {
+    if (!parse_styled_decoration(value, &decoration))
+      goto invalid_value;
+    state->overline = decoration != STYLED_DECORATION_FALSE;
+  } else if (name_length == 13 &&
+             !strncasecmp(directive, "strikethrough", name_length)) {
+    if (!parse_styled_decoration(value, &decoration))
+      goto invalid_value;
+    state->strikethrough = decoration != STYLED_DECORATION_FALSE;
   } else if (!strcasecmp(directive, "inverse")) {
     state->inverse = true;
-  } else if (!strncasecmp(directive, "fg=", 3)) {
-    if (!parse_color(palette, directive + 3, &color)) {
+  } else if ((name_length == 2 && !strncasecmp(directive, "fg", 2)) ||
+             (name_length == 5 && !strncasecmp(directive, "color", 5))) {
+    if (!value || !parse_color(palette, value, &color)) {
       set_error(error, error_size, "unknown foreground color");
       return false;
     }
     state->foreground = color;
-  } else if (!strncasecmp(directive, "bg=", 3)) {
-    if (!parse_color(palette, directive + 3, &color)) {
+  } else if (name_length == 2 && !strncasecmp(directive, "bg", 2)) {
+    if (!value || !parse_color(palette, value, &color)) {
       set_error(error, error_size, "unknown background color");
       return false;
     }
     state->background = color;
+  } else if (name_length == 21 &&
+             !strncasecmp(directive, "text-decoration-color", name_length)) {
+    if (!value || !parse_color(palette, value, &color)) {
+      set_error(error, error_size, "unknown text decoration color");
+      return false;
+    }
   } else if (!strcmp(directive, "/") || !strcasecmp(directive, "reset")) {
     set_error(error, error_size,
               "style close and reset tags cannot be combined");
@@ -595,6 +1030,10 @@ static bool apply_style_directive(const StyledTextPalette *palette,
     return false;
   }
   return true;
+
+invalid_value:
+  set_error(error, error_size, "invalid style property value");
+  return false;
 }
 
 static bool parse_link_tag(const char *start, const char *end,
@@ -675,13 +1114,19 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
   if (parse_link_tag(start, end, &link_kind, &target_start)) {
     char target[OSC8_URI_LIMIT + 1];
     char uri[OSC8_URI_LIMIT + 1];
+    char rendered_uri[OSC8_URI_LIMIT + 1];
+    const char *directives;
+    StyledLinkStyle style = {0};
+    bool enabled;
+    bool include_base;
+    bool include_states = false;
 
     if (state->has_link) {
       set_error(error, error_size, "links cannot be nested");
       return false;
     }
-    if (!link_target_unquote(target_start, end, target, sizeof(target), error,
-                             error_size))
+    if (!link_target_unquote(target_start, end, target, sizeof(target),
+                             &directives, error, error_size))
       return false;
     if (link_kind == STYLED_LINK_EXTERNAL) {
       if (!external_uri_valid(target, error, error_size))
@@ -691,11 +1136,77 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
                                    error_size)) {
       return false;
     }
+
+    while (directives < end) {
+      const char *directive_end = directives;
+      char directive[64];
+      size_t directive_length;
+
+      while (directives < end && isspace((unsigned char)*directives))
+        directives++;
+      if (directives == end)
+        break;
+      directive_end = directives;
+      while (directive_end < end && !isspace((unsigned char)*directive_end))
+        directive_end++;
+      directive_length = (size_t)(directive_end - directives);
+      if (directive_length >= sizeof(directive)) {
+        set_error(error, error_size, "link style directive is too long");
+        return false;
+      }
+      memcpy(directive, directives, directive_length);
+      directive[directive_length] = '\0';
+      if (!strcasecmp(directive, "blink") ||
+          !strcasecmp(directive, "inverse")) {
+        if (!apply_style_directive(palette, directive, &updated, error,
+                                   error_size))
+          return false;
+      } else if (!apply_link_property(palette, directive, &style, error,
+                                      error_size)) {
+        return false;
+      }
+      directives = directive_end;
+    }
+
+    enabled = link_enabled(link_kind, options);
+    include_base = enabled && options && options->osc_hyperlinks_style_basic &&
+                   link_properties_present(&style.base);
+    if (enabled && options && options->osc_hyperlinks_style_states) {
+      for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
+        if (link_properties_present(&style.states[index])) {
+          include_states = true;
+          break;
+        }
+      }
+    }
+    if (!include_base)
+      apply_link_fallback(&style.base, &updated);
+    if (include_base || include_states) {
+      if (!build_styled_uri(uri, &style, include_base, include_states,
+                            rendered_uri, sizeof(rendered_uri))) {
+        set_error(error, error_size, "styled link URI is too long");
+        return false;
+      }
+    } else {
+      memcpy(rendered_uri, uri, strlen(uri) + 1);
+    }
+
     stack[(*stack_size)++] = *state;
-    state->has_link = true;
-    state->link_emitted = link_enabled(link_kind, options);
+    updated.has_link = true;
+    updated.link_emitted = enabled;
+    *state = updated;
     if (state->link_emitted &&
-        !emit_link_open(uri, output, output_size, used)) {
+        !emit_link_open(rendered_uri, output, output_size, used)) {
+      (*stack_size)--;
+      *state = stack[*stack_size];
+      set_error(error, error_size, "styled text is too long");
+      return false;
+    }
+    if (!styled_format_equal(state, &stack[*stack_size - 1]) &&
+        !emit_state(state, output, styled_output_size(state, output_size),
+                    used)) {
+      if (state->link_emitted)
+        emit_link_close(output, output_size, used);
       (*stack_size)--;
       *state = stack[*stack_size];
       set_error(error, error_size, "styled text is too long");
@@ -747,6 +1258,8 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
       .osc_hyperlinks = true,
       .osc_hyperlinks_send = true,
       .osc_hyperlinks_prompt = true,
+      .osc_hyperlinks_style_basic = true,
+      .osc_hyperlinks_style_states = true,
   };
   StyledState state = {0};
   StyledState stack[STYLE_STACK_LIMIT];

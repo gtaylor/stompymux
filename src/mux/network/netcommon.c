@@ -248,6 +248,12 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
       d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_SEND");
   options.osc_hyperlinks_prompt = descriptor_telnet_environment_value_is_one(
       d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_PROMPT");
+  options.osc_hyperlinks_style_basic =
+      descriptor_telnet_environment_value_is_one(d, TELNET_ENVIRONMENT_USERVAR,
+                                                 "OSC_HYPERLINKS_STYLE_BASIC");
+  options.osc_hyperlinks_style_states =
+      descriptor_telnet_environment_value_is_one(d, TELNET_ENVIRONMENT_USERVAR,
+                                                 "OSC_HYPERLINKS_STYLE_STATES");
   styled_text_render_with_options(
       descriptor_runtime(d)->world->styled_text_palette, s, &options, rendered,
       sizeof(rendered));

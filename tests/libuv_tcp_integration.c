@@ -414,7 +414,65 @@ static int negotiate_new_environ(int socket_fd) {
       'T',
       TELNET_ENVIRON_VALUE,
       '1',
-      ' ',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'S',
+      'T',
+      'Y',
+      'L',
+      'E',
+      '_',
+      'B',
+      'A',
+      'S',
+      'I',
+      'C',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'S',
+      'T',
+      'Y',
+      'L',
+      'E',
+      '_',
+      'S',
+      'T',
+      'A',
+      'T',
+      'E',
+      'S',
+      TELNET_ENVIRON_VALUE,
+      '1',
       TELNET_IAC,
       TELNET_SE,
   };
@@ -657,10 +715,10 @@ static int create_styled_object(int socket_fd) {
       expect_text(socket_fd, "\033[38;2;205;0;0m\033[48;2;229;229;229m"
                              "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
-      expect_three_texts(
-          socket_fd, "\033[38;2;255;112;0mLuaMarkup",
-          "\033]8;;https://example.com\033\\Web\033]8;;\033\\",
-          "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\ Edit") < 0 ||
+      expect_three_texts(socket_fd, "\033[38;2;255;112;0mLuaMarkup",
+                         "\033]8;;https://example.com\033\\Web\033]8;;\033\\",
+                         "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\ "
+                         "\033]8;;prompt:look\033\\Edit\033]8;;\033\\") < 0 ||
       send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "  NEW-ENVIRON:",
                          "      VAR \"USER\" = "
@@ -764,10 +822,19 @@ static int create_styled_object(int socket_fd) {
     return -1;
   }
   if (send_command(socket_fd,
-                   "@desc RenamedWidget=[send=\"look\"][fg=red]Description"
-                   "[/][/]\r\n") < 0 ||
+                   "@desc RenamedWidget=[send=\"look\" color=red bold "
+                   "hover.color=yellow]Description[/]\r\n") < 0 ||
       expect_text(socket_fd, "Desc - Set.") < 0) {
     fprintf(stderr, "styled-object description failed\n");
+    return -1;
+  }
+  if (send_command(socket_fd, "look RenamedWidget\r\n") < 0 ||
+      expect_text(socket_fd,
+                  "\033]8;;send:look?config=%7B%22style%22%3A%7B%22color%22"
+                  "%3A%22%23cd0000%22%2C%22bold%22%3Atrue%2C%22hover%22%3A"
+                  "%7B%22color%22%3A%22%23cdcd00%22%7D%7D%7D\033\\"
+                  "Description\033]8;;\033\\") < 0) {
+    fprintf(stderr, "OSC Tier 2 rendering failed\n");
     return -1;
   }
   if (send_command(socket_fd, "@idesc RenamedWidget=[bg=blue]Inside[/]\r\n") <
@@ -778,7 +845,8 @@ static int create_styled_object(int socket_fd) {
   }
   if (send_command(socket_fd, "@examine RenamedWidget\r\n") < 0 ||
       expect_three_texts(socket_fd, "[fg=bright-cyan]RenamedWidget[/](#",
-                         "Desc: [send=\"look\"][fg=red]Description[/][/]",
+                         "Desc: [send=\"look\" color=red bold "
+                         "hover.color=yellow]Description[/]",
                          "Idesc: [bg=blue]Inside[/]") < 0) {
     fprintf(stderr, "styled-object examine markup failed\n");
     return -1;
@@ -824,7 +892,8 @@ static int check_styled_object(const char *directory) {
   if (!strcmp((const char *)sqlite3_column_text(statement, 0),
               "[fg=bright-cyan]RenamedWidget[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 1),
-              "[send=\"look\"][fg=red]Description[/][/]") &&
+              "[send=\"look\" color=red bold "
+              "hover.color=yellow]Description[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 2),
               "[bg=blue]Inside[/]") &&
       sqlite3_column_int64(statement, 3) == 2 &&
