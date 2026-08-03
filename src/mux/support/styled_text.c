@@ -1,9 +1,17 @@
 /* styled_text.c - Safe markup and capability-aware terminal rendering. */
 
-#include "mux/server/platform.h"
+#ifndef _GNU_SOURCE
+// Needed for strcasestr() and strnlen()
+#define _GNU_SOURCE
+#endif
 
+#include <ctype.h>
+#include <errno.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text.h"
