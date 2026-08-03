@@ -3685,7 +3685,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
     context->result = -1;
 }
 
-/* Mirror map dynamic state and repair queues without changing legacy reads. */
+/* Store map dynamic state and repair queues in the SQLite snapshot. */
 static int btech_persistence_store_special_state(
     sqlite3 *sqlite, PersistenceContext *persistence, void *extension_context) {
   BtechContext *btech = extension_context;
@@ -3859,15 +3859,6 @@ static int btech_persistence_store_special_state(
   sqlite3_finalize(repairs);
   btech_finalize_object_statements(&objects);
   return result;
-}
-
-/* Reads remain on the legacy files during this first BTech dual-write slice. */
-static int btech_persistence_preload_special_state(
-    sqlite3 *sqlite, PersistenceContext *persistence, void *extension_context) {
-  (void)persistence;
-  (void)extension_context;
-  (void)sqlite;
-  return 0;
 }
 
 typedef struct btech_special_object_counts BTECH_SPECIAL_OBJECT_COUNTS;
@@ -4313,8 +4304,7 @@ static int btech_persistence_store_economy(sqlite3 *sqlite,
 int btech_persistence_register(PersistenceContext *context,
                                BtechContext *btech) {
   if (persistence_register_sqlite_extension(
-          context, "btech_special_state",
-          btech_persistence_preload_special_state,
+          context, "btech_special_state", nullptr,
           btech_persistence_store_special_state, btech) < 0)
     return -1;
 #ifdef BT_ADVANCED_ECON

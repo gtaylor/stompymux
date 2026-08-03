@@ -17,8 +17,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/utf8.h"
 
-/* The legacy file is read during this phase; SQLite is an atomic dump mirror.
- */
+/* SQLite schema for commac, comsys, and macro state. */
 static const char commac_schema_sql[] =
     "CREATE TABLE commac_entries ("
     " who INTEGER PRIMARY KEY, curmac INTEGER NOT NULL,"

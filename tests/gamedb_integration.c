@@ -37,8 +37,7 @@ static int run_server(const char *binary_path, const char *config,
   return waitpid(child, status, 0) == child ? 0 : -1;
 }
 
-/* Run an isolated server instance so legacy dual-write artifacts stay
- * disposable. */
+/* Run an isolated server instance so snapshot artifacts stay disposable. */
 static int run_server_in_directory_for(const char *binary_path,
                                        const char *config,
                                        const char *directory, int make_minimal,

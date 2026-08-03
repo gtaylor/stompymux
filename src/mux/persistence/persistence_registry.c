@@ -28,7 +28,7 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
                                           void *extension_context) {
   assert(context != nullptr);
 
-  if (name == nullptr || *name == '\0' || load == nullptr || store == nullptr)
+  if (name == nullptr || *name == '\0' || store == nullptr)
     return -1;
   for (size_t index = 0; index < context->extension_count; index++) {
     PersistenceSqliteExtension *extension = &context->extensions[index];

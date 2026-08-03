@@ -61,8 +61,10 @@ void persistence_context_initialize(
 /*
  * Register a named SQLite extension before gamedb_load() or gamedb_dump().
  * The callbacks are invoked with the SQLite connection owned by this module;
- * store callbacks run inside the snapshot transaction. Returns 0 on success
- * and -1 if the registration is invalid or the extension limit is reached.
+ * store callbacks run inside the snapshot transaction. A load callback may be
+ * nullptr when the subsystem restores its data after core loading. Returns 0
+ * on success and -1 if the registration is invalid or the extension limit is
+ * reached.
  */
 int persistence_register_sqlite_extension(PersistenceContext *context,
                                           const char *name,

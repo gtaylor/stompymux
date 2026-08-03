@@ -212,6 +212,8 @@ static int gamedb_load_extensions(PersistenceContext *context, sqlite3 *sqlite,
 
   for (index = 0; index < context->extension_count; index++) {
     PersistenceSqliteExtension *extension = &context->extensions[index];
+    if (extension->load == nullptr)
+      continue;
     if (extension->load(sqlite, context, extension->context) < 0) {
       gamedb_log_extension_failure(context->log, "loading", extension->name,
                                    path, sqlite);
