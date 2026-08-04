@@ -42,7 +42,7 @@ option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
-option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" OFF)
+option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
