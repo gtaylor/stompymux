@@ -1,4 +1,20 @@
-#include "mech_maps_internal.h"
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "mech_classification_api.h"
+#include "mech_electronics_api.h"
+#include "mech_identity_api.h"
+#include "mech_map_render_internal.h"
+#include "mech_maps_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_status_types.h"
+#include "mux/objects/attrs.h"
+#include "registry_api.h"
+
+#include <ctype.h>
+#include <stdio.h>
 
 void mech_tacmap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
@@ -14,7 +30,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   int flags = 3, dohexlos = 0;
 
   /* Basic checks for pilot and mech */
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
   /* Get the map info */
@@ -22,11 +39,11 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Various checks for conditions and system of mech */
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech_context(mech), !MechTacRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_tactical_range(mech),
                   "Your system seems to be inoperational.");
 
   if (MapIsDark(mech_map) ||
-      (MechType(mech) == CLASS_MW &&
+      (mech_class(mech) == CLASS_MW &&
        mech_context(mech)->configuration->btech_mw_losmap))
     dohexlos = 1;
 
@@ -71,7 +88,8 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech_context(mech), dohexlos && (flags & (8 | 16 | 32)),
                   "You can't see that much here!");
 
-  if (!parse_tacargs(player, mech, args, argc, MechTacRange(mech), &x, &y))
+  if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
+                     &y))
     return;
 
   /* Get the Tacsize attribute from
@@ -96,12 +114,12 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Everything worked but lets check the mech's tac range
    * and the map size */
-  displayHeight =
-      (displayHeight <= 2 * MechTacRange(mech) ? displayHeight
-                                               : 2 * MechTacRange(mech));
-  displayWidth =
-      (displayWidth <= 2 * MechTacRange(mech) ? displayWidth
-                                              : 2 * MechTacRange(mech));
+  displayHeight = (displayHeight <= 2 * mech_tactical_range(mech)
+                       ? displayHeight
+                       : 2 * mech_tactical_range(mech));
+  displayWidth = (displayWidth <= 2 * mech_tactical_range(mech)
+                      ? displayWidth
+                      : 2 * mech_tactical_range(mech));
 
   displayHeight = (displayHeight <= mech_map->map_height)
                       ? displayHeight
