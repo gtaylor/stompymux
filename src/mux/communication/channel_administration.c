@@ -348,8 +348,8 @@ void do_chanlist(CommandInvocation *invocation) {
   int key = invocation->key;
   struct channel *ch;
   long flags;
-  char *temp;
-  char *buf;
+  char temp[MBUF_SIZE];
+  char buf[MBUF_SIZE];
   char *atrstr;
 
   flags = 0;
@@ -358,9 +358,6 @@ void do_chanlist(CommandInvocation *invocation) {
     comsys_list_channels(evaluation, player);
     return;
   }
-  temp = alloc_mbuf("do_chanlist_temp");
-  buf = alloc_mbuf("do_chanlist_buf");
-
   raw_notify(evaluation, player, "** Channel       Description");
 
   for (ch = (struct channel *)hash_table_first_entry(
@@ -386,8 +383,6 @@ void do_chanlist(CommandInvocation *invocation) {
       raw_notify(evaluation, player, temp);
     }
   }
-  free_mbuf(temp);
-  free_mbuf(buf);
   raw_notify(evaluation, player, "-- End of list of Channels --");
 }
 
@@ -398,8 +393,6 @@ void do_chanstatus(CommandInvocation *invocation) {
   char *chan = invocation->first;
   struct channel *ch;
   long flags;
-  char *temp;
-  char *buf;
   char *atrstr;
 
   if (key & CSTATUS_FULL) {
@@ -434,8 +427,8 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "-- End of list of Channels --");
     return;
   }
-  temp = alloc_mbuf("do_chanstatus_temp");
-  buf = alloc_mbuf("do_chanstatus_buf");
+  char temp[MBUF_SIZE];
+  char buf[MBUF_SIZE];
 
   raw_notify(evaluation, player, "** Channel       Description");
   if (!(ch = select_channel(evaluation->runtime->channels, chan))) {
@@ -455,7 +448,5 @@ void do_chanstatus(CommandInvocation *invocation) {
            (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
 
   raw_notify(evaluation, player, temp);
-  free_mbuf(temp);
-  free_mbuf(buf);
   raw_notify(evaluation, player, "-- End of list of Channels --");
 }

@@ -294,12 +294,11 @@ void do_boot(CommandInvocation *invocation) {
       return;
     }
     STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
-      buf = alloc_sbuf("do_boot.port");
-      snprintf(buf, SBUF_SIZE, "Port %ld", victim);
-      log_text(buf);
+      char port[SBUF_SIZE];
+      snprintf(port, sizeof(port), "Port %ld", victim);
+      log_text(port);
       log_text(" was @booted by ");
       log_name(evaluation->log, player);
-      free_sbuf(buf);
       ENDLOG(evaluation->log);
     }
   } else {

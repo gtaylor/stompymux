@@ -44,10 +44,9 @@ NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
 void command_list_access(EvaluationContext *evaluation,
                          const ServerConfiguration *configuration,
                          CommandRegistry *registry, DbRef player) {
-  char *buff;
+  char buff[SBUF_SIZE];
   CMDENT *cmdp;
 
-  buff = alloc_sbuf("command_list_access");
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
@@ -58,7 +57,6 @@ void command_list_access(EvaluationContext *evaluation,
       }
     }
   }
-  free_sbuf(buff);
 }
 
 /*
@@ -69,10 +67,9 @@ void command_list_access(EvaluationContext *evaluation,
 void command_list_switches(EvaluationContext *evaluation,
                            const ServerConfiguration *configuration,
                            DbRef player) {
-  char *buff;
+  char buff[SBUF_SIZE];
   CMDENT *cmdp;
 
-  buff = alloc_sbuf("command_list_switches");
   for (cmdp = command_table; cmdp->cmdname; cmdp++) {
     if (cmdp->switches) {
       if (check_access(evaluation->world->database, configuration, player,
@@ -85,7 +82,6 @@ void command_list_switches(EvaluationContext *evaluation,
       }
     }
   }
-  free_sbuf(buff);
 }
 /*
  * ---------------------------------------------------------------------------

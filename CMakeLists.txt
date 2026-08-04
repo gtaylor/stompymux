@@ -287,12 +287,17 @@ include(src/mux/sources.cmake)
 if(BUILD_TESTING)
   target_compile_definitions(stompymux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
 endif()
+set(STOMPYMUX_MAX_FRAME_SIZE 65536)
+if(BTECH_ENABLE_ASAN)
+  # ASan redzones inflate unchanged legacy frames beyond their optimized size.
+  set(STOMPYMUX_MAX_FRAME_SIZE 98304)
+endif()
 target_compile_options(stompymux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
   -Wbad-function-cast -Wvla -Wswitch-enum -Wunused-macros -Wfloat-equal
   -Wpedantic -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings
-  -Wconversion -Wsign-conversion>)
+  -Wconversion -Wsign-conversion -Wframe-larger-than=${STOMPYMUX_MAX_FRAME_SIZE}>)
 target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"

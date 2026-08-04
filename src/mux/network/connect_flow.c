@@ -137,11 +137,10 @@ static void connect_flow_terminate(Descriptor *d, const char *logcode,
                                    DbRef player, const char *user,
                                    int filecache, const char *message) {
   STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, logcode, "RJCT") {
-    char *buff = alloc_mbuf("connect_flow_terminate.LOG");
+    char buff[MBUF_SIZE];
     snprintf(buff, MBUF_SIZE, "[%d/%s] %s rejected to ", d->descriptor, d->addr,
              logtype);
     log_text(buff);
-    free_mbuf(buff);
     if (player != NOTHING)
       log_name(descriptor_log(d), player);
     else
@@ -213,12 +212,11 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       is_wizard(descriptor_runtime(d)->world->database, player) ||
       is_god(descriptor_runtime(d)->world->database, player)) {
     STARTLOG(descriptor_log(d), LOG_LOGIN, "CON", "LOGIN") {
-      buff = alloc_mbuf("connect_flow_attempt_login.LOG.login");
-      snprintf(buff, MBUF_SIZE, "[%d/%s] Connected to ", d->descriptor,
-               d->addr);
-      log_text(buff);
+      char log_buffer[MBUF_SIZE];
+      snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Connected to ",
+               d->descriptor, d->addr);
+      log_text(log_buffer);
       log_name_and_loc(descriptor_log(d), player);
-      free_mbuf(buff);
       ENDLOG(descriptor_log(d));
     }
     d->is_connected = true;
@@ -248,7 +246,6 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   ServerConfiguration *configuration = runtime->world->configuration;
   int nplayers;
   DbRef player;
-  char *buff;
 
   if (!configuration->is_login_enabled) {
     connect_flow_terminate(d, "CRE", "Create", "Logins Disabled",
@@ -279,22 +276,21 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
   if (player == NOTHING) {
     descriptor_queue_string(d, create_fail);
     STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
-      buff = alloc_mbuf("connect_flow_attempt_create.LOG.badcrea");
-      snprintf(buff, MBUF_SIZE, "[%d/%s] Create of '%s' failed", d->descriptor,
-               d->addr, name);
-      log_text(buff);
-      free_mbuf(buff);
+      char log_buffer[MBUF_SIZE];
+      snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Create of '%s' failed",
+               d->descriptor, d->addr, name);
+      log_text(log_buffer);
       ENDLOG(descriptor_log(d));
     }
     return CONNECT_RESULT_RETRY;
   }
 
   STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_PCREATES, "CON", "CREA") {
-    buff = alloc_mbuf("connect_flow_attempt_create.LOG.create");
-    snprintf(buff, MBUF_SIZE, "[%d/%s] Created ", d->descriptor, d->addr);
-    log_text(buff);
+    char log_buffer[MBUF_SIZE];
+    snprintf(log_buffer, sizeof(log_buffer), "[%d/%s] Created ", d->descriptor,
+             d->addr);
+    log_text(log_buffer);
     log_name(descriptor_log(d), player);
-    free_mbuf(buff);
     ENDLOG(descriptor_log(d));
   }
   move_object(&descriptor_runtime(d)->background_command->evaluation, player,

@@ -87,12 +87,11 @@ static const char *stat_string(int strtype, int flag) {
 static void list_sites(EvaluationContext *evaluation, DbRef player,
                        SiteData *site_list, const char *header_txt,
                        int stat_type) {
-  char *buff, *buff1;
+  char buff[MBUF_SIZE];
+  char buff1[SBUF_SIZE];
   const char *str;
   SiteData *this;
 
-  buff = alloc_mbuf("list_sites.buff");
-  buff1 = alloc_sbuf("list_sites.addr");
   snprintf(buff, MBUF_SIZE, "----- %s -----", header_txt);
   notify(evaluation, player, buff);
   notify(evaluation, player,
@@ -104,8 +103,6 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
              str);
     notify(evaluation, player, buff);
   }
-  free_mbuf(buff);
-  free_sbuf(buff1);
 }
 
 /*

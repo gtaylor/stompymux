@@ -679,17 +679,13 @@ fail:
 }
 
 static void init_rlimit(MuxServer *server) {
-  struct rlimit *rlp;
+  struct rlimit rlimit;
 
-  rlp = (struct rlimit *)alloc_lbuf("rlimit");
-
-  if (getrlimit(RLIMIT_NOFILE, rlp)) {
+  if (getrlimit(RLIMIT_NOFILE, &rlimit)) {
     log_perror(&server->log, "RLM", "FAIL", nullptr, "getrlimit()");
-    free_lbuf(rlp);
     return;
   }
-  rlp->rlim_cur = rlp->rlim_max;
-  if (setrlimit(RLIMIT_NOFILE, rlp))
+  rlimit.rlim_cur = rlimit.rlim_max;
+  if (setrlimit(RLIMIT_NOFILE, &rlimit))
     log_perror(&server->log, "RLM", "FAIL", nullptr, "setrlimit()");
-  free_lbuf(rlp);
 }

@@ -370,7 +370,7 @@ void do_dig(CommandInvocation *invocation) {
   char **args = invocation->vector;
   int nargs = invocation->vector_count;
   DbRef room;
-  char *buff;
+  char buff[SBUF_SIZE];
   char *compiled_name;
 
   /*
@@ -392,7 +392,6 @@ void do_dig(CommandInvocation *invocation) {
   notify_printf(evaluation, player, "%s created with room number %ld.",
                 game_object_name(evaluation->world->database, room), room);
 
-  buff = alloc_sbuf("do_dig");
   if ((nargs >= 1) && args[0] && *args[0]) {
     snprintf(buff, SBUF_SIZE, "%ld", room);
     open_exit(evaluation, player,
@@ -404,7 +403,6 @@ void do_dig(CommandInvocation *invocation) {
              game_object_location(evaluation->world->database, player));
     open_exit(evaluation, player, room, args[1], buff);
   }
-  free_sbuf(buff);
   if (key == DIG_TELEPORT)
     (void)move_via_teleport(evaluation, player, room, cause, 0);
 }

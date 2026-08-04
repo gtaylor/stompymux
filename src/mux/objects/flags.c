@@ -313,7 +313,7 @@ ObjectEntry object_types[8] = {
     {"TYPE7", '#', CA_GOD, 0}};
 
 void init_flagtab(WorldIndexes *indexes) {
-  char *buffer = alloc_sbuf("init_flagtab");
+  char buffer[SBUF_SIZE];
   hash_table_initialize(&indexes->flags, 100 * HASH_FACTOR);
   for (FlagEntry *flag = gen_flags; flag->flagname; flag++) {
     char *out = buffer;
@@ -322,7 +322,6 @@ void init_flagtab(WorldIndexes *indexes) {
     *out = '\0';
     hash_table_add(buffer, (int *)flag, &indexes->flags);
   }
-  free_sbuf(buffer);
 }
 void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   char *buffer = alloc_lbuf("display_flagtab");

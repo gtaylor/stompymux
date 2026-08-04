@@ -211,7 +211,6 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   CommandContext *command = runtime->background_command;
   DbRef loc, temp;
   int num, key;
-  char *buf;
   Descriptor *dtemp;
   DescriptorIterator iterator =
       descriptor_iterator_player(runtime->descriptors, player);
@@ -234,7 +233,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
   command->enactor = player;
 
   if (num == 0) {
-    buf = alloc_mbuf("descriptor_announce_disconnect.only");
+    char buf[MBUF_SIZE];
 
     snprintf(buf, MBUF_SIZE, "%s has disconnected.",
              game_object_name(runtime->world->database, player));
@@ -243,7 +242,6 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                               is_wizard(runtime->world->database, player)))
       key |= MSG_NBR | MSG_NBR_EXITS | MSG_LOC;
     notify_checked(&command->evaluation, player, player, buf, key);
-    free_mbuf(buf);
 
     do_comdisconnect(&command->evaluation, player);
 
@@ -261,7 +259,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     }
 
   } else {
-    buf = alloc_mbuf("descriptor_announce_disconnect.partial");
+    char buf[MBUF_SIZE];
     snprintf(buf, MBUF_SIZE, "%s has partially disconnected.",
              game_object_name(runtime->world->database, player));
     key = MSG_INV;
@@ -272,7 +270,6 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
     raw_broadcast(runtime->descriptors, OBJECT_FLAG_MONITOR,
                   "GAME: %s has partially disconnected.",
                   game_object_name(runtime->world->database, player));
-    free_mbuf(buf);
   }
 
   command->enactor = temp;

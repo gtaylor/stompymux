@@ -216,7 +216,7 @@ static const char *ed[] = {"Disabled", "Enabled"};
 static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
                          DbRef player) {
   const ServerConfiguration *configuration = runtime->world->configuration;
-  char *buff;
+  char buff[MBUF_SIZE];
   time_t now;
 
   now = time(nullptr);
@@ -236,7 +236,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
               configuration->command_queue_limit));
   if (!is_wizard(evaluation->world->database, player))
     return;
-  buff = alloc_mbuf("list_options");
 
   raw_notify(
       evaluation, player,
@@ -305,8 +304,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
            configuration->command_queue_idle_chunk,
            configuration->command_queue_active_chunk);
   raw_notify(evaluation, player, buff);
-
-  free_mbuf(buff);
 }
 
 /*

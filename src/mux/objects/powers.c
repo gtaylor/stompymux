@@ -19,18 +19,17 @@ POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0}, {nullptr, POWER_NONE, 0}};
  */
 void init_powertab(WorldIndexes *indexes) {
   POWERENT *fp;
-  char *nbuf, *np;
+  char nbuf[SBUF_SIZE];
+  char *np;
   const char *bp;
 
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
-  nbuf = alloc_sbuf("init_powertab");
   for (fp = gen_powers; fp->powername; fp++) {
     for (np = nbuf, bp = fp->powername; *bp; np++, bp++)
       *np = ToLower(*bp);
     *np = '\0';
     hash_table_add(nbuf, (int *)fp, &indexes->powers);
   }
-  free_sbuf(nbuf);
 }
 
 /**

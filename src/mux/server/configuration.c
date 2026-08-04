@@ -431,9 +431,8 @@ int configuration_read(ConfigurationContext *context, char *fn) {
  */
 void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
   CONF *tp;
-  char *buff;
+  char buff[MBUF_SIZE];
 
-  buff = alloc_mbuf("configuration_list_access");
   for (tp = conftable; tp->pname; tp++) {
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database,
@@ -443,5 +442,4 @@ void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
                           access_nametab, tp->flags, buff, 1);
     }
   }
-  free_mbuf(buff);
 }

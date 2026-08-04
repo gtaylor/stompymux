@@ -258,11 +258,11 @@ void fcache_send(FileCache *cache, DbRef player, int num) {
 void fcache_load(EvaluationContext *evaluation, FileCache *cache,
                  DbRef player) {
   FCACHE *fp;
-  char *buff, *bufc, *sbuf;
+  char *buff, *bufc;
+  char sbuf[SBUF_SIZE];
   int i;
 
   buff = bufc = alloc_lbuf("fcache_load.lbuf");
-  sbuf = alloc_sbuf("fcache_load.sbuf");
   for (fp = cache->entries; fp < cache->entries + FC_LAST + 1; fp++) {
     i = fcache_read(evaluation, &fp->fileblock, fp->filename);
     if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
@@ -285,7 +285,6 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
     notify(evaluation, player, buff);
   }
   free_lbuf(buff);
-  free_sbuf(sbuf);
 }
 
 FileCache *file_cache_create(EvaluationContext *evaluation,
