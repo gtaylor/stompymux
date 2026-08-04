@@ -46,6 +46,8 @@ typedef struct EvaluationContext EvaluationContext;
 #define GFLAG_MW 128
 
 #include "glue_types.h"
+#include "map.h"
+#include "p.map.obj.h"
 
 void heartbeat_init(BtechContext *context);
 void heartbeat_stop(BtechContext *context);

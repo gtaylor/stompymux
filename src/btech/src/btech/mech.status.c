@@ -8,41 +8,53 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
-#include <math.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
 #include "coolmenu.h"
 #include "failures.h"
-#include "glue.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mech.partnames.h"
-#include "mech.tech.h"
-#include "mux/commands/command_runtime.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mech.parts.h"
+#include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/mux_event_alloc.h"
-#include "mycool.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.build.h"
-#include "p.mech.combat.h"
 #include "p.mech.contacts.h"
 #include "p.mech.enhanced.criticals.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
 #include "p.mech.notify.h"
+#include "p.mech.partnames.h"
 #include "p.mech.scan.h"
 #include "p.mech.status.h"
 #include "p.mech.tag.h"
-#include "p.mech.tech.commands.h"
 #include "p.mech.tech.do.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
+#include "weapon_settings.h"
 
 static void append_status(char *buffer, size_t size, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
@@ -119,7 +131,7 @@ void DisplayTarget(EvaluationContext *evaluation, DbRef player, MECH *mech) {
   if (MechPKiller(mech))
     notify(evaluation, player,
            "Weapon Safeties are [fg=red bold]OFF[reset].\n");
-  if (GotPilot(mech) &&
+  if (mech_has_pilot(mech) &&
       HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "maneuvering_ace"))
     notify_printf(evaluation, player, "Turn Mode: %s",
                   GetTurnMode(mech) ? "TIGHT" : "NORMAL");
@@ -546,7 +558,7 @@ void PrintInfoStatus(EvaluationContext *evaluation, DbRef player, MECH *mech,
       if (MechMove(mech) == MOVE_SUB) {
         snprintf(buff, sizeof(buff), "Heading: %3d KPH  Des. Heading: %3d deg",
                  (int)MechFacing(mech), MechDesiredFacing(mech));
-      } else if (AeroFreeFuel(mech)) {
+      } else if (mech_aero_has_free_fuel(mech)) {
         snprintf(buff, sizeof(buff),
                  "Heading:    [fg=green bold]%3d[reset] deg  Des. Heading:    "
                  "    %3d "
@@ -802,9 +814,9 @@ PartDisplayName pos_part_name(MECH *mech, int index, int loop) {
   PartDisplayName name;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
-    SendError(mech->xcode.context,
-              tprintf("INVALID: For mech #%ld, %d/%d was requested.",
-                      mech->mynum, index, loop));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("INVALID: For mech #%ld, %d/%d was requested.",
+                               mech->mynum, index, loop));
     return part_display_name("--?LocationBug?--");
   }
   t = GetPartType(mech, index, loop);
@@ -1171,12 +1183,9 @@ char *critslot_func(MECH *mech, char *buf_section, char *buf_critnum,
 
   if (type == EMPTY || IsCrap(type))
     return status_text(buffer, "Empty");
-  if (flag == 0)
-#ifndef BT_COMPLEXREPAIRS
-    type = alias_part(mech, type);
-#else
-    type = alias_part(mech, type, index);
-#endif
+  if (flag == 0) {
+    type = mech_parts_alias(mech, index, type);
+  }
   snprintf(buffer, MBUF_SIZE, "%s",
            get_parts_vlong_name(mech->xcode.context, type,
                                 GetPartBrand(mech, index, crit)));
@@ -1401,10 +1410,13 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
               NULL) ||
              (TaggedBy(btech_context_get_mech(mech->xcode.context,
                                               TAGTarget(mech))) != mech->mynum))
-              ? (TagRecycling(mech) ? "[fg=yellow bold]Not Rdy[reset]"
-                                    : "[fg=green]Rdy[reset]")
+              ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                     ? "[fg=yellow bold]Not Rdy[reset]"
+                     : "[fg=green]Rdy[reset]")
               : tprintf("%s%s[reset]",
-                        (TagRecycling(mech) ? "[fg=yellow bold]" : "[bold]"),
+                        (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                             ? "[fg=yellow bold]"
+                             : "[bold]"),
                         mech_to_mech_display_id(
                             mech, btech_context_get_mech(mech->xcode.context,
                                                          TAGTarget(mech)))
@@ -1543,7 +1555,7 @@ static void print_weapon_status(EvaluationContext *evaluation, MECH *mech,
                              (MechSections(mech)[(a)].recycle % WEAPON_TICK))  \
        : "[fg=green]Ready[reset]")
 
-  UpdateRecycling(mech);
+  mech_update_recycling(mech);
   if (MechType(mech) == CLASS_MECH && !compact) {
     tempbuff[0] = 0;
 
@@ -2286,7 +2298,7 @@ int ArmorEvaluateSerious(MECH *mech, int loc, int flag, int *ret_armor_value) {
     armor_value = GetSectArmor(mech, loc);
     armor_denom = GetSectOArmor(mech, loc);
 
-    if (SectArmorRepair(mech, loc))
+    if (mech_section_armor_repairing(mech, loc))
       repair_flag = 1;
     break;
 
@@ -2301,7 +2313,7 @@ int ArmorEvaluateSerious(MECH *mech, int loc, int flag, int *ret_armor_value) {
       armor_value = GetSectInt(mech, loc);
       armor_denom = GetSectOInt(mech, loc);
 
-      if (SectIntsRepair(mech, loc))
+      if (mech_section_internals_repairing(mech, loc))
         repair_flag = 1;
     }
     break;
@@ -2311,7 +2323,7 @@ int ArmorEvaluateSerious(MECH *mech, int loc, int flag, int *ret_armor_value) {
     armor_value = GetSectRArmor(mech, loc);
     armor_denom = GetSectORArmor(mech, loc);
 
-    if (SectRArmorRepair(mech, loc))
+    if (mech_section_rear_armor_repairing(mech, loc))
       repair_flag = 1;
     break;
 

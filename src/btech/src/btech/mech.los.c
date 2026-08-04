@@ -13,16 +13,25 @@
  *
  */
 
-#include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/file.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "p.map.obj.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.los.h"
 #include "p.mech.lostracer.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.utils.h"
 
@@ -99,27 +108,28 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
 
   if (end_z > 10 && pos_z > 10)
     return new_flag;
-  bothworlds = IsWater(MechRTerrain(mech)) && /* Can we be in both worlds? */
-               (((MechType(mech) == CLASS_MECH) && (MechZ(mech) == -1)) ||
-                ((WaterBeast(mech)) && (MechZ(mech) == 0)) ||
-                ((MechMove(mech) == MOVE_HOVER) && (MechZ(mech) == 0)));
+  bothworlds =
+      IsWater(mech_real_terrain_get(mech)) && /* Can we be in both worlds? */
+      (((MechType(mech) == CLASS_MECH) && (MechZ(mech) == -1)) ||
+       ((WaterBeast(mech)) && (MechZ(mech) == 0)) ||
+       ((MechMove(mech) == MOVE_HOVER) && (MechZ(mech) == 0)));
   underwater = InWater(mech) && (pos_z < 0.0);
 
   /* Ice hex targeting special case */
-  if (!target && !underwater && GetRTerrain(map, x, y) == ICE)
+  if (!target && !underwater && map_real_terrain_get(map, x, y) == ICE)
     end_z = 0.0;
 
   if (target) {
     /* What about him? Both worlds? Or flat out underwater? */
     t_bothworlds =
-        IsWater(MechRTerrain(target)) &&
+        IsWater(mech_real_terrain_get(target)) &&
         (((MechType(target) == CLASS_MECH) && (MechZ(target) == -1)) ||
          ((WaterBeast(target)) && (MechZ(target) == 0)) ||
          ((MechMove(target) == MOVE_HOVER) && (MechZ(target) == 0)));
 
     t_underwater = InWater(target) && (end_z < 0.0);
   } else {
-    if (GetRTerrain(map, x, y) == ICE)
+    if (map_real_terrain_get(map, x, y) == ICE)
       t_bothworlds = 1;
     else
       t_bothworlds = 0;
@@ -163,7 +173,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
         continue;
       /* Should be possible to see into water.. perhaps. But not
          on vislight */
-      terrain = GetRTerrain(map, trace.points[i].x, trace.points[i].y);
+      terrain = map_real_terrain_get(map, trace.points[i].x, trace.points[i].y);
       /* get the current height */
       height = Elevation(map, trace.points[i].x, trace.points[i].y);
 
@@ -192,7 +202,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
       } else { /* Viewer is not underwater */
         /* keep track of how many wooded hexes we cross */
         if (pos_z < (height + 2)) {
-          switch (GetTerrain(map, trace.points[i].x, trace.points[i].y)) {
+          switch (map_terrain_get(map, trace.points[i].x, trace.points[i].y)) {
           case SMOKE:
             if (i < coordcount - 1)
               new_flag |= MECHLOSFLAG_SMOKE;
@@ -259,7 +269,7 @@ int CalculateLOSFlag(MECH *mech, MECH *target, MAP *map, int x, int y, int ff,
           (Elevation(map, trace.points[coordcount - 2].x,
                      trace.points[coordcount - 2].y) == (MechZ(target) + 1)))
         new_flag |= MECHLOSFLAG_PARTIAL;
-      if (MechZ(target) == -1 && MechRTerrain(target) == WATER)
+      if (MechZ(target) == -1 && mech_real_terrain_get(target) == WATER)
         new_flag |= MECHLOSFLAG_PARTIAL;
     }
 
@@ -315,16 +325,16 @@ int InLineOfSight(MECH *mech, MECH *target, int x, int y, float hexRange) {
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
-    SendError(mech->xcode.context,
-              tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
-                      mech->mynum, mech->mapindex));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
+                               mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return 0;
   }
   if (x < 0 || y < 0 || y >= map->map_height || x >= map->map_width) {
-    SendError(mech->xcode.context,
-              tprintf("x:%d y:%d out of bounds for #%ld (LOS check)", x, y,
-                      mech ? mech->mynum : -1));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("x:%d y:%d out of bounds for #%ld (LOS check)",
+                               x, y, mech ? mech->mynum : -1));
   }
 
   /* Possibly do a quickie check only */

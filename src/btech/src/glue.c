@@ -1,3 +1,11 @@
+#include "btech_event.h" // IWYU pragma: keep
+#include "map.h"         // IWYU pragma: keep
+#include "map.terrain.h"
+#include "mech.parts.h"               // IWYU pragma: keep
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "p.map.h"
+#include "p.mech.scan.h"   // IWYU pragma: keep
+#include "p.mech.status.h" // IWYU pragma: keep
 
 /*
  * $Id: glue.c,v 1.4 2005/08/08 09:43:09 murrayma Exp $
@@ -15,39 +23,56 @@
  *
  */
 
-#include "mux/server/game.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btmux_build_config.h"
+#include "glue_types.h"
+#include "macros.h"
+#include "mech.lifecycle.h"
+#include "missile_hit_registry.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/formatting.h"
+#include "mux/support/hash_table.h"
+#include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.dynamic.h"
+#include "p.mech.restrict.h"
+#include "p.mech.update.h"
+#include "p.mech.utils.h"
+#include "p.mine.h"
+#include "weapon_settings.h"
 
 #define FAST_WHICHSPECIAL
-
-#include "mux/network/mux_event_alloc.h"
 
 #define _GLUE_C
 
 /*** #include all the prototype here! ****/
 #include "autopilot.h"
 #include "coolmenu.h"
-#include "debug.h"
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mech.tech.h"
 #include "mechrep.h"
 #include "mux/objects/powers.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "mycool.h"
-#include "p.bsuit.h"
-#include "p.ds.turret.h"
 #include "p.mech.partnames.h"
 #include "p.mech.stat.h"
-#include "p.mechfile.h"
 #include "p.mechrep.h"
 #include "persistence/btech_persistence.h"
 #include "turret.h"
@@ -333,9 +358,9 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
 
     if (!Started(mech))
       return 1;
-    StartSeeing(mech);
-    UpdateRecycling(mech);
-    MaybeMove(mech);
+    mech_start_seeing(mech);
+    mech_update_recycling(mech);
+    mech_maybe_move(mech);
   }
   return 1;
 }

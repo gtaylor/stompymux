@@ -7,20 +7,36 @@
  */
 
 #include "debug.h"
+
+#include <stdlib.h>
+#include <string.h>
+
 #include "autopilot.h"
+#include "btech_context.h"
+#include "btmacros.h"
 #include "glue.h"
+#include "glue_types.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "mux/network/mux_event.h"
+#include "mech.lifecycle.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
+#include "mux/server/server_config.h"
 #include "mux/support/red_black_tree.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.bits.h"
+#include "p.map.dynamic.h"
 #include "p.map.obj.h"
 #include "p.mech.partnames.h"
 #include "p.mech.startup.h"
+#include "weapon_settings.h"
 
 void debug_list(DbRef player, void *data, char *buffer) {
   XCODE *debug = data;

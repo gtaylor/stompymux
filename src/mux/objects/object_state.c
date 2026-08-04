@@ -1,9 +1,5 @@
 /* object_state.c - Typed, namespaced persistent object state. */
 
-#include "mux/server/platform.h"
-
-#include "mux/objects/object_state.h"
-
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -11,6 +7,9 @@
 #include <string.h>
 
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/object_state.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 
 constexpr size_t OBJECT_STATE_NAMESPACE_LIMIT = 127;

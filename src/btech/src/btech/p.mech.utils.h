@@ -75,7 +75,7 @@ int FindBearing(float x0, float y0, float x1, float y1);
 int InWeaponArc(MECH *mech, float x, float y);
 int IsInWeaponArc(MECH *mech, float x, float y, int section, int critical);
 void navigate_sketch_mechs(MECH *mech, MAP *map, int x, int y,
-                           char buff[NAVIGATE_LINES][MBUF_SIZE]);
+                           char buff[][MBUF_SIZE]);
 int FindTargetXY(MECH *mech, float *x, float *y, float *z);
 
 /* Skill lookups */

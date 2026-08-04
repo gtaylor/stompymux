@@ -2,24 +2,22 @@
  * move.c -- Routines for moving about
  */
 
+#include <stdio.h>
+#include <string.h>
+
 #include "mux/commands/action_messages.h"
-#include "mux/commands/command_runtime.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/access.h"
-#include "mux/world/world_context.h"
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/powers.h"
-#include "mux/server/platform.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
 #include "mux/world/movement_commands.h"
-#include "mux/world/world_context.h"
 
 /*
  * ---------------------------------------------------------------------------

@@ -9,27 +9,39 @@
  *       All rights reserved
  */
 
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/file.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
 #include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mech.physical.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.bth.h"
-#include "p.mech.combat.h"
 #include "p.mech.damage.h"
 #include "p.mech.hitloc.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.physical.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
-#include "p.template.h"
 
 // Only allows arm physical attacks for CLASS_MECH.
 #define ARM_PHYS_CHECK(a)                                                      \
@@ -214,12 +226,12 @@ int phys_common_checks(MECH *mech) {
     return 0;
   }
 
-  if (Standing(mech)) {
+  if (mech_event_count(mech, EVENT_STAND)) {
     mech_notify(mech, MECHALL, "You are still trying to stand up!");
     return 0;
   }
 #ifdef BT_MOVEMENT_MODES
-  if (Dodging(mech) || MoveModeLock(mech)) {
+  if (Dodging(mech) || mech_move_mode_locked(mech)) {
     mech_notify(
         mech, MECHALL,
         "You cannot use physicals while using a special movement mode.");
@@ -392,8 +404,8 @@ void mech_club(DbRef player, void *data, char *buffer) {
     clubLoc = LARM;
 
   if (clubLoc == -1) {
-    DOCHECKMA(MechRTerrain(mech) != HEAVY_FOREST &&
-                  MechRTerrain(mech) != LIGHT_FOREST,
+    DOCHECKMA(mech_real_terrain_get(mech) != HEAVY_FOREST &&
+                  mech_real_terrain_get(mech) != LIGHT_FOREST,
               "You can not seem to find any trees around to club with.");
     // Since we have trees nearby, assume the club goes to right hand.
     clubLoc = RARM;
@@ -867,7 +879,7 @@ void mech_charge(DbRef player, void *data, char *buffer) {
 
   argc = mech_parseattributes(buffer, args, 2);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_MOVEMODE),
                   "You cannot charge while changing movement modes!");
 
   DOCHECK_CONTEXT(mech->xcode.context, Sprinting(mech) || Evading(mech),
@@ -1146,7 +1158,8 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
             "You can only trip mechs!");
 
   // Can't trip mechs that are fallen or in the process of standing.
-  DOCHECKMA(AttackType == PA_TRIP && (Fallen(target) || Standing(target)),
+  DOCHECKMA(AttackType == PA_TRIP &&
+                (Fallen(target) || mech_event_count(target, EVENT_STAND)),
             "Your target is already down!");
 
   // We're attacking a ground/naval unit.
@@ -1328,9 +1341,9 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
   // Might want to check for Fire also at some point?
   if (MechTerrain(target) == SMOKE) {
     baseToHit += 2;
-  } else if (MechRTerrain(target) == HEAVY_FOREST) {
+  } else if (mech_real_terrain_get(target) == HEAVY_FOREST) {
     baseToHit += 2;
-  } else if (MechRTerrain(target) == LIGHT_FOREST) {
+  } else if (mech_real_terrain_get(target) == LIGHT_FOREST) {
     baseToHit += 1;
   }
 
@@ -1346,13 +1359,13 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
               phys_form(AttackType, 0));
 
   // We send to MechAttacks channel
-  SendAttacks(mech->xcode.context,
-              tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
-                      target->mynum, phys_form(AttackType, 0), baseToHit,
-                      roll));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
+                     tprintf("#%li attacks #%li (%s) (%i/%i)", mech->mynum,
+                             target->mynum, phys_form(AttackType, 0), baseToHit,
+                             roll));
 
   // Set the appropriate section(s) to recycle.
-  SetRecycleLimb(mech, sect, PHYSICAL_RECYCLE_TIME);
+  mech_set_recycle_limb(mech, sect, PHYSICAL_RECYCLE_TIME);
 
   /*
    * Attack-specific recycles and flags.
@@ -1366,7 +1379,7 @@ void PhysicalAttack(MECH *mech, int damageweight, int baseToHit, int AttackType,
 
   // Clubbing recycles both arms.
   if (AttackType == PA_CLUB)
-    SetRecycleLimb(mech, LARM, PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, LARM, PHYSICAL_RECYCLE_TIME);
 
   RbaseToHit = baseToHit;
   if (mech->xcode.context->configuration->btech_glancing_blows == 2)
@@ -1681,7 +1694,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
              "Your target is no longer valid.");
 
 #ifdef BT_MOVEMENT_MODES
-  DOCHECKMA0(Dodging(mech) || MoveModeLock(mech),
+  DOCHECKMA0(Dodging(mech) || mech_move_mode_locked(mech),
              "You cannot use physicals while using a special movement mode.");
 #endif
 
@@ -1831,7 +1844,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
     MechSpeed(mech) = 0.0;
     MechDesiredSpeed(mech) = 0.0;
 
-    MakeMechFall(mech);
+    mech_make_fall(mech);
     MechZ(mech) = MechElevation(mech);
     MechFZ(mech) = MechZ(mech) * ZSCALE;
 
@@ -1840,7 +1853,7 @@ int DeathFromAbove(MECH *mech, MECH *target) {
   }
 
   for (i = 0; i < DFA_SECTIONS; i++)
-    SetRecycleLimb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
 
   return 1;
 } // end DeathFromAbove()
@@ -2037,23 +2050,23 @@ void ChargeMech(MECH *mech, MECH *target) {
     }
 
     /* Are they stunned ? */
-    if (CrewStunned(mech)) {
+    if (mech_event_count(mech, EVENT_UNSTUN_CREW)) {
       mech_notify(mech, MECHALL, "You are too stunned to ram!");
       mech_charge = 0;
     }
 
-    if (CrewStunned(target)) {
+    if (mech_event_count(target, EVENT_UNSTUN_CREW)) {
       mech_notify(target, MECHALL, "You are too stunned to ram!");
       target_charge = 0;
     }
 
     /* Are they trying to unjam their turrets ? */
-    if (UnjammingTurret(mech)) {
+    if (mech_event_count(mech, EVENT_UNJAM_TURRET)) {
       mech_notify(mech, MECHALL, "You are too busy unjamming your turret!");
       mech_charge = 0;
     }
 
-    if (UnjammingTurret(target)) {
+    if (mech_event_count(target, EVENT_UNJAM_TURRET)) {
       mech_notify(mech, MECHALL, "You are too busy unjamming your turret!");
       target_charge = 0;
     }
@@ -2257,7 +2270,8 @@ void ChargeMech(MECH *mech, MECH *target) {
                " %.2f DI: %i DR: %i",
                mech->mynum, target->mynum, mech_baseToHit, mech_roll,
                MechChargeDistance(mech), inflicted_damage, received_damage);
-      SendDebug(mech->xcode.context, emit_buff);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         emit_buff);
 
       /* Make the first unit roll for doing the charge if it is a mech */
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
@@ -2339,7 +2353,8 @@ void ChargeMech(MECH *mech, MECH *target) {
                " %.2f DI: %i DR: %i",
                target->mynum, mech->mynum, targ_baseToHit, targ_roll,
                MechChargeDistance(target), inflicted_damage, received_damage);
-      SendDebug(mech->xcode.context, emit_buff);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         emit_buff);
 
       if (MechType(mech) == CLASS_MECH && !MadePilotSkillRoll(mech, 2)) {
         mech_notify(mech, MECHALL,
@@ -2356,18 +2371,18 @@ void ChargeMech(MECH *mech, MECH *target) {
     /* Cycle the sections so they can't make another attack for a while */
     if (MechType(mech) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
-        SetRecycleLimb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+        mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
     } else {
-      SetRecycleLimb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
-      SetRecycleLimb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
     }
 
     if (MechType(target) == CLASS_MECH) {
       for (i = 0; i < CHARGE_SECTIONS; i++)
-        SetRecycleLimb(target, resect[i], PHYSICAL_RECYCLE_TIME);
+        mech_set_recycle_limb(target, resect[i], PHYSICAL_RECYCLE_TIME);
     } else {
-      SetRecycleLimb(target, FSIDE, PHYSICAL_RECYCLE_TIME);
-      SetRecycleLimb(target, TURRET, PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(target, FSIDE, PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(target, TURRET, PHYSICAL_RECYCLE_TIME);
     }
 
     /* MechChargeTarget(mech) and the others are set
@@ -2567,16 +2582,17 @@ void ChargeMech(MECH *mech, MECH *target) {
              " %.2f DI: %i DR: %i",
              mech->mynum, target->mynum, baseToHit, roll,
              MechChargeDistance(mech), inflicted_damage, received_damage);
-    SendDebug(mech->xcode.context, emit_buff);
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       emit_buff);
   }
 
   /* Cycle the sections so they can't make another attack for a while */
   if (MechType(mech) == CLASS_MECH) {
     for (i = 0; i < CHARGE_SECTIONS; i++)
-      SetRecycleLimb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(mech, resect[i], PHYSICAL_RECYCLE_TIME);
   } else {
-    SetRecycleLimb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
-    SetRecycleLimb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
   }
   return;
 } // end ChargeMech()
@@ -2632,7 +2648,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   if (wcArgs >= 1 && toupper(args[0][0]) == '-') {
     if ((MechSections(mech)[LARM].specials & CARRYING_CLUB) ||
         (MechSections(mech)[RARM].specials & CARRYING_CLUB)) {
-      DropClub(mech);
+      mech_drop_club(mech);
     } else {
       mech_notify(mech, MECHALL, "You aren't currently carrying a club.");
     }
@@ -2644,8 +2660,10 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
             "You can't grab a club while lying flat on your face.");
   DOCHECKMA(Jumping(mech), "You can't grab a club while jumping!");
   DOCHECKMA(OODing(mech), "Your rapid descent prevents that.");
-  DOCHECKMA(UnJammingAmmo(mech), "You are too busy unjamming a weapon!");
-  DOCHECKMA(RemovingPods(mech), "You are too busy removing iNARC pods!");
+  DOCHECKMA(mech_event_count(mech, EVENT_UNJAM_AMMO),
+            "You are too busy unjamming a weapon!");
+  DOCHECKMA(mech_event_count(mech, EVENT_REMOVE_PODS),
+            "You are too busy removing iNARC pods!");
 
   // If they already have a physical weapon, disallow the grabbing of a club.
   DOCHECKMA(have_axe(mech, LARM) || have_axe(mech, RARM),
@@ -2686,8 +2704,8 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   }
 
   DOCHECKMA(CarryingClub(mech), "You're already carrying a club.");
-  DOCHECKMA(MechRTerrain(mech) != HEAVY_FOREST &&
-                MechRTerrain(mech) != LIGHT_FOREST,
+  DOCHECKMA(mech_real_terrain_get(mech) != HEAVY_FOREST &&
+                mech_real_terrain_get(mech) != LIGHT_FOREST,
             "There don't appear to be any trees within grabbing distance.");
 
   ArmorStringFromIndex(location, locname, MechType(mech), MechMove(mech));
@@ -2699,5 +2717,5 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
 
   // Grabbing a club sets a flag and recycles the arm used.
   MechSections(mech)[location].specials |= CARRYING_CLUB;
-  SetRecycleLimb(mech, location, PHYSICAL_RECYCLE_TIME);
+  mech_set_recycle_limb(mech, location, PHYSICAL_RECYCLE_TIME);
 } // end mech_grabclub()

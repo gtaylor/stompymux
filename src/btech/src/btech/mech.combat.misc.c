@@ -8,18 +8,29 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#include "mech.h"
-#include "glue.h"
+#include <string.h>
+
+#include "btech_event.h"
+#include "btmacros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
-#include "p.bsuit.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "p.crit.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.fire.h"
+#include "p.mech.notify.h"
 #include "p.mech.partnames.h"
 #include "p.mech.pickup.h"
-#include "p.mech.tag.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 
 void decrement_ammunition(MECH *mech, int weapindx, int section, int critical,
@@ -163,7 +174,7 @@ void heat_effect(MECH *mech, MECH *tempMech, int heatdam, int fromInferno) {
         MechLOSBroadcast(tempMech, "explodes!");
         mech_notify(tempMech, MECHALL,
                     "The heat's too much for your vehicle! It blows up!");
-        Destroy(tempMech);
+        mech_mark_destroyed(tempMech);
         ChannelEmitKill(tempMech, mech, KILL_TYPE_HEAT);
         explode_unit(tempMech, mech ? mech : tempMech);
       }
@@ -179,7 +190,7 @@ void heat_effect(MECH *mech, MECH *tempMech, int heatdam, int fromInferno) {
 void Inferno_Hit(MECH *mech, MECH *hitMech, int missiles, int LOS) {
   int hmod = (missiles + 1) / 2;
 
-  if (Jellied(hitMech) || Burning(hitMech)) {
+  if (Jellied(hitMech) || mech_event_count(hitMech, EVENT_VEHICLEBURN)) {
     MechLOSBroadcast(hitMech, "burns a bit more brightly.");
     mech_notify(hitMech, MECHALL,
                 "[fg=red bold]More burning jelly joins the flames![reset]");
@@ -333,9 +344,9 @@ void DestroyMech(MECH *target, MECH *mech, int showboom, const char *reason) {
 
   /* shut it down */
   if (mech) {
-    DestroyAndDump(target);
+    mech_destroy_and_place(target);
   } else {
-    Destroy(target);
+    mech_mark_destroyed(target);
   }
   if (MechType(target) == CLASS_MW) {
     if (is_in_character(context->database, target->mynum)) {

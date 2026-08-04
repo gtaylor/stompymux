@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Author: Cord Awtry <kipsta@mediaone.net>
  *  Copyright (c) 2000-2002 Cord Awtry
@@ -9,15 +10,34 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#include "mech.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
 #include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.crit.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.map.conditions.h"
 #include "p.mech.ammodump.h"
 #include "p.mech.build.h"
@@ -25,11 +45,12 @@
 #include "p.mech.combat.missile.h"
 #include "p.mech.damage.h"
 #include "p.mech.ecm.h"
+#include "p.mech.events.h"
 #include "p.mech.hitloc.h"
 #include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.ood.h"
 #include "p.mech.pickup.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mechrep.h"
 #include "p.pcombat.h"
@@ -201,16 +222,17 @@ int cause_armordamage(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     }
     switch (hitloc) {
     case AERO_AFT:
-      MakeMechFall(wounded);
+      mech_make_fall(wounded);
       MechSpeed(wounded) = 0;
-      SetMaxSpeed(wounded, 0);
+      mech_max_speed_set(wounded, 0);
       MechVerticalSpeed(wounded) = 0;
       if (!(MechStatus(wounded) & LANDED))
         mech_notify(wounded, MECHALL, "You feel the thrust die..");
       else
         mech_notify(wounded, MECHALL, "The computer reports engine destroyed!");
       if (!Landed(wounded))
-        MECHEVENT(wounded, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+        mech_event_schedule(wounded, EVENT_FALL, mech_fall_event, FALL_TICK,
+                            -1);
       break;
     }
   }
@@ -396,23 +418,24 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
     MechLOSBroadcast(wounded, "breaks out of its sprint as it takes damage!");
     mech_notify(wounded, MECHALL,
                 "You lose your sprinting momentum as you take damage!");
-    if (!MoveModeChange(wounded))
-      MECHEVENT(wounded, EVENT_MOVEMODE, mech_movemode_event, TURN,
-                MODE_OFF | MODE_SPRINT);
+    if (!mech_event_count(wounded, EVENT_MOVEMODE))
+      mech_event_schedule(wounded, EVENT_MOVEMODE, mech_movemode_event, TURN,
+                          MODE_OFF | MODE_SPRINT);
   }
 
   if ((damage > 0 || intDamage > 0) && MechCritStatus(wounded) & HIDDEN) {
     MechCritStatus(wounded) &= ~HIDDEN;
     MechLOSBroadcast(wounded, "loses its cover as it takes damage!");
     mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
-    if (!MoveModeChange(wounded))
+    if (!mech_event_count(wounded, EVENT_MOVEMODE))
       MechCritStatus(wounded) &= ~HIDDEN;
   }
 
   if ((damage > 0 || intDamage > 0) &&
-      (MoveModeLock(wounded) &&
-       !(MoveModeData(wounded) & (MODE_EVADE | MODE_DODGE | MODE_OFF)))) {
-    StopMoveMode(wounded);
+      (mech_move_mode_locked(wounded) &&
+       !(mech_event_first_delay(wounded, EVENT_MOVEMODE) &
+         (MODE_EVADE | MODE_DODGE | MODE_OFF)))) {
+    mech_event_cancel(wounded, EVENT_MOVEMODE);
     mech_notify(wounded, MECHALL,
                 "Your movement mode changes are cancelled as you take damage!");
   }
@@ -454,7 +477,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
 
     if (MechType(wounded) == CLASS_MECH) {
       strcpy(rearMessage, "(Rear)");
-      if (Dumping(wounded) &&
+      if (mech_event_count(wounded, EVENT_DUMP) &&
           ((hitloc == CTORSO) || (hitloc == LTORSO) || (hitloc == RTORSO)) &&
           (cause >= 0))
         tBlowDumpingAmmo = 1;
@@ -930,7 +953,7 @@ void DestroySection(MECH *wounded, MECH *attacker, int LOS, int hitloc) {
 
   /* uncycle the section <in the case of an arm/leg that was kicking getting
    * blown */
-  SetRecycleLimb(wounded, hitloc, 0);
+  mech_set_recycle_limb(wounded, hitloc, 0);
 
   /* drop off what we were carrying, since we really can't pick it up with one
    * arm */

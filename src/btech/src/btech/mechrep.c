@@ -4,20 +4,36 @@
  *   All right reserved
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
+#include <ctype.h>
 #include <dirent.h>
-#include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "macros.h"
+#include "map.terrain.h" // IWYU pragma: keep
+#include "mech.events.h"
+#include "mech.lifecycle.h" // IWYU pragma: keep
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 
 #define MECH_STAT_C /* want to use the POSIX stat() call. */
 
-#include "glue.h"
-#include "mech.events.h"
 #include "mech.h"
 #include "mechrep.h"
 #include "mux/commands/command_helpers.h"
@@ -550,7 +566,7 @@ void clear_mech(MECH *mech, int flag) {
   MechTargY(mech) = -1;
   MechPilot(mech) = -1;
   MechAim(mech) = NUM_SECTIONS;
-  StopBurning(mech);
+  mech_event_cancel(mech, EVENT_VEHICLEBURN);
   if (flag) {
     for (i = 0; i < NUM_TICS; i++)
       for (j = 0; j < TICLONGS; j++)
@@ -675,6 +691,33 @@ int unable_to_find_proper_type(int i) {
   return 0;
 }
 
+static bool mechdata_load_error(FILE *fp, MECH *mech, bool condition,
+                                const char *format, ...)
+    __attribute__((format(printf, 4, 5)));
+
+static bool mechdata_load_error(FILE *fp, MECH *mech, bool condition,
+                                const char *format, ...) {
+  if (!condition) {
+    return false;
+  }
+#ifdef TEMPLATE_VERBOSE_ERRORS
+  char message[LBUF_SIZE] = {0};
+  va_list args;
+  va_start(args, format);
+  vsnprintf(message, sizeof(message), format, args);
+  va_end(args);
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                     message);
+#else
+  (void)mech;
+  (void)format;
+#endif
+  if (fp) {
+    fclose(fp);
+  }
+  return true;
+}
+
 int load_mechdata(MECH *mech, char *id) {
   FILE *fp = NULL;
   int i, j, k, t;
@@ -684,16 +727,25 @@ int load_mechdata(MECH *mech, char *id) {
   filename =
       mechref_path(mech->xcode.context,
                    mech->xcode.context->configuration->database.mech_db, id);
-  TEMPLATE_GERR(filename == NULL, "No matching file for '%s'.", id);
+  if (mechdata_load_error(fp, mech, filename == NULL,
+                          "No matching file for '%s'.", id)) {
+    return -1;
+  }
   if (filename)
     fp = fopen(filename, "r");
-  TEMPLATE_GERR(!fp, "Unable to open file %s (%s)!", filename, id);
+  if (mechdata_load_error(fp, mech, !fp, "Unable to open file %s (%s)!",
+                          filename, id)) {
+    return -1;
+  }
   strncpy(MechType_Ref(mech), id, 25);
   MechType_Ref(mech)[24] = '\0';
-  TEMPLATE_GERR(fscanf(fp, "%d %d %d %d %d %f %f %d\n", &i1, &i2, &i3, &i4, &i5,
-                       &MechMaxSpeed(mech), &MechJumpSpeed(mech), &i6) < 8,
-                "Old template loading system: %s is invalid template file.",
-                id);
+  if (mechdata_load_error(
+          fp, mech,
+          fscanf(fp, "%d %d %d %d %d %f %f %d\n", &i1, &i2, &i3, &i4, &i5,
+                 &MechMaxSpeed(mech), &MechJumpSpeed(mech), &i6) < 8,
+          "Old template loading system: %s is invalid template file.", id)) {
+    return -1;
+  }
   MechTons(mech) = i1;
   MechTacRange(mech) = i2;
   MechLRSRange(mech) = i3;
@@ -722,8 +774,11 @@ int load_mechdata(MECH *mech, char *id) {
         break;
       }
     }
-    TEMPLATE_GERR(fscanf(fp, "%d %d %d %d\n", &i1, &i2, &i3, &i4) < 4,
-                  "Insufficient data reading section %d!", i);
+    if (mechdata_load_error(fp, mech,
+                            fscanf(fp, "%d %d %d %d\n", &i1, &i2, &i3, &i4) < 4,
+                            "Insufficient data reading section %d!", i)) {
+      return -1;
+    }
     MechSections(mech)[i].recycle = 0;
     SetSectArmor(mech, i, i1);
     SetSectOArmor(mech, i, i1);
@@ -737,11 +792,17 @@ int load_mechdata(MECH *mech, char *id) {
       i4 &= ~4;
     MechSections(mech)[i].config = i4;
     for (j = 0; j < NUM_CRITICALS; j++) {
-      TEMPLATE_GERR(fscanf(fp, "%d %d %d\n", &i1, &i2, &i3) < 3,
-                    "Insufficient data reading critical %d/%d!", i, j);
+      if (mechdata_load_error(
+              fp, mech, fscanf(fp, "%d %d %d\n", &i1, &i2, &i3) < 3,
+              "Insufficient data reading critical %d/%d!", i, j)) {
+        return -1;
+      }
       MechSections(mech)[i].criticals[j].type = i1;
-      TEMPLATE_GERR(unable_to_find_proper_type(GetPartType(mech, i, j)),
-                    "Invalid datatype at %d/%d!", i, j);
+      if (mechdata_load_error(
+              fp, mech, unable_to_find_proper_type(GetPartType(mech, i, j)),
+              "Invalid datatype at %d/%d!", i, j)) {
+        return -1;
+      }
       if (IsSpecial(i1))
         i1 += SPECIAL_BASE_INDEX - OSPECIAL_BASE_INDEX;
       if (IsWeapon(GetPartType(mech, i, j)) &&
@@ -757,9 +818,15 @@ int load_mechdata(MECH *mech, char *id) {
   }
   if (fscanf(fp, "%d %d\n", &i1, &i2) == 2) {
     MechType(mech) = i1;
-    TEMPLATE_GERR(MechType(mech) > CLASS_LAST, "Invalid 'mech type!");
+    if (mechdata_load_error(fp, mech, MechType(mech) > CLASS_LAST,
+                            "Invalid 'mech type!")) {
+      return -1;
+    }
     MechMove(mech) = i2;
-    TEMPLATE_GERR(MechMove(mech) > MOVENEMENT_LAST, "Invalid movenement type!");
+    if (mechdata_load_error(fp, mech, MechMove(mech) > MOVENEMENT_LAST,
+                            "Invalid movenement type!")) {
+      return -1;
+    }
   }
   if (fscanf(fp, "%d\n", &i1) != 1)
     MechRadioRange(mech) = DEFAULT_RADIORANGE;

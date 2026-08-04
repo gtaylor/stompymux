@@ -2,10 +2,13 @@
 
 #pragma once
 
-#include <stdbool.h>
-
+#include "mux/commands/command_runtime.h"
+#include "mux/network/descriptor.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/world/world_context.h"
+
+struct CommandContext; // IWYU pragma: keep
 
 typedef struct Descriptor Descriptor;
 typedef struct BtechContext BtechContext;

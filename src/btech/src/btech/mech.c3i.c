@@ -12,12 +12,21 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
+#include <string.h>
+
+#include "macros.h"
 #include "mech.h"
-#include "mech.events.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.c3.misc.h"
 #include "p.mech.c3i.h"
-#include "p.mech.contacts.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 #define C3_POS_IN_NETWORK -1

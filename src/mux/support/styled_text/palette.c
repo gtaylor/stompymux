@@ -1,12 +1,12 @@
 /* palette.c - Styled-text palette and color parsing. */
 
 #include <ctype.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 #include "mux/support/styled_text/internal.h"
+#include "mux/support/styled_text/palette.h"
 
 typedef struct NamedColor {
   const char *name;

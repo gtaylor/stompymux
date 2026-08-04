@@ -2,33 +2,13 @@
  * command.c - command parser and support routines
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
-#include "p.glue.h"
-
-#include "mux/commands/command.h"
-#include "mux/commands/macro.h"
 #include "mux/communication/access_policy.h"
-#include "mux/communication/comsys.h"
-#include "mux/help/help_command.h"
-#include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
+
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/configuration.h"
-#include "mux/server/configuration_context.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/world/match.h"
-
-#ifdef ARBITRARY_LOGFILES
-#include "mux/server/log_cache.h"
-#endif
+#include "mux/server/server_control.h"
 
 bool is_in_character_location(GameDatabase *database,
                               const ServerConfiguration *configuration,

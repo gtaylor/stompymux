@@ -14,17 +14,33 @@
  *
  */
 
+#include "map.h"
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.artillery.h"
 #include "p.btechstats.h"
 #include "p.crit.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.map.conditions.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
 #include "p.mech.ecm.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.utils.h"
 
@@ -235,7 +251,8 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
                 (MechBoomStart(wounded) + MAX_BOOM_TIME) >=
                     wounded->xcode.context->events->tick &&
                 btech_random_roll(wounded->xcode.context) >= BOOM_BTH &&
-                (Started(wounded) || Starting(wounded))) {
+                (Started(wounded) ||
+                 mech_event_count(wounded, EVENT_STARTUP))) {
 
               HexLOSBroadcast(
                   btech_context_get_map(wounded->xcode.context,
@@ -300,7 +317,7 @@ void DestroyParts(MECH *attacker, MECH *wounded, int hitloc, int breach,
         return;
     if (hitloc == RLEG || hitloc == LLEG || hitloc == LARM || hitloc == RARM) {
       tDoAutoFall = 1;
-      StopStand(wounded);
+      mech_event_cancel(wounded, EVENT_STAND);
     }
     NormalizeAllActuatorCrits(wounded);
     if (tIsLeg && !Fallen(wounded) && !Jumping(wounded) && !OODing(wounded) &&

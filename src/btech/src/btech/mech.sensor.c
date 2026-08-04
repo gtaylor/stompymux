@@ -7,10 +7,30 @@
  *       All rights reserved
  */
 
-#include "mech.h"
-#include "glue.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
 #include "map.h"
+#include "mech.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
+
 #define _MECH_SENSOR_C
 #include "autopilot.h"
 #include "mech.events.h"
@@ -46,7 +66,8 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
     bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                    mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    SendDebug(mech->xcode.context, tprintf("%d: BTH S+%d", mech->mynum, bth2));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("%d: BTH S+%d", mech->mynum, bth2));
 #endif
     return bth2;
   }
@@ -55,7 +76,8 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
     bth1 = sensors[(int)MechSensor(mech)[0]].tohitbonus_func(mech, target, map,
                                                              flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    SendDebug(mech->xcode.context, tprintf("%d: BTH P+%d", mech->mynum, bth1));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("%d: BTH P+%d", mech->mynum, bth1));
 #endif
     return bth1;
   }
@@ -64,8 +86,8 @@ int Sensor_ToHitBonus(MECH *mech, MECH *target, int flag, int maplight,
   bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                  mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-  SendDebug(mech->xcode.context,
-            tprintf("%d: BTH +%d/+%d", mech->mynum, bth1, bth2));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("%d: BTH +%d/+%d", mech->mynum, bth1, bth2));
 #endif
   return MIN(bth1, bth2);
 }
@@ -370,14 +392,15 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
           target->mynum == MechTarget(mech)) {
         mech_notify(mech, MECHALL,
                     "Weapon system reports the lock has been lost.");
-        LoseLock(mech);
+        mech_lose_lock(mech);
       }
 #ifdef SENSOR_DEBUG
       snprintf(buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
                mech->mynum, target->mynum,
                (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
                sensor_flag_text(f).text);
-      SendSensor(mech->xcode.context, buf);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
+                         buf);
 #endif
       MechPNumSeen(mech)++;
     }
@@ -425,13 +448,14 @@ void Sensor_DoWeSeeNow(MECH *mech, unsigned short *fl, float range, int x,
         mech_notify(mech, MECHALL, buf);
       }
       if (MechTeam(mech) != MechTeam(target))
-        StopHiding(target);
+        mech_event_cancel(target, EVENT_HIDE);
 #ifdef SENSOR_DEBUG
       snprintf(buf, sizeof(buf),
                "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)", mech->mynum,
                target->mynum, (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
                sensor_flag_text(f).text, seeanew);
-      SendSensor(mech->xcode.context, buf);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
+                         buf);
 #endif
     } else
       MechPNumSeen(mech)++;
@@ -636,7 +660,7 @@ char *mechSensorInfo(MECH *mech, char buffer[static LBUF_SIZE]) {
 
   buffer[0] = SensorInf[(short)MechSensor(mech)[0]];
   buffer[1] = SensorInf[(short)MechSensor(mech)[1]];
-  if (SensorChange(mech)) {
+  if (mech_event_count(mech, EVENT_SCHANGE)) {
     mux_event_visit_type_data(mech->xcode.context->events, EVENT_SCHANGE, mech,
                               sensor_selection_read, &selection);
     if (selection.found) {
@@ -655,7 +679,7 @@ static void show_sensor(DbRef player, MECH *mech, int verbose) {
 
   sensor_mode(mech, "Sensors", player, MechSensor(mech)[0], MechSensor(mech)[1],
               verbose);
-  if (SensorChange(mech)) {
+  if (mech_event_count(mech, EVENT_SCHANGE)) {
     mux_event_visit_type_data(mech->xcode.context->events, EVENT_SCHANGE, mech,
                               sensor_selection_read, &selection);
     if (selection.found)
@@ -766,9 +790,9 @@ static int set_sensor(MECH *mech, char ps, char ss) {
       return -1;
     if (!CanChangeTo(mech, sec))
       return -1;
-    StopSensorChange(mech);
-    MECHEVENT(mech, EVENT_SCHANGE, mech_sensorchange_event, SCHANGE_TICK,
-              ((prim * NUM_SENSORS) + sec));
+    mech_event_cancel(mech, EVENT_SCHANGE);
+    mech_event_schedule(mech, EVENT_SCHANGE, mech_sensorchange_event,
+                        SCHANGE_TICK, ((prim * NUM_SENSORS) + sec));
   }
   return 0;
 }
@@ -824,10 +848,10 @@ void possibly_see_mech(MECH *mech) {
       if (!(seer = btech_context_get_mech(mech->xcode.context, j)))
         continue;
       if (seer->mapindex != map->mynum) {
-        SendError(mech->xcode.context,
-                  tprintf("Mech #%ld was on map #%ld but with "
-                          "incorrect mapindex (%ld)",
-                          seer->mynum, map->mynum, seer->mapindex));
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                           tprintf("Mech #%ld was on map #%ld but with "
+                                   "incorrect mapindex (%ld)",
+                                   seer->mynum, map->mynum, seer->mapindex));
         map->mechsOnMap[i] = -1;
         continue;
       }
@@ -887,6 +911,7 @@ void ScrambleInfraAndLiteAmp(MECH *mech, int time, int chance, char *inframsg,
           } else
             continue;
           MechStatus(tempMech) |= BLINDED;
-          MECHEVENT(tempMech, EVENT_BLINDREC, mech_unblind_event, time, 0);
+          mech_event_schedule(tempMech, EVENT_BLINDREC, mech_unblind_event,
+                              time, 0);
         }
 }

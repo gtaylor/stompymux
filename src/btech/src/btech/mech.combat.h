@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include "mech.h"
+
 #define Clustersize(weapindx)                                                  \
   (((MechWeapons[weapindx].special & (IDF | MRM | ROCKET)) &&                  \
     (MechWeapons[weapindx].damage == 1))                                       \

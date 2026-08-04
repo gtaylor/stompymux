@@ -14,14 +14,23 @@
  *
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "autopilot.h"
-#include "glue.h"
+#include "btech_channel.h"
+#include "btmacros.h"
+#include "map.terrain.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "p.econ_cmds.h"
+#include "p.glue.h"
 #include "p.map.conditions.h"
+#include "p.map.dynamic.h"
 #include "p.mech.restrict.h"
 #include "p.mech.utils.h"
 
@@ -90,11 +99,12 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   mech->mapindex = -1;
   if (map->first_free <= mech->mapnumber ||
       map->mechsOnMap[mech->mapnumber] != mech->mynum) {
-    SendError(map->xcode.context,
-              tprintf("Map indexing error for mech #%ld: Map index %d contains "
-                      "data for #%ld instead.",
-                      mech->mynum, mech->mapnumber,
-                      map->mechsOnMap ? map->mechsOnMap[mech->mapnumber] : -1));
+    btech_channel_send(
+        map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("Map indexing error for mech #%ld: Map index %d contains "
+                "data for #%ld instead.",
+                mech->mynum, mech->mapnumber,
+                map->mechsOnMap ? map->mechsOnMap[mech->mapnumber] : -1));
     if (map->mechsOnMap)
       for (loop = 0;
            (loop < map->first_free) && (map->mechsOnMap[loop] != mech->mynum);
@@ -136,8 +146,9 @@ void remove_mech_from_map(MAP *map, MECH *mech) {
   }
   MechNumSeen(mech) = 0;
   if (IsDS(mech))
-    SendDSInfo(map->xcode.context,
-               tprintf("DS #%ld has left map #%ld", mech->mynum, map->mynum));
+    btech_channel_send(
+        map->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+        tprintf("DS #%ld has left map #%ld", mech->mynum, map->mynum));
 }
 
 void add_mech_to_map(MAP *newmap, MECH *mech) {
@@ -200,8 +211,9 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
   UnZombifyMech(mech);
   UpdateConditions(mech, newmap);
   if (IsDS(mech))
-    SendDSInfo(mech->xcode.context, tprintf("DS #%ld has entered map #%ld",
-                                            mech->mynum, newmap->mynum));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+        tprintf("DS #%ld has entered map #%ld", mech->mynum, newmap->mynum));
 }
 
 int mech_size(MAP *map) {

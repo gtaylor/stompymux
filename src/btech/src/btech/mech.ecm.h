@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "mech.lifecycle.h"
 /* mech.ecm.c */
 void cause_ecm(MECH *from, MECH *to);
 void end_ecm_check(MECH *mech);

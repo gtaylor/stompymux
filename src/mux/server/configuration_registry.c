@@ -1,29 +1,18 @@
 /* configuration.c - Configuration parsing and defaults */
 
-#include "mux/server/configuration.h"
-
-#include "mux/server/configuration_context.h"
-#include "mux/server/configuration_toml.h"
-#include "mux/server/platform.h"
-
-#include <arpa/inet.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 #include "mux/commands/command.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
+#include "mux/objects/flags.h" // IWYU pragma: keep
+#include "mux/server/configuration.h"
+#include "mux/server/configuration_context.h" // IWYU pragma: keep
 #include "mux/server/configuration_internal.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_registries.h"
-#include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/styled_text/palette.h"
-#include "mux/world/world_context.h"
+
 typedef int (*ConfigurationIntInterpreter)(int *value, char *text, long extra,
                                            DbRef player, char *command,
                                            ConfigurationContext *context);

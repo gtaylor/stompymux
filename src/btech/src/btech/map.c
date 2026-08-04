@@ -1,38 +1,37 @@
-
-/*
- * Author: Markus Stenberg <fingon@iki.fi>
- *
- * Last modified: Fri Dec 11 00:59:48 1998 fingon
- *
- * Original authors:
- *   4.8.93- rdm created
- *   6.16.93- jb modified, added hex_struct
- * Since that modified by:
- *   '95 - '97: Markus Stenberg <fingon@iki.fi>
- *   '98 - '02: Thomas Wouters <thomas@xs4all.net>
- */
-
-#include "mux/server/game.h"
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
-#include <time.h>
+#include <string.h>
 
-#include "autopilot.h"
-#include "glue.h"
-#include "mech.events.h"
-#include "mech.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "glue_types.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
-#include "object_spatial.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/server/server_control.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.debug.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.h"
 #include "p.map.obj.h"
-#include "p.mech.build.h"
 #include "p.mech.maps.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.utils.h"
 #include "p.mechfile.h"
-#include "p.spath.h"
 
 static char *map_filename(const MAP *map, const char *mapname) {
   const char *map_path = map->xcode.context->configuration->database.map_db;
@@ -191,10 +190,10 @@ void map_addhex(DbRef player, void *data, char *buffer) {
       !((x >= 0) && (x < map->map_width) && (y >= 0) && (y < map->map_height)),
       "X,Y out of range!");
   if (args[2][0] == '.')
-    SetTerrain(map, x, y, ' ');
+    map_terrain_set(map, x, y, ' ');
   else
-    SetTerrain(map, x, y, args[2][0]);
-  SetElevation(map, x, y, (elev <= MAX_ELEV) ? elev : MAX_ELEV);
+    map_terrain_set(map, x, y, args[2][0]);
+  map_elevation_set(map, x, y, (elev <= MAX_ELEV) ? elev : MAX_ELEV);
   notify(btech_context_evaluation(map->xcode.context), player, "Hex set!");
 }
 
@@ -227,9 +226,11 @@ int water_distance(MAP *map, int x, int y, int dir, int max) {
     y2 = BOUNDED(0, y, map->map_height - 1);
     if (x != x2 || y != y2)
       return max;
-    if (GetTerrain(map, x, y) == WATER || GetTerrain(map, x, y) == ICE)
+    if (map_terrain_get(map, x, y) == WATER ||
+        map_terrain_get(map, x, y) == ICE)
       return i;
-    if (GetTerrain(map, x, y) != BRIDGE && GetTerrain(map, x, y) != ROAD)
+    if (map_terrain_get(map, x, y) != BRIDGE &&
+        map_terrain_get(map, x, y) != ROAD)
       return max;
   }
   return max;
@@ -255,9 +256,9 @@ static void make_bridges(MAP *map) {
 
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
-      if (GetTerrain(map, x, y) == ROAD)
+      if (map_terrain_get(map, x, y) == ROAD)
         if (eligible_bridge_hex(map, x, y))
-          SetTerrainBase(map, x, y, BRIDGE);
+          map_terrain_set_base(map, x, y, BRIDGE);
 }
 
 int map_checkmapfile(MAP *map, char *mapname) {
@@ -280,9 +281,9 @@ int map_checkmapfile(MAP *map, char *mapname) {
 
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(map->xcode.context,
-                 tprintf("Map #%ld: Invalid height and or/width on %s",
-                         map->mynum, mapname));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
+                       tprintf("Map #%ld: Invalid height and or/width on %s",
+                               map->mynum, mapname));
     my_close_file(fp, &filemode);
     return -2; // Bad Height/Width
   }
@@ -295,10 +296,11 @@ int map_checkmapfile(MAP *map, char *mapname) {
   }
 
   if (i != height) {
-    SendMapError(map->xcode.context,
-                 tprintf("Map #%ld: Mapfile possibly corrupt and/or "
-                         "height/width flipped. Height != what was read in %s",
-                         map->mynum, mapname));
+    btech_channel_send(
+        map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
+        tprintf("Map #%ld: Mapfile possibly corrupt and/or "
+                "height/width flipped. Height != what was read in %s",
+                map->mynum, mapname));
     my_close_file(fp, &filemode);
     return -3;
   }
@@ -335,8 +337,9 @@ int map_load(MAP *map, char *mapname) {
   }
   if (fscanf(fp, "%d %d\n", &width, &height) != 2 || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    SendMapError(map->xcode.context,
-                 tprintf("Map #%ld: Invalid height and/or width", map->mynum));
+    btech_channel_send(
+        map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
+        tprintf("Map #%ld: Invalid height and/or width", map->mynum));
     width = DEFAULT_MAP_WIDTH;
     height = DEFAULT_MAP_HEIGHT;
   }
@@ -367,18 +370,19 @@ int map_load(MAP *map, char *mapname) {
         break;
       }
       if (!strcmp(GetTerrainName_base(terr), "Unknown")) {
-        SendMapError(map->xcode.context,
-                     tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
-                             map->mynum, j, i, terr));
+        btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
+                           tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
+                                   map->mynum, j, i, terr));
         terr = GRASSLAND;
       }
-      SetMap(map, j, i, terr, elev);
+      map_hex_set(map, j, i, terr, elev);
     }
   }
   if (i != height) {
-    SendMapError(map->xcode.context, tprintf("Error: EOF reached prematurely. "
-                                             "(x%d != %d || y%d != %d)",
-                                             j, width, i, height));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
+                       tprintf("Error: EOF reached prematurely. "
+                               "(x%d != %d || y%d != %d)",
+                               j, width, i, height));
     my_close_file(fp, &filemode);
     return -2;
   }
@@ -474,7 +478,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
 
     row[0] = 0;
     for (j = 0; j < map->map_width; j++) {
-      terrain = GetTerrain(map, j, i);
+      terrain = map_terrain_get(map, j, i);
       switch (terrain) {
       case ' ':
         terrain = '.';
@@ -484,22 +488,22 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         if ((mo = find_mapobj(map, j, i, TYPE_FIRE)))
           terrain = TFIRE;
         else if (!(map->flags & MAPFLAG_FIRES)) {
-          SetTerrain(map, j, i, ' ');
-          SendEvent(
-              map->xcode.context,
+          map_terrain_set(map, j, i, ' ');
+          btech_channel_send(
+              map->xcode.context, BTECH_CHANNEL_EVENT_INFO, "%s",
               tprintf("[lost?] fire event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
         }
         break;
       case SMOKE:
-        terrain = GetRTerrain(map, j, i);
+        terrain = map_real_terrain_get(map, j, i);
         if (terrain == ' ')
           terrain = '.';
         if (terrain == SMOKE) {
-          SetTerrain(map, j, i, ' ');
-          SendEvent(
-              map->xcode.context,
+          map_terrain_set(map, j, i, ' ');
+          btech_channel_send(
+              map->xcode.context, BTECH_CHANNEL_EVENT_INFO, "%s",
               tprintf("[lost?] smoke event noticed on map #%ld (%s) at %d,%d",
                       map->mynum, map->mapname, j, i));
           terrain = '.';
@@ -507,7 +511,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         break;
       }
       row[j * 2] = terrain;
-      row[j * 2 + 1] = GetElevation(map, j, i) + '0';
+      row[j * 2 + 1] = map_elevation_get(map, j, i) + '0';
     }
     row[j * 2] = 0;
     fprintf(fp, "%s\n", row);
@@ -542,20 +546,22 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
     Create(map[i], unsigned char, x);
 
   if (failed)
-    SendMapError(oldmap->xcode.context,
-                 "Memory allocation failed in setmapsize!");
+    btech_channel_send(oldmap->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                       "Memory allocation failed in setmapsize!");
   else {
     /* Initialize the hexes in the new map to blank */
     for (i = 0; i < y; i++)
       for (j = 0; j < x; j++)
-        SetMapB(&oldmap->xcode.context->map_coding, map, j, i, ' ', 0);
+        map_hex_buffer_set(&oldmap->xcode.context->map_coding, map, j, i, ' ',
+                           0);
     /* Copy old map into new map */
     x1 = (oldmap->map_width < x) ? oldmap->map_width : x;
     y1 = (oldmap->map_height < y) ? oldmap->map_height : y;
     for (i = 0; i < y1; i++)
       for (j = 0; j < x1; j++)
-        SetMapB(&oldmap->xcode.context->map_coding, map, j, i,
-                GetTerrain(oldmap, j, i), GetElevation(oldmap, j, i));
+        map_hex_buffer_set(&oldmap->xcode.context->map_coding, map, j, i,
+                           map_terrain_get(oldmap, j, i),
+                           map_elevation_get(oldmap, j, i));
     /* Now free the old map */
     for (i = oldmap->map_height - 1; i >= 0; i--)
       free((char *)(oldmap->map[i]));
@@ -638,7 +644,7 @@ void initialize_map_empty(MAP *new, DbRef key) {
 
   for (i = 0; i < new->map_height; i++)
     for (j = 0; j < new->map_width; j++)
-      SetMap(new, j, i, ' ', 0);
+      map_hex_set(new, j, i, ' ', 0);
 }
 
 /* Mem alloc/free routines */
@@ -749,15 +755,15 @@ void clear_hex(MECH *mech, int x, int y, int meant) {
 
   if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
-  switch (GetTerrain(map, x, y)) {
+  switch (map_terrain_get(map, x, y)) {
   case HEAVY_FOREST:
-    SetTerrain(map, x, y, LIGHT_FOREST);
+    map_terrain_set(map, x, y, LIGHT_FOREST);
     break;
   case LIGHT_FOREST:
     if (btech_random_range(map->xcode.context, 1, 2) == 1)
-      SetTerrain(map, x, y, ROUGH);
+      map_terrain_set(map, x, y, ROUGH);
     else
-      SetTerrain(map, x, y, GRASSLAND);
+      map_terrain_set(map, x, y, GRASSLAND);
     break;
   default:
     return;

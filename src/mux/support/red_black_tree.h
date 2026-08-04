@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include <stdbool.h>
-
 enum : int {
   SEARCH_EQUAL = 0x1,
   SEARCH_GTEQ = 0x2,

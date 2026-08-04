@@ -4,6 +4,8 @@
 
 #include "mux/support/hash_table.h"
 
+struct ChannelRegistry; // IWYU pragma: keep
+
 typedef struct ChannelRegistry ChannelRegistry;
 typedef struct commac Commac;
 constexpr int COMMAC_BUCKET_COUNT = 500;

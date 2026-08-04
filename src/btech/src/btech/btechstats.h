@@ -18,9 +18,9 @@
 
 #pragma once
 
+#include <time.h>
+
 #include "btechstats_global.h"
-#include "mux/objects/db.h"
-#include "mux/objects/powers.h"
 #include "mux/server/platform.h"
 
 #ifdef BTECHSTATS_C
@@ -238,5 +238,3 @@ typedef struct {
 } PSTATS;
 
 #endif
-
-#include "p.btechstats.h"

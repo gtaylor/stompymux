@@ -6,23 +6,14 @@
  *
  */
 
-#include "mux/server/platform.h"
-
 #include "autopilot.h"
-#include "debug.h"
 #include "glue_types.h"
-#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
-#include "mux/server/server_config.h"
+#include "mux/server/maintenance.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 static void heartbeat_run(MuxTimer *timer, void *arg);
 

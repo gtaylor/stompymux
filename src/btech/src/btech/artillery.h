@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "btech_context.h"
 #include "mux/server/platform.h"
 
 typedef struct BtechContext BtechContext;

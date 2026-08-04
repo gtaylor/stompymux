@@ -2,19 +2,19 @@
  * htab.c - table hashing routines
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include <ctype.h>
 
 #include "mux/commands/command.h"
-#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
-#include "mux/server/configuration_context.h"
+#include "mux/server/game.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
-
-#include "mux/server/server_config.h"
+#include "mux/support/name_table.h"
+#include "mux/support/stringutil.h"
 
 /*
  * ---------------------------------------------------------------------------

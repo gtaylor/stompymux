@@ -8,14 +8,38 @@
  *
  */
 
-#include "mux/server/game.h"
-#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "missile_hit_registry.h"
+#include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.bits.h"
+#include "p.map.obj.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
 
@@ -116,9 +140,10 @@ void del_mapobj(MAP *map, mapobj *mapob, int type, int zap) {
   if (type <= TYPE_LAST_DEC) {
     /* Need to alter terrain back to 'usual' */
     if (!(zap & 2))
-      SetTerrain(map, mapob->x, mapob->y, mapob->datac);
+      map_terrain_set(map, mapob->x, mapob->y, mapob->datac);
     if (zap)
-      StopDec(mapob);
+      mux_event_remove_type_data2(map->xcode.context->events, EVENT_DECORATION,
+                                  mapob);
   }
   if (type == TYPE_BUILD) {
 
@@ -181,9 +206,9 @@ static void fire_dissipation_event(MuxEvent *e) {
   del_mapobj(map, o, TYPE_FIRE, 0);
   if (IsForestHex(map, x, y)) {
     if (btech_random_range(map->xcode.context, 1, 6) < 3)
-      SetTerrain(map, x, y, GRASSLAND);
+      map_terrain_set(map, x, y, GRASSLAND);
     else
-      SetTerrain(map, x, y, ROUGH);
+      map_terrain_set(map, x, y, ROUGH);
   }
 }
 
@@ -367,7 +392,7 @@ void CheckForSmoke(MAP *map, int x[], int y[]) {
     if (find_decorations(map, x[i], y[i]))
       continue;
     /* Cackle */
-    switch (GetTerrain(map, x[i], y[i])) {
+    switch (map_terrain_get(map, x[i], y[i])) {
     case BUILDING:
     case WALL:
       continue;
@@ -451,9 +476,11 @@ static void fire_spreading_event(MuxEvent *e) {
   CheckForFire(map, new_fire_hex_x, new_fire_hex_y);
   flaggo = (o->datas -= FIRESPEED(map));
   if (flaggo > FIRESPEED(map))
-    MAPEVENT(map, EVENT_DECORATION, fire_spreading_event, FIRESPEED(map), o);
+    map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
+                       FIRESPEED(map), (intptr_t)o);
   else
-    MAPEVENT(map, EVENT_DECORATION, fire_dissipation_event, flaggo, o);
+    map_event_schedule(map, EVENT_DECORATION, fire_dissipation_event, flaggo,
+                       (intptr_t)o);
 }
 
 void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo) {
@@ -468,7 +495,7 @@ void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo) {
       foo.y >= map->map_height)
     return;
 
-  foo.datac = GetRTerrain(map, x, y);
+  foo.datac = map_real_terrain_get(map, x, y);
   /* if (foo.datac) */
   {
     mapobj *m, *m2;
@@ -482,17 +509,18 @@ void add_decoration(MAP *map, int x, int y, int type, char data, int flaggo) {
       }
     }
   }
-  SetTerrain(map, x, y, data);
+  map_terrain_set(map, x, y, data);
   foo.datas = (short)flaggo;
   tmpo = add_mapobj(map, &map->mapobj[type], &foo, 1);
   if (flaggo) {
     if (type == TYPE_SMOKE)
-      MAPEVENT(map, EVENT_DECORATION, smoke_dissipation_event, flaggo, tmpo);
+      map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,
+                         (intptr_t)tmpo);
     if (type == TYPE_FIRE) {
       foo.datas = foo.datas * FIRESPEED(map) * 4 / 3 / 60;
       foo.datas = MAX(foo.datas, FIRESPEED(map) * 2);
-      MAPEVENT(map, EVENT_DECORATION, fire_spreading_event, FIRESPEED(map),
-               tmpo);
+      map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
+                         FIRESPEED(map), (intptr_t)tmpo);
     }
   }
 }
@@ -906,8 +934,8 @@ static void building_regen_event(MuxEvent *e) {
   cf = MIN(cf + map->regen_factor, max);
   set_building_cf(map, cf, max);
   if (cf != max)
-    OBJEVENT(e->scheduler, map, EVENT_BREGEN, building_regen_event,
-             BUILDING_REPAIR_DELAY, NULL);
+    btech_event_schedule(e->scheduler, map, EVENT_BREGEN, building_regen_event,
+                         BUILDING_REPAIR_DELAY, 0);
 #endif
 }
 
@@ -933,11 +961,11 @@ void possibly_start_building_regen(BtechContext *context, DbRef obj) {
   if (f == t)
     return;
   if (!f)
-    OBJEVENT(context->events, map, EVENT_BREBUILD, building_rebuild_event,
-             BUILDING_DREBUILD_DELAY, NULL);
+    btech_event_schedule(context->events, map, EVENT_BREBUILD,
+                         building_rebuild_event, BUILDING_DREBUILD_DELAY, 0);
   else
-    OBJEVENT(context->events, map, EVENT_BREGEN, building_regen_event,
-             BUILDING_REPAIR_DELAY, NULL);
+    btech_event_schedule(context->events, map, EVENT_BREGEN,
+                         building_regen_event, BUILDING_REPAIR_DELAY, 0);
 }
 
 static void damage_cf(MECH *mech, mapobj *o, int from, int to, int damage) {
@@ -1031,7 +1059,7 @@ void fire_hex(MECH *mech, int x, int y, int meant) {
 
   if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
-  switch (GetTerrain(map, x, y)) {
+  switch (map_terrain_get(map, x, y)) {
   case HEAVY_FOREST:
     break;
   case LIGHT_FOREST:
@@ -1125,7 +1153,7 @@ int map_underlying_terrain(MAP *map, int x, int y) {
   c = find_decorations(map, x, y);
   if (c)
     return c;
-  return GetTerrain(map, x, y);
+  return map_terrain_get(map, x, y);
 }
 
 int mech_underlying_terrain(MECH *mech) {

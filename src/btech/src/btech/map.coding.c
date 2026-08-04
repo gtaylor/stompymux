@@ -22,6 +22,7 @@
 #include "map.coding.h"
 
 #include "btech/map_coding_registry.h"
+#include "p.map.coding.h"
 
 int map_coding_get_index(MapCodingRegistry *registry, char terrain,
                          char elevation) {

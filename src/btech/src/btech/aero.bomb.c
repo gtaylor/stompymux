@@ -14,14 +14,34 @@
 #define GMOD 1 /* Acceleration / second, in Z hexes */
 
 #include "aero.bomb.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
 #include "coolmenu.h"
+#include "macros.h"
+#include "map.h" // IWYU pragma: keep
+#include "map.terrain.h"
 #include "math.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mycool.h"
+#include "mymath.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 static const BOMBINFO bombs[] = {

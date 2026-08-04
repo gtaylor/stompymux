@@ -11,6 +11,9 @@
 
 #pragma once
 
+#include "map.h"
+#include "mech.h"
+
 /* mine.c */
 void add_mine(MAP *map, int x, int y, int dam);
 void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,

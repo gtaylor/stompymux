@@ -9,21 +9,34 @@
  *       All rights reserved
  */
 
-#include "mux/server/platform.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "map.terrain.h"
+#include "mech.lifecycle.h"
 #include <math.h>
+#include <string.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
+#include "map.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mux/network/mux_event.h"
-#include "p.bsuit.h"
+#include "mech.notify.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.crit.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.mech.events.h"
 #include "p.mech.ice.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.pickup.h"
-#include "p.mech.tag.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 
 void mech_pickup(DbRef player, void *data, char *buffer) {
@@ -40,7 +53,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
                   "You cannot tow while fortified.");
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
                   "You cannot tow currently in this movement mode!");
 #endif
   DOCHECK_CONTEXT(mech->xcode.context, argc != 1,
@@ -76,7 +89,8 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                   MechX(mech) != MechX(target) || MechY(mech) != MechY(target),
                   "You need to be in the same hex!");
   DOCHECK_CONTEXT(mech->xcode.context,
-                  ((MechZ(target) <= 0) && (MechRTerrain(target) == BRIDGE) &&
+                  ((MechZ(target) <= 0) &&
+                   (mech_real_terrain_get(target) == BRIDGE) &&
                    (MechZ(mech) > 0)),
                   "You need to be under the bridge to pick up this unit.");
   DOCHECK_CONTEXT(mech->xcode.context, Towed(target),
@@ -91,7 +105,8 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
       "You can't tow that!");
   DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(target) & HIDDEN,
                   "You cannot pickup hiding targets....");
-  DOCHECK_CONTEXT(mech->xcode.context, Burning(target),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(target, EVENT_VEHICLEBURN),
                   "You can't tow a burning unit!");
   DOCHECK_CONTEXT(
       mech->xcode.context, OODing(target),
@@ -137,10 +152,11 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
           (!Destroyed(target) && !Started(target) && MechTeam(target) != 0),
       "You can't pick that up!");
 
-  if (Moving(target) && !Falling(target) && !OODing(target))
-    StopMoving(target);
+  if (mech_event_count(target, EVENT_MOVE) &&
+      !mech_event_count(target, EVENT_FALL) && !OODing(target))
+    mech_event_cancel(target, EVENT_MOVE);
 
-  DOCHECK_CONTEXT(mech->xcode.context, Moving(target),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(target, EVENT_MOVE),
                   "You can't pick up a moving target!");
 
   mech_printf(target, MECHALL, "%s attaches his tow lines to you.",
@@ -156,14 +172,14 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   if (MechType(target) == CLASS_MECH) {
     MechStatus(target) |= FALLEN;
     FallCentersTorso(target);
-    StopStand(target);
+    mech_event_cancel(target, EVENT_STAND);
   }
   MechStatus(target) |= TOWED;
   MechStatus(target) &= ~HULLDOWN;
   MechTankCritStatus(target) &= ~DUG_IN;
 
-  through_ice =
-      (MechRTerrain(target) == ICE && MechZ(mech) >= 0 && MechZ(target) < 0);
+  through_ice = (mech_real_terrain_get(target) == ICE && MechZ(mech) >= 0 &&
+                 MechZ(target) < 0);
   MirrorPosition(mech, target, 0);
   if (through_ice) {
     if (MechZ(mech) == 0 && MechMove(mech) != MOVE_HOVER)
@@ -172,14 +188,15 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
       break_thru_ice(mech);
   }
   if (!Destroyed(target))
-    Shutdown(target);
+    mech_power_down(target);
 
   /* Adjust the speed involved */
   correct_speed(mech);
 
   /* Send emit for triggers/debugging */
-  SendDebug(mech->xcode.context,
-            tprintf("#%ld has picked up #%ld", mech->mynum, target->mynum));
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+      tprintf("#%ld has picked up #%ld", mech->mynum, target->mynum));
 }
 
 void mech_attachcables(DbRef player, void *data, char *buffer) {
@@ -239,7 +256,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
       (MechTons(towMech) < 5) ||
           (!is_in_character(mech->xcode.context->database, towMech->mynum)),
       "That unit can not tow!");
-  DOCHECK_CONTEXT(mech->xcode.context, Burning(towMech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(towMech, EVENT_VEHICLEBURN),
                   "You can not attach tow cables to a burning unit!");
   DOCHECK_CONTEXT(
       mech->xcode.context, (MechSpecials(towMech) & SALVAGE_TECH),
@@ -288,7 +306,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
                   "That unit can not be towed!");
   DOCHECK_CONTEXT(mech->xcode.context, IsDS(target),
                   "That unit can not be towed!");
-  DOCHECK_CONTEXT(mech->xcode.context, Burning(target),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(target, EVENT_VEHICLEBURN),
                   "You can not attach tow cables to a burning unit!");
   DOCHECK_CONTEXT(
       mech->xcode.context,
@@ -299,11 +318,12 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
                   (MechTeam(target) != MechTeam(mech)) && Started(target),
                   "That unit can not be towed!");
 
-  if (Moving(target) && !Falling(target) && !OODing(target))
-    StopMoving(target);
+  if (mech_event_count(target, EVENT_MOVE) &&
+      !mech_event_count(target, EVENT_FALL) && !OODing(target))
+    mech_event_cancel(target, EVENT_MOVE);
 
   DOCHECK_CONTEXT(
-      mech->xcode.context, Moving(target),
+      mech->xcode.context, mech_event_count(target, EVENT_MOVE),
       "The target is moving to fast for you to attach the tow cables!");
 
   strcpy(mechName, mech_display_id(mech).text);
@@ -326,7 +346,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   if (MechType(target) == CLASS_MECH) {
     MechStatus(target) |= FALLEN;
     FallCentersTorso(target);
-    StopStand(target);
+    mech_event_cancel(target, EVENT_STAND);
   }
 
   MechStatus(target) |= TOWED;
@@ -334,7 +354,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   MechTankCritStatus(target) &= ~DUG_IN;
 
   if (!Destroyed(target))
-    Shutdown(target);
+    mech_power_down(target);
 
   /* Adjust the speed involved */
   correct_speed(towMech);
@@ -393,7 +413,7 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
               targetName);
   mech_notify(target, MECHALL, "You have been released from towing.");
 
-  StopMoving(target);
+  mech_event_cancel(target, EVENT_MOVE);
   MechSpeed(target) = 0;
   MechDesiredSpeed(target) = 0;
 
@@ -428,7 +448,7 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "You drop the mech you were carrying.");
   mech_notify(target, MECHALL, "You have been released from towing.");
 
-  StopMoving(target);
+  mech_event_cancel(target, EVENT_MOVE);
   MechSpeed(target) = 0;
   MechDesiredSpeed(target) = 0;
 
@@ -442,15 +462,16 @@ void mech_dropoff(DbRef player, void *data, char *buffer) {
           target, MECHALL,
           "You wish he had done that a might bit closer to the ground.");
       MechLOSBroadcast(target, "falls through the sky.");
-      MECHEVENT(target, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+      mech_event_schedule(target, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
     } else {
-      if (GetTerrain(newmap, MechX(mech), MechY(mech)) == ICE)
+      if (map_terrain_get(newmap, MechX(mech), MechY(mech)) == ICE)
         MechZ(target) = 0;
       else
         MechZ(target) = Elevation(newmap, MechX(mech), MechY(mech));
     }
   }
   correct_speed(mech);
-  SendDebug(mech->xcode.context,
-            tprintf("#%ld has dropped off #%ld", mech->mynum, target->mynum));
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+      tprintf("#%ld has dropped off #%ld", mech->mynum, target->mynum));
 }

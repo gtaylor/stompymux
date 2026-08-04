@@ -2,15 +2,11 @@
  * look.c -- commands which look at things
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
-#include "mux/commands/action_messages.h"
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/commands/command_runtime.h"
 #include "mux/commands/examine_commands.h"
-#include "mux/commands/look.h"
+
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/commands/command_keys.h"
 #include "mux/commands/state_commands.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/attrs.h"
@@ -18,18 +14,14 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
+#include "mux/persistence/gamedb.h" // IWYU pragma: keep
+#include "mux/server/configuration_context.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
+#include "mux/world/access.h"
 #include "mux/world/match.h"
-#include "mux/world/object_set.h"
-#include "mux/world/walkdb.h"
-#include "mux/world/world_context.h"
-
-#include <ctype.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <math.h>
 
 extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
 

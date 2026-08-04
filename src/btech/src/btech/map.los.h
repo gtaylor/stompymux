@@ -13,6 +13,7 @@
 
 typedef struct BtechContext BtechContext;
 
+#include "btech_context.h"
 #include "mux/server/platform.h"
 
 #define MAX_SENSORS 2

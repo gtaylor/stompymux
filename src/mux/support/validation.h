@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/server/server_config.h"
+
 typedef struct ServerConfiguration ServerConfiguration;
 
 int is_integer(char *string);

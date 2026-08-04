@@ -24,19 +24,34 @@
 /*! \todo { Add more code to the sensor system so the AI can be
  * more aware of its terrain } */
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "autopilot.h"
-#include "failures.h"
-#include "mech.events.h"
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mech.sensor.h"
-#include "p.autogun.h"
-#include "p.bsuit.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
 #include "p.glue.h"
-#include "p.mech.advanced.h"
-#include "p.mech.bth.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.physical.h"
-#include "p.mech.sensor.h"
 #include "p.mech.utils.h"
 
 #if 0

@@ -7,7 +7,14 @@
  *       All rights reserved
  */
 
+#include <stdlib.h>
+
+#include "btmacros.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 static struct {

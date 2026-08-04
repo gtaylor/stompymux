@@ -2,7 +2,10 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+
+struct ObjectList; // IWYU pragma: keep
 
 typedef struct ObjectListBlock ObjectListBlock;
 struct ObjectListBlock {

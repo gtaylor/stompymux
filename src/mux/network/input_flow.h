@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/network/descriptor.h"
 
 constexpr int FLOW_STEP_NAME_SIZE = 64;

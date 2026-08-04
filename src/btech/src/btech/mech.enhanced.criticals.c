@@ -8,14 +8,23 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#include "mech.h"
+#include <stdio.h>
+#include <string.h>
+
+#include "btech_context.h"
 #include "failures.h"
-#include "mech.events.h"
+#include "macros.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "p.glue.hcode.h"
 #include "p.mech.bth.h"
-#include "p.mech.combat.h"
 #include "p.mech.damage.h"
 #include "p.mech.enhanced.criticals.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 void getWeapData(MECH *mech, int section, int critical, int *wWeapIndex,

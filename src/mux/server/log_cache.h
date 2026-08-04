@@ -2,7 +2,11 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
+#include "mux/commands/command_context.h"
+#include "mux/network/mux_event.h" // IWYU pragma: keep
+#include "mux/server/event_timer.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct LogCache LogCache;

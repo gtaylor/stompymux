@@ -9,35 +9,54 @@
  *
  */
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "mech.lifecycle.h"
 #include "mux/commands/action_messages.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "mux/world/object.h"
-
 /* Ejection code */
 #include "autopilot.h"
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btmacros.h"
 #include "glue.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.notify.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.crit.h"
 #include "p.econ_cmds.h"
-#include "p.mech.combat.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.misc.h"
+#include "p.mech.events.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.ood.h"
-#include "p.mech.pickup.h"
 #include "p.mech.restrict.h"
-#include "p.mech.tag.h"
 #include "p.mech.tech.commands.h"
 #include "p.mech.tech.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mechrep.h"
-#include <math.h>
 
 int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag) {
   DbRef i, tmpnext;
@@ -46,8 +65,8 @@ int tele_contents(BtechContext *context, DbRef from, DbRef to, int flag) {
 
   SAFE_DOLIST(context->database, i, tmpnext,
               game_object_contents(context->database, from))
-  if ((flag & TELE_ALL) || !Wiz(context->database, i)) {
-    if (flag & TELE_XP && !Wiz(context->database, i))
+  if ((flag & TELE_ALL) || !is_wizard(context->database, i)) {
+    if (flag & TELE_XP && !is_wizard(context->database, i))
       if (!(is_quiet(context->database, from)))
         lower_xp(context, i, context->configuration->btech_xploss);
     move_via_teleport(evaluation, i, to, 1, flag & TELE_LOUD ? 0 : 7);
@@ -88,7 +107,7 @@ static void mech_discard_event(MuxEvent *e) {
 
 void discard_mw(MECH *mech) {
   if (is_in_character(mech->xcode.context->database, mech->mynum))
-    MECHEVENT(mech, EVENT_NUKEMECH, mech_discard_event, 10, 0);
+    mech_event_schedule(mech, EVENT_NUKEMECH, mech_discard_event, 10, 0);
 }
 
 void enter_mw_bay(MECH *mech, DbRef bay) {
@@ -145,8 +164,8 @@ static void char_eject(DbRef player, MECH *mech) {
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   if (!(m = btech_context_get_mech(mech->xcode.context, suit))) {
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_thing(evaluation, suit);
     notify(evaluation, player,
@@ -156,8 +175,8 @@ static void char_eject(DbRef player, MECH *mech) {
   }
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);
@@ -269,9 +288,10 @@ static void char_disembark(DbRef player, MECH *mech) {
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   if (!(m = btech_context_get_mech(mech->xcode.context, suit))) {
-    SendError(mech->xcode.context,
-              tprintf("Unable to create special obj for #%ld's disembarkation.",
-                      player));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("Unable to create special obj for #%ld's disembarkation.",
+                player));
     destroy_thing(evaluation, suit);
     notify(evaluation, player,
            "Sorry, something serious went wrong, contact a Wizard "
@@ -280,10 +300,10 @@ static void char_disembark(DbRef player, MECH *mech) {
   }
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
-    SendError(mech->xcode.context,
-              tprintf("Unable to load mechwarrior template for #%ld's "
-                      "disembarkation. (%s)",
-                      player, (!d || !*d) ? "Default template" : d));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("Unable to load mechwarrior template for #%ld's "
+                               "disembarkation. (%s)",
+                               player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);
     notify(evaluation, player,
            "Sorry, something serious went wrong, contact a Wizard "
@@ -326,7 +346,8 @@ static void char_disembark(DbRef player, MECH *mech) {
     MechLOSBroadcast(m, tprintf("jumps out of %s... in mid air !",
                                 mech_display_id(mech).text));
     initial_speed = ((MechSpeed(mech) + MechVerticalSpeed(mech)) / MP1) / 2 + 4;
-    MECHEVENT(m, EVENT_FALL, mech_fall_event, FALL_TICK, -initial_speed);
+    mech_event_schedule(m, EVENT_FALL, mech_fall_event, FALL_TICK,
+                        -initial_speed);
   } else {
     MechLOSBroadcast(m,
                      tprintf("climbs out of %s!", mech_display_id(mech).text));
@@ -363,7 +384,7 @@ void mech_disembark(DbRef player, void *data, char *buffer) {
           game_object_location(mech->xcode.context->database, mech->mynum)),
       "Your location isn't in character!");
   DOCHECK_CONTEXT(mech->xcode.context,
-                  (Started(mech) || Starting(mech)) &&
+                  (Started(mech) || mech_event_count(mech, EVENT_STARTUP)) &&
                       (MechPilot(mech) == player),
                   "While it's running!? Don't be daft.");
   DOCHECK_CONTEXT(mech->xcode.context, fabs(MechSpeed(mech)) > 25.,
@@ -391,7 +412,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(
       mech->xcode.context,
       is_in_character(mech->xcode.context->database, mech->mynum) &&
-          !Wiz(mech->xcode.context->database, player) &&
+          !is_wizard(mech->xcode.context->database, player) &&
           (char_lookupplayer(mech->xcode.context, GOD, GOD, 0,
                              btech_attribute_read(
                                  mech->xcode.context->database, mech->mynum,
@@ -440,7 +461,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
   if (!Destroyed(mech) && game_object_location(mech->xcode.context->database,
                                                player) == mech->mynum) {
     MechPilot(mech) = player;
-    Startup(mech);
+    mech_power_up(mech);
   }
 
   MarkForLOSUpdate(mech);
@@ -519,14 +540,14 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
     StartBSuitRecycle(mech, 20);
   } else if (MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW) {
     for (i = 0; i < NUM_SECTIONS; i++)
-      SetRecycleLimb(mech, i, PHYSICAL_RECYCLE_TIME);
+      mech_set_recycle_limb(mech, i, PHYSICAL_RECYCLE_TIME);
   } else if (MechType(mech) == CLASS_VEH_GROUND ||
              MechType(mech) == CLASS_VTOL) {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (i == ROTOR)
         continue;
       else
-        SetRecycleLimb(mech, i, PHYSICAL_RECYCLE_TIME);
+        mech_set_recycle_limb(mech, i, PHYSICAL_RECYCLE_TIME);
   }
 
   fix_pilotdamage(mech, MechPilot(mech));
@@ -642,7 +663,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                   "That target is not in your line of sight.");
   DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) == target_num,
                   "You cannot embark what your towing!");
-  DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech) || Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  Fallen(mech) || mech_event_count(mech, EVENT_STAND),
                   "Help! I've fallen and I can't get up!");
   DOCHECK_CONTEXT(mech->xcode.context, !Started(mech) || Destroyed(mech),
                   "Ha Ha Ha.");
@@ -759,7 +781,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   }
 
   /* Check if the unit is towing something so the towed unit
-   * is handled first because Shutdown() will cause it to drop
+   * is handled first because mech_power_down() will cause it to drop
    * whatever its towing */
   if (towee && MechCarrying(mech) > 0) {
     MarkForLOSUpdate(towee);
@@ -767,7 +789,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     mech_Rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
     move_via_teleport(evaluation, towee->mynum, target->mynum, 1, 0);
     CargoSpace(target) -= (MechTons(towee) * 100);
-    Shutdown(towee);
+    mech_power_down(towee);
     SetCarrying(mech, -1);
     MechStatus(towee) &= ~TOWED;
   }
@@ -777,7 +799,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
   move_via_teleport(evaluation, mech->mynum, target->mynum, 1, 0);
   CargoSpace(target) -= (MechTons(mech) * 100);
-  Shutdown(mech);
+  mech_power_down(mech);
 
   correct_speed(target);
 }
@@ -807,8 +829,8 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   d = btech_attribute_read(mech->xcode.context->database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   if (!(m = btech_context_get_mech(mech->xcode.context, suit))) {
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to create special obj for #%ld's ejection.", player));
     destroy_thing(evaluation, suit);
     notify(evaluation, player,
@@ -818,8 +840,8 @@ void autoeject(DbRef player, MECH *mech, int tIsBSuit) {
   }
   if (!mech_loadnew(GOD, m,
                     (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
                 player, (!d || !*d) ? "Default template" : d));
     destroy_thing(evaluation, suit);

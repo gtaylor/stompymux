@@ -2,16 +2,20 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <time.h>
 
 #include "btech/map_coding_registry.h"
 #include "btech/missile_hit_registry.h"
 #include "btech/random.h"
 #include "btech/weapon_settings.h"
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/network/descriptor.h"
 #include "mux/server/platform.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/world/world_context.h"
+
+struct BtechContext; // IWYU pragma: keep
 
 typedef struct AccessControlStore AccessControlStore;
 typedef struct CommandContext CommandContext;

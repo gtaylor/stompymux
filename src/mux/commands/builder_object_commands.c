@@ -2,34 +2,28 @@
  * builder_commands.c -- Commands that create and configure world objects
  */
 
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/server/game.h"
-#include "mux/world/player.h"
-
-#include "p.glue.h"
+#include <string.h>
+#include <strings.h>
 
 #include "mux/commands/builder_commands_internal.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
+#include "mux/commands/command_handlers.h"
 #include "mux/communication/comsys.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "mux/support/name_table.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
 #include "mux/world/match.h"
-#include "mux/world/object.h"
 #include "mux/world/object_set.h"
-#include "mux/world/walkdb.h"
+#include "mux/world/player.h"
 
 extern NameTable indiv_attraccess_nametab[];
 

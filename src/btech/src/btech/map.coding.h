@@ -13,5 +13,3 @@
  */
 
 #pragma once
-
-#include "p.map.coding.h"

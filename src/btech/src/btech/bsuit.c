@@ -11,16 +11,31 @@
  */
 
 #include <math.h>
+#include <string.h>
 
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.bsuit.h"
 #include "p.crit.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.bth.h"
-#include "p.mech.combat.h"
 #include "p.mech.damage.h"
 #include "p.mech.los.h"
 #include "p.mech.move.h"
-#include "p.mech.update.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 /*! \todo {The Bsuit code needs an overhaul} */
@@ -58,7 +73,7 @@ void StartBSuitRecycle(MECH *mech, int time) {
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
     if (GetSectInt(mech, i))
-      SetRecycleLimb(mech, i, time);
+      mech_set_recycle_limb(mech, i, time);
 }
 
 void StopSwarming(MECH *mech, int intentional) {
@@ -109,7 +124,7 @@ void StopSwarming(MECH *mech, int intentional) {
   }
 
   MechSpeed(mech) = 0;
-  MaybeMove(mech);
+  mech_maybe_move(mech);
   DropSetElevation(mech, 0);
   MechFloods(mech);
 }
@@ -241,7 +256,7 @@ int doBSuitCommonChecks(MECH *mech, DbRef player) {
   DOCHECK1_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 0,
                    "You are already busy with a special attack!");
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK1_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+  DOCHECK1_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
                    "Unavailable when performing movement modes - deal.");
 #endif
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
@@ -446,7 +461,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     SetFacing(mech, 270);
     MechDesiredFacing(mech) = 270;
     MirrorPosition(target, mech, 1);
-    StopLock(mech);
+    mech_stop_lock(mech);
   } else {
     mech_printf(target, MECHALL, "%s attempts to %s you!",
                 mech_to_mech_display_id(target, mech).text,
@@ -461,7 +476,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
     MechLOSBroadcast(mech, "breaks from its cover.");
     MechCritStatus(mech) &= ~(HIDDEN);
-    StopHiding(mech);
+    mech_event_cancel(mech, EVENT_HIDE);
   }
 
   StartBSuitRecycle(mech, RECYCLE_SWARM);
@@ -675,7 +690,7 @@ static void mech_hide_event(MuxEvent *e) {
     return;
   } else if (tic < (MyHiddenTurns(mech) * HIDE_TICK)) {
     tic++;
-    MECHEVENT(mech, EVENT_HIDE, mech_hide_event, 1, tic);
+    mech_event_schedule(mech, EVENT_HIDE, mech_hide_event, 1, tic);
   } else if (!fail) {
     mech_notify(mech, MECHALL, "You are now hidden!");
     MechCritStatus(mech) |= HIDDEN;
@@ -705,7 +720,7 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
                   "Hide where? Up here?");
   DOCHECK_CONTEXT(mech->xcode.context, (fabs(MechSpeed(mech)) > MP1),
                   "Come to a complete stop first.");
-  DOCHECK_CONTEXT(mech->xcode.context, Hiding(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_HIDE),
                   "You are looking for cover already!");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechMove(mech) == MOVE_VTOL && !Landed(mech),
@@ -714,7 +729,7 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, MechSwarmTarget(mech) > 1,
                   "Hide where? Not while on that!");
 
-  terrain = GetRTerrain(map, MechX(mech), MechY(mech));
+  terrain = map_real_terrain_get(map, MechX(mech), MechY(mech));
 
   if (IsForest(terrain)) {
     mech_notify(mech, MECHALL, "You start to hide amongst the trees...");
@@ -734,7 +749,7 @@ void bsuit_hide(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  MECHEVENT(mech, EVENT_HIDE, mech_hide_event, 1, 0);
+  mech_event_schedule(mech, EVENT_HIDE, mech_hide_event, 1, 0);
 }
 
 void JettisonPacks(DbRef player, void *data, char *buffer) {

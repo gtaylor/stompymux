@@ -2,9 +2,11 @@
  * stringutil.c -- string utilities
  */
 
-#include "mux/server/platform.h"
-
+#include <ctype.h>
+#include <errno.h>
 #include <limits.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"

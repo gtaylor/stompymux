@@ -8,31 +8,46 @@
  *
  */
 
-#include "mux/server/game.h"
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
 #include "coolmenu.h"
 #include "failures.h"
-#include "glue.h"
-#include "mech.ecm.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "p.artillery.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.btechstats.h"
-#include "p.crit.h"
+#include "p.glue.hcode.h"
 #include "p.map.conditions.h"
 #include "p.mech.build.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
 #include "p.mech.ecm.h"
 #include "p.mech.enhanced.criticals.h"
-#include "p.mech.hitloc.h"
+#include "p.mech.events.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
+#include "random.h"
 
 #define SILLY_TOGGLE_MACRO(neededspecial, setstatus, msgon, msgoff, donthave)  \
   if (MechSpecials(mech) & (neededspecial)) {                                  \
@@ -206,7 +221,7 @@ void mech_slite(DbRef player, MECH *mech, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & SLITE_DEST,
                   "Your searchlight has been destroyed already!");
 
-  if (SearchlightChanging(mech)) {
+  if (mech_event_count(mech, EVENT_SLITECHANGING)) {
     if (MechStatus2(mech) & SLITE_ON)
       mech_notify(mech, MECHALL,
                   "Your searchlight is already in the process of turning off.");
@@ -219,10 +234,10 @@ void mech_slite(DbRef player, MECH *mech, char *buffer) {
 
   if (MechStatus2(mech) & SLITE_ON) {
     mech_notify(mech, MECHALL, "Your searchlight starts to cool down.");
-    MECHEVENT(mech, EVENT_SLITECHANGING, MechSliteChangeEvent, 5, 0);
+    mech_event_schedule(mech, EVENT_SLITECHANGING, MechSliteChangeEvent, 5, 0);
   } else {
     mech_notify(mech, MECHALL, "Your searchlight starts to warm up.");
-    MECHEVENT(mech, EVENT_SLITECHANGING, MechSliteChangeEvent, 5, 1);
+    mech_event_schedule(mech, EVENT_SLITECHANGING, MechSliteChangeEvent, 5, 1);
   }
 }
 
@@ -669,10 +684,12 @@ static int mech_unjamammo_func(MECH *mech, DbRef player, int index, int high,
     }
   }
 
-  DOCHECK0_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+  DOCHECK0_CONTEXT(mech->xcode.context,
+                   mech_event_count(mech, EVENT_UNJAM_AMMO),
                    "You are already unjamming a weapon!");
 
-  MECHEVENT(mech, EVENT_UNJAM_AMMO, mech_unjam_ammo_event, 60, (long)index);
+  mech_event_schedule(mech, EVENT_UNJAM_AMMO, mech_unjam_ammo_event, 60,
+                      (long)index);
   mech_printf(mech, MECHALL,
               "You begin to shake the jammed ammo loose on weapon #%d", index);
   return 0;
@@ -826,7 +843,7 @@ static void mech_mascr_event(MuxEvent *e) {
 
   if (MechMASCCounter(mech) > 0) {
     MechMASCCounter(mech)--;
-    MECHEVENT(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
+    mech_event_schedule(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
   }
 }
 
@@ -849,11 +866,11 @@ static void mech_masc_event(MuxEvent *e) {
     roll--;
   if (needed < 10 &&
       is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
-      Wiz(mech->xcode.context->database, MechPilot(mech)))
+      is_wizard(mech->xcode.context->database, MechPilot(mech)))
     roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "MASC: BTH %d+, Roll: %d", needed + 1, roll);
   if (roll > needed) {
-    MECHEVENT(mech, EVENT_MASC_FAIL, mech_masc_event, MASC_TICK, 0);
+    mech_event_schedule(mech, EVENT_MASC_FAIL, mech_masc_event, MASC_TICK, 0);
     return;
   }
   MechSpecials(mech) &= ~MASC_TECH;
@@ -885,7 +902,7 @@ static void mech_masc_event(MuxEvent *e) {
   MechCritStatus(mech) |= HIP_DESTROYED;
 
   /* Reset the Speeds, this sets all 3 of them */
-  SetMaxSpeed(mech, 0.0);
+  mech_max_speed_set(mech, 0.0);
 }
 
 void mech_masc(DbRef player, void *data, char *buffer) {
@@ -898,17 +915,17 @@ void mech_masc(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "MASC has been turned off.");
     MechStatus(mech) &= ~MASC_ENABLED;
     MechDesiredSpeed(mech) = MechDesiredSpeed(mech) * 3. / 4.;
-    StopMasc(mech);
-    MECHEVENT(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
+    mech_event_cancel(mech, EVENT_MASC_FAIL);
+    mech_event_schedule(mech, EVENT_MASC_REGEN, mech_mascr_event, MASC_TICK, 0);
     return;
   }
   DOCHECK_CONTEXT(mech->xcode.context, MMaxSpeed(mech) < MP1,
                   "You can't move. How is MASC going to work?");
   mech_notify(mech, MECHALL, "MASC has been turned on.");
   MechStatus(mech) |= MASC_ENABLED;
-  StopMascR(mech);
+  mech_event_cancel(mech, EVENT_MASC_REGEN);
   MechDesiredSpeed(mech) = MechDesiredSpeed(mech) * 4. / 3.;
-  MECHEVENT(mech, EVENT_MASC_FAIL, mech_masc_event, 1, 0);
+  mech_event_schedule(mech, EVENT_MASC_FAIL, mech_masc_event, 1, 0);
 }
 
 static void mech_scharger_event(MuxEvent *e) {
@@ -916,7 +933,8 @@ static void mech_scharger_event(MuxEvent *e) {
 
   if (MechSChargeCounter(mech) > 0) {
     MechSChargeCounter(mech)--;
-    MECHEVENT(mech, EVENT_SCHARGE_REGEN, mech_scharger_event, SCHARGE_TICK, 0);
+    mech_event_schedule(mech, EVENT_SCHARGE_REGEN, mech_scharger_event,
+                        SCHARGE_TICK, 0);
   }
 }
 
@@ -943,12 +961,13 @@ static void mech_scharge_event(MuxEvent *e) {
     roll = roll - 1;
   if (needed < 10 &&
       is_good_obj(mech->xcode.context->database, MechPilot(mech)) &&
-      Wiz(mech->xcode.context->database, MechPilot(mech)))
+      is_wizard(mech->xcode.context->database, MechPilot(mech)))
     roll = btech_random_range(mech->xcode.context, needed + 1, 12);
   mech_printf(mech, MECHALL, "Supercharger: BTH %d, Roll: %d", needed + 1,
               roll);
   if (roll > needed) {
-    MECHEVENT(mech, EVENT_SCHARGE_FAIL, mech_scharge_event, SCHARGE_TICK, 0);
+    mech_event_schedule(mech, EVENT_SCHARGE_FAIL, mech_scharge_event,
+                        SCHARGE_TICK, 0);
     return;
   }
 
@@ -996,7 +1015,7 @@ static void mech_scharge_event(MuxEvent *e) {
     MechLOSBroadcast(mech, msgbuf);
     maxspeed = MechMaxSpeed(mech);
     newmaxspeed = (maxspeed * .5);
-    SetMaxSpeed(mech, newmaxspeed);
+    mech_max_speed_set(mech, newmaxspeed);
   }
 }
 
@@ -1011,17 +1030,18 @@ void mech_scharge(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "Supercharger has been turned off.");
     MechStatus(mech) &= ~SCHARGE_ENABLED;
     MechDesiredSpeed(mech) = MechDesiredSpeed(mech) * 3. / 4.;
-    StopSCharge(mech);
-    MECHEVENT(mech, EVENT_SCHARGE_REGEN, mech_scharger_event, SCHARGE_TICK, 0);
+    mech_event_cancel(mech, EVENT_SCHARGE_FAIL);
+    mech_event_schedule(mech, EVENT_SCHARGE_REGEN, mech_scharger_event,
+                        SCHARGE_TICK, 0);
     return;
   }
   DOCHECK_CONTEXT(mech->xcode.context, MMaxSpeed(mech) < MP1,
                   "How much can you Supercharge if you can't move?");
   mech_notify(mech, MECHALL, "Supercharger has been turned on.");
   MechStatus(mech) |= SCHARGE_ENABLED;
-  StopSChargeR(mech);
+  mech_event_cancel(mech, EVENT_SCHARGE_REGEN);
   MechDesiredSpeed(mech) = MechDesiredSpeed(mech) * 4. / 3.;
-  MECHEVENT(mech, EVENT_SCHARGE_FAIL, mech_scharge_event, 1, 0);
+  mech_event_schedule(mech, EVENT_SCHARGE_FAIL, mech_scharge_event, 1, 0);
 }
 
 static void mech_explode_event(MuxEvent *e) {
@@ -1038,9 +1058,10 @@ static void mech_explode_event(MuxEvent *e) {
   if ((--extra) % 256) {
     mech_printf(mech, MECHALL, "Self-destruction in %ld second%s..",
                 extra % 256, extra > 1 ? "s" : "");
-    MECHEVENT(mech, EVENT_EXPLODE, mech_explode_event, 1, extra);
+    mech_event_schedule(mech, EVENT_EXPLODE, mech_explode_event, 1, extra);
   } else {
-    SendDebug(mech->xcode.context, tprintf("#%ld explodes.", mech->mynum));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("#%ld explodes.", mech->mynum));
     if (MechType(mech) == CLASS_BSUIT) {
       mech_notify(mech, MECHALL,
                   "Your batttle suit triggers it's self-destruction sequence.. "
@@ -1061,14 +1082,14 @@ static void mech_explode_event(MuxEvent *e) {
       MechZ(mech) += 6;
 
     } else if (extra >= 256) {
-      SendDebug(mech->xcode.context,
-                tprintf("#%ld explodes [ammo]", mech->mynum));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         tprintf("#%ld explodes [ammo]", mech->mynum));
       mech_notify(mech, MECHALL, "All your ammo explodes!");
       while ((damage = FindDestructiveAmmo(mech, &i, &j)))
         ammo_explosion(mech, mech, i, j, damage);
     } else {
-      SendDebug(mech->xcode.context,
-                tprintf("#%ld explodes [reactor]", mech->mynum));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         tprintf("#%ld explodes [reactor]", mech->mynum));
       MechLOSBroadcast(mech, "suddenly explodes!");
       mech_notify(mech, MECHALL,
                   "Suddenly you feel great heat overcoming your senses.. you "
@@ -1112,18 +1133,19 @@ void mech_explode(DbRef player, void *data, char *buffer) {
                       !mech->xcode.context->configuration->btech_explode_stop,
                       "It's too late to turn back now!");
     }
-    DOCHECK_CONTEXT(mech->xcode.context, !Exploding(mech),
+    DOCHECK_CONTEXT(mech->xcode.context, !mech_event_count(mech, EVENT_EXPLODE),
                     "Your mech isn't undergoing a self-destruct sequence!");
 
-    StopExploding(mech);
+    mech_event_cancel(mech, EVENT_EXPLODE);
     mech_notify(mech, MECHALL, "Self-destruction sequence aborted.");
-    SendDebug(mech->xcode.context,
-              tprintf("#%ld in #%ld stopped the self-destruction sequence.",
-                      player, mech->mynum));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("#%ld in #%ld stopped the self-destruction sequence.", player,
+                mech->mynum));
     MechLOSBroadcast(mech, "regains control over itself.");
     return;
   }
-  DOCHECK_CONTEXT(mech->xcode.context, Exploding(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_EXPLODE),
                   "Your mech is already undergoing a self-destruct sequence!");
   if (!strcasecmp(buffer, "ammo")) {
     /*
@@ -1140,9 +1162,10 @@ void mech_explode(DbRef player, void *data, char *buffer) {
     DOCHECK_CONTEXT(mech->xcode.context, !i,
                     "There is no 'damaging' ammo on your 'mech!");
     /* Engage the boom-event */
-    SendDebug(mech->xcode.context,
-              tprintf("#%ld in #%ld initiates the ammo explosion sequence.",
-                      player, mech->mynum));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("#%ld in #%ld initiates the ammo explosion sequence.", player,
+                mech->mynum));
     MechLOSBroadcast(mech, "starts billowing smoke!");
     time = time / 2;
   } else {
@@ -1156,15 +1179,16 @@ void mech_explode(DbRef player, void *data, char *buffer) {
       DOCHECK_CONTEXT(mech->xcode.context, MechSpecials(mech) & ICE_TECH,
                       "You need a fusion reactor.");
     }
-    SendDebug(mech->xcode.context,
-              tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
-                      player, mech->mynum));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
+                player, mech->mynum));
     MechLOSBroadcast(mech, "loses reactions containment!");
     ammo = 0;
   }
   if (override)
     time = 3;
-  MECHEVENT(mech, EVENT_EXPLODE, mech_explode_event, 1, time);
+  mech_event_schedule(mech, EVENT_EXPLODE, mech_explode_event, 1, time);
   mech_notify(mech, MECHALL,
               "Self-destruction sequence engaged ; please stand by.");
   mech_printf(mech, MECHALL, "%s in %ld seconds.",
@@ -1209,15 +1233,16 @@ void mech_dig(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
                   "While dropping? I think not.");
   DOCHECK_CONTEXT(mech->xcode.context,
-                  MechRTerrain(mech) == ROAD || MechRTerrain(mech) == BRIDGE ||
-                      MechRTerrain(mech) == BUILDING ||
-                      MechRTerrain(mech) == WALL,
+                  mech_real_terrain_get(mech) == ROAD ||
+                      mech_real_terrain_get(mech) == BRIDGE ||
+                      mech_real_terrain_get(mech) == BUILDING ||
+                      mech_real_terrain_get(mech) == WALL,
                   "The surface is slightly too hard for you to dig in.");
-  DOCHECK_CONTEXT(mech->xcode.context, MechRTerrain(mech) == WATER,
+  DOCHECK_CONTEXT(mech->xcode.context, mech_real_terrain_get(mech) == WATER,
                   "In water? Who are you kidding?");
 
   MechTankCritStatus(mech) |= DIGGING_IN;
-  MECHEVENT(mech, EVENT_DIG, mech_dig_event, 20, 0);
+  mech_event_schedule(mech, EVENT_DIG, mech_dig_event, 20, 0);
   mech_notify(mech, MECHALL, "You start digging yourself in a nice hole..");
 }
 
@@ -1254,7 +1279,7 @@ void mech_fixturret(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context,
                   !(MechTankCritStatus(mech) & TURRET_JAMMED),
                   "Your turret is not jammed!");
-  MECHEVENT(mech, EVENT_UNJAM_TURRET, mech_unjam_turret_event, 60, 0);
+  mech_event_schedule(mech, EVENT_UNJAM_TURRET, mech_unjam_turret_event, 60, 0);
   mech_notify(mech, MECHALL, "You start to repair your jammed turret.");
 }
 
@@ -1375,7 +1400,7 @@ void mech_stealtharmor(DbRef player, MECH *mech, char *buffer) {
     return;
   }
 
-  if (StealthArmorChanging(mech)) {
+  if (mech_event_count(mech, EVENT_STEALTH_ARMOR)) {
     mech_notify(
         mech, MECHALL,
         "You are already changing the status of your Stealth Armor system!");
@@ -1387,11 +1412,13 @@ void mech_stealtharmor(DbRef player, MECH *mech, char *buffer) {
     mech_notify(mech, MECHALL,
                 "Your Stealth Armor system begins to come online.");
 
-    MECHEVENT(mech, EVENT_STEALTH_ARMOR, changeStealthArmorEvent, 30, 1);
+    mech_event_schedule(mech, EVENT_STEALTH_ARMOR, changeStealthArmorEvent, 30,
+                        1);
   } else {
     mech_notify(mech, MECHALL, "Your Stealth Armor system begins to shutdown.");
 
-    MECHEVENT(mech, EVENT_STEALTH_ARMOR, changeStealthArmorEvent, 30, 0);
+    mech_event_schedule(mech, EVENT_STEALTH_ARMOR, changeStealthArmorEvent, 30,
+                        0);
   }
 }
 
@@ -1434,7 +1461,7 @@ void mech_nullsig(DbRef player, MECH *mech, char *buffer) {
     return;
   }
 
-  if (NullSigSysChanging(mech)) {
+  if (mech_event_count(mech, EVENT_NSS)) {
     mech_notify(
         mech, MECHALL,
         "You are already changing the status of your Null Signature System!");
@@ -1446,12 +1473,12 @@ void mech_nullsig(DbRef player, MECH *mech, char *buffer) {
     mech_notify(mech, MECHALL,
                 "Your Null Signature System begins to come online.");
 
-    MECHEVENT(mech, EVENT_NSS, changeNullSigSysEvent, 30, 1);
+    mech_event_schedule(mech, EVENT_NSS, changeNullSigSysEvent, 30, 1);
   } else {
     mech_notify(mech, MECHALL,
                 "Your Null Signature System begins to shutdown.");
 
-    MECHEVENT(mech, EVENT_NSS, changeNullSigSysEvent, 30, 0);
+    mech_event_schedule(mech, EVENT_NSS, changeNullSigSysEvent, 30, 0);
   }
 }
 
@@ -1677,7 +1704,7 @@ void remove_inarc_pods_mech(DbRef player, MECH *mech, char *buffer) {
     MechLOSBroadcast(mech, "knocks an iNarc pod off itself.");
   }
 
-  SetRecycleLimb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
+  mech_set_recycle_limb(mech, wArmToUse, PHYSICAL_RECYCLE_TIME);
 }
 
 void removeiNarcPodsTank(MuxEvent *e) {
@@ -1715,12 +1742,13 @@ void remove_inarc_pods_tank(DbRef player, MECH *mech, char *buffer) {
     DOCHECK_CONTEXT(mech->xcode.context, !Landed(mech),
                     "You must land before attempting to remove iNarc pods!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, CrewStunned(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_UNSTUN_CREW),
                   "You're too stunned to remove iNarc pods!");
   DOCHECK_CONTEXT(
-      mech->xcode.context, UnjammingTurret(mech),
+      mech->xcode.context, mech_event_count(mech, EVENT_UNJAM_TURRET),
       "You're too busy unjamming your turret to remove iNarc pods!");
-  DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_UNJAM_AMMO),
                   "You're too busy unjamming a weapon to remove iNarc pods!");
 
   if (!(checkAllSections(mech, INARC_HOMING_ATTACHED) ||
@@ -1738,7 +1766,7 @@ void remove_inarc_pods_tank(DbRef player, MECH *mech, char *buffer) {
       mech, MECHALL,
       "You begin to systematically remove all the iNarc pods from your unit.");
 
-  MECHEVENT(mech, EVENT_REMOVE_PODS, removeiNarcPodsTank, 60, 0);
+  mech_event_schedule(mech, EVENT_REMOVE_PODS, removeiNarcPodsTank, 60, 0);
 }
 
 void mech_auto_turret(DbRef player, MECH *mech, char *buffer) {

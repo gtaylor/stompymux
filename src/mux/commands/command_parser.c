@@ -1,10 +1,11 @@
 /* command_parser.c - Literal native-command argument parsing. */
 
 #include "mux/commands/command_parser.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
 
 #include <ctype.h>
+#include <stddef.h>
 
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 
 static char *parse_cleanup(const ServerConfiguration *configuration, int flags,

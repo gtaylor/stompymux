@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
+#include "mux/commands/command_context.h"
+#include "mux/server/platform.h"
 
 typedef struct EvaluationContext EvaluationContext;
 

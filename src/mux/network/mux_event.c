@@ -54,13 +54,9 @@
    further than LOOKAHEAD_STACK_SIZE in the future
    */
 
-#include <assert.h>
-#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <time.h>
 
 #include "mux/network/mux_event.h"
 #include "mux/server/diagnostics.h"

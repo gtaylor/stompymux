@@ -1,18 +1,19 @@
 /* help_render.c - Renders help articles to plain text for display. */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 #include "cmark.h"
-
 #include "mux/help/help_index.h"
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
+#include "mux/server/game.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 
 void help_text_buffer_init(HelpTextBuffer *buffer) {
   buffer->data = nullptr;

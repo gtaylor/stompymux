@@ -1,12 +1,11 @@
 /* red_black_tree_mutation.c - Red-black tree insertion and deletion. */
 
-#include "mux/server/platform.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "mux/support/red_black_tree.h"
 #include "mux/support/red_black_tree_internal.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 
 [[noreturn]] static void red_black_tree_fail(const char *message) {
   fprintf(stderr, "Red-black tree invariant failure: %s\n", message);

@@ -1,3 +1,8 @@
+#include "btech_event.h" // IWYU pragma: keep
+#include "macros.h"
+#include "map.h" // IWYU pragma: keep
+#include "map.terrain.h"
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  *  Copyright (c) 1999-2005 Kevin Stevens
  *	All rights reserved
@@ -17,7 +22,17 @@
 
 /* 09/16/96 Some?? ... ya right ;-) (nim)                  */
 
-#include "mux/server/mux_server.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "mech.lifecycle.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "weapon_settings.h"
 
 /* 09/17/96 Ok, ton of touches then :-P (Mark) */
 
@@ -25,27 +40,22 @@
 
 #define MAX_STRING_LENGTH 8192
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <time.h>
 
-#include "aero.bomb.h"
 #include "coolmenu.h"
-#include "failures.h"
-#include "glue.h"
-#include "mech.events.h"
 #include "mech.h"
-#include "mech.partnames.h"
-#include "mux/network/mux_event_alloc.h"
 #include "p.aero.bomb.h"
 #include "p.bsuit.h"
-#include "p.crit.h"
 #include "p.map.conditions.h"
 #include "p.mech.c3.h"
 #include "p.mech.consistency.h"
 #include "p.mech.mechref_ident.h"
 #include "p.mech.partnames.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.template.h"
 
@@ -2120,8 +2130,8 @@ void update_specials(MECH *mech) {
   }
   if ((MechSpecials(mech) & (XXL_TECH | XL_TECH | LE_TECH)) &&
       (MechSpecials(mech) & CE_TECH))
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("#%ld apparently is very weird: Compact engine AND XL/XXL?",
                 mech->mynum));
   if (tc_count) {
@@ -2154,31 +2164,31 @@ void update_specials(MECH *mech) {
   if (MechType(mech) == CLASS_MECH) {
     /* Be 'noisy' about some crits/techs */
     if ((ff_count > 0) && (ff_count < (cl ? 7 : 14)))
-      SendError(mech->xcode.context,
-                tprintf("%s (#%ld) is missing FF Crits %d/%d!",
-                        MechType_Ref(mech), mech->mynum, ff_count,
-                        (cl ? 7 : 14)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("%s (#%ld) is missing FF Crits %d/%d!",
+                                 MechType_Ref(mech), mech->mynum, ff_count,
+                                 (cl ? 7 : 14)));
 
     if ((es_count > 0) && (es_count < (cl ? 7 : 14)))
-      SendError(mech->xcode.context,
-                tprintf("%s (#%ld) is missing ES Crits %d/%d!",
-                        MechType_Ref(mech), mech->mynum, es_count,
-                        (cl ? 7 : 14)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("%s (#%ld) is missing ES Crits %d/%d!",
+                                 MechType_Ref(mech), mech->mynum, es_count,
+                                 (cl ? 7 : 14)));
 
     if ((tsm_count > 0) && (tsm_count < 6))
-      SendError(mech->xcode.context,
-                tprintf("%s (#%ld) is missing TSM Crits %d/6!",
-                        MechType_Ref(mech), mech->mynum, tsm_count));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("%s (#%ld) is missing TSM Crits %d/6!",
+                                 MechType_Ref(mech), mech->mynum, tsm_count));
 
     if ((wcHvyFF > 0) && (wcHvyFF < 21))
-      SendError(mech->xcode.context,
-                tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
-                        MechType_Ref(mech), mech->mynum, wcHvyFF));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
+                                 MechType_Ref(mech), mech->mynum, wcHvyFF));
 
     if ((wcLtFF > 0) && (wcLtFF < 7))
-      SendError(mech->xcode.context,
-                tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
-                        MechType_Ref(mech), mech->mynum, wcLtFF));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
+                                 MechType_Ref(mech), mech->mynum, wcLtFF));
   }
 
   /*
@@ -2289,6 +2299,40 @@ int get_weight(MECH *mech) {
   return update_oweight(mech, mech_weight_sub(GOD, mech, -1));
 }
 
+static bool template_load_error(FILE *fp, MECH *mech, DbRef player,
+                                bool condition, bool global, const char *format,
+                                ...) __attribute__((format(printf, 6, 7)));
+
+static bool template_load_error(FILE *fp, MECH *mech, DbRef player,
+                                bool condition, bool global, const char *format,
+                                ...) {
+  if (!condition) {
+    return false;
+  }
+#ifdef TEMPLATE_VERBOSE_ERRORS
+  char message[LBUF_SIZE] = {0};
+  va_list args;
+  va_start(args, format);
+  vsnprintf(message, sizeof(message), format, args);
+  va_end(args);
+  if (global) {
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       message);
+  } else {
+    notify(btech_context_evaluation(mech->xcode.context), player, message);
+  }
+#else
+  (void)mech;
+  (void)player;
+  (void)global;
+  (void)format;
+#endif
+  if (fp) {
+    fclose(fp);
+  }
+  return true;
+}
+
 int load_template(DbRef player, MECH *mech, char *filename) {
   char line[MAX_STRING_LENGTH], buf[MAX_STRING_LENGTH];
   int x, y, value, i;
@@ -2347,11 +2391,17 @@ int load_template(DbRef player, MECH *mech, char *filename) {
     else if ((selection = compare_array(load_cmds, cmd)) == -1) {
       /* Initial premise: we will have a mech type before we get to this */
       section = find_section(cmd, MechType(mech), MechMove(mech));
-      TEMPLATE_ERR(section == -1 && !ok_count,
-                   "New template loading system: %s is invalid template file.",
-                   filename);
-      TEMPLATE_GERR(section == -1, "Error while loading: Section %s not found.",
-                    cmd);
+      if (template_load_error(
+              fp, mech, player, section == -1 && !ok_count, false,
+              "New template loading system: %s is invalid template file.",
+              filename)) {
+        return -1;
+      }
+      if (template_load_error(fp, mech, player, section == -1, true,
+                              "Error while loading: Section %s not found.",
+                              cmd)) {
+        return -1;
+      }
       MechSections(mech)[section].recycle = 0;
       ok_count++;
       continue;
@@ -2361,8 +2411,8 @@ int load_template(DbRef player, MECH *mech, char *filename) {
     case 0: /* Reference */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       if (strcmp(tmpc, MechType_Ref(mech))) {
-        SendError(
-            mech->xcode.context,
+        btech_channel_send(
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s has Reference <-> Filename mismatch : %s <-> "
                     "%s - It is automatically fixed by saving again.",
                     filename, tmpc, MechType_Ref(mech)));
@@ -2375,15 +2425,21 @@ int load_template(DbRef player, MECH *mech, char *filename) {
     case 1: /* Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       MechType(mech) = compare_array(mech_types, tmpc);
-      TEMPLATE_GERR(MechType(mech) == -1,
-                    "Error while loading: Type %s not found.", tmpc);
+      if (template_load_error(fp, mech, player, MechType(mech) == -1, true,
+                              "Error while loading: Type %s not found.",
+                              tmpc)) {
+        return -1;
+      }
       AeroFuel(mech) = AeroFuelOrig(mech) = DefaultFuelByType(mech);
       break;
     case 2: /* Movement Type */
       tmpc = read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0});
       MechMove(mech) = compare_array(move_types, tmpc);
-      TEMPLATE_GERR(MechMove(mech) == -1,
-                    "Error while loading: Type %s not found.", tmpc);
+      if (template_load_error(fp, mech, player, MechMove(mech) == -1, true,
+                              "Error while loading: Type %s not found.",
+                              tmpc)) {
+        return -1;
+      }
       break;
     case 3: /* Tons */
       MechTons(mech) = atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
@@ -2409,8 +2465,8 @@ int load_template(DbRef player, MECH *mech, char *filename) {
           atoi(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0}));
       break;
     case 9: /* Max Speed */
-      SetMaxSpeed(mech,
-                  atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
+      mech_max_speed_set(
+          mech, atof(read_desc(fp, ptr, (char[BTECH_TEXT_CAPACITY]){0})));
       TemplateMaxSpeed(mech) = MechMaxSpeed(mech);
       break;
     case 10: /* Specials */
@@ -2419,9 +2475,11 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       if (CheckSpecialsList(specials, specials2, tmpc)) {
         MechSpecials(mech) |= BuildBitVectorNoErr(specials, tmpc);
         MechSpecials2(mech) |= BuildBitVectorNoErr(specials2, tmpc);
-      } else
-        TEMPLATE_GERR(MechSpecials(mech) == -1,
-                      "Error while loading: Invalid specials - %s.", tmpc);
+      } else if (template_load_error(
+                     fp, mech, player, MechSpecials(mech) == -1, true,
+                     "Error while loading: Invalid specials - %s.", tmpc)) {
+        return -1;
+      }
       break;
     case 11: /* Armor */
       SetSectOArmor(mech, section,
@@ -2443,8 +2501,11 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       MechSections(mech)[section].config =
           BuildBitVector(section_configs, tmpc) &
           ~(CASE_TECH | SECTION_DESTROYED);
-      TEMPLATE_GERR(MechSections(mech)[section].config == -1,
-                    "Error while loading: Invalid location config: %s.", tmpc);
+      if (template_load_error(
+              fp, mech, player, MechSections(mech)[section].config == -1, true,
+              "Error while loading: Invalid location config: %s.", tmpc)) {
+        return -1;
+      }
       break;
     case 9999:
       if ((sscanf(cmd, "CRIT_%d-%d", &x, &y)) == 2) {
@@ -2460,9 +2521,13 @@ int load_template(DbRef player, MECH *mech, char *filename) {
       line2 = one_arg(line2, buf);
       if (!strncasecmp(buf, "CL.", 3))
         isClan = 1;
-      TEMPLATE_GERR(!(find_matching_vlong_part(mech->xcode.context, buf, NULL,
-                                               &type, &brand)),
-                    "Unable to find %s", buf);
+      if (template_load_error(fp, mech, player,
+                              !find_matching_vlong_part(mech->xcode.context,
+                                                        buf, NULL, &type,
+                                                        &brand),
+                              true, "Unable to find %s", buf)) {
+        return -1;
+      }
       SetPartType(mech, section, critical, type);
       if (!mech->xcode.context->configuration->btech_parts)
         brand = 0;
@@ -2488,9 +2553,12 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         wFireModes = BuildBitVectorWithDelim(crit_fire_modes, buf);
         wAmmoModes = BuildBitVectorWithDelim(crit_ammo_modes, buf);
 
-        TEMPLATE_GERR(((wFireModes < 0) && (wAmmoModes < 0)),
-                      "Error while loading: Invalid crit modes for weapon: %s.",
-                      buf);
+        if (template_load_error(
+                fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
+                "Error while loading: Invalid crit modes for weapon: %s.",
+                buf)) {
+          return -1;
+        }
 
         if (wFireModes < 0)
           wFireModes = 0;
@@ -2518,9 +2586,11 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         wFireModes = BuildBitVectorWithDelim(crit_fire_modes, buf);
         wAmmoModes = BuildBitVectorWithDelim(crit_ammo_modes, buf);
 
-        TEMPLATE_GERR(((wFireModes < 0) && (wAmmoModes < 0)),
-                      "Error while loading: Invalid crit modes for ammo: %s.",
-                      buf);
+        if (template_load_error(
+                fp, mech, player, wFireModes < 0 && wAmmoModes < 0, true,
+                "Error while loading: Invalid crit modes for ammo: %s.", buf)) {
+          return -1;
+        }
 
         if (wFireModes < 0)
           wFireModes = 0;
@@ -2542,11 +2612,12 @@ int load_template(DbRef player, MECH *mech, char *filename) {
         if (GetPartData(mech, section, critical) !=
                 FullAmmo(mech, section, critical) &&
             MechType(mech) != CLASS_MW && MechType(mech) != CLASS_BSUIT) {
-          SendError(mech->xcode.context,
-                    tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
-                            MechWeapons[Ammo2I(type)].name, mech->mynum,
-                            filename, GetPartData(mech, section, critical),
-                            FullAmmo(mech, section, critical)));
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+              tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
+                      MechWeapons[Ammo2I(type)].name, mech->mynum, filename,
+                      GetPartData(mech, section, critical),
+                      FullAmmo(mech, section, critical)));
           SetPartData(mech, section, critical,
                       FullAmmo(mech, section, critical));
         }
@@ -2664,7 +2735,7 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   if (MechType(mech) == CLASS_MECH)
     do_sub_magic(mech, 1);
   if (MechType(mech) == CLASS_MW)
-    Startup(mech);
+    mech_power_up(mech);
 
   if (MechType(mech) == CLASS_MECH)
     value = 8;
@@ -2722,8 +2793,8 @@ int load_template(DbRef player, MECH *mech, char *filename) {
   /* While we're at it, lets report those that are overweight */
   if ((x - y) > 40)
     if (MechType(mech) != CLASS_BSUIT && MechMove(mech) != MOVE_NONE)
-      SendError(
-          mech->xcode.context,
+      btech_channel_send(
+          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf(
               "Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
               MechType_Ref(mech), x / 1024.0, y / 1024));

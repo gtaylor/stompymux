@@ -8,9 +8,16 @@
  *
  */
 
-#include "mech.tic.h"
-#include "mux/network/mux_event_alloc.h"
-#include "mux/server/game.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
 #include "p.mech.combat.h"
 #include "p.mech.contacts.h"
 #include "p.mech.maps.h"

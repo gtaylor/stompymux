@@ -7,14 +7,23 @@
  *       All rights reserved
  */
 
-#include "mech.h"
-#include "glue.h"
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "btmacros.h"
 #include "mech.events.h"
-#include "p.aero.bomb.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/support/formatting.h"
+#include "p.aero.move.h"
 #include "p.crit.h"
-#include "p.mech.combat.h"
+#include "p.map.obj.h"
 #include "p.mech.damage.h"
-#include "p.mech.update.h"
+#include "p.mech.events.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 #define CHECK_ZERO_LOC(mech, a, b) (GetSectInt(mech, a) > 0 ? a : b)
@@ -269,8 +278,8 @@ int ModifyHeadHit(int hitGroup, MECH *mech) {
                 "The cockpit violently shakes from a grazing blow! "
                 "You are momentarily stunned!");
 
-    if (CrewStunning(mech)) {
-      StopCrewStunning(mech);
+    if (mech_event_count(mech, EVENT_CREWSTUN)) {
+      mech_event_cancel(mech, EVENT_CREWSTUN);
     }
 
     MechLOSBroadcast(mech, "significantly slows down and starts wobbling!");
@@ -281,7 +290,8 @@ int ModifyHeadHit(int hitGroup, MECH *mech) {
       MechDesiredSpeed(mech) = WalkingSpeed(MechMaxSpeed(mech));
     }
 
-    MECHEVENT(mech, EVENT_CREWSTUN, mech_crewstun_event, MECHSTUN_TICK, 0);
+    mech_event_schedule(mech, EVENT_CREWSTUN, mech_crewstun_event,
+                        MECHSTUN_TICK, 0);
   }
 
   return newloc;
@@ -387,21 +397,22 @@ int crittable(MECH *mech, int loc, int tres) {
   /* Are we below the threshold? Okay, then lets give it a 1 in 12 chance to TAC
    */
   if (d < tres) {
-    SendTAC(mech->xcode.context,
-            tprintf("%ld was below thresh (d: %d, tres: %d)", mech->mynum, d,
-                    tres));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                       tprintf("%ld was below thresh (d: %d, tres: %d)",
+                               mech->mynum, d, tres));
     if (btech_random_range(mech->xcode.context, 1, 12) == 6) {
-      SendTAC(mech->xcode.context, tprintf("%ld is pretty unlucky. Needed 6. "
-                                           "Rolled: 6. You're getting tac'd!",
-                                           mech->mynum));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                         tprintf("%ld is pretty unlucky. Needed 6. "
+                                 "Rolled: 6. You're getting tac'd!",
+                                 mech->mynum));
       return 1;
     }
   }
   /* Full Up Armor? Okay, 1 in 71 chance for that 'lucky' TAC */
   if (d == 100) {
     if (btech_random_range(mech->xcode.context, 1, 71) == 23) {
-      SendTAC(
-          mech->xcode.context,
+      btech_channel_send(
+          mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
           tprintf("%ld has full armor, but you suck. 1-71 and you got a 23? "
                   "Who the eff are you, MJ?",
                   mech->mynum));
@@ -446,9 +457,10 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
-                                             "We're in FindFasaHitLocation()",
-                                             mech->mynum));
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                           tprintf("%ld's luck sucks. It got TACed. "
+                                   "We're in FindFasaHitLocation()",
+                                   mech->mynum));
         *iscritical = 1;
         return LTORSO;
       case 3:
@@ -477,9 +489,10 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
-                                             "We're in FindFasaHitLocation()",
-                                             mech->mynum));
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                           tprintf("%ld's luck sucks. It got TACed. "
+                                   "We're in FindFasaHitLocation()",
+                                   mech->mynum));
         *iscritical = 1;
         return RTORSO;
       case 3:
@@ -509,9 +522,10 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
     case BACK:
       switch (roll) {
       case 2:
-        SendTAC(mech->xcode.context, tprintf("%ld's luck sucks. It got TACed. "
-                                             "We're in FindFasaHitLocation()",
-                                             mech->mynum));
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
+                           tprintf("%ld's luck sucks. It got TACed. "
+                                   "We're in FindFasaHitLocation()",
+                                   mech->mynum));
         *iscritical = 1;
         return CTORSO;
       case 3:
@@ -571,7 +585,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
                   "Your craft lurches and suddenly loses a lot of speed!");
               break;
             }
-            LowerMaxSpeed(mech, MP2);
+            mech_max_speed_lower(mech, MP2);
           }
           return LSIDE;
         }
@@ -600,9 +614,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
           }
-          SetMaxSpeed(mech, 0.0);
+          mech_max_speed_set(mech, 0.0);
 
-          MakeMechFall(mech);
+          mech_make_fall(mech);
         }
         return LSIDE;
       case 4:
@@ -626,7 +640,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL, "Your craft suddenly slows!");
             break;
           }
-          LowerMaxSpeed(mech, MP1);
+          mech_max_speed_lower(mech, MP1);
         }
         return LSIDE;
         break;
@@ -685,7 +699,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
                   "Your craft lurches and suddenly loses a lot of speed!");
               break;
             }
-            LowerMaxSpeed(mech, MP2);
+            mech_max_speed_lower(mech, MP2);
           }
           return RSIDE;
         }
@@ -714,9 +728,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL,
                         "Your engines cut out and you drift to a halt!");
           }
-          SetMaxSpeed(mech, 0.0);
+          mech_max_speed_set(mech, 0.0);
 
-          MakeMechFall(mech);
+          mech_make_fall(mech);
         }
         return RSIDE;
       case 4:
@@ -740,7 +754,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
             mech_notify(mech, MECHALL, "Your craft suddenly slows!");
             break;
           }
-          LowerMaxSpeed(mech, MP1);
+          mech_max_speed_lower(mech, MP1);
         }
         return RSIDE;
       case 6:
@@ -753,7 +767,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           if (MechMove(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
-            LowerMaxSpeed(mech, MP1);
+            mech_max_speed_lower(mech, MP1);
           }
         }
         return RSIDE;
@@ -812,7 +826,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
                     "Your craft lurches and suddenly loses a lot of speed!");
                 break;
               }
-              LowerMaxSpeed(mech, MP2);
+              mech_max_speed_lower(mech, MP2);
             }
             return side;
           }
@@ -841,9 +855,9 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
               mech_notify(mech, MECHALL,
                           "Your engines cut out and you drift to a halt!");
             }
-            SetMaxSpeed(mech, 0.0);
+            mech_max_speed_set(mech, 0.0);
 
-            MakeMechFall(mech);
+            mech_make_fall(mech);
           }
         }
         return side;
@@ -868,7 +882,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
               mech_notify(mech, MECHALL, "Your craft suddenly slows!");
               break;
             }
-            LowerMaxSpeed(mech, MP1);
+            mech_max_speed_lower(mech, MP1);
           }
         }
         return side;
@@ -878,7 +892,7 @@ int FindFasaHitLocation(MECH *mech, int hitGroup, int *iscritical,
           if (MechMove(mech) == MOVE_HOVER) {
             mech_notify(mech, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
             mech_notify(mech, MECHALL, "Your air skirt is damaged!");
-            LowerMaxSpeed(mech, MP1);
+            mech_max_speed_lower(mech, MP1);
           }
         }
         return side;
@@ -1461,7 +1475,7 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
     if (MechSpeed(mech) != 0.0)
       MechLOSBroadcast(mech, "wobbles violently.");
 
-    LowerMaxSpeed(mech, MP1);
+    mech_max_speed_lower(mech, MP1);
     correct_speed(mech);
   } else {
     if (Fallen(mech))
@@ -1478,8 +1492,8 @@ void DoMotiveSystemHit(MECH *mech, int wRollMod) {
     if (MechSpeed(mech) > 0)
       MechLOSBroadcast(mech, "shakes violently then begins to slow down.");
 
-    SetMaxSpeed(mech, 0.0);
-    MakeMechFall(mech);
+    mech_max_speed_set(mech, 0.0);
+    mech_make_fall(mech);
     correct_speed(mech);
   }
 }
@@ -2239,8 +2253,8 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, LTORSO, 60)) {
-          SendTAC(
-              mech->xcode.context,
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
                   "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
                   mech->mynum));
@@ -2274,8 +2288,8 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, RTORSO, 60)) {
-          SendTAC(
-              mech->xcode.context,
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
                   "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
                   mech->mynum));
@@ -2310,8 +2324,8 @@ int FindHitLocation(MECH *mech, int hitGroup, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         if (crittable(mech, CTORSO, 60)) {
-          SendTAC(
-              mech->xcode.context,
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_TAC_INFO, "%s",
               tprintf(
                   "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
                   mech->mynum));

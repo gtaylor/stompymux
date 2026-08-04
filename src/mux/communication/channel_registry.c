@@ -6,6 +6,7 @@
 
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
+#include "mux/server/platform.h"
 
 void channel_registry_initialize(ChannelRegistry *registry) {
   assert(registry != nullptr);

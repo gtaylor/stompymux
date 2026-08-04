@@ -1,33 +1,24 @@
 /* configuration.c - Configuration parsing and defaults */
 
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
+#include "mux/server/configuration_internal.h"
 #include "mux/server/game.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/hash_table.h"
+#include "mux/support/name_table.h"
+#include "mux/support/styled_text/palette.h"
 #include "mux/world/player.h"
 
-#include "mux/server/configuration_context.h"
-#include "mux/server/configuration_toml.h"
-#include "mux/server/platform.h"
-
-#include <arpa/inet.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_context.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/configuration_internal.h"
-#include "mux/server/log.h"
-#include "mux/server/server_config.h"
-#include "mux/server/server_registries.h"
-#include "mux/support/alloc.h"
-#include "mux/support/hash_table.h"
-#include "mux/support/styled_text/palette.h"
-#include "mux/world/world_context.h"
 int cf_int(int *vp, char *str, long extra, DbRef player, char *cmd,
            ConfigurationContext *context) {
   /*

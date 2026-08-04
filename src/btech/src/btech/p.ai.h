@@ -11,6 +11,10 @@
 
 #pragma once
 
+#include "autopilot.h"
+#include "mech.h"
+#include "mux/objects/db.h"
+
 #include "mux/server/platform.h"
 
 typedef struct AiInfo {

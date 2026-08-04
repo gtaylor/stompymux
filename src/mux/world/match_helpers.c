@@ -1,15 +1,19 @@
 /* match_helpers.c - Supplemental object matching helpers and command parsing.
  */
 
-#include "mux/world/match.h"
-#include "mux/world/world_context.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <strings.h>
 
-#include "mux/server/platform.h"
-
+#include "mux/commands/command_context.h"
 #include "mux/commands/command_parser.h"
-#include "mux/objects/attrs.h"
+#include "mux/lua/lua_runtime.h" // IWYU pragma: keep
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h" // IWYU pragma: keep
 #include "mux/support/alloc.h"
+#include "mux/world/match.h"
 
 static DbRef promote_dflt(DbRef old, DbRef new) {
   switch (new) {

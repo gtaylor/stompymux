@@ -1,16 +1,13 @@
 /* db.c - In-memory game-object and attribute database operations. */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/player.h"
-#include "mux/world/world_context.h"
+#include <ctype.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-#include <assert.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-
-#include "mux/commands/command.h"
 #include "mux/commands/macro.h"
+#include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
@@ -26,10 +23,8 @@
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
-#include "mux/world/match.h"
 #include "mux/world/object.h"
-#include "mux/world/player_cache.h"
-#include "mux/world/world_context.h"
+#include "mux/world/player.h"
 
 #ifndef O_ACCMODE
 #define O_ACCMODE (O_RDONLY | O_WRONLY | O_RDWR)

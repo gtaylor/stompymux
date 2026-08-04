@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
 /*
  * $Id: ai.c,v 1.2 2005/08/03 21:40:53 av1-op Exp $
@@ -14,21 +15,36 @@
  *
  */
 
-#include "mux/server/mux_server.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
+#include "mech.lifecycle.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/formatting.h"
+#include "mux/support/red_black_tree.h"
+#include "p.ai.h"
+#include "p.glue.h"
+#include "p.mech.move.h"
 
 /* Point of the excercise : move from point a,b to point c,d while
    eliminating opponents and stuff, avoiding enemies in rear/side arc
    and generally having fun */
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "autopilot.h"
-#include "glue.h"
 #include "mech.h"
-#include "object_spatial.h"
-#include "p.autopilot_command.h"
 #include "p.glue.hcode.h"
-#include "p.map.obj.h"
 #include "p.mech.combat.h"
 #include "p.mech.utils.h"
 
@@ -94,7 +110,7 @@ static const int combat_fast_opt[CFAST_COUNT][2] = {
 
 void sendAIM(AUTO *a, MECH *m, char *msg) {
   auto_reply(m, msg);
-  SendAI(a->xcode.context, msg);
+  btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s", msg);
 }
 
 AiInfo ai_info(MECH *m, AUTO *a) {
@@ -229,7 +245,7 @@ static int ai_crash(MAP *map, MECH *m, LocationSimulation *l) {
     /* Ensure if mech m can do transition auto_lx,auto_ly => auto_x,auto_y */
 
     /* XXX Decent handling of terrain choosing and stuff */
-    switch (GetRTerrain(map, l->x, l->y)) {
+    switch (map_real_terrain_get(map, l->x, l->y)) {
     case HEAVY_FOREST:
       if (MechType(m) != CLASS_MECH)
         return 1;
@@ -274,7 +290,7 @@ static int ai_crash(MAP *map, MECH *m, LocationSimulation *l) {
     l->e = Elevation(map, l->x, l->y);
     if (MechMove(m) == MOVE_HOVER)
       l->e = MAX(0, l->e);
-    l->t = GetRTerrain(map, l->x, l->y);
+    l->t = map_real_terrain_get(map, l->x, l->y);
     if (MechType(m) == CLASS_MECH)
       if ((l->e - oz) > 2 || (oz - l->e) > 2)
         return 1;
@@ -294,7 +310,7 @@ static void location_simulation_initialize(LocationSimulation *location,
   location->h = MechFacing(mech);
   location->dh = MechDesiredFacing(mech);
   location->s = MechSpeed(mech);
-  location->t = MechRTerrain(mech);
+  location->t = mech_real_terrain_get(mech);
   location->ds = MechDesiredSpeed(mech);
   location->x = MechX(mech);
   location->y = MechY(mech);
@@ -720,20 +736,23 @@ void ai_adjust_move(AUTO *a, MECH *m, char *text, int hmod, int smod,
   ai_set_heading(m, a, MechDesiredFacing(m) + hmod);
   switch (smod) {
   default:
-    SendAI(a->xcode.context, "%s state: %s (hmod:%d) sc:%d", ai_info(m, a).text,
-           text, hmod, b_score);
+    btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI,
+                       "%s state: %s (hmod:%d) sc:%d", ai_info(m, a).text, text,
+                       hmod, b_score);
     break;
   case SP_OPT_FASTER:
-    SendAI(a->xcode.context, "%s state: %s+accelerating (hmod:%d) sc:%d",
-           ai_info(m, a).text, text, hmod, b_score);
+    btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI,
+                       "%s state: %s+accelerating (hmod:%d) sc:%d",
+                       ai_info(m, a).text, text, hmod, b_score);
     ai_set_speed(
         m, a,
         (float)((MechDesiredSpeed(m) < MP1 ? MP1 : MechDesiredSpeed(m)) * 4.0 /
                 3.0));
     break;
   case SP_OPT_SLOWER:
-    SendAI(a->xcode.context, "%s state: %s+decelerating (hmod:%d) sc:%d",
-           ai_info(m, a).text, text, hmod, b_score);
+    btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI,
+                       "%s state: %s+decelerating (hmod:%d) sc:%d",
+                       ai_info(m, a).text, text, hmod, b_score);
     ai_set_speed(m, a, (int)(MechDesiredSpeed(m) * 2.0 / 3.0));
     break;
   }
@@ -813,7 +832,8 @@ int ai_check_path(MECH *m, AUTO *a, float dx, float dy, float delx,
 
   /* Slow down + stop - no sense in dying needlessly */
   ai_stop(m, a);
-  SendAI(a->xcode.context, "%s state: panic", ai_info(m, a).text);
+  btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s state: panic",
+                     ai_info(m, a).text);
   sendAIM(a, m, "PANIC! Unable to comply with order.");
   return 0;
 }
@@ -1141,7 +1161,7 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
         child_g_score += 150;
 
       /* Now add in some modifiers for terrain */
-      switch (GetTerrain(map, map_x2, map_y2)) {
+      switch (map_terrain_get(map, map_x2, map_y2)) {
       case LIGHT_FOREST:
 
         /* Don't bother trying to enter a light forest

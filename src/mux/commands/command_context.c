@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#include "mux/commands/command_runtime.h"
+#include "mux/commands/command_queue.h"
 #include "mux/objects/db.h"
 
 bool command_context_initialize(CommandContext *context,

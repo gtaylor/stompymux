@@ -4,6 +4,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
+#include "mux/server/platform.h"
 
 bool game_object_has_power(GameDatabase *database, DbRef object, PowerId id) {
   const GameObject *game_object = game_database_object(database, object);

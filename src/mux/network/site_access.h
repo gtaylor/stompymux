@@ -2,10 +2,15 @@
 
 #pragma once
 
-#include <netinet/in.h>
-
-#include "mux/network/descriptor.h"
+#include "mux/commands/command_context.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/server/server_registries.h"
+
+struct sockaddr_storage;
 
 typedef struct AccessControlStore AccessControlStore;
 typedef struct EvaluationContext EvaluationContext;

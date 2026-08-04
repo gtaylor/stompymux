@@ -1,16 +1,12 @@
 /* action_messages.c - Action messaging and native Lua event dispatch. */
 
 #include "mux/commands/action_messages.h"
-#include "mux/server/game.h"
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/object_spatial.h"

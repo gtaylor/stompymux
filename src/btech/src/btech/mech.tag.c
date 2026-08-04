@@ -5,9 +5,20 @@
  *       All rights reserved
  */
 
-#include "mech.h"
+#include <string.h>
+
+#include "btech_event.h"
+#include "macros.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.tag.h"
 #include "p.mech.utils.h"
 
@@ -55,7 +66,8 @@ void mech_tag(DbRef player, void *data, char *buffer) {
                   "This unit is not equipped with TAG!");
   DOCHECK_CONTEXT(mech->xcode.context, isTAGDestroyed(mech),
                   "Your TAG system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, TagRecycling(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_TAG_RECYCLE),
                   "Your TAG system is recycling!");
   DOCHECK_CONTEXT(mech->xcode.context,
                   mech_parseattributes(buffer, args, 2) != 1,
@@ -109,7 +121,8 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   TaggedBy(target) = mech->mynum;
   TAGTarget(mech) = target->mynum;
 
-  MECHEVENT(mech, EVENT_TAG_RECYCLE, tag_recycle_event, TAGRECYCLE_TICK, 1);
+  mech_event_schedule(mech, EVENT_TAG_RECYCLE, tag_recycle_event,
+                      TAGRECYCLE_TICK, 1);
 }
 
 int isTAGDestroyed(MECH *mech) {
@@ -137,7 +150,8 @@ void stopTAG(MECH *mech) {
 
     mech_notify(mech, MECHALL, "Your TAG connection has been broken.");
 
-    MECHEVENT(mech, EVENT_TAG_RECYCLE, tag_recycle_event, TAGRECYCLE_TICK, 0);
+    mech_event_schedule(mech, EVENT_TAG_RECYCLE, tag_recycle_event,
+                        TAGRECYCLE_TICK, 0);
   }
 }
 

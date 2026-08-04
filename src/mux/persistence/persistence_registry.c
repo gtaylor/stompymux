@@ -1,9 +1,10 @@
 /* persistence_registry.c - Registration for snapshot persistence extensions. */
 
-#include "mux/persistence/gamedb.h"
-
 #include <assert.h>
 #include <string.h>
+#include <time.h>
+
+#include "mux/persistence/gamedb.h"
 
 void persistence_context_initialize(
     PersistenceContext *context, const ServerConfiguration *configuration,

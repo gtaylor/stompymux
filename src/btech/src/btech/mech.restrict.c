@@ -7,19 +7,35 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include <math.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
 #include "autopilot.h"
-#include "mech.events.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "mux/network/mux_event_alloc.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.dynamic.h"
 #include "p.mech.build.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3i.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mechrep.h"
@@ -39,8 +55,8 @@ void clear_mech_from_LOS(MECH *mech) {
   if (!(map = btech_context_find_object(mech->xcode.context, mech->mapindex)))
     return;
 #ifdef SENSOR_DEBUG
-  SendSensor(mech->xcode.context,
-             tprintf("LOS info for #%d cleared.", mech->mynum));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
+                     tprintf("LOS info for #%d cleared.", mech->mynum));
 #endif
   for (i = 0; i < map->first_free; i++) {
     map->LOSinfo[mech->mapnumber][i] = 0;
@@ -53,7 +69,7 @@ void clear_mech_from_LOS(MECH *mech) {
       if ((MechStatus(mek) & LOCK_TARGET) && MechTarget(mek) == mech->mynum) {
         mech_notify(mek, MECHALL,
                     "Weapon system reports the lock has been lost.");
-        LoseLock(mek);
+        mech_lose_lock(mek);
       }
       if ((map->LOSinfo[i][mech->mapnumber] & MECHLOSFLAG_SEEN) &&
           MechTeam(mek) != MechTeam(mech))
@@ -62,7 +78,7 @@ void clear_mech_from_LOS(MECH *mech) {
   }
   if (MechStatus(mech) & LOCK_MODES) {
     mech_notify(mech, MECHALL, "Weapon system reports the lock has been lost.");
-    LoseLock(mech);
+    mech_lose_lock(mech);
   }
 }
 
@@ -87,10 +103,10 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   MechY(mech) = y;
   MechLastY(mech) = y;
   MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
-  MechTerrain(mech) = GetTerrain(mech_map, MechX(mech), MechY(mech));
+  MechTerrain(mech) = map_terrain_get(mech_map, MechX(mech), MechY(mech));
   MarkForLOSUpdate(mech);
   if (argc == 2) {
-    MechElev(mech) = GetElev(mech_map, MechX(mech), MechY(mech));
+    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
     MechZ(mech) = MechElev(mech) - 1;
     MechFZ(mech) = ZSCALE * MechZ(mech);
     DropSetElevation(mech, 0);
@@ -101,7 +117,7 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     z = atoi(args[2]);
     MechZ(mech) = z;
     MechFZ(mech) = ZSCALE * MechZ(mech);
-    MechElev(mech) = GetElev(mech_map, MechX(mech), MechY(mech));
+    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
   }
   clear_mech_from_LOS(mech);
   notify_printf(btech_context_evaluation(mech->xcode.context), player,
@@ -194,8 +210,8 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     MechY(mech) = 0;
     MechLastY(mech) = 0;
     MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
-    MechTerrain(mech) = GetTerrain(newmap, MechX(mech), MechY(mech));
-    MechElev(mech) = GetElev(newmap, MechX(mech), MechY(mech));
+    MechTerrain(mech) = map_terrain_get(newmap, MechX(mech), MechY(mech));
+    MechElev(mech) = map_elevation_get(newmap, MechX(mech), MechY(mech));
     notify(btech_context_evaluation(mech->xcode.context), player,
            "You're current position is out of bounds, Pos changed to 0,0");
   }

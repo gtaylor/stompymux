@@ -3,25 +3,17 @@
  */
 
 #include "mux/world/database_check.h"
+
+#include "mux/commands/command_handlers.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/server/server_control.h"
 #include "mux/world/move.h"
 #include "mux/world/object.h"
 #include "mux/world/object_internal.h"
-
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/support/styled_text/markup.h"
-#include "mux/world/world_context.h"
 
 #define ZAP_LOC(database, i)                                                   \
   {                                                                            \

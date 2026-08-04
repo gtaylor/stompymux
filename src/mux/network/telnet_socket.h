@@ -5,11 +5,14 @@
 
 #include <stddef.h>
 
-#include "mux/network/descriptor.h"
+// IWYU pragma: no_include "mux/network/connection_runtime.h"
+// IWYU pragma: no_include "mux/network/descriptor.h"
+// IWYU pragma: no_include "uv.h"
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct TelnetSockets TelnetSockets;
 typedef struct ConnectionRuntime ConnectionRuntime;
+typedef struct Descriptor Descriptor;
 
 TelnetSockets *telnet_sockets_create(uv_loop_t *loop,
                                      ConnectionRuntime *runtime);

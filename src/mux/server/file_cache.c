@@ -2,15 +2,19 @@
  * file_cache.c -- File cache management
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/network/network_output.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include "mux/network/descriptor.h"
 #include <dirent.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-#include "mux/commands/command.h"
+#include "mux/network/network_output.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"

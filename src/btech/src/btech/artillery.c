@@ -16,19 +16,33 @@
  */
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 #include "artillery.h"
+#include "btconfig.h"
+#include "btech_event.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
-#include "object_spatial.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mymath.h"
 #include "p.artillery.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.map.obj.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
-#include "p.mech.fire.h"
 #include "p.mech.hitloc.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
 
@@ -261,7 +275,7 @@ void blast_hit_hexesf(MAP *map, int dam, int singlehitsize, int heatdam,
        * 8/4/99
        */
 
-      switch (GetRTerrain(map, x1, y1)) {
+      switch (map_real_terrain_get(map, x1, y1)) {
       case LIGHT_FOREST:
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {

@@ -12,6 +12,8 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/mux_package.h"
 
+typedef struct CommandInvocation CommandInvocation;
+
 typedef enum LuaModuleRoot {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,

@@ -2,7 +2,9 @@
 
 #pragma once
 
-#include <sodium.h>
+#include <crypto_pwhash.h>
+
+#include "mux/server/server_config.h"
 
 typedef struct ServerConfiguration ServerConfiguration;
 

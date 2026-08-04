@@ -2,13 +2,13 @@
  * htab.c - table hashing routines
  */
 
-#include "mux/server/platform.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-#include "mux/objects/db.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
-
-#include "mux/server/server_config.h"
 
 struct string_dict_entry {
   char *key;

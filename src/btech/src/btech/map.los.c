@@ -10,10 +10,20 @@
  */
 
 #include "map.los.h"
-#include "btmacros.h"
-#include "glue.h"
+
+#include <string.h>
+
+#include "btech_channel.h"
+#include "btech_event.h" // IWYU pragma: keep
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
 #include "mech.sensor.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.lostracer.h"
 #include "p.mech.utils.h"
 
@@ -23,8 +33,9 @@
 int los_map_hex_index(HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {
-    SendError(map_info->context,
-              tprintf("LOSMap request from out of bounds hex: %d,%d", x, y));
+    btech_channel_send(
+        map_info->context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("LOSMap request from out of bounds hex: %d,%d", x, y));
     return 0;
   }
   return ((y - map_info->starty) * map_info->xsize) + (x - map_info->startx);
@@ -223,7 +234,7 @@ static void trace_slitelos(HexLosMap *los_map, MAP *map, MECH *mech, int index,
       return;
 
     trace_a = (trace_height - start_height) / (trace_range + 1);
-    switch (GetTerrain(map, trace_x, trace_y)) {
+    switch (map_terrain_get(map, trace_x, trace_y)) {
     case HEAVY_FOREST:
     case LIGHT_FOREST:
     case SMOKE:
@@ -300,7 +311,7 @@ static void trace_maphexlos(HexLosMap *los_map, MAP *map, MECH *mech, int index,
 
     float trace_a = (trace_height - start_height) / (trace_range + 1);
     float trace_ba = ((trace_height + 2 - start_height)) / (trace_range + 1);
-    int trace_terrain = GetRTerrain(map, trace_x, trace_y);
+    int trace_terrain = map_real_terrain_get(map, trace_x, trace_y);
     int nsensor, newwoods;
 
     for (nsensor = 0; nsensor < NUMSENSORS(mech); nsensor++) {
@@ -413,10 +424,11 @@ bool los_map_calculate(HexLosMap *los_map, MAP *map, MECH *mech, int sx, int sy,
   /* Some safeguarding on size */
 
   if (xsz > MAPLOS_MAXX || ysz > MAPLOS_MAXY) {
-    SendError(map->xcode.context,
-              tprintf("xsize (%d vs %d) or ysize (%d vs %d) "
-                      "to CalculateLOSMap too large, for mech #%ld",
-                      xsz, MAPLOS_MAXX, ysz, MAPLOS_MAXY, mech->mynum));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("xsize (%d vs %d) or ysize (%d vs %d) "
+                               "to CalculateLOSMap too large, for mech #%ld",
+                               xsz, MAPLOS_MAXX, ysz, MAPLOS_MAXY,
+                               mech->mynum));
     return false;
   }
 
@@ -429,7 +441,7 @@ bool los_map_calculate(HexLosMap *los_map, MAP *map, MECH *mech, int sx, int sy,
   };
 
   underterrain = MechZ(mech) <= -1;
-  if (IsWater(MechRTerrain(mech)) &&
+  if (IsWater(mech_real_terrain_get(mech)) &&
       ((MechType(mech) == CLASS_MECH && MechZ(mech) == -1) ||
        ((WaterBeast(mech) || MechMove(mech) == MOVE_HOVER) &&
         MechZ(mech) == 0))) {

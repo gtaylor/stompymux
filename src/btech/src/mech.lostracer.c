@@ -138,12 +138,14 @@ don't :)
 OK, enough of this.  Let's get on to the code.
 */
 
-#include "mech.h"
-#include "btmacros.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "btmacros.h"
+#include "map.terrain.h"
+#include "mech.h"
 
 #define DEG60 1.0471976 /* In radians, of course ;) */
 #define DEG30 0.5235988

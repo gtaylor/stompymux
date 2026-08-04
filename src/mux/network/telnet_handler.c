@@ -1,26 +1,27 @@
 /* telnet_handler.c - Telnet protocol negotiation and client data handling. */
 
-#include "mux/network/network_output.h"
-#include "mux/server/platform.h"
-
-#include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
+#include "btmux_build_config.h"
 #include "libtelnet.h"
-#include "mux/commands/command.h"
-#include "mux/commands/command_runtime.h"
+#include "mux/commands/command_context.h"
+#include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
+#include "mux/network/network_output.h"
 #include "mux/network/site_access.h"
 #include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
-#include "mux/server/log_cache.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/log.h"
 #include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/styled_text/render.h"
 #include "mux/support/utf8.h"
+#include "mux/world/world_context.h"
 
 static int telnet_connected_count(CommandRuntime *runtime);
 static bool telnet_charset_is_utf8(const char *buffer, size_t size);

@@ -2,26 +2,26 @@
  * walkdb.c -- Support for commands that walk the entire db
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include <ctype.h>
+#include <stdio.h>
 
-#include "mux/commands/command.h"
+#include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
-#include "mux/commands/command_invocation.h"
 #include "mux/commands/command_parser.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/persistence/gamedb.h" // IWYU pragma: keep
+#include "mux/server/configuration_context.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/search.h"
 #include "mux/world/walkdb.h"
-#include "mux/world/world_context.h"
 
 /**
  * Regular @find command

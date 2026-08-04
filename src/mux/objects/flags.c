@@ -1,17 +1,22 @@
 /* flags.c - object flag manipulation routines */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
+#include <ctype.h>
+#include <stdio.h>
 
+#include "btech_context.h" // IWYU pragma: keep
 #include "mux/commands/command.h"
-#include "mux/commands/command_context.h"
-#include "mux/objects/attrs.h"
+#include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/server_registries.h"
+#include "mux/persistence/gamedb.h" // IWYU pragma: keep
+#include "mux/server/configuration_context.h"
+#include "mux/server/game.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
-#include "mux/world/world_context.h"
 
 bool game_object_has_flag(GameDatabase *database, DbRef object,
                           ObjectFlag flag) {

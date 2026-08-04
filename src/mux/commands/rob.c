@@ -3,22 +3,19 @@
  */
 
 #include "mux/commands/action_messages.h"
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/commands/command_keys.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/world/access.h"
-#include "mux/world/move.h"
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/powers.h"
-#include "mux/server/platform.h"
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "mux/world/access.h"
 #include "mux/world/match.h"
-#include "mux/world/world_context.h"
+#include "mux/world/move.h"
 
 /*
  * ---------------------------------------------------------------------------

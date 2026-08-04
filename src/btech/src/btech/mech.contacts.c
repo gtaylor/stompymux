@@ -7,19 +7,36 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include "mux/world/access.h"
-#include <math.h>
+#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmux_build_config.h"
+#include "macros.h"
 #include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
+#include "mux/world/access.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.contacts.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 static const char default_contactoptions[] = "!db";
@@ -120,17 +137,17 @@ MechStatusString mech_status_string(MECH *target, int who) {
   if (Destroyed(target))
     statusstr[sptr++] = 'D';
 
-  if (Starting(target))
+  if (mech_event_count(target, EVENT_STARTUP))
     statusstr[sptr++] = 's';
   else if (!Started(target))
     statusstr[sptr++] = 'S';
 
-  if (Standing(target))
+  if (mech_event_count(target, EVENT_STAND))
     statusstr[sptr++] = 'f';
   else if (Fallen(target))
     statusstr[sptr++] = 'F';
 
-  if (ChangingHulldown(target))
+  if (mech_event_count(target, EVENT_CHANGING_HULLDOWN))
     statusstr[sptr++] = 'h';
   else if (IsHulldown(target))
     statusstr[sptr++] = 'H';
@@ -152,7 +169,7 @@ MechStatusString mech_status_string(MECH *target, int who) {
   if (Jellied(target))
     statusstr[sptr++] = 'I';
 
-  if (Burning(target))
+  if (mech_event_count(target, EVENT_VEHICLEBURN))
     statusstr[sptr++] = 'B';
 
   if (MechLites(target))
@@ -230,23 +247,24 @@ char getStatusChar(MECH *mech, MECH *mechTarget, int wCharNum) {
                                    : ' ';
     break;
   case 3:
-    cRet = Jumping(mechTarget)            ? 'J'
-           : OODing(mechTarget)           ? 'O'
-           : Fallen(mechTarget)           ? 'F'
-           : Standing(mechTarget)         ? 'f'
-           : ChangingHulldown(mechTarget) ? 'h'
-           : IsHulldown(mechTarget)       ? 'H'
-           : Spinning(mech)               ? 'X'
-                                          : ' ';
+    cRet = Jumping(mechTarget)                                     ? 'J'
+           : OODing(mechTarget)                                    ? 'O'
+           : Fallen(mechTarget)                                    ? 'F'
+           : mech_event_count(mechTarget, EVENT_STAND)             ? 'f'
+           : mech_event_count(mechTarget, EVENT_CHANGING_HULLDOWN) ? 'h'
+           : IsHulldown(mechTarget)                                ? 'H'
+           : Spinning(mech)                                        ? 'X'
+                                                                   : ' ';
     break;
   case 4:
-    cRet = Started(mechTarget)      ? (MechHeat(mechTarget)  ? '+'
-                                       : Jellied(mechTarget) ? 'I'
-                                       : Burning(mechTarget) ? 'B'
-                                                             : ' ')
-           : Staggering(mechTarget) ? 'G'
-           : Starting(mechTarget)   ? 's'
-                                    : 'S';
+    cRet = Started(mechTarget)
+               ? (MechHeat(mechTarget)                              ? '+'
+                  : Jellied(mechTarget)                             ? 'I'
+                  : mech_event_count(mechTarget, EVENT_VEHICLEBURN) ? 'B'
+                                                                    : ' ')
+           : Staggering(mechTarget)                      ? 'G'
+           : mech_event_count(mechTarget, EVENT_STARTUP) ? 's'
+                                                         : 'S';
     break;
   case 5:
     cRet = (checkAllSections(mechTarget, NARC_ATTACHED) ||

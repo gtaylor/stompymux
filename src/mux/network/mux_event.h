@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include "mux/server/event_timer.h"
-
 /* EVENT_DEBUG adds some useful debugging information to the structure
    / allows more diverse set of error messages to be shown. However,
    for a run-time version it's practically useless. */
@@ -46,9 +44,11 @@ enum : int {
 
 typedef struct MuxEvent MuxEvent;
 typedef struct MuxEventScheduler MuxEventScheduler;
+typedef struct MuxTimer MuxTimer;
+typedef void (*MuxEventCallback)(MuxEvent *event);
 struct MuxEvent {
   char flags;
-  void (*function)(MuxEvent *);
+  MuxEventCallback function;
   void *data;
   void *data2;
   int tick; /* The tick this baby was first scheduled to go off */
@@ -85,7 +85,7 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler);
   a = b
 
 void mux_event_add(MuxEventScheduler *scheduler, int time, int flags, int type,
-                   void (*func)(MuxEvent *), void *data, void *data2);
+                   MuxEventCallback func, void *data, void *data2);
 void mux_event_run(MuxEventScheduler *scheduler);
 int mux_event_run_by_type(MuxEventScheduler *scheduler, int type);
 int mux_event_last_type(const MuxEventScheduler *scheduler);
@@ -108,14 +108,14 @@ int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
                                    void *data, void *data2);
 int mux_event_count_data(MuxEventScheduler *scheduler, int type, void *data);
 void mux_event_gothru_type_data(MuxEventScheduler *scheduler, int type,
-                                void *data, void (*func)(MuxEvent *));
+                                void *data, MuxEventCallback func);
 void mux_event_visit_type_data(MuxEventScheduler *scheduler, int type,
                                void *data, void (*visitor)(MuxEvent *, void *),
                                void *context);
 void mux_event_visit_type(MuxEventScheduler *scheduler, int type,
                           void (*visitor)(MuxEvent *, void *), void *context);
 void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
-                           void (*func)(MuxEvent *));
+                           MuxEventCallback func);
 int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
                              void *data);
 long mux_event_count_type_data_firstev(MuxEventScheduler *scheduler, int type,

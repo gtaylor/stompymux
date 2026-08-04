@@ -1,21 +1,34 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* mux_server.c - Construction and teardown for the MUX composition root. */
 
 #include "mux/server/mux_server.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
 
 #include <assert.h>
 #include <string.h>
 
+#include "btech/btech_context.h"
+#include "btmux_build_config.h"
+#include "mux/commands/command_context.h"
 #include "mux/commands/command_queue.h"
+#include "mux/commands/macro.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/help/help_index.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/network/connect_flow.h"
+#include "mux/network/connection_runtime.h"
 #include "mux/network/descriptor.h"
+#include "mux/objects/db.h"
 #include "mux/server/configuration.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/server/server_registries.h"
 #include "mux/support/styled_text/palette.h"
 #include "mux/world/player_cache.h"
+#include "mux/world/world_context.h"
 
 void runtime_clock_initialize(RuntimeClock *clock) {
   assert(clock != nullptr);

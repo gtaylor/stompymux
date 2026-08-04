@@ -12,20 +12,177 @@
  * Last modified: Sat Jun  6 21:43:52 1998 fingon
  */
 
-#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#define _FAILURES_C
+#include "btech_event.h"
+#include "btmacros.h"
 #include "failures.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.notify.h"
+#include "p.failures.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.startup.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
+#include "weapon_settings.h"
 
 extern const int num_def_weapons;
+
+struct brand_data brands[] = {
+    {"Lords", 1, 80, -40}, /* Energy weapons */
+    {"Hesperus", 2, 90, -20},
+    {"Martell", 3, 95, 0},
+    {"Magna", 4, 100, 20},
+    {"Agra", 5, 101, 40},
+
+    {"Luxor", 1, 80, -40}, /* Autocannons */
+    {"SperryBrowning", 2, 90, -20},
+    {"Oriente", 3, 95, 0},
+    {"Deprus", 4, 100, 20},
+    {"Armstrong", 5, 101, 40},
+
+    {"Coventry", 1, 80, -40}, /* Missiles */
+    {"Shannon", 2, 90, -20},
+    {"Bical", 3, 95, 0},
+    {"Holly", 4, 100, 20},
+    {"Telos", 5, 101, 40},
+
+    {"Pynes", 1, 80, -40}, /* Flamers */
+    {"Hotshot", 2, 90, -20},
+    {"Firestorm", 3, 95, 0},
+    {"Purity", 4, 100, 20},
+    {"Ventra", 5, 101, 40},
+
+    {"Dalban", 1, 80, -40}, /* Computers */
+    {"Hartford", 2, 90, -20},
+    {"Garet", 3, 95, 0},
+    {"Ares", 4, 100, 20},
+    {"Tek", 5, 101, 40},
+
+    {"Duoteck", 1, 80, -40}, /* Radios */
+    {"CeresCom", 2, 90, -20},
+    {"Achernar", 3, 95, 0},
+    {"Tek", 4, 100, 20},
+    {"Iriad", 5, 101, 40},
+};
+
+#define REQ_HEAT 1
+#define REQ_TARGET 2
+#define REQ_TAC 3
+#define REQ_LRS 4
+#define REQ_SCANNERS 5
+#define REQ_COMPUTER 6
+#define REQ_RADIO 7
+
+struct failure_data failures[] = {
+#define ENERGY_INDEX 0
+    /* Energy Weapons - 0 */
+
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 15,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 30,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Your weapon fails to charge properly![reset]", 45,
+     FailureWeaponDamage, FAIL_NONE, 0},
+    {"[fg=red bold]Failure in the weapon's cooling system ; too much heat "
+     "produced![reset]",
+     30, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+    {"[fg=red bold]Odd energy reading from the weapon ; It seems to have gone "
+     "offline![reset]",
+     0, FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Weapon melts down![reset]", 0, FailureWeaponSpike,
+     FAIL_SHORTED, 0},
+
+/* Autocannons - 6 */
+#define AC_INDEX 6
+
+    {"[fg=red bold]Round misfires! .. and spirals off![reset]", 0,
+     FailureWeaponDud, FAIL_NONE, 0},
+    {"[fg=red bold]Round not fired!  Dud![reset]", 0, FailureWeaponDud,
+     FAIL_DUD, 0},
+    {"[fg=red bold]Weapon JAMS... clearing![reset]", 0, FailureWeaponJammed,
+     FAIL_JAMMED, 0},
+    {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
+     "produced![reset]",
+     20, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+    {"[fg=red bold]Failure in the weapon's cooling system, too much heat "
+     "produced![reset]",
+     40, FailureWeaponHeat, FAIL_NONE, REQ_HEAT},
+    {"[fg=red bold]Round not fired!  STUCK in chamber![reset]", 0,
+     FailureWeaponDud, FAIL_DUD, 0},
+
+/* Missiles - 12 */
+#define MISSILE_INDEX 12
+
+    {"[fg=red bold]Rack jams, attemping to clear![reset]", 0,
+     FailureWeaponJammed, FAIL_JAMMED, 0},
+    {"[fg=red bold]Some of your missiles veer off course![reset]", 20,
+     FailureWeaponMissiles, FAIL_NONE, 0},
+    {"[fg=red bold]Some of your missiles veer off course![reset]", 40,
+     FailureWeaponMissiles, FAIL_NONE, 0},
+    {"[fg=red bold]Guidance Failure!  All missile veer off course![reset]", 100,
+     FailureWeaponMissiles, FAIL_NONE, 0},
+    {"[fg=red bold]Weapon power spikes.. attempting to restart![reset]", 0,
+     FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Weapon power spikes.. Electronics fused!![reset]", 0,
+     FailureWeaponSpike, FAIL_SHORTED, 0},
+
+/* Flamer - 18 */
+#define FLAMMER_INDEX 18
+
+    {"[fg=red bold]Gel line clogs, sending pressure through it now![reset]", 0,
+     FailureWeaponJammed, FAIL_JAMMED, 0},
+    {"[fg=red bold]Electric ignition shorts out! Restarting![reset]", 0,
+     FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Fuel leaks on the chassis and ignites![reset]", 100,
+     FailureWeaponHeat, FAIL_NONE, 0},
+
+    {"[fg=red bold]Fuel at critical point!! Shutting down weapon to vent "
+     "heat![reset]",
+     0, FailureWeaponSpike, FAIL_SHORTED, 0},
+    {"[fg=red bold]Ejection nozzle gums up!  Please wait while pressure is "
+     "applied![reset]",
+     0, FailureWeaponJammed, FAIL_JAMMED, 0},
+    {"[fg=red bold]Fuel canisters explode!  No fuel left to burn![reset]", 0,
+     FailureWeaponSpike, FAIL_EMPTY, 0},
+
+/* Computer - 24 */
+#define COMPUTER_INDEX 24
+
+    {"[fg=red bold]Computer Glitch!  Target lost, please reacquire![reset]", 0,
+     FailureComputerTarget, FAIL_NONE, REQ_TARGET},
+    {"[fg=red bold]Tactical shorts out! Fixing .. Please stand by.[reset]", 1,
+     FailureComputerScanner, FAIL_NONE, REQ_TAC},
+    {"[fg=red bold]Long Range Sensors short out! .. Fixing .. Please stand "
+     "by.[reset]",
+     2, FailureComputerScanner, FAIL_NONE, REQ_LRS},
+    {"[fg=red bold]Scanners short out! Fixing .. Please stand by.[reset]", 4,
+     FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
+    {"[fg=red bold]A sudden *SNAP* echos in your cockpit then all your "
+     "displays "
+     "die![reset]",
+     7, FailureComputerScanner, FAIL_NONE, REQ_SCANNERS},
+    {"[fg=red bold]You hear a loud *SNAP* *CRACKLE* and then everything "
+     "powers "
+     "down![reset]",
+     0, FailureComputerShutdown, FAIL_NONE, REQ_COMPUTER},
+
+/* Radio - 30 */
+#define RADIO_INDEX 30
+    {"none", 50, FailureRadioStatic, FAIL_NONE, 0},
+    {"none", 70, FailureRadioStatic, FAIL_NONE, 0},
+    {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
+     15, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+    {"[fg=red bold]Your readouts register a power loss in your radio![reset]",
+     30, FailureRadioRange, FAIL_NONE, REQ_RADIO},
+    {"[fg=red bold]Your radio suddenly shorts out! Please wait for backup to "
+     "come "
+     "online![reset]",
+     0, FailureRadioShort, FAIL_NONE, REQ_RADIO},
+    {"[fg=red bold]Your entire radio system suddenly shorts out![reset]", 0,
+     FailureRadioShort, FAIL_NONE, REQ_RADIO}};
 
 int GetBrandIndex(int type) {
   if (type == -1)
@@ -109,7 +266,7 @@ static void mech_srec_event(MuxEvent *e) {
 
 void FailureRadioShort(MECH *mech, int weapnum, int weaptype, int section,
                        int critical, int roll, int *modifier, int *type) {
-  MECHEVENT(
+  mech_event_schedule(
       mech, EVENT_MRECOVERY, mech_rrec_event,
       btech_random_range(mech->xcode.context, 30,
                          btech_random_range(mech->xcode.context, 40, 200)),
@@ -122,7 +279,7 @@ void FailureRadioRange(MECH *mech, int weapnum, int weaptype, int section,
   int mod = failures[GetBrandIndex(-2) + roll - 1].data;
 
   mod = MIN(MechRadioRange(mech) - 1, mod);
-  MECHEVENT(
+  mech_event_schedule(
       mech, EVENT_MRECOVERY, mech_rrec_event,
       btech_random_range(mech->xcode.context, 30,
                          btech_random_range(mech->xcode.context, 40, 200)),
@@ -142,7 +299,7 @@ void FailureComputerScanner(MECH *mech, int weapnum, int weaptype, int section,
 
   switch (tmp) {
   case 1:
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
@@ -150,7 +307,7 @@ void FailureComputerScanner(MECH *mech, int weapnum, int weaptype, int section,
     MechTacRange(mech) = 0;
     break;
   case 2:
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
@@ -158,7 +315,7 @@ void FailureComputerScanner(MECH *mech, int weapnum, int weaptype, int section,
     MechLRSRange(mech) = 0;
     break;
   case 4:
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
@@ -166,17 +323,17 @@ void FailureComputerScanner(MECH *mech, int weapnum, int weaptype, int section,
     MechScanRange(mech) = 0;
     break;
   case 7:
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
         (long)MechTacRange(mech));
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
         (long)(MechLRSRange(mech) + 256));
-    MECHEVENT(
+    mech_event_schedule(
         mech, EVENT_MRECOVERY, mech_srec_event,
         btech_random_range(mech->xcode.context, 30,
                            btech_random_range(mech->xcode.context, 40, 200)),
@@ -204,9 +361,9 @@ void FailureWeaponMissiles(MECH *mech, int weapnum, int weaptype, int section,
 void FailureWeaponDud(MECH *mech, int weapnum, int weaptype, int section,
                       int critical, int roll, int *modifier, int *type) {
   if (failures[Conv(mech, section, critical) + roll].type == FAIL_NONE) {
-    SetRecyclePart(mech, section, critical,
-                   btech_weapon_settings_recycle_time(
-                       &mech->xcode.context->weapon_settings, weaptype));
+    mech_set_recycle_part(mech, section, critical,
+                          btech_weapon_settings_recycle_time(
+                              &mech->xcode.context->weapon_settings, weaptype));
     return;
   }
   SetPartTempNuke(mech, section, critical,
@@ -215,8 +372,8 @@ void FailureWeaponDud(MECH *mech, int weapnum, int weaptype, int section,
   if (roll == 6) {
     SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
   }
-  SetRecyclePart(mech, section, critical,
-                 30 + btech_random_range(mech->xcode.context, 1, 60));
+  mech_set_recycle_part(mech, section, critical,
+                        30 + btech_random_range(mech->xcode.context, 1, 60));
 }
 
 void FailureWeaponJammed(MECH *mech, int weapnum, int weaptype, int section,
@@ -224,8 +381,8 @@ void FailureWeaponJammed(MECH *mech, int weapnum, int weaptype, int section,
   SetPartTempNuke(mech, section, critical,
                   failures[Conv(mech, section, critical) + roll].type);
   *type = WEAPON_JAMMED;
-  SetRecyclePart(mech, section, critical,
-                 btech_random_range(mech->xcode.context, 20, 40));
+  mech_set_recycle_part(mech, section, critical,
+                        btech_random_range(mech->xcode.context, 20, 40));
 }
 
 void FailureWeaponRange(MECH *mech, int weapnum, int weaptype, int section,
@@ -260,8 +417,8 @@ void FailureWeaponSpike(MECH *mech, int weapnum, int weaptype, int section,
     SetPartTempNuke(mech, section, critical, FAIL_DESTROYED);
     return;
   }
-  SetRecyclePart(mech, section, critical,
-                 btech_random_range(mech->xcode.context, 20, 40));
+  mech_set_recycle_part(mech, section, critical,
+                        btech_random_range(mech->xcode.context, 20, 40));
 }
 
 void CheckGenericFail(MECH *mech, int type, int *result, int *mod) {

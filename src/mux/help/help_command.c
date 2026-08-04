@@ -1,19 +1,18 @@
 /* help_command.c - `help` and `@help` command handlers. */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/network/network_output.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
 #include <string.h>
 
+#include "mux/commands/command_context.h" // IWYU pragma: keep
+#include "mux/commands/command_handlers.h"
 #include "mux/help/help_command.h"
 #include "mux/help/help_index.h"
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
+#include "mux/network/network_output.h"
 #include "mux/objects/flags.h"
-#include "mux/server/server_config.h"
+#include "mux/server/game.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 

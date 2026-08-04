@@ -7,14 +7,23 @@
  *       All rights reserved
  */
 
+#include <stddef.h>
+
+#include "btech_context.h"
+#include "btech_event.h" // IWYU pragma: keep
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "mech.events.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/server/game.h"
-#include "p.bsuit.h"
+#include "mux/server/platform.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.misc.h"
-#include "p.mech.pickup.h"
-#include "p.mech.tag.h"
-#include "p.mech.update.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 #define TMP_TERR '1'
@@ -50,11 +59,11 @@ static void swim_except(MAP *map, MECH *mech, int x, int y, char *msg,
 }
 
 static void break_sub(MAP *map, MECH *mech, int x, int y, char *msg) {
-  int isbridge = GetRTerrain(map, x, y) == BRIDGE;
+  int isbridge = map_real_terrain_get(map, x, y) == BRIDGE;
 
-  SetTerrain(map, x, y, WATER);
+  map_terrain_set(map, x, y, WATER);
   if (isbridge)
-    SetElevation(map, x, y, 1);
+    map_elevation_set(map, x, y, 1);
   swim_except(map, mech, x, y, msg, isbridge);
 }
 
@@ -106,10 +115,10 @@ int possibly_drop_thru_ice(MECH *mech) {
 
 static void growable_callback(MAP *map, int x, int y, void *context) {
   int *water_count = context;
-  int terrain = GetRTerrain(map, x, y);
+  int terrain = map_real_terrain_get(map, x, y);
 
   if ((IsWater(terrain) && terrain != ICE) ||
-      GetRTerrain(map, x, y) == TMP_TERR)
+      map_real_terrain_get(map, x, y) == TMP_TERR)
     (*water_count)++;
 }
 
@@ -128,7 +137,7 @@ int growable(MAP *map, int x, int y) {
 static void meltable_callback(MAP *map, int x, int y, void *context) {
   int *water_count = context;
 
-  if (GetRTerrain(map, x, y) == ICE)
+  if (map_real_terrain_get(map, x, y) == ICE)
     (*water_count)++;
 }
 
@@ -148,16 +157,16 @@ void ice_growth(DbRef player, MAP *map, int num) {
 
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
-      if (GetRTerrain(map, x, y) == WATER)
+      if (map_real_terrain_get(map, x, y) == WATER)
         if (btech_random_range(map->xcode.context, 1, 100) <= num &&
             growable(map, x, y)) {
-          SetTerrain(map, x, y, TMP_TERR);
+          map_terrain_set(map, x, y, TMP_TERR);
           count++;
         }
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
-      if (GetRTerrain(map, x, y) == TMP_TERR)
-        SetTerrain(map, x, y, ICE);
+      if (map_real_terrain_get(map, x, y) == TMP_TERR)
+        map_terrain_set(map, x, y, ICE);
   if (count)
     notify_printf(btech_context_evaluation(map->xcode.context), player,
                   "%d hexes 'iced'.", count);
@@ -172,17 +181,17 @@ void ice_melt(DbRef player, MAP *map, int num) {
 
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
-      if (GetRTerrain(map, x, y) == ICE)
+      if (map_real_terrain_get(map, x, y) == ICE)
         if (btech_random_range(map->xcode.context, 1, 100) <= num &&
             meltable(map, x, y)) {
           break_sub(map, NULL, x, y, "goes swimming as ice breaks!");
-          SetTerrain(map, x, y, TMP_TERR);
+          map_terrain_set(map, x, y, TMP_TERR);
           count++;
         }
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
-      if (GetRTerrain(map, x, y) == TMP_TERR)
-        SetTerrain(map, x, y, WATER);
+      if (map_real_terrain_get(map, x, y) == TMP_TERR)
+        map_terrain_set(map, x, y, WATER);
   if (count)
     notify_printf(btech_context_evaluation(map->xcode.context), player,
                   "%d hexes melted.", count);
@@ -216,7 +225,7 @@ void map_delice(DbRef player, MAP *map, char *buffer) {
 void possibly_blow_ice(MECH *mech, int weapindx, int x, int y) {
   MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
-  if (GetRTerrain(map, x, y) != ICE)
+  if (map_real_terrain_get(map, x, y) != ICE)
     return;
   if (btech_random_range(mech->xcode.context, 1, 15) >
       MechWeapons[weapindx].damage)
@@ -228,12 +237,12 @@ void possibly_blow_ice(MECH *mech, int weapindx, int x, int y) {
 void possibly_blow_bridge(MECH *mech, int weapindx, int x, int y) {
   MAP *map = btech_context_find_object(mech->xcode.context, mech->mapindex);
 
-  if (GetRTerrain(map, x, y) != BRIDGE)
+  if (map_real_terrain_get(map, x, y) != BRIDGE)
     return;
   if (MapBridgesCS(map))
     return;
   if (btech_random_range(mech->xcode.context, 1,
-                         10 * (1 + GetElev(map, x, y))) >
+                         10 * (1 + map_elevation_get(map, x, y))) >
       MechWeapons[weapindx].damage) {
     HexLOSBroadcast(map, x, y, "The bridge at $H shudders from direct hit!");
     return;

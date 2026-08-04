@@ -8,21 +8,36 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "p.aero.move.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.map.conditions.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
 #include "p.mech.events.h"
@@ -30,6 +45,8 @@
 #include "p.mech.hitloc.h"
 #include "p.mech.ice.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.physical.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
@@ -84,24 +101,24 @@ void mech_lateral(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, !lateral_modes[i].name, "Invalid mode!");
 
   if (lateral_modes[i].ofs == MechLateral(mech)) {
-    DOCHECK_CONTEXT(mech->xcode.context, !ChangingLateral(mech),
+    DOCHECK_CONTEXT(mech->xcode.context, !mech_event_count(mech, EVENT_LATERAL),
                     "You are going that way already!");
     mech_notify(mech, MECHALL, "Lateral mode change aborted.");
-    StopLateral(mech);
+    mech_event_cancel(mech, EVENT_LATERAL);
     return;
   }
 
   mech_printf(mech, MECHALL,
               "Wanted lateral movement mode changed to %s (%d offset).",
               lateral_modes[i].full, lateral_modes[i].ofs);
-  StopLateral(mech);
-  MECHEVENT(mech, EVENT_LATERAL, mech_lateral_event, LATERAL_TICK, i);
+  mech_event_cancel(mech, EVENT_LATERAL);
+  mech_event_schedule(mech, EVENT_LATERAL, mech_lateral_event, LATERAL_TICK, i);
 }
 
 void mech_turnmode(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
-  if (!GotPilot(mech) || MechPilot(mech) != player) {
+  if (!mech_has_pilot(mech) || MechPilot(mech) != player) {
     notify(btech_context_evaluation(mech->xcode.context), player,
            "You're not the pilot!");
     return;
@@ -212,10 +229,11 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   skipws(buffer);
 
-  SendDebug(mech->xcode.context,
-            tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
-                    "Speed: %4.1f, BTHMod: %d",
-                    mech->mynum, wMechTons, fMechSpeed, wBTHMod));
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+      tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
+              "Speed: %4.1f, BTHMod: %d",
+              mech->mynum, wMechTons, fMechSpeed, wBTHMod));
 
   if (MadePilotSkillRoll(mech, wBTHMod)) {
     wNewHeading = AcceptableDegree(MechFacing(mech) + wHeadingChange);
@@ -231,7 +249,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     for (i = 0; i < NUM_SECTIONS; i++) {
       if ((i == LLEG) || (i == RLEG) ||
           (MechIsQuad(mech) && ((i == LARM) || (i == RARM))))
-        SetRecycleLimb(mech, i, 30);
+        mech_set_recycle_limb(mech, i, 30);
     }
 
   } else {
@@ -348,7 +366,8 @@ float MechCargoMaxSpeed(MECH *mech, float mspeed) {
     }
 
     /* if the player has speed demon give him his boost in speed */
-    if (!MoveModeChange(mech) && MechStatus2(mech) & SPRINTING &&
+    if (!mech_event_count(mech, EVENT_MOVEMODE) &&
+        MechStatus2(mech) & SPRINTING &&
         HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "speed_demon"))
       mspeed += MP1;
 
@@ -438,7 +457,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, Fallen(mech), "You are already prone.");
   DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech) || OODing(mech),
                   "You can't prone in the air!");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You can't drop while trying to stand up!");
 
   s1 = MMaxSpeed(mech) / 3.0;
@@ -496,7 +515,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
     MechLOSBroadcast(mech, "drops to the ground!");
   }
 
-  MakeMechFall(mech);
+  mech_make_fall(mech);
   MechDesiredSpeed(mech) = 0;
   MechSpeed(mech) = 0;
   MechFloods(mech);
@@ -543,11 +562,12 @@ void mech_stand(DbRef player, void *data, char *buffer) {
 
   DOCHECK_CONTEXT(mech->xcode.context, !Fallen(mech),
                   "You're already standing!");
-  DOCHECK_CONTEXT(mech->xcode.context, Standrecovering(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STANDFAIL),
                   "You're still recovering from your last attempt!");
   DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
                   "You can not stand while hulldown");
-  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
                   "You are busy changing your hulldown mode");
 
   bth = MechPilotSkillRoll_BTH(mech, 0);
@@ -585,7 +605,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
       mech->xcode.context, !standanyway && bth > 12,
       "You would fail; use 'stand anyway' if you really want to stand.");
 
-  MakeMechStand(mech);
+  mech_make_stand(mech);
 
   /*  quads with all 4 legs don't have to roll to stand */
   if (((wcDeadLegs == 0) && MechIsQuad(mech)) || (MechType(mech) == CLASS_MW)) {
@@ -594,7 +614,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
 
   MechLOSBroadcast(mech, "attempts to stand up.");
 
-  if (MechRTerrain(mech) == ICE && MechZ(mech) == -1)
+  if (mech_real_terrain_get(mech) == ICE && MechZ(mech) == -1)
     break_thru_ice(mech);
 
   if (tNeedsPSkill) {
@@ -609,7 +629,8 @@ void mech_stand(DbRef player, void *data, char *buffer) {
       if (standcarefulmod) {
         mechstandtime = MAX(30, mechstandtime * 2);
       }
-      MECHEVENT(mech, EVENT_STANDFAIL, mech_standfail_event, mechstandtime, 0);
+      mech_event_schedule(mech, EVENT_STANDFAIL, mech_standfail_event,
+                          mechstandtime, 0);
       tDoStand = 0;
     }
   }
@@ -624,7 +645,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
     if (standcarefulmod) {
       mechstandtime = mechstandtime * 2;
     }
-    MECHEVENT(mech, EVENT_STAND, mech_stand_event, mechstandtime, 0);
+    mech_event_schedule(mech, EVENT_STAND, mech_stand_event, mechstandtime, 0);
   }
   /* Free args */
   for (i = 0; i < 2; i++) {
@@ -657,7 +678,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
       MechDFATarget(mech) = -1;
       MechGoingX(mech) = MechGoingY(mech) = 0;
       MechSpeed(mech) = 0;
-      MaybeMove(mech);
+      mech_maybe_move(mech);
     }
   } else
     notify(btech_context_evaluation(mech->xcode.context), player,
@@ -690,16 +711,17 @@ void mech_heading(DbRef player, void *data, char *buffer) {
                     "speed cmd to get out].");
     DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
                     "You can not turn while hulldown");
-    DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
                     "You are busy changing your hulldown mode");
     if (Digging(mech)) {
       mech_notify(mech, MECHALL, "You cease your attempts at digging in.");
-      StopDigging(mech);
+      mech_stop_digging(mech);
     }
     newheading = AcceptableDegree(atoi(args[0]));
     MechDesiredFacing(mech) = newheading;
     mech_printf(mech, MECHALL, "Heading changed to %d.", newheading);
-    MaybeMove(mech);
+    mech_maybe_move(mech);
   } else {
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Your current heading is %i.", MechFacing(mech));
@@ -814,7 +836,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
                   "This piece of equipment is stationary!");
   DOCHECK_CONTEXT(mech->xcode.context, PerformingAction(mech),
                   "You are too busy at the moment to turn.");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You are currently standing up and cannot move.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
@@ -828,11 +850,13 @@ void mech_speed(DbRef player, void *data, char *buffer) {
       "the inconvenience.");
 
   if (MechType(mech) != CLASS_MECH)
-    DOCHECK_CONTEXT(mech->xcode.context, RemovingPods(mech),
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    mech_event_count(mech, EVENT_REMOVE_PODS),
                     "You are too busy removing iNARC pods!");
   DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
                   "You can not move while hulldown");
-  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
                   "You are busy changing your hulldown mode");
 
   if (mech_parseattributes(buffer, args, 1) != 1) {
@@ -841,7 +865,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
     return;
   }
   DOCHECK_CONTEXT(mech->xcode.context,
-                  FlyingT(mech) && AeroFuel(mech) <= 0 && !AeroFreeFuel(mech),
+                  FlyingT(mech) && AeroFuel(mech) <= 0 &&
+                      !mech_aero_has_free_fuel(mech),
                   "You're out of fuel!");
   maxspeed = MMaxSpeed(mech);
 
@@ -892,9 +917,10 @@ void mech_speed(DbRef player, void *data, char *buffer) {
                   "You can not backup while sprinting!");
 
   if (IsRunning(newspeed, maxspeed)) {
-    DOCHECK_CONTEXT(mech->xcode.context, Dumping(mech),
+    DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_DUMP),
                     "You can not run while dumping ammo!");
-    DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+    DOCHECK_CONTEXT(mech->xcode.context,
+                    mech_event_count(mech, EVENT_UNJAM_AMMO),
                     "You can not run while unjamming your weapon!");
 
     /* Exile Stun Code Effect */
@@ -906,20 +932,21 @@ void mech_speed(DbRef player, void *data, char *buffer) {
     }
 
     DOCHECK_CONTEXT(
-        mech->xcode.context, CrewStunned(mech),
+        mech->xcode.context, mech_event_count(mech, EVENT_UNSTUN_CREW),
         "Your cannot possibly control a vehicle going this fast in your "
         "current mental state!");
     DOCHECK_CONTEXT(
         mech->xcode.context, MechTankCritStatus(mech) & TAIL_ROTOR_DESTROYED,
         "Your cannot possibly control a VTOL going this fast with a "
         "destroyed tail rotor!");
-    DOCHECK_CONTEXT(mech->xcode.context,
-                    MechType(mech) == CLASS_MECH &&
-                        ((MechZ(mech) < 0 && (MechRTerrain(mech) == WATER ||
-                                              MechRTerrain(mech) == BRIDGE ||
-                                              MechRTerrain(mech) == ICE)) ||
-                         MechRTerrain(mech) == HIGHWATER),
-                    "You can't run through water!");
+    DOCHECK_CONTEXT(
+        mech->xcode.context,
+        MechType(mech) == CLASS_MECH &&
+            ((MechZ(mech) < 0 && (mech_real_terrain_get(mech) == WATER ||
+                                  mech_real_terrain_get(mech) == BRIDGE ||
+                                  mech_real_terrain_get(mech) == ICE)) ||
+             mech_real_terrain_get(mech) == HIGHWATER),
+        "You can't run through water!");
   }
   if (!is_wizard(mech->xcode.context->database, player) &&
       is_in_character(mech->xcode.context->database, mech->mynum) &&
@@ -937,7 +964,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
     }
   }
   MechDesiredSpeed(mech) = newspeed;
-  MaybeMove(mech);
+  mech_maybe_move(mech);
   if (fabs(newspeed) > 0.1) {
     if (MechSwarmTarget(mech) > 0) {
       StopSwarming(mech, 1);
@@ -945,7 +972,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
     }
     if (Digging(mech)) {
       mech_notify(mech, MECHALL, "You cease your attempts at digging in.");
-      StopDigging(mech);
+      mech_stop_digging(mech);
     }
     MechTankCritStatus(mech) &= ~DUG_IN;
   }
@@ -964,7 +991,7 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
                   "This command is for VTOLs only.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0 &&
-                      !AeroFreeFuel(mech),
+                      !mech_aero_has_free_fuel(mech),
                   "You're out of fuel!");
   DOCHECK_CONTEXT(
       mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
@@ -991,7 +1018,7 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
     MechVerticalSpeed(mech) = newspeed;
     mech_printf(mech, MECHALL, "Vertical speed changed to %d KPH",
                 (int)newspeed);
-    MaybeMove(mech);
+    mech_maybe_move(mech);
   }
 }
 
@@ -1024,7 +1051,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
                   "You need to be prone to thrash!");
   DOCHECK_CONTEXT(mech->xcode.context, !map, "Invalid map! Contact a wizard!");
 
-  terrain = GetRTerrain(map, MechX(mech), MechY(mech));
+  terrain = map_real_terrain_get(map, MechX(mech), MechY(mech));
 
   DOCHECK_CONTEXT(
       mech->xcode.context,
@@ -1129,7 +1156,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
     if (SectIsDestroyed(mech, tempLoc))
       continue;
 
-    SetRecycleLimb(mech, tempLoc, PHYSICAL_RECYCLE_TIME);
+    mech_set_recycle_limb(mech, tempLoc, PHYSICAL_RECYCLE_TIME);
   }
 }
 
@@ -1152,7 +1179,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, Fortified(mech),
                   "Your fortified state prevents you from moving.");
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
                   "Movement modes disallow jumping.");
 #endif
   DOCHECK_CONTEXT(mech->xcode.context,
@@ -1169,22 +1196,24 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                   "You can't Jump from a FALLEN position");
   DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
                   "You can't Jump while hulldown");
-  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
                   "You are busy changing your hulldown mode");
   DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
                   "You're already jumping!");
-  DOCHECK_CONTEXT(mech->xcode.context, Stabilizing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_JUMPSTABIL),
                   "You haven't stabilized from your last jump yet.");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You haven't finished standing up yet.");
   DOCHECK_CONTEXT(mech->xcode.context, fabs(MechJumpSpeed(mech)) <= 0.0,
                   "This mech doesn't have jump jets!");
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(mech->xcode.context, Dumping(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_DUMP),
                   "You can not jump while dumping ammo!");
-  DOCHECK_CONTEXT(mech->xcode.context, UnJammingAmmo(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_UNJAM_AMMO),
                   "You can not jump while unjamming your weapon!");
-  DOCHECK_CONTEXT(mech->xcode.context, RemovingPods(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_REMOVE_PODS),
                   "You are too busy removing iNARC pods!");
   DOCHECK_CONTEXT(
       mech->xcode.context, MapIsUnderground(mech_map),
@@ -1277,7 +1306,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                   MechX(mech) == mapx && MechY(mech) == mapy,
                   "You're already in the target hex.");
   sz = MechZ(mech);
-  if (GetRTerrain(mech_map, mapx, mapy) == ICE)
+  if (map_real_terrain_get(mech_map, mapx, mapy) == ICE)
     tz = 0;
   else
     tz = Elevation(mech_map, mapx, mapy);
@@ -1324,14 +1353,14 @@ void mech_jump(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "You engage your jump jets.");
   MechSwarmTarget(mech) = -1;
   MechLOSBroadcast(mech, "engages jumpjets!");
-  MECHEVENT(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
+  mech_event_schedule(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
 }
 
 static void mech_hulldown_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
   long type = (long)e->data2;
 
-  if (!ChangingHulldown(mech))
+  if (!mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
     return;
 
   if (!Started(mech))
@@ -1363,7 +1392,7 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
                   "This piece of equipment is stationary!");
   DOCHECK_CONTEXT(mech->xcode.context, MechCarrying(mech) > 0,
                   "You cannot sprint while towing!");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You are currently standing up and cannot move.");
   DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
                   "You cannot do this while jumping.");
@@ -1381,7 +1410,7 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
       mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
       "You are regrettably unable to move at this time. We apologize for "
       "the inconvenience.");
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_MOVEMODE),
                   "You are already changing movement modes!");
   DOCHECK_CONTEXT(mech->xcode.context, MechStatus2(mech) & (EVADING | DODGING),
                   "You cannot perform multiple movement modes!");
@@ -1410,18 +1439,18 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of sprinting...");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              d);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        d);
   } else {
     mech_notify(mech, MECHALL, "You begin the process of ceasing to sprint.");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              d);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        d);
   }
   return;
 }
@@ -1438,7 +1467,7 @@ void mech_evade(DbRef player, void *data, char *buffer) {
                   "While falling out of the sky?");
   DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
                   "This piece of equipment is stationary!");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You are currently standing up and cannot move.");
   DOCHECK_CONTEXT(mech->xcode.context, Jumping(mech),
                   "You cannot do this while jumping.");
@@ -1460,7 +1489,7 @@ void mech_evade(DbRef player, void *data, char *buffer) {
       mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
       "You are regrettably unable to move at this time. We apologize for "
       "the inconvenience.");
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_MOVEMODE),
                   "You are already changing movement modes!");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechStatus2(mech) & (SPRINTING | DODGING),
@@ -1489,18 +1518,18 @@ void mech_evade(DbRef player, void *data, char *buffer) {
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of evading...");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              d);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        d);
   } else {
     mech_notify(mech, MECHALL, "You begin the process of ceasing to evade.");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              d);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        d);
   }
   return;
 }
@@ -1517,7 +1546,7 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
                   "While falling out of the sky?");
   DOCHECK_CONTEXT(mech->xcode.context, MechMove(mech) == MOVE_NONE,
                   "This piece of equipment is stationary!");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You are currently standing up and cannot move.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   (Fallen(mech)) && (MechType(mech) != CLASS_MECH &&
@@ -1529,7 +1558,7 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
       mech->xcode.context, WaterBeast(mech) && NotInWater(mech),
       "You are regrettably unable to move at this time. We apologize for "
       "the inconvenience.");
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeChange(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_MOVEMODE),
                   "You are already changing movement modes!");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechStatus2(mech) & (SPRINTING | EVADING),
@@ -1553,10 +1582,10 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
       return;
     }
     mech_notify(mech, MECHALL, "You begin the process of dodging...");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event, 1, d);
+    mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event, 1, d);
   } else {
     mech_notify(mech, MECHALL, "You begin the process of ceasing to dodge.");
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event, TURN, d);
+    mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event, TURN, d);
   }
   return;
 }
@@ -1580,9 +1609,9 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
                   "You can't hulldown while jumping!");
   DOCHECK_CONTEXT(mech->xcode.context, MechSpeed(mech) > 0.5,
                   "You can't hulldown while moving!");
-  DOCHECK_CONTEXT(mech->xcode.context, Stabilizing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_JUMPSTABIL),
                   "You are still stabilizing from your last jump.");
-  DOCHECK_CONTEXT(mech->xcode.context, Standing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STAND),
                   "You haven't finished standing up yet.");
 
   argc = mech_parseattributes(buffer, args, 1);
@@ -1591,21 +1620,21 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
     if (!strcmp(args[0], "-")) {
       if (!IsHulldown(mech))
         mech_notify(mech, MECHALL, "You are not hulldown.");
-      else if (ChangingHulldown(mech))
+      else if (mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
         mech_notify(mech, MECHALL, "You are busy changing your hulldown mode.");
       else {
         mech_notify(mech, MECHALL, "You start to lift yourself up.");
         MechLOSBroadcast(mech, "begins to raise up on its legs.");
 
-        MECHEVENT(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,
-                  StandMechTime(mech), 0);
+        mech_event_schedule(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,
+                            StandMechTime(mech), 0);
       }
     } else if (!strcasecmp(args[0], "stop")) {
-      if (!ChangingHulldown(mech))
+      if (!mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
         mech_notify(mech, MECHALL,
                     "You are not currently changing your hulldown mode.");
       else {
-        StopHullDown(mech);
+        mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
         mech_notify(mech, MECHALL, "You stop changing your hulldown mode.");
       }
     } else
@@ -1616,19 +1645,20 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
 
   DOCHECK_CONTEXT(mech->xcode.context, IsHulldown(mech),
                   "You are already hulldown.");
-  DOCHECK_CONTEXT(mech->xcode.context, ChangingHulldown(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_CHANGING_HULLDOWN),
                   "You are busy changing your hulldown mode.");
 
   mech_notify(mech, MECHALL, "You start to lower yourself to the ground.");
   MechLOSBroadcast(mech, "begins to lower itself to the ground.");
   MechDesiredSpeed(mech) = 0;
 
-  MECHEVENT(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,
-            StandMechTime(mech), 1);
+  mech_event_schedule(mech, EVENT_CHANGING_HULLDOWN, mech_hulldown_event,
+                      StandMechTime(mech), 1);
 }
 
 int DropGetElevation(MECH *mech) {
-  if (MechRTerrain(mech) == BRIDGE) {
+  if (mech_real_terrain_get(mech) == BRIDGE) {
     if (MechZ(mech) < (MechElev(mech))) {
       if (Overwater(mech))
         return 0;
@@ -1636,21 +1666,22 @@ int DropGetElevation(MECH *mech) {
     }
     return MechElevation(mech);
   }
-  if (Overwater(mech) || (MechRTerrain(mech) == ICE && MechZ(mech) >= 0))
+  if (Overwater(mech) ||
+      (mech_real_terrain_get(mech) == ICE && MechZ(mech) >= 0))
     return MAX(0, MechElevation(mech));
   else
     return MechElevation(mech);
 }
 
 void DropSetElevation(MECH *mech, int wantdrop) {
-  if (MechRTerrain(mech) == BRIDGE) {
+  if (mech_real_terrain_get(mech) == BRIDGE) {
     bridge_set_elevation(mech);
     return;
   }
   MechZ(mech) = DropGetElevation(mech);
   MechFZ(mech) = MechZ(mech) * ZSCALE;
   if (wantdrop)
-    if (MechRTerrain(mech) == ICE && MechZ(mech) >= 0)
+    if (mech_real_terrain_get(mech) == ICE && MechZ(mech) >= 0)
       possibly_drop_thru_ice(mech);
 }
 
@@ -1691,7 +1722,7 @@ void LandMech(MECH *mech) {
       mech_notify(mech, MECHALL, "You finish your jump.");
 
     /* Better reset the FZ */
-    MechElev(mech) = GetElev(mech_map, MechX(mech), MechY(mech));
+    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
     MechZ(mech) = MechElev(mech) - 1;
     MechFZ(mech) = ZSCALE * MechZ(mech);
     DropSetElevation(mech, 1);
@@ -1778,15 +1809,15 @@ void LandMech(MECH *mech) {
   /* If we aren't jumping anymore, we already took care of the event.
      (e.g. in MechFalls()) */
   if (Jumping(mech))
-    MECHEVENT(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
-              JUMP_TO_HIT_RECYCLE, 0);
+    mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
+                        JUMP_TO_HIT_RECYCLE, 0);
   MechStatus(mech) &= ~JUMPING;
   MechStatus(mech) &= ~DFA_ATTACK;
   MechDFATarget(mech) = -1;
   MechGoingX(mech) = MechGoingY(mech) = 0;
   MechSpeed(mech) = 0;
-  StopJump(mech);  /* Kill the event for moving 'round */
-  MaybeMove(mech); /* Possibly start movin' on da ground */
+  mech_event_cancel(mech, EVENT_JUMP); /* Kill the event for moving 'round */
+  mech_maybe_move(mech);               /* Possibly start movin' on da ground */
 
   if (!done)
     possible_mine_poof(mech, MINE_LAND);
@@ -1795,7 +1826,7 @@ void LandMech(MECH *mech) {
   water_extinguish_inferno(mech);
   // this is only for non-new-stagger
   if (!mech->xcode.context->configuration->btech_newstagger)
-    StopStaggerCheck(mech);
+    mech_stop_stagger_check(mech);
 }
 
 /* Flooding code. Once we're in water, this is checked
@@ -1926,25 +1957,25 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
   if (Jumping(mech)) {
     MechStatus(mech) &= ~JUMPING;
     MechStatus(mech) &= ~DFA_ATTACK;
-    StopJump(mech);
-    MECHEVENT(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
-              JUMP_TO_HIT_RECYCLE, 0);
+    mech_event_cancel(mech, EVENT_JUMP);
+    mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
+                        JUMP_TO_HIT_RECYCLE, 0);
   }
 #ifdef BT_MOVEMENT_MODES
-  if (MoveModeChange(mech))
-    StopMoveMode(mech);
+  if (mech_event_count(mech, EVENT_MOVEMODE))
+    mech_event_cancel(mech, EVENT_MOVEMODE);
   if (MechStatus2(mech) & SPRINTING)
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              MODE_SPRINT | MODE_OFF);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        MODE_SPRINT | MODE_OFF);
   if (MechStatus2(mech) & EVADING)
-    MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event,
-              (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW)
-                  ? TURN / 2
-                  : TURN,
-              MODE_EVADE | MODE_OFF);
+    mech_event_schedule(
+        mech, EVENT_MOVEMODE, mech_movemode_event,
+        (MechType(mech) == CLASS_BSUIT || MechType(mech) == CLASS_MW) ? TURN / 2
+                                                                      : TURN,
+        MODE_EVADE | MODE_OFF);
 #endif
   if (MechMove(mech) == MOVE_VTOL || MechMove(mech) == MOVE_FLY) {
     MechVerticalSpeed(mech) = 0;
@@ -1958,11 +1989,11 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
         mech_notify(mech, MECHALL, "Your rotor has been destroyed!");
       MechStatus(mech) |= FALLEN;
     }
-    StopMoving(mech);
+    mech_event_cancel(mech, EVENT_MOVE);
   } else
-    MaybeMove(mech);
+    mech_maybe_move(mech);
   if (MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW)
-    MakeMechFall(mech);
+    mech_make_fall(mech);
 
   if (seemsg)
     MechLOSBroadcast(mech, "falls down!");
@@ -1999,7 +2030,7 @@ void MechFalls(MECH *mech, int levels, int seemsg) {
     isrear = 1;
   SetFacing(mech, AcceptableDegree(MechFacing(mech)));
   MechDesiredFacing(mech) = MechFacing(mech);
-  if (!InWater(mech) && MechRTerrain(mech) != HIGHWATER)
+  if (!InWater(mech) && mech_real_terrain_get(mech) != HIGHWATER)
 #ifndef REALWEIGHT_DAMAGE
     damage = (levels * (MechTons(mech) + 5)) / 10;
 #else

@@ -1,24 +1,27 @@
+#include "mux/commands/command_context.h"
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "mux/world/world_context.h"
 /* Descriptor lifecycle, traversal, and shutdown implementations. */
-
-#include "mux/server/platform.h"
-
-#include "mux/network/connection_events.h"
-#include "mux/network/descriptor.h"
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <uv.h>
 
-#include "mux/commands/command_runtime.h"
+#include "mux/network/connection_events.h"
+#include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/server/server_control.h"
 
 /* Human-readable labels for DescriptorShutdownReason values. */
 static const char *descriptor_disconnect_reasons[] = {

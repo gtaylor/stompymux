@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
 /*
  * $Id: mech.startup.c,v 1.2 2005/06/23 18:31:42 av1-op Exp $
@@ -13,25 +14,33 @@
  *
  */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "mux/server/mux_server.h"
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 
 #include "autopilot.h"
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "p.bsuit.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "p.btechstats.h"
 #include "p.econ_cmds.h"
-#include "p.mech.build.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.misc.h"
-#include "p.mech.pickup.h"
-#include "p.mech.tag.h"
+#include "p.mech.events.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.tech.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 
 /* NOTE: Number of boot messages for both types _MUST_ match */
@@ -188,14 +197,14 @@ static void mech_startup_event(MuxEvent *e) {
   }
 
   if (timer < BOOTCOUNT) {
-    MECHEVENT(mech, EVENT_STARTUP, mech_startup_event, SSLEN, timer);
+    mech_event_schedule(mech, EVENT_STARTUP, mech_startup_event, SSLEN, timer);
     return;
   }
   if ((mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     for (i = 0; i < mech_map->first_free; i++)
       mech_map->LOSinfo[mech->mapnumber][i] = 0;
   initialize_pc(MechPilot(mech), mech);
-  Startup(mech);
+  mech_power_up(mech);
   MarkForLOSUpdate(mech);
   SetCargoWeight(mech);
   UnSetMechPKiller(mech);
@@ -230,7 +239,7 @@ static void mech_startup_event(MuxEvent *e) {
     MechStartFY(mech) = 0.0;
     MechStartFZ(mech) = 0.0;
     MechDesiredSpeed(mech) = MechMaxSpeed(mech);
-    MaybeMove(mech);
+    mech_maybe_move(mech);
   }
   UnZombifyMech(mech);
 }
@@ -258,9 +267,10 @@ void mech_startup(DbRef player, void *data, char *buffer) {
                   "This 'Mech is destroyed!");
   DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
                   "This 'Mech is already started!");
-  DOCHECK_CONTEXT(mech->xcode.context, Starting(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_STARTUP),
                   "This 'Mech is already starting!");
-  DOCHECK_CONTEXT(mech->xcode.context, Extinguishing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
                   "You're way too busy putting out fires!");
   n = figure_latest_tech_event(mech);
   DOCHECK_CONTEXT(
@@ -271,7 +281,7 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(
       mech->xcode.context,
       is_in_character(mech->xcode.context->database, mech->mynum) &&
-          !Wiz(mech->xcode.context->database, player) &&
+          !is_wizard(mech->xcode.context->database, player) &&
           (char_lookupplayer(mech->xcode.context, GOD, GOD, 0,
                              btech_attribute_read(
                                  mech->xcode.context->database, mech->mynum,
@@ -280,7 +290,7 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   n = 0;
   if (*buffer && !strncasecmp(buffer, "override", strlen(buffer))) {
     DOCHECK_CONTEXT(mech->xcode.context,
-                    !Wiz(mech->xcode.context->database, player),
+                    !is_wizard(mech->xcode.context->database, player),
                     "Insufficient access!");
     n = BOOTCOUNT - 1;
   }
@@ -297,27 +307,28 @@ void mech_startup(DbRef player, void *data, char *buffer) {
   MechSections(mech)[LARM].recycle = 0;
   MechSections(mech)[RTORSO].recycle = 0;
   MechSections(mech)[LTORSO].recycle = 0;
-  MECHEVENT(mech, EVENT_STARTUP, mech_startup_event,
-            (n || MechType(mech) == CLASS_MW) ? 1 : SSLEN,
-            (long)(MechType(mech) == CLASS_MW ? BOOTCOUNT - 1 : n));
+  mech_event_schedule(mech, EVENT_STARTUP, mech_startup_event,
+                      (n || MechType(mech) == CLASS_MW) ? 1 : SSLEN,
+                      (long)(MechType(mech) == CLASS_MW ? BOOTCOUNT - 1 : n));
 }
 
 void mech_shutdown(DbRef player, void *data, char *buffer) {
   MECH *mech = (MECH *)data;
 
-  DOCHECK_CONTEXT(mech->xcode.context, (!Started(mech) && !Starting(mech)),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  (!Started(mech) && !mech_event_count(mech, EVENT_STARTUP)),
                   "The 'mech hasn't been started yet!");
   DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
                   "You snore for a while.. and then _start_ yourself back up.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   IsDS(mech) && !Landed(mech) &&
-                      !Wiz(mech->xcode.context->database, player),
+                      !is_wizard(mech->xcode.context->database, player),
                   "No shutdowns in mid-air! Are you suicidal?");
   if (MechPilot(mech) == -1)
     return;
-  if (Starting(mech)) {
+  if (mech_event_count(mech, EVENT_STARTUP)) {
     mech_notify(mech, MECHALL, "The startup sequence has been aborted.");
-    StopStartup(mech);
+    mech_event_cancel(mech, EVENT_STARTUP);
     MechPilot(mech) = -1;
     return;
   }
@@ -355,7 +366,7 @@ void mech_shutdown(DbRef player, void *data, char *buffer) {
        (MechType(mech) != CLASS_MECH &&
         MechZ(mech) > MechUpperElevation(mech) && MechZ(mech) < ORBIT_Z))) {
     mech_notify(mech, MECHALL, "You start free-fall.. Enjoy the ride!");
-    MECHEVENT(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+    mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   } else if (MechSpeed(mech) > MP1) {
     mech_notify(mech, MECHALL, "Your systems stop in mid-motion!");
     if (MechType(mech) == CLASS_MECH)
@@ -369,5 +380,5 @@ void mech_shutdown(DbRef player, void *data, char *buffer) {
     MechFalls(mech, 1, 0);
     domino_space(mech, 2);
   }
-  Shutdown(mech);
+  mech_power_down(mech);
 }

@@ -1,6 +1,10 @@
 /* commac.c - Player communication macro storage and lookup. */
 
 #include "mux/communication/commac.h"
+
+#include <stdlib.h>
+#include <strings.h>
+
 #include "mux/communication/channel_registry.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"

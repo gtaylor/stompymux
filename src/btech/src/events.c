@@ -8,12 +8,14 @@
  *
  */
 
-#include "mech.events.h"
-#include "mech.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "glue_types.h"
+#include "macros.h"
 #include "mux/network/mux_event.h"
 #include "mux/server/game.h"
-
-extern char *mux_event_names[];
+#include "mux/server/platform.h"
+#include "p.map.obj.h"
 
 void debug_EventTypes(DbRef player, void *data, char *buffer) {
   XCODE *debug = data;
@@ -31,7 +33,7 @@ void debug_EventTypes(DbRef player, void *data, char *buffer) {
       continue;
     tot += j;
     notify_printf(btech_context_evaluation(debug->context), player, "%-20s%d",
-                  mux_event_names[i], j);
+                  btech_event_name(i), j);
   }
   if (tot)
     notify(btech_context_evaluation(debug->context), player,

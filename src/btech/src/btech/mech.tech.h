@@ -14,11 +14,15 @@
  *
  */
 
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "mech.events.h"
+#include "mech.h"
+#include "mech.parts.h"
 #include "mux/server/platform.h"
 
 #pragma once
-
-#include "mech.events.h"
 
 /* In minutes */
 #if 1
@@ -78,16 +82,16 @@
                   "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
-                  Starting(mech) &&                                            \
-                      !Wiz(mech->xcode.context->database, player),             \
+                  mech_event_count(mech, EVENT_STARTUP) &&                     \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The mech's starting up! Please stop the sequence first.");  \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
                   Started(mech) &&                                             \
-                      !Wiz(mech->xcode.context->database, player),             \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The mech's started up ; please shut it down first.");       \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
                   !isds && !MechStall(mech) &&                                 \
-                      !Wiz(mech->xcode.context->database, player),             \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The 'mech isn't in a repair stall!");
 
 #define TECHCOMMANDD                                                           \
@@ -95,17 +99,17 @@
                   "Error has occured in techcommand ; please contact a wiz");  \
   isds = DropShip(MechType(mech));                                             \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
-                  Starting(mech) &&                                            \
-                      !Wiz(mech->xcode.context->database, player),             \
+                  mech_event_count(mech, EVENT_STARTUP) &&                     \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The mech's starting up! Please stop the sequence first.");  \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
                   Started(mech) &&                                             \
-                      !Wiz(mech->xcode.context->database, player),             \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The mech's started up ; please shut it down first.");       \
   DOCHECK_CONTEXT(mech->xcode.context,                                         \
                   mech->xcode.context->configuration->btech_limitedrepairs &&  \
                       !isds && !MechStall(mech) &&                             \
-                      !Wiz(mech->xcode.context->database, player),             \
+                      !is_wizard(mech->xcode.context->database, player),       \
                   "The 'mech isn't in a repair stall!");
 
 #define ETECHCOMMAND(a) void a(DbRef player, void *data, char *buffer)
@@ -298,55 +302,6 @@ ECMD(tech_fix);
          : (MechSpecials(mech) & REINFI_TECH) ? RE_INTERNAL                    \
          : (MechSpecials(mech) & COMPI_TECH)  ? CO_INTERNAL                    \
                                               : S_INTERNAL))
-#endif
-
-#define GrabPartsM(m, a, b, c)                                                 \
-  econ_change_items((m)->xcode.context,                                        \
-                    IsDS(m) ? AeroBay(m, 0)                                    \
-                            : game_object_location(                            \
-                                  (m)->xcode.context->database, (m)->mynum),   \
-                    a, b, 0 - c)
-#define PartAvailM(m, a, b, c)                                                 \
-  (econ_find_items((m)->xcode.context,                                         \
-                   IsDS(m) ? AeroBay(m, 0)                                     \
-                           : game_object_location(                             \
-                                 (m)->xcode.context->database, (m)->mynum),    \
-                   a, b) >= c)
-#ifndef BT_COMPLEXREPAIRS
-#define AddPartsM(m, a, b, c)                                                  \
-  econ_change_items((m)->xcode.context,                                        \
-                    IsDS(m) ? AeroBay(m, 0)                                    \
-                            : game_object_location(                            \
-                                  (m)->xcode.context->database, (m)->mynum),   \
-                    alias_part(m, a), b, c)
-#else
-#define AddPartsM(m, l, a, b, c)                                               \
-  econ_change_items((m)->xcode.context,                                        \
-                    IsDS(m) ? AeroBay(m, 0)                                    \
-                            : game_object_location(                            \
-                                  (m)->xcode.context->database, (m)->mynum),   \
-                    alias_part(m, a, l), b, c)
-#endif
-#define AVCHECKM(m, a, b, c)                                                   \
-  DOCHECK1_CONTEXT(                                                            \
-      mech->xcode.context, !PartAvailM(m, a, b, c),                            \
-      tprintf(                                                                 \
-          "Not enough units of %s in store! You need to have at least %d.",    \
-          part_name((m)->xcode.context, a, b).text, c));
-
-#ifndef BT_COMPLEXREPAIRS
-#define alias_part(m, t)                                                        \
-  (IsActuator(t) ? Cargo(S_ACTUATOR)                                            \
-                 : (t == Special(ENGINE)                                        \
-                        ? ((MechSpecials(m) & XL_TECH)    ? Cargo(XL_ENGINE)    \
-                           : (MechSpecials(m) & ICE_TECH) ? Cargo(IC_ENGINE)    \
-                           : (MechSpecials(m) & XXL_TECH) ? Cargo(XXL_ENGINE)   \
-                           : (MechSpecials(m) & CE_TECH)  ? Cargo(COMP_ENGINE)  \
-                           : (MechSpecials(m) & LE_TECH)  ? Cargo(LIGHT_ENGINE) \
-                                                          : t)                   \
-                        : (t == Special(HEAT_SINK) && MechHasDHS(m)             \
-                               ? Cargo(DOUBLE_HEAT_SINK)                        \
-                               : t)))
 #endif
 
 ETECHEVENT(mux_event_tickmech_reattach);

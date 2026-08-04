@@ -3,10 +3,16 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/server/log.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/world/world_context.h"
 
-#include <sys/file.h>
+struct GameDatabase; // IWYU pragma: keep
 
 typedef struct Attribute Attribute;
 typedef struct EvaluationContext EvaluationContext;

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/communication/channel_registry.h"
+#include "mux/objects/db.h"
 #include "mux/server/platform.h"
 
 typedef struct GameDatabase GameDatabase;

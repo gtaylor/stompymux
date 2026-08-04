@@ -1,3 +1,9 @@
+#include "btech_event.h" // IWYU pragma: keep
+#include "map.terrain.h" // IWYU pragma: keep
+#include "mech.lifecycle.h"
+#include "mux/objects/powers.h"       // IWYU pragma: keep
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "p.btech.h"                  // IWYU pragma: keep
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -9,38 +15,53 @@
  *
  */
 
-#include "mux/server/game.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-#include "mux/world/player.h"
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "glue_types.h"
+#include "macros.h"
+#include "mech.notify.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mux/world/player.h"
+#include "p.btechstats.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
+#include "p.mech.events.h"
+#include "p.mech.notify.h"
+#include "weapon_settings.h"
+
 #define BTECHSTATS
 #include "coolmenu.h"
-#include "mech.events.h"
 #include "mech.h"
 #include "mycool.h"
+
 #define BTECHSTATS_C
 #include "btechstats.h"
 #include "btmacros.h"
 #include "glue.h"
 #include "mux/commands/command_helpers.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/network/mux_event.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
-#include "p.bsuit.h"
-#include "p.map.obj.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.partnames.h"
-#include "p.mech.pickup.h"
-#include "p.mech.tag.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
-#include "p.mechfile.h"
 
 static int char_xp_bonus(PSTATS *s, int code);
 static int char_getstatvalue(PSTATS *s, char *name);
@@ -681,10 +702,11 @@ void initialize_pc(DbRef player, MECH *mech) {
   case 3:
     if (strcmp(buf3, "-")) {
       if (!find_matching_vlong_part(context, buf3, nullptr, &id, &brand)) {
-        SendError(context, tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                                   game_object_name(
-                                       mech->xcode.context->database, player),
-                                   player, buf3));
+        btech_channel_send(
+            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
+                    game_object_name(mech->xcode.context->database, player),
+                    player, buf3));
         return;
       }
       if (IsWeapon(id)) {
@@ -704,10 +726,11 @@ void initialize_pc(DbRef player, MECH *mech) {
   case 2:
     if (strcmp(buf2, "-")) {
       if (!find_matching_vlong_part(context, buf2, nullptr, &id, &brand)) {
-        SendError(context, tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                                   game_object_name(
-                                       mech->xcode.context->database, player),
-                                   player, buf2));
+        btech_channel_send(
+            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
+                    game_object_name(mech->xcode.context->database, player),
+                    player, buf2));
         return;
       }
       if (IsWeapon(id)) {
@@ -726,16 +749,17 @@ void initialize_pc(DbRef player, MECH *mech) {
     [[fallthrough]];
   case 1:
     if (strlen(buf1) != PC_LOCS) {
-      SendError(context,
-                tprintf("Invalid armor string for %s(#%ld): %s",
-                        game_object_name(mech->xcode.context->database, player),
-                        player, buf1));
+      btech_channel_send(
+          context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+          tprintf("Invalid armor string for %s(#%ld): %s",
+                  game_object_name(mech->xcode.context->database, player),
+                  player, buf1));
       return;
     }
     for (i = 0; buf1[i]; i++)
       if (!isdigit(buf1[i])) {
-        SendError(
-            context,
+        btech_channel_send(
+            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
                     game_object_name(mech->xcode.context->database, player),
                     player, buf1, i + 1, buf1[i]));
@@ -867,7 +891,7 @@ void headhitmwdamage(MECH *mech, MECH *attacker, int dam) {
     return;
   /* check to see if mech is IC */
   if (!is_in_character(mech->xcode.context->database, mech->mynum) ||
-      !GotPilot(mech)) {
+      !mech_has_pilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -924,7 +948,7 @@ void mwlethaldam(MECH *mech, MECH *attacker, int dam) {
     return;
   /* check to see if mech is IC */
   if (!is_in_character(mech->xcode.context->database, mech->mynum) ||
-      !GotPilot(mech)) {
+      !mech_has_pilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
     return;
@@ -992,9 +1016,10 @@ void AccumulateTechXP(BtechContext *context, DbRef pilot, MECH *mech,
 
   // We emit all tech XP gains to the MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
-    SendTechXP(context, tprintf("%s gained %d %s XP (changing mech #%ld)",
-                                game_object_name(context->database, pilot), xp,
-                                skname, mech ? mech->mynum : -1));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
+                       tprintf("%s gained %d %s XP (changing mech #%ld)",
+                               game_object_name(context->database, pilot), xp,
+                               skname, mech ? mech->mynum : -1));
 }
 
 void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, MECH *mech,
@@ -1008,9 +1033,10 @@ void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, MECH *mech,
 
   // We emit all tech xp gains to MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
-    SendTechXP(context, tprintf("%s gained %d %s XP (changing mech #%ld)",
-                                game_object_name(context->database, pilot), xp,
-                                skname, mech ? mech->mynum : -1));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
+                       tprintf("%s gained %d %s XP (changing mech #%ld)",
+                               game_object_name(context->database, pilot), xp,
+                               skname, mech ? mech->mynum : -1));
 }
 
 void AccumulateCommXP(DbRef pilot, MECH *mech) {
@@ -1018,17 +1044,18 @@ void AccumulateCommXP(DbRef pilot, MECH *mech) {
   int xp;
 
   xp = 1;
-  if (!RGotPilot(mech))
+  if (!mech_has_active_pilot(mech))
     return;
   if (!is_in_character(mech->xcode.context->database, mech->mynum))
     return;
   if (!is_connected(mech->xcode.context->database, pilot))
     return;
   if (char_gainxp(context, pilot, "Comm-Conventional", xp))
-    SendXP(context,
-           tprintf("%s gained %d %s XP (in #%ld)",
-                   game_object_name(mech->xcode.context->database, pilot), xp,
-                   "Comm-Conventional", mech->mynum));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_XP, "%s",
+        tprintf("%s gained %d %s XP (in #%ld)",
+                game_object_name(mech->xcode.context->database, pilot), xp,
+                "Comm-Conventional", mech->mynum));
 }
 
 void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
@@ -1039,7 +1066,7 @@ void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
   if (!is_in_character(mech->xcode.context->database, mech->mynum))
     return;
 
-  if (!RGotPilot(mech))
+  if (!mech_has_active_pilot(mech))
     return;
 
   if (!(skname = FindPilotingSkillName(mech)))
@@ -1058,15 +1085,16 @@ void AccumulatePilXP(DbRef pilot, MECH *mech, int reason, int addanyway) {
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(context, pilot, skname, xp))
-    SendPilotXP(context,
-                tprintf("%s gained %d %s XP",
-                        game_object_name(mech->xcode.context->database, pilot),
-                        xp, skname));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_PILOT_XP, "%s",
+        tprintf("%s gained %d %s XP",
+                game_object_name(mech->xcode.context->database, pilot), xp,
+                skname));
   /*
       if (char_gainxp(context, pilot, skname, xp))
-              SendXP(context, tprintf("%s gained %d %s XP",
-     game_object_name(mech->xcode.context->database, pilot), xp,
-     skname));
+              btech_channel_send(context, BTECH_CHANNEL_MECH_XP, tprintf("%s
+     gained %d %s XP", game_object_name(mech->xcode.context->database, pilot),
+     xp, skname));
   */
 }
 
@@ -1076,7 +1104,7 @@ void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
 
   if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
     return;
-  if (!RGotPilot(attacker))
+  if (!mech_has_active_pilot(attacker))
     return;
   if (MechPilot(attacker) != pilot)
     return;
@@ -1089,9 +1117,10 @@ void AccumulateSpotXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
     return;
   if (char_gainxp(context, pilot, "Gunnery-Spotting", xp))
-    SendXP(context,
-           tprintf("%s gained spotting XP",
-                   game_object_name(attacker->xcode.context->database, pilot)));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_XP, "%s",
+        tprintf("%s gained spotting XP",
+                game_object_name(attacker->xcode.context->database, pilot)));
 }
 
 int MadePerceptionRoll(MECH *mech, int modifier) {
@@ -1100,7 +1129,7 @@ int MadePerceptionRoll(MECH *mech, int modifier) {
 
   if (!is_in_character(mech->xcode.context->database, mech->mynum))
     return 0;
-  if (!RGotGPilot(mech))
+  if (!mech_has_active_gunner(mech))
     return 0;
   pilot = MechPilot(mech);
   if (pilot <= 0)
@@ -1110,9 +1139,10 @@ int MadePerceptionRoll(MECH *mech, int modifier) {
   if (btech_random_roll(mech->xcode.context) < (MechPer(mech) + modifier))
     return 0;
   if (char_gainxp(context, pilot, "Perception", 1))
-    SendXP(context,
-           tprintf("%s gained 1 perception XP",
-                   game_object_name(mech->xcode.context->database, pilot)));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_XP, "%s",
+        tprintf("%s gained 1 perception XP",
+                game_object_name(mech->xcode.context->database, pilot)));
   return 1;
 }
 
@@ -1124,7 +1154,7 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
   if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
     return;
 
-  if (!RGotGPilot(attacker))
+  if (!mech_has_active_gunner(attacker))
     return;
 
   if (GunPilot(attacker) != pilot)
@@ -1150,10 +1180,11 @@ void AccumulateArtyXP(DbRef pilot, MECH *attacker, MECH *wounded) {
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(context, pilot, "Gunnery-Artillery", xp))
-    SendAttackXP(context, tprintf("%s gained %d artillery XP",
-                                  game_object_name(
-                                      attacker->xcode.context->database, pilot),
-                                  xp));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
+        tprintf("%s gained %d artillery XP",
+                game_object_name(attacker->xcode.context->database, pilot),
+                xp));
 }
 
 void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason) {
@@ -1164,10 +1195,11 @@ void AccumulateComputerXP(DbRef pilot, MECH *mech, int reason) {
   if (mech && is_in_character(mech->xcode.context->database, mech->mynum) &&
       is_player(mech->xcode.context->database, pilot))
     if (char_gainxp(context, pilot, "computer", MAX(1, reason)))
-      SendXP(context,
-             tprintf("%s gained %d computer XP (mech #%ld)",
-                     game_object_name(mech->xcode.context->database, pilot),
-                     reason, mech ? mech->mynum : -1));
+      btech_channel_send(
+          context, BTECH_CHANNEL_MECH_XP, "%s",
+          tprintf("%s gained %d computer XP (mech #%ld)",
+                  game_object_name(mech->xcode.context->database, pilot),
+                  reason, mech ? mech->mynum : -1));
 }
 
 int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
@@ -1279,7 +1311,7 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
   if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
     return;
 
-  if (!RGotGPilot(attacker))
+  if (!mech_has_active_gunner(attacker))
     return;
 
   if (GunPilot(attacker) != pilot)
@@ -1319,8 +1351,9 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
   if (attacker->xcode.context->configuration->btech_xp_bthmod) {
     if (!(bth >= 3 && bth <= 12)) {
       if (attacker->xcode.context->configuration->btech_noisy_xpgain)
-        SendXP(context, tprintf("#%ld in #%ld 1 noxp #%ld", pilot,
-                                attacker->mynum, wounded->mynum));
+        btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                           tprintf("#%ld in #%ld 1 noxp #%ld", pilot,
+                                   attacker->mynum, wounded->mynum));
       return; /* sure hits aren't interesting */
     }
     multiplier = 2 * multiplier * bth_modifier[bth - 3] / 36;
@@ -1338,11 +1371,12 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
     th_BV = th_BV * theirPilotBVMod;
 
 #ifdef XP_DEBUG
-    SendDebug(context,
-              tprintf("Using skill modified battle value for mechs %ld and %ld "
-                      "with skill mods of %2.2f and %2.2f",
-                      attacker->mynum, wounded->mynum, myPilotBVMod,
-                      theirPilotBVMod));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("Using skill modified battle value for mechs %ld and %ld "
+                "with skill mods of %2.2f and %2.2f",
+                attacker->mynum, wounded->mynum, myPilotBVMod,
+                theirPilotBVMod));
 #endif
   }
 
@@ -1390,15 +1424,16 @@ void AccumulateGunXP(DbRef pilot, MECH *attacker, MECH *wounded, int damage,
 
   // Emit XP gain over MechAttackXP
   if (char_gainxp(context, pilot, skname, (int)xp)) {
-    SendAttackXP(
-        context,
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
                 "(%d damage) against %s",
                 game_object_name(attacker->xcode.context->database, pilot),
                 (int)xp, multiplier, damage, buf));
     if (attacker->xcode.context->configuration->btech_noisy_xpgain)
-      SendXP(context, tprintf("#%ld in #%ld %d damage #%ld", pilot,
-                              attacker->mynum, damage, wounded->mynum));
+      btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                         tprintf("#%ld in #%ld %d damage #%ld", pilot,
+                                 attacker->mynum, damage, wounded->mynum));
   }
 
 } // end AccumulateGunXP()
@@ -1415,7 +1450,7 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
   if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
     return;
 
-  if (!RGotGPilot(attacker))
+  if (!mech_has_active_gunner(attacker))
     return;
 
   if (GunPilot(attacker) != pilot)
@@ -1452,8 +1487,8 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
                  BOUNDED(50, 100 * TonValue(wounded) / TonValue(attacker), 150);
   else {
     /* Bring this to the attention of the admins */
-    SendError(
-        context,
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
                 attacker->mynum,
                 game_object_name(attacker->xcode.context->database,
@@ -1488,11 +1523,12 @@ void AccumulateGunXPold(DbRef pilot, MECH *attacker, MECH *wounded,
    * Attacking and Piloting xp into two different channels
    */
   if (char_gainxp(context, pilot, skname, (int)xp))
-    SendAttackXP(context, tprintf("%s gained %d gun XP from feat of %f %% "
-                                  "difficulty (%d occurences) against %s",
-                                  game_object_name(
-                                      attacker->xcode.context->database, pilot),
-                                  (int)xp, multiplier, numOccurences, buf));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
+        tprintf("%s gained %d gun XP from feat of %f %% "
+                "difficulty (%d occurences) against %s",
+                game_object_name(attacker->xcode.context->database, pilot),
+                (int)xp, multiplier, numOccurences, buf));
 }
 
 void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
@@ -1509,7 +1545,7 @@ void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
                NOTHING,
            "#-1 INVALID TARGET");
-  FUNCHECK(!Wiz(context->database, player), "#-1 PERMISSION DENIED!");
+  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
   if (Readnum(targetcode, fargs[1]))
     targetcode = char_getvaluecode(context, fargs[1]);
   FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
@@ -1554,7 +1590,7 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
                NOTHING,
            "#-1 INVALID TARGET");
-  FUNCHECK(!Wiz(context->database, player), "#-1 PERMISSION DENIED!");
+  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
   if (Readnum(targetcode, fargs[1]))
     targetcode = char_getvaluecode(context, fargs[1]);
   FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
@@ -1613,8 +1649,9 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
         context, target, targetcode,
         targetvalue - char_getxpbycode(context, target, targetcode), 1);
 
-    SendXP(context, tprintf("%ld set %ld's %s XP to %d", player, target,
-                            char_values[targetcode].name, targetvalue));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                       tprintf("%ld set %ld's %s XP to %d", player, target,
+                               char_values[targetcode].name, targetvalue));
     safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
                      game_object_name(context->database, target),
                      char_values[targetcode].name, targetvalue);
@@ -1624,8 +1661,10 @@ void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
   default:
     /* Any other flaggo value will addxp for the skill */
     char_gainxpbycode(context, target, targetcode, targetvalue, 1);
-    SendXP(context, tprintf("#%ld added %d more %s XP to #%ld", player,
-                            targetvalue, char_values[targetcode].name, target));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                       tprintf("#%ld added %d more %s XP to #%ld", player,
+                               targetvalue, char_values[targetcode].name,
+                               target));
     safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
                      game_object_name(context->database, target), targetvalue,
                      char_values[targetcode].name);
@@ -1726,7 +1765,7 @@ void debug_xptop(DbRef player, void *data, char *buffer) {
   DO_WHOLE_DB(context->database, i) {
     if (!is_player(context->database, i))
       continue;
-    if (Wiz(context->database, i))
+    if (is_wizard(context->database, i))
       continue;
     retrieve_stats(context, i, VALUES_SKILLS, s);
     if (!s->xp[hm])

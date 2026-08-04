@@ -4,8 +4,9 @@
 
 #include <lua.h>
 
-#include "mux/objects/db.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/objects/object_state.h"
+#include "mux/server/platform.h"
 
 typedef struct LuaMuxPackage LuaMuxPackage;
 typedef struct LuaServices LuaServices;

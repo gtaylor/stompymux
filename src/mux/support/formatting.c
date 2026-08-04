@@ -2,9 +2,10 @@
 
 #include "mux/support/formatting.h"
 
-#include "mux/server/platform.h"
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "mux/support/alloc.h"
-#include "mux/support/stringutil.h"
 
 char *tprintf(const char *format, ...) {
   static char buff[LBUF_SIZE];

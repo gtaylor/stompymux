@@ -16,9 +16,6 @@
 
 #pragma once
 
-#include "mech.h"
-#include "mux/objects/db.h"
-
 #define MECHPILOT 0
 #define MECHSTARTED 1
 #define MECHALL 2
@@ -27,5 +24,3 @@
 #define ccheck(a, b, c)                                                        \
   if (!common_checks((a), (b), (c)))                                           \
   return
-
-#include "p.mech.notify.h"

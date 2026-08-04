@@ -2,13 +2,16 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <time.h>
 
-#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/render.h"
+
+// IWYU pragma: no_include "btech_context.h"
+// IWYU pragma: no_include "mux/commands/command_runtime.h"
+// IWYU pragma: no_include "mux/server/log.h"
+// IWYU pragma: no_include "uv.h"
 
 /* Reasons passed to descriptor_shutdown(). */
 typedef enum DescriptorShutdownReason {

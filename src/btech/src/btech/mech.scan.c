@@ -7,20 +7,32 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include <math.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
 #include "autopilot.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "p.autopilot_command.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.map.obj.h"
-#include "p.mech.build.h"
 #include "p.mech.combat.h"
-#include "p.mech.combat.misc.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.scan.h"
 #include "p.mech.status.h"
 #include "p.mech.update.h"

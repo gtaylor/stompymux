@@ -12,16 +12,18 @@
 
 /* Make statistics 'bout what we do.. whatever it is we _do_ */
 
-#include "mux/server/game.h"
 #include <assert.h>
 #include <time.h>
 
-#include "mech.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/objects/db.h"
-#include "p.glue.h"
-
 #include "macros.h"
+#include "mux/commands/command_context.h" // IWYU pragma: keep
+#include "mux/commands/command_handlers.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "random.h"
+
 void init_stat(BtechContext *context) {
   btech_random_seed(&context->random, (unsigned long)time(nullptr));
 }

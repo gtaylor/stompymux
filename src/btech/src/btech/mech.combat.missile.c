@@ -8,13 +8,20 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
+#include "map.terrain.h"
+#include "mech.lifecycle.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
 #include "btmacros.h"
+#include "map.h"
 #include "mech.combat.h"
-#include "mech.events.h"
 #include "mech.h"
+#include "mech.notify.h"
+#include "missile_hit_registry.h"
+#include "mux/support/alloc.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.combat.missile.h"
@@ -22,9 +29,10 @@
 #include "p.mech.ecm.h"
 #include "p.mech.hitloc.h"
 #include "p.mech.los.h"
-#include "p.mech.update.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 #include "p.pcombat.h"
+#include "weapon_settings.h"
 
 void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
                  int iscritical, int weapindx, int fireMode, int ammoMode,
@@ -48,9 +56,10 @@ void Missile_Hit(MECH *mech, MECH *target, int hitX, int hitY, int isrear,
        Elevation(mech_map, MechX(target), MechY(target)))) {
     clear_damage = total_damage;
 
-    if (GetRTerrain(mech_map, MechX(target), MechY(target)) == LIGHT_FOREST)
+    if (map_real_terrain_get(mech_map, MechX(target), MechY(target)) ==
+        LIGHT_FOREST)
       total_damage -= 2;
-    else if (GetRTerrain(mech_map, MechX(target), MechY(target)) ==
+    else if (map_real_terrain_get(mech_map, MechX(target), MechY(target)) ==
              HEAVY_FOREST)
       total_damage -= 4;
 
@@ -500,9 +509,9 @@ int LocateAMSDefenses(MECH *target, int *AMStype, int *ammoLoc, int *ammoCrit) {
   if (!(GetPartData(target, *ammoLoc, *ammoCrit)))
     return 0;
 
-  SetRecyclePart(target, AMSsect, AMScrit,
-                 btech_weapon_settings_recycle_time(
-                     &target->xcode.context->weapon_settings, w));
+  mech_set_recycle_part(target, AMSsect, AMScrit,
+                        btech_weapon_settings_recycle_time(
+                            &target->xcode.context->weapon_settings, w));
   MechWeapHeat(target) += (float)MechWeapons[w].heat;
   return 1;
 }

@@ -10,6 +10,7 @@
 /* Generated at Mon Mar 22 08:51:16 CET 1999 from mech.status.c */
 
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 
 #pragma once
 

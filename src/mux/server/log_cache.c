@@ -1,21 +1,19 @@
 /* log_cache.c - Cached arbitrary-log file management. */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
 #include <errno.h>
-#include <sys/file.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
+#include "btech_context.h" // IWYU pragma: keep
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_config.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
 

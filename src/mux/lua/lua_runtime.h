@@ -2,11 +2,20 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
-
-#include <stdbool.h>
 #include <stddef.h>
 #include <time.h>
+
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/network/descriptor.h"
+#include "mux/objects/db.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/world/world_context.h"
+
+struct LuaOwner; // IWYU pragma: keep
 
 typedef struct LuaRuntime LuaRuntime;
 typedef struct LuaServices LuaServices;

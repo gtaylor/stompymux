@@ -14,24 +14,41 @@
  *
  */
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "autopilot.h"
-#include "glue.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mux/network/mux_event_alloc.h"
-#include "p.bsuit.h"
-#include "p.btechstats.h"
-#include "p.ds.bay.h"
-#include "p.econ.h"
+#include "mech.lifecycle.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/formatting.h"
+#include "mymath.h"
+#include "p.ai.h"
+#include "p.autopilot.h"
 #include "p.econ_cmds.h"
 #include "p.eject.h"
 #include "p.glue.h"
-#include "p.mech.los.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.maps.h"
+#include "p.mech.move.h"
 #include "p.mech.pickup.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
-#include <math.h>
 
 /*
  * List of all the available autopilot commands
@@ -90,7 +107,7 @@ void auto_command_startup(AUTO *autopilot, MECH *mech) {
   if (Started(mech))
     return;
 
-  if (!Starting(mech)) {
+  if (!mech_event_count(mech, EVENT_STARTUP)) {
     mech_startup(autopilot->mynum, mech, "");
     auto_goto_next_command(autopilot, AUTOPILOT_STARTUP_TICK);
   }
@@ -180,7 +197,8 @@ void auto_cal_mapindex(BtechContext *context, MECH *mech) {
   char error_buf[MBUF_SIZE];
 
   if (!mech) {
-    SendError(context, "Null pointer catch in auto_cal_mapindex");
+    btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS,
+                       "Null pointer catch in auto_cal_mapindex");
     return;
   }
 
@@ -194,7 +212,7 @@ void auto_cal_mapindex(BtechContext *context, MECH *mech) {
                "Mech #%ld thinks it has the Autopilot #%d on it"
                " but FindObj breaks",
                mech->mynum, MechAuto(mech));
-      SendError(context, error_buf);
+      btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS, "%s", error_buf);
       MechAuto(mech) = -1;
     } else {
 
@@ -389,7 +407,8 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for autogun command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
     }
 
   } else if (argc == 2) {
@@ -405,7 +424,8 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument for autogun command",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         /* Free Args */
         for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
@@ -424,7 +444,8 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " target for autogun command",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         /* Free Args */
         for (i = 0; i < AUTOPILOT_MAX_ARGS - 1; i++) {
@@ -461,7 +482,8 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for autogun command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
     }
   }
 
@@ -478,8 +500,8 @@ void auto_command_autogun(AUTO *autopilot, MECH *mech) {
 void auto_command_chasetarget(AUTO *autopilot) {
 
   /* Fire off follow event */
-  AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-            AUTOPILOT_FOLLOW_TICK, 1);
+  autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
+                           AUTOPILOT_FOLLOW_TICK, 1);
 
   return;
 }
@@ -505,7 +527,8 @@ void auto_command_pickup(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for pickup command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     return;
   }
@@ -517,7 +540,8 @@ void auto_command_pickup(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld unable to pickup"
              " unit #%d",
              autopilot->mynum, target);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return;
   }
 
@@ -551,7 +575,8 @@ void auto_command_speed(AUTO *autopilot) {
              "AI Error - AI #%ld given bad"
              " argument for speed command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     return;
   }
@@ -564,7 +589,8 @@ void auto_command_speed(AUTO *autopilot) {
              "AI Error - AI #%ld given bad"
              " argument for speed command - out side of the range",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return;
   }
 
@@ -594,7 +620,8 @@ void auto_command_embark(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for embark command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     return;
   }
@@ -606,7 +633,8 @@ void auto_command_embark(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld unable to embark"
              " unit #%d",
              autopilot->mynum, target);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return;
   }
 
@@ -694,38 +722,38 @@ void auto_com_event(MuxEvent *muxevent) {
     auto_command_chasetarget(autopilot);
     return;
   case GOAL_DUMBGOTO:
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
-              AUTOPILOT_GOTO_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
+                             AUTOPILOT_GOTO_TICK, 0);
     return;
   case GOAL_DUMBFOLLOW:
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
-              AUTOPILOT_FOLLOW_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
+                             AUTOPILOT_FOLLOW_TICK, 0);
     return;
 
   case GOAL_ENTERBASE:
-    AUTOEVENT(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
-              AUTOPILOT_NC_DELAY, 1);
+    autopilot_event_schedule(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
+                             AUTOPILOT_NC_DELAY, 1);
     return;
 
   case GOAL_FOLLOW:
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-              AUTOPILOT_FOLLOW_TICK, 1);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                             auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK, 1);
     return;
 
   case GOAL_GOTO:
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
-              AUTOPILOT_GOTO_TICK, 1);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
+                             AUTOPILOT_GOTO_TICK, 1);
     return;
 
   case GOAL_LEAVEBASE:
-    AUTOEVENT(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
-              AUTOPILOT_LEAVE_TICK, 1);
+    autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
+                             AUTOPILOT_LEAVE_TICK, 1);
     return;
 
   case GOAL_OLDGOTO:
     AUTO_GSTART(autopilot, mech);
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_goto_event, AUTOPILOT_GOTO_TICK,
-              0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_goto_event,
+                             AUTOPILOT_GOTO_TICK, 0);
     return;
 
   case GOAL_ROAM:
@@ -738,13 +766,13 @@ void auto_com_event(MuxEvent *muxevent) {
 		j = GVAL(a, 2);
 		if(!i) {
 			PG(a) += CCLEN(a);
-			AUTOEVENT(a, EVENT_AUTOCOM, auto_com_event, MAX(1, j), 0);
+			autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event, MAX(1, j), 0);
 		} else {
 			if(i == 1) {
 				if(MechNumSeen(mech)) {
 					ADVANCE_PG(a);
 				} else {
-					AUTOEVENT(a, EVENT_AUTOCOM, auto_com_event,
+					autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event,
 							  AUTOPILOT_WAITFOE_TICK, 0);
 				}
 			} else {
@@ -756,7 +784,7 @@ void auto_com_event(MuxEvent *muxevent) {
 #if 0
 	case COMMAND_ATTACKLEG:
 		if(!(tempmech = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
-			SendAI(autopilot->xcode.context, tprintf("AIAttacklegError #%d", GVAL(a, 1)));
+			btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s", tprintf("AIAttacklegError #%d", GVAL(a, 1)));
 			//ADVANCE_PG(a);
 			auto_goto_next_command(a);
 			return;
@@ -815,7 +843,7 @@ void auto_com_event(MuxEvent *muxevent) {
 	case COMMAND_JUMP:
 		if(auto_valid_progline(a, GVAL(a, 1))) {
 			PG(a) = GVAL(a, 1);
-			AUTOEVENT(a, EVENT_AUTOCOM, auto_com_event,
+			autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event,
 					  AUTOPILOT_NC_DELAY, 0);
 		} else {
 			ADVANCE_PG(a);
@@ -875,7 +903,7 @@ void auto_com_event(MuxEvent *muxevent) {
 #if 0
 	case COMMAND_SWARM:
 		if(!(tempmech = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
-			SendAI(autopilot->xcode.context, tprintf("AISwarmError #%d", GVAL(a, 1)));
+			btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s", tprintf("AISwarmError #%d", GVAL(a, 1)));
 			//ADVANCE_PG(a);
 			auto_goto_next_command(a);
 			return;
@@ -934,7 +962,7 @@ static void speed_up_if_neccessary(AUTO *a, MECH *mech, int tx, int ty,
   if (bearing < 0 || abs((int)MechDesiredSpeed(mech)) < 2)
     if (bearing < 0 || abs(bearing - MechFacing(mech)) <= 30)
       if (MechX(mech) != tx || MechY(mech) != ty) {
-        if (GetRTerrain(map, MechX(mech), MechY(mech)) == WATER)
+        if (map_real_terrain_get(map, MechX(mech), MechY(mech)) == WATER)
           ai_set_speed(mech, a, WalkingSpeed(MMaxSpeed(mech)));
         else
           ai_set_speed(mech, a, MMaxSpeed(mech));
@@ -1049,12 +1077,12 @@ void auto_goto_event(MuxEvent *e) {
 
     /* Use the AI */
     if (ai_check_path(mech, autopilot, dx, dy, 0.0, 0.0))
-      AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_goto_event, AUTOPILOT_GOTO_TICK,
-                0);
+      autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_goto_event,
+                               AUTOPILOT_GOTO_TICK, 0);
 
   } else {
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_goto_event, AUTOPILOT_GOTO_TICK,
-              0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_goto_event,
+                             AUTOPILOT_GOTO_TICK, 0);
   }
 }
 
@@ -1095,9 +1123,9 @@ void auto_roam_event(MuxEvent * e)
 			ty = BOUNDED(1, btech_random_range(map->xcode.context, 20, map->map_height - 21),
 						 map->map_height - 1);
 			MapCoordToRealCoord(tx, ty, &dx, &dy);
-			t = GetRTerrain(map, tx, ty);
+			t = map_real_terrain_get(map, tx, ty);
 			range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech),
-							  dx, dy, ZSCALE * GetElev(map, tx, ty));
+							  dx, dy, ZSCALE * map_elevation_get(map, tx, ty));
 			if((InLineOfSight(mech, NULL, tx, ty, range) &&
 				t != WATER && t != HIGHWATER && t != MOUNTAINS) || i > 5000) {
 				i = 0;
@@ -1107,7 +1135,7 @@ void auto_roam_event(MuxEvent * e)
 		}
 		a->commands[a->program_counter + 1] = tx;
 		a->commands[a->program_counter + 2] = ty;
-		AUTOEVENT(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
+		autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
 		return;
 	}
 	MapCoordToRealCoord(tx, ty, &dx, &dy);
@@ -1115,10 +1143,10 @@ void auto_roam_event(MuxEvent * e)
 	if(!slow_down_if_neccessary(a, mech, range, bearing, tx, ty)) {
 		/* Use the AI */
 		if(ai_check_path(mech, a, dx, dy, 0.0, 0.0))
-			AUTOEVENT(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK,
+			autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK,
 					  0);
 	} else {
-		AUTOEVENT(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
+		autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
 	}
 }
 #endif
@@ -1165,7 +1193,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1175,12 +1204,12 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
-              AUTOPILOT_STARTUP_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
+                             AUTOPILOT_STARTUP_TICK, 0);
     return;
   }
 
@@ -1188,12 +1217,12 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
-              AUTOPILOT_NC_DELAY, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
+                             AUTOPILOT_NC_DELAY, 0);
     return;
   }
 
@@ -1209,7 +1238,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " first argument - going to next command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1222,7 +1252,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " first argument '%s' - going to next command",
              autopilot->mynum, argument);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1239,7 +1270,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " second argument - going to next command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1252,7 +1284,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
              " goto [dumbly] with AI #%ld but was unable to - bad"
              " second argument '%s' - going to next command",
              autopilot->mynum, argument);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1274,8 +1307,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   speed_up_if_neccessary(autopilot, mech, tx, ty, bearing);
   slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty);
   update_wanted_heading(autopilot, mech, bearing);
-  AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event, AUTOPILOT_GOTO_TICK,
-            0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_dumbgoto_event,
+                           AUTOPILOT_GOTO_TICK, 0);
 }
 
 /*
@@ -1328,7 +1361,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              " goto with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1338,12 +1372,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
-              (long)AUTOPILOT_STARTUP_TICK, generate_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
+                             (long)AUTOPILOT_STARTUP_TICK, generate_path);
     return;
   }
 
@@ -1351,12 +1385,12 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
-              (long)AUTOPILOT_NC_DELAY, generate_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
+                             (long)AUTOPILOT_NC_DELAY, generate_path);
     return;
   }
 
@@ -1375,7 +1409,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " first argument - going to next command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1388,7 +1423,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " first argument '%s' - going to next command",
                autopilot->mynum, argument);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
 
       free(argument);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1406,7 +1442,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld but was unable to - bad"
                " second argument - going to next command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1419,7 +1456,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to hex %d,%d but was"
                " unable to - bad second argument '%s' - going to next command",
                autopilot->mynum, tx, ty, argument);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
 
       free(argument);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1436,7 +1474,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to bad hex"
                " (%d, %d)",
                autopilot->mynum, tx, ty);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
       return;
     }
@@ -1450,7 +1489,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
                " generate an astar path for AI #%ld to hex %d,%d but was"
                " unable to",
                autopilot->mynum, tx, ty);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
 
       /*! \todo {add in some message the AI can give if it can't find a path} */
 
@@ -1467,7 +1507,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to follow"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1485,7 +1526,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1515,8 +1557,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
       free(temp_astar_node);
 
       /* Call this event again */
-      AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
-                AUTOPILOT_GOTO_TICK, 0);
+      autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
+                               AUTOPILOT_GOTO_TICK, 0);
       return;
     }
   }
@@ -1532,8 +1574,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   slow_down_if_neccessary(autopilot, mech, range, bearing, tx, ty);
   update_wanted_heading(autopilot, mech, bearing);
 
-  AUTOEVENT(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
-            AUTOPILOT_GOTO_TICK, 0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOGOTO, auto_astar_goto_event,
+                           AUTOPILOT_GOTO_TICK, 0);
 }
 
 /*
@@ -1593,7 +1635,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " follow with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1603,12 +1646,13 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-              (long)AUTOPILOT_STARTUP_TICK, destroy_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                             auto_astar_follow_event,
+                             (long)AUTOPILOT_STARTUP_TICK, destroy_path);
     return;
   }
 
@@ -1616,12 +1660,13 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-              (long)AUTOPILOT_NC_DELAY, destroy_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                             auto_astar_follow_event, (long)AUTOPILOT_NC_DELAY,
+                             destroy_path);
     return;
   }
 
@@ -1637,7 +1682,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " to follow target but was unable to - bad argument - going"
              " to next command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -1650,7 +1696,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " to follow target but was unable to - bad argument '%s' - going"
              " to next command",
              autopilot->mynum, argument);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1666,7 +1713,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to"
              " follow unit #%ld with AI #%ld but its not a valid unit.",
              target_dbref, autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     ai_set_speed(mech, autopilot, 0);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1681,7 +1729,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " follow unit #%ld with AI #%ld but it is either dead or"
              " not on the same map.",
              target_dbref, autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     ai_set_speed(mech, autopilot, 0);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -1715,8 +1764,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
       auto_destroy_astar_path(autopilot);
     }
 
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-              AUTOPILOT_FOLLOW_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                             auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK, 0);
     return;
   }
 
@@ -1761,7 +1810,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                  " generate an astar path for AI #%ld to hex %d,%d to follow"
                  " unit #%ld, but was unable to.",
                  autopilot->mynum, x, y, target_dbref);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         /*! \todo {add in some message the AI can give if it can't find a path}
          */
@@ -1787,7 +1837,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                  " generate an astar path for AI #%ld to hex %d,%d to follow"
                  " unit #%ld, but was unable to.",
                  autopilot->mynum, x, y, target_dbref);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         /*! \todo {add in some message the AI can give if it can't find a path}
          */
@@ -1812,7 +1863,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to follow"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     /* Destroy List */
     auto_destroy_astar_path(autopilot);
@@ -1832,7 +1884,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     /* Destroy List */
     auto_destroy_astar_path(autopilot);
@@ -1853,8 +1906,9 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
       auto_destroy_astar_path(autopilot);
 
       /* Re-Run Follow */
-      AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-                AUTOPILOT_FOLLOW_TICK, 0);
+      autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                               auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK,
+                               0);
       return;
 
     } else {
@@ -1865,8 +1919,9 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
       free(temp_astar_node);
 
       /* Call this event again */
-      AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-                AUTOPILOT_FOLLOW_TICK, 0);
+      autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                               auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK,
+                               0);
       return;
     }
   }
@@ -1885,8 +1940,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   /* Increase Tick */
   autopilot->follow_update_tick++;
 
-  AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
-            AUTOPILOT_FOLLOW_TICK, 0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
+                           AUTOPILOT_FOLLOW_TICK, 0);
 }
 
 #if 0
@@ -1914,7 +1969,7 @@ void auto_follow_event(MuxEvent * e)
 	FindComponents(MechSpeed(leader) * MOVE_MOD, MechFacing(leader),
 				   &newx, &newy);
 	if(ai_check_path(mech, a, fx, fy, newx, newy))
-		AUTOEVENT(a, EVENT_AUTOFOLLOW, auto_follow_event,
+		autopilot_event_schedule(a, EVENT_AUTOFOLLOW, auto_follow_event,
 				  AUTOPILOT_FOLLOW_TICK, 0);
 }
 #endif
@@ -1967,7 +2022,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
              " follow [dumbly] with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -1977,12 +2033,12 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
-              AUTOPILOT_STARTUP_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
+                             AUTOPILOT_STARTUP_TICK, 0);
     return;
   }
 
@@ -1990,12 +2046,12 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
-              AUTOPILOT_NC_DELAY, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
+                             AUTOPILOT_NC_DELAY, 0);
     return;
   }
 
@@ -2012,7 +2068,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
         " to follow target [dumbly] but was unable to - bad argument - going"
         " to next command",
         autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2027,7 +2084,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
              "- going"
              " to next command",
              autopilot->mynum, argument);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     free(argument);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2045,7 +2103,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
         " to follow target [dumbly] but was unable to - bad or dead target -"
         " going to next command",
         autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2075,8 +2134,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
       }
     }
 
-    AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
-              AUTOPILOT_FOLLOW_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
+                             AUTOPILOT_FOLLOW_TICK, 0);
     return;
   }
 
@@ -2088,8 +2147,8 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   update_wanted_heading(autopilot, mech, bearing);
 
-  AUTOEVENT(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
-            AUTOPILOT_FOLLOW_TICK, 0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_dumbfollow_event,
+                           AUTOPILOT_FOLLOW_TICK, 0);
 }
 
 /*
@@ -2133,7 +2192,8 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2143,12 +2203,12 @@ void auto_leave_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
-              (long)AUTOPILOT_STARTUP_TICK, reset_mapindex);
+    autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
+                             (long)AUTOPILOT_STARTUP_TICK, reset_mapindex);
     return;
   }
 
@@ -2156,12 +2216,12 @@ void auto_leave_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
-              (long)AUTOPILOT_NC_DELAY, reset_mapindex);
+    autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
+                             (long)AUTOPILOT_NC_DELAY, reset_mapindex);
     return;
   }
 
@@ -2182,7 +2242,8 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but was given bad argument"
              " defaulting to direction = 0",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     dir = 0;
 
@@ -2193,7 +2254,8 @@ void auto_leave_event(MuxEvent *muxevent) {
              " leavebase with AI #%ld but was given bad argument '%s'"
              " defaulting to direction = 0",
              autopilot->mynum, argument);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     dir = 0;
   }
@@ -2211,8 +2273,8 @@ void auto_leave_event(MuxEvent *muxevent) {
   /* Still not out yet so keep trying */
   speed_up_if_neccessary(autopilot, mech, -1, -1, dir);
   update_wanted_heading(autopilot, mech, dir);
-  AUTOEVENT(autopilot, EVENT_AUTOLEAVE, auto_leave_event, AUTOPILOT_LEAVE_TICK,
-            0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOLEAVE, auto_leave_event,
+                           AUTOPILOT_LEAVE_TICK, 0);
 }
 
 /*
@@ -2258,7 +2320,8 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2280,7 +2343,8 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but there is nothing at %d, %d"
              " to enter",
              autopilot->mynum, MechX(mech), MechY(mech));
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2294,12 +2358,12 @@ void auto_enter_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
-              AUTOPILOT_STARTUP_TICK, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
+                             AUTOPILOT_STARTUP_TICK, 0);
     return;
   }
 
@@ -2307,12 +2371,12 @@ void auto_enter_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
-              AUTOPILOT_NC_DELAY, 0);
+    autopilot_event_schedule(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
+                             AUTOPILOT_NC_DELAY, 0);
     return;
   }
 
@@ -2326,7 +2390,8 @@ void auto_enter_event(MuxEvent *muxevent) {
              " enterbase with AI #%ld but was given bad argument -"
              " going to next command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
   }
@@ -2359,13 +2424,13 @@ void auto_enter_event(MuxEvent *muxevent) {
   if (MechDesiredSpeed(mech) != 0.0)
     ai_set_speed(mech, autopilot, 0);
 
-  if ((MechSpeed(mech) == 0.0) && !EnteringHangar(mech)) {
+  if ((MechSpeed(mech) == 0.0) && !mech_event_count(mech, EVENT_ENTER_HANGAR)) {
     mech_enterbase(GOD, mech, dir);
   }
 
   /* Run this event again if we're not in yet */
-  AUTOEVENT(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
-            AUTOPILOT_NC_DELAY, 0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOENTERBASE, auto_enter_event,
+                           AUTOPILOT_NC_DELAY, 0);
 }
 
 /*
@@ -2405,8 +2470,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
       autopilot->roam_type = AUTO_ROAM_MAP;
 
       /* Fire off event */
-      AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-                AUTO_ROAM_TICK, 1);
+      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
+                               auto_astar_roam_event, AUTO_ROAM_TICK, 1);
 
     } else {
 
@@ -2415,7 +2480,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for roam command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
 
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     }
@@ -2432,7 +2498,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_hex_x) for roam command",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2451,7 +2518,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_hex_y) for roam command",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2471,7 +2539,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  "AI Error - AI #%ld given bad"
                  " argument (anchor_distance) for roam command",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2496,7 +2565,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  " roam with AI #%ld but AI is not on a valid"
                  " Map (#%d).",
                  autopilot->mynum, autopilot->mapindex);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2520,7 +2590,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                  " argument (bad anchor hex or bad anchor distance)"
                  " %d,%d : %d hexes for roam command",
                  autopilot->mynum, anchor_hex_x, anchor_hex_y, anchor_distance);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
 
@@ -2540,8 +2611,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
       autopilot->roam_anchor_distance = anchor_distance;
 
       /* Fire off event */
-      AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-                AUTO_ROAM_TICK, 1);
+      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
+                               auto_astar_roam_event, AUTO_ROAM_TICK, 1);
 
     } else {
 
@@ -2550,7 +2621,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
                "AI Error - AI #%ld given bad"
                " argument for roam command",
                autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
 
       auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     }
@@ -2562,7 +2634,8 @@ void auto_command_roam(AUTO *autopilot, MECH *mech) {
              "AI Error - AI #%ld given bad"
              " argument for roam command",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
   }
@@ -2647,7 +2720,7 @@ void auto_roam_generate_target_hex(AUTO *autopilot, MECH *mech, MAP *map,
         target_hex_x >= map->map_width || target_hex_y >= map->map_height)
       continue;
 
-    switch (GetTerrain(map, target_hex_x, target_hex_y)) {
+    switch (map_terrain_get(map, target_hex_x, target_hex_y)) {
     case LIGHT_FOREST:
       if ((MechType(mech) == CLASS_VEH_GROUND) &&
           (MechMove(mech) != MOVE_TRACK))
@@ -2724,7 +2797,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              " roam with AI #%ld but AI is not on a valid"
              " Map (#%d).",
              autopilot->mynum, autopilot->mapindex);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
     return;
@@ -2734,12 +2808,12 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   if (!Started(mech)) {
 
     /* Startup */
-    if (!Starting(mech))
+    if (!mech_event_count(mech, EVENT_STARTUP))
       auto_command_startup(autopilot, mech);
 
     /* Run this command after startup */
-    AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-              (long)AUTOPILOT_STARTUP_TICK, generate_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
+                             (long)AUTOPILOT_STARTUP_TICK, generate_path);
     return;
   }
 
@@ -2747,12 +2821,12 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
-    if (!Standing(mech))
+    if (!mech_event_count(mech, EVENT_STAND))
       mech_stand(autopilot->mynum, mech, "");
 
     /* Ok lets run this command again */
-    AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-              (long)AUTOPILOT_NC_DELAY, generate_path);
+    autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
+                             (long)AUTOPILOT_NC_DELAY, generate_path);
     return;
   }
 
@@ -2791,8 +2865,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
         (doubly_linked_list_size(autopilot->astar_path) <= 0)) {
 
       /* Put Roam to bed and try again */
-      AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-                AUTO_ROAM_TICK, 1);
+      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
+                               auto_astar_roam_event, AUTO_ROAM_TICK, 1);
       return;
     }
 
@@ -2808,7 +2882,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              "Internal AI Error - Attempting to roam"
              " Astar path for AI #%ld - but the path is not there",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -2828,7 +2903,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
              " Astar path for AI #%ld - but the current astar node does not"
              " exist",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
 
     auto_destroy_astar_path(autopilot);
     auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
@@ -2847,8 +2923,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
 
       /* Destroy the path and run roam again */
       auto_destroy_astar_path(autopilot);
-      AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-                AUTO_ROAM_TICK, 1);
+      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
+                               auto_astar_roam_event, AUTO_ROAM_TICK, 1);
       return;
 
     } else {
@@ -2862,8 +2938,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
       autopilot->roam_update_tick++;
 
       /* Call this event again */
-      AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
-                AUTO_ROAM_TICK, 0);
+      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
+                               auto_astar_roam_event, AUTO_ROAM_TICK, 0);
       return;
     }
   }
@@ -2883,6 +2959,6 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   autopilot->roam_update_tick++;
 
   /* Cycle it again */
-  AUTOEVENT(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event, AUTO_ROAM_TICK,
-            0);
+  autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
+                           AUTO_ROAM_TICK, 0);
 }

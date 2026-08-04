@@ -1,14 +1,9 @@
 /* gamedb_sqlite.c -- SQLite game-database persistence */
 
-#include "mux/server/platform.h"
-#include "mux/world/player.h"
-
-#include <errno.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <sqlite3.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
@@ -17,10 +12,12 @@
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
+#include "mux/world/player.h"
 
 static int gamedb_load_metadata(PersistenceContext *context, sqlite3 *sqlite,
                                 int *db_top) {

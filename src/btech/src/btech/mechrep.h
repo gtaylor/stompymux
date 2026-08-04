@@ -14,8 +14,8 @@
  */
 
 #include "glue_types.h"
-
 #include "mech.h"
+#include "mux/server/platform.h"
 
 #pragma once
 

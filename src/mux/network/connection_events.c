@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * netcommon.c
  */
@@ -8,32 +9,30 @@
  * portions of the descriptor data structure are not used.
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
-#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
-#include "btech/btech_context.h"
-#include "mux/commands/command.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/commands/command_runtime.h"
+#include "mux/commands/command_context.h"
 #include "mux/commands/look.h"
 #include "mux/communication/comsys.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/network/connection_events.h"
+#include "mux/network/descriptor.h"
 #include "mux/network/network_output.h"
-#include "mux/network/telnet_environment.h"
-#include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
-#include "mux/server/diagnostics.h"
+#include "mux/objects/flags.h"
 #include "mux/server/file_cache.h"
+#include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
-#include "mux/support/styled_text/render.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 

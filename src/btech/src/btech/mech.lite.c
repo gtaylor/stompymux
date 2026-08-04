@@ -15,6 +15,13 @@
  */
 
 #include "mech.h"
+#include "btconfig.h"
+#include "map.h"
+#include "map.terrain.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "p.glue.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 /* If the target is in the front arc, and Line of Sight is not blocked

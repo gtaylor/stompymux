@@ -4,6 +4,8 @@
 
 #include <lua.h>
 
+#include "mux/lua/lua_runtime.h"
+
 typedef struct LuaBtechPackage LuaBtechPackage;
 typedef struct LuaServices LuaServices;
 

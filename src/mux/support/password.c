@@ -1,8 +1,10 @@
 /* password.c - Player password hashing with libsodium's Argon2id API. */
 
-#include "mux/server/platform.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
+#include <core.h>
+#include <string.h>
 
-#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
 #include "mux/support/password.h"
 
 int password_initialize(void) { return sodium_init() >= 0; }

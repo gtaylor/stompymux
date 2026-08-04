@@ -22,11 +22,28 @@
 #pragma once
 
 #include "btech/btech_context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
 #include "floatsim.h"
 #include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
+#include "mech.events.h"
 #include "mech.h"
-#include "mux/network/mux_event.h"
-#include "mux/server/server_config.h"
+#include "mech.lifecycle.h"
+#include "p.aero.move.h"
+#include "p.bsuit.h"
+#include "p.crit.h"
+#include "p.map.coding.h"
+#include "p.map.h"
+#include "p.map.obj.h"
+#include "p.mech.events.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
+#include "p.mech.pickup.h"
+#include "p.mech.tag.h"
+#include "p.mech.update.h"
+#include "p.template.h"
 #include <math.h>
 
 static inline BtechContext *xcode_context(const void *object) {
@@ -39,50 +56,31 @@ static inline BtechContext *xcode_context(const void *object) {
 #define IsRunning(speed, maxspeed) (speed > MWalkingSpeed(maxspeed))
 #define is_aero(mech) ((MechType(mech) == CLASS_AERO) || (IsDS(mech)))
 #define IsForest(t) (t == LIGHT_FOREST || t == HEAVY_FOREST)
-#define IsForestHex(map, x, y) (IsForest(GetRTerrain(map, x, y)))
+#define IsForestHex(map, x, y) (IsForest(map_real_terrain_get(map, x, y)))
 #define IsMountains(t) (t == MOUNTAINS)
-#define IsMountainsHex(map, x, y) (IsMountains(GetRTerrain(map, x, y)))
+#define IsMountainsHex(map, x, y) (IsMountains(map_real_terrain_get(map, x, y)))
 #define IsRough(t) (t == ROUGH)
-#define IsRoughHex(map, x, y) (IsRough(GetRTerrain(map, x, y)))
+#define IsRoughHex(map, x, y) (IsRough(map_real_terrain_get(map, x, y)))
 #define IsBuilding(t) (t == BUILDING)
-#define IsBuildingHex(map, x, y) (IsBuilding(GetRTerrain(map, x, y)))
+#define IsBuildingHex(map, x, y) (IsBuilding(map_real_terrain_get(map, x, y)))
 #define BaseElev(terr, elev)                                                   \
   ((terr) == WATER ? -(elev) : (terr) == ICE ? -(elev) : (elev))
 #define Elevation(mech_map, x, y)                                              \
-  BaseElev(GetRTerrain(mech_map, x, y), GetElevation(mech_map, x, y))
-#define MechElevation(mech) BaseElev(MechRTerrain(mech), abs(MechElev(mech)))
+  BaseElev(map_real_terrain_get(mech_map, x, y),                               \
+           map_elevation_get(mech_map, x, y))
+#define MechElevation(mech)                                                    \
+  BaseElev(mech_real_terrain_get(mech), abs(MechElev(mech)))
 #define MechEngineSizeC(mech)                                                  \
   ((int)rint((2 * MechMaxSpeed(mech) / KPH_PER_MP) / 3) * MechTons(mech))
 #define MechLowerElevation(mech)                                               \
-  (MechRTerrain(mech) != BRIDGE ? MechElevation(mech)                          \
-                                : bridge_w_elevation(mech))
+  (mech_real_terrain_get(mech) != BRIDGE ? MechElevation(mech)                 \
+                                         : bridge_w_elevation(mech))
 #define MechUpperElevation(mech)                                               \
-  (MechRTerrain(mech) == ICE ? 0 : MechElevation(mech))
+  (mech_real_terrain_get(mech) == ICE ? 0 : MechElevation(mech))
 #define MechsElevation(mech)                                                   \
   (MechZ(mech) -                                                               \
    ((MechUpperElevation(mech) <= MechZ(mech) ? MechUpperElevation(mech)        \
                                              : MechLowerElevation(mech))))
-
-/* GotPilot checks if mech's pilot is valid and inside his machine */
-#define GotPilot(mech)                                                         \
-  (MechPilot(mech) > 0 &&                                                      \
-   game_object_location(xcode_context(mech)->database, MechPilot(mech)) ==     \
-       mech->mynum)
-
-#define RGotPilot(mech)                                                        \
-  ((GotPilot(mech)) &&                                                         \
-   (is_connected(xcode_context(mech)->database, MechPilot(mech)) ||            \
-    !is_player(xcode_context(mech)->database, MechPilot(mech))))
-
-#define GotGPilot(mech)                                                        \
-  ((xcode_context(mech)->combat_overrides.pilot && GunPilot(mech) > 0) ||      \
-   (!xcode_context(mech)->combat_overrides.pilot && GotPilot(mech)))
-
-#define RGotGPilot(mech)                                                       \
-  ((xcode_context(mech)->combat_overrides.pilot && GunPilot(mech) > 0 &&       \
-    (is_connected(xcode_context(mech)->database, GunPilot(mech)) ||            \
-     !is_player(xcode_context(mech)->database, GunPilot(mech)))) ||            \
-   (!xcode_context(mech)->combat_overrides.pilot && RGotPilot(mech)))
 
 #define AeroBay(a, b) (a)->pd.bay[b]
 #define AeroFuel(a) (a)->ud.fuel
@@ -92,10 +90,6 @@ static inline BtechContext *xcode_context(const void *object) {
 #define AeroSIOrig(a) (a)->ud.si_orig
 #define AeroTurret(a, b) (a)->pd.turret[b]
 #define AeroUnusableArcs(a) (a)->pd.unusable_arcs
-#define AeroFreeFuel(a)                                                        \
-  ((MechType(a) == CLASS_VTOL) &&                                              \
-   xcode_context(a)->configuration->btech_nofusionvtolfuel &&                  \
-   (!(MechSpecials(a) & ICE_TECH)))
 #define DSLastMsg(a) (a)->rd.last_ds_msg
 #define GunPilot(a)                                                            \
   (xcode_context(a)->combat_overrides.pilot > 0                                \
@@ -180,14 +174,6 @@ static inline BtechContext *xcode_context(const void *object) {
   (MechEngineSizeV(a) > 0 ? MechEngineSizeV(a) : MechEngineSizeC(a))
 #define MechMaxSpeed(a) (a)->ud.maxspeed
 #define TemplateMaxSpeed(a) (a)->ud.template_maxspeed
-#define SetMaxSpeed(a, b)                                                      \
-  do {                                                                         \
-    MechMaxSpeed(a) = b;                                                       \
-    MechCritStatus(a) &= ~SPEED_OK;                                            \
-    correct_speed(a);                                                          \
-  } while (0)
-#define LowerMaxSpeed(a, b) SetMaxSpeed(a, MechMaxSpeed(a) - b)
-#define DivideMaxSpeed(a, b) SetMaxSpeed(a, MechMaxSpeed(a) / b)
 #define MechRMaxSpeed(a) (a)->rd.rspd
 #define MMaxSpeed(a) ((float)MechCargoMaxSpeed((a), (float)MechMaxSpeed((a))))
 #define MechMaxSuits(a) (a)->rd.maxsuits
@@ -255,10 +241,6 @@ static inline BtechContext *xcode_context(const void *object) {
 #define MechTarget(a) (a)->rd.target
 #define MechTeam(a) (a)->pd.team
 #define MechTerrain(a) (a)->pd.terrain
-#define MechRTerrain(a)                                                        \
-  ((MechTerrain(a) == FIRE || MechTerrain(a) == SMOKE)                         \
-       ? mech_underlying_terrain(a)                                            \
-       : MechTerrain(a))
 #define MechTons(a) (a)->ud.tons
 #define MechRTons(a) get_weight(a)
 #define MechRTonsV(a) (a)->rd.row
@@ -333,27 +315,6 @@ static inline BtechContext *xcode_context(const void *object) {
   } while (0)
 #define GetTurnMode(a) (MechPrefs(a) & MECHPREF_TURNMODE)
 
-#define MECHEVENT(mech, type, func, time, data)                                \
-  do {                                                                         \
-    if (mech->mynum > 0)                                                       \
-      mux_event_add(xcode_context(mech)->events, time, 0, type, func,          \
-                    (void *)(mech), (void *)(data));                           \
-  } while (0)
-
-#define AUTOEVENT(auto, type, func, time, data)                                \
-  mux_event_add(xcode_context(auto)->events, time, 0, type, func,              \
-                (void *)(auto), (void *)(data))
-
-#define MAPEVENT(map, type, func, time, data)                                  \
-  mux_event_add(xcode_context(map)->events, time, 0, type, func,               \
-                (void *)(map), (void *)(data))
-#define StopDec(a)                                                             \
-  mux_event_remove_type_data2(xcode_context(a)->events, EVENT_DECORATION,      \
-                              (void *)a)
-
-#define OBJEVENT(events, obj, type, func, time, data)                          \
-  mux_event_add(events, time, 0, type, func, (void *)obj, (void *)(data))
-
 #define GetPartType(a, b, c) MechSections(a)[b].criticals[c].type
 #define SetPartType(a, b, c, d) GetPartType(a, b, c) = d
 
@@ -422,10 +383,6 @@ static inline BtechContext *xcode_context(const void *object) {
 #define WpnIsRecycling(a, b, c)                                                \
   (GetPartData(a, b, c) > 0 && IsWeapon(GetPartType(a, b, c)) &&               \
    !PartIsNonfunctional(a, b, c) && !SectIsDestroyed(a, b))
-#define SectArmorRepair(a, b) SomeoneFixingA(a, b)
-#define SectRArmorRepair(a, b) SomeoneFixingA(a, b + 8)
-#define SectIntsRepair(a, b) SomeoneFixingI(a, b)
-
 #define SectIsDestroyed(a, b)                                                  \
   (!GetSectArmor(a, b) && ((is_aero(a) || !GetSectInt(a, b)) && !IsDS(a)))
 #define SetSectDestroyed(a, b)
@@ -486,118 +443,20 @@ static inline BtechContext *xcode_context(const void *object) {
 #define SetSectORArmor(a, b, c) (a)->ud.sections[b].rear_orig = c
 #define SetSectOInt(a, b, c) (a)->ud.sections[b].internal_orig = c
 
-#define CanJump(a) (!(Stabilizing(a)) && !(Jumping(a)))
-
 /* #define Jumping(a)
  * mux_event_count_type_data(xcode_context(a)->events,
  * EVENT_JUMP,(void *) a)
  */
 
 /* crew stunned related events and macros */
-#define CrewStunned(a)                                                         \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_UNSTUN_CREW,       \
-                            (void *)a)
-#define StunCrew(a) MECHEVENT(a, EVENT_UNSTUN_CREW, unstun_crew_event, 60, 0)
-
 /* Exile Stun code */
-#define CrewStunning(a)                                                        \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_CREWSTUN, (void *)a)
-#define StopCrewStunning(a)                                                    \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_CREWSTUN,         \
-                             (void *)a)
-
-#define Burning(a)                                                             \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_VEHICLEBURN,       \
-                            (void *)a)
-#define BurningSide(a, side)                                                   \
-  mux_event_count_type_data_data(xcode_context(a)->events, EVENT_VEHICLEBURN,  \
-                                 (void *)a, (void *)side)
-#define StopBurning(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_VEHICLEBURN,      \
-                             (void *)a)
-#define StopBurningSide(a, side)                                               \
-  mux_event_remove_type_data_data(xcode_context(a)->events, EVENT_VEHICLEBURN, \
-                                  (void *)a, (void *)side)
-#define Extinguishing(a)                                                       \
-  mux_event_count_type_data(xcode_context(a)->events,                          \
-                            EVENT_VEHICLE_EXTINGUISH, (void *)a)
 #define Jellied(a) (MechCritStatus(a) & JELLIED)
-#define Exploding(a)                                                           \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_EXPLODE, (void *)a)
-#define Dumping(a)                                                             \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_DUMP, (void *)a)
-#define Dumping_Type(a, type)                                                  \
-  (mux_event_count_type_data_data(xcode_context(a)->events, EVENT_DUMP,        \
-                                  (void *)a, (void *)type) ||                  \
-   mux_event_count_type_data_data(xcode_context(a)->events, EVENT_DUMP,        \
-                                  (void *)a, (void *)0))
-#define DumpingData(a, data2)                                                  \
-  mux_event_get_type_data(xcode_context(a)->events, EVENT_DUMP, (void *)a,     \
-                          (void *)data2)
-#define ChangingLateral(a)                                                     \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_LATERAL, (void *)a)
-#define Seeing(a)                                                              \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_PLOS, (void *)a)
-#define Locking(a)                                                             \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_LOCK, (void *)a)
-#define Hiding(a)                                                              \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_HIDE, (void *)a)
 #define HasCamo(a) (MechSpecials2(a) & CAMO_TECH)
 #define Digging(a) (MechTankCritStatus(a) & DIGGING_IN)
 #define MechDugIn(a) (MechTankCritStatus(mech) & DUG_IN)
-#define ChangingHulldown(a)                                                    \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_CHANGING_HULLDOWN, \
-                            (void *)a)
 #define IsHulldown(a) (MechStatus(a) & HULLDOWN)
-#define Falling(a)                                                             \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_FALL, (void *)a)
-#define Moving(a)                                                              \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_MOVE, (void *)a)
-#define RemovingPods(a)                                                        \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_REMOVE_PODS,       \
-                            (void *)a)
-#define SensorChange(a)                                                        \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_SCHANGE, (void *)a)
-#define Stabilizing(a)                                                         \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_JUMPSTABIL,        \
-                            (void *)a)
-#define Standrecovering(a)                                                     \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_STANDFAIL,         \
-                            (void *)a)
-#define Standing(a)                                                            \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_STAND, (void *)a)
-#define Starting(a)                                                            \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_STARTUP, (void *)a)
-#define Recovering(a)                                                          \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_RECOVERY, (void *)a)
-#define TakingOff(a)                                                           \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_TAKEOFF, (void *)a)
 #define FlyingT(a) (is_aero(a) || MechMove(a) == MOVE_VTOL)
 #define RollingT(a) ((MechType(a) == CLASS_AERO) || (MechType(a) == CLASS_DS))
-#define MaybeMove(a)                                                           \
-  do {                                                                         \
-    if (!Moving(a) && Started(a) &&                                            \
-        (!Fallen(mech) || MechType(a) == CLASS_MECH))                          \
-      MECHEVENT(a, EVENT_MOVE, is_aero(a) ? aero_move_event : mech_move_event, \
-                MOVE_TICK, 0);                                                 \
-  } while (0)
-#define SetRecyclePart(a, b, c, d)                                             \
-  do {                                                                         \
-    UpdateRecycling(a);                                                        \
-    SetPartData(a, b, c, d);                                                   \
-  } while (0)
-#define SetRecycleLimb(a, b, c)                                                \
-  do {                                                                         \
-    UpdateRecycling(a);                                                        \
-    (a)->ud.sections[b].recycle = c;                                           \
-  } while (0)
-#define UpdateRecycling(a)                                                     \
-  do {                                                                         \
-    if (Started(a) && !Destroyed(a) &&                                         \
-        a->rd.last_weapon_recycle != xcode_context(a)->events->tick)           \
-      recycle_weaponry(a);                                                     \
-  } while (0)
-
 #define AllLimbsRecycling(mech)                                                \
   (MechSections(mech)[RARM].recycle && MechSections(mech)[LARM].recycle &&     \
    MechSections(mech)[RLEG].recycle && MechSections(mech)[LLEG].recycle)
@@ -606,64 +465,6 @@ static inline BtechContext *xcode_context(const void *object) {
   (MechSections(mech)[RARM].recycle || MechSections(mech)[LARM].recycle ||     \
    MechSections(mech)[RLEG].recycle || MechSections(mech)[LLEG].recycle)
 
-#define StopExploding(a)                                                       \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_EXPLODE, (void *)a)
-#define StopLateral(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_LATERAL, (void *)a)
-#define StopMasc(a)                                                            \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_MASC_FAIL,        \
-                             (void *)a)
-#define StopMascR(a)                                                           \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_MASC_REGEN,       \
-                             (void *)a)
-#define StopSCharge(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_SCHARGE_FAIL,     \
-                             (void *)a)
-#define StopSChargeR(a)                                                        \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_SCHARGE_REGEN,    \
-                             (void *)a)
-#define StopDump(a)                                                            \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_DUMP, (void *)a)
-#define StopJump(a)                                                            \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_JUMP, (void *)a)
-#define StopOOD(a)                                                             \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_OOD, (void *)a)
-#define StopMoving(a)                                                          \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_MOVE, (void *)a)
-#define StopStand(a)                                                           \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_STAND, (void *)a)
-#define StopStabilization(a)                                                   \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_JUMPSTABIL,       \
-                             (void *)a)
-#define StopSensorChange(a)                                                    \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_SCHANGE, (void *)a)
-#define StopStartup(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_STARTUP, (void *)a)
-#define StopHiding(a)                                                          \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_HIDE, (void *)a)
-#define StopDigging(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_DIG, (void *)a);  \
-  MechTankCritStatus(a) &= ~DIGGING_IN
-#define StopHullDown(a)                                                        \
-  mux_event_remove_type_data(xcode_context(a)->events,                         \
-                             EVENT_CHANGING_HULLDOWN, (void *)a)
-#define StopTakeOff(a)                                                         \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_TAKEOFF, (void *)a)
-#define UnjammingTurret(a)                                                     \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_UNJAM_TURRET,      \
-                            (void *)a)
-#define UnJammingAmmo(a)                                                       \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_UNJAM_AMMO,        \
-                            (void *)a)
-#define UnJammingAmmoData(a, type)                                             \
-  mux_event_get_type_data(xcode_context(a)->events, EVENT_UNJAM_AMMO,          \
-                          (void *)a, (void *)type)
-#define WeaponUnJammingAmmo(a, type)                                           \
-  mux_event_count_type_data_data(xcode_context(a)->events, EVENT_UNJAM_AMMO,   \
-                                 (void *)a, (void *)type)
-#define EnteringHangar(a)                                                      \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_ENTER_HANGAR,      \
-                            (void *)a)
 #define OODing(a) MechCocoon(a)
 #define C_OODing(a) (MechCocoon(a) > 0)
 #define InSpecial(a) (MechStatus(a) & UNDERSPECIAL)
@@ -687,255 +488,21 @@ static inline BtechContext *xcode_context(const void *object) {
 #define PerformingAction(a) (MechStatus(a) & PERFORMING_ACTION)
 #define StopPerformingAction(a) (MechStatus(a) &= ~PERFORMING_ACTION)
 
-#define MakeMechFall(a)                                                        \
-  MechStatus(a) |= FALLEN;                                                     \
-  FallCentersTorso(a);                                                         \
-  MarkForLOSUpdate(a);                                                         \
-  MechFloods(a);                                                               \
-  StopStand(a);                                                                \
-  StopHullDown(a);                                                             \
-  MechStatus(a) &= ~HULLDOWN;                                                  \
-  if (xcode_context(a)->configuration->btech_newstagger) {                     \
-    ClearAllStaggerDamage(a);                                                  \
-  };
-
 #define FallCentersTorso(a)                                                    \
   MechStatus(a) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS)
-#define MakeMechStand(a)                                                       \
-  MechStatus(a) &= ~FALLEN;                                                    \
-  MarkForLOSUpdate(a)
 #define StandMechTime(a) (30 / BOUNDED(1, (MechMaxSpeed(a) / MP2), 30))
-#define StopLock(a)                                                            \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_LOCK, (void *)a); \
-  MechStatus(a) &= ~LOCK_MODES;                                                \
-  MechAim(a) = NUM_SECTIONS;
-#define SearchlightChanging(a)                                                 \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_SLITECHANGING,     \
-                            (void *)a)
-#define HeatcutoffChanging(a)                                                  \
-  mux_event_count_type_data(xcode_context(a)->events,                          \
-                            EVENT_HEATCUTOFFCHANGING, (void *)a)
-
 #define SeeWhenShutdown(a) (MechStatus(mech) & AUTOCON_WHEN_SHUTDOWN)
 
-#define LoseLock(a)                                                            \
-  StopLock(a);                                                                 \
-  MechTarget(a) = -1;                                                          \
-  MechTargX(a) = -1;                                                           \
-  MechTargY(a) = -1;                                                           \
-  if (MechAim(a) != NUM_SECTIONS) {                                            \
-    mech_notify(a, MECHALL, "Location-specific targeting powers down.");       \
-    MechAim(a) = NUM_SECTIONS;                                                 \
-  }
 #ifdef ADVANCED_LOS
-#define StartSeeing(a)                                                         \
-  MECHEVENT(a, EVENT_PLOS, mech_plos_event, INITIAL_PLOS_TICK, 0)
 #else
-#define StartSeeing(a)
 #endif
 
-#define Startup(a)                                                             \
-  do {                                                                         \
-    MechStatus(a) |= STARTED;                                                  \
-    MechTurnDamage(a) = 0;                                                     \
-    UpdateRecycling(a);                                                        \
-    MechNumSeen(a) = 0;                                                        \
-    StartSeeing(a);                                                            \
-  } while (0)
-
-#define Shutdown(a)                                                            \
-  do {                                                                         \
-    if (!Destroyed(a)) {                                                       \
-      UpdateRecycling(a);                                                      \
-      MechSpeed(a) = 0.0;                                                      \
-      MechCritStatus(a) &= ~(HEATCUTOFF);                                      \
-      MechStatus(a) &= ~(STARTED | MASC_ENABLED);                              \
-      MechStatus2(a) &= ~(ECM_ENABLED | ECCM_ENABLED | PER_ECM_ENABLED |       \
-                          PER_ECCM_ENABLED | ANGEL_ECM_ENABLED |               \
-                          ANGEL_ECCM_ENABLED | NULLSIGSYS_ON | STH_ARMOR_ON);  \
-      MechDesiredSpeed(a) = 0.0;                                               \
-    };                                                                         \
-    MechPilot(a) = -1;                                                         \
-    MechTarget(a) = -1;                                                        \
-    StopStartup(a);                                                            \
-    MechStatus2(a) &= ~SLITE_ON;                                               \
-    MechCritStatus(a) &= ~SLITE_LIT;                                           \
-    StopMoveMode(a);                                                           \
-    MechStatus2(a) &= ~(MOVE_MODES);                                           \
-    StopJump(a);                                                               \
-    StopMoving(a);                                                             \
-    MechMASCCounter(a) = 0;                                                    \
-    StopStand(a);                                                              \
-    StopStabilization(a);                                                      \
-    StopTakeOff(a);                                                            \
-    StopHiding(a);                                                             \
-    StopDigging(a);                                                            \
-    StopHullDown(a);                                                           \
-    stopTAG(a);                                                                \
-    DropClub(a);                                                               \
-    StopMasc(a);                                                               \
-    MechChargeTarget(a) = -1;                                                  \
-    StopSwarming(a, 0);                                                        \
-    MechSChargeCounter(a) = 0;                                                 \
-    if (MechCarrying(a) > 0) {                                                 \
-      mech_dropoff(GOD, a, "");                                                \
-    };                                                                         \
-  } while (0)
-
-#define Destroy(a)                                                             \
-  do {                                                                         \
-    if (Uncon(a)) {                                                            \
-      MechStatus(a) &= ~(BLINDED | UNCONSCIOUS);                               \
-      mech_notify(a, MECHALL,                                                  \
-                  "The mech was destroyed while pilot was unconscious!");      \
-    }                                                                          \
-    MechStatus(a) &= ~BLINDED;                                                 \
-    Shutdown(a);                                                               \
-    StopBurning(a);                                                            \
-    StopStaggerCheck(a);                                                       \
-    StaggerDamage(a) = 0;                                                      \
-    MechCritStatus(a) &= ~JELLIED;                                             \
-    MechStatus(a) |= DESTROYED;                                                \
-    MechCritStatus(a) &= ~MECH_STUNNED;                                        \
-    StopBSuitSwarmers(btech_context_get_map(a->xcode.context, a->mapindex), a, \
-                      1);                                                      \
-    mux_event_remove_data(xcode_context(a)->events, (void *)a);                \
-    if ((MechType(a) == CLASS_MECH && Jumping(a)) ||                           \
-        (MechType(a) != CLASS_MECH && MechZ(a) > MechUpperElevation(a)))       \
-      MECHEVENT(a, EVENT_FALL, mech_fall_event, FALL_TICK, -1);                \
-  } while (0)
-
-#define DestroyAndDump(a)                                                      \
-  do {                                                                         \
-    Destroy(a);                                                                \
-    MechVerticalSpeed(a) = 0.0;                                                \
-    if (MechRTerrain(a) == WATER || MechRTerrain(a) == ICE)                    \
-      MechZ(a) = -MechElev(a);                                                 \
-    else if (MechRTerrain(a) == BRIDGE) {                                      \
-      if (MechZ(a) >= MechUpperElevation(a))                                   \
-        MechZ(a) = MechUpperElevation(a);                                      \
-      else                                                                     \
-        MechZ(a) = MechLowerElevation(a);                                      \
-    } else                                                                     \
-      MechZ(a) = MechElev(a);                                                  \
-    MechFZ(a) = ZSCALE * MechZ(a);                                             \
-  } while (0)
-
-#define GetTerrain(mapn, x, y)                                                 \
-  map_coding_get_terrain(&(mapn)->xcode.context->map_coding, (mapn)->map[y][x])
-#define GetRTerrain(map, x, y)                                                 \
-  ((GetTerrain(map, x, y) == FIRE || GetTerrain(map, x, y) == SMOKE)           \
-       ? map_underlying_terrain(map, x, y)                                     \
-       : GetTerrain(map, x, y))
-#define GetElevation(mapn, x, y)                                               \
-  map_coding_get_elevation(&(mapn)->xcode.context->map_coding,                 \
-                           (mapn)->map[y][x])
-#define GetElev(mapn, x, y) GetElevation(mapn, x, y)
-#define SetMap(mapn, x, y, t, e)                                               \
-  (mapn)->map[y][x] =                                                          \
-      map_coding_get_index(&(mapn)->xcode.context->map_coding, (t), (e))
-#define SetMapB(registry, mapn, x, y, t, e)                                    \
-  (mapn)[y][x] = map_coding_get_index((registry), (t), (e))
-#define SetTerrain(mapn, x, y, t)                                              \
-  do {                                                                         \
-    SetMap(mapn, x, y, t, GetElevation(mapn, x, y));                           \
-    UpdateMechsTerrain(mapn, x, y, t);                                         \
-  } while (0)
-#define SetTerrainBase(mapn, x, y, t)                                          \
-  SetMap(mapn, x, y, t, GetElevation(mapn, x, y))
-#define SetElevation(mapn, x, y, e)                                            \
-  SetMap(mapn, x, y, GetTerrain(mapn, x, y), e)
-
 /* For now I don't care about allocations */
-#define ScenError(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "ScenErrors", __VA_ARGS__)
-#define ScenStatus(context, ...)                                               \
-  send_channel(btech_context_evaluation(context), "ScenStatus", __VA_ARGS__)
-#define SendAI(context, ...)                                                   \
-  send_channel(btech_context_evaluation(context), "MechAI", __VA_ARGS__)
 #define SendAlloc(msg)
 #define SendLoc(msg)
-#define SendCustom(context, ...)                                               \
-  send_channel(btech_context_evaluation(context), "MechCustom", __VA_ARGS__)
-#define SendDB(context, ...)                                                   \
-  send_channel(btech_context_evaluation(context), "DBInfo", __VA_ARGS__)
-#define SendDebug(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "MechDebugInfo", __VA_ARGS__)
-#define SendDeath(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "MechDeaths", __VA_ARGS__)
-#define SendEcon(context, ...)                                                 \
-  send_channel(btech_context_evaluation(context), "MechEconInfo", __VA_ARGS__)
-#define SendError(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "MechErrors", __VA_ARGS__)
-#define SendMapError(context, ...)                                             \
-  send_channel(btech_context_evaluation(context), "MapErrors", __VA_ARGS__)
-#define SendEvent(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "EventInfo", __VA_ARGS__)
-#define SendSensor(context, ...)                                               \
-  send_channel(btech_context_evaluation(context), "MechSensor", __VA_ARGS__)
-#define SendTrigger(context, ...)                                              \
-  send_channel(btech_context_evaluation(context), "MineTriggers", __VA_ARGS__)
-#define SendXP(context, ...)                                                   \
-  send_channel(btech_context_evaluation(context), "MechXP", __VA_ARGS__)
-#define SendDSInfo(context, ...)                                               \
-  send_channel(btech_context_evaluation(context), "DSInfo", __VA_ARGS__)
-
-/*
- * Exile Added Channel Message Emits
- */
-#define SendAttackEmits(context, ...)                                          \
-  send_channel(btech_context_evaluation(context), "MechAttackEmits",           \
-               __VA_ARGS__)
-#define SendAttacks(context, ...)                                              \
-  send_channel(btech_context_evaluation(context), "MechAttacks", __VA_ARGS__)
-#define SendAttackXP(context, ...)                                             \
-  send_channel(btech_context_evaluation(context), "MechAttackXP", __VA_ARGS__)
-#define SendBTHDebug(context, ...)                                             \
-  send_channel(btech_context_evaluation(context), "MechBTHDebug", __VA_ARGS__)
-#define SendFreqs(context, ...)                                                \
-  send_channel(btech_context_evaluation(context), "MechFreqs", __VA_ARGS__)
-#define SendPilotXP(context, ...)                                              \
-  send_channel(btech_context_evaluation(context), "MechPilotXP", __VA_ARGS__)
-#define SendTechXP(context, ...)                                               \
-  send_channel(btech_context_evaluation(context), "MechTechXP", __VA_ARGS__)
-#define SendTAC(context, ...)                                                  \
-  send_channel(btech_context_evaluation(context), "TACInfo", __VA_ARGS__)
-
 /*
  * This is the prototype for functions
  */
-
-#ifdef TEMPLATE_VERBOSE_ERRORS
-
-#define TEMPLATE_ERR(a, ...)                                                   \
-  if (a) {                                                                     \
-    notify(btech_context_evaluation(mech->xcode.context), player,              \
-           tprintf(__VA_ARGS__));                                              \
-    if (fp)                                                                    \
-      fclose(fp);                                                              \
-    return -1;                                                                 \
-  }
-
-#define TEMPLATE_GERR(a, ...)                                                  \
-  if (a) {                                                                     \
-    char foobarbuf[LBUF_SIZE] = {0};                                           \
-    snprintf(foobarbuf, sizeof(foobarbuf), __VA_ARGS__);                       \
-    SendError(mech->xcode.context, foobarbuf);                                 \
-    if (fp)                                                                    \
-      fclose(fp);                                                              \
-    return -1;                                                                 \
-  }
-#else
-
-#define TEMPLATE_ERR(a, ...)                                                   \
-  if (a) {                                                                     \
-    if (fp)                                                                    \
-      fclose(fp);                                                              \
-    return -1;                                                                 \
-  }
-#define TEMPLATE_GERR TEMPLATE_ERR
-
-#endif
 
 #define HotLoading(weapindx, mode)                                             \
   ((mode & HOTLOAD_MODE) && (MechWeapons[weapindx].special & IDF))
@@ -989,14 +556,6 @@ static inline BtechContext *xcode_context(const void *object) {
 #define FindWeapons(m, i, wa, wda, cr)                                         \
   FindWeapons_Advanced(m, i, wa, wda, cr, 1)
 
-#define ContinueFlying(mech)                                                   \
-  if (FlyingT(mech)) {                                                         \
-    MechStatus(mech) &= ~LANDED;                                               \
-    MechZ(mech) += 1;                                                          \
-    MechFZ(mech) = ZSCALE * MechZ(mech);                                       \
-    StopMoving(mech);                                                          \
-  }
-
 #define Overwater(mech)                                                        \
   (MechMove(mech) == MOVE_HOVER || MechType(mech) == CLASS_MW ||               \
    MechMove(mech) == MOVE_FOIL || MechMove(mech) == MOVE_HULL)
@@ -1007,8 +566,10 @@ static inline BtechContext *xcode_context(const void *object) {
                                              : 1)
 
 #define IsWater(t) ((t) == ICE || (t) == WATER || (t) == BRIDGE)
-#define InWater(mech) (IsWater(MechRTerrain((mech))) && MechZ(mech) < 0)
-#define OnWater(mech) (IsWater(MechRTerrain((mech))) && MechZ(mech) <= 0)
+#define InWater(mech)                                                          \
+  (IsWater(mech_real_terrain_get((mech))) && MechZ(mech) < 0)
+#define OnWater(mech)                                                          \
+  (IsWater(mech_real_terrain_get((mech))) && MechZ(mech) <= 0)
 
 #define IsC3(mech)                                                             \
   ((MechSpecials(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH)) &&                  \
@@ -1155,19 +716,11 @@ static inline BtechContext *xcode_context(const void *object) {
 #define StealthArmorActive(mech) (MechStatus2(mech) & STH_ARMOR_ON)
 #define EnableStealthArmor(mech) (MechStatus2(mech) |= STH_ARMOR_ON)
 #define DisableStealthArmor(mech) (MechStatus2(mech) &= ~STH_ARMOR_ON)
-#define StealthArmorChanging(mech)                                             \
-  mux_event_count_type_data(xcode_context(mech)->events, EVENT_STEALTH_ARMOR,  \
-                            (void *)mech)
-
 #define DestroyNullSigSys(mech) (MechCritStatus(mech) |= NSS_DESTROYED)
 #define NullSigSysDest(mech) (MechCritStatus(mech) & NSS_DESTROYED)
 #define NullSigSysActive(mech) (MechStatus2(mech) & NULLSIGSYS_ON)
 #define EnableNullSigSys(mech) (MechStatus2(mech) |= NULLSIGSYS_ON)
 #define DisableNullSigSys(mech) (MechStatus2(mech) &= ~NULLSIGSYS_ON)
-#define NullSigSysChanging(mech)                                               \
-  mux_event_count_type_data(xcode_context(mech)->events, EVENT_NSS,            \
-                            (void *)mech)
-
 /* C3 macros */
 
 #define HasC3(mech) (HasC3m(mech) || HasC3s(mech))
@@ -1193,45 +746,12 @@ static inline BtechContext *xcode_context(const void *object) {
 #define HasTAG(mech) ((MechSpecials2(mech) & TAG_TECH) || HasC3m(mech))
 #define TAGTarget(mech) (mech)->sd.tagTarget
 #define TaggedBy(mech) (mech)->sd.taggedBy
-#define TagRecycling(a)                                                        \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_TAG_RECYCLE,       \
-                            (void *)a)
-
 /* Club stuff */
 #define CarryingClub(mech)                                                     \
   ((MechSections(mech)[RARM].specials & CARRYING_CLUB) ||                      \
    (MechSections(mech)[LARM].specials & CARRYING_CLUB))
-#define DropClub(mech)                                                         \
-  do {                                                                         \
-    if (CarryingClub(mech)) {                                                  \
-      MechSections(mech)[RARM].specials &= ~CARRYING_CLUB;                     \
-      MechSections(mech)[LARM].specials &= ~CARRYING_CLUB;                     \
-      mech_notify(mech, MECHALL,                                               \
-                  "Your club falls to the ground and shatters.");              \
-      MechLOSBroadcast(mech, "'s club falls to the ground and shatters.");     \
-    }                                                                          \
-  } while (0)
-
 /* New stagger stuff */
 #define Staggering(mech) (StaggerLevel(mech) > 0)
-#define CheckingStaggerDamage(mech)                                            \
-  mux_event_count_type_data(xcode_context(mech)->events, EVENT_CHECK_STAGGER,  \
-                            (void *)mech)
-#define StartStaggerCheck(mech)                                                \
-  do {                                                                         \
-    MECHEVENT(mech, EVENT_CHECK_STAGGER, check_stagger_event, 5, 0);           \
-    SendDebug(mech->xcode.context,                                             \
-              tprintf("Starting stagger check for %ld.", mech->mynum));        \
-  } while (0)
-#define StopStaggerCheck(mech)                                                 \
-  do {                                                                         \
-    mux_event_remove_type_data(xcode_context(mech)->events,                    \
-                               EVENT_CHECK_STAGGER, (void *)mech);             \
-    (mech)->rd.staggerDamage = 0;                                              \
-    (mech)->rd.lastStaggerNotify = 0;                                          \
-    SendDebug(mech->xcode.context,                                             \
-              tprintf("Stopping stagger check for %ld.", mech->mynum));        \
-  } while (0)
 #define StaggerDamage(mech) ((mech)->rd.staggerDamage)
 #define LastStaggerNotify(mech) ((mech)->rd.lastStaggerNotify)
 #define StaggerLevel(mech) ((mech)->rd.staggerDamage / 20)
@@ -1247,22 +767,6 @@ static inline BtechContext *xcode_context(const void *object) {
 #define MechToMech_LOSFlag(map, from, to)                                      \
   ((map)->LOSinfo[from->mapnumber][to->mapnumber])
 
-#define MoveModeChange(a)                                                      \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_MOVEMODE, (void *)a)
-#define MoveModeLock(a)                                                        \
-  (MechStatus2(a) & MOVE_MODES_LOCK ||                                         \
-   (MoveModeChange(a) && !(MechStatus2(a) & DODGING)))
-#define MoveModeData(a)                                                        \
-  mux_event_count_type_data_firstev(xcode_context(a)->events, EVENT_MOVEMODE,  \
-                                    (void *)a)
-#define StopMoveMode(a)                                                        \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_MOVEMODE,         \
-                             (void *)a)
 #define Sprinting(a) (MechStatus2(a) & SPRINTING)
 #define Evading(a) (MechStatus2(a) & EVADING)
 #define Dodging(a) (MechStatus2(a) & DODGING)
-#define SideSlipping(a)                                                        \
-  mux_event_count_type_data(xcode_context(a)->events, EVENT_SIDESLIP, (void *)a)
-#define StopSideslip(a)                                                        \
-  mux_event_remove_type_data(xcode_context(a)->events, EVENT_SIDESLIP,         \
-                             (void *)a)

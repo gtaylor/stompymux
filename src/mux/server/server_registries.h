@@ -2,8 +2,11 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
 #include "mux/support/hash_table.h"
+
+struct WorldIndexes;       // IWYU pragma: keep
+struct AccessControlStore; // IWYU pragma: keep
+struct CommandRegistry;    // IWYU pragma: keep
 
 typedef struct SiteData SiteData;
 typedef struct badname_struc BADNAME;

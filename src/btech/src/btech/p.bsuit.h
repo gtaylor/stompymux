@@ -11,6 +11,10 @@
 
 #pragma once
 
+#include "map.h"
+#include "mech.h"
+#include "mux/server/platform.h"
+
 /* bsuit.c */
 char *GetBSuitName(MECH *mech);
 char *GetLCaseBSuitName(MECH *mech);

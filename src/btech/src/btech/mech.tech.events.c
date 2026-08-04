@@ -7,14 +7,15 @@
  *       All rights reserved
  */
 
-#include "mux/server/platform.h"
-
-#include "failures.h"
-#include "mech.events.h"
 #include "mech.h"
+#include "btech_event.h"
+#include "mech.events.h"
+#include "mech.notify.h"
+#include "mech.parts.h"
 #include "mech.tech.h"
-#include "mux/network/mux_event.h"
-#include "p.econ.h"
+#include "mux/support/alloc.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.status.h"
 #include "p.mech.tech.do.h"
 #include "p.mech.utils.h"
@@ -40,15 +41,19 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
   loc = earg % LOCMAX;
   extra = earg / (LOCMAX * POSMAX);
 #ifndef BT_COMPLEXREPAIRS
-  AddPartsM(mech, ProperInternal(mech), 0, (2 * GetSectInt(mech, loc)) / extra);
-  AddPartsM(mech, ProperArmor(mech), 0, (2 * GetSectArmor(mech, loc)) / extra);
-  AddPartsM(mech, Cargo(S_ELECTRONIC), 0, (GetSectInt(mech, loc)) / extra);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0,
+                 (2 * GetSectInt(mech, loc)) / extra);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperArmor(mech), 0,
+                 (2 * GetSectArmor(mech, loc)) / extra);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0,
+                 (GetSectInt(mech, loc)) / extra);
 #else
-  AddPartsM(mech, loc, ProperInternal(mech), 0,
-            (2 * GetSectInt(mech, loc)) / extra);
-  AddPartsM(mech, loc, ProperArmor(mech), 0,
-            (2 * GetSectArmor(mech, loc)) / extra);
-  AddPartsM(mech, loc, Cargo(S_ELECTRONIC), 0, (GetSectInt(mech, loc)) / extra);
+  mech_parts_add(mech, loc, ProperInternal(mech), 0,
+                 (2 * GetSectInt(mech, loc)) / extra);
+  mech_parts_add(mech, loc, ProperArmor(mech), 0,
+                 (2 * GetSectArmor(mech, loc)) / extra);
+  mech_parts_add(mech, loc, Cargo(S_ELECTRONIC), 0,
+                 (GetSectInt(mech, loc)) / extra);
 #endif
   mech_Detach(mech, loc);
   ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
@@ -90,11 +95,12 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
   ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
   if (extra == 2 && (e->function != very_fake_func)) {
 #ifndef BT_COMPLEXREPAIRS
-    AddPartsM(mech, FindAmmoType(mech, loc, pos), GetPartBrand(mech, loc, pos),
-              1);
+    mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                   FindAmmoType(mech, loc, pos), GetPartBrand(mech, loc, pos),
+                   1);
 #else
-    AddPartsM(mech, loc, FindAmmoType(mech, loc, pos),
-              GetPartBrand(mech, loc, pos), 1);
+    mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
+                   GetPartBrand(mech, loc, pos), 1);
 #endif
     do {
       int was_destroyed = 0;
@@ -135,11 +141,12 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
   ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
   if (extra == 2 && (e->function != very_fake_func)) {
 #ifndef BT_COMPLEXREPAIRS
-    AddPartsM(mech, FindAmmoType(mech, loc, pos), GetPartBrand(mech, loc, pos),
-              1);
+    mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                   FindAmmoType(mech, loc, pos), GetPartBrand(mech, loc, pos),
+                   1);
 #else
-    AddPartsM(mech, loc, FindAmmoType(mech, loc, pos),
-              GetPartBrand(mech, loc, pos), 1);
+    mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
+                   GetPartBrand(mech, loc, pos), 1);
 #endif
     do {
       int i = 0;
@@ -449,11 +456,12 @@ void mux_event_tickmech_reload(MuxEvent *e) {
     SetPartData(mech, loc, pos, 0);
     if (extra > 1)
 #ifndef BT_COMPLEXREPAIRS
-      AddPartsM(mech, FindAmmoType(mech, loc, pos),
-                GetPartBrand(mech, loc, pos), 1);
+      mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
+                     FindAmmoType(mech, loc, pos), GetPartBrand(mech, loc, pos),
+                     1);
 #else
-      AddPartsM(mech, loc, FindAmmoType(mech, loc, pos),
-                GetPartBrand(mech, loc, pos), 1);
+      mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
+                     GetPartBrand(mech, loc, pos), 1);
 #endif
   } else
     mech_FillPartAmmo(mech, loc, pos);

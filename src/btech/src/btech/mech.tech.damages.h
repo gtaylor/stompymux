@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "mech.h"
 /* Added RESEAL to repair flooded sections
  * -Kipsta
  * 8/4/99

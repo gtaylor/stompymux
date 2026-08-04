@@ -21,18 +21,35 @@
  */
 
 #include "mine.h"
-#include "glue.h"
+
+#include <math.h>
+#include <stdlib.h>
+#include <strings.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/commands/action_messages.h"
+#include "mux/lua/lua_runtime.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "p.artillery.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.bits.h"
 #include "p.map.obj.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
-#include "p.template.h"
-#include <math.h>
 
 /* Different types of mines
  *
@@ -133,9 +150,10 @@ void make_mine_explode(MECH *mech, MAP *map, mapobj *o, int x, int y,
     mapobj_del(map, o->x, o->y, TYPE_MINE);
     break;
   case MINE_TRIGGER:
-    SendTrigger(mech->xcode.context,
-                tprintf("#%ld %s activated trigger at %d,%d.", mech->mynum,
-                        mech_display_id(mech).text, o->x, o->y));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MINE_TRIGGERS, "%s",
+                       tprintf("#%ld %s activated trigger at %d,%d.",
+                               mech->mynum, mech_display_id(mech).text, o->x,
+                               o->y));
 
     // Trigger the unit's AMECHDEST attribute.
     if (mech->mynum > 0)
@@ -240,7 +258,8 @@ void possible_mine_poof(MECH *mech, int reason) {
   if (!is_mine_hex(map, x, y))
     return;
 
-  if (MechZ(mech) > (MechRTerrain(mech) == ICE ? 0 : Elevation(map, x, y)))
+  if (MechZ(mech) >
+      (mech_real_terrain_get(mech) == ICE ? 0 : Elevation(map, x, y)))
     return;
 
   possible_mine_explosion(mech, map, x, y, reason);

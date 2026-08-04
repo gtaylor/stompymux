@@ -2,33 +2,24 @@
  * speech.c -- Commands which involve speaking
  */
 
-#include "mux/commands/action_messages.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/network/network_output.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/access.h"
-#include "mux/world/object_spatial.h"
-#include "mux/world/world_context.h"
+#include <stdio.h>
 
-#include "mux/commands/command.h"
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
-#include "mux/commands/command_helpers.h"
-#include "mux/communication/access_policy.h"
-#include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
-#include "mux/objects/attrs.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/network/network_output.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
-#include "mux/world/match.h"
-#include "mux/world/world_context.h"
+#include "mux/world/access.h"
+#include "mux/world/object_spatial.h"
 
 static int sp_ok(EvaluationContext *evaluation,
                  const ServerConfiguration *configuration, DbRef player) {

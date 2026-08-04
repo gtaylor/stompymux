@@ -6,12 +6,21 @@
  */
 
 #include "mech.h"
+#include "btech_event.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
-#include "p.mech.build.h"
-#include "p.mech.combat.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "p.glue.h"
+#include "p.map.obj.h"
 #include "p.mech.damage.h"
 #include "p.mech.fire.h"
 #include "p.mech.hitloc.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 #define VEHICLEBURN_TICK 60
@@ -30,7 +39,7 @@ void inferno_burn(MECH *mech, int time) {
 
   if (!(MechCritStatus(mech) & JELLIED)) {
     MechCritStatus(mech) |= JELLIED;
-    MECHEVENT(mech, EVENT_BURN, inferno_end_event, time, 0);
+    mech_event_schedule(mech, EVENT_BURN, inferno_end_event, time, 0);
     return;
   }
 
@@ -39,7 +48,7 @@ void inferno_burn(MECH *mech, int time) {
       time;
   mux_event_remove_type_data(mech->xcode.context->events, EVENT_BURN,
                              (void *)mech);
-  MECHEVENT(mech, EVENT_BURN, inferno_end_event, l, 0);
+  mech_event_schedule(mech, EVENT_BURN, inferno_end_event, l, 0);
 }
 
 static void vehicle_burn_event(MuxEvent *objEvent) {
@@ -66,13 +75,13 @@ static void vehicle_burn_event(MuxEvent *objEvent) {
    * Only continue the event if the damage was greater than one
    */
   if ((wDamRoll > 1) && (GetSectInt(objMech, wLoc)))
-    MECHEVENT(objMech, EVENT_VEHICLEBURN, vehicle_burn_event, VEHICLEBURN_TICK,
-              wLoc);
+    mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
+                        VEHICLEBURN_TICK, wLoc);
   else {
     if (GetSectInt(objMech, wLoc))
       mech_printf(objMech, MECHALL,
                   "The fire burning on your %s finally goes out.", strLocName);
-    if (!Burning(objMech))
+    if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
       MechLOSBroadcast(objMech, "is no longer engulfed in flames.");
   }
 }
@@ -89,7 +98,8 @@ void vehicle_start_burn(MECH *objMech, MECH *objAttacker) {
   MechLOSBroadcast(objMech, "catches on fire!");
 
   for (wIter = 0; wIter < NUM_SECTIONS; wIter++) {
-    if (GetSectInt(objMech, wIter) && !BurningSide(objMech, wIter)) {
+    if (GetSectInt(objMech, wIter) &&
+        !mech_event_count_data(objMech, EVENT_VEHICLEBURN, wIter)) {
       wDamage = btech_random_range(objMech->xcode.context, 1, 6);
       ArmorStringFromIndex(wIter, strLocName, MechType(objMech),
                            MechMove(objMech));
@@ -97,8 +107,8 @@ void vehicle_start_burn(MECH *objMech, MECH *objAttacker) {
 
       DamageMech(objMech, objAttacker, 0, -1, wIter, 0, 0, wDamage, 0, 0, 0, -1,
                  0, 1);
-      MECHEVENT(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
-                VEHICLEBURN_TICK, wIter);
+      mech_event_schedule(objMech, EVENT_VEHICLEBURN, vehicle_burn_event,
+                          VEHICLEBURN_TICK, wIter);
     }
   }
 }
@@ -109,10 +119,10 @@ void vehicle_extinquish_fire_event(MuxEvent *e) {
   if (!objMech)
     return;
 
-  if (!Burning(objMech))
+  if (!mech_event_count(objMech, EVENT_VEHICLEBURN))
     return;
 
-  StopBurning(objMech);
+  mech_event_cancel(objMech, EVENT_VEHICLEBURN);
 
   mech_notify(objMech, MECHALL, "You manage to dowse the fire.");
   MechLOSBroadcast(objMech, "is no longer engulfed in flames.");
@@ -124,15 +134,18 @@ void vehicle_extinquish_fire(DbRef player, MECH *mech, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, Started(mech),
                   "Your tank is started! You can not extinguish the "
                   "flames while your tank is started!");
-  DOCHECK_CONTEXT(mech->xcode.context, !Burning(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  !mech_event_count(mech, EVENT_VEHICLEBURN),
                   "This unit is not on fire!");
-  DOCHECK_CONTEXT(mech->xcode.context, Extinguishing(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH),
                   "You're already trying to put out the fire!");
 
   mech_notify(mech, MECHALL, "You begin to extinguish the fires!");
 
-  MECHEVENT(mech, EVENT_VEHICLE_EXTINGUISH, vehicle_extinquish_fire_event,
-            VEHICLE_EXTINGUISH_TICK, 0);
+  mech_event_schedule(mech, EVENT_VEHICLE_EXTINGUISH,
+                      vehicle_extinquish_fire_event, VEHICLE_EXTINGUISH_TICK,
+                      0);
 }
 
 /*

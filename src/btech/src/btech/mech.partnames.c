@@ -1,3 +1,4 @@
+#include "mux/objects/flags.h"
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -7,19 +8,24 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "glue.h"
+#include "btech_context.h"
+#include "glue_types.h"
+#include "macros.h"
 #include "mech.h"
 #include "mech.partnames.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
-#include "mux/world/world_context.h"
+#include "p.mech.partnames.h"
 #include "p.template.h"
 
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
@@ -263,7 +269,8 @@ void fun_btpartmatch(char *buff, char **bufc, DbRef player, DbRef cause,
   int partindex = 0, id = 0, brand = 0;
   int part_count = 0;
 
-  FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
+  FUNCHECK(!is_wizard(context->world->database, player),
+           "#-1 PERMISSION DENIED");
   FUNCHECK(strlen(fargs[0]) >= MBUF_SIZE, "#-1 PARTNAME TOO LONG");
   FUNCHECK(!fargs[0], "#-1 NEED PARTNAME");
 
@@ -342,7 +349,8 @@ static int btpartslist_matches(BT_PART_CATEGORY category, int part) {
 void fun_btpartscategorylist(char *buff, char **bufc, DbRef player, DbRef cause,
                              char *fargs[], int nfargs, char *cargs[],
                              int ncargs, EvaluationContext *context) {
-  FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
+  FUNCHECK(!is_wizard(context->world->database, player),
+           "#-1 PERMISSION DENIED");
   safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
 }
 
@@ -362,7 +370,8 @@ void fun_btpartslist(char *buff, char **bufc, DbRef player, DbRef cause,
   int listed;
   PartNameRegistry *registry = context->btech->part_names;
 
-  FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
+  FUNCHECK(!is_wizard(context->world->database, player),
+           "#-1 PERMISSION DENIED");
   FUNCHECK(nfargs != 1, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
 
   category = btpartslist_category(fargs[0]);
@@ -404,7 +413,8 @@ void fun_btpartname(char *buff, char **bufc, DbRef player, DbRef cause,
   char *cptr;
   const char *infostr;
 
-  FUNCHECK(!WizR(context->world->database, player), "#-1 PERMISSION DENIED");
+  FUNCHECK(!is_wizard(context->world->database, player),
+           "#-1 PERMISSION DENIED");
   FUNCHECK(!fargs[0], "#-1 NEED PARTNAME");
   index = strtol(fargs[0], &cptr, 10);
   FUNCHECK(cptr == fargs[0], "#-1 INVALID PART NUMBER");

@@ -2,9 +2,13 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
+#include "mux/commands/command_context.h"
+#include "mux/communication/channel_registry.h"
+#include "mux/communication/commac.h"
 #include "mux/server/platform.h"
-#include "mux/world/match.h"
+#include "mux/server/server_registries.h"
+
+struct MacroRegistry; // IWYU pragma: keep
 
 enum : int { MACRO_L = 1, MACRO_R = 2, MACRO_W = 4 };
 constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */

@@ -2,8 +2,17 @@
  */
 
 #pragma once
-#include "mux/server/event_timer.h"
+
+#include "mux/network/mux_event.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
+#include "mux/server/runtime_clock.h"
+
+// IWYU pragma: no_include "btech_context.h"
+// IWYU pragma: no_include "mux/commands/command_context.h"
+// IWYU pragma: no_include "mux/commands/command_runtime.h"
+// IWYU pragma: no_include "mux/server/log.h"
+// IWYU pragma: no_include "mux/server/mux_server.h"
+// IWYU pragma: no_include "mux/world/world_context.h"
 
 /* BQUE - Command queue */
 
@@ -17,6 +26,7 @@ typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerLifecycle ServerLifecycle;
 typedef struct ServerLog ServerLog;
 typedef struct WorldContext WorldContext;
+typedef struct MuxTimer MuxTimer;
 
 typedef struct CommandQueueDependencies CommandQueueDependencies;
 struct CommandQueueDependencies {

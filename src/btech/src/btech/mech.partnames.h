@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "mech.h"
+
 typedef struct PN {
   char *shorty;
   char *longy;
@@ -27,5 +29,3 @@ typedef struct PN {
 #define UNPACK_PART(from, id, brand)                                           \
   id = from % NUM_ITEMS;                                                       \
   brand = from / NUM_ITEMS
-
-#include "p.mech.partnames.h"

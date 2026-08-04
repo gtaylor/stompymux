@@ -5,15 +5,26 @@
  *       All rights reserved
  */
 
-#include "mux/server/platform.h"
-
-#include "coolmenu.h"
-#include "glue.h"
-#include "mech.h"
-#include "mech.partnames.h"
-#include "mycool.h"
-#include "p.mech.utils.h"
 #include <math.h>
+#include <stdio.h>
+#include <strings.h>
+
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "coolmenu.h"
+#include "macros.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mycool.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
+#include "p.mech.partnames.h"
+#include "p.mech.utils.h"
 
 static const char mech_loc_table[][2] = {{CTORSO, 1}, {LTORSO, 2}, {RTORSO, 2},
                                          {LARM, 3},   {RARM, 3},   {LLEG, 4},
@@ -273,8 +284,8 @@ static int engine_weight(MECH *mech) {
   /* Hack ensues! Most hovers are 1/5th engine weight. Doesn't always register
    * correctly. */
   if (MechMove(mech) != MOVE_HOVER) {
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
                 game_object_name(mech->xcode.context->database, mech->mynum)));
   }
@@ -675,8 +686,8 @@ void vehicle_int_check(MECH *mech, int noisy) {
   for (i = 0; i < NUM_SECTIONS; i++)
     if (GetSectOInt(mech, i) && GetSectOInt(mech, i) != j) {
       if (noisy)
-        SendError(
-            mech->xcode.context,
+        btech_channel_send(
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                     "(should be %d, are %d)",
                     MechType_Ref(mech), mech->mynum, i, j,
@@ -700,16 +711,17 @@ void mech_int_check(MECH *mech, int noisy) {
       break;
   if (int_data[i][0] < 0) {
     if (noisy)
-      SendError(mech->xcode.context, tprintf("VERY odd tonnage for #%ld: %d.",
-                                             mech->mynum, MechTons(mech)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
+                                 MechTons(mech)));
     return;
   }
   k = i;
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (GetSectOInt(mech, i) != (j = real_int(mech, i, k))) {
       if (noisy)
-        SendError(
-            mech->xcode.context,
+        btech_channel_send(
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                     "(should be %d, are %d)",
                     MechType_Ref(mech), mech->mynum, i, j,

@@ -12,11 +12,17 @@
  *
  */
 
-#include "mux/objects/db.h"
+#include "mux/commands/command_context.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
-#include <stdio.h>
-#include <string.h>
+
+typedef struct EvaluationContext EvaluationContext;
 
 void KillText(char **mapt);
 void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
@@ -26,7 +32,6 @@ void ShowText(EvaluationContext *evaluation, char **mapt, DbRef player);
    */
 #include "coolmenu.h"
 #include "mux/network/mux_event_alloc.h"
-#include "mux/objects/db.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

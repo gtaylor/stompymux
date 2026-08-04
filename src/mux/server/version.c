@@ -2,16 +2,14 @@
  * version.c - version information
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
+#include <string.h>
 
-#include "mux/commands/command.h"
+#include "btmux_build_config.h"
+#include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
-#include "mux/objects/db.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-
 #include "mux/server/version.h"
 
 void do_version(CommandInvocation *invocation) {

@@ -2,11 +2,12 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
 
+#include "mux/commands/command_context.h"
 #include "mux/help/help_types.h"
-#include "mux/objects/db.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
 
 typedef struct HelpIndex HelpIndex;
 typedef struct EvaluationContext EvaluationContext;

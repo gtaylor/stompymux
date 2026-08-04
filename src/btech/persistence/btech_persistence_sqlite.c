@@ -1,7 +1,5 @@
 /* btech_persistence_sqlite.c -- BTech state in the MUX SQLite game database */
 
-#include "mux/server/platform.h"
-
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
@@ -10,20 +8,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "autopilot.h"
-#include "btech/btech_context.h"
-#include "glue.h"
+#include "btconfig.h"
+#include "btmux_build_config.h"
+#include "glue_types.h"
 #include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.parts.h"
 #include "mech.tech.h"
 #include "mechrep.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/log.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/utf8.h"
-#include "p.mech.events.h"
+#include "p.glue.h"
+#include "p.map.obj.h"
 #include "p.mech.utils.h"
 #include "p.template.h"
 #include "persistence/btech_persistence.h"

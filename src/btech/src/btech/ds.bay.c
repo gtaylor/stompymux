@@ -8,18 +8,33 @@
  *
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/access.h"
-#include "mux/world/move.h"
-
 #include <math.h>
+#include <stddef.h>
 
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/commands/command_helpers.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
 #include "p.bsuit.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.restrict.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
@@ -142,7 +157,8 @@ static void mech_enterbay_event(MuxEvent *e) {
   MAP *tmpmap;
 
   if (!Started(mech) || Uncon(mech) || Jumping(mech) ||
-      (MechType(mech) == CLASS_MECH && (Fallen(mech) || Standing(mech))) ||
+      (MechType(mech) == CLASS_MECH &&
+       (Fallen(mech) || mech_event_count(mech, EVENT_STAND))) ||
       OODing(mech) ||
       (fabs(MechSpeed(mech)) * 5 >= MMaxSpeed(mech) &&
        fabs(MMaxSpeed(mech)) >= MP1) ||
@@ -235,7 +251,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
                   "While in mid-jump? No way.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechType(mech) == CLASS_MECH &&
-                      (Fallen(mech) || Standing(mech)),
+                      (Fallen(mech) || mech_event_count(mech, EVENT_STAND)),
                   "Crawl inside? I think not. Stand first.");
   DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
                   "While in mid-flight? No way.");
@@ -290,7 +306,8 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   DOCHECK_CONTEXT(mech->xcode.context, !map,
                   "You sense wrongness in fabric of space.");
 
-  DOCHECK_CONTEXT(mech->xcode.context, EnteringHangar(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_ENTER_HANGAR),
                   "You are already entering the hangar!");
   if (!lock_test(btech_context_evaluation(mech->xcode.context), player, player,
                  mech->mynum, ref, LUA_LOCK_ENTER,
@@ -310,7 +327,7 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
       "You sense a wrongness in fabric of space.");
   HexLOSBroadcast(map, MechX(mech), MechY(mech),
                   "The bay doors at $h start to open..");
-  MECHEVENT(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
+  mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
 }
 
 static void DS_Place(MECH *ds, MECH *mech, int frombay) {
@@ -341,7 +358,7 @@ static void DS_Place(MECH *ds, MECH *mech, int frombay) {
   MechZ(mech) = MechZ(ds);
   MechElev(mech) = MechElev(ds);
   MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
-  MechTerrain(mech) = GetTerrain(mech_map, MechX(mech), MechY(mech));
+  MechTerrain(mech) = map_terrain_get(mech_map, MechX(mech), MechY(mech));
 }
 
 static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
@@ -370,7 +387,7 @@ static int Leave_DS_Bay(MAP *map, MECH *ds, MECH *mech, DbRef frombay) {
   MechLOSBroadcasti(mech, ds, "has left %s's bay.");
   mech_notify(ds, MECHALL,
               tprintf("%s has left the bay.", mech_display_id(mech).text));
-  ContinueFlying(mech);
+  mech_continue_flying(mech);
   if (is_in_character(mech->xcode.context->database, mech->mynum) &&
       game_object_location(mech->xcode.context->database, MechPilot(mech)) !=
           mech->mynum) {

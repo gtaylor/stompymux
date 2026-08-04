@@ -3,6 +3,8 @@
 #pragma once
 
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/world/world_context.h"
 
 typedef struct WorldContext WorldContext;
 

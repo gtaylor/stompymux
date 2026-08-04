@@ -8,30 +8,10 @@
  * portions of the descriptor data structure are not used.
  */
 
-#include "mux/server/platform.h"
-
-#include <arpa/inet.h>
-#include <time.h>
-
-#include "btech/btech_context.h"
-#include "mux/commands/command.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/communication/comsys.h"
 #include "mux/network/network_time.h"
-#include "mux/network/telnet_environment.h"
-#include "mux/network/telnet_socket.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/server/diagnostics.h"
-#include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/support/stringutil.h"
-#include "mux/support/styled_text/render.h"
-#include "mux/world/player.h"
-#include "mux/world/world_context.h"
+
+#include "mux/network/descriptor.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
 
 struct timeval timeval_sub(struct timeval now, struct timeval then) {
   now.tv_sec -= then.tv_sec;

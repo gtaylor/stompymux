@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "mux/server/platform.h"
-
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include "mux/objects/db.h"
+#include "mux/server/platform.h"
 
 typedef struct GameDatabase GameDatabase;
 typedef struct ObjectStateCollection ObjectStateCollection;

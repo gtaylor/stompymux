@@ -1,14 +1,14 @@
 /* btech_package.c - Lua bindings for the BattleTech host API. */
 
-#include "mux/server/platform.h"
+#include <lauxlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "mux/lua/btech_package.h"
-
-#include <lauxlib.h>
-
-#include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 
 typedef void BtechLuaHandler(char *, char **, DbRef, DbRef, char **, int,

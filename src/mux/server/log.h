@@ -2,11 +2,19 @@
 
 #pragma once
 
-#include <stddef.h>
+#include "btmux_build_config.h"
+#include "mux/objects/db.h" // IWYU pragma: keep
+#include "mux/server/platform.h"
 
-#include "mux/objects/db.h"
+struct ServerLog; // IWYU pragma: keep
+
+// IWYU pragma: no_include "mux/commands/command_context.h"
+// IWYU pragma: no_include "mux/communication/commac.h"
+// IWYU pragma: no_include "mux/server/server_config.h"
 
 typedef struct LogCache LogCache;
+typedef struct EvaluationContext EvaluationContext;
+typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
 
 typedef struct ServerLog ServerLog;

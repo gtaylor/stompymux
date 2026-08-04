@@ -2,16 +2,21 @@
  * powers.c - power manipulation routines
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
+#include <ctype.h>
 
+#include "btech_context.h" // IWYU pragma: keep
 #include "mux/commands/command.h"
+#include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
-#include "mux/server/server_config.h"
+#include "mux/persistence/gamedb.h" // IWYU pragma: keep
+#include "mux/server/configuration_context.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
-#include "mux/world/world_context.h"
 
 POWERENT gen_powers[] = {{"idle", POWER_IDLE, 0}, {nullptr, POWER_NONE, 0}};
 

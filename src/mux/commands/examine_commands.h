@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/commands/command_invocation.h"
+
 typedef struct CommandInvocation CommandInvocation;
 
 void do_examine(CommandInvocation *invocation);

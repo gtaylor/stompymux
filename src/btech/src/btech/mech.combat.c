@@ -8,54 +8,58 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
 #include "btmacros.h"
+#include "btmux_build_config.h"
 #include "failures.h"
-#include "glue.h"
+#include "macros.h"
 #include "map.h"
+#include "map.terrain.h"
 #include "mech.combat.h"
-#include "mech.ecm.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mech.partnames.h"
-#include "mux/network/mux_event.h"
-#include "mux/network/mux_event_alloc.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.artillery.h"
 #include "p.bsuit.h"
-#include "p.btechstats.h"
-#include "p.crit.h"
-#include "p.eject.h"
-#include "p.map.conditions.h"
+#include "p.failures.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.h"
 #include "p.map.obj.h"
 #include "p.mech.bth.h"
 #include "p.mech.build.h"
-#include "p.mech.c3.h"
-#include "p.mech.c3.misc.h"
-#include "p.mech.c3i.h"
 #include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.combat.missile.h"
 #include "p.mech.damage.h"
-#include "p.mech.ecm.h"
 #include "p.mech.enhanced.criticals.h"
-#include "p.mech.fire.h"
+#include "p.mech.events.h"
 #include "p.mech.hitloc.h"
 #include "p.mech.ice.h"
 #include "p.mech.los.h"
-#include "p.mech.ood.h"
-#include "p.mech.pickup.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.spot.h"
-#include "p.mech.tag.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
 #include "p.pcombat.h"
-#include "p.template.h"
+#include "weapon_settings.h"
 
 /*
 Optional firing modes:
@@ -150,7 +154,7 @@ static void mech_ss_event(MuxEvent *ev) {
 
   if (Uncon(mech))
     return;
-  if (!RGotPilot(mech))
+  if (!mech_has_active_pilot(mech))
     return;
   mech_notify(mech, MECHPILOT, ss_messages[BOUNDED(0, i, 8)]);
 }
@@ -167,9 +171,9 @@ void sixth_sense_check(MECH *mech, MECH *target) {
     return;
   r = FaMechRange(mech, target);
   d = (MechRTonsV(mech) - MechRTonsV(target)) / 1024;
-  MECHEVENT(target, EVENT_SS, mech_ss_event,
-            btech_random_range(mech->xcode.context, 1, 3),
-            (long)((3 * (SSDistMod(r))) + (SSTonMod(d))));
+  mech_event_schedule(target, EVENT_SS, mech_ss_event,
+                      btech_random_range(mech->xcode.context, 1, 3),
+                      (long)((3 * (SSDistMod(r))) + (SSTonMod(d))));
 }
 
 void mech_settarget(DbRef player, void *data, char *buffer) {
@@ -194,7 +198,7 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       MechTargX(mech) = -1;
       MechTargY(mech) = -1;
       mech_notify(mech, MECHALL, "All locks cleared.");
-      StopLock(mech);
+      mech_stop_lock(mech);
       if (MechSpotter(mech) == mech->mynum)
         ClearFireAdjustments(mech_map, mech->mynum);
       return;
@@ -222,13 +226,13 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
 
     mech_printf(mech, MECHALL, "Target set to %s.",
                 mech_to_mech_display_id(mech, target).text);
-    StopLock(mech);
+    mech_stop_lock(mech);
     MechTarget(mech) = targetref;
     MechStatus(mech) |= LOCK_TARGET;
     sixth_sense_check(mech, target);
 #if LOCK_TICK > 0
     if (!mech->xcode.context->combat_overrides.arcs)
-      MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
   case 2:
@@ -253,11 +257,11 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
     MechTargZ(mech) = Elevation(mech_map, newx, newy);
     notify_printf(btech_context_evaluation(mech->xcode.context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
-    StopLock(mech);
+    mech_stop_lock(mech);
     MechStatus(mech) |= LOCK_TARGET;
 #if LOCK_TICK > 0
     if (!mech->xcode.context->combat_overrides.arcs)
-      MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
     break;
   case 3:
@@ -323,11 +327,11 @@ void mech_settarget(DbRef player, void *data, char *buffer) {
       break;
     }
 
-    StopLock(mech);
+    mech_stop_lock(mech);
     MechStatus(mech) |= mode;
 #if LOCK_TICK > 0
     if (!mech->xcode.context->combat_overrides.arcs)
-      MECHEVENT(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
 #endif
   }
 }
@@ -406,10 +410,10 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
 
   /* If they fire a weapon while trying to hide stop them from hiding */
   if (!sight) {
-    StopHiding(mech);
+    mech_event_cancel(mech, EVENT_HIDE);
   }
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK0_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+  DOCHECK0_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
                    "You cannot fire while using a special movement mode.");
 #endif
   DOCHECK0_CONTEXT(mech->xcode.context,
@@ -729,11 +733,11 @@ int FireWeaponNumber(DbRef player, MECH *mech, MAP *mech_map, int weapnum,
     DOCHECK0_CONTEXT(mech->xcode.context,
                      MechSwarmTarget(tempMech) == mech->mynum,
                      "You are unable to use your weapons against a 'swarmer!");
-    DOCHECK0_CONTEXT(
-        mech->xcode.context,
-        StealthArmorActive(tempMech) &&
-            ((MechTarget(mech) != tempMech->mynum) || Locking(mech)),
-        "You need a stable lock to fire on that target!");
+    DOCHECK0_CONTEXT(mech->xcode.context,
+                     StealthArmorActive(tempMech) &&
+                         ((MechTarget(mech) != tempMech->mynum) ||
+                          mech_event_count(mech, EVENT_LOCK)),
+                     "You need a stable lock to fire on that target!");
     DOCHECK0_CONTEXT(mech->xcode.context,
                      !IsCoolant(weaptype) &&
                          MechTeam(tempMech) == MechTeam(mech) &&
@@ -837,10 +841,14 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   DOCHECKMA((SectionUnderwater(mech, section) &&
              (MechWeapons[weapindx].shortrange_water <= 0)),
             "This weapon may not be fired underwater.");
-  DOCHECKMA(CrewStunned(mech), "You are too stunned to fire a weapon!");
-  DOCHECKMA(UnjammingTurret(mech), "You are too busy unjamming your turret!");
-  DOCHECKMA(UnJammingAmmo(mech), "You are too busy unjamming a weapon!");
-  DOCHECKMA(RemovingPods(mech), "You are too busy removing iNARC pods!");
+  DOCHECKMA(mech_event_count(mech, EVENT_UNSTUN_CREW),
+            "You are too stunned to fire a weapon!");
+  DOCHECKMA(mech_event_count(mech, EVENT_UNJAM_TURRET),
+            "You are too busy unjamming your turret!");
+  DOCHECKMA(mech_event_count(mech, EVENT_UNJAM_AMMO),
+            "You are too busy unjamming a weapon!");
+  DOCHECKMA(mech_event_count(mech, EVENT_REMOVE_PODS),
+            "You are too busy removing iNARC pods!");
 
   DOCHECKMA((MechSwarmTarget(mech) > 0) &&
                 ((!target) || (MechSwarmTarget(mech) != target->mynum)),
@@ -989,20 +997,22 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(mech->xcode.context,
-                tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
-                        target->mynum, baseToHit, roll));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
+                       tprintf("#%li attacks #%li (weapon) (%i/%i)",
+                               mech->mynum, target->mynum, baseToHit, roll));
     /*
-            SendXP(mech->xcode.context, tprintf("#%i attacks #%i (weapon)
+            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_XP,
+       tprintf("#%i attacks #%i (weapon)
        (%i/%i)", mech->mynum, target->mynum, baseToHit, roll));
     */
     /* If the target has the ATTACKEMIT_MECH flag on have it
      * output this info as well
      */
     if (MechStatus2(target) & ATTACKEMIT_MECH)
-      SendAttackEmits(mech->xcode.context,
-                      tprintf("#%li attacks #%li (weapon) (%i/%i)", mech->mynum,
-                              target->mynum, baseToHit, roll));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACK_EMITS,
+                         "%s",
+                         tprintf("#%li attacks #%li (weapon) (%i/%i)",
+                                 mech->mynum, target->mynum, baseToHit, roll));
 
   } else {
     sendC3TrackEmit(mech, c3Ref, c3Mech);
@@ -1015,11 +1025,13 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
      * Attacking and Piloting xp into two different channels
      * And since this is neither it goes to its own channel
      */
-    SendAttacks(mech->xcode.context,
-                tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech->mynum,
-                        mapx, mapy, short_hextarget(mech), baseToHit, roll));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ATTACKS, "%s",
+                       tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)",
+                               mech->mynum, mapx, mapy, short_hextarget(mech),
+                               baseToHit, roll));
     /*
-            SendXP(mech->xcode.context, tprintf("#%i attacks %d,%d (%s) (weapon)
+            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_XP,
+       tprintf("#%i attacks %d,%d (%s) (weapon)
        (%i/%i)", mech->mynum, mapx, mapy, short_hextarget(mech), baseToHit,
        roll));
     */
@@ -1044,11 +1056,12 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
           if (MechX(tmpmech) != mapx && MechY(tmpmech) != mapy)
             continue;
           if (MechStatus2(tmpmech) & ATTACKEMIT_MECH)
-            SendAttackEmits(mech->xcode.context,
-                            tprintf("#%li attacks %d,%d (%s) (weapon)"
-                                    " (%i/%i)",
-                                    mech->mynum, mapx, mapy,
-                                    short_hextarget(mech), baseToHit, roll));
+            btech_channel_send(mech->xcode.context,
+                               BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
+                               tprintf("#%li attacks %d,%d (%s) (weapon)"
+                                       " (%i/%i)",
+                                       mech->mynum, mapx, mapy,
+                                       short_hextarget(mech), baseToHit, roll));
         }
       }
     }
@@ -1069,10 +1082,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
     if (target && (AngelECMDisturbed(mech) || AngelECMProtected(target)))
       mech_notify(mech, MECHALL, "The ECM confuses your streak homing system!");
     else if (roll < baseToHit) {
-      SetRecyclePart(mech, section, critical,
-                     WEAPON_TICK *
-                         btech_weapon_settings_recycle_time(
-                             &mech->xcode.context->weapon_settings, weapindx));
+      mech_set_recycle_part(
+          mech, section, critical,
+          WEAPON_TICK * btech_weapon_settings_recycle_time(
+                            &mech->xcode.context->weapon_settings, weapindx));
       mech_notify(mech, MECHALL, "Your streak fails to lock on.");
       return;
     }
@@ -1237,8 +1250,8 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
                     "Your action splits open the cocoon - have a nice fall!");
         MechLOSBroadcast(mech, "starts plummeting down, as the cocoon opens!.");
         MechCocoon(mech) = 0;
-        StopOOD(mech);
-        MECHEVENT(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+        mech_event_cancel(mech, EVENT_OOD);
+        mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
       }
     }
   }
@@ -1337,10 +1350,10 @@ void FireWeapon(MECH *mech, MAP *mech_map, MECH *target, int LOS, int weapindx,
   }
 
   /* Recycle the weapon */
-  SetRecyclePart(mech, section, critical,
-                 WEAPON_TICK *
-                     btech_weapon_settings_recycle_time(
-                         &mech->xcode.context->weapon_settings, weapindx));
+  mech_set_recycle_part(
+      mech, section, critical,
+      WEAPON_TICK * btech_weapon_settings_recycle_time(
+                        &mech->xcode.context->weapon_settings, weapindx));
 
   /****************************************
    * START: Set the heat after firing
@@ -1459,7 +1472,7 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
   if (hitMech) {
     if (wAmmoMode & AC_FLECHETTE_MODE) {
       if (MechType(hitMech) == CLASS_MW) {
-        if (MechRTerrain(hitMech) == GRASSLAND)
+        if (mech_real_terrain_get(hitMech) == GRASSLAND)
           wWeapDamage *= 4;
         else
           wWeapDamage *= 2;
@@ -1508,9 +1521,10 @@ int determineDamageFromHit(MECH *mech, int wSection, int wCritSlot,
          Elevation(mech_map, MechX(hitMech), MechY(hitMech)))) {
       wClearDamage = wWeapDamage;
 
-      if (GetRTerrain(mech_map, MechX(hitMech), MechY(hitMech)) == LIGHT_FOREST)
+      if (map_real_terrain_get(mech_map, MechX(hitMech), MechY(hitMech)) ==
+          LIGHT_FOREST)
         wWeapDamage -= 2;
-      else if (GetRTerrain(mech_map, MechX(hitMech), MechY(hitMech)) ==
+      else if (map_real_terrain_get(mech_map, MechX(hitMech), MechY(hitMech)) ==
                HEAVY_FOREST)
         wWeapDamage -= 4;
 
@@ -1857,7 +1871,7 @@ int canWeaponClear(int weapindx) {
 
 void possibly_ignite(MECH *mech, MAP *map, int weapindx, int ammoMode, int x,
                      int y, int intentional) {
-  char terrain = GetTerrain(map, x, y);
+  char terrain = map_terrain_get(map, x, y);
   int roll = btech_random_roll(mech->xcode.context);
   int bth = 13;
 

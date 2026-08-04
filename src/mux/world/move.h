@@ -2,7 +2,9 @@
 
 #pragma once
 
-#include "mux/objects/db.h"
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_invocation.h"
+#include "mux/server/platform.h"
 
 typedef struct CommandInvocation CommandInvocation;
 typedef struct EvaluationContext EvaluationContext;

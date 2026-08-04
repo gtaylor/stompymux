@@ -8,24 +8,41 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include <math.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
 #include "autopilot.h"
-#include "failures.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
 #include "glue.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "p.autopilot_command.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
-#include "p.map.obj.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.build.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
@@ -317,7 +334,7 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
     strcpy(buf + spaces, "[fg=green bold]ILLUMINATED[reset]");
     notify(evaluation, player, buf);
   }
-  if (Burning(mech) || Jellied(mech)) {
+  if (mech_event_count(mech, EVENT_VEHICLEBURN) || Jellied(mech)) {
     strcpy(buf + spaces, "[fg=red bold]ON FIRE[reset]");
     notify(evaluation, player, buf);
   }
@@ -357,12 +374,12 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
     strcpy(buf + spaces, tprintf("[fg=red bold]SPRINTING[reset]"));
     notify(evaluation, player, buf);
   }
-  if (MoveModeChange(mech)) {
+  if (mech_event_count(mech, EVENT_MOVEMODE)) {
     strcpy(buf + spaces,
            tprintf("[fg=yellow bold]CHANGING MOVEMENT MODE[reset]"));
     notify(evaluation, player, buf);
   }
-  if (SideSlipping(mech)) {
+  if (mech_event_count(mech, EVENT_SIDESLIP)) {
     strcpy(buf + spaces, tprintf("[fg=yellow bold]SIDESLIPPING[reset]"));
     notify(evaluation, player, buf);
   }
@@ -418,7 +435,7 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, MECH *mech,
       strcpy(buf + spaces, "[fg=yellow bold]INARC ECM POD ATTACHED[reset]");
       notify(evaluation, player, buf);
     }
-    if (Extinguishing(mech)) {
+    if (mech_event_count(mech, EVENT_VEHICLE_EXTINGUISH)) {
       strcpy(buf + spaces, "[fg=yellow bold]EXTINGUISHING FIRE[reset]");
       notify(evaluation, player, buf);
     }
@@ -576,11 +593,12 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
         continue;
       for (j = 0; j < MFreqs(t); j++) {
         if (t->freq[j] == freq && !(t->freqmodes[j] & FREQ_SCAN))
-          SendFreqs(mech->xcode.context,
-                    tprintf("ALERT: Possible abuse by #%ld (Team %d)"
-                            " setting freq %d matching #%ld (Team %d)!",
-                            mech->mynum, MechTeam(mech), freq, t->mynum,
-                            MechTeam(t)));
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_MECH_FREQS, "%s",
+              tprintf("ALERT: Possible abuse by #%ld (Team %d)"
+                      " setting freq %d matching #%ld (Team %d)!",
+                      mech->mynum, MechTeam(mech), freq, t->mynum,
+                      MechTeam(t)));
       }
     }
   }
@@ -774,7 +792,8 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   cch(MECH_USUALS);
   DOCHECK_CONTEXT(mech->xcode.context, Destroyed(mech) || !MechRadioRange(mech),
                   "Your communication gear is inoperative.");
-  DOCHECK_CONTEXT(mech->xcode.context, CrewStunned(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_UNSTUN_CREW),
                   "You are too stunned to use the radio!");
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
@@ -1047,7 +1066,8 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
     if (iter_c++ == 100000) {
       /* Lets not spam MechErrors with this.. */
       /*
-                              SendError(mech->xcode.context, tprintf
+                              btech_channel_send(mech->xcode.context,
+         BTECH_CHANNEL_MECH_ERRORS, tprintf
                                                 ("#%d: Infinite loop in relay
          code (?) ; using backup recursive code (num_mechs:%d, maxdepth:%d,
          nowdepth:%d)", relay->mechs[0]->mynum, relay->node_count, maxdepth,
@@ -1301,7 +1321,8 @@ void sendchannelstuff(MECH *mech, int freq, char *msg) {
               a->mynum,
               game_object_location(mech->xcode.context->database, a->mynum),
               tempMech->mynum);
-          SendAI(mech->xcode.context, ai_buf);
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                             ai_buf);
         } else if (a && !ECMDisturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
           snprintf(buf3, LBUF_SIZE, "%s", msg);
@@ -1763,7 +1784,7 @@ void mech_notify(MECH *mech, int type, char *buffer) {
   /* Let's do colorization too, just in case. */
 
   if (type == MECHPILOT) {
-    if (GotPilot(mech))
+    if (mech_has_pilot(mech))
       notify(evaluation, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
@@ -1797,7 +1818,7 @@ void mech_printf(MECH *mech, int type, char *format, ...) {
   va_end(ap);
 
   if (type == MECHPILOT) {
-    if (GotPilot(mech))
+    if (mech_has_pilot(mech))
       notify(evaluation, MechPilot(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);

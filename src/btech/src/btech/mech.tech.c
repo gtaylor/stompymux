@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -7,13 +8,24 @@
  *       All rights reserved
  */
 
-#include "mech.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include "btech_context.h"
 #include "mech.events.h"
 #include "mech.tech.h"
 #include "mux/network/mux_event.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.btechstats.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.build.h"
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"

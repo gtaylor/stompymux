@@ -1,44 +1,23 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-
-#include "mux/lua/btech_package.h"
-#include "mux/lua/command_access.h"
-#include "mux/lua/lua_runtime.h"
-#include "mux/lua/mux_package.h"
-
-#include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
 #include <limits.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <lua.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <time.h>
 
-#include <lauxlib.h>
-#include <lua.h>
-#include <luajit.h>
-#include <lualib.h>
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_handlers.h"
-#include "mux/commands/command_runtime.h"
-#include "mux/network/descriptor.h"
-#include "mux/network/input_flow.h"
-#include "mux/objects/attrs.h"
+#include "mux/lua/command_access.h"
+#include "mux/lua/lua_internal.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/world/access.h"
 #include "mux/world/match.h"
-#include "mux/world/world_context.h"
-
-#include "mux/lua/lua_internal.h"
-#include "mux/network/network_output.h"
 
 static unsigned long lua_schedule_hash(const char *path, const char *name,
                                        DbRef object, time_t minute) {

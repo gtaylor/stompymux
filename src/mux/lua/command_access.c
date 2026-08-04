@@ -2,9 +2,8 @@
 
 #include "mux/lua/command_access.h"
 
-#include <string.h>
-
 #include <lua.h>
+#include <string.h>
 
 #include "mux/objects/flags.h"
 

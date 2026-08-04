@@ -14,7 +14,9 @@
 
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/internal.h"
-#include "mux/support/utf8.h"
+#include "mux/support/styled_text/markup.h"
+#include "mux/support/styled_text/palette.h"
+#include "mux/support/styled_text/render.h"
 
 bool styled_sgr_parse(const char *cursor, const char **end, int *parameters,
                       size_t *parameter_count) {

@@ -3,7 +3,11 @@
 
 #pragma once
 
-#include <stdbool.h>
+// IWYU pragma: no_include "mux/commands/command_runtime.h"
+// IWYU pragma: no_include "mux/server/maintenance.h"
+// IWYU pragma: no_include "mux/server/server_config.h"
+// IWYU pragma: no_include "mux/world/world_context.h"
+// IWYU pragma: no_include "uv.h"
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct DescriptorRegistry DescriptorRegistry;

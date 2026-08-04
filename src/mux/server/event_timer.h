@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
+
+// IWYU pragma: no_include "uv.h"
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct MuxTimer MuxTimer;

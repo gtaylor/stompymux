@@ -3,6 +3,7 @@
 #pragma once
 
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
 
 DbRef insert_first(GameDatabase *database, DbRef head, DbRef thing);
 DbRef remove_first(GameDatabase *database, DbRef head, DbRef thing);

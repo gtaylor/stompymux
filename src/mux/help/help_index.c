@@ -1,12 +1,10 @@
 /* help_index.c - Recursive indexing of markdown help articles. */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
 #include <ctype.h>
 #include <dirent.h>
+#include <fcntl.h> // IWYU pragma: keep
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -14,9 +12,13 @@
 #include "mux/help/help_frontmatter.h"
 #include "mux/help/help_index.h"
 #include "mux/help/help_types.h"
+#include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/server/server_control.h"
 
 struct HelpIndex {
   ServerLog *log;

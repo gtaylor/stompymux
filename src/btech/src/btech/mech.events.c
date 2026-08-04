@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -9,15 +10,30 @@
  */
 
 #include <math.h>
+#include <stdlib.h>
+#include <time.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
 #include "mech.notify.h"
-#include "mux/server/mux_server.h"
+#include "mux/network/mux_event.h"
+#include "mux/support/formatting.h"
 #include "p.aero.move.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
 #include "p.mech.combat.misc.h"
+#include "p.mech.events.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.partnames.h"
 #include "p.mech.sensor.h"
 #include "p.mech.update.h"
@@ -26,7 +42,7 @@
 #undef WEAPON_RECYCLE_DEBUG
 
 void mech_heartbeat(MECH *mech) {
-  UpdateRecycling(mech);
+  mech_update_recycling(mech);
   if (mech->xcode.context->configuration->btech_newstagger >= 1 &&
       MechType(mech) == CLASS_MECH) {
     // no sense checking if a fallen mech will fall down again, and let's not
@@ -165,7 +181,7 @@ void mech_fall_event(MuxEvent *e) {
     return;
   if (fallspeed <= 0 &&
       (!Started(mech) || !(FlyingT(mech)) ||
-       ((AeroFuel(mech) <= 0) && !AeroFreeFuel(mech)) ||
+       ((AeroFuel(mech) <= 0) && !mech_aero_has_free_fuel(mech)) ||
        ((MechType(mech) == CLASS_VTOL) && (SectIsDestroyed(mech, ROTOR)))))
     fallspeed -= FALL_ACCEL;
   else
@@ -174,7 +190,8 @@ void mech_fall_event(MuxEvent *e) {
   if (MechsElevation(mech) > labs(fallspeed)) {
     MechZ(mech) -= labs(fallspeed);
     MechFZ(mech) = MechZ(mech) * ZSCALE;
-    MECHEVENT(mech, EVENT_FALL, mech_fall_event, FALL_TICK, fallspeed);
+    mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK,
+                        fallspeed);
     return;
   }
   /* Time to hit da ground */
@@ -217,10 +234,10 @@ void mech_stabilizing_event(MuxEvent *e) {
 void mech_jump_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
-  MECHEVENT(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
+  mech_event_schedule(mech, EVENT_JUMP, mech_jump_event, JUMP_TICK, 0);
   move_mech(mech);
   if (!Jumping(mech))
-    StopJump(mech);
+    mech_event_cancel(mech, EVENT_JUMP);
 }
 
 extern const int PilotStatusRollNeeded[];
@@ -242,9 +259,9 @@ void ProlongUncon(MECH *mech, int len) {
 
   if (Destroyed(mech))
     return;
-  if (!Recovering(mech)) {
+  if (!mech_event_count(mech, EVENT_RECOVERY)) {
     MechStatus(mech) |= UNCONSCIOUS;
-    MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
+    mech_event_schedule(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
     return;
   }
   l = mux_event_last_type_data(mech->xcode.context->events, EVENT_RECOVERY,
@@ -252,7 +269,7 @@ void ProlongUncon(MECH *mech, int len) {
       len;
   mux_event_remove_type_data(mech->xcode.context->events, EVENT_RECOVERY,
                              (void *)mech);
-  MECHEVENT(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
+  mech_event_schedule(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
 
 struct foo {
@@ -286,7 +303,7 @@ void mech_sideslip_event(MuxEvent *e) {
     MechLateral(mech) = 0;
     return;
   }
-  MECHEVENT(mech, EVENT_SIDESLIP, mech_sideslip_event, TURN, 0);
+  mech_event_schedule(mech, EVENT_SIDESLIP, mech_sideslip_event, TURN, 0);
 }
 #endif
 
@@ -303,9 +320,9 @@ void mech_lateral_event(MuxEvent *e) {
 #ifdef BT_MOVEMENT_MODES
   if (MechMove(mech) != MOVE_QUAD) {
     if (MechLateral(mech) == 0)
-      StopSideslip(mech);
-    else if (!(SideSlipping(mech)))
-      MECHEVENT(mech, EVENT_SIDESLIP, mech_sideslip_event, 1, 0);
+      mech_event_cancel(mech, EVENT_SIDESLIP);
+    else if (!(mech_event_count(mech, EVENT_SIDESLIP)))
+      mech_event_schedule(mech, EVENT_SIDESLIP, mech_sideslip_event, 1, 0);
   }
 #endif
 }
@@ -319,7 +336,7 @@ void mech_move_event(MuxEvent *e) {
   UpdateHeading(mech);
   if ((IsMechLegLess(mech)) || Jumping(mech) || OODing(mech)) {
     if (MechDesiredFacing(mech) != MechFacing(mech))
-      MECHEVENT(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
+      mech_event_schedule(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
     return;
   }
   UpdateSpeed(mech);
@@ -328,15 +345,17 @@ void mech_move_event(MuxEvent *e) {
   if (mech->mapindex < 0)
     return;
 
-  if (MechType(mech) == CLASS_VEH_NAVAL && MechRTerrain(mech) != BRIDGE &&
-      MechRTerrain(mech) != ICE && MechRTerrain(mech) != WATER)
+  if (MechType(mech) == CLASS_VEH_NAVAL &&
+      mech_real_terrain_get(mech) != BRIDGE &&
+      mech_real_terrain_get(mech) != ICE &&
+      mech_real_terrain_get(mech) != WATER)
     return;
 
   if (MechSpeed(mech) || MechDesiredSpeed(mech) ||
       MechDesiredFacing(mech) != MechFacing(mech) ||
       ((MechType(mech) == CLASS_VTOL || MechMove(mech) == MOVE_SUB) &&
        MechVerticalSpeed(mech)))
-    MECHEVENT(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
+    mech_event_schedule(mech, EVENT_MOVE, mech_move_event, MOVE_TICK, 0);
 }
 
 void mech_stand_event(MuxEvent *e) {
@@ -344,7 +363,7 @@ void mech_stand_event(MuxEvent *e) {
 
   MechLOSBroadcast(mech, "stands up!");
   mech_notify(mech, MECHALL, "You have finally finished standing up.");
-  MakeMechStand(mech);
+  mech_make_stand(mech);
 }
 
 void mech_plos_event(MuxEvent *e) {
@@ -359,7 +378,7 @@ void mech_plos_event(MuxEvent *e) {
     return;
   if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
     return;
-  MECHEVENT(mech, EVENT_PLOS, mech_plos_event, PLOS_TICK, 0);
+  mech_event_schedule(mech, EVENT_PLOS, mech_plos_event, PLOS_TICK, 0);
   if (!MechPNumSeen(mech) && !(MechSpecials(mech) & AA_TECH))
     return;
   mapvis = map->mapvis;
@@ -405,7 +424,7 @@ void aero_move_event(MuxEvent *e) {
           "is hit directly by DropShip's exhaust!",
           "You are hit by the DropShip's plasma exhaust!",
           "is hit by DropShip's exhaust!", "light up and burn.", 8);
-    MECHEVENT(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
+    mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   } else if (Landed(mech) && !Fallen(mech) && RollingT(mech)) {
     UpdateHeading(mech);
     UpdateSpeed(mech);
@@ -413,7 +432,7 @@ void aero_move_event(MuxEvent *e) {
     if (fabs(MechSpeed(mech)) > 0.0 || fabs(MechDesiredSpeed(mech)) > 0.0 ||
         MechDesiredFacing(mech) != MechFacing(mech))
       if (!FuelCheck(mech))
-        MECHEVENT(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
+        mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   }
 }
 
@@ -448,7 +467,8 @@ void mech_crewstun_event(MuxEvent *e) {
 void unstun_crew_event(MuxEvent *e) {
   MECH *mech = (MECH *)e->data;
 
-  if (CrewStunned(mech) > 1) /* If we've been stunned again! */
+  if (mech_event_count(mech, EVENT_UNSTUN_CREW) >
+      1) /* If we've been stunned again! */
     return;
 
   mech_notify(
@@ -524,12 +544,12 @@ void mech_unjam_ammo_event(MuxEvent *objEvent) {
 void check_stagger_event(MuxEvent *event) {
   MECH *mech = (MECH *)event->data; /* get the mech */
 
-  SendDebug(mech->xcode.context,
-            tprintf("Triggered stagger check for %ld.", mech->mynum));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("Triggered stagger check for %ld.", mech->mynum));
 
   if ((StaggerLevel(mech) < 1) || Fallen(mech) ||
       (MechType(mech) != CLASS_MECH)) {
-    StopStaggerCheck(mech);
+    mech_stop_stagger_check(mech);
     return;
   }
 
@@ -545,7 +565,7 @@ void check_stagger_event(MuxEvent *event) {
     MechFalls(mech, 1, 0);
   }
 
-  StopStaggerCheck(mech);
+  mech_stop_stagger_check(mech);
   /* Since stagger rolls happen much more often now, this adds 10 damage
    * points of 'buffer' to mech that was just forced to make a stager roll.
    * Mechs whose damage accumulation times out without making a roll (<20

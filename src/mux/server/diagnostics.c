@@ -1,8 +1,7 @@
 /* diagnostics.c - Timestamped stderr tracing and always-on assertions. */
 
-#include "mux/server/platform.h"
-
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>

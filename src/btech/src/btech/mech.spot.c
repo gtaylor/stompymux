@@ -9,18 +9,31 @@
  *  Copyright (c) 1998-2001 Thomas Wouters
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
 #include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
+#include "map.terrain.h"
 #include "mech.events.h"
-#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/server/platform.h"
 #include "p.btechstats.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.bth.h"
 #include "p.mech.combat.h"
-#include "p.mech.combat.misc.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 int IsArtyMech(MECH *mech) {
@@ -56,7 +69,8 @@ static void mech_check_range(MuxEvent *e) {
     MechSpotter(mech) = -1;
     return;
   }
-  MECHEVENT(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK, spotter);
+  mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
+                      (intptr_t)spotter);
 }
 
 static void mech_spot_event(MuxEvent *e) {
@@ -80,7 +94,8 @@ static void mech_spot_event(MuxEvent *e) {
               "Data link established with %s, you now have a forward observer.",
               mech_to_mech_display_id(target, mech).text);
   MechSpotter(mech) = target->mynum;
-  MECHEVENT(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK, target);
+  mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
+                      (intptr_t)target);
   free((void *)e->data2);
 }
 
@@ -114,7 +129,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   argc = mech_parseattributes(buffer, args, 5);
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(mech->xcode.context, MoveModeLock(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
                   "You cannot spot while using a special movement mode.");
 #endif
   DOCHECK_CONTEXT(mech->xcode.context, argc != 1,
@@ -173,8 +188,8 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     dat->tarFY = MechFY(target);
     dat->target = (MECH *)target;
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-    MECHEVENT(mech, EVENT_SPOT_LOCK, mech_spot_event,
-              WEAPON_TICK * ((int)range / 10 + 5), dat);
+    mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
+                        WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
     return;
   } else
     DOCHECK_CONTEXT(mech->xcode.context, !LOS,
@@ -229,7 +244,8 @@ int FireSpot(DbRef player, MECH *mech, MAP *mech_map, int weaponnum,
             ? 2
             : (1 + AddTerrainMod(spotter, target, mech_map, spot_range, 0) +
                AttackMovementMods(spotter) +
-               ((Locking(spotter) && MechTargComp(spotter) != TARGCOMP_MULTI)
+               ((mech_event_count(spotter, EVENT_LOCK) &&
+                 MechTargComp(spotter) != TARGCOMP_MULTI)
                     ? 2
                     : 0));
     DOCHECK1_CONTEXT(mech->xcode.context, IsArtillery(weapontype) && target,
@@ -272,13 +288,13 @@ int FireSpot(DbRef player, MECH *mech, MAP *mech_map, int weaponnum,
                    "That target is not in your spotters line of sight!");
   range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), enemyX, enemyY,
                     enemyZ);
-  spotTerrain =
-      IsArtillery(weapontype)
-          ? 2
-          : (1 + AttackMovementMods(spotter) +
-             ((Locking(spotter) && MechTargComp(spotter) != TARGCOMP_MULTI)
-                  ? 2
-                  : 0));
+  spotTerrain = IsArtillery(weapontype)
+                    ? 2
+                    : (1 + AttackMovementMods(spotter) +
+                       ((mech_event_count(spotter, EVENT_LOCK) &&
+                         MechTargComp(spotter) != TARGCOMP_MULTI)
+                            ? 2
+                            : 0));
   FireWeapon(mech, mech_map, target, 0, weapontype, weaponnum, section,
              critical, enemyX, enemyY, mapx, mapy, range, spotTerrain, sight,
              2);

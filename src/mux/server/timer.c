@@ -1,32 +1,25 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * timer.c -- Subroutines for (system-) timed events
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/network/network_output.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include <bits/types/struct_rusage.h>
+#include <stdlib.h>
+#include <sys/resource.h>
+#include <time.h>
 
-#include "p.glue.h"
-
-#include <signal.h>
-
-#include "mux/commands/command.h"
-#include "mux/commands/command_queue.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
+#include "mux/network/descriptor.h"
+#include "mux/network/network_output.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/game.h"
-#include "mux/server/maintenance.h"
-#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
-#include "mux/server/server_lifecycle.h"
 #include "mux/server/timer.h"
 #include "mux/world/database_check.h"
-#include "mux/world/match.h"
+#include "mux/world/player_cache.h"
+#include "p.glue.h"
 
 extern void pool_reset(void);
 extern unsigned int alarm(unsigned int seconds);

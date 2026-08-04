@@ -3,9 +3,9 @@
  */
 
 #pragma once
-#include "mux/commands/command_queue.h"
 #include "mux/objects/db.h"
-#include "mux/support/red_black_tree.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
 
 typedef struct player_cache {
   DbRef player;

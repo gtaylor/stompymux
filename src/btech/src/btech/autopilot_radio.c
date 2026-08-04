@@ -16,20 +16,36 @@
 
 /* Most of the BattleSheep(tm) code is here.. */
 
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
 #include "autopilot.h"
-#include "glue.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "map.h"
+#include "map.terrain.h"
+#include "mech.events.h"
 #include "mech.h"
-#include "mech.notify.h"
-#include "object_spatial.h"
+#include "mech.lifecycle.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "p.bsuit.h"
-#include "p.ds.bay.h"
 #include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.los.h"
-#include "p.mech.maps.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.startup.h"
 #include "p.mech.utils.h"
-#include <math.h>
 
 void sendchannelstuff(MECH *mech, int freq, char *msg);
 
@@ -480,10 +496,12 @@ void auto_radio_command_hide(AUTO *autopilot, MECH *mech, char **args, int argc,
     return;
   }
 
-  if (!(MechRTerrain(mech) == HEAVY_FOREST ||
-        MechRTerrain(mech) == LIGHT_FOREST || MechRTerrain(mech) == ROUGH ||
-        MechRTerrain(mech) == MOUNTAINS ||
-        (MechType(mech) == CLASS_BSUIT ? MechRTerrain(mech) == BUILDING : 0))) {
+  if (!(mech_real_terrain_get(mech) == HEAVY_FOREST ||
+        mech_real_terrain_get(mech) == LIGHT_FOREST ||
+        mech_real_terrain_get(mech) == ROUGH ||
+        mech_real_terrain_get(mech) == MOUNTAINS ||
+        (MechType(mech) == CLASS_BSUIT ? mech_real_terrain_get(mech) == BUILDING
+                                       : 0))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid Terrain");
     return;
   }
@@ -1175,12 +1193,14 @@ void auto_reply(MECH *mech, char *buf) {
 
   if (reply) {
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-    MECHEVENT(mech, EVENT_AUTO_REPLY, auto_reply_event,
-              btech_random_range(mech->xcode.context, 1, 2), reply);
+    mech_event_schedule(mech, EVENT_AUTO_REPLY, auto_reply_event,
+                        btech_random_range(mech->xcode.context, 1, 2),
+                        (intptr_t)reply);
   } else {
-    SendAI(mech->xcode.context,
-           "Interal AI Error: Attempting to radio reply but unable to copy "
-           "string");
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_AI,
+        "Interal AI Error: Attempting to radio reply but unable to copy "
+        "string");
   }
 }
 

@@ -1,27 +1,32 @@
-/*
- * macro.c - ported from BattleTech 3056 MUSE
- */
 #include "mux/commands/macro.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
+#include "mux/persistence/gamedb.h" // IWYU pragma: keep
+#include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_registries.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
+#include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
-#include "mux/world/world_context.h"
+
 void macro_registry_initialize(MacroRegistry *registry,
                                ChannelRegistry *channels) {
   memset(registry, 0, sizeof(*registry));
   registry->channels = channels;
 }
-
 void macro_registry_destroy(MacroRegistry *registry) {
   if (registry == nullptr)
     return;
@@ -38,15 +43,12 @@ void macro_registry_destroy(MacroRegistry *registry) {
   free(registry->sets);
   macro_registry_initialize(registry, channels);
 }
-
 static bool is_valid_macro_index(const MacroRegistry *registry, int index) {
   return index >= 0 && index < registry->count;
 }
-
 static void macro_notify(MatchContext *m, DbRef p, const char *text) {
   notify_checked(m->evaluation, p, p, text, MSG_ME_ALL | MSG_F_DOWN);
 }
-
 MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
                         {"chmod", do_chmod_macro},   {"chown", do_chown_macro},
                         {"create", do_create_macro}, {"def", do_def_macro},
@@ -55,7 +57,6 @@ MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
                         {"gex", do_gex_macro},       {"glist", do_list_macro},
                         {"list", do_status_macro},   {"undef", do_undef_macro},
                         {(char *)nullptr, nullptr}};
-
 void init_mactab(CommandRegistry *commands) {
   MACENT *mp;
 
@@ -64,7 +65,6 @@ void init_mactab(CommandRegistry *commands) {
   for (mp = macro_table; mp->cmdname; mp++)
     hash_table_add(mp->cmdname, (int *)mp, &commands->macros);
 }
-
 int do_macro(MatchContext *match, CommandRegistry *commands,
              MacroRegistry *registry, DbRef player, char *in, char **out) {
   char *s;

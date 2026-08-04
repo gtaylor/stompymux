@@ -1,40 +1,41 @@
 /* game.c - Core game notifications, database dumps, and shutdown operations. */
 
-#include "mux/network/network_output.h"
-#include "mux/server/platform.h"
-#include "mux/world/object_spatial.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/resource.h>
+#include <time.h>
+#include <unistd.h>
 
-#include <regex.h>
-
-#include "p.glue.h"
-
-#include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
-#include "mux/commands/command_queue.h"
 #include "mux/commands/macro.h"
-#include "mux/communication/commac.h"
+#include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
-#include "mux/help/help_index.h"
+#include "mux/network/network_output.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/configuration.h"
+#include "mux/server/configuration_context.h"
+#include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/version.h"
 #include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/password.h"
 #include "mux/world/database_check.h"
-#include "mux/world/match.h"
+#include "mux/world/object_spatial.h"
+#include "mux/world/player_cache.h"
+#include "p.glue.h"
 #include "persistence/btech_persistence.h"
-#ifndef NEXT
-#endif
 
 extern void init_cmdtab(CommandRegistry *registry);
 

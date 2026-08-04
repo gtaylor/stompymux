@@ -14,12 +14,18 @@
  *
  */
 
+#include <math.h>
+
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
 #include "mech.sensor.h"
-#include "p.map.obj.h"
-#include "p.mech.update.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.utils.h"
-#include "p.template.h"
 
 /* Full chance of seeing, except if range > conditionrange */
 SEEFUNC(vislight_see,
@@ -144,10 +150,11 @@ CSEEFUNC(blood_csee, !(map->sensorflags & (1 << SENSOR_BHAP)) &&
 #define MOVE_MODIFIER(a) (fabsf(a) >= 10.75 ? 1 : 0)
 
 #define nwood_count(mech, a)                                                   \
-  (MechLOSFlag_WoodCount(a) + ((MechElevation(mech) + 2) < MechZ(mech) ? 0     \
-                               : MechRTerrain(mech) == LIGHT_FOREST    ? 1     \
-                               : MechRTerrain(mech) == HEAVY_FOREST    ? 2     \
-                                                                       : 0))
+  (MechLOSFlag_WoodCount(a) +                                                  \
+   ((MechElevation(mech) + 2) < MechZ(mech)       ? 0                          \
+    : mech_real_terrain_get(mech) == LIGHT_FOREST ? 1                          \
+    : mech_real_terrain_get(mech) == HEAVY_FOREST ? 2                          \
+                                                  : 0))
 
 /* To-hit functions */
 /* Visual - Non-Day, Interrupting woods, partial LOS, and hulldown. */

@@ -13,18 +13,35 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#include "mux/server/game.h"
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.aero.move.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.bth.h"
 #include "p.mech.c3.misc.h"
-#include "p.mech.combat.h"
 #include "p.mech.enhanced.criticals.h"
 #include "p.mech.hitloc.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 
@@ -54,7 +71,9 @@
       baseToHit += i;                                                          \
     }                                                                          \
   } while (0)
-#define BTHEND(m) SendBTHDebug(mech->xcode.context, tprintf("%s.", buf))
+#define BTHEND(m)                                                              \
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_BTH_DEBUG, "%s",  \
+                     tprintf("%s.", buf))
 #endif
 
 int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
@@ -79,7 +98,7 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   *c3Ref = -1;
 
   if (target) {
-    tInWater = ((MechRTerrain(mech) == WATER) && (MechZ(mech) < 0));
+    tInWater = ((mech_real_terrain_get(mech) == WATER) && (MechZ(mech) < 0));
   }
 
   BTHBASE(mech, target, FindPilotGunnery(mech, weapindx));
@@ -272,7 +291,8 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
   if (!mech->xcode.context->combat_overrides.arcs &&
       (!spotter && target &&
        ((MechTarget(mech) != target->mynum) ||
-        (Locking(mech) && MechTargComp(mech) != TARGCOMP_MULTI)))) {
+        (mech_event_count(mech, EVENT_LOCK) &&
+         MechTargComp(mech) != TARGCOMP_MULTI)))) {
     if (FindTargetXY(mech, &enemyX, &enemyY, &enemyZ)) {
       if (InWeaponArc(mech, enemyX, enemyY) & (FORWARDARC | TURRETARC))
         BTHADD("UnstableLock/Fwarc", 1);
@@ -381,9 +401,10 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
         IsForestHex(mech_map, MechX(target), MechY(target)) &&
         ((MechZ(target) - 2) <=
          Elevation(mech_map, MechX(target), MechY(target)))) {
-      if (GetRTerrain(mech_map, MechX(target), MechY(target)) == LIGHT_FOREST)
+      if (map_real_terrain_get(mech_map, MechX(target), MechY(target)) ==
+          LIGHT_FOREST)
         BTHADD("Light Woods bonus", -1);
-      else if (GetRTerrain(mech_map, MechX(target), MechY(target)) ==
+      else if (map_real_terrain_get(mech_map, MechX(target), MechY(target)) ==
                HEAVY_FOREST)
         BTHADD("Heavy Woods bonus", -2);
     }
@@ -400,8 +421,9 @@ int FindNormalBTH(MECH *mech, MAP *mech_map, int section, int critical,
          ? 1 : FindPilotPiloting(target) >= 4 ? 2 : FindPilotPiloting(target) >=
          2 ? 3 : 4) + (HasBoolAdvantage(target->xcode.context,
          MechPilot(target), "speed_demon") ? 1 : 0)); } else
-         if(MoveModeChange(target)) { int i = MoveModeData(target); if(i &
-         MODE_SPRINT) BTHADD("SprintingTargetChanging", -4); if(i & MODE_EVADE)
+         if(mech_event_count(target, EVENT_MOVEMODE)) { int i =
+         mech_event_first_delay(target, EVENT_MOVEMODE); if(i & MODE_SPRINT)
+         BTHADD("SprintingTargetChanging", -4); if(i & MODE_EVADE)
                                       BTHADD("EvadingTargetChanging", 1);
                       BTHADD("EvadingTarget", (FindPilotPiloting(target) >= 6 ?
          1 : FindPilotPiloting(target) >= 4 ? 2 : FindPilotPiloting(target) >= 2
@@ -692,7 +714,8 @@ int AttackMovementMods(MECH *mech) {
       Fallen(mech) && !IsDS(mech))
     return 2;
 
-  if (!Jumping(mech) && (Stabilizing(mech) || Standing(mech)))
+  if (!Jumping(mech) && (mech_event_count(mech, EVENT_JUMPSTABIL) ||
+                         mech_event_count(mech, EVENT_STAND)))
     return 2;
 
   //	if(fabs(MechSpeed(mech)) > fabs(MechDesiredSpeed(mech)))

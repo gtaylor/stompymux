@@ -3,6 +3,7 @@
 #pragma once
 
 #include "mux/commands/command_context.h"
+#include "mux/server/platform.h"
 
 char *trim_space_sep(char *string, char separator);
 char *next_token(char *string, char separator);

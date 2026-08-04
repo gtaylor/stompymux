@@ -1,11 +1,13 @@
 /* validation.c - Input validation for names, attributes, and passwords. */
 
 #include "mux/support/validation.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
 
-#include "mux/server/configuration.h"
+#include <ctype.h>
+#include <string.h>
+#include <strings.h>
+
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
 

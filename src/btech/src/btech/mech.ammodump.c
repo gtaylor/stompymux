@@ -9,13 +9,29 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
-#include "mech.h"
-#include "glue.h"
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "macros.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "missile_hit_registry.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.hcode.h"
 #include "p.mech.ammodump.h"
 #include "p.mech.build.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
+#include "p.mech.notify.h"
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"
 
@@ -39,7 +55,8 @@ static void mech_dump_event(MuxEvent *ev) {
           if (GetPartData(mech, i, l))
             Dump_Decrease(mech, i, l, &e);
     if (e > 1)
-      MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
+      mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
+                          arg);
     else {
       mech_notify(mech, MECHALL, "All ammunition dumped.");
       MechLOSBroadcast(mech,
@@ -56,7 +73,8 @@ static void mech_dump_event(MuxEvent *ev) {
           if ((d = GetPartData(mech, loc, i)))
             Dump_Decrease(mech, loc, i, &e);
     if (e > 1)
-      MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
+      mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
+                          arg);
     else if (e == 1 && Started(mech)) {
       ArmorStringFromIndex(loc, buf, MechType(mech), MechMove(mech));
       mech_printf(mech, MECHALL, "All ammunition in %s dumped.", buf);
@@ -74,7 +92,8 @@ static void mech_dump_event(MuxEvent *ev) {
             if (GetPartData(mech, i, l))
               Dump_Decrease(mech, i, l, &e);
     if (e > 1)
-      MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
+      mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
+                          arg);
     else {
       mech_printf(
           mech, MECHALL, "Ammunition for %s dumped!",
@@ -90,7 +109,7 @@ static void mech_dump_event(MuxEvent *ev) {
   if (GetPartData(mech, l, i))
     Dump_Decrease(mech, l, i, &e);
   if (e > 1) {
-    MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
+    mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, arg);
   } else {
     ArmorStringFromIndex(l, buf, MechType(mech), MechMove(mech));
     mech_printf(mech, MECHALL, "Ammunition in %s crit %i dumped!", buf, i + 1);
@@ -125,9 +144,10 @@ void mech_dump(DbRef player, void *data, char *buffer) {
             "You can't dump ammo while running!");
 
   if (!strcasecmp(args[0], "stop")) {
-    DOCHECKMA(!Dumping(mech), "You aren't dumping anything!");
+    DOCHECKMA(!mech_event_count(mech, EVENT_DUMP),
+              "You aren't dumping anything!");
     mech_notify(mech, MECHALL, "Ammo dumping halted.");
-    StopDump(mech);
+    mech_event_cancel(mech, EVENT_DUMP);
     MechLOSBroadcast(mech,
                      "no longer has ammo dumping from hatches on its back.");
     return;
@@ -140,15 +160,16 @@ void mech_dump(DbRef player, void *data, char *buffer) {
           if (GetPartData(mech, i, l))
             count++;
     DOCHECKMA(!count, "You have no ammo to dump!");
-    DOCHECKMA(Dumping_Type(mech, 0), "You're already dumping your ammo!");
-    StopDump(mech);
+    DOCHECKMA(mech_dumping_type(mech, 0), "You're already dumping your ammo!");
+    mech_event_cancel(mech, EVENT_DUMP);
     mech_notify(mech, MECHALL, "Starting dumping of all ammunition..");
     MechLOSBroadcast(mech, "starts dumping ammo from hatches on its back.");
-    MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, 0);
+    mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, 0);
     return;
   } else if (!weapnum && strcmp(args[0], "0")) {
     /* Try to find hitloc instead */
-    DOCHECKMA(Dumping(mech), "You're already dumping some ammo!");
+    DOCHECKMA(mech_event_count(mech, EVENT_DUMP),
+              "You're already dumping some ammo!");
     loc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
     DOCHECK_CONTEXT(mech->xcode.context, loc < 0,
                     "Invalid location or weapon number!");
@@ -170,7 +191,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
                     "Starting dumping of ammunition in %s crit %i..", buf,
                     i + 1);
         MechLOSBroadcast(mech, "starts dumping ammo from hatches on its back.");
-        MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
+        mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
+                            type);
         return;
       }
     }
@@ -184,15 +206,18 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     type = loc + 1;
     mech_printf(mech, MECHALL, "Starting dumping of ammunition in %s..", buf);
     MechLOSBroadcast(mech, "starts dumping ammo from hatches on its back.");
-    MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
+    mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
+                        type);
     return;
   }
   weapindx = FindWeaponIndex(mech, weapnum);
   if (weapnum < 0)
-    SendError(mech->xcode.context,
-              tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
-                      (int)player, weapnum));
-  DOCHECKMA(Dumping(mech), "You're already dumping some ammo!");
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
+                (int)player, weapnum));
+  DOCHECKMA(mech_event_count(mech, EVENT_DUMP),
+            "You're already dumping some ammo!");
   DOCHECK_CONTEXT(mech->xcode.context, weapindx < 0, "Invalid weapon number!");
   FindWeaponNumberOnMech(mech, weapnum, &section, &critical);
   DOCHECK_CONTEXT(mech->xcode.context,
@@ -211,7 +236,7 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "Starting dumping %s ammunition..",
               get_parts_long_name(mech->xcode.context, I2Weapon(weapindx), 0));
   MechLOSBroadcast(mech, "starts dumping ammo from hatches on its back.");
-  MECHEVENT(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
+  mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, type);
 #if 0
 	while (FindAmmoForWeapon(mech, weapindx, 0, &ammoLoc, &ammoCrit))
 		GetPartData(mech, ammoLoc, ammoCrit) = 0;
@@ -277,7 +302,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
   int wRndIdx = 0;
   int wBlowDamage = 0;
 
-  DumpingData(mech, &wEventData);
+  wEventData = (int)mech_event_data(mech, EVENT_DUMP);
   if (wEventData < 0)
     return;
   if (!wEventData) { /* Global ammo dump */
@@ -368,7 +393,7 @@ void BlowDumpingAmmo(MECH *mech, MECH *attacker, int wHitLoc) {
       mech_notify(
           mech, MECHALL,
           "[fg=red bold]All ammo dumping operations have stopped![reset]");
-      StopDump(mech);
+      mech_event_cancel(mech, EVENT_DUMP);
     }
   }
 }

@@ -1,7 +1,6 @@
 /* Heap-owned libuv timer used by server subsystems. */
 
-#include "mux/server/platform.h"
-
+#include <stdlib.h>
 #include <uv.h>
 
 #include "mux/server/event_timer.h"

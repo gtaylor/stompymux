@@ -1,14 +1,14 @@
 /* link_directives.c - Styled-text and OSC 8 directive parsing. */
 
 #include <ctype.h>
-#include <errno.h>
-#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 #include "mux/support/styled_text/internal.h"
+#include "mux/support/styled_text/palette.h"
 #include "mux/support/utf8.h"
 
 const char *const styled_link_state_names[STYLED_LINK_STATE_COUNT] = {

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
 
 typedef struct lua_State lua_State;
 

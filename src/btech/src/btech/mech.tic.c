@@ -7,17 +7,28 @@
  *       All rights reserved
  */
 
-#include "mux/server/game.h"
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
 
+#include "btech_context.h"
+#include "btech_event.h"
 #include "coolmenu.h"
+#include "macros.h"
+#include "map.h" // IWYU pragma: keep
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.build.h"
 #include "p.mech.combat.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 typedef struct TicSelectionContext TicSelectionContext;
@@ -324,7 +335,7 @@ void heat_cutoff(DbRef player, void *data, char *buffer) {
   }
 
   cch(MECH_USUALSMO);
-  if (HeatcutoffChanging(mech)) {
+  if (mech_event_count(mech, EVENT_HEATCUTOFFCHANGING)) {
     notify(btech_context_evaluation(mech->xcode.context), player,
            "You are already toggling heat cutoff status. Please be patient.");
     return;
@@ -332,10 +343,12 @@ void heat_cutoff(DbRef player, void *data, char *buffer) {
   if (Heatcutoff(mech)) {
     notify(btech_context_evaluation(mech->xcode.context), player,
            "Disengaging heat dissipation cutoff...");
-    MECHEVENT(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4, 0);
+    mech_event_schedule(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4,
+                        0);
   } else {
     notify(btech_context_evaluation(mech->xcode.context), player,
            "Engaging heat dissipation cutoff...");
-    MECHEVENT(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4, 1);
+    mech_event_schedule(mech, EVENT_HEATCUTOFFCHANGING, heat_cutoff_event, 4,
+                        1);
   }
 }

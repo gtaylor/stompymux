@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -10,26 +11,45 @@
 
 #define MIN_TAKEOFF_SPEED 3
 
-#include "glue.h"
+#include <math.h>
+#include <stdlib.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/commands/action_messages.h"
-#include "mux/network/mux_event.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
-#include "object_spatial.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "mymath.h"
+#include "p.aero.move.h"
 #include "p.artillery.h"
 #include "p.econ_cmds.h"
-#include "p.mech.combat.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.ecm.h"
+#include "p.mech.events.h"
 #include "p.mech.lite.h"
+#include "p.mech.notify.h"
 #include "p.mech.sensor.h"
 #include "p.mech.tag.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mine.h"
-#include <math.h>
 
 struct land_data_type {
   int type;
@@ -112,7 +132,7 @@ static void aero_takeoff_event(MuxEvent *e) {
         break;
       }
     }
-    MECHEVENT(mech, EVENT_TAKEOFF, aero_takeoff_event, 1, (void *)(count - 1));
+    mech_event_schedule(mech, EVENT_TAKEOFF, aero_takeoff_event, 1, count - 1);
     return;
   }
   if (i < 0) {
@@ -131,10 +151,11 @@ static void aero_takeoff_event(MuxEvent *e) {
   MechStartFY(mech) = 0;
   MechStartFZ(mech) = 0;
   if (IsDS(mech))
-    SendDSInfo(mech->xcode.context,
-               tprintf("DS #%ld has lifted off at %d %d "
-                       "on map #%ld",
-                       mech->mynum, MechX(mech), MechY(mech), map->mynum));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+                       tprintf("DS #%ld has lifted off at %d %d "
+                               "on map #%ld",
+                               mech->mynum, MechX(mech), MechY(mech),
+                               map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
     MechLOSBroadcast(mech, "breaks its cover in the brush.");
@@ -148,8 +169,8 @@ static void aero_takeoff_event(MuxEvent *e) {
     MechDesiredSpeed(mech) = 0;
     MechVerticalSpeed(mech) = 60.0;
   }
-  ContinueFlying(mech);
-  MaybeMove(mech);
+  mech_continue_flying(mech);
+  mech_maybe_move(mech);
 }
 
 void aero_takeoff(DbRef player, void *data, char *buffer) {
@@ -164,10 +185,10 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
 
   if ((j = atoi(buffer)))
     DOCHECK_CONTEXT(mech->xcode.context,
-                    !Wiz(mech->xcode.context->database, player),
+                    !is_wizard(mech->xcode.context->database, player),
                     "Insufficient access!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, TakingOff(mech),
+  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_TAKEOFF),
                   "The launch sequence has already been initiated!");
   DOCHECK_CONTEXT(mech->xcode.context, i == (int)(NUM_LAND_TYPES),
                   "This vehicle type cannot takeoff!");
@@ -185,7 +206,7 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
            "The engines are dead!");
     return;
   }
-  if (!AeroFreeFuel(mech) && AeroFuel(mech) < 1) {
+  if (!mech_aero_has_free_fuel(mech) && AeroFuel(mech) < 1) {
     DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_VTOL,
                     "Your VTOL's out of fuel!");
     notify(btech_context_evaluation(mech->xcode.context), player,
@@ -204,17 +225,18 @@ void aero_takeoff(DbRef player, void *data, char *buffer) {
                 "Launch sequence initiated.. type 'land' to abort it.");
   DSSpam(mech, "starts warming engines for liftoff!");
   if (IsDS(mech))
-    SendDSInfo(mech->xcode.context,
-               tprintf("DS #%ld has started takeoff at %d %d on map #%ld",
-                       mech->mynum, MechX(mech), MechY(mech), map->mynum));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+        tprintf("DS #%ld has started takeoff at %d %d on map #%ld", mech->mynum,
+                MechX(mech), MechY(mech), map->mynum));
   if (MechCritStatus(mech) & HIDDEN) {
     mech_notify(mech, MECHALL, "You break your cover to takeoff!");
     MechLOSBroadcast(mech, "breaks its cover as it begins takeoff.");
     MechCritStatus(mech) &= ~(HIDDEN);
   }
-  StopHiding(mech);
-  MECHEVENT(mech, EVENT_TAKEOFF, aero_takeoff_event, 1,
-            (void *)j ? j : land_data[i].launchtime);
+  mech_event_cancel(mech, EVENT_HIDE);
+  mech_event_schedule(mech, EVENT_TAKEOFF, aero_takeoff_event, 1,
+                      (void *)j ? j : land_data[i].launchtime);
 }
 
 #define NUM_NEIGHBORS 7
@@ -236,7 +258,7 @@ void DS_BlastNearbyMechsAndTrees(MECH *mech, char *hitmsg, char *hitmsg1,
       if ((d = MyHexDist(x, y, x1, y1, 0)) > rng)
         continue;
       d = MAX(1, d);
-      switch (GetRTerrain(map, x1, y1)) {
+      switch (map_real_terrain_get(map, x1, y1)) {
       case LIGHT_FOREST:
       case HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
@@ -244,7 +266,7 @@ void DS_BlastNearbyMechsAndTrees(MECH *mech, char *hitmsg, char *hitmsg1,
               map, x1, y1,
               tprintf("[fg=red bold]The trees in $h %s[reset]", treehitmsg));
           if ((damage / d) > 100) {
-            SetTerrain(map, x1, y1, ROUGH);
+            map_terrain_set(map, x1, y1, ROUGH);
           } else {
             add_decoration(map, x1, y1, TYPE_FIRE, FIRE,
                            btech_random_range(map->xcode.context, 60, 180));
@@ -288,7 +310,8 @@ int ImproperLZ(MECH *mech, int x, int y) {
       .height = Elevation(map, x, y),
   };
 
-  if (GetRTerrain(map, x, y) != GRASSLAND && GetRTerrain(map, x, y) != ROAD)
+  if (map_real_terrain_get(map, x, y) != GRASSLAND &&
+      map_real_terrain_get(map, x, y) != ROAD)
     if (mech->xcode.context->configuration->btech_blzmapmode == 0)
       return INVALID_TERRAIN;
 
@@ -315,7 +338,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
                   "You can't land this type of vehicle.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechType(mech) == CLASS_VTOL && AeroFuel(mech) <= 0 &&
-                      !AeroFreeFuel(mech),
+                      !mech_aero_has_free_fuel(mech),
                   "You lack fuel to maneuver for landing!");
 
   for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
@@ -330,15 +353,16 @@ void aero_land(DbRef player, void *data, char *buffer) {
                   (Fallen(mech)) && (MechType(mech) != CLASS_VTOL),
                   "The engines are dead!");
   if (MechStatus(mech) & LANDED) {
-    if (TakingOff(mech)) {
+    if (mech_event_count(mech, EVENT_TAKEOFF)) {
       mech_printf(mech, MECHALL, "Launch aborted by %s.",
                   game_object_name(mech->xcode.context->database, player));
       if (IsDS(mech))
-        SendDSInfo(mech->xcode.context,
-                   tprintf("DS #%ld aborted takeoff at %d %d "
-                           "on map #%ld",
-                           mech->mynum, MechX(mech), MechY(mech), map->mynum));
-      StopTakeOff(mech);
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+                           tprintf("DS #%ld aborted takeoff at %d %d "
+                                   "on map #%ld",
+                                   mech->mynum, MechX(mech), MechY(mech),
+                                   map->mynum));
+      mech_event_cancel(mech, EVENT_TAKEOFF);
       return;
     }
     notify(btech_context_evaluation(mech->xcode.context), player,
@@ -369,7 +393,7 @@ void aero_land(DbRef player, void *data, char *buffer) {
              "You're climbing not landing!");
     return;
   }
-  t = MechRTerrain(mech);
+  t = mech_real_terrain_get(mech);
   DOCHECK_CONTEXT(mech->xcode.context,
                   !(t == GRASSLAND || t == ROAD ||
                     (MechType(mech) == CLASS_VTOL && t == BUILDING)),
@@ -379,9 +403,10 @@ void aero_land(DbRef player, void *data, char *buffer) {
     return;
   }
   if (IsDS(mech))
-    SendDSInfo(mech->xcode.context,
-               tprintf("DS #%ld has landed at %d %d on map #%ld", mech->mynum,
-                       MechX(mech), MechY(mech), map->mynum));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+                       tprintf("DS #%ld has landed at %d %d on map #%ld",
+                               mech->mynum, MechX(mech), MechY(mech),
+                               map->mynum));
 
   mech_notify(mech, MECHALL, land_data[i].landmsg);
   MechLOSBroadcast(mech, land_data[i].landmsg_others);
@@ -539,7 +564,7 @@ int FuelCheck(MECH *mech) {
   /* We don't do anything particularly nasty to shutdown things */
   if (!Started(mech))
     return 0;
-  if (AeroFreeFuel(mech))
+  if (mech_aero_has_free_fuel(mech))
     return 0;
   if (fabs(MechSpeed(mech)) > MMaxSpeed(mech)) {
     if (MechZ(mech) < ATMO_Z)
@@ -587,7 +612,7 @@ int FuelCheck(MECH *mech) {
     MechVerticalSpeed(mech) = 0;
     /* Hmm. This _can_ be ugly if things crash in middle of fall. Oh well. */
     mech_notify(mech, MECHALL, "You start free-fall.. Enjoy the ride!");
-    MECHEVENT(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+    mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   }
   return 1;
 }
@@ -658,7 +683,7 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   }
   MechDesiredSpeed(mech) = newspeed;
   mech_printf(mech, MECHALL, "Thrust set to %.2f.", newspeed);
-  MaybeMove(mech);
+  mech_maybe_move(mech);
 }
 
 void aero_vheading(DbRef player, void *data, char *arg, int flag) {

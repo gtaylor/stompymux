@@ -3,10 +3,12 @@
 
 #pragma once
 
+#include "mux/commands/command_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/name_table.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 
 typedef struct ConfigurationContext ConfigurationContext;
 

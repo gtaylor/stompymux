@@ -1,11 +1,13 @@
 /* osc8.c - OSC 8 URI validation and configuration serialization. */
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
 #include "mux/support/styled_text/internal.h"
+#include "mux/support/styled_text/render.h"
 #include "mux/support/utf8.h"
 
 static bool uri_unreserved(unsigned char byte) {

@@ -12,16 +12,19 @@
  */
 
 #include <assert.h>
-#include <math.h>
-#include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/file.h>
+#include <strings.h>
 
+#include "btmacros.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "missile_hit_registry.h"
 #include "p.mech.build.h"
 #include "p.mech.partnames.h"
 #include "p.mech.utils.h"
+#include "weapon_settings.h"
 #include "weapons.h"
 
 const int num_def_weapons = NUM_DEF_WEAPONS;

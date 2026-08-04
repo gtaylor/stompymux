@@ -2,8 +2,6 @@
 
 #include "btech/btech_context.h"
 
-#include "mux/commands/command_context.h"
-
 #include <assert.h>
 
 void btech_context_initialize(

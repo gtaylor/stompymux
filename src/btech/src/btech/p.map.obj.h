@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "map.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 

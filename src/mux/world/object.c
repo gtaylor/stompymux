@@ -3,29 +3,30 @@
  */
 
 #include "mux/world/object.h"
-#include "mux/server/game.h"
-#include "mux/world/move.h"
-#include "mux/world/object_internal.h"
-#include "mux/world/player.h"
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include "mux/commands/command.h"
+#include "mux/commands/command_queue.h"
 #include "mux/network/connection_events.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/server/game.h"
 #include "mux/server/log.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
+#include "mux/world/move.h"
+#include "mux/world/object_internal.h"
 #include "mux/world/object_list.h"
-#include "mux/world/world_context.h"
+#include "mux/world/player.h"
 
 #define IS_CLEAN(database, i)                                                  \
   (typeof_obj((database), (i)) == OBJECT_TYPE_GARBAGE &&                       \

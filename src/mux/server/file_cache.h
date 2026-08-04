@@ -2,8 +2,11 @@
 
 #pragma once
 
-#include "mux/network/descriptor.h"
-#include "mux/objects/db.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/server/game.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
 
 typedef struct FileCache FileCache;
 typedef struct ServerConfiguration ServerConfiguration;

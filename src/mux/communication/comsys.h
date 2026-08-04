@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <stdarg.h>
 #include <time.h>
 
 #include "mux/commands/command_context.h"
@@ -74,6 +75,9 @@ void channel_destroy(struct channel *channel);
 void send_channel(EvaluationContext *evaluation, const char *chan,
                   const char *format, ...)
     __attribute__((format(printf, 3, 4)));
+void send_channel_v(EvaluationContext *evaluation, const char *chan,
+                    const char *format, va_list arguments)
+    __attribute__((format(printf, 3, 0)));
 struct channel *select_channel(ChannelRegistry *channels, const char *channel);
 struct comuser *select_user(struct channel *ch, DbRef player);
 void do_addcom(CommandInvocation *invocation);

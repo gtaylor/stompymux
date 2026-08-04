@@ -14,8 +14,15 @@
 
 #pragma once
 
+#include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "mux/world/world_context.h"
+
+typedef struct EvaluationContext EvaluationContext;
+
+void mecha_notify(EvaluationContext *evaluation, DbRef player, char *message);
+void mecha_notify_except(EvaluationContext *evaluation, DbRef location,
+                         DbRef player, DbRef exception, char *message);
 
 #ifdef notify
 #undef notify
@@ -117,6 +124,3 @@
     else                                                                       \
       UnSetBit(val, bit);                                                      \
   } while (0)
-
-#define Wiz(database, p) is_wizard(database, p)
-#define WizR(database, p) Wiz(database, p)

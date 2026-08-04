@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stddef.h>
+
+#include "mux/network/descriptor.h"
 
 typedef struct Descriptor Descriptor;
 typedef struct TelnetEnvironment TelnetEnvironment;

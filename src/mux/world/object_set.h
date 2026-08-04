@@ -2,7 +2,11 @@
 
 #pragma once
 
+#include "mux/commands/command_context.h"
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_registries.h"
+#include "mux/world/walkdb.h"
 
 typedef struct ObjectList ObjectList;
 typedef struct MatchContext MatchContext;

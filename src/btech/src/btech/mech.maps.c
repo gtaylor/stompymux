@@ -8,28 +8,46 @@
  *       All rights reserved
  */
 
-#include "mux/commands/action_messages.h"
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
-#include "mux/world/access.h"
-#include "mux/world/move.h"
-
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
 
 #include "autopilot.h"
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
 #include "map.los.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mine.h"
-#include "mux/network/mux_event_alloc.h"
+#include "mux/commands/action_messages.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
+#include "p.aero.move.h"
 #include "p.bsuit.h"
 #include "p.ds.bay.h"
 #include "p.eject.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.los.h"
 #include "p.mech.maps.h"
 #include "p.mech.notify.h"
@@ -134,7 +152,7 @@ const char *GetTerrainName_base(int t) {
 }
 
 const char *GetTerrainName(MAP *map, int x, int y) {
-  return GetTerrainName_base(GetTerrain(map, x, y));
+  return GetTerrainName_base(map_terrain_get(map, x, y));
 }
 
 /* Player-customizable colors */
@@ -483,7 +501,7 @@ static MapCellText lrs_mech_text(const MapColorScheme *colors, MECH *mech,
 
 static MapCellText lrs_terrain_text(const MapColorScheme *colors, MAP *map,
                                     int x, int y, int docolor, char *prevc) {
-  char c = GetTerrain(map, x, y);
+  char c = map_terrain_get(map, x, y);
   char newc;
 
   if (!c || !docolor || c == ' ') {
@@ -491,14 +509,14 @@ static MapCellText lrs_terrain_text(const MapColorScheme *colors, MAP *map,
     result.text[0] = c;
     return result;
   } else
-    newc = TerrainColorChar(colors, c, GetElev(map, x, y));
+    newc = TerrainColorChar(colors, c, map_elevation_get(map, x, y));
 
   return map_cell_text(newc, prevc, c);
 }
 
 static MapCellText lrs_elevation_text(const MapColorScheme *colors, MAP *map,
                                       int x, int y, int docolor, char *prevc) {
-  int e = GetElev(map, x, y);
+  int e = map_elevation_get(map, x, y);
   char c = (e || docolor) ? '0' + e : ' ';
   char newc;
 
@@ -507,7 +525,7 @@ static MapCellText lrs_elevation_text(const MapColorScheme *colors, MAP *map,
     result.text[0] = c;
     return result;
   } else
-    newc = TerrainColorChar(colors, GetTerrain(map, x, y), e);
+    newc = TerrainColorChar(colors, map_terrain_get(map, x, y), e);
 
   return map_cell_text(newc, prevc, c);
 }
@@ -554,8 +572,8 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, MECH *mech,
   if (mode & LRS_TERRAINMODE)
     return lrs_terrain_text(colors, map, x, y, mode & LRS_COLORMODE, prevc);
 
-  SendError(
-      mech->xcode.context,
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
       tprintf("Unknown LRS mode, mech #%ld mode 0x%x.", mech->mynum, mode));
   return map_cell_text('R', prevc, 'Y');
 }
@@ -888,12 +906,12 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
       } else {
 
         if (losflag & MAPLOSHEX_SEETERRAIN)
-          terr = GetTerrain(map, sx + x, sy + y);
+          terr = map_terrain_get(map, sx + x, sy + y);
         else
           terr = UNKNOWN_TERRAIN;
 
         if (losflag & MAPLOSHEX_SEEELEV)
-          elev = GetElev(map, sx + x, sy + y);
+          elev = map_elevation_get(map, sx + x, sy + y);
         else
           elev = 15; /* Ugly hack: '0' + 15 == '?' */
       }
@@ -919,7 +937,7 @@ static void sketch_tac_map(char *buf, MAP *map, MECH *mech, int sx, int sy,
       case SMOKE:
       case FIRE:
         if (dounderlying) {
-          rterr = GetRTerrain(map, sx + x, sy + y);
+          rterr = map_real_terrain_get(map, sx + x, sy + y);
           topchar = terr;
           botchar = rterr;
         } else {
@@ -1805,7 +1823,8 @@ static void mech_enter_event(MuxEvent *e) {
   if (!(mapo = find_entrance_by_xy(map, MechX(mech), MechY(mech))))
     return;
   if (!Started(mech) || Uncon(mech) || Jumping(mech) ||
-      (MechType(mech) == CLASS_MECH && (Fallen(mech) || Standing(mech))) ||
+      (MechType(mech) == CLASS_MECH &&
+       (Fallen(mech) || mech_event_count(mech, EVENT_STAND))) ||
       OODing(mech) ||
       (fabs(MechSpeed(mech)) * 5 >= MMaxSpeed(mech) &&
        fabs(MMaxSpeed(mech)) >= MP1) ||
@@ -1894,7 +1913,7 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
                   "While in mid-jump? No way.");
   DOCHECK_CONTEXT(mech->xcode.context,
                   MechType(mech) == CLASS_MECH &&
-                      (Fallen(mech) || Standing(mech)),
+                      (Fallen(mech) || mech_event_count(mech, EVENT_STAND)),
                   "Crawl inside? I think not. Stand first.");
   DOCHECK_CONTEXT(mech->xcode.context, OODing(mech),
                   "While in mid-flight? No way.");
@@ -1916,16 +1935,16 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   /* Wow, *gasp*, we got something to enter */
   if (!(newmap = btech_context_find_object(mech->xcode.context, mapo->obj))) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error: No map existing for mapindex #%d (@ %d,%d of #%ld)",
                 (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
     return;
   }
   if (!find_entrance(newmap, target, &x, &y)) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf(
             "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
             (int)mapo->obj, mapo->x, mapo->y, mech->mapindex));
@@ -1947,10 +1966,12 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  DOCHECK_CONTEXT(mech->xcode.context, EnteringHangar(mech),
+  DOCHECK_CONTEXT(mech->xcode.context,
+                  mech_event_count(mech, EVENT_ENTER_HANGAR),
                   "You are already entering the hangar!");
   /* XXX Check for other mechs in the hex possibly doing this as well (ick) */
   HexLOSBroadcast(map, MechX(mech), MechY(mech),
                   "The doors at $h start to open..");
-  MECHEVENT(mech, EVENT_ENTER_HANGAR, mech_enter_event, 18, (long)target);
+  mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enter_event, 18,
+                      (long)target);
 }

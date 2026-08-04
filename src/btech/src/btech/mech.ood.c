@@ -7,17 +7,34 @@
  *       All rights reserved
  */
 
-#include "mech.h"
+#include <stdlib.h>
+
+#include "btconfig.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mux/commands/action_messages.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "p.btechstats.h"
-#include "p.mech.combat.h"
+#include "p.glue.hcode.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
+#include "p.mech.events.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.restrict.h"
-#include "p.mech.update.h"
 #include "p.mech.utils.h"
-#include "p.template.h"
 
 void mech_ood_damage(MECH *wounded, MECH *attacker, int damage) {
   mech_printf(attacker, MECHALL,
@@ -44,8 +61,8 @@ void mech_ood_damage(MECH *wounded, MECH *attacker, int damage) {
     MechLOSBroadcast(
         wounded,
         "starts plummeting down, as the final blast blows the cocoon apart!");
-    StopOOD(wounded);
-    MECHEVENT(wounded, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+    mech_event_cancel(wounded, EVENT_OOD);
+    mech_event_schedule(wounded, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   }
 }
 
@@ -59,7 +76,7 @@ void mech_ood_event(MuxEvent *e) {
   if ((MechsElevation(mech) - DropGetElevation(mech)) > OOD_SPEED) {
     MechZ(mech) -= OOD_SPEED;
     MechFZ(mech) = MechZ(mech) * ZSCALE;
-    MECHEVENT(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
+    mech_event_schedule(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
     return;
   }
   /* Time to hit da ground */
@@ -74,7 +91,7 @@ void mech_ood_event(MuxEvent *e) {
     MechCocoon(mech) = 0;
     MechLOSBroadcast(mech, "touches down safely!");
     DropSetElevation(mech, 1);
-    MaybeMove(mech);
+    mech_maybe_move(mech);
     return;
   }
 
@@ -97,8 +114,10 @@ void mech_ood_event(MuxEvent *e) {
     roll_needed += 10;
   }
 
-  if (MechRTerrain(mech) != GRASSLAND && MechRTerrain(mech) != ROAD) {
-    if (MechRTerrain(mech) == WATER || MechRTerrain(mech) == HIGHWATER)
+  if (mech_real_terrain_get(mech) != GRASSLAND &&
+      mech_real_terrain_get(mech) != ROAD) {
+    if (mech_real_terrain_get(mech) == WATER ||
+        mech_real_terrain_get(mech) == HIGHWATER)
       roll_needed += 2;
     else
       roll_needed += 3;
@@ -207,7 +226,7 @@ void mech_ood_event(MuxEvent *e) {
 
     MechDesiredSpeed(mech) = 0.0;
 
-  MaybeMove(mech);
+  mech_maybe_move(mech);
 
   /* Lets handle dropping right into the water. Anything but a mech/hover goes
    * glub */
@@ -270,10 +289,10 @@ void initiate_ood(DbRef player, MECH *mech, char *buffer) {
     MechDesiredSpeed(mech) = MechMaxSpeed(mech) / 2;
     if (is_aero(mech))
       MechDesiredAngle(mech) = 0;
-    MaybeMove(mech);
+    mech_maybe_move(mech);
   } else {
     MechCocoon(mech) = MechRTons(mech) / 5 / 1024 + 1;
-    StopMoving(mech);
-    MECHEVENT(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
+    mech_event_cancel(mech, EVENT_MOVE);
+    mech_event_schedule(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
   }
 }

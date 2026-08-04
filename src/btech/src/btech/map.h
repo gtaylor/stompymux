@@ -213,10 +213,5 @@ typedef struct map_data {
 /* Used by navigate_sketch_map */
 #define NAVIGATE_LINES 13
 
-#include "p.map.bits.h"
-#include "p.map.dynamic.h"
-#include "p.map.h"
-#include "p.map.obj.h"
-
 extern void newfreemap(DbRef key, void **data, int selector);
 extern void map_update(DbRef obj, void *data);

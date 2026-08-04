@@ -13,11 +13,11 @@
  * *
  */
 
-#include "mux/server/platform.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "mux/objects/db.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/wild.h"

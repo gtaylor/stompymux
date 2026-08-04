@@ -8,18 +8,34 @@
  *
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "autopilot.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
 #include "coolmenu.h"
-#include "glue.h"
+#include "macros.h"
 #include "mech.events.h"
-#include "mech.h"
+#include "mech.lifecycle.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
 #include "mycool.h"
+#include "p.autopilot_commands.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 extern const ACOM acom[AUTO_NUM_COMMANDS + 1];
-extern char *mux_event_names[];
-
 /*
  * Creates a new command_node for the AI's
  * command list
@@ -176,7 +192,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
                "Internal AI Error: Trying to remove"
                " Command #%d from AI #%ld but the command node doesn't exist\n",
                p, autopilot->mynum);
-      SendAI(autopilot->xcode.context, error_buf);
+      btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                         error_buf);
     }
 
     /* Destroy the command_node */
@@ -203,7 +220,8 @@ void auto_delcommand(DbRef player, void *data, char *buffer) {
                  " the first command from AI #%ld but the command node doesn't "
                  "exist\n",
                  autopilot->mynum);
-        SendAI(autopilot->xcode.context, error_buf);
+        btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI,
+                           "%s", error_buf);
 
       } else {
 
@@ -390,7 +408,7 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
     if ((j = mux_event_count_type_data(autopilot->xcode.context->events, i,
                                        (void *)autopilot))) {
       notify_printf(btech_context_evaluation(autopilot->xcode.context), player,
-                    "%-20s%d", mux_event_names[i], j);
+                    "%-20s%d", btech_event_name(i), j);
       total += j;
     }
   }
@@ -510,7 +528,8 @@ void auto_engage(DbRef player, void *data, char *buffer) {
 
   notify(btech_context_evaluation(autopilot->xcode.context), player,
          "Engaging autopilot...");
-  AUTOEVENT(autopilot, EVENT_AUTOCOM, auto_com_event, AUTOPILOT_NC_DELAY, 0);
+  autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
+                           AUTOPILOT_NC_DELAY, 0);
 
   return;
 }
@@ -546,7 +565,8 @@ void auto_goto_next_command(AUTO *autopilot, int time) {
              "Internal AI Error: Trying to remove"
              " the first command from AI #%ld but the command list is empty\n",
              autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return;
   }
 
@@ -559,7 +579,8 @@ void auto_goto_next_command(AUTO *autopilot, int time) {
         "Internal AI Error: Trying to remove"
         " the first command from AI #%ld but the command node doesn't exist\n",
         autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return;
   }
 
@@ -585,7 +606,8 @@ char *auto_get_command_arg(AUTO *autopilot, int command_number,
              "Internal AI Error: Trying to "
              "access Command #%d for AI #%ld but it doesn't exist",
              command_number, autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return NULL;
   }
 
@@ -595,7 +617,8 @@ char *auto_get_command_arg(AUTO *autopilot, int command_number,
              "access Arg #%d for AI #%ld Command #%d but its greater"
              " then AUTOPILOT_MAX_ARGS (%d)",
              arg_number, autopilot->mynum, command_number, AUTOPILOT_MAX_ARGS);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return NULL;
   }
 
@@ -609,7 +632,8 @@ char *auto_get_command_arg(AUTO *autopilot, int command_number,
              "Internal AI Error: Trying to "
              "access Arg #%d for AI #%ld Command #%d but it doesn't exist",
              arg_number, autopilot->mynum, command_number);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return NULL;
   }
 
@@ -638,7 +662,8 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
              "Internal AI Error: Trying to "
              "access a command (%d) for AI #%ld that can't be on a list",
              command_number, autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return -1;
   }
 
@@ -648,7 +673,8 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
              "Internal AI Error: Trying to "
              "access Command #%d for AI #%ld but it doesn't exist",
              command_number, autopilot->mynum);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return -1;
   }
 
@@ -665,7 +691,8 @@ int auto_get_command_enum(AUTO *autopilot, int command_number) {
              "Internal AI Error: Command ENUM for"
              " AI #%ld Command Number #%d doesn't exist\n",
              autopilot->mynum, command_number);
-    SendAI(autopilot->xcode.context, error_buf);
+    btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+                       error_buf);
     return -1;
   }
 

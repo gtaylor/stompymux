@@ -1,30 +1,18 @@
 /* mux_package.c - Built-in Lua mux package bindings. */
 
-#include "mux/server/platform.h"
-
-#include "mux/lua/mux_package.h"
-
-#include <math.h>
-#include <stdint.h>
+#include <lauxlib.h>
+#include <lua.h>
 #include <string.h>
 
-#include <lauxlib.h>
-
-#include "mux/lua/lua_runtime.h"
-#include "mux/network/descriptor.h"
-#include "mux/network/telnet_environment.h"
+#include "mux/lua/mux_package.h"
+#include "mux/lua/mux_package_internal.h"
 #include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/objects/object_state.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/support/styled_text/markup.h"
-#include "mux/support/utf8.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
 #include "mux/world/access.h"
 #include "mux/world/object_spatial.h"
-
-#include "mux/lua/mux_package_internal.h"
 
 DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
                              int argument) {

@@ -16,17 +16,25 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "btech_context.h"
+#include "btmacros.h"
 #include "coolmenu.h"
-#include "failures.h"
-#include "mech.events.h"
+#include "macros.h"
 #include "mech.h"
+#include "mech.parts.h"
 #include "mech.tech.damages.h"
 #include "mech.tech.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "mycool.h"
 #include "p.btechstats.h"
+#include "p.glue.hcode.h"
 #include "p.mech.build.h"
+#include "p.mech.notify.h"
 #include "p.mech.status.h"
 #include "p.mech.tech.commands.h"
 #include "p.mech.utils.h"

@@ -1,6 +1,7 @@
 /* password_hash.c -- Argon2id password hashing integration test */
 
 #include <string.h>
+#include <sodium.h>
 
 #include "mux/server/server_config.h"
 #include "mux/support/password.h"

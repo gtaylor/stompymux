@@ -2,7 +2,12 @@
 
 #pragma once
 
+#include "mux/world/world_context.h"
 #include <sys/time.h>
+
+#include "mux/server/server_config.h"
+
+struct timeval;
 
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct ServerConfiguration ServerConfiguration;

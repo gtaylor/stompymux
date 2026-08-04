@@ -2,13 +2,14 @@
  * player_c.c -- Player cache routines
  */
 
-#include "mux/server/platform.h"
+#include "mux/server/server_config.h" // IWYU pragma: keep
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
-#include "mux/support/hash_table.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/world/player_cache.h"
 

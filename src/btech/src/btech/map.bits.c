@@ -12,8 +12,10 @@
  *
  */
 
-#include "mech.h"
+#include "map.h"
 #include "mux/network/mux_event_alloc.h"
+#include "p.map.bits.h"
+#include "p.map.obj.h"
 
 #define realnum(x) ((x) / 4 + ((x) % 4 ? 1 : 0))
 #define boffs(x) (2 * ((x) % 4))

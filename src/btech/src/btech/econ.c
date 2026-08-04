@@ -21,7 +21,16 @@
    [id,brand,count]{,[id,brand,count],..}
  */
 
+#include <stdio.h>
+#include <string.h>
+
 #include "mech.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.hcode.h"
 #include "p.mech.partnames.h"
 
 /* entry = pointer to [ */

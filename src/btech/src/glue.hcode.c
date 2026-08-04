@@ -14,12 +14,15 @@
  *
  */
 
-#include "mux/server/platform.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "macros.h"
-#include "mech.h"
 #include "mux/objects/db.h"
-#include "p.glue.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "p.glue.hcode.h"
 
 char *btech_attribute_read(GameDatabase *database, int id, int flag,
                            char buffer[static LBUF_SIZE]) {

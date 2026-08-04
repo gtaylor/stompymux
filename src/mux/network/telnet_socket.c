@@ -1,26 +1,33 @@
+#include "mux/commands/command_runtime.h" // IWYU pragma: keep
+#include "mux/server/runtime_clock.h"     // IWYU pragma: keep
 /* libuv TCP listeners and client I/O. */
 
-#include "mux/network/network_output.h"
-#include "mux/server/platform.h"
-
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <uv.h>
 
 #include "libtelnet.h"
-#include "mux/commands/command_runtime.h"
 #include "mux/network/connect_flow.h"
 #include "mux/network/connection_events.h"
-#include "mux/network/connection_runtime.h"
+#include "mux/network/descriptor.h"
+#include "mux/network/network_output.h"
 #include "mux/network/site_access.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
-#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
-#include "mux/server/mux_server.h"
+#include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/support/alloc.h"
 #include "mux/support/utf8.h"
+#include "mux/world/world_context.h"
+#include "uv/unix.h"
 
 typedef struct DescriptorWrite DescriptorWrite;
 typedef struct TelnetListener TelnetListener;

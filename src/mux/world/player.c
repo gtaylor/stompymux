@@ -3,29 +3,32 @@
  * player.c
  */
 
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
+#include "mux/server/server_registries.h"
+#include <crypto_pwhash.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <utils.h>
 
-#include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
-#include "mux/commands/command_invocation.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/site_access.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
-#include "mux/objects/powers.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
-#include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
 #include "mux/support/wild.h"
 #include "mux/world/object.h"
 #include "mux/world/player.h"
-#include "mux/world/world_context.h"
 
 // # of successful logins to save data for
 constexpr int NUM_GOOD = 4;

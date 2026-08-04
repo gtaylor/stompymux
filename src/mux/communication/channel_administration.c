@@ -1,31 +1,25 @@
 /* comsys.c - Player channel creation, membership, and message delivery. */
 
-#include "mux/network/network_output.h"
-#include "mux/server/game.h"
-#include "mux/world/access.h"
-#include <ctype.h>
-#include <sys/types.h>
+#include <stdio.h>
+#include <strings.h>
 
-#include "mux/commands/command_runtime.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-#include "mux/world/match.h"
-#include "mux/world/player.h"
-#include "mux/world/world_context.h"
-
+#include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_helpers.h"
-#include "mux/commands/command_invocation.h"
-#include "mux/communication/access_policy.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/comsys_internal.h"
-#include "mux/network/mux_event_alloc.h"
-#include "mux/support/styled_text/markup.h"
-#include "mux/support/utf8.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/network/network_output.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
+#include "mux/world/access.h"
+#include "mux/world/match.h"
+#include "mux/world/player.h"
 
 void do_channel_membership_flags(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;

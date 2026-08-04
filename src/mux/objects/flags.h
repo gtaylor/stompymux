@@ -3,7 +3,10 @@
 #pragma once
 
 #include "mux/objects/db.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_registries.h"
 #include "mux/support/hash_table.h"
+#include "mux/world/world_context.h"
 
 typedef enum ObjectFlag {
   OBJECT_FLAG_NONE,

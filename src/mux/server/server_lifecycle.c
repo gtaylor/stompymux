@@ -1,15 +1,14 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Server startup, service shutdown, and libuv lifecycle orchestration.
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
-
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -17,17 +16,16 @@
 
 #include "glue.h"
 #include "mux/commands/command_queue.h"
-#include "mux/communication/commac.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/network/descriptor.h"
 #include "mux/network/network_time.h"
 #include "mux/network/telnet_socket.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
-#include "mux/server/log_cache.h"
-#include "mux/server/maintenance.h"
+#include "mux/server/log.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/signals.h"

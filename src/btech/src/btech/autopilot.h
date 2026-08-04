@@ -16,10 +16,15 @@
 
 #pragma once
 
+#include "btech_event.h"
 #include "mech.events.h"
+#include "mux/server/platform.h"
 #include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
 
 #include "glue_types.h"
+
+typedef struct MuxEvent MuxEvent;
 
 #define AUTOPILOT_MEMORY 100 /* Number of command slots available to AI */
 #define AUTOPILOT_MAX_ARGS                                                     \
@@ -163,7 +168,7 @@
       UnZombify(a);                                                            \
     if (a->flags & AUTOPILOT_PILZOMBIE) {                                      \
       a->flags &= ~AUTOPILOT_PILZOMBIE;                                        \
-      AUTOEVENT(a, EVENT_AUTOCOM, auto_com_event, 1, 0);                       \
+      autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event, 1, 0);        \
     }                                                                          \
   } while (0)
 
@@ -197,7 +202,8 @@
     return;
 
 /* Shortcut to the auto_com_event function */
-#define AUTO_COM(a, n) AUTOEVENT(a, EVENT_AUTOCOM, auto_com_event, (n), 0);
+#define AUTO_COM(a, n)                                                         \
+  autopilot_event_schedule(a, EVENT_AUTOCOM, auto_com_event, (n), 0);
 
 /*! \todo {Get rid of this once we're done} */
 #define ADVANCE_PG(a)                                                          \
@@ -216,14 +222,14 @@
   AUTO_PSTART(a, mech);                                                        \
   if (MechType(mech) == CLASS_MECH && Fallen(mech) &&                          \
       !(CountDestroyedLegs(mech) > 0)) {                                       \
-    if (!Standing(mech))                                                       \
+    if (!mech_event_count(mech, EVENT_STAND))                                  \
       mech_stand(a->mynum, mech, "");                                          \
     AUTO_COM(a, AUTOPILOT_NC_DELAY);                                           \
     return;                                                                    \
   };                                                                           \
   if (MechType(mech) == CLASS_VTOL && Landed(mech) &&                          \
       !SectIsDestroyed(mech, ROTOR)) {                                         \
-    if (!TakingOff(mech))                                                      \
+    if (!mech_event_count(mech, EVENT_TAKEOFF))                                \
       aero_takeoff(a->mynum, mech, "");                                        \
     AUTO_COM(a, AUTOPILOT_NC_DELAY);                                           \
     return;                                                                    \
@@ -270,7 +276,7 @@ typedef struct profile_node_t {
 /*
  * The Autopilot Structure
  */
-typedef struct {
+typedef struct auto_data {
   XCODE xcode; /* XCODE base class field */
 
   DbRef mynum;          /* The AI's dbref number */

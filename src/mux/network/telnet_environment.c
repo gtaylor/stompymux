@@ -1,15 +1,11 @@
 /* telnet_environment.c - RFC 1572 environment storage and lookup. */
 
-#include "mux/server/platform.h"
-
-#include "mux/network/telnet_environment.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "libtelnet.h"
-#include "mux/network/descriptor.h"
+#include "mux/network/telnet_environment.h"
 
 constexpr size_t TELNET_ENVIRONMENT_MAX_ENTRIES = 64;
 constexpr size_t TELNET_ENVIRONMENT_MAX_NAME_SIZE = 256;

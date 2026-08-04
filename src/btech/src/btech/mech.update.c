@@ -1,3 +1,4 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /*
  * Author: Markus Stenberg <fingon@iki.fi>
  *
@@ -11,24 +12,44 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <time.h>
 
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
 #include "failures.h"
-#include "glue.h"
+#include "floatsim.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
 #include "mech.ice.h"
-#include "mux/server/mux_server.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.aero.move.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
-#include "p.mech.combat.h"
+#include "p.failures.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
 #include "p.mech.ecm.h"
+#include "p.mech.events.h"
 #include "p.mech.fire.h"
 #include "p.mech.lite.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.physical.h"
-#include "p.mech.pickup.h"
 #include "p.mech.startup.h"
 #include "p.mech.tag.h"
 #include "p.mech.update.h"
@@ -93,7 +114,7 @@ int collision_check(MECH *mech, int mode, int le, int lt) {
   if (Overwater(mech) && le < 0)
     le = 0;
   e = MechElevation(mech);
-  if (MechRTerrain(mech) == ICE)
+  if (mech_real_terrain_get(mech) == ICE)
     if (le >= 0)
       e = 0;
   if (le < (MechUpperElevation(mech) - MoveMod(mech)) && lt == BRIDGE) {
@@ -106,7 +127,7 @@ int collision_check(MECH *mech, int mode, int le, int lt) {
     e = 0;
   switch (mode) {
   case JUMP:
-    if (MechRTerrain(mech) == BRIDGE) {
+    if (mech_real_terrain_get(mech) == BRIDGE) {
       if (MechZ(mech) < 0)
         return 1;
       if (MechZ(mech) == (e - 1))
@@ -117,7 +138,8 @@ int collision_check(MECH *mech, int mode, int le, int lt) {
   case WALK_DROP:
     return (le - e) > MoveMod(mech);
   case WALK_WALL:
-    if ((MechMove(mech) == MOVE_HOVER) && (MechRTerrain(mech) == BRIDGE) &&
+    if ((MechMove(mech) == MOVE_HOVER) &&
+        (mech_real_terrain_get(mech) == BRIDGE) &&
         (((lt == ICE) || (lt == WATER)) || ((le == 0) && (lt == BRIDGE)))) {
       return 0;
     } else {
@@ -129,7 +151,8 @@ int collision_check(MECH *mech, int mode, int le, int lt) {
     [[fallthrough]];
   case HIT_UNDER_BRIDGE: /* Hovers only... tho it should be fixed for foils and
                             hulls too */
-    if ((lt == BRIDGE) && (MechRTerrain(mech) == BRIDGE) && (le == 0) &&
+    if ((lt == BRIDGE) && (mech_real_terrain_get(mech) == BRIDGE) &&
+        (le == 0) &&
         (Elevation(mech_map, MechLastX(mech), MechLastY(mech)) != 0) &&
         (Elevation(mech_map, MechX(mech), MechY(mech)) == 1))
       return 1;
@@ -181,7 +204,8 @@ void move_mech(MECH *mech) {
     snprintf(message_buffer, MBUF_SIZE,
              "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
              mech->mapindex);
-    SendError(mech->xcode.context, message_buffer);
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       message_buffer);
     mech->mapindex = -1;
     return;
   }
@@ -204,7 +228,8 @@ void move_mech(MECH *mech) {
     snprintf(message_buffer, MBUF_SIZE,
              "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
              mech->mapindex);
-    SendError(mech->xcode.context, message_buffer);
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       message_buffer);
 
     mech->mapindex = -1;
     return;
@@ -279,14 +304,15 @@ void move_mech(MECH *mech) {
       snprintf(message_buffer, MBUF_SIZE, "#%d: %d, %d, %d (%d, %d, %d)",
                mech->mynum, MechX(mech), MechY(mech), MechZ(mech),
                (int)MechFX(mech), (int)MechFY(mech), (int)MechFZ(mech));
-      SendDebug(mech->xcode.context, message_buffer);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         message_buffer);
 #endif
 
       /* The famous jumping on bridge collision code */
       /*! \todo {possibly turn the bridge collision code into
        * a configuration parameter} */
-      if (MechRTerrain(mech) == BRIDGE && collision_check(mech, JUMP, 0, 0) &&
-          MechZ(mech) > 0) {
+      if (mech_real_terrain_get(mech) == BRIDGE &&
+          collision_check(mech, JUMP, 0, 0) && MechZ(mech) > 0) {
 
         mech_notify(mech, MECHALL, "CRASH! You crash into the bridge!");
         MechLOSBroadcast(mech, "crashes into the bridge!");
@@ -323,7 +349,7 @@ void move_mech(MECH *mech) {
       }
 
       /* Are we landing on ice */
-      if (MechRTerrain(mech) == ICE) {
+      if (mech_real_terrain_get(mech) == ICE) {
         if (oz < -1 && MechZ(mech) >= -1)
           break_thru_ice(mech);
         else if (oz >= -1 && MechZ(mech) < -1)
@@ -575,7 +601,8 @@ void move_mech(MECH *mech) {
                (!mech       ? "mech"
                 : !mech_map ? "mech_map"
                             : "weird...."));
-      SendError(mech->xcode.context, message_buffer);
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                         message_buffer);
 
       if (mech) {
 
@@ -591,7 +618,8 @@ void move_mech(MECH *mech) {
         snprintf(message_buffer, MBUF_SIZE,
                  "move_mech:invalid map:Mech: %ld Index: %ld", mech->mynum,
                  mech->mapindex);
-        SendError(mech->xcode.context, message_buffer);
+        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                           message_buffer);
         mech->mapindex = -1;
       }
       return;
@@ -604,18 +632,18 @@ void move_mech(MECH *mech) {
       MechCritStatus(mech) &= ~(HIDDEN);
     }
 
-    StopHiding(mech);
+    mech_event_cancel(mech, EVENT_HIDE);
 
     x = MechX(mech);
     y = MechY(mech);
-    MechTerrain(mech) = GetTerrain(mech_map, x, y);
-    MechElev(mech) = GetElev(mech_map, x, y);
+    MechTerrain(mech) = map_terrain_get(mech_map, x, y);
+    MechElev(mech) = map_elevation_get(mech_map, x, y);
 
     /* Update our Z values */
     if (upd_z) {
 
       /* Chance of breaking through ICE */
-      if (MechRTerrain(mech) == ICE) {
+      if (mech_real_terrain_get(mech) == ICE) {
         if (oz < -1 && MechZ(mech) >= -1)
           break_thru_ice(mech);
         else if (MechZ(mech) == 0)
@@ -627,7 +655,7 @@ void move_mech(MECH *mech) {
       DropSetElevation(mech, 0);
 
       /* To fix certain slide-under-ice-effect for _mechs_ */
-      if (MechType(mech) == CLASS_MECH && MechRTerrain(mech) == ICE &&
+      if (MechType(mech) == CLASS_MECH && mech_real_terrain_get(mech) == ICE &&
           oz == -1 && MechZ(mech) == -1) {
 
         MechZ(mech) = 0;
@@ -650,7 +678,7 @@ void move_mech(MECH *mech) {
       if (is_in_character(mech->xcode.context->database, mech->mynum)) {
         MechHexes(mech)++;
         if (!((int)MechHexes(mech) % PIL_XP_EVERY_N_STEPS))
-          if (RGotPilot(mech))
+          if (mech_has_active_pilot(mech))
             AccumulatePilXP(MechPilot(mech), mech, 1, 0);
       }
 
@@ -709,8 +737,9 @@ void move_mech(MECH *mech) {
 }
 
 void CheckNavalHeight(MECH *mech, int oz) {
-  if (MechRTerrain(mech) != WATER && MechRTerrain(mech) != ICE &&
-      MechRTerrain(mech) != BRIDGE) {
+  if (mech_real_terrain_get(mech) != WATER &&
+      mech_real_terrain_get(mech) != ICE &&
+      mech_real_terrain_get(mech) != BRIDGE) {
     MechSpeed(mech) = 0.0;
     MechVerticalSpeed(mech) = 0;
     MechDesiredSpeed(mech) = 0.0;
@@ -741,9 +770,10 @@ void CheckNavalHeight(MECH *mech, int oz) {
   if (MechZ(mech) <= (MechLowerElevation(mech))) {
     MechZ(mech) = MIN(0, MechLowerElevation(mech) + 1);
     if (MechElevation(mech) > 0)
-      SendError(mech->xcode.context,
-                tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
-                        mech->mynum, MechTerrain(mech), MechElev(mech)));
+      btech_channel_send(
+          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+          tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
+                  mech->mynum, MechTerrain(mech), MechElev(mech)));
     MechFZ(mech) = ((5.0 * MechZ(mech) - 4) * ZSCALE) / 5.0;
     if (MechMove(mech) == MOVE_SUB) {
       if (MechVerticalSpeed(mech) < 0) {
@@ -779,7 +809,7 @@ void CheckVTOLHeight(MECH *mech) {
 
   if (MechZ(mech) >= MechElevation(mech))
     return;
-  if (MechRTerrain(mech) == BRIDGE)
+  if (mech_real_terrain_get(mech) == BRIDGE)
     if (MechZ(mech) != (MechElevation(mech) - 1))
       return;
   aero_land(MechPilot(mech), mech, "");
@@ -1001,8 +1031,8 @@ void UpdateSpeed(MECH *mech) {
   }
   if (MechType(mech) != CLASS_MW && MechMove(mech) != MOVE_VTOL &&
       (MechMove(mech) != MOVE_FLY || Landed(mech)))
-    tempspeed = terrain_speed(mech, tempspeed, maxspeed, MechRTerrain(mech),
-                              MechElevation(mech));
+    tempspeed = terrain_speed(mech, tempspeed, maxspeed,
+                              mech_real_terrain_get(mech), MechElevation(mech));
   if (MechCritStatus(mech) & CHEAD) {
     if (mech->xcode.context->configuration->btech_slowdown == 2) {
       /* _New_ slowdown based on facing vs desired difference */
@@ -1288,9 +1318,9 @@ void HandleOverheat(MECH *mech) {
           (!MadePilotSkillRoll(mech, 3)))
         MechFalls(mech, 0, 1);
     }
-    Shutdown(mech);
-    StopMoving(mech);
-    StopStand(mech);
+    mech_power_down(mech);
+    mech_event_cancel(mech, EVENT_MOVE);
+    mech_event_cancel(mech, EVENT_STAND);
   }
 }
 
@@ -1637,7 +1667,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
   /* Recording the old elevation and terrain */
   /*! \todo {Wasn't lastelevation passed as an argument 'last_z' ?} */
-  ot = oldterrain = GetTerrain(mech_map, MechLastX(mech), MechLastY(mech));
+  ot = oldterrain = map_terrain_get(mech_map, MechLastX(mech), MechLastY(mech));
 
   if ((MechMove(mech) == MOVE_HOVER) &&
       (oldterrain == WATER || oldterrain == ICE ||
@@ -1668,7 +1698,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
     if (Jumping(mech)) {
 
-      if (MechRTerrain(mech) == WATER)
+      if (mech_real_terrain_get(mech) == WATER)
         return;
 
       /* Did we hit something while jumping */
@@ -1680,7 +1710,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         mech_notify(mech, MECHALL,
                     "[bold]You attempt to jump over elevation that is too "
                     "high![reset]");
-        if (RGotPilot(mech) &&
+        if (mech_has_active_pilot(mech) &&
             MadePilotSkillRoll(mech, (int)(MechFZ(mech)) / ZSCALE / 3)) {
 
           mech_notify(mech, MECHALL, "[bold]You land safely.[reset]");
@@ -1821,8 +1851,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
       /* Are they in water, also make sure it affects them */
       if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-          (MechRTerrain(mech) == WATER ||
-           (MechRTerrain(mech) == BRIDGE &&
+          (mech_real_terrain_get(mech) == WATER ||
+           (mech_real_terrain_get(mech) == BRIDGE &&
             (lastelevation < (elevation - 1)))) &&
           elevation < 0) {
 
@@ -1849,10 +1879,10 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       }
 
     } else if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-               ((MechRTerrain(mech) == WATER && MechZ(mech) < 0) ||
-                (MechRTerrain(mech) == BRIDGE && MechZ(mech) < 0) ||
-                (MechRTerrain(mech) == ICE && MechZ(mech) < 0) ||
-                MechRTerrain(mech) == HIGHWATER) &&
+               ((mech_real_terrain_get(mech) == WATER && MechZ(mech) < 0) ||
+                (mech_real_terrain_get(mech) == BRIDGE && MechZ(mech) < 0) ||
+                (mech_real_terrain_get(mech) == ICE && MechZ(mech) < 0) ||
+                mech_real_terrain_get(mech) == HIGHWATER) &&
                MechType(mech) != CLASS_MW) {
 
       int skillmod, dammod;
@@ -1864,9 +1894,9 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         mech_notify(mech, MECHALL,
                     "You lose your sprinting momentum as you "
                     "enter water!");
-        if (!MoveModeChange(mech))
-          MECHEVENT(mech, EVENT_MOVEMODE, mech_movemode_event, TURN,
-                    MODE_OFF | MODE_SPRINT);
+        if (!mech_event_count(mech, EVENT_MOVEMODE))
+          mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event, TURN,
+                              MODE_OFF | MODE_SPRINT);
       }
 #endif
       if (IsRunning(MechSpeed(mech), MMaxSpeed(mech))) {
@@ -1881,10 +1911,11 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         skillmod = 0;
         dammod = 0;
       }
-      skillmod += (MechRTerrain(mech) == HIGHWATER ? -2
-                   : MechRTerrain(mech) == BRIDGE  ? bridge_w_elevation(mech)
-                   : MechElev(mech) > 3            ? 1
-                                                   : (MechElev(mech) - 2));
+      skillmod +=
+          (mech_real_terrain_get(mech) == HIGHWATER ? -2
+           : mech_real_terrain_get(mech) == BRIDGE  ? bridge_w_elevation(mech)
+           : MechElev(mech) > 3                     ? 1
+                                                    : (MechElev(mech) - 2));
       //
       // Stupid Frontiers cheaters. No XP gains here.
       if (!MadePilotSkillRoll_NoXP(mech, skillmod, 0)) {
@@ -1948,7 +1979,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         MechFalls(mech, lastelevation - elevation, 0);
         domino_space(mech, 2);
 
-        if (MechRTerrain(mech) == WATER &&
+        if (mech_real_terrain_get(mech) == WATER &&
             !(MechSpecials2(mech) & WATERPROOF_TECH)) {
 
           mech_notify(
@@ -1998,8 +2029,9 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-        (MechRTerrain(mech) == WATER ||
-         (MechRTerrain(mech) == BRIDGE && (lastelevation < (elevation - 1)))) &&
+        (mech_real_terrain_get(mech) == WATER ||
+         (mech_real_terrain_get(mech) == BRIDGE &&
+          (lastelevation < (elevation - 1)))) &&
         elevation < 0) {
 
       mech_notify(mech, MECHALL, "You notice a body of water in front of you");
@@ -2024,7 +2056,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
     /* New terrain restrictions */
     if (mech->xcode.context->configuration->btech_newterrain) {
-      tt = MechRTerrain(mech);
+      tt = mech_real_terrain_get(mech);
       if ((tt == HEAVY_FOREST) && fabs(MechSpeed(mech)) > MP1) {
 
 #if 0
@@ -2121,7 +2153,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
         MechFalls(mech, lastelevation - elevation, 0);
         domino_space(mech, 2);
 
-        if (MechRTerrain(mech) == WATER &&
+        if (mech_real_terrain_get(mech) == WATER &&
             !(MechSpecials2(mech) & WATERPROOF_TECH)) {
 
           mech_notify(
@@ -2170,8 +2202,9 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
     }
 
     if (!(MechSpecials2(mech) & WATERPROOF_TECH) &&
-        (MechRTerrain(mech) == WATER ||
-         (MechRTerrain(mech) == BRIDGE && (lastelevation < (elevation - 1)))) &&
+        (mech_real_terrain_get(mech) == WATER ||
+         (mech_real_terrain_get(mech) == BRIDGE &&
+          (lastelevation < (elevation - 1)))) &&
         elevation < 0) {
 
       mech_notify(mech, MECHALL, "You notice a body of water in front of you");
@@ -2197,7 +2230,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
 
     /* New terrain restrictions */
     if (mech->xcode.context->configuration->btech_newterrain) {
-      tt = MechRTerrain(mech);
+      tt = mech_real_terrain_get(mech);
       if ((tt == HEAVY_FOREST || tt == LIGHT_FOREST) &&
           fabs(MechSpeed(mech)) > MP1) {
 
@@ -2261,7 +2294,8 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
   case MOVE_FOIL:
   case MOVE_SUB:
 
-    if ((MechRTerrain(mech) != WATER && MechRTerrain(mech) != BRIDGE) ||
+    if ((mech_real_terrain_get(mech) != WATER &&
+         mech_real_terrain_get(mech) != BRIDGE) ||
         abs(MechElev(mech)) <
             (abs(MechZ(mech)) + (MechMove(mech) == MOVE_FOIL ? -1 : 0))) {
       /* Run aground */
@@ -2417,7 +2451,7 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       return;
     }
 
-    tt = MechRTerrain(mech);
+    tt = mech_real_terrain_get(mech);
     if ((tt == HEAVY_FOREST || tt == LIGHT_FOREST) &&
         fabs(MechSpeed(mech)) > MP1) {
 #if 0
@@ -2460,15 +2494,16 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
   case MOVE_VTOL:
   case MOVE_FLY:
 
-    if ((Landed(mech) && MechRTerrain(mech) != ROAD &&
-         MechRTerrain(mech) != BRIDGE && MechRTerrain(mech) != GRASSLAND &&
-         MechRTerrain(mech) != BUILDING) ||
-        (IsForest(MechRTerrain(mech)) &&
+    if ((Landed(mech) && mech_real_terrain_get(mech) != ROAD &&
+         mech_real_terrain_get(mech) != BRIDGE &&
+         mech_real_terrain_get(mech) != GRASSLAND &&
+         mech_real_terrain_get(mech) != BUILDING) ||
+        (IsForest(mech_real_terrain_get(mech)) &&
          MechZ(mech) < (MechElevation(mech) + 2))) {
 
       mech_notify(mech, MECHALL,
                   "You go where no flying thing has ever gone before..");
-      if (RGotPilot(mech) && MadePilotSkillRoll(mech, 5)) {
+      if (mech_has_active_pilot(mech) && MadePilotSkillRoll(mech, 5)) {
         mech_notify(mech, MECHALL, "You stop in time!");
         move_unit_back(mech, deltax, deltay, lastelevation, ot, le);
       } else {
@@ -2516,11 +2551,11 @@ void NewHexEntered(MECH *mech, MAP *mech_map, float deltax, float deltay,
       return;
     }
 
-    if (MechRTerrain(mech) == WATER)
+    if (mech_real_terrain_get(mech) == WATER)
       return;
 
-    if (MechRTerrain(mech) == LIGHT_FOREST ||
-        MechRTerrain(mech) == HEAVY_FOREST)
+    if (mech_real_terrain_get(mech) == LIGHT_FOREST ||
+        mech_real_terrain_get(mech) == HEAVY_FOREST)
       elevation = MechElevation(mech) + 2;
     else
       elevation = MechElevation(mech);
@@ -2730,7 +2765,8 @@ void UpdatePilotSkillRolls(MECH *mech) {
 #ifndef BT_MOVEMENT_MODES
     if (InSpecial(mech) && InGravity(mech))
 #else
-    if (InSpecial(mech) && InGravity(mech) && !MoveModeChange(mech))
+    if (InSpecial(mech) && InGravity(mech) &&
+        !mech_event_count(mech, EVENT_MOVEMODE))
 #endif
       if (MechSpeed(mech) > MechMaxSpeed(mech) &&
           MechType(mech) == CLASS_MECH) {

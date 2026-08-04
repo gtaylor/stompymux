@@ -8,14 +8,33 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
+#include <stdio.h>
+#include <string.h>
+
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
+#include "macros.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.h"
-#include "glue.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_control.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3.misc.h"
 #include "p.mech.c3i.h"
 #include "p.mech.contacts.h"
 #include "p.mech.los.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 #define TARG_LOS_NONE 0
@@ -549,5 +568,5 @@ float findC3RangeWithNetwork(MECH *mech, MECH *mechTarget, float realRange,
 
 void debugC3(BtechContext *context, char *msg) {
   if (DEBUG_C3)
-    SendDebug(context, msg);
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", msg);
 }

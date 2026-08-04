@@ -1,11 +1,12 @@
 /* presets.c - Session-scoped OSC 8 preset catalog. */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mux/support/styled_text/internal.h"
+#include "mux/support/styled_text/palette.h"
+#include "mux/support/styled_text/render.h"
 
 bool styled_text_preset_name_valid(const char *name) {
   size_t length;

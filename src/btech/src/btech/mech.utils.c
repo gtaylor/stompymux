@@ -8,39 +8,59 @@
  *       All rights reserved
  */
 
-#include "mux/commands/action_messages.h"
-#include "mux/server/platform.h"
-#include "mux/world/move.h"
-
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/file.h>
+#include <string.h>
+#include <strings.h>
 
 #include "autopilot.h"
-#include "glue.h"
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "btmux_build_config.h"
+#include "macros.h"
 #include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
+#include "missile_hit_registry.h"
+#include "mux/commands/action_messages.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mux/world/move.h"
+#include "mymath.h"
 #include "p.aero.bomb.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.crit.h"
 #include "p.ds.bay.h"
-#include "p.mech.combat.h"
+#include "p.glue.h"
+#include "p.glue.hcode.h"
+#include "p.map.obj.h"
 #include "p.mech.consistency.h"
 #include "p.mech.damage.h"
 #include "p.mech.los.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.restrict.h"
 #include "p.mech.startup.h"
 #include "p.mech.status.h"
 #include "p.mech.utils.h"
 #include "p.mechrep.h"
 #include "p.template.h"
-
-#ifdef BT_ADVANCED_ECON
-#include "p.mech.tech.do.h"
-#endif
+#include "random.h"
+#include "weapon_settings.h"
 
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
@@ -214,9 +234,9 @@ DbRef FindTargetDBREFFromMapNumber(MECH *mech, char *mapnum) {
     return -1;
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (!map) {
-    SendError(mech->xcode.context,
-              tprintf("FTDBREFFMN:invalid map:Mech: %ld  Index: %ld",
-                      mech->mynum, mech->mapindex));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("FTDBREFFMN:invalid map:Mech: %ld  Index: %ld",
+                               mech->mynum, mech->mapindex));
     mech->mapindex = -1;
     return -1;
   }
@@ -249,18 +269,19 @@ static int Leave_Hangar(MAP *map, MECH *mech) {
                       tprintf("%d", (int)map->mapobj[TYPE_LEAVE]->obj));
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (mech->mapindex == mapob) {
-    SendError(mech->xcode.context,
-              tprintf("#%ld %s attempted to leave, but no target map?",
-                      mech->mynum, mech_display_id(mech).text));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("#%ld %s attempted to leave, but no target map?",
+                               mech->mynum, mech_display_id(mech).text));
     mech_notify(mech, MECHALL,
                 "Exit of this map is.. fubared. Please contact a wizard");
     return 0;
   }
   if (!(mapo = find_entrance_by_target(map, mapob))) {
-    SendError(mech->xcode.context,
-              tprintf("#%ld %s attempted to leave, but no target place was "
-                      "found? setting the mech at 0,0 at %ld.",
-                      mech->mynum, mech_display_id(mech).text, mech->mapindex));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("#%ld %s attempted to leave, but no target place was "
+                "found? setting the mech at 0,0 at %ld.",
+                mech->mynum, mech_display_id(mech).text, mech->mapindex));
     mech_notify(mech, MECHALL,
                 "Weird bug happened during leave. Please contact a wizard. ");
     return 1;
@@ -271,7 +292,7 @@ static int Leave_Hangar(MAP *map, MECH *mech) {
   mech_printf(mech, MECHALL, "You have left %s.",
               structure_name(mech->xcode.context->database, mapo).text);
   mech_Rsetxy(GOD, (void *)mech, tprintf("%d %d", mapo->x, mapo->y));
-  ContinueFlying(mech);
+  mech_continue_flying(mech);
   if (car)
     MirrorPosition(mech, car, 0);
   MechLOSBroadcast(
@@ -310,9 +331,10 @@ void CheckEdgeOfMap(MECH *mech) {
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
     mech_shutdown(MechPilot(mech), (void *)mech, "");
-    SendError(mech->xcode.context,
-              tprintf("CheckEdgeofMap:invalid map:Mech: %ld  Index: %ld",
-                      mech->mynum, mech->mapindex));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("CheckEdgeofMap:invalid map:Mech: %ld  Index: %ld", mech->mynum,
+                mech->mapindex));
     mech->mapindex = -1;
     return;
   }
@@ -378,7 +400,7 @@ void CheckEdgeOfMap(MECH *mech) {
         MechStartFY(mech) = 0.0;
         MechStartFZ(mech) = 0.0;
         if (!Landed(mech))
-          MaybeMove(mech);
+          mech_maybe_move(mech);
       }
     }
   }
@@ -452,9 +474,9 @@ int InWeaponArc(MECH *mech, float x, float y) {
       res |= TURRETARC;
   }
   if (res == NOARC)
-    SendError(mech->xcode.context,
-              tprintf("NoArc: #%ld: BearingToTarget:%d Facing:%d", mech->mynum,
-                      bearingToTarget, MechFacing(mech)));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+                       tprintf("NoArc: #%ld: BearingToTarget:%d Facing:%d",
+                               mech->mynum, bearingToTarget, MechFacing(mech)));
   return res;
 }
 
@@ -534,7 +556,7 @@ char *FindPilotingSkillName(MECH *mech) {
     }
   } else {
 
-    if (MechType(mech) == CLASS_MW && MechRTerrain(mech) == WATER)
+    if (MechType(mech) == CLASS_MW && mech_real_terrain_get(mech) == WATER)
       return "Swimming";
     switch (MechType(mech)) {
     case CLASS_MW:
@@ -587,7 +609,7 @@ int FindPilotPiloting(MECH *mech) {
   int i[NUM_MECHSKILLS];
 
   GENERIC_FIND_MECHSKILL(MECHSKILL_PILOTING, 0);
-  if (RGotPilot(mech))
+  if (mech_has_active_pilot(mech))
     if ((str = FindPilotingSkillName(mech)))
       return char_getskilltarget(mech->xcode.context, MechPilot(mech), str, 0);
   return DEFAULT_PILOTING;
@@ -602,7 +624,7 @@ int FindPilotSpotting(MECH *mech) {
   int i[NUM_MECHSKILLS];
 
   GENERIC_FIND_MECHSKILL(MECHSKILL_SPOTTING, 0);
-  if (RGotPilot(mech))
+  if (mech_has_active_pilot(mech))
     return (char_getskilltarget(mech->xcode.context, MechPilot(mech),
                                 "Gunnery-Spotting", 0));
   return DEFAULT_SPOTTING;
@@ -613,7 +635,7 @@ int FindPilotArtyGun(MECH *mech) {
   int i[NUM_MECHSKILLS];
 
   GENERIC_FIND_MECHSKILL(MECHSKILL_ARTILLERY, 0);
-  if (RGotGPilot(mech))
+  if (mech_has_active_gunner(mech))
     return (char_getskilltarget(mech->xcode.context, GunPilot(mech),
                                 "Gunnery-Artillery", 0));
   return DEFAULT_ARTILLERY;
@@ -624,7 +646,7 @@ int FindPilotGunnery(MECH *mech, int weapindx) {
   int i[NUM_MECHSKILLS];
 
   GENERIC_FIND_MECHSKILL(MECHSKILL_GUNNERY, 0);
-  if (RGotGPilot(mech))
+  if (mech_has_active_gunner(mech))
     if ((str = FindGunnerySkillName(mech, weapindx)))
       return char_getskilltarget(mech->xcode.context, GunPilot(mech), str, 0);
   return DEFAULT_GUNNERY;
@@ -684,11 +706,11 @@ int MadePilotSkillRoll_NoXP(MECH *mech, int mods, int succeedWhenFallen) {
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = MechPilotSkillRoll_BTH(mech, mods);
 
-  SendDebug(mech->xcode.context,
-            tprintf("Attempting to make pilot skill roll. "
-                    "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                    FindSPilotPiloting(mech), mods, MechPilotSkillBase(mech),
-                    roll_needed));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("Attempting to make pilot skill roll. "
+                             "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
+                             FindSPilotPiloting(mech), mods,
+                             MechPilotSkillBase(mech), roll_needed));
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
@@ -709,11 +731,11 @@ int MadePilotSkillRoll_Advanced(MECH *mech, int mods, int succeedWhenFallen) {
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = MechPilotSkillRoll_BTH(mech, mods);
 
-  SendDebug(mech->xcode.context,
-            tprintf("Attempting to make pilot (noxp) skill roll. "
-                    "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                    FindSPilotPiloting(mech), mods, MechPilotSkillBase(mech),
-                    roll_needed));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("Attempting to make pilot (noxp) skill roll. "
+                             "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
+                             FindSPilotPiloting(mech), mods,
+                             MechPilotSkillBase(mech), roll_needed));
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
@@ -930,7 +952,7 @@ void MapCoordToRealCoord(int hex_x, int hex_y, float *cart_x, float *cart_y) {
 #define NAV_MAX_WIDTH 4 + 21 + 2
 
 void navigate_sketch_mechs(MECH *mech, MAP *map, int x, int y,
-                           char buff[NAVIGATE_LINES][MBUF_SIZE]) {
+                           char buff[][MBUF_SIZE]) {
   float corner_fx, corner_fy, fx, fy;
   int i, row, column;
   MECH *other;
@@ -1003,10 +1025,11 @@ int FindTargetXY(MECH *mech, float *x, float *y, float *z) {
   if (num_crits) {                                                             \
     if (num_crits != (i = GetWeaponCrits(mech, lastweap)) && i < 9) {          \
       if (whine)                                                               \
-        SendError(mech->xcode.context,                                         \
-                  tprintf("Error in the numcriticals for weapon on #%ld! "     \
-                          "(Should be: %d, is: %d)",                           \
-                          mech->mynum, i, num_crits));                         \
+        btech_channel_send(                                                    \
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",              \
+            tprintf("Error in the numcriticals for weapon on #%ld! "           \
+                    "(Should be: %d, is: %d)",                                 \
+                    mech->mynum, i, num_crits));                               \
       return -1;                                                               \
     }                                                                          \
     num_crits = 0;                                                             \
@@ -1858,10 +1881,11 @@ void do_sub_magic(MECH *mech, int loud) {
 
   if (jjs > maxjjs) {
     if (loud)
-      SendError(mech->xcode.context,
-                tprintf("Error in #%ld (%s): %d JJs, yet %d maximum available "
-                        "(due to walk MPs)?",
-                        mech->mynum, MechType_Ref(mech), jjs, maxjjs));
+      btech_channel_send(
+          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+          tprintf("Error in #%ld (%s): %d JJs, yet %d maximum available "
+                  "(due to walk MPs)?",
+                  mech->mynum, MechType_Ref(mech), jjs, maxjjs));
 
     jjs = maxjjs;
   }
@@ -1872,22 +1896,22 @@ void do_sub_magic(MECH *mech, int loud) {
     MechNumOsinks(mech) =
         wanths - MIN(MechRealNumsinks(mech), inthses * hs_eff);
   if (wanths != MechRealNumsinks(mech) && loud) {
-    SendError(mech->xcode.context,
-              tprintf("Error in #%ld (%s): Set HS: %d. Existing HS: %d. "
-                      "Difference: %d. Please %s.",
-                      mech->mynum, MechType_Ref(mech), MechRealNumsinks(mech),
-                      wanths, MechRealNumsinks(mech) - wanths,
-                      wanths < MechRealNumsinks(mech)
-                          ? "add the extra HS critical(s)"
-                          : "fix the template"));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("Error in #%ld (%s): Set HS: %d. Existing HS: %d. "
+                "Difference: %d. Please %s.",
+                mech->mynum, MechType_Ref(mech), MechRealNumsinks(mech), wanths,
+                MechRealNumsinks(mech) - wanths,
+                wanths < MechRealNumsinks(mech) ? "add the extra HS critical(s)"
+                                                : "fix the template"));
   } else
     MechRealNumsinks(mech) = wanths;
   MechNumOsinks(mech) = wanths_f;
 
   if ((MechNumOsinks(mech) * shs_size / hs_eff -
        (MechSpecials(mech) & ICE_TECH ? 0 : 10) * shs_size) < 0)
-    SendError(
-        mech->xcode.context,
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error in #%ld (%s): HS less then max possible in engine!",
                 mech->mynum, MechType_Ref(mech)));
 }
@@ -1946,7 +1970,7 @@ void do_magic(MECH *mech) {
         (TURRET_LOCKED | TURRET_JAMMED | TAIL_ROTOR_DESTROYED | CREW_STUNNED);
 
   /* stop the burning */
-  StopBurning(mech);
+  mech_event_cancel(mech, EVENT_VEHICLEBURN);
   StopPerformingAction(mech);
 
   memcpy(&opp, mech, sizeof(MECH));
@@ -2619,33 +2643,34 @@ void ChannelEmitKill(MECH *mech, MECH *attacker, const char *reason) {
     MechUnitsKilled(attacker) = MechUnitsKilled(attacker) + 1;
 
   if (reason) {
-    SendDebug(mech->xcode.context,
-              tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                      mech->mynum, MechType_Ref(mech), attacker->mynum,
-                      MechType_Ref(attacker), reason));
-    SendDeath(mech->xcode.context,
-              tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                      mech->mynum, MechType_Ref(mech), attacker->mynum,
-                      MechType_Ref(attacker), reason));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
+                               mech->mynum, MechType_Ref(mech), attacker->mynum,
+                               MechType_Ref(attacker), reason));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
+                       tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
+                               mech->mynum, MechType_Ref(mech), attacker->mynum,
+                               MechType_Ref(attacker), reason));
   } else {
-    SendDebug(mech->xcode.context,
-              tprintf("#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
-                      MechType_Ref(mech), attacker->mynum,
-                      MechType_Ref(attacker)));
-    SendDeath(mech->xcode.context,
-              tprintf("#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
-                      MechType_Ref(mech), attacker->mynum,
-                      MechType_Ref(attacker)));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("#%ld [%s] has been killed by #%ld [%s]",
+                               mech->mynum, MechType_Ref(mech), attacker->mynum,
+                               MechType_Ref(attacker)));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
+                       tprintf("#%ld [%s] has been killed by #%ld [%s]",
+                               mech->mynum, MechType_Ref(mech), attacker->mynum,
+                               MechType_Ref(attacker)));
   }
 
   if (IsDS(mech)) {
     if (reason) {
-      SendDSInfo(mech->xcode.context,
-                 tprintf("#%ld has been killed by #%ld (%s)", mech->mynum,
-                         attacker->mynum, reason));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+                         tprintf("#%ld has been killed by #%ld (%s)",
+                                 mech->mynum, attacker->mynum, reason));
     } else {
-      SendDSInfo(mech->xcode.context, tprintf("#%ld has been killed by #%ld",
-                                              mech->mynum, attacker->mynum));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
+                         tprintf("#%ld has been killed by #%ld", mech->mynum,
+                                 attacker->mynum));
     }
   }
 
@@ -2792,8 +2817,8 @@ void CalcFasaCost_AddPrice(const MECH *mech, float *total, char *desc,
                            float value) {
   *total += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    SendDebug(mech->xcode.context,
-              tprintf("Addprice - %25s %8.0f", desc, value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("Addprice - %25s %8.0f", desc, value));
 }
 
 int MechNumHeatsinksInEngine(MECH *mech) {
@@ -2968,8 +2993,9 @@ unsigned long long int CalcFasaCost(MECH *mech) {
           turret += crit_weight(mech, part);
         if (IsEnergy(part)) {
           pamp += crit_weight(mech, part);
-          SendDebug(mech->xcode.context,
-                    tprintf("PAmp Weight: %d", crit_weight(mech, part)));
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+              tprintf("PAmp Weight: %d", crit_weight(mech, part)));
         }
       }
     /*
@@ -3086,8 +3112,9 @@ unsigned long long int CalcFasaCost(MECH *mech) {
     }
 
 #if COST_DEBUG
-    SendDebug(mech->xcode.context,
-              tprintf("Heat Sinks: %d, Cost Per Sink: %d", numsinks, sinkcost));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("Heat Sinks: %d, Cost Per Sink: %d", numsinks, sinkcost));
 #endif
 
     /* Armor */
@@ -3124,9 +3151,10 @@ unsigned long long int CalcFasaCost(MECH *mech) {
                             : MechSpecials2(mech) & HVY_FF_ARMOR_TECH  ? 25000
                                                                        : 10000);
 #if COST_DEBUG
-    SendDebug(mech->xcode.context,
-              tprintf("Armor Tons %.1f(%d pts) * Armor Cost Per Point %d",
-                      armor_tons, orig_armor, armor_cost_point));
+    btech_channel_send(
+        mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("Armor Tons %.1f(%d pts) * Armor Cost Per Point %d", armor_tons,
+                orig_armor, armor_cost_point));
 #endif
     int armor_price = armor_tons * armor_cost_point;
     CalcFasaCost_AddPrice(mech, &total, "Armor", armor_price);
@@ -3155,7 +3183,8 @@ unsigned long long int CalcFasaCost(MECH *mech) {
 
   if (ammoweapcount > 0) {
     if (mech->xcode.context->configuration->btech_cost_debug)
-      SendDebug(mech->xcode.context, "Ammo Costs");
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                         "Ammo Costs");
     for (i = 0; i < ammoweapcount; i++) {
       /* ArtemisIV ammo is X2 */
       /* Interesting way to handle half_tons */
@@ -3277,8 +3306,9 @@ unsigned long long int CalcFasaCost(MECH *mech) {
       long indiv_part_cost = btech_part_cost_get(mech->xcode.context, part);
       if (MechType(mech) != CLASS_MECH && IsWeapon(part)) {
         indiv_part_cost *= MechWeapons[part - 1].criticals;
-        // SendDebug(mech->xcode.context, tprintf("Part#: %s(%d) Crits: %d",
-        // MechWeapons[part-1].name, part-1, MechWeapons[part-1].criticals));
+        // btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+        // tprintf("Part#: %s(%d) Crits: %d", MechWeapons[part-1].name, part-1,
+        // MechWeapons[part-1].criticals));
       }
       CalcFasaCost_AddPrice(
           mech, &total, (char *)part_name(mech->xcode.context, part, 0).text,
@@ -3346,8 +3376,9 @@ unsigned long long int CalcFasaCost(MECH *mech) {
   }
 
 #if COST_DEBUG
-  SendDebug(mech->xcode.context, tprintf("Price Total %.0f * Mod - %f = %.0f",
-                                         total, mod, total * mod));
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+      tprintf("Price Total %.0f * Mod - %f = %.0f", total, mod, total * mod));
 #endif
 
   return (total * mod);
@@ -3399,19 +3430,22 @@ float skillmul[HIGH_SKILL][HIGH_SKILL] = {
 void Calc_AddOffBV(const MECH *mech, float *offbv, char *desc, float value) {
   *offbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    SendDebug(mech->xcode.context, tprintf("AddOffBV %25s %8.2f", desc, value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("AddOffBV %25s %8.2f", desc, value));
 }
 
 void Calc_AddDefBV(const MECH *mech, float *defbv, char *desc, float value) {
   *defbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    SendDebug(mech->xcode.context, tprintf("AddDefBV %25s %8.2f", desc, value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("AddDefBV %25s %8.2f", desc, value));
 }
 
 void Calc_SubDefBV(const MECH *mech, float *defbv, char *desc, float value) {
   *defbv -= value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    SendDebug(mech->xcode.context, tprintf("SubDefBV %25s-%8.2f", desc, value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("SubDefBV %25s-%8.2f", desc, value));
 }
 
 /* Calculate Defensive BV 2.0 per Total Warfare Rules */
@@ -3819,12 +3853,12 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
     else
       intern = (debug3 = AeroSI(mech));
 #ifdef DEBUG_BV
-    SendDebug(mech->xcode.context,
-              tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",
-                      debug1 / 100, debug2 / 100, debug3 / 100));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",
+                               debug1 / 100, debug2 / 100, debug3 / 100));
 //				if(mechspec2 & TORSOCOCKPIT_TECH && i == CTORSO)
-//					SendDebug(mech->xcode.context,
-// tprintf("TorsoCockpit Armoradd
+//					btech_channel_send(mech->xcode.context,
+// BTECH_CHANNEL_MECH_DEBUG, // tprintf("TorsoCockpit Armoradd
 //: %d", debug4));
 #endif
 
@@ -3845,10 +3879,11 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
                            (mech_weapon_recycle_time(mech, weapindx) * 100)));
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context,
-                    tprintf("DefWeapBVadd (%s) : %d - Total : %d",
-                            MechWeapons[weapindx].name, debug1 / 100,
-                            defweapbv / 100));
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "%s",
+                             tprintf("DefWeapBVadd (%s) : %d - Total : %d",
+                                     MechWeapons[weapindx].name, debug1 / 100,
+                                     defweapbv / 100));
 #endif
 
         } else {
@@ -3863,10 +3898,11 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
             if (FindArtemisForWeapon(mech, i, ii))
               offweapbv += (mech_weapon_battle_value(mech, weapindx) * 20);
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context,
-                    tprintf("OffWeapBVadd (%s) : %d - Total : %d",
-                            MechWeapons[weapindx].name, debug1 / 100,
-                            offweapbv / 100));
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "%s",
+                             tprintf("OffWeapBVadd (%s) : %d - Total : %d",
+                                     MechWeapons[weapindx].name, debug1 / 100,
+                                     offweapbv / 100));
 #endif
         }
         if (type == CLASS_MECH) {
@@ -3882,10 +3918,11 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
               tempheat = (tempheat / 2);
             mostheat += tempheat;
 #ifdef DEBUG_BV
-            SendDebug(mech->xcode.context,
-                      tprintf("Tempheatadded (%s) : %d - Total : %d",
-                              MechWeapons[weapindx].name, tempheat / 100,
-                              mostheat / 100));
+            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                               "%s",
+                               tprintf("Tempheatadded (%s) : %d - Total : %d",
+                                       MechWeapons[weapindx].name,
+                                       tempheat / 100, mostheat / 100));
 #endif
             tempheat = 0;
           }
@@ -3918,8 +3955,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
                                   .ammoperton)));
 
 #ifdef DEBUG_BV
-        SendDebug(
-            mech->xcode.context,
+        btech_channel_send(
+            mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
             tprintf("AmmoBVmul (%s) : %.2f", MechWeapons[weapindx].name, mul));
 #endif
 
@@ -3933,19 +3970,20 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
                                    100)));
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context,
-                    tprintf("AmmoDefWeapBVadd (%s) : %d - Total : %d",
-                            MechWeapons[weapindx].name, debug1 / 100,
-                            defweapbv / 100));
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "%s",
+                             tprintf("AmmoDefWeapBVadd (%s) : %d - Total : %d",
+                                     MechWeapons[weapindx].name, debug1 / 100,
+                                     defweapbv / 100));
 #endif
 
         } else {
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context,
-                    tprintf("Abattlebalue (%s) : %d",
-                            MechWeapons[weapindx].name,
-                            (mech_weapon_battle_value(mech, weapindx) / 10)));
+          btech_channel_send(
+              mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+              tprintf("Abattlebalue (%s) : %d", MechWeapons[weapindx].name,
+                      (mech_weapon_battle_value(mech, weapindx) / 10)));
 #endif
 
           offweapbv +=
@@ -3957,10 +3995,11 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
                                    100)));
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context,
-                    tprintf("AmmoOffWeapBVadd (%s)  : %d - Total : %d",
-                            MechWeapons[weapindx].name, debug1 / 100,
-                            offweapbv / 100));
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "%s",
+                             tprintf("AmmoOffWeapBVadd (%s)  : %d - Total : %d",
+                                     MechWeapons[weapindx].name, debug1 / 100,
+                                     offweapbv / 100));
 #endif
         }
       }
@@ -3971,7 +4010,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
           if (i == CTORSO || i == HEAD || i == RLEG || i == LLEG) {
 
 #ifdef DEBUG_BV
-            SendDebug(mech->xcode.context, "20 deduct added for ammo");
+            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                               "20 deduct added for ammo");
 #endif
             deduct += 2000;
             continue;
@@ -3979,7 +4019,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
         if (mechspec & (XL_TECH | XXL_TECH | ICE_TECH | LE_TECH)) {
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context, "20/2000 deduct added for ammo");
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "20/2000 deduct added for ammo");
 #endif
 
           deduct += 2000;
@@ -3989,7 +4030,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
             !(MechSections(mech)[i].config & CASE_TECH)) {
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context, "20 deduct added for ammo");
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "20 deduct added for ammo");
 #endif
 
           deduct += 2000;
@@ -4001,7 +4043,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
                CASE_TECH))) {
 
 #ifdef DEBUG_BV
-          SendDebug(mech->xcode.context, "20 deduct added for ammo");
+          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                             "20 deduct added for ammo");
 #endif
 
           deduct += 2000;
@@ -4019,13 +4062,14 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
     if ((temp = (mostheat - (MechActiveNumsinks(mech) * 100))) > 0) {
       deduct += temp * 5;
 #ifdef DEBUG_BV
-      SendDebug(mech->xcode.context,
-                tprintf("Deduct add for heat : %d", (temp * 5) / 100));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                         tprintf("Deduct add for heat : %d", (temp * 5) / 100));
 #endif
     }
   }
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context, tprintf("DeductTotal : %d", deduct / 100));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DeductTotal : %d", deduct / 100));
 #endif
 
   if (mechspec & ECM_TECH)
@@ -4056,7 +4100,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
   }
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context, tprintf("InternMul : %.2f", mul));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("InternMul : %.2f", mul));
 #endif
 
   armor = (armor * (MechType(mech) == CLASS_MECH ? 2 : 1));
@@ -4064,8 +4109,9 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
   mul = 1.00;
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context,
-            tprintf("ArmorEnd : %d IntEnd : %d", armor / 100, intern / 100));
+  btech_channel_send(
+      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+      tprintf("ArmorEnd : %d IntEnd : %d", armor / 100, intern / 100));
 #endif
 
   maxspeed = MMaxSpeed(mech);
@@ -4115,14 +4161,15 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
     mul += 2.0;
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context, tprintf("DefBVMul : %.2f", mul));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DefBVMul : %.2f", mul));
 #endif
 
   defbv = (armor + intern + (MechTons(mech) * 100) + defweapbv);
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context,
-            tprintf("DefBV Tonnage added : %d", MechTons(mech)));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DefBV Tonnage added : %d", MechTons(mech)));
 #endif
 
   if ((defbv - deduct) < 1)
@@ -4142,22 +4189,23 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
   defbv = defbv * mul;
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context, tprintf("DefBV : %d", defbv / 100));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DefBV : %d", defbv / 100));
 #endif
 
   if ((type == CLASS_MECH || is_aero(mech)) &&
       mostheat > (MechActiveNumsinks(mech) * 100)) {
 #ifdef DEBUG_BV
-    SendDebug(mech->xcode.context,
-              tprintf("Pre-Heat OffWeapBV : %d", offweapbv / 100));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("Pre-Heat OffWeapBV : %d", offweapbv / 100));
 #endif
     i = (((MechActiveNumsinks(mech) / 100) * offweapbv) / mostheat);
     ii = ((offweapbv - i) / 2);
     offweapbv = i + ii;
 
 #ifdef DEBUG_BV
-    SendDebug(mech->xcode.context,
-              tprintf("Post-Heat OffWeapBV : %d", offweapbv / 100));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("Post-Heat OffWeapBV : %d", offweapbv / 100));
 #endif
   }
   /*
@@ -4176,7 +4224,8 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
             1.2);
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context, tprintf("DumbMul : %.2f", mul));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DumbMul : %.2f", mul));
 #endif
 
   if (mechspec2 & OMNIMECH_TECH)
@@ -4188,18 +4237,18 @@ int CalculateBV(MECH *mech, int gunstat, int pilstat) {
   offbv = offweapbv;
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context,
-            tprintf("OffWeapBVAfter : %d", offweapbv / 100));
-  SendDebug(mech->xcode.context,
-            tprintf("DefBV : %d OffBV : %d TotalBV : %d", defbv / 100,
-                    offbv / 100, (offbv + defbv) / 100));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("OffWeapBVAfter : %d", offweapbv / 100));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("DefBV : %d OffBV : %d TotalBV : %d", defbv / 100,
+                             offbv / 100, (offbv + defbv) / 100));
 #endif
 
   mul = (skillmul[LAZY_SKILLMUL(gunskl)][LAZY_SKILLMUL(pilskl)]);
 
 #ifdef DEBUG_BV
-  SendDebug(mech->xcode.context,
-            tprintf("SkillMul : %.2f (%d/%d)", mul, gunskl, pilskl));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("SkillMul : %.2f (%d/%d)", mul, gunskl, pilskl));
 #endif
   return ((offbv + defbv) / 100) * mul;
 }
@@ -4374,7 +4423,7 @@ int HeatFactor(MECH *mech) {
   snprintf(buf, LBUF_SIZE,
            "HeatFactor : Invalid heat factor calculation on #%ld.",
            mech->mynum);
-  SendDebug(mech->xcode.context, buf);
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s", buf);
 }
 
 /* Function to determine if a weapon is functional or not

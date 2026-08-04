@@ -2,9 +2,12 @@
 
 #pragma once
 
+#include "mux/commands/command_context.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/support/hash_table.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_registries.h"
+#include "mux/world/world_context.h"
 
 typedef struct WorldContext WorldContext;
 

@@ -1,31 +1,30 @@
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* comsys.c - Player channel creation, membership, and message delivery. */
 
-#include "mux/network/network_output.h"
-#include "mux/server/game.h"
-#include <ctype.h>
-#include <sys/types.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <time.h>
 
-#include "mux/commands/command_runtime.h"
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/mux_server.h"
-#include "mux/server/platform.h"
-#include "mux/server/server_config.h"
-#include "mux/world/match.h"
-#include "mux/world/player.h"
-#include "mux/world/world_context.h"
-
-#include "mux/commands/command_helpers.h"
-#include "mux/commands/command_invocation.h"
 #include "mux/communication/access_policy.h"
 #include "mux/communication/channel_registry.h"
+#include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/comsys_internal.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/network/network_output.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/persistence/gamedb.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/fifo.h"
 #include "mux/support/styled_text/markup.h"
-#include "mux/support/utf8.h"
+#include "mux/world/player.h"
 
 void init_chantab(ChannelRegistry *channels) {
   channel_registry_reset_statistics(channels);
@@ -33,18 +32,24 @@ void init_chantab(ChannelRegistry *channels) {
 
 void send_channel(EvaluationContext *evaluation, const char *chan,
                   const char *format, ...) {
+  va_list arguments;
+
+  va_start(arguments, format);
+  send_channel_v(evaluation, chan, format, arguments);
+  va_end(arguments);
+}
+
+void send_channel_v(EvaluationContext *evaluation, const char *chan,
+                    const char *format, va_list arguments) {
   struct channel *ch;
   char buf[LBUF_SIZE];
   char data[LBUF_SIZE];
   char *bp = buf;
   char *newline;
-  va_list ap;
 
   if (!(ch = select_channel(evaluation->runtime->channels, chan)))
     return;
-  va_start(ap, format);
-  vsnprintf(data, LBUF_SIZE, format, ap);
-  va_end(ap);
+  vsnprintf(data, LBUF_SIZE, format, arguments);
 
   safe_chr('[', buf, &bp);
   safe_str(chan, buf, &bp);

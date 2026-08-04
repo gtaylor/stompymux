@@ -7,6 +7,9 @@
 
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/internal.h"
+#include "mux/support/styled_text/markup.h"
+#include "mux/support/styled_text/palette.h"
+#include "mux/support/styled_text/render.h"
 #include "mux/support/utf8.h"
 
 const char *styled_find_tag_close(const char *start) {

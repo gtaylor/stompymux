@@ -8,58 +8,59 @@
  *
  */
 
-/* All the *_{succ|fail|econ} functions belong here */
-#include "mux/server/game.h"
-#include "mux/server/platform.h"
+#include <ctype.h>
+#include <string.h>
 
-#include "mech.events.h"
+#include "mech.parts.h"
+#include "mux/server/platform.h"
+/* All the *_{succ|fail|econ} functions belong here */
+#include "btech_context.h"
+#include "macros.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
 #include "mech.tech.h"
-#include "mux/network/mux_event.h"
-#include "p.econ.h"
-#include "p.mech.status.h"
+#include "mux/server/game.h"
+#include "p.glue.hcode.h"
 #include "p.mech.tech.h"
 #include "p.mech.utils.h"
 
-#define PARTCHECK_SUB(m, a, b, c)                                              \
-  AVCHECKM(m, a, b, c);                                                        \
-  GrabPartsM(m, a, b, c);
+static bool parts_consume_one(DbRef player, MECH *mech, int location, int part,
+                              int brand, int count) {
+  const MechPartRequirement requirement = {
+      .part = mech_parts_alias(mech, location, part),
+      .brand = brand,
+      .count = count,
+  };
+  return mech_parts_consume(mech, player, &requirement, 1);
+}
 
-#ifndef BT_COMPLEXREPAIRS
-#define PARTCHECK(m, a, b, c)                                                  \
-  {                                                                            \
-    PARTCHECK_SUB(m, alias_part(m, a), b, c);                                  \
-  }
-#else
-#define PARTCHECK(m, a, b, c)                                                  \
-  {                                                                            \
-    PARTCHECK_SUB(m, alias_part(m, a, loc), b, c);                             \
-  }
-#endif
+static bool parts_consume_two(DbRef player, MECH *mech, int first_part,
+                              int first_brand, int first_count, int second_part,
+                              int second_brand, int second_count) {
+  const MechPartRequirement requirements[] = {
+      {.part = first_part, .brand = first_brand, .count = first_count},
+      {.part = second_part, .brand = second_brand, .count = second_count},
+  };
+  return mech_parts_consume(mech, player, requirements,
+                            sizeof(requirements) / sizeof(requirements[0]));
+}
 
-#define PARTCHECKTWO(m, a, b, c, d, e, f)                                      \
-  AVCHECKM(m, a, b, c);                                                        \
-  AVCHECKM(m, d, e, f);                                                        \
-  GrabPartsM(m, a, b, c);                                                      \
-  GrabPartsM(m, d, e, f);
-
-#define PARTCHECKTHREE(m, a, b, c, d, e, f, g, h, i)                           \
-  AVCHECKM(m, a, b, c);                                                        \
-  AVCHECKM(m, d, e, f);                                                        \
-  AVCHECKM(m, g, h, i);                                                        \
-  GrabPartsM(m, a, b, c);                                                      \
-  GrabPartsM(m, d, e, f);                                                      \
-  GrabPartsM(m, g, h, i);
-
-#define PARTCHECKFOUR(m, a, b, c, d, e, f, g, h, i, j, k, l)                   \
-  AVCHECKM(m, a, b, c);                                                        \
-  AVCHECKM(m, d, e, f);                                                        \
-  AVCHECKM(m, g, h, i);                                                        \
-  AVCHECKM(m, j, k, l);                                                        \
-  GrabPartsM(m, a, b, c);                                                      \
-  GrabPartsM(m, d, e, f);                                                      \
-  GrabPartsM(m, g, h, i);                                                      \
-  GrabPartsM(m, j, k, l);
+static bool parts_consume_four(DbRef player, MECH *mech, int first_part,
+                               int first_brand, int first_count,
+                               int second_part, int second_brand,
+                               int second_count, int third_part,
+                               int third_brand, int third_count,
+                               int fourth_part, int fourth_brand,
+                               int fourth_count) {
+  const MechPartRequirement requirements[] = {
+      {.part = first_part, .brand = first_brand, .count = first_count},
+      {.part = second_part, .brand = second_brand, .count = second_count},
+      {.part = third_part, .brand = third_brand, .count = third_count},
+      {.part = fourth_part, .brand = fourth_brand, .count = fourth_count},
+  };
+  return mech_parts_consume(mech, player, requirements,
+                            sizeof(requirements) / sizeof(requirements[0]));
+}
 
 static struct {
   char name;   /* Letter identifying the ammo in 'reload' */
@@ -285,25 +286,30 @@ int FindAmmoType(MECH *mech, int loc, int part) {
 TFUNC_LOCPOS(replace_econ) {
   if (IsAmmo(GetPartType(mech, loc, part)))
     return 0;
-  PARTCHECK(mech, GetPartType(mech, loc, part), GetPartBrand(mech, loc, part),
-            1);
+  if (!parts_consume_one(player, mech, loc, GetPartType(mech, loc, part),
+                         GetPartBrand(mech, loc, part), 1))
+    return -1;
   return 0;
 }
 
 TFUNC_LOCPOS_VAL(reload_econ) {
   int ammotype = FindAmmoType(mech, loc, part);
 
-  PARTCHECK(mech, ammotype, GetPartBrand(mech, loc, part), 1);
+  if (!parts_consume_one(player, mech, loc, ammotype,
+                         GetPartBrand(mech, loc, part), 1))
+    return -1;
   return 0;
 }
 
 TFUNC_LOC_VAL(fixarmor_econ) {
-  PARTCHECK(mech, ProperArmor(mech), 0, *val);
+  if (!parts_consume_one(player, mech, loc, ProperArmor(mech), 0, *val))
+    return -1;
   return 0;
 }
 
 TFUNC_LOC_VAL(fixinternal_econ) {
-  PARTCHECK(mech, ProperInternal(mech), 0, *val);
+  if (!parts_consume_one(player, mech, loc, ProperInternal(mech), 0, *val))
+    return -1;
   return 0;
 }
 
@@ -311,31 +317,40 @@ TFUNC_LOCPOS(repair_econ) {
   if (IsAmmo(GetPartType(mech, loc, part)))
     return 0;
   int destroyed = PartIsDestroyed(mech, loc, part) ? 3 : 1;
-  PARTCHECKTWO(mech, Cargo(S_ELECTRONIC), 0, destroyed, ProperInternal(mech), 0,
-               destroyed);
+  if (!parts_consume_two(player, mech, Cargo(S_ELECTRONIC), 0, destroyed,
+                         ProperInternal(mech), 0, destroyed))
+    return -1;
   return 0;
 }
 
 TFUNC_LOCPOS(repairenhcrit_econ) {
-  PARTCHECK(mech, Cargo(S_ELECTRONIC), 0, 1);
+  if (!parts_consume_one(player, mech, loc, Cargo(S_ELECTRONIC), 0, 1))
+    return -1;
   return 0;
 }
 
 TFUNC_LOC(reattach_econ) {
 #ifndef BT_COMPLEXREPAIRS
-  PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
-               Cargo(S_ELECTRONIC), 0, GetSectOInt(mech, loc));
+  if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
+                         GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
+                         GetSectOInt(mech, loc)))
+    return -1;
 #else
   if (mech->xcode.context->configuration->btech_complexrepair) {
     if (MechType(mech) == CLASS_MECH) {
-      PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
-                   ProperMyomer(mech), 0, 1);
+      if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
+                             GetSectOInt(mech, loc), ProperMyomer(mech), 0, 1))
+        return -1;
     } else {
-      PARTCHECK(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc));
+      if (!parts_consume_one(player, mech, loc, ProperInternal(mech), 0,
+                             GetSectOInt(mech, loc)))
+        return -1;
     }
   } else {
-    PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
-                 Cargo(S_ELECTRONIC), 0, GetSectOInt(mech, loc));
+    if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
+                           GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
+                           GetSectOInt(mech, loc)))
+      return -1;
   }
 #endif
   return 0;
@@ -347,10 +362,12 @@ TFUNC_LOC(reattach_econ) {
 #define BSUIT_REPAIR_ELECTRONICS_NEEDED 10
 
 TFUNC_LOC(replacesuit_econ) {
-  PARTCHECKFOUR(mech, ProperInternal(mech), 0, BSUIT_REPAIR_INTERNAL_NEEDED,
-                Cargo(BSUIT_SENSOR), 0, BSUIT_REPAIR_SENSORS_NEEDED,
-                Cargo(BSUIT_LIFESUPPORT), 0, BSUIT_REPAIR_LIFESUPPORT_NEEDED,
-                Cargo(BSUIT_ELECTRONIC), 0, BSUIT_REPAIR_ELECTRONICS_NEEDED);
+  if (!parts_consume_four(
+          player, mech, ProperInternal(mech), 0, BSUIT_REPAIR_INTERNAL_NEEDED,
+          Cargo(BSUIT_SENSOR), 0, BSUIT_REPAIR_SENSORS_NEEDED,
+          Cargo(BSUIT_LIFESUPPORT), 0, BSUIT_REPAIR_LIFESUPPORT_NEEDED,
+          Cargo(BSUIT_ELECTRONIC), 0, BSUIT_REPAIR_ELECTRONICS_NEEDED))
+    return -1;
   return 0;
 }
 
@@ -360,8 +377,10 @@ TFUNC_LOC(replacesuit_econ) {
  */
 
 TFUNC_LOC(reseal_econ) {
-  PARTCHECKTWO(mech, ProperInternal(mech), 0, GetSectOInt(mech, loc),
-               Cargo(S_ELECTRONIC), 0, GetSectOInt(mech, loc));
+  if (!parts_consume_two(player, mech, ProperInternal(mech), 0,
+                         GetSectOInt(mech, loc), Cargo(S_ELECTRONIC), 0,
+                         GetSectOInt(mech, loc)))
+    return -1;
   return 0;
 }
 
@@ -400,11 +419,11 @@ TFUNC_LOCPOS(replaceg_fail) {
                 "Despite messing the repair, you manage not to waste the %s.",
                 w ? "weapon" : "part");
 #ifndef BT_COMPLEXREPAIRS
-  AddPartsM(mech, FindAmmoType(mech, loc, part), GetPartBrand(mech, loc, part),
-            1);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, FindAmmoType(mech, loc, part),
+                 GetPartBrand(mech, loc, part), 1);
 #else
-  AddPartsM(mech, loc, FindAmmoType(mech, loc, part),
-            GetPartBrand(mech, loc, part), 1);
+  mech_parts_add(mech, loc, FindAmmoType(mech, loc, part),
+                 GetPartBrand(mech, loc, part), 1);
 #endif
   return -1;
 }
@@ -509,14 +528,14 @@ TFUNC_LOC(reattach_fail) {
   if (tot == GetSectOInt(mech, loc))
     tot = GetSectOInt(mech, loc) - 1;
 #ifndef BT_COMPLEXREPAIRS
-  AddPartsM(mech, Cargo(S_ELECTRONIC), 0, tot);
-  AddPartsM(mech, ProperInternal(mech), 0, tot);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0, tot);
 #else
-  AddPartsM(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
-  AddPartsM(mech, loc, ProperInternal(mech), 0, tot);
+  mech_parts_add(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, loc, ProperInternal(mech), 0, tot);
   if (mech->xcode.context->configuration->btech_complexrepair &&
       MechType(mech) == CLASS_MECH)
-    AddPartsM(mech, loc, ProperMyomer(mech), 0, 1);
+    mech_parts_add(mech, loc, ProperMyomer(mech), 0, 1);
 #endif
   return -1;
 }
@@ -533,23 +552,23 @@ TFUNC_LOC(replacesuit_fail) {
       "Despite your disastrous failure, you recover %d%% of the materials.",
       wRand);
 #ifndef BT_COMPLEXREPAIRS
-  AddPartsM(mech, Cargo(BSUIT_SENSOR), 0,
-            MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
-  AddPartsM(mech, Cargo(BSUIT_LIFESUPPORT), 0,
-            ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
-  AddPartsM(mech, Cargo(BSUIT_ELECTRONIC), 0,
-            ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
-  AddPartsM(mech, ProperInternal(mech), 0,
-            MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(BSUIT_SENSOR), 0,
+                 MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(BSUIT_LIFESUPPORT), 0,
+                 ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(BSUIT_ELECTRONIC), 0,
+                 ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0,
+                 MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
 #else
-  AddPartsM(mech, loc, Cargo(BSUIT_SENSOR), 0,
-            MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
-  AddPartsM(mech, loc, Cargo(BSUIT_LIFESUPPORT), 0,
-            ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
-  AddPartsM(mech, loc, Cargo(BSUIT_ELECTRONIC), 0,
-            ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
-  AddPartsM(mech, loc, ProperInternal(mech), 0,
-            MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
+  mech_parts_add(mech, loc, Cargo(BSUIT_SENSOR), 0,
+                 MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
+  mech_parts_add(mech, loc, Cargo(BSUIT_LIFESUPPORT), 0,
+                 ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
+  mech_parts_add(mech, loc, Cargo(BSUIT_ELECTRONIC), 0,
+                 ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
+  mech_parts_add(mech, loc, ProperInternal(mech), 0,
+                 MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
 #endif
   return -1;
 }
@@ -575,11 +594,11 @@ TFUNC_LOC_RESEAL(reseal_fail) {
   if (tot == GetSectOInt(mech, loc))
     tot = GetSectOInt(mech, loc) - 1;
 #ifndef BT_COMPLEXREPAIRS
-  AddPartsM(mech, Cargo(S_ELECTRONIC), 0, tot);
-  AddPartsM(mech, ProperInternal(mech), 0, tot);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, Cargo(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, ProperInternal(mech), 0, tot);
 #else
-  AddPartsM(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
-  AddPartsM(mech, loc, ProperInternal(mech), 0, tot);
+  mech_parts_add(mech, loc, Cargo(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, loc, ProperInternal(mech), 0, tot);
 #endif
   return -1;
 }

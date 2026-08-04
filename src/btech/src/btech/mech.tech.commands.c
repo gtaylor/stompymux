@@ -7,22 +7,33 @@
  *       All rights reserved
  */
 
-#include "mech.h"
-#include "failures.h"
+#include <string.h>
+
+#include "btech_context.h"
+#include "btech_event.h"
+#include "btmacros.h"
+#include "macros.h"
 #include "mech.events.h"
+#include "mech.h"
+#include "mech.notify.h"
+#include "mech.parts.h"
 #include "mech.tech.h"
 #include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.econ.h"
+#include "p.glue.hcode.h"
 #include "p.mech.consistency.h"
+#include "p.mech.notify.h"
 #include "p.mech.status.h"
 #include "p.mech.tech.do.h"
 #include "p.mech.tech.h"
 #include "p.mech.utils.h"
-#include <math.h>
-#include <string.h>
 
 #define my_parsepart(loc, part)                                                \
   switch (tech_parsepart(mech, buffer, loc, part, NULL)) {                     \

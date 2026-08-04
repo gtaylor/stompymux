@@ -1,10 +1,10 @@
 /* numeric_hash_table.c - Numeric-keyed hash-table operations. */
 
-#include "mux/objects/db.h"
+#include <string.h>
+
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h"
-#include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/red_black_tree.h"
 
 static int nhrbtab_compare(void *left_key, void *right_key, void *arg) {
   const DbRef left = (DbRef)left_key;

@@ -2,17 +2,10 @@
 
 #pragma once
 
-#include "mux/commands/command_context.h"
-#include "mux/commands/command_queue.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/server/platform.h"
-#include "mux/server/server_registries.h"
-#include "mux/support/alloc.h"
-#include "mux/support/hash_table.h"
-#include "mux/support/red_black_tree.h"
-#include "mux/world/player_cache.h"
 #include <netinet/in.h>
+#include <stdbool.h>
+
+#include "mux/objects/flags.h"
 
 typedef struct Descriptor Descriptor;
 typedef struct DescriptorRegistry DescriptorRegistry;

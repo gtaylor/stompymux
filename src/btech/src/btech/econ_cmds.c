@@ -16,17 +16,34 @@
    - stores
  */
 
-#include "mux/server/game.h"
+#include <ctype.h>
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_context.h"
+#include "btmacros.h"
 #include "coolmenu.h"
-#include "glue.h"
-#include "math.h"
+#include "glue_types.h"
+#include "macros.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mech.partnames.h"
-#include "p.aero.bomb.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.crit.h"
 #include "p.econ.h"
+#include "p.glue.hcode.h"
 #include "p.mech.partnames.h"
 #include "p.mech.status.h"
 #include "p.mech.utils.h"
@@ -183,9 +200,10 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
     if ((buf && (x = pile2[brand][id])) || ((!buf && (x = pile[brand][id])))) {
       display_name = part_name_long(context, id, brand);
       if (!display_name.valid) {
-        SendError(context,
-                  tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.",
-                          player, loc, pile[brand][id], id, brand));
+        btech_channel_send(
+            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+            tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.", player,
+                    loc, pile[brand][id], id, brand));
         continue;
       }
 #ifndef BT_PART_WEIGHTS
@@ -319,10 +337,11 @@ static void stuff_change_sub(BtechContext *context, DbRef player, char *buffer,
   i = -1;
 #define MY_ECON_MODIFY(loc, num)                                               \
   econ_change_items(context, loc, id, brand, num);                             \
-  SendEcon(context, tprintf("#%ld %s %d %s %s #%ld.", player,                  \
-                            num > 0 ? "added" : "removed", abs(num),           \
-                            (c = get_parts_long_name(context, id, brand)),     \
-                            num > 0 ? "to" : "from", loc))
+  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",                   \
+                     tprintf("#%ld %s %d %s %s #%ld.", player,                 \
+                             num > 0 ? "added" : "removed", abs(num),          \
+                             (c = get_parts_long_name(context, id, brand)),    \
+                             num > 0 ? "to" : "from", loc))
   while (sfun(context, args[0], &i, &id, &brand)) {
     if (mort) {
       if (mod < 0)
@@ -410,6 +429,7 @@ void mech_Rresetstuff(DbRef player, void *data, char *buffer) {
   silly_atr_set_in(context->database,
                    game_object_location(context->database, player), A_ECONPARTS,
                    "");
-  SendEcon(context, tprintf("#%ld reset #%ld's stuff.", player,
-                            game_object_location(context->database, player)));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",
+                     tprintf("#%ld reset #%ld's stuff.", player,
+                             game_object_location(context->database, player)));
 }

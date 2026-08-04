@@ -2,38 +2,28 @@
  * command.c - command parser and support routines
  */
 
-#include "mux/commands/command_runtime.h"
-#include "mux/server/platform.h"
-#include "mux/world/world_context.h"
+#include <stdlib.h>
+#include <strings.h>
 
-#include "p.glue.h"
-
+#include "btech_context.h" // IWYU pragma: keep
+#include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
+#include "mux/commands/command_keys.h"
 #include "mux/commands/look.h"
-#include "mux/commands/macro.h"
+#include "mux/commands/macro.h" // IWYU pragma: keep
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/help/help_command.h"
-#include "mux/lua/lua_runtime.h"
 #include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/flags.h"
-#include "mux/objects/powers.h"
-#include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
-#include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
+#include "mux/support/hash_table.h"
+#include "mux/support/name_table.h"
 #include "mux/world/inventory_commands.h"
-#include "mux/world/match.h"
 #include "mux/world/movement_commands.h"
-
-#ifdef ARBITRARY_LOGFILES
-#include "mux/server/log_cache.h"
-#endif
 
 /*
  * ---------------------------------------------------------------------------

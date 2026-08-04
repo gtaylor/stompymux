@@ -19,13 +19,19 @@
    Work's based on MUSE's btechstats.c
  */
 
+#include <stdio.h>
+#include <string.h>
+
 #include "btechstats_global.h"
-#include "coolmenu.h"
-#include "mech.h"
+#include "macros.h"
 #include "mux/commands/command_invocation.h"
-#include "mux/network/mux_event_alloc.h"
-#include "mux/world/world_context.h"
-#include "mycool.h"
+#include "mux/commands/command_queue.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "p.btech.h"
+#include "p.btechstats.h"
+#include "p.glue.hcode.h"
 #include "p.glue.scode.h"
 #include "p.mech.utils.h"
 
@@ -47,7 +53,7 @@ void do_show(CommandInvocation *invocation) {
                        NULL};
   char buf[MBUF_SIZE] = {0};
 
-  if (!Wiz(database, player)) {
+  if (!is_wizard(database, player)) {
     notify(&command->evaluation, player,
            "You aren't cleared to know this stuff yet!");
     return;

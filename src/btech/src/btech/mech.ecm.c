@@ -15,7 +15,12 @@
  */
 
 #include "mech.h"
+#include "btconfig.h"
+#include "map.terrain.h"
 #include "mech.ecm.h"
+#include "mech.notify.h"
+#include "p.glue.h"
+#include "p.mech.notify.h"
 #include "p.mech.utils.h"
 
 /*
@@ -191,8 +196,9 @@ void checkECM(MECH *objMech) {
   tCheckECCM = ((wFriendlyECCM != 0) || (wFriendlyAngelECCM != 0) ||
                 (wUnFriendlyECM != 0) || (wUnFriendlyAngelECM != 0));
 
-  /* SendDebug(mech->xcode.context, tprintf("Checking unit %d. ECMDelta: %d.
-   * ECCMDelta: %d. CheckECM: %d. CheckECCM:
+  /* btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+   * tprintf("Checking unit %d. ECMDelta: %d. ECCMDelta: %d. CheckECM: %d.
+   * CheckECCM:
    * %d",objMech->mynum,wFriendlyECMDelta,wFriendlyECCMDelta,tCheckECM,tCheckECCM));
    */
 

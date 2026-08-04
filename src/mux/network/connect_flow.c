@@ -3,26 +3,34 @@
 
 #include "mux/network/connect_flow.h"
 
-#include "mux/server/platform.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <utils.h>
 
+#include "mux/commands/command_context.h"
+#include "mux/commands/command_queue.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/network/connection_events.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
 #include "mux/network/network_output.h"
+#include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
-#include "mux/network/telnet_socket.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/password.h"
-#include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
 #include "mux/world/move.h"
 #include "mux/world/player.h"
+#include "mux/world/world_context.h"
 
 typedef enum ConnectResult {
   CONNECT_RESULT_CONNECTED,

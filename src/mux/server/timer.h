@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include "mux/network/mux_event.h"
+#include "mux/server/maintenance.h"
+
 typedef struct uv_loop_s uv_loop_t;
 typedef struct MaintenanceContext MaintenanceContext;
 typedef struct ServerTimer ServerTimer;

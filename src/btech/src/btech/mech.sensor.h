@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include "map.terrain.h"
+#include "mech.h"
+#include "mech.lifecycle.h"
 /*
    For all scanners chance of seeing a foe is modified by:
    - Side arcs are 70% chance

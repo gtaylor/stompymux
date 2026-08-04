@@ -13,7 +13,7 @@
 /* fifo.c - Generic first-in, first-out queue implementation. */
 
 #include "mux/support/fifo.h"
-#include <stdio.h>
+
 #include <stdlib.h>
 
 /* A little shortcut to save me some typing */

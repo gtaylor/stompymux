@@ -2,26 +2,27 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <time.h>
 
-#include "btech/btech_context.h"
-#include "mux/commands/command_context.h"
+#include "btech/btech_context.h"          // IWYU pragma: keep
+#include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_runtime.h"
-#include "mux/commands/macro.h"
-#include "mux/communication/channel_registry.h"
+#include "mux/commands/macro.h"                 // IWYU pragma: keep
+#include "mux/communication/channel_registry.h" // IWYU pragma: keep
 #include "mux/communication/comsys_context.h"
-#include "mux/lua/lua_runtime.h"
+#include "mux/lua/lua_runtime.h" // IWYU pragma: keep
 #include "mux/network/connection_runtime.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/db.h"
+#include "mux/objects/db.h" // IWYU pragma: keep
 #include "mux/persistence/gamedb.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
+#include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
-#include "mux/server/server_registries.h"
-#include "mux/world/world_context.h"
+#include "mux/server/server_registries.h" // IWYU pragma: keep
+#include "mux/world/world_context.h"      // IWYU pragma: keep
 
 typedef struct CommandQueue CommandQueue;
 typedef struct DescriptorRegistry DescriptorRegistry;
@@ -33,21 +34,6 @@ typedef struct PlayerCache PlayerCache;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
 typedef struct StyledTextPalette StyledTextPalette;
-
-typedef struct RuntimeClock RuntimeClock;
-struct RuntimeClock {
-  time_t now;
-  time_t dump_deadline;
-  time_t check_deadline;
-  time_t idle_deadline;
-  time_t metrics_deadline;
-  bool tick_pending;
-  int shared_memory[2];
-  int private_memory[2];
-  int stack_memory[2];
-  int sample_time[2];
-  int current_sample;
-};
 
 typedef struct MuxServer MuxServer;
 struct MuxServer {

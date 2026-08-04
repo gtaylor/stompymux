@@ -8,34 +8,48 @@
  *
  */
 
-#include "autopilot.h"
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_event.h"
 #include "btmacros.h"
 #include "failures.h"
-#include "glue.h"
+#include "map.h"
+#include "map.terrain.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mech.lifecycle.h"
+#include "mech.notify.h"
 #include "mech.sensor.h"
+#include "missile_hit_registry.h"
 #include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "p.bsuit.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
 #include "p.btechstats.h"
+#include "p.crit.h"
 #include "p.econ_cmds.h"
 #include "p.eject.h"
+#include "p.glue.h"
 #include "p.mech.ammodump.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3i.h"
-#include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.damage.h"
 #include "p.mech.enhanced.criticals.h"
+#include "p.mech.events.h"
+#include "p.mech.move.h"
+#include "p.mech.notify.h"
 #include "p.mech.pickup.h"
-#include "p.mech.restrict.h"
 #include "p.mech.tag.h"
 #include "p.mech.tech.commands.h"
 #include "p.mech.update.h"
 #include "p.mech.utils.h"
-#include "p.mechrep.h"
-#include <math.h>
+#include "random.h"
 
 void correct_speed(MECH *mech) {
   float maxspeed = MMaxSpeed(mech);
@@ -107,7 +121,7 @@ void NormalizeLegActuatorCrits(MECH *objMech, int wLoc, int wCritType) {
        2nd crit == zero speed on bipeds, but not on quads. Cut current speed in
        half again
      */
-    DivideMaxSpeed(objMech, 2);
+    mech_max_speed_divide(objMech, 2);
     MechPilotSkillBase(objMech) += 2;
     break;
 
@@ -119,7 +133,7 @@ void NormalizeLegActuatorCrits(MECH *objMech, int wLoc, int wCritType) {
        +1 to pskill rolls
        +1 to BTHs with this leg
      */
-    LowerMaxSpeed(objMech, MP1);
+    mech_max_speed_lower(objMech, MP1);
     MechSections(objMech)[wLoc].basetohit += 1;
     MechPilotSkillBase(objMech) += 1;
     break;
@@ -204,7 +218,7 @@ void NormalizeAllActuatorCrits(MECH *objMech) {
   /* reset us back to zero */
   MechPilotSkillBase(objMech) = 0;
 
-  SetMaxSpeed(objMech, TemplateMaxSpeed(objMech));
+  mech_max_speed_set(objMech, TemplateMaxSpeed(objMech));
 
   /*
      The problem here is all the calcs are based on running speed... ie, max
@@ -237,29 +251,29 @@ void NormalizeAllActuatorCrits(MECH *objMech) {
 
       switch (wLegsDestroyed) {
       case 1:
-        LowerMaxSpeed(objMech, MP1);
+        mech_max_speed_lower(objMech, MP1);
         break;
 
       case 2:
-        SetMaxSpeed(objMech, MP1);
+        mech_max_speed_set(objMech, MP1);
         MechPilotSkillBase(objMech) += 5;
         break;
 
       case 3:
       case 4:
-        SetMaxSpeed(objMech, 0.0);
-        MakeMechFall(objMech);
+        mech_max_speed_set(objMech, 0.0);
+        mech_make_fall(objMech);
         ;
         break;
       }
     } else {
       if (wLegsDestroyed == 1) {
-        SetMaxSpeed(objMech, MP1);
+        mech_max_speed_set(objMech, MP1);
         MechPilotSkillBase(objMech) += 5;
       } else {
-        SetMaxSpeed(objMech, 0.0);
+        mech_max_speed_set(objMech, 0.0);
         MechPilotSkillBase(objMech) += 10;
-        MakeMechFall(objMech);
+        mech_make_fall(objMech);
       }
     }
   }
@@ -318,8 +332,8 @@ void NormalizeAllActuatorCrits(MECH *objMech) {
      speed to zero.
    */
   if (MechCritStatus(objMech) & HIP_DESTROYED) {
-    SetMaxSpeed(objMech, 0.0);
-    MakeMechFall(objMech);
+    mech_max_speed_set(objMech, 0.0);
+    mech_make_fall(objMech);
   }
 
   correct_speed(objMech);
@@ -693,8 +707,8 @@ void DoWeaponJamCrit(MECH *objMech, int wLoc) {
     }
 
     SetPartTempNuke(objMech, wLoc, wCritNum, wCritType);
-    SetRecyclePart(objMech, wLoc, wCritNum,
-                   btech_random_range(objMech->xcode.context, 60, 120));
+    mech_set_recycle_part(objMech, wLoc, wCritNum,
+                          btech_random_range(objMech->xcode.context, 60, 120));
   }
 }
 
@@ -839,8 +853,9 @@ void DoVehicleEngineHit(MECH *objMech, MECH *objAttacker) {
 
   if (MechType(objMech) == CLASS_VTOL) {
     if (!Landed(objMech)) {
-      if (MechRTerrain(objMech) == GRASSLAND || MechRTerrain(objMech) == ROAD ||
-          MechRTerrain(objMech) == BUILDING) {
+      if (mech_real_terrain_get(objMech) == GRASSLAND ||
+          mech_real_terrain_get(objMech) == ROAD ||
+          mech_real_terrain_get(objMech) == BUILDING) {
 
         if (MadePilotSkillRoll(objMech,
                                MechZ(objMech) - MechElevation(objMech))) {
@@ -848,7 +863,7 @@ void DoVehicleEngineHit(MECH *objMech, MECH *objAttacker) {
           MechStatus(objMech) |= LANDED;
           MechZ(objMech) = MechElevation(objMech);
           MechFZ(objMech) = ZSCALE * MechZ(objMech);
-          SetMaxSpeed(objMech, 0.0);
+          mech_max_speed_set(objMech, 0.0);
           MechVerticalSpeed(objMech) = 0.0;
         }
       } else {
@@ -859,8 +874,8 @@ void DoVehicleEngineHit(MECH *objMech, MECH *objAttacker) {
       }
     }
   } else {
-    SetMaxSpeed(objMech, 0.0);
-    MakeMechFall(objMech);
+    mech_max_speed_set(objMech, 0.0);
+    mech_make_fall(objMech);
   }
 }
 
@@ -901,7 +916,7 @@ void DoVehicleCrewStunnedCrit(MECH *objMech) {
       "[fg=red bold]The shot resonates throughout the crew compartment, "
       "temporarily stunning you![reset]");
 
-  StunCrew(objMech);
+  mech_stun_crew(objMech);
   limitSpeedToCruise(objMech);
 }
 
@@ -958,7 +973,7 @@ void DoVehicleCrewKilledCrit(MECH *objMech, MECH *objAttacker) {
   if (MechSpeed(objMech) != 0.0)
     MechLOSBroadcast(objMech, "careens out of control and starts to slow!");
 
-  MakeMechFall(objMech);
+  mech_make_fall(objMech);
 }
 
 void DoVTOLCoPilotCrit(MECH *objMech) {
@@ -1028,7 +1043,7 @@ void DoVTOLRotorDamagedCrit(MECH *objMech) {
   mech_notify(objMech, MECHALL, "Your rotor is damaged!");
 
   if (!Fallen(objMech))
-    LowerMaxSpeed(objMech, MP1);
+    mech_max_speed_lower(objMech, MP1);
 }
 
 void DoVTOLTailRotorDamagedCrit(MECH *objMech) {
@@ -1054,7 +1069,7 @@ void StartVTOLCrash(MECH *objMech) {
   if (!Fallen(objMech)) {
     MechSpeed(objMech) = 0.0;
     MechDesiredSpeed(objMech) = 0.0;
-    SetMaxSpeed(objMech, 0.0);
+    mech_max_speed_set(objMech, 0.0);
 
     if (!Landed(objMech)) {
       mech_notify(objMech, MECHALL,
@@ -1063,7 +1078,7 @@ void StartVTOLCrash(MECH *objMech) {
       MechVerticalSpeed(objMech) = 0;
       mech_notify(objMech, MECHALL, "You start free-fall.. Enjoy the ride!");
       MechLOSBroadcast(objMech, "starts to fall to the ground!");
-      MECHEVENT(objMech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
+      mech_event_schedule(objMech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
 
       /*
          MechVerticalSpeed(objMech) = 0;
@@ -1367,15 +1382,16 @@ void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     /* Engine Hit */
     mech_notify(wounded, MECHALL, "Your engine takes a direct hit!");
     if (!Landed(wounded)) {
-      if (MechRTerrain(wounded) == GRASSLAND || MechRTerrain(wounded) == ROAD ||
-          MechRTerrain(wounded) == BUILDING) {
+      if (mech_real_terrain_get(wounded) == GRASSLAND ||
+          mech_real_terrain_get(wounded) == ROAD ||
+          mech_real_terrain_get(wounded) == BUILDING) {
         if (MadePilotSkillRoll(wounded,
                                MechZ(wounded) - MechElevation(wounded))) {
           mech_notify(wounded, MECHALL, "You land safely!");
           MechStatus(wounded) |= LANDED;
           MechZ(wounded) = MechElevation(wounded);
           MechFZ(wounded) = ZSCALE * MechZ(wounded);
-          SetMaxSpeed(wounded, 0.0);
+          mech_max_speed_set(wounded, 0.0);
           MechVerticalSpeed(wounded) = 0.0;
         }
       } else {
@@ -1385,7 +1401,7 @@ void HandleVTOLCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
         MechFalls(wounded, MechsElevation(wounded), 0);
       }
     }
-    SetMaxSpeed(wounded, 0.0);
+    mech_max_speed_set(wounded, 0.0);
     break;
   case 3:
     /* Crew Killed */
@@ -1489,7 +1505,7 @@ void HandleFasaVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     /* Engine Hit */
     mech_notify(wounded, MECHALL,
                 "Your engine takes a direct hit!  You can't move anymore.");
-    SetMaxSpeed(wounded, 0.0);
+    mech_max_speed_set(wounded, 0.0);
     break;
   case 3:
     /* Crew Killed */
@@ -1558,7 +1574,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
           mech_notify(wounded, MECHALL, "Your craft suddenly slows!");
           break;
         }
-        LowerMaxSpeed(wounded, MP1);
+        mech_max_speed_lower(wounded, MP1);
       }
       return;
       break;
@@ -1586,9 +1602,9 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
           mech_notify(wounded, MECHALL,
                       "Your engines cut out and you drift to a halt!");
         }
-        SetMaxSpeed(wounded, 0.0);
+        mech_max_speed_set(wounded, 0.0);
 
-        MakeMechFall(wounded);
+        mech_make_fall(wounded);
       }
       return;
       break;
@@ -1608,7 +1624,7 @@ void HandleVehicleCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     /* Engine Hit */
     mech_notify(wounded, MECHALL,
                 "Your engine takes a direct hit!  You can't move anymore.");
-    SetMaxSpeed(wounded, 0.0);
+    mech_max_speed_set(wounded, 0.0);
     break;
   case 3:
     /* Crew Killed */
@@ -2056,7 +2072,7 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
 
         if ((Special2I(critType) == HAND_OR_FOOT_ACTUATOR) &&
             (MechSections(mech)[hitloc].specials & CARRYING_CLUB))
-          DropClub(mech);
+          mech_drop_club(mech);
         if (MechCarrying(mech) > 0) {
           mech_notify(mech, MECHALL, "The hit causes your tow line to let go!");
           MechLOSBroadcast(mech,
@@ -2227,8 +2243,9 @@ int HandleMechCrit(MECH *wounded, MECH *attacker, int LOS, int hitloc,
     case ARTEMIS_IV:
       weapon_slot = GetPartData(wounded, hitloc, critHit);
       if (weapon_slot > NUM_CRITICALS) {
-        SendError(mech->xcode.context,
-                  tprintf("Artemis IV error on mech %ld", wounded->mynum));
+        btech_channel_send(
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+            tprintf("Artemis IV error on mech %ld", wounded->mynum));
         break;
       }
       GetPartAmmoMode(wounded, hitloc, weapon_slot) &= ~ARTEMIS_MODE;

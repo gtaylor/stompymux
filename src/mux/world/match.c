@@ -2,18 +2,20 @@
  * match.c -- Routines for parsing arguments
  */
 
+#include "mux/lua/lua_runtime.h"
+#include "mux/support/stringutil.h"
+#include <ctype.h>
+#include <stdlib.h>
+
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/world/access.h"
+#include "mux/world/match.h"
 #include "mux/world/object_spatial.h"
 #include "mux/world/player.h"
-
-#include "mux/objects/attrs.h"
-#include "mux/objects/db.h"
-#include "mux/objects/powers.h"
-#include "mux/server/platform.h"
-#include "mux/world/match.h"
-#include "mux/world/world_context.h"
 
 #define CON_LOCAL                                                              \
   0x01 /*                                                                      \

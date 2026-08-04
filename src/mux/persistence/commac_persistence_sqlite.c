@@ -1,20 +1,22 @@
 /* commac_persistence_sqlite.c -- commac, comsys, and macro persistence */
 
-#include "mux/server/platform.h"
-
 #include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "mux/commands/macro.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
-#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
 #include "mux/persistence/commac_persistence.h"
 #include "mux/persistence/gamedb.h"
-#include "mux/server/server_config.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/fifo.h"
+#include "mux/support/hash_table.h"
 #include "mux/support/utf8.h"
 
 /* SQLite schema for commac, comsys, and macro state. */
