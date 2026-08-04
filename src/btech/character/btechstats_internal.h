@@ -30,6 +30,7 @@
 #include "command_handlers_api.h"
 #include "legacy_macros.h"
 #include "map_obj_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"

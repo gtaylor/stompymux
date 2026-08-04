@@ -87,26 +87,26 @@ void initialize_pc(DbRef player, Mech *mech) {
   int i, id, brand;
   int pc_loc_to_mech_loc[] = {HEAD, CTORSO, RARM, RLEG};
 
-  if (!(MechType(mech) == CLASS_MW && !(MechCritStatus(mech) & PC_INITIALIZED)))
+  if (!mech_player_character_initialization_begin(mech))
     return;
   buf4[1] = 0;
   character_stats_retrieve(context, player,
                            VALUES_HEALTH | VALUES_ATTRS | VALUES_SKILLS, s);
   playerBLD = char_gvalue(s, "build");
-  MechCritStatus(mech) |= PC_INITIALIZED;
   bruise = char_gbruise(s);
   lethal = char_glethal(s);
   tot = playerBLD * 20;
   dam = bruise + lethal;
-  MechMaxSpeed(mech) =
-      (playerBLD + char_gvalue(s, "reflexes") + char_gvalue(s, "running")) *
-      MP1 / 9.0;
+  mech_maximum_speed_set(mech, (playerBLD + char_gvalue(s, "reflexes") +
+                                char_gvalue(s, "running")) *
+                                   MP1 / 9.0);
 #define PC_LOCS 4
   for (i = 0; i < NUM_SECTIONS; i++) {
-    SetSectArmor(mech, i, 0);
-    SetSectOArmor(mech, i, 0);
-    SetSectInt(mech, i, (loc_mod(i) * (tot - dam)) / 100 + 1);
-    SetSectOInt(mech, i, (loc_mod(i) * (tot - dam)) / 100 + 1);
+    mech_section_armor_set(mech, i, 0);
+    mech_section_original_armor_set(mech, i, 0);
+    mech_section_internal_set(mech, i, (loc_mod(i) * (tot - dam)) / 100 + 1);
+    mech_section_original_internal_set(mech, i,
+                                       (loc_mod(i) * (tot - dam)) / 100 + 1);
   }
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
                            (char[LBUF_SIZE]){0});
@@ -126,15 +126,10 @@ void initialize_pc(DbRef player, Mech *mech) {
         return;
       }
       if (IsWeapon(id)) {
-        SetPartType(mech, LARM, 0, id);
-        SetPartData(mech, LARM, 0, 0);
-        SetPartFireMode(mech, LARM, 0, 0);
-        SetPartAmmoMode(mech, LARM, 0, 0);
+        mech_critical_configure(mech, LARM, 0, id, 0, 0, 0);
         if ((i = MechWeapons[Weapon2I(id)].ammoperton)) {
-          SetPartType(mech, LARM, 1, I2Ammo(Weapon2I(id)));
-          SetPartData(mech, LARM, 1, cnt >= 5 ? ammo2 : i);
-          SetPartFireMode(mech, LARM, 1, 0);
-          SetPartAmmoMode(mech, LARM, 1, 0);
+          mech_critical_configure(mech, LARM, 1, I2Ammo(Weapon2I(id)),
+                                  cnt >= 5 ? ammo2 : i, 0, 0);
         }
       }
     }
@@ -150,15 +145,10 @@ void initialize_pc(DbRef player, Mech *mech) {
         return;
       }
       if (IsWeapon(id)) {
-        SetPartType(mech, RARM, 0, id);
-        SetPartData(mech, RARM, 0, 0);
-        SetPartFireMode(mech, RARM, 0, 0);
-        SetPartAmmoMode(mech, RARM, 0, 0);
+        mech_critical_configure(mech, RARM, 0, id, 0, 0, 0);
         if ((i = MechWeapons[Weapon2I(id)].ammoperton)) {
-          SetPartType(mech, RARM, 1, I2Ammo(Weapon2I(id)));
-          SetPartData(mech, RARM, 1, cnt >= 4 ? ammo1 : i);
-          SetPartFireMode(mech, RARM, 1, 0);
-          SetPartAmmoMode(mech, RARM, 1, 0);
+          mech_critical_configure(mech, RARM, 1, I2Ammo(Weapon2I(id)),
+                                  cnt >= 4 ? ammo1 : i, 0, 0);
         }
       }
     }
@@ -183,7 +173,7 @@ void initialize_pc(DbRef player, Mech *mech) {
       }
     for (i = 0; buf1[i]; i++) {
       buf4[0] = buf1[i];
-      SetSectArmor(mech, pc_loc_to_mech_loc[i], atoi(buf4));
+      mech_section_armor_set(mech, pc_loc_to_mech_loc[i], atoi(buf4));
     }
   }
 }
@@ -200,7 +190,7 @@ void fix_pilotdamage(Mech *mech, DbRef player) {
   if (playerBLD < 1 || playerBLD > 100)
     playerBLD = 10;
 
-  MechPilotStatus(mech) = (bruise + lethal) / playerBLD;
+  mech_pilot_status_set(mech, (bruise + lethal) / playerBLD);
 }
 
 const int PilotStatusRollNeeded[] = {0, 3, 5, 7, 10, 11};
@@ -220,7 +210,7 @@ int mw_ic_bth(Mech *mech) {
   PSTATS stats, *s = &stats;
   int mod = 0;
 
-  character_stats_retrieve(context, MechPilot(mech),
+  character_stats_retrieve(context, mech_pilot_dbref(mech),
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   playerBLD = char_gvalue(s, "build");
   bruise = char_gbruise(s);
@@ -250,32 +240,31 @@ int handlemwconc(Mech *mech, int initial) {
   int m, roll;
 
   if (is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
-      MechPilot(mech) > 0)
+      mech_pilot_dbref(mech) > 0)
     m = mw_ic_bth(mech);
   else {
     if (initial)
-      if (MechPilotStatus(mech) > 5) {
+      if (mech_pilot_status(mech) > 5) {
         mech_notify(mech, MECHPILOT, "You are killed from personal injuries!!");
 
         // This is here to avoid multi-triggers of AMECHDEST.
-        if (!Destroyed(mech))
+        if (!mech_is_destroyed(mech))
           DestroyMech(mech, mech, 0, KILL_TYPE_MWDAMAGE);
 
-        MechPilot(mech) = -1;
-        MechSpeed(mech) = 0.;
-        MechDesiredSpeed(mech) = 0.;
+        mech_pilot_dbref_set(mech, -1);
+        mech_movement_stop(mech);
         return 0;
       }
-    m = PilotStatusRollNeeded[BOUNDED(0, (int)MechPilotStatus(mech), 4)];
+    m = PilotStatusRollNeeded[BOUNDED(0, mech_pilot_status(mech), 4)];
   }
   if (initial && Uncon(mech))
     return 0;
-  if (HasBoolAdvantage(mech_context(mech), MechPilot(mech), "toughness"))
+  if (HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech), "toughness"))
     /*  Gets the saving roll for someone with toughness  */
     roll = char_rollsaving(mech_context(mech));
   else
     roll = char_rollskilled(mech_context(mech));
-  if (MechPilot(mech) >= 0) {
+  if (mech_pilot_dbref(mech) >= 0) {
     if (initial) {
       mech_notify(mech, MECHPILOT, "You attempt to keep consciousness!");
       mech_printf(mech, MECHPILOT, "Retain Conciousness on: %d  \tRoll: %d",
@@ -308,11 +297,11 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
   /* check to see if mech is IC */
   if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)) ||
       !mech_has_pilot(mech)) {
-    MechPilotStatus(mech) += dam;
+    mech_pilot_status_add(mech, dam);
     handlemwconc(mech, 1);
     return;
   }
-  player = MechPilot(mech);
+  player = mech_pilot_dbref(mech);
 
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
@@ -340,7 +329,7 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
       char_slethal(s, playerBLD * 10 - 1);
       char_sbruise(s, playerBLD * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);
-      if (!Destroyed(mech)) {
+      if (!mech_is_destroyed(mech)) {
         DestroyMech(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
       }
       KillMechContentsIfIC(mech);
@@ -351,7 +340,7 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
   char_sbruise(s, bruise);
   character_stats_store(context, player, s, VALUES_HEALTH);
   handlemwconc(mech, 1);
-  MechPilotStatus(mech) += dam;
+  mech_pilot_status_add(mech, dam);
 }
 
 void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
@@ -365,11 +354,11 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
   /* check to see if mech is IC */
   if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)) ||
       !mech_has_pilot(mech)) {
-    MechPilotStatus(mech) += dam;
+    mech_pilot_status_add(mech, dam);
     handlemwconc(mech, 1);
     return;
   }
-  player = MechPilot(mech);
+  player = mech_pilot_dbref(mech);
 
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
@@ -384,7 +373,7 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
     char_slethal(s, lethaldam - 1);
     char_sbruise(s, lethaldam);
     character_stats_store(context, player, s, VALUES_HEALTH);
-    if (!Destroyed(mech)) {
+    if (!mech_is_destroyed(mech)) {
       DestroyMech(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
     }
     KillMechContentsIfIC(mech);
@@ -394,5 +383,5 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
   char_slethal(s, lethaldam);
   character_stats_store(context, player, s, VALUES_HEALTH);
   handlemwconc(mech, 1);
-  MechPilotStatus(mech) += dam;
+  mech_pilot_status_add(mech, dam);
 }

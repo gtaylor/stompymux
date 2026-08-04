@@ -11,6 +11,18 @@ bool mech_suppresses_gunnery_experience(const Mech *mech) {
   return mech->rd.status2 & NO_GUN_XP;
 }
 
+bool mech_player_character_initialization_begin(Mech *mech) {
+  if (mech->ud.type != CLASS_MW || (mech->rd.critstatus & PC_INITIALIZED))
+    return false;
+  mech->rd.critstatus |= PC_INITIALIZED;
+  return true;
+}
+
+void mech_movement_stop(Mech *mech) {
+  mech->rd.speed = 0.0F;
+  mech->rd.desired_speed = 0.0F;
+}
+
 DbRef mech_autopilot_dbref(const Mech *mech) { return mech->rd.autopilot_num; }
 
 void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot) {

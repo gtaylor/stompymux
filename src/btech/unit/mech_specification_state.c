@@ -29,6 +29,10 @@ float mech_current_speed(const Mech *mech) { return mech->rd.speed; }
 
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
 
+void mech_maximum_speed_set(Mech *mech, float speed) {
+  mech->ud.maxspeed = speed;
+}
+
 bool mech_is_flying_type(const Mech *mech) {
   return mech->ud.type == CLASS_AERO || mech->ud.type == CLASS_DS ||
          mech->ud.type == CLASS_SPHEROID_DS || mech->ud.move == MOVE_VTOL;
