@@ -98,6 +98,23 @@ int mech_stagger_damage_current_counted(const Mech *mech, time_t now) {
   return mech_stagger_damage_sum(mech, now, true);
 }
 
+bool mech_stagger_damage_get(const Mech *mech, int index,
+                             MechStaggerDamageSnapshot *snapshot) {
+  const MechDamageRecord *damage = mech->rd.staggerDamageList;
+
+  while (damage && index > 0) {
+    damage = damage->next;
+    index--;
+  }
+  if (!damage)
+    return false;
+  snapshot->amount = damage->amount;
+  snapshot->occurred_at = damage->occuredAt;
+  snapshot->attacker = damage->attackerNum;
+  snapshot->counted = damage->counted != 0;
+  return true;
+}
+
 void mech_stagger_tracking_reset(Mech *mech) {
   mech->rd.staggerDamage = 0;
   mech->rd.lastStaggerNotify = 0;

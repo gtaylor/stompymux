@@ -41,7 +41,7 @@ int btech_store_simple_object(void *key, void *data, int depth,
   int runtime_index;
   AutopilotCommand *command;
   AutopilotPathNode *path_node;
-  MechDamageRecord *damage;
+  MechStaggerDamageSnapshot damage;
 
   (void)depth;
   if (context->result < 0)
@@ -408,17 +408,18 @@ int btech_store_simple_object(void *key, void *data, int depth,
           btech_special_step(context->unit_aux) < 0)
         context->result = -1;
     }
-    for (damage = snapshot.runtime.staggerDamageList, index = 0;
-         context->result == 0 && damage; damage = damage->next, index++) {
+    for (index = 0;
+         context->result == 0 && mech_stagger_damage_get(mech, index, &damage);
+         index++) {
       if (btech_special_bind_int(context->stagger_damage, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->stagger_damage, 2, index) < 0 ||
-          btech_special_bind_int(context->stagger_damage, 3, damage->amount) <
+          btech_special_bind_int(context->stagger_damage, 3, damage.amount) <
               0 ||
           btech_special_bind_int(context->stagger_damage, 4,
-                                 (sqlite3_int64)damage->occuredAt) < 0 ||
-          btech_special_bind_int(context->stagger_damage, 5,
-                                 damage->attackerNum) < 0 ||
-          btech_special_bind_int(context->stagger_damage, 6, damage->counted) <
+                                 (sqlite3_int64)damage.occurred_at) < 0 ||
+          btech_special_bind_int(context->stagger_damage, 5, damage.attacker) <
+              0 ||
+          btech_special_bind_int(context->stagger_damage, 6, damage.counted) <
               0 ||
           btech_special_step(context->stagger_damage) < 0)
         context->result = -1;
