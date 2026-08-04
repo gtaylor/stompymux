@@ -21,3 +21,5 @@ void alter_conditions(BattleMap *map);
 void map_setconditions(DbRef player, BattleMap *map, char *buffer);
 void map_conditions_apply(Mech *mech, BattleMap *map);
 int battle_map_gravity(const BattleMap *map);
+int battle_map_light(const BattleMap *map);
+int battle_map_visibility(const BattleMap *map);

@@ -24,6 +24,7 @@
 #include "map_conditions_api.h"
 #include "map_dynamic_api.h"
 #include "map_terrain.h"
+#include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_identity_api.h"
@@ -36,6 +37,12 @@
 #include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "registry_api.h"
+
+int battle_map_unit_count(const BattleMap *map) { return map->first_free; }
+
+DbRef battle_map_unit_dbref(const BattleMap *map, int index) {
+  return map->mechsOnMap[index];
+}
 
 void mech_map_consistency_check(Mech *mech) {
   BattleMap *map =

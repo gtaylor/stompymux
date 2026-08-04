@@ -13,7 +13,26 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include "autopilot.h"
+#include "btech/context.h"
+#include "map_conditions_api.h"
+#include "map_los_api.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_identity_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
+#include "registry_api.h"
 
 /* Function to determine if there are any slites affecting the AI */
 int SearchLightInRange(Mech *mech, BattleMap *map) {
@@ -26,28 +45,29 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
     return 0;
 
   /* Loop through all the units on the map */
-  for (i = 0; i < map->first_free; i++) {
+  for (i = 0; i < battle_map_unit_count(map); i++) {
 
     /* No units on the map */
-    if (!(target = btech_context_find_object(mech->xcode.context,
-                                             map->mechsOnMap[i])))
+    if (!(target = btech_context_find_object(mech_context(mech),
+                                             battle_map_unit_dbref(map, i))))
       continue;
 
     /* The unit doesn't have slite on */
-    if (!(MechSpecials(target) & SLITE_TECH) ||
-        MechCritStatus(mech) & SLITE_DEST)
+    if (!mech_has_searchlight(target) ||
+        mech_condition_summary(mech).searchlight_destroyed)
       continue;
 
     /* Is the mech close enough to be affected by the slite */
-    if (FaMechRange(target, mech) < LITE_RANGE) {
+    if (mech_range_to(target, mech) < LITE_RANGE) {
 
       /* Returning true, but let's differentiate also between being in-arc. */
-      if ((MechStatus(target) & SLITE_ON) &&
-          InWeaponArc(target, MechFX(mech), MechFY(mech)) & FORWARDARC) {
+      if (mech_searchlight_active(target) &&
+          InWeaponArc(target, mech_position_real_x(mech),
+                      mech_position_real_y(mech)) &
+              FORWARDARC) {
 
         /* Make sure its in los */
-        if (!(map->LOSinfo[target->mapnumber][mech->mapnumber] &
-              MECHLOSFLAG_BLOCK))
+        if (!battle_map_unit_los_is_blocked(map, target, mech))
 
           /* Slite on and, arced, and LoS to you */
           return 3;
@@ -55,11 +75,12 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
           /* Slite on, arced, but LoS blocked */
           return 4;
 
-      } else if (!(MechStatus(target) & SLITE_ON) &&
-                 InWeaponArc(target, MechFX(mech), MechFY(mech)) & FORWARDARC) {
+      } else if (!mech_searchlight_active(target) &&
+                 InWeaponArc(target, mech_position_real_x(mech),
+                             mech_position_real_y(mech)) &
+                     FORWARDARC) {
 
-        if (!(map->LOSinfo[target->mapnumber][mech->mapnumber] &
-              MECHLOSFLAG_BLOCK))
+        if (!battle_map_unit_los_is_blocked(map, target, mech))
 
           /* Slite off, arced, and LoS to you */
           return 5;
@@ -71,7 +92,7 @@ int SearchLightInRange(Mech *mech, BattleMap *map) {
 
       /* Slite is in range of you, but apparently not arced on you.
        * Return tells wether on or off */
-      return (MechStatus(target) & SLITE_ON ? 1 : 2);
+      return (mech_searchlight_active(target) ? 1 : 2);
     }
   }
   return 0;
@@ -85,15 +106,15 @@ int PrefVisSens(Mech *mech, BattleMap *map, int slite, Mech *target) {
     return SENSOR_VIS;
 
   /* Ok the AI is lit or using slite so use V */
-  if (MechStatus(mech) & SLITE_ON || MechCritStatus(mech) & SLITE_LIT)
+  if (mech_searchlight_active(mech) || mech_condition_summary(mech).illuminated)
     return SENSOR_VIS;
 
   /* The target is lit so use V */
-  if (target && MechCritStatus(target) & SLITE_LIT)
+  if (target && mech_condition_summary(target).illuminated)
     return SENSOR_VIS;
 
   /* Ok if its night/dawn/dusk and theres no slite use L */
-  if (map->maplight <= 1 && slite != 3 && slite != 5)
+  if (battle_map_light(map) <= 1 && slite != 3 && slite != 5)
     return SENSOR_LA;
 
   /* Default sensor */
@@ -106,7 +127,7 @@ int PrefVisSens(Mech *mech, BattleMap *map, int slite, Mech *target) {
  */
 /*! \todo {Improve this so it knows more about the terrain} */
 void auto_sensor_event(Autopilot *autopilot) {
-  Mech *target = NULL;
+  Mech *target = nullptr;
   BattleMap *map;
   int wanted_s[2];
   int rvis;
@@ -137,18 +158,18 @@ void auto_sensor_event(Autopilot *autopilot) {
     return;
   }
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Mech is dead so stop trying to shoot things */
-  if (Destroyed(mech)) {
+  if (mech_is_destroyed(mech)) {
     DoStopGun(autopilot);
     return;
   }
 
   /* Mech isn't started */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
     Zombify(autopilot);
     return;
   }
@@ -159,7 +180,8 @@ void auto_sensor_event(Autopilot *autopilot) {
     return;
 
   /* Get the map */
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
+  if (!(map =
+            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
 
     /* Bad Map */
     Zombify(autopilot);
@@ -167,54 +189,54 @@ void auto_sensor_event(Autopilot *autopilot) {
   }
 
   /* Get the target if there is one */
-  if (MechTarget(mech) > 0)
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+  if (mech_target_dbref(mech) > 0)
+    target =
+        btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
 
   /* Checks to see if there is slite, and what types of vis
    * and which visual sensor (V or L) to use */
-  slite = (map->mapvis != 2 ? SearchLightInRange(mech, map) : 0);
-  rvis = (map->maplight ? (map->mapvis) : (map->mapvis * (slite ? 1 : 3)));
+  int visibility = battle_map_visibility(map);
+  slite = (visibility != 2 ? SearchLightInRange(mech, map) : 0);
+  rvis = (battle_map_light(map) ? visibility : (visibility * (slite ? 1 : 3)));
   prefvis = PrefVisSens(mech, map, slite, target);
 
   /* Is there a target */
   if (target) {
 
     /* Range to target */
-    trng = FaMechRange(mech, target);
+    trng = mech_range_to(mech, target);
 
     /* Actually not gonna bother with this */
     /* If the target is running hot and is close switch to IR */
     if (!set && HeatFactor(target) > 35 && (int)trng < 15) {
       // wanted_s[0] = SENSOR_IR;
-      // wanted_s[1] = ((MechTons(target) >= 60) ? SENSOR_EM : prefvis);
+      // wanted_s[1] = ((mech_tonnage(target) >= 60) ? SENSOR_EM : prefvis);
       // set++;
     }
 
     /* If the target is BIG and close enough, use EM */
-    if (!set && MechTons(target) >= 60 && (int)trng <= 20) {
+    if (!set && mech_tonnage(target) >= 60 && (int)trng <= 20) {
       wanted_s[0] = SENSOR_EM;
       wanted_s[1] = SENSOR_IR;
       set++;
     }
 
     /* If the target is flying switch to Radar */
-    if (!set && !Landed(target) && FlyingT(target)) {
+    if (!set && !mech_is_landed(target) && mech_is_flying_type(target)) {
       wanted_s[0] = SENSOR_RA;
       wanted_s[1] = prefvis;
       set++;
     }
 
     /* If the target is really close and the unit has BAP, use it */
-    if (!set && (int)trng <= 4 && MechSpecials(mech) & BEAGLE_PROBE_TECH &&
-        !(MechCritStatus(mech) & BEAGLE_DESTROYED)) {
+    if (!set && (int)trng <= 4 && mech_has_operational_beagle_probe(mech)) {
       wanted_s[0] = SENSOR_BAP;
       wanted_s[1] = SENSOR_BAP;
       set++;
     }
 
     /* If the target is really close and the unit has Bloodhound, use it */
-    if (!set && (int)trng <= 8 && MechSpecials2(mech) & BLOODHOUND_PROBE_TECH &&
-        !(MechCritStatus(mech) & BLOODHOUND_DESTROYED)) {
+    if (!set && (int)trng <= 8 && mech_has_operational_bloodhound_probe(mech)) {
       wanted_s[0] = SENSOR_BHAP;
       wanted_s[1] = SENSOR_BHAP;
       set++;
@@ -244,16 +266,15 @@ void auto_sensor_event(Autopilot *autopilot) {
   /* Check to make sure valid sensors are selected and then set them */
   if (wanted_s[0] >= SENSOR_VIS && wanted_s[0] <= SENSOR_BHAP &&
       wanted_s[1] >= SENSOR_VIS && wanted_s[1] <= SENSOR_BHAP &&
-      (MechSensor(mech)[0] != wanted_s[0] ||
-       MechSensor(mech)[1] != wanted_s[1])) {
+      (mech_sensor_index(mech, 0) != wanted_s[0] ||
+       mech_sensor_index(mech, 1) != wanted_s[1])) {
 
     wanted_s[0] = BOUNDED(SENSOR_VIS, wanted_s[0], SENSOR_BHAP);
     wanted_s[1] = BOUNDED(SENSOR_VIS, wanted_s[1], SENSOR_BHAP);
 
-    MechSensor(mech)[0] = wanted_s[0];
-    MechSensor(mech)[1] = wanted_s[1];
+    mech_sensors_set(mech, wanted_s[0], wanted_s[1]);
     mech_notify(mech, MECHALL, "As your sensors change, your lock clears.");
-    MechTarget(mech) = -1;
+    mech_targeting_target_clear(mech);
     MarkForLOSUpdate(mech);
   }
 }
