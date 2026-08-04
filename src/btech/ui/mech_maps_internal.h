@@ -46,9 +46,3 @@
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "registry_api.h"
-
-/* Default colour string is "BbWnYyRWWWXGgbRHYRn" */
-/* internal rep has H instead of h and \0 instead of n */
-
-#define DEFAULT_COLOR_STRING "BbWXYyRWWWXGgbRhYRnGR"
-#define DEFAULT_COLOR_SCHEME "BbWXYyRWWWXGgbRHYR\0GR"

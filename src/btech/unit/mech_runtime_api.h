@@ -9,6 +9,7 @@ bool mech_is_destroyed(const Mech *mech);
 bool mech_suppresses_gunnery_experience(const Mech *mech);
 bool mech_player_character_initialization_begin(Mech *mech);
 bool mech_pilot_is_unconscious(const Mech *mech);
+bool mech_is_observer(const Mech *mech);
 void mech_movement_stop(Mech *mech);
 DbRef mech_autopilot_dbref(const Mech *mech);
 void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot);

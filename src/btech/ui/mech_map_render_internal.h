@@ -32,6 +32,9 @@ enum {
   NUM_COLOR_IDX
 };
 
+#define DEFAULT_COLOR_STRING "BbWXYyRWWWXGgbRhYRnGR"
+#define DEFAULT_COLOR_SCHEME "BbWXYyRWWWXGgbRHYR\0GR"
+
 typedef struct MapColorScheme {
   char values[NUM_COLOR_IDX + 1];
 } MapColorScheme;

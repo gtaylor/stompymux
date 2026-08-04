@@ -1,7 +1,9 @@
 #include "mech_position_api.h"
 
+#include "floatsim.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
+#include "mech_utils_api.h"
 
 void mech_position_reset_origin(Mech *mech) {
   mech->pd.last_x = 0;
@@ -21,6 +23,15 @@ float mech_position_real_x(const Mech *mech) { return mech->pd.fx; }
 float mech_position_real_y(const Mech *mech) { return mech->pd.fy; }
 
 float mech_position_real_z(const Mech *mech) { return mech->pd.fz; }
+
+float mech_range_to(const Mech *mech, const Mech *target) {
+  return FindRange(mech->pd.fx, mech->pd.fy, mech->pd.fz, target->pd.fx,
+                   target->pd.fy, target->pd.fz);
+}
+
+float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
+
+int mech_heading_degrees(const Mech *mech) { return FSIM2SHO(mech->pd.facing); }
 
 char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
 

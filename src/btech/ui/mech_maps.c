@@ -1,21 +1,46 @@
-#include "mech_maps_internal.h"
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "map_terrain.h"
+#include "mech_classification_api.h"
+#include "mech_electronics_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_map_render_internal.h"
+#include "mech_maps_api.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/game.h"
+#include "registry_api.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 void mech_findcenter(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   float fx, fy;
   int x, y;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
-  x = MechX(mech);
-  y = MechY(mech);
+  x = mech_position_x(mech);
+  y = mech_position_y(mech);
   MapCoordToRealCoord(x, y, &fx, &fy);
   notify_printf(evaluation, player,
                 "Current hex: (%d,%d,%d)\tRange to center: %.2f\t"
                 "Bearing to center: %d",
-                x, y, MechZ(mech),
-                FindHexRange(fx, fy, MechFX(mech), MechFY(mech)),
-                FindBearing(MechFX(mech), MechFY(mech), fx, fy));
+                x, y, mech_position_z(mech),
+                FindHexRange(fx, fy, mech_position_real_x(mech),
+                             mech_position_real_y(mech)),
+                FindBearing(mech_position_real_x(mech),
+                            mech_position_real_y(mech), fx, fy));
 }
 
 int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
@@ -30,9 +55,10 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     bearing = atoi(args[0]);
     range = atof(args[1]);
     DOCHECK0_CONTEXT(mech_context(mech),
-                     !MechIsObservator(mech) && abs((int)range) > maxrange,
+                     !mech_is_observer(mech) && abs((int)range) > maxrange,
                      "Those coordinates are out of sensor range!");
-    FindXY(MechFX(mech), MechFY(mech), bearing, range, &fx, &fy);
+    FindXY(mech_position_real_x(mech), mech_position_real_y(mech), bearing,
+           range, &fx, &fy);
     RealCoordToMapCoord(x, y, fx, fy);
     return 1;
   case 1:
@@ -40,19 +66,19 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     tempMech =
         btech_context_get_mech(mech_context(mech), FindMechOnMap(map, args[0]));
     DOCHECK0_CONTEXT(mech_context(mech), !tempMech, "No such target.");
-    range = FlMechRange(mech_map, mech, tempMech);
-    DOCHECK0_CONTEXT(
-        mech_context(mech),
-        !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
-        "No such target.");
+    range = mech_range_to(mech, tempMech);
+    DOCHECK0_CONTEXT(mech_context(mech),
+                     !InLineOfSight(mech, tempMech, mech_position_x(tempMech),
+                                    mech_position_y(tempMech), range),
+                     "No such target.");
     DOCHECK0_CONTEXT(mech_context(mech), abs((int)range) > maxrange,
                      "Target is out of scanner range.");
-    *x = MechX(tempMech);
-    *y = MechY(tempMech);
+    *x = mech_position_x(tempMech);
+    *y = mech_position_y(tempMech);
     return 1;
   case 0:
-    *x = MechX(mech);
-    *y = MechY(mech);
+    *x = mech_position_x(mech);
+    *y = mech_position_y(mech);
     return 1;
   default:
     notify(btech_context_evaluation(mech_context(mech)), player,
@@ -173,13 +199,14 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   int i, dolos, argc;
   short x, y;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   dolos = MapIsDark(mech_map) ||
-          (MechType(mech) == CLASS_MW &&
+          (mech_class(mech) == CLASS_MW &&
            mech_context(mech)->configuration->btech_mw_losmap);
 
   DOCHECK_CONTEXT(mech_context(mech),
@@ -187,7 +214,8 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
                   "Nothing to see on this map, move along.");
 
   argc = mech_parseattributes(buffer, args, 3);
-  if (!parse_tacargs(player, mech, args, argc, MechTacRange(mech), &x, &y))
+  if (!parse_tacargs(player, mech, args, argc, mech_tactical_range(mech), &x,
+                     &y))
     return;
 
   map_text = map_text_create(player, mech, mech_map, x, y, 5, 5, 4, dolos);
@@ -205,10 +233,13 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
            maptext[1]);
   snprintf(mybuff[2], MBUF_SIZE,
            "        /           \\          Location:%4d,%4d, %3d   %.150s",
-           MechX(mech), MechY(mech), MechZ(mech), maptext[2]);
-  snprintf(mybuff[3], MBUF_SIZE,
-           "  300  /             \\  60     Terrain: %14s   %.150s",
-           GetTerrainName(mech_map, MechX(mech), MechY(mech)), maptext[3]);
+           mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
+           maptext[2]);
+  snprintf(
+      mybuff[3], MBUF_SIZE,
+      "  300  /             \\  60     Terrain: %14s   %.150s",
+      GetTerrainName(mech_map, mech_position_x(mech), mech_position_y(mech)),
+      maptext[3]);
   snprintf(mybuff[4], MBUF_SIZE,
            "      /               \\                                  %.150s",
            maptext[4]);
@@ -217,13 +248,13 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
            maptext[5]);
   snprintf(mybuff[6], MBUF_SIZE,
            "270 (                   )  90  Speed:           %6.1f   %.150s",
-           MechSpeed(mech), maptext[6]);
+           mech_current_speed(mech), maptext[6]);
   snprintf(mybuff[7], MBUF_SIZE,
            "     \\                 /       Vertical Speed:  %6.1f   %.150s",
-           MechVerticalSpeed(mech), maptext[7]);
+           mech_vertical_speed(mech), maptext[7]);
   snprintf(mybuff[8], MBUF_SIZE,
            "      \\               /        Heading:           %4d   %.150s",
-           MechFacing(mech), maptext[8]);
+           mech_heading_degrees(mech), maptext[8]);
   snprintf(mybuff[9], MBUF_SIZE,
            "  240  \\             /  120                              %.150s",
            maptext[9]);

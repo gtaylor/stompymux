@@ -22,6 +22,10 @@ bool mech_pilot_is_unconscious(const Mech *mech) {
   return mech->rd.status & UNCONSCIOUS;
 }
 
+bool mech_is_observer(const Mech *mech) {
+  return mech->rd.critstatus & OBSERVATORIC;
+}
+
 void mech_movement_stop(Mech *mech) {
   mech->rd.speed = 0.0F;
   mech->rd.desired_speed = 0.0F;
