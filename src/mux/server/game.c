@@ -652,19 +652,11 @@ int main(int argc, char *argv[]) {
     goto fail;
   }
 
-#ifdef MCHECK
-  mtrace();
-#endif
-
   /*
    * go do it
    */
 
   server_lifecycle_run(server.lifecycle, server.configuration->port);
-
-#ifdef MCHECK
-  muntrace();
-#endif
 
   server_lifecycle_close_connections(server.lifecycle, false,
                                      "Going down - Bye");
