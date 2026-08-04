@@ -68,11 +68,13 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mycool.h"
+#include "part_cost_api.h"
 #include "registry_api.h"
 #include "registry_internal.h"
 #include "special_object.h"
 #include "template_api.h"
 #include "turret.h"
+#include "unit_cost_api.h"
 #include "value_handlers_api.h"
 #include "weapon_settings.h"
 

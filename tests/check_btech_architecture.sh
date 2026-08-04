@@ -112,6 +112,13 @@ while IFS= read -r match; do
 done < <(rg -n -g '*.[ch]' '#include "mech\.h"|#include "mech_macros\.h"' \
   src/btech/commands || true)
 
+while IFS= read -r match; do
+  echo "$match: economy depends on a legacy Mech interface"
+  status=1
+done < <(rg -n -g '*.[ch]' \
+  '#include "mech\.h"|#include "mech_macros\.h"|#include "mech_utils_internal\.h"|\b(CalcFasaCost|GetPartWeight|MechNumHeatsinksInEngine)\b' \
+  src/btech/economy || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

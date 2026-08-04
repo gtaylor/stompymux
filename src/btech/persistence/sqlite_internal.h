@@ -36,6 +36,7 @@
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/utf8.h"
+#include "part_cost_api.h"
 #include "registry_api.h"
 #include "schema.h"
 #include "special_object.h"

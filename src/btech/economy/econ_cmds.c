@@ -31,12 +31,15 @@
 #include "crit_api.h"
 #include "econ_api.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_partnames.h"
 #include "mech_partnames_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
@@ -47,6 +50,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "special_object.h"
+#include "unit_cost_api.h"
 
 #ifdef BT_PART_WEIGHTS
 /* From template.c */
@@ -64,7 +68,7 @@ void SetCargoWeight(Mech *mech) {
   char *t;
   int i1, i2, i3;
 
-  t = btech_attribute_read(mech->xcode.context->database, mech->mynum,
+  t = btech_attribute_read(mech_context(mech)->database, mech_dbref(mech),
                            A_ECONPARTS, (char[LBUF_SIZE]){0});
   bzero(pile, sizeof(pile));
   while (*t) {
@@ -73,10 +77,10 @@ void SetCargoWeight(Mech *mech) {
         pile[i1] += ((IsBomb(i1)) ? 4 : 1) * i3;
     t++;
   }
-  if (FlyingT(mech))
+  if (mech_is_flying_type(mech))
     for (i = 0; i < NUM_SECTIONS; i++)
       for (j = 0; j < NUM_CRITICALS; j++) {
-        if (IsBomb((k = GetPartType(mech, i, j))))
+        if (IsBomb((k = mech_critical_part_type(mech, i, j))))
           pile[k]++;
         else if (IsSpecial(k))
           if (Special2I(k) == FUELTANK)
@@ -85,15 +89,16 @@ void SetCargoWeight(Mech *mech) {
   /* We've 'so-called' pile now */
   for (i = 0; i < NUM_ITEMS; i++)
     if (pile[i]) {
-      sw = GetPartWeight(i);
+      sw = btech_part_weight(i);
       weight += sw * pile[i];
     }
-  if (FlyingT(mech)) {
-    AeroFuelMax(mech) = AeroFuelOrig(mech) + 2000 * pile[I2Special(FUELTANK)];
-    if (AeroFuel(mech) > AeroFuelOrig(mech))
-      weight += AeroFuel(mech) - AeroFuelOrig(mech);
+  if (mech_is_flying_type(mech)) {
+    mech_maximum_fuel_set(mech, mech_original_fuel(mech) +
+                                    2000 * pile[I2Special(FUELTANK)]);
+    if (mech_fuel(mech) > mech_original_fuel(mech))
+      weight += mech_fuel(mech) - mech_original_fuel(mech);
   }
-  SetCarriedCargo(mech, weight);
+  mech_cargo_weight_set(mech, weight);
 }
 
 /* Returns 1 if calling function should return */
@@ -102,15 +107,15 @@ int loading_bay_whine(DbRef player, DbRef cargobay, Mech *mech) {
   char *c;
   int i1, i2, i3 = 0;
 
-  c = btech_attribute_read(mech->xcode.context->database, cargobay,
-                           A_MECHSKILLS, (char[LBUF_SIZE]){0});
+  c = btech_attribute_read(mech_context(mech)->database, cargobay, A_MECHSKILLS,
+                           (char[LBUF_SIZE]){0});
   if (c && *c)
     if (sscanf(c, "%d %d %d", &i1, &i2, &i3) >= 2)
-      if (MechX(mech) != i1 || MechY(mech) != i2) {
-        notify(btech_context_evaluation(mech->xcode.context), player,
+      if (mech_position_x(mech) != i1 || mech_position_y(mech) != i2) {
+        notify(btech_context_evaluation(mech_context(mech)), player,
                "You're not where the cargo is!");
         if (i3)
-          notify_printf(btech_context_evaluation(mech->xcode.context), player,
+          notify_printf(btech_context_evaluation(mech_context(mech)), player,
                         "Try looking around %d,%d instead.", i1, i2);
         return 1;
       }
@@ -209,7 +214,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
 #ifndef BT_PART_WEIGHTS
       ch = display_name.text;
 #else
-      sw = GetPartWeight(id);
+      sw = btech_part_weight(id);
       snprintf(tmpstr, LBUF_SIZE, "%s (%.1ft)", display_name.text,
                (sw * x) / 1024.0);
       ch = tmpstr;
@@ -249,22 +254,24 @@ void mech_manifest(DbRef player, void *data, char *buffer) {
 
 void mech_stores(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   GameDatabase *database = context->database;
 
   cch(MECH_USUAL);
   DOCHECK_CONTEXT(
       context,
-      game_object_location(database, mech->mynum) != mech->mapindex ||
+      game_object_location(database, mech_dbref(mech)) !=
+              mech_map_dbref(mech) ||
           is_in_character(database,
-                          game_object_location(database, mech->mynum)),
+                          game_object_location(database, mech_dbref(mech))),
       "You aren't inside a hangar!");
-  if (loading_bay_whine(player, game_object_location(database, mech->mynum),
-                        mech))
+  if (loading_bay_whine(player,
+                        game_object_location(database, mech_dbref(mech)), mech))
     return;
   while (isspace(*buffer))
     buffer++;
-  MY_DO_LIST(mech->xcode.context, game_object_location(database, mech->mynum));
+  MY_DO_LIST(mech_context(mech),
+             game_object_location(database, mech_dbref(mech)));
 }
 
 #ifdef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
@@ -390,34 +397,38 @@ void mech_Rremovestuff(DbRef player, void *data, char *buffer) {
 
 void mech_loadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
 
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(context, !(MechSpecials(mech) & CARGO_TECH),
+  DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & CARGO_TECH),
                   "This unit cannot haul cargo!");
-  DOCHECK_CONTEXT(context, fabs(MechSpeed(mech)) > 0.0,
+  DOCHECK_CONTEXT(context, fabs(mech_current_speed(mech)) > 0.0,
                   "You're moving too fast!");
-  DOCHECK_CONTEXT(
-      context,
-      game_object_location(context->database, mech->mynum) != mech->mapindex ||
-          is_in_character(context->database,
-                          game_object_location(context->database, mech->mynum)),
-      "You aren't inside hangar!");
+  DOCHECK_CONTEXT(context,
+                  game_object_location(context->database, mech_dbref(mech)) !=
+                          mech_map_dbref(mech) ||
+                      is_in_character(context->database,
+                                      game_object_location(context->database,
+                                                           mech_dbref(mech))),
+                  "You aren't inside hangar!");
   if (loading_bay_whine(
-          player, game_object_location(context->database, mech->mynum), mech))
+          player, game_object_location(context->database, mech_dbref(mech)),
+          mech))
     return;
-  stuff_change_sub(context, player, buffer, mech->mynum, mech->mapindex, 1, 1);
+  stuff_change_sub(context, player, buffer, mech_dbref(mech),
+                   mech_map_dbref(mech), 1, 1);
   correct_speed(mech);
 }
 
 void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
 
   cch(MECH_USUALSO);
-  DOCHECK_CONTEXT(context, !(MechSpecials(mech) & CARGO_TECH),
+  DOCHECK_CONTEXT(context, !(mech_technology_flags(mech) & CARGO_TECH),
                   "This unit cannot haul cargo!");
-  stuff_change_sub(context, player, buffer, mech->mynum, mech->mapindex, -1, 1);
+  stuff_change_sub(context, player, buffer, mech_dbref(mech),
+                   mech_map_dbref(mech), -1, 1);
   correct_speed(mech);
 }
 

@@ -123,6 +123,7 @@ set(BTECH_SOURCES
   unit/mech_position_state.c
   unit/mech_radio_state.c
   unit/mech_runtime_state.c
+  unit/mech_specification_state.c
   unit/mech_stagger.c
   unit/mech_targeting_state.c
   persistence/economy_sqlite.c
@@ -205,6 +206,7 @@ set(BTECH_SOURCES
   unit/mech_classification_state.c
   unit/mech_consistency.c
   unit/mech_events.c
+  unit/mech_equipment_state.c
   unit/mech_geometry.c
   unit/mech_identity.c
   unit/mech_identity_state.c

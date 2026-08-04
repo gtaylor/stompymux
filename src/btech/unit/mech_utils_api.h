@@ -138,12 +138,10 @@ char **ProperSectionStringFromType(int type, int mtype);
 void ArmorStringFromIndex(int index, char *buffer, char type, char mtype);
 int GetWeaponCrits(Mech *mech, int weapindx);
 int listmatch(char *const *foo, char *mat);
-int GetPartWeight(int part);
 typedef int (*MultiWeaponSelectionCallback)(Mech *mech, DbRef player, int low,
                                             int high, void *context);
 void multi_weap_sel(Mech *mech, DbRef player, char *buffer, int bitbybit,
                     MultiWeaponSelectionCallback callback, void *context);
-int MechNumHeatsinksInEngine(Mech *mech);
 
 /* Tech/Repair functions */
 void do_sub_magic(Mech *mech, int loud);
@@ -173,31 +171,9 @@ int FindAndCheckAmmo(Mech *mech, int weapindx, int section, int critical,
                      int *wGattlingShots);
 
 #ifdef BT_ADVANCED_ECON
-typedef struct BtechPartCostSet {
-  const unsigned long long *costs;
-  size_t count;
-  int first_part;
-} BtechPartCostSet;
-
-enum { BTECH_PART_COST_SET_COUNT = 5 };
-
-void btech_part_costs_initialize(BtechContext *context);
-void btech_part_costs_destroy(BtechContext *context);
-void btech_part_costs_reset(BtechContext *context);
-void btech_part_cost_sets(
-    const BtechContext *context,
-    BtechPartCostSet sets[static BTECH_PART_COST_SET_COUNT]);
-unsigned long long btech_part_cost_get(const BtechContext *context, int part);
-void btech_part_cost_set(BtechContext *context, int part,
-                         unsigned long long cost);
-void CalcFasaCost_DoLegMath(Mech *mech, int loc, float *total);
-void CalcFasaCost_DoArmMath(Mech *mech, int loc, float *total);
-void CalcFasaCost_AddPrice(const Mech *mech, float *total, char *desc,
-                           float value);
 void Calc_AddOffBV(const Mech *mech, float *offbv, char *desc, float value);
 void Calc_AddDefBV(const Mech *mech, float *defbv, char *desc, float value);
 void Calc_SubDefBV(const Mech *mech, float *defbv, char *desc, float value);
-unsigned long long int CalcFasaCost(Mech *mech);
 int mech_armorpoints(Mech *mech);
 int mech_intpoints(Mech *mech);
 #endif

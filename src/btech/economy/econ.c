@@ -24,8 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "btech/context.h"
 #include "command_handlers_api.h"
-#include "mech.h"
+#include "equipment_types.h"
 #include "mech_partnames_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"

@@ -119,7 +119,7 @@ void fun_btgetweight(char *buff, char **bufc, DbRef player, DbRef cause,
     FUNCHECK(!find_matching_vlong_part(context->btech, fargs[0], &i, &p, &b),
              "#-1 INVALID PART NAME");
   }
-  sw = GetPartWeight(p);
+  sw = btech_part_weight(p);
   if (sw <= 0)
     sw = (1024 * 100);
   safe_tprintf_str(buff, bufc, "%s", tprintf("%.3f", (float)sw / 1024));
@@ -689,7 +689,7 @@ void fun_btfasabasecost_ref(char *buff, char **bufc, DbRef player, DbRef cause,
            "#-1 PERMISSION DENIED");
   FUNCHECK(!(mech = load_refmech(context->btech, fargs[0])), "#-1 INVALID REF");
 
-  safe_tprintf_str(buff, bufc, "%lld", CalcFasaCost(mech));
+  safe_tprintf_str(buff, bufc, "%llu", mech_fasa_cost(mech));
 #else
   safe_tprintf_str(buff, bufc, "#-1 NO ECONDB SUPPORT");
 #endif
