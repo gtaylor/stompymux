@@ -1,13 +1,44 @@
-#include "mech_maps_internal.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "map_los.h"
+#include "map_terrain.h"
+#include "mech_classification_api.h"
+#include "mech_electronics_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_map_render_internal.h"
+#include "mech_maps_api.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "registry_api.h"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static bool mech_seems_friendly(Mech *mech, Mech *other) {
+  return mech_team(mech) == mech_team(other) &&
+         InLineOfSight_NB(mech, other, 0, 0, 0);
+}
 
 char GetLRSMechChar(Mech *mech, Mech *other) {
   char c = 'u';
 
   if (mech == other)
     return '*';
-  if (IsDS(other))
+  if (mech_is_dropship(other))
     c = 'd';
-  switch (MechMove(other)) {
+  switch (mech_movement_type(other)) {
   case MOVE_FLY:
     c = 'a';
     break;
@@ -39,7 +70,7 @@ char GetLRSMechChar(Mech *mech, Mech *other) {
     c = 'f';
     break;
   }
-  if (!MechSeemsFriend(mech, other))
+  if (!mech_seems_friendly(mech, other))
     c = toupper(c);
   return c;
 }
@@ -140,7 +171,7 @@ static MapCellText lrs_mech_text(const MapColorScheme *colors, Mech *mech,
 
   if (mech == other)
     newc = colors->values[SELF_IDX];
-  else if (!MechSeemsFriend(mech, other))
+  else if (!mech_seems_friendly(mech, other))
     newc = colors->values[ENEMY_IDX];
   else
     newc = colors->values[FRIEND_IDX];
@@ -195,11 +226,13 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
   int losflag = MAPLOSHEX_SEE | MAPLOSHEX_SEEN;
 
   if (mode & LRS_MECHMODE) {
-    while (mechs[lm] && MechY(mechs[lm]) < y)
+    while (mechs[lm] && mech_position_y(mechs[lm]) < y)
       lm++;
-    while (mechs[lm] && MechY(mechs[lm]) == y && MechX(mechs[lm]) < x)
+    while (mechs[lm] && mech_position_y(mechs[lm]) == y &&
+           mech_position_x(mechs[lm]) < x)
       lm++;
-    if (mechs[lm] && MechY(mechs[lm]) == y && MechX(mechs[lm]) == x)
+    if (mechs[lm] && mech_position_y(mechs[lm]) == y &&
+        mech_position_x(mechs[lm]) == x)
       return lrs_mech_text(colors, mech, mechs[lm], mode & LRS_COLORMODE,
                            prevc);
   }
@@ -289,28 +322,30 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
       if ((oMech = btech_context_get_mech(mech_context(mech),
                                           map->mechsOnMap[i]))) {
         if ((mech == oMech) ||
-            (MechY(oMech) >= b_height && MechY(oMech) <= e_height &&
-             MechX(oMech) >= b_width && MechX(oMech) <= e_width &&
-             InLineOfSight(mech, oMech, MechX(oMech), MechY(oMech),
-                           FlMechRange(map, mech, oMech))))
+            (mech_position_y(oMech) >= b_height &&
+             mech_position_y(oMech) <= e_height &&
+             mech_position_x(oMech) >= b_width &&
+             mech_position_x(oMech) <= e_width &&
+             InLineOfSight(mech, oMech, mech_position_x(oMech),
+                           mech_position_y(oMech), mech_range_to(mech, oMech))))
           mechs[last_mech++] = oMech;
       }
     }
     for (i = 0; i < (last_mech - 1); i++) /* Bubble-sort the list
                                            *  to y/x order */
       for (loop = (i + 1); loop < last_mech; loop++) {
-        if (MechY(mechs[i]) > MechY(mechs[loop])) {
+        if (mech_position_y(mechs[i]) > mech_position_y(mechs[loop])) {
           oMech = mechs[i];
           mechs[i] = mechs[loop];
           mechs[loop] = oMech;
-        } else if (MechY(mechs[i]) == MechY(mechs[loop]) &&
-                   MechX(mechs[i]) > MechX(mechs[loop])) {
+        } else if (mech_position_y(mechs[i]) == mech_position_y(mechs[loop]) &&
+                   mech_position_x(mechs[i]) > mech_position_x(mechs[loop])) {
           oMech = mechs[i];
           mechs[i] = mechs[loop];
           mechs[loop] = oMech;
         }
       }
-    mechs[last_mech] = NULL;
+    mechs[last_mech] = nullptr;
     last_mech = 0;
   }
 
@@ -323,7 +358,7 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
     strcpy(botbuff, "    ");
     if (mode & LRS_MECHMODE)
-      while (mechs[last_mech] && MechY(mechs[last_mech]) < loop)
+      while (mechs[last_mech] && mech_position_y(mechs[last_mech]) < loop)
         last_mech++;
 
     for (i = b_width; i < e_width; i += 2) {
@@ -380,7 +415,8 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   char *args[5], *str;
   int displayHeight = LRS_DISPLAY_HEIGHT;
 
-  cch(MECH_USUAL);
+  if (!common_checks(player, mech, MECH_USUAL))
+    return;
 
   if (is_ansi(mech_context(mech)->database, player))
     mode |= LRS_COLORMODE;
@@ -388,10 +424,10 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech_context(mech), !MechLRSRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_long_range_sensor_range(mech),
                   "Your system seems to be inoperational.");
-  if (!parse_tacargs(player, mech, &args[1], argc - 1, MechLRSRange(mech), &x,
-                     &y))
+  if (!parse_tacargs(player, mech, &args[1], argc - 1,
+                     mech_long_range_sensor_range(mech), &x, &y))
     return;
   switch (args[0][0]) {
   case 'M':
@@ -428,7 +464,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (MapIsDark(map) || (MechType(mech) == CLASS_MW &&
+  if (MapIsDark(map) || (mech_class(mech) == CLASS_MW &&
                          mech_context(mech)->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
@@ -443,7 +479,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     }
   }
 
-  displayHeight = MIN(displayHeight, 2 * MechLRSRange(mech));
+  displayHeight = MIN(displayHeight, 2 * mech_long_range_sensor_range(mech));
   displayHeight = MIN(displayHeight, map->map_height);
 
   if (!(displayHeight % 2))
