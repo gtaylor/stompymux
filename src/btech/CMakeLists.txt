@@ -51,6 +51,11 @@ set(BTECH_SOURCES
   combat/mech_weapon_modes.c
   combat/mech_hitloc.c
   combat/mech_physical.c
+  combat/mech_physical_commands.c
+  combat/mech_physical_resolution.c
+  combat/mech_physical_damage.c
+  combat/mech_charge.c
+  combat/mech_club.c
   combat/mine.c
   commands/btech.c
   commands/mech_restrict.c
