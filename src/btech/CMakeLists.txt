@@ -123,6 +123,7 @@ set(BTECH_SOURCES
   unit/mech_position_state.c
   unit/mech_radio_state.c
   unit/mech_runtime_state.c
+  unit/mech_sensor_state.c
   unit/mech_specification_state.c
   unit/mech_stagger.c
   unit/mech_targeting_state.c

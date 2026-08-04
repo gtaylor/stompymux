@@ -16,6 +16,12 @@ int mech_position_y(const Mech *mech) { return mech->pd.y; }
 
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
 
+float mech_position_real_x(const Mech *mech) { return mech->pd.fx; }
+
+float mech_position_real_y(const Mech *mech) { return mech->pd.fy; }
+
+float mech_position_real_z(const Mech *mech) { return mech->pd.fz; }
+
 char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
 
 void mech_position_xy_set(Mech *mech, int x, int y) {

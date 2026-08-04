@@ -124,7 +124,8 @@ while IFS= read -r match; do
   status=1
 done < <(rg -n '#include "mech\.h"|#include "mech_macros\.h"' \
   src/btech/map/map.c src/btech/map/map_buildings.c \
-  src/btech/map/map_dynamic.c src/btech/map/map_obj.c \
+  src/btech/map/map_dynamic.c src/btech/map/map_los.c \
+  src/btech/map/map_obj.c \
   src/btech/map/map_obj_commands.c src/btech/map/map_obj_internal.h \
   src/btech/map/map_terrain.c || true)
 
