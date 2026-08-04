@@ -219,7 +219,8 @@ done < <(rg -n \
   src/btech/autopilot/autopilot_radio_handlers.c \
   src/btech/autopilot/autopilot_radio_parser.c \
   src/btech/autopilot/autopilot_sensor_policy.c \
-  src/btech/autopilot/autopilot_target_scoring.c || true)
+  src/btech/autopilot/autopilot_target_scoring.c \
+  src/btech/autopilot/autopilot_weapon_profile.c || true)
 
 if [[ -e src/btech/ui/coolmenu_interface.h ]]; then
   echo "src/btech/ui/coolmenu_interface.h: unused macro interface is not allowed"

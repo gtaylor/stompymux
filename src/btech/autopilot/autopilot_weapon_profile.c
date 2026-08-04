@@ -13,7 +13,19 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include <stdlib.h>
+#include <string.h>
+
+#include "autopilot.h"
+#include "btech/context.h"
+#include "equipment_types.h"
+#include "mech_identity_api.h"
+#include "mech_runtime_api.h"
+#include "mech_utils_api.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
+#include "registry_api.h"
 
 AutopilotWeapon *auto_create_weapon_node(short weapon_number,
                                          short weapon_db_number, short section,
@@ -23,8 +35,8 @@ AutopilotWeapon *auto_create_weapon_node(short weapon_number,
 
   temp = malloc(sizeof(AutopilotWeapon));
 
-  if (temp == NULL) {
-    return NULL;
+  if (temp == nullptr) {
+    return nullptr;
   }
 
   memset(temp, 0, sizeof(AutopilotWeapon));
@@ -55,8 +67,8 @@ AutopilotTarget *auto_create_target_node(int target_score, DbRef target_dbref) {
 
   temp = malloc(sizeof(AutopilotTarget));
 
-  if (temp == NULL) {
-    return NULL;
+  if (temp == nullptr) {
+    return nullptr;
   }
 
   memset(temp, 0, sizeof(AutopilotTarget));
@@ -100,7 +112,7 @@ void auto_destroy_weaplist(Autopilot *autopilot) {
 
   /* Finally destroying the list */
   doubly_linked_list_destroy_list(autopilot->weaplist);
-  autopilot->weaplist = NULL;
+  autopilot->weaplist = nullptr;
 }
 
 /*
@@ -187,7 +199,7 @@ static int auto_calc_weapon_score(BtechContext *context, int weapon_db_number,
   }
 
   /* Get the damage for the weapon */
-  if (IsMissile(weapon_db_number)) {
+  if (MechWeapons[weapon_db_number].type == TMISSILE) {
     const MissileHitEntry *entry = missile_hit_registry_find_weapon(
         &context->missile_hits, weapon_db_number);
 
@@ -264,17 +276,17 @@ void auto_update_profile_event(Autopilot *autopilot) {
     dprintk("ai is bad!");
     return;
   }
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Ok our mech is dead we're done */
-  if (Destroyed(mech)) {
+  if (mech_is_destroyed(mech)) {
     return;
   }
 
   /* Log Message */
-  print_autogun_log(autopilot, "Profiling Unit #%d", mech->mynum);
+  print_autogun_log(autopilot, "Profiling Unit #%ld", mech_dbref(mech));
 
   /* Destroy the arrays first, don't worry about the weap
    * structures because we can clear them with the ddlist
@@ -288,11 +300,11 @@ void auto_update_profile_event(Autopilot *autopilot) {
       /* Destroy RedBlackTree */
       red_black_tree_destroy(autopilot->profile[range]);
     }
-    autopilot->profile[range] = NULL;
+    autopilot->profile[range] = nullptr;
   }
 
   /* Check to see if the weaplist exists */
-  if (autopilot->weaplist != NULL) {
+  if (autopilot->weaplist != nullptr) {
 
     /* Destroy the list */
     auto_destroy_weaplist(autopilot);
@@ -312,7 +324,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
 
     /* Find all the weapons for a given section */
     weapon_count_section =
-        FindWeapons(mech, section, weaparray, weapdata, critical);
+        FindWeapons_Advanced(mech, section, weaparray, weapdata, critical, 1);
 
     /* No weapons here */
     if (weapon_count_section <= 0)
@@ -327,7 +339,7 @@ void auto_update_profile_event(Autopilot *autopilot) {
        * which one to send in the command */
       weapon_count++;
 
-      if (IsAMS(weaparray[weapon_number]))
+      if (MechWeapons[weaparray[weapon_number]].special & AMS)
         continue;
 
       /* Does it work? */
@@ -381,9 +393,9 @@ void auto_update_profile_event(Autopilot *autopilot) {
           autopilot->xcode.context, temp_weapon_node->weapon_db_number, range);
 
       /* If RedBlackTree for this range doesn't exist, create it */
-      if (autopilot->profile[range] == NULL) {
+      if (autopilot->profile[range] == nullptr) {
         autopilot->profile[range] =
-            red_black_tree_init(&auto_generic_compare, NULL);
+            red_black_tree_init(&auto_generic_compare, nullptr);
       }
 
       /* Check to see if the score exists in the tree
