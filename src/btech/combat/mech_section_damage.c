@@ -23,9 +23,9 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
+#include "environment_damage_api.h"
 #include "legacy_macros.h"
 #include "map.h"
-#include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech.h"
 #include "mech_ammodump_api.h"
@@ -222,7 +222,7 @@ void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
   }
 
   /* Destroy everything in the loc */
-  DestroyParts(attacker, wounded, hitloc, 0, 0);
+  mech_parts_destroy(attacker, wounded, hitloc, 0, 0);
   checkECM(wounded);
   /* Stop lateral if we're a quad */
   if ((MechType(wounded) == CLASS_MECH) && MechIsQuad(wounded))

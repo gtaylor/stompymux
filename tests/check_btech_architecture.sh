@@ -120,14 +120,11 @@ done < <(rg -n -g '*.[ch]' \
   src/btech/economy || true)
 
 while IFS= read -r match; do
-  echo "$match: converted map module depends on the legacy Mech aggregate"
+  echo "$match: map domain depends on the legacy Mech layout"
   status=1
-done < <(rg -n '#include "mech\.h"|#include "mech_macros\.h"' \
-  src/btech/map/map.c src/btech/map/map_buildings.c \
-  src/btech/map/map_dynamic.c src/btech/map/map_los.c \
-  src/btech/map/map_obj.c \
-  src/btech/map/map_obj_commands.c src/btech/map/map_obj_internal.h \
-  src/btech/map/map_terrain.c || true)
+done < <(rg -n -g '*.[ch]' \
+  '#include "mech\.h"|#include "mech_macros\.h"|\bmech->' \
+  src/btech/map || true)
 
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"

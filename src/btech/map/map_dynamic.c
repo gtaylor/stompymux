@@ -205,7 +205,7 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
   }
   MarkForLOSUpdate(mech);
   UnZombifyMech(mech);
-  UpdateConditions(mech, newmap);
+  map_conditions_apply(mech, newmap);
   if (mech_is_dropship(mech))
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
                        tprintf("DS #%ld has entered map #%ld", mech_dbref(mech),

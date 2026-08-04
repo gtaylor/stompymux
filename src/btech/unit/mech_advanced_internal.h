@@ -14,6 +14,7 @@
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
+#include "environment_damage_api.h"
 #include "failures.h"
 #include "legacy_macros.h"
 #include "map.h"

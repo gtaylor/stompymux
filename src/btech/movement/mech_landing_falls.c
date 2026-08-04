@@ -24,9 +24,9 @@
 #include "btechstats_api.h"
 #include "btmux_build_config.h"
 #include "command_handlers_api.h"
+#include "environment_damage_api.h"
 #include "legacy_macros.h"
 #include "map.h"
-#include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech.h"
 #include "mech_combat_misc_api.h"
@@ -266,7 +266,7 @@ void MechFloodsLoc(Mech *mech, int loc, int lev) {
       mech, tprintf("has a gaping hole in %s, and water pours in!", locbuff));
 
   SetSectFlooded(mech, loc);
-  DestroyParts(mech, mech, loc, 1, 1);
+  mech_parts_destroy(mech, mech, loc, 1, 1);
 }
 
 void MechFloods(Mech *mech) {

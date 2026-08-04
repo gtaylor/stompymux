@@ -501,7 +501,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
               MechType_Ref(mech), x / 1024.0, y / 1024));
   update_oweight(mech, x);
   if ((map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
-    UpdateConditions(mech, map);
+    map_conditions_apply(mech, map);
   /* To prevent certain funny occurences.. */
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (!(GetSectOInt(mech, i))) {

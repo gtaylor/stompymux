@@ -13,13 +13,10 @@
 
 #include "mux/server/platform.h"
 
+typedef struct BattleMap BattleMap;
+typedef struct Mech Mech;
+
 /* map.conditions.c */
 void alter_conditions(BattleMap *map);
 void map_setconditions(DbRef player, BattleMap *map, char *buffer);
-void UpdateConditions(Mech *mech, BattleMap *map);
-void DestroyParts(Mech *attacker, Mech *wounded, int hitloc, int breach,
-                  int IsDisable);
-void reactor_explosion(Mech *wounded, Mech *attacker);
-
-int BreachLoc(Mech *attacker, Mech *mech, int hitloc);
-int PossiblyBreach(Mech *attacker, Mech *mech, int hitloc);
+void map_conditions_apply(Mech *mech, BattleMap *map);

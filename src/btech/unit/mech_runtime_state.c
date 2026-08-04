@@ -28,3 +28,17 @@ void mech_carried_dbref_set(Mech *mech, DbRef carried) {
 bool mech_is_towed(const Mech *mech) { return mech->rd.status & TOWED; }
 
 void mech_towed_clear(Mech *mech) { mech->rd.status &= ~TOWED; }
+
+void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
+                                     bool gravity, bool vacuum) {
+  mech->rd.status &= ~CONDITIONS;
+  if (!special)
+    return;
+  mech->rd.status |= UNDERSPECIAL;
+  if (temperature)
+    mech->rd.status |= UNDERTEMPERATURE;
+  if (gravity)
+    mech->rd.status |= UNDERGRAVITY;
+  if (vacuum)
+    mech->rd.status |= UNDERVACUUM;
+}

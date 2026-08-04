@@ -23,9 +23,9 @@
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
+#include "environment_damage_api.h"
 #include "legacy_macros.h"
 #include "map.h"
-#include "map_conditions_api.h"
 #include "map_terrain.h"
 #include "mech.h"
 #include "mech_ammodump_api.h"
@@ -430,9 +430,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
           cause_internaldamage(wounded, attacker, LOS, attackPilot, isrear,
                                hitloc, intDamage, cause, &crits);
       if (!intDamage && !SectIsDestroyed(wounded, hitloc))
-        BreachLoc(attacker, wounded, hitloc);
+        mech_location_breach(attacker, wounded, hitloc);
     } else
-      PossiblyBreach(attacker, wounded, hitloc);
+      mech_location_maybe_breach(attacker, wounded, hitloc);
     if (intDamage > 0 && transfer && (MechType(wounded) != CLASS_BSUIT)) {
       if ((hitloc = TransferTarget(wounded, hitloc)) >= 0)
         DamageMech(wounded, attacker, LOS, attackPilot, hitloc, isrear,
@@ -457,7 +457,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
             cause_internaldamage(wounded, attacker, LOS, attackPilot, isrear,
                                  hitloc, intDamage, cause, &crits);
       if (!SectIsDestroyed(wounded, hitloc))
-        PossiblyBreach(attacker, wounded, hitloc);
+        mech_location_maybe_breach(attacker, wounded, hitloc);
       if (intDamage > 0 && transfer &&
           !((MechSections(wounded)[hitloc].config & CASE_TECH) ||
             (MechSpecials(wounded) & CLAN_TECH))) {

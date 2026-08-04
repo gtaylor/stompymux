@@ -38,6 +38,7 @@ set(BTECH_SOURCES
   combat/crit_dispatch.c
   combat/eject.c
   combat/eject_embark.c
+  combat/environment_damage.c
   combat/mech_ammodump.c
   combat/mech_bth.c
   combat/mech_bth_movement.c
