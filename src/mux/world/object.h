@@ -18,7 +18,6 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int object_type,
 void object_apply_default_lua_parent(EvaluationContext *evaluation,
                                      DbRef object, int object_type);
 void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef object);
-void database_check(EvaluationContext *evaluation, DbRef player, int key);
 void empty_obj(EvaluationContext *evaluation, DbRef object);
 void destroy_exit(EvaluationContext *evaluation, DbRef exit);
 void destroy_thing(EvaluationContext *evaluation, DbRef thing);

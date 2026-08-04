@@ -5,6 +5,7 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"

@@ -9,9 +9,12 @@ stylua := env_var_or_default("STYLUA", "stylua")
 
 default: fmt build test install
 
-ci: fmt-check build test
+ci: check-mux-source-size fmt-check build test
 
 agent-checks: ci
+
+check-mux-source-size:
+    status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
 
 fmt:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i

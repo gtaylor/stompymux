@@ -24,6 +24,7 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/timer.h"
+#include "mux/world/database_check.h"
 #include "mux/world/match.h"
 
 extern void pool_reset(void);

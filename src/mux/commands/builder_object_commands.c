@@ -1,0 +1,260 @@
+/*
+ * builder_commands.c -- Commands that create and configure world objects
+ */
+
+#include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
+
+#include "p.glue.h"
+
+#include "mux/commands/builder_commands_internal.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/server/platform.h"
+#include "mux/world/world_context.h"
+
+#include "mux/communication/comsys.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/styled_text/markup.h"
+#include "mux/world/match.h"
+#include "mux/world/object.h"
+#include "mux/world/object_set.h"
+#include "mux/world/walkdb.h"
+
+extern NameTable indiv_attraccess_nametab[];
+
+void do_chzone(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  char *newobj = invocation->second;
+  DbRef thing;
+  DbRef zone;
+
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
+  match_everything(&invocation->context->match, 0);
+  if ((thing = noisy_match_result(&invocation->context->match)) == NOTHING)
+    return;
+
+  if (!strcasecmp(newobj, "none"))
+    zone = NOTHING;
+  else {
+    init_match(&invocation->context->match, player, newobj, OBJECT_TYPE_NOTYPE);
+    match_everything(&invocation->context->match, 0);
+    if ((zone = noisy_match_result(&invocation->context->match)) == NOTHING)
+      return;
+
+    if ((typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_THING) &&
+        (typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_ROOM)) {
+      notify(evaluation, player, "Invalid zone object type.");
+      return;
+    }
+  }
+
+  if (!is_controls(evaluation->world->database, player, thing)) {
+    notify(evaluation, player, "You don't have the power to shift reality.");
+    return;
+  }
+  /* The target zone must also be controllable by the actor. */
+  if ((zone != NOTHING) &&
+      !is_controls(evaluation->world->database, player, zone)) {
+    notify(evaluation, player, "You cannot move that object to that zone.");
+    return;
+  }
+  /*
+   * only rooms may be zoned to other rooms
+   */
+  if ((zone != NOTHING) &&
+      (typeof_obj(evaluation->world->database, zone) == OBJECT_TYPE_ROOM) &&
+      typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_ROOM) {
+    notify(evaluation, player, "Only rooms may be zoned to rooms.");
+    return;
+  }
+  /*
+   * everything is okay, do the change
+   */
+  game_object_set_zone(invocation->context->world->database, thing, zone);
+  if (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_PLAYER) {
+    /*
+     * if the object is a player, resetting these flags is rather
+     * * * * * inconvenient -- although this may pose a bit of a *
+     * *  * security * risk. Be careful when @chzone'ing wizard players.
+     */
+    game_object_set_flag(evaluation->world->database, thing, OBJECT_FLAG_WIZARD,
+                         false);
+    game_object_clear_powers(evaluation->world->database, thing);
+  }
+  notify(evaluation, player, "Zone changed.");
+}
+void do_name(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  char *newname = invocation->second;
+  DbRef thing;
+  char *buff;
+  char new[LBUF_SIZE];
+  char *compiled_name;
+
+  if ((thing = match_controlled(&invocation->context->match, player, name)) ==
+      NOTHING)
+    return;
+  compiled_name = builder_compile_object_name(evaluation, player, newname);
+  if (!compiled_name)
+    return;
+  newname = compiled_name;
+
+  /*
+   * check for bad name
+   */
+  styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                    sizeof(new));
+  if (*newname == '\0' || strlen(new) == 0) {
+    notify_quiet(evaluation, player, "Give it what new name?");
+    free_lbuf(compiled_name);
+    return;
+  }
+  /*
+   * check for renaming a player
+   */
+  if (is_player(evaluation->world->database, thing)) {
+
+    styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                      sizeof(new));
+    buff = trim_spaces(new);
+    if (!ok_player_name(invocation->context->world->configuration, buff) ||
+        !badname_check(invocation->context->world, buff)) {
+      notify_quiet(evaluation, player, "You can't use that name.");
+      free_lbuf(buff);
+      free_lbuf(compiled_name);
+      return;
+    } else if (string_compare(
+                   invocation->context->world->configuration, buff,
+                   game_object_pure_name(invocation->context->world->database,
+                                         thing)) &&
+               (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
+                NOTHING)) {
+
+      /*
+       * string_compare allows changing foo to Foo, etc.
+       */
+
+      notify_quiet(evaluation, player, "That name is already in use.");
+      free_lbuf(buff);
+      free_lbuf(compiled_name);
+      return;
+    }
+
+    /*
+     * everything ok, notify
+     */
+    STARTLOG(evaluation->log, LOG_SECURITY, "SEC", "CNAME") {
+      log_name(evaluation->log, thing), log_text(" renamed to ");
+      log_text(buff);
+      ENDLOG(evaluation->log);
+    }
+    if (is_suspect(evaluation->world->database, thing)) {
+      send_channel(
+          evaluation, "Suspect", "%s",
+          tprintf("%s renamed to %s",
+                  game_object_name(invocation->context->world->database, thing),
+                  buff));
+    }
+    delete_player_name(
+        invocation->context->world, thing,
+        game_object_pure_name(invocation->context->world->database, thing));
+
+    object_name_set(invocation->context->world->database, thing, newname);
+    add_player_name(
+        invocation->context->world, thing,
+        game_object_pure_name(invocation->context->world->database, thing));
+    if (!is_quiet(evaluation->world->database, player) &&
+        !is_quiet(evaluation->world->database, thing))
+      notify_quiet(evaluation, player, "Name set.");
+    free_lbuf(buff);
+    free_lbuf(compiled_name);
+    return;
+  } else {
+    styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                      sizeof(new));
+    if (!ok_name(invocation->context->world->configuration, new)) {
+      notify_quiet(evaluation, player, "That is not a reasonable name.");
+      free_lbuf(compiled_name);
+      return;
+    }
+    /*
+     * everything ok, change the name
+     */
+    object_name_set(invocation->context->world->database, thing, newname);
+    if (!is_quiet(evaluation->world->database, player) &&
+        !is_quiet(evaluation->world->database, thing))
+      notify_quiet(evaluation, player, "Name set.");
+  }
+  free_lbuf(compiled_name);
+}
+/*
+ * ---------------------------------------------------------------------------
+ * * do_unlink: Unlink an exit from its destination or remove a dropto.
+ */
+
+void do_unlink(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  char *name = invocation->first;
+  DbRef exit;
+
+  init_match(&invocation->context->match, player, name, OBJECT_TYPE_EXIT);
+  match_everything(&invocation->context->match, 0);
+  exit = match_result(&invocation->context->match);
+
+  switch (exit) {
+  case NOTHING:
+    notify_quiet(evaluation, player, "Unlink what?");
+    break;
+  case AMBIGUOUS:
+    notify_quiet(evaluation, player, "I don't know which one you mean!");
+    break;
+  default:
+    if (!is_controls(evaluation->world->database, player, exit)) {
+      notify_quiet(evaluation, player, "Permission denied.");
+    } else {
+      switch (typeof_obj(evaluation->world->database, exit)) {
+      case OBJECT_TYPE_EXIT:
+        game_object_set_location(evaluation->world->database, exit, NOTHING);
+        if (!is_quiet(evaluation->world->database, player))
+          notify_quiet(evaluation, player, "Unlinked.");
+        break;
+      case OBJECT_TYPE_ROOM:
+        game_object_set_location(evaluation->world->database, exit, NOTHING);
+        if (!is_quiet(evaluation->world->database, player))
+          notify_quiet(evaluation, player, "Dropto removed.");
+        break;
+      default:
+        notify_quiet(evaluation, player, "You can't unlink that!");
+        break;
+      }
+    }
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * * do_set: Set flags on objects.
+ */
+void do_set(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef player = invocation->player;
+  int key = invocation->key;
+  char *name = invocation->first;
+  char *flag = invocation->second;
+  DbRef thing = match_controlled(&invocation->context->match, player, name);
+  if (thing != NOTHING)
+    flag_set(evaluation, invocation->context->world->indexes, thing, player,
+             flag, key);
+}

@@ -1,0 +1,305 @@
+/*
+ * speech.c -- Commands which involve speaking
+ */
+
+#include "mux/commands/command_runtime.h"
+#include "mux/server/platform.h"
+#include "mux/world/world_context.h"
+
+#include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/commands/command_helpers.h"
+#include "mux/communication/access_policy.h"
+#include "mux/communication/comsys.h"
+#include "mux/communication/speech.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/objects/powers.h"
+#include "mux/server/platform.h"
+#include "mux/server/server_api.h"
+#include "mux/support/alloc.h"
+#include "mux/support/styled_text/markup.h"
+#include "mux/world/match.h"
+#include "mux/world/world_context.h"
+
+static int page_check(EvaluationContext *evaluation,
+                      const ServerConfiguration *configuration, DbRef player,
+                      DbRef target) {
+  if (is_in_character_location(evaluation->world->database, configuration,
+                               player) &&
+      !is_wizard(evaluation->world->database, target) &&
+      !is_wizard(evaluation->world->database, player)) {
+    notify(evaluation, player, "Permission denied.");
+    return 0;
+  }
+  if (!is_connected(evaluation->world->database, target)) {
+    notify_with_cause(
+        evaluation, player, target,
+        tprintf("Sorry, %s is not connected.",
+                game_object_name(evaluation->world->database, target)));
+    return 0;
+  }
+  if (!is_wizard(evaluation->world->database, player) &&
+      is_in_character_location(evaluation->world->database, configuration,
+                               target) &&
+      !is_wizard(evaluation->world->database, target)) {
+    notify_with_cause(
+        evaluation, player, target,
+        tprintf("Sorry, %s is not accepting pages.",
+                game_object_name(evaluation->world->database, target)));
+    return 0;
+  }
+  return 1;
+}
+
+/*
+ * Used in do_page
+ */
+static char *dbrefs_to_names(WorldContext *world, DbRef player, char *list,
+                             char *namelist, int ismessage) {
+  char *bp, *p;
+  char oldlist[LBUF_SIZE];
+
+  StringCopy(oldlist, list);
+  bp = namelist;
+  for (p = (char *)strtok(oldlist, " "); p != nullptr;
+       p = (char *)strtok(nullptr, " ")) {
+    if (ismessage)
+      safe_str(tprintf("%s, ", game_object_name(world->database, atoi(p))),
+               namelist, &bp);
+    else {
+      if (lookup_player(world, player, p, 1) != NOTHING) {
+        safe_str(tprintf("%s, ",
+                         game_object_name(world->database,
+                                          lookup_player(world, player, p, 1))),
+                 namelist, &bp);
+      }
+    }
+  }
+  *(bp - 2) = '\0';
+  return bp;
+}
+
+void do_page(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  const ServerConfiguration *configuration =
+      invocation->context->world->configuration;
+  const DbRef player = invocation->player;
+  char *tname = invocation->first;
+  char *message = invocation->second;
+  char plain_message[LBUF_SIZE];
+  DbRef target;
+  char *p, *buf1, *bp, *buf2, *bp2, *mp, *str;
+  char targetname[LBUF_SIZE];
+  char alias[LBUF_SIZE];
+  char aladd[LBUF_SIZE];
+  int ispose = 0;
+  int ismessage = 0;
+  int count = 0;
+  int n = 0;
+  long aflags = 0;
+
+  buf1 = alloc_lbuf("page_return_list");
+  bp = buf1;
+
+  buf2 = alloc_lbuf("page_list");
+  bp2 = buf2;
+
+  if ((tname[0] == ':') || (tname[0] == ';') || (message[0] == ':') ||
+      (message[0] == ';'))
+    ispose = 1;
+
+  if (!*message) {
+    attribute_get_string(evaluation->world->database, targetname, player,
+                         A_LASTPAGE, &aflags);
+    if (!*tname) {
+      if (!*targetname)
+        notify(evaluation, player, "You have not paged anyone.");
+      else
+        for (p = (char *)strtok(targetname, " "); p != nullptr;
+             p = (char *)strtok(nullptr, " ")) {
+          target = atoi(p);
+          notify_printf(evaluation, player, "You last paged %s.",
+                        game_object_name(evaluation->world->database, target));
+        }
+
+      free_lbuf(buf1);
+      free_lbuf(buf2);
+      return;
+    }
+    StringCopy(message, tname);
+    StringCopy(tname, targetname);
+    ismessage = 1;
+  }
+
+  styled_text_strip(evaluation->world->styled_text_palette, message,
+                    plain_message, sizeof(plain_message));
+  message = plain_message;
+  mp = message;
+
+  attribute_get_string(evaluation->world->database, alias, player, A_ALIAS,
+                       &aflags);
+  if (*alias) {
+    char *ap = aladd;
+
+    safe_str(" (", aladd, &ap);
+    safe_str(alias, aladd, &ap);
+    safe_chr(')', aladd, &ap);
+    *ap = '\0';
+  } else
+    aladd[0] = 0;
+
+  /*
+   * Count the words
+   */
+  for (n = 0, str = tname; str; str = (char *)next_token(str, ' '), n++)
+    ;
+
+  if (((target = lookup_player(evaluation->world, player, tname, 1)) ==
+       NOTHING) &&
+      n > 1) {
+    bp = dbrefs_to_names(evaluation->world, player, tname, buf1, ismessage);
+    for (p = (char *)strtok(tname, " "); p != nullptr;
+         p = (char *)strtok(nullptr, " ")) {
+
+      /*
+       * If it's a memory page, grab the number from the *
+       * * * list
+       */
+      if (ismessage) {
+        target = atoi(p);
+      } else
+        target = lookup_player(evaluation->world, player, p, 1);
+
+      message = mp;
+
+      if (target == NOTHING) {
+        notify_printf(evaluation, player, "I don't recognize \"%s\".", p);
+      } else if (!page_check(evaluation, configuration, player, target)) {
+        ;
+      } else {
+        switch (*message) {
+        case ':':
+          notify_with_cause(
+              evaluation, target, player,
+              tprintf("From afar, to (%s):%s %s %s", buf1, aladd,
+                      game_object_name(evaluation->world->database, player),
+                      message + 1));
+          break;
+        case ';':
+          message++;
+          notify_with_cause(
+              evaluation, target, player,
+              tprintf("From afar, to (%s):%s %s%s", buf1, aladd,
+                      game_object_name(evaluation->world->database, player),
+                      message));
+          break;
+        case '"':
+          message++;
+          [[fallthrough]];
+        default:
+          notify_with_cause(
+              evaluation, target, player,
+              tprintf("To (%s), %s%s pages you: %s", buf1,
+                      game_object_name(evaluation->world->database, player),
+                      aladd, message));
+        }
+        safe_str(tprintf("%ld ", target), buf2, &bp2);
+        count++;
+      }
+    }
+  } else {
+    if (ismessage)
+      target = atoi(tname);
+    if (target == NOTHING) {
+      notify_printf(evaluation, player, "I don't recognize \"%s\".", tname);
+    } else if (!page_check(evaluation, configuration, player, target)) {
+      ;
+    } else {
+
+      switch (*message) {
+      case ':':
+        notify_with_cause(
+            evaluation, target, player,
+            tprintf("From afar,%s %s %s", aladd,
+                    game_object_name(evaluation->world->database, player),
+                    message + 1));
+        break;
+      case ';':
+        message++;
+        notify_with_cause(
+            evaluation, target, player,
+            tprintf("From afar,%s %s%s", aladd,
+                    game_object_name(evaluation->world->database, player),
+                    message));
+        break;
+      case '"':
+        message++;
+        [[fallthrough]];
+      default:
+        notify_with_cause(
+            evaluation, target, player,
+            tprintf("%s%s pages: %s",
+                    game_object_name(evaluation->world->database, player),
+                    aladd, message));
+      }
+      safe_str(tprintf("%ld ", target), buf2, &bp2);
+      safe_str(tprintf("%s, ",
+                       game_object_name(evaluation->world->database, target)),
+               buf1, &bp);
+
+      /* this is terminating the string above when there is no more to add to
+       * the list removing the ", "
+       */
+      *(bp - 2) = '\0';
+      count++;
+    }
+  }
+
+  if (count == 0) {
+    free_lbuf(buf1);
+    free_lbuf(buf2);
+    return;
+  }
+  *(bp2 - 1) = '\0';
+  attribute_add(evaluation->world->database, player, A_LASTPAGE, buf2, aflags);
+
+  if (count == 1) {
+    if (*buf1) {
+      if (ispose != 1) {
+        notify_printf(evaluation, player, "You paged %s with '%s'.", buf1, mp);
+      } else {
+        if (mp[0] == ':')
+          notify_printf(evaluation, player, "Long distance to %s: %s %s", buf1,
+                        game_object_name(evaluation->world->database, player),
+                        mp + 1);
+        else
+          notify_printf(evaluation, player, "Long distance to %s: %s%s", buf1,
+                        game_object_name(evaluation->world->database, player),
+                        mp + 1);
+      }
+    }
+  } else {
+    *(bp - 2) = ')';
+    *(bp - 1) = '\0';
+
+    if (*buf1) {
+      if (ispose != 1) {
+        notify_printf(evaluation, player, "You paged (%s with '%s'.", buf1, mp);
+      } else {
+        if (mp[0] == ':')
+          notify_printf(evaluation, player, "Long distance to (%s: %s %s", buf1,
+                        game_object_name(evaluation->world->database, player),
+                        mp + 1);
+        else
+          notify_printf(evaluation, player, "Long distance to (%s: %s%s", buf1,
+                        game_object_name(evaluation->world->database, player),
+                        mp + 1);
+      }
+    }
+  }
+
+  free_lbuf(buf1);
+  free_lbuf(buf2);
+}

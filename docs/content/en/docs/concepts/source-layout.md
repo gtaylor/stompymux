@@ -26,6 +26,16 @@ descriptive PascalCase names. Functions use snake_case, and implementation
 details remain private to their owning module unless another translation unit
 needs them.
 
+Large subsystems use several translation units instead of collecting unrelated
+operations in one source file. Command registration, dispatch, configuration,
+listing, builder operations, state inspection, and examination are separate;
+channels separate delivery, aliases, management, presence, and administration;
+networking separates timing, output, connection lifecycle, commands, and site
+access; and SQLite and Lua code separate their schemas or runtimes from loading,
+storage, callbacks, scheduling, flows, and bindings. Headers ending in
+`_internal.h` are private contracts between translation units in one subsystem
+and must not be included by other subsystems.
+
 Object flags and powers are represented by individual boolean fields in memory
 and matching SQLite columns. Flags use `has_*_flag` names and powers use
 `has_*_power` names; command names omit those storage-oriented affixes (for

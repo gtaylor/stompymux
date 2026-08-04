@@ -16,8 +16,3 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing,
                       DbRef destination, DbRef cause, int hush);
 void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                const char *name, int quiet);
-void do_enter_internal(EvaluationContext *evaluation, DbRef player,
-                       DbRef target, int key);
-void do_move(CommandInvocation *invocation);
-void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
-                  int key, char *direction);

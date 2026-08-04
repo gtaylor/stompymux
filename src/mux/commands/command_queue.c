@@ -8,6 +8,7 @@
 
 #include "btech/btech_context.h"
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/command_runtime.h"

@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 enum : int {
   SEARCH_EQUAL = 0x1,
   SEARCH_GTEQ = 0x2,
@@ -40,31 +42,14 @@ enum : int {
   WALK_POSTORDER = 0x102,
 };
 
-#ifndef DEBUG
-typedef void *RedBlackTree;
-#else
-typedef struct RedBlackTreeNode {
-  struct RedBlackTreeNode *left, *right, *parent;
-  void *key;
-  void *data;
-  int color;
-  int count;
-} rbtree_node;
-
-typedef struct RedBlackTreeHead {
-  struct RedBlackTreeNode *head;
-  int (*compare_function)(void *, void *, void *);
-  void *token;
-  unsigned int size;
-} *RedBlackTree;
-#endif
+typedef struct RedBlackTreeHead *RedBlackTree;
 
 RedBlackTree red_black_tree_init(int (*)(void *, void *, void *), void *);
 void red_black_tree_destroy(RedBlackTree);
 
 void red_black_tree_insert(RedBlackTree, void *, void *);
 void *red_black_tree_find(RedBlackTree, void *);
-int red_black_tree_exists(RedBlackTree, void *);
+bool red_black_tree_exists(RedBlackTree, void *);
 void *red_black_tree_delete(RedBlackTree, void *);
 void red_black_tree_release(RedBlackTree, void (*)(void *, void *, void *),
                             void *);

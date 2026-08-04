@@ -7,6 +7,7 @@
 #include "p.glue.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/commac.h"
@@ -29,6 +30,7 @@
 #include "mux/server/version.h"
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
+#include "mux/world/database_check.h"
 #include "mux/world/match.h"
 #include "persistence/btech_persistence.h"
 #ifndef NEXT

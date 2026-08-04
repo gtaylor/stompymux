@@ -1,0 +1,443 @@
+/* lua.c - Lua runtime initialization and MUX integration. */
+
+#include "mux/server/platform.h"
+
+#include "mux/lua/btech_package.h"
+#include "mux/lua/command_access.h"
+#include "mux/lua/lua_runtime.h"
+#include "mux/lua/mux_package.h"
+
+#include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#include <lauxlib.h>
+#include <lua.h>
+#include <luajit.h>
+#include <lualib.h>
+
+#include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/network/descriptor.h"
+#include "mux/network/input_flow.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/log.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/world/match.h"
+#include "mux/world/world_context.h"
+
+#include "mux/lua/lua_internal.h"
+#include "mux/network/network_output.h"
+
+static unsigned long lua_schedule_hash(const char *path, const char *name,
+                                       DbRef object, time_t minute) {
+  const unsigned char *text;
+  unsigned long hash = 2166136261U;
+
+  for (text = (const unsigned char *)path; *text; text++)
+    hash = (hash ^ *text) * 16777619U;
+  for (text = (const unsigned char *)name; *text; text++)
+    hash = (hash ^ *text) * 16777619U;
+  hash ^= (unsigned long)object;
+  hash ^= (unsigned long)minute;
+  return hash;
+}
+
+static int lua_schedule_add_job(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+                                const char *path, const char *name,
+                                const char *cron, DbRef object, time_t minute) {
+  LUA_SCHEDULE_JOB *jobs;
+  LUA_SCHEDULE_JOB *job;
+  char *path_copy = strdup(path);
+  char *name_copy = strdup(name);
+  char *cron_copy = strdup(cron);
+
+  if (!path_copy || !name_copy || !cron_copy) {
+    free(path_copy);
+    free(name_copy);
+    free(cron_copy);
+    return 0;
+  }
+
+  jobs = realloc(runtime->schedule_jobs,
+                 (runtime->schedule_job_count + 1) * sizeof(*jobs));
+  if (!jobs) {
+    free(path_copy);
+    free(name_copy);
+    free(cron_copy);
+    return 0;
+  }
+  runtime->schedule_jobs = jobs;
+  job = &jobs[runtime->schedule_job_count++];
+  memset(job, 0, sizeof(*job));
+  job->root = root;
+  job->object = object;
+  job->path = path_copy;
+  job->name = name_copy;
+  job->cron = cron_copy;
+  job->due = minute * 60 +
+             (time_t)(lua_schedule_hash(path, name, object, minute) % 55U);
+  job->expires = minute * 60 + 60;
+  return 1;
+}
+
+static void lua_schedule_collect_module(LuaRuntime *runtime,
+                                        LUA_MODULE_ROOT root, const char *path,
+                                        DbRef object, time_t minute) {
+  lua_State *state = runtime->state;
+  int top = lua_gettop(state);
+  int schedules;
+  int index;
+  char error[LBUF_SIZE];
+
+  if (!lua_load_module(runtime, root, path, error, sizeof(error))) {
+    lua_log_load_error(runtime, object, path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, "schedules");
+  schedules = lua_gettop(state);
+  if (!lua_istable(state, schedules)) {
+    lua_settop(state, top);
+    return;
+  }
+  for (index = 1; index <= (int)lua_objlen(state, schedules); index++) {
+    const char *name;
+    const char *cron;
+
+    lua_rawgeti(state, schedules, index);
+    lua_getfield(state, -1, "name");
+    name = lua_tostring(state, -1);
+    lua_pop(state, 1);
+    lua_getfield(state, -1, "cron");
+    cron = lua_tostring(state, -1);
+    lua_pop(state, 1);
+    if (name && cron &&
+        lua_cron_matches(cron, minute * 60, error, sizeof(error)) > 0)
+      lua_schedule_add_job(runtime, root, path, name, cron, object, minute);
+    lua_pop(state, 1);
+  }
+  lua_settop(state, top);
+}
+
+static void lua_schedule_run_job(LuaRuntime *runtime, LUA_SCHEDULE_JOB *job) {
+  lua_State *state = runtime->state;
+  int top = lua_gettop(state);
+  int schedules;
+  int index;
+  char error[LBUF_SIZE];
+
+  if (job->root == LUA_ROOT_OBJECT_LOGIC &&
+      (!is_good_obj(runtime->services->database, job->object) ||
+       is_going(runtime->services->database, job->object)))
+    return;
+  if (!lua_load_module(runtime, job->root, job->path, error, sizeof(error))) {
+    lua_log_load_error(runtime, job->object, job->path, error);
+    lua_settop(state, top);
+    return;
+  }
+  lua_getfield(state, -1, "schedules");
+  schedules = lua_gettop(state);
+  for (index = 1; lua_istable(state, schedules) &&
+                  index <= (int)lua_objlen(state, schedules);
+       index++) {
+    const char *name;
+
+    lua_rawgeti(state, schedules, index);
+    lua_getfield(state, -1, "name");
+    name = lua_tostring(state, -1);
+    lua_pop(state, 1);
+    if (!name || strcmp(name, job->name)) {
+      lua_pop(state, 1);
+      continue;
+    }
+    lua_getfield(state, -1, "handler");
+    if (lua_isfunction(state, -1)) {
+      LUA_MODULE_ROOT previous_root = runtime->current_root;
+      int status;
+
+      lua_push_context(runtime->services->database, nullptr, state, job->object,
+                       GOD, GOD, nullptr, "schedule",
+                       job->root == LUA_ROOT_OBJECT_LOGIC ? "object" : "global",
+                       nullptr, 0);
+      lua_pushstring(state, job->name);
+      lua_setfield(state, -2, "schedule");
+      lua_pushstring(state, job->cron);
+      lua_setfield(state, -2, "cron");
+      if (job->root == LUA_ROOT_GLOBAL_LOGIC) {
+        lua_pushnil(state);
+        lua_setfield(state, -2, "enactor");
+        lua_pushnil(state);
+        lua_setfield(state, -2, "cause");
+      }
+      previous_root = runtime->current_root;
+      runtime->current_root = job->root;
+      status = lua_callback_pcall_checked(runtime, 1, 0);
+      runtime->current_root = previous_root;
+      if (status) {
+        if (job->root == LUA_ROOT_OBJECT_LOGIC)
+          log_error(runtime->services->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
+                    "object #%ld module %s schedule %s: %s", job->object,
+                    job->path, job->name, lua_tostring(state, -1));
+        else
+          log_error(runtime->services->log, LOG_PROBLEMS, "LUA", "SCHEDULE",
+                    "global module %s schedule %s: %s", job->path, job->name,
+                    lua_tostring(state, -1));
+      }
+    } else {
+      lua_pop(state, 1);
+    }
+    lua_pop(state, 1);
+    break;
+  }
+  lua_settop(state, top);
+}
+
+void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
+  time_t minute = now / 60;
+  size_t index;
+
+  if (!runtime)
+    return;
+  if (runtime->schedule_high_water < 0)
+    runtime->schedule_high_water = minute;
+  if (minute > runtime->schedule_high_water) {
+    DbRef object;
+
+    runtime->schedule_high_water = minute;
+    for (index = 0; index < runtime->global_module_count; index++)
+      lua_schedule_collect_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
+                                  runtime->global_modules[index], NOTHING,
+                                  minute);
+    for (object = 0; object < runtime->services->database->top; object++) {
+      char path[PATH_MAX];
+
+      if (!is_good_obj(runtime->services->database, object) ||
+          is_going(runtime->services->database, object) ||
+          !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
+        continue;
+      lua_schedule_collect_module(runtime, LUA_ROOT_OBJECT_LOGIC, path, object,
+                                  minute);
+    }
+  }
+  for (index = 0; index < runtime->schedule_job_count;) {
+    LUA_SCHEDULE_JOB *job = &runtime->schedule_jobs[index];
+
+    if (now >= job->expires) {
+      free(job->path);
+      free(job->name);
+      free(job->cron);
+      runtime->schedule_jobs[index] =
+          runtime->schedule_jobs[--runtime->schedule_job_count];
+      continue;
+    }
+    if (now >= job->due) {
+      lua_schedule_run_job(runtime, job);
+      free(job->path);
+      free(job->name);
+      free(job->cron);
+      runtime->schedule_jobs[index] =
+          runtime->schedule_jobs[--runtime->schedule_job_count];
+      continue;
+    }
+    index++;
+  }
+}
+
+static int lua_schedule_count(LuaRuntime *runtime, LUA_MODULE_ROOT root,
+                              const char *path, int *count, char *error,
+                              size_t error_size) {
+  lua_State *state = runtime->state;
+  int top = lua_gettop(state);
+
+  if (!lua_load_module(runtime, root, path, error, error_size)) {
+    lua_settop(state, top);
+    return 0;
+  }
+  lua_getfield(state, -1, "schedules");
+  *count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
+  lua_settop(state, top);
+  return 1;
+}
+
+static void lua_schedule_show_module(EvaluationContext *evaluation,
+                                     DbRef player, LuaRuntime *runtime,
+                                     LUA_MODULE_ROOT root, const char *path,
+                                     int show_objects) {
+  lua_State *state;
+  int top;
+  int schedules;
+  int index;
+  char error[LBUF_SIZE];
+
+  if (!runtime || !lua_load_module(runtime, root, path, error, sizeof(error))) {
+    notify_printf(evaluation, player, "Lua schedule unavailable: %s", error);
+    return;
+  }
+  state = runtime->state;
+  top = lua_gettop(state) - 1;
+  notify_printf(evaluation, player, "Schedules for %s/%s:", lua_root_name(root),
+                path);
+  lua_getfield(state, -1, "schedules");
+  schedules = lua_gettop(state);
+  if (!lua_istable(state, schedules))
+    notify_quiet(evaluation, player, "  (none)");
+  for (index = 1; lua_istable(state, schedules) &&
+                  index <= (int)lua_objlen(state, schedules);
+       index++) {
+    const char *name;
+    const char *cron;
+
+    lua_rawgeti(state, schedules, index);
+    lua_getfield(state, -1, "name");
+    name = lua_tostring(state, -1);
+    lua_pop(state, 1);
+    lua_getfield(state, -1, "cron");
+    cron = lua_tostring(state, -1);
+    lua_pop(state, 2);
+    notify_printf(evaluation, player, "  %s: %s", name ? name : "<invalid>",
+                  cron ? cron : "<invalid>");
+  }
+  lua_settop(state, top);
+  if (show_objects) {
+    DbRef object;
+
+    notify_quiet(evaluation, player, "Objects:");
+    for (object = 0; object < runtime->services->database->top; object++) {
+      char attached[PATH_MAX];
+
+      if (is_good_obj(runtime->services->database, object) &&
+          lua_attached_path(runtime, object, attached, sizeof(attached),
+                            nullptr) &&
+          !strcmp(attached, path))
+        notify_printf(evaluation, player, "  %s (#%ld)",
+                      game_object_name(runtime->services->database, object),
+                      object);
+    }
+  }
+}
+
+void do_luaschedule(CommandInvocation *invocation) {
+  DbRef player = invocation->player;
+  char *argument = invocation->first;
+  LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
+  LuaRuntime *inspection;
+  char error[LBUF_SIZE];
+
+  if (!runtime) {
+    notify_quiet(&invocation->context->evaluation, player,
+                 "Lua is not initialized.");
+    return;
+  }
+  inspection =
+      lua_runtime_create(nullptr, runtime->services, error, sizeof(error));
+  if (!inspection) {
+    notify_printf(&invocation->context->evaluation, player,
+                  "Lua schedule unavailable: %s", error);
+    return;
+  }
+  inspection->checking = 1;
+  if (*argument) {
+    if (!strncmp(argument, "global_logic/", 13)) {
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_GLOBAL_LOGIC, argument + 13,
+                               0);
+      goto done;
+    }
+    if (lua_valid_relative_path(argument)) {
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_OBJECT_LOGIC, argument, 1);
+      goto done;
+    }
+    init_match(&invocation->context->match, player, argument,
+               OBJECT_TYPE_NOTYPE);
+    match_everything(&invocation->context->match, 0);
+    {
+      DbRef object = noisy_match_result(&invocation->context->match);
+      char path[PATH_MAX];
+
+      if (object == NOTHING)
+        goto done;
+      if (!lua_attached_path(runtime, object, path, sizeof(path), nullptr)) {
+        notify_quiet(&invocation->context->evaluation, player,
+                     "That object has no Luaparent.");
+        goto done;
+      }
+      lua_schedule_show_module(&invocation->context->evaluation, player,
+                               inspection, LUA_ROOT_OBJECT_LOGIC, path, 0);
+      goto done;
+    }
+  }
+  {
+    size_t index;
+    DbRef object;
+    char **paths = nullptr;
+    size_t *counts = nullptr;
+    size_t path_count = 0;
+
+    for (index = 0; index < runtime->global_module_count; index++) {
+      int count;
+
+      if (lua_schedule_count(inspection, LUA_ROOT_GLOBAL_LOGIC,
+                             runtime->global_modules[index], &count, error,
+                             sizeof(error)) &&
+          count)
+        notify_printf(&invocation->context->evaluation, player,
+                      "global_logic/%s: %d schedules (global)",
+                      runtime->global_modules[index], count);
+    }
+    for (object = 0; object < runtime->services->database->top; object++) {
+      char path[PATH_MAX];
+
+      if (!is_good_obj(runtime->services->database, object) ||
+          !lua_attached_path(runtime, object, path, sizeof(path), nullptr))
+        continue;
+      for (index = 0; index < path_count; index++) {
+        if (!strcmp(paths[index], path)) {
+          counts[index]++;
+          break;
+        }
+      }
+      if (index == path_count) {
+        char **new_paths = realloc(paths, (path_count + 1) * sizeof(*paths));
+        size_t *new_counts;
+
+        if (!new_paths)
+          break;
+        paths = new_paths;
+        new_counts = realloc(counts, (path_count + 1) * sizeof(*counts));
+        if (!new_counts)
+          break;
+        counts = new_counts;
+        paths[path_count] = strdup(path);
+        counts[path_count++] = 1;
+      }
+    }
+    for (index = 0; index < path_count; index++) {
+      int count;
+
+      if (lua_schedule_count(inspection, LUA_ROOT_OBJECT_LOGIC, paths[index],
+                             &count, error, sizeof(error)) &&
+          count)
+        notify_printf(&invocation->context->evaluation, player,
+                      "object_logic/%s: %d schedules (%zu objects)",
+                      paths[index], count, counts[index]);
+      free(paths[index]);
+    }
+    free(paths);
+    free(counts);
+  }
+done:
+  lua_runtime_destroy(inspection);
+}

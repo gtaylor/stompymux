@@ -6,9 +6,10 @@
 #include "mux/server/platform.h"
 
 #include "mux/commands/command_runtime.h"
+#include "mux/network/connection_events.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/input_flow.h"
-#include "mux/network/netcommon.h"
+#include "mux/network/network_output.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"

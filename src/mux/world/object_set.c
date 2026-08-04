@@ -11,6 +11,7 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/communication/comsys.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"

@@ -11,20 +11,32 @@ set(STYLED_TEXT_SOURCES
   ${MUX_MODULE_DIR}/support/styled_text/renderer.c)
 
 target_sources(stompymux PRIVATE
-  ${MUX_MODULE_DIR}/commands/command.c
+  ${MUX_MODULE_DIR}/commands/command_table.c
+  ${MUX_MODULE_DIR}/commands/command_dispatch.c
+  ${MUX_MODULE_DIR}/commands/command_configuration.c
+  ${MUX_MODULE_DIR}/commands/command_list.c
   ${MUX_MODULE_DIR}/commands/command_context.c
   ${MUX_MODULE_DIR}/commands/command_helpers.c
   ${MUX_MODULE_DIR}/commands/command_invocation.c
   ${MUX_MODULE_DIR}/commands/command_queue.c
-  ${MUX_MODULE_DIR}/commands/builder_commands.c
+  ${MUX_MODULE_DIR}/commands/builder_create_commands.c
+  ${MUX_MODULE_DIR}/commands/builder_destroy_commands.c
+  ${MUX_MODULE_DIR}/commands/builder_object_commands.c
   ${MUX_MODULE_DIR}/commands/command_parser.c
   ${MUX_MODULE_DIR}/commands/macro.c
   ${MUX_MODULE_DIR}/commands/action_messages.c
   ${MUX_MODULE_DIR}/communication/commac.c
+  ${MUX_MODULE_DIR}/communication/access_policy.c
   ${MUX_MODULE_DIR}/communication/channel_registry.c
   ${MUX_MODULE_DIR}/communication/comsys_context.c
-  ${MUX_MODULE_DIR}/communication/comsys.c
+  ${MUX_MODULE_DIR}/communication/channel_delivery.c
+  ${MUX_MODULE_DIR}/communication/channel_aliases.c
+  ${MUX_MODULE_DIR}/communication/channel_management.c
+  ${MUX_MODULE_DIR}/communication/channel_presence.c
+  ${MUX_MODULE_DIR}/communication/channel_administration.c
   ${MUX_MODULE_DIR}/communication/speech.c
+  ${MUX_MODULE_DIR}/communication/page_commands.c
+  ${MUX_MODULE_DIR}/communication/pemit_commands.c
   ${MUX_MODULE_DIR}/objects/db.c
   ${MUX_MODULE_DIR}/objects/object_state.c
   ${MUX_MODULE_DIR}/objects/flags.c
@@ -35,21 +47,40 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/help/help_index.c
   ${MUX_MODULE_DIR}/help/help_render.c
   ${MUX_MODULE_DIR}/lua/command_access.c
-  ${MUX_MODULE_DIR}/lua/lua.c
+  ${MUX_MODULE_DIR}/lua/lua_runtime.c
+  ${MUX_MODULE_DIR}/lua/lua_module_registry.c
+  ${MUX_MODULE_DIR}/lua/lua_validation.c
+  ${MUX_MODULE_DIR}/lua/lua_callbacks.c
+  ${MUX_MODULE_DIR}/lua/lua_schedule.c
+  ${MUX_MODULE_DIR}/lua/lua_commands.c
+  ${MUX_MODULE_DIR}/lua/lua_flow.c
   ${MUX_MODULE_DIR}/lua/btech_package.c
   ${MUX_MODULE_DIR}/lua/mux_package.c
+  ${MUX_MODULE_DIR}/lua/mux_object_bindings.c
+  ${MUX_MODULE_DIR}/lua/mux_text_bindings.c
+  ${MUX_MODULE_DIR}/lua/mux_state_bindings.c
+  ${MUX_MODULE_DIR}/lua/mux_connection_bindings.c
   ${MUX_MODULE_DIR}/network/connect_flow.c
   ${MUX_MODULE_DIR}/network/descriptor.c
   ${MUX_MODULE_DIR}/network/input_flow.c
   ${MUX_MODULE_DIR}/network/mux_event.c
-  ${MUX_MODULE_DIR}/network/netcommon.c
+  ${MUX_MODULE_DIR}/network/network_time.c
+  ${MUX_MODULE_DIR}/network/network_output.c
+  ${MUX_MODULE_DIR}/network/connection_events.c
+  ${MUX_MODULE_DIR}/network/connection_commands.c
+  ${MUX_MODULE_DIR}/network/site_access.c
   ${MUX_MODULE_DIR}/network/telnet_handler.c
   ${MUX_MODULE_DIR}/network/telnet_environment.c
   ${MUX_MODULE_DIR}/network/telnet_socket.c
   ${MUX_MODULE_DIR}/persistence/commac_persistence_sqlite.c
-  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite.c
+  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite_schema.c
+  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite_common.c
+  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite_load.c
+  ${MUX_MODULE_DIR}/persistence/gamedb_sqlite_store.c
   ${MUX_MODULE_DIR}/persistence/persistence_registry.c
   ${MUX_MODULE_DIR}/server/configuration.c
+  ${MUX_MODULE_DIR}/server/configuration_values.c
+  ${MUX_MODULE_DIR}/server/configuration_registry.c
   ${MUX_MODULE_DIR}/server/configuration_toml.c
   ${MUX_MODULE_DIR}/server/diagnostics.c
   ${MUX_MODULE_DIR}/server/file_cache.c
@@ -70,6 +101,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/support/numeric_hash_table.c
   ${MUX_MODULE_DIR}/support/hash_table.c
   ${MUX_MODULE_DIR}/support/red_black_tree.c
+  ${MUX_MODULE_DIR}/support/red_black_tree_mutation.c
   ${MUX_MODULE_DIR}/support/password.c
   ${MUX_MODULE_DIR}/support/stringutil.c
   ${STYLED_TEXT_SOURCES}
@@ -77,9 +109,14 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/support/validation.c
   ${MUX_MODULE_DIR}/support/wild.c
   ${MUX_MODULE_DIR}/commands/look.c
+  ${MUX_MODULE_DIR}/commands/state_commands.c
+  ${MUX_MODULE_DIR}/commands/examine_commands.c
   ${MUX_MODULE_DIR}/world/match.c
   ${MUX_MODULE_DIR}/world/move.c
+  ${MUX_MODULE_DIR}/world/movement_commands.c
+  ${MUX_MODULE_DIR}/world/inventory_commands.c
   ${MUX_MODULE_DIR}/world/object.c
+  ${MUX_MODULE_DIR}/world/database_check.c
   ${MUX_MODULE_DIR}/world/object_list.c
   ${MUX_MODULE_DIR}/world/player.c
   ${MUX_MODULE_DIR}/world/player_cache.c

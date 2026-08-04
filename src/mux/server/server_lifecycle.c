@@ -19,7 +19,7 @@
 #include "mux/commands/command_queue.h"
 #include "mux/communication/commac.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/network/netcommon.h"
+#include "mux/network/network_time.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"

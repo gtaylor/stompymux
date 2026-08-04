@@ -2,6 +2,7 @@
 
 #include "mux/server/platform.h"
 
+#include "mux/network/connection_events.h"
 #include "mux/network/descriptor.h"
 
 #include <stdint.h>
@@ -11,7 +12,6 @@
 
 #include "mux/commands/command_runtime.h"
 #include "mux/network/input_flow.h"
-#include "mux/network/netcommon.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/objects/flags.h"
 #include "mux/server/diagnostics.h"

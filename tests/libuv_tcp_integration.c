@@ -910,6 +910,42 @@ static int exercise_utf8(int socket_fd) {
              : 0;
 }
 
+static int exercise_split_modules(int socket_fd) {
+  return send_command(socket_fd, "@list commands\r\n") < 0 ||
+                 expect_text(socket_fd, "Built-in commands:") < 0 ||
+                 send_command(socket_fd, "@lua/check\r\n") < 0 ||
+                 expect_text(socket_fd, "All Lua module checks passed.") < 0 ||
+                 send_command(socket_fd,
+                              "@lua/schedule global_logic/example.lua\r\n") <
+                     0 ||
+                 expect_text(socket_fd,
+                             "Schedules for global_logic/example.lua:") < 0 ||
+                 send_command(socket_fd, "flow-demo confirm\r\n") < 0 ||
+                 expect_text(socket_fd, "Really do the thing? (y/n)") < 0 ||
+                 send_command(socket_fd, "y\r\n") < 0 ||
+                 expect_text(socket_fd, "Done.") < 0 ||
+                 send_command(socket_fd, "@create MovementWidget\r\n") < 0 ||
+                 expect_text(socket_fd, "MovementWidget created as object") <
+                     0 ||
+                 send_command(socket_fd, "drop MovementWidget\r\n") < 0 ||
+                 expect_text(socket_fd, "Dropped.") < 0 ||
+                 send_command(socket_fd, "get MovementWidget\r\n") < 0 ||
+                 expect_text(socket_fd, "Taken.") < 0 ||
+                 send_command(socket_fd, "@destroy MovementWidget\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "The object shakes and begins to crumble.") < 0
+                 ||
+                 send_command(socket_fd, "@open SplitExit\r\n") < 0 ||
+                 expect_text(socket_fd, "Opened.") < 0 ||
+                 send_command(socket_fd, "@link SplitExit=here\r\n") < 0 ||
+                 expect_text(socket_fd, "Linked.") < 0 ||
+                 send_command(socket_fd, "@destroy SplitExit\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "The exit shakes and begins to crumble.") < 0
+             ? -1
+             : 0;
+}
+
 static int create_styled_object(int socket_fd) {
   if (send_command(socket_fd, "GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "preset:osc8-demo-button?config=",
@@ -1056,6 +1092,10 @@ static int create_styled_object(int socket_fd) {
   }
   if (exercise_utf8(socket_fd) < 0) {
     fprintf(stderr, "UTF-8 behavior failed\n");
+    return -1;
+  }
+  if (exercise_split_modules(socket_fd) < 0) {
+    fprintf(stderr, "split-module behavior failed\n");
     return -1;
   }
   if (send_command(socket_fd, "@create [fg=#112233]StyledWidget[/]\r\n") < 0 ||

@@ -2,12 +2,12 @@
  * descriptors. */
 
 #include "mux/network/input_flow.h"
+#include "mux/network/network_output.h"
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
-#include "mux/network/netcommon.h"
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"

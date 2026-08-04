@@ -12,6 +12,7 @@
 #include <time.h>
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/log.h"

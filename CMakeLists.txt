@@ -310,6 +310,15 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME event_timer COMMAND event_timer_test)
 
+  add_executable(red_black_tree_test tests/red_black_tree.c
+    ${MUX_SOURCE_DIR}/support/red_black_tree.c
+    ${MUX_SOURCE_DIR}/support/red_black_tree_mutation.c)
+  target_link_libraries(red_black_tree_test PRIVATE btmux_options)
+  target_include_directories(red_black_tree_test PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME red_black_tree COMMAND red_black_tree_test)
+
   add_executable(libuv_tcp_integration_test tests/libuv_tcp_integration.c)
   target_link_libraries(libuv_tcp_integration_test
     PRIVATE btmux_options SQLite3::SQLite3)

@@ -1,0 +1,184 @@
+/*
+ * netcommon.c
+ */
+
+/*
+ * This file contains routines used by the networking code that do not
+ * depend on the implementation of the networking code.  The network-specific
+ * portions of the descriptor data structure are not used.
+ */
+
+#include "mux/server/platform.h"
+
+#include <arpa/inet.h>
+#include <time.h>
+
+#include "btech/btech_context.h"
+#include "mux/commands/command.h"
+#include "mux/commands/command_invocation.h"
+#include "mux/commands/command_runtime.h"
+#include "mux/communication/comsys.h"
+#include "mux/network/connection_commands.h"
+#include "mux/network/network_output.h"
+#include "mux/network/site_access.h"
+#include "mux/network/telnet_environment.h"
+#include "mux/network/telnet_socket.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/server/diagnostics.h"
+#include "mux/server/file_cache.h"
+#include "mux/server/mux_server.h"
+#include "mux/server/server_api.h"
+#include "mux/server/server_config.h"
+#include "mux/support/alloc.h"
+#include "mux/support/stringutil.h"
+#include "mux/support/styled_text/render.h"
+#include "mux/world/player.h"
+#include "mux/world/world_context.h"
+
+int site_data_check(struct sockaddr_storage *saddr, int saddr_len,
+                    SiteData *site_list) {
+  SiteData *this;
+  for (this = site_list; this; this = this->next) {
+    if ((((struct sockaddr_in *)saddr)->sin_addr.s_addr & this->mask.s_addr) ==
+        this->address.s_addr) {
+      return this->flag;
+    }
+  }
+  return 0;
+}
+
+/*
+ * --------------------------------------------------------------------------
+ * * list_sites: Display information in a site list
+ */
+
+#define S_SUSPECT 1
+#define S_ACCESS 2
+
+static const char *stat_string(int strtype, int flag) {
+  const char *str;
+
+  switch (strtype) {
+  case S_SUSPECT:
+    if (flag)
+      str = "Suspected";
+    else
+      str = "Trusted";
+    break;
+  case S_ACCESS:
+    switch (flag) {
+    case H_FORBIDDEN:
+      str = "Forbidden";
+      break;
+    case 0:
+      str = "Unrestricted";
+      break;
+    default:
+      str = "Strange";
+    }
+    break;
+  default:
+    str = "Strange";
+  }
+  return str;
+}
+
+static void list_sites(EvaluationContext *evaluation, DbRef player,
+                       SiteData *site_list, const char *header_txt,
+                       int stat_type) {
+  char *buff, *buff1;
+  const char *str;
+  SiteData *this;
+
+  buff = alloc_mbuf("list_sites.buff");
+  buff1 = alloc_sbuf("list_sites.addr");
+  snprintf(buff, MBUF_SIZE, "----- %s -----", header_txt);
+  notify(evaluation, player, buff);
+  notify(evaluation, player,
+         "Address              Mask                 Status");
+  for (this = site_list; this; this = this->next) {
+    str = stat_string(stat_type, this->flag);
+    StringCopy(buff1, inet_ntoa(this->mask));
+    snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address), buff1,
+             str);
+    notify(evaluation, player, buff);
+  }
+  free_mbuf(buff);
+  free_sbuf(buff1);
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * * list_siteinfo: List information about specially-marked sites.
+ */
+
+void list_siteinfo(EvaluationContext *evaluation,
+                   AccessControlStore *access_control, DbRef player) {
+  list_sites(evaluation, player, access_control->access_sites, "Site Access",
+             S_ACCESS);
+  list_sites(evaluation, player, access_control->suspect_sites,
+             "Suspected Sites", S_SUSPECT);
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * * make_ulist: Make a list of connected user numbers for the LWHO function.
+ */
+
+void make_ulist(GameDatabase *database, DescriptorRegistry *descriptors,
+                DbRef player, char *buff, char **bufc) {
+  Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected(descriptors);
+  char *cp;
+
+  cp = *bufc;
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    if (!is_wizard(database, player) && is_hidden(database, d->player))
+      continue;
+    if (cp != *bufc)
+      safe_chr(' ', buff, bufc);
+    safe_chr('#', buff, bufc);
+    safe_str(tprintf("%ld", d->player), buff, bufc);
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * * find_connected_name: Resolve a playername from the list of connected
+ * * players using prefix matching.  We only return a match if the prefix
+ * * was unique.
+ */
+
+DbRef find_connected_name(GameDatabase *database,
+                          DescriptorRegistry *descriptors, DbRef player,
+                          char *name) {
+  Descriptor *d;
+  DescriptorIterator iterator = descriptor_iterator_connected(descriptors);
+  DbRef found;
+
+  found = NOTHING;
+  while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    if (is_good_obj(database, player) && !is_wizard(database, player) &&
+        is_hidden(database, d->player))
+      continue;
+    if (!string_prefix(game_object_pure_name(database, d->player), name))
+      continue;
+    if ((found != NOTHING) && (found != d->player))
+      return NOTHING;
+    found = d->player;
+  }
+  return found;
+}
+
+void descriptor_run_command(Descriptor *d, char *command) {
+  if (!is_wizard(descriptor_runtime(d)->world->database, d->player)) {
+    if (d->quota <= 0) {
+      descriptor_queue_string(d, "quota exceed, dropping command.\n");
+      dprintk("aborting execution of %s for #%ld.", command, d->player);
+      return;
+    }
+    d->quota--;
+  }
+  descriptor_command(d, command);
+}

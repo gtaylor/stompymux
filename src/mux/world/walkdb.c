@@ -7,6 +7,7 @@
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/objects/db.h"
