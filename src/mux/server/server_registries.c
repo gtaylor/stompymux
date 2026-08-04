@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/commands/command.h"
 #include "mux/server/server_config.h"
 
 void command_registry_initialize(CommandRegistry *registry) {
@@ -16,6 +17,7 @@ void command_registry_initialize(CommandRegistry *registry) {
 void command_registry_destroy(CommandRegistry *registry) {
   if (registry == nullptr)
     return;
+  command_aliases_destroy(&registry->commands);
   hash_table_destroy(&registry->commands);
   hash_table_destroy(&registry->macros);
   memset(registry, 0, sizeof(*registry));
@@ -31,6 +33,11 @@ void world_indexes_destroy(WorldIndexes *indexes) {
     return;
   hash_table_destroy(&indexes->powers);
   hash_table_destroy(&indexes->flags);
+  if (indexes->players.tree != nullptr) {
+    for (void *player = hash_table_first_entry(&indexes->players);
+         player != nullptr; player = hash_table_next_entry(&indexes->players))
+      free(player);
+  }
   hash_table_destroy(&indexes->players);
   memset(indexes, 0, sizeof(*indexes));
 }

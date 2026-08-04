@@ -45,12 +45,13 @@ void *fifo_pop(Fifo **foo) {
     if (PFOO->first == PFOO->last) {
       PFOO->first = nullptr;
       PFOO->last = nullptr;
-    } else
+    } else {
       tmp->prev->next = nullptr;
-    PFOO->last = tmp->prev;
-    /* Are we going down to only one element? */
-    if (PFOO->last->prev == nullptr)
-      PFOO->first = PFOO->last;
+      PFOO->last = tmp->prev;
+      /* Are we going down to only one element? */
+      if (PFOO->last->prev == nullptr)
+        PFOO->first = PFOO->last;
+    }
     PFOO->count--;
     tmpd = tmp->data;
     free(tmp);

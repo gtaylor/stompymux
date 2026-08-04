@@ -681,8 +681,10 @@ static int btech_special_resize_map(MAP *map, int width, int height) {
 static int btech_special_allocate_map_dynamic(MAP *map) {
   int index;
 
-  if (!map->first_free)
+  if (!map->first_free) {
+    map->dynamic_size = 0;
     return 0;
+  }
   map->mechsOnMap = calloc(map->first_free, sizeof(*map->mechsOnMap));
   map->mechflags = calloc(map->first_free, sizeof(*map->mechflags));
   map->LOSinfo = calloc(map->first_free, sizeof(*map->LOSinfo));
@@ -692,8 +694,10 @@ static int btech_special_allocate_map_dynamic(MAP *map) {
     map->LOSinfo[index] = calloc(map->first_free, sizeof(*map->LOSinfo[index]));
   }
   if (map->mechsOnMap && map->mechflags && map->LOSinfo &&
-      index == map->first_free)
+      index == map->first_free) {
+    map->dynamic_size = map->first_free;
     return 0;
+  }
   if (map->LOSinfo)
     for (index = 0; index < map->first_free; index++)
       free(map->LOSinfo[index]);
@@ -703,6 +707,7 @@ static int btech_special_allocate_map_dynamic(MAP *map) {
   map->LOSinfo = NULL;
   map->mechflags = NULL;
   map->mechsOnMap = NULL;
+  map->dynamic_size = 0;
   return -1;
 }
 

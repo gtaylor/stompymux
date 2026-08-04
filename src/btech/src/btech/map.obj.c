@@ -126,6 +126,13 @@ void del_mapobj(MAP *map, mapobj *mapob, int type, int zap) {
       tmap->onmap = 0;
     }
   }
+  if (type == TYPE_BITS && mapob->datai != 0) {
+    unsigned char **bits = (unsigned char **)mapob->datai;
+
+    for (int y = 0; y < map->map_height; y++)
+      free(bits[y]);
+    free(bits);
+  }
   free(mapob);
 }
 

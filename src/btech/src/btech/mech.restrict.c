@@ -19,6 +19,7 @@
 #include "p.mech.build.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3i.h"
+#include "p.mech.update.h"
 #include "p.mech.utils.h"
 #include "p.mechrep.h"
 
@@ -255,6 +256,7 @@ void newfreemech(DbRef key, void **data, int selector) {
       FillDefaultCriticals(new, i);
     break;
   case SPECIAL_FREE:
+    ClearAllStaggerDamage(new);
     if (new->mapindex != -1 &&
         (map = btech_context_get_map(new->xcode.context, new->mapindex)))
       remove_mech_from_map(map, new);

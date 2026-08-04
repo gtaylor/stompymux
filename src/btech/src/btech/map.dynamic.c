@@ -79,6 +79,7 @@ void eliminate_empties(MAP *map) {
   ReCreate(map->mechflags, char, count);
 
   map->first_free = count;
+  map->dynamic_size = count;
   econ_fix_stuff(map->xcode.context, GOD, map->mynum);
 }
 
@@ -165,6 +166,7 @@ void add_mech_to_map(MAP *newmap, MECH *mech) {
     }
     for (i = 0; i < count; i++)
       newmap->LOSinfo[loop][i] = 0;
+    newmap->dynamic_size = count;
   }
   mech->mapindex = newmap->mynum;
   mech->mapnumber = loop;

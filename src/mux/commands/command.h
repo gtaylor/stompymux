@@ -12,6 +12,7 @@
 typedef struct CommandContext CommandContext;
 typedef struct CommandRegistry CommandRegistry;
 typedef struct ConfigurationContext ConfigurationContext;
+typedef struct HashTable HashTable;
 typedef struct ServerConfiguration ServerConfiguration;
 
 typedef enum {
@@ -137,6 +138,7 @@ struct cmdentry {
 };
 
 void init_cmdtab(CommandRegistry *registry);
+void command_aliases_destroy(HashTable *commands);
 int cf_access(int *vp, char *str, long extra, DbRef player, char *cmd,
               ConfigurationContext *context);
 int cf_cmd_alias(void *vp, char *str, long extra, DbRef player, char *cmd,

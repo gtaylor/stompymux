@@ -105,13 +105,15 @@ static void cque_free_entry(BQUE *entry) {
   free(entry);
 }
 
-static int objqe_compare(DbRef left, DbRef right, void *arg) {
+static int objqe_compare(void *left_key, void *right_key, void *arg) {
+  const DbRef left = (DbRef)left_key;
+  const DbRef right = (DbRef)right_key;
+
   return (right > left) - (right < left);
 }
 
 int cque_init(CommandQueue *queue) {
-  queue->object_queues = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)objqe_compare, nullptr);
+  queue->object_queues = red_black_tree_init(objqe_compare, nullptr);
   return 1;
 }
 

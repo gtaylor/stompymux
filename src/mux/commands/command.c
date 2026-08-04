@@ -405,6 +405,41 @@ void init_cmdtab(CommandRegistry *registry) {
   registry->goto_command = hash_table_find("goto", &registry->commands);
 }
 
+void command_aliases_destroy(HashTable *commands) {
+  CMDENT **aliases = nullptr;
+  size_t alias_count = 0;
+
+  if (commands == nullptr || commands->tree == nullptr)
+    return;
+  for (char *key = hash_table_first_key(commands); key != nullptr;
+       key = hash_table_next_key(commands)) {
+    CMDENT *command = hash_table_find(key, commands);
+    bool built_in = false;
+
+    for (CMDENT *candidate = command_table; candidate->cmdname; candidate++) {
+      if (command == candidate) {
+        built_in = true;
+        break;
+      }
+    }
+    if (built_in || strcasecmp(key, command->cmdname))
+      continue;
+    CMDENT **grown = realloc(aliases, (alias_count + 1) * sizeof(*aliases));
+    if (grown == nullptr)
+      break;
+    aliases = grown;
+    aliases[alias_count++] = command;
+  }
+  for (size_t index = 0; index < alias_count; index++) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+    free((void *)aliases[index]->cmdname);
+#pragma clang diagnostic pop
+    free(aliases[index]);
+  }
+  free(aliases);
+}
+
 void set_prefix_cmds(CommandRegistry *registry) {
   /*
    * Load the command prefix table.  Note - these commands can never *

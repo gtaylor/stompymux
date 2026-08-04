@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "mux/communication/commac.h"
+#include "mux/communication/comsys.h"
 
 void channel_registry_initialize(ChannelRegistry *registry) {
   assert(registry != nullptr);
@@ -22,6 +23,13 @@ void channel_registry_destroy(ChannelRegistry *registry) {
       entry = next;
     }
     registry->commacs[bucket] = nullptr;
+  }
+  if (registry->channels.tree != nullptr) {
+    struct channel *channel = hash_table_first_entry(&registry->channels);
+    while (channel != nullptr) {
+      channel_destroy(channel);
+      channel = hash_table_next_entry(&registry->channels);
+    }
   }
   hash_table_destroy(&registry->channels);
   registry->count = 0;

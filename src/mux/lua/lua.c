@@ -1141,8 +1141,9 @@ static int lua_load_global_modules(LuaRuntime *runtime, char *error,
 
   if (!lua_collect_global_modules(runtime, "", error, error_size))
     return 0;
-  qsort(runtime->global_modules, runtime->global_module_count,
-        sizeof(*runtime->global_modules), lua_compare_module_paths);
+  if (runtime->global_module_count > 1)
+    qsort(runtime->global_modules, runtime->global_module_count,
+          sizeof(*runtime->global_modules), lua_compare_module_paths);
   for (index = 0; index < runtime->global_module_count; index++) {
     if (!lua_verify_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
                            runtime->global_modules[index], error, error_size))

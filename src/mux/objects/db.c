@@ -595,6 +595,8 @@ void db_free(GameDatabase *database) {
     database->objects = nullptr;
   }
   if (database->pure_names != nullptr) {
+    for (DbRef object = 0; object < database->top; object++)
+      free(database->pure_names[object]);
     database->pure_names -= SIZE_HACK;
     free(database->pure_names);
     database->pure_names = nullptr;

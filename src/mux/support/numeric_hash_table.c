@@ -7,14 +7,16 @@
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 
-static int nhrbtab_compare(int left, int right, void *arg) {
-  return (right - left);
+static int nhrbtab_compare(void *left_key, void *right_key, void *arg) {
+  const DbRef left = (DbRef)left_key;
+  const DbRef right = (DbRef)right_key;
+
+  return (right > left) - (right < left);
 }
 
 void numeric_hash_table_initialize(HashTable *htab, int size) {
   memset(htab, 0, sizeof(HashTable));
-  htab->tree = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)nhrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(nhrbtab_compare, nullptr);
   htab->last = nullptr;
 }
 
@@ -72,8 +74,7 @@ void numeric_hash_table_delete(long val, HashTable *htab) {
 
 void numeric_hash_table_flush(HashTable *htab, int size) {
   red_black_tree_destroy(htab->tree);
-  htab->tree = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)nhrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(nhrbtab_compare, nullptr);
   htab->last = nullptr;
 }
 

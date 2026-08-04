@@ -43,6 +43,7 @@ option(BTECH_SCALED_INFRARED "Scale infrared BTH with increasing heat" ON)
 option(BTECH_OVERSPEEDING "Allow mech overspeeding" OFF)
 
 option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
+option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
@@ -170,6 +171,10 @@ target_compile_options(btmux_options INTERFACE
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_options INTERFACE -fsanitize=address)
   target_link_options(btmux_options INTERFACE -fsanitize=address)
+endif()
+if(BTECH_ENABLE_UBSAN)
+  target_compile_options(btmux_options INTERFACE -fsanitize=undefined)
+  target_link_options(btmux_options INTERFACE -fsanitize=undefined)
 endif()
 
 set(BTECH_SOURCES

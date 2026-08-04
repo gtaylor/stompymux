@@ -176,7 +176,17 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
           remove_mech_from_map(map, mech);
         }
       }
+    if (map->LOSinfo)
+      for (j = 0; j < map->dynamic_size; j++)
+        free(map->LOSinfo[j]);
+    free(map->LOSinfo);
+    free(map->mechflags);
+    free(map->mechsOnMap);
+    map->LOSinfo = nullptr;
+    map->mechflags = nullptr;
+    map->mechsOnMap = nullptr;
     map->first_free = 0;
+    map->dynamic_size = 0;
     notify(btech_context_evaluation(context), player, "Map Cleared");
     return;
   }

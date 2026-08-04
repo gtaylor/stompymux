@@ -770,12 +770,27 @@ void do_createchannel(CommandInvocation *invocation) {
   notify_printf(evaluation, player, "Channel %s created.", channel);
 }
 
+void channel_destroy(struct channel *channel) {
+  if (channel == nullptr)
+    return;
+  for (int index = 0; index < channel->num_users; index++)
+    free(channel->users[index]);
+  free(channel->users);
+  while (channel->last_messages != nullptr &&
+         fifo_length(&channel->last_messages) > 0) {
+    chmsg *message = fifo_pop(&channel->last_messages);
+    free(message->msg);
+    free(message);
+  }
+  free(channel->last_messages);
+  free(channel);
+}
+
 void do_destroychannel(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *channel = invocation->first;
   struct channel *ch;
-  int j;
 
   ch = (struct channel *)hash_table_find(
       channel, &evaluation->runtime->channels->channels);
@@ -790,11 +805,7 @@ void do_destroychannel(CommandInvocation *invocation) {
   evaluation->runtime->channels->count--;
   hash_table_delete(channel, &evaluation->runtime->channels->channels);
 
-  for (j = 0; j < ch->num_users; j++) {
-    free(ch->users[j]);
-  }
-  free(ch->users);
-  free(ch);
+  channel_destroy(ch);
   notify_printf(evaluation, player, "Channel %s destroyed.", channel);
 }
 

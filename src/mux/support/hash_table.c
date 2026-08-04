@@ -18,14 +18,13 @@ struct string_dict_entry {
 
 static int nuke_hash_ent(void *key, void *data, int depth, void *arg);
 
-static int hrbtab_compare(char *left, char *right, void *arg) {
+static int hrbtab_compare(void *left, void *right, void *arg) {
   return strcasecmp(left, right);
 }
 
 void hash_table_initialize(HashTable *htab, int size) {
   memset(htab, 0, sizeof(HashTable));
-  htab->tree = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)hrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(hrbtab_compare, nullptr);
   htab->last = nullptr;
 }
 
@@ -34,6 +33,7 @@ void hash_table_destroy(HashTable *htab) {
     return;
   red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, nullptr);
   red_black_tree_destroy(htab->tree);
+  free(htab->last);
   memset(htab, 0, sizeof(*htab));
 }
 
@@ -137,8 +137,7 @@ static int nuke_hash_ent(void *key, void *data, int depth, void *arg) {
 void hash_table_flush(HashTable *htab, int size) {
   red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, nullptr);
   red_black_tree_destroy(htab->tree);
-  htab->tree = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)hrbtab_compare, nullptr);
+  htab->tree = red_black_tree_init(hrbtab_compare, nullptr);
   if (htab->last)
     free(htab->last);
   htab->last = nullptr;

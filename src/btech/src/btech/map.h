@@ -197,6 +197,7 @@ typedef struct map_data {
   char buildflag;
 
   unsigned char first_free; /* First free on da map */
+  int dynamic_size;         /* Allocated occupancy/LOS matrix dimension. */
   DbRef *mechsOnMap;        /* Mechs on the map */
   unsigned short **LOSinfo; /* Line of sight info */
 

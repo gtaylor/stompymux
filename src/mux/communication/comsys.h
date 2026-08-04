@@ -69,6 +69,7 @@ int is_in_character_location(GameDatabase *database,
                              const ServerConfiguration *configuration,
                              DbRef player);
 void init_chantab(ChannelRegistry *channels);
+void channel_destroy(struct channel *channel);
 void send_channel(EvaluationContext *evaluation, const char *chan,
                   const char *format, ...)
     __attribute__((format(printf, 3, 4)));

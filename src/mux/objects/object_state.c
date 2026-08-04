@@ -138,7 +138,8 @@ static bool object_state_value_copy(ObjectStateValue *destination,
   char *data = malloc(source->as.string.length + 1);
   if (!data)
     return false;
-  memcpy(data, source->as.string.data, source->as.string.length);
+  if (source->as.string.length > 0)
+    memcpy(data, source->as.string.data, source->as.string.length);
   data[source->as.string.length] = '\0';
   destination->as.string.data = data;
   return true;

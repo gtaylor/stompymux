@@ -570,7 +570,7 @@ int main(int argc, char *argv[]) {
   }
   if (!mux_server_create(&server)) {
     fprintf(stderr, "Unable to create MUX server resources.\n");
-    exit(2);
+    return 2;
   }
   time(&server.start_time);
   server.process_start_time = server.start_time;
@@ -587,32 +587,32 @@ int main(int argc, char *argv[]) {
 
   hash_table_initialize(&server.world_indexes.players, 250 * HASH_FACTOR);
   if (configuration_read(&server.configuration_context, config_file) < 0)
-    exit(2);
+    goto fail;
 
   if (!password_initialize()) {
     fprintf(stderr, "Unable to initialize password hashing.\n");
-    exit(2);
+    goto fail;
   }
 
   if (!*server.configuration->database.gamedb) {
     fprintf(stderr,
             "Required configuration directive game_database is missing.\n");
-    exit(2);
+    goto fail;
   }
 
   if (btech_persistence_register(&server.persistence, &server.btech) < 0) {
     fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
-    exit(2);
+    goto fail;
   }
 
   if (commac_persistence_register(&server.persistence) < 0) {
     fprintf(stderr, "Unable to register commac SQLite persistence.\n");
-    exit(2);
+    goto fail;
   }
 
   if (!mux_server_load_content(&server)) {
     fprintf(stderr, "Unable to load MUX server content.\n");
-    exit(2);
+    goto fail;
   }
   db_free(&server.database);
 
@@ -626,7 +626,7 @@ int main(int argc, char *argv[]) {
       log_text(server.configuration->database.gamedb);
       ENDLOG(&server.log);
     }
-    exit(2);
+    goto fail;
   }
   server_lifecycle_prepare(server.lifecycle);
 
@@ -647,7 +647,7 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&server.world_indexes.players);
 
   if (!server_lifecycle_boot(server.lifecycle, mindb)) {
-    exit(2);
+    goto fail;
   }
 
 #ifdef MCHECK
@@ -669,7 +669,11 @@ int main(int argc, char *argv[]) {
   dump_database(&server.server_control);
 
   mux_server_destroy(&server);
-  exit(0);
+  return 0;
+
+fail:
+  mux_server_destroy(&server);
+  return 2;
 }
 
 static void init_rlimit(MuxServer *server) {

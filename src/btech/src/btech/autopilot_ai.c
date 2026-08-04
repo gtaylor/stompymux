@@ -911,7 +911,12 @@ static astar_node *auto_create_astar_node(short x, short y, short x_parent,
  *
  * Returns 1 if it found a path and 0 if it doesn't
  */
-int astar_compare(int a, int b, void *arg) { return a - b; }
+static int astar_compare(void *left_key, void *right_key, void *arg) {
+  const long left = (long)left_key;
+  const long right = (long)right_key;
+
+  return (left > right) - (left < right);
+}
 void astar_release(void *key, void *data) { free(data); }
 int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
                              short end_y) {
@@ -964,9 +969,9 @@ int auto_astar_generate_path(AUTO *autopilot, MECH *mech, short end_x,
   memset(open_list_bitfield, 0, sizeof(open_list_bitfield));
 
   /* Setup the trees */
-  open_list_by_score = red_black_tree_init((void *)astar_compare, NULL);
-  open_list_by_xy = red_black_tree_init((void *)astar_compare, NULL);
-  closed_list = red_black_tree_init((void *)astar_compare, NULL);
+  open_list_by_score = red_black_tree_init(astar_compare, NULL);
+  open_list_by_xy = red_black_tree_init(astar_compare, NULL);
+  closed_list = red_black_tree_init(astar_compare, NULL);
 
   /* Setup the path */
   /* Destroy any existing path first */

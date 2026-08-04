@@ -20,7 +20,10 @@ struct PlayerCache {
   GameDatabase *database;
 };
 
-static int compare_pcache(DbRef left, DbRef right) {
+static int compare_pcache(void *left_key, void *right_key, void *arg) {
+  const DbRef left = (DbRef)left_key;
+  const DbRef right = (DbRef)right_key;
+
   return (left > right) - (left < right);
 }
 
@@ -32,8 +35,7 @@ PlayerCache *player_cache_create(const ServerConfiguration *configuration,
     return nullptr;
   cache->configuration = configuration;
   cache->database = database;
-  cache->tree = red_black_tree_init(
-      (int (*)(void *, void *, void *))(GenericFnPtr)compare_pcache, nullptr);
+  cache->tree = red_black_tree_init(compare_pcache, nullptr);
   if (cache->tree == nullptr) {
     free(cache);
     return nullptr;

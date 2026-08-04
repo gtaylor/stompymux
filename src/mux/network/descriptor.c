@@ -267,6 +267,8 @@ void descriptor_shutdown(Descriptor *descriptor,
   descriptor->is_dead = true;
   uv_read_stop((uv_stream_t *)descriptor->socket);
   if (descriptor->is_connected) {
+    char *flags;
+
     fcache_dump(runtime->files, descriptor, FC_QUIT);
     log_error(descriptor_log(descriptor), LOG_NET | LOG_LOGIN, "NET", "DISC",
               "[%d/%s] Logout by %s(#%ld), <Reason: %s>",
@@ -274,17 +276,18 @@ void descriptor_shutdown(Descriptor *descriptor,
               game_object_name(runtime->world->database, descriptor->player),
               descriptor->player, descriptor_disconnect_reasons[reason]);
 
+    flags = unparse_flags(descriptor_runtime(descriptor)->world->database, GOD,
+                          descriptor->player);
     log_error(
         descriptor_log(descriptor), LOG_ACCOUNTING, "DIS", "ACCT",
-        "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player,
-        unparse_flags(descriptor_runtime(descriptor)->world->database, GOD,
-                      descriptor->player),
+        "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player, flags,
         descriptor->command_count,
         runtime->clock->now - descriptor->connected_at,
         game_object_location(descriptor_runtime(descriptor)->world->database,
                              descriptor->player),
         descriptor->addr, descriptor_disconnect_reasons[reason],
         game_object_name(runtime->world->database, descriptor->player));
+    free_sbuf(flags);
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_disconnect_messages[reason]);
