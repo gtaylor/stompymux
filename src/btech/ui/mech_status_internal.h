@@ -41,6 +41,7 @@
 #include "mech_parts.h"
 #include "mech_scan_api.h"
 #include "mech_status_api.h"
+#include "mech_status_render_internal.h"
 #include "mech_tag_api.h"
 #include "mech_tech_do_api.h"
 #include "mech_utils_api.h"
@@ -55,12 +56,6 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "weapon_settings.h"
-
-void append_status(char *buffer, size_t size, const char *fmt, ...)
-    __attribute__((format(printf, 3, 4)));
-void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
-                         DbRef player, bool compact, char *compact_buffer,
-                         size_t compact_buffer_size);
 
 enum {
   PHY_AXE = 1,
