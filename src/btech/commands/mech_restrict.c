@@ -20,17 +20,20 @@
 #include "map.h"
 #include "map_dynamic_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_build_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
+#include "mech_classification_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
 #include "mech_stagger.h"
+#include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
@@ -69,18 +72,17 @@ void clear_mech_from_LOS(Mech *mech) {
       if (!(mek =
                 btech_context_get_mech(mech_context(mech), map->mechsOnMap[i])))
         continue;
-      if ((MechStatus(mek) & LOCK_TARGET) &&
-          MechTarget(mek) == mech_dbref(mech)) {
+      if (mech_targeting_has_lock_on(mek, mech_dbref(mech))) {
         mech_notify(mek, MECHALL,
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mek);
       }
       if ((map->LOSinfo[i][mech_map_slot(mech)] & MECHLOSFLAG_SEEN) &&
-          MechTeam(mek) != MechTeam(mech))
-        MechNumSeen(mek) = MAX(0, MechNumSeen(mek) - 1);
+          mech_team(mek) != mech_team(mech))
+        mech_seen_count_decrement(mek);
     }
   }
-  if (MechStatus(mech) & LOCK_MODES) {
+  if (mech_targeting_lock_modes_active(mech)) {
     mech_notify(mech, MECHALL, "Weapon system reports the lock has been lost.");
     mech_lose_lock(mech);
   }
@@ -92,6 +94,8 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[3];
   int x, y, z, argc;
+  float fx, fy;
+  int elevation;
 
   cch(MECH_MAP);
   argc = mech_parseattributes(buffer, args, 3);
@@ -103,26 +107,22 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
                   x >= mech_map->map_width || y >= mech_map->map_height ||
                       x < 0 || y < 0,
                   "Invalid coordinates!");
-  MechX(mech) = x;
-  MechLastX(mech) = x;
-  MechY(mech) = y;
-  MechLastY(mech) = y;
-  MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
-  MechTerrain(mech) = map_terrain_get(mech_map, MechX(mech), MechY(mech));
+  mech_position_xy_set(mech, x, y);
+  MapCoordToRealCoord(x, y, &fx, &fy);
+  mech_position_real_xy_set(mech, fx, fy);
+  mech_position_terrain_set(mech, map_terrain_get(mech_map, x, y));
   MarkForLOSUpdate(mech);
   if (argc == 2) {
-    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
-    MechZ(mech) = MechElev(mech) - 1;
-    MechFZ(mech) = ZSCALE * MechZ(mech);
+    elevation = map_elevation_get(mech_map, x, y);
+    mech_position_elevation_set(mech, elevation);
+    mech_position_z_set(mech, elevation - 1);
     DropSetElevation(mech, 0);
-    z = MechZ(mech);
-    if (!Landed(mech) && FlyingT(mech))
-      MechStatus(mech) |= LANDED;
+    z = mech_position_z(mech);
+    mech_position_land_if_flying(mech);
   } else {
     z = atoi(args[2]);
-    MechZ(mech) = z;
-    MechFZ(mech) = ZSCALE * MechZ(mech);
-    MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
+    mech_position_z_set(mech, z);
+    mech_position_elevation_set(mech, map_elevation_get(mech_map, x, y));
   }
   clear_mech_from_LOS(mech);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
@@ -155,7 +155,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   if (mech_map_dbref(mech) != -1) {
     if (!(oldmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech))))
       return;
-    TAGTarget(mech) = -1;
+    mech_targeting_tag_clear(mech);
     clearC3iNetwork(mech, 1);
     clearC3Network(mech, 1);
     remove_mech_from_map(oldmap, mech);
@@ -188,9 +188,11 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   targ[1] = BOUNDED('A', toupper(targ[1]), 'Z');
   for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
     if ((tempMech = (Mech *)btech_context_find_object(
-             mech_context(mech), newmap->mechsOnMap[loop])))
-      if (MechID(tempMech)[0] == targ[0] && MechID(tempMech)[1] == targ[1])
+             mech_context(mech), newmap->mechsOnMap[loop]))) {
+      MechUnitId const id = mech_unit_id(tempMech);
+      if (id.first == targ[0] && id.second == targ[1])
         notdone = 1;
+    }
   }
   while (notdone) {
     targ[0] = 65 + btech_random_range(mech_context(mech), 0, 25);
@@ -198,32 +200,33 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     notdone = 0;
     for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
       if ((tempMech = (Mech *)btech_context_find_object(
-               mech_context(mech), newmap->mechsOnMap[loop])))
-        if (MechID(tempMech)[0] == targ[0] && MechID(tempMech)[1] == targ[1])
+               mech_context(mech), newmap->mechsOnMap[loop]))) {
+        MechUnitId const id = mech_unit_id(tempMech);
+        if (id.first == targ[0] && id.second == targ[1])
           notdone = 1;
+      }
     }
   }
   DOCHECK_CONTEXT(mech_context(mech), loop == MAX_MECHS_PER_MAP,
                   "There are too many mechs on that map!");
   add_mech_to_map(newmap, mech);
-  MechID(mech)[0] = targ[0];
-  MechID(mech)[1] = targ[1];
-  if (MechX(mech) > (newmap->map_width - 1) ||
-      MechY(mech) > (newmap->map_height - 1)) {
-    MechX(mech) = 0;
-    MechLastX(mech) = 0;
-    MechY(mech) = 0;
-    MechLastY(mech) = 0;
-    MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
-    MechTerrain(mech) = map_terrain_get(newmap, MechX(mech), MechY(mech));
-    MechElev(mech) = map_elevation_get(newmap, MechX(mech), MechY(mech));
+  mech_unit_id_set(mech, targ[0], targ[1]);
+  if (mech_position_x(mech) > (newmap->map_width - 1) ||
+      mech_position_y(mech) > (newmap->map_height - 1)) {
+    float fx, fy;
+    mech_position_reset_origin(mech);
+    MapCoordToRealCoord(0, 0, &fx, &fy);
+    mech_position_real_xy_set(mech, fx, fy);
+    mech_position_terrain_set(mech, map_terrain_get(newmap, 0, 0));
+    mech_position_elevation_set(mech, map_elevation_get(newmap, 0, 0));
     notify(btech_context_evaluation(mech_context(mech)), player,
            "You're current position is out of bounds, Pos changed to 0,0");
   }
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "MapIndex changed to %d", newindex);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                "Your ID: %c%c", MechID(mech)[0], MechID(mech)[1]);
+                "Your ID: %c%c", mech_unit_id(mech).first,
+                mech_unit_id(mech).second);
   SendLoc(tprintf("#%d set #%d's mapindex to #%d.", player, mech_dbref(mech),
                   newindex));
   UnZombifyMech(mech);
@@ -250,7 +253,7 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   team = atoi(args[0]);
   if (team < 0)
     team = 0;
-  MechTeam(mech) = team;
+  mech_team_set(mech, team);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Team set to %d", team);
 }
@@ -278,9 +281,9 @@ void newfreemech(DbRef key, void **data, int selector) {
     if (mech_map_dbref(new) != -1 &&
         (map = btech_context_get_map(mech_context(new), mech_map_dbref(new))))
       remove_mech_from_map(map, new);
-    if (MechAuto(new) > 0) {
-      Autopilot *autopilot =
-          btech_context_find_object(mech_context(new), MechAuto(new));
+    if (mech_autopilot_dbref(new) > 0) {
+      Autopilot *autopilot = btech_context_find_object(
+          mech_context(new), mech_autopilot_dbref(new));
       if (autopilot) {
         auto_stop_pilot(autopilot);
         /* Go through the list and remove any leftover nodes */
@@ -316,7 +319,7 @@ void newfreemech(DbRef key, void **data, int selector) {
 
         autopilot->mymechnum = -1;
       }
-      MechAuto(new) = -1;
+      mech_autopilot_dbref_set(new, -1);
     }
   }
 }

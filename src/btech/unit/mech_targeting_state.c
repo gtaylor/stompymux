@@ -16,6 +16,16 @@ void mech_targeting_target_clear(Mech *mech) {
   mech->rd.targy = -1;
 }
 
+void mech_targeting_tag_clear(Mech *mech) { mech->sd.tagTarget = -1; }
+
+bool mech_targeting_has_lock_on(const Mech *mech, DbRef target) {
+  return (mech->rd.status & LOCK_TARGET) && mech->rd.target == target;
+}
+
+bool mech_targeting_lock_modes_active(const Mech *mech) {
+  return mech->rd.status & LOCK_MODES;
+}
+
 bool mech_targeting_has_specific_aim(const Mech *mech) {
   return mech->rd.aim != NUM_SECTIONS;
 }

@@ -12,6 +12,10 @@ int mech_map_slot(const Mech *mech) { return mech->mapnumber; }
 
 int mech_brief_mode(const Mech *mech) { return mech->brief; }
 
+MechUnitId mech_unit_id(const Mech *mech) {
+  return (MechUnitId){.first = mech->ID[0], .second = mech->ID[1]};
+}
+
 void mech_map_dbref_set(Mech *mech, DbRef map_dbref) {
   mech->mapindex = map_dbref;
 }

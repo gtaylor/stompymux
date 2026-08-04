@@ -15,6 +15,11 @@
 
 typedef struct Mech Mech;
 
+typedef struct MechUnitId {
+  char first;
+  char second;
+} MechUnitId;
+
 extern const struct WeaponDefinition MechWeapons[];
 
 #define TELE_ALL 1  /* Tele all, not just mortals */

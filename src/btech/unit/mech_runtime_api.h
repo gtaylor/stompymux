@@ -6,3 +6,5 @@
 
 bool mech_is_started(const Mech *mech);
 DbRef mech_autopilot_dbref(const Mech *mech);
+void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot);
+void mech_seen_count_decrement(Mech *mech);
