@@ -1,5 +1,32 @@
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_combat_api.h"
+#include "mech_equipment_api.h"
 #include "mech_identity_api.h"
-#include "mech_scan_internal.h"
+#include "mech_lifecycle.h"
+#include "mech_los_api.h"
+#include "mech_move_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
+#include "mech_update_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/server/platform.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "section_types.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -16,18 +43,19 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
 
   recycle_weaponry(mech);
   notify(evaluation, player, "================WEAPON SYSTEMS================");
-  if (MechType(mech) == CLASS_BSUIT)
+  if (mech_class(mech) == CLASS_BSUIT)
     notify(evaluation, player,
            "----- Weapon ------ [##]  Holder ------ Status");
   else
     notify(evaluation, player,
            "----- Weapon ------ [##]  Location ---- Status");
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    if (SectIsDestroyed(mech, loop))
+    if (mech_section_is_destroyed(mech, loop))
       continue;
-    count = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 1);
     if (count > 0) {
-      ArmorStringFromIndex(loop, tempbuff, MechType(mech), MechMove(mech));
+      ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
+                           mech_movement_type(mech));
       snprintf(location, sizeof(location), "%-14.14s", tempbuff);
 
       for (ii = 0; ii < count; ii++) {
@@ -35,7 +63,7 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
                  &MechWeapons[weaparray[ii]].name[3], running_sum + ii);
         strcat(weapbuff, location);
 
-        if (PartIsNonfunctional(mech, loop, critical[ii])) {
+        if (mech_critical_is_nonfunctional(mech, loop, critical[ii])) {
           strcat(weapbuff, "[fg=black bold]*****[reset]");
         } else {
           if (weapdata[ii]) {
@@ -82,20 +110,21 @@ void mech_view(DbRef player, void *data, char *buffer) {
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 2);
   if (argc == 0) { /* default target */
-    if (MechTarget(mech) == -1) {
+    if (mech_target_dbref(mech) == -1) {
       mech_notify(mech, MECHALL, "You do not have a default target set!");
       return;
     }
-    target = btech_context_get_mech(mech_context(mech), MechTarget(mech));
+    target =
+        btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
     if (!target) {
       mech_notify(mech, MECHALL, "Invalid default target!");
-      MechTarget(mech) = -1;
+      mech_targeting_target_clear(mech);
       return;
     }
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                          FaMechRange(mech, target)),
+        !InLineOfSight_NB(mech, target, mech_position_x(target),
+                          mech_position_y(target), mech_range_to(mech, target)),
         "That target isn't seen well enough by the scannfers for viewing!");
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,
                                              mech_dbref(target), A_MECHDESC,
@@ -113,16 +142,17 @@ void mech_view(DbRef player, void *data, char *buffer) {
     }
     target = btech_context_get_mech(mech_context(mech), targetnum);
 
-    if (!target || !InLineOfSight(mech, target, MechX(target), MechY(target),
-                                  FaMechRange(mech, target))) {
+    if (!target ||
+        !InLineOfSight(mech, target, mech_position_x(target),
+                       mech_position_y(target), mech_range_to(mech, target))) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");
       return;
     }
 
     DOCHECK_CONTEXT(
         mech_context(mech),
-        !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
-                          FaMechRange(mech, target)),
+        !InLineOfSight_NB(mech, target, mech_position_x(target),
+                          mech_position_y(target), mech_range_to(mech, target)),
         "That target isn't seen well enough by the scanners for viewing!");
 
     if (*(target_desc = btech_attribute_read(mech_context(target)->database,
