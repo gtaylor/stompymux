@@ -257,7 +257,7 @@ int handlemwconc(Mech *mech, int initial) {
       }
     m = PilotStatusRollNeeded[BOUNDED(0, mech_pilot_status(mech), 4)];
   }
-  if (initial && Uncon(mech))
+  if (initial && mech_pilot_is_unconscious(mech))
     return 0;
   if (HasBoolAdvantage(mech_context(mech), mech_pilot_dbref(mech), "toughness"))
     /*  Gets the saving roll for someone with toughness  */
@@ -280,7 +280,7 @@ int handlemwconc(Mech *mech, int initial) {
       mech_notify(mech, MECHPILOT,
                   "Consciousness slips away from you as you enter a sea of "
                   "darkness...");
-    ProlongUncon(mech, UNCONSCIOUS_TIME);
+    mech_unconsciousness_extend(mech, UNCONSCIOUS_TIME);
     return 0;
   }
   return 1;

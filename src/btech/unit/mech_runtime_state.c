@@ -18,6 +18,10 @@ bool mech_player_character_initialization_begin(Mech *mech) {
   return true;
 }
 
+bool mech_pilot_is_unconscious(const Mech *mech) {
+  return mech->rd.status & UNCONSCIOUS;
+}
+
 void mech_movement_stop(Mech *mech) {
   mech->rd.speed = 0.0F;
   mech->rd.desired_speed = 0.0F;

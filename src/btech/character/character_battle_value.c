@@ -105,7 +105,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 
   /* No XP for zero'd mechas */
   for (i = 0; i < NUM_SECTIONS; i++)
-    j -= SectIsDestroyed(wounded, i);
+    j -= mech_section_is_destroyed(wounded, i);
 
   if (j < 1)
     return;

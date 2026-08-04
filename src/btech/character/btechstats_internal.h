@@ -50,25 +50,26 @@
 
 #define BTECHSTATS
 #include "coolmenu.h"
-#include "mech.h"
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"
 #include "mech_progress_api.h"
 #include "mycool.h"
 
 #include "btechstats.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_combat_misc_api.h"
-#include "mech_macros.h"
 #include "mech_partnames_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 #include "registry_internal.h"
+#include "section_types.h"
 int character_value_by_code(BtechContext *context, DbRef player, int code);
 void character_stats_clear(PSTATS *stats);
 void character_stats_retrieve(BtechContext *context, DbRef player, int modes,

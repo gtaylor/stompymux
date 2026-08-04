@@ -14,6 +14,15 @@ int mech_section_original_rear_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].rear_orig;
 }
 
+bool mech_section_is_destroyed(const Mech *mech, int section) {
+  int unit_class = mech->ud.type;
+  bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;
+  bool is_aerospace = unit_class == CLASS_AERO || is_dropship;
+  return mech->ud.sections[section].armor == 0 &&
+         (is_aerospace || mech->ud.sections[section].internal == 0) &&
+         !is_dropship;
+}
+
 void mech_section_armor_set(Mech *mech, int section, int armor) {
   mech->ud.sections[section].armor = armor;
 }

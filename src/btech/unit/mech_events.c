@@ -255,7 +255,7 @@ void mech_recovery_event(MuxEvent *e) {
   }
 }
 
-void ProlongUncon(Mech *mech, int len) {
+void mech_unconsciousness_extend(Mech *mech, int len) {
   int l;
 
   if (Destroyed(mech))

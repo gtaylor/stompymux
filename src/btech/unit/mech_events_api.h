@@ -21,7 +21,7 @@ void mech_stabilizing_event(MuxEvent *e);
 void mech_jump_event(MuxEvent *e);
 void mech_recovery_event(MuxEvent *e);
 void mech_recycle_event(MuxEvent *e);
-void ProlongUncon(Mech *mech, int len);
+void mech_unconsciousness_extend(Mech *mech, int len);
 void MaybeRecycle(Mech *mech, int wticks);
 void mech_lateral_event(MuxEvent *e);
 void mech_move_event(MuxEvent *e);

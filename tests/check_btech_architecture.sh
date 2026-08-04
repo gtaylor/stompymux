@@ -143,6 +143,22 @@ done < <(rg -n \
   src/btech/character/character_battle_value.c \
   src/btech/character/pcombat.c || true)
 
+while IFS= read -r match; do
+  echo "$match: converted character module includes aggregate Mech layout"
+  status=1
+done < <(rg -n '#include "mech(_macros)?\.h"' \
+  src/btech/character/btechstats_internal.h \
+  src/btech/character/btechstats.c \
+  src/btech/character/character_health.c \
+  src/btech/character/character_experience.c \
+  src/btech/character/character_battle_value.c \
+  src/btech/character/character_persistence.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy unconsciousness export is not allowed"
+  status=1
+done < <(rg -n '\bProlongUncon\b' src/btech || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1
