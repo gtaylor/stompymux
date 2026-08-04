@@ -88,6 +88,12 @@ done < <(rg -n \
   -- '\bmech->(xcode|mynum|mapindex|mapnumber|brief|ID)\b' \
   src/btech/special/registry_loading.c || true)
 
+while IFS= read -r match; do
+  echo "$match: special-object domain depends on the legacy Mech aggregate"
+  status=1
+done < <(rg -n -g '*.[ch]' '#include "mech\.h"|\b(MechAuto|MechType|Started)\s*\(' \
+  src/btech/special || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

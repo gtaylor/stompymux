@@ -65,7 +65,7 @@
 #include "autopilot.h"
 #include "btech/persistence.h"
 #include "coolmenu.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_partnames_api.h"
 #include "mech_stat_api.h"
@@ -148,7 +148,7 @@ int btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
 
   if (!cmdflag)
     return 1;
-  if (!mech || !(i = TYPE2FLAG(MechType(mech))))
+  if (!mech || !(i = TYPE2FLAG(mech_class(mech))))
     return 0;
   if (cmdflag > 0) {
     if (cmdflag & i)

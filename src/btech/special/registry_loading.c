@@ -65,10 +65,12 @@
 #include "autopilot.h"
 #include "btech/persistence.h"
 #include "coolmenu.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_partnames_api.h"
+#include "mech_runtime_api.h"
 #include "mech_stat_api.h"
 #include "mechrep.h"
 #include "mechrep_api.h"
@@ -167,7 +169,7 @@ static int load_update4(void *key, void *data, int depth, void *arg) {
         return 1;
     }
 
-    if (!Started(mech))
+    if (!mech_is_started(mech))
       return 1;
     mech_start_seeing(mech);
     mech_update_recycling(mech);
@@ -220,7 +222,7 @@ static int load_autopilot_data(void *key, void *data, int depth, void *arg) {
        * the AUTO object being inside that MECH. Requeue its dispatcher from
        * the durable command list; it recreates goal-specific events itself.
        */
-      if (MechAuto(autopilot->mymech) == autopilot->mynum &&
+      if (mech_autopilot_dbref(autopilot->mymech) == autopilot->mynum &&
           game_object_location(context->database, autopilot->mynum) ==
               autopilot->mymechnum &&
           autopilot->commands &&

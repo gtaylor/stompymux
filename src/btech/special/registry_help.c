@@ -65,7 +65,7 @@
 #include "autopilot.h"
 #include "btech/persistence.h"
 #include "coolmenu.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_partnames_api.h"
 #include "mech_stat_api.h"
