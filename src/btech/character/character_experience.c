@@ -38,7 +38,7 @@ void AccumulateTechXP(BtechContext *context, DbRef pilot, Mech *mech,
     btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
                        tprintf("%s gained %d %s XP (changing mech #%ld)",
                                game_object_name(context->database, pilot), xp,
-                               skname, mech ? mech->mynum : -1));
+                               skname, mech ? mech_dbref(mech) : -1));
 }
 
 void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
@@ -55,34 +55,34 @@ void AccumulateTechWeaponsXP(BtechContext *context, DbRef pilot, Mech *mech,
     btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
                        tprintf("%s gained %d %s XP (changing mech #%ld)",
                                game_object_name(context->database, pilot), xp,
-                               skname, mech ? mech->mynum : -1));
+                               skname, mech ? mech_dbref(mech) : -1));
 }
 
 void AccumulateCommXP(DbRef pilot, Mech *mech) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   int xp;
 
   xp = 1;
   if (!mech_has_active_pilot(mech))
     return;
-  if (!is_in_character(mech->xcode.context->database, mech->mynum))
+  if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
     return;
-  if (!is_connected(mech->xcode.context->database, pilot))
+  if (!is_connected(mech_context(mech)->database, pilot))
     return;
   if (char_gainxp(context, pilot, "Comm-Conventional", xp))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_XP, "%s",
         tprintf("%s gained %d %s XP (in #%ld)",
-                game_object_name(mech->xcode.context->database, pilot), xp,
-                "Comm-Conventional", mech->mynum));
+                game_object_name(mech_context(mech)->database, pilot), xp,
+                "Comm-Conventional", mech_dbref(mech)));
 }
 
 void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   char *skname;
   int xp;
 
-  if (!is_in_character(mech->xcode.context->database, mech->mynum))
+  if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
     return;
 
   if (!mech_has_active_pilot(mech))
@@ -107,21 +107,21 @@ void AccumulatePilXP(DbRef pilot, Mech *mech, int reason, int addanyway) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_PILOT_XP, "%s",
         tprintf("%s gained %d %s XP",
-                game_object_name(mech->xcode.context->database, pilot), xp,
+                game_object_name(mech_context(mech)->database, pilot), xp,
                 skname));
   /*
       if (char_gainxp(context, pilot, skname, xp))
               btech_channel_send(context, BTECH_CHANNEL_MECH_XP, tprintf("%s
-     gained %d %s XP", game_object_name(mech->xcode.context->database, pilot),
+     gained %d %s XP", game_object_name(mech_context(mech)->database, pilot),
      xp, skname));
   */
 }
 
 void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
-  BtechContext *context = attacker->xcode.context;
+  BtechContext *context = mech_context(attacker);
   int xp = 1;
 
-  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(attacker)))
     return;
   if (!mech_has_active_pilot(attacker))
     return;
@@ -133,20 +133,20 @@ void AccumulateSpotXP(DbRef pilot, Mech *attacker, Mech *wounded) {
     return;
   if (MechTeam(wounded) == MechTeam(attacker))
     return;
-  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
   if (char_gainxp(context, pilot, "Gunnery-Spotting", xp))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_XP, "%s",
         tprintf("%s gained spotting XP",
-                game_object_name(attacker->xcode.context->database, pilot)));
+                game_object_name(mech_context(attacker)->database, pilot)));
 }
 
 int MadePerceptionRoll(Mech *mech, int modifier) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   int pilot;
 
-  if (!is_in_character(mech->xcode.context->database, mech->mynum))
+  if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
     return 0;
   if (!mech_has_active_gunner(mech))
     return 0;
@@ -155,22 +155,22 @@ int MadePerceptionRoll(Mech *mech, int modifier) {
     return 0;
   if (!MechPer(mech))
     MechPer(mech) = char_getskilltarget(context, pilot, "Perception", 2);
-  if (btech_random_roll(mech->xcode.context) < (MechPer(mech) + modifier))
+  if (btech_random_roll(mech_context(mech)) < (MechPer(mech) + modifier))
     return 0;
   if (char_gainxp(context, pilot, "Perception", 1))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_XP, "%s",
         tprintf("%s gained 1 perception XP",
-                game_object_name(mech->xcode.context->database, pilot)));
+                game_object_name(mech_context(mech)->database, pilot)));
   return 1;
 }
 
 void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
-  BtechContext *context = attacker->xcode.context;
+  BtechContext *context = mech_context(attacker);
   int xp = 1;
 
   /* If not in character ie: like in simulator - no xp */
-  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(attacker)))
     return;
 
   if (!mech_has_active_gunner(attacker))
@@ -192,7 +192,7 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
     return;
 
   /* If target not in character ie: in simulator - no xp */
-  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
 
   /* Switching to Exile method of tracking xp, where we split
@@ -202,21 +202,20 @@ void AccumulateArtyXP(DbRef pilot, Mech *attacker, Mech *wounded) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d artillery XP",
-                game_object_name(attacker->xcode.context->database, pilot),
-                xp));
+                game_object_name(mech_context(attacker)->database, pilot), xp));
 }
 
 void AccumulateComputerXP(DbRef pilot, Mech *mech, int reason) {
   if (!mech)
     return;
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
 
-  if (mech && is_in_character(mech->xcode.context->database, mech->mynum) &&
-      is_player(mech->xcode.context->database, pilot))
+  if (mech && is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
+      is_player(mech_context(mech)->database, pilot))
     if (char_gainxp(context, pilot, "computer", MAX(1, reason)))
       btech_channel_send(
           context, BTECH_CHANNEL_MECH_XP, "%s",
           tprintf("%s gained %d computer XP (mech #%ld)",
-                  game_object_name(mech->xcode.context->database, pilot),
-                  reason, mech ? mech->mynum : -1));
+                  game_object_name(mech_context(mech)->database, pilot), reason,
+                  mech ? mech_dbref(mech) : -1));
 }

@@ -74,7 +74,7 @@ float getPilotBVMod(Mech *mech, int weapindx) {
  */
 void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
                      float multiplier, int weapindx, int bth) {
-  BtechContext *context = attacker->xcode.context;
+  BtechContext *context = mech_context(attacker);
   int xp, my_BV, th_BV, my_speed, th_speed;
   float myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
   float weapTypeMod;
@@ -89,7 +89,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 
   weapTypeMod = 1;
 
-  if (attacker->xcode.context->configuration->btech_oldxpsystem) {
+  if (mech_context(attacker)->configuration->btech_oldxpsystem) {
     AccumulateGunXPold(pilot, attacker, wounded, damage, multiplier, weapindx,
                        bth);
     return;
@@ -103,7 +103,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
     return;
 
   /* Is attacker in character ie: not in simulator */
-  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(attacker)))
     return;
 
   if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
@@ -128,7 +128,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
     return;
 
   /* Is the target in character ie: in simulators */
-  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
 
   /* No skill to match the weapon we're shooting with? */
@@ -144,14 +144,14 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
     return;
 
   multiplier =
-      multiplier * attacker->xcode.context->configuration->btech_xp_modifier;
+      multiplier * mech_context(attacker)->configuration->btech_xp_modifier;
 
-  if (attacker->xcode.context->configuration->btech_xp_bthmod) {
+  if (mech_context(attacker)->configuration->btech_xp_bthmod) {
     if (!(bth >= 3 && bth <= 12)) {
-      if (attacker->xcode.context->configuration->btech_noisy_xpgain)
+      if (mech_context(attacker)->configuration->btech_noisy_xpgain)
         btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
                            tprintf("#%ld in #%ld 1 noxp #%ld", pilot,
-                                   attacker->mynum, wounded->mynum));
+                                   mech_dbref(attacker), mech_dbref(wounded)));
       return; /* sure hits aren't interesting */
     }
     multiplier = 2 * multiplier * bth_modifier[bth - 3] / 36;
@@ -161,7 +161,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   my_BV = MechBV(attacker);
   th_BV = MechBV(wounded);
 
-  if (attacker->xcode.context->configuration->btech_xp_usePilotBVMod) {
+  if (mech_context(attacker)->configuration->btech_xp_usePilotBVMod) {
     myPilotBVMod = getPilotBVMod(attacker, weapindx);
     theirPilotBVMod = getPilotBVMod(wounded, weapindx);
 
@@ -173,7 +173,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
         context, BTECH_CHANNEL_MECH_DEBUG, "%s",
         tprintf("Using skill modified battle value for mechs %ld and %ld "
                 "with skill mods of %2.2f and %2.2f",
-                attacker->mynum, wounded->mynum, myPilotBVMod,
+                mech_dbref(attacker), mech_dbref(wounded), myPilotBVMod,
                 theirPilotBVMod));
 #endif
   }
@@ -182,11 +182,11 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   th_speed = NewMoveValue(wounded) + 1;
 
   if (MechWeapons[weapindx].type == TMISSILE)
-    weapTypeMod = attacker->xcode.context->configuration->btech_xp_missilemod;
+    weapTypeMod = mech_context(attacker)->configuration->btech_xp_missilemod;
   else if (MechWeapons[weapindx].type == TAMMO)
-    weapTypeMod = attacker->xcode.context->configuration->btech_xp_ammomod;
+    weapTypeMod = mech_context(attacker)->configuration->btech_xp_ammomod;
 
-  if (attacker->xcode.context->configuration->btech_defaultweapdam > 1)
+  if (mech_context(attacker)->configuration->btech_defaultweapdam > 1)
     damagemod = damage;
   else
     damagemod = 1;
@@ -195,7 +195,7 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
       btech_weapon_settings_recycle_time(&context->weapon_settings, weapindx);
   weapon_battle_value =
       btech_weapon_settings_battle_value(&context->weapon_settings, weapindx);
-  if (attacker->xcode.context->configuration->btech_xp_vrtmod)
+  if (mech_context(attacker)->configuration->btech_xp_vrtmod)
     vrtmod = (recycle_time < 30 ? sqrt((double)recycle_time / 30.0) : 1);
   else
     vrtmod = 1.0;
@@ -203,11 +203,11 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   multiplier =
       (vrtmod * weapTypeMod * multiplier *
        sqrt((double)(th_BV + 1) * th_speed *
-            attacker->xcode.context->configuration->btech_defaultweapbv /
-            attacker->xcode.context->configuration->btech_defaultweapdam)) /
+            mech_context(attacker)->configuration->btech_defaultweapbv /
+            mech_context(attacker)->configuration->btech_defaultweapdam)) /
       (sqrt((double)(my_BV + 1) * my_speed * weapon_battle_value / damagemod));
 
-  if (attacker->xcode.context->configuration->btech_perunit_xpmod)
+  if (mech_context(attacker)->configuration->btech_perunit_xpmod)
     multiplier =
         multiplier *
         MechXPMod(attacker); /* Per unit XP Mod. Defaults to 1 anyways */
@@ -215,10 +215,10 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
   /* Change the Cap to be variable depending on what a mux wants */
 
   xp = BOUNDED(1, (int)(multiplier * damage / 100),
-               attacker->xcode.context->configuration->btech_xpgain_cap);
+               mech_context(attacker)->configuration->btech_xpgain_cap);
 
-  strcpy(buf,
-         game_object_name(attacker->xcode.context->database, wounded->mynum));
+  strcpy(buf, game_object_name(mech_context(attacker)->database,
+                               mech_dbref(wounded)));
 
   // Emit XP gain over MechAttackXP
   if (char_gainxp(context, pilot, skname, (int)xp)) {
@@ -226,12 +226,13 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
                 "(%d damage) against %s",
-                game_object_name(attacker->xcode.context->database, pilot),
+                game_object_name(mech_context(attacker)->database, pilot),
                 (int)xp, multiplier, damage, buf));
-    if (attacker->xcode.context->configuration->btech_noisy_xpgain)
+    if (mech_context(attacker)->configuration->btech_noisy_xpgain)
       btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
                          tprintf("#%ld in #%ld %d damage #%ld", pilot,
-                                 attacker->mynum, damage, wounded->mynum));
+                                 mech_dbref(attacker), damage,
+                                 mech_dbref(wounded)));
   }
 
 } // end AccumulateGunXP()
@@ -239,13 +240,13 @@ void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
 void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
                         int numOccurences, float multiplier, int weapindx,
                         int bth) {
-  BtechContext *context = attacker->xcode.context;
+  BtechContext *context = mech_context(attacker);
   int xp;
   char *skname;
   char buf[MBUF_SIZE];
 
   /* Is the attacker in character ie: in simulators */
-  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(attacker)))
     return;
 
   if (!mech_has_active_gunner(attacker))
@@ -267,7 +268,7 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
     return;
 
   /* if target is in character ie: in simulators or something */
-  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+  if (!is_in_character(mech_context(attacker)->database, mech_dbref(wounded)))
     return;
 
   if (!(skname = FindGunnerySkillName(attacker, weapindx)))
@@ -288,9 +289,9 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
-                attacker->mynum,
-                game_object_name(attacker->xcode.context->database,
-                                 attacker->mynum),
+                mech_dbref(attacker),
+                game_object_name(mech_context(attacker)->database,
+                                 mech_dbref(attacker)),
                 (short)MechTons(attacker)));
     return;
   }
@@ -305,18 +306,18 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
 
   multiplier = multiplier * bth_modifier[bth - 3] / 36;
   multiplier = multiplier * 2; /* For average shot */
-  if (attacker->xcode.context->configuration->btech_perunit_xpmod)
+  if (mech_context(attacker)->configuration->btech_perunit_xpmod)
     multiplier = multiplier *
                  MechXPMod(attacker); /* Per unit XP Modifier. Defaults to 1 */
 
-  if (btech_random_range(attacker->xcode.context, 1, 50) >
+  if (btech_random_range(mech_context(attacker), 1, 50) >
       (multiplier * numOccurences))
     return; /* Nothing for truly twinky stuff, occasionally */
 
   xp = BOUNDED(1, (int)(multiplier * numOccurences) / 100,
                50); /*Hardcoded limit */
-  strcpy(buf,
-         game_object_name(attacker->xcode.context->database, wounded->mynum));
+  strcpy(buf, game_object_name(mech_context(attacker)->database,
+                               mech_dbref(wounded)));
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
@@ -325,7 +326,7 @@ void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f %% "
                 "difficulty (%d occurences) against %s",
-                game_object_name(attacker->xcode.context->database, pilot),
+                game_object_name(mech_context(attacker)->database, pilot),
                 (int)xp, multiplier, numOccurences, buf));
 }
 

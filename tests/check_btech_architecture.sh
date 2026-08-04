@@ -126,6 +126,13 @@ done < <(rg -n -g '*.[ch]' \
   '#include "mech\.h"|#include "mech_macros\.h"|\bmech->' \
   src/btech/map || true)
 
+while IFS= read -r match; do
+  echo "$match: character domain accesses Mech identity layout directly"
+  status=1
+done < <(rg -n -g '*.[ch]' \
+  -- '\b[A-Za-z_][A-Za-z0-9_]*->(xcode|mynum|mapindex|mapnumber)\b' \
+  src/btech/character || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

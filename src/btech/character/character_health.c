@@ -72,7 +72,7 @@ static int loc_mod(int loc) {
 }
 
 void initialize_pc(DbRef player, Mech *mech) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   int bruise, lethal, playerBLD;
   int dam, tot;
@@ -121,7 +121,7 @@ void initialize_pc(DbRef player, Mech *mech) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                    game_object_name(mech->xcode.context->database, player),
+                    game_object_name(mech_context(mech)->database, player),
                     player, buf3));
         return;
       }
@@ -145,7 +145,7 @@ void initialize_pc(DbRef player, Mech *mech) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                    game_object_name(mech->xcode.context->database, player),
+                    game_object_name(mech_context(mech)->database, player),
                     player, buf2));
         return;
       }
@@ -168,7 +168,7 @@ void initialize_pc(DbRef player, Mech *mech) {
       btech_channel_send(
           context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Invalid armor string for %s(#%ld): %s",
-                  game_object_name(mech->xcode.context->database, player),
+                  game_object_name(mech_context(mech)->database, player),
                   player, buf1));
       return;
     }
@@ -177,7 +177,7 @@ void initialize_pc(DbRef player, Mech *mech) {
         btech_channel_send(
             context, BTECH_CHANNEL_MECH_ERRORS, "%s",
             tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
-                    game_object_name(mech->xcode.context->database, player),
+                    game_object_name(mech_context(mech)->database, player),
                     player, buf1, i + 1, buf1[i]));
         return;
       }
@@ -189,7 +189,7 @@ void initialize_pc(DbRef player, Mech *mech) {
 }
 
 void fix_pilotdamage(Mech *mech, DbRef player) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   int bruise, lethal, playerBLD;
 
@@ -210,7 +210,7 @@ const int PilotStatusRollNeeded[] = {0, 3, 5, 7, 10, 11};
     return ret * mod;
 
 int mw_ic_bth(Mech *mech) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   /* Rule Reference: BMR Revised, Page 17 ( Consciousness Table ) */
   /* Rule Reference: Total Warfare, Page 41-42 ( Consciousness Table ) */
   /* Rule Reference: MaxTech Revised, Page 46 ( Pain Resistance = -1 ) */
@@ -249,7 +249,7 @@ int handlemwconc(Mech *mech, int initial) {
 
   int m, roll;
 
-  if (is_in_character(mech->xcode.context->database, mech->mynum) &&
+  if (is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
       MechPilot(mech) > 0)
     m = mw_ic_bth(mech);
   else {
@@ -270,11 +270,11 @@ int handlemwconc(Mech *mech, int initial) {
   }
   if (initial && Uncon(mech))
     return 0;
-  if (HasBoolAdvantage(mech->xcode.context, MechPilot(mech), "toughness"))
+  if (HasBoolAdvantage(mech_context(mech), MechPilot(mech), "toughness"))
     /*  Gets the saving roll for someone with toughness  */
-    roll = char_rollsaving(mech->xcode.context);
+    roll = char_rollsaving(mech_context(mech));
   else
-    roll = char_rollskilled(mech->xcode.context);
+    roll = char_rollskilled(mech_context(mech));
   if (MechPilot(mech) >= 0) {
     if (initial) {
       mech_notify(mech, MECHPILOT, "You attempt to keep consciousness!");
@@ -298,15 +298,15 @@ int handlemwconc(Mech *mech, int initial) {
 }
 
 void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   DbRef player;
   int damage, bruise, lethaldam, playerBLD;
 
-  if (mech->mynum < 0)
+  if (mech_dbref(mech) < 0)
     return;
   /* check to see if mech is IC */
-  if (!is_in_character(mech->xcode.context->database, mech->mynum) ||
+  if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)) ||
       !mech_has_pilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);
@@ -355,15 +355,15 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
 }
 
 void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
-  BtechContext *context = mech->xcode.context;
+  BtechContext *context = mech_context(mech);
   PSTATS stats, *s = &stats;
   DbRef player;
   int lethaldam, playerBLD;
 
-  if (mech->mynum < 0)
+  if (mech_dbref(mech) < 0)
     return;
   /* check to see if mech is IC */
-  if (!is_in_character(mech->xcode.context->database, mech->mynum) ||
+  if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)) ||
       !mech_has_pilot(mech)) {
     MechPilotStatus(mech) += dam;
     handlemwconc(mech, 1);

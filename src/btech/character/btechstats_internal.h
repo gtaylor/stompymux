@@ -50,6 +50,7 @@
 #define BTECHSTATS
 #include "coolmenu.h"
 #include "mech.h"
+#include "mech_identity_api.h"
 #include "mycool.h"
 
 #include "btechstats.h"
