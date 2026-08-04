@@ -94,6 +94,9 @@ set(BTECH_SOURCES
   repair/mech_tech_events.c
   repair/mech_tech_repairs.c
   repair/mechrep.c
+  repair/mechrep_templates.c
+  repair/mechrep_construction.c
+  repair/mechrep_technology.c
   scripting/functions.c
   scripting/los_store_values.c
   scripting/registry_values.c
