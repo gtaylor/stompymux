@@ -17,7 +17,7 @@
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_parts.h"
 #include "mech_persistence.h"

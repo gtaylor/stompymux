@@ -94,6 +94,12 @@ while IFS= read -r match; do
 done < <(rg -n -g '*.[ch]' '#include "mech\.h"|\b(MechAuto|MechType|Started)\s*\(' \
   src/btech/special || true)
 
+while IFS= read -r match; do
+  echo "$match: converted integration or persistence code depends on the legacy Mech aggregate"
+  status=1
+done < <(rg -n -g '*.[ch]' '#include "mech\.h"|#include "mech_macros\.h"' \
+  src/btech/integration src/btech/persistence || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

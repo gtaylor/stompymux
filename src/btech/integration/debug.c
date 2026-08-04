@@ -19,10 +19,10 @@
 #include "map_dynamic_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_partnames_api.h"
+#include "mech_position_api.h"
 #include "mech_startup_api.h"
 #include "mux/network/mux_event_alloc.h"
 #include "mux/objects/db.h"
@@ -187,10 +187,7 @@ void ShutDownMap(BtechContext *context, DbRef player, DbRef mapnumber) {
               "Shutting down Mech #%ld and resetting map index to -1....",
               map->mechsOnMap[j]);
           mech_shutdown(GOD, (void *)mech, "");
-          MechLastX(mech) = 0;
-          MechLastY(mech) = 0;
-          MechX(mech) = 0;
-          MechY(mech) = 0;
+          mech_position_reset_origin(mech);
           remove_mech_from_map(map, mech);
         }
       }
