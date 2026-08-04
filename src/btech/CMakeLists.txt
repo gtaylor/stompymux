@@ -21,10 +21,13 @@ set(BTECH_SOURCES
   character/pcombat.c
   combat/artillery.c
   combat/bsuit.c
+  combat/bsuit_hide.c
   combat/crit.c
   combat/eject.c
+  combat/eject_embark.c
   combat/mech_ammodump.c
   combat/mech_bth.c
+  combat/mech_bth_movement.c
   combat/mech_combat.c
   combat/mech_combat_misc.c
   combat/mech_combat_missile.c
