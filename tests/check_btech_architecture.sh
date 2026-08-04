@@ -185,6 +185,7 @@ while IFS= read -r match; do
   echo "$match: tactical style renderer depends on aggregate Mech layout"
   status=1
 done < <(rg -n '#include "mech(_maps_internal|_macros)?\.h"' \
+  src/btech/commands/mech_command_checks.c \
   src/btech/ui/mech_base_entry.c \
   src/btech/ui/mech_lrs_map.c \
   src/btech/ui/mech_maps.c \

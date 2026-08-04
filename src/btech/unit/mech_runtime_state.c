@@ -39,6 +39,8 @@ void mech_movement_stop(Mech *mech) {
   mech->rd.desired_speed = 0.0F;
 }
 
+void mech_last_use_reset(Mech *mech) { mech->rd.lastused = 0; }
+
 DbRef mech_autopilot_dbref(const Mech *mech) { return mech->rd.autopilot_num; }
 
 void mech_autopilot_dbref_set(Mech *mech, DbRef autopilot) {

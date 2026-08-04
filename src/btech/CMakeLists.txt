@@ -74,6 +74,7 @@ set(BTECH_SOURCES
   combat/mech_club.c
   combat/mine.c
   commands/btech.c
+  commands/mech_command_checks.c
   commands/mech_restrict.c
   core/btech_channel.c
   core/btech_event.c
