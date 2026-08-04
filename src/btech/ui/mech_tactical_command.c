@@ -15,19 +15,19 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
 
   /* Basic checks for pilot and mech */
   cch(MECH_USUAL);
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
   /* Get the map info */
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   /* Various checks for conditions and system of mech */
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech->xcode.context, !MechTacRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !MechTacRange(mech),
                   "Your system seems to be inoperational.");
 
   if (MapIsDark(mech_map) ||
       (MechType(mech) == CLASS_MW &&
-       mech->xcode.context->configuration->btech_mw_losmap))
+       mech_context(mech)->configuration->btech_mw_losmap))
     dohexlos = 1;
 
   /* Check to see which type of tactical to display
@@ -68,7 +68,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
     argc--;
   }
 
-  DOCHECK_CONTEXT(mech->xcode.context, dohexlos && (flags & (8 | 16 | 32)),
+  DOCHECK_CONTEXT(mech_context(mech), dohexlos && (flags & (8 | 16 | 32)),
                   "You can't see that much here!");
 
   if (!parse_tacargs(player, mech, args, argc, MechTacRange(mech), &x, &y))
@@ -78,7 +78,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
    * the player, if doesn't exist set the height and width to
    * default params. If it does exist, check the values and
    * make sure they are legit. */
-  str = btech_attribute_read(mech->xcode.context->database, player, A_TACSIZE,
+  str = btech_attribute_read(mech_context(mech)->database, player, A_TACSIZE,
                              (char[LBUF_SIZE]){0});
   if (!*str) {
     displayHeight = MAP_DISPLAY_HEIGHT;

@@ -23,6 +23,7 @@
 #include "map_terrain.h"
 #include "mech.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"

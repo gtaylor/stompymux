@@ -66,6 +66,14 @@ done < <(rg -n -g '*.[ch]' \
   -- '\b(mech|[A-Za-z_][A-Za-z0-9_]*Mech|seer|target|spotter|m|t)->' \
   src/btech/sensors || true)
 
+while IFS= read -r match; do
+  echo "$match: converted map UI boundary accesses Mech layout directly"
+  status=1
+done < <(rg -n \
+  -- '\b(mech|tempMech|tmpm|oMech)->(xcode|mynum|mapindex|mapnumber|brief|ID)\b' \
+  src/btech/ui/mech_maps.c src/btech/ui/mech_base_entry.c \
+  src/btech/ui/mech_lrs_map.c src/btech/ui/mech_tactical_command.c || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

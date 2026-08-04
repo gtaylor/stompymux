@@ -224,9 +224,9 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
   if (mode & LRS_TERRAINMODE)
     return lrs_terrain_text(colors, map, x, y, mode & LRS_COLORMODE, prevc);
 
-  btech_channel_send(
-      mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-      tprintf("Unknown LRS mode, mech #%ld mode 0x%x.", mech->mynum, mode));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
+                     tprintf("Unknown LRS mode, mech #%ld mode 0x%x.",
+                             mech_dbref(mech), mode));
   return map_cell_text('R', prevc, 'Y');
 }
 
@@ -280,13 +280,13 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff), "%c",
              trash1[2]);
   }
-  notify(btech_context_evaluation(mech->xcode.context), player, topbuff);
-  notify(btech_context_evaluation(mech->xcode.context), player, midbuff);
-  notify(btech_context_evaluation(mech->xcode.context), player, botbuff);
+  notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
+  notify(btech_context_evaluation(mech_context(mech)), player, midbuff);
+  notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
 
   if (mode & LRS_MECHMODE) {
     for (i = 0; i < map->first_free; i++) {
-      if ((oMech = btech_context_get_mech(mech->xcode.context,
+      if ((oMech = btech_context_get_mech(mech_context(mech),
                                           map->mechsOnMap[i]))) {
         if ((mech == oMech) ||
             (MechY(oMech) >= b_height && MechY(oMech) <= e_height &&
@@ -366,8 +366,8 @@ static void show_lrs_map(const MapColorScheme *colors, DbRef player, Mech *mech,
     }
     snprintf(botbuff + strlen(botbuff), sizeof(botbuff) - strlen(botbuff),
              " %-3d", loop);
-    notify(btech_context_evaluation(mech->xcode.context), player, topbuff);
-    notify(btech_context_evaluation(mech->xcode.context), player, botbuff);
+    notify(btech_context_evaluation(mech_context(mech)), player, topbuff);
+    notify(btech_context_evaluation(mech_context(mech)), player, botbuff);
   }
 }
 
@@ -382,13 +382,13 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUAL);
 
-  if (is_ansi(mech->xcode.context->database, player))
+  if (is_ansi(mech_context(mech)->database, player))
     mode |= LRS_COLORMODE;
 
-  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   argc = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech->xcode.context, !MechLRSRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !MechLRSRange(mech),
                   "Your system seems to be inoperational.");
   if (!parse_tacargs(player, mech, &args[1], argc - 1, MechLRSRange(mech), &x,
                      &y))
@@ -423,21 +423,21 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
     mode |= LRS_LOSMODE | LRS_MECHMODE | LRS_TERRAINMODE;
     break;
   default:
-    notify_printf(btech_context_evaluation(mech->xcode.context), player,
+    notify_printf(btech_context_evaluation(mech_context(mech)), player,
                   "Unknown LRS sensor type '%s'!", args[0]);
     return;
   }
 
   if (MapIsDark(map) || (MechType(mech) == CLASS_MW &&
-                         mech->xcode.context->configuration->btech_mw_losmap))
+                         mech_context(mech)->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
-  str = btech_attribute_read(mech->xcode.context->database, player, A_LRSHEIGHT,
+  str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
                              (char[LBUF_SIZE]){0});
   if (*str) {
     displayHeight = atoi(str);
     if (displayHeight < 10 || displayHeight > 40) {
-      notify(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(mech_context(mech)), player,
              "Illegal LRSHeight attribute.  Must be between 10 and 40");
       displayHeight = LRS_DISPLAY_HEIGHT;
     }
@@ -449,7 +449,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   if (!(displayHeight % 2))
     displayHeight++;
 
-  map_color_scheme_load(&colors, mech->xcode.context, player);
+  map_color_scheme_load(&colors, mech_context(mech), player);
 
   show_lrs_map(&colors, player, mech, map, x, y, displayHeight, mode);
 }

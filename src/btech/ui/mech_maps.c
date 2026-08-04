@@ -6,7 +6,7 @@ void mech_findcenter(DbRef player, void *data, char *buffer) {
   int x, y;
 
   cch(MECH_USUAL);
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   x = MechX(mech);
   y = MechY(mech);
   MapCoordToRealCoord(x, y, &fx, &fy);
@@ -29,23 +29,23 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
   case 2:
     bearing = atoi(args[0]);
     range = atof(args[1]);
-    DOCHECK0_CONTEXT(mech->xcode.context,
+    DOCHECK0_CONTEXT(mech_context(mech),
                      !MechIsObservator(mech) && abs((int)range) > maxrange,
                      "Those coordinates are out of sensor range!");
     FindXY(MechFX(mech), MechFY(mech), bearing, range, &fx, &fy);
     RealCoordToMapCoord(x, y, fx, fy);
     return 1;
   case 1:
-    map = btech_context_get_map(mech->xcode.context, mech->mapindex);
-    tempMech = btech_context_get_mech(mech->xcode.context,
-                                      FindMechOnMap(map, args[0]));
-    DOCHECK0_CONTEXT(mech->xcode.context, !tempMech, "No such target.");
+    map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+    tempMech =
+        btech_context_get_mech(mech_context(mech), FindMechOnMap(map, args[0]));
+    DOCHECK0_CONTEXT(mech_context(mech), !tempMech, "No such target.");
     range = FlMechRange(mech_map, mech, tempMech);
     DOCHECK0_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
         "No such target.");
-    DOCHECK0_CONTEXT(mech->xcode.context, abs((int)range) > maxrange,
+    DOCHECK0_CONTEXT(mech_context(mech), abs((int)range) > maxrange,
                      "Target is out of scanner range.");
     *x = MechX(tempMech);
     *y = MechY(tempMech);
@@ -55,7 +55,7 @@ int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
     *y = MechY(mech);
     return 1;
   default:
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Invalid number of parameters!");
     return 0;
   }
@@ -174,15 +174,15 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   short x, y;
 
   cch(MECH_USUAL);
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   dolos = MapIsDark(mech_map) ||
           (MechType(mech) == CLASS_MW &&
-           mech->xcode.context->configuration->btech_mw_losmap);
+           mech_context(mech)->configuration->btech_mw_losmap);
 
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_map->map_width <= 0 || mech_map->map_height <= 0,
                   "Nothing to see on this map, move along.");
 
