@@ -33,6 +33,7 @@
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -127,8 +128,6 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   clear_mech_from_LOS(mech);
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Pos changed to %d,%d,%d", x, y, z);
-  SendLoc(tprintf("#%d set #%d's pos to %d,%d,%d.", player, mech_dbref(mech), x,
-                  y, z));
 }
 
 /* Team/Map commands */
@@ -164,8 +163,6 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   if (newindex == -1) {
     notify(btech_context_evaluation(mech_context(mech)), player,
            "Mech removed from map.");
-    SendLoc(tprintf("#%d removed #%d from map #%d.", player, mech_dbref(mech),
-                    oldmap->mynum));
     return;
   }
 
@@ -227,9 +224,7 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your ID: %c%c", mech_unit_id(mech).first,
                 mech_unit_id(mech).second);
-  SendLoc(tprintf("#%d set #%d's mapindex to #%d.", player, mech_dbref(mech),
-                  newindex));
-  UnZombifyMech(mech);
+  autopilot_resume_for_mech(mech);
 }
 
 void mech_Rsetteam(DbRef player, void *data, char *buffer) {

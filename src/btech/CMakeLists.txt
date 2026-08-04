@@ -15,6 +15,7 @@ set(BTECH_SOURCES
   autopilot/autopilot_bases.c
   autopilot/autopilot_roam.c
   autopilot/autopilot_core.c
+  autopilot/autopilot_resume.c
   autopilot/autopilot_radio.c
   autopilot/autopilot_radio_catalog.c
   autopilot/autopilot_radio_handlers.c

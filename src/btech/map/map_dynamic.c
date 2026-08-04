@@ -20,6 +20,7 @@
 #include "autopilot.h"
 #include "btech_channel.h"
 #include "econ_cmds_api.h"
+#include "map.h"
 #include "map_conditions_api.h"
 #include "map_dynamic_api.h"
 #include "map_terrain.h"
@@ -204,7 +205,7 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
       mech_towed_clear(mech);
   }
   MarkForLOSUpdate(mech);
-  UnZombifyMech(mech);
+  autopilot_resume_for_mech(mech);
   map_conditions_apply(mech, newmap);
   if (mech_is_dropship(mech))
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",

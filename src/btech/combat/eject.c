@@ -487,7 +487,7 @@ void mech_udisembark(DbRef player, void *data, char *buffer) {
     MechPer(mech) = 6;
   }
   MechCommLast(mech) = 0;
-  UnZombifyMech(mech);
+  autopilot_resume_for_mech(mech);
   CargoSpace(target) += (MechTons(mech) * 100);
   MarkForLOSUpdate(target);
 

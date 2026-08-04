@@ -7,6 +7,8 @@
  */
 
 #include "autopilot.h"
+#include "btech/context.h"
+#include "context_internal.h"
 #include "mech_lifecycle.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"

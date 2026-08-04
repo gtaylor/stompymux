@@ -172,13 +172,7 @@ typedef struct MuxEvent MuxEvent;
     }                                                                          \
   } while (0)
 
-#define UnZombifyMech(mech)                                                    \
-  do {                                                                         \
-    Autopilot *au;                                                             \
-    if (MechAuto(mech) > 0 &&                                                  \
-        (au = btech_context_find_object(mech->xcode.context, MechAuto(mech)))) \
-      UnZombifyAuto(au);                                                       \
-  } while (0)
+void autopilot_resume_for_mech(Mech *mech);
 
 /*! \todo {Get rid of these} */
 

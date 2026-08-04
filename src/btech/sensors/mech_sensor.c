@@ -428,7 +428,7 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
     if ((f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS))) {
       if (MechTeam(mech) != MechTeam(target)) {
         MechNumSeen(mech)++;
-        UnZombifyMech(mech);
+        autopilot_resume_for_mech(mech);
       }
       f |= MECHLOSFLAG_SEEN;
       *fl = f;

@@ -241,7 +241,7 @@ static void mech_startup_event(MuxEvent *e) {
     MechDesiredSpeed(mech) = MechMaxSpeed(mech);
     mech_maybe_move(mech);
   }
-  UnZombifyMech(mech);
+  autopilot_resume_for_mech(mech);
 }
 
 void mech_startup(DbRef player, void *data, char *buffer) {
