@@ -1,0 +1,35 @@
+#pragma once
+#include "btech_channel.h"
+#include "btech_event.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "mech.h"
+#include "mech_macros.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+
+#include "autopilot.h"
+#include "btechstats_api.h"
+#include "mech_ecm_api.h"
+#include "mech_events.h"
+#include "mech_lite_api.h"
+#include "mech_los_api.h"
+#include "mech_sensor.h"
+#include "mech_sensor_api.h"
+#include "mech_tag_api.h"
+#include "mech_utils_api.h"

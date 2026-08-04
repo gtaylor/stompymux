@@ -114,6 +114,8 @@ ETOHITFUNC(blood_tohit);
 #define SENSOR_BAP 6
 #define SENSOR_BHAP 7
 
+enum { NUM_SENSORS = 9 };
+
 #define SENSOR_ATTR_NONE 0
 #define SENSOR_ATTR_SEISMIC 1
 
@@ -165,7 +167,6 @@ SensorStruct sensors[] = {
      "Superior version of the Beagle Active Probe (slightly varying BTH, but "
      "ignores partial/woods/water)"}};
 
-#define NUM_SENSORS (sizeof(sensors) / sizeof(sensors[0]))
 #else
 extern SensorStruct sensors[];
 #endif
