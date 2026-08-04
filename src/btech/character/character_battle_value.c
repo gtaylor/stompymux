@@ -1,0 +1,541 @@
+#include "btechstats_internal.h"
+
+int HasBoolAdvantage(BtechContext *context, DbRef player, const char *name) {
+  PSTATS stats, *s = &stats;
+  char buf[SBUF_SIZE];
+
+  strcpy(buf, name);
+  character_stats_retrieve(context, player,
+                           VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
+  if (char_gvalue(s, buf) == 1)
+    return 1;
+  else
+    return 0;
+}
+
+const int bth_modifier[] = /* Starts from '3' , in 1/36's */
+    {
+        /*  3 4 5  6  7  8  9 10 11 12 */
+        1, 3, 6, 10, 15, 21, 26, 30, 33, 35, 0, 0, 0, 0 /* pad, just in case */
+};
+
+#define TonValue(mech)                                                         \
+  MAX(1, (MechTons(mech) / ((MechType(mech) != CLASS_MECH) ? 2 : 1) /          \
+          ((MechMove(mech) == MOVE_NONE) ? 2 : 1)))
+
+static int t_mod(float sp) {
+  if (sp <= MP2)
+    return 0;
+  if (sp <= MP4)
+    return 1;
+  if (sp <= MP6)
+    return 2;
+  if (sp <= MP9)
+    return 3;
+  return 4; /* No extra mods */
+}
+
+#define MoveValue(mech) (t_mod(MMaxSpeed(mech)) + 2)
+#define NewMoveValue(mech) ((int)(MechMaxSpeed(mech) / MP1))
+
+float getPilotBVMod(Mech *mech, int weapindx) {
+  /*
+   * What we do is we get the mod as if we had a 0+ piloting (baseline)
+   * for the gun skill we want. Each '+' above zero subtracts .05 from
+   * the result. Obviously, each '+' below adds .05.
+   *
+   * The first number in the array below corresponds to a 0+ 0+ person
+   * and the last number in the array below corresponds to a 7+ 0+ person
+   * (that's <gun skill>+ <pilot skill>+)
+   */
+
+  float zeroPilotBaseSkills[] = {2.05, 1.85, 1.65, 1.45, 1.25, 1.15, 1.05, .95};
+
+  int myGSkill = FindPilotGunnery(mech, weapindx);
+  int myPSkill = FindPilotPiloting(mech);
+  float baseMod = 0.0;
+
+  /* First we check if we have a totally off the wall GSkill, i.e., below
+   * 0 or above 7.
+   */
+  if (myGSkill < 0) {
+    baseMod = zeroPilotBaseSkills[0] + (abs(myGSkill) * 0.20);
+  } else if (myGSkill > 7) {
+    baseMod = zeroPilotBaseSkills[7] - (myGSkill * 0.10);
+  } else {
+    baseMod = zeroPilotBaseSkills[myGSkill];
+  }
+
+  return (baseMod - ((0 + myPSkill) * 0.05));
+}
+
+/*
+ * Routines and formula for XP gain.
+ */
+void AccumulateGunXP(DbRef pilot, Mech *attacker, Mech *wounded, int damage,
+                     float multiplier, int weapindx, int bth) {
+  BtechContext *context = attacker->xcode.context;
+  int xp, my_BV, th_BV, my_speed, th_speed;
+  float myPilotBVMod = 1.0, theirPilotBVMod = 1.0;
+  float weapTypeMod;
+  char *skname;
+  char buf[MBUF_SIZE];
+  int damagemod;
+  float vrtmod;
+  int recycle_time;
+  int weapon_battle_value;
+  int i;
+  int j = NUM_SECTIONS;
+
+  weapTypeMod = 1;
+
+  if (attacker->xcode.context->configuration->btech_oldxpsystem) {
+    AccumulateGunXPold(pilot, attacker, wounded, damage, multiplier, weapindx,
+                       bth);
+    return;
+  }
+
+  /* No XP for zero'd mechas */
+  for (i = 0; i < NUM_SECTIONS; i++)
+    j -= SectIsDestroyed(wounded, i);
+
+  if (j < 1)
+    return;
+
+  /* Is attacker in character ie: not in simulator */
+  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+    return;
+
+  if (NoGunXP(wounded)) /* No Gun XP for shooting this (Boxes, etc) */
+    return;
+
+  if (!mech_has_active_gunner(attacker))
+    return;
+
+  if (GunPilot(attacker) != pilot)
+    return;
+
+  /* No xp for shooting yourself */
+  if (attacker == wounded)
+    return;
+
+  /* No xp for shooting destroyed mechs */
+  if (Destroyed(wounded))
+    return;
+
+  /* No xp for shooting a teammate */
+  if (MechTeam(wounded) == MechTeam(attacker))
+    return;
+
+  /* Is the target in character ie: in simulators */
+  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+    return;
+
+  /* No skill to match the weapon we're shooting with? */
+  if (!(skname = FindGunnerySkillName(attacker, weapindx)))
+    return;
+
+  /* No xp for shooting mechwarriors if you not a mechwarrior */
+  if (MechType(wounded) == CLASS_MW && MechType(attacker) != CLASS_MW)
+    return;
+
+  /* bth to high so no way to hit */
+  if (!(bth <= 12))
+    return;
+
+  multiplier =
+      multiplier * attacker->xcode.context->configuration->btech_xp_modifier;
+
+  if (attacker->xcode.context->configuration->btech_xp_bthmod) {
+    if (!(bth >= 3 && bth <= 12)) {
+      if (attacker->xcode.context->configuration->btech_noisy_xpgain)
+        btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                           tprintf("#%ld in #%ld 1 noxp #%ld", pilot,
+                                   attacker->mynum, wounded->mynum));
+      return; /* sure hits aren't interesting */
+    }
+    multiplier = 2 * multiplier * bth_modifier[bth - 3] / 36;
+  }
+
+  /* Need to do a BV mod between the mechs */
+  my_BV = MechBV(attacker);
+  th_BV = MechBV(wounded);
+
+  if (attacker->xcode.context->configuration->btech_xp_usePilotBVMod) {
+    myPilotBVMod = getPilotBVMod(attacker, weapindx);
+    theirPilotBVMod = getPilotBVMod(wounded, weapindx);
+
+    my_BV = my_BV * myPilotBVMod;
+    th_BV = th_BV * theirPilotBVMod;
+
+#ifdef XP_DEBUG
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
+        tprintf("Using skill modified battle value for mechs %ld and %ld "
+                "with skill mods of %2.2f and %2.2f",
+                attacker->mynum, wounded->mynum, myPilotBVMod,
+                theirPilotBVMod));
+#endif
+  }
+
+  my_speed = NewMoveValue(attacker) + 1;
+  th_speed = NewMoveValue(wounded) + 1;
+
+  if (MechWeapons[weapindx].type == TMISSILE)
+    weapTypeMod = attacker->xcode.context->configuration->btech_xp_missilemod;
+  else if (MechWeapons[weapindx].type == TAMMO)
+    weapTypeMod = attacker->xcode.context->configuration->btech_xp_ammomod;
+
+  if (attacker->xcode.context->configuration->btech_defaultweapdam > 1)
+    damagemod = damage;
+  else
+    damagemod = 1;
+
+  recycle_time =
+      btech_weapon_settings_recycle_time(&context->weapon_settings, weapindx);
+  weapon_battle_value =
+      btech_weapon_settings_battle_value(&context->weapon_settings, weapindx);
+  if (attacker->xcode.context->configuration->btech_xp_vrtmod)
+    vrtmod = (recycle_time < 30 ? sqrt((double)recycle_time / 30.0) : 1);
+  else
+    vrtmod = 1.0;
+
+  multiplier =
+      (vrtmod * weapTypeMod * multiplier *
+       sqrt((double)(th_BV + 1) * th_speed *
+            attacker->xcode.context->configuration->btech_defaultweapbv /
+            attacker->xcode.context->configuration->btech_defaultweapdam)) /
+      (sqrt((double)(my_BV + 1) * my_speed * weapon_battle_value / damagemod));
+
+  if (attacker->xcode.context->configuration->btech_perunit_xpmod)
+    multiplier =
+        multiplier *
+        MechXPMod(attacker); /* Per unit XP Mod. Defaults to 1 anyways */
+
+  /* Change the Cap to be variable depending on what a mux wants */
+
+  xp = BOUNDED(1, (int)(multiplier * damage / 100),
+               attacker->xcode.context->configuration->btech_xpgain_cap);
+
+  strcpy(buf,
+         game_object_name(attacker->xcode.context->database, wounded->mynum));
+
+  // Emit XP gain over MechAttackXP
+  if (char_gainxp(context, pilot, skname, (int)xp)) {
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
+        tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
+                "(%d damage) against %s",
+                game_object_name(attacker->xcode.context->database, pilot),
+                (int)xp, multiplier, damage, buf));
+    if (attacker->xcode.context->configuration->btech_noisy_xpgain)
+      btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                         tprintf("#%ld in #%ld %d damage #%ld", pilot,
+                                 attacker->mynum, damage, wounded->mynum));
+  }
+
+} // end AccumulateGunXP()
+
+void AccumulateGunXPold(DbRef pilot, Mech *attacker, Mech *wounded,
+                        int numOccurences, float multiplier, int weapindx,
+                        int bth) {
+  BtechContext *context = attacker->xcode.context;
+  int xp;
+  char *skname;
+  char buf[MBUF_SIZE];
+
+  /* Is the attacker in character ie: in simulators */
+  if (!is_in_character(attacker->xcode.context->database, attacker->mynum))
+    return;
+
+  if (!mech_has_active_gunner(attacker))
+    return;
+
+  if (GunPilot(attacker) != pilot)
+    return;
+
+  /* No xp for shooting yourself */
+  if (attacker == wounded)
+    return;
+
+  /* No xp for shooting destroyed units */
+  if (Destroyed(wounded))
+    return;
+
+  /* No xp for shooting teammate */
+  if (MechTeam(wounded) == MechTeam(attacker))
+    return;
+
+  /* if target is in character ie: in simulators or something */
+  if (!is_in_character(attacker->xcode.context->database, wounded->mynum))
+    return;
+
+  if (!(skname = FindGunnerySkillName(attacker, weapindx)))
+    return;
+
+  /* No xp for shooting a mechwarrior unless you a mechwarrior */
+  if (MechType(wounded) == CLASS_MW && MechType(attacker) != CLASS_MW)
+    return;
+
+  if (!(bth >= 3 && bth <= 12))
+    return; /* sure hits aren't interesting */
+
+  if (MechTons(attacker) > 0)
+    multiplier = multiplier *
+                 BOUNDED(50, 100 * TonValue(wounded) / TonValue(attacker), 150);
+  else {
+    /* Bring this to the attention of the admins */
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+        tprintf("AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
+                attacker->mynum,
+                game_object_name(attacker->xcode.context->database,
+                                 attacker->mynum),
+                (short)MechTons(attacker)));
+    return;
+  }
+
+  /* Hmm.. we have to figure the speed differences as well */
+  {
+    int my_speed = MoveValue(attacker);
+    int th_speed = MoveValue(wounded);
+
+    multiplier = multiplier * th_speed * th_speed / my_speed / my_speed;
+  }
+
+  multiplier = multiplier * bth_modifier[bth - 3] / 36;
+  multiplier = multiplier * 2; /* For average shot */
+  if (attacker->xcode.context->configuration->btech_perunit_xpmod)
+    multiplier = multiplier *
+                 MechXPMod(attacker); /* Per unit XP Modifier. Defaults to 1 */
+
+  if (btech_random_range(attacker->xcode.context, 1, 50) >
+      (multiplier * numOccurences))
+    return; /* Nothing for truly twinky stuff, occasionally */
+
+  xp = BOUNDED(1, (int)(multiplier * numOccurences) / 100,
+               50); /*Hardcoded limit */
+  strcpy(buf,
+         game_object_name(attacker->xcode.context->database, wounded->mynum));
+  /* Switching to Exile method of tracking xp, where we split
+   * Attacking and Piloting xp into two different channels
+   */
+  if (char_gainxp(context, pilot, skname, (int)xp))
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
+        tprintf("%s gained %d gun XP from feat of %f %% "
+                "difficulty (%d occurences) against %s",
+                game_object_name(attacker->xcode.context->database, pilot),
+                (int)xp, multiplier, numOccurences, buf));
+}
+
+void fun_btgetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *evaluation) {
+  BtechContext *context = evaluation->btech;
+  PSTATS stats;
+  /* fargs[0] = char id (#222)
+     fargs[1] = value name / value loc #
+     fargs[2] = flaggo (?) */
+  DbRef target;
+  int targetcode, flaggo;
+
+  FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+               NOTHING,
+           "#-1 INVALID TARGET");
+  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
+  if (Readnum(targetcode, fargs[1]))
+    targetcode = char_getvaluecode(context, fargs[1]);
+  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
+           "#-1 INVALID VALUE");
+  flaggo = atoi(fargs[2]);
+  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 4) {
+    safe_tprintf_str(buff, bufc, "%d",
+                     character_xp_to_next_level(context, target, targetcode));
+    return;
+  }
+  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 3) {
+    character_stats_retrieve(context, target, VALUES_SKILLS, &stats);
+    safe_tprintf_str(buff, bufc, "%d", stats.values[targetcode]);
+    return;
+  }
+  if (char_values[targetcode].type == CHAR_SKILL && flaggo == 2) {
+    safe_tprintf_str(buff, bufc, "%d",
+                     char_getxpbycode(context, target, targetcode));
+    return;
+  }
+  if (char_values[targetcode].type == CHAR_SKILL && flaggo) {
+    safe_tprintf_str(buff, bufc, "%d",
+                     char_getskilltargetbycode(context, target, targetcode, 0));
+    return;
+  }
+  safe_tprintf_str(buff, bufc, "%d",
+                   character_value_by_code(context, target, targetcode));
+}
+
+void fun_btsetcharvalue(char *buff, char **bufc, DbRef player, DbRef cause,
+                        char *fargs[], int nfargs, char *cargs[], int ncargs,
+                        EvaluationContext *evaluation) {
+  BtechContext *context = evaluation->btech;
+  /* fargs[0] = char id (#222)
+     fargs[1] = value name / value loc #
+     fargs[2] = value to be set
+     fargs[3] = flaggo (?)
+   */
+  DbRef target;
+  int targetcode, targetvalue, flaggo;
+
+  FUNCHECK((target = char_lookupplayer(context, player, cause, 0, fargs[0])) ==
+               NOTHING,
+           "#-1 INVALID TARGET");
+  FUNCHECK(!is_wizard(context->database, player), "#-1 PERMISSION DENIED!");
+  if (Readnum(targetcode, fargs[1]))
+    targetcode = char_getvaluecode(context, fargs[1]);
+  FUNCHECK(targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES),
+           "#-1 INVALID VALUE");
+  targetvalue = atoi(fargs[2]);
+  flaggo = atoi(fargs[3]);
+
+  /* We supposedly have everything at hand.. */
+  if (flaggo) {
+    FUNCHECK(char_values[targetcode].type != CHAR_SKILL,
+             "#-1 ONLY SKILLS CAN HAVE FLAG");
+  }
+  switch (flaggo) {
+  case 0:
+    /* this is the # of skill points in said skill
+     * Also Known as Level. This is not the + value
+     * I.e. Setting someone to Level 2 Gun-Bmech with A Physical Attribute of 7+
+     * will give you a 5+ in Gun-Bmech */
+    character_value_set_by_code(context, target, targetcode, targetvalue);
+    safe_tprintf_str(buff, bufc, "%s's %s set to %d",
+                     game_object_name(context->database, target),
+                     char_values[targetcode].name,
+                     character_value_by_code(context, target, targetcode));
+    break;
+
+  case 1:
+    /* This is the + value of said skill
+     * Also known as the ToHit Roll. This is not the 'Skill Level'
+     * I.e. Setting someone's Gun-Bmech with this to 5 with a Physical Attribute
+     * of 7+ will give you Level 2 Gun-Bmech (5+) */
+
+    character_value_set_by_code(context, target, targetcode, 0);
+    targetvalue =
+        char_getskilltargetbycode(context, target, targetcode, 0) - targetvalue;
+
+    /* Handle a wierd code race issue. target shouldn't be negative in this case
+     * anyways */
+    if (targetvalue >= 0) {
+      character_value_set_by_code(context, target, targetcode, targetvalue);
+    } else {
+      character_value_set_by_code(context, target, targetcode, 0);
+    }
+
+    safe_tprintf_str(buff, bufc, "%s's %s set to %d",
+                     game_object_name(context->database, target),
+                     char_values[targetcode].name,
+                     targetvalue >= 0
+                         ? character_value_by_code(context, target, targetcode)
+                         : 0);
+
+    break;
+
+  case 3:
+    /* Set the XP Amount for this skill */
+    char_gainxpbycode(
+        context, target, targetcode,
+        targetvalue - char_getxpbycode(context, target, targetcode), 1);
+
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                       tprintf("%ld set %ld's %s XP to %d", player, target,
+                               char_values[targetcode].name, targetvalue));
+    safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
+                     game_object_name(context->database, target),
+                     char_values[targetcode].name, targetvalue);
+
+    break;
+
+  default:
+    /* Any other flaggo value will addxp for the skill */
+    char_gainxpbycode(context, target, targetcode, targetvalue, 1);
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
+                       tprintf("#%ld added %d more %s XP to #%ld", player,
+                               targetvalue, char_values[targetcode].name,
+                               target));
+    safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
+                     game_object_name(context->database, target), targetvalue,
+                     char_values[targetcode].name);
+
+    break;
+  }
+}
+
+/* ----------------------------------------------------------------------
+** Syntax: btcharlist(skills|advantages|attributes[,targetplayer])
+**
+** Given one of the three arguments above, btcharlist returns the
+** listing of each in a space delimited list.  This is basically a
+** function version of +show. If the second argument is provided, only
+** the skills/advantages that are learned or possessed will
+** appear. For attributes the full list will be returned of since
+** characters need all of them.
+*/
+void fun_btcharlist(char *buff, char **bufc, DbRef player, DbRef cause,
+                    char *fargs[], int nfargs, char *cargs[], int ncargs,
+                    EvaluationContext *evaluation) {
+  BtechContext *context = evaluation->btech;
+  int i;
+  int type = 0;
+  int first = 1;
+  DbRef target = 0;
+  enum {
+    CHSKI,
+    CHADV,
+    CHATT,
+  };
+  static char *cmds[] = {"skills", "advantages", "attributes", NULL};
+
+  if (!argument_count_in_range("BTCHARLIST", nfargs, 1, 2, buff, bufc))
+    return;
+
+  if (nfargs == 2) {
+    target = char_lookupplayer(context, player, cause, 0, fargs[1]);
+    if (target == NOTHING) {
+      safe_str("#-1 FUNCTION (BTCHARLIST) INVALID TARGET", buff, bufc);
+      return;
+    }
+  }
+
+  switch (listmatch(cmds, fargs[0])) {
+  case CHSKI:
+    type = CHAR_SKILL;
+    break;
+  case CHADV:
+    type = CHAR_ADVANTAGE;
+    break;
+  case CHATT:
+    type = CHAR_ATTRIBUTE;
+    break;
+  default:
+    safe_str("#-1 FUNCTION (BTCHARLIST) INVALID VALUE", buff, bufc);
+    return;
+  }
+
+  for (i = 0; i < (int)(NUM_CHARVALUES); ++i)
+    if (type == char_values[i].type) {
+      if (nfargs == 2 && type != CHAR_ATTRIBUTE) {
+        int targetcode = char_getvaluecode(context, char_values[i].name);
+        if (character_value_by_code(context, target, targetcode) == 0 &&
+            (type == CHAR_SKILL &&
+             char_getxpbycode(context, target, targetcode) == 0))
+          continue;
+      }
+      if (first)
+        first = 0;
+      else
+        safe_str(" ", buff, bufc);
+      safe_str(char_values[i].name, buff, bufc);
+    }
+  return;
+}

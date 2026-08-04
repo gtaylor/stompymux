@@ -43,7 +43,12 @@ struct CharacterValue {
   char type;
   int flag;
   int xpthreshold;
-} char_values[] = {
+};
+
+enum { NUM_CHARVALUES = 119 };
+
+#ifdef BTECHSTATS_C
+struct CharacterValue char_values[NUM_CHARVALUES] = {
 
     {"XP", CHAR_VALUE, 0, 0},
     {"MaxXP", CHAR_VALUE, 0, 0},
@@ -200,18 +205,10 @@ struct CharacterValue {
 
 /* *INDENT-ON* */
 
-#define NUM_CHARVALUES sizeof(char_values) / sizeof(struct CharacterValue)
-
-/*************************************************************************/
-
 char *char_levels[] = {"Green", "Regular", "Veteran", "Elite", "Historical"};
-
-#define NUM_CHARLEVELS 5
 
 char *char_types[] = {"Inner_Sphere",   "Clan_MechWarrior", "Clan_Aerospace",
                       "Clan_Elemental", "Clan_Freebirth",   "Clan_Other"};
-
-#define NUM_CHARTYPES 6
 
 char *char_packages[] = {"None",
                          "Primary_Clan_Warrior",
@@ -222,6 +219,18 @@ char *char_packages[] = {"None",
                          "Advanced_Academy",
                          "Basic_University",
                          "Advanced_University"};
+#else
+extern struct CharacterValue char_values[NUM_CHARVALUES];
+extern char *char_levels[5];
+extern char *char_types[6];
+extern char *char_packages[9];
+#endif
+
+/*************************************************************************/
+
+#define NUM_CHARLEVELS 5
+
+#define NUM_CHARTYPES 6
 
 #define NUM_CHARPACKAGES 9
 

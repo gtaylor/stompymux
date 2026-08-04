@@ -13,6 +13,10 @@ set(BTECH_SOURCES
   autopilot/autopilot_radio.c
   autopilot/path_helpers.c
   character/btechstats.c
+  character/character_health.c
+  character/character_experience.c
+  character/character_battle_value.c
+  character/character_persistence.c
   character/failures.c
   character/pcombat.c
   combat/artillery.c
