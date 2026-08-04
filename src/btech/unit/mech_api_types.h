@@ -10,15 +10,11 @@
 
 #pragma once
 
-#include "command_handlers_api.h"
 #include "equipment_types.h"
-#include "map.h"
-#include "map_coding.h"
-#include "mech_internal.h"
-#include "mech_macros.h"
-#include "mech_notify.h"
-#include "mech_status_types.h"
-#include "registry_api.h"
+#include "mux/objects/db.h"
+
+typedef struct Mech Mech;
+
 extern const struct WeaponDefinition MechWeapons[];
 
 #define TELE_ALL 1  /* Tele all, not just mortals */
@@ -54,13 +50,6 @@ extern const struct WeaponDefinition MechWeapons[];
   "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long " \
   "VRT C "                                                                     \
   " ApT"
-#include "command_handlers_api.h"
-#include "map.h"
-#include "map_coding.h"
-#include "mech_macros.h"
-#include "mech_notify.h"
-#include "registry_api.h"
-
 enum { LOS_TRACE_CAPACITY = 4000 };
 
 typedef struct LosTracePoint {
