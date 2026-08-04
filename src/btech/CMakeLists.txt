@@ -27,6 +27,7 @@ set(BTECH_SOURCES
   combat/mech_damage.c
   combat/mech_enhanced_criticals.c
   combat/mech_fire.c
+  combat/mech_weapon_modes.c
   combat/mech_hitloc.c
   combat/mech_physical.c
   combat/mine.c
@@ -60,6 +61,7 @@ set(BTECH_SOURCES
   movement/mech_pickup.c
   movement/mech_startup.c
   movement/mech_update.c
+  movement/mech_boosters.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
   persistence/mech_restore_identity.c
@@ -92,6 +94,7 @@ set(BTECH_SOURCES
   sensors/mech_c3i.c
   sensors/mech_contacts.c
   sensors/mech_ecm.c
+  sensors/mech_electronics_controls.c
   sensors/mech_lite.c
   sensors/mech_los.c
   sensors/mech_scan.c
