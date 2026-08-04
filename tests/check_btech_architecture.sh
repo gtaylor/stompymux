@@ -223,6 +223,7 @@ done < <(rg -n \
   src/btech/autopilot/autopilot_radio_catalog.c \
   src/btech/autopilot/autopilot_radio_handlers.c \
   src/btech/autopilot/autopilot_radio_parser.c \
+  src/btech/autopilot/autopilot_roam.c \
   src/btech/autopilot/autopilot_sensor_policy.c \
   src/btech/autopilot/autopilot_target_scoring.c \
   src/btech/autopilot/autopilot_weapon_profile.c || true)

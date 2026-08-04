@@ -6,6 +6,12 @@
 // IWYU pragma: no_include "coding_registry.h"
 
 typedef struct BattleMap BattleMap;
+
+typedef enum BattleTerrain {
+  BATTLE_TERRAIN_LIGHT_FOREST = '`',
+  BATTLE_TERRAIN_HEAVY_FOREST = '"',
+  BATTLE_TERRAIN_WATER = '~',
+} BattleTerrain;
 typedef struct Mech Mech;
 typedef struct MapCodingRegistry MapCodingRegistry;
 

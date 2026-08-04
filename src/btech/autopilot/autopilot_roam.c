@@ -1,4 +1,40 @@
-#include "autopilot_commands_internal.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "ai_api.h"
+#include "autopilot.h"
+#include "autopilot_api.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "map_terrain.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_events.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_startup_api.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/support/doubly_linked_list.h"
+#include "registry_api.h"
+#include "section_types.h"
+
+void speed_up_if_neccessary(Autopilot *autopilot, Mech *mech, int target_x,
+                            int target_y, int bearing);
+int slow_down_if_neccessary(Autopilot *autopilot, Mech *mech, float range,
+                            int bearing, int target_x, int target_y);
+void update_wanted_heading(Autopilot *autopilot, Mech *mech, int bearing);
 
 void auto_command_roam(Autopilot *autopilot, Mech *mech) {
 
@@ -144,7 +180,8 @@ void auto_command_roam(Autopilot *autopilot, Mech *mech) {
       /* Check to make sure the hexes are inside the map and the distance
        * is not beyond our limit */
       if (anchor_hex_x < 0 || anchor_hex_y < 0 ||
-          anchor_hex_x >= map->map_width || anchor_hex_y >= map->map_height ||
+          anchor_hex_x >= battle_map_width(map) ||
+          anchor_hex_y >= battle_map_height(map) ||
           anchor_distance > AUTO_ROAM_MAX_RADIUS) {
 
         snprintf(error_buf, MBUF_SIZE,
@@ -229,8 +266,8 @@ void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
   /* First tho we pick a hex differently based on which roam mode */
   if (autopilot->roam_type == AUTO_ROAM_MAP) {
 
-    start_hex_x = MechX(mech);
-    start_hex_y = MechY(mech);
+    start_hex_x = mech_position_x(mech);
+    start_hex_y = mech_position_y(mech);
     max_range = AUTO_ROAM_MAX_MAP_DISTANCE;
 
   } else if (autopilot->roam_type == AUTO_ROAM_SPOT) {
@@ -262,11 +299,11 @@ void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
     if (max_range < 1) {
       range = 1.0;
     } else {
-      range = (float)btech_random_range(map->xcode.context, 1, max_range);
+      range = (float)btech_random_range(mech_context(mech), 1, max_range);
     }
 
     /* Generate random bearing */
-    bearing = btech_random_range(map->xcode.context, 0, 359);
+    bearing = btech_random_range(mech_context(mech), 0, 359);
 
     /* Map coord to Real */
     MapCoordToRealCoord(start_hex_x, start_hex_y, &x1, &y1);
@@ -279,25 +316,26 @@ void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
 
     /* Make sure the hex is sane */
     if (target_hex_x < 0 || target_hex_y < 0 ||
-        target_hex_x >= map->map_width || target_hex_y >= map->map_height)
+        target_hex_x >= battle_map_width(map) ||
+        target_hex_y >= battle_map_height(map))
       continue;
 
     switch (map_terrain_get(map, target_hex_x, target_hex_y)) {
-    case LIGHT_FOREST:
-      if ((MechType(mech) == CLASS_VEH_GROUND) &&
-          (MechMove(mech) != MOVE_TRACK))
+    case BATTLE_TERRAIN_LIGHT_FOREST:
+      if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+          (mech_movement_type(mech) != MOVE_TRACK))
         continue;
 
       break;
 
-    case HEAVY_FOREST:
-      if (MechType(mech) == CLASS_VEH_GROUND)
+    case BATTLE_TERRAIN_HEAVY_FOREST:
+      if (mech_class(mech) == CLASS_VEH_GROUND)
         continue;
 
       break;
 
-    case WATER:
-      if (MechMove(mech) != MOVE_HOVER)
+    case BATTLE_TERRAIN_WATER:
+      if (mech_movement_type(mech) != MOVE_HOVER)
         continue;
 
       break;
@@ -332,17 +370,17 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   char error_buf[MBUF_SIZE];
 
   /* Make sure the mech is a mech and the autopilot is an autopilot */
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -367,7 +405,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started and standing */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -380,7 +418,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -474,8 +512,8 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   }
 
   /* Are we in the current target hex */
-  if ((MechX(mech) == temp_astar_node->x) &&
-      (MechY(mech) == temp_astar_node->y)) {
+  if ((mech_position_x(mech) == temp_astar_node->x) &&
+      (mech_position_y(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
     if (doubly_linked_list_size(autopilot->astar_path) == 1) {
