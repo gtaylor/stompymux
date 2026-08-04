@@ -6,3 +6,5 @@ typedef struct BattleMap BattleMap;
 
 int battle_map_unit_count(const BattleMap *map);
 DbRef battle_map_unit_dbref(const BattleMap *map, int index);
+int battle_map_width(const BattleMap *map);
+int battle_map_height(const BattleMap *map);

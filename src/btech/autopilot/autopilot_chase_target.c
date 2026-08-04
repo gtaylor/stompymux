@@ -13,7 +13,20 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include <stdio.h>
+
+#include "autopilot.h"
+#include "autopilot_commands_api.h"
+#include "btech/context.h"
+#include "map_units_api.h"
+#include "mech_identity_api.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
 
 bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
                           Mech *target) {
@@ -113,42 +126,46 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         /* Check to see if we need to turn to face the guy by
          * generating our target hex and seeing if we are in that
          * hex then face the bad guy */
-        if ((target = btech_context_get_mech(mech->xcode.context,
+        if ((target = btech_context_get_mech(mech_context(mech),
                                              autopilot->target)) &&
-            (!Destroyed(target) && (target->mapindex == mech->mapindex))) {
+            (!mech_is_destroyed(target) &&
+             mech_map_dbref(target) == mech_map_dbref(mech))) {
 
           /* Generate the target hex */
           /*! \todo {Instead of calcing this all the time, possibly add
            * variables to the AI to remember it} */
-          FindXY(MechFX(target), MechFY(target),
-                 MechFacing(target) + autopilot->ofsx, autopilot->ofsy, &fx,
-                 &fy);
+          FindXY(mech_position_real_x(target), mech_position_real_y(target),
+                 mech_heading_degrees(target) + autopilot->ofsx,
+                 autopilot->ofsy, &fx, &fy);
 
           RealCoordToMapCoord(&x, &y, fx, fy);
 
           /* Make sure the hex is sane */
-          if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height) {
+          if (x < 0 || y < 0 || x >= battle_map_width(map) ||
+              y >= battle_map_height(map)) {
 
             /* Bad Target Hex */
 
             /* Reset the hex to the Target's current hex */
-            x = MechX(target);
-            y = MechY(target);
+            x = mech_position_x(target);
+            y = mech_position_y(target);
           }
 
           /* Are we in the target hex and is the target not moving */
-          if ((MechX(mech) == x) && (MechY(mech) == y) &&
-              (MechSpeed(target) < 0.5)) {
+          if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
+              (mech_current_speed(target) < 0.5)) {
 
             /* Get his bearing and face him */
             MapCoordToRealCoord(x, y, &fx, &fy);
 
             /* If we're not facing him, turn towards him */
-            if (MechDesiredFacing(mech) !=
-                FindBearing(MechFX(mech), MechFY(mech), fx, fy)) {
+            if (mech_desired_heading_degrees(mech) !=
+                FindBearing(mech_position_real_x(mech),
+                            mech_position_real_y(mech), fx, fy)) {
 
               snprintf(buffer, LBUF_SIZE, "%d",
-                       FindBearing(MechFX(mech), MechFY(mech), fx, fy));
+                       FindBearing(mech_position_real_x(mech),
+                                   mech_position_real_y(mech), fx, fy));
               mech_heading(autopilot->mynum, mech, buffer);
             }
             /* Turn towards him */
