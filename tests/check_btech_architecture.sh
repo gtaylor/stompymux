@@ -219,6 +219,7 @@ done < <(rg -n \
   src/btech/autopilot/autopilot_command_dispatch.c \
   src/btech/autopilot/autopilot_core.c \
   src/btech/autopilot/autopilot_navigation.c \
+  src/btech/autopilot/autopilot_pathfinding.c \
   src/btech/autopilot/autopilot_physical_attack.c \
   src/btech/autopilot/autopilot_radio.c \
   src/btech/autopilot/autopilot_radio_catalog.c \

@@ -11,6 +11,9 @@ typedef enum BattleTerrain {
   BATTLE_TERRAIN_LIGHT_FOREST = '`',
   BATTLE_TERRAIN_HEAVY_FOREST = '"',
   BATTLE_TERRAIN_WATER = '~',
+  BATTLE_TERRAIN_HIGH_WATER = '?',
+  BATTLE_TERRAIN_ROUGH = '%',
+  BATTLE_TERRAIN_MOUNTAINS = '^',
 } BattleTerrain;
 typedef struct Mech Mech;
 typedef struct MapCodingRegistry MapCodingRegistry;

@@ -1,4 +1,25 @@
-#include "autopilot_ai_internal.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "autopilot.h"
+#include "btech/context.h"
+#include "equipment_types.h"
+#include "map.h"
+#include "map_terrain.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_identity_api.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "mux/support/doubly_linked_list.h"
+#include "mux/support/red_black_tree.h"
+#include "registry_api.h"
+#include "section_types.h"
 
 /* Experimental (highly) path finding system based on the A* 'a-star'
  * system used in many typical games.
@@ -85,7 +106,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
   snprintf(log_msg, MBUF_SIZE,
            "\nStarting ASTAR Path finding for AI #%d from "
            "%d, %d to %d, %d\n",
-           autopilot->mynum, MechX(mech), MechY(mech), end_x, end_y);
+           autopilot->mynum, mech_position_x(mech), mech_position_y(mech),
+           end_x, end_y);
   fprintf(logfile, "%s", log_msg);
 #endif
 
@@ -104,8 +126,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
   autopilot->astar_path = doubly_linked_list_create_list();
 
   /* Setup the start hex */
-  temp_astar_node =
-      auto_create_astar_node(MechX(mech), MechY(mech), -1, -1, 0, 0);
+  temp_astar_node = auto_create_astar_node(mech_position_x(mech),
+                                           mech_position_y(mech), -1, -1, 0, 0);
 
   if (temp_astar_node == nullptr) {
     /*! \todo {Add code here to break if we can't alloc memory} */
@@ -115,7 +137,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
     snprintf(log_msg, MBUF_SIZE,
              "AI ERROR - Unable to malloc astar node for "
              "hex %d, %d\n",
-             MechX(mech), MechY(mech));
+             mech_position_x(mech), mech_position_y(mech));
     fprintf(logfile, "%s", log_msg);
 #endif
   }
@@ -212,8 +234,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
       RealCoordToMapCoord(&map_x2, &map_y2, x2, y2);
 
       /* Make sure the hex is sane */
-      if (map_x2 < 0 || map_y2 < 0 || map_x2 >= map->map_width ||
-          map_y2 >= map->map_height)
+      if (map_x2 < 0 || map_y2 < 0 || map_x2 >= battle_map_width(map) ||
+          map_y2 >= battle_map_height(map))
         continue;
 
       /* Generate hexoffset for the child node */
@@ -225,14 +247,14 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
         continue;
 
       /* Check to see if we can enter it */
-      if ((MechType(mech) == CLASS_MECH) &&
-          (abs(Elevation(map, map_x1, map_y1) -
-               Elevation(map, map_x2, map_y2)) > 2))
+      if ((mech_class(mech) == CLASS_MECH) &&
+          (abs(map_elevation_get(map, map_x1, map_y1) -
+               map_elevation_get(map, map_x2, map_y2)) > 2))
         continue;
 
-      if ((MechType(mech) == CLASS_VEH_GROUND) &&
-          (abs(Elevation(map, map_x1, map_y1) -
-               Elevation(map, map_x2, map_y2)) > 1))
+      if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+          (abs(map_elevation_get(map, map_x1, map_y1) -
+               map_elevation_get(map, map_x2, map_y2)) > 1))
         continue;
 
       /* Score the hex */
@@ -262,55 +284,55 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
 
       /* Lets attempt to avoid hexes that already have our friendlies in it
        * (Stack Check) */
-      if (mechs_in_hex(map, map_x2, map_y2, 1, MechTeam(mech)) > 2)
+      if (mechs_in_hex(map, map_x2, map_y2, 1, mech_team(mech)) > 2)
         child_g_score += 150;
 
       /* Now add in some modifiers for terrain */
       switch (map_terrain_get(map, map_x2, map_y2)) {
-      case LIGHT_FOREST:
+      case BATTLE_TERRAIN_LIGHT_FOREST:
 
         /* Don't bother trying to enter a light forest
          * hex unless we can */
-        if ((MechType(mech) == CLASS_VEH_GROUND) &&
-            (MechMove(mech) != MOVE_TRACK))
+        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+            (mech_movement_type(mech) != MOVE_TRACK))
           continue;
 
         child_g_score += 50;
         break;
-      case ROUGH:
+      case BATTLE_TERRAIN_ROUGH:
         child_g_score += 50;
         break;
-      case HEAVY_FOREST:
+      case BATTLE_TERRAIN_HEAVY_FOREST:
 
         /* Don't bother trying to enter a heavy forest
          * hex unless we can */
-        if (MechType(mech) == CLASS_VEH_GROUND)
+        if (mech_class(mech) == CLASS_VEH_GROUND)
           continue;
 
         child_g_score += 100;
         break;
-      case MOUNTAINS:
+      case BATTLE_TERRAIN_MOUNTAINS:
         child_g_score += 100;
         break;
-      case WATER:
+      case BATTLE_TERRAIN_WATER:
 
         /* Don't bother trying to enter a water hex
          * unless we can */
-        if ((MechType(mech) == CLASS_VEH_GROUND) &&
-            (MechMove(mech) != MOVE_HOVER) &&
-            !(MechSpecials2(mech) & WATERPROOF_TECH))
+        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+            (mech_movement_type(mech) != MOVE_HOVER) &&
+            !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH))
           continue;
 
         /* We really don't want them trying to enter water */
         child_g_score += 200;
         break;
-      case HIGHWATER:
+      case BATTLE_TERRAIN_HIGH_WATER:
 
         /* Don't bother trying to enter a water hex
          * unless we can */
-        if ((MechType(mech) == CLASS_VEH_GROUND) &&
-            (MechMove(mech) != MOVE_HOVER) &&
-            !(MechSpecials2(mech) & WATERPROOF_TECH))
+        if ((mech_class(mech) == CLASS_VEH_GROUND) &&
+            (mech_movement_type(mech) != MOVE_HOVER) &&
+            !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH))
           continue;
 
         /* We really don't want them trying to enter water */
@@ -471,8 +493,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
 #endif
 
     /* Check if the end hex is the start hex */
-    if (!(temp_astar_node->x == MechX(mech) &&
-          temp_astar_node->y == MechY(mech))) {
+    if (!(temp_astar_node->x == mech_position_x(mech) &&
+          temp_astar_node->y == mech_position_y(mech))) {
 
       /* Its not so lets loop through the closed list
        * building the path */
@@ -492,8 +514,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, short end_x,
 
         /* Check if start hex */
         /* If start hex quit */
-        if (parent_astar_node->x == MechX(mech) &&
-            parent_astar_node->y == MechY(mech)) {
+        if (parent_astar_node->x == mech_position_x(mech) &&
+            parent_astar_node->y == mech_position_y(mech)) {
           break;
         }
 
