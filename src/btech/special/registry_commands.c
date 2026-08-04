@@ -43,6 +43,139 @@
 #include "turret.h"
 #include "value_handlers_api.h"
 
+static void command_aero_climb(DbRef actor, void *object, char *arguments) {
+  aero_climb(actor, object, arguments);
+}
+
+static void command_aero_dive(DbRef actor, void *object, char *arguments) {
+  aero_dive(actor, object, arguments);
+}
+
+static void command_mech_stinger(DbRef actor, void *object, char *arguments) {
+  mech_stinger(actor, object, arguments);
+}
+
+static void command_mech_usebin(DbRef actor, void *object, char *arguments) {
+  mech_usebin(actor, object, arguments);
+}
+
+static void command_mech_weaponstatus(DbRef actor, void *object,
+                                      char *arguments) {
+  mech_weaponstatus(actor, object, arguments);
+}
+
+static void command_aero_checklz(DbRef actor, void *object, char *arguments) {
+  aero_checklz(actor, object, arguments);
+}
+
+static void command_mech_damage(DbRef actor, void *object, char *arguments) {
+  mech_damage(actor, object, arguments);
+}
+
+static void command_mech_damage_section(DbRef actor, void *object,
+                                        char *arguments) {
+  mech_damage_section(actor, object, arguments);
+}
+
+static void command_mech_ecm(DbRef actor, void *object, char *arguments) {
+  mech_ecm(actor, object, arguments);
+}
+
+static void command_mech_eccm(DbRef actor, void *object, char *arguments) {
+  mech_eccm(actor, object, arguments);
+}
+
+static void command_mech_angelecm(DbRef actor, void *object, char *arguments) {
+  mech_angelecm(actor, object, arguments);
+}
+
+static void command_mech_angeleccm(DbRef actor, void *object, char *arguments) {
+  mech_angeleccm(actor, object, arguments);
+}
+
+static void command_mech_perecm(DbRef actor, void *object, char *arguments) {
+  mech_perecm(actor, object, arguments);
+}
+
+static void command_mech_pereccm(DbRef actor, void *object, char *arguments) {
+  mech_pereccm(actor, object, arguments);
+}
+
+static void command_mech_stealtharmor(DbRef actor, void *object,
+                                      char *arguments) {
+  mech_stealtharmor(actor, object, arguments);
+}
+
+static void command_mech_nullsig(DbRef actor, void *object, char *arguments) {
+  mech_nullsig(actor, object, arguments);
+}
+
+static void command_mech_slite(DbRef actor, void *object, char *arguments) {
+  mech_slite(actor, object, arguments);
+}
+
+static void command_mech_auto_turret(DbRef actor, void *object,
+                                     char *arguments) {
+  mech_auto_turret(actor, object, arguments);
+}
+
+static void command_vehicle_extinguish_fire(DbRef actor, void *object,
+                                            char *arguments) {
+  vehicle_extinquish_fire(actor, object, arguments);
+}
+
+static void command_mech_c3_message(DbRef actor, void *object,
+                                    char *arguments) {
+  mech_c3_message(actor, object, arguments);
+}
+
+static void command_mech_c3_targets(DbRef actor, void *object,
+                                    char *arguments) {
+  mech_c3_targets(actor, object, arguments);
+}
+
+static void command_mech_c3_network(DbRef actor, void *object,
+                                    char *arguments) {
+  mech_c3_network(actor, object, arguments);
+}
+
+static void command_mech_c3i_message(DbRef actor, void *object,
+                                     char *arguments) {
+  mech_c3i_message(actor, object, arguments);
+}
+
+static void command_mech_c3i_targets(DbRef actor, void *object,
+                                     char *arguments) {
+  mech_c3i_targets(actor, object, arguments);
+}
+
+static void command_mech_c3i_network(DbRef actor, void *object,
+                                     char *arguments) {
+  mech_c3i_network(actor, object, arguments);
+}
+
+static void command_show_narc_pods(DbRef actor, void *object, char *arguments) {
+  show_narc_pods(actor, object, arguments);
+}
+
+static void command_remove_inarc_pods_mech(DbRef actor, void *object,
+                                           char *arguments) {
+  remove_inarc_pods_mech(actor, object, arguments);
+}
+
+static void command_remove_inarc_pods_tank(DbRef actor, void *object,
+                                           char *arguments) {
+  remove_inarc_pods_tank(actor, object, arguments);
+}
+
+static void command_tech_repairs(DbRef actor, void *object, char *arguments) {
+  tech_repairs(actor, object, arguments);
+}
+
+static void command_mech_snipe(DbRef actor, void *object, char *arguments) {
+  mech_snipe(actor, object, arguments);
+}
+
 void newturret(DbRef, void **, int);
 void newfreemech(DbRef, void **, int);
 
@@ -125,8 +258,9 @@ BtechCommandDefinition mechcommands[] = {
      mech_vertical},
 
     {12, "CLIMB [angle]", "Shows/Changes the climbing angle to <NUM>.",
-     aero_climb},
-    {12, "DIVE [angle]", "Shows/Changes the diving angle to <NUM>.", aero_dive},
+     command_aero_climb},
+    {12, "DIVE [angle]", "Shows/Changes the diving angle to <NUM>.",
+     command_aero_dive},
     {12, "THRUST [num]", "Shows/Changes the thrust to <NUM>.", aero_thrust},
     {0, "LATERAL [fl|fr|rl|rr|-]",
      "Change your lateral movement mode (quad only/vtol/hover, or with "
@@ -248,7 +382,7 @@ BtechCommandDefinition mechcommands[] = {
     {0, "SGUIDED <weapnum>", "Sets weapon to and from Sguide Mode",
      mech_sguided},
     {0, "STINGER <weaponum>", "Sets weapon to and from Stinger Mode.",
-     mech_stinger},
+     command_mech_stinger},
     {0, "ATMRANGE <weapnum>", "Sets weapon to and from Extended Range Mode",
      mech_atmrange},
     {0, "ATMEXPLOSIVE <weapnum>", "Sets weapon to and from High Explosive Mode",
@@ -266,7 +400,7 @@ BtechCommandDefinition mechcommands[] = {
      mech_disableweap},
     {0, "UNJAM <weapnum>", "Fixes ammo loader jams.", mech_unjamammo},
     {0, "USEBIN <weapnum> <location>",
-     "Draw ammo from <location> first for <weapnum>.", mech_usebin},
+     "Draw ammo from <location> first for <weapnum>.", command_mech_usebin},
 
     /* TIC Support */
     {0, "ADDTIC  <NUM> <WEAPNUM | LOWNUM-HIGHNUM>",
@@ -308,7 +442,7 @@ BtechCommandDefinition mechcommands[] = {
     {0, "WEAPONSPECS", "Shows the specifications for your weapons",
      mech_weaponspecs},
     {0, "WEAPONSTATUS", "Shows the status of all your weapons",
-     mech_weaponstatus},
+     command_mech_weaponstatus},
 
     /* Navigation */
     HEADER("Navigation"),
@@ -336,7 +470,7 @@ BtechCommandDefinition mechcommands[] = {
     HEADER("Special"),
 
     {12, "CHECKLZ", "Checks if the landing-zone is good for a landing",
-     aero_checklz},
+     command_aero_checklz},
     {0, "@OOD <X> <Y> [Z]",
      "@Initiates OOD drop at the orbit altitude to <X> <Y> (optional Z "
      "altitude to start from)",
@@ -347,11 +481,11 @@ BtechCommandDefinition mechcommands[] = {
      "@Causes <NUM> pt of damage to be done to 'mech in <CLUSTERSIZE> point "
      "clusters (if <ISREAR> is 1, damage is done to rear arc ; if <ISCRITICAL> "
      "is 1, damage does crit-thru-armor)",
-     mech_damage},
+     command_mech_damage},
     {0, "@DAMAGESECTION <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>",
      "@Causes <DAMAGE> pts of damage to be done to unit's <SECTION>. <ISREAR> "
      "= 1 for REAR, <ISCRITICAL> = 1 for critical",
-     mech_damage_section},
+     command_mech_damage_section},
     {0, "@WEIGHT", "@Checks the weight allocated in the mech", mech_weight},
     {4, "BOMB [list | drop <num> | aim]",
      "Lists bombs / drops bomb <num> / aims where a bomb would fall.",
@@ -393,36 +527,36 @@ BtechCommandDefinition mechcommands[] = {
     {0, "ECM",
      "Toggles the ECM status of your Guardian ECM suite (only applicable if "
      "you have one)",
-     mech_ecm},
+     command_mech_ecm},
     {0, "ECCM",
      "Toggles the ECCM status of your Guardian ECM suite (only applicable if "
      "you have one)",
-     mech_eccm},
+     command_mech_eccm},
     {0, "ANGELECM",
      "Toggles the ECM status of your Angel ECM suite (only applicable if you "
      "have one)",
-     mech_angelecm},
+     command_mech_angelecm},
     {0, "ANGELECCM",
      "Toggles the ECCM status of your Angel ECM suite (only applicable if you "
      "have one)",
-     mech_angeleccm},
+     command_mech_angeleccm},
 
     {0, "PERECM",
      "Toggles the ECM status of your Personal ECM suite (only applicable if "
      "you have one)",
-     mech_perecm},
+     command_mech_perecm},
     {0, "PERECCM",
      "Toggles the ECCM status of your Personal ECM suite (only applicable if "
      "you have one)",
-     mech_pereccm},
+     command_mech_pereccm},
 
     {0, "STEALTH",
      "Toggles status of Stealth Armor for those mechs equipped with it.",
-     mech_stealtharmor},
+     command_mech_stealtharmor},
     {0, "NSS",
      "Toggles status of the Null Signature System for those mechs equipped "
      "with it.",
-     mech_nullsig},
+     command_mech_nullsig},
     /* Ejection */
 
     {0, "DISEMBARK", "Gets the hell out of the 'mech / vehicle.",
@@ -437,7 +571,7 @@ BtechCommandDefinition mechcommands[] = {
     {1, "ROTTORSO <L(eft) | R(ight) | C(enter)>",
      "Rotates the torso 60 degrees right or left.", mech_rotatetorso},
     /* Nim's IDF things */
-    {0, "SLITE", "Turns your searchlight on/off", mech_slite},
+    {0, "SLITE", "Turns your searchlight on/off", command_mech_slite},
 
     {0, "SPOT [ID|-|OWNID]",
      "Sets someone as your spotter / makes you stop spotting / sets you as a "
@@ -447,10 +581,10 @@ BtechCommandDefinition mechcommands[] = {
     {0, "SHUTDOWN", "Shuts down the mech.", mech_shutdown},
     {34, "TURRET", "Set the turret facing.", mech_turret},
     {34, "AUTOTURRET", "Forces your turret to stay facing the locked target.",
-     mech_auto_turret},
+     command_mech_auto_turret},
     {18, "EXTINGUISH",
      "Puts out the fires on your vehicle. You must be shut down to do this.",
-     vehicle_extinquish_fire},
+     command_vehicle_extinguish_fire},
 
 #ifdef C3_SUPPORT
     /* C3 */
@@ -460,20 +594,20 @@ BtechCommandDefinition mechcommands[] = {
      "assigned to a master computer within the network.",
      mech_c3_join_leave},
     {0, "C3MESSAGE <MSG>", "Sends a message to all others in your C3 network",
-     mech_c3_message},
+     command_mech_c3_message},
     {0, "C3TARGETS", "Shows available C3 targeting information",
-     mech_c3_targets},
+     command_mech_c3_targets},
     {0, "C3NETWORK", "Displays information about your C3 network",
-     mech_c3_network},
+     command_mech_c3_network},
 
     {0, "C3I [ID|-]", "Joins/Leaves the C3i network connected to the target",
      mech_c3i_join_leave},
     {0, "C3IMESSAGE <MSG>", "Sends a message to all others in your C3i network",
-     mech_c3i_message},
+     command_mech_c3i_message},
     {0, "C3ITARGETS", "Shows available C3i targeting information",
-     mech_c3i_targets},
+     command_mech_c3i_targets},
     {0, "C3INETWORK", "Displays information about your C3i network",
-     mech_c3i_network},
+     command_mech_c3i_network},
 #endif
 
     /* Heat stuff */
@@ -483,13 +617,13 @@ BtechCommandDefinition mechcommands[] = {
      heat_cutoff},
     {0, "PODS",
      "Shows the location of NARC and iNARC pods that attached to you",
-     show_narc_pods},
+     command_show_narc_pods},
     {1, "REMOVEPOD <LOCATION> <TYPE>",
      "Remove one of the pods from the selected location. Possible types are: "
      "'H' - Homing, 'Y' - Haywire, 'E' - ECM",
-     remove_inarc_pods_mech},
+     command_remove_inarc_pods_mech},
     {18, "REMOVEPODS", "Removes all iNARC pods from the unit.",
-     remove_inarc_pods_tank},
+     command_remove_inarc_pods_tank},
 
     /* Physical */
     SHEADER(1, "Physical"),
@@ -552,7 +686,7 @@ BtechCommandDefinition mechcommands[] = {
      tech_replacepart},
     {0, "REPAIRPART <LOC> <POS>", "Repairs the part in the position",
      tech_repairpart},
-    {0, "REPAIRS", "Shows repairs/scrapping in progress", tech_repairs},
+    {0, "REPAIRS", "Shows repairs/scrapping in progress", command_tech_repairs},
     {0, "UNLOAD <LOC> <POS>", "Unloads the ammo compartment in <loc>/<pos>",
      tech_unload},
 
@@ -585,7 +719,7 @@ BtechCommandDefinition mechcommands[] = {
 
     {0, "SNIPE <ID> <WEAPON>",
      "@Lets you 'snipe' (=shoot artillery weapons with movement prediction)",
-     mech_snipe},
+     command_mech_snipe},
     {0, "ADDSTUFF <NAME> <COUNT>", "@Adds <COUNT> <NAME> to mech's inventory",
      mech_Raddstuff},
 

@@ -244,7 +244,8 @@ void btech_special_object_help(BtechContext *context, DbRef player, char *type,
     mech = btech_context_get_mech(context, loc);
   bzero(pos, sizeof(pos));
   for (i = 0; SpecialObjects[id].commands[i].name; i++) {
-    if (!SpecialObjects[id].commands[i].func &&
+    if (!btech_command_definition_has_handler(
+            &SpecialObjects[id].commands[i]) &&
         (SpecialObjects[id].commands[i].helpmsg[0] != '@' ||
          btech_special_command_access(context, player, powerneeded)))
       if (id != GTYPE_MECH || btech_command_allowed_for_mech(

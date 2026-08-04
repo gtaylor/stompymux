@@ -297,8 +297,7 @@ static int UpdateSpecialObject_func(void *key, void *data, int depth,
     return 1;
   if ((context->clock->now % SpecialObjects[xcode_obj->type].updateTime))
     return 1;
-  ((void (*)(DbRef, void *))SpecialObjects[xcode_obj->type].updatefunc)(
-      (DbRef)key, xcode_obj);
+  SpecialObjects[xcode_obj->type].update((DbRef)key, xcode_obj);
   return 1;
 }
 

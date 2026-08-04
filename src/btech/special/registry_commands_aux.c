@@ -45,6 +45,19 @@
 #include "turret.h"
 #include "value_handlers_api.h"
 
+static void command_map_addice(DbRef actor, void *object, char *arguments) {
+  map_addice(actor, object, arguments);
+}
+
+static void command_map_delice(DbRef actor, void *object, char *arguments) {
+  map_delice(actor, object, arguments);
+}
+
+static void command_map_setconditions(DbRef actor, void *object,
+                                      char *arguments) {
+  map_setconditions(actor, object, arguments);
+}
+
 void newturret(DbRef, void **, int);
 void newfreemech(DbRef, void **, int);
 
@@ -122,13 +135,13 @@ BtechCommandDefinition mapcommands[] = {
     {0, "ADDICE <NUMBER>",
      "@Adds ice (<NUMBER> percent chance for each watery hex connected to "
      "land/ice)",
-     map_addice},
+     command_map_addice},
     {0, "DELICE <NUMBER>", "@Deletes first-melting ices at <NUMBER> chance",
-     map_delice},
+     command_map_delice},
     {0, "SETCOND <GRAV> <TEMP> [CLOUDBASE [VACUUM]]",
      "@Sets the map attributes (gravity: in 1/100'ths of Earth gravity, "
      "temperature: in Celsius, vacuum: optional, number (0 or 1)",
-     map_setconditions},
+     command_map_setconditions},
     {0, "VIEW <X> <Y>", "@Shows the map centered at X,Y", map_view},
 
     {0, "ADDBLOCK <X> <Y> <DIST> [TEAM#_TO_ALLOW]",

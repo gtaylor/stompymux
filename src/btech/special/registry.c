@@ -217,7 +217,7 @@ int HandledCommand_sub(BtechContext *context, DbRef player, DbRef location,
         btech_special_command_access(context, player,
                                      typeOfObject->power_needed)) {
       SKIPSTUFF(command);
-      ((void (*)(DbRef, void *, char *))cmd->func)(player, xcode_obj, command);
+      cmd->handler(player, xcode_obj, command);
     } else
       notify(btech_context_evaluation(context), player,
              "Sorry, that command is restricted!");
@@ -280,9 +280,8 @@ void *NewSpecialObject(BtechContext *context, long id, int type) {
     xcode_obj->size = SpecialObjects[type].datasize;
     xcode_obj->context = context;
 
-    if (SpecialObjects[type].allocfreefunc)
-      ((void (*)(DbRef, void **, int))SpecialObjects[type].allocfreefunc)(
-          id, (void **)&xcode_obj, SPECIAL_ALLOC);
+    if (SpecialObjects[type].lifecycle)
+      SpecialObjects[type].lifecycle(id, (void **)&xcode_obj, SPECIAL_ALLOC);
 
     red_black_tree_insert(context->special_objects, (void *)id, xcode_obj);
   }
@@ -359,9 +358,8 @@ void btech_special_object_dispose(BtechContext *context, DbRef player,
     i = btech_context_which_special(context, key);
   }
   if (xcode_obj) {
-    if (typeOfObject->allocfreefunc)
-      ((void (*)(DbRef, void **, int))typeOfObject->allocfreefunc)(
-          key, (void **)&xcode_obj, SPECIAL_FREE);
+    if (typeOfObject->lifecycle)
+      typeOfObject->lifecycle(key, (void **)&xcode_obj, SPECIAL_FREE);
     red_black_tree_delete(context->special_objects, (void *)key);
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
@@ -379,9 +377,8 @@ static void destroy_special_object(void *key, void *data, void *arg) {
   const BtechSpecialObjectDefinition *type = &SpecialObjects[xcode_obj->type];
 
   mux_event_remove_data(context->events, xcode_obj);
-  if (type->allocfreefunc)
-    ((void (*)(DbRef, void **, int))type->allocfreefunc)(
-        (DbRef)key, (void **)&xcode_obj, SPECIAL_FREE);
+  if (type->lifecycle)
+    type->lifecycle((DbRef)key, (void **)&xcode_obj, SPECIAL_FREE);
   free(xcode_obj);
 }
 
@@ -487,7 +484,8 @@ void InitSpecialHash(BtechContext *context, int which) {
 
   hash_table_initialize(&context->special_commands[which], 20 * HASH_FACTOR);
   for (i = 0; (tmp = SpecialObjects[which].commands[i].name); i++) {
-    if (!SpecialObjects[which].commands[i].func)
+    if (!btech_command_definition_has_handler(
+            &SpecialObjects[which].commands[i]))
       continue;
     tmpc = buf;
     for (; *tmp && *tmp != ' '; tmp++)

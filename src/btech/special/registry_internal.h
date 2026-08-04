@@ -25,6 +25,10 @@
 #pragma once
 
 typedef struct EvaluationContext EvaluationContext;
+typedef struct Mech Mech;
+typedef struct BattleMap BattleMap;
+
+typedef void (*BtechCommandHandler)(DbRef actor, void *object, char *arguments);
 
 #define VERIFY 0
 #define SAVE 1
@@ -56,16 +60,25 @@ typedef struct BtechCommandDefinition {
   int flag;
   char *name;
   char *helpmsg;
-  void *func;
+  BtechCommandHandler handler;
 } BtechCommandDefinition;
+
+static inline bool
+btech_command_definition_has_handler(const BtechCommandDefinition *command) {
+  return command->handler != nullptr;
+}
+
+typedef void (*BtechSpecialLifecycleHandler)(DbRef object, void **data,
+                                             int operation);
+typedef void (*BtechSpecialUpdateHandler)(DbRef object, void *data);
 
 typedef struct BtechSpecialObjectDefinition {
   char *type;                       // Type of the object
   BtechCommandDefinition *commands; // Commands array
   long datasize;                    // Size of private buffer
-  void *allocfreefunc;
-  int updateTime;       // Amount of time between updates (secs)
-  void *updatefunc;     // called for every object at every update
+  BtechSpecialLifecycleHandler lifecycle;
+  int updateTime;                   // Amount of time between updates (secs)
+  BtechSpecialUpdateHandler update; // called for every object at every update
   PowerId power_needed; // What power is needed to restricted commands
 } BtechSpecialObjectDefinition;
 
