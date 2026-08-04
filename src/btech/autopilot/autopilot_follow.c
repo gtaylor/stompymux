@@ -1,4 +1,31 @@
-#include "autopilot_commands_internal.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "ai_api.h"
+#include "autopilot.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_events.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_startup_api.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/support/doubly_linked_list.h"
+#include "registry_api.h"
+#include "section_types.h"
 
 void auto_astar_follow_event(MuxEvent *muxevent) {
 
@@ -20,17 +47,17 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 
   char error_buf[MBUF_SIZE];
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -62,7 +89,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started and standing */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -76,7 +103,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -141,7 +168,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Is the target destroyed or we not even on the same map */
-  if (Destroyed(target) || (target->mapindex != mech->mapindex)) {
+  if (mech_is_destroyed(target) ||
+      (mech_map_dbref(target) != mech_map_dbref(mech))) {
 
     snprintf(error_buf, MBUF_SIZE,
              "Internal AI Error - Attempting to"
@@ -157,22 +185,25 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Generate the target hex - since this can be altered by position command */
-  FindXY(MechFX(target), MechFY(target), MechFacing(target) + autopilot->ofsx,
-         autopilot->ofsy, &fx, &fy);
+  FindXY(mech_position_real_x(target), mech_position_real_y(target),
+         mech_heading_degrees(target) + autopilot->ofsx, autopilot->ofsy, &fx,
+         &fy);
 
   RealCoordToMapCoord(&x, &y, fx, fy);
 
   /* Make sure the hex is sane - if not set the target hex to the target's
    * hex */
-  if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height) {
+  if (x < 0 || y < 0 || x >= battle_map_width(map) ||
+      y >= battle_map_height(map)) {
 
     /* Reset the hex to the Target's current hex */
-    x = MechX(target);
-    y = MechY(target);
+    x = mech_position_x(target);
+    y = mech_position_y(target);
   }
 
   /* Are we in the target hex and the target isn't moving ? */
-  if ((MechX(mech) == x) && (MechY(mech) == y) && (MechSpeed(target) < 0.5)) {
+  if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
+      (mech_current_speed(target) < 0.5)) {
 
     /* Ok go into holding pattern */
     ai_set_speed(mech, autopilot, 0.0);
@@ -200,15 +231,15 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
       autopilot->follow_update_tick >= AUTOPILOT_FOLLOW_UPDATE_TICK) {
 
     /* Target hex is not target's hex */
-    if ((x != MechX(mech)) || (y != MechY(mech))) {
+    if ((x != mech_position_x(mech)) || (y != mech_position_y(mech))) {
 
       /* Try and generate path with target hex */
       if (!(auto_astar_generate_path(autopilot, mech, x, y))) {
 
         /* Didn't work so reset the x,y coords to target's hex
          * and try again */
-        x = MechX(target);
-        y = MechY(target);
+        x = mech_position_x(target);
+        y = mech_position_y(target);
 
         /* This is how we try again - reset the ticker and
          * it will try again */
@@ -314,8 +345,8 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   }
 
   /* Are we in the current target hex */
-  if ((MechX(mech) == temp_astar_node->x) &&
-      (MechY(mech) == temp_astar_node->y)) {
+  if ((mech_position_x(mech) == temp_astar_node->x) &&
+      (mech_position_y(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
     if (doubly_linked_list_size(autopilot->astar_path) == 1) {
@@ -364,36 +395,6 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                            AUTOPILOT_FOLLOW_TICK, 0);
 }
 
-#if 0
-/* Old follow system - will phase out */
-void auto_follow_event(MuxEvent * e)
-{
-	Autopilot *a = (Autopilot *) e->data;
-	float fx, fy, newx, newy;
-	int h;
-	Mech *leader;
-	Mech *mech = a->mymech;
-
-	if(!btech_context_is_mech(mech->xcode.context, mech->mynum) || !btech_context_is_auto(a->xcode.context, a->mynum))
-		return;
-
-	CCH(a);
-	GSTART(a, mech);
-	if(!(leader = btech_context_get_mech(autopilot->xcode.context, GVAL(a, 1)))) {
-		/* For some reason, leader is missing(?) */
-		ADVANCE_PG(a);
-		return;
-	}
-	h = MechFacing(leader);
-	FindXY(MechFX(leader), MechFY(leader), h + a->ofsx, a->ofsy, &fx, &fy);
-	FindComponents(MechSpeed(leader) * MOVE_MOD, MechFacing(leader),
-				   &newx, &newy);
-	if(ai_check_path(mech, a, fx, fy, newx, newy))
-		autopilot_event_schedule(a, EVENT_AUTOFOLLOW, auto_follow_event,
-				  AUTOPILOT_FOLLOW_TICK, 0);
-}
-#endif
-
 /*
  * Make the AI [dumbly]follow the given target
  */
@@ -415,17 +416,17 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   char buffer[SBUF_SIZE];
 
   /* Making sure the mech is a mech and the autopilot is an autopilot */
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -450,7 +451,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started and standing */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -463,7 +464,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   }
 
   /* Make sure the mech is standing before going on */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -514,7 +515,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   /* Make sure its a valid target */
   if (!(leader = btech_context_get_mech(autopilot->xcode.context, target)) ||
-      Destroyed(leader)) {
+      mech_is_destroyed(leader)) {
 
     /* For some reason, leader is missing(?) */
     snprintf(
@@ -529,27 +530,27 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
     return;
   }
 
-  h = MechDesiredFacing(leader);
+  h = mech_desired_heading_degrees(leader);
   x = autopilot->ofsy * cos(TWOPIOVER360 * (270.0 + (h + autopilot->ofsx)));
   y = autopilot->ofsy * sin(TWOPIOVER360 * (270.0 + (h + autopilot->ofsx)));
-  tx = MechX(leader) + x;
-  ty = MechY(leader) + y;
+  tx = mech_position_x(leader) + x;
+  ty = mech_position_y(leader) + y;
 
-  if (MechX(mech) == tx && MechY(mech) == ty) {
+  if (mech_position_x(mech) == tx && mech_position_y(mech) == ty) {
 
     /* Do ugly stuff */
     /* For now, try to match speed (if any) and heading (if any) of the
        leader */
-    if (MechSpeed(leader) > 1 || MechSpeed(leader) < -1 ||
-        MechSpeed(mech) > 1 || MechSpeed(mech) < -1) {
+    if (mech_current_speed(leader) > 1 || mech_current_speed(leader) < -1 ||
+        mech_current_speed(mech) > 1 || mech_current_speed(mech) < -1) {
 
-      if (MechDesiredFacing(mech) != MechFacing(leader)) {
-        snprintf(buffer, SBUF_SIZE, "%d", MechFacing(leader));
+      if (mech_desired_heading_degrees(mech) != mech_heading_degrees(leader)) {
+        snprintf(buffer, SBUF_SIZE, "%d", mech_heading_degrees(leader));
         mech_heading(autopilot->mynum, mech, buffer);
       }
 
-      if (MechSpeed(mech) != MechSpeed(leader)) {
-        snprintf(buffer, SBUF_SIZE, "%.2f", MechSpeed(leader));
+      if (mech_current_speed(mech) != mech_current_speed(leader)) {
+        snprintf(buffer, SBUF_SIZE, "%.2f", mech_current_speed(leader));
         mech_speed(autopilot->mynum, mech, buffer);
       }
     }
@@ -562,7 +563,7 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
   figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
   speed_up_if_neccessary(autopilot, mech, tx, ty, -1);
 
-  if (MechSpeed(leader) < MP1)
+  if (mech_current_speed(leader) < MP1)
     slow_down_if_neccessary(autopilot, mech, range + 1, bearing, tx, ty);
 
   update_wanted_heading(autopilot, mech, bearing);
