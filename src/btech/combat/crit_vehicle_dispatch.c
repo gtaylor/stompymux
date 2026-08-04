@@ -1,0 +1,261 @@
+/*
+ * Author: Markus Stenberg <fingon@iki.fi>
+ *
+ *  Copyright (c) 1996 Markus Stenberg
+ *  Copyright (c) 1998-2002 Thomas Wouters
+ *  Copyright (c) 2000-2002 Cord Awtry
+ *       All rights reserved
+ *
+ */
+
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "btconfig.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "btechstats_api.h"
+#include "crit_api.h"
+#include "econ_cmds_api.h"
+#include "eject_api.h"
+#include "failures.h"
+#include "map.h"
+#include "map_terrain.h"
+#include "mech.h"
+#include "mech_ammodump_api.h"
+#include "mech_c3_api.h"
+#include "mech_c3i_api.h"
+#include "mech_combat_misc_api.h"
+#include "mech_damage_api.h"
+#include "mech_enhanced_criticals_api.h"
+#include "mech_events.h"
+#include "mech_events_api.h"
+#include "mech_lifecycle.h"
+#include "mech_macros.h"
+#include "mech_move_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_pickup_api.h"
+#include "mech_sensor.h"
+#include "mech_tag_api.h"
+#include "mech_tech_commands_api.h"
+#include "mech_update_api.h"
+#include "mech_utils_api.h"
+#include "missile_hit_registry.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "random.h"
+#include "registry_api.h"
+
+void DestroyMainWeapon(Mech *mech) {
+  unsigned char weaparray[MAX_WEAPS_SECTION];
+  unsigned char weapdata[MAX_WEAPS_SECTION];
+  int critical[MAX_WEAPS_SECTION];
+  int count;
+  int loop;
+  int ii;
+  int tempcrit;
+  int maxcrit = 0;
+  int maxloc = 0;
+  int critfound = 0;
+  unsigned char maxtype = 0;
+  int firstCrit = 0;
+
+  for (loop = 0; loop < NUM_SECTIONS; loop++) {
+    if (SectIsDestroyed(mech, loop))
+      continue;
+    count = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    if (count > 0) {
+      for (ii = 0; ii < count; ii++) {
+        if (!PartIsBroken(mech, loop, critical[ii])) {
+          /* tempcrit = GetWeaponCrits(mech, weaparray[ii]); */
+          tempcrit = (int)btech_random_i31(&mech->xcode.context->random);
+          if (tempcrit > maxcrit) {
+            critfound = 1;
+            maxcrit = tempcrit;
+            maxloc = loop;
+            maxtype = weaparray[ii];
+          }
+        }
+      }
+    }
+  }
+  if (critfound) {
+    firstCrit = FindFirstWeaponCrit(mech, maxloc, -1, 0, I2Weapon(maxtype), 1);
+    DestroyWeapon(mech, maxloc, I2Weapon(maxtype), 1, firstCrit,
+                  GetWeaponCrits(mech, maxtype));
+    mech_printf(mech, MECHALL, "[fg=red bold]Your %s is destroyed![reset]",
+                &MechWeapons[maxtype].name[3]);
+  }
+}
+
+void HandleFasaVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
+                           int num) {
+  if (MechMove(wounded) == MOVE_NONE)
+    return;
+
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
+  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
+  case 0:
+    /* Crew stunned for one turn...treat like a head hit */
+    headhitmwdamage(wounded, attacker, 1);
+    break;
+  case 1:
+    /* Weapon jams, set them recylcling maybe */
+    /* hmm. nothing for now, tanks are so weak */
+    JamMainWeapon(wounded);
+    break;
+  case 2:
+    /* Engine Hit */
+    mech_notify(wounded, MECHALL,
+                "Your engine takes a direct hit!  You can't move anymore.");
+    mech_max_speed_set(wounded, 0.0);
+    break;
+  case 3:
+    /* Crew Killed */
+    mech_notify(wounded, MECHALL,
+                "Your armor is pierced and you are killed instantly!");
+    DestroyMech(wounded, attacker, 0, KILL_TYPE_PILOT);
+    KillMechContentsIfIC(wounded);
+    break;
+  case 4:
+    /* Fuel Tank Explodes */
+    mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
+    if (wounded != attacker)
+      MechLOSBroadcast(wounded, "'s fule tank explodes in a ball of fire!");
+    DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    explode_unit(wounded, attacker);
+    break;
+  case 5:
+    /* Ammo/Power Plant Explodes */
+    mech_notify(wounded, MECHALL, "Your power plant explodes!");
+    if (wounded != attacker)
+      MechLOSBroadcast(wounded, "'s power plant suddenly explodes!");
+    DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    if (!(MechSections(wounded)[BSIDE].config & CASE_TECH))
+      explode_unit(wounded, attacker);
+    else
+      DestroySection(wounded, attacker, LOS, BSIDE);
+    break;
+  }
+}
+
+void HandleVehicleCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
+                       int num) {
+  if (MechMove(wounded) == MOVE_NONE)
+    return;
+  if (hitloc == TURRET) {
+    if (btech_random_range(wounded->xcode.context, 1, 3) == 2) {
+      if (!(MechTankCritStatus(wounded) & TURRET_LOCKED)) {
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
+        MechTankCritStatus(wounded) |= TURRET_LOCKED;
+        mech_notify(wounded, MECHALL,
+                    "Your turret takes a direct hit and locks up!");
+      }
+      return;
+    }
+  } else
+    switch (btech_random_range(wounded->xcode.context, 1, 10)) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+      if (!Fallen(wounded)) {
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
+        switch (MechMove(wounded)) {
+        case MOVE_TRACK:
+          mech_notify(wounded, MECHALL, "One of your tracks is damaged!");
+          break;
+        case MOVE_WHEEL:
+          mech_notify(wounded, MECHALL, "One of your wheels is damaged!");
+          break;
+        case MOVE_HOVER:
+          mech_notify(wounded, MECHALL, "Your air skirt is damaged!");
+          break;
+        case MOVE_HULL:
+        case MOVE_SUB:
+        case MOVE_FOIL:
+          mech_notify(wounded, MECHALL, "Your craft suddenly slows!");
+          break;
+        }
+        mech_max_speed_lower(wounded, MP1);
+      }
+      return;
+      break;
+    case 5:
+      if (!Fallen(wounded)) {
+        mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
+        switch (MechMove(wounded)) {
+        case MOVE_TRACK:
+          mech_notify(
+              wounded, MECHALL,
+              "One of your tracks is destroyed, immobilizing your vehicle!");
+          break;
+        case MOVE_WHEEL:
+          mech_notify(
+              wounded, MECHALL,
+              "One of your wheels is destroyed, immobilizing your vehicle!");
+          break;
+        case MOVE_HOVER:
+          mech_notify(wounded, MECHALL,
+                      "Your lift fan is destroyed, immobilizing your vehicle!");
+          break;
+        case MOVE_HULL:
+        case MOVE_SUB:
+        case MOVE_FOIL:
+          mech_notify(wounded, MECHALL,
+                      "Your engines cut out and you drift to a halt!");
+        }
+        mech_max_speed_set(wounded, 0.0);
+
+        mech_make_fall(wounded);
+      }
+      return;
+      break;
+    }
+  mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
+  switch (btech_random_range(wounded->xcode.context, 0, 5)) {
+  case 0:
+    /* Crew stunned for one turn...treat like a head hit */
+    headhitmwdamage(wounded, attacker, 1);
+    break;
+  case 1:
+    /* Weapon jams, set them recylcling maybe */
+    /* hmm. nothing for now, tanks are so weak */
+    JamMainWeapon(wounded);
+    break;
+  case 2:
+    /* Engine Hit */
+    mech_notify(wounded, MECHALL,
+                "Your engine takes a direct hit!  You can't move anymore.");
+    mech_max_speed_set(wounded, 0.0);
+    break;
+  case 3:
+    /* Crew Killed */
+    mech_notify(wounded, MECHALL,
+                "Your armor is pierced and you are killed instantly!");
+    DestroyMech(wounded, attacker, 0, KILL_TYPE_PILOT);
+    KillMechContentsIfIC(wounded);
+    break;
+  case 4:
+    /* Fuel Tank Explodes */
+    mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
+    if (wounded != attacker)
+      MechLOSBroadcast(wounded, "'s fuel tank explodes in a ball of fire!");
+    DestroyMech(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    explode_unit(wounded, attacker);
+    break;
+  case 5:
+    /* Ammo/Power Plant Explodes */
+    mech_notify(wounded, MECHALL, "Your power plant explodes!");
+    if (wounded != attacker)
+      MechLOSBroadcast(wounded, "'s power plant suddenly explodes!");
+    DestroyMech(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    explode_unit(wounded, attacker);
+    break;
+  }
+}

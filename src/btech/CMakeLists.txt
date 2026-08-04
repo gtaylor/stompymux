@@ -26,6 +26,11 @@ set(BTECH_SOURCES
   combat/bsuit.c
   combat/bsuit_hide.c
   combat/crit.c
+  combat/crit_weapons.c
+  combat/crit_vehicles.c
+  combat/crit_vehicle_dispatch.c
+  combat/crit_mechs.c
+  combat/crit_dispatch.c
   combat/eject.c
   combat/eject_embark.c
   combat/mech_ammodump.c
