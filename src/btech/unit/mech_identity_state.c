@@ -6,6 +6,10 @@ BtechContext *mech_context(const Mech *mech) { return mech->xcode.context; }
 
 DbRef mech_dbref(const Mech *mech) { return mech->mynum; }
 
+DbRef mech_turret_dbref(const Mech *mech, int turret) {
+  return mech->pd.turret[turret];
+}
+
 DbRef mech_map_dbref(const Mech *mech) { return mech->mapindex; }
 
 int mech_map_slot(const Mech *mech) { return mech->mapnumber; }

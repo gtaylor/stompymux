@@ -13,3 +13,10 @@ bool mech_piloting_position_mark_changed(Mech *mech) {
 int mech_battle_value(const Mech *mech) { return mech->ud.mechbv; }
 
 float mech_experience_modifier(const Mech *mech) { return mech->rd.xpmod; }
+
+void mech_shot_result_record(Mech *mech, bool hit) {
+  if (hit)
+    mech->rd.shots_hit++;
+  else
+    mech->rd.shots_missed++;
+}

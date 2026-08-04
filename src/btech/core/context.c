@@ -63,6 +63,16 @@ EvaluationContext *btech_context_evaluation(BtechContext *context) {
   return &btech_context_command(context)->evaluation;
 }
 
+GameDatabase *btech_context_database(BtechContext *context) {
+  assert(context != nullptr);
+  return context->database;
+}
+
+bool btech_context_combat_arcs_enabled(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->combat_overrides.arcs;
+}
+
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
                                CommandContext *command) {
   assert(scope != nullptr);

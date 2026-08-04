@@ -6,6 +6,7 @@ typedef struct BtechContext BtechContext;
 
 BtechContext *mech_context(const Mech *mech);
 DbRef mech_dbref(const Mech *mech);
+DbRef mech_turret_dbref(const Mech *mech, int turret);
 DbRef mech_map_dbref(const Mech *mech);
 int mech_map_slot(const Mech *mech);
 int mech_brief_mode(const Mech *mech);

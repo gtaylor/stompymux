@@ -188,6 +188,7 @@ done < <(rg -n '#include "mech(_maps_internal|_macros)?\.h"' \
   src/btech/ui/mech_base_entry.c \
   src/btech/ui/mech_lrs_map.c \
   src/btech/ui/mech_maps.c \
+  src/btech/ui/mech_notify.c \
   src/btech/ui/mech_tactical_command.c \
   src/btech/ui/mech_tactical_layout.c \
   src/btech/ui/mech_tactical_map.c \

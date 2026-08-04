@@ -52,6 +52,8 @@ void btech_context_set_process_start_time(BtechContext *context,
                                           time_t process_start_time);
 CommandContext *btech_context_command(BtechContext *context);
 EvaluationContext *btech_context_evaluation(BtechContext *context);
+GameDatabase *btech_context_database(BtechContext *context);
+bool btech_context_combat_arcs_enabled(const BtechContext *context);
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
                                CommandContext *command);
 void btech_command_scope_leave(BtechCommandScope *scope);

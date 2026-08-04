@@ -1,22 +1,50 @@
-#include "mech_notify_internal.h"
+#include "mech_notify.h"
+#include "btech/context.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "map_terrain.h"
+#include "mech_crew_api.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_los_api.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_progress_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_api.h"
+#include "mech_utils_api.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
+static int map_base_elevation(BattleMap *map, int x, int y) {
+  int elevation = map_elevation_get(map, x, y);
+  char terrain = map_real_terrain_get(map, x, y);
+  return terrain == WATER || terrain == ICE ? -elevation : elevation;
+}
 
 void MechLOSBroadcast(Mech *mech, char *message) {
   /* Sends msg to everyone except the mech */
   int i;
   Mech *tempMech;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char buf[LBUF_SIZE];
 
   possibly_see_mech(mech);
   if (!mech_map)
     return;
   for (i = 0; i < mech_map->first_free; i++)
-    if (mech_map->mechsOnMap[i] != -1 && mech_map->mechsOnMap[i] != mech->mynum)
+    if (mech_map->mechsOnMap[i] != -1 &&
+        mech_map->mechsOnMap[i] != mech_dbref(mech))
       if ((tempMech = btech_context_get_mech(mech_map->xcode.context,
                                              mech_map->mechsOnMap[i])))
-        if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
-                          FlMechRange(mech_map, tempMech, mech))) {
+        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
+                          mech_position_y(mech),
+                          mech_range_to(tempMech, mech))) {
           snprintf(buf, sizeof(buf), "%s%s%s",
                    mech_to_mech_display_id(tempMech, mech).text,
                    *message != '\'' ? " " : "", message);
@@ -25,9 +53,11 @@ void MechLOSBroadcast(Mech *mech, char *message) {
 }
 
 int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy) {
-  return (InLineOfSight(mech, NULL, ix, iy,
-                        FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), x,
-                                  y, ZSCALE * Elevation(map, ix, iy))));
+  return InLineOfSight(mech, nullptr, ix, iy,
+                       FindRange(mech_position_real_x(mech),
+                                 mech_position_real_y(mech),
+                                 mech_position_real_z(mech), x, y,
+                                 ZSCALE * map_base_elevation(map, ix, iy)));
 }
 
 int MechSeesHex(Mech *mech, BattleMap *map, int x, int y) {
@@ -64,7 +94,8 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
               if (*(c + 1) == 'h' || *(c + 1) == 'H') {
                 c++;
                 if (*c == 'h') {
-                  if (x == MechX(tempMech) && y == MechY(tempMech))
+                  if (x == mech_position_x(tempMech) &&
+                      y == mech_position_y(tempMech))
                     strcpy(d, "your hex");
                   else
                     snprintf(d, sizeof(tbuf) - (tbuf - d), "%d,%d", x, y);
@@ -72,7 +103,8 @@ void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message) {
                     d++;
                 } else {
                   /* Dangerous */
-                  if (x == MechX(tempMech) && y == MechY(tempMech))
+                  if (x == mech_position_x(tempMech) &&
+                      y == mech_position_y(tempMech))
                     strcpy(d, "[fg=red bold]YOUR HEX[reset]");
                   else
                     snprintf(d, sizeof(tbuf) - (tbuf - d),
@@ -114,7 +146,7 @@ void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message) {
   char oddbuff2[LBUF_SIZE];
   Mech *tempMech;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (!mech_map)
     return;
@@ -122,14 +154,15 @@ void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message) {
   possibly_see_mech(target);
   for (i = 0; i < mech_map->first_free; i++)
     if (mech_map->mechsOnMap[i] != -1 &&
-        mech_map->mechsOnMap[i] != mech->mynum &&
-        mech_map->mechsOnMap[i] != target->mynum)
-      if ((tempMech = btech_context_get_mech(mech->xcode.context,
+        mech_map->mechsOnMap[i] != mech_dbref(mech) &&
+        mech_map->mechsOnMap[i] != mech_dbref(target))
+      if ((tempMech = btech_context_get_mech(mech_context(mech),
                                              mech_map->mechsOnMap[i]))) {
-        a = InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
-                          FlMechRange(mech_map, tempMech, mech));
-        b = InLineOfSight(tempMech, target, MechX(target), MechY(target),
-                          FlMechRange(mech_map, tempMech, target));
+        a = InLineOfSight(tempMech, mech, mech_position_x(mech),
+                          mech_position_y(mech), mech_range_to(tempMech, mech));
+        b = InLineOfSight(tempMech, target, mech_position_x(target),
+                          mech_position_y(target),
+                          mech_range_to(tempMech, target));
         if (a || b) {
           char *obp = oddbuff2;
 
@@ -171,39 +204,41 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
   /* Stat recording */
   if (target) { /* only if we have a mecha */
     if (IsHit)
-      MechShotsHit(mech)++;
+      mech_shot_result_record(mech, true);
     else
-      MechShotsMissed(mech)++;
+      mech_shot_result_record(mech, false);
   }
 
   possibly_see_mech(mech);
   if (target) {
     possibly_see_mech(target);
-    mapx = MechX(target);
-    mapy = MechY(target);
-    fx = MechFX(target);
-    fy = MechFY(target);
-    fz = MechFZ(target);
+    mapx = mech_position_x(target);
+    mapy = mech_position_y(target);
+    fx = mech_position_real_x(target);
+    fy = mech_position_real_y(target);
+    fz = mech_position_real_z(target);
     for (loop = 0; loop < mech_map->first_free; loop++)
-      if (mech_map->mechsOnMap[loop] != mech->mynum &&
+      if (mech_map->mechsOnMap[loop] != mech_dbref(mech) &&
           mech_map->mechsOnMap[loop] != -1 &&
-          mech_map->mechsOnMap[loop] != target->mynum) {
+          mech_map->mechsOnMap[loop] != mech_dbref(target)) {
         attacker = 0;
         defender = 0;
         tempMech = (Mech *)btech_context_find_object(
-            mech->xcode.context, mech_map->mechsOnMap[loop]);
+            mech_context(mech), mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
-        if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
-                          FlMechRange(mech_map, tempMech, mech)))
+        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
+                          mech_position_y(mech), mech_range_to(tempMech, mech)))
           attacker = 1;
         if (target) {
           if (InLineOfSight(tempMech, target, mapx, mapy,
-                            FlMechRange(mech_map, tempMech, target)))
+                            mech_range_to(tempMech, target)))
             defender = 1;
         } else if (InLineOfSight(tempMech, target, mapx, mapy,
-                                 FindRange(MechFX(tempMech), MechFY(tempMech),
-                                           MechFZ(tempMech), fx, fy, fz)))
+                                 FindRange(mech_position_real_x(tempMech),
+                                           mech_position_real_y(tempMech),
+                                           mech_position_real_z(tempMech), fx,
+                                           fy, fz)))
           defender = 1;
 
         if (!attacker && !defender)
@@ -227,27 +262,29 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
     mapx = x;
     mapy = y;
     MapCoordToRealCoord(x, y, &fx, &fy);
-    fz = ZSCALE * Elevation(mech_map, x, y);
+    fz = ZSCALE * map_base_elevation(mech_map, x, y);
     snprintf(buff, sizeof(buff), "hex %d %d!", mapx, mapy);
     for (loop = 0; loop < mech_map->first_free; loop++)
-      if (mech_map->mechsOnMap[loop] != mech->mynum &&
+      if (mech_map->mechsOnMap[loop] != mech_dbref(mech) &&
           mech_map->mechsOnMap[loop] != -1) {
         attacker = 0;
         defender = 0;
         tempMech = (Mech *)btech_context_find_object(
-            mech->xcode.context, mech_map->mechsOnMap[loop]);
+            mech_context(mech), mech_map->mechsOnMap[loop]);
         if (!tempMech)
           continue;
-        if (InLineOfSight(tempMech, mech, MechX(mech), MechY(mech),
-                          FlMechRange(mech_map, tempMech, mech)))
+        if (InLineOfSight(tempMech, mech, mech_position_x(mech),
+                          mech_position_y(mech), mech_range_to(tempMech, mech)))
           attacker = 1;
         if (target) {
           if (InLineOfSight(tempMech, target, mapx, mapy,
-                            FlMechRange(mech_map, tempMech, target)))
+                            mech_range_to(tempMech, target)))
             defender = 1;
         } else if (InLineOfSight(tempMech, target, mapx, mapy,
-                                 FindRange(MechFX(tempMech), MechFY(tempMech),
-                                           MechFZ(tempMech), fx, fy, fz)))
+                                 FindRange(mech_position_real_x(tempMech),
+                                           mech_position_real_y(tempMech),
+                                           mech_position_real_z(tempMech), fx,
+                                           fy, fz)))
           defender = 1;
         if (!attacker && !defender)
           continue;
@@ -269,28 +306,29 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
 void mech_notify(Mech *mech, int type, const char *buffer) {
   int i;
 
-  if (Uncon(mech))
+  if (mech_pilot_is_unconscious(mech))
     return;
-  if (Blinded(mech))
+  if (mech_is_blinded(mech))
     return;
-  if (mech->mynum < 0)
+  if (mech_dbref(mech) < 0)
     return;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   /* Let's do colorization too, just in case. */
 
   if (type == MECHPILOT) {
     if (mech_has_pilot(mech))
-      notify(evaluation, MechPilot(mech), buffer);
+      notify(evaluation, mech_pilot_dbref(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
-  } else if ((type == MECHALL && !Destroyed(mech)) ||
-             (type == MECHSTARTED && Started(mech))) {
-    notify_except(evaluation, mech->mynum, NOTHING, mech->mynum, buffer);
-    if (mech->xcode.context->combat_overrides.arcs)
+  } else if ((type == MECHALL && !mech_is_destroyed(mech)) ||
+             (type == MECHSTARTED && mech_is_started(mech))) {
+    notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
+                  buffer);
+    if (btech_context_combat_arcs_enabled(mech_context(mech)))
       for (i = 0; i < NUM_TURRETS; i++)
-        if (AeroTurret(mech, i) > 0)
-          notify_except(evaluation, AeroTurret(mech, i), NOTHING,
-                        AeroTurret(mech, i), buffer);
+        if (mech_turret_dbref(mech, i) > 0)
+          notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
+                        mech_turret_dbref(mech, i), buffer);
   }
 }
 
@@ -299,13 +337,13 @@ void mech_printf(Mech *mech, int type, char *format, ...) {
   int i;
   va_list ap;
 
-  if (Uncon(mech))
+  if (mech_pilot_is_unconscious(mech))
     return;
-  if (Blinded(mech))
+  if (mech_is_blinded(mech))
     return;
-  if (mech->mynum < 0)
+  if (mech_dbref(mech) < 0)
     return;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   /* Let's do colorization too, just in case. */
 
   va_start(ap, format);
@@ -314,16 +352,17 @@ void mech_printf(Mech *mech, int type, char *format, ...) {
 
   if (type == MECHPILOT) {
     if (mech_has_pilot(mech))
-      notify(evaluation, MechPilot(mech), buffer);
+      notify(evaluation, mech_pilot_dbref(mech), buffer);
     else
       mech_notify(mech, MECHALL, buffer);
-  } else if ((type == MECHALL && !Destroyed(mech)) ||
-             (type == MECHSTARTED && Started(mech))) {
-    notify_except(evaluation, mech->mynum, NOTHING, mech->mynum, buffer);
-    if (mech->xcode.context->combat_overrides.arcs)
+  } else if ((type == MECHALL && !mech_is_destroyed(mech)) ||
+             (type == MECHSTARTED && mech_is_started(mech))) {
+    notify_except(evaluation, mech_dbref(mech), NOTHING, mech_dbref(mech),
+                  buffer);
+    if (btech_context_combat_arcs_enabled(mech_context(mech)))
       for (i = 0; i < NUM_TURRETS; i++)
-        if (AeroTurret(mech, i) > 0)
-          notify_except(evaluation, AeroTurret(mech, i), NOTHING,
-                        AeroTurret(mech, i), buffer);
+        if (mech_turret_dbref(mech, i) > 0)
+          notify_except(evaluation, mech_turret_dbref(mech, i), NOTHING,
+                        mech_turret_dbref(mech, i), buffer);
   }
 }
