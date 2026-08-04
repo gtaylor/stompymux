@@ -34,7 +34,9 @@ set(BTECH_SOURCES
   combat/mech_combat.c
   combat/mech_combat_misc.c
   combat/mech_combat_missile.c
+  combat/mech_armor_damage.c
   combat/mech_damage.c
+  combat/mech_section_damage.c
   combat/mech_enhanced_criticals.c
   combat/mech_fire.c
   combat/mech_weapon_modes.c
