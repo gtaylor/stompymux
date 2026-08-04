@@ -13,7 +13,32 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include <stdio.h>
+#include <string.h>
+
+#include "autopilot.h"
+#include "btech/context.h"
+#include "equipment_types.h"
+#include "map_los_api.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_identity_api.h"
+#include "mech_physical_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
+
+static void format_physical_command(char buffer[static LBUF_SIZE], char side,
+                                    const Mech *target) {
+  MechUnitId id = mech_unit_id(target);
+  snprintf(buffer, LBUF_SIZE, "%c %c%c", side, id.first, id.second);
+}
 
 void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                              Mech *target) {
@@ -35,7 +60,8 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
   /* Get range from mech to current target */
   range =
-      FindHexRange(MechFX(mech), MechFY(mech), MechFX(target), MechFY(target));
+      FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                   mech_position_real_x(target), mech_position_real_y(target));
 
   /* First check our range to our target, if within range attack it, else
    * check to see if its outside our range threshold and if so pick a target
@@ -52,30 +78,31 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
     /* Try and find a target */
 
-    physical_target = NULL;
+    physical_target = nullptr;
 
     /* Cycle through possible targets and pick something to beat on */
-    for (i = 0; i < map->first_free; i++) {
+    for (i = 0; i < battle_map_unit_count(map); i++) {
 
       /* Make sure its on the right map */
-      if (i != mech->mapnumber && (j = map->mechsOnMap[i]) > 0) {
+      if (i != mech_map_slot(mech) && (j = battle_map_unit_dbref(map, i)) > 0) {
 
         /* Is it a valid unit ? */
-        if (!(target = btech_context_get_mech(mech->xcode.context, j)))
+        if (!(target = btech_context_get_mech(mech_context(mech), j)))
           continue;
 
-        if (Destroyed(target))
+        if (mech_is_destroyed(target))
           continue;
 
-        if (MechStatus(target) & COMBAT_SAFE)
+        if (mech_condition_summary(target).combat_safe)
           continue;
 
-        if (MechTeam(target) == MechTeam(mech))
+        if (mech_team(target) == mech_team(mech))
           continue;
 
         /* Check its range */
-        range = FindHexRange(MechFX(mech), MechFY(mech), MechFX(target),
-                             MechFY(target));
+        range = FindHexRange(
+            mech_position_real_x(mech), mech_position_real_y(mech),
+            mech_position_real_x(target), mech_position_real_y(target));
 
         /* Just go for first one , can always add scoring later */
         if (range < 1.0) {
@@ -88,82 +115,83 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   } else {
 
     /* Our target is close so dont try and physically attack anyone */
-    physical_target = NULL;
+    physical_target = nullptr;
   }
 
   /* Now nail it with a physical attack but only if we see it */
-  if (physical_target &&
-      (MechToMech_LOSFlag(map, mech, physical_target) & MECHLOSFLAG_SEEN)) {
+  if (physical_target && battle_map_unit_is_seen(map, mech, physical_target)) {
 
     /* Log It */
     print_autogun_log(autopilot,
                       "Autogun - Attempting physical attack against"
-                      " target #%d",
-                      physical_target->mynum);
+                      " target #%ld",
+                      mech_dbref(physical_target));
 
     /* Calculate elevation difference */
-    elevation_diff = MechZ(mech) - MechZ(target);
+    elevation_diff = mech_position_z(mech) - mech_position_z(target);
 
     /* Are we a biped Mech */
-    if ((MechType(mech) == CLASS_MECH) && (MechMove(mech) == MOVE_BIPED)) {
+    if ((mech_class(mech) == CLASS_MECH) &&
+        (mech_movement_type(mech) == MOVE_BIPED)) {
 
       /* Center the torso */
-      MechStatus(mech) &= ~(TORSO_RIGHT | TORSO_LEFT);
+      mech_torso_twist_set(mech, MECH_TORSO_CENTER);
 
-      if (MechSpecials(mech) & FLIPABLE_ARMS) {
+      if (mech_technology_flags(mech) & FLIPABLE_ARMS) {
 
         /* Center the arms if need be */
-        MechStatus(mech) &= ~(FLIPPED_ARMS);
+        mech_arms_center(mech);
       }
 
       /* Find direction of bad guy */
-      what_arc =
-          InWeaponArc(mech, MechFX(physical_target), MechFY(physical_target));
+      what_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
+                             mech_position_real_y(physical_target));
 
       /* Rotate if we need to */
       if (what_arc & LSIDEARC) {
 
         /* Rotate Left */
-        MechStatus(mech) |= TORSO_LEFT;
+        mech_torso_twist_set(mech, MECH_TORSO_LEFT);
 
       } else if (what_arc & RSIDEARC) {
 
         /* Rotate Right */
-        MechStatus(mech) |= TORSO_RIGHT;
+        mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
 
       } else if (what_arc & REARARC) {
 
         /* Find out if it would be better to
          * rotate left or right */
         relative_bearing =
-            MechFacing(mech) - FindBearing(MechFX(mech), MechFY(mech),
-                                           MechFX(physical_target),
-                                           MechFY(physical_target));
+            mech_heading_degrees(mech) -
+            FindBearing(mech_position_real_x(mech), mech_position_real_y(mech),
+                        mech_position_real_x(physical_target),
+                        mech_position_real_y(physical_target));
 
         if (relative_bearing > 120 && relative_bearing < 180) {
 
           /* Rotate Right */
-          MechStatus(mech) |= TORSO_RIGHT;
+          mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
 
         } else if (relative_bearing > 180 && relative_bearing < 240) {
 
           /* Rotate Left */
-          MechStatus(mech) |= TORSO_LEFT;
+          mech_torso_twist_set(mech, MECH_TORSO_LEFT);
         }
 
         /* ELSE: Hes directly behind us so we can't do anything */
       }
 
       /* Calculate the new arc */
-      new_arc =
-          InWeaponArc(mech, MechFX(physical_target), MechFY(physical_target));
+      new_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
+                            mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
       memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
-      is_section_destroyed[0] = SectIsDestroyed(mech, RARM);
-      is_section_destroyed[1] = SectIsDestroyed(mech, LARM);
-      is_section_destroyed[2] = SectIsDestroyed(mech, RLEG);
-      is_section_destroyed[3] = SectIsDestroyed(mech, LLEG);
+      is_section_destroyed[0] = mech_section_is_destroyed(mech, RARM);
+      is_section_destroyed[1] = mech_section_is_destroyed(mech, LARM);
+      is_section_destroyed[2] = mech_section_is_destroyed(mech, RLEG);
+      is_section_destroyed[3] = mech_section_is_destroyed(mech, LLEG);
 
       /* Check to see if the sections have a busy weapon */
       memset(section_hasbusyweap, 0, sizeof(section_hasbusyweap));
@@ -176,12 +204,11 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
       /* Right Arm */
       if (!is_section_destroyed[0] && !section_hasbusyweap[0] &&
-          !AnyLimbsRecycling(mech) &&
+          !mech_limbs_are_recycling(mech) &&
           ((new_arc & FORWARDARC) || (new_arc & RSIDEARC)) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
-        snprintf(buffer, LBUF_SIZE, "r %c%c", MechID(target)[0],
-                 MechID(target)[1]);
+        format_physical_command(buffer, 'r', target);
 
         if (have_axe(mech, RARM))
           mech_axe(autopilot->mynum, mech, buffer);
@@ -193,12 +220,11 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
       /* Left Arm */
       if (!is_section_destroyed[1] && !section_hasbusyweap[1] &&
-          !AnyLimbsRecycling(mech) &&
+          !mech_limbs_are_recycling(mech) &&
           ((new_arc & FORWARDARC) || (new_arc & LSIDEARC)) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
-        snprintf(buffer, LBUF_SIZE, "l %c%c", MechID(target)[0],
-                 MechID(target)[1]);
+        format_physical_command(buffer, 'l', target);
 
         if (have_axe(mech, LARM))
           mech_axe(autopilot->mynum, mech, buffer);
@@ -213,7 +239,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
        * front arc */
       if ((!section_hasbusyweap[2] || !section_hasbusyweap[3]) &&
           !is_section_destroyed[2] && !is_section_destroyed[3] &&
-          (what_arc & FORWARDARC) && !AnyLimbsRecycling(mech) &&
+          (what_arc & FORWARDARC) && !mech_limbs_are_recycling(mech) &&
           (elevation_diff == 0 || elevation_diff == 1)) {
 
         rleg_bth = 0;
@@ -221,13 +247,17 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the RLEG for any crits or weaps cycling */
         if (!section_hasbusyweap[2]) {
-          if (!OkayCritSectS(RLEG, 0, SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(mech, RLEG, 0,
+                                                    SHOULDER_OR_HIP))
             rleg_bth += 3;
-          if (!OkayCritSectS(RLEG, 1, UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RLEG, 1,
+                                                    UPPER_ACTUATOR))
             rleg_bth++;
-          if (!OkayCritSectS(RLEG, 2, LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RLEG, 2,
+                                                    LOWER_ACTUATOR))
             rleg_bth++;
-          if (!OkayCritSectS(RLEG, 3, HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RLEG, 3,
+                                                    HAND_OR_FOOT_ACTUATOR))
             rleg_bth++;
         } else {
           rleg_bth = 99;
@@ -235,13 +265,17 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the LLEG for any crits or weaps cycling */
         if (!section_hasbusyweap[3]) {
-          if (!OkayCritSectS(LLEG, 0, SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(mech, LLEG, 0,
+                                                    SHOULDER_OR_HIP))
             lleg_bth += 3;
-          if (!OkayCritSectS(LLEG, 1, UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LLEG, 1,
+                                                    UPPER_ACTUATOR))
             lleg_bth++;
-          if (!OkayCritSectS(LLEG, 2, LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LLEG, 2,
+                                                    LOWER_ACTUATOR))
             lleg_bth++;
-          if (!OkayCritSectS(LLEG, 3, HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LLEG, 3,
+                                                    HAND_OR_FOOT_ACTUATOR))
             lleg_bth++;
         } else {
           rleg_bth = 99;
@@ -250,11 +284,9 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
         /* Now kick depending on which one would be better
          * to kick with */
         if (rleg_bth <= lleg_bth) {
-          snprintf(buffer, LBUF_SIZE, "r %c%c", MechID(physical_target)[0],
-                   MechID(physical_target)[1]);
+          format_physical_command(buffer, 'r', physical_target);
         } else {
-          snprintf(buffer, LBUF_SIZE, "l %c%c", MechID(physical_target)[0],
-                   MechID(physical_target)[1]);
+          format_physical_command(buffer, 'l', physical_target);
         }
         mech_kick(autopilot->mynum, mech, buffer);
       }
@@ -262,7 +294,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
       /* Finally try to punch */
       if (((!is_section_destroyed[0] && !section_hasbusyweap[0]) ||
            (!is_section_destroyed[1] && !section_hasbusyweap[1])) &&
-          !AnyLimbsRecycling(mech) &&
+          !mech_limbs_are_recycling(mech) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
         is_rarm_ready = 0;
@@ -283,37 +315,34 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
         }
 
         if (is_rarm_ready == 1 && is_larm_ready == 1) {
-          snprintf(buffer, LBUF_SIZE, "b %c%c", MechID(target)[0],
-                   MechID(target)[1]);
+          format_physical_command(buffer, 'b', target);
         } else if (is_rarm_ready == 1) {
-          snprintf(buffer, LBUF_SIZE, "r %c%c", MechID(target)[0],
-                   MechID(target)[1]);
+          format_physical_command(buffer, 'r', target);
         } else {
-          snprintf(buffer, LBUF_SIZE, "l %c%c", MechID(target)[0],
-                   MechID(target)[1]);
+          format_physical_command(buffer, 'l', target);
         }
 
         /* Now punch */
         mech_punch(autopilot->mynum, mech, buffer);
       }
 
-    } else if ((MechType(mech) == CLASS_MECH) &&
-               (MechMove(mech) == MOVE_QUAD)) {
+    } else if ((mech_class(mech) == CLASS_MECH) &&
+               (mech_movement_type(mech) == MOVE_QUAD)) {
 
       /* Quad Mech - Right now only supporting kicking front style for quad */
       /* Remember, the RARM becomes the Front RLEG and the LARM becomes the
        * Front LLEG */
 
       /* Find direction of bad guy */
-      what_arc =
-          InWeaponArc(mech, MechFX(physical_target), MechFY(physical_target));
+      what_arc = InWeaponArc(mech, mech_position_real_x(physical_target),
+                             mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
       memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
-      is_section_destroyed[0] = SectIsDestroyed(mech, RARM);
-      is_section_destroyed[1] = SectIsDestroyed(mech, LARM);
-      is_section_destroyed[2] = SectIsDestroyed(mech, RLEG);
-      is_section_destroyed[3] = SectIsDestroyed(mech, LLEG);
+      is_section_destroyed[0] = mech_section_is_destroyed(mech, RARM);
+      is_section_destroyed[1] = mech_section_is_destroyed(mech, LARM);
+      is_section_destroyed[2] = mech_section_is_destroyed(mech, RLEG);
+      is_section_destroyed[3] = mech_section_is_destroyed(mech, LLEG);
 
       /* Check to see if the sections have a busy weapon */
       memset(section_hasbusyweap, 0, sizeof(section_hasbusyweap));
@@ -328,7 +357,7 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
       if ((!section_hasbusyweap[0] || !section_hasbusyweap[0]) &&
           !is_section_destroyed[0] && !is_section_destroyed[1] &&
           !is_section_destroyed[2] && !is_section_destroyed[3] &&
-          (what_arc & FORWARDARC) && !AnyLimbsRecycling(mech) &&
+          (what_arc & FORWARDARC) && !mech_limbs_are_recycling(mech) &&
           (elevation_diff == 0 || elevation_diff == 1)) {
 
         rleg_bth = 0;
@@ -336,13 +365,17 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the Front Right Leg for any crits or weaps cycling */
         if (!section_hasbusyweap[0]) {
-          if (!OkayCritSectS(RARM, 0, SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(mech, RARM, 0,
+                                                    SHOULDER_OR_HIP))
             rleg_bth += 3;
-          if (!OkayCritSectS(RARM, 1, UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RARM, 1,
+                                                    UPPER_ACTUATOR))
             rleg_bth++;
-          if (!OkayCritSectS(RARM, 2, LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RARM, 2,
+                                                    LOWER_ACTUATOR))
             rleg_bth++;
-          if (!OkayCritSectS(RARM, 3, HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, RARM, 3,
+                                                    HAND_OR_FOOT_ACTUATOR))
             rleg_bth++;
         } else {
           rleg_bth = 99;
@@ -350,13 +383,17 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Check the Front Left Leg for any crits or weaps cycling */
         if (!section_hasbusyweap[1]) {
-          if (!OkayCritSectS(LARM, 0, SHOULDER_OR_HIP))
+          if (!mech_critical_is_operational_special(mech, LARM, 0,
+                                                    SHOULDER_OR_HIP))
             lleg_bth += 3;
-          if (!OkayCritSectS(LARM, 1, UPPER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LARM, 1,
+                                                    UPPER_ACTUATOR))
             lleg_bth++;
-          if (!OkayCritSectS(LARM, 2, LOWER_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LARM, 2,
+                                                    LOWER_ACTUATOR))
             lleg_bth++;
-          if (!OkayCritSectS(LARM, 3, HAND_OR_FOOT_ACTUATOR))
+          if (!mech_critical_is_operational_special(mech, LARM, 3,
+                                                    HAND_OR_FOOT_ACTUATOR))
             lleg_bth++;
         } else {
           rleg_bth = 99;
@@ -365,16 +402,14 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
         /* Now kick depending on which one would be better
          * to kick with */
         if (rleg_bth <= lleg_bth) {
-          snprintf(buffer, LBUF_SIZE, "r %c%c", MechID(physical_target)[0],
-                   MechID(physical_target)[1]);
+          format_physical_command(buffer, 'r', physical_target);
         } else {
-          snprintf(buffer, LBUF_SIZE, "l %c%c", MechID(physical_target)[0],
-                   MechID(physical_target)[1]);
+          format_physical_command(buffer, 'l', physical_target);
         }
         mech_kick(autopilot->mynum, mech, buffer);
       }
 
-    } else if (MechType(mech) == CLASS_BSUIT) {
+    } else if (mech_class(mech) == CLASS_BSUIT) {
 
       /* Are we a BSuit */
 

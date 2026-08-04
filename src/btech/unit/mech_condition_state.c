@@ -70,3 +70,13 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .masc_counter = mech->rd.masc_value,
   };
 }
+
+void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
+  mech->rd.status &= ~(TORSO_RIGHT | TORSO_LEFT);
+  if (twist == MECH_TORSO_LEFT)
+    mech->rd.status |= TORSO_LEFT;
+  else if (twist == MECH_TORSO_RIGHT)
+    mech->rd.status |= TORSO_RIGHT;
+}
+
+void mech_arms_center(Mech *mech) { mech->rd.status &= ~FLIPPED_ARMS; }

@@ -30,6 +30,7 @@ bool mech_section_is_flooded(const Mech *mech, int section);
 bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special);
 bool mech_section_carries_club(const Mech *mech, int section);
+bool mech_limbs_are_recycling(const Mech *mech);
 int mech_section_recycle_ticks(const Mech *mech, int section);
 bool mech_part_is_structural_placeholder(int part_type);
 void mech_section_armor_set(Mech *mech, int section, int armor);

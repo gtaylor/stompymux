@@ -105,6 +105,11 @@ bool mech_section_carries_club(const Mech *mech, int section) {
   return mech->ud.sections[section].specials & CARRYING_CLUB;
 }
 
+bool mech_limbs_are_recycling(const Mech *mech) {
+  return mech->ud.sections[RARM].recycle || mech->ud.sections[LARM].recycle ||
+         mech->ud.sections[RLEG].recycle || mech->ud.sections[LLEG].recycle;
+}
+
 int mech_section_recycle_ticks(const Mech *mech, int section) {
   return mech->ud.sections[section].recycle;
 }

@@ -215,6 +215,7 @@ while IFS= read -r match; do
 done < <(rg -n \
   '#include "mech(_macros)?\.h"|\bmech->|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|FlyingT|HasCamo)\(' \
   src/btech/autopilot/autopilot_chase_target.c \
+  src/btech/autopilot/autopilot_physical_attack.c \
   src/btech/autopilot/autopilot_radio.c \
   src/btech/autopilot/autopilot_radio_catalog.c \
   src/btech/autopilot/autopilot_radio_handlers.c \
