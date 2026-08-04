@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "map_terrain.h"
-#include "mech.h"
-#include "mech_lifecycle.h"
+#include "mech_api_types.h"
+
+typedef struct BattleMap BattleMap;
 /*
    For all scanners chance of seeing a foe is modified by:
    - Side arcs are 70% chance

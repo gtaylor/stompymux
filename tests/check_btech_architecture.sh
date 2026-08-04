@@ -78,6 +78,12 @@ done < <(rg -n \
   src/btech/sensors/mech_tag.c || true)
 
 while IFS= read -r match; do
+  echo "$match: sensor catalogue exposes aggregate Mech layout"
+  status=1
+done < <(rg -n '#include "mech(_macros)?\.h"' \
+  src/btech/sensors/mech_sensor.h || true)
+
+while IFS= read -r match; do
   echo "$match: legacy sensor export is not allowed"
   status=1
 done < <(rg -n \

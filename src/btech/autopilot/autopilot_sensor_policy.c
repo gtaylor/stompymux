@@ -34,6 +34,14 @@
 #include "mux/server/diagnostics.h"
 #include "registry_api.h"
 
+static int sensor_index_clamp(int sensor) {
+  if (sensor < SENSOR_VIS)
+    return SENSOR_VIS;
+  if (sensor > SENSOR_BHAP)
+    return SENSOR_BHAP;
+  return sensor;
+}
+
 /* Function to determine if there are any slites affecting the AI */
 int SearchLightInRange(Mech *mech, BattleMap *map) {
 
@@ -269,8 +277,8 @@ void auto_sensor_event(Autopilot *autopilot) {
       (mech_sensor_index(mech, 0) != wanted_s[0] ||
        mech_sensor_index(mech, 1) != wanted_s[1])) {
 
-    wanted_s[0] = BOUNDED(SENSOR_VIS, wanted_s[0], SENSOR_BHAP);
-    wanted_s[1] = BOUNDED(SENSOR_VIS, wanted_s[1], SENSOR_BHAP);
+    wanted_s[0] = sensor_index_clamp(wanted_s[0]);
+    wanted_s[1] = sensor_index_clamp(wanted_s[1]);
 
     mech_sensors_set(mech, wanted_s[0], wanted_s[1]);
     mech_notify(mech, MECHALL, "As your sensors change, your lock clears.");
