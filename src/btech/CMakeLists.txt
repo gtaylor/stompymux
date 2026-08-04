@@ -50,6 +50,16 @@ set(BTECH_SOURCES
   combat/mech_fire.c
   combat/mech_weapon_modes.c
   combat/mech_hitloc.c
+  combat/mech_hitloc_fasa.c
+  combat/mech_hitloc_fasa_mech.c
+  combat/mech_hitloc_fasa_ground.c
+  combat/mech_hitloc_fasa_aerospace.c
+  combat/mech_hitloc_fasa_vtol_naval.c
+  combat/mech_hitloc_motive.c
+  combat/mech_hitloc_advanced.c
+  combat/mech_hitloc_critproof.c
+  combat/mech_hitloc_standard.c
+  combat/mech_hitloc_targeting.c
   combat/mech_physical.c
   combat/mech_physical_commands.c
   combat/mech_physical_resolution.c
