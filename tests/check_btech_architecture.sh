@@ -181,6 +181,18 @@ done < <(rg -n \
   '\b(GetBrandIndex|GetPartBrandName|CheckGenericFail|CheckWeaponFailed)\b' \
   src/btech || true)
 
+while IFS= read -r match; do
+  echo "$match: tactical style renderer depends on aggregate Mech layout"
+  status=1
+done < <(rg -n '#include "mech(_maps_internal|_macros)?\.h"' \
+  src/btech/ui/mech_tactical_style.c \
+  src/btech/ui/mech_map_render_internal.h || true)
+
+if [[ -e src/btech/ui/coolmenu_interface.h ]]; then
+  echo "src/btech/ui/coolmenu_interface.h: unused macro interface is not allowed"
+  status=1
+fi
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

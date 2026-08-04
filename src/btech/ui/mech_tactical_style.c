@@ -1,4 +1,8 @@
-#include "mech_maps_internal.h"
+#include "mech_map_render_internal.h"
+
+#include <assert.h>
+#include <ctype.h>
+#include <string.h>
 
 bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int dispcols, int disprows) {
