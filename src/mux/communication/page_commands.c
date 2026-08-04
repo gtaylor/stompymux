@@ -3,7 +3,9 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -17,7 +19,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
@@ -31,24 +32,27 @@ static int page_check(EvaluationContext *evaluation,
                                player) &&
       !is_wizard(evaluation->world->database, target) &&
       !is_wizard(evaluation->world->database, player)) {
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   if (!is_connected(evaluation->world->database, target)) {
-    notify_with_cause(
+    notify_checked(
         evaluation, player, target,
         tprintf("Sorry, %s is not connected.",
-                game_object_name(evaluation->world->database, target)));
+                game_object_name(evaluation->world->database, target)),
+        MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   if (!is_wizard(evaluation->world->database, player) &&
       is_in_character_location(evaluation->world->database, configuration,
                                target) &&
       !is_wizard(evaluation->world->database, target)) {
-    notify_with_cause(
+    notify_checked(
         evaluation, player, target,
         tprintf("Sorry, %s is not accepting pages.",
-                game_object_name(evaluation->world->database, target)));
+                game_object_name(evaluation->world->database, target)),
+        MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   return 1;
@@ -116,7 +120,8 @@ void do_page(CommandInvocation *invocation) {
                          A_LASTPAGE, &aflags);
     if (!*tname) {
       if (!*targetname)
-        notify(evaluation, player, "You have not paged anyone.");
+        notify_checked(evaluation, player, player, "You have not paged anyone.",
+                       MSG_ME_ALL | MSG_F_DOWN);
       else
         for (p = (char *)strtok(targetname, " "); p != nullptr;
              p = (char *)strtok(nullptr, " ")) {
@@ -182,29 +187,32 @@ void do_page(CommandInvocation *invocation) {
       } else {
         switch (*message) {
         case ':':
-          notify_with_cause(
+          notify_checked(
               evaluation, target, player,
               tprintf("From afar, to (%s):%s %s %s", buf1, aladd,
                       game_object_name(evaluation->world->database, player),
-                      message + 1));
+                      message + 1),
+              MSG_ME_ALL | MSG_F_DOWN);
           break;
         case ';':
           message++;
-          notify_with_cause(
+          notify_checked(
               evaluation, target, player,
               tprintf("From afar, to (%s):%s %s%s", buf1, aladd,
                       game_object_name(evaluation->world->database, player),
-                      message));
+                      message),
+              MSG_ME_ALL | MSG_F_DOWN);
           break;
         case '"':
           message++;
           [[fallthrough]];
         default:
-          notify_with_cause(
+          notify_checked(
               evaluation, target, player,
               tprintf("To (%s), %s%s pages you: %s", buf1,
                       game_object_name(evaluation->world->database, player),
-                      aladd, message));
+                      aladd, message),
+              MSG_ME_ALL | MSG_F_DOWN);
         }
         safe_str(tprintf("%ld ", target), buf2, &bp2);
         count++;
@@ -221,29 +229,32 @@ void do_page(CommandInvocation *invocation) {
 
       switch (*message) {
       case ':':
-        notify_with_cause(
+        notify_checked(
             evaluation, target, player,
             tprintf("From afar,%s %s %s", aladd,
                     game_object_name(evaluation->world->database, player),
-                    message + 1));
+                    message + 1),
+            MSG_ME_ALL | MSG_F_DOWN);
         break;
       case ';':
         message++;
-        notify_with_cause(
+        notify_checked(
             evaluation, target, player,
             tprintf("From afar,%s %s%s", aladd,
                     game_object_name(evaluation->world->database, player),
-                    message));
+                    message),
+            MSG_ME_ALL | MSG_F_DOWN);
         break;
       case '"':
         message++;
         [[fallthrough]];
       default:
-        notify_with_cause(
+        notify_checked(
             evaluation, target, player,
             tprintf("%s%s pages: %s",
                     game_object_name(evaluation->world->database, player),
-                    aladd, message));
+                    aladd, message),
+            MSG_ME_ALL | MSG_F_DOWN);
       }
       safe_str(tprintf("%ld ", target), buf2, &bp2);
       safe_str(tprintf("%s, ",

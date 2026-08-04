@@ -3,7 +3,9 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/object_spatial.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -16,7 +18,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
@@ -47,18 +48,22 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
     }
     switch (who) {
     case NOTHING:
-      notify(evaluation, player, "Emit to whom?");
+      notify_checked(evaluation, player, player, "Emit to whom?",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     case AMBIGUOUS:
-      notify(evaluation, player, "I don't know who you mean!");
+      notify_checked(evaluation, player, player, "I don't know who you mean!",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     default:
       if (!ok_to_do) {
-        notify(evaluation, player, "You cannot do that.");
+        notify_checked(evaluation, player, player, "You cannot do that.",
+                       MSG_ME_ALL | MSG_F_DOWN);
         break;
       }
       if (is_good_obj(evaluation->world->database, who))
-        notify_with_cause(evaluation, who, player, message);
+        notify_checked(evaluation, who, player, message,
+                       MSG_ME_ALL | MSG_F_DOWN);
     }
   }
 }
@@ -107,17 +112,21 @@ void do_pemit(CommandInvocation *invocation) {
   case NOTHING:
     switch (key) {
     case PEMIT_PEMIT:
-      notify(evaluation, player, "Emit to whom?");
+      notify_checked(evaluation, player, player, "Emit to whom?",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     case PEMIT_OEMIT:
-      notify(evaluation, player, "Emit except to whom?");
+      notify_checked(evaluation, player, player, "Emit except to whom?",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     default:
-      notify(evaluation, player, "Sorry.");
+      notify_checked(evaluation, player, player, "Sorry.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     }
     break;
   case AMBIGUOUS:
-    notify(evaluation, player, "I don't know who you mean!");
+    notify_checked(evaluation, player, player, "I don't know who you mean!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
     /*
@@ -130,12 +139,15 @@ void do_pemit(CommandInvocation *invocation) {
       ok_to_do = 1;
     }
     if (!ok_to_do) {
-      notify(evaluation, player, "You are too far away to do that.");
+      notify_checked(evaluation, player, player,
+                     "You are too far away to do that.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     if (do_contents &&
         !is_controls(evaluation->world->database, player, target)) {
-      notify(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     loc = where_is(evaluation->world->database, target);
@@ -144,10 +156,13 @@ void do_pemit(CommandInvocation *invocation) {
     case PEMIT_PEMIT:
       if (do_contents) {
         if (has_contents(evaluation->world->database, target)) {
-          notify_all_from_inside(evaluation, target, player, message);
+          notify_checked(evaluation, target, player, message,
+                         MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
+                             MSG_F_CONTENTS | MSG_S_INSIDE);
         }
       } else {
-        notify_with_cause(evaluation, target, player, message);
+        notify_checked(evaluation, target, player, message,
+                       MSG_ME_ALL | MSG_F_DOWN);
       }
       break;
     case PEMIT_OEMIT:
@@ -166,21 +181,27 @@ void do_pemit(CommandInvocation *invocation) {
       }
       break;
     case PEMIT_FPOSE:
-      notify_all_from_inside(
+      notify_checked(
           evaluation, loc, player,
           tprintf("%s %s",
                   game_object_name(evaluation->world->database, target),
-                  message));
+                  message),
+          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+              MSG_S_INSIDE);
       break;
     case PEMIT_FPOSE_NS:
-      notify_all_from_inside(
+      notify_checked(
           evaluation, loc, player,
           tprintf("%s%s", game_object_name(evaluation->world->database, target),
-                  message));
+                  message),
+          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+              MSG_S_INSIDE);
       break;
     case PEMIT_FEMIT:
       if ((pemit_flags & PEMIT_HERE) || !pemit_flags)
-        notify_all_from_inside(evaluation, loc, player, message);
+        notify_checked(evaluation, loc, player, message,
+                       MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
+                           MSG_F_CONTENTS | MSG_S_INSIDE);
       if (pemit_flags & PEMIT_ROOM) {
         if ((typeof_obj(evaluation->world->database, loc) ==
              OBJECT_TYPE_ROOM) &&
@@ -197,7 +218,9 @@ void do_pemit(CommandInvocation *invocation) {
             return;
         }
         if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
-          notify_all_from_inside(evaluation, loc, player, message);
+          notify_checked(evaluation, loc, player, message,
+                         MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
+                             MSG_F_CONTENTS | MSG_S_INSIDE);
         }
       }
       break;

@@ -7,6 +7,8 @@
  *       All rights reserved
  */
 
+#include "mux/server/game.h"
+#include "mux/world/access.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -8,6 +8,7 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
@@ -26,7 +27,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"

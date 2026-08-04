@@ -1,5 +1,6 @@
 /* signals.c - Process signal registration and server shutdown handlers. */
 
+#include "mux/network/network_output.h"
 #include "mux/server/platform.h"
 #include <signal.h>
 #include <uv.h>
@@ -8,7 +9,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
 #include "mux/server/server_lifecycle.h"

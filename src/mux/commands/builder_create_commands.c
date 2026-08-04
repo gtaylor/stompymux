@@ -2,8 +2,13 @@
  * builder_commands.c -- Commands that create and configure world objects
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
+#include "mux/server/game.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
+#include "mux/world/player.h"
 
 #include "p.glue.h"
 
@@ -18,7 +23,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -72,11 +76,13 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
    */
 
   if (!is_good_obj(evaluation->world->database, room)) {
-    notify_quiet(evaluation, player, "That's not a valid object.");
+    notify_checked(evaluation, player, player, "That's not a valid object.",
+                   MSG_ME);
     return NOTHING;
   } else if (!has_contents(evaluation->world->database, room) ||
              !is_linkable(evaluation->world->database, player, room)) {
-    notify_quiet(evaluation, player, "You can't link to that.");
+    notify_checked(evaluation, player, player, "You can't link to that.",
+                   MSG_ME);
     return NOTHING;
   } else {
     return room;
@@ -99,10 +105,10 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
     return;
 
   if (!direction || !*direction) {
-    notify_quiet(evaluation, player, "Open where?");
+    notify_checked(evaluation, player, player, "Open where?", MSG_ME);
     return;
   } else if (!is_controls(evaluation->world->database, player, loc)) {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }
   compiled_direction =
@@ -127,7 +133,7 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
    * and we're done
    */
 
-  notify_quiet(evaluation, player, "Opened.");
+  notify_checked(evaluation, player, player, "Opened.", MSG_ME);
 
   /*
    * See if we should do a link
@@ -151,7 +157,7 @@ static void open_exit(EvaluationContext *evaluation, DbRef player, DbRef loc,
       return;
     }
     game_object_set_location(evaluation->world->database, exit, loc);
-    notify_quiet(evaluation, player, "Linked.");
+    notify_checked(evaluation, player, player, "Linked.", MSG_ME);
   }
 }
 
@@ -211,7 +217,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
 
   if (dest != HOME) {
     if (!is_controls(evaluation->world->database, player, dest)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
       return;
     }
     if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
@@ -227,7 +233,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
 
   if ((game_object_location(evaluation->world->database, exit) != NOTHING) &&
       !is_controls(evaluation->world->database, player, exit)) {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }
   /*
@@ -236,7 +242,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
 
   game_object_set_location(evaluation->world->database, exit, dest);
   if (!is_quiet(evaluation->world->database, player))
-    notify_quiet(evaluation, player, "Linked.");
+    notify_checked(evaluation, player, player, "Linked.", MSG_ME);
 }
 
 void do_link(CommandInvocation *invocation) {
@@ -289,7 +295,7 @@ void do_link(CommandInvocation *invocation) {
      */
 
     if (!is_controls(evaluation->world->database, player, thing)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
       break;
     }
     init_match(&invocation->context->match, player, where, OBJECT_TYPE_NOTYPE);
@@ -298,22 +304,24 @@ void do_link(CommandInvocation *invocation) {
     if (!is_good_obj(evaluation->world->database, room))
       break;
     if (!has_contents(evaluation->world->database, room)) {
-      notify_quiet(evaluation, player, "Can't link to an exit.");
+      notify_checked(evaluation, player, player, "Can't link to an exit.",
+                     MSG_ME);
       break;
     }
     if (!can_set_home(evaluation, player, thing, room)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if (!lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_SET_HOME, false,
                           &lock, &result)) {
       notify_lock_failure(evaluation, &lock, &result, "Permission denied.",
                           nullptr, LUA_EVENT_NONE);
     } else if (room == HOME) {
-      notify_quiet(evaluation, player, "Can't set home to home.");
+      notify_checked(evaluation, player, player, "Can't set home to home.",
+                     MSG_ME);
     } else {
       game_object_set_link(evaluation->world->database, thing, room);
       if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Home set.");
+        notify_checked(evaluation, player, player, "Home set.", MSG_ME);
     }
     break;
   case OBJECT_TYPE_ROOM:
@@ -323,7 +331,7 @@ void do_link(CommandInvocation *invocation) {
      */
 
     if (!is_controls(evaluation->world->database, player, thing)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
       break;
     }
     room = parse_linkable_room(evaluation, &invocation->context->match, player,
@@ -332,10 +340,10 @@ void do_link(CommandInvocation *invocation) {
       break;
 
     if ((room != HOME) && !is_room(evaluation->world->database, room)) {
-      notify_quiet(evaluation, player, "That is not a room!");
+      notify_checked(evaluation, player, player, "That is not a room!", MSG_ME);
     } else if ((room != HOME) &&
                !is_controls(evaluation->world->database, player, room)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if ((room != HOME) &&
                !lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_LINK, false, &lock,
@@ -345,11 +353,11 @@ void do_link(CommandInvocation *invocation) {
     } else {
       game_object_set_location(evaluation->world->database, thing, room);
       if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Dropto set.");
+        notify_checked(evaluation, player, player, "Dropto set.", MSG_ME);
     }
     break;
   case OBJECT_TYPE_GARBAGE:
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     break;
   default:
     log_error(evaluation->log, LOG_BUGS, "BUG", "OTYPE",
@@ -380,7 +388,7 @@ void do_dig(CommandInvocation *invocation) {
    */
 
   if (!name || !*name) {
-    notify_quiet(evaluation, player, "Dig what?");
+    notify_checked(evaluation, player, player, "Dig what?", MSG_ME);
     return;
   }
   compiled_name = builder_compile_object_name(evaluation, player, name);
@@ -430,7 +438,7 @@ void do_create(CommandInvocation *invocation) {
   styled_text_strip(evaluation->world->styled_text_palette, compiled_name,
                     clearbuffer, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
-    notify_quiet(evaluation, player, "Create what?");
+    notify_checked(evaluation, player, player, "Create what?", MSG_ME);
     free_lbuf(compiled_name);
     return;
   }
@@ -483,16 +491,17 @@ void do_clone(CommandInvocation *invocation) {
   /* Cloning requires examination permission. */
 
   if (!is_examinable(evaluation->world->database, player, thing)) {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }
   if (is_player(evaluation->world->database, thing)) {
-    notify_quiet(evaluation, player, "You cannot clone players!");
+    notify_checked(evaluation, player, player, "You cannot clone players!",
+                   MSG_ME);
     return;
   }
   if ((typeof_obj(evaluation->world->database, thing) == OBJECT_TYPE_EXIT) &&
       !is_controls(evaluation->world->database, player, loc)) {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }
 
@@ -507,7 +516,8 @@ void do_clone(CommandInvocation *invocation) {
     styled_text_strip(evaluation->world->styled_text_palette, clone_name,
                       pure_name, sizeof(pure_name));
     if (!ok_name(invocation->context->world->configuration, pure_name)) {
-      notify_quiet(evaluation, player, "That is not a reasonable name.");
+      notify_checked(evaluation, player, player,
+                     "That is not a reasonable name.", MSG_ME);
       free_lbuf(clone_name);
       return;
     }
@@ -618,14 +628,16 @@ void do_pcreate(CommandInvocation *invocation) {
 
   newplayer = create_player(evaluation, name, pass);
   if (newplayer == NOTHING) {
-    notify_quiet(evaluation, player, tprintf("Failure creating '%s'", name));
+    notify_checked(evaluation, player, player,
+                   tprintf("Failure creating '%s'", name), MSG_ME);
     return;
   }
   move_object(evaluation, newplayer,
               invocation->context->world->configuration->start_room);
-  notify_quiet(evaluation, player,
-               tprintf("New player '%s' (#%ld) created with password '%s'",
-                       name, newplayer, pass));
+  notify_checked(evaluation, player, player,
+                 tprintf("New player '%s' (#%ld) created with password '%s'",
+                         name, newplayer, pass),
+                 MSG_ME);
 
   STARTLOG(evaluation->log, LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
     log_name(evaluation->log, newplayer);

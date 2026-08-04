@@ -1,5 +1,6 @@
 /* help_render.c - Renders help articles to plain text for display. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <stdio.h>
@@ -12,7 +13,6 @@
 #include "mux/help/help_index.h"
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
-#include "mux/server/server_api.h"
 
 void help_text_buffer_init(HelpTextBuffer *buffer) {
   buffer->data = nullptr;
@@ -337,9 +337,9 @@ void help_render_send(EvaluationContext *evaluation, DbRef player,
     if (line_length >= sizeof(line))
       line_length = sizeof(line) - 1;
     if (line_length == 0) {
-      /* notify() silently drops empty messages, so a blank line needs a
+      /* notify_checked() silently drops empty messages, so a blank line needs a
        * single space to actually reach the player. */
-      notify(evaluation, player, " ");
+      notify_checked(evaluation, player, player, " ", MSG_ME_ALL | MSG_F_DOWN);
       if (!line_end)
         break;
       cursor = line_end + 1;
@@ -347,7 +347,7 @@ void help_render_send(EvaluationContext *evaluation, DbRef player,
     }
     memcpy(line, cursor, line_length);
     line[line_length] = '\0';
-    notify(evaluation, player, line);
+    notify_checked(evaluation, player, player, line, MSG_ME_ALL | MSG_F_DOWN);
     if (!line_end)
       break;
     cursor = line_end + 1;

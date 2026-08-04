@@ -3,6 +3,8 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 #include <dirent.h>
@@ -11,7 +13,6 @@
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/utf8.h"
@@ -283,7 +284,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
                     cache->connection_entries, &cache->connection_count,
                     MAX_CONN);
   if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(buff);
 }

@@ -2,7 +2,10 @@
  * look.c -- commands which look at things
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/object_spatial.h"
 
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command.h"
@@ -16,7 +19,6 @@
 #include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
@@ -115,7 +117,8 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
    * Display the list of exit names
    */
 
-  notify(evaluation, player, exit_name);
+  notify_checked(evaluation, player, player, exit_name,
+                 MSG_ME_ALL | MSG_F_DOWN);
   e = buff = alloc_lbuf("look_exits");
   buff1 = alloc_lbuf("look_exits2");
   command = alloc_lbuf("look_exits.command");
@@ -153,7 +156,7 @@ static void look_exits(EvaluationContext *evaluation, DbRef player, DbRef loc,
   if (!(is_transparent(evaluation->world->database, loc))) {
     safe_str("\r\n", buff, &e);
     *e = 0;
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(buff);
   free_lbuf(buff1);
@@ -187,13 +190,15 @@ static void look_contents(EvaluationContext *evaluation, DbRef player,
        * something exists!  show him everything
        */
 
-      notify(evaluation, player, contents_name);
+      notify_checked(evaluation, player, player, contents_name,
+                     MSG_ME_ALL | MSG_F_DOWN);
       DOLIST(evaluation->world->database, thing,
              game_object_contents(evaluation->world->database, loc)) {
         if (can_see(evaluation, player, thing, can_see_loc)) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing);
-          notify(evaluation, player, buff);
+          notify_checked(evaluation, player, player, buff,
+                         MSG_ME_ALL | MSG_F_DOWN);
           free_lbuf(buff);
         }
       }
@@ -227,7 +232,8 @@ static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
   if (!result.defined)
     return false;
   if (*result.rendered)
-    notify(evaluation, player, result.rendered);
+    notify_checked(evaluation, player, player, result.rendered,
+                   MSG_ME_ALL | MSG_F_DOWN);
   notify_event(evaluation,
                evaluation->command ? evaluation->command->descriptor : nullptr,
                player, player, thing, LUA_EVENT_DESCRIBE, nullptr, 0);
@@ -256,7 +262,7 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
   if (is_examinable(evaluation->world->database, player, thing)) {
     buff =
         unparse_object(evaluation->world->database, evaluation, player, thing);
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buff);
   }
   pattr = A_DESC;
@@ -338,7 +344,7 @@ void look_in(EvaluationContext *evaluation, DbRef player, DbRef loc, int key) {
   custom = look_custom_appearance(evaluation, player, loc);
   if (!custom) {
     buff = unparse_object(evaluation->world->database, evaluation, player, loc);
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buff);
 
     show_desc(evaluation, player, loc,
@@ -394,7 +400,8 @@ void do_look(CommandInvocation *invocation) {
       if (key & LOOK_OUTSIDE) {
         if (typeof_obj(evaluation->world->database, thing) ==
             OBJECT_TYPE_ROOM) {
-          notify_quiet(evaluation, player, "You can't look outside.");
+          notify_checked(evaluation, player, player, "You can't look outside.",
+                         MSG_ME);
           return;
         }
         thing = game_object_location(evaluation->world->database, thing);

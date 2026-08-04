@@ -3,7 +3,10 @@
  */
 
 #include "mux/world/object.h"
+#include "mux/server/game.h"
+#include "mux/world/move.h"
 #include "mux/world/object_internal.h"
+#include "mux/world/player.h"
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
@@ -16,7 +19,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -236,14 +238,17 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     default_flags = &evaluation->world->configuration->default_player_flags;
     buff = munge_space(pure_name);
     if (!badname_check(evaluation->world, buff)) {
-      notify(evaluation, player, "That name is not allowed.");
+      notify_checked(evaluation, player, player, "That name is not allowed.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
       return NOTHING;
     }
     if (*buff) {
       okname = ok_player_name(evaluation->world->configuration, buff);
       if (!okname) {
-        notify(evaluation, player, "That's a silly name for a player.");
+        notify_checked(evaluation, player, player,
+                       "That's a silly name for a player.",
+                       MSG_ME_ALL | MSG_F_DOWN);
         free_lbuf(buff);
         return NOTHING;
       }
@@ -355,7 +360,8 @@ void destroy_obj(EvaluationContext *evaluation, DbRef player, DbRef obj) {
 
   if ((player != NOTHING) && !is_quiet(evaluation->world->database, player)) {
     if (!is_quiet(evaluation->world->database, obj))
-      notify(evaluation, player, "Destroyed.");
+      notify_checked(evaluation, player, player, "Destroyed.",
+                     MSG_ME_ALL | MSG_F_DOWN);
   }
 
   attribute_free(evaluation->world->database, obj);

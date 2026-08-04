@@ -1,5 +1,6 @@
 /* log_cache.c - Cached arbitrary-log file management. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <errno.h>
@@ -14,7 +15,6 @@
 #include "mux/server/event_timer.h"
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
@@ -80,12 +80,18 @@ static int _logcache_list(void *key, void *data, int depth, void *arg) {
 void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
                     DbRef player) {
   LogCacheListContext context = {.evaluation = evaluation, .player = player};
-  notify(evaluation, player, "/--------------------------- Open Logfiles");
+  notify_checked(evaluation, player, player,
+                 "/--------------------------- Open Logfiles",
+                 MSG_ME_ALL | MSG_F_DOWN);
   if (red_black_tree_size(cache->files) == 0) {
-    notify(evaluation, player, "- There are no open logfile handles.");
+    notify_checked(evaluation, player, player,
+                   "- There are no open logfile handles.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
-  notify(evaluation, player, "Filename                               Timeout");
+  notify_checked(evaluation, player, player,
+                 "Filename                               Timeout",
+                 MSG_ME_ALL | MSG_F_DOWN);
   red_black_tree_walk(cache->files, WALK_INORDER, _logcache_list, &context);
 }
 

@@ -1,5 +1,6 @@
 /* flags.c - object flag manipulation routines */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
@@ -7,7 +8,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
@@ -256,7 +256,8 @@ static bool flag_wizard_bit(EvaluationContext *evaluation, DbRef target,
   if (!is_god(evaluation->world->database, player))
     return false;
   if (is_god(evaluation->world->database, target) && clear) {
-    notify(evaluation, player, "You cannot make yourself mortal.");
+    notify_checked(evaluation, player, player,
+                   "You cannot make yourself mortal.", MSG_ME_ALL | MSG_F_DOWN);
     return false;
   }
   return flag_any(evaluation, target, player, flag, clear);
@@ -338,7 +339,7 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
     safe_chr(')', buffer, &out);
   }
   *out = '\0';
-  notify(evaluation, player, buffer);
+  notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buffer);
 }
 FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
@@ -359,18 +360,21 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
   while (*name && isspace((unsigned char)*name))
     name++;
   if (!*name) {
-    notify(evaluation, player,
-           clear ? "You must specify a flag to clear."
-                 : "You must specify a flag to set.");
+    notify_checked(evaluation, player, player,
+                   clear ? "You must specify a flag to clear."
+                         : "You must specify a flag to set.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   FlagEntry *flag = find_flag(indexes, target, name);
   if (!flag) {
-    notify(evaluation, player, "I don't understand that flag.");
+    notify_checked(evaluation, player, player, "I don't understand that flag.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if (!flag->handler(evaluation, target, player, flag->id, clear)) {
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player))

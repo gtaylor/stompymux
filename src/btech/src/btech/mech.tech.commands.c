@@ -12,6 +12,7 @@
 #include "mech.events.h"
 #include "mech.tech.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/game.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
 #include "p.econ.h"

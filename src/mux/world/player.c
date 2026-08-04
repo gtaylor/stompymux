@@ -3,17 +3,18 @@
  * player.c
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/communication/comsys.h"
+#include "mux/network/site_access.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
@@ -152,7 +153,7 @@ void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
   decrypt_logindata(atrbuf, &login_info);
   if (isgood) {
     if (login_info.new_bad > 0) {
-      notify(evaluation, player, "");
+      notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
       notify_printf(
           evaluation, player,
           "**** %d failed connect%s since your last successful connect. ****",
@@ -160,7 +161,7 @@ void record_login(EvaluationContext *evaluation, DbRef player, int isgood,
       notify_printf(evaluation, player,
                     "Most recent attempt was from %s on %s.",
                     login_info.bad[0].host, login_info.bad[0].dtm);
-      notify(evaluation, player, "");
+      notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
       login_info.new_bad = 0;
     }
     for (i = NUM_GOOD - 1; i > 0; i--) {
@@ -319,7 +320,8 @@ void do_last(CommandInvocation *invocation) {
   }
 
   if (target == NOTHING) {
-    notify(evaluation, player, "I couldn't find that player.");
+    notify_checked(evaluation, player, player, "I couldn't find that player.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   } else {
     atrbuf = attribute_get(world->database, target, A_LOGINDATA, &aflags);
     decrypt_logindata(atrbuf, &login_info);
@@ -563,6 +565,6 @@ void badname_list(EvaluationContext *evaluation, WorldContext *world,
    * Now display it
    */
 
-  notify(evaluation, player, buff);
+  notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buff);
 }

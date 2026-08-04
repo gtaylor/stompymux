@@ -3,6 +3,8 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
@@ -15,6 +17,7 @@
 #include "mux/communication/comsys.h"
 #include "mux/help/help_command.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/network/site_access.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -24,11 +27,11 @@
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/match.h"
+#include "mux/world/player.h"
 
 #ifdef ARBITRARY_LOGFILES
 #include "mux/server/log_cache.h"
@@ -163,19 +166,19 @@ static void list_cmdtable(EvaluationContext *evaluation,
   }
   *bp = '\0';
 
-  notify(evaluation, player, buf);
+  notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 
-  notify_quiet(evaluation, player, "Global commands:");
+  notify_checked(evaluation, player, player, "Global commands:", MSG_ME);
   count = lua_visit_global_commands(runtime->lua_owner->runtime, player,
                                     list_global_lua_command, &context);
   if (!count)
-    notify_quiet(evaluation, player, "  (none)");
+    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
 
-  notify_quiet(evaluation, player, "Object commands:");
+  notify_checked(evaluation, player, player, "Object commands:", MSG_ME);
   count = list_reachable_object_lua_commands(runtime, evaluation, player);
   if (!count)
-    notify_quiet(evaluation, player, "  (none)");
+    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
 }
 
 /*

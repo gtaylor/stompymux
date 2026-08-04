@@ -8,6 +8,7 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
@@ -28,7 +29,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -258,8 +258,9 @@ void do_who(CommandInvocation *invocation) {
   char *match = invocation->first;
 
   if (descriptor == nullptr) {
-    notify(&invocation->context->evaluation, player,
-           "@who is only available from an active connection.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "@who is only available from an active connection.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   dump_users(descriptor, match);
@@ -322,11 +323,13 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   size_t count = descriptor_telnet_environment_count(descriptor);
   char *buffer = alloc_lbuf("dump_telnet_environment");
 
-  notify(evaluation, viewer, "  NEW-ENVIRON:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  NEW-ENVIRON:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_new_environ_enabled ? "yes" : "no");
   if (count == 0) {
-    notify(evaluation, viewer, "    Variables: (none)");
+    notify_checked(evaluation, viewer, viewer, "    Variables: (none)",
+                   MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buffer);
     return;
   }
@@ -335,7 +338,8 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   for (size_t index = 0; index < count; index++)
     descriptor_telnet_environment_entry(descriptor, index, &entries[index]);
   qsort(entries, count, sizeof(entries[0]), telnet_environment_view_compare);
-  notify(evaluation, viewer, "    Variables:");
+  notify_checked(evaluation, viewer, viewer,
+                 "    Variables:", MSG_ME_ALL | MSG_F_DOWN);
   for (size_t index = 0; index < count; index++) {
     TelnetEnvironmentEntryView *entry = &entries[index];
     size_t value_position = 0;
@@ -360,7 +364,8 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
                             chunk_size);
       safe_chr('"', buffer, &position);
       *position = '\0';
-      notify(evaluation, viewer, buffer);
+      notify_checked(evaluation, viewer, viewer, buffer,
+                     MSG_ME_ALL | MSG_F_DOWN);
       value_position += chunk_size;
       first_chunk = false;
     } while (value_position < entry->value_size);
@@ -387,7 +392,8 @@ static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
       evaluation, viewer, "Telnet state for %s(#%ld), descriptor %d:",
       game_object_name(evaluation->world->database, descriptor->player),
       descriptor->player, descriptor->descriptor);
-  notify(evaluation, viewer, "  TTYPE / MTTS:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  TTYPE / MTTS:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_ttype_enabled ? "yes" : "no");
   notify_printf(evaluation, viewer, "    Client: \"%s\"", client);
@@ -398,12 +404,14 @@ static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
                 terminal_color_depth_name(descriptor->terminal_color_depth));
   notify_printf(evaluation, viewer, "    Screen reader: %s",
                 descriptor->is_screen_reader ? "yes" : "no");
-  notify(evaluation, viewer, "  NAWS:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  NAWS:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_naws_enabled ? "yes" : "no");
   notify_printf(evaluation, viewer, "    Window size: %dx%d",
                 descriptor->terminal_width, descriptor->terminal_height);
-  notify(evaluation, viewer, "  CHARSET:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  CHARSET:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_charset_enabled ? "yes" : "no");
   notify_printf(evaluation, viewer, "    Encoding: %s",
@@ -411,16 +419,20 @@ static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
   notify_printf(evaluation, viewer, "    Request pending: %s",
                 descriptor->is_charset_request_pending ? "yes" : "no");
   dump_telnet_environment(evaluation, viewer, descriptor);
-  notify(evaluation, viewer, "  GMCP:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  GMCP:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_gmcp_enabled ? "yes" : "no");
-  notify(evaluation, viewer, "  MSSP:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  MSSP:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Negotiated: %s",
                 descriptor->is_mssp_enabled ? "yes" : "no");
-  notify(evaluation, viewer, "  MCCP2:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  MCCP2:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Compression: %s",
                 descriptor->is_mccp_enabled ? "active" : "inactive");
-  notify(evaluation, viewer, "  ECHO:");
+  notify_checked(evaluation, viewer, viewer,
+                 "  ECHO:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Client echo: %s",
                 descriptor->is_echo_suppressed ? "suppressed" : "enabled");
   free_lbuf(terminal);
@@ -435,13 +447,15 @@ void do_telnet(CommandInvocation *invocation) {
   int count = 0;
 
   if (invocation->first == nullptr || invocation->first[0] == '\0') {
-    notify(evaluation, invocation->player, "Usage: @telnet <player>");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Usage: @telnet <player>", MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   target = lookup_player(invocation->context->world, invocation->player,
                          invocation->first, 0);
   if (target == NOTHING) {
-    notify(evaluation, invocation->player, "No such player.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "No such player.", MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   iterator =
@@ -451,7 +465,8 @@ void do_telnet(CommandInvocation *invocation) {
     count++;
   }
   if (count == 0)
-    notify(evaluation, invocation->player, "That player is not connected.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "That player is not connected.", MSG_ME_ALL | MSG_F_DOWN);
 }
 
 void do_color(CommandInvocation *invocation) {
@@ -460,8 +475,10 @@ void do_color(CommandInvocation *invocation) {
   TerminalColorDepth requested;
 
   if (descriptor == nullptr || descriptor->player != invocation->player) {
-    notify(&invocation->context->evaluation, invocation->player,
-           "color is only available from an active connection.");
+    notify_checked(&invocation->context->evaluation, invocation->player,
+                   invocation->player,
+                   "color is only available from an active connection.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if (!mode || !*mode) {
@@ -487,8 +504,10 @@ void do_color(CommandInvocation *invocation) {
     else if (!strcasecmp(mode, "truecolor"))
       requested = TERMINAL_COLOR_TRUECOLOR;
     else {
-      notify(&invocation->context->evaluation, invocation->player,
-             "Use color auto, off, 16, 256, or truecolor.");
+      notify_checked(&invocation->context->evaluation, invocation->player,
+                     invocation->player,
+                     "Use color auto, off, 16, 256, or truecolor.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     descriptor->has_color_override = true;
@@ -507,8 +526,9 @@ void do_session(CommandInvocation *invocation) {
   char *match = invocation->first;
 
   if (descriptor == nullptr) {
-    notify(&invocation->context->evaluation, player,
-           "@session is only available from an active connection.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "@session is only available from an active connection.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   dump_sessions(descriptor, match);
@@ -519,8 +539,9 @@ void do_quit(CommandInvocation *invocation) {
   Descriptor *descriptor = invocation->context->descriptor;
 
   if (descriptor == nullptr || descriptor->player != player) {
-    notify(&invocation->context->evaluation, player,
-           "quit is only available from an active connection.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "quit is only available from an active connection.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_QUIT);

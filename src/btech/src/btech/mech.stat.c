@@ -12,13 +12,13 @@
 
 /* Make statistics 'bout what we do.. whatever it is we _do_ */
 
+#include "mux/server/game.h"
 #include <assert.h>
 #include <time.h>
 
 #include "mech.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/objects/db.h"
-#include "mux/server/server_api.h"
 #include "p.glue.h"
 
 #include "macros.h"

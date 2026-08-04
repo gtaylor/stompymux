@@ -40,6 +40,6 @@ void help_article_render_body(const HelpIndex *index,
                               const HelpArticle *article, bool viewer_is_wizard,
                               HelpTextBuffer *out);
 
-/* Splits buffer->data on '\n' and calls notify() once per line. */
+/* Splits buffer->data on '\n' and calls notify_checked() once per line. */
 void help_render_send(EvaluationContext *evaluation, DbRef player,
                       const HelpTextBuffer *buffer);

@@ -10,6 +10,7 @@
 
 #include "mech.tic.h"
 #include "mux/network/mux_event_alloc.h"
+#include "mux/server/game.h"
 #include "p.mech.combat.h"
 #include "p.mech.contacts.h"
 #include "p.mech.maps.h"

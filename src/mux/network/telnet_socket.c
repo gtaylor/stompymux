@@ -1,5 +1,6 @@
 /* libuv TCP listeners and client I/O. */
 
+#include "mux/network/network_output.h"
 #include "mux/server/platform.h"
 
 #include <uv.h>
@@ -9,6 +10,7 @@
 #include "mux/network/connect_flow.h"
 #include "mux/network/connection_events.h"
 #include "mux/network/connection_runtime.h"
+#include "mux/network/site_access.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/db.h"
@@ -16,7 +18,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/utf8.h"

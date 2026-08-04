@@ -1,5 +1,6 @@
 /* mux_package.c - Built-in Lua mux package bindings. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/lua/mux_package.h"
@@ -17,7 +18,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
@@ -40,7 +40,8 @@ static int lua_mux_notify(lua_State *state) {
   if (!utf8_validate(message, length))
     return luaL_argerror(state, 2, "message is not valid UTF-8");
   object = lua_mux_require_object(package, state, 1);
-  notify(&package->services->background_command->evaluation, object, message);
+  notify_checked(&package->services->background_command->evaluation, object,
+                 object, message, MSG_ME_ALL | MSG_F_DOWN);
   return 0;
 }
 

@@ -5,7 +5,6 @@
 #include "mux/server/platform.h"
 
 #include "mux/objects/db.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 

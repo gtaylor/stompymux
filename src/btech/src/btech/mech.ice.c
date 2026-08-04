@@ -9,6 +9,7 @@
 
 #include "mech.h"
 #include "mech.events.h"
+#include "mux/server/game.h"
 #include "p.bsuit.h"
 #include "p.mech.combat.misc.h"
 #include "p.mech.pickup.h"

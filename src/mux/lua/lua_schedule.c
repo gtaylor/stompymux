@@ -1,5 +1,6 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/lua/btech_package.h"
@@ -31,7 +32,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
@@ -292,7 +292,7 @@ static void lua_schedule_show_module(EvaluationContext *evaluation,
   lua_getfield(state, -1, "schedules");
   schedules = lua_gettop(state);
   if (!lua_istable(state, schedules))
-    notify_quiet(evaluation, player, "  (none)");
+    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   for (index = 1; lua_istable(state, schedules) &&
                   index <= (int)lua_objlen(state, schedules);
        index++) {
@@ -313,7 +313,7 @@ static void lua_schedule_show_module(EvaluationContext *evaluation,
   if (show_objects) {
     DbRef object;
 
-    notify_quiet(evaluation, player, "Objects:");
+    notify_checked(evaluation, player, player, "Objects:", MSG_ME);
     for (object = 0; object < runtime->services->database->top; object++) {
       char attached[PATH_MAX];
 
@@ -336,8 +336,8 @@ void do_luaschedule(CommandInvocation *invocation) {
   char error[LBUF_SIZE];
 
   if (!runtime) {
-    notify_quiet(&invocation->context->evaluation, player,
-                 "Lua is not initialized.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "Lua is not initialized.", MSG_ME);
     return;
   }
   inspection =
@@ -370,8 +370,8 @@ void do_luaschedule(CommandInvocation *invocation) {
       if (object == NOTHING)
         goto done;
       if (!lua_attached_path(runtime, object, path, sizeof(path), nullptr)) {
-        notify_quiet(&invocation->context->evaluation, player,
-                     "That object has no Luaparent.");
+        notify_checked(&invocation->context->evaluation, player, player,
+                       "That object has no Luaparent.", MSG_ME);
         goto done;
       }
       lua_schedule_show_module(&invocation->context->evaluation, player,

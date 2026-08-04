@@ -2,8 +2,13 @@
  * wiz.c -- Wizard-only commands
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
+#include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -17,7 +22,6 @@
 #include "mux/server/file_cache.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -66,7 +70,8 @@ void do_teleport(CommandInvocation *invocation) {
 
   if (!has_location(evaluation->world->database, victim) &&
       typeof_obj(evaluation->world->database, victim) != OBJECT_TYPE_EXIT) {
-    notify_quiet(evaluation, player, "You can't teleport that.");
+    notify_checked(evaluation, player, player, "You can't teleport that.",
+                   MSG_ME);
     return;
   }
   /*
@@ -77,7 +82,7 @@ void do_teleport(CommandInvocation *invocation) {
       !is_controls(evaluation->world->database, player,
                    game_object_location(evaluation->world->database, victim)) &&
       !is_wizard(evaluation->world->database, player)) {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }
   /*
@@ -100,15 +105,15 @@ void do_teleport(CommandInvocation *invocation) {
 
   switch (destination) {
   case NOTHING:
-    notify_quiet(evaluation, player, "No match.");
+    notify_checked(evaluation, player, player, "No match.", MSG_ME);
     return;
   case AMBIGUOUS:
-    notify_quiet(evaluation, player,
-                 "I don't know which destination you mean!");
+    notify_checked(evaluation, player, player,
+                   "I don't know which destination you mean!", MSG_ME);
     return;
   default:
     if (victim == destination) {
-      notify_quiet(evaluation, player, "Bad destination.");
+      notify_checked(evaluation, player, player, "Bad destination.", MSG_ME);
       return;
     }
   }
@@ -146,7 +151,8 @@ void do_teleport(CommandInvocation *invocation) {
        */
 
       if (player != victim)
-        notify_quiet(evaluation, player, "Permission denied.");
+        notify_checked(evaluation, player, player, "Permission denied.",
+                       MSG_ME);
       notify_lock_failure(evaluation, &lock, &result,
                           "You can't teleport there!", nullptr,
                           LUA_EVENT_TELEPORT_DESTINATION_FAIL);
@@ -175,18 +181,19 @@ void do_teleport(CommandInvocation *invocation) {
       game_object_set_exits(evaluation->world->database, victim, destination);
 
       if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Exit teleported.");
+        notify_checked(evaluation, player, player, "Exit teleported.", MSG_ME);
     } else if (move_via_teleport(evaluation, victim, destination, cause,
                                  hush)) {
       if (player != victim && !is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Teleported.");
+        notify_checked(evaluation, player, player, "Teleported.", MSG_ME);
     }
   } else if (is_exit(evaluation->world->database, destination)) {
     if (game_object_exits(evaluation->world->database, destination) ==
         game_object_location(evaluation->world->database, victim)) {
       move_exit(evaluation, victim, destination, "You can't go that way.", 0);
     } else {
-      notify_quiet(evaluation, player, "I can't find that exit.");
+      notify_checked(evaluation, player, player, "I can't find that exit.",
+                     MSG_ME);
     }
   }
 }
@@ -245,7 +252,7 @@ void do_newpassword(CommandInvocation *invocation) {
 
   if ((victim = lookup_player(invocation->context->world, player, name, 0)) ==
       NOTHING) {
-    notify_quiet(evaluation, player, "No such player.");
+    notify_checked(evaluation, player, player, "No such player.", MSG_ME);
     return;
   }
   if (*password != '\0' && !ok_password(configuration, password)) {
@@ -253,16 +260,17 @@ void do_newpassword(CommandInvocation *invocation) {
     /*
      * Can set null passwords, but not bad passwords
      */
-    notify_quiet(evaluation, player, "Bad password");
+    notify_checked(evaluation, player, player, "Bad password", MSG_ME);
     return;
   }
   if (is_god(evaluation->world->database, victim)) {
-    notify_quiet(evaluation, player,
-                 "You cannot change that player's password.");
+    notify_checked(evaluation, player, player,
+                   "You cannot change that player's password.", MSG_ME);
     return;
   }
   if (!password_hash(configuration, password, hashed_password)) {
-    notify_quiet(evaluation, player, "Unable to change password.");
+    notify_checked(evaluation, player, player, "Unable to change password.",
+                   MSG_ME);
     return;
   }
   object_password_set(evaluation->world->database, victim, hashed_password);
@@ -274,10 +282,10 @@ void do_newpassword(CommandInvocation *invocation) {
     ENDLOG(evaluation->log);
   }
   buf = alloc_lbuf("do_newpassword");
-  notify_quiet(evaluation, player, "Password changed.");
+  notify_checked(evaluation, player, player, "Password changed.", MSG_ME);
   snprintf(buf, LBUF_SIZE, "Your password has been changed by %s.",
            game_object_name(invocation->context->world->database, player));
-  notify_quiet(evaluation, victim, buf);
+  notify_checked(evaluation, victim, victim, buf, MSG_ME);
   free_lbuf(buf);
 }
 
@@ -291,14 +299,16 @@ void do_boot(CommandInvocation *invocation) {
   int count;
 
   if (!is_wizard(evaluation->world->database, player)) {
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if (key & BOOT_PORT) {
     if (is_number(name)) {
       victim = atoi(name);
     } else {
-      notify_quiet(evaluation, player, "That's not a number!");
+      notify_checked(evaluation, player, player, "That's not a number!",
+                     MSG_ME);
       return;
     }
     STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
@@ -318,13 +328,15 @@ void do_boot(CommandInvocation *invocation) {
       return;
 
     if (is_god(evaluation->world->database, victim)) {
-      notify_quiet(evaluation, player, "You cannot boot that player!");
+      notify_checked(evaluation, player, player, "You cannot boot that player!",
+                     MSG_ME);
       return;
     }
     if ((!is_player(evaluation->world->database, victim) &&
          !is_god(evaluation->world->database, player)) ||
         (player == victim)) {
-      notify_quiet(evaluation, player, "You can only boot off other players!");
+      notify_checked(evaluation, player, player,
+                     "You can only boot off other players!", MSG_ME);
       return;
     }
     STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "BOOT") {
@@ -333,10 +345,11 @@ void do_boot(CommandInvocation *invocation) {
       log_name(evaluation->log, player);
       ENDLOG(evaluation->log);
     }
-    notify_quiet(evaluation, player,
-                 tprintf("You booted %s off!",
-                         game_object_name(invocation->context->world->database,
-                                          victim)));
+    notify_checked(
+        evaluation, player, player,
+        tprintf("You booted %s off!",
+                game_object_name(invocation->context->world->database, victim)),
+        MSG_ME);
   }
   if (key & BOOT_QUIET) {
     buf = nullptr;
@@ -353,9 +366,10 @@ void do_boot(CommandInvocation *invocation) {
                          !is_god(evaluation->world->database, player), buf);
   else
     count = boot_off(invocation->context->runtime->descriptors, victim, buf);
-  notify_quiet(
-      evaluation, player,
-      tprintf("%d connection%s closed.", count, (count == 1 ? "" : "s")));
+  notify_checked(
+      evaluation, player, player,
+      tprintf("%d connection%s closed.", count, (count == 1 ? "" : "s")),
+      MSG_ME);
   if (buf)
     free_lbuf(buf);
 }
@@ -410,7 +424,7 @@ void list_global_controls(EvaluationContext *evaluation,
       safe_chr(';', buf, &bp);
   }
   *bp = '\0';
-  notify(evaluation, player, buf);
+  notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 }
 
@@ -430,7 +444,8 @@ void do_global(CommandInvocation *invocation) {
                               invocation->context->world->configuration, player,
                               enable_names, flag);
   if (control < 0) {
-    notify_quiet(evaluation, player, "I don't know about that flag.");
+    notify_checked(evaluation, player, player, "I don't know about that flag.",
+                   MSG_ME);
     return;
   }
 
@@ -439,12 +454,13 @@ void do_global(CommandInvocation *invocation) {
   if (key == GLOB_ENABLE) {
     *is_enabled = true;
     if (!is_quiet(evaluation->world->database, player))
-      notify_quiet(evaluation, player, "Enabled.");
+      notify_checked(evaluation, player, player, "Enabled.", MSG_ME);
   } else if (key == GLOB_DISABLE) {
     *is_enabled = false;
     if (!is_quiet(evaluation->world->database, player))
-      notify_quiet(evaluation, player, "Disabled.");
+      notify_checked(evaluation, player, player, "Disabled.", MSG_ME);
   } else {
-    notify_quiet(evaluation, player, "Illegal combination of switches.");
+    notify_checked(evaluation, player, player,
+                   "Illegal combination of switches.", MSG_ME);
   }
 }

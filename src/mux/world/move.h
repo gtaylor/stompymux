@@ -7,6 +7,10 @@
 typedef struct CommandInvocation CommandInvocation;
 typedef struct EvaluationContext EvaluationContext;
 
+constexpr int HUSH_ENTER = 1; /* Suppress enter actions. */
+constexpr int HUSH_LEAVE = 2; /* Suppress leave actions. */
+constexpr int HUSH_EXIT = 4;  /* Suppress exit actions. */
+
 void move_object(EvaluationContext *evaluation, DbRef thing, DbRef destination);
 void move_via_generic(EvaluationContext *evaluation, DbRef thing,
                       DbRef destination, DbRef cause, int hush);

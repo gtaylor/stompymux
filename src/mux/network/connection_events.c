@@ -8,6 +8,7 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
@@ -17,6 +18,7 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/commands/look.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/connection_events.h"
 #include "mux/network/network_output.h"
@@ -27,7 +29,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"

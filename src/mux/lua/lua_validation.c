@@ -1,5 +1,6 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/lua/btech_package.h"
@@ -30,7 +31,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
@@ -230,13 +230,13 @@ static void lua_examine_array(LuaRuntime *runtime,
   lua_getfield(state, module, table_name);
   count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
   if (!count)
-    notify_quiet(evaluation, player, "  (none)");
+    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   for (index = 1; index <= count; index++) {
     const char *name;
 
     lua_rawgeti(state, -1, index);
     if (!lua_istable(state, -1)) {
-      notify_quiet(evaluation, player, "  <invalid>");
+      notify_checked(evaluation, player, player, "  <invalid>", MSG_ME);
       lua_pop(state, 1);
       continue;
     }
@@ -270,7 +270,7 @@ lua_examine_named_functions(LuaRuntime *runtime, EvaluationContext *evaluation,
     }
   }
   if (!found)
-    notify_quiet(evaluation, player, "  (none)");
+    notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   lua_pop(state, 1);
 }
 
@@ -295,7 +295,7 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
     return;
   }
   module = lua_gettop(state);
-  notify_quiet(evaluation, player, "Lua appearances:");
+  notify_checked(evaluation, player, player, "Lua appearances:", MSG_ME);
   {
     bool found = false;
     static const char *names[] = {"internal_appearance", "external_appearance",
@@ -310,7 +310,7 @@ void lua_examine_object(LuaRuntime *runtime, EvaluationContext *evaluation,
       lua_pop(state, 1);
     }
     if (!found)
-      notify_quiet(evaluation, player, "  (none)");
+      notify_checked(evaluation, player, player, "  (none)", MSG_ME);
   }
   lua_examine_array(runtime, evaluation, player, module, "commands",
                     "Lua commands", "pattern");

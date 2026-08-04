@@ -8,6 +8,7 @@
  *       All rights reserved
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <math.h>

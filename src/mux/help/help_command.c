@@ -1,6 +1,8 @@
 /* help_command.c - `help` and `@help` command handlers. */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
@@ -11,7 +13,6 @@
 #include "mux/help/help_render.h"
 #include "mux/help/help_types.h"
 #include "mux/objects/flags.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
@@ -57,7 +58,8 @@ static void help_command_send_suggestions(EvaluationContext *evaluation,
   else {
     notify_printf(evaluation, player,
                   "No exact match for '%s'. Did you mean:", needle);
-    notify(evaluation, player, topic_list);
+    notify_checked(evaluation, player, player, topic_list,
+                   MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(topic_list);
 }
@@ -74,8 +76,9 @@ void do_help(CommandInvocation *invocation) {
   if (*message == '\0') {
     article = help_index_default_article(help);
     if (!article) {
-      notify(&invocation->context->evaluation, player,
-             "Unable to render default help article");
+      notify_checked(&invocation->context->evaluation, player, player,
+                     "Unable to render default help article",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     help_command_send_article(&invocation->context->evaluation, help, player,

@@ -9,6 +9,7 @@
 
 #include "mech.h"
 #include "mech.events.h"
+#include "mux/commands/action_messages.h"
 #include "p.btechstats.h"
 #include "p.mech.combat.h"
 #include "p.mech.combat.misc.h"

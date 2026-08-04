@@ -2,6 +2,7 @@
  * look.c -- commands which look at things
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/commands/action_messages.h"
@@ -18,7 +19,6 @@
 #include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
@@ -43,7 +43,7 @@ static void examine_notify_markup(EvaluationContext *evaluation, DbRef player,
   if (label)
     notify_printf(evaluation, player, "%s: %s", label, markup);
   else
-    notify(evaluation, player, markup);
+    notify_checked(evaluation, player, player, markup, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(markup);
 }
 
@@ -123,7 +123,7 @@ void do_examine(CommandInvocation *invocation) {
   examine_notify_markup(evaluation, player, nullptr, buf2);
   free_lbuf(buf2);
   buf2 = flag_description(evaluation->world->database, player, thing);
-  notify(evaluation, player, buf2);
+  notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
 
   temp = alloc_lbuf("do_examine.info");
@@ -143,7 +143,7 @@ void do_examine(CommandInvocation *invocation) {
   lua_examine_object(invocation->context->runtime->lua_owner->runtime,
                      evaluation, player, thing);
   buf2 = power_description(evaluation->world->database, player, thing);
-  notify(evaluation, player, buf2);
+  notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
   free_mbuf(buf2);
   if (!(key & EXAM_BRIEF))
     state_examine_namespaces(evaluation, player, thing);
@@ -156,12 +156,13 @@ void do_examine(CommandInvocation *invocation) {
    */
 
   if (game_object_contents(evaluation->world->database, thing) != NOTHING) {
-    notify(evaluation, player, "Contents:");
+    notify_checked(evaluation, player, player,
+                   "Contents:", MSG_ME_ALL | MSG_F_DOWN);
     DOLIST(evaluation->world->database, content,
            game_object_contents(evaluation->world->database, thing)) {
       buf2 = unparse_object(evaluation->world->database, evaluation, player,
                             content);
-      notify(evaluation, player, buf2);
+      notify_checked(evaluation, player, player, buf2, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buf2);
     }
   }
@@ -177,16 +178,19 @@ void do_examine(CommandInvocation *invocation) {
      */
 
     if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
-      notify(evaluation, player, "Exits:");
+      notify_checked(evaluation, player, player,
+                     "Exits:", MSG_ME_ALL | MSG_F_DOWN);
       DOLIST(evaluation->world->database, exit,
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
                               exit);
-        notify(evaluation, player, buf2);
+        notify_checked(evaluation, player, player, buf2,
+                       MSG_ME_ALL | MSG_F_DOWN);
         free_lbuf(buf2);
       }
     } else {
-      notify(evaluation, player, "No exits.");
+      notify_checked(evaluation, player, player, "No exits.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     }
 
     /*
@@ -209,16 +213,19 @@ void do_examine(CommandInvocation *invocation) {
      */
 
     if (game_object_exits(evaluation->world->database, thing) != NOTHING) {
-      notify(evaluation, player, "Exits:");
+      notify_checked(evaluation, player, player,
+                     "Exits:", MSG_ME_ALL | MSG_F_DOWN);
       DOLIST(evaluation->world->database, exit,
              game_object_exits(evaluation->world->database, thing)) {
         buf2 = unparse_object(evaluation->world->database, evaluation, player,
                               exit);
-        notify(evaluation, player, buf2);
+        notify_checked(evaluation, player, player, buf2,
+                       MSG_ME_ALL | MSG_F_DOWN);
         free_lbuf(buf2);
       }
     } else {
-      notify(evaluation, player, "No exits.");
+      notify_checked(evaluation, player, player, "No exits.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     }
 
     /*
@@ -257,7 +264,8 @@ void do_examine(CommandInvocation *invocation) {
     case NOTHING:
       break;
     case HOME:
-      notify(evaluation, player, "Destination: *HOME*");
+      notify_checked(evaluation, player, player, "Destination: *HOME*",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     default:
       buf2 = unparse_object(
@@ -282,20 +290,23 @@ void do_inventory(CommandInvocation *invocation) {
 
   thing = game_object_contents(evaluation->world->database, player);
   if (thing == NOTHING) {
-    notify(evaluation, player, "You aren't carrying anything.");
+    notify_checked(evaluation, player, player, "You aren't carrying anything.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   } else {
-    notify(evaluation, player, "You are carrying:");
+    notify_checked(evaluation, player, player,
+                   "You are carrying:", MSG_ME_ALL | MSG_F_DOWN);
     DOLIST(evaluation->world->database, thing, thing) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
-      notify(evaluation, player, buff);
+      notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
     }
   }
 
   thing = game_object_exits(evaluation->world->database, player);
   if (thing != NOTHING) {
-    notify(evaluation, player, "Exits:");
+    notify_checked(evaluation, player, player,
+                   "Exits:", MSG_ME_ALL | MSG_F_DOWN);
     e = buff = alloc_lbuf("look_exits");
     DOLIST(evaluation->world->database, thing, thing) {
       /*
@@ -307,7 +318,7 @@ void do_inventory(CommandInvocation *invocation) {
       safe_str("  ", buff, &e);
     }
     *e = 0;
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buff);
   }
 }

@@ -4,7 +4,6 @@
 
 #include "mux/server/configuration.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"

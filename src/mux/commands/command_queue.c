@@ -2,6 +2,7 @@
  * command_queue.c -- commands and functions for manipulating the command queue
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <signal.h>
@@ -20,7 +21,6 @@
 #include "mux/server/event_timer.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/alloc.h"
@@ -326,7 +326,8 @@ void do_halt(CommandInvocation *invocation) {
   int numhalted;
 
   if ((key & HALT_ALL) && !is_wizard(queue->world->database, player)) {
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /*
@@ -349,7 +350,9 @@ void do_halt(CommandInvocation *invocation) {
     if (obj_targ == NOTHING)
       return;
     if (key & HALT_ALL) {
-      notify(evaluation, player, "Can't specify a target and /all");
+      notify_checked(evaluation, player, player,
+                     "Can't specify a target and /all",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     if (typeof_obj(queue->world->database, obj_targ) == OBJECT_TYPE_PLAYER) {
@@ -364,7 +367,8 @@ void do_halt(CommandInvocation *invocation) {
   if (is_quiet(queue->world->database, player))
     return;
   if (numhalted == 1)
-    notify(evaluation, player, "1 queue entries removed.");
+    notify_checked(evaluation, player, player, "1 queue entries removed.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   else
     notify_printf(evaluation, player, "%d queue entries removed.", numhalted);
 }
@@ -394,8 +398,9 @@ static BQUE *setup_que(CommandQueue *queue, DbRef player, DbRef cause,
 
   maximum = queue_maximum(queue->players, player);
   if (queue_adjust(queue->players, player, 1) > maximum) {
-    notify(evaluation, player,
-           "Run away objects: too many commands queued.  Halted.");
+    notify_checked(evaluation, player, player,
+                   "Run away objects: too many commands queued.  Halted.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     halt_que(queue, player, NOTHING);
 
     /*
@@ -480,7 +485,8 @@ void do_wait(CommandInvocation *invocation) {
   CommandQueue *queue = invocation->context->runtime->commands;
 
   if (!is_number(event)) {
-    notify(evaluation, player, "Wait time must be a number.");
+    notify_checked(evaluation, player, player, "Wait time must be a number.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 

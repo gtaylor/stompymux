@@ -13,6 +13,7 @@
  *  Copyright (c) 1998-2000 Thomas Wouters
  */
 
+#include "mux/server/game.h"
 #include <math.h>
 
 #include "glue.h"

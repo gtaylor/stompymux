@@ -1,5 +1,6 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/lua/btech_package.h"
@@ -31,7 +32,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
@@ -238,8 +238,8 @@ static void do_luaparent(CommandInvocation *invocation) {
     return;
   if (!*path) {
     game_object_lua_parent_set(invocation->context->world->database, thing, "");
-    notify_quiet(&invocation->context->evaluation, player,
-                 "Lua parent cleared.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "Lua parent cleared.", MSG_ME);
     return;
   }
   if (!lua_validate_path(invocation->context->runtime->lua_owner->runtime, path,
@@ -250,11 +250,12 @@ static void do_luaparent(CommandInvocation *invocation) {
   }
   if (!game_object_lua_parent_set(invocation->context->world->database, thing,
                                   path)) {
-    notify_quiet(&invocation->context->evaluation, player,
-                 "Lua parent not set: out of memory.");
+    notify_checked(&invocation->context->evaluation, player, player,
+                   "Lua parent not set: out of memory.", MSG_ME);
     return;
   }
-  notify_quiet(&invocation->context->evaluation, player, "Lua parent set.");
+  notify_checked(&invocation->context->evaluation, player, player,
+                 "Lua parent set.", MSG_ME);
 }
 
 static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
@@ -294,7 +295,7 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                   strerror(errno));
   free(line);
   fclose(stream);
-  notify_quiet(evaluation, player, "-- End Lua parent --");
+  notify_checked(evaluation, player, player, "-- End Lua parent --", MSG_ME);
 }
 
 static void do_luaviewparent(CommandInvocation *invocation) {
@@ -307,11 +308,13 @@ static void do_luaviewparent(CommandInvocation *invocation) {
   char error[LBUF_SIZE];
 
   if (!runtime) {
-    notify_quiet(evaluation, player, "Lua is not initialized.");
+    notify_checked(evaluation, player, player, "Lua is not initialized.",
+                   MSG_ME);
     return;
   }
   if (!argument || !*argument) {
-    notify_quiet(evaluation, player, "View which Lua parent?");
+    notify_checked(evaluation, player, player, "View which Lua parent?",
+                   MSG_ME);
     return;
   }
   if (argument[0] == '#') {
@@ -324,7 +327,8 @@ static void do_luaviewparent(CommandInvocation *invocation) {
     if (object == NOTHING)
       return;
     if (!lua_attached_path(runtime, object, path, sizeof(path), &source)) {
-      notify_quiet(evaluation, player, "That object has no Lua parent.");
+      notify_checked(evaluation, player, player,
+                     "That object has no Lua parent.", MSG_ME);
       return;
     }
   } else {
@@ -348,8 +352,8 @@ static void do_luacheck(CommandInvocation *invocation) {
                   "Lua check failed: %s", error);
     return;
   }
-  notify_quiet(&invocation->context->evaluation, player,
-               "All Lua module checks passed.");
+  notify_checked(&invocation->context->evaluation, player, player,
+                 "All Lua module checks passed.", MSG_ME);
 }
 
 static void do_luareload(CommandInvocation *invocation) {
@@ -365,7 +369,8 @@ static void do_luareload(CommandInvocation *invocation) {
     raw_notify(&invocation->context->evaluation, player, error);
     return;
   }
-  notify_quiet(&invocation->context->evaluation, player, "Lua reloaded.");
+  notify_checked(&invocation->context->evaluation, player, player,
+                 "Lua reloaded.", MSG_ME);
 }
 
 void do_lua(CommandInvocation *invocation) {

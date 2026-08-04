@@ -22,7 +22,6 @@
 #include "mux/server/configuration_context.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/world/match.h"
 

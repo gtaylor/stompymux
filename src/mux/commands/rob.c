@@ -2,7 +2,11 @@
  * rob.c -- Commands dealing with giving and taking things
  */
 
+#include "mux/commands/action_messages.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
@@ -10,7 +14,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -37,22 +40,26 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
 
   switch (thing) {
   case NOTHING:
-    notify(evaluation, giver, "You don't have that!");
+    notify_checked(evaluation, giver, giver, "You don't have that!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   case AMBIGUOUS:
-    notify(evaluation, giver, "I don't know which you mean!");
+    notify_checked(evaluation, giver, giver, "I don't know which you mean!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   default:
     break;
   }
 
   if (thing == giver) {
-    notify(evaluation, giver, "You can't give yourself away!");
+    notify_checked(evaluation, giver, giver, "You can't give yourself away!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if ((typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_THING) &&
       (typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_PLAYER)) {
-    notify(evaluation, giver, "Permission denied.");
+    notify_checked(evaluation, giver, giver, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   if (!lock_test(evaluation, giver, giver, giver, thing, LUA_LOCK_GIVE,
@@ -87,15 +94,17 @@ static void give_thing(EvaluationContext *evaluation, DbRef giver,
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
     StringCopy(str, game_object_name(evaluation->world->database, giver));
-    notify_with_cause(
+    notify_checked(
         evaluation, recipient, giver,
         tprintf("%s gave you %s.", str,
-                game_object_name(evaluation->world->database, thing)));
-    notify(evaluation, giver, "Given.");
-    notify_with_cause(
+                game_object_name(evaluation->world->database, thing)),
+        MSG_ME_ALL | MSG_F_DOWN);
+    notify_checked(evaluation, giver, giver, "Given.", MSG_ME_ALL | MSG_F_DOWN);
+    notify_checked(
         evaluation, thing, giver,
         tprintf("%s gave you to %s.", str,
-                game_object_name(evaluation->world->database, recipient)));
+                game_object_name(evaluation->world->database, recipient)),
+        MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(str);
   }
   notify_action(evaluation,
@@ -140,10 +149,12 @@ void do_give(CommandInvocation *invocation) {
   recipient = match_result(match);
   switch (recipient) {
   case NOTHING:
-    notify(evaluation, player, "Give to whom?");
+    notify_checked(evaluation, player, player, "Give to whom?",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   case AMBIGUOUS:
-    notify(evaluation, player, "I don't know who you mean!");
+    notify_checked(evaluation, player, player, "I don't know who you mean!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   default:
     break;

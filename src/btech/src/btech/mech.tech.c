@@ -11,6 +11,7 @@
 #include "mech.events.h"
 #include "mech.tech.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/game.h"
 #include "mux/server/mux_server.h"
 #include "p.btechstats.h"
 #include "p.mech.build.h"

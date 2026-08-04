@@ -5,7 +5,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 
 void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
   struct commac *c;

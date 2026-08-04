@@ -1,6 +1,7 @@
 /* configuration.c - Configuration parsing and defaults */
 
 #include "mux/server/configuration.h"
+#include "mux/server/game.h"
 
 #include "mux/server/configuration_context.h"
 #include "mux/server/configuration_toml.h"
@@ -20,7 +21,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/configuration_internal.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
@@ -270,7 +270,8 @@ void configuration_log_not_found(ConfigurationContext *context, DbRef player,
   } else {
     buff = alloc_lbuf("configuration_log_not_found");
     snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
-    notify(&context->command->evaluation, player, buff);
+    notify_checked(&context->command->evaluation, player, player, buff,
+                   MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(buff);
   }
 }
@@ -319,7 +320,8 @@ int configuration_status_from_succfail(DbRef player, char *cmd, int success,
       log_error(context->log, LOG_STARTUP, "CNF", "NDATA", "%s: Nothing to set",
                 cmd);
     } else {
-      notify(&context->command->evaluation, player, "Nothing to set");
+      notify_checked(&context->command->evaluation, player, player,
+                     "Nothing to set", MSG_ME_ALL | MSG_F_DOWN);
     }
   }
   return -1;
@@ -346,7 +348,8 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
       if (!context->configuration->is_initializing &&
           !check_access(context->database, context->configuration, player,
                         tp->flags)) {
-        notify(&context->command->evaluation, player, "Permission denied.");
+        notify_checked(&context->command->evaluation, player, player,
+                       "Permission denied.", MSG_ME_ALL | MSG_F_DOWN);
         return (-1);
       }
       buff = alloc_lbuf("configuration_set");
@@ -386,7 +389,8 @@ void do_admin(CommandInvocation *invocation) {
                         invocation->player);
   if ((i >= 0) &&
       !is_quiet(invocation->context->world->database, invocation->player))
-    notify(&invocation->context->evaluation, invocation->player, "Set.");
+    notify_checked(&invocation->context->evaluation, invocation->player,
+                   invocation->player, "Set.", MSG_ME_ALL | MSG_F_DOWN);
 }
 
 /*

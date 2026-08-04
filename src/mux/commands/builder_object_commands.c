@@ -4,6 +4,8 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
+#include "mux/server/game.h"
+#include "mux/world/player.h"
 
 #include "p.glue.h"
 
@@ -19,7 +21,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -55,19 +56,24 @@ void do_chzone(CommandInvocation *invocation) {
 
     if ((typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_THING) &&
         (typeof_obj(evaluation->world->database, zone) != OBJECT_TYPE_ROOM)) {
-      notify(evaluation, player, "Invalid zone object type.");
+      notify_checked(evaluation, player, player, "Invalid zone object type.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
   }
 
   if (!is_controls(evaluation->world->database, player, thing)) {
-    notify(evaluation, player, "You don't have the power to shift reality.");
+    notify_checked(evaluation, player, player,
+                   "You don't have the power to shift reality.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /* The target zone must also be controllable by the actor. */
   if ((zone != NOTHING) &&
       !is_controls(evaluation->world->database, player, zone)) {
-    notify(evaluation, player, "You cannot move that object to that zone.");
+    notify_checked(evaluation, player, player,
+                   "You cannot move that object to that zone.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /*
@@ -76,7 +82,9 @@ void do_chzone(CommandInvocation *invocation) {
   if ((zone != NOTHING) &&
       (typeof_obj(evaluation->world->database, zone) == OBJECT_TYPE_ROOM) &&
       typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_ROOM) {
-    notify(evaluation, player, "Only rooms may be zoned to rooms.");
+    notify_checked(evaluation, player, player,
+                   "Only rooms may be zoned to rooms.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /*
@@ -93,7 +101,8 @@ void do_chzone(CommandInvocation *invocation) {
                          false);
     game_object_clear_powers(evaluation->world->database, thing);
   }
-  notify(evaluation, player, "Zone changed.");
+  notify_checked(evaluation, player, player, "Zone changed.",
+                 MSG_ME_ALL | MSG_F_DOWN);
 }
 void do_name(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
@@ -119,7 +128,8 @@ void do_name(CommandInvocation *invocation) {
   styled_text_strip(evaluation->world->styled_text_palette, newname, new,
                     sizeof(new));
   if (*newname == '\0' || strlen(new) == 0) {
-    notify_quiet(evaluation, player, "Give it what new name?");
+    notify_checked(evaluation, player, player, "Give it what new name?",
+                   MSG_ME);
     free_lbuf(compiled_name);
     return;
   }
@@ -133,7 +143,8 @@ void do_name(CommandInvocation *invocation) {
     buff = trim_spaces(new);
     if (!ok_player_name(invocation->context->world->configuration, buff) ||
         !badname_check(invocation->context->world, buff)) {
-      notify_quiet(evaluation, player, "You can't use that name.");
+      notify_checked(evaluation, player, player, "You can't use that name.",
+                     MSG_ME);
       free_lbuf(buff);
       free_lbuf(compiled_name);
       return;
@@ -148,7 +159,8 @@ void do_name(CommandInvocation *invocation) {
        * string_compare allows changing foo to Foo, etc.
        */
 
-      notify_quiet(evaluation, player, "That name is already in use.");
+      notify_checked(evaluation, player, player, "That name is already in use.",
+                     MSG_ME);
       free_lbuf(buff);
       free_lbuf(compiled_name);
       return;
@@ -179,7 +191,7 @@ void do_name(CommandInvocation *invocation) {
         game_object_pure_name(invocation->context->world->database, thing));
     if (!is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
-      notify_quiet(evaluation, player, "Name set.");
+      notify_checked(evaluation, player, player, "Name set.", MSG_ME);
     free_lbuf(buff);
     free_lbuf(compiled_name);
     return;
@@ -187,7 +199,8 @@ void do_name(CommandInvocation *invocation) {
     styled_text_strip(evaluation->world->styled_text_palette, newname, new,
                       sizeof(new));
     if (!ok_name(invocation->context->world->configuration, new)) {
-      notify_quiet(evaluation, player, "That is not a reasonable name.");
+      notify_checked(evaluation, player, player,
+                     "That is not a reasonable name.", MSG_ME);
       free_lbuf(compiled_name);
       return;
     }
@@ -197,7 +210,7 @@ void do_name(CommandInvocation *invocation) {
     object_name_set(invocation->context->world->database, thing, newname);
     if (!is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
-      notify_quiet(evaluation, player, "Name set.");
+      notify_checked(evaluation, player, player, "Name set.", MSG_ME);
   }
   free_lbuf(compiled_name);
 }
@@ -218,28 +231,30 @@ void do_unlink(CommandInvocation *invocation) {
 
   switch (exit) {
   case NOTHING:
-    notify_quiet(evaluation, player, "Unlink what?");
+    notify_checked(evaluation, player, player, "Unlink what?", MSG_ME);
     break;
   case AMBIGUOUS:
-    notify_quiet(evaluation, player, "I don't know which one you mean!");
+    notify_checked(evaluation, player, player,
+                   "I don't know which one you mean!", MSG_ME);
     break;
   default:
     if (!is_controls(evaluation->world->database, player, exit)) {
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else {
       switch (typeof_obj(evaluation->world->database, exit)) {
       case OBJECT_TYPE_EXIT:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
         if (!is_quiet(evaluation->world->database, player))
-          notify_quiet(evaluation, player, "Unlinked.");
+          notify_checked(evaluation, player, player, "Unlinked.", MSG_ME);
         break;
       case OBJECT_TYPE_ROOM:
         game_object_set_location(evaluation->world->database, exit, NOTHING);
         if (!is_quiet(evaluation->world->database, player))
-          notify_quiet(evaluation, player, "Dropto removed.");
+          notify_checked(evaluation, player, player, "Dropto removed.", MSG_ME);
         break;
       default:
-        notify_quiet(evaluation, player, "You can't unlink that!");
+        notify_checked(evaluation, player, player, "You can't unlink that!",
+                       MSG_ME);
         break;
       }
     }

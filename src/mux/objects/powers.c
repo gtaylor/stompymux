@@ -2,12 +2,12 @@
  * powers.c - power manipulation routines
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/commands/command.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
@@ -52,7 +52,7 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
     safe_str(fp->powername, buf, &bp);
   }
   *bp = '\0';
-  notify(evaluation, player, buf);
+  notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 }
 
@@ -114,14 +114,19 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
 
   if (*power == '\0') {
     if (negate)
-      notify(evaluation, player, "You must specify a power to clear.");
+      notify_checked(evaluation, player, player,
+                     "You must specify a power to clear.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     else
-      notify(evaluation, player, "You must specify a power to set.");
+      notify_checked(evaluation, player, player,
+                     "You must specify a power to set.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   fp = find_power(indexes, target, power);
   if (fp == nullptr) {
-    notify(evaluation, player, "I don't understand that power.");
+    notify_checked(evaluation, player, player, "I don't understand that power.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /*
@@ -130,7 +135,8 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
 
   if (!is_wizard(evaluation->world->database, player) &&
       !is_god(evaluation->world->database, player)) {
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 

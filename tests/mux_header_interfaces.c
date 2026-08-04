@@ -32,7 +32,6 @@
 #include "mux/server/log.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/signals.h"

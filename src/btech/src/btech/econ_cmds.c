@@ -16,6 +16,7 @@
    - stores
  */
 
+#include "mux/server/game.h"
 #include <stdio.h>
 
 #include "coolmenu.h"

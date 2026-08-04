@@ -2,8 +2,11 @@
  * move.c -- Routines for moving about
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -13,7 +16,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
 #include "mux/world/movement_commands.h"
@@ -55,7 +57,8 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
      */
 
     for (i = 0; i < 3; i++)
-      notify(evaluation, player, "There's no place like home...");
+      notify_checked(evaluation, player, player,
+                     "There's no place like home...", MSG_ME_ALL | MSG_F_DOWN);
     move_via_generic(evaluation, player, HOME, NOTHING, 0);
     return;
   }
@@ -70,10 +73,12 @@ void move_command(EvaluationContext *evaluation, DbRef player, DbRef cause,
   case NOTHING: /*
                  * try to force the object
                  */
-    notify(evaluation, player, "You can't go that way.");
+    notify_checked(evaluation, player, player, "You can't go that way.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   case AMBIGUOUS:
-    notify(evaluation, player, "I don't know which way you mean!");
+    notify_checked(evaluation, player, player,
+                   "I don't know which way you mean!", MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
     quiet = 0;
@@ -103,7 +108,8 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
   LuaLockResult result;
 
   if (player == thing) {
-    notify(evaluation, player, "You can't enter yourself!");
+    notify_checked(evaluation, player, player, "You can't enter yourself!",
+                   MSG_ME_ALL | MSG_F_DOWN);
   } else if (lock_test(evaluation, player, player, player, thing,
                        LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet, &lock,
                        &result) &&
@@ -142,7 +148,8 @@ void do_enter(CommandInvocation *invocation) {
     do_enter_internal(evaluation, player, thing, quiet);
     break;
   default:
-    notify(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   }
   return;
 }
@@ -161,7 +168,8 @@ void do_leave(CommandInvocation *invocation) {
   if (!is_good_obj(evaluation->world->database, loc) ||
       is_room(evaluation->world->database, loc) ||
       is_going(evaluation->world->database, loc)) {
-    notify(evaluation, player, "You can't leave.");
+    notify_checked(evaluation, player, player, "You can't leave.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   quiet = 0;

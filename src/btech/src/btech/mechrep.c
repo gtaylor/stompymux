@@ -4,6 +4,7 @@
  *   All right reserved
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <dirent.h>
@@ -21,7 +22,6 @@
 #include "mechrep.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event_alloc.h"
-#include "mux/server/server_api.h"
 #include "p.mech.build.h"
 #include "p.mech.consistency.h"
 #include "p.mech.restrict.h"

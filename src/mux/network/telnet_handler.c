@@ -1,5 +1,6 @@
 /* telnet_handler.c - Telnet protocol negotiation and client data handling. */
 
+#include "mux/network/network_output.h"
 #include "mux/server/platform.h"
 
 #include <ctype.h>
@@ -11,13 +12,13 @@
 #include "mux/commands/command.h"
 #include "mux/commands/command_runtime.h"
 #include "mux/network/input_flow.h"
+#include "mux/network/site_access.h"
 #include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/server/diagnostics.h"
 #include "mux/server/log_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/utf8.h"
 

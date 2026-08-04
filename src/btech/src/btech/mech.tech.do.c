@@ -9,6 +9,7 @@
  */
 
 /* All the *_{succ|fail|econ} functions belong here */
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mech.events.h"

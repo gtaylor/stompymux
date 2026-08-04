@@ -1,16 +1,14 @@
 /*
  * macro.c - ported from BattleTech 3056 MUSE
  */
-
 #include "mux/commands/macro.h"
+#include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
 #include "mux/communication/commac.h"
-#include "mux/server/platform.h"
-
-#include "mux/commands/command_helpers.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
@@ -18,7 +16,6 @@
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
 #include "mux/world/world_context.h"
-
 void macro_registry_initialize(MacroRegistry *registry,
                                ChannelRegistry *channels) {
   memset(registry, 0, sizeof(*registry));
@@ -44,6 +41,10 @@ void macro_registry_destroy(MacroRegistry *registry) {
 
 static bool is_valid_macro_index(const MacroRegistry *registry, int index) {
   return index >= 0 && index < registry->count;
+}
+
+static void macro_notify(MatchContext *m, DbRef p, const char *text) {
+  notify_checked(m->evaluation, p, p, text, MSG_ME_ALL | MSG_F_DOWN);
 }
 
 MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
@@ -74,8 +75,7 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
   cmd = in + 1;
 
   if (!is_player(match->evaluation->world->database, player)) {
-    notify(match->evaluation, player,
-           "MACRO: Only players may use macro_sets.");
+    macro_notify(match, player, "MACRO: Only players may use macro_sets.");
     return 0;
   }
   old = alloc_lbuf("do_macro");
@@ -120,9 +120,9 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
     if (can_read_macros(match->evaluation->world->database, player, m)) {
       if (!notified) {
-        notify(match->evaluation, player,
-               "Num  Description                         Owner         "
-               "            LRW");
+        macro_notify(match, player,
+                     "Num  Description                         Owner         "
+                     "            LRW");
         notified = 1;
       }
       unparse = unparse_object(match->evaluation->world->database,
@@ -136,8 +136,7 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
 
   if (!notified)
-    notify(match->evaluation, player,
-           "MACRO: There are no macro sets you can read.");
+    macro_notify(match, player, "MACRO: There are no macro sets you can read.");
 }
 
 void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -156,8 +155,8 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       first = i;
 
   if (first < 0) {
-    notify(match->evaluation, player,
-           "MACRO: Sorry, you already have 5 sets defined on you.");
+    macro_notify(match, player,
+                 "MACRO: Sorry, you already have 5 sets defined on you.");
   } else if (is_number(s)) {
     set = clamped_atoi(s);
     if (set >= 0 && set < registry->count) {
@@ -167,16 +166,15 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         notify_printf(match->evaluation, player,
                       "MACRO: Macro set %d added in the %d slot.", set, first);
       } else {
-        notify(match->evaluation, player, "MACRO: Permission denied.");
+        macro_notify(match, player, "MACRO: Permission denied.");
       }
     } else {
-      notify(match->evaluation, player,
-             "MACRO: That macro set does not exist.");
+      macro_notify(match, player, "MACRO: That macro set does not exist.");
       return;
     }
   } else {
-    notify(match->evaluation, player,
-           "MACRO: What set do you want to add to your macro system?");
+    macro_notify(match, player,
+                 "MACRO: What set do you want to add to your macro system?");
   }
 }
 
@@ -196,15 +194,16 @@ void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     set);
       if (set == c->curmac) {
         c->curmac = -1;
-        notify(match->evaluation, player,
-               "MACRO: Deleted current slot, resetting to none.");
+        macro_notify(match, player,
+                     "MACRO: Deleted current slot, resetting to none.");
       }
     } else
-      notify(match->evaluation, player,
-             "MACRO: That is not a legal macro slot.");
+      macro_notify(match, player, "MACRO: That is not a legal macro slot.");
   } else
-    notify(match->evaluation, player,
-           "MACRO: What set did you want to delete from your macro system?");
+    notify_checked(
+        match->evaluation, player, player,
+        "MACRO: What set did you want to delete from your macro system?",
+        MSG_ME_ALL | MSG_F_DOWN);
 }
 
 void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -219,7 +218,7 @@ void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     notify_printf(match->evaluation, player,
                   "MACRO: Current slot description to %s.", s);
   } else
-    notify(match->evaluation, player, "MACRO: You have no current slot set.");
+    macro_notify(match, player, "MACRO: You have no current slot set.");
 }
 
 void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -232,7 +231,7 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   if (m) {
     if ((m->player != player) &&
         !is_wizard(match->evaluation->world->database, player)) {
-      notify(match->evaluation, player, "MACRO: Permission denied.");
+      macro_notify(match, player, "MACRO: Permission denied.");
       return;
     }
     if (*s == '!') {
@@ -246,44 +245,50 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     case 'l':
       if (sign) {
         m->status |= MACRO_L;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot is now locked and unwritable.");
+        notify_checked(
+            match->evaluation, player, player,
+            "MACRO: Default Macro Slot is now locked and unwritable.",
+            MSG_ME_ALL | MSG_F_DOWN);
       } else {
         m->status &= ~MACRO_L;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot is now unlocked.");
+        macro_notify(match, player,
+                     "MACRO: Default Macro Slot is now unlocked.");
       }
       break;
     case 'R':
     case 'r':
       if (sign) {
         m->status |= MACRO_R;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot set to be readable by others");
+        macro_notify(match, player,
+                     "MACRO: Default Macro Slot set to be readable by others");
       } else {
         m->status &= ~MACRO_R;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot set to be not readable by others");
+        notify_checked(
+            match->evaluation, player, player,
+            "MACRO: Default Macro Slot set to be not readable by others",
+            MSG_ME_ALL | MSG_F_DOWN);
       }
       break;
     case 'W':
     case 'w':
       if (sign) {
         m->status |= MACRO_W;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot set to be writable by others");
+        macro_notify(match, player,
+                     "MACRO: Default Macro Slot set to be writable by others");
       } else {
         m->status &= ~MACRO_W;
-        notify(match->evaluation, player,
-               "MACRO: Default Macro Slot set to be not writable by others");
+        notify_checked(
+            match->evaluation, player, player,
+            "MACRO: Default Macro Slot set to be not writable by others",
+            MSG_ME_ALL | MSG_F_DOWN);
       }
       break;
     default:
-      notify(match->evaluation, player,
-             "MACRO: Sorry, unknown mode.  Legal modes are: L R W");
+      macro_notify(match, player,
+                   "MACRO: Sorry, unknown mode.  Legal modes are: L R W");
     }
   } else
-    notify(match->evaluation, player, "MACRO: You have no current slot set.");
+    macro_notify(match, player, "MACRO: You have no current slot set.");
 }
 
 void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -294,8 +299,7 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   char buffer[LBUF_SIZE];
 
   if (!s || !*s) {
-    notify(match->evaluation, player,
-           "MACRO: You need to specify a macro set.");
+    macro_notify(match, player, "MACRO: You need to specify a macro set.");
     return;
   }
   if (is_number(s)) {
@@ -308,7 +312,7 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     } else
       m = registry->sets[which];
   } else {
-    notify(match->evaluation, player, "MACRO: I do not see that set here.");
+    macro_notify(match, player, "MACRO: I do not see that set here.");
     return;
   }
 
@@ -318,10 +322,10 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     for (i = 0; i < m->macro_count; i++) {
       snprintf(buffer, sizeof(buffer), "  %-5.5s: %s", m->alias + i * 5,
                m->string[i]);
-      notify(match->evaluation, player, buffer);
+      macro_notify(match, player, buffer);
     }
   } else
-    notify(match->evaluation, player, "MACRO: Permission denied.");
+    macro_notify(match, player, "MACRO: Permission denied.");
 }
 
 void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -338,11 +342,10 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       notify_printf(match->evaluation, player, "MACRO: Current slot set to %d.",
                     set);
     } else
-      notify(match->evaluation, player,
-             "MACRO: That is not a legal macro slot.");
+      macro_notify(match, player, "MACRO: That is not a legal macro slot.");
   } else
-    notify(match->evaluation, player,
-           "MACRO: What slot did you want to make current?");
+    macro_notify(match, player,
+                 "MACRO: What slot did you want to make current?");
 }
 
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -354,9 +357,9 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   c = get_commac(registry->channels, player);
 
-  notify(match->evaluation, player,
-         "#: Num  Description                         Owner            "
-         "         LRW");
+  macro_notify(match, player,
+               "#: Num  Description                         Owner            "
+               "         LRW");
   for (i = 0; i < 5; i++) {
     if (c->macros[i] >= 0)
       if (!(is_valid_macro_index(registry, c->macros[i])))
@@ -396,10 +399,10 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     for (i = 0; i < m->macro_count; i++) {
       snprintf(buffer, sizeof(buffer), "  %-5.5s: %s", m->alias + i * 5,
                m->string[i]);
-      notify(match->evaluation, player, buffer);
+      macro_notify(match, player, buffer);
     }
   } else
-    notify(match->evaluation, player, "MACRO: Illegal macro set to examine.");
+    macro_notify(match, player, "MACRO: Illegal macro set to examine.");
 }
 
 void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -412,16 +415,15 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   thing = match_thing(match, player, cmd);
 
   if (thing == NOTHING) {
-    notify(match->evaluation, player, "MACRO: I do not see that here.");
+    macro_notify(match, player, "MACRO: I do not see that here.");
     return;
   }
   if (!m) {
-    notify(match->evaluation, player, "MACRO: No current active macro.");
+    macro_notify(match, player, "MACRO: No current active macro.");
     return;
   }
   if (!is_wizard(match->evaluation->world->database, player)) {
-    notify(match->evaluation, player,
-           "MACRO: Sorry, command limited to Wizards.");
+    macro_notify(match, player, "MACRO: Sorry, command limited to Wizards.");
     return;
   }
   m->player = (int)thing;
@@ -477,11 +479,11 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   c = get_commac(registry->channels, player);
 
   if (c->curmac == -1) {
-    notify(match->evaluation, player,
-           "MACRO: You are not currently editing a macro set.");
+    macro_notify(match, player,
+                 "MACRO: You are not currently editing a macro set.");
     return;
   } else if (c->macros[c->curmac] == -1) {
-    notify(match->evaluation, player, "MACRO: That is not a valid macro set.");
+    macro_notify(match, player, "MACRO: That is not a valid macro set.");
     return;
   }
   set = c->macros[c->curmac];
@@ -490,12 +492,11 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   if (is_valid_macro_index(registry, set)) {
     if ((player != m->player) &&
         !is_wizard(match->evaluation->world->database, player)) {
-      notify(match->evaluation, player,
-             "MACRO: You may only CLEAR your own macro sets.");
+      macro_notify(match, player,
+                   "MACRO: You may only CLEAR your own macro sets.");
       return;
     } else if ((player == m->player) && (m->status & MACRO_L)) {
-      notify(match->evaluation, player,
-             "MACRO: Sorry, that macro set is locked.");
+      macro_notify(match, player, "MACRO: Sorry, that macro set is locked.");
       return;
     }
   }
@@ -518,11 +519,11 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   m = get_macro_set(registry, player, -1);
 
   if (!m) {
-    notify(match->evaluation, player, "MACRO: No current set.");
+    macro_notify(match, player, "MACRO: No current set.");
     return;
   }
   if (!can_write_macros(player, m)) {
-    notify(match->evaluation, player, "MACRO: Permission denied.");
+    macro_notify(match, player, "MACRO: Permission denied.");
     return;
   }
   for (alias = cmd; *alias && *alias == ' '; alias++)
@@ -534,8 +535,8 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   while (*cmd && *cmd == ' ')
     *cmd++ = '\0';
   if (*cmd != '=') {
-    notify(match->evaluation, player,
-           "MACRO: You must specify an = in your macro definition");
+    macro_notify(match, player,
+                 "MACRO: You must specify an = in your macro definition");
     return;
   }
   *cmd++ = 0;
@@ -545,27 +546,29 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   s = cmd;
 
   if (!*s) {
-    notify(match->evaluation, player,
-           "MACRO: You must specify a string to substitute for.");
+    macro_notify(match, player,
+                 "MACRO: You must specify a string to substitute for.");
     return;
   } else if (!*alias || strlen(alias) > 4) {
-    notify(match->evaluation, player,
-           "MACRO: Please use an alias from 1 to 4 characters long.");
+    macro_notify(match, player,
+                 "MACRO: Please use an alias from 1 to 4 characters long.");
     return;
   } else if (!utf8_is_printable_ascii(alias, strlen(alias))) {
-    notify(match->evaluation, player,
-           "MACRO: Aliases must contain only printable ASCII characters.");
+    notify_checked(
+        match->evaluation, player, player,
+        "MACRO: Aliases must contain only printable ASCII characters.",
+        MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   for (j = 0; j < m->macro_count && (strcasecmp(alias, m->alias + j * 5) > 0);
        j++)
     ;
   if (j < m->macro_count && !strcasecmp(alias, m->alias + j * 5)) {
-    notify(match->evaluation, player,
-           "MACRO: That alias is already defined in this set.");
+    macro_notify(match, player,
+                 "MACRO: That alias is already defined in this set.");
     snprintf(buffer, sizeof(buffer), "%-4.4s:%s", m->alias + j * 5,
              m->string[j]);
-    notify(match->evaluation, player, buffer);
+    macro_notify(match, player, buffer);
     return;
   }
   if (m->macro_count >= m->macro_capacity) {
@@ -593,7 +596,7 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   m->string[where] = malloc(strlen(s) + 1);
   StringCopy(m->string[where], s);
   snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias, s);
-  notify(match->evaluation, player, buffer);
+  macro_notify(match, player, buffer);
 }
 
 void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
@@ -604,7 +607,7 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   m = get_macro_set(registry, player, -1);
 
   if (!m || !can_write_macros(player, m)) {
-    notify(match->evaluation, player, "MACRO: Permission denied.");
+    macro_notify(match, player, "MACRO: Permission denied.");
     return;
   }
   for (i = 0; i < m->macro_count; i++) {
@@ -615,11 +618,11 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         StringCopy(m->alias + i * 5, m->alias + i * 5 + 5);
         m->string[i] = m->string[i + 1];
       }
-      notify(match->evaluation, player, "MACRO: Macro deleted from set.");
+      macro_notify(match, player, "MACRO: Macro deleted from set.");
       return;
     }
   }
-  notify(match->evaluation, player, "MACRO: That macro is not in this set.");
+  macro_notify(match, player, "MACRO: That macro is not in this set.");
 }
 
 char *do_process_macro(MacroRegistry *registry, DbRef player, char *in,
@@ -742,8 +745,8 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     if (c->macros[i] == -1)
       first = i;
   if (first < 0) {
-    notify(match->evaluation, player,
-           "MACRO: Sorry, you already have 5 sets defined on you.");
+    macro_notify(match, player,
+                 "MACRO: Sorry, you already have 5 sets defined on you.");
     return;
   }
   if (registry->count >= registry->capacity) {

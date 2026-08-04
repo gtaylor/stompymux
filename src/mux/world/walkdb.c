@@ -3,6 +3,7 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
@@ -15,7 +16,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
@@ -43,11 +43,12 @@ void do_find(CommandInvocation *invocation) {
          string_match(game_object_pure_name(evaluation->world->database, i),
                       name))) {
       buff = unparse_object(evaluation->world->database, evaluation, player, i);
-      notify(evaluation, player, buff);
+      notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
     }
   }
-  notify(evaluation, player, "***End of List***");
+  notify_checked(evaluation, player, player, "***End of List***",
+                 MSG_ME_ALL | MSG_F_DOWN);
 }
 
 /**
@@ -349,11 +350,12 @@ void do_search(CommandInvocation *invocation) {
       if (flag) {
         flag = 0;
         destitute = 0;
-        notify(evaluation, player, "\nROOMS:");
+        notify_checked(evaluation, player, player,
+                       "\nROOMS:", MSG_ME_ALL | MSG_F_DOWN);
       }
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
-      notify(evaluation, player, buff);
+      notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
       rcount++;
     }
@@ -371,7 +373,8 @@ void do_search(CommandInvocation *invocation) {
       if (flag) {
         flag = 0;
         destitute = 0;
-        notify(evaluation, player, "\nEXITS:");
+        notify_checked(evaluation, player, player,
+                       "\nEXITS:", MSG_ME_ALL | MSG_F_DOWN);
       }
       from = game_object_exits(evaluation->world->database, thing);
       to = game_object_location(evaluation->world->database, thing);
@@ -396,7 +399,8 @@ void do_search(CommandInvocation *invocation) {
 
       safe_chr(']', outbuf, &bp);
       *bp = '\0';
-      notify(evaluation, player, outbuf);
+      notify_checked(evaluation, player, player, outbuf,
+                     MSG_ME_ALL | MSG_F_DOWN);
       ecount++;
     }
   }
@@ -413,11 +417,12 @@ void do_search(CommandInvocation *invocation) {
       if (flag) {
         flag = 0;
         destitute = 0;
-        notify(evaluation, player, "\nOBJECTS:");
+        notify_checked(evaluation, player, player,
+                       "\nOBJECTS:", MSG_ME_ALL | MSG_F_DOWN);
       }
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
-      notify(evaluation, player, buff);
+      notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
       tcount++;
     }
@@ -435,11 +440,12 @@ void do_search(CommandInvocation *invocation) {
       if (flag) {
         flag = 0;
         destitute = 0;
-        notify(evaluation, player, "\nGARBAGE:");
+        notify_checked(evaluation, player, player,
+                       "\nGARBAGE:", MSG_ME_ALL | MSG_F_DOWN);
       }
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
-      notify(evaluation, player, buff);
+      notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
       free_lbuf(buff);
       gcount++;
     }
@@ -457,7 +463,8 @@ void do_search(CommandInvocation *invocation) {
       if (flag) {
         flag = 0;
         destitute = 0;
-        notify(evaluation, player, "\nPLAYERS:");
+        notify_checked(evaluation, player, player,
+                       "\nPLAYERS:", MSG_ME_ALL | MSG_F_DOWN);
       }
       bp = outbuf;
       buff = unparse_object(evaluation->world->database, evaluation, player,
@@ -474,7 +481,8 @@ void do_search(CommandInvocation *invocation) {
         safe_chr(']', outbuf, &bp);
       }
       *bp = '\0';
-      notify(evaluation, player, outbuf);
+      notify_checked(evaluation, player, player, outbuf,
+                     MSG_ME_ALL | MSG_F_DOWN);
       pcount++;
     }
   }
@@ -483,13 +491,14 @@ void do_search(CommandInvocation *invocation) {
    */
 
   if (destitute) {
-    notify(evaluation, player, "Nothing found.");
+    notify_checked(evaluation, player, player, "Nothing found.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   } else {
     snprintf(outbuf, LBUF_SIZE,
              "\nFound:  Rooms...%d  Exits...%d  Objects...%d  Players...%d  "
              "Garbage...%d",
              rcount, ecount, tcount, pcount, gcount);
-    notify(evaluation, player, outbuf);
+    notify_checked(evaluation, player, player, outbuf, MSG_ME_ALL | MSG_F_DOWN);
   }
   free_lbuf(outbuf);
   object_list_destroy(&results);

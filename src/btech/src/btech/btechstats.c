@@ -9,8 +9,10 @@
  *
  */
 
+#include "mux/server/game.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
+#include "mux/world/player.h"
 #include <math.h>
 #include <stdio.h>
 #define BTECHSTATS

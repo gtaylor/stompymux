@@ -2,17 +2,20 @@
  * move.c -- Routines for moving about
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_invocation.h"
+#include "mux/commands/look.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/formatting.h"
 #include "mux/world/match.h"
@@ -376,7 +379,8 @@ int move_via_teleport(EvaluationContext *evaluation, DbRef thing, DbRef dest,
           failmsg = "You can't teleport out!";
         else {
           failmsg = "You can't be teleported out!";
-          notify_quiet(evaluation, cause, "You can't teleport that out!");
+          notify_checked(evaluation, cause, cause,
+                         "You can't teleport that out!", MSG_ME);
         }
         notify_lock_failure(evaluation, &lock, &result, failmsg, nullptr,
                             LUA_EVENT_TELEPORT_OUT_FAIL);
@@ -466,13 +470,15 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
     case OBJECT_TYPE_PLAYER:
     case OBJECT_TYPE_THING:
       if (is_going(evaluation->world->database, loc)) {
-        notify(evaluation, player, "You can't go that way.");
+        notify_checked(evaluation, player, player, "You can't go that way.",
+                       MSG_ME_ALL | MSG_F_DOWN);
         return;
       }
       move_via_exit(evaluation, player, loc, NOTHING, exit, hush);
       break;
     case OBJECT_TYPE_EXIT:
-      notify(evaluation, player, "You can't go that way.");
+      notify_checked(evaluation, player, player, "You can't go that way.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     default:
       break;

@@ -12,6 +12,7 @@
  *   '98 - '02: Thomas Wouters <thomas@xs4all.net>
  */
 
+#include "mux/server/game.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

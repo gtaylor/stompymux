@@ -2,6 +2,7 @@
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
+#include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
 #include <assert.h>
@@ -18,7 +19,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -136,7 +136,7 @@ static char *set_string(char **ptr, char *new) {
  * ---------------------------------------------------------------------------
  * * Name, s_Name: Get or set an object's name.
  */
-INLINE char *game_object_name(GameDatabase *database, DbRef thing) {
+char *game_object_name(GameDatabase *database, DbRef thing) {
   long aflags;
   char *buff;
   char buffer[MBUF_SIZE];
@@ -180,7 +180,7 @@ bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
   return true;
 }
 
-INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
+char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   long aflags;
   char *buff;
 
@@ -209,7 +209,7 @@ INLINE char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   return database->pure_name_buffer;
 }
 
-INLINE void object_name_set(GameDatabase *database, DbRef thing, char *s) {
+void object_name_set(GameDatabase *database, DbRef thing, char *s) {
   char stored[MBUF_SIZE];
   char new[MBUF_SIZE];
 

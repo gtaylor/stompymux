@@ -4,6 +4,7 @@
 
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
+#include "mux/server/game.h"
 
 #include "p.glue.h"
 
@@ -17,7 +18,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -36,8 +36,8 @@ static int can_destroy_exit(EvaluationContext *evaluation, DbRef player,
   loc = game_object_exits(evaluation->world->database, exit);
   if ((loc != game_object_location(evaluation->world->database, player)) &&
       (loc != player) && !is_wizard(evaluation->world->database, player)) {
-    notify_quiet(evaluation, player,
-                 "You can not destroy exits in another room.");
+    notify_checked(evaluation, player, player,
+                   "You can not destroy exits in another room.", MSG_ME);
     return 0;
   }
   return 1;
@@ -62,11 +62,13 @@ static int destroyable(GameDatabase *database,
 static int can_destroy_player(EvaluationContext *evaluation, DbRef player,
                               DbRef victim) {
   if (!is_wizard(evaluation->world->database, player)) {
-    notify_quiet(evaluation, player, "Sorry, no suicide allowed.");
+    notify_checked(evaluation, player, player, "Sorry, no suicide allowed.",
+                   MSG_ME);
     return 0;
   }
   if (is_wizard(evaluation->world->database, victim)) {
-    notify_quiet(evaluation, player, "You may not destroy Wizards!");
+    notify_checked(evaluation, player, player, "You may not destroy Wizards!",
+                   MSG_ME);
     return 0;
   }
   return 1;
@@ -106,9 +108,10 @@ void do_destroy(CommandInvocation *invocation) {
   if (is_safe(evaluation->world->database,
               invocation->context->world->configuration, thing, player) &&
       !(key & DEST_OVERRIDE)) {
-    notify_quiet(evaluation, player,
-                 "Sorry, that object is protected. Use "
-                 "@destroy/override to destroy it.");
+    notify_checked(evaluation, player, player,
+                   "Sorry, that object is protected. Use "
+                   "@destroy/override to destroy it.",
+                   MSG_ME);
     return;
   }
   /*
@@ -117,7 +120,8 @@ void do_destroy(CommandInvocation *invocation) {
 
   if (!destroyable(evaluation->world->database,
                    invocation->context->world->configuration, thing)) {
-    notify_quiet(evaluation, player, "You can't destroy that!");
+    notify_checked(evaluation, player, player, "You can't destroy that!",
+                   MSG_ME);
     return;
   }
   /*
@@ -128,7 +132,8 @@ void do_destroy(CommandInvocation *invocation) {
   case OBJECT_TYPE_EXIT:
     if (can_destroy_exit(evaluation, player, thing)) {
       if (is_going(evaluation->world->database, thing)) {
-        notify_quiet(evaluation, player, "No sense beating a dead exit.");
+        notify_checked(evaluation, player, player,
+                       "No sense beating a dead exit.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
           DisposeSpecialObject(evaluation->btech, player, thing);
@@ -137,7 +142,9 @@ void do_destroy(CommandInvocation *invocation) {
         if (0) {
           destroy_exit(evaluation, thing);
         } else {
-          notify(evaluation, player, "The exit shakes and begins to crumble.");
+          notify_checked(evaluation, player, player,
+                         "The exit shakes and begins to crumble.",
+                         MSG_ME_ALL | MSG_F_DOWN);
           s_going(evaluation->world->database, thing);
         }
       }
@@ -145,7 +152,8 @@ void do_destroy(CommandInvocation *invocation) {
     break;
   case OBJECT_TYPE_THING:
     if (is_going(evaluation->world->database, thing)) {
-      notify_quiet(evaluation, player, "No sense beating a dead object.");
+      notify_checked(evaluation, player, player,
+                     "No sense beating a dead object.", MSG_ME);
     } else {
       if (is_xcode(evaluation->world->database, thing)) {
         DisposeSpecialObject(evaluation->btech, player, thing);
@@ -154,7 +162,9 @@ void do_destroy(CommandInvocation *invocation) {
       if (0) {
         destroy_thing(evaluation, thing);
       } else {
-        notify(evaluation, player, "The object shakes and begins to crumble.");
+        notify_checked(evaluation, player, player,
+                       "The object shakes and begins to crumble.",
+                       MSG_ME_ALL | MSG_F_DOWN);
         s_going(evaluation->world->database, thing);
       }
     }
@@ -162,7 +172,8 @@ void do_destroy(CommandInvocation *invocation) {
   case OBJECT_TYPE_PLAYER:
     if (can_destroy_player(evaluation, player, thing)) {
       if (is_going(evaluation->world->database, thing)) {
-        notify_quiet(evaluation, player, "No sense beating a dead player.");
+        notify_checked(evaluation, player, player,
+                       "No sense beating a dead player.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
           DisposeSpecialObject(evaluation->btech, player, thing);
@@ -173,8 +184,9 @@ void do_destroy(CommandInvocation *invocation) {
                             tprintf("%ld", player));
           destroy_player(evaluation, thing);
         } else {
-          notify(evaluation, player,
-                 "The player shakes and begins to crumble.");
+          notify_checked(evaluation, player, player,
+                         "The player shakes and begins to crumble.",
+                         MSG_ME_ALL | MSG_F_DOWN);
           s_going(evaluation->world->database, thing);
           attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
                             tprintf("%ld", player));
@@ -184,14 +196,16 @@ void do_destroy(CommandInvocation *invocation) {
     break;
   case OBJECT_TYPE_ROOM:
     if (is_going(evaluation->world->database, thing)) {
-      notify_quiet(evaluation, player, "No sense beating a dead room.");
+      notify_checked(evaluation, player, player,
+                     "No sense beating a dead room.", MSG_ME);
     } else {
       if (0) {
         empty_obj(evaluation, thing);
         destroy_obj(evaluation, NOTHING, thing);
       } else {
-        notify_all(evaluation, thing, player,
-                   "The room shakes and begins to crumble.");
+        notify_checked(evaluation, thing, player,
+                       "The room shakes and begins to crumble.",
+                       MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
         s_going(evaluation->world->database, thing);
       }
     }

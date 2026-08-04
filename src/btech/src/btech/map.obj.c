@@ -8,6 +8,7 @@
  *
  */
 
+#include "mux/server/game.h"
 #include <math.h>
 #include <stdlib.h>
 

@@ -1,5 +1,8 @@
 /* comsys.c - Player channel creation, membership, and message delivery. */
 
+#include "mux/commands/action_messages.h"
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include <ctype.h>
 #include <sys/types.h>
 
@@ -10,7 +13,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/world/match.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"

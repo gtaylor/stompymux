@@ -3,6 +3,7 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
@@ -16,7 +17,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
@@ -284,7 +284,9 @@ int log_to_file(EvaluationContext *evaluation, DbRef thing, const char *logfile,
   snprintf(message_buffer, 4096, "%s\n", message);
 
   if (!log_cache_write(evaluation->log->cache, pathname, message_buffer)) {
-    notify(evaluation, thing, "Serious failure while trying to write to log.");
+    notify_checked(evaluation, thing, thing,
+                   "Serious failure while trying to write to log.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   return 1;
@@ -296,20 +298,24 @@ void do_log(CommandInvocation *invocation) {
   char *logfile = invocation->first;
   char *message = invocation->second;
   if (!message || !*message) {
-    notify(evaluation, player, "Nothing to log!");
+    notify_checked(evaluation, player, player, "Nothing to log!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 
   if (!logfile || !*logfile) {
-    notify(evaluation, player, "Invalid logfile.");
+    notify_checked(evaluation, player, player, "Invalid logfile.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 
   if (!log_to_file(evaluation, player, logfile, message)) {
-    notify(evaluation, player, "Request failed.");
+    notify_checked(evaluation, player, player, "Request failed.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 
-  notify(evaluation, player, "Message logged.");
+  notify_checked(evaluation, player, player, "Message logged.",
+                 MSG_ME_ALL | MSG_F_DOWN);
 }
 #endif

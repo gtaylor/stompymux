@@ -22,7 +22,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 
 #ifdef BTECHSTATS_C
 char *btech_charvaluetype_names[] = {"Char_value", "Char_skill",

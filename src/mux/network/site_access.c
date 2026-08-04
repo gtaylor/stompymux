@@ -8,6 +8,7 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include <arpa/inet.h>
@@ -28,7 +29,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/mux_server.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -94,15 +94,16 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
   SiteData *this;
 
   snprintf(buff, MBUF_SIZE, "----- %s -----", header_txt);
-  notify(evaluation, player, buff);
-  notify(evaluation, player,
-         "Address              Mask                 Status");
+  notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
+  notify_checked(evaluation, player, player,
+                 "Address              Mask                 Status",
+                 MSG_ME_ALL | MSG_F_DOWN);
   for (this = site_list; this; this = this->next) {
     str = stat_string(stat_type, this->flag);
     StringCopy(buff1, inet_ntoa(this->mask));
     snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address), buff1,
              str);
-    notify(evaluation, player, buff);
+    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
 }
 

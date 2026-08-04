@@ -2,13 +2,16 @@
  * match.c -- Routines for parsing arguments
  */
 
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/object_spatial.h"
+#include "mux/world/player.h"
 
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/world/match.h"
 #include "mux/world/world_context.h"
 
@@ -404,13 +407,16 @@ DbRef last_match_result(MatchContext *match_context) { return md.match; }
 DbRef match_status(EvaluationContext *evaluation, DbRef player, DbRef match) {
   switch (match) {
   case NOTHING:
-    notify(evaluation, player, NOMATCH_MESSAGE);
+    notify_checked(evaluation, player, player, NOMATCH_MESSAGE,
+                   MSG_ME_ALL | MSG_F_DOWN);
     return NOTHING;
   case AMBIGUOUS:
-    notify(evaluation, player, AMBIGUOUS_MESSAGE);
+    notify_checked(evaluation, player, player, AMBIGUOUS_MESSAGE,
+                   MSG_ME_ALL | MSG_F_DOWN);
     return NOTHING;
   case NOPERM:
-    notify(evaluation, player, NOPERM_MESSAGE);
+    notify_checked(evaluation, player, player, NOPERM_MESSAGE,
+                   MSG_ME_ALL | MSG_F_DOWN);
     return NOTHING;
   default:
     break;

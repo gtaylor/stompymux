@@ -10,6 +10,7 @@
 
 #include "mech.h"
 #include "glue.h"
+#include "mux/server/game.h"
 #include "p.mech.c3.h"
 #include "p.mech.c3.misc.h"
 #include "p.mech.c3i.h"

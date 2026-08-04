@@ -1,6 +1,7 @@
 /* action_messages.c - Action messaging and native Lua event dispatch. */
 
 #include "mux/commands/action_messages.h"
+#include "mux/server/game.h"
 
 #include "mux/commands/command_runtime.h"
 #include "mux/server/platform.h"
@@ -10,7 +11,6 @@
 #include "mux/commands/command_context.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/flags.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/object_spatial.h"
@@ -42,13 +42,16 @@ void notify_action(EvaluationContext *evaluation,
     d = attribute_get(evaluation->world->database, message.object,
                       invocation->content_attribute, &attribute_flags);
     if (*d) {
-      notify(evaluation, message.enactor, d);
+      notify_checked(evaluation, message.enactor, message.enactor, d,
+                     MSG_ME_ALL | MSG_F_DOWN);
     } else if (enactor_message) {
-      notify(evaluation, message.enactor, enactor_message);
+      notify_checked(evaluation, message.enactor, message.enactor,
+                     enactor_message, MSG_ME_ALL | MSG_F_DOWN);
     }
     free_lbuf(d);
   } else if (enactor_message && *enactor_message)
-    notify(evaluation, message.enactor, enactor_message);
+    notify_checked(evaluation, message.enactor, message.enactor,
+                   enactor_message, MSG_ME_ALL | MSG_F_DOWN);
   /*
    * message to neighbors
    */
@@ -110,7 +113,8 @@ void notify_lock_failure(EvaluationContext *evaluation,
   if (invocation->silent)
     return;
   if (enactor_message && *enactor_message)
-    notify(evaluation, invocation->enactor, enactor_message);
+    notify_checked(evaluation, invocation->enactor, invocation->enactor,
+                   enactor_message, MSG_ME_ALL | MSG_F_DOWN);
   if (other_message && *other_message &&
       has_location(evaluation->world->database, invocation->enactor) &&
       is_good_obj(evaluation->world->database,

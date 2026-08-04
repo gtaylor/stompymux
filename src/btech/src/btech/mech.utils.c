@@ -8,7 +8,9 @@
  *       All rights reserved
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/server/platform.h"
+#include "mux/world/move.h"
 
 #include <math.h>
 #include <stdio.h>

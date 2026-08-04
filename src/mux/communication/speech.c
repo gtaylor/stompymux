@@ -2,8 +2,13 @@
  * speech.c -- Commands which involve speaking
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/object_spatial.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -18,7 +23,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
@@ -33,7 +37,9 @@ static int sp_ok(EvaluationContext *evaluation,
 
   if (is_gagged(evaluation->world->database, player) &&
       (!(is_wizard(evaluation->world->database, player)))) {
-    notify(evaluation, player, "Sorry. Gagged players cannot speak.");
+    notify_checked(evaluation, player, player,
+                   "Sorry. Gagged players cannot speak.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
 
@@ -146,20 +152,26 @@ void do_say(CommandInvocation *invocation) {
                           message));
     break;
   case SAY_POSE:
-    notify_all_from_inside(
+    notify_checked(
         evaluation, loc, player,
         tprintf("%s %s", game_object_name(evaluation->world->database, player),
-                message));
+                message),
+        MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+            MSG_S_INSIDE);
     break;
   case SAY_POSE_NOSPC:
-    notify_all_from_inside(
+    notify_checked(
         evaluation, loc, player,
         tprintf("%s%s", game_object_name(evaluation->world->database, player),
-                message));
+                message),
+        MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+            MSG_S_INSIDE);
     break;
   case SAY_EMIT:
     if ((say_flags & SAY_HERE) || !say_flags) {
-      notify_all_from_inside(evaluation, loc, player, message);
+      notify_checked(evaluation, loc, player, message,
+                     MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+                         MSG_S_INSIDE);
     }
     if (say_flags & SAY_ROOM) {
       if ((typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) &&
@@ -176,7 +188,9 @@ void do_say(CommandInvocation *invocation) {
           return;
       }
       if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
-        notify_all_from_inside(evaluation, loc, player, message);
+        notify_checked(evaluation, loc, player, message,
+                       MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP |
+                           MSG_F_CONTENTS | MSG_S_INSIDE);
       }
     }
     break;

@@ -3,6 +3,7 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/network/network_output.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
@@ -18,9 +19,9 @@
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/event_timer.h"
+#include "mux/server/game.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/server/timer.h"

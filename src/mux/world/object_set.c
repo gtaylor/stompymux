@@ -3,6 +3,10 @@
  */
 
 #include "mux/world/object_set.h"
+#include "mux/commands/action_messages.h"
+#include "mux/server/game.h"
+#include "mux/world/access.h"
+#include "mux/world/player.h"
 
 #include "p.glue.h"
 
@@ -18,7 +22,6 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -33,7 +36,8 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   mat = noisy_match_result(match);
   if (is_good_obj(match->evaluation->world->database, mat) &&
       !is_controls(match->evaluation->world->database, player, mat)) {
-    notify_quiet(match->evaluation, player, "Permission denied.");
+    notify_checked(match->evaluation, player, player, "Permission denied.",
+                   MSG_ME);
     return NOTHING;
   } else {
     return (mat);
@@ -96,7 +100,7 @@ void do_alias(CommandInvocation *invocation) {
        * player * name checks.
        */
 
-      notify_quiet(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if (!*trimalias) {
 
       /*
@@ -106,7 +110,7 @@ void do_alias(CommandInvocation *invocation) {
       delete_player_name(invocation->context->world, thing, oldalias);
       attribute_clear(evaluation->world->database, thing, A_ALIAS);
       if (!is_quiet(evaluation->world->database, player))
-        notify_quiet(evaluation, player, "Alias removed.");
+        notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
     } else if (lookup_player(invocation->context->world, NOTHING, trimalias,
                              0) != NOTHING) {
 
@@ -114,11 +118,13 @@ void do_alias(CommandInvocation *invocation) {
        * Make sure new alias isn't already in use
        */
 
-      notify_quiet(evaluation, player, "That name is already in use.");
+      notify_checked(evaluation, player, player, "That name is already in use.",
+                     MSG_ME);
     } else if (!(badname_check(invocation->context->world, trimalias) &&
                  ok_player_name(invocation->context->world->configuration,
                                 trimalias))) {
-      notify_quiet(evaluation, player, "That's a silly name for a player!");
+      notify_checked(evaluation, player, player,
+                     "That's a silly name for a player!", MSG_ME);
     } else {
 
       /*
@@ -130,18 +136,20 @@ void do_alias(CommandInvocation *invocation) {
                     aflags);
       if (add_player_name(invocation->context->world, thing, trimalias)) {
         if (!is_quiet(evaluation->world->database, player))
-          notify_quiet(evaluation, player, "Alias set.");
+          notify_checked(evaluation, player, player, "Alias set.", MSG_ME);
       } else {
-        notify_quiet(
-            evaluation, player,
-            "That name is already in use or is illegal, alias cleared.");
+        notify_checked(
+            evaluation, player, player,
+            "That name is already in use or is illegal, alias cleared.",
+            MSG_ME);
         attribute_clear(evaluation->world->database, thing, A_ALIAS);
       }
     }
     free_lbuf(trimalias);
     free_lbuf(oldalias);
   } else {
-    notify_quiet(evaluation, player, "Only players may have aliases.");
+    notify_checked(evaluation, player, player, "Only players may have aliases.",
+                   MSG_ME);
   }
 }
 
@@ -160,8 +168,9 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
         (!is_player(evaluation->world->database, thing) ||
          (*attrtext &&
           !ok_player_name(evaluation->world->configuration, attrtext)))) {
-      notify_quiet(evaluation, player,
-                   "Player aliases must use valid printable ASCII names.");
+      notify_checked(evaluation, player, player,
+                     "Player aliases must use valid printable ASCII names.",
+                     MSG_ME);
       return;
     }
     if (attrnum == A_DESC || attrnum == A_IDESC) {
@@ -186,7 +195,7 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");
     free_lbuf(compiled);
   } else {
-    notify_quiet(evaluation, player, "Permission denied.");
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
   }
 }
 
@@ -198,7 +207,8 @@ void do_power(CommandInvocation *invocation) {
   DbRef thing;
 
   if (!flag || !*flag) {
-    notify_quiet(evaluation, player, "I don't know what you want to set!");
+    notify_checked(evaluation, player, player,
+                   "I don't know what you want to set!", MSG_ME);
     return;
   }
   /*
@@ -294,6 +304,7 @@ void do_use(CommandInvocation *invocation) {
     free_lbuf(df_use);
     free_lbuf(df_ouse);
   } else {
-    notify_quiet(evaluation, player, "You can't figure out how to use that.");
+    notify_checked(evaluation, player, player,
+                   "You can't figure out how to use that.", MSG_ME);
   }
 }

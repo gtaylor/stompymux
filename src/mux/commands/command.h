@@ -5,6 +5,7 @@
 #pragma once
 
 #include "mux/commands/command_invocation.h"
+#include "mux/commands/command_keys.h"
 
 #include "mux/objects/db.h"
 #include "mux/support/name_table.h"

@@ -4,7 +4,6 @@
 
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/world/match.h"
 
 enum : int { MACRO_L = 1, MACRO_R = 2, MACRO_W = 4 };

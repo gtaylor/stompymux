@@ -2,6 +2,8 @@
  * look.c -- commands which look at things
  */
 
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 
 #include "mux/commands/action_messages.h"
@@ -17,7 +19,6 @@
 #include "mux/objects/object_state.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/match.h"
@@ -42,7 +43,7 @@ void state_examine_namespaces(EvaluationContext *evaluation, DbRef player,
   if (!entry_count)
     return;
 
-  notify_quiet(evaluation, player, "State namespaces:");
+  notify_checked(evaluation, player, player, "State namespaces:", MSG_ME);
   for (size_t index = 0; index < entry_count; index++) {
     ObjectStateEntryView entry;
 
@@ -152,9 +153,10 @@ static void examine_state_namespace(EvaluationContext *evaluation, DbRef player,
 static void examine_state_summary(EvaluationContext *evaluation, DbRef player,
                                   DbRef thing) {
   state_examine_namespaces(evaluation, player, thing);
-  notify_quiet(evaluation, player,
-               "Type @state/examine <object>/<namespace> to list the values "
-               "in a namespace.");
+  notify_checked(evaluation, player, player,
+                 "Type @state/examine <object>/<namespace> to list the values "
+                 "in a namespace.",
+                 MSG_ME);
 }
 
 static void do_state_examine(CommandInvocation *invocation) {
@@ -174,7 +176,8 @@ static void do_state_examine(CommandInvocation *invocation) {
     if (name_space)
       *name_space++ = '\0';
     if (!*name) {
-      notify_quiet(evaluation, player, "You must specify an object.");
+      notify_checked(evaluation, player, player, "You must specify an object.",
+                     MSG_ME);
       return;
     }
     init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
@@ -186,7 +189,8 @@ static void do_state_examine(CommandInvocation *invocation) {
   if (!name_space) {
     examine_state_summary(evaluation, player, thing);
   } else if (!object_state_name_is_valid(name_space)) {
-    notify_quiet(evaluation, player, "Invalid state namespace.");
+    notify_checked(evaluation, player, player, "Invalid state namespace.",
+                   MSG_ME);
   } else {
     examine_state_namespace(evaluation, player, thing, name_space);
   }
@@ -231,7 +235,8 @@ static bool state_match_object(CommandInvocation *invocation, char *name,
   EvaluationContext *evaluation = &invocation->context->evaluation;
 
   if (!name || !*name) {
-    notify_quiet(evaluation, invocation->player, "You must specify an object.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "You must specify an object.", MSG_ME);
     return false;
   }
   init_match(&invocation->context->match, invocation->player, name,
@@ -248,22 +253,22 @@ static bool state_parse_address(CommandInvocation *invocation, char *text,
   char *slash;
 
   if (!state_split_last_word(text, &target, &address->key)) {
-    notify_quiet(evaluation, invocation->player,
-                 "Expected <object>/<namespace> <attribute_name>.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
   slash = strchr(target, '/');
   if (!slash || slash == target || !slash[1]) {
-    notify_quiet(evaluation, invocation->player,
-                 "Expected <object>/<namespace> <attribute_name>.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Expected <object>/<namespace> <attribute_name>.", MSG_ME);
     return false;
   }
   *slash++ = '\0';
   address->name_space = slash;
   if (!object_state_name_is_valid(address->name_space) ||
       !object_state_name_is_valid(address->key)) {
-    notify_quiet(evaluation, invocation->player,
-                 "Invalid state namespace or attribute name.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Invalid state namespace or attribute name.", MSG_ME);
     return false;
   }
   return state_match_object(invocation, target, &address->object);
@@ -274,14 +279,14 @@ static bool state_parse_destination(CommandInvocation *invocation, char *text,
   EvaluationContext *evaluation = &invocation->context->evaluation;
 
   if (!state_split_last_word(text, name_space, key)) {
-    notify_quiet(evaluation, invocation->player,
-                 "Expected <namespace> <attribute_name>.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Expected <namespace> <attribute_name>.", MSG_ME);
     return false;
   }
   if (!object_state_name_is_valid(*name_space) ||
       !object_state_name_is_valid(*key)) {
-    notify_quiet(evaluation, invocation->player,
-                 "Invalid state namespace or attribute name.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Invalid state namespace or attribute name.", MSG_ME);
     return false;
   }
   return true;
@@ -424,7 +429,8 @@ static void do_state_set(CommandInvocation *invocation) {
   if (!*text) {
     object_state_delete(database, address.object, address.name_space,
                         address.key);
-    notify_quiet(evaluation, invocation->player, "State value cleared.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "State value cleared.", MSG_ME);
     return;
   }
 
@@ -444,7 +450,8 @@ static void do_state_set(CommandInvocation *invocation) {
                   error);
     return;
   }
-  notify_quiet(evaluation, invocation->player, "State value set.");
+  notify_checked(evaluation, invocation->player, invocation->player,
+                 "State value set.", MSG_ME);
 }
 
 static void do_state_wipe(CommandInvocation *invocation) {
@@ -456,8 +463,8 @@ static void do_state_wipe(CommandInvocation *invocation) {
   size_t removed = 0;
 
   if (!target || !*target) {
-    notify_quiet(evaluation, invocation->player,
-                 "Expected <object> or <object>/<namespace>.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Expected <object> or <object>/<namespace>.", MSG_ME);
     return;
   }
   name_space = strchr(target, '/');
@@ -470,7 +477,8 @@ static void do_state_wipe(CommandInvocation *invocation) {
     object_state_clear(database, object);
   } else {
     if (!object_state_name_is_valid(name_space)) {
-      notify_quiet(evaluation, invocation->player, "Invalid state namespace.");
+      notify_checked(evaluation, invocation->player, invocation->player,
+                     "Invalid state namespace.", MSG_ME);
       return;
     }
     for (size_t index = 0; index < object_state_count(database, object);) {
@@ -507,8 +515,8 @@ static void do_state_copy_or_move(CommandInvocation *invocation, bool move) {
   ObjectStateTransaction transaction;
   object_state_transaction_initialize(&transaction);
   if (!object_state_transaction_begin(&transaction, database)) {
-    notify_quiet(evaluation, invocation->player,
-                 "Unable to start state transaction.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Unable to start state transaction.", MSG_ME);
     object_state_transaction_destroy(&transaction);
     return;
   }
@@ -517,8 +525,8 @@ static void do_state_copy_or_move(CommandInvocation *invocation, bool move) {
   if (!value) {
     object_state_transaction_finish(&transaction, false);
     object_state_transaction_destroy(&transaction);
-    notify_quiet(evaluation, invocation->player,
-                 "Source state value not found.");
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Source state value not found.", MSG_ME);
     return;
   }
   bool changed = object_state_transaction_set(

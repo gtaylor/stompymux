@@ -1,5 +1,7 @@
 /* comsys.c - Player channel creation, membership, and message delivery. */
 
+#include "mux/network/network_output.h"
+#include "mux/server/game.h"
 #include <ctype.h>
 #include <sys/types.h>
 
@@ -10,7 +12,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/world/match.h"
 #include "mux/world/player.h"
@@ -110,7 +111,8 @@ static void do_show_com(void *data, void *context) {
   } else
     snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s", t->tm_mon + 1,
              t->tm_mday, t->tm_hour, t->tm_min, d->msg);
-  notify(view->evaluation, player, buf);
+  notify_checked(view->evaluation, player, player, buf,
+                 MSG_ME_ALL | MSG_F_DOWN);
 }
 
 static void do_comlast(EvaluationContext *evaluation, DbRef player,
@@ -217,7 +219,8 @@ void comsys_send_channel_message(EvaluationContext *evaluation,
           is_connected(evaluation->world->database, user->who))
         raw_notify(evaluation, user->who, mess);
       else
-        notify(evaluation, user->who, mess);
+        notify_checked(evaluation, user->who, user->who, mess,
+                       MSG_ME_ALL | MSG_F_DOWN);
     }
   }
   /* Also, add it to the history of channel */
@@ -255,7 +258,8 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct channel *ch,
           is_connected(evaluation->world->database, user->who))
         raw_notify(evaluation, user->who, buffer);
       else
-        notify(evaluation, user->who, buffer);
+        notify_checked(evaluation, user->who, user->who, buffer,
+                       MSG_ME_ALL | MSG_F_DOWN);
     }
   }
   /* Also, add it to the history of channel */

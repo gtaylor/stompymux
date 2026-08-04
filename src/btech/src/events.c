@@ -11,6 +11,7 @@
 #include "mech.events.h"
 #include "mech.h"
 #include "mux/network/mux_event.h"
+#include "mux/server/game.h"
 
 extern char *mux_event_names[];
 

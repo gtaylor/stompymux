@@ -2,8 +2,11 @@
  * move.c -- Routines for moving about
  */
 
+#include "mux/commands/action_messages.h"
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
 #include "mux/world/world_context.h"
 
 #include "mux/commands/command.h"
@@ -13,7 +16,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/support/formatting.h"
 #include "mux/world/inventory_commands.h"
 #include "mux/world/match.h"
@@ -77,7 +79,8 @@ void do_get(CommandInvocation *invocation) {
 
     thingloc = game_object_location(evaluation->world->database, thing);
     if (thingloc == player) {
-      notify(evaluation, player, "You already have that!");
+      notify_checked(evaluation, player, player, "You already have that!",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     }
     if ((key & GET_QUIET) &&
@@ -85,7 +88,8 @@ void do_get(CommandInvocation *invocation) {
       quiet = 1;
 
     if (thing == player) {
-      notify(evaluation, player, "You cannot get yourself!");
+      notify_checked(evaluation, player, player, "You cannot get yourself!",
+                     MSG_ME_ALL | MSG_F_DOWN);
     } else if (lock_test(evaluation, player, invocation->cause, player, thing,
                          LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet,
                          &lock, &result)) {
@@ -95,7 +99,8 @@ void do_get(CommandInvocation *invocation) {
                       game_object_name(evaluation->world->database, thing));
       }
       move_via_generic(evaluation, thing, player, player, 0);
-      notify(evaluation, thing, "Taken.");
+      notify_checked(evaluation, thing, thing, "Taken.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -126,7 +131,8 @@ void do_get(CommandInvocation *invocation) {
 
     thingloc = game_object_exits(evaluation->world->database, thing);
     if (thingloc == player) {
-      notify(evaluation, player, "You already have that!");
+      notify_checked(evaluation, player, player, "You already have that!",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     }
     /*
@@ -136,7 +142,8 @@ void do_get(CommandInvocation *invocation) {
     playerloc = game_object_location(evaluation->world->database, player);
     if (!is_controls(evaluation->world->database, player, thing) &&
         !is_controls(evaluation->world->database, player, playerloc)) {
-      notify(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       break;
     }
     /*
@@ -155,10 +162,12 @@ void do_get(CommandInvocation *invocation) {
                      thing));
     game_object_set_exits(evaluation->world->database, thing, player);
     if (!is_quiet(evaluation->world->database, player))
-      notify(evaluation, player, "Exit taken.");
+      notify_checked(evaluation, player, player, "Exit taken.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
-    notify(evaluation, player, "You can't take that!");
+    notify_checked(evaluation, player, player, "You can't take that!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   }
 }
@@ -190,10 +199,12 @@ void do_drop(CommandInvocation *invocation) {
 
   switch (thing = match_result(match)) {
   case NOTHING:
-    notify(evaluation, player, "You don't have that!");
+    notify_checked(evaluation, player, player, "You don't have that!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   case AMBIGUOUS:
-    notify(evaluation, player, "I don't know which you mean!");
+    notify_checked(evaluation, player, player, "I don't know which you mean!",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   default:
     break;
@@ -209,7 +220,8 @@ void do_drop(CommandInvocation *invocation) {
 
     if ((game_object_location(evaluation->world->database, thing) != player) &&
         !is_wizard(evaluation->world->database, player)) {
-      notify(evaluation, player, "You can't drop that.");
+      notify_checked(evaluation, player, player, "You can't drop that.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     if (!lock_test(evaluation, player, invocation->cause, player, thing,
@@ -226,7 +238,8 @@ void do_drop(CommandInvocation *invocation) {
     move_via_generic(evaluation, thing,
                      game_object_location(evaluation->world->database, player),
                      player, 0);
-    notify(evaluation, thing, "Dropped.");
+    notify_checked(evaluation, thing, thing, "Dropped.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     quiet = 0;
     if ((key & DROP_QUIET) &&
         is_controls(evaluation->world->database, player, thing))
@@ -265,11 +278,13 @@ void do_drop(CommandInvocation *invocation) {
 
     if ((game_object_exits(evaluation->world->database, thing) != player) &&
         !is_wizard(evaluation->world->database, player)) {
-      notify(evaluation, player, "You can't drop that.");
+      notify_checked(evaluation, player, player, "You can't drop that.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     if (!is_controls(evaluation->world->database, player, loc)) {
-      notify(evaluation, player, "Permission denied.");
+      notify_checked(evaluation, player, player, "Permission denied.",
+                     MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
     /*
@@ -290,10 +305,12 @@ void do_drop(CommandInvocation *invocation) {
     game_object_set_exits(evaluation->world->database, thing, loc);
 
     if (!is_quiet(evaluation->world->database, player))
-      notify(evaluation, player, "Exit dropped.");
+      notify_checked(evaluation, player, player, "Exit dropped.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     break;
   default:
-    notify(evaluation, player, "You can't drop that.");
+    notify_checked(evaluation, player, player, "You can't drop that.",
+                   MSG_ME_ALL | MSG_F_DOWN);
   }
 }
 

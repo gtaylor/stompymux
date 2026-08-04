@@ -1,6 +1,7 @@
 /* gamedb_sqlite.c -- SQLite game-database persistence */
 
 #include "mux/server/platform.h"
+#include "mux/world/player.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -16,7 +17,6 @@
 #include "mux/objects/powers.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/utf8.h"

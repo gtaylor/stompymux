@@ -11,6 +11,7 @@
 #include "mech.h"
 #include "failures.h"
 #include "mech.events.h"
+#include "mux/server/game.h"
 #include "p.mech.bth.h"
 #include "p.mech.combat.h"
 #include "p.mech.damage.h"

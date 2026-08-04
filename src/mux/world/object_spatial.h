@@ -8,6 +8,9 @@
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct EvaluationContext EvaluationContext;
 
+constexpr int VE_LOC_XAM = 0x01;  /* Location is examinable. */
+constexpr int VE_LOC_DARK = 0x02; /* Location is dark. */
+
 DbRef where_is(GameDatabase *database, DbRef object);
 DbRef where_room(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef object);

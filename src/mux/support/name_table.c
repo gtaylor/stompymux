@@ -3,6 +3,7 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/world/world_context.h"
 
@@ -10,7 +11,6 @@
 #include "mux/objects/db.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
 
@@ -89,7 +89,7 @@ void name_table_display(EvaluationContext *evaluation,
   }
   *bp = '\0';
   if (got_one || list_if_none)
-    notify(evaluation, player, buf);
+    notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 }
 
@@ -133,7 +133,7 @@ void name_table_interpret(EvaluationContext *evaluation,
     }
   }
   *bp = '\0';
-  notify(evaluation, player, buf);
+  notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 }
 
@@ -170,7 +170,7 @@ void name_table_list_set(EvaluationContext *evaluation,
   }
   *bp = '\0';
   if (got_one || list_if_none)
-    notify(evaluation, player, buf);
+    notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buf);
 }
 

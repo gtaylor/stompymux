@@ -8,7 +8,11 @@
  *       All rights reserved
  */
 
+#include "mux/commands/action_messages.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/access.h"
+#include "mux/world/move.h"
 
 #include <assert.h>
 #include <math.h>

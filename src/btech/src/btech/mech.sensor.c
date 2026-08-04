@@ -10,6 +10,7 @@
 #include "mech.h"
 #include "glue.h"
 #include "map.h"
+#include "mux/server/game.h"
 #define _MECH_SENSOR_C
 #include "autopilot.h"
 #include "mech.events.h"

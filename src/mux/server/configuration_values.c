@@ -1,6 +1,8 @@
 /* configuration.c - Configuration parsing and defaults */
 
 #include "mux/server/configuration.h"
+#include "mux/server/game.h"
+#include "mux/world/player.h"
 
 #include "mux/server/configuration_context.h"
 #include "mux/server/configuration_toml.h"
@@ -20,7 +22,6 @@
 #include "mux/objects/powers.h"
 #include "mux/server/configuration_internal.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/alloc.h"
@@ -96,7 +97,8 @@ int cf_string(int *vp, char *str, long extra, DbRef player, char *cmd,
       log_error(context->log, LOG_STARTUP, "CNF", "NFND",
                 "%s: String truncated", cmd);
     } else {
-      notify(&context->command->evaluation, player, "String truncated");
+      notify_checked(&context->command->evaluation, player, player,
+                     "String truncated", MSG_ME_ALL | MSG_F_DOWN);
     }
     retval = 1;
   }

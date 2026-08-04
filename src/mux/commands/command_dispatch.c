@@ -3,7 +3,9 @@
  */
 
 #include "mux/commands/command_runtime.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/world/move.h"
 #include "mux/world/world_context.h"
 
 #include "p.glue.h"
@@ -25,7 +27,6 @@
 #include "mux/server/log.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
@@ -136,8 +137,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
       (typeof_obj(context->world->database, player) != OBJECT_TYPE_PLAYER))
     fail++;
   if (fail > 0) {
-    notify(&context->evaluation, player,
-           "Command incompatible with invoker type.");
+    notify_checked(&context->evaluation, player, player,
+                   "Command incompatible with invoker type.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   /*
@@ -146,8 +148,9 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
 
   if (is_protected(cmdp, CA_QUEUE) &&
       !context->world->configuration->is_command_queue_enabled) {
-    notify(&context->evaluation, player,
-           "Sorry, queueing and triggering are not allowed now.");
+    notify_checked(&context->evaluation, player, player,
+                   "Sorry, queueing and triggering are not allowed now.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
   key = cmdp->extra & ~SW_MULTIPLE;
@@ -165,7 +168,8 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
   /* Asumption: base command permission required for all sub-commands */
   if (!check_access(context->world->database, context->world->configuration,
                     player, cmdp->perms)) {
-    notify(&context->evaluation, player, "Permission denied.");
+    notify_checked(&context->evaluation, player, player, "Permission denied.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
 
@@ -191,12 +195,14 @@ static void process_cmdent(CommandContext *context, CMDENT *cmdp, char *switchp,
                       cmdp->cmdname);
         return;
       } else if (xkey == -2) {
-        notify(&context->evaluation, player, "Permission denied.");
+        notify_checked(&context->evaluation, player, player,
+                       "Permission denied.", MSG_ME_ALL | MSG_F_DOWN);
         return;
       } else if (!(xkey & SW_MULTIPLE)) {
         if (i == 1) {
-          notify(&context->evaluation, player,
-                 "Illegal combination of switches.");
+          notify_checked(&context->evaluation, player, player,
+                         "Illegal combination of switches.",
+                         MSG_ME_ALL | MSG_F_DOWN);
           return;
         }
         i = 1;
@@ -535,9 +541,10 @@ void process_command(CommandContext *context, char *command, char *args[],
   cmdp = (CMDENT *)hash_table_find(lcbuf, &registry->commands);
   if (cmdp != nullptr) {
     if ((cmdp->callseq & CS_NO_MACRO) && macerr == 1)
-      notify(&context->evaluation, player,
-             "This command is unavailable as macro. Please use an "
-             "attribute instead.");
+      notify_checked(&context->evaluation, player, player,
+                     "This command is unavailable as macro. Please use an "
+                     "attribute instead.",
+                     MSG_ME_ALL | MSG_F_DOWN);
     else
       process_cmdent(context, cmdp, slashp, player, cause, interactive, arg,
                      command, args, nargs);
@@ -645,7 +652,8 @@ void process_command(CommandContext *context, char *command, char *args[],
    */
 
   if (!succ) {
-    notify(&context->evaluation, player, "Huh?  (Type \"help\" for help.)");
+    notify_checked(&context->evaluation, player, player,
+                   "Huh?  (Type \"help\" for help.)", MSG_ME_ALL | MSG_F_DOWN);
     STARTLOG(context->log, LOG_BADCOMMANDS, "CMD", "BAD") {
       log_name_and_loc(context->log, player);
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");

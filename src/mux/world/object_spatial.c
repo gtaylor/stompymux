@@ -6,7 +6,6 @@
 #include "mux/server/platform.h"
 
 #include "mux/objects/powers.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/world/world_context.h"
 

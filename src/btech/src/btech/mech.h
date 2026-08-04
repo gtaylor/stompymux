@@ -17,7 +17,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/powers.h"
-#include "mux/server/server_api.h"
 
 #include "btconfig.h"
 #include "mymath.h"

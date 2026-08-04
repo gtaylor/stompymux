@@ -23,6 +23,8 @@
 #include "mine.h"
 #include "glue.h"
 #include "mech.h"
+#include "mux/commands/action_messages.h"
+#include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "p.artillery.h"
 #include "p.btechstats.h"

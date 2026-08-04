@@ -35,6 +35,10 @@ constexpr int CHAN_OPERATION_MASK =
     CHAN_BOOT | CHAN_OBJECT | CHAN_CREATE | CHAN_DESTROY | CHAN_EMIT |
     CHAN_LIST | CHAN_OFLAGS | CHAN_PFLAGS | CHAN_FLAGS | CHAN_STATUS | CHAN_WHO;
 
+constexpr int CEMIT_NOHEADER = 1; /* Channel emit without header. */
+constexpr int CLIST_FULL = 1;     /* Full listing of channels. */
+constexpr int CSTATUS_FULL = 1;   /* Full listing of channel status. */
+
 typedef struct chanentry CHANENT;
 struct chanentry {
   char *channame;

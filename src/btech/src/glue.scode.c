@@ -16,6 +16,7 @@
  */
 
 #include "mux/network/mux_event.h"
+#include "mux/server/game.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 

@@ -17,7 +17,6 @@
 #include "mux/persistence/gamedb.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
 #include "mux/server/log.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/utf8.h"

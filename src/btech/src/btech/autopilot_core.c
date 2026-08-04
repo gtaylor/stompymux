@@ -13,6 +13,7 @@
 #include "glue.h"
 #include "mech.events.h"
 #include "mech.h"
+#include "mux/server/game.h"
 #include "mycool.h"
 #include "p.mech.utils.h"
 

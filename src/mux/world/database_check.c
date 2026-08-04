@@ -3,6 +3,8 @@
  */
 
 #include "mux/world/database_check.h"
+#include "mux/server/game.h"
+#include "mux/world/move.h"
 #include "mux/world/object.h"
 #include "mux/world/object_internal.h"
 
@@ -16,7 +18,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
-#include "mux/server/server_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/markup.h"
@@ -692,7 +693,8 @@ void database_check(EvaluationContext *evaluation, DbRef player, int key) {
 
   if (player != NOTHING) {
     if (!is_quiet(evaluation->world->database, player))
-      notify(evaluation, player, "Done.");
+      notify_checked(evaluation, player, player, "Done.",
+                     MSG_ME_ALL | MSG_F_DOWN);
   }
 }
 

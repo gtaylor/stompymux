@@ -1,6 +1,7 @@
 /* access.c - Object visibility, lock, and hearing permission checks. */
 
 #include "mux/world/access.h"
+#include "mux/server/game.h"
 
 #include "mux/server/platform.h"
 
@@ -9,7 +10,6 @@
 #include "mux/commands/command_runtime.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/powers.h"
-#include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/world/world_context.h"

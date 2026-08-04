@@ -12,6 +12,7 @@
 #include "mech.h"
 #include "btmacros.h"
 #include "mech.events.h"
+#include "mux/server/game.h"
 #include "mux/server/mux_server.h"
 #include "p.bsuit.h"
 #include "p.btechstats.h"
@@ -688,7 +689,7 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
      * and pick the name out from there */
     if (wounded->xcode.context->configuration->btech_statengine_obj > 0 &&
         wWeapIndx != -1)
-      notify_with_cause(
+      notify_checked(
           btech_context_evaluation(wounded->xcode.context),
           wounded->xcode.context->configuration->btech_statengine_obj, GOD,
           tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
@@ -699,7 +700,8 @@ void DamageMech(MECH *wounded, MECH *attacker, int LOS, int attackPilot,
                   &MechWeapons[wWeapIndx].name[0], damage - intDamage,
                   GetSectInt(wounded, hitloc) < intDamage
                       ? intDamage - (intDamage - GetSectInt(wounded, hitloc))
-                      : intDamage));
+                      : intDamage),
+          MSG_ME_ALL | MSG_F_DOWN);
 
     if (intDamage >= 0)
       MechFloodsLoc(wounded, hitloc, MechZ(wounded));
