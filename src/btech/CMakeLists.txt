@@ -191,6 +191,7 @@ set(BTECH_SOURCES
   ui/mech_tactical_style.c
   ui/mech_tactical_command.c
   ui/mech_base_entry.c
+  ui/mech_broadcast.c
   ui/mech_notify.c
   ui/mech_notify_radio.c
   ui/mech_notify_radio_config.c
