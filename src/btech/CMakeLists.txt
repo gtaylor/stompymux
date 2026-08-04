@@ -101,6 +101,8 @@ set(BTECH_SOURCES
   sensors/mech_lite.c
   sensors/mech_los.c
   sensors/mech_scan.c
+  sensors/mech_scan_navigation.c
+  sensors/mech_scan_view.c
   sensors/mech_sensor.c
   sensors/mech_sensor_functions.c
   sensors/mech_spot.c
