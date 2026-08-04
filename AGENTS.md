@@ -18,10 +18,11 @@
 * Two space indents for C sources.
 * Avoid the use of preprocessor macros when possible.
 * Use bool types instead of int for boolean logic.
-* uSE `nullptr` instead of NULL or other workarounds.
+* Use `nullptr` instead of NULL or other workarounds.
 * Prefer multiple bools instead of bitmasks where reasonable.
 * Use enums instead of multiple #define or constexpr statements.
 * Obey the C code naming conventions below.
+* Avoid source files longer than 800 lines long.
 
 ## C code naming conventions
 
