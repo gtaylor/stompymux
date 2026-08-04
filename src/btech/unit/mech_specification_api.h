@@ -14,6 +14,7 @@ int mech_technology_flags_secondary(const Mech *mech);
 int mech_infantry_technology_flags(const Mech *mech);
 int mech_cargo_space(const Mech *mech);
 int mech_carrier_maximum_tonnage(const Mech *mech);
+int mech_maximum_battle_suits(const Mech *mech);
 float mech_current_speed(const Mech *mech);
 float mech_maximum_speed(const Mech *mech);
 void mech_maximum_speed_set(Mech *mech, float speed);

@@ -43,6 +43,7 @@
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
+#include "mech_specification_api.h"
 #include "mech_stagger.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -440,6 +441,10 @@ float MechCargoMaxSpeed(Mech *mech, float mspeed) {
   MechWalkXPFactor(mech) = MAX(1, (int)mspeed / MP1) * 2;
   MechCritStatus(mech) |= SPEED_OK;
   return MMaxSpeed(mech);
+}
+
+float mech_effective_maximum_speed(Mech *mech) {
+  return MechCargoMaxSpeed(mech, mech_maximum_speed(mech));
 }
 
 void mech_drop(DbRef player, void *data, char *buffer) {

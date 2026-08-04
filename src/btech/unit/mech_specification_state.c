@@ -35,6 +35,8 @@ int mech_carrier_maximum_tonnage(const Mech *mech) {
   return mech->ud.carmaxton;
 }
 
+int mech_maximum_battle_suits(const Mech *mech) { return mech->rd.maxsuits; }
+
 float mech_current_speed(const Mech *mech) { return mech->rd.speed; }
 
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }

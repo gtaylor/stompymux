@@ -18,6 +18,26 @@ void mech_targeting_target_clear(Mech *mech) {
 
 DbRef mech_target_dbref(const Mech *mech) { return mech->rd.target; }
 
+DbRef mech_charge_target_dbref(const Mech *mech) { return mech->rd.chgtarget; }
+
+DbRef mech_dfa_target_dbref(const Mech *mech) { return mech->rd.dfatarget; }
+
+int mech_charge_timer(const Mech *mech) { return mech->rd.chargetimer; }
+
+int mech_target_hex_x(const Mech *mech) { return mech->rd.targx; }
+
+int mech_target_hex_y(const Mech *mech) { return mech->rd.targy; }
+
+int mech_aim_section(const Mech *mech) { return mech->rd.aim; }
+
+int mech_aim_unit_class(const Mech *mech) { return mech->rd.aim_type; }
+
+bool mech_targets_building(const Mech *mech) {
+  return mech->rd.status & LOCK_BUILDING;
+}
+
+bool mech_targets_hex(const Mech *mech) { return mech->rd.status & LOCK_HEX; }
+
 void mech_targeting_tag_clear(Mech *mech) { mech->sd.tagTarget = -1; }
 
 bool mech_targeting_has_lock_on(const Mech *mech, DbRef target) {

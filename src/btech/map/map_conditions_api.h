@@ -20,3 +20,4 @@ typedef struct Mech Mech;
 void alter_conditions(BattleMap *map);
 void map_setconditions(DbRef player, BattleMap *map, char *buffer);
 void map_conditions_apply(Mech *mech, BattleMap *map);
+int battle_map_gravity(const BattleMap *map);

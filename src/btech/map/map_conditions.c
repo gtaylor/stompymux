@@ -35,6 +35,8 @@ void alter_conditions(BattleMap *map) {
     }
 }
 
+int battle_map_gravity(const BattleMap *map) { return map->grav; }
+
 void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   char *args[5];
   int vacuum = -1, underground = -1, grav, temp, argc;

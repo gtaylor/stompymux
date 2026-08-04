@@ -33,6 +33,24 @@ float mech_vertical_speed(const Mech *mech) { return mech->rd.verticalspeed; }
 
 int mech_heading_degrees(const Mech *mech) { return FSIM2SHO(mech->pd.facing); }
 
+int mech_desired_heading_degrees(const Mech *mech) {
+  return mech->rd.desiredfacing;
+}
+
+int mech_turret_heading_degrees(const Mech *mech) {
+  return mech->rd.turretfacing;
+}
+
+int mech_jump_destination_x(const Mech *mech) { return mech->rd.goingx; }
+
+int mech_jump_destination_y(const Mech *mech) { return mech->rd.goingy; }
+
+int mech_desired_angle(const Mech *mech) { return mech->rd.angle; }
+
+int mech_lateral_movement(const Mech *mech) { return mech->rd.lateral; }
+
+float mech_desired_speed(const Mech *mech) { return mech->rd.desired_speed; }
+
 char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
 
 void mech_position_xy_set(Mech *mech, int x, int y) {
