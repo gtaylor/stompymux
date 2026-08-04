@@ -15,7 +15,7 @@
 #include "map.h"
 #include "mech.events.h"
 #include "mech.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/markup.h"
 #include "p.mech.contacts.h"
 #include "p.mech.los.h"
 #include "p.mech.utils.h"

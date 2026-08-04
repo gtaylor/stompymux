@@ -14,7 +14,7 @@
 #include "mux/server/log_cache.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/palette.h"
 #include "mux/world/player_cache.h"
 
 void runtime_clock_initialize(RuntimeClock *clock) {

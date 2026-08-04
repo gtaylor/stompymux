@@ -1,9 +1,11 @@
-/* styled_text.h - Safe markup and capability-aware terminal rendering. */
+/* render.h - Capability-aware styled-text terminal rendering. */
 
 #pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "mux/support/styled_text/palette.h"
 
 typedef enum TerminalColorDepth {
   TERMINAL_COLOR_NONE,
@@ -12,8 +14,6 @@ typedef enum TerminalColorDepth {
   TERMINAL_COLOR_TRUECOLOR,
 } TerminalColorDepth;
 
-typedef struct StyledTextPalette StyledTextPalette;
-
 typedef struct StyledTextRenderOptions {
   TerminalColorDepth color_depth;
   bool osc_hyperlinks;
@@ -21,18 +21,20 @@ typedef struct StyledTextRenderOptions {
   bool osc_hyperlinks_prompt;
   bool osc_hyperlinks_style_basic;
   bool osc_hyperlinks_style_states;
+  bool osc_hyperlinks_tooltip;
+  bool osc_hyperlinks_menu;
+  bool osc_hyperlinks_visibility;
+  bool osc_hyperlinks_spoiler;
+  bool osc_hyperlinks_disabled;
+  bool osc_hyperlinks_selection;
+  bool osc_hyperlinks_compact;
+  bool osc_hyperlinks_presets;
 } StyledTextRenderOptions;
 
-StyledTextPalette *styled_text_palette_create(void);
-void styled_text_palette_destroy(StyledTextPalette *palette);
-bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
-                                 int red, int green, int blue, char *error,
-                                 size_t error_size);
-
-bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
-                         char *output, size_t output_size, char *error,
-                         size_t error_size);
-bool styled_text_escape(const char *text, char *output, size_t output_size);
+bool styled_text_palette_render_preset(const StyledTextPalette *palette,
+                                       size_t index,
+                                       const StyledTextRenderOptions *options,
+                                       char *output, size_t output_size);
 void styled_text_render(const StyledTextPalette *palette, const char *styled,
                         TerminalColorDepth depth, char *output,
                         size_t output_size);
@@ -40,11 +42,6 @@ void styled_text_render_with_options(const StyledTextPalette *palette,
                                      const char *styled,
                                      const StyledTextRenderOptions *options,
                                      char *output, size_t output_size);
-size_t styled_text_width(const StyledTextPalette *palette, const char *styled);
-void styled_text_strip(const StyledTextPalette *palette, const char *styled,
-                       char *output, size_t output_size);
-void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
-                          size_t width, char *output, size_t output_size);
 TerminalColorDepth terminal_color_depth_from_type(const char *name);
 bool terminal_mtts_parse(const char *name, TerminalColorDepth *depth,
                          bool *is_screen_reader);

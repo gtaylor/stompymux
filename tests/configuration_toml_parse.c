@@ -164,7 +164,7 @@ static int test_alias_map_dispatch(void) {
 
 static int test_rgb_map_dispatch(void) {
   static const char toml[] = "[colors]\n"
-                             "red = [205, 0, 0]\n"
+                             "brand_red = [205, 0, 0]\n"
                              "brand_blue = [32, 96, 192]\n"
                              "bad_length = [1, 2]\n"
                              "bad_type = [1, \"2\", 3]\n"
@@ -177,8 +177,30 @@ static int test_rgb_map_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 2 && call_log_find(&log, "named_color", "red 205 0 0") &&
+  ok = log.count == 2 &&
+       call_log_find(&log, "named_color", "brand_red 205 0 0") &&
        call_log_find(&log, "named_color", "brand_blue 32 96 192");
+  toml_free(result);
+  return ok;
+}
+
+static int test_osc8_preset_map_dispatch(void) {
+  static const char toml[] =
+      "[osc8.presets]\n"
+      "button = 'color=white bg=green bold'\n"
+      "poll = 'selection.group=\"demo\" selection.exclusive'\n";
+  toml_result_t result;
+  CallLog log = {0};
+  int ok;
+
+  result = toml_parse(toml, sizeof(toml) - 1);
+  if (!result.ok)
+    return 0;
+  configuration_toml_walk(result.toptab, recording_set_fn, &log);
+  ok = log.count == 2 &&
+       call_log_find(&log, "osc8_preset", "button color=white bg=green bold") &&
+       call_log_find(&log, "osc8_preset",
+                     "poll selection.group=\"demo\" selection.exclusive");
   toml_free(result);
   return ok;
 }
@@ -349,6 +371,8 @@ int main(int argc, char *argv[]) {
     return 4;
   if (!test_rgb_map_dispatch())
     return 5;
+  if (!test_osc8_preset_map_dispatch())
+    return 15;
   if (!test_access_map_dispatch())
     return 6;
   if (!test_site_list_dispatch())

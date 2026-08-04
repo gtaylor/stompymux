@@ -14,7 +14,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/support/alloc.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/markup.h"
 #include <stdio.h>
 #include <string.h>
 

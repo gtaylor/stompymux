@@ -3,7 +3,6 @@
 ## MUX Todos in the /src/ dir
 
 * Enable address sanitizer by default
-* Something we can crib? `Mudlet supports all standard color formats via Qt's QColor parser: Named colors (147+ CSS3/X11 names):`
 * Define primary/secondary/tertiary colors for use in UI elements.
 * Make help rendering more pretty.
 * Offer a non-privileged way to change your own password.
@@ -32,8 +31,6 @@
 * Maybe: do we need btech/src/mt19937ar.c or is there something else that may suffice for RNG?
 * Remove prototype header files
 
-
 ## OSC 8 
 
-* Make rgb/hex inputs match across ANSII and OSC8 in markup styling
-* Add Tier 3/tooltips
+* Break up styled_text.c/.h. It's huge now.

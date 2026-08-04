@@ -22,6 +22,7 @@ anything pulled in through `include`.
 | `[lua]` | Lua module directory, VM memory limit, and persistent object-state limits. LuaJIT compilation is enabled. |
 | `[server]` | Port and MUD name. |
 | `[colors]` | Case-insensitive named RGB colors used by styled-text markup. |
+| `[osc8.presets]` | Case-sensitive session-scoped Mudlet OSC 8 presets. |
 | `[battletech]` / `[battletech.xp]` | BattleTech gameplay tuning and the XP system. |
 | `[mux]` | Base MUX behavior, including default flags and Lua parents for newly created objects. |
 | `[security]` | Password hashing and login rate limiting (see below). |
@@ -58,32 +59,51 @@ directives take other shapes:
   "..." }` tables, applied in file order.
 - **Named colors** (`[colors]`) map a color name to an array of three integer
   RGB channels. Each channel must be from `0` through `255`.
+- **OSC 8 presets** (`[osc8.presets]`) map a preset name to a string of the
+  flattened directives accepted on a styled link.
 
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
 
 ## Named colors
 
-The `[colors]` table defines names accepted by `[fg=NAME]` and `[bg=NAME]`
-styled-text markup:
+The `[colors]` table defines custom names accepted by `[fg=NAME]`,
+`[color=NAME]`, and `[bg=NAME]` styled-text markup:
 
 ```toml
 [colors]
-red = [205, 0, 0]
 "brand-blue" = [32, 96, 192]
 ```
 
 Names are case-insensitive and may contain letters, digits, hyphens, and
-underscores. A name may be at most 60 characters. Defining one of the built-in
-names overrides it; any built-in omitted from the table remains available with
-its compiled-in ANSI behavior. The shipped configuration defines the standard
-palette with RGB values matching the compiled-in palette.
+underscores. A name may be at most 60 characters. Custom names must not overlap
+an opaque CSS/X11 built-in name; a case-insensitive collision is a fatal
+configuration error and stops server startup. Built-ins are immutable and do
+not need entries in this table.
 
 RGB colors are emitted directly for truecolor clients and mapped to the nearest
-xterm-256 or ANSI-16 color for less capable clients. Invalid entries are logged
-and skipped. When configuration files are included, normal table merge rules
-apply, so a color in the including file overrides a color with the same TOML
-key in an included file.
+xterm-256 or ANSI-16 color for less capable clients. A built-in name collision
+stops startup; other malformed entries are logged and skipped. When
+configuration files are included, normal table merge rules apply, so a color
+in the including file overrides a color with the same TOML key in an included
+file.
+
+## OSC 8 presets
+
+The `[osc8.presets]` table defines reusable Tier 2–5 link configuration:
+
+```toml
+[osc8.presets]
+button = 'color=white bg=green bold hover.bg=darkgreen'
+poll = 'selection.group="demo-poll" selection.exclusive'
+```
+
+Names are case-sensitive, contain 1–60 URI-safe letters, digits, dots,
+underscores, tildes, or hyphens, and must begin with a letter or digit. Values
+use the same flattened directives accepted inside a styled link tag. Presets
+may be partial templates, but every link's merged result must be valid. Invalid
+preset configuration stops startup. Definitions are immutable while the
+server runs and are sent once to each capable connection.
 
 ## Default Lua parents
 

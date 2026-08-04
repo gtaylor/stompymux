@@ -30,7 +30,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/render.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
@@ -254,6 +254,36 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
   options.osc_hyperlinks_style_states =
       descriptor_telnet_environment_value_is_one(d, TELNET_ENVIRONMENT_USERVAR,
                                                  "OSC_HYPERLINKS_STYLE_STATES");
+  options.osc_hyperlinks_tooltip = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_TOOLTIP");
+  options.osc_hyperlinks_menu = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_MENU");
+  options.osc_hyperlinks_visibility =
+      descriptor_telnet_environment_value_is_one(d, TELNET_ENVIRONMENT_USERVAR,
+                                                 "OSC_HYPERLINKS_VISIBILITY");
+  options.osc_hyperlinks_spoiler = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_SPOILER");
+  options.osc_hyperlinks_disabled = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_DISABLED");
+  options.osc_hyperlinks_selection = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_SELECTION");
+  options.osc_hyperlinks_compact = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_COMPACT");
+  options.osc_hyperlinks_presets = descriptor_telnet_environment_value_is_one(
+      d, TELNET_ENVIRONMENT_USERVAR, "OSC_HYPERLINKS_PRESETS");
+  if (options.osc_hyperlinks_presets && !d->osc8_presets_emitted) {
+    d->osc8_presets_emitted = true;
+    size_t count = styled_text_palette_preset_count(
+        descriptor_runtime(d)->world->styled_text_palette);
+    for (size_t index = 0; index < count; index++) {
+      char definition[LBUF_SIZE];
+
+      if (styled_text_palette_render_preset(
+              descriptor_runtime(d)->world->styled_text_palette, index,
+              &options, definition, sizeof(definition)))
+        descriptor_queue_write(d, definition, (int)strlen(definition));
+    }
+  }
   styled_text_render_with_options(
       descriptor_runtime(d)->world->styled_text_palette, s, &options, rendered,
       sizeof(rendered));

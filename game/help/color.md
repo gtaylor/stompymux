@@ -1,7 +1,7 @@
 +++
 title = "Color markup"
-description = "Add safe named or hexadecimal colors to object text"
-keywords = ["color", "colour", "color markup", "hex color", "truecolor"]
+description = "Add safe named, hexadecimal, or RGB colors to object text"
+keywords = ["color", "colour", "color markup", "hex color", "rgb color", "truecolor"]
 article_tags = ["show_in_index"]
 +++
 
@@ -21,15 +21,16 @@ most recent style with `[/]`.
 @idesc dropship=[bg=#101830 fg=bright-white]Cool light fills the cabin.[/]
 ```
 
-The predefined colors are `black`, `red`, `green`, `yellow`, `blue`,
-`magenta`, `cyan`, and `white`, plus each name prefixed by `bright-`.
-`gray` and `grey` are aliases for `bright-black`. Hexadecimal colors use
-exactly six digits in `#RRGGBB` form.
+Colors accept three forms: an opaque CSS/X11 name such as `red`, exactly six
+hexadecimal digits in `#RRGGBB` form, or `rgb(RED,GREEN,BLUE)` with three
+decimal channels from 0 through 255. For example, `red`, `#ff0000`, and
+`rgb(255,0,0)` are equivalent. RGB functions do not allow spaces,
+percentages, or alpha channels.
 
-The game configuration may override these colors or provide additional named
-colors. Custom names work anywhere a predefined color is accepted.
+The game configuration may provide additional named colors. Custom names work
+anywhere a predefined color is accepted, but cannot override a CSS/X11 name.
 BattleTech maps, status displays, menus, and notifications use the same named
-palette, so overrides also apply to their output.
+palette.
 
 Formatting tags are `[bold]`, `[blink]`, `[underline]`, and `[inverse]`. They
 can share a tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes
@@ -47,7 +48,7 @@ terminal formatting in the message body is removed before delivery.
 Ordinary player messages sent to communication channels follow the same rule.
 Wizard messages sent with `@chan/emit` may contain styling.
 
-The server adapts hexadecimal color to truecolor, 256-color, or 16-color ANSI
+The server adapts each resolved color to truecolor, 256-color, or 16-color ANSI
 according to the connected client. Players without the ANSI flag, and clients
 reporting screen-reader mode, receive plain text.
 

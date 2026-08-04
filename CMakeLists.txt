@@ -142,7 +142,8 @@ unset(CMAKE_SKIP_INSTALL_RULES)
 set(BUILD_TESTING ${CMARK_BUILD_TESTING_SAVED} CACHE BOOL "" FORCE)
 unset(CMARK_BUILD_TESTING_SAVED)
 
-set(BTMUX_VERSION_STRING "StompyMUX ${PROJECT_VERSION}")
+set(BTMUX_NAME "${PROJECT_NAME}")
+set(BTMUX_VERSION_STRING "${BTMUX_NAME} ${PROJECT_VERSION}")
 
 set(BT_ADVANCED_ECON ${BTECH_ADVANCED_ECON})
 set(ARBITRARY_LOGFILES ${BTECH_ENHANCED_LOGGING})
@@ -358,8 +359,14 @@ if(BUILD_TESTING)
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME utf8 COMMAND utf8_test)
 
-  add_executable(styled_text_test tests/styled_text.c
-    ${MUX_SOURCE_DIR}/support/styled_text.c
+  add_executable(styled_text_test
+    tests/styled_text/main.c
+    tests/styled_text/markup.c
+    tests/styled_text/osc8.c
+    tests/styled_text/presets.c
+    tests/styled_text/terminal.c
+    tests/styled_text/test_support.c
+    ${STYLED_TEXT_SOURCES}
     ${MUX_SOURCE_DIR}/support/utf8.c)
   target_link_libraries(styled_text_test PRIVATE btmux_options)
   target_include_directories(styled_text_test PRIVATE

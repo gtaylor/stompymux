@@ -586,7 +586,8 @@ int main(int argc, char *argv[]) {
   init_version(&server);
 
   hash_table_initialize(&server.world_indexes.players, 250 * HASH_FACTOR);
-  configuration_read(&server.configuration_context, config_file);
+  if (configuration_read(&server.configuration_context, config_file) < 0)
+    exit(2);
 
   if (!password_initialize()) {
     fprintf(stderr, "Unable to initialize password hashing.\n");

@@ -20,7 +20,7 @@
 #include "mux/server/server_api.h"
 #include "mux/support/alloc.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/palette.h"
 #include "mux/world/world_context.h"
 /* default (runtime-resettable) cache parameters */
 
@@ -696,6 +696,38 @@ static int cf_named_color(void *vp, char *str, long extra, DbRef player,
   if (!styled_text_palette_set_rgb(context->world->styled_text_palette, name,
                                    red, green, blue, error, sizeof(error))) {
     configuration_log_syntax(context, player, cmd, error, "");
+    if (context->configuration->is_initializing)
+      context->fatal_error = true;
+    return -1;
+  }
+  return 0;
+}
+
+static int cf_osc8_preset(void *vp, char *str, long extra, DbRef player,
+                          char *cmd, ConfigurationContext *context) {
+  char *directives;
+  char error[256];
+
+  (void)vp;
+  (void)extra;
+  directives = str;
+  while (*directives && !isspace((unsigned char)*directives))
+    directives++;
+  if (!*directives) {
+    configuration_log_syntax(context, player, cmd,
+                             "Expected NAME DIRECTIVES: ", str);
+    if (context->configuration->is_initializing)
+      context->fatal_error = true;
+    return -1;
+  }
+  *directives++ = '\0';
+  while (isspace((unsigned char)*directives))
+    directives++;
+  if (!styled_text_palette_set_preset(context->world->styled_text_palette, str,
+                                      directives, error, sizeof(error))) {
+    configuration_log_syntax(context, player, cmd, error, "");
+    if (context->configuration->is_initializing)
+      context->fatal_error = true;
     return -1;
   }
   return 0;
@@ -740,6 +772,7 @@ DEFINE_CONFIGURATION_ADAPTER(cf_flagalias)
 DEFINE_CONFIGURATION_ADAPTER(cf_int)
 DEFINE_CONFIGURATION_ADAPTER(cf_ntab_access)
 DEFINE_CONFIGURATION_ADAPTER(cf_named_color)
+DEFINE_CONFIGURATION_ADAPTER(cf_osc8_preset)
 DEFINE_CONFIGURATION_ADAPTER(cf_set_flags)
 DEFINE_CONFIGURATION_ADAPTER(cf_site)
 DEFINE_CONFIGURATION_ADAPTER(cf_string)
@@ -754,6 +787,8 @@ CONF conftable[] = {
     {"badsite_file", cf_string_configuration_adapter, CA_DISABLED,
      CONFIG_LOC(site_file), 32},
     {"named_color", cf_named_color_configuration_adapter, CA_DISABLED, nullptr,
+     0},
+    {"osc8_preset", cf_osc8_preset_configuration_adapter, CA_DISABLED, nullptr,
      0},
     {"btech_explode_reactor", cf_int_configuration_adapter, CA_GOD,
      CONFIG_LOC(btech_explode_reactor), 0},
@@ -1197,11 +1232,14 @@ int configuration_read(ConfigurationContext *context, char *fn) {
   bool ok;
 
   StringCopy(context->configuration->config_file, fn);
+  context->fatal_error = false;
   context->configuration->is_initializing = true;
   ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, context,
                                errbuf, sizeof(errbuf));
   context->configuration->is_initializing = false;
-  if (!ok) {
+  if (context->fatal_error && errbuf[0] == '\0')
+    snprintf(errbuf, sizeof(errbuf), "invalid styled-text configuration");
+  if (!ok || context->fatal_error) {
     fprintf(stderr, "Error reading config file '%s': %s\n", fn, errbuf);
     return -1;
   }

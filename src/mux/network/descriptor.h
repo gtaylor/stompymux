@@ -8,7 +8,7 @@
 
 #include "mux/objects/db.h"
 #include "mux/support/alloc.h"
-#include "mux/support/styled_text.h"
+#include "mux/support/styled_text/render.h"
 
 /* Reasons passed to descriptor_shutdown(). */
 typedef enum DescriptorShutdownReason {
@@ -106,6 +106,8 @@ typedef struct Descriptor {
   bool is_naws_enabled;
   /* Whether the client agreed to NEW-ENVIRON negotiation. */
   bool is_new_environ_enabled;
+  /* Whether this connection has received its OSC 8 preset definitions. */
+  bool osc8_presets_emitted;
   /* Whether the client requested the server-status response. */
   bool is_mssp_enabled;
   /* Whether the client enabled the GMCP telnet option. */

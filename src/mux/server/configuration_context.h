@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 typedef struct CommandContext CommandContext;
 typedef struct CommandRegistry CommandRegistry;
 typedef struct GameDatabase GameDatabase;
@@ -12,7 +14,8 @@ typedef struct WorldIndexes WorldIndexes;
 
 typedef struct ConfigurationContext ConfigurationContext;
 struct ConfigurationContext {
-  /* Every member is borrowed from MuxServer. */
+  /* Service members are borrowed from MuxServer. */
+  bool fatal_error;
   ServerConfiguration *configuration;
   GameDatabase *database;
   ServerLog *log;

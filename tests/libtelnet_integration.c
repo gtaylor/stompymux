@@ -63,6 +63,7 @@ static void test_send_mssp_pair(telnet_t *telnet, const char *name,
 static void test_send_mssp(telnet_t *telnet) {
   telnet_begin_sb(telnet, TELNET_TELOPT_MSSP);
   test_send_mssp_pair(telnet, "NAME", "BattleTechMUX");
+  test_send_mssp_pair(telnet, "CODEBASE", "StompyMUX");
   telnet_finish_sb(telnet);
 }
 
@@ -403,6 +404,25 @@ int main(void) {
                                    'e',
                                    'c',
                                    'h',
+                                   'M',
+                                   'U',
+                                   'X',
+                                   TELNET_MSSP_VAR,
+                                   'C',
+                                   'O',
+                                   'D',
+                                   'E',
+                                   'B',
+                                   'A',
+                                   'S',
+                                   'E',
+                                   TELNET_MSSP_VAL,
+                                   'S',
+                                   't',
+                                   'o',
+                                   'm',
+                                   'p',
+                                   'y',
                                    'M',
                                    'U',
                                    'X',

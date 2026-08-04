@@ -61,18 +61,10 @@ mud_name = "Big Stompy Robot Game"
 #  Styled-text named colors
 # -----------------------------------------------
 
-# RGB channels range from 0 through 255. Names are case-insensitive. Change a
-# value here to override a built-in color, or add another key to define a new
-# name for [fg=NAME] and [bg=NAME] markup.
+# RGB channels range from 0 through 255. Names are case-insensitive and must
+# not conflict with a built-in CSS/X11 color. Each key defines a custom name
+# for [fg=NAME], [color=NAME], and [bg=NAME] markup.
 [colors]
-black = [0, 0, 0]
-red = [205, 0, 0]
-green = [0, 205, 0]
-yellow = [205, 205, 0]
-blue = [0, 0, 238]
-magenta = [205, 0, 205]
-cyan = [0, 205, 205]
-white = [229, 229, 229]
 bright-black = [127, 127, 127]
 bright-red = [255, 0, 0]
 bright-green = [0, 255, 0]
@@ -81,9 +73,13 @@ bright-blue = [92, 92, 255]
 bright-magenta = [255, 0, 255]
 bright-cyan = [0, 255, 255]
 bright-white = [255, 255, 255]
-gray = [127, 127, 127]
-grey = [127, 127, 127]
 stompy-orange = [255, 112, 0]
+
+# Session-scoped Mudlet OSC 8 presets. Values use the same flattened
+# directives accepted inside styled link tags.
+[osc8.presets]
+osc8-demo-button = 'color=white bg=green bold hover.bg=darkgreen'
+osc8-demo-danger = 'color=white bg=red bold hover.bg=darkred disabled.strikethrough'
 
 # -----------------------------------------------
 #  Define local aliases/parameters/whatnot here.

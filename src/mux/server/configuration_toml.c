@@ -18,6 +18,8 @@ typedef enum {
                             dispatch, space-joined */
   CFG_KIND_ALIAS_MAP,   /* table string->string -> one dispatch per key,
                             "key value" */
+  CFG_KIND_PRESET_MAP,  /* strict table string->string -> one dispatch per key,
+                            "key directives" */
   CFG_KIND_ACCESS_MAP,  /* table string->(string|array) -> one dispatch per
                             key, "key perm..." */
   CFG_KIND_RGB_MAP,     /* table string->[r,g,b] -> one dispatch per key,
@@ -254,6 +256,9 @@ static const ConfigTomlMapping config_toml_map[] = {
     /* named styled-text colors */
     {"colors", "named_color", CFG_KIND_RGB_MAP},
 
+    /* OSC 8 preset definitions */
+    {"osc8.presets", "osc8_preset", CFG_KIND_PRESET_MAP},
+
     /* names */
     {"names.bad", "bad_name", CFG_KIND_STRING_LIST},
     {"names.good", "good_name", CFG_KIND_STRING_LIST},
@@ -381,6 +386,33 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       args = malloc(len);
       snprintf(args, len, "%s %s", value.u.tab.key[i],
                value.u.tab.value[i].u.s);
+      set_fn(m->pname, args, ctx);
+      free(args);
+    }
+    return;
+
+  case CFG_KIND_PRESET_MAP:
+    if (value.type != TOML_TABLE) {
+      fprintf(stderr, "configuration_toml: '%s' expected a table\n", path);
+      set_fn(m->pname, "", ctx);
+      return;
+    }
+    for (i = 0; i < value.u.tab.size; i++) {
+      size_t len;
+
+      if (value.u.tab.value[i].type != TOML_STRING) {
+        fprintf(stderr, "configuration_toml: '%s.%s' expected a string\n", path,
+                value.u.tab.key[i]);
+        len = strlen(value.u.tab.key[i]) + 2;
+        args = malloc(len);
+        snprintf(args, len, "%s ", value.u.tab.key[i]);
+      } else {
+        len = strlen(value.u.tab.key[i]) + 1 +
+              strlen(value.u.tab.value[i].u.s) + 1;
+        args = malloc(len);
+        snprintf(args, len, "%s %s", value.u.tab.key[i],
+                 value.u.tab.value[i].u.s);
+      }
       set_fn(m->pname, args, ctx);
       free(args);
     }

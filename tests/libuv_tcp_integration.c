@@ -55,6 +55,25 @@ static int wait_child(pid_t child) {
   return -1;
 }
 
+/* Wait for a child to reject its startup configuration. */
+static int wait_child_failure(pid_t child) {
+  struct timespec delay = {.tv_sec = 0, .tv_nsec = 100000000};
+  int status;
+
+  for (int attempt = 0; attempt < 30; attempt++) {
+    pid_t result = waitpid(child, &status, WNOHANG);
+
+    if (result == child)
+      return WIFEXITED(status) && WEXITSTATUS(status) != 0 ? 0 : -1;
+    if (result < 0)
+      return -1;
+    nanosleep(&delay, nullptr);
+  }
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  return -1;
+}
+
 /* Run a command with three arguments and return whether it succeeded. */
 static int run_command(const char *command, const char *first,
                        const char *second, const char *third) {
@@ -93,7 +112,7 @@ static int choose_port(void) {
 
 /* Copy the game configuration while replacing its listening port. */
 static int write_config(const char *source_path, const char *target_path,
-                        int port) {
+                        int port, bool add_color_collision) {
   FILE *source = fopen(source_path, "r");
   FILE *target = fopen(target_path, "w");
   char *line = nullptr;
@@ -106,6 +125,9 @@ static int write_config(const char *source_path, const char *target_path,
     if (strncmp(line, "port =", 6) == 0) {
       fprintf(target, "port = %d\n", port);
       replaced = true;
+    } else if (add_color_collision && !strcmp(line, "[colors]\n")) {
+      fputs(line, target);
+      fputs("red = [1, 2, 3]\n", target);
     } else {
       fputs(line, target);
     }
@@ -473,6 +495,209 @@ static int negotiate_new_environ(int socket_fd) {
       'S',
       TELNET_ENVIRON_VALUE,
       '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'T',
+      'O',
+      'O',
+      'L',
+      'T',
+      'I',
+      'P',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'M',
+      'E',
+      'N',
+      'U',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'V',
+      'I',
+      'S',
+      'I',
+      'B',
+      'I',
+      'L',
+      'I',
+      'T',
+      'Y',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'S',
+      'P',
+      'O',
+      'I',
+      'L',
+      'E',
+      'R',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'D',
+      'I',
+      'S',
+      'A',
+      'B',
+      'L',
+      'E',
+      'D',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'S',
+      'E',
+      'L',
+      'E',
+      'C',
+      'T',
+      'I',
+      'O',
+      'N',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'C',
+      'O',
+      'M',
+      'P',
+      'A',
+      'C',
+      'T',
+      TELNET_ENVIRON_VALUE,
+      '1',
+      TELNET_ENVIRON_USERVAR,
+      'O',
+      'S',
+      'C',
+      '_',
+      'H',
+      'Y',
+      'P',
+      'E',
+      'R',
+      'L',
+      'I',
+      'N',
+      'K',
+      'S',
+      '_',
+      'P',
+      'R',
+      'E',
+      'S',
+      'E',
+      'T',
+      'S',
+      TELNET_ENVIRON_VALUE,
+      '1',
       TELNET_IAC,
       TELNET_SE,
   };
@@ -687,7 +912,8 @@ static int exercise_utf8(int socket_fd) {
 
 static int create_styled_object(int socket_fd) {
   if (send_command(socket_fd, "GOD\r\n") < 0 ||
-      expect_text(socket_fd, "Password:") < 0 ||
+      expect_three_texts(socket_fd, "preset:osc8-demo-button?config=",
+                         "preset:osc8-demo-danger?config=", "Password:") < 0 ||
       send_command(socket_fd, "btmuxr0x\r\n") < 0 ||
       expect_text(socket_fd, "Connected.") < 0 ||
       send_command(socket_fd, "color truecolor\r\n") < 0 ||
@@ -695,7 +921,8 @@ static int create_styled_object(int socket_fd) {
       send_command(socket_fd, "help color\r\n") < 0 ||
       expect_text(
           socket_fd,
-          "Custom names work anywhere a predefined color is accepted.") < 0 ||
+          "Custom names work anywhere a predefined color is accepted, but "
+          "cannot override a CSS/X11 name.") < 0 ||
       send_command(socket_fd, "color\r\n") < 0 ||
       expect_text(socket_fd, "Color mode: truecolor (override).") < 0 ||
       send_command(socket_fd, "say [fg=red]PublicPlain[/]\r\n") < 0 ||
@@ -712,13 +939,35 @@ static int create_styled_object(int socket_fd) {
       expect_text_without(socket_fd, "ChannelPosePlain", "\033[") < 0 ||
       send_command(socket_fd, "@chan/emit StyledTest=[fg=red "
                               "bg=white]AdministrativeStyled[/]\r\n") < 0 ||
-      expect_text(socket_fd, "\033[38;2;205;0;0m\033[48;2;229;229;229m"
+      expect_text(socket_fd, "\033[38;2;255;0;0m\033[48;2;255;255;255m"
                              "AdministrativeStyled") < 0 ||
       send_command(socket_fd, "luacolor\r\n") < 0 ||
       expect_three_texts(socket_fd, "\033[38;2;255;112;0mLuaMarkup",
                          "\033]8;;https://example.com\033\\Web\033]8;;\033\\",
                          "\033]8;;send:cast%20fireball\033\\Cast\033]8;;\033\\ "
                          "\033]8;;prompt:look\033\\Edit\033]8;;\033\\") < 0 ||
+      send_command(socket_fd, "osc8demo\r\n") < 0 ||
+      expect_three_texts(
+          socket_fd, "OSC 8 demonstration (Tier 1-6)",
+          "\033]8;;prompt:say%20OSC%208%20works%21\033\\fill input",
+          "%22t%22%3A%22Left-click%20to%20look%3B%20right-click%20for%20"
+          "more%20actions%22") < 0 ||
+      expect_three_texts(
+          socket_fd,
+          "%22v%22%3A%7B%22action%22%3A%22conceal%22%2C%22delay%22"
+          "%3A500%7D",
+          "%22sp%22%3Atrue%2C%22d%22%3Atrue", "%22d%22%3Atrue%7D") < 0 ||
+      expect_three_texts(
+          socket_fd,
+          "%22sel%22%3A%7B%22group%22%3A%22difficulty%22%2C%22value"
+          "%22%3A%22easy%22",
+          "%22sel%22%3A%7B%22group%22%3A%22buffs%22%2C%22value%22%3A"
+          "%22strength%22%2C%22exclusive%22%3Afalse",
+          "%22sel%22%3A%7B%22group%22%3A%22following%22%2C%22value%22"
+          "%3A%22news%22%2C%22toggle%22%3Afalse%2C%22selected%22%3Atrue") < 0 ||
+      expect_three_texts(
+          socket_fd, "preset=osc8-demo-button",
+          "preset=osc8-demo-button&config=", "preset=osc8-demo-danger") < 0 ||
       send_command(socket_fd, "@telnet GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "  NEW-ENVIRON:",
                          "      VAR \"USER\" = "
@@ -823,18 +1072,38 @@ static int create_styled_object(int socket_fd) {
   }
   if (send_command(socket_fd,
                    "@desc RenamedWidget=[send=\"look\" color=red bold "
-                   "hover.color=yellow]Description[/]\r\n") < 0 ||
+                   "hover.color=yellow tooltip=\"Inspect this object\" "
+                   "title=\"Actions\" menu.1.label=\"Look\" "
+                   "menu.1.send=\"look\" menu.2.label=\"Examine\" "
+                   "menu.2.prompt=\"examine RenamedWidget\" "
+                   "visibility.action=conceal visibility.delay=500 "
+                   "visibility.expire.prompt spoiler "
+                   "selection.group=\"objects\" "
+                   "selection.value=\"description\" selection.selected "
+                   "selection.exclusive=false selection.disabled=false "
+                   "disabled=false]Description[/]"
+                   "\r\n") < 0 ||
       expect_text(socket_fd, "Desc - Set.") < 0) {
     fprintf(stderr, "styled-object description failed\n");
     return -1;
   }
   if (send_command(socket_fd, "look RenamedWidget\r\n") < 0 ||
       expect_text(socket_fd,
-                  "\033]8;;send:look?config=%7B%22style%22%3A%7B%22color%22"
-                  "%3A%22%23cd0000%22%2C%22bold%22%3Atrue%2C%22hover%22%3A"
-                  "%7B%22color%22%3A%22%23cdcd00%22%7D%7D%7D\033\\"
+                  "\033]8;;send:look?config=%7B%22s%22%3A%7B%22c%22"
+                  "%3A%22%23ff0000%22%2C%22b%22%3Atrue%2C%22h%22%3A"
+                  "%7B%22c%22%3A%22%23ffff00%22%7D%7D%2C%22t%22"
+                  "%3A%22Inspect%20this%20object%22%2C%22m%22%3A%5B%7B"
+                  "%22Look%22%3A%22send%3Alook%22%7D%2C%7B%22Examine%22%3A"
+                  "%22prompt%3Aexamine%20RenamedWidget%22%7D%5D%2C%22ti"
+                  "%22%3A%22Actions%22%2C%22v%22%3A%7B%22action%22"
+                  "%3A%22conceal%22%2C%22delay%22%3A500%2C%22expire%22%3A"
+                  "%7B%22prompt%22%3Atrue%7D%7D%2C%22sel%22%3A%7B%22"
+                  "group%22%3A%22objects%22%2C%22value%22%3A%22description"
+                  "%22%2C%22selected%22%3Atrue%2C%22exclusive%22%3Afalse%2C"
+                  "%22disabled%22%3Afalse%7D%2C%22sp%22%3Atrue%2C"
+                  "%22d%22%3Afalse%7D\033\\"
                   "Description\033]8;;\033\\") < 0) {
-    fprintf(stderr, "OSC Tier 2 rendering failed\n");
+    fprintf(stderr, "OSC Tier 6 rendering failed\n");
     return -1;
   }
   if (send_command(socket_fd, "@idesc RenamedWidget=[bg=blue]Inside[/]\r\n") <
@@ -846,7 +1115,17 @@ static int create_styled_object(int socket_fd) {
   if (send_command(socket_fd, "@examine RenamedWidget\r\n") < 0 ||
       expect_three_texts(socket_fd, "[fg=bright-cyan]RenamedWidget[/](#",
                          "Desc: [send=\"look\" color=red bold "
-                         "hover.color=yellow]Description[/]",
+                         "hover.color=yellow tooltip=\"Inspect this object\" "
+                         "title=\"Actions\" menu.1.label=\"Look\" "
+                         "menu.1.send=\"look\" menu.2.label=\"Examine\" "
+                         "menu.2.prompt=\"examine RenamedWidget\" "
+                         "visibility.action=conceal visibility.delay=500 "
+                         "visibility.expire.prompt spoiler "
+                         "selection.group=\"objects\" "
+                         "selection.value=\"description\" selection.selected "
+                         "selection.exclusive=false selection.disabled=false "
+                         "disabled=false]"
+                         "Description[/]",
                          "Idesc: [bg=blue]Inside[/]") < 0) {
     fprintf(stderr, "styled-object examine markup failed\n");
     return -1;
@@ -862,6 +1141,11 @@ static int exercise_plain_osc_fallback(int socket_fd) {
       send_command(socket_fd, "osclinks\r\n") < 0 ||
       expect_text_without(socket_fd, "Web Cast Edit", "\033]") < 0) {
     fprintf(stderr, "OSC plain fallback failed\n");
+    return -1;
+  }
+  if (send_command(socket_fd, "osc8demo\r\n") < 0 ||
+      expect_text_without(socket_fd, "Tier 6 - presets:", "\033]") < 0) {
+    fprintf(stderr, "OSC demo plain fallback failed\n");
     return -1;
   }
   return 0;
@@ -893,7 +1177,16 @@ static int check_styled_object(const char *directory) {
               "[fg=bright-cyan]RenamedWidget[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 1),
               "[send=\"look\" color=red bold "
-              "hover.color=yellow]Description[/]") &&
+              "hover.color=yellow tooltip=\"Inspect this object\" "
+              "title=\"Actions\" menu.1.label=\"Look\" "
+              "menu.1.send=\"look\" menu.2.label=\"Examine\" "
+              "menu.2.prompt=\"examine RenamedWidget\" "
+              "visibility.action=conceal visibility.delay=500 "
+              "visibility.expire.prompt spoiler "
+              "selection.group=\"objects\" "
+              "selection.value=\"description\" selection.selected "
+              "selection.exclusive=false selection.disabled=false "
+              "disabled=false]Description[/]") &&
       !strcmp((const char *)sqlite3_column_text(statement, 2),
               "[bg=blue]Inside[/]") &&
       sqlite3_column_int64(statement, 3) == 2 &&
@@ -933,7 +1226,23 @@ int main(int argc, char **argv) {
   snprintf(target_config, sizeof(target_config), "%s/stompymux.toml",
            directory);
   port = choose_port();
-  if (port < 0 || write_config(source_config, target_config, port) < 0 ||
+  if (port < 0 || write_config(source_config, target_config, port, true) < 0)
+    goto done;
+  child = fork();
+  if (child < 0)
+    goto done;
+  if (child == 0) {
+    if (chdir(directory) < 0)
+      _exit(127);
+    execl(argv[1], argv[1], "stompymux.toml", nullptr);
+    _exit(127);
+  }
+  if (wait_child_failure(child) < 0) {
+    fprintf(stderr, "built-in color collision did not halt startup\n");
+    goto done;
+  }
+  child = -1;
+  if (write_config(source_config, target_config, port, false) < 0 ||
       write_lua_fixture(directory) < 0)
     goto done;
 

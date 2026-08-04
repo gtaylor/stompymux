@@ -4,8 +4,6 @@ type: docs
 weight: 35
 ---
 
-# Text encoding
-
 The server uses UTF-8 for all client text. Telnet connections default to UTF-8
 and negotiate `UTF-8` with the CHARSET option when the client supports it.
 Malformed UTF-8 commands are rejected instead of being partially interpreted.

@@ -1,5 +1,15 @@
 set(MUX_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
+set(STYLED_TEXT_SOURCES
+  ${MUX_MODULE_DIR}/support/styled_text/compiler.c
+  ${MUX_MODULE_DIR}/support/styled_text/link_config.c
+  ${MUX_MODULE_DIR}/support/styled_text/link_directives.c
+  ${MUX_MODULE_DIR}/support/styled_text/osc8.c
+  ${MUX_MODULE_DIR}/support/styled_text/output.c
+  ${MUX_MODULE_DIR}/support/styled_text/palette.c
+  ${MUX_MODULE_DIR}/support/styled_text/presets.c
+  ${MUX_MODULE_DIR}/support/styled_text/renderer.c)
+
 target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command.c
   ${MUX_MODULE_DIR}/commands/command_context.c
@@ -62,7 +72,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/support/red_black_tree.c
   ${MUX_MODULE_DIR}/support/password.c
   ${MUX_MODULE_DIR}/support/stringutil.c
-  ${MUX_MODULE_DIR}/support/styled_text.c
+  ${STYLED_TEXT_SOURCES}
   ${MUX_MODULE_DIR}/support/utf8.c
   ${MUX_MODULE_DIR}/support/validation.c
   ${MUX_MODULE_DIR}/support/wild.c
