@@ -104,6 +104,15 @@ set(BTECH_SOURCES
   movement/mech_pickup.c
   movement/mech_startup.c
   movement/mech_update.c
+  movement/mech_update_altitude.c
+  movement/mech_update_motion.c
+  movement/mech_update_heat.c
+  movement/mech_update_recycle.c
+  movement/mech_update_hex.c
+  movement/mech_update_hex_mech.c
+  movement/mech_update_stagger.c
+  movement/mech_update_piloting.c
+  movement/mech_update_heartbeat.c
   movement/mech_boosters.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
