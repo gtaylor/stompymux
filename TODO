@@ -2,6 +2,8 @@
 
 ## MUX Todos in the /src/ dir
 
+* Consolidate the various logging files in server
+* Remove arbitrary logs compile directive and keep it on
 * Define primary/secondary/tertiary colors for use in UI elements.
 * Make help rendering more pretty.
 * Offer a non-privileged way to change your own password.
