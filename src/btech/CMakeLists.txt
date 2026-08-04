@@ -86,6 +86,9 @@ set(BTECH_SOURCES
   persistence/validation.c
   repair/mech_tech.c
   repair/mech_tech_commands.c
+  repair/mech_tech_scrap_commands.c
+  repair/mech_tech_part_commands.c
+  repair/mech_tech_section_commands.c
   repair/mech_tech_damages.c
   repair/mech_tech_do.c
   repair/mech_tech_events.c
