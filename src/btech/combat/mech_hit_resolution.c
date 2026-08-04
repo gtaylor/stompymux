@@ -292,8 +292,8 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
         hitloc = FindTargetHitLoc(mech, hitMech, &isrear, &iscritical);
 
       DamageMech(hitMech, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
-                 pc_to_dam_conversion(hitMech, weapindx, wWeapDamage), 0,
-                 weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
+                 personal_combat_damage_to_unit(hitMech, weapindx, wWeapDamage),
+                 0, weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
 
     } else {
       hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage, 1);
@@ -395,10 +395,10 @@ void HitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
           hitloc = FindTCHitLoc(mech, hitMech, &isrear, &iscritical);
         else
           hitloc = FindTargetHitLoc(mech, hitMech, &isrear, &iscritical);
-        DamageMech(hitMech, mech, LOS, GunPilot(mech), hitloc, isrear,
-                   iscritical,
-                   pc_to_dam_conversion(hitMech, weapindx, wWeapDamage), 0,
-                   weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
+        DamageMech(
+            hitMech, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
+            personal_combat_damage_to_unit(hitMech, weapindx, wWeapDamage), 0,
+            weapindx, bth, weapindx, wAmmoMode, tIsSwarmAttack);
       } else
         hex_hit(mech, hitX, hitY, weapindx, wAmmoMode, wWeapDamage, 1);
 

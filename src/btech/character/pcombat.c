@@ -10,24 +10,26 @@
 #include <stdlib.h>
 
 #include "command_handlers_api.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_identity_api.h"
-#include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
+#include "section_types.h"
 
-static struct {
-  char *name;
+typedef struct PersonalArmorDefinition {
+  const char *name;
   int loc;
   int loci;
   int deft;
   int defmin;
   int defpros;
   int defmax;
-} Armors[] = {
+} PersonalArmorDefinition;
+
+static const PersonalArmorDefinition PERSONAL_ARMOR[] = {
     {"Helmet", HEAD, 1, PC_IMPA | PC_HEAT, 10, 30, 30},
     {"Combat Helmet", HEAD, 2, PC_IMPA | PC_SHAR | PC_HEAT, 20, 50, 60},
     {"Gloves", RARM, 1, PC_SHAR | PC_HEAT, 10, 30, 20},
@@ -42,9 +44,9 @@ static struct {
     {"Combat Armorplate", CTORSO, 6, PC_IMPA | PC_SHAR | PC_HEAT, 50, 50, 120},
     {"DEST Armor", CTORSO, 7, PC_IMPA | PC_SHAR | PC_HEAT, 50, 70, 120},
     {"Black Robes", CTORSO, 8, PC_IMPA | PC_SHAR | PC_HEAT, 60, 80, 140},
-    {NULL, -1, -1, 0, 0, 0, 0}};
+    {nullptr, -1, -1, 0, 0, 0, 0}};
 
-int pc_to_dam_conversion(Mech *target, int weapindx, int dam) {
+int personal_combat_damage_to_unit(Mech *target, int weapindx, int dam) {
   int i = 0;
 
   if (mech_class(target) == CLASS_MW)
@@ -58,7 +60,7 @@ int pc_to_dam_conversion(Mech *target, int weapindx, int dam) {
   return i;
 }
 
-int dam_to_pc_conversion(Mech *target, int weapindx, int dam) {
+int unit_damage_to_personal_combat(Mech *target, int weapindx, int dam) {
   int i = 0, j;
 
   if (weapindx >= 0 && MechWeapons[weapindx].special & PCOMBAT)
@@ -84,7 +86,8 @@ static int pcombat_hitloc(int loc) {
   return loc;
 }
 
-int armor_effect(Mech *wounded, int cause, int hitloc, int intDamage, int id) {
+int personal_armor_reduce_damage(Mech *wounded, int cause, int hitloc,
+                                 int intDamage, int id) {
   int i;
   int block;
   int noblock = 0;
@@ -95,11 +98,11 @@ int armor_effect(Mech *wounded, int cause, int hitloc, int intDamage, int id) {
   if (mech_class(wounded) != CLASS_MW)
     return intDamage;
   hitloc = pcombat_hitloc(hitloc);
-  if (!GetSectArmor(wounded, hitloc))
+  if (!mech_section_armor(wounded, hitloc))
     return intDamage;
-  for (i = 0; Armors[i].name; i++)
-    if (Armors[i].loc == hitloc &&
-        Armors[i].loci == GetSectArmor(wounded, hitloc))
+  for (i = 0; PERSONAL_ARMOR[i].name; i++)
+    if (PERSONAL_ARMOR[i].loc == hitloc &&
+        PERSONAL_ARMOR[i].loci == mech_section_armor(wounded, hitloc))
       break;
   if (btech_random_range(mech_context(wounded), 1, 5) == 1) {
     if (btech_random_range(mech_context(wounded), 1, 2) == 1)
@@ -108,15 +111,16 @@ int armor_effect(Mech *wounded, int cause, int hitloc, int intDamage, int id) {
       noblock = 1;
   } else if (btech_random_range(mech_context(wounded), 1, 10) == 2)
     intDamage = intDamage / 2;
-  if (!Armors[i].name)
+  if (!PERSONAL_ARMOR[i].name)
     return intDamage;
   if (cause >= 0 &&
-      !((Armors[i].deft) & (MechWeapons[cause].special & PCOMBAT)) &&
+      !((PERSONAL_ARMOR[i].deft) & (MechWeapons[cause].special & PCOMBAT)) &&
       (MechWeapons[cause].special & PCOMBAT))
     return intDamage;
-  block = BOUNDED(
-      btech_random_range(mech_context(wounded), 1, (Armors[i].defmin / 2)),
-      abs(intDamage * Armors[i].defpros / 100), Armors[i].defmax / 2);
+  block = BOUNDED(btech_random_range(mech_context(wounded), 1,
+                                     (PERSONAL_ARMOR[i].defmin / 2)),
+                  abs(intDamage * PERSONAL_ARMOR[i].defpros / 100),
+                  PERSONAL_ARMOR[i].defmax / 2);
   if (noblock)
     block = 0;
   if (abs(intDamage) < block) {

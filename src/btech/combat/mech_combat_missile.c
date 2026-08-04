@@ -107,8 +107,8 @@ void Missile_Hit(Mech *mech, Mech *target, int hitX, int hitY, int isrear,
       hitloc = FindTargetHitLoc(mech, target, &isrear, &iscritical);
 
       DamageMech(target, mech, LOS, GunPilot(mech), hitloc, isrear, iscritical,
-                 pc_to_dam_conversion(target, weapindx, this_damage), 0,
-                 weapindx, bth, weapindx, ammoMode, tIsSwarmAttack);
+                 personal_combat_damage_to_unit(target, weapindx, this_damage),
+                 0, weapindx, bth, weapindx, ammoMode, tIsSwarmAttack);
     } else {
       hex_hit(mech, hitX, hitY, weapindx, ammoMode, this_damage, 1);
     }

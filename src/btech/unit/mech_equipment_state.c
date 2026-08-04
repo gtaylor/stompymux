@@ -14,6 +14,10 @@ int mech_section_original_rear_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].rear_orig;
 }
 
+int mech_section_armor(const Mech *mech, int section) {
+  return mech->ud.sections[section].armor;
+}
+
 bool mech_section_is_destroyed(const Mech *mech, int section) {
   int unit_class = mech->ud.type;
   bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;

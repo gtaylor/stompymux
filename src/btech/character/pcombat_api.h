@@ -14,6 +14,7 @@
 #include "mux/server/platform.h"
 
 /* pcombat.c */
-int pc_to_dam_conversion(Mech *target, int weapindx, int dam);
-int dam_to_pc_conversion(Mech *target, int weapindx, int dam);
-int armor_effect(Mech *wounded, int cause, int hitloc, int intDamage, int id);
+int personal_combat_damage_to_unit(Mech *target, int weapon_index, int damage);
+int unit_damage_to_personal_combat(Mech *target, int weapon_index, int damage);
+int personal_armor_reduce_damage(Mech *wounded, int cause, int hit_location,
+                                 int internal_damage, int id);

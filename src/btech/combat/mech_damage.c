@@ -193,7 +193,7 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
           MechTeam(wounded) != MechTeam(attacker))
         if (MechType(wounded) != CLASS_MW || MechType(attacker) == CLASS_MW)
           AccumulatePilXP(attackPilot, attacker, damage / 3, 1);
-    damage = dam_to_pc_conversion(wounded, cause, damage);
+    damage = unit_damage_to_personal_combat(wounded, cause, damage);
   }
   if (isrear) {
     if (!(MechSpecials(wounded) & SALVAGE_TECH) &&
@@ -307,7 +307,8 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   }
   if (MechType(wounded) == CLASS_MW && !was_transfer)
     if (damage > 0)
-      if (!(damage = armor_effect(wounded, cause, hitloc, damage, intDamage)))
+      if (!(damage = personal_armor_reduce_damage(wounded, cause, hitloc,
+                                                  damage, intDamage)))
         return;
   mech_printf(wounded, MECHALL, "[fg=yellow bold]You have been hit %s%s[reset]",
               notificationBuff, was_transfer ? "(transfer)" : "");
