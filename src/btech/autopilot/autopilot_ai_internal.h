@@ -2,6 +2,7 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 
 #include "ai_api.h"
+#include "ai_simulation_api.h"
 #include "btconfig.h"
 #include "btech_channel.h"
 #include "legacy_macros.h"
@@ -33,31 +34,3 @@
 #include "mech.h"
 #include "mech_combat_api.h"
 #include "mech_utils_api.h"
-
-typedef struct LocationSimulation LocationSimulation;
-struct LocationSimulation {
-  int e, t;
-  float s, ds;
-  float fx, fy;
-  short x, y, lx, ly;
-  int h;
-  int dh;
-};
-
-typedef struct AiPathUnitSimulation AiPathUnitSimulation;
-struct AiPathUnitSimulation {
-  LocationSimulation location;
-  Mech *mech;
-  bool out;
-};
-
-typedef struct AiPathContext AiPathContext;
-struct AiPathContext {
-  AiPathUnitSimulation enemies[MAX_MECHS_PER_MAP];
-  int enemy_count;
-  AiPathUnitSimulation friends[MAX_MECHS_PER_MAP];
-  int friend_count;
-};
-
-int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location);
-void location_simulation_initialize(LocationSimulation *location, Mech *mech);

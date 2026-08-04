@@ -1,4 +1,17 @@
-#include "autopilot_ai_internal.h"
+#include "ai_api.h"
+#include "ai_simulation_api.h"
+#include "autopilot.h"
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "mech_combat_api.h"
+#include "mech_identity_api.h"
+#include "mech_position_api.h"
+#include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/flags.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
 
 void ai_init(Autopilot *a, Mech *m) {
 
@@ -22,10 +35,12 @@ static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
   int flt_time;
   LocationSimulation t;
   Mech *target_mech = context;
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   location_simulation_initialize(&t, target_mech);
-  while ((flt_time = artillery_round_flight_time(MechFX(mech), MechFY(mech),
+  while ((flt_time = artillery_round_flight_time(mech_position_real_x(mech),
+                                                 mech_position_real_y(mech),
                                                  t.fx, t.fy)) > now) {
     if (!crashed)
       if (ai_crash(map, target_mech, &t))
@@ -33,7 +48,7 @@ static int mech_snipe_func(Mech *mech, DbRef player, int index, int high,
     now++;
   }
   /* Fire at t.x, t.y */
-  if (MechTargX(mech) != t.x || MechTargY(mech) != t.y)
+  if (mech_target_hex_x(mech) != t.x || mech_target_hex_y(mech) != t.y)
     mech_settarget(player, mech, tprintf("%d %d", t.x, t.y));
   mech_fireweapon(player, mech, tprintf("%d", index));
   return 0;
@@ -44,15 +59,16 @@ void mech_snipe(DbRef player, Mech *mech, char *buffer) {
   DbRef d;
   Mech *target_mech;
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  !is_wizard(mech->xcode.context->database, player),
-                  "Permission denied.");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(
+      mech_context(mech),
+      !is_wizard(btech_context_database(mech_context(mech)), player),
+      "Permission denied.");
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_parseattributes(buffer, args, 3) != 2,
                   "Please supply target ID _and_ weapon(s) to use");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   (d = FindTargetDBREFFromMapNumber(mech, args[0])) <= 0,
                   "Invalid target!");
-  target_mech = btech_context_get_mech(mech->xcode.context, d);
+  target_mech = btech_context_get_mech(mech_context(mech), d);
   multi_weap_sel(mech, player, args[1], 1, mech_snipe_func, target_mech);
 }
