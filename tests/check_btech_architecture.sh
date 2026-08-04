@@ -73,6 +73,7 @@ done < <(rg -n \
   '#include "mech(_macros)?\.h"|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|HasWorkingECMSuite|ECMProtected|ECMCountered|AnyECMDisturbed)\(' \
   src/btech/sensors/mech_ecm.c \
   src/btech/sensors/mech_lite.c \
+  src/btech/sensors/mech_scan_navigation.c \
   src/btech/sensors/mech_scan_view.c \
   src/btech/sensors/mech_tag.c || true)
 

@@ -1,8 +1,38 @@
+#include "btech/context.h"
+#include "command_handlers_api.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "map_conditions_api.h"
+#include "map_terrain.h"
+#include "map_units_api.h"
+#include "mech_api_types.h"
 #include "mech_identity_api.h"
-#include "mech_scan_internal.h"
+#include "mech_lifecycle.h"
+#include "mech_los_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_restrict_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "registry_api.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int map_signed_elevation(BattleMap *map, int x, int y) {
+  const char terrain = map_real_terrain_get(map, x, y);
+  const int elevation = map_elevation_get(map, x, y);
+  return terrain == BATTLE_TERRAIN_WATER || terrain == BATTLE_TERRAIN_ICE
+             ? -elevation
+             : elevation;
+}
 
 void mech_bearing(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = NULL;
+  Mech *mech = (Mech *)data, *tempMech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
@@ -18,18 +48,20 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   x1 = y1 = -1;
 
   cch(MECH_USUAL);
-  x0 = MechFX(mech);
-  y0 = MechFY(mech);
+  x0 = mech_position_real_x(mech);
+  y0 = mech_position_real_y(mech);
   if (mech_map_dbref(mech) != -1) {
     mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 4);
     if (argc == 0) {
       /* Bearing to current target */
-      if (MechTarget(mech) != -1) {
-        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
+      if (mech_target_dbref(mech) != -1) {
+        tempMech =
+            btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
-                             FaMechRange(mech, tempMech))) {
+          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
+                             mech_position_y(tempMech),
+                             mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
@@ -44,8 +76,8 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       /* Bearing to X, Y */
       ix1 = atoi(args[0]);
       iy1 = atoi(args[1]);
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
@@ -58,10 +90,10 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       ix1 = atoi(args[2]);
       iy1 = atoi(args[3]);
 
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height && ix0 >= 0 &&
-            ix0 <= mech_map->map_width && iy0 >= 0 &&
-            iy0 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
+            ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
+            iy0 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
@@ -86,7 +118,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
 }
 
 void mech_range(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = NULL;
+  Mech *mech = (Mech *)data, *tempMech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
@@ -104,19 +136,21 @@ void mech_range(DbRef player, void *data, char *buffer) {
   x1 = y1 = -1;
 
   cch(MECH_USUAL);
-  x0 = MechFX(mech);
-  y0 = MechFY(mech);
-  z0 = MechFZ(mech);
+  x0 = mech_position_real_x(mech);
+  y0 = mech_position_real_y(mech);
+  z0 = mech_position_real_z(mech);
   if (mech_map_dbref(mech) != -1) {
     mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 4);
     if (argc == 0) {
       /* Range to current target */
-      if (MechTarget(mech) != -1) {
-        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
+      if (mech_target_dbref(mech) != -1) {
+        tempMech =
+            btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
-                             FaMechRange(mech, tempMech))) {
+          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
+                             mech_position_y(tempMech),
+                             mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
@@ -124,24 +158,24 @@ void mech_range(DbRef player, void *data, char *buffer) {
       }
       DOCHECK_CONTEXT(mech_context(mech), !FindTargetXY(mech, &x1, &y1, &z1),
                       "There is no default target!");
-      if (MapIsDark(mech_map) && !tempMech)
-        z1 = ZSCALE * MechZ(mech);
+      if (battle_map_is_dark(mech_map) && !tempMech)
+        z1 = ZSCALE * mech_position_z(mech);
       strcpy(buff, "Range to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
       ix1 = atoi(args[0]);
       iy1 = atoi(args[1]);
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Range to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        if (MapIsDark(mech_map))
-          z1 = ZSCALE * MechZ(mech);
+        if (battle_map_is_dark(mech_map))
+          z1 = ZSCALE * mech_position_z(mech);
         else
-          z1 = ZSCALE * Elevation(mech_map, ix1, iy1);
+          z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 4) {
       /* Range to X, Y from given X, Y */
@@ -150,10 +184,10 @@ void mech_range(DbRef player, void *data, char *buffer) {
       ix1 = atoi(args[2]);
       iy1 = atoi(args[3]);
 
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height && ix0 >= 0 &&
-            ix0 <= mech_map->map_width && iy0 >= 0 &&
-            iy0 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
+            ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
+            iy0 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
@@ -161,11 +195,11 @@ void mech_range(DbRef player, void *data, char *buffer) {
                  ix0, iy0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
-        if (MapIsDark(mech_map))
+        if (battle_map_is_dark(mech_map))
           z1 = z0 = 0;
         else {
-          z1 = ZSCALE * Elevation(mech_map, ix1, iy1);
-          z0 = ZSCALE * Elevation(mech_map, ix0, iy0);
+          z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
+          z0 = ZSCALE * map_signed_elevation(mech_map, ix0, iy0);
         }
       }
     } else {
@@ -192,7 +226,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
 }
 
 void mech_vector(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *tempMech = NULL;
+  Mech *mech = (Mech *)data, *tempMech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[6];
@@ -210,19 +244,21 @@ void mech_vector(DbRef player, void *data, char *buffer) {
   x1 = y1 = -1;
 
   cch(MECH_USUAL);
-  x0 = MechFX(mech);
-  y0 = MechFY(mech);
-  z0 = MechFZ(mech);
+  x0 = mech_position_real_x(mech);
+  y0 = mech_position_real_y(mech);
+  z0 = mech_position_real_z(mech);
   if (mech_map_dbref(mech) != -1) {
     mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 6);
     if (argc == 0) {
       /* Range to current target */
-      if (MechTarget(mech) != -1) {
-        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
+      if (mech_target_dbref(mech) != -1) {
+        tempMech =
+            btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
         if (tempMech) {
-          if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
-                             FaMechRange(mech, tempMech))) {
+          if (!InLineOfSight(mech, tempMech, mech_position_x(tempMech),
+                             mech_position_y(tempMech),
+                             mech_range_to(mech, tempMech))) {
             notify(evaluation, player, "Target is not in line of sight!");
             return;
           }
@@ -235,22 +271,22 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       /* Range to X, Y */
       ix1 = atoi(args[0]);
       iy1 = atoi(args[1]);
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
         snprintf(buff, sizeof(buff), "Vector to  %d,%d is: ", ix1, iy1);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
-        z1 = ZSCALE * Elevation(mech_map, ix1, iy1);
+        z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
       }
     } else if (argc == 3) {
       iz0 = z0 / ZSCALE;
       ix1 = atoi(args[0]);
       iy1 = atoi(args[1]);
       iz1 = atoi(args[2]);
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1.;
       } else {
@@ -265,10 +301,10 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       ix1 = atoi(args[2]);
       iy1 = atoi(args[3]);
 
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height && ix0 >= 0 &&
-            ix0 <= mech_map->map_width && iy0 >= 0 &&
-            iy0 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
+            ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
+            iy0 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
@@ -276,8 +312,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                  iy1, ix0, iy0);
         MapCoordToRealCoord(ix1, iy1, &x1, &y1);
         MapCoordToRealCoord(ix0, iy0, &x0, &y0);
-        z1 = ZSCALE * Elevation(mech_map, ix1, iy1);
-        z0 = ZSCALE * Elevation(mech_map, ix0, iy0);
+        z1 = ZSCALE * map_signed_elevation(mech_map, ix1, iy1);
+        z0 = ZSCALE * map_signed_elevation(mech_map, ix0, iy0);
       }
     } else if (argc == 6) {
       ix0 = atoi(args[0]);
@@ -287,10 +323,10 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       iy1 = atoi(args[4]);
       iz1 = atoi(args[5]);
 
-      if (!(ix1 >= 0 && ix1 < mech_map->map_width && iy1 >= 0 &&
-            iy1 < mech_map->map_height && ix0 >= 0 &&
-            ix0 <= mech_map->map_width && iy0 >= 0 &&
-            iy0 < mech_map->map_height)) {
+      if (!(ix1 >= 0 && ix1 < battle_map_width(mech_map) && iy1 >= 0 &&
+            iy1 < battle_map_height(mech_map) && ix0 >= 0 &&
+            ix0 <= battle_map_width(mech_map) && iy0 >= 0 &&
+            iy0 < battle_map_height(mech_map))) {
         notify(evaluation, player, "Invalid map coordinates!");
         x1 = y1 = -1;
       } else {
