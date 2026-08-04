@@ -1,4 +1,29 @@
-#include "mech_notify_internal.h"
+#include "mech_notify_api.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "bsuit_api.h"
+#include "btech/context.h"
+#include "btech_event.h"
+#include "equipment_types.h"
+#include "legacy_macros.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/server/diagnostics.h"
+#include "mux/support/alloc.h"
+#include "section_types.h"
+#include "weapon_settings.h"
 
 const char *GetAmmoDesc_Model_Mode(int model, int mode) {
   if (mode & LBX_MODE)
@@ -126,14 +151,14 @@ char GetWeaponFireModeLetter_Model_Mode(int model, int mode) {
 
 char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit) {
   return GetWeaponAmmoModeLetter_Model_Mode(
-      Weapon2I(GetPartType(mech, loop, crit)),
-      GetPartAmmoMode(mech, loop, crit));
+      Weapon2I(mech_critical_part_type(mech, loop, crit)),
+      mech_critical_ammo_mode(mech, loop, crit));
 }
 
 char GetWeaponFireModeLetter(Mech *mech, int loop, int crit) {
   return GetWeaponFireModeLetter_Model_Mode(
-      Weapon2I(GetPartType(mech, loop, crit)),
-      GetPartFireMode(mech, loop, crit));
+      Weapon2I(mech_critical_part_type(mech, loop, crit)),
+      mech_critical_fire_mode(mech, loop, crit));
 }
 
 const char *GetMoveTypeID(int movetype) {
@@ -163,41 +188,30 @@ const char *GetMoveTypeID(int movetype) {
   }
 }
 
-static const struct {
-  const char *onmsg;
-  const char *offmsg;
-  int flag;
-  int infolvl;
-} temp_flag_info_struct[] = {
-    {"DESTROYED", nullptr, DESTROYED, 1},
-    {nullptr, "SHUTDOWN", STARTED, 1},
-    {"Torso is 60 degrees right", nullptr, TORSO_RIGHT, 0},
-    {"Torso is 60 degrees left", nullptr, TORSO_LEFT, 0},
-    {nullptr, nullptr, 0, 0}};
-
 void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
                     int spaces, int level) {
   char buf[LBUF_SIZE];
   int i;
+  MechConditionSummary conditions = mech_condition_summary(mech);
 
   for (i = 0; i < spaces; i++)
     buf[i] = ' ';
   buf[spaces] = 0;
 
-  if (MechStatus(mech) & COMBAT_SAFE) {
+  if (conditions.combat_safe) {
     strcpy(buf + spaces, "[fg=blue bold]COMBAT SAFE[reset]");
     notify(evaluation, player, buf);
   }
-  if (Fortified(mech)) {
+  if (conditions.fortified) {
     strcpy(buf + spaces, "[fg=green bold]FORTIFIED[reset]");
     notify(evaluation, player, buf);
   }
-  if (WeaponsHold(mech)) {
+  if (conditions.weapons_hold) {
     strcpy(buf + spaces, "[fg=red bold]WEAPONS HOLD[reset]");
     notify(evaluation, player, buf);
   }
-  if (Fallen(mech)) {
-    switch (MechMove(mech)) {
+  if (mech_is_fallen(mech)) {
+    switch (mech_movement_type(mech)) {
     case MOVE_BIPED:
       strcpy(buf + spaces, "[fg=red bold]FALLEN[reset]");
       break;
@@ -231,38 +245,38 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     }
     notify(evaluation, player, buf);
   }
-  if (IsHulldown(mech)) {
+  if (conditions.hull_down) {
     strcpy(buf + spaces, "[fg=green bold]HULLDOWN[reset]");
     notify(evaluation, player, buf);
   }
-  if (MechDugIn(mech)) {
+  if (conditions.dug_in) {
     strcpy(buf + spaces, "[fg=green bold]DUG IN[reset]");
     notify(evaluation, player, buf);
   }
-  if (Digging(mech)) {
+  if (conditions.digging) {
     strcpy(buf + spaces, "[fg=green]DIGGING IN[reset]");
     notify(evaluation, player, buf);
   }
-  if (Staggering(mech)) {
+  if (conditions.staggering) {
     strcpy(buf + spaces, "[fg=red bold]STAGGERING[reset]");
     notify(evaluation, player, buf);
   }
-  if (MechCritStatus(mech) & SLITE_DEST) {
+  if (conditions.searchlight_destroyed) {
     strcpy(buf + spaces, "[fg=red bold]SEARCHLIGHT DESTROYED[reset]");
     notify(evaluation, player, buf);
   }
-  if (MechLites(mech)) {
+  if (mech_searchlight_active(mech)) {
     strcpy(buf + spaces, "[fg=green bold]SEARCHLIGHT ON[reset]");
     notify(evaluation, player, buf);
-  } else if (MechLit(mech)) {
+  } else if (conditions.illuminated) {
     strcpy(buf + spaces, "[fg=green bold]ILLUMINATED[reset]");
     notify(evaluation, player, buf);
   }
-  if (mech_event_count(mech, EVENT_VEHICLEBURN) || Jellied(mech)) {
+  if (mech_event_count(mech, EVENT_VEHICLEBURN) || mech_is_jellied(mech)) {
     strcpy(buf + spaces, "[fg=red bold]ON FIRE[reset]");
     notify(evaluation, player, buf);
   }
-  if (MechCritStatus(mech) & HIDDEN) {
+  if (conditions.hidden) {
     strcpy(buf + spaces, tprintf("[fg=green bold]HIDDEN[reset]"));
     notify(evaluation, player, buf);
   }
@@ -274,10 +288,11 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     strcpy(buf + spaces, "[fg=red bold]MOUNTED BY FRIENDLY SUITS[reset]");
     notify(evaluation, player, buf);
   }
-  if (MechSwarmTarget(mech) > 0) {
-    if (btech_context_get_mech(mech->xcode.context, MechSwarmTarget(mech))) {
-      if (MechTeam(btech_context_get_mech(
-              mech->xcode.context, MechSwarmTarget(mech))) == MechTeam(mech))
+  if (conditions.swarm_target > 0) {
+    Mech *swarm_target =
+        btech_context_get_mech(mech_context(mech), conditions.swarm_target);
+    if (swarm_target) {
+      if (mech_team(swarm_target) == mech_team(mech))
         strcpy(buf + spaces, "[fg=green bold]MOUNTED ON FRIENDLY UNIT[reset]");
       else
         strcpy(buf + spaces, "[fg=green bold]SWARMING ENEMY UNIT[reset]");
@@ -286,15 +301,15 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     }
   }
 #ifdef BT_MOVEMENT_MODES
-  if (MechStatus2(mech) & DODGING) {
+  if (conditions.dodging) {
     strcpy(buf + spaces, tprintf("[fg=red bold]DODGING[reset]"));
     notify(evaluation, player, buf);
   }
-  if (MechStatus2(mech) & EVADING) {
+  if (conditions.evading) {
     strcpy(buf + spaces, tprintf("[fg=red bold]EVADING[reset]"));
     notify(evaluation, player, buf);
   }
-  if (MechStatus2(mech) & SPRINTING) {
+  if (conditions.sprinting) {
     strcpy(buf + spaces, tprintf("[fg=red bold]SPRINTING[reset]"));
     notify(evaluation, player, buf);
   }
@@ -307,38 +322,37 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
     strcpy(buf + spaces, tprintf("[fg=yellow bold]SIDESLIPPING[reset]"));
     notify(evaluation, player, buf);
   }
-  if (MechTankCritStatus(mech) & CREW_STUNNED ||
-      MechCritStatus(mech) & MECH_STUNNED) {
+  if (conditions.stunned) {
     strcpy(buf + spaces, "[fg=red bold]STUNNED[reset]");
     notify(evaluation, player, buf);
   }
 #endif
   if (level == 0) { /* our own 'status' */
-    if (ECMProtected(mech)) {
+    if (conditions.ecm_protected) {
       strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ECM[reset]");
       notify(evaluation, player, buf);
     }
-    if (AngelECMProtected(mech)) {
+    if (conditions.angel_ecm_protected) {
       strcpy(buf + spaces, "[fg=green bold]PROTECTED BY ANGEL ECM[reset]");
       notify(evaluation, player, buf);
     }
-    if (ECMDisturbed(mech)) {
+    if (mech_is_ecm_disturbed(mech)) {
       strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ECM[reset]");
       notify(evaluation, player, buf);
     }
-    if (AngelECMDisturbed(mech)) {
+    if (conditions.angel_ecm_disturbed) {
       strcpy(buf + spaces, "[fg=yellow bold]AFFECTED BY ANGEL ECM[reset]");
       notify(evaluation, player, buf);
     }
-    if (ECMCountered(mech)) {
+    if (conditions.ecm_countered) {
       strcpy(buf + spaces, "[fg=yellow bold]COUNTERED BY ECCM[reset]");
       notify(evaluation, player, buf);
     }
-    if (StealthArmorActive(mech)) {
+    if (conditions.stealth_armor_active) {
       strcpy(buf + spaces, "[fg=green bold]STEALTH ARMOR ACTIVE[reset]");
       notify(evaluation, player, buf);
     }
-    if (NullSigSysActive(mech)) {
+    if (conditions.null_signature_active) {
       strcpy(buf + spaces,
              "[fg=green bold]NULL SIGNATURE SYSTEM ACTIVE[reset]");
       notify(evaluation, player, buf);
@@ -363,38 +377,41 @@ void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
       strcpy(buf + spaces, "[fg=yellow bold]EXTINGUISHING FIRE[reset]");
       notify(evaluation, player, buf);
     }
-    if (MechStatus2(mech) & AUTOTURN_TURRET) {
+    if (conditions.turret_auto_turn) {
       strcpy(buf + spaces, "[fg=green bold]TURRET AUTO-TURN ENGAGED[reset]");
       notify(evaluation, player, buf);
     }
-    if (MechSections(mech)[RARM].specials & CARRYING_CLUB) {
+    if (mech_section_carries_club(mech, RARM)) {
       strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - RIGHT ARM[reset]");
       notify(evaluation, player, buf);
     }
-    if (MechSections(mech)[LARM].specials & CARRYING_CLUB) {
+    if (mech_section_carries_club(mech, LARM)) {
       strcpy(buf + spaces, "[fg=green bold]CARRYING CLUB - LEFT ARM[reset]");
       notify(evaluation, player, buf);
     }
   }
-  for (i = 0; temp_flag_info_struct[i].flag; i++)
-    if (temp_flag_info_struct[i].infolvl >= level) {
-      if (MechStatus(mech) & temp_flag_info_struct[i].flag) {
-        if (temp_flag_info_struct[i].onmsg) {
-          strcpy(buf + spaces, temp_flag_info_struct[i].onmsg);
-          notify(evaluation, player, buf);
-        }
-      } else {
-        if (temp_flag_info_struct[i].offmsg) {
-          strcpy(buf + spaces, temp_flag_info_struct[i].offmsg);
-          notify(evaluation, player, buf);
-        }
-      }
-    }
+  if (level <= 1 && mech_is_destroyed(mech)) {
+    strcpy(buf + spaces, "DESTROYED");
+    notify(evaluation, player, buf);
+  }
+  if (level <= 1 && !mech_is_started(mech)) {
+    strcpy(buf + spaces, "SHUTDOWN");
+    notify(evaluation, player, buf);
+  }
+  if (level == 0 && conditions.torso_right) {
+    strcpy(buf + spaces, "Torso is 60 degrees right");
+    notify(evaluation, player, buf);
+  }
+  if (level == 0 && conditions.torso_left) {
+    strcpy(buf + spaces, "Torso is 60 degrees left");
+    notify(evaluation, player, buf);
+  }
 }
 
 const char *GetArcID(Mech *mech, int arc) {
-  int mechlike = (MechType(mech) == CLASS_MECH || MechType(mech) == CLASS_MW ||
-                  MechType(mech) == CLASS_BSUIT);
+  int unit_class = mech_class(mech);
+  bool mechlike = unit_class == CLASS_MECH || unit_class == CLASS_MW ||
+                  unit_class == CLASS_BSUIT;
 
   if (arc & FORWARDARC)
     return "Forward";
@@ -411,17 +428,19 @@ MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
   char *mname;
   MechDisplayId id = {0};
 
-  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+  BtechContext *context = mech_context(mech);
+  DbRef object = mech_dbref(mech);
+  if (!is_good_obj(context->database, object))
     return id;
 
   if (!inlos)
     mname = "something";
   else
-    mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
-                                 A_MECHNAME, (char[LBUF_SIZE]){0});
+    mname = btech_attribute_read(context->database, object, A_MECHNAME,
+                                 (char[LBUF_SIZE]){0});
 
   snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
-           mech_id(mech, inlos && MechTeam(see) == MechTeam(mech)).text);
+           mech_id(mech, inlos && mech_team(see) == mech_team(mech)).text);
   return id;
 }
 
@@ -438,16 +457,18 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
     dprintk("bad see");
     return id;
   }
-  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+  BtechContext *context = mech_context(mech);
+  DbRef object = mech_dbref(mech);
+  if (!is_good_obj(context->database, object))
     return id;
 
   if (!InLineOfSight_NB(see, mech, 0, 0, 0)) {
     mname = "something";
     team = 0;
   } else {
-    mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
-                                 A_MECHNAME, (char[LBUF_SIZE]){0});
-    team = (MechTeam(see) == MechTeam(mech));
+    mname = btech_attribute_read(context->database, object, A_MECHNAME,
+                                 (char[LBUF_SIZE]){0});
+    team = mech_team(see) == mech_team(mech);
   }
 
   snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
@@ -459,11 +480,13 @@ MechDisplayId mech_display_id(Mech *mech) {
   char *mname;
   MechDisplayId id = {0};
 
-  if (!is_good_obj(mech->xcode.context->database, mech->mynum))
+  BtechContext *context = mech_context(mech);
+  DbRef object = mech_dbref(mech);
+  if (!is_good_obj(context->database, object))
     return id;
 
-  mname = btech_attribute_read(mech->xcode.context->database, mech->mynum,
-                               A_MECHNAME, (char[LBUF_SIZE]){0});
+  mname = btech_attribute_read(context->database, object, A_MECHNAME,
+                               (char[LBUF_SIZE]){0});
   snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
            mech_id(mech, false).text);
   return id;

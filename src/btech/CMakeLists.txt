@@ -210,6 +210,7 @@ set(BTECH_SOURCES
   unit/battle_value_legacy.c
   unit/mech_build.c
   unit/mech_classification_state.c
+  unit/mech_condition_state.c
   unit/mech_crew_state.c
   unit/mech_electronics_state.c
   unit/mech_consistency.c

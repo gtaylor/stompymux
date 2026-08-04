@@ -10,6 +10,18 @@ int mech_critical_brand(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].brand % 16;
 }
 
+int mech_critical_data(const Mech *mech, int section, int critical) {
+  return mech->ud.sections[section].criticals[critical].data;
+}
+
+int mech_critical_fire_mode(const Mech *mech, int section, int critical) {
+  return mech->ud.sections[section].criticals[critical].firemode;
+}
+
+int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
+  return mech->ud.sections[section].criticals[critical].ammomode;
+}
+
 void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
                                          int failure) {
   struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
@@ -55,6 +67,10 @@ bool mech_critical_is_operational_special(const Mech *mech, int section,
       &mech->ud.sections[section].criticals[critical];
   return slot->type == I2Special(special) &&
          !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE));
+}
+
+bool mech_section_carries_club(const Mech *mech, int section) {
+  return mech->ud.sections[section].specials & CARRYING_CLUB;
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

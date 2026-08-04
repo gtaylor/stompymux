@@ -11,8 +11,11 @@
 
 #pragma once
 
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 
+typedef struct BattleMap BattleMap;
 typedef struct EvaluationContext EvaluationContext;
 
 typedef struct MechDisplayId {
