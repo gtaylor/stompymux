@@ -38,6 +38,3 @@
 #include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "registry_internal.h"
-
-void radio_color_code(char buffer[static 32], Mech *mech, int channel,
-                      int observer, int team);

@@ -27,3 +27,13 @@ int mech_perception_target(const Mech *mech) { return mech->rd.per; }
 void mech_perception_target_set(Mech *mech, int target) {
   mech->rd.per = target;
 }
+
+int mech_communication_skill(const Mech *mech) { return mech->rd.commconv; }
+
+int mech_communication_last_tick(const Mech *mech) {
+  return mech->rd.commconv_last;
+}
+
+void mech_communication_last_tick_set(Mech *mech, int tick) {
+  mech->rd.commconv_last = tick;
+}

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "mux/commands/command_context.h"
+#include "mux/network/mux_event.h"
 
 BtechContext *btech_context_create(const BtechDependencies *dependencies) {
   if (dependencies == nullptr)
@@ -71,6 +72,11 @@ GameDatabase *btech_context_database(BtechContext *context) {
 bool btech_context_combat_arcs_enabled(const BtechContext *context) {
   assert(context != nullptr);
   return context->combat_overrides.arcs;
+}
+
+int btech_context_event_tick(const BtechContext *context) {
+  assert(context != nullptr);
+  return context->events->tick;
 }
 
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,

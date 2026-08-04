@@ -11,6 +11,7 @@
 #include "mech_identity_api.h"
 #include "mech_notify.h"
 #include "mech_radio_api.h"
+#include "mech_radio_render_internal.h"
 #include "mech_restrict_api.h"
 #include "mech_runtime_api.h"
 #include "mine_api.h"

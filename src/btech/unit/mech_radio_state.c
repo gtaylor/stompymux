@@ -34,6 +34,11 @@ void mech_radio_frequency_set(Mech *mech, int channel, int frequency) {
     mech->freq[channel] = frequency;
 }
 
+void mech_radio_frequency_add(Mech *mech, int channel, int amount) {
+  if (mech_radio_channel_valid(channel))
+    mech->freq[channel] += amount;
+}
+
 void mech_radio_mode_set(Mech *mech, int channel, int mode) {
   if (mech_radio_channel_valid(channel))
     mech->freqmodes[channel] = mode;

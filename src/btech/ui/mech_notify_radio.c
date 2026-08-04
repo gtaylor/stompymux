@@ -1,4 +1,38 @@
-#include "mech_notify_internal.h"
+#include "autopilot.h"
+#include "btconfig.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btechstats_api.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "mech_classification_api.h"
+#include "mech_crew_api.h"
+#include "mech_electronics_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_radio_api.h"
+#include "mech_radio_render_internal.h"
+#include "mech_restrict_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/game.h"
+#include "mux/support/formatting.h"
+#include "random.h"
+#include "registry_api.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 
@@ -53,7 +87,7 @@ static void scramble_message(const CommRelayContext *relay,
                              int digmode) {
 
   int mr, i;
-  char *header = NULL;
+  char *header = nullptr;
   char buf[LBUF_SIZE];
 
   *isxp = 0;
@@ -65,13 +99,14 @@ static void scramble_message(const CommRelayContext *relay,
     for (i = 1; i < relay->best_depth; i++) {
       if (i > 1)
         strcat(buf, "/");
-      bearing = FindBearing(MechFX(relay->mechs[relay->best_path[i]]),
-                            MechFY(relay->mechs[relay->best_path[i]]),
-                            MechFX(relay->mechs[relay->best_path[i - 1]]),
-                            MechFY(relay->mechs[relay->best_path[i - 1]]));
+      bearing = FindBearing(
+          mech_position_real_x(relay->mechs[relay->best_path[i]]),
+          mech_position_real_y(relay->mechs[relay->best_path[i]]),
+          mech_position_real_x(relay->mechs[relay->best_path[i - 1]]),
+          mech_position_real_y(relay->mechs[relay->best_path[i - 1]]));
+      MechUnitId id = mech_unit_id(relay->mechs[relay->best_path[i]]);
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "[%c%c]-h:%.3d",
-               MechID(relay->mechs[relay->best_path[i]])[0],
-               MechID(relay->mechs[relay->best_path[i]])[1], bearing);
+               id.first, id.second, bearing);
     }
     strcat(buf, "} ");
     header = buf;
@@ -196,21 +231,21 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
   relay->node_count = 0;
   relay->mechs[relay->node_count++] = from;
   for (i = 0; i < map->first_free; i++) {
-    if (!(t = btech_context_find_object(from->xcode.context,
+    if (!(t = btech_context_find_object(mech_context(from),
                                         map->mechsOnMap[i])))
       continue;
     if (t == from || t == to)
       continue;
-    if (MechTeam(from) != MechTeam(t))
+    if (mech_team(from) != mech_team(t))
       continue;
-    if ((MechMove(t) != MOVE_NONE && !Started(t)) ||
-        (MechMove(t) == MOVE_NONE && Destroyed(t)))
+    if ((mech_movement_type(t) != MOVE_NONE && !mech_is_started(t)) ||
+        (mech_movement_type(t) == MOVE_NONE && mech_is_destroyed(t)))
       continue;
-    if (!(MechRadioInfo(t) & RADIO_RELAY))
+    if (!(mech_radio_capabilities(t) & RADIO_RELAY))
       continue;
-    for (j = 0; j < MFreqs(t); j++)
-      if (t->freq[j] == freq)
-        if (t->freqmodes[j] & FREQ_RELAY) {
+    for (j = 0; j < mech_radio_channel_count(t); j++)
+      if (mech_radio_frequency(t, j) == freq)
+        if (mech_radio_mode(t, j) & FREQ_RELAY) {
           if (relay->node_count < MAX_MECHS_PER_MAP - 1)
             relay->mechs[relay->node_count++] = t;
           continue;
@@ -223,10 +258,10 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
     relay->visited[i] = false;
     relay->connected[i][i] = false;
     for (j = i + 1; j < relay->node_count; j++) {
-      float range = FlMechRange(map, relay->mechs[i], relay->mechs[j]);
+      float range = mech_range_to(relay->mechs[i], relay->mechs[j]);
 
-      relay->connected[i][j] = (range <= MechRadioRange(relay->mechs[i]));
-      relay->connected[j][i] = (range <= MechRadioRange(relay->mechs[j]));
+      relay->connected[i][j] = range <= mech_radio_range(relay->mechs[i]);
+      relay->connected[j][i] = range <= mech_radio_range(relay->mechs[j]);
     }
   }
   relay->best_depth = 9999;
@@ -290,7 +325,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   int loop, range, bearing, i, isxp;
   Mech *tempMech;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char buf[LBUF_SIZE];
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
@@ -303,7 +338,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* Removed the Radio Failing stuff cause it annoys me - Dany
      mech_generic_failure_check(mech, -2, &sfail_type, &sfail_mod);
    */
-  if (!MechRadioRange(mech))
+  if (!mech_radio_range(mech))
     return;
   relay = calloc(1, sizeof(*relay));
 
@@ -314,31 +349,35 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       // that a dbref may be indicated as "on the map" without being on the
       // map. I believe this to be a serious problem.
       if (!(tempMech = (Mech *)btech_context_find_object(
-                mech->xcode.context, mech_map->mechsOnMap[loop])))
+                mech_context(mech), mech_map->mechsOnMap[loop])))
         continue;
-      if (Destroyed(tempMech))
+      if (mech_is_destroyed(tempMech))
         continue;
-      obs = (MechCritStatus(tempMech) & OBSERVATORIC);
-      range = FaMechRange(mech, tempMech);
-      bearing = FindBearing(MechFX(tempMech), MechFY(tempMech), MechFX(mech),
-                            MechFY(mech));
-      for (i = 0; i < MFreqs(tempMech); i++) {
-        if (tempMech->freq[i] == mech->freq[freq] || obs) {
-          if ((tempMech->freqmodes[i] & FREQ_MUTE) ||
-              ((mech->freqmodes[freq] & FREQ_DIGITAL) &&
-               (MechRadioInfo(tempMech) & RADIO_NODIGITAL)))
+      obs = mech_is_observer(tempMech);
+      range = mech_range_to(mech, tempMech);
+      bearing = FindBearing(
+          mech_position_real_x(tempMech), mech_position_real_y(tempMech),
+          mech_position_real_x(mech), mech_position_real_y(mech));
+      for (i = 0; i < mech_radio_channel_count(tempMech); i++) {
+        if (mech_radio_frequency(tempMech, i) ==
+                mech_radio_frequency(mech, freq) ||
+            obs) {
+          if ((mech_radio_mode(tempMech, i) & FREQ_MUTE) ||
+              ((mech_radio_mode(mech, freq) & FREQ_DIGITAL) &&
+               (mech_radio_capabilities(tempMech) & RADIO_NODIGITAL)))
             continue;
           break;
         }
       }
-      if (i >= MFreqs(tempMech)) {
+      if (i >= mech_radio_channel_count(tempMech)) {
         /* Possible scanner check */
-        if (!(mech->freqmodes[freq] & FREQ_DIGITAL))
-          if ((MechRadioInfo(tempMech) & RADIO_SCAN) && mech->freq[freq]) {
+        if (!(mech_radio_mode(mech, freq) & FREQ_DIGITAL))
+          if ((mech_radio_capabilities(tempMech) & RADIO_SCAN) &&
+              mech_radio_frequency(mech, freq)) {
             int tnc = 0;
 
-            for (i = 0; i < MFreqs(tempMech); i++)
-              if (tempMech->freqmodes[i] & FREQ_SCAN) {
+            for (i = 0; i < mech_radio_channel_count(tempMech); i++)
+              if (mech_radio_mode(tempMech, i) & FREQ_SCAN) {
                 int l = strlen(msg), t;
                 int mod, diff;
                 int pr;
@@ -346,24 +385,26 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                 /* Possible skill check here? Nah. */
 
                 /* Chance of detection: 1 in MIN(80,l) out of 100 */
-                if (btech_random_range(mech->xcode.context, 1, 100) >
-                    MIN(80, l))
+                if (btech_random_range(mech_context(mech), 1, 100) > MIN(80, l))
                   continue;
 
                 if (!tnc++)
                   mech_notify(tempMech, MECHALL,
                               "You notice a "
                               "unknown transmission your scanner.. ");
-                if (tempMech->freq[i] < mech->freq[freq]) {
-                  diff = mech->freq[freq] - tempMech->freq[i];
+                if (mech_radio_frequency(tempMech, i) <
+                    mech_radio_frequency(mech, freq)) {
+                  diff = mech_radio_frequency(mech, freq) -
+                         mech_radio_frequency(tempMech, i);
                   mod = 1;
                 } else {
-                  diff = tempMech->freq[i] - mech->freq[freq];
+                  diff = mech_radio_frequency(tempMech, i) -
+                         mech_radio_frequency(mech, freq);
                   mod = -1;
                 }
 
                 t = MAX(1,
-                        btech_random_range(mech->xcode.context, 1, MIN(99, l)) *
+                        btech_random_range(mech_context(mech), 1, MIN(99, l)) *
                             diff / 100);
                 pr = t * 100 / diff;
                 mech_printf(tempMech, MECHALL,
@@ -374,7 +415,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                             : pr < 95 ? "precisely"
                                       : "exactly",
                             i + 'A');
-                tempMech->freq[i] += mod * t;
+                mech_radio_frequency_add(tempMech, i, mod * t);
               }
           }
 
@@ -382,54 +423,58 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       }
 
       snprintf(buf2, LBUF_SIZE, "%s", msg);
-      radio_color_code(color_code, tempMech, i, obs, MechTeam(mech));
+      radio_color_code(color_code, tempMech, i, obs, mech_team(mech));
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking
        * elsewhere. We'll compose the message and send it now since
        * it should technically hear everything */
 
       if (obs) {
-        if (mech->freqmodes[freq] & FREQ_DIGITAL) {
+        if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
           build_observer_channel_message(
               buf, color_code, '[', ']', (char)('A' + i), bearing,
-              btech_attribute_read(mech->xcode.context->database, mech->mynum,
-                                   A_FACTION, (char[LBUF_SIZE]){0}),
-              mech_id(mech, false).text, mech->freq[freq],
-              mech->chantitle[freq], buf2);
+              btech_attribute_read(btech_context_database(mech_context(mech)),
+                                   mech_dbref(mech), A_FACTION,
+                                   (char[LBUF_SIZE]){0}),
+              mech_id(mech, false).text, mech_radio_frequency(mech, freq),
+              mech_radio_title(mech, freq), buf2);
         } else {
           build_observer_channel_message(
               buf, color_code, '(', ')', (char)('A' + i), bearing,
-              btech_attribute_read(mech->xcode.context->database, mech->mynum,
-                                   A_FACTION, (char[LBUF_SIZE]){0}),
-              mech_id(mech, false).text, mech->freq[freq],
-              mech->chantitle[freq], buf2);
+              btech_attribute_read(btech_context_database(mech_context(mech)),
+                                   mech_dbref(mech), A_FACTION,
+                                   (char[LBUF_SIZE]){0}),
+              mech_id(mech, false).text, mech_radio_frequency(mech, freq),
+              mech_radio_title(mech, freq), buf2);
         }
         mech_notify(tempMech, MECHALL, buf);
       }
 
       /* This is where we check to see if the mech has an AI and
        * then we give the radio commands to the AI */
-      if (MechAuto(tempMech) > 0 && tempMech->freq[i]) {
+      if (mech_autopilot_dbref(tempMech) > 0 &&
+          mech_radio_frequency(tempMech, i)) {
         Autopilot *a = (Autopilot *)btech_context_find_object(
-            mech->xcode.context, MechAuto(tempMech));
+            mech_context(mech), mech_autopilot_dbref(tempMech));
 
         /* First check to make sure the AI is still there */
         if (!a) {
           /* No AI there so reset the AI value on the mech */
-          MechAuto(tempMech) = -1;
-        } else if (a && game_object_location(mech->xcode.context->database,
-                                             a->mynum) != tempMech->mynum) {
+          mech_autopilot_dbref_set(tempMech, -1);
+        } else if (a && game_object_location(
+                            btech_context_database(mech_context(mech)),
+                            a->mynum) != mech_dbref(tempMech)) {
           /* Check to see if the AI is still in the same mech */
-          snprintf(
-              ai_buf, LBUF_SIZE,
-              "Autopilot #%ld (Location: #%ld) "
-              "reported on Mech #%ld but not in the proper location",
-              a->mynum,
-              game_object_location(mech->xcode.context->database, a->mynum),
-              tempMech->mynum);
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
+          snprintf(ai_buf, LBUF_SIZE,
+                   "Autopilot #%ld (Location: #%ld) "
+                   "reported on Mech #%ld but not in the proper location",
+                   a->mynum,
+                   game_object_location(
+                       btech_context_database(mech_context(mech)), a->mynum),
+                   mech_dbref(tempMech));
+          btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_AI, "%s",
                              ai_buf);
-        } else if (a && !ECMDisturbed(tempMech)) {
+        } else if (a && !mech_is_ecm_disturbed(tempMech)) {
           /* Ok send the command to the AI provided its not ECM'd */
           snprintf(buf3, LBUF_SIZE, "%s", msg);
           auto_parse_command(a, tempMech, i, buf3);
@@ -438,44 +483,50 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       /* Removed the Radio fail stuff because it annoys me - Dany
          mech_generic_failure_check(tempMech, -2, &rfail_type, &rfail_mod);
        */
-      if (!MechRadioRange(tempMech))
+      if (!mech_radio_range(tempMech))
         continue;
-      if (mech->freqmodes[freq] & FREQ_DIGITAL) {
+      if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
         if (relay != nullptr)
           relay->best_depth = 1;
-        if (range > MechRadioRange(mech)) {
-          if (relay == nullptr || !find_comm_link(relay, mech_map, mech,
-                                                  tempMech, mech->freq[freq]))
+        if (range > mech_radio_range(mech)) {
+          if (relay == nullptr ||
+              !find_comm_link(relay, mech_map, mech, tempMech,
+                              mech_radio_frequency(mech, freq)))
             continue;
         }
 
         if (tempMech != mech) {
-          if (AnyECMDisturbed(mech))
+          if (mech_is_any_ecm_disturbed(mech))
             continue;
-          else if (AnyECMDisturbed(tempMech))
+          else if (mech_is_any_ecm_disturbed(tempMech))
             continue;
         }
 
-        scramble_message(relay, mech->xcode.context, buf3, range,
-                         MechRadioRange(mech), MechRadioRange(mech),
-                         mech->chantitle[freq], buf2, MechComm(tempMech), &isxp,
-                         0, (tempMech->freqmodes[i] & FREQ_INFO) ? 2 : 1);
+        scramble_message(relay, mech_context(mech), buf3, range,
+                         mech_radio_range(mech), mech_radio_range(mech),
+                         (char *)mech_radio_title(mech, freq), buf2,
+                         mech_communication_skill(tempMech), &isxp, 0,
+                         (mech_radio_mode(tempMech, i) & FREQ_INFO) ? 2 : 1);
 
         if (relay != nullptr && relay->best_depth >= 2)
           bearing = FindBearing(
-              MechFX(tempMech), MechFY(tempMech),
-              MechFX(relay->mechs[relay->best_path[relay->best_depth - 1]]),
-              MechFY(relay->mechs[relay->best_path[relay->best_depth - 1]]));
+              mech_position_real_x(tempMech), mech_position_real_y(tempMech),
+              mech_position_real_x(
+                  relay->mechs[relay->best_path[relay->best_depth - 1]]),
+              mech_position_real_y(
+                  relay->mechs[relay->best_path[relay->best_depth - 1]]));
         if (!obs)
           build_channel_message(buf, color_code, '[', ']', (char)('A' + i),
                                 bearing, buf3);
 
       } else {
 
-        scramble_message(relay, mech->xcode.context, buf3, range,
-                         MechRadioRange(mech), MechRadioRange(tempMech),
-                         mech->chantitle[freq], buf2, MechComm(tempMech), &isxp,
-                         (AnyECMDisturbed(mech) || AnyECMDisturbed(tempMech)
+        scramble_message(relay, mech_context(mech), buf3, range,
+                         mech_radio_range(mech), mech_radio_range(tempMech),
+                         (char *)mech_radio_title(mech, freq), buf2,
+                         mech_communication_skill(tempMech), &isxp,
+                         (mech_is_any_ecm_disturbed(mech) ||
+                          mech_is_any_ecm_disturbed(tempMech)
                           /*
                              || sfail_type == FAIL_STATIC ||
                              rfail_type == FAIL_STATIC
@@ -490,11 +541,13 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
       if (!obs)
         mech_notify(tempMech, MECHALL, buf);
-      if (isxp &&
-          is_in_character(mech->xcode.context->database, tempMech->mynum))
-        if ((MechCommLast(tempMech) + 60) < mech->xcode.context->events->tick) {
-          AccumulateCommXP(MechPilot(tempMech), tempMech);
-          MechCommLast(tempMech) = mech->xcode.context->events->tick;
+      if (isxp && is_in_character(btech_context_database(mech_context(mech)),
+                                  mech_dbref(tempMech)))
+        if ((mech_communication_last_tick(tempMech) + 60) <
+            btech_context_event_tick(mech_context(mech))) {
+          AccumulateCommXP(mech_pilot_dbref(tempMech), tempMech);
+          mech_communication_last_tick_set(
+              tempMech, btech_context_event_tick(mech_context(mech)));
         }
     }
   } /* End of looping through all the units on the map */
@@ -515,7 +568,7 @@ void mech_radio(DbRef player, void *data, char *buffer) {
   /* This is silly, but who cares. */
   cch(MECH_USUAL);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechIsObservator(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_is_observer(mech),
                   "You can't radio anyone.");
   if ((argc = proper_parseattributes(buffer, args, 3)) != 3)
     fail = 1;
@@ -526,12 +579,12 @@ void mech_radio(DbRef player, void *data, char *buffer) {
     fail = 1;
   if (!fail) {
     target = FindTargetDBREFFromMapNumber(mech, args[0]);
-    tempMech = btech_context_get_mech(mech->xcode.context, target);
-    DOCHECK_CONTEXT(mech->xcode.context,
-                    !tempMech ||
-                        !InLineOfSight(mech, tempMech, MechX(tempMech),
-                                       MechY(tempMech),
-                                       FlMechRange(map, mech, tempMech)),
+    tempMech = btech_context_get_mech(mech_context(mech), target);
+    DOCHECK_CONTEXT(mech_context(mech),
+                    !tempMech || !InLineOfSight(mech, tempMech,
+                                                mech_position_x(tempMech),
+                                                mech_position_y(tempMech),
+                                                mech_range_to(mech, tempMech)),
                     "Target is not in line of sight!");
     mech_printf(mech, MECHSTARTED, "You radio %s with, '%s'",
                 mech_to_mech_display_id(mech, tempMech).text, args[2]);
@@ -541,7 +594,7 @@ void mech_radio(DbRef player, void *data, char *buffer) {
                tprintf("%s radio'ed me '%s'",
                        mech_to_mech_display_id(tempMech, mech).text, args[2]));
   }
-  DOCHECK_CONTEXT(mech->xcode.context, fail,
+  DOCHECK_CONTEXT(mech_context(mech), fail,
                   "Invalid format! Usage: radio <letter><letter>=<message>");
   for (i = 0; i < 3; i++) {
     if (args[i])

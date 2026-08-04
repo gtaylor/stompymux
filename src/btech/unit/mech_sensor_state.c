@@ -18,3 +18,11 @@ bool mech_searchlight_active(const Mech *mech) {
 bool mech_is_clairvoyant(const Mech *mech) {
   return mech->rd.critstatus & CLAIRVOYANT;
 }
+
+bool mech_is_ecm_disturbed(const Mech *mech) {
+  return mech->rd.status2 & ECM_DISTURBANCE;
+}
+
+bool mech_is_any_ecm_disturbed(const Mech *mech) {
+  return mech->rd.status2 & (ECM_DISTURBANCE | ANGEL_ECM_DISTURBED);
+}
