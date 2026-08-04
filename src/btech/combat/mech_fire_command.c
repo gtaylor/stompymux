@@ -488,8 +488,8 @@ int weapon_failure_stuff(Mech *mech, int *weapnum, int *weapindx, int *section,
                          int *ammoLoc1, int *ammoCrit1, int *modifier,
                          int *type, float range, int *range_ok,
                          int wGattlingShots) {
-  CheckWeaponFailed(mech, *weapnum, *weapindx, *section, *critical, modifier,
-                    type);
+  mech_weapon_failure_check(mech, *weapnum, *weapindx, *section, *critical,
+                            modifier, type);
   if (*type == POWER_SPIKE)
     return 1;
   if (*type == WEAPON_JAMMED || *type == WEAPON_DUD) {

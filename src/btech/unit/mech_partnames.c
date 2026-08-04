@@ -67,7 +67,7 @@ static void insert_sorted_brandname(PartNameRegistry *registry, int ind,
   UGLY_SORT(registry->vlong_sorted, vlongy);
 }
 
-extern char *GetPartBrandName(int, int);
+extern const char *mech_part_brand_name(int, int);
 
 static int create_brandname(PartNameRegistry *registry,
                             const ServerConfiguration *configuration, int id,
@@ -75,11 +75,12 @@ static int create_brandname(PartNameRegistry *registry,
   char buf[LBUF_SIZE];
   char buf2[BTECH_TEXT_CAPACITY];
   char buf3[BTECH_TEXT_CAPACITY];
-  char *c, *brn = NULL;
+  char *c;
+  const char *brn = nullptr;
   PartNameEntry *p;
 
   if (b)
-    if (!(brn = GetPartBrandName(id, b)))
+    if (!(brn = mech_part_brand_name(id, b)))
       return 0;
   Create(p, PartNameEntry, 1);
 /* \todo Remove this stupid #define and make the code readable */

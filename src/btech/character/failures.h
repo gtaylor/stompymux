@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_lifecycle.h"
 
 #define IsAutocannon(a) (MechWeapons[a].type == TAMMO)
@@ -41,20 +41,20 @@
 #define FAIL_AMMOJAMMED 6
 #define FAIL_AMMOCRITJAMMED 7
 
-struct PartBrand {
-  char *name;
+typedef struct PartBrand {
+  const char *name;
   short level;
   int success;
   int modifier;
-};
+} PartBrand;
 
-struct PartFailure {
-  char *message;
+typedef struct PartFailure {
+  const char *message;
   int data; /* things like percent to alter */
   void (*func)(Mech *, int, int, int, int, int, int *, int *);
   int type;
   int flag;
-};
+} PartFailure;
 
 /*  Brand keys
    1 - This is absolute crap.
@@ -63,6 +63,3 @@ struct PartFailure {
    4 - These are supieror parts.
    5 - These are EXTREMELY RARE and EXTREMELY reliable
  */
-
-extern struct PartBrand brands[];
-extern struct PartFailure failures[];

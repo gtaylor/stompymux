@@ -367,7 +367,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   char ai_buf[LBUF_SIZE];
 
   /* Removed the Radio Failing stuff cause it annoys me - Dany
-     CheckGenericFail(mech, -2, &sfail_type, &sfail_mod);
+     mech_generic_failure_check(mech, -2, &sfail_type, &sfail_mod);
    */
   if (!MechRadioRange(mech))
     return;
@@ -502,7 +502,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
         }
       }
       /* Removed the Radio fail stuff because it annoys me - Dany
-         CheckGenericFail(tempMech, -2, &rfail_type, &rfail_mod);
+         mech_generic_failure_check(tempMech, -2, &rfail_type, &rfail_mod);
        */
       if (!MechRadioRange(tempMech))
         continue;

@@ -49,6 +49,6 @@ void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message);
 void MapBroadcast(BattleMap *map, char *message);
 void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
                        BattleMap *mech_map, char *weapname, int IsHit);
-void mech_notify(Mech *mech, int type, char *buffer);
+void mech_notify(Mech *mech, int type, const char *buffer);
 void mech_printf(Mech *mech, int type, char *format, ...)
     __attribute__((format(printf, 3, 4)));

@@ -44,9 +44,9 @@ void center_string(char *destination, size_t destination_size,
 void InitSpecialHash(BtechContext *context, int which);
 void btech_special_object_flag_changed(BtechContext *context, DbRef player,
                                        DbRef obj, bool from, bool to);
-void mecha_notify(EvaluationContext *evaluation, DbRef player, char *msg);
+void mecha_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
-                         DbRef exception, char *msg);
+                         DbRef exception, const char *msg);
 void list_chashstats(DbRef player);
 void btech_special_objects_reset(BtechContext *context);
 BattleMap *btech_context_get_map(BtechContext *context, DbRef d);

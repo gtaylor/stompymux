@@ -512,12 +512,13 @@ void btech_special_object_flag_changed(BtechContext *context, DbRef player,
 }
 
 #undef notify
-void mecha_notify(EvaluationContext *evaluation, DbRef player, char *msg) {
+void mecha_notify(EvaluationContext *evaluation, DbRef player,
+                  const char *msg) {
   raw_notify(evaluation, player, msg);
 }
 
 void mecha_notify_except(EvaluationContext *evaluation, DbRef loc, DbRef player,
-                         DbRef exception, char *msg) {
+                         DbRef exception, const char *msg) {
   DbRef first;
 
   if (loc != exception)

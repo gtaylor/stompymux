@@ -20,9 +20,10 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
-void mecha_notify(EvaluationContext *evaluation, DbRef player, char *message);
+void mecha_notify(EvaluationContext *evaluation, DbRef player,
+                  const char *message);
 void mecha_notify_except(EvaluationContext *evaluation, DbRef location,
-                         DbRef player, DbRef exception, char *message);
+                         DbRef player, DbRef exception, const char *message);
 
 #ifdef notify
 #undef notify

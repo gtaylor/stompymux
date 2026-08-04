@@ -6,6 +6,16 @@ int mech_critical_part_type(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].type;
 }
 
+int mech_critical_brand(const Mech *mech, int section, int critical) {
+  return mech->ud.sections[section].criticals[critical].brand % 16;
+}
+
+void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
+                                         int failure) {
+  struct CriticalSlot *slot = &mech->ud.sections[section].criticals[critical];
+  slot->brand = (slot->brand % 16) + (failure << 4);
+}
+
 int mech_section_original_armor(const Mech *mech, int section) {
   return mech->ud.sections[section].armor_orig;
 }

@@ -266,7 +266,7 @@ void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
   }
 }
 
-void mech_notify(Mech *mech, int type, char *buffer) {
+void mech_notify(Mech *mech, int type, const char *buffer) {
   int i;
 
   if (Uncon(mech))

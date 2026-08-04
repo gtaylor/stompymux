@@ -81,7 +81,7 @@ void UpdatePilotSkillRolls(Mech *mech) {
     MechTurnDamage(mech) = 0;
   if ((temp_tick % TURN) == 0) {
     if (Started(mech) && MechMove(mech) != MOVE_NONE)
-      CheckGenericFail(mech, -1, NULL, NULL);
+      mech_generic_failure_check(mech, -1, nullptr, nullptr);
   }
 }
 

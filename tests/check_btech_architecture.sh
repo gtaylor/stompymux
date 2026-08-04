@@ -167,6 +167,20 @@ done < <(rg -n \
   '\b(pc_to_dam_conversion|dam_to_pc_conversion|armor_effect)\b' \
   src/btech || true)
 
+while IFS= read -r match; do
+  echo "$match: character domain depends on aggregate Mech layout"
+  status=1
+done < <(rg -n -g '*.[ch]' \
+  '#include "mech(_macros)?\.h"|\b[A-Za-z_][A-Za-z0-9_]*->(ud|pd|rd|sd)\b' \
+  src/btech/character || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy failure export is not allowed"
+  status=1
+done < <(rg -n \
+  '\b(GetBrandIndex|GetPartBrandName|CheckGenericFail|CheckWeaponFailed)\b' \
+  src/btech || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

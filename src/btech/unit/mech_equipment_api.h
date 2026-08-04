@@ -5,6 +5,9 @@
 #include <stdbool.h>
 
 int mech_critical_part_type(const Mech *mech, int section, int critical);
+int mech_critical_brand(const Mech *mech, int section, int critical);
+void mech_critical_temporary_failure_set(Mech *mech, int section, int critical,
+                                         int failure);
 int mech_section_original_armor(const Mech *mech, int section);
 int mech_section_original_rear_armor(const Mech *mech, int section);
 int mech_section_armor(const Mech *mech, int section);

@@ -16,6 +16,8 @@ void mech_targeting_target_clear(Mech *mech) {
   mech->rd.targy = -1;
 }
 
+DbRef mech_target_dbref(const Mech *mech) { return mech->rd.target; }
+
 void mech_targeting_tag_clear(Mech *mech) { mech->sd.tagTarget = -1; }
 
 bool mech_targeting_has_lock_on(const Mech *mech, DbRef target) {

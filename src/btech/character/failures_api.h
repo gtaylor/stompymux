@@ -13,37 +13,11 @@
 
 #include "mux/server/platform.h"
 
-#include "mech.h"
+#include "mech_api_types.h"
 
-/* failures.c */
-int GetBrandIndex(int type);
-char *GetPartBrandName(int type, int level);
-void FailureRadioStatic(Mech *mech, int weapnum, int weaptype, int section,
-                        int critical, int roll, int *modifier, int *type);
-void FailureRadioShort(Mech *mech, int weapnum, int weaptype, int section,
-                       int critical, int roll, int *modifier, int *type);
-void FailureRadioRange(Mech *mech, int weapnum, int weaptype, int section,
-                       int critical, int roll, int *modifier, int *type);
-void FailureComputerShutdown(Mech *mech, int weapnum, int weaptype, int section,
-                             int critical, int roll, int *modifier, int *type);
-void FailureComputerScanner(Mech *mech, int weapnum, int weaptype, int section,
-                            int critical, int roll, int *modifier, int *type);
-void FailureComputerTarget(Mech *mech, int weapnum, int weaptype, int section,
-                           int critical, int roll, int *modifier, int *type);
-void FailureWeaponMissiles(Mech *mech, int weapnum, int weaptype, int section,
-                           int critical, int roll, int *modifier, int *type);
-void FailureWeaponDud(Mech *mech, int weapnum, int weaptype, int section,
-                      int critical, int roll, int *modifier, int *type);
-void FailureWeaponJammed(Mech *mech, int weapnum, int weaptype, int section,
-                         int critical, int roll, int *modifier, int *type);
-void FailureWeaponRange(Mech *mech, int weapnum, int weaptype, int section,
-                        int critical, int roll, int *modifier, int *type);
-void FailureWeaponDamage(Mech *mech, int weapnum, int weaptype, int section,
-                         int critical, int roll, int *modifier, int *type);
-void FailureWeaponHeat(Mech *mech, int weapnum, int weaptype, int section,
-                       int critical, int roll, int *modifier, int *type);
-void FailureWeaponSpike(Mech *mech, int weapnum, int weaptype, int section,
-                        int critical, int roll, int *modifier, int *type);
-void CheckGenericFail(Mech *mech, int type, int *result, int *mod);
-void CheckWeaponFailed(Mech *mech, int weapnum, int weaptype, int section,
-                       int critical, int *modifier, int *type);
+const char *mech_part_brand_name(int type, int level);
+void mech_generic_failure_check(Mech *mech, int type, int *result,
+                                int *modifier);
+void mech_weapon_failure_check(Mech *mech, int weapon_number, int weapon_type,
+                               int section, int critical, int *modifier,
+                               int *type);

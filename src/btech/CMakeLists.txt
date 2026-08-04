@@ -208,6 +208,7 @@ set(BTECH_SOURCES
   unit/mech_build.c
   unit/mech_classification_state.c
   unit/mech_crew_state.c
+  unit/mech_electronics_state.c
   unit/mech_consistency.c
   unit/mech_events.c
   unit/mech_equipment_state.c
