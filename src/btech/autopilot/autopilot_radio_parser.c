@@ -32,12 +32,14 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
+#include "mech_radio_api.h"
+#include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
 #include "mech_startup_api.h"
 #include "mech_utils_api.h"
@@ -66,14 +68,14 @@ void auto_reply_event(MuxEvent *muxevent) {
   BattleMap *map;
 
   /* Make sure its a mech */
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum)) {
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech))) {
     free(buf);
     return;
   }
 
   /* If valid object */
   if (mech)
-    if ((map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+    if ((map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))))
       sendchannelstuff(mech, 0, buf);
 
   free(buf);
@@ -87,19 +89,20 @@ void auto_reply(Mech *mech, char *buf) {
   char *reply;
 
   /* No zero freq messages */
-  if (!mech->freq[0])
+  if (!mech_radio_frequency(mech, 0))
     return;
 
   /* Make sure there is an autopilot */
-  if (MechAuto(mech) <= 0)
+  if (mech_autopilot_dbref(mech) <= 0)
     return;
 
   /* Make sure valid objects */
-  if (!(btech_context_find_object(mech->xcode.context, MechAuto(mech))) ||
-      !is_good_obj(mech->xcode.context->database, MechAuto(mech)) ||
-      game_object_location(mech->xcode.context->database, MechAuto(mech)) !=
-          mech->mynum) {
-    MechAuto(mech) = -1;
+  BtechContext *context = mech_context(mech);
+  DbRef autopilot = mech_autopilot_dbref(mech);
+  if (!(btech_context_find_object(context, autopilot)) ||
+      !is_good_obj(context->database, autopilot) ||
+      game_object_location(context->database, autopilot) != mech_dbref(mech)) {
+    mech_autopilot_dbref_set(mech, -1);
     return;
   }
 
@@ -109,11 +112,11 @@ void auto_reply(Mech *mech, char *buf) {
   if (reply) {
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
     mech_event_schedule(mech, EVENT_AUTO_REPLY, auto_reply_event,
-                        btech_random_range(mech->xcode.context, 1, 2),
+                        btech_random_range(mech_context(mech), 1, 2),
                         (intptr_t)reply);
   } else {
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_AI,
+        mech_context(mech), BTECH_CHANNEL_MECH_AI,
         "Interal AI Error: Attempting to radio reply but unable to copy "
         "string");
   }
@@ -136,7 +139,7 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   /* Basic checks */
   if (!autopilot || !mech)
     return;
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Get the args - just need the first one */
@@ -151,8 +154,9 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
 
   /* Check to see if the command was given to this AI */
   if (strcmp(args[0], "all")) {
-    mech_id[0] = MechID(mech)[0];
-    mech_id[1] = MechID(mech)[1];
+    MechUnitId id = mech_unit_id(mech);
+    mech_id[0] = id.first;
+    mech_id[1] = id.second;
     mech_id[2] = '\0';
 
     if (strcasecmp(mech_id, args[0])) {
@@ -232,7 +236,7 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
       build_auto_reply(reply, "ERROR: ", message + 1, "!");
     } else {
 
-      switch (btech_random_range(mech->xcode.context, 0, 20)) {
+      switch (btech_random_range(mech_context(mech), 0, 20)) {
       case 0:
       case 1:
       case 2:

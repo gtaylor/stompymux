@@ -209,6 +209,16 @@ done < <(rg -n '#include "mech(_maps_internal|_macros)?\.h"' \
   src/btech/ui/mech_tactical_style.c \
   src/btech/ui/mech_map_render_internal.h || true)
 
+while IFS= read -r match; do
+  echo "$match: converted autopilot radio module depends on aggregate Mech layout"
+  status=1
+done < <(rg -n \
+  '#include "mech(_macros)?\.h"|\bmech->|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|FlyingT|HasCamo)\(' \
+  src/btech/autopilot/autopilot_radio.c \
+  src/btech/autopilot/autopilot_radio_catalog.c \
+  src/btech/autopilot/autopilot_radio_handlers.c \
+  src/btech/autopilot/autopilot_radio_parser.c || true)
+
 if [[ -e src/btech/ui/coolmenu_interface.h ]]; then
   echo "src/btech/ui/coolmenu_interface.h: unused macro interface is not allowed"
   status=1

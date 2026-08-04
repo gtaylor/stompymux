@@ -32,14 +32,19 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
 #include "mech_sensor_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
 #include "mech_startup_api.h"
+#include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
@@ -95,38 +100,42 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech, char **args,
   Mech *target;
 
   /* Is the AI moving or something */
-  if (Jumping(mech))
+  if (mech_is_jumping(mech))
     strcpy(buffer, "Jumping");
-  else if (Fallen(mech))
+  else if (mech_is_fallen(mech))
     strcpy(buffer, "Prone");
-  else if (IsRunning(MechSpeed(mech), MMaxSpeed(mech)))
+  else if (mech_current_speed(mech) >
+           2.0f * mech_effective_maximum_speed(mech) / 3.0f + 0.1f)
     strcpy(buffer, "Running");
-  else if (MechSpeed(mech) > 1.0)
+  else if (mech_current_speed(mech) > 1.0)
     strcpy(buffer, "Walking");
   else
     strcpy(buffer, "Standing");
 
-  snprintf(mesg, LBUF_SIZE, "%s at %d, %d", buffer, MechX(mech), MechY(mech));
+  snprintf(mesg, LBUF_SIZE, "%s at %d, %d", buffer, mech_position_x(mech),
+           mech_position_y(mech));
 
   /* Which way is the AI going */
-  if (MechSpeed(mech) > 1.0) {
-    snprintf(buffer, MBUF_SIZE, ", headed %d speed %.2f", MechFacing(mech),
-             MechSpeed(mech));
+  if (mech_current_speed(mech) > 1.0) {
+    snprintf(buffer, MBUF_SIZE, ", headed %d speed %.2f",
+             mech_heading_degrees(mech), mech_current_speed(mech));
     strncat(mesg, buffer, LBUF_SIZE);
   } else {
-    snprintf(buffer, MBUF_SIZE, ", headed %d", MechFacing(mech));
+    snprintf(buffer, MBUF_SIZE, ", headed %d", mech_heading_degrees(mech));
     strncat(mesg, buffer, LBUF_SIZE);
   }
 
   /* Is the AI targeting something */
-  if (MechTarget(mech) != -1) {
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+  if (mech_target_dbref(mech) != -1) {
+    target =
+        btech_context_get_mech(mech_context(mech), mech_target_dbref(mech));
 
     if (target) {
       snprintf(buffer, MBUF_SIZE, ", targeting %s %s",
                mech_to_mech_display_id(mech, target).text,
-               InLineOfSight(mech, target, MechX(target), MechY(target),
-                             FaMechRange(mech, target))
+               InLineOfSight(mech, target, mech_position_x(target),
+                             mech_position_y(target),
+                             mech_range_to(mech, target))
                    ? ""
                    : "(not in LOS)");
       strncat(mesg, buffer, LBUF_SIZE);

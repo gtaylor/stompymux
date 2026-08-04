@@ -32,14 +32,18 @@
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_classification_api.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_move_api.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
 #include "mech_sensor_api.h"
+#include "mech_specification_api.h"
 #include "mech_startup_api.h"
+#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
@@ -311,12 +315,12 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech, char **args,
     return;
   }
 
-  if (MechX(mech) == x && MechY(mech) == y) {
+  if (mech_position_x(mech) == x && mech_position_y(mech) == y) {
     snprintf(mesg, LBUF_SIZE, "!Already in that hex");
     return;
   }
 
-  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (x < 0 || y < 0 || x >= map->map_width || y >= map->map_height) {
     snprintf(mesg, LBUF_SIZE, "!Bad hex to travel to");
@@ -383,9 +387,9 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech, char **args,
 void auto_radio_command_hide(Autopilot *autopilot, Mech *mech, char **args,
                              int argc, char *mesg) {
 
-  if ((HasCamo(mech))
+  if ((mech_technology_flags_secondary(mech) & CAMO_TECH)
           ? 0
-          : MechType(mech) != CLASS_BSUIT && MechType(mech) != CLASS_MW) {
+          : mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_MW) {
     snprintf(mesg, LBUF_SIZE, "!Last I checked I was kind of big for that");
     return;
   }
@@ -394,8 +398,9 @@ void auto_radio_command_hide(Autopilot *autopilot, Mech *mech, char **args,
         mech_real_terrain_get(mech) == LIGHT_FOREST ||
         mech_real_terrain_get(mech) == ROUGH ||
         mech_real_terrain_get(mech) == MOUNTAINS ||
-        (MechType(mech) == CLASS_BSUIT ? mech_real_terrain_get(mech) == BUILDING
-                                       : 0))) {
+        (mech_class(mech) == CLASS_BSUIT
+             ? mech_real_terrain_get(mech) == BUILDING
+             : 0))) {
     snprintf(mesg, LBUF_SIZE, "!Invalid Terrain");
     return;
   }
@@ -415,7 +420,7 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech, char **args,
   char buffer[SBUF_SIZE];
   int bear, rng;
 
-  if (!(int)fabs(MechJumpSpeed(mech))) {
+  if (!(int)fabs(mech_jump_speed(mech))) {
     snprintf(mesg, LBUF_SIZE, "!I don't do hiphop and jump around");
     return;
   }
