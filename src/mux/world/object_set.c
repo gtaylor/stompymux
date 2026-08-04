@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "btech/special_objects.h"
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
@@ -24,7 +25,6 @@
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/player.h"
-#include "p.glue.h"
 
 DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   DbRef mat;
@@ -184,8 +184,9 @@ void object_attribute_set(EvaluationContext *evaluation, DbRef player,
     have_xcode = is_xcode(evaluation->world->database, thing);
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   aflags);
-    handle_xcode(evaluation->btech, player, thing, have_xcode,
-                 is_xcode(evaluation->world->database, thing));
+    btech_special_object_flag_changed(
+        evaluation->btech, player, thing, have_xcode,
+        is_xcode(evaluation->world->database, thing));
     if (!(key & SET_QUIET) && !is_quiet(evaluation->world->database, player) &&
         !is_quiet(evaluation->world->database, thing))
       notify_printf(evaluation, player, "%s/%s - %s",

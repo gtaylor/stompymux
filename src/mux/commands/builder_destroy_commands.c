@@ -2,6 +2,7 @@
  * builder_commands.c -- Commands that create and configure world objects
  */
 
+#include "btech/special_objects.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
@@ -17,7 +18,6 @@
 #include "mux/world/match.h"
 #include "mux/world/object.h"
 #include "mux/world/object_set.h"
-#include "p.glue.h"
 
 extern NameTable indiv_attraccess_nametab[];
 
@@ -128,7 +128,7 @@ void do_destroy(CommandInvocation *invocation) {
                        "No sense beating a dead exit.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
-          DisposeSpecialObject(evaluation->btech, player, thing);
+          btech_special_object_dispose(evaluation->btech, player, thing);
           c_xcode(evaluation->world->database, thing);
         }
         if (0) {
@@ -148,7 +148,7 @@ void do_destroy(CommandInvocation *invocation) {
                      "No sense beating a dead object.", MSG_ME);
     } else {
       if (is_xcode(evaluation->world->database, thing)) {
-        DisposeSpecialObject(evaluation->btech, player, thing);
+        btech_special_object_dispose(evaluation->btech, player, thing);
         c_xcode(evaluation->world->database, thing);
       }
       if (0) {
@@ -168,7 +168,7 @@ void do_destroy(CommandInvocation *invocation) {
                        "No sense beating a dead player.", MSG_ME);
       } else {
         if (is_xcode(evaluation->world->database, thing)) {
-          DisposeSpecialObject(evaluation->btech, player, thing);
+          btech_special_object_dispose(evaluation->btech, player, thing);
           c_xcode(evaluation->world->database, thing);
         }
         if (0) {

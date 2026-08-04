@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "btech/btech_context.h"
+#include "btech/context.h"
 #include "btmux_build_config.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_queue.h"
@@ -61,11 +61,26 @@ bool mux_server_create(MuxServer *server) {
   world_indexes_initialize(&server->world_indexes);
   access_control_store_initialize(&server->access_control);
   server_log_initialize(&server->log, &server->database, server->configuration);
+  const BtechDependencies btech_dependencies = {
+      .configuration = server->configuration,
+      .clock = &server->clock,
+      .background_command = &server->background_command,
+      .database = &server->database,
+      .events = &server->events,
+      .log = &server->log,
+      .persistence = &server->persistence,
+      .world_indexes = &server->world_indexes,
+      .access_control = &server->access_control,
+      .process_start_time = server->process_start_time,
+  };
+  server->btech = btech_context_create(&btech_dependencies);
+  if (server->btech == nullptr)
+    goto fail;
 
   /* Create opaque owners. Their addresses remain stable while service views
      are wired below. */
-  server->descriptors = descriptor_registry_create(
-      &server->command_runtime, &server->btech, &server->log);
+  server->descriptors = descriptor_registry_create(&server->command_runtime,
+                                                   server->btech, &server->log);
   world_context_initialize(&server->world, &server->database,
                            server->configuration, &server->world_indexes,
                            &server->access_control, server->descriptors,
@@ -75,7 +90,7 @@ bool mux_server_create(MuxServer *server) {
       player_cache_create(server->configuration, &server->database);
   const CommandQueueDependencies queue_dependencies = {
       .command_runtime = &server->command_runtime,
-      .btech = &server->btech,
+      .btech = server->btech,
       .log = &server->log,
       .world = &server->world,
       .clock = &server->clock,
@@ -100,7 +115,7 @@ bool mux_server_create(MuxServer *server) {
   server_control_initialize(
       &server->server_control, server->configuration, &server->database,
       &server->log, server->descriptors, server->players, &server->persistence,
-      &server->background_command, &server->btech);
+      &server->background_command, server->btech);
   connection_runtime_initialize(&server->connection_runtime,
                                 server->configuration, &server->clock,
                                 server->descriptors, &server->log,
@@ -125,7 +140,7 @@ bool mux_server_create(MuxServer *server) {
       .record_players = &server->record_players,
   };
   bool command_context_ready = command_context_initialize(
-      &server->background_command, &server->command_runtime, &server->btech,
+      &server->background_command, &server->command_runtime, server->btech,
       &server->log, NOTHING, NOTHING, nullptr, false);
   if (!command_context_ready)
     goto fail;
@@ -142,7 +157,7 @@ bool mux_server_create(MuxServer *server) {
       &server->maintenance, &server->server_control,
       &server->connection_runtime, server->configuration, &server->database,
       &server->log, &server->clock, server->descriptors, server->commands,
-      server->players, &server->background_command, &server->btech,
+      server->players, &server->background_command, server->btech,
       &server->lua_services, &server->lua);
   server->lifecycle = server_lifecycle_create(&server->maintenance);
   if (server->lifecycle == nullptr)
@@ -158,12 +173,7 @@ bool mux_server_create(MuxServer *server) {
   if (server->log.cache == nullptr)
     goto fail;
 #endif
-  btech_context_initialize(&server->btech, server->configuration,
-                           &server->clock, &server->background_command,
-                           &server->database, &server->events,
-                           server->lifecycle, &server->log,
-                           &server->persistence, &server->world_indexes,
-                           &server->access_control, server->process_start_time);
+  btech_context_set_lifecycle(server->btech, server->lifecycle);
   server->command_runtime.lifecycle = server->lifecycle;
   return true;
 
@@ -199,14 +209,15 @@ void mux_server_destroy(MuxServer *server) {
   server->lifecycle = nullptr;
   server->server_control.lifecycle = nullptr;
   server->command_runtime.lifecycle = nullptr;
-  server->btech.lifecycle = nullptr;
+  btech_context_set_lifecycle(server->btech, nullptr);
   help_index_destroy(server->help);
   server->help = nullptr;
   file_cache_destroy(server->files);
   server->files = nullptr;
   command_queue_destroy(server->commands);
   server->commands = nullptr;
-  btech_context_destroy(&server->btech);
+  btech_context_destroy(server->btech);
+  server->btech = nullptr;
   mux_event_scheduler_destroy(&server->events);
   macro_registry_destroy(&server->macros);
   channel_registry_destroy(&server->channels);

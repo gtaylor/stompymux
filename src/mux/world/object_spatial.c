@@ -4,7 +4,7 @@
 #include "mux/world/object_spatial.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
 
-#include "btech_context.h"
+#include "btech/context.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"

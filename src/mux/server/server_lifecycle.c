@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <uv.h>
 
-#include "glue.h"
+#include "btech/lifecycle.h"
 #include "mux/commands/command_queue.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
@@ -258,7 +258,7 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
   }
   server_timer_destroy(lifecycle->timer);
   lifecycle->timer = nullptr;
-  heartbeat_stop(lifecycle->maintenance->btech);
+  btech_heartbeat_stop(lifecycle->maintenance->btech);
   lua_shutdown(lifecycle->maintenance->lua);
   signal_handlers_destroy(lifecycle->signals);
   lifecycle->signals = nullptr;

@@ -1,7 +1,7 @@
-#include "mech.parts.h"
+#include "mech_parts.h"
 
-#include "btech_context.h"
-#include "btmacros.h"
+#include "btech/context.h"
+#include "mech_macros.h"
 #include "btmux_build_config.h"
 #include "mech.h"
 #include "mux/objects/db.h"
@@ -12,7 +12,7 @@ static int changed_part;
 static int changed_brand;
 static int changed_count;
 
-int alias_part(MECH *mech, int part, int location) {
+int alias_part(Mech *mech, int part, int location) {
   (void)mech;
   return part + location;
 }
@@ -38,7 +38,7 @@ int main(void) {
   GameObject objects[2] = {0};
   GameDatabase database = {.objects = objects};
   BtechContext context = {.database = &database};
-  MECH mech = {.xcode.context = &context, .mynum = 1};
+  Mech mech = {.xcode.context = &context, .mynum = 1};
   constexpr int part = 777;
 
   MechType(&mech) = CLASS_MECH;

@@ -8,6 +8,7 @@
 #include <sys/resource.h>
 #include <time.h>
 
+#include "btech/special_objects.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/network_output.h"
@@ -19,7 +20,6 @@
 #include "mux/server/timer.h"
 #include "mux/world/database_check.h"
 #include "mux/world/player_cache.h"
-#include "p.glue.h"
 
 extern void pool_reset(void);
 extern unsigned int alarm(unsigned int seconds);
@@ -131,7 +131,7 @@ static void dispatch(MaintenanceContext *maintenance) {
      needed (see UpdateSpecialObjects for details)
    */
 
-  UpdateSpecialObjects(maintenance->btech);
+  btech_special_objects_update(maintenance->btech);
 
   /*
    * Idle user check

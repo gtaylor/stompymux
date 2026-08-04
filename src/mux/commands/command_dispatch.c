@@ -8,6 +8,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include "btech/commands.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_internal.h"
@@ -31,7 +32,6 @@
 #include "mux/world/move.h"
 #include "mux/world/movement_commands.h"
 #include "mux/world/world_context.h"
-#include "p.glue.h"
 
 int check_access(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef player,
@@ -458,9 +458,9 @@ void process_command(CommandContext *context, char *command, char *args[],
     goto exit;
 
   /* Handle mecha stuff.. */
-  if (HandledCommand(context->btech, player,
-                     game_object_location(context->world->database, player),
-                     command))
+  if (btech_command_try_execute(
+          context->btech, player,
+          game_object_location(context->world->database, player), command))
     goto exit;
   /*
    * Check for the HOME command

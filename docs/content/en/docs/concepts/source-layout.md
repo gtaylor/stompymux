@@ -102,7 +102,8 @@ context interfaces directly instead of using `mux_server.h` as an aggregate
 dependency header.
 
 `MuxServer` owns a narrow `BtechContext` for BTech runtime services and legacy
-callback objects. In addition to borrowing core MUX services, this context owns
+callback objects through an opaque pointer constructed from explicit borrowed
+dependencies. In addition to borrowing core MUX services, this context owns
 the BTech special-object registry, special command indexes, map-coding cache,
 part-name registry, lazily populated template filename registry, combat
 overrides, advanced-economy part costs, heartbeat timer state, random-generator
@@ -111,6 +112,8 @@ missile cluster indexes, wizard-adjustable weapon recycle/BV settings, and
 update timestamps. Those resources are released explicitly before the event
 scheduler during server teardown. Canonical weapon definitions remain
 immutable; runtime overrides are isolated in the context-owned settings array.
+BattleTech implementation files are grouped by owning gameplay domain; MUX
+code includes only the focused interfaces under `src/btech/include/btech`.
 Interactive and queued dispatch push a checked `BtechCommandScope` while
 invoking BTech code; nested command execution restores the previous scope in
 LIFO order instead of manually swapping one mutable command pointer.

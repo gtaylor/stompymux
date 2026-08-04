@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "btech/btech_context.h"
+#include "btech/context.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"

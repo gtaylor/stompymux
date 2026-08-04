@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "btech_context.h"
+#include "btech/context.h"
 #include "mux/commands/command.h"
 #include "mux/objects/flags.h"
 #include "mux/server/server_config.h"

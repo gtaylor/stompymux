@@ -1,0 +1,130 @@
+
+/*
+ * $Id: econ.c,v 1.1.1.1 2005/01/11 21:18:06 kstevens Exp $
+ *
+ * Author: Markus Stenberg <fingon@iki.fi>
+ *
+ *  Copyright (c) 1996 Markus Stenberg
+ *  Copyright (c) 1998-2002 Thomas Wouters
+ *  Copyright (c) 2000-2002 Cord Awtry
+ *       All rights reserved
+ *
+ * Created: Sat Oct  5 14:06:02 1996 fingon
+ * Last modified: Sat Apr 19 13:54:56 1997 fingon
+ *
+ */
+
+/* Idea:
+   Store the parts in an attribute on object
+
+   Format:
+   [id,brand,count]{,[id,brand,count],..}
+ */
+
+#include <stdio.h>
+#include <string.h>
+
+#include "command_handlers_api.h"
+#include "mech.h"
+#include "mech_partnames_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/flags.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+
+/* entry = pointer to [ */
+static void remove_entry(char *alku, char *entry) {
+  char *j;
+
+  if (!(j = strstr(entry, "]")))
+    return;
+  j++;
+  if (*j) {
+    /* Move the remainder of the string, including the terminating NUL,
+       but not including the separating comma */
+    j++;
+    memmove(entry, j, strlen(j) + 1);
+  } else {
+    if (entry == alku)
+      *alku = '\0';
+    else
+      *(entry - 1) = '\0';
+  }
+}
+
+static void add_entry(char *to, int siz, char *data) {
+  if (*to)
+    snprintf(to + strlen(to), siz - strlen(to), ",[%s]", data);
+  else
+    snprintf(to, siz, "[%s]", data);
+}
+
+static char *find_entry(char *s, int i, int b) {
+  char buf[MBUF_SIZE];
+
+  snprintf(buf, MBUF_SIZE, "[%d,%d,", i, b);
+  return strstr(s, buf);
+}
+
+void econ_change_items(BtechContext *context, DbRef d, int id, int brand,
+                       int num) {
+  GameDatabase *database = context->database;
+  char *t, *u;
+  int base = 0, i1, i2, i3;
+
+  if (!is_good_obj(database, d))
+    return;
+  if (brand)
+    if (get_parts_short_name(context, id, brand) ==
+        get_parts_short_name(context, id, 0))
+      brand = 0;
+  /* t is buf of LBUF_SIZE */
+  t = btech_attribute_read(database, d, A_ECONPARTS, (char[LBUF_SIZE]){0});
+  if ((u = find_entry(t, id, brand))) {
+    if (sscanf(u, "[%d,%d,%d]", &i1, &i2, &i3) == 3)
+      base += i3;
+    remove_entry(t, u);
+  }
+  base += num;
+  if (base <= 0) {
+    if (u)
+      silly_atr_set_in(database, d, A_ECONPARTS, t);
+    return;
+  }
+  if (!(IsActuator(id)))
+    add_entry(t, LBUF_SIZE, tprintf("%d,%d,%d", id, brand, base));
+  silly_atr_set_in(database, d, A_ECONPARTS, t);
+  if (IsActuator(id))
+    econ_change_items(context, d, Cargo(S_ACTUATOR), brand, base);
+  /* Successfully changed */
+}
+
+int econ_find_items(BtechContext *context, DbRef d, int id, int brand) {
+  GameDatabase *database = context->database;
+  char *t, *u;
+  int i1, i2, i3;
+
+  if (!is_good_obj(database, d))
+    return 0;
+  if (brand)
+    if (get_parts_short_name(context, id, brand) ==
+        get_parts_short_name(context, id, 0))
+      brand = 0;
+  t = btech_attribute_read(database, d, A_ECONPARTS, (char[LBUF_SIZE]){0});
+  if ((u = find_entry(t, id, brand)))
+    if (sscanf(u, "[%d,%d,%d]", &i1, &i2, &i3) == 3)
+      return i3;
+  return 0;
+}
+
+void econ_set_items(BtechContext *context, DbRef d, int id, int brand,
+                    int num) {
+  int i;
+
+  if (!is_good_obj(context->database, d))
+    return;
+  i = econ_find_items(context, d, id, brand);
+  if (i != num)
+    econ_change_items(context, d, id, brand, num - i);
+}

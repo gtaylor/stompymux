@@ -8,7 +8,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/styled_text/render.h"
 
-// IWYU pragma: no_include "btech_context.h"
+// IWYU pragma: no_include "context.h"
 // IWYU pragma: no_include "mux/commands/command_runtime.h"
 // IWYU pragma: no_include "mux/server/log.h"
 // IWYU pragma: no_include "uv.h"

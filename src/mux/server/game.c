@@ -3,10 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "btech/context.h"
 #include <sys/resource.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "btech/persistence.h"
+#include "btech/special_objects.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/macro.h"
 #include "mux/communication/channel_registry.h"
@@ -34,8 +38,6 @@
 #include "mux/world/database_check.h"
 #include "mux/world/object_spatial.h"
 #include "mux/world/player_cache.h"
-#include "p.glue.h"
-#include "persistence/btech_persistence.h"
 
 extern void init_cmdtab(CommandRegistry *registry);
 
@@ -365,7 +367,7 @@ void do_shutdown(CommandInvocation *invocation) {
 
 void server_shutdown(ServerControl *control, DbRef player, int key,
                      const char *message) {
-  ResetSpecialObjects(control->btech);
+  btech_special_objects_reset(control->btech);
   if (player != NOTHING) {
     raw_broadcast(control->descriptors, 0, "Game: Shutdown by %s",
                   game_object_name(control->database, player));
@@ -524,7 +526,7 @@ static int load_game(MuxServer *server) {
   }
 
   /* Load the mecha stuff.. */
-  LoadSpecialObjects(&server->btech);
+  btech_special_objects_load(server->btech);
 
   STARTLOG(&server->log, LOG_STARTUP, "INI", "LOAD") {
     log_text("Load complete.");
@@ -578,7 +580,7 @@ int main(int argc, char *argv[]) {
   }
   time(&server.start_time);
   server.process_start_time = server.start_time;
-  server.btech.process_start_time = server.process_start_time;
+  btech_context_set_process_start_time(server.btech, server.process_start_time);
   server.database.top = -1;
   configuration_initialize(&server.configuration_context);
   init_rlimit(&server);
@@ -604,7 +606,7 @@ int main(int argc, char *argv[]) {
     goto fail;
   }
 
-  if (btech_persistence_register(&server.persistence, &server.btech) < 0) {
+  if (btech_persistence_register(&server.persistence, server.btech) < 0) {
     fprintf(stderr, "Unable to register BTech SQLite persistence.\n");
     goto fail;
   }

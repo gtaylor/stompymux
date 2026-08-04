@@ -1,0 +1,54 @@
+
+/*
+   p.mech.notify.h
+
+   Automatically created by protomaker (C) 1998 Markus Stenberg (fingon@iki.fi)
+   Protomaker is actually only a wrapper script for cproto, but well.. I like
+   fancy headers and stuff :)
+   */
+
+/* Generated at Fri Jan 15 15:32:52 CET 1999 from mech.notify.c */
+
+#pragma once
+
+#include "mux/server/platform.h"
+
+typedef struct EvaluationContext EvaluationContext;
+
+typedef struct MechDisplayId {
+  char text[SBUF_SIZE];
+} MechDisplayId;
+
+/* mech.notify.c */
+const char *GetAmmoDesc_Model_Mode(int model, int mode);
+char GetWeaponAmmoModeLetter_Model_Mode(int model, int mode);
+char GetWeaponFireModeLetter_Model_Mode(int model, int mode);
+char GetWeaponAmmoModeLetter(Mech *mech, int loop, int crit);
+char GetWeaponFireModeLetter(Mech *mech, int loop, int crit);
+const char *GetMoveTypeID(int movetype);
+void Mech_ShowFlags(EvaluationContext *evaluation, DbRef player, Mech *mech,
+                    int spaces, int level);
+const char *GetArcID(Mech *mech, int arc);
+MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos);
+MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech);
+MechDisplayId mech_display_id(Mech *mech);
+void mech_set_channelfreq(DbRef player, void *data, char *buffer);
+void mech_set_channeltitle(DbRef player, void *data, char *buffer);
+void mech_set_channelmode(DbRef player, void *data, char *buffer);
+void mech_list_freqs(DbRef player, void *data, char *buffer);
+void mech_sendchannel(DbRef player, void *data, char *buffer);
+int common_checks(DbRef player, Mech *mech, int flag);
+void sendchannelstuff(Mech *mech, int freq, char *msg);
+void mech_radio(DbRef player, void *data, char *buffer);
+void MechBroadcast(Mech *mech, Mech *target, BattleMap *mech_map, char *buffer);
+void MechLOSBroadcast(Mech *mech, char *message);
+int MechSeesHexF(Mech *mech, BattleMap *map, float x, float y, int ix, int iy);
+int MechSeesHex(Mech *mech, BattleMap *map, int x, int y);
+void HexLOSBroadcast(BattleMap *mech_map, int x, int y, char *message);
+void MechLOSBroadcasti(Mech *mech, Mech *target, const char *message);
+void MapBroadcast(BattleMap *map, char *message);
+void MechFireBroadcast(Mech *mech, Mech *target, int x, int y,
+                       BattleMap *mech_map, char *weapname, int IsHit);
+void mech_notify(Mech *mech, int type, char *buffer);
+void mech_printf(Mech *mech, int type, char *format, ...)
+    __attribute__((format(printf, 3, 4)));

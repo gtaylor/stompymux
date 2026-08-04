@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "btech_context.h" // IWYU pragma: keep
+#include "btech/context.h" // IWYU pragma: keep
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/game.h"

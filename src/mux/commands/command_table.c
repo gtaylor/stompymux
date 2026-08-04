@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <strings.h>
 
-#include "btech_context.h" // IWYU pragma: keep
+#include "btech/context.h" // IWYU pragma: keep
 #include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"

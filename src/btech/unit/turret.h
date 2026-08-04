@@ -1,0 +1,34 @@
+
+/*
+ * $Id: turret.h,v 1.1.1.1 2005/01/11 21:18:33 kstevens Exp $
+ *
+ * Author: Markus Stenberg <fingon@iki.fi>
+ *
+ *  Copyright (c) 1996 Markus Stenberg
+ *  Copyright (c) 1998-2002 Thomas Wouters
+ *  Copyright (c) 2000-2002 Cord Awtry
+ *       All rights reserved
+ *
+ * Created: Fri Nov 22 17:10:35 1996 fingon
+ * Last modified: Fri Nov 22 21:30:46 1996 fingon
+ *
+ */
+
+#pragma once
+
+#include "special_object.h"
+
+#include "mech.h"
+
+typedef struct {
+  BtechSpecialObject xcode; /* XCODE base class field */
+  DbRef mynum;
+
+  int arcs;
+  unsigned long tic[NUM_TICS]; /* tics.. */
+  DbRef parent;                /* ship whose stats we use for this */
+  DbRef gunner;                /* who's da gunner? */
+  DbRef target;                /* what do we have locked? */
+  short targx, targy, targz;   /* in map coords, target squares */
+  int lockmode;                /* lock modes (hex, etc) */
+} Turret;

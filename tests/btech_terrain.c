@@ -1,7 +1,7 @@
-#include "map.terrain.h"
+#include "map_terrain.h"
 
-#include "btech_context.h"
-#include "btmacros.h"
+#include "btech/context.h"
+#include "mech_macros.h"
 #include "map.h"
 #include "mech.h"
 
@@ -29,7 +29,7 @@ char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
   return encoded_terrain[index];
 }
 
-void UpdateMechsTerrain(MAP *map, int x, int y, int terrain) {
+void UpdateMechsTerrain(BattleMap *map, int x, int y, int terrain) {
   (void)map;
   (void)x;
   (void)y;
@@ -37,14 +37,14 @@ void UpdateMechsTerrain(MAP *map, int x, int y, int terrain) {
   terrain_updates++;
 }
 
-int map_underlying_terrain(MAP *map, int x, int y) {
+int map_underlying_terrain(BattleMap *map, int x, int y) {
   (void)map;
   (void)x;
   (void)y;
   return HEAVY_FOREST;
 }
 
-int mech_underlying_terrain(MECH *mech) {
+int mech_underlying_terrain(Mech *mech) {
   (void)mech;
   return ROUGH;
 }
@@ -53,8 +53,8 @@ int main(void) {
   BtechContext context = {0};
   unsigned char row[2] = {0};
   unsigned char *rows[] = {row};
-  MAP map = {.xcode.context = &context, .map = rows};
-  MECH mech = {0};
+  BattleMap map = {.xcode.context = &context, .map = rows};
+  Mech mech = {0};
 
   map_hex_set(&map, 0, 0, ROAD, 3);
   if (map_terrain_get(&map, 0, 0) != ROAD ||

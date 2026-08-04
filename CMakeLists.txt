@@ -183,119 +183,24 @@ if(BTECH_ENABLE_UBSAN)
   target_link_options(btmux_options INTERFACE -fsanitize=undefined)
 endif()
 
-set(BTECH_SOURCES
-  ${BTECH_SOURCE_DIR}/src/btech_context.c
-  ${BTECH_SOURCE_DIR}/persistence/btech_persistence_sqlite.c
-  ${BTECH_SOURCE_DIR}/src/coolmenu.c
-  ${BTECH_SOURCE_DIR}/src/debug.c
-  ${BTECH_SOURCE_DIR}/src/events.c
-  ${BTECH_SOURCE_DIR}/src/glue.hcode.c
-  ${BTECH_SOURCE_DIR}/src/glue.c
-  ${BTECH_SOURCE_DIR}/src/glue.scode.c
-  ${BTECH_SOURCE_DIR}/src/mech.lostracer.c
-  ${BTECH_SOURCE_DIR}/src/mechfile.c
-  ${BTECH_SOURCE_DIR}/src/spath.c
-  ${BTECH_SOURCE_DIR}/src/tick.c
-  ${BTECH_SOURCE_DIR}/src/mt19937ar.c
-  ${BTECH_SOURCE_DIR}/src/btech/aero.bomb.c
-  ${BTECH_SOURCE_DIR}/src/btech/aero.move.c
-  ${BTECH_SOURCE_DIR}/src/btech/artillery.c
-  ${BTECH_SOURCE_DIR}/src/btech/autopilot_ai.c
-  ${BTECH_SOURCE_DIR}/src/btech/autopilot_autogun.c
-  ${BTECH_SOURCE_DIR}/src/btech/autopilot_commands.c
-  ${BTECH_SOURCE_DIR}/src/btech/autopilot_core.c
-  ${BTECH_SOURCE_DIR}/src/btech/autopilot_radio.c
-  ${BTECH_SOURCE_DIR}/src/btech/bsuit.c
-  ${BTECH_SOURCE_DIR}/src/btech/btech_channel.c
-  ${BTECH_SOURCE_DIR}/src/btech/btech_event.c
-  ${BTECH_SOURCE_DIR}/src/btech/btech_event_core.c
-  ${BTECH_SOURCE_DIR}/src/btech/btech.c
-  ${BTECH_SOURCE_DIR}/src/btech/btechstats.c
-  ${BTECH_SOURCE_DIR}/src/btech/crit.c
-  ${BTECH_SOURCE_DIR}/src/btech/ds.bay.c
-  ${BTECH_SOURCE_DIR}/src/btech/ds.turret.c
-  ${BTECH_SOURCE_DIR}/src/btech/econ.c
-  ${BTECH_SOURCE_DIR}/src/btech/econ_cmds.c
-  ${BTECH_SOURCE_DIR}/src/btech/eject.c
-  ${BTECH_SOURCE_DIR}/src/btech/failures.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.bits.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.coding.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.conditions.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.dynamic.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.los.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.obj.c
-  ${BTECH_SOURCE_DIR}/src/btech/map.terrain.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.advanced.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.ammodump.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.bth.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.build.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.c3.misc.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.c3.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.c3i.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.misc.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.missile.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.combat.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.consistency.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.contacts.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.damage.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.ecm.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.enhanced.criticals.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.events.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.fire.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.hitloc.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.ice.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.lite.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.lifecycle.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.los.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.maps.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.mechref_ident.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.move.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.notify.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.ood.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.partnames.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.parts.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.physical.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.pickup.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.restrict.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.scan.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.sensor.functions.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.sensor.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.spot.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.startup.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.stat.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.status.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tag.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.commands.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.damages.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.do.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.events.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tech.repairs.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.tic.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.update.c
-  ${BTECH_SOURCE_DIR}/src/btech/mech.utils.c
-  ${BTECH_SOURCE_DIR}/src/btech/mechrep.c
-  ${BTECH_SOURCE_DIR}/src/btech/mine.c
-  ${BTECH_SOURCE_DIR}/src/btech/pcombat.c
-  ${BTECH_SOURCE_DIR}/src/btech/template.c)
-
-add_library(btech STATIC ${BTECH_SOURCES})
-target_link_libraries(btech PRIVATE btmux_options)
-if(BUILD_TESTING)
-  target_compile_definitions(btech PRIVATE BTMUX_PERSISTENCE_TESTING=1)
-endif()
-target_include_directories(btech PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_BINARY_DIR}"
-  "${SQLite3_INCLUDE_DIRS}"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
-  "${CMAKE_SOURCE_DIR}/src")
-if(BTECH_ENABLE_IWYU)
-  set_property(TARGET btech PROPERTY C_INCLUDE_WHAT_YOU_USE "${BTECH_IWYU_COMMAND}")
-endif()
+set(BTECH_PRIVATE_INCLUDE_DIRS
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/character"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/commands"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/economy"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/integration"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/movement"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/special"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/ui"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit"
+  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include")
+add_subdirectory("${BTECH_SOURCE_DIR}")
 
 add_executable(stompymux)
 include(src/mux/sources.cmake)
@@ -316,78 +221,91 @@ target_compile_options(stompymux PRIVATE
 target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"
-  "${CMAKE_SOURCE_DIR}/src"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-  "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}")
+  "${CMAKE_SOURCE_DIR}/src")
 if(BTECH_ENABLE_IWYU)
   set_property(TARGET stompymux PROPERTY C_INCLUDE_WHAT_YOU_USE "${BTECH_IWYU_COMMAND}")
 endif()
 
 if(BUILD_TESTING)
   add_executable(btech_channel_test tests/btech_channel.c
-    ${BTECH_SOURCE_DIR}/src/btech/btech_channel.c)
+    ${BTECH_SOURCE_DIR}/core/btech_channel.c)
+  target_compile_definitions(btech_channel_test PRIVATE BTECH_INTERNAL=1)
   target_link_libraries(btech_channel_test PRIVATE btmux_options)
   target_include_directories(btech_channel_test PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_channel COMMAND btech_channel_test)
 
   add_executable(btech_event_test tests/btech_event.c
-    ${BTECH_SOURCE_DIR}/src/btech/btech_event_core.c
+    ${BTECH_SOURCE_DIR}/core/btech_event_core.c
     ${MUX_SOURCE_DIR}/network/mux_event.c
     ${MUX_SOURCE_DIR}/server/event_timer.c)
   target_link_libraries(btech_event_test PRIVATE btmux_options uv_a)
   target_include_directories(btech_event_test PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_event COMMAND btech_event_test)
 
   add_executable(btech_terrain_test tests/btech_terrain.c
-    ${BTECH_SOURCE_DIR}/src/btech/map.terrain.c)
+    ${BTECH_SOURCE_DIR}/map/map_terrain.c)
+  target_compile_definitions(btech_terrain_test PRIVATE BTECH_INTERNAL=1)
   target_link_libraries(btech_terrain_test PRIVATE btmux_options)
   target_include_directories(btech_terrain_test PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_terrain COMMAND btech_terrain_test)
 
   add_executable(btech_lifecycle_test tests/btech_lifecycle.c
-    ${BTECH_SOURCE_DIR}/src/btech/mech.lifecycle.c)
+    ${BTECH_SOURCE_DIR}/unit/mech_lifecycle.c)
+  target_compile_definitions(btech_lifecycle_test PRIVATE BTECH_INTERNAL=1)
   target_compile_options(btech_lifecycle_test PRIVATE -ffunction-sections)
   target_link_options(btech_lifecycle_test PRIVATE -Wl,--gc-sections)
   target_link_libraries(btech_lifecycle_test PRIVATE btmux_options)
   target_include_directories(btech_lifecycle_test PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_lifecycle COMMAND btech_lifecycle_test)
 
   add_executable(btech_parts_test tests/btech_parts.c
-    ${BTECH_SOURCE_DIR}/src/btech/mech.parts.c)
+    ${BTECH_SOURCE_DIR}/unit/mech_parts.c)
+  target_compile_definitions(btech_parts_test PRIVATE BTECH_INTERNAL=1)
   target_compile_options(btech_parts_test PRIVATE -ffunction-sections)
   target_link_options(btech_parts_test PRIVATE -Wl,--gc-sections)
   target_link_libraries(btech_parts_test PRIVATE btmux_options)
   target_include_directories(btech_parts_test PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/include"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/src/btech"
-    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}"
+    ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
   add_test(NAME btech_parts COMMAND btech_parts_test)
+
+  add_executable(btech_persistence_schema_test
+    tests/btech_persistence_schema.c
+    ${BTECH_SOURCE_DIR}/persistence/schema.c)
+  target_link_libraries(btech_persistence_schema_test
+    PRIVATE btmux_options SQLite3::SQLite3)
+  target_include_directories(btech_persistence_schema_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include")
+  add_test(NAME btech_persistence_schema COMMAND btech_persistence_schema_test)
+
+  add_executable(btech_header_interfaces_test
+    tests/btech_header_interfaces.c)
+  target_link_libraries(btech_header_interfaces_test PRIVATE btmux_options)
+  target_include_directories(btech_header_interfaces_test PRIVATE
+    "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/src")
+  add_test(NAME btech_header_interfaces COMMAND btech_header_interfaces_test)
+  add_test(NAME btech_architecture
+    COMMAND bash "${CMAKE_SOURCE_DIR}/tests/check_btech_architecture.sh"
+                 "${CMAKE_SOURCE_DIR}")
 
   add_executable(event_timer_test tests/event_timer.c
     ${MUX_SOURCE_DIR}/server/event_timer.c)

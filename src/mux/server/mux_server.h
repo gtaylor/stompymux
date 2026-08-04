@@ -4,7 +4,6 @@
 
 #include <time.h>
 
-#include "btech/btech_context.h"          // IWYU pragma: keep
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_runtime.h"
 #include "mux/commands/macro.h"                 // IWYU pragma: keep
@@ -34,6 +33,7 @@ typedef struct PlayerCache PlayerCache;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLifecycle ServerLifecycle;
 typedef struct StyledTextPalette StyledTextPalette;
+typedef struct BtechContext BtechContext;
 
 typedef struct MuxServer MuxServer;
 struct MuxServer {
@@ -43,7 +43,7 @@ struct MuxServer {
   int record_players;
   ServerConfiguration *configuration;
   StyledTextPalette *styled_text_palette;
-  BtechContext btech;
+  BtechContext *btech;
   DescriptorRegistry *descriptors;
   CommandQueue *commands;
   ServerLifecycle *lifecycle;

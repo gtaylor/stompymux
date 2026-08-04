@@ -1,0 +1,191 @@
+
+/*
+ * $Id: mech.tech.repairs.c,v 1.1.1.1 2005/01/11 21:18:26 kstevens Exp $
+ *
+ * Author: Markus Stenberg <fingon@iki.fi>
+ *
+ *  Copyright (c) 1997 Markus Stenberg
+ *  Copyright (c) 1998-2002 Thomas Wouters
+ *  Copyright (c) 2000-2002 Cord Awtry
+ *       All rights reserved
+ *
+ * Created: Sat Aug 23 19:12:32 1997 fingon
+ * Last modified: Sat Jun  6 20:45:48 1998 fingon
+ *
+ */
+
+#include <stdio.h>
+#include <string.h>
+
+#include "btech/context.h"
+#include "btech_event.h"
+#include "coolmenu.h"
+#include "legacy_macros.h"
+#include "mech.h"
+#include "mech_build_api.h"
+#include "mech_events.h"
+#include "mech_macros.h"
+#include "mech_notify_api.h"
+#include "mech_parts.h"
+#include "mech_status_api.h"
+#include "mech_tech.h"
+#include "mech_tech_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "mycool.h"
+
+static void describe_repairs(MuxEvent *e, void *menu_context) {
+  CoolMenu **menu = menu_context;
+  int type = e->type;
+  Mech *mech = (Mech *)e->data;
+  long earg = ((long)e->data2) % PLAYERPOS;
+  DbRef player = ((long)e->data2) / PLAYERPOS;
+  int loc, pos, extra;
+  char buf[MBUF_SIZE] = {0};
+  char buf2[LBUF_SIZE] = {0};
+  int fail = (e->function == very_fake_func);
+  BtechContext *context = mech->xcode.context;
+
+  UNPACK_LOCPOS_E(earg, loc, pos, extra);
+  snprintf(
+      buf, sizeof(buf), "%s%s",
+      armor_section_abbreviation(MechType(mech), MechMove(mech), loc % 8).text,
+      loc >= 8 ? "(R)" : "");
+  snprintf(buf2, sizeof(buf2), "%-5ld ", player);
+  snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%-4d ",
+           game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
+  switch (type) {
+  case EVENT_REPAIR_REPL:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Replacement of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_REPLG:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Replacement of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_REAT:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s Reattachment", buf);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_RELO:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d %sload of %s", buf, pos + 1, extra ? "Un" : "Re",
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_FIX:
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+               "%5s:%-2d Failed armor repair", buf, 0);
+    else
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+               "%5s:%-2d Repair of armor - possibly next point", buf, pos);
+    break;
+  case EVENT_REPAIR_FIXI:
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+               "%5s:%-2d Failed internal repair", buf, 0);
+    else
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+               "%5s:%-2d Repair of internals - possibly next point", buf, pos);
+    break;
+  case EVENT_REPAIR_SCRL:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%5s Removal",
+             buf);
+    break;
+  case EVENT_REPAIR_SCRP:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Scrapping of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    break;
+  case EVENT_REPAIR_SCRG:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Scrapping of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    break;
+  case EVENT_REPAIR_REPAG:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Repair of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_REPAP:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Repair of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_REPENHCRIT:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Repair of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_MOB:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Mounting of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_UMOB:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s:%-2d Removing of %s", buf, pos + 1,
+             pos_part_name(mech, loc, pos).text);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  case EVENT_REPAIR_REPSUIT:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2),
+             "%5s Replacing suit", buf);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  // Added Reseal description
+  case EVENT_REPAIR_RESE:
+    snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), "%5s Reseal",
+             buf);
+    if (fail)
+      snprintf(buf2 + strlen(buf2), sizeof(buf2) - strlen(buf2), " (Failure)");
+    break;
+  }
+
+  CreateMenuEntry_VSimple(menu, buf2);
+}
+
+void tech_repairs(DbRef player, Mech *mech, char *buffer) {
+  int i, isds = IsDS(mech);
+  CoolMenu *c = nullptr;
+
+  TECHCOMMANDD;
+
+  DOCHECK_CONTEXT(mech->xcode.context, !figure_latest_tech_event(mech),
+                  "This 'mech has no repairs pending!");
+  addline();
+  cent(tprintf("Repairs/Scrapping in progress (%s)",
+               mech_display_id(mech).text));
+  vsi(tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
+  addline();
+  for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
+    mux_event_visit_type_data(mech->xcode.context->events, i, mech,
+                              describe_repairs, &c);
+  addline();
+  vsi("Note: Time = Time remaining in minutes. Plr = Tech's dbref");
+  addline();
+  ShowCoolMenu(btech_context_evaluation(mech->xcode.context), player, c);
+  KillCoolMenu(c);
+}

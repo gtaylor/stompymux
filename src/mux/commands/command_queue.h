@@ -7,7 +7,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h"
 
-// IWYU pragma: no_include "btech_context.h"
+// IWYU pragma: no_include "context.h"
 // IWYU pragma: no_include "mux/commands/command_context.h"
 // IWYU pragma: no_include "mux/commands/command_runtime.h"
 // IWYU pragma: no_include "mux/server/log.h"

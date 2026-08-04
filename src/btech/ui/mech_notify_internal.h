@@ -1,0 +1,43 @@
+#pragma once
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "autopilot.h"
+#include "bsuit_api.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "btechstats_api.h"
+#include "btmux_build_config.h"
+#include "command_handlers_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "map_terrain.h"
+#include "mech.h"
+#include "mech_build_api.h"
+#include "mech_events.h"
+#include "mech_lifecycle.h"
+#include "mech_los_api.h"
+#include "mech_macros.h"
+#include "mech_notify.h"
+#include "mech_notify_api.h"
+#include "mech_sensor_api.h"
+#include "mech_startup_api.h"
+#include "mech_utils_api.h"
+#include "mine_api.h"
+#include "mux/objects/attrs.h"
+#include "mux/objects/db.h"
+#include "mux/objects/flags.h"
+#include "mux/server/diagnostics.h"
+#include "mux/server/game.h"
+#include "mux/server/platform.h"
+#include "mux/support/alloc.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "registry_internal.h"
+
+void radio_color_code(char buffer[static 32], Mech *mech, int channel,
+                      int observer, int team);

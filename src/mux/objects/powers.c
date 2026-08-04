@@ -4,7 +4,7 @@
 
 #include <ctype.h>
 
-#include "btech_context.h" // IWYU pragma: keep
+#include "btech/context.h" // IWYU pragma: keep
 #include "mux/commands/command.h"
 #include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"

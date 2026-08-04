@@ -1,23 +1,23 @@
-#include "mech.lifecycle.h"
+#include "mech_lifecycle.h"
 
-#include "btmacros.h"
+#include "mech_macros.h"
 #include "mech.h"
 
 static int speed_corrections;
 static int los_updates;
 
-void correct_speed(MECH *mech) {
+void correct_speed(Mech *mech) {
   (void)mech;
   speed_corrections++;
 }
 
-void MarkForLOSUpdate(MECH *mech) {
+void MarkForLOSUpdate(Mech *mech) {
   (void)mech;
   los_updates++;
 }
 
 int main(void) {
-  MECH mech = {0};
+  Mech mech = {0};
 
   MechCritStatus(&mech) = SPEED_OK;
   mech_max_speed_set(&mech, 12.0F);

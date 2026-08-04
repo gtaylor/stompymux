@@ -16,7 +16,7 @@
 #include <strings.h>
 #include <time.h>
 
-#include "btech/btech_context.h"
+#include "btech/context.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"

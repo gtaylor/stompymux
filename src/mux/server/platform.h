@@ -27,8 +27,8 @@
 typedef long DbRef;
 typedef long Flag;
 typedef char IBUF[16];
-typedef struct map_data MAP;
-typedef struct mech_data MECH;
+typedef struct BattleMap BattleMap;
+typedef struct Mech Mech;
 
 /*
  * Generic function-pointer type for tables that store heterogeneous

@@ -191,11 +191,17 @@ static int run_server_killed_in_directory(const char *binary_path,
 static int query_int(sqlite3 *sqlite, const char *sql, sqlite3_int64 expected) {
   sqlite3_stmt *statement;
   int ok;
+  sqlite3_int64 actual = 0;
 
   statement = NULL;
   ok = sqlite3_prepare_v2(sqlite, sql, -1, &statement, NULL) == SQLITE_OK &&
-       sqlite3_step(statement) == SQLITE_ROW &&
-       sqlite3_column_int64(statement, 0) == expected;
+       sqlite3_step(statement) == SQLITE_ROW;
+  if (ok)
+    actual = sqlite3_column_int64(statement, 0);
+  ok = ok && actual == expected;
+  if (!ok)
+    fprintf(stderr, "SQLite assertion failed: expected %lld, got %lld: %s\n",
+            (long long)expected, (long long)actual, sql);
   sqlite3_finalize(statement);
   return ok ? 0 : -1;
 }
@@ -478,7 +484,7 @@ static int check_snapshot(const char *path) {
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       1) == 0;
+                       2) == 0;
 #ifdef BTMUX_TEST_ADVANCED_ECON
   ok =
       ok && query_int(sqlite,

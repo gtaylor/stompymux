@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "btech_context.h"
+#include "btech/context.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/macro.h"
