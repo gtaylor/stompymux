@@ -217,6 +217,7 @@ done < <(rg -n \
   src/btech/autopilot/autopilot_autogun.c \
   src/btech/autopilot/autopilot_bases.c \
   src/btech/autopilot/autopilot_chase_target.c \
+  src/btech/autopilot/autopilot_commands.c \
   src/btech/autopilot/autopilot_command_dispatch.c \
   src/btech/autopilot/autopilot_core.c \
   src/btech/autopilot/autopilot_follow.c \
@@ -235,6 +236,11 @@ done < <(rg -n \
 
 if [[ -e src/btech/ui/coolmenu_interface.h ]]; then
   echo "src/btech/ui/coolmenu_interface.h: unused macro interface is not allowed"
+  status=1
+fi
+
+if [[ -e src/btech/autopilot/autopilot_commands_internal.h ]]; then
+  echo "src/btech/autopilot/autopilot_commands_internal.h: aggregate command header is not allowed"
   status=1
 fi
 
