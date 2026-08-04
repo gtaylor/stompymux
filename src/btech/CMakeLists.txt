@@ -3,6 +3,11 @@ set(BTECH_SOURCES
   autopilot/autopilot_navigation.c
   autopilot/autopilot_pathfinding.c
   autopilot/autopilot_autogun.c
+  autopilot/autopilot_sensor_policy.c
+  autopilot/autopilot_weapon_profile.c
+  autopilot/autopilot_target_scoring.c
+  autopilot/autopilot_physical_attack.c
+  autopilot/autopilot_chase_target.c
   autopilot/autopilot_commands.c
   autopilot/autopilot_command_dispatch.c
   autopilot/autopilot_goto.c

@@ -1,0 +1,179 @@
+/*
+ * $Id: autogun.c,v 1.5 2005/08/03 21:40:54 av1-op Exp $
+ *
+ * Author: Markus Stenberg <fingon@iki.fi>
+ *
+ *  Copyright (c) 1996 Markus Stenberg
+ *  Copyright (c) 1998-2002 Thomas Wouters
+ *  Copyright (c) 2000-2002 Cord Awtry
+ *       All rights reserved
+ *
+ * Created: Sun Nov 17 13:23:20 1996 fingon
+ * Last modified: Sun Jun 14 16:29:44 1998 fingon
+ *
+ */
+
+#include "autopilot_autogun_internal.h"
+
+int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
+                           BattleMap *map) {
+
+  int target_score;
+  float range;
+  float target_speed;
+  int target_bv;
+
+  int total_armor_current;
+  int total_armor_original;
+  int total_internal_current;
+  int total_internal_original;
+
+  int section;
+
+  float damage_score;
+  float bv_score;
+  float speed_score;
+  float range_score;
+  float status_score;
+
+  /* Default Values */
+  target_score = 0;
+
+  total_armor_current = 0;
+  total_armor_original = 0;
+  total_internal_current = 0;
+  total_internal_original = 0;
+
+  damage_score = 0.0;
+  bv_score = 0.0;
+  speed_score = 0.0;
+  range_score = 0.0;
+  status_score = 0.0;
+
+  /* Here is the meat of the function, basicly I gave each
+   * part a maximum score, then fit a linear plot from the
+   * max to a min value and score.  Then I just summed
+   * all the pieces together, very linear but should
+   * give us a good starting point */
+
+  /* Is the target dead? */
+  if (Destroyed(target))
+    return target_score;
+
+  /* If target is combat safe don't even try to shoot it */
+  if (MechStatus(target) & COMBAT_SAFE)
+    return target_score;
+
+  /* Compare Teams - for now we won't try to shoot a guy on our team */
+  if (MechTeam(target) == MechTeam(mech))
+    return target_score;
+
+  /* Are we in los of the target - not sure really what to do about this
+   * one, since we want the AI to be smart and all, for now, lets have
+   * it be all seeing */
+
+  /* Range to target */
+  range =
+      FindHexRange(MechFX(mech), MechFY(mech), MechFX(target), MechFY(target));
+
+  /* Our we outside the range of the AI's System */
+  if ((range >= (float)AUTO_GUN_MAX_RANGE)) {
+    return target_score;
+  }
+
+  /* Range score calc */
+  /* Min range is 0, max range is 30, so score goes from 300 to 0 */
+  range_score = -10.0 * range + 300.0;
+
+  /* Get the Speed of the target */
+  target_speed = MechSpeed(target);
+
+  /* Speed score calc */
+  /* Min speed is 0, max is 150 (can go higher tho), and score goes from
+   * 300 to 0 (can go negative if the target is faster then 150) */
+  /*! \todo {Check to see what happens when the target is backing} */
+  speed_score = -2.0 * target_speed + 300.0;
+
+  /* Get the BV of the target */
+  target_bv = MechBV(target);
+
+  /* BV score calc */
+  /* Min bv is 0, max is around 2000 (can go higher), and score goes from
+   * 0 to 100 (can go higher but we don't care much about bv) */
+  bv_score = 0.05 * ((float)target_bv);
+
+  /* Get the damage of the target by cycling through all the sections
+   * and adding up the current and original values */
+  for (section = 0; section < NUM_SECTIONS; section++) {
+
+    /* Total the current armor and original armor */
+    total_armor_current +=
+        GetSectArmor(target, section) + GetSectRArmor(target, section);
+    total_armor_original +=
+        GetSectOArmor(target, section) + GetSectORArmor(target, section);
+
+    /* Total the current internal and original internal */
+    total_internal_current += GetSectInt(target, section);
+    total_internal_original += GetSectOInt(target, section);
+  }
+
+  /* Ok like above, we set a min and max, for armor was 100% to 0%
+   * and scored from 0 to 300.  For internal was 100% to 0% and
+   * scored from 0 to 200. But we have to take care not to divide
+   * by zero. */
+
+  /* Check the totals before we divide so no Divide by zeros */
+  if (total_internal_original == 0 && total_armor_original == 0) {
+
+    /* Both values are zero, not going to try and shoot it */
+    return target_score;
+
+  } else if (total_internal_original == 0) {
+
+    /* Just use armor part of the calc */
+    damage_score =
+        -3.0 * ((float)total_armor_current / (float)total_armor_original) +
+        300.0;
+
+  } else if (total_armor_original == 0) {
+
+    /* Just use internal part of the calc */
+    damage_score = -2.0 * ((float)total_internal_current /
+                           (float)total_internal_original) +
+                   200.0;
+
+  } else {
+
+    /* Use the whole thing */
+    damage_score =
+        -3.0 * ((float)total_armor_current / (float)total_armor_original) +
+        300.0 -
+        2.0 * ((float)total_internal_current / (float)total_internal_original) +
+        200.0;
+  }
+
+  /* Get the 'state' ie: shutdown, prone whatever */
+  if (!Started(target))
+    status_score += 100.0;
+
+  if (Uncon(target))
+    status_score += 100.0;
+
+  /* Since the max bv is somewhat around 2000, lets put mechs in LOS on an even
+   * scale */
+  if (MechToMech_LOSFlag(map, mech, target) & MECHLOSFLAG_SEEN)
+    status_score += 2000.0;
+
+  /* Add the individual scores and return the value */
+  target_score = (int)floor(range_score + speed_score + bv_score +
+                            damage_score + status_score);
+
+  return target_score;
+}
+
+/*
+ * The main targeting/firing event for the AI
+ *
+ * Loops through all the cons around it, scoring them and deciding
+ * what to shoot and what weapons to shoot at it
+ */
