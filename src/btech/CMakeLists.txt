@@ -131,6 +131,10 @@ set(BTECH_SOURCES
   sensors/mech_spot.c
   sensors/mech_tag.c
   special/registry.c
+  special/registry_loading.c
+  special/registry_help.c
+  special/registry_commands.c
+  special/registry_commands_aux.c
   ui/mech_maps.c
   ui/mech_lrs_map.c
   ui/mech_tactical_map.c
