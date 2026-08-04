@@ -81,6 +81,10 @@ set(BTECH_SOURCES
   movement/ds_turret.c
   movement/mech_ice.c
   movement/mech_move.c
+  movement/mech_move_controls.c
+  movement/mech_jump_stance.c
+  movement/mech_landing_falls.c
+  movement/mech_domino.c
   movement/mech_ood.c
   movement/mech_pickup.c
   movement/mech_startup.c
