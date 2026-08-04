@@ -24,6 +24,7 @@
 #include "mech_build_api.h"
 #include "mech_c3_api.h"
 #include "mech_c3i_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
 #include "mech_move_api.h"
@@ -50,29 +51,31 @@ void clear_mech_from_LOS(Mech *mech) {
   int i;
   Mech *mek;
 
-  /* if (mech->mapindex < 0)
+  /* if (mech_map_dbref(mech) < 0)
      return;
    */
-  if (!(map = btech_context_find_object(mech->xcode.context, mech->mapindex)))
+  if (!(map = btech_context_find_object(mech_context(mech),
+                                        mech_map_dbref(mech))))
     return;
 #ifdef SENSOR_DEBUG
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
-                     tprintf("LOS info for #%d cleared.", mech->mynum));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
+                     tprintf("LOS info for #%d cleared.", mech_dbref(mech)));
 #endif
   for (i = 0; i < map->first_free; i++) {
-    map->LOSinfo[mech->mapnumber][i] = 0;
-    map->LOSinfo[i][mech->mapnumber] = 0;
+    map->LOSinfo[mech_map_slot(mech)][i] = 0;
+    map->LOSinfo[i][mech_map_slot(mech)] = 0;
 
-    if (map->mechsOnMap[i] >= 0 && i != mech->mapnumber) {
-      if (!(mek = btech_context_get_mech(mech->xcode.context,
-                                         map->mechsOnMap[i])))
+    if (map->mechsOnMap[i] >= 0 && i != mech_map_slot(mech)) {
+      if (!(mek =
+                btech_context_get_mech(mech_context(mech), map->mechsOnMap[i])))
         continue;
-      if ((MechStatus(mek) & LOCK_TARGET) && MechTarget(mek) == mech->mynum) {
+      if ((MechStatus(mek) & LOCK_TARGET) &&
+          MechTarget(mek) == mech_dbref(mech)) {
         mech_notify(mek, MECHALL,
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mek);
       }
-      if ((map->LOSinfo[i][mech->mapnumber] & MECHLOSFLAG_SEEN) &&
+      if ((map->LOSinfo[i][mech_map_slot(mech)] & MECHLOSFLAG_SEEN) &&
           MechTeam(mek) != MechTeam(mech))
         MechNumSeen(mek) = MAX(0, MechNumSeen(mek) - 1);
     }
@@ -86,17 +89,17 @@ void clear_mech_from_LOS(Mech *mech) {
 void mech_Rsetxy(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *mech_map =
-      btech_context_get_map(mech->xcode.context, mech->mapindex);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[3];
   int x, y, z, argc;
 
   cch(MECH_MAP);
   argc = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(mech->xcode.context, argc != 2 && argc != 3,
+  DOCHECK_CONTEXT(mech_context(mech), argc != 2 && argc != 3,
                   "Invalid number of arguments to SETXY!");
   x = atoi(args[0]);
   y = atoi(args[1]);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   x >= mech_map->map_width || y >= mech_map->map_height ||
                       x < 0 || y < 0,
                   "Invalid coordinates!");
@@ -122,10 +125,10 @@ void mech_Rsetxy(DbRef player, void *data, char *buffer) {
     MechElev(mech) = map_elevation_get(mech_map, MechX(mech), MechY(mech));
   }
   clear_mech_from_LOS(mech);
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Pos changed to %d,%d,%d", x, y, z);
-  SendLoc(
-      tprintf("#%d set #%d's pos to %d,%d,%d.", player, mech->mynum, x, y, z));
+  SendLoc(tprintf("#%d set #%d's pos to %d,%d,%d.", player, mech_dbref(mech), x,
+                  y, z));
 }
 
 /* Team/Map commands */
@@ -140,17 +143,17 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   char targ[2];
 
   nargs = mech_parseattributes(buffer, args, 2);
-  DOCHECK_CONTEXT(mech->xcode.context, nargs < 1,
+  DOCHECK_CONTEXT(mech_context(mech), nargs < 1,
                   "Invalid number of arguments to SETMAPINDX!");
   newindex = atoi(args[0]);
-  DOCHECK_CONTEXT(mech->xcode.context, newindex < -1, "Invalid map index!");
+  DOCHECK_CONTEXT(mech_context(mech), newindex < -1, "Invalid map index!");
   if (newindex != -1) {
-    if (!(newmap = ValidMap(mech->xcode.context, player, newindex)))
+    if (!(newmap = ValidMap(mech_context(mech), player, newindex)))
       return;
   }
   /* Remove the mech from it's old map */
-  if (mech->mapindex != -1) {
-    if (!(oldmap = ValidMap(mech->xcode.context, player, mech->mapindex)))
+  if (mech_map_dbref(mech) != -1) {
+    if (!(oldmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech))))
       return;
     TAGTarget(mech) = -1;
     clearC3iNetwork(mech, 1);
@@ -159,9 +162,9 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   }
 
   if (newindex == -1) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Mech removed from map.");
-    SendLoc(tprintf("#%d removed #%d from map #%d.", player, mech->mynum,
+    SendLoc(tprintf("#%d removed #%d from map #%d.", player, mech_dbref(mech),
                     oldmap->mynum));
     return;
   }
@@ -171,36 +174,36 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
   if (nargs > 1 && strlen(args[1]) > 1) {
     targ[0] = args[1][0];
     targ[1] = args[1][1];
-  } else if ((tempstr = btech_attribute_read(mech->xcode.context->database,
-                                             mech->mynum, A_MECHPREFID,
+  } else if ((tempstr = btech_attribute_read(mech_context(mech)->database,
+                                             mech_dbref(mech), A_MECHPREFID,
                                              (char[LBUF_SIZE]){0})) &&
              strlen(tempstr) > 1) {
     targ[0] = tempstr[0];
     targ[1] = tempstr[1];
   } else {
-    targ[0] = 65 + btech_random_range(mech->xcode.context, 0, 25);
-    targ[1] = 65 + btech_random_range(mech->xcode.context, 0, 25);
+    targ[0] = 65 + btech_random_range(mech_context(mech), 0, 25);
+    targ[1] = 65 + btech_random_range(mech_context(mech), 0, 25);
   }
   targ[0] = BOUNDED('A', toupper(targ[0]), 'Z');
   targ[1] = BOUNDED('A', toupper(targ[1]), 'Z');
   for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
     if ((tempMech = (Mech *)btech_context_find_object(
-             mech->xcode.context, newmap->mechsOnMap[loop])))
+             mech_context(mech), newmap->mechsOnMap[loop])))
       if (MechID(tempMech)[0] == targ[0] && MechID(tempMech)[1] == targ[1])
         notdone = 1;
   }
   while (notdone) {
-    targ[0] = 65 + btech_random_range(mech->xcode.context, 0, 25);
-    targ[1] = 65 + btech_random_range(mech->xcode.context, 0, 25);
+    targ[0] = 65 + btech_random_range(mech_context(mech), 0, 25);
+    targ[1] = 65 + btech_random_range(mech_context(mech), 0, 25);
     notdone = 0;
     for (loop = 0; (loop < newmap->first_free && !notdone); loop++) {
       if ((tempMech = (Mech *)btech_context_find_object(
-               mech->xcode.context, newmap->mechsOnMap[loop])))
+               mech_context(mech), newmap->mechsOnMap[loop])))
         if (MechID(tempMech)[0] == targ[0] && MechID(tempMech)[1] == targ[1])
           notdone = 1;
     }
   }
-  DOCHECK_CONTEXT(mech->xcode.context, loop == MAX_MECHS_PER_MAP,
+  DOCHECK_CONTEXT(mech_context(mech), loop == MAX_MECHS_PER_MAP,
                   "There are too many mechs on that map!");
   add_mech_to_map(newmap, mech);
   MechID(mech)[0] = targ[0];
@@ -214,15 +217,15 @@ void mech_Rsetmapindex(DbRef player, void *data, char *buffer) {
     MapCoordToRealCoord(MechX(mech), MechY(mech), &MechFX(mech), &MechFY(mech));
     MechTerrain(mech) = map_terrain_get(newmap, MechX(mech), MechY(mech));
     MechElev(mech) = map_elevation_get(newmap, MechX(mech), MechY(mech));
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "You're current position is out of bounds, Pos changed to 0,0");
   }
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "MapIndex changed to %d", newindex);
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your ID: %c%c", MechID(mech)[0], MechID(mech)[1]);
-  SendLoc(
-      tprintf("#%d set #%d's mapindex to #%d.", player, mech->mynum, newindex));
+  SendLoc(tprintf("#%d set #%d's mapindex to #%d.", player, mech_dbref(mech),
+                  newindex));
   UnZombifyMech(mech);
 }
 
@@ -232,23 +235,23 @@ void mech_Rsetteam(DbRef player, void *data, char *buffer) {
   int team;
   BattleMap *newmap;
 
-  DOCHECK_CONTEXT(mech->xcode.context, mech->mapindex == -1,
+  DOCHECK_CONTEXT(mech_context(mech), mech_map_dbref(mech) == -1,
                   "Mech is not on a map:  Can't set team");
-  newmap = ValidMap(mech->xcode.context, player, mech->mapindex);
+  newmap = ValidMap(mech_context(mech), player, mech_map_dbref(mech));
   if (!newmap) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Map index reset!");
-    mech->mapindex = -1;
+    mech_map_dbref_set(mech, NOTHING);
     return;
   }
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_parseattributes(buffer, args, 1) != 1,
                   "Invalid number of arguments!");
   team = atoi(args[0]);
   if (team < 0)
     team = 0;
   MechTeam(mech) = team;
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Team set to %d", team);
 }
 
@@ -265,23 +268,19 @@ void newfreemech(DbRef key, void **data, int selector) {
 
   switch (selector) {
   case SPECIAL_ALLOC:
-    new->mynum = key;
-    new->mapnumber = 1;
-    new->mapindex = -1;
-    MechID(new)[0] = ' ';
-    MechID(new)[1] = ' ';
+    mech_identity_initialize(new, key);
     clear_mech(new, 1);
     for (i = 0; i < NUM_SECTIONS; i++)
       FillDefaultCriticals(new, i);
     break;
   case SPECIAL_FREE:
     mech_stagger_damage_clear(new);
-    if (new->mapindex != -1 &&
-        (map = btech_context_get_map(new->xcode.context, new->mapindex)))
+    if (mech_map_dbref(new) != -1 &&
+        (map = btech_context_get_map(mech_context(new), mech_map_dbref(new))))
       remove_mech_from_map(map, new);
     if (MechAuto(new) > 0) {
       Autopilot *autopilot =
-          btech_context_find_object(new->xcode.context, MechAuto(new));
+          btech_context_find_object(mech_context(new), MechAuto(new));
       if (autopilot) {
         auto_stop_pilot(autopilot);
         /* Go through the list and remove any leftover nodes */

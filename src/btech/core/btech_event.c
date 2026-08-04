@@ -12,6 +12,7 @@
 #include "mech.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_macros.h"
 #include "mech_notify.h"
@@ -21,8 +22,8 @@
 
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
                          int delay, intptr_t data) {
-  if (mech->mynum > 0) {
-    btech_event_schedule(mech->xcode.context->events, mech, type, callback,
+  if (mech_dbref(mech) > 0) {
+    btech_event_schedule(mech_context(mech)->events, mech, type, callback,
                          delay, data);
   }
 }
@@ -41,31 +42,31 @@ void map_event_schedule(BattleMap *map, int type, MuxEventCallback callback,
 }
 
 int mech_event_count(const Mech *mech, int type) {
-  return btech_event_count(mech->xcode.context->events, mech, type);
+  return btech_event_count(mech_context(mech)->events, mech, type);
 }
 
 int mech_event_count_data(const Mech *mech, int type, intptr_t data) {
-  return btech_event_count_data(mech->xcode.context->events, mech, type, data);
+  return btech_event_count_data(mech_context(mech)->events, mech, type, data);
 }
 
 long mech_event_first_delay(const Mech *mech, int type) {
-  return btech_event_first_delay(mech->xcode.context->events, mech, type);
+  return btech_event_first_delay(mech_context(mech)->events, mech, type);
 }
 
 long mech_event_data(const Mech *mech, int type) {
-  return btech_event_data(mech->xcode.context->events, mech, type);
+  return btech_event_data(mech_context(mech)->events, mech, type);
 }
 
 void mech_event_cancel(Mech *mech, int type) {
-  btech_event_cancel(mech->xcode.context->events, mech, type);
+  btech_event_cancel(mech_context(mech)->events, mech, type);
 }
 
 void mech_event_cancel_data(Mech *mech, int type, intptr_t data) {
-  btech_event_cancel_data(mech->xcode.context->events, mech, type, data);
+  btech_event_cancel_data(mech_context(mech)->events, mech, type, data);
 }
 
 void mech_events_cancel_all(Mech *mech) {
-  btech_events_cancel_all(mech->xcode.context->events, mech);
+  btech_events_cancel_all(mech_context(mech)->events, mech);
 }
 
 bool mech_dumping_type(const Mech *mech, intptr_t type) {
@@ -101,15 +102,15 @@ void mech_lose_lock(Mech *mech) {
 
 void mech_start_stagger_check(Mech *mech) {
   mech_event_schedule(mech, EVENT_CHECK_STAGGER, check_stagger_event, 5, 0);
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                     "Starting stagger check for %ld.", mech->mynum);
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
+                     "Starting stagger check for %ld.", mech_dbref(mech));
 }
 
 void mech_stop_stagger_check(Mech *mech) {
   mech_event_cancel(mech, EVENT_CHECK_STAGGER);
   mech_stagger_tracking_reset(mech);
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                     "Stopping stagger check for %ld.", mech->mynum);
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
+                     "Stopping stagger check for %ld.", mech_dbref(mech));
 }
 
 bool mech_move_mode_locked(const Mech *mech) {

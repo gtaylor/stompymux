@@ -53,6 +53,12 @@ while IFS= read -r match; do
 done < <(rg -n '\b(MarkStaggerDamage|RemoveStaggerDamage|ClearAllStaggerDamage|ClearStaggerDamage|CurrentStaggerDamage|CurrentCountedStaggerDamage)\b' \
   src/btech -g '*.[ch]' || true)
 
+while IFS= read -r match; do
+  echo "$match: converted boundary accesses Mech layout directly"
+  status=1
+done < <(rg -n -g '*.[ch]' -- '\bmech->' src/btech/core src/btech/commands \
+  src/btech/integration || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

@@ -202,6 +202,7 @@ set(BTECH_SOURCES
   unit/mech_events.c
   unit/mech_geometry.c
   unit/mech_identity.c
+  unit/mech_identity_state.c
   unit/mech_integrity.c
   unit/mech_lifecycle.c
   unit/mech_maintenance.c
