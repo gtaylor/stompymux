@@ -1,4 +1,51 @@
-#include "mech_status_internal.h"
+#include "mech_status_api.h"
+#include "mech_status_render_internal.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "btech/context.h"
+#include "btech_event.h"
+#include "failures.h"
+#include "legacy_macros.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_enhanced_criticals_api.h"
+#include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
+#include "mech_network_api.h"
+#include "mech_notify_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_tag_api.h"
+#include "mech_update_api.h"
+#include "mech_utils_api.h"
+#include "mux/support/formatting.h"
+#include "registry_api.h"
+#include "section_types.h"
+#include "weapon_settings.h"
+
+static const char *section_recycle_status(Mech *mech, int section) {
+  int recycle = mech_section_recycle_ticks(mech, section);
+  if (mech_section_is_destroyed(mech, section))
+    return "[fg=black bold]*****[reset]";
+  if (recycle > 0)
+    return tprintf("%-5d", recycle / WEAPON_TICK + recycle % WEAPON_TICK);
+  return "[fg=green]Ready[reset]";
+}
+
+static const char *physical_recycle_status(Mech *mech, int section,
+                                           int physical_type) {
+  int recycle = mech_section_recycle_ticks(mech, section);
+  if (!canUsePhysical(mech, section, physical_type))
+    return "[fg=red bold]XX[reset]";
+  if (recycle > 0)
+    return tprintf("%-3d", recycle / WEAPON_TICK + recycle % WEAPON_TICK);
+  return "[fg=green]Rdy[reset]";
+}
 
 void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                          DbRef player, bool compact, char *compact_buffer,
@@ -22,214 +69,209 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   char astrAmmoSpacer[MBUF_SIZE] = {0}; /* mem is cheap. over allocate */
   int running_sum = 0;
   short ammo_mode;
+  int technology = mech_technology_flags(mech);
+  int technology_secondary = mech_technology_flags_secondary(mech);
+  int infantry_technology = mech_infantry_technology_flags(mech);
+  MechConditionSummary conditions = mech_condition_summary(mech);
+  bool has_c3_master = technology & C3_MASTER_TECH;
+  bool has_c3_slave = technology & C3_SLAVE_TECH;
+  bool has_c3i = technology_secondary & C3I_TECH;
+  bool has_tag = (technology_secondary & TAG_TECH) || has_c3_master;
 
-  if ((MechSpecials(mech) & ECM_TECH) ||
-      (MechSpecials2(mech) & STEALTH_ARMOR_TECH) ||
-      (MechSpecials2(mech) & NULLSIGSYS_TECH) ||
-      (MechSpecials(mech) & SLITE_TECH) || HasC3(mech) || HasC3i(mech) ||
-      (MechSpecials(mech) & MASC_TECH) ||
-      (MechSpecials2(mech) & SUPERCHARGER_TECH) ||
-      (MechSpecials(mech) & TRIPLE_MYOMER_TECH) ||
-      (MechSpecials2(mech) & ANGEL_ECM_TECH) || HasTAG(mech) ||
-      (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH)) {
+  if ((technology & ECM_TECH) || (technology_secondary & STEALTH_ARMOR_TECH) ||
+      (technology_secondary & NULLSIGSYS_TECH) || (technology & SLITE_TECH) ||
+      has_c3_master || has_c3_slave || has_c3i || (technology & MASC_TECH) ||
+      (technology_secondary & SUPERCHARGER_TECH) ||
+      (technology & TRIPLE_MYOMER_TECH) ||
+      (technology_secondary & ANGEL_ECM_TECH) || has_tag ||
+      (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)) {
     strcpy(tempbuff, "AdvTech: ");
 
-    if (MechSpecials(mech) & ECM_TECH) {
+    if (technology & ECM_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "ECM(%s)  ",
-               (MechCritStatus(mech) & ECM_DESTROYED) ? "[fg=red bold]XX[reset]"
-               : ECMEnabled(mech)
-                   ? (ECMActive(mech) ? "[fg=green bold]ECM[reset]"
-                                      : "[fg=red bold]ECM[reset]")
-               : ECCMEnabled(mech)  ? "[fg=green bold]ECCM[reset]"
-               : ECMCountered(mech) ? "[fg=red]Off[reset]"
-                                    : "[fg=green]Off[reset]");
+               conditions.ecm_destroyed ? "[fg=red bold]XX[reset]"
+               : conditions.ecm_enabled
+                   ? (conditions.ecm_active ? "[fg=green bold]ECM[reset]"
+                                            : "[fg=red bold]ECM[reset]")
+               : conditions.eccm_enabled  ? "[fg=green bold]ECCM[reset]"
+               : conditions.ecm_countered ? "[fg=red]Off[reset]"
+                                          : "[fg=green]Off[reset]");
     }
 
-    if (MechSpecials2(mech) & ANGEL_ECM_TECH) {
+    if (technology_secondary & ANGEL_ECM_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "AngelECM(%s)  ",
-               (!HasWorkingAngelECMSuite(mech)) ? "[fg=red bold]XX[reset]"
-               : AngelECMEnabled(mech)
-                   ? (AngelECMActive(mech) ? "[fg=green bold]ECM[reset]"
-                                           : "[fg=red bold]ECM[reset]")
-               : AngelECCMEnabled(mech) ? "[fg=green bold]ECCM[reset]"
-               : ECMCountered(mech)     ? "[fg=red]Off[reset]"
-                                        : "[fg=green]Off[reset]");
+               conditions.angel_ecm_destroyed ? "[fg=red bold]XX[reset]"
+               : conditions.angel_ecm_enabled
+                   ? (conditions.angel_ecm_active ? "[fg=green bold]ECM[reset]"
+                                                  : "[fg=red bold]ECM[reset]")
+               : conditions.angel_eccm_enabled ? "[fg=green bold]ECCM[reset]"
+               : conditions.ecm_countered      ? "[fg=red]Off[reset]"
+                                               : "[fg=green]Off[reset]");
     }
 
-    if (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH) {
+    if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "PersonalECM(%s)  ",
-               PerECMEnabled(mech)
-                   ? (PerECMActive(mech) ? "[fg=green bold]ECM[reset]"
-                                         : "[fg=red bold]ECM[reset]")
-               : PerECCMEnabled(mech) ? "[fg=green bold]ECCM[reset]"
-               : ECMCountered(mech)   ? "[fg=red]Off[reset]"
-                                      : "[fg=green]Off[reset]");
+               conditions.personal_ecm_enabled
+                   ? (conditions.personal_ecm_active
+                          ? "[fg=green bold]ECM[reset]"
+                          : "[fg=red bold]ECM[reset]")
+               : conditions.personal_eccm_enabled ? "[fg=green bold]ECCM[reset]"
+               : conditions.ecm_countered         ? "[fg=red]Off[reset]"
+                                                  : "[fg=green]Off[reset]");
     }
 
-    if (MechSpecials2(mech) & STEALTH_ARMOR_TECH) {
+    if (technology_secondary & STEALTH_ARMOR_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "SthArmor(%s)  ",
-               (MechCritStatus(mech) & ECM_DESTROYED) ? "[fg=red bold]XX[reset]"
-               : StealthArmorActive(mech) ? "[fg=green bold]On[reset]"
-                                          : "[fg=green]Rdy[reset]");
+               conditions.ecm_destroyed          ? "[fg=red bold]XX[reset]"
+               : conditions.stealth_armor_active ? "[fg=green bold]On[reset]"
+                                                 : "[fg=green]Rdy[reset]");
     }
 
-    if (MechSpecials2(mech) & NULLSIGSYS_TECH) {
+    if (technology_secondary & NULLSIGSYS_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "NullSigSys(%s)  ",
-               NullSigSysDest(mech)     ? "[fg=red bold]XX[reset]"
-               : NullSigSysActive(mech) ? "[fg=green bold]On[reset]"
-                                        : "[fg=green]Rdy[reset]");
+               conditions.null_signature_destroyed ? "[fg=red bold]XX[reset]"
+               : conditions.null_signature_active  ? "[fg=green bold]On[reset]"
+                                                   : "[fg=green]Rdy[reset]");
     }
 
-    if (MechSpecials(mech) & SLITE_TECH) {
+    if (technology & SLITE_TECH) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "SLITE(%s)  ",
-               (MechCritStatus(mech) & SLITE_DEST) ? "[fg=red bold]XX[reset]"
-               : (MechStatus2(mech) & SLITE_ON)    ? "[fg=green bold]On[reset]"
-                                                   : "[fg=green]Off[reset]");
+               conditions.searchlight_destroyed ? "[fg=red bold]XX[reset]"
+               : mech_searchlight_active(mech)  ? "[fg=green bold]On[reset]"
+                                                : "[fg=green]Off[reset]");
     }
 
-    if (HasC3m(mech))
+    if (has_c3_master)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "%sC3M[reset]  ",
-               C3Destroyed(mech)             ? "[fg=red]"
-               : AnyECMDisturbed(mech)       ? "[fg=yellow]"
-               : MechC3NetworkSize(mech) > 0 ? "[fg=green bold]"
-                                             : "[fg=green]");
+               conditions.c3_destroyed           ? "[fg=red]"
+               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+               : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
+                                                 : "[fg=green]");
 
-    if (HasC3s(mech))
+    if (has_c3_slave)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "%sC3S[reset]  ",
-               C3Destroyed(mech)             ? "[fg=red]"
-               : AnyECMDisturbed(mech)       ? "[fg=yellow]"
-               : MechC3NetworkSize(mech) > 0 ? "[fg=green bold]"
-                                             : "[fg=green]");
+               conditions.c3_destroyed           ? "[fg=red]"
+               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+               : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
+                                                 : "[fg=green]");
 
-    if (HasC3i(mech))
+    if (has_c3i)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "%sC3i[reset]  ",
-               C3iDestroyed(mech)             ? "[fg=red]"
-               : AnyECMDisturbed(mech)        ? "[fg=yellow]"
-               : MechC3iNetworkSize(mech) > 0 ? "[fg=green bold]"
-                                              : "[fg=green]");
+               conditions.c3i_destroyed          ? "[fg=red]"
+               : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
+               : mech_c3i_network_size(mech) > 0 ? "[fg=green bold]"
+                                                 : "[fg=green]");
 
-    if (MechSpecials(mech) & TRIPLE_MYOMER_TECH)
+    if (technology & TRIPLE_MYOMER_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "TSM(%s)  ",
-               ((MechHeat(mech) >= 9.0) ? "[fg=green bold]On[reset]"
-                                        : "[fg=green]Off[reset]"));
+               mech_excess_heat(mech) >= 9.0 ? "[fg=green bold]On[reset]"
+                                             : "[fg=green]Off[reset]");
 
-    if (HasTAG(mech)) {
-      snprintf(
-          tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-          "TAG(%s)  ",
-          isTAGDestroyed(mech) ? "[fg=red bold]XX[reset]"
-          : ((btech_context_get_mech(mech->xcode.context, TAGTarget(mech)) ==
-              NULL) ||
-             (TaggedBy(btech_context_get_mech(mech->xcode.context,
-                                              TAGTarget(mech))) != mech->mynum))
-              ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                     ? "[fg=yellow bold]Not Rdy[reset]"
-                     : "[fg=green]Rdy[reset]")
-              : tprintf("%s%s[reset]",
-                        (mech_event_count(mech, EVENT_TAG_RECYCLE)
-                             ? "[fg=yellow bold]"
-                             : "[bold]"),
-                        mech_to_mech_display_id(
-                            mech, btech_context_get_mech(mech->xcode.context,
-                                                         TAGTarget(mech)))
-                            .text));
+    if (has_tag) {
+      DbRef tag_target_dbref = mech_tag_target_dbref(mech);
+      Mech *tag_target =
+          btech_context_get_mech(mech_context(mech), tag_target_dbref);
+      snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
+               "TAG(%s)  ",
+               isTAGDestroyed(mech) ? "[fg=red bold]XX[reset]"
+               : (!tag_target ||
+                  mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
+                   ? (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                          ? "[fg=yellow bold]Not Rdy[reset]"
+                          : "[fg=green]Rdy[reset]")
+                   : tprintf("%s%s[reset]",
+                             (mech_event_count(mech, EVENT_TAG_RECYCLE)
+                                  ? "[fg=yellow bold]"
+                                  : "[bold]"),
+                             mech_to_mech_display_id(mech, tag_target).text));
     }
 
-    if (MechSpecials2(mech) & SUPERCHARGER_TECH)
+    if (technology_secondary & SUPERCHARGER_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "SCHARGE: %s%d[reset] (%s)",
-               MechSChargeCounter(mech) > 3   ? "[fg=red bold]"
-               : MechSChargeCounter(mech) > 0 ? "[fg=yellow bold]"
-                                              : "[fg=green]",
-               MechSChargeCounter(mech),
-               MechStatus(mech) & SCHARGE_ENABLED ? "On" : "Off");
+               conditions.supercharger_counter > 3   ? "[fg=red bold]"
+               : conditions.supercharger_counter > 0 ? "[fg=yellow bold]"
+                                                     : "[fg=green]",
+               conditions.supercharger_counter,
+               conditions.supercharger_enabled ? "On" : "Off");
 
-    if (MechSpecials(mech) & MASC_TECH)
+    if (technology & MASC_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "MASC: %s%d[reset] (%s)",
-               MechMASCCounter(mech) > 3   ? "[fg=red bold]"
-               : MechMASCCounter(mech) > 0 ? "[fg=yellow bold]"
-                                           : "[fg=green]",
-               MechMASCCounter(mech),
-               MechStatus(mech) & MASC_ENABLED ? "On" : "Off");
+               conditions.masc_counter > 3   ? "[fg=red bold]"
+               : conditions.masc_counter > 0 ? "[fg=yellow bold]"
+                                             : "[fg=green]",
+               conditions.masc_counter, conditions.masc_enabled ? "On" : "Off");
 
     notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
-  if (MechSpecials2(mech) & CARRIER_TECH) {
+  if (technology_secondary & CARRIER_TECH) {
     strcpy(tempbuff, "Carrier: ");
 
     snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-             "%d tons free, %d tons max unit size", (CargoSpace(mech) / 100),
-             CarMaxTon(mech));
+             "%d tons free, %d tons max unit size",
+             mech_cargo_space(mech) / 100, mech_carrier_maximum_tonnage(mech));
     notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
-  if ((MechSpecials(mech) & AA_TECH) ||
-      (MechSpecials(mech) & BEAGLE_PROBE_TECH) ||
-      (MechSpecials2(mech) & BLOODHOUND_PROBE_TECH)) {
-    /*||
-    (MechSpecials(mech) & LIGHT_BAP_TECH)) { */
-
+  if ((technology & AA_TECH) || (technology & BEAGLE_PROBE_TECH) ||
+      (technology_secondary & BLOODHOUND_PROBE_TECH)) {
     strcpy(tempbuff, "AdvSensors:");
 
-    if (MechSpecials(mech) & AA_TECH)
+    if (technology & AA_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " Radar");
 
-    if (MechSpecials(mech) & BEAGLE_PROBE_TECH)
+    if (technology & BEAGLE_PROBE_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BeagleProbe");
 
-    if (MechSpecials2(mech) & BLOODHOUND_PROBE_TECH)
+    if (technology_secondary & BLOODHOUND_PROBE_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BloodhoundProbe");
-
-    //		if(MechSpecials(mech) & LIGHT_BAP_TECH)
-    //			snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) -
-    // strleng(tempbuff), " LightBAP");
 
     notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
 
-  if ((MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH) ||
-      (MechInfantrySpecials(mech) & DC_KAGE_STEALTH_TECH) ||
-      (MechInfantrySpecials(mech) & FWL_ACHILEUS_STEALTH_TECH) ||
-      (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH) ||
-      (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH)) {
+  if ((infantry_technology & CS_PURIFIER_STEALTH_TECH) ||
+      (infantry_technology & DC_KAGE_STEALTH_TECH) ||
+      (infantry_technology & FWL_ACHILEUS_STEALTH_TECH) ||
+      (infantry_technology & FC_INFILTRATOR_STEALTH_TECH) ||
+      (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)) {
 
     strcpy(tempbuff, "AdvItems:");
 
-    if (MechInfantrySpecials(mech) & CS_PURIFIER_STEALTH_TECH)
+    if (infantry_technology & CS_PURIFIER_STEALTH_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " PurifierStealth");
 
-    if (MechInfantrySpecials(mech) & DC_KAGE_STEALTH_TECH)
+    if (infantry_technology & DC_KAGE_STEALTH_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " KageStealth");
 
-    if (MechInfantrySpecials(mech) & FWL_ACHILEUS_STEALTH_TECH)
+    if (infantry_technology & FWL_ACHILEUS_STEALTH_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " AchileusStealth");
 
-    if (MechInfantrySpecials(mech) & FC_INFILTRATOR_STEALTH_TECH)
+    if (infantry_technology & FC_INFILTRATOR_STEALTH_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " InfiltratorStealth");
 
-    if (MechInfantrySpecials(mech) & FC_INFILTRATORII_STEALTH_TECH)
+    if (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " InfiltratorIIStealth");
 
@@ -237,26 +279,26 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     tempbuff[0] = 0;
   }
 
-  if ((MechInfantrySpecials(mech) & INF_SWARM_TECH) ||
-      (MechInfantrySpecials(mech) & INF_MOUNT_TECH) ||
-      (MechInfantrySpecials(mech) & INF_ANTILEG_TECH) ||
-      (MechInfantrySpecials(mech) & CAN_JETTISON_TECH)) {
+  if ((infantry_technology & INF_SWARM_TECH) ||
+      (infantry_technology & INF_MOUNT_TECH) ||
+      (infantry_technology & INF_ANTILEG_TECH) ||
+      (infantry_technology & CAN_JETTISON_TECH)) {
 
     strcpy(tempbuff, "Special Actions:");
 
-    if (MechInfantrySpecials(mech) & INF_MOUNT_TECH)
+    if (infantry_technology & INF_MOUNT_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " MountFriends");
 
-    if (MechInfantrySpecials(mech) & INF_SWARM_TECH)
+    if (infantry_technology & INF_SWARM_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " SwarmAttack");
 
-    if (MechInfantrySpecials(mech) & INF_ANTILEG_TECH)
+    if (infantry_technology & INF_ANTILEG_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " AntiLegAttack");
 
-    if (MechInfantrySpecials(mech) & CAN_JETTISON_TECH)
+    if (infantry_technology & CAN_JETTISON_TECH)
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                " BackPackJettison");
 
@@ -264,93 +306,81 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     tempbuff[0] = 0;
   }
 
-  if (MechInfantrySpecials(mech) & MUST_JETTISON_TECH) {
+  if (infantry_technology & MUST_JETTISON_TECH) {
     strcpy(tempbuff, "Requirements: Must jettison backpack before using "
                      "special abilities or jumping");
     notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }
-#define SHOWSECTSTAT(a)                                                        \
-  (SectIsDestroyed(mech, a) ? "[fg=black bold]*****[reset]"                    \
-   : (MechSections(mech)[(a)].recycle > 0)                                     \
-       ? tprintf("%-5d", (MechSections(mech)[(a)].recycle / WEAPON_TICK) +     \
-                             (MechSections(mech)[(a)].recycle % WEAPON_TICK))  \
-       : "[fg=green]Ready[reset]")
-
   mech_update_recycling(mech);
-  if (MechType(mech) == CLASS_MECH && !compact) {
+  if (mech_class(mech) == CLASS_MECH && !compact) {
     tempbuff[0] = 0;
-
-#define SHOWPHYSTATUS(a, b)                                                    \
-  (!canUsePhysical(mech, a, b) ? "[fg=red bold]XX[reset]"                      \
-   : (MechSections(mech)[(a)].recycle > 0)                                     \
-       ? tprintf("%-3d", (MechSections(mech)[(a)].recycle / WEAPON_TICK) +     \
-                             +(MechSections(mech)[(a)].recycle % WEAPON_TICK)) \
-       : "[fg=green]Rdy[reset]")
 
 #define SHOW(part, loc)                                                        \
   snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),   \
            "%s: %s ", part, loc)
 
-    SHOW(MechIsQuad(mech) ? "FLLEG" : "LARM", SHOWSECTSTAT(LARM));
-    SHOW(MechIsQuad(mech) ? "FRLEG" : "RARM", SHOWSECTSTAT(RARM));
-    SHOW(MechIsQuad(mech) ? "RLLEG" : "LLEG", SHOWSECTSTAT(LLEG));
-    SHOW(MechIsQuad(mech) ? "RRLEG" : "RLEG", SHOWSECTSTAT(RLEG));
+    bool is_quad = mech_movement_type(mech) == MOVE_QUAD;
+    SHOW(is_quad ? "FLLEG" : "LARM", section_recycle_status(mech, LARM));
+    SHOW(is_quad ? "FRLEG" : "RARM", section_recycle_status(mech, RARM));
+    SHOW(is_quad ? "RLLEG" : "LLEG", section_recycle_status(mech, LLEG));
+    SHOW(is_quad ? "RRLEG" : "RLEG", section_recycle_status(mech, RLEG));
 
     if (hasPhysical(mech, LARM, PHY_AXE))
-      SHOW("Axe[LA]", SHOWPHYSTATUS(LARM, PHY_AXE));
+      SHOW("Axe[LA]", physical_recycle_status(mech, LARM, PHY_AXE));
 
     if (hasPhysical(mech, RARM, PHY_AXE))
-      SHOW("Axe[RA]", SHOWPHYSTATUS(RARM, PHY_AXE));
+      SHOW("Axe[RA]", physical_recycle_status(mech, RARM, PHY_AXE));
 
     if (hasPhysical(mech, LARM, PHY_SWORD))
-      SHOW("Sword[LA]", SHOWPHYSTATUS(LARM, PHY_SWORD));
+      SHOW("Sword[LA]", physical_recycle_status(mech, LARM, PHY_SWORD));
 
     if (hasPhysical(mech, RARM, PHY_SWORD))
-      SHOW("Sword[RA]", SHOWPHYSTATUS(RARM, PHY_SWORD));
+      SHOW("Sword[RA]", physical_recycle_status(mech, RARM, PHY_SWORD));
 
     if (hasPhysical(mech, LARM, PHY_CLAW))
-      SHOW("Claw[LA]", SHOWPHYSTATUS(LARM, PHY_CLAW));
+      SHOW("Claw[LA]", physical_recycle_status(mech, LARM, PHY_CLAW));
 
     if (hasPhysical(mech, RARM, PHY_CLAW))
-      SHOW("Claw[RA]", SHOWPHYSTATUS(RARM, PHY_CLAW));
+      SHOW("Claw[RA]", physical_recycle_status(mech, RARM, PHY_CLAW));
 
     if (hasPhysical(mech, LARM, PHY_MACE))
-      SHOW("Mace[LA]", SHOWPHYSTATUS(LARM, PHY_MACE));
+      SHOW("Mace[LA]", physical_recycle_status(mech, LARM, PHY_MACE));
 
     if (hasPhysical(mech, RARM, PHY_MACE))
-      SHOW("Mace[RA]", SHOWPHYSTATUS(RARM, PHY_MACE));
+      SHOW("Mace[RA]", physical_recycle_status(mech, RARM, PHY_MACE));
 
     if (hasPhysical(mech, LARM, PHY_SAW))
-      SHOW("Saw[LA]", SHOWPHYSTATUS(LARM, PHY_SAW));
+      SHOW("Saw[LA]", physical_recycle_status(mech, LARM, PHY_SAW));
 
     if (hasPhysical(mech, RARM, PHY_SAW))
-      SHOW("Saw[RA]", SHOWPHYSTATUS(RARM, PHY_SAW));
+      SHOW("Saw[RA]", physical_recycle_status(mech, RARM, PHY_SAW));
 
     notify(evaluation, player, tempbuff);
 
-    if (MechStatus(mech) & FLIPPED_ARMS)
+    if (conditions.arms_flipped)
       notify(evaluation, player,
              "*** Mech arms are flipped into the rear arc ***");
-  } else if (MechType(mech) == CLASS_BSUIT && !compact) {
+  } else if (mech_class(mech) == CLASS_BSUIT && !compact) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
-      if (GetSectInt(mech, i))
+      if (mech_section_internal(mech, i))
         break;
     if (i < NUM_BSUIT_MEMBERS) {
       snprintf(tempbuff, sizeof(tempbuff), "Team status (special attacks): %s",
-               SHOWSECTSTAT(i));
+               section_recycle_status(mech, i));
       notify(evaluation, player, tempbuff);
     }
 
-  } else if (((MechType(mech) == CLASS_VEH_GROUND) ||
-              (MechType(mech) == CLASS_VTOL)) &&
+  } else if (((mech_class(mech) == CLASS_VEH_GROUND) ||
+              (mech_class(mech) == CLASS_VTOL)) &&
              !compact) {
 
     *tempbuff = 0;
 
-    if (MechSections(mech)[FSIDE].recycle) {
+    if (mech_section_recycle_ticks(mech, FSIDE)) {
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
-               "Vehicle status (charge): %s", SHOWSECTSTAT(FSIDE));
+               "Vehicle status (charge): %s",
+               section_recycle_status(mech, FSIDE));
     }
 
     if (*tempbuff)
@@ -362,7 +392,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     notify(evaluation, player,
            "==================WEAPON "
            "SYSTEMS===========================AMMUNITION========");
-    if (MechType(mech) == CLASS_BSUIT)
+    if (mech_class(mech) == CLASS_BSUIT)
       notify(evaluation, player,
              "------ Weapon --------- [##] Holder ------ Status ||--- "
              "Ammo Type ---- Rounds");
@@ -372,10 +402,11 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
              "Ammo Type ---- Rounds");
   }
   for (loop = 0; loop < NUM_SECTIONS; loop++) {
-    count = FindWeapons(mech, loop, weaparray, weapdata, critical);
+    count = FindWeapons_Advanced(mech, loop, weaparray, weapdata, critical, 0);
     if (count <= 0)
       continue;
-    ArmorStringFromIndex(loop, tempbuff, MechType(mech), MechMove(mech));
+    ArmorStringFromIndex(loop, tempbuff, mech_class(mech),
+                         mech_movement_type(mech));
     snprintf(location, sizeof(location), "%-14.14s", tempbuff);
     if (compact) {
       strcpy(location, tempbuff);
@@ -383,38 +414,32 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
         *tmpc = '_';
     }
     for (ii = 0; ii < count; ii++) {
-      if (IsAMS(weaparray[ii]))
+      int fire_mode = mech_critical_fire_mode(mech, loop, critical[ii]);
+      if (MechWeapons[weaparray[ii]].special & AMS)
         snprintf(weapbuff, sizeof(weapbuff), " %-16.16s %c%c%c%c%c [%2d] ",
                  &MechWeapons[weaparray[ii]].name[3], ' ',
-                 (MechStatus(mech) & AMS_ENABLED) ? ' ' : 'O',
-                 (MechStatus(mech) & AMS_ENABLED) ? 'O' : 'F',
-                 (MechStatus(mech) & AMS_ENABLED) ? 'N' : 'F', ' ',
-                 running_sum + ii);
+                 conditions.ams_enabled ? ' ' : 'O',
+                 conditions.ams_enabled ? 'O' : 'F',
+                 conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
       else {
-        if (GetPartFireMode(mech, loop, critical[ii]) & OS_MODE)
+        if (fire_mode & OS_MODE)
           strcpy(tmpbuf, "OS ");
         else
           tmpbuf[0] = 0;
         strcat(tmpbuf, &MechWeapons[weaparray[ii]].name[3]);
         snprintf(
             weapbuff, sizeof(weapbuff), " %-16.16s %c%c%c%c%c [%2d] ", tmpbuf,
-            (GetPartFireMode(mech, loop, critical[ii]) & REAR_MOUNT) ? 'R'
-                                                                     : ' ',
-            (((GetPartFireMode(mech, loop, critical[ii]) & OS_USED) ||
-              (GetPartFireMode(mech, loop, critical[ii]) & ROCKET_FIRED))
-                 ? '-'
-             : (GetPartFireMode(mech, loop, critical[ii]) & OS_MODE) ? 'O'
-                                                                     : ' '),
+            (fire_mode & REAR_MOUNT) ? 'R' : ' ',
+            (((fire_mode & OS_USED) || (fire_mode & ROCKET_FIRED)) ? '-'
+             : (fire_mode & OS_MODE)                               ? 'O'
+                                                                   : ' '),
             GetWeaponAmmoModeLetter(mech, loop, critical[ii]),
             GetWeaponFireModeLetter(mech, loop, critical[ii]),
-            ((GetPartFireMode(mech, loop, critical[ii]) & ON_TC) &&
-             (!(MechCritStatus(mech) & TC_DESTROYED)))
+            ((fire_mode & ON_TC) && !conditions.targeting_computer_destroyed)
                 ? 'T'
-            : (GetPartFireMode(mech, loop, critical[ii]) & IS_JETTISONED_MODE)
-                ? 'J'
-            : (GetPartFireMode(mech, loop, critical[ii]) & WILL_JETTISON_MODE)
-                ? 'P'
-                : ' ',
+            : (fire_mode & IS_JETTISONED_MODE) ? 'J'
+            : (fire_mode & WILL_JETTISON_MODE) ? 'P'
+                                               : ' ',
             running_sum + ii);
       }
       if (compact)
@@ -422,13 +447,15 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                       &MechWeapons[weaparray[ii]].name[3], location);
       strcat(weapbuff, location);
 
-      if (PartIsBroken(mech, loop, critical[ii]) ||
-          PartTempNuke(mech, loop, critical[ii]) == FAIL_DESTROYED)
+      int temporary_failure =
+          mech_critical_temporary_failure(mech, loop, critical[ii]);
+      if (mech_critical_is_broken(mech, loop, critical[ii]) ||
+          temporary_failure == FAIL_DESTROYED)
         strcat(weapbuff, "[fg=black bold]*****[reset]  || ");
-      else if (PartIsDisabled(mech, loop, critical[ii]))
+      else if (mech_critical_is_disabled(mech, loop, critical[ii]))
         strcat(weapbuff, "[fg=red]DISABLE[reset]|| ");
-      else if (PartTempNuke(mech, loop, critical[ii])) {
-        switch (PartTempNuke(mech, loop, critical[ii])) {
+      else if (temporary_failure) {
+        switch (temporary_failure) {
         case FAIL_JAMMED:
           strcat(weapbuff, "[fg=red]JAMMED[reset] || ");
           break;
@@ -445,7 +472,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
           strcat(weapbuff, "[fg=red]AMMOJAM[reset]|| ");
           break;
         }
-      } else if (GetPartFireMode(mech, loop, critical[ii]) & ROCKET_FIRED)
+      } else if (fire_mode & ROCKET_FIRED)
         strcat(weapbuff, "[fg=black bold]Empty[reset]  || ");
       else if (weapdata[ii])
         strcat(weapbuff, tprintf(" %2d    || ",
@@ -504,18 +531,6 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
       notify(evaluation, player, astrAmmoSpacer);
 
-      /*
-         if (compact) {
-         if (ammo_mode && ammo_mode != ' ')
-         snprintf(compact_buffer + strlen(compact_buffer), sizeof(wierdbuf) -
-         strlen(wierdbuf), "|%s|%d|%c ",
-         &MechWeapons[ammoweap[running_sum]].name[3], ammo[running_sum],
-         ammo_mode); else snprintf(compact_buffer + strlen(compact_buffer),
-         sizeof(wierdbuf)
-         - strlen(wierdbuf), "|%s|%d ",
-         &MechWeapons[ammoweap[running_sum]].name[3], ammo[running_sum]);
-         }
-       */
       running_sum++;
     }
   }

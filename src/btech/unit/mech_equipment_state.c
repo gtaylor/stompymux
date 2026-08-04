@@ -105,6 +105,10 @@ bool mech_section_carries_club(const Mech *mech, int section) {
   return mech->ud.sections[section].specials & CARRYING_CLUB;
 }
 
+int mech_section_recycle_ticks(const Mech *mech, int section) {
+  return mech->ud.sections[section].recycle;
+}
+
 bool mech_part_is_structural_placeholder(int part_type) {
   return part_type == I2Special(ENDO_STEEL) ||
          part_type == I2Special(FERRO_FIBROUS) ||

@@ -25,6 +25,16 @@ int mech_technology_flags_secondary(const Mech *mech) {
   return mech->rd.specials2;
 }
 
+int mech_infantry_technology_flags(const Mech *mech) {
+  return mech->rd.infantry_specials;
+}
+
+int mech_cargo_space(const Mech *mech) { return mech->ud.cargospace; }
+
+int mech_carrier_maximum_tonnage(const Mech *mech) {
+  return mech->ud.carmaxton;
+}
+
 float mech_current_speed(const Mech *mech) { return mech->rd.speed; }
 
 float mech_maximum_speed(const Mech *mech) { return mech->ud.maxspeed; }
