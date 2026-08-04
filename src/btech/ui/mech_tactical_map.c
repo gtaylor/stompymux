@@ -1,185 +1,49 @@
-#include "mech_maps_internal.h"
+#include "aero_move_api.h"
+#include "btconfig.h"
+#include "btech/context.h"
+#include "ds_bay_api.h"
+#include "legacy_macros.h"
+#include "map.h"
+#include "map_los.h"
+#include "map_obj_api.h"
+#include "map_terrain.h"
+#include "mech_classification_api.h"
+#include "mech_identity_api.h"
+#include "mech_los_api.h"
+#include "mech_map_render_internal.h"
+#include "mech_maps_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_utils_api.h"
+#include "mine.h"
+#include "mux/server/game.h"
+#include "registry_api.h"
 
-static inline int is_oddcol(int col) {
-  /*
-   * The only real trick here is to handle negative
-   * numbers correctly.
-   */
-  return (unsigned)col & 1;
+#include <ctype.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static bool mech_seems_friendly(Mech *mech, Mech *other) {
+  return mech_team(mech) == mech_team(other) &&
+         InLineOfSight_NB(mech, other, 0, 0, 0);
 }
 
-static inline int tac_dispcols(int hexcols) { return hexcols * 3 + 1; }
-
-static inline int tac_hex_offset(int x, int y, int dispcols, int oddcol1) {
-  int oddcolx = is_oddcol(x + oddcol1);
-
-  return (y * 2 + 1 - oddcolx) * dispcols + x * 3 + 1;
+static int minimum_int(int left, int right) {
+  return left < right ? left : right;
 }
 
-static inline void sketch_tac_row(char *pos, int left_offset, char const *src,
-                                  int len) {
-  memset(pos, ' ', left_offset);
-  memcpy(pos + left_offset, src, len);
-  pos[left_offset + len] = '\0';
+static int maximum_int(int left, int right) {
+  return left > right ? left : right;
 }
 
-static void sketch_tac_map(char *buf, BattleMap *map, Mech *mech, int sx,
-                           int sy, int wx, int wy, int dispcols, int top_offset,
-                           int left_offset, int docolour, int dohexlos,
-                           int dounderlying)
-
-{
-#if 0
-	static char const hexrow[2][76] = {
-		"\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/",
-		"/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\"
-	};
-#else
-  static char const hexrow[2][310] = {
-      "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\][/]["
-      "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\][/]["
-      "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\][/]["
-      "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\][/]["
-      "\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/",
-      "/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\]["
-      "/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\]["
-      "/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\]["
-      "/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/"
-      "][\\]["
-      "/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\][/][\\"};
-#endif
-  int x, y;
-  int oddcol1 = is_oddcol(sx); /* One iff first hex col is odd */
-  char *pos;
-  int mapcols = tac_dispcols(wx);
-  HexLosMap los_map_storage;
-  HexLosMap *losmap = nullptr;
-
-  /*
-   * First create a blank hex map.
-   */
-  pos = buf;
-  for (y = 0; y < top_offset; y++) {
-    memset(pos, ' ', dispcols - 1);
-    pos[dispcols - 1] = '\0';
-    pos += dispcols;
-  }
-  for (y = 0; y < wy; y++) {
-    sketch_tac_row(pos, left_offset, hexrow[oddcol1], mapcols);
-    pos += dispcols;
-    sketch_tac_row(pos, left_offset, hexrow[!oddcol1], mapcols);
-    pos += dispcols;
-  }
-  sketch_tac_row(pos, left_offset, hexrow[oddcol1], mapcols);
-
-  /*
-   * Now draw the terrain and elevation.
-   */
-  pos = buf + top_offset * dispcols + left_offset;
-  wx = MIN(wx, map->map_width - sx);
-  wy = MIN(wy, map->map_height - sy);
-
-  if (dohexlos && los_map_calculate(&los_map_storage, map, mech, MAX(0, sx),
-                                    MAX(0, sy), wx, wy))
-    losmap = &los_map_storage;
-
-  for (y = MAX(0, -sy); y < wy; y++) {
-    for (x = MAX(0, -sx); x < wx; x++) {
-      int terr, elev, rterr, losflag = MAPLOSHEX_SEE | MAPLOSHEX_SEEN;
-      char *base;
-      char topchar, botchar;
-
-      if (losmap)
-        losflag = LOS_MAP_GET_FLAG(losmap, sx + x, sy + y);
-
-      if (!(losflag & MAPLOSHEX_SEEN)) {
-        terr = 'X';
-        elev = 40; /* 'X' */
-      } else {
-
-        if (losflag & MAPLOSHEX_SEETERRAIN)
-          terr = map_terrain_get(map, sx + x, sy + y);
-        else
-          terr = UNKNOWN_TERRAIN;
-
-        if (losflag & MAPLOSHEX_SEEELEV)
-          elev = map_elevation_get(map, sx + x, sy + y);
-        else
-          elev = 15; /* Ugly hack: '0' + 15 == '?' */
-      }
-      base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
-
-      switch (terr) {
-      case WATER:
-        /*
-         * Colour hack:  Draw deep water with '\242'
-         * if using colour so style_tac_map()
-         * knows to use dark blue rather than light
-         * blue
-         */
-        if (docolour && elev >= 2) {
-          topchar = '\242';
-          botchar = '\242';
-        } else {
-          topchar = '~';
-          botchar = '~';
-        }
-        break;
-
-      case SMOKE:
-      case FIRE:
-        if (dounderlying) {
-          rterr = map_real_terrain_get(map, sx + x, sy + y);
-          topchar = terr;
-          botchar = rterr;
-        } else {
-          topchar = terr;
-          botchar = terr;
-        }
-        break;
-
-      case HIGHWATER:
-        topchar = '~';
-        botchar = '+';
-        break;
-
-      case BRIDGE:
-        topchar = '#';
-        botchar = '+';
-        break;
-
-      case ' ': /* GRASSLAND */
-        topchar = ' ';
-        botchar = '_';
-        break;
-
-      case UNKNOWN_TERRAIN:
-        topchar = '?';
-        botchar = '?';
-        break;
-
-      default:
-        topchar = terr;
-        botchar = terr;
-        break;
-      }
-
-      base[0] = topchar;
-      base[1] = topchar;
-      base[dispcols + 0] = botchar;
-      if (elev > 0) {
-        botchar = '0' + elev;
-      }
-      base[dispcols + 1] = botchar;
-    }
-  }
+static int map_base_elevation(BattleMap *map, int x, int y) {
+  int elevation = map_elevation_get(map, x, y);
+  char terrain = map_real_terrain_get(map, x, y);
+  return terrain == WATER || terrain == ICE ? -elevation : elevation;
 }
 
 /*
@@ -205,16 +69,16 @@ static void sketch_tac_ownmech(char *buf, BattleMap *map, Mech *mech, int sx,
                                int sy, int wx, int wy, int dispcols,
                                int top_offset, int left_offset) {
 
-  int oddcol1 = is_oddcol(sx);
+  int oddcol1 = tactical_column_is_odd(sx);
   char *pos = buf + top_offset * dispcols + left_offset;
   char *base;
-  int x = MechX(mech) - sx;
-  int y = MechY(mech) - sy;
+  int x = mech_position_x(mech) - sx;
+  int y = mech_position_y(mech) - sy;
 
   if (x < 0 || x >= wx || y < 0 || y >= wy) {
     return;
   }
-  base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
+  base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
   base[0] = '*';
   base[0] = '*';
 }
@@ -225,7 +89,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
                              int labels) {
   int i;
   char *pos = buf + top_offset * dispcols + left_offset;
-  int oddcol1 = is_oddcol(sx);
+  int oddcol1 = tactical_column_is_odd(sx);
 
   /*
    * Draw all the 'mechs on the map.
@@ -240,7 +104,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
     }
 
     mech = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i]);
-    if (mech == NULL) {
+    if (mech == nullptr) {
       continue;
     }
 
@@ -248,27 +112,29 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
      * Check to see if the 'mech is on the tac map and
      * that its in LOS of the player's 'mech.
      */
-    x = MechX(mech) - sx;
-    y = MechY(mech) - sy;
-    if (!IsDS(mech) && (x < 0 || x >= wx || y < 0 || y >= wy)) {
+    x = mech_position_x(mech) - sx;
+    y = mech_position_y(mech) - sy;
+    if (!mech_is_dropship(mech) && (x < 0 || x >= wx || y < 0 || y >= wy)) {
       continue;
     }
 
-    if (IsDS(mech) && (x < -1 || x > wx || y < -1 || y > wy)) {
+    if (mech_is_dropship(mech) && (x < -1 || x > wx || y < -1 || y > wy)) {
       continue;
     }
 
     if (mech != player_mech &&
-        !InLineOfSight(player_mech, mech, MechX(mech), MechY(mech),
-                       FlMechRange(map, player_mech, mech))) {
+        !InLineOfSight(player_mech, mech, mech_position_x(mech),
+                       mech_position_y(mech),
+                       mech_range_to(player_mech, mech))) {
       continue;
     }
 
-    base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
-    if (!(MechSpecials2(mech) & CARRIER_TECH) && IsDS(mech) &&
-        ((MechZ(mech) >= ORBIT_Z && mech != player_mech) || Landed(mech) ||
-         !Started(mech))) {
-      int ts = DSBearMod(mech);
+    base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
+    if (!(mech_technology_flags_secondary(mech) & CARRIER_TECH) &&
+        mech_is_dropship(mech) &&
+        ((mech_position_z(mech) >= ORBIT_Z && mech != player_mech) ||
+         mech_is_landed(mech) || !mech_is_started(mech))) {
+      int ts = ((mech_heading_degrees(mech) + 30) / 60) % 6;
       int dir;
 
       /*
@@ -287,7 +153,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
         if (tx < 0 || tx >= wx || ty < 0 || ty >= wy) {
           continue;
         }
-        base = pos + tac_hex_offset(tx, ty, dispcols, oddcol1);
+        base = pos + tactical_hex_offset(tx, ty, dispcols, oddcol1);
         if (Find_DS_Bay_Number(mech, (dir - ts + 6) % 6) >= 0) {
           sketch_tac_ds(base, dispcols, '@');
         } else {
@@ -297,7 +163,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
       if (x < 0 || x >= wx || y < 0 || y >= wy)
         continue;
 
-      base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
+      base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
       if (docolour) {
         /*
          * Colour hack: 'X' would be confused with
@@ -315,7 +181,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
         base[0] = '*';
         base[1] = '*';
       } else {
-        MechId id = mech_id(mech, MechSeemsFriend(player_mech, mech));
+        MechId id = mech_id(mech, mech_seems_friendly(player_mech, mech));
         base[0] = id.text[0];
         base[1] = id.text[1];
       }
@@ -326,7 +192,7 @@ static void sketch_tac_mechs(char *buf, BattleMap *map, Mech *player_mech,
       base[0] = '*';
       base[1] = '*';
     } else {
-      MechId id = mech_id(mech, MechSeemsFriend(player_mech, mech));
+      MechId id = mech_id(mech, mech_seems_friendly(player_mech, mech));
       base[0] = id.text[0];
       base[1] = id.text[1];
     }
@@ -338,18 +204,18 @@ static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
                               int left_offset, int cliff_size) {
   char *pos = buf + top_offset * dispcols + left_offset;
   int y, x;
-  int oddcol1 = is_oddcol(sx);
+  int oddcol1 = tactical_column_is_odd(sx);
 
-  wx = MIN(wx, map->map_width - sx);
-  wy = MIN(wy, map->map_height - sy);
-  for (y = MAX(0, -sy); y < wy; y++) {
+  wx = minimum_int(wx, map->map_width - sx);
+  wy = minimum_int(wy, map->map_height - sy);
+  for (y = maximum_int(0, -sy); y < wy; y++) {
     int ty = sy + y;
 
-    for (x = MAX(0, -sx); x < wx; x++) {
+    for (x = maximum_int(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      int oddcolx = is_oddcol(tx);
-      int elev = Elevation(map, tx, ty);
-      char *base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
+      int oddcolx = tactical_column_is_odd(tx);
+      int elev = map_base_elevation(map, tx, ty);
+      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
       char c;
 
       /*
@@ -372,11 +238,13 @@ static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
        */
 
       if (x != 0 && (y < wy - 1 || oddcolx) &&
-          abs(Elevation(map, tx - 1, ty + 1 - oddcolx) - elev) >= cliff_size) {
+          abs(map_base_elevation(map, tx - 1, ty + 1 - oddcolx) - elev) >=
+              cliff_size) {
 
         base[dispcols - 1] = '|';
       }
-      if (y < wy - 1 && abs(Elevation(map, tx, ty + 1) - elev) >= cliff_size) {
+      if (y < wy - 1 &&
+          abs(map_base_elevation(map, tx, ty + 1) - elev) >= cliff_size) {
         base[dispcols] = ',';
         base[dispcols + 1] = ',';
       } else {
@@ -384,7 +252,8 @@ static void sketch_tac_cliffs(char *buf, BattleMap *map, int sx, int sy, int wx,
         base[dispcols + 1] = '_';
       }
       if (x < wx - 1 && (y < wy - 1 || oddcolx) &&
-          abs(Elevation(map, tx + 1, ty + 1 - oddcolx) - elev) >= cliff_size) {
+          abs(map_base_elevation(map, tx + 1, ty + 1 - oddcolx) - elev) >=
+              cliff_size) {
         base[dispcols + 2] = '!';
       }
     }
@@ -396,16 +265,16 @@ static void sketch_tac_dslz(char *buf, BattleMap *map, Mech *mech, int sx,
                             int docolour) {
   char *pos = buf + top_offset * dispcols + left_offset;
   int y, x;
-  int oddcol1 = is_oddcol(sx);
+  int oddcol1 = tactical_column_is_odd(sx);
 
-  wx = MIN(wx, map->map_width - sx);
-  wy = MIN(wy, map->map_height - sy);
-  for (y = MAX(0, -sy); y < wy; y++) {
+  wx = minimum_int(wx, map->map_width - sx);
+  wy = minimum_int(wy, map->map_height - sy);
+  for (y = maximum_int(0, -sy); y < wy; y++) {
     int ty = sy + y;
 
-    for (x = MAX(0, -sx); x < wx; x++) {
+    for (x = maximum_int(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      char *base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
+      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
 
       if (ImproperLZ(mech, tx, ty))
         base[dispcols] = docolour ? '\241' : 'X';
@@ -420,17 +289,17 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
                              int top_offset, int left_offset) {
   char *pos = buf + top_offset * dispcols + left_offset;
   int y, x;
-  int oddcol1 = is_oddcol(sx);
+  int oddcol1 = tactical_column_is_odd(sx);
   float fx, fy, fz, hex_range;
   MapObject *o;
 
-  wx = MIN(wx, map->map_width - sx);
-  wy = MIN(wy, map->map_height - sy);
-  for (y = MAX(0, -sy); y < wy; y++) {
+  wx = minimum_int(wx, map->map_width - sx);
+  wy = minimum_int(wy, map->map_height - sy);
+  for (y = maximum_int(0, -sy); y < wy; y++) {
     int ty = sy + y;
-    for (x = MAX(0, -sx); x < wx; x++) {
+    for (x = maximum_int(0, -sx); x < wx; x++) {
       int tx = sx + x;
-      char *base = pos + tac_hex_offset(x, y, dispcols, oddcol1);
+      char *base = pos + tactical_hex_offset(x, y, dispcols, oddcol1);
       char c;
 
       /*
@@ -460,11 +329,12 @@ static void sketch_tac_mines(char *buf, BattleMap *map, Mech *mech, int sx,
       base[dispcols + 1] = ' ';
       if (o) {
         MapCoordToRealCoord(tx, ty, &fx, &fy);
-        fz = ZSCALE * Elevation(map, tx, ty);
+        fz = ZSCALE * map_base_elevation(map, tx, ty);
         hex_range =
-            FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy, fz);
+            FindRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                      mech_position_real_z(mech), fx, fy, fz);
         if ((o->datac != MINE_TRIGGER) &&
-            InLineOfSight_NB(mech, NULL, tx, ty, hex_range)) {
+            InLineOfSight_NB(mech, nullptr, tx, ty, hex_range)) {
           /*     base[dispcols]=(o->datas/10) + '0'; */
           /*     base[dispcols+1]=(o->datas%10) + '0'; */
           base[dispcols] = '<';
@@ -541,8 +411,8 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   /*
    * Figure out the extent of the tac map to draw.
    */
-  wx = MIN(MAX_WIDTH, wx);
-  wy = MIN(MAX_HEIGHT, wy);
+  wx = minimum_int(MAX_WIDTH, wx);
+  wy = minimum_int(MAX_HEIGHT, wy);
 
   sx = cx - wx / 2;
   sy = cy - wy / 2;
@@ -550,16 +420,16 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
     /*
      * Only allow navigate maps to include off map hexes.
      */
-    sx = MAX(0, MIN(sx, map->map_width - wx));
-    sy = MAX(0, MIN(sy, map->map_height - wy));
-    wx = MIN(wx, map->map_width);
-    wy = MIN(wy, map->map_height);
+    sx = maximum_int(0, minimum_int(sx, map->map_width - wx));
+    sy = maximum_int(0, minimum_int(sy, map->map_height - wy));
+    wx = minimum_int(wx, map->map_width);
+    wy = minimum_int(wy, map->map_height);
   }
 
-  mapcols = tac_dispcols(wx);
+  mapcols = tactical_display_columns(wx);
   dispcols = mapcols + 1;
   disprows = wy * 2 + 1;
-  oddcol1 = is_oddcol(sx);
+  oddcol1 = tactical_column_is_odd(sx);
 
   if (navigate) {
     if (oddcol1) {
@@ -591,8 +461,9 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   /*
    * Create a sketch tac map including terrain and elevation.
    */
-  sketch_tac_map(sketch_buf, map, mech, sx, sy, wx, wy, dispcols, top_offset,
-                 left_offset, docolour, dohexlos, dounderlying);
+  tactical_map_sketch(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
+                      top_offset, left_offset, docolour, dohexlos,
+                      dounderlying);
 
   /*
    * Draw the top and side labels.
@@ -638,28 +509,28 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
   }
 
   if (labels & 8) {
-    if (mech != NULL) {
+    if (mech != nullptr) {
       sketch_tac_ownmech(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
                          top_offset, left_offset);
     }
     sketch_tac_cliffs(sketch_buf, map, sx, sy, wx, wy, dispcols, top_offset,
                       left_offset, 3);
   } else if (labels & 16) {
-    if (mech != NULL) {
+    if (mech != nullptr) {
       sketch_tac_ownmech(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
                          top_offset, left_offset);
     }
     sketch_tac_cliffs(sketch_buf, map, sx, sy, wx, wy, dispcols, top_offset,
                       left_offset, 2);
   } else if (labels & 32) {
-    if (mech != NULL) {
+    if (mech != nullptr) {
       sketch_tac_ownmech(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
                          top_offset, left_offset);
     }
     sketch_tac_dslz(sketch_buf, map, mech, sx, sy, wx, wy, dispcols, top_offset,
                     left_offset, 2, docolour);
   } else if (labels & 128) {
-    if (mech != NULL) {
+    if (mech != nullptr) {
       sketch_tac_ownmech(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
                          top_offset, left_offset);
       sketch_tac_mines(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
@@ -668,7 +539,7 @@ MapText *map_text_create(DbRef player, Mech *mech, BattleMap *map, int cx,
                        top_offset, left_offset, docolour, labels);
     }
 
-  } else if (mech != NULL) {
+  } else if (mech != nullptr) {
     sketch_tac_mechs(sketch_buf, map, mech, sx, sy, wx, wy, dispcols,
                      top_offset, left_offset, docolour, labels);
   }

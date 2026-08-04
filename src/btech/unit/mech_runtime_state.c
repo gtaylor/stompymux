@@ -7,6 +7,8 @@ bool mech_is_started(const Mech *mech) { return mech->rd.status & STARTED; }
 
 bool mech_is_destroyed(const Mech *mech) { return mech->rd.status & DESTROYED; }
 
+bool mech_is_landed(const Mech *mech) { return mech->rd.status & LANDED; }
+
 bool mech_suppresses_gunnery_experience(const Mech *mech) {
   return mech->rd.status2 & NO_GUN_XP;
 }

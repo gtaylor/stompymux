@@ -186,6 +186,7 @@ set(BTECH_SOURCES
   ui/mech_maps.c
   ui/mech_lrs_map.c
   ui/mech_tactical_map.c
+  ui/mech_tactical_layout.c
   ui/mech_tactical_style.c
   ui/mech_tactical_command.c
   ui/mech_base_entry.c

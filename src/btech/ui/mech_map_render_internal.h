@@ -57,5 +57,14 @@ char map_terrain_color_char(const MapColorScheme *colors, char terrain,
 const char *map_color_markup(char color);
 bool style_tac_map(MapText *text, const MapColorScheme *colors,
                    const char *sketch, int display_columns, int display_rows);
+int tactical_column_is_odd(int column);
+int tactical_display_columns(int hex_columns);
+int tactical_hex_offset(int x, int y, int display_columns,
+                        int first_column_is_odd);
+void tactical_map_sketch(char *buffer, BattleMap *map, Mech *mech, int start_x,
+                         int start_y, int width, int height,
+                         int display_columns, int top_offset, int left_offset,
+                         bool use_color, bool use_hex_los,
+                         bool show_underlying_terrain);
 int parse_tacargs(DbRef player, Mech *mech, char **args, int argc, int maxrange,
                   short *x, short *y);
