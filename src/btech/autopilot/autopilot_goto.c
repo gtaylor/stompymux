@@ -1,4 +1,32 @@
-#include "autopilot_commands_internal.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "aero_move_api.h"
+#include "ai_api.h"
+#include "autopilot.h"
+#include "btech/context.h"
+#include "btech_channel.h"
+#include "btech_event.h"
+#include "legacy_macros.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_equipment_api.h"
+#include "mech_events.h"
+#include "mech_identity_api.h"
+#include "mech_lifecycle.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_specification_api.h"
+#include "mech_startup_api.h"
+#include "mech_utils_api.h"
+#include "mux/network/mux_event.h"
+#include "mux/objects/db.h"
+#include "mux/support/doubly_linked_list.h"
+#include "registry_api.h"
+#include "section_types.h"
 
 void auto_goto_event(MuxEvent *e) {
 
@@ -11,15 +39,37 @@ void auto_goto_event(MuxEvent *e) {
 
   char *argument;
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Basic Checks */
-  AUTO_CHECKS(autopilot);
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum ||
+      mech_is_destroyed(mech))
+    return;
 
   /* Make sure mech is started and standing */
-  AUTO_GSTART(autopilot, mech);
+  if (!mech_is_started(mech)) {
+    auto_command_startup(autopilot, mech);
+    return;
+  }
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
+      CountDestroyedLegs(mech) <= 0) {
+    if (!mech_event_count(mech, EVENT_STAND))
+      mech_stand(autopilot->mynum, mech, "");
+    autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
+                             AUTOPILOT_NC_DELAY, 0);
+    return;
+  }
+  if (mech_class(mech) == CLASS_VTOL && mech_is_landed(mech) &&
+      !mech_section_is_destroyed(mech, ROTOR)) {
+    if (!mech_event_count(mech, EVENT_TAKEOFF))
+      aero_takeoff(autopilot->mynum, mech, "");
+    autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
+                             AUTOPILOT_NC_DELAY, 0);
+    return;
+  }
 
   /* Get the first argument - x coord */
   argument = auto_get_command_arg(autopilot, 1, 1);
@@ -41,7 +91,8 @@ void auto_goto_event(MuxEvent *e) {
   }
   free(argument);
 
-  if (MechX(mech) == tx && MechY(mech) == ty && fabs(MechSpeed(mech)) < 0.5) {
+  if (mech_position_x(mech) == tx && mech_position_y(mech) == ty &&
+      fabs(mech_current_speed(mech)) < 0.5) {
 
     /* We've reached this goal! Time for next one. */
     ai_set_speed(mech, autopilot, 0);
@@ -65,71 +116,6 @@ void auto_goto_event(MuxEvent *e) {
   }
 }
 
-#if 0
-/* ROAMMODE is a funky beast */
-void auto_roam_event(MuxEvent * e)
-{
-	Autopilot *a = (Autopilot *) e->data;
-	int tx, ty;
-	float dx, dy, range;
-	Mech *mech = a->mymech;
-	BattleMap *map;
-	int bearing, i = 1, t;
-
-	if(!btech_context_is_mech(mech->xcode.context, mech->mynum) || !btech_context_is_auto(a->xcode.context, a->mynum))
-		return;
-
-	CCH(a);
-	GSTART(a, mech);
-	tx = GVAL(a, 1);
-	ty = GVAL(a, 2);
-
-	if(!mech || !(map = btech_context_find_object(autopilot->xcode.context, mech->mapindex))) {
-		return;
-	}
-
-	if(!(a->flags & AUTOPILOT_ROAMMODE) || MechTarget(mech) > 0) {
-		return;
-	}
-
-	if((tx == 0 && ty == 0) || e->data2 > 0 || (MechX(mech) == tx
-												&& MechY(mech) == ty
-												&& abs(MechSpeed(mech)) <
-												0.5)) {
-		while (i) {
-			tx = BOUNDED(1, btech_random_range(map->xcode.context, 20, map->map_width - 21),
-						 map->map_width - 1);
-			ty = BOUNDED(1, btech_random_range(map->xcode.context, 20, map->map_height - 21),
-						 map->map_height - 1);
-			MapCoordToRealCoord(tx, ty, &dx, &dy);
-			t = map_real_terrain_get(map, tx, ty);
-			range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech),
-							  dx, dy, ZSCALE * map_elevation_get(map, tx, ty));
-			if((InLineOfSight(mech, NULL, tx, ty, range) &&
-				t != WATER && t != HIGHWATER && t != MOUNTAINS) || i > 5000) {
-				i = 0;
-			} else {
-				i++;
-			}
-		}
-		a->commands[a->program_counter + 1] = tx;
-		a->commands[a->program_counter + 2] = ty;
-		autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
-		return;
-	}
-	MapCoordToRealCoord(tx, ty, &dx, &dy);
-	figure_out_range_and_bearing(mech, tx, ty, &range, &bearing);
-	if(!slow_down_if_neccessary(a, mech, range, bearing, tx, ty)) {
-		/* Use the AI */
-		if(ai_check_path(mech, a, dx, dy, 0.0, 0.0))
-			autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK,
-					  0);
-	} else {
-		autopilot_event_schedule(a, EVENT_AUTOGOTO, auto_roam_event, AUTOPILOT_GOTO_TICK, 0);
-	}
-}
-#endif
-
 /*
  * Dumbly[goto] a given a hex
  */
@@ -145,17 +131,17 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   char *argument;
   char error_buf[MBUF_SIZE];
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -180,7 +166,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -193,7 +179,7 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -272,7 +258,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
   free(argument);
 
   /* If we're at the target hex - stop */
-  if (MechX(mech) == tx && MechY(mech) == ty && fabs(MechSpeed(mech)) < 0.5) {
+  if (mech_position_x(mech) == tx && mech_position_y(mech) == ty &&
+      fabs(mech_current_speed(mech)) < 0.5) {
 
     /* We've reached this goal! Time for next one. */
     ai_set_speed(mech, autopilot, 0);
@@ -313,17 +300,17 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   char error_buf[MBUF_SIZE];
 
   /* Make sure the mech is a mech and the autopilot is an autopilot */
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Are we in the mech we're supposed to be in */
-  if (game_object_location(mech->xcode.context->database, autopilot->mynum) !=
-      autopilot->mymechnum)
+  if (game_object_location(btech_context_database(mech_context(mech)),
+                           autopilot->mynum) != autopilot->mymechnum)
     return;
 
   /* Our mech is destroyed */
-  if (Destroyed(mech))
+  if (mech_is_destroyed(mech))
     return;
 
   /* Check to make sure the first command in the queue is this one */
@@ -348,7 +335,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   }
 
   /* Make sure mech is started and standing */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
 
     /* Startup */
     if (!mech_event_count(mech, EVENT_STARTUP))
@@ -361,7 +348,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   }
 
   /* Ok not standing so lets do that first */
-  if (MechType(mech) == CLASS_MECH && Fallen(mech) &&
+  if (mech_class(mech) == CLASS_MECH && mech_is_fallen(mech) &&
       !(CountDestroyedLegs(mech) > 0)) {
 
     if (!mech_event_count(mech, EVENT_STAND))
@@ -445,7 +432,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
     free(argument);
 
     /* Boundaries */
-    if (tx < 0 || ty < 0 || tx >= map->map_width || ty >= map->map_width) {
+    if (tx < 0 || ty < 0 || tx >= battle_map_width(map) ||
+        ty >= battle_map_width(map)) {
 
       /* Bad location to go to */
       snprintf(error_buf, MBUF_SIZE,
@@ -514,8 +502,8 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   }
 
   /* Are we in the current target hex */
-  if ((MechX(mech) == temp_astar_node->x) &&
-      (MechY(mech) == temp_astar_node->y)) {
+  if ((mech_position_x(mech) == temp_astar_node->x) &&
+      (mech_position_y(mech) == temp_astar_node->y)) {
 
     /* Is this the last hex */
     if (doubly_linked_list_size(autopilot->astar_path) == 1) {
