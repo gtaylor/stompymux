@@ -16,6 +16,8 @@ int mech_position_y(const Mech *mech) { return mech->pd.y; }
 
 int mech_position_z(const Mech *mech) { return mech->pd.z; }
 
+char mech_position_terrain(const Mech *mech) { return mech->pd.terrain; }
+
 void mech_position_xy_set(Mech *mech, int x, int y) {
   mech->pd.x = x;
   mech->pd.last_x = x;

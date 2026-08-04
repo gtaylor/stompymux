@@ -119,6 +119,15 @@ done < <(rg -n -g '*.[ch]' \
   '#include "mech\.h"|#include "mech_macros\.h"|#include "mech_utils_internal\.h"|\b(CalcFasaCost|GetPartWeight|MechNumHeatsinksInEngine)\b' \
   src/btech/economy || true)
 
+while IFS= read -r match; do
+  echo "$match: converted map module depends on the legacy Mech aggregate"
+  status=1
+done < <(rg -n '#include "mech\.h"|#include "mech_macros\.h"' \
+  src/btech/map/map.c src/btech/map/map_buildings.c \
+  src/btech/map/map_dynamic.c src/btech/map/map_obj.c \
+  src/btech/map/map_obj_commands.c src/btech/map/map_obj_internal.h \
+  src/btech/map/map_terrain.c || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

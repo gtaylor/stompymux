@@ -9,12 +9,13 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "legacy_macros.h"
 #include "map.h"
 #include "map_bits_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
@@ -37,4 +38,4 @@
 
 static char *const map_types[] = {"FIRE",     "SMOKE", "DECO",  "MINE",
                                   "BUILDING", "LEAVE", "ENTRA", "LINKED",
-                                  "TBITS",    "BLZ",   NULL};
+                                  "TBITS",    "BLZ",   nullptr};

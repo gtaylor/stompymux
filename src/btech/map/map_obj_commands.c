@@ -1,5 +1,7 @@
 #include "map_obj_internal.h"
 
+#include "mech_classification_api.h"
+
 void list_mapobjs(DbRef player, BattleMap *map) {
   MapObject *tmp;
   int i;
@@ -108,7 +110,7 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
     // comment this out...That makes it a square BLZ, not round
     //		if(abs(x - o->x) > o->datai || abs(y - o->y) > o->datai)
     //			continue;
-    if (o->datac && o->datac == MechTeam(mech))
+    if (o->datac && o->datac == mech_team(mech))
       continue;
     MapCoordToRealCoord(o->x, o->y, &tx, &ty);
     if (FindHexRange(fx, fy, tx, ty) <= o->datai)

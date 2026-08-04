@@ -11,11 +11,13 @@
 #include "map_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
+#include "mech_api_types.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_maps_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
 #include "mech_sensor_api.h"
 #include "mech_utils_api.h"
 #include "mechfile_api.h"
@@ -69,8 +71,8 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
         if (i != m->first_free)
           continue;
         map_mech = btech_context_get_mech(m->xcode.context, k);
-        map_mech->mapindex = -1; /* Eep. */
-        map_mech->mapnumber = 0;
+        mech_map_dbref_set(map_mech, -1); /* Eep. */
+        mech_map_slot_set(map_mech, 0);
       }
     }
   }
@@ -84,14 +86,14 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d has no mech data. Removing..", k);
         m->mechsOnMap[i] = -1;
-      } else if (mek->mapindex != m->mynum) {
+      } else if (mech_map_dbref(mek) != m->mynum) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d isn't really here! Removing..", k);
         m->mechsOnMap[i] = -1;
-      } else if (mek->mapnumber != i) {
+      } else if (mech_map_slot(mek) != i) {
         notify_printf(btech_context_evaluation(m->xcode.context), player,
                       "Error: #%d has invalid mapnumber (mn:%d <-> real:%d)..",
-                      k, mek->mapnumber, i);
+                      k, mech_map_slot(mek), i);
       }
     }
   notify(btech_context_evaluation(m->xcode.context), player, "Done.");
@@ -753,7 +755,7 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
 void clear_hex(Mech *mech, int x, int y, int meant) {
   BattleMap *map;
 
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+  if (!(map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))))
     return;
   switch (map_terrain_get(map, x, y)) {
   case HEAVY_FOREST:
@@ -785,10 +787,10 @@ void UpdateMechsTerrain(BattleMap *map, int x, int y, int t) {
     if (!(mech =
               btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
       continue;
-    if (MechX(mech) != x || MechY(mech) != y)
+    if (mech_position_x(mech) != x || mech_position_y(mech) != y)
       continue;
-    if (MechTerrain(mech) != t) {
-      MechTerrain(mech) = t;
+    if (mech_position_terrain(mech) != t) {
+      mech_position_terrain_set(mech, t);
       MarkForLOSUpdate(mech);
     }
   }

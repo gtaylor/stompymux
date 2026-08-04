@@ -1,5 +1,8 @@
 #include "map_obj_internal.h"
 
+#include "mech_identity_api.h"
+#include "mech_position_api.h"
+
 static int get_building_cf(BattleMap *map, int *i1, int *i2) {
   *i1 = map->cf;
   *i2 = map->cfmax;
@@ -65,7 +68,7 @@ static void damage_cf(Mech *mech, MapObject *o, int from, int to, int damage) {
   if (from == damage)
     destroy = 1;
   from -= damage;
-  BattleMap *building = btech_context_get_map(mech->xcode.context, o->obj);
+  BattleMap *building = btech_context_get_map(mech_context(mech), o->obj);
 
   if (building == nullptr)
     return;
@@ -73,29 +76,27 @@ static void damage_cf(Mech *mech, MapObject *o, int from, int to, int damage) {
   if (destroy) {
     mech_printf(mech, MECHALL,
                 "You hit %s for %d points of damage, destroying it!",
-                structure_name(mech->xcode.context->database, o).text, damage);
+                structure_name(mech_context(mech)->database, o).text, damage);
     notify_except(
-        btech_context_evaluation(mech->xcode.context), o->obj, NOTHING, o->obj,
-        tprintf(
-            "%s is hit for %d more points of damage, destroying it!",
-            MyToUpper(structure_name(mech->xcode.context->database, o).text),
-            damage));
+        btech_context_evaluation(mech_context(mech)), o->obj, NOTHING, o->obj,
+        tprintf("%s is hit for %d more points of damage, destroying it!",
+                MyToUpper(structure_name(mech_context(mech)->database, o).text),
+                damage));
     MechLOSBroadcast(
         mech, tprintf("hits %s, destroying it!",
-                      structure_name(mech->xcode.context->database, o).text));
+                      structure_name(mech_context(mech)->database, o).text));
     start_regen = 2;
   } else {
     mech_printf(mech, MECHALL, "You hit %s for %d points of damage.",
-                structure_name(mech->xcode.context->database, o).text, damage);
+                structure_name(mech_context(mech)->database, o).text, damage);
     notify_except(
-        btech_context_evaluation(mech->xcode.context), o->obj, NOTHING, o->obj,
-        tprintf(
-            "%s is hit for %d points of damage.",
-            MyToUpper(structure_name(mech->xcode.context->database, o).text),
-            damage));
+        btech_context_evaluation(mech_context(mech)), o->obj, NOTHING, o->obj,
+        tprintf("%s is hit for %d points of damage.",
+                MyToUpper(structure_name(mech_context(mech)->database, o).text),
+                damage));
   }
   if (start_regen)
-    possibly_start_building_regen(mech->xcode.context, o->obj);
+    possibly_start_building_regen(mech_context(mech), o->obj);
 }
 
 void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
@@ -105,18 +106,18 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
   int num_missiles_hit, hit_roll;
   int i1, i2;
 
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+  if (!(map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))))
     return;
   if (!(o = find_entrance_by_xy(map, x, y)))
     return;
-  if (!(nmap = btech_context_get_map(mech->xcode.context, o->obj)))
+  if (!(nmap = btech_context_get_map(mech_context(mech), o->obj)))
     return;
   if (!damage) {
     if (!IsMissile(weapindx))
       damage = MechWeapons[weapindx].damage;
     else {
       const MissileHitEntry *entry = missile_hit_registry_find_weapon(
-          &mech->xcode.context->missile_hits, weapindx);
+          &mech_context(mech)->missile_hits, weapindx);
 
       /* Missile weapon.  Multiple Hit locations... */
       if (entry == nullptr)
@@ -144,7 +145,7 @@ void hit_building(Mech *mech, int x, int y, int weapindx, int damage) {
 void fire_hex(Mech *mech, int x, int y, int meant) {
   BattleMap *map;
 
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex)))
+  if (!(map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech))))
     return;
   switch (map_terrain_get(map, x, y)) {
   case HEAVY_FOREST:
@@ -170,23 +171,23 @@ void steppable_base_check(Mech *mech, int x, int y) {
   BattleMap *map;
   BattleMap *nmap;
 
-  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map)
     return;
-  if (MechZ(mech) != Elevation(map, x, y))
+  if (mech_position_z(mech) != map_elevation_get(map, x, y))
     return;
   if (!(is_hangar_hex(map, x, y)))
     return;
   if (!(o = find_entrance_by_xy(map, x, y)))
     return;
-  if (!(nmap = btech_context_get_map(mech->xcode.context, o->obj)))
+  if (!(nmap = btech_context_get_map(mech_context(mech), o->obj)))
     return;
   if (BuildIsDSS(nmap))
     return;
   if (BuildIsHidden(nmap) && !MadePerceptionRoll(mech, 0))
     return;
   mech_printf(mech, MECHALL, "%s has CF of %d.",
-              MyToUpper(structure_name(mech->xcode.context->database, o).text),
+              MyToUpper(structure_name(mech_context(mech)->database, o).text),
               nmap->cf);
 }
 
@@ -195,7 +196,8 @@ void show_building_in_hex(Mech *mech, int x, int y) {
   BattleMap *map;
   BattleMap *nmap;
 
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
+  if (!(map =
+            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
@@ -203,20 +205,21 @@ void show_building_in_hex(Mech *mech, int x, int y) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
-  if (!(nmap = btech_context_get_map(mech->xcode.context, o->obj))) {
+  if (!(nmap = btech_context_get_map(mech_context(mech), o->obj))) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
   if (BuildIsInvis(nmap) ||
       (BuildIsHidden(nmap) &&
-       !MadePerceptionRoll(mech, (int)(FindRange(MechX(mech), MechY(mech),
-                                                 MechZ(mech), x, y, 0) +
-                                       0.95)))) {
+       !MadePerceptionRoll(
+           mech, (int)(FindRange(mech_position_x(mech), mech_position_y(mech),
+                                 mech_position_z(mech), x, y, 0) +
+                       0.95)))) {
     mech_notify(mech, MECHALL, "The sensors detect no building in the hex!");
     return;
   }
   mech_printf(mech, MECHALL, "%s's CF is %d.",
-              MyToUpper(structure_name(mech->xcode.context->database, o).text),
+              MyToUpper(structure_name(mech_context(mech)->database, o).text),
               nmap->cf);
 }
 
@@ -246,12 +249,12 @@ int map_underlying_terrain(BattleMap *map, int x, int y) {
 int mech_underlying_terrain(Mech *mech) {
   char c;
   BattleMap *map =
-      btech_context_find_object(mech->xcode.context, mech->mapindex);
+      btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
 
   if (!map)
-    return MechTerrain(mech);
-  c = find_decorations(map, MechX(mech), MechY(mech));
+    return mech_position_terrain(mech);
+  c = find_decorations(map, mech_position_x(mech), mech_position_y(mech));
   if (c)
     return c;
-  return MechTerrain(mech);
+  return mech_position_terrain(mech);
 }

@@ -158,7 +158,8 @@ static void fire_dissipation_event(MuxEvent *e) {
   x = o->x;
   y = o->y;
   del_mapobj(map, o, TYPE_FIRE, 0);
-  if (IsForestHex(map, x, y)) {
+  char terrain = map_real_terrain_get(map, x, y);
+  if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST) {
     if (btech_random_range(map->xcode.context, 1, 6) < 3)
       map_terrain_set(map, x, y, GRASSLAND);
     else
@@ -331,7 +332,8 @@ void CheckForFire(BattleMap *map, int x[], int y[]) {
     if (x[i] < 0 || y[i] < 0)
       continue;
     /* Cackle */
-    if (IsForestHex(map, x[i], y[i]))
+    char terrain = map_real_terrain_get(map, x[i], y[i]);
+    if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST)
       add_decoration(map, x[i], y[i], TYPE_FIRE, FIRE,
                      btech_random_range(map->xcode.context, 60, 180));
   }

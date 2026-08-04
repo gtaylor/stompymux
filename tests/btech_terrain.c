@@ -1,9 +1,9 @@
 #include "map_terrain.h"
 
 #include "btech/context.h"
-#include "mech_macros.h"
 #include "map.h"
 #include "mech.h"
+#include "mech_macros.h"
 
 static char encoded_terrain[256];
 static char encoded_elevation[256];
@@ -48,6 +48,8 @@ int mech_underlying_terrain(Mech *mech) {
   (void)mech;
   return ROUGH;
 }
+
+char mech_position_terrain(const Mech *mech) { return MechTerrain(mech); }
 
 int main(void) {
   BtechContext context = {0};

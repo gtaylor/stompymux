@@ -7,9 +7,9 @@
 #include "map_api.h"
 #include "map_coding_api.h"
 #include "map_obj_api.h"
-#include "mech.h" // IWYU pragma: keep
+#include "mech_api_types.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
+#include "mech_position_api.h"
 
 char map_terrain_get(const BattleMap *map, int x, int y) {
   return map_coding_get_terrain(&map->xcode.context->map_coding,
@@ -26,10 +26,11 @@ char map_real_terrain_get(BattleMap *map, int x, int y) {
 }
 
 char mech_real_terrain_get(Mech *mech) {
-  if (MechTerrain(mech) == FIRE || MechTerrain(mech) == SMOKE) {
+  if (mech_position_terrain(mech) == FIRE ||
+      mech_position_terrain(mech) == SMOKE) {
     return (char)mech_underlying_terrain(mech);
   }
-  return MechTerrain(mech);
+  return mech_position_terrain(mech);
 }
 
 char map_elevation_get(const BattleMap *map, int x, int y) {
