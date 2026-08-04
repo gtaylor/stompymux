@@ -1,6 +1,6 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
-build_dir := "build"
+build_dir := ".build"
 build_type := env_var_or_default("CMAKE_BUILD_TYPE", "RelWithDebInfo")
 clang_tidy := env_var_or_default("CLANG_TIDY", "clang-tidy-20")
 run_clang_tidy := env_var_or_default("RUN_CLANG_TIDY", "run-clang-tidy-20")

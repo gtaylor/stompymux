@@ -7,10 +7,10 @@
                 "${workspaceFolder}/src/btech",
                 "${workspaceFolder}/src/btech/src/btech",
                 "${workspaceFolder}/src/btech/src/include",
-                "${workspaceFolder}/build",
-                "${workspaceFolder}/build/src/btech",
-                "${workspaceFolder}/build/libevent/include",
-                "${workspaceFolder}/build/libsodium/src/libsodium/include",
+                "${workspaceFolder}/.build",
+                "${workspaceFolder}/.build/src/btech",
+                "${workspaceFolder}/.build/libevent/include",
+                "${workspaceFolder}/.build/libsodium/src/libsodium/include",
                 "${workspaceFolder}/third_party/libevent",
                 "${workspaceFolder}/third_party/libevent/compat",
                 "${workspaceFolder}/third_party/libevent/include",
@@ -31,7 +31,7 @@
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-clang-x64",
             "configurationProvider": "ms-vscode.cmake-tools",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "compileCommands": "${workspaceFolder}/.build/compile_commands.json"
         }
     ],
     "version": 4
