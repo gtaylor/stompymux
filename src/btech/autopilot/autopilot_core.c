@@ -21,9 +21,10 @@
 #include "coolmenu.h"
 #include "legacy_macros.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify_api.h"
+#include "mech_runtime_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
@@ -465,7 +466,7 @@ void auto_set_comtitle(Autopilot *autopilot, Mech *mech) {
 
   char buf[LBUF_SIZE];
 
-  snprintf(buf, LBUF_SIZE, "a=%s/%s", MechType_Ref(mech),
+  snprintf(buf, LBUF_SIZE, "a=%s/%s", mech_model_reference(mech),
            mech_id(mech, true).text);
   mech_set_channeltitle(autopilot->mynum, mech, buf);
 }
@@ -519,14 +520,14 @@ void auto_engage(DbRef player, void *data, char *buffer) {
       autopilot->xcode.context, auto_pilot_on(autopilot),
       "The autopilot's already online! You have to disengage it first.");
 
-  if (MechAuto(mech) <= 0)
+  if (mech_autopilot_dbref(mech) <= 0)
     auto_init(autopilot, mech);
-  MechAuto(mech) = autopilot->mynum;
+  mech_autopilot_dbref_set(mech, autopilot->mynum);
 
-  if (MechAuto(mech) > 0)
+  if (mech_autopilot_dbref(mech) > 0)
     auto_set_comtitle(autopilot, mech);
 
-  autopilot->mapindex = mech->mapindex;
+  autopilot->mapindex = mech_map_dbref(mech);
 
   notify(btech_context_evaluation(autopilot->xcode.context), player,
          "Engaging autopilot...");
@@ -776,8 +777,8 @@ void auto_newautopilot(DbRef key, void **data, int selector) {
                                        autopilot->mymechnum))) {
 
       /* Just incase another AI has taken over */
-      if (MechAuto(mech) == autopilot->mynum) {
-        MechAuto(mech) = -1;
+      if (mech_autopilot_dbref(mech) == autopilot->mynum) {
+        mech_autopilot_dbref_set(mech, -1);
       }
     }
 
