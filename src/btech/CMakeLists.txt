@@ -124,6 +124,7 @@ set(BTECH_SOURCES
   unit/mech_radio_state.c
   unit/mech_runtime_state.c
   unit/mech_stagger.c
+  unit/mech_targeting_state.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
   persistence/mech_restore_identity.c

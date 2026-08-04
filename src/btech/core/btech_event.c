@@ -8,16 +8,15 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "map_obj_api.h" // IWYU pragma: keep
-#include "map_terrain.h"
-#include "mech.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
-#include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_stagger.h"
+#include "mech_targeting_api.h"
 #include "mux/network/mux_event.h" // IWYU pragma: keep
 
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
@@ -80,23 +79,21 @@ void mech_stun_crew(Mech *mech) {
 
 void mech_stop_digging(Mech *mech) {
   mech_event_cancel(mech, EVENT_DIG);
-  MechTankCritStatus(mech) &= ~DIGGING_IN;
+  mech_digging_clear(mech);
 }
 
 void mech_stop_lock(Mech *mech) {
   mech_event_cancel(mech, EVENT_LOCK);
-  MechStatus(mech) &= ~LOCK_MODES;
-  MechAim(mech) = NUM_SECTIONS;
+  mech_targeting_lock_modes_clear(mech);
+  mech_targeting_aim_reset(mech);
 }
 
 void mech_lose_lock(Mech *mech) {
   mech_stop_lock(mech);
-  MechTarget(mech) = -1;
-  MechTargX(mech) = -1;
-  MechTargY(mech) = -1;
-  if (MechAim(mech) != NUM_SECTIONS) {
+  mech_targeting_target_clear(mech);
+  if (mech_targeting_has_specific_aim(mech)) {
     mech_notify(mech, MECHALL, "Location-specific targeting powers down.");
-    MechAim(mech) = NUM_SECTIONS;
+    mech_targeting_aim_reset(mech);
   }
 }
 
@@ -114,7 +111,6 @@ void mech_stop_stagger_check(Mech *mech) {
 }
 
 bool mech_move_mode_locked(const Mech *mech) {
-  return (MechStatus2(mech) & MOVE_MODES_LOCK) ||
-         (mech_event_count(mech, EVENT_MOVEMODE) &&
-          !(MechStatus2(mech) & DODGING));
+  return mech_movement_modes_locked(mech) ||
+         (mech_event_count(mech, EVENT_MOVEMODE) && !mech_is_dodging(mech));
 }
