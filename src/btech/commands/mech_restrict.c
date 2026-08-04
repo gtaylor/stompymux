@@ -29,6 +29,7 @@
 #include "mech_move_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_stagger.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
@@ -274,7 +275,7 @@ void newfreemech(DbRef key, void **data, int selector) {
       FillDefaultCriticals(new, i);
     break;
   case SPECIAL_FREE:
-    ClearAllStaggerDamage(new);
+    mech_stagger_damage_clear(new);
     if (new->mapindex != -1 &&
         (map = btech_context_get_map(new->xcode.context, new->mapindex)))
       remove_mech_from_map(map, new);

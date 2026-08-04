@@ -115,11 +115,12 @@ set(BTECH_SOURCES
   movement/mech_update_recycle.c
   movement/mech_update_hex.c
   movement/mech_update_hex_mech.c
-  movement/mech_update_stagger.c
+  movement/mech_update_damage.c
   movement/mech_update_piloting.c
   movement/mech_update_heartbeat.c
   movement/mech_boosters.c
   unit/mech_persistence.c
+  unit/mech_stagger.c
   persistence/economy_sqlite.c
   persistence/map_restore.c
   persistence/mech_restore_identity.c

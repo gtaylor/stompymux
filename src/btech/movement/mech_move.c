@@ -43,6 +43,7 @@
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
+#include "mech_stagger.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -523,7 +524,7 @@ void mech_drop(DbRef player, void *data, char *buffer) {
 
   // as per ps, prone clears stagger
   if (mech->xcode.context->configuration->btech_newstagger)
-    ClearAllStaggerDamage(mech);
+    mech_stagger_damage_clear(mech);
 
   possible_mine_poof(mech, MINE_STEP);
 }

@@ -33,6 +33,7 @@
 #include "mech_notify_api.h"
 #include "mech_partnames_api.h"
 #include "mech_sensor_api.h"
+#include "mech_stagger.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
@@ -50,7 +51,7 @@ void mech_heartbeat(Mech *mech) {
     if (!Fallen(mech) && !Jumping(mech)) {
       mech_staggercheck_heartbeat(mech);
     }
-    ClearStaggerDamage(mech);
+    mech_stagger_damage_expire(mech, mech->xcode.context->clock->now);
   }
   // Aeros need to check fuel while sitting and hovering
   if (MechType(mech) == CLASS_AERO || MechType(mech) == CLASS_VTOL) {
@@ -76,8 +77,8 @@ void mech_staggercheck_heartbeat(Mech *mech) {
     // curStagger is stuff we haven't rolled against
     // prevStagger is stuf we have
     // stuff we have adds to the difficulty, but doesn't get rolled against
-    curStaggerDamage = CurrentStaggerDamage(mech);
-    prevStaggerDamage = CurrentCountedStaggerDamage(mech);
+    curStaggerDamage = mech_stagger_damage_current(mech, now);
+    prevStaggerDamage = mech_stagger_damage_current_counted(mech, now);
     if (curStaggerDamage < 20)
       return;
     else {
@@ -87,9 +88,9 @@ void mech_staggercheck_heartbeat(Mech *mech) {
       // unless we're using
       // mech->xcode.context->configuration->btech_newstagger = 2
       if (mech->xcode.context->configuration->btech_newstagger == 2)
-        RemoveStaggerDamage(mech, staggerLevel);
+        mech_stagger_damage_remove(mech, staggerLevel);
       else {
-        MarkStaggerDamage(mech, staggerLevel);
+        mech_stagger_damage_mark(mech, staggerLevel);
         staggerLevel = (curStaggerDamage + prevStaggerDamage) / 20;
       }
       switch (staggerLevel) {

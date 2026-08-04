@@ -16,6 +16,7 @@
 #include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_stagger.h"
 #include "mux/network/mux_event.h" // IWYU pragma: keep
 
 void mech_event_schedule(Mech *mech, int type, MuxEventCallback callback,
@@ -106,8 +107,7 @@ void mech_start_stagger_check(Mech *mech) {
 
 void mech_stop_stagger_check(Mech *mech) {
   mech_event_cancel(mech, EVENT_CHECK_STAGGER);
-  mech->rd.staggerDamage = 0;
-  mech->rd.lastStaggerNotify = 0;
+  mech_stagger_tracking_reset(mech);
   btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
                      "Stopping stagger check for %ld.", mech->mynum);
 }

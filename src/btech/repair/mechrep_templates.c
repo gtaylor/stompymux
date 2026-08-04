@@ -266,12 +266,7 @@ void mechrep_Rloadnew(DbRef player, void *data, char *buffer) {
 }
 
 void clear_mech(Mech *mech, int flag) {
-  int i, j;
-
-  mech->brief = 1;
-
-  bzero(&mech->rd, sizeof(MechRuntimeState));
-  bzero(&mech->ud, sizeof(MechDefinitionState));
+  mech_template_state_reset(mech);
 
   MechSpotter(mech) = -1;
   MechTarget(mech) = -1;
@@ -287,16 +282,8 @@ void clear_mech(Mech *mech, int flag) {
   MechPilot(mech) = -1;
   MechAim(mech) = NUM_SECTIONS;
   mech_event_cancel(mech, EVENT_VEHICLEBURN);
-  if (flag) {
-    for (i = 0; i < NUM_TICS; i++)
-      for (j = 0; j < TICLONGS; j++)
-        mech->tic[i][j] = 0;
-    for (i = 0; i < FREQS; i++) {
-      mech->freq[i] = 0;
-      mech->freqmodes[i] = 0;
-      mech->chantitle[i][0] = 0;
-    }
-  }
+  if (flag)
+    mech_communications_clear(mech);
 }
 
 char *mechref_path(BtechContext *context, const char *mech_path, char *id) {

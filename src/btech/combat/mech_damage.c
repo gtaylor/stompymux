@@ -44,6 +44,7 @@
 #include "mech_notify_api.h"
 #include "mech_ood_api.h"
 #include "mech_pickup_api.h"
+#include "mech_stagger.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
 #include "mux/network/mux_event.h"
@@ -72,7 +73,6 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
   Mech *mechSwarmer;
   int tSnapTowLines = 0;
   Mech *towTarget;
-  MechDamageRecord *damagePointer;
 
   /* if:
      damage = -1 && intDamage>0
@@ -316,38 +316,9 @@ void DamageMech(Mech *wounded, Mech *attacker, int LOS, int attackPilot,
     if (wounded->xcode.context->configuration->btech_newstagger &&
         MechType(wounded) == CLASS_MECH) {
 
-      // So now that stagger isn't completely retarded, here's how it works
-      // you take damage and every point of damage gets added to a linked list
-      // in the mech struct's RS object (mech->rd). This damage is a linked
-      // list, and each node contains the time of the damage, the amount, the
-      // attacker's dbref and a link to the next damage. if the node->next is
-      // NULL, you're at the end of the list.
-
-      // Let's do this right. Get the damageNode, walk to the end, add the new
-      // damage
-      damagePointer = (wounded)->rd.staggerDamageList;
-
-      if (damagePointer == NULL) {
-        (wounded)->rd.staggerDamageList = malloc(sizeof(MechDamageRecord));
-        (wounded)->rd.staggerDamageList->amount = damage;
-        (wounded)->rd.staggerDamageList->occuredAt =
-            wounded->xcode.context->clock->now;
-        (wounded)->rd.staggerDamageList->attackerNum = attacker->mynum;
-        (wounded)->rd.staggerDamageList->counted = 0;
-        (wounded)->rd.staggerDamageList->next = NULL;
-      } else {
-        // walk down to the last node on the list
-        while (damagePointer->next != NULL) {
-          damagePointer = damagePointer->next;
-        }
-        // set the last node equal to our new damage pointer
-        damagePointer->next = malloc(sizeof(MechDamageRecord));
-        damagePointer->next->amount = damage;
-        damagePointer->next->occuredAt = wounded->xcode.context->clock->now;
-        damagePointer->next->attackerNum = attacker->mynum;
-        damagePointer->next->counted = 0;
-        damagePointer->next->next = NULL;
-      }
+      mech_stagger_damage_append(wounded, damage,
+                                 wounded->xcode.context->clock->now,
+                                 attacker->mynum, false);
     } else {
       MechTurnDamage(wounded) += damage;
     }

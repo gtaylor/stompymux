@@ -43,6 +43,7 @@
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_physical_api.h"
+#include "mech_stagger.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
@@ -323,7 +324,7 @@ void MechFalls(Mech *mech, int levels, int seemsg) {
 
   /* Clear stagger damage if we use new stagger*/
   if (mech->xcode.context->configuration->btech_newstagger)
-    ClearAllStaggerDamage(mech);
+    mech_stagger_damage_clear(mech);
 
   /* damage pilot */
   MechCocoon(mech) = 0;

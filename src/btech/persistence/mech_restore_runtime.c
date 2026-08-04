@@ -316,7 +316,7 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
     }
     if (mech_dbref != current_mech) {
       mech = btech_context_get_mech(context, mech_dbref);
-      if (!mech || !mech_persistence_damage_history_is_empty(mech)) {
+      if (!mech || !mech_stagger_damage_history_is_empty(mech)) {
         result = -1;
         break;
       }
@@ -327,8 +327,8 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
       result = -1;
       break;
     }
-    if (!mech_persistence_damage_append(mech, amount, occurred_at, attacker,
-                                        counted != 0)) {
+    if (!mech_stagger_damage_append(mech, amount, occurred_at, attacker,
+                                    counted != 0)) {
       result = -1;
       break;
     }

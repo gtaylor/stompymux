@@ -26,3 +26,5 @@ void mech_start_seeing(Mech *mech);
 void mech_continue_flying(Mech *mech);
 void mech_drop_club(Mech *mech);
 bool mech_aero_has_free_fuel(const Mech *mech);
+void mech_template_state_reset(Mech *mech);
+void mech_communications_clear(Mech *mech);

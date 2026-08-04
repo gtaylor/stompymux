@@ -42,6 +42,3 @@ void mech_persistence_frequency_restore(Mech *mech, int frequency_index,
                                         const char *title);
 void mech_persistence_runtime_restore(Mech *mech,
                                       const MechPersistenceSnapshot *snapshot);
-bool mech_persistence_damage_history_is_empty(const Mech *mech);
-bool mech_persistence_damage_append(Mech *mech, int amount, time_t occurred_at,
-                                    DbRef attacker, bool counted);

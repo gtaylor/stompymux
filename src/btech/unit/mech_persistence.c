@@ -1,6 +1,5 @@
 #include "mech_persistence.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "mech_internal.h"
@@ -95,26 +94,4 @@ void mech_persistence_runtime_restore(Mech *mech,
 
   mech->rd = snapshot->runtime;
   mech->rd.staggerDamageList = damage_history;
-}
-
-bool mech_persistence_damage_history_is_empty(const Mech *mech) {
-  return mech->rd.staggerDamageList == nullptr;
-}
-
-bool mech_persistence_damage_append(Mech *mech, int amount, time_t occurred_at,
-                                    DbRef attacker, bool counted) {
-  MechDamageRecord **link = &mech->rd.staggerDamageList;
-  MechDamageRecord *record;
-
-  while (*link)
-    link = &(*link)->next;
-  record = calloc(1, sizeof(*record));
-  if (!record)
-    return false;
-  record->amount = amount;
-  record->occuredAt = occurred_at;
-  record->attackerNum = attacker;
-  record->counted = counted;
-  *link = record;
-  return true;
 }

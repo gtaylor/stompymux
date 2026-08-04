@@ -21,6 +21,7 @@
 #include "mech_events.h"
 #include "mech_parts.h"
 #include "mech_persistence.h"
+#include "mech_stagger.h"
 #include "mech_tech.h"
 #include "mech_utils_api.h"
 #include "mechrep.h"

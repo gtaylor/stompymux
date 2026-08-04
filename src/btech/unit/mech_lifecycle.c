@@ -2,6 +2,8 @@
 
 #include "mech_lifecycle.h"
 
+#include <string.h>
+
 #include "bsuit_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
@@ -17,6 +19,7 @@
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_pickup_api.h"
+#include "mech_stagger.h"
 #include "mech_tag_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
@@ -192,7 +195,7 @@ void mech_make_fall(Mech *mech) {
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
   MechStatus(mech) &= ~HULLDOWN;
   if (mech->xcode.context->configuration->btech_newstagger) {
-    ClearAllStaggerDamage(mech);
+    mech_stagger_damage_clear(mech);
   }
 }
 
@@ -226,6 +229,19 @@ void mech_drop_club(Mech *mech) {
     mech_notify(mech, MECHALL, "Your club falls to the ground and shatters.");
     MechLOSBroadcast(mech, "'s club falls to the ground and shatters.");
   }
+}
+
+void mech_template_state_reset(Mech *mech) {
+  mech->brief = 1;
+  memset(&mech->rd, 0, sizeof(mech->rd));
+  memset(&mech->ud, 0, sizeof(mech->ud));
+}
+
+void mech_communications_clear(Mech *mech) {
+  memset(mech->tic, 0, sizeof(mech->tic));
+  memset(mech->freq, 0, sizeof(mech->freq));
+  memset(mech->freqmodes, 0, sizeof(mech->freqmodes));
+  memset(mech->chantitle, 0, sizeof(mech->chantitle));
 }
 
 bool mech_aero_has_free_fuel(const Mech *mech) {
