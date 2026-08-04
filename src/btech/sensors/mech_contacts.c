@@ -23,6 +23,7 @@
 #include "mech.h"
 #include "mech_contacts_api.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_notify.h"
@@ -58,14 +59,14 @@ static char *const c_desc[] = {
 
 void show_brief_flags(DbRef player, Mech *mech) {
   notify_printf(
-      btech_context_evaluation(mech->xcode.context), player,
+      btech_context_evaluation(mech_context(mech)), player,
       "Brief status for %s:", mech_to_mech_display_id(mech, mech).text);
 #ifdef ADVANCED_LOS
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                "    (A)utocontacts: %s", ac_desc[mech->brief / 4]);
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
+                "    (A)utocontacts: %s", ac_desc[mech_brief_mode(mech) / 4]);
 #endif
-  notify_printf(btech_context_evaluation(mech->xcode.context), player,
-                "    (C)ontacts:     %s", c_desc[mech->brief % 4]);
+  notify_printf(btech_context_evaluation(mech_context(mech)), player,
+                "    (C)ontacts:     %s", c_desc[mech_brief_mode(mech) % 4]);
 }
 
 void mech_brief(DbRef player, void *data, char *buffer) {
@@ -82,24 +83,21 @@ void mech_brief(DbRef player, void *data, char *buffer) {
   c = *buffer;
   buffer++;
   skipws(buffer);
-  DOCHECK_CONTEXT(mech->xcode.context, !*buffer, "Argument missing!");
-  DOCHECK_CONTEXT(mech->xcode.context, Readnum(v, buffer), "Invalid number!");
+  DOCHECK_CONTEXT(mech_context(mech), !*buffer, "Argument missing!");
+  DOCHECK_CONTEXT(mech_context(mech), Readnum(v, buffer), "Invalid number!");
   switch (toupper(c)) {
 #ifdef ADVANCED_LOS
   case 'A':
-    DOCHECK_CONTEXT(mech->xcode.context, v < 0 || v > 6,
-                    "Number out of range!");
+    DOCHECK_CONTEXT(mech_context(mech), v < 0 || v > 6, "Number out of range!");
     v = BOUNDED(0, v, 6);
-    mech->brief = mech->brief % 4;
-    mech->brief += v * 4;
+    mech_brief_mode_set(mech, mech_brief_mode(mech) % 4 + v * 4);
     mech_printf(mech, MECHALL, "Autocontact brevity set to %s.", ac_desc[v]);
     return;
 #endif
   case 'C':
-    DOCHECK_CONTEXT(mech->xcode.context, v < 0 || v > 3,
-                    "Number out of range!");
+    DOCHECK_CONTEXT(mech_context(mech), v < 0 || v > 3, "Number out of range!");
     v = BOUNDED(0, v, 3);
-    mech->brief = ((mech->brief / 4) * 4) + v;
+    mech_brief_mode_set(mech, ((mech_brief_mode(mech) / 4) * 4) + v);
     mech_printf(mech, MECHALL, "Contact brevity set to %s.", c_desc[v]);
     return;
   }
@@ -288,7 +286,7 @@ char getStatusChar(Mech *mech, Mech *mechTarget, int wCharNum) {
 void mech_contacts(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech;
   BattleMap *mech_map =
-                btech_context_get_map(mech->xcode.context, mech->mapindex),
+                btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
             *tmp_map;
   MapObject *building;
   int loop, i, j, argc, bearing, buffindex = 0;
@@ -311,10 +309,10 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 1);
 
-  isvb = (mech->brief % 4);
+  isvb = (mech_brief_mode(mech) % 4);
   if (argc > 0) {
     if (args[0][0] == '+') {
-      str = btech_attribute_read(mech->xcode.context->database, player,
+      str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
       if (!*str)
         strcpy(buff, default_contactoptions);
@@ -363,7 +361,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
                     SEE_ALLY | SEE_TARGET);
       } else
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       "Ignoring %c as contact option.", c);
     }
   } else {
@@ -373,15 +371,15 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   }
 
   if (isvb <= 2)
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Line of Sight Contacts:");
 
   for (loop = 0; loop < mech_map->first_free; loop++) {
-    if (!(mech_map->mechsOnMap[loop] != mech->mynum &&
+    if (!(mech_map->mechsOnMap[loop] != mech_dbref(mech) &&
           mech_map->mechsOnMap[loop] != -1))
       continue;
 
-    tempMech = (Mech *)btech_context_find_object(mech->xcode.context,
+    tempMech = (Mech *)btech_context_find_object(mech_context(mech),
                                                  mech_map->mechsOnMap[loop]);
 
     if (!tempMech)
@@ -389,28 +387,31 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     if (argc) {
       if (!((MechSeemsFriend(mech, tempMech) ? (see_what & SEE_ALLY)
                                              : (see_what & SEE_ENEMA)) ||
-            ((see_what & SEE_TARGET) && (tempMech->mynum == MechTarget(mech)))))
+            ((see_what & SEE_TARGET) &&
+             (mech_dbref(tempMech) == MechTarget(mech)))))
         continue;
       if (!(((see_what & SEE_SHUTDOWN) || Started(tempMech)) ||
             Destroyed(tempMech) ||
-            ((see_what & SEE_TARGET) && (tempMech->mynum == MechTarget(mech)))))
+            ((see_what & SEE_TARGET) &&
+             (mech_dbref(tempMech) == MechTarget(mech)))))
         continue;
       if (!(((see_what & SEE_DEAD) || !Destroyed(tempMech)) ||
-            ((see_what & SEE_TARGET) && (tempMech->mynum == MechTarget(mech)))))
+            ((see_what & SEE_TARGET) &&
+             (mech_dbref(tempMech) == MechTarget(mech)))))
         continue;
     }
     range = FlMechRange(mech_map, mech, tempMech);
     if (!(losflag = InLineOfSight(mech, tempMech, MechX(tempMech),
                                   MechY(tempMech), range)))
       continue;
-    if (is_good_obj(mech->xcode.context->database, tempMech->mynum)) {
+    if (is_good_obj(mech_context(mech)->database, mech_dbref(tempMech))) {
       if (!InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             0.0)) {
         mech_name = "something";
         inlos = 0;
       } else {
-        mech_name = btech_attribute_read(tempMech->xcode.context->database,
-                                         tempMech->mynum, A_MECHNAME,
+        mech_name = btech_attribute_read(mech_context(tempMech)->database,
+                                         mech_dbref(tempMech), A_MECHNAME,
                                          (char[LBUF_SIZE]){0});
         inlos = 1;
       }
@@ -441,9 +442,9 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       snprintf(buff, sizeof(buff),
                "%s%c%c%c[%s]%c %-12.12s x:%3d y:%3d z:%3d r:%4.1f b:%3d "
                "s:%5.1f h:%3d S:%c%c%c%c%c%s",
-               tempMech->mynum == MechTarget(mech) ? "[fg=red bold]"
-               : !MechSeemsFriend(mech, tempMech)  ? "[fg=yellow bold]"
-                                                   : "",
+               mech_dbref(tempMech) == MechTarget(mech) ? "[fg=red bold]"
+               : !MechSeemsFriend(mech, tempMech)       ? "[fg=yellow bold]"
+                                                        : "",
                (losflag & MECHLOSFLAG_SEESP) ? 'P' : ' ',
                (losflag & MECHLOSFLAG_SEESS) ? 'S' : ' ', weaponarc,
                mech_id(tempMech, MechSeemsFriend(mech, tempMech)).text,
@@ -451,7 +452,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                MechZ(tempMech), range, bearing, MechSpeed(tempMech),
                MechVFacing(tempMech), cStatus1, cStatus2, cStatus3, cStatus4,
                cStatus5,
-               (tempMech->mynum == MechTarget(mech) ||
+               (mech_dbref(tempMech) == MechTarget(mech) ||
                 !MechSeemsFriend(mech, tempMech))
                    ? "[reset]"
                    : "");
@@ -463,36 +464,36 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       snprintf(buff, sizeof(buff), "[%s] %-17s  Tonnage: %d",
                mech_id(tempMech, MechSeemsFriend(mech, tempMech)).text,
                mech_name, MechTons(tempMech));
-      notify(btech_context_evaluation(mech->xcode.context), player, buff);
+      notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Range: %.1f hex\tBearing: %d degrees",
                range, bearing);
-      notify(btech_context_evaluation(mech->xcode.context), player, buff);
+      notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Speed: %.1f KPH\tHeading: %d degrees",
                MechSpeed(tempMech), MechVFacing(tempMech));
-      notify(btech_context_evaluation(mech->xcode.context), player, buff);
+      notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      X, Y: %3d, %3d \tHeat: %.0f deg C.",
                MechX(tempMech), MechY(tempMech), MechHeat(tempMech));
-      notify(btech_context_evaluation(mech->xcode.context), player, buff);
+      notify(btech_context_evaluation(mech_context(mech)), player, buff);
       snprintf(buff, sizeof(buff), "      Movement Type: %s", move_type);
-      notify(btech_context_evaluation(mech->xcode.context), player, buff);
-      notify_printf(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(mech_context(mech)), player, buff);
+      notify_printf(btech_context_evaluation(mech_context(mech)), player,
                     "      Mech is in %s Arc",
                     GetArcID(mech, InWeaponArc(mech, MechFX(tempMech),
                                                MechFY(tempMech))));
       if (MechStatus(tempMech) & DESTROYED)
-        notify(btech_context_evaluation(mech->xcode.context), player,
+        notify(btech_context_evaluation(mech_context(mech)), player,
                "      Mech Destroyed");
       if (!(MechStatus(tempMech) & STARTED))
-        notify(btech_context_evaluation(mech->xcode.context), player,
+        notify(btech_context_evaluation(mech_context(mech)), player,
                "      Mech Shutdown");
       if (Fallen(tempMech))
-        notify(btech_context_evaluation(mech->xcode.context), player,
+        notify(btech_context_evaluation(mech_context(mech)), player,
                "      Mech has Fallen!");
       if (Jumping(tempMech))
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       "      Mech is Jumping!\tJump Heading: %d",
                       MechJumpHeading(tempMech));
-      notify(btech_context_evaluation(mech->xcode.context), player, " ");
+      notify(btech_context_evaluation(mech_context(mech)), player, " ");
     }
   }
 
@@ -510,29 +511,29 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         continue;
 
       if (!(building->obj && (tmp_map = btech_context_get_map(
-                                  mech->xcode.context, building->obj))))
+                                  mech_context(mech), building->obj))))
         continue;
       if (BuildIsInvis(tmp_map))
         continue;
-      if ((j = !lock_test(btech_context_evaluation(mech->xcode.context), player,
-                          player, mech->mynum, tmp_map->mynum, LUA_LOCK_ENTER,
-                          LUA_LOCK_OPERATION_BTECH_CONTACT, true, &lock,
-                          &lock_result)) &&
+      if ((j = !lock_test(btech_context_evaluation(mech_context(mech)), player,
+                          player, mech_dbref(mech), tmp_map->mynum,
+                          LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_CONTACT,
+                          true, &lock, &lock_result)) &&
           BuildIsHidden(tmp_map))
         continue;
       bearing = FindBearing(MechFX(mech), MechFY(mech), fx, fy);
       weaponarc = getWeaponArc(mech, InWeaponArc(mech, fx, fy));
 
       mech_name =
-          btech_attribute_read(mech->xcode.context->database, building->obj,
+          btech_attribute_read(mech_context(mech)->database, building->obj,
                                A_MECHNAME, (char[LBUF_SIZE]){0});
       if (!mech_name || !*mech_name) {
         strncpy(new,
-                game_object_name(mech->xcode.context->database, building->obj),
+                game_object_name(mech_context(mech)->database, building->obj),
                 LBUF_SIZE - 1);
         styled_text_strip(
-            mech->xcode.context->database->styled_text_palette,
-            game_object_name(mech->xcode.context->database, building->obj), new,
+            mech_context(mech)->database->styled_text_palette,
+            game_object_name(mech_context(mech)->database, building->obj), new,
             sizeof(new));
         mech_name = new;
       }
@@ -568,12 +569,12 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           sbuff[j] = loop;
         }
     for (loop = 0; loop < buffindex; loop++)
-      notify(btech_context_evaluation(mech->xcode.context), player,
+      notify(btech_context_evaluation(mech_context(mech)), player,
              bufflist[sbuff[loop]]);
   }
 
   if (isvb <= 2)
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "End Contact List");
 }
 

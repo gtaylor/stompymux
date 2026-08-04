@@ -59,6 +59,13 @@ while IFS= read -r match; do
 done < <(rg -n -g '*.[ch]' -- '\bmech->' src/btech/core src/btech/commands \
   src/btech/integration || true)
 
+while IFS= read -r match; do
+  echo "$match: converted sensors boundary accesses Mech layout directly"
+  status=1
+done < <(rg -n -g '*.[ch]' \
+  -- '\b(mech|[A-Za-z_][A-Za-z0-9_]*Mech|seer|target|spotter|m|t)->' \
+  src/btech/sensors || true)
+
 if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   echo "src/btech/src: legacy nested source tree is not allowed"
   status=1

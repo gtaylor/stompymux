@@ -23,6 +23,7 @@
 #include "map.h"
 #include "map_terrain.h"
 #include "mech.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_lostracer_api.h"
@@ -322,19 +323,19 @@ int InLineOfSight(Mech *mech, Mech *target, int x, int y, float hexRange) {
   int arc;
   int losflag;
 
-  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                        tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
-                               mech->mynum, mech->mapindex));
-    mech->mapindex = -1;
+                               mech_dbref(mech), mech_map_dbref(mech)));
+    mech_map_dbref_set(mech, NOTHING);
     return 0;
   }
   if (x < 0 || y < 0 || y >= map->map_height || x >= map->map_width) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                        tprintf("x:%d y:%d out of bounds for #%ld (LOS check)",
-                               x, y, mech ? mech->mynum : -1));
+                               x, y, mech ? mech_dbref(mech) : -1));
   }
 
   /* Possibly do a quickie check only */
@@ -353,11 +354,11 @@ int InLineOfSight(Mech *mech, Mech *target, int x, int y, float hexRange) {
     losflag = MechToMech_LOSFlag(map, mech, target);
     if (Sensor_CanSee(mech, target, &losflag, arc, hexRange, map->mapvis,
                       map->maplight, map->cloudbase)) {
-      map->LOSinfo[mech->mapnumber][target->mapnumber] |=
+      map->LOSinfo[mech_map_slot(mech)][mech_map_slot(target)] |=
           (MECHLOSFLAG_SEEN | MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS);
       return 1;
     } else {
-      map->LOSinfo[mech->mapnumber][target->mapnumber] &=
+      map->LOSinfo[mech_map_slot(mech)][mech_map_slot(target)] &=
           ~(MECHLOSFLAG_SEEN | MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS);
       return 0;
     }
@@ -377,6 +378,6 @@ int InLineOfSight(Mech *mech, Mech *target, int x, int y, float hexRange) {
 void mech_losemit(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALSP);
   MechLOSBroadcast(mech, buffer);
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "Broadcast done.");
 }

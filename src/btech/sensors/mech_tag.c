@@ -12,6 +12,7 @@
 #include "legacy_macros.h"
 #include "mech.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_notify.h"
@@ -41,12 +42,12 @@ static void tag_recycle_event(MuxEvent *e) {
     return;
   }
 
-  target = btech_context_get_mech(mech->xcode.context, TAGTarget(mech));
+  target = btech_context_get_mech(mech_context(mech), TAGTarget(mech));
 
   if (!target)
     return;
 
-  if (TaggedBy(target) != mech->mynum)
+  if (TaggedBy(target) != mech_dbref(mech))
     return;
 
   mech_notify(mech, MECHALL,
@@ -62,14 +63,13 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context, !HasTAG(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !HasTAG(mech),
                   "This unit is not equipped with TAG!");
-  DOCHECK_CONTEXT(mech->xcode.context, isTAGDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), isTAGDestroyed(mech),
                   "Your TAG system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_event_count(mech, EVENT_TAG_RECYCLE),
+  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_TAG_RECYCLE),
                   "Your TAG system is recycling!");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_parseattributes(buffer, args, 2) != 1,
                   "Invalid number of arguments to function!");
 
@@ -77,7 +77,7 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   if (!strcmp(args[0], "-")) {
     refTarget = TAGTarget(mech);
 
-    DOCHECK_CONTEXT(mech->xcode.context, refTarget <= 0,
+    DOCHECK_CONTEXT(mech_context(mech), refTarget <= 0,
                     "You are not currently tagging anything!");
 
     stopTAG(mech);
@@ -87,7 +87,7 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   /* TAG something... anything :) */
   refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
-  target = btech_context_get_mech(mech->xcode.context, refTarget);
+  target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (target) {
     range = FaMechRange(mech, target);
@@ -96,13 +96,13 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   } else
     refTarget = 0;
 
-  DOCHECK_CONTEXT(mech->xcode.context, refTarget < 1 || !LOS,
+  DOCHECK_CONTEXT(mech_context(mech), refTarget < 1 || !LOS,
                   "That is not a valid TAG targetID. Try again.");
-  DOCHECK_CONTEXT(mech->xcode.context, MechTeam(mech) == MechTeam(target),
+  DOCHECK_CONTEXT(mech_context(mech), MechTeam(mech) == MechTeam(target),
                   "You can't TAG friendly units!");
-  DOCHECK_CONTEXT(mech->xcode.context, mech == target,
+  DOCHECK_CONTEXT(mech_context(mech), mech == target,
                   "You can't TAG yourself!");
-  DOCHECK_CONTEXT(mech->xcode.context, range > TAG_LONG,
+  DOCHECK_CONTEXT(mech_context(mech), range > TAG_LONG,
                   tprintf("Out of range! TAG ranges are %d/%d/%d", TAG_SHORT,
                           TAG_MED, TAG_LONG));
 
@@ -118,8 +118,8 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "You light up %s with your TAG.",
               mech_to_mech_display_id(mech, target).text);
 
-  TaggedBy(target) = mech->mynum;
-  TAGTarget(mech) = target->mynum;
+  TaggedBy(target) = mech_dbref(mech);
+  TAGTarget(mech) = mech_dbref(target);
 
   mech_event_schedule(mech, EVENT_TAG_RECYCLE, tag_recycle_event,
                       TAGRECYCLE_TICK, 1);
@@ -139,10 +139,10 @@ int isTAGDestroyed(Mech *mech) {
 void stopTAG(Mech *mech) {
   Mech *target;
 
-  target = btech_context_get_mech(mech->xcode.context, TAGTarget(mech));
+  target = btech_context_get_mech(mech_context(mech), TAGTarget(mech));
 
   if (target)
-    if (TaggedBy(target) == mech->mynum)
+    if (TaggedBy(target) == mech_dbref(mech))
       TaggedBy(target) = 0;
 
   if (TAGTarget(mech) > 0) {
@@ -166,20 +166,21 @@ void checkTAG(Mech *mech) {
   if (refTarget <= 0)
     return;
 
-  target = btech_context_get_mech(mech->xcode.context, refTarget);
+  target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (!target) {
     stopTAG(mech);
     return;
   }
 
-  if (TaggedBy(target) != mech->mynum) {
+  if (TaggedBy(target) != mech_dbref(mech)) {
     stopTAG(mech);
     return;
   }
 
   range = FlMechRange(
-      btech_context_get_map(mech->xcode.context, mech->mapindex), mech, target);
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech)), mech,
+      target);
   LOS = InLineOfSight_NB(mech, target, MechX(target), MechY(target), range);
 
   if (!LOS || (range > TAG_LONG)) {

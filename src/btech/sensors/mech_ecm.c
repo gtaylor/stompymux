@@ -18,6 +18,7 @@
 #include "btconfig.h"
 #include "map_terrain.h"
 #include "mech.h"
+#include "mech_identity_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
 #include "mech_utils_api.h"
@@ -127,12 +128,12 @@ void checkECM(Mech *objMech) {
   int tMark = 0;
 
   if (!(objMapmap = btech_context_find_object(
-            objMech->xcode.context, objMech->mapindex))) /* get our map */
+            mech_context(objMech), mech_map_dbref(objMech)))) /* get our map */
     return;
 
   for (wIter = 0; wIter < objMapmap->first_free; wIter++) {
     if (!(objOtherMech = btech_context_find_object(
-              objMech->xcode.context, objMapmap->mechsOnMap[wIter])))
+              mech_context(objMech), objMapmap->mechsOnMap[wIter])))
       continue;
 
     if ((range = FaMechRange(objOtherMech, objMech)) > ECM_RANGE)
@@ -196,10 +197,10 @@ void checkECM(Mech *objMech) {
   tCheckECCM = ((wFriendlyECCM != 0) || (wFriendlyAngelECCM != 0) ||
                 (wUnFriendlyECM != 0) || (wUnFriendlyAngelECM != 0));
 
-  /* btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+  /* btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
    * tprintf("Checking unit %d. ECMDelta: %d. ECCMDelta: %d. CheckECM: %d.
    * CheckECCM:
-   * %d",objMech->mynum,wFriendlyECMDelta,wFriendlyECCMDelta,tCheckECM,tCheckECCM));
+   * %d",mech_dbref(objMech),wFriendlyECMDelta,wFriendlyECCMDelta,tCheckECM,tCheckECCM));
    */
 
   /* Now we do our checks... */

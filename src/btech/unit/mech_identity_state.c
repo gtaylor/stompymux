@@ -10,9 +10,13 @@ DbRef mech_map_dbref(const Mech *mech) { return mech->mapindex; }
 
 int mech_map_slot(const Mech *mech) { return mech->mapnumber; }
 
+int mech_brief_mode(const Mech *mech) { return mech->brief; }
+
 void mech_map_dbref_set(Mech *mech, DbRef map_dbref) {
   mech->mapindex = map_dbref;
 }
+
+void mech_brief_mode_set(Mech *mech, int mode) { mech->brief = (char)mode; }
 
 void mech_unit_id_set(Mech *mech, char first, char second) {
   mech->ID[0] = first;

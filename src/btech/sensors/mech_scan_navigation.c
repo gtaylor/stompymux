@@ -1,8 +1,9 @@
+#include "mech_identity_api.h"
 #include "mech_scan_internal.h"
 
 void mech_bearing(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech = NULL;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
   int argc;
@@ -19,14 +20,13 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   cch(MECH_USUAL);
   x0 = MechFX(mech);
   y0 = MechFY(mech);
-  if (mech->mapindex != -1) {
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  if (mech_map_dbref(mech) != -1) {
+    mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 4);
     if (argc == 0) {
       /* Bearing to current target */
       if (MechTarget(mech) != -1) {
-        tempMech =
-            btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
@@ -87,7 +87,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
 
 void mech_range(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech = NULL;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
   int argc;
@@ -107,14 +107,13 @@ void mech_range(DbRef player, void *data, char *buffer) {
   x0 = MechFX(mech);
   y0 = MechFY(mech);
   z0 = MechFZ(mech);
-  if (mech->mapindex != -1) {
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  if (mech_map_dbref(mech) != -1) {
+    mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 4);
     if (argc == 0) {
       /* Range to current target */
       if (MechTarget(mech) != -1) {
-        tempMech =
-            btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
@@ -123,7 +122,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
           }
         }
       }
-      DOCHECK_CONTEXT(mech->xcode.context, !FindTargetXY(mech, &x1, &y1, &z1),
+      DOCHECK_CONTEXT(mech_context(mech), !FindTargetXY(mech, &x1, &y1, &z1),
                       "There is no default target!");
       if (MapIsDark(mech_map) && !tempMech)
         z1 = ZSCALE * MechZ(mech);
@@ -194,7 +193,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
 
 void mech_vector(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *tempMech = NULL;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[6];
   int argc;
@@ -214,14 +213,13 @@ void mech_vector(DbRef player, void *data, char *buffer) {
   x0 = MechFX(mech);
   y0 = MechFY(mech);
   z0 = MechFZ(mech);
-  if (mech->mapindex != -1) {
-    mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  if (mech_map_dbref(mech) != -1) {
+    mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
     argc = mech_parseattributes(buffer, args, 6);
     if (argc == 0) {
       /* Range to current target */
       if (MechTarget(mech) != -1) {
-        tempMech =
-            btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+        tempMech = btech_context_get_mech(mech_context(mech), MechTarget(mech));
         if (tempMech) {
           if (!InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech),
                              FaMechRange(mech, tempMech))) {
@@ -230,7 +228,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
           }
         }
       }
-      DOCHECK_CONTEXT(mech->xcode.context, !FindTargetXY(mech, &x1, &y1, &z1),
+      DOCHECK_CONTEXT(mech_context(mech), !FindTargetXY(mech, &x1, &y1, &z1),
                       "There is no default target!");
       strcpy(buff, "Vector to default target is: ");
     } else if (argc == 2) {

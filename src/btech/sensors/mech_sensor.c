@@ -20,6 +20,7 @@
 #include "legacy_macros.h"
 #include "map.h"
 #include "mech.h"
+#include "mech_identity_api.h"
 #include "mech_macros.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
@@ -50,7 +51,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
                       float range, int wAmmoMode) {
   int bth1, bth2;
   int wLightMod = (wAmmoMode & AC_INCENDIARY_MODE) ? 1 : 0;
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   maplight = maplight + wLightMod;
 
@@ -66,8 +68,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
     bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                    mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("%d: BTH S+%d", mech->mynum, bth2));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("%d: BTH S+%d", mech_dbref(mech), bth2));
 #endif
     return bth2;
   }
@@ -76,8 +78,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
     bth1 = sensors[(int)MechSensor(mech)[0]].tohitbonus_func(mech, target, map,
                                                              flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("%d: BTH P+%d", mech->mynum, bth1));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
+                       tprintf("%d: BTH P+%d", mech_dbref(mech), bth1));
 #endif
     return bth1;
   }
@@ -86,8 +88,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
   bth2 = 1 + sensors[(int)MechSensor(mech)[1]].tohitbonus_func(
                  mech, target, map, flag, maplight);
 #ifdef SENSOR_BTH_DEBUG
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("%d: BTH +%d/+%d", mech->mynum, bth1, bth2));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
+                     tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
 #endif
   return MIN(bth1, bth2);
 }
@@ -95,7 +97,8 @@ int Sensor_ToHitBonus(Mech *mech, Mech *target, int flag, int maplight,
 int Sensor_CanSee(Mech *mech, Mech *target, int *flag, int arc, float range,
                   int mapvis, int maplight, int cloudbase) {
   int i, j = 0, sn;
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   /* Make sure we're okay */
   if (!map || !mech)
@@ -214,7 +217,8 @@ int Sensor_DriverBaseChance(Mech *mech) {
 
 int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
                 int chance_divisor, int mapvis, int maplight) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int chance = (Sensor_ArcBaseChance(MechType(mech), arc) *
                 ((target && MechTeam(mech) != MechTeam(target))
                      ? Sensor_DriverBaseChance(mech)
@@ -241,12 +245,13 @@ int Sensor_Sees(Mech *mech, Mech *target, int f, int arc, float range, int snum,
       chance = chance / 4;
     }
   }
-  if (range < 3 || btech_random_range(mech->xcode.context, 1, 10000) <
+  if (range < 3 || btech_random_range(mech_context(mech), 1, 10000) <
                        ((chance * ch2) / chance_divisor)) {
-    if (target && is_in_character(mech->xcode.context->database, mech->mynum) &&
-        is_in_character(mech->xcode.context->database, target->mynum) &&
+    if (target &&
+        is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
+        is_in_character(mech_context(mech)->database, mech_dbref(target)) &&
         MechTeam(mech) != MechTeam(target))
-      if (!btech_random_range(mech->xcode.context, 0, 5))
+      if (!btech_random_range(mech_context(mech), 0, 5))
         MadePerceptionRoll(mech, -2);
     return 1;
   }
@@ -307,7 +312,7 @@ SensorFlagText sensor_flag_text(int flags) {
 #define AUTOCON_SHORT 0x04
 
 static int valid_to_notice(Mech *mech, Mech *targ, int los) {
-  int bf = (mech->brief / 4);
+  int bf = (mech_brief_mode(mech) / 4);
   int foe;
 
   if ((los < 0 && MechSeemsFriend(mech, targ)) ||
@@ -389,17 +394,17 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
         mech_notify(mech, MECHALL, buf);
       }
       if ((MechStatus(mech) & LOCK_TARGET) &&
-          target->mynum == MechTarget(mech)) {
+          mech_dbref(target) == MechTarget(mech)) {
         mech_notify(mech, MECHALL,
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mech);
       }
 #ifdef SENSOR_DEBUG
       snprintf(buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
-               mech->mynum, target->mynum,
+               mech_dbref(mech), mech_dbref(target),
                (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
                sensor_flag_text(f).text);
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
+      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                          buf);
 #endif
       MechPNumSeen(mech)++;
@@ -451,10 +456,11 @@ void Sensor_DoWeSeeNow(Mech *mech, unsigned short *fl, float range, int x,
         mech_event_cancel(target, EVENT_HIDE);
 #ifdef SENSOR_DEBUG
       snprintf(buf, sizeof(buf),
-               "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)", mech->mynum,
-               target->mynum, (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
+               "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)",
+               mech_dbref(mech), mech_dbref(target),
+               (f & (MECHLOSFLAG_SEESP | MECHLOSFLAG_SEESS)),
                sensor_flag_text(f).text, seeanew);
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_SENSOR, "%s",
+      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                          buf);
 #endif
     } else
@@ -480,8 +486,7 @@ void update_LOSinfo(DbRef obj, BattleMap *map) {
       continue;
     for (j = i + 1; j < map->first_free; j++)
       if (1) {
-        target =
-            btech_context_get_mech(mech->xcode.context, map->mechsOnMap[j]);
+        target = btech_context_get_mech(mech_context(mech), map->mechsOnMap[j]);
         if (!target)
           continue;
         range = FaMechRange(mech, target);
@@ -519,8 +524,7 @@ void update_LOSinfo(DbRef obj, BattleMap *map) {
       continue;
     for (j = 0; j < i; j++)
       if (1) {
-        target =
-            btech_context_get_mech(mech->xcode.context, map->mechsOnMap[j]);
+        target = btech_context_get_mech(mech_context(mech), map->mechsOnMap[j]);
         if (!target)
           continue;
         range = FaMechRange(mech, target);

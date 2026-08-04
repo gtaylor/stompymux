@@ -1,8 +1,9 @@
+#include "mech_identity_api.h"
 #include "mech_scan_internal.h"
 
 void mech_scan(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
   int mapx = 0, mapy = 0;
@@ -15,12 +16,12 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   int dob = 0, doh = 0;
   int options = SHOW_INFO | SHOW_ARMOR | SHOW_WEAPONS;
 
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   cch(MECH_USUAL);
   numargs = mech_parseattributes(buffer, args, 4);
-  DOCHECK_CONTEXT(mech->xcode.context, numargs > 3,
+  DOCHECK_CONTEXT(mech_context(mech), numargs > 3,
                   "Wrong number of arguments to scan!");
-  DOCHECK_CONTEXT(mech->xcode.context, !MechScanRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !MechScanRange(mech),
                   "Your system seems to be inoperational.");
   switch (numargs) {
   case 1:
@@ -29,20 +30,20 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     if (args[0][1]) {
       targetID[1] = args[0][1];
       target = FindTargetDBREFFromMapNumber(mech, targetID);
-      tempMech = btech_context_get_mech(mech->xcode.context, target);
-      DOCHECK_CONTEXT(mech->xcode.context, !tempMech,
+      tempMech = btech_context_get_mech(mech_context(mech), target);
+      DOCHECK_CONTEXT(mech_context(mech), !tempMech,
                       "Target is not in line of sight!");
       range = FaMechRange(mech, tempMech);
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight(mech, tempMech, MechX(tempMech),
                                      MechY(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
-          mech->xcode.context,
+          mech_context(mech),
           !InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             range),
           "That target isn't seen well enough by the scanners for scanning!");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !MechIsObservator(mech) &&
                           (int)range > MechScanRange(mech),
                       "Target is out of scanner range.");
@@ -67,25 +68,25 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   case 0:
     /* scan current target... */
     target = MechTarget(mech);
-    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    tempMech = btech_context_get_mech(mech_context(mech), target);
     if (tempMech) {
       range = FaMechRange(mech, tempMech);
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !MechIsObservator(mech) &&
                           (int)range > MechScanRange(mech),
                       "Target is out of scanner range.");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight(mech, tempMech, MechX(tempMech),
                                      MechY(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
-          mech->xcode.context,
+          mech_context(mech),
           !InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             range),
           "That target isn't seen well enough by the scanners for scanning!");
     } else {
       if (!(MechStatus(mech) & LOCK_BUILDING))
-        DOCHECK_CONTEXT(mech->xcode.context,
+        DOCHECK_CONTEXT(mech_context(mech),
                         !FindTargetXY(mech, &enemyX, &enemyY, &enemyZ),
                         "No default target set!");
       mapx = MechTargX(mech);
@@ -95,11 +96,11 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy, fz);
       ValidCoordA(mech_map, mapx, mapy,
                   "Those coordinates are out of scanner range.");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !MechIsObservator(mech) &&
                           (int)range > MechScanRange(mech),
                       "Those coordinates are out of scanner range.");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight_NB(mech, tempMech, mapx, mapy, range),
                       "Target hex is not in line of sight!");
       /* look for enemies in that hex... */
@@ -132,9 +133,9 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
     fz = ZSCALE * Elevation(mech_map, mapx, mapy);
     range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy, fz);
-    DOCHECK_CONTEXT(mech->xcode.context, (int)range > MechScanRange(mech),
+    DOCHECK_CONTEXT(mech_context(mech), (int)range > MechScanRange(mech),
                     "Those coordinates are out of scanner range.");
-    DOCHECK_CONTEXT(mech->xcode.context,
+    DOCHECK_CONTEXT(mech_context(mech),
                     !InLineOfSight(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     break;
@@ -146,15 +147,15 @@ void mech_scan(DbRef player, void *data, char *buffer) {
       targetID[0] = args[0][0];
       targetID[1] = args[0][1];
       target = FindTargetDBREFFromMapNumber(mech, targetID);
-      tempMech = btech_context_get_mech(mech->xcode.context, target);
-      DOCHECK_CONTEXT(mech->xcode.context, !tempMech,
+      tempMech = btech_context_get_mech(mech_context(mech), target);
+      DOCHECK_CONTEXT(mech_context(mech), !tempMech,
                       "Target is not in line of sight!");
       range = FaMechRange(mech, tempMech);
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight(mech, tempMech, MechX(tempMech),
                                      MechY(tempMech), range),
                       "Target is not in line of sight!");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !MechIsObservator(mech) &&
                           (int)range > MechScanRange(mech),
                       "Target is out of scanner range.");
@@ -178,10 +179,10 @@ void mech_scan(DbRef player, void *data, char *buffer) {
                 "Those coordinates are out of scanner range.");
     MapCoordToRealCoord(mapx, mapy, &fx, &fy);
     range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy, fz);
-    DOCHECK_CONTEXT(mech->xcode.context,
+    DOCHECK_CONTEXT(mech_context(mech),
                     !MechIsObservator(mech) && (int)range > MechScanRange(mech),
                     "Those coordinates are out of scanner range.");
-    DOCHECK_CONTEXT(mech->xcode.context,
+    DOCHECK_CONTEXT(mech_context(mech),
                     !InLineOfSight(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     fz = ZSCALE * Elevation(mech_map, mapx, mapy);
@@ -192,12 +193,12 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   }
   if (tempMech) {
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                           range),
         "That target isn't seen well enough by the scanners for report!");
     DOCHECK_CONTEXT(
-        mech->xcode.context, (MechType(tempMech) == CLASS_MW),
+        mech_context(mech), (MechType(tempMech) == CLASS_MW),
         "Your scanners cannot give you precise information on targets that "
         "small!");
     PrintEnemyStatus(evaluation, player, mech, tempMech, range, options);
@@ -222,7 +223,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
 
 void mech_report(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[3];
   int mapx = 0, mapy = 0;
@@ -233,12 +234,12 @@ void mech_report(DbRef player, void *data, char *buffer) {
   float fx, fy, fz = 0.0;
   float range = 0.0, enemyX, enemyY, enemyZ;
 
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   cch(MECH_USUAL);
   numargs = mech_parseattributes(buffer, args, 3);
-  DOCHECK_CONTEXT(mech->xcode.context, numargs > 2,
+  DOCHECK_CONTEXT(mech_context(mech), numargs > 2,
                   "Wrong number of arguments to report!");
-  DOCHECK_CONTEXT(mech->xcode.context, !MechScanRange(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !MechScanRange(mech),
                   "Your system seems to be inoperational.");
   switch (numargs) {
   case 1:
@@ -246,16 +247,16 @@ void mech_report(DbRef player, void *data, char *buffer) {
     targetID[0] = args[0][0];
     targetID[1] = args[0][1];
     target = FindTargetDBREFFromMapNumber(mech, targetID);
-    tempMech = btech_context_get_mech(mech->xcode.context, target);
-    DOCHECK_CONTEXT(mech->xcode.context, !tempMech,
+    tempMech = btech_context_get_mech(mech_context(mech), target);
+    DOCHECK_CONTEXT(mech_context(mech), !tempMech,
                     "Target is not in line of sight!");
     range = FaMechRange(mech, tempMech);
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight(mech, tempMech, MechX(tempMech), MechY(tempMech), range),
         "Target is not in line of sight!");
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                           range),
         "That target isn't seen well enough by the scanners for a report!");
@@ -268,43 +269,43 @@ void mech_report(DbRef player, void *data, char *buffer) {
     range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), fx, fy, fz);
     ValidCoordA(mech_map, mapx, mapy,
                 "Those coordinates are out of scanner range.");
-    DOCHECK_CONTEXT(mech->xcode.context, (int)range > MechScanRange(mech),
+    DOCHECK_CONTEXT(mech_context(mech), (int)range > MechScanRange(mech),
                     "Those coordinates are out of scanner range.");
-    DOCHECK_CONTEXT(mech->xcode.context,
+    DOCHECK_CONTEXT(mech_context(mech),
                     !InLineOfSight(mech, tempMech, mapx, mapy, range),
                     "Coordinates are not in line of sight!");
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight_NB(mech, tempMech, mapx, mapy, range),
         "That target isn't seen well enough by the scanners for a report!");
     fz = ZSCALE * Elevation(mech_map, mapx, mapy);
     /* look for enemies in that hex... */
     tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
-    DOCHECK_CONTEXT(mech->xcode.context, !tempMech, "No target found.");
+    DOCHECK_CONTEXT(mech_context(mech), !tempMech, "No target found.");
     break;
   case 0:
     /* report current target... */
     target = MechTarget(mech);
-    tempMech = btech_context_get_mech(mech->xcode.context, target);
+    tempMech = btech_context_get_mech(mech_context(mech), target);
     if (tempMech) {
       range = FaMechRange(mech, tempMech);
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight(mech, tempMech, MechX(tempMech),
                                      MechY(tempMech), range),
                       "Target is not in line of sight!");
       DOCHECK_CONTEXT(
-          mech->xcode.context,
+          mech_context(mech),
           !InLineOfSight_NB(mech, tempMech, MechX(tempMech), MechY(tempMech),
                             range),
           "That target isn't seen well enough by the scanners for a report!");
     } else {
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech),
                       !FindTargetXY(mech, &enemyX, &enemyY, &enemyZ),
                       "No default target set!");
       /* look for enemies in that hex... */
       tempMech = find_mech_in_hex(mech, mech_map, mapx, mapy, 1);
-      DOCHECK_CONTEXT(mech->xcode.context, !tempMech, "You don't see a thing.");
-      DOCHECK_CONTEXT(mech->xcode.context,
+      DOCHECK_CONTEXT(mech_context(mech), !tempMech, "You don't see a thing.");
+      DOCHECK_CONTEXT(mech_context(mech),
                       !InLineOfSight(mech, tempMech, MechX(tempMech),
                                      MechY(tempMech), range),
                       "You don't see a thing.");
@@ -344,9 +345,9 @@ void PrintReport(EvaluationContext *evaluation, DbRef player, Mech *mech,
   int weaponarc;
   char *mech_name;
 
-  mech_name =
-      btech_attribute_read(tempMech->xcode.context->database, tempMech->mynum,
-                           A_MECHNAME, (char[LBUF_SIZE]){0});
+  mech_name = btech_attribute_read(mech_context(tempMech)->database,
+                                   mech_dbref(tempMech), A_MECHNAME,
+                                   (char[LBUF_SIZE]){0});
   snprintf(buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
            mech_id(tempMech, MechSeemsFriend(mech, tempMech)).text, mech_name,
            MechTons(tempMech));
@@ -461,7 +462,7 @@ void PrintEnemyStatus(EvaluationContext *evaluation, DbRef player, Mech *mymech,
       notify(evaluation, player, "Torso is 60 degrees left");
     if (MechCarrying(mech) > 0)
       if ((tempMech =
-               btech_context_get_mech(mech->xcode.context, MechCarrying(mech))))
+               btech_context_get_mech(mech_context(mech), MechCarrying(mech))))
         notify_printf(evaluation, player, "Towing %s.",
                       mech_to_mech_display_id(mech, tempMech).text);
     notify(evaluation, player, " ");

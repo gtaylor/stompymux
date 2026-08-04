@@ -1,7 +1,8 @@
+#include "mech_identity_api.h"
 #include "mech_scan_internal.h"
 
 void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
@@ -52,13 +53,13 @@ void PrintEnemyWeaponStatus(Mech *mech, DbRef player) {
 
 void mech_sight(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[5];
   int argc;
   int weapnum;
 
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   cch(MECH_USUAL);
   argc = mech_parseattributes(buffer, args, 5);
   if (argc >= 1) {
@@ -71,7 +72,7 @@ void mech_sight(DbRef player, void *data, char *buffer) {
 
 void mech_view(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data, *target;
-  EvaluationContext *evaluation = btech_context_evaluation(mech->xcode.context);
+  EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int targetnum;
   char targetID[5];
   char *args[5];
@@ -85,19 +86,19 @@ void mech_view(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You do not have a default target set!");
       return;
     }
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(mech));
+    target = btech_context_get_mech(mech_context(mech), MechTarget(mech));
     if (!target) {
       mech_notify(mech, MECHALL, "Invalid default target!");
       MechTarget(mech) = -1;
       return;
     }
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
                           FaMechRange(mech, target)),
         "That target isn't seen well enough by the scannfers for viewing!");
-    if (*(target_desc = btech_attribute_read(target->xcode.context->database,
-                                             target->mynum, A_MECHDESC,
+    if (*(target_desc = btech_attribute_read(mech_context(target)->database,
+                                             mech_dbref(target), A_MECHDESC,
                                              (char[LBUF_SIZE]){0})))
       notify(evaluation, player, target_desc);
     else
@@ -110,7 +111,7 @@ void mech_view(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHPILOT, "Target is not in line of sight!");
       return;
     }
-    target = btech_context_get_mech(mech->xcode.context, targetnum);
+    target = btech_context_get_mech(mech_context(mech), targetnum);
 
     if (!target || !InLineOfSight(mech, target, MechX(target), MechY(target),
                                   FaMechRange(mech, target))) {
@@ -119,13 +120,13 @@ void mech_view(DbRef player, void *data, char *buffer) {
     }
 
     DOCHECK_CONTEXT(
-        mech->xcode.context,
+        mech_context(mech),
         !InLineOfSight_NB(mech, target, MechX(target), MechY(target),
                           FaMechRange(mech, target)),
         "That target isn't seen well enough by the scanners for viewing!");
 
-    if (*(target_desc = btech_attribute_read(target->xcode.context->database,
-                                             target->mynum, A_MECHDESC,
+    if (*(target_desc = btech_attribute_read(mech_context(target)->database,
+                                             mech_dbref(target), A_MECHDESC,
                                              (char[LBUF_SIZE]){0})))
       notify(evaluation, player, target_desc);
     else

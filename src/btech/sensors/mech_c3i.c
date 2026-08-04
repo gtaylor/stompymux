@@ -19,6 +19,7 @@
 #include "mech.h"
 #include "mech_c3_misc_api.h"
 #include "mech_c3i_api.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_notify.h"
@@ -42,7 +43,7 @@ int getFreeC3iNetworkPos(Mech *mech, Mech *mechToAdd) {
     otherRef = MechC3iNetworkElem(mech, i);
 
     if (otherRef > 0) {
-      if (otherRef == mechToAdd->mynum)
+      if (otherRef == mech_dbref(mechToAdd))
         return C3_POS_IN_NETWORK;
     } else
       return i;
@@ -55,18 +56,19 @@ void replicateC3iNetwork(Mech *mechSrc, Mech *mechDest) {
   int i;
   DbRef otherRef;
 
-  debugC3(mechSrc->xcode.context, tprintf("REPLICATE: %ld's C3i network to %ld",
-                                          mechSrc->mynum, mechDest->mynum));
+  debugC3(mech_context(mechSrc),
+          tprintf("REPLICATE: %ld's C3i network to %ld", mech_dbref(mechSrc),
+                  mech_dbref(mechDest)));
 
   clearC3iNetwork(mechDest, 0);
 
-  MechC3iNetworkElem(mechDest, 0) = mechSrc->mynum;
+  MechC3iNetworkElem(mechDest, 0) = mech_dbref(mechSrc);
   MechC3iNetworkSize(mechDest) = 1;
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
     otherRef = MechC3iNetworkElem(mechSrc, i);
 
-    if (otherRef != mechDest->mynum) {
+    if (otherRef != mech_dbref(mechDest)) {
       MechC3iNetworkElem(mechDest, MechC3iNetworkSize(mechDest)) = otherRef;
       MechC3iNetworkSize(mechDest) += 1;
     }
@@ -82,8 +84,8 @@ void addMechToC3iNetwork(Mech *mech, Mech *mechToAdd) {
   int i;
   int wPos = -1;
 
-  debugC3(mech->xcode.context, tprintf("ADD: %ld to the C3i network of %ld",
-                                       mechToAdd->mynum, mech->mynum));
+  debugC3(mech_context(mech), tprintf("ADD: %ld to the C3i network of %ld",
+                                      mech_dbref(mechToAdd), mech_dbref(mech)));
 
   /* Find a position to add the new mech into my network */
   wPos = getFreeC3iNetworkPos(mech, mechToAdd);
@@ -94,7 +96,7 @@ void addMechToC3iNetwork(Mech *mech, Mech *mechToAdd) {
     return;
 
   /* Well, we have a valid position, so let's put this mech in the network */
-  MechC3iNetworkElem(mech, wPos) = mechToAdd->mynum;
+  MechC3iNetworkElem(mech, wPos) = mech_dbref(mechToAdd);
   MechC3iNetworkSize(mech) += 1;
 
   mech_notify(mech, MECHALL,
@@ -111,10 +113,10 @@ void addMechToC3iNetwork(Mech *mech, Mech *mechToAdd) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(mech->xcode.context->database, otherMech->mynum))
+    if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
       continue;
 
-    if (otherRef != mechToAdd->mynum) {
+    if (otherRef != mech_dbref(mechToAdd)) {
       otherNotifyMech = getOtherMechInNetwork(mech, i, 1, 1, 1, 0);
 
       if (otherNotifyMech)
@@ -134,8 +136,8 @@ void addMechToC3iNetwork(Mech *mech, Mech *mechToAdd) {
 void clearMechFromC3iNetwork(DbRef refToClear, Mech *mech) {
   int i;
 
-  debugC3(mech->xcode.context, tprintf("CLEAR: %ld from the C3i network of %ld",
-                                       refToClear, mech->mynum));
+  debugC3(mech_context(mech), tprintf("CLEAR: %ld from the C3i network of %ld",
+                                      refToClear, mech_dbref(mech)));
 
   if (!MechC3iNetworkSize(mech))
     return;
@@ -152,8 +154,8 @@ void clearC3iNetwork(Mech *mech, int tClearFromOthers) {
   Mech *otherMech;
   int i;
 
-  debugC3(mech->xcode.context,
-          tprintf("CLEAR: %ld's C3i network", mech->mynum));
+  debugC3(mech_context(mech),
+          tprintf("CLEAR: %ld's C3i network", mech_dbref(mech)));
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
     otherMech = getOtherMechInNetwork(mech, i, 0, 0, 0, 0);
@@ -164,10 +166,10 @@ void clearC3iNetwork(Mech *mech, int tClearFromOthers) {
       if (!otherMech)
         continue;
 
-      if (!is_good_obj(mech->xcode.context->database, otherMech->mynum))
+      if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
         continue;
 
-      clearMechFromC3iNetwork(mech->mynum, otherMech);
+      clearMechFromC3iNetwork(mech_dbref(mech), otherMech);
     }
   }
 
@@ -180,8 +182,8 @@ void validateC3iNetwork(Mech *mech) {
   int i;
   int networkSize = 0;
 
-  debugC3(mech->xcode.context,
-          tprintf("VALIDATE: %ld's C3i network", mech->mynum));
+  debugC3(mech_context(mech),
+          tprintf("VALIDATE: %ld's C3i network", mech_dbref(mech)));
 
   if (!HasC3i(mech) || Destroyed(mech) || C3iDestroyed(mech)) {
     clearC3iNetwork(mech, 1);
@@ -201,14 +203,14 @@ void validateC3iNetwork(Mech *mech) {
     if (!otherMech)
       continue;
 
-    if (!is_good_obj(mech->xcode.context->database, otherMech->mynum))
+    if (!is_good_obj(mech_context(mech)->database, mech_dbref(otherMech)))
       continue;
 
-    debugC3(mech->xcode.context,
+    debugC3(mech_context(mech),
             tprintf("VALIDATE INFO: %ld is now in %ld's C3i network",
-                    otherMech->mynum, mech->mynum));
+                    mech_dbref(otherMech), mech_dbref(mech)));
 
-    myTempNetwork[networkSize++] = otherMech->mynum;
+    myTempNetwork[networkSize++] = mech_dbref(otherMech);
   }
 
   clearC3iNetwork(mech, 0);
@@ -218,9 +220,9 @@ void validateC3iNetwork(Mech *mech) {
 
   MechC3iNetworkSize(mech) = networkSize;
 
-  debugC3(mech->xcode.context,
+  debugC3(mech_context(mech),
           tprintf("VALIDATE INFO: %ld's C3i network is %d elements",
-                  mech->mynum, MechC3iNetworkSize(mech)));
+                  mech_dbref(mech), MechC3iNetworkSize(mech)));
 }
 
 void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
@@ -232,15 +234,15 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_parseattributes(buffer, args, 2) != 1,
                   "Invalid number of arguments to function!");
 
-  DOCHECK_CONTEXT(mech->xcode.context, !HasC3i(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !HasC3i(mech),
                   "This unit is not equipped with C3i!");
-  DOCHECK_CONTEXT(mech->xcode.context, C3iDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), C3iDestroyed(mech),
                   "Your C3i system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
                   "Your C3i system is not currently operational!");
 
   validateC3iNetwork(mech);
@@ -263,34 +265,34 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   /* Well, if we're here then we wanna connect to a network */
   /* Let's check to see if we're already in one... can't be in two at the same
    * time */
-  DOCHECK_CONTEXT(mech->xcode.context, MechC3iNetworkSize(mech) > 0,
+  DOCHECK_CONTEXT(mech_context(mech), MechC3iNetworkSize(mech) > 0,
                   "You are already in a C3i network!");
 
   /* Find who we're trying to connect to */
   refTarget = FindTargetDBREFFromMapNumber(mech, args[0]);
-  target = btech_context_get_mech(mech->xcode.context, refTarget);
+  target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (target) {
     LOS = InLineOfSight(mech, target, MechX(target), MechY(target), range);
   } else
     refTarget = 0;
 
-  DOCHECK_CONTEXT(mech->xcode.context, (refTarget < 1) || !LOS,
+  DOCHECK_CONTEXT(mech_context(mech), (refTarget < 1) || !LOS,
                   "That is not a valid targetID. Try again.");
-  DOCHECK_CONTEXT(mech->xcode.context, MechTeam(mech) != MechTeam(target),
+  DOCHECK_CONTEXT(mech_context(mech), MechTeam(mech) != MechTeam(target),
                   "You can't use the C3i network of unfriendly units!");
-  DOCHECK_CONTEXT(mech->xcode.context, mech == target,
+  DOCHECK_CONTEXT(mech_context(mech), mech == target,
                   "You can't connect to yourself!");
-  DOCHECK_CONTEXT(mech->xcode.context, Destroyed(target),
+  DOCHECK_CONTEXT(mech_context(mech), Destroyed(target),
                   "That unit is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, !Started(target),
+  DOCHECK_CONTEXT(mech_context(mech), !Started(target),
                   "That unit is not started!");
-  DOCHECK_CONTEXT(mech->xcode.context, !HasC3i(target),
+  DOCHECK_CONTEXT(mech_context(mech), !HasC3i(target),
                   "That unit does not appear to be equipped with C3i!");
 
   /* validate the network of our target */
   validateC3iNetwork(target);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   MechC3iNetworkSize(target) >= C3I_NETWORK_SIZE,
                   "That unit's C3i network is operating at maximum capacity!");
 
@@ -305,20 +307,20 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
 void mech_c3i_message(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context, !HasC3i(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !HasC3i(mech),
                   "This unit is not equipped with C3i!");
-  DOCHECK_CONTEXT(mech->xcode.context, C3iDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), C3iDestroyed(mech),
                   "Your C3i system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
                   "Your C3i system is not currently operational!");
 
   validateC3iNetwork(mech);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechC3iNetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), MechC3iNetworkSize(mech) <= 0,
                   "There are no other units in your C3i network!");
 
   skipws(buffer);
-  DOCHECK_CONTEXT(mech->xcode.context, !*buffer,
+  DOCHECK_CONTEXT(mech_context(mech), !*buffer,
                   "What do you want to send on the C3i Network?");
 
   sendNetworkMessage(player, mech, buffer, 0);
@@ -327,16 +329,16 @@ void mech_c3i_message(DbRef player, Mech *mech, char *buffer) {
 void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context, !HasC3i(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !HasC3i(mech),
                   "This unit is not equipped with C3i!");
-  DOCHECK_CONTEXT(mech->xcode.context, C3iDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), C3iDestroyed(mech),
                   "Your C3i system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
                   "Your C3i system is not currently operational!");
 
   validateC3iNetwork(mech);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechC3iNetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), MechC3iNetworkSize(mech) <= 0,
                   "There are no other units in your C3i network!");
 
   showNetworkTargets(player, mech, 0);
@@ -345,16 +347,16 @@ void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
 void mech_c3i_network(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context, !HasC3i(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !HasC3i(mech),
                   "This unit is not equipped with C3i!");
-  DOCHECK_CONTEXT(mech->xcode.context, C3iDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), C3iDestroyed(mech),
                   "Your C3i system is destroyed!");
-  DOCHECK_CONTEXT(mech->xcode.context, AnyECMDisturbed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), AnyECMDisturbed(mech),
                   "Your C3i system is not currently operational!");
 
   validateC3iNetwork(mech);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechC3iNetworkSize(mech) <= 0,
+  DOCHECK_CONTEXT(mech_context(mech), MechC3iNetworkSize(mech) <= 0,
                   "There are no other units in your C3i network!");
 
   showNetworkData(player, mech, 0);

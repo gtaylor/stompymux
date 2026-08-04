@@ -26,6 +26,7 @@
 #include "mech_bth_api.h"
 #include "mech_combat_api.h"
 #include "mech_events.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
 #include "mech_macros.h"
@@ -64,7 +65,7 @@ static void mech_check_range(MuxEvent *e) {
   }
   range = FlMechRange(fl, mech, spotter);
   if (range > 2 * MechRadioRange(spotter) || MechSpotter(spotter) == -1 ||
-      spotter->mapindex != mech->mapindex) {
+      mech_map_dbref(spotter) != mech_map_dbref(mech)) {
     mech_notify(mech, MECHALL, "You have lost link with your spotter!");
     MechSpotter(mech) = -1;
     return;
@@ -93,7 +94,7 @@ static void mech_spot_event(MuxEvent *e) {
   mech_printf(mech, MECHALL,
               "Data link established with %s, you now have a forward observer.",
               mech_to_mech_display_id(target, mech).text);
-  MechSpotter(mech) = target->mynum;
+  MechSpotter(mech) = mech_dbref(target);
   mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
                       (intptr_t)target);
   free((void *)e->data2);
@@ -107,7 +108,7 @@ void ClearFireAdjustments(BattleMap *map, DbRef mech) {
     if (map->mechsOnMap[i] >= 0) {
       if (!(m = btech_context_get_mech(map->xcode.context, map->mechsOnMap[i])))
         continue;
-      if (m->mynum == mech)
+      if (mech_dbref(m) == mech)
         continue;
       if (MechSpotter(m) == mech)
         MechFireAdjustment(m) = 0;
@@ -126,49 +127,49 @@ void mech_spot(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map;
 
   cch(MECH_USUALO);
-  mech_map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   argc = mech_parseattributes(buffer, args, 5);
 #ifdef BT_MOVEMENT_MODES
-  DOCHECK_CONTEXT(mech->xcode.context, mech_move_mode_locked(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_move_mode_locked(mech),
                   "You cannot spot while using a special movement mode.");
 #endif
-  DOCHECK_CONTEXT(mech->xcode.context, argc != 1,
+  DOCHECK_CONTEXT(mech_context(mech), argc != 1,
                   "You may only use mech ID's to set spotter!");
-  DOCHECK_CONTEXT(mech->xcode.context, MechType(mech) == CLASS_MW,
+  DOCHECK_CONTEXT(mech_context(mech), MechType(mech) == CLASS_MW,
                   "Spot ? You ? What with, your pretty blue eyes ? Hah!");
   targetID[0] = args[0][0];
   targetID[1] = args[0][1];
   targetID[2] = 0;
   targetref = FindTargetDBREFFromMapNumber(mech, targetID);
   if (!strcmp(args[0], "-")) {
-    if (MechSpotter(mech) == mech->mynum) {
+    if (MechSpotter(mech) == mech_dbref(mech)) {
       mech_notify(mech, MECHALL, "You spot no longer.");
-      ClearFireAdjustments(mech_map, mech->mynum);
+      ClearFireAdjustments(mech_map, mech_dbref(mech));
     } else
       mech_notify(mech, MECHALL, "You disable the datalink to spotter.");
     MechSpotter(mech) = -1;
     return;
   }
   if (!strcasecmp(targetID, mech_id(mech, false).text)) {
-    DOCHECK_CONTEXT(mech->xcode.context, MechFullNoRecycle(mech, CHECK_BOTH),
+    DOCHECK_CONTEXT(mech_context(mech), MechFullNoRecycle(mech, CHECK_BOTH),
                     "You have weapons recycling!");
-    MechSpotter(mech) = mech->mynum;
+    MechSpotter(mech) = mech_dbref(mech);
     mech_notify(mech, MECHALL, "You are now set as a spotter.");
     return;
   }
-  target = btech_context_get_mech(mech->xcode.context, targetref);
+  target = btech_context_get_mech(mech_context(mech), targetref);
   if (target)
     LOS = InLineOfSight(mech, target, MechX(target), MechY(target),
                         FlMechRange(mech_map, mech, target));
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   !target || (targetref == -1) ||
                       MechTeam(target) != MechTeam(mech),
                   "That target does not exist!");
 
   DOCHECK_CONTEXT(
-      mech->xcode.context, MechType(target) == CLASS_MW,
+      mech_context(mech), MechType(target) == CLASS_MW,
       "Spot ? That puny being ?! What with, those clear brown eyes ? Hah!");
-  DOCHECK_CONTEXT(mech->xcode.context, MechSpotter(target) != target->mynum,
+  DOCHECK_CONTEXT(mech_context(mech), MechSpotter(target) != mech_dbref(target),
                   "That 'mech is not set up as spotter!");
 
   if (IsArtyMech(mech) && !LOS) {
@@ -192,7 +193,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
                         WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
     return;
   } else
-    DOCHECK_CONTEXT(mech->xcode.context, !LOS,
+    DOCHECK_CONTEXT(mech_context(mech), !LOS,
                     "You do not have LOS to that target!")
   MechSpotter(mech) = targetref;
   MechFireAdjustment(mech) = 0;
@@ -215,10 +216,10 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   if (MechSpotter(mech) == -1 || !(MechWeapons[weapontype].special & IDF))
     return 0;
 
-  spotter = btech_context_get_mech(mech->xcode.context, MechSpotter(mech));
+  spotter = btech_context_get_mech(mech_context(mech), MechSpotter(mech));
   DOCHECKMP1(!spotter, "There is no spotter avilable to IDF with!");
 
-  if (!(MechSpotter(spotter) == spotter->mynum)) {
+  if (!(MechSpotter(spotter) == mech_dbref(spotter))) {
     mech_notify(mech, MECH_PILOT, "You do not have a spotter!");
     MechSpotter(mech) = -1;
     return 1;
@@ -228,7 +229,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
 
   /* Is the spotter set to a Mech or to a Hex? */
   if (MechTarget(spotter) != -1) {
-    target = btech_context_get_mech(mech->xcode.context, MechTarget(spotter));
+    target = btech_context_get_mech(mech_context(mech), MechTarget(spotter));
     DOCHECKMP1(!target, "Your spotter has invalid target!");
     mapx = MechX(target);
     mapy = MechY(target);
@@ -236,7 +237,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     LOS = InLineOfSight(spotter, target, mapx, mapy, spot_range);
     DOCHECKMP1(!LOS, "You spotter does not have a target in LOS!");
     range = FaMechRange(mech, target);
-    DOCHECK0_CONTEXT(mech->xcode.context, InWater(target) && !(InWater(mech)),
+    DOCHECK0_CONTEXT(mech_context(mech), InWater(target) && !(InWater(mech)),
                      "You can't fire into water with that weapon from here.");
 
     spotTerrain =
@@ -248,7 +249,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                  MechTargComp(spotter) != TARGCOMP_MULTI)
                     ? 2
                     : 0));
-    DOCHECK1_CONTEXT(mech->xcode.context, IsArtillery(weapontype) && target,
+    DOCHECK1_CONTEXT(mech_context(mech), IsArtillery(weapontype) && target,
                      "You can only target hexes with this kind of artillery.");
     if (!sight) {
       AccumulateSpotXP(MechPilot(spotter), spotter, target);
@@ -260,7 +261,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
     return 1;
   }
   if (!(MechTargX(spotter) >= 0 && MechTargY(spotter) >= 0)) {
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "Your spotter has no target set!");
     return 1;
   }
@@ -284,7 +285,7 @@ int FireSpot(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   spot_range = FindRange(MechFX(spotter), MechFY(spotter), MechFZ(spotter),
                          enemyX, enemyY, enemyZ);
   LOS = InLineOfSight(spotter, target, mapx, mapy, spot_range);
-  DOCHECK0_CONTEXT(mech->xcode.context, !LOS,
+  DOCHECK0_CONTEXT(mech_context(mech), !LOS,
                    "That target is not in your spotters line of sight!");
   range = FindRange(MechFX(mech), MechFY(mech), MechFZ(mech), enemyX, enemyY,
                     enemyZ);

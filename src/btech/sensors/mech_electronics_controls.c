@@ -1,8 +1,9 @@
 #include "mech_advanced_internal.h"
+#include "mech_identity_api.h"
 
 void mech_ecm(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & ECM_DESTROYED,
+  DOCHECK_CONTEXT(mech_context(mech), MechCritStatus(mech) & ECM_DESTROYED,
                   "Your Guardian ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK(ECM_TECH, ECM_ENABLED, ECCM_ENABLED,
                               "You turn your ECM suite online (ECM mode).",
@@ -13,7 +14,7 @@ void mech_ecm(DbRef player, Mech *mech, char *buffer) {
 
 void mech_eccm(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & ECM_DESTROYED,
+  DOCHECK_CONTEXT(mech_context(mech), MechCritStatus(mech) & ECM_DESTROYED,
                   "Your Guardian ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK(ECM_TECH, ECCM_ENABLED, ECM_ENABLED,
                               "You turn your ECM suite online (ECCM mode).",
@@ -44,7 +45,7 @@ void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
 
 void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
                   "Your Angel ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK2(
@@ -57,7 +58,7 @@ void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
 
 void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALO);
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   MechCritStatus(mech) & ANGEL_ECM_DESTROYED,
                   "Your Angel ECM has been destroyed already!");
   TOGGLE_SPECIALS_MACRO_CHECK2(
@@ -109,7 +110,7 @@ void mech_slite(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechCritStatus(mech) & SLITE_DEST,
+  DOCHECK_CONTEXT(mech_context(mech), MechCritStatus(mech) & SLITE_DEST,
                   "Your searchlight has been destroyed already!");
 
   if (mech_event_count(mech, EVENT_SLITECHANGING)) {
@@ -268,16 +269,16 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
         checkAllSections(mech, INARC_ECM_ATTACHED) ||
         checkAllSections(mech, INARC_NEMESIS_ATTACHED))) {
 
-    notify(btech_context_evaluation(mech->xcode.context), player,
+    notify(btech_context_evaluation(mech_context(mech)), player,
            "There are no NARC or iNARC pods attached to this unit.");
 
     return;
   }
 
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "=========================Attached NARC and iNARC "
          "Pods========================");
-  notify(btech_context_evaluation(mech->xcode.context), player,
+  notify(btech_context_evaluation(mech_context(mech)), player,
          "-- Location ---||- NARC -||- iHoming -||- iHaywire -||- iECM "
          "-||- iNemesis --");
 
@@ -286,13 +287,13 @@ void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
       ArmorStringFromIndex(i, location, MechType(mech), MechMove(mech));
 
       if (SectIsDestroyed(mech, i)) {
-        notify_printf(btech_context_evaluation(mech->xcode.context), player,
+        notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       " %-14.13s||********||***********||************||********"
                       "||************* ",
                       location);
       } else {
         notify_printf(
-            btech_context_evaluation(mech->xcode.context), player,
+            btech_context_evaluation(mech_context(mech)), player,
             " %-14.13s||....%s...||.....%s.....||......%s.....||....%s...||...."
             "..%s...... ",
             location,
@@ -340,18 +341,18 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech->xcode.context, MechIsQuad(mech),
+  DOCHECK_CONTEXT(mech_context(mech), MechIsQuad(mech),
                   "Quads can not knock of iNARC pods!");
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   mech_parseattributes(buffer, args, 2) != 2,
                   "Invalid number of arguments!");
 
   wLoc = ArmorSectionFromString(MechType(mech), MechMove(mech), args[0]);
 
-  DOCHECK_CONTEXT(mech->xcode.context, wLoc == -1, "Invalid section!");
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectOInt(mech, wLoc),
+  DOCHECK_CONTEXT(mech_context(mech), wLoc == -1, "Invalid section!");
+  DOCHECK_CONTEXT(mech_context(mech), !GetSectOInt(mech, wLoc),
                   "Invalid section!");
-  DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, wLoc),
+  DOCHECK_CONTEXT(mech_context(mech), !GetSectInt(mech, wLoc),
                   "That section is destroyed!");
 
   ArmorStringFromIndex(wLoc, strLocation, MechType(mech), MechMove(mech));
@@ -374,36 +375,36 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     break;
   }
 
-  DOCHECK_CONTEXT(mech->xcode.context,
+  DOCHECK_CONTEXT(mech_context(mech),
                   !checkSectionForSpecial(mech, wPodType, wLoc),
                   tprintf("There are no iNarc %s pods attached to your %s!",
                           strPodType, strLocation));
 
   DOCHECK_CONTEXT(
-      mech->xcode.context,
+      mech_context(mech),
       ((!GetSectInt(mech, RARM)) && (!GetSectInt(mech, LARM))),
       "You need at least one functioning arm to remove iNarc pods!");
 
   if (wLoc == RARM) {
-    DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, LARM),
+    DOCHECK_CONTEXT(mech_context(mech), !GetSectInt(mech, LARM),
                     "Your Left Arm needs to be intact to take "
                     "iNarc pods off your right arm!");
-    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, LARM),
+    DOCHECK_CONTEXT(mech_context(mech), SectHasBusyWeap(mech, LARM),
                     "You have weapons recycling on your Left Arm.");
-    DOCHECK_CONTEXT(mech->xcode.context, MechSections(mech)[LARM].recycle,
+    DOCHECK_CONTEXT(mech_context(mech), MechSections(mech)[LARM].recycle,
                     "Your Left Arm is still recovering from your last attack.");
 
     wArmToUse = LARM;
   }
 
   if (wLoc == LARM) {
-    DOCHECK_CONTEXT(mech->xcode.context, !GetSectInt(mech, RARM),
+    DOCHECK_CONTEXT(mech_context(mech), !GetSectInt(mech, RARM),
                     "Your Right Arm needs to be intact to "
                     "take iNarc pods off your Left Arm!");
-    DOCHECK_CONTEXT(mech->xcode.context, SectHasBusyWeap(mech, RARM),
+    DOCHECK_CONTEXT(mech_context(mech), SectHasBusyWeap(mech, RARM),
                     "You have weapons recycling on your Right Arm.");
     DOCHECK_CONTEXT(
-        mech->xcode.context, MechSections(mech)[RARM].recycle,
+        mech_context(mech), MechSections(mech)[RARM].recycle,
         "Your Right Arm is still recovering from your last attack.");
 
     wArmToUse = RARM;
@@ -419,7 +420,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
       wLAAvail = 0;
 
     DOCHECK_CONTEXT(
-        mech->xcode.context, !(wLAAvail || wRAAvail),
+        mech_context(mech), !(wLAAvail || wRAAvail),
         "You need at least one arm that is not recycling and does not have "
         "weapons recycling in it!");
 
@@ -445,7 +446,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   }
 
   wBTH += FindPilotPiloting(mech) + 4;
-  wRoll = btech_random_roll(mech->xcode.context);
+  wRoll = btech_random_roll(mech_context(mech));
 
   ArmorStringFromIndex(wArmToUse, strPunchWith, MechType(mech), MechMove(mech));
 
@@ -506,23 +507,22 @@ void remove_inarc_pods_tank(DbRef player, Mech *mech, char *buffer) {
   cch(MECH_USUALSO);
 
   DOCHECK_CONTEXT(
-      mech->xcode.context, (MechDesiredSpeed(mech) > 0),
+      mech_context(mech), (MechDesiredSpeed(mech) > 0),
       "You can not be moving when attempting to remove iNarc pods!");
   DOCHECK_CONTEXT(
-      mech->xcode.context, (MechSpeed(mech) > 0),
+      mech_context(mech), (MechSpeed(mech) > 0),
       "You can not be moving when attempting to remove iNarc pods!");
 
   if (MechType(mech) == CLASS_VTOL)
-    DOCHECK_CONTEXT(mech->xcode.context, !Landed(mech),
+    DOCHECK_CONTEXT(mech_context(mech), !Landed(mech),
                     "You must land before attempting to remove iNarc pods!");
 
-  DOCHECK_CONTEXT(mech->xcode.context,
-                  mech_event_count(mech, EVENT_UNSTUN_CREW),
+  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNSTUN_CREW),
                   "You're too stunned to remove iNarc pods!");
   DOCHECK_CONTEXT(
-      mech->xcode.context, mech_event_count(mech, EVENT_UNJAM_TURRET),
+      mech_context(mech), mech_event_count(mech, EVENT_UNJAM_TURRET),
       "You're too busy unjamming your turret to remove iNarc pods!");
-  DOCHECK_CONTEXT(mech->xcode.context, mech_event_count(mech, EVENT_UNJAM_AMMO),
+  DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_UNJAM_AMMO),
                   "You're too busy unjamming a weapon to remove iNarc pods!");
 
   if (!(checkAllSections(mech, INARC_HOMING_ATTACHED) ||

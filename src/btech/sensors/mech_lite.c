@@ -18,6 +18,7 @@
 #include "map.h"
 #include "map_terrain.h"
 #include "mech.h"
+#include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
@@ -29,7 +30,8 @@
  * range, the target is lit.
  */
 static int mech_lites_target(Mech *mech, Mech *target) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int losflag = MechToMech_LOSFlag(map, mech, target);
 
   if (!MechLites(mech))
@@ -55,7 +57,8 @@ void cause_lite(Mech *mech, Mech *tempMech) {
 }
 
 void end_lite_check(Mech *mech) {
-  BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);
+  BattleMap *map =
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   Mech *t;
   int i;
 
@@ -64,9 +67,9 @@ void end_lite_check(Mech *mech) {
   if (!map)
     return;
   for (i = 0; i < map->first_free; i++) {
-    if (i == mech->mapnumber)
+    if (i == mech_map_slot(mech))
       continue;
-    if (!(t = btech_context_find_object(mech->xcode.context,
+    if (!(t = btech_context_find_object(mech_context(mech),
                                         map->mechsOnMap[i])))
       continue;
     if (mech_lites_target(t, mech))
