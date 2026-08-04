@@ -493,9 +493,9 @@ void update_LOSinfo(DbRef obj, BattleMap *map) {
         if (ECMEnabled(mech) || ECCMEnabled(mech) || AngelECMEnabled(mech) ||
             AngelECCMEnabled(mech))
           if (range < ECM_RANGE)
-            checkECM(target);
+            mech_ecm_check(target);
         if (TAGTarget(mech) > 0)
-          checkTAG(mech);
+          mech_tag_check(mech);
         if (MechStatus2(mech) & SLITE_ON)
           if (range < LITE_RANGE)
             cause_lite(mech, target);
@@ -531,9 +531,9 @@ void update_LOSinfo(DbRef obj, BattleMap *map) {
         if (ECMEnabled(mech) || ECCMEnabled(mech) || AngelECMEnabled(mech) ||
             AngelECCMEnabled(mech))
           if (range < ECM_RANGE)
-            checkECM(target);
+            mech_ecm_check(target);
         if (TAGTarget(mech) > 0)
-          checkTAG(mech);
+          mech_tag_check(mech);
         if (MechStatus2(mech) & SLITE_ON)
           if (range < LITE_RANGE)
             cause_lite(mech, target);

@@ -106,6 +106,14 @@ bool mech_section_carries_club(const Mech *mech, int section) {
   return mech->ud.sections[section].specials & CARRYING_CLUB;
 }
 
+bool mech_has_attached_inarc_ecm(const Mech *mech) {
+  for (int section = 0; section < NUM_SECTIONS; section++)
+    if (mech->ud.sections[section].internal &&
+        (mech->ud.sections[section].specials & INARC_ECM_ATTACHED))
+      return true;
+  return false;
+}
+
 bool mech_limbs_are_recycling(const Mech *mech) {
   return mech->ud.sections[RARM].recycle || mech->ud.sections[LARM].recycle ||
          mech->ud.sections[RLEG].recycle || mech->ud.sections[LLEG].recycle;

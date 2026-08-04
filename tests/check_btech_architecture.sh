@@ -67,6 +67,22 @@ done < <(rg -n -g '*.[ch]' \
   src/btech/sensors || true)
 
 while IFS= read -r match; do
+  echo "$match: converted sensor module uses a legacy Mech layout interface"
+  status=1
+done < <(rg -n \
+  '#include "mech(_macros)?\.h"|\b(Mech[A-Z][A-Za-z0-9_]*|GetSect[A-Za-z0-9_]*|GetPart[A-Za-z0-9_]*|SetSect[A-Za-z0-9_]*|SetPart[A-Za-z0-9_]*|Destroyed|Started|Fallen|Jumping|Landed|HasWorkingECMSuite|ECMProtected|ECMCountered|AnyECMDisturbed)\(' \
+  src/btech/sensors/mech_ecm.c \
+  src/btech/sensors/mech_lite.c \
+  src/btech/sensors/mech_tag.c || true)
+
+while IFS= read -r match; do
+  echo "$match: legacy sensor export is not allowed"
+  status=1
+done < <(rg -n \
+  '\b(sendECMNotification|checkECM|isTAGDestroyed|stopTAG|checkTAG)\b' \
+  src/btech || true)
+
+while IFS= read -r match; do
   echo "$match: converted map UI boundary accesses Mech layout directly"
   status=1
 done < <(rg -n \

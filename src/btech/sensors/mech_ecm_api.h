@@ -11,8 +11,8 @@
 
 #pragma once
 
+#include "mech_api_types.h"
 #include "mux/server/platform.h"
 
 /* mech.ecm.c */
-void sendECMNotification(Mech *objMech, int wMsgType);
-void checkECM(Mech *objMech);
+void mech_ecm_check(Mech *objMech);

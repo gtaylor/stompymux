@@ -188,7 +188,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, int breach,
                         "Your ECM system has been destroyed!");
             DisableECM(wounded);
             DisableECCM(wounded);
-            checkECM(wounded);
+            mech_ecm_check(wounded);
           }
           break;
         case TARGETING_COMPUTER:

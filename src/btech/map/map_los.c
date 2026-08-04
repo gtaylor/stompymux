@@ -47,6 +47,20 @@ bool battle_map_unit_los_is_blocked(const BattleMap *map, const Mech *observer,
          MECHLOSFLAG_BLOCK;
 }
 
+int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
+                                   const Mech *target) {
+  const int flags =
+      map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)];
+  return (flags / MECHLOSFLAG_WOOD) % MECHLOSMAX_WOOD;
+}
+
+int battle_map_unit_los_water_count(const BattleMap *map, const Mech *observer,
+                                    const Mech *target) {
+  const int flags =
+      map->LOSinfo[mech_map_slot(observer)][mech_map_slot(target)];
+  return (flags / MECHLOSFLAG_WATER) % MECHLOSMAX_WATER;
+}
+
 int los_map_hex_index(HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {

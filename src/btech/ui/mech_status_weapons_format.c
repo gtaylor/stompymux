@@ -183,7 +183,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
           btech_context_get_mech(mech_context(mech), tag_target_dbref);
       snprintf(tempbuff + strlen(tempbuff), sizeof(tempbuff) - strlen(tempbuff),
                "TAG(%s)  ",
-               isTAGDestroyed(mech) ? "[fg=red bold]XX[reset]"
+               mech_tag_is_destroyed(mech) ? "[fg=red bold]XX[reset]"
                : (!tag_target ||
                   mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
                    ? (mech_event_count(mech, EVENT_TAG_RECYCLE)

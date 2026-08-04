@@ -10,13 +10,18 @@
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "legacy_macros.h"
-#include "mech.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_los_api.h"
+#include "mech_network_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_sensor_state_api.h"
+#include "mech_status_types.h"
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
@@ -33,7 +38,7 @@ static void tag_recycle_event(MuxEvent *e) {
   long data = (long)e->data2;
   Mech *target;
 
-  if (isTAGDestroyed(mech))
+  if (mech_tag_is_destroyed(mech))
     return;
 
   if (data == 0) {
@@ -42,12 +47,13 @@ static void tag_recycle_event(MuxEvent *e) {
     return;
   }
 
-  target = btech_context_get_mech(mech_context(mech), TAGTarget(mech));
+  target =
+      btech_context_get_mech(mech_context(mech), mech_tag_target_dbref(mech));
 
   if (!target)
     return;
 
-  if (TaggedBy(target) != mech_dbref(mech))
+  if (mech_tagged_by_dbref(target) != mech_dbref(mech))
     return;
 
   mech_notify(mech, MECHALL,
@@ -63,9 +69,9 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   cch(MECH_USUALO);
 
-  DOCHECK_CONTEXT(mech_context(mech), !HasTAG(mech),
+  DOCHECK_CONTEXT(mech_context(mech), !mech_has_tag_system(mech),
                   "This unit is not equipped with TAG!");
-  DOCHECK_CONTEXT(mech_context(mech), isTAGDestroyed(mech),
+  DOCHECK_CONTEXT(mech_context(mech), mech_tag_is_destroyed(mech),
                   "Your TAG system is destroyed!");
   DOCHECK_CONTEXT(mech_context(mech), mech_event_count(mech, EVENT_TAG_RECYCLE),
                   "Your TAG system is recycling!");
@@ -75,12 +81,12 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
   /* Clear our TAG */
   if (!strcmp(args[0], "-")) {
-    refTarget = TAGTarget(mech);
+    refTarget = mech_tag_target_dbref(mech);
 
     DOCHECK_CONTEXT(mech_context(mech), refTarget <= 0,
                     "You are not currently tagging anything!");
 
-    stopTAG(mech);
+    mech_tag_stop(mech);
 
     return;
   }
@@ -90,15 +96,16 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (target) {
-    range = FaMechRange(mech, target);
+    range = mech_range_to(mech, target);
 
-    LOS = InLineOfSight_NB(mech, target, MechX(target), MechY(target), range);
+    LOS = InLineOfSight_NB(mech, target, mech_position_x(target),
+                           mech_position_y(target), range);
   } else
     refTarget = 0;
 
   DOCHECK_CONTEXT(mech_context(mech), refTarget < 1 || !LOS,
                   "That is not a valid TAG targetID. Try again.");
-  DOCHECK_CONTEXT(mech_context(mech), MechTeam(mech) == MechTeam(target),
+  DOCHECK_CONTEXT(mech_context(mech), mech_team(mech) == mech_team(target),
                   "You can't TAG friendly units!");
   DOCHECK_CONTEXT(mech_context(mech), mech == target,
                   "You can't TAG yourself!");
@@ -118,35 +125,29 @@ void mech_tag(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "You light up %s with your TAG.",
               mech_to_mech_display_id(mech, target).text);
 
-  TaggedBy(target) = mech_dbref(mech);
-  TAGTarget(mech) = mech_dbref(target);
+  mech_tagged_by_dbref_set(target, mech_dbref(mech));
+  mech_tag_target_dbref_set(mech, mech_dbref(target));
 
   mech_event_schedule(mech, EVENT_TAG_RECYCLE, tag_recycle_event,
                       TAGRECYCLE_TICK, 1);
 }
 
-int isTAGDestroyed(Mech *mech) {
-  if ((MechSpecials2(mech) & TAG_TECH) &&
-      (MechCritStatus(mech) & TAG_DESTROYED))
-    return 1;
-
-  if (HasC3m(mech) && (MechCritStatus(mech) & C3_DESTROYED))
-    return 1;
-
-  return 0;
+bool mech_tag_is_destroyed(const Mech *mech) {
+  return mech_tag_system_is_destroyed(mech);
 }
 
-void stopTAG(Mech *mech) {
+void mech_tag_stop(Mech *mech) {
   Mech *target;
 
-  target = btech_context_get_mech(mech_context(mech), TAGTarget(mech));
+  target =
+      btech_context_get_mech(mech_context(mech), mech_tag_target_dbref(mech));
 
   if (target)
-    if (TaggedBy(target) == mech_dbref(mech))
-      TaggedBy(target) = 0;
+    if (mech_tagged_by_dbref(target) == mech_dbref(mech))
+      mech_tagged_by_dbref_set(target, 0);
 
-  if (TAGTarget(mech) > 0) {
-    TAGTarget(mech) = 0;
+  if (mech_tag_target_dbref(mech) > 0) {
+    mech_tag_target_dbref_set(mech, 0);
 
     mech_notify(mech, MECHALL, "Your TAG connection has been broken.");
 
@@ -155,13 +156,13 @@ void stopTAG(Mech *mech) {
   }
 }
 
-void checkTAG(Mech *mech) {
+void mech_tag_check(Mech *mech) {
   Mech *target;
   DbRef refTarget;
   float range;
   int LOS = 1;
 
-  refTarget = TAGTarget(mech);
+  refTarget = mech_tag_target_dbref(mech);
 
   if (refTarget <= 0)
     return;
@@ -169,22 +170,21 @@ void checkTAG(Mech *mech) {
   target = btech_context_get_mech(mech_context(mech), refTarget);
 
   if (!target) {
-    stopTAG(mech);
+    mech_tag_stop(mech);
     return;
   }
 
-  if (TaggedBy(target) != mech_dbref(mech)) {
-    stopTAG(mech);
+  if (mech_tagged_by_dbref(target) != mech_dbref(mech)) {
+    mech_tag_stop(mech);
     return;
   }
 
-  range = FlMechRange(
-      btech_context_get_map(mech_context(mech), mech_map_dbref(mech)), mech,
-      target);
-  LOS = InLineOfSight_NB(mech, target, MechX(target), MechY(target), range);
+  range = mech_range_to(mech, target);
+  LOS = InLineOfSight_NB(mech, target, mech_position_x(target),
+                         mech_position_y(target), range);
 
   if (!LOS || (range > TAG_LONG)) {
-    stopTAG(mech);
+    mech_tag_stop(mech);
     return;
   }
 }

@@ -30,6 +30,7 @@ bool mech_section_is_flooded(const Mech *mech, int section);
 bool mech_critical_is_operational_special(const Mech *mech, int section,
                                           int critical, int special);
 bool mech_section_carries_club(const Mech *mech, int section);
+bool mech_has_attached_inarc_ecm(const Mech *mech);
 bool mech_limbs_are_recycling(const Mech *mech);
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical);
 bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,

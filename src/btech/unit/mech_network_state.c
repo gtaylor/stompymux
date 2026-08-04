@@ -9,3 +9,11 @@ int mech_c3i_network_size(const Mech *mech) { return mech->sd.wC3iNetworkSize; }
 DbRef mech_tag_target_dbref(const Mech *mech) { return mech->sd.tagTarget; }
 
 DbRef mech_tagged_by_dbref(const Mech *mech) { return mech->sd.taggedBy; }
+
+void mech_tag_target_dbref_set(Mech *mech, DbRef target) {
+  mech->sd.tagTarget = target;
+}
+
+void mech_tagged_by_dbref_set(Mech *mech, DbRef tagger) {
+  mech->sd.taggedBy = tagger;
+}

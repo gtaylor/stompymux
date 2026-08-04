@@ -16,13 +16,25 @@
 
 #include "mech_ecm.h"
 #include "btconfig.h"
-#include "map_terrain.h"
-#include "mech.h"
+#include "map_units_api.h"
+#include "mech_api_types.h"
+#include "mech_classification_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_notify.h"
 #include "mech_notify_api.h"
+#include "mech_position_api.h"
+#include "mech_sensor_state_api.h"
 #include "mech_utils_api.h"
 #include "registry_api.h"
+
+typedef enum MechEcmNotification {
+  MECH_ECM_NOTIFY_DISTURBED,
+  MECH_ECM_NOTIFY_UNDISTURBED,
+  MECH_ECM_NOTIFY_COUNTERED,
+  MECH_ECM_NOTIFY_UNCOUNTERED,
+} MechEcmNotification;
 
 /*
  * This is a rewrite of the ECM code to support ECCM. I've redone everything
@@ -32,78 +44,33 @@
  * Kipsta
  */
 
-#define LOUD_ECM     /* No complete stealth */
-#undef VERY_LOUD_ECM /* But no spam, either */
-
-void sendECMNotification(Mech *objMech, int wMsgType) {
+static void mech_ecm_notification_send(Mech *objMech,
+                                       MechEcmNotification wMsgType) {
   switch (wMsgType) {
-  case ECM_NOTIFY_DISTURBED:
+  case MECH_ECM_NOTIFY_DISTURBED:
 
-#ifdef LOUD_ECM
     mech_notify(objMech, MECHALL,
                 "Half your screens are suddenly filled with static!");
-
-#ifdef VERY_LOUD_ECM
-    if (MechSpecials(objMech) & BEAGLE_PROBE_TECH &&
-        !(MechCritStatus(objMech) & BEAGLE_DESTROYED))
-      mech_notify(objMech, MECHALL, "Your Beagle Active Probe is inoperative!");
-    if (MechSpecials2(objMech) & BLOODHOUND_PROBE_TECH &&
-        !(MechCritStatus(objMech) & BLOODHOUND_DESTROYED))
-      mech_notify(objMech, MECHALL,
-                  "Your Bloodhound Active Probe is inoperative!");
-    if (MechSpecials(objMech) & LIGHT_BAP_TECH &&
-        !(MechCritStatus2(objMech) & LIGHT_BAP_DESTROYED))
-      mech_notify(objMech, MECHALL,
-                  "Your Light Beagle Active Probe is inoperative!");
-    if (IsC3(objMech))
-      mech_notify(objMech, MECHALL, "Your C3 network is inoperative!");
-    if (IsC3i(objMech))
-      mech_notify(objMech, MECHALL, "Your C3i network is inoperative!");
-
-#endif /*  */
-#endif /*  */
     break;
-  case ECM_NOTIFY_UNDISTURBED:
+  case MECH_ECM_NOTIFY_UNDISTURBED:
 
-#ifdef LOUD_ECM
     mech_notify(objMech, MECHALL, "All your systems are back to normal again!");
-
-#ifdef VERY_LOUD_ECM
-    if (MechSpecials(objMech) & BEAGLE_PROBE_TECH &&
-        !(MechCritStatus(objMech) & BEAGLE_DESTROYED))
-      mech_notify(objMech, MECHALL,
-                  "Your Beagle Active Probe is operational again!");
-    if (MechSpecials2(objMech) & BLOODHOUND_PROBE_TECH &&
-        !(MechCritStatus(objMech) & BLOODHOUND_DESTROYED))
-      mech_notify(objMech, MECHALL,
-                  "Your Bloodhound Active Probe is operational again!");
-    if (MechSpecials(objMech) & LIGHT_BAP_TECH &&
-        !(MechCritStatus2(objMech) & LIGHT_BAP_DESTROYED))
-      mech_notify(objMech, MECHALL,
-                  "Your Light Beagle Active Probe is operational again!");
-    if (IsC3(objMech))
-      mech_notify(objMech, MECHALL, "Your C3 network is operational again!");
-    if (IsC3i(objMech))
-      mech_notify(objMech, MECHALL, "Your C3i network is operational again!");
-
-#endif /*  */
-#endif /*  */
     break;
-  case ECM_NOTIFY_COUNTERED:
-    if (HasWorkingECMSuite(objMech))
+  case MECH_ECM_NOTIFY_COUNTERED:
+    if (mech_has_working_ecm_suite(objMech))
       mech_notify(
           objMech, MECHALL,
           "Your ECM suite's ready light turns red, countered by enemy ECCM!");
     break;
-  case ECM_NOTIFY_UNCOUNTERED:
-    if (HasWorkingECMSuite(objMech))
+  case MECH_ECM_NOTIFY_UNCOUNTERED:
+    if (mech_has_working_ecm_suite(objMech))
       mech_notify(objMech, MECHALL,
                   "Your ECM suite's ready light turns green, enemy ECCM is out "
                   "of range.");
     break;
   }
 }
-void checkECM(Mech *objMech) {
+void mech_ecm_check(Mech *objMech) {
   BattleMap *objMapmap;
   Mech *objOtherMech;
   float range = 0.0;
@@ -131,59 +98,60 @@ void checkECM(Mech *objMech) {
             mech_context(objMech), mech_map_dbref(objMech)))) /* get our map */
     return;
 
-  for (wIter = 0; wIter < objMapmap->first_free; wIter++) {
+  for (wIter = 0; wIter < battle_map_unit_count(objMapmap); wIter++) {
     if (!(objOtherMech = btech_context_find_object(
-              mech_context(objMech), objMapmap->mechsOnMap[wIter])))
+              mech_context(objMech), battle_map_unit_dbref(objMapmap, wIter))))
       continue;
 
-    if ((range = FaMechRange(objOtherMech, objMech)) > ECM_RANGE)
+    if ((range = mech_range_to(objOtherMech, objMech)) > ECM_RANGE)
       continue;
 
-    if (MechTeam(objOtherMech) == MechTeam(objMech)) {
-      if (ECMEnabled(objOtherMech))
+    const MechConditionSummary other = mech_condition_summary(objOtherMech);
+    if (mech_team(objOtherMech) == mech_team(objMech)) {
+      if (other.ecm_enabled)
         wFriendlyECM++;
 
-      if (ECCMEnabled(objOtherMech))
+      if (other.eccm_enabled)
         wFriendlyECCM++;
 
-      if (AngelECMEnabled(objOtherMech))
+      if (other.angel_ecm_enabled)
         wFriendlyAngelECM++;
 
-      if (AngelECCMEnabled(objOtherMech))
+      if (other.angel_eccm_enabled)
         wFriendlyAngelECCM++;
 
       if (range <= 0.5) {
-        if (PerECMEnabled(objOtherMech))
+        if (other.personal_ecm_enabled)
           wFriendlyECM++;
 
-        if (PerECCMEnabled(objOtherMech))
+        if (other.personal_eccm_enabled)
           wFriendlyECCM++;
       }
     } else {
-      if (ECMEnabled(objOtherMech))
+      if (other.ecm_enabled)
         wUnFriendlyECM++;
 
-      if (ECCMEnabled(objOtherMech))
+      if (other.eccm_enabled)
         wUnFriendlyECCM++;
 
-      if (AngelECMEnabled(objOtherMech))
+      if (other.angel_ecm_enabled)
         wUnFriendlyAngelECM++;
 
-      if (AngelECCMEnabled(objOtherMech))
+      if (other.angel_eccm_enabled)
         wUnFriendlyAngelECCM++;
 
       if (range <= 0.5) {
-        if (PerECMEnabled(objOtherMech))
+        if (other.personal_ecm_enabled)
           wUnFriendlyECM++;
 
-        if (PerECCMEnabled(objOtherMech))
+        if (other.personal_eccm_enabled)
           wUnFriendlyECCM++;
       }
     }
   }
 
-  if ((MechStatus2(objMech) & STH_ARMOR_ON) ||
-      checkAllSections(objMech, INARC_ECM_ATTACHED))
+  if (mech_condition_summary(objMech).stealth_armor_active ||
+      mech_has_attached_inarc_ecm(objMech))
     wUnFriendlyECM += 1000;
 
   /* Generate our deltas */
@@ -207,24 +175,25 @@ void checkECM(Mech *objMech) {
   /* Let's first see if we should just reset our flags... 'cause there's no ECM
    * or ECCM around */
   if (!tCheckECM) {
-    if (ECMCountered(objMech)) {
-      sendECMNotification(objMech, ECM_NOTIFY_UNCOUNTERED);
-      UnSetECMCountered(objMech);
+    if (mech_condition_summary(objMech).ecm_countered) {
+      mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNCOUNTERED);
+      mech_ecm_countered_set(objMech, false);
       tMark = 1;
     }
 
-    if (ECMProtected(objMech) || AngelECMProtected(objMech)) {
-      UnSetECMProtected(objMech);
-      UnSetAngelECMProtected(objMech);
+    if (mech_condition_summary(objMech).ecm_protected ||
+        mech_condition_summary(objMech).angel_ecm_protected) {
+      mech_ecm_protected_set(objMech, false);
+      mech_angel_ecm_protected_set(objMech, false);
       tMark = 1;
     }
   }
 
   if (!tCheckECCM) {
-    if (AnyECMDisturbed(objMech)) {
-      sendECMNotification(objMech, ECM_NOTIFY_UNDISTURBED);
-      UnSetECMDisturbed(objMech);
-      UnSetAngelECMDisturbed(objMech);
+    if (mech_is_any_ecm_disturbed(objMech)) {
+      mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNDISTURBED);
+      mech_ecm_disturbed_set(objMech, false);
+      mech_angel_ecm_disturbed_set(objMech, false);
       tMark = 1;
     }
   }
@@ -241,54 +210,54 @@ void checkECM(Mech *objMech) {
   if (tCheckECM) {
     if (wFriendlyECMDelta <=
         0) { /* They have the same or more ECCM than we have ECM */
-      if (!ECMCountered(objMech)) {
-        sendECMNotification(objMech, ECM_NOTIFY_COUNTERED);
-        SetECMCountered(objMech);
-        UnSetECMProtected(objMech);
-        UnSetAngelECMProtected(objMech);
+      if (!mech_condition_summary(objMech).ecm_countered) {
+        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_COUNTERED);
+        mech_ecm_countered_set(objMech, true);
+        mech_ecm_protected_set(objMech, false);
+        mech_angel_ecm_protected_set(objMech, false);
       }
     } else {
-      if (ECMCountered(objMech)) {
-        sendECMNotification(objMech, ECM_NOTIFY_UNCOUNTERED);
-        UnSetECMCountered(objMech);
+      if (mech_condition_summary(objMech).ecm_countered) {
+        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNCOUNTERED);
+        mech_ecm_countered_set(objMech, false);
       }
 
       if (wFriendlyECM > 0)
-        SetECMProtected(objMech);
+        mech_ecm_protected_set(objMech, true);
       else
-        UnSetECMProtected(objMech);
+        mech_ecm_protected_set(objMech, false);
 
       if (wFriendlyAngelECM > 0)
-        SetAngelECMProtected(objMech);
+        mech_angel_ecm_protected_set(objMech, true);
       else
-        UnSetAngelECMProtected(objMech);
+        mech_angel_ecm_protected_set(objMech, false);
     }
   }
 
   /* Now we see if we're under an enemy ECM umbrella */
   if (tCheckECCM) {
     if (wFriendlyECCMDelta < 0) { /* They have more ECM than we have ECCM */
-      if (!AnyECMDisturbed(objMech)) {
-        sendECMNotification(objMech, ECM_NOTIFY_DISTURBED);
+      if (!mech_is_any_ecm_disturbed(objMech)) {
+        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_DISTURBED);
 
         if (wUnFriendlyECM > 0)
-          SetECMDisturbed(objMech);
+          mech_ecm_disturbed_set(objMech, true);
         else
-          UnSetECMDisturbed(objMech);
+          mech_ecm_disturbed_set(objMech, false);
 
         if (wUnFriendlyAngelECM > 0)
-          SetAngelECMDisturbed(objMech);
+          mech_angel_ecm_disturbed_set(objMech, true);
         else
-          UnSetAngelECMDisturbed(objMech);
+          mech_angel_ecm_disturbed_set(objMech, false);
 
         MarkForLOSUpdate(objMech);
       }
     } else {
-      if (AnyECMDisturbed(objMech)) {
-        sendECMNotification(objMech, ECM_NOTIFY_UNDISTURBED);
+      if (mech_is_any_ecm_disturbed(objMech)) {
+        mech_ecm_notification_send(objMech, MECH_ECM_NOTIFY_UNDISTURBED);
 
-        UnSetECMDisturbed(objMech);
-        UnSetAngelECMDisturbed(objMech);
+        mech_ecm_disturbed_set(objMech, false);
+        mech_angel_ecm_disturbed_set(objMech, false);
         MarkForLOSUpdate(objMech);
       }
     }

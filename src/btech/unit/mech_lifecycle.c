@@ -63,7 +63,7 @@ void mech_power_down(Mech *mech) {
   mech_event_cancel(mech, EVENT_HIDE);
   mech_stop_digging(mech);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
-  stopTAG(mech);
+  mech_tag_stop(mech);
   mech_drop_club(mech);
   mech_event_cancel(mech, EVENT_MASC_FAIL);
   MechChargeTarget(mech) = -1;

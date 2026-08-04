@@ -45,3 +45,61 @@ bool mech_is_ecm_disturbed(const Mech *mech) {
 bool mech_is_any_ecm_disturbed(const Mech *mech) {
   return mech->rd.status2 & (ECM_DISTURBANCE | ANGEL_ECM_DISTURBED);
 }
+
+bool mech_has_tag_system(const Mech *mech) {
+  return (mech->rd.specials2 & TAG_TECH) ||
+         (mech->rd.specials & C3_MASTER_TECH);
+}
+
+bool mech_tag_system_is_destroyed(const Mech *mech) {
+  return ((mech->rd.specials2 & TAG_TECH) &&
+          (mech->rd.critstatus & TAG_DESTROYED)) ||
+         ((mech->rd.specials & C3_MASTER_TECH) &&
+          (mech->rd.critstatus & C3_DESTROYED));
+}
+
+bool mech_has_working_ecm_suite(const Mech *mech) {
+  return ((mech->rd.specials & ECM_TECH) &&
+          !(mech->rd.critstatus & ECM_DESTROYED)) ||
+         ((mech->rd.specials2 & ANGEL_ECM_TECH) &&
+          !(mech->rd.critstatus & ANGEL_ECM_DESTROYED)) ||
+         (mech->rd.infantry_specials & FC_INFILTRATORII_STEALTH_TECH);
+}
+
+bool mech_searchlight_warning_enabled(const Mech *mech) {
+  return mech->rd.mech_prefs & MECHPREF_SLWARN;
+}
+
+void mech_illumination_set(Mech *mech, bool illuminated) {
+  if (illuminated)
+    mech->rd.critstatus |= SLITE_LIT;
+  else
+    mech->rd.critstatus &= ~SLITE_LIT;
+}
+
+static void mech_status2_flag_set(Mech *mech, int flag, bool enabled) {
+  if (enabled)
+    mech->rd.status2 |= flag;
+  else
+    mech->rd.status2 &= ~flag;
+}
+
+void mech_ecm_countered_set(Mech *mech, bool countered) {
+  mech_status2_flag_set(mech, ECM_COUNTERED, countered);
+}
+
+void mech_ecm_protected_set(Mech *mech, bool protected) {
+  mech_status2_flag_set(mech, ECM_PROTECTED, protected);
+}
+
+void mech_angel_ecm_protected_set(Mech *mech, bool protected) {
+  mech_status2_flag_set(mech, ANGEL_ECM_PROTECTED, protected);
+}
+
+void mech_ecm_disturbed_set(Mech *mech, bool disturbed) {
+  mech_status2_flag_set(mech, ECM_DISTURBANCE, disturbed);
+}
+
+void mech_angel_ecm_disturbed_set(Mech *mech, bool disturbed) {
+  mech_status2_flag_set(mech, ANGEL_ECM_DISTURBED, disturbed);
+}

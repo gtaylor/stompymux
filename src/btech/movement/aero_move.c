@@ -643,8 +643,8 @@ void aero_update(Mech *mech) {
     MechVisMod(mech) = BOUNDED(
         0, MechVisMod(mech) + btech_random_range(mech->xcode.context, -40, 40),
         100);
-  checkECM(mech);
-  checkTAG(mech);
+  mech_ecm_check(mech);
+  mech_tag_check(mech);
   end_lite_check(mech);
 }
 

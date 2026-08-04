@@ -223,7 +223,7 @@ void DestroySection(Mech *wounded, Mech *attacker, int LOS, int hitloc) {
 
   /* Destroy everything in the loc */
   mech_parts_destroy(attacker, wounded, hitloc, 0, 0);
-  checkECM(wounded);
+  mech_ecm_check(wounded);
   /* Stop lateral if we're a quad */
   if ((MechType(wounded) == CLASS_MECH) && MechIsQuad(wounded))
     if (MechLateral(wounded) && tIsLeg)

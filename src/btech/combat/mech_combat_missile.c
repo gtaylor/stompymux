@@ -271,7 +271,7 @@ int MissileHitTarget(Mech *mech, int weapindx, int wSection, int wCritSlot,
           } else if (wNARCType == 4) {
             MechSections(hitMech)[wNARCHitLoc].specials |= INARC_ECM_ATTACHED;
 
-            checkECM(hitMech);
+            mech_ecm_check(hitMech);
           }
 
           mech_printf(hitMech, MECHALL,

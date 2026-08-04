@@ -516,7 +516,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
         if (MechWorkingC3Masters(mech) == 0) {
           MechCritStatus(wounded) |= C3_DESTROYED;
 
-          checkTAG(mech);
+          mech_tag_check(mech);
         }
 
         if (MechTotalC3Masters(mech))
@@ -541,7 +541,7 @@ int HandleMechCrit(Mech *wounded, Mech *attacker, int LOS, int hitloc,
       MechCritStatus(wounded) |= TAG_DESTROYED;
       mech_notify(wounded, MECHALL, "Your TAG system has been destroyed!");
 
-      checkTAG(mech);
+      mech_tag_check(mech);
       break;
     case ECM:
       MechCritStatus(wounded) |= ECM_DESTROYED;

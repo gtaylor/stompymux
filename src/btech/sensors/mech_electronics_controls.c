@@ -147,13 +147,13 @@ void changeStealthArmorEvent(MuxEvent *e) {
     mech_notify(mech, MECHALL, "Stealth Armor system engaged!");
 
     EnableStealthArmor(mech);
-    checkECM(mech);
+    mech_ecm_check(mech);
     MarkForLOSUpdate(mech);
   } else {
     mech_notify(mech, MECHALL, "Stealth Armor system disengaged!");
 
     DisableStealthArmor(mech);
-    checkECM(mech);
+    mech_ecm_check(mech);
     MarkForLOSUpdate(mech);
   }
 }
