@@ -13,7 +13,37 @@
  *
  */
 
-#include "autopilot_autogun_internal.h"
+#include <math.h>
+#include <stdio.h>
+
+#include "autopilot.h"
+#include "autopilot_autogun_api.h"
+#include "btech/context.h"
+#include "equipment_types.h"
+#include "map_los_api.h"
+#include "map_units_api.h"
+#include "mech_classification_api.h"
+#include "mech_combat_api.h"
+#include "mech_condition_api.h"
+#include "mech_equipment_api.h"
+#include "mech_heat_api.h"
+#include "mech_identity_api.h"
+#include "mech_move_api.h"
+#include "mech_position_api.h"
+#include "mech_runtime_api.h"
+#include "mech_specification_api.h"
+#include "mech_status_types.h"
+#include "mech_targeting_api.h"
+#include "mech_utils_api.h"
+#include "mux/server/platform.h"
+#include "mux/support/red_black_tree.h"
+#include "registry_api.h"
+
+static void format_target_id(char buffer[static LBUF_SIZE],
+                             const Mech *target) {
+  MechUnitId id = mech_unit_id(target);
+  snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
+}
 
 void auto_gun_event(Autopilot *autopilot) {
   Mech *mech = (Mech *)autopilot->mymech; /* Its Mech */
@@ -42,24 +72,25 @@ void auto_gun_event(Autopilot *autopilot) {
   if (!mech || !autopilot)
     return;
 
-  if (!btech_context_is_mech(mech->xcode.context, mech->mynum) ||
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||
       !btech_context_is_auto(autopilot->xcode.context, autopilot->mynum))
     return;
 
   /* Ok our mech is dead we're done */
-  if (Destroyed(mech)) {
+  if (mech_is_destroyed(mech)) {
     DoStopGun(autopilot);
     return;
   }
 
   /*! \todo {Need to change this incase the AI shuts down while fighting} */
-  if (!Started(mech)) {
+  if (!mech_is_started(mech)) {
     Zombify(autopilot);
     return;
   }
 
   /* Not on map - so lets calm down */
-  if (!(map = btech_context_get_map(mech->xcode.context, mech->mapindex))) {
+  if (!(map =
+            btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))) {
     Zombify(autopilot);
     return;
   }
@@ -68,13 +99,13 @@ void auto_gun_event(Autopilot *autopilot) {
   print_autogun_log(autopilot, "Autogun Event Started");
 
   /* check for a gun profile. */
-  if (autopilot->weaplist == NULL) {
+  if (autopilot->weaplist == nullptr) {
     print_autogun_log(autopilot, "Autogun Event Finished");
     return;
   }
 
   /* OODing so don't shoot any guns */
-  if (OODing(mech)) {
+  if (mech_is_out_of_control(mech)) {
     /* Log It */
     print_autogun_log(autopilot, "Autogun Event Finished");
     return;
@@ -84,13 +115,14 @@ void auto_gun_event(Autopilot *autopilot) {
   if (autopilot->target > -1) {
 
     if (!(target =
-              btech_context_get_mech(mech->xcode.context, autopilot->target))) {
+              btech_context_get_mech(mech_context(mech), autopilot->target))) {
 
       /* ok its not a valid target reset */
       autopilot->target = -1;
       autopilot->target_score = 0;
 
-    } else if (Destroyed(target) || (target->mapindex != mech->mapindex)) {
+    } else if (mech_is_destroyed(target) ||
+               (mech_map_dbref(target) != mech_map_dbref(mech))) {
 
       /* Target is either dead or not on the map anymore */
       autopilot->target = -1;
@@ -102,8 +134,9 @@ void auto_gun_event(Autopilot *autopilot) {
        * away */
 
       /* Get range from mech to current target */
-      range = FindHexRange(MechFX(mech), MechFY(mech), MechFX(target),
-                           MechFY(target));
+      range = FindHexRange(
+          mech_position_real_x(mech), mech_position_real_y(mech),
+          mech_position_real_x(target), mech_position_real_y(target));
 
       if ((range >= (float)AUTO_GUN_MAX_RANGE) && !AssignedTarget(autopilot)) {
 
@@ -137,16 +170,16 @@ void auto_gun_event(Autopilot *autopilot) {
     autopilot->target_update_tick = 0;
 
     /* Setup the RedBlackTree */
-    targets = red_black_tree_init(&auto_generic_compare, NULL);
+    targets = red_black_tree_init(&auto_generic_compare, nullptr);
 
     /* Cycle through possible targets and pick something to shoot */
-    for (i = 0; i < map->first_free; i++) {
+    for (i = 0; i < battle_map_unit_count(map); i++) {
 
       /* Make sure its on the right map */
-      if (i != mech->mapnumber && (j = map->mechsOnMap[i]) > 0) {
+      if (i != mech_map_slot(mech) && (j = battle_map_unit_dbref(map, i)) > 0) {
 
         /* Is it a valid unit ? */
-        if (!(target = btech_context_get_mech(mech->xcode.context, j)))
+        if (!(target = btech_context_get_mech(mech_context(mech), j)))
           continue;
 
         /* Score the target */
@@ -155,14 +188,14 @@ void auto_gun_event(Autopilot *autopilot) {
         /* Log It */
         print_autogun_log(autopilot,
                           "Autogun - Possible target #%d with score %d",
-                          target->mynum, target_score);
+                          mech_dbref(target), target_score);
 
         /* If target has a score add it to RedBlackTree */
         if (target_score > 0) {
 
           /* Create target node and fill with proper values */
           temp_target_node =
-              auto_create_target_node(target_score, target->mynum);
+              auto_create_target_node(target_score, mech_dbref(target));
 
           /*! \todo {should add check incase it returns a NULL struct} */
 
@@ -184,7 +217,7 @@ void auto_gun_event(Autopilot *autopilot) {
         }
 
         /* Check to see if its our current target */
-        if (autopilot->target == target->mynum) {
+        if (autopilot->target == mech_dbref(target)) {
 
           /* Save the new score */
           autopilot->target_score = target_score;
@@ -206,7 +239,8 @@ void auto_gun_event(Autopilot *autopilot) {
       autopilot->target_update_tick = 20;
 
       /* Don't need the target list any more so lets destroy it */
-      red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
+      red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback,
+                          nullptr);
       red_black_tree_destroy(targets);
 
       /* Log It */
@@ -221,7 +255,7 @@ void auto_gun_event(Autopilot *autopilot) {
 
     /* Best target */
     temp_target_node =
-        (AutopilotTarget *)red_black_tree_search(targets, SEARCH_LAST, NULL);
+        (AutopilotTarget *)red_black_tree_search(targets, SEARCH_LAST, nullptr);
 
     /* Log It */
     print_autogun_log(autopilot, "Autogun - Best target #%d with score %d",
@@ -264,7 +298,7 @@ void auto_gun_event(Autopilot *autopilot) {
     } /* End of choosing new target */
 
     /* Don't need the target list any more so lets destroy it */
-    red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback, NULL);
+    red_black_tree_walk(targets, WALK_INORDER, &auto_targets_callback, nullptr);
     red_black_tree_destroy(targets);
 
   } else {
@@ -281,7 +315,7 @@ void auto_gun_event(Autopilot *autopilot) {
 
   /* Setup the current target */
   if (!(target =
-            btech_context_get_mech(mech->xcode.context, autopilot->target))) {
+            btech_context_get_mech(mech_context(mech), autopilot->target))) {
 
     /* There were no valid targets so
      * rerun autogun */
@@ -297,10 +331,10 @@ void auto_gun_event(Autopilot *autopilot) {
   }
 
   /* Check to see if we need to (re)lock our target */
-  if (MechTarget(mech) != autopilot->target) {
+  if (mech_target_dbref(mech) != autopilot->target) {
 
     /* Lock Him */
-    snprintf(buffer, LBUF_SIZE, "%c%c", MechID(target)[0], MechID(target)[1]);
+    format_target_id(buffer, target);
     mech_settarget(autopilot->mynum, mech, buffer);
 
     /* Log It */
@@ -309,7 +343,7 @@ void auto_gun_event(Autopilot *autopilot) {
   }
 
   /* Primary target isn't in LOS. Let's re-run in 5s */
-  if (!(MechToMech_LOSFlag(map, mech, target) & MECHLOSFLAG_SEEN)) {
+  if (!battle_map_unit_is_seen(map, mech, target)) {
     autopilot->target = -1;
     autopilot->target_update_tick = 25;
     return;
@@ -327,7 +361,7 @@ void auto_gun_event(Autopilot *autopilot) {
   /* Check to make sure we didn't kill it with physical attack
    * or something */
   if (!(target =
-            btech_context_get_mech(mech->xcode.context, autopilot->target))) {
+            btech_context_get_mech(mech_context(mech), autopilot->target))) {
 
     /* There were no valid targets so
      * rerun autogun */
@@ -341,7 +375,8 @@ void auto_gun_event(Autopilot *autopilot) {
     print_autogun_log(autopilot, "Autogun Event Finished");
     return;
 
-  } else if (Destroyed(target) || (target->mapindex != mech->mapindex)) {
+  } else if (mech_is_destroyed(target) ||
+             (mech_map_dbref(target) != mech_map_dbref(mech))) {
 
     /* Target is either dead or not on the map anymore */
     autopilot->target = -1;
@@ -358,7 +393,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
   /* Get range from mech to current target */
   range =
-      FindHexRange(MechFX(mech), MechFY(mech), MechFX(target), MechFY(target));
+      FindHexRange(mech_position_real_x(mech), mech_position_real_y(mech),
+                   mech_position_real_x(target), mech_position_real_y(target));
 
   /* This probably unnecessary but since it doesn't
    * take much to calc range it should be ok for
@@ -381,13 +417,14 @@ void auto_gun_event(Autopilot *autopilot) {
     /* Ok we got weapons lets use them */
 
     /* Reset heat counter to current heat */
-    accumulate_heat = MechWeapHeat(mech);
+    accumulate_heat = mech_weapon_heat(mech);
 
     /* If the unit is moving need to account for the heat of that as well */
-    if ((MechType(mech) == CLASS_MECH) && (fabs(MechSpeed(mech)) > 0.0)) {
+    if ((mech_class(mech) == CLASS_MECH) &&
+        (fabs(mech_current_speed(mech)) > 0.0)) {
 
-      maxspeed = MMaxSpeed(mech);
-      if (IsRunning(MechDesiredSpeed(mech), maxspeed))
+      maxspeed = mech_effective_maximum_speed(mech);
+      if (mech_desired_speed(mech) > ((float)2.0 * maxspeed / 3.0 + 0.1))
         accumulate_heat += 2;
       else
         accumulate_heat += 1;
@@ -395,15 +432,14 @@ void auto_gun_event(Autopilot *autopilot) {
 
     /* Get first weapon */
     temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
-        autopilot->profile[(int)range], SEARCH_LAST, NULL);
+        autopilot->profile[(int)range], SEARCH_LAST, nullptr);
 
     while (temp_weapon_node) {
 
       /* Check to see if the weapon even works */
-      if (WeaponIsNonfunctional(
+      if (mech_weapon_is_nonfunctional_at(
               mech, temp_weapon_node->section, temp_weapon_node->critical,
-              GetWeaponCrits(
-                  mech, Weapon2I(temp_weapon_node->weapon_db_number))) > 0) {
+              Weapon2I(temp_weapon_node->weapon_db_number))) {
 
         /* Weapon Doesn't work so go to next one */
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
@@ -414,8 +450,8 @@ void auto_gun_event(Autopilot *autopilot) {
       }
 
       /* Check to see if its cycling */
-      if (WpnIsRecycling(mech, temp_weapon_node->section,
-                         temp_weapon_node->critical)) {
+      if (mech_weapon_is_recycling_at(mech, temp_weapon_node->section,
+                                      temp_weapon_node->critical)) {
 
         /* Go to the next one */
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
@@ -425,7 +461,7 @@ void auto_gun_event(Autopilot *autopilot) {
         continue;
       }
 
-      if (IsAMS(temp_weapon_node->weapon_db_number)) {
+      if (MechWeapons[temp_weapon_node->weapon_db_number].special & AMS) {
 
         /* Ok its an AMS so go to next weapon */
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
@@ -437,12 +473,12 @@ void auto_gun_event(Autopilot *autopilot) {
       /* No sense trying to fire Stinger missiles if the target isn't
        * airborne/jumping */
 
-      if ((GetPartAmmoMode(mech, temp_weapon_node->section,
-                           temp_weapon_node->critical) &
+      if ((mech_critical_ammo_mode(mech, temp_weapon_node->section,
+                                   temp_weapon_node->critical) &
            STINGER_MODE) &&
           target &&
-          !(Jumping(target) || OODing(target) ||
-            (FlyingT(target) && !Landed(target)))) {
+          !(mech_is_jumping(target) || mech_is_out_of_control(target) ||
+            (mech_is_flying_type(target) && !mech_is_landed(target)))) {
 
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
             autopilot->profile[(int)range], SEARCH_PREV,
@@ -453,10 +489,10 @@ void auto_gun_event(Autopilot *autopilot) {
       /* Check heat levels, since the heat isn't updated untill we're done
        * we have to manage the heat ourselves */
       /*! \todo {Add a check also for aeros} */
-      if ((MechType(mech) == CLASS_MECH) &&
+      if ((mech_class(mech) == CLASS_MECH) &&
           (((float)accumulate_heat +
             (float)MechWeapons[temp_weapon_node->weapon_db_number].heat -
-            (float)MechMinusHeat(mech)) > AUTO_GUN_MAX_HEAT)) {
+            mech_heat_dissipation(mech)) > AUTO_GUN_MAX_HEAT)) {
 
         /* Would make ourselves to hot to fire this gun */
         temp_weapon_node = (AutopilotWeapon *)red_black_tree_search(
@@ -469,18 +505,20 @@ void auto_gun_event(Autopilot *autopilot) {
       /* Ok passed the checks now setup the arcs and see if we can fire it */
 
       /* Ok the rest depends on what type of unit we driving */
-      if ((MechType(mech) == CLASS_MECH) && (MechMove(mech) == MOVE_BIPED)) {
+      if ((mech_class(mech) == CLASS_MECH) &&
+          (mech_movement_type(mech) == MOVE_BIPED)) {
 
         /* Center ourself and get target arc */
-        MechStatus(mech) &= ~(TORSO_RIGHT | TORSO_LEFT);
-        if (MechSpecials(mech) & FLIPABLE_ARMS) {
+        mech_torso_twist_set(mech, MECH_TORSO_CENTER);
+        if (mech_technology_flags(mech) & FLIPABLE_ARMS) {
 
           /* Center the arms if need be */
-          MechStatus(mech) &= ~(FLIPPED_ARMS);
+          mech_arms_center(mech);
         }
 
         /* Get Target Arc */
-        what_arc = InWeaponArc(mech, MechFX(target), MechFY(target));
+        what_arc = InWeaponArc(mech, mech_position_real_x(target),
+                               mech_position_real_y(target));
 
         /* Now go through the various arcs and see if we
          * need to flip arm or rotorso or something */
@@ -490,10 +528,10 @@ void auto_gun_event(Autopilot *autopilot) {
               temp_weapon_node->section == RARM) {
 
             /* First see if we can flip arms */
-            if (MechSpecials(mech) & FLIPABLE_ARMS) {
+            if (mech_technology_flags(mech) & FLIPABLE_ARMS) {
 
               /* Flip the arms */
-              MechStatus(mech) |= FLIPPED_ARMS;
+              mech_arms_flip(mech);
 
             } else {
 
@@ -501,21 +539,23 @@ void auto_gun_event(Autopilot *autopilot) {
 
               /* Find out if it would be better to
                * rotate left or right */
-              relative_bearing = MechFacing(mech) -
-                                 FindBearing(MechFX(mech), MechFY(mech),
-                                             MechFX(target), MechFY(target));
+              relative_bearing = mech_heading_degrees(mech) -
+                                 FindBearing(mech_position_real_x(mech),
+                                             mech_position_real_y(mech),
+                                             mech_position_real_x(target),
+                                             mech_position_real_y(target));
 
               if (relative_bearing > 120 && relative_bearing < 180 &&
                   temp_weapon_node->section == RARM) {
 
                 /* Rotate Right */
-                MechStatus(mech) |= TORSO_RIGHT;
+                mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
 
               } else if (relative_bearing > 180 && relative_bearing < 240 &&
                          temp_weapon_node->section == LARM) {
 
                 /* Rotate Left */
-                MechStatus(mech) |= TORSO_LEFT;
+                mech_torso_twist_set(mech, MECH_TORSO_LEFT);
 
               } else {
 
@@ -528,8 +568,8 @@ void auto_gun_event(Autopilot *autopilot) {
               }
             }
 
-          } else if (!(GetPartFireMode(mech, temp_weapon_node->section,
-                                       temp_weapon_node->critical) &
+          } else if (!(mech_critical_fire_mode(mech, temp_weapon_node->section,
+                                               temp_weapon_node->critical) &
                        REAR_MOUNT)) {
 
             /* Weapon is forward torso or leg mounted weapon
@@ -559,7 +599,7 @@ void auto_gun_event(Autopilot *autopilot) {
           }
 
           /* Rotate torso left */
-          MechStatus(mech) |= TORSO_LEFT;
+          mech_torso_twist_set(mech, MECH_TORSO_LEFT);
 
         } else if (what_arc & RSIDEARC) {
 
@@ -576,12 +616,12 @@ void auto_gun_event(Autopilot *autopilot) {
           }
 
           /* Rotate torso right */
-          MechStatus(mech) |= TORSO_RIGHT;
+          mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
 
         } else {
 
-          if (GetPartFireMode(mech, temp_weapon_node->section,
-                              temp_weapon_node->critical) &
+          if (mech_critical_fire_mode(mech, temp_weapon_node->section,
+                                      temp_weapon_node->critical) &
               REAR_MOUNT) {
 
             /* No way can we hit the guy with a rear
@@ -594,16 +634,17 @@ void auto_gun_event(Autopilot *autopilot) {
           }
         }
 
-      } else if ((MechType(mech) == CLASS_MECH) &&
-                 (MechMove(mech) == MOVE_QUAD)) {
+      } else if ((mech_class(mech) == CLASS_MECH) &&
+                 (mech_movement_type(mech) == MOVE_QUAD)) {
 
         /* Get Target Arc */
-        what_arc = InWeaponArc(mech, MechFX(target), MechFY(target));
+        what_arc = InWeaponArc(mech, mech_position_real_x(target),
+                               mech_position_real_y(target));
 
         if (what_arc & REARARC) {
 
-          if (!(GetPartFireMode(mech, temp_weapon_node->section,
-                                temp_weapon_node->critical) &
+          if (!(mech_critical_fire_mode(mech, temp_weapon_node->section,
+                                        temp_weapon_node->critical) &
                 REAR_MOUNT)) {
 
             /* Weapon is not rear mounted so skip it and
@@ -617,8 +658,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
         } else if (what_arc & FORWARDARC) {
 
-          if (GetPartFireMode(mech, temp_weapon_node->section,
-                              temp_weapon_node->critical) &
+          if (mech_critical_fire_mode(mech, temp_weapon_node->section,
+                                      temp_weapon_node->critical) &
               REAR_MOUNT) {
 
             /* Weapon is rear mounted so skip it and
@@ -641,32 +682,40 @@ void auto_gun_event(Autopilot *autopilot) {
           continue;
         }
 
-      } else if ((MechType(mech) == CLASS_VEH_GROUND) ||
-                 (MechType(mech) == CLASS_VEH_NAVAL)) {
+      } else if ((mech_class(mech) == CLASS_VEH_GROUND) ||
+                 (mech_class(mech) == CLASS_VEH_NAVAL)) {
 
         /* Get Target Arc */
-        what_arc = InWeaponArc(mech, MechFX(target), MechFY(target));
+        what_arc = InWeaponArc(mech, mech_position_real_x(target),
+                               mech_position_real_y(target));
 
         /* Check if turret exists and weapon is there */
-        if (GetSectInt(mech, TURRET) && temp_weapon_node->section == TURRET) {
+        if (mech_section_internal(mech, TURRET) &&
+            temp_weapon_node->section == TURRET) {
 
           /* Rotate Turret and nail the guy */
-          if (!(MechTankCritStatus(mech) & TURRET_JAMMED) &&
-              !(MechTankCritStatus(mech) & TURRET_LOCKED) &&
-              (AcceptableDegree(MechTurretFacing(mech) + MechFacing(mech)) !=
-               FindBearing(MechFX(mech), MechFY(mech), MechFX(target),
-                           MechFY(target)))) {
+          MechConditionSummary condition = mech_condition_summary(mech);
+          if (!condition.turret_jammed && !condition.turret_locked &&
+              (AcceptableDegree(mech_turret_heading_degrees(mech) +
+                                mech_heading_degrees(mech)) !=
+               FindBearing(mech_position_real_x(mech),
+                           mech_position_real_y(mech),
+                           mech_position_real_x(target),
+                           mech_position_real_y(target)))) {
 
             snprintf(buffer, LBUF_SIZE, "%d",
-                     FindBearing(MechFX(mech), MechFY(mech), MechFX(target),
-                                 MechFY(target)));
+                     FindBearing(mech_position_real_x(mech),
+                                 mech_position_real_y(mech),
+                                 mech_position_real_x(target),
+                                 mech_position_real_y(target)));
             mech_turret(autopilot->mynum, mech, buffer);
           }
 
         } else {
 
           /* Check if in arc of weapon */
-          if (!IsInWeaponArc(mech, MechFX(target), MechFY(target),
+          if (!IsInWeaponArc(mech, mech_position_real_x(target),
+                             mech_position_real_y(target),
                              temp_weapon_node->section,
                              temp_weapon_node->critical)) {
 
@@ -698,8 +747,8 @@ void auto_gun_event(Autopilot *autopilot) {
 
       /* Ok check to see if weapon was fired if so account for the
        * heat */
-      if (WpnIsRecycling(mech, temp_weapon_node->section,
-                         temp_weapon_node->critical)) {
+      if (mech_weapon_is_recycling_at(mech, temp_weapon_node->section,
+                                      temp_weapon_node->critical)) {
         accumulate_heat += MechWeapons[temp_weapon_node->weapon_db_number].heat;
       }
 

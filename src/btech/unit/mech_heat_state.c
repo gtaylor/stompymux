@@ -9,6 +9,8 @@ float mech_heat_production(const Mech *mech) { return mech->rd.plus_heat; }
 
 float mech_heat_dissipation(const Mech *mech) { return mech->rd.minus_heat; }
 
+float mech_weapon_heat(const Mech *mech) { return mech->rd.weapheat; }
+
 float mech_active_heat_sinks(const Mech *mech) {
   return mech->ud.numsinks - mech->rd.disabled_hs;
 }

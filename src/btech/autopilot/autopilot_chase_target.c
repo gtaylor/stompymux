@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #include "autopilot.h"
+#include "autopilot_autogun_api.h"
 #include "autopilot_commands_api.h"
 #include "btech/context.h"
 #include "map_units_api.h"

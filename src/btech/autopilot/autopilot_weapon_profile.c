@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "autopilot_autogun_api.h"
 #include "btech/context.h"
 #include "equipment_types.h"
 #include "mech_identity_api.h"

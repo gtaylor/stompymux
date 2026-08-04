@@ -1,6 +1,7 @@
 #include "mech_equipment_api.h"
 
 #include "mech_internal.h"
+#include "mech_utils_api.h"
 
 int mech_critical_part_type(const Mech *mech, int section, int critical) {
   return mech->ud.sections[section].criticals[critical].type;
@@ -108,6 +109,19 @@ bool mech_section_carries_club(const Mech *mech, int section) {
 bool mech_limbs_are_recycling(const Mech *mech) {
   return mech->ud.sections[RARM].recycle || mech->ud.sections[LARM].recycle ||
          mech->ud.sections[RLEG].recycle || mech->ud.sections[LLEG].recycle;
+}
+
+bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
+  return mech_critical_data(mech, section, critical) > 0 &&
+         IsWeapon(mech_critical_part_type(mech, section, critical)) &&
+         !mech_critical_is_nonfunctional(mech, section, critical) &&
+         !mech_section_is_destroyed(mech, section);
+}
+
+bool mech_weapon_is_nonfunctional_at(Mech *mech, int section, int critical,
+                                     int weapon_index) {
+  return WeaponIsNonfunctional(mech, section, critical,
+                               GetWeaponCrits(mech, weapon_index)) > 0;
 }
 
 int mech_section_recycle_ticks(const Mech *mech, int section) {

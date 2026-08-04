@@ -80,3 +80,5 @@ void mech_torso_twist_set(Mech *mech, MechTorsoTwist twist) {
 }
 
 void mech_arms_center(Mech *mech) { mech->rd.status &= ~FLIPPED_ARMS; }
+
+void mech_arms_flip(Mech *mech) { mech->rd.status |= FLIPPED_ARMS; }

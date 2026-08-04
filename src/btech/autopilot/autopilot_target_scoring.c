@@ -16,6 +16,7 @@
 #include <math.h>
 
 #include "autopilot.h"
+#include "autopilot_autogun_api.h"
 #include "equipment_types.h"
 #include "map_los_api.h"
 #include "mech_classification_api.h"
